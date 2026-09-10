@@ -432,25 +432,27 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 268
-- `buildSettlementProps` — function — line 675
-- `disposeSettlementGroup` — function — line 1856
-- `SettlementHouseBed` — type — line 136
-- `SettlementHouseLandmark` — type — line 107
-- `SettlementLandmarks` — type — line 143
-- `SettlementLandPlot` — type — line 257
-- `SettlementStorageVisuals` — type — line 249
-- `SettlementTreeLandmark` — type — line 275
+- `BlacksmithWorkplace` — type — line 270
+- `buildSettlementProps` — function — line 677
+- `disposeSettlementGroup` — function — line 1861
+- `SettlementHouseBed` — type — line 138
+- `SettlementHouseLandmark` — type — line 109
+- `SettlementLandmarks` — type — line 145
+- `SettlementLandPlot` — type — line 259
+- `SettlementStorageVisuals` — type — line 251
+- `SettlementTreeLandmark` — type — line 277
 
 ## `settlement/propSpecs.ts`
 
+- `ANIMAL_TROUGH_HEIGHT` — const — line 111
+- `ANIMAL_TROUGH_URL` — const — line 109
 - `BUSH_SPECS` — const — line 17
 - `CACTUS_SPECS` — const — line 31
-- `CAMPFIRE_FIT_MAX` — const — line 122
-- `CAMPFIRE_UNLIT_URL` — const — line 120
+- `CAMPFIRE_FIT_MAX` — const — line 130
+- `CAMPFIRE_UNLIT_URL` — const — line 128
 - `CEMETERY_SPECS` — const — line 80
-- `COBBLE_FIT_MAX` — const — line 127
-- `COBBLE_URL` — const — line 124
+- `COBBLE_FIT_MAX` — const — line 135
+- `COBBLE_URL` — const — line 132
 - `CROPS_FIT_MAX` — const — line 103
 - `CROPS_URL` — const — line 101
 - `DOCK_SPECS` — const — line 64
@@ -458,11 +460,11 @@ Generated from exported TypeScript symbols.
 - `FARM_HEIGHT` — const — line 99
 - `FARM_URL` — const — line 96
 - `FERN_SPECS` — const — line 27
-- `FIRE_FX_URL` — const — line 137
+- `FIRE_FX_URL` — const — line 145
 - `GRAVE_SPECS` — const — line 84
-- `LANTERN_FLOOR_MAX` — const — line 138
-- `LANTERN_URL` — const — line 135
-- `LANTERN_WALL_MAX` — const — line 141
+- `LANTERN_FLOOR_MAX` — const — line 146
+- `LANTERN_URL` — const — line 143
+- `LANTERN_WALL_MAX` — const — line 149
 - `LILY_SPECS` — const — line 51
 - `REED_SPECS` — const — line 42
 - `RESOURCE_GOLD_SPECS` — const — line 88
@@ -470,21 +472,23 @@ Generated from exported TypeScript symbols.
 - `ROCK_CLUSTER_SPECS` — const — line 72
 - `ROCK_SPECS` — const — line 68
 - `SEAWEED_SPECS` — const — line 60
-- `TABLE_LAMP_FIT_MAX` — const — line 150
-- `TABLE_LAMP_URL` — const — line 149
+- `TABLE_LAMP_FIT_MAX` — const — line 158
+- `TABLE_LAMP_URL` — const — line 157
+- `TRAP_GOOD_FIT_MAX` — const — line 115
+- `TRAP_GOOD_URL` — const — line 114
 - `TREE_SPECS` — const — line 5
-- `TREE_STUMP_HEIGHT` — const — line 132
-- `TREE_STUMP_URL` — const — line 129
-- `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 118
-- `VILLAGE_TORCH_HEIGHT` — const — line 142
-- `VILLAGE_TORCH_URL` — const — line 136
-- `WALL_URL` — const — line 134
+- `TREE_STUMP_HEIGHT` — const — line 140
+- `TREE_STUMP_URL` — const — line 137
+- `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 126
+- `VILLAGE_TORCH_HEIGHT` — const — line 150
+- `VILLAGE_TORCH_URL` — const — line 144
+- `WALL_URL` — const — line 142
 - `WELL_HEIGHT` — const — line 107
 - `WELL_URL` — const — line 105
-- `WOOD_PILE_COLLISION_RADIUS` — const — line 116
-- `WOOD_PILE_HEIGHT` — const — line 113
-- `WOOD_PILE_PROGRESSIVE_URL` — const — line 111
-- `WOOD_PILE_URL` — const — line 109
+- `WOOD_PILE_COLLISION_RADIUS` — const — line 124
+- `WOOD_PILE_HEIGHT` — const — line 121
+- `WOOD_PILE_PROGRESSIVE_URL` — const — line 119
+- `WOOD_PILE_URL` — const — line 117
 
 ## `settlement/propUtils.ts`
 
@@ -652,25 +656,26 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementStructures.ts`
 
-- `createAnvil` — function — line 237
-- `createBarrel` — function — line 100
-- `createCrate` — function — line 224
-- `createDock` — function — line 306
-- `createGarden` — function — line 374
-- `createGrindWorkbench` — function — line 263
-- `createHayBale` — function — line 124
-- `createHut` — function — line 10
-- `createRatNest` — function — line 178
-- `createSignpost` — function — line 332
-- `createStockpile` — function — line 288
-- `createTrough` — function — line 170
-- `createTroughVisual` — function — line 146
-- `createVillageNamepost` — function — line 353
-- `createWell` — function — line 37
-- `createWheatField` — function — line 425
-- `layoutCropsGarden` — function — line 404
-- `TroughVisual` — type — line 137
-- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 351
+- `createAnvil` — function — line 266
+- `createBarrel` — function — line 102
+- `createCrate` — function — line 253
+- `createDock` — function — line 335
+- `createGarden` — function — line 403
+- `createGrindWorkbench` — function — line 292
+- `createHayBale` — function — line 126
+- `createHut` — function — line 12
+- `createRatNest` — function — line 207
+- `createSignpost` — function — line 361
+- `createStockpile` — function — line 317
+- `createTrough` — function — line 199
+- `createTroughVisual` — function — line 193
+- `createVillageNamepost` — function — line 382
+- `createWell` — function — line 39
+- `createWheatField` — function — line 454
+- `layoutCropsGarden` — function — line 433
+- `preloadAnimalTroughVisual` — function — line 149
+- `TroughVisual` — type — line 139
+- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 380
 
 ## `settlement/settlementTerrain.ts`
 

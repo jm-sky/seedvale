@@ -898,7 +898,10 @@ Generated from TypeScript imports.
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementPropColliders.test.ts`
 - `settlement/settlementPropColliders.ts`
+- `settlement/settlementStructures.ts`
+- `world/animalTraps.ts`
 - `world/standingTorchProp.ts`
+- `world/trapProp.ts`
 - `world/treeLifecycle.test.ts`
 
 ## `settlement/propUtils.ts`
@@ -913,6 +916,7 @@ Generated from TypeScript imports.
 - `settlement/decorProps.ts`
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/settlementStructures.ts`
 - `settlement/storageVisuals.ts`
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
@@ -1322,9 +1326,12 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/gardenScale.ts`
+- `settlement/propSpecs.ts`
+- `settlement/propUtils.ts`
 
 **Imported by**
 
+- `app/worldBundle.ts`
 - `settlement/props.ts`
 - `world/createPlayerTroughs.ts`
 - `world/playerWellProp.ts`

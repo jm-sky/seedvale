@@ -4,33 +4,37 @@ Generated from exported TypeScript symbols.
 
 ## `audio/actionSounds.ts`
 
-- `ACTION_BOW_DRAW_SOUND_URL` — const — line 23
-- `ACTION_BOW_RELEASE_SOUND_URL` — const — line 24
+- `ACTION_BOW_DRAW_SOUND_URL` — const — line 25
+- `ACTION_BOW_RELEASE_SOUND_URL` — const — line 26
 - `ACTION_BRANCH_BREAK_SOUND_URL` — const — line 16
 - `ACTION_CHOP_SOUND_URLS` — const — line 12
+- `ACTION_COOK_SOUND_URL` — const — line 24
 - `ACTION_DIG_SOUND_URLS` — const — line 5
+- `ACTION_DRINK_SOUND_URL` — const — line 23
 - `ACTION_FISHING_CAST_SOUND_URL` — const — line 19
 - `ACTION_MELEE_HIT_SOUND_URL` — const — line 20
 - `ACTION_MELEE_KILL_SOUND_URL` — const — line 21
 - `ACTION_TREE_FALL_SOUND_URL` — const — line 17
 - `ACTION_WELL_CONSTRUCTION_SOUND_URL` — const — line 18
 - `ACTION_WELL_SOUND_URL` — const — line 22
-- `playActionBowDraw` — function — line 99
-- `playActionBowRelease` — function — line 104
-- `playActionBranchBreak` — function — line 56
-- `playActionChop` — function — line 49
-- `playActionDig` — function — line 42
-- `playActionFishingCast` — function — line 71
-- `playActionMeleeHit` — function — line 82
-- `playActionMeleeKill` — function — line 87
-- `playActionMine` — function — line 76
-- `playActionTreeFall` — function — line 61
-- `playActionWell` — function — line 92
-- `playActionWellConstruction` — function — line 66
-- `playAnimalCombatDeath` — function — line 133
-- `playCombatBowDraw` — function — line 111
-- `playCombatHit` — function — line 118
-- `playNpcCombatDeath` — function — line 125
+- `playActionBowDraw` — function — line 113
+- `playActionBowRelease` — function — line 118
+- `playActionBranchBreak` — function — line 60
+- `playActionChop` — function — line 53
+- `playActionCook` — function — line 106
+- `playActionDig` — function — line 46
+- `playActionDrink` — function — line 101
+- `playActionFishingCast` — function — line 75
+- `playActionMeleeHit` — function — line 86
+- `playActionMeleeKill` — function — line 91
+- `playActionMine` — function — line 80
+- `playActionTreeFall` — function — line 65
+- `playActionWell` — function — line 96
+- `playActionWellConstruction` — function — line 70
+- `playAnimalCombatDeath` — function — line 147
+- `playCombatBowDraw` — function — line 125
+- `playCombatHit` — function — line 132
+- `playNpcCombatDeath` — function — line 139
 
 ## `audio/ambientEvents.ts`
 

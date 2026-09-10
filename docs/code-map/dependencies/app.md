@@ -1248,6 +1248,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementStructures.ts`
 - `shared/bootMark.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkManager.ts`
@@ -1292,6 +1293,7 @@ Generated from TypeScript imports.
 - `world/siteInfrastructure.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
+- `world/trapProp.ts`
 - `world/treeLifecycle.ts`
 - `world/waterMirror.ts`
 - `world/workContract.ts`

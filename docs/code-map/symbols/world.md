@@ -4,41 +4,41 @@ Generated from exported TypeScript symbols.
 
 ## `world/animalTraps.ts`
 
-- `accumulateTrapWeatherWear` — function — line 241
-- `isSpeciesTrappable` — function — line 96
-- `isTrapCooldownActive` — function — line 179
-- `PlacedTrapRecord` — type — line 265
-- `rollTrapDetection` — function — line 136
-- `spendTrapDurability` — function — line 204
-- `startTrapCooldown` — function — line 191
-- `TRAP_BAIT_DETECTION_CUT` — const — line 113
-- `TRAP_CHECK_INTERVAL_SEC` — const — line 320
-- `TRAP_DEFS` — const — line 50
-- `TRAP_DETECTION_COOLDOWN_DAYS` — const — line 170
-- `TRAP_FOOTPRINT_RADIUS` — const — line 308
-- `TRAP_KIND_BY_ITEM` — const — line 75
-- `TRAP_MAX_DETECTION` — const — line 104
-- `TRAP_MIN_DETECTION` — const — line 103
-- `TRAP_PLACE_REACH` — const — line 313
-- `TRAP_PLACEMENT_MESSAGE` — const — line 300
-- `TRAP_SEPARATION` — const — line 311
-- `TRAP_SETUP_DURATION_SEC` — const — line 316
-- `TRAP_SKILL_DETECTION_CUT` — const — line 106
-- `TRAP_WEATHER_MAX_CATCHUP_CYCLES` — const — line 231
-- `TRAP_WEATHER_SEVERITY` — const — line 211
-- `TrapCooldowns` — type — line 175
-- `TrapDef` — type — line 24
-- `trapDetectionChance` — function — line 119
-- `trapDetectionRoll` — function — line 163
-- `TrapKind` — type — line 17
-- `trapKindForItem` — function — line 80
-- `TrapLureDescriptor` — type — line 290
-- `TrapPlacementReason` — type — line 298
-- `TrapState` — type — line 22
-- `trapStateLabel` — function — line 322
-- `TrapUseResult` — type — line 199
-- `TrapWeatherCatchup` — type — line 233
-- `trapWeatherWear` — function — line 222
+- `accumulateTrapWeatherWear` — function — line 242
+- `isSpeciesTrappable` — function — line 97
+- `isTrapCooldownActive` — function — line 180
+- `PlacedTrapRecord` — type — line 266
+- `rollTrapDetection` — function — line 137
+- `spendTrapDurability` — function — line 205
+- `startTrapCooldown` — function — line 192
+- `TRAP_BAIT_DETECTION_CUT` — const — line 114
+- `TRAP_CHECK_INTERVAL_SEC` — const — line 321
+- `TRAP_DEFS` — const — line 51
+- `TRAP_DETECTION_COOLDOWN_DAYS` — const — line 171
+- `TRAP_FOOTPRINT_RADIUS` — const — line 309
+- `TRAP_KIND_BY_ITEM` — const — line 76
+- `TRAP_MAX_DETECTION` — const — line 105
+- `TRAP_MIN_DETECTION` — const — line 104
+- `TRAP_PLACE_REACH` — const — line 314
+- `TRAP_PLACEMENT_MESSAGE` — const — line 301
+- `TRAP_SEPARATION` — const — line 312
+- `TRAP_SETUP_DURATION_SEC` — const — line 317
+- `TRAP_SKILL_DETECTION_CUT` — const — line 107
+- `TRAP_WEATHER_MAX_CATCHUP_CYCLES` — const — line 232
+- `TRAP_WEATHER_SEVERITY` — const — line 212
+- `TrapCooldowns` — type — line 176
+- `TrapDef` — type — line 25
+- `trapDetectionChance` — function — line 120
+- `trapDetectionRoll` — function — line 164
+- `TrapKind` — type — line 18
+- `trapKindForItem` — function — line 81
+- `TrapLureDescriptor` — type — line 291
+- `TrapPlacementReason` — type — line 299
+- `TrapState` — type — line 23
+- `trapStateLabel` — function — line 323
+- `TrapUseResult` — type — line 200
+- `TrapWeatherCatchup` — type — line 234
+- `trapWeatherWear` — function — line 223
 
 ## `world/beehives.ts`
 
@@ -1190,9 +1190,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/trapProp.ts`
 
-- `createTrapProp` — function — line 32
-- `disposeTrapProp` — function — line 102
-- `setTrapPropState` — function — line 88
+- `createTrapProp` — function — line 56
+- `disposeTrapProp` — function — line 132
+- `preloadTrapProps` — function — line 41
+- `setTrapPropState` — function — line 118
 
 ## `world/treeHarvest.ts`
 

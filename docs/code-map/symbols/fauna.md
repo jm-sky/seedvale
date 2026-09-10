@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 834
+- `AnimalAgent` — class — line 852
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 377
-- `AnimalAgentDeps` — type — line 702
-- `AnimalSaveState` — type — line 474
-- `AnimalUpdateContext` — type — line 733
-- `BURY_DURATION_SEC` — const — line 247
-- `canPredatorPursueIntoVillage` — function — line 532
-- `FAUNA_SHADOW_DISTANCE` — const — line 214
-- `FaunaAiBranch` — type — line 356
-- `FaunaNavRescueDebugInfo` — type — line 361
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 307
-- `FrenzyWolfCandidate` — type — line 637
-- `HARVEST_MEAT_DURATION_SEC` — const — line 250
-- `isWithinVillageRadius` — function — line 513
-- `NearbyNpcCandidate` — type — line 632
-- `pickNearestEligibleWolf` — function — line 646
-- `pickRabidTarget` — function — line 671
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 232
-- `resolveLureTarget` — function — line 561
-- `villageFleeBiasFalloff` — function — line 540
-- `VillageInfo` — type — line 507
+- `AnimalAgentDebugInfo` — type — line 388
+- `AnimalAgentDeps` — type — line 720
+- `AnimalSaveState` — type — line 489
+- `AnimalUpdateContext` — type — line 751
+- `BURY_DURATION_SEC` — const — line 258
+- `canPredatorPursueIntoVillage` — function — line 549
+- `FAUNA_SHADOW_DISTANCE` — const — line 225
+- `FaunaAiBranch` — type — line 367
+- `FaunaNavRescueDebugInfo` — type — line 372
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 318
+- `FrenzyWolfCandidate` — type — line 655
+- `HARVEST_MEAT_DURATION_SEC` — const — line 261
+- `isWithinVillageRadius` — function — line 530
+- `NearbyNpcCandidate` — type — line 650
+- `pickNearestEligibleWolf` — function — line 664
+- `pickRabidTarget` — function — line 689
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 243
+- `resolveLureTarget` — function — line 578
+- `villageFleeBiasFalloff` — function — line 557
+- `VillageInfo` — type — line 524
 
 ## `fauna/animalCorpse.ts`
 
@@ -72,22 +72,23 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 271
+- `ANIMAL_DEFS` — const — line 285
 - `ANIMAL_LABELS` — const — line 47
+- `AnimalAffinityConfig` — type — line 154
 - `AnimalDef` — type — line 66
-- `AnimalDietConfig` — type — line 170
+- `AnimalDietConfig` — type — line 184
 - `AnimalKind` — type — line 25
 - `AnimalLifeStage` — type — line 22
 - `AnimalRole` — type — line 14
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 18
-- `dietAcceptsItem` — function — line 256
-- `LivestockProductionConfig` — type — line 214
-- `LivestockProductKind` — type — line 201
-- `MountPointConfig` — type — line 192
-- `ScavengingConfig` — type — line 179
-- `WaterTripConfig` — type — line 149
+- `dietAcceptsItem` — function — line 270
+- `LivestockProductionConfig` — type — line 228
+- `LivestockProductKind` — type — line 215
+- `MountPointConfig` — type — line 206
+- `ScavengingConfig` — type — line 193
+- `WaterTripConfig` — type — line 163
 
 ## `fauna/animalDialogue.ts`
 
@@ -95,37 +96,54 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalForaging.ts`
 
-- `AnimalWaterSourceProvider` — type — line 89
-- `applySourceRelief` — function — line 496
-- `CarcassCandidate` — type — line 182
-- `carcassCandidateScore` — function — line 173
-- `carcassFoodValue` — function — line 155
-- `DRINK_DURATION_SEC` — const — line 64
-- `EAT_DURATION_SEC` — const — line 61
-- `findFoodTarget` — function — line 439
-- `findForageTarget` — function — line 318
-- `findGrassPatchTarget` — function — line 345
-- `findHouseholdTroughTarget` — function — line 259
-- `findTroughTarget` — const — line 266
-- `findWaterTarget` — function — line 290
-- `FOOD_INTERACTION_RANGE` — const — line 55
-- `forageEdgeScore` — function — line 103
-- `ForagingContext` — type — line 231
-- `isCarcassEdible` — function — line 129
-- `isSourceTargetValid` — function — line 451
-- `selectDietFeedKind` — function — line 114
-- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 68
-- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 73
-- `SourceTarget` — type — line 200
-- `SourceTargetKind` — type — line 199
-- `TROUGH_DRINK_AMOUNT` — const — line 76
-- `WATER_INTERACTION_RANGE` — const — line 58
-- `WaterSourceRef` — type — line 81
+- `AnimalWaterSourceProvider` — type — line 90
+- `applySourceRelief` — function — line 531
+- `canAcceptHandFeed` — function — line 137
+- `CarcassCandidate` — type — line 217
+- `carcassCandidateScore` — function — line 208
+- `carcassFoodValue` — function — line 190
+- `dietItemReliefScale` — function — line 127
+- `DRINK_DURATION_SEC` — const — line 65
+- `EAT_DURATION_SEC` — const — line 62
+- `findFoodTarget` — function — line 474
+- `findForageTarget` — function — line 353
+- `findGrassPatchTarget` — function — line 380
+- `findHouseholdTroughTarget` — function — line 294
+- `findTroughTarget` — const — line 301
+- `findWaterTarget` — function — line 325
+- `FOOD_INTERACTION_RANGE` — const — line 56
+- `forageEdgeScore` — function — line 104
+- `ForagingContext` — type — line 266
+- `isCarcassEdible` — function — line 164
+- `isSourceTargetValid` — function — line 486
+- `selectDietFeedKind` — function — line 115
+- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 69
+- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 74
+- `SourceTarget` — type — line 235
+- `SourceTargetKind` — type — line 234
+- `TROUGH_DRINK_AMOUNT` — const — line 77
+- `tryCommitHandFeed` — function — line 148
+- `WATER_INTERACTION_RANGE` — const — line 59
+- `WaterSourceRef` — type — line 82
 
 ## `fauna/animalHarvest.ts`
 
 - `AnimalHarvestResult` — type — line 7
 - `harvestAnimalIntoInventory` — function — line 29
+
+## `fauna/animalHumanAffinity.ts`
+
+- `AnimalAffinitySaveEntry` — type — line 16
+- `applyAffinityGain` — function — line 25
+- `clampAffinity` — function — line 20
+- `deserializeHumanAffinity` — function — line 46
+- `FAUNA_PLAYER_HUMAN_ID` — const — line 9
+  - domain: fauna
+  - role: Stable human identity + sparse per-animal affinity helpers (plan fauna-013). Affinity is individual animal → concrete person; it does not replace `ownerHouseId` / household familiarity.
+- `faunaNpcHumanId` — function — line 12
+- `isAffinityTrusted` — function — line 37
+- `serializeHumanAffinity` — function — line 41
+- `SparseHumanAffinity` — type — line 18
 
 ## `fauna/AnimalLife.ts`
 
@@ -231,7 +249,7 @@ Generated from exported TypeScript symbols.
 - `DogGuardWolfCandidate` — type — line 47
 - `DogPestCandidate` — type — line 101
 - `RecentVocalizeCandidate` — type — line 136
-- `resolveDogBarkStimulus` — function — line 147
+- `resolveDogBarkStimulus` — function — line 155
 - `resolveDogGuardTarget` — function — line 73
 - `resolveDogPestTarget` — function — line 111
 - `StrangerNpcCandidate` — type — line 138

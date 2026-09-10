@@ -187,11 +187,11 @@ Generated from exported TypeScript symbols.
 
 ## `items/heldToolVisual.ts`
 
-- `BRANCH_HELD_ATTACH` — const — line 188
+- `BRANCH_HELD_ATTACH` — const — line 187
 - `createHeldToolObject` — function — line 282
 - `findRightHandSocket` — function — line 259
 - `HELD_ATTACH` — const — line 32
-- `HELD_GLB` — const — line 197
+- `HELD_GLB` — const — line 196
 - `HeldAttach` — type — line 10
 - `HeldMountContext` — type — line 249
 - `mountAttachOnSocket` — function — line 352
@@ -297,9 +297,9 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemModels.ts`
 
-- `cloneItemGlb` — function — line 169
+- `cloneItemGlb` — function — line 174
 - `ITEM_GLB_SPECS` — const — line 15
-- `preloadItemGlbModels` — function — line 144
+- `preloadItemGlbModels` — function — line 149
 
 ## `items/items.ts`
 

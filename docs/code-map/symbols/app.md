@@ -112,9 +112,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 156
+- `createSurvivalActions` — function — line 159
 - `FeedableAnimal` — type — line 134
-- `feedAnimal` — function — line 147
+- `feedAnimal` — function — line 148
 - `hasCarriedMilkContainer` — function — line 124
 - `SurvivalActionLifecycle` — type — line 84
 - `SurvivalActions` — type — line 94
@@ -200,13 +200,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 571
+- `createGameLoop` — function — line 570
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 539
-- `GameLoopDeps` — type — line 276
+- `GameLoop` — type — line 538
+- `GameLoopDeps` — type — line 275
 
 ## `app/graphicsSettings.ts`
 
@@ -313,13 +313,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 622
-- `createWorldBundle` — function — line 1005
-- `disposeWorldBundle` — function — line 1406
-- `HOME_RADIUS` — const — line 95
-- `homeChunks` — function — line 106
-- `rebuildWorldBundle` — function — line 1203
-- `WorldBundle` — type — line 129
+- `BuiltWorldSystems` — type — line 624
+- `createWorldBundle` — function — line 1011
+- `disposeWorldBundle` — function — line 1412
+- `HOME_RADIUS` — const — line 97
+- `homeChunks` — function — line 108
+- `rebuildWorldBundle` — function — line 1209
+- `WorldBundle` — type — line 131
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

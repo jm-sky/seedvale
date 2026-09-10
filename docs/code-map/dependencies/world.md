@@ -43,6 +43,7 @@ Generated from TypeScript imports.
 
 - `fauna/animalDefs.ts`
 - `items/items.ts`
+- `settlement/propSpecs.ts`
 - `world/weather.ts`
 
 **Imported by**
@@ -227,7 +228,6 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/settlementGenerator.ts`
 - `terrain/chunkHeightmap.ts`
-- `world/caves/caveIdentity.ts`
 - `world/caves/caveSdfColliders.ts`
 - `world/caves/caveSdfField.ts`
 - `world/caves/caveSdfQuery.ts`
@@ -313,7 +313,6 @@ Generated from TypeScript imports.
 
 - `world/caveGenerator.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
-- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -2464,10 +2463,12 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `settlement/propSpecs.ts`
 - `world/animalTraps.ts`
 
 **Imported by**
 
+- `app/worldBundle.ts`
 - `world/createPlacedTraps.ts`
 
 ## `world/treeHarvest.ts`
