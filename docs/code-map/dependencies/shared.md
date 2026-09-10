@@ -39,6 +39,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/constructionWorkSession.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/gameLoop.ts`
 - `items/sensibleFood.test.ts`
@@ -113,6 +114,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/constructionWorkSession.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/gameLoop.ts`
 - `items/sensibleFood.test.ts`

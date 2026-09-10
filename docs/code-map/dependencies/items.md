@@ -91,6 +91,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/placementRequirementView.ts`
 - `app/actions/restActions.ts`
 - `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.test.ts`
@@ -237,6 +238,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/inspectionActions.ts`
 - `app/actions/restActions.ts`
 - `app/gameLoop.ts`
 - `interaction/targetedSkillAction.ts`
@@ -299,6 +301,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/actions/fullCampIntent.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementRequirementView.ts`
 - `app/actions/restActions.ts`
 - `app/inspection/buildWorldInspection.ts`
 - `items/campRepair.ts`
@@ -308,6 +311,7 @@ Generated from TypeScript imports.
 - `world/createSleepingUtilities.ts`
 - `world/palisade.test.ts`
 - `world/palisade.ts`
+- `world/playerGarden.ts`
 - `world/playerTrough.ts`
 - `world/playerWell.ts`
 - `world/residentialBuilding.ts`
@@ -370,6 +374,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/actions/placementRequirementView.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.test.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
@@ -878,6 +884,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementRequirementView.ts`
 - `app/actions/restActions.ts`
 - `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.test.ts`

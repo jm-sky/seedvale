@@ -60,6 +60,8 @@ Generated from exported TypeScript symbols.
 - `computeMaterialRecovery` — function — line 152
 - `CONSTRUCTION_MATERIAL_RADIUS` — const — line 12
 - `consumeMaterial` — function — line 113
+- `foldMaterialRequirements` — function — line 176
+- `formatMaterialAvailabilityLine` — function — line 191
 - `hasMaterial` — function — line 88
 - `materialAvailabilityBreakdown` — function — line 64
 - `MaterialAvailabilityView` — type — line 55
@@ -95,7 +97,7 @@ Generated from exported TypeScript symbols.
 
 ## `items/createItemSpawners.ts`
 
-- `createItemSpawners` — function — line 124
+- `createItemSpawners` — function — line 130
 - `ItemSpawners` — type — line 11
 - `OneTimeWorldItemPickup` — type — line 117
 

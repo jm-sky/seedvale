@@ -233,6 +233,8 @@ Generated from TypeScript imports.
 - `world/caves/topologyAdapter.test.ts`
 - `world/caves/topologyAdapter.ts`
 - `world/createCaves.ts`
+- `world/locations/darkForestTreasureSite.test.ts`
+- `world/locations/darkForestTreasureSite.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/worldLocationCatalog.test.ts`
@@ -420,6 +422,7 @@ Generated from TypeScript imports.
 - `world/caves/caveSdfExtraction.ts`
 - `world/caves/mouthCarve.ts`
 - `world/largeCaves.ts`
+- `world/locations/darkForestTreasureSite.ts`
 
 ## `world/caves/cavePresentationLifecycle.test.ts`
 
@@ -1773,6 +1776,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `world/caveVolume.ts`
 - `world/locations/darkForestTreasureSite.ts`
 
 ## `world/locations/darkForestTreasureSite.ts`
@@ -1782,6 +1786,8 @@ Generated from TypeScript imports.
 - `terrain/biomeRegions.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
+- `world/caveVolume.ts`
+- `world/caves/caveOrientation.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
@@ -2354,6 +2360,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/HeldTool.ts`
+- `items/constructionMaterials.ts`
 - `items/itemCatalog.ts`
 - `items/tentPlacement.ts`
 - `world/weather.ts`
@@ -2393,6 +2400,7 @@ Generated from TypeScript imports.
 
 - `app/actions/placementActions.ts`
 - `app/createApp.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
@@ -2708,6 +2716,7 @@ Generated from TypeScript imports.
 - `app/actions/restActions.ts`
 - `app/campRestSnapshot.ts`
 - `app/createApp.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/worldBundle.ts`
 - `items/campRepair.ts`
 - `items/createPlacedTents.test.ts`

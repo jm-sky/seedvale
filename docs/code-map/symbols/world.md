@@ -506,14 +506,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlayerTroughs.ts`
 
-- `createPlayerTroughs` — function — line 51
+- `createPlayerTroughs` — function — line 52
   - domain: items-player
 - `PlayerTroughEntry` — type — line 16
 - `PlayerTroughs` — type — line 32
 
 ## `world/createPlayerWells.ts`
 
-- `createPlayerWells` — function — line 89
+- `createPlayerWells` — function — line 90
 - `PlayerWellEntry` — type — line 22
 - `PlayerWells` — type — line 24
 
@@ -538,14 +538,14 @@ Generated from exported TypeScript symbols.
 ## `world/createSleepingUtilities.ts`
 
 - `BedrollEntry` — type — line 20
-- `createSleepingUtilities` — function — line 85
+- `createSleepingUtilities` — function — line 87
   - domain: items-player
 - `PlatformEntry` — type — line 21
 - `SleepingUtilities` — type — line 36
 
 ## `world/createStandingTorches.ts`
 
-- `createStandingTorches` — function — line 71
+- `createStandingTorches` — function — line 72
   - domain: items-player
 - `StandingTorchEntry` — type — line 17
 - `StandingTorches` — type — line 31
@@ -720,19 +720,30 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/darkForestTreasureSite.ts`
 
-- `DARK_FOREST_TREASURE_CHEST_COINS` — const — line 207
-- `DARK_FOREST_TREASURE_LANDMARK_ID` — const — line 18
-- `DARK_FOREST_TREASURE_LOCATION_ID` — const — line 16
-- `DARK_FOREST_TREASURE_SITE_KEY` — const — line 14
-- `darkForestTreasureChestId` — function — line 20
-- `DarkForestTreasureSite` — type — line 28
-- `DarkForestTreasureSiteInput` — type — line 44
-- `darkForestTreasureWolfDenId` — function — line 24
-- `isDarkForestTreasureChestLooted` — function — line 209
-- `resolveDarkForestTreasureSite` — function — line 144
+- `caveWorldLocationId` — function — line 80
+- `DARK_FOREST_TREASURE_CHEST_COINS` — const — line 351
+- `DARK_FOREST_TREASURE_LANDMARK_ID` — const — line 20
+- `DARK_FOREST_TREASURE_LOCATION_ID` — const — line 18
+- `DARK_FOREST_TREASURE_SITE_KEY` — const — line 16
+- `darkForestTreasureChestId` — function — line 22
+- `darkForestTreasureMapPickupId` — function — line 30
+- `DarkForestTreasureSite` — type — line 52
+- `DarkForestTreasureSiteInput` — type — line 68
+- `darkForestTreasureWolfDenId` — function — line 26
+- `isDarkForestTreasureChestLooted` — function — line 353
+- `resolveDarkForestTreasureSite` — function — line 177
   - domain: quests-progression
-- `ruinsDiscoveryRadius` — function — line 229
-- `siteChunkContainsPoint` — function — line 215
+- `resolveTreasureMapSourcePlace` — function — line 304
+  - domain: quests-progression
+- `ResolveTreasureMapSourcePlaceInput` — type — line 240
+- `ruinsDiscoveryRadius` — function — line 373
+- `siteChunkContainsPoint` — function — line 359
+- `TREASURE_MAP_SOURCE_PREFERRED_MAX` — const — line 77
+- `TREASURE_MAP_SOURCE_PREFERRED_MIN` — const — line 76
+- `TreasureMapSourceCandidate` — type — line 231
+- `TreasureMapSourceKind` — type — line 35
+- `TreasureMapSourcePlace` — type — line 41
+- `withTreasureMapSourcePlace` — function — line 343
 
 ## `world/locations/darkForestTreasureSiteRuntime.ts`
 
@@ -952,10 +963,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/placementPreview.ts`
 
-- `createPlacementPreviewGhost` — function — line 62
-- `placementEntranceMarkerLocalZ` — function — line 58
+- `createPlacementPreviewGhost` — function — line 63
+- `placementEntranceMarkerLocalZ` — function — line 59
 - `PlacementPreviewFootprint` — type — line 5
-- `PlacementPreviewGhost` — type — line 40
+- `PlacementPreviewGhost` — type — line 41
 
 ## `world/plantedCrops.ts`
 
@@ -984,132 +995,135 @@ Generated from exported TypeScript symbols.
 
 ## `world/playerGarden.ts`
 
-- `applyCultivationMaintenance` — function — line 157
-- `applyGardenWatering` — function — line 310
-- `CARE_DEGRADATION_PER_DAY` — const — line 118
-- `CARE_MAINTAINED_THRESHOLD` — const — line 120
-- `CARE_NEGLECTED_THRESHOLD` — const — line 121
-- `CARE_REMOVAL_THRESHOLD` — const — line 125
-- `CultivationStatus` — type — line 127
-- `cultivationYieldCount` — function — line 350
-- `DROUGHT_STRESS_CAP_DAYS` — const — line 230
-- `DROUGHT_STRESS_MAX_STEPS` — const — line 227
-- `DROUGHT_STRESS_PERCENT_PER_STEP` — const — line 226
-- `DROUGHT_STRESS_STEP_DAYS` — const — line 225
-- `droughtYieldMultiplier` — function — line 243
-- `findNearestGarden` — function — line 84
-- `GARDEN_CAPABILITY` — const — line 52
-- `GARDEN_COST` — const — line 48
-- `GARDEN_FOOTPRINT_RADIUS` — const — line 56
-- `GARDEN_PLACE_DURATION_SEC` — const — line 61
-- `GARDEN_PLACE_REACH` — const — line 59
-- `GARDEN_PLACEMENT_MESSAGE` — const — line 71
-- `GARDEN_SEPARATION` — const — line 57
-- `GardenHydrationState` — type — line 248
-- `GardenMaterialCost` — type — line 47
-- `GardenPlacementReason` — type — line 69
-- `gardenPlotPromptLabel` — function — line 371
-- `getCultivationStatus` — function — line 129
-- `HYDRATION_DROUGHT_THRESHOLD` — const — line 210
-- `HYDRATION_DRY_RATE_PER_DAY` — const — line 195
-- `HYDRATION_RAIN_GAIN_PER_DAY` — const — line 207
-- `HYDRATION_SIM_WINDOW_DAYS` — const — line 223
-- `MAINTENANCE_BASE_DURATION_SEC` — const — line 172
-- `MAINTENANCE_CARE_GAIN` — const — line 152
-- `MAINTENANCE_TOOL_DURATION_SEC` — const — line 178
-- `maintenanceDurationSec` — function — line 181
-- `PLAYER_GARDEN_PLANT_RADIUS` — const — line 67
-- `PlayerGardenRecord` — type — line 27
-- `resolveCultivationCare` — function — line 142
-- `resolveGardenHydration` — function — line 269
-- `resolveGardenHydrationAfterHarvest` — function — line 322
-- `WATERING_DURATION_SEC` — const — line 203
-- `WATERING_HYDRATION_GAIN` — const — line 197
-- `WATERING_LITRES` — const — line 200
-- `weedGrowthMultiplier` — function — line 234
+- `applyCultivationMaintenance` — function — line 165
+- `applyGardenWatering` — function — line 318
+- `CARE_DEGRADATION_PER_DAY` — const — line 126
+- `CARE_MAINTAINED_THRESHOLD` — const — line 128
+- `CARE_NEGLECTED_THRESHOLD` — const — line 129
+- `CARE_REMOVAL_THRESHOLD` — const — line 133
+- `CultivationStatus` — type — line 135
+- `cultivationYieldCount` — function — line 358
+- `DROUGHT_STRESS_CAP_DAYS` — const — line 238
+- `DROUGHT_STRESS_MAX_STEPS` — const — line 235
+- `DROUGHT_STRESS_PERCENT_PER_STEP` — const — line 234
+- `DROUGHT_STRESS_STEP_DAYS` — const — line 233
+- `droughtYieldMultiplier` — function — line 251
+- `findNearestGarden` — function — line 92
+- `GARDEN_CAPABILITY` — const — line 60
+- `GARDEN_COST` — const — line 49
+- `GARDEN_FOOTPRINT_RADIUS` — const — line 64
+- `GARDEN_PLACE_DURATION_SEC` — const — line 69
+- `GARDEN_PLACE_REACH` — const — line 67
+- `GARDEN_PLACEMENT_MESSAGE` — const — line 79
+- `GARDEN_SEPARATION` — const — line 65
+- `GardenHydrationState` — type — line 256
+- `GardenMaterialCost` — type — line 48
+- `gardenMaterialRequirements` — function — line 51
+- `GardenPlacementReason` — type — line 77
+- `gardenPlotPromptLabel` — function — line 379
+- `getCultivationStatus` — function — line 137
+- `HYDRATION_DROUGHT_THRESHOLD` — const — line 218
+- `HYDRATION_DRY_RATE_PER_DAY` — const — line 203
+- `HYDRATION_RAIN_GAIN_PER_DAY` — const — line 215
+- `HYDRATION_SIM_WINDOW_DAYS` — const — line 231
+- `MAINTENANCE_BASE_DURATION_SEC` — const — line 180
+- `MAINTENANCE_CARE_GAIN` — const — line 160
+- `MAINTENANCE_TOOL_DURATION_SEC` — const — line 186
+- `maintenanceDurationSec` — function — line 189
+- `PLAYER_GARDEN_PLANT_RADIUS` — const — line 75
+- `PlayerGardenRecord` — type — line 28
+- `resolveCultivationCare` — function — line 150
+- `resolveGardenHydration` — function — line 277
+- `resolveGardenHydrationAfterHarvest` — function — line 330
+- `WATERING_DURATION_SEC` — const — line 211
+- `WATERING_HYDRATION_GAIN` — const — line 205
+- `WATERING_LITRES` — const — line 208
+- `weedGrowthMultiplier` — function — line 242
 
 ## `world/playerTrough.ts`
 
-- `clampPlayerTroughWaterLitres` — function — line 72
-- `isPlayerTroughConstructionComplete` — function — line 64
+- `clampPlayerTroughWaterLitres` — function — line 75
+- `isPlayerTroughConstructionComplete` — function — line 67
 - `PLAYER_TROUGH_CAPACITY_LITRES` — const — line 25
-- `PLAYER_TROUGH_FILL_DURATION_SEC` — const — line 58
+- `PLAYER_TROUGH_FILL_DURATION_SEC` — const — line 61
 - `PLAYER_TROUGH_FOOTPRINT_RADIUS` — const — line 29
 - `PLAYER_TROUGH_MATERIAL_REQUIREMENTS` — const — line 47
 - `PLAYER_TROUGH_PLACE_DURATION_SEC` — const — line 32
 - `PLAYER_TROUGH_PLACE_REACH` — const — line 31
 - `PLAYER_TROUGH_PLACEMENT_MESSAGE` — const — line 36
-- `PLAYER_TROUGH_REQUIRED_WORK` — const — line 52
+- `PLAYER_TROUGH_RECOVERY_RATE` — const — line 52
+- `PLAYER_TROUGH_REQUIRED_WORK` — const — line 55
 - `PLAYER_TROUGH_SEPARATION` — const — line 30
-- `PLAYER_TROUGH_WORK_SESSION_HOURS` — const — line 54
-- `PLAYER_TROUGH_WORK_SESSION_SEC` — const — line 53
-- `playerTroughFreeCapacity` — function — line 68
+- `PLAYER_TROUGH_WORK_SESSION_HOURS` — const — line 57
+- `PLAYER_TROUGH_WORK_SESSION_SEC` — const — line 56
+- `playerTroughFreeCapacity` — function — line 71
 - `PlayerTroughPlacementReason` — type — line 34
-- `playerTroughPromptLabel` — function — line 76
+- `playerTroughPromptLabel` — function — line 79
 - `PlayerTroughRecord` — type — line 14
   - domain: items-player
-- `playerTroughRemainingWork` — function — line 60
+- `playerTroughRemainingWork` — function — line 63
 
 ## `world/playerWell.ts`
 
-- `activeWellStage` — function — line 542
-- `advanceWellConstruction` — function — line 317
-- `applyWellRoofConditionDelta` — function — line 477
+- `activeWellStage` — function — line 546
+- `advanceWellConstruction` — function — line 321
+- `applyWellRoofConditionDelta` — function — line 481
   - domain: world
-- `applyWellRoofRepairWork` — function — line 272
+- `applyWellRoofRepairWork` — function — line 276
   - domain: world
-- `beginWellRoofRepair` — function — line 235
+- `beginWellRoofRepair` — function — line 239
   - domain: world
-- `formatHours` — function — line 602
-- `formatWorkDuration` — function — line 607
+- `formatHours` — function — line 606
+- `formatWorkDuration` — function — line 611
 - `getWellPitWorkHours` — function — line 89
-- `hasActiveWellRoofRepair` — function — line 181
-- `hasWellRoofCondition` — function — line 402
-- `initializeWellRoofCondition` — function — line 421
+- `hasActiveWellRoofRepair` — function — line 185
+- `hasWellRoofCondition` — function — line 406
+- `initializeWellRoofCondition` — function — line 425
   - domain: world
-- `initialWellRoofCondition` — function — line 408
-- `isWellCompleted` — function — line 381
-- `isWellStageWorkComplete` — function — line 372
-- `isWellWaterAvailable` — function — line 499
-- `NearbyPlayerWellLookup` — type — line 644
-- `nextWellStage` — function — line 367
+- `initialWellRoofCondition` — function — line 412
+- `isWellCompleted` — function — line 385
+- `isWellStageWorkComplete` — function — line 376
+- `isWellWaterAvailable` — function — line 503
+- `NearbyPlayerWellLookup` — type — line 648
+- `nextWellStage` — function — line 371
 - `PlayerWellRecord` — type — line 37
-- `quoteWellRoofRepair` — function — line 208
+- `quoteWellRoofRepair` — function — line 212
   - domain: world
-- `resolveWellRoofCondition` — function — line 436
+- `resolveWellRoofCondition` — function — line 440
   - domain: world
-- `WELL_FOOTPRINT_RADIUS` — const — line 559
-- `WELL_PLACE_DURATION_SEC` — const — line 565
-- `WELL_PLACE_REACH` — const — line 562
-- `WELL_PLACEMENT_MESSAGE` — const — line 549
-- `WELL_ROOF_PASSIVE_DECAY_PER_DAY` — const — line 389
-- `WELL_ROOF_RAIN_DECAY_PER_DAY` — const — line 390
-- `WELL_ROOF_REPAIR_COST_FACTOR` — const — line 160
-- `WELL_ROOF_REPAIR_WORK_LABEL` — const — line 583
-- `WELL_ROOF_SIM_WINDOW_DAYS` — const — line 392
-- `WELL_ROOF_SNOW_DECAY_PER_DAY` — const — line 391
-- `WELL_SEPARATION` — const — line 560
+- `WELL_FOOTPRINT_RADIUS` — const — line 563
+- `WELL_PLACE_DURATION_SEC` — const — line 569
+- `WELL_PLACE_REACH` — const — line 566
+- `WELL_PLACEMENT_MESSAGE` — const — line 553
+- `WELL_RECOVERY_RATE` — const — line 159
+- `WELL_ROOF_PASSIVE_DECAY_PER_DAY` — const — line 393
+- `WELL_ROOF_RAIN_DECAY_PER_DAY` — const — line 394
+- `WELL_ROOF_REPAIR_COST_FACTOR` — const — line 164
+- `WELL_ROOF_REPAIR_WORK_LABEL` — const — line 587
+- `WELL_ROOF_SIM_WINDOW_DAYS` — const — line 396
+- `WELL_ROOF_SNOW_DECAY_PER_DAY` — const — line 395
+- `WELL_SEPARATION` — const — line 564
 - `WELL_STAGE_CAPABILITY` — const — line 124
 - `WELL_STAGE_COST` — const — line 112
-- `WELL_STAGE_START_PROMPT` — const — line 586
+- `WELL_STAGE_START_PROMPT` — const — line 590
 - `WELL_STAGE_WORK_HOURS` — const — line 75
-- `WELL_WATER_UNAVAILABLE_DURING_REPAIR` — const — line 505
-- `WELL_WORK_LABEL` — const — line 593
-- `WELL_WORK_SESSION_HOURS` — const — line 580
-- `WELL_WORK_SESSION_SEC` — const — line 571
+- `WELL_WATER_UNAVAILABLE_DURING_REPAIR` — const — line 509
+- `WELL_WORK_LABEL` — const — line 597
+- `WELL_WORK_SESSION_HOURS` — const — line 584
+- `WELL_WORK_SESSION_SEC` — const — line 575
 - `WellMaterialCost` — type — line 106
-- `WellPlacementReason` — type — line 547
-- `wellPromptLabel` — function — line 619
-- `wellRemainingWork` — function — line 352
-- `wellRoofProtectionFactor` — function — line 465
-- `WellRoofRepairQuote` — type — line 162
-- `WellRoofRepairStartOutcome` — type — line 169
+- `WellPlacementReason` — type — line 551
+- `wellPromptLabel` — function — line 623
+- `wellRemainingWork` — function — line 356
+- `wellRoofProtectionFactor` — function — line 469
+- `WellRoofRepairQuote` — type — line 166
+- `WellRoofRepairStartOutcome` — type — line 173
 - `WellStage` — type — line 30
 - `wellStageCapabilities` — function — line 137
 - `wellStageRequirements` — function — line 149
 - `wellStageWorkHours` — function — line 102
-- `wellWaterSource` — function — line 515
-- `WellWorkOutcome` — type — line 304
+- `wellWaterSource` — function — line 519
+- `WellWorkOutcome` — type — line 308
 
 ## `world/playerWellProp.ts`
 
@@ -1138,14 +1152,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/residentialBuilding.ts`
 
-- `applyResidentialBuildingWork` — function — line 309
-- `coveringPreparationSize` — function — line 382
-- `createUnfinishedResidentialBuildingRecord` — function — line 273
-- `isPlayerOwnedResidentialBuilding` — function — line 240
+- `applyResidentialBuildingWork` — function — line 317
+- `coveringPreparationSize` — function — line 390
+- `createUnfinishedResidentialBuildingRecord` — function — line 281
+- `isPlayerOwnedResidentialBuilding` — function — line 248
 - `isResidentialBuildingComplete` — function — line 157
 - `isResidentialBuildingMaterialBlocked` — function — line 161
 - `isResidentialConstructionStage` — function — line 122
-- `nextResidentialConstructionStage` — function — line 181
+- `nextResidentialConstructionStage` — function — line 189
 - `RESIDENTIAL_BUILDING_DEFINITIONS` — const — line 99
 - `RESIDENTIAL_BUILDING_MATERIAL_BLOCK_WAIT_SEC` — const — line 145
 - `RESIDENTIAL_BUILDING_PLACE_DURATION_SEC` — const — line 140
@@ -1153,34 +1167,35 @@ Generated from exported TypeScript symbols.
 - `RESIDENTIAL_BUILDING_WORK_SESSION_SEC` — const — line 141
 - `RESIDENTIAL_CONSTRUCTION_STAGES` — const — line 69
 - `RESIDENTIAL_PLACEMENT_MESSAGE` — const — line 149
-- `residentialBuildingApproachLocal` — function — line 248
-- `residentialBuildingApproachPoint` — function — line 268
-- `residentialBuildingCompletedWork` — function — line 211
+- `residentialBuildingApproachLocal` — function — line 256
+- `residentialBuildingApproachPoint` — function — line 276
+- `residentialBuildingCompletedWork` — function — line 219
 - `residentialBuildingDefinition` — function — line 118
 - `ResidentialBuildingDefinition` — type — line 60
 - `residentialBuildingFootprintRadius` — function — line 126
 - `ResidentialBuildingKind` — type — line 17
   - domain: settlements
-- `residentialBuildingLodgingId` — function — line 366
+- `residentialBuildingLodgingId` — function — line 374
 - `residentialBuildingPlaceReach` — function — line 135
-- `residentialBuildingPromptLabel` — function — line 370
+- `residentialBuildingPromptLabel` — function — line 378
 - `ResidentialBuildingRecord` — type — line 33
-- `residentialBuildingRemainingWork` — function — line 193
+- `residentialBuildingRemainingWork` — function — line 201
 - `residentialBuildingSeparation` — function — line 131
 - `ResidentialBuildingStage` — type — line 21
-- `residentialBuildingTotalRemainingWork` — function — line 226
-- `residentialBuildingTotalRequiredWork` — function — line 201
+- `residentialBuildingTotalRemainingWork` — function — line 234
+- `residentialBuildingTotalRequiredWork` — function — line 209
 - `ResidentialConstructionStage` — type — line 19
-- `residentialConstructionStageLabel` — function — line 230
-- `residentialHomePlaceId` — function — line 236
+- `residentialConstructionStageLabel` — function — line 238
+- `residentialHomePlaceId` — function — line 244
 - `ResidentialOwner` — type — line 27
 - `ResidentialPlacementReason` — type — line 147
 - `ResidentialStageDefinition` — type — line 55
 - `residentialStageRequiredWork` — function — line 167
 - `residentialStageRequirements` — function — line 174
-- `ResidentialWorkContribution` — type — line 297
-- `rotateLocalToWorld` — function — line 253
-- `supplyResidentialStageMaterials` — function — line 359
+- `residentialTotalRequirements` — function — line 184
+- `ResidentialWorkContribution` — type — line 305
+- `rotateLocalToWorld` — function — line 261
+- `supplyResidentialStageMaterials` — function — line 367
 
 ## `world/residentialBuildingProp.ts`
 
@@ -1252,33 +1267,35 @@ Generated from exported TypeScript symbols.
 
 - `BEDROLL_FOOTPRINT_RADIUS` — const — line 55
 - `BEDROLL_MATERIAL_REQUIREMENTS` — const — line 68
-- `BEDROLL_ON_PLATFORM_RADIUS` — const — line 100
+- `BEDROLL_ON_PLATFORM_RADIUS` — const — line 102
 - `BEDROLL_PLACE_DURATION_SEC` — const — line 58
 - `BEDROLL_PLACE_REACH` — const — line 57
-- `BEDROLL_PLACEMENT_MESSAGE` — const — line 75
-- `BEDROLL_REST_RADIUS` — const — line 94
+- `BEDROLL_PLACEMENT_MESSAGE` — const — line 77
+- `BEDROLL_RECOVERY_RATE` — const — line 71
+- `BEDROLL_REST_RADIUS` — const — line 96
 - `BEDROLL_SEPARATION` — const — line 56
-- `BedrollPlacementReason` — type — line 72
+- `BedrollPlacementReason` — type — line 74
 - `BedrollRecord` — type — line 26
-- `findNearestSleepingUtility` — function — line 106
+- `findNearestSleepingUtility` — function — line 108
 - `PLATFORM_FOOTPRINT_RADIUS` — const — line 60
 - `PLATFORM_MATERIAL_REQUIREMENTS` — const — line 70
 - `PLATFORM_PLACE_DURATION_SEC` — const — line 63
 - `PLATFORM_PLACE_REACH` — const — line 62
-- `PLATFORM_PLACEMENT_MESSAGE` — const — line 83
+- `PLATFORM_PLACEMENT_MESSAGE` — const — line 85
+- `PLATFORM_RECOVERY_RATE` — const — line 72
 - `PLATFORM_SEPARATION` — const — line 61
-- `PlatformPlacementReason` — type — line 73
+- `PlatformPlacementReason` — type — line 75
 - `PlatformRecord` — type — line 41
-- `resolveSleepingUtilityCondition` — function — line 199
-- `resolveWeatherDrivenCondition` — function — line 157
+- `resolveSleepingUtilityCondition` — function — line 201
+- `resolveWeatherDrivenCondition` — function — line 159
   - domain: items-player
-- `SLEEPING_UTILITY_CONDITION_MAX` — const — line 126
-- `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 132
-- `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 138
-- `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 133
+- `SLEEPING_UTILITY_CONDITION_MAX` — const — line 128
+- `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 134
+- `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 140
+- `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 135
 - `SleepingUtilityVariant` — type — line 24
   - domain: items-player
-- `WeatherDrivenConditionRates` — type — line 140
+- `WeatherDrivenConditionRates` — type — line 142
 
 ## `world/sleepingUtilityProp.ts`
 
@@ -1295,25 +1312,26 @@ Generated from exported TypeScript symbols.
 
 ## `world/standingTorch.ts`
 
-- `isStandingTorchConstructionComplete` — function — line 128
-- `resolveStandingTorchBurnState` — function — line 104
+- `isStandingTorchConstructionComplete` — function — line 131
+- `resolveStandingTorchBurnState` — function — line 107
   - domain: items-player
-- `STANDING_TORCH_BURN_DURATION_DAYS` — const — line 95
+- `STANDING_TORCH_BURN_DURATION_DAYS` — const — line 98
 - `STANDING_TORCH_FOOTPRINT_RADIUS` — const — line 46
 - `STANDING_TORCH_MATERIAL_REQUIREMENTS` — const — line 77
 - `STANDING_TORCH_PLACE_DURATION_SEC` — const — line 53
 - `STANDING_TORCH_PLACE_REACH` — const — line 50
 - `STANDING_TORCH_PLACEMENT_MESSAGE` — const — line 60
-- `STANDING_TORCH_REQUIRED_WORK` — const — line 86
+- `STANDING_TORCH_RECOVERY_RATE` — const — line 83
+- `STANDING_TORCH_REQUIRED_WORK` — const — line 89
 - `STANDING_TORCH_SEPARATION` — const — line 47
-- `STANDING_TORCH_WORK_SESSION_HOURS` — const — line 92
-- `STANDING_TORCH_WORK_SESSION_SEC` — const — line 89
-- `standingTorchBurnUntilDays` — function — line 115
+- `STANDING_TORCH_WORK_SESSION_HOURS` — const — line 95
+- `STANDING_TORCH_WORK_SESSION_SEC` — const — line 92
+- `standingTorchBurnUntilDays` — function — line 118
 - `StandingTorchPlacementReason` — type — line 55
-- `standingTorchPromptLabel` — function — line 136
+- `standingTorchPromptLabel` — function — line 139
 - `StandingTorchRecord` — type — line 30
   - domain: items-player
-- `standingTorchRemainingWork` — function — line 121
+- `standingTorchRemainingWork` — function — line 124
 
 ## `world/standingTorchProp.ts`
 

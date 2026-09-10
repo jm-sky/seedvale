@@ -67,6 +67,29 @@ Generated from TypeScript imports.
 - `ui/createPauseMenu.ts`
 - `ui/createQuickActions.ts`
 
+## `app/actions/constructionWorkSession.test.ts`
+
+**Imports**
+
+- `app/actions/constructionWorkSession.ts`
+- `app/busyAction.ts`
+- `player/PlayerNeeds.ts`
+
+## `app/actions/constructionWorkSession.ts`
+
+**Imports**
+
+- `app/busyAction.ts`
+- `player/PlayerNeeds.ts`
+- `shared/HungerState.ts`
+- `shared/ThirstState.ts`
+
+**Imported by**
+
+- `app/actions/constructionWorkSession.test.ts`
+- `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
+
 ## `app/actions/containerActions.ts`
 
 **Imports**
@@ -263,10 +286,13 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/actionContracts.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
+- `app/campRestSnapshot.ts`
 - `app/inspection/buildWorldInspection.ts`
 - `app/inspection/inspectionTarget.ts`
 - `app/inspection/worldInspectionView.ts`
 - `interaction/Interactable.ts`
+- `items/campRepair.ts`
 - `ui-vue/mount.ts`
 - `world/WaterSource.ts`
 - `world/workContract.ts`
@@ -312,6 +338,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `app/actions/constructionWorkSession.ts`
+- `app/actions/placementRequirementView.ts`
 - `app/actions/placementYaw.ts`
 - `audio/actionSounds.ts`
 - `items/constructionMaterials.ts`
@@ -352,8 +380,10 @@ Generated from TypeScript imports.
 - `app/actions/terrainPreparationActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/createApp.ts`
+- `app/gameLoop.ts`
 - `app/inspection/buildWorldInspection.ts`
 - `app/userActions.ts`
+- `interaction/interactionView.ts`
 
 ## `app/actions/placementPreviewActions.ts`
 
@@ -363,6 +393,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContracts.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementRequirementView.ts`
 - `app/actions/placementYaw.ts`
 - `app/actions/workContractActions.ts`
 - `world/placementPreview.ts`
@@ -373,6 +404,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/fullCampIntent.ts`
 - `app/createApp.ts`
+- `app/userActions.ts`
 - `ui-vue/store.ts`
 - `ui/createQuickActions.ts`
 
@@ -381,6 +413,29 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/placementActions.ts`
+
+## `app/actions/placementRequirementView.test.ts`
+
+**Imports**
+
+- `app/actions/placementRequirementView.ts`
+
+## `app/actions/placementRequirementView.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/constructionMaterials.ts`
+- `items/createDroppedItems.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/actions/placementActions.ts`
+- `app/actions/placementPreviewActions.ts`
+- `app/actions/placementRequirementView.test.ts`
+- `app/userActions.ts`
+- `ui-vue/store.ts`
 
 ## `app/actions/placementYaw.test.ts`
 
@@ -403,6 +458,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `app/actions/constructionWorkSession.ts`
 - `app/campRest.ts`
 - `app/campRestSnapshot.ts`
 - `items/Inventory.ts`
@@ -429,7 +485,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/inspectionActions.ts`
 - `app/createApp.ts`
+- `app/inspection/buildWorldInspection.ts`
 
 ## `app/actions/storageInfestationActions.ts`
 
@@ -602,6 +660,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/constructionWorkSession.test.ts`
+- `app/actions/constructionWorkSession.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
 - `app/actions/fullCampIntent.test.ts`
@@ -661,8 +721,10 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/fullCampIntent.ts`
+- `app/actions/inspectionActions.ts`
 - `app/actions/restActions.ts`
 - `app/campRestSnapshot.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 
 ## `app/createApp.ts`
@@ -833,6 +895,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
+- `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyAction.ts`
 - `app/inspection/inspectionTarget.ts`
@@ -977,17 +1040,22 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
+- `app/campRestSnapshot.ts`
 - `app/inspection/worldInspectionView.ts`
 - `items/Inventory.ts`
 - `items/constructionMaterials.ts`
+- `items/createDroppedItems.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
 - `terrain/terrainPreparation.ts`
 - `world/WaterSource.ts`
 - `world/palisade.ts`
+- `world/playerTrough.ts`
 - `world/playerWell.ts`
 - `world/residentialBuilding.ts`
+- `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 - `world/workContract.ts`
 
@@ -1256,6 +1324,8 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContracts.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementPreviewActions.ts`
+- `app/actions/placementRequirementView.ts`
 - `app/worldBundle.ts`
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`

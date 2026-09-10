@@ -19,6 +19,14 @@ Generated from exported TypeScript symbols.
 - `toAvailability` — function — line 46
 - `toResult` — function — line 51
 
+## `app/actions/constructionWorkSession.ts`
+
+- `ConstructionWorkSessionSpec` — type — line 12
+- `maxSafeConstructionHours` — function — line 28
+  - domain: ui-input
+- `startConstructionWorkSession` — function — line 52
+  - domain: ui-input
+
 ## `app/actions/containerActions.ts`
 
 - `ContainerActionDeps` — type — line 57
@@ -54,9 +62,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/inspectionActions.ts`
 
-- `createInspectionActions` — function — line 53
-- `InspectionActionDeps` — type — line 20
-- `InspectionActions` — type — line 40
+- `createInspectionActions` — function — line 94
+- `InspectionActionDeps` — type — line 29
+- `InspectionActions` — type — line 81
 
 ## `app/actions/leadActions.ts`
 
@@ -73,29 +81,49 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 416
-- `evaluatePlacementSite` — function — line 253
-- `GroundPlacementDefinition` — type — line 236
+- `ConstructionActionView` — type — line 323
+- `createPlacementActions` — function — line 482
+- `evaluatePlacementSite` — function — line 278
+- `GroundPlacementDefinition` — type — line 261
   - domain: world
-- `GroundPlacementSite` — type — line 220
-- `PlacementActions` — type — line 295
-- `PlacementBlocker` — type — line 195
-- `PlacementMutationLifecycle` — type — line 247
-- `PlacementPreviewResult` — type — line 206
-- `previewGroundPlacement` — function — line 263
-- `WellRoofRepairView` — type — line 286
-- `WellWorkView` — type — line 279
+- `GroundPlacementSite` — type — line 245
+- `PlacementActions` — type — line 342
+- `PlacementBlocker` — type — line 211
+- `PlacementMutationLifecycle` — type — line 272
+- `PlacementPreviewResult` — type — line 222
+- `previewGroundPlacement` — function — line 288
+- `RemovalPreview` — type — line 335
+- `ResidentialWorkView` — type — line 328
+- `WellRoofRepairView` — type — line 314
+- `WellWorkView` — type — line 307
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 153
-- `PlacementPreviewActionDeps` — type — line 96
-- `PlacementPreviewActions` — type — line 132
-- `PlacementPreviewConfirmResult` — type — line 49
-- `PlacementPreviewKind` — type — line 23
+- `createPlacementPreviewActions` — function — line 232
+- `FirePreviewKind` — type — line 157
+- `PlacementPreviewActionDeps` — type — line 159
+- `PlacementPreviewActions` — type — line 199
+- `PlacementPreviewConfirmResult` — type — line 60
+- `PlacementPreviewKind` — type — line 25
   - domain: ui-input
-- `PlacementPreviewLifecycle` — type — line 55
-- `PlacementPreviewUiView` — type — line 39
+- `PlacementPreviewLifecycle` — type — line 66
+- `PlacementPreviewUiView` — type — line 44
+
+## `app/actions/placementRequirementView.ts`
+
+- `derivePlacementPresentation` — function — line 95
+  - domain: ui-input
+- `formatMaterialCost` — function — line 80
+- `formatPlacementRequirement` — function — line 70
+- `formatRecoveryLines` — function — line 84
+- `missingMaterialsReason` — function — line 74
+- `PlacementConfirmKind` — type — line 19
+- `PlacementPresentation` — type — line 31
+- `PlacementPreviewState` — type — line 17
+- `placementRequirementView` — function — line 46
+  - domain: ui-input
+- `PlacementRequirementView` — type — line 21
+- `placementRequirementViews` — function — line 58
 
 ## `app/actions/placementYaw.ts`
 
@@ -107,11 +135,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 148
+- `CampRepairView` — type — line 70
+- `createRestActions` — function — line 158
 - `LodgingChoiceAction` — type — line 60
 - `REST_IN_TOWN_RADIUS` — const — line 68
-- `RestActionDeps` — type — line 131
-- `RestActions` — type — line 74
+- `RestActionDeps` — type — line 141
+- `RestActions` — type — line 82
 
 ## `app/actions/storageInfestationActions.ts`
 
@@ -214,13 +243,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 582
+- `createGameLoop` — function — line 604
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 550
-- `GameLoopDeps` — type — line 284
+- `GameLoop` — type — line 572
+- `GameLoopDeps` — type — line 286
 
 ## `app/graphicsSettings.ts`
 
@@ -230,50 +259,52 @@ Generated from exported TypeScript symbols.
 
 ## `app/inspection/buildWorldInspection.ts`
 
-- `buildWorldInspection` — function — line 97
-- `listWaterContainerOptions` — function — line 595
-- `liveWellWaterSource` — function — line 641
-- `WorldInspectionLookup` — type — line 80
+- `buildWorldInspection` — function — line 127
+- `listWaterContainerOptions` — function — line 831
+- `liveWellWaterSource` — function — line 877
+- `WorldInspectionLookup` — type — line 91
 
 ## `app/inspection/inspectionTarget.ts`
 
-- `contractTargetFor` — function — line 24
+- `contractTargetFor` — function — line 33
 - `inspectionTargetRef` — function — line 10
 
 ## `app/inspection/worldInspectionView.ts`
 
-- `InspectionAction` — type — line 72
-- `InspectionActionId` — type — line 61
-- `InspectionContractRow` — type — line 43
+- `InspectionAction` — type — line 80
+- `InspectionActionId` — type — line 64
+- `InspectionContractRow` — type — line 46
 - `InspectionInfoRow` — type — line 4
-- `InspectionLiquidContainerOption` — type — line 29
-- `InspectionLiquidContainersRow` — type — line 37
+- `InspectionLiquidContainerOption` — type — line 32
+- `InspectionLiquidContainersRow` — type — line 40
 - `InspectionMaterialItem` — type — line 18
-- `InspectionMaterialsRow` — type — line 23
+- `InspectionMaterialsRow` — type — line 26
 - `InspectionProgressRow` — type — line 10
-- `InspectionRow` — type — line 49
-- `InspectionSection` — type — line 56
-- `InspectionTargetKind` — type — line 88
-- `InspectionTargetRef` — type — line 95
-- `WorldInspectionView` — type — line 80
+- `InspectionRow` — type — line 52
+- `InspectionSection` — type — line 59
+- `InspectionTargetKind` — type — line 96
+- `InspectionTargetRef` — type — line 107
+- `WorldInspectionView` — type — line 88
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1108
-- `buildDigTarget` — function — line 1055
-- `buildInteractables` — function — line 413
-- `collectItem` — function — line 1155
+- `buildCombatTarget` — function — line 1120
+- `buildDigTarget` — function — line 1067
+- `buildInteractables` — function — line 425
+- `collectItem` — function — line 1167
 - `COMBAT_TARGET_CONE_DOT` — const — line 92
 - `COMBAT_TARGET_RANGE` — const — line 77
 - `CombatAimMode` — type — line 82
 - `DIG_REACH` — const — line 71
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 263
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 275
 - `GAZE_RANGE` — const — line 67
-- `groupDroppedItemCandidates` — function — line 273
+- `groupDroppedItemCandidates` — function — line 285
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 64
 - `INTERACT_RANGE` — const — line 61
-- `resolveHaySpot` — function — line 349
+- `resolveHaySpot` — function — line 361
+- `worldItemAllowsAltInteract` — function — line 257
+  - domain: ui-input
 
 ## `app/inventoryWiring.ts`
 
@@ -318,25 +349,27 @@ Generated from exported TypeScript symbols.
 
 ## `app/userActions.ts`
 
-- `FIRE_FOOTPRINT_RADIUS` — const — line 36
-- `FIRE_PIT_STONE_COST` — const — line 23
-- `FIRE_PLACE_REACH` — const — line 35
-- `FIRE_SEPARATION` — const — line 37
-- `GRATE_BUILD_RANGE` — const — line 49
-- `GRATE_COST` — const — line 43
-- `SIMPLE_FIRE_BRANCH_COST` — const — line 22
-- `TORCH_BRANCH_COST` — const — line 24
-- `WOOD_PILE_BEAM_COST` — const — line 29
+- `FIRE_FOOTPRINT_RADIUS` — const — line 38
+- `FIRE_PIT_FOOTPRINT_RADIUS` — const — line 39
+- `FIRE_PIT_STONE_COST` — const — line 25
+- `FIRE_PLACE_REACH` — const — line 37
+- `FIRE_SEPARATION` — const — line 41
+- `GRATE_BUILD_RANGE` — const — line 59
+- `GRATE_COST` — const — line 53
+- `SIMPLE_FIRE_BRANCH_COST` — const — line 24
+- `TORCH_BRANCH_COST` — const — line 26
+- `WOOD_PILE_BEAM_COST` — const — line 31
+- `WOOD_PILE_FOOTPRINT_RADIUS` — const — line 40
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 681
-- `createWorldBundle` — function — line 1146
-- `disposeWorldBundle` — function — line 1570
-- `HOME_RADIUS` — const — line 114
-- `homeChunks` — function — line 125
-- `rebuildWorldBundle` — function — line 1354
-- `WorldBundle` — type — line 148
+- `BuiltWorldSystems` — type — line 686
+- `createWorldBundle` — function — line 1170
+- `disposeWorldBundle` — function — line 1594
+- `HOME_RADIUS` — const — line 116
+- `homeChunks` — function — line 127
+- `rebuildWorldBundle` — function — line 1378
+- `WorldBundle` — type — line 150
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

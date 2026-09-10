@@ -122,14 +122,14 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerNeeds.ts`
 
-- `applyRepresentedPhysicalEffortVigor` — function — line 151
+- `applyRepresentedPhysicalEffortVigor` — function — line 158
 - `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 85
-- `createPlayerNeeds` — function — line 212
-- `DEHYDRATION_HP_PER_SEC` — const — line 185
-- `drinkWater` — function — line 378
-- `eatFood` — function — line 374
-- `hungerSevereDurationSec` — function — line 171
-- `isTakingDeprivationDamage` — function — line 386
+- `createPlayerNeeds` — function — line 219
+- `DEHYDRATION_HP_PER_SEC` — const — line 192
+- `drinkWater` — function — line 385
+- `eatFood` — function — line 381
+- `hungerSevereDurationSec` — function — line 178
+- `isTakingDeprivationDamage` — function — line 393
 - `physicalEffortBusyOptions` — function — line 135
 - `PhysicalEffortIntensity` — type — line 93
 - `physicalEffortStaminaCostPerSec` — function — line 121
@@ -145,16 +145,17 @@ Generated from exported TypeScript symbols.
   - owns: PlayerNeeds
   - uses: StaminaState, VigorState
   - simulation: tick
-- `resetPlayerNeeds` — function — line 224
-- `restoreNeedsFromSleep` — function — line 368
-- `restorePersistedNeeds` — function — line 245
-- `STARVATION_HP_PER_SEC` — const — line 184
-- `thirstSevereDurationSec` — function — line 174
-- `tickHealthRegen` — function — line 395
-- `tickPlayerMovementVigor` — function — line 346
-- `tickPlayerNeeds` — function — line 270
-- `tickPlayerStamina` — function — line 297
-- `tickRidingStamina` — function — line 326
+- `representedPhysicalEffortVigorPerHour` — function — line 148
+- `resetPlayerNeeds` — function — line 231
+- `restoreNeedsFromSleep` — function — line 375
+- `restorePersistedNeeds` — function — line 252
+- `STARVATION_HP_PER_SEC` — const — line 191
+- `thirstSevereDurationSec` — function — line 181
+- `tickHealthRegen` — function — line 402
+- `tickPlayerMovementVigor` — function — line 353
+- `tickPlayerNeeds` — function — line 277
+- `tickPlayerStamina` — function — line 304
+- `tickRidingStamina` — function — line 333
 
 ## `player/playerRanged.ts`
 

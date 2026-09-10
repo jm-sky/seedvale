@@ -160,13 +160,15 @@ Generated from exported TypeScript symbols.
 - `AuthoredQuestStage` — type — line 492
 - `AuthoredQuestStageDialogueAction` — type — line 485
   - domain: quests-progression
-- `bindExactCaveQuests` — function — line 1426
-- `buildDarkForestTreasureQuest` — function — line 1321
-- `buildHorseAcquisitionQuest` — function — line 1368
+- `bindDarkForestTreasureQuest` — function — line 1473
+- `bindExactCaveQuests` — function — line 1448
+- `buildDarkForestTreasureQuest` — function — line 1325
+- `buildHorseAcquisitionQuest` — function — line 1372
 - `buildLandmarkQuests` — function — line 1219
-- `CAVE_PLACE_TOKEN` — const — line 1411
-- `cavePlacePhrase` — function — line 1415
+- `CAVE_PLACE_TOKEN` — const — line 1415
+- `cavePlacePhrase` — function — line 1419
 - `LandmarkResolver` — type — line 1208
+- `MAP_SOURCE_PLACE_TOKEN` — const — line 1322
 - `QUEST_STATES` — const — line 264
 - `QuestAvailability` — type — line 75
 - `QuestConsequences` — type — line 239
@@ -189,6 +191,7 @@ Generated from exported TypeScript symbols.
 - `RelationLevel` — type — line 32
 - `relationLevelMeetsMinimum` — function — line 82
 - `relationToLevel` — function — line 46
+- `treasureMapSourcePlacePhrase` — function — line 1435
 - `uniqueOutcomeForState` — function — line 276
 - `validateQuestDefinitions` — function — line 97
 

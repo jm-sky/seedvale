@@ -60,6 +60,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `app/actions/placementActions.ts`
 - `interaction/Interactable.ts`
 
 **Imported by**
