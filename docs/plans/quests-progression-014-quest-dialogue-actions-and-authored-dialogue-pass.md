@@ -220,6 +220,38 @@ Powinny być podejrzane dla ataku zwierząt, zagrożenia mieszkańców, plagi, a
 
 Nie usuwać gate'ów mechanicznie — poprawić tylko te, które są sprzeczne z charakterem problemu.
 
+### 11. Otwarcie rozmowy nie może omijać listy dialogowej
+
+Naprawić regresję wprowadzoną w commicie `499004546eeaf15c6003bcb3f3d0ed79b7a0b9e2` (`Fix talk_to_npc dialogue so quest lines show on NPC open`).
+
+Po zwykłej interakcji `[E]` z NPC dialog powinien zaczynać się od istniejącej listy tematów. Sam fakt, że `QuestManager` ma dla tego NPC questowy override, ofertę, reminder, `talk_to_npc` progress line albo raport, nie może automatycznie przełączać UI na widok `help` ani od razu pokazywać `Przyjmij` / `Odmów`.
+
+Oczekiwany flow:
+
+```text
+[E] NPC
+→ lista tematów rozmowy
+→ gracz świadomie wybiera questową / pomocową wypowiedź
+→ dopiero wtedy resolve quest dialogue/action
+→ ewentualny progress / accept / report / outcome
+```
+
+Wyjątek: istniejący `paymentClaim` może zachować specjalne auto-open, jeżeli recon potwierdzi, że jest to zamierzone i niezależne zachowanie płatności za pracę.
+
+Obecny seam wymaga przebudowy, ponieważ `openNpcDialogueMenu()` wywołuje mutujące `QuestManager.onInteract(npc.name)` jeszcze podczas otwierania UI, a commit `49900454` dodatkowo utrwala automatyczne wejście w `help` przez `helpFromQuestManager` / `resolveNpcDialogueOpenTopic()`.
+
+W ramach implementacji:
+
+- nie wywoływać mutującej quest action tylko z powodu otwarcia modala NPC,
+- oddzielić otwarcie listy tematów od świadomego wyboru questowej akcji,
+- `talk_to_npc` i `talk_to_npc_choice` mogą zmienić quest state dopiero po odpowiedniej player dialogue action,
+- oferta questa może pokazać `Przyjmij` / `Odmów` dopiero po wybraniu przez gracza odpowiedniej opcji rozmowy,
+- reminder/progress/report line nie powinny przejmować całego dialogu przy `[E]`,
+- usunąć albo zmienić `helpFromQuestManager` i `resolveNpcDialogueOpenTopic()` dla przypadku `help`, jeżeli po reconie nie mają już poprawnej odpowiedzialności,
+- poprawić test dodany w `src/ui-vue/npcDialogueOpen.test.ts`, który obecnie oczekuje `resolveNpcDialogueOpenTopic() === 'help'` i tym samym utrwala regresję.
+
+Nie naprawiać tego przez sam kosmetyczny revert auto-open, jeśli `QuestManager.onInteract()` nadal mutuje quest state przy otwarciu dialogu. Fix ma przywrócić poprawny UX i właściwy moment advancementu.
+
 ## Reference quest: `sprawdz-szlak`
 
 Zachować istniejące ID dla kompatybilności save: `sprawdz-szlak`.
@@ -343,11 +375,15 @@ Stary save znajdujący się w `ready_to_report` powinien po zmianie po prostu ot
 
 Automatycznie zweryfikować minimum:
 
+- zwykłe `[E]` na NPC otwiera listę tematów, nawet gdy `QuestManager` ma questowy override lub ofertę,
+- oferta questa pokazuje `Przyjmij` / `Odmów` dopiero po świadomym wyborze questowej opcji dialogowej,
 - samo otwarcie rozmowy nie kończy `ready_to_report`,
+- samo otwarcie rozmowy nie zmienia `talk_to_npc` ani `talk_to_npc_choice` quest state,
 - wybranie player dialogue action kończy quest dokładnie raz,
 - `talk_to_npc` nie zalicza celu samą interakcją,
 - `talk_to_npc_choice` nie wybiera outcome samą interakcją,
 - zamknięcie dialogu bez wyboru pozostawia quest aktywny,
+- test regresyjny obejmuje zachowanie wprowadzone przez `49900454` i nie oczekuje auto-open `help`,
 - konkretna jaskinia zalicza objective, inna nie,
 - directional mapping działa dla 8 kierunków,
 - brak dodatkowych world lookups w dialogue interaction path,
@@ -382,6 +418,9 @@ Nie dodawać:
 - Rozszerzać istniejący `QuestManager` i obecny NPC dialogue flow.
 - QuestManager pozostaje authority dla progress i resolution.
 - UI nie może samodzielnie interpretować quest state ani outcomes.
+- Otwarcie NPC dialogue UI jest operacją prezentacyjną i nie może samo mutować quest progress/outcome.
+- Quest state może zmieniać się przez dialog dopiero po jawnej player dialogue action odpowiadającej danej czynności.
+- Questowy override nie może automatycznie omijać listy tematów rozmowy.
 - Reużyć istniejącą identity world targets.
 - Target resolve wykonywać najwyżej raz w istniejącym binding flow.
 - Direction hints wyliczać wyłącznie z już dostępnych danych.
