@@ -288,15 +288,20 @@ Odkrycie lokacji i ustawienie jej jako celu są osobnymi operacjami.
 
 ## 14. Minimap
 
-Minimapa nie pokazuje wszystkich discovered locations.
+Minimapa nie pokazuje wszystkich discovered locations na całym świecie.
 
-Pokazuje wyłącznie aktywne 1–3 cele.
+Warstwy:
 
-Dla celu:
+- **Nearby known locations** — subtelne markery POI tylko dla lokacji już znanych graczowi (`LocationKnowledge`), które mieszczą się w aktualnym widoku minimapy (zasięg wynika z `size`, `MINIMAP_SCALE`, zoomu minimapy i istniejącego viewportu przez `MapData.knownLocations(viewport)`). Bez strzałek na krawędzi i bez slotów nawigacji.
+- **Aktywne cele (1–3)** — wyróżnione markery / strzałki na krawędzi jak dotychczas.
+
+Jeżeli lokacja jest jednocześnie znanym POI i aktywnym celem, rysowana jest wyłącznie jako cel nawigacji.
+
+Dla aktywnego celu:
 - wewnątrz minimapy → marker,
 - poza minimapą → strzałka przy krawędzi wskazująca kierunek.
 
-Kolor strzałki/markera odpowiada slotowi celu.
+Kolor strzałki/markera celu odpowiada slotowi celu.
 
 Wykorzystać istniejącą logikę minimap arrows.
 

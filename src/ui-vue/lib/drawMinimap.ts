@@ -3,7 +3,9 @@ import { getActiveNavigationTargets } from '../../world/locations/navigationTarg
 import { MAP_MINIMAP_ZOOM_MAX, MAP_MINIMAP_ZOOM_MIN } from '../../world/map/mapConfig'
 import { getActiveMapData } from '../../world/map/mapData'
 import { mapCellBounds } from '../../world/map/mapProjection'
-import { MAP_FOG_FILL, mapCellFillStyle, targetSlotColor } from './mapColors'
+import { worldLocationKindFromId } from '../../world/locations/worldLocationTypes'
+import { locationKindColor, MAP_FOG_FILL, mapCellFillStyle, targetSlotColor } from './mapColors'
+import { selectNearbyMinimapPois } from './minimapLocationMarkers'
 import type { Vector3 } from 'three'
 
 export type MinimapSettlement = {
@@ -145,10 +147,30 @@ export function drawMinimapFrame(
     }
   }
 
-  // Minimap shows only the 1-3 active navigation targets (plan world-012
-  // §14) — never the full `knownLocations()` list; that stays the full
-  // world map's job.
   const targets = getActiveNavigationTargets()?.list() ?? []
+  const activeTargetIds = new Set(targets.map((t) => t.id))
+
+  if (mapData) {
+    const nearbyPois = selectNearbyMinimapPois(
+      mapData.knownLocations(viewport),
+      activeTargetIds,
+      (location) => {
+        const { x, y } = toMap(location.x, location.z)
+        return x >= 0 && x <= size && y >= 0 && y <= size
+      },
+    )
+    for (const location of nearbyPois) {
+      const kind = worldLocationKindFromId(location.id)
+      const { x, y } = toMap(location.x, location.z)
+      ctx.fillStyle = locationKindColor(kind)
+      ctx.globalAlpha = location.state === 'discovered' ? 0.65 : 1
+      ctx.beginPath()
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.globalAlpha = 1
+    }
+  }
+
   for (const target of targets) {
     const location = mapData?.resolveKnown(target.id)
     if (!location) continue

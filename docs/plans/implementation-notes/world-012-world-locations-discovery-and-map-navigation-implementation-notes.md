@@ -330,22 +330,25 @@ Przy nowym seedzie targety muszą zostać wyzerowane.
 
 Jeśli cele mają przetrwać save/load, zapisuj tylko ID. W przeciwnym razie będzie to niespójne z „aktywny cel” jako częścią stanu gracza.
 
-## 17. Minimap — obecna implementacja wymaga świadomej zmiany
+## 17. Minimap — aktywne cele + nearby known POI
 
-Aktualne `drawMinimapFrame()` pokazuje `mapData.knownLocations()`, a dla lokacji poza minimapą rysuje strzałkę.
+Historycznie `drawMinimapFrame()` rysowało wszystkie `knownLocations()` ze strzałkami na krawędzi; plan 012 to zmienił na **wyłącznie aktywne targety**.
 
-To **nie spełnia jeszcze** planu 012: po implementacji minimapa ma pokazywać tylko 1–3 aktywne cele.
-
-Nie tworzyć drugiego systemu arrow. Istniejąca:
+Korekta (2026-09-10): minimapa nadal **nie** skanuje całego katalogu ani nie daje strzałek wszystkim znanym lokacjom. Dodatkowa warstwa:
 
 ````
-drawArrow()
-rotateDelta()
+MapData.knownLocations(minimap viewport)
+        ↓
+nearby POI (canvas clip, bez active target id)
+        ↓
+subtelny marker (kind colour, bez labela / bez edge arrow)
 ````
 
-jest dokładnie mechanizmem do ponownego użycia.
+Aktywne `NavigationTargets` (1–3) pozostają osobną ścieżką — marker w `halfRange` lub `drawArrow()` / `rotateDelta()` poza minimapą, kolor slotu.
 
-Usunąć z minimapy automatyczne rysowanie wszystkich known locations; podać jej wyłącznie aktywne targety.
+Target ma pierwszeństwo wizualne nad POI (ten sam id nie jest rysowany dwa razy).
+
+Nie tworzyć drugiego systemu arrow dla POI.
 
 ## 18. Game loop / per-frame cost
 
@@ -422,7 +425,7 @@ Dla źródeł świata osobne testy powinny pozostać przy ich generatorach, np. 
 
 8. full-map interaction/popover
 
-9. minimap → tylko targets
+9. minimap → nearby known POI + active targets only
 
 10. debug + focused tests
 ````
