@@ -36,6 +36,7 @@ export type PlayerTroughs = AnimalWaterSourceProvider & {
   contributeWork: (id: string, workAmount: number) => { acceptedWork: number, completed: boolean } | null
   addWater: (id: string, litres: number) => number
   consumeWater: (id: string, litres: number) => boolean
+  remove: (id: string) => PlayerTroughRecord | null
   dispose: () => void
 }
 
@@ -144,6 +145,15 @@ export function createPlayerTroughs(
     queryAvailableNear,
     isAvailable,
     consume: consumeWater,
+    remove(id) {
+      const index = entries.findIndex((entry) => entry.id === id)
+      if (index === -1) return null
+      const [entry] = entries.splice(index, 1)
+      if (!entry) return null
+      entry.visual.object.removeFromParent()
+      disposeObject3D(entry.visual.object)
+      return toRecord(entry)
+    },
     dispose() {
       for (const entry of entries) {
         entry.visual.object.removeFromParent()

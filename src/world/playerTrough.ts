@@ -48,6 +48,9 @@ export const PLAYER_TROUGH_MATERIAL_REQUIREMENTS: readonly MaterialRequirement[]
   { kind: 'beam', count: 2 },
 ]
 
+/** Fraction of placement materials returned on removal (plan ui-input-016). */
+export const PLAYER_TROUGH_RECOVERY_RATE = 0.5
+
 /** Active-work hours required to finish a trough (plan items-player-020 §2). */
 export const PLAYER_TROUGH_REQUIRED_WORK = 1.5
 export const PLAYER_TROUGH_WORK_SESSION_SEC = 4

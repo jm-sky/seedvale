@@ -5,6 +5,11 @@ defineProps<{
   statusLabel: string
   items: readonly InspectionMaterialItem[]
 }>()
+
+function itemLine(item: InspectionMaterialItem): string {
+  if (item.available == null) return `${item.count} × ${item.label}`
+  return `${item.label}: ${item.available}/${item.count} — przy sobie ${item.inInventory ?? 0} · w pobliżu ${item.nearbyWorld ?? 0}`
+}
 </script>
 
 <template>
@@ -20,7 +25,7 @@ defineProps<{
         v-for="item in items"
         :key="item.label"
       >
-        {{ item.count }} × {{ item.label }}
+        {{ itemLine(item) }}
       </li>
     </ul>
   </div>

@@ -10,18 +10,27 @@ export type { InspectionTargetRef }
 export function inspectionTargetRef(target: Interactable | null | undefined): InspectionTargetRef | null {
   if (!target) return null
   switch (target.kind) {
+    case 'bedroll':
     case 'palisade':
+    case 'platform':
+    case 'playerTrough':
     case 'playerWell':
     case 'residentialBuilding':
     case 'standingTorch':
     case 'terrainPreparation':
       return { kind: target.kind, id: target.id }
+    case 'camp':
+      return { kind: 'camp', id: target.tentId }
+    case 'tent':
+      return { kind: 'camp', id: target.id }
     default:
       return null
   }
 }
 
-export function contractTargetFor(ref: InspectionTargetRef): ContractTarget {
+/** Contract-capable structures only. Camp/trough/bedroll/platform have no
+ *  work-contract mapping — do not invent one for exhaustiveness. */
+export function contractTargetFor(ref: InspectionTargetRef): ContractTarget | null {
   switch (ref.kind) {
     case 'palisade':
       return { kind: 'palisade', targetId: ref.id }
@@ -33,5 +42,7 @@ export function contractTargetFor(ref: InspectionTargetRef): ContractTarget {
       return { kind: 'standing_torch', targetId: ref.id }
     case 'terrainPreparation':
       return { kind: 'terrain_preparation', targetId: ref.id }
+    default:
+      return null
   }
 }

@@ -6,7 +6,14 @@ import type { PlacementPreviewKind } from '../../app/actions/placementPreviewAct
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TrapKind } from '../../world/animalTraps'
 import type { CropId } from '../../world/cropLifecycle'
+import { formatMaterialCost } from '../../app/actions/placementRequirementView'
 import { isTouchDevice } from '../../input/isTouchDevice'
+import { PALISADE_MATERIAL_REQUIREMENTS } from '../../world/palisade'
+import { gardenMaterialRequirements } from '../../world/playerGarden'
+import { PLAYER_TROUGH_MATERIAL_REQUIREMENTS } from '../../world/playerTrough'
+import { residentialTotalRequirements } from '../../world/residentialBuilding'
+import { BEDROLL_MATERIAL_REQUIREMENTS, PLATFORM_MATERIAL_REQUIREMENTS } from '../../world/sleepingUtilities'
+import { STANDING_TORCH_MATERIAL_REQUIREMENTS } from '../../world/standingTorch'
 import QuickActionsButton from '../components/QuickActionsButton.vue'
 import SkillsHudButton from '../components/SkillsHudButton.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
@@ -75,7 +82,7 @@ function rest(variant: RestVariant): void {
 
 function placeTrap(kind: TrapKind): void {
   closeQuickActions()
-  ui.quickActions.onPlaceTrap?.(kind)
+  startPlacementPreview(kind === 'simple' ? 'trapSimple' : 'trapGood')
 }
 
 function putDownContainer(): void {
@@ -110,7 +117,7 @@ function buildWell(): void {
 
 function buildGarden(): void {
   closeQuickActions()
-  ui.quickActions.onBuildGarden?.()
+  ui.quickActions.onStartPlacementPreview?.('garden')
 }
 
 function hireHelp(): void {
@@ -191,7 +198,7 @@ const shovelActions: Action[] = [
   { label: 'Wyrównaj', cost: 'łopata', onClick: level },
   { label: 'Zrób górkę', cost: 'łopata', onClick: mound },
   { label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell },
-  { label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden },
+  { label: 'Zbuduj grządkę', cost: formatMaterialCost(gardenMaterialRequirements()), onClick: buildGarden },
 ]
 
 const terrainActions: Action[] = [
@@ -215,16 +222,16 @@ const buildActions = computed<Action[]>(() => {
   list.push({ label: 'Zbuduj ognisko', cost: formatCostItems(FIRE_COST_ITEMS.buildSimpleFire), onClick: () => startPlacementPreview('fireSimple'), disabled: !ui.quickActions.fireAvailability.buildSimpleFire.available })
   list.push({ label: 'Zbuduj palenisko', cost: formatCostItems(FIRE_COST_ITEMS.buildFirePit), onClick: () => startPlacementPreview('firePit'), disabled: !ui.quickActions.fireAvailability.buildFirePit.available })
   list.push({ label: 'Zbuduj stos drewna', cost: formatCostItems(FIRE_COST_ITEMS.buildWoodPile), onClick: () => startPlacementPreview('firePile'), disabled: !ui.quickActions.fireAvailability.buildWoodPile.available })
-  list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch'), disabled: !ui.quickActions.hasWoodenTorch })
-  list.push({ label: 'Postaw segment palisady', cost: '2× belka', onClick: () => startPlacementPreview('palisade'), disabled: !ui.quickActions.hasPalisadeMaterial })
-  list.push({ label: 'Postaw koryto', cost: '2× belka', onClick: () => startPlacementPreview('playerTrough'), disabled: !ui.quickActions.hasTroughMaterial })
-  list.push({ label: 'Rozłóż posłanie', cost: '3× skóra', onClick: () => startPlacementPreview('bedroll'), disabled: !ui.quickActions.hasBedrollMaterial })
-  list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform'), disabled: !ui.quickActions.hasPlatformMaterial })
-  list.push({ label: 'Zbuduj małą chatę', cost: '', onClick: () => startPlacementPreview('smallHouse') })
-  list.push({ label: 'Zbuduj średnią chatę', cost: '', onClick: () => startPlacementPreview('mediumHouse') })
+  list.push({ label: 'Postaw pochodnię', cost: formatMaterialCost(STANDING_TORCH_MATERIAL_REQUIREMENTS), onClick: () => startPlacementPreview('standingTorch'), disabled: !ui.quickActions.hasWoodenTorch })
+  list.push({ label: 'Postaw segment palisady', cost: formatMaterialCost(PALISADE_MATERIAL_REQUIREMENTS), onClick: () => startPlacementPreview('palisade'), disabled: !ui.quickActions.hasPalisadeMaterial })
+  list.push({ label: 'Postaw koryto', cost: formatMaterialCost(PLAYER_TROUGH_MATERIAL_REQUIREMENTS), onClick: () => startPlacementPreview('playerTrough'), disabled: !ui.quickActions.hasTroughMaterial })
+  list.push({ label: 'Rozłóż posłanie', cost: formatMaterialCost(BEDROLL_MATERIAL_REQUIREMENTS), onClick: () => startPlacementPreview('bedroll'), disabled: !ui.quickActions.hasBedrollMaterial })
+  list.push({ label: 'Zbuduj podest do spania', cost: formatMaterialCost(PLATFORM_MATERIAL_REQUIREMENTS), onClick: () => startPlacementPreview('platform'), disabled: !ui.quickActions.hasPlatformMaterial })
+  list.push({ label: 'Zbuduj małą chatę', cost: formatMaterialCost(residentialTotalRequirements('small_house')), onClick: () => startPlacementPreview('smallHouse') })
+  list.push({ label: 'Zbuduj średnią chatę', cost: formatMaterialCost(residentialTotalRequirements('medium_house')), onClick: () => startPlacementPreview('mediumHouse') })
 
   list.push({ label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell })
-  list.push({ label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden })
+  list.push({ label: 'Zbuduj grządkę', cost: formatMaterialCost(gardenMaterialRequirements()), onClick: buildGarden })
 
   // "Zleć budowę studni" (plan npc-014) — always available, no material
   // cost; the reward is chosen after the well target is placed, not spent up

@@ -38,6 +38,7 @@ export type SleepingUtilities = {
     list: () => readonly BedrollEntry[]
     nodes: () => readonly BedrollRecord[]
     place: (x: number, z: number, yaw: number, worldDays: number, variant: SleepingUtilityVariant) => BedrollRecord
+    remove: (id: string) => BedrollRecord | null
     /** Resolved current condition (plan §"Condition resolution"), or `null`
      *  if `id` no longer exists — same pure-read contract as
      *  `PlayerGardens.hydrationOf`. `shelterFactor` is `0..1` tent shelter
@@ -49,6 +50,7 @@ export type SleepingUtilities = {
     list: () => readonly PlatformEntry[]
     nodes: () => readonly PlatformRecord[]
     place: (x: number, z: number, yaw: number, worldDays: number) => PlatformRecord
+    remove: (id: string) => PlatformRecord | null
     conditionOf: (id: string, worldDays: number, shelterFactor: number) => number | null
   } & RepairOwnerApi<PlatformRecord>
   dispose: () => void
@@ -167,6 +169,14 @@ export function createSleepingUtilities(
         spawnBedroll(record)
         return record
       },
+      remove(id) {
+        const index = bedrolls.findIndex((entry) => entry.id === id)
+        if (index === -1) return null
+        const [entry] = bedrolls.splice(index, 1)
+        if (!entry) return null
+        disposeSleepingUtilityProp(entry.mesh)
+        return bedrollRecord(entry)
+      },
       conditionOf(id, worldDays, shelterFactor) {
         const entry = bedrolls.find((b) => b.id === id)
         return entry ? resolveBedroll(entry, worldDays, shelterFactor) : null
@@ -218,6 +228,14 @@ export function createSleepingUtilities(
         }
         spawnPlatform(record)
         return record
+      },
+      remove(id) {
+        const index = platforms.findIndex((entry) => entry.id === id)
+        if (index === -1) return null
+        const [entry] = platforms.splice(index, 1)
+        if (!entry) return null
+        disposeSleepingUtilityProp(entry.mesh)
+        return platformRecord(entry)
       },
       conditionOf(id, worldDays, shelterFactor) {
         const entry = platforms.find((p) => p.id === id)

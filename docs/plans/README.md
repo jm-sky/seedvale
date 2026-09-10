@@ -72,7 +72,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
-| 💡 `ui-input-016-building-placement-construction-ux-coherence.md`              | -       | 🔴 | L      | ~~ui-input-014~~, ~~ui-input-015~~, items-player-024 |
 
 ---
 
@@ -84,6 +83,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `ui-input-016-building-placement-construction-ux-coherence.md` | Ghost: ready zielony / preparation bursztyn / invalid czerwony; nearby materiały zmieniają ghost przy ruchu; stromy dom → Przygotuj teren [E] (łopata); pułapka i grządka mają ghost; ogniska mają różne footprinty; namiot i chata pokazują znacznik wejścia; praca ciągła aż do stopu, Esc/touch Przerwij; `[V]` obóz i koryto; `[R]` nie kasuje od razu (potwierdzenie + recovery); palisada Postaw kolejny; pełny obóz nadal kończy preview po confirm |
 | `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | Home: Anna/Piotr/Kasia/Marek nadal istnieją, w tej samej kolejności, i oferują authored questy; mała ogród/las osada ma food livelihood bez Tradera/Kowala; osada przy significant ore ma Minera wewnątrz istniejącej liczby domów (bez extra resource family); OUTPOST nadal 1 NPC z forced resource role |
 | `quests-progression-017-rpg-settlement-quest-matrices.md` | Sąsiadująca osada: NPC oferuje generated „Sekret starego miejsca” na realny landmark; interakcja zalicza etap; `Umowa między osadami` prowadzi do NPC w innej osadzie po id (to samo imię w home nie kradnie celu); `Podejrzany transport` to rozmowa+wybór bez quest-owned przesyłki; live „Wilki pod osadą” w home nie znika przez RPG; save/load trzyma te same cele |
 | `items-player-023-systemic-item-utility-and-food-safety.md` | Można rozpalić/dołożyć szyszkę, gałąź i belkę; szyszka daje zauważalnie mniej czasu niż gałąź, belka więcej; automatyczny wybór opału nie spala belki, gdy dostępna jest szyszka/gałąź; komunikaty przy ogniu mówią o paliwie/opale, nie tylko o gałęzi; świeże surowe mięso może spowodować zatrucie zależnie od gatunku, a medium-fresh jest bardziej ryzykowne; pieczone/suszone mięso nie wywołuje raw-meat poisoning i nadal daje większą sytość z zachowanym gatunkowym provenance; save/load nie resetuje sequence deterministycznych food-risk rolls ani aktywnego poisoning |

@@ -1,7 +1,12 @@
 import type { MaterialRequirement } from '../../items/constructionMaterials'
+import type { DroppedItems } from '../../items/createDroppedItems'
 import type { Inventory } from '../../items/Inventory'
+import type { PlayerTroughRecord } from '../../world/playerTrough'
+import type { BedrollRecord, PlatformRecord } from '../../world/sleepingUtilities'
 import type { WaterSource } from '../../world/WaterSource'
-import type { WellRoofRepairView, WellWorkView } from '../actions/placementActions'
+import type { ConstructionActionView, RemovalPreview, ResidentialWorkView, WellRoofRepairView, WellWorkView } from '../actions/placementActions'
+import type { CampRepairView } from '../actions/restActions'
+import type { CampRestSnapshot } from '../campRestSnapshot'
 import type { InspectionTargetRef } from './worldInspectionView'
 import type {
   InspectionAction,
@@ -11,7 +16,11 @@ import type {
   InspectionSection,
   WorldInspectionView,
 } from './worldInspectionView'
-import { isLiquidContainerInstance, LIQUID_CONTAINER_KIND_LIST } from '../../items/itemInstances'
+import {
+  CONSTRUCTION_MATERIAL_RADIUS,
+  materialAvailabilityBreakdown,
+} from '../../items/constructionMaterials'
+import { createTentInstance, isLiquidContainerInstance, LIQUID_CONTAINER_KIND_LIST } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import {
   canFillLiquidContainer,
@@ -25,6 +34,7 @@ import {
   palisadeRemainingWork,
   type PalisadeSegmentRecord,
 } from '../../world/palisade'
+import { isPlayerTroughConstructionComplete } from '../../world/playerTrough'
 import {
   activeWellStage,
   formatHours,
@@ -68,6 +78,7 @@ import {
   type WorkContractRecord,
   type WorkContractState,
 } from '../../world/workContract'
+import { campInspectionRepairTargets, formatCampInspectionDetails } from '../campRestSnapshot'
 
 const WELL_STAGE_ORDER: readonly WellStage[] = ['pit', 'well', 'roof']
 
@@ -83,9 +94,28 @@ export type WorldInspectionLookup = {
   palisade: (id: string) => PalisadeSegmentRecord | undefined
   standingTorch: (id: string) => StandingTorchRecord | undefined
   residentialBuilding: (id: string) => ResidentialBuildingRecord | undefined
+  trough: (id: string) => PlayerTroughRecord | undefined
+  bedroll: (id: string) => BedrollRecord | undefined
+  platform: (id: string) => PlatformRecord | undefined
+  tent: (id: string) => { id: string, x: number, z: number, condition: number, repair?: unknown } | undefined
   contract: (target: ContractTarget) => WorkContractRecord | undefined
   describeWellWork: (id: string) => WellWorkView | null
   describeWellRoofRepair: (id: string) => WellRoofRepairView | null
+  describePalisadeWork?: (id: string) => ConstructionActionView | null
+  describeStandingTorchWork?: (id: string) => ConstructionActionView | null
+  describePlayerTroughWork?: (id: string) => ConstructionActionView | null
+  describePlayerTroughFill?: (id: string) => ConstructionActionView | null
+  describeResidentialWork?: (id: string) => ResidentialWorkView | null
+  describeCampRepair?: (kind: 'tent' | 'bedroll' | 'platform', id: string) => CampRepairView | null
+  previewPalisadeRemoval?: (id: string) => RemovalPreview | null
+  previewResidentialCancel?: (id: string) => RemovalPreview | null
+  previewWellCancel?: (id: string) => RemovalPreview | null
+  previewStandingTorchRemoval?: (id: string) => RemovalPreview | null
+  previewPlayerTroughRemoval?: (id: string) => RemovalPreview | null
+  previewBedrollRemoval?: (id: string) => RemovalPreview | null
+  previewPlatformRemoval?: (id: string) => RemovalPreview | null
+  campSnapshot?: (tentId: string) => CampRestSnapshot | null
+  droppedItems?: DroppedItems
   worldSeed: number
   nowDays: number
   inventory: Inventory
@@ -99,8 +129,16 @@ export function buildWorldInspection(
   lookup: WorldInspectionLookup,
 ): WorldInspectionView | null {
   switch (ref.kind) {
+    case 'bedroll':
+      return buildBedrollInspection(ref.id, lookup)
+    case 'camp':
+      return buildCampInspection(ref.id, lookup)
     case 'palisade':
       return buildPalisadeInspection(ref.id, lookup)
+    case 'platform':
+      return buildPlatformInspection(ref.id, lookup)
+    case 'playerTrough':
+      return buildTroughInspection(ref.id, lookup)
     case 'playerWell':
       return buildWellInspection(ref.id, lookup)
     case 'residentialBuilding':
@@ -159,7 +197,7 @@ function buildWellInspection(id: string, lookup: WorldInspectionLookup): WorldIn
       required: overallRequired,
       valueLabel: `${formatHours(overallCompleted)} / ${formatHours(overallRequired)} h`,
     })
-    const materials = wellMaterialsRow(well, activeStage)
+    const materials = wellMaterialsRow(well, activeStage, lookup)
     if (materials) statusRows.push(materials)
   } else {
     statusRows.push({
@@ -240,6 +278,16 @@ function buildWellInspection(id: string, lookup: WorldInspectionLookup): WorldIn
       reasonLabel: canHire ? '' : 'Brak pracy do zlecenia.',
     })
   }
+  if (!completed) {
+    const cancel = lookup.previewWellCancel?.(id)
+    actions.push({
+      id: 'cancel',
+      label: 'Anuluj budowę',
+      enabled: cancel?.canReceive ?? true,
+      reasonLabel: cancel?.reasonLabel ?? '',
+      variant: 'danger',
+    })
+  }
 
   return {
     targetId: id,
@@ -261,7 +309,7 @@ function wellStatusLabel(well: PlayerWellRecord, repairView: WellRoofRepairView 
   return 'W budowie'
 }
 
-function wellMaterialsRow(well: PlayerWellRecord, activeStage: WellStage): InspectionRow | null {
+function wellMaterialsRow(well: PlayerWellRecord, activeStage: WellStage, lookup: WorldInspectionLookup): InspectionRow | null {
   const requirements = wellStageRequirements(activeStage)
   if (requirements.length === 0 && WELL_STAGE_COST[activeStage].stone === 0 && WELL_STAGE_COST[activeStage].branch === 0) {
     return null
@@ -270,7 +318,7 @@ function wellMaterialsRow(well: PlayerWellRecord, activeStage: WellStage): Inspe
   return {
     kind: 'materials',
     statusLabel: supplied ? 'Materiały dostarczone' : 'Materiały wymagane',
-    items: materialItems(requirements),
+    items: materialItems(requirements, lookup, well.x, well.z, !supplied),
   }
 }
 
@@ -342,18 +390,19 @@ function buildPalisadeInspection(id: string, lookup: WorldInspectionLookup): Wor
   rows.push({
     kind: 'materials',
     statusLabel: 'Materiały dostarczone',
-    items: materialItems(PALISADE_MATERIAL_REQUIREMENTS),
+    items: materialItems(PALISADE_MATERIAL_REQUIREMENTS, lookup, record.x, record.z, false),
   })
   const sections: InspectionSection[] = [{ title: 'Segment palisady', rows }]
   const contractSection = buildContractSection(contract)
   if (contractSection) sections.push(contractSection)
   const actions: InspectionAction[] = []
   if (!complete) {
+    const work = lookup.describePalisadeWork?.(id)
     actions.push({
       id: 'work',
       label: 'Buduj dalej',
-      enabled: true,
-      reasonLabel: '',
+      enabled: work?.canWork ?? true,
+      reasonLabel: work?.reasonLabel ?? '',
       variant: 'primary',
     })
     if (!contract) {
@@ -368,8 +417,8 @@ function buildPalisadeInspection(id: string, lookup: WorldInspectionLookup): Wor
   actions.push({
     id: 'remove',
     label: 'Usuń',
-    enabled: true,
-    reasonLabel: '',
+    enabled: lookup.previewPalisadeRemoval?.(id)?.canReceive ?? true,
+    reasonLabel: lookup.previewPalisadeRemoval?.(id)?.reasonLabel ?? '',
     variant: 'danger',
   })
   return {
@@ -405,18 +454,19 @@ function buildStandingTorchInspection(id: string, lookup: WorldInspectionLookup)
   rows.push({
     kind: 'materials',
     statusLabel: 'Materiały dostarczone',
-    items: materialItems(STANDING_TORCH_MATERIAL_REQUIREMENTS),
+    items: materialItems(STANDING_TORCH_MATERIAL_REQUIREMENTS, lookup, record.x, record.z, false),
   })
   const sections: InspectionSection[] = [{ title: 'Pochodnia', rows }]
   const contractSection = buildContractSection(contract)
   if (contractSection) sections.push(contractSection)
   const actions: InspectionAction[] = []
   if (!complete) {
+    const work = lookup.describeStandingTorchWork?.(id)
     actions.push({
       id: 'work',
       label: 'Buduj dalej',
-      enabled: true,
-      reasonLabel: '',
+      enabled: work?.canWork ?? true,
+      reasonLabel: work?.reasonLabel ?? '',
       variant: 'primary',
     })
     if (!contract) {
@@ -436,6 +486,14 @@ function buildStandingTorchInspection(id: string, lookup: WorldInspectionLookup)
       variant: 'primary',
     })
   }
+  const removal = lookup.previewStandingTorchRemoval?.(id)
+  actions.push({
+    id: 'remove',
+    label: 'Usuń',
+    enabled: removal?.canReceive ?? true,
+    reasonLabel: removal?.reasonLabel ?? '',
+    variant: 'danger',
+  })
   return {
     targetId: id,
     title: 'Pochodnia',
@@ -489,7 +547,7 @@ function buildResidentialInspection(id: string, lookup: WorldInspectionLookup): 
     rows.push({
       kind: 'materials',
       statusLabel: record.materialsSupplied ? 'Materiały dostarczone' : 'Materiały wymagane',
-      items: materialItems(residentialStageRequirements(record.kind, record.stage)),
+      items: materialItems(residentialStageRequirements(record.kind, record.stage), lookup, record.x, record.z, !record.materialsSupplied),
     })
   } else if (complete) {
     rows.push({
@@ -503,20 +561,21 @@ function buildResidentialInspection(id: string, lookup: WorldInspectionLookup): 
   if (contractSection) sections.push(contractSection)
   const actions: InspectionAction[] = []
   if (!complete) {
+    const workView = lookup.describeResidentialWork?.(id)
     if (isResidentialBuildingMaterialBlocked(record)) {
       actions.push({
         id: 'supplyMaterials',
         label: 'Dostarcz materiały',
-        enabled: true,
-        reasonLabel: '',
+        enabled: workView?.canSupply ?? true,
+        reasonLabel: workView?.supplyReasonLabel ?? '',
         variant: 'primary',
       })
     } else {
       actions.push({
         id: 'work',
         label: 'Buduj dalej',
-        enabled: usefulRemaining > 0,
-        reasonLabel: '',
+        enabled: workView?.canWork ?? usefulRemaining > 0,
+        reasonLabel: workView?.workReasonLabel ?? '',
         variant: 'primary',
       })
     }
@@ -531,8 +590,8 @@ function buildResidentialInspection(id: string, lookup: WorldInspectionLookup): 
     actions.push({
       id: 'cancel',
       label: 'Anuluj budowę',
-      enabled: true,
-      reasonLabel: '',
+      enabled: lookup.previewResidentialCancel?.(id)?.canReceive ?? true,
+      reasonLabel: lookup.previewResidentialCancel?.(id)?.reasonLabel ?? '',
       variant: 'danger',
     })
   } else if (isPlayerOwnedResidentialBuilding(record)) {
@@ -585,11 +644,188 @@ function contractStateLabel(state: WorkContractState): string {
   }
 }
 
-function materialItems(requirements: readonly MaterialRequirement[]): readonly InspectionMaterialItem[] {
-  return requirements.map((requirement) => ({
-    label: ITEM_DEFS[requirement.kind].label,
-    count: requirement.count,
+function materialItems(
+  requirements: readonly MaterialRequirement[],
+  lookup?: WorldInspectionLookup,
+  x = 0,
+  z = 0,
+  withAvailability = false,
+): readonly InspectionMaterialItem[] {
+  return requirements.map((requirement) => {
+    if (!withAvailability || !lookup?.droppedItems) {
+      return {
+        label: ITEM_DEFS[requirement.kind].label,
+        count: requirement.count,
+      }
+    }
+    const breakdown = materialAvailabilityBreakdown(
+      lookup.inventory,
+      lookup.droppedItems,
+      x,
+      z,
+      CONSTRUCTION_MATERIAL_RADIUS,
+      requirement,
+    )
+    return {
+      label: ITEM_DEFS[requirement.kind].label,
+      count: requirement.count,
+      available: breakdown.available,
+      inInventory: breakdown.inInventory,
+      nearbyWorld: breakdown.nearbyWorld,
+    }
+  })
+}
+
+function dangerAction(
+  id: InspectionAction['id'],
+  label: string,
+  preview: RemovalPreview | null | undefined,
+): InspectionAction {
+  return {
+    id,
+    label,
+    enabled: preview?.canReceive ?? true,
+    reasonLabel: preview?.reasonLabel ?? '',
+    variant: 'danger',
+  }
+}
+
+function buildCampInspection(id: string, lookup: WorldInspectionLookup): WorldInspectionView | null {
+  const snapshot = lookup.campSnapshot?.(id)
+  const tent = lookup.tent(id)
+  if (!snapshot || !tent) return null
+  const details = formatCampInspectionDetails(snapshot)
+  const rows: InspectionRow[] = details.map((detail) => ({
+    kind: 'info',
+    label: detail.label,
+    value: [detail.value, detail.secondaryValue].filter(Boolean).join(' · '),
   }))
+  const actions: InspectionAction[] = []
+  for (const target of campInspectionRepairTargets(snapshot)) {
+    const repair = lookup.describeCampRepair?.(target.kind, target.id)
+    if (!repair) continue
+    const actionId = target.kind === 'tent'
+      ? 'repairTent'
+      : target.kind === 'bedroll'
+        ? 'repairBedroll'
+        : 'repairPlatform'
+    actions.push({
+      id: actionId,
+      label: repair.mode === 'continue' ? `Kontynuuj: ${repair.title}` : repair.title,
+      enabled: repair.canAct,
+      reasonLabel: repair.reasonLabel,
+      variant: 'primary',
+    })
+  }
+  const instance = createTentInstance(
+    lookup.tent(id)?.condition ?? tent.condition,
+    tent.id,
+  )
+  const repairing = tent.repair != null
+  const canPack = !repairing && lookup.inventory.canAddInstance(instance)
+  actions.push({
+    id: 'pack',
+    label: 'Złóż namiot',
+    enabled: canPack,
+    reasonLabel: repairing
+      ? 'Nie możesz złożyć namiotu w trakcie naprawy.'
+      : canPack ? '' : 'Brak miejsca w ekwipunku na namiot.',
+  })
+  return {
+    targetId: id,
+    title: snapshot.bedroll || snapshot.platform ? 'Twój obóz' : 'To twój namiot',
+    sections: [{ title: 'Obóz', rows }],
+    actions,
+  }
+}
+
+function buildBedrollInspection(id: string, lookup: WorldInspectionLookup): WorldInspectionView | null {
+  const record = lookup.bedroll(id)
+  if (!record) return null
+  const repair = lookup.describeCampRepair?.('bedroll', id)
+  const rows: InspectionRow[] = [
+    { kind: 'info', label: 'Stan', value: `${Math.round(record.condition)} / 100` },
+  ]
+  const actions: InspectionAction[] = []
+  if (repair) {
+    actions.push({
+      id: 'repairBedroll',
+      label: repair.mode === 'continue' ? 'Kontynuuj naprawę' : 'Napraw',
+      enabled: repair.canAct,
+      reasonLabel: repair.reasonLabel,
+      variant: 'primary',
+    })
+  }
+  actions.push(dangerAction('remove', 'Usuń', lookup.previewBedrollRemoval?.(id)))
+  return {
+    targetId: id,
+    title: 'Posłanie',
+    sections: [{ title: 'Posłanie', rows }],
+    actions,
+  }
+}
+
+function buildPlatformInspection(id: string, lookup: WorldInspectionLookup): WorldInspectionView | null {
+  const record = lookup.platform(id)
+  if (!record) return null
+  const repair = lookup.describeCampRepair?.('platform', id)
+  const rows: InspectionRow[] = [
+    { kind: 'info', label: 'Stan', value: `${Math.round(record.condition)} / 100` },
+  ]
+  const actions: InspectionAction[] = []
+  if (repair) {
+    actions.push({
+      id: 'repairPlatform',
+      label: repair.mode === 'continue' ? 'Kontynuuj naprawę' : 'Napraw',
+      enabled: repair.canAct,
+      reasonLabel: repair.reasonLabel,
+      variant: 'primary',
+    })
+  }
+  actions.push(dangerAction('remove', 'Usuń', lookup.previewPlatformRemoval?.(id)))
+  return {
+    targetId: id,
+    title: 'Podest do spania',
+    sections: [{ title: 'Podest', rows }],
+    actions,
+  }
+}
+
+function buildTroughInspection(id: string, lookup: WorldInspectionLookup): WorldInspectionView | null {
+  const record = lookup.trough(id)
+  if (!record) return null
+  const complete = isPlayerTroughConstructionComplete(record)
+  const work = lookup.describePlayerTroughWork?.(id)
+  const fill = lookup.describePlayerTroughFill?.(id)
+  const rows: InspectionRow[] = [
+    { kind: 'info', label: 'Status', value: complete ? 'Ukończone' : 'W budowie' },
+    { kind: 'info', label: 'Woda', value: `${record.waterLitres} l` },
+  ]
+  const actions: InspectionAction[] = []
+  if (!complete) {
+    actions.push({
+      id: 'work',
+      label: 'Buduj dalej',
+      enabled: work?.canWork ?? true,
+      reasonLabel: work?.reasonLabel ?? '',
+      variant: 'primary',
+    })
+  } else {
+    actions.push({
+      id: 'fill',
+      label: 'Napełnij',
+      enabled: fill?.canWork ?? true,
+      reasonLabel: fill?.reasonLabel ?? '',
+      variant: 'primary',
+    })
+  }
+  actions.push(dangerAction('remove', 'Usuń', lookup.previewPlayerTroughRemoval?.(id)))
+  return {
+    targetId: id,
+    title: 'Koryto',
+    sections: [{ title: 'Koryto', rows }],
+    actions,
+  }
 }
 
 export function listWaterContainerOptions(

@@ -68,6 +68,8 @@ export const PLATFORM_PLACE_DURATION_SEC = 4
 export const BEDROLL_MATERIAL_REQUIREMENTS: readonly MaterialRequirement[] = [{ kind: 'hide', count: 3 }]
 /** Initial material (plan §"Initial material") — `branch`, per plan. */
 export const PLATFORM_MATERIAL_REQUIREMENTS: readonly MaterialRequirement[] = [{ kind: 'branch', count: 6 }]
+export const BEDROLL_RECOVERY_RATE = 0.5
+export const PLATFORM_RECOVERY_RATE = 0.5
 
 export type BedrollPlacementReason = GroundPlacementReason | 'bedroll'
 export type PlatformPlacementReason = GroundPlacementReason | 'platform'

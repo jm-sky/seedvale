@@ -46,6 +46,7 @@ export type StandingTorches = {
    *  light source), so a repeated `Ignite` never creates duplicate
    *  flame/light resources. */
   ignite: (id: string, nowDays: number) => boolean
+  remove: (id: string) => StandingTorchRecord | null
   /** World-time burn expiry (plan items-player-022) — flips expired lit
    *  torches to unlit, clears their deadline, and drops them from `active`.
    *  Call from the game/world update path with `dayNight.elapsedDays`. */
@@ -153,6 +154,17 @@ export function createStandingTorches(
       entry.torch.setLit(true)
       if (!active.includes(entry)) active.push(entry)
       return true
+    },
+    remove(id) {
+      const index = entries.findIndex((entry) => entry.id === id)
+      if (index === -1) return null
+      const [entry] = entries.splice(index, 1)
+      if (!entry) return null
+      extinguish(entry)
+      pointLightBudget.unregisterSubtree(entry.torch.object)
+      entry.torch.object.removeFromParent()
+      disposeObject3D(entry.torch.object)
+      return toRecord(entry)
     },
     resolveExpiry(now) {
       for (let i = active.length - 1; i >= 0; i--) {

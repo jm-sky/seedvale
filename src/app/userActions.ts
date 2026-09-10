@@ -7,9 +7,11 @@ import type { PlacedFireEntry } from '../settlement/PlacedFires'
 import type { Hud } from '../ui/createHud'
 import type { ActionAvailability, ActionRequirement, ActionResult } from './actions/actionContracts'
 import type { PlacementBlocker, PlacementPreviewResult } from './actions/placementActions'
+import type { FirePreviewKind } from './actions/placementPreviewActions'
 import type { WorldBundle } from './worldBundle'
 import { evaluateGroundPlacement } from '../items/tentPlacement'
 import { capabilityRequirement, itemRequirement, targetRequirement, toAvailability, toResult } from './actions/actionContracts'
+import { derivePlacementPresentation } from './actions/placementRequirementView'
 
 
 /** Resource costs for the fire-building/lighting quick actions
@@ -34,7 +36,15 @@ export const WOOD_PILE_BEAM_COST = 3
  *  blockers, and the minimum spacing from another placed fire. */
 export const FIRE_PLACE_REACH = 1.6
 export const FIRE_FOOTPRINT_RADIUS = 0.7
+export const FIRE_PIT_FOOTPRINT_RADIUS = 0.9
+export const WOOD_PILE_FOOTPRINT_RADIUS = 1.1
 export const FIRE_SEPARATION = 2.2
+
+const FIRE_KIND_FOOTPRINT: Record<FirePreviewKind, number> = {
+  simple: FIRE_FOOTPRINT_RADIUS,
+  pit: FIRE_PIT_FOOTPRINT_RADIUS,
+  pile: WOOD_PILE_FOOTPRINT_RADIUS,
+}
 
 /** Plan 175 §3 — one-time material cost to build a grate on an existing
  *  nearby fire. Centralized here (single source, like `FIRE_PIT_STONE_COST`
@@ -81,7 +91,7 @@ const getUserActions = (
    *  validation at all (placed directly under the player); this is the
    *  "authoritative aimed placement/validation seam" both the instant build
    *  and the shared placement-preview mode call. */
-  const evaluateFirePlacement = (x: number, z: number): boolean =>
+  const evaluateFirePlacement = (x: number, z: number, kind: FirePreviewKind = 'simple'): boolean =>
     evaluateGroundPlacement({
       x,
       z,
@@ -89,28 +99,32 @@ const getUserActions = (
       waterLevel: bundle.chunkManager.waterLevel,
       blockers: blockersNear(x, z),
       peers: bundle.placedFires.nodes(),
-      footprintRadius: FIRE_FOOTPRINT_RADIUS,
+      footprintRadius: FIRE_KIND_FOOTPRINT[kind],
       separation: FIRE_SEPARATION,
     }) === 'ok'
 
-  const previewFirePlacement = (): PlacementPreviewResult => {
+  const previewFirePlacement = (kind: FirePreviewKind = 'simple'): PlacementPreviewResult => {
     const aim = fireAimPoint()
-    const valid = evaluateFirePlacement(aim.x, aim.z)
+    const radius = FIRE_KIND_FOOTPRINT[kind]
+    const valid = evaluateFirePlacement(aim.x, aim.z, kind)
+    const presentation = derivePlacementPresentation({
+      geometryOk: valid,
+      geometryReason: valid ? '' : 'Za mało miejsca lub zbyt blisko wody/zbocza.',
+    })
     return {
       x: aim.x,
       z: aim.z,
       yaw: aim.yaw,
-      footprintRadius: FIRE_FOOTPRINT_RADIUS,
-      footprint: { kind: 'circle', radius: FIRE_FOOTPRINT_RADIUS },
-      valid,
-      reasonLabel: valid ? '' : 'Za mało miejsca lub zbyt blisko wody/zbocza.',
+      footprintRadius: radius,
+      footprint: { kind: 'circle', radius },
+      ...presentation,
     }
   }
 
   const simpleFireRequirements = (aim: { x: number, z: number }): (ActionRequirement | null)[] => [
     capabilityRequirement(inventory.hasCapability('fire_starting'), 'fire_starting'),
     itemRequirement(inventory.count('branch'), SIMPLE_FIRE_BRANCH_COST, 'branch'),
-    targetRequirement(evaluateFirePlacement(aim.x, aim.z), 'firePlacement'),
+    targetRequirement(evaluateFirePlacement(aim.x, aim.z, 'simple'), 'firePlacement'),
   ]
 
   const availableSimpleFire = (): ActionAvailability => toAvailability(simpleFireRequirements(fireAimPoint()))
@@ -133,7 +147,7 @@ const getUserActions = (
   // doc comment above).
   const firePitRequirements = (aim: { x: number, z: number }): (ActionRequirement | null)[] => [
     itemRequirement(inventory.count('stone'), FIRE_PIT_STONE_COST, 'stone'),
-    targetRequirement(evaluateFirePlacement(aim.x, aim.z), 'firePlacement'),
+    targetRequirement(evaluateFirePlacement(aim.x, aim.z, 'pit'), 'firePlacement'),
   ]
 
   const availableFirePit = (): ActionAvailability => toAvailability(firePitRequirements(fireAimPoint()))
@@ -154,7 +168,7 @@ const getUserActions = (
   // via the existing `[E]` campfire interaction.
   const woodPileRequirements = (aim: { x: number, z: number }): (ActionRequirement | null)[] => [
     itemRequirement(inventory.count('beam'), WOOD_PILE_BEAM_COST, 'beam'),
-    targetRequirement(evaluateFirePlacement(aim.x, aim.z), 'firePlacement'),
+    targetRequirement(evaluateFirePlacement(aim.x, aim.z, 'pile'), 'firePlacement'),
   ]
 
   const availableWoodPile = (): ActionAvailability => toAvailability(woodPileRequirements(fireAimPoint()))

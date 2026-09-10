@@ -79,6 +79,9 @@ export const STANDING_TORCH_MATERIAL_REQUIREMENTS: readonly MaterialRequirement[
   { kind: 'wooden_torch', count: 1 },
 ]
 
+/** Fraction of placement materials returned on removal (plan ui-input-016). */
+export const STANDING_TORCH_RECOVERY_RATE = 0.5
+
 /** Active-work hours required to finish a torch (plan items-player-017 §3/
  *  §11) — the smallest buildable this plan covers, so one full-length bout
  *  completes it (plan §4's "keep small objects practical to construct

@@ -8,18 +8,23 @@ import {
   primaryActionState,
 } from './interactionView'
 
-function tentTarget(promptLabel: string): Interactable {
+function houseTarget(promptLabel: string): Interactable {
   return {
-    kind: 'tent',
+    kind: 'house',
     position: { x: 0, z: 0 },
     promptLabel,
-    id: 'tent-1',
+    houseId: 'h1',
+    modelUrl: null,
+    label: '',
+    examine: '',
+    lampMount: null,
+    lampMountSource: null,
   }
 }
 
 describe('buildInteractionView (plan ui-input-015)', () => {
   it('maps primary-only legacy prompts', () => {
-    const view = buildInteractionView(tentTarget('Rozmawiaj z Jan'), { hasInspect: false })
+    const view = buildInteractionView(houseTarget('Rozmawiaj z Jan'), { hasInspect: false })
     expect(view.actions).toEqual([{
       slot: 'primary',
       label: 'Rozmawiaj z Jan',
@@ -29,7 +34,7 @@ describe('buildInteractionView (plan ui-input-015)', () => {
   })
 
   it('maps primary and alternate bracket prompts', () => {
-    const view = buildInteractionView(tentTarget('[E] Odpocznij · [R] Zbadaj'), { hasInspect: false })
+    const view = buildInteractionView(houseTarget('[E] Odpocznij · [R] Zbadaj'), { hasInspect: false })
     expect(view.actions.map((a) => a.slot)).toEqual(['primary', 'alternate'])
     expect(view.actions[0]?.label).toBe('Odpocznij')
     expect(view.actions[1]?.label).toBe('Zbadaj')
@@ -44,7 +49,7 @@ describe('buildInteractionView (plan ui-input-015)', () => {
       complete: false,
     }, { hasInspect: true })
     expect(view.actions.some((a) => a.slot === 'inspect')).toBe(true)
-    expect(view.actions.filter((a) => a.slot === 'primary' || a.slot === 'alternate')).toHaveLength(1)
+    expect(view.actions.filter((a) => a.slot === 'primary' || a.slot === 'alternate')).toHaveLength(2)
   })
 
   it('marks flavor-only status prompts as disabled primary', () => {
@@ -80,7 +85,7 @@ describe('buildInteractionView (plan ui-input-015)', () => {
   })
 
   it('does not mutate the interactable', () => {
-    const target = tentTarget('[E] Odpocznij')
+    const target = houseTarget('[E] Odpocznij')
     const before = JSON.stringify(target)
     buildInteractionView(target, { hasInspect: false })
     expect(JSON.stringify(target)).toBe(before)
@@ -89,7 +94,7 @@ describe('buildInteractionView (plan ui-input-015)', () => {
 
 describe('touch availability helpers', () => {
   it('hides alternate when only primary exists', () => {
-    const view = buildInteractionView(tentTarget('[E] Odpocznij'), { hasInspect: false })
+    const view = buildInteractionView(houseTarget('[E] Odpocznij'), { hasInspect: false })
     expect(alternateActionState(view)).toBeNull()
     expect(primaryActionState(view)?.enabled).toBe(true)
   })
@@ -112,3 +117,57 @@ describe('targeted skill override', () => {
     expect(action).toMatchObject({ slot: 'primary', label: 'Napraw: namiot', enabled: true })
   })
 })
+
+describe('construction InteractionView (plan ui-input-016)', () => {
+  it('does not use [R] inspect on camp or tent', () => {
+    const camp = buildInteractionView({
+      kind: 'camp',
+      position: { x: 0, z: 0 },
+      promptLabel: '[E] Odpocznij · [R] Zbadaj',
+      tentId: 't1',
+      bedrollId: null,
+      platformId: null,
+    }, { hasInspect: true })
+    expect(camp.actions.find((action) => action.slot === 'primary')?.label).toBe('Odpocznij')
+    expect(camp.actions.some((action) => action.slot === 'alternate')).toBe(false)
+    expect(camp.actions.some((action) => action.slot === 'inspect')).toBe(true)
+  })
+
+  it('shows disabled palisade work with the live reason', () => {
+    const view = buildInteractionView({
+      kind: 'palisade',
+      position: { x: 0, z: 0 },
+      promptLabel: '',
+      id: 'p1',
+      complete: false,
+    }, {
+      hasInspect: false,
+      describePalisadeWork: () => ({ canWork: false, reasonLabel: 'Jesteś zbyt wyczerpany, by kontynuować.' }),
+    })
+    expect(view.actions.find((action) => action.slot === 'primary')).toMatchObject({
+      enabled: false,
+      reasonLabel: 'Jesteś zbyt wyczerpany, by kontynuować.',
+    })
+    expect(view.actions.find((action) => action.slot === 'alternate')?.label).toBe('Usuń')
+  })
+
+  it('shows trough fill as disabled when water is missing', () => {
+    const view = buildInteractionView({
+      kind: 'playerTrough',
+      position: { x: 0, z: 0 },
+      promptLabel: '',
+      id: 'tr1',
+      complete: true,
+      canFill: true,
+    }, {
+      hasInspect: true,
+      describePlayerTroughFill: () => ({ canWork: false, reasonLabel: 'Potrzebujesz pojemnika z wodą.' }),
+    })
+    expect(view.actions.find((action) => action.slot === 'primary')).toMatchObject({
+      label: 'Napełnij',
+      enabled: false,
+      reasonLabel: 'Potrzebujesz pojemnika z wodą.',
+    })
+  })
+})
+

@@ -1,6 +1,7 @@
 import type { ActionResult } from './actionContracts'
 import type { ContainerActions } from './containerActions'
 import type { PlacementActions, PlacementMutationLifecycle, PlacementPreviewResult } from './placementActions'
+import type { PlacementPreviewState, PlacementRequirementView } from './placementRequirementView'
 import type { WorkContractActions } from './workContractActions'
 import { createPlacementPreviewGhost, type PlacementPreviewGhost } from '../../world/placementPreview'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
@@ -9,14 +10,15 @@ import type { Scene } from 'three'
 
 /**
  * Shared object-placement preview mode (plan `ui-input-004` §2/§7, rotation
- * and coverage by `ui-input-012`) — one generic aim/ghost/confirm/cancel
- * lifecycle reused by every placeable object, matching
- * `terrainPreparationActions.ts`'s split: this module owns only the preview
- * presentation, rotation state and dispatch, never gameplay rules. Each
- * object's own action module remains the sole owner of its placement
- * validity, costs and mutation — this only calls their read-only `preview*()`
- * for the ghost, then their real placement action again at confirm time
- * (never trust a cached preview result for the final mutation).
+ * and coverage by `ui-input-012`, three-state/garden/traps/repeat by
+ * `ui-input-016`) — one generic aim/ghost/confirm/cancel lifecycle reused by
+ * every placeable object, matching `terrainPreparationActions.ts`'s split:
+ * this module owns only the preview presentation, rotation state and
+ * dispatch, never gameplay rules. Each object's own action module remains the
+ * sole owner of its placement validity, costs and mutation — this only
+ * calls their read-only `preview*()` for the ghost, then their real
+ * placement action again at confirm time (never trust a cached preview
+ * result for the final mutation).
  *
  * @domain ui-input
  */
@@ -35,12 +37,21 @@ export type PlacementPreviewKind =
   | 'well'
   | 'smallHouse'
   | 'mediumHouse'
+  | 'garden'
+  | 'trapSimple'
+  | 'trapGood'
 
 export type PlacementPreviewUiView = {
   label: string
   valid: boolean
+  state: PlacementPreviewState
+  canConfirm: boolean
+  confirmLabel: string
   reasonLabel: string
   supportsRotation: boolean
+  requirements: readonly PlacementRequirementView[]
+  supportsRepeat: boolean
+  repeatEnabled: boolean
 }
 
 /** Async completion hooks for multi-stage player intents (plan ui-input-010 /
@@ -72,6 +83,9 @@ const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   well: 'Studnia',
   smallHouse: 'Mała chata',
   mediumHouse: 'Średnia chata',
+  garden: 'Grządka',
+  trapSimple: 'Prosta pułapka',
+  trapGood: 'Dobra pułapka',
 }
 
 /** Explicit rotation capability — not derived from footprint kind
@@ -91,7 +105,56 @@ const SUPPORTS_ROTATION: Record<PlacementPreviewKind, boolean> = {
   well: false,
   smallHouse: true,
   mediumHouse: true,
+  garden: false,
+  trapSimple: false,
+  trapGood: false,
 }
+
+/** Semantic front/entrance marker — independent of rotation. House and tent
+ *  have a real entrance; other rotatable objects do not. */
+const SHOW_ENTRANCE_MARKER: Record<PlacementPreviewKind, boolean> = {
+  chest: false,
+  tent: true,
+  fireSimple: false,
+  firePit: false,
+  firePile: false,
+  standingTorch: false,
+  playerTrough: false,
+  palisade: false,
+  bedroll: false,
+  platform: false,
+  workContract: false,
+  well: false,
+  smallHouse: true,
+  mediumHouse: true,
+  garden: false,
+  trapSimple: false,
+  trapGood: false,
+}
+
+/** Serial placement stays open after a successful commit. Palisade is the
+ *  primary case; intent-driven flows never stay open. */
+const SUPPORTS_REPEAT: Record<PlacementPreviewKind, boolean> = {
+  chest: false,
+  tent: false,
+  fireSimple: false,
+  firePit: false,
+  firePile: false,
+  standingTorch: false,
+  playerTrough: false,
+  palisade: true,
+  bedroll: false,
+  platform: false,
+  workContract: false,
+  well: false,
+  smallHouse: false,
+  mediumHouse: false,
+  garden: false,
+  trapSimple: false,
+  trapGood: false,
+}
+
+export type FirePreviewKind = 'simple' | 'pit' | 'pile'
 
 export type PlacementPreviewActionDeps = {
   scene: Scene
@@ -115,10 +178,14 @@ export type PlacementPreviewActionDeps = {
     | 'placeSmallHouseAtAim'
     | 'previewMediumHousePlacement'
     | 'placeMediumHouseAtAim'
+    | 'previewGardenPlacement'
+    | 'placeGardenAtAim'
+    | 'previewTrapPlacement'
+    | 'placeTrapAtAim'
   >
   containers: Pick<ContainerActions, 'previewContainerPlacement' | 'placeContainerAtAim'>
   workContract: Pick<WorkContractActions, 'previewContractPlacement' | 'confirmContractPlacementAtAim'>
-  previewFire: () => PlacementPreviewResult
+  previewFire: (kind: FirePreviewKind) => PlacementPreviewResult
   buildSimpleFire: () => ActionResult
   buildFirePit: () => ActionResult
   buildWoodPile: () => ActionResult
@@ -144,10 +211,22 @@ export type PlacementPreviewActions = {
   confirm: () => void
   rotateLeft: () => void
   rotateRight: () => void
+  toggleRepeat: () => void
   /** Esc — cancels the active preview without side effects. Returns true if
    *  a preview was actually active (same contract as
    *  `TerrainPreparationActions.cancelActive`). */
   cancel: () => boolean
+}
+
+function firePreviewKind(kind: PlacementPreviewKind): FirePreviewKind {
+  if (kind === 'firePit') return 'pit'
+  if (kind === 'firePile') return 'pile'
+  return 'simple'
+}
+
+function confirmLabelFor(result: PlacementPreviewResult): string {
+  if (result.confirmKind === 'prepareTerrain') return 'Przygotuj teren [E]'
+  return 'Zatwierdź [E]'
 }
 
 export function createPlacementPreviewActions(
@@ -163,6 +242,7 @@ export function createPlacementPreviewActions(
   let placementStartYaw = 0
   let rotationSteps = 0
   let intentLifecycle: PlacementPreviewLifecycle | null = null
+  let repeatEnabled = false
 
   const finishIntent = (cancelled: boolean, result?: PlacementPreviewConfirmResult): void => {
     const lifecycle = intentLifecycle
@@ -198,7 +278,8 @@ export function createPlacementPreviewActions(
       case 'firePile':
       case 'firePit':
       case 'fireSimple':
-        return previewFire()
+        return previewFire(firePreviewKind(kind))
+      case 'garden': return placement.previewGardenPlacement()
       case 'mediumHouse': return placement.previewMediumHousePlacement(objectYaw)
       case 'palisade': return placement.previewPalisadePlacement(objectYaw)
       case 'platform': return placement.previewPlatformPlacement(objectYaw)
@@ -206,6 +287,8 @@ export function createPlacementPreviewActions(
       case 'smallHouse': return placement.previewSmallHousePlacement(objectYaw)
       case 'standingTorch': return placement.previewStandingTorchPlacement()
       case 'tent': return placement.previewTentPlacement(objectYaw)
+      case 'trapGood': return placement.previewTrapPlacement('good')
+      case 'trapSimple': return placement.previewTrapPlacement('simple')
       case 'well': return placement.previewWellPlacement()
       case 'workContract': return workContract.previewContractPlacement()
     }
@@ -228,6 +311,7 @@ export function createPlacementPreviewActions(
         else finishIntent(true)
         return
       }
+      case 'garden': placement.placeGardenAtAim(); return
       case 'mediumHouse': placement.placeMediumHouseAtAim(objectYaw); return
       case 'palisade': placement.placePalisadeAtAim(objectYaw); return
       case 'platform': {
@@ -245,9 +329,26 @@ export function createPlacementPreviewActions(
         placement.placeTentAtAim(objectYaw, notifyPlacement(lifecycle, 'tent'))
         return
       }
+      case 'trapGood': placement.placeTrapAtAim('good'); return
+      case 'trapSimple': placement.placeTrapAtAim('simple'); return
       case 'well': placement.placeWellAtAim(); return
       case 'workContract': workContract.confirmContractPlacementAtAim(); return
     }
+  }
+
+  const publish = (kind: PlacementPreviewKind, result: PlacementPreviewResult): void => {
+    showPreview({
+      label: KIND_LABEL[kind],
+      valid: result.valid,
+      state: result.state,
+      canConfirm: result.canConfirm,
+      confirmLabel: confirmLabelFor(result),
+      reasonLabel: result.reasonLabel,
+      supportsRotation: SUPPORTS_ROTATION[kind],
+      requirements: result.requirements,
+      supportsRepeat: SUPPORTS_REPEAT[kind] && intentLifecycle === null,
+      repeatEnabled,
+    })
   }
 
   const exit = (cancelIntent = false): void => {
@@ -257,6 +358,7 @@ export function createPlacementPreviewActions(
     lastResult = null
     placementStartYaw = 0
     rotationSteps = 0
+    repeatEnabled = false
     intentLifecycle = null
     mouseLook.state.zoomLocked = false
     ghost.group.removeFromParent()
@@ -270,6 +372,7 @@ export function createPlacementPreviewActions(
     rotationSteps = 0
     placementStartYaw = snapPlacementYaw45(mouseLook.state.yaw)
     intentLifecycle = lifecycle ?? null
+    repeatEnabled = false
     mouseLook.state.zoomLocked = true
     scene.add(ghost.group)
   }
@@ -286,19 +389,26 @@ export function createPlacementPreviewActions(
     rotationSteps += 1
   }
 
+  const toggleRepeat = (): void => {
+    if (!active || !SUPPORTS_REPEAT[active] || intentLifecycle) return
+    repeatEnabled = !repeatEnabled
+    if (lastResult) publish(active, lastResult)
+  }
+
   const confirm = (): void => {
-    if (!active || !lastResult?.valid) return
+    if (!active || !lastResult?.canConfirm) return
     const kind = active
     const objectYaw = currentObjectYaw()
+    const stay = repeatEnabled && SUPPORTS_REPEAT[kind] && !intentLifecycle
     commit(kind, objectYaw)
-    exit(false)
+    if (!stay) exit(false)
   }
 
   const tick = (): void => {
     const rotateLeftPressed = keyboard.consumeRotateLeft()
     if (!active) return
     if (isActionBlocked(ctx)) {
-      exit(true)
+      if (keyboard.consumeDrop()) { /* drain so G cannot linger */ }
       return
     }
     if (supportsRotation(active)) {
@@ -307,15 +417,10 @@ export function createPlacementPreviewActions(
     }
     const result = resolvePreview(active, currentObjectYaw())
     ghost.setFootprint(result.footprint)
-    ghost.setEntranceMarker(active === 'smallHouse' || active === 'mediumHouse')
+    ghost.setEntranceMarker(SHOW_ENTRANCE_MARKER[active])
     ghost.setTransform(result.x, result.z, bundle.chunkManager.sampleHeight(result.x, result.z), result.yaw)
-    ghost.setValid(result.valid)
-    showPreview({
-      label: KIND_LABEL[active],
-      valid: result.valid,
-      reasonLabel: result.reasonLabel,
-      supportsRotation: SUPPORTS_ROTATION[active],
-    })
+    ghost.setPreviewState(result.state)
+    publish(active, result)
     lastResult = result
     if (keyboard.consumeInteract()) confirm()
   }
@@ -326,5 +431,5 @@ export function createPlacementPreviewActions(
     return true
   }
 
-  return { start, isActive, tick, confirm, rotateLeft, rotateRight, cancel }
+  return { start, isActive, tick, confirm, rotateLeft, rotateRight, toggleRepeat, cancel }
 }

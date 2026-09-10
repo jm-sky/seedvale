@@ -142,6 +142,13 @@ export function physicalEffortBusyOptions(
   }
 }
 
+/** Represented-hour Vigor cost of `intensity` — the per-hour amount
+ *  `applyRepresentedPhysicalEffortVigor` applies. Used to compute a
+ *  construction session's nearest stamina/vigor stop (plan ui-input-016). */
+export function representedPhysicalEffortVigorPerHour(intensity: PhysicalEffortIntensity): number {
+  return EFFORT_VIGOR_EXTRA_DRAIN_PER_GAME_DAY[intensity] / GAME_HOURS_PER_DAY
+}
+
 /** Applies `intensity`'s Vigor cost for a delta of *represented* work time
  *  (game-hours), decoupled from how many real seconds the channel
  *  representing it actually ran (plan §5) — `workOnWell`'s compressed bout
@@ -154,7 +161,7 @@ export function applyRepresentedPhysicalEffortVigor(
   representedGameHours: number,
 ): void {
   if (representedGameHours <= 0) return
-  drainVigor(vigor, (EFFORT_VIGOR_EXTRA_DRAIN_PER_GAME_DAY[intensity] / GAME_HOURS_PER_DAY) * representedGameHours)
+  drainVigor(vigor, representedPhysicalEffortVigorPerHour(intensity) * representedGameHours)
 }
 
 /** How long Hunger/Thirst must stay continuously critical (plan 165 §2/§3)

@@ -1,3 +1,4 @@
+import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { ToolKind } from '../items/HeldTool'
 import type { ItemCapability } from '../items/itemCatalog'
 import type { GroundPlacementReason } from '../items/tentPlacement'
@@ -46,6 +47,13 @@ export type PlayerGardenRecord = {
  *  budowy") — a fraction of a well's `well`-stage cost. */
 export type GardenMaterialCost = { stone: number, branch: number }
 export const GARDEN_COST: GardenMaterialCost = { stone: 3, branch: 2 }
+
+export function gardenMaterialRequirements(): MaterialRequirement[] {
+  const requirements: MaterialRequirement[] = []
+  if (GARDEN_COST.stone > 0) requirements.push({ kind: 'stone', count: GARDEN_COST.stone })
+  if (GARDEN_COST.branch > 0) requirements.push({ kind: 'branch', count: GARDEN_COST.branch })
+  return requirements
+}
 
 /** Capability required to build a plot — same "digging tool, not a specific
  *  item identity" contract as a well's `pit` stage. */

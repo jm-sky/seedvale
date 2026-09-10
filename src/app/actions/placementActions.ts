@@ -28,7 +28,6 @@ import { selectInstanceToPlace } from '../../items/trade'
 import {
   applyRepresentedPhysicalEffortVigor,
   physicalEffortBusyOptions,
-  physicalEffortStaminaCostPerSec,
 } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD, survivalDurationMultiplier } from '../../player/PlayerSkills'
 import { villageSizeConfig } from '../../settlement/families'
@@ -49,6 +48,7 @@ import {
   TRAP_SEPARATION,
   TRAP_SETUP_DURATION_SEC,
   type TrapKind,
+  type TrapPlacementReason,
 } from '../../world/animalTraps'
 import {
   isPalisadeConstructionComplete,
@@ -84,12 +84,13 @@ import {
 } from '../../world/plantedTrees'
 import {
   GARDEN_CAPABILITY,
-  GARDEN_COST,
   GARDEN_FOOTPRINT_RADIUS,
   GARDEN_PLACE_DURATION_SEC,
   GARDEN_PLACE_REACH,
   GARDEN_PLACEMENT_MESSAGE,
   GARDEN_SEPARATION,
+  gardenMaterialRequirements,
+  type GardenPlacementReason,
   maintenanceDurationSec,
   PLAYER_GARDEN_PLANT_RADIUS,
   WATERING_DURATION_SEC,
@@ -103,6 +104,7 @@ import {
   PLAYER_TROUGH_PLACE_DURATION_SEC,
   PLAYER_TROUGH_PLACE_REACH,
   PLAYER_TROUGH_PLACEMENT_MESSAGE,
+  PLAYER_TROUGH_RECOVERY_RATE,
   PLAYER_TROUGH_SEPARATION,
   PLAYER_TROUGH_WORK_SESSION_HOURS,
   PLAYER_TROUGH_WORK_SESSION_SEC,
@@ -121,6 +123,7 @@ import {
   WELL_PLACE_DURATION_SEC,
   WELL_PLACE_REACH,
   WELL_PLACEMENT_MESSAGE,
+  WELL_RECOVERY_RATE,
   WELL_ROOF_REPAIR_WORK_LABEL,
   WELL_SEPARATION,
   WELL_WORK_LABEL,
@@ -148,6 +151,7 @@ import {
   residentialBuildingSeparation,
   type ResidentialPlacementReason,
   residentialStageRequirements,
+  residentialTotalRequirements,
 } from '../../world/residentialBuilding'
 import {
   BEDROLL_FOOTPRINT_RADIUS,
@@ -155,6 +159,7 @@ import {
   BEDROLL_PLACE_DURATION_SEC,
   BEDROLL_PLACE_REACH,
   BEDROLL_PLACEMENT_MESSAGE,
+  BEDROLL_RECOVERY_RATE,
   BEDROLL_SEPARATION,
   type BedrollPlacementReason,
   PLATFORM_FOOTPRINT_RADIUS,
@@ -162,6 +167,7 @@ import {
   PLATFORM_PLACE_DURATION_SEC,
   PLATFORM_PLACE_REACH,
   PLATFORM_PLACEMENT_MESSAGE,
+  PLATFORM_RECOVERY_RATE,
   PLATFORM_SEPARATION,
   type PlatformPlacementReason,
 } from '../../world/sleepingUtilities'
@@ -178,6 +184,7 @@ import {
   STANDING_TORCH_PLACE_DURATION_SEC,
   STANDING_TORCH_PLACE_REACH,
   STANDING_TORCH_PLACEMENT_MESSAGE,
+  STANDING_TORCH_RECOVERY_RATE,
   STANDING_TORCH_SEPARATION,
   STANDING_TORCH_WORK_SESSION_HOURS,
   STANDING_TORCH_WORK_SESSION_SEC,
@@ -185,6 +192,15 @@ import {
   standingTorchRemainingWork,
 } from '../../world/standingTorch'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
+import { startConstructionWorkSession } from './constructionWorkSession'
+import {
+  derivePlacementPresentation,
+  formatRecoveryLines,
+  type PlacementConfirmKind,
+  type PlacementPreviewState,
+  type PlacementRequirementView,
+  placementRequirementViews,
+} from './placementRequirementView'
 import { placementAimSite } from './placementYaw'
 
 /** A world object the player can put down in front of themselves — the shared
@@ -212,7 +228,16 @@ export type PlacementPreviewResult = {
   footprint: PlacementPreviewFootprint
   valid: boolean
   reasonLabel: string
+  /** Explicit three-state presentation (plan ui-input-016) — Vue/ghost
+   *  must not infer this from `reasonLabel`. `valid` stays as
+   *  `state === 'ready'` for compatibility. */
+  state: PlacementPreviewState
+  canConfirm: boolean
+  confirmKind: PlacementConfirmKind
+  requirements: readonly PlacementRequirementView[]
 }
+
+export type { PlacementConfirmKind, PlacementPreviewState, PlacementRequirementView }
 
 /** Aimed transform for a ground-placed object (plan `world-008` §2) —
  *  resolved fresh on every read, never cached: the site a placement would
@@ -265,14 +290,17 @@ export function previewGroundPlacement<Reason extends string>(
 ): PlacementPreviewResult {
   const { site, reason } = evaluatePlacementSite(def)
   const ok = (reason as string) === 'ok'
+  const presentation = derivePlacementPresentation({
+    geometryOk: ok,
+    geometryReason: ok ? '' : def.reasonLabel(reason as Exclude<Reason, 'ok'>),
+  })
   return {
     x: site.x,
     z: site.z,
     yaw: site.yaw,
     footprintRadius: def.footprintRadius,
     footprint: def.previewFootprint,
-    valid: ok,
-    reasonLabel: ok ? '' : def.reasonLabel(reason as Exclude<Reason, 'ok'>),
+    ...presentation,
   }
 }
 
@@ -292,6 +320,25 @@ export type WellRoofRepairView = {
   waterAvailable: boolean
 }
 
+export type ConstructionActionView = {
+  canWork: boolean
+  reasonLabel: string
+}
+
+export type ResidentialWorkView = {
+  canWork: boolean
+  workReasonLabel: string
+  canSupply: boolean
+  supplyReasonLabel: string
+}
+
+export type RemovalPreview = {
+  recovered: readonly MaterialRequirement[]
+  canReceive: boolean
+  reasonLabel: string
+  body: string
+}
+
 export type PlacementActions = {
   /** Where a tent placed right now would land (its far end is `TENT_LENGTH`
    *  ahead of the player, along the current look yaw). */
@@ -307,6 +354,7 @@ export type PlacementActions = {
   previewTentPlacement: (objectYaw?: number) => PlacementPreviewResult
   placeTentAtAim: (objectYaw?: number, lifecycle?: PlacementMutationLifecycle) => void
   placeTrapAtAim: (kind: TrapKind) => void
+  previewTrapPlacement: (kind: TrapKind) => PlacementPreviewResult
   /** Read-only preview of well placement at the player's current aim (plan
    *  `ui-input-012`) — same shared preview seam as tent/torch; confirm still
    *  re-resolves via `placeWellAtAim`. */
@@ -327,6 +375,7 @@ export type PlacementActions = {
    *  — a single-stage placement (unlike a well), immediately usable as a
    *  planting anchor once built. */
   placeGardenAtAim: () => void
+  previewGardenPlacement: () => PlacementPreviewResult
   /** "Zrób porządek" on a player garden plot (plan 176 §4/§10) — restores
    *  ~50 care points (capped at 100) after a short busy channel, shortened
    *  by a held shovel/pitchfork. Mutation only applied on completion, after
@@ -360,10 +409,17 @@ export type PlacementActions = {
    *  applied, same "measured wall-clock fraction on cancel" contract as
    *  `workOnWell`. No-op if `id` is unknown or already complete. */
   workOnStandingTorch: (id: string) => void
+  describeStandingTorchWork: (id: string) => ConstructionActionView | null
+  previewStandingTorchRemoval: (id: string) => RemovalPreview | null
+  removeStandingTorch: (id: string) => void
   previewPlayerTroughPlacement: () => PlacementPreviewResult
   placePlayerTroughAtAim: () => void
   workOnPlayerTrough: (id: string) => void
+  describePlayerTroughWork: (id: string) => ConstructionActionView | null
+  describePlayerTroughFill: (id: string) => ConstructionActionView | null
   fillPlayerTrough: (id: string) => void
+  previewPlayerTroughRemoval: (id: string) => RemovalPreview | null
+  removePlayerTrough: (id: string) => void
   /** Read-only preview of palisade-segment placement at the player's current
    *  aim (plan items-player-010 §1/§3/§4) — already snapped to a nearby
    *  segment endpoint when one is in range; backs the shared
@@ -379,6 +435,8 @@ export type PlacementActions = {
    *  same shape as `workOnStandingTorch`, `moderate`-effort represented
    *  vigor cost. No-op if `id` is unknown or already complete. */
   workOnPalisade: (id: string) => void
+  describePalisadeWork: (id: string) => ConstructionActionView | null
+  previewPalisadeRemoval: (id: string) => RemovalPreview | null
   /** `[R]` removes one palisade segment by id (plan items-player-010 §5/§6/
    *  §7, extended by items-player-017 §17) — the generic player-built
    *  removal/recovery seam (`items/constructionMaterials.ts`) applied to a
@@ -410,11 +468,70 @@ export type PlacementActions = {
   placeMediumHouseAtAim: (objectYaw?: number) => void
   supplyResidentialBuildingMaterials: (id: string) => void
   workOnResidentialBuilding: (id: string) => void
+  describeResidentialWork: (id: string) => ResidentialWorkView | null
+  previewResidentialCancel: (id: string) => RemovalPreview | null
   cancelResidentialBuilding: (id: string) => void
+  previewWellCancel: (id: string) => RemovalPreview | null
+  cancelPlayerWell: (id: string) => void
+  previewBedrollRemoval: (id: string) => RemovalPreview | null
+  removeBedroll: (id: string) => void
+  previewPlatformRemoval: (id: string) => RemovalPreview | null
+  removePlatform: (id: string) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
+
+  const withRequirements = (
+    result: PlacementPreviewResult,
+    requirements: readonly MaterialRequirement[],
+    missingCapabilityReason?: string,
+  ): PlacementPreviewResult => ({
+    ...result,
+    ...derivePlacementPresentation({
+      geometryOk: result.state !== 'invalid',
+      geometryReason: result.reasonLabel,
+      requirements: placementRequirementViews(inventory, bundle.droppedItems, result.x, result.z, requirements),
+      missingCapabilityReason,
+    }),
+  })
+
+  const exhaustedReason = 'Jesteś zbyt wyczerpany, by kontynuować.'
+
+  const startRepresentedWork = (
+    remainingHours: number,
+    realSecondsPerRepresentedHour: number,
+    label: string,
+    staminaEffort: 'light' | 'moderate' | 'heavy',
+    vigorEffort: 'light' | 'moderate' | 'heavy',
+    contribute: (hours: number) => void,
+  ): boolean => {
+    const started = startConstructionWorkSession(busy, player.needs, {
+      remainingHours,
+      realSecondsPerRepresentedHour,
+      label,
+      staminaEffort,
+      vigorEffort,
+      contribute,
+    })
+    if (!started) toast.show(exhaustedReason, 'error')
+    return started
+  }
+
+  const removalPreview = (
+    requirements: readonly MaterialRequirement[],
+    recoveryRate: number,
+    emptyReason = 'Brak miejsca w ekwipunku na odzyskane materiały.',
+  ): RemovalPreview => {
+    const recovered = computeMaterialRecovery({ requirements, recoveryRate })
+    const canReceive = canReceiveRecovery(inventory, recovered)
+    return {
+      recovered,
+      canReceive,
+      reasonLabel: canReceive ? '' : emptyReason,
+      body: formatRecoveryLines(recovered),
+    }
+  }
 
   const tentAimPoint = (): { x: number, z: number, yaw: number } =>
     placementAimSite(player.mesh.position.x, player.mesh.position.z, mouseLook.state.yaw, TENT_LENGTH)
@@ -518,34 +635,62 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  completes, and it lands `placed` (not armed), so arming stays a separate
    *  `[E]` interaction. Reuses the shared ground-suitability check, just with
    *  the trap's own footprint. */
+  const trapPlacementDefinition = (_kind: TrapKind): GroundPlacementDefinition<TrapPlacementReason> => ({
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      TRAP_PLACE_REACH,
+    ),
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: [...bundle.placedTraps.nodes(), ...bundle.placedTents.nodes()],
+        footprintRadius: TRAP_FOOTPRINT_RADIUS,
+        separation: TRAP_SEPARATION,
+      })
+      return reason === 'occupied' ? 'trap' : reason
+    },
+    footprintRadius: TRAP_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'circle', radius: TRAP_FOOTPRINT_RADIUS },
+    reasonLabel: (reason) => TRAP_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewTrapPlacement = (kind: TrapKind): PlacementPreviewResult => {
+    const result = previewGroundPlacement(trapPlacementDefinition(kind))
+    const def = TRAP_DEFS[kind]
+    const hasInstance = inventory.getInstances(def.itemKind).some(isTrapItemInstance)
+    if (hasInstance) return result
+    return {
+      ...result,
+      ...derivePlacementPresentation({
+        geometryOk: result.state !== 'invalid',
+        geometryReason: result.reasonLabel,
+        missingCapabilityReason: `Nie masz: ${def.label}.`,
+      }),
+    }
+  }
+
   const placeTrapAtAim = (kind: TrapKind): void => {
     const def = TRAP_DEFS[kind]
     const candidates = inventory.getInstances(def.itemKind).filter(isTrapItemInstance)
     const selected = selectInstanceToPlace(candidates)
     if (!selected || isActionBlocked(ctx)) return
     const instanceId = selected.id
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * TRAP_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * TRAP_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: [...bundle.placedTraps.nodes(), ...bundle.placedTents.nodes()],
-      footprintRadius: TRAP_FOOTPRINT_RADIUS,
-      separation: TRAP_SEPARATION,
-    })
+    const { site, reason } = evaluatePlacementSite(trapPlacementDefinition(kind))
     if (reason !== 'ok') {
-      toast.show(TRAP_PLACEMENT_MESSAGE[reason === 'occupied' ? 'trap' : reason], 'error')
+      toast.show(TRAP_PLACEMENT_MESSAGE[reason], 'error')
       return
     }
     busy.start(TRAP_SETUP_DURATION_SEC, 'Zastawianie pułapki…', () => {
       const instance = inventory.getInstance(instanceId)
       if (!instance || !isTrapItemInstance(instance) || instance.durability <= 0) return
       if (!inventory.removeInstance(instanceId)) return
-      bundle.placedTraps.place(instance, x, z, yaw)
+      bundle.placedTraps.place(instance, site.x, site.z, site.yaw)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show(`Zastawiono: ${def.label}.`)
@@ -577,7 +722,11 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     reasonLabel: (reason) => WELL_PLACEMENT_MESSAGE[reason],
   })
 
-  const previewWellPlacement = (): PlacementPreviewResult => previewGroundPlacement(wellPlacementDefinition())
+  const previewWellPlacement = (): PlacementPreviewResult => {
+    const result = previewGroundPlacement(wellPlacementDefinition())
+    if (inventory.hasCapability('soil_digging')) return result
+    return withRequirements(result, [], `Potrzebujesz ${CAPABILITY_NEED_LABEL.soil_digging}.`)
+  }
 
   /** Places a new player-built well ahead of the player (plan 127 §5/§11) —
    *  same busy-channel shape as pitching a tent/setting a trap: the shovel
@@ -586,7 +735,11 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  `world/playerWell.ts`'s header doc). Materials are charged later, when
    *  each subsequent stage actually starts (`advanceWellStage` below). */
   const placeWellAtAim = (): void => {
-    if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
+    if (isActionBlocked(ctx)) return
+    if (!inventory.hasCapability('soil_digging')) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.soil_digging}.`, 'error')
+      return
+    }
     const { site, reason } = evaluatePlacementSite(wellPlacementDefinition())
     if (reason !== 'ok') {
       toast.show(WELL_PLACEMENT_MESSAGE[reason], 'error')
@@ -652,32 +805,20 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }
     const workedSoFar = enteredNewStage ? 0 : well.workProgress
     const remainingHours = Math.max(0, wellStageWorkHours(stage, well.waterDepth) - workedSoFar)
-    const sessionHours = Math.min(WELL_WORK_SESSION_HOURS, remainingHours)
-    const sessionSec = (sessionHours / WELL_WORK_SESSION_HOURS) * WELL_WORK_SESSION_SEC
-    const startedAt = performance.now()
-    // Vigor is `heavy` (plan §8 "studnia heavy") applied per represented
-    // work-hour actually credited — never per real `sessionSec`, so changing
-    // `WELL_WORK_SESSION_SEC` can't silently change the total Vigor cost of
-    // the represented work (plan §5). Stamina stays on the existing
-    // `moderate` real-elapsed-seconds channel (`BUSY_ACTION_STAMINA_COST_PER_SEC`
-    // unchanged per implementation notes).
-    const creditPartial = (): void => {
-      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
-      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      const creditedHours = sessionHours * fraction
-      bundle.playerWells.addWork(id, creditedHours, dayNight.elapsedDays)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', creditedHours)
-    }
+    startRepresentedWork(
+      remainingHours,
+      WELL_WORK_SESSION_SEC / WELL_WORK_SESSION_HOURS,
+      WELL_WORK_LABEL[stage],
+      'moderate',
+      'heavy',
+      (hours) => {
+        bundle.playerWells.addWork(id, hours, dayNight.elapsedDays)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', hours)
+      },
+    )
     if (stage === 'roof') {
       playActionWellConstruction(worldAudio.playAt, { x: well.x, z: well.z })
     }
-    busy.start(sessionSec, WELL_WORK_LABEL[stage], () => {
-      bundle.playerWells.addWork(id, sessionHours, dayNight.elapsedDays)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', sessionHours)
-    }, {
-      onCancel: creditPartial,
-      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
-    })
   }
 
   const describeWellWork = (id: string): WellWorkView | null => {
@@ -772,24 +913,18 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (!well?.roofRepair) return
     const remainingHours = repairRemainingWork(well.roofRepair)
     if (remainingHours <= 0) return
-    const sessionHours = Math.min(WELL_WORK_SESSION_HOURS, remainingHours)
-    const sessionSec = (sessionHours / WELL_WORK_SESSION_HOURS) * WELL_WORK_SESSION_SEC
-    const startedAt = performance.now()
-    const creditPartial = (): void => {
-      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
-      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      const creditedHours = sessionHours * fraction
-      const accepted = bundle.playerWells.contributeRoofRepairWork(id, creditedHours, dayNight.elapsedDays)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', accepted)
-    }
+    startRepresentedWork(
+      remainingHours,
+      WELL_WORK_SESSION_SEC / WELL_WORK_SESSION_HOURS,
+      WELL_ROOF_REPAIR_WORK_LABEL,
+      'moderate',
+      'heavy',
+      (hours) => {
+        const accepted = bundle.playerWells.contributeRoofRepairWork(id, hours, dayNight.elapsedDays)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', accepted)
+      },
+    )
     playActionWellConstruction(worldAudio.playAt, { x: well.x, z: well.z })
-    busy.start(sessionSec, WELL_ROOF_REPAIR_WORK_LABEL, () => {
-      const accepted = bundle.playerWells.contributeRoofRepairWork(id, sessionHours, dayNight.elapsedDays)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', accepted)
-    }, {
-      onCancel: creditPartial,
-      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
-    })
   }
 
   const workOnWellRoofRepair = (id: string): void => {
@@ -826,30 +961,53 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  completes, from inventory or nearby dropped items (plan 187's
    *  `constructionMaterials.ts`, the same construction-material seam a
    *  well's `well`/`roof` stages use) — no parallel material system. */
+  const gardenPlacementDefinition = (): GroundPlacementDefinition<GardenPlacementReason> => ({
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      GARDEN_PLACE_REACH,
+    ),
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.playerGardens.nodes(),
+        footprintRadius: GARDEN_FOOTPRINT_RADIUS,
+        separation: GARDEN_SEPARATION,
+      })
+      return reason === 'occupied' ? 'garden' : reason
+    },
+    footprintRadius: GARDEN_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'circle', radius: GARDEN_FOOTPRINT_RADIUS },
+    reasonLabel: (reason) => GARDEN_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewGardenPlacement = (): PlacementPreviewResult => {
+    const result = previewGroundPlacement(gardenPlacementDefinition())
+    const missingCapability = inventory.hasCapability(GARDEN_CAPABILITY)
+      ? undefined
+      : `Potrzebujesz ${CAPABILITY_NEED_LABEL[GARDEN_CAPABILITY]}.`
+    return withRequirements(result, gardenMaterialRequirements(), missingCapability)
+  }
+
   const placeGardenAtAim = (): void => {
-    if (!inventory.hasCapability(GARDEN_CAPABILITY) || isActionBlocked(ctx)) return
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * GARDEN_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * GARDEN_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.playerGardens.nodes(),
-      footprintRadius: GARDEN_FOOTPRINT_RADIUS,
-      separation: GARDEN_SEPARATION,
-    })
-    if (reason !== 'ok') {
-      toast.show(GARDEN_PLACEMENT_MESSAGE[reason === 'occupied' ? 'garden' : reason], 'error')
+    if (isActionBlocked(ctx)) return
+    if (!inventory.hasCapability(GARDEN_CAPABILITY)) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL[GARDEN_CAPABILITY]}.`, 'error')
       return
     }
-    const requirements: MaterialRequirement[] = []
-    if (GARDEN_COST.stone > 0) requirements.push({ kind: 'stone', count: GARDEN_COST.stone })
-    if (GARDEN_COST.branch > 0) requirements.push({ kind: 'branch', count: GARDEN_COST.branch })
+    const { site, reason } = evaluatePlacementSite(gardenPlacementDefinition())
+    if (reason !== 'ok') {
+      toast.show(GARDEN_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    const requirements = gardenMaterialRequirements()
     const missing = requirements.filter(
-      (r) => !hasMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      (r) => !hasMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r),
     )
     if (missing.length > 0) {
       toast.show(
@@ -860,9 +1018,9 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }
     busy.start(GARDEN_PLACE_DURATION_SEC, 'Budowa grządki…', () => {
       for (const r of requirements) {
-        if (!consumeMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
       }
-      bundle.playerGardens.place(x, z, yaw, dayNight.elapsedDays)
+      bundle.playerGardens.place(site.x, site.z, site.yaw, dayNight.elapsedDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Zbudowano grządkę.')
@@ -1042,7 +1200,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   })
 
   const previewStandingTorchPlacement = (): PlacementPreviewResult =>
-    previewGroundPlacement(standingTorchPlacementDefinition())
+    withRequirements(previewGroundPlacement(standingTorchPlacementDefinition()), STANDING_TORCH_MATERIAL_REQUIREMENTS)
 
   /** Places a new standing torch ahead of the player (plan items-player-009
    *  §1/§2/§3) — same "validate, then busy-channel, consume+build only on
@@ -1099,23 +1257,23 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (isActionBlocked(ctx)) return
     const torch = bundle.standingTorches.list().find((entry) => entry.id === id)
     if (!torch || isStandingTorchConstructionComplete(torch)) return
-    const sessionHours = Math.min(STANDING_TORCH_WORK_SESSION_HOURS, standingTorchRemainingWork(torch))
-    const sessionSec = (sessionHours / STANDING_TORCH_WORK_SESSION_HOURS) * STANDING_TORCH_WORK_SESSION_SEC
-    const startedAt = performance.now()
-    const creditPartial = (): void => {
-      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
-      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      const creditedHours = sessionHours * fraction
-      bundle.standingTorches.contributeWork(id, creditedHours)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'light', creditedHours)
-    }
-    busy.start(sessionSec, 'Budowa pochodni w toku…', () => {
-      bundle.standingTorches.contributeWork(id, sessionHours)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'light', sessionHours)
-    }, {
-      onCancel: creditPartial,
-      staminaCostPerSec: physicalEffortStaminaCostPerSec('light'),
-    })
+    startRepresentedWork(
+      standingTorchRemainingWork(torch),
+      STANDING_TORCH_WORK_SESSION_SEC / STANDING_TORCH_WORK_SESSION_HOURS,
+      'Budowa pochodni w toku…',
+      'light',
+      'light',
+      (hours) => {
+        bundle.standingTorches.contributeWork(id, hours)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'light', hours)
+      },
+    )
+  }
+
+  const describeStandingTorchWork = (id: string): ConstructionActionView | null => {
+    const torch = bundle.standingTorches.list().find((entry) => entry.id === id)
+    if (!torch || isStandingTorchConstructionComplete(torch)) return null
+    return { canWork: true, reasonLabel: '' }
   }
 
   const playerTroughPlacementDefinition = (): GroundPlacementDefinition<PlayerTroughPlacementReason> => ({
@@ -1144,7 +1302,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   })
 
   const previewPlayerTroughPlacement = (): PlacementPreviewResult =>
-    previewGroundPlacement(playerTroughPlacementDefinition())
+    withRequirements(previewGroundPlacement(playerTroughPlacementDefinition()), PLAYER_TROUGH_MATERIAL_REQUIREMENTS)
 
   const placePlayerTroughAtAim = (): void => {
     if (isActionBlocked(ctx)) return
@@ -1180,23 +1338,35 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (isActionBlocked(ctx)) return
     const trough = bundle.playerTroughs.list().find((entry) => entry.id === id)
     if (!trough || isPlayerTroughConstructionComplete(trough)) return
-    const sessionHours = Math.min(PLAYER_TROUGH_WORK_SESSION_HOURS, playerTroughRemainingWork(trough))
-    const sessionSec = (sessionHours / PLAYER_TROUGH_WORK_SESSION_HOURS) * PLAYER_TROUGH_WORK_SESSION_SEC
-    const startedAt = performance.now()
-    const creditPartial = (): void => {
-      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
-      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      const creditedHours = sessionHours * fraction
-      bundle.playerTroughs.contributeWork(id, creditedHours)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', creditedHours)
+    startRepresentedWork(
+      playerTroughRemainingWork(trough),
+      PLAYER_TROUGH_WORK_SESSION_SEC / PLAYER_TROUGH_WORK_SESSION_HOURS,
+      'Budowa koryta w toku…',
+      'moderate',
+      'moderate',
+      (hours) => {
+        bundle.playerTroughs.contributeWork(id, hours)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', hours)
+      },
+    )
+  }
+
+  const describePlayerTroughWork = (id: string): ConstructionActionView | null => {
+    const trough = bundle.playerTroughs.list().find((entry) => entry.id === id)
+    if (!trough || isPlayerTroughConstructionComplete(trough)) return null
+    return { canWork: true, reasonLabel: '' }
+  }
+
+  const describePlayerTroughFill = (id: string): ConstructionActionView | null => {
+    const trough = bundle.playerTroughs.list().find((entry) => entry.id === id)
+    if (!trough || !isPlayerTroughConstructionComplete(trough)) return null
+    if (playerTroughFreeCapacity(trough) <= 0) {
+      return { canWork: false, reasonLabel: 'Koryto jest pełne.' }
     }
-    busy.start(sessionSec, 'Budowa koryta w toku…', () => {
-      bundle.playerTroughs.contributeWork(id, sessionHours)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours)
-    }, {
-      onCancel: creditPartial,
-      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
-    })
+    if (carriedWaterContainersForTrough().length === 0) {
+      return { canWork: false, reasonLabel: 'Potrzebujesz pojemnika z wodą.' }
+    }
+    return { canWork: true, reasonLabel: '' }
   }
 
   const carriedWaterContainersForTrough = (): LiquidContainerItemInstance[] =>
@@ -1281,7 +1451,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   })
 
   const previewPalisadePlacement = (objectYaw?: number): PlacementPreviewResult =>
-    previewGroundPlacement(palisadePlacementDefinition(objectYaw))
+    withRequirements(previewGroundPlacement(palisadePlacementDefinition(objectYaw)), PALISADE_MATERIAL_REQUIREMENTS)
 
   /** Places a new palisade segment ahead of the player (plan items-player-010
    *  §1/§2/§3/§4) — same "validate the resolved site, then busy-channel,
@@ -1323,23 +1493,23 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (isActionBlocked(ctx)) return
     const segment = bundle.palisades.list().find((entry) => entry.id === id)
     if (!segment || isPalisadeConstructionComplete(segment)) return
-    const sessionHours = Math.min(PALISADE_WORK_SESSION_HOURS, palisadeRemainingWork(segment))
-    const sessionSec = (sessionHours / PALISADE_WORK_SESSION_HOURS) * PALISADE_WORK_SESSION_SEC
-    const startedAt = performance.now()
-    const creditPartial = (): void => {
-      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
-      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      const creditedHours = sessionHours * fraction
-      bundle.palisades.contributeWork(id, creditedHours)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', creditedHours)
-    }
-    busy.start(sessionSec, 'Budowa segmentu palisady w toku…', () => {
-      bundle.palisades.contributeWork(id, sessionHours)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours)
-    }, {
-      onCancel: creditPartial,
-      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
-    })
+    startRepresentedWork(
+      palisadeRemainingWork(segment),
+      PALISADE_WORK_SESSION_SEC / PALISADE_WORK_SESSION_HOURS,
+      'Budowa segmentu palisady w toku…',
+      'moderate',
+      'moderate',
+      (hours) => {
+        bundle.palisades.contributeWork(id, hours)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', hours)
+      },
+    )
+  }
+
+  const describePalisadeWork = (id: string): ConstructionActionView | null => {
+    const segment = bundle.palisades.list().find((entry) => entry.id === id)
+    if (!segment || isPalisadeConstructionComplete(segment)) return null
+    return { canWork: true, reasonLabel: '' }
   }
 
   /** `[R]` removes one palisade segment (plan items-player-010 §5/§6/§7,
@@ -1349,21 +1519,23 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  reverse, and never partial. Any active Work Contract still referencing
    *  this segment is invalidated in the same step, so a committed NPC never
    *  keeps travelling/working toward a now-missing target. */
+  const previewPalisadeRemoval = (id: string): RemovalPreview | null => {
+    if (!bundle.palisades.list().some((entry) => entry.id === id)) return null
+    return removalPreview(PALISADE_MATERIAL_REQUIREMENTS, PALISADE_RECOVERY_RATE)
+  }
+
   const removePalisadeSegment = (id: string): void => {
     if (isActionBlocked(ctx)) return
-    if (!bundle.palisades.list().some((entry) => entry.id === id)) return
-    const recovered = computeMaterialRecovery({
-      requirements: PALISADE_MATERIAL_REQUIREMENTS,
-      recoveryRate: PALISADE_RECOVERY_RATE,
-    })
-    if (!canReceiveRecovery(inventory, recovered)) {
-      toast.show('Brak miejsca w ekwipunku na odzyskane materiały.', 'error')
+    const preview = previewPalisadeRemoval(id)
+    if (!preview) return
+    if (!preview.canReceive) {
+      toast.show(preview.reasonLabel, 'error')
       return
     }
     if (!bundle.palisades.remove(id)) return
     const contract = bundle.workContracts.findByTarget({ kind: 'palisade', targetId: id })
     if (contract) bundle.workContracts.invalidateTarget(contract.id, { now: dayNight.elapsedDays })
-    applyRecovery(inventory, recovered)
+    applyRecovery(inventory, preview.recovered)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     toast.show('Usunięto segment palisady.')
@@ -1398,7 +1570,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   })
 
   const previewBedrollPlacement = (objectYaw?: number): PlacementPreviewResult =>
-    previewGroundPlacement(bedrollPlacementDefinition(objectYaw))
+    withRequirements(previewGroundPlacement(bedrollPlacementDefinition(objectYaw)), BEDROLL_MATERIAL_REQUIREMENTS)
 
   /** Places a new leather bedroll ahead of the player (plan items-player-013)
    *  — same "validate, then busy-channel, consume+build only on completion"
@@ -1469,7 +1641,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   })
 
   const previewPlatformPlacement = (objectYaw?: number): PlacementPreviewResult =>
-    previewGroundPlacement(platformPlacementDefinition(objectYaw))
+    withRequirements(previewGroundPlacement(platformPlacementDefinition(objectYaw)), PLATFORM_MATERIAL_REQUIREMENTS)
 
   /** Places a new raised sleeping platform ahead of the player (plan
    *  items-player-013) — same shape as `placeBedrollAtAim`. */
@@ -1556,6 +1728,10 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   }
 
   const tryStartHouseTerrainPrep = (kind: ResidentialBuildingKind, x: number, z: number): boolean => {
+    if (!inventory.hasCapability('soil_digging')) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.soil_digging}.`, 'error')
+      return false
+    }
     const def = residentialBuildingDefinition(kind)
     const size = coveringPreparationSize(def.footprint.width, def.footprint.depth)
     const chunkManager = bundle.chunkManager
@@ -1625,10 +1801,47 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     })
   }
 
+  const previewHousePlacement = (kind: ResidentialBuildingKind, objectYaw?: number): PlacementPreviewResult => {
+    const def = housePlacementDefinition(kind, objectYaw)
+    const { site, reason } = evaluatePlacementSite(def)
+    if (reason === 'slope') {
+      const canDig = inventory.hasCapability('soil_digging')
+      const presentation = derivePlacementPresentation({
+        geometryOk: false,
+        geometryReason: RESIDENTIAL_PLACEMENT_MESSAGE.slope,
+        requirements: placementRequirementViews(
+          inventory,
+          bundle.droppedItems,
+          site.x,
+          site.z,
+          residentialTotalRequirements(kind),
+        ),
+        preparation: {
+          canConfirm: canDig,
+          reasonLabel: canDig
+            ? 'Teren jest zbyt stromy. Przygotuj teren, aby postawić chatę.'
+            : `Potrzebujesz ${CAPABILITY_NEED_LABEL.soil_digging}.`,
+        },
+      })
+      return {
+        x: site.x,
+        z: site.z,
+        yaw: site.yaw,
+        footprintRadius: def.footprintRadius,
+        footprint: def.previewFootprint,
+        ...presentation,
+      }
+    }
+    return withRequirements(
+      previewGroundPlacement(def),
+      residentialTotalRequirements(kind),
+    )
+  }
+
   const previewSmallHousePlacement = (objectYaw?: number): PlacementPreviewResult =>
-    previewGroundPlacement(housePlacementDefinition('small_house', objectYaw))
+    previewHousePlacement('small_house', objectYaw)
   const previewMediumHousePlacement = (objectYaw?: number): PlacementPreviewResult =>
-    previewGroundPlacement(housePlacementDefinition('medium_house', objectYaw))
+    previewHousePlacement('medium_house', objectYaw)
   const placeSmallHouseAtAim = (objectYaw?: number): void => placeHouseAtAim('small_house', objectYaw)
   const placeMediumHouseAtAim = (objectYaw?: number): void => placeHouseAtAim('medium_house', objectYaw)
 
@@ -1663,42 +1876,180 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (!house || isResidentialBuildingComplete(house) || isResidentialBuildingMaterialBlocked(house)) return
     const remaining = residentialBuildingRemainingWork(house)
     if (remaining <= 0) return
-    const sessionHours = Math.min(RESIDENTIAL_BUILDING_WORK_SESSION_HOURS, remaining)
-    const sessionSec = (sessionHours / RESIDENTIAL_BUILDING_WORK_SESSION_HOURS) * RESIDENTIAL_BUILDING_WORK_SESSION_SEC
-    const startedAt = performance.now()
-    const creditPartial = (): void => {
-      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
-      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      bundle.residentialBuildings.contributeWork(id, sessionHours * fraction)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours * fraction)
+    startRepresentedWork(
+      remaining,
+      RESIDENTIAL_BUILDING_WORK_SESSION_SEC / RESIDENTIAL_BUILDING_WORK_SESSION_HOURS,
+      'Budowa chaty w toku…',
+      'moderate',
+      'moderate',
+      (hours) => {
+        bundle.residentialBuildings.contributeWork(id, hours)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', hours)
+      },
+    )
+  }
+
+  const describeResidentialWork = (id: string): ResidentialWorkView | null => {
+    const house = bundle.residentialBuildings.find(id)
+    if (!house || isResidentialBuildingComplete(house)) return null
+    if (isResidentialBuildingMaterialBlocked(house) && house.stage !== 'completed') {
+      const missing = residentialStageRequirements(house.kind, house.stage).filter(
+        (r) => !hasMaterial(inventory, bundle.droppedItems, house.x, house.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      )
+      const supplyReason = missing.length > 0
+        ? `Brakuje: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`
+        : ''
+      return {
+        canWork: false,
+        workReasonLabel: 'Najpierw dostarcz materiały bieżącego etapu.',
+        canSupply: missing.length === 0,
+        supplyReasonLabel: supplyReason,
+      }
     }
-    busy.start(sessionSec, 'Budowa chaty w toku…', () => {
-      bundle.residentialBuildings.contributeWork(id, sessionHours)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours)
-    }, {
-      onCancel: creditPartial,
-      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
-    })
+    return {
+      canWork: residentialBuildingRemainingWork(house) > 0,
+      workReasonLabel: '',
+      canSupply: false,
+      supplyReasonLabel: '',
+    }
+  }
+
+  const previewResidentialCancel = (id: string): RemovalPreview | null => {
+    const house = bundle.residentialBuildings.find(id)
+    if (!house || isResidentialBuildingComplete(house)) return null
+    const recovered = house.materialsSupplied && house.stage !== 'completed'
+      ? [...residentialStageRequirements(house.kind, house.stage)]
+      : []
+    const canReceive = recovered.length === 0 || canReceiveRecovery(inventory, recovered)
+    return {
+      recovered,
+      canReceive,
+      reasonLabel: canReceive ? '' : 'Brak miejsca w ekwipunku na odzyskane materiały.',
+      body: formatRecoveryLines(recovered),
+    }
   }
 
   const cancelResidentialBuilding = (id: string): void => {
     if (isActionBlocked(ctx)) return
-    const house = bundle.residentialBuildings.find(id)
-    if (!house || isResidentialBuildingComplete(house)) return
-    const recovered = house.materialsSupplied && house.stage !== 'completed'
-      ? [...residentialStageRequirements(house.kind, house.stage)]
-      : []
-    if (recovered.length > 0 && !canReceiveRecovery(inventory, recovered)) {
-      toast.show('Brak miejsca w ekwipunku na odzyskane materiały.', 'error')
+    const preview = previewResidentialCancel(id)
+    if (!preview) return
+    if (!preview.canReceive) {
+      toast.show(preview.reasonLabel, 'error')
       return
     }
     if (!bundle.residentialBuildings.remove(id)) return
     const contract = bundle.workContracts.findByTarget({ kind: 'residential_building', targetId: id })
     if (contract) bundle.workContracts.invalidateTarget(contract.id, { now: dayNight.elapsedDays })
-    if (recovered.length > 0) applyRecovery(inventory, recovered)
+    if (preview.recovered.length > 0) applyRecovery(inventory, preview.recovered)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     toast.show('Anulowano budowę chaty.')
+  }
+
+  const previewWellCancel = (id: string): RemovalPreview | null => {
+    const well = bundle.playerWells.list().find((entry) => entry.id === id)
+    if (!well || isWellCompleted(well)) return null
+    const requirements = well.stage === 'pit' ? [] : wellStageRequirements(well.stage)
+    return removalPreview(requirements, WELL_RECOVERY_RATE)
+  }
+
+  const cancelPlayerWell = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const preview = previewWellCancel(id)
+    if (!preview) return
+    if (!preview.canReceive) {
+      toast.show(preview.reasonLabel, 'error')
+      return
+    }
+    if (!bundle.playerWells.remove(id)) return
+    const contract = bundle.workContracts.findByTarget({ kind: 'construction', targetId: id })
+    if (contract) bundle.workContracts.invalidateTarget(contract.id, { now: dayNight.elapsedDays })
+    applyRecovery(inventory, preview.recovered)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Anulowano budowę studni.')
+  }
+
+  const previewStandingTorchRemoval = (id: string): RemovalPreview | null => {
+    if (!bundle.standingTorches.list().some((entry) => entry.id === id)) return null
+    return removalPreview(STANDING_TORCH_MATERIAL_REQUIREMENTS, STANDING_TORCH_RECOVERY_RATE)
+  }
+
+  const removeStandingTorch = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const preview = previewStandingTorchRemoval(id)
+    if (!preview) return
+    if (!preview.canReceive) {
+      toast.show(preview.reasonLabel, 'error')
+      return
+    }
+    if (!bundle.standingTorches.remove(id)) return
+    const contract = bundle.workContracts.findByTarget({ kind: 'standing_torch', targetId: id })
+    if (contract) bundle.workContracts.invalidateTarget(contract.id, { now: dayNight.elapsedDays })
+    applyRecovery(inventory, preview.recovered)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Usunięto pochodnię.')
+  }
+
+  const previewPlayerTroughRemoval = (id: string): RemovalPreview | null => {
+    if (!bundle.playerTroughs.list().some((entry) => entry.id === id)) return null
+    return removalPreview(PLAYER_TROUGH_MATERIAL_REQUIREMENTS, PLAYER_TROUGH_RECOVERY_RATE)
+  }
+
+  const removePlayerTrough = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const preview = previewPlayerTroughRemoval(id)
+    if (!preview) return
+    if (!preview.canReceive) {
+      toast.show(preview.reasonLabel, 'error')
+      return
+    }
+    if (!bundle.playerTroughs.remove(id)) return
+    applyRecovery(inventory, preview.recovered)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Usunięto koryto.')
+  }
+
+  const previewBedrollRemoval = (id: string): RemovalPreview | null => {
+    if (!bundle.sleepingUtilities.bedrolls.get(id)) return null
+    return removalPreview(BEDROLL_MATERIAL_REQUIREMENTS, BEDROLL_RECOVERY_RATE)
+  }
+
+  const removeBedroll = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const preview = previewBedrollRemoval(id)
+    if (!preview) return
+    if (!preview.canReceive) {
+      toast.show(preview.reasonLabel, 'error')
+      return
+    }
+    if (!bundle.sleepingUtilities.bedrolls.remove(id)) return
+    applyRecovery(inventory, preview.recovered)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Usunięto posłanie.')
+  }
+
+  const previewPlatformRemoval = (id: string): RemovalPreview | null => {
+    if (!bundle.sleepingUtilities.platforms.get(id)) return null
+    return removalPreview(PLATFORM_MATERIAL_REQUIREMENTS, PLATFORM_RECOVERY_RATE)
+  }
+
+  const removePlatform = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const preview = previewPlatformRemoval(id)
+    if (!preview) return
+    if (!preview.canReceive) {
+      toast.show(preview.reasonLabel, 'error')
+      return
+    }
+    if (!bundle.sleepingUtilities.platforms.remove(id)) return
+    applyRecovery(inventory, preview.recovered)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Usunięto podest.')
   }
 
   return {
@@ -1707,6 +2058,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     previewTentPlacement,
     placeTentAtAim,
     placeTrapAtAim,
+    previewTrapPlacement,
     previewWellPlacement,
     placeWellAtAim,
     workOnWell,
@@ -1714,6 +2066,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     describeWellRoofRepair,
     workOnWellRoofRepair,
     placeGardenAtAim,
+    previewGardenPlacement,
     tidyGardenPlot,
     waterGardenPlot,
     plantTreeAtAim,
@@ -1722,13 +2075,22 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeStandingTorchAtAim,
     igniteStandingTorch,
     workOnStandingTorch,
+    describeStandingTorchWork,
+    previewStandingTorchRemoval,
+    removeStandingTorch,
     previewPlayerTroughPlacement,
     placePlayerTroughAtAim,
     workOnPlayerTrough,
+    describePlayerTroughWork,
+    describePlayerTroughFill,
     fillPlayerTrough,
+    previewPlayerTroughRemoval,
+    removePlayerTrough,
     previewPalisadePlacement,
     placePalisadeAtAim,
     workOnPalisade,
+    describePalisadeWork,
+    previewPalisadeRemoval,
     removePalisadeSegment,
     previewBedrollPlacement,
     placeBedrollAtAim,
@@ -1740,6 +2102,14 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeMediumHouseAtAim,
     supplyResidentialBuildingMaterials,
     workOnResidentialBuilding,
+    describeResidentialWork,
+    previewResidentialCancel,
     cancelResidentialBuilding,
+    previewWellCancel,
+    cancelPlayerWell,
+    previewBedrollRemoval,
+    removeBedroll,
+    previewPlatformRemoval,
+    removePlatform,
   }
 }

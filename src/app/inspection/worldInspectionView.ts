@@ -18,6 +18,9 @@ export type InspectionProgressRow = {
 export type InspectionMaterialItem = {
   label: string
   count: number
+  available?: number
+  inInventory?: number
+  nearbyWorld?: number
 }
 
 export type InspectionMaterialsRow = {
@@ -65,6 +68,11 @@ export type InspectionActionId =
   | 'cancel'
   | 'remove'
   | 'repair'
+  | 'repairTent'
+  | 'repairBedroll'
+  | 'repairPlatform'
+  | 'pack'
+  | 'fill'
   | 'drink'
   | 'ignite'
   | 'sleep'
@@ -91,6 +99,10 @@ export type InspectionTargetKind =
   | 'palisade'
   | 'standingTorch'
   | 'residentialBuilding'
+  | 'camp'
+  | 'bedroll'
+  | 'platform'
+  | 'playerTrough'
 
 export type InspectionTargetRef = {
   kind: InspectionTargetKind

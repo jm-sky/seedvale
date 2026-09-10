@@ -1298,17 +1298,40 @@ export async function createApp(
     describeWellWork: placement.describeWellWork,
     describeWellRoofRepair: placement.describeWellRoofRepair,
     workOnPalisade: placement.workOnPalisade,
+    previewPalisadeRemoval: placement.previewPalisadeRemoval,
     removePalisadeSegment: placement.removePalisadeSegment,
     workOnStandingTorch: placement.workOnStandingTorch,
     igniteStandingTorch: placement.igniteStandingTorch,
+    previewStandingTorchRemoval: placement.previewStandingTorchRemoval,
+    removeStandingTorch: placement.removeStandingTorch,
     supplyResidentialBuildingMaterials: placement.supplyResidentialBuildingMaterials,
     workOnResidentialBuilding: placement.workOnResidentialBuilding,
+    describeResidentialWork: placement.describeResidentialWork,
+    previewResidentialCancel: placement.previewResidentialCancel,
     cancelResidentialBuilding: placement.cancelResidentialBuilding,
+    previewWellCancel: placement.previewWellCancel,
+    cancelPlayerWell: placement.cancelPlayerWell,
+    describePalisadeWork: placement.describePalisadeWork,
+    describeStandingTorchWork: placement.describeStandingTorchWork,
+    describePlayerTroughWork: placement.describePlayerTroughWork,
+    describePlayerTroughFill: placement.describePlayerTroughFill,
+    workOnPlayerTrough: placement.workOnPlayerTrough,
+    fillPlayerTrough: placement.fillPlayerTrough,
+    previewPlayerTroughRemoval: placement.previewPlayerTroughRemoval,
+    removePlayerTrough: placement.removePlayerTrough,
+    previewBedrollRemoval: placement.previewBedrollRemoval,
+    removeBedroll: placement.removeBedroll,
+    previewPlatformRemoval: placement.previewPlatformRemoval,
+    removePlatform: placement.removePlatform,
     sleepInOwnedHouse: rest.sleepInOwnedHouse,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,
     beginHireHelpForTarget: contracts.beginHireHelpForTarget,
     drinkFromWaterSource: survival.drinkFromWaterSource,
     fillWaterContainer: survival.fillWaterContainer,
+    describeCampRepair: rest.describeCampRepair,
+    campInspectionSnapshot: rest.campInspectionSnapshot,
+    workOnCampRepair: rest.workOnCampRepair,
+    packTent: rest.packTent,
   })
 
   onTrapCaptureTarget = gathering.onTrapCapture
@@ -1704,6 +1727,19 @@ export async function createApp(
     rotateLeft: placementPreview.rotateLeft,
     rotateRight: placementPreview.rotateRight,
   })
+  vueUi.configurePlacementPreviewRepeat(placementPreview.toggleRepeat)
+  inventoryScreenHandlers.onPlaceTrap = (kind) => {
+    inventoryScreen.close()
+    placementPreview.start(kind === 'simple' ? 'trapSimple' : 'trapGood')
+  }
+  inventoryScreenHandlers.onPlaceContainer = () => {
+    inventoryScreen.close()
+    placementPreview.start('chest')
+  }
+  inventoryScreenHandlers.onPlaceTent = () => {
+    inventoryScreen.close()
+    placementPreview.start('tent')
+  }
 
   const cookMealIntent = createCookMealIntent({
     ctx: actionCtx,
@@ -1792,10 +1828,10 @@ export async function createApp(
     },
     onPrepareTerrain: terrainPrep.startPreview,
     onStartPlacementPreview: placementPreview.start,
-    onPlaceTrap: placement.placeTrapAtAim,
+    onPlaceTrap: (kind) => placementPreview.start(kind === 'simple' ? 'trapSimple' : 'trapGood'),
     onPutDownContainer: containers.putDownContainerAtAim,
     onBuildWell: () => placementPreview.start('well'),
-    onBuildGarden: placement.placeGardenAtAim,
+    onBuildGarden: () => placementPreview.start('garden'),
     onPlantTree: placement.plantTreeAtAim,
     onPlantCrop: placement.plantCropAtAim,
     onEquipFishingRod: () => inventoryWiring.equipTool('fishing_rod'),
@@ -1995,7 +2031,8 @@ export async function createApp(
     vueUi.isSkillsScreenOpen() ||
     vueUi.isCharacterScreenOpen() ||
     vueUi.isWorldMapOpen() ||
-    vueUi.isWorldInspectionOpen()
+    vueUi.isWorldInspectionOpen() ||
+    vueUi.isActionConfirmOpen()
   const scheduleRestorePointerLockAfterFlavorDialog = (): void => {
     queueMicrotask(() => {
       if (!restorePointerLockAfterFlavorDialog) return
@@ -2016,6 +2053,16 @@ export async function createApp(
     },
   })
   vueUi.configureWorldInspection({
+    onOpen: () => {
+      if (exitGamePointerLock(renderer.domElement)) {
+        restorePointerLockAfterFlavorDialog = true
+      }
+    },
+    onClose: () => {
+      scheduleRestorePointerLockAfterFlavorDialog()
+    },
+  })
+  vueUi.configureActionConfirm({
     onOpen: () => {
       if (exitGamePointerLock(renderer.domElement)) {
         restorePointerLockAfterFlavorDialog = true
@@ -2125,13 +2172,28 @@ export async function createApp(
     workOnWellRoofRepair: placement.workOnWellRoofRepair,
     igniteStandingTorch: placement.igniteStandingTorch,
     workOnStandingTorch: placement.workOnStandingTorch,
+    describeStandingTorchWork: placement.describeStandingTorchWork,
+    previewStandingTorchRemoval: placement.previewStandingTorchRemoval,
+    removeStandingTorch: placement.removeStandingTorch,
     workOnPlayerTrough: placement.workOnPlayerTrough,
+    describePlayerTroughWork: placement.describePlayerTroughWork,
+    describePlayerTroughFill: placement.describePlayerTroughFill,
     fillPlayerTrough: placement.fillPlayerTrough,
+    previewPlayerTroughRemoval: placement.previewPlayerTroughRemoval,
+    removePlayerTrough: placement.removePlayerTrough,
     workOnPalisade: placement.workOnPalisade,
+    describePalisadeWork: placement.describePalisadeWork,
+    previewPalisadeRemoval: placement.previewPalisadeRemoval,
     removePalisadeSegment: placement.removePalisadeSegment,
     supplyResidentialBuildingMaterials: placement.supplyResidentialBuildingMaterials,
     workOnResidentialBuilding: placement.workOnResidentialBuilding,
+    describeResidentialWork: placement.describeResidentialWork,
+    previewResidentialCancel: placement.previewResidentialCancel,
     cancelResidentialBuilding: placement.cancelResidentialBuilding,
+    previewBedrollRemoval: placement.previewBedrollRemoval,
+    removeBedroll: placement.removeBedroll,
+    previewPlatformRemoval: placement.previewPlatformRemoval,
+    removePlatform: placement.removePlatform,
     repairSettlementStorage: storageInfestation.repairSettlementStorage,
     destroyRatNest: storageInfestation.destroyRatNest,
     openNoticeBoard: contracts.openNoticeBoard,

@@ -49,6 +49,7 @@ import type { ClimateState, WeatherState } from '../world/weather'
 import type { WeatherParticles } from '../world/weatherParticles'
 import type { LeadActions } from './actions/leadActions'
 import type { MountActions } from './actions/mountActions'
+import type { RemovalPreview } from './actions/placementActions'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
@@ -470,6 +471,26 @@ export type GameLoopDeps = {
   workOnResidentialBuilding?: (id: string) => void
   cancelResidentialBuilding?: (id: string) => void
   sleepInOwnedHouse?: (id: string) => void
+  describePalisadeWork?: (id: string) => { canWork: boolean, reasonLabel: string } | null
+  describeStandingTorchWork?: (id: string) => { canWork: boolean, reasonLabel: string } | null
+  describePlayerTroughWork?: (id: string) => { canWork: boolean, reasonLabel: string } | null
+  describePlayerTroughFill?: (id: string) => { canWork: boolean, reasonLabel: string } | null
+  describeResidentialWork?: (id: string) => {
+    canWork: boolean
+    workReasonLabel: string
+    canSupply: boolean
+    supplyReasonLabel: string
+  } | null
+  previewPalisadeRemoval?: (id: string) => RemovalPreview | null
+  previewStandingTorchRemoval?: (id: string) => RemovalPreview | null
+  removeStandingTorch?: (id: string) => void
+  previewPlayerTroughRemoval?: (id: string) => RemovalPreview | null
+  removePlayerTrough?: (id: string) => void
+  previewResidentialCancel?: (id: string) => RemovalPreview | null
+  previewBedrollRemoval?: (id: string) => RemovalPreview | null
+  removeBedroll?: (id: string) => void
+  previewPlatformRemoval?: (id: string) => RemovalPreview | null
+  removePlatform?: (id: string) => void
   /** `[R]` removes one gazed-at palisade segment (plan items-player-010 §5) —
    *  the generic player-built removal/recovery seam applied to a palisade:
    *  preflights inventory capacity for the recovered materials, then removes
@@ -590,9 +611,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, inspectCamp, inspectBedroll, inspectPlatform, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
+    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
+    describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
+    previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, previewPlayerTroughRemoval, removePlayerTrough,
+    previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
     openWorldInspection, syncWorldInspection,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
@@ -1448,6 +1472,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               hasInspect: !isTouchDevice() && inspectAvailable,
               describeWellWork,
               describeWellRoofRepair,
+              describePalisadeWork,
+              describeStandingTorchWork,
+              describePlayerTroughWork,
+              describePlayerTroughFill,
+              describeResidentialWork,
               primaryOverride: interactionActionFromSkillPrompt(skillAction.promptLabel),
             }, cycleHint)
           : { targetLabel: skillPrompt ?? '', actions: [], cycleHint })
@@ -1456,6 +1485,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               hasInspect: !isTouchDevice() && inspectAvailable,
               describeWellWork,
               describeWellRoofRepair,
+              describePalisadeWork,
+              describeStandingTorchWork,
+              describePlayerTroughWork,
+              describePlayerTroughFill,
+              describeResidentialWork,
             }, cycleHint)
           : null)
       vueUi.setFlavorInteractionPrompt(interactionPrompt, promptHighlighted, rangedDrawProgress)
@@ -1540,14 +1574,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
       } else if (target?.kind === 'camp') {
         if (interactPressed) startTentRest(target.tentId)
-        if (altInteractPressed) inspectCamp(target.tentId)
       } else if (target?.kind === 'tent') {
         if (interactPressed) startTentRest(target.id)
-        if (altInteractPressed) inspectTent(target.id)
       } else if (target?.kind === 'bedroll') {
-        if (interactPressed) inspectBedroll(target.id)
+        if (altInteractPressed) {
+          const preview = previewBedrollRemoval?.(target.id)
+          if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
+          else if (preview) vueUi.openActionConfirm('Usuń posłanie', preview.body, () => removeBedroll?.(target.id))
+        }
       } else if (target?.kind === 'platform') {
-        if (interactPressed) inspectPlatform(target.id)
+        if (altInteractPressed) {
+          const preview = previewPlatformRemoval?.(target.id)
+          if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
+          else if (preview) vueUi.openActionConfirm('Usuń podest', preview.body, () => removePlatform?.(target.id))
+        }
       } else if (target?.kind === 'hay') {
         if (interactPressed) sleepInHay?.(target.settlementId)
       } else if (target?.kind === 'trap') {
@@ -1644,21 +1684,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
         if (!target.complete) {
           if (interactPressed) workOnWell?.(wellId)
-          if (altInteractPressed) {
-            const view = describeWellWork?.(wellId)
-            if (view) {
-              const actions = [
-                { label: view.title, enabled: view.canWork, reasonLabel: view.reasonLabel, run: () => workOnWell?.(wellId) },
-              ]
-              if (source) {
-                actions.push(
-                  { label: 'Napij się', enabled: true, reasonLabel: '', run: () => drinkFromWaterSource?.(source) },
-                  { label: 'Napełnij pojemnik', enabled: true, reasonLabel: '', run: () => fillWaterskin?.(source) },
-                )
-              }
-              vueUi.openFlavorDialog(view.title, view.description, actions)
-            }
-          }
         } else if (interactPressed) {
           if (source) {
             const outcome = resolveInteraction({
@@ -1684,16 +1709,30 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (!target.complete) workOnStandingTorch?.(target.id)
           else if (!target.lit) igniteStandingTorch?.(target.id)
         }
+        if (altInteractPressed) {
+          const preview = previewStandingTorchRemoval?.(target.id)
+          if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
+          else if (preview) vueUi.openActionConfirm('Usuń pochodnię', preview.body, () => removeStandingTorch?.(target.id))
+        }
       } else if (target?.kind === 'playerTrough') {
         if (interactPressed) {
           if (!target.complete) workOnPlayerTrough?.(target.id)
           else if (target.canFill) fillPlayerTrough?.(target.id)
         }
+        if (altInteractPressed) {
+          const preview = previewPlayerTroughRemoval?.(target.id)
+          if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
+          else if (preview) vueUi.openActionConfirm('Usuń koryto', preview.body, () => removePlayerTrough?.(target.id))
+        }
       } else if (target?.kind === 'palisade') {
         // Unfinished (plan items-player-017 §10/§17) — `[E]` runs a
         // construction bout; `[R]` removal stays available either way.
         if (interactPressed && !target.complete) workOnPalisade?.(target.id)
-        if (altInteractPressed) removePalisadeSegment?.(target.id)
+        if (altInteractPressed) {
+          const preview = previewPalisadeRemoval?.(target.id)
+          if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
+          else if (preview) vueUi.openActionConfirm('Usuń palisadę', preview.body, () => removePalisadeSegment?.(target.id))
+        }
       } else if (target?.kind === 'residentialBuilding') {
         if (interactPressed) {
           if (!target.complete) {
@@ -1703,7 +1742,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             sleepInOwnedHouse?.(target.id)
           }
         }
-        if (altInteractPressed && !target.complete) cancelResidentialBuilding?.(target.id)
+        if (altInteractPressed && !target.complete) {
+          const preview = previewResidentialCancel?.(target.id)
+          if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
+          else if (preview) vueUi.openActionConfirm('Anuluj budowę chaty', preview.body, () => cancelResidentialBuilding?.(target.id))
+        }
       } else if (target?.kind === 'settlementStorage') {
         if (interactPressed) {
           const storageDamaged = bundle.settlementsManager.isStorageDamaged(target.settlementId)

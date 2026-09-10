@@ -29,7 +29,6 @@ import { canCancelRestNow, ITEM_DEFS, restCancelAllowedByStartVigor } from '../.
 import { tentRestPose } from '../../items/tentProp'
 import {
   applyRepresentedPhysicalEffortVigor,
-  physicalEffortStaminaCostPerSec,
   restoreNeedsFromSleep,
 } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD } from '../../player/PlayerSkills'
@@ -50,8 +49,9 @@ import { type RepairProgress, repairRemainingWork } from '../../world/repair'
 import { residentialBuildingLodgingId } from '../../world/residentialBuilding'
 import { findNearestSleepingUtility } from '../../world/sleepingUtilities'
 import { TENT_SHELTER_RADIUS, tentShelterFactor } from '../campRest'
-import { type CampInspectionDetailRow, campInspectionRepairTargets, formatCampInspectionDetails, resolveCampRestSnapshot } from '../campRestSnapshot'
+import { type CampInspectionDetailRow, campInspectionRepairTargets, type CampRestSnapshot, formatCampInspectionDetails, resolveCampRestSnapshot } from '../campRestSnapshot'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
+import { startConstructionWorkSession } from './constructionWorkSession'
 
 /** One button in the generic contextual interaction panel
  *  (`InteractionPanelAction`/`openFlavorDialog`) — mirrored here rather than
@@ -66,6 +66,14 @@ export type LodgingChoiceAction = { label: string, enabled: boolean, reasonLabel
  *  A UI/action convenience gate only — the lodging resolver itself picks
  *  the actual candidates once this passes (implementation notes §8). */
 export const REST_IN_TOWN_RADIUS = 40
+
+export type CampRepairView = {
+  title: string
+  description: string
+  canAct: boolean
+  reasonLabel: string
+  mode: 'start' | 'continue'
+}
 
 /** Waiting, sleeping and the camp quality that decides how much a night gives
  *  back (plan 128). The rest *outcome* is owned here rather than in
@@ -88,6 +96,8 @@ export type RestActions = {
   inspectBedroll: (id: string) => void
   inspectPlatform: (id: string) => void
   packTent: (id: string) => void
+  describeCampRepair: (kind: CampRepairTargetKind, id: string) => CampRepairView | null
+  campInspectionSnapshot: (tentId: string) => CampRestSnapshot | null
   workOnCampRepair: (kind: CampRepairTargetKind, id: string) => void
   campRepairAvailable: (kind: CampRepairTargetKind, id: string) => { mode: 'start' | 'continue' } | null
   /** A full night's sleep just finished — applies the resolved rest quality
@@ -483,14 +493,6 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     return tentShelterFactor(tentCondition)
   }
 
-  type CampRepairView = {
-    title: string
-    description: string
-    canAct: boolean
-    reasonLabel: string
-    mode: 'start' | 'continue'
-  }
-
   const describeCampRepair = (kind: CampRepairTargetKind, id: string): CampRepairView | null => {
     const nowDays = dayNight.elapsedDays
     if (kind === 'tent') {
@@ -598,32 +600,28 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     if (!record?.repair) return
     const remainingHours = repairRemainingWork(record.repair)
     if (remainingHours <= 0) return
-    const sessionHours = Math.min(CAMP_REPAIR_SESSION_HOURS, remainingHours)
     const competence = evaluateSkillCompetence(player.skills, 'repair')
-    const sessionSec = (sessionHours / CAMP_REPAIR_SESSION_HOURS) * CAMP_REPAIR_SESSION_SEC * campRepairDurationScale(competence.primary.value)
-    const startedAt = performance.now()
+    const realSecondsPerRepresentedHour = (CAMP_REPAIR_SESSION_SEC / CAMP_REPAIR_SESSION_HOURS)
+      * campRepairDurationScale(competence.primary.value)
     const effort = kind === 'platform' ? 'moderate' as const : 'light' as const
-    const contribute = (work: number): void => {
-      const accepted = kind === 'tent'
-        ? bundle.placedTents.contributeRepairWork(id, work, dayNight.elapsedDays)
-        : kind === 'bedroll'
-          ? bundle.sleepingUtilities.bedrolls.contributeRepairWork(id, work, dayNight.elapsedDays)
-          : bundle.sleepingUtilities.platforms.contributeRepairWork(id, work, dayNight.elapsedDays)
-      applyRepresentedPhysicalEffortVigor(player.needs.vigor, effort, accepted)
-      awardSkillXp(player.skills, 'repair', campRepairXp(accepted))
-    }
-    const creditPartial = (): void => {
-      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
-      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      contribute(sessionHours * fraction)
-    }
     const label = kind === 'tent' ? 'Naprawa namiotu…' : kind === 'bedroll' ? 'Naprawa posłania…' : 'Naprawa podestu…'
-    busy.start(sessionSec, label, () => {
-      contribute(sessionHours)
-    }, {
-      onCancel: creditPartial,
-      staminaCostPerSec: physicalEffortStaminaCostPerSec(effort),
+    const started = startConstructionWorkSession(busy, player.needs, {
+      label,
+      remainingHours,
+      realSecondsPerRepresentedHour,
+      staminaEffort: effort,
+      vigorEffort: effort,
+      contribute(hours) {
+        const accepted = kind === 'tent'
+          ? bundle.placedTents.contributeRepairWork(id, hours, dayNight.elapsedDays)
+          : kind === 'bedroll'
+            ? bundle.sleepingUtilities.bedrolls.contributeRepairWork(id, hours, dayNight.elapsedDays)
+            : bundle.sleepingUtilities.platforms.contributeRepairWork(id, hours, dayNight.elapsedDays)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, effort, accepted)
+        awardSkillXp(player.skills, 'repair', campRepairXp(accepted))
+      },
     })
+    if (!started) toast.show('Jesteś zbyt wyczerpany, by kontynuować.', 'error')
   }
 
   const workOnCampRepair = (kind: CampRepairTargetKind, id: string): void => {
@@ -699,6 +697,12 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
           : 'Kontynuuj naprawę podestu'
     }
     return kind === 'tent' ? 'Napraw namiot' : kind === 'bedroll' ? 'Napraw posłanie' : 'Napraw podest'
+  }
+
+  const campInspectionSnapshot = (tentId: string): CampRestSnapshot | null => {
+    const tent = bundle.placedTents.list().find((entry) => entry.id === tentId)
+    if (!tent) return null
+    return resolveSnapshot(tent.x, tent.z, inventory.has('blanket', 1))
   }
 
   const inspectTent = (id: string): void => {
@@ -872,6 +876,8 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     inspectBedroll,
     inspectPlatform,
     packTent,
+    describeCampRepair,
+    campInspectionSnapshot,
     workOnCampRepair,
     campRepairAvailable: (kind, id) => {
       const view = describeCampRepair(kind, id)

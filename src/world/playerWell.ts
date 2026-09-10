@@ -154,6 +154,10 @@ export function wellStageRequirements(stage: WellStage): readonly MaterialRequir
   return requirements
 }
 
+/** Fraction of the current stage's consumed materials returned when cancelling
+ *  an unfinished well (plan ui-input-016). Pit has no materials. */
+export const WELL_RECOVERY_RATE = 0.5
+
 /** Repair is cheaper than rebuilding the roof from scratch (`WELL_STAGE_COST.roof`
  *  + `WELL_STAGE_WORK_HOURS.roof`) but still a real cost, not a free reset.
  *  Applied to the restored-condition fraction for both materials and work. */

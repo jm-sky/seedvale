@@ -1,7 +1,7 @@
 # Plan: Building placement and construction UX coherence
 
 **Created:** 2026-09-10
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** high · **Effort:** L
 **Depends on:** ~~ui-input-014~~, ~~ui-input-015~~, items-player-024

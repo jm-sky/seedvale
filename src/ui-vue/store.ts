@@ -1,7 +1,8 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { ActionAvailability, ActionResult } from '../app/actions/actionContracts'
-import type { PlacementPreviewKind } from '../app/actions/placementPreviewActions'
+import type { PlacementPreviewKind, PlacementPreviewUiView } from '../app/actions/placementPreviewActions'
+import type { PlacementPreviewState as PlacementPreviewPresentation, PlacementRequirementView } from '../app/actions/placementRequirementView'
 import type { InspectionActionId, WorldInspectionView } from '../app/inspection/worldInspectionView'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { BadgeDef } from '../badges/badges'
@@ -381,6 +382,17 @@ type QuantityDialogState = {
   value: number
   onConfirm: ((amount: number) => void) | null
 }
+/** Destructive/costly action confirmation (plan ui-input-016) — `[R]` and
+ *  inspection danger actions arm this overlay instead of mutating immediately. */
+type ActionConfirmState = {
+  open: boolean
+  title: string
+  body: string
+  confirmLabel: string
+  onConfirm: (() => void) | null
+  onOpen: (() => void) | null
+  onClose: (() => void) | null
+}
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean; canCancelTerrainPreparation: boolean }
 /** Lodging autowalk cancel HUD (plan `ui-input-005`) — separate from
  *  `TimeSkipState` because the walk itself isn't a `timeSkip` (that only
@@ -404,8 +416,14 @@ type PlacementPreviewState = {
   visible: boolean
   label: string
   valid: boolean
+  state: PlacementPreviewPresentation
+  canConfirm: boolean
+  confirmLabel: string
   reasonLabel: string
   supportsRotation: boolean
+  requirements: readonly PlacementRequirementView[]
+  supportsRepeat: boolean
+  repeatEnabled: boolean
 }
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
@@ -642,7 +660,10 @@ export const ui = reactive({
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   lodgingWalk: { active: false } as LodgingWalkState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
-  placementPreview: { visible: false, label: '', valid: false, reasonLabel: '', supportsRotation: false } as PlacementPreviewState,
+  placementPreview: {
+    visible: false, label: '', valid: false, state: 'invalid', canConfirm: false, confirmLabel: 'Zatwierdź [E]',
+    reasonLabel: '', supportsRotation: false, requirements: [], supportsRepeat: false, repeatEnabled: false,
+  } as PlacementPreviewState,
   merchant: { open: false, npc: null, counts: {}, groups: [], pricing: null, horseOffer: null, onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', mode: 'container', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
@@ -650,6 +671,7 @@ export const ui = reactive({
     onDeposit: null, onWithdraw: null, onDepositInstance: null, onWithdrawInstance: null, onTakeAll: null,
   } as ContainerScreenState,
   quantityDialog: { open: false, label: '', max: 1, value: 1, onConfirm: null } as QuantityDialogState,
+  actionConfirm: { open: false, title: '', body: '', confirmLabel: 'Potwierdź', onConfirm: null, onOpen: null, onClose: null } as ActionConfirmState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -1147,6 +1169,35 @@ export function confirmQuantityDialog(): void {
 }
 export function isQuantityDialogOpen(): boolean { return ui.quantityDialog.open }
 
+export function configureActionConfirm(handlers: { onOpen?: () => void, onClose?: () => void }): void {
+  ui.actionConfirm.onOpen = handlers.onOpen ?? null
+  ui.actionConfirm.onClose = handlers.onClose ?? null
+}
+
+/** Opens a dedicated confirmation overlay (plan ui-input-016). Mutation
+ *  only runs if the player confirms. */
+export function openActionConfirm(title: string, body: string, onConfirm: () => void, confirmLabel = 'Potwierdź'): void {
+  ui.actionConfirm.title = title
+  ui.actionConfirm.body = body
+  ui.actionConfirm.confirmLabel = confirmLabel
+  ui.actionConfirm.onConfirm = onConfirm
+  ui.actionConfirm.open = true
+  emitUiOpen()
+  ui.actionConfirm.onOpen?.()
+}
+export function closeActionConfirm(): void {
+  if (!ui.actionConfirm.open) return
+  ui.actionConfirm.open = false
+  ui.actionConfirm.onConfirm = null
+  ui.actionConfirm.onClose?.()
+}
+export function confirmActionConfirm(): void {
+  const onConfirm = ui.actionConfirm.onConfirm
+  closeActionConfirm()
+  onConfirm?.()
+}
+export function isActionConfirmOpen(): boolean { return ui.actionConfirm.open }
+
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
 export function setQuickActionsHasDiggingTool(hasDiggingTool: boolean): void { ui.quickActions.hasDiggingTool = hasDiggingTool }
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
@@ -1379,16 +1430,34 @@ export function rotatePlacementPreviewRight(): void {
   placementPreviewRotationHandler?.rotateRight()
 }
 
-export function showPlacementPreview(view: { label: string, valid: boolean, reasonLabel: string, supportsRotation?: boolean }): void {
+let placementPreviewRepeatHandler: (() => void) | null = null
+export function configurePlacementPreviewRepeat(handler: (() => void) | null): void {
+  placementPreviewRepeatHandler = handler
+}
+export function togglePlacementPreviewRepeat(): void {
+  placementPreviewRepeatHandler?.()
+}
+
+export function showPlacementPreview(view: PlacementPreviewUiView): void {
   ui.placementPreview.visible = true
   ui.placementPreview.label = view.label
   ui.placementPreview.valid = view.valid
+  ui.placementPreview.state = view.state
+  ui.placementPreview.canConfirm = view.canConfirm
+  ui.placementPreview.confirmLabel = view.confirmLabel
   ui.placementPreview.reasonLabel = view.reasonLabel
-  ui.placementPreview.supportsRotation = view.supportsRotation ?? false
+  ui.placementPreview.supportsRotation = view.supportsRotation
+  ui.placementPreview.requirements = view.requirements
+  ui.placementPreview.supportsRepeat = view.supportsRepeat
+  ui.placementPreview.repeatEnabled = view.repeatEnabled
 }
 export function hidePlacementPreview(): void {
   ui.placementPreview.visible = false
   ui.placementPreview.supportsRotation = false
+  ui.placementPreview.canConfirm = false
+  ui.placementPreview.requirements = []
+  ui.placementPreview.supportsRepeat = false
+  ui.placementPreview.repeatEnabled = false
 }
 
 export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: {

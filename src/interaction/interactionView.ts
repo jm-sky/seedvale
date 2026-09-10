@@ -1,3 +1,4 @@
+import type { ConstructionActionView, ResidentialWorkView } from '../app/actions/placementActions'
 import type { Interactable } from './Interactable'
 
 /** @domain ui-input */
@@ -30,6 +31,11 @@ export type InteractionViewContext = {
     reasonLabel: string
     waterAvailable: boolean
   } | null
+  describePalisadeWork?: (id: string) => ConstructionActionView | null
+  describeStandingTorchWork?: (id: string) => ConstructionActionView | null
+  describePlayerTroughWork?: (id: string) => ConstructionActionView | null
+  describePlayerTroughFill?: (id: string) => ConstructionActionView | null
+  describeResidentialWork?: (id: string) => ResidentialWorkView | null
 }
 
 const STATUS_ONLY_RE = /…$|^\s*Suszy się|^\s*Spalony ul|^\s*Słona woda|Słona woda —|^\s*Prowadzisz:|^\s*Młoda roślina:|^\s*Przejrzała roślina:|^\s*Dziki ul\s*$/i
@@ -131,14 +137,110 @@ function enrichPlayerWell(
   })
 }
 
-function standingTorchActions(target: Extract<Interactable, { kind: 'standingTorch' }>): InteractionActionView[] {
+function standingTorchActions(
+  target: Extract<Interactable, { kind: 'standingTorch' }>,
+  ctx: InteractionViewContext,
+): InteractionActionView[] {
   if (!target.complete) {
-    return [{ slot: 'primary', label: 'Kontynuuj budowę', enabled: true, reasonLabel: '' }]
+    const work = ctx.describeStandingTorchWork?.(target.id)
+    return [
+      { slot: 'primary', label: 'Kontynuuj budowę', enabled: work?.canWork ?? true, reasonLabel: work?.reasonLabel ?? '' },
+      { slot: 'alternate', label: 'Usuń', enabled: true, reasonLabel: '' },
+    ]
   }
   if (target.lit) {
-    return [{ slot: 'primary', label: 'Pochodnia świeci', enabled: false, reasonLabel: '' }]
+    return [
+      { slot: 'primary', label: 'Pochodnia świeci', enabled: false, reasonLabel: '' },
+      { slot: 'alternate', label: 'Usuń', enabled: true, reasonLabel: '' },
+    ]
   }
-  return [{ slot: 'primary', label: 'Zapal pochodnię', enabled: true, reasonLabel: '' }]
+  return [
+    { slot: 'primary', label: 'Zapal pochodnię', enabled: true, reasonLabel: '' },
+    { slot: 'alternate', label: 'Usuń', enabled: true, reasonLabel: '' },
+  ]
+}
+
+function palisadeActions(
+  target: Extract<Interactable, { kind: 'palisade' }>,
+  ctx: InteractionViewContext,
+): InteractionActionView[] {
+  const actions: InteractionActionView[] = []
+  if (!target.complete) {
+    const work = ctx.describePalisadeWork?.(target.id)
+    actions.push({
+      slot: 'primary',
+      label: 'Kontynuuj budowę',
+      enabled: work?.canWork ?? true,
+      reasonLabel: work?.reasonLabel ?? '',
+    })
+  }
+  actions.push({ slot: 'alternate', label: 'Usuń', enabled: true, reasonLabel: '' })
+  return actions
+}
+
+function troughActions(
+  target: Extract<Interactable, { kind: 'playerTrough' }>,
+  ctx: InteractionViewContext,
+): InteractionActionView[] {
+  const actions: InteractionActionView[] = []
+  if (!target.complete) {
+    const work = ctx.describePlayerTroughWork?.(target.id)
+    actions.push({
+      slot: 'primary',
+      label: 'Kontynuuj budowę',
+      enabled: work?.canWork ?? true,
+      reasonLabel: work?.reasonLabel ?? '',
+    })
+  } else if (target.canFill) {
+    const fill = ctx.describePlayerTroughFill?.(target.id)
+    actions.push({
+      slot: 'primary',
+      label: 'Napełnij',
+      enabled: fill?.canWork ?? true,
+      reasonLabel: fill?.reasonLabel ?? '',
+    })
+  }
+  actions.push({ slot: 'alternate', label: 'Usuń', enabled: true, reasonLabel: '' })
+  return actions
+}
+
+function residentialActions(
+  target: Extract<Interactable, { kind: 'residentialBuilding' }>,
+  ctx: InteractionViewContext,
+): InteractionActionView[] {
+  const actions: InteractionActionView[] = []
+  if (!target.complete) {
+    const work = ctx.describeResidentialWork?.(target.id)
+    if (!target.materialsSupplied) {
+      actions.push({
+        slot: 'primary',
+        label: 'Dostarcz materiały',
+        enabled: work?.canSupply ?? true,
+        reasonLabel: work?.supplyReasonLabel ?? '',
+      })
+    } else {
+      actions.push({
+        slot: 'primary',
+        label: 'Kontynuuj budowę',
+        enabled: work?.canWork ?? true,
+        reasonLabel: work?.workReasonLabel ?? '',
+      })
+    }
+    actions.push({ slot: 'alternate', label: 'Anuluj budowę', enabled: true, reasonLabel: '' })
+    return actions
+  }
+  if (target.playerOwned) {
+    actions.push({ slot: 'primary', label: 'Nocuj', enabled: true, reasonLabel: '' })
+  }
+  return actions
+}
+
+function terrainPreparationActions(): InteractionActionView[] {
+  return [{ slot: 'primary', label: 'Kontynuuj pracę', enabled: true, reasonLabel: '' }]
+}
+
+function campRestActions(): InteractionActionView[] {
+  return [{ slot: 'primary', label: 'Odpocznij', enabled: true, reasonLabel: '' }]
 }
 
 function cartActions(target: Extract<Interactable, { kind: 'cart' }>): InteractionActionView[] {
@@ -257,17 +359,37 @@ export function buildInteractionView(
 
   let actions: InteractionActionView[]
   switch (target.kind) {
+    case 'bedroll':
+    case 'platform':
+      actions = []
+      break
+    case 'camp':
+    case 'tent':
+      actions = campRestActions()
+      break
     case 'cart':
       actions = cartActions(target)
       break
     case 'dig':
       actions = digActions(target)
       break
+    case 'palisade':
+      actions = palisadeActions(target, ctx)
+      break
+    case 'playerTrough':
+      actions = troughActions(target, ctx)
+      break
     case 'playerWell':
       actions = enrichPlayerWell(target, buildFromParsed(parseLegacyPrompt(target.promptLabel)), ctx)
       break
+    case 'residentialBuilding':
+      actions = residentialActions(target, ctx)
+      break
     case 'standingTorch':
-      actions = standingTorchActions(target)
+      actions = standingTorchActions(target, ctx)
+      break
+    case 'terrainPreparation':
+      actions = terrainPreparationActions()
       break
     default:
       actions = buildFromParsed(parseLegacyPrompt(target.promptLabel))

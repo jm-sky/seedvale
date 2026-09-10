@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import { isTouchDevice } from '../input/isTouchDevice'
 import NpcDialogueMenu from './NpcDialogueMenu.vue'
+import ActionConfirmOverlay from './screens/ActionConfirmOverlay.vue'
 import BusyOverlay from './screens/BusyOverlay.vue'
 import CharacterScreen from './screens/CharacterScreen.vue'
 import ContainerScreen from './screens/ContainerScreen.vue'
@@ -62,6 +63,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <MerchantScreen />
     <ContainerScreen />
     <QuantityDialog />
+    <ActionConfirmOverlay />
     <QuickActionsScreen />
     <WorldConfigScreen />
     <NotesScreen />

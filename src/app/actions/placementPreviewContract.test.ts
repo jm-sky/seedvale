@@ -18,6 +18,10 @@ describe('previewGroundPlacement', () => {
       footprint: { kind: 'box', width: 2.2, depth: 0.6 },
       valid: true,
       reasonLabel: '',
+      state: 'ready',
+      canConfirm: true,
+      confirmKind: 'place',
+      requirements: [],
     })
   })
 })

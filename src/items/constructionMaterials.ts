@@ -170,3 +170,24 @@ export function canReceiveRecovery(inventory: Inventory, recovered: readonly Mat
 export function applyRecovery(inventory: Inventory, recovered: readonly MaterialRequirement[]): void {
   for (const r of recovered) inventory.add(r.kind, r.count)
 }
+
+/** Merges several requirement lists by `kind` — used for house total-cost
+ *  presentation (plan ui-input-016). Does not mutate the inputs. */
+export function foldMaterialRequirements(
+  lists: readonly (readonly MaterialRequirement[])[],
+): MaterialRequirement[] {
+  const byKind = new Map<ItemKind, number>()
+  for (const list of lists) {
+    for (const requirement of list) {
+      byKind.set(requirement.kind, (byKind.get(requirement.kind) ?? 0) + requirement.count)
+    }
+  }
+  return [...byKind.entries()].map(([kind, count]) => ({ kind, count }))
+}
+
+/** Player-facing availability line (plan items-player-024 / ui-input-016)
+ *  — `Belki: 4/7 — przy sobie 2 · w pobliżu 2`. `label` is the item's
+ *  display name from the catalog; this helper never looks up items itself. */
+export function formatMaterialAvailabilityLine(view: MaterialAvailabilityView, label: string): string {
+  return `${label}: ${view.available}/${view.required} — przy sobie ${view.inInventory} · w pobliżu ${view.nearbyWorld}`
+}

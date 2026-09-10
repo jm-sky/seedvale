@@ -71,6 +71,7 @@ export type PlayerWells = {
    *  need not be finished), or null — the `NearbyPlayerWellLookup`
    *  `NpcAgent` uses for water-fetch destination resolution (plan 127 §10). */
   nearestCompleted: NearbyPlayerWellLookup
+  remove: (id: string) => PlayerWellRecord | null
   dispose: () => void
 }
 
@@ -238,6 +239,16 @@ export function createPlayerWells(
       }
       if (!best) return null
       return { x: best.x, y: sampleHeight(best.x, best.z), z: best.z }
+    },
+    remove(id) {
+      const index = wells.findIndex((entry) => entry.id === id)
+      if (index === -1) return null
+      const [entry] = wells.splice(index, 1)
+      if (!entry) return null
+      disposeObject3D(entry.mesh)
+      entry.mesh.removeFromParent()
+      clearColliders(colliderKey(entry.id))
+      return toRecord(entry)
     },
     dispose() {
       for (const entry of wells) {

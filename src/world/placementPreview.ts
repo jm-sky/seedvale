@@ -9,13 +9,14 @@ export type PlacementPreviewFootprint =
 /**
  * Vanilla Three.js ghost mesh for the shared object-placement preview mode
  * (plan `ui-input-004` §2/§7, shapes/yaw by `ui-input-012`) — a world-space
- * footprint marker following the player's aim, colored green/red by whether
- * the currently aimed spot would validate. Circle and box geometries are
+ * footprint marker following the player's aim, colored by the three-state
+ * placement presentation (ready / preparation / invalid). Circle and box geometries are
  * created once and only scaled/shown per frame. Pure rendering: no domain
  * logic, no scene ownership beyond its own group (the caller adds/removes
  * it from `scene`), same split as `world/terrainPreparationPreview.ts`.
  */
-const VALID_COLOR = 0x4caf50
+const READY_COLOR = 0x4caf50
+const PREPARATION_COLOR = 0xe0a14a
 const INVALID_COLOR = 0xe0524a
 const FILL_OPACITY = 0.35
 const LINE_OPACITY = 0.9
@@ -49,7 +50,7 @@ export type PlacementPreviewGhost = {
   /** Positions the whole ghost at world `(x, z)`, feet at `y`, oriented by
    *  `yaw` (circle footprints are rotationally symmetric). */
   setTransform: (x: number, z: number, y: number, yaw?: number) => void
-  setValid: (valid: boolean) => void
+  setPreviewState: (state: 'ready' | 'preparation' | 'invalid') => void
   dispose: () => void
 }
 
@@ -65,14 +66,14 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
   group.renderOrder = 10
 
   const fillMaterial = new THREE.MeshBasicMaterial({
-    color: VALID_COLOR,
+    color: READY_COLOR,
     transparent: true,
     opacity: FILL_OPACITY,
     depthWrite: false,
     side: THREE.DoubleSide,
   })
   const ringMaterial = new THREE.LineBasicMaterial({
-    color: VALID_COLOR,
+    color: READY_COLOR,
     transparent: true,
     opacity: LINE_OPACITY,
     depthTest: false,
@@ -118,7 +119,7 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
   const entranceGeometry = new THREE.BufferGeometry()
   entranceGeometry.setAttribute('position', new THREE.Float32BufferAttribute(entrancePositions, 3))
   const entranceMaterial = new THREE.LineBasicMaterial({
-    color: VALID_COLOR,
+    color: READY_COLOR,
     transparent: true,
     opacity: LINE_OPACITY,
     depthTest: false,
@@ -164,8 +165,12 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
       group.position.set(x, y, z)
       group.rotation.y = yaw
     },
-    setValid(valid) {
-      const color = valid ? VALID_COLOR : INVALID_COLOR
+    setPreviewState(state) {
+      const color = state === 'ready'
+        ? READY_COLOR
+        : state === 'preparation'
+          ? PREPARATION_COLOR
+          : INVALID_COLOR
       fillMaterial.color.setHex(color)
       ringMaterial.color.setHex(color)
       entranceMaterial.color.setHex(color)

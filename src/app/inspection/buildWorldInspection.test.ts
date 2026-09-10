@@ -38,6 +38,10 @@ function emptyLookup(overrides: Partial<WorldInspectionLookup> = {}): WorldInspe
     palisade: () => undefined,
     standingTorch: () => undefined,
     residentialBuilding: () => undefined,
+    trough: () => undefined,
+    bedroll: () => undefined,
+    platform: () => undefined,
+    tent: () => undefined,
     contract: () => undefined,
     describeWellWork: () => ({ title: 'Kopanie', description: '', canWork: true, reasonLabel: '' }),
     describeWellRoofRepair: () => null,
@@ -233,5 +237,42 @@ describe('buildWorldInspection (plan ui-input-014)', () => {
     const hire = view!.actions.find((action) => action.id === 'hireHelp')
     expect(hire?.enabled).toBe(false)
     expect(view!.actions.some((action) => action.id === 'supplyMaterials')).toBe(true)
+  })
+
+  it('maps camp and trough interactables to inspection refs', () => {
+    expect(inspectionTargetRef({
+      kind: 'camp',
+      position: { x: 0, z: 0 },
+      promptLabel: '',
+      tentId: 'tent:1',
+      bedrollId: null,
+      platformId: null,
+    })).toEqual({ kind: 'camp', id: 'tent:1' })
+    expect(inspectionTargetRef({
+      kind: 'playerTrough',
+      position: { x: 0, z: 0 },
+      promptLabel: '',
+      id: 'trough:1',
+      complete: true,
+      canFill: true,
+    })).toEqual({ kind: 'playerTrough', id: 'trough:1' })
+  })
+
+  it('disables trough fill when the live check reports missing water', () => {
+    const view = buildWorldInspection({ kind: 'playerTrough', id: 'trough:1' }, emptyLookup({
+      trough: () => ({
+        id: 'trough:1',
+        x: 0,
+        z: 0,
+        yaw: 0,
+        completedWork: 1.5,
+        waterLitres: 0,
+      }),
+      describePlayerTroughFill: () => ({ canWork: false, reasonLabel: 'Potrzebujesz pojemnika z wodą.' }),
+    }))
+    expect(view!.actions.find((action) => action.id === 'fill')).toMatchObject({
+      enabled: false,
+      reasonLabel: 'Potrzebujesz pojemnika z wodą.',
+    })
   })
 })

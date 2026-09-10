@@ -1,7 +1,7 @@
 import type { HouseDefinition } from '../assets/houseDefinitionExampleConfig'
-import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { GroundPlacementReason } from '../items/tentPlacement'
 import { COTTAGE_4X4_A, COTTAGE_6X4_A } from '../assets/houseDefinitionExample'
+import { foldMaterialRequirements, type MaterialRequirement } from '../items/constructionMaterials'
 import { formatHours } from './playerWell'
 
 /**
@@ -176,6 +176,14 @@ export function residentialStageRequirements(
   stage: ResidentialConstructionStage,
 ): readonly MaterialRequirement[] {
   return residentialBuildingDefinition(kind).stages[stage].requiredMaterials
+}
+
+/** Sum of every construction stage's materials — Quick Actions / preview
+ *  total-cost presentation (plan ui-input-016). Current-stage UI still
+ *  reads `residentialStageRequirements`. */
+export function residentialTotalRequirements(kind: ResidentialBuildingKind): MaterialRequirement[] {
+  const stages = residentialBuildingDefinition(kind).stages
+  return foldMaterialRequirements(RESIDENTIAL_CONSTRUCTION_STAGES.map((stage) => stages[stage].requiredMaterials))
 }
 
 export function nextResidentialConstructionStage(
