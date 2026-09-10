@@ -31,6 +31,7 @@ import {
   type NearbyNpcCandidate,
   type VillageInfo,
 } from './AnimalAgent'
+import { findSettlementOutskirtsDestination } from './animalRoaming'
 import {
   defaultSpawnPointScenarioFields,
   type PreySpawner,
@@ -41,7 +42,12 @@ import {
   tickSpawnPointRecovery,
   updateSpawners,
 } from './AnimalSpawner'
-import { findSettlementOutskirtsDestination } from './animalRoaming'
+import {
+  HERD_CLUSTER_RADIUS,
+  HERD_SPECIES,
+  JUVENILE_SPAWN_CHANCE,
+} from './herdCohesion'
+import { createBoarModel, createDuckModel, createRabbitModel } from './proceduralAnimals'
 import {
   activateWolfDenProblem,
   canOfferSettlementTrip,
@@ -51,12 +57,6 @@ import {
   SETTLEMENT_TRIP_STAY_SEC,
   shouldActivateWolfDenProblem,
 } from './wolfDenScenario'
-import {
-  HERD_CLUSTER_RADIUS,
-  HERD_SPECIES,
-  JUVENILE_SPAWN_CHANCE,
-} from './herdCohesion'
-import { createBoarModel, createDuckModel, createRabbitModel } from './proceduralAnimals'
 
 /** Extra clearance past each corridor's `halfWidth` — matches forest-belt
  *  road avoidance in `props.ts` (`ROAD_TREE_CLEARANCE`). */
@@ -133,9 +133,9 @@ export type Fauna = {
    *  plan 093 Etap E) is dead — `false` if the den has none tracked yet
    *  (including a failed placement) or any tracked wolf is still alive. */
   isWolfDenCleared: () => boolean
-  /** Label suffix (e.g. quest `!`/`?`) for a spawner type's CSS2D label — set
+  /** Label suffix (e.g. quest `!`/`?`) for one spawner's CSS2D label — set
    *  externally (e.g. by a QuestManager), mirrors `NpcAgent.setQuestMarker`. */
-  setSpawnerMarker: (type: PreySpawner['type'], marker: string | null) => void
+  setSpawnerMarker: (spawnerId: string, marker: string | null) => void
   /** Player "Zniszcz" on a `depleted` spawn point (plan 125 §6 / plan 137) —
    *  moves it to `disabled`, burns its prop dark and carves a charcoal scorch
    *  patch. Applies to cave/thicket **and** `wolfDen` (a cleared den is
@@ -350,6 +350,17 @@ export const SPAWNER_SPECS: {
  *  wolf cave) so two physical caves never collide on one save-restorable id. */
 export function spawnerId(settlementId: string, type: PreySpawner['type'], kind: AnimalKind, seenOfType: number): string {
   return seenOfType === 0 ? `${settlementId}:${type}` : `${settlementId}:${type}:${kind}`
+}
+
+/** First home-settlement cave (`${settlementId}:cave`) — the original
+ *  type-unique cave id from plan 188. */
+export function findHomeCaveSpawner(
+  spawners: readonly PreySpawner[],
+  settlementId: string,
+): PreySpawner | undefined {
+  const firstId = `${settlementId}:cave`
+  return spawners.find((spawner) => spawner.id === firstId)
+    ?? spawners.find((spawner) => spawner.type === 'cave' && spawner.id.startsWith(`${settlementId}:`))
 }
 
 export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
@@ -784,6 +795,7 @@ export async function createFauna(
 
   const spawners: PreySpawner[] = []
   const spawnerLabels: {
+    id: string
     type: PreySpawner['type']
     object: CSS2DObject
     el: HTMLDivElement
@@ -949,7 +961,7 @@ export async function createFauna(
         : DEFAULT_SPAWNER_LABEL_HEIGHT
     label.position.set(pos.x, groundY + labelH, pos.z)
     scene.add(label)
-    spawnerLabels.push({ type: spec.type, object: label, el, marker: null, lastOpacity: -1 })
+    spawnerLabels.push({ id: spawner.id, type: spec.type, object: label, el, marker: null, lastOpacity: -1 })
   }
 
   for (const extra of extraHabitatSpawners ?? []) {
@@ -993,7 +1005,7 @@ export async function createFauna(
     const label = new CSS2DObject(el)
     label.position.set(extra.x, groundY + CAVE_LABEL_HEIGHT, extra.z)
     scene.add(label)
-    spawnerLabels.push({ type: extra.type, object: label, el, marker: null, lastOpacity: -1 })
+    spawnerLabels.push({ id: extra.id, type: extra.type, object: label, el, marker: null, lastOpacity: -1 })
   }
   } finally {
     bootMarkEnd('habitatSpawners')
@@ -1185,13 +1197,13 @@ export async function createFauna(
       }
       return true
     },
-    setSpawnerMarker(type, marker) {
+    setSpawnerMarker(spawnerId, marker) {
       for (const entry of spawnerLabels) {
-        if (entry.type !== type || entry.marker === marker) continue
+        if (entry.id !== spawnerId || entry.marker === marker) continue
         entry.marker = marker
         entry.el.textContent = marker
-          ? `${SPAWNER_LABELS[type]} · ${marker}`
-          : SPAWNER_LABELS[type]
+          ? `${SPAWNER_LABELS[entry.type]} · ${marker}`
+          : SPAWNER_LABELS[entry.type]
       }
     },
     destroySpawner(spawnerId, nowDays) {

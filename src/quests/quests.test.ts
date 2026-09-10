@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { QuestDef } from './quests'
 import {
+  bindExactCaveQuests,
   buildLandmarkQuests,
   QuestDefinitionValidationError,
   QUESTS,
@@ -198,7 +199,7 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
     const bad = runtimeQuest({
       ...baseQuest,
       stages: [{
-        objective: { type: 'talk_to_npc_choice', choices: [{ npcName: 'Anna', outcomeId: 'done' }] },
+        objective: { type: 'talk_to_npc_choice', choices: [{ npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to tobie.' }] },
         description: 'choose',
         reminderLine: 'remind',
       }],
@@ -213,8 +214,8 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
         objective: {
           type: 'talk_to_npc_choice',
           choices: [
-            { npcName: 'Anna', outcomeId: 'done' },
-            { npcName: 'Anna', outcomeId: 'done' },
+            { npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to Annie.' },
+            { npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to Annie jeszcze raz.' },
           ],
         },
         description: 'choose',
@@ -231,8 +232,8 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
         objective: {
           type: 'talk_to_npc_choice',
           choices: [
-            { npcName: 'Anna', outcomeId: 'done' },
-            { npcName: 'Piotr', outcomeId: 'missing' },
+            { npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to Annie.' },
+            { npcName: 'Piotr', outcomeId: 'missing', playerLine: 'Oddaję to Piotrowi.' },
           ],
         },
         description: 'choose',
@@ -310,5 +311,72 @@ describe('QUESTS authored RPG pack (plan quests-progression-005)', () => {
       visibility: 'hidden',
       items: [{ kind: 'book_defense_intermediate', count: 1 }],
     })
+  })
+})
+
+describe('quest dialogue lines and cave binding (plan quests-progression-014)', () => {
+  it('rejects an empty talk_to_npc_choice playerLine', () => {
+    const bad = runtimeQuest({
+      ...QUESTS.find((q) => q.id === 'relay-anna-piotr')!,
+      id: 'choice-empty-line',
+      stages: [{
+        objective: {
+          type: 'talk_to_npc_choice',
+          choices: [
+            { npcName: 'Anna', outcomeId: 'delivered', playerLine: '   ' },
+            { npcName: 'Piotr', outcomeId: 'delivered', playerLine: 'Oddaję to Piotrowi.' },
+          ],
+        },
+        description: 'choose',
+        reminderLine: 'remind',
+      }],
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/playerLine/)
+  })
+
+  it('rejects an empty reportPlayerLine', () => {
+    const bad = runtimeQuest({
+      ...QUESTS.find((q) => q.id === 'relay-anna-piotr')!,
+      reportPlayerLine: ' ',
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/reportPlayerLine/)
+  })
+
+  it('binds exact cave identity and cheap direction prose onto authored cave quests', () => {
+    const bound = bindExactCaveQuests(QUESTS, {
+      id: 'home:cave',
+      directionPhrase: 'na północny wschód od osady',
+    })
+    const check = bound.find((q) => q.id === 'sprawdz-szlak')!
+    const lost = bound.find((q) => q.id === 'zaginiona-przesylka')!
+    const scout = bound.find((q) => q.id === 'zwiadowca')!
+    expect(check.stages[0]?.objective).toEqual({
+      type: 'interact_spawner',
+      spawnerType: 'cave',
+      spawnerId: 'home:cave',
+    })
+    expect(lost.stages[0]?.objective).toEqual({
+      type: 'interact_spawner',
+      spawnerType: 'cave',
+      spawnerId: 'home:cave',
+    })
+    expect(scout.stages[0]?.objective).toEqual({ type: 'interact_spawner', spawnerType: 'cave' })
+    expect(check.offerLine).toContain('na północny wschód od osady')
+    expect(check.offerLine).not.toContain('{cavePlace}')
+    expect(lost.stages[0]?.reminderLine).toContain('na północny wschód od osady')
+  })
+
+  it('uses the neutral cave-place fallback when no direction is available', () => {
+    const bound = bindExactCaveQuests(
+      QUESTS.filter((q) => q.id === 'sprawdz-szlak'),
+      { id: 'home:cave', directionPhrase: null },
+    )
+    expect(bound[0]?.stages[0]?.reminderLine).toContain('poza osadą')
+    expect(bound[0]?.stages[0]?.reminderLine).not.toContain('{cavePlace}')
+  })
+
+  it('does not gate wilki-pod-osada on Anna trusted or grozny-wilk', () => {
+    const wolves = QUESTS.find((q) => q.id === 'wilki-pod-osada')!
+    expect(wolves.availability).toBeUndefined()
   })
 })

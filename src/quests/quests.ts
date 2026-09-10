@@ -85,6 +85,7 @@ export class QuestDefinitionValidationError extends Error {}
 export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
   const byId = new Map(defs.map((def) => [def.id, def]))
   for (const def of defs) {
+    validatePlayerDialogueLines(def)
     validateTalkToNpcChoiceObjective(def)
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) continue
@@ -137,6 +138,20 @@ export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
   }
 }
 
+function validatePlayerDialogueLines(def: QuestDef): void {
+  if (def.reportPlayerLine !== undefined && def.reportPlayerLine.trim().length === 0) {
+    throw new QuestDefinitionValidationError(`Quest "${def.id}" reportPlayerLine is empty`)
+  }
+  if (def.reportPromptLine !== undefined && def.reportPromptLine.trim().length === 0) {
+    throw new QuestDefinitionValidationError(`Quest "${def.id}" reportPromptLine is empty`)
+  }
+  for (const stage of def.stages) {
+    if (stage.playerLine !== undefined && stage.playerLine.trim().length === 0) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" stage playerLine is empty`)
+    }
+  }
+}
+
 function validateTalkToNpcChoiceObjective(def: QuestDef): void {
   for (const stage of def.stages) {
     const objective = stage.objective
@@ -153,6 +168,11 @@ function validateTalkToNpcChoiceObjective(def: QuestDef): void {
       )
     }
     for (const choice of objective.choices) {
+      if (choice.playerLine.trim().length === 0) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" talk_to_npc_choice is missing a playerLine for "${choice.npcName}"`,
+        )
+      }
       if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) {
         throw new QuestDefinitionValidationError(
           `Quest "${def.id}" talk_to_npc_choice references unknown outcome "${choice.outcomeId}"`,
@@ -220,21 +240,28 @@ export function uniqueOutcomeForState(
 
 export type QuestObjective =
   | { type: 'talk_to_npc', npcName: string }
-  /** Talking to one of the authored NPCs selects a terminal outcome
-   *  (plan quests-progression-005). Resolved immediately through the same
-   *  path as other outcomes — not a dialogue tree. The giver may also be a
-   *  choice target, so `QuestManager.onInteract` dispatches this before the
-   *  giver reminder. */
+  /** Talking to one of the authored NPCs presents a player dialogue action
+   *  (plan quests-progression-014). Selecting that action resolves through
+   *  the same outcome path as other terminals — not a dialogue tree. The
+   *  giver may also be a choice target, so `QuestManager.onInteract`
+   *  dispatches this before the giver reminder. Mere `[E]` / menu open does
+   *  not select the outcome. */
   | {
       type: 'talk_to_npc_choice'
       choices: readonly {
         npcName: string
         outcomeId: QuestOutcomeId
+        /** Player-facing declaration shown as the dialogue action. */
+        playerLine: string
+        /** Optional NPC prompt shown before the player speaks. */
+        npcLine?: string
       }[]
     }
   | { type: 'interact_well' }
   | { type: 'interact_tree' }
-  | { type: 'interact_spawner', spawnerType: SpawnerType }
+  /** `spawnerId` binds this stage to one stable `PreySpawner.id`. Absent =
+   *  any habitat of `spawnerType` (plan quests-progression-014). */
+  | { type: 'interact_spawner', spawnerType: SpawnerType, spawnerId?: string }
   /** `range` (plan 153) overrides the flat `INTERACT_RANGE`/`GAZE_RANGE` for
    *  this one objective's target — needed for skittish species (e.g. the
    *  stag's `fleeRange: 15`, `fauna/AnimalAgent.ts`) that would otherwise
@@ -311,10 +338,14 @@ export type QuestStage = {
   /** Giver's line while this stage is the active one (not yet cleared). */
   reminderLine: string
   /** Spoken at the point the objective is cleared — by the target NPC for
-   *  `talk_to_npc`, or as the giver's line the next time you talk to them for
-   *  world-interaction objectives. Not used for `gather_item` (cleared and
-   *  reported in the same giver conversation — see `QuestManager`). */
+   *  `talk_to_npc` after the player dialogue action, or as discovery text
+   *  at the world object for world-interaction objectives. Not used for
+   *  `gather_item` (cleared and reported in the same giver conversation —
+   *  see `QuestManager`). */
   progressLine?: string
+  /** Player-facing line for a conscious `talk_to_npc` / gather hand-in
+   *  action (plan quests-progression-014). Absent = a generic spoken action. */
+  playerLine?: string
   /** Reported when the stage transitions to `failed` (e.g. a `find_animal`
    *  target dies before being found). Falls back to a generic line in
    *  `QuestManager` when absent. */
@@ -331,6 +362,10 @@ export type QuestDef = {
   stages: readonly QuestStage[]
   /** Giver's line once every stage is cleared and the player reports back. */
   reportLine: string
+  /** Player-facing report / hand-in line (plan quests-progression-014). */
+  reportPlayerLine?: string
+  /** NPC prompt shown before the player reports (plan quests-progression-014). */
+  reportPromptLine?: string
   /** Availability prerequisites; quest stays `not_offered` and hidden from
    *  the giver/log until every prerequisite is met (plan 093 Etap A,
    *  quests-progression-004). */
@@ -366,9 +401,12 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'talk_to_npc', npcName: 'Piotr' },
         description: 'Porozmawiaj z Piotrem.',
         reminderLine: 'Powiedziałeś już Piotrowi o rybach o świcie?',
-        progressLine: 'Wiadomość od Anny? Dzięki, że przekazałeś — będę o świcie.',
+        playerLine: 'Anna mówiła, że jutro idziecie na ryby o świcie.',
+        progressLine: 'Dzięki, że przekazałeś. Będę o świcie.',
       },
     ],
+    reportPromptLine: 'Przekazałeś już Piotrowi?',
+    reportPlayerLine: 'Tak. Będzie o świcie.',
     reportLine: 'Świetnie, dziękuję za przekazanie wiadomości!',
     outcomes: [
       {
@@ -394,8 +432,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'gather_item', kind: 'shell', count: 3 },
         description: 'Zbierz 3 muszle.',
         reminderLine: 'Znalazłeś już trzy muszle?',
+        playerLine: 'Tak. Znalazłem trzy muszle — proszę.',
       },
     ],
+    reportPromptLine: 'Masz już te muszle?',
+    reportPlayerLine: 'Tak. Znalazłem trzy muszle — proszę.',
     reportLine: 'Piękne! Dziękuję, teraz próg będzie ładniejszy.',
     outcomes: [
       {
@@ -416,9 +457,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'interact_well' },
         description: 'Zaczerpnij wody ze studni.',
         reminderLine: 'Zaczerpnąłeś już wody?',
-        progressLine: 'Zaczerpnąłeś wody. Wróć do Marka.',
+        progressLine: 'Woda ze studni jest czysta i chłodna. Czas wrócić do Marka.',
       },
     ],
+    reportPromptLine: 'Udało ci się zaczerpnąć wody?',
+    reportPlayerLine: 'Tak. Zaczerpnąłem wody ze studni.',
     reportLine: 'Dzięki, akurat mi się przydała. Weź te monety.',
     outcomes: [
       {
@@ -431,17 +474,18 @@ export const QUESTS: readonly QuestDef[] = [
   },
   {
     id: 'zwiadowca',
-    title: 'Zwiadowca',
-    description: 'Piotr potrzebuje zwiadu: jaskinia z sarnami, jeleń po drodze i dwa kamienie z gór.',
+    title: 'Zwiad okolicy',
+    description:
+      'Piotr chce wiedzieć, czy za osadą jest spokojnie. Sprawdź jaskinię, wypatrz jelenia i przynieś kamienie z gór na znak, że naprawdę tam byłeś.',
     giverName: 'Piotr',
     offerLine:
-      'Zwiadowca mi trzeba — sprawdź jaskinię z sarnami, wypatrz jelenia po drodze, i przynieś dwa kamienie z gór na dowód.',
+      'Chcę wiedzieć, co się dzieje za osadą. Zajrzyj do jaskini, wypatrz jelenia po drodze i przynieś dwa kamienie z gór — wtedy będę pewien, że naprawdę tam byłeś.',
     stages: [
       {
         objective: { type: 'interact_spawner', spawnerType: 'cave' },
-        description: 'Zbadaj jaskinię z sarnami.',
+        description: 'Sprawdź jaskinię za osadą.',
         reminderLine: 'Byłeś już przy jaskini?',
-        progressLine: 'Ślady sarn świeże, wszystko w porządku. Teraz wypatrz jelenia.',
+        progressLine: 'Przy wejściu widać świeże tropy. To miejsce nie jest puste. Teraz wypatrz jelenia.',
       },
       {
         // range 16 > stag's fleeRange (15, `fauna/AnimalAgent.ts`) — the
@@ -451,15 +495,18 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'spot_animal', kind: 'stag', range: 16 },
         description: 'Wypatrz jelenia w terenie.',
         reminderLine: 'Widziałeś już jelenia?',
-        progressLine: 'Jeleń zauważony. Teraz kamienie z gór.',
+        progressLine: 'Jeleń zerwał się z miejsca i zniknął między drzewami. Zostały kamienie z gór.',
       },
       {
         objective: { type: 'gather_item', kind: 'stone', count: 2 },
         description: 'Przynieś 2 kamienie z gór.',
         reminderLine: 'Masz już kamienie z gór?',
+        playerLine: 'Przyniosłem kamienie z gór — byłem tam, gdzie prosiłeś.',
       },
     ],
-    reportLine: 'Dobra robota, zwiadowco. Teraz wiem, że okolica bezpieczna.',
+    reportPromptLine: 'No i jak? Co tam zastałeś?',
+    reportPlayerLine: 'Jaskinia jest używana, jeleń kręci się w okolicy, a kamienie przyniosłem z gór.',
+    reportLine: 'Dobra robota. Teraz wiem, że okolica żyje — i że ktoś wreszcie na nią spojrzał.',
     outcomes: [
       {
         id: 'reported',
@@ -480,10 +527,12 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'find_animal', kind: 'sheep' },
         description: 'Znajdź zagubioną owcę.',
         reminderLine: 'Owca wciąż się gdzieś włóczy.',
-        progressLine: 'Jest! Wróć i powiedz Annie, gdzie ją znalazłeś.',
+        progressLine: 'Owca pasze się w trawie, jakby nigdy nic. Trzeba powiedzieć Annie.',
         failLine: 'Zbyt późno... to na pewno była ona. Przykro mi, Anno.',
       },
     ],
+    reportPromptLine: 'Znalazłeś ją?',
+    reportPlayerLine: 'Tak. Widziałem ją — pasła się niedaleko, cała i zdrowa.',
     reportLine: 'Uff, dzięki. Już się bałam, że coś ją spotkało.',
     outcomes: [
       {
@@ -511,8 +560,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'gather_item', kind: 'branch', count: 5 },
         description: 'Zbierz 5 gałęzi.',
         reminderLine: 'Masz już dość gałęzi na naprawę?',
+        playerLine: 'Przyniosłem pięć gałęzi. Tyle powinno wystarczyć na płot.',
       },
     ],
+    reportPromptLine: 'Masz już gałęzie?',
+    reportPlayerLine: 'Przyniosłem pięć gałęzi. Tyle powinno wystarczyć na płot.',
     reportLine: 'To starczy w zupełności. Płot znów będzie trzymał się kupy.',
     outcomes: [
       {
@@ -534,8 +586,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'gather_item', kind: 'herb', count: 3 },
         description: 'Zbierz 3 zioła.',
         reminderLine: 'Masz już trzy zioła?',
+        playerLine: 'Tak. Zebrałem trzy zioła — proszę.',
       },
     ],
+    reportPromptLine: 'Masz już te zioła?',
+    reportPlayerLine: 'Tak. Zebrałem trzy zioła — proszę.',
     reportLine: 'Dziękuję, dokładnie tyle mi trzeba.',
     outcomes: [
       {
@@ -557,8 +612,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'gather_item', kind: 'stone', count: 6 },
         description: 'Zbierz 6 kamieni.',
         reminderLine: 'Masz już sześć kamieni?',
+        playerLine: 'Przyniosłem sześć kamieni na naprawy.',
       },
     ],
+    reportPromptLine: 'Masz już kamienie?',
+    reportPlayerLine: 'Przyniosłem sześć kamieni na naprawy.',
     reportLine: 'To wystarczy. Dzięki za dostawę.',
     outcomes: [
       {
@@ -570,20 +628,26 @@ export const QUESTS: readonly QuestDef[] = [
   },
   {
     id: 'sprawdz-szlak',
-    title: 'Sprawdzenie szlaku',
-    description: 'Kasia prosi o sprawdzenie przejścia przy jaskini na szlaku handlowym.',
+    title: 'Sprawdzenie jaskini',
+    description:
+      'Kasia prosi o sprawdzenie jaskini znajdującej się {cavePlace}. Ostatnio zauważono tam świeże ślady zwierząt.',
     giverName: 'Kasia',
     offerLine:
-      'Szlak handlowy przy jaskini trzeba sprawdzić — dasz radę tam zajrzeć? Zapłacę dwanaście monet.',
+      'Ostatnio ktoś widział świeże ślady przy jaskini {cavePlace}. Możesz tam zajrzeć i sprawdzić, czy nie kręci się tam coś niebezpiecznego? Zapłacę ci za fatygę.',
     stages: [
       {
         objective: { type: 'interact_spawner', spawnerType: 'cave' },
-        description: 'Sprawdź przejście przy jaskini.',
-        reminderLine: 'Byłeś już przy jaskini na szlaku?',
-        progressLine: 'Przejście wygląda na przejezdne. Wróć do Kasi.',
+        description: 'Sprawdź jaskinię wskazaną przez Kasię.',
+        reminderLine: 'Jaskinia jest {cavePlace}. Sprawdź tylko, co się tam dzieje, i wróć do mnie.',
+        progressLine:
+          'Wokół wejścia widać świeże ślady zwierząt. To miejsce zdecydowanie nie jest opuszczone.',
       },
     ],
-    reportLine: 'Dobrze wiedzieć, że szlak jest czysty. Weź zapłatę.',
+    reportPromptLine: 'I jak? Udało ci się sprawdzić jaskinię?',
+    reportPlayerLine:
+      'Tak. Są tam świeże ślady. Wygląda na to, że coś regularnie korzysta z tej jaskini.',
+    reportLine:
+      'Dobrze, że to sprawdziłeś. Przynajmniej wiemy, że trzeba tam uważać. Dzięki — proszę, to za pomoc.',
     outcomes: [
       {
         id: 'reported',
@@ -598,15 +662,17 @@ export const QUESTS: readonly QuestDef[] = [
     description: 'Marek prosi o pozbycie się lisa grasującego przy osadzie.',
     giverName: 'Marek',
     offerLine:
-      'Przy osadzie grasuje lis — dasz radę go przegonić? Zapłacę dwadzieścia monet.',
+      'Przy osadzie grasuje lis. Trzeba go zabić, zanim weźmie się za kury — zapłacę dwadzieścia monet.',
     stages: [
       {
         objective: { type: 'kill_target_animal', kind: 'fox' },
-        description: 'Pozbądź się lisa przy osadzie.',
+        description: 'Zabij lisa przy osadzie.',
         reminderLine: 'Lis wciąż grasuje w okolicy.',
-        progressLine: 'Lis nie wróci. Wróć do Marka.',
+        progressLine: 'Lis nie żyje. Wróć do Marka.',
       },
     ],
+    reportPromptLine: 'Co z lisem?',
+    reportPlayerLine: 'Zabiłem lisa. Nie będzie już grasował przy osadzie.',
     reportLine: 'Dzięki — teraz będzie spokojniej. Weź monety.',
     outcomes: [
       {
@@ -631,9 +697,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'kill_target_animal', kind: 'wolf', dangerous: true },
         description: 'Znajdź i pokonaj groźnego wilka.',
         reminderLine: 'Wilk wciąż grasuje w okolicy.',
-        progressLine: 'Wilk pokonany. Wróć do Anny.',
+        progressLine: 'Groźny wilk nie żyje. Wróć do Anny.',
       },
     ],
+    reportPromptLine: 'Udało ci się znaleźć tego wilka?',
+    reportPlayerLine: 'Wilk nie żyje. Można znowu wychodzić poza osadę.',
     reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę. Weź ten damasceński miecz — zasłużyłeś.',
     availability: {
       prerequisites: [
@@ -664,9 +732,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'clear_wolf_den', denId: WOLF_DEN_ID },
         description: 'Znajdź wilczą jamę i zlikwiduj zagrożenie.',
         reminderLine: 'Jama wciąż jest zamieszkana.',
-        progressLine: 'Jama opustoszała. Wróć do Anny.',
+        progressLine: 'W jamie nie zostało żadnego wilka. Wróć do Anny.',
       },
     ],
+    reportPromptLine: 'Co z jamą?',
+    reportPlayerLine: 'Jama jest pusta. Wilki stamtąd już nie wrócą.',
     reportLine: 'Teraz w okolicy będzie spokojniej. Weź ten obsydianowy miecz z wulkanicznego szkła.',
     availability: {
       prerequisites: [
@@ -702,12 +772,9 @@ export const QUESTS: readonly QuestDef[] = [
         progressLine: 'Siedlisko zniszczone. Wróć do Anny.',
       },
     ],
+    reportPromptLine: 'Udało ci się zniszczyć to siedlisko?',
+    reportPlayerLine: 'Zniszczyłem siedlisko. Wilki nie mają już skąd wracać pod osadę.',
     reportLine: 'Dzięki — źródło zagrożenia zniknęło. Osada może odetchnąć.',
-    availability: {
-      prerequisites: [
-        { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
-      ],
-    },
     outcomes: [
       {
         id: 'reported',
@@ -725,23 +792,36 @@ export const QUESTS: readonly QuestDef[] = [
   {
     id: 'zaginiona-przesylka',
     title: 'Zaginiona przesyłka',
-    description: 'Kasia zgubiła handlową przesyłkę przy jaskini na szlaku. Sprawdź jaskinię i zdecyduj, komu ją oddać.',
+    description:
+      'Kasia zgubiła handlową przesyłkę przy jaskini {cavePlace}. Sprawdź jaskinię i zdecyduj, komu ją oddać.',
     giverName: 'Kasia',
     offerLine:
-      'Zgubiłam przesyłkę przy jaskini na szlaku. Dasz radę tam zajrzeć? Potem zdecyduj, komu ją oddać — mnie albo Markowi.',
+      'Zgubiłam przesyłkę przy jaskini {cavePlace}. To prywatne listy i rachunki — bez nich nie ogarnę dostawy. Marek już o tym słyszał i chętnie by to przejął „dla porządku”. Dasz radę tam zajrzeć?',
     stages: [
       {
         objective: { type: 'interact_spawner', spawnerType: 'cave' },
-        description: 'Sprawdź jaskinię przy szlaku.',
-        reminderLine: 'Byłeś już przy jaskini?',
-        progressLine: 'Przesyłka jest. Oddaj ją Kasi albo przekaż strażnikowi Markowi.',
+        description: 'Sprawdź jaskinię wskazaną przez Kasię.',
+        reminderLine: 'Jaskinia jest {cavePlace}. Szukaj przesyłki przy wejściu.',
+        progressLine: 'Przy wejściu leży zawinięta przesyłka. Kasia jej szuka — Marek też o niej wie.',
       },
       {
         objective: {
           type: 'talk_to_npc_choice',
           choices: [
-            { npcName: 'Kasia', outcomeId: 'returned_sealed' },
-            { npcName: 'Marek', outcomeId: 'turned_over_to_guard' },
+            {
+              npcName: 'Kasia',
+              outcomeId: 'returned_sealed',
+              npcLine:
+                'Znalazłeś przesyłkę? Oddaj mi ją, zanim ktoś obcy zajrzy do środka. To moja korespondencja i bez niej stoję na szlaku z pustymi rękami.',
+              playerLine: 'Znalazłem przesyłkę. Proszę, jest twoja.',
+            },
+            {
+              npcName: 'Marek',
+              outcomeId: 'turned_over_to_guard',
+              npcLine:
+                'Kasia zgubiła przesyłkę na szlaku. Jeśli ją masz — oddaj mi ją. Straż powinna sprawdzić, skąd przyszła i czy na pewno jest tym, za co ją podaje.',
+              playerLine: 'Znalazłem przesyłkę Kasi. Przekazuję ją straży.',
+            },
           ],
         },
         description: 'Oddaj przesyłkę Kasi albo przekaż ją Markowi.',
@@ -787,14 +867,26 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'talk_to_npc', npcName: 'Piotr' },
         description: 'Porozmawiaj z Piotrem.',
         reminderLine: 'Rozmawiałeś już z Piotrem?',
-        progressLine: 'Anna chce materiał na gospodarstwo, ja na swoje prace. Zdecyduj, komu pomożesz.',
+        playerLine: 'Anna mówiła, że ty też chcesz to samo drewno.',
+        progressLine:
+          'Potrzebuję go na naprawy, bez których stoję. Anna chce je na gospodarstwo. Zdecyduj, komu pomożesz — nie wystarczy dla obojga.',
       },
       {
         objective: {
           type: 'talk_to_npc_choice',
           choices: [
-            { npcName: 'Anna', outcomeId: 'support_anna' },
-            { npcName: 'Piotr', outcomeId: 'support_piotr' },
+            {
+              npcName: 'Anna',
+              outcomeId: 'support_anna',
+              npcLine: 'No i jak? Piotr cię przekonał, czy zostajesz przy gospodarstwie?',
+              playerLine: 'Pomożę tobie. Gospodarstwo nie może czekać.',
+            },
+            {
+              npcName: 'Piotr',
+              outcomeId: 'support_piotr',
+              npcLine: 'No? Pomagasz mi, czy Annie?',
+              playerLine: 'Pomożę tobie. Najpierw naprawy, potem reszta.',
+            },
           ],
         },
         description: 'Zdecyduj, czy pomożesz Annie, czy Piotrowi.',
@@ -840,8 +932,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'gather_item', kind: 'branch', count: 5 },
         description: 'Zbierz 5 gałęzi.',
         reminderLine: 'Masz już pięć gałęzi?',
+        playerLine: 'Przyniosłem pięć gałęzi na gospodarstwo.',
       },
     ],
+    reportPromptLine: 'Masz już gałęzie?',
+    reportPlayerLine: 'Przyniosłem pięć gałęzi na gospodarstwo.',
     reportLine: 'Dziękuję, to wystarczy.',
     availability: {
       prerequisites: [
@@ -869,8 +964,11 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'gather_item', kind: 'branch', count: 5 },
         description: 'Zbierz 5 gałęzi.',
         reminderLine: 'Masz już pięć gałęzi?',
+        playerLine: 'Przyniosłem pięć gałęzi do twoich prac.',
       },
     ],
+    reportPromptLine: 'Masz już gałęzie?',
+    reportPlayerLine: 'Przyniosłem pięć gałęzi do twoich prac.',
     reportLine: 'To starczy. Weź zapłatę.',
     availability: {
       prerequisites: [
@@ -900,15 +998,18 @@ export const QUESTS: readonly QuestDef[] = [
         objective: { type: 'talk_to_npc', npcName: 'Piotr' },
         description: 'Porozmawiaj z Piotrem i dowiedz się, gdzie widywano dzika.',
         reminderLine: 'Porozmawiaj z Piotrem — wie, gdzie kręci się dzik przy szlaku.',
-        progressLine: 'Tak, przy szlaku w lesie kręci się duży dzik. Uważaj na siebie.',
+        playerLine: 'Marek mówi, że przy szlaku kręci się duży dzik. Wiesz, gdzie go szukać?',
+        progressLine: 'Tak. Przy szlaku w lesie, tam gdzie ludzie już nie chodzą. Bestia nie odpuszcza — uważaj na siebie.',
       },
       {
         objective: { type: 'kill_target_animal', kind: 'boar' },
         description: 'Pozbądź się dzika przy szlaku.',
         reminderLine: 'Dzik wciąż kręci się przy szlaku.',
-        progressLine: 'Dzik nie wróci. Wróć do Marka.',
+        progressLine: 'Dzik nie żyje. Szlak znów jest przejezdny. Wróć do Marka.',
       },
     ],
+    reportPromptLine: 'Co z dzikiem?',
+    reportPlayerLine: 'Dzika już nie ma. Szlak jest znowu przejezdny.',
     reportLine: 'Dzięki. Weź tę książkę — przyda ci się, zanim znów wyjdziesz poza osadę.',
     availability: {
       prerequisites: [
@@ -942,9 +1043,11 @@ export const QUESTS: readonly QuestDef[] = [
         description:
           'Napraw magazyn osady, zniszcz gniazdo szczurów za jednym z domów i doprowadź liczbę żywych szczurów w osadzie do co najwyżej jednego.',
         reminderLine: 'Plaga wciąż nie wygasła — sprawdź magazyn, gniazdo za domem i szczury w osadzie.',
-        progressLine: 'Wygląda na to, że plaga wygasła. Wróć do Marka.',
+        progressLine: 'Magazyn jest łatany, gniazdo spalone, szczurów prawie nie widać.',
       },
     ],
+    reportPromptLine: 'Udało ci się opanować tę plagę?',
+    reportPlayerLine: 'Plaga wygasła. Magazyn jest znowu bezpieczny.',
     reportLine: 'Dzięki — magazyn jest znowu bezpieczny, a szczurów prawie nie ma.',
     outcomes: [
       {
@@ -993,9 +1096,12 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
           objective: { type: 'interact_landmark', landmarkId: ruinsId },
           description: 'Zbadaj stare ruiny.',
           reminderLine: 'Byłeś już przy ruinach?',
-          progressLine: 'Ruiny zbadane. Wróć i opowiedz Piotrowi, co znalazłeś.',
+          progressLine:
+            'Mur porośnięty mchem, resztki paleniska. Ktoś tu kiedyś mieszkał, ale dawno. Ślady nie są świeże.',
         },
       ],
+      reportPromptLine: 'Co znalazłeś w tych ruinach?',
+      reportPlayerLine: 'Ruiny są puste. Ktoś tu kiedyś mieszkał, ale dawno.',
       reportLine: 'Dobrze wiedzieć, co tam jest, zanim ktoś natknie się na to nieprzygotowany. Dzięki.',
       outcomes: [
         {
@@ -1021,9 +1127,12 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
           objective: { type: 'interact_landmark', landmarkId: monolithId },
           description: 'Zbadaj monolit, gdzie ostatnio go widziano.',
           reminderLine: 'Byłeś już przy monolicie?',
-          progressLine: 'Przy monolicie widać ślady niedawnego obozowiska. Wróć i powiedz Annie.',
+          progressLine:
+            'Przy kamieniu widać zdeptaną trawę i wygasłe palenisko. Ktoś tu nocował niedawno.',
         },
       ],
+      reportPromptLine: 'Byłeś już przy monolicie?',
+      reportPlayerLine: 'Przy monolicie było obozowisko. Ktoś tam nocował, zanim zniknął.',
       reportLine: 'Ślady obozowiska... więc żył jeszcze, kiedy tam był. To już coś. Dziękuję, że sprawdziłeś.',
       outcomes: [
         {
@@ -1049,9 +1158,11 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
           objective: { type: 'interact_landmark', landmarkId: cemeteryId },
           description: 'Odwiedź zaniedbany cmentarz.',
           reminderLine: 'Byłeś już na cmentarzu?',
-          progressLine: 'Groby stoją, tylko mocno zarosły. Wróć i powiedz Kasi.',
+          progressLine: 'Nagrobki stoją, choć chwasty prawie je zakryły. Nikt tu od dawna nie przychodził.',
         },
       ],
+      reportPromptLine: 'Sprawdziłeś już ten cmentarz?',
+      reportPlayerLine: 'Groby jeszcze stoją, tylko cmentarz mocno zarósł.',
       reportLine: 'To dobrze, że ktoś jeszcze o nich pamięta. Dziękuję, że sprawdziłeś.',
       outcomes: [
         {
@@ -1077,27 +1188,29 @@ export function buildDarkForestTreasureQuest(): QuestDef {
     description: 'Piotr słyszał o starych ruinach głęboko w ciemnym lesie i o skarbie, który tam spoczywa.',
     giverName: 'Piotr',
     offerLine:
-      'Podobno w ciemnym lesie są stare ruiny, a w nich skarb. Jeśli znajdziesz mapę i dotrzesz tam żywy, opowiem o tym więcej.',
+      'Słyszałem o starych ruinach głęboko w ciemnym lesie. Podobno ktoś zostawił tam skarb i mapę, która do niego prowadzi. Jeśli mapę odczytasz i wrócisz żywy — opowiedz, co tam znalazłeś.',
     stages: [
       {
         objective: { type: 'read_item', itemKind: 'treasure_map_dark_forest' },
         description: 'Znajdź mapę do skarbu i odczytaj ją.',
         reminderLine: 'Bez mapy nie wiesz, gdzie szukać ruin.',
-        progressLine: 'Ruiny są zaznaczone — teraz trzeba tam dotrzeć.',
+        progressLine: 'Na mapie widać ruiny głęboko w ciemnym lesie. Teraz trzeba tam dotrzeć.',
       },
       {
         objective: { type: 'discover_location', locationId: DARK_FOREST_TREASURE_LOCATION_ID },
         description: 'Dotrzyj do ruin w ciemnym lesie.',
         reminderLine: 'Ruiny wciąż czekają głęboko w lesie.',
-        progressLine: 'Ruiny są na miejscu. Została skrzynia.',
+        progressLine: 'Ruiny stoją tam, gdzie mapa wskazywała. Została skrzynia.',
       },
       {
         objective: { type: 'loot_world_container', containerId: darkForestTreasureChestId() },
         description: 'Zabierz skarb ze skrzyni w ruinach.',
         reminderLine: 'Skrzynia w ruinach wciąż może coś kryć.',
-        progressLine: 'Masz skarb. Wróć do Piotra.',
+        progressLine: 'W skrzyni był skarb. Czas wrócić do Piotra.',
       },
     ],
+    reportPromptLine: 'Dotarłeś do tych ruin?',
+    reportPlayerLine: 'Byłem w ruinach. Mapa nie kłamała — skarb był na miejscu.',
     reportLine: 'Wiedziałem, że tam coś jest. Dzięki, że to sprawdziłeś.',
     outcomes: [
       {
@@ -1132,6 +1245,8 @@ export function buildHorseAcquisitionQuest(horseRewardAnimalId: string): QuestDe
         failLine: 'Koń nie przeżył — nie ma już czego oddać.',
       },
     ],
+    reportPromptLine: 'Co z tamtą jamą?',
+    reportPlayerLine: 'Jama jest pusta. Twój koń może spokojnie stać przy wozie.',
     reportLine: 'Dzięki. Ten koń jest twój — trzymaj go przy sobie.',
     outcomes: [
       {
@@ -1151,4 +1266,45 @@ export function buildHorseAcquisitionQuest(horseRewardAnimalId: string): QuestDe
     ],
     horseRewardAnimalId,
   }
+}
+
+/** Placeholder in authored cave-quest prose, replaced once at composition
+ *  with either a cheap 8-way direction or a neutral fallback
+ *  (plan quests-progression-014). */
+export const CAVE_PLACE_TOKEN = '{cavePlace}'
+
+const CAVE_BOUND_QUEST_IDS = new Set(['sprawdz-szlak', 'zaginiona-przesylka'])
+
+export function cavePlacePhrase(directionFromSettlement: string | null): string {
+  return directionFromSettlement ?? 'poza osadą'
+}
+
+function applyCavePlaceToken(text: string, phrase: string): string {
+  return text.replaceAll(CAVE_PLACE_TOKEN, phrase)
+}
+
+/** Binds exact home-cave identity and cheap direction prose onto the
+ *  authored cave quests. Direction is already-resolved presentation data
+ *  — never persisted. */
+export function bindExactCaveQuests(
+  defs: readonly QuestDef[],
+  cave: { id: string, directionPhrase: string | null } | undefined,
+): QuestDef[] {
+  const cavePlace = cavePlacePhrase(cave?.directionPhrase ?? null)
+  const caveId = cave?.id
+  return defs.map((def) => {
+    if (!CAVE_BOUND_QUEST_IDS.has(def.id)) return def
+    return {
+      ...def,
+      description: applyCavePlaceToken(def.description, cavePlace),
+      offerLine: applyCavePlaceToken(def.offerLine, cavePlace),
+      stages: def.stages.map((stage) => ({
+        ...stage,
+        reminderLine: applyCavePlaceToken(stage.reminderLine, cavePlace),
+        objective: stage.objective.type === 'interact_spawner' && caveId
+          ? { ...stage.objective, spawnerId: caveId }
+          : stage.objective,
+      })),
+    }
+  })
 }

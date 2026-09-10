@@ -1,7 +1,7 @@
 # Plan: Quest Dialogue Actions & Authored Dialogue Pass
 
 **Created:** 2026-09-10
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** quests-progression-005

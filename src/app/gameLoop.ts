@@ -1929,7 +1929,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           }
         }
         for (const spawner of bundle.fauna.getSpawners()) {
-          bundle.fauna.setSpawnerMarker(spawner.type, questManager.spawnerMarker(spawner.type))
+          bundle.fauna.setSpawnerMarker(spawner.id, questManager.spawnerMarker(spawner.type, spawner.id))
         }
         questManager.clearDirty()
       }

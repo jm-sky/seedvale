@@ -161,6 +161,7 @@ export function resolveInteraction(
       const override = questManager.onInteractObjective({
         type: 'interact_spawner',
         spawnerType: target.spawner.type,
+        spawnerId: target.spawner.id,
       })
       return {
         speakerName: capitalize(SPAWNER_LABELS[target.spawner.type]),

@@ -40,6 +40,19 @@ export const QUEST_MARKER_IN_PROGRESS = '…'
 export const QUEST_MARKER_READY = '✓'
 export const QUEST_MARKER_TALK_TARGET = '?'
 
+export type QuestDialogAction = {
+  /** Player-facing line shown as the selectable dialogue action. */
+  label: string
+  /** Re-reads live quest state, then advances or resolves. Returns the NPC reply. */
+  onSelect: () => string
+}
+
+/**
+ * Quest-driven NPC dialogue payload. UI displays `line` / `offer` / `actions`
+ * and invokes callbacks; it must not interpret quest ids, stages or outcomes.
+ *
+ * @domain quests-progression
+ */
 export type QuestDialogOverride = {
   line: string
   /** Present only when the dialog should present an accept/decline choice. */
@@ -47,6 +60,8 @@ export type QuestDialogOverride = {
     onAccept: () => void
     onDecline: () => void
   }
+  /** Conscious player speech for report / talk_to_npc / talk_to_npc_choice. */
+  actions?: readonly QuestDialogAction[]
 }
 
 export type { QuestProgressEntry }
@@ -102,7 +117,7 @@ export type HorseRewardAvailability = (animalId: string) => boolean
 export type ObjectiveRef =
   | { type: 'interact_well' }
   | { type: 'interact_tree' }
-  | { type: 'interact_spawner', spawnerType: SpawnerType }
+  | { type: 'interact_spawner', spawnerType: SpawnerType, spawnerId: string }
   | { type: 'spot_animal', kind: AnimalKind }
   | { type: 'animal_died', animalId: string }
   | { type: 'wolf_den_cleared', denId: string }
@@ -183,6 +198,11 @@ const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
 const QUEST_COMPLETE_SOUND_VOLUME = 0.35
 /** Used when a failed stage has no `failLine` of its own. */
 const QUEST_FAILED_FALLBACK_LINE = 'To się już nie uda.'
+const DEFAULT_TALK_PLAYER_LINE = 'Chciałem ci coś powiedzieć.'
+const DEFAULT_REPORT_PLAYER_LINE = 'Zdaję relację z zadania.'
+const DEFAULT_REPORT_PROMPT = 'No i jak? Udało się?'
+const DEFAULT_GATHER_PLAYER_LINE = 'Przyniosłem to, o co prosiłeś.'
+const DEFAULT_NPC_PROMPT = 'Tak?'
 
 /** `boundAnimalId` is the specific individual this quest's `kill_target_animal`
  *  stage was bound to (if any) — an `animal_died` ref only matches that one
@@ -196,7 +216,9 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
     case 'interact_landmark':
       return objective.type === 'interact_landmark' && objective.landmarkId === ref.landmarkId
     case 'interact_spawner':
-      return objective.type === 'interact_spawner' && objective.spawnerType === ref.spawnerType
+      return objective.type === 'interact_spawner'
+        && objective.spawnerType === ref.spawnerType
+        && (objective.spawnerId == null || objective.spawnerId === ref.spawnerId)
     case 'interact_tree':
       return objective.type === 'interact_tree'
     case 'interact_well':
@@ -211,7 +233,7 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
 function matchingTalkChoice(
   objective: QuestObjective | undefined,
   npcName: string,
-): { npcName: string, outcomeId: QuestOutcomeId } | undefined {
+): { npcName: string, outcomeId: QuestOutcomeId, playerLine: string, npcLine?: string } | undefined {
   if (objective?.type !== 'talk_to_npc_choice') return undefined
   return objective.choices.find((choice) => choice.npcName === npcName)
 }
@@ -536,12 +558,12 @@ export class QuestManager {
 
   private isWorldObjectiveSatisfied(objective: QuestObjective): boolean {
     switch (objective.type) {
-      case 'read_item':
-        return this.worldProgress.hasReadItem(objective.itemKind)
       case 'discover_location':
         return this.worldProgress.hasDiscoveredLocation(objective.locationId)
       case 'loot_world_container':
         return this.worldProgress.isWorldContainerLooted(objective.containerId)
+      case 'read_item':
+        return this.worldProgress.hasReadItem(objective.itemKind)
       default:
         return false
     }
@@ -561,17 +583,14 @@ export class QuestManager {
     def: QuestDef,
     s: QuestRuntimeProgress,
     stage: QuestStage,
-  ): QuestDialogOverride {
+  ): QuestDialogOverride | null {
     if (!def.settlementId) return { line: stage.reminderLine }
     const snapshot = this.settlementRatInfestation.getSnapshot(def.settlementId)
     const line = settlementRatInfestationReminderLine(snapshot)
     if (isSettlementRatInfestationResolved(snapshot)) {
       this.advanceStage(def, s)
       const updated = this.stateOf(def.id)
-      if (updated.state === 'ready_to_report') {
-        const reportLine = this.resolveSuccessfulTurnIn(def)
-        return reportLine ? { line: reportLine } : { line }
-      }
+      if (updated.state === 'ready_to_report') return this.reportOverride(def)
     }
     return { line }
   }
@@ -731,34 +750,28 @@ export class QuestManager {
       if (stage.objective.type === 'gather_item') {
         const { kind, count } = stage.objective
         const isFinalStage = s.stageIndex >= def.stages.length - 1
-        if (isFinalStage) {
-          const outcome = uniqueOutcomeForState(def, 'complete')
-          if (!outcome) return { line: stage.reminderLine }
-          if (!this.inventory.has(kind, count)) return { line: stage.reminderLine }
-          if (!this.inventory.remove(kind, count)) return { line: stage.reminderLine }
-          const applied = this.applyOutcome(def, outcome.id)
-          return applied ? { line: def.reportLine } : { line: stage.reminderLine }
-        }
+        if (isFinalStage && !uniqueOutcomeForState(def, 'complete')) return { line: stage.reminderLine }
         if (!this.inventory.has(kind, count)) return { line: stage.reminderLine }
-        if (!this.inventory.remove(kind, count)) return { line: stage.reminderLine }
-        this.advanceStage(def, s)
-        const updated = this.stateOf(def.id)
-        return { line: this.currentStage(def, updated.stageIndex)?.reminderLine ?? def.reportLine }
+        const stageIndex = s.stageIndex
+        return {
+          line: stage.reminderLine,
+          actions: [{
+            label: stage.playerLine ?? def.reportPlayerLine ?? DEFAULT_GATHER_PLAYER_LINE,
+            onSelect: () => this.selectGatherTurnIn(def, stageIndex),
+          }],
+        }
       }
       return { line: stage.reminderLine }
     }
-    if (s.state === 'ready_to_report') {
-      const line = this.resolveSuccessfulTurnIn(def)
-      return line ? { line } : null
-    }
+    if (s.state === 'ready_to_report') return this.reportOverride(def)
     return null
   }
 
   /**
-   * Active `talk_to_npc_choice`: talking to a matching NPC selects that
-   * choice's outcome and resolves through `applyOutcome`. Must run before
-   * giver reminder handling because the giver may also be a choice target
-   * (plan quests-progression-005).
+   * Active `talk_to_npc_choice`: talking to a matching NPC presents that
+   * choice's player action. Selecting the action resolves through
+   * `applyOutcome`. Must run before giver reminder handling because the
+   * giver may also be a choice target (plan quests-progression-005 / 014).
    *
    * @domain quests-progression
    */
@@ -769,9 +782,80 @@ export class QuestManager {
     const choice = matchingTalkChoice(stage?.objective, npcName)
     if (!choice) return null
     if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) return null
-    const applied = this.applyOutcome(def, choice.outcomeId)
-    if (!applied) return null
-    return { line: applied.resultText ?? def.reportLine }
+    const stageIndex = s.stageIndex
+    return {
+      line: choice.npcLine ?? DEFAULT_NPC_PROMPT,
+      actions: [{
+        label: choice.playerLine,
+        onSelect: () => this.selectTalkToNpcChoice(def, npcName, choice.outcomeId, stageIndex),
+      }],
+    }
+  }
+
+  private reportOverride(def: QuestDef): QuestDialogOverride | null {
+    if (!uniqueOutcomeForState(def, 'complete')) return null
+    return {
+      line: def.reportPromptLine ?? DEFAULT_REPORT_PROMPT,
+      actions: [{
+        label: def.reportPlayerLine ?? DEFAULT_REPORT_PLAYER_LINE,
+        onSelect: () => this.selectSuccessfulTurnIn(def),
+      }],
+    }
+  }
+
+  private selectSuccessfulTurnIn(def: QuestDef): string {
+    const current = this.stateOf(def.id)
+    if (current.state !== 'ready_to_report') {
+      return current.state === 'complete' ? def.reportLine : (def.reportPromptLine ?? DEFAULT_REPORT_PROMPT)
+    }
+    return this.resolveSuccessfulTurnIn(def) ?? def.reportLine
+  }
+
+  private selectTalkToNpc(def: QuestDef, npcName: string, stageIndex: number, progressLine: string): string {
+    const current = this.stateOf(def.id)
+    if (current.state !== 'active' || current.stageIndex !== stageIndex) return progressLine
+    const stage = this.currentStage(def, current.stageIndex)
+    if (stage?.objective.type !== 'talk_to_npc' || stage.objective.npcName !== npcName) return progressLine
+    this.advanceStage(def, current)
+    return progressLine
+  }
+
+  private selectTalkToNpcChoice(
+    def: QuestDef,
+    npcName: string,
+    outcomeId: QuestOutcomeId,
+    stageIndex: number,
+  ): string {
+    const current = this.stateOf(def.id)
+    const outcome = def.outcomes.find((entry) => entry.id === outcomeId)
+    const resolvedLine = outcome?.resultText ?? def.reportLine
+    if (current.state !== 'active' || current.stageIndex !== stageIndex) return resolvedLine
+    const choice = matchingTalkChoice(this.currentStage(def, current.stageIndex)?.objective, npcName)
+    if (!choice || choice.outcomeId !== outcomeId) return resolvedLine
+    const applied = this.applyOutcome(def, outcomeId)
+    return applied ? (applied.resultText ?? def.reportLine) : resolvedLine
+  }
+
+  private selectGatherTurnIn(def: QuestDef, stageIndex: number): string {
+    const current = this.stateOf(def.id)
+    const stage = this.currentStage(def, current.stageIndex)
+    if (current.state !== 'active' || current.stageIndex !== stageIndex || stage?.objective.type !== 'gather_item') {
+      return stage?.reminderLine ?? def.reportLine
+    }
+    const { kind, count } = stage.objective
+    const isFinalStage = current.stageIndex >= def.stages.length - 1
+    if (isFinalStage) {
+      const outcome = uniqueOutcomeForState(def, 'complete')
+      if (!outcome) return stage.reminderLine
+      if (!this.inventory.has(kind, count)) return stage.reminderLine
+      if (!this.inventory.remove(kind, count)) return stage.reminderLine
+      const applied = this.applyOutcome(def, outcome.id)
+      return applied ? def.reportLine : stage.reminderLine
+    }
+    if (!this.inventory.has(kind, count)) return stage.reminderLine
+    if (!this.inventory.remove(kind, count)) return stage.reminderLine
+    this.advanceStage(def, current)
+    return this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine ?? def.reportLine
   }
 
   /** Quest-driven line/offer for talking to `npcName` right now, or null if
@@ -800,8 +884,15 @@ export class QuestManager {
       if (s.state === 'active' && npcName !== def.giverName) {
         const stage = this.currentStage(def, s.stageIndex)
         if (stage?.objective.type === 'talk_to_npc' && stage.objective.npcName === npcName) {
-          this.advanceStage(def, s)
-          return { line: stage.progressLine ?? stage.description }
+          const stageIndex = s.stageIndex
+          const progressLine = stage.progressLine ?? stage.description
+          return {
+            line: DEFAULT_NPC_PROMPT,
+            actions: [{
+              label: stage.playerLine ?? DEFAULT_TALK_PLAYER_LINE,
+              onSelect: () => this.selectTalkToNpc(def, npcName, stageIndex, progressLine),
+            }],
+          }
         }
       }
     }
@@ -860,16 +951,18 @@ export class QuestManager {
     return null
   }
 
-  /** Label suffix for a fauna spawner type, or null when no active quest's
-   *  current stage targets it. */
-  spawnerMarker(spawnerType: SpawnerType): string | null {
+  /** Label suffix for a fauna spawner, or null when no active quest's
+   *  current stage targets it. When the objective binds `spawnerId`, only
+   *  that identity matches; otherwise any habitat of `spawnerType` does. */
+  spawnerMarker(spawnerType: SpawnerType, spawnerId?: string): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
       const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type === 'interact_spawner' && stage.objective.spawnerType === spawnerType) {
-        return '?'
-      }
+      if (stage?.objective.type !== 'interact_spawner') continue
+      if (stage.objective.spawnerType !== spawnerType) continue
+      if (stage.objective.spawnerId != null && stage.objective.spawnerId !== spawnerId) continue
+      return '?'
     }
     return null
   }

@@ -54,10 +54,9 @@ type NpcDialogueMenuState = {
   settlement: Settlement | null
   timeOfDay: number
   helpResult: QuestDialogOverride | null
-  /** `true` when `helpResult` came from `QuestManager.onInteract`, not the
-   *  generic greeting fallback — UI opens straight on that line (plan
-   *  quests-progression / `talk_to_npc` seam). */
-  helpFromQuestManager: boolean
+  /** Resolves the current quest/help line when the player selects that topic.
+   *  Opening the menu must not invoke it (plan quests-progression-014). */
+  resolveQuestHelp: (() => QuestDialogOverride | null) | null
   canAskSword: boolean
   getCanAskSword: (() => boolean) | null
   onAskSword: (() => string) | null
@@ -553,7 +552,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, helpFromQuestManager: false, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -783,25 +782,41 @@ export function setVillagersPage(page: number): void { ui.villagers.page = page 
 
 export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, questManager: QuestManager, timeOfDay: number): void {
   const state = ui.npcDialogueMenu
-  const override = questManager.onInteract(npc.name)
   state.npc = markRaw(npc)
   state.settlement = settlement
   state.timeOfDay = timeOfDay
-  state.helpFromQuestManager = override != null
-  state.helpResult = override ?? { line: npc.getDialogueLine() }
+  state.helpResult = null
+  state.resolveQuestHelp = () => questManager.onInteract(npc.name)
   state.canAskSword = state.getCanAskSword?.() ?? false
   state.paymentClaim = npc.preparePaymentRequest()
   state.open = true
   emitUiOpen()
   playNpcVoice(npc, pickNpcGreetingSound(npc.voiceActor))
 }
-/** Topic the dialogue menu should open on (payment wage claim beats quest line). */
-export function resolveNpcDialogueOpenTopic(): 'payment' | 'help' | null {
+/** Topic the dialogue menu should open on. Payment wage-claim is the only
+ *  automatic exception; quest presence must not skip the topic list
+ *  (plan quests-progression-014). */
+export function resolveNpcDialogueOpenTopic(): 'payment' | null {
   const state = ui.npcDialogueMenu
   if (!state.open) return null
   if (state.paymentClaim) return 'payment'
-  if (state.helpFromQuestManager) return 'help'
   return null
+}
+/** Resolve the current quest/help payload when the player selects that topic. */
+export function resolveNpcDialogueHelp(): void {
+  const state = ui.npcDialogueMenu
+  if (!state.open || !state.npc) return
+  state.helpResult = state.resolveQuestHelp?.() ?? { line: state.npc.getDialogueLine() }
+}
+/** Invoke one authored quest dialogue action and replace the shown NPC line. */
+export function selectNpcDialogueHelpAction(index: number): void {
+  const state = ui.npcDialogueMenu
+  const action = state.helpResult?.actions?.[index]
+  if (!state.open || !action) return
+  const line = action.onSelect()
+  const npc = state.npc as NpcAgent | null
+  playNpcVoice(npc, npc ? pickNpcConfirmationSound(npc.voiceActor) : undefined)
+  state.helpResult = { line }
 }
 function resetNpcDialogueMenu(): void {
   const state = ui.npcDialogueMenu
@@ -809,7 +824,7 @@ function resetNpcDialogueMenu(): void {
   state.npc = null
   state.settlement = null
   state.helpResult = null
-  state.helpFromQuestManager = false
+  state.resolveQuestHelp = null
   state.paymentClaim = null
 }
 /** `decline: false` means this close is a transition (e.g. into trade — see

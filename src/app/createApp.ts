@@ -31,6 +31,7 @@ import { isAdminMode, isDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { installNpcDebugApi } from '../debug/npcDebugApi'
 import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
 import { createPlayerGroundTraceBuffer } from '../debug/playerGroundTrace'
+import { findHomeCaveSpawner } from '../fauna/createFauna'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -77,8 +78,9 @@ import {
 import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
+import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
 import { QuestManager } from '../quests/QuestManager'
-import { buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
+import { bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
@@ -113,13 +115,13 @@ import { createDayNightState, parseTimeOfDayFromUrl, resetDayNightForNewGame } f
 import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
 import { createGroundFog } from '../world/groundFog'
+import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
+import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
 import { createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
-import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
-import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -882,14 +884,23 @@ export async function createApp(
   // data; the composition root resolves the real settlement here, once,
   // rather than hardcoding a settlement id inside `QuestManager`/
   // `ReputationManager`).
-  const homeSettlementId = bundle.settlementsManager.getHomeDef().id
+  const homeDef = bundle.settlementsManager.getHomeDef()
+  const homeSettlementId = homeDef.id
+  const homeCave = findHomeCaveSpawner(bundle.fauna.getSpawners(), homeSettlementId)
+  const caveDirection = homeCave
+    ? cardinalDirectionPhrase(homeCave.x - homeDef.x, homeCave.z - homeDef.z)
+    : null
+  const caveBinding = {
+    id: homeCave?.id ?? `${homeSettlementId}:cave`,
+    directionPhrase: caveDirection ? `${caveDirection} od osady` : null,
+  }
   const merchantHorseId = merchantHorseAnimalId(homeSettlementId)
-  const questDefs = [
+  const questDefs = bindExactCaveQuests([
     ...QUESTS,
     ...landmarkQuests,
     buildDarkForestTreasureQuest(),
     buildHorseAcquisitionQuest(merchantHorseId),
-  ].map((def) => ({ ...def, settlementId: homeSettlementId }))
+  ], caveBinding).map((def) => ({ ...def, settlementId: homeSettlementId }))
 
   const questManager: QuestManager = new QuestManager(
     questDefs,

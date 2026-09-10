@@ -4,7 +4,7 @@ import type { NpcAgent } from '../ai/NpcAgent'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
 import { useOverlayScreen } from './composables/useOverlayScreen'
-import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, resolveNpcDialogueOpenTopic, ui } from './store'
+import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, resolveNpcDialogueHelp, resolveNpcDialogueOpenTopic, selectNpcDialogueHelpAction, ui } from './store'
 
 const BACKDROP_CLOSE_GUARD_MS = 300
 
@@ -17,6 +17,7 @@ useOverlayScreen('npc-dialogue', isNpcDialogueMenuOpen, closeNpcDialogueMenu)
 
 const archetype = computed(() => (state.npc ? nearestArchetype(state.npc.personality) : 'calm'))
 const hasOffer = computed(() => state.helpResult?.offer != null)
+const helpActions = computed(() => state.helpResult?.actions ?? [])
 const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
 const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
 const swordLine = ref('')
@@ -56,7 +57,16 @@ function resetMenu(): void {
   paymentLine.value = ''
 }
 function backToTopics(): void { emitUiClick(); resetMenu() }
-function selectTopic(next: Topic): void { emitUiClick(); topic.value = next }
+function selectTopic(next: Topic): void {
+  emitUiClick()
+  if (next === 'help') resolveNpcDialogueHelp()
+  topic.value = next
+}
+
+function selectHelpAction(index: number): void {
+  emitUiClick()
+  selectNpcDialogueHelpAction(index)
+}
 
 function askSword(): void {
   emitUiClick()
@@ -241,6 +251,27 @@ watch(() => state.open, (open) => {
             @click="close"
           >
             Odmów
+          </button>
+        </div>
+        <div
+          v-else-if="topic === 'help' && helpActions.length"
+          class="flex flex-col gap-2"
+        >
+          <button
+            v-for="(action, index) in helpActions"
+            :key="index"
+            type="button"
+            class="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20"
+            @click="selectHelpAction(index)"
+          >
+            {{ action.label }}
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+            @click="backToTopics"
+          >
+            Wróć
           </button>
         </div>
         <button

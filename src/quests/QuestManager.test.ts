@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { SocialConsequence } from '../reputation/ReputationManager'
-import type { QuestManagerInitial, QuestSocialAvailabilityLookup } from './QuestManager'
+import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup } from './QuestManager'
 import type { QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
 import { QuestManager } from './QuestManager'
-import { buildHorseAcquisitionQuest, QUESTS, relationToLevel } from './quests'
+import { bindExactCaveQuests, buildHorseAcquisitionQuest, QUESTS, relationToLevel } from './quests'
 
 function quest(
   partial: Omit<QuestDef, 'title' | 'description' | 'outcomes'> & Partial<Pick<QuestDef, 'title' | 'description' | 'outcomes'>>,
@@ -104,6 +104,17 @@ function acceptOffer(qm: QuestManager, npcName: string): void {
   offer?.offer?.onAccept()
 }
 
+function selectAction(dialog: QuestDialogOverride | null, index = 0): string | undefined {
+  return dialog?.actions?.[index]?.onSelect()
+}
+
+/** Selects the first authored dialogue action from the current NPC override. */
+function speak(qm: QuestManager, npcName: string, index = 0): string | undefined {
+  return selectAction(qm.onInteract(npcName), index)
+}
+
+const CAVE_REF = { type: 'interact_spawner', spawnerType: 'cave', spawnerId: 'test-cave' } as const
+
 describe('relationToLevel', () => {
   it('maps numeric relation to the highest threshold met', () => {
     expect(relationToLevel(-5)).toBe('stranger')
@@ -134,7 +145,7 @@ describe('QuestManager availability', () => {
     const qm = makeManager([simpleQuest, gatedQuest])
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
-    qm.onInteract('Anna') // report -> complete, +1 relation
+    speak(qm, 'Anna') // report -> complete, +1 relation
     expect(qm.getRelation('Anna')).toBe(1)
     expect(qm.isQuestAvailable('gated')).toBe(false)
   })
@@ -151,7 +162,7 @@ describe('QuestManager availability', () => {
     const qm = makeManager([boosted, gatedQuest])
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(qm.getRelation('Anna')).toBe(6)
     expect(qm.getRelationLevel('Anna')).toBe('trusted')
     expect(qm.isQuestAvailable('gated')).toBe(true)
@@ -177,7 +188,7 @@ describe('QuestManager outcomes', () => {
     const qm = makeManager([noRelation])
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(qm.getRelation('Anna')).toBe(0)
     expect(qm.getState('simple')).toBe('complete')
   })
@@ -187,10 +198,12 @@ describe('QuestManager outcomes', () => {
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective({ type: 'interact_well' })
     const result = qm.onInteract('Kasia')
-    expect(result?.line).toBe('report effects')
+    expect(result?.line).toBe('No i jak? Udało się?')
+    expect(qm.getState('effects')).toBe('ready_to_report')
+    expect(selectAction(result)).toBe('report effects')
     expect(qm.getRelation('Kasia')).toBe(3)
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('complete')
-    qm.onInteract('Kasia')
+    speak(qm, 'Kasia')
     expect(qm.getRelation('Kasia')).toBe(3)
   })
 
@@ -211,8 +224,8 @@ describe('QuestManager outcomes', () => {
     })
     const qm = makeManager([relay])
     acceptOffer(qm, 'Anna')
-    qm.onInteract('Piotr')
-    qm.onInteract('Anna')
+    speak(qm, 'Piotr')
+    speak(qm, 'Anna')
     expect(qm.getRelation('Anna')).toBe(1)
     expect(qm.getRelation('Piotr')).toBe(0)
   })
@@ -245,7 +258,7 @@ describe('QuestManager kill_target_animal binding', () => {
     const qm = makeManager([wolfQuest], () => 'wolf-1')
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
-    qm.onInteract('Anna') // report -> complete
+    speak(qm, 'Anna') // report -> complete
     expect(qm.getState('wolf')).toBe('complete')
     // Re-reporting a death for the same id afterward must not affect anything.
     expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })).toBeNull()
@@ -427,7 +440,7 @@ describe('QuestManager reset', () => {
     const qm = makeManager([effectsQuest])
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective({ type: 'interact_well' })
-    qm.onInteract('Kasia')
+    speak(qm, 'Kasia')
     expect(qm.getRelation('Kasia')).toBeGreaterThan(0)
     qm.reset()
     expect(qm.getRelation('Kasia')).toBe(0)
@@ -683,7 +696,7 @@ describe('QuestManager applySocialConsequence', () => {
     const qm = makeTrustedManager([groznyWilkDef], (c) => consequences.push(c), () => 'wolf-1')
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' }) // -> ready_to_report
-    qm.onInteract('Anna') // report -> complete, applies consequence
+    speak(qm, 'Anna') // report -> complete, applies consequence
     expect(consequences).toEqual([
       { settlementId: 'home', reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 },
     ])
@@ -708,7 +721,7 @@ describe('QuestManager applySocialConsequence', () => {
     )
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(consequences).toEqual([
       { settlementId: 'home', reputation: { competence: 15, courage: 18, benevolence: 6 }, renown: 25 },
     ])
@@ -721,7 +734,7 @@ describe('QuestManager applySocialConsequence', () => {
     const qm = makeTrustedManager([simpleQuest], (c) => consequences.push(c))
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(consequences).toHaveLength(0)
   })
 
@@ -731,7 +744,7 @@ describe('QuestManager applySocialConsequence', () => {
     const qm = makeTrustedManager([unresolved], (c) => consequences.push(c), () => 'wolf-1')
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(consequences).toHaveLength(0)
   })
 
@@ -758,7 +771,7 @@ describe('QuestManager applySocialConsequence', () => {
     const qm = makeTrustedManager([otherSettlementDef], (c) => consequences.push(c), () => 'wolf-1')
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(consequences).toEqual([{ settlementId: 'outpost', reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 }])
   })
 })
@@ -778,9 +791,9 @@ describe('QuestManager resolveQuest', () => {
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
     expect(granted).toEqual([])
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(granted).toEqual([{ kind: 'coin', count: 5 }, { kind: 'shell', count: 2 }])
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(granted).toHaveLength(2)
     expect(qm.resolveQuest('simple', 'complete')).toBe(false)
     expect(granted).toHaveLength(2)
@@ -827,7 +840,7 @@ describe('QuestManager resolveQuest', () => {
     const qm = makeManager([simpleQuest], undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(granted).toEqual([])
   })
 })
@@ -883,7 +896,7 @@ describe('QuestManager authored sheep outcomes', () => {
     qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })
     expect(qm.getState('zagubiona-owca')).toBe('ready_to_report')
     expect(granted).toEqual([])
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(qm.getState('zagubiona-owca')).toBe('complete')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('found_and_reported')
     expect(granted).toEqual([{ kind: 'coin', count: 10 }])
@@ -968,7 +981,7 @@ describe('QuestManager formal vs personal relation rebalance', () => {
     inventory.add('branch', 5)
     const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Piotr')
-    qm.onInteract('Piotr')
+    speak(qm, 'Piotr')
     expect(qm.getState('drewno-na-naprawe')).toBe('complete')
     expect(granted).toEqual([{ kind: 'coin', count: 8 }])
     expect(qm.getRelation('Piotr')).toBe(0)
@@ -980,7 +993,7 @@ describe('QuestManager formal vs personal relation rebalance', () => {
     const qm = new QuestManager([def], undefined, new Inventory(), undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Marek')
     qm.onInteractObjective({ type: 'interact_well' })
-    qm.onInteract('Marek')
+    speak(qm, 'Marek')
     expect(granted).toEqual([{ kind: 'coin', count: 5 }])
     expect(qm.getRelation('Marek')).toBe(1)
   })
@@ -1046,12 +1059,12 @@ describe('QuestManager gather_item turn-in', () => {
     inventory.add('herb', 3)
     const qm = new QuestManager([gatherQuest], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Anna')
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(inventory.count('herb')).toBe(0)
     expect(qm.getState('gather-coins')).toBe('complete')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('delivered')
     expect(granted).toEqual([{ kind: 'coin', count: 8 }])
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(granted).toHaveLength(1)
   })
 
@@ -1073,7 +1086,7 @@ describe('QuestManager gather_item turn-in', () => {
     inventory.add('stone', 2)
     const qm = new QuestManager([multiStageGather], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Piotr')
-    expect(qm.onInteract('Piotr')?.line).toBe('remind cave')
+    expect(selectAction(qm.onInteract('Piotr'))).toBe('remind cave')
     expect(inventory.count('stone')).toBe(0)
     expect(qm.getState('multi-gather')).toBe('active')
     expect(qm.getState('multi-gather')).not.toBe('ready_to_report')
@@ -1089,7 +1102,7 @@ describe('QuestManager paid quest definitions', () => {
     inventory.add('herb', 3)
     const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Anna')
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(granted).toEqual([{ kind: 'coin', count: 8 }])
     expect(qm.getRelation('Anna')).toBe(0)
     expect(qm.list().find((e) => e.id === 'ziola-dla-anny')?.promisedReward).toBeNull()
@@ -1102,7 +1115,7 @@ describe('QuestManager paid quest definitions', () => {
     inventory.add('stone', 6)
     const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Piotr')
-    qm.onInteract('Piotr')
+    speak(qm, 'Piotr')
     expect(granted).toEqual([{ kind: 'coin', count: 9 }])
     expect(qm.getRelation('Piotr')).toBe(0)
   })
@@ -1112,8 +1125,8 @@ describe('QuestManager paid quest definitions', () => {
     const def = QUESTS.find((d) => d.id === 'sprawdz-szlak')!
     const qm = new QuestManager([def], undefined, new Inventory(), undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Kasia')
-    qm.onInteractObjective({ type: 'interact_spawner', spawnerType: 'cave' })
-    qm.onInteract('Kasia')
+    qm.onInteractObjective(CAVE_REF)
+    speak(qm, 'Kasia')
     expect(granted).toEqual([{ kind: 'coin', count: 12 }])
     expect(qm.getRelation('Kasia')).toBe(0)
   })
@@ -1135,11 +1148,11 @@ describe('QuestManager paid quest definitions', () => {
     acceptOffer(qm, 'Marek')
     expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'fox-2' })).toBeNull()
     qm.onInteractObjective({ type: 'animal_died', animalId: 'fox-1' })
-    qm.onInteract('Marek')
+    speak(qm, 'Marek')
     expect(granted).toEqual([{ kind: 'coin', count: 20 }])
     expect(consequences).toEqual([{ settlementId: 'home', reputation: { competence: 3, courage: 3 }, renown: 3 }])
     expect(qm.getRelation('Marek')).toBe(0)
-    qm.onInteract('Marek')
+    speak(qm, 'Marek')
     expect(granted).toHaveLength(1)
     expect(consequences).toHaveLength(1)
   })
@@ -1361,7 +1374,10 @@ describe('QuestManager prerequisites (plan quests-progression-004)', () => {
 })
 
 function homeQuest(id: string): QuestDef {
-  return { ...QUESTS.find((d) => d.id === id)!, settlementId: 'home' }
+  return bindExactCaveQuests(
+    [{ ...QUESTS.find((d) => d.id === id)!, settlementId: 'home' }],
+    { id: CAVE_REF.spawnerId, directionPhrase: null },
+  )[0]!
 }
 
 const woodPack = (): QuestDef[] => [
@@ -1389,7 +1405,7 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
 
   function startChoiceStage(qm: QuestManager): void {
     acceptOffer(qm, 'Kasia')
-    qm.onInteractObjective({ type: 'interact_spawner', spawnerType: 'cave' })
+    qm.onInteractObjective(CAVE_REF)
   }
 
   it('advances the cave stage without granting an item, then talks to Kasia for returned_sealed', () => {
@@ -1400,16 +1416,18 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
       (c) => consequences.push(c),
     )
     acceptOffer(qm, 'Kasia')
-    expect(qm.onInteract('Kasia')?.line).toBe('Byłeś już przy jaskini?')
+    expect(qm.onInteract('Kasia')?.line).toBe('Jaskinia jest poza osadą. Szukaj przesyłki przy wejściu.')
     expect(qm.onInteract('Marek')).toBeNull()
-    qm.onInteractObjective({ type: 'interact_spawner', spawnerType: 'cave' })
+    qm.onInteractObjective(CAVE_REF)
     expect(granted).toEqual([])
     expect(qm.getState('zaginiona-przesylka')).toBe('active')
     expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
     expect(qm.list().find((e) => e.id === 'zaginiona-przesylka')?.promisedReward).toBeNull()
 
-    const line = qm.onInteract('Kasia')
-    expect(line?.line).toBe('Dziękuję, że przyniosłeś przesyłkę nietkniętą. To dla mnie dużo znaczy.')
+    const dialog = qm.onInteract('Kasia')
+    expect(qm.getState('zaginiona-przesylka')).toBe('active')
+    expect(dialog?.actions?.[0]?.label).toBe('Znalazłem przesyłkę. Proszę, jest twoja.')
+    expect(selectAction(dialog)).toBe('Dziękuję, że przyniosłeś przesyłkę nietkniętą. To dla mnie dużo znaczy.')
     expect(qm.getState('zaginiona-przesylka')).toBe('complete')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('returned_sealed')
     expect(granted).toEqual([{ kind: 'coin', count: 15 }])
@@ -1430,8 +1448,10 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
     startChoiceStage(qm)
     expect(qm.labelMarker('Kasia')).toBe('?')
     expect(qm.labelMarker('Marek')).toBe('?')
-    const line = qm.onInteract('Marek')
-    expect(line?.line).toBe('Dobrze, że mi to oddałeś. Sprawdzę, skąd ta przesyłka.')
+    const dialog = qm.onInteract('Marek')
+    expect(qm.getState('zaginiona-przesylka')).toBe('active')
+    expect(dialog?.actions?.[0]?.label).toBe('Znalazłem przesyłkę Kasi. Przekazuję ją straży.')
+    expect(selectAction(dialog)).toBe('Dobrze, że mi to oddałeś. Sprawdzę, skąd ta przesyłka.')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('turned_over_to_guard')
     expect(granted).toEqual([{ kind: 'bandage', count: 2 }])
     expect(qm.getRelation('Kasia')).toBe(-1)
@@ -1451,9 +1471,9 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
       (c) => consequences.push(c),
     )
     startChoiceStage(qm)
-    qm.onInteract('Kasia')
-    qm.onInteract('Marek')
-    qm.onInteract('Kasia')
+    speak(qm, 'Kasia')
+    speak(qm, 'Marek')
+    speak(qm, 'Kasia')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('returned_sealed')
     expect(granted).toEqual([{ kind: 'coin', count: 15 }])
     expect(qm.getRelation('Kasia')).toBe(2)
@@ -1478,7 +1498,10 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
     expect(qm.labelMarker('Anna')).toBe('…')
     expect(qm.labelMarker('Piotr')).toBe('?')
     expect(qm.onInteract('Anna')?.line).toBe('remind')
-    expect(qm.onInteract('Piotr')?.line).toBe('got it')
+    const piotr = qm.onInteract('Piotr')
+    expect(piotr?.line).toBe('Tak?')
+    expect(qm.getState('relay')).toBe('active')
+    expect(selectAction(piotr)).toBe('got it')
     expect(qm.getState('relay')).toBe('ready_to_report')
     expect(qm.labelMarker('Piotr')).toBeNull()
     expect(qm.labelMarker('Anna')).toBe('✓')
@@ -1500,8 +1523,12 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
     acceptOffer(qm, 'Anna')
     expect(qm.onInteract('Anna')?.line).toBe('Rozmawiałeś już z Piotrem?')
     expect(qm.getState('sporne-drewno')).toBe('active')
-    expect(qm.onInteract('Piotr')?.line).toBe('Anna chce materiał na gospodarstwo, ja na swoje prace. Zdecyduj, komu pomożesz.')
-    expect(qm.onInteract('Anna')?.line).toBe('Dziękuję. Przyda nam się każda pomoc przy gospodarstwie.')
+    const piotr = qm.onInteract('Piotr')
+    expect(piotr?.line).toBe('Tak?')
+    expect(selectAction(piotr)).toContain('nie wystarczy dla obojga')
+    const annaChoice = qm.onInteract('Anna')
+    expect(qm.getState('sporne-drewno')).toBe('active')
+    expect(selectAction(annaChoice)).toBe('Dziękuję. Przyda nam się każda pomoc przy gospodarstwie.')
     expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_anna')
     expect(qm.getRelation('Anna')).toBe(2)
     expect(qm.getRelation('Piotr')).toBe(-1)
@@ -1510,12 +1537,12 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
     expect(qm.onInteract('Piotr')).toBeNull()
     expect(qm.onInteract('Anna')?.line).toBe('Skoro zdecydowałeś — przyniesiesz pięć gałęzi? Przyda się na gospodarstwie.')
     qm.onInteract('Anna')?.offer?.onAccept()
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(inventory.count('branch')).toBe(0)
     expect(granted).toEqual([{ kind: 'seed_carrot', count: 3 }])
     expect(qm.getRelation('Anna')).toBe(3)
     expect(qm.exportProgress().find((e) => e.id === 'drewno-dla-anny')?.resolvedOutcomeId).toBe('delivered_to_anna')
-    qm.onInteract('Anna')
+    speak(qm, 'Anna')
     expect(granted).toHaveLength(1)
     expect(inventory.count('branch')).toBe(0)
   })
@@ -1532,8 +1559,8 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
       (kind, count) => granted.push({ kind, count }),
     )
     acceptOffer(qm, 'Anna')
-    qm.onInteract('Piotr')
-    expect(qm.onInteract('Piotr')?.line).toBe('Dobra, skoro tak. Będę miał czym robić.')
+    speak(qm, 'Piotr')
+    expect(selectAction(qm.onInteract('Piotr'))).toBe('Dobra, skoro tak. Będę miał czym robić.')
     expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_piotr')
     expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(false)
     expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(true)
@@ -1541,7 +1568,7 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
       items: [{ kind: 'coin', count: 8 }],
     })
     acceptOffer(qm, 'Piotr')
-    qm.onInteract('Piotr')
+    speak(qm, 'Piotr')
     expect(inventory.count('branch')).toBe(0)
     expect(granted).toEqual([{ kind: 'coin', count: 8 }])
     expect(qm.getRelation('Piotr')).toBe(3)
@@ -1596,13 +1623,18 @@ describe('QuestManager dzik-przy-szlaku (plan quests-progression-005)', () => {
     )
     acceptOffer(qm, 'Marek')
     expect(qm.onInteract('Marek')?.line).toBe('Porozmawiaj z Piotrem — wie, gdzie kręci się dzik przy szlaku.')
-    expect(qm.onInteract('Piotr')?.line).toBe('Tak, przy szlaku w lesie kręci się duży dzik. Uważaj na siebie.')
+    expect(selectAction(qm.onInteract('Piotr'))).toBe(
+      'Tak. Przy szlaku w lesie, tam gdzie ludzie już nie chodzą. Bestia nie odpuszcza — uważaj na siebie.',
+    )
     expect(marked).toEqual([])
     expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'boar-2' })).toBeNull()
-    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'boar-1' })?.line).toBe('Dzik nie wróci. Wróć do Marka.')
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'boar-1' })?.line).toBe(
+      'Dzik nie żyje. Szlak znów jest przejezdny. Wróć do Marka.',
+    )
     expect(qm.getState('dzik-przy-szlaku')).toBe('ready_to_report')
     const report = qm.onInteract('Marek')
-    expect(report?.line).toBe('Dzięki. Weź tę książkę — przyda ci się, zanim znów wyjdziesz poza osadę.')
+    expect(qm.getState('dzik-przy-szlaku')).toBe('ready_to_report')
+    expect(selectAction(report)).toBe('Dzięki. Weź tę książkę — przyda ci się, zanim znów wyjdziesz poza osadę.')
     expect(granted).toEqual([{ kind: 'book_defense_intermediate', count: 1 }])
     expect(qm.getRelation('Marek')).toBe(2)
     expect(consequences).toEqual([{
@@ -1644,7 +1676,7 @@ describe('QuestManager dzik-przy-szlaku (plan quests-progression-005)', () => {
       boarLookup(10),
     )
     acceptOffer(live, 'Marek')
-    live.onInteract('Piotr')
+    speak(live, 'Piotr')
     expect(live.getState('dzik-przy-szlaku')).toBe('active')
     live.invalidateStaleAnimalTargets()
     expect(live.getState('dzik-przy-szlaku')).toBe('invalidated')
@@ -1701,7 +1733,7 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'wolf-den' })
     expect(qm.getState('wilki-u-kupca')).toBe('ready_to_report')
-    qm.onInteract('Kasia')
+    speak(qm, 'Kasia')
     expect(transferred).toEqual([HORSE_ID])
     expect(qm.getState('wilki-u-kupca')).toBe('complete')
   })
@@ -1723,7 +1755,7 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
     )
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'wolf-den' })
-    qm.onInteract('Kasia')
+    speak(qm, 'Kasia')
     expect(qm.getState('wilki-u-kupca')).toBe('failed')
   })
 
@@ -1746,5 +1778,102 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
     qm.onHorseRewardTargetDied(HORSE_ID)
     expect(qm.getState('wilki-u-kupca')).toBe('failed')
     expect(qm.isHorseRewardReserving(HORSE_ID)).toBe(false)
+  })
+})
+
+describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
+  it('does not resolve ready_to_report until the player selects the report action', () => {
+    const qm = makeManager([simpleQuest])
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    const dialog = qm.onInteract('Anna')
+    expect(qm.getState('simple')).toBe('ready_to_report')
+    expect(dialog?.actions).toHaveLength(1)
+    expect(selectAction(dialog)).toBe('report')
+    expect(qm.getState('simple')).toBe('complete')
+  })
+
+  it('cannot duplicate reward or consequences via a stale report callback', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const rewarded = quest({
+      ...simpleQuest,
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 4 }] },
+        consequences: { relations: [{ npcName: 'Anna', delta: 2 }] },
+      }],
+    })
+    const qm = makeManager([rewarded], undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    const dialog = qm.onInteract('Anna')
+    expect(selectAction(dialog)).toBe('report')
+    expect(selectAction(dialog)).toBe('report')
+    expect(granted).toEqual([{ kind: 'coin', count: 4 }])
+    expect(qm.getRelation('Anna')).toBe(2)
+  })
+
+  it('leaves talk_to_npc_choice unresolved if the player closes without selecting', () => {
+    const qm = new QuestManager([homeQuest('zaginiona-przesylka')], undefined, new Inventory())
+    acceptOffer(qm, 'Kasia')
+    qm.onInteractObjective(CAVE_REF)
+    const dialog = qm.onInteract('Kasia')
+    expect(dialog?.actions).toHaveLength(1)
+    expect(qm.getState('zaginiona-przesylka')).toBe('active')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBeUndefined()
+  })
+
+  it('advances an exact cave objective only for the bound spawner id', () => {
+    const def = bindExactCaveQuests(
+      [QUESTS.find((q) => q.id === 'sprawdz-szlak')!],
+      { id: 'home:cave', directionPhrase: null },
+    )[0]!
+    const qm = makeManager([def])
+    acceptOffer(qm, 'Kasia')
+    expect(qm.onInteractObjective({
+      type: 'interact_spawner',
+      spawnerType: 'cave',
+      spawnerId: 'home:cave:bear',
+    })).toBeNull()
+    expect(qm.getState('sprawdz-szlak')).toBe('active')
+    expect(qm.onInteractObjective({
+      type: 'interact_spawner',
+      spawnerType: 'cave',
+      spawnerId: 'home:cave',
+    })?.line).toContain('świeże ślady')
+    expect(qm.getState('sprawdz-szlak')).toBe('ready_to_report')
+  })
+
+  it('restores a ready_to_report save with the new report action', () => {
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'simple', state: 'ready_to_report', stageIndex: 1 }],
+      relations: {},
+    }
+    const qm = makeManager([simpleQuest], undefined, undefined, initial)
+    expect(qm.getState('simple')).toBe('ready_to_report')
+    const dialog = qm.onInteract('Anna')
+    expect(dialog?.actions).toHaveLength(1)
+    expect(selectAction(dialog)).toBe('report')
+    expect(qm.getState('simple')).toBe('complete')
+  })
+
+  it('offers wilki-pod-osada without Anna trusted relation', () => {
+    const def = homeQuest('wilki-pod-osada')
+    const qm = makeManager([def], undefined, undefined, { progress: [], relations: {} })
+    expect(qm.isQuestAvailable('wilki-pod-osada')).toBe(true)
+    expect(qm.onInteract('Anna')?.line).toContain('Wilki')
+    expect(qm.getState('wilki-pod-osada')).toBe('offered')
+  })
+
+  it('does not mark an unbound cave when the objective has a specific spawnerId', () => {
+    const def = bindExactCaveQuests(
+      [QUESTS.find((q) => q.id === 'sprawdz-szlak')!],
+      { id: 'home:cave', directionPhrase: null },
+    )[0]!
+    const qm = makeManager([def])
+    acceptOffer(qm, 'Kasia')
+    expect(qm.spawnerMarker('cave', 'home:cave')).toBe('?')
+    expect(qm.spawnerMarker('cave', 'home:cave:bear')).toBeNull()
   })
 })
