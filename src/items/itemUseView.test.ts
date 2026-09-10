@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Inventory } from './Inventory'
 import type { LiquidContainerItemInstance } from './itemInstances'
+import { Inventory } from './Inventory'
 import { resolveConsumeUseView, resolveReadBookUseView } from './itemUseView'
 
 function liquidInstance(id: string, amountLitres: number): LiquidContainerItemInstance {

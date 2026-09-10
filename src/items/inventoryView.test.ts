@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildInventoryGroups, ITEM_METER_LABEL } from './inventoryView'
 import { Inventory } from './Inventory'
+import { buildInventoryGroups, ITEM_METER_LABEL } from './inventoryView'
 import { createTentInstance, type LiquidContainerItemInstance, type TrapItemInstance } from './itemInstances'
 import { createTrapInstance } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'

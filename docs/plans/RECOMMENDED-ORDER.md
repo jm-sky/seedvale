@@ -34,7 +34,8 @@
 
 ### Bug Fixes
 
-_No qualifying plans._
+1. `quests-progression-018` — **Quest playtest reachability and dialogue conflicts**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
 
@@ -114,15 +115,19 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  40  
    → **unlocks:** 0/0
 
-11. `items-player-014` — **Rope-pullable resource transport**  
+11. `quests-progression-018` — **Quest playtest reachability and dialogue conflicts**  
+  🔴 `M` · **Score:**  37  
+   → **unlocks:** 0/0
+
+12. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `tools-005` — **Seedvale Character Preparation Panel**  
+13. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-013` — **NPC decision verification and scenario tooling**  
+14. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
@@ -287,6 +292,7 @@ graph TD
   quests_progression_015["quests-progression-015 — Stable NPC identity for quests"]
   quests_progression_016["quests-progression-016 — World-driven settlement quest opportunities"]
   quests_progression_017["quests-progression-017 — RPG settlement quest matrices"]
+  quests_progression_018["quests-progression-018 — Quest playtest reachability and dialogue conflicts"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -523,8 +529,10 @@ graph TD
   quests_progression_003 --> quests_progression_005
   quests_progression_004 --> quests_progression_005
   quests_progression_005 --> quests_progression_014
+  quests_progression_005 --> quests_progression_018
   quests_progression_006 --> quests_progression_013
   quests_progression_011 --> quests_progression_008
+  quests_progression_014 --> quests_progression_018
   quests_progression_015 --> quests_progression_016
   quests_progression_015 --> quests_progression_017
   quests_progression_016 --> quests_progression_017

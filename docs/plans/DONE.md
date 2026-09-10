@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-npcs-023-profession-staffing-and-settlement-composition`  | 2026-09-11 00:16:10 | —                   | `settlements-npcs` | —          |
 | `quests-progression-017-rpg-settlement-quest-matrices`                 | 2026-09-10 20:25:19 | —                   | `quests-progression` | —          |
 | `items-player-023-systemic-item-utility-and-food-safety`               | 2026-09-10 20:05:38 | —                   | `items-player`   | —          |
 | `items-player-024-inventory-item-use-ux-coherence`                     | 2026-09-10 19:27:53 | —                   | `items-player`   | —          |
