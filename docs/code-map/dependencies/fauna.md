@@ -98,6 +98,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `settlement/SettlementsManager.ts`
+- `settlement/animalCorpseSanitation.ts`
 - `settlement/createSettlement.ts`
 - `settlement/horseAcquisition.test.ts`
 - `settlement/horseAcquisition.ts`
@@ -178,12 +179,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/animalCorpseCleanupPressure.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.test.ts`
 - `fauna/animalForaging.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/harvestedRemains.test.ts`
 - `fauna/rabies.test.ts`
+- `settlement/animalCorpseSanitation.ts`
 
 ## `fauna/animalDebugVisual.ts`
 

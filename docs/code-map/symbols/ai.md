@@ -2,6 +2,13 @@
 
 Generated from exported TypeScript symbols.
 
+## `ai/animalCorpseCleanupPressure.ts`
+
+- `AnimalCorpseCleanupPressureInput` — type — line 15
+  - domain: settlements-npcs
+- `AnimalCorpseCleanupPressureResult` — type — line 22
+- `resolveAnimalCorpseCleanupPressure` — function — line 78
+
 ## `ai/approachPlayer.ts`
 
 - `ApproachPlayerIntent` — type — line 9
@@ -118,29 +125,29 @@ Generated from exported TypeScript symbols.
 ## `ai/npcAction.ts`
 
 - `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 77
+- `NpcPlannedAction` — type — line 80
 - `Phase` — type — line 10
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 620
-- `CurrentActivity` — type — line 466
-- `CurrentActivityKind` — type — line 459
-- `NPC_HEIGHT` — const — line 369
-- `NPC_MODEL_URLS` — const — line 433
-- `NPC_SHADOW_DISTANCE` — const — line 383
-- `NpcAgent` — class — line 951
+- `classifyPendingActivity` — function — line 637
+- `CurrentActivity` — type — line 471
+- `CurrentActivityKind` — type — line 464
+- `NPC_HEIGHT` — const — line 374
+- `NPC_MODEL_URLS` — const — line 438
+- `NPC_SHADOW_DISTANCE` — const — line 388
+- `NpcAgent` — class — line 975
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 867
-- `NpcInspectionSnapshot` — type — line 481
-- `NpcWhy` — type — line 595
-- `projectNpcWhy` — function — line 658
-- `promoteChainKind` — function — line 612
+- `NpcAgentDeps` — type — line 889
+- `NpcInspectionSnapshot` — type — line 486
+- `NpcWhy` — type — line 612
+- `projectNpcWhy` — function — line 676
+- `promoteChainKind` — function — line 629
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -206,13 +213,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcDecision.ts`
 
-- `decideNpcAction` — function — line 87
+- `decideNpcAction` — function — line 90
 - `NPC_DECISION_PRIORITY` — const — line 45
 - `NpcDecisionInput` — type — line 26
 - `NpcDecisionKind` — type — line 24
-- `NpcInterruptInput` — type — line 107
-- `scoreNpcDecisions` — function — line 99
-- `shouldInterruptAction` — function — line 129
+- `NpcInterruptInput` — type — line 110
+- `scoreNpcDecisions` — function — line 102
+- `shouldInterruptAction` — function — line 132
 
 ## `ai/npcLoadout.ts`
 

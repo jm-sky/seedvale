@@ -54,6 +54,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
+- `ai/animalCorpseCleanupPressure.test.ts`
 - `ai/burialPressure.test.ts`
 - `ai/graveVisitPressure.test.ts`
 - `ai/healingPressure.test.ts`

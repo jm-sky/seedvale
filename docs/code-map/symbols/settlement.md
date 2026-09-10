@@ -2,6 +2,23 @@
 
 Generated from exported TypeScript symbols.
 
+## `settlement/animalCorpseSanitation.ts`
+
+- `AnimalCorpseCleanupCandidate` — type — line 41
+- `animalCorpseCleanupHandle` — function — line 174
+- `AnimalCorpseCleanupHandle` — type — line 54
+- `AnimalCorpseCleanupRejection` — type — line 80
+- `AnimalCorpseView` — type — line 26
+- `animalCorpseViewFromAgent` — function — line 157
+- `collectAnimalCorpseCleanupCandidates` — function — line 132
+- `HouseholdAnchor` — type — line 13
+  - domain: settlements-npcs
+- `isInsideSettlementInfluence` — function — line 90
+- `resolveAnimalCorpseCleanupHandle` — function — line 195
+- `resolveResponsibleHousehold` — function — line 105
+- `SettlementCorpseCleanupHooks` — type — line 73
+- `SettlementInfluence` — type — line 19
+
 ## `settlement/blacksmithYard.ts`
 
 - `BLACKSMITH_YARD_BASE_OFFSET` — const — line 23
@@ -24,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 349
-- `CreateSettlementDeps` — type — line 227
-- `Settlement` — type — line 114
-- `settlementSpawnPoint` — function — line 215
+- `createSettlement` — function — line 362
+- `CreateSettlementDeps` — type — line 240
+- `Settlement` — type — line 123
+- `settlementSpawnPoint` — function — line 228
 
 ## `settlement/decorProps.ts`
 
@@ -596,7 +613,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 208
+- `createSettlementsManager` — function — line 210
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.

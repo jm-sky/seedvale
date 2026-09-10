@@ -79,7 +79,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
-| 💡 `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md`    | -       | 🟡 | M      | -      |
 | 💡 `npc-026-npc-grave-visits.md`                                               | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
 | 💡 `quests-progression-013-rat-infestation-nest-and-reproduction.md`           | -       | 🟡 | M      | ~~quests-progression-006~~ |
 

@@ -119,6 +119,27 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/settlementNightCycle.ts`
 
+## `settlement/animalCorpseSanitation.test.ts`
+
+**Imports**
+
+- `settlement/animalCorpseSanitation.ts`
+
+## `settlement/animalCorpseSanitation.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/animalCorpseCleanupPressure.test.ts`
+- `ai/animalCorpseCleanupPressure.ts`
+- `settlement/animalCorpseSanitation.test.ts`
+- `settlement/createSettlement.ts`
+
 ## `settlement/blacksmithYard.test.ts`
 
 **Imports**
@@ -172,6 +193,7 @@ Generated from TypeScript imports.
 - `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
 - `settlement/VillageFire.ts`
+- `settlement/animalCorpseSanitation.ts`
 - `settlement/families.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/houseDoors.ts`

@@ -20,6 +20,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
+- `debug/npcDebugApi.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/faunaCombat.ts`
 - `player/PlayerController.ts`
@@ -48,6 +49,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/npcDebugApi.ts`
 - `player/PlayerController.ts`
 - `player/characterPresentation.ts`
 - `settlement/npcPhysicalProfile.ts`

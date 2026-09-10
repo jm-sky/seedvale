@@ -43,6 +43,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/Needs.ts`
+- `ai/animalCorpseCleanupPressure.ts`
 - `ai/approachPlayer.ts`
 - `ai/burialPressure.ts`
 - `ai/characters.ts`
@@ -97,6 +98,7 @@ Generated from TypeScript imports.
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
+- `settlement/animalCorpseSanitation.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
@@ -166,6 +168,27 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/store.ts`
 - `ui/createNpcInspector.ts`
+
+## `ai/animalCorpseCleanupPressure.test.ts`
+
+**Imports**
+
+- `ai/animalCorpseCleanupPressure.ts`
+- `ai/weatherPressure.ts`
+- `settlement/animalCorpseSanitation.ts`
+- `simulation/index.ts`
+
+## `ai/animalCorpseCleanupPressure.ts`
+
+**Imports**
+
+- `fauna/animalCorpse.ts`
+- `settlement/animalCorpseSanitation.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/animalCorpseCleanupPressure.test.ts`
 
 ## `ai/approachPlayer.test.ts`
 
@@ -885,6 +908,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/animalCorpseCleanupPressure.test.ts`
 - `ai/burialPressure.test.ts`
 - `ai/graveVisitPressure.test.ts`
 - `ai/healingPressure.test.ts`

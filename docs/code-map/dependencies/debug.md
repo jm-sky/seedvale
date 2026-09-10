@@ -215,10 +215,13 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
+- `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `quests/QuestManager.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `shared/HealthState.ts`
+- `shared/PhysicalAttributes.ts`
 - `shared/injurySeverity.ts`
 - `shared/temporaryConditions.ts`
 - `world/locations/locationConfig.ts`

@@ -159,6 +159,7 @@ Generated from TypeScript imports.
 - `app/actions/terrainPreparationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `debug/npcDebugApi.ts`
 - `items/campRepair.ts`
 - `items/sensibleFood.test.ts`
 - `items/sensibleFood.ts`
