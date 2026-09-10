@@ -151,14 +151,15 @@ function previousWasCaveOwned(prevSource: PlayerGroundSource | null, tick: Playe
 }
 
 /**
- * Vertical-only snap detector. Uses this tick's already-recorded fields
- * (and the previous vertical `source`) — no extra spatial queries.
+ * Latches a large runtime upward mesh write, including `writer: "swim"`.
+ * `snap` (teleport / setGround) is excluded. Uses this tick's fields and
+ * the previous walking `source` — no extra spatial queries.
  */
 export function detectPlayerGroundSnap(
   tick: PlayerGroundTraceTick,
   prevSource: PlayerGroundSource | null,
 ): PlayerGroundSnapReason | null {
-  if (tick.writer !== 'vertical') return null
+  if (tick.writer === 'snap') return null
   const upwardJump = tick.after.y - tick.before.y > PLAYER_GROUND_SNAP_Y
   const overburden = tick.surfaceY - tick.before.y > PLAYER_GROUND_SNAP_Y
   const surfaceTakeover = tick.source === 'surface' && overburden && previousWasCaveOwned(prevSource, tick)

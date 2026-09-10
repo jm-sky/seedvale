@@ -36,13 +36,24 @@ function tick(overrides: Partial<PlayerGroundTraceTick> = {}): PlayerGroundTrace
 }
 
 describe('detectPlayerGroundSnap', () => {
-  it('ignores snap/swim writers even when Y jumps', () => {
+  it('ignores writer:snap teleports even when Y jumps', () => {
     expect(detectPlayerGroundSnap(tick({
       writer: 'snap',
       before: { x: 0, y: 1, z: 0 },
       after: { x: 0, y: 12, z: 0 },
       source: 'surface',
     }), 'cave')).toBeNull()
+  })
+
+  it('latches a large upward swim write', () => {
+    expect(detectPlayerGroundSnap(tick({
+      writer: 'swim',
+      before: { x: 114, y: -2.70, z: -16 },
+      after: { x: 114, y: 10.62, z: -16 },
+      source: 'cave',
+      surfaceY: 10.62,
+      groundY: -2.64,
+    }), 'cave')).toBe('upward-jump')
   })
 
   it('detects a large upward vertical jump', () => {

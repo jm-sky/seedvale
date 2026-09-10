@@ -1043,12 +1043,19 @@ export class PlayerController {
 
   /**
    * Surface-world ocean/river water may own vertical motion only when the
-   * water plane is in the player's current space. Closed cave occupancy is
-   * not flooded just because `groundY <= waterLevel`.
+   * water plane is in the player's current space. Resolved closed cave
+   * ground (rock ceiling) blocks it even if strict occupancy is briefly false.
    */
-  private worldWaterOwnsVertical(x: number, z: number, groundY: number): boolean {
-    if (groundY > this.waterLevel) return false
-    return worldWaterAppliesInCurrentSpace(this.caveOccupancy(x, this.mesh.position.y, z))
+  private worldWaterOwnsVertical(
+    x: number,
+    z: number,
+    ground: { height: number, ceiling: number | null },
+  ): boolean {
+    if (ground.height > this.waterLevel) return false
+    return worldWaterAppliesInCurrentSpace({
+      occupancy: this.caveOccupancy(x, this.mesh.position.y, z),
+      caveCeiling: ground.ceiling,
+    })
   }
 
   /** `collidersNear`, filtered to whatever's actually active at the
@@ -1067,14 +1074,14 @@ export class PlayerController {
     const yBefore = this.mesh.position.y
     const groundedBefore = this.grounded
     const vyBefore = this.verticalVelocity
-    const groundY = this.groundAt(x, z).height
-    const inWorldWater = this.worldWaterOwnsVertical(x, z, groundY)
+    const ground = this.groundAt(x, z)
+    const inWorldWater = this.worldWaterOwnsVertical(x, z, ground)
     if (inWorldWater) {
       // Underwater: sink toward the real seabed instead of the flattened-to-waterLevel
       // mesh, capped so deep water still leaves the head above the surface.
       this.mesh.position.y = swimFeetY(this.waterLevel, this.sampleFloor(x, z))
     } else {
-      this.mesh.position.y = groundY
+      this.mesh.position.y = ground.height
     }
     this.verticalVelocity = 0
     this.grounded = true
@@ -1082,7 +1089,7 @@ export class PlayerController {
     this.wasInWater = inWorldWater
     this.footstepAccum = 0
     this.modelRoot.rotation.x = 0
-    this.emitGroundTrace('snap', x, yBefore, z, groundedBefore, vyBefore, groundY)
+    this.emitGroundTrace('snap', x, yBefore, z, groundedBefore, vyBefore, ground.height)
   }
 
   /** Per-frame gravity/jump (plan 097 §2.3 + 158 slope-stick). Underwater
@@ -1094,7 +1101,7 @@ export class PlayerController {
     const vyBefore = this.verticalVelocity
     const ground = this.groundAt(x, z)
     const groundY = ground.height
-    if (this.worldWaterOwnsVertical(x, z, groundY)) {
+    if (this.worldWaterOwnsVertical(x, z, ground)) {
       if (!this.wasInWater && this.playAt) {
         playWaterLap(this.playAt, { x, y: this.waterLevel, z })
       }

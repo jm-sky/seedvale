@@ -268,9 +268,11 @@ seq 276  writer=vertical  source=surface  raw=null   (already outdoors)
 
 The same class hits any closed cave whose floor crosses below `waterLevel` (chamber descent, tunnel under a river/lake). Surface-world water is not physically in that void.
 
-**Fix (2026-09-10):** `worldWaterAppliesInCurrentSpace` — closed cave occupancy (`occupancyAt`, not `openSky`) does not hand vertical ownership to world water. Open-sky mouth/approach pits still wade/swim. Underground water bodies need their own occupancy later; this is not a permanent cave-swim ban. `integrateVerticalMotion` keeps the cave floor.
+**Fix (2026-09-10):** `worldWaterAppliesInCurrentSpace` — resolved **closed cave ground** (rock ceiling from `queryGround` / hysteresis) does not hand vertical ownership to world water, even when strict occupancy / `queryInterior` are briefly false (player a few cm below the floor). Occupancy-closed remains a second guard. Open-sky mouth/approach pits still wade/swim. Underground water bodies need their own occupancy later; this is not a permanent cave-swim ban.
 
-B3 remains in progress (doorway seam / other entrance work). Manual check: seed `1136726869`, Grota Czarnego Kamienia, walk the passage→chamber descent — player Y must stay in the cave, not jump to ~11.2. Outdoor swimming/wading must still work.
+Live follow-up (seq 124): occupancy=false, queryInterior=false, but `source=cave`, ceiling≈-0.02, player Y≈-2.70 (5.9 cm below floor). Occupancy-only guard let swim assign outdoor Y≈10.62. Ceiling/cave-ground ownership is now the primary block.
+
+B3 remains in progress (doorway seam / other entrance work). Manual check: seed `1136726869`, Grota Czarnego Kamienia, walk the passage→chamber descent **into the lower chamber** (Y≈-2.7). Player Y must stay on the cave floor / fall in-cave, not jump to ~10.6. Outdoor swimming/wading must still work.
 
 ## Classification (Case A)
 

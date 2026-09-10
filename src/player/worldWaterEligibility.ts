@@ -3,8 +3,10 @@
  *
  * `ChunkManager.waterLevel` is a single ocean/river plane. A cave chamber
  * below that plane is not flooded: rock separates the void from the sea.
- * Closed cave occupancy therefore must not hand vertical ownership to the
- * swim path (which snaps feet to `waterLevel` / outdoor `sampleFloor`).
+ * The swim path snaps feet to `waterLevel` / outdoor `sampleFloor`, so it
+ * must not own vertical motion while cave ground still resolves a closed
+ * interval — even if strict occupancy is briefly false (floor grace /
+ * quantization / a centimetre below the floor).
  *
  * Open-sky mouth/approach pits still see world water (a flooded entrance).
  * True underground water needs its own occupancy later — this helper is the
@@ -19,13 +21,29 @@ export type WorldWaterOccupancy = {
   openSky?: boolean
 } | null
 
+export type WorldWaterEligibilityInput = {
+  /** Strict cave occupancy at the player's Y. May be `null` on a floor boundary. */
+  occupancy: WorldWaterOccupancy
+  /**
+   * Rock ceiling from the resolved cave ground query (`source` cave/hysteresis).
+   * `null` means outdoor or an open-sky pit (the gameplay adapter strips
+   * openSky ceilings). A real number means overburden between the player
+   * and the outdoor surface.
+   */
+  caveCeiling: number | null
+}
+
 /**
  * Whether the global water plane may own vertical motion at this sample.
- * `null` occupancy is outdoor / non-cave space — existing wading/swim rules.
+ *
+ * Closed cave *ground* wins over occupancy: if queryGround still owns the
+ * column with a rock ceiling, outdoor water is on the other side of that
+ * roof. Occupancy-only false must not reopen surface swim.
  */
-export function worldWaterAppliesInCurrentSpace(occupancy: WorldWaterOccupancy): boolean {
-  if (!occupancy) return true
-  return occupancy.openSky === true
+export function worldWaterAppliesInCurrentSpace(input: WorldWaterEligibilityInput): boolean {
+  if (input.caveCeiling != null) return false
+  if (input.occupancy && input.occupancy.openSky !== true) return false
+  return true
 }
 
 /** Feet Y while the swim path owns vertical motion (deep water caps at `MAX_SWIM_DEPTH`). */
