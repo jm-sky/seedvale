@@ -214,6 +214,28 @@ Generated from TypeScript imports.
 - `world/caves/topologyAdapter.ts`
 - `world/largeCaves.ts`
 
+## `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `fauna/createFauna.ts`
+- `player/PlayerController.ts`
+- `player/verticalMotion.ts`
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/caves/caveIdentity.ts`
+- `world/caves/caveSdfColliders.ts`
+- `world/caves/caveSdfField.ts`
+- `world/caves/caveSdfQuery.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
+- `world/collision.ts`
+- `world/largeCaves.ts`
+- `world/locations/worldLocationNames.ts`
+
 ## `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 
 **Imports**
@@ -289,6 +311,7 @@ Generated from TypeScript imports.
 
 - `world/caveGenerator.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -336,6 +359,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -360,6 +384,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -394,6 +419,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -445,6 +471,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -494,6 +521,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveSdfColliders.test.ts`
@@ -545,6 +573,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -712,6 +741,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `world/caveColliders.test.ts`
 - `world/caveColliders.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -1448,6 +1478,7 @@ Generated from TypeScript imports.
 
 - `world/caveGenerator.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
@@ -1629,6 +1660,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationNames.test.ts`
 

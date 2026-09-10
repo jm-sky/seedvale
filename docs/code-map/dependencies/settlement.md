@@ -316,6 +316,7 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.ts`
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/createCaves.ts`
 - `world/hiddenFinds.ts`
 
@@ -1152,6 +1153,7 @@ Generated from TypeScript imports.
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkManager.ts`
 - `ui-vue/store.ts`
+- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/createCaves.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
