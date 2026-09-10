@@ -4,7 +4,7 @@
 
 **Not:** a field-by-field `SaveData` schema dump (that's [ARCHITECTURE.md](../architecture/ARCHITECTURE.md#save-schema)'s job), a per-migration changelog narrating why each version bump happened (that belongs in the migration plans themselves), or a domain's own detailed persistence status (each domain doc states its own facts and links here for the taxonomy).
 
-**Last verified:** 2026-09-09
+**Last verified:** 2026-09-10
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -30,7 +30,7 @@ A deterministic base plus only the deviation from it. *Examples:* player-sourced
 A pure function of `(seed, [elapsedDays/region params])`; never persisted, because it never needs to be. *Examples:* terrain heightmap/biome/river/road geometry, season/weather/climate, settlement generation (`VillagePlan`), NPC identity/physical profile, family composition, wild-fauna spawn population, world-location geometry.
 
 ### Runtime authoritative
-Real, meaningful state that is deliberately not persisted. *Examples:* NPC phase/pending-action/pathfinding/watchdog/combat-intent/`carried` work inventory (reset fresh on every reconstruction, by design), combat's own in-flight state (no `CombatIntent`/attack-phase/projectile field exists anywhere), player stamina, the selected targeted skill (plan items-player-021), wild-fauna individuals (see [fauna.md](./fauna.md)'s four-tier picture), and — the one case in this category that is *not* believed deliberate — player HP (see [Known persistence limitations](#known-persistence-limitations)). Personal NPC belongings are **not** in this category — they persist on `NpcAuthoritativeState.personalInventory`.
+Real, meaningful state that is deliberately not persisted. *Examples:* NPC phase/pending-action/pathfinding/watchdog/combat-intent/`carried` work inventory (reset fresh on every reconstruction, by design), combat's own in-flight state (no `CombatIntent`/attack-phase/projectile field exists anywhere), player stamina, the selected targeted skill (plan items-player-021), ordinary wild-fauna individuals (see [fauna.md](./fauna.md)'s persistence classes), and — the one case in this category that is *not* believed deliberate — player HP (see [Known persistence limitations](#known-persistence-limitations)). Personal NPC belongings are **not** in this category — they persist on `NpcAuthoritativeState.personalInventory`.
 
 ### Derived / cache
 Safely evictable, never a source of truth. *Examples:* the persistent worldgen cache, in-session terrain/mesh caches, settlement-plan memoization, encumbrance, shortage/surplus, a skill's derived value from its XP.
@@ -78,7 +78,7 @@ The boundary rule this codebase applies consistently: **a value that is a pure f
 | Player | Inventory (counts, item instances, *and* food-batch freshness), survival needs, and skills (XP) persist. **HP does not** — see [Known persistence limitations](#known-persistence-limitations). Stamina is deliberately not persisted. |
 | Inventory/items | A generic `Inventory` class is reused by the player, NPCs, households, the settlement economy, and every placed container — persistence fidelity differs by owner (see limitations below), not by mechanism. |
 | World objects/buildables | Persisted authoritative, one array per object type; construction progress lives on the object's own entry, never duplicated onto a work contract. Movable draft carts persist identity and `x/z/yaw` only — hitch (`pulledByAnimalId`) is runtime-only because livestock can unload while carts stay in the world. |
-| Fauna: livestock/wild/rats | Four distinct shapes — livestock persisted per individual (with an explicit pre-save capture step), spawner lifecycle persisted thin, wild individuals unpersisted-but-population-deterministic, rats persisted per individual plus a settlement infestation record. See [fauna.md](./fauna.md). |
+| Fauna: livestock/wild/rats | Distinct shapes — livestock persisted per individual (with an explicit pre-save capture step), spawner lifecycle persisted thin, ordinary wild individuals unpersisted-but-population-deterministic, sparse persistent habitat occupants persisted per declared slot with tombstones, rats persisted per individual plus a settlement infestation record. See [fauna.md](./fauna.md). |
 | Combat/health | `HealthState` is the shared primitive; combat itself holds zero persisted state anywhere — only each target's own consequence field persists (NPC `physicalInjury`, livestock HP inside its snapshot; nothing for the player). |
 | Quests/progression | Persisted authoritative (progress including `resolvedOutcomeId` after a complete/failed outcome, player↔NPC relations). Global quest EXP is not persisted. |
 | Reputation/renown | Persisted authoritative, sparse-optional (own top-level `SaveData.reputation`, keyed by settlement id — absent settlement/save restores neutral, no version bump needed, same idiom as `npcStates`/`households`). Owned by `ReputationManager`, independent of `QuestManager`; changes only through an explicit, already-resolved consequence a caller applies. See [npc.md](./npc.md#relationships-social-and-dialogue). |
@@ -104,7 +104,7 @@ Today there is exactly one namespace (coarse world-location classification, used
 ## Known persistence limitations
 
 - **Player HP is not persisted.** Every Continue/Load fully heals the player, while NPC and livestock HP both persist. Unlike player stamina — which carries an explicit "not worth persisting" rationale — nothing states this is a deliberate choice. This is a maintainer decision (persist it, or document the omission as deliberate), not resolved here.
-- **Wild-fauna individual state is not persisted.** Population reconstruction is deterministic; no specific individual's position, health, hunger, disease state, or life stage survives a session boundary. The generic per-individual snapshot mechanism exists on the fauna runtime class itself but is only ever invoked for livestock — see [fauna.md](./fauna.md).
+- **Ordinary wild-fauna individual state is not persisted.** Population reconstruction is deterministic; no specific ordinary individual's position, health, hunger, disease state, or life stage survives a session boundary. Explicitly declared persistent habitat occupants are the sparse exception (`SaveData.persistentHabitatOccupants`) using the same `AnimalSaveState` snapshot livestock already used — see [fauna.md](./fauna.md).
 
 None of the items above is a "bug" in the sense of contradicting a stated invariant — player HP is an undocumented gap with no stated rationale either way; wild-fauna individual non-persistence is a documented, deliberate scope decision. Treat them accordingly rather than uniformly as defects.
 

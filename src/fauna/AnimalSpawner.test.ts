@@ -129,6 +129,33 @@ describe('updateSpawners', () => {
     updateSpawners([s], 2, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ })
     expect(respawned).toBe(1)
   })
+
+  it('reduces ordinary capacity by reserved persistent slots (plan fauna-018)', () => {
+    const s = spawner({ maxPreyCount: 3 })
+    const reserved = new Map([[s.id, 1]])
+    let respawned = 0
+    // empty: 2 + 1 = 3 days for 2 ordinary animals; 5 days still caps at 2
+    updateSpawners([s], 5, [], () => { respawned++ }, reserved)
+    expect(respawned).toBe(2)
+    expect(s.daysSinceLastRespawn).toBe(0)
+  })
+
+  it('does not treat an away/corpse/tombstone persistent slot as a vacancy', () => {
+    const s = spawner({ maxPreyCount: 1 })
+    const reserved = new Map([[s.id, 1]])
+    let respawned = 0
+    updateSpawners([s], 10, [], () => { respawned++ }, reserved)
+    expect(respawned).toBe(0)
+    expect(s.daysSinceLastRespawn).toBe(0)
+  })
+
+  it('still replenishes remaining ordinary slots', () => {
+    const s = spawner({ maxPreyCount: 3 })
+    const reserved = new Map([[s.id, 1]])
+    let respawned = 0
+    updateSpawners([s], 1, [{ kind: 'deer', x: 1, z: 1 }], () => { respawned++ }, reserved)
+    expect(respawned).toBe(1)
+  })
 })
 
 describe('tickSpawnPointRecovery', () => {

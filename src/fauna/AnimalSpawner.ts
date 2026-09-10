@@ -1,4 +1,5 @@
 import type { AnimalKind } from './AnimalAgent'
+import { ordinaryHabitatCapacity } from './persistentOccupants'
 import { effectiveMaxPreyCount, effectiveRespawnIntervalDays } from './wolfDenScenario'
 
 /** `wolfDen` (plan 093 Etap E) reuses this same spawner shape — a fixed
@@ -124,17 +125,21 @@ export function respawnIntervalDaysFor(intervalDays: number, nearbyCount: number
  * Ticks respawn timers in **game-days** and calls `onRespawn` for each
  * `active` spawner that's ready (timer elapsed, below its live same-kind
  * cap). A large `dayDelta` (time-skip) may spawn more than once, always
- * capped at `maxPreyCount`. Pure timer/count bookkeeping — actual agent
+ * capped at ordinary capacity (`maxPreyCount` minus reserved persistent
+ * slots — plan fauna-018). Pure timer/count bookkeeping — actual agent
  * creation is the caller's job. `depleted`/`disabled`/`recovering` spawners
  * never respawn (plan 125 §2/§3); `Infinity` intervals are skipped (plan
  * 139). Nearby count is by `kind` (prey *or* predator) so a wolf cave is
- * capped by living wolves, not an empty prey filter.
+ * capped by living wolves, not an empty prey filter. Persistent occupants
+ * must be excluded from `animalPositions` by the caller; reserved slots
+ * still occupy capacity while the resident is away, a corpse, or tombstoned.
  */
 export function updateSpawners(
   spawners: PreySpawner[],
   dayDelta: number,
   animalPositions: { kind: AnimalKind; x: number; z: number }[],
   onRespawn: (spawner: PreySpawner) => void,
+  reservedPersistentSlots?: ReadonlyMap<string, number>,
 ): void {
   if (dayDelta <= 0) return
   for (const spawner of spawners) {
@@ -143,7 +148,10 @@ export function updateSpawners(
     if (!Number.isFinite(respawnIntervalDays) || respawnIntervalDays <= 0) continue
     spawner.daysSinceLastRespawn += dayDelta
 
-    const cap = effectiveMaxPreyCount(spawner)
+    const cap = ordinaryHabitatCapacity(
+      effectiveMaxPreyCount(spawner),
+      reservedPersistentSlots?.get(spawner.id) ?? 0,
+    )
     let nearby = animalPositions.filter(
       (p) =>
         p.kind === spawner.kind &&

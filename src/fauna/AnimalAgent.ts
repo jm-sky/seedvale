@@ -516,6 +516,8 @@ export type AnimalSaveState = {
   affinity?: { humanId: string, value: number }[]
   /** Optional given name — assigned to a horse on player ownership transfer. */
   name?: string
+  /** Durable rabies infection (plan fauna-018) — omitted on legacy saves. */
+  rabid?: boolean
 }
 
 type EnvironmentSense = {
@@ -1925,6 +1927,7 @@ export class AnimalAgent {
       control: this.isPlayerOwned() ? snapshotOwnedAnimalControl(this._control) : undefined,
       affinity: serializeHumanAffinity(this.humanAffinityById),
       name: this.name,
+      rabid: this.rabid,
     }
   }
 
@@ -1983,6 +1986,7 @@ export class AnimalAgent {
     }
     this.name = state.name
     this.labelController.setName(this.getDisplayName())
+    this.rabid = state.rabid === true
   }
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */

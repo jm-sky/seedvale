@@ -47,6 +47,13 @@ import {
   HERD_SPECIES,
   JUVENILE_SPAWN_CHANCE,
 } from './herdCohesion'
+import {
+  createPersistentOccupantRegistry,
+  ordinaryHabitatCapacity,
+  persistentAnimalId,
+  type PersistentOccupantDecl,
+  type PersistentOccupantSnapshot,
+} from './persistentOccupants'
 import { createBoarModel, createDuckModel, createRabbitModel } from './proceduralAnimals'
 import {
   activateWolfDenProblem,
@@ -148,6 +155,9 @@ export type Fauna = {
    *  quests-progression-007) — accepts stable `WOLF_DEN_ID` or a real
    *  `PreySpawner.id`. */
   isQuestSpawnPointPermanentlyDestroyed: (questSpawnerId: string) => boolean
+  /** Sparse persistent habitat-occupant snapshot (plan fauna-018) — live
+   *  capture plus tombstones, for save/load and in-session rebuild carry. */
+  snapshotPersistentOccupants: () => PersistentOccupantSnapshot
 }
 
 /** Where a species prefers to spawn relative to the home settlement (plan
@@ -532,6 +542,12 @@ export async function createFauna(
     respawnIntervalDays: number
     maxPreyCount: number
   }[],
+  /** Explicit persistent habitat occupants (plan fauna-018) — applied
+   *  before generic initial fill. Absent means no persistent slots. */
+  persistentOccupantDecls?: readonly PersistentOccupantDecl[],
+  /** Restored persistent occupant records/tombstones (save/load or
+   *  in-session rebuild). Absent means first construction of each declaration. */
+  initialPersistentOccupants?: PersistentOccupantSnapshot,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
 
@@ -670,6 +686,10 @@ export async function createFauna(
    *  only consumed by the ring-spawn loop below (spawner respawns stay
    *  solitary, see its own comment). */
   let nextHerdId = 0
+  const occupantDecls = persistentOccupantDecls ?? []
+  const occupantRegistry = createPersistentOccupantRegistry(initialPersistentOccupants)
+  occupantRegistry.registerDeclarations(occupantDecls)
+  const reservedPersistentSlots = occupantRegistry.slotCountsByHabitatId()
   const spawnAgent = (
     kind: AnimalKind,
     x: number,
@@ -681,6 +701,9 @@ export async function createFauna(
      *  passed by spawner-driven creation (initial placement + respawn) below,
      *  never by ring spawns/livestock. */
     spawnPointId?: string,
+    /** Stable id for a persistent habitat occupant (plan fauna-018). Ordinary
+     *  callers omit this and keep the per-build `${kind}-${n}` path. */
+    explicitAnimalId?: string,
   ): AnimalAgent => {
     const tpl = templates[kind]
     let visual: Object3D | undefined
@@ -691,7 +714,7 @@ export async function createFauna(
     } else {
       visual = PROCEDURAL_FALLBACKS[kind]?.()
     }
-    const animalId = `${kind}-${nextAnimalId++}`
+    const animalId = explicitAnimalId ?? `${kind}-${nextAnimalId++}`
     if (spawnPointId) animalToSpawner.set(animalId, spawnPointId)
     const boundSpawner = spawnPointId ? spawnerById.get(spawnPointId) : undefined
     return new AnimalAgent({
@@ -917,29 +940,14 @@ export async function createFauna(
       spawnerMeshById.set(spawner.id, mouth)
     }
 
-    // Cave/thicket/wolfDen start inhabited (plan 139) — slow day-scale
-    // respawn only replaces losses on finite-interval habitats. Tagged with
-    // `spawnPointId` so deaths count toward depletion (including the one-shot
-    // wolfDen pack, so a cleared den can be burned). Only for a spawn point
-    // that's actually `active` — a restored `depleted`/`disabled`/`recovering`
-    // point must not come back with a full fresh population just because it
-    // was saved/reloaded; it stays empty until it recovers through the
-    // normal `tickSpawnPointRecovery` path.
-    if (spawner.state === 'active') {
-      for (let i = 0; i < spec.maxPreyCount; i++) {
-        const spot = findWalkableNear(pos.x, pos.z, 0, 4) ?? pos
-        const agent = spawnAgent(spec.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
-        scene.add(agent.mesh)
-        agents.push(agent)
-        if (spec.type === 'wolfDen') denWolfAnimalIds.add(agent.animalId)
-      }
-    }
     // A restored `disabled`/`recovering` point looks freshly-burned again on
     // reload/rebuild instead of a mismatched pristine prop — same visual as
     // `destroySpawner()` below, reapplied rather than duplicated. This replay
     // is driven entirely by the already-separately-persisted
     // `SavedSpawnPointState`, so it's `'system'` (never itself persisted) —
     // `destroySpawner()`'s own scorch below is the genuine player-caused one.
+    // Generic population fill happens after all spawners exist and after
+    // persistent occupants are restored (plan fauna-018).
     if (spawner.state === 'disabled' || spawner.state === 'recovering') {
       const mesh = spawnerMeshById.get(spawner.id)
       if (mesh) tintPropMaterials(mesh, BURNED_SPAWNER_TINT_HEX)
@@ -991,14 +999,6 @@ export async function createFauna(
     scene.add(mouth)
     spawnerMeshes.push(mouth)
     spawnerMeshById.set(spawner.id, mouth)
-    if (spawner.state === 'active') {
-      for (let i = 0; i < extra.maxPreyCount; i++) {
-        const spot = findWalkableNear(extra.x, extra.z, 0, 4) ?? { x: extra.x, z: extra.z }
-        const agent = spawnAgent(extra.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
-        scene.add(agent.mesh)
-        agents.push(agent)
-      }
-    }
     const el = document.createElement('div')
     el.className = 'npc-label'
     el.textContent = SPAWNER_LABELS[extra.type]
@@ -1006,6 +1006,51 @@ export async function createFauna(
     label.position.set(extra.x, groundY + CAVE_LABEL_HEIGHT, extra.z)
     scene.add(label)
     spawnerLabels.push({ id: extra.id, type: extra.type, object: label, el, marker: null, lastOpacity: -1 })
+  }
+
+  // Persistent occupants first (plan fauna-018) — tombstone skips, hydrate
+  // before the first update, fresh spawn only on an active habitat. Generic
+  // fill below uses the remaining ordinary capacity so the reserved slot
+  // cannot become `maxPreyCount + 1`.
+  for (const decl of occupantDecls) {
+    const habitat = spawnerById.get(decl.habitatId)
+    if (!habitat) continue
+    const action = occupantRegistry.restoreAction(decl)
+    if (action.type === 'skip' || action.type === 'mismatch') continue
+    if (action.type === 'fresh' && habitat.state !== 'active') continue
+    const animalId = persistentAnimalId(decl.habitatId, decl.occupantKey)
+    const spot = findWalkableNear(habitat.x, habitat.z, 0, 4) ?? habitat
+    const agent = spawnAgent(
+      decl.kind,
+      spot.x,
+      spot.z,
+      undefined,
+      undefined,
+      undefined,
+      habitat.id,
+      animalId,
+    )
+    if (action.type === 'hydrate') agent.hydrate(action.record.state)
+    scene.add(agent.mesh)
+    agents.push(agent)
+  }
+
+  // Ordinary habitat population (plan 139) — tagged with `spawnPointId` so
+  // deaths count toward depletion. A restored depleted/disabled/recovering
+  // point stays empty until `tickSpawnPointRecovery`.
+  for (const habitat of spawners) {
+    if (habitat.state !== 'active') continue
+    const ordinary = ordinaryHabitatCapacity(
+      habitat.maxPreyCount,
+      occupantRegistry.slotCountFor(habitat.id),
+    )
+    for (let i = 0; i < ordinary; i++) {
+      const spot = findWalkableNear(habitat.x, habitat.z, 0, 4) ?? habitat
+      const agent = spawnAgent(habitat.kind, spot.x, spot.z, undefined, undefined, undefined, habitat.id)
+      scene.add(agent.mesh)
+      agents.push(agent)
+      if (habitat.type === 'wolfDen') denWolfAnimalIds.add(agent.animalId)
+    }
   }
   } finally {
     bootMarkEnd('habitatSpawners')
@@ -1076,7 +1121,11 @@ export async function createFauna(
       if (agents.some((a) => a.readyToRemove())) {
         const alive: AnimalAgent[] = []
         for (const a of agents) {
-          if (a.readyToRemove()) disposeAgent(a)
+          if (a.readyToRemove()) {
+            const slot = occupantRegistry.slotKeyForAnimalId(a.animalId)
+            if (slot) occupantRegistry.markRemoved(slot)
+            disposeAgent(a)
+          }
           else alive.push(a)
         }
         agents = alive
@@ -1089,7 +1138,7 @@ export async function createFauna(
         spawners,
         dayDelta,
         agents
-          .filter((a) => !a.isDead())
+          .filter((a) => !a.isDead() && !occupantRegistry.hasPersistentAnimalId(a.animalId))
           .map((a) => ({ kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z })),
         (spawner) => {
           const pos = findWalkableNear(spawner.x, spawner.z, 0, 4) ?? spawner
@@ -1097,6 +1146,7 @@ export async function createFauna(
           scene.add(agent.mesh)
           agents.push(agent)
         },
+        reservedPersistentSlots,
       )
 
       // Recovery check (plan 125 §8) — at most once per in-game day, and
@@ -1224,6 +1274,10 @@ export async function createFauna(
     },
     isQuestSpawnPointPermanentlyDestroyed(questSpawnerId: string) {
       return isQuestSpawnPointPermanentlyDestroyed(spawners, questSpawnerId)
+    },
+    snapshotPersistentOccupants() {
+      occupantRegistry.capture(agents.filter((a) => occupantRegistry.hasPersistentAnimalId(a.animalId)))
+      return occupantRegistry.serialize()
     },
   }
 }

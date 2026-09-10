@@ -271,6 +271,42 @@ describe('AnimalAgent', () => {
     })
   })
 
+  describe('durable snapshot fields (plan fauna-018)', () => {
+    it('round-trips rabies through snapshot and hydrate', () => {
+      const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-rabid' }))
+      animal.infectWithRabies()
+      const snap = animal.snapshot()
+      expect(snap.rabid).toBe(true)
+
+      const loaded = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-rabid' }))
+      loaded.hydrate({ ...snap, x: 2, z: 3, yaw: 0.4 })
+      expect(loaded.isRabid()).toBe(true)
+      expect(loaded.snapshot().rabid).toBe(true)
+    })
+
+    it('hydrates a legacy save without rabid as not infected', () => {
+      const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-legacy' }))
+      const { rabid: _rabid, ...legacy } = animal.snapshot()
+      animal.infectWithRabies()
+      animal.hydrate(legacy)
+      expect(animal.isRabid()).toBe(false)
+    })
+
+    it('round-trips corpse linger state without requiring transient foraging/roaming', () => {
+      const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.bear, animalId: 'bear-corpse' }))
+      const snap = animal.snapshot()
+      animal.hydrate({
+        ...snap,
+        health: { current: 0, max: snap.health.max, dead: true },
+        corpse: { timeSinceDeath: 90, meatHarvested: true },
+      })
+      expect(animal.isDead()).toBe(true)
+      expect(animal.snapshot().corpse).toEqual({ timeSinceDeath: 90, meatHarvested: true })
+      expect(animal.snapshot()).not.toHaveProperty('sourceTarget')
+      expect(animal.snapshot()).not.toHaveProperty('trip')
+    })
+  })
+
   describe('leading (plan fauna-007)', () => {
     const farObserver = new THREE.Vector3(1000, 0, 1000)
     const stubGrass = (x: number, z: number): GrassForageService => ({

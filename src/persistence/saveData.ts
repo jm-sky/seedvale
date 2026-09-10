@@ -3,6 +3,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
+import type { PersistentOccupantSaveRecord } from '../fauna/persistentOccupants'
 import type { ContainerKind } from '../items/container'
 import type { InventoryContentsSnapshot, SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
@@ -563,7 +564,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 26
+export const CURRENT_SAVE_VERSION = 27
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -707,6 +708,11 @@ export type SaveData = {
   rats?: RatSaveRecord[]
   /** `${settlementId}:${animalId}` tombstones for settlement rats. */
   removedRatIds?: string[]
+  /** Sparse persistent habitat occupants (plan fauna-018) — fauna-owned,
+   *  not settlement-owned. Ordinary wild fauna is still not persisted. */
+  persistentHabitatOccupants?: PersistentOccupantSaveRecord[]
+  /** `habitatId:occupantKey` tombstones for persistent habitat occupants. */
+  removedPersistentOccupantSlots?: string[]
   /** Settlement rat infestation state per settlement id (plan
    *  quests-progression-006 / quests-progression-013) — independent
    *  storage-damage and nest-destroyed facts. */
@@ -1793,7 +1799,8 @@ function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
     (r.productionReadyAtDays === null || typeof r.productionReadyAtDays === 'number') &&
     typeof r.eggPending === 'boolean' &&
     isLivestockCorpse(r.corpse) &&
-    isAnimalAffinityField(r.affinity)
+    isAnimalAffinityField(r.affinity) &&
+    (r.rabid === undefined || typeof r.rabid === 'boolean')
   )
 }
 
@@ -1818,7 +1825,8 @@ function isRatSaveRecord(value: unknown): value is RatSaveRecord {
     isLivestockLife(r.life) &&
     (r.productionReadyAtDays === null || typeof r.productionReadyAtDays === 'number') &&
     typeof r.eggPending === 'boolean' &&
-    isLivestockCorpse(r.corpse)
+    isLivestockCorpse(r.corpse) &&
+    (r.rabid === undefined || typeof r.rabid === 'boolean')
   )
 }
 
@@ -1827,6 +1835,46 @@ function isRatsField(value: unknown): value is RatSaveRecord[] {
 }
 
 function isRemovedRatIdsField(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string')
+}
+
+function isAnimalSaveState(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  const s = value as Record<string, unknown>
+  return (
+    typeof s.x === 'number' &&
+    typeof s.z === 'number' &&
+    typeof s.yaw === 'number' &&
+    isNpcHealth(s.health) &&
+    isLivestockLife(s.life) &&
+    (s.productionReadyAtDays === null || typeof s.productionReadyAtDays === 'number') &&
+    typeof s.eggPending === 'boolean' &&
+    isLivestockCorpse(s.corpse) &&
+    isAnimalOwnerField(s.owner) &&
+    isOwnedAnimalControlField(s.control) &&
+    isAnimalAffinityField(s.affinity) &&
+    (s.name === undefined || typeof s.name === 'string') &&
+    (s.rabid === undefined || typeof s.rabid === 'boolean')
+  )
+}
+
+function isPersistentOccupantSaveRecord(value: unknown): value is PersistentOccupantSaveRecord {
+  if (!value || typeof value !== 'object') return false
+  const r = value as Record<string, unknown>
+  return (
+    typeof r.habitatId === 'string' &&
+    typeof r.occupantKey === 'string' &&
+    typeof r.animalId === 'string' &&
+    typeof r.kind === 'string' && ANIMAL_KINDS.has(r.kind) &&
+    isAnimalSaveState(r.state)
+  )
+}
+
+function isPersistentHabitatOccupantsField(value: unknown): value is PersistentOccupantSaveRecord[] {
+  return Array.isArray(value) && value.every(isPersistentOccupantSaveRecord)
+}
+
+function isRemovedPersistentOccupantSlotsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
@@ -1922,6 +1970,8 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.removedLivestockIds !== undefined && !isRemovedLivestockIdsField(v.removedLivestockIds)) return false
   if (v.rats !== undefined && !isRatsField(v.rats)) return false
   if (v.removedRatIds !== undefined && !isRemovedRatIdsField(v.removedRatIds)) return false
+  if (v.persistentHabitatOccupants !== undefined && !isPersistentHabitatOccupantsField(v.persistentHabitatOccupants)) return false
+  if (v.removedPersistentOccupantSlots !== undefined && !isRemovedPersistentOccupantSlotsField(v.removedPersistentOccupantSlots)) return false
   if (v.storageInfestation !== undefined && !isStorageInfestationField(v.storageInfestation)) return false
   // Same sparse "object of numbers" shape as `resourceDeposits` above.
   if (v.grassForagePatches !== undefined && !isResourceDepositsField(v.grassForagePatches)) return false
@@ -2673,6 +2723,17 @@ function migrateSaveV25ToV26(data: unknown): unknown {
   return { ...(data as Record<string, unknown>), version: 26, carts: [] }
 }
 
+/** v26 → v27 (plan fauna-018): sparse persistent habitat occupants + tombstones.
+ *  Absent records mean first construction of each declared occupant. */
+function migrateSaveV26ToV27(data: unknown): unknown {
+  return {
+    ...(data as Record<string, unknown>),
+    version: 27,
+    persistentHabitatOccupants: [],
+    removedPersistentOccupantSlots: [],
+  }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2713,6 +2774,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   23: migrateSaveV23ToV24,
   24: migrateSaveV24ToV25,
   25: migrateSaveV25ToV26,
+  26: migrateSaveV26ToV27,
 }
 
 function detectStoredVersion(value: unknown): number | null {

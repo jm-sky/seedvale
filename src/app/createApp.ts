@@ -546,6 +546,12 @@ export async function createApp(
     })),
     initialSave?.residentialBuildings ?? [],
     (initialSave?.carts ?? []).map((c) => ({ ...c, pulledByAnimalId: null })),
+    initialSave
+      ? {
+          entries: initialSave.persistentHabitatOccupants ?? [],
+          removedSlots: initialSave.removedPersistentOccupantSlots ?? [],
+        }
+      : undefined,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do

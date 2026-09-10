@@ -4,6 +4,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
+import type { PersistentOccupantSnapshot } from '../fauna/persistentOccupants'
 import type { Settlement } from '../settlement/createSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
@@ -418,6 +419,7 @@ function buildFauna(
     respawnIntervalDays: number
     maxPreyCount: number
   }[],
+  initialPersistentOccupants?: PersistentOccupantSnapshot,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
 
@@ -471,6 +473,11 @@ function buildFauna(
     waterSourceProvider,
     chunkManager.riverShoreDistance,
     extraHabitatSpawners,
+    // Persistent occupant declarations stay empty until a consumer (the
+    // treasure-map bear cave) supplies them; restore still accepts carried
+    // snapshots so in-session rebuild/save wiring is live.
+    undefined,
+    initialPersistentOccupants,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
@@ -584,6 +591,7 @@ type WorldSystemsSeed = {
   /** Authored V1 trigger for home storage infestation on a fresh world. */
   seedHomeStorageInfestation?: boolean
   spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
+  persistentOccupants?: PersistentOccupantSnapshot
   resourceDepletion: ResourceDepletionState
   onAnimalDeath?: (animalId: string) => void
   getPlayerSocial?: PlayerSocialLookup
@@ -630,6 +638,7 @@ function createEmptyFauna(): Fauna {
     setSpawnerMarker: () => {},
     destroySpawner: () => false,
     isQuestSpawnPointPermanentlyDestroyed: () => false,
+    snapshotPersistentOccupants: () => ({ entries: [], removedSlots: [] }),
   }
 }
 
@@ -729,6 +738,7 @@ async function buildWorldSystems(
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
     spawnerState: initialSpawnerState,
+    persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
@@ -1062,6 +1072,7 @@ async function buildWorldSystems(
                 respawnIntervalDays: Infinity,
                 maxPreyCount: 2,
               })),
+              initialPersistentOccupants,
             )
           } finally {
             bootMarkEnd('background:buildFauna')
@@ -1269,6 +1280,9 @@ export async function createWorldBundle(
   /** Movable draft carts (plan fauna-007) — same carry/restore contract as
    *  `initialPlacedTents`. Empty on a fresh world spawns one demo cart near home. */
   initialCarts: readonly CartRecord[] = [],
+  /** Sparse persistent habitat occupants (plan fauna-018) — same
+   *  carry/restore contract as spawn-point lifecycle. */
+  initialPersistentOccupants?: PersistentOccupantSnapshot,
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1306,6 +1320,7 @@ export async function createWorldBundle(
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
     spawnerState: initialSpawnerState,
+    persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
@@ -1383,6 +1398,9 @@ export async function rebuildWorldBundle(
   const carriedSpawnerState = resetCollectedItems
     ? undefined
     : new Map(bundle.fauna.getSpawners().map((s) => [s.id, snapshotSpawnPointState(s)]))
+  const carriedPersistentOccupants = resetCollectedItems
+    ? undefined
+    : bundle.fauna.snapshotPersistentOccupants()
   // Blood traces (plan world-009) are positioned by real damage events, not
   // seed-derived — same "carried across rebuild, reset only on a genuinely
   // new world" contract as the placed-* arrays below.
@@ -1516,6 +1534,7 @@ export async function rebuildWorldBundle(
     storageInfestation: carriedStorageInfestation,
     seedHomeStorageInfestation: false,
     spawnerState: carriedSpawnerState,
+    persistentOccupants: carriedPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,

@@ -128,6 +128,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim/sanitation-reservation state machine.
 - [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.
 - [Roaming](../src/fauna/animalRoaming.ts) — water-trip state machine and shared radial probe.
+- [Persistent occupants](../src/fauna/persistentOccupants.ts) — sparse stable habitat-occupant identity and tombstone registry.
 - [Fauna decision](../src/fauna/faunaDecision.ts) — fixed-priority behaviour table.
 - [Dog guard](../src/fauna/dogGuard.ts) — household-dog guard/bark/pest resolution.
 - [Prey alert](../src/fauna/preyAlertPerception.ts) — extra-range threat-alert relevance.

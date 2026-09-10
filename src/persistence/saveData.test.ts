@@ -127,6 +127,8 @@ const validSave: SaveData = {
     committedWork: 3,
     npcWorkCompleted: 1,
   }],
+  persistentHabitatOccupants: [],
+  removedPersistentOccupantSlots: [],
 }
 
 describe('loadSaveData v1 contract', () => {
@@ -148,7 +150,7 @@ describe('loadSaveData v1 contract', () => {
 
   it('rejects a non-current version', () => {
     expect(loadSaveData({ ...validSave, version: 1 })).toBeNull()
-    expect(loadSaveData({ ...validSave, version: 27 })).toBeNull()
+    expect(loadSaveData({ ...validSave, version: CURRENT_SAVE_VERSION + 1 })).toBeNull()
   })
 
   it('rejects a save missing required fields (no migration path)', () => {
@@ -1188,6 +1190,52 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     if (result.status !== 'ok') return
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(result.data.carts).toEqual([])
+  })
+
+  it('migrates v26 saves to empty persistent habitat occupant collections (plan fauna-018)', () => {
+    const {
+      persistentHabitatOccupants: _occ,
+      removedPersistentOccupantSlots: _slots,
+      ...v26Fields
+    } = validSave
+    const result = loadStoredSave({ ...v26Fields, version: 26 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.persistentHabitatOccupants).toEqual([])
+    expect(result.data.removedPersistentOccupantSlots).toEqual([])
+  })
+
+  it('accepts a persistent habitat occupant record and rejects a malformed one (plan fauna-018)', () => {
+    const occupant = {
+      habitatId: 'home:cave:bear',
+      occupantKey: 'resident',
+      animalId: 'persistent:home:cave:bear:resident',
+      kind: 'bear' as const,
+      state: {
+        x: 1, z: 2, yaw: 0,
+        health: { current: 40, max: 40, dead: false },
+        life: { hunger: 0.5, thirst: 0.5, stamina: 1 },
+        productionReadyAtDays: null,
+        eggPending: false,
+        corpse: null,
+        rabid: true,
+      },
+    }
+    const save = {
+      ...validSave,
+      persistentHabitatOccupants: [occupant],
+      removedPersistentOccupantSlots: ['home:thicket:alpha'],
+    }
+    expect(loadSaveData(save)).toEqual(save)
+    expect(isSaveData({
+      ...validSave,
+      persistentHabitatOccupants: [{ ...occupant, kind: 'not-an-animal' }],
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      persistentHabitatOccupants: [{ ...occupant, state: { x: 1 } }],
+    })).toBe(false)
   })
 
   it('accepts current-version infestation objects and rejects legacy strings', () => {

@@ -121,6 +121,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     // settlement unload on its own).
     const livestockSnapshot = bundle.settlementsManager.snapshotLivestock()
     const ratSnapshot = bundle.settlementsManager.snapshotRats()
+    const persistentOccupants = bundle.fauna.snapshotPersistentOccupants()
     return {
       version: CURRENT_SAVE_VERSION,
     config: {
@@ -260,6 +261,8 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       removedLivestockIds: livestockSnapshot.removedIds,
       rats: ratSnapshot.entries,
       removedRatIds: ratSnapshot.removedIds,
+      persistentHabitatOccupants: persistentOccupants.entries,
+      removedPersistentOccupantSlots: persistentOccupants.removedSlots,
       storageInfestation: bundle.settlementsManager.snapshotStorageInfestation(),
     }
   }

@@ -75,7 +75,7 @@ settlement food/storage
 
 ## Persistence classes
 
-Fauna has a genuine four-tier persistence picture — treat these as four distinct shapes, not degrees of the same thing:
+Fauna has a genuine four-tier persistence picture plus one sparse exception — treat these as distinct shapes, not degrees of the same thing:
 
 ### Livestock
 **Persisted, per individual.** Full snapshot (position/yaw/health/hunger/thirst/stamina-as-a-ratio/production-readiness anchor/corpse state) via a generic per-individual snapshot capability that exists on the `AnimalAgent` class itself. Because no live object survives a settlement unload, an explicit capture step must snapshot the currently-loaded animals immediately before save — unlike households/NPC state, which read an already-persistent state object. Tombstones for individuals removed since the last save prevent deterministic respawn logic from resurrecting a disposed corpse.
@@ -84,7 +84,10 @@ Fauna has a genuine four-tier persistence picture — treat these as four distin
 **Persisted, thin.** Only the state-machine/clock fields (state, deaths-this-cycle, disabled-at-day) round-trip — position/type/kind are always deterministic and never persisted; a restored `active` spawner simply restarts its respawn timer from zero.
 
 ### Wild fauna
-**Not persisted; population is deterministically reconstructed, individual identity is not.** The fixed spawn table plus seeded placement fully reproduces the population every session, but a specific individual's position/health/hunger/rabies-infection/frenzy/juvenile state simply ceases to exist on unload — a wolf that was rabid, mid-chase, or juvenile at save time comes back as a fresh deterministic spawn. The generic per-individual snapshot capability used by livestock exists on the class and could be called for a wild individual, but nothing does — a future feature persisting a specific wild animal (a tracked quest animal, an ongoing rabies outbreak) needs a call site, not new infrastructure.
+**Not persisted; population is deterministically reconstructed, individual identity is not.** The fixed spawn table plus seeded placement fully reproduces the population every session, but a specific individual's position/health/hunger/rabies-infection/frenzy/juvenile state simply ceases to exist on unload — a wolf that was rabid, mid-chase, or juvenile at save time comes back as a fresh deterministic spawn. Ordinary wild fauna does not go through `AnimalAgent.snapshot()`.
+
+### Persistent habitat occupants
+**Persisted per declared slot (plan fauna-018), fauna-owned, sparse.** A stable `habitatId + occupantKey` yields a stable `animalId`. The occupant is a normal `AnimalAgent` using the shared `AnimalSaveState` snapshot (including corpse linger and durable rabies). The slot stays reserved through live → corpse → tombstone, so generic habitat fill/`updateSpawners()` cannot replace it. Tombstone happens at `readyToRemove()`, not on death. Ordinary wild animals are unchanged: they remain unpersisted. The first gameplay consumer is the treasure-map bear cave; this contract does not itself declare that occupant.
 
 ### Rats
 **Persisted per individual (plan quests-progression-006), with a live pressure target and a separate infestation record (plan quests-progression-013).** Settlement rats use the same `AnimalAgent.snapshot()` / capture-registry pattern as livestock, keyed by settlement id with removed-id tombstones. The *target population* is a live formula over current food and whether shared settlement storage is still damaged (`max(normalTarget + 3, 7)` while damaged); dogs do not change that target. Infestation replenishment (nest intact, below target) is a deterministic bucketed roll reduced by living dogs. Excess live rats are never deleted just because the target falls. Nest position is reconstructed from `VillagePlan`; only `{ storageDamaged, nestDestroyed }` persists.
@@ -117,10 +120,10 @@ Temporary leading is a separate runtime relation (`AnimalDef.lead`, presence = c
 
 ## Limitations
 
-- Wild-fauna individuals have no persistence and no reconstruction guarantee beyond population-level determinism (see [Persistence classes](#persistence-classes)).
+- **Wild-fauna individuals have no persistence and no reconstruction guarantee beyond population-level determinism**, except explicitly declared persistent habitat occupants (see [Persistence classes](#persistence-classes)).
 - Settlement rats persist as individuals. Their target population remains a live pressure formula (food + damaged-storage bonus); infestation nest/storage facts persist separately. Dogs affect replenishment and physical hunting, not the target.
 - Fauna's outgoing attack damage bypasses the shared critical/defense pipeline (see [Combat](#combat)) — a known asymmetry, not yet resolved either way.
-- Ordinary movement-target search (wander/food/water) uses unseeded randomness, unlike the deterministic hashed rolls used for population-protection and rat food-eating. This is internally consistent today only because wild-fauna individual state is never persisted — there is nothing for the randomness to desynchronize against across a save/reload. If wild-fauna persistence is ever added, this boundary needs to become an explicit, stated policy rather than an implicit one.
+- Ordinary movement-target search (wander/food/water) uses unseeded randomness, unlike the deterministic hashed rolls used for population-protection and rat food-eating. Persistent habitat occupants restore durable pools/position and then re-decide; in-flight paths/`SourceTarget`/`AnimalTrip` are not persisted, so this remains a stated policy rather than an accidental desync.
 - Blacksmith/farmer-adjacent gaps aside, no disease system beyond rabies exists — a decaying-food risk-penalty seam exists in the corpse-scavenging scoring function but is currently inert.
 
 ## Entry points
@@ -133,6 +136,7 @@ src/fauna/animalForaging.ts
 src/fauna/animalRoaming.ts
 src/fauna/AnimalLife.ts
 src/fauna/AnimalSpawner.ts
+src/fauna/persistentOccupants.ts
 src/fauna/createFauna.ts
 src/fauna/faunaDecision.ts
 src/fauna/faunaCombat.ts

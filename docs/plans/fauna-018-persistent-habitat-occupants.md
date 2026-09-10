@@ -1,7 +1,12 @@
 # Plan: Persistent habitat occupants
 
+> Implementation landed on `main` 2026-09-10. Automated checks are the
+> remaining gate before browser/manual verification (plan § Manual verification).
+> No real-cave occupant is declared yet — `quests-progression-008` is the first
+> consumer.
+
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-016, fauna-017
 **Domain:** `fauna`  
