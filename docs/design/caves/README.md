@@ -64,6 +64,7 @@ B5 — V1 removal + cleanup
 - [ ] Technical/manual checkpoint after B2 where useful.
 - [ ] Implementation agent: B3 — collision + third-person camera.
 - [ ] Player: browser verification of movement, collision and camera before continuing.
+- [x] Architecture/recon: B4 focused streaming/lifecycle/performance recon — `05-b4-streaming-lifecycle-performance-recon.md`.
 - [ ] Implementation agent: B4 — streaming + lifecycle + performance.
 - [ ] Implementation agent: B5 — remove obsolete V1 geometry and disposable spike code; perform cleanup without unrelated refactors.
 - [ ] Run full technical verification required by the plan.
@@ -125,8 +126,9 @@ V1 cleanup + Cave V2 completion
 | `02-generation-techniques-research.md` | Research and comparison of cave geometry/representation techniques. | `done` |
 | `03-advanced-sweep-vs-sdf-spike-research.md` | Seedvale-focused Sweep vs SDF comparison and shared spike definition. | `done` |
 | `04-sweep-vs-sdf-spike-results.md` | Technical measurements, player observations and architecture decision from Milestone A. | `technical comparison complete, manual comparison required` |
-| `docs/plans/world-terrain-008-underground-caves-v2.md` | Production Cave V2 plan and architecture gate. | `Milestone A implemented, awaiting player decision` |
-| `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md` | Exact current-code integration map for implementation agents. | `done` |
+| `05-b4-streaming-lifecycle-performance-recon.md` | Current-code B4 recon: lifecycle, performance risks, worker decision and recommended streaming architecture. | `recon complete` |
+| `docs/plans/world-terrain-008-underground-caves-v2.md` | Production Cave V2 plan and architecture gate. | `Milestone B in progress` |
+| `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md` | Exact current-code integration map for implementation agents. | `in progress` |
 
 ## Rules
 
