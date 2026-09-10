@@ -131,6 +131,7 @@ Generated from TypeScript imports.
 - `world/createResidentialBuildings.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
+- `world/createTransportOrders.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
@@ -700,6 +701,7 @@ Generated from TypeScript imports.
 - `player/physicalWorkStrength.ts`
 - `settlement/household.ts`
 - `terrain/depositMining.ts`
+- `world/createTransportOrders.ts`
 - `world/fishing.ts`
 
 ## `ai/npcProfessionWork.ts`
@@ -725,11 +727,14 @@ Generated from TypeScript imports.
 - `simulation/index.ts`
 - `terrain/depositMining.ts`
 - `terrain/resourceDeposits.ts`
+- `world/createTransportOrders.ts`
 - `world/cropLifecycle.ts`
 - `world/cultivationAnchor.ts`
 - `world/fishing.ts`
 - `world/foodSources.ts`
 - `world/plantedCrops.ts`
+- `world/transportOrder.ts`
+- `world/transportTransactions.ts`
 
 **Imported by**
 

@@ -230,6 +230,7 @@ Generated from TypeScript imports.
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationTypes.ts`
+- `world/transportOrder.ts`
 - `world/worldContext.ts`
 
 **Imported by**

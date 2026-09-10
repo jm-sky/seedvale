@@ -130,24 +130,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 637
-- `CurrentActivity` — type — line 471
-- `CurrentActivityKind` — type — line 464
-- `NPC_HEIGHT` — const — line 374
-- `NPC_MODEL_URLS` — const — line 438
-- `NPC_SHADOW_DISTANCE` — const — line 388
-- `NpcAgent` — class — line 975
+- `classifyPendingActivity` — function — line 638
+- `CurrentActivity` — type — line 472
+- `CurrentActivityKind` — type — line 465
+- `NPC_HEIGHT` — const — line 375
+- `NPC_MODEL_URLS` — const — line 439
+- `NPC_SHADOW_DISTANCE` — const — line 389
+- `NpcAgent` — class — line 978
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 889
-- `NpcInspectionSnapshot` — type — line 486
-- `NpcWhy` — type — line 612
-- `projectNpcWhy` — function — line 676
-- `promoteChainKind` — function — line 629
+- `NpcAgentDeps` — type — line 890
+- `NpcInspectionSnapshot` — type — line 487
+- `NpcWhy` — type — line 613
+- `projectNpcWhy` — function — line 677
+- `promoteChainKind` — function — line 630
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -313,10 +313,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 49
-- `findWeaponNeedingMaintenance` — function — line 75
-- `NpcWorkContext` — type — line 95
-- `planProfessionWork` — function — line 455
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 52
+- `findWeaponNeedingMaintenance` — function — line 78
+- `NpcWorkContext` — type — line 98
+- `planProfessionWork` — function — line 541
+- `selectTraderCollectionGoods` — function — line 333
 
 ## `ai/npcStrategies.ts`
 

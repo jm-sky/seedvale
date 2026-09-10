@@ -6,14 +6,14 @@
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6
-2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 3/6
-3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · 🔒 blocked · unlocks 3/5
-4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · ✅ ready · unlocks 3/5
+3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/3
-5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2
+5. `fauna-004` — **Sheep wool cycle and shepherd**  
+   🟡 `L` · ✅ ready · unlocks 1/2
 
 ---
 
@@ -21,14 +21,14 @@
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6 · roadmap: `economy-production`
-2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 3/6 · roadmap: `physical-goods-transport`
-3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · 🔒 blocked · unlocks 3/5 · roadmap: `physical-goods-transport`
-4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · ✅ ready · unlocks 3/5 · roadmap: `physical-goods-transport`
+3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/3 · roadmap: `economy-production`
-5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2 · roadmap: `economy-production`
+5. `fauna-004` — **Sheep wool cycle and shepherd**  
+   🟡 `L` · ✅ ready · unlocks 1/2 · roadmap: `textiles-and-herbal-medicine`
 
 ---
 
@@ -48,8 +48,8 @@ _No qualifying plans._
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6
-2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 3/6
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · ✅ ready · unlocks 3/5
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
 4. `quests-progression-015` — **Stable NPC identity for quests**  
@@ -77,71 +77,63 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:** 125  
    → **unlocks:** 3/6
 
-2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-  🔴 `M` · **Score:** 125  
-   → **unlocks:** 3/6
-
-3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
   🔴 `M` · **Score:** 117  
    → **unlocks:** 3/5
 
-4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  89  
    → **unlocks:** 1/3
 
-5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  81  
    → **unlocks:** 1/2
 
-6. `fauna-004` — **Sheep wool cycle and shepherd**  
+5. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/2
 
-7. `settlements-npcs-006` — **Wool to material**  
+6. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-8. `quests-progression-015` — **Stable NPC identity for quests**  
+7. `quests-progression-015` — **Stable NPC identity for quests**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-9. `settlements-npcs-007` — **Bandages and herbal medicine**  
+8. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-10. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+9. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  45  
    → **unlocks:** 2/2
 
-11. `quests-progression-016` — **World-driven settlement quest opportunities**  
+10. `quests-progression-016` — **World-driven settlement quest opportunities**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-12. `settlements-npcs-022` — **Household help and age-based work participation**  
+11. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-025` — **Resource storage visualization**  
+12. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-14. `fauna-018` — **Persistent habitat occupants**  
-  🟡 `M` · **Score:**  37  
-   → **unlocks:** 1/1
-
-15. `items-player-014` — **Rope-pullable resource transport**  
+13. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+14. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `tools-005` — **Seedvale Character Preparation Panel**  
+15. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `quests-progression-017` — **RPG settlement quest matrices**  
+16. `quests-progression-017` — **RPG settlement quest matrices**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
@@ -158,7 +150,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`quests-progression-008-treasure-map-bear-cave.md`](quests-progression-008-treasure-map-bear-cave.md)  
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
-  - [`fauna-018-persistent-habitat-occupants.md`](fauna-018-persistent-habitat-occupants.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
 - [`quests-progression-016-world-driven-settlement-quest-opportunities.md`](quests-progression-016-world-driven-settlement-quest-opportunities.md)  
   is blocked by:
@@ -181,9 +172,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-npcs-017-production-demand-and-economic-pressures.md`](settlements-npcs-017-production-demand-and-economic-pressures.md)  
   is blocked by:
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)
-- [`settlements-npcs-019-persistent-and-off-screen-transport.md`](settlements-npcs-019-persistent-and-off-screen-transport.md)  
-  is blocked by:
-  - [`settlements-npcs-018-physical-goods-transport-foundation.md`](settlements-npcs-018-physical-goods-transport-foundation.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)

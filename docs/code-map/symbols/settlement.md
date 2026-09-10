@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 369
-- `CreateSettlementDeps` — type — line 246
-- `Settlement` — type — line 125
-- `settlementSpawnPoint` — function — line 234
+- `createSettlement` — function — line 375
+- `CreateSettlementDeps` — type — line 247
+- `Settlement` — type — line 126
+- `settlementSpawnPoint` — function — line 235
 
 ## `settlement/decorProps.ts`
 
@@ -224,7 +224,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/householdExchange.ts`
 
-- `createHouseholdExchangeHooks` — function — line 67
+- `createHouseholdExchangeHooks` — function — line 71
 - `HouseholdExchangeHooks` — type — line 55
 - `HouseholdSurplusCandidate` — type — line 12
 - `selectHouseholdSurplusSource` — function — line 30
@@ -647,13 +647,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 213
+- `createSettlementsManager` — function — line 214
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 83
+- `SettlementsManager` — type — line 84
 
 ## `settlement/settlementStructures.ts`
 

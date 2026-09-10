@@ -84,6 +84,7 @@ import { createResidentialBuildings, type ResidentialBuildings } from '../world/
 import { createSleepingUtilities, type SleepingUtilities } from '../world/createSleepingUtilities'
 import { createStandingTorches, type StandingTorches } from '../world/createStandingTorches'
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
+import { createTransportOrders, type TransportOrders } from '../world/createTransportOrders'
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -178,6 +179,10 @@ export type WorldBundle = {
   dryingRacks: DryingRacks
   hives: Beehives
   workContracts: WorkContracts
+  /** Runtime-only physical transport commitments (plan settlements-npcs-018).
+   *  Not persisted and not carried across rebuild — in-transit cargo lives
+   *  in transient `NpcAgent.carried`. */
+  transportOrders: TransportOrders
   /** Plan fauna-010 §3/§4 — world-owned deterministic grass forage patches,
    *  shared by wild herbivores (`fauna`) and settlement livestock alike. */
   grassForage: GrassForageService
@@ -311,6 +316,7 @@ function buildSettlementsManager(
    *  `hunting`, these are built *before* `SettlementsManager` (see
    *  `buildWorldSystems`), so they're passed directly rather than late-bound. */
   workContracts?: WorkContracts,
+  transportOrders?: TransportOrders,
   playerWells?: PlayerWells,
   droppedItems?: DroppedItems,
   /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
@@ -376,6 +382,7 @@ function buildSettlementsManager(
     initialStorageInfestation,
     seedHomeStorageInfestation,
     workContracts,
+    transportOrders,
     playerWells,
     droppedItems,
     grassForage,
@@ -919,6 +926,9 @@ async function buildWorldSystems(
     config.terrain.waterLevel,
   )
   const workContracts = createWorkContracts(scene, chunkManager.sampleHeight, initialWorkContracts)
+  // Runtime-only: 018 does not persist or carry in-transit orders because
+  // cargo still lives in transient `NpcAgent.carried` (see settlements-npcs-019).
+  const transportOrders = createTransportOrders()
   const terrainPreparations = createTerrainPreparations(
     scene,
     chunkManager,
@@ -954,7 +964,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -1033,6 +1043,7 @@ async function buildWorldSystems(
     dryingRacks: createEmptyDryingRacks(),
     hives: createEmptyBeehives(),
     workContracts,
+    transportOrders,
     grassForage,
     riverWaterQuality,
   }
@@ -1469,6 +1480,9 @@ export async function rebuildWorldBundle(
   // `terrainPreparations` above (plan npc-014).
   const carriedWorkContracts = resetCollectedItems ? [] : [...bundle.workContracts.nodes()]
   bundle.workContracts.dispose()
+  // In-transit cargo is still on transient `NpcAgent.carried` — do not keep
+  // orders across rebuild (plan settlements-npcs-018 explicit boundary).
+  bundle.transportOrders.dispose()
   const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
   // Households (plan 197 §8) and NPC authoritative state (plan 197 §7) get
   // the same same-seed-only carry contract as `carriedEconomies` above —
@@ -1577,6 +1591,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.dryingRacks.dispose()
   bundle.hives.dispose()
   bundle.workContracts.dispose()
+  bundle.transportOrders.dispose()
   bundle.resourceDeposits.dispose()
   bundle.grassForage.dispose()
   bundle.settlementsManager.dispose()

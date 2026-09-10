@@ -507,6 +507,13 @@ Generated from exported TypeScript symbols.
 - `TerrainPreparationEntry` — type — line 14
 - `TerrainPreparations` — type — line 16
 
+## `world/createTransportOrders.ts`
+
+- `CreateTransportOrderParams` — type — line 14
+- `createTransportOrders` — function — line 53
+- `TransportOrders` — type — line 34
+  - domain: settlements-npcs
+
 ## `world/createWater.ts`
 
 - `createChunkWater` — function — line 46
@@ -1286,6 +1293,29 @@ Generated from exported TypeScript symbols.
 - `TimeSkip` — type — line 25
 - `TimeSkipFadeStrength` — type — line 8
 - `TimeSkipTickResult` — type — line 10
+
+## `world/transportOrder.ts`
+
+- `assignTransportOrder` — function — line 100
+- `cancelTransportOrder` — function — line 152
+- `completeTransportDelivery` — function — line 129
+- `completeTransportPickup` — function — line 112
+- `createTransportOrderRecord` — function — line 79
+- `failTransportOrder` — function — line 145
+- `isTransportOrderActive` — function — line 75
+- `isTransportOrderTerminal` — function — line 71
+- `TransportEndpointRef` — type — line 34
+- `TransportOrder` — type — line 44
+- `TransportOrderState` — type — line 24
+  - domain: settlements-npcs
+
+## `world/transportTransactions.ts`
+
+- `executeTransportPickup` — function — line 48
+- `executeTransportUnload` — function — line 92
+- `transferInventoryItems` — function — line 19
+- `TransportPickupResult` — type — line 36
+- `TransportUnloadResult` — type — line 83
 
 ## `world/trapProp.ts`
 

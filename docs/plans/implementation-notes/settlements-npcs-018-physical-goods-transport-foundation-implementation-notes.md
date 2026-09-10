@@ -2,7 +2,7 @@
 
 **Plan:** `settlements-npcs-018-physical-goods-transport-foundation.md`  
 **Reviewed:** 2026-09-04  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## Review result
 
@@ -204,5 +204,13 @@ Nie budować teraz pełnego `NpcAgent` test harness wyłącznie dla tego planu �
 - `src/world/workContract.ts` + `src/world/createWorkContracts.ts` — precedent dla pure commitment + world-owned registry.
 - `src/settlement/npcState.ts` — krytyczna transient boundary dla `carried`.
 - `src/settlement/createSettlement.ts`, `src/settlement/SettlementsManager.ts`, `src/app/worldBundle.ts` — dependency/lifetime threading.
+
+## 16. What was built (2026-09-10)
+
+- Pure `TransportOrder` in `src/world/transportOrder.ts` with the first-slice endpoint union (`household` / `settlement-storage`), one concrete `ItemKind`, and central lifecycle guards (`pending` → `assigned` → `in-transit` → `completed`; pre-pickup `failed`/`cancelled`; no cancel/fail after pickup).
+- World-owned runtime registry `src/world/createTransportOrders.ts` — create/find/assign/pickup/delivery/fail/cancel plus `findByCarrier`. No tick. Threaded `WorldBundle → SettlementsManager → createSettlement → NpcAgent` the same way as `WorkContracts`. Explicitly **not** in `SaveData` and **not** carried across a `WorldBundle` rebuild.
+- Pickup/unload seam `src/world/transportTransactions.ts` — `transferInventoryItems` checks destination capacity before source removal and rolls back exact freshness batches; `executeTransportPickup`/`executeTransportUnload` mutate the order only after the inventory transfer succeeds.
+- Trader vertical slice: `planTraderCollection` in `src/ai/npcProfessionWork.ts` creates/resumes a `TransportOrder` for one deterministically chosen food `ItemKind` (`selectTraderCollectionGoods`). Source discovery stays on `HouseholdExchangeHooks.findSurplusSource`; `findById` resolves the household endpoint at pickup. Action closures hold only `order.id`. Own-household Trader → economy path is unchanged.
+- Debug: `seedvale.debug.transport(id)` / `transports()` on the existing console API.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

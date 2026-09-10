@@ -5,8 +5,10 @@ import type { HouseholdExchangeHooks } from '../settlement/householdExchange'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
+import type { TransportOrders } from '../world/createTransportOrders'
 import type { CropId } from '../world/cropLifecycle'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { TransportOrder } from '../world/transportOrder'
 import type { Role } from './characters'
 import type { NpcPlannedAction } from './npcAction'
 import {
@@ -15,7 +17,7 @@ import {
   type SettlementEconomy,
   tryAdvanceDevelopment,
 } from '../economy'
-import { carryFoodClaim, claimFoodItems, type FoodItemClaim } from '../items/foodItems'
+import { claimFoodItems, FOOD_ITEM_KINDS } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
@@ -30,6 +32,7 @@ import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/deposit
 import { type CultivationAnchor, resolveCultivationAnchor } from '../world/cultivationAnchor'
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { CROP_SEED_ITEM } from '../world/plantedCrops'
+import { executeTransportPickup, executeTransportUnload } from '../world/transportTransactions'
 import { depositCarriedItems, HOUSEHOLD_EXCHANGE_MAX_TRANSFER } from './npcLogistics'
 import type { Vector3 } from 'three'
 
@@ -116,6 +119,10 @@ export type NpcWorkContext = {
   mining: SettlementMiningHooks | null
   foodSources: SettlementFoodSourceHooks | null
   householdExchange: HouseholdExchangeHooks | null
+  npcId: string
+  /** World-owned transport commitments (plan settlements-npcs-018). Null in
+   *  isolated fallbacks — trader collection then cannot run. */
+  transportOrders: TransportOrders | null
   /** Already-resolved human Strength (`resolveHumanStrengthProfile()`), the
    *  same value melee uses — not raw base SPEA. Physical-work planners
    *  (currently ore mining) read this; generic `rollWorkDurationSec()` does
@@ -318,56 +325,135 @@ function planGuardPatrol(ctx: NpcWorkContext): NpcPlannedAction | null {
 }
 
 /**
- * Trader cross-household collection (plan settlements-npcs-014) — a
- * bounded, same-settlement pickup of *another* household's real food
- * surplus, physically carried to the settlement's storage. Reuses
- * `HouseholdExchangeHooks.findSurplusSource` — the same nearest-first,
- * id-tie-break lookup `npcLogistics.ts`'s household exchange already uses —
- * but never requires this settlement to already be short of food: the
- * plan's "Model" section wants the storage buffer stocked ahead of demand,
- * not only drained reactively after a shortage appears. Never selects this
- * trader's own household (`excludeHouseholdId`). Claim → carry → deposit,
- * same conservation invariant as `npcLogistics.ts`'s flows — this trader is
- * a consumer of that same local-goods-flow mechanism, not the owner of a
- * second one (plan §3).
+ * Deterministic first-slice cargo for a Trader `TransportOrder` — one
+ * concrete food `ItemKind` from live surplus, bounded to the existing
+ * household-exchange cap and whatever currently fits in `carrier`.
+ * Catalog order (`FOOD_ITEM_KINDS`), never `Math.random()`.
+ */
+export function selectTraderCollectionGoods(
+  household: Household,
+  carrier: Inventory,
+  maxTransfer = HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food,
+): { kind: ItemKind, quantity: number } | null {
+  const surplus = household.surplus('food')
+  if (surplus <= 0) return null
+  const cap = Math.min(surplus, maxTransfer)
+  for (const kind of FOOD_ITEM_KINDS) {
+    const available = household.items.count(kind)
+    if (available <= 0) continue
+    let quantity = Math.min(available, cap)
+    while (quantity > 0 && !carrier.canAdd(kind, quantity)) quantity -= 1
+    if (quantity > 0) return { kind, quantity }
+  }
+  return null
+}
+
+function planTransportOrderExecution(
+  ctx: NpcWorkContext,
+  economy: SettlementEconomy,
+  order: TransportOrder,
+): NpcPlannedAction | null {
+  const orders = ctx.transportOrders
+  const hooks = ctx.householdExchange
+  if (!orders || !ctx.npcId) return null
+  const unloadDestination = copyVec3(settlementStorageDestination(
+    'food',
+    ctx.landmarks.stockpile,
+    ctx.landmarks.settlementStorage,
+  ))
+  const unload: NpcPlannedAction = {
+    kind: 'deposit',
+    destination: unloadDestination,
+    durationSec: 0.8 * ctx.waitMultiplier,
+    onComplete: () => {
+      const current = orders.find(order.id)
+      if (!current || current.state !== 'in-transit') return
+      if (current.destination.type !== 'settlement-storage') return
+      if (economy.settlementId !== current.destination.settlementId) return
+      const result = executeTransportUnload({
+        orders,
+        orderId: order.id,
+        carrierNpcId: ctx.npcId,
+        carrier: ctx.carried,
+        destination: economy.items,
+        nowDays: ctx.simTime(),
+      })
+      if (result.ok) tryAdvanceDevelopment(economy)
+    },
+  }
+  if (order.state === 'in-transit') return unload
+  if (order.state !== 'assigned' || order.source.type !== 'household') return null
+  const source = hooks?.findById(order.source.householdId)
+  if (!source) {
+    orders.fail(order.id)
+    return null
+  }
+  return {
+    kind: 'work',
+    destination: copyVec3({
+      x: source.position.x,
+      y: ctx.sampleHeight(source.position.x, source.position.z),
+      z: source.position.z,
+    }),
+    durationSec: 1.2 * ctx.waitMultiplier,
+    onComplete: () => {
+      const current = orders.find(order.id)
+      if (!current || current.state !== 'assigned') return
+      if (current.source.type !== 'household') {
+        orders.fail(order.id)
+        return
+      }
+      const live = hooks?.findById(current.source.householdId)
+      if (!live) {
+        orders.fail(order.id)
+        return
+      }
+      executeTransportPickup({
+        orders,
+        orderId: order.id,
+        carrierNpcId: ctx.npcId,
+        carrier: ctx.carried,
+        source: live.household.items,
+        liveTransferableQuantity: Math.min(
+          live.household.items.count(current.itemKind),
+          live.household.surplus('food'),
+        ),
+        nowDays: ctx.simTime(),
+      })
+    },
+    next: unload,
+  }
+}
+
+/**
+ * Trader cross-household collection (plan settlements-npcs-014, migrated
+ * onto `TransportOrder` by settlements-npcs-018) — a bounded, same-settlement
+ * pickup of *another* household's real food surplus, physically carried to
+ * the settlement's storage. Source discovery stays on
+ * `HouseholdExchangeHooks.findSurplusSource`; the commitment itself is a
+ * world-owned order executed by this NPC's existing action chain. Temporary
+ * interruption resumes the same non-terminal order instead of creating a
+ * replacement.
  */
 function planTraderCollection(ctx: NpcWorkContext, household: Household, economy: SettlementEconomy): NpcPlannedAction | null {
   const hooks = ctx.householdExchange
-  if (!hooks) return null
+  const orders = ctx.transportOrders
+  if (!hooks || !orders || !ctx.npcId) return null
+  const existing = orders.findByCarrier(ctx.npcId)
+  if (existing) return planTransportOrderExecution(ctx, economy, existing)
   const source = hooks.findSurplusSource(household.id, 'food', ctx.home)
   if (!source) return null
-  const sourceHousehold = source.household
-  const requested = Math.min(sourceHousehold.surplus('food'), HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food)
-  if (requested <= 0) return null
-  const pickupDestination = copyVec3({
-    x: source.position.x,
-    y: ctx.sampleHeight(source.position.x, source.position.z),
-    z: source.position.z,
+  const goods = selectTraderCollectionGoods(source.household, ctx.carried)
+  if (!goods) return null
+  const order = orders.create({
+    source: { type: 'household', householdId: source.household.id },
+    destination: { type: 'settlement-storage', settlementId: economy.settlementId },
+    itemKind: goods.kind,
+    requestedQuantity: goods.quantity,
+    carrierNpcId: ctx.npcId,
   })
-  let carriedClaim: readonly FoodItemClaim[] = []
-  return {
-    kind: 'work',
-    destination: pickupDestination,
-    durationSec: 1.2 * ctx.waitMultiplier,
-    onComplete: () => {
-      const claimed = claimFoodItems(sourceHousehold.items, requested, ctx.simTime())
-      carriedClaim = carryFoodClaim(ctx.carried, claimed, sourceHousehold.items, ctx.simTime())
-    },
-    next: {
-      kind: 'deposit',
-      destination: copyVec3(settlementStorageDestination('food', ctx.landmarks.stockpile, ctx.landmarks.settlementStorage)),
-      durationSec: 0.8 * ctx.waitMultiplier,
-      onComplete: () => {
-        if (carriedClaim.length === 0) return
-        for (const claim of carriedClaim) {
-          const batches = ctx.carried.removeWithFreshness(claim.kind, claim.amount, ctx.simTime())
-          if (!batches) continue
-          economy.depositFood(claim.kind, claim.amount, ctx.simTime(), batches)
-        }
-        tryAdvanceDevelopment(economy)
-      },
-    },
-  }
+  if (!order) return null
+  return planTransportOrderExecution(ctx, economy, order)
 }
 
 /**

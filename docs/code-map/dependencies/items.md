@@ -161,6 +161,8 @@ Generated from TypeScript imports.
 - `ui-vue/npcDialogueOpen.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/transportTransactions.test.ts`
+- `world/transportTransactions.ts`
 - `world/worldGeneratedContainers.ts`
 
 ## `items/ItemSpawner.ts`
@@ -454,6 +456,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/dryingRacks.ts`
+- `world/transportTransactions.test.ts`
 - `world/worldGeneratedContainers.ts`
 
 ## `items/foodItems.test.ts`
@@ -860,6 +863,7 @@ Generated from TypeScript imports.
 - `world/containerProp.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`
+- `world/createTransportOrders.ts`
 - `world/cropLifecycle.ts`
 - `world/cropVisuals.ts`
 - `world/dryingRacks.ts`
@@ -870,6 +874,8 @@ Generated from TypeScript imports.
 - `world/plantedCrops.ts`
 - `world/residentialBuilding.test.ts`
 - `world/restCancel.test.ts`
+- `world/transportOrder.ts`
+- `world/transportTransactions.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
 - `world/worldGeneratedContainers.ts`

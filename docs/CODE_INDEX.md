@@ -75,6 +75,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Player well](../src/world/playerWell.ts) — player-built well construction, completed-roof condition/protection, and roof repair quotes/episodes.
 - [Residential buildings](../src/world/residentialBuilding.ts) — player-built house construction, ownership, and completed home identity; runtime collection in `createResidentialBuildings.ts`.
 - [World carts](../src/world/createCarts.ts) — movable draft-cart identity and one-way animal→cart hitch (plan fauna-007). Hitch pose in [cart.ts](../src/world/cart.ts).
+- [Transport orders](../src/world/transportOrder.ts) — world-owned physical goods transport commitment (plan settlements-npcs-018); registry in [createTransportOrders.ts](../src/world/createTransportOrders.ts). Runtime-only; cargo stays in existing inventories.
 - [Weather](../src/world/weather.ts) — deterministic season/weather and rain/snow exposure.
 
 ## UI wiring

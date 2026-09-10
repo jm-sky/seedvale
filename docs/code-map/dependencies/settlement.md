@@ -72,6 +72,7 @@ Generated from TypeScript imports.
 - `world/createResidentialBuildings.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
+- `world/createTransportOrders.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
@@ -229,6 +230,7 @@ Generated from TypeScript imports.
 - `world/createResidentialBuildings.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
+- `world/createTransportOrders.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
@@ -550,6 +552,7 @@ Generated from TypeScript imports.
 - `settlement/rats.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageVisuals.test.ts`
+- `world/transportOrder.ts`
 
 ## `settlement/householdExchange.test.ts`
 

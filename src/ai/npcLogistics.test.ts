@@ -159,6 +159,7 @@ describe('planHouseholdExchange', () => {
     const source = householdWithFood('source', 20)
     const householdExchange = {
       findSurplusSource: () => ({ household: source, position: { x: 3, y: 0, z: 4 } }),
+      findById: (id: string) => id === source.id ? { household: source, position: { x: 3, y: 0, z: 4 } } : null,
     }
     const ctx = baseCtx({ household: requester, householdExchange })
 
@@ -173,6 +174,7 @@ describe('planHouseholdExchange', () => {
     const source = createHousehold('source', 's', 'home:source', { stock: { wood: 10 }, water: 4 })
     const householdExchange = {
       findSurplusSource: () => ({ household: source, position: { x: 1, y: 0, z: 1 } }),
+      findById: (id: string) => id === source.id ? { household: source, position: { x: 1, y: 0, z: 1 } } : null,
     }
     const ctx = baseCtx({ household: requester, householdExchange })
 
@@ -188,6 +190,7 @@ describe('planHouseholdExchange', () => {
     source.items.remove('carrot', source.items.count('carrot'))
     const householdExchange = {
       findSurplusSource: () => null,
+      findById: () => null,
     }
     const ctx = baseCtx({ household: requester, householdExchange })
     expect(canExchangeWithHousehold(ctx, 'food')).toBe(false)

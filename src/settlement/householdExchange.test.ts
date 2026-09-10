@@ -65,4 +65,15 @@ describe('createHouseholdExchangeHooks', () => {
     expect(found?.household.id).toBe('source')
     expect(found?.position).toEqual({ x: 3, z: 4 })
   })
+
+  it('resolves a candidate by household id without scanning other settlements', () => {
+    const source = householdWithFood('source', 20)
+    const other = householdWithFood('other', 20)
+    const hooks = createHouseholdExchangeHooks([
+      { household: source, position: { x: 3, z: 4 } },
+      { household: other, position: { x: 8, z: 1 } },
+    ])
+    expect(hooks.findById('source')?.position).toEqual({ x: 3, z: 4 })
+    expect(hooks.findById('missing')).toBeNull()
+  })
 })

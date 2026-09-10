@@ -13,6 +13,7 @@ import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldLocation } from '../world/locations/worldLocationTypes'
+import type { TransportOrder } from '../world/transportOrder'
 import type { WorldContext } from '../world/worldContext'
 import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
@@ -216,6 +217,32 @@ export type PlayerDebugApi = {
   clearGroundTrace: () => void
 }
 
+export type TransportOrderDebugSnapshot = {
+  id: string
+  state: string
+  source: TransportOrder['source']
+  destination: TransportOrder['destination']
+  item: TransportOrder['itemKind']
+  requested: number
+  claimed: number
+  delivered: number
+  carrier: string | null
+}
+
+function transportOrderSnapshot(order: TransportOrder): TransportOrderDebugSnapshot {
+  return {
+    id: order.id,
+    state: order.state,
+    source: order.source,
+    destination: order.destination,
+    item: order.itemKind,
+    requested: order.requestedQuantity,
+    claimed: order.claimedQuantity,
+    delivered: order.deliveredQuantity,
+    carrier: order.carrierNpcId,
+  }
+}
+
 export type SeedvaleDebugApi = {
   player: PlayerDebugApi
   npc: (id: string) => NpcDebugHandle | null
@@ -233,6 +260,9 @@ export type SeedvaleDebugApi = {
    *  currently loaded (NPC-scope entries are then just absent, same as
    *  `village(id).npcs()`). `null` only for an unrecognized settlement id. */
   settlement: (id: string) => SettlementHistoryDebugHandle | null
+  /** Physical transport commitments (plan settlements-npcs-018) — runtime-only. */
+  transport: (id: string) => TransportOrderDebugSnapshot | null
+  transports: () => TransportOrderDebugSnapshot[]
   /** `setFrenzyWolf()` (plan 179 §3) — see `npcInspector.ts`'s doc. */
   setFrenzyWolf: () => FrenzyWolfDebugResult | string
   /** Resolves by id whether or not the village is currently loaded — `npcs()`
@@ -324,6 +354,7 @@ const HELP_TEXT = [
   'injury.npc(id) — physicalInjury, derived severity, SPEA modifiers, treatment eligibility',
   'injury.applyNpcInjury(id, "minor"|"serious"|"critical") / clearNpcInjury(id) — real damage/heal accounting',
   'injury.giveNpcBandage(id) — add a bandage so self-treatment is feasible',
+  'transport(id) / transports() — physical goods TransportOrder snapshot {id,state,source,destination,item,requested,claimed,delivered,carrier}',
   'spotAnimal(kind) — simulate spotting an animal for quest progression',
 ].join('\n')
 
@@ -566,6 +597,11 @@ export function installNpcDebugApi(
     skills: skillsDebug,
     conditions: conditionsDebug,
     injury: injuryDebug,
+    transport: (id) => {
+      const order = bundle.transportOrders.find(id)
+      return order ? transportOrderSnapshot(order) : null
+    },
+    transports: () => bundle.transportOrders.list().map(transportOrderSnapshot),
     spotAnimal: (kind) => {
       questManager.onInteractObjective({
         type: 'spot_animal',

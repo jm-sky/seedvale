@@ -6,8 +6,9 @@ import { createWeaponInstance } from '../items/weaponMaintenance'
 import { physicalWorkDuration } from '../player/physicalWorkStrength'
 import { createHousehold } from '../settlement/household'
 import { MINE_DURATION_SEC } from '../terrain/depositMining'
+import { createTransportOrders } from '../world/createTransportOrders'
 import { FISHING_CAST_DURATION_SEC } from '../world/fishing'
-import { BLACKSMITH_SHARPEN_THRESHOLD, findWeaponNeedingMaintenance, planProfessionWork } from './npcProfessionWork'
+import { BLACKSMITH_SHARPEN_THRESHOLD, findWeaponNeedingMaintenance, planProfessionWork, selectTraderCollectionGoods } from './npcProfessionWork'
 
 const HOME = { x: 0, y: 0, z: 0 }
 const WELL = { x: 10, y: 0, z: 0 }
@@ -48,6 +49,8 @@ function baseCtx(overrides: Partial<NpcWorkContext> = {}): NpcWorkContext {
     mining: null,
     foodSources: null,
     householdExchange: null,
+    npcId: 'npc:test',
+    transportOrders: null,
     strength: 0.5,
     ...overrides,
   }
@@ -283,17 +286,112 @@ describe('planProfessionWork', () => {
       sourceHousehold.depositFood('carrot', 10)
       const householdExchange = {
         findSurplusSource: () => ({ household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }),
+        findById: (id: string) => id === sourceHousehold.id
+          ? { household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }
+          : null,
       }
+      const transportOrders = createTransportOrders()
       const ctx = baseCtx({
         role: 'trader',
+        npcId: 'npc:trader',
         household,
         economy,
         workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
         householdExchange: householdExchange as unknown as NpcWorkContext['householdExchange'],
+        transportOrders,
       })
       const work = planProfessionWork(ctx)
       expect(work).not.toBeNull()
       expect(work?.kind).toBe('work')
+      const order = transportOrders.findByCarrier('npc:trader')
+      expect(order?.source).toEqual({ type: 'household', householdId: 'source' })
+      expect(order?.destination).toEqual({ type: 'settlement-storage', settlementId: 's' })
+      expect(order?.itemKind).toBe('carrot')
+      expect(order?.state).toBe('assigned')
+    })
+
+    it('physically collects one concrete food kind into settlement storage via TransportOrder', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      household.items.remove('bread', household.items.count('bread'))
+      const economy = createSettlementEconomy('s', {}, [])
+      const sourceHousehold = createHousehold('source', 's', 'home:source')
+      sourceHousehold.items.remove('bread', sourceHousehold.items.count('bread'))
+      sourceHousehold.depositFood('carrot', 10)
+      const sourceCount = sourceHousehold.items.count('carrot')
+      const householdExchange = {
+        findSurplusSource: () => ({ household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }),
+        findById: (id: string) => id === sourceHousehold.id
+          ? { household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }
+          : null,
+      }
+      const transportOrders = createTransportOrders()
+      const carried = new Inventory()
+      const ctx = baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        carried,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        householdExchange: householdExchange as unknown as NpcWorkContext['householdExchange'],
+        transportOrders,
+      })
+      const work = planProfessionWork(ctx)!
+      const before = sourceCount + carried.count('carrot') + economy.items.count('carrot')
+      work.onComplete?.()
+      const order = transportOrders.findByCarrier('npc:trader')
+      expect(order?.state).toBe('in-transit')
+      expect(sourceHousehold.items.count('carrot') + carried.count('carrot') + economy.items.count('carrot')).toBe(before)
+      work.next?.onComplete?.()
+      expect(transportOrders.find(order!.id)?.state).toBe('completed')
+      expect(carried.count('carrot')).toBe(0)
+      expect(economy.items.count('carrot')).toBe(order!.claimedQuantity)
+      expect(sourceHousehold.items.count('carrot') + carried.count('carrot') + economy.items.count('carrot')).toBe(before)
+    })
+
+    it('resumes an in-transit order without creating a replacement', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      household.items.remove('bread', household.items.count('bread'))
+      const economy = createSettlementEconomy('s', {}, [])
+      const sourceHousehold = createHousehold('source', 's', 'home:source')
+      sourceHousehold.items.remove('bread', sourceHousehold.items.count('bread'))
+      sourceHousehold.depositFood('carrot', 10)
+      const householdExchange = {
+        findSurplusSource: () => ({ household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }),
+        findById: (id: string) => id === sourceHousehold.id
+          ? { household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }
+          : null,
+      }
+      const transportOrders = createTransportOrders()
+      const ctx = baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        householdExchange: householdExchange as unknown as NpcWorkContext['householdExchange'],
+        transportOrders,
+      })
+      const first = planProfessionWork(ctx)!
+      first.onComplete?.()
+      const orderId = transportOrders.findByCarrier('npc:trader')!.id
+      const resumed = planProfessionWork(ctx)
+      expect(resumed?.kind).toBe('deposit')
+      expect(transportOrders.list()).toHaveLength(1)
+      expect(transportOrders.findByCarrier('npc:trader')?.id).toBe(orderId)
+    })
+
+    it('selects one concrete food kind deterministically from mixed surplus', () => {
+      const sourceHousehold = createHousehold('source', 's', 'home:source')
+      sourceHousehold.items.remove('bread', sourceHousehold.items.count('bread'))
+      sourceHousehold.depositFood('fish', 6)
+      sourceHousehold.depositFood('carrot', 6)
+      const picked = selectTraderCollectionGoods(sourceHousehold, new Inventory())
+      expect(picked).not.toBeNull()
+      expect(picked!.quantity).toBeGreaterThan(0)
+      expect(picked!.quantity).toBeLessThanOrEqual(3)
+      const again = selectTraderCollectionGoods(sourceHousehold, new Inventory())
+      expect(again).toEqual(picked)
     })
 
     it('returns null without a household, economy, or workplace', () => {

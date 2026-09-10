@@ -22,6 +22,7 @@ import type { PlayerWells } from '../world/createPlayerWells'
 import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
+import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -941,6 +942,8 @@ export type NpcAgentDeps = {
   helperDelivery?: HelperDeliveryHooks
   householdExchange?: HouseholdExchangeHooks
   workContracts?: WorkContracts | null
+  /** World-owned physical transport commitments (plan settlements-npcs-018). */
+  transportOrders?: TransportOrders | null
   playerWells?: PlayerWells | null
   /** Active terrain-preparation work sites (plan npc-018) — the second Work
    *  Contract target kind, alongside `playerWells`. */
@@ -1296,6 +1299,11 @@ export class NpcAgent {
    *  (`workContracts.findActiveWorkByNpc(this.id)`), never a second copy on
    *  `NpcAuthoritativeState`. Null in isolated fallbacks, same as `mining`. */
   private readonly workContracts: WorkContracts | null
+  /** World-owned transport commitments (plan settlements-npcs-018) — the
+   *  Trader collection flow executes a `TransportOrder` from this store,
+   *  never a second copy on the agent. Null in isolated fallbacks. Not
+   *  persisted in 018: `carried` cargo is still transient. */
+  private readonly transportOrders: TransportOrders | null
   /** Last player/observer XZ this tick — local reaction data only, never a
    *  global chase target (plan npc-016 §11). */
   private lastObserverX = 0
@@ -1409,6 +1417,7 @@ export class NpcAgent {
       helperDelivery,
       householdExchange,
       workContracts,
+      transportOrders,
       playerWells,
       terrainPreparations,
       palisades,
@@ -1454,6 +1463,7 @@ export class NpcAgent {
     this.physicalProfile = physicalProfile
     this.mining = mining
     this.workContracts = workContracts ?? null
+    this.transportOrders = transportOrders ?? null
     this.playerWells = playerWells ?? null
     this.terrainPreparations = terrainPreparations ?? null
     this.palisades = palisades ?? null
@@ -4103,6 +4113,8 @@ export class NpcAgent {
       mining: this.mining,
       foodSources: this.foodSources,
       householdExchange: this.householdExchange,
+      npcId: this.id,
+      transportOrders: this.transportOrders,
       strength: this.effectiveMeleeStrength(),
     }
   }

@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `fauna-018-persistent-habitat-occupants`                               | 2026-09-10 14:33:27 | —                   | `fauna`          | —          |
 | `fauna-007-animal-leading-and-cart-harness`                            | 2026-09-10 14:09:43 | —                   | `fauna`          | —          |
 | `npc-026-npc-grave-visits`                                             | 2026-09-10 14:07:34 | —                   | `npc`            | —          |
 | `quests-progression-014-quest-dialogue-actions-and-authored-dialogue-pass` | 2026-09-10 13:27:47 | —                   | `quests-progression` | —          |

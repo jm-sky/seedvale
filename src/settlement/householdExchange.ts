@@ -58,6 +58,10 @@ export type HouseholdExchangeHooks = {
     kind: HouseholdResourceKind,
     near: { x: number, z: number },
   ) => HouseholdSurplusCandidate | null
+  /** Stable-id lookup of a candidate already on this settlement's local
+   *  list — used to resolve a `TransportOrder` household endpoint back to
+   *  the live household and its home position. Not a world-wide scan. */
+  findById: (householdId: HouseholdId) => HouseholdSurplusCandidate | null
 }
 
 /** Built once per settlement in `createSettlement.ts` from its own
@@ -68,5 +72,6 @@ export function createHouseholdExchangeHooks(candidates: readonly HouseholdSurpl
   return {
     findSurplusSource: (excludeHouseholdId, kind, near) =>
       selectHouseholdSurplusSource(candidates, excludeHouseholdId, kind, near),
+    findById: (householdId) => candidates.find((candidate) => candidate.household.id === householdId) ?? null,
   }
 }

@@ -1,7 +1,8 @@
 # Plan: Physical Goods Transport Foundation
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified; browser/gameplay verification pending.
+**Implemented at:** 2026-09-10
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-014~~
 **Domain:** `settlements-npcs`

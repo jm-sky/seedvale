@@ -63,7 +63,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-016-world-driven-settlement-quest-opportunities.md`     | -       | 🔴 | M      | quests-progression-015 |
 | 💡 `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| 💡 `settlements-npcs-018-physical-goods-transport-foundation.md`               | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
 | ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | settlements-npcs-018 |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
@@ -96,6 +95,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `items-player-002-food-provenance-freshness-and-storage.md` | Świeżość w ekwipunku/skrzyni (0.5×), pieczenie/suszenie dziedziczy zużytą część shelf-life i gatunek, zepsute nie da się przetworzyć, save/load nie resetuje wieku |
 | `npc-006-shared-npc-animal-pathfinding.md` | NPC i zwierzęta poruszają się naturalnie, omijają przeszkody i nie zacinają się |
 | `settlements-npcs-014-local-goods-circulation.md` | Naturalny obieg dóbr: producent → handlarz → magazyn → gospodarstwo |
+| `settlements-npcs-018-physical-goods-transport-foundation.md` | Trader idzie do gospodarstwa z nadwyżką jedzenia, items znikają ze źródła i pojawiają się w carried, po dojściu do magazynu osady ładują się do SettlementEconomy, `debug.transport(id)` pokazuje `completed`; niedostępne źródło przed odbiorem nie mintuje dóbr i kończy order jako `failed`; przerwanie po pickup zostawia cargo u Tradera i wznawia ten sam `in-transit` order |
 | `npc-010-death-and-corpse-lifecycle.md` | Śmierć NPC: corpse zostaje w miejscu śmierci (nie w domu), loot loadoutu, decay w czasie, save/load bez duplikacji itemów, legacy martwy NPC bez sfabrykowanego corpse |
 | `npc-011-npc-burial-and-graves.md` | Członek household po śmierci kogoś z rodziny może dostać burial pressure, odebrać claim, dojść do corpse, wykonać pochówek i zostawić persistent grave + terminal corpse; brak fake NeedId; brak duplikacji grave po reload/rebuild; legacy dead bez corpse nie dostaje grave |
 | `npc-026-npc-grave-visits.md` | Żyjący członek rodziny okazjonalnie odwiedza persistent grave zmarłego; wizyta przegrywa z potrzebami/pogodą/snem, wygrywa z idle; cooldown per zmarły przeżywa save/load; brak fake NeedId i nearest-cemetery fallback |

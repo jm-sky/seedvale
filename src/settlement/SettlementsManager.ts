@@ -21,6 +21,7 @@ import type { PlayerWells } from '../world/createPlayerWells'
 import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
+import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -304,6 +305,10 @@ export async function createSettlementsManager(
    *  every `createSettlement` call the same way `mining`/`foodSources` are
    *  above. */
   workContracts?: WorkContracts,
+  /** World-owned physical transport commitments (plan settlements-npcs-018)
+   *  — forwarded into every `createSettlement` call the same way
+   *  `workContracts` is above. */
+  transportOrders?: TransportOrders,
   /** Player-built wells (plan 127/npc-015) — forwarded the same way. */
   playerWells?: PlayerWells,
   /** World-dropped items — forwarded the same way, for NPC construction
@@ -474,6 +479,7 @@ export async function createSettlementsManager(
     isLandPlotOwned,
     onAnimalDeath,
     workContracts,
+    transportOrders,
     playerWells,
     droppedItems,
     grassForage,

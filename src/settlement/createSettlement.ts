@@ -22,6 +22,7 @@ import type { PlayerWells } from '../world/createPlayerWells'
 import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
+import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -333,6 +334,11 @@ export type CreateSettlementDeps = {
    *  above. World-global (not settlement-scoped): an NPC resolves its own
    *  settlement's notice board from its own `household.settlementId`. */
   workContracts?: WorkContracts
+  /** World-owned physical transport commitments (plan settlements-npcs-018)
+   *  — forwarded into every `NpcAgent.create` call the same way as
+   *  `workContracts`. Runtime-only in 018: not persisted, not carried
+   *  across a `WorldBundle` rebuild. */
+  transportOrders?: TransportOrders
   /** Player-built wells (plan 127/npc-015) — the construction target NPC
    *  Work Contract execution advances, forwarded the same way. */
   playerWells?: PlayerWells
@@ -400,6 +406,7 @@ export async function createSettlement(
     ratPersistence,
     infestationState = () => NO_RAT_INFESTATION,
     workContracts,
+    transportOrders,
     playerWells,
     droppedItems,
     grassForage,
@@ -833,6 +840,7 @@ export async function createSettlement(
         helperDelivery,
         householdExchange,
         workContracts,
+        transportOrders,
         playerWells,
         droppedItems,
         terrainPreparations,

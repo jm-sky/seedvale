@@ -1252,6 +1252,32 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `world/createTerrainPreparations.test.ts`
 
+## `world/createTransportOrders.test.ts`
+
+**Imports**
+
+- `world/createTransportOrders.ts`
+- `world/transportOrder.ts`
+
+## `world/createTransportOrders.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `world/transportOrder.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
+- `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `world/createTransportOrders.test.ts`
+- `world/transportTransactions.test.ts`
+- `world/transportTransactions.ts`
+
 ## `world/createWater.ts`
 
 **Imports**
@@ -2641,6 +2667,49 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/modalState.ts`
+
+## `world/transportOrder.test.ts`
+
+**Imports**
+
+- `world/transportOrder.ts`
+
+## `world/transportOrder.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `settlement/household.ts`
+
+**Imported by**
+
+- `ai/npcProfessionWork.ts`
+- `debug/npcDebugApi.ts`
+- `world/createTransportOrders.test.ts`
+- `world/createTransportOrders.ts`
+- `world/transportOrder.test.ts`
+
+## `world/transportTransactions.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+- `world/createTransportOrders.ts`
+- `world/transportTransactions.ts`
+
+## `world/transportTransactions.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/items.ts`
+- `world/createTransportOrders.ts`
+
+**Imported by**
+
+- `ai/npcProfessionWork.ts`
+- `world/transportTransactions.test.ts`
 
 ## `world/trapProp.ts`
 
