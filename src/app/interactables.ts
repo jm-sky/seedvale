@@ -1,7 +1,7 @@
 import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { Fauna } from '../fauna/createFauna'
 import type { Interactable, WorldItemRef } from '../interaction/Interactable'
-import type { DroppedItems } from '../items/createDroppedItems'
+import type { DroppedItem, DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
 import type { PlacedTents } from '../items/createPlacedTents'
 import type { FoodBatch } from '../items/foodFreshness'
@@ -53,6 +53,7 @@ import {
 import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind, type WaterQuality } from '../world/WaterSource'
+import { resolveCampInteractionMembers } from './campRestSnapshot'
 import type { Vector3 } from 'three'
 
 /** How close (world units) the player must be to an interactable before it's
@@ -247,11 +248,86 @@ function corpseCandidate(
  *  (gated on `ITEM_CATALOG[kind].consumable`, the same flag the inventory
  *  screen's consume button uses — no separate quick-use item list). Plain
  *  pickup keeps the auto-`[E]`-prefixed short form used everywhere else. */
-function itemPromptLabel(kind: ItemKind): string {
+function itemPromptLabel(kind: ItemKind, quantity = 1): string {
   const label = ITEM_DEFS[kind].label
+  const quantityLabel = quantity > 1 ? `${label} ×${quantity}` : label
   const consumable = ITEM_CATALOG[kind].consumable
-  if (!consumable) return `Podnieś: ${label}`
+  if (!consumable || quantity > 1) return `Podnieś: ${quantityLabel}`
   return `[E] Podnieś: ${label} · [R] ${consumeVerbLabel(consumable.need)}`
+}
+
+/** XZ metres two plain dropped units of the same kind may sit apart and
+ *  still share one interaction target (plan items-player-022). */
+export const DROPPED_ITEM_GROUP_RADIUS = 1.5
+
+/**
+ * Groups nearby identical plain dropped records into one interaction
+ * candidate each. Records with `instance` or `foodBatch` stay individual.
+ * Membership and member order follow the source array so Tab identity does
+ * not flicker (plan items-player-022).
+ *
+ * @domain items-player
+ */
+export function groupDroppedItemCandidates(items: readonly DroppedItem[]): {
+  kind: ItemKind
+  x: number
+  z: number
+  memberIds: readonly string[]
+}[] {
+  const parent = items.map((_, i) => i)
+  const find = (i: number): number => {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]!]!
+      i = parent[i]!
+    }
+    return i
+  }
+  const union = (a: number, b: number): void => {
+    const pa = find(a)
+    const pb = find(b)
+    if (pa < pb) parent[pb] = pa
+    else if (pb < pa) parent[pa] = pb
+  }
+
+  const radiusSq = DROPPED_ITEM_GROUP_RADIUS * DROPPED_ITEM_GROUP_RADIUS
+  for (let i = 0; i < items.length; i++) {
+    const a = items[i]!
+    if (a.instance || a.foodBatch) continue
+    for (let j = i + 1; j < items.length; j++) {
+      const b = items[j]!
+      if (b.instance || b.foodBatch || a.kind !== b.kind) continue
+      const dx = a.x - b.x
+      const dz = a.z - b.z
+      if (dx * dx + dz * dz <= radiusSq) union(i, j)
+    }
+  }
+
+  const emitted = new Set<number>()
+  const groups: { kind: ItemKind, x: number, z: number, memberIds: readonly string[] }[] = []
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!
+    if (item.instance || item.foodBatch) {
+      groups.push({ kind: item.kind, x: item.x, z: item.z, memberIds: [item.id] })
+      continue
+    }
+    const root = find(i)
+    if (emitted.has(root)) continue
+    emitted.add(root)
+    const members: DroppedItem[] = []
+    for (let j = 0; j < items.length; j++) {
+      const candidate = items[j]!
+      if (candidate.instance || candidate.foodBatch) continue
+      if (find(j) === root) members.push(candidate)
+    }
+    const first = members[0]!
+    groups.push({
+      kind: first.kind,
+      x: first.x,
+      z: first.z,
+      memberIds: members.map((entry) => entry.id),
+    })
+  }
+  return groups
 }
 
 /** True if `(x, z)` is within `range` of `playerPos` (XZ plane, squared distance). */
@@ -432,17 +508,27 @@ export function buildInteractables(
     })
   }
 
+  const representedBedrolls = new Set<string>()
+  const representedPlatforms = new Set<string>()
+  const bedrollRecords = sleepingUtilities.bedrolls.list()
+  const platformRecords = sleepingUtilities.platforms.list()
   for (const tent of placedTents.list()) {
     if (!withinRange(tent.x, tent.z, playerPos, GAZE_RANGE)) continue
+    const members = resolveCampInteractionMembers(tent, bedrollRecords, platformRecords)
+    if (members.bedrollId) representedBedrolls.add(members.bedrollId)
+    if (members.platformId) representedPlatforms.add(members.platformId)
     list.push({
-      kind: 'tent',
+      kind: 'camp',
       position: { x: tent.x, z: tent.z },
       promptLabel: '[E] Odpocznij · [R] Zbadaj',
-      id: tent.id,
+      tentId: tent.id,
+      bedrollId: members.bedrollId,
+      platformId: members.platformId,
     })
   }
 
-  for (const bedroll of sleepingUtilities.bedrolls.list()) {
+  for (const bedroll of bedrollRecords) {
+    if (representedBedrolls.has(bedroll.id)) continue
     if (!withinRange(bedroll.x, bedroll.z, playerPos, GAZE_RANGE)) continue
     list.push({
       kind: 'bedroll',
@@ -452,7 +538,8 @@ export function buildInteractables(
     })
   }
 
-  for (const platform of sleepingUtilities.platforms.list()) {
+  for (const platform of platformRecords) {
+    if (representedPlatforms.has(platform.id)) continue
     if (!withinRange(platform.x, platform.z, playerPos, GAZE_RANGE)) continue
     list.push({
       kind: 'platform',
@@ -900,12 +987,17 @@ export function buildInteractables(
     })
   }
 
-  for (const item of droppedItems.nodes()) {
+  for (const group of groupDroppedItemCandidates(droppedItems.nodes())) {
     list.push({
       kind: 'item',
-      position: { x: item.x, z: item.z },
-      promptLabel: itemPromptLabel(item.kind),
-      item: { id: item.id, kind: item.kind, source: 'dropped' },
+      position: { x: group.x, z: group.z },
+      promptLabel: itemPromptLabel(group.kind, group.memberIds.length),
+      item: {
+        id: group.memberIds[0]!,
+        kind: group.kind,
+        source: 'dropped',
+        memberIds: group.memberIds,
+      },
     })
   }
 

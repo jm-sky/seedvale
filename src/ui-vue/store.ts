@@ -126,6 +126,14 @@ type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; relati
  *  materials/capability). `run` is the real domain callback (e.g.
  *  `workOnWell`); Vue never re-derives it from the interaction kind. */
 export type InteractionPanelAction = { label: string; enabled: boolean; reasonLabel: string; run: () => void }
+/** Optional structured rows in the shared flavor/interaction dialog (plan
+ *  items-player-022) — Vue only renders labels/values/tones. */
+export type FlavorDialogDetailRow = {
+  label: string
+  value: string
+  secondaryValue?: string
+  tone?: 'positive' | 'warning' | 'muted'
+}
 type FlavorDialogState = {
   open: boolean
   prompt: string | null
@@ -133,6 +141,7 @@ type FlavorDialogState = {
   progress: number | null
   name: string
   line: string
+  details: readonly FlavorDialogDetailRow[]
   /** Extra actions beyond the implicit Esc/E-close (plan `ui-input-002`) —
    *  empty for the plain flavor-text case, which renders exactly as before. */
   actions: readonly InteractionPanelAction[]
@@ -566,7 +575,7 @@ export const ui = reactive({
     saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], relation: () => 0 } as QuestLogState,
-  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [], onOpen: null, onClose: null } as FlavorDialogState,
+  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', details: [], actions: [], onOpen: null, onClose: null } as FlavorDialogState,
   quickActions: {
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
     hasPalisadeMaterial: false, hasTroughMaterial: false, hasBedrollMaterial: false, hasPlatformMaterial: false,
@@ -743,12 +752,18 @@ export function configureFlavorDialog(handlers: { onOpen?: () => void, onClose?:
   ui.flavorDialog.onOpen = handlers.onOpen ?? null
   ui.flavorDialog.onClose = handlers.onClose ?? null
 }
-export function openFlavorDialog(name: string, line: string, actions: readonly InteractionPanelAction[] = []): void {
+export function openFlavorDialog(
+  name: string,
+  line: string,
+  actions: readonly InteractionPanelAction[] = [],
+  details: readonly FlavorDialogDetailRow[] = [],
+): void {
   const wasOpen = ui.flavorDialog.open
   ui.flavorDialog.prompt = null
   ui.flavorDialog.progress = null
   ui.flavorDialog.name = name
   ui.flavorDialog.line = line
+  ui.flavorDialog.details = details
   ui.flavorDialog.actions = actions
   ui.flavorDialog.open = true
   if (!wasOpen) {

@@ -378,6 +378,7 @@ export type GameLoopDeps = {
   consumeItem?: (kind: ItemKind) => void
   startTentRest: (id: string) => void
   inspectTent: (id: string) => void
+  inspectCamp: (tentId: string) => void
   inspectBedroll: (id: string) => void
   inspectPlatform: (id: string) => void
   workOnCampRepair: (kind: CampRepairTargetKind, id: string) => void
@@ -580,7 +581,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, inspectBedroll, inspectPlatform, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
+    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, inspectCamp, inspectBedroll, inspectPlatform, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
     openWorldInspection, syncWorldInspection,
@@ -1496,6 +1497,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         } else if (altInteractPressed && !target.canLevel) {
           toast.show('Nie ma tu czego wyrównać.', 'error')
         }
+      } else if (target?.kind === 'camp') {
+        if (interactPressed) startTentRest(target.tentId)
+        if (altInteractPressed) inspectCamp(target.tentId)
       } else if (target?.kind === 'tent') {
         if (interactPressed) startTentRest(target.id)
         if (altInteractPressed) inspectTent(target.id)
@@ -1685,32 +1689,38 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {
         if (interactPressed || altInteractPressed) {
-          if (!inventory.canAdd(target.item.kind)) {
-            toast.show(inventoryFullToastText(inventory, target.item.kind), 'error')
-          } else {
-            const collected = collectItem(target.item, bundle.chunkManager, bundle.itemSpawners, bundle.droppedItems)
-            if (collected) {
-              // Plan 199 — a dropped instance-backed item carries its own
-              // durability/sharpness; only mint a fresh default instance when
-              // this pickup never had one (world-generated/spawner items).
-              const restoredInstance = collected.instance
-                ? Inventory.instancesFromJSON([collected.instance])[0] ?? null
-                : null
-              const acquiredInstance = restoredInstance ?? createAcquiredInstance(collected.kind)
-              if (acquiredInstance) inventory.addInstance(acquiredInstance)
-              else if (collected.foodBatch) inventory.addWithFreshness(collected.kind, 1, [collected.foodBatch], dayNight.elapsedDays)
-              else inventory.add(collected.kind, 1, dayNight.elapsedDays)
-              playInventoryPickUp(worldAudio.playOnce)
-              hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-              onInventoryChanged()
-              // `[R]` quick-action (plan 153): pickup → inventory → use in one
-              // keypress, reusing the same `consumeItem` flow the inventory
-              // screen's "Zjedz"/"Wypij" button calls — no separate quick-use
-              // system. Silently falls back to a plain pickup if the item
-              // isn't consumable (the `[R]` hint never showed for it).
-              if (altInteractPressed && ITEM_CATALOG[collected.kind].consumable) {
-                consumeItem?.(collected.kind)
-              }
+          const memberIds = target.item.memberIds && target.item.memberIds.length > 0
+            ? target.item.memberIds
+            : [target.item.id]
+          const grouped = memberIds.length > 1
+          let picked = 0
+          let lastKind: ItemKind | null = null
+          for (const id of memberIds) {
+            const ref = grouped
+              ? { id, kind: target.item.kind, source: 'dropped' as const }
+              : target.item
+            if (!inventory.canAdd(ref.kind)) {
+              if (picked === 0) toast.show(inventoryFullToastText(inventory, ref.kind), 'error')
+              break
+            }
+            const collected = collectItem(ref, bundle.chunkManager, bundle.itemSpawners, bundle.droppedItems)
+            if (!collected) continue
+            const restoredInstance = collected.instance
+              ? Inventory.instancesFromJSON([collected.instance])[0] ?? null
+              : null
+            const acquiredInstance = restoredInstance ?? createAcquiredInstance(collected.kind)
+            if (acquiredInstance) inventory.addInstance(acquiredInstance)
+            else if (collected.foodBatch) inventory.addWithFreshness(collected.kind, 1, [collected.foodBatch], dayNight.elapsedDays)
+            else inventory.add(collected.kind, 1, dayNight.elapsedDays)
+            picked += 1
+            lastKind = collected.kind
+          }
+          if (picked > 0) {
+            playInventoryPickUp(worldAudio.playOnce)
+            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+            onInventoryChanged()
+            if (!grouped && altInteractPressed && lastKind && ITEM_CATALOG[lastKind].consumable) {
+              consumeItem?.(lastKind)
             }
           }
         }
@@ -2304,6 +2314,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // `tickFire()` for exactly this reason (see its doc comment).
       for (const s of loaded) s.tickFire(worldDt)
       bundle.placedFires.update(worldDt)
+      bundle.standingTorches.resolveExpiry(dayNight.elapsedDays)
       // Same `worldDt` cadence as `placedFires` above — only lit standing
       // torches' flame/sparks actually tick (plan items-player-009 §5).
       bundle.standingTorches.update(worldDt)

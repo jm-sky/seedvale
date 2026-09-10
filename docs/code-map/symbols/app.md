@@ -107,10 +107,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 141
+- `createRestActions` — function — line 147
 - `LodgingChoiceAction` — type — line 59
 - `REST_IN_TOWN_RADIUS` — const — line 67
-- `RestActionDeps` — type — line 129
+- `RestActionDeps` — type — line 130
 - `RestActions` — type — line 73
 
 ## `app/actions/storageInfestationActions.ts`
@@ -186,13 +186,20 @@ Generated from exported TypeScript symbols.
 
 ## `app/campRestSnapshot.ts`
 
+- `CampInspectionDetailRow` — type — line 152
+  - domain: items-player
+- `campInspectionRepairTargets` — function — line 229
 - `CampRestSnapshot` — type — line 34
   - domain: items-player
 - `CampRestSnapshotInput` — type — line 48
 - `CampSnapshotFire` — type — line 20
 - `findNearestPlayerFire` — function — line 84
-- `formatCampInspectionDescription` — function — line 171
-- `resolveCampRestSnapshot` — function — line 129
+- `formatCampInspectionDescription` — function — line 289
+- `formatCampInspectionDetails` — function — line 173
+  - domain: items-player
+- `resolveCampInteractionMembers` — function — line 130
+  - domain: items-player
+- `resolveCampRestSnapshot` — function — line 247
   - domain: items-player
 
 ## `app/createApp.ts`
@@ -207,12 +214,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 573
+- `createGameLoop` — function — line 574
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 541
+- `GameLoop` — type — line 542
 - `GameLoopDeps` — type — line 276
 
 ## `app/graphicsSettings.ts`
@@ -252,18 +259,21 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1014
-- `buildDigTarget` — function — line 961
-- `buildInteractables` — function — line 335
-- `collectItem` — function — line 1061
-- `COMBAT_TARGET_CONE_DOT` — const — line 91
-- `COMBAT_TARGET_RANGE` — const — line 76
-- `CombatAimMode` — type — line 81
-- `DIG_REACH` — const — line 70
-- `GAZE_RANGE` — const — line 66
-- `INTERACT_MIN_DOT` — const — line 63
-- `INTERACT_RANGE` — const — line 60
-- `resolveHaySpot` — function — line 271
+- `buildCombatTarget` — function — line 1106
+- `buildDigTarget` — function — line 1053
+- `buildInteractables` — function — line 411
+- `collectItem` — function — line 1153
+- `COMBAT_TARGET_CONE_DOT` — const — line 92
+- `COMBAT_TARGET_RANGE` — const — line 77
+- `CombatAimMode` — type — line 82
+- `DIG_REACH` — const — line 71
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 261
+- `GAZE_RANGE` — const — line 67
+- `groupDroppedItemCandidates` — function — line 271
+  - domain: items-player
+- `INTERACT_MIN_DOT` — const — line 64
+- `INTERACT_RANGE` — const — line 61
+- `resolveHaySpot` — function — line 347
 
 ## `app/inventoryWiring.ts`
 

@@ -57,6 +57,7 @@ function formatTrapInspection(trap: PlacedTrapRecord): { title: string, line: st
 }
 
 function campRepairTarget(target: Interactable): { kind: CampRepairTargetKind, id: string } | null {
+  if (target.kind === 'camp') return { kind: 'tent', id: target.tentId }
   if (target.kind === 'tent' || target.kind === 'bedroll' || target.kind === 'platform') {
     return { kind: target.kind, id: target.id }
   }

@@ -40,8 +40,8 @@ _No qualifying plans._
 
 ### Polish
 
-1. `items-player-022` — **Gameplay interaction usability polish**  
-   🟡 `M` · ✅ ready · unlocks 0/0
+1. `ui-input-015` — **Interaction Targeting and Action Semantics**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -118,11 +118,11 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-12. `items-player-014` — **Rope-pullable resource transport**  
-  🟡 `M` · **Score:**  27  
+12. `ui-input-015` — **Interaction Targeting and Action Semantics**  
+  🔴 `M` · **Score:**  39  
    → **unlocks:** 0/0
 
-13. `items-player-022` — **Gameplay interaction usability polish**  
+13. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
@@ -361,6 +361,7 @@ graph TD
   ui_input_012["ui-input-012 — Placement preview shapes, rotation and coverage"]
   ui_input_013["ui-input-013 — Character stats"]
   ui_input_014["ui-input-014 — Construction Status, Inspection and Context Actions"]
+  ui_input_015["ui-input-015 — Interaction Targeting and Action Semantics"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
@@ -588,6 +589,7 @@ graph TD
   ui_input_006 --> world_016
   ui_input_010 --> items_player_018
   ui_input_012 --> items_player_022
+  ui_input_014 --> ui_input_015
   world_006 --> world_016
   world_007 --> quests_progression_011
   world_008 --> items_player_009

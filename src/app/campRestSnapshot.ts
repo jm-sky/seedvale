@@ -120,6 +120,124 @@ export function findNearestPlayerFire(
 }
 
 /**
+ * Spatial membership of sleeping utilities around a tent, using the same
+ * radii and nearest-selection as `resolveCampRestSnapshot` without reading
+ * condition, weather or quality. Used by the per-frame interaction list so
+ * tent + bedroll + platform become one camp target (plan items-player-022).
+ *
+ * @domain items-player
+ */
+export function resolveCampInteractionMembers(
+  tent: { id: string, x: number, z: number },
+  bedrolls: readonly { id: string, x: number, z: number }[],
+  platforms: readonly { id: string, x: number, z: number }[],
+): { tentId: string, bedrollId: string | null, platformId: string | null } {
+  const bedroll = findNearestSleepingUtility(bedrolls, tent.x, tent.z, BEDROLL_REST_RADIUS)
+  const platform = bedroll
+    ? findNearestSleepingUtility(platforms, bedroll.x, bedroll.z, BEDROLL_ON_PLATFORM_RADIUS)
+    : null
+  return {
+    tentId: tent.id,
+    bedrollId: bedroll?.id ?? null,
+    platformId: platform?.id ?? null,
+  }
+}
+
+/**
+ * Reusable structured rows for camp inspection (plan items-player-022).
+ * Values and tones are already resolved — Vue only renders them.
+ *
+ * @domain items-player
+ */
+export type CampInspectionDetailRow = {
+  label: string
+  value: string
+  secondaryValue?: string
+  tone?: 'positive' | 'warning' | 'muted'
+}
+
+function contributionDisplay(value: number): { text: string, positive: boolean } {
+  const pct = Math.round(value * 100)
+  if (pct > 0) return { text: `+${pct}%`, positive: true }
+  if (pct < 0) return { text: `${pct}%`, positive: false }
+  return { text: '', positive: false }
+}
+
+/**
+ * Presentation rows derived from a freshly resolved `CampRestSnapshot`.
+ * Detected components always appear; contribution percentages come from
+ * `snapshot.explanation` and are never recomputed here.
+ *
+ * @domain items-player
+ */
+export function formatCampInspectionDetails(snapshot: CampRestSnapshot): CampInspectionDetailRow[] {
+  const byKey = new Map(snapshot.explanation.lines.map((line) => [line.key, line]))
+  const rows: CampInspectionDetailRow[] = []
+
+  const pushObject = (
+    present: boolean,
+    key: 'tent' | 'bedroll' | 'platform',
+    label: string,
+    condition: number,
+  ): void => {
+    if (!present) return
+    const line = byKey.get(key)
+    const contrib = line ? contributionDisplay(line.value) : { text: '', positive: false }
+    rows.push({
+      label,
+      value: `stan ${Math.round(condition)}%`,
+      secondaryValue: contrib.text || undefined,
+      tone: contrib.positive ? 'positive' : condition < 40 ? 'warning' : undefined,
+    })
+  }
+
+  pushObject(snapshot.tent != null, 'tent', 'Namiot', snapshot.tentCondition)
+  pushObject(snapshot.bedroll != null, 'bedroll', 'Posłanie', snapshot.bedrollCondition)
+  pushObject(snapshot.platform != null, 'platform', 'Platforma', snapshot.platformCondition)
+
+  if (snapshot.fire) {
+    const line = byKey.get('fire')
+    const contrib = line ? contributionDisplay(line.value) : { text: '', positive: false }
+    rows.push({
+      label: 'Ognisko',
+      value: snapshot.fire.lit ? 'rozpalone' : 'zgaszone',
+      secondaryValue: contrib.text || undefined,
+      tone: contrib.positive ? 'positive' : snapshot.fire.lit ? undefined : 'muted',
+    })
+  }
+
+  const survival = byKey.get('survival')
+  if (survival) {
+    const contrib = contributionDisplay(survival.value)
+    rows.push({
+      label: 'Survival',
+      value: '',
+      secondaryValue: contrib.text || undefined,
+      tone: contrib.positive ? 'positive' : undefined,
+    })
+  }
+
+  rows.push({
+    label: 'Komfort',
+    value: `${Math.round(snapshot.explanation.quality * 100)}%`,
+  })
+  return rows
+}
+
+/** Component ids a composed camp inspection may offer repair for — only
+ *  records actually present on the freshly resolved snapshot. */
+export function campInspectionRepairTargets(snapshot: CampRestSnapshot): {
+  kind: 'tent' | 'bedroll' | 'platform'
+  id: string
+}[] {
+  const targets: { kind: 'tent' | 'bedroll' | 'platform', id: string }[] = []
+  if (snapshot.tent) targets.push({ kind: 'tent', id: snapshot.tent.id })
+  if (snapshot.bedroll) targets.push({ kind: 'bedroll', id: snapshot.bedroll.id })
+  if (snapshot.platform) targets.push({ kind: 'platform', id: snapshot.platform.id })
+  return targets
+}
+
+/**
  * Spatial camp lookup + condition reads for one explicit anchor. Does not
  * read the camera or `player.mesh`. Quality comes from `campRest.ts` — the
  * same path sleep uses.

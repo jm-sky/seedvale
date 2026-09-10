@@ -5,7 +5,9 @@ import { placeOnGround } from '../settlement/props'
 import { createNullPointLightBudget, type PointLightBudget } from './pointLightBudget'
 import {
   isStandingTorchConstructionComplete,
+  resolveStandingTorchBurnState,
   STANDING_TORCH_REQUIRED_WORK,
+  standingTorchBurnUntilDays,
   type StandingTorchRecord,
   standingTorchRemainingWork,
 } from './standingTorch'
@@ -37,12 +39,17 @@ export type StandingTorches = {
    *  §16) — same shape as `Palisades.contributeWork`/
    *  `TerrainPreparations.contributeWork`. `null` if `id` is unknown. */
   contributeWork: (id: string, workAmount: number) => { acceptedWork: number, completed: boolean } | null
-  /** Flips `id`'s authoritative `lit` to true and updates its runtime flame/
-   *  light — false (no-op) if `id` is unknown, already lit, or construction
-   *  isn't finished yet (plan items-player-017 §11: an unfinished torch must
-   *  never function as a light source), so a repeated `Ignite` never creates
-   *  duplicate flame/light resources. */
-  ignite: (id: string) => boolean
+  /** Flips `id`'s authoritative `lit` to true, stamps `burnUntilDays` from
+   *  `nowDays`, and updates its runtime flame/light — false (no-op) if `id`
+   *  is unknown, already lit, or construction isn't finished yet (plan
+   *  items-player-017 §11: an unfinished torch must never function as a
+   *  light source), so a repeated `Ignite` never creates duplicate
+   *  flame/light resources. */
+  ignite: (id: string, nowDays: number) => boolean
+  /** World-time burn expiry (plan items-player-022) — flips expired lit
+   *  torches to unlit, clears their deadline, and drops them from `active`.
+   *  Call from the game/world update path with `dayNight.elapsedDays`. */
+  resolveExpiry: (nowDays: number) => void
   /** Per-frame flame/sparks tick — only iterates torches actually lit, never
    *  every torch regardless of state. */
   update: (dt: number) => void
@@ -66,26 +73,27 @@ export function createStandingTorches(
   sampleHeight: HeightSampler,
   initial: readonly StandingTorchRecord[] = [],
   pointLightBudget: PointLightBudget = createNullPointLightBudget(),
+  nowDays = 0,
 ): StandingTorches {
   const entries: StandingTorchEntry[] = []
   /** Torches with an active flame/sparks runtime — `update()` iterates only
-   *  this, never the full `entries` array (plan §6). Only ever grows: this
-   *  plan has no extinguish. */
+   *  this, never the full `entries` array (plan §6). */
   const active: StandingTorchEntry[] = []
 
   void preloadStandingTorchTemplate()
 
   const spawn = (record: StandingTorchRecord): StandingTorchEntry => {
+    const burn = resolveStandingTorchBurnState(record, nowDays)
     const torch = createStandingTorchVisual()
     torch.object.rotation.y = record.yaw
     placeOnGround(torch.object, record.x, record.z, sampleHeight)
     torch.object.scale.y = standingTorchVisualScaleY(record)
     scene.add(torch.object)
     pointLightBudget.registerSubtree(torch.object)
-    torch.setLit(record.lit)
-    const entry: StandingTorchEntry = { ...record, torch }
+    torch.setLit(burn.lit)
+    const entry: StandingTorchEntry = { ...record, lit: burn.lit, burnUntilDays: burn.burnUntilDays, torch }
     entries.push(entry)
-    if (record.lit) active.push(entry)
+    if (entry.lit) active.push(entry)
     return entry
   }
 
@@ -99,8 +107,17 @@ export function createStandingTorches(
     z: entry.z,
     yaw: entry.yaw,
     lit: entry.lit,
+    burnUntilDays: entry.burnUntilDays,
     completedWork: entry.completedWork,
   })
+
+  const extinguish = (entry: StandingTorchEntry): void => {
+    entry.lit = false
+    entry.burnUntilDays = null
+    entry.torch.setLit(false)
+    const index = active.indexOf(entry)
+    if (index >= 0) active.splice(index, 1)
+  }
 
   return {
     list: () => entries,
@@ -112,6 +129,7 @@ export function createStandingTorches(
         z,
         yaw,
         lit: false,
+        burnUntilDays: null,
         completedWork: 0,
       }
       spawn(record)
@@ -127,13 +145,21 @@ export function createStandingTorches(
       }
       return { acceptedWork, completed: isStandingTorchConstructionComplete(entry) }
     },
-    ignite(id) {
+    ignite(id, now) {
       const entry = find(id)
       if (!entry || entry.lit || !isStandingTorchConstructionComplete(entry)) return false
       entry.lit = true
+      entry.burnUntilDays = standingTorchBurnUntilDays(now)
       entry.torch.setLit(true)
-      active.push(entry)
+      if (!active.includes(entry)) active.push(entry)
       return true
+    },
+    resolveExpiry(now) {
+      for (let i = active.length - 1; i >= 0; i--) {
+        const entry = active[i]!
+        const burn = resolveStandingTorchBurnState(entry, now)
+        if (!burn.lit) extinguish(entry)
+      }
     },
     update(dt) {
       for (const entry of active) entry.torch.update(dt)

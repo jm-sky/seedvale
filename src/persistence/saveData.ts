@@ -380,13 +380,23 @@ export type SavePlantedCrop = {
 }
 
 /** Persistent player-built standing torch — mirrors `world/standingTorch.ts`'s
- *  `StandingTorchRecord`. `lit` is the only authoritative ignition state; the
- *  runtime flame/light is always re-derived from it on load, never saved
- *  directly (plan items-player-009). `completedWork` is the construction-
- *  progress field added by plan items-player-017 — a pre-plan save has no
- *  such field at all, so the v5→v6 migration defaults it to
- *  `STANDING_TORCH_REQUIRED_WORK` (already complete), never to 0. */
-export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number, lit: boolean, completedWork: number }
+ *  `StandingTorchRecord`. `lit` plus `burnUntilDays` are the authoritative
+ *  ignition state (plan items-player-022); the runtime flame/light is always
+ *  re-derived from them on load, never saved directly. `completedWork` is the
+ *  construction-progress field added by plan items-player-017 — a pre-plan
+ *  save has no such field at all, so the v5→v6 migration defaults it to
+ *  `STANDING_TORCH_REQUIRED_WORK` (already complete), never to 0. Legacy lit
+ *  torches without a deadline become unlit in v27→v28. */
+export type SaveStandingTorch = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  lit: boolean
+  /** World-day burn deadline while lit; `null` when unlit (plan items-player-022). */
+  burnUntilDays: number | null
+  completedWork: number
+}
 
 /** Persistent player-built palisade segment — mirrors `world/palisade.ts`'s
  *  `PalisadeSegmentRecord`. Each segment round-trips independently; no
@@ -564,7 +574,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 27
+export const CURRENT_SAVE_VERSION = 28
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1371,6 +1381,7 @@ function isStandingTorchesField(value: unknown): value is SaveStandingTorch[] {
       typeof t.z === 'number' &&
       typeof t.yaw === 'number' &&
       typeof t.lit === 'boolean' &&
+      (t.burnUntilDays === null || typeof t.burnUntilDays === 'number') &&
       typeof t.completedWork === 'number'
     )
   })
@@ -2734,6 +2745,25 @@ function migrateSaveV26ToV27(data: unknown): unknown {
   }
 }
 
+/** v27 → v28 (plan items-player-022): standing-torch world-time burn
+ *  deadline. A pre-plan lit torch has no ignition timestamp, so it becomes
+ *  unlit rather than immortal or granted a fresh six hours. */
+function migrateSaveV27ToV28(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const standingTorches = Array.isArray(v.standingTorches) ? v.standingTorches : []
+  return {
+    ...v,
+    version: 28,
+    standingTorches: standingTorches.map((entry) => {
+      const t = entry as Record<string, unknown>
+      if (typeof t.burnUntilDays === 'number' && Number.isFinite(t.burnUntilDays)) {
+        return { ...t, burnUntilDays: t.burnUntilDays }
+      }
+      return { ...t, lit: false, burnUntilDays: null }
+    }),
+  }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2775,6 +2805,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   24: migrateSaveV24ToV25,
   25: migrateSaveV25ToV26,
   26: migrateSaveV26ToV27,
+  27: migrateSaveV27ToV28,
 }
 
 function detectStoredVersion(value: unknown): number | null {

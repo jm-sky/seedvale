@@ -4,6 +4,7 @@ import {
   configureFlavorDialog,
   isFlavorDialogOpen,
   openFlavorDialog,
+  ui,
 } from './store'
 
 describe('FlavorDialog lifecycle', () => {
@@ -48,6 +49,17 @@ describe('FlavorDialog lifecycle', () => {
     expect(onOpen).toHaveBeenCalledTimes(2)
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(isFlavorDialogOpen()).toBe(true)
+  })
+
+  it('stores optional structured detail rows without requiring them from existing callers', () => {
+    openFlavorDialog('Obóz', '', [], [
+      { label: 'Namiot', value: 'stan 100%', secondaryValue: '+5%', tone: 'positive' },
+    ])
+    expect(ui.flavorDialog.details).toEqual([
+      { label: 'Namiot', value: 'stan 100%', secondaryValue: '+5%', tone: 'positive' },
+    ])
+    openFlavorDialog('Title', 'Line')
+    expect(ui.flavorDialog.details).toEqual([])
   })
 })
 

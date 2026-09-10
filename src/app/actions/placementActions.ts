@@ -1083,7 +1083,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`, 'error')
       return
     }
-    if (bundle.standingTorches.ignite(id)) toast.show('Zapalono pochodnię.')
+    if (bundle.standingTorches.ignite(id, dayNight.elapsedDays)) toast.show('Zapalono pochodnię.')
   }
 
   /** Runs one active-work bout on an unfinished standing torch (plan

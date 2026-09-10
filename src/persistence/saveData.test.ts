@@ -100,7 +100,7 @@ const validSave: SaveData = {
     id: 'garden:1', x: 7, z: 8, yaw: 0.4, care: 82, lastMaintainedAtDays: 3.5,
     hydration: 60, lastHydrationUpdateAtDays: 3.5, droughtStressDays: 0,
   }],
-  standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true, completedWork: 1 }],
+  standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true, completedWork: 1, burnUntilDays: 2.25 }],
   playerTroughs: [],
   palisades: [{ id: 'palisade:1', x: 11, z: -2, yaw: 0.4, completedWork: 1.5 }],
   residentialBuildings: [],
@@ -1204,6 +1204,19 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(result.data.persistentHabitatOccupants).toEqual([])
     expect(result.data.removedPersistentOccupantSlots).toEqual([])
+  })
+
+  it('migrates a v27 lit standing torch without a burn deadline to unlit (plan items-player-022)', () => {
+    const { burnUntilDays: _deadline, ...legacyTorch } = validSave.standingTorches[0]!
+    const result = loadStoredSave({
+      ...validSave,
+      version: 27,
+      standingTorches: [{ ...legacyTorch, lit: true }],
+    })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.standingTorches).toEqual([{ ...legacyTorch, lit: false, burnUntilDays: null }])
   })
 
   it('accepts a persistent habitat occupant record and rejects a malformed one (plan fauna-018)', () => {

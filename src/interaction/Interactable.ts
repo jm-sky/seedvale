@@ -18,6 +18,10 @@ export type WorldItemRef = {
   id: string
   kind: ItemKind
   source: 'world' | 'spawner' | 'dropped'
+  /** Concrete dropped-item ids in a nearby identical cluster (plan
+   *  items-player-022). Absent for ungrouped pickups. Order is the source
+   *  array order; `id` is always `memberIds[0]`. */
+  memberIds?: readonly string[]
 }
 
 /** A thin, per-frame adapter over the game's otherwise-incompatible world-object
@@ -84,6 +88,17 @@ export type Interactable =
    *  `profile` non-null → `[E]` dig; `canLevel` → `[R]` level. */
   | { kind: 'dig', position: { x: number, z: number }, promptLabel: string, profile: DigProfile | null, canLevel: boolean }
   | { kind: 'tent', position: { x: number, z: number }, promptLabel: string, id: string }
+  /** Derived tent + matching bedroll/platform (plan items-player-022) —
+   *  one Tab/gaze target for a spatially composed camp. Component ids are
+   *  only for dispatch; inspection re-resolves the live snapshot. */
+  | {
+    kind: 'camp'
+    position: { x: number, z: number }
+    promptLabel: string
+    tentId: string
+    bedrollId: string | null
+    platformId: string | null
+  }
   | { kind: 'bedroll', position: { x: number, z: number }, promptLabel: string, id: string }
   | { kind: 'platform', position: { x: number, z: number }, promptLabel: string, id: string }
   /** Settlement hay bale (plan 168 follow-up) — `[E]` sleeps in it directly,

@@ -1204,6 +1204,13 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `world/createStandingTorches.test.ts`
+
+**Imports**
+
+- `world/createStandingTorches.ts`
+- `world/standingTorch.ts`
+
 ## `world/createStandingTorches.ts`
 
 **Imports**
@@ -1223,6 +1230,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `world/createStandingTorches.test.ts`
 
 ## `world/createTerrainPreparations.test.ts`
 
@@ -2147,12 +2155,20 @@ Generated from TypeScript imports.
 - `world/treeLifecycle.ts`
 - `world/wellGroundwater.ts`
 
+## `world/placementPreview.test.ts`
+
+**Imports**
+
+- `world/placementPreview.ts`
+- `world/residentialBuilding.ts`
+
 ## `world/placementPreview.ts`
 
 **Imported by**
 
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
+- `world/placementPreview.test.ts`
 
 ## `world/plantedCrops.test.ts`
 
@@ -2384,6 +2400,7 @@ Generated from TypeScript imports.
 - `settlement/lodgingResolver.ts`
 - `world/createResidentialBuildings.test.ts`
 - `world/createResidentialBuildings.ts`
+- `world/placementPreview.test.ts`
 - `world/residentialBuilding.test.ts`
 - `world/residentialBuildingProp.ts`
 
@@ -2607,6 +2624,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `persistence/saveData.test.ts`
 - `persistence/saveData.ts`
+- `world/createStandingTorches.test.ts`
 - `world/createStandingTorches.ts`
 - `world/standingTorch.test.ts`
 

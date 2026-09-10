@@ -177,6 +177,26 @@ describe('targeted Repair on camp objects (plan items-player-019)', () => {
     expect(executeTargetedSkillAction('repair', tentTarget(), ctx)).toEqual({ ok: false, reason: 'unavailable' })
     expect(started).toEqual([])
   })
+
+  it('routes a composed camp target to the tent repair id (plan items-player-022)', () => {
+    const started: string[] = []
+    const camp: Extract<Interactable, { kind: 'camp' }> = {
+      kind: 'camp',
+      position: { x: 0, z: 0 },
+      promptLabel: '[E] Odpocznij · [R] Zbadaj',
+      tentId: 'tent-1',
+      bedrollId: 'bed-1',
+      platformId: 'plat-1',
+    }
+    const ctx: TargetedSkillQueryContext = {
+      getTrap: () => null,
+      campRepairAvailable: (kind, id) => kind === 'tent' && id === 'tent-1' ? { mode: 'start' } : null,
+      startCampRepair: (kind, id) => { started.push(`${kind}:${id}`) },
+    }
+    expect(queryTargetedSkillAction('repair', camp, ctx)?.targetId).toBe('tent-1')
+    expect(executeTargetedSkillAction('repair', camp, ctx)).toEqual({ ok: true, started: true })
+    expect(started).toEqual(['tent:tent-1'])
+  })
 })
 
 describe('actionable player skills (plan ui-input-013)', () => {

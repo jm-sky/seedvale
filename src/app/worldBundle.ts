@@ -936,7 +936,7 @@ async function buildWorldSystems(
     initialTerrainPreparations,
     initialCompletedTerrainPreparations,
   )
-  const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget)
+  const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget, getWorldDays())
   const playerTroughs = createPlayerTroughs(scene, chunkManager.sampleHeight, initialPlayerTroughs)
   const palisades = createPalisades(
     scene,

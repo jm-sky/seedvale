@@ -496,10 +496,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createStandingTorches.ts`
 
-- `createStandingTorches` — function — line 64
+- `createStandingTorches` — function — line 71
   - domain: items-player
-- `StandingTorchEntry` — type — line 15
-- `StandingTorches` — type — line 29
+- `StandingTorchEntry` — type — line 17
+- `StandingTorches` — type — line 31
 
 ## `world/createTerrainPreparations.ts`
 
@@ -905,7 +905,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/placementPreview.ts`
 
-- `createPlacementPreviewGhost` — function — line 52
+- `createPlacementPreviewGhost` — function — line 62
+- `placementEntranceMarkerLocalZ` — function — line 58
 - `PlacementPreviewFootprint` — type — line 5
 - `PlacementPreviewGhost` — type — line 40
 
@@ -1247,21 +1248,25 @@ Generated from exported TypeScript symbols.
 
 ## `world/standingTorch.ts`
 
-- `isStandingTorchConstructionComplete` — function — line 98
-- `STANDING_TORCH_FOOTPRINT_RADIUS` — const — line 41
-- `STANDING_TORCH_MATERIAL_REQUIREMENTS` — const — line 72
-- `STANDING_TORCH_PLACE_DURATION_SEC` — const — line 48
-- `STANDING_TORCH_PLACE_REACH` — const — line 45
-- `STANDING_TORCH_PLACEMENT_MESSAGE` — const — line 55
-- `STANDING_TORCH_REQUIRED_WORK` — const — line 81
-- `STANDING_TORCH_SEPARATION` — const — line 42
-- `STANDING_TORCH_WORK_SESSION_HOURS` — const — line 87
-- `STANDING_TORCH_WORK_SESSION_SEC` — const — line 84
-- `StandingTorchPlacementReason` — type — line 50
-- `standingTorchPromptLabel` — function — line 106
-- `StandingTorchRecord` — type — line 27
+- `isStandingTorchConstructionComplete` — function — line 128
+- `resolveStandingTorchBurnState` — function — line 104
   - domain: items-player
-- `standingTorchRemainingWork` — function — line 91
+- `STANDING_TORCH_BURN_DURATION_DAYS` — const — line 95
+- `STANDING_TORCH_FOOTPRINT_RADIUS` — const — line 46
+- `STANDING_TORCH_MATERIAL_REQUIREMENTS` — const — line 77
+- `STANDING_TORCH_PLACE_DURATION_SEC` — const — line 53
+- `STANDING_TORCH_PLACE_REACH` — const — line 50
+- `STANDING_TORCH_PLACEMENT_MESSAGE` — const — line 60
+- `STANDING_TORCH_REQUIRED_WORK` — const — line 86
+- `STANDING_TORCH_SEPARATION` — const — line 47
+- `STANDING_TORCH_WORK_SESSION_HOURS` — const — line 92
+- `STANDING_TORCH_WORK_SESSION_SEC` — const — line 89
+- `standingTorchBurnUntilDays` — function — line 115
+- `StandingTorchPlacementReason` — type — line 55
+- `standingTorchPromptLabel` — function — line 136
+- `StandingTorchRecord` — type — line 30
+  - domain: items-player
+- `standingTorchRemainingWork` — function — line 121
 
 ## `world/standingTorchProp.ts`
 

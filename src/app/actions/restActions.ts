@@ -49,7 +49,7 @@ import { type RepairProgress, repairRemainingWork } from '../../world/repair'
 import { residentialBuildingLodgingId } from '../../world/residentialBuilding'
 import { findNearestSleepingUtility } from '../../world/sleepingUtilities'
 import { TENT_SHELTER_RADIUS, tentShelterFactor } from '../campRest'
-import { formatCampInspectionDescription, resolveCampRestSnapshot } from '../campRestSnapshot'
+import { type CampInspectionDetailRow, campInspectionRepairTargets, formatCampInspectionDetails, resolveCampRestSnapshot } from '../campRestSnapshot'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 /** One button in the generic contextual interaction panel
@@ -83,6 +83,7 @@ export type RestActions = {
   startRest: (variant: RestVariant) => RestOutcome
   startTentRest: (id: string) => void
   inspectTent: (id: string) => void
+  inspectCamp: (tentId: string) => void
   inspectBedroll: (id: string) => void
   inspectPlatform: (id: string) => void
   packTent: (id: string) => void
@@ -135,7 +136,12 @@ export type RestActionDeps = {
    *  this one dependency/mechanism instead of a second lodging UI. This
    *  module builds the `title`/`description`/`actions`; Vue only renders
    *  them. */
-  openLodgingPanel: (title: string, description: string, actions: readonly LodgingChoiceAction[]) => void
+  openLodgingPanel: (
+    title: string,
+    description: string,
+    actions: readonly LodgingChoiceAction[],
+    details?: readonly CampInspectionDetailRow[],
+  ) => void
 }
 
 export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps): RestActions {
@@ -680,6 +686,17 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     startCampRepairBout(kind, id)
   }
 
+  const campRepairActionLabel = (kind: CampRepairTargetKind, mode: 'start' | 'continue'): string => {
+    if (mode === 'continue') {
+      return kind === 'tent'
+        ? 'Kontynuuj naprawę namiotu'
+        : kind === 'bedroll'
+          ? 'Kontynuuj naprawę posłania'
+          : 'Kontynuuj naprawę podestu'
+    }
+    return kind === 'tent' ? 'Napraw namiot' : kind === 'bedroll' ? 'Napraw posłanie' : 'Napraw podest'
+  }
+
   const inspectTent = (id: string): void => {
     if (isActionBlocked(ctx)) return
     const tent = bundle.placedTents.list().find((entry) => entry.id === id)
@@ -687,17 +704,20 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     const snapshot = resolveSnapshot(tent.x, tent.z, inventory.has('blanket', 1))
     const instance = createTentInstance(bundle.placedTents.conditionOf(id, dayNight.elapsedDays) ?? tent.condition, tent.id)
     const canPack = !hasActiveCampRepair(tent) && inventory.canAddInstance(instance)
-    const repair = describeCampRepair('tent', id)
     const actions: LodgingChoiceAction[] = [
       { label: 'Odpocznij', enabled: true, reasonLabel: '', run: () => startTentRest(id) },
     ]
-    if (repair) {
+    const continueNotes: string[] = []
+    for (const target of campInspectionRepairTargets(snapshot)) {
+      const repair = describeCampRepair(target.kind, target.id)
+      if (!repair) continue
       actions.push({
-        label: repair.mode === 'continue' ? 'Kontynuuj naprawę' : 'Napraw',
+        label: campRepairActionLabel(target.kind, repair.mode),
         enabled: repair.canAct,
         reasonLabel: repair.reasonLabel,
-        run: () => workOnCampRepair('tent', id),
+        run: () => workOnCampRepair(target.kind, target.id),
       })
+      if (repair.mode === 'continue' && repair.description) continueNotes.push(repair.description)
     }
     actions.push({
       label: 'Złóż namiot',
@@ -708,12 +728,11 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
       run: () => packTent(id),
     })
     actions.push({ label: 'Zamknij', enabled: true, reasonLabel: '', run: () => {} })
-    openLodgingPanel('To twój namiot', [
-      formatCampInspectionDescription(snapshot),
-      repair && repair.mode === 'start' ? `\n\n${repair.description}` : '',
-      repair && repair.mode === 'continue' ? `\n\n${repair.description}` : '',
-    ].join(''), actions)
+    const title = snapshot.bedroll || snapshot.platform ? 'Twój obóz' : 'To twój namiot'
+    openLodgingPanel(title, continueNotes.join('\n\n'), actions, formatCampInspectionDetails(snapshot))
   }
+
+  const inspectCamp = (tentId: string): void => inspectTent(tentId)
 
   const inspectBedroll = (id: string): void => {
     if (isActionBlocked(ctx)) return
@@ -845,6 +864,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     startRest,
     startTentRest,
     inspectTent,
+    inspectCamp,
     inspectBedroll,
     inspectPlatform,
     packTent,

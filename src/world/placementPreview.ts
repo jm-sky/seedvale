@@ -42,11 +42,21 @@ export type PlacementPreviewGhost = {
   /** Switches between the prebuilt circle/box meshes and scales them —
    *  cheap, no geometry rebuild. */
   setFootprint: (footprint: PlacementPreviewFootprint) => void
+  /** Positions a front/entrance marker on the local `-Z` box edge — same
+   *  front convention as `residentialBuildingApproachLocal()`. Hidden for
+   *  circle footprints and when `visible` is false. */
+  setEntranceMarker: (visible: boolean) => void
   /** Positions the whole ghost at world `(x, z)`, feet at `y`, oriented by
    *  `yaw` (circle footprints are rotationally symmetric). */
   setTransform: (x: number, z: number, y: number, yaw?: number) => void
   setValid: (valid: boolean) => void
   dispose: () => void
+}
+
+/** Local-Z of the box footprint's front edge. Matches residential local
+ *  `-Z` front (plan items-player-022). */
+export function placementEntranceMarkerLocalZ(depth: number): number {
+  return -depth / 2
 }
 
 export function createPlacementPreviewGhost(): PlacementPreviewGhost {
@@ -95,9 +105,43 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
   boxRing.visible = false
   group.add(boxRing)
 
+  const ENTRANCE_HALF_WIDTH = 0.45
+  const ENTRANCE_CHEVRON = 0.28
+  const entrancePositions = [
+    -ENTRANCE_HALF_WIDTH, 0.02, 0,
+    ENTRANCE_HALF_WIDTH, 0.02, 0,
+    -0.22, 0.02, 0,
+    0, 0.02, -ENTRANCE_CHEVRON,
+    0.22, 0.02, 0,
+    0, 0.02, -ENTRANCE_CHEVRON,
+  ]
+  const entranceGeometry = new THREE.BufferGeometry()
+  entranceGeometry.setAttribute('position', new THREE.Float32BufferAttribute(entrancePositions, 3))
+  const entranceMaterial = new THREE.LineBasicMaterial({
+    color: VALID_COLOR,
+    transparent: true,
+    opacity: LINE_OPACITY,
+    depthTest: false,
+  })
+  const entranceMarker = new THREE.LineSegments(entranceGeometry, entranceMaterial)
+  entranceMarker.visible = false
+  group.add(entranceMarker)
+
+  let currentFootprint: PlacementPreviewFootprint = { kind: 'circle', radius: 1 }
+  let entranceRequested = false
+
+  const syncEntrance = (): void => {
+    const show = entranceRequested && currentFootprint.kind === 'box'
+    entranceMarker.visible = show
+    if (show && currentFootprint.kind === 'box') {
+      entranceMarker.position.set(0, 0, placementEntranceMarkerLocalZ(currentFootprint.depth))
+    }
+  }
+
   return {
     group,
     setFootprint(footprint) {
+      currentFootprint = footprint
       const isBox = footprint.kind === 'box'
       circleFill.visible = !isBox
       circleRing.visible = !isBox
@@ -110,6 +154,11 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
         circleFill.scale.set(footprint.radius, 1, footprint.radius)
         circleRing.scale.set(footprint.radius, 1, footprint.radius)
       }
+      syncEntrance()
+    },
+    setEntranceMarker(visible) {
+      entranceRequested = visible
+      syncEntrance()
     },
     setTransform(x, z, y, yaw = 0) {
       group.position.set(x, y, z)
@@ -119,14 +168,17 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
       const color = valid ? VALID_COLOR : INVALID_COLOR
       fillMaterial.color.setHex(color)
       ringMaterial.color.setHex(color)
+      entranceMaterial.color.setHex(color)
     },
     dispose() {
       circleFillGeometry.dispose()
       circleRingGeometry.dispose()
       boxFillGeometry.dispose()
       boxRingGeometry.dispose()
+      entranceGeometry.dispose()
       fillMaterial.dispose()
       ringMaterial.dispose()
+      entranceMaterial.dispose()
     },
   }
 }

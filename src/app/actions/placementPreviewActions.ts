@@ -260,6 +260,7 @@ export function createPlacementPreviewActions(
     intentLifecycle = null
     mouseLook.state.zoomLocked = false
     ghost.group.removeFromParent()
+    ghost.setEntranceMarker(false)
     hidePreview()
   }
 
@@ -306,6 +307,7 @@ export function createPlacementPreviewActions(
     }
     const result = resolvePreview(active, currentObjectYaw())
     ghost.setFootprint(result.footprint)
+    ghost.setEntranceMarker(active === 'smallHouse' || active === 'mediumHouse')
     ghost.setTransform(result.x, result.z, bundle.chunkManager.sampleHeight(result.x, result.z), result.yaw)
     ghost.setValid(result.valid)
     showPreview({

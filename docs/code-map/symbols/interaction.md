@@ -8,7 +8,7 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/Interactable.ts`
 
-- `Interactable` — type — line 28
+- `Interactable` — type — line 32
 - `WorldItemRef` — type — line 17
 
 ## `interaction/resolveInteraction.ts`
@@ -19,15 +19,15 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/targetedSkillAction.ts`
 
-- `executeTargetedSkillAction` — function — line 167
-- `hasImplementedTargetedSkillConsumer` — function — line 124
-- `isActionablePlayerSkill` — function — line 133
-- `listActionablePlayerSkills` — function — line 140
-- `queryTargetedSkillAction` — function — line 148
+- `executeTargetedSkillAction` — function — line 168
+- `hasImplementedTargetedSkillConsumer` — function — line 125
+- `isActionablePlayerSkill` — function — line 134
+- `listActionablePlayerSkills` — function — line 141
+- `queryTargetedSkillAction` — function — line 149
 - `TargetedSkillAction` — type — line 22
 - `TargetedSkillActionId` — type — line 20
 - `TargetedSkillExecuteResult` — type — line 30
-- `targetedSkillPrompt` — function — line 192
+- `targetedSkillPrompt` — function — line 193
 - `TargetedSkillQueryContext` — type — line 14
   - domain: items-player
   - system: interaction

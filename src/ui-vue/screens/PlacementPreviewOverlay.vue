@@ -35,6 +35,10 @@ const touchDevice = isTouchDevice()
           @click="rotatePlacementPreviewLeft"
         >
           ↶
+          <span
+            v-if="!touchDevice"
+            class="text-[11px] opacity-70"
+          >[F]</span>
         </button>
         <button
           type="button"
@@ -42,6 +46,10 @@ const touchDevice = isTouchDevice()
           aria-label="Obróć w prawo"
           @click="rotatePlacementPreviewRight"
         >
+          <span
+            v-if="!touchDevice"
+            class="text-[11px] opacity-70"
+          >[G]</span>
           ↷
         </button>
       </div>
@@ -61,12 +69,6 @@ const touchDevice = isTouchDevice()
         >
           Anuluj [Esc]
         </button>
-      </div>
-      <div
-        v-if="ui.placementPreview.supportsRotation && !touchDevice"
-        class="text-[12px] text-ink/70"
-      >
-        F / G — Obróć
       </div>
     </div>
   </div>

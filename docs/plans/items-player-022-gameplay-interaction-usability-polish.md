@@ -1,7 +1,7 @@
 # Plan: Gameplay interaction usability polish
 
 **Created:** 2026-09-10
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~items-player-018~~, ~~ui-input-012~~, ~~settlements-005~~

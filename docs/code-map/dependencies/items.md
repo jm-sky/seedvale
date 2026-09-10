@@ -101,6 +101,7 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/inspection/buildWorldInspection.test.ts`
 - `app/inspection/buildWorldInspection.ts`
+- `app/interactables.test.ts`
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
@@ -363,6 +364,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/interactables.test.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `items/constructionMaterials.test.ts`
@@ -788,6 +790,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inspection/buildWorldInspection.ts`
+- `app/interactables.test.ts`
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `combat/projectile.ts`

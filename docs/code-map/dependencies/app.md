@@ -652,6 +652,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.ts`
 - `app/actions/restActions.ts`
 - `app/campRestSnapshot.test.ts`
+- `app/interactables.ts`
 
 ## `app/createApp.ts`
 
@@ -1005,11 +1006,15 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/interactables.ts`
+- `items/Inventory.ts`
+- `items/createDroppedItems.ts`
+- `items/items.ts`
 
 ## `app/interactables.ts`
 
 **Imports**
 
+- `app/campRestSnapshot.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/createFauna.ts`

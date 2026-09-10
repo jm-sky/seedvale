@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { campRestQuality } from './campRest'
-import { resolveCampRestSnapshot } from './campRestSnapshot'
+import {
+  campInspectionRepairTargets,
+  formatCampInspectionDetails,
+  resolveCampInteractionMembers,
+  resolveCampRestSnapshot,
+} from './campRestSnapshot'
 
 function tent(id: string, x: number, z: number, condition: number) {
   return { id, x, z, yaw: 0, condition, lastConditionUpdateAtDays: 0 }
@@ -79,5 +84,54 @@ describe('resolveCampRestSnapshot', () => {
     expect(result.fire?.id).toBe('f1')
     expect(result.fire?.lit).toBe(false)
     expect(result.context.hasWarmFire).toBe(false)
+  })
+})
+
+describe('resolveCampInteractionMembers (plan items-player-022)', () => {
+  it('attaches the nearest in-radius bedroll and its supporting platform to the tent', () => {
+    expect(resolveCampInteractionMembers(
+      tent('t1', 0, 0, 100),
+      [bedroll('b1', 0.4, 0, 80), bedroll('b-far', 20, 0, 80)],
+      [platform('p1', 0.4, 0, 70), platform('p-far', 20, 0, 70)],
+    )).toEqual({ tentId: 't1', bedrollId: 'b1', platformId: 'p1' })
+  })
+
+  it('leaves a distant bedroll and platform unattached', () => {
+    expect(resolveCampInteractionMembers(
+      tent('t1', 0, 0, 100),
+      [bedroll('b1', 20, 0, 80)],
+      [platform('p1', 20, 0, 70)],
+    )).toEqual({ tentId: 't1', bedrollId: null, platformId: null })
+  })
+})
+
+describe('formatCampInspectionDetails (plan items-player-022)', () => {
+  it('derives structured rows from canonical explanation values without Vue-side arithmetic', () => {
+    const tents = [tent('t1', 0, 0, 100)]
+    const bedrolls = [bedroll('b1', 0, 0, 82)]
+    const platforms = [platform('p1', 0, 0, 64)]
+    const result = snapshot({
+      tents: { list: () => tents, conditionOf: () => 100 },
+      bedrolls: { list: () => bedrolls, conditionOf: () => 82 },
+      platforms: { list: () => platforms, conditionOf: () => 64 },
+      fires: [fire('f1', 1, 0, true)],
+      survivalValue: 0.4,
+    })
+    const rows = formatCampInspectionDetails(result)
+    const byLabel = Object.fromEntries(rows.map((row) => [row.label, row]))
+    const tentLine = result.explanation.lines.find((line) => line.key === 'tent')
+    expect(byLabel.Namiot?.value).toBe('stan 100%')
+    expect(byLabel.Namiot?.secondaryValue).toBe(`+${Math.round((tentLine?.value ?? 0) * 100)}%`)
+    expect(byLabel.Namiot?.tone).toBe('positive')
+    expect(byLabel.Posłanie?.value).toBe('stan 82%')
+    expect(byLabel.Posłanie?.tone).toBe('positive')
+    expect(byLabel.Platforma?.value).toBe('stan 64%')
+    expect(byLabel.Ognisko?.value).toBe('rozpalone')
+    expect(byLabel.Komfort?.value).toBe(`${Math.round(result.explanation.quality * 100)}%`)
+    expect(campInspectionRepairTargets(result)).toEqual([
+      { kind: 'tent', id: 't1' },
+      { kind: 'bedroll', id: 'b1' },
+      { kind: 'platform', id: 'p1' },
+    ])
   })
 })

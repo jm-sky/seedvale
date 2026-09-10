@@ -187,7 +187,9 @@ describe('buildWorldInspection (plan ui-input-014)', () => {
       row.kind === 'progress' && row.required === PALISADE_REQUIRED_WORK
     ))).toBe(true)
 
-    const torch: StandingTorchRecord = { id: 'torch:1', x: 0, z: 0, yaw: 0, lit: false, completedWork: STANDING_TORCH_REQUIRED_WORK }
+    const torch: StandingTorchRecord = {
+      id: 'torch:1', x: 0, z: 0, yaw: 0, lit: false, burnUntilDays: null, completedWork: STANDING_TORCH_REQUIRED_WORK,
+    }
     const torchView = buildWorldInspection({ kind: 'standingTorch', id: torch.id }, emptyLookup({
       standingTorch: () => torch,
     }))

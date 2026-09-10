@@ -10,9 +10,12 @@ import { formatHours } from './playerWell'
  * one consumes a `wooden_torch` as a component, but the standing torch itself
  * is its own persistent world object with its own identity/lit state.
  *
- * `lit` is the only authoritative ignition state; the runtime flame/light
- * (`world/createStandingTorches.ts`) is always derived from it, never a
- * second source of truth.
+ * `lit` plus `burnUntilDays` are the authoritative ignition state (plan
+ * items-player-022): a lit torch stores the world-day deadline at which it
+ * burns out; an unlit torch has `burnUntilDays === null`. The runtime
+ * flame/light (`world/createStandingTorches.ts`) is always derived from
+ * that pair, never a second source of truth. Portable `PlayerTorch` fuel
+ * is a separate real-time system and is not this record.
  *
  * Since plan items-player-017, placement creates a real but unfinished torch
  * (`completedWork` starts at 0, `lit` stays `false`) — construction progress
@@ -30,6 +33,8 @@ export type StandingTorchRecord = {
   z: number
   yaw: number
   lit: boolean
+  /** World-day deadline while `lit`; `null` when unlit (plan items-player-022). */
+  burnUntilDays: number | null
   /** Hours of active work applied so far (plan items-player-017 §3/§11) —
    *  `STANDING_TORCH_REQUIRED_WORK` (a fixed constant) is the single
    *  requirement authority every reader reads instead of a per-record field. */
@@ -85,6 +90,31 @@ export const STANDING_TORCH_WORK_SESSION_SEC = 4
 /** Active-work hours credited by one full-length bout — shared by the
  *  player's own work action and NPC contract execution. */
 export const STANDING_TORCH_WORK_SESSION_HOURS = 1
+
+/** Six world hours expressed in days (plan items-player-022). */
+export const STANDING_TORCH_BURN_DURATION_DAYS = 6 / 24
+
+/**
+ * Authoritative lit/deadline pair after applying world time (plan
+ * items-player-022). A lit record without a finite deadline, or whose
+ * deadline has passed, is unlit.
+ *
+ * @domain items-player
+ */
+export function resolveStandingTorchBurnState(
+  record: Pick<StandingTorchRecord, 'lit' | 'burnUntilDays'>,
+  nowDays: number,
+): { lit: boolean, burnUntilDays: number | null } {
+  if (!record.lit || record.burnUntilDays == null || nowDays >= record.burnUntilDays) {
+    return { lit: false, burnUntilDays: null }
+  }
+  return { lit: true, burnUntilDays: record.burnUntilDays }
+}
+
+/** Deadline stored at ignition: `nowDays + STANDING_TORCH_BURN_DURATION_DAYS`. */
+export function standingTorchBurnUntilDays(nowDays: number): number {
+  return nowDays + STANDING_TORCH_BURN_DURATION_DAYS
+}
 
 /** All useful work still required to finish `record` (plan items-player-017
  *  §16) — mirrors `world/palisade.ts`'s `palisadeRemainingWork`. */

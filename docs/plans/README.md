@@ -75,7 +75,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
-| 💡 `items-player-022-gameplay-interaction-usability-polish.md`                 | -       | 🟡 | M      | ~~items-player-018~~, ~~ui-input-012~~, ~~settlements-005~~ |
 | 💡 `ui-input-015-interaction-targeting-and-action-semantics.md`                | -       | 🔴 | M      | ui-input-014 |
 
 ---
@@ -88,6 +87,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `items-player-022-gameplay-interaction-usability-polish.md` | Namiot+podest+posłanie = jeden cel Tab/gaze z inspection wszystkich części i repair per część; `+N%` czytelnie zielone; preview małej/średniej chaty pokazuje wejście przy obrocie; `[F]`/`[G]` oczywiste przy przyciskach; kupka gałęzi+belek to 2 cele Tab; stojąca pochodnia gaśnie po 6 h świata / time-skip / save-load |
 | `quests-progression-015-stable-npc-identity-for-quests.md` | Dwa NPC o tym samym imieniu: rozmowa z niewłaściwym nie zalicza `talk_to_npc` / choice / oferty givera; marker zostaje przy właściwym id; save/load i stream-out/in osady trzymają ten sam target; authored Anna/Piotr/Kasia/Marek nadal oferują, przechodzą etapy, kończą się i wypłacają jak wcześniej |
 | `npc-016-work-contracts-payment-and-employer-interaction.md` | Najemnik po skończonej pracy podchodzi tylko gdy gracz jest w pobliżu; dialog otwiera Zapłać N / Jeszcze nie; monety schodzą z gracza do `personalInventory` NPC; za mało monet / pełny ekwipunek NPC nic nie rusza; powtórne Zapłać nic nie robi; śmierć najemnika nie obciąża gracza; save/load zachowuje należność i już wypłacone monety |
 | `settlements-005-residential-house-construction.md` | Placement małej/średniej chaty, stage-gated materiały, praca gracza i NPC, terrain prep przy stoku, ukończenie → lodging high, anulowanie niedokończonej, save/load |

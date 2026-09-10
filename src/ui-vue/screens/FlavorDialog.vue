@@ -70,7 +70,35 @@ function onPanelKeyDown(event: KeyboardEvent): void {
       >
         {{ ui.flavorDialog.name }}
       </h2>
-      <p class="whitespace-pre-line text-sm leading-relaxed opacity-90">
+      <div
+        v-if="ui.flavorDialog.details.length"
+        class="mb-3 flex flex-col gap-1 text-sm leading-relaxed"
+      >
+        <div
+          v-for="(row, index) in ui.flavorDialog.details"
+          :key="`${row.label}-${index}`"
+          class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-x-3"
+        >
+          <span>{{ row.label }}</span>
+          <span
+            class="text-right opacity-90"
+            :class="{
+              'text-amber-300': row.tone === 'warning',
+              'opacity-60': row.tone === 'muted',
+            }"
+          >{{ row.value }}</span>
+          <span
+            v-if="row.secondaryValue"
+            class="min-w-10 text-right tabular-nums"
+            :class="row.tone === 'positive' ? 'text-emerald-300' : 'opacity-80'"
+          >{{ row.secondaryValue }}</span>
+          <span v-else />
+        </div>
+      </div>
+      <p
+        v-if="ui.flavorDialog.line"
+        class="whitespace-pre-line text-sm leading-relaxed opacity-90"
+      >
         {{ ui.flavorDialog.line }}
       </p>
       <div

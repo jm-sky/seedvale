@@ -1166,7 +1166,7 @@ export async function createApp(
   const rest = createRestActions(actionCtx, {
     timeSkipOverlay,
     busyOverlay,
-    openLodgingPanel: (title, description, actions) => vueUi.openFlavorDialog(title, description, actions),
+    openLodgingPanel: (title, description, actions, details) => vueUi.openFlavorDialog(title, description, actions, details),
   })
   // Mutual exclusion between the two world preview modes (plan `ui-input-004`
   // §9) — `terrainPrep` is constructed first but needs a check against
@@ -1986,6 +1986,7 @@ export async function createApp(
     consumeItem: survival.consumeItem,
     startTentRest: rest.startTentRest,
     inspectTent: rest.inspectTent,
+    inspectCamp: rest.inspectCamp,
     inspectBedroll: rest.inspectBedroll,
     inspectPlatform: rest.inspectPlatform,
     workOnCampRepair: rest.workOnCampRepair,
