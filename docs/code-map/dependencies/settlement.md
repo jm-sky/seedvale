@@ -250,6 +250,7 @@ Generated from TypeScript imports.
 - `player/playerCombat.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/lodgingResolver.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
 
 ## `settlement/decorProps.test.ts`

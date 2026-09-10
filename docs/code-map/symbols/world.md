@@ -117,9 +117,9 @@ Generated from exported TypeScript symbols.
 
 - `Bounds` — type — line 49
 - `boxSDF` — function — line 78
-- `buildCaveSdfRepresentation` — function — line 224
+- `buildCaveSdfRepresentation` — function — line 230
   - domain: world-terrain
-- `buildVoidField` — function — line 194
+- `buildVoidField` — function — line 200
 - `CaveSdfSpatialRepresentation` — type — line 54
 - `DEFAULT_SDF_PARAMS` — const — line 39
 - `ellipsoidSDF` — function — line 63
@@ -217,11 +217,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/productionTopology.ts`
 
-- `buildProductionCaveTopology` — function — line 220
+- `buildProductionCaveTopology` — function — line 340
   - domain: world-terrain
-- `MIN_DISCONNECTED_CLEARANCE` — const — line 63
-- `minGapBetweenPaths` — function — line 179
-- `ProductionTopologyInput` — type — line 65
+- `FLOOR_RAMP_STATION_SPACING` — const — line 54
+- `MAX_TRAVERSABLE_FLOOR_GRADE` — const — line 52
+- `maxCenterlineFloorGrade` — function — line 190
+- `MIN_DISCONNECTED_CLEARANCE` — const — line 73
+- `minGapBetweenPaths` — function — line 299
+- `ProductionTopologyInput` — type — line 75
 
 ## `world/caves/sdfCaveMesh.ts`
 

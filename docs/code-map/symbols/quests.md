@@ -32,10 +32,10 @@ Generated from exported TypeScript symbols.
 
 ## `quests/quests.ts`
 
-- `buildDarkForestTreasureQuest` — function — line 1072
-- `buildHorseAcquisitionQuest` — function — line 1117
-- `buildLandmarkQuests` — function — line 978
-- `LandmarkResolver` — type — line 967
+- `buildDarkForestTreasureQuest` — function — line 1073
+- `buildHorseAcquisitionQuest` — function — line 1118
+- `buildLandmarkQuests` — function — line 979
+- `LandmarkResolver` — type — line 968
 - `QUEST_STATES` — const — line 201
 - `QuestAvailability` — type — line 63
 - `QuestConsequences` — type — line 176

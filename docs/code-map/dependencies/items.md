@@ -158,6 +158,7 @@ Generated from TypeScript imports.
 - `settlement/storageVisuals.test.ts`
 - `settlement/storageVisuals.ts`
 - `terrain/digAction.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/helperDeliveryHooks.ts`
 - `world/worldGeneratedContainers.ts`

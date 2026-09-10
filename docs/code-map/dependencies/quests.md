@@ -38,6 +38,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `interaction/resolveInteraction.ts`
 - `quests/QuestManager.test.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
 - `ui/createQuestLog.ts`
 
@@ -71,6 +72,7 @@ Generated from TypeScript imports.
 - `quests/quests.test.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 
 ## `quests/settlementRatInfestation.test.ts`
 

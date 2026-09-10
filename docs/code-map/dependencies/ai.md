@@ -166,6 +166,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `settlement/createSettlement.ts`
 - `ui-vue/lib/drawMinimap.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
 - `ui/createNpcInspector.ts`
 

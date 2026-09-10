@@ -136,6 +136,17 @@ Generated from TypeScript imports.
 - `ui/createTimeSkipOverlay.ts`
 - `ui/createToast.ts`
 
+## `ui-vue/npcDialogueOpen.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `items/Inventory.ts`
+- `quests/QuestManager.ts`
+- `quests/quests.ts`
+- `settlement/createSettlement.ts`
+- `ui-vue/store.ts`
+
 ## `ui-vue/playerQuickActions.test.ts`
 
 **Imports**
@@ -203,6 +214,7 @@ Generated from TypeScript imports.
 - `ui-vue/composables/useOverlayScreen.ts`
 - `ui-vue/flavorDialogLifecycle.test.ts`
 - `ui-vue/mount.ts`
+- `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/playerQuickActions.test.ts`
 - `ui-vue/playerQuickActions.ts`
 - `ui/createHud.ts`
