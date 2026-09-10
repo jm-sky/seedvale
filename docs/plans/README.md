@@ -55,31 +55,31 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
+| 💡 `fauna-007-animal-leading-and-cart-harness.md`                              | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
+| 💡 `npc-026-npc-grave-visits.md`                                               | -       | 🟡 | S      | ~~npc-011~~, ~~world-terrain-016~~ |
+| 💡 `fauna-004-sheep-wool-and-shepherd.md`                                      | -       | 🟡 | L      | ~~npc-006~~, ~~fauna-012~~, ~~fauna-016~~, ~~settlements-npcs-014~~ |
+| 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
+| 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
+| 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
+| 💡 `quests-progression-015-stable-npc-identity-for-quests.md`                  | -       | 🔴 | M      | -      |
+| 💡 `quests-progression-016-world-driven-settlement-quest-opportunities.md`     | -       | 🔴 | M      | quests-progression-015 |
+| ◼️ `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-018-physical-goods-transport-foundation.md`               | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
 | ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | settlements-npcs-018 |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
-| 💡 `fauna-004-sheep-wool-and-shepherd.md`                                      | -       | 🟡 | L      | npc-006, fauna-012, fauna-016, settlements-npcs-014 |
-| 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
-| 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md`    | -       | 🔴 | M      | -      |
-| 💡 `fauna-007-animal-leading-and-cart-harness.md`                              | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
-| 💡 `fauna-018-persistent-habitat-occupants.md`                                 | -       | 🟡 | M      | fauna-016, fauna-017 |
-| 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-008, fauna-016 |
-| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
+| 💡 `fauna-018-persistent-habitat-occupants.md`                                 | -       | 🟡 | M      | ~~fauna-016~~, fauna-017 |
+| 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-008, ~~fauna-016~~ |
+| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
+| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~ |
 | 💡 `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`       | -       | 🟡 | M      | -      |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
-| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
-| 💡 `npc-026-npc-grave-visits.md`                                               | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
-| 💡 `quests-progression-015-stable-npc-identity-for-quests.md`                  | -       | 🔴 | M      | -      |
-| 💡 `quests-progression-016-world-driven-settlement-quest-opportunities.md`     | -       | 🔴 | M      | quests-progression-015 |
-| ◼️ `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
 
 ---
 
