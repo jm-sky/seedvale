@@ -164,6 +164,7 @@ import {
   GAZE_RANGE,
   INTERACT_MIN_DOT,
   INTERACT_RANGE,
+  worldItemAllowsAltInteract,
 } from './interactables'
 import { activeModal } from './modalState'
 import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
@@ -1728,11 +1729,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'terrainPreparation') {
         if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {
-        if (interactPressed || altInteractPressed) {
-          const memberIds = target.item.memberIds && target.item.memberIds.length > 0
-            ? target.item.memberIds
-            : [target.item.id]
-          const grouped = memberIds.length > 1
+        const memberIds = target.item.memberIds && target.item.memberIds.length > 0
+          ? target.item.memberIds
+          : [target.item.id]
+        const grouped = memberIds.length > 1
+        // `[R]` is only the plan-153 pickup+consume alternate — never a
+        // second generic pickup key for tools/materials/stacks.
+        const altQuickConsume = altInteractPressed
+          && worldItemAllowsAltInteract(target.item.kind, memberIds.length)
+        if (interactPressed || altQuickConsume) {
           let picked = 0
           let lastKind: ItemKind | null = null
           for (const id of memberIds) {
@@ -1766,7 +1771,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             if (lastKind && !isInstanceBackedKind(lastKind)) {
               toast.show(`${firstUpperCase(ITEM_DEFS[lastKind].label)} +${picked} · Masz: ${inventory.count(lastKind)}`, 'pickup')
             }
-            if (!grouped && altInteractPressed && lastKind && ITEM_CATALOG[lastKind].consumable) {
+            if (altQuickConsume && lastKind) {
               consumeItem?.(lastKind)
             }
           }

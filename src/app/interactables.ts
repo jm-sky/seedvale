@@ -245,16 +245,28 @@ function corpseCandidate(
   return null
 }
 
+/**
+ * Whether world `[R]` is a real alternate on this item target.
+ *
+ * Only the plan-153 pickup+consume quick-action qualifies. Plain world
+ * pickup is always `[E]`; `[R]` must never alias generic pickup (tools,
+ * materials, grouped stacks, etc.).
+ *
+ * @domain ui-input
+ */
+export function worldItemAllowsAltInteract(kind: ItemKind, quantity = 1): boolean {
+  return quantity <= 1 && Boolean(ITEM_CATALOG[kind].consumable)
+}
+
 /** World pickup prompt (plan 153) — adds a `[R] Zjedz`/`Wypij`/`Opatrz`
  *  quick-action for items immediately usable straight out of inventory
- *  (gated on `ITEM_CATALOG[kind].consumable`, the same flag the inventory
- *  screen's consume button uses — no separate quick-use item list). Plain
- *  pickup keeps the auto-`[E]`-prefixed short form used everywhere else. */
+ *  (gated on `worldItemAllowsAltInteract`, the same flag execution uses).
+ *  Plain pickup keeps the auto-`[E]`-prefixed short form used everywhere else. */
 function itemPromptLabel(kind: ItemKind, quantity = 1): string {
   const label = ITEM_DEFS[kind].label
   const quantityLabel = quantity > 1 ? `${label} ×${quantity}` : label
-  const consumable = ITEM_CATALOG[kind].consumable
-  if (!consumable || quantity > 1) return `Podnieś: ${quantityLabel}`
+  if (!worldItemAllowsAltInteract(kind, quantity)) return `Podnieś: ${quantityLabel}`
+  const consumable = ITEM_CATALOG[kind].consumable!
   return `[E] Podnieś: ${label} · [R] ${consumeVerbLabel(consumable.need)}`
 }
 

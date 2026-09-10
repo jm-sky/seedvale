@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createDroppedItems } from '../items/createDroppedItems'
 import { Inventory } from '../items/Inventory'
 import { ITEM_DEFS } from '../items/items'
-import { DROPPED_ITEM_GROUP_RADIUS, groupDroppedItemCandidates, resolveHaySpot } from './interactables'
+import { DROPPED_ITEM_GROUP_RADIUS, groupDroppedItemCandidates, resolveHaySpot, worldItemAllowsAltInteract } from './interactables'
 
 describe('resolveHaySpot', () => {
   const garden = { x: 0, z: 0 }
@@ -99,5 +99,23 @@ describe('groupDroppedItemCandidates (plan items-player-022)', () => {
     }
     expect(inventory.count('branch')).toBe(2)
     expect(dropped.nodes().map((item) => item.id)).toEqual(group!.memberIds.slice(2))
+  })
+})
+
+describe('worldItemAllowsAltInteract', () => {
+  it('rejects non-consumable world tools and materials (R is not pickup)', () => {
+    expect(worldItemAllowsAltInteract('shovel')).toBe(false)
+    expect(worldItemAllowsAltInteract('axe')).toBe(false)
+    expect(worldItemAllowsAltInteract('branch')).toBe(false)
+    expect(worldItemAllowsAltInteract('stone')).toBe(false)
+  })
+
+  it('allows single consumable items for the plan-153 pickup+consume alternate', () => {
+    expect(worldItemAllowsAltInteract('mushroom')).toBe(true)
+    expect(worldItemAllowsAltInteract('herb')).toBe(true)
+  })
+
+  it('rejects grouped/stacked targets even when the kind is consumable', () => {
+    expect(worldItemAllowsAltInteract('mushroom', 2)).toBe(false)
   })
 })
