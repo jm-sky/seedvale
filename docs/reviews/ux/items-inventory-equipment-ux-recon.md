@@ -2,6 +2,7 @@
 
 **Model:** Cursor — Grok
 **Scope:** focused recon/review only; no implementation.
+**Review:** [2026-09-10--items-inventory-equipment-ux-review.md](./2026-09-10--items-inventory-equipment-ux-review.md)
 
 ## Goal
 

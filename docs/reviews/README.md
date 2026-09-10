@@ -46,6 +46,8 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Plan 149 Phase 1 A `compileAsync` prewarm | Loading-window staging + `compileAsync` on Intel Arc 140V ×3 — streaming first-use after frame 0 **65–99.5 ms** (was 316–382); `glError` 0; program count 65–68. Phase C leftover: `Green` / glass / `Wood` | `done` | [2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md](./2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md) |
 | createSettlement refactor | Deep architectural review of `src/settlement/createSettlement.ts` — responsibilities, ownership, lifecycle/dispose, coupling; verdict **REFACTOR / M** with an ordered implementation plan | `done` | [2026-09-03--createSettlement-refactor-review.md](./2026-09-03--createSettlement-refactor-review.md) |
 | NpcAgent refactor | Deep architectural review of `src/ai/NpcAgent.ts` (5 179 lines) — responsibilities, ownership, coupling, decision/strategy seam, presentation split; verdict **REFACTOR / L** with an ordered 2-phase implementation plan | `done` | [2026-09-03--NpcAgent-refactor-review.md](./2026-09-03--NpcAgent-refactor-review.md) |
+| Interactions & targeting UX | Gaze, `[E]`/`[R]`/`[V]`, cycling, prompt semantics — recon only | `done` | [ux/2026-09-10--interactions-targeting-ux-review.md](./ux/2026-09-10--interactions-targeting-ux-review.md) |
+| Items, inventory & equipment UX | Player-facing item lifecycle: pickup, inventory, held tool, capabilities, loot/transfer — recon only | `done` | [ux/2026-09-10--items-inventory-equipment-ux-review.md](./ux/2026-09-10--items-inventory-equipment-ux-review.md) |
 
 ## After each run
 
