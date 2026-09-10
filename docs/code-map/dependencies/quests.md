@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
 - `quests/settlementRatInfestation.ts`
 - `reputation/ReputationManager.ts`
@@ -80,6 +81,59 @@ Generated from TypeScript imports.
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/quests.test.ts`
 
+## `quests/opportunities/settlementQuestOpportunities.test.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+
+## `quests/opportunities/settlementQuestOpportunities.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `fauna/wolfDenScenario.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/opportunities/settlementQuestOpportunities.test.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+
+## `quests/opportunities/worldQuestMaterialization.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/opportunities/settlementQuestOpportunities.test.ts`
+
+## `quests/opportunities/worldQuestOpportunityTypes.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `quests/QuestManager.ts`
+- `quests/opportunities/settlementQuestOpportunities.test.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+
 ## `quests/quests.test.ts`
 
 **Imports**
@@ -111,6 +165,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.test.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`

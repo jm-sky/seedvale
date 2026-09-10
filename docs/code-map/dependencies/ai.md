@@ -263,6 +263,7 @@ Generated from TypeScript imports.
 - `ai/schedule.ts`
 - `economy/npcWork.ts`
 - `economy/production.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/families.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcPostDeath.ts`

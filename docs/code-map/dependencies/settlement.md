@@ -759,6 +759,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcIdentity.test.ts`
 
@@ -877,6 +878,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -1213,6 +1215,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/villageInspector.test.ts`
 - `debug/villageInspector.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/minorLocations.ts`

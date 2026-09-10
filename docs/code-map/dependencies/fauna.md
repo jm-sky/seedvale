@@ -173,6 +173,9 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/opportunities/settlementQuestOpportunities.test.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`
 
 ## `fauna/animalCorpse.test.ts`
@@ -833,3 +836,4 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `fauna/createFauna.ts`
 - `fauna/wolfDenScenario.test.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`

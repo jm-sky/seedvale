@@ -434,18 +434,20 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/wolfDenScenario.ts`
 
-- `activateWolfDenProblem` — function — line 58
-- `canOfferSettlementTrip` — function — line 63
+- `activateWolfDenProblem` — function — line 69
+- `canOfferSettlementTrip` — function — line 74
 - `effectiveMaxPreyCount` — function — line 21
 - `effectiveRespawnIntervalDays` — function — line 27
-- `isQuestSpawnPointPermanentlyDestroyed` — function — line 42
+- `isQuestSpawnPointPermanentlyDestroyed` — function — line 53
 - `isWolfDenPermanentlyDestroyed` — function — line 32
+- `isWolfDenPressureProblem` — function — line 43
+  - domain: fauna
 - `lerp` — function — line 15
-- `matchesQuestSpawnPointId` — function — line 37
-- `recordSettlementTripOpportunity` — function — line 70
+- `matchesQuestSpawnPointId` — function — line 48
+- `recordSettlementTripOpportunity` — function — line 81
 - `SETTLEMENT_TRIP_COOLDOWN_DAYS` — const — line 12
 - `SETTLEMENT_TRIP_STAY_SEC` — const — line 13
-- `shouldActivateWolfDenProblem` — function — line 51
+- `shouldActivateWolfDenProblem` — function — line 62
 - `WOLF_DEN_ACTIVE_PRESSURE` — const — line 10
 - `WOLF_DEN_PROBLEM_START_DAY` — const — line 9
   - domain: fauna World-owned wolf-den pressure scenario (plan quests-progression-007) — pure helpers over `PreySpawner` fields; activation/trips stay in `createFauna.ts`.

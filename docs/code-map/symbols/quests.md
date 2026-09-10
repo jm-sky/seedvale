@@ -20,35 +20,80 @@ Generated from exported TypeScript symbols.
 - `resolveAuthoredNpcId` — function — line 23
   - domain: quests-progression
 
+## `quests/opportunities/settlementQuestOpportunities.ts`
+
+- `collectSettlementQuestOpportunities` — function — line 98
+  - domain: quests-progression
+- `collectWolfDenPressureOpportunities` — function — line 64
+  - domain: quests-progression
+  - system: settlement-quest-opportunities
+  - role: Collects world-driven candidates from authoritative fauna spawners.
+- `parseWolfDenPressureQuestId` — function — line 21
+- `settlementIdFromWolfDenSpawnerId` — function — line 27
+- `wolfDenPressureQuestId` — function — line 17
+  - domain: quests-progression
+- `wolfDenPressureSourceStatus` — function — line 78
+  - domain: quests-progression
+- `wolfDenPressureStatusFromSpawners` — function — line 85
+
+## `quests/opportunities/worldQuestMaterialization.ts`
+
+- `buildWorldDrivenSettlementQuests` — function — line 126
+  - domain: quests-progression
+- `materializeSettlementQuestOpportunity` — function — line 106
+  - domain: quests-progression
+  - system: settlement-quest-opportunities
+  - role: Materializes a selected settlement opportunity into a normal QuestDef.
+- `opportunityNpcsFromSettlement` — function — line 18
+  - domain: quests-progression
+- `selectSettlementQuestGiver` — function — line 36
+  - domain: quests-progression
+
+## `quests/opportunities/worldQuestOpportunityTypes.ts`
+
+- `OpportunityNpc` — type — line 55
+  - domain: quests-progression
+- `SettlementQuestOpportunity` — type — line 30
+- `WolfDenPressureOpportunity` — type — line 23
+  - domain: quests-progression
+- `WorldQuestOpportunityKind` — type — line 15
+  - domain: quests-progression
+  - system: settlement-quest-opportunities
+  - role: Data-only opportunity contract between settlement/world systems and quest materialization.
+- `WorldQuestSourceLookup` — type — line 46
+  - domain: quests-progression
+- `WorldQuestSourceStatus` — type — line 38
+  - domain: quests-progression
+
 ## `quests/QuestManager.ts`
 
-- `AnimalTargetResolver` — type — line 138
-- `ApplySocialConsequence` — type — line 150
-- `DangerousTraitApplier` — type — line 143
-- `HorseRewardAvailability` — type — line 114
-- `ObjectiveRef` — type — line 119
-- `QUEST_MARKER_AVAILABLE` — const — line 39
-- `QUEST_MARKER_IN_PROGRESS` — const — line 40
-- `QUEST_MARKER_READY` — const — line 41
-- `QUEST_MARKER_TALK_TARGET` — const — line 42
-- `QuestAnimalOwnershipTransfer` — type — line 110
-- `QuestDialogAction` — type — line 44
-- `QuestDialogOverride` — type — line 57
+- `AnimalTargetResolver` — type — line 139
+- `ApplySocialConsequence` — type — line 151
+- `DangerousTraitApplier` — type — line 144
+- `HorseRewardAvailability` — type — line 115
+- `ObjectiveRef` — type — line 120
+- `QUEST_MARKER_AVAILABLE` — const — line 40
+- `QUEST_MARKER_IN_PROGRESS` — const — line 41
+- `QUEST_MARKER_READY` — const — line 42
+- `QUEST_MARKER_TALK_TARGET` — const — line 43
+- `QuestAnimalOwnershipTransfer` — type — line 111
+- `QuestDialogAction` — type — line 45
+- `QuestDialogOverride` — type — line 58
   - domain: quests-progression
-- `QuestItemGrant` — type — line 106
-- `QuestListEntry` — type — line 74
-- `QuestManager` — class — line 252
+- `QuestItemGrant` — type — line 107
+- `QuestListEntry` — type — line 75
+- `QuestManager` — class — line 259
   - domain: quests-progression
   - system: quest-manager
   - role: Owns quest progress, objective/stage evaluation and NPC relation levels.
   - owns: QuestProgressEntry
-  - integration: Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly.
-- `QuestManagerInitial` — type — line 95
-- `QuestPromisedReward` — type — line 70
-- `QuestSocialAvailabilityLookup` — type — line 155
-- `QuestWorldProgressLookup` — type — line 182
-- `SettlementRatInfestationLookup` — type — line 162
-- `SpawnPointDestructionLookup` — type — line 172
+  - integration: Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly. World-driven opportunities use a read-only source lookup; QuestManager owns quest progress only.
+- `QuestManagerInitial` — type — line 96
+- `QuestPromisedReward` — type — line 71
+- `QuestSocialAvailabilityLookup` — type — line 156
+- `QuestWorldProgressLookup` — type — line 183
+- `SettlementRatInfestationLookup` — type — line 163
+- `SpawnPointDestructionLookup` — type — line 173
 
 ## `quests/quests.ts`
 
