@@ -53,6 +53,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 ## Player
 
 - [PlayerController](../src/player/PlayerController.ts) — player movement, animation and runtime state.
+- [World water eligibility](../src/player/worldWaterEligibility.ts) — whether surface-world water may own player vertical motion in the current space.
 - [Slope movement constraint](../src/terrain/slopeConstraint.ts) — shared uphill speed falloff/block used by `PlayerController`, `NpcAgent` and `AnimalAgent`.
 - [PlayerNeeds](../src/player/PlayerNeeds.ts) — stamina / vigor / hunger / thirst pools.
 - [PlayerSkills](../src/player/PlayerSkills.ts) — the eight skills, their XP curve and the single award path.

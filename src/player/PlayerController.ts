@@ -49,6 +49,10 @@ import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
 import { integrateVerticalMotion } from './verticalMotion'
+import {
+  swimFeetY,
+  worldWaterAppliesInCurrentSpace,
+} from './worldWaterEligibility'
 
 /** Stationary/moving/sprinting classification of the player's current
  *  movement, derived from the same `moving`/`sprinting` flags `update()`
@@ -93,9 +97,6 @@ export const PLAYER_STARTING_ATTRIBUTES: PhysicalAttributes = {
   endurance: 0.6,
   agility: 0.6,
 }
-/** How far below the surface the player can sink while swimming — caps out in deep
- *  water so the head still breaks the surface instead of vanishing into the seabed. */
-const MAX_SWIM_DEPTH = 1.2
 /** Rotation (radians) applied to the model root to lie it flat on the ground
  *  for `lieDown()` — the Quaternius rig has no dedicated sleep/rest clip, so
  *  this tips the whole model onto its back instead, the same trick
@@ -1040,6 +1041,16 @@ export class PlayerController {
     return { height: this.sampleHeight(x, z), ceiling: null }
   }
 
+  /**
+   * Surface-world ocean/river water may own vertical motion only when the
+   * water plane is in the player's current space. Closed cave occupancy is
+   * not flooded just because `groundY <= waterLevel`.
+   */
+  private worldWaterOwnsVertical(x: number, z: number, groundY: number): boolean {
+    if (groundY > this.waterLevel) return false
+    return worldWaterAppliesInCurrentSpace(this.caveOccupancy(x, this.mesh.position.y, z))
+  }
+
   /** `collidersNear`, filtered to whatever's actually active at the
    *  player's current Y (cave walls carry a vertical envelope — plan
    *  world-terrain-007; everything else is unaffected). */
@@ -1057,19 +1068,18 @@ export class PlayerController {
     const groundedBefore = this.grounded
     const vyBefore = this.verticalVelocity
     const groundY = this.groundAt(x, z).height
-    if (groundY <= this.waterLevel) {
+    const inWorldWater = this.worldWaterOwnsVertical(x, z, groundY)
+    if (inWorldWater) {
       // Underwater: sink toward the real seabed instead of the flattened-to-waterLevel
       // mesh, capped so deep water still leaves the head above the surface.
-      const floorY = this.sampleFloor(x, z)
-      const depth = Math.min(this.waterLevel - floorY, MAX_SWIM_DEPTH)
-      this.mesh.position.y = this.waterLevel - depth
+      this.mesh.position.y = swimFeetY(this.waterLevel, this.sampleFloor(x, z))
     } else {
       this.mesh.position.y = groundY
     }
     this.verticalVelocity = 0
     this.grounded = true
     this.jumpRequested = false
-    this.wasInWater = groundY <= this.waterLevel
+    this.wasInWater = inWorldWater
     this.footstepAccum = 0
     this.modelRoot.rotation.x = 0
     this.emitGroundTrace('snap', x, yBefore, z, groundedBefore, vyBefore, groundY)
@@ -1084,14 +1094,12 @@ export class PlayerController {
     const vyBefore = this.verticalVelocity
     const ground = this.groundAt(x, z)
     const groundY = ground.height
-    if (groundY <= this.waterLevel) {
+    if (this.worldWaterOwnsVertical(x, z, groundY)) {
       if (!this.wasInWater && this.playAt) {
         playWaterLap(this.playAt, { x, y: this.waterLevel, z })
       }
       this.wasInWater = true
-      const floorY = this.sampleFloor(x, z)
-      const depth = Math.min(this.waterLevel - floorY, MAX_SWIM_DEPTH)
-      this.mesh.position.y = this.waterLevel - depth
+      this.mesh.position.y = swimFeetY(this.waterLevel, this.sampleFloor(x, z))
       this.verticalVelocity = 0
       this.grounded = true
       this.jumpRequested = false

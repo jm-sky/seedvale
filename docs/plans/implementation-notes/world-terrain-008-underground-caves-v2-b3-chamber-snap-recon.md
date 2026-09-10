@@ -4,7 +4,7 @@
 > Against current `main` source only. No commit archaeology.
 > Harness: `src/world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 > **B3 remains in progress.** Do not treat automated tests as closing it.
-> **DO NOT IMPLEMENT YET.**
+> Swim-path ownership for this Case A snap is implemented (`worldWaterEligibility.ts`); doorway seam / other B3 work is not.
 
 Manual evidence (User, `seedvale.debug.player.position()` = `PlayerController.mesh.position`):
 
@@ -254,17 +254,29 @@ Aliases: `seedvale.debug.player.groundTrace()` / `seedvale.debug.player.clearGro
 
 Each tick: `before` (after XZ, before vertical) → `raw` / `lastGroundHit` / `source` (`cave|hysteresis|surface`) / `groundY` → `after` (mesh Y after `integrateVerticalMotion`). `queryInterior` here is raw occupancy on the interior mouth side, not hysteretic `Caves.queryInterior`.
 
+## Live failing tick (2026-09-10, latched ground trace)
+
+Root cause is **swim-path vertical ownership**, not cave query / hysteresis.
+
+```text
+seq 274  writer=vertical  source=cave  floor=0.56  occupancy=true  falling (vy=-0.68)
+seq 275  writer=swim      source=cave  floor=0.11  occupancy=true  after.y=11.19  ΔY=+10.12
+seq 276  writer=vertical  source=surface  raw=null   (already outdoors)
+```
+
+`Caves.queryGround` / hysteresis stayed `source=cave` on the failing tick. `PlayerController.updateVerticalMotion` took the swim branch because **cave floor Y (0.11) ≤ global `waterLevel` (0.45)**. That predicate was written for heightfield beaches: `groundAt` now returns the cave floor, which is a different vertical space than the ocean plane. `swimFeetY` then used outdoor `sampleFloor` (~11.19) and assigned `mesh.position.y` to the hillside / water mesh.
+
+The same class hits any closed cave whose floor crosses below `waterLevel` (chamber descent, tunnel under a river/lake). Surface-world water is not physically in that void.
+
+**Fix (2026-09-10):** `worldWaterAppliesInCurrentSpace` — closed cave occupancy (`occupancyAt`, not `openSky`) does not hand vertical ownership to world water. Open-sky mouth/approach pits still wade/swim. Underground water bodies need their own occupancy later; this is not a permanent cave-swim ban. `integrateVerticalMotion` keeps the cave floor.
+
+B3 remains in progress (doorway seam / other entrance work). Manual check: seed `1136726869`, Grota Czarnego Kamienia, walk the passage→chamber descent — player Y must stay in the cave, not jump to ~11.2. Outdoor swimming/wading must still work.
+
 ## Classification (Case A)
 
 ```text
-PRIMARY (assignment path, if miss): D — unsafe surface fallback / unlimited grounded snap-up
-PRIMARY (why miss would stick):     C — hysteresis lastHit missing (not observed in harness)
-SPATIAL on sampled segment:         not A (no gap at last-good→snap XZ)
-SECONDARY / related:                H — bend/chamber off opening axis (clear in Case B)
-                                    F — not on Case A sampled XZ
-                                    G — verticalMotion snap-up has no cap (enabler, not the miss)
+PRIMARY: swim path treated cave floor <= waterLevel as "underwater"
+         and assigned outdoor sampleFloor / water mesh Y
+NOT:     cave query miss / hysteresis lastHit / surface fallback (those were
+         consequences of the swim teleport, seq 276)
 ```
-
-I — combination **if** production lastHit was null; harness alone is **not** A.
-
-DO NOT IMPLEMENT YET.
