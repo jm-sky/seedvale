@@ -17,10 +17,10 @@ export type SettlementStorageRepairView = {
 /** Read-only repair panel copy for settlement storage (plan
  *  quests-progression-006 §4). */
 export function describeSettlementStorageRepair(
-  infestationActive: boolean,
+  storageDamaged: boolean,
   inventory: Inventory,
 ): SettlementStorageRepairView | null {
-  if (!infestationActive) return null
+  if (!storageDamaged) return null
   const have = inventory.count('beam')
   const canRepair = inventory.has('beam', SETTLEMENT_STORAGE_REPAIR_BEAM_COST)
   const missing = SETTLEMENT_STORAGE_REPAIR_BEAM_COST - have
@@ -39,9 +39,9 @@ export function describeSettlementStorageRepair(
 
 export function formatSettlementStorageInspection(
   stockLines: string,
-  infestationActive: boolean,
+  storageDamaged: boolean,
 ): string {
-  if (!infestationActive) return stockLines
+  if (!storageDamaged) return stockLines
   return [
     stockLines,
     '',

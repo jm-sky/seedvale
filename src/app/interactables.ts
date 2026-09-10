@@ -719,6 +719,16 @@ export function buildInteractables(
       })
     }
 
+    const nest = settlement.landmarks.ratNest
+    if (nest && settlement.hasActiveNest() && withinRange(nest.x, nest.z, playerPos, GAZE_RANGE)) {
+      list.push({
+        kind: 'ratNest',
+        position: { x: nest.x, z: nest.z },
+        promptLabel: '[E] Zniszcz gniazdo szczurów',
+        settlementId: settlement.id,
+      })
+    }
+
     // Plan settlements-npcs-012 — settlement bulk wood at `landmarks.stockpile`,
     // distinct from household yard piles and from the `settlementStorage` crate.
     if (withinRange(settlement.landmarks.stockpile.x, settlement.landmarks.stockpile.z, playerPos, GAZE_RANGE)) {

@@ -1,7 +1,7 @@
 # Plan: Rat infestation nest and reproduction
 
 **Created:** 2026-09-09
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~quests-progression-006~~

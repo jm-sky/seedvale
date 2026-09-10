@@ -71,6 +71,7 @@ import {
   WOOD_PILE_URL,
 } from './propSpecs'
 import { cloneProp, clonePropWithYaw, loadPropOrFallback, loadPropTemplates, placeOnGround } from './propUtils'
+import { placeRatNest } from './ratNestPlacement'
 import {
   PALISADE_GATE_HALF_ANGLE,
   plantEntrancePalisade,
@@ -85,6 +86,7 @@ import {
   createGrindWorkbench,
   createHayBale,
   createHut,
+  createRatNest,
   createSignpost,
   createStockpile,
   createTrough,
@@ -224,6 +226,13 @@ export type SettlementLandmarks = {
    *  `Settlement.id` (`world/workContract.ts`'s `noticeBoardId`), never an
    *  array index or Object3D reference. */
   noticeBoard: THREE.Vector3
+  /** Intact rat-nest position (plan quests-progression-013) — derived from
+   *  `VillagePlan`, omitted when the nest is destroyed or no valid site
+   *  exists. Presentation only; `nestDestroyed` lives on the infestation
+   *  registry. */
+  ratNest?: THREE.Vector3
+  /** Live nest mesh, load-lifetime only. */
+  ratNestProp?: THREE.Object3D
   /** Hidden-treasure dig markers (quick task, home settlement only, see
    *  `plantForest` below) — world position of each of the 3 flower clumps a
    *  shovel dig must land within `HIDDEN_TREASURE_DIG_TOLERANCE` of
@@ -375,6 +384,7 @@ export {
   createGarden,
   createHayBale,
   createHut,
+  createRatNest,
   createSignpost,
   createStockpile,
   createTrough,
@@ -703,6 +713,9 @@ export async function buildSettlementProps(
    *  the caller from already-generated family data; this module never rolls
    *  or inspects roles itself. */
   blacksmithFamilyIndices: readonly number[] = [],
+  /** When set, place the intact infestation nest from `VillagePlan` (plan
+   *  quests-progression-013). Omitted when the nest is already destroyed. */
+  ratNest?: { settlementId: string, settlementSeed: number },
 ): Promise<{
   group: THREE.Group
   landmarks: SettlementLandmarks
@@ -807,6 +820,27 @@ export async function buildSettlementProps(
     { x: settlementStorageX, z: settlementStorageZ },
     sampleHeight,
   )
+
+  if (ratNest && plan) {
+    const nestSite = placeRatNest({
+      settlementId: ratNest.settlementId,
+      settlementSeed: ratNest.settlementSeed,
+      plan,
+      sampleHeight,
+      waterLevel,
+    })
+    if (nestSite) {
+      const nestProp = await loadPropOrFallback(
+        '/models/settlement/rat_nest.glb',
+        0.35,
+        createRatNest,
+      )
+      placeOnGround(nestProp, nestSite.x, nestSite.z, sampleHeight)
+      group.add(nestProp)
+      landmarks.ratNest = new THREE.Vector3(nestSite.x, nestSite.y, nestSite.z)
+      landmarks.ratNestProp = nestProp
+    }
+  }
 
   const gardenLms = (plan?.landmarks.filter((l) => l.kind === 'garden') ?? [])
     .slice()

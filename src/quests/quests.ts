@@ -877,16 +877,16 @@ export const QUESTS: readonly QuestDef[] = [
     id: 'plaga-szcurow',
     title: 'Plaga szczurów',
     description:
-      'Marek zgłasza plagę szczurów wokół magazynu osady. Zbadaj składowisko, napraw uszkodzenia i doprowadź liczbę żywych szczurów w osadzie do jednego albo mniej.',
+      'Marek zgłasza plagę szczurów wokół magazynu osady. Napraw uszkodzony magazyn, zniszcz gniazdo za domem i doprowadź liczbę żywych szczurów w osadzie do jednego albo mniej.',
     giverName: 'Marek',
     offerLine:
-      'Szczury roi się przy magazynie i zżerają zapasy. Możesz się temu przyjrzeć i pomóc osadzie?',
+      'Szczury roi się przy magazynie i zżerają zapasy. Ktoś musi naprawić dziury, znaleźć gniazdo za domem i ograniczyć ich liczbę. Pomożesz?',
     stages: [
       {
         objective: { type: 'resolve_storage_rat_infestation' },
         description:
-          'Zbadaj magazyn osady, napraw uszkodzenia i doprowadź liczbę żywych szczurów w osadzie do co najwyżej jednego.',
-        reminderLine: 'Plaga wciąż nie wygasła — sprawdź magazyn i szczury w osadzie.',
+          'Napraw magazyn osady, zniszcz gniazdo szczurów za jednym z domów i doprowadź liczbę żywych szczurów w osadzie do co najwyżej jednego.',
+        reminderLine: 'Plaga wciąż nie wygasła — sprawdź magazyn, gniazdo za domem i szczury w osadzie.',
         progressLine: 'Wygląda na to, że plaga wygasła. Wróć do Marka.',
       },
     ],

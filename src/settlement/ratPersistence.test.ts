@@ -1,17 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { createRatRegistry } from './ratPersistence'
-import { createStorageInfestationRegistry } from './storageInfestation'
-
-describe('storageInfestation registry (plan quests-progression-006)', () => {
-  it('round-trips active and repaired conditions', () => {
-    const registry = createStorageInfestationRegistry()
-    registry.activate('home')
-    expect(registry.isActive('home')).toBe(true)
-    registry.repair('home')
-    expect(registry.isActive('home')).toBe(false)
-    expect(registry.serialize()).toEqual({ home: 'repaired' })
-  })
-})
 
 describe('rat persistence registry (plan quests-progression-006)', () => {
   it('captures and serializes saved individuals', () => {

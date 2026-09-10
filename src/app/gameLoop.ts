@@ -469,6 +469,8 @@ export type GameLoopDeps = {
   openNoticeBoard?: (settlementId: string) => void
   /** `[E]` repair action on damaged settlement storage (plan quests-progression-006). */
   repairSettlementStorage?: (settlementId: string) => void
+  /** `[E]` destroy action on an intact infestation nest (plan quests-progression-013). */
+  destroyRatNest?: (settlementId: string) => void
   /** Terrain-preparation preview mode (plan `world-terrain-002` §2) — called
    *  unconditionally, before the gaze/interact dispatch, so a confirming
    *  `[E]` press is consumed here rather than falling through to it. No-ops
@@ -578,7 +580,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, inspectBedroll, inspectPlatform, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, openNoticeBoard,
+    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
     openWorldInspection, syncWorldInspection,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
@@ -1639,12 +1641,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (altInteractPressed && !target.complete) cancelResidentialBuilding?.(target.id)
       } else if (target?.kind === 'settlementStorage') {
         if (interactPressed) {
-          const infestationActive = bundle.settlementsManager.isStorageInfestationActive(target.settlementId)
+          const storageDamaged = bundle.settlementsManager.isStorageDamaged(target.settlementId)
           const line = formatSettlementStorageInspection(
             formatSettlementStorageLines(target.economy),
-            infestationActive,
+            storageDamaged,
           )
-          const repairView = describeSettlementStorageRepair(infestationActive, inventory)
+          const repairView = describeSettlementStorageRepair(storageDamaged, inventory)
           const actions = repairView
             ? [{
                 label: 'Napraw magazyn',
@@ -1655,6 +1657,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             : []
           vueUi.openFlavorDialog('Magazyn osady', line, actions)
         }
+      } else if (target?.kind === 'ratNest') {
+        if (interactPressed) destroyRatNest?.(target.settlementId)
       } else if (target?.kind === 'noticeBoard') {
         if (interactPressed) openNoticeBoard?.(target.settlementId)
       } else if (target?.kind === 'terrainPreparation') {

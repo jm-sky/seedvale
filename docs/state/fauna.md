@@ -59,13 +59,14 @@ Death (`takeDamage()` → collapse, `onDeath` fires once regardless of cause) st
 
 **Household dogs** (fauna-011) are livestock-role `AnimalAgent`s (`AnimalDef.role: 'livestock'`, meat diet, `fleeRange: 0`), not a parallel type and not predators — they eat meat but never hunt, and carcass-seeking is gated by role rather than a dog-specific flag. Guard resolution (`dogGuard.ts`) is recomputed fresh every tick: a wolf attacking this dog's own household wins inside a wide home radius; a wolf attacking another settlement inhabitant may be assisted inside a tighter radius; a distant/unrelated wolf never becomes a chase target. Contextual bark is a separate, cooldown-gated stimulus (active guard, then a nearby wolf howl, then a stranger at the house) and never chains dog-to-dog. Idle pest-chase of settlement rats is a third, lower contract — only reached once guard/needs/lure claimed nothing this tick, and home-bounded so a dog never leaves its yard hunting vermin.
 
-**Rats** are a settlement-local pressure/nuisance mechanism implemented as plain `AnimalAgent` instances, physically hosted in `src/settlement/` but fauna-owned by convention. A target population is computed live from `(household food + settlement food) / a food-per-pressure constant − dog count × a suppression factor`, clamped to a small cap, reconciled at most every half game-day — one rat spawned/despawned at a time. Rats drain real food through the exact same atomic primitives every other consumer uses (household/economy withdraw), gated by a deterministic hashed per-rat roll so outcomes don't depend on frame timing:
+**Rats** are a settlement-local pressure/nuisance mechanism implemented as plain `AnimalAgent` instances, physically hosted in `src/settlement/` but fauna-owned by convention. Carrying capacity is food-driven (`(household food + settlement food) / a food-per-pressure constant`, clamped to a small cap). Damaged infested storage adds a temporary `max(normal + 3, 7)` pressure bonus; repairing storage removes that bonus without deleting live rats. An intact infestation nest enables extra replenishment toward that target (at most one spawn per half-day reconciliation, with a deterministic dog-pressure roll); destroying the nest stops that extra replenishment but does not extinguish ordinary food-driven recovery. Dogs no longer subtract from the population target — they hunt rats physically and reduce infestation replenishment by 10% per living dog (floored at 50%). Rats drain real food through the exact same atomic primitives every other consumer uses (household/economy withdraw), gated by a deterministic hashed per-rat roll so outcomes don't depend on frame timing:
 
 ```text
 settlement food/storage
-↔ rats (population target from live food + dog count)
+↔ rats (food-driven carrying capacity; damaged storage adds a temporary floor)
 ↔ household/economy food drain (same atomic primitives every consumer uses)
-↔ dog suppression (a household dog both lowers the target and can hunt rats directly)
+↔ infestation nest (extra replenishment while intact)
+↔ dogs (physical hunting + replenishment pressure, not target suppression)
 ```
 
 **Hunting** exposes exactly two operations to NPCs: a nearest-huntable-animal query (preferred species only, predators/livestock/bear never targetable) and a re-validated knife-harvest. The query applies a deterministic, seeded population-protection roll — if a candidate's local spawn population is down to one individual, a roll can skip it, protecting the last of a local population from being hunted to extinction by repeated NPC hunting. Resource yield on death (the knife-harvest operation itself) is shared verbatim between the player's own harvest action and a hunter NPC's post-kill harvest — a single reusable function, never two implementations.
@@ -86,7 +87,7 @@ Fauna has a genuine four-tier persistence picture — treat these as four distin
 **Not persisted; population is deterministically reconstructed, individual identity is not.** The fixed spawn table plus seeded placement fully reproduces the population every session, but a specific individual's position/health/hunger/rabies-infection/frenzy/juvenile state simply ceases to exist on unload — a wolf that was rabid, mid-chase, or juvenile at save time comes back as a fresh deterministic spawn. The generic per-individual snapshot capability used by livestock exists on the class and could be called for a wild individual, but nothing does — a future feature persisting a specific wild animal (a tracked quest animal, an ongoing rabies outbreak) needs a call site, not new infrastructure.
 
 ### Rats
-**Persisted per individual (plan quests-progression-006), with a live pressure target.** Settlement rats use the same `AnimalAgent.snapshot()` / capture-registry pattern as livestock, keyed by settlement id with removed-id tombstones. The *target population* is still a live formula over current food, dog count, and whether shared settlement storage infestation is active (`max(normalTarget + 3, 7)` while damaged); reconciliation gradually adjusts the live count toward that target after restore rather than respawning the full target instantly.
+**Persisted per individual (plan quests-progression-006), with a live pressure target and a separate infestation record (plan quests-progression-013).** Settlement rats use the same `AnimalAgent.snapshot()` / capture-registry pattern as livestock, keyed by settlement id with removed-id tombstones. The *target population* is a live formula over current food and whether shared settlement storage is still damaged (`max(normalTarget + 3, 7)` while damaged); dogs do not change that target. Infestation replenishment (nest intact, below target) is a deterministic bucketed roll reduced by living dogs. Excess live rats are never deleted just because the target falls. Nest position is reconstructed from `VillagePlan`; only `{ storageDamaged, nestDestroyed }` persists.
 
 **Riding is the one place the wild/livestock boundary is player-visible today:** the persisted mount reference stores a livestock animal id specifically because only livestock kinds have a deterministic id that survives a reload — a player who somehow mounted a wild animal would have no way to reconnect the save reference to a real post-reload individual (not currently possible in practice; mount capability is only configured for livestock kinds).
 
@@ -115,7 +116,7 @@ Any species whose `AnimalDef.mount` is set is ridable — today, horse and donke
 ## Limitations
 
 - Wild-fauna individuals have no persistence and no reconstruction guarantee beyond population-level determinism (see [Persistence classes](#persistence-classes)).
-- Settlement rats persist as individuals, but their target population remains a live pressure formula (food, dogs, storage infestation) — not seed-derivable at the population level.
+- Settlement rats persist as individuals. Their target population remains a live pressure formula (food + damaged-storage bonus); infestation nest/storage facts persist separately. Dogs affect replenishment and physical hunting, not the target.
 - Fauna's outgoing attack damage bypasses the shared critical/defense pipeline (see [Combat](#combat)) — a known asymmetry, not yet resolved either way.
 - Ordinary movement-target search (wander/food/water) uses unseeded randomness, unlike the deterministic hashed rolls used for population-protection and rat food-eating. This is internally consistent today only because wild-fauna individual state is never persisted — there is nothing for the randomness to desynchronize against across a save/reload. If wild-fauna persistence is ever added, this boundary needs to become an explicit, stated policy rather than an implicit one.
 - Blacksmith/farmer-adjacent gaps aside, no disease system beyond rabies exists — a decaying-food risk-penalty seam exists in the corpse-scavenging scoring function but is currently inert.
@@ -145,6 +146,7 @@ src/fauna/preyAlertPerception.ts
 src/settlement/livestock.ts
 src/settlement/rats.ts
 src/settlement/ratPersistence.ts
-src/settlement/storageInfestation.ts
+src/settlement/ratInfestation.ts
+src/settlement/ratNestPlacement.ts
 src/world/createGrassForagePatches.ts
 ```

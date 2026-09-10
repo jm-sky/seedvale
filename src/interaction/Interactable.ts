@@ -114,6 +114,10 @@ export type Interactable =
    *  `SettlementEconomy`, same "presentation, not owner" contract as
    *  `householdStorage`. */
   | { kind: 'settlementStorage', position: { x: number, z: number }, promptLabel: string, economy: SettlementEconomy, settlementId: string }
+  /** Intact settlement rat nest (plan quests-progression-013) — `[E]`
+   *  destroys it with a `soil_digging` tool. Position is derived; destroyed
+   *  state is the infestation registry. */
+  | { kind: 'ratNest', position: { x: number, z: number }, promptLabel: string, settlementId: string }
   /** Settlement wood stockpile (plan settlements-npcs-012) — read-only view
    *  over `SettlementEconomy.wood` only, matching the settlement pile visual.
    *  Distinct from the aggregated `settlementStorage` crate and from each

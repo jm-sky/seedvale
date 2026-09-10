@@ -302,17 +302,20 @@ describe('QuestManager resolve_storage_rat_infestation', () => {
     reportLine: 'report rats',
   })
 
-  it('stays active until storage is repaired and rats are at most one', () => {
-    let snapshot = { infestationActive: true, aliveRatCount: 5 }
+  it('stays active until storage is repaired, the nest is destroyed, and rats are at most one', () => {
+    let snapshot = { storageDamaged: true, nestDestroyed: false, aliveRatCount: 5 }
     const qm = makeManager([ratQuest], undefined, undefined, undefined, undefined, {
       getSnapshot: () => snapshot,
     })
     acceptOffer(qm, 'Marek')
     expect(qm.getState('plaga')).toBe('active')
-    snapshot = { infestationActive: false, aliveRatCount: 5 }
+    snapshot = { storageDamaged: false, nestDestroyed: true, aliveRatCount: 2 }
     qm.pollSettlementRatInfestationObjectives()
     expect(qm.getState('plaga')).toBe('active')
-    snapshot = { infestationActive: false, aliveRatCount: 1 }
+    snapshot = { storageDamaged: false, nestDestroyed: false, aliveRatCount: 0 }
+    qm.pollSettlementRatInfestationObjectives()
+    expect(qm.getState('plaga')).toBe('active')
+    snapshot = { storageDamaged: false, nestDestroyed: true, aliveRatCount: 1 }
     qm.pollSettlementRatInfestationObjectives()
     expect(qm.getState('plaga')).toBe('ready_to_report')
   })

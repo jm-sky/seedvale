@@ -47,6 +47,7 @@ import {
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcAuthoritativeState, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost } from './props'
+import { createRatInfestationRegistry, type RatInfestationState } from './ratInfestation'
 import { createRatRegistry, type RatSaveRecord } from './ratPersistence'
 import {
   type MidpointSignpost,
@@ -63,7 +64,6 @@ import {
 } from './settlementGenerator'
 import { settlementDefFor } from './settlementPlanCache'
 import { createLabeledProp, disposeLabeledProp, type LabeledProp, updateLabelOpacity } from './settlementSignposts'
-import { createStorageInfestationRegistry, type StorageInfestationCondition } from './storageInfestation'
 
 type Entry = {
   def: SettlementDef
@@ -187,10 +187,13 @@ export type SettlementsManager = {
   snapshotLivestock: () => { entries: LivestockSaveRecord[], removedIds: string[] }
   /** Flat rat persistence snapshot (plan quests-progression-006). */
   snapshotRats: () => { entries: RatSaveRecord[], removedIds: string[] }
-  /** Storage infestation condition per settlement (plan quests-progression-006). */
-  snapshotStorageInfestation: () => Record<string, StorageInfestationCondition>
-  isStorageInfestationActive: (settlementId: string) => boolean
+  /** Rat infestation state per settlement (plan quests-progression-013). */
+  snapshotStorageInfestation: () => Record<string, RatInfestationState>
+  isStorageDamaged: (settlementId: string) => boolean
+  isNestDestroyed: (settlementId: string) => boolean
+  hasActiveNest: (settlementId: string) => boolean
   repairStorageInfestation: (settlementId: string) => void
+  destroyRatNest: (settlementId: string) => void
   countAliveRats: (settlementId: string) => number
   /** Public persistent-animal lookup (plan fauna-020). */
   resolvePersistentAnimal: (animalId: string) => AnimalAgent | null
@@ -292,10 +295,10 @@ export async function createSettlementsManager(
   /** Saved settlement rats + tombstones (plan quests-progression-006). */
   initialRats?: readonly RatSaveRecord[],
   initialRemovedRatIds?: readonly string[],
-  /** Persisted storage infestation per settlement (plan quests-progression-006). */
-  initialStorageInfestation?: Record<string, StorageInfestationCondition>,
-  /** When true, the home settlement starts with active storage infestation if
-   *  no persisted entry exists yet (authored V1 trigger). */
+  /** Persisted rat infestation per settlement (plan quests-progression-013). */
+  initialStorageInfestation?: Record<string, RatInfestationState>,
+  /** When true, the home settlement starts with damaged storage and an intact
+   *  nest if no persisted entry exists yet (authored V1 trigger). */
   seedHomeStorageInfestation?: boolean,
   /** Authoritative Work Contract lifecycle (plan npc-015) — forwarded into
    *  every `createSettlement` call the same way `mining`/`foodSources` are
@@ -436,7 +439,7 @@ export async function createSettlementsManager(
     removedIds: initialRemovedRatIds ?? [],
   })
 
-  const storageInfestation = createStorageInfestationRegistry(initialStorageInfestation)
+  const ratInfestation = createRatInfestationRegistry(initialStorageInfestation)
 
   // One shared deps object for every `createSettlement` call (createSettlement
   // refactor review, P1) — was a 26-argument positional call duplicated
@@ -454,7 +457,7 @@ export async function createSettlementsManager(
     relations: npcRelationships,
     livestockPersistence: livestock,
     ratPersistence: rats,
-    infestationActive: (settlementId) => storageInfestation.isActive(settlementId),
+    infestationState: (settlementId) => ratInfestation.get(settlementId),
     collidersNear,
     registerColliders,
     clearColliders,
@@ -502,7 +505,7 @@ export async function createSettlementsManager(
     throw new Error('[SettlementsManager] home settlement (0,0) failed to generate')
   }
   if (seedHomeStorageInfestation && initialStorageInfestation?.[homeDef.id] === undefined) {
-    storageInfestation.activate(homeDef.id)
+    ratInfestation.seed(homeDef.id)
   }
   // Built the same way a streamed-in neighbor is below (`ensureLoaded`) —
   // kicked off immediately rather than waiting for the player to wander into
@@ -771,9 +774,15 @@ export async function createSettlementsManager(
       }
       return rats.serialize()
     },
-    snapshotStorageInfestation: () => storageInfestation.serialize(),
-    isStorageInfestationActive: (settlementId) => storageInfestation.isActive(settlementId),
-    repairStorageInfestation: (settlementId) => storageInfestation.repair(settlementId),
+    snapshotStorageInfestation: () => ratInfestation.serialize(),
+    isStorageDamaged: (settlementId) => ratInfestation.isStorageDamaged(settlementId),
+    isNestDestroyed: (settlementId) => ratInfestation.isNestDestroyed(settlementId),
+    hasActiveNest: (settlementId) => ratInfestation.hasActiveNest(settlementId),
+    repairStorageInfestation: (settlementId) => ratInfestation.repairStorage(settlementId),
+    destroyRatNest: (settlementId) => {
+      ratInfestation.destroyNest(settlementId)
+      entries.get(settlementId)?.settlement?.hideRatNest()
+    },
     countAliveRats: (settlementId) => {
       const entry = entries.get(settlementId)
       if (!entry?.settlement) return 0
@@ -803,7 +812,7 @@ export async function createSettlementsManager(
       npcStates.clear()
       livestock.clear()
       rats.clear()
-      storageInfestation.clear()
+      ratInfestation.clear()
     },
   }
 }

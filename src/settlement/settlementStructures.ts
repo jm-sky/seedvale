@@ -173,6 +173,52 @@ export function createTrough(scale = 1): THREE.Group {
   return visual.object
 }
 
+/** Procedural rat nest — a ground burrow with dirt, straw and wood scraps
+ *  (plan quests-progression-013 §8). Used when `rat_nest.glb` is missing. */
+export function createRatNest(): THREE.Group {
+  const nest = new THREE.Group()
+  const dirtMat = new THREE.MeshStandardMaterial({ color: 0x5a3d24, flatShading: true, roughness: 0.95 })
+  const strawMat = new THREE.MeshStandardMaterial({ color: 0xb89a4a, flatShading: true, roughness: 0.9 })
+  const scrapMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, flatShading: true, roughness: 0.85 })
+  const holeMat = new THREE.MeshStandardMaterial({ color: 0x1a120c, flatShading: true, roughness: 1 })
+
+  const mound = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), dirtMat)
+  mound.scale.set(1.15, 0.45, 1.05)
+  mound.castShadow = true
+  mound.receiveShadow = true
+  nest.add(mound)
+
+  const hole = new THREE.Mesh(new THREE.CircleGeometry(0.14, 8), holeMat)
+  hole.rotation.x = -Math.PI / 2
+  hole.position.y = 0.04
+  nest.add(hole)
+
+  for (const [x, z, yaw, len] of [
+    [0.28, 0.12, 0.4, 0.28],
+    [-0.22, 0.18, -0.7, 0.22],
+    [0.08, -0.26, 1.1, 0.24],
+    [-0.3, -0.08, 0.2, 0.18],
+  ] as const) {
+    const straw = new THREE.Mesh(new THREE.BoxGeometry(len, 0.03, 0.04), strawMat)
+    straw.position.set(x, 0.08, z)
+    straw.rotation.y = yaw
+    nest.add(straw)
+  }
+
+  for (const [x, z, yaw] of [
+    [0.18, -0.16, 0.6],
+    [-0.16, 0.22, -0.3],
+  ] as const) {
+    const scrap = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.07), scrapMat)
+    scrap.position.set(x, 0.07, z)
+    scrap.rotation.y = yaw
+    scrap.castShadow = true
+    nest.add(scrap)
+  }
+
+  return nest
+}
+
 /** Fallback if `crate.glb` fails to load — plain flat-shaded box, same
  *  material family as `createBarrel`'s fallback. */
 export function createCrate(scale = 1): THREE.Group {

@@ -34,6 +34,7 @@ import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
 import { createNpcCrowdPass } from '../ai/npcCrowd'
 import { advanceSocialPairing } from '../ai/socialBehaviour'
+import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { isSystemEnabled } from '../debug/debugMode'
 import { type SettlementEconomy, WOODSHED_DEVELOPMENT } from '../economy'
@@ -75,6 +76,7 @@ import {
   placeOnGround,
   type SettlementLandmarks,
 } from './props'
+import { NO_RAT_INFESTATION, type RatInfestationState } from './ratInfestation'
 import { createSettlementRats } from './rats'
 import { type RoadNetworkContext, segmentsNear } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
@@ -147,6 +149,10 @@ export type Settlement = {
    *  household-owned livestock. */
   readonly rats: readonly AnimalAgent[]
   landmarks: SettlementLandmarks
+  /** Live nest presentation — derived from the manager-owned infestation
+   *  registry, never a second nestDestroyed flag. */
+  hasActiveNest: () => boolean
+  hideRatNest: () => void
   /** Settlement-owned bulk stock / demand / development (plan 071). */
   economy: SettlementEconomy
   /** One household per family, index-aligned with `def.families` (plan 069). */
@@ -271,8 +277,9 @@ export type CreateSettlementDeps = {
   livestockPersistence?: LivestockPersistence
   /** Saved rat individuals + tombstones (plan quests-progression-006). */
   ratPersistence?: import('./ratPersistence').RatPersistence
-  /** Whether this settlement's shared storage infestation is still active. */
-  infestationActive: (settlementId: string) => boolean
+  /** Live infestation facts for this settlement (plan quests-progression-013)
+   *  — read every tick / prop build, never cached here. */
+  infestationState: (settlementId: string) => RatInfestationState
   // collision
   collidersNear: ColliderSource
   /** Registers this settlement's static colliders (well + houses +
@@ -391,7 +398,7 @@ export async function createSettlement(
     relations = createNpcRelationships(),
     livestockPersistence,
     ratPersistence,
-    infestationActive = () => false,
+    infestationState = () => NO_RAT_INFESTATION,
     workContracts,
     playerWells,
     droppedItems,
@@ -459,6 +466,9 @@ export async function createSettlement(
           }
         : { sampleHeight, waterLevel },
       blacksmithFamilyIndices,
+      infestationState(def.id).nestDestroyed
+        ? undefined
+        : { settlementId: def.id, settlementSeed },
     )
   } finally {
     bootMarkEnd('buildSettlementProps')
@@ -621,7 +631,8 @@ export async function createSettlement(
     settlementId: def.id,
     settlementSeed,
     onAnimalDeath,
-    infestationActive: () => infestationActive(def.id),
+    storageDamaged: () => infestationState(def.id).storageDamaged,
+    nestDestroyed: () => infestationState(def.id).nestDestroyed,
     ratPersistence,
   })
 
@@ -889,6 +900,16 @@ export async function createSettlement(
       return rats.getAgents()
     },
     landmarks,
+    hasActiveNest: () => !infestationState(def.id).nestDestroyed,
+    hideRatNest() {
+      const prop = landmarks.ratNestProp
+      if (prop) {
+        prop.removeFromParent()
+        disposeObject3D(prop)
+        landmarks.ratNestProp = undefined
+      }
+      landmarks.ratNest = undefined
+    },
     economy,
     households,
     householdStorages,

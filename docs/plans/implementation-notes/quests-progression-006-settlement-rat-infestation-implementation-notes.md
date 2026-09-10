@@ -4,6 +4,8 @@
 **Plan:** `quests-progression-006-settlement-rat-infestation.md`  
 **Status:** `implemented` ✅
 
+> **Superseded in part by [quests-progression-013](../quests-progression-013-rat-infestation-nest-and-reproduction.md) (2026-09-10).** Historical notes below describe the V1 two-condition completion rule (`repaired && aliveRats <= 1`) and dog subtraction from the rat population target (`RAT_DOG_SUPPRESSION`). Current behaviour: dogs no longer change carrying capacity; they hunt rats physically and reduce nest-gated infestation replenishment. Quest completion now also requires `nestDestroyed`. Do not rewrite the rest of this file as if 006 had always worked that way.
+
 ## Review result
 
 Current `main` already contains almost every runtime primitive needed. The implementation should join four existing seams — settlement rat reconciliation, settlement storage interaction, quest world bindings, and `AnimalAgent` persistence snapshots — rather than introducing a generic problem/repair framework.

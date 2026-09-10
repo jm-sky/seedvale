@@ -31,6 +31,8 @@ const DAMAGE_TABLE: Partial<Record<AnimalKind, Partial<Record<AnimalKind, number
   fox: { deer: 10, stag: 6, rabbit: 20, duck: 18, chicken: 20, rooster: 20 },
   // Large omnivorous predator — hits harder than wolf across the board (plan 188).
   bear: { deer: 26, stag: 22, boar: 20, sheep: 24, donkey: 22, cow: 20, chicken: 28, rooster: 28 },
+  // Household dogs hunt settlement rats physically (plan quests-progression-013 §13).
+  dog: { rat: 2 },
 }
 
 const DEFAULT_DAMAGE = 8

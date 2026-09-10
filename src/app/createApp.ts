@@ -928,7 +928,8 @@ export async function createApp(
     },
     {
       getSnapshot: (settlementId) => ({
-        infestationActive: bundle.settlementsManager.isStorageInfestationActive(settlementId),
+        storageDamaged: bundle.settlementsManager.isStorageDamaged(settlementId),
+        nestDestroyed: bundle.settlementsManager.isNestDestroyed(settlementId),
         aliveRatCount: bundle.settlementsManager.countAliveRats(settlementId),
       }),
     },
@@ -1941,6 +1942,7 @@ export async function createApp(
     workOnResidentialBuilding: placement.workOnResidentialBuilding,
     cancelResidentialBuilding: placement.cancelResidentialBuilding,
     repairSettlementStorage: storageInfestation.repairSettlementStorage,
+    destroyRatNest: storageInfestation.destroyRatNest,
     openNoticeBoard: contracts.openNoticeBoard,
     openWorldInspection: inspection.openFromTarget,
     syncWorldInspection: inspection.syncOpenView,

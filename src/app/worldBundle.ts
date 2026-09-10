@@ -283,7 +283,7 @@ function buildSettlementsManager(
   initialRemovedLivestockIds?: readonly string[],
   initialRats?: readonly import('../settlement/ratPersistence').RatSaveRecord[],
   initialRemovedRatIds?: readonly string[],
-  initialStorageInfestation?: Record<string, import('../settlement/storageInfestation').StorageInfestationCondition>,
+  initialStorageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>,
   seedHomeStorageInfestation?: boolean,
   /** Forwarded into every `createSettlement` call → every `NpcAgent` the
    *  same way `helperDelivery`/`hunting` are above (plan npc-015). Unlike
@@ -538,7 +538,7 @@ type WorldSystemsSeed = {
   removedLivestockIds?: readonly string[]
   rats?: readonly import('../settlement/ratPersistence').RatSaveRecord[]
   removedRatIds?: readonly string[]
-  storageInfestation?: Record<string, import('../settlement/storageInfestation').StorageInfestationCondition>
+  storageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>
   /** Authored V1 trigger for home storage infestation on a fresh world. */
   seedHomeStorageInfestation?: boolean
   spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
@@ -1133,7 +1133,7 @@ export async function createWorldBundle(
   initialRemovedLivestockIds?: readonly string[],
   initialRats?: readonly import('../settlement/ratPersistence').RatSaveRecord[],
   initialRemovedRatIds?: readonly string[],
-  initialStorageInfestation?: Record<string, import('../settlement/storageInfestation').StorageInfestationCondition>,
+  initialStorageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>,
   seedHomeStorageInfestation: boolean = false,
   /** Plan fauna-010 §3/§4 — sparse grass forage depletion overrides, same
    *  "long-lived object owned by `createApp.ts`, mutated in place, threaded

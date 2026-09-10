@@ -48,6 +48,11 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
     expect(damageFor('wolf', 'fox')).toBe(8) // no table entry -> DEFAULT_DAMAGE
   })
 
+  it('gives dogs 2 damage vs rats, not enough to one-shot full health (plan quests-progression-013 §13)', () => {
+    expect(damageFor('dog', 'rat')).toBe(2)
+    expect(damageFor('dog', 'rat')).toBeLessThan(MAX_HP.rat)
+  })
+
   it('looks up predator→human damage (plan 056)', () => {
     expect(damageVsHuman('wolf')).toBe(12)
     expect(damageVsHuman('fox')).toBe(6)

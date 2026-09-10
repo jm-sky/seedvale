@@ -1110,6 +1110,45 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(loadStoredSave(v21Save)).toEqual({ status: 'ok', data: validSave })
   })
 
+  it('migrates v22 storage infestation strings into independent storage/nest facts', () => {
+    const v22Active = {
+      ...validSave,
+      version: 22,
+      storageInfestation: { home: 'active' },
+    }
+    const active = loadStoredSave(v22Active)
+    expect(active.status).toBe('ok')
+    if (active.status !== 'ok') return
+    expect(active.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(active.data.storageInfestation).toEqual({
+      home: { storageDamaged: true, nestDestroyed: false },
+    })
+
+    const v22Repaired = {
+      ...validSave,
+      version: 22,
+      storageInfestation: { home: 'repaired' },
+    }
+    const repaired = loadStoredSave(v22Repaired)
+    expect(repaired.status).toBe('ok')
+    if (repaired.status !== 'ok') return
+    expect(repaired.data.storageInfestation).toEqual({
+      home: { storageDamaged: false, nestDestroyed: false },
+    })
+  })
+
+  it('accepts current-version infestation objects and rejects legacy strings', () => {
+    const current = {
+      ...validSave,
+      storageInfestation: { home: { storageDamaged: true, nestDestroyed: false } },
+    }
+    expect(loadSaveData(current)).toEqual(current)
+    expect(isSaveData({
+      ...validSave,
+      storageInfestation: { home: 'active' },
+    })).toBe(false)
+  })
+
   describe('migrateStoredSave() chain mechanism', () => {
     const addGreeting: SaveMigration = (data) => ({ ...(data as Record<string, unknown>), greeting: 'hi' })
     const bumpToThree: SaveMigration = (data) => ({ ...(data as Record<string, unknown>), version: 3 })

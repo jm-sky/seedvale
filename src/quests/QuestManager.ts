@@ -140,14 +140,14 @@ export type QuestSocialAvailabilityLookup = {
   getRenown(settlementId: string): number
 }
 
-/** Read-only settlement rat-infestation world condition for
- *  `resolve_storage_rat_infestation` (plan quests-progression-006). */
+/** Read-only settlement rat-infestation world snapshot for
+ *  `resolve_storage_rat_infestation` (plan quests-progression-013). */
 export type SettlementRatInfestationLookup = {
   getSnapshot: (settlementId: string) => SettlementRatInfestationSnapshot
 }
 
 const NO_SETTLEMENT_RAT_INFESTATION: SettlementRatInfestationLookup = {
-  getSnapshot: () => ({ infestationActive: false, aliveRatCount: 0 }),
+  getSnapshot: () => ({ storageDamaged: false, nestDestroyed: true, aliveRatCount: 0 }),
 }
 
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
@@ -450,8 +450,9 @@ export class QuestManager {
   }
 
   /** Polls live world state for active `resolve_storage_rat_infestation`
-   *  objectives — call after rat deaths or storage repair (plan
-   *  quests-progression-006). */
+   *  objectives — call after rat deaths, storage repair, or nest destruction
+   *  (plan quests-progression-006 / quests-progression-013). Does not re-poll
+   *  already-completed quests on restore. */
   pollSettlementRatInfestationObjectives(): void {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)

@@ -12,8 +12,8 @@ import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
+import type { RatInfestationState } from '../settlement/ratInfestation'
 import type { RatSaveRecord } from '../settlement/ratPersistence'
-import type { StorageInfestationCondition } from '../settlement/storageInfestation'
 import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
@@ -549,7 +549,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 22
+export const CURRENT_SAVE_VERSION = 23
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -689,9 +689,10 @@ export type SaveData = {
   rats?: RatSaveRecord[]
   /** `${settlementId}:${animalId}` tombstones for settlement rats. */
   removedRatIds?: string[]
-  /** Settlement storage infestation condition per settlement id (plan
-   *  quests-progression-006). */
-  storageInfestation?: Record<string, StorageInfestationCondition>
+  /** Settlement rat infestation state per settlement id (plan
+   *  quests-progression-006 / quests-progression-013) — independent
+   *  storage-damage and nest-destroyed facts. */
+  storageInfestation?: Record<string, RatInfestationState>
   /** Sparse grass forage patch depletion overrides (plan fauna-010 §3/§4) —
    *  `patchId -> availableAtDays`, see `world/grassForage.ts`'s
    *  `GrassForageOverrides`. Patch *placement* is deterministic and never
@@ -1771,9 +1772,15 @@ function isRemovedRatIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
-function isStorageInfestationField(value: unknown): value is Record<string, StorageInfestationCondition> {
+function isRatInfestationState(value: unknown): value is RatInfestationState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-  return Object.values(value as Record<string, unknown>).every((entry) => entry === 'active' || entry === 'repaired')
+  const entry = value as Record<string, unknown>
+  return typeof entry.storageDamaged === 'boolean' && typeof entry.nestDestroyed === 'boolean'
+}
+
+function isStorageInfestationField(value: unknown): value is Record<string, RatInfestationState> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value as Record<string, unknown>).every(isRatInfestationState)
 }
 
 function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
@@ -2569,6 +2576,23 @@ function migrateSaveV21ToV22(data: unknown): unknown {
   return { ...v, version: 22, playerTroughs: [] }
 }
 
+/** v22 → v23 (plan quests-progression-013): storage infestation becomes
+ *  `{ storageDamaged, nestDestroyed }`. Legacy `'repaired'` keeps the nest
+ *  intact — old saves only knew about storage repair. */
+function migrateSaveV22ToV23(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const prev = v.storageInfestation
+  if (!prev || typeof prev !== 'object' || Array.isArray(prev)) {
+    return { ...v, version: 23 }
+  }
+  const storageInfestation: Record<string, RatInfestationState> = {}
+  for (const [id, entry] of Object.entries(prev as Record<string, unknown>)) {
+    if (entry === 'active') storageInfestation[id] = { storageDamaged: true, nestDestroyed: false }
+    else if (entry === 'repaired') storageInfestation[id] = { storageDamaged: false, nestDestroyed: false }
+  }
+  return { ...v, version: 23, storageInfestation }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2591,6 +2615,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   19: migrateSaveV19ToV20,
   20: migrateSaveV20ToV21,
   21: migrateSaveV21ToV22,
+  22: migrateSaveV22ToV23,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -35,7 +35,7 @@ Real, meaningful state that is deliberately not persisted. *Examples:* NPC phase
 ### Derived / cache
 Safely evictable, never a source of truth. *Examples:* the persistent worldgen cache, in-session terrain/mesh caches, settlement-plan memoization, encumbrance, shortage/surplus, a skill's derived value from its XP.
 
-**Rats** are the one concept that fits none of these cleanly: runtime authoritative, not persisted, **and not deterministically reconstructed** — even the population count is a live formula over current food/dog state, not reproducible from `(seed, elapsedDays)` alone. Treat it as its own, fourth shape rather than a subset of "wild fauna, unpersisted" — see [fauna.md](./fauna.md).
+**Rats** persist as individuals (the same capture/tombstone registry as livestock) plus a settlement-owned infestation record (`storageDamaged` / `nestDestroyed`). Population *target* is still a live formula over current food and storage damage, not a seed-derivable count — see [fauna.md](./fauna.md).
 
 ## Save/load lifecycle
 
@@ -78,7 +78,7 @@ The boundary rule this codebase applies consistently: **a value that is a pure f
 | Player | Inventory (counts, item instances, *and* food-batch freshness), survival needs, and skills (XP) persist. **HP does not** — see [Known persistence limitations](#known-persistence-limitations). Stamina is deliberately not persisted. |
 | Inventory/items | A generic `Inventory` class is reused by the player, NPCs, households, the settlement economy, and every placed container — persistence fidelity differs by owner (see limitations below), not by mechanism. |
 | World objects/buildables | Persisted authoritative, one array per object type; construction progress lives on the object's own entry, never duplicated onto a work contract. |
-| Fauna: livestock/wild/rats | Four distinct shapes — livestock persisted per individual (with an explicit pre-save capture step), spawner lifecycle persisted thin, wild individuals unpersisted-but-population-deterministic, rats unpersisted-and-not-deterministic. See [fauna.md](./fauna.md). |
+| Fauna: livestock/wild/rats | Four distinct shapes — livestock persisted per individual (with an explicit pre-save capture step), spawner lifecycle persisted thin, wild individuals unpersisted-but-population-deterministic, rats persisted per individual plus a settlement infestation record. See [fauna.md](./fauna.md). |
 | Combat/health | `HealthState` is the shared primitive; combat itself holds zero persisted state anywhere — only each target's own consequence field persists (NPC `physicalInjury`, livestock HP inside its snapshot; nothing for the player). |
 | Quests/progression | Persisted authoritative (progress including `resolvedOutcomeId` after a complete/failed outcome, player↔NPC relations). Global quest EXP is not persisted. |
 | Reputation/renown | Persisted authoritative, sparse-optional (own top-level `SaveData.reputation`, keyed by settlement id — absent settlement/save restores neutral, no version bump needed, same idiom as `npcStates`/`households`). Owned by `ReputationManager`, independent of `QuestManager`; changes only through an explicit, already-resolved consequence a caller applies. See [npc.md](./npc.md#relationships-social-and-dialogue). |
@@ -104,10 +104,9 @@ Today there is exactly one namespace (coarse world-location classification, used
 ## Known persistence limitations
 
 - **Player HP is not persisted.** Every Continue/Load fully heals the player, while NPC and livestock HP both persist. Unlike player stamina — which carries an explicit "not worth persisting" rationale — nothing states this is a deliberate choice. This is a maintainer decision (persist it, or document the omission as deliberate), not resolved here.
-- **Rats have no persistence and are not seed-derivable.** A settlement's rat population is entirely rebuilt from a live formula every time that settlement streams back in — see [fauna.md](./fauna.md).
 - **Wild-fauna individual state is not persisted.** Population reconstruction is deterministic; no specific individual's position, health, hunger, disease state, or life stage survives a session boundary. The generic per-individual snapshot mechanism exists on the fauna runtime class itself but is only ever invoked for livestock — see [fauna.md](./fauna.md).
 
-None of the three items above is a "bug" in the sense of contradicting a stated invariant — the first is an undocumented gap with no stated rationale either way; the latter two are documented, deliberate scope decisions. Treat them accordingly rather than uniformly as defects.
+None of the items above is a "bug" in the sense of contradicting a stated invariant — player HP is an undocumented gap with no stated rationale either way; wild-fauna individual non-persistence is a documented, deliberate scope decision. Treat them accordingly rather than uniformly as defects.
 
 ## Entry points
 

@@ -14,51 +14,40 @@ import type * as THREE from 'three'
  * @domain fauna
  * @system settlement-rats
  * @role Settlement-local rat population pressure/reconciliation (plan
- *  fauna-016 §7/§8/§9, quests-progression-006) — deliberately not a
- *  `RatManager`: rats are plain `AnimalAgent('rat')` instances this module
- *  spawns/despawns toward a small, deterministic-target population and
- *  periodically drains real household/settlement food from.
+ *  fauna-016 §7/§8/§9, quests-progression-006, quests-progression-013) —
+ *  deliberately not a `RatManager`: rats are plain `AnimalAgent('rat')`
+ *  instances this module spawns toward a small, food-driven target
+ *  population. Infestation replenishment is a separate nest-gated roll;
+ *  excess live rats are never deleted just because the target falls.
  */
 
-/** Hard cap on visible active rats per settlement (plan fauna-016 §7) —
- *  applies to the *normal* food/dog target only; active storage infestation
- *  may exceed it (plan quests-progression-006 §2). */
+/** Hard cap on the *normal* food-driven target (plan fauna-016 §7) —
+ *  damaged infestation storage may exceed it (plan quests-progression-006 §2). */
 export const RAT_POPULATION_CAP = 5
 /** Food units of pressure per rat of target population (plan fauna-016 §7). */
 const RAT_FOOD_PER_PRESSURE = 6
-/** Pressure removed per alive settlement dog (plan fauna-016 §7/§9). */
-const RAT_DOG_SUPPRESSION = 1.5
 /** Closed V1 contract (plan quests-progression-006 §2). */
 export const RAT_INFESTATION_PRESSURE_BONUS = 3
 /** Closed V1 contract (plan quests-progression-006 §2). */
 export const RAT_INFESTATION_FLOOR = 7
+/** Living-dog penalty on infestation replenishment only (plan
+ *  quests-progression-013 §4) — not on carrying capacity. */
+export const RAT_DOG_REPRODUCTION_PRESSURE = 0.10
+/** Floor for the infestation replenishment multiplier at 5+ dogs. */
+export const RAT_MIN_REPRODUCTION_MULTIPLIER = 0.50
+
+export const RAT_RECONCILE_INTERVAL_DAYS = 0.5
+const RAT_EAT_CHANCE = 0.5
+const RAT_SPAWN_OFFSET: readonly [number, number] = [2, 6]
+const RAT_EAT_ROLL_SALT = 0x52415431
+const RAT_INFESTATION_REPRO_SALT = 0x52415432
 
 export type RatPressureInputs = {
   householdFoodCount: number
   settlementFoodCount: number
-  dogCount: number
 }
 
-/** Pure normal target before infestation bonus/floor (plan fauna-016 §7). */
-export function ratNormalPopulationTarget(inputs: RatPressureInputs): number {
-  const pressure =
-    (inputs.householdFoodCount + inputs.settlementFoodCount) / RAT_FOOD_PER_PRESSURE
-    - inputs.dogCount * RAT_DOG_SUPPRESSION
-  return Math.max(0, Math.min(RAT_POPULATION_CAP, Math.floor(pressure)))
-}
-
-/** Pure target population size for a settlement's rats — when
- *  `infestationActive`, applies `max(normalTarget + 3, 7)` (plan
- *  quests-progression-006 §2). */
-export function ratPopulationTarget(inputs: RatPressureInputs, infestationActive = false): number {
-  const normalTarget = ratNormalPopulationTarget(inputs)
-  if (!infestationActive) return normalTarget
-  return Math.max(normalTarget + RAT_INFESTATION_PRESSURE_BONUS, RAT_INFESTATION_FLOOR)
-}
-
-const RAT_RECONCILE_INTERVAL_DAYS = 0.5
-const RAT_EAT_CHANCE = 0.5
-const RAT_SPAWN_OFFSET: readonly [number, number] = [2, 6]
+export type RatReconcileAction = 'none' | 'spawn-infestation' | 'spawn-normal'
 
 function hashString(value: string): number {
   let h = 2166136261
@@ -77,7 +66,74 @@ function hash01(a: number, b: number, salt: number): number {
   return (h >>> 0) / 4294967296
 }
 
-const RAT_EAT_ROLL_SALT = 0x52415431
+/** Pure normal target — food pressure only, independent of dogs (plan
+ *  quests-progression-013 §2). */
+export function ratNormalPopulationTarget(inputs: RatPressureInputs): number {
+  const pressure = (inputs.householdFoodCount + inputs.settlementFoodCount) / RAT_FOOD_PER_PRESSURE
+  return Math.max(0, Math.min(RAT_POPULATION_CAP, Math.floor(pressure)))
+}
+
+/** Pure target population size — damaged storage applies `max(normalTarget + 3, 7)`
+ *  (plan quests-progression-006 §2 / quests-progression-013 §2). The nest
+ *  does not change carrying capacity. */
+export function ratPopulationTarget(inputs: RatPressureInputs, storageDamaged = false): number {
+  const normalTarget = ratNormalPopulationTarget(inputs)
+  if (!storageDamaged) return normalTarget
+  return Math.max(normalTarget + RAT_INFESTATION_PRESSURE_BONUS, RAT_INFESTATION_FLOOR)
+}
+
+/** Infestation replenishment multiplier from living settlement dogs. */
+export function ratDogReproductionMultiplier(dogCount: number): number {
+  return Math.max(
+    RAT_MIN_REPRODUCTION_MULTIPLIER,
+    1 - Math.max(0, dogCount) * RAT_DOG_REPRODUCTION_PRESSURE,
+  )
+}
+
+/** Deterministic `[0, 1)` infestation replenishment roll for one
+ *  reconciliation bucket. Independent of the mutable spawn RNG so
+ *  reconstruction cannot shift the outcome. */
+export function infestationReplenishmentRoll(
+  settlementId: string,
+  settlementSeed: number,
+  dayBucket: number,
+): number {
+  return hash01(hashString(settlementId) ^ (settlementSeed >>> 0), dayBucket, RAT_INFESTATION_REPRO_SALT)
+}
+
+/** Whether infestation replenishment succeeds this bucket. At zero dogs the
+ *  multiplier is `1`, so every `[0, 1)` roll passes (plan
+ *  quests-progression-013 §3). */
+export function shouldInfestationReplenish(args: {
+  settlementId: string
+  settlementSeed: number
+  dayBucket: number
+  dogCount: number
+}): boolean {
+  return infestationReplenishmentRoll(args.settlementId, args.settlementSeed, args.dayBucket)
+    < ratDogReproductionMultiplier(args.dogCount)
+}
+
+/** Pure below-target spawn decision (plan quests-progression-013 §3/§6) —
+ *  never despawns. Nest-gated infestation replenishment is the only path
+ *  toward the damaged-storage target; destroyed nest still allows ordinary
+ *  food-driven recovery up to the normal target. */
+export function ratReconcileAction(args: {
+  alive: number
+  normalTarget: number
+  storageDamaged: boolean
+  nestDestroyed: boolean
+  infestationReplenish: boolean
+}): RatReconcileAction {
+  const target = args.storageDamaged
+    ? Math.max(args.normalTarget + RAT_INFESTATION_PRESSURE_BONUS, RAT_INFESTATION_FLOOR)
+    : args.normalTarget
+  if (args.alive >= target) return 'none'
+  // Food-driven recovery is independent of the nest and dog roll.
+  if (args.alive < args.normalTarget) return 'spawn-normal'
+  if (!args.nestDestroyed && args.infestationReplenish) return 'spawn-infestation'
+  return 'none'
+}
 
 export type RatFoodSite = { household: Household, x: number, z: number }
 
@@ -92,10 +148,12 @@ export type SettlementRatsDeps = {
   settlementId: string
   settlementSeed: number
   onAnimalDeath?: (animalId: string) => void
-  /** Live authoritative infestation flag for this settlement (plan
-   *  quests-progression-006) — read every reconciliation tick, never cached
-   *  here. */
-  infestationActive: () => boolean
+  /** Live storage-damage fact for this settlement — read every
+   *  reconciliation tick, never cached here. */
+  storageDamaged: () => boolean
+  /** Live nest-destroyed fact — infestation replenishment only; must not
+   *  suppress normal food-driven recovery. */
+  nestDestroyed: () => boolean
   /** Optional persistence seam (plan quests-progression-006 §7). */
   ratPersistence?: RatPersistence
 }
@@ -171,35 +229,25 @@ export function createSettlementRats(deps: SettlementRatsDeps): SettlementRats {
     spawnOne(x, z, animalId)
   }
 
-  function despawnFarthest(observerPos: { x: number, z: number }): void {
-    let index = -1
-    let bestDist = -1
-    for (let i = 0; i < agents.length; i++) {
-      const agent = agents[i]!
-      if (agent.isDead()) continue
-      const d = Math.hypot(agent.mesh.position.x - observerPos.x, agent.mesh.position.z - observerPos.z)
-      if (d > bestDist) {
-        bestDist = d
-        index = i
-      }
-    }
-    if (index === -1) return
-    const [agent] = agents.splice(index, 1)
-    agent!.dispose()
-    agent!.mesh.removeFromParent()
-    disposeObject3D(agent!.mesh)
-  }
-
-  function reconcile(dogCount: number, observerPos: { x: number, z: number }): void {
+  function reconcile(dogCount: number, nowDays: number): void {
     const householdFoodCount = deps.householdSites.reduce((sum, site) => sum + site.household.foodCount(), 0)
     const settlementFoodCount = deps.economy.query('food')
-    const target = ratPopulationTarget(
-      { householdFoodCount, settlementFoodCount, dogCount },
-      deps.infestationActive(),
-    )
+    const normalTarget = ratNormalPopulationTarget({ householdFoodCount, settlementFoodCount })
     const alive = agents.reduce((n, a) => n + (a.isDead() ? 0 : 1), 0)
-    if (alive < target) spawnNew()
-    else if (alive > target) despawnFarthest(observerPos)
+    const dayBucket = Math.floor(nowDays / RAT_RECONCILE_INTERVAL_DAYS)
+    const action = ratReconcileAction({
+      alive,
+      normalTarget,
+      storageDamaged: deps.storageDamaged(),
+      nestDestroyed: deps.nestDestroyed(),
+      infestationReplenish: shouldInfestationReplenish({
+        settlementId: deps.settlementId,
+        settlementSeed: deps.settlementSeed,
+        dayBucket,
+        dogCount,
+      }),
+    })
+    if (action !== 'none') spawnNew()
   }
 
   function maybeEatFood(nowDays: number): void {
@@ -256,7 +304,7 @@ export function createSettlementRats(deps: SettlementRatsDeps): SettlementRats {
       }
       if (ctx.nowDays - lastReconcileDay >= RAT_RECONCILE_INTERVAL_DAYS) {
         lastReconcileDay = ctx.nowDays
-        reconcile(ctx.dogCount, ctx.observerPos)
+        reconcile(ctx.dogCount, ctx.nowDays)
         maybeEatFood(ctx.nowDays)
       }
     },
