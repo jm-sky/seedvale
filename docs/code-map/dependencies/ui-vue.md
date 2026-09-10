@@ -68,6 +68,10 @@ Generated from TypeScript imports.
 
 ## `ui-vue/lib/firstUpperCase.ts`
 
+**Imported by**
+
+- `app/gameLoop.ts`
+
 ## `ui-vue/lib/mapColors.ts`
 
 **Imports**

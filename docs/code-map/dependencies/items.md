@@ -131,9 +131,12 @@ Generated from TypeScript imports.
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryTransfer.test.ts`
 - `items/inventoryTransfer.ts`
+- `items/inventoryView.test.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
+- `items/itemUseView.test.ts`
+- `items/itemUseView.ts`
 - `items/liquidContainer.test.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.test.ts`
@@ -451,6 +454,7 @@ Generated from TypeScript imports.
 - `items/foodProvenance.test.ts`
 - `items/inventoryTransfer.test.ts`
 - `items/inventoryView.ts`
+- `items/itemUseView.ts`
 - `items/sensibleFood.ts`
 - `items/timedProcess.ts`
 - `persistence/saveData.ts`
@@ -575,6 +579,16 @@ Generated from TypeScript imports.
 - `app/actions/workContractPayment.ts`
 - `items/inventoryTransfer.test.ts`
 
+## `items/inventoryView.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/inventoryView.ts`
+- `items/itemInstances.ts`
+- `items/trapItemInstances.ts`
+- `items/weaponMaintenance.ts`
+
 ## `items/inventoryView.ts`
 
 **Imports**
@@ -582,6 +596,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/foodFreshness.ts`
 - `items/itemInstances.ts`
+- `items/itemUseView.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
 - `items/tradeCatalog.ts`
@@ -593,6 +608,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/createApp.ts`
 - `app/inventoryWiring.ts`
+- `items/inventoryView.test.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
 
@@ -653,6 +669,7 @@ Generated from TypeScript imports.
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
 - `items/itemDisplay.ts`
+- `items/itemUseView.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
 - `items/sensibleFood.ts`
@@ -714,6 +731,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.ts`
+- `app/actions/containerActions.ts`
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/placementActions.ts`
@@ -729,9 +747,12 @@ Generated from TypeScript imports.
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
 - `items/createDroppedItems.test.ts`
+- `items/inventoryView.test.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemCatalog.ts`
+- `items/itemUseView.test.ts`
+- `items/itemUseView.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
@@ -761,6 +782,30 @@ Generated from TypeScript imports.
 - `items/highQualityWeapons.test.ts`
 - `items/items.ts`
 
+## `items/itemUseView.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/itemUseView.ts`
+
+## `items/itemUseView.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+- `items/itemCatalog.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/liquidContainer.ts`
+
+**Imported by**
+
+- `items/inventoryView.ts`
+- `items/itemUseView.test.ts`
+
 ## `items/items.ts`
 
 **Imports**
@@ -779,6 +824,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/actionContracts.ts`
+- `app/actions/containerActions.ts`
 - `app/actions/cookMealIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
@@ -836,6 +882,7 @@ Generated from TypeScript imports.
 - `items/itemDisplay.ts`
 - `items/itemInstances.ts`
 - `items/itemModels.ts`
+- `items/itemUseView.ts`
 - `items/primaryWeapons.ts`
 - `items/sensibleFood.ts`
 - `items/tentProp.ts`
@@ -909,6 +956,7 @@ Generated from TypeScript imports.
 - `app/inspection/buildWorldInspection.ts`
 - `items/Inventory.ts`
 - `items/inventoryView.ts`
+- `items/itemUseView.ts`
 - `items/liquidContainer.test.ts`
 - `items/trade.ts`
 - `settlement/npcState.test.ts`
@@ -1128,6 +1176,7 @@ Generated from TypeScript imports.
 
 - `app/actions/gatheringActions.ts`
 - `items/Inventory.test.ts`
+- `items/inventoryView.test.ts`
 - `items/inventoryView.ts`
 - `items/trade.test.ts`
 - `items/trade.ts`
@@ -1169,6 +1218,7 @@ Generated from TypeScript imports.
 - `items/Inventory.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryTransfer.test.ts`
+- `items/inventoryView.test.ts`
 - `items/inventoryView.ts`
 - `items/primaryWeapons.test.ts`
 - `items/trade.test.ts`

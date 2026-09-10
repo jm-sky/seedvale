@@ -30,13 +30,13 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createHud.ts`
 
-- `createHud` — function — line 48
+- `createHud` — function — line 52
 - `Hud` — type — line 5
 
 ## `ui/createInventoryScreen.ts`
 
-- `createInventoryScreen` — function — line 48
-- `InventoryScreen` — type — line 28
+- `createInventoryScreen` — function — line 56
+- `InventoryScreen` — type — line 35
 - `InventoryScreenHandlers` — type — line 9
 
 ## `ui/createLoadingScreen.ts`

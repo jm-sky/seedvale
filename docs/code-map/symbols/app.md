@@ -21,9 +21,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 42
-- `ContainerActions` — type — line 28
-- `createContainerActions` — function — line 51
+- `ContainerActionDeps` — type — line 57
+- `ContainerActions` — type — line 43
+- `createContainerActions` — function — line 66
 
 ## `app/actions/cookMealIntent.ts`
 
@@ -73,18 +73,18 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 415
-- `evaluatePlacementSite` — function — line 252
-- `GroundPlacementDefinition` — type — line 235
+- `createPlacementActions` — function — line 416
+- `evaluatePlacementSite` — function — line 253
+- `GroundPlacementDefinition` — type — line 236
   - domain: world
-- `GroundPlacementSite` — type — line 219
-- `PlacementActions` — type — line 294
-- `PlacementBlocker` — type — line 194
-- `PlacementMutationLifecycle` — type — line 246
-- `PlacementPreviewResult` — type — line 205
-- `previewGroundPlacement` — function — line 262
-- `WellRoofRepairView` — type — line 285
-- `WellWorkView` — type — line 278
+- `GroundPlacementSite` — type — line 220
+- `PlacementActions` — type — line 295
+- `PlacementBlocker` — type — line 195
+- `PlacementMutationLifecycle` — type — line 247
+- `PlacementPreviewResult` — type — line 206
+- `previewGroundPlacement` — function — line 263
+- `WellRoofRepairView` — type — line 286
+- `WellWorkView` — type — line 279
 
 ## `app/actions/placementPreviewActions.ts`
 
@@ -107,11 +107,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 147
-- `LodgingChoiceAction` — type — line 59
-- `REST_IN_TOWN_RADIUS` — const — line 67
-- `RestActionDeps` — type — line 130
-- `RestActions` — type — line 73
+- `createRestActions` — function — line 148
+- `LodgingChoiceAction` — type — line 60
+- `REST_IN_TOWN_RADIUS` — const — line 68
+- `RestActionDeps` — type — line 131
+- `RestActions` — type — line 74
 
 ## `app/actions/storageInfestationActions.ts`
 
@@ -214,13 +214,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 580
+- `createGameLoop` — function — line 581
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 548
-- `GameLoopDeps` — type — line 282
+- `GameLoop` — type — line 549
+- `GameLoopDeps` — type — line 283
 
 ## `app/graphicsSettings.ts`
 
@@ -259,27 +259,27 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1106
-- `buildDigTarget` — function — line 1053
-- `buildInteractables` — function — line 411
-- `collectItem` — function — line 1153
+- `buildCombatTarget` — function — line 1107
+- `buildDigTarget` — function — line 1054
+- `buildInteractables` — function — line 412
+- `collectItem` — function — line 1154
 - `COMBAT_TARGET_CONE_DOT` — const — line 92
 - `COMBAT_TARGET_RANGE` — const — line 77
 - `CombatAimMode` — type — line 82
 - `DIG_REACH` — const — line 71
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 261
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 262
 - `GAZE_RANGE` — const — line 67
-- `groupDroppedItemCandidates` — function — line 271
+- `groupDroppedItemCandidates` — function — line 272
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 64
 - `INTERACT_RANGE` — const — line 61
-- `resolveHaySpot` — function — line 347
+- `resolveHaySpot` — function — line 348
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 165
+- `createInventoryWiring` — function — line 169
 - `InventoryWiring` — type — line 108
-- `InventoryWiringDeps` — type — line 133
+- `InventoryWiringDeps` — type — line 137
 - `MerchantInventoryView` — type — line 94
 
 ## `app/modalState.ts`

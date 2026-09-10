@@ -75,7 +75,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
-| 💡 `items-player-024-inventory-item-use-ux-coherence.md`                       | -       | 🔴 | L      | items-player-022, ~~ui-input-015~~ |
 
 ---
 

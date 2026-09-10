@@ -80,6 +80,8 @@ Generated from TypeScript imports.
 - `items/container.ts`
 - `items/foodItems.ts`
 - `items/inventoryView.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
 - `items/tentPlacement.ts`
 - `settlement/npcPostDeath.ts`
 - `ui-vue/mount.ts`
@@ -892,6 +894,7 @@ Generated from TypeScript imports.
 - `shared/ThirstState.ts`
 - `shared/VigorState.ts`
 - `simulation/observation.ts`
+- `ui-vue/lib/firstUpperCase.ts`
 - `ui-vue/mount.ts`
 - `ui/createBusyOverlay.ts`
 - `ui/createHud.ts`

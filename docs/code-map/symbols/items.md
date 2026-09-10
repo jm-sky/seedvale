@@ -55,13 +55,15 @@ Generated from exported TypeScript symbols.
 
 ## `items/constructionMaterials.ts`
 
-- `applyRecovery` — function — line 135
-- `canReceiveRecovery` — function — line 127
-- `computeMaterialRecovery` — function — line 117
+- `applyRecovery` — function — line 170
+- `canReceiveRecovery` — function — line 162
+- `computeMaterialRecovery` — function — line 152
 - `CONSTRUCTION_MATERIAL_RADIUS` — const — line 12
-- `consumeMaterial` — function — line 78
-- `hasMaterial` — function — line 53
-- `MaterialRecoveryPolicy` — type — line 108
+- `consumeMaterial` — function — line 113
+- `hasMaterial` — function — line 88
+- `materialAvailabilityBreakdown` — function — line 64
+- `MaterialAvailabilityView` — type — line 55
+- `MaterialRecoveryPolicy` — type — line 143
 - `MaterialRequirement` — type — line 8
 - `nearbyWorldMaterialCount` — function — line 40
 
@@ -226,39 +228,42 @@ Generated from exported TypeScript symbols.
 
 ## `items/inventoryView.ts`
 
-- `buildInventoryGroups` — function — line 119
-- `inventoryCountsForUi` — function — line 149
-- `InventoryGroupView` — type — line 31
-- `InventoryInstanceRow` — type — line 21
+- `buildInventoryGroups` — function — line 178
+- `inventoryCountsForUi` — function — line 213
+- `InventoryGroupView` — type — line 50
+- `InventoryInstanceRow` — type — line 38
+- `ITEM_METER_LABEL` — const — line 32
+- `ItemMeterKind` — type — line 27
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1326
-- `BookTier` — type — line 134
-- `CAPABILITY_KINDS` — const — line 1357
+- `ARROW_DAMAGE_BONUS` — const — line 1340
+- `BookTier` — type — line 148
+- `CAPABILITY_KINDS` — const — line 1371
+- `CAPABILITY_LABEL` — const — line 126
 - `CAPABILITY_NEED_LABEL` — const — line 112
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1392
-- `ConsumableNeed` — type — line 125
-- `consumeNeedNoun` — function — line 226
-- `consumeVerbLabel` — function — line 217
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1406
+- `ConsumableNeed` — type — line 139
+- `consumeNeedNoun` — function — line 240
+- `consumeVerbLabel` — function — line 231
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1382
-- `HOLDABLE_KINDS` — const — line 1348
-- `INJURY_TREATMENT_KINDS` — const — line 1414
-- `isMeleeToolKind` — function — line 1341
-- `isRangedTool` — function — line 1333
-- `ITEM_CATALOG` — const — line 240
+- `hasItemCapability` — function — line 1396
+- `HOLDABLE_KINDS` — const — line 1362
+- `INJURY_TREATMENT_KINDS` — const — line 1428
+- `isMeleeToolKind` — function — line 1355
+- `isRangedTool` — function — line 1347
+- `ITEM_CATALOG` — const — line 254
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1435
+- `ITEM_SYSTEM_ROADMAP` — const — line 1449
 - `ItemCapability` — type — line 89
-- `ItemCatalogEntry` — type — line 136
+- `ItemCatalogEntry` — type — line 150
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1427
+- `itemTreatsPhysicalInjury` — function — line 1441
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1441
+- `NON_ITEM_PROPS` — const — line 1455
 - `RangedConfig` — type — line 53
 
 ## `items/itemDisplay.ts`
@@ -306,7 +311,7 @@ Generated from exported TypeScript symbols.
 
 - `canCancelRestNow` — function — line 212
 - `canCancelRestProgress` — function — line 183
-- `createItemMesh` — function — line 1207
+- `createItemMesh` — function — line 1209
 - `hasItemCategory` — function — line 162
 - `hasItemKindCategory` — function — line 166
 - `ITEM_DEFS` — const — line 216
@@ -325,6 +330,13 @@ Generated from exported TypeScript symbols.
 
 - `ItemSpawnPoint` — type — line 3
 - `updateItemSpawnPoints` — function — line 16
+
+## `items/itemUseView.ts`
+
+- `ItemUseView` — type — line 18
+  - domain: items-player
+- `resolveConsumeUseView` — function — line 31
+- `resolveReadBookUseView` — function — line 52
 
 ## `items/liquidContainer.ts`
 
