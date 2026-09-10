@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** polish
 **Priority:** medium · **Effort:** M
-**Depends on:** items-player-018, ui-input-012, settlements-005
+**Depends on:** ~~items-player-018~~, ~~ui-input-012~~, ~~settlements-005~~
 **Domain:** `items-player`
 **Subdomains:** `interaction` `items`
 **Tags:** `camp` `pickup` `placement` `torch` `ux`
