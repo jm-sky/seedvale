@@ -74,6 +74,7 @@ import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
 import {
   CEMETERY_SETTLEMENT_GATHER_RADIUS,
   collectSettlementRefsNear,
+  dedicatedCemeteryTopology,
   makeSettlementRefPeek,
   resolveCemeteryTopologyForSettlement,
 } from './cemeteryAssignment'
@@ -1118,6 +1119,17 @@ export function createChunkManager(
       CEMETERY_SETTLEMENT_GATHER_RADIUS,
       (cell) => settlementDefFor(cell, settlementResolveCtx()),
     )
+    const cemeteryGatherSize = config.chunkSize * 8
+    const cemeteryVillage = villageSegmentsNear(x, z, cemeteryGatherSize, roadCtx)
+    const cemeteryRoadSegments = [
+      ...segmentsNear(x, z, cemeteryGatherSize, roadCtx),
+      ...cemeteryVillage.paths,
+    ]
+    const cemeteryClearings = cemeteryVillage.clearings.map((c) => ({
+      x: c.x,
+      z: c.z,
+      radius: c.radius,
+    }))
     return {
       cx: coord.cx,
       cz: coord.cz,
@@ -1154,6 +1166,8 @@ export function createChunkManager(
       regional: village.regional,
       riverSegments,
       cemeterySettlements,
+      cemeteryRoadSegments,
+      cemeteryClearings,
       authoredExpeditionRuins: config.authoredExpeditionRuins ?? (() => {
         const site = getActiveDarkForestTreasureSite()
         if (!site) return null
@@ -1179,7 +1193,20 @@ export function createChunkManager(
     const peekRef = makeSettlementRefPeek(params.cemeterySettlements ?? [])
     const topology = resolveCemeteryTopologyForSettlement(settlementId, peekRef)
     if (!topology) return undefined
-    const placed = resolvePlacementForTopology(topology, params, createLocalTerrainSampler(coord, params))
+    const placed = resolvePlacementForTopology(topology, params)
+      ?? (topology.intent === 'shared'
+        ? resolvePlacementForTopology(
+          dedicatedCemeteryTopology({
+            id: def.id,
+            gx: def.gx,
+            gz: def.gz,
+            x: def.x,
+            z: def.z,
+            size: def.size,
+          }),
+          params,
+        )
+        : null)
     if (!placed) return undefined
     return { id: placed.id, x: placed.x, z: placed.z, cemeterySize: placed.size }
   }

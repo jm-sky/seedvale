@@ -14,6 +14,15 @@
 - `groundActions.checkHiddenFindDig` uses `servedSettlementIdsForCemeteryId` instead of `villageNearest` for grave consequences/loot settlement selection.
 - **Save compatibility:** legacy `cemetery:<cx>:<cz>:…` ids still resolve via chunk lookup; old discovery/target/hidden-find ids from pre-assignment worlds may fail validation or become inert (no nearest-cemetery remapping).
 
+## Follow-up (2026-09-10)
+
+Correctness fixes against the original ownership/placement invariants:
+
+- `resolveSmSharePartner` ranks the partner from **that partner's own** grid neighborhood, so a third nearby `SM` cannot create query-order-dependent pairs.
+- Shared corridor acceptance is an A–B ellipse, not single-village fringe reach — two typical `SM`s (~280 m) can share a cemetery.
+- Candidate chunk-margin is relative to the **candidate's owner chunk**, not the caller. Assignment search samples terrain via `createWorldTerrainSampler` and `cemeteryRoadSegments`/`cemeteryClearings` gathered wider than the carving AABB, so streamed generation and settlement lookup agree.
+- Shared placement failure is cached as a split and falls back to **two dedicated** cemeteries rather than pinning both settlements to the first dedicated hit.
+
 ## Review conclusion
 
 Current `main` still has the old model: one probabilistic cemetery candidate per chunk, accepted only on a settlement fringe. `WorldLocationCatalog` then maps a settlement to the first nearby cemetery it can find. The implementation must replace that ownership model rather than layer assignment metadata on top of nearest-landmark lookup.

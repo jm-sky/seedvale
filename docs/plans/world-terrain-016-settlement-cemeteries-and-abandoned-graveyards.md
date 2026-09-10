@@ -1,7 +1,7 @@
 # Plan: Settlement Cemeteries & Abandoned Graveyards
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none
@@ -9,6 +9,7 @@
 **Subdomains:** `landmarks` `terrain`
 **Tags:** `cemetery` `settlements` `placement` `worldgen`
 **Roadmap:** -
+**Implemented at:** 2026-09-10 19:15
 
 ## Cel
 

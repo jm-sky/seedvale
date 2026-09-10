@@ -4,7 +4,10 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-022-gameplay-interaction-usability-polish`               | 2026-09-10 16:01:15 | —                   | `items-player`   | —          |
 | `quests-progression-015-stable-npc-identity-for-quests`                | 2026-09-10 15:35:27 | —                   | `quests-progression` | —          |
+| `quests-progression-016-world-driven-settlement-quest-opportunities`   | 2026-09-10 15:22:48 | —                   | `quests-progression` | —          |
+| `ui-input-015-interaction-targeting-and-action-semantics`              | —                   | 2026-09-10 15:01:47 | `ui-input`       | —          |
 | `settlements-npcs-018-physical-goods-transport-foundation`             | 2026-09-10 14:54:16 | —                   | `settlements-npcs` | —          |
 | `fauna-018-persistent-habitat-occupants`                               | 2026-09-10 14:33:27 | —                   | `fauna`          | —          |
 | `fauna-007-animal-leading-and-cart-harness`                            | 2026-09-10 14:09:43 | —                   | `fauna`          | —          |

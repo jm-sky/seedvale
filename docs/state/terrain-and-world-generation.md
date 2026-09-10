@@ -4,7 +4,7 @@
 
 **Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../architecture/GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../state/water.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
 
-**Last verified:** 2026-09-08
+**Last verified:** 2026-09-10
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -34,12 +34,13 @@ When this file and the code disagree, the code wins — update this file.
 - Waterfalls are implemented (plan 181, Etap 7 completion, 2026-08-25) as a per-vertex rendering signal on the existing river ribbon — no separate geometry/system. Full shader/rendering parity between rivers and lake/ocean, and hydrology worker offload, remain deliberately deferred ([LOOSE-ENDS](../plans/LOOSE-ENDS.md)).
 - Rivers themselves (hydrology, tiling, ribbon geometry, channel carving) are documented in [WATER.md](../state/water.md), not here — they're a water feature, not a terrain-shape one, even though carving does lower the heightmap.
 
-## Vegetation & rocks
+## Vegetation, rocks & landmarks
 
 - Vegetation and rocks are `InstancedMesh` buckets (`src/render/instancedProps.ts`, chunk-agnostic), batched at **region** granularity (`src/terrain/vegetationRegionBatcher.ts`, plan 143 — `REGION_CHUNKS = 3`, ≈192 m). `ChunkManager` feeds each chunk's placements in on load/unload; the batcher rebuilds only the affected region+kind from the union of its currently-loaded member chunks. Streaming/unload/tree-lifecycle stay chunk-scoped — region granularity is rendering-only. Distance LOD is per-region (max fraction across contributing chunks, "nearest member wins").
 - Stage meshes and procedural landmarks stay individual `Object3D`s, not instanced.
 - Settlement palisade/bushes/barrels/hay are instanced directly via `instancedProps.ts` with no chunk boundaries, so they were explicitly left out of region batching (plan 143). Harvestable settlement trees stay individual (plan 113).
 - Chunk rocks/logs and visible iron/coal/gold deposits use GLB templates with procedural fallbacks.
+- Settlement cemeteries (`kind: 'cemetery'`) are assignment-driven from settlement topology (`src/terrain/cemeteryAssignment.ts`) then placed by `cemeteryPlacement.ts` (dedicated fringe or shared `SM` corridor, plus a rare abandoned wilderness roll). Physical gates (water/slope/roads/footprint) stay in `chunkEnvironment.ts`. `WorldLocationCatalog.cemeteryForSettlement()` consumes that assignment; it does not own nearest-landmark search.
 - Grass (`src/terrain/grass.ts`/`grassPlacement.ts`) is per-chunk, not region-batched. Each grass chunk carries a cheap "filler" bucket (short, few-fin blades, no per-species geometry LOD) alongside the detailed species buckets; `ChunkManager`'s `grassFillerLodFraction`/`grassFillerCoverage` quality knob (plan world-terrain-005, live, no rebuild) controls how far across the grass ring that filler bucket draws — extending visual grass coverage without raising detailed-species instance count.
 - Macro meadow colour variation (plan world-terrain-012): `computeChunkGrass()` blends the existing biome-lerped grass tint toward a drier/yellower appearance using one low-frequency, world-space FBM sample per candidate (`grassPlacement.ts`'s `macroMeadowWeightAt()`, own noise salt independent of the species-patch signal), applied before the per-instance HSL jitter. Gated by `WorldConfig.terrain.grass.macroVariationEnabled` (GUI: Grass folder) — `false` skips the sample entirely and reproduces the pre-012 colour path exactly; positions/counts/draw calls are unaffected either way.
 
@@ -96,6 +97,8 @@ Terrain, hydrology, and weather/season are deterministic reconstructions of `(se
 src/terrain/chunkManager.ts
 src/terrain/chunkHeightmap.ts
 src/terrain/chunkEnvironment.ts
+src/terrain/cemeteryAssignment.ts
+src/terrain/cemeteryPlacement.ts
 src/terrain/chunkVegetation.ts
 src/terrain/vegetationRegionBatcher.ts
 src/terrain/slopeConstraint.ts

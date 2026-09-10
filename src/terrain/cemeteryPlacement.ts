@@ -1,7 +1,5 @@
 import type { CemeterySize } from '../settlement/props'
 import type { CemeteryTerrainSampler, EnvironmentPlacement, VillageDisk } from './chunkEnvironment'
-import type { ChunkCoord } from './chunkGrid'
-import type { ChunkTileParams } from './chunkHeightmap'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, worldToCell } from '../settlement/settlementGenerator'
 import { createSeededRandom } from '../world/parseSeed'
@@ -15,6 +13,7 @@ import {
   cemeteryIdForAssignment,
   type CemeterySettlementRef,
   type CemeteryTopologyIntent,
+  dedicatedCemeteryTopology,
   makeSettlementRefPeek,
   type PeekSettlementRef,
 } from './cemeteryAssignment'
@@ -25,7 +24,8 @@ import {
   cemeteryFitsVillageFringe,
   cemeteryFootprintClearsRoads,
 } from './chunkEnvironment'
-import { worldToChunk } from './chunkGrid'
+import { type ChunkCoord, worldToChunk } from './chunkGrid'
+import { type ChunkTileParams, createWorldTerrainSampler, type RoadCorridorSegment } from './chunkHeightmap'
 
 const SLOPE_SAMPLE_STEP = 1.5
 const ROAD_TINT_REJECT = 0.15
@@ -91,11 +91,8 @@ function slopeAt(terrain: CemeteryTerrainSampler, wx: number, wz: number): numbe
 }
 
 function clearingDisks(params: ChunkTileParams): VillageDisk[] {
-  return params.clearings.map((c) => ({ x: c.x, z: c.z, radius: c.radius }))
-}
-
-function regionalDisks(params: ChunkTileParams): VillageDisk[] {
-  return params.regional.map((r) => ({ x: r.x, z: r.z, radius: r.radius }))
+  const source = params.cemeteryClearings ?? params.clearings
+  return source.map((c) => ({ x: c.x, z: c.z, radius: c.radius }))
 }
 
 function rejectsClearings(x: number, z: number, clearings: readonly VillageDisk[]): boolean {
@@ -127,15 +124,51 @@ function sharedCorridorAccepts(
 ): boolean {
   if (settlements.length < 2) return false
   const [a, b] = settlements
+  const ab = Math.hypot(b.x - a.x, b.z - a.z)
   const da = Math.hypot(x - a.x, z - a.z)
   const db = Math.hypot(x - b.x, z - b.z)
-  const maxReach = Math.max(
+  const innerA = villageSizeConfig(a.size).footprintRadius * CEMETERY_INNER_FRAC
+  const innerB = villageSizeConfig(b.size).footprintRadius * CEMETERY_INNER_FRAC
+  if (da < innerA || db < innerB) return false
+  const corridorWidth = Math.max(
     villageSizeConfig(a.size).footprintRadius,
     villageSizeConfig(b.size).footprintRadius,
-  ) * CEMETERY_OUTER_FRAC * 1.35
-  if (da > maxReach || db > maxReach) return false
+  ) * CEMETERY_OUTER_FRAC
+  if (da + db > ab + corridorWidth) return false
   if (rejectsClearings(x, z, clearings)) return false
   return true
+}
+
+function cemeteryFitsOwnerChunk(
+  x: number,
+  z: number,
+  size: CemeterySize,
+  chunkSize: number,
+): boolean {
+  const owner = worldToChunk(x, z, chunkSize)
+  const margin = CEMETERY_MARGIN_BY_SIZE[size]
+  const half = chunkSize / 2
+  const localX = x - owner.cx * chunkSize
+  const localZ = z - owner.cz * chunkSize
+  return Math.abs(localX) <= half - margin && Math.abs(localZ) <= half - margin
+}
+
+function dedicatedRegionalDisks(settlements: readonly CemeterySettlementRef[]): VillageDisk[] {
+  return settlements.map((s) => ({
+    x: s.x,
+    z: s.z,
+    radius: villageSizeConfig(s.size).footprintRadius,
+  }))
+}
+
+function cemeteryRoadSegmentsOf(params: ChunkTileParams): readonly RoadCorridorSegment[] {
+  return params.cemeteryRoadSegments ?? params.roadSegments
+}
+
+function assignmentTerrainSampler(params: ChunkTileParams): CemeteryTerrainSampler {
+  const roads = cemeteryRoadSegmentsOf(params)
+  if (roads === params.roadSegments) return createWorldTerrainSampler(params)
+  return createWorldTerrainSampler({ ...params, roadSegments: [...roads] })
 }
 
 /** Shared physical cemetery validation for active/abandoned candidates. */
@@ -149,27 +182,22 @@ export function validateCemeteryPhysical(
   placementIntent: 'dedicated' | 'shared' | 'abandoned',
   assignmentSettlements: readonly CemeterySettlementRef[],
 ): boolean {
+  if (!cemeteryFitsOwnerChunk(x, z, size, params.chunkSize)) return false
   const h = terrain.heightAt(x, z)
   if (h <= params.waterLevel + 0.3) return false
   if (terrain.roadTintAt(x, z) > ROAD_TINT_REJECT) return false
   if (slopeAt(terrain, x, z) > SLOPE_REJECT_LANDMARK) return false
-  if (!cemeteryFootprintClearsRoads(x, z, size, scale, params.roadSegments)) return false
+  if (!cemeteryFootprintClearsRoads(x, z, size, scale, cemeteryRoadSegmentsOf(params))) return false
 
   const clearings = clearingDisks(params)
-  const regional = regionalDisks(params)
   if (placementIntent === 'dedicated' && assignmentSettlements.length === 1) {
+    const regional = dedicatedRegionalDisks(assignmentSettlements)
     if (!cemeteryFitsVillageFringe(x, z, regional, clearings)) return false
   } else if (placementIntent === 'shared') {
     if (!sharedCorridorAccepts(x, z, assignmentSettlements, clearings)) return false
   } else if (rejectsClearings(x, z, clearings)) {
     return false
   }
-
-  const margin = CEMETERY_MARGIN_BY_SIZE[size]
-  const half = params.chunkSize / 2
-  const localX = x - params.cx * params.chunkSize
-  const localZ = z - params.cz * params.chunkSize
-  if (Math.abs(localX) > half - margin || Math.abs(localZ) > half - margin) return false
   return true
 }
 
@@ -206,19 +234,9 @@ function* placementCandidates(
   }
 }
 
-function dedicatedIntentFrom(settlement: CemeterySettlementRef): CemeteryTopologyIntent {
-  return {
-    assignmentId: `active:${settlement.id}`,
-    servedSettlementIds: [settlement.id],
-    settlements: [settlement],
-    intent: 'dedicated',
-  }
-}
-
 function tryPlaceTopology(
   topology: CemeteryTopologyIntent,
   params: ChunkTileParams,
-  terrain: CemeteryTerrainSampler,
 ): ResolvedCemeteryPlacement | null {
   const assignment = cemeteryAssignmentFromTopology(topology, params.seed)
   const random = createSeededRandom(assignmentVariationSeed(params.seed, topology.assignmentId) ^ 0x41c2e7)
@@ -226,6 +244,7 @@ function tryPlaceTopology(
   const rotationY = random() * Math.PI * 2
   const variant = random()
   const intent = topology.intent === 'shared' ? 'shared' : 'dedicated'
+  const terrain = assignmentTerrainSampler(params)
   for (const candidate of placementCandidates(topology, params.seed)) {
     if (
       !validateCemeteryPhysical(
@@ -256,49 +275,60 @@ function tryPlaceTopology(
   return null
 }
 
-const resolvedPlacementByAssignment = new Map<string, ResolvedCemeteryPlacement | null>()
+type CachedAssignmentPlacement =
+  | { status: 'placed', placement: ResolvedCemeteryPlacement }
+  | { status: 'split' }
+  | { status: 'none' }
+
+const resolvedPlacementByAssignment = new Map<string, CachedAssignmentPlacement>()
 
 export function clearCemeteryPlacementCaches(): void {
   resolvedPlacementByAssignment.clear()
 }
 
-function rememberPlacement(topology: CemeteryTopologyIntent, placed: ResolvedCemeteryPlacement | null): void {
-  resolvedPlacementByAssignment.set(topology.assignmentId, placed)
+function rememberPlacement(assignmentId: string, cached: CachedAssignmentPlacement): void {
+  resolvedPlacementByAssignment.set(assignmentId, cached)
+}
+
+function cachedPlacementOf(assignmentId: string): CachedAssignmentPlacement | undefined {
+  return resolvedPlacementByAssignment.get(assignmentId)
 }
 
 /**
  * Resolve one assignment's winning placement — shared across chunk generation and catalog lookup.
+ * Shared search that finds no valid corridor is cached as `split`; callers then place a dedicated
+ * cemetery per served settlement without perturbing unrelated pairs.
  * @domain world-terrain
  */
 export function resolvePlacementForTopology(
   topology: CemeteryTopologyIntent,
   params: ChunkTileParams,
-  terrain: CemeteryTerrainSampler,
+  _terrain?: CemeteryTerrainSampler,
 ): ResolvedCemeteryPlacement | null {
-  if (resolvedPlacementByAssignment.has(topology.assignmentId)) {
-    return resolvedPlacementByAssignment.get(topology.assignmentId) ?? null
-  }
-  const placed = tryPlaceTopology(topology, params, terrain)
+  const cached = cachedPlacementOf(topology.assignmentId)
+  if (cached?.status === 'placed') return cached.placement
+  if (cached?.status === 'split' || cached?.status === 'none') return null
+
+  const placed = tryPlaceTopology(topology, params)
   if (placed) {
-    rememberPlacement(topology, placed)
+    rememberPlacement(topology.assignmentId, { status: 'placed', placement: placed })
     return placed
   }
-  if (topology.intent === 'shared' && topology.settlements.length === 2) {
-    for (const settlement of topology.settlements) {
-      const dedicated = dedicatedIntentFrom(settlement)
-      const fallback = tryPlaceTopology(dedicated, params, terrain)
-      if (fallback) {
-        rememberPlacement(topology, fallback)
-        return fallback
-      }
-    }
-  }
-  rememberPlacement(topology, null)
+  rememberPlacement(topology.assignmentId, {
+    status: topology.intent === 'shared' ? 'split' : 'none',
+  })
   return null
 }
 
+export function isSharedAssignmentSplit(assignmentId: string): boolean {
+  return cachedPlacementOf(assignmentId)?.status === 'split'
+}
+
 export function getCachedPlacementForAssignment(assignmentId: string): ResolvedCemeteryPlacement | null | undefined {
-  return resolvedPlacementByAssignment.get(assignmentId)
+  const cached = cachedPlacementOf(assignmentId)
+  if (!cached) return undefined
+  if (cached.status === 'placed') return cached.placement
+  return null
 }
 
 export function resolvedPlacementToEnvironment(p: ResolvedCemeteryPlacement): EnvironmentPlacement {
@@ -386,6 +416,20 @@ export function placementOwnerChunk(x: number, z: number, chunkSize: number): Ch
   return worldToChunk(x, z, chunkSize)
 }
 
+function emitIfOwned(
+  resolved: ResolvedCemeteryPlacement,
+  coord: ChunkCoord,
+  chunkSize: number,
+  seenIds: Set<string>,
+  placements: EnvironmentPlacement[],
+): void {
+  const owner = placementOwnerChunk(resolved.x, resolved.z, chunkSize)
+  if (owner.cx !== coord.cx || owner.cz !== coord.cz) return
+  if (seenIds.has(resolved.id)) return
+  seenIds.add(resolved.id)
+  placements.push(resolvedPlacementToEnvironment(resolved))
+}
+
 /**
  * Assignment-driven cemetery resolution for one chunk — active assignments first, then abandoned.
  * @domain world-terrain
@@ -403,12 +447,16 @@ export function resolveCemeteriesForChunk(
 
   for (const topology of topologies) {
     const resolved = resolvePlacementForTopology(topology, params, terrain)
-    if (!resolved) continue
-    const owner = placementOwnerChunk(resolved.x, resolved.z, params.chunkSize)
-    if (owner.cx !== coord.cx || owner.cz !== coord.cz) continue
-    if (seenIds.has(resolved.id)) continue
-    seenIds.add(resolved.id)
-    placements.push(resolvedPlacementToEnvironment(resolved))
+    if (resolved) {
+      emitIfOwned(resolved, coord, params.chunkSize, seenIds, placements)
+      continue
+    }
+    if (topology.intent !== 'shared') continue
+    for (const settlement of topology.settlements) {
+      const dedicated = dedicatedCemeteryTopology(settlement)
+      const fallback = resolvePlacementForTopology(dedicated, params, terrain)
+      if (fallback) emitIfOwned(fallback, coord, params.chunkSize, seenIds, placements)
+    }
   }
 
   const abandoned = resolveAbandonedCemeteryForChunk(coord, params, terrain)

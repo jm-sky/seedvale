@@ -1,14 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { CemeterySettlementRef } from './cemeteryAssignment'
 import type { CemeteryTerrainSampler } from './chunkEnvironment'
 import type { ChunkTileParams } from './chunkHeightmap'
+import { clearCemeteryCaches } from './cemeteryAssignment'
+import { dedicatedCemeteryTopology, makeSettlementRefPeek, resolveCemeteryTopologyForSettlement } from './cemeteryAssignment'
 import {
   abandonedCemeteryMaxOffsetFromCenter,
   chunkPassesAbandonedCemeteryRoll,
   clearCemeteryPlacementCaches,
+  isSharedAssignmentSplit,
   resolveAbandonedCemeteryAfterRoll,
   resolveAbandonedCemeteryForChunk,
   resolveCemeteriesForChunk,
+  type ResolvedCemeteryPlacement,
+  resolvePlacementForTopology,
 } from './cemeteryPlacement'
+import { worldToChunk } from './chunkGrid'
 import { createLocalTerrainSampler } from './chunkHeightmap'
 
 const CHUNK_SIZE = 64
@@ -193,5 +200,97 @@ describe('abandoned cemetery streamed vs resolver parity (plan world-022)', () =
 describe('abandonedCemeteryMaxOffsetFromCenter', () => {
   it('is the SM-margin inset from the chunk half-size', () => {
     expect(abandonedCemeteryMaxOffsetFromCenter(64)).toBe(32 - 6)
+  })
+})
+
+describe('assignment-driven cemetery placement (world-terrain-016)', () => {
+  const a: CemeterySettlementRef = { id: '0_0', gx: 0, gz: 0, x: 0, z: 0, size: 'SM' }
+  const b: CemeterySettlementRef = { id: '1_0', gx: 1, gz: 0, x: 280, z: 0, size: 'SM' }
+  const pair = [a, b]
+
+  it('places a shared SM cemetery at the same id/position regardless of calling chunk', () => {
+    let found: ResolvedCemeteryPlacement | null = null
+    for (let seed = 1; seed <= 240; seed++) {
+      clearCemeteryCaches()
+      clearCemeteryPlacementCaches()
+      const topology = resolveCemeteryTopologyForSettlement('0_0', makeSettlementRefPeek(pair))!
+      expect(topology.intent).toBe('shared')
+      const fromA = resolvePlacementForTopology(topology, tileParams({ seed, cx: 0, cz: 0, cemeterySettlements: pair }))
+      clearCemeteryPlacementCaches()
+      const fromB = resolvePlacementForTopology(
+        topology,
+        tileParams({ seed, cx: 4, cz: 0, cemeterySettlements: pair }),
+      )
+      if (!fromA || !fromB) continue
+      expect(fromA.id).toBe(fromB.id)
+      expect(fromA.x).toBe(fromB.x)
+      expect(fromA.z).toBe(fromB.z)
+      expect(fromA.servedSettlementIds).toEqual(['0_0', '1_0'])
+      found = fromA
+      break
+    }
+    expect(found).not.toBeNull()
+  })
+
+  it('emits a shared cemetery from only the owner chunk', () => {
+    let seedUsed = 0
+    let placed: ResolvedCemeteryPlacement | null = null
+    for (let seed = 1; seed <= 240; seed++) {
+      clearCemeteryCaches()
+      clearCemeteryPlacementCaches()
+      const topology = resolveCemeteryTopologyForSettlement('0_0', makeSettlementRefPeek(pair))!
+      placed = resolvePlacementForTopology(topology, tileParams({ seed, cx: 0, cz: 0, cemeterySettlements: pair }))
+      if (placed) {
+        seedUsed = seed
+        break
+      }
+    }
+    expect(placed).not.toBeNull()
+    const owner = worldToChunk(placed!.x, placed!.z, CHUNK_SIZE)
+    clearCemeteryPlacementCaches()
+    const ownerParams = tileParams({ seed: seedUsed, cx: owner.cx, cz: owner.cz, cemeterySettlements: pair })
+    const farCoord = { cx: owner.cx + 3, cz: owner.cz }
+    const farParams = tileParams({ seed: seedUsed, cx: farCoord.cx, cz: farCoord.cz, cemeterySettlements: pair })
+    const viaOwner = resolveCemeteriesForChunk(owner, ownerParams, createLocalTerrainSampler(owner, ownerParams))
+      .filter((p) => p.id === placed!.id)
+    const viaFar = resolveCemeteriesForChunk(farCoord, farParams, createLocalTerrainSampler(farCoord, farParams))
+      .filter((p) => p.id === placed!.id)
+    expect(viaOwner).toHaveLength(1)
+    expect(viaFar).toHaveLength(0)
+  })
+
+  it('falls back to two dedicated cemeteries when the shared corridor is blocked', () => {
+    const blockedCorridor = [{ x: 140, z: 0, radius: 80 }]
+    let dedicatedA: ResolvedCemeteryPlacement | null = null
+    let dedicatedB: ResolvedCemeteryPlacement | null = null
+    for (let seed = 1; seed <= 240; seed++) {
+      clearCemeteryCaches()
+      clearCemeteryPlacementCaches()
+      const params = tileParams({
+        seed,
+        cemeterySettlements: pair,
+        cemeteryClearings: blockedCorridor,
+        clearings: blockedCorridor.map((c) => ({
+          x: c.x,
+          z: c.z,
+          radius: c.radius,
+          targetH: 1,
+          heightStrength: 0.8,
+          tintStrength: 0.75,
+        })),
+      })
+      const topology = resolveCemeteryTopologyForSettlement('0_0', makeSettlementRefPeek(pair))!
+      expect(topology.intent).toBe('shared')
+      expect(resolvePlacementForTopology(topology, params)).toBeNull()
+      expect(isSharedAssignmentSplit(topology.assignmentId)).toBe(true)
+      dedicatedA = resolvePlacementForTopology(dedicatedCemeteryTopology(a), params)
+      dedicatedB = resolvePlacementForTopology(dedicatedCemeteryTopology(b), params)
+      if (dedicatedA && dedicatedB) break
+    }
+    expect(dedicatedA).not.toBeNull()
+    expect(dedicatedB).not.toBeNull()
+    expect(dedicatedA!.id).not.toBe(dedicatedB!.id)
+    expect(dedicatedA!.servedSettlementIds).toEqual(['0_0'])
+    expect(dedicatedB!.servedSettlementIds).toEqual(['1_0'])
   })
 })

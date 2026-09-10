@@ -5,6 +5,7 @@ import {
   cemeteryAssignmentId,
   cemeteryIdForAssignment,
   clearCemeteryCaches,
+  dedicatedCemeteryTopology,
   resolveCemeteryTopologyForSettlement,
   resolveSmSharePartner,
   servedSettlementIdsForCemeteryId,
@@ -62,6 +63,20 @@ describe('cemeteryAssignment (world-terrain-016)', () => {
     far.x = SM_SHARING_MAX_DISTANCE + 20
     const peek = peekMap([a, far])
     expect(resolveSmSharePartner(a, peek)).toBeNull()
+  })
+
+  it('uses each SM\'s own neighborhood so a third SM does not steal an existing mutual pair', () => {
+    const a = ref('0_0', 0, 0, 'SM')
+    const b = ref('1_0', 1, 0, 'SM')
+    const c = ref('2_0', 2, 0, 'SM')
+    const peek = peekMap([a, b, c])
+    expect(resolveSmSharePartner(a, peek)?.id).toBe('1_0')
+    expect(resolveSmSharePartner(b, peek)?.id).toBe('0_0')
+    expect(resolveSmSharePartner(c, peek)).toBeNull()
+    const topoA = resolveCemeteryTopologyForSettlement('0_0', peek)!
+    const topoC = resolveCemeteryTopologyForSettlement('2_0', peek)!
+    expect(topoA.intent).toBe('shared')
+    expect(topoC).toEqual(dedicatedCemeteryTopology(c))
   })
 
   it('derives stable cemetery ids and reverse lookup', () => {

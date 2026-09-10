@@ -101,6 +101,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `settlement/roadNetwork.ts`
 - `terrain/cemeteryAssignment.test.ts`
+- `terrain/cemeteryPlacement.test.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkEnvironment.test.ts`
 - `terrain/chunkHeightmap.ts`
@@ -112,8 +113,10 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkEnvironment.ts`
+- `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 
 ## `terrain/cemeteryPlacement.ts`
@@ -207,6 +210,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `perf/benchmark.ts`
 - `settlement/SettlementsManager.ts`
+- `terrain/cemeteryPlacement.test.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkCrops.ts`
 - `terrain/chunkEnvironment.ts`

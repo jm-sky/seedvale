@@ -138,27 +138,30 @@ function rankSmPartners(self: CemeterySettlementRef, candidates: readonly Cemete
     })
 }
 
+function refsAround(self: CemeterySettlementRef, peekRef: PeekSettlementRef): CemeterySettlementRef[] {
+  const nearby: CemeterySettlementRef[] = []
+  for (const cell of cellsWithinRadius({ gx: self.gx, gz: self.gz }, SM_SHARING_CELL_RADIUS)) {
+    const ref = peekRef(cell)
+    if (ref) nearby.push(ref)
+  }
+  return nearby
+}
+
 /** Mutual-best local `SM` pairing — order-independent (plan §6, implementation notes). */
 export function resolveSmSharePartner(
   self: CemeterySettlementRef,
   peekRef: PeekSettlementRef,
 ): CemeterySettlementRef | null {
   if (self.size !== 'SM') return null
-  const center: SettlementCell = { gx: self.gx, gz: self.gz }
-  const nearby: CemeterySettlementRef[] = []
-  for (const cell of cellsWithinRadius(center, SM_SHARING_CELL_RADIUS)) {
-    const ref = peekRef(cell)
-    if (!ref) continue
-    nearby.push(ref)
-  }
-  const ranked = rankSmPartners(self, nearby)
+  const ranked = rankSmPartners(self, refsAround(self, peekRef))
   const best = ranked[0]
   if (!best) return null
-  const reverse = rankSmPartners(best, nearby)
+  const reverse = rankSmPartners(best, refsAround(best, peekRef))
   return reverse[0]?.id === self.id ? best : null
 }
 
-function dedicatedIntent(def: CemeterySettlementRef): CemeteryTopologyIntent {
+/** Dedicated assignment for one settlement — also the shared-placement fallback. */
+export function dedicatedCemeteryTopology(def: CemeterySettlementRef): CemeteryTopologyIntent {
   const served = [def.id]
   return {
     assignmentId: cemeteryAssignmentId(served),
@@ -195,9 +198,9 @@ export function resolveCemeteryTopologyForSettlement(
   let intent: CemeteryTopologyIntent
   if (self.size === 'SM') {
     const partner = resolveSmSharePartner(self, peekRef)
-    intent = partner ? sharedIntent(self, partner) : dedicatedIntent(self)
+    intent = partner ? sharedIntent(self, partner) : dedicatedCemeteryTopology(self)
   } else {
-    intent = dedicatedIntent(self)
+    intent = dedicatedCemeteryTopology(self)
   }
   for (const id of intent.servedSettlementIds) topologyCache.set(id, intent)
   return intent

@@ -302,6 +302,14 @@ export type ChunkTileParams = {
    *  (`cemeteryPlacement.ts`) — populated by `chunkManager.paramsFor()`. */
   /** Empty when no settlements are near this chunk — assignment-driven cemeteries are skipped. */
   cemeterySettlements?: readonly CemeterySettlementRef[]
+  /**
+   * Unclipped nearby roads/paths used only by cemetery assignment search so
+   * every nearby chunk (and unloaded lookup) evaluates the same corridor.
+   * Must not be merged into `roadSegments` — that list carves this chunk.
+   */
+  cemeteryRoadSegments?: RoadCorridorSegment[]
+  /** Unclipped nearby village clearings for cemetery house/plaza rejection. */
+  cemeteryClearings?: readonly { x: number, z: number, radius: number }[]
   /** Single authored expedition ruins site (plan quests-progression-009) —
    *  injected by `chunkManager` when the deterministic site falls in this
    *  chunk. Absent on older call paths / tests. */
@@ -328,6 +336,8 @@ export type RawSampleParams = Omit<
   | 'regional'
   | 'riverSegments'
   | 'cemeterySettlements'
+  | 'cemeteryRoadSegments'
+  | 'cemeteryClearings'
   | 'authoredExpeditionRuins'
 >
 
@@ -1204,5 +1214,30 @@ export function createLocalTerrainSampler(
   return {
     heightAt: (x, z) => sampleField(x, z, (t) => t.h),
     roadTintAt: (x, z) => sampleField(x, z, (t) => t.roadTint),
+  }
+}
+
+/**
+ * Point-sampled cemetery terrain at arbitrary world positions — not clamped
+ * to the calling chunk's apron. Assignment search must agree across chunks.
+ * @domain world-terrain
+ */
+export function createWorldTerrainSampler(
+  params: ChunkTileParams,
+): { heightAt: (wx: number, wz: number) => number, roadTintAt: (wx: number, wz: number) => number } {
+  const noise = noiseHandlesFor(params.seed)
+  const texelCache = new Map<string, ChunkTexel>()
+  const texelAt = (x: number, z: number): ChunkTexel => {
+    const key = `${x.toFixed(3)},${z.toFixed(3)}`
+    let texel = texelCache.get(key)
+    if (!texel) {
+      texel = computeChunkTexel(x, z, noise, params)
+      texelCache.set(key, texel)
+    }
+    return texel
+  }
+  return {
+    heightAt: (x, z) => texelAt(x, z).h,
+    roadTintAt: (x, z) => texelAt(x, z).roadTint,
   }
 }

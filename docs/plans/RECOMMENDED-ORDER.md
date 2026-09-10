@@ -40,8 +40,7 @@ _No qualifying plans._
 
 ### Polish
 
-1. `ui-input-015` — **Interaction Targeting and Action Semantics**  
-   🔴 `M` · ✅ ready · unlocks 0/0
+_No qualifying plans._
 
 ---
 
@@ -53,10 +52,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/5
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
-   🟡 `M` · ✅ ready · unlocks 2/2
-5. `quests-progression-016` — **World-driven settlement quest opportunities**  
-   🔴 `M` · ✅ ready · unlocks 1/1
+4. `settlements-npcs-022` — **Household help and age-based work participation**  
+   🔴 `M` · ✅ ready · unlocks 0/0
+5. `settlements-npcs-025` — **Resource storage visualization**  
+   🟡 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -102,40 +101,36 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-8. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
-  🟡 `M` · **Score:**  45  
-   → **unlocks:** 2/2
-
-9. `quests-progression-016` — **World-driven settlement quest opportunities**  
-  🔴 `M` · **Score:**  43  
-   → **unlocks:** 1/1
-
-10. `settlements-npcs-022` — **Household help and age-based work participation**  
+8. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-025` — **Resource storage visualization**  
+9. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-12. `ui-input-015` — **Interaction Targeting and Action Semantics**  
-  🔴 `M` · **Score:**  39  
-   → **unlocks:** 0/0
-
-13. `items-player-014` — **Rope-pullable resource transport**  
+10. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+11. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `tools-005` — **Seedvale Character Preparation Panel**  
+12. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `quests-progression-017` — **RPG settlement quest matrices**  
+13. `tools-013` — **NPC decision verification and scenario tooling**  
+  🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+14. `quests-progression-017` — **RPG settlement quest matrices**  
   🟡 `M` · **Score:**  21  
+   → **unlocks:** 0/0
+
+15. `items-player-023` — **Systemic item utility and food safety**  
+  🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
 ---
@@ -152,9 +147,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
-- [`quests-progression-017-rpg-settlement-quest-matrices.md`](quests-progression-017-rpg-settlement-quest-matrices.md)  
-  is blocked by:
-  - [`quests-progression-016-world-driven-settlement-quest-opportunities.md`](quests-progression-016-world-driven-settlement-quest-opportunities.md)
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
   - [`fauna-004-sheep-wool-and-shepherd.md`](fauna-004-sheep-wool-and-shepherd.md)
@@ -252,6 +244,7 @@ graph TD
   items_player_020["items-player-020 — Player-built animal trough and water storage"]
   items_player_021["items-player-021 — Player skills and targeted skill actions foundation"]
   items_player_022["items-player-022 — Gameplay interaction usability polish"]
+  items_player_023["items-player-023 — Systemic item utility and food safety"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -347,6 +340,7 @@ graph TD
   tools_010["tools-010 — Recommended Order Rankings and Actionable Plan Dashboard"]
   tools_011["tools-011 — Plan metadata graceful repair and self-healing synchronization"]
   tools_012["tools-012 — Draft plans README automatic sync"]
+  tools_013["tools-013 — NPC decision verification and scenario tooling"]
   ui_input_001["ui-input-001 — Developer Debug API"]
   ui_input_002["ui-input-002 — UI/UX Interaction and Action System Polish"]
   ui_input_003["ui-input-003 — Merchant Trade UI/UX Redesign"]
