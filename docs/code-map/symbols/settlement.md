@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 362
-- `CreateSettlementDeps` — type — line 240
-- `Settlement` — type — line 123
-- `settlementSpawnPoint` — function — line 228
+- `createSettlement` — function — line 369
+- `CreateSettlementDeps` — type — line 246
+- `Settlement` — type — line 125
+- `settlementSpawnPoint` — function — line 234
 
 ## `settlement/decorProps.ts`
 
@@ -432,15 +432,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 259
-- `buildSettlementProps` — function — line 665
-- `disposeSettlementGroup` — function — line 1822
-- `SettlementHouseBed` — type — line 134
-- `SettlementHouseLandmark` — type — line 105
-- `SettlementLandmarks` — type — line 141
-- `SettlementLandPlot` — type — line 248
-- `SettlementStorageVisuals` — type — line 240
-- `SettlementTreeLandmark` — type — line 266
+- `BlacksmithWorkplace` — type — line 268
+- `buildSettlementProps` — function — line 675
+- `disposeSettlementGroup` — function — line 1856
+- `SettlementHouseBed` — type — line 136
+- `SettlementHouseLandmark` — type — line 107
+- `SettlementLandmarks` — type — line 143
+- `SettlementLandPlot` — type — line 257
+- `SettlementStorageVisuals` — type — line 249
+- `SettlementTreeLandmark` — type — line 275
 
 ## `settlement/propSpecs.ts`
 
@@ -500,6 +500,27 @@ Generated from exported TypeScript symbols.
 - `TerrainSampler` — type — line 29
 - `tintPropMaterials` — function — line 10
 
+## `settlement/ratInfestation.ts`
+
+- `createRatInfestationRegistry` — function — line 47
+- `NO_RAT_INFESTATION` — const — line 18
+- `RAT_NEST_DESTROY_DURATION_SEC` — const — line 31
+- `RatInfestationRegistry` — type — line 33
+- `RatInfestationState` — type — line 11
+  - domain: settlements
+  - system: rat-infestation
+  - role: Authoritative settlement-owned rat infestation state (plan quests-progression-013) — keyed by stable `settlementId`, survives settlement stream-out/in, `WorldBundle` rebuild and save/load. Owns independent storage-damage and nest-destroyed facts. Not owned by `QuestManager` or Three.js props.
+- `SEEDED_RAT_INFESTATION` — const — line 25
+
+## `settlement/ratNestPlacement.ts`
+
+- `placeRatNest` — function — line 85
+- `PlaceRatNestArgs` — type — line 74
+- `RatNestPlacement` — type — line 11
+  - domain: settlements
+  - system: rat-infestation
+  - role: Deterministic rat-nest placement from a settlement's `VillagePlan` (plan quests-progression-013 §7) — one point behind a residential house, reconstructed from seed/id rather than a persisted transform.
+
 ## `settlement/ratPersistence.ts`
 
 - `createRatRegistry` — function — line 41
@@ -512,19 +533,27 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/rats.ts`
 
-- `createSettlementRats` — function — line 130
-- `RAT_INFESTATION_FLOOR` — const — line 34
-- `RAT_INFESTATION_PRESSURE_BONUS` — const — line 32
+- `createSettlementRats` — function — line 188
+- `infestationReplenishmentRoll` — function — line 96
+- `RAT_DOG_REPRODUCTION_PRESSURE` — const — line 35
+- `RAT_INFESTATION_FLOOR` — const — line 32
+- `RAT_INFESTATION_PRESSURE_BONUS` — const — line 30
+- `RAT_MIN_REPRODUCTION_MULTIPLIER` — const — line 37
 - `RAT_POPULATION_CAP` — const — line 26
   - domain: fauna
   - system: settlement-rats
-  - role: Settlement-local rat population pressure/reconciliation (plan fauna-016 §7/§8/§9, quests-progression-006) — deliberately not a `RatManager`: rats are plain `AnimalAgent('rat')` instances this module spawns/despawns toward a small, deterministic-target population and periodically drains real household/settlement food from.
-- `RatFoodSite` — type — line 82
-- `ratNormalPopulationTarget` — function — line 43
-- `ratPopulationTarget` — function — line 53
-- `RatPressureInputs` — type — line 36
-- `SettlementRats` — type — line 103
-- `SettlementRatsDeps` — type — line 84
+  - role: Settlement-local rat population pressure/reconciliation (plan fauna-016 §7/§8/§9, quests-progression-006, quests-progression-013) — deliberately not a `RatManager`: rats are plain `AnimalAgent('rat')` instances this module spawns toward a small, food-driven target population. Infestation replenishment is a separate nest-gated roll; excess live rats are never deleted just because the target falls.
+- `RAT_RECONCILE_INTERVAL_DAYS` — const — line 39
+- `ratDogReproductionMultiplier` — function — line 86
+- `RatFoodSite` — type — line 138
+- `ratNormalPopulationTarget` — function — line 71
+- `ratPopulationTarget` — function — line 79
+- `RatPressureInputs` — type — line 45
+- `ratReconcileAction` — function — line 121
+- `RatReconcileAction` — type — line 50
+- `SettlementRats` — type — line 161
+- `SettlementRatsDeps` — type — line 140
+- `shouldInfestationReplenish` — function — line 107
 
 ## `settlement/roadNetwork.ts`
 
@@ -613,7 +642,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 210
+- `createSettlementsManager` — function — line 213
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
@@ -623,24 +652,25 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementStructures.ts`
 
-- `createAnvil` — function — line 191
+- `createAnvil` — function — line 237
 - `createBarrel` — function — line 100
-- `createCrate` — function — line 178
-- `createDock` — function — line 260
-- `createGarden` — function — line 328
-- `createGrindWorkbench` — function — line 217
+- `createCrate` — function — line 224
+- `createDock` — function — line 306
+- `createGarden` — function — line 374
+- `createGrindWorkbench` — function — line 263
 - `createHayBale` — function — line 124
 - `createHut` — function — line 10
-- `createSignpost` — function — line 286
-- `createStockpile` — function — line 242
+- `createRatNest` — function — line 178
+- `createSignpost` — function — line 332
+- `createStockpile` — function — line 288
 - `createTrough` — function — line 170
 - `createTroughVisual` — function — line 146
-- `createVillageNamepost` — function — line 307
+- `createVillageNamepost` — function — line 353
 - `createWell` — function — line 37
-- `createWheatField` — function — line 379
-- `layoutCropsGarden` — function — line 358
+- `createWheatField` — function — line 425
+- `layoutCropsGarden` — function — line 404
 - `TroughVisual` — type — line 137
-- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 305
+- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 351
 
 ## `settlement/settlementTerrain.ts`
 
@@ -657,15 +687,6 @@ Generated from exported TypeScript symbols.
 - `householdStorageDestination` — function — line 37
 - `resolveHouseholdWoodStorage` — function — line 47
 - `settlementStorageDestination` — function — line 64
-
-## `settlement/storageInfestation.ts`
-
-- `createStorageInfestationRegistry` — function — line 22
-- `StorageInfestationCondition` — type — line 10
-  - domain: settlements
-  - system: storage-infestation
-  - role: Authoritative settlement-owned storage infestation condition (plan quests-progression-006) — keyed by stable `settlementId`, survives settlement stream-out/in, `WorldBundle` rebuild and save/load. Not owned by `QuestManager` or Three.js props.
-- `StorageInfestationRegistry` — type — line 12
 
 ## `settlement/storageRepair.ts`
 

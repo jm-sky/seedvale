@@ -617,6 +617,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`

@@ -238,12 +238,12 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/faunaCombat.ts`
 
-- `combatTargetForAnimal` — function — line 86
-- `damageFor` — function — line 74
-- `damageVsHuman` — function — line 78
-- `isMeleeTool` — function — line 70
+- `combatTargetForAnimal` — function — line 88
+- `damageFor` — function — line 76
+- `damageVsHuman` — function — line 80
+- `isMeleeTool` — function — line 72
 - `MAX_HP` — const — line 9
-- `MeleeToolKind` — type — line 49
+- `MeleeToolKind` — type — line 51
 
 ## `fauna/faunaDecision.ts`
 

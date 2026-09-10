@@ -108,7 +108,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/storageInfestationActions.ts`
 
-- `createStorageInfestationActions` — function — line 27
+- `createStorageInfestationActions` — function — line 29
 
 ## `app/actions/survivalActions.ts`
 
@@ -200,12 +200,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 569
+- `createGameLoop` — function — line 571
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 537
+- `GameLoop` — type — line 539
 - `GameLoopDeps` — type — line 276
 
 ## `app/graphicsSettings.ts`
@@ -245,10 +245,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 964
-- `buildDigTarget` — function — line 911
+- `buildCombatTarget` — function — line 974
+- `buildDigTarget` — function — line 921
 - `buildInteractables` — function — line 322
-- `collectItem` — function — line 1011
+- `collectItem` — function — line 1021
 - `COMBAT_TARGET_CONE_DOT` — const — line 89
 - `COMBAT_TARGET_RANGE` — const — line 74
 - `CombatAimMode` — type — line 79

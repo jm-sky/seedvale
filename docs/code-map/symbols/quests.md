@@ -56,9 +56,9 @@ Generated from exported TypeScript symbols.
 
 ## `quests/settlementRatInfestation.ts`
 
-- `isSettlementRatInfestationResolved` — function — line 14
-- `settlementRatInfestationReminderLine` — function — line 20
+- `isSettlementRatInfestationResolved` — function — line 16
+- `settlementRatInfestationReminderLine` — function — line 22
 - `SettlementRatInfestationSnapshot` — type — line 8
   - domain: quests-progression
   - system: settlement-rat-infestation
-  - role: Pure world-condition helpers for the storage rat infestation quest (plan quests-progression-006 §5).
+  - role: Pure world-condition helpers for the settlement rat infestation quest (plan quests-progression-006 §5, quests-progression-013 §11).

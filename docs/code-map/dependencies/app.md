@@ -421,9 +421,11 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/worldBundle.ts`
 - `items/Inventory.ts`
+- `items/itemCatalog.ts`
 - `items/items.ts`
 - `player/PlayerNeeds.ts`
 - `quests/QuestManager.ts`
+- `settlement/ratInfestation.ts`
 - `settlement/storageRepair.ts`
 - `ui/createHud.ts`
 - `ui/createToast.ts`

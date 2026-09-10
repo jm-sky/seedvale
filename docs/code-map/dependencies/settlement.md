@@ -54,13 +54,13 @@ Generated from TypeScript imports.
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/props.ts`
+- `settlement/ratInfestation.ts`
 - `settlement/ratPersistence.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementSignposts.ts`
 - `settlement/settlementTerrain.ts`
-- `settlement/storageInfestation.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/resourceDeposits.ts`
@@ -182,6 +182,7 @@ Generated from TypeScript imports.
 - `ai/npcCrowd.ts`
 - `ai/reactionChance.ts`
 - `ai/socialBehaviour.ts`
+- `assets/loadGltf.ts`
 - `audio/createWorldAudio.ts`
 - `audio/fireSounds.ts`
 - `debug/debugMode.ts`
@@ -206,6 +207,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `settlement/places.ts`
 - `settlement/props.ts`
+- `settlement/ratInfestation.ts`
 - `settlement/rats.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
@@ -949,6 +951,7 @@ Generated from TypeScript imports.
 - `settlement/merchantWagon.ts`
 - `settlement/propSpecs.ts`
 - `settlement/propUtils.ts`
+- `settlement/ratNestPlacement.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementStructures.ts`
@@ -1018,12 +1021,45 @@ Generated from TypeScript imports.
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`
 
+## `settlement/ratInfestation.test.ts`
+
+**Imports**
+
+- `settlement/ratInfestation.ts`
+
+## `settlement/ratInfestation.ts`
+
+**Imported by**
+
+- `app/actions/storageInfestationActions.ts`
+- `persistence/saveData.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `settlement/ratInfestation.test.ts`
+
+## `settlement/ratNestPlacement.test.ts`
+
+**Imports**
+
+- `settlement/ratNestPlacement.ts`
+- `settlement/villagePlan.ts`
+
+## `settlement/ratNestPlacement.ts`
+
+**Imports**
+
+- `settlement/villagePlan.ts`
+
+**Imported by**
+
+- `settlement/props.ts`
+- `settlement/ratNestPlacement.test.ts`
+
 ## `settlement/ratPersistence.test.ts`
 
 **Imports**
 
 - `settlement/ratPersistence.ts`
-- `settlement/storageInfestation.ts`
 
 ## `settlement/ratPersistence.ts`
 
@@ -1332,14 +1368,6 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `settlement/storageDestinations.test.ts`
 
-## `settlement/storageInfestation.ts`
-
-**Imported by**
-
-- `persistence/saveData.ts`
-- `settlement/SettlementsManager.ts`
-- `settlement/ratPersistence.test.ts`
-
 ## `settlement/storageRepair.test.ts`
 
 **Imports**
@@ -1427,6 +1455,8 @@ Generated from TypeScript imports.
 
 - `economy/initial.ts`
 - `settlement/props.ts`
+- `settlement/ratNestPlacement.test.ts`
+- `settlement/ratNestPlacement.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.ts`

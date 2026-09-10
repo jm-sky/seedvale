@@ -226,6 +226,7 @@ Generated from TypeScript imports.
 - `player/PlayerTorch.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/campfireProps.ts`
+- `settlement/createSettlement.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/livestock.ts`
