@@ -1,5 +1,6 @@
-/** Experimental cave heightfield spike — deterministic `CaveTopology` fixtures
- *  and a tiny local surface sampler. Not production cave siting.
+/** Experimental cave heightfield spike — deterministic `CaveTopology`
+ *  fixtures anchored to the production analytic terrain sampler
+ *  (`caveHeightfieldTerrain.ts`). Not production cave siting.
  *
  * @domain world-terrain
  */
@@ -11,16 +12,36 @@ import type {
   CaveTopologySegment,
 } from '../../world/caves/caveTopology'
 import type { CaveEntrance } from '../../world/caveVolume'
-import { mouthAlong, mouthLateral } from '../../world/caves/mouthCarve'
+import { CAVE_MOUTH_DEPTH } from '../../world/caves/mouthCarve'
+import { mouthOverburdenRequirement } from '../../world/caves/mouthOverburden'
+import { minSurfaceOverFootprint } from '../../world/caves/terrainFootprint'
+import { PROXY_MARGIN } from '../../world/caves/topologyAdapter'
+import {
+  sampleCaveHeightfieldBaseSurface,
+  sampleCaveHeightfieldWalkSurface,
+} from './caveHeightfieldTerrain'
 
-/** Shared doorway for every spike fixture — opening faces +Z, interior −Z. */
+/** Mirrors `productionTopology.ts`'s private `STATION_SAFETY` — extra slack
+ *  under the required overburden so a station never sits exactly on it. */
+const STATION_SAFETY = 0.35
+
+const ENTRANCE_WIDTH = 3
+const ENTRANCE_HEIGHT = 2.6
+const ENTRANCE_YAW = 0
+
+/**
+ * Shared doorway for every spike fixture — opening faces +Z, interior −Z.
+ * `y` is the mouth *floor*, derived exactly as `productionTopology.ts` does
+ * it: local surface minus `CAVE_MOUTH_DEPTH`, i.e. the bottom of the recess
+ * `createCaves()` carves.
+ */
 export const CAVE_HEIGHTFIELD_ENTRANCE: CaveEntrance = {
   x: 0,
-  y: 2,
+  y: sampleCaveHeightfieldBaseSurface(0, 0) - CAVE_MOUTH_DEPTH,
   z: 0,
-  yaw: 0,
-  width: 3,
-  height: 2.6,
+  yaw: ENTRANCE_YAW,
+  width: ENTRANCE_WIDTH,
+  height: ENTRANCE_HEIGHT,
 }
 
 export const CAVE_HEIGHTFIELD_FIXTURE_IDS = ['basic', 'bend', 'branch'] as const
@@ -32,25 +53,119 @@ export type CaveHeightfieldVariant = (typeof CAVE_HEIGHTFIELD_VARIANTS)[number]
 export const CAVE_HEIGHTFIELD_MODES = ['walk', 'inspect'] as const
 export type CaveHeightfieldMode = (typeof CAVE_HEIGHTFIELD_MODES)[number]
 
-/** Metres of rock above the deepest chamber ceiling in the local fixture. */
-export const CAVE_HEIGHTFIELD_OVERBURDEN = 9
+/**
+ * Analytic surface both spike representations are built against — the same
+ * function for heightfield and SDF, so the comparison never differs by
+ * terrain input. Equivalent to `createCaves()`'s `analyticSurfaceHeight`.
+ *
+ * @domain world-terrain
+ */
+export function caveHeightfieldBaseSurfaceAt(x: number, z: number): number {
+  return sampleCaveHeightfieldBaseSurface(x, z)
+}
 
-const CLIFF_OUT = 1.4
-const CLIFF_IN = -0.7
-const MOUTH_HALF = CAVE_HEIGHTFIELD_ENTRANCE.width * 0.55
-const MOUTH_FLARE = 1.1
+/**
+ * Walkable/rendered surface: analytic base minus the production mouth
+ * recess. Outdoor player ground and the harness terrain mesh use this.
+ *
+ * @domain world-terrain
+ */
+export function caveHeightfieldWalkSurfaceAt(x: number, z: number): number {
+  return sampleCaveHeightfieldWalkSurface(x, z, CAVE_HEIGHTFIELD_ENTRANCE)
+}
 
-function lerpPoint(a: CaveTopologyPoint, b: CaveTopologyPoint, t: number): CaveTopologyPoint {
+/**
+ * Deepest floor Y that still leaves the production-required overburden over
+ * a station of this width/height, reusing `minSurfaceOverFootprint` +
+ * `mouthOverburdenRequirement` — the same two rules `productionTopology.ts`
+ * applies. Only ever pushes a station *down*, never up.
+ *
+ * @domain world-terrain
+ */
+function anchoredFloorY(
+  desiredY: number,
+  x: number,
+  z: number,
+  width: number,
+  height: number,
+): number {
+  const distanceFromMouth = Math.hypot(x - CAVE_HEIGHTFIELD_ENTRANCE.x, z - CAVE_HEIGHTFIELD_ENTRANCE.z)
+  const required = mouthOverburdenRequirement(CAVE_HEIGHTFIELD_ENTRANCE, distanceFromMouth, PROXY_MARGIN)
+  if (required === null) return desiredY
+  const radius = width / 2 + PROXY_MARGIN
+  const allowedCeiling = minSurfaceOverFootprint(sampleCaveHeightfieldBaseSurface, x, z, radius)
+    - required
+    - STATION_SAFETY
+  return Math.min(desiredY, allowedCeiling - height)
+}
+
+/** Authored station: XZ plus metres of descent below the mouth floor. */
+type FixtureStation = {
+  id: string
+  kind: CaveTopologyNode['kind']
+  x: number
+  z: number
+  /** Metres below `CAVE_HEIGHTFIELD_ENTRANCE.y`, before the overburden clamp. */
+  descent: number
+  targetWidth: number
+  targetHeight: number
+}
+
+function stationNode(station: FixtureStation): CaveTopologyNode {
+  const desiredY = CAVE_HEIGHTFIELD_ENTRANCE.y - station.descent
   return {
-    x: a.x + (b.x - a.x) * t,
-    y: a.y + (b.y - a.y) * t,
-    z: a.z + (b.z - a.z) * t,
+    id: station.id,
+    kind: station.kind,
+    position: {
+      x: station.x,
+      y: anchoredFloorY(desiredY, station.x, station.z, station.targetWidth, station.targetHeight),
+      z: station.z,
+    },
+    targetWidth: station.targetWidth,
+    targetHeight: station.targetHeight,
   }
 }
 
-function arc(from: CaveTopologyPoint, to: CaveTopologyPoint, bulgeX: number, bulgeZ: number): CaveTopologyPoint[] {
-  const mid = lerpPoint(from, to, 0.5)
-  return [from, { x: mid.x + bulgeX, y: mid.y, z: mid.z + bulgeZ }, to]
+/**
+ * Straight run between two anchored nodes, re-clamping every interior point
+ * so a centerline crossing a dip in the hillside does not break the surface.
+ */
+function runCenterline(from: CaveTopologyNode, to: CaveTopologyNode, steps = 4): CaveTopologyPoint[] {
+  const points: CaveTopologyPoint[] = [from.position]
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps
+    const x = from.position.x + (to.position.x - from.position.x) * t
+    const z = from.position.z + (to.position.z - from.position.z) * t
+    const width = from.targetWidth + (to.targetWidth - from.targetWidth) * t
+    const height = from.targetHeight + (to.targetHeight - from.targetHeight) * t
+    const desiredY = from.position.y + (to.position.y - from.position.y) * t
+    points.push({ x, y: anchoredFloorY(desiredY, x, z, width, height), z })
+  }
+  points.push(to.position)
+  return points
+}
+
+/** Same as `runCenterline` but bulged sideways so the passage actually bends. */
+function bendCenterline(
+  from: CaveTopologyNode,
+  to: CaveTopologyNode,
+  bulgeX: number,
+  bulgeZ: number,
+  steps = 6,
+): CaveTopologyPoint[] {
+  const points: CaveTopologyPoint[] = [from.position]
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps
+    const bulge = Math.sin(t * Math.PI)
+    const x = from.position.x + (to.position.x - from.position.x) * t + bulgeX * bulge
+    const z = from.position.z + (to.position.z - from.position.z) * t + bulgeZ * bulge
+    const width = from.targetWidth + (to.targetWidth - from.targetWidth) * t
+    const height = from.targetHeight + (to.targetHeight - from.targetHeight) * t
+    const desiredY = from.position.y + (to.position.y - from.position.y) * t
+    points.push({ x, y: anchoredFloorY(desiredY, x, z, width, height), z })
+  }
+  points.push(to.position)
+  return points
 }
 
 function topology(
@@ -69,107 +184,71 @@ function topology(
   }
 }
 
-/**
- * Hermite smoothstep cloned from `mouthCarve.ts` so the fixture cliff does
- * not import Three.js.
- *
- * @domain world-terrain
- */
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  if (edge0 === edge1) return x < edge0 ? 0 : 1
-  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
-  return t * t * (3 - 2 * t)
-}
-
-/**
- * Tiny deterministic hillside for the spike: flat approach, steep wall at
- * the doorway, overburden over the interior footprint. Prototype only —
- * production mouth carving stays in `mouthCarve.ts`.
- *
- * @domain world-terrain
- */
-export function sampleCaveHeightfieldSurface(
-  x: number,
-  z: number,
-  entrance: CaveEntrance = CAVE_HEIGHTFIELD_ENTRANCE,
-): number {
-  const along = mouthAlong(x, z, entrance)
-  const lateral = mouthLateral(x, z, entrance)
-  const approachY = entrance.y
-  const ridgeY = entrance.y + CAVE_HEIGHTFIELD_OVERBURDEN
-  let y: number
-  if (along >= CLIFF_OUT) y = approachY
-  else if (along <= CLIFF_IN) y = ridgeY
-  else {
-    const t = smoothstep(CLIFF_OUT, CLIFF_IN, along)
-    y = approachY + (ridgeY - approachY) * t
-  }
-  const inDoorwayBand = along > -1.15 && along < 3.4 && Math.abs(lateral) < MOUTH_HALF + MOUTH_FLARE
-  if (inDoorwayBand) {
-    const lateralFade = 1 - smoothstep(MOUTH_HALF, MOUTH_HALF + MOUTH_FLARE, Math.abs(lateral))
-    const alongFade = 1 - smoothstep(2.4, 3.4, along)
-    const inwardFade = 1 - smoothstep(-1.15, -0.25, along)
-    const cut = lateralFade * alongFade * inwardFade
-    y = y + (approachY - y) * cut
-  }
-  return y
+const ENTRANCE_STATION: FixtureStation = {
+  id: 'entrance',
+  kind: 'entrance',
+  x: CAVE_HEIGHTFIELD_ENTRANCE.x,
+  z: CAVE_HEIGHTFIELD_ENTRANCE.z,
+  descent: 0,
+  targetWidth: ENTRANCE_WIDTH,
+  targetHeight: ENTRANCE_HEIGHT,
 }
 
 /**
  * Hand-authored `CaveTopology` fixtures for the heightfield spike. Width /
- * height / path come from topology; the heightfield builder must not replace
- * these with a second layout type.
+ * height / path come from topology; floor Y follows the real local terrain
+ * through `anchoredFloorY`. The heightfield builder must not replace these
+ * with a second layout type.
  *
  * @domain world-terrain
  */
 export function buildCaveHeightfieldFixture(id: CaveHeightfieldFixtureId): CaveTopology {
-  const e = CAVE_HEIGHTFIELD_ENTRANCE
-  const entrancePos: CaveTopologyPoint = { x: e.x, y: e.y, z: e.z }
-
   if (id === 'basic') {
-    const passage: CaveTopologyPoint = { x: 0, y: 1.7, z: -8 }
-    const chamber: CaveTopologyPoint = { x: 0, y: 1.15, z: -17 }
-    const nodes: CaveTopologyNode[] = [
-      { id: 'entrance', kind: 'entrance', position: entrancePos, targetWidth: e.width, targetHeight: e.height },
-      { id: 'passage', kind: 'passage', position: passage, targetWidth: 2.6, targetHeight: 2.4 },
-      { id: 'chamber', kind: 'chamber', position: chamber, targetWidth: 6.4, targetHeight: 4.1 },
-    ]
-    return topology(id, nodes, [
-      { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: [entrancePos, passage] },
-      { id: 'seg-passage-chamber', from: 'passage', to: 'chamber', centerline: [passage, chamber] },
+    const entrance = stationNode(ENTRANCE_STATION)
+    const passage = stationNode({
+      id: 'passage', kind: 'passage', x: 0, z: -8, descent: 1, targetWidth: 2.6, targetHeight: 2.4,
+    })
+    const chamber = stationNode({
+      id: 'chamber', kind: 'chamber', x: 0, z: -17, descent: 2.1, targetWidth: 6.4, targetHeight: 4.1,
+    })
+    return topology(id, [entrance, passage, chamber], [
+      { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: runCenterline(entrance, passage) },
+      { id: 'seg-passage-chamber', from: 'passage', to: 'chamber', centerline: runCenterline(passage, chamber) },
     ])
   }
 
   if (id === 'bend') {
-    const passage: CaveTopologyPoint = { x: 0, y: 1.65, z: -7 }
-    const widening: CaveTopologyPoint = { x: 5.2, y: 1.2, z: -13.5 }
-    const chamber: CaveTopologyPoint = { x: 9.4, y: 0.85, z: -19 }
-    const nodes: CaveTopologyNode[] = [
-      { id: 'entrance', kind: 'entrance', position: entrancePos, targetWidth: e.width, targetHeight: e.height },
-      { id: 'passage', kind: 'passage', position: passage, targetWidth: 2.5, targetHeight: 2.4 },
-      { id: 'widening', kind: 'widening', position: widening, targetWidth: 4.3, targetHeight: 3.1 },
-      { id: 'chamber', kind: 'chamber', position: chamber, targetWidth: 6.1, targetHeight: 4.2 },
-    ]
-    return topology(id, nodes, [
-      { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: [entrancePos, passage] },
-      { id: 'seg-bend', from: 'passage', to: 'widening', centerline: arc(passage, widening, 1.8, 0.4) },
-      { id: 'seg-widening-chamber', from: 'widening', to: 'chamber', centerline: [widening, chamber] },
+    const entrance = stationNode(ENTRANCE_STATION)
+    const passage = stationNode({
+      id: 'passage', kind: 'passage', x: 0, z: -7, descent: 0.9, targetWidth: 2.5, targetHeight: 2.4,
+    })
+    const widening = stationNode({
+      id: 'widening', kind: 'widening', x: 5.2, z: -13.5, descent: 1.7, targetWidth: 4.3, targetHeight: 3.1,
+    })
+    const chamber = stationNode({
+      id: 'chamber', kind: 'chamber', x: 9.4, z: -19, descent: 2.4, targetWidth: 6.1, targetHeight: 4.2,
+    })
+    return topology(id, [entrance, passage, widening, chamber], [
+      { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: runCenterline(entrance, passage) },
+      { id: 'seg-bend', from: 'passage', to: 'widening', centerline: bendCenterline(passage, widening, 1.8, 0.4) },
+      { id: 'seg-widening-chamber', from: 'widening', to: 'chamber', centerline: runCenterline(widening, chamber) },
     ])
   }
 
-  const hub: CaveTopologyPoint = { x: 0, y: 1.55, z: -8 }
-  const left: CaveTopologyPoint = { x: -6.4, y: 1.15, z: -14.2 }
-  const right: CaveTopologyPoint = { x: 6.6, y: 1.05, z: -13.4 }
-  const nodes: CaveTopologyNode[] = [
-    { id: 'entrance', kind: 'entrance', position: entrancePos, targetWidth: e.width, targetHeight: e.height },
-    { id: 'hub', kind: 'passage', position: hub, targetWidth: 3.4, targetHeight: 2.8 },
-    { id: 'left-chamber', kind: 'chamber', position: left, targetWidth: 4.6, targetHeight: 3.3 },
-    { id: 'right-chamber', kind: 'chamber', position: right, targetWidth: 4.9, targetHeight: 3.5 },
-  ]
-  return topology('branch', nodes, [
-    { id: 'seg-entrance-hub', from: 'entrance', to: 'hub', centerline: [entrancePos, hub] },
-    { id: 'seg-hub-left', from: 'hub', to: 'left-chamber', centerline: [hub, left] },
-    { id: 'seg-hub-right', from: 'hub', to: 'right-chamber', centerline: [hub, right] },
+  const entrance = stationNode(ENTRANCE_STATION)
+  const hub = stationNode({
+    id: 'hub', kind: 'passage', x: 0, z: -8, descent: 1.1, targetWidth: 3.4, targetHeight: 2.8,
+  })
+  const left = stationNode({
+    id: 'left-chamber', kind: 'chamber', x: -6.4, z: -14.2, descent: 2.1, targetWidth: 4.6, targetHeight: 3.3,
+  })
+  const right = stationNode({
+    id: 'right-chamber', kind: 'chamber', x: 6.6, z: -13.4, descent: 2.2, targetWidth: 4.9, targetHeight: 3.5,
+  })
+  return topology('branch', [entrance, hub, left, right], [
+    { id: 'seg-entrance-hub', from: 'entrance', to: 'hub', centerline: runCenterline(entrance, hub) },
+    { id: 'seg-hub-left', from: 'hub', to: 'left-chamber', centerline: runCenterline(hub, left) },
+    { id: 'seg-hub-right', from: 'hub', to: 'right-chamber', centerline: runCenterline(hub, right) },
   ])
 }
 

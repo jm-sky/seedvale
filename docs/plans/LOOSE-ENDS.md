@@ -11,6 +11,8 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 ## Wpisy
 
+- [ ] 2026-09-10 — `PlayerController` podaje do `applySlopeMovementConstraint` surowy `sampleHeight` (heightmapa powierzchni), także gdy gracz jest wewnątrz Cave V2 — ruch w tunelu jest wtedy ograniczany gradientem stoku *nad* jaskinią, a nie nachyleniem podłogi jaskini. Pomiar z harnessu `?caveHeightfieldTest` (world-terrain-018): 0.4 m od osi korytarza sonda slope raportuje 73.9° zamiast 7.6° podłogi. Istnieje gotowy czysty helper (`cameraBoom.ts` `withCaveFloorFallback`, dziś nieużywany w produkcji), którego harness używa właśnie do tego. Do rozważenia jako osobna poprawka Cave V2 — spike nie zmieniał produkcji.
+
 - [ ] 2026-09-10 — quests-progression-016: household food-shortage opportunity zablokowane — `Household.shortage('food')` istnieje, ale nie ma player → household food transfer (wpłata do magazynu osady nie rozwiązuje household shortage). Osobny plan w `settlements-npcs` / `items-player`.
 - [ ] 2026-09-10 — quests-progression-016: lost-livestock opportunity zablokowane — `find_animal` to objective, nie predicate zagubienia. Osobny plan w `fauna`.
 - [ ] 2026-09-10 — quests-progression-016: settlement structure-repair opportunity zablokowane — shared `world/repair.ts` math istnieje, brak generic settlement-building repair + player path. Osobny plan w `world` / `settlements`.

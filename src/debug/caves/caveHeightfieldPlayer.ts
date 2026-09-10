@@ -1,6 +1,9 @@
 /** Experimental cave heightfield spike — lightweight Walk-mode controller.
- *  Owns only test pose (position / yaw / camera). Does not boot
+ *  Owns only test pose (position / vertical state / camera). Does not boot
  *  `PlayerController` or WorldBundle gameplay systems.
+ *
+ *  Everything that decides *where the ground is* lives in `CaveWalkWorld`
+ *  and is production Cave V2 semantics; this file only drives it.
  *
  * @domain world-terrain
  */
@@ -13,55 +16,33 @@ import {
   Vector3,
 } from 'three'
 import type { KeyState } from '../../input/Keyboard'
-import type { CaveHeightfieldRepresentation } from './caveHeightfieldRepresentation'
+import type { CaveWalkWorld } from './caveHeightfieldWalkWorld'
 import { loadGltfAnimated, prepareProp } from '../../assets/loadGltf'
 import {
   CAMERA_DISTANCE_DEFAULT,
   CAMERA_DISTANCE_MIN,
   type LookState,
 } from '../../input/MouseLook'
-import { resolveCameraBoom } from '../../player/cameraBoom'
-import { integrateVerticalMotion } from '../../player/verticalMotion'
+import { resolveCameraBoom, withCaveFloorFallback } from '../../player/cameraBoom'
 import { applySlopeMovementConstraint } from '../../terrain/slopeConstraint'
 import {
-  type CaveSdfColumnIndex,
-  occupancyIntervalAt,
-  queryColumnIndex,
-} from '../../world/caves/caveSdfQuery'
-import { type Collider, colliderActiveAtY, resolvePosition } from '../../world/collision'
-import {
   HEIGHTFIELD_PLAYER_HEIGHT,
-  HEIGHTFIELD_PLAYER_RADIUS,
-  heightfieldOccupancyAt,
-  integrateHeightfieldVertical,
-  queryHeightfieldGround,
-  resolveHeightfieldHorizontal,
+  integrateDebugVertical,
 } from './caveHeightfieldTraversal'
 
+/** Mirrors `PlayerController`'s `MOVE_SPEED` / `SPRINT_MULTIPLIER` — see the
+ *  duplication note on `HEIGHTFIELD_PLAYER_RADIUS`. */
 const MOVE_SPEED = 8
 const SPRINT_MULTIPLIER = 1.8
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
 const PLAYER_MODEL_URL = '/models/characters/Adventurer.glb'
 
-export type HeightfieldWalkCollision =
-  | {
-    kind: 'heightfield'
-    representation: CaveHeightfieldRepresentation
-    surfaceAt: (x: number, z: number) => number
-  }
-  | {
-    kind: 'sdf'
-    index: CaveSdfColumnIndex
-    colliders: readonly Collider[]
-    surfaceAt: (x: number, z: number) => number
-  }
-
 export type CaveHeightfieldWalker = {
   root: Object3D
   position: Vector3
   spawn: (x: number, y: number, z: number, yaw: number) => void
-  update: (dt: number, keys: KeyState, look: LookState, camera: Camera, collision: HeightfieldWalkCollision) => void
+  update: (dt: number, keys: KeyState, look: LookState, camera: Camera, world: CaveWalkWorld) => void
   dispose: () => void
 }
 
@@ -104,31 +85,6 @@ export async function createCaveHeightfieldWalker(): Promise<CaveHeightfieldWalk
   let verticalVelocity = 0
   let grounded = true
 
-  const sampleWalkHeight = (collision: HeightfieldWalkCollision, x: number, z: number): number => {
-    if (collision.kind === 'heightfield') {
-      return queryHeightfieldGround(
-        collision.representation,
-        collision.surfaceAt,
-        x,
-        model.position.y,
-        z,
-      ).floorY
-    }
-    const hit = queryColumnIndex(collision.index, x, model.position.y, z)
-    return hit?.floorY ?? collision.surfaceAt(x, z)
-  }
-
-  const occupancyAt = (collision: HeightfieldWalkCollision) => (
-    x: number,
-    y: number,
-    z: number,
-  ): { floorY: number, ceilingY: number, openSky?: boolean } | null => {
-    if (collision.kind === 'heightfield') {
-      return heightfieldOccupancyAt(collision.representation, x, y, z)
-    }
-    return occupancyIntervalAt(collision.index, x, y, z)
-  }
-
   return {
     root: model,
     position: model.position,
@@ -138,8 +94,24 @@ export async function createCaveHeightfieldWalker(): Promise<CaveHeightfieldWalk
       verticalVelocity = 0
       grounded = true
     },
-    update: (dt, keys, look, camera, collision) => {
+    update: (dt, keys, look, camera, world) => {
       const step = Math.min(dt, 0.05)
+
+      // One cave-aware ground resolution per frame, at the entity's own
+      // position — the hysteresis in `CaveWalkWorld` is per-entity state.
+      let ground = world.resolveGround(model.position.x, model.position.y, model.position.z)
+
+      // Slope probes reach `SLOPE_SAMPLE_STEP` (1.2 m) sideways — wider than
+      // a 2.6 m tunnel — so a raw surface sampler reads the hillside metres
+      // overhead and reports a cliff in every direction. Production's
+      // `withCaveFloorFallback` reports the entity's own cave floor for any
+      // probe that misses the cave footprint; outdoors it is the identity.
+      const slopeHeight = withCaveFloorFallback(
+        world.walkSurfaceAt,
+        world.caveFloorAt,
+        ground.caveFloorY,
+      )
+
       forward.set(-Math.sin(look.yaw), 0, -Math.cos(look.yaw))
       right.set(-forward.z, 0, forward.x)
       wish.set(0, 0, 0)
@@ -157,67 +129,30 @@ export async function createCaveHeightfieldWalker(): Promise<CaveHeightfieldWalk
           wish.z,
           model.position.x,
           model.position.z,
-          (x, z) => sampleWalkHeight(collision, x, z),
+          slopeHeight,
         )
         wish.x = slope.x
         wish.z = slope.z
-        let nextX = model.position.x + wish.x
-        let nextZ = model.position.z + wish.z
-        if (collision.kind === 'heightfield') {
-          const resolved = resolveHeightfieldHorizontal(
-            collision.representation,
-            nextX,
-            nextZ,
-            HEIGHTFIELD_PLAYER_RADIUS,
-          )
-          nextX = resolved.x
-          nextZ = resolved.z
-        } else {
-          const colliders = collision.colliders.filter((c) => colliderActiveAtY(c, model.position.y))
-          const resolved = resolvePosition(nextX, nextZ, HEIGHTFIELD_PLAYER_RADIUS, colliders)
-          nextX = resolved.x
-          nextZ = resolved.z
-        }
-        model.position.x = nextX
-        model.position.z = nextZ
+        const resolved = world.resolveHorizontal(
+          model.position.x + wish.x,
+          model.position.z + wish.z,
+          model.position.y,
+        )
+        model.position.x = resolved.x
+        model.position.z = resolved.z
         if (wish.lengthSq() > 0) model.rotation.y = Math.atan2(wish.x, wish.z)
+        ground = world.resolveGround(model.position.x, model.position.y, model.position.z)
       }
 
-      if (collision.kind === 'heightfield') {
-        const next = integrateHeightfieldVertical(
-          collision.representation,
-          collision.surfaceAt,
-          model.position.x,
-          model.position.z,
-          { y: model.position.y, verticalVelocity, grounded },
-          step,
-          keys.jump,
-        )
-        model.position.y = next.y
-        verticalVelocity = next.verticalVelocity
-        grounded = next.grounded
-      } else {
-        const hit = queryColumnIndex(
-          collision.index,
-          model.position.x,
-          model.position.y,
-          model.position.z,
-        )
-        const floorY = hit?.floorY ?? collision.surfaceAt(model.position.x, model.position.z)
-        const ceilingY = hit && !hit.openSky ? hit.ceilingY : null
-        const motion = integrateVerticalMotion({
-          y: model.position.y,
-          verticalVelocity,
-          grounded,
-          groundY: floorY,
-          dt: step,
-          jumpRequested: keys.jump,
-          maxY: ceilingY != null ? ceilingY - HEIGHTFIELD_PLAYER_HEIGHT : undefined,
-        })
-        model.position.y = motion.y
-        verticalVelocity = motion.verticalVelocity
-        grounded = motion.grounded
-      }
+      const next = integrateDebugVertical(
+        ground,
+        { y: model.position.y, verticalVelocity, grounded },
+        step,
+        keys.jump,
+      )
+      model.position.y = next.y
+      verticalVelocity = next.verticalVelocity
+      grounded = next.grounded
 
       play(moving ? (sprinting ? (runAction ?? walkAction) : walkAction) ?? idleAction : idleAction)
       mixer?.update(step)
@@ -242,11 +177,13 @@ export async function createCaveHeightfieldWalker(): Promise<CaveHeightfieldWalk
         camX: originX + camOffset.x,
         camY: targetY + camOffset.y,
         camZ: originZ + camOffset.z,
-        sampleHeight: (x, z) => collision.surfaceAt(x, z),
-        colliders: collision.kind === 'sdf'
-          ? collision.colliders.filter((c) => colliderActiveAtY(c, model.position.y))
-          : [],
-        occupancyAt: occupancyAt(collision),
+        // Raw outdoor surface, exactly as `PlayerController.syncCamera` does:
+        // `occupancyAt` + `isInteriorFollowVoid` are what keep an interior
+        // boom off the hillside above the cave, and a cave-floor-substituted
+        // sampler would defeat that test.
+        sampleHeight: world.walkSurfaceAt,
+        colliders: world.boomCollidersAt(model.position.y),
+        occupancyAt: world.occupancyAt,
       })
       camera.position.set(boom.x, boom.y, boom.z)
       camera.lookAt(originX, targetY, originZ)

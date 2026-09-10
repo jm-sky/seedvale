@@ -128,16 +128,18 @@ Only add contour tracing if the simple result is visibly inadequate at otherwise
 
 Do not import `ChunkManager` or run terrain worker generation.
 
-Use a tiny deterministic local fixture with:
+**Superseded by the 2026-09-10 review (see the follow-up section below).** The
+hand-drawn approach/cliff/overburden fixture was too artificial to judge Cave
+V2 against real world relief. The harness now samples the *production*
+analytic terrain function directly — `chunkHeightmap.sampleHeightAt` +
+`worldConfig.defaultTerrainConfig()` — which is the same pure seam
+`ChunkManager` exposes as `sampleBaseHeight` and `createCaves()` passes to
+Cave V2 as `analyticSurfaceHeight`. Still no `ChunkManager`, no worker, no
+`WorldBundle`.
 
-```text
-approach plane / gentle slope
-→ steep wall/ridge near entrance
-→ cave mouth
-→ enough top surface above cave footprint
-```
-
-This does not solve production mouth carving. `src/world/caves/mouthCarve.ts` and production terrain integration remain untouched.
+This does not solve production mouth carving. `src/world/caves/mouthCarve.ts`
+and production terrain integration remain untouched (the harness *calls*
+`mouthCarveDepth`; it does not change it).
 
 ## Two mandatory test modes
 
@@ -330,5 +332,143 @@ Implementation is complete when the Player can open `?caveHeightfieldTest`, imme
 The implementation commit must not change production cave behavior.
 
 After Player comparison, record measured results and architecture decision before planning any production migration.
+
+---
+
+## Review follow-up — 2026-09-10 (post-merge, PR #80)
+
+Focused review of the merged spike found two things the harness could not
+actually test. Both are fixed; production cave/player/world behaviour is
+unchanged.
+
+### 1. Surface fixture was too artificial
+
+`sampleCaveHeightfieldSurface()` was a hand-rolled `approach + cliff + ridge`
+function with a doorway band cut out of it. Flat approach, one smoothstep
+wall, constant 9 m overburden — nothing a Cave V2 mouth actually meets.
+
+Now (`src/debug/caves/caveHeightfieldTerrain.ts`):
+
+```text
+defaultTerrainConfig(65)                    → RawSampleParams (no localStorage/URL)
+sampleHeightAt(x + anchor.x, z + anchor.z)  → production analytic height
+  − mouthCarveDepth(x, z, entrance)         → production mouth recess
+```
+
+- `CAVE_HEIGHTFIELD_TERRAIN_ANCHOR = (-1638, -918)` on seed `1` — a real
+  hillside: the approach descends outward, the ground climbs ~10 m over the
+  20 m the fixtures run inward, and there is lateral relief for `bend` /
+  `branch`. `caveHeightfieldTerrain.test.ts` asserts those properties, so a
+  terrain-generation change fails loudly instead of quietly flattening the
+  harness.
+- Two samplers, mirroring production exactly:
+  - `caveHeightfieldBaseSurfaceAt` — analytic base. **Both** representations
+    (heightfield *and* SDF field/mesh/column index/colliders) are built on
+    this one function.
+  - `caveHeightfieldWalkSurfaceAt` — base minus the mouth recess. Outdoor
+    player ground and the harness terrain mesh (1 m per texel, production
+    grid density).
+- Fixtures are still hand-authored `CaveTopology`, but Y is now *anchored*:
+  entrance floor = `base(0,0) − CAVE_MOUTH_DEPTH` (as `productionTopology.ts`
+  does it), each station authored as a descent below it and then clamped by
+  `minSurfaceOverFootprint` + `mouthOverburdenRequirement` + a local
+  `STATION_SAFETY` — the same two production rules.
+- Result: the deepest station of every fixture sits **12–14 m under the
+  hillside** (`basic` 14.0, `bend` 14.4, `branch` 12.1), which is the
+  outdoor-surface ↔ cave-interior conflict the spike needed.
+
+### 2. Walk mode did not preserve Cave V2 ground semantics
+
+`queryHeightfieldGround()` invented its own rule (`inside → cave, else →
+surface`, plus an ad-hoc `inColumn` window) and the SDF branch had no
+continuity rule at all. With a real hillside overhead that is the exact
+production regression the harness is supposed to catch:
+
+- **Underground query miss → surface snap.** Any query that lands outside the
+  footprint returned the surface. Fed to `integrateVerticalMotion` while
+  grounded, `groundY ≥ y − STEP_DOWN_MAX` holds trivially when the surface is
+  10 m up, so the player teleports onto the hillside. Production guards this
+  with `applyCaveGroundHysteresis` (`CAVE_UNDERGROUND_MISS`); neither harness
+  variant had it.
+- **Slope probes read the hillside.** `applySlopeMovementConstraint` probes
+  `SLOPE_SAMPLE_STEP` = 1.2 m sideways — wider than a 2.6 m tunnel. Measured
+  at 0.4 m off the tunnel axis at `z = −8`: the old mixed sampler reported a
+  **73.9°** slope inside a walkable passage (past `SLOPE_MAX_WALKABLE_DEG`,
+  so the uphill component is fully removed); the production
+  `withCaveFloorFallback` wrapper reports **7.6°**, the passage's own grade.
+- **Camera occupancy was fictitious.** `heightfieldOccupancyAt` returned
+  `ceilingY = floorY + 8` for open-sky columns and treated
+  `signedDistance ∈ [0, 0.05)` as void — 460 sample points around the mouth
+  reported cave void several metres *above* the terrain. `isInteriorFollowVoid`
+  cannot classify a hood/portal correctly against a made-up ceiling.
+
+Fixed by routing both variants through one seam instead of two ad-hoc paths:
+
+```text
+CaveWalkWorld            (caveHeightfieldWalkWorld.ts)
+  ├ heightfield → heightfieldColumnIntervals → queryHeightfieldColumn
+  └ sdf         → queryColumnIndex                       (production)
+        ↓  pickInterval(y)                               (production)
+        ↓  applyCaveGroundHysteresis(hit, y, surfaceY, last)  (production)
+   ground.height / ground.ceiling / ground.caveFloorY
+        ↓
+  integrateVerticalMotion(maxY = rockCeilingMaxY(...))   (production)
+  applySlopeMovementConstraint(withCaveFloorFallback(...))(production)
+  resolveCameraBoom(occupancyAt = strict intervals)      (production)
+```
+
+- Heightfield columns are clipped to the analytic surface with production's
+  `SURFACE_CLIP_EPS` (exported for this; no behaviour change), so a column
+  whose ceiling pokes through the hillside is open-sky, not rock.
+- `heightfieldOccupancyAt` now mirrors `occupancyIntervalAt` exactly
+  (`CAVE_OCCUPANCY_EPS`, strict containment, real ceiling).
+- `createDebugCaveGroundResolver` owns exactly one piece of state — the
+  remembered cave hit `applyCaveGroundHysteresis` needs. It is not a second
+  player-movement or cave-state system; the walker still owns only pose.
+- The camera boom gets the **raw** walk surface as `sampleHeight`, exactly
+  like `PlayerController.syncCamera` — `occupancyAt` + `isInteriorFollowVoid`
+  are what keep an interior boom off the hillside, and substituting the cave
+  floor there would defeat that test.
+
+### Known divergences from production Cave V2
+
+- Production `PlayerController` feeds the **raw** surface sampler to
+  `applySlopeMovementConstraint`, so inside a cave it constrains movement by
+  the hillside gradient overhead rather than the cave floor. The harness uses
+  `withCaveFloorFallback` there. Recorded in `LOOSE-ENDS.md`; not changed in
+  production as part of this spike.
+- Debug player constants (`MOVE_SPEED`, `SPRINT_MULTIPLIER`,
+  `HEIGHTFIELD_PLAYER_RADIUS/HEIGHT`, `heightfieldRockCeilingMaxY`) are
+  duplicated rather than imported, so the harness bundle does not pull the
+  gameplay/WorldBundle graph. `caveHeightfieldTraversal.test.ts` asserts they
+  equal the production ones.
+- No water, no encumbrance/sneak/stamina modifiers, no footstep/audio, no
+  `queryInterior` hysteresis (ambience only) — Walk mode stays traversal-only.
+- 2.5D still cannot express stacked/crossing passages, shafts, bridges or true
+  overhangs. Unchanged, and deliberately not papered over.
+
+### Tests added
+
+`caveHeightfieldTerrain.test.ts` (7) — deterministic sampling, anchor
+properties (above water, doorway slope, rise over the tunnel, lateral relief),
+walk-surface = base − mouth carve, entrance anchoring, ≥ 8 m of hillside over
+the deepest station of every fixture, production overburden past the mouth
+transition, repeatable topology.
+
+`caveHeightfieldTraversal.test.ts` (26) — debug-vs-production constant
+parity, surface clipping of columns, and, **run against both variants**:
+outdoor ground before the entrance, cave floor (never the hillside) when
+stably inside, no > 0.5 m vertical jump anywhere along entrance → chamber →
+exit, ground handed back to the surface on exit, mouth transition bounded by
+the production approach disc, underground-miss beside the tunnel keeping the
+cave floor, a surface entity above the tunnel *not* being assigned the cave,
+jump clamped by the rock ceiling, third-person boom never parking on the
+overburden, and strict occupancy only inside real void.
+
+### Verification
+
+`npx tsc --noEmit`, `pnpm run lint`, `pnpm run build`, `pnpm run test`
+(413 files / 4611 tests) all pass. **Browser verification is still the
+Player's** — the spike is not complete on automated checks alone.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

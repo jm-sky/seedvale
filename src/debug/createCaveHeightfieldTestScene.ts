@@ -19,7 +19,6 @@ import {
   Scene,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import type { Collider } from '../world/collision'
 import { createKeyboard } from '../input/Keyboard'
 import {
   createMouseLook,
@@ -37,23 +36,30 @@ import { buildSdfCaveMesh, DEFAULT_SDF_PARAMS } from '../world/caves/sdfCaveMesh
 import {
   buildCaveHeightfieldFixture,
   CAVE_HEIGHTFIELD_FIXTURE_IDS,
+  caveHeightfieldBaseSurfaceAt,
   type CaveHeightfieldFixtureId,
   type CaveHeightfieldMode,
   type CaveHeightfieldVariant,
+  caveHeightfieldWalkSurfaceAt,
   parseCaveHeightfieldFixtureId,
   parseCaveHeightfieldMode,
   parseCaveHeightfieldVariant,
-  sampleCaveHeightfieldSurface,
 } from './caves/caveHeightfieldFixtures'
 import { createHeightfieldCaveMesh } from './caves/caveHeightfieldMesh'
-import {
-  createCaveHeightfieldWalker,
-  type HeightfieldWalkCollision,
-} from './caves/caveHeightfieldPlayer'
+import { createCaveHeightfieldWalker } from './caves/caveHeightfieldPlayer'
 import {
   buildCaveHeightfieldRepresentation,
   DEFAULT_HEIGHTFIELD_CONFIG,
 } from './caves/caveHeightfieldRepresentation'
+import {
+  CAVE_HEIGHTFIELD_TERRAIN_ANCHOR,
+  CAVE_HEIGHTFIELD_TERRAIN_SEED,
+} from './caves/caveHeightfieldTerrain'
+import {
+  type CaveWalkWorld,
+  createHeightfieldWalkWorld,
+  createSdfWalkWorld,
+} from './caves/caveHeightfieldWalkWorld'
 import { urlParamValue } from './debugMode'
 
 export type CaveHeightfieldSpikeMetrics = {
@@ -74,7 +80,7 @@ export type CaveHeightfieldSpikeMetrics = {
 
 type BuiltVariant = {
   caveMesh: Mesh
-  collision: HeightfieldWalkCollision
+  world: CaveWalkWorld
   metrics: CaveHeightfieldSpikeMetrics
 }
 
@@ -82,16 +88,18 @@ function now(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
 }
 
-function surfaceAt(x: number, z: number): number {
-  return sampleCaveHeightfieldSurface(x, z)
-}
+/** The one analytic surface both representations are built against —
+ *  `createCaves()`'s `analyticSurfaceHeight` equivalent. */
+const baseSurfaceAt = caveHeightfieldBaseSurfaceAt
+/** Walkable / rendered surface (base minus the production mouth recess). */
+const walkSurfaceAt = caveHeightfieldWalkSurfaceAt
 
 function spawnPose(): { x: number, y: number, z: number, yaw: number } {
   const topology = buildCaveHeightfieldFixture('basic')
   const out = openingDirection(topology.entrance.yaw)
   const x = topology.entrance.x + out.dx * 7
   const z = topology.entrance.z + out.dz * 7
-  return { x, y: surfaceAt(x, z), z, yaw: topology.entrance.yaw }
+  return { x, y: walkSurfaceAt(x, z), z, yaw: topology.entrance.yaw }
 }
 
 function writeUrlState(variant: CaveHeightfieldVariant, fixture: CaveHeightfieldFixtureId, mode: CaveHeightfieldMode): void {
@@ -104,16 +112,18 @@ function writeUrlState(variant: CaveHeightfieldVariant, fixture: CaveHeightfield
   window.history.replaceState(null, '', url)
 }
 
+/** ~1 m per texel, matching production terrain (`chunkSize` 64 /
+ *  `resolution` 65) so the harness hillside reads at the real grid. */
 function buildSurfaceMesh(): Mesh {
-  const size = 56
-  const segments = 56
+  const size = 72
+  const segments = 72
   const geometry = new PlaneGeometry(size, size, segments, segments)
   geometry.rotateX(-Math.PI / 2)
   const pos = geometry.getAttribute('position')
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i)
     const z = pos.getZ(i)
-    pos.setY(i, surfaceAt(x, z))
+    pos.setY(i, walkSurfaceAt(x, z))
   }
   pos.needsUpdate = true
   geometry.computeVertexNormals()
@@ -133,11 +143,7 @@ function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVarian
   const totalMs = built.representationMs + buffers.meshBuildMs
   return {
     caveMesh: mesh,
-    collision: {
-      kind: 'heightfield',
-      representation: built.representation,
-      surfaceAt,
-    },
+    world: createHeightfieldWalkWorld(built.representation, baseSurfaceAt, walkSurfaceAt),
     metrics: {
       variant: 'heightfield',
       fixture,
@@ -161,7 +167,7 @@ function buildSdfVariant(fixture: CaveHeightfieldFixtureId): BuiltVariant {
   const t0 = now()
   const field = buildCaveSdfRepresentation(topology, DEFAULT_SDF_PARAMS)
   const t1 = now()
-  const meshResult = buildSdfCaveMesh(topology, DEFAULT_SDF_PARAMS, surfaceAt, field)
+  const meshResult = buildSdfCaveMesh(topology, DEFAULT_SDF_PARAMS, baseSurfaceAt, field)
   const t2 = now()
   const material = createCaveSpikeMaterial('sdf')
   material.side = FrontSide
@@ -169,16 +175,16 @@ function buildSdfVariant(fixture: CaveHeightfieldFixtureId): BuiltVariant {
   caveMesh.castShadow = true
   caveMesh.receiveShadow = true
   caveMesh.name = 'cave-sdf-baseline'
-  const index = buildCaveSdfColumnIndex(field, topology, surfaceAt)
-  const colliders: Collider[] = buildCaveSdfColliders(
+  const index = buildCaveSdfColumnIndex(field, topology, baseSurfaceAt)
+  const colliders = buildCaveSdfColliders(
     index,
-    surfaceAt,
+    baseSurfaceAt,
     field,
     caveMouthColliderFilter(topology),
   )
   return {
     caveMesh,
-    collision: { kind: 'sdf', index, colliders, surfaceAt },
+    world: createSdfWalkWorld(index, colliders, walkSurfaceAt),
     metrics: {
       variant: 'sdf',
       fixture,
@@ -247,12 +253,28 @@ function renderOverlay(
     </div>
     <div>${metrics.vertices} verts · ${metrics.triangles} tris · ${metrics.geometryBytes} B</div>
     ${extra}
+    <div style="margin-top:6px;opacity:0.9">
+      terrain: production analytic sampler, seed ${CAVE_HEIGHTFIELD_TERRAIN_SEED}
+      @ (${CAVE_HEIGHTFIELD_TERRAIN_ANCHOR.x}, ${CAVE_HEIGHTFIELD_TERRAIN_ANCHOR.z})<br>
+      surface over deepest station: ${deepestSurfaceAbove(fixture).toFixed(1)} m
+    </div>
     <div style="margin-top:8px;opacity:0.85">
       [1] heightfield/SDF · [2] Walk/Inspect · [3] fixture<br>
       WASD walk · mouse look · click canvas to lock pointer<br>
       2.5D cannot represent stacked / crossing / shaft geometry
     </div>
   `
+}
+
+/** Metres of hillside above the deepest station — the outdoor-surface ↔
+ *  cave-interior conflict the Walk-mode review is looking for. */
+function deepestSurfaceAbove(fixture: CaveHeightfieldFixtureId): number {
+  const topology = buildCaveHeightfieldFixture(fixture)
+  let deepest = 0
+  for (const node of topology.nodes) {
+    deepest = Math.max(deepest, baseSurfaceAt(node.position.x, node.position.z) - node.position.y)
+  }
+  return deepest
 }
 
 /**
@@ -270,11 +292,12 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
   scene.background = new Color(0x87ceeb)
 
   const camera = new PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 250)
-  camera.position.set(8, 6, 14)
+  const entranceY = buildCaveHeightfieldFixture('basic').entrance.y
+  camera.position.set(8, entranceY + 6, 14)
 
   const orbit = new OrbitControls(camera, renderer.domElement)
   orbit.enableDamping = true
-  orbit.target.set(0, 3, -8)
+  orbit.target.set(0, entranceY + 1, -8)
   orbit.enabled = mode === 'inspect'
 
   scene.add(new AmbientLight(0xffffff, 0.45))
@@ -309,6 +332,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
   const walker = await createCaveHeightfieldWalker()
   scene.add(walker.root)
   const spawn = spawnPose()
+  built.world.resetGround()
   walker.spawn(spawn.x, spawn.y, spawn.z, spawn.yaw)
 
   const disposeBuilt = (): void => {
@@ -322,6 +346,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
   const rebuild = (): void => {
     disposeBuilt()
     built = variant === 'sdf' ? buildSdfVariant(fixture) : buildHeightfieldVariant(fixture)
+    built.world.resetGround()
     scene.add(built.caveMesh)
     reportMetrics(built.metrics)
     renderOverlay(overlay, variant, fixture, mode, built.metrics)
@@ -378,7 +403,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
     if (!running) return
     const dt = clock.getDelta()
     if (mode === 'walk') {
-      walker.update(dt, keyboard.state, mouseLook.state, camera, built.collision)
+      walker.update(dt, keyboard.state, mouseLook.state, camera, built.world)
       keyboard.consumeJump()
       mouseLook.commitFrame()
     } else {

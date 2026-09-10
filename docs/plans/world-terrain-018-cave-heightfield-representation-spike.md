@@ -123,6 +123,18 @@ Nie importować pełnego `PlayerController`, jeśli wymaga on szerokiego runtime
 
 Walk mode nie ma implementować survivalu, stamina, inventory, interaction, combat ani innych systemów gracza.
 
+**Invariant ground resolution (dodany po review).** Gdy gracz jest stabilnie wewnątrz jaskini, outdoor surface heightmap nie może przejąć ground resolution — żadnego snapu na powierzchnię, wypchnięcia w górę ani „swimu" po niewidzialnym terenie nad podłogą jaskini. Harness reużywa produkcyjny łańcuch zamiast wyprowadzać własną regułę:
+
+```text
+column intervals (clipped do analytic surface, SURFACE_CLIP_EPS)
+    ↓ pickInterval(y)                 ← caveSdfQuery, CAVE_FLOOR_GRACE
+applyCaveGroundHysteresis(...)        ← caveSdfQuery, CAVE_UNDERGROUND_MISS
+    ↓
+floorY / ceilingY  |  outdoor surface
+```
+
+Oba warianty (heightfield i SDF) przechodzą przez ten sam seam (`CaveWalkWorld`), więc różnica w Walk mode jest różnicą reprezentacji, nie kontrolera. Sondy slope/kamery używają produkcyjnego `withCaveFloorFallback`, a occupancy kamery mirroruje `occupancyIntervalAt`.
+
 ### 5.2. Inspect mode — obowiązkowy
 
 Drugi tryb ma używać `OrbitControls` lub równoważnej lekkiej kamery inspekcyjnej, aby można było:
@@ -140,12 +152,24 @@ Spike ma mieć mały lokalny fragment terenu, wystarczający do czytelnego wejś
 
 Fixture powinien zawierać:
 
-- płaski/łagodny obszar podejścia;
-- lokalny stromy stok / skalną ścianę;
-- wejście umieszczone w tej ścianie;
+- łagodny obszar podejścia;
+- realny stok wokół wejścia;
+- pagórkowaty teren przebiegający nad tunelem/chamber;
 - wystarczający overburden nad dalszą częścią jaskini.
 
-Ważne: "pionowa ściana wejścia" jest elementem fixture/prototypu. Spike nie ma jeszcze rozwiązywać produkcyjnego proceduralnego wyboru i deformacji realnego terenu wokół wejścia.
+**Aktualizacja po review (2026-09-10).** Ręcznie rysowany cliff/ridge fixture był zbyt sztuczny, żeby ocenić Cave V2 w kontakcie z rzeczywistym ukształtowaniem świata. Harness używa teraz produkcyjnego czystego samplera terenu:
+
+```text
+worldConfig.defaultTerrainConfig()   → RawSampleParams
+chunkHeightmap.sampleHeightAt(x, z)  → analityczna wysokość (bez ChunkManagera/workera)
+mouthCarve.mouthCarveDepth(x, z)     → produkcyjna nisza wejścia
+```
+
+To jest ta sama funkcja, którą `ChunkManager` udostępnia jako `sampleBaseHeight`, a `createCaves()` podaje Cave V2 jako `analyticSurfaceHeight`. Lokalne współrzędne harnessu są mapowane na stały world anchor (`caveHeightfieldTerrain.ts`), wybrany tak, aby podejście opadało na zewnątrz, a teren wznosił się nad tunelem — powierzchnia jest ~12–14 m nad graczem w najgłębszej komorze.
+
+Obowiązkowe: heightfield i SDF budowane są na **dokładnie tym samym** samplerze (`caveHeightfieldBaseSurfaceAt`). Chodzony/renderowany teren (`caveHeightfieldWalkSurfaceAt`) to ten sam sampler minus produkcyjna nisza wejścia — tak samo, jak produkcja rozdziela `sampleBaseHeight` (clipping jaskini) od zmodyfikowanej heightmapy (grunt gracza).
+
+Ważne: spike nadal nie rozwiązuje produkcyjnego proceduralnego wyboru i deformacji terenu wokół wejścia — fixture tylko *anchoruje* ręcznie zapisaną topologię do prawdziwego terenu (`minSurfaceOverFootprint` + `mouthOverburdenRequirement`, te same reguły co `productionTopology.ts`).
 
 ## 7. Footprint generation
 
@@ -307,8 +331,12 @@ src/debug/debugMode.ts
 src/main.ts
 src/app/createApp.ts
 src/debug/createCaveHeightfieldTestScene.ts
+src/debug/caves/caveHeightfieldTerrain.ts
+src/debug/caves/caveHeightfieldFixtures.ts
 src/debug/caves/caveHeightfieldRepresentation.ts
 src/debug/caves/caveHeightfieldMesh.ts
+src/debug/caves/caveHeightfieldTraversal.ts
+src/debug/caves/caveHeightfieldWalkWorld.ts
 src/debug/caves/caveHeightfieldPlayer.ts
 ```
 
@@ -337,7 +365,9 @@ Manual comparison powinien odpowiedzieć:
 - czy floor/walls/ceiling są naturalne i bez seams;
 - czy bend/widening/junction są przekonujące;
 - czy rozdzielczość potrzebna do dobrego wyglądu nadal daje istotną przewagę wydajnościową;
-- czy ograniczenia 2.5D są akceptowalne dla kierunku Seedvale.
+- czy ograniczenia 2.5D są akceptowalne dla kierunku Seedvale;
+- czy gracz stabilnie wewnątrz jaskini nigdy nie zostaje snapnięty/wypchnięty na powierzchnię (także pod pagórkiem/overburden);
+- czy third-person camera nie parkuje na stoku nad jaskinią.
 
 ## 18. Kryterium decyzji po spike'u
 

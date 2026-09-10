@@ -75,8 +75,10 @@ export const CAVE_OCCUPANCY_EPS = 0.05
 const MIN_INTERVAL_HEIGHT = 0.45
 
 /** Clip gameplay ceilings this far below the analytic surface so a surface
- *  entity at `y ≈ sampleBaseHeight` is not contained. */
-const SURFACE_CLIP_EPS = 0.05
+ *  entity at `y ≈ sampleBaseHeight` is not contained. Exported so a debug
+ *  representation (world-terrain-018 spike) clips its columns to the surface
+ *  with the same slack instead of guessing one. */
+export const SURFACE_CLIP_EPS = 0.05
 
 /** Minimum carve depth that still counts as mouth-portal space. */
 const MIN_PORTAL_DEPTH = 0.05
