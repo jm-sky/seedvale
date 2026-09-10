@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** medium · **Effort:** L  
-**Depends on:** npc-006, fauna-012, fauna-016, settlements-npcs-014  
+**Depends on:** npc-006, fauna-012, fauna-016, settlements-npcs-014, settlements-npcs-023  
 **Domain:** `fauna`  
 **Subdomains:** `domestication`  
 **Tags:** `settlements-npcs` `items-player` `work` `economy`  
@@ -20,7 +20,8 @@ Zakres:
 - 24-dniowy cykl wzrostu wełny,
 - 4 wool na strzyżenie, czyli nominalnie 2 strzyżenia / 8 wool na rok,
 - normalny item `wool` i narzędzie z capability `shearing`,
-- shepherd jako `Role` korzystający z istniejącego schedule/work arbitration,
+- shepherd jako opcjonalny `Role` przydzielany przez staffing z `settlements-npcs-023`,
+- deterministyczne shepherd household z 2–6 owned sheep, gdy composition wybierze tę specjalizację,
 - fizyczne strzyżenie własnych owiec,
 - opieka nad stadem oparta o aktualne fauna roaming/threat/navigation mechanisms,
 - dostarczenie wełny do istniejącego household goods flow.
@@ -45,11 +46,13 @@ Owca jest normalnym `AnimalAgent` z istniejącym:
 
 `fauna-012` rozwinęła semantic threat perception, a `fauna-016` species-specific roaming i celowe trips. Shepherd nie może omijać tych mechanizmów przez ręczne przesuwanie owiec lub równoległy herding FSM.
 
-### NPC work
+### NPC work i staffing
 
 `NpcAgent` ma normalny schedule, decision/arbitration, `PlannedAction`, movement/navigation, profession work i carried inventory. Work Contracts są osobnym, authoritative mechanizmem dla jawnych zobowiązań pracownik–pracodawca.
 
 Codzienna opieka pasterza nad własnym household livestock **nie jest WorkContract**. Shepherd pozostaje zwykłą profesją/schedule work. Nie tworzyć automatycznych kontraktów na strzyżenie własnych owiec.
+
+`settlements-npcs-023` jest authoritative dla generation-time profession staffing/composition. Fauna-004 nie tworzy własnego resolvera profesji: rozszerza staffing z 023 o shepherd-specific eligibility i konsekwencję w postaci owned flock.
 
 ### Economy / goods
 
@@ -119,15 +122,56 @@ NPC sprawdza capability, nie konkretny `ItemKind`. Shears muszą być rzeczywiś
 
 Nie tworzyć `ShearsSystem` ani specjalnego inventory.
 
-## 4. Shepherd role i assignment
+## 4. Shepherd role, staffing i flock composition
 
 Dodać `shepherd` do istniejącego `Role` i exhaustive role-owned konfiguracji, w tym schedule.
 
-Shepherd assignment musi być **livestock-aware**. Nie dodawać `shepherd` bezwarunkowo do random role pool, bo tworzyłoby to pasterzy bez owiec oraz sheep households bez opiekuna.
+Generation-time assignment jest własnością resolvera z `settlements-npcs-023`. Shepherd jest **opcjonalnym conditional specialist**, nie baseline role i nie obowiązkowym mieszkańcem każdej osady.
 
-Preferować najmniejszy istniejący settlement/family role-assignment seam, który widzi household/livestock composition. Assignment powinien być deterministyczny.
+Nie dodawać `shepherd` do generic `RANDOM_ROLES`.
 
-Nie tworzyć nowego `Profession` ani drugiego staffing systemu. Jeżeli aktualny staffing code ma już właściwy hook, rozszerzyć go.
+Staffing ma korzystać z semantycznego modelu 023 (`forced / strong / normal / weak / excluded`) i istniejących generation inputs. Nie wprowadzać osobnej płaskiej tabeli procentów tylko dla shepherd.
+
+Shepherd preference powinna wynikać przede wszystkim z:
+
+- rzeczywistego `adultCapacity` — bardzo mała workforce nie powinna poświęcać podstawowej livelihood coverage dla shepherd,
+- `VillageSize` jako pomocniczego scale/tie-breaker signal,
+- istniejących sygnałów środowiska/terenu przydatnych dla sheep/grazing, jeżeli są dostępne w staffing/generation seam bez nowego biome classifiera,
+- aktualnej coverage innych ważniejszych profesji zgodnie z allocation order 023.
+
+Brak shepherd jest prawidłowym stanem. W obecnym zakresie generatora maksymalnie **jeden shepherd na settlement**.
+
+Jeżeli staffing wybierze shepherd, composition musi zapewnić temu samemu household deterministyczne stado:
+
+```text
+staffing selects shepherd
+→ assign shepherd adult to household
+→ household owns 2–6 sheep
+```
+
+Zakres **2–6 sheep** jest twardym invariantem shepherd flock dla generation-time composition. Wielkość stada ma wynikać z osobnego deterministic RNG stream/salt tak, aby zmiana flock logic nie perturbowała istniejących role/livestock rolls.
+
+Decyzja o shepherd i jego flock musi być jednym spójnym composition outcome. Nie wykonywać niezależnych losowań `hasShepherd` i `hasFlock`, które potem trzeba uzgadniać.
+
+Rozszerzyć istniejący deterministic livestock pipeline w `src/settlement/livestock.ts` oraz household ownership. Nie tworzyć drugiego livestock generatora, sheep-owner registry ani shepherd-specific persistence.
+
+### Questowy `ensureSheep`
+
+Aktualny home settlement ma specjalny `ensureSheep` / guaranteed sheep wymagany przez quest. **Ten mechanizm musi zostać.**
+
+Jest to osobny gameplay invariant i nie oznacza shepherd composition:
+
+```text
+ensureSheep
+→ quest availability invariant
+→ może zapewnić pojedynczą sheep bez shepherd
+
+shepherd composition
+→ profession/economy specialization
+→ shepherd household + 2–6 owned sheep
+```
+
+Guaranteed quest sheep nie może sama wymuszać shepherd role ani być traktowana jako dowód, że settlement powinien dostać shepherd. Przy implementacji zachować deterministic identity/persistence semantics istniejącego `ensureSheep` i uniknąć przypadkowego podwójnego spawnienia tego samego logical slotu.
 
 ## 5. Shepherd work arbitration
 
@@ -266,7 +310,7 @@ now = 30
 
 Nie replayować pominiętych dni ani kolejnych nieodebranych strzyżeń. Owca gotowa od dawna nadal reprezentuje jeden aktualny fleece/yield, nie automatycznie wiele zaległych zbiorów.
 
-Zachować aktualny kontrakt persistence fauny. Jeżeli runtime `AnimalAgent` nadal nie jest pełnym persistent snapshotem, nie dodawać partial persistence tylko dla wool. Wool ma być zgodne z istniejącym livestock production lifecycle.
+Zachować aktualny kontrakt persistence fauny. Nie dodawać partial persistence tylko dla wool. Wool ma być zgodne z istniejącym livestock production lifecycle i aktualną livestock persistence.
 
 ## 13. Performance i determinism
 
@@ -275,7 +319,8 @@ Zachować aktualny kontrakt persistence fauny. Jeżeli runtime `AnimalAgent` nad
 - threat relevance wykorzystuje istniejące bounded/recent threat information,
 - navigation request-based, nie per frame,
 - brak shepherd-driven ciągłego rescoringu habitat/roaming,
-- deterministyczne assignment, target selection i initial wool staggering,
+- deterministyczne staffing/composition, flock size, target selection i initial wool staggering,
+- osobny RNG stream dla shepherd flock nie perturbujący istniejących generation rolls,
 - zachować możliwość przyszłej hybrid/off-screen simulation.
 
 ## 14. Testy
@@ -289,11 +334,18 @@ Zachować aktualny kontrakt persistence fauny. Jeżeli runtime `AnimalAgent` nad
 - long time skip daje jeden ready fleece, nie wielokrotny catch-up yield,
 - milk/egg production bez regresji.
 
-### Assignment / ownership
+### Staffing / composition / ownership
 
-- sheep household może deterministycznie otrzymać shepherd zgodnie z aktualnym staffing seam,
-- shepherd bez owned sheep nie jest tworzony przez bezwarunkowy random assignment,
-- shepherd targetuje tylko owned sheep.
+- shepherd jest wybierany przez staffing resolver z `settlements-npcs-023`, nie przez generic `RANDOM_ROLES`,
+- brak shepherd jest prawidłowym deterministic outcome,
+- maksymalnie jeden shepherd jest generowany na settlement,
+- jeśli shepherd istnieje, jego household ma deterministycznie 2–6 owned sheep,
+- shepherd i flock są jednym spójnym composition outcome,
+- shepherd targetuje tylko owned sheep,
+- tiny workforce nie traci podstawowej livelihood/resource coverage tylko po to, aby utworzyć shepherd,
+- odpowiednie istniejące environment/scale signals mogą zwiększyć shepherd priority bez hard guarantee,
+- home `ensureSheep` nadal gwarantuje questową sheep niezależnie od shepherd composition,
+- guaranteed quest sheep sama nie wymusza shepherd.
 
 ### Action / tool / inventory
 
@@ -324,16 +376,18 @@ Manual verification wykonuje użytkownik w przeglądarce.
 
 Sprawdzić co najmniej:
 
-1. Settlement z sheep otrzymuje sensownego shepherd przez livestock-aware assignment.
-2. Shepherd wykonuje normalny schedule i może zostać przerwany przez potrzeby/zagrożenie.
-3. Sheep nadal korzystają z własnego roaming/flee behaviour.
-4. Shepherd podchodzi do moving sheep przez shared navigation bez teleportacji i shepherd-specific pathingu.
-5. Ready sheep jest ostrzyżona dokładnie raz i daje 4 wool.
-6. Wool trafia fizycznie do household inventory.
-7. Po 24 dniach sheep ponownie staje się ready; time skip działa bez replay.
-8. Milk production tej samej sheep nadal działa niezależnie.
-9. Predator atakujący owned sheep może wywołać sensowną reakcję shepherd, a odległe/nieistotne zagrożenie nie.
-10. Kilka sheep/shepherds nie powoduje widocznego pathfinding/threat scan spam.
+1. Wygenerować kilka osad: shepherd pojawia się jako częsta/sensowna specjalizacja tam, gdzie staffing i warunki na to pozwalają, ale nie jest gwarantowany wszędzie.
+2. Każdy generated shepherd ma household z 2–6 owned sheep; nie ma shepherd bez własnego flock.
+3. Home questowa `ensureSheep` nadal działa także wtedy, gdy staffing nie wybierze shepherd.
+4. Shepherd wykonuje normalny schedule i może zostać przerwany przez potrzeby/zagrożenie.
+5. Sheep nadal korzystają z własnego roaming/flee behaviour.
+6. Shepherd podchodzi do moving sheep przez shared navigation bez teleportacji i shepherd-specific pathingu.
+7. Ready sheep jest ostrzyżona dokładnie raz i daje 4 wool.
+8. Wool trafia fizycznie do household inventory.
+9. Po 24 dniach sheep ponownie staje się ready; time skip działa bez replay.
+10. Milk production tej samej sheep nadal działa niezależnie.
+11. Predator atakujący owned sheep może wywołać sensowną reakcję shepherd, a odległe/nieistotne zagrożenie nie.
+12. Kilka sheep/shepherds nie powoduje widocznego pathfinding/threat scan spam.
 
 ## 16. Kryteria ukończenia
 
@@ -341,7 +395,10 @@ Sprawdzić co najmniej:
 - [ ] sheep ma niezależny 24-dniowy wool cycle,
 - [ ] shearing daje dokładnie 4 wool i resetuje tylko wool anchor,
 - [ ] istnieją `wool`, shears i capability `shearing`,
-- [ ] shepherd jest normalnym `Role` z livestock-aware assignment i schedule,
+- [ ] `settlements-npcs-023` jest zaimplementowany i shepherd rozszerza jego staffing resolver,
+- [ ] shepherd jest opcjonalnym `Role`, nigdy generic `RANDOM_ROLES`, maksymalnie jeden na settlement,
+- [ ] generated shepherd household posiada deterministycznie 2–6 owned sheep,
+- [ ] home questowy `ensureSheep` pozostaje niezależny i nie wymusza shepherd,
 - [ ] shepherd korzysta z normalnej NPC work arbitration i `PlannedAction`,
 - [ ] shared Navigation obsługuje dojście/repath,
 - [ ] flock care nie omija fauna roaming/trip/flee ownership,
@@ -363,9 +420,9 @@ Sprawdzić co najmniej:
 - advanced herding / flock commands,
 - shepherd-specific combat AI,
 - osobny fauna/NPC pathfinder,
-- pełna fauna runtime persistence,
 - automatyczne Work Contracts dla shepherd routine,
-- persistent shepherd wages/household payroll.
+- persistent shepherd wages/household payroll,
+- runtime profession demand/migration — initial staffing pozostaje własnością `settlements-npcs-023`.
 
 ## Następny etap
 
@@ -378,9 +435,5 @@ wool
 ```
 
 Nie implementować przetwarzania w tym planie.
-
-## Implementation guidance
-
-Aktualizować `docs/plans/implementation-notes/fauna-004-sheep-wool-and-shepherd-implementation-notes.md` zgodnie z aktualnym codebase. Dla nowych ważnych publicznych granic dodać JSDoc tam, gdzie poprawia discovery; sugerowany `@domain fauna` / `@domain npc` zgodnie z ownership.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
