@@ -4,6 +4,7 @@ import type { CaveTopology } from './caves/caveTopology'
 import type { Collider } from './collision'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
+import { type CaveGroundQueryDebug, writeHitSnapshot } from '../debug/playerGroundTrace'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { buildCaveSdfColliders } from './caves/caveSdfColliders'
@@ -12,6 +13,7 @@ import {
   applyCaveGroundHysteresis,
   applyCaveInteriorHysteresis,
   buildCaveSdfColumnIndex,
+  CAVE_OCCUPANCY_EPS,
   type CaveGroundHit,
   type CaveSdfColumnIndex,
   type CaveVerticalInterval,
@@ -29,6 +31,9 @@ import {
   CAVE_APPROACH_RADIUS,
   CAVE_MOUTH_DEPTH,
   CAVE_MOUTH_RADIUS,
+  MOUTH_INTERIOR_ALONG,
+  mouthAlong,
+  mouthLateral,
 } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
 import { buildSdfCaveMesh } from './caves/sdfCaveMesh'
@@ -61,6 +66,11 @@ export type Caves = {
    *  B2). `null` outside cave space, including a surface entity above a
    *  tunnel. Includes mouth-portal coverage and underground-miss hysteresis. */
   queryGround: (x: number, y: number, z: number) => CaveGroundHit | null
+  /**
+   * Last `queryGround` breakdown (reused object, mutated in place).
+   * Debug ground-trace only — gameplay must use `queryGround` / `occupancyAt`.
+   */
+  peekGroundQueryDebug: () => CaveGroundQueryDebug
   /** Strict occupancy (B3) — no floor grace, no hysteresis. `null` is solid
    *  rock / outside cave void. Camera boom and derived collision share this. */
   occupancyAt: (x: number, y: number, z: number) => CaveVerticalInterval | null
@@ -227,6 +237,49 @@ export function createCaves(
   let lastGroundHit: CaveGroundHit | null = null
   let lastInteriorRaw: boolean | null = null
   let interiorConfirmed = false
+  let lastHitRuntime: CaveRuntime | null = null
+  const groundQueryDebug: CaveGroundQueryDebug = {
+    raw: null,
+    lastHitBefore: null,
+    resolved: null,
+    source: 'surface',
+    surfaceY: 0,
+    occupancy: false,
+    queryInterior: false,
+    caveId: null,
+    along: null,
+    lateral: null,
+  }
+  const rawHitSlot = { floorY: 0, ceilingY: 0, openSky: false }
+  const lastHitSlot = { floorY: 0, ceilingY: 0, openSky: false }
+  const resolvedHitSlot = { floorY: 0, ceilingY: 0, openSky: false }
+
+  function writeGroundQueryDebug(
+    x: number,
+    y: number,
+    z: number,
+    raw: CaveGroundHit | null,
+    lastHitBefore: CaveGroundHit | null,
+    resolved: CaveGroundHit | null,
+    surfaceY: number,
+    runtime: CaveRuntime | null,
+  ): void {
+    const occupancy = raw != null
+      && y >= raw.floorY - CAVE_OCCUPANCY_EPS
+      && y <= raw.ceilingY
+    const entrance = runtime?.topology.entrance
+    const along = entrance ? mouthAlong(x, z, entrance) : null
+    groundQueryDebug.raw = writeHitSnapshot(rawHitSlot, raw)
+    groundQueryDebug.lastHitBefore = writeHitSnapshot(lastHitSlot, lastHitBefore)
+    groundQueryDebug.resolved = writeHitSnapshot(resolvedHitSlot, resolved)
+    groundQueryDebug.source = raw ? 'cave' : resolved ? 'hysteresis' : 'surface'
+    groundQueryDebug.surfaceY = surfaceY
+    groundQueryDebug.occupancy = occupancy
+    groundQueryDebug.queryInterior = occupancy && along != null && along <= MOUTH_INTERIOR_ALONG
+    groundQueryDebug.caveId = runtime?.topology.caveId ?? null
+    groundQueryDebug.along = along
+    groundQueryDebug.lateral = entrance ? mouthLateral(x, z, entrance) : null
+  }
 
   function activate(def: CaveDefinition): void {
     if (active.has(def.caveId)) return
@@ -263,15 +316,21 @@ export function createCaves(
 
   function queryGround(x: number, y: number, z: number): CaveGroundHit | null {
     let hit: CaveGroundHit | null = null
+    let hitRuntime: CaveRuntime | null = null
     for (const runtime of runtimes) {
       const candidate = queryColumnIndex(runtime.index, x, y, z)
       if (candidate) {
         hit = candidate
+        hitRuntime = runtime
         break
       }
     }
-    const resolved = applyCaveGroundHysteresis(hit, y, analyticSurfaceHeight(x, z), lastGroundHit)
+    const lastHitBefore = lastGroundHit
+    const surfaceY = analyticSurfaceHeight(x, z)
+    const resolved = applyCaveGroundHysteresis(hit, y, surfaceY, lastHitBefore)
     lastGroundHit = resolved.remember
+    if (hitRuntime) lastHitRuntime = hitRuntime
+    writeGroundQueryDebug(x, y, z, hit, lastHitBefore, resolved.hit, surfaceY, hitRuntime ?? lastHitRuntime)
     return resolved.hit
   }
 
@@ -299,6 +358,7 @@ export function createCaves(
       }
     },
     queryGround,
+    peekGroundQueryDebug: () => groundQueryDebug,
     occupancyAt(x, y, z) {
       for (const runtime of runtimes) {
         const hit = occupancyIntervalAt(runtime.index, x, y, z)
@@ -347,8 +407,10 @@ export function createCaves(
     },
     dispose() {
       lastGroundHit = null
+      lastHitRuntime = null
       lastInteriorRaw = null
       interiorConfirmed = false
+      writeGroundQueryDebug(0, 0, 0, null, null, null, 0, null)
       for (const caveId of [...active.keys()]) deactivate(caveId)
     },
   }

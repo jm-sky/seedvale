@@ -27,9 +27,10 @@ import {
   defaultTerrainConfig,
 } from '../config/worldConfig'
 import { createModelTestScene } from '../debug/createModelTestScene'
-import { isDebugMode, isSystemEnabled } from '../debug/debugMode'
+import { isAdminMode, isDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { installNpcDebugApi } from '../debug/npcDebugApi'
 import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
+import { createPlayerGroundTraceBuffer } from '../debug/playerGroundTrace'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
@@ -1425,6 +1426,13 @@ export async function createApp(
   // Ctrl+click listener, no `window.seedvale.debug` outside `?debug`.
   const npcInspector = isDebugMode() ? createNpcInspector(container, bundle, () => dayNight.timeOfDay) : undefined
   const npcInspectTrigger = createNpcInspectTrigger(renderer.domElement)
+  const playerGroundTrace = (isDebugMode() || isAdminMode()) ? createPlayerGroundTraceBuffer() : null
+  if (playerGroundTrace) {
+    player.setGroundTraceRecorder(
+      playerGroundTrace.record,
+      () => bundle.caves.peekGroundQueryDebug(),
+    )
+  }
   installNpcDebugApi(
     bundle,
     worldContext,
@@ -1441,6 +1449,7 @@ export async function createApp(
     () => player,
     () => dayNight.elapsedDays,
     questManager,
+    playerGroundTrace,
   )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {

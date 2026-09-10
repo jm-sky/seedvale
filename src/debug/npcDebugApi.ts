@@ -17,6 +17,7 @@ import type { WorldContext } from '../world/worldContext'
 import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
+import type { PlayerGroundTraceBuffer, PlayerGroundTraceTick } from './playerGroundTrace'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { awardSkillXp, type PlayerSkills, setSkillValueForDebug, type SkillId } from '../player/PlayerSkills'
 import {
@@ -210,6 +211,9 @@ export type PlayerDebugApi = {
   needs: () => PlayerNeeds
   skills: () => PlayerSkills
   temporaryConditions: () => TemporaryConditionsState
+  /** Last ~60 player ground-resolution ticks (Cave V2 B3 snap capture). */
+  groundTrace: () => PlayerGroundTraceTick[]
+  clearGroundTrace: () => void
 }
 
 export type SeedvaleDebugApi = {
@@ -275,6 +279,10 @@ export type SeedvaleDebugApi = {
   injury: InjuryDebugApi
   spotAnimal: (kind: AnimalKind) => void
   help: () => string
+  /** Alias of `player.groundTrace()` — last ~60 cave/surface ground ticks. */
+  getPlayerGroundTrace: () => PlayerGroundTraceTick[]
+  /** Alias of `player.clearGroundTrace()`. */
+  clearPlayerGroundTrace: () => void
 }
 
 declare global {
@@ -288,6 +296,8 @@ type VillageIdentityLike = { id: string, name: string, size: VillageSize, x: num
 const HELP_TEXT = [
   'window.seedvale.debug — developer console API (?debug=1 only)',
   'player.position() — current player world position {x, y, z}',
+  'player.groundTrace() / getPlayerGroundTrace() — last ~60 player ground-resolution ticks (cave/hysteresis/surface); copy after a cave snap',
+  'player.clearGroundTrace() / clearPlayerGroundTrace() — empty the ground-resolution ring before a repro',
   'player.health() — current player health {hp, maxHp, status}',
   'player.attributes() — current player attributes {strength, agility, endurance, intelligence, wisdom, charisma}',
   'player.needs() — current player needs {hunger, thirst, sleep, rest}',
@@ -345,6 +355,7 @@ export function installNpcDebugApi(
   getPlayer: () => PlayerController,
   getElapsedDays: () => number,
   questManager: QuestManager,
+  groundTrace?: PlayerGroundTraceBuffer | null,
 ): void {
   if (!isDebugMode() && !isAdminMode()) return
 
@@ -506,6 +517,8 @@ export function installNpcDebugApi(
       needs: () => getPlayer().needs,
       skills: () => getPlayer().skills,
       temporaryConditions: () => getPlayer().temporaryConditions,
+      groundTrace: () => groundTrace?.snapshot() ?? [],
+      clearGroundTrace: () => { groundTrace?.clear() },
     },
     npc: (id) => {
       if (!findNpcById(bundle, id)) return null
@@ -560,6 +573,8 @@ export function installNpcDebugApi(
       })
     },
     help: () => HELP_TEXT,
+    getPlayerGroundTrace: () => groundTrace?.snapshot() ?? [],
+    clearPlayerGroundTrace: () => { groundTrace?.clear() },
   }
   window.seedvale = { ...window.seedvale, debug: api }
 }

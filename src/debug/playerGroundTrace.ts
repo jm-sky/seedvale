@@ -1,0 +1,205 @@
+/**
+ * Debug-only ring buffer of player cave/surface ground resolution
+ * (Cave V2 B3 chamber-snap recon). Filled from values already computed
+ * on the walking tick — not a second spatial query. No per-frame console.
+ *
+ * @domain debug
+ */
+
+export const PLAYER_GROUND_TRACE_CAPACITY = 60
+
+export type PlayerGroundSource = 'cave' | 'hysteresis' | 'surface'
+
+export type PlayerGroundHitSnapshot = {
+  floorY: number
+  ceilingY: number
+  openSky: boolean
+} | null
+
+export type PlayerGroundTraceWriter = 'vertical' | 'snap' | 'swim'
+
+/** One walking-tick sample. Plain JSON — pasteable from DevTools. */
+export type PlayerGroundTraceTick = {
+  seq: number
+  writer: PlayerGroundTraceWriter
+  before: { x: number, y: number, z: number }
+  after: { x: number, y: number, z: number }
+  surfaceY: number
+  raw: PlayerGroundHitSnapshot
+  lastGroundHit: PlayerGroundHitSnapshot
+  resolved: PlayerGroundHitSnapshot
+  source: PlayerGroundSource
+  groundY: number
+  floorY: number | null
+  ceilingY: number | null
+  occupancy: boolean
+  /**
+   * Raw occupancy on the interior side of the mouth
+   * (`along <= MOUTH_INTERIOR_ALONG`). Not hysteretic `Caves.queryInterior`.
+   */
+  queryInterior: boolean
+  groundedBefore: boolean
+  groundedAfter: boolean
+  verticalVelocityBefore: number
+  verticalVelocityAfter: number
+  caveId: string | null
+  along: number | null
+  lateral: number | null
+}
+
+export type CaveGroundQueryDebug = {
+  raw: PlayerGroundHitSnapshot
+  lastHitBefore: PlayerGroundHitSnapshot
+  resolved: PlayerGroundHitSnapshot
+  source: PlayerGroundSource
+  surfaceY: number
+  occupancy: boolean
+  queryInterior: boolean
+  caveId: string | null
+  along: number | null
+  lateral: number | null
+}
+
+export type PlayerGroundTraceBuffer = {
+  record: (tick: PlayerGroundTraceTick) => void
+  snapshot: () => PlayerGroundTraceTick[]
+  clear: () => void
+}
+
+function copyHit(hit: PlayerGroundHitSnapshot): PlayerGroundHitSnapshot {
+  if (!hit) return null
+  return { floorY: hit.floorY, ceilingY: hit.ceilingY, openSky: hit.openSky }
+}
+
+function copyTick(src: PlayerGroundTraceTick): PlayerGroundTraceTick {
+  return {
+    seq: src.seq,
+    writer: src.writer,
+    before: { x: src.before.x, y: src.before.y, z: src.before.z },
+    after: { x: src.after.x, y: src.after.y, z: src.after.z },
+    surfaceY: src.surfaceY,
+    raw: copyHit(src.raw),
+    lastGroundHit: copyHit(src.lastGroundHit),
+    resolved: copyHit(src.resolved),
+    source: src.source,
+    groundY: src.groundY,
+    floorY: src.floorY,
+    ceilingY: src.ceilingY,
+    occupancy: src.occupancy,
+    queryInterior: src.queryInterior,
+    groundedBefore: src.groundedBefore,
+    groundedAfter: src.groundedAfter,
+    verticalVelocityBefore: src.verticalVelocityBefore,
+    verticalVelocityAfter: src.verticalVelocityAfter,
+    caveId: src.caveId,
+    along: src.along,
+    lateral: src.lateral,
+  }
+}
+
+function emptyTick(): PlayerGroundTraceTick {
+  return {
+    seq: 0,
+    writer: 'vertical',
+    before: { x: 0, y: 0, z: 0 },
+    after: { x: 0, y: 0, z: 0 },
+    surfaceY: 0,
+    raw: null,
+    lastGroundHit: null,
+    resolved: null,
+    source: 'surface',
+    groundY: 0,
+    floorY: null,
+    ceilingY: null,
+    occupancy: false,
+    queryInterior: false,
+    groundedBefore: false,
+    groundedAfter: false,
+    verticalVelocityBefore: 0,
+    verticalVelocityAfter: 0,
+    caveId: null,
+    along: null,
+    lateral: null,
+  }
+}
+
+/**
+ * Bounded ring of the last `capacity` ground-resolution ticks.
+ * `record` mutates preallocated slots (no per-tick array growth).
+ * `snapshot` clones for DevTools (allocation only on explicit read).
+ */
+export function createPlayerGroundTraceBuffer(
+  capacity: number = PLAYER_GROUND_TRACE_CAPACITY,
+): PlayerGroundTraceBuffer {
+  const size = Math.max(1, capacity)
+  const slots: PlayerGroundTraceTick[] = Array.from({ length: size }, emptyTick)
+  let next = 0
+  let filled = 0
+  let seq = 0
+
+  return {
+    record(tick) {
+      seq += 1
+      const slot = slots[next]!
+      slot.seq = seq
+      slot.writer = tick.writer
+      slot.before.x = tick.before.x
+      slot.before.y = tick.before.y
+      slot.before.z = tick.before.z
+      slot.after.x = tick.after.x
+      slot.after.y = tick.after.y
+      slot.after.z = tick.after.z
+      slot.surfaceY = tick.surfaceY
+      slot.raw = copyHit(tick.raw)
+      slot.lastGroundHit = copyHit(tick.lastGroundHit)
+      slot.resolved = copyHit(tick.resolved)
+      slot.source = tick.source
+      slot.groundY = tick.groundY
+      slot.floorY = tick.floorY
+      slot.ceilingY = tick.ceilingY
+      slot.occupancy = tick.occupancy
+      slot.queryInterior = tick.queryInterior
+      slot.groundedBefore = tick.groundedBefore
+      slot.groundedAfter = tick.groundedAfter
+      slot.verticalVelocityBefore = tick.verticalVelocityBefore
+      slot.verticalVelocityAfter = tick.verticalVelocityAfter
+      slot.caveId = tick.caveId
+      slot.along = tick.along
+      slot.lateral = tick.lateral
+      next = (next + 1) % size
+      if (filled < size) filled += 1
+    },
+    snapshot() {
+      const out: PlayerGroundTraceTick[] = []
+      const start = filled < size ? 0 : next
+      for (let i = 0; i < filled; i++) {
+        out.push(copyTick(slots[(start + i) % size]!))
+      }
+      return out
+    },
+    clear() {
+      next = 0
+      filled = 0
+      seq = 0
+    },
+  }
+}
+
+export function snapshotCaveGroundHit(
+  hit: { floorY: number, ceilingY: number, openSky?: boolean } | null,
+): PlayerGroundHitSnapshot {
+  if (!hit) return null
+  return { floorY: hit.floorY, ceilingY: hit.ceilingY, openSky: Boolean(hit.openSky) }
+}
+
+/** Mutates `slot` and returns it, or `null` — no allocation. */
+export function writeHitSnapshot(
+  slot: { floorY: number, ceilingY: number, openSky: boolean },
+  hit: { floorY: number, ceilingY: number, openSky?: boolean } | null,
+): PlayerGroundHitSnapshot {
+  if (!hit) return null
+  slot.floorY = hit.floorY
+  slot.ceilingY = hit.ceilingY
+  slot.openSky = Boolean(hit.openSky)
+  return slot
+}

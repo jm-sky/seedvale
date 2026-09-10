@@ -232,6 +232,26 @@ along / lateral vs entrance
 
 Without `lastGroundHit` + raw query on that exact tick, Case A’s +9.7 m writer is identified **conditionally** (surface fallback + unlimited grounded snap-up), not observed.
 
+## Live capture (`seedvale.debug`, 2026-09-10)
+
+Debug-only ring of the last ~60 player ground-resolution ticks. No gameplay change.
+
+Before entering the cave:
+
+```js
+seedvale.debug.clearPlayerGroundTrace()
+```
+
+After the snap, copy JSON (pasteable into the next prompt):
+
+```js
+copy(JSON.stringify(seedvale.debug.getPlayerGroundTrace(), null, 2))
+```
+
+Aliases: `seedvale.debug.player.groundTrace()` / `seedvale.debug.player.clearGroundTrace()`.
+
+Each record is one `updateVerticalMotion` / `snapToGround` / swim tick: `before` (after XZ, before vertical) → `raw` / `lastGroundHit` / `source` (`cave|hysteresis|surface`) / `groundY` → `after` (mesh Y after `integrateVerticalMotion`). `queryInterior` here is raw occupancy on the interior mouth side, not hysteretic `Caves.queryInterior`.
+
 ## Classification (Case A)
 
 ```text

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
+import type { CaveGroundQueryDebug, PlayerGroundTraceTick } from '../debug/playerGroundTrace'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
@@ -243,6 +244,8 @@ export class PlayerController {
   private caveGround: CaveGroundQuery
   private caveOccupancy: CaveOccupancyQuery
   private sampleFootstepSurface: (x: number, z: number) => FootstepSurface
+  private groundTraceRecord: ((tick: PlayerGroundTraceTick) => void) | null = null
+  private peekGroundQueryDebug: (() => CaveGroundQueryDebug | null) | null = null
   private readonly isCapsule: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
    *  (the wrapper, which also carries the label at a fixed height) for
@@ -503,6 +506,18 @@ export class PlayerController {
     this.caveOccupancy = caveOccupancy
     this.sampleFootstepSurface = sampleFootstepSurface
     this.snapToGround()
+  }
+
+  /**
+   * Debug-only ground-resolution trace (Cave V2 B3). `null` clears.
+   * Production walking does not call this.
+   */
+  setGroundTraceRecorder(
+    record: ((tick: PlayerGroundTraceTick) => void) | null,
+    peek: (() => CaveGroundQueryDebug | null) | null,
+  ): void {
+    this.groundTraceRecord = record
+    this.peekGroundQueryDebug = peek
   }
 
   setName(name: string): void {
@@ -1038,6 +1053,9 @@ export class PlayerController {
    *  movement uses `updateVerticalMotion` instead. */
   private snapToGround(): void {
     const { x, z } = this.mesh.position
+    const yBefore = this.mesh.position.y
+    const groundedBefore = this.grounded
+    const vyBefore = this.verticalVelocity
     const groundY = this.groundAt(x, z).height
     if (groundY <= this.waterLevel) {
       // Underwater: sink toward the real seabed instead of the flattened-to-waterLevel
@@ -1054,12 +1072,16 @@ export class PlayerController {
     this.wasInWater = groundY <= this.waterLevel
     this.footstepAccum = 0
     this.modelRoot.rotation.x = 0
+    this.emitGroundTrace('snap', x, yBefore, z, groundedBefore, vyBefore, groundY)
   }
 
   /** Per-frame gravity/jump (plan 097 §2.3 + 158 slope-stick). Underwater
    *  keeps the existing swim behaviour and blocks jumping/falling. */
   private updateVerticalMotion(dt: number): void {
     const { x, z } = this.mesh.position
+    const yBefore = this.mesh.position.y
+    const groundedBefore = this.grounded
+    const vyBefore = this.verticalVelocity
     const ground = this.groundAt(x, z)
     const groundY = ground.height
     if (groundY <= this.waterLevel) {
@@ -1074,6 +1096,7 @@ export class PlayerController {
       this.grounded = true
       this.jumpRequested = false
       this.modelRoot.rotation.x = 0
+      this.emitGroundTrace('swim', x, yBefore, z, groundedBefore, vyBefore, groundY)
       return
     }
     this.wasInWater = false
@@ -1091,6 +1114,7 @@ export class PlayerController {
     this.mesh.position.y = next.y
     this.verticalVelocity = next.verticalVelocity
     this.grounded = next.grounded
+    this.emitGroundTrace('vertical', x, yBefore, z, groundedBefore, vyBefore, groundY)
 
     if (next.tookOff && this.playAt) {
       playJumpTakeoff(this.playAt, { x, y: next.y, z })
@@ -1113,6 +1137,43 @@ export class PlayerController {
           -JUMP_TILT_MAX,
           JUMP_TILT_MAX,
         )
+  }
+
+  private emitGroundTrace(
+    writer: PlayerGroundTraceTick['writer'],
+    beforeX: number,
+    beforeY: number,
+    beforeZ: number,
+    groundedBefore: boolean,
+    vyBefore: number,
+    groundY: number,
+  ): void {
+    const record = this.groundTraceRecord
+    if (!record) return
+    const debug = this.peekGroundQueryDebug?.() ?? null
+    record({
+      seq: 0,
+      writer,
+      before: { x: beforeX, y: beforeY, z: beforeZ },
+      after: { x: this.mesh.position.x, y: this.mesh.position.y, z: this.mesh.position.z },
+      surfaceY: debug?.surfaceY ?? this.sampleHeight(beforeX, beforeZ),
+      raw: debug?.raw ?? null,
+      lastGroundHit: debug?.lastHitBefore ?? null,
+      resolved: debug?.resolved ?? null,
+      source: debug?.source ?? 'surface',
+      groundY,
+      floorY: debug?.resolved?.floorY ?? null,
+      ceilingY: debug?.resolved?.ceilingY ?? null,
+      occupancy: debug?.occupancy ?? false,
+      queryInterior: debug?.queryInterior ?? false,
+      groundedBefore,
+      groundedAfter: this.grounded,
+      verticalVelocityBefore: vyBefore,
+      verticalVelocityAfter: this.verticalVelocity,
+      caveId: debug?.caveId ?? null,
+      along: debug?.along ?? null,
+      lateral: debug?.lateral ?? null,
+    })
   }
 
   private tickFootsteps(dt: number): void {

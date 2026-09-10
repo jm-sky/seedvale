@@ -12,6 +12,7 @@ import { createPlayerSkills } from '../player/PlayerSkills'
 import { createEmptyTemporaryConditions } from '../shared/temporaryConditions'
 import { computeRiverTile, riverTileCoordOf } from '../terrain/riverNetwork'
 import { installNpcDebugApi } from './npcDebugApi'
+import { createPlayerGroundTraceBuffer } from './playerGroundTrace'
 
 vi.mock('../terrain/riverNetwork', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../terrain/riverNetwork')>()
@@ -103,6 +104,7 @@ function install(
     getPlayerPosition?: () => { x: number, z: number }
     teleport?: (x: number, z: number) => Promise<void>
     config?: WorldConfig
+    groundTrace?: ReturnType<typeof createPlayerGroundTraceBuffer> | null
   } = {},
 ) {
   const worldContext = {} as unknown as WorldContext
@@ -134,6 +136,7 @@ function install(
     () => player as unknown as import('../player/PlayerController').PlayerController,
     () => 0,
     questManager,
+    opts.groundTrace,
   )
   return { teleport, api: typeof window === 'undefined' ? undefined : window.seedvale?.debug }
 }
@@ -506,5 +509,68 @@ describe('teleportTo.nextRiver() (plan ui-input-008)', () => {
 
     expect(await api!.teleportTo.nextRiver()).toBe(true)
     expect(teleport).toHaveBeenNthCalledWith(2, riverC.x, riverC.z)
+  })
+})
+
+describe('player ground-resolution trace', () => {
+  it('returns [] when no buffer is installed', () => {
+    stubWindow('?debug=1')
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    expect(api!.getPlayerGroundTrace()).toEqual([])
+    expect(api!.player.groundTrace()).toEqual([])
+    expect(() => api!.clearPlayerGroundTrace()).not.toThrow()
+  })
+
+  it('exposes the ring through getPlayerGroundTrace and player.groundTrace aliases', () => {
+    stubWindow('?debug=1')
+    const groundTrace = createPlayerGroundTraceBuffer(4)
+    groundTrace.record({
+      seq: 0,
+      writer: 'vertical',
+      before: { x: 120, y: 1.4, z: -16 },
+      after: { x: 119, y: 11.2, z: -16 },
+      surfaceY: 11.2,
+      raw: null,
+      lastGroundHit: { floorY: 1.4, ceilingY: 8, openSky: false },
+      resolved: null,
+      source: 'surface',
+      groundY: 11.2,
+      floorY: null,
+      ceilingY: null,
+      occupancy: false,
+      queryInterior: false,
+      groundedBefore: true,
+      groundedAfter: true,
+      verticalVelocityBefore: 0,
+      verticalVelocityAfter: 0,
+      caveId: 'cave:0e3cce97',
+      along: -16.7,
+      lateral: 1.4,
+    })
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const { api } = install(bundle, { groundTrace })
+    const rows = api!.getPlayerGroundTrace()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      seq: 1,
+      source: 'surface',
+      groundY: 11.2,
+      before: { y: 1.4 },
+      after: { y: 11.2 },
+    })
+    expect(api!.player.groundTrace()).toEqual(rows)
+    expect(JSON.parse(JSON.stringify(rows))).toEqual(rows)
+    api!.clearPlayerGroundTrace()
+    expect(api!.getPlayerGroundTrace()).toEqual([])
+    expect(api!.player.groundTrace()).toEqual([])
+  })
+
+  it('mentions the ground-trace commands in help()', () => {
+    stubWindow('?debug=1')
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    expect(api!.help()).toContain('getPlayerGroundTrace')
+    expect(api!.help()).toContain('clearPlayerGroundTrace')
   })
 })
