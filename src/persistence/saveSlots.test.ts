@@ -50,7 +50,7 @@ const currentSave = {
   graves: [],
   worldFlags: {},
   resolvedHiddenFindSpotIds: [],
-  badges: { earned: [], gravesDisturbed: 0, hiddenFindsFound: 0 },
+  badges: { earned: [], hiddenFindsFound: 0 },
   map: { discoveredCells: [], discoveredLocations: [], targets: [] },
   settlementEconomies: {},
   playerNeeds: { hunger: 100, thirst: 100, vigor: 100, starvationDuration: 0, dehydrationDuration: 0 },

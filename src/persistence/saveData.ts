@@ -24,6 +24,7 @@ import type { RepairProgress } from '../world/repair'
 import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import type { WellWaterKind } from '../world/wellGroundwater'
+import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContainers'
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
 import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
@@ -37,7 +38,6 @@ import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { PLAYER_TROUGH_CAPACITY_LITRES, PLAYER_TROUGH_REQUIRED_WORK } from '../world/playerTrough'
 import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
-import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContainers'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -146,14 +146,13 @@ export type SaveMap = {
   targets: string[]
 }
 
-/** Reputation Badges / Achievements (plan world-007 §10) — `gravesDisturbed`/
- *  `hiddenFindsFound` are the counters `badges/badges.ts`'s `BadgeManager`
- *  derives progress and the UI-facing standing penalty from; not themselves
- *  re-derivable from `resolvedHiddenFindSpotIds` alone (a resolved spot id
- *  doesn't say whether it was a grave or which count it bumped). */
+/** Reputation Badges / Achievements (plan world-007 §10) — `hiddenFindsFound`
+ *  is the counter `badges/badges.ts`'s `BadgeManager` derives Hidden Find
+ *  progress from; not itself re-derivable from `resolvedHiddenFindSpotIds`
+ *  alone (a resolved spot id doesn't say whether it yielded loot). Grave
+ *  disturbance is not a badge. */
 export type SaveBadges = {
   earned: readonly BadgeId[]
-  gravesDisturbed: number
   hiddenFindsFound: number
 }
 
@@ -556,7 +555,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 24
+export const CURRENT_SAVE_VERSION = 25
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -853,7 +852,7 @@ function isResolvedHiddenFindSpotIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
-const BADGE_IDS: ReadonlySet<string> = new Set<BadgeId>(['desecrator', 'grave_robber', 'relic_seeker', 'treasure_hunter'])
+const BADGE_IDS: ReadonlySet<string> = new Set<BadgeId>(['relic_seeker', 'treasure_hunter'])
 
 const REPUTATION_DIMENSIONS = ['trust', 'competence', 'benevolence', 'courage', 'integrity'] as const
 
@@ -879,7 +878,6 @@ function isSaveBadges(value: unknown): value is SaveBadges {
   const b = value as Record<string, unknown>
   return (
     Array.isArray(b.earned) && b.earned.every((id) => typeof id === 'string' && BADGE_IDS.has(id)) &&
-    typeof b.gravesDisturbed === 'number' &&
     typeof b.hiddenFindsFound === 'number'
   )
 }
@@ -2627,6 +2625,28 @@ function migrateSaveV23ToV24(data: unknown): unknown {
   return { ...(data as Record<string, unknown>), version: 24 }
 }
 
+const REMOVED_GRAVE_BADGE_IDS = new Set(['desecrator', 'grave_robber'])
+
+/** v24 → v25: drop the global grave-disturbance badge/counter. Social
+ *  exposure + settlement reputation/renown remain the only social
+ *  consequence of disturbing a grave. */
+function migrateSaveV24ToV25(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const prev = v.badges
+  if (!prev || typeof prev !== 'object' || Array.isArray(prev)) {
+    return { ...v, version: 25 }
+  }
+  const b = prev as { earned?: unknown, hiddenFindsFound?: unknown }
+  const earned = Array.isArray(b.earned)
+    ? b.earned.filter((id) => !REMOVED_GRAVE_BADGE_IDS.has(id as string))
+    : b.earned
+  return {
+    ...v,
+    version: 25,
+    badges: { earned, hiddenFindsFound: b.hiddenFindsFound },
+  }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2665,6 +2685,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   21: migrateSaveV21ToV22,
   22: migrateSaveV22ToV23,
   23: migrateSaveV23ToV24,
+  24: migrateSaveV24ToV25,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -44,7 +44,7 @@ const validSave: SaveData = {
   graves: [],
   worldFlags: {},
   resolvedHiddenFindSpotIds: ['cemetery:0:0:0:1:0', 'stoneCircle:2:1:0:1'],
-  badges: { earned: ['grave_robber'], gravesDisturbed: 1, hiddenFindsFound: 0 },
+  badges: { earned: ['treasure_hunter'], hiddenFindsFound: 5 },
   map: {
     discoveredCells: ['0,0', '1,0'],
     discoveredLocations: [{ id: 'cave:home-cave-0', state: 'confirmed', source: 'exploration' }],
@@ -1161,6 +1161,23 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(repaired.data.storageInfestation).toEqual({
       home: { storageDamaged: false, nestDestroyed: false },
     })
+  })
+
+  it('migrates v24 grave-disturbance badges out of SaveBadges', () => {
+    const v24Save = {
+      ...validSave,
+      version: 24,
+      badges: {
+        earned: ['grave_robber', 'desecrator', 'treasure_hunter'],
+        gravesDisturbed: 5,
+        hiddenFindsFound: 5,
+      },
+    }
+    const result = loadStoredSave(v24Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.badges).toEqual({ earned: ['treasure_hunter'], hiddenFindsFound: 5 })
   })
 
   it('accepts current-version infestation objects and rejects legacy strings', () => {

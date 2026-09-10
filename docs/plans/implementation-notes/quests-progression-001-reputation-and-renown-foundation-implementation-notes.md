@@ -63,7 +63,7 @@ Obecny pseudo-standing jest używany również przez badge UI:
 - `src/ui/createHud.ts` → `src/ui-vue/store.ts#setCharacterBadges`;
 - `src/ui-vue/screens/CharacterScreen.vue` — presentation-only label z pojedynczego `standing`.
 
-Usunąć wyłącznie pseudo-standing/penalty coupling. `BadgeManager` nadal ma zachować `gravesDisturbed`, `hiddenFindsFound`, earned badges i ich persistence/testy.
+Usunąć wyłącznie pseudo-standing/penalty coupling. `BadgeManager` nadal ma zachować `hiddenFindsFound`, earned Hidden Find badges i ich persistence/testy. Globalny `grave_robber` / `gravesDisturbed` został później usunięty — społeczna konsekwencja naruszenia grobu to wyłącznie social exposure + settlement reputation/renown.
 
 Character Screen nie powinien dostawać stale zapamiętanego `currentSettlementId`. Przy otwarciu/refresh należy wyliczyć settlement context z aktualnego świata/pozycji gracza, a do Vue wpuścić gotowy view state: settlement name/id + pięć wartości + renown albo `null` dla braku lokalnego kontekstu. Badges są niezależne i pozostają widoczne poza osadą.
 

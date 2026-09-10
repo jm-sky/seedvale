@@ -23,8 +23,6 @@ Docelowy przepływ:
 ```text
 grave spot disturbed
         ↓
-record grave disturbance / badges
-        ↓
 calculate social exposure risk
         ↓
 deterministic exposure roll
@@ -38,35 +36,36 @@ no renown change                       trust -4
                                        renown +2
 ```
 
+Naruszenie grobu **nie** nadaje globalnego badge `grave_robber` / `desecrator` i nie prowadzi osobnego countera `gravesDisturbed`. Nie zastępować ich settlement-scoped badge ani nowym mechanizmem — social exposure + settlement reputation/renown są jedyną społeczną konsekwencją. Hidden Find badges (`treasure_hunter` / `relic_seeker`) nadal dotyczą wyłącznie znalezionego lootu.
+
 ## Kontekst i ownership
 
-`world-007-hidden-finds-and-reputation-badges` jest właścicielem cemetery Hidden Finds, grave disturbance oraz historycznych badges takich jak `Grave Robber` i `Desecrator`.
+`world-007-hidden-finds-and-reputation-badges` jest właścicielem cemetery Hidden Finds oraz Hidden Find badges (`Treasure Hunter`, `Relic Seeker`). Globalny historyczny badge za naruszenie grobu (`Grave Robber` / `Desecrator`) został usunięty; społeczną konsekwencją jest wyłącznie local reputation/renown po social exposure.
 
 `quests-progression-001-reputation-and-renown-foundation` jest właścicielem lokalnego Reputation & Renown oraz semantyki wiedzy społecznej. Ten plan jest integracją tej warstwy z istniejącym zdarzeniem świata, dlatego należy do `quests-progression`.
 
 Zachować rozdział:
 
 ```text
-Badge / history = gracz rzeczywiście to zrobił
+Badge / history = Hidden Finds (treasure_hunter / relic_seeker), nie naruszenie grobu
 Reputation      = lokalna społeczność dowiedziała się o czynie
 Renown          = jak szeroko gracz jest lokalnie znany
 ```
 
-Nie łączyć ponownie BadgeManager z reputation.
+Nie łączyć ponownie BadgeManager z reputation i nie przywracać globalnego grave badge.
 
-## 1. Grave disturbance zawsze zapisuje historię
+## 1. Grave disturbance nie jest badge
 
-Naruszenie grave spotu zawsze wykonuje istniejący historyczny efekt:
+Naruszenie grave spotu **nie** zapisuje niezależnego historycznego badge ani countera:
 
 ```text
 grave disturbed
-→ gravesDisturbed progress
-→ Grave Robber / Desecrator progression
+→ brak `grave_robber` / `desecrator`
+→ brak `gravesDisturbed` progress
+→ jeden social exposure roll
 ```
 
-Badge i progress nie zależą od social exposure.
-
-Pusty grób również jest naruszeniem. Social consequence nie zależy od znalezienia ani wartości lootu.
+Pusty grób również jest naruszeniem. Social consequence nie zależy od znalezienia ani wartości lootu, i nie idzie przez `BadgeManager`.
 
 ## 2. Social exposure jako mały, czysty resolver
 
@@ -230,7 +229,7 @@ Nie tworzyć globalnej reputation ani nowego ownership cmentarza tylko dla tego 
 
 Jeżeli current code w momencie implementacji posiada już stabilniejsze bezpośrednie `settlementId` dla cemetery, preferować je nad nearest-settlement heuristic.
 
-Brak sensownej lokalnej osady oznacza brak settlement reputation consequence; historyczny badge nadal zostaje zapisany.
+Brak sensownej lokalnej osady oznacza brak settlement reputation consequence. Nie zapisywać globalnego badge w zamian.
 
 ## 8. Social consequence po exposure
 
@@ -287,18 +286,16 @@ Wykorzystać istniejące:
 
 ```text
 resolved Hidden Find spots
-BadgeManager state
 ReputationManager state
 ```
 
 Po pierwszym resolution grave spotu:
 
-1. badge/progress jest aktualizowany,
-2. exposure jest rozstrzygane raz,
-3. ewentualny social consequence trafia natychmiast do persistent ReputationManager,
-4. spot pozostaje resolved.
+1. exposure jest rozstrzygane raz,
+2. ewentualny social consequence trafia natychmiast do persistent ReputationManager,
+3. spot pozostaje resolved.
 
-Save/load nie może uruchomić exposure ponownie dla tego samego spotu.
+Save/load nie może uruchomić exposure ponownie dla tego samego spotu. `BadgeManager` nie jest częścią tego zdarzenia.
 
 ## 11. UI i feedback
 
@@ -366,7 +363,7 @@ Dodać JSDoc z `@domain quests-progression` dla nowego publicznego/architektonic
 5. Dodać pure social exposure resolver z parametrami `50% / -30 p.p. night / Sneak 0..100% / 2% floor`.
 6. Dodać focused unit tests matematyki i determinismu.
 7. Podłączyć resolver wyłącznie do pierwszego resolution cemetery grave spotu.
-8. Zachować niezależne `BadgeManager.recordGraveDisturbed()`.
+8. Nie rejestrować `BadgeManager.recordGraveDisturbed()` ani globalnego `grave_robber`.
 9. Rozwiązać lokalny settlement scope przez istniejący lookup.
 10. Po successful exposure wywołać istniejący social consequence z `integrity -8`, `trust -4`, `renown +2`.
 11. Dodać integration tests grave disturbance → exposure → reputation.
@@ -410,7 +407,7 @@ Zmiana czasu lub Sneak może zmienić wynik `exposed` przez zmianę threshold, a
 - pusty spot również wykonuje exposure,
 - resolved spot nie wykonuje go ponownie,
 - zwykły Hidden Find poza cemetery nie wykonuje grave exposure,
-- grave badge/progress aktualizuje się niezależnie od exposure.
+- grave disturbance nie nadaje `grave_robber` / `desecrator` i nie prowadzi `gravesDisturbed`.
 
 ### Reputation
 
@@ -449,7 +446,7 @@ Sprawdzić:
 3. Grave robbery nocą bez Sneak.
 4. Grave robbery nocą ze Sneak.
 5. Empty grave nadal jest grave disturbance.
-6. `Grave Robber` / `Desecrator` działa niezależnie od exposure.
+6. Brak globalnego badge `Grave Robber` / `Desecrator` — jedyna społeczna konsekwencja to exposure + lokalne reputation/renown.
 7. Ujawniony czyn zmienia lokalne `integrity`, `trust` i `renown` w istniejącym UI.
 8. Brak ujawnienia nie zmienia social standing.
 9. Save/load nie pozwala ponownie rozstrzygnąć tego samego grave spotu.
@@ -484,7 +481,7 @@ Plan jest ukończony, gdy:
 
 ```text
 grave disturbance
-→ zawsze zapisuje historyczny badge/progress
+→ nie nadaje globalnego grave badge
 → wykonuje jeden deterministic social exposure roll
 → dzień bez Sneak = 50% risk
 → noc odejmuje 30 p.p. = 20% risk przed Sneak

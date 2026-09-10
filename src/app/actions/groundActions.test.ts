@@ -331,14 +331,13 @@ describe('cemetery grave social exposure (quests-progression-011)', () => {
 
   it('applies integrity -8 / trust -4 / renown +2 exactly once when the grave is exposed', () => {
     const { landmark, dig } = cemeterySpotWithRoll((roll) => roll < 0.5)
-    const { applySocial, badges, resolvedHiddenFindSpotIds, digAt } = setupHiddenFindDig({
+    const { applySocial, resolvedHiddenFindSpotIds, digAt } = setupHiddenFindDig({
       landmarks: [landmark],
       timeOfDay: 0.5,
     })
 
     digAt(dig.x, dig.z)
 
-    expect(badges.exportState().gravesDisturbed).toBe(1)
     expect(applySocial).toHaveBeenCalledTimes(1)
     expect(applySocial).toHaveBeenCalledWith({
       settlementId: 'anna-village',
@@ -350,60 +349,68 @@ describe('cemetery grave social exposure (quests-progression-011)', () => {
     applySocial.mockClear()
     digAt(dig.x, dig.z)
     expect(applySocial).not.toHaveBeenCalled()
-    expect(badges.exportState().gravesDisturbed).toBe(1)
   })
 
   it('does not change reputation or renown when the grave is not exposed', () => {
     const { landmark, dig } = cemeterySpotWithRoll((roll) => roll >= 0.5)
-    const { applySocial, badges, digAt } = setupHiddenFindDig({
+    const { applySocial, digAt } = setupHiddenFindDig({
       landmarks: [landmark],
       timeOfDay: 0.5,
     })
 
     digAt(dig.x, dig.z)
 
-    expect(badges.exportState().gravesDisturbed).toBe(1)
     expect(applySocial).not.toHaveBeenCalled()
   })
 
   it('still runs exposure for an empty grave', () => {
     const { landmark, dig } = emptyCemeteryGraveWithRoll((roll) => roll < 0.5)
-    const { applySocial, badges, grantItem, digAt } = setupHiddenFindDig({
+    const { applySocial, grantItem, digAt } = setupHiddenFindDig({
       landmarks: [landmark],
       timeOfDay: 0.5,
     })
 
     digAt(dig.x, dig.z)
 
-    expect(badges.exportState().gravesDisturbed).toBe(1)
     expect(grantItem).not.toHaveBeenCalled()
     expect(applySocial).toHaveBeenCalledTimes(1)
   })
 
+  it('does not award a grave-disturbance badge', () => {
+    const { landmark, dig } = emptyCemeteryGraveWithRoll((roll) => roll < 0.5)
+    const { badges, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(badges.exportState()).toEqual({ earned: [], hiddenFindsFound: 0 })
+    expect(badges.listEarned()).toHaveLength(0)
+  })
+
   it('does not run grave exposure for a non-cemetery Hidden Find', () => {
     const landmark = stoneCircleWithFind()
-    const { applySocial, badges, digAt } = setupHiddenFindDig({
+    const { applySocial, digAt } = setupHiddenFindDig({
       landmarks: [landmark],
       timeOfDay: 0.5,
     })
 
     digAt(landmark.x, landmark.z)
 
-    expect(badges.exportState().gravesDisturbed).toBe(0)
     expect(applySocial).not.toHaveBeenCalled()
   })
 
-  it('records the badge without a settlement reputation fallback', () => {
+  it('does not apply a settlement reputation fallback when the cemetery has no settlement', () => {
     const landmark = cemeteryLandmark('cemetery:w:0:0:0:abandoned')
     const dig = gravePosition(landmark, 0)
-    const { applySocial, badges, digAt } = setupHiddenFindDig({
+    const { applySocial, digAt } = setupHiddenFindDig({
       landmarks: [landmark],
       timeOfDay: 0.5,
     })
 
     digAt(dig.x, dig.z)
 
-    expect(badges.exportState().gravesDisturbed).toBe(1)
     expect(applySocial).not.toHaveBeenCalled()
   })
 

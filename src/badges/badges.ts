@@ -6,9 +6,10 @@
  * a badge is a historical record ("this happened"), not a current social
  * value, and is never itself an economic/XP reward.
  *
- * Progress is driven by discrete gameplay events (`recordGraveDisturbed`,
- * `recordHiddenFindDiscovered`) reported by `app/actions/groundActions.ts` —
- * never evaluated per frame.
+ * Progress is driven by discrete gameplay events (`recordHiddenFindDiscovered`)
+ * reported by `app/actions/groundActions.ts` — never evaluated per frame.
+ * Grave disturbance is not a badge: social exposure + settlement reputation
+ * / renown are its only social consequence (plan quests-progression-011).
  *
  * A badge not yet earned reveals nothing (`listEarned` only ever returns
  * earned entries) — that alone satisfies "hidden achievements don't leak
@@ -16,7 +17,7 @@
  * locked/hidden UI state to design.
  */
 
-export type BadgeId = 'grave_robber' | 'desecrator' | 'treasure_hunter' | 'relic_seeker'
+export type BadgeId = 'treasure_hunter' | 'relic_seeker'
 
 export type BadgeDef = {
   id: BadgeId
@@ -26,26 +27,10 @@ export type BadgeDef = {
   description: string
 }
 
-/** Disturbed-grave count at which `desecrator` is earned (plan §7 — "po
- *  przekroczeniu określonej liczby naruszonych grobów"). Exact value is
- *  tuning. */
-const DESECRATOR_THRESHOLD = 5
 /** Non-empty Hidden Finds count at which `treasure_hunter` is earned. */
 const TREASURE_HUNTER_THRESHOLD = 5
 
 const BADGE_DEFS: Record<BadgeId, BadgeDef> = {
-  grave_robber: {
-    id: 'grave_robber',
-    icon: '🪦',
-    label: 'Rozgrabiacz grobów',
-    description: 'Naruszyłeś spokój grobu po raz pierwszy.',
-  },
-  desecrator: {
-    id: 'desecrator',
-    icon: '💀',
-    label: 'Bezcześciciel',
-    description: `Naruszyłeś spokój ${DESECRATOR_THRESHOLD} grobów.`,
-  },
   treasure_hunter: {
     id: 'treasure_hunter',
     icon: '💰',
@@ -62,7 +47,6 @@ const BADGE_DEFS: Record<BadgeId, BadgeDef> = {
 
 export type BadgeManagerInitial = {
   earned: readonly BadgeId[]
-  gravesDisturbed: number
   hiddenFindsFound: number
 }
 
@@ -73,13 +57,11 @@ export type BadgeManagerInitial = {
  */
 export class BadgeManager {
   private readonly earned = new Set<BadgeId>()
-  private gravesDisturbed = 0
   private hiddenFindsFound = 0
 
   constructor(initial?: BadgeManagerInitial) {
     if (!initial) return
     for (const id of initial.earned) if (id in BADGE_DEFS) this.earned.add(id)
-    this.gravesDisturbed = initial.gravesDisturbed
     this.hiddenFindsFound = initial.hiddenFindsFound
   }
 
@@ -87,19 +69,7 @@ export class BadgeManager {
    *  contract as `QuestManager.reset()`. */
   reset(): void {
     this.earned.clear()
-    this.gravesDisturbed = 0
     this.hiddenFindsFound = 0
-  }
-
-  /** A cemetery grave spot was just resolved (loot or not — the plan's own
-   *  rule: "kara nie zależy od tego, czy znaleziono loot"). Returns any
-   *  badges newly earned by this event, for the caller to announce. */
-  recordGraveDisturbed(): readonly BadgeDef[] {
-    this.gravesDisturbed++
-    const newly: BadgeDef[] = []
-    if (this.gravesDisturbed === 1) this.tryEarn('grave_robber', newly)
-    if (this.gravesDisturbed === DESECRATOR_THRESHOLD) this.tryEarn('desecrator', newly)
-    return newly
   }
 
   /** A Hidden Find resolved to real loot (any landmark kind, cemetery
@@ -126,7 +96,6 @@ export class BadgeManager {
   exportState(): BadgeManagerInitial {
     return {
       earned: [...this.earned],
-      gravesDisturbed: this.gravesDisturbed,
       hiddenFindsFound: this.hiddenFindsFound,
     }
   }

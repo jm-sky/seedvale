@@ -2,27 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { BadgeManager } from './badges'
 
 describe('BadgeManager', () => {
-  it('earns grave_robber on the first grave disturbance, not before', () => {
-    const badges = new BadgeManager()
-    expect(badges.listEarned()).toHaveLength(0)
-    const newly = badges.recordGraveDisturbed()
-    expect(newly.map((b) => b.id)).toEqual(['grave_robber'])
-    expect(badges.listEarned().map((b) => b.id)).toEqual(['grave_robber'])
-  })
-
   it('does not re-earn an already-earned badge', () => {
     const badges = new BadgeManager()
-    badges.recordGraveDisturbed()
-    const second = badges.recordGraveDisturbed()
-    expect(second.map((b) => b.id)).not.toContain('grave_robber')
-  })
-
-  it('earns desecrator after enough grave disturbances', () => {
-    const badges = new BadgeManager()
-    let allNewly = badges.recordGraveDisturbed().map((b) => b.id)
-    for (let i = 1; i < 10; i++) allNewly = [...allNewly, ...badges.recordGraveDisturbed().map((b) => b.id)]
-    expect(allNewly).toContain('grave_robber')
-    expect(allNewly).toContain('desecrator')
+    badges.recordHiddenFindDiscovered(true)
+    const second = badges.recordHiddenFindDiscovered(true)
+    expect(second.map((b) => b.id)).not.toContain('relic_seeker')
   })
 
   it('earns treasure_hunter after enough non-empty Hidden Finds', () => {
@@ -41,7 +25,6 @@ describe('BadgeManager', () => {
 
   it('round-trips through exportState/constructor', () => {
     const badges = new BadgeManager()
-    badges.recordGraveDisturbed()
     badges.recordHiddenFindDiscovered(true)
     const state = badges.exportState()
     const restored = new BadgeManager(state)
@@ -51,9 +34,9 @@ describe('BadgeManager', () => {
 
   it('reset drops all progress', () => {
     const badges = new BadgeManager()
-    badges.recordGraveDisturbed()
+    badges.recordHiddenFindDiscovered(true)
     badges.reset()
     expect(badges.listEarned()).toHaveLength(0)
-    expect(badges.exportState()).toEqual({ earned: [], gravesDisturbed: 0, hiddenFindsFound: 0 })
+    expect(badges.exportState()).toEqual({ earned: [], hiddenFindsFound: 0 })
   })
 })

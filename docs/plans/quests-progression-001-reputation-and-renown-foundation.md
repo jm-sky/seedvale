@@ -470,6 +470,8 @@ Usunąć `communityOffensePenalty()` oraz logikę łączenia jej z `QuestManager
 
 Zachować `grave_robber`, `desecrator` i ich counters.
 
+*(Późniejsza korekta: globalny `grave_robber` / `desecrator` / `gravesDisturbed` został usunięty. Społeczna konsekwencja naruszenia grobu to wyłącznie social exposure + settlement reputation/renown; patrz `quests-progression-011`.)*
+
 Naruszenie grobu nie zmienia jeszcze `integrity`, ponieważ obecnie nie ma mechanizmu świadków ani społecznego poznania zdarzenia. Symulacja nie może zmieniać settlement reputation tylko dlatego, że sama zna prywatny czyn gracza.
 
 Badge sam z siebie nie modyfikuje reputation. Event, który doprowadził do badge'a, może kiedyś niezależnie wywołać social consequence, jeśli stał się społecznie znany.

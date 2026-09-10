@@ -113,8 +113,8 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
 
   /** Pushes the current earned-badges list (plan world-007 §9) —
    *  event-driven only (called after a Hidden Find resolves), never per
-   *  frame. Grave disturbance always records badge/progress; reputation
-   *  changes only when the one-shot social-exposure roll succeeds (plan
+   *  frame. Grave disturbance has no badge: reputation/renown change only
+   *  when the one-shot social-exposure roll succeeds (plan
    *  quests-progression-011). */
   const refreshBadgesUi = (): void => {
     hud.setPlayerBadges(badges.listEarned())
@@ -208,10 +208,6 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     const loot = resolveHiddenFindLoot(match.landmark, match.spotId, match.spotIndex, lootSettlementSize)
 
     const newlyEarned: BadgeDef[] = []
-    // The act of disturbing a grave is the offense (plan world-007 §6) —
-    // independent of whether it turned out to hold anything, and independent
-    // of whether the social-exposure roll succeeds.
-    if (isGraveDisturbance) newlyEarned.push(...badges.recordGraveDisturbed())
 
     const consequenceSettlementId = servedSettlementIds[0]
     if (isGraveDisturbance && consequenceSettlementId) {
