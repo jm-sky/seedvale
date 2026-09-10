@@ -1707,6 +1707,9 @@ bigger void against the same bowl would worsen the sky gap.
 - Descending-snap RC1+RC2 (camera) implemented 2026-09-09; **manual
   verification still required** on seed `1136726869`, Grota Czarnego
   Kamienia. See recon note + fix below.
+- **Player Y surface snap ~16 m in** (2026-09-10). Not camera-only.
+  See `world-terrain-008-underground-caves-v2-b3-chamber-snap-recon.md`.
+  Harness does not reproduce +9.7 m while cave hysteresis is primed.
 - Cave size increase (blocked on overburden + doorway).
 - B4 streaming/workers/performance, B5 cleanup: untouched.
 
@@ -1741,5 +1744,12 @@ Targeted: `cameraBoom.test.ts`, `caveGameplayQuery.b3-descending-trace.test.ts`,
 `caveGameplayQuery.b3-entrance-regression.test.ts`. No browser. Player does
 the Grota Czarnego Kamienia walk-in on seed `1136726869`. Do **not** mark
 B3 complete from this slice.
+
+---
+
+# Milestone B3 — Chamber-snap player-Y recon (2026-09-10)
+
+Recon only: `world-terrain-008-underground-caves-v2-b3-chamber-snap-recon.md`.
+No production gameplay change. B3 stays in progress.
 
 
