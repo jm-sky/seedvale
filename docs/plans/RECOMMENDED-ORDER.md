@@ -52,10 +52,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/6
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `settlements-npcs-022` — **Household help and age-based work participation**  
+4. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+   🟡 `M` · ✅ ready · unlocks 2/2
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
    🔴 `M` · ✅ ready · unlocks 0/0
-5. `settlements-npcs-025` — **Resource storage visualization**  
-   🟡 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -105,39 +105,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-9. `settlements-npcs-022` — **Household help and age-based work participation**  
+9. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+  🟡 `M` · **Score:**  45  
+   → **unlocks:** 2/2
+
+10. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-10. `settlements-npcs-025` — **Resource storage visualization**  
+11. `quests-progression-015` — **Stable NPC identity for quests**  
+  🔴 `M` · **Score:**  41  
+   → **unlocks:** 1/1
+
+12. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-11. `fauna-018` — **Persistent habitat occupants**  
+13. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
 
-12. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
-  🟡 `M` · **Score:**  31  
-   → **unlocks:** 1/1
+14. `quests-progression-016` — **World-driven settlement quest opportunities**  
+  🔴 `M` · **Score:**  29  
+   → **unlocks:** 0/0
 
-13. `items-player-014` — **Rope-pullable resource transport**  
+15. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+16. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `tools-005` — **Seedvale Character Preparation Panel**  
+17. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `npc-026` — **NPC Grave Visits**  
+18. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-17. `fauna-007` — **Animal leading and cart harness**  
+19. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
@@ -159,6 +167,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
   - [`fauna-018-persistent-habitat-occupants.md`](fauna-018-persistent-habitat-occupants.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
+- [`quests-progression-016-world-driven-settlement-quest-opportunities.md`](quests-progression-016-world-driven-settlement-quest-opportunities.md)  
+  is blocked by:
+  - [`quests-progression-015-stable-npc-identity-for-quests.md`](quests-progression-015-stable-npc-identity-for-quests.md)
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
   - [`fauna-004-sheep-wool-and-shepherd.md`](fauna-004-sheep-wool-and-shepherd.md)
@@ -302,6 +313,9 @@ graph TD
   quests_progression_011["quests-progression-011 — Grave Robbing Reputation Risk & Stealth"]
   quests_progression_012["quests-progression-012 — Horse acquisition through merchant purchase and quest reward"]
   quests_progression_013["quests-progression-013 — Rat infestation nest and reproduction"]
+  quests_progression_014["quests-progression-014 — Quest Dialogue Actions & Authored Dialogue Pass"]
+  quests_progression_015["quests-progression-015 — Stable NPC identity for quests"]
+  quests_progression_016["quests-progression-016 — World-driven settlement quest opportunities"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -383,6 +397,7 @@ graph TD
   world_019["world-019 — Persistent Player-built Site Infrastructure"]
   world_020["world-020 — World structure condition and degradation"]
   world_021["world-021 — World structure repair work foundation"]
+  world_022["world-022 — World location discovery hitch and progress"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -529,8 +544,10 @@ graph TD
   quests_progression_002 --> quests_progression_010
   quests_progression_003 --> quests_progression_005
   quests_progression_004 --> quests_progression_005
+  quests_progression_005 --> quests_progression_014
   quests_progression_006 --> quests_progression_013
   quests_progression_011 --> quests_progression_008
+  quests_progression_015 --> quests_progression_016
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> ui_input_014
@@ -591,6 +608,8 @@ graph TD
   world_012 --> world_013
   world_013 --> world_014
   world_013 --> world_015
+  world_013 --> world_022
+  world_014 --> world_022
   world_017 --> npc_024
   world_018 --> quests_progression_010
   world_019 --> quests_progression_010
@@ -608,6 +627,7 @@ graph TD
   world_terrain_010 --> world_terrain_011
   world_terrain_011 --> world_terrain_013
   world_terrain_016 --> npc_026
+  world_terrain_016 --> world_022
   world_terrain_017 --> quests_progression_010
   world_terrain_017 --> world_018
 ```

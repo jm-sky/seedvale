@@ -4,6 +4,9 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-014-quest-dialogue-actions-and-authored-dialogue-pass` | 2026-09-10 13:27:47 | —                   | `quests-progression` | —          |
+| `world-022-world-location-discovery-hitch-and-progress`                | 2026-09-10 12:33:40 | —                   | `world`          | —          |
+| `quests-progression-009-dark-forest-ruins-treasure-map`                | 2026-09-10 11:17:20 | —                   | `quests-progression` | —          |
 | `quests-progression-013-rat-infestation-nest-and-reproduction`         | 2026-09-10 09:58:18 | —                   | `quests-progression` | —          |
 | `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation`  | 2026-09-10 09:05:08 | —                   | `settlements-npcs` | —          |
 | `quests-progression-007-wolves-approach-settlement`                    | 2026-09-10 08:19:22 | —                   | `quests-progression` | —          |
