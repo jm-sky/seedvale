@@ -1725,6 +1725,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/settlementGenerator.ts`
+- `terrain/cemeteryPlacement.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainClassification.ts`
@@ -1741,6 +1742,7 @@ Generated from TypeScript imports.
 
 - `settlement/settlementGenerator.ts`
 - `terrain/cemeteryAssignment.ts`
+- `terrain/cemeteryPlacement.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainClassification.ts`
@@ -1762,6 +1764,7 @@ Generated from TypeScript imports.
 - `world/locations/revealLocationKnowledge.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/map/mapData.ts`
+- `world/map/mapProjection.test.ts`
 
 ## `world/locations/worldLocationNames.test.ts`
 
@@ -1856,6 +1859,7 @@ Generated from TypeScript imports.
 
 - `terrain/chunkHeightmap.ts`
 - `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationTypes.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapData.ts`

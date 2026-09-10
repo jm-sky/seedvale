@@ -74,18 +74,24 @@ Generated from exported TypeScript symbols.
 ## `terrain/cemeteryPlacement.ts`
 
 - `ABANDONED_CEMETERY_CHANCE` — const — line 35
-- `clearCemeteryPlacementCaches` — function — line 235
-- `getCachedPlacementForAssignment` — function — line 274
-- `placementOwnerChunk` — function — line 346
-- `resolveAbandonedCemeteryForChunk` — function — line 305
-- `resolveCemeteriesForChunk` — function — line 354
+- `abandonedCemeteryMaxOffsetFromCenter` — function — line 44
   - domain: world-terrain
-- `resolveCemeteryPlacement` — function — line 381
-- `ResolvedCemeteryPlacement` — type — line 37
-- `resolvedPlacementToEnvironment` — function — line 278
-- `resolvePlacementForTopology` — function — line 247
+- `chunkPassesAbandonedCemeteryRoll` — function — line 59
   - domain: world-terrain
-- `validateCemeteryPhysical` — function — line 116
+- `clearCemeteryPlacementCaches` — function — line 261
+- `getCachedPlacementForAssignment` — function — line 300
+- `placementOwnerChunk` — function — line 385
+- `resolveAbandonedCemeteryAfterRoll` — function — line 334
+  - domain: world-terrain
+- `resolveAbandonedCemeteryForChunk` — function — line 344
+- `resolveCemeteriesForChunk` — function — line 393
+  - domain: world-terrain
+- `resolveCemeteryPlacement` — function — line 420
+- `ResolvedCemeteryPlacement` — type — line 63
+- `resolvedPlacementToEnvironment` — function — line 304
+- `resolvePlacementForTopology` — function — line 273
+  - domain: world-terrain
+- `validateCemeteryPhysical` — function — line 142
 
 ## `terrain/chunkCrops.ts`
 

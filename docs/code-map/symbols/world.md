@@ -657,9 +657,10 @@ Generated from exported TypeScript symbols.
 - `formatDistance` — function — line 21
 - `isWithinRange` — function — line 11
 - `landmarksInBand` — function — line 66
+- `landmarksInBandAsync` — function — line 77
 - `pickRandomReveal` — function — line 51
 - `pickRandomSubset` — function — line 40
-- `settlementsInBand` — function — line 76
+- `settlementsInBand` — function — line 88
 - `weightedTopN` — function — line 30
 
 ## `world/locations/locationKnowledge.ts`
@@ -715,11 +716,16 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldLocationCatalog.ts`
 
-- `createWorldLocationCatalog` — function — line 168
-- `LocationScanDiagnostics` — type — line 65
-- `settlementLocationId` — function — line 572
-- `WorldLocationCatalog` — type — line 99
-- `WorldLocationCatalogDeps` — type — line 23
+- `abandonedCemeteryChunkIntersectsKmBand` — function — line 186
+  - domain: world
+- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 131
+- `createWorldLocationCatalog` — function — line 252
+- `emptyLocationScanDiagnostics` — function — line 96
+- `LandmarkQueryOptions` — type — line 120
+- `LocationScanDiagnostics` — type — line 69
+- `settlementLocationId` — function — line 774
+- `WorldLocationCatalog` — type — line 133
+- `WorldLocationCatalogDeps` — type — line 27
 
 ## `world/locations/worldLocationNames.ts`
 

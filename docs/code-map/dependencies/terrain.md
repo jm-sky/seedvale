@@ -108,6 +108,14 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `world/locations/worldLocationCatalog.ts`
 
+## `terrain/cemeteryPlacement.test.ts`
+
+**Imports**
+
+- `terrain/cemeteryPlacement.ts`
+- `terrain/chunkEnvironment.ts`
+- `terrain/chunkHeightmap.ts`
+
 ## `terrain/cemeteryPlacement.ts`
 
 **Imports**
@@ -124,10 +132,13 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `settlement/roadNetwork.ts`
+- `terrain/cemeteryPlacement.test.ts`
 - `terrain/chunkEnvironment.test.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.test.ts`
 - `terrain/chunkManager.ts`
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/locations/worldLocationCatalog.ts`
 
 ## `terrain/chunkCrops.ts`
 
@@ -174,6 +185,7 @@ Generated from TypeScript imports.
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
 - `quests/quests.ts`
+- `terrain/cemeteryPlacement.test.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkEnvironment.test.ts`
 - `terrain/chunkHeightmap.worker.ts`
@@ -251,6 +263,7 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.ts`
 - `terrain/biomeRegions.test.ts`
 - `terrain/biomeRegions.ts`
+- `terrain/cemeteryPlacement.test.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkCrops.ts`
 - `terrain/chunkEnvironment.test.ts`
