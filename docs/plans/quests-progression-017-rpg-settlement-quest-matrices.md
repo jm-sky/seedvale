@@ -1,14 +1,19 @@
 # Plan: RPG settlement quest matrices
 
 **Created:** 2026-09-10  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** medium · **Effort:** M  
-**Depends on:** quests-progression-015, quests-progression-016  
+**Depends on:** ~~quests-progression-015~~ ~~quests-progression-016~~  
 **Domain:** `quests-progression`  
 **Subdomains:** `quests` `relationships`  
 **Tags:** `rpg-matrices` `settlements` `authored-generation`  
-**Roadmap:** `quests-and-reputation.md`
+**Roadmap:** `quests-and-reputation.md`  
+**Implemented at:** 2026-09-10 20:25
+
+## Implementation status
+
+Landed 2026-09-10. Shared 016 selection now includes RPG matrix candidates. All three V1 matrices are implemented as ordinary `QuestDef`s: `Sekret starego miejsca`, `Podejrzany transport` (dialogue choice, no parcel/economy transfer), `Umowa między osadami` (definition-based cross-settlement NPC refs). Browser verification is still required.
 
 ## Cel
 
@@ -853,6 +858,14 @@ AI:
 AI nie wykonuje browser verification.
 
 Manualną weryfikację gameplay wykonuje użytkownik.
+
+Checklist:
+
+- Neighbor settlement NPC offers generated `Sekret starego miejsca` bound to a real nearby landmark (not the home authored ruin/monolith/cemetery quests).
+- Interacting with that landmark completes the stage; save/load keeps the same landmark and giver.
+- `Umowa między osadami` sends the player to a different settlement's NPC by stable id; a duplicate display name in the home settlement does not steal the talk target.
+- `Podejrzany transport` is a same-settlement talk + choice (no quest-owned parcel / economy transfer). Choice A/B applies once.
+- When home wolf-den pressure is live, that world-driven offer is still present; an RPG story does not replace it.
 
 ## Definition of Done
 

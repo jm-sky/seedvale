@@ -82,6 +82,12 @@ import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
 import {
+  nearbyRpgSettlementDefs,
+  OLD_PLACE_LANDMARK_KINDS,
+  type RpgLandmarkRef,
+  type RpgSettlementRef,
+} from '../quests/opportunities/rpgQuestMatrices'
+import {
   parseWolfDenPressureQuestId,
   wolfDenPressureStatusFromSpawners,
 } from '../quests/opportunities/settlementQuestOpportunities'
@@ -936,14 +942,67 @@ export async function createApp(
     ], caveBinding).map((def) => ({ ...def, settlementId: homeSettlementId })),
     homeNpcDescriptors,
   )
-  const worldDrivenQuestDefs = buildWorldDrivenSettlementQuests({
-    settlementId: homeSettlementId,
-    settlementName: homeDef.name,
-    spawners: bundle.fauna.getSpawners(),
-    npcs: opportunityNpcsFromSettlement(homeDef),
-    persistedQuestIds: initialSave?.quests.progress.map((entry) => entry.id),
-  })
-  const questDefs = [...authoredQuestDefs, ...worldDrivenQuestDefs]
+  const occupiedLandmarkIds = new Set<string>()
+  for (const quest of landmarkQuests) {
+    for (const stage of quest.stages) {
+      if (stage.objective.type === 'interact_landmark') occupiedLandmarkIds.add(stage.objective.landmarkId)
+    }
+  }
+  const neighborDefs = nearbyRpgSettlementDefs(homeDef, (cell) => bundle.settlementsManager.peekDef(cell))
+  const opportunitySettlements = [homeDef, ...neighborDefs]
+  const npcsBySettlement = new Map(
+    opportunitySettlements.map((def) => [def.id, opportunityNpcsFromSettlement(def)] as const),
+  )
+  const settlementNameById = new Map(opportunitySettlements.map((def) => [def.id, def.name] as const))
+  const rpgSettlementRefs: RpgSettlementRef[] = opportunitySettlements.map((def) => ({
+    id: def.id,
+    name: def.name,
+    x: def.x,
+    z: def.z,
+    npcs: npcsBySettlement.get(def.id) ?? [],
+  }))
+  const rpgContext = { npcsBySettlement, settlementNameById }
+  const persistedQuestIds = initialSave?.quests.progress.map((entry) => entry.id)
+  const opportunityQuestDefs: ReturnType<typeof buildWorldDrivenSettlementQuests> = []
+  for (const def of opportunitySettlements) {
+    const landmarks: RpgLandmarkRef[] = []
+    for (const kind of OLD_PLACE_LANDMARK_KINDS) {
+      const found = bundle.chunkManager.findLandmarkNear(
+        kind,
+        def.x,
+        def.z,
+        LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
+      )
+      if (found) landmarks.push({ id: found.id, kind })
+    }
+    const npcs = npcsBySettlement.get(def.id) ?? []
+    const generated = buildWorldDrivenSettlementQuests({
+      settlementId: def.id,
+      settlementName: def.name,
+      spawners: def.isHome ? bundle.fauna.getSpawners() : [],
+      npcs,
+      persistedQuestIds,
+      includeWorldDriven: def.isHome,
+      rpg: {
+        settlementId: def.id,
+        settlementX: def.x,
+        settlementZ: def.z,
+        npcs,
+        landmarks,
+        occupiedLandmarkIds,
+        otherSettlements: rpgSettlementRefs,
+        persistedQuestIds,
+        context: rpgContext,
+      },
+    })
+    for (const quest of generated) {
+      opportunityQuestDefs.push(quest)
+      for (const stage of quest.stages) {
+        if (stage.objective.type === 'interact_landmark') occupiedLandmarkIds.add(stage.objective.landmarkId)
+      }
+    }
+  }
+  const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]
   const initialQuestState = initialSave?.quests
     ? {
         ...initialSave.quests,

@@ -59,7 +59,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
-| 💡 `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | settlements-npcs-018 |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | settlements-npcs-015 |
@@ -86,6 +85,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `quests-progression-017-rpg-settlement-quest-matrices.md` | Sąsiadująca osada: NPC oferuje generated „Sekret starego miejsca” na realny landmark; interakcja zalicza etap; `Umowa między osadami` prowadzi do NPC w innej osadzie po id (to samo imię w home nie kradnie celu); `Podejrzany transport` to rozmowa+wybór bez quest-owned przesyłki; live „Wilki pod osadą” w home nie znika przez RPG; save/load trzyma te same cele |
 | `items-player-023-systemic-item-utility-and-food-safety.md` | Można rozpalić/dołożyć szyszkę, gałąź i belkę; szyszka daje zauważalnie mniej czasu niż gałąź, belka więcej; automatyczny wybór opału nie spala belki, gdy dostępna jest szyszka/gałąź; komunikaty przy ogniu mówią o paliwie/opale, nie tylko o gałęzi; świeże surowe mięso może spowodować zatrucie zależnie od gatunku, a medium-fresh jest bardziej ryzykowne; pieczone/suszone mięso nie wywołuje raw-meat poisoning i nadal daje większą sytość z zachowanym gatunkowym provenance; save/load nie resetuje sequence deterministycznych food-risk rolls ani aktywnego poisoning |
 | `world-terrain-018-cave-heightfield-representation-spike.md` | `?caveHeightfieldTest` od razu otwiera lekki harness (bez world boot); [1] przełącza heightfield/SDF na **tej samej** topology; [2] Walk/Inspect bez reloadu; Walk: spawn przed wejściem, wejście, przejście basic/bend/branch i powrót, bez przenikania podłogi/ścian/sufitu; Inspect: floor/walls/ceiling i mouth bez dziur; metryki w overlay/console.table |
 | `quests-progression-016-world-driven-settlement-quest-opportunities.md` | Po dniu 2, gdy jama ma pressure: hunter (albo pierwszy dorosły) oferuje generated „Wilki pod osadą”; zniszczenie jamy zalicza questa i wypłaca nagrodę; jeśli problem zniknie przed akceptacją, oferta znika; save/load aktywnego generated questa trzyma tego samego givera i `spawnerId`; authored `wilki-pod-osada` nadal istnieje osobno |

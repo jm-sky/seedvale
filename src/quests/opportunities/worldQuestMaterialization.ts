@@ -7,7 +7,16 @@ import type {
   WolfDenPressureOpportunity,
 } from './worldQuestOpportunityTypes'
 import { flattenedSettlementMembers, settlementNpcId } from '../../settlement/npcIdentity'
+import {
+  materializeRpgQuestOpportunity,
+  type RpgMaterializationContext,
+} from './rpgQuestMaterialization'
+import {
+  collectRpgQuestOpportunities,
+  type RpgCollectInput,
+} from './rpgQuestMatrices'
 import { collectSettlementQuestOpportunities } from './settlementQuestOpportunities'
+import { selectSettlementQuestOpportunities } from './settlementQuestSelection'
 
 /**
  * Deterministic opportunity NPCs from a settlement definition.
@@ -30,6 +39,7 @@ export function opportunityNpcsFromSettlement(
  * Picks a stable settlement NPC to present a world-driven problem.
  * Prefers a hunter for predator sources; otherwise the first adult in
  * flattened family order. Never uses runtime/camera proximity.
+ * RPG matrices pick givers in `rpgQuestMaterialization.ts`.
  *
  * @domain quests-progression
  */
@@ -107,19 +117,21 @@ export function materializeSettlementQuestOpportunity(
   opportunity: SettlementQuestOpportunity,
   npcs: readonly OpportunityNpc[],
   settlementName: string,
+  rpgContext?: RpgMaterializationContext,
 ): QuestDef | undefined {
+  if (opportunity.kind === 'rpg-matrix') {
+    return materializeRpgQuestOpportunity(opportunity, npcs, settlementName, rpgContext)
+  }
   const giver = selectSettlementQuestGiver(npcs, opportunity.kind)
   if (!giver) return undefined
-  if (opportunity.kind === 'wolf-den-pressure') {
-    return materializeWolfDenPressureQuest(opportunity, giver, settlementName)
-  }
-  return undefined
+  return materializeWolfDenPressureQuest(opportunity, giver, settlementName)
 }
 
 /**
  * Builds generated settlement quest definitions for composition-root
- * assembly. Active generated quests reconstruct from persisted ids even when
- * the live problem has changed.
+ * assembly. World-driven and RPG matrix candidates share one selection
+ * layer. Active generated quests reconstruct from persisted ids even when
+ * the live problem or eligible source set has changed.
  *
  * @domain quests-progression
  */
@@ -129,15 +141,29 @@ export function buildWorldDrivenSettlementQuests(input: {
   spawners: readonly PreySpawner[]
   npcs: readonly OpportunityNpc[]
   persistedQuestIds?: readonly string[]
+  includeWorldDriven?: boolean
+  rpg?: RpgCollectInput & { context?: RpgMaterializationContext }
 }): QuestDef[] {
-  const opportunities = collectSettlementQuestOpportunities({
-    settlementId: input.settlementId,
-    spawners: input.spawners,
+  const world = input.includeWorldDriven === false
+    ? []
+    : collectSettlementQuestOpportunities({
+      settlementId: input.settlementId,
+      spawners: input.spawners,
+      persistedQuestIds: input.persistedQuestIds,
+    })
+  const rpg = input.rpg ? collectRpgQuestOpportunities(input.rpg) : []
+  const opportunities = selectSettlementQuestOpportunities({
+    candidates: [...world, ...rpg],
     persistedQuestIds: input.persistedQuestIds,
   })
   const defs: QuestDef[] = []
   for (const opportunity of opportunities) {
-    const def = materializeSettlementQuestOpportunity(opportunity, input.npcs, input.settlementName)
+    const def = materializeSettlementQuestOpportunity(
+      opportunity,
+      input.npcs,
+      input.settlementName,
+      input.rpg?.context,
+    )
     if (def) defs.push(def)
   }
   return defs
