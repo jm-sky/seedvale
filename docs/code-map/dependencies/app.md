@@ -681,6 +681,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspectTrigger.ts`
+- `debug/playerGroundTrace.ts`
 - `fauna/AnimalAgent.ts`
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`

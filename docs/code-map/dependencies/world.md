@@ -807,6 +807,7 @@ Generated from TypeScript imports.
 
 - `assets/loadGltf.ts`
 - `debug/debugMode.ts`
+- `debug/playerGroundTrace.ts`
 - `settlement/families.ts`
 - `settlement/settlementGenerator.ts`
 - `terrain/chunkManager.ts`

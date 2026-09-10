@@ -90,21 +90,21 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `ConditionsDebugApi` — type — line 191
-- `HiddenTreasureDebugApi` — type — line 163
-- `HouseholdDebugHandle` — type — line 82
-- `InjuryDebugApi` — type — line 199
-- `installNpcDebugApi` — function — line 330
-- `LocationsDebugApi` — type — line 114
-- `NpcDebugHandle` — type — line 67
-- `PlayerDebugApi` — type — line 206
-- `SeedvaleDebugApi` — type — line 215
-- `SettlementHistoryDebugHandle` — type — line 90
-- `SkillsDebugApi` — type — line 181
-- `TeleportToDebugApi` — type — line 126
-- `VillageDebugHandle` — type — line 97
-- `WorldLocationDebugEntry` — type — line 147
-- `WorldLocationsDebugApi` — type — line 148
+- `ConditionsDebugApi` — type — line 192
+- `HiddenTreasureDebugApi` — type — line 164
+- `HouseholdDebugHandle` — type — line 83
+- `InjuryDebugApi` — type — line 200
+- `installNpcDebugApi` — function — line 340
+- `LocationsDebugApi` — type — line 115
+- `NpcDebugHandle` — type — line 68
+- `PlayerDebugApi` — type — line 207
+- `SeedvaleDebugApi` — type — line 219
+- `SettlementHistoryDebugHandle` — type — line 91
+- `SkillsDebugApi` — type — line 182
+- `TeleportToDebugApi` — type — line 127
+- `VillageDebugHandle` — type — line 98
+- `WorldLocationDebugEntry` — type — line 148
+- `WorldLocationsDebugApi` — type — line 149
 
 ## `debug/npcInspector.ts`
 
@@ -139,6 +139,20 @@ Generated from exported TypeScript symbols.
 - `NpcTraceBuffer` — type — line 105
 - `NpcTraceEvent` — type — line 14
 - `NpcTraceEventType` — type — line 97
+
+## `debug/playerGroundTrace.ts`
+
+- `CaveGroundQueryDebug` — type — line 50
+- `createPlayerGroundTraceBuffer` — function — line 131
+- `PLAYER_GROUND_TRACE_CAPACITY` — const — line 9
+  - domain: debug
+- `PlayerGroundHitSnapshot` — type — line 13
+- `PlayerGroundSource` — type — line 11
+- `PlayerGroundTraceBuffer` — type — line 63
+- `PlayerGroundTraceTick` — type — line 22
+- `PlayerGroundTraceWriter` — type — line 19
+- `snapshotCaveGroundHit` — function — line 188
+- `writeHitSnapshot` — function — line 196
 
 ## `debug/renderStateDebug.ts`
 

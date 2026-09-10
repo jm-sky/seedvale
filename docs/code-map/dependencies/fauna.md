@@ -145,6 +145,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/wolfDenScenario.ts`
 
 **Imported by**
 
@@ -156,6 +157,8 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
+- `fauna/wolfDenScenario.test.ts`
+- `fauna/wolfDenScenario.ts`
 - `interaction/Interactable.ts`
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
@@ -334,6 +337,7 @@ Generated from TypeScript imports.
 - `fauna/animalForaging.ts`
 - `fauna/animalRoaming.test.ts`
 - `fauna/animalRoamingTrips.test.ts`
+- `fauna/createFauna.ts`
 
 ## `fauna/animalRoamingTrips.test.ts`
 
@@ -382,9 +386,11 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
+- `fauna/animalRoaming.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/proceduralAnimals.ts`
+- `fauna/wolfDenScenario.ts`
 - `math/segment.ts`
 - `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
@@ -715,3 +721,22 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/animalDefs.ts`
 - `fauna/waterTraversal.test.ts`
+
+## `fauna/wolfDenScenario.test.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `fauna/wolfDenScenario.ts`
+
+## `fauna/wolfDenScenario.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+
+**Imported by**
+
+- `fauna/AnimalSpawner.ts`
+- `fauna/createFauna.ts`
+- `fauna/wolfDenScenario.test.ts`

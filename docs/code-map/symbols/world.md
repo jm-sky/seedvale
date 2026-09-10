@@ -332,8 +332,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 54
-- `createCaves` — function — line 135
+- `Caves` — type — line 59
+- `createCaves` — function — line 145
   - system: caves
   - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation, occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves

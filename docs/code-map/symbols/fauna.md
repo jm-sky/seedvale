@@ -4,7 +4,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 852
+- `AnimalAgent` — class — line 855
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
@@ -13,7 +13,7 @@ Generated from exported TypeScript symbols.
 - `AnimalAgentDebugInfo` — type — line 388
 - `AnimalAgentDeps` — type — line 720
 - `AnimalSaveState` — type — line 489
-- `AnimalUpdateContext` — type — line 751
+- `AnimalUpdateContext` — type — line 754
 - `BURY_DURATION_SEC` — const — line 258
 - `canPredatorPursueIntoVillage` — function — line 549
 - `FAUNA_SHADOW_DISTANCE` — const — line 225
@@ -181,31 +181,33 @@ Generated from exported TypeScript symbols.
 - `AnimalTrip` — type — line 34
 - `AnimalTripKind` — type — line 32
 - `AnimalTripPhase` — type — line 33
-- `findWaterTripDestination` — function — line 120
+- `findSettlementOutskirtsDestination` — function — line 125
+- `findWaterTripDestination` — function — line 151
 - `probeBestPointNear` — function — line 75
 - `tripDayBucket` — function — line 61
 - `TripDestinationContext` — type — line 104
 
 ## `fauna/AnimalSpawner.ts`
 
-- `depletionThreshold` — function — line 93
-- `DESTROY_SPAWNER_DURATION_SEC` — const — line 48
-- `EMPTY_HABITAT_RESPAWN_MULTIPLIER` — const — line 52
-- `MIN_RECOVERY_POPULATION` — const — line 42
-- `PreySpawner` — type — line 54
-- `RECOVERY_DAYS` — const — line 39
-- `respawnIntervalDaysFor` — function — line 105
-- `restoreSpawnPointState` — function — line 203
-- `SavedSpawnPointState` — type — line 184
-- `shouldDeplete` — function — line 99
-- `snapshotSpawnPointState` — function — line 191
-- `SPAWNER_DESTROY_BRANCH_COST` — const — line 46
-- `SPAWNER_RADIUS` — const — line 87
-- `SpawnerType` — type — line 12
-- `SpawnPointState` — type — line 34
-- `tickSpawnPointRecovery` — function — line 163
-- `updateSpawners` — function — line 119
-- `WOLF_DEN_ID` — const — line 18
+- `defaultSpawnPointScenarioFields` — function — line 242
+- `depletionThreshold` — function — line 107
+- `DESTROY_SPAWNER_DURATION_SEC` — const — line 49
+- `EMPTY_HABITAT_RESPAWN_MULTIPLIER` — const — line 53
+- `MIN_RECOVERY_POPULATION` — const — line 43
+- `PreySpawner` — type — line 55
+- `RECOVERY_DAYS` — const — line 40
+- `respawnIntervalDaysFor` — function — line 119
+- `restoreSpawnPointState` — function — line 228
+- `SavedSpawnPointState` — type — line 201
+- `shouldDeplete` — function — line 113
+- `snapshotSpawnPointState` — function — line 212
+- `SPAWNER_DESTROY_BRANCH_COST` — const — line 47
+- `SPAWNER_RADIUS` — const — line 101
+- `SpawnerType` — type — line 13
+- `SpawnPointState` — type — line 35
+- `tickSpawnPointRecovery` — function — line 179
+- `updateSpawners` — function — line 133
+- `WOLF_DEN_ID` — const — line 19
 
 ## `fauna/bloodSplat.ts`
 
@@ -220,21 +222,21 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `clearsRiverChannel` — function — line 214
-- `createFauna` — function — line 448
-- `Fauna` — type — line 60
-- `FAUNA_URLS` — const — line 372
-- `isDeerEdgeHabitat` — function — line 245
-- `isNearRoadCorridor` — function — line 226
-- `measureSlope` — function — line 284
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 348
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 356
-- `SPAWNER_LABELS` — const — line 340
-- `SPAWNER_RING_OFFSET` — const — line 185
-- `SPAWNER_SPECS` — const — line 318
-- `spawnerDestroyBusyLabel` — function — line 367
-- `spawnerDestroyPromptLabel` — function — line 363
-- `spawnerId` — function — line 336
+- `clearsRiverChannel` — function — line 229
+- `createFauna` — function — line 463
+- `Fauna` — type — line 71
+- `FAUNA_URLS` — const — line 387
+- `isDeerEdgeHabitat` — function — line 260
+- `isNearRoadCorridor` — function — line 241
+- `measureSlope` — function — line 299
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 363
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 371
+- `SPAWNER_LABELS` — const — line 355
+- `SPAWNER_RING_OFFSET` — const — line 200
+- `SPAWNER_SPECS` — const — line 333
+- `spawnerDestroyBusyLabel` — function — line 382
+- `spawnerDestroyPromptLabel` — function — line 378
+- `spawnerId` — function — line 351
 
 ## `fauna/dogGuard.ts`
 
@@ -336,20 +338,20 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/predatorHumanDecision.ts`
 
-- `CLOSE_ATTACK_CHANCE` — const — line 84
-- `countNearbyHumans` — function — line 192
-- `CROWD_ATTACK_BLOCK_COUNT` — const — line 90
-- `decidePredatorHumanIntent` — function — line 147
-- `humanProximityFear` — function — line 99
-- `hungerAttackPressure` — function — line 110
-- `isAttackRollSuppressed` — function — line 115
-- `NEARBY_HUMAN_RADIUS` — const — line 186
+- `CLOSE_ATTACK_CHANCE` — const — line 87
+- `countNearbyHumans` — function — line 199
+- `CROWD_ATTACK_BLOCK_COUNT` — const — line 93
+- `decidePredatorHumanIntent` — function — line 154
+- `humanProximityFear` — function — line 102
+- `hungerAttackPressure` — function — line 113
+- `isAttackRollSuppressed` — function — line 118
+- `NEARBY_HUMAN_RADIUS` — const — line 193
 - `PredatorHumanDecisionInput` — type — line 17
 - `PredatorHumanIntent` — type — line 15
-- `PROVOCATION_SECONDS` — const — line 92
-- `PROVOKED_FLEE_HP_RATIO` — const — line 88
-- `RETALIATION_ATTACK_CHANCE` — const — line 86
-- `scorePredatorHumanIntents` — function — line 119
+- `PROVOCATION_SECONDS` — const — line 95
+- `PROVOKED_FLEE_HP_RATIO` — const — line 91
+- `RETALIATION_ATTACK_CHANCE` — const — line 89
+- `scorePredatorHumanIntents` — function — line 122
 
 ## `fauna/preyAlertPerception.ts`
 
@@ -382,3 +384,21 @@ Generated from exported TypeScript symbols.
   - domain: fauna
   - system: water-traversal
   - role: Pure fauna-side water traversal policy (plan fauna-015) — answers "what can this species do with these physical water conditions", built on `terrain/waterSample.ts`'s species-agnostic physical answer. No Three.js/`AnimalAgent` import so the classification rules are directly unit-testable. Shared by autonomous and mounted movement alike (both read it through `AnimalAgent.isWalkable()`), so physical traversability can never diverge between the two (plan fauna-015 §8).
+
+## `fauna/wolfDenScenario.ts`
+
+- `activateWolfDenProblem` — function — line 58
+- `canOfferSettlementTrip` — function — line 63
+- `effectiveMaxPreyCount` — function — line 21
+- `effectiveRespawnIntervalDays` — function — line 27
+- `isQuestSpawnPointPermanentlyDestroyed` — function — line 42
+- `isWolfDenPermanentlyDestroyed` — function — line 32
+- `lerp` — function — line 15
+- `matchesQuestSpawnPointId` — function — line 37
+- `recordSettlementTripOpportunity` — function — line 70
+- `SETTLEMENT_TRIP_COOLDOWN_DAYS` — const — line 12
+- `SETTLEMENT_TRIP_STAY_SEC` — const — line 13
+- `shouldActivateWolfDenProblem` — function — line 51
+- `WOLF_DEN_ACTIVE_PRESSURE` — const — line 10
+- `WOLF_DEN_PROBLEM_START_DAY` — const — line 9
+  - domain: fauna World-owned wolf-den pressure scenario (plan quests-progression-007) — pure helpers over `PreySpawner` fields; activation/trips stay in `createFauna.ts`.

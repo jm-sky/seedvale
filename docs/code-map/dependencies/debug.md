@@ -186,6 +186,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `config/worldConfig.ts`
 - `debug/npcDebugApi.ts`
+- `debug/playerGroundTrace.ts`
 - `player/PlayerSkills.ts`
 - `quests/QuestManager.ts`
 - `settlement/SettlementsManager.ts`
@@ -211,6 +212,7 @@ Generated from TypeScript imports.
 - `debug/locationSearch.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
+- `debug/playerGroundTrace.ts`
 - `debug/villageInspector.ts`
 - `fauna/AnimalAgent.ts`
 - `navigation/navigationStats.ts`
@@ -300,6 +302,23 @@ Generated from TypeScript imports.
 - `debug/npcInspector.ts`
 - `debug/npcTrace.test.ts`
 - `ui/createNpcInspector.ts`
+
+## `debug/playerGroundTrace.test.ts`
+
+**Imports**
+
+- `debug/playerGroundTrace.ts`
+
+## `debug/playerGroundTrace.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
+- `debug/playerGroundTrace.test.ts`
+- `player/PlayerController.ts`
+- `world/createCaves.ts`
 
 ## `debug/renderStateDebug.ts`
 

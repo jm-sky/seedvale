@@ -16,6 +16,7 @@ Generated from TypeScript imports.
 - `assets/loadGltf.ts`
 - `audio/createWorldAudio.ts`
 - `audio/playerMoveSounds.ts`
+- `debug/playerGroundTrace.ts`
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`

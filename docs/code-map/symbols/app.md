@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 71
-- `isChannelBusy` — function — line 78
+- `isActionBlocked` — function — line 73
+- `isChannelBusy` — function — line 80
 - `PlayerActionContext` — type — line 30
 
 ## `app/actions/actionContracts.ts`
@@ -190,13 +190,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 248
+- `createApp` — function — line 249
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 218
+- `NewAppOptions` — type — line 219
 
 ## `app/gameLoop.ts`
 
@@ -313,12 +313,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 624
-- `createWorldBundle` — function — line 1011
-- `disposeWorldBundle` — function — line 1412
+- `BuiltWorldSystems` — type — line 625
+- `createWorldBundle` — function — line 1012
+- `disposeWorldBundle` — function — line 1413
 - `HOME_RADIUS` — const — line 97
 - `homeChunks` — function — line 108
-- `rebuildWorldBundle` — function — line 1209
+- `rebuildWorldBundle` — function — line 1210
 - `WorldBundle` — type — line 131
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
