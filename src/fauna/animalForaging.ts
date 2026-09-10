@@ -5,9 +5,9 @@ import type { Household } from '../settlement/household'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { CorpsePhase } from './animalCorpse'
 import type { AnimalDef, AnimalRole, ScavengingConfig } from './animalDefs'
+import type { AnimalDietConfig } from './animalDefs'
 import { shoreProbeHits } from '../terrain/waterBodyKind'
 import { type AnimalLifeState, consumeFood, drinkWater, NEED_ELEVATED_THRESHOLD } from './AnimalLife'
-import type { AnimalDietConfig } from './animalDefs'
 import { probeBestPointNear } from './animalRoaming'
 
 /**

@@ -1,5 +1,5 @@
-import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import type { ChunkCoord } from '../../terrain/chunkGrid'
+import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import { biomeWeightsAt, forestBiomeAt, forestDensityAt } from '../../terrain/biomeRegions'
 import {
   sampleContinentalnessAt,

@@ -3,19 +3,19 @@ import { createNpcStateRegistry } from '../settlement/npcState'
 import { damageHealth } from '../shared/HealthState'
 import { pickActionKind } from '../simulation'
 import { graveIdForDeceased, type NpcGraves } from '../world/npcGraves'
-import { WEATHER_SEVERE_SHELTER_THRESHOLD, type NpcDecisionTarget } from './weatherPressure'
 import {
   getLastGraveVisitAtDays,
   GRAVE_VISIT_COOLDOWN_DAYS,
   GRAVE_VISIT_PRESSURE,
+  type GraveVisitCandidate,
   graveVisitOpportunity,
   isGraveVisitCooldownExpired,
   recordGraveVisit,
   resolveGraveVisitPressure,
   revalidateGraveVisitCandidate,
-  type GraveVisitCandidate,
 } from './graveVisitPressure'
 import { decideNpcAction, shouldInterruptAction } from './npcDecision'
+import { type NpcDecisionTarget, WEATHER_SEVERE_SHELTER_THRESHOLD } from './weatherPressure'
 
 function makeGraves(records: Array<{ deceasedNpcId: string, x: number, z: number, yaw?: number }>): NpcGraves {
   const byDeceased = new Map(records.map((r) => [r.deceasedNpcId, r]))

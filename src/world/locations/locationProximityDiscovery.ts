@@ -1,8 +1,8 @@
 import type { CaveDefinition } from '../caveVolume'
-import { ruinsDiscoveryRadius } from './darkForestTreasureSite'
-import { getActiveDarkForestTreasureSite } from './darkForestTreasureSiteRuntime'
 import type { LocationKnowledge } from './locationKnowledge'
 import type { WorldLocationCatalog } from './worldLocationCatalog'
+import { ruinsDiscoveryRadius } from './darkForestTreasureSite'
+import { getActiveDarkForestTreasureSite } from './darkForestTreasureSiteRuntime'
 
 /** Horizontal distance from `CaveDefinition.entrance` at which physical
  *  arrival counts as confirming the cave on the world map (plan world-012 §17). */
