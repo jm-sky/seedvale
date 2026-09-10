@@ -18,6 +18,8 @@ Recon against current `main` and `docs/STATE.md` on 2026-09-10. These notes reco
 
 That matches current code. Plan 014 should change the immediate NPC-interaction resolution semantics, not replace the ownership model.
 
+A regression introduced by commit `499004546eeaf15c6003bcb3f3d0ed79b7a0b9e2` is also in scope. That commit aligned quest-stage mutation with the line shown to the player by auto-opening the quest/help view, but it changed the expected NPC-dialogue entry UX: pressing `[E]` can skip the topic list and immediately show quest content / offer controls. Plan 014 must fix the underlying timing problem instead of preserving that workaround.
+
 ## 1. Quest definition ownership — `src/quests/quests.ts`
 
 Important current types/symbols:
@@ -78,6 +80,8 @@ Important current symbols:
 
 The successful giver path currently ultimately reaches `resolveSuccessfulTurnIn()`, which calls `applyOutcome()` immediately. Plan 014 needs the `ready_to_report` giver interaction to return a pending player action instead of resolving at dialog-open time.
 
+There is an additional UI/runtime coupling introduced by `499004546eeaf15c6003bcb3f3d0ed79b7a0b9e2`: `openNpcDialogueMenu()` calls `questManager.onInteract(npc.name)` while the menu is being opened. Because `onInteract()` is currently mutating, the commit then added auto-open behavior so the quest line shown in UI matches the mutation that already happened. Plan 014 should remove this coupling: opening the menu must be observational/presentational, while quest mutation happens only after an explicit player dialogue action.
+
 ### Preserve the exact-once authority
 
 Do not move reward/consequence logic into Vue. `applyOutcome()` already owns:
@@ -118,14 +122,48 @@ Add/retain JSDoc `@domain quests-progression` on the new public/integration acti
 
 ## 3. NPC dialogue UI — existing seam, no new modal
 
+### Expected entry flow
+
+The default NPC interaction must remain:
+
+```text
+[E] NPC
+→ NPC dialogue menu opens
+→ topic list is visible
+→ player chooses a topic
+→ quest/help content is resolved only when the relevant topic/action is chosen
+```
+
+Quest availability, `talk_to_npc`, `talk_to_npc_choice` or `ready_to_report` must not by themselves force the menu to open directly on the quest/help view.
+
+The existing payment/wage-claim special case may keep its direct-open behavior if current UX intentionally requires it. Do not use that exception as precedent for quest auto-open.
+
 ### `src/ui-vue/store.ts`
 
-`NpcDialogueMenuState` already stores:
+Current regression-related state/symbols include:
 
-- `helpResult: QuestDialogOverride | null`
-- `helpFromQuestManager: boolean`
+- `NpcDialogueMenuState.helpResult`
+- `NpcDialogueMenuState.helpFromQuestManager`
+- `openNpcDialogueMenu()`
+- `resolveNpcDialogueOpenTopic()`
 
-`helpFromQuestManager` exists specifically so quest-driven interactions can open directly on the quest line. Extend this existing state rather than creating quest-specific UI state elsewhere.
+`helpFromQuestManager` was added specifically to auto-open quest-driven interactions on `help`. That behavior is not the target architecture for plan 014.
+
+Implementation should remove or repurpose this flag so quest presence does not select the initial topic. `resolveNpcDialogueOpenTopic()` should not return `'help'` merely because `QuestManager` produced an override. If the helper remains, its only automatic topic should be an explicitly preserved special case such as `paymentClaim`.
+
+More importantly, `openNpcDialogueMenu()` must not invoke a mutating quest transition just to populate initial UI state. Prefer deferring the quest/help resolution behind the existing store/UI seam so the Vue component does not need direct `QuestManager` knowledge. A narrow store callback/function that resolves the help result on topic selection is acceptable; a new quest-dialogue store or manager is not.
+
+At menu open:
+
+- assign NPC/settlement/time/payment state;
+- leave quest/help mutation pending;
+- open on the topic list unless the preserved payment special case applies.
+
+When the player selects the quest/help topic:
+
+- resolve the current `QuestDialogOverride` through the existing quest authority;
+- show the line/actions/offer;
+- only a subsequent explicit authored action may advance/resolve stages where plan 014 requires conscious player speech.
 
 ### `src/ui-vue/NpcDialogueMenu.vue`
 
@@ -146,7 +184,7 @@ Add rendering for `helpResult.actions`. On action click:
 
 Do not make Vue inspect quest IDs, stage types or outcome IDs.
 
-`src/ui-vue/npcDialogueOpen.test.ts` already tests that quest-driven target dialogue opens directly on the quest line and currently expects the stage to advance on open. That expectation must change: open should expose the player action, and only selecting it advances/resolves.
+The topic-list interaction itself must remain distinct from the authored quest action. Selecting `Może w czymś ci pomóc?` may reveal a quest offer/report/action, but opening the NPC menu must not implicitly perform that selection.
 
 ## 4. `resolveInteraction.ts` — pass identity, not quest rules
 
@@ -301,7 +339,7 @@ Do not bump save schema for plan 014 unless implementation unexpectedly introduc
 
 `QuestManager.dirty` is set by `setQuestState()` and is used to avoid recomputing markers when quest state did not change.
 
-Opening a report/choice dialogue must no longer mutate quest state, so it should not dirty markers. The giver should remain `QUEST_MARKER_READY` and a `talk_to_npc`/choice target should remain `QUEST_MARKER_TALK_TARGET` until the player selects the action that actually advances/resolves the quest.
+Opening the NPC dialogue menu, selecting a non-mutating topic, or merely revealing a quest/report action must not dirty quest markers. The giver should remain `QUEST_MARKER_READY` and a `talk_to_npc`/choice target should remain `QUEST_MARKER_TALK_TARGET` until the player selects the authored action that actually advances/resolves the quest.
 
 For exact cave objectives, update spawner-marker matching so unrelated caves are not marked. Do not introduce per-frame target resolution; marker reads should compare already-bound IDs.
 
@@ -311,10 +349,10 @@ For exact cave objectives, update spawner-marker matching so unrelated caves are
 
 Add/adjust focused tests for:
 
-- `ready_to_report` + giver interaction returns an action and does not resolve;
+- `ready_to_report` + request for quest dialogue returns an action and does not resolve;
 - selecting report action resolves once;
 - invoking the same stale callback twice cannot duplicate reward/consequences;
-- `talk_to_npc` interaction does not advance until player action selection;
+- `talk_to_npc` quest dialogue does not advance until player action selection;
 - `talk_to_npc_choice` interaction with Kasia/Marek does not resolve until selection;
 - closing/reopening without selection leaves state unchanged;
 - exact `interact_spawner`: wrong cave ID does not advance, bound cave does;
@@ -330,12 +368,17 @@ Extend definition validation tests for the new authored player-line requirements
 
 ### `src/ui-vue/npcDialogueOpen.test.ts`
 
-Current test explicitly expects a quest target stage to advance when the menu opens. Replace that expectation with:
+The test added by commit `499004546eeaf15c6003bcb3f3d0ed79b7a0b9e2` currently codifies the regression: it expects a quest-driven NPC open to resolve initial topic `'help'` and, for `talk_to_npc`, expects stage advancement on open.
 
-- menu opens directly on quest line;
-- player action is present;
-- opening alone leaves state unchanged;
-- selecting action advances once.
+Replace that expectation with the intended interaction contract:
+
+- opening a normal NPC dialogue leaves the initial topic unset / shows the topic list;
+- quest availability or a quest override does not auto-open `'help'`;
+- opening alone leaves quest state/stage unchanged;
+- selecting the quest/help topic reveals the correct quest line / offer / authored action;
+- selecting the authored player action advances/resolves exactly once;
+- reopening after advancement reflects the new live quest state rather than stale actions;
+- `paymentClaim`, if intentionally preserved, still wins as the explicit auto-open exception.
 
 If component-level tests for `NpcDialogueMenu.vue` already exist, cover action rendering/final response there. Do not introduce a heavy new UI test harness solely for this plan if current test style can verify the store/open seam sufficiently.
 
@@ -345,19 +388,26 @@ Pure unit tests for eight sectors and boundary cases. Coordinate convention must
 
 ## 14. Suggested implementation order
 
-1. Extend quest definition/player-line contracts and validator.
-2. Add quest actions to `QuestDialogOverride`; change `QuestManager` report, `talk_to_npc`, and `talk_to_npc_choice` to defer mutation until action selection.
-3. Extend existing NPC dialogue store/component rendering.
-4. Thread `spawnerId` through `ObjectiveRef` / `resolveInteraction()` and exact matching/markers.
-5. Bind exact cave targets once in `createApp.ts` composition using existing `Fauna.getSpawners()` / stable `PreySpawner.id`.
-6. Derive optional eight-way direction text from the same already-resolved target coordinates.
-7. Apply the authored content pass, starting with `sprawdz-szlak`, `zaginiona-przesylka`, `sporne-drewno`, `relay-anna-piotr`.
-8. Remove the verified `trusted` availability gate from `wilki-pod-osada`; audit other authored gates without changing the prerequisite engine.
-9. Update focused tests, then typecheck/build.
-10. Update canonical quest state docs if they still describe immediate `talk_to_npc_choice` resolution after implementation.
+1. Reconfirm current `main`, especially `openNpcDialogueMenu()`, `resolveNpcDialogueOpenTopic()`, `NpcDialogueMenu.vue`, `QuestManager.onInteract()` and `src/ui-vue/npcDialogueOpen.test.ts`; commit `49900454` is historical context, current code is authoritative.
+2. Restore the NPC-dialogue entry invariant: normal `[E]` opens the topic list; remove quest-driven `'help'` auto-open while preserving only deliberate special cases such as payment claims.
+3. Decouple menu open from mutating quest interaction. Move quest/help resolution behind the existing store/UI topic-selection seam without giving Vue quest-state authority.
+4. Extend quest definition/player-line contracts and validator.
+5. Add quest actions to `QuestDialogOverride`; change report, `talk_to_npc`, and `talk_to_npc_choice` so mutation happens only on explicit authored action selection.
+6. Extend existing NPC dialogue store/component rendering for actions and final NPC response.
+7. Thread `spawnerId` through `ObjectiveRef` / `resolveInteraction()` and exact matching/markers.
+8. Bind exact cave targets once in `createApp.ts` composition using existing `Fauna.getSpawners()` / stable `PreySpawner.id`.
+9. Derive optional eight-way direction text from the same already-resolved target coordinates.
+10. Apply the authored content pass, starting with `sprawdz-szlak`, `zaginiona-przesylka`, `sporne-drewno`, `relay-anna-piotr`.
+11. Remove the verified `trusted` availability gate from `wilki-pod-osada`; audit other authored gates without changing the prerequisite engine.
+12. Update focused tests, then typecheck/build.
+13. Update canonical quest state docs if they still describe immediate `talk_to_npc_choice` resolution after implementation.
 
 ## 15. Guardrails / avoid these traps
 
+- Normal NPC `[E]` must open the topic list; do not auto-open quest/help merely because an override exists.
+- Do not call a mutating quest transition as a side effect of opening the NPC dialogue menu.
+- Do not preserve `helpFromQuestManager` / `resolveNpcDialogueOpenTopic() === 'help'` semantics just because they were introduced to fix visual/progress alignment in `49900454`; fix the timing seam instead.
+- Keep any intentional payment/wage-claim auto-open as a narrow explicit exception, not a generic quest mechanism.
 - No new dialogue tree engine, quest dialogue manager, quest modal or parallel store.
 - No quest resolution in Vue.
 - No duplicate reward/consequence path.
