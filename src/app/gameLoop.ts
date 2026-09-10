@@ -21,6 +21,7 @@ import type { TargetedSkillSelection } from '../player/targetedSkillSelection'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
+import type { VillageFire } from '../settlement/VillageFire'
 import type { PlayerObservationInput } from '../simulation/observation'
 import type { VueUi } from '../ui-vue/mount'
 import type { BusyOverlay } from '../ui/createBusyOverlay'
@@ -92,6 +93,7 @@ import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillProm
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
+import { fuelValue, selectFuelKind } from '../items/itemFuel'
 import { isInstanceBackedKind, isWeaponItemInstance } from '../items/itemInstances'
 import { isLiquidContainerInstance, LIQUID_CONTAINER_KIND_LIST } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
@@ -140,7 +142,6 @@ import {
   describeSettlementStorageRepair,
   formatSettlementStorageInspection,
 } from '../settlement/storageRepair'
-import { FIRE_FUEL_KINDS, type VillageFire } from '../settlement/VillageFire'
 import { getHungerRatio } from '../shared/HungerState'
 import { drainStamina, getStaminaRatio } from '../shared/StaminaState'
 import { getThirstRatio } from '../shared/ThirstState'
@@ -1566,14 +1567,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'campfire') {
         if (interactPressed) {
           if (target.fire.isLit()) {
-            const fuelKind = FIRE_FUEL_KINDS.find((kind) => inventory.has(kind, 1))
+            const fuelKind = selectFuelKind(inventory)
             if (fuelKind && inventory.remove(fuelKind, 1)) {
-              target.fire.addFuel()
+              target.fire.addFuel(fuelValue(fuelKind)!)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
               onInventoryChanged()
               toast.show(`Dołożono ${ITEM_DEFS[fuelKind].label} do ogniska.`)
             } else {
-              toast.show('Potrzebujesz gałęzi lub belki, żeby je dołożyć.', 'error')
+              toast.show('Potrzebujesz opału, żeby je dołożyć.', 'error')
             }
           } else {
             startIgniteFire?.(target.fire)

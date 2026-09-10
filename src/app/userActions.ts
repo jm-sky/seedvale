@@ -23,8 +23,9 @@ export const SIMPLE_FIRE_BRANCH_COST = 2
 export const FIRE_PIT_STONE_COST = 4
 export const TORCH_BRANCH_COST = 1
 /** Beam cost for the player-built wood pile (plan items-player-015) — starts
- *  cold like a fire pit; refuelling it (existing `[E]`/`FIRE_FUEL_KINDS` flow)
- *  is what grows its visual toward `PlacedFires.ts`'s `WOOD_PILE_MAX_BODY_SCALE`. */
+ *  cold like a fire pit; refuelling it (existing `[E]`/catalog-fuel flow,
+ *  plan items-player-023) is what grows its visual toward
+ *  `PlacedFires.ts`'s `WOOD_PILE_MAX_BODY_SCALE`. */
 export const WOOD_PILE_BEAM_COST = 3
 
 /** Ground-suitability constants for placing a new fire (plan `ui-input-004`

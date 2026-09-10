@@ -574,7 +574,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 28
+export const CURRENT_SAVE_VERSION = 29
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -646,6 +646,9 @@ export type SaveData = {
   playerConditions?: SaveTemporaryConditionsSnapshot
   /** Monotonic direct-drink counter for deterministic unsafe-water rolls. */
   waterDrinkEventCount?: number
+  /** Monotonic raw-meat-risk counter for deterministic unsafe-food rolls
+   *  (plan items-player-023). */
+  unsafeFoodEventCount?: number
   /** Sparse `settlementId:plotId` composite-key list
    *  (`settlement/landOwnership.ts`); an empty list means no purchased plots. */
   ownedLandPlots: string[]
@@ -1989,6 +1992,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.reputation !== undefined && !isSaveReputation(v.reputation)) return false
   if (!isPlayerConditionsField(v.playerConditions)) return false
   if (v.waterDrinkEventCount !== undefined && typeof v.waterDrinkEventCount !== 'number') return false
+  if (v.unsafeFoodEventCount !== undefined && typeof v.unsafeFoodEventCount !== 'number') return false
   return true
 }
 
@@ -2764,6 +2768,18 @@ function migrateSaveV27ToV28(data: unknown): unknown {
   }
 }
 
+/** v28 → v29 (plan items-player-023): raw-meat poisoning exposure gets its
+ *  own deterministic event counter (`unsafeFoodEventCount`), parallel to
+ *  `waterDrinkEventCount` but never shared with it. It's optional/sparse
+ *  exactly like `waterDrinkEventCount` — a pre-plan save has never rolled
+ *  one, so restore already defaults a missing field to `0`
+ *  (`PlayerController.restoreTemporaryConditionsState`); nothing to backfill
+ *  here beyond the version bump. */
+function migrateSaveV28ToV29(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 29 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2806,6 +2822,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   25: migrateSaveV25ToV26,
   26: migrateSaveV26ToV27,
   27: migrateSaveV27ToV28,
+  28: migrateSaveV28ToV29,
 }
 
 function detectStoredVersion(value: unknown): number | null {

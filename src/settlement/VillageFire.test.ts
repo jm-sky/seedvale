@@ -53,3 +53,33 @@ describe('VillageFire.getFuelRatio (plan items-player-015)', () => {
     expect(fire.getFuelRatio()).toBe(1)
   })
 })
+
+describe('VillageFire branch-equivalent fuel contribution (plan items-player-023)', () => {
+  it('a sub-1 contribution burns for less than a full branch', () => {
+    const fire = createVillageFire(new Vector3(), fakeFlame(), 75)
+    fire.light('player', 0.5)
+    expect(fire.getFuelRatio()).toBeCloseTo(0.5)
+  })
+
+  it('a >1 contribution burns for longer than a full branch', () => {
+    const fire = createVillageFire(new Vector3(), fakeFlame(), 75)
+    fire.light('player', 2)
+    expect(fire.getFuelRatio()).toBeCloseTo(2)
+  })
+
+  it('addFuel is additive with the resolved contribution', () => {
+    const fire = createVillageFire(new Vector3(), fakeFlame(), 75)
+    fire.light('player', 1)
+    fire.addFuel(0.5)
+    fire.addFuel(2)
+    expect(fire.getFuelRatio()).toBeCloseTo(3.5)
+  })
+
+  it('a custom fuelPerBranch still scales every fuel contribution', () => {
+    const fire = createVillageFire(new Vector3(), fakeFlame(), 30)
+    fire.light('player', 2)
+    expect(fire.getFuelRatio()).toBeCloseTo(2)
+    fire.update(30)
+    expect(fire.getFuelRatio()).toBeCloseTo(1)
+  })
+})

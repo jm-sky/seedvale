@@ -235,6 +235,13 @@ export class PlayerController {
   readonly temporaryConditions: TemporaryConditionsState
   /** Monotonic drink-event counter for deterministic unsafe-water exposure rolls. */
   waterDrinkEventCount = 0
+  /** Monotonic counter for deterministic raw-meat poisoning exposure rolls
+   *  (plan items-player-023) — increments only for consumption events that
+   *  actually carry a raw-meat risk (see `foodSafety.ts`'s
+   *  `resolveRawMeatSafetyRisk`), never for every food item eaten. Kept
+   *  separate from `waterDrinkEventCount` so drinking more/less water can
+   *  never perturb future unsafe-food rolls. */
+  unsafeFoodEventCount = 0
   private readonly camera: THREE.PerspectiveCamera
   private readonly keys: KeyState
   private readonly look: LookState
@@ -866,9 +873,11 @@ export class PlayerController {
   restoreTemporaryConditionsState(
     saved?: SaveTemporaryConditionsSnapshot | null,
     waterDrinkEventCount = 0,
+    unsafeFoodEventCount = 0,
   ): void {
     this.temporaryConditions.conditions = restoreTemporaryConditions(saved).conditions
     this.waterDrinkEventCount = Math.max(0, waterDrinkEventCount)
+    this.unsafeFoodEventCount = Math.max(0, unsafeFoodEventCount)
   }
 
   snapshotTemporaryConditionsState(): SaveTemporaryConditionsSnapshot | undefined {

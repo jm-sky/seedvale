@@ -1,18 +1,13 @@
-import type { ItemKind } from '../items/items'
 import type { CampfireFlame } from './props'
 import type * as THREE from 'three'
 
-/** Item kinds that can light or refuel a fire (plan 187) — tried in this
- *  order by `startIgniteFire`/the "dołóż" world action, both re-resolving at
- *  busy-channel completion. Adding a unit of either kind grants the same
- *  `fuelPerBranch` seconds — `beam` is a structural-wood bonus fuel, not a
- *  richer fuel value model. */
-export const FIRE_FUEL_KINDS: readonly ItemKind[] = ['branch', 'beam']
-
-/** Seconds of burn time one branch adds — light and refuel both apply this.
- *  Default for settlement fires and player-built fire pits (`kind: 'pit'`,
- *  `settlement/PlacedFires.ts`) — a simple campfire without a stone ring
- *  passes a shorter value explicitly (plan `2026-08-09--050`). */
+/** Seconds of burn time one branch-equivalent unit of fuel adds — `light()`/
+ *  `addFuel()` scale this by the resolved fuel contribution (plan
+ *  items-player-023 — `branch = 1`, other fuel kinds a fraction/multiple of
+ *  it via `items/itemFuel.ts`'s `fuelValue`). Default for settlement fires
+ *  and player-built fire pits (`kind: 'pit'`, `settlement/PlacedFires.ts`) —
+ *  a simple campfire without a stone ring passes a shorter value explicitly
+ *  (plan `2026-08-09--050`). */
 export const FUEL_PER_BRANCH = 75
 /** Busy-channel duration for lighting an unlit campfire — real-time (not a
  *  time-skip), same order of magnitude as dig/chop. Adding a branch to an
@@ -64,13 +59,18 @@ export type VillageFire = {
    *  counter. */
   getFuelRatio: () => number
   /** Ignites from cold — caller is responsible for checking/consuming the
-   *  branch first (see `app/createApp.ts`'s campfire interact handling).
+   *  fuel first (see `app/createApp.ts`'s campfire interact handling).
    *  Defaults to `'player'`, the common case (interactive ignite, building a
-   *  fire) — pass `'night'` for the deterministic settlement autolight. */
-  light: (source?: FireLightSource) => void
-  /** Extends an already-lit fire — same fuel amount as `light()`, just
-   *  additive instead of resetting. */
-  addFuel: () => void
+   *  fire) — pass `'night'` for the deterministic settlement autolight.
+   *  `fuelValue` is a branch-equivalent contribution (plan items-player-023
+   *  — `items/itemFuel.ts`'s `fuelValue`); defaults to `1` so non-item
+   *  ignition (settlement autolight, habitat burn) keeps today's one-branch
+   *  starting fuel without having to pass anything. */
+  light: (source?: FireLightSource, fuelValue?: number) => void
+  /** Extends an already-lit fire, additive instead of resetting. `fuelValue`
+   *  is the same branch-equivalent contribution `light()` takes; defaults to
+   *  `1` (one branch-equivalent). */
+  addFuel: (fuelValue?: number) => void
   /** Plan 175 — a grate is an optional, one-time capability of *this specific*
    *  fire instance (player-built `PlacedFires.ts` today; settlement fires
    *  inherit the same flag but nothing currently sets it), not a hard-coded
@@ -119,10 +119,10 @@ export function createVillageFire(
     isIgniting: () => lit && igniteRemaining > 0,
     getIgniteProgress: () => (igniteRemaining > 0 ? 1 - igniteRemaining / IGNITE_DURATION_SEC : 1),
     getFuelRatio: () => (lit ? fuelRemaining / fuelPerBranch : 0),
-    light(source = 'player') {
+    light(source = 'player', fuelValue = 1) {
       const wasLit = lit
       lit = true
-      fuelRemaining = fuelPerBranch
+      fuelRemaining = fuelPerBranch * fuelValue
       igniteRemaining = IGNITE_DURATION_SEC
       flame.object.visible = true
       applyVisual()
@@ -131,8 +131,8 @@ export function createVillageFire(
         hooks.onLight?.(position, source)
       }
     },
-    addFuel() {
-      fuelRemaining += fuelPerBranch
+    addFuel(fuelValue = 1) {
+      fuelRemaining += fuelPerBranch * fuelValue
       applyVisual()
     },
     hasGrate: () => grate,

@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-09-09 (plan items-player-019 — `sewing_kit` / tent instances)
+**Last updated:** 2026-09-10 (plan items-player-023 — catalog-driven campfire fuel + raw-meat food safety)
 
 ## Quick rules
 
@@ -24,7 +24,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Village one-time tools | `createItemSpawners.ts` |
 | Portable light | `PlayerTorch` — lit branch (90s) or held wooden_torch (240s); exclusive right hand |
 | Wood model (plan 187) | `branch` (hand-gathered / axe bonus, torch-capable) vs `beam` (axe-felling bonus yield only, construction + fuel, never a torch) — `world/treeLifecycle.ts`'s `bonusYieldForChopStage`/`FELLING_BEAM_YIELD` fires once, on the authoritative felled→harvested bucking step |
-| Campfire fuel (plan 187) | `settlement/VillageFire.ts`'s `FIRE_FUEL_KINDS` (`branch`, `beam`) — `startIgniteFire`/the "dołóż" world action try each kind in order; every unit grants the same `FUEL_PER_BRANCH` seconds regardless of kind |
+| Campfire fuel (plan items-player-023) | `ITEM_CATALOG[kind].utility.fuel.value` (`items/itemFuel.ts`) — the catalog is the fuel authority, not a fixed `ItemKind` list. `cone` 0.5, `branch` 1 (base unit), `beam` 2, relative to `VillageFire`'s `fuelPerBranch`. `selectFuelKind()`/`FUEL_ITEM_PRIORITY` pick `cone → branch → beam` deterministically for ignition and the "dołóż" refuel action; `VillageFire.light()`/`addFuel()` take the resolved branch-equivalent contribution. Habitat/spawner destruction burns a fixed 4 branch-equivalents directly, independent of what fuel the player carries. |
+| Raw-meat food safety (plan items-player-023) | `items/foodSafety.ts`'s `resolveRawMeatSafetyRisk(kind, batch, nowDays)` — species (from `FoodBatch.sourceSpecies` or the kind's own mapping) + `FreshnessStage` (`fresh`/`medium`, never `spoiled` — that stays refused before this even runs) resolve a `{ chance, severity }` pair reused by the existing `TemporaryConditionsState.poisoning` lifecycle (`applyPoisoningExposure`). Deterministic per-event roll via `shared/foodPoisoningExposure.ts`'s `foodPoisoningExposureEventRoll`, keyed on `PlayerController.unsafeFoodEventCount` (separate monotonic counter from `waterDrinkEventCount`, persisted in `SaveData`). `roasted_meat`/`dried_meat` never trigger this even though they keep `sourceSpecies` for nutrition. Wired into `app/actions/survivalActions.ts`'s `consumeItem()` — poisoning is a consequence of eating, so nutrition applies even when the roll succeeds. |
 | Construction materials from the ground (plan 187) | `items/constructionMaterials.ts`'s `hasMaterial`/`consumeMaterial` — resolves a `{ kind, count }` requirement from `Inventory` first, then nearby `DroppedItems` within `CONSTRUCTION_MATERIAL_RADIUS` (3m), closest stack first; atomic (nothing consumed unless the total is sufficient). Wired into `app/actions/placementActions.ts`'s `workOnWell`; kind-agnostic, so a future construction can reuse it without a new storage system |
 | Inventory category | `ITEM_DEFS.categories` — `resource` / `tool` / `utility` / `food` / `weapon` / `knowledge` (multi-category, e.g. axe = tool + weapon); hunger consumables are `food`, waterskins stay `utility`. `knowledge` (plan items-player-016) covers `map_near`/`map_far` (→ `LocationKnowledge`) and the 18 skill books (→ `PlayerSkills`) — a shared item category, not a shared gameplay system |
 | Skill books (plan items-player-016) | `ITEM_CATALOG[kind].book` (`{ skill, requiredSkillValue, targetSkillValue, tier }`) — the single source of truth for inventory/merchant presentation and the "Czytaj" action (`items/books.ts`'s `readBook`). Reading raises the named `SkillId` straight to `targetSkillValue` via `PlayerSkills.ts`'s `raiseSkillToValue` (never lowers XP, no-op once already met); requires the current skill to be `>= requiredSkillValue` first. No parallel book-progression state — the book itself is never consumed. |
@@ -54,10 +55,10 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | shell | muszla | — | — | renewable village | procedural | barter token (Kupiec will not buy/sell shells) |
 | stone | kamień | — | — | renewable + dig | procedural | |
 | branch | gałąź | lit only | — | renewable trees | `items/branch.glb` | Zapal gałąź → hand mesh + fire; **melee later** |
-| beam | belka | — | — | none | procedural | plan 187; bonus yield alongside branch at the felled→harvested bucking chop; construction material + campfire fuel; never a hand torch |
+| beam | belka | — | — | none | procedural | plan 187; bonus yield alongside branch at the felled→harvested bucking chop; construction material + campfire fuel (fuel value 2, plan items-player-023); never a hand torch |
 | mushroom | grzyb | — | — | world chunk | procedural | plan 159; now also `food` category — Zjedz (+8 hunger); freshens 1.5 days, plant bait |
 | flower | kwiat | — | — | world chunk | procedural | |
-| cone | szyszka | — | — | world chunk | procedural | |
+| cone | szyszka | — | — | world chunk | procedural | plan items-player-023; weak campfire fuel/kindling (fuel value 0.5) |
 | knife | nóż | yes | 12 | starting | `items/knife.glb` | |
 | firestarter | krzesiwo | yes | — | starting | procedural | |
 | blanket | koc | — | — | starting | procedural | |

@@ -98,7 +98,7 @@ export const COMBAT_TARGET_CONE_DOT: Record<CombatAimMode, number> = {
  *  `[E]` always drinks directly (well, lake, river or ocean); `[R]` fills a
  *  carried liquid container (waterskin or bucket — plan items-player-001).
  *  Static regardless of inventory (same convention as `campfire`'s "Dołóż
- *  gałąź" prompt not checking for a branch first) — `gameLoop.ts` toasts an
+ *  opał" prompt not checking for fuel first) — `gameLoop.ts` toasts an
  *  error if `[R]` is pressed without one. */
 const WATER_SOURCE_PROMPT = '[E] Napij się · [R] Napełnij pojemnik'
 /** Plan world-011 — shown instead of `WATER_SOURCE_PROMPT` at an ocean
@@ -115,8 +115,9 @@ const OCEAN_WATER_PROMPT = 'Słona woda — niezdatna do picia'
 const FISHING_PROMPT = '[E] Łów rybę · [R] Zanęć'
 /** Lit campfire — `[E]` adds fuel (existing), `[R]` cooks raw_meat (plan
  *  106 §6). Static regardless of inventory, same convention as
- *  `WATER_SOURCE_PROMPT`. */
-const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
+ *  `WATER_SOURCE_PROMPT` — any catalog fuel kind works (plan
+ *  items-player-023), not just a branch. */
+const CAMPFIRE_LIT_PROMPT = '[E] Dołóż opał · [R] Upiecz mięso'
 
 /** `canMilk` (plan fauna-002) is the caller's precomputed "player carries a
  *  bucket with room for milk" check — only meaningful for a `cow`/`sheep`
