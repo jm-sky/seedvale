@@ -458,10 +458,16 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyAction.ts`
+- `fauna/AnimalSpawner.ts`
 - `items/Inventory.ts`
+- `items/foodSafety.ts`
 - `items/itemInstances.ts`
+- `items/items.ts`
 - `player/PlayerNeeds.ts`
+- `player/PlayerSkills.ts`
+- `settlement/VillageFire.ts`
 - `shared/HealthState.ts`
+- `shared/foodPoisoningExposure.ts`
 - `shared/temporaryConditions.ts`
 - `shared/waterPoisoningExposure.ts`
 - `world/WaterSource.ts`
@@ -483,7 +489,9 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/campfireCooking.ts`
 - `items/foodFreshness.ts`
+- `items/foodSafety.ts`
 - `items/itemCatalog.ts`
+- `items/itemFuel.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
@@ -492,6 +500,7 @@ Generated from TypeScript imports.
 - `settlement/VillageFire.ts`
 - `shared/HealthState.ts`
 - `shared/VigorState.ts`
+- `shared/foodPoisoningExposure.ts`
 - `shared/temporaryConditions.ts`
 - `shared/waterPoisoningExposure.ts`
 - `world/WaterSource.ts`
@@ -866,6 +875,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/campRepair.ts`
 - `items/itemCatalog.ts`
+- `items/itemFuel.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/trade.ts`

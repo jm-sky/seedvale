@@ -170,6 +170,12 @@ Generated from exported TypeScript symbols.
 - `takeBatchCount` — function — line 79
 - `takeOneFoodItem` — function — line 33
 
+## `items/foodSafety.ts`
+
+- `RawMeatSafetyRisk` — type — line 24
+- `resolveRawMeatSafetyRisk` — function — line 70
+  - domain: items-player
+
 ## `items/guardSword.ts`
 
 - `askGuardForSword` — function — line 22
@@ -237,39 +243,49 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1340
+- `ARROW_DAMAGE_BONUS` — const — line 1352
 - `BookTier` — type — line 148
-- `CAPABILITY_KINDS` — const — line 1371
+- `CAPABILITY_KINDS` — const — line 1383
 - `CAPABILITY_LABEL` — const — line 126
 - `CAPABILITY_NEED_LABEL` — const — line 112
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1406
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1418
 - `ConsumableNeed` — type — line 139
-- `consumeNeedNoun` — function — line 240
-- `consumeVerbLabel` — function — line 231
+- `consumeNeedNoun` — function — line 249
+- `consumeVerbLabel` — function — line 240
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1396
-- `HOLDABLE_KINDS` — const — line 1362
-- `INJURY_TREATMENT_KINDS` — const — line 1428
-- `isMeleeToolKind` — function — line 1355
-- `isRangedTool` — function — line 1347
-- `ITEM_CATALOG` — const — line 254
+- `hasItemCapability` — function — line 1408
+- `HOLDABLE_KINDS` — const — line 1374
+- `INJURY_TREATMENT_KINDS` — const — line 1440
+- `isMeleeToolKind` — function — line 1367
+- `isRangedTool` — function — line 1359
+- `ITEM_CATALOG` — const — line 263
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1449
+- `ITEM_SYSTEM_ROADMAP` — const — line 1461
 - `ItemCapability` — type — line 89
 - `ItemCatalogEntry` — type — line 150
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1441
+- `itemTreatsPhysicalInjury` — function — line 1453
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1455
+- `NON_ITEM_PROPS` — const — line 1467
 - `RangedConfig` — type — line 53
 
 ## `items/itemDisplay.ts`
 
 - `itemDisplayName` — function — line 15
   - domain: items-player
+
+## `items/itemFuel.ts`
+
+- `FUEL_ITEM_PRIORITY` — const — line 18
+  - domain: items-player
+  - system: item-fuel
+  - role: Catalog-driven campfire fuel resolution (plan items-player-023) — the fuel counterpart of `hasItemCapability`/`findWithCapability`. `VillageFire` receives a resolved branch-equivalent contribution and never has to know which item kind produced it.
+- `fuelValue` — function — line 23
+- `isFuel` — function — line 27
+- `selectFuelKind` — function — line 35
 
 ## `items/itemInstances.ts`
 

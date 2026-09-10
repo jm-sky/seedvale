@@ -747,12 +747,11 @@ Generated from exported TypeScript symbols.
 ## `settlement/VillageFire.ts`
 
 - `createVillageFire` — function — line 100
-- `FIRE_FUEL_KINDS` — const — line 10
-- `FireLightSource` — type — line 41
-- `FUEL_PER_BRANCH` — const — line 16
-- `IGNITE_DURATION_SEC` — const — line 20
-- `VillageFire` — type — line 48
-- `VillageFireHooks` — type — line 43
+- `FireLightSource` — type — line 36
+- `FUEL_PER_BRANCH` — const — line 11
+- `IGNITE_DURATION_SEC` — const — line 15
+- `VillageFire` — type — line 43
+- `VillageFireHooks` — type — line 38
 
 ## `settlement/villagePlan.ts`
 

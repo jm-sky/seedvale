@@ -119,12 +119,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 159
-- `FeedableAnimal` — type — line 134
-- `feedAnimal` — function — line 148
-- `hasCarriedMilkContainer` — function — line 124
-- `SurvivalActionLifecycle` — type — line 84
-- `SurvivalActions` — type — line 94
+- `createSurvivalActions` — function — line 165
+- `FeedableAnimal` — type — line 140
+- `feedAnimal` — function — line 154
+- `hasCarriedMilkContainer` — function — line 130
+- `SurvivalActionLifecycle` — type — line 90
+- `SurvivalActions` — type — line 100
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -214,13 +214,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 581
+- `createGameLoop` — function — line 582
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 549
-- `GameLoopDeps` — type — line 283
+- `GameLoop` — type — line 550
+- `GameLoopDeps` — type — line 284
 
 ## `app/graphicsSettings.ts`
 
@@ -259,21 +259,21 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1107
-- `buildDigTarget` — function — line 1054
-- `buildInteractables` — function — line 412
-- `collectItem` — function — line 1154
+- `buildCombatTarget` — function — line 1108
+- `buildDigTarget` — function — line 1055
+- `buildInteractables` — function — line 413
+- `collectItem` — function — line 1155
 - `COMBAT_TARGET_CONE_DOT` — const — line 92
 - `COMBAT_TARGET_RANGE` — const — line 77
 - `CombatAimMode` — type — line 82
 - `DIG_REACH` — const — line 71
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 262
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 263
 - `GAZE_RANGE` — const — line 67
-- `groupDroppedItemCandidates` — function — line 272
+- `groupDroppedItemCandidates` — function — line 273
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 64
 - `INTERACT_RANGE` — const — line 61
-- `resolveHaySpot` — function — line 348
+- `resolveHaySpot` — function — line 349
 
 ## `app/inventoryWiring.ts`
 
@@ -318,15 +318,15 @@ Generated from exported TypeScript symbols.
 
 ## `app/userActions.ts`
 
-- `FIRE_FOOTPRINT_RADIUS` — const — line 35
+- `FIRE_FOOTPRINT_RADIUS` — const — line 36
 - `FIRE_PIT_STONE_COST` — const — line 23
-- `FIRE_PLACE_REACH` — const — line 34
-- `FIRE_SEPARATION` — const — line 36
-- `GRATE_BUILD_RANGE` — const — line 48
-- `GRATE_COST` — const — line 42
+- `FIRE_PLACE_REACH` — const — line 35
+- `FIRE_SEPARATION` — const — line 37
+- `GRATE_BUILD_RANGE` — const — line 49
+- `GRATE_COST` — const — line 43
 - `SIMPLE_FIRE_BRANCH_COST` — const — line 22
 - `TORCH_BRANCH_COST` — const — line 24
-- `WOOD_PILE_BEAM_COST` — const — line 28
+- `WOOD_PILE_BEAM_COST` — const — line 29
 
 ## `app/worldBundle.ts`
 

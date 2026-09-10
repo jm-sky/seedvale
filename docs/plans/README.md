@@ -74,6 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
+| ◼️ `ui-input-016-building-placement-construction-ux-coherence.md`              | -       | 🔴 | L      | ~~ui-input-014~~, ~~ui-input-015~~, items-player-024 |
 
 ---
 
@@ -200,7 +201,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `007`
 - settlements-npcs: `030`
 - tools: `014`
-- ui-input: `016`
+- ui-input: `017`
 - world: `023`
 - world-terrain: `019`
 

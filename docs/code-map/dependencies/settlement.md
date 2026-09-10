@@ -101,13 +101,13 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `items/items.ts`
 - `settlement/props.ts`
 
 **Imported by**
 
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/fullCampIntent.test.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/gameLoop.ts`

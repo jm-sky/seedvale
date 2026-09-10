@@ -135,6 +135,8 @@ Generated from TypeScript imports.
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
+- `items/itemFuel.test.ts`
+- `items/itemFuel.ts`
 - `items/itemUseView.test.ts`
 - `items/itemUseView.ts`
 - `items/liquidContainer.test.ts`
@@ -452,6 +454,8 @@ Generated from TypeScript imports.
 - `items/foodFreshness.test.ts`
 - `items/foodItems.test.ts`
 - `items/foodProvenance.test.ts`
+- `items/foodSafety.test.ts`
+- `items/foodSafety.ts`
 - `items/inventoryTransfer.test.ts`
 - `items/inventoryView.ts`
 - `items/itemUseView.ts`
@@ -460,6 +464,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `settlement/household.ts`
 - `settlement/npcState.test.ts`
+- `shared/foodPoisoningExposure.ts`
 - `world/createPlacedContainers.ts`
 - `world/dryingRacks.ts`
 - `world/transportTransactions.test.ts`
@@ -504,6 +509,26 @@ Generated from TypeScript imports.
 - `items/campfireCooking.ts`
 - `items/foodFreshness.ts`
 - `world/dryingRacks.ts`
+
+## `items/foodSafety.test.ts`
+
+**Imports**
+
+- `items/foodFreshness.ts`
+- `items/foodSafety.ts`
+
+## `items/foodSafety.ts`
+
+**Imports**
+
+- `items/foodFreshness.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/actions/survivalActions.test.ts`
+- `app/actions/survivalActions.ts`
+- `items/foodSafety.test.ts`
 
 ## `items/guardSword.test.ts`
 
@@ -669,6 +694,7 @@ Generated from TypeScript imports.
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
 - `items/itemDisplay.ts`
+- `items/itemFuel.ts`
 - `items/itemUseView.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
@@ -718,6 +744,27 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `items/itemDisplay.test.ts`
+
+## `items/itemFuel.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemFuel.ts`
+
+## `items/itemFuel.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/actions/survivalActions.ts`
+- `app/gameLoop.ts`
+- `items/itemFuel.test.ts`
 
 ## `items/itemInstances.ts`
 
@@ -832,6 +879,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/storageInfestationActions.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -869,6 +917,7 @@ Generated from TypeScript imports.
 - `items/createItemSpawners.ts`
 - `items/foodFreshness.ts`
 - `items/foodItems.ts`
+- `items/foodSafety.ts`
 - `items/guardSword.ts`
 - `items/heldToolVisual.ts`
 - `items/highQualityWeapons.test.ts`
@@ -880,6 +929,7 @@ Generated from TypeScript imports.
 - `items/itemConsumables.test.ts`
 - `items/itemDisplay.test.ts`
 - `items/itemDisplay.ts`
+- `items/itemFuel.ts`
 - `items/itemInstances.ts`
 - `items/itemModels.ts`
 - `items/itemUseView.ts`
@@ -894,12 +944,12 @@ Generated from TypeScript imports.
 - `player/PlayerTorch.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
-- `settlement/VillageFire.ts`
 - `settlement/household.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageRepair.ts`
 - `settlement/storageVisuals.ts`
+- `shared/foodPoisoningExposure.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`

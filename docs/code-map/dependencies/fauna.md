@@ -159,6 +159,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`

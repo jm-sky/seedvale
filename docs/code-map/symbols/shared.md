@@ -50,6 +50,12 @@ Generated from exported TypeScript symbols.
 - `PoolParticle` — type — line 3
 - `PoolTuning` — type — line 31
 
+## `shared/foodPoisoningExposure.ts`
+
+- `foodPoisoningExposureEventRoll` — function — line 31
+- `resolveRawMeatPoisoningExposure` — function — line 42
+- `tryApplyRawMeatPoisoningExposure` — function — line 50
+
 ## `shared/getFireParticles.ts`
 
 - `createEmberParticles` — function — line 356

@@ -2252,6 +2252,7 @@ Generated from TypeScript imports.
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`
 - `shared/SettlementName.ts`
+- `shared/foodPoisoningExposure.ts`
 - `shared/waterPoisoningExposure.ts`
 - `terrain/biomeColors.ts`
 - `terrain/cemeteryAssignment.ts`

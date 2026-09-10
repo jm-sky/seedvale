@@ -234,6 +234,28 @@ Generated from TypeScript imports.
 - `shared/getFireParticles.ts`
 - `shared/torchConfig.ts`
 
+## `shared/foodPoisoningExposure.test.ts`
+
+**Imports**
+
+- `shared/foodPoisoningExposure.ts`
+- `shared/temporaryConditions.ts`
+
+## `shared/foodPoisoningExposure.ts`
+
+**Imports**
+
+- `items/foodFreshness.ts`
+- `items/items.ts`
+- `shared/temporaryConditions.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/actions/survivalActions.test.ts`
+- `app/actions/survivalActions.ts`
+- `shared/foodPoisoningExposure.test.ts`
+
 ## `shared/getFireParticles.ts`
 
 **Imports**
@@ -320,6 +342,8 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `shared/effectivePhysicalAttributes.test.ts`
 - `shared/effectivePhysicalAttributes.ts`
+- `shared/foodPoisoningExposure.test.ts`
+- `shared/foodPoisoningExposure.ts`
 - `shared/temporaryConditions.test.ts`
 - `shared/waterPoisoningExposure.test.ts`
 - `shared/waterPoisoningExposure.ts`
