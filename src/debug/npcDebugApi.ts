@@ -229,9 +229,11 @@ export type QuestTargetDebugSnapshot = {
   resolved: true
   kind: 'spawnPoint'
   spawner: QuestSpawnPointDebugSnapshot
-  /** Present for `wolfDen` only — `cleared` is `Fauna.isWolfDenCleared()`,
-   *  not derived from the spawner's habitat state. */
-  questState?: { cleared: boolean }
+  /** Present for `wolfDen` only. `packCleared` is `Fauna.isWolfDenCleared()`
+   *  (initial pack dead — `clear_wolf_den`). `permanentlyDestroyed` is
+   *  `Fauna.isQuestSpawnPointPermanentlyDestroyed()` (`destroy_spawn_point`).
+   *  These are two different world facts; neither is derived from the other. */
+  questState?: { packCleared: boolean, permanentlyDestroyed: boolean }
 }
 
 export type QuestsDebugApi = {
@@ -310,7 +312,10 @@ function questTargetSnapshot(bundle: WorldBundle, targetId: string): QuestTarget
     },
   }
   if (spawner.type === 'wolfDen') {
-    snapshot.questState = { cleared: bundle.fauna.isWolfDenCleared() }
+    snapshot.questState = {
+      packCleared: bundle.fauna.isWolfDenCleared(),
+      permanentlyDestroyed: bundle.fauna.isQuestSpawnPointPermanentlyDestroyed(targetId),
+    }
   }
   return snapshot
 }

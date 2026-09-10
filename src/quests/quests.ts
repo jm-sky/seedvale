@@ -1372,18 +1372,18 @@ export function buildHorseAcquisitionQuest(horseRewardAnimalId: string): Authore
     description: 'Kupiec ma problem z wilkami przy szlaku. Pomóż mu, a w nagrodę dostaniesz jego konia.',
     giverName: 'Kasia',
     offerLine:
-      'Wilki straszą przy szlaku — mój koń nie może spokojnie stać przy wozie. Zlikwiduj ich jamę, a oddam ci tego konia.',
+      'Wilki straszą przy szlaku — mój koń nie może spokojnie stać przy wozie. Znajdź ich jamę i zniszcz ją na zawsze, a oddam ci tego konia.',
     stages: [
       {
-        objective: { type: 'clear_wolf_den', denId: WOLF_DEN_ID },
-        description: 'Znajdź wilczą jamę i zlikwiduj zagrożenie.',
-        reminderLine: 'Jama wciąż jest zamieszkana — mój koń czeka na spokój.',
-        progressLine: 'Jama opustoszała. Wróć do Kasi po konia.',
+        objective: { type: 'destroy_spawn_point', spawnerId: WOLF_DEN_ID },
+        description: 'Znajdź wilczą jamę i trwale zniszcz siedlisko.',
+        reminderLine: 'Dopóki jama stoi, wilki będą wracać — mój koń czeka na spokój.',
+        progressLine: 'Siedlisko zniszczone. Wróć do Kasi po konia.',
         failLine: 'Koń nie przeżył — nie ma już czego oddać.',
       },
     ],
-    reportPromptLine: 'Co z tamtą jamą?',
-    reportPlayerLine: 'Jama jest pusta. Twój koń może spokojnie stać przy wozie.',
+    reportPromptLine: 'Udało ci się zniszczyć tamtą jamę?',
+    reportPlayerLine: 'Zniszczyłem siedlisko. Twój koń może spokojnie stać przy wozie.',
     reportLine: 'Dzięki. Ten koń jest twój — trzymaj go przy sobie.',
     outcomes: [
       {

@@ -123,10 +123,12 @@ function fakeWolfDenSpawner(overrides: Partial<PreySpawner> = {}): PreySpawner {
 function fakeFauna(opts: {
   spawners?: readonly PreySpawner[]
   isWolfDenCleared?: boolean
+  isQuestSpawnPointPermanentlyDestroyed?: boolean
 } = {}) {
   return {
     getSpawners: () => opts.spawners ?? [],
     isWolfDenCleared: () => opts.isWolfDenCleared ?? false,
+    isQuestSpawnPointPermanentlyDestroyed: () => opts.isQuestSpawnPointPermanentlyDestroyed ?? false,
   }
 }
 
@@ -674,7 +676,7 @@ describe('quests', () => {
         humanTaste: true,
         canRecover: false,
       },
-      questState: { cleared: false },
+      questState: { packCleared: false, permanentlyDestroyed: false },
     })
     expect(snapshot!.spawner.id).not.toBe('wolf-den')
     expect(snapshot!.spawner.position.x).toBe(den.x)
@@ -682,7 +684,7 @@ describe('quests', () => {
     expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot)
   })
 
-  it('quests.target() reports Fauna.isWolfDenCleared(), not PreySpawner state', () => {
+  it('quests.target() reports packCleared independently of PreySpawner state', () => {
     stubWindow('?debug=1')
     const den = fakeWolfDenSpawner({ state: 'active', deathsThisCycle: 0 })
     const bundle = {
@@ -691,8 +693,43 @@ describe('quests', () => {
     } as unknown as WorldBundle
     const { api } = install(bundle)
     const snapshot = api!.quests.target('wolf-den')
-    expect(snapshot?.questState).toEqual({ cleared: true })
+    expect(snapshot?.questState).toEqual({ packCleared: true, permanentlyDestroyed: false })
     expect(snapshot?.spawner.state).toBe('active')
+  })
+
+  it('quests.target() distinguishes packCleared from permanentlyDestroyed', () => {
+    stubWindow('?debug=1')
+    const den = fakeWolfDenSpawner({ state: 'disabled', canRecover: false, deathsThisCycle: 3 })
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      fauna: fakeFauna({
+        spawners: [den],
+        isWolfDenCleared: false,
+        isQuestSpawnPointPermanentlyDestroyed: true,
+      }),
+    } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const snapshot = api!.quests.target('wolf-den')
+    expect(snapshot?.spawner.state).toBe('disabled')
+    expect(snapshot?.spawner.canRecover).toBe(false)
+    expect(snapshot?.questState).toEqual({ packCleared: false, permanentlyDestroyed: true })
+  })
+
+  it('quests.target() reads permanentlyDestroyed from Fauna, not by inspecting spawner fields', () => {
+    stubWindow('?debug=1')
+    const den = fakeWolfDenSpawner({ state: 'disabled', canRecover: false })
+    const isQuestSpawnPointPermanentlyDestroyed = vi.fn(() => true)
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      fauna: {
+        getSpawners: () => [den],
+        isWolfDenCleared: () => false,
+        isQuestSpawnPointPermanentlyDestroyed,
+      },
+    } as unknown as WorldBundle
+    const { api } = install(bundle)
+    expect(api!.quests.target('wolf-den')?.questState?.permanentlyDestroyed).toBe(true)
+    expect(isQuestSpawnPointPermanentlyDestroyed).toHaveBeenCalledWith('wolf-den')
   })
 
   it('quests.teleportToTarget() uses the injected teleport callback at the resolved spawner', async () => {
@@ -717,6 +754,7 @@ describe('quests', () => {
       fauna: {
         getSpawners: () => spawners,
         isWolfDenCleared: () => false,
+        isQuestSpawnPointPermanentlyDestroyed: () => false,
       },
     } as unknown as WorldBundle
     const { api } = install(bundle)

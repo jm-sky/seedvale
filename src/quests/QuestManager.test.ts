@@ -1705,9 +1705,12 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
   const HORSE_ID = 'merchant-horse-home'
   const horseQuest = (): QuestDef => runtimeAuthored(buildHorseAcquisitionQuest(HORSE_ID))
 
-  it('acceptance reserves the horse and suppresses re-offer when unavailable', () => {
-    let available = true
-    const qm = new QuestManager(
+  function makeHorseManager(opts?: {
+    transferAnimalOwnership?: (animalId: string) => boolean
+    canReserveHorseReward?: () => boolean
+    isPermanentlyDestroyed?: (spawnerId: string) => boolean
+  }): QuestManager {
+    return new QuestManager(
       [horseQuest()],
       undefined,
       new Inventory(),
@@ -1718,9 +1721,22 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
       undefined,
       undefined,
       undefined,
-      () => false,
-      () => available,
+      opts?.transferAnimalOwnership ?? (() => false),
+      opts?.canReserveHorseReward ?? (() => true),
+      { isPermanentlyDestroyed: opts?.isPermanentlyDestroyed ?? (() => false) },
     )
+  }
+
+  it('binds wilki-u-kupca to destroy_spawn_point, not clear_wolf_den', () => {
+    expect(horseQuest().stages[0]?.objective).toEqual({
+      type: 'destroy_spawn_point',
+      spawnerId: WOLF_DEN_ID,
+    })
+  })
+
+  it('acceptance reserves the horse and suppresses re-offer when unavailable', () => {
+    let available = true
+    const qm = makeHorseManager({ canReserveHorseReward: () => available })
     acceptOffer(qm, 'Kasia')
     expect(qm.getState('wilki-u-kupca')).toBe('active')
     expect(qm.isHorseRewardReserving(HORSE_ID)).toBe(true)
@@ -1728,27 +1744,34 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
     expect(qm.isQuestAvailable('wilki-u-kupca')).toBe(false)
   })
 
+  it('does not complete on pack clear; becomes ready_to_report after permanent destruction', () => {
+    let destroyed = false
+    const qm = makeHorseManager({ isPermanentlyDestroyed: () => destroyed })
+    acceptOffer(qm, 'Kasia')
+    expect(qm.getState('wilki-u-kupca')).toBe('active')
+
+    expect(qm.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })).toBeNull()
+    expect(qm.getState('wilki-u-kupca')).toBe('active')
+
+    qm.pollDestroySpawnPointObjectives()
+    expect(qm.getState('wilki-u-kupca')).toBe('active')
+
+    destroyed = true
+    qm.pollDestroySpawnPointObjectives()
+    expect(qm.getState('wilki-u-kupca')).toBe('ready_to_report')
+  })
+
   it('transfers ownership before committing complete outcome', () => {
     const transferred: string[] = []
-    const qm = new QuestManager(
-      [horseQuest()],
-      undefined,
-      new Inventory(),
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      (animalId) => {
+    const qm = makeHorseManager({
+      transferAnimalOwnership: (animalId) => {
         transferred.push(animalId)
         return true
       },
-      () => true,
-    )
+      isPermanentlyDestroyed: () => true,
+    })
     acceptOffer(qm, 'Kasia')
-    qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'wolf-den' })
+    qm.pollDestroySpawnPointObjectives()
     expect(qm.getState('wilki-u-kupca')).toBe('ready_to_report')
     speak(qm, 'Kasia')
     expect(transferred).toEqual([HORSE_ID])
@@ -1756,41 +1779,18 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
   })
 
   it('fails instead of completing when horse transfer is unavailable at turn-in', () => {
-    const qm = new QuestManager(
-      [horseQuest()],
-      undefined,
-      new Inventory(),
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      () => false,
-      () => true,
-    )
+    const qm = makeHorseManager({
+      transferAnimalOwnership: () => false,
+      isPermanentlyDestroyed: () => true,
+    })
     acceptOffer(qm, 'Kasia')
-    qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'wolf-den' })
+    qm.pollDestroySpawnPointObjectives()
     speak(qm, 'Kasia')
     expect(qm.getState('wilki-u-kupca')).toBe('failed')
   })
 
   it('fails an active horse-reward quest when the reserved target dies', () => {
-    const qm = new QuestManager(
-      [horseQuest()],
-      undefined,
-      new Inventory(),
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      () => false,
-      () => true,
-    )
+    const qm = makeHorseManager({ transferAnimalOwnership: () => false })
     acceptOffer(qm, 'Kasia')
     qm.onHorseRewardTargetDied(HORSE_ID)
     expect(qm.getState('wilki-u-kupca')).toBe('failed')

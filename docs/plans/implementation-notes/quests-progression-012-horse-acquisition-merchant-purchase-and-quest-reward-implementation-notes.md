@@ -1,16 +1,18 @@
 # Implementation Notes: Horse acquisition through merchant purchase and quest reward
 
 **Plan:** `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md`  
-**Reviewed against:** current `main`, 2026-09-10
+**Reviewed against:** current `main`, 2026-09-11
 
 ## Implemented (2026-09-10)
 
 - `src/settlement/horseAcquisition.ts` — derived `getHorseAcquisitionState()`, `MERCHANT_HORSE_PRICE` (250), merchant horse id resolver.
 - `src/items/trade.ts` — `settlePricedPurchase()` / `previewPricedPurchaseNetCoins()` for atomic world-entity purchases.
-- `src/quests/quests.ts` — `buildHorseAcquisitionQuest()` (`wilki-u-kupca`, `clear_wolf_den`, `horseRewardAnimalId` on `QuestDef`).
+- `src/quests/quests.ts` — `buildHorseAcquisitionQuest()` (`wilki-u-kupca`, `destroy_spawn_point`, `horseRewardAnimalId` on `QuestDef`).
 - `src/quests/QuestManager.ts` — transfer-before-commit outcome order, quest-state reservation, `onHorseRewardTargetDied()`.
 - `src/app/inventoryWiring.ts` + `MerchantScreen.vue` — special horse offer outside `MERCHANT_STOCK`.
 - `src/app/createApp.ts` — binds home merchant horse id, fauna transfer seam, death hook.
+
+Bugfix (2026-09-11): `wilki-u-kupca` was rebound from `clear_wolf_den` onto the existing `destroy_spawn_point` objective. Pack-clear and permanent habitat destruction stay separate fauna-owned facts; `wilcza-jama` is unchanged.
 
 Ownership transfer reuses `SettlementsManager.transferAnimalOwnership()` from fauna-020 — no parallel path.
 
@@ -95,24 +97,38 @@ If transfer fails because the target is dead/unavailable, resolve through an aut
 
 Do not turn this into a generic scripting language.
 
-## Wolf objective: current code versus planned `quests-progression-007`
+## Wolf objective: `destroy_spawn_point`, not `clear_wolf_den`
 
-Current code already has a real `wolfDen`, stable `WOLF_DEN_ID`, pack membership and `clear_wolf_den`, but today that objective means the den's initial pack is dead.
+`quests-progression-007` is implemented. Permanent habitat destruction is a real, source-owned spawn-point fact:
 
-`quests-progression-007` is still `planned` and intentionally changes the stronger world-problem semantics: persistent wolf pressure plus a generic `destroy_spawn_point` objective where permanent destruction of the source is the completion condition. Its implementation notes explicitly say to preserve legacy `clear_wolf_den` semantics.
+```text
+state === 'disabled' && canRecover === false
+```
 
-Therefore:
+observed by `Fauna.isQuestSpawnPointPermanentlyDestroyed()` and polled by `QuestManager.pollDestroySpawnPointObjectives()`.
 
-- if `quests-progression-007` is implemented before this plan, reuse its world-owned wolf-pressure state and `destroy_spawn_point`; do not create another wolf problem/quest-specific kill condition;
-- if it is still unimplemented, the existing real den can technically drive V1, but be aware that binding this quest to `clear_wolf_den` bakes in the weaker "initial pack dead" meaning and will need reconciliation with 007 later.
+`wilki-u-kupca` originally shipped bound to `clear_wolf_den`. That objective still means **the den's initial pack is dead** (`Fauna.isWolfDenCleared()` / `denWolfAnimalIds`) and is required by `wilcza-jama`. Binding the merchant quest to it left a gameplay hole: the player could `[E] Zniszcz` the den (permanent destruction) while the quest stayed `active`, because pack-clear and habitat-destroy are different world facts.
 
-Do not create a new wolf population, kill counter or quest-owned threat state.
+The quest now uses the existing generic objective:
+
+```ts
+{ type: 'destroy_spawn_point', spawnerId: WOLF_DEN_ID }
+```
+
+Do not:
+
+- strengthen `clear_wolf_den` / `isWolfDenCleared()` to mean permanent destruction;
+- add a quest-owned `wolfDenDestroyed` flag;
+- change `wilcza-jama`.
+
+`clear_wolf_den` and `destroy_spawn_point` remain two different observations of fauna-owned state.
 
 Relevant files:
 
 - `src/fauna/AnimalSpawner.ts`
 - `src/fauna/createFauna.ts`
-- `src/app/gameLoop.ts`
+- `src/fauna/wolfDenScenario.ts`
+- `src/app/createApp.ts`
 - `src/quests/quests.ts`
 - `src/quests/QuestManager.ts`
 - `docs/plans/implementation-notes/quests-progression-007-wolves-approach-settlement-implementation-notes.md`
