@@ -3,8 +3,8 @@ import type { AnimalAgent } from '../fauna/AnimalAgent'
 import {
   getHorseAcquisitionState,
   horseOfferStatusHint,
-  merchantHorseAnimalId,
   MERCHANT_HORSE_PRICE,
+  merchantHorseAnimalId,
 } from './horseAcquisition'
 
 function fakeHorse(overrides: Partial<{ dead: boolean, playerOwned: boolean }> = {}): AnimalAgent {

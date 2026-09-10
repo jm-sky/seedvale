@@ -13,6 +13,7 @@ import type { ReputationManager } from '../reputation/ReputationManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { VueUi } from '../ui-vue/mount'
 import type { MerchantPricing } from '../ui-vue/store'
+import type { MerchantHorseOffer } from '../ui-vue/store'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { DayNightState } from '../world/dayNight'
@@ -34,6 +35,13 @@ import { previewPricedPurchaseNetCoins, previewTransactionNetCoins, resolveOffer
 import { NEUTRAL_SELL_PRICE_CONTEXT, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
+import {
+  getHorseAcquisitionState,
+  horseOfferStatusHint,
+  MERCHANT_HORSE_PRICE,
+  merchantHorseAnimalId,
+  resolveMerchantHorseAnimal,
+} from '../settlement/horseAcquisition'
 import { ui } from '../ui-vue/store'
 import {
   FAR_RANGE_KM,
@@ -51,15 +59,7 @@ import {
   weightedTopN,
 } from '../world/locations/locationDiscovery'
 import { settlementLocationId } from '../world/locations/worldLocationCatalog'
-import {
-  getHorseAcquisitionState,
-  horseOfferStatusHint,
-  MERCHANT_HORSE_PRICE,
-  merchantHorseAnimalId,
-  resolveMerchantHorseAnimal,
-} from '../settlement/horseAcquisition'
 import { payWorkContractAssignment } from './actions/workContractPayment'
-import type { MerchantHorseOffer } from '../ui-vue/store'
 
 /** Nearest settlements the home guard always mentions each conversation
  *  (plan §8 — no pool/scarcity mechanic, unlike landmarks). */

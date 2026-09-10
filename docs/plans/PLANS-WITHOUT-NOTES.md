@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-09 19:10:38  
+> Date: 2026-09-10 06:37:31  
 
 ## PLANS
 
-- `npc-004-npc-genealogy-lineages.md`
 - `npc-027-spatial-context-and-cave-traversal.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
@@ -14,37 +13,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `npc-004-npc-genealogy-lineages.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-004-npc-genealogy-lineages.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/npc-004-npc-genealogy-lineages.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/npc-004-npc-genealogy-lineages-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `npc-027-spatial-context-and-cave-traversal.md`
 

@@ -1,7 +1,7 @@
 # Plan: Water Reflection Content Budget
 
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `draft` 📝
 **Type:** optimization
 **Priority:** medium · **Effort:** S
 **Depends on:** -

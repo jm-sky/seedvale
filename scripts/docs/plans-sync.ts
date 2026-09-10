@@ -11,8 +11,8 @@ const REVIEW_SUFFIX = '-review.md'
 
 const DRAFT_HEADING = '## Drafts'
 const PLANNED_HEADING = '## Planned'
-const PLAN_TITLE_PAD_END_SIZE = 75
-const TABLE_HEADER = '| File                                                                        | Summary | Pri | Effort | Depends |'
+const PLAN_TITLE_PAD_END_SIZE = 78
+const TABLE_HEADER = `| ${'File'.padEnd(PLAN_TITLE_PAD_END_SIZE)} | Summary | Pri | Effort | Depends |`
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
 const PLANNED_END_TAG = '## Verification needed'

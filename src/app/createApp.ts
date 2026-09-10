@@ -875,8 +875,7 @@ export async function createApp(
     buildHorseAcquisitionQuest(merchantHorseId),
   ].map((def) => ({ ...def, settlementId: homeSettlementId }))
 
-  let questManager!: QuestManager
-  questManager = new QuestManager(
+  const questManager: QuestManager = new QuestManager(
     questDefs,
     worldAudio.playOnce,
     inventory,

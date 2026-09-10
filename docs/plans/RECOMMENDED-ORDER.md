@@ -40,8 +40,7 @@ _No qualifying plans._
 
 ### Polish
 
-1. `npc-004` — **Drzewo genealogiczne NPC**  
-   ⚪ `S` · ✅ ready · unlocks 0/0
+_No qualifying plans._
 
 ---
 
@@ -154,20 +153,12 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `world-terrain-015` — **Water Reflection Content Budget**  
-  🟡 `S` · **Score:**  19  
-   → **unlocks:** 0/0
-
-22. `fauna-007` — **Animal leading and cart harness**  
+21. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-23. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
+22. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
   🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
-24. `npc-004` — **Drzewo genealogiczne NPC**  
-  ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
 ---

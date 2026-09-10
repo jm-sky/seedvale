@@ -1,6 +1,6 @@
 # Plan: Drzewo genealogiczne NPC
 
-**Status:** `planned` 📋
+**Status:** `draft` 📝
 **Type:** polish
 **Created:** 2026-08-08
 **Priority:** low · **Effort:** S
