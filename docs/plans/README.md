@@ -75,6 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
+| ◼️ `world-terrain-018-cave-heightfield-representation-spike.md`                | -       | 🔴 | M      | -      |
 
 ---
 
@@ -201,7 +202,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `014`
 - ui-input: `016`
 - world: `023`
-- world-terrain: `018`
+- world-terrain: `019`
 
 This ids section is maintained automatically from the plan files.
 

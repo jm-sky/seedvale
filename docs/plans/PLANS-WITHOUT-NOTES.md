@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-10 16:57:52  
+> Date: 2026-09-10 18:13:37  
 
 ## PLANS
 
@@ -9,6 +9,7 @@
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
 - `settlements-npcs-023-profession-staffing-and-settlement-composition.md`
 - `tools-005-seedvale-character-preparation-panel.md`
+- `world-terrain-018-cave-heightfield-representation-spike.md`
 
 --------------------------------
 ## PROMPTS
@@ -122,6 +123,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `world-terrain-018-cave-heightfield-representation-spike.md`
+
+Prompt:
+
+```
+Zrób review planu `world-terrain-018-cave-heightfield-representation-spike.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/world-terrain-018-cave-heightfield-representation-spike.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/world-terrain-018-cave-heightfield-representation-spike-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

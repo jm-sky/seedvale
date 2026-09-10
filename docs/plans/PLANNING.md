@@ -18,7 +18,7 @@ Rules for AI agents creating Seedvale plans and implementation notes.
 - tools: `014`
 - ui-input: `016`
 - world: `023`
-- world-terrain: `018`
+- world-terrain: `019`
 
 This ids section is maintained automatically from the plan files.
 
