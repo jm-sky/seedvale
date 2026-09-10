@@ -91,6 +91,15 @@ import {
   WATER_INTERACTION_RANGE,
 } from './animalForaging'
 import {
+  applyAffinityGain,
+  deserializeHumanAffinity,
+  FAUNA_PLAYER_HUMAN_ID,
+  faunaNpcHumanId,
+  isAffinityTrusted,
+  serializeHumanAffinity,
+  type SparseHumanAffinity,
+} from './animalHumanAffinity'
+import {
   type AnimalLifeState,
   BIAS_STRENGTH,
   createAnimalLifeState,
@@ -99,15 +108,7 @@ import {
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
-import {
-  applyAffinityGain,
-  deserializeHumanAffinity,
-  FAUNA_PLAYER_HUMAN_ID,
-  faunaNpcHumanId,
-  isAffinityTrusted,
-  type SparseHumanAffinity,
-  serializeHumanAffinity,
-} from './animalHumanAffinity'
+import { horseNameForAnimal } from './animalNames'
 import {
   type AnimalOwner,
   deriveOwnerHouseId,
@@ -507,6 +508,8 @@ export type AnimalSaveState = {
   }
   /** Sparse human affinity (plan fauna-013) — optional, backward-compatible. */
   affinity?: { humanId: string, value: number }[]
+  /** Optional given name — assigned to a horse on player ownership transfer. */
+  name?: string
 }
 
 type EnvironmentSense = {
@@ -863,6 +866,8 @@ export class AnimalAgent {
   readonly animalId: string
   /** Authoritative ownership (plan fauna-020) — household, player, or none. */
   private _owner: AnimalOwner
+  /** Optional given name — assigned to a horse on player ownership transfer. */
+  private name?: string
   /** Owning household runtime context (plan 122) — cleared on player transfer. */
   private _household: Household | null
   /** Player-owned Follow/Stay control (plan fauna-020). */
@@ -1294,7 +1299,7 @@ export class AnimalAgent {
     // the first real `sync()` call in `tickPresentationAndLife()` (plan
     // fauna-017 step 4c).
     this.labelController = createAgentStatusLabelController(
-      ANIMAL_LABELS[def.kind],
+      this.getDisplayName(),
       null,
       ['hp', 'stamina', 'satiety', 'hydration'],
       this.labelHeight(),
@@ -1369,6 +1374,15 @@ export class AnimalAgent {
     return isPlayerOwnedOwner(this._owner)
   }
 
+  getName(): string | undefined {
+    return this.name
+  }
+
+  getDisplayName(): string {
+    const speciesLabel = ANIMAL_LABELS[this.def.kind]
+    return this.name ? `${speciesLabel}: ${this.name}` : speciesLabel
+  }
+
   getOwnedControlMode(): OwnedAnimalControlMode {
     return this._control.mode
   }
@@ -1376,9 +1390,13 @@ export class AnimalAgent {
   /** Household → player transfer cleanup (plan fauna-020). */
   transferOwnershipToPlayer(): void {
     this._owner = { kind: 'player' }
+    if (this.def.kind === 'horse' && !this.name) {
+      this.name = horseNameForAnimal(this.animalId)
+    }
     this._household = null
     this.home.set(this.mesh.position.x, 0, this.mesh.position.z)
     Object.assign(this._control, createFollowOwnedAnimalControlState())
+    this.labelController.setName(this.getDisplayName())
   }
 
   setOwnedControlMode(mode: OwnedAnimalControlMode): void {
@@ -1550,7 +1568,7 @@ export class AnimalAgent {
     )
     this.lastObservationLevel = observationLevel
     const speciesLabel = ANIMAL_LABELS[this.def.kind]
-    const knownName = this.dangerous ? `Groźny ${speciesLabel}` : speciesLabel
+    const knownName = this.dangerous ? `Groźny ${speciesLabel}` : this.getDisplayName()
     const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     // Satiety / hydration are inverted needs (full bar = well fed/hydrated),
     // so they're fed as `{ current: 1 - need, max: 1 }` rather than a
@@ -1875,6 +1893,7 @@ export class AnimalAgent {
       owner: this._owner,
       control: this.isPlayerOwned() ? snapshotOwnedAnimalControl(this._control) : undefined,
       affinity: serializeHumanAffinity(this.humanAffinityById),
+      name: this.name,
     }
   }
 
@@ -1931,6 +1950,8 @@ export class AnimalAgent {
     if (this._control.stayAnchor) {
       this.home.set(this._control.stayAnchor.x, 0, this._control.stayAnchor.z)
     }
+    this.name = state.name
+    this.labelController.setName(this.getDisplayName())
   }
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */

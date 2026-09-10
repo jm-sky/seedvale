@@ -1791,7 +1791,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               }
             }
           } else if (target.animal.isPlayerOwned()) {
-            const label = ANIMAL_LABELS[target.animal.def.kind]
+            const label = target.animal.getDisplayName()
             const actions = []
             if (target.animal.getOwnedControlMode() !== 'follow') {
               actions.push({

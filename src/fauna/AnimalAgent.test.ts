@@ -3,9 +3,10 @@ import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { AnimalAgent, type AnimalAgentDeps } from './AnimalAgent'
-import { ANIMAL_DEFS } from './animalDefs'
+import { ANIMAL_DEFS, ANIMAL_LABELS } from './animalDefs'
 import { FAUNA_PLAYER_HUMAN_ID } from './animalHumanAffinity'
 import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
+import { horseNameForAnimal } from './animalNames'
 import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
 
 const sampleHeight = () => 0
@@ -226,6 +227,45 @@ describe('AnimalAgent', () => {
       const loaded = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.dog, animalId: 'dog-4' }))
       loaded.hydrate({ ...snap, x: 0, z: 0, yaw: 0 })
       expect(loaded.getHumanAffinityValue(FAUNA_PLAYER_HUMAN_ID)).toBe(0.25)
+    })
+  })
+
+  describe('horse given name on player ownership', () => {
+    it('assigns a deterministic name to an unnamed horse on transfer', () => {
+      const animal = new AnimalAgent(makeDeps({ animalId: 'merchant-horse-home' }))
+      expect(animal.getName()).toBeUndefined()
+      animal.transferOwnershipToPlayer()
+      expect(animal.getName()).toBe(horseNameForAnimal(animal.animalId))
+      expect(animal.getDisplayName()).toBe(`${ANIMAL_LABELS.horse}: ${horseNameForAnimal(animal.animalId)}`)
+    })
+
+    it('does not overwrite an existing name on ownership transfer', () => {
+      const animal = new AnimalAgent(makeDeps({ animalId: 'named-horse' }))
+      animal.hydrate({
+        ...animal.snapshot(),
+        name: 'Storm',
+      })
+      animal.transferOwnershipToPlayer()
+      expect(animal.getName()).toBe('Storm')
+    })
+
+    it('round-trips name through snapshot and hydrate', () => {
+      const animal = new AnimalAgent(makeDeps({ animalId: 'persist-horse' }))
+      animal.hydrate({
+        ...animal.snapshot(),
+        name: 'Storm',
+      })
+      expect(animal.getName()).toBe('Storm')
+      expect(animal.snapshot().name).toBe('Storm')
+    })
+
+    it('hydrates a legacy save without name', () => {
+      const animal = new AnimalAgent(makeDeps({ animalId: 'legacy-horse' }))
+      const state = animal.snapshot()
+      expect(state.name).toBeUndefined()
+      animal.hydrate(state)
+      expect(animal.getName()).toBeUndefined()
+      expect(animal.getDisplayName()).toBe(ANIMAL_LABELS.horse)
     })
   })
 })
