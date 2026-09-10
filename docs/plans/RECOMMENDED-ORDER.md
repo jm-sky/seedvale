@@ -157,10 +157,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
-  🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
 ---
 
 ## Initially Blocked

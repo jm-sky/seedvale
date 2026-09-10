@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation`  | 2026-09-10 09:05:08 | —                   | `settlements-npcs` | —          |
 | `ui-input-013-character-stats`                                         | 2026-09-10 08:05:43 | —                   | `ui-input`       | —          |
 | `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward` | 2026-09-10 07:48:51 | —                   | `quests-progression` | —          |
 | `ui-input-014-construction-status-and-context-actions`                 | 2026-09-09 22:15:15 | —                   | `ui-input`       | —          |
