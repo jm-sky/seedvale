@@ -229,6 +229,7 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `fauna/createFauna.test.ts`
 - `fauna/createFauna.ts`
+- `player/worldWaterEligibility.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/findSettlementSite.test.ts`
 - `settlement/findSettlementSite.ts`

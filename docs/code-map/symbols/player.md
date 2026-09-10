@@ -71,23 +71,23 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveGroundQuery` — type — line 198
-- `CaveOccupancyQuery` — type — line 203
-- `ColliderSource` — type — line 191
-- `HeightSampler` — type — line 188
-- `MOVE_SPEED` — const — line 62
-- `PLAYER_COLLISION_RADIUS` — const — line 65
-- `PLAYER_HEIGHT` — const — line 74
-- `PLAYER_MODEL_URL` — const — line 186
-- `PLAYER_STARTING_ATTRIBUTES` — const — line 90
-- `PlayerController` — class — line 215
+- `CaveGroundQuery` — type — line 199
+- `CaveOccupancyQuery` — type — line 204
+- `ColliderSource` — type — line 192
+- `HeightSampler` — type — line 189
+- `MOVE_SPEED` — const — line 66
+- `PLAYER_COLLISION_RADIUS` — const — line 69
+- `PLAYER_HEIGHT` — const — line 78
+- `PLAYER_MODEL_URL` — const — line 187
+- `PLAYER_STARTING_ATTRIBUTES` — const — line 94
+- `PlayerController` — class — line 216
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
-- `PlayerMovementState` — type — line 57
-- `rockCeilingMaxY` — function — line 79
-- `SPRINT_MULTIPLIER` — const — line 66
+- `PlayerMovementState` — type — line 61
+- `rockCeilingMaxY` — function — line 83
+- `SPRINT_MULTIPLIER` — const — line 70
 
 ## `player/playerDamage.ts`
 
@@ -258,3 +258,11 @@ Generated from exported TypeScript symbols.
 - `STEP_DOWN_MAX` — const — line 9
 - `VerticalMotionInput` — type — line 14
 - `VerticalMotionResult` — type — line 27
+
+## `player/worldWaterEligibility.ts`
+
+- `MAX_SWIM_DEPTH` — const — line 16
+  - domain: items-player
+- `swimFeetY` — function — line 32
+- `worldWaterAppliesInCurrentSpace` — function — line 26
+- `WorldWaterOccupancy` — type — line 18

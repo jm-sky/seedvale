@@ -384,6 +384,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `player/worldWaterEligibility.test.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
@@ -419,6 +420,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `player/worldWaterEligibility.test.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
@@ -573,6 +575,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `player/worldWaterEligibility.test.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
@@ -1478,6 +1481,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `player/worldWaterEligibility.test.ts`
 - `world/caveGenerator.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`

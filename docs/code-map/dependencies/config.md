@@ -74,6 +74,7 @@ Generated from TypeScript imports.
 - `main.ts`
 - `perf/benchmark.ts`
 - `persistence/saveData.ts`
+- `player/worldWaterEligibility.test.ts`
 - `render/createPostProcessing.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/roadNetwork.ts`

@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `player/humanCarryCapacity.ts`
 - `player/playerEncumbrance.ts`
 - `player/verticalMotion.ts`
+- `player/worldWaterEligibility.ts`
 - `shared/HealthState.ts`
 - `shared/PhysicalAttributes.ts`
 - `shared/StaminaState.ts`
@@ -504,3 +505,23 @@ Generated from TypeScript imports.
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
+
+## `player/worldWaterEligibility.test.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `fauna/createFauna.ts`
+- `player/worldWaterEligibility.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/caves/caveSdfField.ts`
+- `world/caves/caveSdfQuery.ts`
+- `world/caves/productionTopology.ts`
+- `world/largeCaves.ts`
+
+## `player/worldWaterEligibility.ts`
+
+**Imported by**
+
+- `player/PlayerController.ts`
+- `player/worldWaterEligibility.test.ts`
