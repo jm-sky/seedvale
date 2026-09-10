@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { NpcDecisionTarget } from './weatherPressure'
 import { createNpcStateRegistry } from '../settlement/npcState'
 import { damageHealth } from '../shared/HealthState'
 import { pickActionKind } from '../simulation'
 import { graveIdForDeceased, type NpcGraves } from '../world/npcGraves'
+import { WEATHER_SEVERE_SHELTER_THRESHOLD, type NpcDecisionTarget } from './weatherPressure'
 import {
   getLastGraveVisitAtDays,
   GRAVE_VISIT_COOLDOWN_DAYS,
@@ -12,8 +12,10 @@ import {
   isGraveVisitCooldownExpired,
   recordGraveVisit,
   resolveGraveVisitPressure,
+  revalidateGraveVisitCandidate,
+  type GraveVisitCandidate,
 } from './graveVisitPressure'
-import { decideNpcAction } from './npcDecision'
+import { decideNpcAction, shouldInterruptAction } from './npcDecision'
 
 function makeGraves(records: Array<{ deceasedNpcId: string, x: number, z: number, yaw?: number }>): NpcGraves {
   const byDeceased = new Map(records.map((r) => [r.deceasedNpcId, r]))
@@ -38,6 +40,19 @@ function makeGraves(records: Array<{ deceasedNpcId: string, x: number, z: number
   }
 }
 
+function resolveWhenOpportunity(
+  visitorId: string,
+  visitor: ReturnType<ReturnType<typeof createNpcStateRegistry>['getOrCreate']>,
+  hooks: Parameters<typeof resolveGraveVisitPressure>[2],
+  startDays = 0,
+): ReturnType<typeof resolveGraveVisitPressure> {
+  let result = resolveGraveVisitPressure(visitorId, visitor, hooks, startDays)
+  for (let day = startDays; day < startDays + 120 && !result.candidate; day += 0.5) {
+    result = resolveGraveVisitPressure(visitorId, visitor, hooks, day)
+  }
+  return result
+}
+
 describe('resolveGraveVisitPressure (plan npc-026)', () => {
   it('returns a bounded candidate for a living same-family NPC with a persistent grave', () => {
     const registry = createNpcStateRegistry()
@@ -51,10 +66,7 @@ describe('resolveGraveVisitPressure (plan npc-026)', () => {
       graves: makeGraves([{ deceasedNpcId: '0_0:npc:0', x: 4, z: 6 }]),
     }
 
-    let result = { score: 0, candidate: null as ReturnType<typeof resolveGraveVisitPressure>['candidate'] }
-    for (let day = 0; day < 120 && !result.candidate; day += 0.5) {
-      result = resolveGraveVisitPressure('0_0:npc:1', visitor, hooks, day)
-    }
+    const result = resolveWhenOpportunity('0_0:npc:1', visitor, hooks)
 
     expect(result.score).toBe(GRAVE_VISIT_PRESSURE)
     expect(result.candidate?.deceasedNpcId).toBe('0_0:npc:0')
@@ -84,6 +96,36 @@ describe('resolveGraveVisitPressure (plan npc-026)', () => {
     expect(noGrave.score).toBe(0)
   })
 
+  it('does not return a candidate for a living same-family member', () => {
+    const registry = createNpcStateRegistry()
+    const visitor = registry.getOrCreate('0_0:npc:1', 0)
+    registry.getOrCreate('0_0:npc:0', 0)
+
+    const result = resolveGraveVisitPressure('0_0:npc:1', visitor, {
+      familyNpcIds: () => ['0_0:npc:0'],
+      getNpcState: (id) => registry.get(id),
+      graves: makeGraves([{ deceasedNpcId: '0_0:npc:0', x: 1, z: 2 }]),
+    }, 10)
+    expect(result.score).toBe(0)
+    expect(result.candidate).toBeNull()
+  })
+
+  it('does not write cooldown while resolving a candidate', () => {
+    const registry = createNpcStateRegistry()
+    const visitor = registry.getOrCreate('0_0:npc:1', 0)
+    const deceased = registry.getOrCreate('0_0:npc:0', 0)
+    damageHealth(deceased.health, deceased.health.maxHp)
+
+    const hooks = {
+      familyNpcIds: () => ['0_0:npc:0'] as const,
+      getNpcState: (id: string) => registry.get(id),
+      graves: makeGraves([{ deceasedNpcId: '0_0:npc:0', x: 4, z: 6 }]),
+    }
+    const result = resolveWhenOpportunity('0_0:npc:1', visitor, hooks)
+    expect(result.candidate).not.toBeNull()
+    expect(visitor.graveVisits).toEqual([])
+  })
+
   it('uses stable grave id lookup, not cemetery selection', () => {
     const registry = createNpcStateRegistry()
     const visitor = registry.getOrCreate('0_0:npc:1', 0)
@@ -91,22 +133,35 @@ describe('resolveGraveVisitPressure (plan npc-026)', () => {
     damageHealth(deceased.health, deceased.health.maxHp)
 
     const graves = makeGraves([{ deceasedNpcId: '0_0:npc:0', x: 99, z: -12 }])
-    let result = resolveGraveVisitPressure('0_0:npc:1', visitor, {
+    const result = resolveWhenOpportunity('0_0:npc:1', visitor, {
       familyNpcIds: () => ['0_0:npc:0'],
       getNpcState: (id) => registry.get(id),
       graves,
-    }, 0)
-    for (let day = 0; day < 120 && !result.candidate; day += 0.5) {
-      result = resolveGraveVisitPressure('0_0:npc:1', visitor, {
-        familyNpcIds: () => ['0_0:npc:0'],
-        getNpcState: (id) => registry.get(id),
-        graves,
-      }, day)
-    }
+    })
 
     expect(result.candidate?.graveId).toBe('grave:0_0:npc:0')
     expect(result.candidate?.x).toBe(99)
     expect(result.candidate?.z).toBe(-12)
+  })
+
+  it('drops a candidate when the stable grave lookup fails', () => {
+    const registry = createNpcStateRegistry()
+    const deceased = registry.getOrCreate('0_0:npc:0', 0)
+    damageHealth(deceased.health, deceased.health.maxHp)
+    const candidate: GraveVisitCandidate = {
+      deceasedNpcId: '0_0:npc:0',
+      graveId: graveIdForDeceased('0_0:npc:0'),
+      x: 4,
+      z: 6,
+      yaw: 0,
+    }
+    const hooks = {
+      familyNpcIds: () => ['0_0:npc:0'] as const,
+      getNpcState: (id: string) => registry.get(id),
+      graves: makeGraves([{ deceasedNpcId: '0_0:npc:0', x: 4, z: 6 }]),
+    }
+    expect(revalidateGraveVisitCandidate(candidate, hooks)?.graveId).toBe(candidate.graveId)
+    expect(revalidateGraveVisitCandidate(candidate, { ...hooks, graves: makeGraves([]) })).toBeNull()
   })
 })
 
@@ -121,6 +176,51 @@ describe('grave visit cooldown persistence (plan npc-026)', () => {
 
     const roundTrip = createNpcStateRegistry({ '0_0:npc:1': registry.serialize()['0_0:npc:1']! })
     expect(getLastGraveVisitAtDays(roundTrip.getOrCreate('0_0:npc:1', 0).graveVisits, '0_0:npc:0')).toBe(5)
+  })
+
+  it('does not let visiting one family grave suppress another', () => {
+    const registry = createNpcStateRegistry()
+    const visitor = registry.getOrCreate('0_0:npc:2', 0)
+    const first = registry.getOrCreate('0_0:npc:0', 0)
+    const second = registry.getOrCreate('0_0:npc:1', 0)
+    damageHealth(first.health, first.health.maxHp)
+    damageHealth(second.health, second.health.maxHp)
+    recordGraveVisit(visitor.graveVisits, '0_0:npc:0', 5)
+
+    const hooks = {
+      familyNpcIds: () => ['0_0:npc:0', '0_0:npc:1'] as const,
+      getNpcState: (id: string) => registry.get(id),
+      graves: makeGraves([
+        { deceasedNpcId: '0_0:npc:0', x: 1, z: 1 },
+        { deceasedNpcId: '0_0:npc:1', x: 8, z: 3 },
+      ]),
+    }
+    const result = resolveWhenOpportunity('0_0:npc:2', visitor, hooks, 5)
+    expect(result.candidate?.deceasedNpcId).toBe('0_0:npc:1')
+  })
+
+  it('expires cooldown lazily from larger elapsedDays after unload or time-skip', () => {
+    const registry = createNpcStateRegistry()
+    const visitor = registry.getOrCreate('0_0:npc:1', 0)
+    const deceased = registry.getOrCreate('0_0:npc:0', 0)
+    damageHealth(deceased.health, deceased.health.maxHp)
+    recordGraveVisit(visitor.graveVisits, '0_0:npc:0', 2)
+
+    const hooks = {
+      familyNpcIds: () => ['0_0:npc:0'] as const,
+      getNpcState: (id: string) => registry.get(id),
+      graves: makeGraves([{ deceasedNpcId: '0_0:npc:0', x: 4, z: 6 }]),
+    }
+    expect(resolveGraveVisitPressure('0_0:npc:1', visitor, hooks, 2).candidate).toBeNull()
+
+    const afterSkip = createNpcStateRegistry({ '0_0:npc:1': registry.serialize()['0_0:npc:1']! })
+    const restored = afterSkip.getOrCreate('0_0:npc:1', 0)
+    const later = 2 + GRAVE_VISIT_COOLDOWN_DAYS
+    const result = resolveWhenOpportunity('0_0:npc:1', restored, {
+      ...hooks,
+      getNpcState: (id) => id === '0_0:npc:1' ? restored : registry.get(id),
+    }, later)
+    expect(result.candidate?.deceasedNpcId).toBe('0_0:npc:0')
   })
 })
 
@@ -148,6 +248,30 @@ describe('grave visit arbitration (plan npc-026)', () => {
       'idle',
     )
     expect(idleWinner).toBe('visitGrave')
+
+    expect(pickActionKind<NpcDecisionTarget>(
+      [{ kind: 'heal', score: 0.72 }, { kind: 'visitGrave', score: GRAVE_VISIT_PRESSURE }],
+      'idle',
+    )).toBe('heal')
+    expect(pickActionKind<NpcDecisionTarget>(
+      [{ kind: 'seekShelter', score: 0.5 }, { kind: 'visitGrave', score: GRAVE_VISIT_PRESSURE }],
+      'idle',
+    )).toBe('seekShelter')
+  })
+
+  it('visitGrave stays interruptible because it is not a Need (activeNeed remains idle)', () => {
+    expect(shouldInterruptAction({
+      collapsing: false,
+      activeNeed: 'idle',
+      criticalNeed: 'food',
+      weatherPressure: 0,
+    })).toBe(true)
+    expect(shouldInterruptAction({
+      collapsing: false,
+      activeNeed: 'idle',
+      criticalNeed: 'idle',
+      weatherPressure: WEATHER_SEVERE_SHELTER_THRESHOLD,
+    })).toBe(true)
   })
 
   it('opportunity gate is deterministic for the same inputs', () => {

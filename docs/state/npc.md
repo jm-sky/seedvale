@@ -27,6 +27,7 @@ When this file and the code disagree, the code wins — update this file.
 - `helperAssignment` — a player-configured delivery target (`{targetContainerId, resourceKind, enabled}`, set from the Villagers UI).
 - `activePlan` — the persistent Plan described below (`{goal, strategy, state, progress, currentStep}`).
 - `postDeath` — corpse/lifecycle record after the alive→dead edge (`null` while alive). Holds death position/yaw, a world-days death-time anchor, persisted loadout loot, and `active`/`claimed`/`terminal` status so a corpse can age during stream-out/time-skip and not rematerialize after natural cleanup. Burial (`npc-011`) can `claimed`-lock cleanup without a parallel corpse registry.
+- `graveVisits` — bounded per-deceased `{ deceasedNpcId, lastVisitedAtDays }` history for completed family grave visits (`npc-026`). Optional on restore (absent = none). Distinct from the world-owned grave record.
 - `personalInventory` — every NPC's authoritative personal belongings (`Inventory`, including when empty). Survives settlement streaming, `WorldBundle` rebuild and save/load. Distinct from transient `NpcAgent.carried` work cargo.
 
 `NpcAgent` holds **direct references** into this state, not a copy — disposing/recreating the `NpcAgent` instance (settlement unload/reload, an in-session `WorldBundle` rebuild) re-hydrates from the same object. **All of the fields above are persisted** as part of `SaveData.npcStates` — see [Persistence](#persistence). `needsInitialPersonalLoadout` is a runtime-only latch on the same object (first creation vs restore) and is never saved.
@@ -149,7 +150,7 @@ Combat/weapon resolution reads personal belongings; ammo and work cargo stay on 
 
 ## Persistence
 
-The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/injuryRecoveryUpdatedAtDays/temporaryConditions/helperAssignment/activePlan/postDeath/personalInventory) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/`carried` inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit (loadout belongings that crossed the alive→dead edge live on `postDeath.loot` instead). Identity/physical profile is deterministic and never persisted. Derived injury severity and SPEA modifiers are recomputed after restore. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
+The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/injuryRecoveryUpdatedAtDays/temporaryConditions/helperAssignment/activePlan/postDeath/graveVisits/personalInventory) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/`carried` inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit (loadout belongings that crossed the alive→dead edge live on `postDeath.loot` instead). Identity/physical profile is deterministic and never persisted. Derived injury severity and SPEA modifiers are recomputed after restore. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
 
 ## Cross-domain integrations
 
@@ -166,7 +167,7 @@ The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/phy
 
 ## Limitations
 
-- Burial decisions, graves, and household mourning remain `npc-011` — this plan only leaves a `claimed` handoff on the corpse record.
+- Burial (`npc-011`) is a household/relationship pressure that claims a corpse and leaves a persistent world-owned grave; family grave visits (`npc-026`) are a separate optional pressure over that completed grave, not a mourning simulation.
 - Blacksmith and farmer-planting profession work is wired but currently dormant in a normal playthrough — nothing yet supplies the household-held item (whetstone, seed) either path requires.
 - An NPC's `carried` inventory is never persisted; an interrupted claim/delivery after the claim step genuinely loses the goods. Personal belongings on `personalInventory` persist.
 - The two "relationship" stores (NPC↔NPC and player↔NPC) are easy to conflate by name but are structurally unrelated — see [Relationships, social, and dialogue](#relationships-social-and-dialogue).
@@ -185,6 +186,9 @@ src/ai/npcProfessionWork.ts
 src/ai/npcWorkContract.ts
 src/ai/weatherPressure.ts
 src/ai/healingPressure.ts
+src/ai/burialPressure.ts
+src/ai/graveVisitPressure.ts
+src/ai/animalCorpseCleanupPressure.ts
 src/shared/injurySeverity.ts
 src/shared/injuryRecovery.ts
 src/ai/npcAnimalThreat.ts

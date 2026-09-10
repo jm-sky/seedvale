@@ -1,12 +1,24 @@
 # Plan: NPC Grave Visits
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
-**Depends on:** `npc-011`, ~~world-terrain-016~~
+**Depends on:** ~~npc-011~~, ~~world-terrain-016~~
 **Domain:** `npc`  
 **Type:** `feature`  
 **Roadmap:** -
+
+## Implementation status
+
+Implemented on `main` (2026-09-09):
+
+- Bounded same-family grave-visit resolver built at settlement construction (`familyNpcIds` from `def.families` / `flatMembers`).
+- Low optional `'visitGrave'` pressure in the existing `NpcAgent` stage-1 arbitration; outer rank 65 (between `scheduledSleep` 70 and `idle` 60).
+- Ordinary `goTo` → timed `visitGrave` execute at the persistent `NpcGraveRecord` position; `activeNeed` stays `'idle'`.
+- Per-deceased `NpcAuthoritativeState.graveVisits` cooldown written only after a successful stay; `nowDays` (`elapsedDays`) is the clock.
+- Focused tests for eligibility, stable grave id, priority, cooldown persistence, lazy expiry and revalidation.
+
+Browser/gameplay verification remains manual.
 
 ## Cel
 

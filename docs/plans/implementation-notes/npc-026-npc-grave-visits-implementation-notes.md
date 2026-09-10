@@ -1,7 +1,23 @@
 # NPC Grave Visits — Implementation Notes
 
 **Plan:** `npc-026-npc-grave-visits.md`  
-**Recon:** 2026-09-09, current `main` (`de12f603` baseline before docs edit)
+**Recon:** 2026-09-09, current `main` (`de12f603` baseline before docs edit)  
+**Implemented:** 2026-09-09 on `main` (`f691a2b8`); remaining ROI tests/docs 2026-09-10
+
+## Implemented contract
+
+V1 landed on the seams the recon named. Current source is authoritative:
+
+- `src/ai/graveVisitPressure.ts` — family/grave eligibility, per-deceased cooldown, deterministic opportunity gate, candidate + revalidation.
+- `src/settlement/createSettlement.ts` — bounded `familyNpcIdsByVisitor` from `def.families` / `flatMembers`; `graveVisitHooks` into `NpcAgent`.
+- `NpcAuthoritativeState.graveVisits` — optional snapshot field, no save-version bump (absent = none).
+- `Settlement.update(nowDays)` → `NpcAgent.update(..., nowDays)` — absolute `elapsedDays` for cooldown.
+- `NpcDecisionTarget` / `NpcDecisionKind` `'visitGrave'` at rank 65; `ActionId` `'visitGrave'`.
+- Completion-only `recordGraveVisit()` after a 2s timed stay. In-progress travel is abandoned on settlement unload.
+
+Do not add a second graves registry, fake `NeedId`, cemetery lookup, or off-screen visit executor.
+
+---
 
 ## Recon result
 
@@ -529,4 +545,4 @@ Do not introduce:
 - nearest-cemetery fallback,
 - player-triggered visitor spawn.
 
-This is docs/recon only. No feature implementation, browser verification or `pnpm docs:sync`.
+This recon described the intended seams before implementation. The feature is on `main`; browser/gameplay verification remains manual. Do not run `pnpm docs:sync` by hand.

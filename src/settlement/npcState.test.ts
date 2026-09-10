@@ -92,6 +92,17 @@ describe('createNpcStateRegistry', () => {
     })
     expect(registry.getOrCreate('0_0:npc:0', 0).physicalInjury).toBe(0)
     expect(registry.getOrCreate('0_0:npc:0', 0).injuryRecoveryUpdatedAtDays).toBeUndefined()
+    expect(registry.getOrCreate('0_0:npc:0', 0).graveVisits).toEqual([])
+  })
+
+  it('round-trips completed family grave visits (plan npc-026)', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:1', 0)
+    state.graveVisits.push({ deceasedNpcId: '0_0:npc:0', lastVisitedAtDays: 12.5 })
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:1', 0)
+    expect(hydrated.graveVisits).toEqual([{ deceasedNpcId: '0_0:npc:0', lastVisitedAtDays: 12.5 }])
+    expect(hydrated.graveVisits).not.toBe(state.graveVisits)
   })
 
   it('clear() drops every state so the next getOrCreate starts fresh', () => {
