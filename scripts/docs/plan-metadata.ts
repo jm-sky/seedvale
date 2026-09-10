@@ -477,8 +477,11 @@ const processStatus = (ctx: RepairContext): void => {
     return
   }
 
-  const mappedStatus = REPAIR_STATUS_MAP[raw ?? ''] ?? DEFAULT_STATUS
-  const finalStatus = mappedStatus ?? normalized ?? DEFAULT_STATUS
+  // Prefer a case/spacing-normalized known status over the unrecognized
+  // fallback. `REPAIR_STATUS_MAP[raw] ?? DEFAULT_STATUS` would otherwise
+  // swallow `In Progress` → `in progress` and rewrite it to `planned`.
+  const mappedStatus = REPAIR_STATUS_MAP[raw ?? '']
+  const finalStatus = normalized ?? mappedStatus ?? DEFAULT_STATUS
 
   if (!normalized) {
     ctx.warnings.push(`Status: unrecognized value "${raw ?? ''}" — defaulted to "planned"`)
