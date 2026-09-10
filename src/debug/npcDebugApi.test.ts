@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { NpcInspectionSnapshot } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
+import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { QuestManager } from '../quests/QuestManager'
 import type { SettlementCell, SettlementDef } from '../settlement/settlementGenerator'
 import type { SettlementsManager } from '../settlement/SettlementsManager'
@@ -98,6 +99,37 @@ function fakeSettlementsManager(opts: FakeManagerOpts): { manager: SettlementsMa
   return { manager, setLoaded: (l) => { loaded = l } }
 }
 
+function fakeWolfDenSpawner(overrides: Partial<PreySpawner> = {}): PreySpawner {
+  return {
+    id: 'home:wolfDen',
+    x: 120,
+    z: -45,
+    type: 'wolfDen',
+    kind: 'wolf',
+    respawnIntervalDays: Infinity,
+    maxPreyCount: 2,
+    daysSinceLastRespawn: 0,
+    state: 'active',
+    deathsThisCycle: 1,
+    disabledAtDay: null,
+    pressure: 0.75,
+    humanTaste: true,
+    canRecover: false,
+    lastSettlementTripOpportunityDay: null,
+    ...overrides,
+  }
+}
+
+function fakeFauna(opts: {
+  spawners?: readonly PreySpawner[]
+  isWolfDenCleared?: boolean
+} = {}) {
+  return {
+    getSpawners: () => opts.spawners ?? [],
+    isWolfDenCleared: () => opts.isWolfDenCleared ?? false,
+  }
+}
+
 function install(
   bundle: WorldBundle,
   opts: {
@@ -105,6 +137,7 @@ function install(
     teleport?: (x: number, z: number) => Promise<void>
     config?: WorldConfig
     groundTrace?: ReturnType<typeof createPlayerGroundTraceBuffer> | null
+    questManager?: { list?: () => unknown[] }
   } = {},
 ) {
   const worldContext = {} as unknown as WorldContext
@@ -118,6 +151,8 @@ function install(
   }
   const questManager = {
     onInteractObjective: vi.fn(),
+    list: vi.fn(() => []),
+    ...opts.questManager,
   } as unknown as QuestManager
   const player = {
     temporaryConditions: createEmptyTemporaryConditions(),
@@ -176,6 +211,9 @@ describe('SeedvaleDebugApi shape', () => {
     expect(typeof api!.locations).toBe('object')
     expect(typeof api!.teleportTo).toBe('function')
     expect(typeof api!.teleportTo.villageNearest).toBe('function')
+    expect(typeof api!.quests.list).toBe('function')
+    expect(typeof api!.quests.target).toBe('function')
+    expect(typeof api!.quests.teleportToTarget).toBe('function')
     expect(typeof api!.help).toBe('function')
   })
 
@@ -186,7 +224,7 @@ describe('SeedvaleDebugApi shape', () => {
     const help = api!.help()
     expect(typeof help).toBe('string')
     expect(help.length).toBeGreaterThan(0)
-    for (const word of ['npc', 'village', 'locations', 'teleportTo', 'injury']) {
+    for (const word of ['npc', 'village', 'locations', 'teleportTo', 'injury', 'quests']) {
       expect(help).toContain(word)
     }
   })
@@ -589,5 +627,124 @@ describe('player ground-resolution trace', () => {
     const { api } = install(bundle)
     expect(api!.help()).toContain('getPlayerGroundTrace')
     expect(api!.help()).toContain('clearPlayerGroundTrace')
+  })
+})
+
+describe('quests', () => {
+  it('quests.list() returns the current QuestManager.list() result', () => {
+    stubWindow('?debug=1')
+    const entries = [{ id: 'wilki-u-kupca', title: 'Wilki u kupca' }]
+    const list = vi.fn(() => entries)
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const { api } = install(bundle, { questManager: { list } })
+    expect(api!.quests.list()).toBe(entries)
+    expect(list).toHaveBeenCalledOnce()
+  })
+
+  it("quests.target('wolf-den') resolves the physical wolfDen spawner, not an id match", () => {
+    stubWindow('?debug=1')
+    const den = fakeWolfDenSpawner()
+    const other = fakeWolfDenSpawner({
+      id: 'wolf-den',
+      type: 'cave',
+      kind: 'wolf',
+      x: 1,
+      z: 1,
+    })
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      fauna: fakeFauna({ spawners: [other, den], isWolfDenCleared: false }),
+    } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const snapshot = api!.quests.target('wolf-den')
+    expect(snapshot).not.toBeNull()
+    expect(snapshot).toMatchObject({
+      targetId: 'wolf-den',
+      resolved: true,
+      kind: 'spawnPoint',
+      spawner: {
+        id: 'home:wolfDen',
+        type: 'wolfDen',
+        animalKind: 'wolf',
+        position: { x: den.x, z: den.z },
+        state: 'active',
+        deathsThisCycle: den.deathsThisCycle,
+        maxPreyCount: den.maxPreyCount,
+        pressure: den.pressure,
+        humanTaste: true,
+        canRecover: false,
+      },
+      questState: { cleared: false },
+    })
+    expect(snapshot!.spawner.id).not.toBe('wolf-den')
+    expect(snapshot!.spawner.position.x).toBe(den.x)
+    expect(snapshot!.spawner.position.z).toBe(den.z)
+    expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot)
+  })
+
+  it('quests.target() reports Fauna.isWolfDenCleared(), not PreySpawner state', () => {
+    stubWindow('?debug=1')
+    const den = fakeWolfDenSpawner({ state: 'active', deathsThisCycle: 0 })
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      fauna: fakeFauna({ spawners: [den], isWolfDenCleared: true }),
+    } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const snapshot = api!.quests.target('wolf-den')
+    expect(snapshot?.questState).toEqual({ cleared: true })
+    expect(snapshot?.spawner.state).toBe('active')
+  })
+
+  it('quests.teleportToTarget() uses the injected teleport callback at the resolved spawner', async () => {
+    stubWindow('?debug=1')
+    const den = fakeWolfDenSpawner({ x: 88, z: 17 })
+    const teleport = vi.fn(async () => {})
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      fauna: fakeFauna({ spawners: [den] }),
+    } as unknown as WorldBundle
+    const { api } = install(bundle, { teleport })
+    await expect(api!.quests.teleportToTarget('wolf-den')).resolves.toBe(true)
+    expect(teleport).toHaveBeenCalledOnce()
+    expect(teleport).toHaveBeenCalledWith(den.x, den.z)
+  })
+
+  it('quests.target() re-reads spawners on each call', () => {
+    stubWindow('?debug=1')
+    let spawners: PreySpawner[] = []
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      fauna: {
+        getSpawners: () => spawners,
+        isWolfDenCleared: () => false,
+      },
+    } as unknown as WorldBundle
+    const { api } = install(bundle)
+    expect(api!.quests.target('wolf-den')).toBeNull()
+    spawners = [fakeWolfDenSpawner()]
+    expect(api!.quests.target('wolf-den')?.spawner.id).toBe('home:wolfDen')
+  })
+
+  it('returns null / false for an unresolved quest target', async () => {
+    stubWindow('?debug=1')
+    const teleport = vi.fn(async () => {})
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      fauna: fakeFauna({ spawners: [fakeWolfDenSpawner()] }),
+    } as unknown as WorldBundle
+    const { api } = install(bundle, { teleport })
+    expect(api!.quests.target('does-not-exist')).toBeNull()
+    await expect(api!.quests.teleportToTarget('does-not-exist')).resolves.toBe(false)
+    expect(teleport).not.toHaveBeenCalled()
+  })
+
+  it('help() documents quests.list / target / teleportToTarget', () => {
+    stubWindow('?debug=1')
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const help = api!.help()
+    expect(help).toContain('quests.list()')
+    expect(help).toContain("quests.target('wolf-den')")
+    expect(help).toContain("quests.teleportToTarget('wolf-den')")
   })
 })

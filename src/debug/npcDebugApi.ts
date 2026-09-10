@@ -2,9 +2,11 @@ import type { NpcInspectionSnapshot, NpcWhy } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
 import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
+import type { PreySpawner } from '../fauna/AnimalSpawner'
+import { matchesQuestSpawnPointId } from '../fauna/wolfDenScenario'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerNeeds } from '../player/PlayerNeeds'
-import type { QuestManager } from '../quests/QuestManager'
+import type { QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { VillageSize } from '../settlement/families'
 import type { HouseholdId } from '../settlement/household'
 import type { HealthState } from '../shared/HealthState'
@@ -205,6 +207,43 @@ export type InjuryDebugApi = {
   giveNpcBandage: (npcId: string) => boolean
 }
 
+/** Plain snapshot of a spawn-point quest target (`PreySpawner`) — never the
+ *  live object, so DevTools / automation can JSON-serialize the result. */
+export type QuestSpawnPointDebugSnapshot = {
+  id: string
+  type: PreySpawner['type']
+  animalKind: AnimalKind
+  position: { x: number, z: number }
+  state: PreySpawner['state']
+  deathsThisCycle: number
+  maxPreyCount: number
+  pressure: number
+  humanTaste: boolean
+  canRecover: boolean
+}
+
+/** Resolved quest world target. Unresolvable ids return `null` rather than a
+ *  `{ resolved: false }` payload, matching the rest of this debug API. */
+export type QuestTargetDebugSnapshot = {
+  targetId: string
+  resolved: true
+  kind: 'spawnPoint'
+  spawner: QuestSpawnPointDebugSnapshot
+  /** Present for `wolfDen` only — `cleared` is `Fauna.isWolfDenCleared()`,
+   *  not derived from the spawner's habitat state. */
+  questState?: { cleared: boolean }
+}
+
+export type QuestsDebugApi = {
+  /** Current quest log via `QuestManager.list()` — no parallel snapshot. */
+  list: () => QuestListEntry[]
+  /** Resolve a quest world target id (stable aliases such as `wolf-den`
+   *  included) to a spawn-point snapshot. `null` if nothing matches. */
+  target: (targetId: string) => QuestTargetDebugSnapshot | null
+  /** Teleport to the resolved spawn-point `x/z`. `false` if unresolved. */
+  teleportToTarget: (targetId: string) => Promise<boolean>
+}
+
 export type PlayerDebugApi = {
   position: () => { x: number, y: number, z: number }
   health: () => HealthState
@@ -241,6 +280,39 @@ function transportOrderSnapshot(order: TransportOrder): TransportOrderDebugSnaps
     delivered: order.deliveredQuantity,
     carrier: order.carrierNpcId,
   }
+}
+
+/** Fresh-resolves a quest target id against the current `WorldBundle`
+ *  spawners. Reads `bundle.fauna` on every call so a rebuild/reseed cannot
+ *  leave a stale `PreySpawner` in the debug layer. */
+function resolveQuestSpawnPoint(bundle: WorldBundle, targetId: string): PreySpawner | undefined {
+  return bundle.fauna.getSpawners().find((spawner) => matchesQuestSpawnPointId(spawner, targetId))
+}
+
+function questTargetSnapshot(bundle: WorldBundle, targetId: string): QuestTargetDebugSnapshot | null {
+  const spawner = resolveQuestSpawnPoint(bundle, targetId)
+  if (!spawner) return null
+  const snapshot: QuestTargetDebugSnapshot = {
+    targetId,
+    resolved: true,
+    kind: 'spawnPoint',
+    spawner: {
+      id: spawner.id,
+      type: spawner.type,
+      animalKind: spawner.kind,
+      position: { x: spawner.x, z: spawner.z },
+      state: spawner.state,
+      deathsThisCycle: spawner.deathsThisCycle,
+      maxPreyCount: spawner.maxPreyCount,
+      pressure: spawner.pressure,
+      humanTaste: spawner.humanTaste,
+      canRecover: spawner.canRecover,
+    },
+  }
+  if (spawner.type === 'wolfDen') {
+    snapshot.questState = { cleared: bundle.fauna.isWolfDenCleared() }
+  }
+  return snapshot
 }
 
 export type SeedvaleDebugApi = {
@@ -307,6 +379,9 @@ export type SeedvaleDebugApi = {
   conditions: ConditionsDebugApi
   /** Physical injury severity / treatment (plan npc-025). */
   injury: InjuryDebugApi
+  /** Quest log + spawn-point world-target lookup/teleport. Resolves stable
+   *  aliases such as `wolf-den` through `matchesQuestSpawnPointId`. */
+  quests: QuestsDebugApi
   spotAnimal: (kind: AnimalKind) => void
   help: () => string
   /** Alias of `player.groundTrace()` — rolling ticks, latched after a snap. */
@@ -356,6 +431,9 @@ const HELP_TEXT = [
   'injury.giveNpcBandage(id) — add a bandage so self-treatment is feasible',
   'transport(id) / transports() — physical goods TransportOrder snapshot {id,state,source,destination,item,requested,claimed,delivered,carrier}',
   'spotAnimal(kind) — simulate spotting an animal for quest progression',
+  'quests.list() — quest log/debug snapshot',
+  'quests.target(id) — resolve quest world target; e.g. quests.target(\'wolf-den\')',
+  'quests.teleportToTarget(id) — teleport to resolved quest target; e.g. quests.teleportToTarget(\'wolf-den\')',
 ].join('\n')
 
 /** Installs `window.seedvale.debug` when `?debug` is enabled; a no-op
@@ -597,6 +675,16 @@ export function installNpcDebugApi(
     skills: skillsDebug,
     conditions: conditionsDebug,
     injury: injuryDebug,
+    quests: {
+      list: () => questManager.list(),
+      target: (targetId) => questTargetSnapshot(bundle, targetId),
+      teleportToTarget: async (targetId) => {
+        const spawner = resolveQuestSpawnPoint(bundle, targetId)
+        if (!spawner) return false
+        await teleport(spawner.x, spawner.z)
+        return true
+      },
+    },
     transport: (id) => {
       const order = bundle.transportOrders.find(id)
       return order ? transportOrderSnapshot(order) : null
