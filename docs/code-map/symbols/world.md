@@ -120,21 +120,23 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSdfField.ts`
 
-- `Bounds` — type — line 49
-- `boxSDF` — function — line 78
-- `buildCaveSdfRepresentation` — function — line 230
+- `applyMouthGeometryToField` — function — line 99
   - domain: world-terrain
-- `buildVoidField` — function — line 200
-- `CaveSdfSpatialRepresentation` — type — line 54
-- `DEFAULT_SDF_PARAMS` — const — line 39
-- `ellipsoidSDF` — function — line 63
-- `FeatureBox` — type — line 60
-- `PathStation` — type — line 61
-- `placePrimitivesAlongPath` — function — line 100
+- `Bounds` — type — line 59
+- `boxSDF` — function — line 124
+- `buildCaveSdfRepresentation` — function — line 278
   - domain: world-terrain
-- `SdfCaveParams` — type — line 24
-- `smin` — function — line 72
-- `VoidPrimitive` — type — line 59
+- `buildVoidField` — function — line 246
+- `CaveSdfSpatialRepresentation` — type — line 64
+- `DEFAULT_SDF_PARAMS` — const — line 49
+- `ellipsoidSDF` — function — line 73
+- `FeatureBox` — type — line 70
+- `PathStation` — type — line 71
+- `placePrimitivesAlongPath` — function — line 146
+  - domain: world-terrain
+- `SdfCaveParams` — type — line 34
+- `smin` — function — line 82
+- `VoidPrimitive` — type — line 69
 
 ## `world/caves/caveSdfQuery.ts`
 
@@ -192,26 +194,48 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/clipBelowSurface.ts`
 
-- `clipTrianglesBelowSurface` — function — line 39
+- `clipTrianglesBelowSurface` — function — line 38
   - domain: world-terrain
-- `clipTrianglesInFrontOfMouth` — function — line 86
+- `clipTrianglesInFrontOfMouth` — function — line 83
   - domain: world-terrain
-- `SurfaceHeightSampler` — type — line 31
+- `SurfaceHeightSampler` — type — line 30
 
 ## `world/caves/mouthCarve.ts`
 
-- `CAVE_APPROACH_DEPTH` — const — line 19
-- `CAVE_APPROACH_OFFSET` — const — line 21
-- `CAVE_APPROACH_RADIUS` — const — line 18
-- `CAVE_MOUTH_RADIUS` — const — line 22
-- `MOUTH_INTERIOR_ALONG` — const — line 27
-- `mouthAlong` — function — line 35
+- `CAVE_APPROACH_DEPTH` — const — line 20
+- `CAVE_APPROACH_OFFSET` — const — line 22
+- `CAVE_APPROACH_RADIUS` — const — line 24
+- `CAVE_MOUTH_RADIUS` — const — line 23
+- `CaveMouthGeometry` — type — line 58
   - domain: world-terrain
-- `mouthCarveDepth` — function — line 87
+- `deriveMouthGeometry` — function — line 87
   - domain: world-terrain
-- `mouthLateral` — function — line 50
+- `inMouthAperture` — function — line 222
   - domain: world-terrain
-- `smoothstep` — function — line 61
+- `MOUTH_APERTURE_INWARD` — const — line 41
+- `MOUTH_APERTURE_OUTWARD` — const — line 42
+- `MOUTH_FRAME_INWARD` — const — line 35
+- `MOUTH_FRAME_OUTWARD` — const — line 34
+- `MOUTH_FRAME_THICKNESS` — const — line 33
+- `MOUTH_HOOD_HEIGHT` — const — line 36
+- `MOUTH_INTERIOR_ALONG` — const — line 30
+- `MOUTH_LIP_DEPTH` — const — line 37
+- `mouthAlong` — function — line 126
+  - domain: world-terrain
+- `mouthApertureVoidSDF` — function — line 270
+  - domain: world-terrain
+- `mouthCarveDepth` — function — line 204
+  - domain: world-terrain
+- `MouthCarveDisc` — type — line 44
+- `mouthCarveDiscs` — function — line 170
+  - domain: world-terrain
+- `mouthFrameSolidSDF` — function — line 293
+  - domain: world-terrain
+- `mouthLateral` — function — line 141
+  - domain: world-terrain
+- `mouthLocalBoxSDF` — function — line 240
+  - domain: world-terrain
+- `smoothstep` — function — line 152
 
 ## `world/caves/mouthOverburden.ts`
 
@@ -233,13 +257,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/sdfCaveMesh.ts`
 
-- `AccidentalUnionStressConfig` — type — line 258
-- `buildAccidentalUnionStressMesh` — function — line 273
+- `AccidentalUnionStressConfig` — type — line 268
+- `buildAccidentalUnionStressMesh` — function — line 283
   - domain: world-terrain
-- `buildSdfCaveMesh` — function — line 197
+- `buildSdfCaveMesh` — function — line 199
   - domain: world-terrain
-- `countConnectedComponents` — function — line 296
-- `SdfCaveResult` — type — line 188
+- `countConnectedComponents` — function — line 306
+- `SdfCaveResult` — type — line 190
 
 ## `world/caves/spikeNoise.ts`
 
@@ -340,8 +364,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 59
-- `createCaves` — function — line 145
+- `Caves` — type — line 55
+- `createCaves` — function — line 141
   - system: caves
   - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation, occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves
@@ -603,8 +627,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/largeCaveVisual.ts`
 
-- `createLargeCaveVisual` — function — line 13
-- `placeLargeCaveVisual` — function — line 63
+- `createLargeCaveVisual` — function — line 14
+- `placeLargeCaveVisual` — function — line 60
 
 ## `world/locations/darkForestTreasureSite.ts`
 
