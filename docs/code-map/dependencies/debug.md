@@ -2,6 +2,97 @@
 
 Generated from TypeScript imports.
 
+## `debug/caves/caveHeightfieldFixtures.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mouthCarve.ts`
+
+**Imported by**
+
+- `debug/caves/caveHeightfieldRepresentation.test.ts`
+- `debug/caves/caveHeightfieldTraversal.test.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
+
+## `debug/caves/caveHeightfieldMesh.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldRepresentation.ts`
+
+**Imported by**
+
+- `debug/caves/caveHeightfieldRepresentation.test.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
+
+## `debug/caves/caveHeightfieldPlayer.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `debug/caves/caveHeightfieldRepresentation.ts`
+- `debug/caves/caveHeightfieldTraversal.ts`
+- `input/Keyboard.ts`
+- `input/MouseLook.ts`
+- `player/cameraBoom.ts`
+- `player/verticalMotion.ts`
+- `terrain/slopeConstraint.ts`
+- `world/caves/caveSdfQuery.ts`
+- `world/collision.ts`
+
+**Imported by**
+
+- `debug/createCaveHeightfieldTestScene.ts`
+
+## `debug/caves/caveHeightfieldRepresentation.test.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `debug/caves/caveHeightfieldMesh.ts`
+- `debug/caves/caveHeightfieldRepresentation.ts`
+
+## `debug/caves/caveHeightfieldRepresentation.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/spikeNoise.ts`
+
+**Imported by**
+
+- `debug/caves/caveHeightfieldMesh.ts`
+- `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/caves/caveHeightfieldRepresentation.test.ts`
+- `debug/caves/caveHeightfieldTraversal.test.ts`
+- `debug/caves/caveHeightfieldTraversal.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
+
+## `debug/caves/caveHeightfieldTraversal.test.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `debug/caves/caveHeightfieldRepresentation.ts`
+- `debug/caves/caveHeightfieldTraversal.ts`
+
+## `debug/caves/caveHeightfieldTraversal.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldRepresentation.ts`
+- `player/verticalMotion.ts`
+- `world/caves/mouthCarve.ts`
+
+**Imported by**
+
+- `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/caves/caveHeightfieldTraversal.test.ts`
+
 ## `debug/colliderDebugView.ts`
 
 **Imports**
@@ -30,6 +121,30 @@ Generated from TypeScript imports.
 
 - `app/appRenderLoop.ts`
 
+## `debug/createCaveHeightfieldTestScene.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `debug/caves/caveHeightfieldMesh.ts`
+- `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/caves/caveHeightfieldRepresentation.ts`
+- `debug/debugMode.ts`
+- `input/Keyboard.ts`
+- `input/MouseLook.ts`
+- `render/createRenderer.ts`
+- `world/caves/caveOrientation.ts`
+- `world/caves/caveSdfColliders.ts`
+- `world/caves/caveSdfField.ts`
+- `world/caves/caveSdfQuery.ts`
+- `world/caves/caveSpikeMaterial.ts`
+- `world/caves/sdfCaveMesh.ts`
+- `world/collision.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+
 ## `debug/createModelTestScene.ts`
 
 **Imports**
@@ -57,6 +172,7 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/renderStack.ts`
 - `config/worldConfig.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
 - `debug/debugMode.test.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspectTrigger.ts`

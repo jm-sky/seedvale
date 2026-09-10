@@ -694,6 +694,7 @@ Generated from TypeScript imports.
 - `badges/badges.ts`
 - `config/persistConfig.ts`
 - `config/worldConfig.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
 - `debug/createModelTestScene.ts`
 - `debug/debugMode.ts`
 - `debug/npcDebugApi.ts`

@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards`     | 2026-09-10 19:15:43 | —                   | `world-terrain`  | —          |
 | `items-player-022-gameplay-interaction-usability-polish`               | 2026-09-10 16:01:15 | —                   | `items-player`   | —          |
 | `quests-progression-015-stable-npc-identity-for-quests`                | 2026-09-10 15:35:27 | —                   | `quests-progression` | —          |
 | `quests-progression-016-world-driven-settlement-quest-opportunities`   | 2026-09-10 15:22:48 | —                   | `quests-progression` | —          |

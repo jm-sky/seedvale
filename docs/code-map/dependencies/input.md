@@ -15,6 +15,8 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
 - `input/Keyboard.test.ts`
 - `input/MouseLook.ts`
 - `input/createTouchControls.ts`
@@ -35,6 +37,8 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/saveState.ts`
 - `app/userActions.ts`
+- `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
 - `input/createTouchControls.ts`
 - `player/PlayerController.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
