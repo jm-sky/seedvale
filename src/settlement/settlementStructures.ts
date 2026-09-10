@@ -6,6 +6,8 @@ import {
   gardenBedCount,
   type GardenScale,
 } from './gardenScale'
+import { ANIMAL_TROUGH_HEIGHT, ANIMAL_TROUGH_URL } from './propSpecs'
+import { loadPropOrFallback } from './propUtils'
 
 export function createHut(): THREE.Group {
   const hut = new THREE.Group()
@@ -139,11 +141,33 @@ export type TroughVisual = {
   setHasWater: (hasWater: boolean) => void
 }
 
-/** Household `AnimalTrough` (plan 122) — no GLB yet (`docs/assets/MODELS.md`),
- *  procedural only. Low open wooden basin with a water-colored inset so it
- *  reads as "holds water" even without a per-instance fill-level visual
- *  (instanced like `createBarrel`/`createHayBale`, see `buildSettlementProps`). */
-export function createTroughVisual(scale = 1): TroughVisual {
+/** Household `AnimalTrough` (plan 122) — prefers `animal_trough.glb`
+ *  (`docs/assets/MODELS.md` M37); procedural basin kept as load-failure fallback. */
+let animalTroughTemplate: THREE.Object3D | null = null
+
+/** Warm the trough GLB so settlement instancing and player troughs can clone synchronously. */
+export async function preloadAnimalTroughVisual(): Promise<void> {
+  if (animalTroughTemplate) return
+  animalTroughTemplate = await loadPropOrFallback(
+    ANIMAL_TROUGH_URL,
+    ANIMAL_TROUGH_HEIGHT,
+    () => createProceduralTroughVisual(1).object,
+  )
+}
+
+function wrapTroughVisual(root: THREE.Object3D, scale: number): TroughVisual {
+  const object = root.clone(true) as THREE.Group
+  if (scale !== 1) object.scale.multiplyScalar(scale)
+  const water = object.getObjectByName('troughWater')
+  return {
+    object,
+    setHasWater(hasWater: boolean) {
+      if (water) water.visible = hasWater
+    },
+  }
+}
+
+function createProceduralTroughVisual(scale = 1): TroughVisual {
   const trough = new THREE.Group()
   const woodMat = new THREE.MeshStandardMaterial({ color: 0x6e4f30, flatShading: true })
   const waterMat = new THREE.MeshStandardMaterial({ color: 0x3a7ea8, flatShading: true, roughness: 0.25 })
@@ -164,6 +188,11 @@ export function createTroughVisual(scale = 1): TroughVisual {
       water.visible = hasWater
     },
   }
+}
+
+export function createTroughVisual(scale = 1): TroughVisual {
+  if (animalTroughTemplate) return wrapTroughVisual(animalTroughTemplate, scale)
+  return createProceduralTroughVisual(scale)
 }
 
 /** Back-compat alias — settlement instancing only needs the root `Group`. */

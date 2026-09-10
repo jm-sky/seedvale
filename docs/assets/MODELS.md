@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-09-10 (rat nest procedural fallback, M77, plan quests-progression-013; previously 2026-09-05 reed cluster + shallow coastal seaweed wired, M76, plan world-terrain-010 Phases 5/7; previously 2026-09-04 asset drop — backpack/saddlebags/pan/rope/chest/coin/tomato/roasted_meat/beef/fish GLBs wired; see `docs/tmp/2026-09-04--new-3d-assets.md`)
+**Last updated:** 2026-09-10 (fishing rod, animal trough, trap good-tier GLB; drink/cook SFX wired; previously rat nest procedural fallback M77 plan quests-progression-013; previously 2026-09-05 reed cluster + shallow coastal seaweed M76 plan world-terrain-010 Phases 5/7; previously 2026-09-04 asset drop — backpack/saddlebags/pan/rope/chest/coin/tomato/roasted_meat/beef/fish GLBs wired; see `docs/tmp/2026-09-04--new-3d-assets.md`)
 
 ## How to use
 
@@ -42,7 +42,7 @@ If the feature needs no new model, do nothing to this file.
 | M12 | Pine tree variant | `pine_trees.glb` (multi-tree clump) — stays **parked** under nature, Asset Browser candidate only. Single-tree pines are wired separately as M41 | `in repo` | plan 082 / 073 |
 | M13 | Grass clump GLB | Optional complement to instanced grass | `in repo` | plan 082 |
 | M14 | Long sword | Held melee; Strażnik quest/dialog + Kupiec | `wired` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
-| M15 | Fishing rod | `_temp` FBX parked; license ❓ + convert to GLB | `needed` | `public/models/parked/FishingRod_Lvl2.fbx` |
+| M15 | Fishing rod | Held tool + ground pickup via `ITEM_GLB_SPECS` / `heldToolVisual` | `wired` | `public/models/items/fishing_rod.glb` (Quaternius, plan 159) |
 | M16 | Blood splat death VFX | Spawn at animal death (corpse linger); NPC later | `wired` | [plan 096](../plans/archive/2026-08-13--096--fauna-glb-held-tools-lights-vfx.md) |
 | M17 | Poly Farm building | Alternate farm shell vs Fantasy RTS `farm.glb` (CC-BY) | `in repo` | plan 082 (`settlement/farm_poly.glb`) |
 | M18 | Rock variant B | Extra rock prop beside wired `rock_a` | `in repo` | plan 082 (`nature/rock_b.glb`) |
@@ -65,10 +65,10 @@ If the feature needs no new model, do nothing to this file.
 | M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |
 | M35 | Cemetery / gravestones | Village-fringe landmark (`cemetery`); Poly plot + extra stones | `wired` | plan 049 (`nature/cemetery.glb`, `nature/grave_a.glb`) |
 | M36 | Food items (tomato/raw_meat/roasted_meat/bread + plan 134 species meats/hide/cheese/dried_meat) | Pickup/inventory meshes. `tomato` (Quaternius `Tomato`), `roasted_meat`/`beef` (Quaternius `Steak`) and `fish` (Quaternius `Fish Mackerel`) now wired via `ITEM_GLB_SPECS` (`items/itemModels.ts`); remaining kinds (`raw_meat`, `bread`, plan 134 species meats besides `beef`, `hide`, `cheese`, `dried_meat`) still procedural | `wired` (partial) | plan 106, plan 134 (`items/items.ts`'s `createItemMesh`) |
-| M37 | Animal trough | Household `AnimalTrough` prop; procedural-only fallback in place and functional (`props.ts`'s `createTrough`), no GLB yet | `needed` | plan 122 |
+| M37 | Animal trough | Household `AnimalTrough` + player-built trough visual; Oliver Herklotz `animal_trough.glb` via `preloadAnimalTroughVisual` / `loadPropTemplates`; procedural `createTroughVisual` fallback on load failure | `wired` | plan 122 (`settlement/animal_trough.glb`, [CREDITS](./CREDITS.md)) |
 | M38 | Spear / short sword | Held melee weapons (Kupiec stock). Quaternius Medieval Weapons `Spear` + `Sword` (plain steel) | `wired` | plan 134 (`items/spear.glb`, `items/short_sword.glb`) |
 | M39 | Harvested animal remains (bones / hide) | After knife harvest: `bones_pile` + 1–2 `large_bone` + `animal_hide` + 2–4 procedural meat scraps (`fauna/harvestedRemains.ts`). Procedural cylinder+hide fallback if GLB fails. Per-species carcass GLB still out of scope | `wired` | plan 137, plan 138 (`fx/bones_pile.glb`, `fx/large_bone.glb`, `fx/animal_hide.glb`) |
-| M40 | Animal traps (`simple` / `good`) | Placed trap prop, two visually distinct tiers, jaws readable as armed / disarmed / broken. Procedural fallback in place and functional (`world/trapProp.ts`); `TrapDef.modelUrl` is the single wiring point | `needed` | plan 141 (`world/animalTraps.ts`) |
+| M40 | Animal traps (`simple` / `good`) | `good` tier uses Quaternius `bear_trap.glb` via `TrapDef.modelUrl` + `preloadTrapProps`; `simple` stays procedural until a second distinct GLB exists. Jaw state animation remains procedural-only | `wired` (partial — `good` GLB only) | plan 141 (`world/bear_trap.glb`, `world/animalTraps.ts`) |
 | M41 | Pine tree variants (`pine_1`/`pine_3`/`pine_5`) | Textured single-tree conifers for `TREE_SPECS` — no glTF pine ships in Ultimate Stylized Nature, so `PineTree_1/3/5.fbx` + `PineTree_Bark`/`PineTree_Leaves` textures converted `FBX2glTF` → `gltf-transform` (attach textures) → `gltfpack -cc -tw -tl 512` | `wired` | plan 140 (`nature/pine_1.glb`, `pine_3.glb`, `pine_5.glb`) |
 | M42 | Tree stump (harvest remnant) | Small vertex-color stump swapped in on the final chop stage (`treeVisuals.ts`'s `createTreeStageMesh`); procedural `createTreeStump` fallback mandatory — revert to it if the GLB reads oddly next to textured living trees in browser | `wired` | plan 140 (`nature/tree_stump.glb`, source: Quaternius Ultimate Nature Pack `TreeStump.fbx`) |
 | M43 | Willow (textured) | Same style constraint as pine — the only source found (Quaternius Ultimate Nature Pack) is vertex-color, rejected. A textured willow (Nature MegaKit / Poly Pizza) is still wanted but not required to unblock the rest of this plan | `needed` | plan 140 |

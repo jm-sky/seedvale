@@ -46,6 +46,7 @@ import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
+import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
 import { useBootMark } from '../shared/bootMark'
 import {
   type ChunkManager,
@@ -85,6 +86,7 @@ import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import { createNpcGraves } from '../world/npcGraves'
 import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
 import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
+import { preloadTrapProps } from '../world/trapProp'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
 
@@ -801,6 +803,10 @@ async function buildWorldSystems(
   )
   bootMarkEnd('createPlacedContainers')
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
+
+  bootMark('preloadAnimalTroughAndTrapProps')
+  await Promise.all([preloadAnimalTroughVisual(), preloadTrapProps()])
+  bootMarkEnd('preloadAnimalTroughAndTrapProps')
 
   // Built ahead of `SettlementsManager` (plan npc-015, extended npc-018/
   // items-player-017) — unlike `hunting`/`Fauna`, none of these six depend on

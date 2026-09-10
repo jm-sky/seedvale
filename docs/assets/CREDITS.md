@@ -84,6 +84,9 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/nature/reed_cluster_a.glb` | ? | ? | **needs license confirmation** | Dodane 2026-09-05 (commit `ff55ac25`) bez metadanych źródła — denser reed cluster, `REED_SPECS[1]` (plan world-terrain-010 Phase 5) |
 | `public/models/nature/seaweed_cluster_a.glb` | ? | ? | **needs license confirmation** | Dodane 2026-09-05 (commit `ff55ac25`) bez metadanych źródła — shallow coastal seaweed, `SEAWEED_SPECS` (plan world-terrain-010 Phase 7) |
 | `public/models/settlement/well.glb` | Quaternius | [poly.pizza/m/QlqncKYxXb](https://poly.pizza/m/QlqncKYxXb) | CC0 1.0 | `Well` — studnia wioski; fallback `createWell` (plan 101) |
+| `public/models/settlement/animal_trough.glb` | Oliver Herklotz | [poly.pizza/m/eWOPxWJkqL3](https://poly.pizza/m/eWOPxWJkqL3) | **[CC-BY](https://creativecommons.org/licenses/by/3.0/)** | Wood Water Trough — household + player trough visual (plan 122 / M37); wymagana atrybucja |
+| `public/models/items/fishing_rod.glb` | Quaternius | [poly.pizza/m/0YAR0Lg58p](https://poly.pizza/m/0YAR0Lg58p) | CC0 1.0 | `Fishing Rod` — ground + held (plan 159 / M15) |
+| `public/models/world/bear_trap.glb` | Quaternius | [poly.pizza/m/fqv7qtGQYH](https://poly.pizza/m/fqv7qtGQYH) | CC0 1.0 | `Bear Trap` — placed `good` trap prop only; `simple` tier stays procedural (plan 141 / M40 partial) |
 | `public/models/settlement/wood_pile.glb` | K H (Kash) | [poly.pizza/m/8ueXsvnRjC1](https://poly.pizza/m/8ueXsvnRjC1) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Wood Pile` — skład wioski; wymagana atrybucja (plan 101) |
 | `public/models/nature/mushroom_a.glb` | Quaternius | [poly.pizza/m/aOW08oSrd4](https://poly.pizza/m/aOW08oSrd4) | CC0 1.0 | `Mushroom` — **parked**; textury 1024→512 WebP |
 | `public/models/nature/fern_a.glb` | Quaternius | [poly.pizza/m/jqcanvH7D6](https://poly.pizza/m/jqcanvH7D6) | CC0 1.0 | `Fern` — **parked**; textury 1024→512 WebP |

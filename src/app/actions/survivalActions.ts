@@ -3,7 +3,7 @@ import type { PreySpawner } from '../../fauna/AnimalSpawner'
 import type { ItemKind } from '../../items/items'
 import type { VillageFire } from '../../settlement/VillageFire'
 import type { WaterSource } from '../../world/WaterSource'
-import { playActionDig, playActionWell } from '../../audio/actionSounds'
+import { playActionCook, playActionDig, playActionDrink, playActionWell } from '../../audio/actionSounds'
 import { playAnimalSound } from '../../audio/animalSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { ANIMAL_LABELS, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC, selectDietFeedKind } from '../../fauna/AnimalAgent'
@@ -333,6 +333,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     // "is this a fish recipe" flag to keep in sync with `COOKING_RECIPES`.
     const verb = recipe.output === 'roasted_fish' ? 'Pieczenie ryby' : 'Pieczenie mięsa'
     const label = found.batch > 1 ? `${verb} (${found.batch}×)…` : `${verb}…`
+    playActionCook(worldAudio.playAt, player.mesh.position)
     busy.start(COOK_DURATION_SEC, label, () => {
       if (!fire.isLit()) {
         toast.show('Ogień zgasł.', 'error')
@@ -413,7 +414,8 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     }
     if (!hasRopeIfRequired(source)) return toResult([itemRequirement(0, 1, 'rope')])
     drinkWaterNeeds(player.needs, DRINK_THIRST_RELIEF)
-    playActionWell(worldAudio.playAt, player.mesh.position)
+    if (source.kind === 'well') playActionWell(worldAudio.playAt, player.mesh.position)
+    else playActionDrink(worldAudio.playAt, player.mesh.position)
     const nowDays = dayNight.elapsedDays
     const drinkEventIndex = player.waterDrinkEventCount
     player.waterDrinkEventCount += 1
@@ -595,6 +597,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       }
       inventory.updateInstance(target.id, (inst) => drinkFromLiquidContainer(inst as LiquidContainerItemInstance)!)
       drinkWaterNeeds(player.needs, entry.relief)
+      playActionDrink(worldAudio.playAt, player.mesh.position)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       ctx.refreshInventoryScreen()
@@ -617,7 +620,10 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       ? foodHungerRelief(kind, sourceSpecies) * survivalFoodMultiplier(player.skills.survival.value)
       : foodHungerRelief(kind, sourceSpecies)
     if (entry.need === 'hunger') eatFood(player.needs, relief)
-    else if (entry.need === 'thirst') drinkWaterNeeds(player.needs, relief)
+    else if (entry.need === 'thirst') {
+      drinkWaterNeeds(player.needs, relief)
+      playActionDrink(worldAudio.playAt, player.mesh.position)
+    }
     else healHealth(player.health, relief)
     const treatment = ITEM_CATALOG[kind].conditionTreatment
     if (treatment) {

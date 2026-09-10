@@ -49,6 +49,8 @@ import {
 } from './houseLighting'
 import { pickMerchantWagonPose } from './merchantWagon'
 import {
+  ANIMAL_TROUGH_HEIGHT,
+  ANIMAL_TROUGH_URL,
   BUSH_SPECS,
   COBBLE_FIT_MAX,
   COBBLE_URL,
@@ -1235,7 +1237,10 @@ export async function buildSettlementProps(
   )
   if (householdBarrelInstances) group.add(householdBarrelInstances.group)
 
-  const troughTemplates = [createTrough()]
+  const troughTemplates = await loadPropTemplates(
+    [{ url: ANIMAL_TROUGH_URL, height: ANIMAL_TROUGH_HEIGHT }],
+    () => createTrough(),
+  )
   const troughInstances = buildInstancedProps(
     troughTemplates,
     houseYardPlacements(HOUSEHOLD_YARD_PROP_OFFSETS.trough, 0.9),

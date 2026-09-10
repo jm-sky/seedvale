@@ -56,7 +56,6 @@ import {
   playActionBowRelease,
   playActionMeleeHit,
   playActionMeleeKill,
-  playActionWell,
   playCombatHit,
   playNpcCombatDeath,
 } from '../audio/actionSounds'
@@ -1518,7 +1517,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'well') {
         if (interactPressed) {
           const outcome = resolveInteraction(target, questManager)
-          playActionWell(worldAudio.playAt, target.position)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           drinkFromWaterSource?.(target.source)
         }
@@ -1601,7 +1599,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               promptLabel: target.promptLabel,
               source,
             }, questManager)
-            playActionWell(worldAudio.playAt, target.position)
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
             drinkFromWaterSource?.(source)
           } else {

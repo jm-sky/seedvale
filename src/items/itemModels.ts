@@ -51,6 +51,11 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     maxSize: 1.35,
     groundRotation: [0, 0, Math.PI / 2.2],
   },
+  fishing_rod: {
+    url: '/models/items/fishing_rod.glb',
+    maxSize: 1.35,
+    groundRotation: [0, 0, Math.PI / 2.2],
+  },
   short_sword: {
     url: '/models/items/short_sword.glb',
     maxSize: 0.85,

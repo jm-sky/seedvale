@@ -96,8 +96,7 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     scale: 1,
     gripLocalOffset: [0, 0, -0.3],
   },
-  // Plan 159 — procedural mesh only (no GLB); same long-shaft family as
-  // spear/pitchfork until a real grip is authored in the alignment browser.
+  // Quaternius Fishing Rod — same long-shaft family as spear/pitchfork.
   fishing_rod: {
     position: [-0.5, 0.13, -0.02],
     rotation: [Math.PI / 2, -Math.PI / 2, 0],
@@ -202,6 +201,7 @@ export const HELD_GLB: Partial<Record<ToolKind, { url: string, maxSize: number }
   pickaxe: { url: '/models/items/pickaxe.glb', maxSize: 0.55 },
   long_sword: { url: '/models/items/long_sword.glb', maxSize: 0.95 },
   spear: { url: '/models/items/spear.glb', maxSize: 1.05 },
+  fishing_rod: { url: '/models/items/fishing_rod.glb', maxSize: 1.05 },
   short_sword: { url: '/models/items/short_sword.glb', maxSize: 0.7 },
   pitchfork: { url: '/models/items/pitchfork.glb', maxSize: 0.81 },
   sickle: { url: '/models/items/sickle.glb', maxSize: 0.36 },

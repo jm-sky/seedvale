@@ -106,6 +106,14 @@ export const WELL_URL = '/models/settlement/well.glb'
 /** Roofed well — matches procedural `createWell` overall height (~roof y=2). */
 export const WELL_HEIGHT = 2.0
 
+export const ANIMAL_TROUGH_URL = '/models/settlement/animal_trough.glb'
+/** Open basin height — matches procedural `createTroughVisual` (~0.28 m basin). */
+export const ANIMAL_TROUGH_HEIGHT = 0.35
+
+/** Bear trap GLB wired on the `good` trap tier only (`TrapDef.modelUrl`, M40). */
+export const TRAP_GOOD_URL = '/models/world/bear_trap.glb'
+export const TRAP_GOOD_FIT_MAX = 0.55
+
 export const WOOD_PILE_URL = '/models/settlement/wood_pile.glb'
 /** Quantity-driven primary stockpile — five alternative `Pile_*` variants. */
 export const WOOD_PILE_PROGRESSIVE_URL = '/models/settlement/wood_pile_progressive.glb'

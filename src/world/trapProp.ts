@@ -1,6 +1,7 @@
 import * as THREE from 'three'
-import { disposeObject3D } from '../assets/loadGltf'
-import { type TrapKind, type TrapState } from './animalTraps'
+import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
+import { TRAP_GOOD_FIT_MAX } from '../settlement/propSpecs'
+import { TRAP_DEFS, type TrapKind, type TrapState } from './animalTraps'
 
 /**
  * Procedural visual for a placed animal trap (plan 141 §8/§22). No trap GLB
@@ -29,7 +30,36 @@ const PLATE_COLOR = 0x4a3a2a
 
 const TRAP_RADIUS: Record<TrapKind, number> = { simple: 0.34, good: 0.42 }
 
+const TRAP_FIT_MAX: Record<TrapKind, number> = {
+  simple: 0.5,
+  good: TRAP_GOOD_FIT_MAX,
+}
+
+const trapTemplates = new Map<TrapKind, THREE.Group>()
+
+/** Loads any `TrapDef.modelUrl` templates — call before spawning placed traps. */
+export async function preloadTrapProps(): Promise<void> {
+  await Promise.all((Object.keys(TRAP_DEFS) as TrapKind[]).map(async (kind) => {
+    if (trapTemplates.has(kind)) return
+    const url = TRAP_DEFS[kind].modelUrl
+    if (!url) return
+    try {
+      const model = await loadGltf(url)
+      preparePropFitMax(model, TRAP_FIT_MAX[kind])
+      trapTemplates.set(kind, model)
+    } catch (err) {
+      console.warn(`[trap] failed to load ${url}, using procedural prop`, err)
+    }
+  }))
+}
+
 export function createTrapProp(kind: TrapKind): THREE.Group {
+  const template = trapTemplates.get(kind)
+  if (template) return template.clone(true) as THREE.Group
+  return createProceduralTrapProp(kind)
+}
+
+function createProceduralTrapProp(kind: TrapKind): THREE.Group {
   const group = new THREE.Group()
   const radius = TRAP_RADIUS[kind]
   const metal = new THREE.MeshStandardMaterial({

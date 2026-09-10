@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-09-09
+**Last updated:** 2026-09-10
 
 ## How to use
 
@@ -33,7 +33,7 @@ If the feature needs no new sound, do nothing to this file.
 | Ambient | forest, night crickets, coast, wind, meadow, soft waves, birds, fire loop, rain loop, owl one-shot, lake frogs loop, cave interior | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1); birds + crickets also scale with time-of-day profile and weather (clear/cloudy/fog/rain/snow) per biome weight (plan world-006); owl (migrated to the shared `audio/ambientEvents.ts` runtime, plan world-016) is a random one-shot (not a loop) — cooldown-gated on night + forest weight. Lake frogs (plan world-016) are a single lazy loop whose gain = continuous lake-shore proximity (`terrain/waterBodyKind.ts`'s `lakeProximityAt`) × a dusk/night/pre-dawn profile × weather — local environmental ambience, not a fauna species. Cave interior (`ambient-cave-01.ogg`) crossfades against those surface layers from `Caves.queryInterior` (Cave V2 B3), not landmark name or entrance distance |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
-| Actions | dig ×4, wood-chop ×2 (variant pool), branch-break ×1, tree-fall ×1, melee hit/kill, well ×1, well-construction ×1, fishing-cast ×1, fire ignite/extinguish | Shovel / axe (delimb + fell + buck steps, player + NPC) / melee / well draw / well roof construction / fishing rod cast / campfire. NPC/animal combat impact+death (plan npc-009, `playCombatHit`/`playNpcCombatDeath`/`playAnimalCombatDeath`) and NPC ranged draw/release (`playCombatBowDraw`/`playActionBowRelease`) reuse these same clips — see S26 for the still-open melee-swing/animal-death-vocal gap |
+| Actions | dig ×4, wood-chop ×2 (variant pool), branch-break ×1, tree-fall ×1, melee hit/kill, well ×1, well-construction ×1, fishing-cast ×1, fire ignite/extinguish, drink ×1, cook ×1 | Shovel / axe (delimb + fell + buck steps, player + NPC) / melee / well draw / well roof construction / fishing rod cast / campfire. NPC/animal combat impact+death (plan npc-009, `playCombatHit`/`playNpcCombatDeath`/`playAnimalCombatDeath`) and NPC ranged draw/release (`playCombatBowDraw`/`playActionBowRelease`) reuse these same clips — see S26 for the still-open melee-swing/animal-death-vocal gap |
 | Player move | footsteps × terrain sets (grass/sand/stone/road; dirt aliases sand), jump cloth, land = louder surface footstep, water-lap, door open/close/latch/creak | Walk/sprint/land terrain-classified (Anton Z default, plans 121/158); jump stand-in, enter water, house threshold |
 
 ## Backlog
@@ -71,8 +71,8 @@ If the feature needs no new sound, do nothing to this file.
 | S16 | Pickaxe / ore strike | Mine channel — today reuses dig clips via `playActionMine` | `needed` | [plan 090](../plans/archive/2026-08-12--090--sword-merchant-tent-caves-pickaxe.md) |
 | S17 | Jump / land (player) | New jump mechanic — takeoff + landing thud | `wired` | Stand-in: Kenney `cloth1` (`action-jump-cloth-01`) + louder **terrain-pack** footstep land (plan 158; Kenney `footstep-01…04` unwired). Dedicated jump/land clip still open |
 | S18 | Eat (bite/chew) | Consume food item (inventory Zjedz) | `needed` | plan 106 — currently silent |
-| S19 | Drink / gulp | Consume waterskin, well/lake `[E]` | `needed` | plan 106 — currently reuses `action-well-01` (S08) |
-| S20 | Sizzle / cook | `[R]` cooking raw_meat at a lit campfire | `needed` | plan 106 — currently silent |
+| S19 | Drink / gulp | Consume waterskin, well/lake `[E]` | `wired` | plan 106 — `action-drink-01.ogg` via `playActionDrink` (direct drink + inventory thirst); well draw / container fill still use `action-well-01` (S08) |
+| S20 | Sizzle / cook | `[R]` cooking raw_meat at a lit campfire | `wired` | plan 106 — `action-cook-01.ogg` via `playActionCook` at campfire cook channel start |
 | S21 | Snow ambience (wind flurry) | Weather = `snow` (plan 040 Etap 1) | `needed` | No asset yet — snow stays visual-only (`world/weatherParticles.ts`) until acquired |
 | S22 | Bow draw / release (twang) | Ranged attack draw start / arrow release (plan 162) | `wired` | `public/sounds/bow-draw.ogg`/`bow-release.ogg` via `playActionBowDraw`/`playActionBowRelease` (`src/audio/actionSounds.ts`) — draw plays on a successful `requestDraw()`, release plays on the frame the shot actually fires (not on an early-release cancel). Arrow hit/kill still reuses `playActionMeleeHit`/`playActionMeleeKill` (S-none — no dedicated arrow-impact clip) |
 | S23 | Whetstone sharpening (scrape) | Inventory "Naostrz" action (plan 161) | `needed` | Currently silent |

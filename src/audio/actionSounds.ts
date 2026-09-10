@@ -20,6 +20,8 @@ export const ACTION_FISHING_CAST_SOUND_URL = '/sounds/action-casting-fishing-rod
 export const ACTION_MELEE_HIT_SOUND_URL = '/sounds/action-melee-hit-01.ogg'
 export const ACTION_MELEE_KILL_SOUND_URL = '/sounds/action-melee-kill-01.ogg'
 export const ACTION_WELL_SOUND_URL = '/sounds/action-well-01.ogg'
+export const ACTION_DRINK_SOUND_URL = '/sounds/action-drink-01.ogg'
+export const ACTION_COOK_SOUND_URL = '/sounds/action-cook-01.ogg'
 export const ACTION_BOW_DRAW_SOUND_URL = '/sounds/bow-draw.ogg'
 export const ACTION_BOW_RELEASE_SOUND_URL = '/sounds/bow-release.ogg'
 
@@ -33,6 +35,8 @@ const ACTION_MELEE_HIT_SFX_VOLUME = 0.5
 const ACTION_MELEE_KILL_SFX_VOLUME = 0.55
 /** Quiet — the clip is a deep well echo and reads as “inside” if loud. */
 const ACTION_WELL_SFX_VOLUME = 0.18
+const ACTION_DRINK_SFX_VOLUME = 0.35
+const ACTION_COOK_SFX_VOLUME = 0.4
 const ACTION_BOW_DRAW_SFX_VOLUME = 0.45
 const ACTION_BOW_RELEASE_SFX_VOLUME = 0.55
 
@@ -88,9 +92,19 @@ export function playActionMeleeKill(playAt: PlayAt, position: WorldSoundPosition
   playAt(ACTION_MELEE_KILL_SOUND_URL, position, ACTION_MELEE_KILL_SFX_VOLUME)
 }
 
-/** Well / draw-water one-shot — player interact or NPC drink at the well. */
+/** Well / draw-water one-shot — player `[E]` at a well or filling a container. */
 export function playActionWell(playAt: PlayAt, position: WorldSoundPosition): void {
   playAt(ACTION_WELL_SOUND_URL, position, ACTION_WELL_SFX_VOLUME)
+}
+
+/** Direct drink / gulp — inventory waterskin and natural water (not well draw). */
+export function playActionDrink(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_DRINK_SOUND_URL, position, ACTION_DRINK_SFX_VOLUME)
+}
+
+/** Campfire cooking channel start (plan 106 S20). */
+export function playActionCook(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_COOK_SOUND_URL, position, ACTION_COOK_SFX_VOLUME)
 }
 
 /** Bowstring draw — play when a ranged draw actually starts (plan 162 S22).

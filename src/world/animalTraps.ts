@@ -1,5 +1,6 @@
 import type { AnimalKind } from '../fauna/animalDefs'
 import type { ItemKind } from '../items/items'
+import { TRAP_GOOD_URL } from '../settlement/propSpecs'
 import { computeWeather, getSeason, type WeatherState, type WeatherType } from './weather'
 
 /**
@@ -68,7 +69,7 @@ export const TRAP_DEFS: Record<TrapKind, TrapDef> = {
     weatherWearMultiplier: 0.25,
     triggerRadius: 1.4,
     lureRadius: 8,
-    modelUrl: null,
+    modelUrl: TRAP_GOOD_URL,
   },
 }
 

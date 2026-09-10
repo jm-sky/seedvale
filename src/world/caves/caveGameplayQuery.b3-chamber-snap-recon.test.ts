@@ -2,6 +2,7 @@
  *  Dumps spatial + PlayerController-order ticks. Does not change gameplay. */
 
 import { describe, expect, it } from 'vitest'
+import type { CaveTopology } from './caveTopology'
 import { createBenchmarkWorldConfig } from '../../config/worldConfig'
 import { measureSlope } from '../../fauna/createFauna'
 import { PLAYER_COLLISION_RADIUS, rockCeilingMaxY } from '../../player/PlayerController'
@@ -9,33 +10,30 @@ import { integrateVerticalMotion, STEP_DOWN_MAX } from '../../player/verticalMot
 import { villageSizeConfig } from '../../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../../settlement/settlementGenerator'
 import {
+  type RawSampleParams,
   sampleContinentalnessAt,
   sampleHeightAt,
   sampleMountainRidgeAt,
-  type RawSampleParams,
 } from '../../terrain/chunkHeightmap'
 import { colliderActiveAtY, resolvePosition } from '../collision'
-import { pickLargeCaveSites, type LargeCaveSite, openingDirection } from '../largeCaves'
+import { type LargeCaveSite, openingDirection, pickLargeCaveSites } from '../largeCaves'
 import { landmarkName } from '../locations/worldLocationNames'
-import { makeCaveId } from './caveIdentity'
 import { buildCaveSdfColliders } from './caveSdfColliders'
 import { buildCaveSdfRepresentation } from './caveSdfField'
 import {
   applyCaveGroundHysteresis,
+  buildCaveSdfColumnIndex,
   CAVE_FLOOR_GRACE,
   CAVE_UNDERGROUND_MISS,
-  buildCaveSdfColumnIndex,
+  type CaveGroundHit,
+  type CaveSdfColumnIndex,
   columnIntervalsAt,
   isCaveInteriorAt,
   occupancyContains,
-  occupancyIntervalAt,
   queryColumnIndex,
-  type CaveGroundHit,
-  type CaveSdfColumnIndex,
 } from './caveSdfQuery'
 import { mouthAlong, mouthLateral } from './mouthCarve'
 import { buildProductionCaveTopology } from './productionTopology'
-import type { CaveTopology } from './caveTopology'
 
 const CASE_A_SEED = 1136726869
 const CASE_B_SEED = 4185154392
@@ -436,7 +434,7 @@ describe('B3 chamber-snap recon (no gameplay change)', () => {
     log(`LAST GOOD:\n${lastGoodTick ?? 'none'}`)
     log(`FIRST BAD:\n${firstBadTick ?? 'none'}`)
 
-    // eslint-disable-next-line no-console
+     
     console.log(lines.join('\n'))
 
     expect(topology.caveId).toBe(GROTA_CZARNEGO_KAMIENIA.caveId)
@@ -466,12 +464,12 @@ describe('B3 chamber-snap recon (no gameplay change)', () => {
   it('Case B Grota Milcząca: same passage→chamber signature', () => {
     const caves = pickProductionCaves(CASE_B_SEED)
     const names = caves.map((c) => `${c.name} ${c.topology.caveId} (${fmt(c.topology.entrance.x, 1)},${fmt(c.topology.entrance.z, 1)})`)
-    // eslint-disable-next-line no-console
+     
     console.log(`seed ${CASE_B_SEED} caves:\n${names.join('\n')}`)
     const milczaca = caves.find((c) => c.name.includes('Milcząca'))
     expect(caves.length).toBeGreaterThan(0)
     if (!milczaca) {
-      // eslint-disable-next-line no-console
+       
       console.log('Grota/Jaskinia Milcząca not in accepted set with roads=[] — listing all for mapping')
       return
     }
@@ -515,7 +513,7 @@ describe('B3 chamber-snap recon (no gameplay change)', () => {
     }
     lines.push(`first raw miss along=${firstMissAlong}`)
     lines.push(`first surface takeover: ${firstSurfaceTakeover ?? 'none'}`)
-    // eslint-disable-next-line no-console
+     
     console.log(lines.join('\n'))
     expect(milczaca.name).toBe('Jaskinia Milcząca')
     expect(milczaca.topology.caveId).toBe('cave:cf109eda')

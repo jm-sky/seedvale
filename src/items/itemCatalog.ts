@@ -938,7 +938,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     capabilities: ['fishing'],
     melee: null,
     spawn: 'none',
-    modelUrl: null,
+    modelUrl: '/models/items/fishing_rod.glb',
     notes: 'Plan 159 — Kupiec stock. Held tool; `[E]` at a lake shore casts, `[R]` applies bait from inventory.',
   },
   whetstone: {
