@@ -1,7 +1,8 @@
 # Plan: Cave Heightfield Representation Spike
 
 **Created:** 2026-09-10  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
+**Implemented at:** 2026-09-10 18:45  
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **Domain:** `world-terrain`  

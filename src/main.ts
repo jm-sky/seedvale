@@ -1,7 +1,7 @@
 import './app/dialogueTimeControl'
 import { createApp } from './app/createApp'
 import { createWorldConfig } from './config/worldConfig'
-import { isModelTestMode } from './debug/debugMode'
+import { isCaveHeightfieldTestMode, isModelTestMode } from './debug/debugMode'
 import { BENCHMARK_FIXTURE } from './perf/benchmarkFixture'
 import { benchmarkScenarioFromUrl, isPerfUrlEnabled } from './perf/flags'
 import {
@@ -32,6 +32,11 @@ if (!root) {
 }
 
 async function boot(container: HTMLElement): Promise<void> {
+  if (isCaveHeightfieldTestMode()) {
+    void createApp(container, undefined, { caveHeightfieldTest: true })
+    return
+  }
+
   if (isModelTestMode()) {
     void createApp(container, undefined, { modelTest: true })
     return

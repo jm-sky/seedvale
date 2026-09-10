@@ -211,6 +211,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `assets/loadGltf.test.ts`
+- `debug/caves/caveHeightfieldPlayer.ts`
 - `debug/createModelTestScene.ts`
 - `fauna/bloodSplat.ts`
 - `fauna/createFauna.ts`

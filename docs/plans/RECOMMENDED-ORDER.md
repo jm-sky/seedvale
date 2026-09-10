@@ -394,6 +394,7 @@ graph TD
   world_terrain_015["world-terrain-015 — Water Reflection Content Budget"]
   world_terrain_016["world-terrain-016 — Settlement Cemeteries & Abandoned Graveyards"]
   world_terrain_017["world-terrain-017 — Abandoned mountain mine landmark"]
+  world_terrain_018["world-terrain-018 — Cave Heightfield Representation Spike"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008

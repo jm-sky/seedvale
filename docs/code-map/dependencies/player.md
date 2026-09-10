@@ -250,6 +250,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldPlayer.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
@@ -502,6 +503,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`
 - `player/verticalMotion.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`

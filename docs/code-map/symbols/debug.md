@@ -2,6 +2,83 @@
 
 Generated from exported TypeScript symbols.
 
+## `debug/caves/caveHeightfieldFixtures.ts`
+
+- `buildCaveHeightfieldFixture` — function — line 125
+  - domain: world-terrain
+- `CAVE_HEIGHTFIELD_ENTRANCE` — const — line 17
+- `CAVE_HEIGHTFIELD_FIXTURE_IDS` — const — line 26
+- `CAVE_HEIGHTFIELD_MODES` — const — line 32
+- `CAVE_HEIGHTFIELD_OVERBURDEN` — const — line 36
+- `CAVE_HEIGHTFIELD_VARIANTS` — const — line 29
+- `CaveHeightfieldFixtureId` — type — line 27
+- `CaveHeightfieldMode` — type — line 33
+- `CaveHeightfieldVariant` — type — line 30
+- `parseCaveHeightfieldFixtureId` — function — line 176
+- `parseCaveHeightfieldMode` — function — line 190
+- `parseCaveHeightfieldVariant` — function — line 183
+- `sampleCaveHeightfieldSurface` — function — line 91
+  - domain: world-terrain
+
+## `debug/caves/caveHeightfieldMesh.ts`
+
+- `buildHeightfieldMeshBuffers` — function — line 117
+  - domain: world-terrain
+- `createHeightfieldCaveGeometry` — function — line 151
+  - domain: world-terrain
+- `createHeightfieldCaveMaterial` — function — line 161
+- `createHeightfieldCaveMesh` — function — line 171
+- `HeightfieldMeshBuffers` — type — line 21
+
+## `debug/caves/caveHeightfieldPlayer.ts`
+
+- `CaveHeightfieldWalker` — type — line 60
+- `createCaveHeightfieldWalker` — function — line 74
+  - domain: world-terrain
+- `HeightfieldWalkCollision` — type — line 47
+
+## `debug/caves/caveHeightfieldRepresentation.ts`
+
+- `buildCaveHeightfieldRepresentation` — function — line 302
+  - domain: world-terrain
+- `CaveHeightfieldBounds` — type — line 29
+- `CaveHeightfieldBuildResult` — type — line 92
+- `CaveHeightfieldConfig` — type — line 13
+- `CaveHeightfieldRepresentation` — type — line 42
+  - domain: world-terrain
+- `DEFAULT_HEIGHTFIELD_CONFIG` — const — line 21
+- `extractHeightfieldBoundaryEdges` — function — line 409
+  - domain: world-terrain
+- `HeightfieldBoundaryEdge` — type — line 67
+- `heightfieldCellCenter` — function — line 571
+- `heightfieldCellIndex` — function — line 567
+- `HeightfieldSample` — type — line 84
+- `HeightfieldStation` — type — line 59
+- `resampleSegmentStations` — function — line 157
+  - domain: world-terrain
+- `sampleHeightfieldAt` — function — line 525
+  - domain: world-terrain
+
+## `debug/caves/caveHeightfieldTraversal.ts`
+
+- `HEIGHTFIELD_PLAYER_HEIGHT` — const — line 19
+- `HEIGHTFIELD_PLAYER_RADIUS` — const — line 18
+- `heightfieldCapsuleHitsCeiling` — function — line 209
+  - domain: world-terrain
+- `HeightfieldGroundHit` — type — line 25
+- `heightfieldOccupancyAt` — function — line 186
+  - domain: world-terrain
+- `HeightfieldSpaceQuery` — type — line 21
+- `HeightfieldVerticalState` — type — line 147
+- `integrateHeightfieldVertical` — function — line 158
+  - domain: world-terrain
+- `queryHeightfieldGround` — function — line 120
+  - domain: world-terrain
+- `queryHeightfieldSpace` — function — line 53
+  - domain: world-terrain
+- `resolveHeightfieldHorizontal` — function — line 84
+  - domain: world-terrain
+
 ## `debug/colliderDebugView.ts`
 
 - `ColliderDebugView` — type — line 14
@@ -19,24 +96,31 @@ Generated from exported TypeScript symbols.
 - `CameraDebugSnapshot` — type — line 3
 - `createCameraDebugOverlay` — function — line 26
 
+## `debug/createCaveHeightfieldTestScene.ts`
+
+- `CaveHeightfieldSpikeMetrics` — type — line 59
+- `createCaveHeightfieldTestScene` — function — line 263
+  - domain: world-terrain
+
 ## `debug/createModelTestScene.ts`
 
 - `createModelTestScene` — function — line 44
 
 ## `debug/debugMode.ts`
 
-- `DebugSystemName` — type — line 107
+- `DebugSystemName` — type — line 114
 - `isAdminMode` — function — line 43
 - `isBootMarkMode` — function — line 33
-- `isCameraDebugMode` — function — line 56
-- `isCameraMeshDebugMode` — function — line 69
-- `isColliderDebugMode` — function — line 85
+- `isCameraDebugMode` — function — line 63
+- `isCameraMeshDebugMode` — function — line 76
+- `isCaveHeightfieldTestMode` — function — line 57
+- `isColliderDebugMode` — function — line 92
 - `isDebugMode` — function — line 38
 - `isModelTestMode` — function — line 50
-- `isNoShadowsDebugMode` — function — line 63
-- `isNpcCombatDebugMode` — function — line 99
-- `isRenderStateDebugMode` — function — line 77
-- `isSystemEnabled` — function — line 113
+- `isNoShadowsDebugMode` — function — line 70
+- `isNpcCombatDebugMode` — function — line 106
+- `isRenderStateDebugMode` — function — line 84
+- `isSystemEnabled` — function — line 120
 - `urlParamValue` — function — line 19
 
 ## `debug/domainHistory.ts`

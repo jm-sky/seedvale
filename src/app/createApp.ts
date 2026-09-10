@@ -26,6 +26,7 @@ import {
   createWorldConfig,
   defaultTerrainConfig,
 } from '../config/worldConfig'
+import { createCaveHeightfieldTestScene } from '../debug/createCaveHeightfieldTestScene'
 import { createModelTestScene } from '../debug/createModelTestScene'
 import { isAdminMode, isDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { installNpcDebugApi } from '../debug/npcDebugApi'
@@ -234,6 +235,7 @@ function terrainModificationsFromSave(saved: readonly SaveTerrainModification[])
 export type NewAppOptions = {
   newGame?: boolean
   modelTest?: boolean
+  caveHeightfieldTest?: boolean
   benchmarkFixture?: BenchmarkFixture
   seed?: number
   playerName?: string
@@ -267,6 +269,13 @@ export async function createApp(
   options?: NewAppOptions,
 ): Promise<() => void> {
   const { bootMark, bootMarkEnd, bootMarksSummary } = useBootMark('createApp')
+
+  // `?caveHeightfieldTest` — isolated heightfield vs SDF cave comparison.
+  // Bails out before any world/save/UI bootstrap; see
+  // `createCaveHeightfieldTestScene.ts`.
+  if (options?.caveHeightfieldTest) {
+    return createCaveHeightfieldTestScene(container)
+  }
 
   // `?modelTest` — ultra-minimal NPC/player model+animation preview. Bails out
   // before any world/save/UI bootstrap below; see `createModelTestScene.ts`.

@@ -37,6 +37,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/renderStack.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
 - `debug/createModelTestScene.ts`
 - `house-browser/houseBrowserScene.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`

@@ -204,6 +204,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `debug/caves/caveHeightfieldRepresentation.ts`
 - `world/caveColliders.test.ts`
 - `world/caveColliders.ts`
 - `world/caveGenerator.test.ts`
@@ -413,6 +415,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/createCaveHeightfieldTestScene.ts`
 - `world/caves/caveSdfExtraction.ts`
 - `world/caves/mouthCarve.ts`
 - `world/largeCaves.ts`
@@ -473,6 +476,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/createCaveHeightfieldTestScene.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
@@ -525,6 +529,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/createCaveHeightfieldTestScene.ts`
 - `player/worldWaterEligibility.test.ts`
 - `world/caves/caveExtractionClient.test.ts`
 - `world/caves/caveExtractionProtocol.ts`
@@ -567,6 +572,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
 - `player/worldWaterEligibility.test.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
@@ -583,6 +590,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/createCaveHeightfieldTestScene.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/caveSpikeMetrics.ts`
@@ -621,6 +629,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `debug/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveExtractionClient.test.ts`
 - `world/caves/caveExtractionProtocol.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
@@ -675,6 +685,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `debug/caves/caveHeightfieldRepresentation.ts`
+- `debug/caves/caveHeightfieldTraversal.ts`
 - `world/caveGenerator.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
@@ -780,6 +793,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/createCaveHeightfieldTestScene.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/sdfCaveMesh.test.ts`
@@ -789,6 +803,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveSdfField.ts`
 - `world/caves/sweepCaveMesh.ts`
 
@@ -906,8 +921,10 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcColliderRim.test.ts`
 - `ai/npcColliderRim.ts`
+- `debug/caves/caveHeightfieldPlayer.ts`
 - `debug/colliderDebugView.ts`
 - `debug/colliderInstancedVisual.ts`
+- `debug/createCaveHeightfieldTestScene.ts`
 - `fauna/AnimalAgent.ts`
 - `house-browser/colliderPreview.test.ts`
 - `house-browser/colliderPreview.ts`

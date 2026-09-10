@@ -75,7 +75,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
-| 💡 `world-terrain-018-cave-heightfield-representation-spike.md`                | -       | 🔴 | M      | -      |
 | 💡 `items-player-024-inventory-item-use-ux-coherence.md`                       | -       | 🔴 | L      | items-player-022, ~~ui-input-015~~ |
 
 ---
@@ -88,6 +87,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `world-terrain-018-cave-heightfield-representation-spike.md` | `?caveHeightfieldTest` od razu otwiera lekki harness (bez world boot); [1] przełącza heightfield/SDF na **tej samej** topology; [2] Walk/Inspect bez reloadu; Walk: spawn przed wejściem, wejście, przejście basic/bend/branch i powrót, bez przenikania podłogi/ścian/sufitu; Inspect: floor/walls/ceiling i mouth bez dziur; metryki w overlay/console.table |
 | `quests-progression-016-world-driven-settlement-quest-opportunities.md` | Po dniu 2, gdy jama ma pressure: hunter (albo pierwszy dorosły) oferuje generated „Wilki pod osadą”; zniszczenie jamy zalicza questa i wypłaca nagrodę; jeśli problem zniknie przed akceptacją, oferta znika; save/load aktywnego generated questa trzyma tego samego givera i `spawnerId`; authored `wilki-pod-osada` nadal istnieje osobno |
 | `items-player-022-gameplay-interaction-usability-polish.md` | Namiot+podest+posłanie = jeden cel Tab/gaze z inspection wszystkich części i repair per część; `+N%` czytelnie zielone; preview małej/średniej chaty pokazuje wejście przy obrocie; `[F]`/`[G]` oczywiste przy przyciskach; kupka gałęzi+belek to 2 cele Tab; stojąca pochodnia gaśnie po 6 h świata / time-skip / save-load |
 | `quests-progression-015-stable-npc-identity-for-quests.md` | Dwa NPC o tym samym imieniu: rozmowa z niewłaściwym nie zalicza `talk_to_npc` / choice / oferty givera; marker zostaje przy właściwym id; save/load i stream-out/in osady trzymają ten sam target; authored Anna/Piotr/Kasia/Marek nadal oferują, przechodzą etapy, kończą się i wypłacają jak wcześniej |

@@ -18,6 +18,12 @@
 - [Game loop](../src/app/gameLoop.ts) — one frame of simulation + render, and the interaction state around it.
 - [App render loop](../src/app/appRenderLoop.ts) — `requestAnimationFrame` scheduling, viewport/DPR resize and WebGL context loss/restore around the game loop.
 
+## Debug / isolated scenes
+
+- [Cave heightfield spike](../src/debug/createCaveHeightfieldTestScene.ts) — `?caveHeightfieldTest` Walk/Inspect harness comparing a 2.5D heightfield representation to production SDF on the same `CaveTopology`.
+- [Model test](../src/debug/createModelTestScene.ts) — `?modelTest` renderer/camera/one-model preview, bypassing world bootstrap.
+- [Debug flags](../src/debug/debugMode.ts) — URL-driven debug switches including the isolated-scene flags above.
+
 ## Rendering / presentation
 
 - [Render stack](../src/app/renderStack.ts) — construction of renderer, CSS2D label layer, scene, camera, post-processing, lights, sky and the PointLight budget.
