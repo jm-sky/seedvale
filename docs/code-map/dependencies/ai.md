@@ -268,6 +268,8 @@ Generated from TypeScript imports.
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/places.ts`
+- `settlement/professionStaffing.test.ts`
+- `settlement/professionStaffing.ts`
 - `terrain/naturalResources.ts`
 
 ## `ai/decisionModifiers.test.ts`

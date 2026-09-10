@@ -2,7 +2,7 @@
 
 **Purpose:** a short, current snapshot of the implemented architecture — enough to start a plan without reading every prior plan first. This document describes what exists now, not the desired future state, and not *how* any given plan implemented it.
 
-**Last verified:** 2026-09-10
+**Last verified:** 2026-09-11
 
 ## Read this first
 
@@ -43,7 +43,7 @@ Coarse world features (lakes, mountain peaks, cemeteries, and similar) are class
 
 ### Settlements / NPCs
 
-Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements. `SettlementEconomy` (settlement-owned bulk stock) and `Household` (one family's own wood/water/food/items) are the two resource registries settlements host; both persist and carry across an in-session `WorldBundle` rebuild. NPC authoritative state — health/stamina/vigor/needs/`physicalInjury`/`injuryRecoveryUpdatedAtDays`/`temporaryConditions`/`helperAssignment`/`activePlan`/`postDeath`/`graveVisits`/`personalInventory` — is physically hosted here (`NpcStateRegistry`) and persists as part of `SaveData.npcStates`, but the decision architecture, work dispatch, combat integration, and social/dialogue behaviour that consume it are canonical in `npc.md`, not documented here. Derived injury severity (plan npc-025) is not persisted. Player temporary conditions (`SaveData.playerConditions`) persist separately from base SPEA. Land ownership (`LandOwnershipRegistry`/`SaveData.ownedLandPlots`) is a separate, simpler player-facing mechanic.
+Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements. Initial NPC professions are assigned at generation time by `professionStaffing.ts` from adult workforce + food/resource/scale signals; children and reserved home NPCs are not restaffed, and normal settlements no longer grow an extra resource family. `SettlementEconomy` (settlement-owned bulk stock) and `Household` (one family's own wood/water/food/items) are the two resource registries settlements host; both persist and carry across an in-session `WorldBundle` rebuild. NPC authoritative state — health/stamina/vigor/needs/`physicalInjury`/`injuryRecoveryUpdatedAtDays`/`temporaryConditions`/`helperAssignment`/`activePlan`/`postDeath`/`graveVisits`/`personalInventory` — is physically hosted here (`NpcStateRegistry`) and persists as part of `SaveData.npcStates`, but the decision architecture, work dispatch, combat integration, and social/dialogue behaviour that consume it are canonical in `npc.md`, not documented here. Derived injury severity (plan npc-025) is not persisted. Player temporary conditions (`SaveData.playerConditions`) persist separately from base SPEA. Land ownership (`LandOwnershipRegistry`/`SaveData.ownedLandPlots`) is a separate, simpler player-facing mechanic.
 
 - Settlement generation, streaming, households, settlement/household economy, land ownership: [state/settlements.md](./state/settlements.md)
 - NPC decisions, needs/pressure arbitration, work and profession dispatch, work-contract evaluation, combat integration, social/dialogue/relationships, movement, death/corpse lifecycle: [state/npc.md](./state/npc.md)

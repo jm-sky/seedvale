@@ -55,7 +55,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `settlements-npcs-023-profession-staffing-and-settlement-composition.md`    | -       | 🔴 | M      | -      |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                      | -       | 🟡 | L      | ~~npc-006~~, ~~fauna-012~~, ~~fauna-016~~, ~~settlements-npcs-014~~, settlements-npcs-023 |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
@@ -85,6 +84,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | Home: Anna/Piotr/Kasia/Marek nadal istnieją, w tej samej kolejności, i oferują authored questy; mała ogród/las osada ma food livelihood bez Tradera/Kowala; osada przy significant ore ma Minera wewnątrz istniejącej liczby domów (bez extra resource family); OUTPOST nadal 1 NPC z forced resource role |
 | `quests-progression-017-rpg-settlement-quest-matrices.md` | Sąsiadująca osada: NPC oferuje generated „Sekret starego miejsca” na realny landmark; interakcja zalicza etap; `Umowa między osadami` prowadzi do NPC w innej osadzie po id (to samo imię w home nie kradnie celu); `Podejrzany transport` to rozmowa+wybór bez quest-owned przesyłki; live „Wilki pod osadą” w home nie znika przez RPG; save/load trzyma te same cele |
 | `items-player-023-systemic-item-utility-and-food-safety.md` | Można rozpalić/dołożyć szyszkę, gałąź i belkę; szyszka daje zauważalnie mniej czasu niż gałąź, belka więcej; automatyczny wybór opału nie spala belki, gdy dostępna jest szyszka/gałąź; komunikaty przy ogniu mówią o paliwie/opale, nie tylko o gałęzi; świeże surowe mięso może spowodować zatrucie zależnie od gatunku, a medium-fresh jest bardziej ryzykowne; pieczone/suszone mięso nie wywołuje raw-meat poisoning i nadal daje większą sytość z zachowanym gatunkowym provenance; save/load nie resetuje sequence deterministycznych food-risk rolls ani aktywnego poisoning |
 | `world-terrain-018-cave-heightfield-representation-spike.md` | `?caveHeightfieldTest` od razu otwiera lekki harness (bez world boot); [1] przełącza heightfield/SDF na **tej samej** topology; [2] Walk/Inspect bez reloadu; Walk: spawn przed wejściem, wejście, przejście basic/bend/branch i powrót, bez przenikania podłogi/ścian/sufitu; Inspect: floor/walls/ceiling i mouth bez dziur; metryki w overlay/console.table |

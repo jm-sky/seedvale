@@ -29,13 +29,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/characters.ts`
 
-- `CharacterDef` — type — line 23
-- `characterForSeed` — function — line 73
-- `genderForName` — function — line 64
+- `CharacterDef` — type — line 19
+- `characterForSeed` — function — line 69
+- `genderForName` — function — line 60
 - `NpcGender` — type — line 5
-- `RESERVED_CHARACTERS` — const — line 55
-- `Role` — type — line 15
-- `Trait` — type — line 21
+- `RESERVED_CHARACTERS` — const — line 51
+- `Role` — type — line 11
+- `Trait` — type — line 17
 
 ## `ai/decisionModifiers.ts`
 

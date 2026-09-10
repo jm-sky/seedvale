@@ -2244,6 +2244,7 @@ Generated from TypeScript imports.
 - `settlement/houseCatalog.ts`
 - `settlement/livestock.ts`
 - `settlement/npcPhysicalProfile.ts`
+- `settlement/professionStaffing.ts`
 - `settlement/props.ts`
 - `settlement/rats.ts`
 - `settlement/roadNetwork.ts`

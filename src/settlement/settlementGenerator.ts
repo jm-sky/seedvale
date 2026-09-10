@@ -24,6 +24,7 @@ import {
 } from './families'
 import { DEFAULT_SITE_SEARCH_MARGIN, findSettlementSite } from './findSettlementSite'
 import { findDockLocation } from './minorLocations'
+import { resolveInitialProfessionStaffing } from './professionStaffing'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
 import { type ClearingLayout, layoutClearingsFromPlan } from './villageClearing'
 import { type FoodSourceType, type VillageIdentity, type VillagePlan } from './villagePlan'
@@ -48,8 +49,8 @@ const RESOURCE_INFLUENCE_RADIUS = 140
 
 /** How significant a resource needs to be, combined with harsh (`mountain`)
  *  terrain, to spawn a Resource Outpost (§7) instead of a normal village —
- *  stricter than `SIGNIFICANT_RICHNESS` (which only gates the *dedicated
- *  family* on an otherwise-normal settlement): an outpost replaces the whole
+ *  stricter than `SIGNIFICANT_RICHNESS` (which gates staffing specialization
+ *  on an otherwise-normal settlement): an outpost replaces the whole
  *  village, so it should be reserved for genuinely exceptional deposits. */
 const OUTPOST_RICHNESS_THRESHOLD = 0.78
 /** Not every qualifying mountain+resource combo becomes an outpost —
@@ -481,12 +482,22 @@ function generateSettlementCore(
   const site = chooseSettlementSite(ctx)
   if (!site) return null
   const identity = resolveVillageIdentity(ctx, site)
-  const families = generateFamilies(
-    ctx.seedForCell,
-    identity.size,
-    identity.isHome,
-    identity.nameCulture,
-    identity.dominantResource,
+  const families = resolveInitialProfessionStaffing(
+    generateFamilies(
+      ctx.seedForCell,
+      identity.size,
+      identity.isHome,
+      identity.nameCulture,
+      identity.dominantResource,
+    ),
+    {
+      size: identity.size,
+      terrain: identity.terrain,
+      foodSourceType: identity.foodSourceType,
+      dominantResource: identity.dominantResource,
+      isHome: identity.isHome,
+      seed: ctx.seedForCell,
+    },
   )
   const plan = attachPlannedDock(
     createVillagePlan(

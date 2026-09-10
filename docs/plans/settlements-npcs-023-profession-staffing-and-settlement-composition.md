@@ -1,7 +1,7 @@
 # Plan: Profession staffing and settlement composition
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test); browser/gameplay not yet verified. See [implementation notes](./implementation-notes/settlements-npcs-023-profession-staffing-and-settlement-composition-implementation-notes.md).
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none
@@ -9,6 +9,7 @@
 **Subdomains:** `household` `economy`
 **Tags:** `professions` `generation` `population` `resources`
 **Roadmap:** `npc-professions-households-and-age.md`
+**Implemented at:** 2026-09-11 00:30
 
 ## Goal
 

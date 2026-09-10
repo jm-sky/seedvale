@@ -83,7 +83,7 @@ Generated from exported TypeScript symbols.
 - `FamilyMember` — type — line 145
 - `FamilyMemberRef` — type — line 171
 - `FamilyRelation` — type — line 143
-- `generateFamilies` — function — line 404
+- `generateFamilies` — function — line 402
 - `RolledVillageSize` — type — line 18
 - `rollVillageSize` — function — line 210
 - `VILLAGE_SIZE_CONFIG` — const — line 64
@@ -441,6 +441,17 @@ Generated from exported TypeScript symbols.
 - `socialPlaceFor` — function — line 71
 - `workplaceFor` — function — line 114
 
+## `settlement/professionStaffing.ts`
+
+- `adultProfessionCoverage` — function — line 235
+  - domain: settlements-npcs
+- `isProfessionAdult` — function — line 218
+- `ProfessionStaffingContext` — type — line 22
+  - domain: settlements-npcs
+- `resolveInitialProfessionStaffing` — function — line 337
+  - domain: settlements-npcs
+- `StaffingPriority` — type — line 12
+
 ## `settlement/props.ts`
 
 - `BlacksmithWorkplace` — type — line 270
@@ -593,16 +604,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 136
-- `cellKey` — function — line 121
-- `cellSeed` — function — line 164
-- `cellsWithinRadius` — function — line 148
-- `generateSettlementDef` — function — line 635
-- `generateVillagePlan` — function — line 573
-- `SETTLEMENT_GRID_STEP` — const — line 63
-- `SettlementCell` — type — line 69
-- `SettlementDef` — type — line 71
-- `worldToCell` — function — line 125
+- `cellFromId` — function — line 137
+- `cellKey` — function — line 122
+- `cellSeed` — function — line 165
+- `cellsWithinRadius` — function — line 149
+- `generateSettlementDef` — function — line 646
+- `generateVillagePlan` — function — line 584
+- `SETTLEMENT_GRID_STEP` — const — line 64
+- `SettlementCell` — type — line 70
+- `SettlementDef` — type — line 72
+- `worldToCell` — function — line 126
 
 ## `settlement/settlementNightCycle.ts`
 

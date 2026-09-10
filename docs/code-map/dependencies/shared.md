@@ -70,6 +70,8 @@ Generated from TypeScript imports.
 - `ai/dialogueTemplates.ts`
 - `settlement/createSettlement.ts`
 - `settlement/families.ts`
+- `settlement/professionStaffing.test.ts`
+- `settlement/professionStaffing.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementTerrain.ts`
 - `settlement/villageClearing.ts`

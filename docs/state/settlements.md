@@ -4,7 +4,7 @@
 
 **Nie jest:** indeksem planów ([plans/README.md](../plans/README.md)), katalogiem GLB ([assets/](../assets/README.md)), kontraktem renderu ([GRAPHICS.md](../architecture/GRAPHICS.md)), snapshotem całego codebase ([STATE.md](../STATE.md)), ani drugim dokumentem o życiu NPC — decyzje/potrzeby/strategie/praca/walka/relacje/dialog NPC są kanonicznie opisane w [npc.md](./npc.md); ten plik pokazuje tylko, gdzie osada hostuje NPC-a i jak jego praca dociera do gospodarstwa/ekonomii.
 
-**Last verified:** 2026-09-10
+**Last verified:** 2026-09-11
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -35,6 +35,7 @@ Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 poka
 ### Generator i wygląd
 
 - Rodziny, domy, drogi lokalne i międzysiedliskowe, siting zależny od terenu.
+- Początkowy skład profesji (`Role`) jest generation-time staffingiem (`professionStaffing.ts`) po `generateFamilies()`: liczy się adult workforce (`age >= 18`), food source, significant mapped resource i skala. Dzieci i reserved home NPC (Anna/Piotr/Kasia/Marek) nie są restaffowane. Normalne osady nie dokładają już extra resource family — specjalistę przydziela istniejący adult; `OUTPOST` nadal ma jednego forced specialistę.
 - Siting i per-plot placement twardo odrzucają nakładanie na aktywny kanał rzeki (`findSettlementSite.ts`/`villagePlanner.ts`, `terrain/riverNetwork.ts`'s `footprintOverlapsRiver`) — pełny opis seamu (site clearance, per-plot reject, `pushOutOfRiver` fallback) jest w [water.md](./water.md)'s sekcji "Integracja rzek z resztą worldgenu", nie duplikowany tutaj.
 - Domy: `HouseBuilder` składa chatki 4×4 / 6×4 i średnie domy 6×6 / 8×6 (dachówki MegaKit, native scale ×1, `HOUSE_ASSEMBLY_SCALE`) w `buildSettlementProps`; warianty mieszają tynk, kratownicę i cegłę, część z kominem. Wielkość zależy od rozmiaru osady. `TEST_HOUSE_01` (4×2) zostaje jako test. Collidery/`Place`/households bez zmian. Legacy `HOUSE_CATALOG` (`hut_*.glb`) — fallback i Asset Browser. Osobno gracz może budować trwałe chaty (`small_house` pojemność 3 / `medium_house` pojemność 6) przez `world/residentialBuilding.ts` — to nie wstawia ich do `VillagePlan`; ukończony Player-owned dom daje lodging `owned_house` bez Household.
 - Ogrody skalują się z liczbą domów (S/M/L); środki grządek poza dyskiem placu. Osady z `foodSourceType === 'field'` stawiają pole przy landmarku `field`.

@@ -4,7 +4,11 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-017-rpg-settlement-quest-matrices`                 | 2026-09-10 20:25:19 | —                   | `quests-progression` | —          |
+| `items-player-023-systemic-item-utility-and-food-safety`               | 2026-09-10 20:05:38 | —                   | `items-player`   | —          |
+| `items-player-024-inventory-item-use-ux-coherence`                     | 2026-09-10 19:27:53 | —                   | `items-player`   | —          |
 | `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards`     | 2026-09-10 19:15:43 | —                   | `world-terrain`  | —          |
+| `world-terrain-018-cave-heightfield-representation-spike`              | 2026-09-10 18:49:20 | —                   | `world-terrain`  | —          |
 | `items-player-022-gameplay-interaction-usability-polish`               | 2026-09-10 16:01:15 | —                   | `items-player`   | —          |
 | `quests-progression-015-stable-npc-identity-for-quests`                | 2026-09-10 15:35:27 | —                   | `quests-progression` | —          |
 | `quests-progression-016-world-driven-settlement-quest-opportunities`   | 2026-09-10 15:22:48 | —                   | `quests-progression` | —          |

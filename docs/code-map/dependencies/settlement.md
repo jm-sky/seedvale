@@ -304,6 +304,8 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
 - `economy/initial.ts`
+- `quests/materializeAuthoredQuests.test.ts`
+- `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `settlement/createSettlement.ts`
 - `settlement/families.test.ts`
 - `settlement/findSettlementSite.test.ts`
@@ -311,6 +313,8 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/npcIdentity.test.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/professionStaffing.test.ts`
+- `settlement/professionStaffing.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
@@ -923,6 +927,35 @@ Generated from TypeScript imports.
 - `settlement/lodgingResolver.ts`
 - `settlement/places.test.ts`
 
+## `settlement/professionStaffing.test.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `settlement/families.ts`
+- `settlement/professionStaffing.ts`
+- `settlement/villagePlan.ts`
+- `shared/SettlementName.ts`
+- `terrain/naturalResources.ts`
+
+## `settlement/professionStaffing.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `settlement/families.ts`
+- `settlement/villagePlan.ts`
+- `shared/SettlementName.ts`
+- `terrain/naturalResources.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `quests/materializeAuthoredQuests.test.ts`
+- `quests/opportunities/settlementQuestOpportunities.test.ts`
+- `settlement/professionStaffing.test.ts`
+- `settlement/settlementGenerator.ts`
+
 ## `settlement/propSpecs.ts`
 
 **Imported by**
@@ -1194,6 +1227,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/minorLocations.ts`
+- `settlement/professionStaffing.ts`
 - `settlement/settlementTerrain.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
@@ -1504,6 +1538,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `economy/initial.ts`
+- `settlement/professionStaffing.test.ts`
+- `settlement/professionStaffing.ts`
 - `settlement/props.ts`
 - `settlement/ratNestPlacement.test.ts`
 - `settlement/ratNestPlacement.ts`

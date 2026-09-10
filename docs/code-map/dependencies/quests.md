@@ -65,7 +65,9 @@ Generated from TypeScript imports.
 
 - `quests/materializeAuthoredQuests.ts`
 - `quests/quests.ts`
+- `settlement/families.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/professionStaffing.ts`
 
 ## `quests/materializeAuthoredQuests.ts`
 
@@ -134,6 +136,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `settlement/families.ts`
+- `settlement/professionStaffing.ts`
 
 ## `quests/opportunities/settlementQuestOpportunities.ts`
 

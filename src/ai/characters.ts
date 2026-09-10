@@ -4,14 +4,10 @@ import { personalityForIndex } from './dialogue'
 
 export type NpcGender = 'male' | 'female'
 
-/** Function within the settlement — data only in v1, no schedule/workplace
- *  behavior yet (see npc-2-daily-routine-and-place.md). `miner`/`fisher`
- *  added for plan 032 (natural-resources-economy) — a dedicated family near a
- *  significant iron/gold/fish deposit gets one forced into its role
- *  (`terrain/naturalResources.ts`'s `RESOURCE_ROLE`), but either can also
- *  come up on any regular family via the normal random roll below.
- *  `blacksmith` (plan settlements-npcs-002) is a normal random role like
- *  `hunter` before it — no dedicated/forced assignment. */
+/** Function within the settlement. Baseline `characterForSeed` rolls a
+ *  random role; generation-time `professionStaffing.ts` then assigns
+ *  procedural adult roles from settlement identity. `trader` stays out of
+ *  the random pool so the adult-capacity gate cannot be skipped. */
 export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher' | 'hunter' | 'blacksmith'
 
 /** Closed pool of lightweight, deterministic modifiers — execution effects
@@ -33,8 +29,8 @@ export type CharacterDef = {
   traits: readonly Trait[]
 }
 
-/** Random family members never roll `trader` — plan 090 wants exactly one
- *  Kupiec (reserved Kasia in the home settlement), none elsewhere. */
+/** Random baseline never rolls `trader` — reserved Kasia plus generation-time
+ *  staffing are the only trader assignment paths. */
 const RANDOM_ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'miner', 'fisher', 'hunter', 'blacksmith']
 const TRAITS: readonly Trait[] = ['curious', 'energetic', 'fast_worker', 'night_owl', 'sociable']
 

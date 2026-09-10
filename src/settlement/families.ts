@@ -3,7 +3,7 @@ import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
 import { type CharacterDef, characterForSeed, type NpcGender, RESERVED_CHARACTERS, type Role } from '../ai/characters'
 import { generateFamilySurname, generateNpcName, surnameForGender } from '../ai/nameCultures'
-import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
+import { RESOURCE_ROLE } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 
 /** `OUTPOST` (plan 032 §7) is a single-house, single-NPC settlement, decided
@@ -330,12 +330,10 @@ function childScale(random: () => number): number {
  *  through so `generateNpcName`'s per-slot uniqueness hash keeps working the
  *  same way it already does for the rest of the settlement's NPCs.
  *
- *  `forcedRole` (plan 032 §6/§7 — dedicated resource family / outpost) locks
- *  the *first* member added (whichever relation that turns out to be) to
- *  that role instead of `characterForSeed`'s random pick; any other members
- *  (spouse/child) still roll normally — only one person per family needs to
- *  visibly "be" the miner/fisher/farmer the resource justified.
- *  `forceSingle` (outposts only) skips the couple/child roll entirely. */
+ *  `forcedRole` (OUTPOST resource specialist) locks the *first* member
+ *  added to that role instead of `characterForSeed`'s random pick; any
+ *  other members still roll normally. `forceSingle` (outposts only) skips
+ *  the couple/child roll entirely. */
 function generateFamily(
   seed: number,
   familyIndex: number,
@@ -390,16 +388,16 @@ function generateFamily(
  * always present, on top of which — if the rolled `VillageSize` calls for
  * more — additional procedural families are generated, same as any other
  * settlement. Deterministic: same `seed`/`size`/`isHome`/`nameCulture`/
- * `dominantResource` always produces the same families.
+ * `dominantResource` always produces the same families. Adult profession
+ * composition for normal settlements is applied afterwards by
+ * `resolveInitialProfessionStaffing`.
  *
  * `dominantResource` (plan 032 §5-7, from `terrain/naturalResources.ts`) —
- * when significant (`richness >= SIGNIFICANT_RICHNESS`) and its type has a
- * role mapping (`RESOURCE_ROLE`; clay/salt/resin/herbs don't, and stay
- * naming/food-source flavor only in v1) — adds one dedicated single-member
- * family with that forced role, on top of the normal roster. `size ===
- * 'OUTPOST'` bypasses the normal roster entirely: exactly one lone resident,
- * role forced from the resource that justified the outpost in the first
- * place (`settlementGenerator.ts` only ever rolls `OUTPOST` when there is one).
+ * when `size === 'OUTPOST'`, forces the single resident's role from the
+ * mapped resource that justified the outpost. Normal settlements no longer
+ * grow an extra resource family (plan settlements-npcs-023); specialist
+ * coverage is assigned inside existing adult capacity by
+ * `professionStaffing.ts`.
  */
 export function generateFamilies(
   seed: number,
@@ -423,15 +421,6 @@ export function generateFamilies(
     const { family, nextIndex } = generateFamily(seed, familyIndex, npcIndex, nameCulture)
     families.push(family)
     npcIndex = nextIndex
-  }
-
-  const dedicatedRole =
-    dominantResource && dominantResource.richness >= SIGNIFICANT_RICHNESS
-      ? RESOURCE_ROLE[dominantResource.type]
-      : undefined
-  if (dedicatedRole) {
-    const { family } = generateFamily(seed, families.length, npcIndex, nameCulture, dedicatedRole)
-    families.push(family)
   }
 
   return families

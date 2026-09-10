@@ -122,7 +122,7 @@ describe('generateFamilies', () => {
     expect(families.every((f) => !f.id.startsWith('family-reserved'))).toBe(true)
   })
 
-  it('home has exactly one trader (Kasia); other settlements never roll trader (plan 090)', () => {
+  it('home has exactly one trader (Kasia); characterForSeed never rolls trader', () => {
     const home = generateFamilies(7, 'XL', true, 'polish')
     const homeTraders = home.flatMap((f) => f.members).filter((m) => m.character.role === 'trader')
     expect(homeTraders).toHaveLength(1)
@@ -180,12 +180,10 @@ describe('generateFamilies', () => {
     const faintDeposit: NaturalResource = { id: 'r2', type: 'iron', x: 0, z: 0, radius: 10, richness: 0.1 }
     const unmappedDeposit: NaturalResource = { id: 'r3', type: 'herbs', x: 0, z: 0, radius: 10, richness: 0.9 }
 
-    it('adds one extra dedicated-role family on top of the normal roster when the resource is significant', () => {
+    it('does not grow a dedicated resource family on a normal settlement (plan 023)', () => {
       const without = generateFamilies(11, 'MD', false, 'polish')
       const withResource = generateFamilies(11, 'MD', false, 'polish', ironDeposit)
-      expect(withResource.length).toBe(without.length + 1)
-      const dedicated = withResource[withResource.length - 1]!
-      expect(dedicated.members.some((m) => m.character.role === 'miner')).toBe(true)
+      expect(withResource).toEqual(without)
     })
 
     it('does not add a dedicated family when the resource is below the significance threshold', () => {

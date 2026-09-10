@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { PreySpawner } from '../../fauna/AnimalSpawner'
 import type { OpportunityNpc } from './worldQuestOpportunityTypes'
+import { generateFamilies } from '../../settlement/families'
+import { resolveInitialProfessionStaffing } from '../../settlement/professionStaffing'
 import {
   collectSettlementQuestOpportunities,
   collectWolfDenPressureOpportunities,
@@ -121,6 +123,24 @@ describe('world-driven quest materialization', () => {
   it('prefers a hunter giver and skips children', () => {
     expect(selectSettlementQuestGiver([child, anna, hunter], 'wolf-den-pressure')?.id).toBe(hunter.id)
     expect(selectSettlementQuestGiver([child, anna], 'wolf-den-pressure')?.id).toBe(anna.id)
+  })
+
+  it('always has an adult fallback on a staffed settlement roster', () => {
+    const families = generateFamilies(11, 'MD', false, 'polish')
+    const staffed = resolveInitialProfessionStaffing(families, {
+      size: 'MD',
+      terrain: 'forest',
+      foodSourceType: 'garden',
+      dominantResource: null,
+      isHome: false,
+      seed: 11,
+    })
+    const npcs = opportunityNpcsFromSettlement({ id: '1_0', families: staffed })
+    const giver = selectSettlementQuestGiver(npcs, 'wolf-den-pressure')
+    expect(giver).toBeDefined()
+    expect(giver!.child).toBe(false)
+    const hunterNpc = npcs.find((npc) => npc.role === 'hunter' && !npc.child)
+    if (hunterNpc) expect(giver!.id).toBe(hunterNpc.id)
   })
 
   it('reconstructs the same definition from persisted source refs after the den disappears', () => {

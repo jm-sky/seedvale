@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { SettlementNpcDescriptor } from '../settlement/npcIdentity'
-import type { AuthoredQuestDef } from './quests'
+import { generateFamilies } from '../settlement/families'
+import { type SettlementNpcDescriptor, settlementNpcDescriptors } from '../settlement/npcIdentity'
+import { resolveInitialProfessionStaffing } from '../settlement/professionStaffing'
 import {
   AuthoredNpcResolutionError,
   materializeAuthoredQuestDefs,
   normalizeLegacyQuestRelations,
 } from './materializeAuthoredQuests'
+import { type AuthoredQuestDef, QUESTS } from './quests'
 
 const descriptors: readonly SettlementNpcDescriptor[] = [
   { id: 'home:npc:0', name: 'Piotr' },
@@ -72,6 +74,30 @@ describe('materializeAuthoredQuestDefs', () => {
     ]
     const quest: AuthoredQuestDef = { ...relay, giverName: 'Jan' }
     expect(() => materializeAuthoredQuestDefs([quest], ambiguous)).toThrow(/ambiguous NPC name "Jan"/)
+  })
+
+  it('materializes authored QUESTS against staffed home families without missing or ambiguous NPCs', () => {
+    for (const size of ['SM', 'MD', 'LG', 'XL'] as const) {
+      for (const seed of [3, 7, 21, 99]) {
+        const families = generateFamilies(seed, size, true, 'polish')
+        const staffed = resolveInitialProfessionStaffing(families, {
+          size,
+          terrain: 'forest',
+          foodSourceType: 'garden',
+          dominantResource: null,
+          isHome: true,
+          seed,
+        })
+        const descriptors = settlementNpcDescriptors({ id: '0_0', families: staffed })
+        expect(() => materializeAuthoredQuestDefs(QUESTS, descriptors)).not.toThrow()
+        const reserved = descriptors.filter((d) => ['Anna', 'Kasia', 'Marek', 'Piotr'].includes(d.name))
+        expect(reserved).toHaveLength(4)
+        expect(descriptors[0]?.name).toBe('Piotr')
+        expect(descriptors[1]?.name).toBe('Anna')
+        expect(descriptors[2]?.name).toBe('Marek')
+        expect(descriptors[3]?.name).toBe('Kasia')
+      }
+    }
   })
 })
 

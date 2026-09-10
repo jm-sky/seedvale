@@ -14,7 +14,7 @@ describe('characterForSeed', () => {
       roles.add(characterForSeed(seed, seed % 2 === 0 ? 'male' : 'female').role)
     }
     expect(roles.has('hunter')).toBe(true)
-    // trader stays reserved-only (plan 090) — never rolled by the random pool.
+    // trader is never rolled by the random pool; staffing assigns it separately.
     expect(roles.has('trader')).toBe(false)
   })
 

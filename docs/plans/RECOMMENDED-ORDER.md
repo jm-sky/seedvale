@@ -40,7 +40,8 @@ _No qualifying plans._
 
 ### Polish
 
-_No qualifying plans._
+1. `ui-input-016` — **Building placement and construction UX coherence**  
+   🔴 `L` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -109,12 +110,12 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-10. `items-player-014` — **Rope-pullable resource transport**  
-  🟡 `M` · **Score:**  27  
+10. `ui-input-016` — **Building placement and construction UX coherence**  
+  🔴 `L` · **Score:**  40  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-023` — **Profession staffing and settlement composition**  
-  🔴 `M` · **Score:**  27  
+11. `items-player-014` — **Rope-pullable resource transport**  
+  🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
 12. `tools-005` — **Seedvale Character Preparation Panel**  
@@ -123,14 +124,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 13. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
-   → **unlocks:** 0/0
-
-14. `quests-progression-017` — **RPG settlement quest matrices**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-15. `items-player-023` — **Systemic item utility and food safety**  
-  🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
 ---
@@ -245,6 +238,7 @@ graph TD
   items_player_021["items-player-021 — Player skills and targeted skill actions foundation"]
   items_player_022["items-player-022 — Gameplay interaction usability polish"]
   items_player_023["items-player-023 — Systemic item utility and food safety"]
+  items_player_024["items-player-024 — Inventory and item-use UX coherence"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -356,6 +350,7 @@ graph TD
   ui_input_013["ui-input-013 — Character stats"]
   ui_input_014["ui-input-014 — Construction Status, Inspection and Context Actions"]
   ui_input_015["ui-input-015 — Interaction Targeting and Action Semantics"]
+  ui_input_016["ui-input-016 — Building placement and construction UX coherence"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
@@ -484,6 +479,8 @@ graph TD
   items_player_018 --> world_020
   items_player_021 --> items_player_019
   items_player_021 --> ui_input_013
+  items_player_022 --> items_player_024
+  items_player_024 --> ui_input_016
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004
@@ -568,6 +565,7 @@ graph TD
   settlements_npcs_019 --> settlements_npcs_021
   settlements_npcs_019 --> settlements_npcs_028
   settlements_npcs_020 --> settlements_npcs_021
+  settlements_npcs_023 --> fauna_004
   settlements_npcs_026 --> npc_016
   settlements_npcs_026 --> npc_017
   settlements_npcs_026 --> quests_progression_010
@@ -585,6 +583,9 @@ graph TD
   ui_input_010 --> items_player_018
   ui_input_012 --> items_player_022
   ui_input_014 --> ui_input_015
+  ui_input_014 --> ui_input_016
+  ui_input_015 --> items_player_024
+  ui_input_015 --> ui_input_016
   world_006 --> world_016
   world_007 --> quests_progression_011
   world_008 --> items_player_009
