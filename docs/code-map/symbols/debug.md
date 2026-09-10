@@ -142,17 +142,23 @@ Generated from exported TypeScript symbols.
 
 ## `debug/playerGroundTrace.ts`
 
-- `CaveGroundQueryDebug` — type — line 50
-- `createPlayerGroundTraceBuffer` — function — line 131
-- `PLAYER_GROUND_TRACE_CAPACITY` — const — line 9
+- `CaveGroundQueryDebug` — type — line 69
+- `createPlayerGroundTraceBuffer` — function — line 177
+- `detectPlayerGroundSnap` — function — line 157
+- `emptyPlayerGroundTrace` — function — line 302
+- `PLAYER_GROUND_SNAP_Y` — const — line 16
+- `PLAYER_GROUND_TRACE_CAPACITY` — const — line 12
   - domain: debug
-- `PlayerGroundHitSnapshot` — type — line 13
-- `PlayerGroundSource` — type — line 11
-- `PlayerGroundTraceBuffer` — type — line 63
-- `PlayerGroundTraceTick` — type — line 22
-- `PlayerGroundTraceWriter` — type — line 19
-- `snapshotCaveGroundHit` — function — line 188
-- `writeHitSnapshot` — function — line 196
+- `PLAYER_GROUND_TRACE_POST_TICKS` — const — line 14
+- `PlayerGroundHitSnapshot` — type — line 20
+- `PlayerGroundSnapReason` — type — line 28
+- `PlayerGroundSource` — type — line 18
+- `PlayerGroundTraceBuffer` — type — line 82
+- `PlayerGroundTraceSnapshot` — type — line 61
+- `PlayerGroundTraceTick` — type — line 31
+- `PlayerGroundTraceWriter` — type — line 26
+- `snapshotCaveGroundHit` — function — line 283
+- `writeHitSnapshot` — function — line 291
 
 ## `debug/renderStateDebug.ts`
 
