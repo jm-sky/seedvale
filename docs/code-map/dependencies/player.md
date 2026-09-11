@@ -65,6 +65,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalNaturalWater.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/createFauna.ts`
 - `fauna/mountedSpeed.test.ts`

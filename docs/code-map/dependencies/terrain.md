@@ -264,6 +264,7 @@ Generated from TypeScript imports.
 - `audio/ambientWeights.ts`
 - `config/worldConfig.ts`
 - `debug/caves/caveHeightfieldTerrain.ts`
+- `fauna/animalNaturalWater.ts`
 - `fauna/createFauna.test.ts`
 - `fauna/createFauna.ts`
 - `player/worldWaterEligibility.test.ts`
@@ -1056,6 +1057,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/interactables.ts`
+- `fauna/animalNaturalWater.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkVegetation.test.ts`
 - `terrain/terrainClassification.ts`
@@ -1081,6 +1083,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `audio/createAmbientAudio.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalNaturalWater.ts`
 - `fauna/animalRoaming.ts`
 - `terrain/waterBodyKind.test.ts`
 
@@ -1102,6 +1105,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalForaging.ts`
 - `fauna/createFauna.ts`
 - `fauna/persistentOccupants.test.ts`
 - `settlement/SettlementsManager.ts`

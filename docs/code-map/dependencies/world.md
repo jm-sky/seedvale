@@ -18,6 +18,9 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalForaging.ts`
+- `fauna/animalNaturalWater.ts`
 - `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
 - `shared/waterPoisoningExposure.test.ts`
@@ -3024,6 +3027,8 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/socialBehaviour.ts`
+- `fauna/AnimalLife.ts`
+- `fauna/animalMetabolismGameplay.test.ts`
 - `fauna/createFauna.ts`
 - `player/PlayerNeeds.ts`
 - `world/dayNight.ts`

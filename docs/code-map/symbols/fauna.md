@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 869
+- `AnimalAgent` — class — line 877
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 396
-- `AnimalAgentDeps` — type — line 734
-- `AnimalSaveState` — type — line 497
-- `AnimalUpdateContext` — type — line 768
-- `BURY_DURATION_SEC` — const — line 266
-- `canPredatorPursueIntoVillage` — function — line 563
-- `FAUNA_SHADOW_DISTANCE` — const — line 233
-- `FaunaAiBranch` — type — line 375
-- `FaunaNavRescueDebugInfo` — type — line 380
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 326
-- `FrenzyWolfCandidate` — type — line 669
-- `HARVEST_MEAT_DURATION_SEC` — const — line 269
-- `isWithinVillageRadius` — function — line 544
-- `NearbyNpcCandidate` — type — line 664
-- `pickNearestEligibleWolf` — function — line 678
-- `pickRabidTarget` — function — line 703
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 251
-- `resolveLureTarget` — function — line 592
-- `villageFleeBiasFalloff` — function — line 571
-- `VillageInfo` — type — line 538
+- `AnimalAgentDebugInfo` — type — line 402
+- `AnimalAgentDeps` — type — line 740
+- `AnimalSaveState` — type — line 503
+- `AnimalUpdateContext` — type — line 776
+- `BURY_DURATION_SEC` — const — line 272
+- `canPredatorPursueIntoVillage` — function — line 569
+- `FAUNA_SHADOW_DISTANCE` — const — line 239
+- `FaunaAiBranch` — type — line 381
+- `FaunaNavRescueDebugInfo` — type — line 386
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 332
+- `FrenzyWolfCandidate` — type — line 675
+- `HARVEST_MEAT_DURATION_SEC` — const — line 275
+- `isWithinVillageRadius` — function — line 550
+- `NearbyNpcCandidate` — type — line 670
+- `pickNearestEligibleWolf` — function — line 684
+- `pickRabidTarget` — function — line 709
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 257
+- `resolveLureTarget` — function — line 598
+- `villageFleeBiasFalloff` — function — line 577
+- `VillageInfo` — type — line 544
 
 ## `fauna/animalCorpse.ts`
 
@@ -98,35 +98,36 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalForaging.ts`
 
-- `AnimalWaterSourceProvider` — type — line 90
-- `applySourceRelief` — function — line 531
-- `canAcceptHandFeed` — function — line 137
-- `CarcassCandidate` — type — line 217
-- `carcassCandidateScore` — function — line 208
-- `carcassFoodValue` — function — line 190
-- `dietItemReliefScale` — function — line 127
-- `DRINK_DURATION_SEC` — const — line 65
-- `EAT_DURATION_SEC` — const — line 62
-- `findFoodTarget` — function — line 474
-- `findForageTarget` — function — line 353
-- `findGrassPatchTarget` — function — line 380
-- `findHouseholdTroughTarget` — function — line 294
-- `findTroughTarget` — const — line 301
-- `findWaterTarget` — function — line 325
-- `FOOD_INTERACTION_RANGE` — const — line 56
-- `forageEdgeScore` — function — line 104
-- `ForagingContext` — type — line 266
-- `isCarcassEdible` — function — line 164
-- `isSourceTargetValid` — function — line 486
-- `selectDietFeedKind` — function — line 115
-- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 69
-- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 74
-- `SourceTarget` — type — line 235
-- `SourceTargetKind` — type — line 234
-- `TROUGH_DRINK_AMOUNT` — const — line 77
-- `tryCommitHandFeed` — function — line 148
-- `WATER_INTERACTION_RANGE` — const — line 59
-- `WaterSourceRef` — type — line 82
+- `AnimalWaterSourceProvider` — type — line 93
+- `applySourceRelief` — function — line 570
+- `canAcceptHandFeed` — function — line 140
+- `CarcassCandidate` — type — line 220
+- `carcassCandidateScore` — function — line 211
+- `carcassFoodValue` — function — line 193
+- `dietItemReliefScale` — function — line 130
+- `DRINK_DURATION_SEC` — const — line 68
+- `EAT_DURATION_SEC` — const — line 65
+- `findFoodTarget` — function — line 508
+- `findForageTarget` — function — line 387
+- `findGrassPatchTarget` — function — line 414
+- `findHouseholdTroughTarget` — function — line 327
+- `findTroughTarget` — const — line 334
+- `findWaterTarget` — function — line 359
+- `FOOD_INTERACTION_RANGE` — const — line 59
+- `forageEdgeScore` — function — line 107
+- `ForagingContext` — type — line 269
+- `isCarcassEdible` — function — line 167
+- `isDrinkableNaturalShorePoint` — function — line 303
+- `isSourceTargetValid` — function — line 520
+- `selectDietFeedKind` — function — line 118
+- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 72
+- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 77
+- `SourceTarget` — type — line 238
+- `SourceTargetKind` — type — line 237
+- `TROUGH_DRINK_AMOUNT` — const — line 80
+- `tryCommitHandFeed` — function — line 151
+- `WATER_INTERACTION_RANGE` — const — line 62
+- `WaterSourceRef` — type — line 85
 
 ## `fauna/animalHarvest.ts`
 
@@ -163,19 +164,19 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalLife.ts`
 
-- `ANIMAL_STAMINA_MAX` — const — line 34
-- `AnimalLifeState` — type — line 64
-- `AnimalMetabolismConfig` — type — line 17
-- `BIAS_STRENGTH` — const — line 52
-- `consumeFood` — function — line 122
-- `createAnimalLifeState` — function — line 75
-- `DEFAULT_ANIMAL_METABOLISM` — const — line 39
-- `drinkWater` — function — line 128
-- `FOOD_RELIEF` — const — line 59
-- `NEED_ELEVATED_THRESHOLD` — const — line 56
-- `STAMINA_REST_THRESHOLD` — const — line 49
-- `tickAnimalLife` — function — line 95
-- `WATER_RELIEF` — const — line 62
+- `ANIMAL_STAMINA_MAX` — const — line 44
+- `AnimalLifeState` — type — line 74
+- `AnimalMetabolismConfig` — type — line 18
+- `BIAS_STRENGTH` — const — line 62
+- `consumeFood` — function — line 132
+- `createAnimalLifeState` — function — line 85
+- `DEFAULT_ANIMAL_METABOLISM` — const — line 49
+- `drinkWater` — function — line 138
+- `FOOD_RELIEF` — const — line 69
+- `NEED_ELEVATED_THRESHOLD` — const — line 66
+- `STAMINA_REST_THRESHOLD` — const — line 59
+- `tickAnimalLife` — function — line 105
+- `WATER_RELIEF` — const — line 72
 
 ## `fauna/animalMeat.ts`
 
@@ -186,6 +187,20 @@ Generated from exported TypeScript symbols.
 
 - `HORSE_NAMES` — const — line 1
 - `horseNameForAnimal` — function — line 27
+
+## `fauna/animalNaturalWater.ts`
+
+- `createNaturalWaterKindAt` — function — line 18
+- `NaturalWaterKindSamplerDeps` — type — line 7
+
+## `fauna/animalNeedArbitration.ts`
+
+- `distanceXZ` — function — line 24
+- `isNeedCritical` — function — line 13
+- `NEED_CRITICAL_THRESHOLD` — const — line 4
+- `OWNED_NEED_LEASH_RADIUS` — const — line 8
+- `shouldDeferNeedsForLead` — function — line 18
+- `STAY_NEED_LEASH_RADIUS` — const — line 11
 
 ## `fauna/animalOwnership.ts`
 

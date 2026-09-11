@@ -1374,6 +1374,7 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalSpawner.ts`
+- `fauna/animalNaturalWater.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/persistentOccupants.ts`

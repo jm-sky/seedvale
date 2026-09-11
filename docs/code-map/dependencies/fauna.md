@@ -32,6 +32,7 @@ Generated from TypeScript imports.
 - `fauna/animalHumanAffinity.ts`
 - `fauna/animalLead.ts`
 - `fauna/animalNames.ts`
+- `fauna/animalNeedArbitration.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/dogGuard.ts`
@@ -60,6 +61,7 @@ Generated from TypeScript imports.
 - `terrain/slopeConstraint.ts`
 - `terrain/waterSample.ts`
 - `ui/agentStatusLabel.ts`
+- `world/WaterSource.ts`
 - `world/animalTraps.ts`
 - `world/bloodTraces.ts`
 - `world/collision.ts`
@@ -133,6 +135,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `shared/StaminaState.ts`
+- `world/timeConversion.ts`
 
 **Imported by**
 
@@ -142,6 +145,9 @@ Generated from TypeScript imports.
 - `fauna/animalDefs.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalMetabolismGameplay.test.ts`
+- `fauna/animalNeedArbitration.test.ts`
+- `fauna/animalNeedArbitration.ts`
 
 ## `fauna/AnimalSpawner.test.ts`
 
@@ -275,11 +281,14 @@ Generated from TypeScript imports.
 - `fauna/animalCorpse.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalRoaming.ts`
+- `fauna/waterTraversal.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
 - `player/PlayerController.ts`
 - `settlement/household.ts`
 - `terrain/waterBodyKind.ts`
+- `terrain/waterSample.ts`
+- `world/WaterSource.ts`
 - `world/createGrassForagePatches.ts`
 
 **Imported by**
@@ -346,6 +355,13 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.ts`
 - `fauna/harvestedRemains.ts`
 
+## `fauna/animalMetabolismGameplay.test.ts`
+
+**Imports**
+
+- `fauna/AnimalLife.ts`
+- `world/timeConversion.ts`
+
 ## `fauna/animalNames.test.ts`
 
 **Imports**
@@ -359,6 +375,39 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalNames.test.ts`
+
+## `fauna/animalNaturalWater.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/waterBodies.ts`
+- `terrain/waterBodyKind.ts`
+- `world/WaterSource.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+
+## `fauna/animalNeedArbitration.test.ts`
+
+**Imports**
+
+- `fauna/AnimalLife.ts`
+- `fauna/animalNeedArbitration.ts`
+
+## `fauna/animalNeedArbitration.ts`
+
+**Imports**
+
+- `fauna/AnimalLife.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalNeedArbitration.test.ts`
 
 ## `fauna/animalOwnership.test.ts`
 
@@ -837,6 +886,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/animalDefs.ts`
+- `fauna/animalForaging.ts`
 - `fauna/waterTraversal.test.ts`
 
 ## `fauna/wolfDenScenario.test.ts`

@@ -41,7 +41,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 378
+- `createSettlement` — function — line 379
 - `CreateSettlementDeps` — type — line 250
 - `Settlement` — type — line 129
 - `settlementSpawnPoint` — function — line 238
@@ -259,8 +259,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 277
-- `disposeLivestock` — function — line 771
+- `createLivestockRegistry` — function — line 281
+- `disposeLivestock` — function — line 779
 - `fillShepherdFlockKinds` — function — line 41
 - `isPlayerOwnedLivestockRecord` — function — line 97
 - `LIVESTOCK_KINDS` — const — line 74
@@ -269,15 +269,15 @@ Generated from exported TypeScript symbols.
 - `livestockRecordMatchesHouseholdSlot` — function — line 101
 - `LivestockRegistry` — type — line 139
 - `LivestockSaveRecord` — type — line 87
-- `PersistentLivestockContext` — type — line 682
-- `resolveLivePersistentAnimal` — function — line 690
-- `restoreDetachedPlayerOwnedLivestock` — function — line 754
-- `setOwnedAnimalControl` — function — line 742
-- `spawnAnimalFromRecord` — function — line 176
+- `PersistentLivestockContext` — type — line 690
+- `resolveLivePersistentAnimal` — function — line 698
+- `restoreDetachedPlayerOwnedLivestock` — function — line 762
+- `setOwnedAnimalControl` — function — line 750
+- `spawnAnimalFromRecord` — function — line 177
 - `SpawnAnimalFromRecordDeps` — type — line 166
-- `spawnLivestock` — function — line 532
-- `tickSettlementLivestock` — function — line 788
-- `transferAnimalOwnership` — function — line 717
+- `spawnLivestock` — function — line 536
+- `tickSettlementLivestock` — function — line 796
+- `transferAnimalOwnership` — function — line 725
 
 ## `settlement/lodging.ts`
 
@@ -670,13 +670,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 214
+- `createSettlementsManager` — function — line 215
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 84
+- `SettlementsManager` — type — line 85
 
 ## `settlement/settlementStructures.ts`
 

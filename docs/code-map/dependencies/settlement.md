@@ -42,6 +42,7 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalNaturalWater.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
