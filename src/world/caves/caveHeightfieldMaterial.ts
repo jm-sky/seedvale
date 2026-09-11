@@ -366,6 +366,9 @@ export function createCaveHeightfieldMaterial(
     metalness: 0,
     flatShading: false,
     side: THREE.FrontSide,
+    // Streamed cave interior — global scene.fog must not wash depth when viewed
+    // from outside the mouth (same idea as `createSky`'s dome opt-out).
+    fog: false,
   })
 
   if (surfaceDetail) {

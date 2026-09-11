@@ -319,5 +319,6 @@ Small correctness pass before browser tuning (Stage E):
 - **Flicker.** Cave torches call `setLit(true)` at presentation build; there is no cave presentation `update(dt)` hook, so point-light flicker is **static** after the initial `fireVisual.flicker()` sample (particles visible but not animated per frame).
 - **Lights.** Still `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT = 2` real `PointLight`s per active adventure presentation via `PointLightBudget` register/unregister on the props subtree; `castShadow = false`.
 - **Procedural cart fallback.** `preloadCartProp()` marks the procedural singleton template with exported `markSharedGpu()` so `disposeObject3D()` on streamed presentation clones cannot free shared cart geometry/material.
+- **Exterior view / scene fog.** Global `scene.fog` (day/night + weather via `resolveSceneFog` when the camera is in cave occupancy) cannot exclude cave interior surfaces when the camera is outside — `THREE.Fog` is per-camera, not per-volume. Streamed cave presentation opts out: shared heightfield/mouth materials set `fog: false`; `exemptCavePresentationFromSceneFog()` runs on each assembled `cave:*` group (clones `sharedGpu` materials on prop/rock meshes so GLTF cache is not mutated).
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

@@ -47,6 +47,31 @@ export function createMouthUndersideMaskMaterial(): THREE.MeshStandardMaterial {
     metalness: 0,
     flatShading: true,
     side: THREE.DoubleSide,
+    fog: false,
+  })
+}
+
+/** Streamed cave presentation opts out of global `scene.fog` (see `createSky`). */
+export function exemptCavePresentationFromSceneFog(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const detachFog = (mat: THREE.Material): THREE.Material => {
+      if (!mat.userData.sharedGpu) {
+        ;(mat as THREE.Material & { fog?: boolean }).fog = false
+        return mat
+      }
+      const next = mat.clone()
+      next.userData = { ...next.userData, sharedGpu: false }
+      ;(next as THREE.Material & { fog?: boolean }).fog = false
+      return next
+    }
+    const mat = mesh.material
+    if (Array.isArray(mat)) {
+      mesh.material = mat.map(detachFog)
+    } else if (mat) {
+      mesh.material = detachFog(mat)
+    }
   })
 }
 
@@ -306,6 +331,8 @@ export function createCaveHeightfieldPresentation(input: {
       adventureLanternLightCount = adventureProps.lanternLightCount
     }
   }
+
+  exemptCavePresentationFromSceneFog(group)
 
   const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
   return {
