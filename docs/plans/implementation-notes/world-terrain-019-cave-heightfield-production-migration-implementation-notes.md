@@ -774,12 +774,12 @@ Presentation-only visual polish of the Cave V2 mouth after the heightfield spati
 
 Denser contour-driven framing in `createMouthRocks()`:
 
-- along-axis sample step ~0.55 m (was 0.9 m × 6 fixed steps) with deterministic along-axis jitter;
-- hillside / upper-rim arc sampled from −opening so the back of the terrain hole is covered, not only the left/right walls;
-- two classes on the same `createLargeRock()` pipeline: **anchor** (scale ~1.0–1.45, doorway + hillside sides + back-centre) and **filler** (scale ~0.45–0.9) between them;
+- along-axis sample step ~0.48 m with deterministic along-axis jitter, **hillside flanks → doorway only** (not onto the approach / grass lip, not onto the pinched back of the hole);
+- no back-rim / upper-lip arc — those boulders hung into the doorway at the cave/grass junction;
+- two classes on the same `createLargeRock()` pipeline: **anchor** (scale ~1.1–1.5, doorway left/right pillars only) and **filler** (scale ~0.45–0.85) on the same flanks;
 - deterministic variation (scale / yaw / along jitter / outside offset / sink) from a local hash of `(caveId, step, side, channel)` — no `Math.random()`, no sequential RNG;
-- rocks still sit on `walkSurfaceAt` on the terrain side of `mouthOpeningAt = 0`; corridor stays clear; no colliders;
-- cap 30 rocks per entrance (typically low-20s, up from the legacy 12).
+- rocks still sit on `walkSurfaceAt` on the terrain side of `mouthOpeningAt = 0`; an explicit exit-path keep-out rejects anything on the grass lip or in the walkable corridor;
+- cap 30 rocks per entrance.
 
 Layering from typical camera angles:
 

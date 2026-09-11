@@ -24,8 +24,6 @@ import { openingDirection } from './caveOrientation'
 
 const TEST_CONFIG = { ...DEFAULT_HEIGHTFIELD_CONFIG, cellSize: 0.5 }
 const walk = caveHeightfieldWalkSurfaceAt
-/** Sparse framing before the entrance polish (6 along-steps × 2 sides). */
-const LEGACY_MOUTH_ROCK_COUNT = 12
 
 function build(id: (typeof CAVE_HEIGHTFIELD_FIXTURE_IDS)[number]): CaveHeightfieldRepresentation {
   return buildCaveHeightfieldRepresentation(buildCaveHeightfieldFixture(id), walk, TEST_CONFIG).heightfield
@@ -55,7 +53,7 @@ function rockSnapshot(group: THREE.Group): number[] {
 }
 
 describe('createMouthRocks (presentation only)', () => {
-  it('places rocks outside the opening contour and leaves the corridor free', () => {
+  it('places rocks outside the opening contour and leaves the exit path free', () => {
     for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
       const field = build(id)
       const opening = openingOf(field)
@@ -64,40 +62,57 @@ describe('createMouthRocks (presentation only)', () => {
       const out = openingDirection(field.entrance.yaw)
       const sideX = -out.dz
       const sideZ = out.dx
+      const half = field.entrance.width * 0.5
       for (const rock of rocks.children) {
         expect(opening(rock.position.x, rock.position.z)).toBeLessThan(0)
         const dx = rock.position.x - field.entrance.x
         const dz = rock.position.z - field.entrance.z
         const along = dx * out.dx + dz * out.dz
         const lat = dx * sideX + dz * sideZ
-        if (along > -0.5 && along < 2.5) {
-          expect(Math.abs(lat)).toBeGreaterThan(0.7)
+        expect(along).toBeLessThan(0.55)
+        if (along > -1.1) {
+          expect(Math.abs(lat)).toBeGreaterThan(half * 0.55)
         }
       }
-      for (let along = 0; along <= 2; along += 0.25) {
+      for (let along = 0; along <= 3; along += 0.25) {
         const cx = field.entrance.x + out.dx * along
         const cz = field.entrance.z + out.dz * along
         for (const rock of rocks.children) {
-          expect(Math.hypot(rock.position.x - cx, rock.position.z - cz)).toBeGreaterThan(0.7)
+          expect(Math.hypot(rock.position.x - cx, rock.position.z - cz)).toBeGreaterThan(1.15)
         }
       }
     }
   })
 
-  it('is denser than the legacy 12-rock framing, still bounded', () => {
+  it('frames both doorway flanks, still bounded', () => {
     const field = build('basic')
     const rocks = createMouthRocks(field, openingOf(field), walk)
-    expect(rocks.children.length).toBeGreaterThan(LEGACY_MOUTH_ROCK_COUNT)
+    expect(rocks.children.length).toBeGreaterThanOrEqual(6)
     expect(rocks.children.length).toBeLessThanOrEqual(30)
   })
 
-  it('mixes larger anchor rocks with smaller fillers', () => {
+  it('puts the large anchor rocks on the doorway sides, not the grass lip', () => {
     const field = build('basic')
     const rocks = createMouthRocks(field, openingOf(field), walk)
+    const out = openingDirection(field.entrance.yaw)
+    const sideX = -out.dz
+    const sideZ = out.dx
     const anchors = rocks.children.filter((c) => c.userData.mouthRockKind === 'anchor')
     const fillers = rocks.children.filter((c) => c.userData.mouthRockKind === 'filler')
-    expect(anchors.length).toBeGreaterThan(0)
-    expect(fillers.length).toBeGreaterThan(anchors.length)
+    expect(anchors.length).toBeGreaterThanOrEqual(2)
+    expect(fillers.length).toBeGreaterThan(0)
+    const sides = new Set<number>()
+    for (const rock of anchors) {
+      const dx = rock.position.x - field.entrance.x
+      const dz = rock.position.z - field.entrance.z
+      const along = dx * out.dx + dz * out.dz
+      const lat = dx * sideX + dz * sideZ
+      expect(Math.abs(along)).toBeLessThan(0.8)
+      expect(Math.abs(lat)).toBeGreaterThan(field.entrance.width * 0.4)
+      sides.add(lat > 0 ? 1 : -1)
+    }
+    expect(sides.has(1)).toBe(true)
+    expect(sides.has(-1)).toBe(true)
   })
 
   it('is deterministic for identical field and contour', () => {
@@ -168,7 +183,7 @@ describe('createCaveHeightfieldPresentation', () => {
       maskMaterial,
       rocks: false,
     })
-    expect(withRocks.rockCount).toBeGreaterThan(LEGACY_MOUTH_ROCK_COUNT)
+    expect(withRocks.rockCount).toBeGreaterThanOrEqual(6)
     expect(withRocks.group.children.map((c) => c.name)).toContain('cave-mouth-rocks')
     expect(withRocks.maskVertices).toBe(withoutRocks.maskVertices)
     expect(withRocks.buffers.vertices).toBe(withoutRocks.buffers.vertices)
