@@ -161,6 +161,22 @@ const ROLE_STAFFING_POLICY: Record<Role, RoleStaffingPolicy> = {
     },
     afterDuplicate: (copies, base) => (copies >= 1 ? 'excluded' : base),
   },
+  shepherd: {
+    basePriority: (s) => {
+      if (s.adultCapacity <= 3) return 'excluded'
+      let priority: StaffingPriority = 'weak'
+      if (s.adultCapacity >= 6 || s.size === 'MD') priority = 'normal'
+      if (s.adultCapacity >= 8 || s.size === 'LG' || s.size === 'XL') priority = 'strong'
+      if (s.terrain === 'forest' || s.foodSourceType === 'field' || s.foodSourceType === 'garden') {
+        priority = shiftPriority(priority, 1)
+      }
+      if (s.terrain === 'desert' || s.terrain === 'ocean') {
+        priority = shiftPriority(priority, -1)
+      }
+      return priority
+    },
+    afterDuplicate: (copies, base) => (copies >= 1 ? 'excluded' : base),
+  },
 }
 
 function environmentSignal(signals: StaffingSignals, role: Role): boolean {
@@ -217,6 +233,16 @@ function isReservedFamily(family: FamilyDef): boolean {
 /** Active workforce: `age >= 18`. Children never count toward coverage. */
 export function isProfessionAdult(member: FamilyMember): boolean {
   return member.age >= 18
+}
+
+/** Household index of the settlement's shepherd adult, or `null`. At most one. */
+export function shepherdHouseholdIndex(families: readonly FamilyDef[]): number | null {
+  for (let i = 0; i < families.length; i++) {
+    if (families[i]!.members.some((member) => isProfessionAdult(member) && member.character.role === 'shepherd')) {
+      return i
+    }
+  }
+  return null
 }
 
 function isStaffableAdult(member: FamilyMember, family: FamilyDef): boolean {

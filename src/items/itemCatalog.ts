@@ -107,6 +107,8 @@ export type ItemCapability =
   | 'textile_repair'
   /** Pry, wedge or strike something open — crates, stuck lids, forced locks. */
   | 'prying'
+  /** Shear a wool-ready sheep (`fauna/AnimalAgent.ts`). */
+  | 'shearing'
 
 /** Genitive Polish phrase used after "Potrzebujesz …" when an action is
  *  refused for a missing capability — keeps requirement messages capability-
@@ -121,6 +123,7 @@ export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
   soil_digging: 'narzędzia do kopania',
   wood_chopping: 'narzędzia do rąbania',
   prying: 'narzędzia do wyważania',
+  shearing: 'nożyc do strzyżenia',
 }
 
 /** Player-facing capability name (plan items-player-024) — shared by the
@@ -136,6 +139,7 @@ export const CAPABILITY_LABEL: Record<ItemCapability, string> = {
   fishing: 'Wędkowanie',
   textile_repair: 'Naprawa tekstyliów',
   prying: 'Wyważanie',
+  shearing: 'Strzyżenie',
 }
 
 /** What a `consumable` item restores — `hunger`/`thirst` map to a
@@ -444,6 +448,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: '/models/items/sickle.glb',
     notes: '1–3 with pitchfork near gardens (plan 082). Holdable melee, medium speed (plan 096/123).',
     roadmap: 'NPC protest on village theft (issue 025).',
+  },
+  shears: {
+    kind: 'shears',
+    label: 'nożyce do wełny',
+    holdable: true,
+    capabilities: ['shearing'],
+    melee: { damage: 8, range: 1.5, arcDot: 0.55, windUp: 0.14, hitWindow: 0.08, recovery: 0.18, staminaCost: 4 },
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan fauna-004 — shepherd personal loadout and Kupiec stock. Gates sheep shearing via `shearing`, never by kind identity.',
   },
   wooden_torch: {
     kind: 'wooden_torch',
@@ -1245,6 +1259,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan fauna-010 — livestock feed, not human food/`HeldTool`. Trickles into a household\'s `items` from a temporary lazy hay source (`settlement/household.ts`\'s `resolveHayForage`); an `AnimalDef.diet` decides which herbivore species may eat it.',
+  },
+  wool: {
+    kind: 'wool',
+    label: 'wełna',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan fauna-004 — stackable sheep shearing yield. Lands in carried inventory then household `items`; not food and not a settlement EconomicKind.',
   },
   book_riding_basic: {
     kind: 'book_riding_basic',

@@ -192,27 +192,27 @@ Generated from exported TypeScript symbols.
 
 ## `items/HeldTool.ts`
 
-- `createHeldTool` — function — line 68
+- `createHeldTool` — function — line 69
   - domain: items-player
   - system: held-tool
   - role: Tracks which single tool/weapon instance is currently equipped in hand.
   - uses: Inventory
-- `HeldTool` — type — line 38
-- `isToolKind` — function — line 34
+- `HeldTool` — type — line 39
+- `isToolKind` — function — line 35
 - `ToolKind` — type — line 7
 
 ## `items/heldToolVisual.ts`
 
-- `BRANCH_HELD_ATTACH` — const — line 187
-- `createHeldToolObject` — function — line 282
-- `findRightHandSocket` — function — line 259
+- `BRANCH_HELD_ATTACH` — const — line 192
+- `createHeldToolObject` — function — line 287
+- `findRightHandSocket` — function — line 264
 - `HELD_ATTACH` — const — line 32
-- `HELD_GLB` — const — line 196
+- `HELD_GLB` — const — line 201
 - `HeldAttach` — type — line 10
-- `HeldMountContext` — type — line 249
-- `mountAttachOnSocket` — function — line 352
-- `mountHeldToolOnSocket` — function — line 310
-- `preloadHeldToolModels` — function — line 263
+- `HeldMountContext` — type — line 254
+- `mountAttachOnSocket` — function — line 357
+- `mountHeldToolOnSocket` — function — line 315
+- `preloadHeldToolModels` — function — line 268
 
 ## `items/Inventory.ts`
 
@@ -250,34 +250,34 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1434
-- `BookTier` — type — line 152
-- `CAPABILITY_KINDS` — const — line 1465
-- `CAPABILITY_LABEL` — const — line 129
-- `CAPABILITY_NEED_LABEL` — const — line 114
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1505
-- `ConsumableNeed` — type — line 143
-- `consumeNeedNoun` — function — line 258
-- `consumeVerbLabel` — function — line 249
+- `ARROW_DAMAGE_BONUS` — const — line 1457
+- `BookTier` — type — line 156
+- `CAPABILITY_KINDS` — const — line 1488
+- `CAPABILITY_LABEL` — const — line 132
+- `CAPABILITY_NEED_LABEL` — const — line 116
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1528
+- `ConsumableNeed` — type — line 147
+- `consumeNeedNoun` — function — line 262
+- `consumeVerbLabel` — function — line 253
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1490
-- `HOLDABLE_KINDS` — const — line 1456
-- `INJURY_TREATMENT_KINDS` — const — line 1527
-- `isMeleeToolKind` — function — line 1449
-- `isRangedTool` — function — line 1441
-- `ITEM_CATALOG` — const — line 272
+- `hasItemCapability` — function — line 1513
+- `HOLDABLE_KINDS` — const — line 1479
+- `INJURY_TREATMENT_KINDS` — const — line 1550
+- `isMeleeToolKind` — function — line 1472
+- `isRangedTool` — function — line 1464
+- `ITEM_CATALOG` — const — line 276
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1548
+- `ITEM_SYSTEM_ROADMAP` — const — line 1571
 - `ItemCapability` — type — line 89
-- `ItemCatalogEntry` — type — line 154
-- `itemIsResilient` — function — line 1495
+- `ItemCatalogEntry` — type — line 158
+- `itemIsResilient` — function — line 1518
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1540
+- `itemTreatsPhysicalInjury` — function — line 1563
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1554
+- `NON_ITEM_PROPS` — const — line 1577
 - `RangedConfig` — type — line 53
 
 ## `items/itemDisplay.ts`
@@ -334,22 +334,22 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 219
-- `canCancelRestProgress` — function — line 190
-- `createItemMesh` — function — line 1279
-- `hasItemCategory` — function — line 169
-- `hasItemKindCategory` — function — line 173
-- `ITEM_DEFS` — const — line 223
-- `ITEM_SIZE_UNITS` — const — line 142
-- `ItemCategory` — type — line 133
-- `ItemDef` — type — line 155
+- `canCancelRestNow` — function — line 221
+- `canCancelRestProgress` — function — line 192
+- `createItemMesh` — function — line 1299
+- `hasItemCategory` — function — line 171
+- `hasItemKindCategory` — function — line 175
+- `ITEM_DEFS` — const — line 225
+- `ITEM_SIZE_UNITS` — const — line 144
+- `ItemCategory` — type — line 135
+- `ItemDef` — type — line 157
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 138
-- `itemSizeUnits` — function — line 151
-- `primaryItemCategory` — function — line 180
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 188
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 200
-- `restCancelAllowedByStartVigor` — function — line 207
+- `ItemSize` — type — line 140
+- `itemSizeUnits` — function — line 153
+- `primaryItemCategory` — function — line 182
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 190
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 202
+- `restCancelAllowedByStartVigor` — function — line 209
 
 ## `items/ItemSpawner.ts`
 
@@ -451,33 +451,33 @@ Generated from exported TypeScript symbols.
 
 ## `items/tradeCatalog.ts`
 
-- `BASE_SELL_FACTOR` — const — line 192
+- `BASE_SELL_FACTOR` — const — line 194
   - domain: settlements — full-condition sell factor bounds (plan settlements-006).
-- `BROKEN_SELL_MULTIPLIER` — const — line 294
-- `canSell` — function — line 223
-- `fullConditionSellFactor` — function — line 256
+- `BROKEN_SELL_MULTIPLIER` — const — line 296
+- `canSell` — function — line 225
+- `fullConditionSellFactor` — function — line 258
   - domain: settlements — sell factor for a full-condition item before durability scaling.
-- `isMerchantStock` — function — line 207
-- `MAX_SELL_FACTOR` — const — line 194
+- `isMerchantStock` — function — line 209
+- `MAX_SELL_FACTOR` — const — line 196
 - `MERCHANT_PRICES` — const — line 14
-- `MERCHANT_STOCK` — const — line 91
-- `merchantPrice` — function — line 203
-- `MIN_SELL_FACTOR` — const — line 193
-- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 184
+- `MERCHANT_STOCK` — const — line 92
+- `merchantPrice` — function — line 205
+- `MIN_SELL_FACTOR` — const — line 195
+- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 186
   - domain: settlements — neutral social standing for merchant sell pricing.
-- `offerValue` — function — line 285
-- `relationshipEffect` — function — line 232
+- `offerValue` — function — line 287
+- `relationshipEffect` — function — line 234
   - domain: settlements — relation tier bonus in percentage points (0.01 = 1 pp).
-- `reputationEffect` — function — line 245
+- `reputationEffect` — function — line 247
   - domain: settlements — weighted reputation × renown amplification (percentage points).
-- `resolveInstanceSellPrice` — function — line 297
+- `resolveInstanceSellPrice` — function — line 299
   - domain: settlements — merchant buyback for a concrete item instance — price is derived, never stored.
-- `roundSellPrice` — function — line 265
+- `roundSellPrice` — function — line 267
   - domain: settlements — deterministic integer coin rounding shared by stack and instance pricing.
-- `sellPrice` — function — line 275
+- `sellPrice` — function — line 277
   - domain: settlements — merchant buyback for a stackable kind at full condition.
-- `SellPriceContext` — type — line 196
-- `tradeValue` — function — line 212
+- `SellPriceContext` — type — line 198
+- `tradeValue` — function — line 214
 
 ## `items/trapItemInstances.ts`
 

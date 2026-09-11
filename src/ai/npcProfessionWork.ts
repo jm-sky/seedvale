@@ -17,6 +17,13 @@ import {
   type SettlementEconomy,
   tryAdvanceDevelopment,
 } from '../economy'
+import { WOOL_YIELD } from '../fauna/livestockProduction'
+import {
+  ownedFlockCentroid,
+  selectReadyOwnedSheep,
+  selectSeparatedOwnedSheep,
+  type ShepherdFlockHooks,
+} from '../fauna/shepherdFlock'
 import { claimFoodItems, FOOD_ITEM_KINDS } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
@@ -132,6 +139,10 @@ export type NpcWorkContext = {
    *  bootstrap can supply a Player-built garden through the same Farmer
    *  planner. Absent, the planner resolves the settlement garden landmark. */
   cultivationAnchor?: CultivationAnchor | null
+  /** Absolute world days for wool readiness (plan fauna-004). */
+  nowDays?: () => number
+  shepherdFlock?: ShepherdFlockHooks | null
+  hasShearingTool?: () => boolean
 }
 
 /**
@@ -530,6 +541,77 @@ function planBlacksmithWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   }
 }
 
+const WOOL_YIELD_KINDS: readonly ItemKind[] = ['wool']
+const SHEARING_DURATION_SEC = 2.4
+
+function planWoolDeposit(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const household = ctx.household
+  if (!household || ctx.carried.count('wool') <= 0) return null
+  return {
+    kind: 'deposit',
+    destination: copyVec3(ctx.home),
+    durationSec: 0.8 * ctx.waitMultiplier,
+    onComplete: () => depositCarriedItems(ctx.carried, household, WOOL_YIELD_KINDS, ctx.simTime()),
+  }
+}
+
+function planShepherdWork(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const flock = ctx.shepherdFlock
+  const household = ctx.household
+  if (!flock || !household) return null
+  const ownerHouseId = household.homeId
+  const sheep = flock.listOwned(ownerHouseId)
+  const ready = selectReadyOwnedSheep(sheep, ownerHouseId)
+  const canShear = ctx.hasShearingTool?.() === true
+  if (ready && canShear && ctx.carried.canAdd('wool', WOOL_YIELD)) {
+    const sheepId = ready.animalId
+    return {
+      kind: 'shear',
+      destination: copyVec3({ x: ready.x, y: ctx.sampleHeight(ready.x, ready.z), z: ready.z }),
+      durationSec: SHEARING_DURATION_SEC * ctx.waitMultiplier,
+      followAnimalId: sheepId,
+      onComplete: () => {
+        if (ctx.hasShearingTool?.() !== true) return
+        if (!ctx.carried.canAdd('wool', WOOL_YIELD)) return
+        const live = flock.resolve(sheepId)
+        if (!live || !live.isAlive || live.ownerHouseId !== ownerHouseId || !live.woolReady) return
+        if (!live.shear(ctx.nowDays?.() ?? 0)) return
+        ctx.carried.add('wool', WOOL_YIELD)
+      },
+      next: planWoolDeposit(ctx) ?? {
+        kind: 'deposit',
+        destination: copyVec3(ctx.home),
+        durationSec: 0.8 * ctx.waitMultiplier,
+        onComplete: () => depositCarriedItems(ctx.carried, household, WOOL_YIELD_KINDS, ctx.simTime()),
+      },
+    }
+  }
+  const deposit = planWoolDeposit(ctx)
+  if (deposit) return deposit
+  const separated = selectSeparatedOwnedSheep(sheep, ownerHouseId, ctx.home.x, ctx.home.z)
+  if (separated) {
+    return {
+      kind: 'work',
+      destination: copyVec3({
+        x: separated.x,
+        y: ctx.sampleHeight(separated.x, separated.z),
+        z: separated.z,
+      }),
+      durationSec: ctx.rollWorkDurationSec(),
+      followAnimalId: separated.animalId,
+      onComplete: () => {},
+    }
+  }
+  const centroid = ownedFlockCentroid(sheep, ownerHouseId)
+  const stay = centroid ?? { x: ctx.home.x, z: ctx.home.z }
+  return {
+    kind: 'work',
+    destination: copyVec3({ x: stay.x, y: ctx.sampleHeight(stay.x, stay.z), z: stay.z }),
+    durationSec: ctx.rollWorkDurationSec(),
+    onComplete: () => {},
+  }
+}
+
 /**
  * Dispatches to the one planner matching `ctx.role` (review §5 E2) — mirrors
  * the pre-extraction `if (this.role === 'x' && this.beginXWork()) return`
@@ -546,6 +628,7 @@ export function planProfessionWork(ctx: NpcWorkContext): NpcPlannedAction | null
     case 'guard': return planGuardPatrol(ctx)
     case 'hunter': return planArrowCrafting(ctx)
     case 'miner': return planOreGathering(ctx)
+    case 'shepherd': return planShepherdWork(ctx)
     case 'trader': return planTraderWork(ctx)
     default: return null
   }

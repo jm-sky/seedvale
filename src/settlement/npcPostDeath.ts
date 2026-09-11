@@ -218,7 +218,7 @@ const LOADOUT_KINDS_BY_ROLE_CACHE = new Map<Role, readonly ItemKind[]>()
 function loadoutKindsFor(role: Role): readonly ItemKind[] {
   const cached = LOADOUT_KINDS_BY_ROLE_CACHE.get(role)
   if (cached) return cached
-  const kinds: ItemKind[] = ['knife', 'axe', 'long_sword', 'hunting_bow']
+  const kinds: ItemKind[] = ['knife', 'axe', 'long_sword', 'hunting_bow', 'shears']
   const matched = kinds.filter((kind) => isNpcLoadoutBelonging(kind, role))
   LOADOUT_KINDS_BY_ROLE_CACHE.set(role, matched)
   return matched

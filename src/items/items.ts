@@ -104,6 +104,8 @@ export type ItemKind =
   | 'map_far'
   | 'rope'
   | 'hay'
+  | 'wool'
+  | 'shears'
   // Plan items-player-016 — 18 skill-book kinds (6 `SkillId`s × 3 tiers).
   // Names are stable and independent of the displayed title (`ITEM_DEFS.label`);
   // the mechanical tier metadata lives on `ITEM_CATALOG[kind].book`, not here.
@@ -373,6 +375,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0x8a9098,
     description: 'Małe zakrzywione ostrze przeznaczone do ścinania trawy, zbóż i innych roślin.'
+  },
+  shears: {
+    kind: 'shears',
+    label: 'nożyce do wełny',
+    categories: ['tool'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x8a9098,
+    description: 'Sprężynowe nożyce do strzyżenia owiec. Bez nich nie da się zebrać wełny.'
   },
   wooden_torch: {
     kind: 'wooden_torch',
@@ -1099,6 +1110,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0xd9c26a,
     description: 'Wiązka suszonego siana. Pasza dla zwierząt gospodarskich — ludzie jej nie jedzą.'
+  },
+  wool: {
+    kind: 'wool',
+    label: 'wełna',
+    categories: ['resource'],
+    weight: 0.2,
+    size: 'SM',
+    color: 0xf2efe6,
+    description: 'Runo ostrzyżonej owcy. Surowiec tkacki — nie jest jedzeniem.'
   },
   book_riding_basic: {
     kind: 'book_riding_basic',
@@ -2047,6 +2067,38 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.position.y = 0.1
     mesh.castShadow = true
     return mesh
+  }
+  if (kind === 'wool') {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 7, 5),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.wool.color, flatShading: true }),
+    )
+    mesh.scale.set(1.2, 0.85, 1)
+    mesh.position.y = 0.08
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'shears') {
+    const group = new THREE.Group()
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.014, 0.12, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4a3324, flatShading: true }),
+    )
+    handle.rotation.z = Math.PI / 2.2
+    handle.position.set(-0.04, 0.05, 0)
+    handle.castShadow = true
+    group.add(handle)
+    for (const side of [-1, 1] as const) {
+      const blade = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.012, 0.03),
+        new THREE.MeshStandardMaterial({ color: ITEM_DEFS.shears.color, flatShading: true, metalness: 0.45 }),
+      )
+      blade.rotation.z = side * 0.28
+      blade.position.set(0.05, 0.06 + side * 0.012, 0)
+      blade.castShadow = true
+      group.add(blade)
+    }
+    return group
   }
   // blanket
   const mesh = new THREE.Mesh(

@@ -71,7 +71,7 @@ settlement food/storage
 
 **Hunting** exposes exactly two operations to NPCs: a nearest-huntable-animal query (preferred species only, predators/livestock/bear never targetable) and a re-validated knife-harvest. The query applies a deterministic, seeded population-protection roll — if a candidate's local spawn population is down to one individual, a roll can skip it, protecting the last of a local population from being hunted to extinction by repeated NPC hunting. Resource yield on death (the knife-harvest operation itself) is shared verbatim between the player's own harvest action and a hunter NPC's post-kill harvest — a single reusable function, never two implementations.
 
-**Livestock production** (egg/milk, only for species whose `AnimalDef.production` is set) is a lazy day-anchor readiness check compared against the current day, not a per-frame timer — correct across any length of settlement unload or time-skip. A product only advances the animal's next cycle once actually collected, so a cycle can't silently advance while nobody's picking it up.
+**Livestock production** (egg/milk for species whose `AnimalDef.production` is set, plus an independent 24-day wool cycle on sheep) is a lazy day-anchor readiness check compared against the current day, not a per-frame timer — correct across any length of settlement unload or time-skip. A product only advances the animal's next cycle once actually collected, so a cycle can't silently advance while nobody's picking it up. Wool is a separate `woolReadyAtDays` anchor from milk; shearing yields 4 `wool` into carried inventory, then household `items`.
 
 ## Persistence classes
 

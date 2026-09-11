@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { ShepherdFlockHooks } from '../fauna/shepherdFlock'
 import type { NpcWorkContext } from './npcProfessionWork'
 import { createSettlementEconomy } from '../economy'
+import { WOOL_YIELD } from '../fauna/livestockProduction'
 import { Inventory } from '../items/Inventory'
 import { createWeaponInstance } from '../items/weaponMaintenance'
 import { physicalWorkDuration } from '../player/physicalWorkStrength'
@@ -424,6 +426,135 @@ describe('planProfessionWork', () => {
       })
       const work = planProfessionWork(ctx)
       expect(work?.kind).toBe('sharpen')
+    })
+  })
+
+  describe('shepherd (plan fauna-004)', () => {
+    const ownerHouseId = 'home:h'
+
+    function flockHooks(opts: {
+      woolReady?: boolean
+      shear?: (nowDays: number) => boolean
+      x?: number
+      z?: number
+    } = {}): { flock: ShepherdFlockHooks, sheared: { value: boolean } } {
+      const sheared = { value: false }
+      let woolReady = opts.woolReady ?? true
+      const view = {
+        animalId: 'sheep-house0-0',
+        x: opts.x ?? 3,
+        z: opts.z ?? 4,
+        ownerHouseId,
+        isAlive: true,
+        woolReady,
+      }
+      const flock: ShepherdFlockHooks = {
+        listOwned: () => [{ ...view, woolReady }],
+        resolve: () => ({
+          ...view,
+          woolReady,
+          shear: (nowDays) => {
+            if (opts.shear) return opts.shear(nowDays)
+            if (!woolReady) return false
+            woolReady = false
+            sheared.value = true
+            return true
+          },
+        }),
+      }
+      return { flock, sheared }
+    }
+
+    it('does not shear without a shearing tool', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const { flock, sheared } = flockHooks()
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        shepherdFlock: flock,
+        hasShearingTool: () => false,
+        nowDays: () => 24,
+      }))
+      expect(work?.kind).not.toBe('shear')
+      work?.onComplete()
+      expect(sheared.value).toBe(false)
+      expect(work && 'followAnimalId' in work ? work.followAnimalId : undefined).not.toBe('sheep-house0-0')
+    })
+
+    it('does not shear or move the wool anchor when carry capacity cannot take the yield', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const { flock, sheared } = flockHooks()
+      const carried = new Inventory(undefined, 0.1)
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        carried,
+        shepherdFlock: flock,
+        hasShearingTool: () => true,
+        nowDays: () => 24,
+      }))
+      expect(work?.kind).not.toBe('shear')
+      work?.onComplete()
+      expect(sheared.value).toBe(false)
+      expect(carried.count('wool')).toBe(0)
+    })
+
+    it('does not create wool when the action is interrupted before complete', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const { flock, sheared } = flockHooks()
+      const carried = new Inventory()
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        carried,
+        shepherdFlock: flock,
+        hasShearingTool: () => true,
+        nowDays: () => 24,
+      }))
+      expect(work?.kind).toBe('shear')
+      expect(work?.followAnimalId).toBe('sheep-house0-0')
+      expect(sheared.value).toBe(false)
+      expect(carried.count('wool')).toBe(0)
+    })
+
+    it('on success adds exactly 4 wool, shears once, and deposits into household items', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const { flock, sheared } = flockHooks()
+      const carried = new Inventory()
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        carried,
+        shepherdFlock: flock,
+        hasShearingTool: () => true,
+        nowDays: () => 24,
+      }))
+      expect(work?.kind).toBe('shear')
+      work?.onComplete()
+      expect(sheared.value).toBe(true)
+      expect(carried.count('wool')).toBe(WOOL_YIELD)
+      work?.next?.onComplete()
+      expect(carried.count('wool')).toBe(0)
+      expect(household.items.count('wool')).toBe(WOOL_YIELD)
+    })
+
+    it('deposits already-carried wool home without using the food path', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const { flock } = flockHooks({ woolReady: false, x: 1, z: 1 })
+      const carried = new Inventory()
+      carried.add('wool', 4)
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        carried,
+        shepherdFlock: flock,
+        hasShearingTool: () => true,
+        nowDays: () => 10,
+      }))
+      expect(work?.kind).toBe('deposit')
+      work?.onComplete()
+      expect(carried.count('wool')).toBe(0)
+      expect(household.items.count('wool')).toBe(4)
     })
   })
 })

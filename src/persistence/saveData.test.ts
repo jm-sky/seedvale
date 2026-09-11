@@ -371,6 +371,32 @@ describe('loadSaveData v1 contract', () => {
     })).toBeNull()
   })
 
+  it('accepts optional livestock woolReadyAtDays without a save-version bump (plan fauna-004)', () => {
+    const withWool = {
+      ...validSave,
+      livestock: [{
+        settlementId: 'home',
+        animalId: 'sheep-house0-0',
+        kind: 'sheep',
+        ownerHouseId: 'home:home:0',
+        x: 1,
+        z: 2,
+        yaw: 0.5,
+        health: { current: 10, max: 10, dead: false },
+        life: { hunger: 0.2, thirst: 0.1, stamina: 1 },
+        productionReadyAtDays: 0.2,
+        eggPending: false,
+        corpse: null,
+        woolReadyAtDays: 24,
+      }],
+    }
+    expect(loadSaveData(withWool)).toEqual(withWool)
+    expect(loadSaveData({
+      ...withWool,
+      livestock: [{ ...withWool.livestock[0], woolReadyAtDays: 'soon' }],
+    })).toBeNull()
+  })
+
   it('rejects a malformed npcStates record', () => {
     expect(loadSaveData({
       ...validSave,

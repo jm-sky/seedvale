@@ -1604,29 +1604,30 @@ Generated from exported TypeScript symbols.
 
 ## `world/weather.ts`
 
-- `ClimateState` — type — line 278
-- `computeClimate` — function — line 264
-- `computeRainExposureDays` — function — line 220
-- `computeSnowExposureDays` — function — line 239
-- `computeSurfaceWeather` — function — line 166
-- `computeWeather` — function — line 116
-- `createClimateState` — function — line 291
+- `ClimateState` — type — line 279
+- `computeClimate` — function — line 265
+- `computeRainExposureDays` — function — line 221
+- `computeSnowExposureDays` — function — line 240
+- `computeSurfaceWeather` — function — line 167
+- `computeWeather` — function — line 117
+- `createClimateState` — function — line 292
 - `DAYS_PER_SEASON` — const — line 31
-- `getSeason` — function — line 33
-- `getSeasonProgress` — function — line 39
+- `DAYS_PER_YEAR` — const — line 32
+- `getSeason` — function — line 34
+- `getSeasonProgress` — function — line 40
 - `Season` — type — line 8
 - `SEASON_LABELS` — const — line 14
-- `SNOW_ACCUMULATE_WINDOW_DAYS` — const — line 140
-- `SNOW_MELT_WINDOW_DAYS` — const — line 143
-- `SurfaceWeatherState` — type — line 151
-- `temperatureFor` — function — line 69
-- `tickClimate` — function — line 295
-- `WEATHER_CYCLE_DAYS` — const — line 77
+- `SNOW_ACCUMULATE_WINDOW_DAYS` — const — line 141
+- `SNOW_MELT_WINDOW_DAYS` — const — line 144
+- `SurfaceWeatherState` — type — line 152
+- `temperatureFor` — function — line 70
+- `tickClimate` — function — line 296
+- `WEATHER_CYCLE_DAYS` — const — line 78
 - `WEATHER_LABELS` — const — line 21
-- `WeatherState` — type — line 101
+- `WeatherState` — type — line 102
 - `WeatherType` — type — line 9
-- `WETNESS_DRY_WINDOW_DAYS` — const — line 136
-- `WorldClimateState` — type — line 255
+- `WETNESS_DRY_WINDOW_DAYS` — const — line 137
+- `WorldClimateState` — type — line 256
 
 ## `world/weatherParticles.ts`
 

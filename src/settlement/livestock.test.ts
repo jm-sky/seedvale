@@ -4,6 +4,7 @@ import type { AnimalAgent, AnimalSaveState } from '../fauna/AnimalAgent'
 import { ownerFromHouseId } from '../fauna/animalOwnership'
 import {
   createLivestockRegistry,
+  fillShepherdFlockKinds,
   isPlayerOwnedLivestockRecord,
   livestockRecordMatchesHouseholdSlot,
   type LivestockSaveRecord,
@@ -248,5 +249,23 @@ describe('tickSettlementLivestock', () => {
 
     expect(livestock).toBe(originalArray)
     expect(livestock).toHaveLength(0)
+  })
+})
+
+describe('fillShepherdFlockKinds (plan fauna-004)', () => {
+  it('appends extra sheep so earlier house rolls keep their slots', () => {
+    const kinds = ['cow', 'chicken'] as Array<'cow' | 'chicken' | 'sheep'>
+    fillShepherdFlockKinds(kinds, 3)
+    expect(kinds).toEqual(['cow', 'chicken', 'sheep', 'sheep', 'sheep'])
+  })
+
+  it('counts existing sheep toward the flock and does not prepend', () => {
+    const kinds = ['sheep', 'cow'] as Array<'cow' | 'sheep'>
+    fillShepherdFlockKinds(kinds, 2)
+    expect(kinds).toEqual(['sheep', 'cow', 'sheep'])
+    fillShepherdFlockKinds(kinds, 2)
+    expect(kinds).toEqual(['sheep', 'cow', 'sheep'])
+    fillShepherdFlockKinds(kinds, 4)
+    expect(kinds).toEqual(['sheep', 'cow', 'sheep', 'sheep', 'sheep'])
   })
 })

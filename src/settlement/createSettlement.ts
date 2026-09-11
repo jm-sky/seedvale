@@ -8,6 +8,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, AnimalKind, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
+import type { ShepherdFlockHooks } from '../fauna/shepherdFlock'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
@@ -71,6 +72,7 @@ import {
 } from './npcPostDeath'
 import { createNpcRelationships, type NpcRelationships } from './npcRelationships'
 import { homePlaceId, type Place, socialPlaceFor, workplaceFor } from './places'
+import { shepherdHouseholdIndex } from './professionStaffing'
 import {
   buildSettlementProps,
   createStockpile,
@@ -594,6 +596,10 @@ export async function createSettlement(
   // house-anchored animal its owning household's water reserve — keyed the
   // same way `ownerHouseId` already is (`homePlaceId(def.id, i)`).
   const householdByHomeId = new Map(households.map((h) => [h.homeId, h]))
+  const shepherdFamilyIndex = shepherdHouseholdIndex(def.families)
+  const shepherdHouseIndex = shepherdFamilyIndex == null || landmarks.homes.length === 0
+    ? null
+    : shepherdFamilyIndex % landmarks.homes.length
 
   bootMark('spawnLivestock')
   let livestock: Awaited<ReturnType<typeof spawnLivestock>>
@@ -613,6 +619,7 @@ export async function createSettlement(
       landmarks.merchantHorseSpawn,
       livestockPersistence,
       def.isHome,
+      shepherdHouseIndex,
     )
   } finally {
     bootMarkEnd('spawnLivestock')
@@ -786,8 +793,41 @@ export async function createSettlement(
 
   bootMark('npcCreation')
   let agents: NpcAgent[]
+  /** Most recent `update()` call's `nowDays` — read by a chicken's
+   *  `onCollected` closure (plan fauna-002) and by shepherd flock wool
+   *  readiness (plan fauna-004). Mutable-outer-variable-in-closure. */
+  let currentNowDays = forest?.getWorldDays() ?? 0
+  const shepherdFlock: ShepherdFlockHooks = {
+    listOwned: (ownerHouseId) => livestock
+      .filter((animal) => animal.def.kind === 'sheep' && !animal.isDead() && animal.ownerHouseId === ownerHouseId)
+      .map((animal) => ({
+        animalId: animal.animalId,
+        x: animal.mesh.position.x,
+        z: animal.mesh.position.z,
+        ownerHouseId: animal.ownerHouseId ?? '',
+        isAlive: !animal.isDead(),
+        woolReady: animal.canBeSheared(currentNowDays),
+      })),
+    resolve: (animalId) => {
+      const animal = livestock.find((entry) => entry.animalId === animalId && entry.def.kind === 'sheep')
+      if (!animal) return null
+      return {
+        animalId: animal.animalId,
+        x: animal.mesh.position.x,
+        z: animal.mesh.position.z,
+        ownerHouseId: animal.ownerHouseId ?? '',
+        isAlive: !animal.isDead(),
+        woolReady: animal.canBeSheared(currentNowDays),
+        shear: (nowDays) => {
+          if (animal.isDead() || !animal.canBeSheared(nowDays)) return false
+          animal.completeShearing(nowDays)
+          return true
+        },
+      }
+    },
+  }
   try {
-  const nowDays = forest?.getWorldDays() ?? 0
+  const nowDays = currentNowDays
   agents = (await Promise.all(
     flatMembers.map(async ({ home, household, member, familyIndex, familyMembers }, i) => {
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex)
@@ -853,6 +893,7 @@ export async function createSettlement(
           : null,
         graveVisitHooks,
         corpseCleanupHooks,
+        shepherdFlock,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent
@@ -872,12 +913,6 @@ export async function createSettlement(
     houseLights,
   })
 
-  /** Most recent `update()` call's `nowDays` — read by a chicken's
-   *  `onCollected` closure (plan fauna-002), which can fire an arbitrary
-   *  number of frames/days after the egg was laid (whenever the player
-   *  actually picks it up), so it can't capture a frozen `nowDays` value
-   *  from lay time. Mutable-outer-variable-in-closure. */
-  let currentNowDays = 0
   let woodshedPlaced = false
 
   function placeWoodshedIfComplete(): void {

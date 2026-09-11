@@ -65,6 +65,7 @@ import {
   type SettlementEconomy,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
+import { FLOCK_THREAT_RADIUS, senseOwnedFlockThreat, type ShepherdFlockHooks } from '../fauna/shepherdFlock'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial } from '../items/constructionMaterials'
 import { foodItemCount, takeOneFoodItem } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
@@ -647,6 +648,7 @@ export function classifyPendingActivity(
   if (
     chainKind === 'work' || chainKind === 'mine' || chainKind === 'fish'
     || chainKind === 'harvest' || chainKind === 'plant' || chainKind === 'sharpen'
+    || chainKind === 'shear'
   ) return 'work'
   if (pending.kind === 'eat' && activeNeed === 'idle') return 'eat'
   // Plan 151 — walking to/settling at the campfire reads as ordinary idle;
@@ -939,6 +941,8 @@ export type NpcAgentDeps = {
   getNearbyPlayerWell?: NearbyPlayerWellLookup
   foodSources?: SettlementFoodSourceHooks
   hunting?: SettlementHuntingHooks
+  /** Settlement-local owned-sheep lookup (plan fauna-004). */
+  shepherdFlock?: ShepherdFlockHooks | null
   helperDelivery?: HelperDeliveryHooks
   householdExchange?: HouseholdExchangeHooks
   workContracts?: WorkContracts | null
@@ -1377,6 +1381,7 @@ export class NpcAgent {
    *  exists, same as `mining`/`foodSources`. Only ever read by a `hunter`
    *  role NPC (`beginHuntExpedition`); every other role ignores it. */
   private readonly hunting: SettlementHuntingHooks | null
+  private readonly shepherdFlock: ShepherdFlockHooks | null
   /** Helper resource-delivery target lookup/transfer hooks over the player's
    *  own placed `Container`s (plan 167) — null in isolated fallbacks, same as
    *  `mining`/`foodSources`/`hunting`. Only ever consulted when this NPC has
@@ -1415,6 +1420,7 @@ export class NpcAgent {
       getNearbyPlayerWell,
       foodSources,
       hunting,
+      shepherdFlock,
       helperDelivery,
       householdExchange,
       workContracts,
@@ -1478,6 +1484,7 @@ export class NpcAgent {
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
     this.hunting = hunting ?? null
+    this.shepherdFlock = shepherdFlock ?? null
     this.helperDelivery = helperDelivery ?? null
     this.householdExchange = householdExchange ?? null
     this.sampleHeight = sampleHeight
@@ -2620,6 +2627,31 @@ export class NpcAgent {
       this.mesh.position.z,
       nearbyAnimalThreats,
     )
+    if (this.role === 'shepherd' && this.household) {
+      const flockThreat = senseOwnedFlockThreat(
+        this.mesh.position.x,
+        this.mesh.position.z,
+        this.household.homeId,
+        nearbyAnimalThreats,
+        FLOCK_THREAT_RADIUS,
+      )
+      if (flockThreat && (!this.currentAnimalThreat || Math.hypot(
+        flockThreat.x - this.mesh.position.x,
+        flockThreat.z - this.mesh.position.z,
+      ) < this.currentAnimalThreat.distance)) {
+        const candidate = nearbyAnimalThreats.find((entry) => entry.animalId === flockThreat.animalId)
+        if (candidate) {
+          this.currentAnimalThreat = {
+            animalId: candidate.animalId,
+            kind: candidate.kind,
+            x: candidate.x,
+            z: candidate.z,
+            distance: Math.hypot(candidate.x - this.mesh.position.x, candidate.z - this.mesh.position.z),
+            target: candidate.target,
+          }
+        }
+      }
+    }
     if (previousAnimalThreat === null && this.currentAnimalThreat !== null) {
       this.trace.record({
         simTime: this.simClock,
@@ -2870,6 +2902,18 @@ export class NpcAgent {
             this.paymentApproachInterruptReason = 'player_left'
             this.interruptCurrentAction()
             break
+          }
+        }
+        if (action.followAnimalId && this.shepherdFlock) {
+          const live = this.shepherdFlock.resolve(action.followAnimalId)
+          if (!live || !live.isAlive) {
+            this.interruptCurrentAction()
+            break
+          }
+          action.destination = {
+            x: live.x,
+            y: this.sampleHeight(live.x, live.z),
+            z: live.z,
           }
         }
         this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
@@ -4117,6 +4161,9 @@ export class NpcAgent {
       npcId: this.id,
       transportOrders: this.transportOrders,
       strength: this.effectiveMeleeStrength(),
+      nowDays: () => this.worldNowDays,
+      shepherdFlock: this.shepherdFlock,
+      hasShearingTool: () => this.personalInventory.hasCapability('shearing'),
     }
   }
 

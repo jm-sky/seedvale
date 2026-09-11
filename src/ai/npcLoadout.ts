@@ -70,6 +70,14 @@ export function seedHunterStartingArrows(carried: Inventory): void {
   if (carried.count('arrow') === 0) carried.add('arrow', HUNTER_STARTING_ARROWS)
 }
 
+/** Seeds `shears` once for a shepherd — the real `shearing` tool, not just
+ *  the catalog capability (plan fauna-004). Count-based, same idempotency
+ *  as the hunter arrow seed. */
+export function seedShepherdShears(inventory: Inventory): void {
+  if (inventory.hasCapability('shearing')) return
+  inventory.add('shears', 1)
+}
+
 /**
  * Seeds role weapons/knife into authoritative personal inventory once, on
  * genuine first NPC-state creation (plan settlements-npcs-026). Snapshot
@@ -84,6 +92,7 @@ export function seedInitialPersonalBelongingsIfNeeded(
   if (!state.needsInitialPersonalLoadout) return
   seedDefaultRoleWeapon(inventory, role)
   if (role === 'hunter' || role === 'woodcutter') ensureKnifeCarried(inventory)
+  if (role === 'shepherd') seedShepherdShears(inventory)
   state.needsInitialPersonalLoadout = false
 }
 
@@ -94,5 +103,6 @@ export function seedInitialPersonalBelongingsIfNeeded(
  *  equipment, and the loadout helpers never tag ownership per item. */
 export function isNpcLoadoutBelonging(kind: ItemKind, role: Role): boolean {
   if (kind === defaultWeaponForRole(role)) return true
+  if (kind === 'shears' && role === 'shepherd') return true
   return kind === 'knife' && (role === 'woodcutter' || role === 'hunter')
 }

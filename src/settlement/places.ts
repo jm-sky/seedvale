@@ -141,6 +141,12 @@ export function workplaceFor(
       return { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
     case 'miner':
       return { id: `${settlementId}:workplace:stockpile`, type: 'workplace', position: landmarks.stockpile }
+    case 'shepherd': {
+      const home = landmarks.homes[homeIndex]
+      return home
+        ? { id: `${settlementId}:workplace:shepherd:${homeIndex}`, type: 'workplace', position: home }
+        : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
+    }
     case 'trader':
       return { id: `${settlementId}:workplace:market`, type: 'workplace', position: landmarks.market }
     case 'woodcutter': {

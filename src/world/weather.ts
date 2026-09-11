@@ -26,9 +26,10 @@ export const WEATHER_LABELS: Record<WeatherType, string> = {
   snow: 'Śnieg',
 }
 
-/** Plan §4 default: 7 world-days per season, 28-day year. Season is a pure
- *  function of `elapsedDays` — no separate season counter/clock. */
-export const DAYS_PER_SEASON = 7
+/** Canonical calendar (plan fauna-004): 12 world-days per season, 48-day year.
+ *  Season is a pure function of `elapsedDays` — no separate season counter. */
+export const DAYS_PER_SEASON = 12
+export const DAYS_PER_YEAR = DAYS_PER_SEASON * 4
 
 export function getSeason(elapsedDays: number): Season {
   const idx = Math.floor(elapsedDays / DAYS_PER_SEASON)

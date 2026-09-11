@@ -4,6 +4,8 @@ import {
   initialLivestockProductionReadyAtDays,
   livestockProductionReady,
   nextLivestockProductionReadyAtDays,
+  WOOL_GROWTH_DAYS,
+  WOOL_YIELD,
 } from './livestockProduction'
 
 describe('livestockProductionReady (plan fauna-002)', () => {
@@ -68,5 +70,38 @@ describe('ANIMAL_DEFS livestock production config (plan fauna-002 §5/§10/§14 
 
   it('sheep milking cooldown is shorter than cow, matching their yield difference', () => {
     expect(ANIMAL_DEFS.sheep.production?.intervalDays).toBeLessThan(ANIMAL_DEFS.cow.production!.intervalDays)
+  })
+})
+
+describe('wool cycle (plan fauna-004)', () => {
+  it('uses a 24-day growth cycle and yields 4 wool', () => {
+    expect(WOOL_GROWTH_DAYS).toBe(24)
+    expect(WOOL_YIELD).toBe(4)
+  })
+
+  it('is not ready before 24 days, and is ready exactly on and after the anchor', () => {
+    expect(livestockProductionReady(24, 23.9)).toBe(false)
+    expect(livestockProductionReady(24, 24)).toBe(true)
+    expect(livestockProductionReady(24, 24.1)).toBe(true)
+  })
+
+  it('staggers the first fleece across one growth cycle', () => {
+    expect(initialLivestockProductionReadyAtDays(0, WOOL_GROWTH_DAYS, 0)).toBe(0)
+    expect(initialLivestockProductionReadyAtDays(0, WOOL_GROWTH_DAYS, 1)).toBe(24)
+    expect(initialLivestockProductionReadyAtDays(10, WOOL_GROWTH_DAYS, 0.5)).toBe(22)
+  })
+
+  it('resets the next fleece a full 24 days after a successful shear, not from the old anchor', () => {
+    expect(nextLivestockProductionReadyAtDays(30, WOOL_GROWTH_DAYS)).toBe(54)
+  })
+
+  it('a long time skip still represents one ready fleece, not catch-up yield', () => {
+    expect(livestockProductionReady(24, 100)).toBe(true)
+    expect(WOOL_YIELD).toBe(4)
+  })
+
+  it('does not change milk/egg production intervals', () => {
+    expect(ANIMAL_DEFS.sheep.production).toMatchObject({ product: 'milk', amount: 2, intervalDays: 0.35 })
+    expect(ANIMAL_DEFS.chicken.production).toMatchObject({ product: 'egg', amount: 1, intervalDays: 1 })
   })
 })

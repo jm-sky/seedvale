@@ -50,6 +50,8 @@ export type ActionId =
   | 'mine'
   | 'plant'
   | 'sharpen'
+  /** Sheep shearing (plan fauna-004) — profession work, reads as `work`. */
+  | 'shear'
   /** Weather-pressure reaction (plan npc-012) — a normal `goTo`/`execute`
    *  step to the NPC's own `home` Place, no world-mutating effect on
    *  completion. Reads as `idle` to `classifyPendingActivity`, same as
@@ -91,4 +93,7 @@ export type NpcPlannedAction = PlannedAction<ActionId> & {
    *  2026-08-16). Set automatically at promotion time; never assigned when
    *  an action starts. */
   chainKind?: ActionId
+  /** Live moving-target identity (plan fauna-004) — `goTo` refreshes
+   *  `destination` from this animal without retargeting another sheep. */
+  followAnimalId?: string
 }

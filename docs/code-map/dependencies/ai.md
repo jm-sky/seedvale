@@ -87,6 +87,7 @@ Generated from TypeScript imports.
 - `debug/npcTrace.ts`
 - `economy/index.ts`
 - `fauna/huntingHooks.ts`
+- `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
@@ -699,6 +700,8 @@ Generated from TypeScript imports.
 
 - `ai/npcProfessionWork.ts`
 - `economy/index.ts`
+- `fauna/livestockProduction.ts`
+- `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
 - `items/weaponMaintenance.ts`
 - `player/physicalWorkStrength.ts`
@@ -715,6 +718,8 @@ Generated from TypeScript imports.
 - `ai/npcAction.ts`
 - `ai/npcLogistics.ts`
 - `economy/index.ts`
+- `fauna/livestockProduction.ts`
+- `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
 - `items/itemInstances.ts`

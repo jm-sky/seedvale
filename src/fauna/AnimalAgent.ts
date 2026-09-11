@@ -156,6 +156,7 @@ import {
   initialLivestockProductionReadyAtDays,
   livestockProductionReady,
   nextLivestockProductionReadyAtDays,
+  WOOL_GROWTH_DAYS,
 } from './livestockProduction'
 import {
   createFollowOwnedAnimalControlState,
@@ -501,6 +502,8 @@ export type AnimalSaveState = {
   life: { hunger: number, thirst: number, stamina: number }
   productionReadyAtDays: number | null
   eggPending: boolean
+  /** Independent wool-growth anchor (plan fauna-004) — omitted on legacy saves. */
+  woolReadyAtDays?: number | null
   /** Set only while `health.dead` — `null` for a live animal. Lets a dead
    *  individual's corpse lifecycle (linger threshold, harvested-remains vs.
    *  natural-decay presentation) resume exactly where it left off. */
@@ -992,6 +995,8 @@ export class AnimalAgent {
    *  timer, and no per-frame decrementing — see `livestockProduction.ts`).
    *  Meaningless (never read) for kinds without `def.production`. */
   private productionReadyAtDays: number | null = null
+  /** Independent of milk/egg `productionReadyAtDays` (plan fauna-004). */
+  private woolReadyAtDays: number | null = null
   /** `egg` only — true from the moment this cycle's egg has been dropped
    *  into the world until it's actually collected (`notifyEggCollected`);
    *  blocks starting a new cycle so a chicken never has more than one
@@ -1589,6 +1594,7 @@ export class AnimalAgent {
     if (this.vocalizeAlertRemainingSec > 0) this.vocalizeAlertRemainingSec -= dt
     this.advanceAge(dt)
     this.tickProduction(nowDays)
+    this.tickWoolProduction(nowDays)
     this.snapY()
     this.updateAnim()
     this.resolveWaterTraversal()
@@ -1920,6 +1926,7 @@ export class AnimalAgent {
       life: { hunger: this.life.hunger, thirst: this.life.thirst, stamina: getStaminaRatio(this.life.stamina) },
       productionReadyAtDays: this.productionReadyAtDays,
       eggPending: this.eggPending,
+      woolReadyAtDays: this.woolReadyAtDays,
       corpse: this.health.dead
         ? { timeSinceDeath: this.corpse.timeSinceDeath, meatHarvested: this.corpse.meatHarvested }
         : null,
@@ -1957,6 +1964,7 @@ export class AnimalAgent {
     this.life.stamina.current = state.life.stamina * this.life.stamina.max
     this.productionReadyAtDays = state.productionReadyAtDays
     this.eggPending = state.eggPending
+    this.woolReadyAtDays = state.woolReadyAtDays ?? null
     if (state.corpse) {
       this.corpse.timeSinceDeath = state.corpse.timeSinceDeath
       this.corpse.meatHarvested = state.corpse.meatHarvested
@@ -2184,6 +2192,28 @@ export class AnimalAgent {
     const production = this.def.production
     if (!production || production.product !== 'milk') return
     this.productionReadyAtDays = nextLivestockProductionReadyAtDays(nowDays, production.intervalDays)
+  }
+
+  private tickWoolProduction(nowDays: number): void {
+    if (this.def.kind !== 'sheep' || this.woolReadyAtDays !== null) return
+    this.woolReadyAtDays = initialLivestockProductionReadyAtDays(nowDays, WOOL_GROWTH_DAYS, Math.random())
+  }
+
+  /** True while this sheep's current fleece is ready to shear. */
+  canBeSheared(nowDays: number): boolean {
+    return this.def.kind === 'sheep' && !this.health.dead && livestockProductionReady(this.woolReadyAtDays, nowDays)
+  }
+
+  /** Advances the wool anchor only after a successful shearing transaction. */
+  completeShearing(nowDays: number): void {
+    if (this.def.kind !== 'sheep') return
+    this.woolReadyAtDays = nextLivestockProductionReadyAtDays(nowDays, WOOL_GROWTH_DAYS)
+  }
+
+  /** Read-only committed prey identity for shepherd flock-threat queries. */
+  huntingPrey(): { animalId: string, ownerHouseId: string | undefined } | null {
+    if (!this.preyTarget || this.preyTarget.health.dead) return null
+    return { animalId: this.preyTarget.animalId, ownerHouseId: this.preyTarget.ownerHouseId }
   }
 
   update(ctx: AnimalUpdateContext): void {

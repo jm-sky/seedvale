@@ -25,6 +25,14 @@ describe('characterForSeed', () => {
     }
     expect(roles.has('blacksmith')).toBe(true)
   })
+
+  it('never rolls shepherd from the generic random pool (plan fauna-004)', () => {
+    const roles = new Set<Role>()
+    for (let seed = 0; seed < 500; seed++) {
+      roles.add(characterForSeed(seed, seed % 2 === 0 ? 'male' : 'female').role)
+    }
+    expect(roles.has('shepherd')).toBe(false)
+  })
 })
 
 describe('RESERVED_CHARACTERS (plan 178 must not change these)', () => {

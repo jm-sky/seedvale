@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 376
-- `CreateSettlementDeps` — type — line 248
-- `Settlement` — type — line 127
-- `settlementSpawnPoint` — function — line 236
+- `createSettlement` — function — line 378
+- `CreateSettlementDeps` — type — line 250
+- `Settlement` — type — line 129
+- `settlementSpawnPoint` — function — line 238
 
 ## `settlement/decorProps.ts`
 
@@ -259,24 +259,25 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 264
-- `disposeLivestock` — function — line 752
-- `isPlayerOwnedLivestockRecord` — function — line 84
-- `LIVESTOCK_KINDS` — const — line 61
-- `LIVESTOCK_URLS` — const — line 45
-- `LivestockPersistence` — type — line 104
-- `livestockRecordMatchesHouseholdSlot` — function — line 88
-- `LivestockRegistry` — type — line 126
-- `LivestockSaveRecord` — type — line 74
-- `PersistentLivestockContext` — type — line 663
-- `resolveLivePersistentAnimal` — function — line 671
-- `restoreDetachedPlayerOwnedLivestock` — function — line 735
-- `setOwnedAnimalControl` — function — line 723
-- `spawnAnimalFromRecord` — function — line 163
-- `SpawnAnimalFromRecordDeps` — type — line 153
-- `spawnLivestock` — function — line 519
-- `tickSettlementLivestock` — function — line 769
-- `transferAnimalOwnership` — function — line 698
+- `createLivestockRegistry` — function — line 277
+- `disposeLivestock` — function — line 771
+- `fillShepherdFlockKinds` — function — line 41
+- `isPlayerOwnedLivestockRecord` — function — line 97
+- `LIVESTOCK_KINDS` — const — line 74
+- `LIVESTOCK_URLS` — const — line 58
+- `LivestockPersistence` — type — line 117
+- `livestockRecordMatchesHouseholdSlot` — function — line 101
+- `LivestockRegistry` — type — line 139
+- `LivestockSaveRecord` — type — line 87
+- `PersistentLivestockContext` — type — line 682
+- `resolveLivePersistentAnimal` — function — line 690
+- `restoreDetachedPlayerOwnedLivestock` — function — line 754
+- `setOwnedAnimalControl` — function — line 742
+- `spawnAnimalFromRecord` — function — line 176
+- `SpawnAnimalFromRecordDeps` — type — line 166
+- `spawnLivestock` — function — line 532
+- `tickSettlementLivestock` — function — line 788
+- `transferAnimalOwnership` — function — line 717
 
 ## `settlement/lodging.ts`
 
@@ -443,13 +444,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/professionStaffing.ts`
 
-- `adultProfessionCoverage` — function — line 235
+- `adultProfessionCoverage` — function — line 261
   - domain: settlements-npcs
-- `isProfessionAdult` — function — line 218
+- `isProfessionAdult` — function — line 234
 - `ProfessionStaffingContext` — type — line 22
   - domain: settlements-npcs
-- `resolveInitialProfessionStaffing` — function — line 337
+- `resolveInitialProfessionStaffing` — function — line 363
   - domain: settlements-npcs
+- `shepherdHouseholdIndex` — function — line 239
 - `StaffingPriority` — type — line 12
 
 ## `settlement/props.ts`

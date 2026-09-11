@@ -655,6 +655,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
+- `app/actions/survivalActions.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/livestockProduction.test.ts`
 - `settlement/SettlementsManager.ts`
@@ -785,6 +788,23 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.ts`
+
+## `fauna/shepherdFlock.test.ts`
+
+**Imports**
+
+- `fauna/shepherdFlock.ts`
+
+## `fauna/shepherdFlock.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
+- `fauna/shepherdFlock.test.ts`
+- `settlement/createSettlement.ts`
+- `settlement/livestock.ts`
 
 ## `fauna/spawnerLabels.test.ts`
 

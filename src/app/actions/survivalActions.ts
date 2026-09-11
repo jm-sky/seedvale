@@ -14,6 +14,7 @@ import {
   SPAWNER_DESTROY_BRANCH_COST,
 } from '../../fauna/AnimalSpawner'
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
+import { WOOL_YIELD } from '../../fauna/livestockProduction'
 import { COOK_DURATION_SEC, findCookingBatch, processCookedBatches, resolveCookingCapacity } from '../../items/campfireCooking'
 import {
   CARRIED_FOOD_DECAY,
@@ -113,6 +114,8 @@ export type SurvivalActions = {
   /** Milks a live `cow`/`sheep` into a carried bucket (busy channel, plan
    *  fauna-002 §3/§4). */
   startMilkAnimal: (animal: AnimalAgent) => ActionResult
+  /** Shears a wool-ready sheep into carried inventory (busy channel, plan fauna-004). */
+  startShearAnimal: (animal: AnimalAgent) => ActionResult
 }
 
 /** Real-time seconds per litre of milk drawn — the shared rate behind
@@ -585,6 +588,39 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     return { ok: true }
   }
 
+  const SHEARING_DURATION_SEC = 2.4
+
+  /** Shears a live wool-ready sheep into carried inventory (plan fauna-004).
+   *  Esc-cancelling the channel grants no wool and does not move the wool
+   *  anchor — same "no partial credit" shape as milking. */
+  const startShearAnimal = (animal: AnimalAgent): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
+    if (!inventory.hasCapability('shearing')) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.shearing}.`, 'error')
+      return toResult([capabilityRequirement(false, 'shearing')])
+    }
+    if (!animal.canBeSheared(dayNight.elapsedDays)) {
+      return toResult([targetRequirement(false, 'animalShearable')])
+    }
+    if (!inventory.canAdd('wool', WOOL_YIELD)) {
+      toast.show(inventoryFullToastText(inventory, 'wool', WOOL_YIELD), 'error')
+      return toResult([targetRequirement(false, 'inventoryFull')])
+    }
+    const label = ANIMAL_LABELS[animal.def.kind]
+    busy.start(SHEARING_DURATION_SEC, `Strzyżenie: ${label}…`, () => {
+      if (!inventory.hasCapability('shearing')) return
+      if (!animal.canBeSheared(dayNight.elapsedDays)) return
+      if (!inventory.canAdd('wool', WOOL_YIELD)) return
+      inventory.add('wool', WOOL_YIELD)
+      animal.completeShearing(dayNight.elapsedDays)
+      playAnimalSound(animal.def.kind, worldAudio.playAt, animal.mesh.position)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show(`+${WOOL_YIELD} wełny`, 'pickup')
+    }, { blurred: true })
+    return { ok: true }
+  }
+
   /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by
    *  `ITEM_CATALOG[kind].consumable`, the same catalog entry the well/lake/
    *  cooking paths' relief amounts come from. */
@@ -680,5 +716,6 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     fillWaterContainer,
     consumeItem,
     startMilkAnimal,
+    startShearAnimal,
   }
 }

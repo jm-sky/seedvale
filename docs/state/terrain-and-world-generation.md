@@ -4,7 +4,7 @@
 
 **Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../architecture/GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../state/water.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
 
-**Last verified:** 2026-09-10
+**Last verified:** 2026-09-11
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -56,7 +56,7 @@ When this file and the code disagree, the code wins — update this file.
 ## Weather & seasons
 
 - `Season`/`WeatherState` (`world/weather.ts`, plan 040) are **deterministic pure functions** of `(worldSeed, elapsedDays)` — no runtime history, no save field. Any `elapsedDays` (including after a time-skip or reload) re-derives the same result:
-  - `getSeason`/`getSeasonProgress` — fixed-length seasons (`DAYS_PER_SEASON`).
+  - `getSeason`/`getSeasonProgress` — fixed-length seasons (`DAYS_PER_SEASON` = 12 world-days, `DAYS_PER_YEAR` = 48).
   - `computeWeather` — per-season weighted odds, hashed per fixed-length weather "cycle" (`WEATHER_CYCLE_DAYS`).
   - `computeClimate` composes both into `WorldClimateState`.
 - `ClimateState`/`tickClimate` is a small mutable runtime cache around those pure functions (mirrors `DayNightState`'s shape): it only recomputes `weather` when `elapsedDays` crosses into a new cycle, plus a debug-only `forced` override (lil-gui) that is never persisted.

@@ -553,6 +553,7 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
 - `fauna/createFauna.ts`
+- `fauna/livestockProduction.ts`
 - `items/Inventory.ts`
 - `items/campfireCooking.ts`
 - `items/foodFreshness.ts`

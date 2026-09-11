@@ -50,6 +50,7 @@ const ROLE_LABEL: Record<Role, string> = {
   fisher: 'rybakiem',
   hunter: 'myśliwym',
   blacksmith: 'kowalem',
+  shepherd: 'pasterzem',
 }
 
 const RELATION_LABEL: Record<FamilyRelation, string> = {

@@ -134,6 +134,7 @@ function animalPromptLabel(
   nowDays: number,
   feedItemKind: ItemKind | null,
   ledAnimalId: string | null = null,
+  canShear = false,
 ): string {
   const kind = animal.def.kind
   const label = ANIMAL_LABELS[kind]
@@ -144,6 +145,7 @@ function animalPromptLabel(
   // weapon is held.
   if (animal.isPlayerOwned()) return `Steruj: ${label}`
   if (ANIMAL_DEFS[kind].mount) return `Dosiądź: ${label}`
+  if (canShear && animal.canBeSheared(nowDays)) return `Ostrzyż: ${label}`
   if (canMilk && animal.canBeMilked(nowDays)) return `Wydój: ${label}`
   if (feedItemKind) return `Nakarm: ${label}`
   return `Obserwuj: ${label}`
@@ -511,6 +513,8 @@ export function buildInteractables(
   ledAnimal: AnimalAgent | null = null,
   /** Plan items-player-026 — prompt override for systemic treasure chests. */
   worldGeneratedContainerPrompt?: (id: string) => string | null,
+  /** Player carries a `shearing` tool (plan fauna-004). */
+  hasShearingTool = false,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -787,7 +791,7 @@ export function buildInteractables(
       list.push({
         kind: 'animal',
         position: animal.mesh.position,
-        promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null, ledAnimal?.animalId ?? null),
+        promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null, ledAnimal?.animalId ?? null, hasShearingTool),
         animal,
         interactRange: rangeOverride ?? undefined,
       })
@@ -971,7 +975,7 @@ export function buildInteractables(
     list.push({
       kind: 'animal',
       position: animal.mesh.position,
-      promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null, ledAnimal?.animalId ?? null),
+      promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null, ledAnimal?.animalId ?? null, hasShearingTool),
       animal,
       interactRange: rangeOverride ?? undefined,
     })

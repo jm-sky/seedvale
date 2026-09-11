@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
 import { resolveNpcAmmoKind, resolveNpcMeleeWeapon, resolveNpcRangedWeapon } from './npcCombat'
-import { defaultWeaponForRole, ensureKnifeCarried, isNpcLoadoutBelonging, seedDefaultRoleWeapon, seedHunterStartingArrows, seedHunterSupplies, seedInitialPersonalBelongingsIfNeeded } from './npcLoadout'
+import { defaultWeaponForRole, ensureKnifeCarried, isNpcLoadoutBelonging, seedDefaultRoleWeapon, seedHunterStartingArrows, seedHunterSupplies, seedInitialPersonalBelongingsIfNeeded, seedShepherdShears } from './npcLoadout'
 
 describe('defaultWeaponForRole', () => {
   it('maps roles to their default melee weapon', () => {
@@ -109,6 +109,8 @@ describe('isNpcLoadoutBelonging (plan npc-010)', () => {
     expect(isNpcLoadoutBelonging('arrow', 'hunter')).toBe(false)
     expect(isNpcLoadoutBelonging('hunting_bow', 'hunter')).toBe(true)
     expect(isNpcLoadoutBelonging('knife', 'hunter')).toBe(true)
+    expect(isNpcLoadoutBelonging('shears', 'shepherd')).toBe(true)
+    expect(isNpcLoadoutBelonging('shears', 'farmer')).toBe(false)
   })
 })
 
@@ -130,6 +132,25 @@ describe('seedInitialPersonalBelongingsIfNeeded (plan settlements-npcs-026)', ()
     const state = { needsInitialPersonalLoadout: false }
     seedInitialPersonalBelongingsIfNeeded(inventory, 'guard', state)
     expect(inventory.isEmpty()).toBe(true)
+  })
+})
+
+describe('seedShepherdShears (plan fauna-004)', () => {
+  it('gives a shepherd shears once and is idempotent', () => {
+    const inventory = new Inventory()
+    seedShepherdShears(inventory)
+    expect(inventory.hasCapability('shearing')).toBe(true)
+    expect(inventory.count('shears')).toBe(1)
+    seedShepherdShears(inventory)
+    expect(inventory.count('shears')).toBe(1)
+  })
+
+  it('seeds shears with the initial personal loadout', () => {
+    const inventory = new Inventory()
+    const state = { needsInitialPersonalLoadout: true }
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'shepherd', state)
+    expect(inventory.hasCapability('shearing')).toBe(true)
+    expect(state.needsInitialPersonalLoadout).toBe(false)
   })
 })
 

@@ -38,6 +38,10 @@ export function livestockProductionReady(readyAtDays: number | null, nowDays: nu
   return readyAtDays !== null && nowDays >= readyAtDays
 }
 
+/** Independent wool-growth cycle (plan fauna-004) — not milk/egg `intervalDays`. */
+export const WOOL_GROWTH_DAYS = 24
+export const WOOL_YIELD = 4
+
 /** The next `readyAtDays` anchor once a cycle starts (collection/milking),
  *  `intervalDays` after `nowDays` — a fixed duration, not "however long the
  *  interval was previously running for", so a late collection never grants

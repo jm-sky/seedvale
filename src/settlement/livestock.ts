@@ -30,9 +30,22 @@ import {
   createRoosterModel,
   createSheepModel,
 } from '../fauna/proceduralAnimals'
+import { SHEPHERD_FLOCK_SALT, shepherdFlockSize } from '../fauna/shepherdFlock'
 import { createSeededRandom } from '../world/parseSeed'
 import { type VillageSize, villageSizeConfig } from './families'
 import { homePlaceId } from './places'
+
+/** Append sheep onto a house's rolled kinds until the shepherd flock size is
+ *  met. Extra sheep are appended so earlier house rolls keep their animal
+ *  ids; existing sheep already in `kinds` count toward the flock. */
+export function fillShepherdFlockKinds<T extends string>(kinds: T[], flockSize: number): void {
+  let sheep = 0
+  for (const kind of kinds) if (kind === 'sheep') sheep++
+  while (sheep < flockSize) {
+    kinds.push('sheep' as T)
+    sheep++
+  }
+}
 
 /** Owned farm animal kinds — the only `AnimalKind`s this module ever spawns. */
 type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken' | 'rooster' | 'dog'
@@ -549,6 +562,8 @@ export async function spawnLivestock(
   persistence?: LivestockPersistence,
   /** Home settlement always starts with at least one sheep. */
   ensureSheep = false,
+  /** Family index of the generated shepherd household, or `null`. */
+  shepherdHouseIndex: number | null = null,
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
@@ -568,6 +583,10 @@ export async function spawnLivestock(
     const ownerHouseId = homePlaceId(settlementId, i)
     const household = householdByHomeId?.get(ownerHouseId)
     const kinds = kindsForHouse(size, random)
+    if (shepherdHouseIndex === i) {
+      const flockRandom = createSeededRandom(settlementSeed ^ SHEPHERD_FLOCK_SALT ^ houseSeed(settlementSeed, i))
+      fillShepherdFlockKinds(kinds, shepherdFlockSize(flockRandom))
+    }
 
     if (kinds.includes('sheep')) {
       rolledEnsuredAnimals.sheep = true

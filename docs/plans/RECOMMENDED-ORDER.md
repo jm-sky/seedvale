@@ -52,8 +52,8 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 1/3
 3. `items-player-027` — **Player-to-NPC item transfer and equipment**  
    🔴 `M` · ✅ ready · unlocks 2/4
-4. `fauna-004` — **Sheep wool cycle and shepherd**  
-   🟡 `L` · ✅ ready · unlocks 1/2
+4. `settlements-npcs-006` — **Wool to material**  
+   🟡 `M` · ✅ ready · unlocks 1/1
 5. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
    🔴 `M` · ✅ ready · unlocks 2/2
 
@@ -97,55 +97,51 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  66  
    → **unlocks:** 2/3
 
-7. `fauna-004` — **Sheep wool cycle and shepherd**  
-  🟡 `L` · **Score:**  64  
-   → **unlocks:** 1/2
-
-8. `npc-031` — **Voluntary expedition joining**  
+7. `npc-031` — **Voluntary expedition joining**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-9. `settlements-npcs-006` — **Wool to material**  
+8. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-10. `npc-030` — **Paid expedition escort Work Contracts**  
+9. `npc-030` — **Paid expedition escort Work Contracts**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+10. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-12. `settlements-npcs-007` — **Bandages and herbal medicine**  
+11. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-022` — **Household help and age-based work participation**  
+12. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-14. `world-023` — **Species-Driven Sowing, Density and Yield**  
+13. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-15. `settlements-npcs-025` — **Resource storage visualization**  
+14. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-16. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+15. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-17. `items-player-014` — **Rope-pullable resource transport**  
+16. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `tools-005` — **Seedvale Character Preparation Panel**  
+17. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-19. `tools-013` — **NPC decision verification and scenario tooling**  
+18. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
@@ -175,9 +171,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   is blocked by:
   - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
-- [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
-  is blocked by:
-  - [`fauna-004-sheep-wool-and-shepherd.md`](fauna-004-sheep-wool-and-shepherd.md)
 - [`settlements-npcs-007-bandages-and-herbal-medicine.md`](settlements-npcs-007-bandages-and-herbal-medicine.md)  
   is blocked by:
   - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)

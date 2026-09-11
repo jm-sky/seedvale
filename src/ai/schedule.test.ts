@@ -15,7 +15,7 @@ import {
   SOCIABLE_SOCIAL_HOURS,
 } from './schedule'
 
-const ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'trader', 'miner', 'fisher', 'hunter', 'blacksmith']
+const ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'trader', 'miner', 'fisher', 'hunter', 'blacksmith', 'shepherd']
 
 function hoursOf(activity: ScheduleActivity, template: ScheduleTemplate): number[] {
   return template.filter((entry) => entry.activity === activity).map((entry) => entry.hour)

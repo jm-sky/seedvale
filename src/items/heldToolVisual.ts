@@ -115,6 +115,11 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     rotation: [Math.PI, 0, Math.PI / 2],
     scale: 1.15,
   },
+  shears: {
+    position: [0, 0.12, -0.01],
+    rotation: [Math.PI, 0, Math.PI / 2],
+    scale: 1.05,
+  },
   // Quaternius Dagger_2 — knife family.
   damascus_knife: {
     position: [0, 0.12, -0.01],

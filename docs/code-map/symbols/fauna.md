@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 866
+- `AnimalAgent` — class — line 869
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 395
-- `AnimalAgentDeps` — type — line 731
-- `AnimalSaveState` — type — line 496
-- `AnimalUpdateContext` — type — line 765
-- `BURY_DURATION_SEC` — const — line 265
-- `canPredatorPursueIntoVillage` — function — line 560
-- `FAUNA_SHADOW_DISTANCE` — const — line 232
-- `FaunaAiBranch` — type — line 374
-- `FaunaNavRescueDebugInfo` — type — line 379
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 325
-- `FrenzyWolfCandidate` — type — line 666
-- `HARVEST_MEAT_DURATION_SEC` — const — line 268
-- `isWithinVillageRadius` — function — line 541
-- `NearbyNpcCandidate` — type — line 661
-- `pickNearestEligibleWolf` — function — line 675
-- `pickRabidTarget` — function — line 700
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 250
-- `resolveLureTarget` — function — line 589
-- `villageFleeBiasFalloff` — function — line 568
-- `VillageInfo` — type — line 535
+- `AnimalAgentDebugInfo` — type — line 396
+- `AnimalAgentDeps` — type — line 734
+- `AnimalSaveState` — type — line 497
+- `AnimalUpdateContext` — type — line 768
+- `BURY_DURATION_SEC` — const — line 266
+- `canPredatorPursueIntoVillage` — function — line 563
+- `FAUNA_SHADOW_DISTANCE` — const — line 233
+- `FaunaAiBranch` — type — line 375
+- `FaunaNavRescueDebugInfo` — type — line 380
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 326
+- `FrenzyWolfCandidate` — type — line 669
+- `HARVEST_MEAT_DURATION_SEC` — const — line 269
+- `isWithinVillageRadius` — function — line 544
+- `NearbyNpcCandidate` — type — line 664
+- `pickNearestEligibleWolf` — function — line 678
+- `pickRabidTarget` — function — line 703
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 251
+- `resolveLureTarget` — function — line 592
+- `villageFleeBiasFalloff` — function — line 571
+- `VillageInfo` — type — line 538
 
 ## `fauna/animalCorpse.ts`
 
@@ -338,9 +338,11 @@ Generated from exported TypeScript symbols.
 ## `fauna/livestockProduction.ts`
 
 - `DropLivestockProductHook` — type — line 16
-- `initialLivestockProductionReadyAtDays` — function — line 54
+- `initialLivestockProductionReadyAtDays` — function — line 58
 - `livestockProductionReady` — function — line 37
-- `nextLivestockProductionReadyAtDays` — function — line 45
+- `nextLivestockProductionReadyAtDays` — function — line 49
+- `WOOL_GROWTH_DAYS` — const — line 42
+- `WOOL_YIELD` — const — line 43
 
 ## `fauna/ownedAnimalControl.ts`
 
@@ -419,6 +421,28 @@ Generated from exported TypeScript symbols.
 - `createRatModel` — function — line 324
 - `createRoosterModel` — function — line 246
 - `createSheepModel` — function — line 185
+
+## `fauna/shepherdFlock.ts`
+
+- `FLOCK_SEPARATION_RANGE` — const — line 18
+- `FLOCK_THREAT_RADIUS` — const — line 20
+- `FlockThreatCandidate` — type — line 103
+- `ownedFlockCentroid` — function — line 84
+- `ownedSheepOf` — function — line 46
+  - domain: fauna
+- `OwnedSheepView` — type — line 22
+- `selectReadyOwnedSheep` — function — line 56
+- `selectSeparatedOwnedSheep` — function — line 64
+- `senseOwnedFlockThreat` — function — line 118
+  - domain: fauna
+- `SHEARING_RANGE` — const — line 16
+- `SHEPHERD_FLOCK_MAX` — const — line 11
+- `SHEPHERD_FLOCK_MIN` — const — line 10
+  - domain: fauna
+- `SHEPHERD_FLOCK_SALT` — const — line 13
+- `ShepherdFlockHooks` — type — line 36
+- `shepherdFlockSize` — function — line 99
+- `ShepherdSheepHandle` — type — line 31
 
 ## `fauna/waterTraversal.ts`
 

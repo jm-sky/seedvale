@@ -29,13 +29,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/characters.ts`
 
-- `CharacterDef` — type — line 19
-- `characterForSeed` — function — line 69
-- `genderForName` — function — line 60
+- `CharacterDef` — type — line 21
+- `characterForSeed` — function — line 71
+- `genderForName` — function — line 62
 - `NpcGender` — type — line 5
-- `RESERVED_CHARACTERS` — const — line 51
-- `Role` — type — line 11
-- `Trait` — type — line 17
+- `RESERVED_CHARACTERS` — const — line 53
+- `Role` — type — line 13
+- `Trait` — type — line 19
 
 ## `ai/decisionModifiers.ts`
 
@@ -57,13 +57,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/dialogueTemplates.ts`
 
-- `aboutAreaLine` — function — line 206
-- `aboutSelfLine` — function — line 68
-- `aboutVillageLine` — function — line 162
-- `currentActivityLine` — function — line 109
-- `familyPhrase` — function — line 63
-- `goodbyeLine` — function — line 195
-- `requestAssistanceLine` — function — line 220
+- `aboutAreaLine` — function — line 207
+- `aboutSelfLine` — function — line 69
+- `aboutVillageLine` — function — line 163
+- `currentActivityLine` — function — line 110
+- `familyPhrase` — function — line 64
+- `goodbyeLine` — function — line 196
+- `requestAssistanceLine` — function — line 221
 
 ## `ai/graveVisitPressure.ts`
 
@@ -125,39 +125,39 @@ Generated from exported TypeScript symbols.
 ## `ai/npcAction.ts`
 
 - `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 80
+- `NpcPlannedAction` — type — line 82
 - `Phase` — type — line 10
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 638
-- `CurrentActivity` — type — line 472
-- `CurrentActivityKind` — type — line 465
-- `NPC_HEIGHT` — const — line 375
-- `NPC_MODEL_URLS` — const — line 439
-- `NPC_SHADOW_DISTANCE` — const — line 389
-- `NpcAgent` — class — line 978
+- `classifyPendingActivity` — function — line 639
+- `CurrentActivity` — type — line 473
+- `CurrentActivityKind` — type — line 466
+- `NPC_HEIGHT` — const — line 376
+- `NPC_MODEL_URLS` — const — line 440
+- `NPC_SHADOW_DISTANCE` — const — line 390
+- `NpcAgent` — class — line 982
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 890
-- `NpcInspectionSnapshot` — type — line 487
-- `NpcWhy` — type — line 613
-- `projectNpcWhy` — function — line 677
-- `promoteChainKind` — function — line 630
+- `NpcAgentDeps` — type — line 892
+- `NpcInspectionSnapshot` — type — line 488
+- `NpcWhy` — type — line 614
+- `projectNpcWhy` — function — line 679
+- `promoteChainKind` — function — line 631
 
 ## `ai/npcAnimalThreat.ts`
 
-- `AnimalThreatDecisionInput` — type — line 68
-- `AnimalThreatResponse` — type — line 66
-- `decideAnimalThreatResponse` — function — line 109
-- `IMMEDIATE_ANIMAL_THREAT_RADIUS` — const — line 41
-- `ImmediateAnimalThreat` — type — line 28
-- `scoreAnimalThreatIntents` — function — line 89
-- `senseImmediateAnimalThreat` — function — line 47
+- `AnimalThreatDecisionInput` — type — line 76
+- `AnimalThreatResponse` — type — line 74
+- `decideAnimalThreatResponse` — function — line 117
+- `IMMEDIATE_ANIMAL_THREAT_RADIUS` — const — line 48
+- `ImmediateAnimalThreat` — type — line 35
+- `scoreAnimalThreatIntents` — function — line 97
+- `senseImmediateAnimalThreat` — function — line 54
 - `ThreateningAnimalCandidate` — type — line 16
 
 ## `ai/npcAssistance.ts`
@@ -225,11 +225,12 @@ Generated from exported TypeScript symbols.
 
 - `defaultWeaponForRole` — function — line 22
 - `ensureKnifeCarried` — function — line 46
-- `isNpcLoadoutBelonging` — function — line 95
+- `isNpcLoadoutBelonging` — function — line 104
 - `seedDefaultRoleWeapon` — function — line 32
 - `seedHunterStartingArrows` — function — line 69
 - `seedHunterSupplies` — function — line 61
-- `seedInitialPersonalBelongingsIfNeeded` — function — line 79
+- `seedInitialPersonalBelongingsIfNeeded` — function — line 87
+- `seedShepherdShears` — function — line 76
 
 ## `ai/npcLogistics.ts`
 
@@ -313,11 +314,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 52
-- `findWeaponNeedingMaintenance` — function — line 78
-- `NpcWorkContext` — type — line 98
-- `planProfessionWork` — function — line 541
-- `selectTraderCollectionGoods` — function — line 333
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 59
+- `findWeaponNeedingMaintenance` — function — line 85
+- `NpcWorkContext` — type — line 105
+- `planProfessionWork` — function — line 623
+- `selectTraderCollectionGoods` — function — line 344
 
 ## `ai/npcStrategies.ts`
 
@@ -389,15 +390,15 @@ Generated from exported TypeScript symbols.
 
 ## `ai/schedule.ts`
 
-- `activityAt` — function — line 302
-- `effectiveScheduleFor` — function — line 175
+- `activityAt` — function — line 312
+- `effectiveScheduleFor` — function — line 185
 - `EffectiveScheduleOptions` — type — line 29
 - `FAST_WORKER_WORK_EXTEND_HOURS` — const — line 67
 - `hourMod24` — function — line 85
 - `hourToTimeOfDay` — function — line 81
-- `idleIntentFor` — function — line 199
+- `idleIntentFor` — function — line 209
 - `isNightLeisureTime` — function — line 57
-- `nextBoundary` — function — line 321
+- `nextBoundary` — function — line 331
 - `NIGHT_LEISURE_END_HOUR` — const — line 53
 - `NIGHT_LEISURE_START_HOUR` — const — line 52
   - domain: npc

@@ -44,6 +44,20 @@ describe('senseImmediateAnimalThreat (plan 179 §7/§10/§12)', () => {
   it('returns null with no candidates', () => {
     expect(senseImmediateAnimalThreat(0, 0, [])).toBeNull()
   })
+
+  it('ignores a flock-only predator that is not threatening a human (plan fauna-004)', () => {
+    const flockOnly: ThreateningAnimalCandidate = {
+      animalId: 'wolf-sheep',
+      kind: 'wolf',
+      x: 2,
+      z: 0,
+      target: fakeTarget(),
+      threateningHuman: false,
+      preyAnimalId: 'sheep-1',
+      preyOwnerHouseId: 'home:0',
+    }
+    expect(senseImmediateAnimalThreat(0, 0, [flockOnly])).toBeNull()
+  })
 })
 
 describe('decideAnimalThreatResponse (plan 179 §8/§14/§15)', () => {

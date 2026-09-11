@@ -2174,6 +2174,7 @@ export async function createApp(
     startBuryCorpse: survival.startBuryCorpse,
     startHarvestMeat: survival.startHarvestMeat,
     startMilkAnimal: survival.startMilkAnimal,
+    startShearAnimal: survival.startShearAnimal,
     startCookAt: survival.startCookAt,
     startIgniteFire: survival.startIgniteFire,
     startDestroySpawner: survival.startDestroySpawner,

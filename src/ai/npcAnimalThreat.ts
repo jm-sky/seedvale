@@ -23,6 +23,13 @@ export type ThreateningAnimalCandidate = {
    *  decision can hand it straight to `NpcAgent.beginCombat()` without a
    *  second animal lookup/registry. */
   target: CombatTargetHandle
+  /** When false, this candidate is flock-prey information only and must not
+   *  count as an immediate threat to a non-shepherd NPC. Omitted/`true` keeps
+   *  the existing human-threat list behaviour. */
+  threateningHuman?: boolean
+  /** Committed livestock prey, when this predator is hunting an animal. */
+  preyAnimalId?: string
+  preyOwnerHouseId?: string
 }
 
 export type ImmediateAnimalThreat = {
@@ -53,6 +60,7 @@ export function senseImmediateAnimalThreat(
   let best: ImmediateAnimalThreat | null = null
   let bestD = radius
   for (const c of candidates) {
+    if (c.threateningHuman === false) continue
     if (!c.target.isAlive()) continue
     const d = Math.hypot(c.x - npcX, c.z - npcZ)
     if (d < bestD) {

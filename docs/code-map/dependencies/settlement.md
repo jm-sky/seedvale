@@ -191,6 +191,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
+- `fauna/shepherdFlock.ts`
 - `items/createDroppedItems.ts`
 - `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
@@ -208,6 +209,7 @@ Generated from TypeScript imports.
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/places.ts`
+- `settlement/professionStaffing.ts`
 - `settlement/props.ts`
 - `settlement/ratInfestation.ts`
 - `settlement/rats.ts`
@@ -657,6 +659,7 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
 - `fauna/proceduralAnimals.ts`
+- `fauna/shepherdFlock.ts`
 - `player/PlayerController.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
@@ -956,6 +959,7 @@ Generated from TypeScript imports.
 
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
+- `settlement/createSettlement.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/settlementGenerator.ts`
 

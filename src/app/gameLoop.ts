@@ -366,6 +366,8 @@ export type GameLoopDeps = {
   startHarvestMeat?: (animal: AnimalAgent) => void
   /** Milks a live `cow`/`sheep` into a carried bucket (busy channel, plan fauna-002). */
   startMilkAnimal?: (animal: AnimalAgent) => void
+  /** Shears a wool-ready sheep into carried inventory (busy channel, plan fauna-004). */
+  startShearAnimal?: (animal: AnimalAgent) => void
   /** Busy-channel `[E] Zniszcz` on a `depleted` spawn point (plan 137). */
   startDestroySpawner: (spawner: PreySpawner) => void
   /** Cook the first held recipe's input at a lit campfire (busy channel, plan 106 §6). */
@@ -613,7 +615,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, lead, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
-    startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
+    startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startShearAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
@@ -1032,6 +1034,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             ?? null)
           : null,
         describeWorldGeneratedContainer,
+        inventory.hasCapability('shearing'),
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -1977,6 +1980,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               actions,
             )
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
+          } else if (target.animal.canBeSheared(dayNight.elapsedDays) && inventory.hasCapability('shearing')) {
+            startShearAnimal?.(target.animal)
           } else if (target.animal.canBeMilked(dayNight.elapsedDays) && hasMilkContainer) {
             startMilkAnimal?.(target.animal)
           } else if (feedAnimal(target.animal, inventory)) {
@@ -2307,8 +2312,21 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // NPC defense uses, so a `defend` decision can hand it straight to
         // `beginCombat()` with no second animal lookup.
         const threateningAnimals = bundle.fauna.getAgents()
-          .filter((a) => a.isThreateningHuman())
-          .map((a) => ({ animalId: a.animalId, kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z, target: combatTargetForAnimal(a) }))
+          .flatMap((a) => {
+            const prey = a.huntingPrey()
+            const threateningHuman = a.isThreateningHuman()
+            if (!threateningHuman && !prey) return []
+            return [{
+              animalId: a.animalId,
+              kind: a.def.kind,
+              x: a.mesh.position.x,
+              z: a.mesh.position.z,
+              target: combatTargetForAnimal(a),
+              threateningHuman,
+              preyAnimalId: prey?.animalId,
+              preyOwnerHouseId: prey?.ownerHouseId,
+            }]
+          })
         // Plan fauna-011 §9/§10/§11: bounded/local live wolves, forwarded to
         // every settlement's owned dogs for guard-target/bark-stimulus
         // perception — a per-frame filter over the already-loaded wild-fauna

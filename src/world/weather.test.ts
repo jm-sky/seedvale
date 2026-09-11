@@ -7,6 +7,7 @@ import {
   computeWeather,
   createClimateState,
   DAYS_PER_SEASON,
+  DAYS_PER_YEAR,
   getSeason,
   getSeasonProgress,
   temperatureFor,
@@ -15,6 +16,12 @@ import {
 } from './weather'
 
 describe('getSeason / getSeasonProgress', () => {
+  it('uses a 12-day season and 48-day year (plan fauna-004)', () => {
+    expect(DAYS_PER_SEASON).toBe(12)
+    expect(DAYS_PER_YEAR).toBe(48)
+    expect(DAYS_PER_SEASON * 4).toBe(48)
+  })
+
   it('cycles spring/summer/autumn/winter every DAYS_PER_SEASON days', () => {
     expect(getSeason(0)).toBe('spring')
     expect(getSeason(DAYS_PER_SEASON - 0.1)).toBe('spring')

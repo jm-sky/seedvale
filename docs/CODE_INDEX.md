@@ -157,6 +157,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Fauna decision](../src/fauna/faunaDecision.ts) — fixed-priority behaviour table.
 - [Dog guard](../src/fauna/dogGuard.ts) — household-dog guard/bark/pest resolution.
 - [Prey alert](../src/fauna/preyAlertPerception.ts) — extra-range threat-alert relevance.
+- [Livestock production](../src/fauna/livestockProduction.ts) — absolute-day egg/milk/wool readiness math.
+- [Shepherd flock](../src/fauna/shepherdFlock.ts) — owned-sheep lookup, flock size, and flock-threat query.
 
 <!-- AI_NAVIGATION_INDEX_START -->
 

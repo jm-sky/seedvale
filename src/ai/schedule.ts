@@ -162,6 +162,16 @@ export const SCHEDULE_TEMPLATES: Record<Role, ScheduleTemplate> = {
     { hour: 18, activity: 'home' },
     { hour: 22, activity: 'sleep' },
   ],
+  /** Daytime flock work around the household livestock yard — same shape as
+   *  `farmer`; destination is owned sheep / home, not a dedicated Pasture. */
+  shepherd: [
+    { hour: 6, activity: 'wake' },
+    { hour: 7, activity: 'work' },
+    { hour: 12, activity: 'eat' },
+    { hour: 13, activity: 'work' },
+    { hour: 18, activity: 'home' },
+    { hour: 22, activity: 'sleep' },
+  ],
 }
 
 /**

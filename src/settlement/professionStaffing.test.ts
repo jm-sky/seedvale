@@ -10,6 +10,7 @@ import {
   isProfessionAdult,
   type ProfessionStaffingContext,
   resolveInitialProfessionStaffing,
+  shepherdHouseholdIndex,
 } from './professionStaffing'
 
 const PERSONALITY = {
@@ -367,6 +368,31 @@ describe('resolveInitialProfessionStaffing', () => {
         expect(adultProfessionCoverage(staff(adults(5), { size: 'MD', seed })).guard).toBeLessThanOrEqual(1)
       }
     })
+
+    it('never assigns shepherd at 1–3 adults (plan fauna-004)', () => {
+      for (let n = 1; n <= 3; n++) {
+        for (let seed = 0; seed < 20; seed++) {
+          expect(adultProfessionCoverage(staff(adults(n), { size: 'MD', terrain: 'forest', seed })).shepherd).toBe(0)
+        }
+      }
+    })
+
+    it('assigns at most one shepherd (plan fauna-004)', () => {
+      for (let seed = 0; seed < 40; seed++) {
+        expect(adultProfessionCoverage(staff(adults(11), { size: 'XL', terrain: 'forest', foodSourceType: 'garden', seed })).shepherd).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('absence of shepherd is a valid outcome (plan fauna-004)', () => {
+      let absent = false
+      for (let seed = 0; seed < 40; seed++) {
+        if (adultProfessionCoverage(staff(adults(5), { size: 'MD', terrain: 'desert', foodSourceType: 'garden', seed })).shepherd === 0) {
+          absent = true
+          break
+        }
+      }
+      expect(absent).toBe(true)
+    })
   })
 
   describe('distribution', () => {
@@ -420,6 +446,35 @@ describe('resolveInitialProfessionStaffing', () => {
       expect(frequency(samples, () => adults(11), large, 'trader')).toBeGreaterThan(
         frequency(samples, () => adults(2), tiny, 'trader'),
       )
+    })
+
+    it('forest/garden contexts produce shepherd more often than desert (plan fauna-004)', () => {
+      const grazing = frequency(samples, () => adults(8), {
+        size: 'LG',
+        terrain: 'forest',
+        foodSourceType: 'garden',
+        dominantResource: null,
+        isHome: false,
+      }, 'shepherd')
+      const desert = frequency(samples, () => adults(8), {
+        size: 'LG',
+        terrain: 'desert',
+        foodSourceType: 'garden',
+        dominantResource: null,
+        isHome: false,
+      }, 'shepherd')
+      expect(grazing).toBeGreaterThan(desert)
+    })
+  })
+
+  describe('shepherd household (plan fauna-004)', () => {
+    it('points at the household that actually has the shepherd adult', () => {
+      const families = [
+        family('family-0', [member({ name: 'A', role: 'farmer', age: 30 })]),
+        family('family-1', [member({ name: 'B', role: 'shepherd', age: 28 })]),
+      ]
+      expect(shepherdHouseholdIndex(families)).toBe(1)
+      expect(shepherdHouseholdIndex(staff(adults(2), { size: 'SM' }))).toBeNull()
     })
   })
 })

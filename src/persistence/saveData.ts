@@ -1843,6 +1843,7 @@ function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
     isLivestockLife(r.life) &&
     (r.productionReadyAtDays === null || typeof r.productionReadyAtDays === 'number') &&
     typeof r.eggPending === 'boolean' &&
+    (r.woolReadyAtDays === undefined || r.woolReadyAtDays === null || typeof r.woolReadyAtDays === 'number') &&
     isLivestockCorpse(r.corpse) &&
     isAnimalAffinityField(r.affinity) &&
     (r.rabid === undefined || typeof r.rabid === 'boolean')
@@ -1894,6 +1895,7 @@ function isAnimalSaveState(value: unknown): boolean {
     isLivestockLife(s.life) &&
     (s.productionReadyAtDays === null || typeof s.productionReadyAtDays === 'number') &&
     typeof s.eggPending === 'boolean' &&
+    (s.woolReadyAtDays === undefined || s.woolReadyAtDays === null || typeof s.woolReadyAtDays === 'number') &&
     isLivestockCorpse(s.corpse) &&
     isAnimalOwnerField(s.owner) &&
     isOwnedAnimalControlField(s.control) &&

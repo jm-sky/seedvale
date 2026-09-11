@@ -148,12 +148,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 165
-- `FeedableAnimal` — type — line 140
-- `feedAnimal` — function — line 154
-- `hasCarriedMilkContainer` — function — line 130
-- `SurvivalActionLifecycle` — type — line 90
-- `SurvivalActions` — type — line 100
+- `createSurvivalActions` — function — line 168
+- `FeedableAnimal` — type — line 143
+- `feedAnimal` — function — line 157
+- `hasCarriedMilkContainer` — function — line 133
+- `SurvivalActionLifecycle` — type — line 91
+- `SurvivalActions` — type — line 101
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -243,12 +243,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 608
+- `createGameLoop` — function — line 610
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 576
+- `GameLoop` — type — line 578
 - `GameLoopDeps` — type — line 287
 
 ## `app/graphicsSettings.ts`
@@ -288,23 +288,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1143
-- `buildDigTarget` — function — line 1090
-- `buildInteractables` — function — line 435
-- `collectItem` — function — line 1193
+- `buildCombatTarget` — function — line 1147
+- `buildDigTarget` — function — line 1094
+- `buildInteractables` — function — line 437
+- `collectItem` — function — line 1197
 - `COMBAT_TARGET_CONE_DOT` — const — line 92
 - `COMBAT_TARGET_RANGE` — const — line 77
 - `CombatAimMode` — type — line 82
 - `DIG_REACH` — const — line 71
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 285
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 287
 - `GAZE_RANGE` — const — line 67
-- `groupDroppedItemCandidates` — function — line 295
+- `groupDroppedItemCandidates` — function — line 297
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 64
 - `INTERACT_RANGE` — const — line 61
-- `itemPromptLabel` — function — line 274
-- `resolveHaySpot` — function — line 371
-- `worldItemAllowsAltInteract` — function — line 259
+- `itemPromptLabel` — function — line 276
+- `resolveHaySpot` — function — line 373
+- `worldItemAllowsAltInteract` — function — line 261
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`

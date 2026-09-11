@@ -1,7 +1,7 @@
 # Plan: Sheep wool cycle and shepherd
 
 **Created:** 2026-08-29  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~npc-006~~, ~~fauna-012~~, ~~fauna-016~~, ~~settlements-npcs-014~~, ~~settlements-npcs-023 ~~  

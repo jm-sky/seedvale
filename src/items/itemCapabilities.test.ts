@@ -26,6 +26,7 @@ describe('item capability lookup', () => {
     expect(hasItemCapability('sewing_kit', 'textile_repair')).toBe(true)
     expect(hasItemCapability('pickaxe', 'prying')).toBe(true)
     expect(hasItemCapability('axe', 'prying')).toBe(true)
+    expect(hasItemCapability('shears', 'shearing')).toBe(true)
   })
 
   it('is false for a kind without the capability, and for no item at all', () => {
@@ -52,6 +53,7 @@ describe('item capability lookup', () => {
     expect(CAPABILITY_KINDS.rock_mining).toEqual(['pickaxe'])
     expect(CAPABILITY_KINDS.textile_repair).toEqual(['sewing_kit'])
     expect(CAPABILITY_KINDS.prying).toEqual(['battle_axe', 'axe', 'pitchfork', 'pickaxe'])
+    expect(CAPABILITY_KINDS.shearing).toEqual(['shears'])
   })
 
   it('keeps CAPABILITY_KINDS and the per-entry declarations in sync', () => {
