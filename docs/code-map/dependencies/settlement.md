@@ -332,6 +332,7 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.ts`
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
+- `world/createCaves.archetype.test.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
 - `world/hiddenFinds.ts`

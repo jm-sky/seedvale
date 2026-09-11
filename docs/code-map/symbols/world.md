@@ -118,6 +118,33 @@ Generated from exported TypeScript symbols.
 
 - `createCaveInteriorMesh` — function — line 117
 
+## `world/caves/adventureTopology.ts`
+
+- `ADVENTURE_DESCENT_PER_METER` — const — line 50
+- `ADVENTURE_FINAL_CHAMBER_NODE_ID` — const — line 71
+- `ADVENTURE_JUNCTION_NODE_ID` — const — line 69
+- `ADVENTURE_MAX_HEIGHTFIELD_CELLS` — const — line 118
+- `ADVENTURE_SIDE_CHAMBER_NODE_ID` — const — line 70
+- `buildAdventureCaveTopology` — function — line 210
+  - domain: world-terrain
+- `fitsAdventureFootprintBudget` — function — line 128
+  - domain: world-terrain
+
+## `world/caves/caveArchetype.ts`
+
+- `ADVENTURE_HOME_BAND_MAX` — const — line 36
+- `ADVENTURE_HOME_BAND_MIN` — const — line 35
+- `ADVENTURE_ROLL_CHANCE` — const — line 29
+- `ArchetypeAssignment` — type — line 88
+- `ArchetypeCandidate` — type — line 38
+- `assignCaveArchetypes` — function — line 118
+  - domain: world-terrain
+- `CaveArchetype` — type — line 24
+- `orderHomeAdventureCandidates` — function — line 56
+  - domain: world-terrain
+- `rollsAdventure` — function — line 84
+  - domain: world-terrain
+
 ## `world/caves/caveGroundQuery.ts`
 
 - `applyCaveGroundHysteresis` — function — line 66
@@ -186,7 +213,7 @@ Generated from exported TypeScript symbols.
 
 - `APERTURE_LIFT` — const — line 83
 - `BETA` — const — line 46
-- `buildCaveHeightfieldRepresentation` — function — line 645
+- `buildCaveHeightfieldRepresentation` — function — line 667
   - domain: world-terrain
 - `buildChamberLobes` — function — line 391
   - domain: world-terrain
@@ -204,16 +231,18 @@ Generated from exported TypeScript symbols.
 - `DEFAULT_HEIGHTFIELD_CONFIG` — const — line 111
 - `ENTRANCE_INWARD` — const — line 87
 - `ENTRANCE_OUTWARD` — const — line 85
+- `estimateHeightfieldGrid` — function — line 640
+  - domain: world-terrain
 - `FAR_GAP` — const — line 79
-- `heightfieldGapGradient` — function — line 886
-- `heightfieldNodeGap` — function — line 799
-- `heightfieldNodeIndex` — function — line 786
-- `heightfieldNodeOpenSky` — function — line 804
-- `heightfieldNodePosition` — function — line 790
+- `heightfieldGapGradient` — function — line 903
+- `heightfieldNodeGap` — function — line 816
+- `heightfieldNodeIndex` — function — line 803
+- `heightfieldNodeOpenSky` — function — line 821
+- `heightfieldNodePosition` — function — line 807
 - `HeightfieldSample` — type — line 174
 - `HeightfieldStation` — type — line 165
 - `KAPPA` — const — line 55
-- `mouthOpeningAt` — function — line 875
+- `mouthOpeningAt` — function — line 892
   - domain: world-terrain
 - `NC` — const — line 51
 - `NF` — const — line 48
@@ -226,7 +255,7 @@ Generated from exported TypeScript symbols.
 - `RIM_BAND_MAX` — const — line 64
 - `RIM_BAND_MIN` — const — line 61
 - `rimBand` — function — line 221
-- `sampleHeightfieldAt` — function — line 839
+- `sampleHeightfieldAt` — function — line 856
   - domain: world-terrain
 - `SMOOTH_K` — const — line 57
 - `SurfaceSampler` — type — line 195
@@ -270,7 +299,27 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveRng.ts`
 
 - `CAVE_RNG_SALT` — const — line 34
-- `createCaveRandom` — function — line 51
+- `createCaveRandom` — function — line 65
+
+## `world/caves/caveRoute.ts`
+
+- `CaveRecipeInput` — type — line 63
+- `Cursor` — type — line 87
+- `FLOOR_RAMP_STATION_SPACING` — const — line 41
+- `lowerFeatureIfNeeded` — function — line 310
+- `MAX_TOTAL_DROP` — const — line 49
+- `MAX_TRAVERSABLE_FLOOR_GRADE` — const — line 39
+- `maxCenterlineFloorGrade` — function — line 187
+- `MIN_DISCONNECTED_CLEARANCE` — const — line 60
+- `minGapBetweenPaths` — function — line 290
+- `NATURAL_DESCENT_PER_METER` — const — line 30
+- `pick` — function — line 101
+- `RadialStation` — type — line 89
+- `rotateXZ` — function — line 95
+- `RouteContext` — type — line 78
+- `walkSegment` — function — line 220
+  - domain: world-terrain
+- `WalkWobble` — type — line 91
 
 ## `world/caves/caveSpikeMetrics.ts`
 
@@ -357,14 +406,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/productionTopology.ts`
 
-- `buildProductionCaveTopology` — function — line 342
+- `buildNaturalCaveTopology` — function — line 95
   - domain: world-terrain
-- `FLOOR_RAMP_STATION_SPACING` — const — line 55
-- `MAX_TRAVERSABLE_FLOOR_GRADE` — const — line 53
-- `maxCenterlineFloorGrade` — function — line 192
-- `MIN_DISCONNECTED_CLEARANCE` — const — line 75
-- `minGapBetweenPaths` — function — line 301
-- `ProductionTopologyInput` — type — line 77
+- `buildProductionCaveTopology` — function — line 82
+  - domain: world-terrain
+- `ProductionTopologyInput` — type — line 66
 
 ## `world/caves/spikeNoise.ts`
 
@@ -479,8 +525,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 68
-- `createCaves` — function — line 202
+- `Caves` — type — line 70
+- `createCaves` — function — line 213
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query) and streamed interior presentation; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves

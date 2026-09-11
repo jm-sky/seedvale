@@ -78,7 +78,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
 | 💡 `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 | ◼️ `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
-| 💡 `world-terrain-020-adventure-cave-variant.md`                               | -       | 🟡 | M      | ~~world-terrain-019~~, world-024 |
 
 ---
 
