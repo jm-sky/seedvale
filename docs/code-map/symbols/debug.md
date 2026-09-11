@@ -156,25 +156,25 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `ConditionsDebugApi` — type — line 195
-- `HiddenTreasureDebugApi` — type — line 167
-- `HouseholdDebugHandle` — type — line 86
-- `InjuryDebugApi` — type — line 203
-- `installNpcDebugApi` — function — line 454
-- `LocationsDebugApi` — type — line 118
-- `NpcDebugHandle` — type — line 71
-- `PlayerDebugApi` — type — line 249
-- `QuestsDebugApi` — type — line 239
-- `QuestSpawnPointDebugSnapshot` — type — line 212
-- `QuestTargetDebugSnapshot` — type — line 227
-- `SeedvaleDebugApi` — type — line 323
-- `SettlementHistoryDebugHandle` — type — line 94
-- `SkillsDebugApi` — type — line 185
-- `TeleportToDebugApi` — type — line 130
-- `TransportOrderDebugSnapshot` — type — line 261
-- `VillageDebugHandle` — type — line 101
-- `WorldLocationDebugEntry` — type — line 151
-- `WorldLocationsDebugApi` — type — line 152
+- `ConditionsDebugApi` — type — line 200
+- `HiddenTreasureDebugApi` — type — line 172
+- `HouseholdDebugHandle` — type — line 91
+- `InjuryDebugApi` — type — line 208
+- `installNpcDebugApi` — function — line 468
+- `LocationsDebugApi` — type — line 123
+- `NpcDebugHandle` — type — line 76
+- `PlayerDebugApi` — type — line 254
+- `QuestsDebugApi` — type — line 244
+- `QuestSpawnPointDebugSnapshot` — type — line 217
+- `QuestTargetDebugSnapshot` — type — line 232
+- `SeedvaleDebugApi` — type — line 334
+- `SettlementHistoryDebugHandle` — type — line 99
+- `SkillsDebugApi` — type — line 190
+- `TeleportToDebugApi` — type — line 135
+- `TransportOrderDebugSnapshot` — type — line 272
+- `VillageDebugHandle` — type — line 106
+- `WorldLocationDebugEntry` — type — line 156
+- `WorldLocationsDebugApi` — type — line 157
 
 ## `debug/npcInspector.ts`
 
@@ -229,6 +229,27 @@ Generated from exported TypeScript symbols.
 - `PlayerGroundTraceWriter` — type — line 26
 - `snapshotCaveGroundHit` — function — line 284
 - `writeHitSnapshot` — function — line 292
+
+## `debug/playerMovementTrace.ts`
+
+- `classifyMovementBackward` — function — line 175
+- `colliderToMovementSnapshot` — function — line 124
+- `createPlayerMovementTraceBuffer` — function — line 385
+- `emptyPlayerMovementTrace` — function — line 445
+- `findLargestBackwardEvent` — function — line 293
+- `MOVEMENT_BACKWARD_EPSILON` — const — line 12
+- `movementBackwardAmount` — function — line 155
+- `MovementBackwardClassification` — type — line 166
+- `MovementColliderSnapshot` — type — line 31
+- `MovementGroundSource` — type — line 43
+- `MovementHeightfieldSnapshot` — type — line 21
+- `MovementSnapStage` — type — line 14
+- `PLAYER_MOVEMENT_TRACE_CAPACITY` — const — line 10
+- `PlayerMovementTraceBuffer` — type — line 114
+- `PlayerMovementTraceRecordInput` — type — line 103
+- `PlayerMovementTraceSnapshot` — type — line 98
+- `PlayerMovementTraceTick` — type — line 45
+- `selectMovementTraceWindow` — function — line 302
 
 ## `debug/renderStateDebug.ts`
 

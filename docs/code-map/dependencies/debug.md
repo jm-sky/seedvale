@@ -367,6 +367,7 @@ Generated from TypeScript imports.
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `debug/playerGroundTrace.ts`
+- `debug/playerMovementTrace.ts`
 - `debug/villageInspector.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
@@ -476,6 +477,25 @@ Generated from TypeScript imports.
 - `debug/playerGroundTrace.test.ts`
 - `player/PlayerController.ts`
 - `world/createCaves.ts`
+
+## `debug/playerMovementTrace.test.ts`
+
+**Imports**
+
+- `debug/playerMovementTrace.ts`
+
+## `debug/playerMovementTrace.ts`
+
+**Imports**
+
+- `world/collision.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `debug/npcDebugApi.ts`
+- `debug/playerMovementTrace.test.ts`
+- `player/PlayerController.ts`
 
 ## `debug/renderStateDebug.ts`
 

@@ -774,6 +774,7 @@ Generated from TypeScript imports.
 - `ai/npcColliderRim.ts`
 - `debug/colliderDebugView.ts`
 - `debug/colliderInstancedVisual.ts`
+- `debug/playerMovementTrace.ts`
 - `fauna/AnimalAgent.ts`
 - `house-browser/colliderPreview.test.ts`
 - `house-browser/colliderPreview.ts`

@@ -422,13 +422,14 @@ Generated from exported TypeScript symbols.
 - `Collider` — type — line 45
 - `colliderActiveAtY` — function — line 51
 - `colliderContainsPoint` — function — line 96
-- `ColliderRegistry` — type — line 244
+- `ColliderRegistry` — type — line 259
 - `colliderRimPoint` — function — line 141
 - `colliderSignedDistance` — function — line 85
-- `createColliderRegistry` — function — line 260
+- `createColliderRegistry` — function — line 275
 - `isInsideAnyCollider` — function — line 100
 - `ObbCollider` — type — line 36
 - `resolvePosition` — function — line 223
+- `resolvePositionAudited` — function — line 234
 - `VerticalExtent` — type — line 19
 
 ## `world/condition.ts`
@@ -471,8 +472,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 64
-- `createCaves` — function — line 187
+- `Caves` — type — line 65
+- `createCaves` — function — line 199
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query) and streamed interior presentation; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves

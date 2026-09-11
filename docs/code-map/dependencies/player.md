@@ -17,6 +17,7 @@ Generated from TypeScript imports.
 - `audio/createWorldAudio.ts`
 - `audio/playerMoveSounds.ts`
 - `debug/playerGroundTrace.ts`
+- `debug/playerMovementTrace.ts`
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`
