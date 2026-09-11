@@ -48,7 +48,11 @@ import {
   parseCaveHeightfieldMode,
   parseCaveHeightfieldVariant,
 } from './caves/caveHeightfieldFixtures'
-import { createHeightfieldCaveMesh, marchCellRing } from './caves/caveHeightfieldMesh'
+import {
+  createHeightfieldCaveMesh,
+  createMouthUndersideMask,
+  marchCellRing,
+} from './caves/caveHeightfieldMesh'
 import { createCaveHeightfieldWalker } from './caves/caveHeightfieldPlayer'
 import {
   buildCaveHeightfield,
@@ -106,6 +110,10 @@ type BuiltVariant = {
   surfaceMesh: Mesh
   /** Rock framing that masks the terrain-cutout seam (presentation only). */
   rocks: Group | null
+  /** Dark-rock beam under the terrain around the mouth — presentation only,
+   *  independent of rock framing. Catches grazing views through residual
+   *  millimetre gaps. Null on the SDF baseline (closed terrain sheet). */
+  mouthMask: Mesh | null
   field: CaveHeightfield | null
   /** Positive where cave void breaks the walk surface. Drives the terrain
    *  cutout, the cave ceiling clip and the rock placement from one contour. */
@@ -386,6 +394,7 @@ function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVarian
     mouthOpening,
     surfaceMesh: buildSurfaceMesh(mouthOpening),
     rocks: null,
+    mouthMask: createMouthUndersideMask(field, mouthOpening, walkSurfaceAt),
     world: createHeightfieldWalkWorld(field, baseSurfaceAt, walkSurfaceAt),
     metrics: {
       variant: 'heightfield',
@@ -438,6 +447,7 @@ function buildSdfVariant(fixture: CaveHeightfieldFixtureId): BuiltVariant {
     mouthOpening: null,
     surfaceMesh: buildSurfaceMesh(null),
     rocks: null,
+    mouthMask: null,
     world: createSdfWalkWorld(index, colliders, walkSurfaceAt),
     metrics: {
       variant: 'sdf',
@@ -588,6 +598,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
   built.rocks = showRocks ? makeRocks(built) : null
   scene.add(built.caveMesh)
   scene.add(built.surfaceMesh)
+  if (built.mouthMask) scene.add(built.mouthMask)
   if (built.rocks) scene.add(built.rocks)
   reportMetrics(built.metrics)
   renderOverlay(overlay, variant, fixture, mode, built.metrics)
@@ -623,6 +634,10 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
 
   const disposeBuilt = (): void => {
     disposeRocks()
+    if (built.mouthMask) {
+      disposeMesh(built.mouthMask)
+      built.mouthMask = null
+    }
     disposeMesh(built.caveMesh)
     disposeMesh(built.surfaceMesh)
   }
@@ -634,6 +649,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
     built.world.resetGround()
     scene.add(built.caveMesh)
     scene.add(built.surfaceMesh)
+    if (built.mouthMask) scene.add(built.mouthMask)
     if (built.rocks) scene.add(built.rocks)
     reportMetrics(built.metrics)
     renderOverlay(overlay, variant, fixture, mode, built.metrics)

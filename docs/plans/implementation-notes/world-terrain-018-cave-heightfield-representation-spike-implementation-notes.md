@@ -776,3 +776,20 @@ entrance quality, chamber scale, geometry smoothness and real FPS are not
 settled by any of the above.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+---
+
+## Iteration 4 — mouth underside mask (2026-09-11)
+
+Small visual-robustness patch on top of the clipped mouth contour. The
+entrance geometry itself is unchanged: terrain and cave mesh still stop on
+the same `mouthOpeningAt` contour. Residual millimetre gaps at grazing
+angles could still show the sky / the empty underside of the terrain sheet.
+
+A presentation-only dark-rock box-beam sits under the terrain around that
+contour (`createMouthUndersideMask` in `caveHeightfieldMesh.ts`). It is
+created and disposed with the heightfield cave mesh, carries no collision,
+and is not read by `queryInterior`, floor/ceiling or navigation. It does
+not replace the spatial representation or the terrain cutout. Rock framing
+remains optional (`[4]` / `&rocks=0`); the mask does not depend on it.
+

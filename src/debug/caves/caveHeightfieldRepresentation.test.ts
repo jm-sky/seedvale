@@ -8,7 +8,7 @@ import {
   CAVE_HEIGHTFIELD_FIXTURE_IDS,
   caveHeightfieldWalkSurfaceAt,
 } from './caveHeightfieldFixtures'
-import { buildHeightfieldMeshBuffers } from './caveHeightfieldMesh'
+import { buildHeightfieldMeshBuffers, buildMouthUndersideMaskBuffers } from './caveHeightfieldMesh'
 import {
   buildCaveHeightfield,
   type CaveHeightfield,
@@ -482,6 +482,42 @@ describe('cave heightfield mesh', () => {
     // Only the mouth portal may leave an open edge loop; a per-cell-quad mesh
     // would leave thousands.
     expect(naked).toBeLessThan(edgeUse.size * 0.05)
+  })
+
+  it('mouth underside mask sits under the terrain around the opening, not in the doorway', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      const opening = (x: number, z: number): number => mouthOpeningAt(field, walk, x, z)
+      const buffers = buildMouthUndersideMaskBuffers(field, opening, walk)
+      expect(buffers.vertices).toBeGreaterThan(24)
+      expect(buffers.triangles).toBeGreaterThan(24)
+      let insideDoorway = 0
+      for (let i = 0; i < buffers.vertices; i++) {
+        const x = buffers.positions[i * 3]!
+        const y = buffers.positions[i * 3 + 1]!
+        const z = buffers.positions[i * 3 + 2]!
+        expect(Number.isFinite(y)).toBe(true)
+        expect(y).toBeLessThan(walk(x, z) - 0.01)
+        expect(Math.hypot(x - field.entrance.x, z - field.entrance.z)).toBeLessThan(8)
+        if (opening(x, z) > 0.12) insideDoorway++
+        const sample = sampleHeightfieldAt(field, x, z)
+        if (sample.gap > 0 && !sample.outsideGrid && sample.surfaceY - sample.ceilY > 0.12) {
+          expect(y).toBeGreaterThan(sample.ceilY - 0.02)
+        }
+      }
+      expect(insideDoorway).toBe(0)
+    }
+  })
+
+  it('mouth underside mask is deterministic', () => {
+    const field = build('basic')
+    const opening = (x: number, z: number): number => mouthOpeningAt(field, walk, x, z)
+    const a = buildMouthUndersideMaskBuffers(field, opening, walk)
+    const b = buildMouthUndersideMaskBuffers(field, opening, walk)
+    expect(a.vertices).toBe(b.vertices)
+    expect(a.triangles).toBe(b.triangles)
+    expect(arraysEqual(a.positions, b.positions)).toBe(true)
+    expect(Array.from(a.indices)).toEqual(Array.from(b.indices))
   })
 })
 
