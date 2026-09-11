@@ -54,6 +54,7 @@ Generated from TypeScript imports.
 - `terrain/naturalResources.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/map/mapProjection.ts`
+- `world/treasureSites.ts`
 - `world/treeLifecycle.ts`
 - `world/worldContext.ts`
 
@@ -187,6 +188,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/interactables.ts`
+- `app/worldBundle.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
@@ -199,6 +201,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkManager.ts`
 - `world/hiddenFinds.ts`
+- `world/treasureSites.ts`
 
 ## `terrain/chunkGrid.test.ts`
 
@@ -327,6 +330,7 @@ Generated from TypeScript imports.
 - `world/map/mapProjection.ts`
 - `world/seedLibrary.test.ts`
 - `world/seedLibrary.ts`
+- `world/treasureSites.ts`
 - `world/worldContext.ts`
 
 ## `terrain/chunkHeightmap.worker.ts`

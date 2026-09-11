@@ -4,31 +4,31 @@
 
 ### Overall
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · ✅ ready · unlocks 4/8
+2. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6
-2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · ✅ ready · unlocks 3/5
 3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/3
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+4. `npc-029` — **NPC accompany/follow commitment**  
+   🔴 `M` · 🔒 blocked · unlocks 2/2
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
-   🟡 `L` · ✅ ready · unlocks 1/2
 
 ---
 
 ### Roadmap Focus
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · ✅ ready · unlocks 4/8 · roadmap: `physical-goods-transport`
+2. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6 · roadmap: `economy-production`
-2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · ✅ ready · unlocks 3/5 · roadmap: `physical-goods-transport`
 3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/3 · roadmap: `economy-production`
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+4. `npc-029` — **NPC accompany/follow commitment**  
+   🔴 `M` · 🔒 blocked · unlocks 2/2 · roadmap: `companions`
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2 · roadmap: `economy-production`
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
-   🟡 `L` · ✅ ready · unlocks 1/2 · roadmap: `textiles-and-herbal-medicine`
 
 ---
 
@@ -46,10 +46,10 @@ _No qualifying plans._
 
 ### Ready Now
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · ✅ ready · unlocks 4/8
+2. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6
-2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · ✅ ready · unlocks 3/5
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
 4. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
@@ -73,64 +73,84 @@ Only planned plans are ranked.
 done / verification needed satisfy dependencies.  
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+  🔴 `M` · **Score:** 151  
+   → **unlocks:** 4/8
+
+2. `settlements-npcs-015` — **Economic Production and Input Integration**  
   🔴 `M` · **Score:** 125  
    → **unlocks:** 3/6
-
-2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-  🔴 `M` · **Score:** 117  
-   → **unlocks:** 3/5
 
 3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  89  
    → **unlocks:** 1/3
 
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+4. `npc-029` — **NPC accompany/follow commitment**  
+  🔴 `M` · **Score:**  85  
+   → **unlocks:** 2/2
+
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  81  
    → **unlocks:** 1/2
 
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
+6. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/2
 
-6. `settlements-npcs-006` — **Wool to material**  
+7. `npc-031` — **Voluntary expedition joining**  
+  🔴 `M` · **Score:**  59  
+   → **unlocks:** 0/0
+
+8. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-7. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+9. `npc-030` — **Paid expedition escort Work Contracts**  
+  🔴 `L` · **Score:**  56  
+   → **unlocks:** 0/0
+
+10. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-8. `settlements-npcs-007` — **Bandages and herbal medicine**  
+11. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-9. `settlements-npcs-022` — **Household help and age-based work participation**  
+12. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-10. `world-023` — **Species-Driven Sowing, Density and Yield**  
+13. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-11. `settlements-npcs-025` — **Resource storage visualization**  
+14. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+15. `items-player-027` — **Player-to-NPC item transfer and equipment**  
+  🔴 `M` · **Score:**  29  
+   → **unlocks:** 0/0
+
+16. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-13. `items-player-014` — **Rope-pullable resource transport**  
+17. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `tools-005` — **Seedvale Character Preparation Panel**  
+18. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `tools-013` — **NPC decision verification and scenario tooling**  
+19. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+20. `items-player-026` — **Treasure loot, forced entry and traps**  
+  🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
 ---
@@ -139,13 +159,22 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)  
   is blocked by:
-  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
+  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
 - [`npc-027-spatial-context-and-cave-traversal.md`](npc-027-spatial-context-and-cave-traversal.md)  
   is blocked by:
-  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
+  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
+- [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)  
+  is blocked by:
+  - [`settlements-npcs-019-persistent-and-off-screen-transport.md`](settlements-npcs-019-persistent-and-off-screen-transport.md)
+- [`npc-030-paid-expedition-escort-work-contracts.md`](npc-030-paid-expedition-escort-work-contracts.md)  
+  is blocked by:
+  - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)
+- [`npc-031-voluntary-expedition-joining.md`](npc-031-voluntary-expedition-joining.md)  
+  is blocked by:
+  - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)
 - [`quests-progression-008-treasure-map-bear-cave.md`](quests-progression-008-treasure-map-bear-cave.md)  
   is blocked by:
-  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
+  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
@@ -167,14 +196,14 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
-  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
+  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
 - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)  
   is blocked by:
   - [`settlements-npcs-030-non-home-settlement-food-production-v1.md`](settlements-npcs-030-non-home-settlement-food-production-v1.md)
 - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)  
   is blocked by:
-  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
+  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
 
 ---
 
@@ -255,6 +284,8 @@ graph TD
   items_player_023["items-player-023 — Systemic item utility and food safety"]
   items_player_024["items-player-024 — Inventory and item-use UX coherence"]
   items_player_025["items-player-025 — World food freshness prompt and spoiled decay"]
+  items_player_026["items-player-026 — Treasure loot, forced entry and traps"]
+  items_player_027["items-player-027 — Player-to-NPC item transfer and equipment"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -282,6 +313,9 @@ graph TD
   npc_026["npc-026 — NPC Grave Visits"]
   npc_027["npc-027 — Spatial-context-aware NPC movement and cave traversal"]
   npc_028["npc-028 — Work Contracts — Multiple Workers"]
+  npc_029["npc-029 — NPC accompany/follow commitment"]
+  npc_030["npc-030 — Paid expedition escort Work Contracts"]
+  npc_031["npc-031 — Voluntary expedition joining"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -392,6 +426,7 @@ graph TD
   world_021["world-021 — World structure repair work foundation"]
   world_022["world-022 — World location discovery hitch and progress"]
   world_023["world-023 — Species-Driven Sowing, Density and Yield"]
+  world_024["world-024 — Systemic treasure sites and keys"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -410,6 +445,7 @@ graph TD
   world_terrain_016["world-terrain-016 — Settlement Cemeteries & Abandoned Graveyards"]
   world_terrain_017["world-terrain-017 — Abandoned mountain mine landmark"]
   world_terrain_018["world-terrain-018 — Cave Heightfield Representation Spike"]
+  world_terrain_019["world-terrain-019 — Cave Heightfield Production Migration"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -531,6 +567,8 @@ graph TD
   npc_024 --> ui_input_013
   npc_025 --> ui_input_013
   npc_028 --> npc_016
+  npc_029 --> npc_030
+  npc_029 --> npc_031
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
   persistence_003 --> persistence_004
@@ -587,11 +625,13 @@ graph TD
   settlements_npcs_018 --> settlements_npcs_019
   settlements_npcs_018 --> settlements_npcs_020
   settlements_npcs_018 --> settlements_npcs_021
+  settlements_npcs_019 --> npc_029
   settlements_npcs_019 --> settlements_npcs_020
   settlements_npcs_019 --> settlements_npcs_021
   settlements_npcs_019 --> settlements_npcs_028
   settlements_npcs_020 --> settlements_npcs_021
   settlements_npcs_023 --> fauna_004
+  settlements_npcs_026 --> items_player_027
   settlements_npcs_026 --> npc_016
   settlements_npcs_026 --> npc_017
   settlements_npcs_026 --> quests_progression_010
@@ -633,17 +673,19 @@ graph TD
   world_021 --> items_player_019
   world_021 --> ui_input_014
   world_023 --> settlements_npcs_031
+  world_024 --> items_player_026
   world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
-  world_terrain_008 --> fauna_019
-  world_terrain_008 --> npc_027
-  world_terrain_008 --> quests_progression_008
-  world_terrain_008 --> world_018
-  world_terrain_008 --> world_terrain_017
   world_terrain_010 --> world_terrain_011
   world_terrain_011 --> world_terrain_013
   world_terrain_016 --> npc_026
   world_terrain_016 --> world_022
   world_terrain_017 --> quests_progression_010
   world_terrain_017 --> world_018
+  world_terrain_018 --> world_terrain_019
+  world_terrain_019 --> fauna_019
+  world_terrain_019 --> npc_027
+  world_terrain_019 --> quests_progression_008
+  world_terrain_019 --> world_018
+  world_terrain_019 --> world_terrain_017
 ```

@@ -164,6 +164,20 @@ export type HiddenFindMatch = {
   spotIndex: number
 }
 
+/** Caller-supplied buried placement (plan world-024). Namespaced `spotId`
+ *  so a systemic treasure key never collides with generic Hidden Find loot. */
+export type ExplicitBuriedPlacement = {
+  spotId: string
+  landmarkId: string
+  landmarkKind: LandmarkKind
+  x: number
+  z: number
+  /** Present only when the burial is a real cemetery grave. */
+  graveIndex?: number
+  /** Exact instance granted on a successful dig — never minted later. */
+  keyInstanceId: string
+}
+
 /** Finds the nearest not-yet-resolved Hidden Find spot within dig tolerance
  *  of `(x, z)` among `landmarks` (typically `chunkManager.getNearbyLandmarks`
  *  around the dig point) — pure/deterministic, safe to call on every shovel
@@ -186,6 +200,27 @@ export function findHiddenFindSpot(
         bestDist = dist
         best = { landmark, spotId: spot.spotId, spotIndex: i }
       }
+    }
+  }
+  return best
+}
+
+/** Same dig-tolerance match as `findHiddenFindSpot`, for an externally
+ *  supplied buried placement (plan world-024). */
+export function findExplicitBuriedSpot(
+  placements: readonly ExplicitBuriedPlacement[],
+  x: number,
+  z: number,
+  isSpotResolved: (spotId: string) => boolean,
+): ExplicitBuriedPlacement | null {
+  let best: ExplicitBuriedPlacement | null = null
+  let bestDist = HIDDEN_FIND_DIG_TOLERANCE
+  for (const placement of placements) {
+    if (isSpotResolved(placement.spotId)) continue
+    const dist = Math.hypot(placement.x - x, placement.z - z)
+    if (dist <= bestDist) {
+      bestDist = dist
+      best = placement
     }
   }
   return best

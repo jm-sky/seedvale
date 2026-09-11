@@ -19,6 +19,7 @@ import { INSTANCE_BACKED_KINDS } from '../../items/itemInstances'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
 import { canLootNpcCorpse, corpseLootInventory, transferCorpseCountTo, transferCorpseInstanceTo } from '../../settlement/npcPostDeath'
 import { CHEST_DEPTH, CHEST_WIDTH } from '../../world/containerProp'
+import { attemptTreasureUnlock } from '../../world/treasureSites'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import { evaluatePlacementSite, previewGroundPlacement } from './placementActions'
 import { placementAimSite } from './placementYaw'
@@ -61,6 +62,8 @@ export type ContainerActionDeps = {
   /** Renderer canvas — released from pointer lock when the container screen
    *  opens, same as inventory/skills/character (`createApp.ts`). */
   rendererElement: HTMLElement
+  /** Plan world-024 — mutated in place; never reassigned. */
+  unlockedTreasureContainerIds: Set<string>
 }
 
 export function createContainerActions(
@@ -68,7 +71,7 @@ export function createContainerActions(
   deps: ContainerActionDeps,
 ): ContainerActions {
   const { bundle, player, inventory, hud, toast, busy, mouseLook } = ctx
-  const { vueUi, tentBlockers, rendererElement } = deps
+  const { vueUi, tentBlockers, rendererElement, unlockedTreasureContainerIds } = deps
 
   /** The transfer screen currently shown — a placed chest or an NPC corpse
    *  (plan npc-010). Opening one overwrites the other; handlers below always
@@ -164,6 +167,17 @@ export function createContainerActions(
     const world = placed ? undefined : bundle.worldGeneratedContainers.find(id)
     const entry = placed ?? world
     if (!entry) return
+    const unlock = attemptTreasureUnlock(
+      bundle.treasureSites,
+      unlockedTreasureContainerIds,
+      id,
+      (requiredKeyId) => inventory.getInstance(requiredKeyId) != null,
+    )
+    if (unlock.kind === 'locked') {
+      toast.show('Skrzynia jest zamknięta. Potrzebujesz pasującego klucza.', 'error')
+      return
+    }
+    if (unlock.kind === 'unlocked') toast.show('Otwarto skrzynię kluczem.')
     exitGamePointerLock(rendererElement)
     openTransfer = { kind: 'container', id }
     const def = placed ? CONTAINER_DEFS[placed.kind] : CONTAINER_DEFS.chest

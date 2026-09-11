@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cemeteryGraveLayout } from '../settlement/props'
 import { rotateOffsetY } from '../settlement/propUtils'
-import { findHiddenFindSpot, type HiddenFindLandmark, resolveHiddenFindLoot } from './hiddenFinds'
+import { findExplicitBuriedSpot, findHiddenFindSpot, type HiddenFindLandmark, resolveHiddenFindLoot } from './hiddenFinds'
 
 const NEVER_RESOLVED = () => false
 
@@ -94,6 +94,37 @@ describe('findHiddenFindSpot', () => {
     // ~25% chance — with 20 samples, expect neither "always" nor "never".
     expect(results.some((r) => r)).toBe(true)
     expect(results.every((r) => r)).toBe(false)
+  })
+})
+
+describe('findExplicitBuriedSpot (world-024)', () => {
+  it('matches a namespaced placement within dig tolerance and skips resolved spots', () => {
+    const placement = {
+      spotId: 'treasure-key:site-a',
+      landmarkId: 'cemetery:host',
+      landmarkKind: 'cemetery' as const,
+      x: 12,
+      z: -8,
+      graveIndex: 2,
+      keyInstanceId: 'item:treasure-key:site-a',
+    }
+    const first = findExplicitBuriedSpot([placement], 12.2, -8.1, NEVER_RESOLVED)
+    expect(first?.spotId).toBe(placement.spotId)
+    expect(first?.keyInstanceId).toBe(placement.keyInstanceId)
+    const second = findExplicitBuriedSpot([placement], 12.2, -8.1, (id) => id === placement.spotId)
+    expect(second).toBeNull()
+  })
+
+  it('does not match a far placement', () => {
+    const placement = {
+      spotId: 'treasure-key:site-b',
+      landmarkId: 'monolith:host',
+      landmarkKind: 'monolith' as const,
+      x: 0,
+      z: 0,
+      keyInstanceId: 'item:treasure-key:site-b',
+    }
+    expect(findExplicitBuriedSpot([placement], 80, 80, NEVER_RESOLVED)).toBeNull()
   })
 })
 

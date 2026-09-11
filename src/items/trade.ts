@@ -1,5 +1,6 @@
 import type { Inventory } from './Inventory'
 import {
+  createKeyInstance,
   createTentInstance,
   isInstanceBackedKind,
   isLiquidContainerKind,
@@ -141,6 +142,7 @@ export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
   if (isWeaponMaintenanceKind(kind)) return createWeaponInstance(kind)
   if (isLiquidContainerKind(kind)) return createLiquidContainerInstance(kind)
   if (kind === 'tent') return createTentInstance()
+  if (kind === 'key') return createKeyInstance()
   return null
 }
 

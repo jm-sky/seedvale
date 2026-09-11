@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WeaponItemInstance } from '../../items/itemInstances'
+import type { TreasureSiteDefinition } from '../../world/treasureSites'
 import type { PlayerActionContext } from './actionContext'
 import { BadgeManager } from '../../badges/badges'
 import { villageNearest } from '../../debug/locationQueries'
@@ -270,8 +271,10 @@ function setupHiddenFindDig(options: {
   sneakValue?: number
   resolved?: Set<string>
   village?: typeof NEAREST_VILLAGE | null
+  treasureSites?: readonly TreasureSiteDefinition[]
+  inventoryMaxWeight?: number
 }) {
-  const inventory = new Inventory({ shovel: 1 }, 100)
+  const inventory = new Inventory({ shovel: 1 }, options.inventoryMaxWeight ?? 100)
   const heldTool = createHeldTool(inventory, 'shovel')
   const dropped: { kind: ItemKind, count: number }[] = []
   const grantItem = makeGrantItem(inventory, dropped)
@@ -280,6 +283,7 @@ function setupHiddenFindDig(options: {
   const badges = new BadgeManager()
   const applySocial = vi.fn()
   const resolvedHiddenFindSpotIds = options.resolved ?? new Set<string>()
+  const drop = vi.fn()
   vi.mocked(villageNearest).mockReturnValue(options.village === undefined ? NEAREST_VILLAGE : options.village)
 
   const ctx = {
@@ -289,7 +293,8 @@ function setupHiddenFindDig(options: {
         modifyTerrain: vi.fn(),
       },
       settlementsManager: { peekDef: () => null, getLoaded: () => [], home: null },
-      droppedItems: { settleNear: vi.fn(), drop: vi.fn() },
+      droppedItems: { settleNear: vi.fn(), drop },
+      treasureSites: options.treasureSites ?? [],
     },
     player: mockPlayer({
       skills: { sneak: { active: options.sneakActive ?? false, value: options.sneakValue ?? 0.2 } },
@@ -305,6 +310,7 @@ function setupHiddenFindDig(options: {
     mouseLook: { state: { yaw: 0 } },
     worldAudio: { playAt: vi.fn(), playOnce: vi.fn() },
     grantItem,
+    onInventoryChanged: vi.fn(),
     syncQuickActionAvailability: vi.fn(),
   } as unknown as PlayerActionContext
 
@@ -320,7 +326,7 @@ function setupHiddenFindDig(options: {
     busy.tick(DIG_DURATION_SEC)
   }
 
-  return { badges, applySocial, resolvedHiddenFindSpotIds, digAt, grantItem }
+  return { badges, applySocial, resolvedHiddenFindSpotIds, digAt, grantItem, inventory, drop, toast }
 }
 
 describe('cemetery grave social exposure (quests-progression-011)', () => {
@@ -458,6 +464,95 @@ describe('cemetery grave social exposure (quests-progression-011)', () => {
     second.digAt(dig.x, dig.z)
     expect(second.applySocial).not.toHaveBeenCalled()
     expect(spotId).toBeDefined()
+  })
+})
+
+function buriedKeySite(input: {
+  landmark: HiddenFindLandmark
+  dig: { x: number, z: number }
+  graveIndex?: number
+  keyInstanceId: string
+  buriedSpotId: string
+}): TreasureSiteDefinition {
+  return {
+    id: 'treasure:ruins:test-site',
+    archetype: 'ruins',
+    placeId: 'smallRuins:test',
+    chest: { containerId: 'world-container:treasure:ruins:test-site', x: 0, z: 0, yaw: 0 },
+    requiredKeyId: input.keyInstanceId,
+    key: {
+      mode: 'buried',
+      spotId: input.buriedSpotId,
+      landmarkId: input.landmark.id,
+      landmarkKind: input.landmark.kind,
+      x: input.dig.x,
+      z: input.dig.z,
+      graveIndex: input.graveIndex,
+      keyInstanceId: input.keyInstanceId,
+    },
+  }
+}
+
+describe('buried treasure keys (world-024)', () => {
+  beforeEach(() => {
+    vi.mocked(villageNearest).mockReset()
+    vi.mocked(villageNearest).mockReturnValue(null)
+  })
+
+  it('grants the exact key instance once and reuses cemetery grave social exposure', () => {
+    const { landmark, dig, spotId } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const keyInstanceId = 'item:treasure-key:test-site'
+    const buriedSpotId = 'treasure-key:test-site'
+    const { applySocial, resolvedHiddenFindSpotIds, digAt, grantItem, inventory } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+      treasureSites: [buriedKeySite({
+        landmark,
+        dig,
+        graveIndex: 0,
+        keyInstanceId,
+        buriedSpotId,
+      })],
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(inventory.getInstance(keyInstanceId)?.kind).toBe('key')
+    expect(grantItem).not.toHaveBeenCalled()
+    expect(applySocial).toHaveBeenCalledTimes(1)
+    expect(applySocial).toHaveBeenCalledWith({
+      settlementId: 'anna-village',
+      reputation: { ...GRAVE_DISTURBANCE_EXPOSURE.reputation },
+      renown: GRAVE_DISTURBANCE_EXPOSURE.renown,
+    })
+    expect(resolvedHiddenFindSpotIds.has(buriedSpotId)).toBe(true)
+    expect(resolvedHiddenFindSpotIds.has(spotId)).toBe(true)
+
+    applySocial.mockClear()
+    digAt(dig.x, dig.z)
+    expect(applySocial).not.toHaveBeenCalled()
+    expect(grantItem).not.toHaveBeenCalled()
+    expect(inventory.countInstances('key')).toBe(1)
+  })
+
+  it('does not run grave exposure for a non-grave buried key', () => {
+    const landmark = stoneCircleWithFind()
+    const keyInstanceId = 'item:treasure-key:stone-site'
+    const { applySocial, digAt, inventory } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+      treasureSites: [buriedKeySite({
+        landmark,
+        dig: { x: landmark.x, z: landmark.z },
+        keyInstanceId,
+        buriedSpotId: 'treasure-key:stone-site',
+      })],
+    })
+
+    digAt(landmark.x, landmark.z)
+
+    expect(inventory.getInstance(keyInstanceId)?.kind).toBe('key')
+    expect(applySocial).not.toHaveBeenCalled()
   })
 })
 

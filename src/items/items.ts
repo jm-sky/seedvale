@@ -59,6 +59,7 @@ export type ItemKind =
   | 'dried_meat'
   | 'coin'
   | 'ruby'
+  | 'key'
   | 'treasure_map_dark_forest'
   | 'herb'
   | 'bandage'
@@ -683,6 +684,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XXS',
     color: 0xb02040,
     description: 'Czerwony kamień szlachetny — rzadki i ceniony przez handlarzy.',
+  },
+  key: {
+    kind: 'key',
+    label: 'klucz',
+    categories: ['utility'],
+    weight: 0.04,
+    size: 'XXS',
+    color: 0xc4a040,
+    description: 'Zwykły metalowy klucz. Pasuje tylko do jednej, konkretnej kłódki.',
   },
   treasure_map_dark_forest: {
     kind: 'treasure_map_dark_forest',
@@ -1730,6 +1740,32 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.position.y = 0.06
     mesh.castShadow = true
     return mesh
+  }
+  if (kind === 'key') {
+    const group = new THREE.Group()
+    const bow = new THREE.Mesh(
+      new THREE.TorusGeometry(0.045, 0.012, 5, 8),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.key.color, flatShading: true, metalness: 0.55 }),
+    )
+    bow.position.set(-0.07, 0.04, 0)
+    bow.castShadow = true
+    group.add(bow)
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.16, 5),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.key.color, flatShading: true, metalness: 0.55 }),
+    )
+    shaft.rotation.z = Math.PI / 2
+    shaft.position.set(0.03, 0.04, 0)
+    shaft.castShadow = true
+    group.add(shaft)
+    const bit = new THREE.Mesh(
+      new THREE.BoxGeometry(0.03, 0.04, 0.012),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.key.color, flatShading: true, metalness: 0.55 }),
+    )
+    bit.position.set(0.1, 0.025, 0)
+    bit.castShadow = true
+    group.add(bit)
+    return group
   }
   if (kind === 'wooden_torch') {
     const group = new THREE.Group()

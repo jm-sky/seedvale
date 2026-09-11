@@ -109,6 +109,7 @@ Generated from TypeScript imports.
 - `settlement/npcPostDeath.ts`
 - `ui-vue/mount.ts`
 - `world/containerProp.ts`
+- `world/treasureSites.ts`
 
 **Imported by**
 
@@ -242,6 +243,7 @@ Generated from TypeScript imports.
 - `terrain/dig.ts`
 - `terrain/digAction.ts`
 - `world/hiddenFinds.ts`
+- `world/treasureSites.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
 
@@ -256,6 +258,7 @@ Generated from TypeScript imports.
 - `badges/badges.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
 - `items/trade.ts`
 - `player/PlayerNeeds.ts`
@@ -271,6 +274,7 @@ Generated from TypeScript imports.
 - `world/dayNight.ts`
 - `world/hiddenFinds.ts`
 - `world/parseSeed.ts`
+- `world/treasureSites.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
 
@@ -1374,6 +1378,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementStructures.ts`
 - `shared/bootMark.ts`
+- `terrain/chunkEnvironment.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`
@@ -1424,6 +1429,7 @@ Generated from TypeScript imports.
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 - `world/trapProp.ts`
+- `world/treasureSites.ts`
 - `world/treeLifecycle.ts`
 - `world/waterMirror.ts`
 - `world/workContract.ts`

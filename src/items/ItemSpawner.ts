@@ -8,6 +8,7 @@ export type ItemSpawnPoint = {
   respawnTime: number
   timeSinceCollected: number
   collected: boolean
+  instanceId?: string
 }
 
 /** Pure timer bookkeeping — ticks `timeSinceCollected` for collected points and

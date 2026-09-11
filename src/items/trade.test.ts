@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { RelationLevel } from '../quests/quests'
 import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
 import { Inventory } from './Inventory'
-import { createTentInstance, isTentItemInstance } from './itemInstances'
+import { createKeyInstance, createTentInstance, isTentItemInstance } from './itemInstances'
 import {
+  createAcquiredInstance,
   previewPricedPurchaseNetCoins,
   previewTransactionNetCoins,
   resolveOfferLineBuyback,
@@ -460,5 +461,18 @@ describe('settlePricedPurchase (plan quests-progression-012)', () => {
     expect(settlePricedPurchase(inv, HORSE_PRICE, offer, NEUTRAL_SELL_PRICE_CONTEXT, () => true)).toBe('ok')
     expect(inv.count('coin')).toBe(240 - preview)
     expect(inv.count('shell')).toBe(10)
+  })
+})
+
+describe('createAcquiredInstance key (world-024)', () => {
+  it('mints a generic key, while systemic keys keep the caller-supplied id', () => {
+    const acquired = createAcquiredInstance('key')
+    expect(acquired?.kind).toBe('key')
+    expect(acquired?.id).toBeTypeOf('string')
+    expect(acquired?.id).not.toBe('item:treasure-key:site')
+    expect(createKeyInstance('item:treasure-key:site')).toEqual({
+      id: 'item:treasure-key:site',
+      kind: 'key',
+    })
   })
 })

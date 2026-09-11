@@ -97,9 +97,9 @@ Generated from exported TypeScript symbols.
 
 ## `items/createItemSpawners.ts`
 
-- `createItemSpawners` — function — line 130
-- `ItemSpawners` — type — line 11
-- `OneTimeWorldItemPickup` — type — line 117
+- `createItemSpawners` — function — line 133
+- `ItemSpawners` — type — line 12
+- `OneTimeWorldItemPickup` — type — line 118
 
 ## `items/createPlacedTents.ts`
 
@@ -250,33 +250,33 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1352
+- `ARROW_DAMAGE_BONUS` — const — line 1361
 - `BookTier` — type — line 148
-- `CAPABILITY_KINDS` — const — line 1383
+- `CAPABILITY_KINDS` — const — line 1392
 - `CAPABILITY_LABEL` — const — line 126
 - `CAPABILITY_NEED_LABEL` — const — line 112
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1418
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1427
 - `ConsumableNeed` — type — line 139
 - `consumeNeedNoun` — function — line 249
 - `consumeVerbLabel` — function — line 240
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1408
-- `HOLDABLE_KINDS` — const — line 1374
-- `INJURY_TREATMENT_KINDS` — const — line 1440
-- `isMeleeToolKind` — function — line 1367
-- `isRangedTool` — function — line 1359
+- `hasItemCapability` — function — line 1417
+- `HOLDABLE_KINDS` — const — line 1383
+- `INJURY_TREATMENT_KINDS` — const — line 1449
+- `isMeleeToolKind` — function — line 1376
+- `isRangedTool` — function — line 1368
 - `ITEM_CATALOG` — const — line 263
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1461
+- `ITEM_SYSTEM_ROADMAP` — const — line 1470
 - `ItemCapability` — type — line 89
 - `ItemCatalogEntry` — type — line 150
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1453
+- `itemTreatsPhysicalInjury` — function — line 1462
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1467
+- `NON_ITEM_PROPS` — const — line 1476
 - `RangedConfig` — type — line 53
 
 ## `items/itemDisplay.ts`
@@ -296,18 +296,19 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemInstances.ts`
 
-- `clamp01` — function — line 167
+- `clamp01` — function — line 174
 - `clampCampCondition` — function — line 126
-- `cloneItemInstance` — function — line 172
+- `cloneItemInstance` — function — line 179
 - `createItemInstanceId` — function — line 142
+- `createKeyInstance` — function — line 158
 - `createTentInstance` — function — line 131
 - `INSTANCE_BACKED_KINDS` — const — line 147
-- `isInstanceBackedKind` — function — line 155
+- `isInstanceBackedKind` — function — line 162
 - `isLiquidContainerInstance` — function — line 110
 - `isLiquidContainerKind` — function — line 84
 - `isTentItemInstance` — function — line 121
-- `isTrapItemInstance` — function — line 163
-- `isTrapKind` — function — line 159
+- `isTrapItemInstance` — function — line 170
+- `isTrapKind` — function — line 166
 - `isWeaponItemInstance` — function — line 97
 - `isWeaponMaintenanceKind` — function — line 57
 - `ItemInstance` — type — line 4
@@ -332,27 +333,27 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 212
-- `canCancelRestProgress` — function — line 183
-- `createItemMesh` — function — line 1209
-- `hasItemCategory` — function — line 162
-- `hasItemKindCategory` — function — line 166
-- `ITEM_DEFS` — const — line 216
-- `ITEM_SIZE_UNITS` — const — line 135
-- `ItemCategory` — type — line 126
-- `ItemDef` — type — line 148
+- `canCancelRestNow` — function — line 213
+- `canCancelRestProgress` — function — line 184
+- `createItemMesh` — function — line 1219
+- `hasItemCategory` — function — line 163
+- `hasItemKindCategory` — function — line 167
+- `ITEM_DEFS` — const — line 217
+- `ITEM_SIZE_UNITS` — const — line 136
+- `ItemCategory` — type — line 127
+- `ItemDef` — type — line 149
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 131
-- `itemSizeUnits` — function — line 144
-- `primaryItemCategory` — function — line 173
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 181
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 193
-- `restCancelAllowedByStartVigor` — function — line 200
+- `ItemSize` — type — line 132
+- `itemSizeUnits` — function — line 145
+- `primaryItemCategory` — function — line 174
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 182
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 194
+- `restCancelAllowedByStartVigor` — function — line 201
 
 ## `items/ItemSpawner.ts`
 
 - `ItemSpawnPoint` — type — line 3
-- `updateItemSpawnPoints` — function — line 16
+- `updateItemSpawnPoints` — function — line 17
 
 ## `items/itemUseView.ts`
 
@@ -431,21 +432,21 @@ Generated from exported TypeScript symbols.
 
 ## `items/trade.ts`
 
-- `createAcquiredInstance` — function — line 139
-- `InstanceSellResult` — type — line 30
-- `OfferBuybackResolution` — type — line 34
-- `previewPricedPurchaseNetCoins` — function — line 288
-- `previewTransactionNetCoins` — function — line 273
-- `resolveOfferBuyback` — function — line 222
+- `createAcquiredInstance` — function — line 140
+- `InstanceSellResult` — type — line 31
+- `OfferBuybackResolution` — type — line 35
+- `previewPricedPurchaseNetCoins` — function — line 290
+- `previewTransactionNetCoins` — function — line 275
+- `resolveOfferBuyback` — function — line 224
   - domain: settlements — merchant buyback for an entire offer basket plus the concrete instance ids settlement should remove for instance-backed kinds.
-- `resolveOfferLineBuyback` — function — line 199
+- `resolveOfferLineBuyback` — function — line 201
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
-- `selectInstancesToSell` — function — line 157
-- `selectInstanceToPlace` — function — line 172
-- `sellInstancesForCoins` — function — line 359
-- `settlePricedPurchase` — function — line 301
-- `settleTransaction` — function — line 329
-- `TradeResult` — type — line 28
+- `selectInstancesToSell` — function — line 159
+- `selectInstanceToPlace` — function — line 174
+- `sellInstancesForCoins` — function — line 361
+- `settlePricedPurchase` — function — line 303
+- `settleTransaction` — function — line 331
+- `TradeResult` — type — line 29
 
 ## `items/tradeCatalog.ts`
 

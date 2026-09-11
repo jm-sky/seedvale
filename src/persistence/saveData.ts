@@ -574,7 +574,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 29
+export const CURRENT_SAVE_VERSION = 30
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -667,6 +667,9 @@ export type SaveData = {
   placedContainers: SavePlacedContainer[]
   /** Plan quests-progression-009 — world-authored chests (not player-placed). */
   worldGeneratedContainers?: SaveWorldGeneratedContainer[]
+  /** Plan world-024 — sparse unlocked systemic treasure chests, keyed by
+   *  stable container id. Missing means none unlocked. */
+  unlockedTreasureContainerIds?: string[]
   carriedContainer: SaveCarriedContainer | null
   playerWells: SavePlayerWell[]
   terrainPreparations: SaveTerrainPreparation[]
@@ -1961,6 +1964,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isHarvestedCropIdsField(v.harvestedCropIds)) return false
   if (!isPlacedContainersField(v.placedContainers)) return false
   if (v.worldGeneratedContainers !== undefined && !isWorldGeneratedContainersField(v.worldGeneratedContainers)) return false
+  if (v.unlockedTreasureContainerIds !== undefined && !isResolvedHiddenFindSpotIdsField(v.unlockedTreasureContainerIds)) return false
   if (!isCarriedContainerField(v.carriedContainer)) return false
   if (!isPlayerWellsField(v.playerWells)) return false
   if (!isTerrainPreparationsField(v.terrainPreparations)) return false
@@ -2780,6 +2784,14 @@ function migrateSaveV28ToV29(data: unknown): unknown {
   return { ...v, version: 29 }
 }
 
+/** v29 → v30 (plan world-024): sparse unlocked systemic treasure chests.
+ *  A pre-plan save has never unlocked one, so restore already defaults a
+ *  missing field to empty. */
+function migrateSaveV29ToV30(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 30 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2823,6 +2835,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   26: migrateSaveV26ToV27,
   27: migrateSaveV27ToV28,
   28: migrateSaveV28ToV29,
+  29: migrateSaveV29ToV30,
 }
 
 function detectStoredVersion(value: unknown): number | null {

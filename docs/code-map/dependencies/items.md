@@ -126,6 +126,7 @@ Generated from TypeScript imports.
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.test.ts`
 - `items/createDroppedItems.ts`
+- `items/createItemSpawners.ts`
 - `items/foodItems.test.ts`
 - `items/foodItems.ts`
 - `items/foodProvenance.test.ts`
@@ -392,6 +393,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `items/Inventory.ts`
 - `items/ItemSpawner.ts`
 - `items/items.ts`
 - `player/PlayerController.ts`
@@ -789,6 +791,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/groundActions.test.ts`
+- `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.test.ts`

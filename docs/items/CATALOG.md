@@ -126,6 +126,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | broadhead_arrow | strzała łowiecka | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +4 damage over `arrow` |
 | war_arrow | strzała bojowa | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +8 damage over `arrow`, heaviest |
 | chest | skrzynia | — | — | none (Kupiec) | `items/chest.glb` (M53) | plan 164; generic player storage container — place with Inventory „Postaw”, `[E]` open transfer screen / `[R]` pick up (with contents) on the world prop, Quick Actions → „Odłóż skrzynię” while carrying |
+| key | klucz | — | — | world (systemic treasure) | procedural | plan world-024; generic instance-backed key — identity is `ItemInstance.id`, not a per-site kind; unlocks one matching systemic chest |
 | backpack | plecak | — | — | none (Kupiec) | `items/backpack.glb` (M55) | plan 186; ordinary carried item — simply holding it in `Inventory` raises `Inventory.maxWeight` by `ITEM_CATALOG.backpack.carryCapacityBonus` (+15 kg, stacks); must fit under the pre-bonus capacity to buy/pick up; no equip/backpack-slot system |
 | tree_seed | nasiono drzewa | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź drzewo" — species picked from local habitat suitability, not a per-species item |
 | seed_carrot | nasiona marchwi | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: marchew" — plants a `carrot` `CropLifecycle` entity in a settlement garden |

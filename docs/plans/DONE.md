@@ -4,7 +4,9 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
-| `2026-08-13--093--quests-v3-world-problems-reputation`                 | —                   | 2026-09-11 09:46:23 | —                | —          |
+| `world-terrain-007-underground-caves`                                  | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
+| `world-terrain-008-underground-caves-v2`                               | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
+| `2026-08-13--093--quests-v3-world-problems-reputation`                 | —                   | 2026-09-11 09:46:23 | `—`              | —          |
 | `fauna-021-player-combat-settlement-rats`                              | 2026-09-11 09:05:29 | —                   | `fauna`          | —          |
 | `items-player-025-world-food-freshness-prompt-and-decay`               | 2026-09-11 09:05:29 | —                   | `items-player`   | —          |
 | `ui-input-016-building-placement-construction-ux-coherence`            | 2026-09-11 01:48:29 | —                   | `ui-input`       | —          |

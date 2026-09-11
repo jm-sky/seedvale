@@ -993,6 +993,8 @@ Generated from TypeScript imports.
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
 - `world/standingTorchProp.ts`
+- `world/treasureSites.test.ts`
+- `world/treasureSites.ts`
 
 ## `settlement/props.lampMount.test.ts`
 
@@ -1095,6 +1097,8 @@ Generated from TypeScript imports.
 - `world/largeCaveVisual.ts`
 - `world/locations/worldLocationNames.ts`
 - `world/npcGraves.ts`
+- `world/treasureSites.test.ts`
+- `world/treasureSites.ts`
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`
 - `world/worldGeneratedContainers.ts`

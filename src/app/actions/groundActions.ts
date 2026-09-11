@@ -9,8 +9,9 @@ import {
   playActionTreeFall,
 } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
-import { inventoryFullToastText } from '../../items/Inventory'
+import { inventoryFullToastText, toSaveItemInstance } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
+import { createKeyInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import { createAcquiredInstance } from '../../items/trade'
 import { physicalWorkDuration } from '../../player/physicalWorkStrength'
@@ -27,8 +28,9 @@ import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
 import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
 import { phaseName } from '../../world/dayNight'
-import { findHiddenFindSpot, HIDDEN_FIND_SEARCH_RADIUS, resolveHiddenFindLoot } from '../../world/hiddenFinds'
+import { findExplicitBuriedSpot, findHiddenFindSpot, HIDDEN_FIND_SEARCH_RADIUS, resolveHiddenFindLoot } from '../../world/hiddenFinds'
 import { createSeededRandom } from '../../world/parseSeed'
+import { buriedTreasureKeyPlacements } from '../../world/treasureSites'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
 import { isChoppableStage } from '../../world/treeLifecycle'
 import { DIG_REACH } from '../interactables'
@@ -186,6 +188,56 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     refreshBadgesUi()
   }
 
+  /** Cemetery grave disturbance (plan quests-progression-011) — reused by
+   *  generic Hidden Finds and grave-hosted systemic treasure keys. */
+  const applyGraveDisturbanceIfExposed = (cemeteryId: string, eventSpotId: string): void => {
+    const servedSettlementIds = servedSettlementIdsForCemeteryId(cemeteryId)
+    const consequenceSettlementId = servedSettlementIds[0]
+    if (!consequenceSettlementId) return
+    const sneak = player.skills.sneak
+    const { exposed } = resolveSocialExposure({
+      night: phaseName(dayNight.timeOfDay) === 'noc',
+      sneakActive: sneak.active,
+      sneakValue: sneak.value,
+      eventRoll: socialExposureEventRoll(eventSpotId),
+    })
+    if (exposed) {
+      applySocialConsequence({
+        settlementId: consequenceSettlementId,
+        reputation: { ...GRAVE_DISTURBANCE_EXPOSURE.reputation },
+        renown: GRAVE_DISTURBANCE_EXPOSURE.renown,
+      })
+    }
+  }
+
+  /** Systemic buried keys (plan world-024) — ordinary shovel completion, exact
+   *  instance id, namespaced Hidden Find spot. Returns true when this dig
+   *  resolved a key so generic Hidden Find loot must not also fire. */
+  const checkBuriedTreasureKeyDig = (x: number, z: number): boolean => {
+    const match = findExplicitBuriedSpot(
+      buriedTreasureKeyPlacements(bundle.treasureSites ?? []),
+      x,
+      z,
+      (spotId) => resolvedHiddenFindSpotIds.has(spotId),
+    )
+    if (!match) return false
+    resolvedHiddenFindSpotIds.add(match.spotId)
+    if (match.graveIndex !== undefined) {
+      const graveSpotId = `${match.landmarkId}:${match.graveIndex}`
+      resolvedHiddenFindSpotIds.add(graveSpotId)
+      applyGraveDisturbanceIfExposed(match.landmarkId, graveSpotId)
+    } else if (match.landmarkKind !== 'cemetery') {
+      resolvedHiddenFindSpotIds.add(match.landmarkId)
+    }
+    const instance = createKeyInstance(match.keyInstanceId)
+    if (!inventory.addInstance(instance)) {
+      bundle.droppedItems.drop('key', x, z, toSaveItemInstance(instance))
+    }
+    toast.show(`Znaleziono: ${ITEM_DEFS.key.label}!`, 'pickup')
+    ctx.onInventoryChanged()
+    return true
+  }
+
   /** Generic Hidden Finds (plan world-007) — cemetery graves and
    *  stoneCircle/monolith landmark treasures, resolved as a side effect of
    *  the same ordinary shovel dig every other ground action uses. No
@@ -209,23 +261,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
 
     const newlyEarned: BadgeDef[] = []
 
-    const consequenceSettlementId = servedSettlementIds[0]
-    if (isGraveDisturbance && consequenceSettlementId) {
-      const sneak = player.skills.sneak
-      const { exposed } = resolveSocialExposure({
-        night: phaseName(dayNight.timeOfDay) === 'noc',
-        sneakActive: sneak.active,
-        sneakValue: sneak.value,
-        eventRoll: socialExposureEventRoll(match.spotId),
-      })
-      if (exposed) {
-        applySocialConsequence({
-          settlementId: consequenceSettlementId,
-          reputation: { ...GRAVE_DISTURBANCE_EXPOSURE.reputation },
-          renown: GRAVE_DISTURBANCE_EXPOSURE.renown,
-        })
-      }
-    }
+    if (isGraveDisturbance) applyGraveDisturbanceIfExposed(match.landmark.id, match.spotId)
 
     if (loot.kind === 'coins') {
       ctx.grantItem('coin', loot.amount)
@@ -252,7 +288,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     busy.start(physicalDuration(DIG_DURATION_SEC), 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       checkHiddenTreasureDig(x, z)
-      checkHiddenFindDig(x, z)
+      if (!checkBuriedTreasureKeyDig(x, z)) checkHiddenFindDig(x, z)
       ctx.syncQuickActionAvailability()
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }

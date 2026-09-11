@@ -29,9 +29,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 57
-- `ContainerActions` — type — line 43
-- `createContainerActions` — function — line 66
+- `ContainerActionDeps` — type — line 58
+- `ContainerActions` — type — line 44
+- `createContainerActions` — function — line 69
 
 ## `app/actions/cookMealIntent.ts`
 
@@ -56,9 +56,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/groundActions.ts`
 
-- `createGroundActions` — function — line 105
-- `GroundActions` — type — line 53
-- `GroundActionsDeps` — type — line 77
+- `createGroundActions` — function — line 107
+- `GroundActions` — type — line 55
+- `GroundActionsDeps` — type — line 79
 
 ## `app/actions/inspectionActions.ts`
 
@@ -339,7 +339,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 110
+- `createSaveState` — function — line 112
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
@@ -364,13 +364,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 686
-- `createWorldBundle` — function — line 1170
-- `disposeWorldBundle` — function — line 1594
-- `HOME_RADIUS` — const — line 116
-- `homeChunks` — function — line 127
-- `rebuildWorldBundle` — function — line 1378
-- `WorldBundle` — type — line 150
+- `BuiltWorldSystems` — type — line 749
+- `createWorldBundle` — function — line 1291
+- `disposeWorldBundle` — function — line 1715
+- `HOME_RADIUS` — const — line 133
+- `homeChunks` — function — line 144
+- `rebuildWorldBundle` — function — line 1499
+- `WorldBundle` — type — line 167
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

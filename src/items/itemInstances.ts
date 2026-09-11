@@ -145,12 +145,19 @@ export function createItemInstanceId(): string {
 }
 
 export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
+  'key',
   'tent',
   'trap_good',
   'trap_simple',
   ...WEAPON_MAINTENANCE_KINDS,
   ...LIQUID_CONTAINER_KINDS,
 ])
+
+/** Generic physical key. Systemic treasure passes a deterministic `id`;
+ *  ordinary acquisition (if it ever happens) mints a fresh one. */
+export function createKeyInstance(id?: string): ItemInstance {
+  return { id: id ?? createItemInstanceId(), kind: 'key' }
+}
 
 export function isInstanceBackedKind(kind: ItemKind): boolean {
   return INSTANCE_BACKED_KINDS.has(kind)

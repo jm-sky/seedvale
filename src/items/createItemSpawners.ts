@@ -1,6 +1,7 @@
 import { type Object3D, type Scene, Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { HeightSampler } from '../player/PlayerController'
+import type { SaveItemInstance } from './Inventory'
 import { disposeObject3D } from '../assets/loadGltf'
 import { placeOnGround } from '../settlement/props'
 import { labelOpacityForDistance } from '../ui/labelDistance'
@@ -12,7 +13,7 @@ export type ItemSpawners = {
   nodes: () => readonly ItemSpawnPoint[]
   /** Removes the pickup mesh and marks the point collected; null if already
    *  collected or `id` doesn't match a known point. */
-  collect: (id: string) => { kind: ItemKind; x: number; z: number } | null
+  collect: (id: string) => { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance } | null
   /** `dayFactor` (0 night .. 1 day) fades labels out in the dark, on top of
    *  the distance fade — see `ITEM_LABEL_FADE_NEAR`/`_FAR` (issue 011). */
   update: (dt: number, observerPos: Vector3, dayFactor: number) => void
@@ -125,6 +126,8 @@ export type OneTimeWorldItemPickup = {
    * meant for loosely scattered settlement spawns.
    */
   anchoredToWorldPlace?: boolean
+  /** Exact instance identity to restore on pickup (plan world-024 keys). */
+  instanceId?: string
 }
 
 export function createItemSpawners(
@@ -182,6 +185,7 @@ export function createItemSpawners(
     respawnTime: number,
     pos: { x: number, z: number },
     id?: string,
+    instanceId?: string,
   ): void => {
     const index = points.length
     points.push({
@@ -192,6 +196,7 @@ export function createItemSpawners(
       respawnTime,
       timeSinceCollected: 0,
       collected: false,
+      instanceId,
     })
     meshes.push(null)
     spawnMeshAt(index)
@@ -207,7 +212,7 @@ export function createItemSpawners(
 
   for (const extra of extraOneTimePickups) {
     if (!extra.anchoredToWorldPlace && sampleHeight(extra.x, extra.z) <= waterLevel + 0.6) continue
-    addSpawnPoint(extra.kind, Infinity, { x: extra.x, z: extra.z }, extra.id)
+    addSpawnPoint(extra.kind, Infinity, { x: extra.x, z: extra.z }, extra.id, extra.instanceId)
   }
 
   for (const spec of SPAWN_SPECS) {
@@ -351,7 +356,8 @@ export function createItemSpawners(
         disposeObject3D(mesh)
         meshes[index] = null
       }
-      return { kind: p.kind, x: p.x, z: p.z }
+      const instance = p.instanceId ? { id: p.instanceId, kind: p.kind } : undefined
+      return { kind: p.kind, x: p.x, z: p.z, instance }
     },
     update(dt, observerPos, dayFactor) {
       const wasCollected = points.map((p) => p.collected)

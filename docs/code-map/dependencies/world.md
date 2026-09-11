@@ -2437,6 +2437,7 @@ Generated from TypeScript imports.
 - `world/locations/seedProfile.ts`
 - `world/parseSeed.test.ts`
 - `world/seedLibrary.ts`
+- `world/treasureSites.ts`
 - `world/treeLifecycle.ts`
 - `world/wellGroundwater.ts`
 
@@ -3029,6 +3030,33 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `world/createPlacedTraps.ts`
+
+## `world/treasureSites.test.ts`
+
+**Imports**
+
+- `settlement/propUtils.ts`
+- `settlement/props.ts`
+- `world/treasureSites.ts`
+
+## `world/treasureSites.ts`
+
+**Imports**
+
+- `settlement/propUtils.ts`
+- `settlement/props.ts`
+- `terrain/biomeRegions.ts`
+- `terrain/chunkEnvironment.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/actions/containerActions.ts`
+- `app/actions/groundActions.test.ts`
+- `app/actions/groundActions.ts`
+- `app/worldBundle.ts`
+- `world/treasureSites.test.ts`
 
 ## `world/treeHarvest.ts`
 

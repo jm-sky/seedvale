@@ -11,6 +11,7 @@ import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { SettlementDef } from '../settlement/settlementGenerator'
+import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { CompletedTerrainPreparation, TerrainPreparationRecord } from '../terrain/terrainPreparation'
@@ -90,6 +91,7 @@ import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import {
   DARK_FOREST_TREASURE_CHEST_COINS,
+  darkForestTreasureMapPickupId,
   resolveDarkForestTreasureSite,
   resolveTreasureMapSourcePlace,
   withTreasureMapSourcePlace,
@@ -101,12 +103,27 @@ import { createNpcGraves } from '../world/npcGraves'
 import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
 import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
 import { preloadTrapProps } from '../world/trapProp'
+import {
+  abandonedTreasureKeyPickups,
+  authoredTreasureReservedIds,
+  completeTreasureSites,
+  KEY_HOST_KINDS,
+  resolveTreasureChestDrafts,
+  RUINS_CHEST_KINDS,
+  sampleDeepForestTreasureCandidates,
+  TREASURE_CHEST_PLACEHOLDER_COINS,
+  TREASURE_KEY_SEARCH_CHUNK_RADIUS,
+  TREASURE_SITE_SEARCH_CHUNK_RADIUS,
+  type TreasureLandmarkCandidate,
+  type TreasureSiteDefinition,
+} from '../world/treasureSites'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
 import {
   createWorldGeneratedContainers,
   type SaveWorldGeneratedContainer,
   type WorldGeneratedContainers,
+  type WorldGeneratedContainerSpec,
 } from '../world/worldGeneratedContainers'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
@@ -165,6 +182,8 @@ export type WorldBundle = {
   npcGraves: NpcGraves
   placedContainers: PlacedContainers
   worldGeneratedContainers: WorldGeneratedContainers
+  /** Deterministic systemic treasure (plan world-024) — reconstructed, not persisted. */
+  treasureSites: readonly TreasureSiteDefinition[]
   playerWells: PlayerWells
   playerGardens: PlayerGardens
   standingTorches: StandingTorches
@@ -490,11 +509,45 @@ function buildFauna(
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
+function landmarkFromFind(
+  kind: LandmarkKind,
+  found: { id: string, x: number, z: number },
+  cemeterySize?: TreasureLandmarkCandidate['cemeterySize'],
+): TreasureLandmarkCandidate {
+  return {
+    id: found.id,
+    kind,
+    x: found.x,
+    z: found.z,
+    rotationY: 0,
+    scale: 1,
+    cemeterySize,
+  }
+}
+
+function collectLandmarksNear(
+  chunkManager: ChunkManager,
+  x: number,
+  z: number,
+  radius: number,
+  kinds: readonly LandmarkKind[],
+): TreasureLandmarkCandidate[] {
+  const out: TreasureLandmarkCandidate[] = []
+  for (const kind of kinds) {
+    const found = chunkManager.findLandmarkNear(kind, x, z, radius)
+    if (!found) continue
+    const cemetery = kind === 'cemetery' ? chunkManager.resolveCemeteryById(found.id) : undefined
+    out.push(landmarkFromFind(kind, found, cemetery?.cemeterySize))
+  }
+  return out
+}
+
 function buildItemSpawners(
   scene: Scene,
   chunkManager: ChunkManager,
   settlement: Settlement,
   seed: number,
+  treasureSites: readonly TreasureSiteDefinition[],
 ): ItemSpawners {
   const gardens =
     settlement.landmarks.gardens.length > 0
@@ -502,16 +555,26 @@ function buildItemSpawners(
       : [settlement.landmarks.garden]
   const treasureSite = getActiveDarkForestTreasureSite()
   const mapSource = treasureSite?.treasureMap
-  const extraOneTimePickups = mapSource
-    ? [{
-        id: mapSource.pickupId,
-        kind: 'treasure_map_dark_forest' as const,
-        x: mapSource.pickupX,
-        z: mapSource.pickupZ,
-        /** Owned by an existing cave/cemetery place — always materialize. */
-        anchoredToWorldPlace: true,
-      }]
-    : []
+  const extraOneTimePickups = [
+    ...(mapSource
+      ? [{
+          id: mapSource.pickupId,
+          kind: 'treasure_map_dark_forest' as const,
+          x: mapSource.pickupX,
+          z: mapSource.pickupZ,
+          /** Owned by an existing cave/cemetery place — always materialize. */
+          anchoredToWorldPlace: true,
+        }]
+      : []),
+    ...abandonedTreasureKeyPickups(treasureSites).map((key) => ({
+      id: key.pickupId,
+      kind: 'key' as const,
+      x: key.x,
+      z: key.z,
+      anchoredToWorldPlace: true,
+      instanceId: key.keyInstanceId,
+    })),
+  ]
   return createItemSpawners(
     scene,
     chunkManager.sampleHeight,
@@ -892,20 +955,77 @@ async function buildWorldSystems(
     initialCarriedContainer,
   )
   bootMarkEnd('createPlacedContainers')
+  const sampleParams = rawSampleParamsFromWorld(config)
+  const reservedTreasureIds = authoredTreasureReservedIds({
+    landmarkId: darkForestTreasureSite.landmarkId,
+    locationId: darkForestTreasureSite.locationId,
+    chestId: darkForestTreasureSite.chestId,
+    mapPickupId: darkForestTreasureMapPickupId(),
+  })
+  const ruinsCandidates = collectLandmarksNear(
+    chunkManager,
+    homeDefForSite.x,
+    homeDefForSite.z,
+    TREASURE_SITE_SEARCH_CHUNK_RADIUS,
+    RUINS_CHEST_KINDS,
+  )
+  const treasureDrafts = resolveTreasureChestDrafts({
+    seed: config.seed,
+    homeX: homeDefForSite.x,
+    homeZ: homeDefForSite.z,
+    reservedPlaceIds: reservedTreasureIds,
+    ruinsCandidates,
+    deepForestCandidates: sampleDeepForestTreasureCandidates(
+      config.seed,
+      homeDefForSite.x,
+      homeDefForSite.z,
+      sampleParams,
+    ),
+  })
+  const keyHostsBySiteId = new Map(
+    treasureDrafts.map((draft) => [
+      draft.id,
+      collectLandmarksNear(
+        chunkManager,
+        draft.chest.x,
+        draft.chest.z,
+        TREASURE_KEY_SEARCH_CHUNK_RADIUS,
+        KEY_HOST_KINDS,
+      ),
+    ] as const),
+  )
+  const treasureSites = completeTreasureSites({
+    seed: config.seed,
+    drafts: treasureDrafts,
+    keyHostsBySiteId,
+    reservedPlaceIds: reservedTreasureIds,
+    sampleParams,
+  })
   const chestYaw = darkForestTreasureSite.rotationY + 0.35
   const chestX = darkForestTreasureSite.x + Math.cos(chestYaw) * 2.8
   const chestZ = darkForestTreasureSite.z + Math.sin(chestYaw) * 2.8
-  const worldGeneratedContainers = createWorldGeneratedContainers(
-    scene,
-    chunkManager.sampleHeight,
-    [{
+  const worldGeneratedSpecs: WorldGeneratedContainerSpec[] = [
+    {
       id: darkForestTreasureSite.chestId,
       kind: 'chest',
       x: chestX,
       z: chestZ,
       yaw: chestYaw,
       initialCounts: { coin: DARK_FOREST_TREASURE_CHEST_COINS, ruby: 1 },
-    }],
+    },
+    ...treasureSites.map((site) => ({
+      id: site.chest.containerId,
+      kind: 'chest' as const,
+      x: site.chest.x,
+      z: site.chest.z,
+      yaw: site.chest.yaw,
+      initialCounts: { coin: TREASURE_CHEST_PLACEHOLDER_COINS },
+    })),
+  ]
+  const worldGeneratedContainers = createWorldGeneratedContainers(
+    scene,
+    chunkManager.sampleHeight,
+    worldGeneratedSpecs,
     initialWorldGeneratedContainers,
   )
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
@@ -1050,6 +1170,7 @@ async function buildWorldSystems(
     npcGraves,
     placedContainers,
     worldGeneratedContainers,
+    treasureSites,
     playerWells,
     playerGardens,
     standingTorches,
@@ -1137,7 +1258,7 @@ async function buildWorldSystems(
       bootMarkEnd('background:homeReady')
 
       bootMark('background:itemSpawners+dryingRacks+hives')
-      itemSpawners = buildItemSpawners(scene, chunkManager, home, config.seed)
+      itemSpawners = buildItemSpawners(scene, chunkManager, home, config.seed, treasureSites)
       dryingRacks = createDryingRacks(scene, chunkManager.sampleHeight, home.landmarks.stockpile, initialDryingRacks)
       hives = createBeehives(scene, chunkManager.sampleHeight, home.landmarks.trees.map((t) => t.position), config.seed, initialHives)
       bootMarkEnd('background:itemSpawners+dryingRacks+hives')

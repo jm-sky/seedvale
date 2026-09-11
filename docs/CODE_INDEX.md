@@ -87,6 +87,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Weather](../src/world/weather.ts) — deterministic season/weather and rain/snow exposure.
 - [Cemetery assignment](../src/terrain/cemeteryAssignment.ts) — settlement↔cemetery topology (dedicated or shared `SM`) and reverse lookup; abandoned cemeteries have no served settlements.
 - [Cemetery placement](../src/terrain/cemeteryPlacement.ts) — bounded dedicated/shared/abandoned cemetery search over the shared physical gates in `chunkEnvironment.ts`.
+- [Treasure sites](../src/world/treasureSites.ts) — deterministic finite world treasure (ruins/deep-forest chests + matching keys); cave archetype deferred.
 
 ## UI wiring
 

@@ -1146,6 +1146,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan quests-progression-009 — treasure loot from the deep-forest ruins chest.',
   },
+  key: {
+    kind: 'key',
+    label: 'klucz',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan world-024 — generic instance-backed key. Identity is the ItemInstance id, not a per-site ItemKind.',
+  },
   rope: {
     kind: 'rope',
     label: 'lina',

@@ -425,6 +425,11 @@ export async function createApp(
   // same "mutated in place" contract as `landOwnership`/`mapDiscovery`, since
   // it must stay the same reference `ground` (created once, below) captured.
   const resolvedHiddenFindSpotIds = new Set<string>(initialSave?.resolvedHiddenFindSpotIds ?? [])
+  // Plan world-024 — sparse unlocked systemic treasure chests: never
+  // reassigned, only `.clear()`-ed on a genuinely new world, same mutated-in-
+  // place contract as `resolvedHiddenFindSpotIds` (container actions capture
+  // this reference once).
+  const unlockedTreasureContainerIds = new Set<string>(initialSave?.unlockedTreasureContainerIds ?? [])
   const badges = new BadgeManager(initialSave?.badges)
   const reputation = new ReputationManager(initialSave?.reputation)
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
@@ -1259,6 +1264,7 @@ export async function createApp(
     vueUi,
     tentBlockers: placement.tentBlockers,
     rendererElement: renderer.domElement,
+    unlockedTreasureContainerIds,
   })
   const contracts = createWorkContractActions(actionCtx, {
     vueUi,
@@ -1376,6 +1382,7 @@ export async function createApp(
     vueUi,
     worldFlags,
     resolvedHiddenFindSpotIds,
+    unlockedTreasureContainerIds,
     badges,
     reputation,
     fishingBait,
@@ -1477,6 +1484,7 @@ export async function createApp(
         worldFlags.treasureMapDarkForestRead = false
         ground.resetTreasureProgress()
         resolvedHiddenFindSpotIds.clear()
+        unlockedTreasureContainerIds.clear()
         badges.reset()
         reputation.reset()
         hud.setPlayerBadges(badges.listEarned())

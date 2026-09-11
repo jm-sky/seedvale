@@ -788,12 +788,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/hiddenFinds.ts`
 
-- `findHiddenFindSpot` — function — line 171
+- `ExplicitBuriedPlacement` — type — line 169
+- `findExplicitBuriedSpot` — function — line 210
+- `findHiddenFindSpot` — function — line 185
 - `HIDDEN_FIND_SEARCH_RADIUS` — const — line 49
 - `HiddenFindLandmark` — type — line 51
 - `HiddenFindLoot` — type — line 61
 - `HiddenFindMatch` — type — line 161
-- `resolveHiddenFindLoot` — function — line 198
+- `resolveHiddenFindLoot` — function — line 233
 
 ## `world/largeCaves.ts`
 
@@ -1491,6 +1493,54 @@ Generated from exported TypeScript symbols.
 - `disposeTrapProp` — function — line 132
 - `preloadTrapProps` — function — line 41
 - `setTrapPropState` — function — line 118
+
+## `world/treasureSites.ts`
+
+- `abandonedTreasureKeyPickups` — function — line 529
+- `AbandonedTreasureKeyPlacement` — type — line 59
+- `attemptTreasureUnlock` — function — line 554
+  - domain: world
+- `authoredTreasureReservedIds` — function — line 164
+- `BuriedTreasureKeyPlacement` — type — line 47
+- `buriedTreasureKeyPlacements` — function — line 523
+- `CAVE_TREASURE_ENABLED` — const — line 108
+- `completeTreasureSites` — function — line 478
+  - domain: world
+- `CompleteTreasureSitesInput` — type — line 464
+- `KEY_HOST_KINDS` — const — line 98
+- `MAX_KEY_DISTANCE` — const — line 93
+- `MAX_TREASURE_HOME_DIST` — const — line 91
+- `MIN_KEY_DISTANCE` — const — line 92
+- `MIN_TREASURE_HOME_DIST` — const — line 90
+- `MIN_TREASURE_SITE_SEPARATION` — const — line 89
+- `resolveTreasureChestDrafts` — function — line 280
+  - domain: world
+- `ResolveTreasureChestDraftsInput` — type — line 265
+- `resolveTreasureSites` — function — line 509
+  - domain: world
+- `ResolveTreasureSitesInput` — type — line 496
+- `RUINS_CHEST_KINDS` — const — line 105
+- `sampleDeepForestTreasureCandidates` — function — line 216
+  - domain: world
+- `TARGET_TREASURE_SITE_COUNT` — const — line 88
+- `TREASURE_CHEST_PLACEHOLDER_COINS` — const — line 95
+- `TREASURE_KEY_SEARCH_CHUNK_RADIUS` — const — line 97
+- `TREASURE_SITE_SEARCH_CHUNK_RADIUS` — const — line 96
+- `TreasureArchetype` — type — line 28
+- `treasureBuriedSpotId` — function — line 160
+- `TreasureChestDraft` — type — line 80
+- `treasureChestId` — function — line 148
+- `TreasureChestPlacement` — type — line 40
+- `treasureKeyInstanceId` — function — line 152
+- `treasureKeyPickupId` — function — line 156
+- `TreasureKeyPlacement` — type — line 69
+- `TreasureLandmarkCandidate` — type — line 30
+- `TreasureSiteDefinition` — type — line 71
+- `treasureSiteForContainer` — function — line 535
+- `treasureSiteId` — function — line 144
+- `TreasureSiteId` — type — line 27
+  - domain: world
+- `TreasureUnlockAttempt` — type — line 542
 
 ## `world/treeHarvest.ts`
 
