@@ -73,6 +73,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | ◼️ `settlements-npcs-030-non-home-settlement-food-production-v1.md`            | -       | 🔴 | M      | -      |
+| ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | -      |
 
 ---
 
@@ -203,7 +204,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `031`
 - tools: `014`
 - ui-input: `017`
-- world: `023`
+- world: `024`
 - world-terrain: `019`
 
 This ids section is maintained automatically from the plan files.
