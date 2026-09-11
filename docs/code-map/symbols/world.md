@@ -138,7 +138,7 @@ Generated from exported TypeScript symbols.
 
 - `buildHeightfieldMeshBuffers` — function — line 93
   - domain: world-terrain
-- `buildMouthUndersideMaskBuffers` — function — line 574
+- `buildMouthUndersideMaskBuffers` — function — line 578
   - domain: world-terrain
 - `HeightfieldMeshBuffers` — type — line 28
 - `MouthUndersideMaskBuffers` — type — line 289

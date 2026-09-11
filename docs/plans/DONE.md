@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-024-systemic-treasure-sites-and-keys`                           | 2026-09-11 12:30:03 | —                   | `world`          | —          |
 | `world-terrain-007-underground-caves`                                  | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
 | `world-terrain-008-underground-caves-v2`                               | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
 | `2026-08-13--093--quests-v3-world-problems-reputation`                 | —                   | 2026-09-11 09:46:23 | `—`              | —          |
