@@ -27,6 +27,7 @@ Generated dependency maps by source domain.
 - [`reputation`](./reputation.md)
 - [`scene`](./scene.md)
 - [`settlement`](./settlement.md)
+- [`settlements-npcs-007.test.ts`](./settlements-npcs-007.test.ts.md)
 - [`shared`](./shared.md)
 - [`simulation`](./simulation.md)
 - [`terrain`](./terrain.md)

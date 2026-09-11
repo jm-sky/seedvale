@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 379
-- `CreateSettlementDeps` — type — line 250
-- `Settlement` — type — line 129
-- `settlementSpawnPoint` — function — line 238
+- `createSettlement` — function — line 382
+- `CreateSettlementDeps` — type — line 251
+- `Settlement` — type — line 130
+- `settlementSpawnPoint` — function — line 239
 
 ## `settlement/decorProps.ts`
 
@@ -444,14 +444,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/professionStaffing.ts`
 
-- `adultProfessionCoverage` — function — line 279
+- `adultProfessionCoverage` — function — line 300
   - domain: settlements-npcs
-- `isProfessionAdult` — function — line 252
+- `isProfessionAdult` — function — line 273
 - `ProfessionStaffingContext` — type — line 22
   - domain: settlements-npcs
-- `resolveInitialProfessionStaffing` — function — line 381
+- `resolveInitialProfessionStaffing` — function — line 402
   - domain: settlements-npcs
-- `shepherdHouseholdIndex` — function — line 257
+- `shepherdHouseholdIndex` — function — line 278
 - `StaffingPriority` — type — line 12
 
 ## `settlement/props.ts`
@@ -670,13 +670,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 222
+- `createSettlementsManager` — function — line 223
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 92
+- `SettlementsManager` — type — line 93
 
 ## `settlement/settlementStructures.ts`
 

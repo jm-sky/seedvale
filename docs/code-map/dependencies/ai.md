@@ -136,6 +136,7 @@ Generated from TypeScript imports.
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/herbalGathering.ts`
 - `world/npcGraves.ts`
 - `world/palisade.ts`
 - `world/playerGarden.ts`
@@ -740,6 +741,7 @@ Generated from TypeScript imports.
 - `world/cultivationAnchor.ts`
 - `world/fishing.ts`
 - `world/foodSources.ts`
+- `world/herbalGathering.ts`
 - `world/plantedCrops.ts`
 - `world/transportOrder.ts`
 - `world/transportTransactions.ts`
@@ -748,6 +750,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcProfessionWork.test.ts`
+- `settlements-npcs-007.test.ts`
 
 ## `ai/npcStamina.test.ts`
 

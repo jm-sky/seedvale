@@ -1434,6 +1434,7 @@ Generated from TypeScript imports.
 - `world/foodSources.ts`
 - `world/grassForage.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/herbalGathering.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/map/mapProjection.ts`

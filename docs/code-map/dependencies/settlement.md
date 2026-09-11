@@ -78,6 +78,7 @@ Generated from TypeScript imports.
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/herbalGathering.ts`
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
@@ -241,6 +242,7 @@ Generated from TypeScript imports.
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/herbalGathering.ts`
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
@@ -575,6 +577,7 @@ Generated from TypeScript imports.
 - `settlement/rats.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageVisuals.test.ts`
+- `settlements-npcs-007.test.ts`
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 - `world/transportOrder.ts`

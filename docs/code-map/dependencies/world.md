@@ -1911,6 +1911,22 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 
+## `world/herbalGathering.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `terrain/chunkManager.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
+- `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `settlements-npcs-007.test.ts`
+
 ## `world/hiddenFinds.test.ts`
 
 **Imports**

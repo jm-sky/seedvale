@@ -861,6 +861,15 @@ Generated from exported TypeScript symbols.
 - `createHelperDeliveryHooks` — function — line 28
 - `HelperDeliveryHooks` — type — line 11
 
+## `world/herbalGathering.ts`
+
+- `createHerbalGatherHooks` — function — line 34
+  - domain: settlements-npcs
+- `HerbalGatherTarget` — type — line 9
+- `HERBALIST_GATHER_KINDS` — const — line 5
+- `nearestHerbalGatherTarget` — function — line 52
+- `SettlementHerbalGatherHooks` — type — line 20
+
 ## `world/hiddenFinds.ts`
 
 - `ExplicitBuriedPlacement` — type — line 169

@@ -171,6 +171,7 @@ Generated from TypeScript imports.
 - `settlement/storageRepair.ts`
 - `settlement/storageVisuals.test.ts`
 - `settlement/storageVisuals.ts`
+- `settlements-npcs-007.test.ts`
 - `terrain/digAction.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `world/createPlacedContainers.ts`
@@ -725,6 +726,7 @@ Generated from TypeScript imports.
 - `player/playerMelee.ts`
 - `player/playerRanged.test.ts`
 - `player/playerRanged.ts`
+- `settlements-npcs-007.test.ts`
 - `ui-vue/composables/useMerchantTradeState.ts`
 - `ui-vue/playerQuickActions.ts`
 - `world/createSleepingUtilities.ts`
@@ -976,6 +978,7 @@ Generated from TypeScript imports.
 - `shared/foodPoisoningExposure.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkWorldItems.ts`
 - `terrain/depositMining.ts`
 - `tools/assetBrowser/gripEdit.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
@@ -994,6 +997,7 @@ Generated from TypeScript imports.
 - `world/fishing.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/herbalGathering.ts`
 - `world/hiddenFinds.ts`
 - `world/plantedCrops.ts`
 - `world/residentialBuilding.test.ts`

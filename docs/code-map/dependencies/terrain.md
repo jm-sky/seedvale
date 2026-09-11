@@ -235,6 +235,7 @@ Generated from TypeScript imports.
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
 - `terrain/chunkVegetation.ts`
+- `terrain/chunkWorldItems.ts`
 - `terrain/grass.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `world/locations/darkForestTreasureSite.ts`
@@ -302,6 +303,7 @@ Generated from TypeScript imports.
 - `terrain/chunkVegetation.test.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/chunkWorkerPool.ts`
+- `terrain/chunkWorldItems.ts`
 - `terrain/footstepSurface.ts`
 - `terrain/grass.ts`
 - `terrain/grassPlacement.test.ts`
@@ -397,6 +399,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.worker.ts`
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkItems.test.ts`
+- `terrain/chunkWorldItems.ts`
 
 ## `terrain/chunkManager.test.ts`
 
@@ -435,6 +438,7 @@ Generated from TypeScript imports.
 - `terrain/chunkMeshCache.ts`
 - `terrain/chunkMeshData.ts`
 - `terrain/chunkWorkerPool.ts`
+- `terrain/chunkWorldItems.ts`
 - `terrain/distanceLod.ts`
 - `terrain/fbm.ts`
 - `terrain/grass.ts`
@@ -475,6 +479,7 @@ Generated from TypeScript imports.
 - `world/createTerrainPreparations.test.ts`
 - `world/createTerrainPreparations.ts`
 - `world/foodSources.ts`
+- `world/herbalGathering.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/worldContext.ts`
@@ -553,6 +558,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkVegetation.test.ts`
+- `terrain/chunkWorldItems.ts`
 
 ## `terrain/chunkWorkerPool.ts`
 
@@ -566,6 +572,20 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `terrain/chunkManager.ts`
+
+## `terrain/chunkWorldItems.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `terrain/chunkGrid.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkItems.ts`
+- `terrain/chunkVegetation.ts`
+
+**Imported by**
+
 - `terrain/chunkManager.ts`
 
 ## `terrain/coastPlacement.test.ts`

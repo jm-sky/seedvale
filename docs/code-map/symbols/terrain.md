@@ -180,26 +180,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 916
-- `applyModificationToTile` — function — line 773
-- `ChunkManager` — type — line 488
-- `ChunkManagerConfig` — type — line 327
-- `createChunkManager` — function — line 941
+- `applyChunkWaterDayNight` — function — line 930
+- `applyModificationToTile` — function — line 787
+- `ChunkManager` — type — line 493
+- `ChunkManagerConfig` — type — line 332
+- `createChunkManager` — function — line 955
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 930
-- `drainByBudget` — function — line 891
-- `FinalizeStage` — type — line 428
-- `pickNearestQueuedKey` — function — line 851
-- `pickNextFinalizeKey` — function — line 869
-- `resolveUnloadedLandmark` — function — line 276
+- `CropHarvestOutcome` — type — line 944
+- `drainByBudget` — function — line 905
+- `FinalizeStage` — type — line 433
+- `pickNearestQueuedKey` — function — line 865
+- `pickNextFinalizeKey` — function — line 883
+- `resolveUnloadedLandmark` — function — line 281
   - domain: world-terrain
-- `ringChunkOffsets` — function — line 236
-- `TerrainModification` — type — line 730
-- `tickChunkWaterSurfaces` — function — line 904
+- `ringChunkOffsets` — function — line 241
+- `TerrainModification` — type — line 744
+- `tickChunkWaterSurfaces` — function — line 918
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -235,6 +235,14 @@ Generated from exported TypeScript symbols.
 - `requestChunkGrass` — function — line 327
 - `requestChunkMesh` — function — line 338
 - `requestChunkTile` — function — line 316
+
+## `terrain/chunkWorldItems.ts`
+
+- `chunkCoordFromWorldItemId` — function — line 29
+- `nearestWorldChunkItem` — function — line 60
+- `proceduralChunkItems` — function — line 45
+  - domain: settlements-npcs
+- `WorldChunkItemRef` — type — line 21
 
 ## `terrain/coastPlacement.ts`
 

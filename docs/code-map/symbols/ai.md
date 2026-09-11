@@ -57,13 +57,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/dialogueTemplates.ts`
 
-- `aboutAreaLine` — function — line 208
-- `aboutSelfLine` — function — line 70
-- `aboutVillageLine` — function — line 164
-- `currentActivityLine` — function — line 111
-- `familyPhrase` — function — line 65
-- `goodbyeLine` — function — line 197
-- `requestAssistanceLine` — function — line 222
+- `aboutAreaLine` — function — line 209
+- `aboutSelfLine` — function — line 71
+- `aboutVillageLine` — function — line 165
+- `currentActivityLine` — function — line 112
+- `familyPhrase` — function — line 66
+- `goodbyeLine` — function — line 198
+- `requestAssistanceLine` — function — line 223
 
 ## `ai/graveVisitPressure.ts`
 
@@ -130,24 +130,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 639
-- `CurrentActivity` — type — line 473
-- `CurrentActivityKind` — type — line 466
-- `NPC_HEIGHT` — const — line 376
-- `NPC_MODEL_URLS` — const — line 440
-- `NPC_SHADOW_DISTANCE` — const — line 390
-- `NpcAgent` — class — line 982
+- `classifyPendingActivity` — function — line 640
+- `CurrentActivity` — type — line 474
+- `CurrentActivityKind` — type — line 467
+- `NPC_HEIGHT` — const — line 377
+- `NPC_MODEL_URLS` — const — line 441
+- `NPC_SHADOW_DISTANCE` — const — line 391
+- `NpcAgent` — class — line 984
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 892
-- `NpcInspectionSnapshot` — type — line 488
-- `NpcWhy` — type — line 614
-- `projectNpcWhy` — function — line 679
-- `promoteChainKind` — function — line 631
+- `NpcAgentDeps` — type — line 893
+- `NpcInspectionSnapshot` — type — line 489
+- `NpcWhy` — type — line 615
+- `projectNpcWhy` — function — line 680
+- `promoteChainKind` — function — line 632
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -314,11 +314,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 60
-- `findWeaponNeedingMaintenance` — function — line 86
-- `NpcWorkContext` — type — line 106
-- `planProfessionWork` — function — line 655
-- `selectTraderCollectionGoods` — function — line 351
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 65
+- `findWeaponNeedingMaintenance` — function — line 91
+- `NpcWorkContext` — type — line 111
+- `planProfessionWork` — function — line 728
+- `selectTraderCollectionGoods` — function — line 358
 
 ## `ai/npcStrategies.ts`
 
@@ -390,15 +390,15 @@ Generated from exported TypeScript symbols.
 
 ## `ai/schedule.ts`
 
-- `activityAt` — function — line 322
-- `effectiveScheduleFor` — function — line 195
+- `activityAt` — function — line 330
+- `effectiveScheduleFor` — function — line 203
 - `EffectiveScheduleOptions` — type — line 29
 - `FAST_WORKER_WORK_EXTEND_HOURS` — const — line 67
 - `hourMod24` — function — line 85
 - `hourToTimeOfDay` — function — line 81
-- `idleIntentFor` — function — line 219
+- `idleIntentFor` — function — line 227
 - `isNightLeisureTime` — function — line 57
-- `nextBoundary` — function — line 341
+- `nextBoundary` — function — line 349
 - `NIGHT_LEISURE_END_HOUR` — const — line 53
 - `NIGHT_LEISURE_START_HOUR` — const — line 52
   - domain: npc

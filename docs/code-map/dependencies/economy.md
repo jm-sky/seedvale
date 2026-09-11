@@ -41,6 +41,7 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/rats.ts`
+- `settlements-npcs-007.test.ts`
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 
