@@ -10,6 +10,8 @@ Plan jest nadal trafny, ale codebase zmienił się istotnie od 2026-09-04: `sett
 
 Najważniejsza decyzja dla 019: **nie używać `personalInventory` jako cargo transportowego** i nie persistować całego obecnego `NpcAgent.carried`. `personalInventory` to osobiste belongings NPC; zmieszanie go z transport cargo powodowałoby niejednoznaczne ownership/unload dla tego samego `ItemKind`. Najmniejszy poprawny model to osobny, authoritative transport-cargo `Inventory` przypięty do `NpcId` i przeżywający lifetime `NpcAgent`.
 
+Dodatkowo review po `npc-032` ujawnił wymaganie dla generic travel continuity: reusable detailed↔off-screen travel primitive nie może rozliczać wyłącznie pozycji/czasu/cargo. Dla zwykłego travelling NPC musi zachować continuity authoritative survival state (needs/vigor/injury/personal provisions) bez tworzenia drugiego decision loop. To jest shared contract dla transportu, long-distance travel i później accompany/return travel.
+
 ## 1. Aktualne granice ownership
 
 Stan po 018/026:
@@ -96,6 +98,51 @@ Transport off-screen powinien być procesowany na poziomie world-owned `Transpor
 
 Nie dodawać per-frame pętli nad wszystkimi orderami. Liczba aktywnych orderów jest mała; iteracja tylko po active/off-screen commitments jest wystarczająca.
 
+## 6a. Generic NPC survival continuity podczas off-screen travel
+
+Reusable travel primitive, który 019 ma pozostawić dla `settlements-npcs-028` i `npc-029`, musi mieć jawny hook do rozliczenia elapsed travel consequences zwykłego NPC.
+
+Nie oznacza to przeniesienia całego `NpcAgent.choose()` poza ekran ani implementacji transport-specific hunger systemu.
+
+Docelowy kontrakt:
+
+```text
+off-screen travel interval
++ same NpcAuthoritativeState
++ journey duration/context
+→ bounded/lazy survival resolution
+→ same NpcAuthoritativeState
+```
+
+Co najmniej:
+
+- hunger/thirst nie mogą zostać zamrożone przez stream-out;
+- stamina/vigor nie mogą być resetowane przy reification; coarse travel/rest policy ma zachować ciągłość bez frame-level tickowania;
+- `physicalInjury` korzysta z istniejącego lazy elapsed recovery (`injuryRecoveryUpdatedAtDays`), bez drugiej kopii recovery state;
+- personal food/water są konsumowane wyłącznie z `personalInventory` przez shared provision semantics, nie z `transportCargo` i nie z nowego travel inventory;
+- depletion ma realne konsekwencje; nie tworzyć magicznego refill;
+- save/load/time-skip i zwykły elapsed world time muszą rozliczać ten sam interval idempotentnie.
+
+Nie implementować pełnej listy detailed actions off-screen. Preferować deterministic checkpoint/lazy resolution, które aktualizuje existing authoritative state i zwraca neutralny rezultat, np. `continue` / `cannotProgress`, jeśli finalny design tego wymaga.
+
+**Execution ownership invariant pozostaje:**
+
+```text
+detailed NPC simulation
+XOR
+off-screen NPC travel simulation
+```
+
+Nie może istnieć równoległy `CompanionOffscreenSimulation` ani expedition-only needs state. Shared survival hook ma być dostępny dla każdego generic NPC travel commitmentu, nawet jeśli pierwszy caller 019 używa go tylko w ograniczonym zakresie transportu.
+
+Nie mieszać inventory owners:
+
+```text
+personalInventory → personal food/drink/medicine/weapons/tools
+transportCargo    → transport-order cargo only
+carried           → transient runtime work payload only
+```
+
 ## 7. Endpoint resolution i off-screen unload
 
 Pierwszy slice ma tylko:
@@ -115,13 +162,16 @@ Jeśli endpoint nie może zostać rozwiązany: zostawić order `in-transit` + ca
 
 Przy reconstruction live agent powinien:
 
-1. dostać ten sam `transportCargo` z `NpcAuthoritativeState`;
-2. sprawdzić `transportOrders.findByCarrier(npcId)`;
-3. jeśli off-screen arrival jeszcze nie nastąpił — skasować off-screen execution ownership i wznowić właściwy physical leg;
-4. jeśli arrival nastąpił i unload został wykonany — nie wznawiać transportu;
-5. jeśli arrival nastąpił, ale endpoint był nierozwiązywalny — wznowić final delivery z istniejącym cargo.
+1. rozliczyć pending shared off-screen survival interval dokładnie raz;
+2. dostać ten sam `transportCargo` z `NpcAuthoritativeState`;
+3. sprawdzić `transportOrders.findByCarrier(npcId)`;
+4. jeśli off-screen arrival jeszcze nie nastąpił — skasować off-screen execution ownership i wznowić właściwy physical leg;
+5. jeśli arrival nastąpił i unload został wykonany — nie wznawiać transportu;
+6. jeśli arrival nastąpił, ale endpoint był nierozwiązywalny — wznowić final delivery z istniejącym cargo.
 
 Nie wykonywać ponownie source selection ani pickup dla `in-transit`.
+
+Reification nie może resetować needs/vigor/injury ani ponownie konsumować personal provisions za interval już rozliczony off-screen.
 
 ## 9. Save snapshot consistency
 
@@ -132,7 +182,8 @@ Przy restore walidować conservatively:
 - active order ma poprawny carrier id;
 - `in-transit` ma `claimedQuantity > 0`;
 - carrier state istnieje lub może zostać deterministycznie utworzony przez normalny NPC registry flow;
-- cargo inventory posiada co najmniej `claimedQuantity` danego kind przed unload.
+- cargo inventory posiada co najmniej `claimedQuantity` danego kind przed unload;
+- off-screen survival checkpoint/timestamp nie powoduje double-application po restore.
 
 W przypadku niespójności nie naprawiać save przez tworzenie goods. Zachować cargo/record do diagnostyki lub pozostawić order nierozwiązany.
 
@@ -156,6 +207,9 @@ Dodać testy przede wszystkim na boundaries:
 - pickup → `WorldBundle`-style registry reconstruction → order + cargo zachowane, brak drugiego pickup;
 - save/load `in-transit` order + cargo;
 - off-screen timestamp przed/po `arrivesAtDays`;
+- unloaded traveller: hunger/thirst i personal provisions rozliczone przez shared off-screen survival hook, bez użycia transport cargo;
+- vigor/stamina nie resetują się po reification;
+- injury lazy recovery nie jest pominięty ani podwójnie rozliczony;
 - repeated checkpoint/time-skip jest idempotentny;
 - unload off-screen używa transactional seam i nie duplikuje goods;
 - stream-in przed arrival przełącza execution owner dokładnie raz;
@@ -173,9 +227,10 @@ Nie budować szerokiego simulation scheduler test harness tylko dla tego planu.
 3. Carry TransportOrders + transportCargo przez WorldBundle rebuild.
 4. Dodać SaveData/saveState/validation/migration.
 5. Dodać execution metadata + jawny detailed→off-screen handoff.
-6. Dodać world-owned off-screen resolution/checkpoint + endpoint resolver.
-7. Podpiąć time skip i stream-in resume.
-8. Testy conservation/idempotency/legacy restore.
+6. Wydzielić shared off-screen travel checkpoint contract, w tym neutralny hook do authoritative NPC survival continuity.
+7. Dodać world-owned off-screen resolution/checkpoint + endpoint resolver.
+8. Podpiąć time skip i stream-in resume.
+9. Testy conservation/idempotency/survival continuity/legacy restore.
 ```
 
 Nie zaczynać od off-screen timing przed domknięciem kroków 1–4.
@@ -187,6 +242,8 @@ Nie zaczynać od off-screen timing przed domknięciem kroków 1–4.
 - `src/world/transportTransactions.ts`
 - `src/ai/npcProfessionWork.ts`
 - `src/ai/NpcAgent.ts`
+- `src/ai/Needs.ts`
+- `src/ai/npcPersonalProvisions.ts`
 - `src/settlement/npcState.ts`
 - `src/settlement/SettlementsManager.ts`
 - `src/settlement/household.ts`

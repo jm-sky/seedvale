@@ -1,420 +1,107 @@
 # Implementation Notes: NPC Healing
 
-**Reviewed:** 2026-09-06  
+**Reviewed:** 2026-09-11  
 **Plan:** `npc-002-npc-healing.md`  
 **Status:** `implementation notes`  
 **Source of truth:** current code on `main` + tests/build configuration.
 
-## 1. Recon verdict
+## Follow-up recon — personal treatment ownership
 
-Plan pozostaje architektonicznie poprawny, ale wcześniejsze notes z 2026-08-21 zestarzały się po serii `ai-*` oraz refactorze `NpcAgent` z 2026-09-04.
-
-Najważniejsza korekta: healing nie powinien być dokładany bezpośrednio jako kolejny branch starego `NpcAgent.choose()`. Obecny codebase posiada już jawne warstwy pressures, top-level decision arbitration, strategies/plans oraz generic action lifecycle.
-
-Aktualny przepływ, który należy rozszerzyć:
+Aktualny kod po wprowadzeniu trwałego `NpcAuthoritativeState.personalInventory` ma nadal historyczną niespójność w healing path:
 
 ```text
-NPC state
-→ generate pressures
-→ top-level decision arbitration
-→ optional Goal/Plan/Strategy
-→ NpcPlannedAction
+healing pressure
+→ this.carried.findInjuryTreatment(...)
+
+beginHeal()
+→ this.carried.findInjuryTreatment(...)
+```
+
+Tymczasem personal medicine/bandages są zwykłymi durable belongings NPC i powinny należeć do `personalInventory`; `NpcAgent.carried` pozostaje transient work/logistics cargo.
+
+Przy najbliższej korekcie `npc-002` należy utrzymać jeden spójny contract:
+
+```text
+personalInventory
+→ shared catalog-driven treatment lookup
+→ healing feasibility / pressure
+→ beginHeal() revalidation
+→ consume exact item from the same authoritative inventory
+```
+
+Nie tworzyć osobnego planu ani companion-specific healing branch. Jeżeli istnieje konkretny legacy/work use case dla treatmentu w `carried`, może być jawnie wspieranym dodatkowym źródłem, ale pressure i execution muszą zachowywać source identity i zużyć item z faktycznego ownera.
+
+Najważniejsze regression tests:
+
+- suitable treatment tylko w `personalInventory` daje healing candidate;
+- `beginHeal()` zużywa treatment z `personalInventory`;
+- item znika między planning i execution → brak heal i brak ghost consumption;
+- treatment obecny tylko w unrelated `carried` nie staje się automatycznie personal medicine;
+- pressure i execution korzystają z tego samego suitability resolvera z `npc-025`.
+
+## Historical notes
+
+Poniższe ustalenia opisują oryginalny implementation recon `npc-002`; current code pozostaje source of truth. Follow-up ownership correction powyżej ma pierwszeństwo przed historycznymi wzmiankami o `carried health item`.
+
+### Architecture
+
+Healing pozostaje częścią normalnego NPC pipeline:
+
+```text
+physicalInjury
+→ healing pressure
+→ npcDecision arbitration
+→ heal action
 → goTo / execute
-→ world-state effect
+→ catalog-driven treatment
+→ actual HP/injury accounting
 ```
 
-Healing V1 pasuje jako **injury state → pressure → decision → pojedynczy action**. Nie wymaga osobnego systemu ani obowiązkowego persistent Goal/Plan.
+Nie jest `NeedId`, nie ma osobnego managera/FSM i nie przerywa aktywnego combat automatycznie.
 
-## 2. Aktualni ownerzy
+### Current owners
 
-### `src/shared/HealthState.ts`
+- `src/shared/HealthState.ts` — HP primitive; bez NPC-specific policy.
+- `src/settlement/npcState.ts` — authoritative `physicalInjury` i trwały `personalInventory`.
+- `src/ai/healingPressure.ts` — pure healing feasibility/pressure.
+- `src/ai/npcDecision.ts` — top-level arbitration.
+- `src/ai/npcAction.ts` — generic action lifecycle.
+- `src/ai/NpcAgent.ts` — thin glue, damage bookkeeping, `beginHeal()`.
+- `src/items/Inventory.ts` / `src/items/itemCatalog.ts` — catalog-driven treatment lookup.
 
-Wspólny owner HP dla player/NPC/fauna:
+### Damage and injury
 
-```ts
-type HealthState = {
-  maxHp: number
-  currentHp: number
-  dead: boolean
-}
-```
+Accepted physical damage zapisuje `physicalInjury`; healing nie uruchamia się bezpośrednio z damage callbacku. Low HP bez physical injury nie powinno tworzyć healing candidate.
 
-Dostarcza `damageHealth()`, `healHealth()` i `isAlive()`.
+### Treatment execution
 
-`HealthState` jest combat/AI-agnostic i powinien taki pozostać. Nie wkładać tu NPC-specific injury policy, treatment selection ani inventory.
-
-### `src/ai/Needs.ts`
-
-Wbrew poprzednim notes, istnieje już jawny pressure seam:
-
-```text
-NpcPressure
-generateNeedPressures()
-pickFromPressures()
-pickNeed()
-```
-
-`NpcPressure` ma `source`, `target`, `value`, a need arbitration korzysta z istniejącego `pickActionKind`.
-
-Nie dodawać `health` do `NeedId`. Injury jest stanem zdrowotnym/problemem, nie hunger/thirst/duty meter.
-
-### `src/ai/npcDecision.ts`
-
-To aktualny owner top-level wyboru zachowania. `NpcDecisionKind` obejmuje obecnie:
-
-```text
-collapseSleep
-seekShelter
-need
-scheduledSleep
-idle
-```
-
-`decideNpcAction()` i `scoreNpcDecisions()` współdzielą jedną definicję valid candidates i priorytetów. Healing powinien wejść tutaj jako jawny outcome/candidate zamiast być ukrytym if-em w `NpcAgent`.
-
-`shouldInterruptAction()` ma osobną semantykę dla in-flight interruption. Nie rozszerzać go automatycznie o healing tylko dlatego, że healing ma wysoki pressure. W szczególności nie używać go do przerywania aktywnego combat.
-
-### `src/ai/npcAction.ts`
-
-`NpcPlannedAction` nadal jest prawidłowym execution seamem. Aktualny FSM używa generic:
-
-```text
-choose → goTo → execute
-```
-
-Dodać `heal` do `ActionId`; nie dodawać osobnych faz healing.
-
-### `src/ai/npcPlan.ts`
-
-Po `ai-004` istnieje persistent intent:
-
-```text
-NeedId → NpcGoalId → NpcPlan → NpcStrategyId → concrete action
-```
-
-Aktualne goals to:
-
-```text
-secureFood
-secureWater
-obtainWood
-fulfilWorkDuty
-```
-
-Healing V1 nie powinien rozszerzać tego modelu mechanicznie. Injury response jest na razie krótkim, pojedynczym treatment pursuit. Jeżeli implementacja ujawni realną potrzebę resume/multi-step treatment, wtedy rozszerzyć istniejący Goal/Plan model zamiast tworzyć `HealingPlan`.
-
-### `src/items/itemCatalog.ts`
-
-Katalog jest źródłem prawdy dla consumables:
-
-```ts
-consumable?: {
-  need: 'hunger' | 'thirst' | 'health'
-  relief: number
-  resultKind?: ItemKind
-}
-```
-
-Codebase posiada już więcej niż jeden health consumable. AI musi wyszukiwać po contract `need === 'health'`, nie po `bandage`.
-
-### `NpcAgent`
-
-Po refactorze nadal jest koordynatorem runtime NPC i pozostaje właściwym ownerem per-agent injury state oraz cienkiego glue do decyzji/actions. Nie należy cofać refactoru przez ponowne umieszczanie w nim scoringu, consumable policy i rozbudowanych action builders, jeżeli mogą być małymi pure/domain helpers.
-
-## 3. Damage recon
-
-NPC physical damage nadal przechodzi przez istniejący combat pipeline, m.in. `NpcAgent.applyIncomingCombatDamage()` / defense resolution / accepted final damage.
-
-Healing nie może uruchamiać się bezpośrednio z damage entry point.
-
-Damage path powinien jedynie zapisać konsekwencję:
-
-```text
-accepted physical final damage
-→ HealthState HP loss
-→ outstanding healable physical injury increases
-```
-
-Następnie normalny decision tick decyduje, czy i kiedy się leczyć.
-
-NPC starvation/dehydration HP damage nadal nie jest obecnym wymaganiem tego planu. Nie dodawać go w `npc-002`. Przyszłe non-physical damage musi jawnie nie zwiększać healable injury.
-
-## 4. Minimalny injury state V1
-
-Potrzebny jest najmniejszy stan odpowiadający na pytanie:
-
-> Ile aktualnego ubytku zdrowia pochodzi z uleczalnego physical injury?
-
-Akceptowalny kierunek:
-
-```ts
-physicalInjury: number
-```
-
-Owner: per NPC, nie globalny manager.
-
-Inwarianty:
-
-```text
-physicalInjury >= 0
-physicalInjury <= maxHp - currentHp
-physicalInjury == 0 → brak healing pressure
-```
-
-Po accepted physical damage zwiększyć go o faktyczny final HP loss. Po treatment zmniejszyć o **actual restored HP**, nie nominalne `relief`.
-
-Nie używać `currentHp < maxHp` jako fallbacku. To zniszczyłoby rozróżnienie physical injury vs przyszłe deprivation/disease damage.
-
-Nie budować jeszcze `conditions[]`, `injuries[]`, severity/effects/duration ani persistence, chyba że finalny recon przed implementacją wykaże istniejący kontrakt, który trzeba zachować. V1 ma być łatwo migrowalny do przyszłego condition modelu.
-
-## 5. Pressure + decision integration
-
-Poprzednie notes sugerowały osobny krok w `NpcAgent.choose()` po `pickNeed()`. To jest już nieaktualne.
-
-Implementacja powinna:
-
-1. policzyć pure healing pressure/candidate na podstawie injury severity/HP oraz dostępności health consumable;
-2. wprowadzić healing do aktualnego top-level arbitration seam;
-3. zachować jedną jawną definicję precedence w `npcDecision.ts`;
-4. nie duplikować scoringu w `NpcAgent`.
-
-Nie musi to oznaczać wciskania injury do `generateNeedPressures()`: ten helper jest ownerem **need-driven pressures**. Lepiej zachować semantyczną granicę i połączyć injury pressure z pozostałymi kandydatami na poziomie istniejącego decision arbitration.
-
-Wymagane zachowanie:
-
-```text
-collapse / istniejące critical survival semantics
-    → nie mogą przypadkiem stracić priorytetu
-
-serious healable injury + medicine
-    → healing wygrywa z ordinary schedule/work/idle
-
-minor injury
-    → może nie przerywać normalnego życia
-
-injury bez medicine
-    → brak wykonalnego healing candidate
-```
-
-Nie tworzyć `PressureManager`, `NpcDecisionManager` ani osobnego healing priority table poza istniejącym decision modelem.
-
-## 6. Consumable execution
-
-NPC nie powinien korzystać z playerowego `createSurvivalActions()` ani tworzyć fake `PlayerActionContext`.
-
-Przy wyborze medicine:
-
-```text
-NpcAgent Inventory
-→ ITEM_CATALOG[kind].consumable
-→ need === 'health'
-```
-
-Przy `execute` trzeba ponownie sprawdzić:
+Execution musi revalidować:
 
 1. NPC żyje;
-2. `physicalInjury > 0`;
-3. HP rzeczywiście może wzrosnąć;
-4. wybrany item nadal jest w inventory;
-5. jego aktualny catalog entry nadal jest health consumable.
+2. injury nadal istnieje;
+3. current severity/treatment suitability;
+4. selected treatment nadal istnieje w tym samym authoritative inventory;
+5. HP może zostać przywrócone.
 
-Dopiero wtedy:
+Dopiero wtedy item jest zużywany, `healHealth()` stosowane, a `physicalInjury` zmniejszane o actual restored HP.
 
-```text
-remove exactly 1
-→ healHealth(health, relief)
-→ actualRestored = hpAfter - hpBefore
-→ physicalInjury -= actualRestored
-```
+### Destination
 
-Jeżeli precondition nie przejdzie, item nie może zostać zużyty.
+Healing używa istniejącego action/pathing lifecycle. Historyczny V1 preferował home jako destination; późniejsze generic travel/expedition plans mogą rozszerzyć locality semantics bez tworzenia hospital/CompanionHealing.
 
-Jeżeli warto wydzielić wspólny player/NPC helper, powinien być domain-neutral i obejmować tylko katalog + inventory + consumable effect. Player UI/toasts/freshness policy pozostają po stronie player actions.
+### Persistence
 
-## 7. Action i treatment destination
+`physicalInjury` i `personalInventory` round-tripują przez `NpcAuthoritativeState` / snapshot / `SaveData.npcStates`. Nie dodawać drugiego healing inventory ani treatment snapshotu.
 
-Dodać:
+## Verification
 
-```ts
-ActionId = ... | 'heal'
-```
+Agent implementujący correction:
 
-Healing jest normalnym `NpcPlannedAction`:
-
-```text
-select destination
-→ goTo
-→ execute for treatment duration
-→ revalidate + consume + heal
-→ choose
-```
-
-Nie przechowywać w action `Object3D` ani nie tworzyć specjalnego movement path.
-
-V1 preferuje istniejący home NPC jako destination. Nie tworzyć hospital/doctor/medical station/`HealingLocation`/`SafePlaceManager`.
-
-Brak poprawnego destination powinien zakończyć próbę bezpiecznie; nie teleportować NPC.
-
-Treatment duration ma być simulation duration, niezależny od render animation, aby zachowanie pozostało kompatybilne z przyszłą off-screen/hybrid simulation.
-
-## 8. Combat semantics
-
-Wymagany przepływ:
-
-```text
-combat hit
-→ accepted physical injury
-→ combat trwa
-→ combat kończy się normalnie
-→ choose
-→ healing może wygrać
-```
-
-Nie robić:
-
-```text
-applyIncomingCombatDamage()
-→ beginHealing()
-```
-
-Healing nie powinien automatycznie przerywać `combat` ani wykorzystywać critical interrupt path jako skrótu.
-
-Jeżeli później powstanie mechanika retreat-to-treat podczas walki, będzie to osobna decyzja combat strategy, nie część V1.
-
-## 9. Interakcja z Plans/strategies i przerwanymi actions
-
-Refactor `NpcAgent` ujednolicił cancellation/cleanup in-flight actions i naprawił przypadki pozostawiania błędnego active Plan.
-
-Healing nie powinien obchodzić tego mechanizmu. Jeżeli healing może przerwać zwykłe `goTo/execute`, użyć istniejącego interruption/reset seam i poprawnie oznaczyć aktywny Plan jako interrupted zgodnie z aktualnymi regułami.
-
-Po zakończeniu healing nie wznawiać starej concrete action automatycznie. NPC wraca do `choose`; istniejący Plan może zostać wznowiony lub uznany za nieaktualny przez obecny lifecycle.
-
-To zachowuje trwały intent bez ręcznego odtwarzania starego action closure.
-
-## 10. Persistence
-
-Obecny plan nie wymaga pełnego persisted injury modelu. Przed implementacją trzeba jednak sprawdzić aktualny `NpcAuthoritativeState`/save path i świadomie zdecydować, czy V1 `physicalInjury` jest runtime-only czy musi round-tripować.
-
-Zasada:
-- nie dodawać persistence mechanicznie, jeżeli obecny NPC health sam nie jest persisted w wymagany sposób;
-- jeżeli injury wpływa na zachowanie po save/load w istniejącym authoritative state, rozszerzyć ten sam owner zamiast tworzyć osobny healing save record.
-
-Decyzję zapisać w implementation result.
-
-## 11. Konkretne touch points
-
-Przed kodowaniem potwierdzić finalne sygnatury na HEAD. Oczekiwane pliki:
-
-```text
-src/shared/HealthState.ts
-  reuse only; raczej bez zmian
-
-src/ai/Needs.ts
-  reuse NpcPressure semantics; nie dodawać health NeedId
-
-src/ai/npcDecision.ts
-  healing decision candidate/outcome + precedence + tests
-
-src/ai/npcAction.ts
-  ActionId 'heal'
-
-src/ai/NpcAgent.ts
-  per-agent injury state
-  accepted physical damage bookkeeping
-  thin decision/action wiring
-
-src/items/itemCatalog.ts
-src/items/Inventory.ts
-  reuse contracts; bez hardcoded bandage
-
-opcjonalny mały domain-neutral consumable/healing helper
-  tylko jeśli usuwa realną player/NPC duplikację
-```
-
-Nie zakładać nowych plików, jeżeli istniejący owner wystarcza.
-
-## 12. Testy
-
-Minimum:
-
-### Injury accounting
-- accepted physical damage zwiększa injury o actual HP loss;
-- injury nigdy nie przekracza HP deficit;
-- heal zmniejsza injury o actual restored HP;
-- over-heal poprawnie clampuje accounting;
-- dead NPC nie jest leczony.
-
-### Decision
-- brak injury → brak healing candidate;
-- injury bez health consumable → brak wykonalnego healing;
-- serious injury + medicine → healing wygrywa z schedule/idle;
-- istniejące wyższe survival/collapse semantics pozostają niezmienione;
-- healing nie staje się `NeedId`.
-
-### Action
-- `heal` używa generic `goTo → execute`;
-- item jest rewalidowany przed consume;
-- item usunięty przed treatment nie zostaje magicznie użyty;
-- medicine nie jest zużywane po śmierci NPC;
-- po completion wracamy do normalnego decision flow.
-
-### Combat
-- hit zapisuje injury, ale nie uruchamia heal action;
-- aktywny combat nie jest przerywany samym healing pressure;
-- po combat normalny decision może wybrać healing.
-
-## 13. Verification
-
-Agent implementujący:
-
-- uruchamia testy/typecheck/lint/build wymagane przez `CLAUDE.md`;
+- uruchamia najmniejszy odpowiedni zestaw testów/typecheck/lint/build zgodnie z `CLAUDE.md`;
 - nie uruchamia browser verification;
-- nie uruchamia ręcznie `pnpm docs:sync`, jeżeli repo workflow wykonuje synchronizację automatycznie;
-- unika niepowiązanych refaktorów.
+- nie tworzy nowego healing planu/systemu;
+- aktualizuje `docs/state/npc.md`, jeśli finalny ownership contract zmieni obecny opis.
 
-Użytkownik wykonuje manualną weryfikację w przeglądarce, szczególnie:
+Użytkownik wykonuje manualną weryfikację w przeglądarce.
 
-```text
-NPC wounded in combat
-→ survives
-→ combat ends
-→ goes home / treatment destination
-→ consumes carried health item
-→ HP increases
-→ returns to autonomous life
-```
-
-## 14. Najważniejsze zakazy
-
-Nie tworzyć:
-
-```text
-NpcHealingSystem
-HealingManager
-InjuryManager
-ConditionManager
-HealingLocation
-medical inventory
-healing FSM
-health NeedId
-combat auto-heal callback
-```
-
-Nie hardcodować `bandage`.
-
-Nie opierać decyzji na samym `currentHp < maxHp`.
-
-Nie cofać granic odpowiedzialności wprowadzonych przez refactor `NpcAgent`.
-
-## 15. Implementation result (2026-09-06)
-
-Zaimplementowane zgodnie z §11's touch points, plus dwie korekty odkryte podczas implementacji:
-
-- **Healing pressure jako trzeci `NpcDecisionTarget`, nie jako `'need'` outcome.** `weatherPressure.ts`'s `NpcDecisionTarget` rozszerzony do `NeedId | 'seekShelter' | 'heal'` (doc comment zaktualizowany — to już jest generyczna unia decision-targetów, nie coś weather-specific). Nowy `src/ai/healingPressure.ts` (`healingPressure()` + pure `increaseInjuryFromDamage`/`decreaseInjuryFromHeal` deltas) dokłada `{ kind: 'heal', score }` do tego samego `pickActionKind<NpcDecisionTarget>` wywołania w `choose()`, obok `seekShelter` — dokładnie ten sam wzorzec co weather pressure (plan npc-012), zero duplikacji scoringu. `npcDecision.ts` dostał osobny `NpcDecisionKind = 'heal'` (rangi `NPC_DECISION_PRIORITY`) zamiast wciskania `'heal'` w `'need'` — bo `'heal'` nie jest `NeedId`, a rzutowanie `decision as NeedId` w `choose()`'s istniejącej `need` gałęzi złamałoby typowanie. `heal` dzieli rangę z `need` (80): oba są wzajemnie wykluczające się wyniki tego samego stage-1 arbitrażu (`wonNeed` to zawsze jedna wartość), więc nie konkurują ze sobą na tym poziomie — konkurują wcześniej, przez surowy score.
-- **Healing NIE jest wpięty w `tickCriticalInterrupt`/`shouldInterruptAction` (V1).** Plan §9 dopuszczał to warunkowo ("jeśli healing może przerwać zwykłe goTo/execute, użyć istniejącego seamu"), ale nie wymagał tego wprost, a §5/§8 wymagały: (a) combat nigdy nie jest automatycznie przerywany przez healing, (b) nie używać critical-interrupt path jako skrótu. Zostawienie healing wyłącznie w `choose()`-time arbitration (naturalny punkt decyzji po zakończeniu bieżącej akcji, `idle`, albo po `endCombat()`) spełnia oba wymagania minimalnym kosztem i bez ryzyka thrashingu z istniejącym critical-need/weather interrupt. Healing więc **nie przerywa** akcji w locie (`goTo`/`execute`) — czeka na naturalny powrót do `choose`.
-- **Consumable execution jest self-contained w `NpcAgent.beginHeal()`**, bez wspólnego player/NPC helpera. `createSurvivalActions().consumeItem` (player) niesie freshness/liquid-container/instance/survival-skill-multiplier/toast logikę nieistotną dla `herb`/`bandage` (proste, nie-perishable, nie-instance items) — ekstrakcja niczego by nie usunęła poza wspólnym `ITEM_CATALOG[kind].consumable` odczytem, który i tak jest jedno-liniowy. Nowy katalogowo-sterowany lookup (`ITEM_CATALOG`'s `CONSUMABLE_KINDS_BY_NEED`, best-relief-first, + `Inventory.findConsumableForNeed`) jest jednak realnie dzielony — to dokładnie ten sam wzorzec co plan 184's `CAPABILITY_KINDS`/`findWithCapability`, gotowy do reużycia przez każdego przyszłego konsumenta.
-- **Persistence: `physicalInjury` dodany do `NpcAuthoritativeState`/`NpcStateSnapshot`.** Recon przy implementacji wykazał, że notatka §10/§1 "health nie jest w SaveData" jest już nieaktualna — plan persistence-001 realnie zapisuje `health`/`needs`/`stamina`/`vigor`/`helperAssignment`/`activePlan` przez `SaveData.npcStates: Record<NpcId, NpcStateSnapshot>` (`persistence/saveData.ts`). Ponieważ `health.currentHp` faktycznie przeżywa save/load, `physicalInjury` musiał dostać ten sam traktament — inaczej ranny NPC po reloadzie zostałby trwale z niedoborem HP bez żadnej ścieżki do wyleczenia (injury=0 na zawsze, mimo prawdziwego deficytu). Pole opcjonalne w `NpcStateSnapshot` (domyślnie `0`) dla kompatybilności ze starszym in-session snapshotem; walidator w `saveData.ts`'s `isNpcStateSnapshot` rozszerzony. Nieaktualność starszych doc-commentów w `npcState.ts` ("not part of SaveData") odnotowana w `docs/plans/LOOSE-ENDS.md` zamiast poprawiana w całości (poza zakresem tego planu).
-- **Treatment destination:** wyłącznie `this.home`, przez istniejący `startAction`/`goTo`/`execute` (ten sam bezpieczny `isAbandonedDestination` fallback do `beginUnscheduledIdle` co każda inna akcja) — brak nowego `HealingLocation`.
-- Zakazy z §14 zachowane: brak `NpcHealingSystem`/`HealingManager`/`InjuryManager`/`HealingLocation`/healing FSM, brak `health` w `NeedId`, brak combat auto-heal, brak hardcoded `bandage`, brak `currentHp < maxHp` jako sygnału.
-
-Weryfikacja: `tsc --noEmit`, `eslint . --fix`, `vitest run` (3338/3338), `vite build` — wszystkie czyste. Browser/gameplay weryfikację (§13's `NPC wounded in combat → ... → returns to autonomous life`) wykonuje użytkownik.
+> **Zrób git commit i push do main, rebase jeżeli trzeba**

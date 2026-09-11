@@ -126,12 +126,63 @@ Nie implementować w tym planie bez osobnego uzasadnienia:
 - global road graph routing,
 - terrain-cost route planner,
 - weather travel penalties,
-- sleep/rest itinerary,
+- detailed sleep/rest itinerary,
 - random encounters,
 - caravan formation,
-- food/water consumption podczas każdego odcinka.
+- per-segment detailed food/water actions.
 
-Te systemy mogą później wpływać na ten sam travel commitment zamiast tworzyć nową podróż.
+Jednocześnie off-screen travel nie może zamrażać authoritative NPC survival state. Shared generic travel/off-screen contract musi rozliczać continuity dla normalnego NPC state w coarse/lazy formie, bez companion/expedition-specific systemu.
+
+Minimalny wymagany invariant:
+
+```text
+detailed NPC simulation
+XOR
+off-screen NPC travel simulation
+```
+
+obie ścieżki używają tego samego authoritative:
+
+- hunger/thirst,
+- stamina/vigor,
+- `physicalInjury` + lazy natural recovery,
+- `personalInventory`,
+- realnych personal provisions.
+
+### Generic off-screen survival continuity
+
+028 nie powinien implementować drugiego decision loop ani symulować każdej czynności NPC poza ekranem. Powinien jednak konsumować shared travel primitive z 019, który umożliwia deterministyczne rozliczenie elapsed travel consequences.
+
+Preferowany contract:
+
+```text
+off-screen interval
++ authoritative NPC state
++ journey context/duration
+→ bounded coarse/lazy survival progression
+→ same authoritative NPC state
+```
+
+W szczególności:
+
+- hunger/thirst pogarszają się zgodnie z elapsed world time zamiast zatrzymywać się przy stream-out;
+- stamina/vigor nie mogą zostać magicznie zresetowane przy reification; coarse travel może stosować wspólną travel/rest policy bez utrzymywania dokładnego per-frame stamina tick;
+- injury natural recovery korzysta z istniejącego lazy elapsed-time ownera, nie travel-specific kopii;
+- personal food/water są konsumowane z `personalInventory` przez shared survival/provision semantics, bez `ExpeditionRations`;
+- depletion pozostawia realną konsekwencję zamiast magicznego refill;
+- save/load/time-skip muszą być równoważne z tym samym elapsed interval.
+
+Jeżeli pełne hunger/thirst consumption nie da się bezpiecznie wdrożyć w pierwszym slice 019/028 bez powielenia AI, shared contract może użyć bounded deterministic checkpoints zamiast detailed actions, ale nie może ignorować survival continuity całkowicie.
+
+Nie tworzyć:
+
+- `CompanionOffscreenSimulation`,
+- `ExpeditionNeedsState`,
+- expedition-only hunger/thirst meters,
+- osobnej kopii `personalInventory`,
+- per-frame off-screen NPC update loop.
+
+Te same generic semantics mają obsłużyć później accompany/return travel z `npc-029` oraz `npc-032`.
 
 ## Position/fidelity semantics
 
@@ -157,10 +208,11 @@ Gdy traveller znów staje się istotny dla detailed simulation:
 
 1. zatrzymać off-screen execution ownership,
 2. rozwiązać ten sam NPC authoritative state,
-3. odtworzyć jego persistent personal inventory,
-4. ustalić safe world position zgodną z travel progress,
-5. wznowić movement do tego samego destination,
-6. nie rozpoczynać expedition od nowa.
+3. rozliczyć shared off-screen survival/recovery interval dokładnie raz,
+4. odtworzyć jego persistent personal inventory po tym samym authoritative ownerze,
+5. ustalić safe world position zgodną z travel progress,
+6. wznowić movement do tego samego destination,
+7. nie rozpoczynać expedition od nowa.
 
 ## Arrival
 
@@ -201,13 +253,21 @@ Death nie oznacza arrival ani replacement. Assignment zachowuje konsekwencję ś
 
 Normalna potrzeba/combat/action może przerwać local detailed movement zgodnie z istniejącym arbitration. Nie może jednak skasować persistent travel commitment bez jawnego cancellation semantics.
 
+### Off-screen survival interruption
+
+Coarse off-screen progression może wykryć, że travel nie może logicznie kontynuować bez naruszenia normalnych survival invariants, np. skrajne wyczerpanie zasobów/stan zdrowia zgodnie z finalnym shared contractem.
+
+Nie kończyć assignmentu automatycznie w tym planie. Zamiast tego shared travel execution powinien zatrzymać/oznaczyć brak możliwości dalszego progressu w neutralny sposób, który caller może później rozstrzygnąć.
+
+Nie tworzyć expedition-specific abandonment policy.
+
 ### Destination unavailable
 
 Travel pozostaje unresolved/arrival-ready zgodnie ze shared contract; nie kasować traveller ani belongings.
 
 ### World reload/save-load
 
-Odtworzyć commitment i jego execution ownership dokładnie raz.
+Odtworzyć commitment, survival checkpoint i jego execution ownership dokładnie raz.
 
 ## Persistence and idempotency
 
@@ -223,9 +283,12 @@ Repeated restoration nie może:
 
 - restartować zegara od source,
 - wykonywać arrival ponownie,
+- podwójnie rozliczać hunger/thirst/vigor/injury recovery interval,
 - ponownie provisionować inventory,
 - zmieniać member identity,
 - uruchamiać detailed i off-screen execution równocześnie.
+
+Nie persistować derived pressure scores ani second-copy survival state. Potrzebne checkpoint/timestamp metadata ma należeć do generic travel execution lub istniejącego authoritative ownera danej domeny.
 
 ## Performance
 
@@ -237,6 +300,7 @@ Preferować:
 - world-time timestamp comparisons,
 - processing przy istniejących simulation/streaming/time-skip checkpoints,
 - bounded work proportional to active journeys,
+- lazy/coarse survival resolution per active traveller,
 - detailed pathfinding tylko dla aktywnie materializowanych NPC.
 
 ## Relationship with settlement membership and future colony
@@ -259,11 +323,12 @@ jest osobnym późniejszym planem związanym z colony bootstrap/relocation. Nie 
 - colony creation,
 - migration/membership transfer,
 - expedition candidate selection,
-- provisioning,
-- personal inventory ownership,
+- provisioning policy,
+- personal inventory ownership redesign,
 - random encounters,
 - full road/world route graph,
 - high-fidelity simulation całej trasy,
+- detailed per-action off-screen AI replay,
 - multiplayer networking.
 
 ## Likely integration points to verify during review
@@ -275,7 +340,10 @@ jest osobnym późniejszym planem związanym z colony bootstrap/relocation. Nie 
 - world time/time skip integration,
 - SaveData schema/migrations,
 - `settlements-npcs-019` implementation/plan,
-- `settlements-npcs-027` assignment representation.
+- `settlements-npcs-027` assignment representation,
+- `src/ai/Needs.ts` / authoritative NPC need state,
+- `src/ai/npcPersonalProvisions.ts`,
+- injury lazy-recovery owner from `npc-025`.
 
 ## Verification
 
@@ -283,6 +351,10 @@ Automated tests powinny objąć:
 
 - detailed → off-screen single ownership,
 - off-screen elapsed-time progression,
+- hunger/thirst continuity across off-screen interval,
+- personal provision consumption uses the same `personalInventory`,
+- vigor/stamina semantics do not reset on reification,
+- injury lazy recovery is not skipped or double-applied,
 - save/load continuity,
 - time-skip equivalence,
 - off-screen → detailed before arrival,

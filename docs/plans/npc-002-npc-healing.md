@@ -142,6 +142,29 @@ Inventory
 
 Nie wywoływać playerowego `createSurvivalActions()` z NPC ani nie tworzyć fake `PlayerActionContext`. Jeżeli wspólna logika consumable wymaga ekstrakcji, wydzielić wyłącznie domain-neutral helper i zachować player UI/toast policy poza nim.
 
+## Durable personal treatment ownership — follow-up correction
+
+Po wdrożeniu trwałego `NpcAuthoritativeState.personalInventory` personal medicine / bandages należą do tego samego authoritative inventory co inne osobiste belongings NPC.
+
+Aktualny kod nadal ma historyczną niespójność: healing pressure oraz `NpcAgent.beginHeal()` wyszukują treatment w transient `NpcAgent.carried`.
+
+To musi zostać skorygowane w **shared NPC healing path**, nie przez Companion-specific branch.
+
+Docelowy invariant:
+
+```text
+NPC personalInventory
+→ healing pressure wykrywa suitable treatment
+→ healing action revaliduje ten sam authoritative item
+→ dokładnie ten item zostaje zużyty
+```
+
+`carried` pozostaje transient work/logistics cargo. Nie może być domyślnym ownerem personal medicine.
+
+Jeżeli po reconie istnieje realny legacy/workflow, w którym treatment celowo znajduje się w `carried`, może zostać obsłużony jako jawne dodatkowe źródło. Pressure, selection i execution muszą jednak wskazywać ten sam konkretny owner i nie mogą dublować itemu między inventories.
+
+Zmiana powinna reuse aktualny catalog-driven injury-treatment lookup (`Inventory.findInjuryTreatment` / właściwy successor po `npc-025`) i nie wracać do generic `consumable.need === 'health'` tam, gdzie severity wymaga physical-injury capability.
+
 ## Action lifecycle
 
 Dodać `heal` do istniejącego `ActionId` i wykorzystać `NpcPlannedAction`:
@@ -206,7 +229,8 @@ Przyszłe environmental physical damage powinno używać tej samej klasyfikacji.
 12. Zachować `combat → normal decision → healing`, bez auto-heal callbacków z combat.
 13. Nie tworzyć pełnego injury/condition systemu ani nowego `NpcGoalId` bez realnej potrzeby ujawnionej przez implementację.
 14. Dodać testy pure decision/pressure logic oraz action/injury invariants w istniejących modułach.
-15. Bez niepowiązanych refaktorów.
+15. Ujednolicić treatment ownership: personal medicine w `personalInventory`, pressure i execution używają tego samego authoritative ownera/itemu; transient `carried` tylko jako jawne dodatkowe źródło, jeśli current use case rzeczywiście go wymaga.
+16. Bez niepowiązanych refaktorów.
 
 ## Przypadki do sprawdzenia
 
@@ -219,7 +243,9 @@ Przyszłe environmental physical damage powinno używać tej samej klasyfikacji.
 - item znika przed `execute` → brak konsumpcji/heal i bezpieczny powrót do decyzji;
 - NPC umiera przed treatment → medicine nie jest zużywane;
 - heal przekracza brakujące HP → HP clamp i injury maleje tylko o actual restored HP;
-- NPC idzie do treatment location przez normalny pathing, bez teleportacji.
+- NPC idzie do treatment location przez normalny pathing, bez teleportacji;
+- suitable treatment w `personalInventory` jest widoczny zarówno dla pressure, jak i `beginHeal()`;
+- treatment zużywa item z tego samego inventory, które dało feasibility; nie ma ghost consumption ani duplikacji między `personalInventory` i `carried`.
 
 ## Weryfikacja techniczna
 
@@ -230,6 +256,7 @@ Przyszłe environmental physical damage powinno używać tej samej klasyfikacji.
 - brak `health` w `NeedId`;
 - brak osobnego healing/injury managera i równoległego FSM;
 - brak automatycznego combat healing;
+- `personalInventory` jest authoritative ownerem personal treatment i pressure/execution nie rozjeżdżają się co do źródła itemu;
 - brak niepowiązanych refaktorów.
 
 Weryfikację zachowania w przeglądarce wykonuje użytkownik.
