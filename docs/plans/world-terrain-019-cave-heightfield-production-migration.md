@@ -18,7 +18,7 @@
 - `createCaves()` builds one heightfield per accepted topology from the deterministic walk-surface sampler (`sampleBaseHeight - mouthCarveDepth`).
 - Presentation is the heightfield mesh (`caveHeightfieldMesh.ts` / `caveHeightfieldPresentation.ts`), streamed by the unchanged 55/80 m controller through a main-thread nearest-first queue; mouth underside mask and contour-driven rocks are presentation-only.
 - The mouth is a real hole: `ChunkManager.registerTerrainCutouts()` retains a per-cave `TerrainCutout` on the shared `mouthOpeningAt` contour and applies it on every chunk mesh build/rebuild (`terrainCutout.ts`).
-- SDF remains the gameplay, collision and camera authority (`queryGround`, `occupancyAt`, `queryInterior`, colliders) until Milestone D; SDF extraction/worker/mesh files remain in place until E.
+- Early gameplay migration (post-B, 2026-09-11): `queryGround` / `sampleFloor` / `sampleCeiling` read the heightfield (`caveHeightfieldQuery.ts`; neutral ground contract in `caveGroundQuery.ts`) so the player stands on the rendered floor. SDF remains the strict occupancy, interior, collision and camera authority (`occupancyAt`, `contains`, `queryInterior`, colliders) until Milestone D; SDF extraction/worker/mesh files remain in place until E.
 - Debug `?caveHeightfieldTest` reuses the production representation and mesher; it does not keep a second algorithm copy.
 
 **Not implemented:** Milestones C–E (shared spatial API + semantic locations, gameplay/collision/camera switch, SDF cleanup).

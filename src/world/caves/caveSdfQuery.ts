@@ -1,14 +1,20 @@
-/** Plan world-terrain-008 Milestone B2 — derived gameplay spatial queries
- *  over a production `CaveSdfSpatialRepresentation`.
+/** Plan world-terrain-008 Milestone B2 — derived spatial queries over a
+ *  production `CaveSdfSpatialRepresentation`.
  *
- *  The SDF field is the source of truth for cave space; this module is a
- *  cave-local, deterministic occupancy index so `PlayerController.groundAt`
- *  does not raymarch primitives per frame. Mesh/BVH are never authority.
+ *  Transitional (world-terrain-019): the SDF column index is no longer the
+ *  player ground authority — `queryGround` / `sampleFloor` / `sampleCeiling`
+ *  read the heightfield (`caveHeightfieldQuery.ts`). It remains the strict
+ *  occupancy / interior / wall-collider / camera source until Milestone D
+ *  moves those consumers and E deletes it. Mesh/BVH are never authority.
  *  `CaveVolume` is not consulted.
  *
  *  Per column: sorted disjoint `{ floorY, ceilingY }[]` (multi-level-safe).
  *  Intervals are clipped to the analytic surface and unioned with the
  *  mouth/approach carve portal (`mouthCarve.ts`).
+ *
+ *  The representation-neutral ground contract (`CaveGroundHit`, floor
+ *  grace, underground-miss hysteresis) lives in `caveGroundQuery.ts`; the
+ *  re-exports below are transitional for debug/test importers.
  *
  * @domain world-terrain
  */
@@ -17,6 +23,14 @@ import type { CaveEntrance } from '../caveVolume'
 import type { CaveSdfSpatialRepresentation } from './caveSdfField'
 import type { CaveTopology } from './caveTopology'
 import { openingDirection } from '../largeCaves'
+import {
+  applyCaveGroundHysteresis,
+  CAVE_FLOOR_GRACE,
+  CAVE_UNDERGROUND_MISS,
+  type CaveGroundHit,
+  type CaveGroundHysteresis,
+  type CaveVerticalInterval,
+} from './caveGroundQuery'
 import { DEFAULT_SDF_PARAMS } from './caveSdfField'
 import { SURFACE_CLIP_EPS } from './caveSurface'
 import {
@@ -29,21 +43,15 @@ import {
 } from './mouthCarve'
 
 export { SURFACE_CLIP_EPS }
-
-export type CaveVerticalInterval = {
-  floorY: number
-  ceilingY: number
-  /** True when `ceilingY` is the heightfield clip, not rock overburden.
-   *  PlayerController must not use it as `maxY` — the pit is open to the sky. */
-  openSky?: boolean
-}
-
-export type CaveGroundHit = {
-  floorY: number
-  ceilingY: number
-  openSky?: boolean
-  /** All walkable intervals at this X/Z, lowest-first. L1 usually has one. */
-  intervals: readonly CaveVerticalInterval[]
+// Transitional re-exports — neutral ground contract now owned by
+// `caveGroundQuery.ts`. New code imports from there.
+export {
+  applyCaveGroundHysteresis,
+  CAVE_FLOOR_GRACE,
+  CAVE_UNDERGROUND_MISS,
+  type CaveGroundHit,
+  type CaveGroundHysteresis,
+  type CaveVerticalInterval,
 }
 
 export type CaveSdfColumnIndex = {
@@ -61,12 +69,6 @@ export type CaveSdfColumnIndex = {
 /** Same order as `DEFAULT_SDF_PARAMS.cellSize` — recon's starting step. */
 export const CAVE_COLUMN_STEP = DEFAULT_SDF_PARAMS.cellSize
 
-/** How far below a reported floor an entity still belongs to that interval.
- *  Matches `caveVolume.ts`'s `FLOOR_GRACE` scale so a step/jump does not
- *  drop the player out; the ceiling bound is what separates cave from the
- *  hillside above it. Collision and camera occupancy must not use this. */
-export const CAVE_FLOOR_GRACE = 2
-
 /** Closed-interval slack for strict occupancy (collision / camera). Far
  *  smaller than `CAVE_FLOOR_GRACE` — that grace is ground continuity, not
  *  a solid test. A few centimetres covers column-floor sampling vs feet-on
@@ -79,10 +81,6 @@ const MIN_INTERVAL_HEIGHT = 0.45
 
 /** Minimum carve depth that still counts as mouth-portal space. */
 const MIN_PORTAL_DEPTH = 0.05
-
-/** `sampleHeight - playerY` above this is an underground miss, not a
- *  legitimate cave→surface exit (mouth exit has the two heights meeting). */
-export const CAVE_UNDERGROUND_MISS = 1.5
 
 const Y_SCAN_STEP = CAVE_COLUMN_STEP
 const ZERO_CROSSING_ITERS = 8
@@ -314,8 +312,10 @@ export function pickInterval(
 }
 
 /**
- * Y-aware gameplay query against a derived column index. Returns `null`
- * outside cave space (including a surface entity above a tunnel).
+ * Y-aware ground query against a derived SDF column index. Returns `null`
+ * outside cave space (including a surface entity above a tunnel). No
+ * longer the production player ground path (`queryHeightfieldGround`);
+ * kept for SDF regression harnesses and debug comparison.
  *
  * @domain world-terrain
  */
@@ -423,35 +423,9 @@ export function applyCaveInteriorHysteresis(
   return { interior: confirmed, rememberRaw: sample }
 }
 
-export type CaveGroundHysteresis = {
-  hit: CaveGroundHit | null
-  remember: CaveGroundHit | null
-}
-
-/**
- * Continuity policy for a single-frame query miss. An underground miss
- * (`surfaceY - y` clearly larger than a mouth-exit) keeps the last cave
- * interval so `groundAt` does not fall through to `sampleHeight` and
- * teleport the player up. A surface entity (`surfaceY ≈ y`) is never
- * assigned to a cave below them.
- *
- * @domain world-terrain
- */
-export function applyCaveGroundHysteresis(
-  hit: CaveGroundHit | null,
-  y: number,
-  surfaceY: number,
-  lastHit: CaveGroundHit | null,
-): CaveGroundHysteresis {
-  if (hit) return { hit, remember: hit }
-  if (lastHit && surfaceY - y > CAVE_UNDERGROUND_MISS) {
-    return { hit: lastHit, remember: lastHit }
-  }
-  return { hit: null, remember: null }
-}
-
-/** Lowest interval floor at `(x, z)`, ignoring Y. Transitional / debug only
- *  — player ground must use `queryColumnIndex` / `queryGround`. */
+/** Lowest SDF interval floor at `(x, z)`, ignoring Y. Debug / SDF tests
+ *  only — production `Caves.sampleFloor` / `queryGround` read the
+ *  heightfield. */
 export function lowestFloorAt(index: CaveSdfColumnIndex, x: number, z: number): number | null {
   const intervals = columnIntervalsAt(index, x, z)
   if (intervals.length === 0) return null

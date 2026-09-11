@@ -4,7 +4,8 @@
 **Plan:** `docs/plans/world-terrain-019-cave-heightfield-production-migration.md`  
 **Baseline:** `main` at `81f9b1a550e67a03b8b3414eabed81a853a259ff`  
 **Milestone A implemented:** 2026-09-11 — see “Milestone A — implemented” below.  
-**Milestone B implemented:** 2026-09-11 — see “Milestone B — implemented” below. Heightfield is presentation + terrain-mouth authority; SDF remains gameplay / collision / camera authority until D.
+**Milestone B implemented:** 2026-09-11 — see “Milestone B — implemented” below. Heightfield is presentation + terrain-mouth authority.  
+**Early gameplay migration (post-B, pre-C):** 2026-09-11 — see “Early gameplay migration — implemented” below. Heightfield is also player cave ground / floor / ceiling authority; SDF remains strict occupancy / interior / collider / camera authority until D.
 
 These notes are a focused implementation handoff, not a restatement of the plan. Current code is authoritative. The final `world-terrain-018` spike differs materially from several earlier notes: production migration must copy the final floor/ceiling-convergence model, not the superseded binary-footprint/vertical-wall approach.
 
@@ -570,7 +571,7 @@ No browser verification. `pnpm docs:sync` was not run.
 #### Known risks after B
 
 - Terrain node heights are tile `floorHeights` (roads, rivers, player digs applied) while the cave rim is `sampleBaseHeight − mouthCarveDepth`; a road/river corridor or a player dig at a mouth would open a vertical seam the mask may not fully cover.
-- Gameplay is still SDF: the player walks the SDF floor/colliders while seeing the heightfield floor/walls; any place the two disagree by more than a step height at the entrance reads as floating/sinking until D.
+- ~~Gameplay is still SDF: the player walks the SDF floor/colliders while seeing the heightfield floor/walls; any place the two disagree by more than a step height at the entrance reads as floating/sinking until D.~~ Confirmed in browser (player sinking to the waist in places) and fixed by the early gameplay migration below: player ground now reads the heightfield floor. Wall colliders are still SDF beads, so wall push-out and the rendered rim can still disagree until D.
 - Two grids: the cave rim is piecewise-linear at 0.3 m, the terrain edge at ≤ 1 m with bisected crossings — hairline seams between contour vertices are possible at grazing angles; the underside mask is the intended cover.
 - Presentation assembly is synchronous; a very large cave (many chambers) would be a single-frame hitch. Metrics are logged under `?bootMark`; no worker was added on purpose.
 - `cutoutsOverlappingChunk` runs per mesh build for every chunk (cheap bounds test over a handful of cutouts).
@@ -580,11 +581,87 @@ No browser verification. `pnpm docs:sync` was not run.
 Start from this implemented state.
 
 - `CaveRuntime` now carries `heightfield` and `walkSurfaceAt` (the sampler the field was built against). C's shared spatial API should take those two, not rebuild the sampler.
-- Neutral contracts still to lift out of `caveSdfQuery.ts`: `CaveVerticalInterval`, `CaveGroundHit`, hysteresis helpers, `pickInterval`; `SURFACE_CLIP_EPS` already lives in `caveSurface.ts`.
+- Neutral contracts lifted out of `caveSdfQuery.ts` by the early gameplay migration: `CaveVerticalInterval`, `CaveGroundHit`, hysteresis helpers now live in `caveGroundQuery.ts` (transitional re-exports remain in `caveSdfQuery.ts`); `pickInterval` stayed SDF-side; `SURFACE_CLIP_EPS` already lives in `caveSurface.ts`. Production Y-aware ground is `caveHeightfieldQuery.ts`.
 - Heightfield query primitives available: `sampleHeightfieldAt`, `heightfieldNodeGap`/`heightfieldNodeOpenSky`, `mouthOpeningAt`, `heightfieldGapGradient`; debug `caveHeightfieldTraversal.ts` demonstrates column intervals / occupancy / horizontal resolve.
 - `caveOpenSkyBounds()` is a cheap "where does this cave reach the surface" box that C's identity/location lookup can reuse.
 - Do not touch `terrainCutout.ts` / `ChunkManager` cutout ownership in C; it is complete for the mouth. D may need `walkSurfaceAt` to stay the walk authority at the mouth (terrain `sampleHeight` there is the carved recess; the hole is presentation only).
 - `definitions()` / `topologyToCaveDefinition` remain used by streaming bounds (`distanceToBoundsXZ`) and location code.
+
+### Early gameplay migration — implemented (2026-09-11)
+
+Deliberately small step between B and C, after manual verification showed the dual-authority state (`rendered floor = heightfield`, `player ground = SDF column index`) reading as the player sinking into the cave floor, in places to the waist. Not Milestone C or D.
+
+```text
+Early gameplay migration:
+heightfield → player cave ground / floor / ceiling
+SDF → strict occupancy / interior / colliders / camera
+```
+
+#### What landed
+
+- `src/world/caves/caveGroundQuery.ts` — **neutral ground contract** lifted out of `caveSdfQuery.ts`: `CaveVerticalInterval`, `CaveGroundHit`, `CaveGroundHysteresis`, `CAVE_FLOOR_GRACE`, `CAVE_UNDERGROUND_MISS`, `applyCaveGroundHysteresis()`. Knows nothing about how an interval was found. `caveSdfQuery.ts` imports and transitionally re-exports these names so debug / test importers did not churn; new code imports from `caveGroundQuery.ts`. `pickInterval` and `CAVE_OCCUPANCY_EPS` stayed SDF-side (multi-interval selection / strict occupancy).
+- `src/world/caves/caveHeightfieldQuery.ts` — production heightfield ground:
+  - `heightfieldGroundColumn(field, surfaceHeightAt, x, z)` → the column's single interval or `null` (`outsideGrid`, `gap <= 0`, or void above the clip). Ceiling clipped to `surfaceHeightAt − SURFACE_CLIP_EPS` exactly like the SDF index was; `openSky` is the representation's own sample semantic (void reaches the walk surface).
+  - `queryHeightfieldGround(field, surfaceHeightAt, x, y, z)` → `CaveGroundHit | null`, Y-aware: `y ∈ [floorY − CAVE_FLOOR_GRACE, ceilingY]`. No heightfield column index — one bilinear sample per query.
+- `src/world/createCaves.ts`:
+  - `queryGround()` loops `queryHeightfieldGround(runtime.heightfield, analyticSurfaceHeight, …)` (first hit wins, same as before), then the unchanged `applyCaveGroundHysteresis()` with `surfaceY = analyticSurfaceHeight(x, z)`. The `surfaceY − y > CAVE_UNDERGROUND_MISS` underground-miss rule is untouched.
+  - `lastHitRuntime` is now explicitly debug-only (trace `caveId`) and tracks the *remembered* hit: set on a hit, kept through hysteresis, cleared when the hit is released. Hysteresis cannot carry one cave's floor into another because a fresh hit from any cave always wins and a remembered hit is only ever the one this entity last stood in.
+  - `sampleFloor()` / `sampleCeiling()` share `sampleGroundColumn(x, z)`: per runtime `heightfieldGroundColumn(...)`, lowest floor wins, and its **own** ceiling comes with it. Never a floor from one cave and a ceiling from another. `lowestFloorAt` / `lowestCeilingAt` are no longer called by production.
+  - `occupancyAt` / `contains` / `queryInterior` / colliders unchanged (SDF column index). `CaveRuntime.index` / `.representation` / `.colliders` retained.
+- `PlayerController` **unchanged**. Its flow already centralises cave ground: `groundAt()` → `caveGround` (`createApp` `caveGroundQuery`) → `bundle.caves.queryGround()`; `createApp.ts` unchanged too.
+- No mesh offset, player Y fudge, invisible floor or cave-specific special case.
+
+#### Semantics kept vs the SDF path
+
+| Case | SDF column index (before) | Heightfield (now) |
+| --- | --- | --- |
+| surface player above underground tunnel | `null` (`y > clipped ceiling`) | `null` (same clip) |
+| player above closed ceiling | `null` | `null` |
+| player ≤ 2 m below floor | hit (`CAVE_FLOOR_GRACE`) | hit (same constant) |
+| mouth recess | portal interval, `openSky: true` | sample `openSky`, ceiling clip on analytic surface |
+| single underground miss | last hit kept | last hit kept (same helper) |
+| surface-level miss | released | released |
+| stacked intervals | multi-interval `pickInterval` | n/a — 2.5D, one interval per column |
+
+#### Tests
+
+- `src/world/caves/caveGroundQuery.test.ts` — hysteresis tests moved from `caveSdfQuery.test.ts` (+ strict threshold case).
+- `src/world/caves/caveHeightfieldQuery.test.ts` — fixture `basic`: passage/chamber floor equals `sampleHeightfieldAt().floorY`, ceiling from the same sample, `openSky` mirrors the sample, grid/rock `null`; Y-awareness (on floor, grace below floor, hillside above tunnel, above closed ceiling, entrance walk surface → open-sky hit, pit rim → `null`); hysteresis keep/release with heightfield hits.
+- `src/world/createCaves.test.ts` — spies prove `queryGround` uses `queryHeightfieldGround` and **not** `queryColumnIndex`, `sampleFloor` / `sampleCeiling` use `heightfieldGroundColumn` and not `lowestFloorAt` / `lowestCeilingAt`, while `occupancyAt` / `queryInterior` still call the SDF index and relevance colliders are still the SDF beads. On the production cave (seed `1136726869`) every closed-ceiling void column on a 1 m grid returns exactly the heightfield floor to a player standing on it (`sampleFloor` / `sampleCeiling` agree with `queryGround`); hillside above the tunnel and above the closed ceiling are `null`; one underground miss keeps the cave floor with debug `source: 'hysteresis'` and the cave id; a surface-level miss releases both.
+- Existing SDF regression harnesses (`caveGameplayQuery.b2-recon` / `b3-*`, `worldWaterEligibility`, `productionTopology.floor-continuity`, `caveSdfQuery.test.ts`) were **not** weakened: they exercise `queryColumnIndex` / occupancy directly, which is still the retained strict-occupancy / camera path, and they still pass. They no longer describe the player ground path; retiring or porting them to the heightfield belongs to D/E.
+
+#### Checks
+
+```text
+vitest: src/world/caves, src/world/createCaves.test.ts, src/player, src/debug/caves, src/world/locations/worldLocationCatalog.test.ts
+vue-tsc --noEmit
+eslint .
+pnpm run build
+```
+
+No browser verification (User pass pending: entrance, passage, chamber, former waist-deep spots, exit, re-entry, hillside over the tunnel, no snap to surface overhead). `pnpm docs:sync` not run.
+
+#### Remaining `CaveSdfColumnIndex` consumers (input for D/E)
+
+Production:
+
+- `createCaves.ts` — `buildCaveSdfColumnIndex()` at boot (`cave.columnIndex` ≈ 2 s on `?bootMark`), `CaveRuntime.index`; `occupancyAt` → `occupancyIntervalAt`, `contains` → `occupancyContains`, `queryInterior` → `isCaveInteriorAt`, and `writeGroundQueryDebug` uses `CAVE_OCCUPANCY_EPS`.
+- `caveSdfColliders.ts` — `buildCaveSdfColliders(index, …)` → relevance-registered wall beads (`cave.colliders` ≈ 0.4 s).
+- `createApp.ts` — `caveOccupancyQuery` → `bundle.caves.occupancyAt` (PlayerController swim eligibility + `cameraBoom` march), `isInCave` → `bundle.caves.contains`.
+- `gameLoop.ts` — `bundle.caves.queryInterior` (ambience / rain mute).
+
+Debug / tests only:
+
+- `debug/createCaveHeightfieldTestScene.ts`, `debug/caves/caveHeightfieldWalkWorld.ts`, `debug/caves/caveHeightfieldTraversal.ts` (+ test) — SDF comparison variant.
+- `caveSdfQuery.test.ts`, `caveSdfColliders.test.ts`, `caveGameplayQuery.b2-recon` / `b3-*.test.ts`, `productionTopology.floor-continuity.test.ts`, `player/worldWaterEligibility.test.ts`.
+
+Once D moves occupancy / interior / colliders / camera onto the heightfield, `buildCaveSdfColumnIndex` and `buildCaveSdfRepresentation` have no production caller and E can delete them with the extraction worker.
+
+#### Known risks after this step
+
+- Wall push-out is still the SDF bead colliders while the floor is heightfield: near the rounded rim the player can be stopped slightly before/after the visible wall. D.
+- `occupancyAt` (swim eligibility, camera) and `queryGround` now come from different representations; `worldWaterOwnsVertical` uses the resolved cave ceiling as its primary gate, so a brief occupancy/ground disagreement only matters where cave floor is below `waterLevel`.
+- The mouth: heightfield `openSky` + analytic-surface clip replaces the SDF portal interval. `createCaves.test.ts` covers the closed interior exhaustively but the recess only through the fixture; the User's browser pass should watch the entrance transition specifically.
 
 ## Milestone C — Shared spatial queries + semantic cave locations
 

@@ -1,17 +1,18 @@
-/** Plan world-terrain-008 B2 — derived SDF column index + Y-aware gameplay
- *  query. Pure: no Three.js, no `ChunkManager`, no `CaveVolume`. */
+/** Plan world-terrain-008 B2 — derived SDF column index + Y-aware column
+ *  query (transitional: strict occupancy / interior authority only since
+ *  world-terrain-019 moved player ground to the heightfield; the neutral
+ *  hysteresis tests live in `caveGroundQuery.test.ts`). Pure: no Three.js,
+ *  no `ChunkManager`, no `CaveVolume`. */
 
 import { describe, expect, it } from 'vitest'
 import type { CaveEntrance } from '../caveVolume'
 import type { CaveSdfSpatialRepresentation } from './caveSdfField'
 import type { CaveTopology } from './caveTopology'
 import {
-  applyCaveGroundHysteresis,
   applyCaveInteriorHysteresis,
   buildCaveSdfColumnIndex,
   CAVE_COLUMN_STEP,
   CAVE_FLOOR_GRACE,
-  CAVE_UNDERGROUND_MISS,
   isCaveInteriorAt,
   occupancyContains,
   occupancyIntervalAt,
@@ -231,35 +232,6 @@ describe('strict occupancy', () => {
     expect(occupancyContains(index, 0, mouthY, 0)).toBe(true)
     expect(occupancyContains(index, 0, mouthY, 2.2)).toBe(true)
     expect(occupancyContains(index, 0, mouthY, 12)).toBe(false)
-  })
-})
-
-describe('applyCaveGroundHysteresis', () => {
-  const caveHit = { floorY: 2, ceilingY: 8, intervals: [{ floorY: 2, ceilingY: 8 }] }
-
-  it('keeps the last cave interval on an underground miss (no upward teleport)', () => {
-    const resolved = applyCaveGroundHysteresis(null, 2.2, 2.2 + CAVE_UNDERGROUND_MISS + 1, caveHit)
-    expect(resolved.hit).toEqual(caveHit)
-    expect(resolved.remember).toEqual(caveHit)
-  })
-
-  it('releases on a real cave→surface exit where surface ≈ player Y', () => {
-    const resolved = applyCaveGroundHysteresis(null, 10, 10.1, caveHit)
-    expect(resolved.hit).toBeNull()
-    expect(resolved.remember).toBeNull()
-  })
-
-  it('does not assign a surface entity to a cave below them', () => {
-    const surfaceY = 12
-    const resolved = applyCaveGroundHysteresis(null, surfaceY, surfaceY, caveHit)
-    expect(resolved.hit).toBeNull()
-  })
-
-  it('prefers a fresh hit over hysteresis', () => {
-    const next = { floorY: 3, ceilingY: 9, intervals: [{ floorY: 3, ceilingY: 9 }] }
-    const resolved = applyCaveGroundHysteresis(next, 4, 20, caveHit)
-    expect(resolved.hit).toEqual(next)
-    expect(resolved.remember).toEqual(next)
   })
 })
 
