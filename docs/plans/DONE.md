@@ -4,6 +4,9 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `2026-08-13--093--quests-v3-world-problems-reputation`                 | —                   | 2026-09-11 09:46:23 | —                | —          |
+| `fauna-021-player-combat-settlement-rats`                              | 2026-09-11 09:05:29 | —                   | `fauna`          | —          |
+| `items-player-025-world-food-freshness-prompt-and-decay`               | 2026-09-11 09:05:29 | —                   | `items-player`   | —          |
 | `ui-input-016-building-placement-construction-ux-coherence`            | 2026-09-11 01:48:29 | —                   | `ui-input`       | —          |
 | `quests-progression-018-quest-playtest-reachability-and-dialogue-conflicts` | 2026-09-11 00:46:59 | —                   | `quests-progression` | —          |
 | `settlements-npcs-023-profession-staffing-and-settlement-composition`  | 2026-09-11 00:16:10 | —                   | `settlements-npcs` | —          |

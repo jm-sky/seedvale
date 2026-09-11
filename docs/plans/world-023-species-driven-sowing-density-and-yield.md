@@ -3,10 +3,10 @@
 **Created:** 2026-09-11
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** M
-**Depends on:** none
+**Depends on:** settlements-npcs-030
 **Domain:** `world`  
 **Type:** `feature`  
-**Roadmap:** `docs/roadmap/agriculture-and-cultivation.md`  
+**Roadmap:** `agriculture-and-cultivation`  
 
 ## Cel
 

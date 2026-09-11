@@ -8,7 +8,7 @@
 **Domain:** `settlements-npcs`  
 **Subdomains:** `household` `economy` `logistics`  
 **Tags:** `agriculture` `seeds` `off-screen`  
-**Roadmap:** `docs/roadmap/agriculture-and-cultivation.md`  
+**Roadmap:** `agriculture-and-cultivation`  
 
 ## Cel
 

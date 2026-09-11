@@ -52,10 +52,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/5
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `settlements-npcs-022` — **Household help and age-based work participation**  
+4. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+   🔴 `M` · ✅ ready · unlocks 2/2
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
    🔴 `M` · ✅ ready · unlocks 0/0
-5. `settlements-npcs-025` — **Resource storage visualization**  
-   🟡 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -97,27 +97,39 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-7. `settlements-npcs-007` — **Bandages and herbal medicine**  
+7. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+  🔴 `M` · **Score:**  55  
+   → **unlocks:** 2/2
+
+8. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-8. `settlements-npcs-022` — **Household help and age-based work participation**  
+9. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-9. `settlements-npcs-025` — **Resource storage visualization**  
+10. `world-023` — **Species-Driven Sowing, Density and Yield**  
+  🔴 `M` · **Score:**  43  
+   → **unlocks:** 1/1
+
+11. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-10. `items-player-014` — **Rope-pullable resource transport**  
+12. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+  🔴 `L` · **Score:**  28  
+   → **unlocks:** 0/0
+
+13. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-11. `tools-005` — **Seedvale Character Preparation Panel**  
+14. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `tools-013` — **NPC decision verification and scenario tooling**  
+15. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
@@ -149,10 +161,17 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-npcs-017-production-demand-and-economic-pressures.md`](settlements-npcs-017-production-demand-and-economic-pressures.md)  
   is blocked by:
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)
+- [`settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`](settlements-npcs-031-sustainable-seed-recovery-and-replanting.md)  
+  is blocked by:
+  - [`settlements-npcs-030-non-home-settlement-food-production-v1.md`](settlements-npcs-030-non-home-settlement-food-production-v1.md)
+  - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
+- [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)  
+  is blocked by:
+  - [`settlements-npcs-030-non-home-settlement-food-production-v1.md`](settlements-npcs-030-non-home-settlement-food-production-v1.md)
 - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)  
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
@@ -215,6 +234,7 @@ graph TD
   fauna_018["fauna-018 — Persistent habitat occupants"]
   fauna_019["fauna-019 — Real cave habitats and animal home navigation"]
   fauna_020["fauna-020 — Player-owned animals and follow/stay behaviour"]
+  fauna_021["fauna-021 — Player combat for settlement rats"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -234,6 +254,7 @@ graph TD
   items_player_022["items-player-022 — Gameplay interaction usability polish"]
   items_player_023["items-player-023 — Systemic item utility and food safety"]
   items_player_024["items-player-024 — Inventory and item-use UX coherence"]
+  items_player_025["items-player-025 — World food freshness prompt and spoiled decay"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -318,6 +339,8 @@ graph TD
   settlements_npcs_027["settlements-npcs-027 — NPC expedition assignment and provisioning"]
   settlements_npcs_028["settlements-npcs-028 — Long-distance NPC travel and expedition movement"]
   settlements_npcs_029["settlements-npcs-029 — Animal Corpse Cleanup & Household Sanitation"]
+  settlements_npcs_030["settlements-npcs-030 — Non-Home Settlement Food Production v1"]
+  settlements_npcs_031["settlements-npcs-031 — Sustainable Seed Recovery and Replanting"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -368,6 +391,7 @@ graph TD
   world_020["world-020 — World structure condition and degradation"]
   world_021["world-021 — World structure repair work foundation"]
   world_022["world-022 — World location discovery hitch and progress"]
+  world_023["world-023 — Species-Driven Sowing, Density and Yield"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -455,6 +479,7 @@ graph TD
   fauna_016 --> fauna_004
   fauna_016 --> fauna_018
   fauna_016 --> fauna_019
+  fauna_016 --> fauna_021
   fauna_016 --> quests_progression_006
   fauna_016 --> quests_progression_007
   fauna_016 --> quests_progression_009
@@ -464,6 +489,7 @@ graph TD
   fauna_019 --> quests_progression_008
   fauna_020 --> quests_progression_012
   items_player_001 --> fauna_002
+  items_player_002 --> items_player_025
   items_player_009 --> items_player_013
   items_player_009 --> items_player_015
   items_player_010 --> items_player_013
@@ -476,6 +502,7 @@ graph TD
   items_player_021 --> items_player_019
   items_player_021 --> ui_input_013
   items_player_022 --> items_player_024
+  items_player_022 --> items_player_025
   items_player_024 --> ui_input_016
   npc_001 --> npc_019
   npc_002 --> npc_025
@@ -522,6 +549,7 @@ graph TD
   quests_progression_005 --> quests_progression_018
   quests_progression_006 --> quests_progression_013
   quests_progression_011 --> quests_progression_008
+  quests_progression_013 --> fauna_021
   quests_progression_014 --> quests_progression_018
   quests_progression_015 --> quests_progression_016
   quests_progression_015 --> quests_progression_017
@@ -573,6 +601,8 @@ graph TD
   settlements_npcs_027 --> settlements_npcs_028
   settlements_npcs_028 --> quests_progression_010
   settlements_npcs_028 --> settlements_003
+  settlements_npcs_030 --> settlements_npcs_031
+  settlements_npcs_030 --> world_023
   tools_010 --> tools_011
   tools_011 --> tools_012
   ui_input_001 --> ui_input_008
@@ -602,6 +632,7 @@ graph TD
   world_020 --> world_021
   world_021 --> items_player_019
   world_021 --> ui_input_014
+  world_023 --> settlements_npcs_031
   world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
   world_terrain_008 --> fauna_019

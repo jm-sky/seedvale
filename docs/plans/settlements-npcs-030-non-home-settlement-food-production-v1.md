@@ -6,7 +6,7 @@
 **Depends on:** none  
 **Domain:** `settlements-npcs`  
 **Type:** `feature`  
-**Roadmap:** `docs/roadmap/agriculture-and-cultivation.md`  
+**Roadmap:** `agriculture-and-cultivation`  
 
 ## Cel
 

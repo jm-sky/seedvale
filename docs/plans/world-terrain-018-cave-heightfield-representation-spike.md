@@ -1,8 +1,8 @@
 # Plan: Cave Heightfield Representation Spike
 
 **Created:** 2026-09-10  
-**Status:** `verification needed` 🔍  
-**Implemented at:** 2026-09-11 (iteration 2 — rounded 2.5D representation)  
+**Status:** `verification needed` 🔍  (iteration 2 — rounded 2.5D representation)  
+**Implemented at:** 2026-09-11 08:55
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **Domain:** `world-terrain`  
