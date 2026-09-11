@@ -526,13 +526,16 @@ function emitDeepMouthPatches(
   }
 }
 
-const UNDER_ENTRANCE_SIZE = 6
-const UNDER_ENTRANCE_DROP = 1
+/** Extent along the opening axis (`out`) — in/out of the mouth. */
+const UNDER_ENTRANCE_LENGTH = 4
+/** Extent left/right of the entrance (`right`). */
+const UNDER_ENTRANCE_WIDTH = 10
+const UNDER_ENTRANCE_DROP = 2
 
 /**
- * Flat 4×4 catcher exactly under the mouth floor, 0.5 m down. Winding is
- * CCW from above so the coloured face points +Y — looking down through a
- * floor/lip gap hits dark rock instead of sky.
+ * Flat catcher exactly under the mouth floor. Winding is CCW from above so
+ * the coloured face points +Y — looking down through a floor/lip gap hits
+ * dark rock instead of sky.
  */
 function emitUnderEntrancePlane(
   positions: number[],
@@ -542,15 +545,16 @@ function emitUnderEntrancePlane(
   const out = openingDirection(field.entrance.yaw)
   const right = { dx: out.dz, dz: -out.dx }
   const y = field.entrance.y - UNDER_ENTRANCE_DROP
-  const h = UNDER_ENTRANCE_SIZE / 2
+  const halfAlong = UNDER_ENTRANCE_LENGTH / 2
+  const halfAcross = UNDER_ENTRANCE_WIDTH / 2
   const base = positions.length / 3
-  // CCW from above: verified +Y against `computeVertexNormals()` in the
-  // cave floor mesher (`CELL_RING` / `emitFan`).
+  // `[along, across]`. CCW from above: verified +Y against
+  // `computeVertexNormals()` in the cave floor mesher (`CELL_RING` / `emitFan`).
   const ring: readonly (readonly [number, number])[] = [
-    [-h, -h],
-    [h, -h],
-    [h, h],
-    [-h, h],
+    [-halfAlong, -halfAcross],
+    [halfAlong, -halfAcross],
+    [halfAlong, halfAcross],
+    [-halfAlong, halfAcross],
   ]
   for (const [along, across] of ring) {
     positions.push(
@@ -565,7 +569,7 @@ function emitUnderEntrancePlane(
 /**
  * CPU buffers for the presentation-only mouth underside mask. A closed
  * rectangular beam around the opening contour, plus larger underground
- * patches in front of and beside the doorway, and a flat 4×4 under the
+ * patches in front of and beside the doorway, and a flat catcher under the
  * mouth floor. Empty when the field has no surface-breaking mouth
  * (SDF comparison path).
  *
