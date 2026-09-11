@@ -562,12 +562,21 @@ describe('planProfessionWork', () => {
   describe('textile_worker (plan settlements-npcs-006)', () => {
     const workplace = { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace']
 
-    it('returns null without wool, a household, or a workplace', () => {
+    it('returns null without a runnable recipe, a household, or a workplace', () => {
       const household = createHousehold('h', 's', 'home')
       expect(planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))).toBeNull()
       expect(planProfessionWork(baseCtx({ role: 'textile_worker', workplace }))).toBeNull()
       household.items.add('wool', 4)
       expect(planProfessionWork(baseCtx({ role: 'textile_worker', household }))).toBeNull()
+    })
+
+    it('can process flax when wool is unavailable (plan settlements-npcs-007)', () => {
+      const household = createHousehold('h', 's', 'home')
+      household.items.add('flax', 3)
+      const work = planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))
+      work?.onComplete()
+      expect(household.items.count('flax')).toBe(0)
+      expect(household.items.count('linen_material')).toBe(1)
     })
 
     it('preview does not mutate inventory', () => {

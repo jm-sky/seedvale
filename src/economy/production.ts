@@ -105,6 +105,43 @@ export const WOOL_MATERIAL_PRODUCTION: ProductionDef = {
   itemOutputs: [{ kind: 'wool_material', amount: 12 }],
 }
 
+/** `3 flax → 1 linen_material` (plan settlements-npcs-007). */
+export const FLAX_LINEN_PRODUCTION: ProductionDef = {
+  id: 'textile_worker.linen_material',
+  role: 'textile_worker',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'flax', amount: 3 }],
+  itemOutputs: [{ kind: 'linen_material', amount: 1 }],
+}
+
+/** `1 linen_material → 1 bandage` (plan settlements-npcs-007). */
+export const LINEN_BANDAGE_PRODUCTION: ProductionDef = {
+  id: 'textile_worker.bandage',
+  role: 'textile_worker',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'linen_material', amount: 1 }],
+  itemOutputs: [{ kind: 'bandage', amount: 1 }],
+}
+
+/** Wool first, then linen chain — same priority pattern as hunter arrows. */
+export const TEXTILE_WORKER_PRODUCTIONS: readonly ProductionDef[] = [
+  WOOL_MATERIAL_PRODUCTION,
+  FLAX_LINEN_PRODUCTION,
+  LINEN_BANDAGE_PRODUCTION,
+]
+
+/** `1 bandage + 1 herb → 1 dressing` (plan settlements-npcs-007). */
+export const DRESSING_PRODUCTION: ProductionDef = {
+  id: 'herbalist.dressing',
+  role: 'herbalist',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'bandage', amount: 1 }, { kind: 'herb', amount: 1 }],
+  itemOutputs: [{ kind: 'dressing', amount: 1 }],
+}
+
 /**
  * Applies the first recipe in `defs` that the shared executor can commit
  * against `inventory`. Priority order is the array order (hunter: branch

@@ -182,6 +182,14 @@ export const SCHEDULE_TEMPLATES: Record<Role, ScheduleTemplate> = {
     { hour: 18, activity: 'home' },
     { hour: 22, activity: 'sleep' },
   ],
+  herbalist: [
+    { hour: 6, activity: 'wake' },
+    { hour: 7, activity: 'work' },
+    { hour: 12, activity: 'eat' },
+    { hour: 13, activity: 'work' },
+    { hour: 18, activity: 'home' },
+    { hour: 22, activity: 'sleep' },
+  ],
 }
 
 /**

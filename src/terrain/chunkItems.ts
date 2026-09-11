@@ -191,6 +191,11 @@ export function computeChunkItems(
     // than mushroom (half its weight) so it stays a "found" healing source
     // rather than a reliable food-equivalent supply.
     const herbWeight = (biome.forest * 0.4 + biome.swamp * 0.2) * (treeClose ? 1.1 : 0.7)
+    // Flax (plan settlements-npcs-007) — open meadow / forest-edge fibre, not
+    // dense undergrowth.
+    const flaxWeight = (biome.forest * 0.22 + (1 - biome.desert) * 0.12) * (treeClose ? 0.65 : 1)
+    // Poisonous herb — swampy / shady floor, distinct from medicinal herb.
+    const poisonousHerbWeight = (biome.swamp * 0.35 + biome.forest * 0.12) * (treeClose ? 1 : 0.75)
     // Natural food (plan 159) — berries favor forest undergrowth/swamp edges
     // like mushroom; nuts favor drier forest floor near trees (a pine bonus
     // like mushroom's, since both read as "forest floor" finds).
@@ -201,7 +206,8 @@ export function computeChunkItems(
     // whole fallen limb, not a twig. No open-ground weight, unlike branch.
     const beamWeight = treeClose ? 0.18 : 0
 
-    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight + nutsWeight + beamWeight
+    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight
+      + poisonousHerbWeight + berriesWeight + nutsWeight + beamWeight
     if (total <= 0) continue
     if (floraRandom() > Math.min(1, total) * FLORA_KEEP_SCALE) continue
 
@@ -212,8 +218,12 @@ export function computeChunkItems(
     else if (roll < mushroomWeight + flowerWeight + branchWeight) kind = 'branch'
     else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight) kind = 'cone'
     else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight) kind = 'herb'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight) kind = 'berries'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight + nutsWeight) kind = 'nuts'
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight) kind = 'flax'
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight + poisonousHerbWeight) {
+      kind = 'poisonous_herb'
+    }
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight + poisonousHerbWeight + berriesWeight) kind = 'berries'
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight + poisonousHerbWeight + berriesWeight + nutsWeight) kind = 'nuts'
     else kind = 'beam'
 
     placements.push({ id: `${coord.cx}:${coord.cz}:f${i}`, x: wx, z: wz, kind })

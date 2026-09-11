@@ -2,7 +2,7 @@
 
 **Plan:** `docs/plans/settlements-npcs-007-bandages-and-herbal-medicine.md`  
 **Reviewed:** 2026-09-06  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Source of truth:** current `main` code + docs; plan is intent, not current implementation.
 
 ## Review result

@@ -25,6 +25,7 @@ import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
@@ -940,6 +941,7 @@ export type NpcAgentDeps = {
   mining?: SettlementMiningHooks | null
   getNearbyPlayerWell?: NearbyPlayerWellLookup
   foodSources?: SettlementFoodSourceHooks
+  herbalGather?: SettlementHerbalGatherHooks
   hunting?: SettlementHuntingHooks
   /** Settlement-local owned-sheep lookup (plan fauna-004). */
   shepherdFlock?: ShepherdFlockHooks | null
@@ -1382,6 +1384,7 @@ export class NpcAgent {
    *  below when a real, closer food source is available. Null in isolated
    *  fallbacks, same as `mining`. See `beginNeed`'s `'food'` branch. */
   private readonly foodSources: SettlementFoodSourceHooks | null
+  private readonly herbalGather: SettlementHerbalGatherHooks | null
   /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
    *  — null in isolated fallbacks and for any settlement built before fauna
    *  exists, same as `mining`/`foodSources`. Only ever read by a `hunter`
@@ -1425,6 +1428,7 @@ export class NpcAgent {
       forest,
       getNearbyPlayerWell,
       foodSources,
+      herbalGather,
       hunting,
       shepherdFlock,
       helperDelivery,
@@ -1489,6 +1493,7 @@ export class NpcAgent {
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
+    this.herbalGather = herbalGather ?? null
     this.hunting = hunting ?? null
     this.shepherdFlock = shepherdFlock ?? null
     this.helperDelivery = helperDelivery ?? null
@@ -4165,6 +4170,7 @@ export class NpcAgent {
       sampleHeight: this.sampleHeight,
       mining: this.mining,
       foodSources: this.foodSources,
+      herbalGather: this.herbalGather,
       householdExchange: this.householdExchange,
       npcId: this.id,
       transportOrders: this.transportOrders,

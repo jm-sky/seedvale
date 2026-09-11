@@ -7,6 +7,8 @@ import {
   produceFirstAvailableItemRecipe,
   productionForRole,
   WOODCUTTING_PRODUCTION,
+  DRESSING_PRODUCTION,
+  TEXTILE_WORKER_PRODUCTIONS,
   WOOL_MATERIAL_PRODUCTION,
 } from './production'
 import { executeProduction } from './productionExecutor'
@@ -55,6 +57,28 @@ export function commitHunterArrowProduction(household: Household, simTime = 0): 
  */
 export function commitWoolMaterialProduction(household: Household, simTime = 0): boolean {
   return executeProduction(WOOL_MATERIAL_PRODUCTION, {
+    inventory: household.items,
+    simTime,
+  }).ok
+}
+
+/**
+ * Textile Worker completion (plan settlements-npcs-007) — wool, flax→linen,
+ * or linen→bandage via shared executor priority order.
+ *
+ * @domain settlements-npcs
+ */
+export function commitTextileWorkProduction(household: Household, simTime = 0): boolean {
+  return produceFirstAvailableItemRecipe(household.items, TEXTILE_WORKER_PRODUCTIONS, simTime) !== null
+}
+
+/**
+ * Herbalist dressing completion (plan settlements-npcs-007).
+ *
+ * @domain settlements-npcs
+ */
+export function commitDressingProduction(household: Household, simTime = 0): boolean {
+  return executeProduction(DRESSING_PRODUCTION, {
     inventory: household.items,
     simTime,
   }).ok

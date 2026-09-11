@@ -6,6 +6,8 @@ export {
   commitHunterArrowProduction,
   commitRoleWork,
   commitWoodcutterDeposit,
+  commitDressingProduction,
+  commitTextileWorkProduction,
   commitWoolMaterialProduction,
   tryAdvanceDevelopment,
 } from './npcWork'
@@ -20,6 +22,10 @@ export {
   type ProductionDef,
   productionForRole,
   WOODCUTTING_PRODUCTION,
+  DRESSING_PRODUCTION,
+  FLAX_LINEN_PRODUCTION,
+  LINEN_BANDAGE_PRODUCTION,
+  TEXTILE_WORKER_PRODUCTIONS,
   WOOL_MATERIAL_PRODUCTION,
 } from './production'
 export {

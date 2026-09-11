@@ -92,6 +92,8 @@ import { createTerrainPreparations, type TerrainPreparations } from '../world/cr
 import { createTransportOrders, type TransportOrders } from '../world/createTransportOrders'
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
 import { createFoodSourceHooks } from '../world/foodSources'
+import { createHerbalGatherHooks } from '../world/herbalGathering'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import {
   DARK_FOREST_TREASURE_CHEST_COINS,
@@ -341,6 +343,8 @@ function buildSettlementsManager(
    *  (plan 174) — forwarded into every `createSettlement` call → every
    *  `NpcAgent`, the same way `mining` is above. */
   foodSources?: SettlementFoodSourceHooks,
+  /** Herbalist wild herb/flax gather hooks (plan settlements-npcs-007). */
+  herbalGather?: SettlementHerbalGatherHooks,
   /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
    *  — forwarded into every `createSettlement` call → every `NpcAgent`, the
    *  same way `mining`/`foodSources` are above. Late-bound by the caller
@@ -428,6 +432,7 @@ function buildSettlementsManager(
     pointLightBudget,
     getNearbyPlayerWell,
     foodSources,
+    herbalGather,
     hunting,
     initialHouseholds,
     initialNpcStates,
@@ -985,6 +990,10 @@ async function buildWorldSystems(
   const foodSources = createFoodSourceHooks(chunkManager, playerGardens, getWorldDays)
   bootMarkEnd('createFoodSourceHooks')
 
+  bootMark('createHerbalGatherHooks')
+  const herbalGather = createHerbalGatherHooks(chunkManager)
+  bootMarkEnd('createHerbalGatherHooks')
+
   // Late-bound (plan 178, now also world-003 §4): `Fauna` is only built in
   // the background phase below, so `hunting` closes over a mutable accessor
   // instead of a direct `Fauna` reference — `faunaForHunting` is assigned
@@ -1126,7 +1135,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)

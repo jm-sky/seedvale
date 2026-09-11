@@ -492,6 +492,20 @@ describe('resolveInitialProfessionStaffing', () => {
       expect(grazing).toBeGreaterThan(desert)
     })
 
+    it('never assigns herbalist at 1–3 adults (plan settlements-npcs-007)', () => {
+      for (let n = 1; n <= 3; n++) {
+        for (let seed = 0; seed < 20; seed++) {
+          expect(adultProfessionCoverage(staff(adults(n), { size: 'MD', terrain: 'forest', seed })).herbalist).toBe(0)
+        }
+      }
+    })
+
+    it('assigns at most one herbalist (plan settlements-npcs-007)', () => {
+      for (let seed = 0; seed < 40; seed++) {
+        expect(adultProfessionCoverage(staff(adults(11), { size: 'XL', terrain: 'forest', foodSourceType: 'foraging', seed })).herbalist).toBeLessThanOrEqual(1)
+      }
+    })
+
     it('large forest/garden settlements can staff a textile_worker (plan settlements-npcs-006)', () => {
       const hits = frequency(samples, () => adults(11), {
         size: 'XL',

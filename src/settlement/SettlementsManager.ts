@@ -24,6 +24,7 @@ import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
@@ -270,6 +271,8 @@ export async function createSettlementsManager(
    *  (plan 174) — forwarded into every `createSettlement` call the same way
    *  `mining` is above. */
   foodSources?: SettlementFoodSourceHooks,
+  /** Herbalist wild herb/flax gather hooks (plan settlements-npcs-007). */
+  herbalGather?: SettlementHerbalGatherHooks,
   /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
    *  — forwarded into every `createSettlement` call the same way `mining`/
    *  `foodSources` are above. */
@@ -504,6 +507,7 @@ export async function createSettlementsManager(
     forest,
     mining,
     foodSources,
+    herbalGather,
     hunting,
     helperDelivery,
     getPlayerSocial,

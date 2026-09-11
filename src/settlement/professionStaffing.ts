@@ -195,6 +195,27 @@ const ROLE_STAFFING_POLICY: Record<Role, RoleStaffingPolicy> = {
     },
     afterDuplicate: (copies, base) => (copies >= 1 ? 'excluded' : base),
   },
+  herbalist: {
+    basePriority: (s) => {
+      if (s.adultCapacity <= 3) return 'excluded'
+      let priority: StaffingPriority = 'weak'
+      if (s.adultCapacity >= 8 || s.size === 'LG' || s.size === 'XL') priority = 'normal'
+      if (s.terrain === 'forest' || s.foodSourceType === 'foraging') {
+        priority = shiftPriority(priority, 1)
+      }
+      if (
+        s.dominantResource?.type === 'herbs'
+        && s.dominantResource.richness >= SIGNIFICANT_RICHNESS
+      ) {
+        priority = shiftPriority(priority, 1)
+      }
+      if (s.terrain === 'desert' || s.terrain === 'ocean') {
+        priority = shiftPriority(priority, -1)
+      }
+      return priority
+    },
+    afterDuplicate: (copies, base) => (copies >= 1 ? 'excluded' : base),
+  },
 }
 
 function environmentSignal(signals: StaffingSignals, role: Role): boolean {

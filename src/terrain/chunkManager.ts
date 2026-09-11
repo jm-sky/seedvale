@@ -115,6 +115,11 @@ import {
   requestChunkMesh,
   requestChunkTile,
 } from './chunkWorkerPool'
+import {
+  chunkCoordFromWorldItemId,
+  nearestWorldChunkItem,
+  proceduralChunkItems,
+} from './chunkWorldItems'
 import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
 import {
@@ -556,6 +561,15 @@ export type ChunkManager = {
    *  its id as collected so it won't reappear on chunk reload. Null if `id`
    *  isn't currently instantiated. */
   collectItem: (id: string) => { kind: ItemKind, x: number, z: number } | null
+  /** Nearest world-generated item of one of `kinds` within `radius`, searching
+   *  loaded meshes first then deterministic procedural placements up to
+   *  `maxChunkRadius` chunk rings (plan settlements-npcs-007 off-screen gather). */
+  findNearestWorldItem: (
+    pos: { x: number, z: number },
+    radius: number,
+    kinds: readonly ItemKind[],
+    maxChunkRadius: number,
+  ) => { id: string, kind: ItemKind, x: number, z: number } | null
   /** Naturally-generated crops (`terrain/chunkCrops.ts`) within `radius` of
    *  `pos` among currently loaded chunks (plan 172) — same "loaded chunks
    *  only" contract as `getNearbyItems`, with lifecycle stage already
@@ -2606,7 +2620,35 @@ export function createChunkManager(
         config.collectedItemIds.add(id)
         return result
       }
-      return null
+      if (config.collectedItemIds.has(id)) return null
+      const coord = chunkCoordFromWorldItemId(id)
+      if (!coord) return null
+      const placement = proceduralChunkItems(coord, paramsFor(coord, []), config.collectedItemIds)
+        .find((p) => p.id === id)
+      if (!placement) return null
+      config.collectedItemIds.add(id)
+      return { kind: placement.kind, x: placement.x, z: placement.z }
+    },
+    findNearestWorldItem(pos, radius, kinds, maxChunkRadius) {
+      const kindSet = new Set(kinds)
+      const loaded = this.getNearbyItems(pos, radius).filter((item) => kindSet.has(item.kind))
+      return nearestWorldChunkItem(
+        pos.x,
+        pos.z,
+        radius,
+        kindSet,
+        config.chunkSize,
+        loaded,
+        (coord) => {
+          const rec = chunks.get(chunkKey(coord))
+          const placements = rec?.tile?.items
+            ?? proceduralChunkItems(coord, paramsFor(coord, []), config.collectedItemIds)
+          return placements
+            .filter((p) => !config.collectedItemIds.has(p.id) && kindSet.has(p.kind))
+            .map((p) => ({ id: p.id, kind: p.kind, x: p.x, z: p.z }))
+        },
+        maxChunkRadius,
+      )
     },
     harvestCrop(id) {
       const plantedIndex = config.plantedCrops.findIndex((p) => p.id === id)

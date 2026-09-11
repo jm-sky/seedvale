@@ -10,7 +10,7 @@ export type NpcGender = 'male' | 'female'
  *  the random pool so the adult-capacity gate cannot be skipped. `shepherd`
  *  and `textile_worker` are the same kind of optional specialist — staffing
  *  assigns them, baseline `characterForSeed` never does. */
-export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher' | 'hunter' | 'blacksmith' | 'shepherd' | 'textile_worker'
+export type Role = 'woodcutter' | 'farmer' | 'guard' | 'trader' | 'miner' | 'fisher' | 'hunter' | 'blacksmith' | 'shepherd' | 'textile_worker' | 'herbalist'
 
 /** Closed pool of lightweight, deterministic modifiers — execution effects
  *  live in `NpcAgent` (wait times, stamina, PAUSE_PARAMS); schedule overlays
@@ -31,9 +31,9 @@ export type CharacterDef = {
   traits: readonly Trait[]
 }
 
-/** Random baseline never rolls `trader`, `shepherd` or `textile_worker` —
- *  reserved Kasia plus generation-time staffing are the only assignment
- *  paths for those roles. */
+/** Random baseline never rolls `trader`, `shepherd`, `textile_worker` or
+ *  `herbalist` — reserved Kasia plus generation-time staffing are the only
+ *  assignment paths for those roles. */
 const RANDOM_ROLES: readonly Role[] = ['woodcutter', 'farmer', 'guard', 'miner', 'fisher', 'hunter', 'blacksmith']
 const TRAITS: readonly Trait[] = ['curious', 'energetic', 'fast_worker', 'night_owl', 'sociable']
 

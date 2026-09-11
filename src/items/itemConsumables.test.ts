@@ -14,7 +14,7 @@ import {
  *  `ITEM_CATALOG[kind].consumable.need`. */
 describe('CONSUMABLE_KINDS_BY_NEED', () => {
   it('derives every need bucket from the catalog, best (highest relief) first', () => {
-    expect(CONSUMABLE_KINDS_BY_NEED.health).toEqual(['bandage', 'herb'])
+    expect(CONSUMABLE_KINDS_BY_NEED.health).toEqual(['dressing', 'bandage', 'herb'])
   })
 
   it('keeps every bucket in sync with the per-entry declarations', () => {

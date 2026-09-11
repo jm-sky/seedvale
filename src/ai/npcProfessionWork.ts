@@ -13,11 +13,16 @@ import type { Role } from './characters'
 import type { NpcPlannedAction } from './npcAction'
 import {
   claimHouseholdSurplus,
+  commitDressingProduction,
   commitHunterArrowProduction,
-  commitWoolMaterialProduction,
+  commitTextileWorkProduction,
+  DRESSING_PRODUCTION,
+  TEXTILE_WORKER_PRODUCTIONS,
   type SettlementEconomy,
   tryAdvanceDevelopment,
 } from '../economy'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
+import { HERBALIST_GATHER_KINDS } from '../world/herbalGathering'
 import { WOOL_YIELD } from '../fauna/livestockProduction'
 import {
   ownedFlockCentroid,
@@ -150,6 +155,8 @@ export type NpcWorkContext = {
   nowDays?: () => number
   shepherdFlock?: ShepherdFlockHooks | null
   hasShearingTool?: () => boolean
+  /** Wild herb/flax gather hooks (plan settlements-npcs-007). */
+  herbalGather?: SettlementHerbalGatherHooks | null
 }
 
 /**
@@ -619,27 +626,93 @@ function planShepherdWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   }
 }
 
-const WOOL_MATERIAL_INPUT = 4
+function householdCanRunItemRecipe(inventory: Inventory, def: { itemInputs?: readonly { kind: ItemKind, amount: number }[] }): boolean {
+  const inputs = def.itemInputs ?? []
+  return inputs.length > 0 && inputs.every((inp) => inventory.has(inp.kind, inp.amount))
+}
+
+function textileWorkAvailable(household: Household): boolean {
+  return TEXTILE_WORKER_PRODUCTIONS.some((def) => householdCanRunItemRecipe(household.items, def))
+}
 
 /**
- * Textile Worker's `work` schedule block (plan settlements-npcs-006) —
+ * Textile Worker's `work` schedule block (plans settlements-npcs-006/007) —
  * preview the known owner inventory, then a bounded workplace action whose
- * completion calls `executeProduction` through `commitWoolMaterialProduction`.
- * Preview is not a reservation: wool stays in `Household.items` until
- * completion revalidates live state. `null` (idle stand) when the household
- * has fewer than 4 wool, so a blocked recipe is a normal profession fallback
- * rather than a started action that cannot produce.
+ * completion calls `executeProduction` through `commitTextileWorkProduction`
+ * (wool, flax→linen, linen→bandage priority). Preview is not a reservation.
  */
 function planTextileWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   const { household, workplace } = ctx
   if (!household || !workplace) return null
-  if (!household.items.has('wool', WOOL_MATERIAL_INPUT)) return null
+  if (!textileWorkAvailable(household)) return null
   return {
     kind: 'work',
     destination: copyVec3(workplace.position),
     durationSec: ctx.rollWorkDurationSec(),
     onComplete: () => {
-      commitWoolMaterialProduction(household, ctx.simTime())
+      commitTextileWorkProduction(household, ctx.simTime())
+    },
+  }
+}
+
+const HERBAL_GATHER_RADIUS = 60
+const HERBAL_YIELD_KINDS: readonly ItemKind[] = HERBALIST_GATHER_KINDS
+
+function planHerbalDeposit(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const household = ctx.household
+  if (!household || !HERBAL_YIELD_KINDS.some((kind) => ctx.carried.count(kind) > 0)) return null
+  return {
+    kind: 'deposit',
+    destination: copyVec3(ctx.home),
+    durationSec: 0.8 * ctx.waitMultiplier,
+    onComplete: () => depositCarriedItems(ctx.carried, household, HERBAL_YIELD_KINDS, ctx.simTime()),
+  }
+}
+
+/**
+ * Herbalist work (plan settlements-npcs-007) — dressing production from
+ * household items, else gather wild herb/flax/poisonous_herb into carried cargo.
+ */
+function planHerbalistWork(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const { household, workplace, herbalGather } = ctx
+  if (!household || !workplace) return null
+
+  const deposit = planHerbalDeposit(ctx)
+  if (deposit) return deposit
+
+  if (householdCanRunItemRecipe(household.items, DRESSING_PRODUCTION)) {
+    return {
+      kind: 'work',
+      destination: copyVec3(workplace.position),
+      durationSec: ctx.rollWorkDurationSec(),
+      onComplete: () => {
+        commitDressingProduction(household, ctx.simTime())
+      },
+    }
+  }
+
+  if (!herbalGather) return null
+  const target = herbalGather.queryNearest(ctx.x, ctx.z, HERBAL_GATHER_RADIUS)
+  if (!target || !ctx.carried.canAdd(target.kind, 1)) return null
+
+  return {
+    kind: 'work',
+    destination: copyVec3({
+      x: target.x,
+      y: ctx.sampleHeight(target.x, target.z),
+      z: target.z,
+    }),
+    durationSec: ctx.rollWorkDurationSec(),
+    onComplete: () => {
+      const result = herbalGather.harvest(target)
+      if (!result || !ctx.carried.canAdd(result.kind, result.count)) return
+      ctx.carried.add(result.kind, result.count)
+    },
+    next: planHerbalDeposit(ctx) ?? {
+      kind: 'deposit',
+      destination: copyVec3(ctx.home),
+      durationSec: 0.8 * ctx.waitMultiplier,
+      onComplete: () => depositCarriedItems(ctx.carried, household, HERBAL_YIELD_KINDS, ctx.simTime()),
     },
   }
 }
@@ -662,6 +735,7 @@ export function planProfessionWork(ctx: NpcWorkContext): NpcPlannedAction | null
     case 'miner': return planOreGathering(ctx)
     case 'shepherd': return planShepherdWork(ctx)
     case 'textile_worker': return planTextileWork(ctx)
+    case 'herbalist': return planHerbalistWork(ctx)
     case 'trader': return planTraderWork(ctx)
     default: return null
   }

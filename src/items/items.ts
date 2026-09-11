@@ -106,6 +106,10 @@ export type ItemKind =
   | 'hay'
   | 'wool'
   | 'wool_material'
+  | 'flax'
+  | 'linen_material'
+  | 'poisonous_herb'
+  | 'dressing'
   | 'shears'
   // Plan items-player-016 — 18 skill-book kinds (6 `SkillId`s × 3 tiers).
   // Names are stable and independent of the displayed title (`ITEM_DEFS.label`);
@@ -1130,6 +1134,42 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xe4d5b8,
     description: 'Zgrzebny materiał utkany z wełny. Surowiec krawiecki — nie jest jedzeniem.'
   },
+  flax: {
+    kind: 'flax',
+    label: 'len',
+    categories: ['resource'],
+    weight: 0.08,
+    size: 'SM',
+    color: 0x9cb86a,
+    description: 'Źdźbła lnu zebrane z łąki. Surowiec do przędzenia i tkaniny.'
+  },
+  linen_material: {
+    kind: 'linen_material',
+    label: 'materiał lniany',
+    categories: ['resource'],
+    weight: 0.1,
+    size: 'SM',
+    color: 0xd8cdb0,
+    description: 'Przędza i płótno z lnu. Surowiec do opatrunków i tkanin.'
+  },
+  poisonous_herb: {
+    kind: 'poisonous_herb',
+    label: 'trujące ziele',
+    categories: ['resource'],
+    weight: 0.05,
+    size: 'XS',
+    color: 0x6a4a7a,
+    description: 'Ciemne, ostrze zioło z wilgotnego podłoża. Na razie tylko surowiec — nie spożywać.'
+  },
+  dressing: {
+    kind: 'dressing',
+    label: 'opatrunek ziołowy',
+    categories: ['utility'],
+    weight: 0.15,
+    size: 'XS',
+    color: 0xe0dcc8,
+    description: 'Opatrunek nasączony ziołami leczniczymi. Skuteczniejszy niż sam bandaż lub samo zioło.'
+  },
   book_riding_basic: {
     kind: 'book_riding_basic',
     label: 'Pierwsze kroki w siodle',
@@ -2094,6 +2134,52 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS.wool_material.color, flatShading: true }),
     )
     mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'flax') {
+    const group = new THREE.Group()
+    for (let i = -1; i <= 1; i++) {
+      const stalk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.01, 0.28, 4),
+        new THREE.MeshStandardMaterial({ color: ITEM_DEFS.flax.color, flatShading: true }),
+      )
+      stalk.position.set(i * 0.03, 0.14, 0)
+      stalk.rotation.z = i * 0.12
+      stalk.castShadow = true
+      group.add(stalk)
+    }
+    return group
+  }
+  if (kind === 'linen_material') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.03, 0.15),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.linen_material.color, flatShading: true }),
+    )
+    mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'poisonous_herb') {
+    const group = new THREE.Group()
+    for (let i = -1; i <= 1; i++) {
+      const blade = new THREE.Mesh(
+        new THREE.ConeGeometry(0.014, 0.14, 4),
+        new THREE.MeshStandardMaterial({ color: ITEM_DEFS.poisonous_herb.color, flatShading: true }),
+      )
+      blade.position.set(i * 0.04, 0.07, 0)
+      blade.rotation.z = i * 0.3
+      blade.castShadow = true
+      group.add(blade)
+    }
+    return group
+  }
+  if (kind === 'dressing') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.04, 0.08),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.dressing.color, flatShading: true }),
+    )
+    mesh.position.y = 0.03
     mesh.castShadow = true
     return mesh
   }

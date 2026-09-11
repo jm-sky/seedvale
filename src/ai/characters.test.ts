@@ -41,6 +41,14 @@ describe('characterForSeed', () => {
     }
     expect(roles.has('textile_worker')).toBe(false)
   })
+
+  it('never rolls herbalist from the generic random pool (plan settlements-npcs-007)', () => {
+    const roles = new Set<Role>()
+    for (let seed = 0; seed < 500; seed++) {
+      roles.add(characterForSeed(seed, seed % 2 === 0 ? 'male' : 'female').role)
+    }
+    expect(roles.has('herbalist')).toBe(false)
+  })
 })
 
 describe('RESERVED_CHARACTERS (plan 178 must not change these)', () => {
