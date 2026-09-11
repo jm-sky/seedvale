@@ -130,6 +130,7 @@ V1 cleanup + Cave V2 completion
 | `03-advanced-sweep-vs-sdf-spike-research.md` | Seedvale-focused Sweep vs SDF comparison and shared spike definition. | `done` |
 | `04-sweep-vs-sdf-spike-results.md` | Technical measurements, player observations and architecture decision from Milestone A. | `technical comparison complete, manual comparison required` |
 | `05-b4-streaming-lifecycle-performance-recon.md` | Current-code B4 recon: lifecycle, performance risks, worker decision and recommended streaming architecture. | `recon complete` |
+| `06-heightfield-cave-representation-design.md` | Cave heightfield (2.5D `floorY`/`ceilingY`) recon, recommended representation, cross-section/chamber/entrance model and the next harness implementation plan. Rejects the boundary-wall model of plan world-terrain-018. | `design complete, not implemented` |
 | `docs/plans/world-terrain-008-underground-caves-v2.md` | Production Cave V2 plan and architecture gate. | `Milestone B4 planned in slices` |
 | `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md` | Exact current-code integration map for implementation agents. | `in progress` |
 | `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b4-implementation-notes.md` | B4 implementation contract: lifecycle seam, worker boundary, disposal and verification. | `ready for B4.1` |
