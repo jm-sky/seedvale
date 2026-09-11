@@ -1,14 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 21:13:13  
+> Date: 2026-09-11 21:20:01  
 
 ## PLANS
 
 - `items-player-028-npc-player-storage-access-policies.md`
 - `npc-031-voluntary-expedition-joining.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
-- `quests-progression-019-dangerous-animal-deeds-local-reputation.md`
 - `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `world-023-species-driven-sowing-density-and-yield.md`
@@ -94,37 +93,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/quests-progression-008-treasure-map-bear-cave-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `quests-progression-019-dangerous-animal-deeds-local-reputation.md`
-
-Prompt:
-
-```
-Zrób review planu `quests-progression-019-dangerous-animal-deeds-local-reputation.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/quests-progression-019-dangerous-animal-deeds-local-reputation.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/quests-progression-019-dangerous-animal-deeds-local-reputation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
