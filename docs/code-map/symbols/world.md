@@ -162,11 +162,18 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldMaterial.ts`
 
+- `alignCaveDetailNormalToGeometric` — function — line 114
+  - domain: world-terrain
 - `CAVE_SURFACE_MATERIAL_TUNING` — const — line 12
 - `CaveSurfaceMaterialTuning` — type — line 25
-- `createCaveHeightfieldMaterial` — function — line 212
-- `CreateCaveHeightfieldMaterialOptions` — type — line 202
-- `disposeCaveHeightfieldMaterialGpu` — function — line 243
+- `CaveVec3` — type — line 27
+- `createCaveHeightfieldMaterial` — function — line 345
+- `CreateCaveHeightfieldMaterialOptions` — type — line 332
+- `disposeCaveHeightfieldMaterialGpu` — function — line 375
+- `perturbCaveWorldNormalOnTangentPlane` — function — line 92
+  - domain: world-terrain
+- `reconstructCaveTriplanarWorldNormal` — function — line 52
+  - domain: world-terrain
 
 ## `world/caves/caveHeightfieldMesh.ts`
 
