@@ -307,6 +307,48 @@ describe('AnimalAgent', () => {
     })
   })
 
+  describe('player-owned follow (plan fauna-020)', () => {
+    const farObserver = new THREE.Vector3(1000, 0, 1000)
+
+    it('defaults to follow and moves toward the player instead of roaming away', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'owned-follow' }))
+      horse.transferOwnershipToPlayer()
+      expect(horse.getOwnedControlMode()).toBe('follow')
+      horse.life.thirst = 0
+      horse.life.hunger = 0
+      const playerPos = { x: 20, z: 0 }
+      horse.update({
+        dt: 1,
+        others: [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        playerControlPos: playerPos,
+      })
+      expect(horse.mesh.position.x).toBeGreaterThan(1)
+    })
+
+    it('stay mode does not wander away from the anchor', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'owned-stay', x: 5, z: 5 }))
+      horse.transferOwnershipToPlayer()
+      horse.setOwnedControlMode('stay')
+      const anchorX = horse.mesh.position.x
+      for (let i = 0; i < 8; i++) {
+        horse.update({
+          dt: 1,
+          others: [],
+          observerPos: farObserver,
+          dayFactor: 1,
+          forestFactor: 0,
+          litFires: [],
+          playerControlPos: { x: 100, z: 100 },
+        })
+      }
+      expect(Math.hypot(horse.mesh.position.x - anchorX, horse.mesh.position.z - 5)).toBeLessThan(4)
+    })
+  })
+
   describe('leading (plan fauna-007)', () => {
     const farObserver = new THREE.Vector3(1000, 0, 1000)
     const stubGrass = (x: number, z: number): GrassForageService => ({
@@ -345,7 +387,7 @@ describe('AnimalAgent', () => {
       expect(dying.isLeadAttached()).toBe(false)
     })
 
-    it('follows the player while attached, yields to elevated needs, then resumes', () => {
+    it('follows the player while attached and defers ordinary elevated needs', () => {
       const horse = new AnimalAgent(makeDeps({ animalId: 'lead-follow' }))
       horse.life.hunger = 0
       horse.life.thirst = 0
@@ -374,7 +416,7 @@ describe('AnimalAgent', () => {
         playerControlPos: playerFar,
         grassForage: stubGrass(-12, 0),
       })
-      expect(horse.mesh.position.x).toBeLessThan(beforeNeed)
+      expect(horse.mesh.position.x).toBeGreaterThan(beforeNeed)
 
       horse.life.hunger = 0
       const beforeResume = horse.mesh.position.x

@@ -525,6 +525,7 @@ export async function createFauna(
   /** Shared world-owned player-trough water provider (plan items-player-020
    *  §4) — forwarded unchanged into every `AnimalAgent.update()` call below. */
   waterSourceProvider?: import('./animalForaging').AnimalWaterSourceProvider,
+  naturalWaterKindAt?: (x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null,
   /** Signed distance from a point to the nearest loaded river's water edge
    *  (`ChunkManager.riverShoreDistance`) — negative inside the water, `null`
    *  when no river channel is near. Optional so callers/tests without
@@ -723,6 +724,7 @@ export async function createFauna(
       sampleHeight,
       waterLevel,
       sampleLocalWater,
+      naturalWaterKindAt,
       collidersNear,
       x,
       z,

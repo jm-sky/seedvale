@@ -28,6 +28,7 @@ import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
+import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import type { TerrainSamplers } from './settlementTerrain'
 import { createEconomyRegistry } from '../economy'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
@@ -342,7 +343,19 @@ export async function createSettlementsManager(
   /** NPC burial graves (plan npc-011) — forwarded into every `createSettlement`
    *  call the same way as `droppedItems`. */
   npcGraves?: import('../world/npcGraves').NpcGraves,
+  /** River bank distance (plan fauna drink targeting) — when set, livestock
+   *  agents get the same lake/river/ocean classifier as player drink. */
+  riverShoreDistance?: (worldX: number, worldZ: number) => number | null,
 ): Promise<SettlementsManager> {
+  const naturalWaterKindAt = riverShoreDistance
+    ? createNaturalWaterKindAt({
+      sampleHeight,
+      waterLevel,
+      sampleContinentalness: terrainSamplers.sampleContinentalness,
+      region,
+      riverShoreDistance,
+    })
+    : undefined
   const roadCtx: RoadNetworkContext = {
     seed,
     sampleHeight,
@@ -428,6 +441,7 @@ export async function createSettlementsManager(
     sampleHeight,
     waterLevel,
     sampleLocalWater,
+    naturalWaterKindAt,
     collidersNear,
     onAnimalDeath,
   }
@@ -489,6 +503,7 @@ export async function createSettlementsManager(
     standingTorches,
     residentialBuildings,
     npcGraves,
+    naturalWaterKindAt,
   }
 
   const entries = new Map<string, Entry>()

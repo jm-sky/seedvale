@@ -1,4 +1,5 @@
 import { SLEEP_HUNGER_THIRST_RATE, type TickNeedsOptions } from '../ai/Needs'
+import { gameDaysToRealSeconds } from '../world/timeConversion'
 import {
   createStaminaState,
   drainStamina,
@@ -22,11 +23,20 @@ export type AnimalMetabolismConfig = {
   staminaRegenRate: number
 }
 
-/** Units/sec — same order of magnitude as NPC `Needs.ts` (0.028–0.04/sec).
- *  Kept as the fallback `AnimalMetabolismConfig` for callers/tests that
- *  construct life state without a species definition (plan fauna-010). */
-const HUNGER_RATE = 0.03
-const THIRST_RATE = 0.032
+/** Game-day pacing aligned with player survival (plan 106: ~3d hunger / ~2.5d
+ *  thirst to traverse the 0–1 urge scale) at the default 480s day length —
+ *  replaces the legacy ~0.03/s rates that hit `NEED_ELEVATED_THRESHOLD` in
+ *  under a minute of real time. */
+const DEFAULT_DAY_LENGTH_SEC = 480
+const ANIMAL_HUNGER_EMPTY_GAME_DAYS = 3
+const ANIMAL_THIRST_EMPTY_GAME_DAYS = 2.5
+
+function urgeRatePerSecond(emptyGameDays: number, dayLengthSec = DEFAULT_DAY_LENGTH_SEC): number {
+  return 1 / gameDaysToRealSeconds(emptyGameDays, dayLengthSec)
+}
+
+const HUNGER_RATE = urgeRatePerSecond(ANIMAL_HUNGER_EMPTY_GAME_DAYS)
+const THIRST_RATE = urgeRatePerSecond(ANIMAL_THIRST_EMPTY_GAME_DAYS)
 /** Faster than regen so a sustained chase/flee visibly costs stamina. */
 const STAMINA_DRAIN_RATE = 0.18
 const STAMINA_REGEN_RATE = 0.06

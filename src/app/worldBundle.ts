@@ -37,6 +37,7 @@ import type { StandingTorchRecord } from '../world/standingTorch'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorkContractRecord } from '../world/workContract'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
+import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
 import { createHuntingHooks } from '../fauna/huntingHooks'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
@@ -447,6 +448,7 @@ function buildSettlementsManager(
     standingTorches,
     residentialBuildings,
     npcGraves,
+    chunkManager.riverShoreDistance.bind(chunkManager),
   )
 }
 
@@ -506,6 +508,14 @@ function buildFauna(
     bootMarkEnd('prepareRoadQuery')
   }
 
+  const naturalWaterKindAt = createNaturalWaterKindAt({
+    sampleHeight: chunkManager.sampleHeight,
+    waterLevel: chunkManager.waterLevel,
+    sampleContinentalness: chunkManager.sampleContinentalness,
+    region: chunkManager.region,
+    riverShoreDistance: chunkManager.riverShoreDistance.bind(chunkManager),
+  })
+
   bootMark('createFauna')
   return createFauna(
     scene,
@@ -533,6 +543,7 @@ function buildFauna(
     initialSpawnerState,
     grassForage,
     waterSourceProvider,
+    naturalWaterKindAt,
     chunkManager.riverShoreDistance,
     extraHabitatSpawners,
     // Persistent occupant declarations stay empty until a consumer (the

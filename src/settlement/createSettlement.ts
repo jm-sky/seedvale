@@ -256,6 +256,7 @@ export type CreateSettlementDeps = {
    *  `spawnLivestock` → every livestock `AnimalAgent`, the same water/floor/
    *  river seam wild fauna's `createFauna.ts` uses. */
   sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  naturalWaterKindAt?: (x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null
   localRadius: number
   seed: number
   // registries (owned by SettlementsManager, shared across stream-out/in)
@@ -385,6 +386,7 @@ export async function createSettlement(
     sampleHeight,
     waterLevel,
     sampleLocalWater,
+    naturalWaterKindAt,
     localRadius,
     seed,
     householdRegistry,
@@ -609,6 +611,7 @@ export async function createSettlement(
       sampleHeight,
       waterLevel,
       sampleLocalWater,
+      naturalWaterKindAt,
       collidersNear,
       landmarks.homes,
       def.size,

@@ -121,6 +121,11 @@ import {
   isPlayerOwned as isPlayerOwnedOwner,
   ownerFromHouseId,
 } from './animalOwnership'
+import {
+  OWNED_NEED_LEASH_RADIUS,
+  shouldDeferNeedsForLead,
+  STAY_NEED_LEASH_RADIUS,
+} from './animalNeedArbitration'
 import { type AnimalTrip, findWaterTripDestination, tripDayBucket } from './animalRoaming'
 import {
   DOG_BARK_COOLDOWN_SEC,
@@ -175,6 +180,7 @@ import {
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
 import { PREY_ALERT_RANGE_BONUS, type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
+import type { WaterBodyKind } from '../world/WaterSource'
 import {
   classifyWaterTraversal,
   shouldApplyDrowningDamage,
@@ -737,6 +743,8 @@ export type AnimalAgentDeps = {
   sampleHeight: HeightSampler
   waterLevel: number
   sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  /** Lake/river/ocean shore classifier — same seam as player drink targets. */
+  naturalWaterKindAt?: (x: number, z: number) => WaterBodyKind | null
   collidersNear: ColliderSource
   x: number
   z: number
@@ -912,6 +920,7 @@ export class AnimalAgent {
    *  `isWalkable()`/`resolveWaterTraversal()` use to classify dry/wading/
    *  swimming, so lake/ocean/river water depth is never re-derived here. */
   private readonly sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  private readonly naturalWaterKindAt?: (x: number, z: number) => WaterBodyKind | null
   /** This tick's resolved traversal mode (plan fauna-015 §2/§7) — set once
    *  per tick by `resolveWaterTraversal()` from the animal's actual
    *  post-movement position, read by stamina exertion (`swimExertionNow`)
@@ -1226,6 +1235,7 @@ export class AnimalAgent {
       sampleHeight,
       waterLevel,
       sampleLocalWater,
+      naturalWaterKindAt,
       collidersNear,
       x,
       z,
@@ -1255,6 +1265,7 @@ export class AnimalAgent {
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.sampleLocalWater = sampleLocalWater
+    this.naturalWaterKindAt = naturalWaterKindAt
     this.collidersNear = collidersNear
     this.sampleForestFactor = sampleForestFactor
     this.home.set(x, 0, z)
@@ -3137,10 +3148,10 @@ export class AnimalAgent {
       this.fleeFrom(alert.x, alert.z, dt)
       return
     }
+    if (this.pursueLead(dt)) return
     if (this.pursueNeeds(dt, others)) return
     if (this.pursueLure(dt, lures)) return
     if (this.def.kind === 'dog' && this.pursuePest(dt, nearbyRats)) return
-    if (this.pursueLead(dt)) return
     if (this.pursueOwnedControl(dt)) return
     this.setIntent('wander')
     this.wander(dt)
@@ -3183,6 +3194,14 @@ export class AnimalAgent {
       this.setIntent('wander', { x: movement.x, z: movement.z })
       this.sourceDest.set(movement.x, 0, movement.z)
       this.steerToward(this.sourceDest, this.sprintSpeedNow(), dt)
+      return true
+    }
+    if (movement.kind === 'stay') {
+      const anchor = this._control.stayAnchor ?? { x: this.home.x, z: this.home.z }
+      if (!this.arrived(this.sourceDest.set(anchor.x, 0, anchor.z), 1.8)) {
+        this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+      }
+      this.setIntent('wander', { x: anchor.x, z: anchor.z })
       return true
     }
     return false
@@ -3506,7 +3525,7 @@ export class AnimalAgent {
    *  never cached across ticks. `ROAM_RADIUS` is this agent's flat
    *  movement-domain home bound, not a foraging-owned constant. */
   private foragingContext(): ForagingContext {
-    return {
+    const ctx: ForagingContext = {
       x: this.mesh.position.x,
       z: this.mesh.position.z,
       home: this.home,
@@ -3522,10 +3541,27 @@ export class AnimalAgent {
       roamRadius: ROAM_RADIUS,
       isWalkable: (x, z) => this.isWalkable(x, z),
       isNearVillage: (pos) => this.isNearVillage(pos),
+      sampleLocalWater: (x, z) => this.sampleLocalWater(x, z),
+      naturalWaterKindAt: this.naturalWaterKindAt,
     }
+    if (this.isPlayerOwned() || this._leadAttached) {
+      const anchor = this._control.mode === 'stay' && this._control.stayAnchor
+        ? this._control.stayAnchor
+        : this._tickPlayerControlPos
+      if (anchor) {
+        ctx.needAnchor = anchor
+        ctx.needLeashRadius = this._control.mode === 'stay'
+          ? STAY_NEED_LEASH_RADIUS
+          : OWNED_NEED_LEASH_RADIUS
+      }
+    }
+    return ctx
   }
 
   private pursueNeeds(dt: number, others: readonly AnimalAgent[]): boolean {
+    if (this._leadAttached && shouldDeferNeedsForLead(this.life.hunger, this.life.thirst)) {
+      return false
+    }
     const thirstElevated = this.life.thirst > NEED_ELEVATED_THRESHOLD
     const hungerElevated = this.life.hunger > NEED_ELEVATED_THRESHOLD
     if (!thirstElevated && !hungerElevated) {
@@ -3655,6 +3691,7 @@ export class AnimalAgent {
   }
 
   private wander(dt: number): void {
+    if (this.isPlayerOwned() && this._control.mode === 'stay') return
     // Trip continuation/opportunity (plan fauna-016 §4/§5) — the same
     // low-priority tail every predator/prey/dog branch already falls back to
     // (implementation notes §2.1), so a trip is transparently below any real
@@ -4043,6 +4080,7 @@ export class AnimalAgent {
   }
 
   private clampBounds(): void {
+    if (this.isPlayerOwned() || this._leadAttached) return
     this.mesh.position.x = THREE.MathUtils.clamp(
       this.mesh.position.x,
       this.home.x - ROAM_RADIUS,
@@ -4056,15 +4094,16 @@ export class AnimalAgent {
   }
 
   private snapY(): void {
-    let y = this.sampleHeight(this.mesh.position.x, this.mesh.position.z)
-    // Prefer not sinking below the local water surface — reads the same
-    // canonical local sample `isWalkable()`/`resolveWaterTraversal()` use
-    // (plan fauna-015) rather than a bare `waterLevel` comparison, so a
-    // river point whose canonical surface sits above the global `waterLevel`
-    // (a mountain stream) is handled correctly too.
+    const terrainY = this.sampleHeight(this.mesh.position.x, this.mesh.position.z)
+    let y = terrainY
     const water = this.sampleLocalWater(this.mesh.position.x, this.mesh.position.z)
-    if (water.present && y <= water.waterSurfaceHeight + 0.15) {
-      y = water.waterSurfaceHeight + 0.2
+    if (water.present) {
+      const mode = classifyWaterTraversal(water.depth, this.def.scale, this.def.water)
+      if (mode === 'swimming' || mode === null) {
+        y = Math.max(terrainY, water.waterSurfaceHeight + 0.2)
+      } else if (mode === 'wading') {
+        y = Math.max(terrainY, water.waterSurfaceHeight - water.depth * 0.35)
+      }
     }
     // Capsule is centered; GLB feet sit at local y=0 after prepareProp.
     this.mesh.position.y = this.isCapsule ? y + 0.45 * this.def.scale : y

@@ -1821,7 +1821,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // batch rather than trusting the prompt string.
         const altQuickConsume = altInteractPressed
           && worldItemAllowsAltInteract(target.item.kind, memberIds.length, freshness)
-        if (interactPressed || altQuickConsume) {
+        const tryCollectWorldItem = (): { picked: number, lastKind: ItemKind | null } => {
           let picked = 0
           let lastKind: ItemKind | null = null
           for (const id of memberIds) {
@@ -1844,19 +1844,24 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             picked += 1
             lastKind = collected.kind
           }
+          return { picked, lastKind }
+        }
+        if (altQuickConsume) {
+          const { picked, lastKind } = tryCollectWorldItem()
+          if (picked > 0 && lastKind) {
+            playInventoryPickUp(worldAudio.playOnce)
+            hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+            onInventoryChanged()
+            consumeItem?.(lastKind)
+          }
+        } else if (interactPressed) {
+          const { picked, lastKind } = tryCollectWorldItem()
           if (picked > 0) {
             playInventoryPickUp(worldAudio.playOnce)
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             onInventoryChanged()
-            // Delta + resulting total (plan items-player-024) — count-stack
-            // resources only; an instance-backed pickup (weapon/trap/tent/
-            // liquid container) each carries its own condition, which this
-            // generic format can't summarize, so it keeps no toast here.
             if (lastKind && !isInstanceBackedKind(lastKind)) {
               toast.show(`${firstUpperCase(ITEM_DEFS[lastKind].label)} +${picked} · Masz: ${inventory.count(lastKind)}`, 'pickup')
-            }
-            if (altQuickConsume && lastKind) {
-              consumeItem?.(lastKind)
             }
           }
         }

@@ -168,6 +168,7 @@ export type SpawnAnimalFromRecordDeps = {
   sampleHeight: HeightSampler
   waterLevel: number
   sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  naturalWaterKindAt?: (x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null
   collidersNear: ColliderSource
   onAnimalDeath?: (animalId: string) => void
 }
@@ -186,6 +187,7 @@ export async function spawnAnimalFromRecord(
     sampleHeight: deps.sampleHeight,
     waterLevel: deps.waterLevel,
     sampleLocalWater: deps.sampleLocalWater,
+    naturalWaterKindAt: deps.naturalWaterKindAt,
     collidersNear: deps.collidersNear,
     x: record.x,
     z: record.z,
@@ -218,6 +220,7 @@ function createGuaranteedSheep(
   sampleHeight: HeightSampler,
   waterLevel: number,
   sampleLocalWater: (x: number, z: number) => LocalWaterSample,
+  naturalWaterKindAt: ((x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null) | undefined,
   collidersNear: ColliderSource,
   onAnimalDeath: ((animalId: string) => void) | undefined,
   removed: ReadonlySet<string> | undefined,
@@ -254,6 +257,7 @@ function createGuaranteedSheep(
     sampleHeight,
     waterLevel,
     sampleLocalWater,
+    naturalWaterKindAt,
     collidersNear,
     x,
     z,
@@ -534,6 +538,7 @@ export async function spawnLivestock(
   sampleHeight: HeightSampler,
   waterLevel: number,
   sampleLocalWater: (x: number, z: number) => LocalWaterSample,
+  naturalWaterKindAt: ((x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null) | undefined,
   collidersNear: ColliderSource,
   homes: readonly THREE.Vector3[],
   size: VillageSize,
@@ -608,6 +613,7 @@ export async function spawnLivestock(
         sampleHeight,
         waterLevel,
         sampleLocalWater,
+        naturalWaterKindAt,
         collidersNear,
         x,
         z,
@@ -636,6 +642,7 @@ export async function spawnLivestock(
       sampleHeight,
       waterLevel,
       sampleLocalWater,
+      naturalWaterKindAt,
       collidersNear,
       onAnimalDeath,
       removed,
@@ -658,6 +665,7 @@ export async function spawnLivestock(
         sampleHeight,
         waterLevel,
         sampleLocalWater,
+        naturalWaterKindAt,
         collidersNear,
         x: merchantHorseSpawn.x,
         z: merchantHorseSpawn.z,

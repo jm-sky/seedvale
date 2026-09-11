@@ -12,6 +12,7 @@ import {
   findTroughTarget,
   findWaterTarget,
   type ForagingContext,
+  isDrinkableNaturalShorePoint,
   isSourceTargetValid,
   type SourceTarget,
   tryCommitHandFeed,
@@ -79,6 +80,35 @@ function makeCorpse(overrides: Partial<CarcassCandidate> & { id?: string } = {})
     ...overrides,
   }
 }
+
+describe('isDrinkableNaturalShorePoint', () => {
+  it('rejects ocean shores', () => {
+    const ctx = makeCtx({
+      def: ANIMAL_DEFS.horse,
+      sampleHeight: (x) => (Math.abs(x) > 1.4 ? -1 : 2),
+      waterLevel: 0,
+      naturalWaterKindAt: () => 'ocean',
+      sampleLocalWater: () => ({ present: false }),
+    })
+    expect(isDrinkableNaturalShorePoint(ctx, 0, 0)).toBe(false)
+  })
+
+  it('rejects deep swimming water at the candidate point', () => {
+    const ctx = makeCtx({
+      def: ANIMAL_DEFS.horse,
+      sampleHeight: () => 2,
+      waterLevel: 0,
+      naturalWaterKindAt: () => 'lake',
+      sampleLocalWater: () => ({
+        present: true,
+        waterSurfaceHeight: 0,
+        floorHeight: -3,
+        depth: 3,
+      }),
+    })
+    expect(isDrinkableNaturalShorePoint(ctx, 0, 0)).toBe(false)
+  })
+})
 
 describe('findTroughTarget / findWaterTarget (plan 122 — trough preferred over shoreline)', () => {
   it('prefers the household trough over a shoreline search when water is stocked', () => {

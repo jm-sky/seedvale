@@ -6,9 +6,12 @@ import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { CorpsePhase } from './animalCorpse'
 import type { AnimalDef, AnimalRole, ScavengingConfig } from './animalDefs'
 import type { AnimalDietConfig } from './animalDefs'
+import type { LocalWaterSample } from '../terrain/waterSample'
 import { shoreProbeHits } from '../terrain/waterBodyKind'
+import type { WaterBodyKind } from '../world/WaterSource'
 import { type AnimalLifeState, consumeFood, drinkWater, NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { probeBestPointNear } from './animalRoaming'
+import { classifyWaterTraversal, wadeDepthFor } from './waterTraversal'
 
 /**
  * @domain fauna
@@ -284,6 +287,36 @@ export type ForagingContext = {
   /** Optional finite player-built trough provider (plan items-player-020 §4)
    *  — queried only during an active water search, never per frame. */
   waterSourceProvider?: AnimalWaterSourceProvider
+  /** Physical water at a point — same sample `AnimalAgent.isWalkable()` uses. */
+  sampleLocalWater?: (x: number, z: number) => LocalWaterSample
+  /** Lake/river/ocean classifier (player drink seam) — when absent, ocean
+   *  exclusion falls back to dry-shore checks only. */
+  naturalWaterKindAt?: (x: number, z: number) => WaterBodyKind | null
+  /** When set, natural food/water targets must stay within this radius of the
+   *  anchor (player position for Follow/lead, stay anchor for Stay). */
+  needAnchor?: { readonly x: number, readonly z: number }
+  needLeashRadius?: number
+}
+
+/** Natural shoreline drink point: dry or shallow wade at the edge, never deep
+ *  water or undrinkable ocean. */
+export function isDrinkableNaturalShorePoint(ctx: ForagingContext, x: number, z: number): boolean {
+  if (!ctx.isWalkable(x, z)) return false
+  if (shoreProbeHits(x, z, ctx.sampleHeight, ctx.waterLevel) === 0) return false
+  const kind = ctx.naturalWaterKindAt?.(x, z)
+  if (kind === 'ocean') return false
+  const sample = ctx.sampleLocalWater?.(x, z)
+  if (sample?.present) {
+    const mode = classifyWaterTraversal(sample.depth, ctx.def.scale, ctx.def.water)
+    if (mode === 'swimming' || mode === null) return false
+    if (mode === 'wading' && sample.depth > wadeDepthFor(ctx.def.scale) * 0.85) return false
+  }
+  return true
+}
+
+function withinNeedLeash(ctx: ForagingContext, x: number, z: number): boolean {
+  if (!ctx.needAnchor || ctx.needLeashRadius == null) return true
+  return Math.hypot(x - ctx.needAnchor.x, z - ctx.needAnchor.z) <= ctx.needLeashRadius
 }
 
 /** Household `AnimalTrough` (plan 122) — preferred over a natural
@@ -310,6 +343,7 @@ function findPlayerTroughTarget(ctx: ForagingContext): SourceTarget | null {
     if (!ctx.isWalkable(candidate.x, candidate.z)) continue
     if (ctx.def.sociability === 'wild' && ctx.isNearVillage(candidate)) continue
     if (Math.hypot(candidate.x - ctx.home.x, candidate.z - ctx.home.z) > ctx.roamRadius) continue
+    if (!withinNeedLeash(ctx, candidate.x, candidate.z)) continue
     const d = Math.hypot(candidate.x - ctx.x, candidate.z - ctx.z)
     const score = -d
     if (score > bestScore) {
@@ -332,10 +366,10 @@ export function findWaterTarget(ctx: ForagingContext): SourceTarget | null {
     WATER_SEARCH_RADIUS,
     WATER_SEARCH_ATTEMPTS,
     (x, z) => {
-      if (!ctx.isWalkable(x, z)) return false
-      if (shoreProbeHits(x, z, ctx.sampleHeight, ctx.waterLevel) === 0) return false
+      if (!isDrinkableNaturalShorePoint(ctx, x, z)) return false
       if (ctx.def.sociability === 'wild' && ctx.isNearVillage({ x, z })) return false
-      return Math.hypot(x - ctx.home.x, z - ctx.home.z) <= ctx.roamRadius
+      if (Math.hypot(x - ctx.home.x, z - ctx.home.z) > ctx.roamRadius) return false
+      return withinNeedLeash(ctx, x, z)
     },
     (x, z) => {
       const hits = shoreProbeHits(x, z, ctx.sampleHeight, ctx.waterLevel)
@@ -518,7 +552,12 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
     if (!ctx.waterSourceProvider?.isAvailable(target.waterSource.id, TROUGH_DRINK_AMOUNT)) return false
   }
   if (!ctx.isWalkable(target.x, target.z)) return false
-  return Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) <= ctx.roamRadius
+  if (Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) > ctx.roamRadius) return false
+  if (!withinNeedLeash(ctx, target.x, target.z)) return false
+  if (target.kind === 'water' && target.waterSource?.kind === 'natural') {
+    return isDrinkableNaturalShorePoint(ctx, target.x, target.z)
+  }
+  return true
 }
 
 /** The five-arm "revalidate at completion or grant no relief" switch (plan
