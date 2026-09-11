@@ -16,10 +16,10 @@ export const CAVE_SURFACE_MATERIAL_TUNING = {
   proceduralRockStrength: 0.22,
   macroScale: 0.055,
   wetnessScale: 0.048,
-  wetnessAmount: 0.62,
+  wetnessAmount: 1.0,
   dryRoughness: 0.87,
-  wetRoughness: 0.44,
-  wetDarkening: 0.14,
+  wetRoughness: 0.60,
+  wetDarkening: 0.20,
 } as const
 
 export type CaveSurfaceMaterialTuning = typeof CAVE_SURFACE_MATERIAL_TUNING
@@ -216,7 +216,7 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
     diffuseColor.rgb = mix(
       diffuseColor.rgb,
       diffuseColor.rgb * vec3( 0.9, 0.94, 1.02 ),
-      wetMask * 0.32
+      wetMask * 0.20
     );
   }
 `
