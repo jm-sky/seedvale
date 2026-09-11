@@ -105,6 +105,7 @@ export type ItemKind =
   | 'rope'
   | 'hay'
   | 'wool'
+  | 'wool_material'
   | 'shears'
   // Plan items-player-016 — 18 skill-book kinds (6 `SkillId`s × 3 tiers).
   // Names are stable and independent of the displayed title (`ITEM_DEFS.label`);
@@ -1120,6 +1121,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xf2efe6,
     description: 'Runo ostrzyżonej owcy. Surowiec tkacki — nie jest jedzeniem.'
   },
+  wool_material: {
+    kind: 'wool_material',
+    label: 'materiał wełniany',
+    categories: ['resource'],
+    weight: 0.1,
+    size: 'SM',
+    color: 0xe4d5b8,
+    description: 'Zgrzebny materiał utkany z wełny. Surowiec krawiecki — nie jest jedzeniem.'
+  },
   book_riding_basic: {
     kind: 'book_riding_basic',
     label: 'Pierwsze kroki w siodle',
@@ -2075,6 +2085,15 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     )
     mesh.scale.set(1.2, 0.85, 1)
     mesh.position.y = 0.08
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'wool_material') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.035, 0.14),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.wool_material.color, flatShading: true }),
+    )
+    mesh.position.y = 0.02
     mesh.castShadow = true
     return mesh
   }

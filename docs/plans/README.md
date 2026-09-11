@@ -56,7 +56,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | ~~fauna-004~~, ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, ~~settlements-npcs-015~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | ~~settlements-npcs-018~~ |
@@ -90,6 +89,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-npcs-006-wool-to-material.md` | Textile Worker bez WorkContract; przy ≥4 wełny w `Household.items` konsumuje dokładnie 4 wool i tworzy 12 `wool_material`; 0–3 wełny blokuje bez outputu; przerwanie nie zużywa wełny; produkcja nie bierze wełny z innego gospodarstwa/magazynu |
 | `fauna-004-sheep-wool-and-shepherd.md` | 12-dniowy sezon / 48-dniowy rok; shepherd w większych osadach z 2–6 owcami gospodarstwa, nie wszędzie; home `ensureSheep` bez wymuszania shepherd; strzyżenie 4 wełny do household items (nie jedzenie); wełna wraca po 24 dniach bez catch-up; mleko niezależne; pasterz podchodzi do ruchomej owcy i reaguje na wilka atakującego własne stado |
 | `settlements-npcs-015-economic-production-and-input-integration.md` | Hunter z gałęzią/belką w gospodarstwie craftuje strzały przy `work` (gałąź przed belką, 1→1 / 1→8); brak materiału nie zużywa nic; drwal nadal dodaje drewno osady przy depozycie; mixed/stock recipes nie mintują częściowego wyniku |
 | `ui-input-016-building-placement-construction-ux-coherence.md` | Ghost: ready zielony / preparation bursztyn / invalid czerwony; nearby materiały zmieniają ghost przy ruchu; stromy dom → Przygotuj teren [E] (łopata); pułapka i grządka mają ghost; ogniska mają różne footprinty; namiot i chata pokazują znacznik wejścia; praca ciągła aż do stopu, Esc/touch Przerwij; `[V]` obóz i koryto; `[R]` nie kasuje od razu (potwierdzenie + recovery); palisada Postaw kolejny; pełny obóz nadal kończy preview po confirm |

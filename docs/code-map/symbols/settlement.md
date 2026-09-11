@@ -440,18 +440,18 @@ Generated from exported TypeScript symbols.
 - `Place` — type — line 20
 - `PlaceType` — type — line 18
 - `socialPlaceFor` — function — line 71
-- `workplaceFor` — function — line 114
+- `workplaceFor` — function — line 117
 
 ## `settlement/professionStaffing.ts`
 
-- `adultProfessionCoverage` — function — line 261
+- `adultProfessionCoverage` — function — line 279
   - domain: settlements-npcs
-- `isProfessionAdult` — function — line 234
+- `isProfessionAdult` — function — line 252
 - `ProfessionStaffingContext` — type — line 22
   - domain: settlements-npcs
-- `resolveInitialProfessionStaffing` — function — line 363
+- `resolveInitialProfessionStaffing` — function — line 381
   - domain: settlements-npcs
-- `shepherdHouseholdIndex` — function — line 239
+- `shepherdHouseholdIndex` — function — line 257
 - `StaffingPriority` — type — line 12
 
 ## `settlement/props.ts`

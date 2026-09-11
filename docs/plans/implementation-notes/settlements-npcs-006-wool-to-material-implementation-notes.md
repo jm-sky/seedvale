@@ -3,7 +3,7 @@
 Plan: `docs/plans/settlements-npcs-006-wool-to-material.md`
 
 **Reviewed:** 2026-09-11  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## Review outcome
 

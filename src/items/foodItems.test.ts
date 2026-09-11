@@ -11,6 +11,7 @@ describe('FOOD_ITEM_KINDS', () => {
     expect(FOOD_ITEM_KINDS).not.toContain('arrow')
     expect(FOOD_ITEM_KINDS).not.toContain('stone')
     expect(FOOD_ITEM_KINDS).not.toContain('wool')
+    expect(FOOD_ITEM_KINDS).not.toContain('wool_material')
   })
 })
 

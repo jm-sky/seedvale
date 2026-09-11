@@ -165,6 +165,7 @@ describe('resolveInitialProfessionStaffing', () => {
         expect(roles[0]).toBe('farmer')
         expect(roles).not.toContain('trader')
         expect(roles).not.toContain('blacksmith')
+        expect(roles).not.toContain('textile_worker')
       }
     })
 
@@ -393,6 +394,31 @@ describe('resolveInitialProfessionStaffing', () => {
       }
       expect(absent).toBe(true)
     })
+
+    it('never assigns textile_worker at 1–3 adults (plan settlements-npcs-006)', () => {
+      for (let n = 1; n <= 3; n++) {
+        for (let seed = 0; seed < 20; seed++) {
+          expect(adultProfessionCoverage(staff(adults(n), { size: 'MD', terrain: 'forest', seed })).textile_worker).toBe(0)
+        }
+      }
+    })
+
+    it('assigns at most one textile_worker (plan settlements-npcs-006)', () => {
+      for (let seed = 0; seed < 40; seed++) {
+        expect(adultProfessionCoverage(staff(adults(11), { size: 'XL', terrain: 'forest', foodSourceType: 'garden', seed })).textile_worker).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('absence of textile_worker is a valid outcome (plan settlements-npcs-006)', () => {
+      let absent = false
+      for (let seed = 0; seed < 40; seed++) {
+        if (adultProfessionCoverage(staff(adults(5), { size: 'MD', terrain: 'desert', foodSourceType: 'garden', seed })).textile_worker === 0) {
+          absent = true
+          break
+        }
+      }
+      expect(absent).toBe(true)
+    })
   })
 
   describe('distribution', () => {
@@ -464,6 +490,18 @@ describe('resolveInitialProfessionStaffing', () => {
         isHome: false,
       }, 'shepherd')
       expect(grazing).toBeGreaterThan(desert)
+    })
+
+    it('large forest/garden settlements can staff a textile_worker (plan settlements-npcs-006)', () => {
+      const hits = frequency(samples, () => adults(11), {
+        size: 'XL',
+        terrain: 'forest',
+        foodSourceType: 'garden',
+        dominantResource: null,
+        isHome: false,
+      }, 'textile_worker')
+      expect(hits).toBeGreaterThan(0)
+      expect(hits).toBeLessThan(samples)
     })
   })
 

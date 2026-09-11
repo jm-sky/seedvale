@@ -30,10 +30,10 @@ Generated from exported TypeScript symbols.
 ## `ai/characters.ts`
 
 - `CharacterDef` — type — line 21
-- `characterForSeed` — function — line 71
-- `genderForName` — function — line 62
+- `characterForSeed` — function — line 72
+- `genderForName` — function — line 63
 - `NpcGender` — type — line 5
-- `RESERVED_CHARACTERS` — const — line 53
+- `RESERVED_CHARACTERS` — const — line 54
 - `Role` — type — line 13
 - `Trait` — type — line 19
 
@@ -57,13 +57,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/dialogueTemplates.ts`
 
-- `aboutAreaLine` — function — line 207
-- `aboutSelfLine` — function — line 69
-- `aboutVillageLine` — function — line 163
-- `currentActivityLine` — function — line 110
-- `familyPhrase` — function — line 64
-- `goodbyeLine` — function — line 196
-- `requestAssistanceLine` — function — line 221
+- `aboutAreaLine` — function — line 208
+- `aboutSelfLine` — function — line 70
+- `aboutVillageLine` — function — line 164
+- `currentActivityLine` — function — line 111
+- `familyPhrase` — function — line 65
+- `goodbyeLine` — function — line 197
+- `requestAssistanceLine` — function — line 222
 
 ## `ai/graveVisitPressure.ts`
 
@@ -314,11 +314,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 59
-- `findWeaponNeedingMaintenance` — function — line 85
-- `NpcWorkContext` — type — line 105
-- `planProfessionWork` — function — line 623
-- `selectTraderCollectionGoods` — function — line 344
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 60
+- `findWeaponNeedingMaintenance` — function — line 86
+- `NpcWorkContext` — type — line 106
+- `planProfessionWork` — function — line 649
+- `selectTraderCollectionGoods` — function — line 345
 
 ## `ai/npcStrategies.ts`
 
@@ -390,15 +390,15 @@ Generated from exported TypeScript symbols.
 
 ## `ai/schedule.ts`
 
-- `activityAt` — function — line 312
-- `effectiveScheduleFor` — function — line 185
+- `activityAt` — function — line 322
+- `effectiveScheduleFor` — function — line 195
 - `EffectiveScheduleOptions` — type — line 29
 - `FAST_WORKER_WORK_EXTEND_HOURS` — const — line 67
 - `hourMod24` — function — line 85
 - `hourToTimeOfDay` — function — line 81
-- `idleIntentFor` — function — line 209
+- `idleIntentFor` — function — line 219
 - `isNightLeisureTime` — function — line 57
-- `nextBoundary` — function — line 331
+- `nextBoundary` — function — line 341
 - `NIGHT_LEISURE_END_HOUR` — const — line 53
 - `NIGHT_LEISURE_START_HOUR` — const — line 52
   - domain: npc

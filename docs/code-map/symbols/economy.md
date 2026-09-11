@@ -28,10 +28,12 @@ Generated from exported TypeScript symbols.
 
 ## `economy/npcWork.ts`
 
-- `commitHunterArrowProduction` — function — line 41
-- `commitRoleWork` — function — line 27
-- `commitWoodcutterDeposit` — function — line 16
-- `tryAdvanceDevelopment` — function — line 46
+- `commitHunterArrowProduction` — function — line 43
+- `commitRoleWork` — function — line 29
+- `commitWoodcutterDeposit` — function — line 18
+- `commitWoolMaterialProduction` — function — line 56
+  - domain: settlements-npcs
+- `tryAdvanceDevelopment` — function — line 64
 
 ## `economy/production.ts`
 
@@ -41,10 +43,12 @@ Generated from exported TypeScript symbols.
 - `FISHING_PRODUCTION` — const — line 43
 - `HUNTER_ARROW_PRODUCTIONS` — const — line 85
 - `MINING_PRODUCTION` — const — line 50
-- `produceFirstAvailableItemRecipe` — function — line 95
+- `produceFirstAvailableItemRecipe` — function — line 113
 - `ProductionDef` — type — line 10
-- `productionForRole` — function — line 113
+- `productionForRole` — function — line 131
 - `WOODCUTTING_PRODUCTION` — const — line 25
+- `WOOL_MATERIAL_PRODUCTION` — const — line 99
+  - domain: settlements-npcs
 
 ## `economy/productionExecutor.ts`
 

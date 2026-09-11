@@ -14,6 +14,7 @@ import type { NpcPlannedAction } from './npcAction'
 import {
   claimHouseholdSurplus,
   commitHunterArrowProduction,
+  commitWoolMaterialProduction,
   type SettlementEconomy,
   tryAdvanceDevelopment,
 } from '../economy'
@@ -44,7 +45,7 @@ import { depositCarriedItems, HOUSEHOLD_EXCHANGE_MAX_TRANSFER } from './npcLogis
 import type { Vector3 } from 'three'
 
 /**
- * Owns the eight profession `work`-block planners (review 2026-09-03 §5 E2)
+ * Owns the profession `work`-block planners (review 2026-09-03 §5 E2)
  * that used to live inside `NpcAgent` as `begin*Work` methods, dispatched by
  * a `this.role === 'x' && this.beginXWork()` ladder. Each planner is a pure
  * decision + world-query producing an `NpcPlannedAction`; none needs the
@@ -612,6 +613,31 @@ function planShepherdWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   }
 }
 
+const WOOL_MATERIAL_INPUT = 4
+
+/**
+ * Textile Worker's `work` schedule block (plan settlements-npcs-006) —
+ * preview the known owner inventory, then a bounded workplace action whose
+ * completion calls `executeProduction` through `commitWoolMaterialProduction`.
+ * Preview is not a reservation: wool stays in `Household.items` until
+ * completion revalidates live state. `null` (idle stand) when the household
+ * has fewer than 4 wool, so a blocked recipe is a normal profession fallback
+ * rather than a started action that cannot produce.
+ */
+function planTextileWork(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const { household, workplace } = ctx
+  if (!household || !workplace) return null
+  if (!household.items.has('wool', WOOL_MATERIAL_INPUT)) return null
+  return {
+    kind: 'work',
+    destination: copyVec3(workplace.position),
+    durationSec: ctx.rollWorkDurationSec(),
+    onComplete: () => {
+      commitWoolMaterialProduction(household, ctx.simTime())
+    },
+  }
+}
+
 /**
  * Dispatches to the one planner matching `ctx.role` (review §5 E2) — mirrors
  * the pre-extraction `if (this.role === 'x' && this.beginXWork()) return`
@@ -629,6 +655,7 @@ export function planProfessionWork(ctx: NpcWorkContext): NpcPlannedAction | null
     case 'hunter': return planArrowCrafting(ctx)
     case 'miner': return planOreGathering(ctx)
     case 'shepherd': return planShepherdWork(ctx)
+    case 'textile_worker': return planTextileWork(ctx)
     case 'trader': return planTraderWork(ctx)
     default: return null
   }

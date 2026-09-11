@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHousehold } from '../settlement/household'
 import { WOODSHED_DEVELOPMENT } from './development'
-import { commitHunterArrowProduction, commitRoleWork, commitWoodcutterDeposit } from './npcWork'
+import { commitHunterArrowProduction, commitRoleWork, commitWoodcutterDeposit, commitWoolMaterialProduction } from './npcWork'
 import { FARMING_PRODUCTION } from './production'
 import { createSettlementEconomy } from './settlementEconomy'
 
@@ -96,5 +96,31 @@ describe('commitHunterArrowProduction (settlements-npcs-003)', () => {
     expect(commitRoleWork(createSettlementEconomy('s', {}, []), 'farmer')).toBe(true)
     expect(household.items.count('branch')).toBe(2)
     expect(household.items.count('arrow')).toBe(0)
+  })
+})
+
+describe('commitWoolMaterialProduction (settlements-npcs-006)', () => {
+  it('consumes 4 wool and creates 12 wool_material in Household.items', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('wool', 4)
+    expect(commitWoolMaterialProduction(household, 9)).toBe(true)
+    expect(household.items.count('wool')).toBe(0)
+    expect(household.items.count('wool_material')).toBe(12)
+  })
+
+  it('returns false without mutation when the household has fewer than 4 wool', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('wool', 3)
+    expect(commitWoolMaterialProduction(household)).toBe(false)
+    expect(household.items.count('wool')).toBe(3)
+    expect(household.items.count('wool_material')).toBe(0)
+  })
+
+  it('does not run from commitRoleWork — textile is not a stock recipe', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('wool', 4)
+    expect(commitRoleWork(createSettlementEconomy('s', {}, []), 'textile_worker')).toBe(false)
+    expect(household.items.count('wool')).toBe(4)
+    expect(household.items.count('wool_material')).toBe(0)
   })
 })

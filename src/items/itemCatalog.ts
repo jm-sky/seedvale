@@ -1269,6 +1269,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan fauna-004 — stackable sheep shearing yield. Lands in carried inventory then household `items`; not food and not a settlement EconomicKind.',
   },
+  wool_material: {
+    kind: 'wool_material',
+    label: 'materiał wełniany',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan settlements-npcs-006 — stackable textile output of `4 wool → 12 wool_material` via `executeProduction`. Household `items` only; not food and not a settlement EconomicKind.',
+  },
   book_riding_basic: {
     kind: 'book_riding_basic',
     label: 'Pierwsze kroki w siodle',

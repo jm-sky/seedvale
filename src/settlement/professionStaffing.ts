@@ -177,6 +177,24 @@ const ROLE_STAFFING_POLICY: Record<Role, RoleStaffingPolicy> = {
     },
     afterDuplicate: (copies, base) => (copies >= 1 ? 'excluded' : base),
   },
+  textile_worker: {
+    basePriority: (s) => {
+      // Wool processing is only useful where a shepherd-capable village can
+      // actually produce wool. No livestock signal yet — reuse the same
+      // size/terrain/food cues, with a slightly higher adult-capacity bar.
+      if (s.adultCapacity <= 3) return 'excluded'
+      let priority: StaffingPriority = 'weak'
+      if (s.adultCapacity >= 8 || s.size === 'LG' || s.size === 'XL') priority = 'normal'
+      if (s.terrain === 'forest' || s.foodSourceType === 'field' || s.foodSourceType === 'garden') {
+        priority = shiftPriority(priority, 1)
+      }
+      if (s.terrain === 'desert' || s.terrain === 'ocean') {
+        priority = shiftPriority(priority, -1)
+      }
+      return priority
+    },
+    afterDuplicate: (copies, base) => (copies >= 1 ? 'excluded' : base),
+  },
 }
 
 function environmentSignal(signals: StaffingSignals, role: Role): boolean {

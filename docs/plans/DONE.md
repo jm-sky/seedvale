@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `fauna-004-sheep-wool-and-shepherd`                                    | 2026-09-11 14:25:00 | —                   | `fauna`          | —          |
 | `settlements-npcs-015-economic-production-and-input-integration`       | 2026-09-11 13:49:40 | —                   | `settlements-npcs` | —          |
 | `items-player-026-treasure-loot-forced-entry-and-traps`                | 2026-09-11 13:08:21 | —                   | `items-player`   | —          |
 | `world-024-systemic-treasure-sites-and-keys`                           | 2026-09-11 12:30:03 | —                   | `world`          | —          |

@@ -120,6 +120,7 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `economy/development.ts`
 - `economy/production.ts`
+- `economy/productionExecutor.ts`
 - `economy/settlementEconomy.ts`
 - `settlement/household.ts`
 
@@ -179,6 +180,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `economy/index.ts`
+- `economy/npcWork.ts`
 - `economy/production.ts`
 - `economy/productionExecutor.test.ts`
 - `economy/settlementEconomy.ts`

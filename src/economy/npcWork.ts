@@ -7,7 +7,9 @@ import {
   produceFirstAvailableItemRecipe,
   productionForRole,
   WOODCUTTING_PRODUCTION,
+  WOOL_MATERIAL_PRODUCTION,
 } from './production'
+import { executeProduction } from './productionExecutor'
 
 /**
  * Chop → deposit completion. Tree harvest stays in `NpcAgent`; this is the
@@ -40,6 +42,22 @@ export function commitRoleWork(economy: SettlementEconomy, role: Role, simTime =
  */
 export function commitHunterArrowProduction(household: Household, simTime = 0): boolean {
   return produceFirstAvailableItemRecipe(household.items, HUNTER_ARROW_PRODUCTIONS, simTime) !== null
+}
+
+/**
+ * Textile Worker wool-processing completion (settlements-npcs-006) — a thin
+ * adapter from profession `work` completion to the shared executor, so the
+ * planner never calls `Inventory.applyRecipe()` itself. Live revalidation:
+ * 0–3 wool, a missing owner, or a full destination all fail with zero
+ * mutation.
+ *
+ * @domain settlements-npcs
+ */
+export function commitWoolMaterialProduction(household: Household, simTime = 0): boolean {
+  return executeProduction(WOOL_MATERIAL_PRODUCTION, {
+    inventory: household.items,
+    simTime,
+  }).ok
 }
 
 /** Reserve then pay the woodshed once stock can cover it. Idempotent. */

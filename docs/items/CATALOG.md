@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-09-11 (plan fauna-004 — wool, shears, shearing)
+**Last updated:** 2026-09-11 (plan settlements-npcs-006 — wool_material)
 
 ## Quick rules
 
@@ -98,6 +98,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | egg | jajko | — | — | none — laid by a live chicken, dropped in the world | procedural | plan fauna-002; Zjedz raw (+12 hunger); spoils like other food (3 days); no cooking/processing |
 | hide | skóra | — | — | corpse harvest byproduct (any species) | procedural | plan 134; sellable via barter or to Kupiec at `sellPrice` (`tradeValue` / 2) |
 | wool | wełna | — | — | sheep shearing | procedural | plan fauna-004; 4 per successful shear; household `items`, not food and not a settlement EconomicKind |
+| wool_material | materiał wełniany | — | — | textile worker recipe (`4 wool → 12`) | procedural | plan settlements-npcs-006; household `items` via `executeProduction`; not food and not a settlement EconomicKind |
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
 | coin | moneta | — | — | world chunk (rare) | `items/coin.glb` | plan 129 / issue 035; near-zero weight (0.001 kg); Kupiec buy/sell currency + quest reward + land-plot price; shells stay barter-only; `physical.resilient` (items-player-026) |

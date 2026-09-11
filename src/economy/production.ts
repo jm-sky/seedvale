@@ -88,6 +88,24 @@ export const HUNTER_ARROW_PRODUCTIONS: readonly ProductionDef[] = [
 ]
 
 /**
+ * Textile Worker wool processing (settlements-npcs-006) — item-for-item
+ * against owning `Household.items`, not settlement stock. Intentionally
+ * skips yarn: `4 wool → 12 wool_material`. Not in `BY_ROLE` because
+ * `commitRoleWork` is stock-only; completion goes through
+ * `commitWoolMaterialProduction` / `executeProduction`.
+ *
+ * @domain settlements-npcs
+ */
+export const WOOL_MATERIAL_PRODUCTION: ProductionDef = {
+  id: 'textile_worker.wool_material',
+  role: 'textile_worker',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'wool', amount: 4 }],
+  itemOutputs: [{ kind: 'wool_material', amount: 12 }],
+}
+
+/**
  * Applies the first recipe in `defs` that the shared executor can commit
  * against `inventory`. Priority order is the array order (hunter: branch
  * before beam). Returns the applied def, or null when none can run.

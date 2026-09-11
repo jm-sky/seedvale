@@ -116,7 +116,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 ## Economy
 
-- [Production recipes](../src/economy/production.ts) — `ProductionDef` tables, role lookup, and hunter item-recipe priority wrapper.
+- [Production recipes](../src/economy/production.ts) — `ProductionDef` tables, role lookup, hunter item-recipe priority wrapper, and textile wool-material recipe.
 - [Production executor](../src/economy/productionExecutor.ts) — synchronous all-or-nothing stock/item/mixed recipe commit (plan settlements-npcs-015).
 - [NPC work adapters](../src/economy/npcWork.ts) — work-completion → economy mutation seam.
 - [Settlement economy](../src/economy/settlementEconomy.ts) — settlement bulk stock, concrete food inventory, demand, and history.
@@ -129,7 +129,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NPC action types](../src/ai/npcAction.ts) — `Phase`/`ActionId`/`NpcPlannedAction`, re-exported from `NpcAgent.ts`.
 - [Approach player](../src/ai/approachPlayer.ts) — locality/arrival helpers for a nearby-player interaction intent (work-contract payment is the first consumer).
 - [NPC logistics](../src/ai/npcLogistics.ts) — the claim→carry→deposit two-leg transfer builder and the economy-withdraw/household-exchange/player-storage-delivery flows built on it.
-- [NPC profession work](../src/ai/npcProfessionWork.ts) — the eight profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith) as pure functions.
+- [NPC profession work](../src/ai/npcProfessionWork.ts) — profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith/shepherd/textile_worker) as pure functions.
 - [NPC strategies](../src/ai/npcStrategies.ts) — per-need candidate strategy lists + `selectStrategy()`, the authoritative source `beginNeed()` switches on.
 - [NPC decision](../src/ai/npcDecision.ts) — the top-level `choose()`/`tickCriticalInterrupt()` priority tables, fauna-style.
 - [Burial pressure](../src/ai/burialPressure.ts) — household/social burial of a deceased NPC (`npc-011`).

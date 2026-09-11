@@ -107,6 +107,9 @@ export function socialPlaceFor(
  *   grind workbench, plan settlements-npcs-002) — a real maintenance
  *   workplace, not a stand-in. `null` when that family has no blacksmith
  *   workplace (no blacksmith member, or `homeIndex` doesn't own one).
+ * - `textile_worker` → the NPC's own home (plan settlements-npcs-006), same
+ *   as `shepherd`: recipe input/output is `Household.items`, so the bounded
+ *   work stand is the house, not a decorative loom.
  *
  * Returns `null` only when the role's landmark genuinely doesn't exist for
  * this settlement (e.g. a `woodcutter` in a settlement with no trees yet).
@@ -145,6 +148,12 @@ export function workplaceFor(
       const home = landmarks.homes[homeIndex]
       return home
         ? { id: `${settlementId}:workplace:shepherd:${homeIndex}`, type: 'workplace', position: home }
+        : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
+    }
+    case 'textile_worker': {
+      const home = landmarks.homes[homeIndex]
+      return home
+        ? { id: `${settlementId}:workplace:textile:${homeIndex}`, type: 'workplace', position: home }
         : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
     }
     case 'trader':

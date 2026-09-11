@@ -557,4 +557,87 @@ describe('planProfessionWork', () => {
       expect(household.items.count('wool')).toBe(4)
     })
   })
+
+  describe('textile_worker (plan settlements-npcs-006)', () => {
+    const workplace = { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace']
+
+    it('returns null without wool, a household, or a workplace', () => {
+      const household = createHousehold('h', 's', 'home')
+      expect(planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))).toBeNull()
+      expect(planProfessionWork(baseCtx({ role: 'textile_worker', workplace }))).toBeNull()
+      household.items.add('wool', 4)
+      expect(planProfessionWork(baseCtx({ role: 'textile_worker', household }))).toBeNull()
+    })
+
+    it('preview does not mutate inventory', () => {
+      const household = createHousehold('h', 's', 'home')
+      household.items.add('wool', 4)
+      const work = planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))
+      expect(work?.kind).toBe('work')
+      expect(household.items.count('wool')).toBe(4)
+      expect(household.items.count('wool_material')).toBe(0)
+    })
+
+    it('0–3 wool is a blocked profession outcome, not a started recipe', () => {
+      for (const amount of [0, 1, 2, 3]) {
+        const household = createHousehold('h', 's', 'home')
+        if (amount > 0) household.items.add('wool', amount)
+        expect(planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))).toBeNull()
+        expect(household.items.count('wool')).toBe(amount)
+        expect(household.items.count('wool_material')).toBe(0)
+      }
+    })
+
+    it('interruption before completion consumes no wool', () => {
+      const household = createHousehold('h', 's', 'home')
+      household.items.add('wool', 4)
+      const work = planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))
+      expect(work?.kind).toBe('work')
+      expect(household.items.count('wool')).toBe(4)
+      expect(household.items.count('wool_material')).toBe(0)
+    })
+
+    it('stale wool on completion fails without partial consume', () => {
+      const household = createHousehold('h', 's', 'home')
+      household.items.add('wool', 4)
+      const work = planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))
+      expect(household.items.remove('wool', 4)).toBe(true)
+      work?.onComplete()
+      expect(household.items.count('wool')).toBe(0)
+      expect(household.items.count('wool_material')).toBe(0)
+    })
+
+    it('successful completion consumes 4 wool and creates 12 wool_material once', () => {
+      const household = createHousehold('h', 's', 'home')
+      household.items.add('wool', 8)
+      const work = planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))
+      work?.onComplete()
+      expect(household.items.count('wool')).toBe(4)
+      expect(household.items.count('wool_material')).toBe(12)
+      work?.onComplete()
+      expect(household.items.count('wool')).toBe(0)
+      expect(household.items.count('wool_material')).toBe(24)
+    })
+
+    it('does not take wool from another household', () => {
+      const worker = createHousehold('worker', 's', 'home:worker')
+      const other = createHousehold('other', 's', 'home:other')
+      other.items.add('wool', 8)
+      const work = planProfessionWork(baseCtx({ role: 'textile_worker', household: worker, workplace }))
+      expect(work).toBeNull()
+      work?.onComplete()
+      expect(other.items.count('wool')).toBe(8)
+      expect(worker.items.count('wool_material')).toBe(0)
+      expect(other.items.count('wool_material')).toBe(0)
+    })
+
+    it('can consume wool previously deposited by a shepherd', () => {
+      const household = createHousehold('h', 's', 'home')
+      household.items.add('wool', WOOL_YIELD)
+      const work = planProfessionWork(baseCtx({ role: 'textile_worker', household, workplace }))
+      work?.onComplete()
+      expect(household.items.count('wool')).toBe(0)
+      expect(household.items.count('wool_material')).toBe(12)
+    })
+  })
 })

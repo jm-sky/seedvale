@@ -9,6 +9,7 @@ import {
   produceFirstAvailableItemRecipe,
   type ProductionDef,
   WOODCUTTING_PRODUCTION,
+  WOOL_MATERIAL_PRODUCTION,
 } from './production'
 import { executeProduction } from './productionExecutor'
 import { createSettlementEconomy } from './settlementEconomy'
@@ -258,5 +259,77 @@ describe('SettlementEconomy.produce stock-only adapter', () => {
     expect(eco.produce(MIXED_ROD)).toBe(false)
     expect(eco.query('iron')).toBe(2)
     expect(household.items.count('iron_rod')).toBe(0)
+  })
+})
+
+describe('WOOL_MATERIAL_PRODUCTION (settlements-npcs-006)', () => {
+  it('is the explicit 4 wool → 12 wool_material recipe', () => {
+    expect(WOOL_MATERIAL_PRODUCTION.id).toBe('textile_worker.wool_material')
+    expect(WOOL_MATERIAL_PRODUCTION.role).toBe('textile_worker')
+    expect(WOOL_MATERIAL_PRODUCTION.itemInputs).toEqual([{ kind: 'wool', amount: 4 }])
+    expect(WOOL_MATERIAL_PRODUCTION.itemOutputs).toEqual([{ kind: 'wool_material', amount: 12 }])
+  })
+
+  it('wool_material is a stackable resource item', () => {
+    const inventory = new Inventory(undefined, Infinity)
+    expect(inventory.add('wool_material', 5)).toBe(true)
+    expect(inventory.add('wool_material', 7)).toBe(true)
+    expect(inventory.count('wool_material')).toBe(12)
+  })
+
+  it('commits exactly 4 wool into 12 wool_material on a household inventory', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('wool', 4)
+    const result = executeProduction(WOOL_MATERIAL_PRODUCTION, {
+      inventory: household.items,
+      simTime: 9,
+    })
+    expect(result).toEqual({ ok: true, recipeId: WOOL_MATERIAL_PRODUCTION.id })
+    expect(household.items.count('wool')).toBe(0)
+    expect(household.items.count('wool_material')).toBe(12)
+  })
+
+  it('blocks 0–3 wool with zero mutation', () => {
+    for (const amount of [0, 1, 2, 3]) {
+      const household = createHousehold('h', 's', 'home')
+      if (amount > 0) household.items.add('wool', amount)
+      const result = executeProduction(WOOL_MATERIAL_PRODUCTION, { inventory: household.items })
+      expect(result).toMatchObject({
+        ok: false,
+        recipeId: WOOL_MATERIAL_PRODUCTION.id,
+        reason: 'insufficient-input',
+        category: 'item',
+        kind: 'wool',
+      })
+      expect(household.items.count('wool')).toBe(amount)
+      expect(household.items.count('wool_material')).toBe(0)
+    }
+  })
+
+  it('does not consume wool from another household inventory', () => {
+    const worker = createHousehold('worker', 's', 'home:worker')
+    const other = createHousehold('other', 's', 'home:other')
+    other.items.add('wool', 8)
+    const result = executeProduction(WOOL_MATERIAL_PRODUCTION, { inventory: worker.items })
+    expect(result).toMatchObject({ ok: false, reason: 'insufficient-input', kind: 'wool' })
+    expect(other.items.count('wool')).toBe(8)
+    expect(worker.items.count('wool_material')).toBe(0)
+    expect(other.items.count('wool_material')).toBe(0)
+  })
+
+  it('output capacity failure does not partially consume wool', () => {
+    const inventory = new Inventory({ wool: 4 }, 1)
+    const result = executeProduction(WOOL_MATERIAL_PRODUCTION, { inventory })
+    expect(result).toMatchObject({ ok: false, reason: 'unavailable-destination', category: 'item' })
+    expect(inventory.count('wool')).toBe(4)
+    expect(inventory.count('wool_material')).toBe(0)
+  })
+
+  it('produces output exactly once per successful commit', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.add('wool', 4)
+    expect(executeProduction(WOOL_MATERIAL_PRODUCTION, { inventory: household.items }).ok).toBe(true)
+    expect(executeProduction(WOOL_MATERIAL_PRODUCTION, { inventory: household.items }).ok).toBe(false)
+    expect(household.items.count('wool_material')).toBe(12)
   })
 })

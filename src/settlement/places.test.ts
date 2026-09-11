@@ -82,6 +82,16 @@ describe('workplaceFor', () => {
     expect(workplaceFor('village_a', 'guard', landmarks, 0, 0)?.id).toBe('village_a:workplace:well')
   })
 
+  it('textile_worker -> own home, else well (plan settlements-npcs-006)', () => {
+    const home = new Vector3(6, 0, 6)
+    const withHome = makeLandmarks({ homes: [home] })
+    expect(workplaceFor('s1', 'textile_worker', withHome, 0, 0)?.position).toBe(home)
+    expect(workplaceFor('s1', 'textile_worker', withHome, 0, 0)?.id).toBe('s1:workplace:textile:0')
+
+    const withoutHome = makeLandmarks()
+    expect(workplaceFor('s1', 'textile_worker', withoutHome, 0, 0)?.position).toBe(withoutHome.well)
+  })
+
   describe('blacksmith (household-owned, plan settlements-npcs-024 Stage 1)', () => {
     it('scenario A — no blacksmith workplace anywhere -> null, no phantom Place', () => {
       const landmarks = makeLandmarks()
