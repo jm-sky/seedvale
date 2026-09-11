@@ -581,6 +581,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldMesh.ts`
 - `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `debug/caves/caveHeightfieldRepresentation.ts`
 - `debug/caves/caveHeightfieldTraversal.test.ts`
@@ -1737,7 +1738,6 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `debug/createCaveHeightfieldTestScene.ts`
 - `world/createCaves.ts`
 
 ## `world/largeCaves.test.ts`

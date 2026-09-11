@@ -271,6 +271,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/createCaveHeightfieldTestScene.ts`
 - `settlement/decorProps.test.ts`
 - `settlement/props.ts`
 

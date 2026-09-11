@@ -26,6 +26,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `debug/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveSdfQuery.ts`
 
 **Imported by**
 
@@ -191,13 +192,13 @@ Generated from TypeScript imports.
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
 - `render/createRenderer.ts`
+- `settlement/decorProps.ts`
 - `world/caves/caveOrientation.ts`
 - `world/caves/caveSdfColliders.ts`
 - `world/caves/caveSdfField.ts`
 - `world/caves/caveSdfQuery.ts`
 - `world/caves/caveSpikeMaterial.ts`
 - `world/caves/sdfCaveMesh.ts`
-- `world/largeCaveVisual.ts`
 
 **Imported by**
 
