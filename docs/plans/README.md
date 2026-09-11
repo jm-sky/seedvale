@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
 | ◼️ `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
 | ◼️ `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
+| ◼️ `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
 
 ---
 
@@ -202,7 +203,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `022`
-- items-player: `028`
+- items-player: `029`
 - npc: `032`
 - persistence: `005`
 - quests-progression: `019`
