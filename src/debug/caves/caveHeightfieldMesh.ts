@@ -621,8 +621,8 @@ function emitDeepMouthPatches(
   }
 }
 
-const UNDER_ENTRANCE_SIZE = 4
-const UNDER_ENTRANCE_DROP = 0.5
+const UNDER_ENTRANCE_SIZE = 6
+const UNDER_ENTRANCE_DROP = 1
 
 /**
  * Flat 4×4 catcher exactly under the mouth floor, 0.5 m down. Winding is
