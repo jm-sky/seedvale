@@ -255,14 +255,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 248
-- `createCaveHeightfieldGeometry` — function — line 85
+- `CaveHeightfieldPresentation` — type — line 253
+- `createCaveHeightfieldGeometry` — function — line 90
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 278
+- `createCaveHeightfieldPresentation` — function — line 283
   - domain: world-terrain
-- `createMouthRocks` — function — line 181
+- `createMouthRocks` — function — line 186
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 103
+- `createMouthUndersideMask` — function — line 108
   - domain: world-terrain
 - `createMouthUndersideMaskMaterial` — function — line 44
 - `exemptCavePresentationFromSceneFog` — function — line 56
@@ -615,10 +615,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 87
-- `createCaves` — function — line 251
+- `CaveInteriorQueryChannel` — type — line 89
+- `Caves` — type — line 91
+- `createCaves` — function — line 257
   - system: caves
-  - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
+  - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
   - lifecycle: rebuild
 
