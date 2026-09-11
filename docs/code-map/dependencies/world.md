@@ -381,6 +381,23 @@ Generated from TypeScript imports.
 - `world/collision.ts`
 - `world/largeCaves.ts`
 
+## `world/caves/caveGroundQuery.test.ts`
+
+**Imports**
+
+- `world/caves/caveGroundQuery.ts`
+
+## `world/caves/caveGroundQuery.ts`
+
+**Imported by**
+
+- `world/caves/caveGroundQuery.test.ts`
+- `world/caves/caveHeightfieldQuery.test.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveSdfQuery.ts`
+- `world/createCaves.test.ts`
+- `world/createCaves.ts`
+
 ## `world/caves/caveHeightfieldMesh.test.ts`
 
 **Imports**
@@ -418,6 +435,30 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldMesh.ts`
 - `world/createCaves.ts`
 
+## `world/caves/caveHeightfieldQuery.test.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `world/caves/caveGroundQuery.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveSurface.ts`
+
+## `world/caves/caveHeightfieldQuery.ts`
+
+**Imports**
+
+- `world/caves/caveGroundQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveSurface.ts`
+
+**Imported by**
+
+- `world/caves/caveHeightfieldQuery.test.ts`
+- `world/createCaves.test.ts`
+- `world/createCaves.ts`
+
 ## `world/caves/caveHeightfieldRepresentation.test.ts`
 
 **Imports**
@@ -450,9 +491,12 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldMesh.test.ts`
 - `world/caves/caveHeightfieldMesh.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
+- `world/caves/caveHeightfieldQuery.test.ts`
+- `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/caveIdentity.test.ts`
@@ -663,6 +707,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `world/caveVolume.ts`
+- `world/caves/caveGroundQuery.ts`
 - `world/caves/caveSdfField.ts`
 - `world/caves/caveSurface.ts`
 - `world/caves/caveTopology.ts`
@@ -706,6 +751,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveHeightfieldMesh.ts`
+- `world/caves/caveHeightfieldQuery.test.ts`
+- `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveSdfQuery.ts`
@@ -842,6 +889,7 @@ Generated from TypeScript imports.
 - `world/caves/caveSdfQuery.ts`
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/clipBelowSurface.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/mouthOverburden.ts`
@@ -913,6 +961,7 @@ Generated from TypeScript imports.
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/caves/productionTopology.test.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/sdfCaveMesh.test.ts`
@@ -1172,12 +1221,18 @@ Generated from TypeScript imports.
 **Imports**
 
 - `config/worldConfig.ts`
+- `fauna/createFauna.ts`
 - `settlement/families.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainCutout.ts`
+- `world/caves/caveGroundQuery.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/cavePresentationLifecycle.ts`
 - `world/caves/caveSdfQuery.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
 - `world/collision.ts`
 - `world/createCaves.ts`
 
@@ -1194,7 +1249,9 @@ Generated from TypeScript imports.
 - `shared/bootMark.ts`
 - `terrain/chunkManager.ts`
 - `world/caveVolume.ts`
+- `world/caves/caveGroundQuery.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
+- `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/cavePresentationLifecycle.ts`
 - `world/caves/caveSdfColliders.ts`
