@@ -135,7 +135,10 @@ The chosen representation must not make these require a rewrite:
 - upper and lower routes reaching the same chamber;
 - nearby routes that must remain physically separate.
 
-L1 need not implement all of these, but the spike must include at least one feature that exposes whether the representation is fundamentally 2.5D or genuinely volumetric.
+L1 need not implement all of these, but the spike must include at least one **overhang**
+(or similar volumetric ceiling/wall) test **and** an **elevated shelf/ledge** that
+occupies a different XZ region beside lower chamber floor — the shelf is not a test of
+multi-interval `(x,z)` geometry (see §5.7).
 
 ## 3. Common Test Cave
 
@@ -198,7 +201,7 @@ It exposes every failure the current implementation has shown without becoming a
 | floor continuity | descent + chamber floor |
 | irregular ceiling | passage + chamber |
 | shelf/overhang support | E |
-| vertical variation | shelf above chamber floor |
+| vertical variation | elevated shelf beside lower floor (XZ-adjacent, single floorY per column) |
 | camera/headroom | constriction + chamber |
 
 The shelf is especially important. It is small enough to implement experimentally, but it is geometrically awkward for a pure swept corridor. It therefore reveals whether Sweep needs a second unrelated geometry mechanism while the SDF candidate can express it naturally as another local volume operation.
@@ -482,9 +485,22 @@ A deterministic low-frequency warp can change passage silhouette; higher-frequen
 
 ### 5.7 Shelves and overhangs
 
-A local volume representation handles these directly.
+**Shelf (intended Seedvale semantics, clarified 2026-09-11):** an elevated floor
+region/ledge **adjacent in XZ** to lower chamber floor — single `floorY(x,z)` per column,
+no traversable void required underneath. Heightfield and sweep-style floor profiles can
+express this as a local floor plateau; it is **not** inherently a 2.5D blocker.
 
-One conceptual construction:
+**Overhang:** a genuine 3D ceiling/wall feature; may need empty space and solid rock in
+the same column at different Y — true volumetric capability.
+
+The Milestone A SDF spike used a **solid box subtracted from the void** for both feature
+kinds (`featureBoxesFromTopology`), which for `shelf` reads as a floating slab with void
+below — **implemented representation ≠ intended shelf semantics**. That construction is
+still a fair test of volumetric **overhang** tooling, but it should not be taken as the
+design definition of `shelf`.
+
+One conceptual volumetric construction (overhang / legacy spike shelf box, not the
+target shelf model):
 
 ```text
 walkable chamber void
@@ -492,9 +508,8 @@ walkable chamber void
 - retained-rock slab below shelf
 ```
 
-or define the cave void as a union that opens space above the shelf but not below it.
-
-The important point is not the exact formula: the representation can distinguish empty space above and solid space beneath at the same horizontal location. That is a true volumetric capability.
+For **overhang**, distinguishing empty space above and solid beneath at the same
+horizontal location remains a volumetric strength.
 
 ### 5.8 Multi-level passages
 
@@ -633,7 +648,9 @@ distance/clearance queries in full 3D
 local walkable-surface queries
 ```
 
-The implementation spike can keep current L1 movement unchanged, but its test topology should record where the shelf creates more than one meaningful vertical surface relation.
+The implementation spike can keep current L1 movement unchanged, but its test topology
+should record the shelf ledge footprint and target walkable top in shared topology
+(adjacent XZ elevation, not stacked void intervals at the same `(x,z)`).
 
 ## 7. Naturalness Evaluation
 
@@ -907,15 +924,20 @@ Visual wall/ceiling noise must not be treated as walkable ground. A future walka
 
 ### Shelves
 
-A shelf exposes the difference between “cave is one floor height” and “cave has multiple traversable surfaces.”
+An intended **shelf** is multiple **adjacent** floor heights in one chamber (different
+XZ), not two traversable surfaces at the **same** `(x,z)`. It should remain compatible
+with a single `floorY(x,z)` field when lower floor and ledge do not share a column.
 
 For the spike, it is enough to:
 
 - render the shelf in both candidates;
-- define its target walkable top surface in shared topology;
-- record that current `sampleFloor(x,z)` cannot represent both lower chamber floor and elevated shelf at overlapping X/Z.
+- define its target walkable top surface and XZ footprint in shared topology;
+- note if a candidate (or the SDF box implementation) incorrectly creates void under the
+  shelf or stacked intervals at overlapping X/Z — that is a representation bug relative
+  to intended semantics, not evidence that shelf requires multi-interval gameplay.
 
-Do not rebuild movement around it yet.
+Do not rebuild movement around it yet. **Upper/lower routes at the same X/Z** remain a
+separate question (§8).
 
 ## 11. Performance
 

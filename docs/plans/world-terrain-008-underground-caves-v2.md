@@ -13,7 +13,7 @@
 
 Zastąpić gameplayowo nieudaną reprezentację Underground Caves V1 produkcyjnym Cave V2: deterministycznymi, walk-in przestrzeniami podziemnymi działającymi w tym samym świecie co surface terrain i nadającymi się do third-person gameplay.
 
-Pierwsza produkcyjna cave ma pozostać mała topologicznie, ale nie ciasna przestrzennie: wejście, passage, widening/bend, większy chamber i co najmniej jeden genuine 3D feature (`shelf` albo `overhang`). Nie implementować jeszcze pełnego proceduralnego dungeon generatora.
+Pierwsza produkcyjna cave ma pozostać mała topologicznie, ale nie ciasna przestrzennie: wejście, passage, widening/bend, większy chamber i co najmniej jeden chamber feature — **`shelf` (podwyższony fragment podłogi / ledge obok niższego poziomu w XZ) albo `overhang` (genuine 3D element sufitu/ściany)**. Nie implementować jeszcze pełnego proceduralnego dungeon generatora.
 
 V2 ma przede wszystkim usunąć:
 
@@ -73,8 +73,12 @@ Semantyczny/gameplayowy layout, bez Three.js i bez parametrów konkretnego meshe
 - centerlines / spatial placement;
 - elevation intent;
 - desired width/height;
-- shelf/overhang;
-- przyszłościowo loops, multiple entrances i upper/lower routes.
+- **`shelf`** — elevated floor region / ledge adjacent in XZ to lower floor (single
+  `floorY` per column; not floating void-under-slab geometry);
+- **`overhang`** — ceiling/wall volumetric feature (may need geometry beyond one
+  floor/ceiling interval per column);
+- przyszłościowo loops, multiple entrances i upper/lower routes (same XZ — distinct
+  from shelf semantics).
 
 ### CaveSpatialRepresentation
 
@@ -118,8 +122,10 @@ Sweep pozostaje przegranym wariantem porównawczym i ma zostać usunięty po prz
 - lepsza odporność na pipe look;
 - continuous passage → chamber transitions;
 - naturalniejsze junctions;
-- genuine 3D features bez doklejania niezależnych sweep meshes;
-- lepsza droga do przyszłych shelves, overhangs, loops i multi-level routes.
+- genuine 3D **overhangs** (i inne volumetryczne detale) bez doklejania niezależnych sweep meshes;
+- lepsza droga do przyszłych **overhangs**, loops i multi-level routes; **shelves** jako
+  podwyższone regiony podłogi obok niższego poziomu (kompatybilne z heightfield / jednym
+  `floorY` na kolumnę).
 
 ### Koszt zaakceptowany jako ryzyko
 
@@ -242,6 +248,19 @@ main chamber
   └─ shelf OR overhang
 ```
 
+**Semantyka feature (nie utożsamiać):**
+
+- **`shelf` / cave ledge** — część **podłogi**: lokalnie wyższy poziom w części komnaty,
+  **obok** niższego poziomu w top view (różne obszary XZ). Dla każdego `(x,z)` jest
+  dokładnie jeden `floorY`. Może być plateau, ledge przy ścianie, skalny stopień/taras;
+  przejście może być pochyłością, skarpą lub stopniem — **bez** wymaganej pustej
+  przestrzeni pod shelf.
+- **`overhang`** — genuine 3D: element sufitu/ściany (np. wiszący skał), który może
+  wymagać reprezentacji poza jedną parą `floorY`/`ceilingY` w tej samej kolumnie.
+
+Obecna produkcyjna implementacja SDF reprezentuje oba jako **solid box** w void; dla
+`shelf` to **implementation mismatch** względem powyższej semantyki (nie wymóg designu).
+
 Opcjonalny krótki branch może pozostać stress/test capability, ale nie jest wymagany dla pierwszego production L1.
 
 ### Skala przestrzeni
@@ -335,7 +354,8 @@ Wymagania:
 - asymetryczne walls;
 - grywalny floor;
 - ceiling variation;
-- shelf/overhang jako część continuous space;
+- `shelf` jako podwyższony fragment podłogi w continuous space; `overhang` jako
+  volumetryczny detal sufitu/ściany w tym samym polu (SDF) — różne wymagania geometryczne;
 - poprawne winding/normals;
 - surface clip przy mouth zachowany;
 - one cave interior nie mnoży niepotrzebnie draw calls.
@@ -815,9 +835,9 @@ Architektura ma pozostawić drogę do:
 - several chambers;
 - different elevations;
 - ramps;
-- shelves/platforms;
-- overhangs;
-- upper/lower paths w tym samym X/Z.
+- shelves/ledges (adjacent elevated floor regions in XZ);
+- overhangs (volumetric ceiling/wall);
+- upper/lower paths w tym samym X/Z (multi-interval / genuine 3D — not the same as shelf).
 
 Nie implementować pełnego topology generatora tych układów w tym planie.
 

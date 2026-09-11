@@ -79,7 +79,10 @@ Strengths:
 - continuous passage → chamber transitions;
 - no representation-level seams at unions;
 - natural junction path;
-- shelf/overhang represented as genuine 3D field operations;
+- topology `shelf`/`overhang` emitted as SDF solid-box field operations (Milestone A);
+  **intended `shelf` semantics** are an elevated floor region adjacent in XZ (heightfield-compatible) —
+  the floating box is an **implementation mismatch**, not design intent;
+- `overhang` as a genuine 3D ceiling/wall field operation;
 - much stronger future path to loops, nearby branches, stacked/multi-level layouts and irregular chambers.
 
 Risks:

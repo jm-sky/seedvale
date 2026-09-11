@@ -229,8 +229,11 @@ Rules to hold the line:
   big"), and each spike is free to interpret them; they are not the wall position.
 - `centerline` is a polyline of control points, not a swept radius — it is what
   makes a bend expressible without either spike inventing its own path model.
-- `features` is how the shelf/overhang is stated as intent so Sweep cannot quietly
-  skip it.
+- `features` is how shelf/overhang intent is stated so Sweep cannot quietly skip them.
+  **`shelf`** — elevated floor region adjacent in XZ to lower floor (single `floorY` per
+  column; see `docs/plans/world-terrain-008-underground-caves-v2.md` §7). Production SDF
+  currently emits a floating solid box — implementation mismatch, not design semantics.
+  **`overhang`** — volumetric ceiling/wall feature; may imply multi-interval columns.
 - Reuse `CaveEntrance` from `caveVolume.ts` rather than defining a second entrance
   type — it is already representation-neutral (`x/y/z/yaw/width/height`).
 - Add JSDoc with `@domain world-terrain` on `CaveTopology` and the builder function

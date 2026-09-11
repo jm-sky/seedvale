@@ -220,40 +220,43 @@ actually runs today.
 | optional `branch` | one extra chamber off `widening-bend`, accepted only if `minGapBetweenPaths(...) ≥ MIN_DISCONNECTED_CLEARANCE (1.5 m)` | ✅ — and note `minGapBetweenPaths` measures **XZ surface-to-surface gap** using `RadialStation {x, z, radius}`, so branches are already guaranteed XZ-separated. 2.5D is safe by construction. |
 | `minClearance: 2.4` | a scalar corridor requirement | ✅ |
 | mouth carve / approach pit | `mouthCarveDiscs` → terrain recess | ✅ (pure XZ discs) |
-| **`features`: `shelf` \| `overhang`** | exactly one per cave, 50/50 (`featureRandom() < 0.5`), emitted as a **solid box subtracted from the void** (`featureBoxesFromTopology` → `d = max(d, -boxSDF)`) | ❌ **This is the only real incompatibility.** |
+| **`features`: `shelf`** | exactly one per cave when chosen (50/50 with overhang). **Intended semantics:** elevated floor region / ledge **adjacent in XZ** to lower chamber floor — part of `floorY`, not traversable void underneath. **Production SDF today:** `chamber-shelf` is a **solid box subtracted from the void** (`featureBoxesFromTopology` → `d = max(d, -boxSDF)`), centre at `chamberY + 0.35·H`, size ~`2.6–3.8 × 0.4–0.9 × 1.8–2.6`, offset `0.55·chamberRadius` sideways — an **implementation mismatch** (unnecessary 3D floating slab), not design intent. | ✅ single `floorY(x,z)` per column |
+| **`features`: `overhang`** | `chamber-overhang` — same box-subtraction path; centre at `chamberY + 0.68·H`, size ~`3.0–4.2 × 1.0–1.6 × 2.0–2.8`, offset `0.4·chamberRadius`. Can create **void above and below** in the same XZ column (two vertical intervals) when the box sits in open air. | ❌ **True volumetric ceiling/wall feature** — may need `ceilingY` deformation in 2.5D or remain a 3D-only presentation concern. |
 
-### The feature problem, stated precisely
+### Shelf semantics (canonical)
 
-Both kinds are floating solid slabs *inside* the chamber:
+> **Shelf is a floor-height feature:** an elevated floor region/ledge adjacent in XZ
+> to lower chamber floor. It does not create traversable void underneath and
+> remains single-valued as `floorY(x,z)`.
 
-- `chamber-shelf` — centre at `chamberY + 0.35·H`, size ~`2.6–3.8 × 0.4–0.9 × 1.8–2.6`, offset `0.55·chamberRadius` sideways;
-- `chamber-overhang` — centre at `chamberY + 0.68·H`, size ~`3.0–4.2 × 1.0–1.6 × 2.0–2.8`, offset `0.4·chamberRadius` the other way.
+Shelf is not a floating slab, a platform with empty space under it, or geometry that
+assigns two vertical void intervals to the same `(x,z)`. Multiple floor levels in one
+chamber are allowed when they occupy **different XZ areas** (plateau, wall ledge,
+rock step/terrace). Transition from lower floor to shelf may be slope, cliff, or step
+depending on generation; no cavity under the shelf is required.
 
-Each creates **void above and void below** in the same XZ column — two vertical intervals.
-That is exactly what 2.5D cannot hold. `pickInterval()` was written for stacked intervals
-and would receive only one.
+Do **not** conflate `shelf` with `overhang`: overhang remains a genuine 3D
+ceiling/wall feature and may still be a 2.5D limitation when it needs more than one
+vertical interval per column.
 
-Three honest options:
+### Feature handling for the heightfield path
 
-1. **Drop features.** Chambers lose their one genuine 3D element. Plan
-   world-terrain-008 §7/§28 requires at least one per L1 cave, so this is a real
-   regression, not a neutral simplification.
-2. **Reinterpret in 2.5D (recommended for the next iteration).**
-   - `shelf` → raise `floorY` over the feature footprint to the slab's top face
-     (a ledge grown out of the chamber floor/wall). Standable, reads as a shelf,
-     arguably better gameplay than a floating slab.
-   - `overhang` → lower `ceilingY` over the feature footprint (a rock pendant hanging
-     from the roof). Reads as an overhang from below; is not one from above.
-   Both are ~10 lines of local field deformation and cost nothing.
-3. **Keep features as a separate small derived mesh** outside the heightfield, explicitly
-   flagged as not-general (plan world-terrain-018 §13 permits this). Adds a second
-   geometry source — avoid unless (2) looks bad in the browser.
+- **`shelf` (recommended):** raise `floorY` over the feature footprint to the ledge
+  top — local floor elevation/plateau. This is the **normal** heightfield expression
+  of topology intent, not a workaround or “reinterpretation” of a floating SDF box.
+- **`overhang`:** lower `ceilingY` over the footprint (rock pendant from below). Reads
+  as an overhang from the walkable floor; does not reproduce every view-dependent
+  undercut the volumetric SDF box can show. If that gap matters, acceptance item 20
+  applies; keeping a small derived mesh for overhang only remains a fallback (plan
+  world-terrain-018 §13).
+- **Drop features entirely** only if the Player explicitly accepts losing L1 chamber
+  character; plan world-terrain-008 still expects shelf **or** overhang per cave.
 
 ### Verdict
 
 > **`floorY(x,z) + ceilingY(x,z)` is sufficient for every structural element the current
-> Cave V2 topology builder produces, except `CaveTopology.features`, which are
-> representable only as reinterpreted floor/ceiling deformation.**
+> Cave V2 topology builder produces, including `shelf`. `overhang` is the main feature
+> that may require ceiling deformation or accept a presentation compromise in 2.5D.**
 
 Two further facts support this:
 
@@ -847,8 +850,9 @@ One floor and one ceiling per `(x, z)`. The model **cannot** express:
 - **vertical shafts** — an unbounded `dz/dy`; a shaft is a column with no single
   floor/ceiling pair;
 - **natural bridges / arches** — rock with void above and below;
-- **true internal overhangs and free-standing shelves** — which, per §3, is the one place
-  current `CaveTopology` already asks for something 2.5D cannot hold;
+- **true internal overhangs** (and any geometry that needs **two void intervals in the
+  same `(x,z)`**) — production `overhang` boxes can exhibit this; intended `shelf`
+  semantics do **not** (§3);
 - **anything requiring `intervals.length > 1`**. `pickInterval` was built for stacked
   intervals; the heightfield always hands it 0 or 1.
 
@@ -921,7 +925,9 @@ Deliberately one small, browser-judgeable step. Suggested plan id: **`world-terr
 2. Four new `CAVE_RNG_SALT` entries.
 3. `closure(u, n)`, `crossSection(influence)`, influence assembly (segments → polyline
    nearest-point with arc-length `s`; chamber nodes → lobes), `smin`/soft-max fold,
-   detail noise with rim attenuation, corridor-only clearance guard.
+   detail noise with rim attenuation, corridor-only clearance guard; apply topology
+   `shelf` as local `floorY` elevation over the feature footprint, `overhang` as local
+   `ceilingY` depression (§3).
 4. New `CaveHeightfield` type; corner sampling; bilinear `sampleCaveHeightfieldAt`.
 
 **Owns:** the two `Float32Array`s and nothing else. No scene, no Three.js, no state.
@@ -1070,7 +1076,8 @@ surface, `[2]` Walk/Inspect, `[3]` fixture.
 ### Known limitations (accepted, not risks)
 
 - No stacked/crossing/shaft/bridge geometry (§12). Architectural, by design.
-- `CaveTopology.features` become floor/ceiling deformations, not true 3D solids (§3).
+- `overhang` may remain a ceiling deformation in 2.5D, not a full volumetric undercut (§3).
+  Production SDF `shelf` boxes are not the design target for shelf semantics.
 - Chamber lobe floor offsets are bounded by `STEP_DOWN_MAX`, so lobes cannot create a
   dramatic multi-level chamber floor.
 - The 0.4 m grid bounds detail; sub-0.4 m rock texture must come from materials, not geometry.
@@ -1084,13 +1091,14 @@ surface, `[2]` Walk/Inspect, `[3]` fixture.
 | Detail noise still pinches the corridor despite the guard. | The guard is applied after noise and raises the ceiling; test 4 asserts it on all fixtures. `minGapInCore` metric makes it visible. |
 | `NF = 2.5` reads as a skate ramp (too round) or still as a box (too flat). | Single tuning knob, exposed in the harness; `walkableWidth` metric quantifies it; the Player decides. |
 | Field build is slower than estimated because of the nearest-point loop over ~60 stations × 10k nodes. | Measure first. Bbox rejection / station grid are known cheap fixes (§11). Do not pre-optimise. |
-| Losing the true 3D shelf/overhang makes chambers feel flatter than the SDF baseline. | This is exactly what acceptance item 20 is for. If it is decisive, that is a legitimate reason to reject the heightfield. |
+| Heightfield `overhang` (ceiling dip) reads flatter than the SDF volumetric box; shelf should match intent better than the current floating SDF slab. | Acceptance item 20. If overhang quality is decisive, that is a legitimate reason to reject the heightfield or keep a small derived mesh for overhang only. |
 
 ### Decisions that genuinely need the User
 
-1. **Features.** Drop them, reinterpret them as floor/ceiling deformation
-   (recommended), or carry them as a separate small mesh? This changes what plan
-   world-terrain-008 §7/§28 means for the heightfield path.
+1. **Overhang in 2.5D.** Shelf is already aligned with `floorY` plateaus (§3). For
+   `overhang`, accept ceiling deformation, add a small derived mesh for that feature
+   only, or defer overhang fidelity until a volumetric path returns? This affects how
+   plan world-terrain-008 L1 reads in the heightfield harness.
 2. **Lobe extent vs overburden.** Lobes can reach `1.25 × Rc`, past what
    `minSurfaceOverFootprint` currently checks (§7). Clamp lobes to `1.0 × Rc`
    (safer, slightly rounder chambers) or widen the topology's overburden check
