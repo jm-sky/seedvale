@@ -18,11 +18,11 @@ Celowo pomijamy przędzę.
 
 ```text
 sheep
-  ↓ fauna-004
+  ↓ istniejący fauna wool cycle
 Household.items: wool
   ↓
 Textile Worker
-  ↓ ProductionDef / shared production execution
+  ↓ ProductionDef + executeProduction()
 Household.items: wool_material
 ```
 
@@ -30,34 +30,48 @@ Plan nie tworzy własnego systemu tekstyliów, storage ani logistyki.
 
 ## Aktualny fundament
 
-Plan powstał przed późniejszym rozwojem economy/storage/work. Implementacja ma traktować aktualny kod jako źródło prawdy.
+Plan powstał przed późniejszym rozwojem fauna/economy/work. Implementacja ma traktować aktualny kod jako źródło prawdy.
 
-### Wool input — fauna-004
+### Wool input — fauna-004 jest wdrożone
 
-`fauna-004` jest nadal planem `planned`, więc nie traktować wool jako już dostępnego runtime inputu.
+Aktualny runtime już dostarcza realny wool input:
 
-Po implementacji `fauna-004`:
-
-- `wool` jest zwykłym `ItemKind`,
+- `wool` jest zwykłym stackowalnym `ItemKind`,
+- owca ma absolute-time wool readiness,
+- `WOOL_GROWTH_DAYS = 24`,
+- `WOOL_YIELD = 4`,
 - Shepherd fizycznie strzyże owned sheep,
 - wool trafia przez carried inventory do authoritative `Household.items`,
 - shearing/tool capability należy do flow Shepherda, nie Textile Workera.
 
-`settlements-npcs-006` konsumuje ten realny stan. Nie implementuje ponownie sheep/shearing/deposit.
+`settlements-npcs-006` konsumuje ten istniejący stan. Nie implementuje ponownie sheep/shearing/deposit ani wool growth.
 
-### Production — settlements-npcs-015
+### Production — settlements-npcs-015 jest wdrożone
 
-Aktualny codebase ma `ProductionDef`, ale wykonanie nadal jest rozdzielone między stock production i item-only Hunter production. `settlements-npcs-015` ma dostarczyć wspólny transactional production execution path.
+Aktualny codebase ma wspólny synchroniczny, transactional production boundary:
 
-Dlatego `settlements-npcs-015` jest rzeczywistą zależnością tego planu.
+```ts
+executeProduction(def: ProductionDef, ctx: ProductionContext): ProductionResult
+```
 
-Nie implementować wool-specific executora i nie kopiować bezpośrednio obecnego Hunter `Inventory.applyRecipe()` jako nowej równoległej ścieżki.
+w `src/economy/productionExecutor.ts`.
+
+`ProductionDef` w `src/economy/production.ts` obsługuje `itemInputs` i `itemOutputs`, a executor:
+
+- preflightuje inputy i output capacity,
+- agreguje duplicate inputs/outputs,
+- wykonuje item recipe przez istniejące `Inventory` primitives,
+- nie szuka dóbr u innych ownerów,
+- zwraca jawny success/failure result,
+- zachowuje wspólną transaction boundary zamiast textile-specific mutation path.
+
+Wool processing musi użyć tego executora. Nie tworzyć wool-specific executora ani kopiować Hunter path.
 
 ### Goods / storage / logistics
 
-`Household.items` pozostaje authoritative storage dla konkretnego `wool` i `wool_material` w tym pierwszym slice.
+`Household.items` pozostaje authoritative storage dla konkretnego `wool` i `wool_material` w pierwszym slice.
 
-Późniejsze local goods circulation i physical storage/logistics ustanowiły zasadę jawnego ownership i fizycznego cargo podczas transferów. Ten plan nie wymaga jednak transportowania wool przez settlement storage tylko po to, aby uruchomić produkcję.
+Istniejące local goods circulation i physical storage/logistics ustanawiają zasadę jawnego ownership i fizycznego cargo podczas transferów. Ten plan nie wymaga transportowania wool przez settlement storage tylko po to, aby uruchomić produkcję.
 
 Jeżeli wool/material zostaną później zakwalifikowane jako circulating production goods, transfer między ownerami ma korzystać ze wspólnego goods/logistics flow. **Production nie wyszukuje ani nie teleportuje brakującego inputu.**
 
@@ -73,8 +87,8 @@ Work Contracts pozostają authoritative dla jawnych zobowiązań worker–employ
 
 - dodać `wool_material` jako zwykły stackowalny `ItemKind`,
 - dodać jedną szeroką rolę `textile_worker`,
-- dodać `ProductionDef` dla `wool → wool_material`,
-- wykonać recipe przez wspólny production execution z `settlements-npcs-015`,
+- dodać `ProductionDef` dla `4 wool → 12 wool_material`,
+- wykonywać recipe przez istniejący `executeProduction()`,
 - zintegrować wybór i wykonanie produkcji z istniejącym NPC work pipeline,
 - source i destination pierwszego slice: owning `Household.items`,
 - zachować poprawność przy interruption, revalidation i off-screen/time-skip work zgodnie z istniejącym work lifecycle.
@@ -83,7 +97,7 @@ Work Contracts pozostają authoritative dla jawnych zobowiązań worker–employ
 
 Nie implementować fizycznego etapu yarn.
 
-Punkt odniesienia pozostaje informacyjny:
+Plan używa istniejącego punktu odniesienia:
 
 ```text
 1 kg wool
@@ -91,7 +105,21 @@ Punkt odniesienia pozostaje informacyjny:
 → ~3 m² wool cloth
 ```
 
-Gameplay quantity ma być jawnie zdefiniowane w `ProductionDef` jako dyskretne `ItemAmount`. Nie wyprowadzać runtime conversion z powyższego przelicznika i nie dodawać `yarn` jako itemu.
+Dla obecnych dyskretnych itemów przyjmujemy prostą recepturę zgodną z tym przelicznikiem:
+
+```text
+4 wool
+→ 12 wool_material
+```
+
+czyli:
+
+```text
+1 wool
+→ 3 wool_material
+```
+
+Recipe ma być jawnie zapisane w `ProductionDef` jako `ItemAmount`. Nie dodawać runtime unit-conversion subsystem ani `yarn` jako itemu.
 
 ## Profesja
 
@@ -99,9 +127,9 @@ Dodać szeroką rolę `textile_worker`.
 
 Jedna profesja ma docelowo obsługiwać produkcję tekstyliów. Nie tworzyć osobnych `spinner`, `weaver` ani `cloth_maker`.
 
-Role assignment ma używać istniejącego staffing/character generation seam. Preferować sensowne, deterministyczne powiązanie z household mającym dostęp do wool zamiast bezwarunkowego dodania roli do random pool.
+Role assignment ma używać istniejącego staffing/character generation seam. Nie dodawać `textile_worker` bezwarunkowo do generic random pool.
 
-Nie wymagać posiadania sheep przez ten sam household, jeśli aktualny local-goods flow już dostarczył wool do niego fizycznie; źródłem prawdy jest realny inventory state.
+Preferować deterministyczne powiązanie z realną możliwością pozyskania wool przez household/settlement, korzystając z istniejącego staffing seam zamiast tworzenia drugiego profession resolvera. Nie wymagać posiadania sheep przez ten sam household, jeśli realny local-goods flow dostarczył wool do niego fizycznie; źródłem prawdy dla wykonania recipe jest rzeczywisty inventory state.
 
 ## Produkcja
 
@@ -116,9 +144,9 @@ normal bounded work action
   ↓
 live revalidation at completion
   ↓
-shared production transaction
+executeProduction(recipe, { inventory: household.items, simTime })
   ↓
-consume wool + create wool_material
+consume 4 wool + create 12 wool_material
   ↓
 Household.items
 ```
@@ -126,7 +154,8 @@ Household.items
 Wymagania:
 
 - `ProductionDef` pozostaje źródłem prawdy recipe,
-- produkcja nie może tworzyć materiału bez skutecznego commitu wymaganej ilości wool,
+- `executeProduction()` jest jedyną mutation boundary dla recipe,
+- produkcja nie może tworzyć materiału bez skutecznego commitu 4 wool,
 - failed/revalidated recipe nie może częściowo zużyć inputu ani stworzyć outputu,
 - nie usuwać wool na początku akcji,
 - nie skanować świata/global inventory w poszukiwaniu wool,
@@ -134,7 +163,7 @@ Wymagania:
 
 ## Workplace i narzędzia
 
-Nie dodawać automatycznie shears do Textile Workera — `shearing` należy do Shepherd flow z `fauna-004`.
+Nie dodawać automatycznie shears do Textile Workera — `shearing` należy do istniejącego Shepherd flow.
 
 Nowy textile workplace/tool jest opcjonalny. Dodać go tylko wtedy, gdy aktualny wspólny work/production contract rzeczywiście wymaga fizycznego miejsca lub capability. Nie tworzyć budynku/landmarku wyłącznie jako dekoracyjnego warunku recipe.
 
@@ -151,7 +180,7 @@ missing local input
 → later production retry
 ```
 
-Production execution nie może samodzielnie claimować dóbr z obcego ownera ani omijać carried/physical delivery semantics.
+`executeProduction()` dostaje jawny owner inventory i nie może samodzielnie claimować dóbr z obcego ownera ani omijać carried/physical delivery semantics.
 
 ## Performance i determinism
 
@@ -167,13 +196,14 @@ Production execution nie może samodzielnie claimować dóbr z obcego ownera ani
 ### Items / recipe
 
 - `wool_material` jest poprawnym stackowalnym itemem,
-- wool jest poprawnym `itemInput`,
-- poprawna ilość wool tworzy dokładnie zdefiniowaną ilość wool material,
-- brak/za mało wool blokuje recipe bez mutation.
+- recipe ma dokładnie `4 wool → 12 wool_material`,
+- 4 wool tworzy dokładnie 12 wool material,
+- 0–3 wool blokuje recipe bez mutation.
 
 ### Transaction / ownership
 
 - source i destination używają realnego `Household.items`,
+- recipe przechodzi przez `executeProduction()`,
 - output powstaje dokładnie raz,
 - interruption przed completion nie konsumuje wool,
 - stale state jest revalidated na completion,
@@ -189,8 +219,8 @@ Production execution nie może samodzielnie claimować dóbr z obcego ownera ani
 
 ### Regression / integration
 
-- `fauna-004` wool deposit pozostaje źródłem realnego inputu,
-- Hunter/shared production execution nie ma regresji,
+- istniejący Shepherd wool deposit pozostaje źródłem realnego inputu,
+- shared production/Hunter paths nie mają regresji,
 - local goods/storage flow nie traci ownership/conservation,
 - produkcja działa bez gracza oraz zgodnie z istniejącym off-screen/time-skip lifecycle.
 
@@ -200,10 +230,10 @@ Manual verification wykonuje użytkownik w przeglądarce.
 
 Sprawdzić:
 
-1. Household otrzymuje realny wool z `fauna-004`.
+1. Household otrzymuje realny wool po strzyżeniu sheep przez Shepherda.
 2. Textile Worker podejmuje normalną pracę bez WorkContract.
-3. Przy dostępnym wool recipe konsumuje dokładny input i tworzy `wool_material` w prawidłowym inventory.
-4. Brak wool blokuje produkcję bez free output.
+3. Przy minimum 4 wool recipe konsumuje dokładnie 4 wool i tworzy dokładnie 12 `wool_material` w prawidłowym inventory.
+4. 0–3 wool blokuje produkcję bez free output.
 5. Przerwanie pracy nie powoduje partial consume.
 6. Produkcja nie teleportuje wool z innego storage/householdu.
 
