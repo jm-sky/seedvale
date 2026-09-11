@@ -478,6 +478,15 @@ Do not implement in this plan:
 
 These are deliberate follow-up decisions, not missing V1 requirements.
 
+> Check: `docs/assets/LOCAL_ASSETS.md`
+> - `Mace by joney_lol - z59Foset56.glb`
+> - `Doublesided Hammer by Quaternius - UIXvQ73DS1`
+> - `Mace by Poly by Google - 40LBkajLUig.glb`
+> - `Shield Round by Quaternius - lWajrVXcnA.glb`
+> - `Shield by Quaternius - srN1KGAO7f.glb`
+> - `Armor Metal by Quaternius - TMUoxILh9w.glb`
+> - `Armor Leather by Quaternius - na9KfWiKN8.glb`
+
 ## Expected integration points
 
 Verify all paths/symbols against current `main` before implementation.
