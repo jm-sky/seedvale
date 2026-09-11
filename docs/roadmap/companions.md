@@ -26,7 +26,7 @@ accompany / follow commitment
     ↓
 existing NPC decision + action systems
     ↓
-travel / combat / work / needs / return home
+travel / combat / work / needs / item use / return home
 ```
 
 A temporary expedition and a long-term Companion relationship are distinct. Temporary accompaniment must not require moving the NPC out of its household or permanently changing its identity.
@@ -40,6 +40,10 @@ The companion direction includes:
 - temporary voluntary accompaniment,
 - follow/travel behaviour,
 - autonomous needs and interruption/resumption during travel,
+- player-to-NPC transfer of useful items such as weapons, food and tools,
+- controlled NPC access to player-owned storage,
+- configurable permissions and resource-reserve limits for shared storage,
+- NPC decisions about whether and when permitted resources should actually be taken or used,
 - combat and mutual defense,
 - shared work such as construction and farming,
 - relationship consequences from shared experiences,
@@ -47,7 +51,7 @@ The companion direction includes:
 - later long-term relocation / household change,
 - multiple independent companions later.
 
-It does not include a classic RPG party manager, player-owned NPCs, teleport-follow, a second combat/work/needs implementation or special recruit-only inhabitants.
+It does not include a classic RPG party manager, player-owned NPCs, teleport-follow, a second combat/work/needs/inventory implementation or special recruit-only inhabitants.
 
 ---
 
@@ -195,7 +199,155 @@ NPC initiative is desirable: a suitable inhabitant may offer to join rather than
 
 ---
 
-## Stage 5 — Expedition survival and combat
+## Stage 5 — Player-to-NPC item transfer and equipment
+
+### Goal
+
+Allow the player to deliberately provide an NPC with useful world items, especially equipment needed for an expedition or shared work.
+
+### Direction
+
+The transfer should use normal item ownership and NPC personal inventory rather than a separate companion inventory.
+
+Relevant item classes include:
+
+- weapons,
+- ammunition where applicable,
+- food and drink,
+- tools,
+- medicine / healing supplies where supported,
+- work materials where an NPC action legitimately carries them.
+
+The transfer itself and item use are separate concerns:
+
+```text
+player gives item
+    ↓
+NPC personal inventory owns item
+    ↓
+normal NPC decisions/actions determine whether and when to use it
+```
+
+Receiving a sword should not force the NPC to equip or use it if the item is unusable, inappropriate for the current action, inferior to another available option or conflicts with normal combat/equipment rules.
+
+Likewise, food transferred to an NPC should become an ordinary usable resource for that NPC rather than a companion-only provision counter.
+
+### Player interaction
+
+A later UI may expose simple actions such as:
+
+- Give item,
+- Take back / request return where socially and mechanically appropriate,
+- inspect relevant carried equipment where normal interaction rules allow it.
+
+The first implementation should prefer existing inventory/item-transfer interaction patterns instead of creating a full party inventory screen.
+
+### Architectural constraints
+
+- Item ownership must remain authoritative in the existing item/inventory systems.
+- Do not duplicate equipment or consumable state inside companion state.
+- NPC item-use decisions remain part of normal NPC behaviour.
+- The same transfer mechanism should be reusable for non-companion NPC interactions where appropriate.
+
+---
+
+## Stage 6 — Controlled access to player storage
+
+### Goal
+
+Allow trusted/authorized NPCs to use resources from player-owned storage without giving them unrestricted access to everything the player owns.
+
+### Core distinction
+
+Three concepts must remain separate:
+
+```text
+item ownership
+    ≠
+storage access permission
+    ≠
+NPC decision to take/use an item
+```
+
+A permission means an NPC **may** use a resource. It does not itself create a need or command the NPC to consume/take it.
+
+### Permission model
+
+Player storage should expose an access policy that can be evaluated by normal NPC actions.
+
+The policy may define permissions by resource class or use case, for example:
+
+- food,
+- water,
+- tools,
+- weapons,
+- ammunition,
+- medicine,
+- work materials,
+- valuables / protected items.
+
+Possible policy modes may include:
+
+- forbidden,
+- allowed,
+- assigned-only for equipment such as weapons/tools,
+- later more granular rules if gameplay demonstrates a need.
+
+### Reserve / consumption limits
+
+The player should be able to protect a minimum reserve so companions do not consume the last critical supplies.
+
+Examples:
+
+```text
+Food       allowed     keep at least 5
+Water      allowed     keep at least 3
+Tools      assigned only
+Weapons    assigned only
+Materials  allowed for authorized work
+Valuables  forbidden
+```
+
+Potential limits include:
+
+- minimum quantity to leave in storage,
+- maximum amount one NPC may take at once,
+- later time-based quotas only if simpler reserve rules prove insufficient.
+
+Prefer a small, understandable policy model over per-item micromanagement.
+
+### Use cases
+
+An authorized NPC may decide to:
+
+- eat or drink when needs justify it,
+- take a weapon or tool that it is allowed/assigned to use,
+- take materials required by an active work action,
+- return unused resources or deposit produced/collected goods where normal logistics rules support it.
+
+### UI direction
+
+Player-owned storage should eventually expose a compact permissions/configuration interface rather than requiring hidden debug configuration.
+
+The UI should express player intent, not directly drive NPC actions. A setting such as `Food: Allowed` grants access; the NPC's needs and decisions determine actual consumption.
+
+### Architectural constraints
+
+- Extend general storage/logistics permissions rather than creating `CompanionChest` semantics if practical.
+- Storage remains authoritative for contained items/resources.
+- Access policy remains authoritative for permission.
+- NPC inventory/action systems remain authoritative for carried items and actual usage.
+- Rules must remain deterministic and enforceable off-screen.
+- Multiple NPCs accessing the same storage must not bypass reserve limits through independent stale reads.
+
+### Related roadmap
+
+- [`physical-resource-storage-and-logistics.md`](physical-resource-storage-and-logistics.md)
+- [`physical-goods-transport.md`](physical-goods-transport.md)
+
+---
+
+## Stage 7 — Expedition survival and combat
 
 ### Goal
 
@@ -214,13 +366,15 @@ Reuse existing NPC systems for:
 - flee/chase,
 - death.
 
+Transferred items and permitted shared storage should feed these same systems. For example, an NPC with permission to use player food may obtain food when hungry, but critical needs, pathing, availability and reserve policy still determine whether that actually happens.
+
 An NPC may protect the player or another group member when relationship/commitment/context produces sufficient pressure, but accompaniment must not imply suicidal loyalty.
 
 A frightened, badly injured or overwhelmed NPC may flee, refuse to continue or abandon an expedition.
 
 ---
 
-## Stage 6 — Shared work and expedition activities
+## Stage 8 — Shared work and expedition activities
 
 ### Goal
 
@@ -241,6 +395,8 @@ Use actor-neutral work/action seams. Do not create `CompanionBuild`, `CompanionF
 
 Profession, skills, traits and personality should make different companions useful in different situations.
 
+Shared-storage permissions can provide authorized materials/tools, but work actions must still use normal authoritative resource consumption and contribution mechanisms.
+
 ### Related roadmap
 
 - [`player-construction.md`](player-construction.md)
@@ -249,7 +405,7 @@ Profession, skills, traits and personality should make different companions usef
 
 ---
 
-## Stage 7 — Shared experience and relationship development
+## Stage 9 — Shared experience and relationship development
 
 ### Goal
 
@@ -261,7 +417,9 @@ Potential relationship-relevant events include:
 - fair or unfair payment,
 - fighting together,
 - rescuing/helping one another,
+- providing useful equipment,
 - providing food/water/shelter,
+- withholding promised support/resources,
 - abandoning an injured NPC,
 - repeated dangerous decisions,
 - successful shared work,
@@ -275,7 +433,7 @@ Shared history should later influence dialogue, willingness to accompany again a
 
 ---
 
-## Stage 8 — Long-term companion life
+## Stage 10 — Long-term companion life
 
 ### Goal
 
@@ -286,7 +444,7 @@ Possible consequences:
 - leaving or restructuring an existing household where world rules allow it,
 - moving to a player camp/house/settlement,
 - acquiring a normal place of life,
-- using shared/local storage,
+- using shared/local storage under explicit permissions,
 - continuing a profession or adopting another supported role,
 - retaining needs, schedules, relationships and autonomy.
 
@@ -296,7 +454,7 @@ Long-term companionship is not an automatic reward for completing enough expedit
 
 ---
 
-## Stage 9 — Multiple companions and group behaviour
+## Stage 11 — Multiple companions and group behaviour
 
 ### Goal
 
@@ -307,6 +465,7 @@ Each NPC keeps independent:
 - needs,
 - navigation/execution state,
 - combat decisions,
+- personal inventory,
 - relationships,
 - commitments,
 - reasons for staying or leaving.
@@ -318,9 +477,12 @@ Later group-level effects may emerge from:
 - conflict,
 - danger,
 - resource availability,
+- shared storage contention,
 - travel speed and injuries.
 
 Any group coordination mechanism should remain lightweight and should not replace individual NPC decision making.
+
+Shared-storage limits must be enforced authoritatively across all NPC consumers so several companions cannot independently consume resources below the configured reserve.
 
 ---
 
@@ -328,19 +490,31 @@ Any group coordination mechanism should remain lightweight and should not replac
 
 ### Persistence
 
-Temporary and long-term commitments, relevant relationship consequences and life changes must survive save/load. Transient path/action state may reconstruct through existing NPC mechanisms.
+Temporary and long-term commitments, relevant relationship consequences, NPC-owned items, player-storage access policies and life changes must survive save/load. Transient path/action state may reconstruct through existing NPC mechanisms.
 
 ### Off-screen simulation
 
-An accompanying or returning NPC remains world state even when not rendered. Hybrid simulation may reduce navigation/combat detail at distance while preserving meaningful continuity and consequences.
+An accompanying or returning NPC remains world state even when not rendered. Hybrid simulation may reduce navigation/combat detail at distance while preserving meaningful continuity and consequences, including item ownership, resource consumption and storage limits.
 
 ### Determinism and observability
 
-Joining decisions and commitment state should be inspectable in NPC debug/history tools. Prefer deterministic scoring/modifiers over opaque random recruitment rolls.
+Joining decisions, commitment state, item transfers and storage-access decisions should be inspectable in NPC debug/history tools where useful. Prefer deterministic scoring/modifiers over opaque random recruitment rolls.
 
 ### Player-independent world
 
 The same young NPC who could accompany the player must remain free to develop through other world systems. The player missing an opportunity should not freeze that NPC's life.
+
+### Resource authority
+
+Item/storage integration must preserve clear ownership:
+
+```text
+storage owns stored resources
+NPC inventory owns carried resources
+access policy owns permission
+NPC AI owns decision to use permitted resources
+world action owns authoritative consumption/work effect
+```
 
 ---
 
@@ -353,11 +527,16 @@ Likely implementation slices:
 1. **NPC accompany/follow commitment** — shared runtime foundation.
 2. **Paid escort Work Contract** — contract objective + duration/termination + evaluation.
 3. **Voluntary expedition decision** — personality/relation/reputation/life-context evaluation and NPC initiative.
-4. **Expedition integration** — combat, needs, interruption/resumption and return-home behaviour.
-5. **Shared activities** — verify/extend actor-neutral construction, cultivation and other useful actions for accompanying NPCs.
-6. **Relationship consequences** — shared-experience events and future willingness.
-7. **Long-term relocation** — household/place-of-life transition when broader lifecycle systems are ready.
-8. **Multiple companions** — only after one-NPC accompaniment is robust.
+4. **Player-to-NPC item transfer and equipment** — ownership transfer, personal inventory and normal item use.
+5. **NPC access to player storage** — permission policy, UI/configuration and authoritative reserve limits.
+6. **Expedition survival integration** — needs, provisions, interruption/resumption and return-home behaviour.
+7. **Companion combat cooperation** — protection pressure, combat/flee behaviour and supplied weapons/equipment.
+8. **Shared activities** — verify/extend actor-neutral construction, cultivation and other useful actions for accompanying NPCs, including authorized tools/materials.
+9. **Relationship consequences** — shared-experience events and future willingness.
+10. **Long-term relocation** — household/place-of-life transition when broader lifecycle systems are ready.
+11. **Multiple companions** — only after one-NPC accompaniment and shared-resource access are robust.
+
+Plans 4 and 5 should precede broad shared-work integration because survival, combat and work increasingly depend on ordinary access to weapons, tools, food and materials.
 
 Do not create all plans up front if dependencies are still changing.
 
@@ -377,6 +556,12 @@ normal NPC demographics / households / personality / relationships
                                 ▼
                     accompany/follow commitment
                                 │
+                  ┌─────────────┴─────────────┐
+                  ▼                           ▼
+       player→NPC item transfer       player storage access
+                  │                           │
+                  └─────────────┬─────────────┘
+                                ▼
                  ┌──────────────┼──────────────┐
                  ▼              ▼              ▼
               needs          combat        shared work
@@ -401,7 +586,12 @@ normal NPC demographics / households / personality / relationships
 - Paid accompaniment extends Work Contracts.
 - Voluntary accompaniment is a social/NPC decision, not a fake zero-price contract.
 - Follow/accompany is a commitment/behaviour, not NPC identity.
-- Needs, combat, work and navigation remain authoritative in their existing systems.
+- No companion-specific inventory or equipment store when normal NPC inventory/item systems can own the state.
+- Giving an NPC an item transfers/assigns real world inventory state; it is not a temporary stat bonus.
+- Storage permission is separate from storage ownership and separate from NPC item-use decisions.
+- Prefer general storage access policies over a special Companion Chest system.
+- Reserve/limit checks must be authoritative and safe with multiple NPC consumers.
+- Needs, combat, work, item use and navigation remain authoritative in their existing systems.
 - Player↔NPC relationship improvements must be general-purpose where practical.
 - Long-term relocation reuses household/place mechanisms.
 - NPCs can refuse, interrupt, abandon and return home for systemic reasons.
@@ -417,6 +607,12 @@ normal NPC demographics / households / personality / relationships
 - Which current Player↔NPC relation data is sufficient for the first voluntary-joining slice, and when is a richer general relationship model justified?
 - How should NPC initiative surface naturally in dialogue/interaction without creating a recruitment UI scan?
 - How should returning home work under hybrid/off-screen navigation when an expedition ends far from the NPC's settlement?
+- Which existing item/equipment mechanisms already support NPC ownership and active weapon/tool selection, and what general gaps remain?
+- Should a player-given weapon become fully NPC-owned, remain player-owned but assigned, or should both semantics be supported explicitly?
+- At what level should player-storage access policy live: individual storage, player household/place, individual NPC authorization, relationship role, or a combination?
+- What is the smallest useful permission vocabulary for food/water/tools/weapons/materials without creating per-item micromanagement?
+- How should reserve thresholds remain atomic when several NPCs consume from one storage in the same simulation interval?
+- Should companions normally return unused assigned tools/weapons at expedition end, and how should refusal/loss/death be represented as real item ownership consequences?
 - Which shared activities already have actor-neutral seams sufficient for companions, and which require general NPC-system extensions?
 
 ## Related systems
@@ -427,10 +623,14 @@ normal NPC demographics / households / personality / relationships
 - Work Contracts and payment
 - Player↔NPC relationships
 - settlement reputation and renown
+- NPC personal inventory and item use
+- player inventory / item transfer
+- weapons, tools and equipment
 - NPC combat, health and healing
 - player/NPC construction
 - cultivation/farming
 - storage/logistics/transport
+- player-owned storage permissions
 - places and schedules
 - persistence
 - dialogue and quests
