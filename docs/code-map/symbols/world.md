@@ -162,7 +162,7 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveRng.ts`
 
 - `CAVE_RNG_SALT` — const — line 34
-- `createCaveRandom` — function — line 43
+- `createCaveRandom` — function — line 51
 
 ## `world/caves/caveSdfColliders.ts`
 
@@ -339,9 +339,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/spikeNoise.ts`
 
-- `createMultiScaleNoise1D` — function — line 40
-- `createValueNoise1D` — function — line 25
-- `NoiseOctave` — type — line 35
+- `createMultiScaleNoise1D` — function — line 75
+- `createValueNoise1D` — function — line 33
+- `createValueNoise2D` — function — line 51
+  - domain: world-terrain
+- `NoiseOctave` — type — line 70
 
 ## `world/caves/spikeTestCave.ts`
 

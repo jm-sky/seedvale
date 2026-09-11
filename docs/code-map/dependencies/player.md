@@ -508,6 +508,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`
 - `player/verticalMotion.test.ts`

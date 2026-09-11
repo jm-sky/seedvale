@@ -902,6 +902,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/actions/mountActions.ts`
 - `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `fauna/AnimalAgent.ts`
 - `navigation/navigation.ts`
 - `player/PlayerController.ts`
