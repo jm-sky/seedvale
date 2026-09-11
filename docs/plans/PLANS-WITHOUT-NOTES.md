@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 08:26:13  
+> Date: 2026-09-11 09:05:12  
 
 ## PLANS
 
-- `npc-029-npc-accompany-follow-commitment.md`
 - `npc-030-paid-expedition-escort-work-contracts.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-030-non-home-settlement-food-production-v1.md`
@@ -16,37 +15,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `npc-029-npc-accompany-follow-commitment.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-029-npc-accompany-follow-commitment.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/npc-029-npc-accompany-follow-commitment.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/npc-029-npc-accompany-follow-commitment-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `npc-030-paid-expedition-escort-work-contracts.md`
 
