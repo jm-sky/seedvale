@@ -150,21 +150,21 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveContentAnchors.ts`
 
-- `CAVE_CONTENT_ANCHOR_ROLES` — const — line 32
-- `CAVE_CONTENT_PLACEMENT` — const — line 78
-- `CaveContentAnchor` — type — line 50
+- `CAVE_CONTENT_ANCHOR_ROLES` — const — line 42
+- `CAVE_CONTENT_PLACEMENT` — const — line 88
+- `CaveContentAnchor` — type — line 60
   - domain: world-terrain
-- `caveContentAnchorId` — function — line 111
+- `caveContentAnchorId` — function — line 115
   - domain: world-terrain
-- `CaveContentAnchorInput` — type — line 60
-- `CaveContentAnchorRole` — type — line 41
-- `chamberContentCandidates` — function — line 200
+- `CaveContentAnchorInput` — type — line 70
+- `CaveContentAnchorRole` — type — line 51
+- `chamberContentCandidates` — function — line 135
   - domain: world-terrain
-- `CONTENT_ANCHOR_CANDIDATE_LIMIT` — const — line 89
-- `ContentAnchorPlacement` — type — line 69
-- `passageWallContentCandidates` — function — line 246
+- `CONTENT_ANCHOR_CANDIDATE_LIMIT` — const — line 99
+- `ContentAnchorPlacement` — type — line 79
+- `passageWallContentCandidates` — function — line 150
   - domain: world-terrain
-- `resolveCaveContentAnchors` — function — line 459
+- `resolveCaveContentAnchors` — function — line 329
   - domain: world-terrain
 
 ## `world/caves/caveGroundQuery.ts`
@@ -206,18 +206,36 @@ Generated from exported TypeScript symbols.
 - `HeightfieldMeshBuffers` — type — line 28
 - `MouthUndersideMaskBuffers` — type — line 331
 
+## `world/caves/caveHeightfieldPlacement.ts`
+
+- `chamberCandidates` — function — line 117
+  - domain: world-terrain
+- `footprintHolds` — function — line 195
+  - domain: world-terrain
+- `Heading` — type — line 16
+- `incomingFromPoints` — function — line 26
+- `incomingHeading` — function — line 36
+- `lateralDistance` — function — line 102
+- `passageWallCandidates` — function — line 164
+  - domain: world-terrain
+- `pointAlongSegment` — function — line 63
+- `segmentLength` — function — line 52
+- `signFromRandom` — function — line 22
+- `Xz` — type — line 15
+- `yawFacing` — function — line 18
+
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 198
-- `createCaveHeightfieldGeometry` — function — line 49
+- `CaveHeightfieldPresentation` — type — line 203
+- `createCaveHeightfieldGeometry` — function — line 54
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 217
+- `createCaveHeightfieldPresentation` — function — line 226
   - domain: world-terrain
-- `createMouthRocks` — function — line 131
+- `createMouthRocks` — function — line 136
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 67
+- `createMouthUndersideMask` — function — line 72
   - domain: world-terrain
-- `createMouthUndersideMaskMaterial` — function — line 33
+- `createMouthUndersideMaskMaterial` — function — line 38
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
@@ -297,6 +315,19 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `makeCaveId` — function — line 15
 
+## `world/caves/caveInteriorRocks.ts`
+
+- `CAVE_INTERIOR_ROCK_TEMPLATE_SLOTS` — const — line 81
+- `CaveInteriorRockPlacement` — type — line 54
+- `CaveInteriorRocksInput` — type — line 70
+- `CaveInteriorRockSizeClass` — type — line 49
+- `createCaveInteriorRocksGroup` — function — line 485
+  - domain: world-terrain
+- `getCaveInteriorRockTemplates` — function — line 438
+  - domain: world-terrain
+- `resolveCaveInteriorRocks` — function — line 212
+  - domain: world-terrain
+
 ## `world/caves/caveMath.ts`
 
 - `smax` — function — line 21
@@ -328,7 +359,7 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveRng.ts`
 
 - `CAVE_RNG_SALT` — const — line 34
-- `createCaveRandom` — function — line 68
+- `createCaveRandom` — function — line 73
 
 ## `world/caves/caveRoute.ts`
 
@@ -554,8 +585,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 76
-- `createCaves` — function — line 235
+- `Caves` — type — line 80
+- `createCaves` — function — line 244
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves

@@ -277,6 +277,7 @@ Generated from TypeScript imports.
 - `settlement/decorProps.test.ts`
 - `settlement/props.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
+- `world/caves/caveInteriorRocks.ts`
 
 ## `settlement/families.test.ts`
 

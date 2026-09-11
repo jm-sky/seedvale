@@ -71,6 +71,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/vegetationRegionBatcher.test.ts`
 - `terrain/vegetationRegionBatcher.ts`
+- `world/caves/caveInteriorRocks.ts`
 
 ## `render/programPrewarm.test.ts`
 

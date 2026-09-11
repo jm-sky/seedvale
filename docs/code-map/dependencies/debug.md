@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldPresentation.test.ts`
 - `world/caves/caveHeightfieldQuery.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
+- `world/caves/caveInteriorRocks.test.ts`
 
 ## `debug/caves/caveHeightfieldMesh.ts`
 

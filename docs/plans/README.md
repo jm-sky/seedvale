@@ -218,7 +218,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `014`
 - ui-input: `017`
 - world: `025`
-- world-terrain: `022`
+- world-terrain: `023`
 
 This ids section is maintained automatically from the plan files.
 
