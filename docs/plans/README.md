@@ -77,7 +77,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-024-systemic-treasure-sites-and-keys.md`                             | -       | 🟡 | M      | -      |
 | ◼️ `world-terrain-019-cave-heightfield-production-migration.md`                | -       | 🔴 | XL     | world-terrain-018 |
 | ◼️ `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | settlements-npcs-019 |
-| ◼️ `items-player-026-treasure-loot-forced-entry-and-traps.md`                  | -       | 🟡 | M      | world-024 |
+| 💡 `items-player-026-treasure-loot-forced-entry-and-traps.md`                  | -       | 🟡 | M      | world-024 |
 
 ---
 
