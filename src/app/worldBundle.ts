@@ -65,6 +65,7 @@ import {
 } from '../terrain/resourceDeposits'
 import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '../world/bloodTraces'
 import { preloadCartProp } from '../world/cartProp'
+import { preloadCaveAdventurePropTemplates } from '../world/caves/caveAdventureProps'
 import { type Beehives, createBeehives } from '../world/createBeehives'
 import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
 import { type CaveContentAnchor, type Caves, createCaves } from '../world/createCaves'
@@ -1040,7 +1041,12 @@ async function buildWorldSystems(
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
 
   bootMark('preloadAnimalTroughAndTrapProps')
-  await Promise.all([preloadAnimalTroughVisual(), preloadTrapProps(), preloadCartProp()])
+  await Promise.all([
+    preloadAnimalTroughVisual(),
+    preloadTrapProps(),
+    preloadCartProp(),
+    preloadCaveAdventurePropTemplates(),
+  ])
   bootMarkEnd('preloadAnimalTroughAndTrapProps')
 
   // Built ahead of `SettlementsManager` (plan npc-015, extended npc-018/
@@ -1141,6 +1147,7 @@ async function buildWorldSystems(
     config.seed,
     villageSizeConfig(homeDef.size).footprintRadius,
     config.terrain.region.coastThreshold,
+    pointLightBudget,
   )
   bootMarkEnd('createCaves')
 

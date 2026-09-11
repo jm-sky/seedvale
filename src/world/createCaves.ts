@@ -17,6 +17,11 @@ import {
 
 export type { CaveContentAnchor }
 import {
+  CAVE_ADVENTURE_PROPS_GROUP_NAME,
+  CAVE_ADVENTURE_PROPS_USERDATA_KEY,
+  presentationAnchorsFromContent,
+} from './caves/caveAdventureProps'
+import {
   applyCaveGroundHysteresis,
   applyCaveInteriorHysteresis,
   CAVE_OCCUPANCY_EPS,
@@ -66,6 +71,7 @@ import { buildProductionCaveTopology } from './caves/productionTopology'
 import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition } from './caveVolume'
 import { type LargeCaveSite, pickLargeCaveSites } from './largeCaves'
+import { createNullPointLightBudget, type PointLightBudget } from './pointLightBudget'
 import type { Scene } from 'three'
 
 /** Presentation builds run synchronously on the main thread; this many
@@ -247,6 +253,7 @@ export function createCaves(
   seed: number,
   homeRadius: number,
   coastThreshold: number,
+  pointLightBudget: PointLightBudget = createNullPointLightBudget(),
 ): Caves {
   const homeFootprint = Math.max(homeRadius, villageSizeConfig('MD').footprintRadius)
   const villages = cellsWithinRadius({ gx: 0, gz: 0 }, 3).map((cell) => ({
@@ -416,6 +423,11 @@ export function createCaves(
   function disposePresentation(caveId: string): void {
     const group = presentations.get(caveId)
     if (!group) return
+    const propsRoot = group.userData[CAVE_ADVENTURE_PROPS_USERDATA_KEY] as THREE.Object3D | undefined
+    if (propsRoot) {
+      pointLightBudget.unregisterSubtree(propsRoot)
+      delete group.userData[CAVE_ADVENTURE_PROPS_USERDATA_KEY]
+    }
     group.removeFromParent()
     disposeObject3D(group)
     presentations.delete(caveId)
@@ -428,6 +440,9 @@ export function createCaves(
     const v2 = v2ByCaveId.get(caveId)
     if (!v2) return
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    const adventurePropAnchors = v2.archetype === 'adventure'
+      ? presentationAnchorsFromContent(v2.contentAnchors)
+      : []
     const presentation = createCaveHeightfieldPresentation({
       field: v2.heightfield,
       walkSurfaceAt: v2.walkSurfaceAt,
@@ -435,7 +450,17 @@ export function createCaves(
       maskMaterial,
       rocks: mouthRocksEnabled,
       interiorRockPlacements: v2.interiorRocks,
+      adventurePropAnchors,
     })
+    if (presentation.adventureLanternLightCount > 0) {
+      const propsRoot = presentation.group.children.find(
+        (c) => c.name === CAVE_ADVENTURE_PROPS_GROUP_NAME,
+      )
+      if (propsRoot) {
+        presentation.group.userData[CAVE_ADVENTURE_PROPS_USERDATA_KEY] = propsRoot
+        pointLightBudget.registerSubtree(propsRoot)
+      }
+    }
     scene.add(presentation.group)
     presentations.set(caveId, presentation.group)
     const activationTotalMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0
@@ -454,6 +479,8 @@ export function createCaves(
         maskVertices: presentation.maskVertices,
         rocks: presentation.rockCount,
         interiorRocks: presentation.interiorRockCount,
+        adventureProps: presentation.adventurePropCount,
+        adventureLanternLights: presentation.adventureLanternLightCount,
       })
     }
   }

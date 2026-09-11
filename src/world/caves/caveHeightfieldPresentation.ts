@@ -13,7 +13,12 @@
  */
 
 import * as THREE from 'three'
+import type { CaveContentAnchor } from './caveContentAnchors'
 import { createLargeRock } from '../../settlement/decorProps'
+import {
+  createCaveAdventurePropsGroup,
+  getCaveAdventurePropTemplates,
+} from './caveAdventureProps'
 import {
   buildHeightfieldMeshBuffers,
   buildMouthUndersideMaskBuffers,
@@ -222,6 +227,11 @@ export type CaveHeightfieldPresentation = {
   /** Interior rock/boulder clutter instance count (world-terrain-022) —
    *  0 when disabled or when no placement passed its guards. */
   interiorRockCount: number
+  /** Adventure storytelling props (world-terrain-020 Stage D) — 0 for natural
+   *  caves or when no presentation anchors resolved. */
+  adventurePropCount: number
+  /** PointLights attached under lantern props (bounded per cave). */
+  adventureLanternLightCount: number
   /** Main-thread assembly time, mesh buffers included. */
   assembleMs: number
 }
@@ -247,6 +257,8 @@ export function createCaveHeightfieldPresentation(input: {
    *  when the debug system is disabled. Rendering-only input; this module
    *  never resolves placements itself. */
   interiorRockPlacements: readonly CaveInteriorRockPlacement[]
+  /** Stage B anchors minus treasure — only passed for `adventure` caves. */
+  adventurePropAnchors: readonly CaveContentAnchor[]
 }): CaveHeightfieldPresentation {
   const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
   const { field, walkSurfaceAt } = input
@@ -281,6 +293,20 @@ export function createCaveHeightfieldPresentation(input: {
     }
   }
 
+  let adventurePropCount = 0
+  let adventureLanternLightCount = 0
+  if (input.adventurePropAnchors.length > 0) {
+    const adventureProps = createCaveAdventurePropsGroup(
+      input.adventurePropAnchors,
+      getCaveAdventurePropTemplates(),
+    )
+    if (adventureProps.propCount > 0) {
+      group.add(adventureProps.group)
+      adventurePropCount = adventureProps.propCount
+      adventureLanternLightCount = adventureProps.lanternLightCount
+    }
+  }
+
   const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
   return {
     group,
@@ -288,6 +314,8 @@ export function createCaveHeightfieldPresentation(input: {
     maskVertices: mask ? (mask.geometry.getAttribute('position') as THREE.BufferAttribute).count : 0,
     rockCount,
     interiorRockCount,
+    adventurePropCount,
+    adventureLanternLightCount,
     assembleMs: now - t0,
   }
 }

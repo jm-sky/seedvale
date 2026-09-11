@@ -190,6 +190,7 @@ describe('createCaveHeightfieldPresentation', () => {
       maskMaterial,
       rocks: false,
       interiorRockPlacements: [],
+      adventurePropAnchors: [],
     })
     expect(presentation.rockCount).toBe(0)
     expect(presentation.interiorRockCount).toBe(0)
@@ -212,6 +213,7 @@ describe('createCaveHeightfieldPresentation', () => {
       maskMaterial,
       rocks: true,
       interiorRockPlacements: [],
+      adventurePropAnchors: [],
     })
     const withoutRocks = createCaveHeightfieldPresentation({
       field,
@@ -220,6 +222,7 @@ describe('createCaveHeightfieldPresentation', () => {
       maskMaterial,
       rocks: false,
       interiorRockPlacements: [],
+      adventurePropAnchors: [],
     })
     expect(withRocks.rockCount).toBeGreaterThanOrEqual(8)
     expect(withRocks.group.children.map((c) => c.name)).toContain('cave-mouth-rocks')

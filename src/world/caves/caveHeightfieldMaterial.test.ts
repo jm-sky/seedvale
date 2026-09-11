@@ -2,8 +2,8 @@
 
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
-import { getSharedTerrainDetailNormalMap } from '../../terrain/terrainDetailNormalMap'
 import { getSharedCaveRockDiffuse } from '../../assets/sharedSurfaceDiffuseTextures'
+import { getSharedTerrainDetailNormalMap } from '../../terrain/terrainDetailNormalMap'
 import {
   alignCaveDetailNormalToGeometric,
   CAVE_SURFACE_MATERIAL_TUNING,

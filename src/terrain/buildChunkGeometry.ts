@@ -3,8 +3,8 @@ import type { DetailNormalConfig } from '../config/worldConfig'
 import type { ChunkMeshData } from './chunkMeshData'
 import {
   getSharedTerrainDirtDiffuse,
-  TERRAIN_DIRT_DIFFUSE_LINEAR_NEUTRAL,
   type SharedSurfaceDiffuseSampler,
+  TERRAIN_DIRT_DIFFUSE_LINEAR_NEUTRAL,
 } from '../assets/sharedSurfaceDiffuseTextures'
 import { buildCutChunkAttributes, type TerrainCutout } from './terrainCutout'
 import { getSharedTerrainDetailNormalMap } from './terrainDetailNormalMap'
