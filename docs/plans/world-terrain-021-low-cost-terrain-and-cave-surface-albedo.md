@@ -1,7 +1,7 @@
 # Plan: Low-Cost Terrain and Cave Surface Albedo
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** `polish`
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~world-terrain-019~~

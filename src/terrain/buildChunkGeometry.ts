@@ -1,6 +1,11 @@
 import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { ChunkMeshData } from './chunkMeshData'
+import {
+  getSharedTerrainDirtDiffuse,
+  TERRAIN_DIRT_DIFFUSE_LINEAR_NEUTRAL,
+  type SharedSurfaceDiffuseSampler,
+} from '../assets/sharedSurfaceDiffuseTextures'
 import { buildCutChunkAttributes, type TerrainCutout } from './terrainCutout'
 import { getSharedTerrainDetailNormalMap } from './terrainDetailNormalMap'
 
@@ -32,6 +37,16 @@ export type TerrainWeatherUniforms = {
   uSnowAmount: { value: number }
 }
 
+/** Shared diffuse colour-detail tuning (plan world-terrain-021). */
+export const TERRAIN_DIRT_DIFFUSE_TUNING = {
+  worldScale: 0.14,
+  bareGroundStart: 0.35,
+  bareGroundEnd: 0.88,
+  detailFadeStart: 20,
+  detailFadeEnd: 50,
+  linearNeutral: TERRAIN_DIRT_DIFFUSE_LINEAR_NEUTRAL,
+} as const
+
 export function createTerrainMaterial(
   flatShading: boolean,
   detailNormal: DetailNormalConfig,
@@ -59,8 +74,10 @@ export function createTerrainMaterial(
     uSnowAmount: { value: 0 },
   }
   material.weatherUniforms = weatherUniforms
+  const dirtDiffuse = getSharedTerrainDirtDiffuse()
   // Macro color/roughness always; dual-tile normals + distance fade when enabled.
-  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null, waterLevel, weatherUniforms)
+  applyTerrainSurfaceShader(material, detailOn ? detailNormal : null, waterLevel, weatherUniforms, dirtDiffuse)
+  material.userData.terrainDirtAlbedo = dirtDiffuse.map
   return material
 }
 
@@ -120,6 +137,23 @@ float terrainValueNoise( vec2 p ) {
   float d = terrainHash21( i + vec2( 1.0, 1.0 ) );
   return mix( mix( a, b, f.x ), mix( c, d, f.x ), f.y );
 }
+`
+
+/** Bare-ground-gated dirt photograph as luminance detail (plan 021). */
+const TERRAIN_DIRT_ALBEDO_CHUNK = /* glsl */ `
+  {
+    vec3 dirtRgb = texture2D( uTerrainDirtAlbedo, vWorldPos.xz * uTerrainDirtWorldScale ).rgb;
+    float dirtLum = dot( dirtRgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+    float dirtDetail = dirtLum / max( uTerrainDirtLinearNeutral, 1e-4 );
+    float bareMask = smoothstep( uTerrainDirtBareStart, uTerrainDirtBareEnd, vBareGround );
+    float dirtDetailFade = 1.0 - smoothstep(
+      uTerrainDirtFadeStart,
+      uTerrainDirtFadeEnd,
+      length( vViewPosition )
+    );
+    float dirtAmt = bareMask * dirtDetailFade * uTerrainDirtAlbedoInfluence;
+    diffuseColor.rgb *= mix( 1.0, dirtDetail, dirtAmt );
+  }
 `
 
 const MACRO_COLOR_CHUNK = /* glsl */ `
@@ -265,10 +299,20 @@ function applyTerrainSurfaceShader(
   detailNormal: DetailNormalConfig | null,
   waterLevel: number,
   weatherUniforms: TerrainWeatherUniforms,
+  dirtDiffuse: SharedSurfaceDiffuseSampler,
 ): void {
   const detailOn = detailNormal !== null
+  const dirtTuning = TERRAIN_DIRT_DIFFUSE_TUNING
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWaterLevel = { value: waterLevel }
+    shader.uniforms.uTerrainDirtAlbedo = dirtDiffuse.map
+    shader.uniforms.uTerrainDirtAlbedoInfluence = dirtDiffuse.influence
+    shader.uniforms.uTerrainDirtWorldScale = { value: dirtTuning.worldScale }
+    shader.uniforms.uTerrainDirtLinearNeutral = { value: dirtTuning.linearNeutral }
+    shader.uniforms.uTerrainDirtBareStart = { value: dirtTuning.bareGroundStart }
+    shader.uniforms.uTerrainDirtBareEnd = { value: dirtTuning.bareGroundEnd }
+    shader.uniforms.uTerrainDirtFadeStart = { value: dirtTuning.detailFadeStart }
+    shader.uniforms.uTerrainDirtFadeEnd = { value: dirtTuning.detailFadeEnd }
     // Referenced, not copied — `ChunkManager.setWeatherSurface()` mutates
     // `weatherUniforms.uWetness.value` directly, so this stays live without
     // needing to re-fetch the compiled shader later (plan 133).
@@ -310,6 +354,14 @@ varying float vSlopeUp;
 uniform float uWaterLevel;
 uniform float uWetness;
 uniform float uSnowAmount;
+uniform sampler2D uTerrainDirtAlbedo;
+uniform float uTerrainDirtAlbedoInfluence;
+uniform float uTerrainDirtWorldScale;
+uniform float uTerrainDirtLinearNeutral;
+uniform float uTerrainDirtBareStart;
+uniform float uTerrainDirtBareEnd;
+uniform float uTerrainDirtFadeStart;
+uniform float uTerrainDirtFadeEnd;
 ${MACRO_NOISE_FUNCS}${
           detailOn
             ? '\nuniform float uDetailTilesGrass;\nuniform float uDetailTilesBare;'
@@ -318,7 +370,7 @@ ${MACRO_NOISE_FUNCS}${
       )
       .replace(
         COLOR_FRAGMENT_INCLUDE,
-        `${COLOR_FRAGMENT_INCLUDE}\n${MACRO_COLOR_CHUNK}\n${WET_SAND_CHUNK}\n${WEATHER_SURFACE_COLOR_CHUNK}`,
+        `${COLOR_FRAGMENT_INCLUDE}\n${TERRAIN_DIRT_ALBEDO_CHUNK}\n${MACRO_COLOR_CHUNK}\n${WET_SAND_CHUNK}\n${WEATHER_SURFACE_COLOR_CHUNK}`,
       )
       .replace(
         ROUGHNESSMAP_FRAGMENT_INCLUDE,
@@ -347,7 +399,7 @@ ${MACRO_NOISE_FUNCS}${
   // world-terrain-003's edge/core puddle split so three never reuses a v5
   // program compiled against the old single `puddleAmt` chunk.
   material.customProgramCacheKey = () =>
-    detailOn ? 'chunk-terrain-surface-detail-v6' : 'chunk-terrain-surface-v6'
+    detailOn ? 'chunk-terrain-surface-detail-v7' : 'chunk-terrain-surface-v7'
 }
 
 /**

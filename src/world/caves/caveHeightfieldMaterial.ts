@@ -6,6 +6,11 @@
  */
 
 import * as THREE from 'three'
+import {
+  CAVE_ROCK_DIFFUSE_LINEAR_NEUTRAL,
+  getSharedCaveRockDiffuse,
+  type SharedSurfaceDiffuseSampler,
+} from '../../assets/sharedSurfaceDiffuseTextures'
 import { getSharedTerrainDetailNormalMap } from '../../terrain/terrainDetailNormalMap'
 
 /** Central tuning knobs — referenced from GLSL via matching uniforms. */
@@ -14,6 +19,8 @@ export const CAVE_SURFACE_MATERIAL_TUNING = {
   rockNormalStrength: 0.42,
   /** Procedural rock normal detail layered under triplanar texture (world-space). */
   proceduralRockStrength: 0.22,
+  rockAlbedoScale: 0.42,
+  rockAlbedoLinearNeutral: CAVE_ROCK_DIFFUSE_LINEAR_NEUTRAL,
   macroScale: 0.055,
   wetnessScale: 0.048,
   wetnessAmount: 1.0,
@@ -30,7 +37,7 @@ const NORMAL_MAP_INCLUDE = '#include <normal_fragment_maps>'
 const COLOR_FRAGMENT_INCLUDE = '#include <color_fragment>'
 const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
 
-const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v5-detail'
+const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v6-detail'
 const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v5-plain'
 
 function caveVec3Normalize(v: CaveVec3, fallback: CaveVec3 = [0, 1, 0]): [number, number, number] {
@@ -169,11 +176,25 @@ float caveWetnessMask( vec3 worldPos ) {
   float wetNoise = wetMacro * 0.68 + wetMacro2 * 0.32;
   return clamp( smoothstep( 0.38, 0.78, wetNoise ) * uCaveWetnessAmount, 0.0, 1.0 );
 }
+vec3 caveTriplanarBlendWeights( vec3 worldN ) {
+  vec3 blend = abs( worldN );
+  blend = max( blend, vec3( 1e-4 ) );
+  return blend / ( blend.x + blend.y + blend.z );
+}
+float caveTriplanarRockAlbedoDetail( vec3 worldPos, vec3 worldN, float scale ) {
+  vec3 blend = caveTriplanarBlendWeights( worldN );
+  vec3 p = worldPos * scale;
+  vec3 albedoX = texture2D( uCaveRockAlbedo, p.zy ).rgb;
+  vec3 albedoY = texture2D( uCaveRockAlbedo, p.xz ).rgb;
+  vec3 albedoZ = texture2D( uCaveRockAlbedo, p.xy ).rgb;
+  vec3 rockRgb = albedoX * blend.x + albedoY * blend.y + albedoZ * blend.z;
+  float rockLum = dot( rockRgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+  float centered = rockLum / max( uCaveRockAlbedoLinearNeutral, 1e-4 );
+  return mix( 1.0, centered, uCaveRockAlbedoInfluence );
+}
 vec3 caveTriplanarWorldNormal( vec3 worldPos, vec3 worldN, float scale, float strength ) {
   vec3 n = caveSafeNormalize( worldN, vec3( 0.0, 1.0, 0.0 ) );
-  vec3 blend = abs( n );
-  blend = max( blend, vec3( 1e-4 ) );
-  blend /= ( blend.x + blend.y + blend.z );
+  vec3 blend = caveTriplanarBlendWeights( n );
 
   vec3 tX = texture2D( uCaveDetailNormalMap, worldPos.zy * scale ).xyz * 2.0 - 1.0;
   vec3 tY = texture2D( uCaveDetailNormalMap, worldPos.xz * scale ).xyz * 2.0 - 1.0;
@@ -206,6 +227,13 @@ void caveProceduralRockPerturb( vec3 worldPos, float scale, inout vec3 worldN ) 
 
 const CAVE_COLOR_CHUNK = /* glsl */ `
   {
+    vec3 geoWorld = caveViewToWorldDir( normalize( vNormal ) );
+    diffuseColor.rgb *= caveTriplanarRockAlbedoDetail(
+      vWorldPos,
+      geoWorld,
+      uCaveRockAlbedoScale
+    );
+
     float macro = caveTriplanarValueNoise( vWorldPos, uCaveMacroScale );
     float macro2 = caveTriplanarValueNoise( vWorldPos, uCaveMacroScale * 2.15 );
     float macroMix = macro * 0.62 + macro2 * 0.38;
@@ -244,9 +272,14 @@ function applyCaveSurfaceShader(
   material: THREE.MeshStandardMaterial,
   tuning: CaveSurfaceMaterialTuning,
   detailMap: THREE.Texture,
+  rockDiffuse: SharedSurfaceDiffuseSampler,
 ): void {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uCaveDetailNormalMap = { value: detailMap }
+    shader.uniforms.uCaveRockAlbedo = rockDiffuse.map
+    shader.uniforms.uCaveRockAlbedoInfluence = rockDiffuse.influence
+    shader.uniforms.uCaveRockAlbedoScale = { value: tuning.rockAlbedoScale }
+    shader.uniforms.uCaveRockAlbedoLinearNeutral = { value: tuning.rockAlbedoLinearNeutral }
     shader.uniforms.uCaveRockDetailScale = { value: tuning.rockDetailScale }
     shader.uniforms.uCaveRockNormalStrength = { value: tuning.rockNormalStrength }
     shader.uniforms.uCaveProceduralRockStrength = { value: tuning.proceduralRockStrength }
@@ -273,6 +306,10 @@ function applyCaveSurfaceShader(
         `#include <common>
 varying vec3 vWorldPos;
 uniform sampler2D uCaveDetailNormalMap;
+uniform sampler2D uCaveRockAlbedo;
+uniform float uCaveRockAlbedoInfluence;
+uniform float uCaveRockAlbedoScale;
+uniform float uCaveRockAlbedoLinearNeutral;
 uniform float uCaveRockDetailScale;
 uniform float uCaveRockNormalStrength;
 uniform float uCaveProceduralRockStrength;
@@ -333,9 +370,11 @@ export function createCaveHeightfieldMaterial(
 
   if (surfaceDetail) {
     const detailMap = getSharedTerrainDetailNormalMap()
-    applyCaveSurfaceShader(material, tuning, detailMap)
+    const rockDiffuse = getSharedCaveRockDiffuse()
+    applyCaveSurfaceShader(material, tuning, detailMap, rockDiffuse)
     material.userData.caveSurfaceDetail = true
     material.userData.caveDetailNormalMap = detailMap
+    material.userData.caveRockAlbedo = rockDiffuse.map
   } else {
     material.roughness = 0.88
     material.customProgramCacheKey = () => SHADER_CACHE_KEY_PLAIN
@@ -354,5 +393,6 @@ export function disposeCaveHeightfieldMaterialGpu(material: THREE.Material): voi
   }
   material.normalMap = null
   material.userData.caveDetailNormalMap = null
+  material.userData.caveRockAlbedo = null
   material.dispose()
 }

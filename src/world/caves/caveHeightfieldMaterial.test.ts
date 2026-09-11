@@ -3,6 +3,7 @@
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 import { getSharedTerrainDetailNormalMap } from '../../terrain/terrainDetailNormalMap'
+import { getSharedCaveRockDiffuse } from '../../assets/sharedSurfaceDiffuseTextures'
 import {
   alignCaveDetailNormalToGeometric,
   CAVE_SURFACE_MATERIAL_TUNING,
@@ -71,6 +72,7 @@ describe('createCaveHeightfieldMaterial', () => {
     expect(a.normalMap).toBeNull()
     expect(b.normalMap).toBeNull()
     expect(a.userData.caveDetailNormalMap).toBe(shared)
+    expect(a.userData.caveRockAlbedo).toBe(getSharedCaveRockDiffuse().map)
     expect(b.userData.caveDetailNormalMap).toBe(shared)
     expect(a.userData.caveSurfaceDetail).toBe(true)
     expect(a.metalness).toBe(0)
@@ -96,6 +98,7 @@ describe('createCaveHeightfieldMaterial', () => {
     expect(mat.side).toBe(THREE.FrontSide)
     const shader = injectDetailShader(mat)
     expect(shader.fragmentShader).not.toContain('caveTriplanarWorldNormal')
+    expect(shader.fragmentShader).not.toContain('uCaveRockAlbedo')
     expect(shader.fragmentShader).toContain('#include <normal_fragment_maps>')
     mat.dispose()
   })
@@ -115,8 +118,15 @@ describe('cave surface shader contract', () => {
 
     expect(mat.normalMap).toBeNull()
     expect(uniforms.uCaveDetailNormalMap?.value).toBe(getSharedTerrainDetailNormalMap())
+    expect(uniforms.uCaveRockAlbedo?.value).toBe(getSharedCaveRockDiffuse().map.value)
     expect(fragmentShader).toContain('uniform sampler2D uCaveDetailNormalMap')
+    expect(fragmentShader).toContain('uniform sampler2D uCaveRockAlbedo')
     expect(fragmentShader).toContain('texture2D( uCaveDetailNormalMap')
+    expect(fragmentShader).toContain('texture2D( uCaveRockAlbedo')
+    expect(fragmentShader.match(/texture2D\(\s*uCaveDetailNormalMap/g)?.length).toBe(3)
+    expect(fragmentShader.match(/texture2D\(\s*uCaveRockAlbedo/g)?.length).toBe(3)
+    expect(fragmentShader).toContain('caveTriplanarBlendWeights')
+    expect(fragmentShader).toContain('caveViewToWorldDir( normalize( vNormal ) )')
     expect(fragmentShader).toContain('caveTriplanarWorldNormal')
     expect(fragmentShader).toContain('caveViewToWorldDir')
     expect(fragmentShader).toContain('geoView = caveSafeNormalize( normal')
