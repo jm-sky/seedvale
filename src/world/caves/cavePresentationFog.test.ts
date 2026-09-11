@@ -80,6 +80,20 @@ describe('cave presentation scene fog opt-out', () => {
     expect(inst.userData.sharedGpu).toBe(false)
   })
 
+  it('leaves already fog-disabled shared heightfield materials on the mesh', () => {
+    const shared = createCaveHeightfieldMaterial()
+    shared.userData.sharedGpu = true
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), shared)
+    const group = new THREE.Group()
+    group.add(mesh)
+
+    exemptCavePresentationFromSceneFog(group)
+
+    expect(mesh.material).toBe(shared)
+    expect(shared.userData.sharedGpu).toBe(true)
+    expect(shared.fog).toBe(false)
+  })
+
   it('outdoor resolveSceneFog contract is unchanged when not in cave occupancy', () => {
     const baseFog = { fogColor: 0x6a93b0, fogNear: 160, fogFar: 230 }
     const outdoor = applyWeatherOverlay(baseFog, weather({ type: 'fog', intensity: 1 }))

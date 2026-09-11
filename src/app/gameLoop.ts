@@ -649,6 +649,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     camera.position.x,
     camera.position.y,
     camera.position.z,
+    'camera',
   )
   /** Cached `skyParamsFromTime(dayNight.timeOfDay)` — recomputed at most once
    *  per frame (only while unpaused, since `timeOfDay` is frozen otherwise),
@@ -782,6 +783,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       camera.position.x,
       camera.position.y,
       camera.position.z,
+      'camera',
     )
     cachedSky = applyDayNight(
       dayNight.timeOfDay,
@@ -2151,6 +2153,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         camera.position.x,
         camera.position.y,
         camera.position.z,
+        'camera',
       )
       if (
         dayNight.enabled &&
@@ -2175,6 +2178,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position.x,
         player.mesh.position.y,
         player.mesh.position.z,
+        'player',
       )
       weatherAudio.update(climate.weather, inCaveInterior)
       ambientAudio.update(

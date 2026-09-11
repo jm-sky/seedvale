@@ -370,6 +370,46 @@ describe('createCaves (world-terrain-019 B)', () => {
     expect(caves.occupancyAt(ax, ay, az)?.openSky).toBe(true)
   })
 
+  it('camera and player interior channels keep independent two-sample confirmation', () => {
+    const def = caves.definitions()[0]!
+    const field = productionHeightfield(def.caveId)
+    const out = openingDirection(def.entrance.yaw)
+    let deep: { x: number, y: number, z: number } | null = null
+    for (let along = -4; along >= -14 && !deep; along -= 0.5) {
+      const x = def.entrance.x + out.dx * along
+      const z = def.entrance.z + out.dz * along
+      const sample = sampleHeightfieldAt(field, x, z)
+      if (sample.outsideGrid || sample.gap < 2 || sample.openSky) continue
+      deep = { x, y: sample.floorY + 0.3, z }
+    }
+    expect(deep).not.toBeNull()
+    const ax = def.entrance.x + out.dx * 1.5
+    const az = def.entrance.z + out.dz * 1.5
+    const ay = chunkManager.sampleBaseHeight(ax, az) - mouthCarveDepth(ax, az, def.entrance) + 0.2
+
+    caves.dispose()
+    caves = createCaves(scene, chunkManager, SEED, villageSizeConfig('MD').footprintRadius, 0.45)
+
+    // First sample per channel is taken immediately (empty hysteresis).
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z, 'camera')).toBe(true)
+    // Shared-slot bug: this player exterior sample would hold interior=true
+    // because camera just wrote lastRaw=true.
+    expect(caves.queryInterior(ax, ay, az, 'player')).toBe(false)
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z, 'camera')).toBe(true)
+    expect(caves.queryInterior(ax, ay, az, 'player')).toBe(false)
+
+    // Player can still confirm interior on its own channel.
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z, 'player')).toBe(false)
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z, 'camera')).toBe(true)
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z, 'player')).toBe(true)
+
+    // Camera leaving does not drop the player's confirmed interior.
+    expect(caves.queryInterior(ax, ay, az, 'camera')).toBe(true)
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z, 'player')).toBe(true)
+    expect(caves.queryInterior(ax, ay, az, 'camera')).toBe(false)
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z, 'player')).toBe(true)
+  })
+
   it('horizontal containment keeps a player inside the production cave and leaves the hillside alone', () => {
     const def = caves.definitions()[0]!
     const field = productionHeightfield(def.caveId)

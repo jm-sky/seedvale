@@ -13,13 +13,13 @@
  */
 
 import * as THREE from 'three'
+import type { VillageTorch } from '../../settlement/houseLighting'
 import type { CaveContentAnchor } from './caveContentAnchors'
 import { createLargeRock } from '../../settlement/decorProps'
 import {
   createCaveAdventurePropsGroup,
   getCaveAdventurePropTemplates,
 } from './caveAdventureProps'
-import type { VillageTorch } from '../../settlement/houseLighting'
 import {
   buildHeightfieldMeshBuffers,
   buildMouthUndersideMaskBuffers,
@@ -58,8 +58,13 @@ export function exemptCavePresentationFromSceneFog(root: THREE.Object3D): void {
     const mesh = obj as THREE.Mesh
     if (!mesh.isMesh) return
     const detachFog = (mat: THREE.Material): THREE.Material => {
+      const fogMat = mat as THREE.Material & { fog?: boolean }
+      // Heightfield / mouth materials already opt out at creation and stay
+      // shared across activations. Clone only cache materials that still
+      // receive scene fog (GLTF props / rocks).
+      if (fogMat.fog === false) return mat
       if (!mat.userData.sharedGpu) {
-        ;(mat as THREE.Material & { fog?: boolean }).fog = false
+        fogMat.fog = false
         return mat
       }
       const next = mat.clone()

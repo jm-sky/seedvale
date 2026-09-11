@@ -166,18 +166,26 @@ describe('cave content anchors (plan world-terrain-020 Stage B)', () => {
   })
 
   it('keeps each required anchor inside the cave void with its role clearance', () => {
-    const anchors = resolveCaveContentAnchors({
-      archetype: 'adventure',
-      topology: FIXTURE.topology,
-      heightfield: FIXTURE.heightfield,
-    })
-    for (const role of ['sideTreasure', 'finalTreasure', 'wagon'] as const) {
-      const anchor = byRole(anchors, role)[0]!
-      const spec = CAVE_CONTENT_PLACEMENT[role]
-      const sample = sampleHeightfieldAt(FIXTURE.heightfield, anchor.x, anchor.z)
-      expect(sample.gap, role).toBeGreaterThanOrEqual(spec.minGap)
-      expect(sample.coreT, role).toBeLessThanOrEqual(spec.maxCoreT)
+    const seeds = [42, 7, 99, 123, 1001, 2026]
+    let accepted = 0
+    for (const seed of seeds) {
+      const built = seed === 42 ? FIXTURE : buildAdventure(seed, SITE)
+      accepted++
+      const anchors = resolveCaveContentAnchors({
+        archetype: 'adventure',
+        topology: built.topology,
+        heightfield: built.heightfield,
+      })
+      for (const role of ['sideTreasure', 'finalTreasure', 'wagon'] as const) {
+        const anchor = byRole(anchors, role)[0]
+        expect(anchor, `seed ${seed} missing ${role}`).toBeDefined()
+        const spec = CAVE_CONTENT_PLACEMENT[role]
+        const sample = sampleHeightfieldAt(built.heightfield, anchor!.x, anchor!.z)
+        expect(sample.gap, `seed ${seed} ${role}`).toBeGreaterThanOrEqual(spec.minGap)
+        expect(sample.coreT, `seed ${seed} ${role}`).toBeLessThanOrEqual(spec.maxCoreT)
+      }
     }
+    expect(accepted).toBe(seeds.length)
   })
 
   it('requires a larger placement clearance for the wagon than for a chest', () => {

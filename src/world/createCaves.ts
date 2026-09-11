@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { VillageTorch } from '../settlement/houseLighting'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { CaveArchetype } from './caves/caveArchetype'
 import type { CaveTopology } from './caves/caveTopology'
@@ -7,7 +8,6 @@ import { isBootMarkMode, isSystemEnabled } from '../debug/debugMode'
 import { type CaveGroundQueryDebug, writeHitSnapshot } from '../debug/playerGroundTrace'
 import { getMonitor } from '../perf/active'
 import { villageSizeConfig } from '../settlement/families'
-import type { VillageTorch } from '../settlement/houseLighting'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { useBootMark } from '../shared/bootMark'
 import { assignCaveArchetypes } from './caves/caveArchetype'
@@ -84,6 +84,10 @@ const PRESENTATION_BUILDS_PER_UPDATE = 1
  *  to narrow streaming candidates — not cave identity/generation. */
 const CAVE_GRID_CELL = 500
 
+/** Independent two-sample interior confirmation slots. Fog uses `camera`;
+ *  audio / player-facing callers use `player` (the default). */
+export type CaveInteriorQueryChannel = 'player' | 'camera'
+
 export type Caves = {
   definitions: () => readonly CaveDefinition[]
   /** Streams cave presentation in/out around the observer
@@ -126,11 +130,12 @@ export type Caves = {
    */
   resolveHorizontal: (x: number, z: number, y: number, radius: number, entityHeight: number) => { x: number, z: number }
   /**
-   * Hysteretic cave-interior flag for the player's current position.
-   * Call once per frame from the player sample — not from camera march.
-   * Approach/mouth portal occupancy is not interior.
+   * Hysteretic cave-interior flag. Approach/mouth portal occupancy is not
+   * interior. Each channel keeps its own two-sample confirmation so camera
+   * boom (scene fog) and player body (audio) cannot contaminate each other
+   * at the mouth. Call at most once per frame per channel.
    */
-  queryInterior: (x: number, y: number, z: number) => boolean
+  queryInterior: (x: number, y: number, z: number, channel?: CaveInteriorQueryChannel) => boolean
   /**
    * Presentation/relevance counters (B4). Debug / tests — gameplay must use
    * `queryGround` / `occupancyAt`, never this. `queuedJobs` counts pending
@@ -243,8 +248,9 @@ const TERRAIN_CUTOUT_OWNER_KEY = 'caves'
  *  streamed interior presentation, and deterministic adventure content
  *  anchors; `PlayerController` ground goes through `queryGround`, lateral
  *  containment through `resolveHorizontal`, camera and swim eligibility
- *  through `occupancyAt`. `queryInterior` is the hysteretic player-position
- *  cave-interior signal (audio / diagnostics).
+ *  through `occupancyAt`. `queryInterior` is the hysteretic cave-interior
+ *  signal: `player` (default, audio) and `camera` (scene fog) keep separate
+ *  confirmation slots.
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -374,8 +380,10 @@ export function createCaves(
   const maskMaterial = createMouthUndersideMaskMaterial()
   maskMaterial.userData.sharedGpu = true
   let lastGroundHit: CaveGroundHit | null = null
-  let lastInteriorRaw: boolean | null = null
-  let interiorConfirmed = false
+  const interiorHysteresis: Record<CaveInteriorQueryChannel, { lastRaw: boolean | null, confirmed: boolean }> = {
+    player: { lastRaw: null, confirmed: false },
+    camera: { lastRaw: null, confirmed: false },
+  }
   /** Cave the remembered `lastGroundHit` belongs to — debug trace `caveId`
    *  only; ground resolution never reads it. Cleared with the hit. */
   let lastHitRuntime: CaveRuntime | null = null
@@ -631,7 +639,7 @@ export function createCaves(
       }
       return { x: px, z: pz }
     },
-    queryInterior(x, y, z) {
+    queryInterior(x, y, z, channel = 'player') {
       let sample = false
       for (const runtime of runtimes) {
         if (heightfieldInteriorAt(runtime.heightfield, analyticSurfaceHeight, runtime.topology.entrance, x, y, z)) {
@@ -639,10 +647,11 @@ export function createCaves(
           break
         }
       }
-      const resolved = applyCaveInteriorHysteresis(sample, lastInteriorRaw, interiorConfirmed)
-      lastInteriorRaw = resolved.rememberRaw
-      interiorConfirmed = resolved.interior
-      return interiorConfirmed
+      const slot = interiorHysteresis[channel]
+      const resolved = applyCaveInteriorHysteresis(sample, slot.lastRaw, slot.confirmed)
+      slot.lastRaw = resolved.rememberRaw
+      slot.confirmed = resolved.interior
+      return slot.confirmed
     },
     contains(x, y, z) {
       return occupancyAt(x, y, z) !== null
@@ -665,8 +674,10 @@ export function createCaves(
     dispose() {
       lastGroundHit = null
       lastHitRuntime = null
-      lastInteriorRaw = null
-      interiorConfirmed = false
+      interiorHysteresis.player.lastRaw = null
+      interiorHysteresis.player.confirmed = false
+      interiorHysteresis.camera.lastRaw = null
+      interiorHysteresis.camera.confirmed = false
       writeGroundQueryDebug(0, 0, 0, null, null, null, 0, null)
       streaming.dispose()
       presentationQueue.clear()

@@ -308,7 +308,7 @@ Stage D (wagon/cart, support, crate, lantern visuals; optional bounded cave lant
 - **Pivot corrections.** None beyond standard prepareProp foot-on-y=0 and cart `CART_MODEL_YAW_OFFSET` (currently 0). No Stage B anchor placement bugs found during implementation.
 - **Tests.** `caveAdventureProps.test.ts`, `createCaves.adventureProps.test.ts` (stream in/out, budget unregister, natural cave has no props group).
 
-Stage E (if any) can build on browser-verified prop scale/placement tuning only — no new seam required for presentation attach.
+Stage E (integration review) is below — no new presentation seam was required.
 
 ## Pre–Stage E fix (presentation contract)
 
@@ -316,10 +316,21 @@ Small correctness pass before browser tuning (Stage E):
 
 - **Prepared-root offset.** `createCaveAdventurePropsGroup()` pivot world position is exactly semantic anchor `x/y/z`; the cloned template keeps its `prepareProp` / `preparePropFitMax` local root offset once (no `anchor + src.position` on the pivot).
 - **Cave `lantern` role → torch presentation.** Stage B role name unchanged; Stage D uses `VILLAGE_TORCH_URL` / `createProceduralTorchPost` + `createVillageTorchLight()` (shared particle fire, baked `Fire` mesh hidden). No `LANTERN_URL` in adventure cave preload. Reuse is direct via `createVillageTorchLight` — no `CaveTorchSystem`, no `houseLighting` behavior change for settlement torches.
-- **Flicker.** Cave torches call `setLit(true)` at presentation build; there is no cave presentation `update(dt)` hook, so point-light flicker is **static** after the initial `fireVisual.flicker()` sample (particles visible but not animated per frame).
+- **Flicker.** Active adventure presentations tick `VillageTorch.update(dt)` from `createCaves.update` — bounded to that cave's lit torches (max 2). There is no global cave-torch manager.
 - **Lights.** Still `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT = 2` real `PointLight`s per active adventure presentation via `PointLightBudget` register/unregister on the props subtree; `castShadow = false`.
 - **Procedural cart fallback.** `preloadCartProp()` marks the procedural singleton template with exported `markSharedGpu()` so `disposeObject3D()` on streamed presentation clones cannot free shared cart geometry/material.
-- **Exterior view / scene fog.** Global `scene.fog` (day/night + weather via `resolveSceneFog` when the camera is in cave occupancy) cannot exclude cave interior surfaces when the camera is outside — `THREE.Fog` is per-camera, not per-volume. Streamed cave presentation opts out: shared heightfield/mouth materials set `fog: false`; `exemptCavePresentationFromSceneFog()` runs on each assembled `cave:*` group (clones `sharedGpu` materials on prop/rock meshes so GLTF cache is not mutated).
+- **Exterior view / scene fog.** Global `scene.fog` (day/night + weather via `resolveSceneFog` when the camera is in cave occupancy) cannot exclude cave interior surfaces when the camera is outside — `THREE.Fog` is per-camera, not per-volume. Streamed cave presentation opts out: shared heightfield/mouth materials set `fog: false`; `exemptCavePresentationFromSceneFog()` runs on each assembled `cave:*` group (clones `sharedGpu` materials that still receive fog so GLTF cache is not mutated; materials already at `fog: false` stay shared).
 - **Support / torch polish.** Stage D lays megakit supports flat (`CAVE_SUPPORT_LAY_FLAT_ROLL`) with a horizontal procedural fallback. Lantern anchors use `passageWallCandidates` `tight` bias; cave torches add `CAVE_TORCH_YAW_OFFSET` on the presentation pivot.
+
+## Stage E landed — integration review
+
+Stage E was review-only plus two contract holes found on current `main`:
+
+- **`queryInterior` channels.** Fog (`gameLoop` / `resyncDayNight`) and audio both called `Caves.queryInterior` in the same frame against one hysteresis slot. `applyCaveInteriorHysteresis` is per-entity, so camera boom vs player body at the mouth could freeze or mix confirmation. `queryInterior(x, y, z, channel?: 'player' | 'camera')` now keeps independent slots; default remains `'player'`. Fog uses `'camera'`.
+- **Shared heightfield material clone.** `exemptCavePresentationFromSceneFog()` cloned every `sharedGpu` material, including the already `fog: false` cave/mouth materials, so each activation allocated a new interior material (`sharedGpu: false`). Skip materials that already have `fog === false`; GLTF/prop cache materials with fog still clone.
+- **Required-anchor fallback.** `pickCandidate` still places required `sideTreasure` / `finalTreasure` / `wagon` on the first in-void sample if no candidate meets full clearance. Multi-seed check (6 accepted adventure layouts) all met `minGap` / `maxCoreT`; left unchanged so the 1+1 chest guarantee stays.
+- **`CAVE_TREASURE_ENABLED`** remains `false` and unread; keyed world-024 cave treasure stays off via `Exclude<'cave'>`. Not wired.
+
+User already browser-verified adventure caves. Automated sweep + typecheck/lint/build passed. Plan status `done`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
