@@ -46,6 +46,10 @@ import {
   type SurfaceSampler,
 } from './caves/caveHeightfieldRepresentation'
 import {
+  type CaveInteriorRockPlacement,
+  resolveCaveInteriorRocks,
+} from './caves/caveInteriorRocks'
+import {
   type CaveStreamingStats,
   createCavePresentationQueue,
   createCaveStreamingController,
@@ -171,6 +175,11 @@ type CaveRuntime = {
   /** Adventure content placements resolved against `heightfield`. Empty for
    *  `natural`. Frozen; never mutated after construction. */
   contentAnchors: readonly CaveContentAnchor[]
+  /** Generic interior rock/boulder clutter (world-terrain-022), resolved
+   *  against `heightfield` and `contentAnchors`. Empty when
+   *  `?debugDisableSystems=caveInteriorRocks` disables the system. Frozen;
+   *  never mutated after construction. */
+  interiorRocks: readonly CaveInteriorRockPlacement[]
 }
 
 function gridKey(cx: number, cz: number): string {
@@ -267,6 +276,7 @@ export function createCaves(
   // geometry stays lazy on streaming.
   const { bootMark, bootMarkEnd } = useBootMark('createCaves')
   const mouthRocksEnabled = isSystemEnabled('caveMouthRocks')
+  const interiorRocksEnabled = isSystemEnabled('caveInteriorRocks')
   const v2ByCaveId = new Map<string, CaveRuntime>()
 
   bootMark('cave.topology')
@@ -290,13 +300,19 @@ export function createCaves(
   for (const { topology, archetype } of accepted) {
     const walkSurfaceAt: SurfaceSampler = (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
     const heightfield = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
+    const contentAnchors = resolveCaveContentAnchors({ archetype, topology, heightfield })
     v2ByCaveId.set(topology.caveId, {
       archetype,
       topology,
       definition: topologyToCaveDefinition(topology),
       heightfield,
       walkSurfaceAt,
-      contentAnchors: resolveCaveContentAnchors({ archetype, topology, heightfield }),
+      contentAnchors,
+      // Presentation-only, so skip the CPU work entirely when the debug
+      // system disables it — unlike `contentAnchors`, it never renders.
+      interiorRocks: interiorRocksEnabled
+        ? resolveCaveInteriorRocks({ archetype, topology, heightfield, contentAnchors })
+        : [],
     })
   }
   bootMarkEnd('cave.heightfield')
@@ -418,6 +434,7 @@ export function createCaves(
       caveMaterial,
       maskMaterial,
       rocks: mouthRocksEnabled,
+      interiorRockPlacements: v2.interiorRocks,
     })
     scene.add(presentation.group)
     presentations.set(caveId, presentation.group)
@@ -436,6 +453,7 @@ export function createCaves(
         geometryBytes: presentation.buffers.geometryBytes,
         maskVertices: presentation.maskVertices,
         rocks: presentation.rockCount,
+        interiorRocks: presentation.interiorRockCount,
       })
     }
   }

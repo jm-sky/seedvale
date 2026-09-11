@@ -24,6 +24,11 @@ import {
   mouthOpeningAt,
   type SurfaceSampler,
 } from './caveHeightfieldRepresentation'
+import {
+  type CaveInteriorRockPlacement,
+  createCaveInteriorRocksGroup,
+  getCaveInteriorRockTemplates,
+} from './caveInteriorRocks'
 import { openingDirection } from './caveOrientation'
 
 export { createCaveHeightfieldMaterial } from './caveHeightfieldMaterial'
@@ -200,6 +205,9 @@ export type CaveHeightfieldPresentation = {
   buffers: HeightfieldMeshBuffers
   maskVertices: number
   rockCount: number
+  /** Interior rock/boulder clutter instance count (world-terrain-022) —
+   *  0 when disabled or when no placement passed its guards. */
+  interiorRockCount: number
   /** Main-thread assembly time, mesh buffers included. */
   assembleMs: number
 }
@@ -210,7 +218,8 @@ export type CaveHeightfieldPresentation = {
  * ~10–20k nodes, small enough that the SDF extraction worker is not needed.
  * The caller adds the group to the scene and later disposes it with
  * `disposeObject3D()`; `caveMaterial` / `maskMaterial` are shared and must
- * be flagged `userData.sharedGpu` by their owner.
+ * be flagged `userData.sharedGpu` by their owner (as must the interior-rock
+ * templates — see `caveInteriorRocks.ts`'s `getCaveInteriorRockTemplates()`).
  *
  * @domain world-terrain
  */
@@ -220,6 +229,10 @@ export function createCaveHeightfieldPresentation(input: {
   caveMaterial: THREE.Material
   maskMaterial: THREE.Material
   rocks: boolean
+  /** Already-resolved interior clutter (`resolveCaveInteriorRocks`) — empty
+   *  when the debug system is disabled. Rendering-only input; this module
+   *  never resolves placements itself. */
+  interiorRockPlacements: readonly CaveInteriorRockPlacement[]
 }): CaveHeightfieldPresentation {
   const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
   const { field, walkSurfaceAt } = input
@@ -244,12 +257,23 @@ export function createCaveHeightfieldPresentation(input: {
     if (rockCount > 0) group.add(rocks)
   }
 
+  let interiorRockCount = 0
+  if (input.interiorRockPlacements.length > 0) {
+    const interiorRocks = createCaveInteriorRocksGroup(input.interiorRockPlacements, getCaveInteriorRockTemplates())
+    if (interiorRocks) {
+      interiorRocks.group.name = 'cave-interior-rocks'
+      group.add(interiorRocks.group)
+      interiorRockCount = input.interiorRockPlacements.length
+    }
+  }
+
   const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
   return {
     group,
     buffers,
     maskVertices: mask ? (mask.geometry.getAttribute('position') as THREE.BufferAttribute).count : 0,
     rockCount,
+    interiorRockCount,
     assembleMs: now - t0,
   }
 }

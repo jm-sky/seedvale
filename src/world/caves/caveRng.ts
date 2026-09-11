@@ -61,6 +61,11 @@ export const CAVE_RNG_SALT = {
   /** Plan world-terrain-020 Stage B: preferred wall-side for content anchors.
    *  Own stream so yaw/offset never shifts topology or heightfield noise. */
   adventureContent: 0x0f,
+  /** Plan world-terrain-022: generic interior rock/boulder clutter
+   *  placement (size, position candidate order, yaw, scale, clustering).
+   *  Own stream so toggling clutter never perturbs topology, heightfield
+   *  noise or adventure content-anchor placement. */
+  interiorRocks: 0x10,
 } as const
 
 /** Fresh `[0,1)` generator for `(caveId, salt)` — deterministic, and

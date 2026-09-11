@@ -25,9 +25,19 @@ import {
   ADVENTURE_FINAL_PASSAGE_NODE_ID,
   ADVENTURE_SIDE_CHAMBER_NODE_ID,
 } from './adventureTopology'
+import {
+  chamberCandidates,
+  footprintHolds,
+  type Heading,
+  incomingHeading,
+  lateralDistance,
+  passageWallCandidates,
+  signFromRandom,
+  type Xz,
+  yawFacing,
+} from './caveHeightfieldPlacement'
 import { sampleHeightfieldAt } from './caveHeightfieldRepresentation'
 import { CAVE_RNG_SALT, createCaveRandom } from './caveRng'
-import { rotateXZ } from './caveRoute'
 
 export const CAVE_CONTENT_ANCHOR_ROLES = [
   'sideTreasure',
@@ -90,12 +100,6 @@ export const CONTENT_ANCHOR_CANDIDATE_LIMIT = 24
 
 const EMPTY_ANCHORS: readonly CaveContentAnchor[] = Object.freeze([])
 
-const RING_SAMPLES = 6
-const RING_GAP_SCALE = 0.85
-
-type Xz = { x: number, z: number }
-type Heading = { dx: number, dz: number }
-
 type FitContext = {
   heading: Heading
   throughOrigin: Xz
@@ -120,80 +124,11 @@ function freezeAnchor(anchor: CaveContentAnchor): CaveContentAnchor {
   return Object.freeze(anchor)
 }
 
-function signFromRandom(random: () => number): 1 | -1 {
-  return random() < 0.5 ? -1 : 1
-}
-
-function yawFacing(dx: number, dz: number): number {
-  return Math.atan2(dx, dz)
-}
-
-function incomingHeading(topology: CaveTopology, nodeId: string): Heading {
-  const seg = topology.segments.find((s) => s.to === nodeId)
-  if (!seg || seg.centerline.length < 2) {
-    const node = topology.nodes.find((n) => n.id === nodeId)
-    if (!node) return { dx: 0, dz: 1 }
-    const dx = node.position.x - topology.entrance.x
-    const dz = node.position.z - topology.entrance.z
-    const len = Math.hypot(dx, dz) || 1
-    return { dx: dx / len, dz: dz / len }
-  }
-  const a = seg.centerline[seg.centerline.length - 2]!
-  const b = seg.centerline[seg.centerline.length - 1]!
-  const dx = b.x - a.x
-  const dz = b.z - a.z
-  const len = Math.hypot(dx, dz) || 1
-  return { dx: dx / len, dz: dz / len }
-}
-
-function pointAlongSegment(seg: CaveTopologySegment, t: number): { point: Xz, heading: Heading } {
-  const pts = seg.centerline
-  if (pts.length < 2) {
-    const p = pts[0] ?? { x: 0, z: 0 }
-    return { point: { x: p.x, z: p.z }, heading: { dx: 0, dz: 1 } }
-  }
-  let total = 0
-  const lengths: number[] = []
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1]!
-    const b = pts[i]!
-    const len = Math.hypot(b.x - a.x, b.z - a.z)
-    lengths.push(len)
-    total += len
-  }
-  if (total < 1e-6) {
-    const p = pts[pts.length - 1]!
-    return { point: { x: p.x, z: p.z }, heading: incomingFromPoints(pts[0]!, p) }
-  }
-  let remain = Math.max(0, Math.min(1, t)) * total
-  for (let i = 1; i < pts.length; i++) {
-    const len = lengths[i - 1]!
-    const a = pts[i - 1]!
-    const b = pts[i]!
-    if (remain <= len || i === pts.length - 1) {
-      const u = len < 1e-6 ? 1 : remain / len
-      return {
-        point: { x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u },
-        heading: incomingFromPoints(a, b),
-      }
-    }
-    remain -= len
-  }
-  const last = pts[pts.length - 1]!
-  return { point: { x: last.x, z: last.z }, heading: incomingFromPoints(pts[pts.length - 2]!, last) }
-}
-
-function incomingFromPoints(a: { x: number, z: number }, b: { x: number, z: number }): Heading {
-  const dx = b.x - a.x
-  const dz = b.z - a.z
-  const len = Math.hypot(dx, dz) || 1
-  return { dx: dx / len, dz: dz / len }
-}
-
 /**
- * Bounded XZ alternatives around a semantic chamber/node. Off-centre first
- * so a chest/wagon is not dropped on the incoming bottleneck; the node
- * itself is last. Length is always ≤ `CONTENT_ANCHOR_CANDIDATE_LIMIT`.
+ * Bounded XZ alternatives around a semantic chamber/node. Thin wrapper over
+ * the shared `chamberCandidates()` (`caveHeightfieldPlacement.ts`) fixing
+ * the limit to `CONTENT_ANCHOR_CANDIDATE_LIMIT` — kept as its own exported
+ * name/signature since existing tests call it directly.
  *
  * @domain world-terrain
  */
@@ -202,44 +137,13 @@ export function chamberContentCandidates(
   incoming: Heading,
   preferredSign: 1 | -1,
 ): Xz[] {
-  const perp = { dx: -incoming.dz * preferredSign, dz: incoming.dx * preferredSign }
-  const cx = node.position.x
-  const cz = node.position.z
-  const r = node.targetWidth * 0.28
-  const dirs: Heading[] = [
-    perp,
-    { dx: -perp.dx, dz: -perp.dz },
-    rotateXZ(perp.dx, perp.dz, 0.45),
-    rotateXZ(perp.dx, perp.dz, -0.45),
-    rotateXZ(-perp.dx, -perp.dz, 0.45),
-    rotateXZ(-perp.dx, -perp.dz, -0.45),
-    { dx: -incoming.dx, dz: -incoming.dz },
-    incoming,
-  ]
-  const out: Xz[] = []
-  const seen = new Set<string>()
-  const push = (x: number, z: number): void => {
-    const key = `${x.toFixed(3)},${z.toFixed(3)}`
-    if (seen.has(key)) return
-    seen.add(key)
-    out.push({ x, z })
-  }
-  for (const scale of [1, 0.72, 0.5]) {
-    for (const d of dirs) {
-      push(cx + d.dx * r * scale, cz + d.dz * r * scale)
-      if (out.length >= CONTENT_ANCHOR_CANDIDATE_LIMIT - 1) {
-        push(cx, cz)
-        return out
-      }
-    }
-  }
-  push(cx, cz)
-  return out
+  return chamberCandidates(node, incoming, preferredSign, CONTENT_ANCHOR_CANDIDATE_LIMIT)
 }
 
 /**
- * Bounded wall-side alternatives along a passage centreline. Used for
- * lanterns / supports that should hug a wall rather than sit in a chamber.
+ * Bounded wall-side alternatives along a passage centreline. Thin wrapper
+ * over the shared `passageWallCandidates()`, same reasoning as
+ * `chamberContentCandidates` above.
  *
  * @domain world-terrain
  */
@@ -249,23 +153,7 @@ export function passageWallContentCandidates(
   preferredSign: 1 | -1,
   halfWidth: number,
 ): { candidates: Xz[], along: Xz, heading: Heading } {
-  const { point, heading } = pointAlongSegment(seg, t)
-  const perp = { dx: -heading.dz * preferredSign, dz: heading.dx * preferredSign }
-  const fractions = [0.42, 0.32, 0.52, 0.24, 0.18]
-  const out: Xz[] = []
-  for (const f of fractions) {
-    const o = halfWidth * f
-    out.push({ x: point.x + perp.dx * o, z: point.z + perp.dz * o })
-    out.push({ x: point.x - perp.dx * o, z: point.z - perp.dz * o })
-    if (out.length >= CONTENT_ANCHOR_CANDIDATE_LIMIT) break
-  }
-  return { candidates: out.slice(0, CONTENT_ANCHOR_CANDIDATE_LIMIT), along: point, heading }
-}
-
-function lateralDistance(x: number, z: number, origin: Xz, heading: Heading): number {
-  const perpDx = -heading.dz
-  const perpDz = heading.dx
-  return Math.abs((x - origin.x) * perpDx + (z - origin.z) * perpDz)
+  return passageWallCandidates(seg, t, preferredSign, halfWidth, CONTENT_ANCHOR_CANDIDATE_LIMIT)
 }
 
 function blocksForeignPassage(
@@ -293,24 +181,6 @@ function blocksForeignPassage(
   return false
 }
 
-function footprintHolds(
-  field: CaveHeightfieldRepresentation,
-  x: number,
-  z: number,
-  spec: ContentAnchorPlacement,
-): boolean {
-  for (let i = 0; i < RING_SAMPLES; i++) {
-    const a = (i / RING_SAMPLES) * Math.PI * 2
-    const sample = sampleHeightfieldAt(
-      field,
-      x + Math.cos(a) * spec.footprintRadius,
-      z + Math.sin(a) * spec.footprintRadius,
-    )
-    if (sample.outsideGrid || sample.gap < spec.minGap * RING_GAP_SCALE) return false
-  }
-  return true
-}
-
 function evaluateCandidate(
   field: CaveHeightfieldRepresentation,
   topology: CaveTopology,
@@ -326,7 +196,7 @@ function evaluateCandidate(
   if (sample.gap < spec.minGap || sample.coreT > spec.maxCoreT) {
     return { ok: false, floorY: sample.floorY, gap: sample.gap }
   }
-  if (!footprintHolds(field, x, z, spec)) {
+  if (!footprintHolds(field, x, z, spec.footprintRadius, spec.minGap)) {
     return { ok: false, floorY: sample.floorY, gap: sample.gap }
   }
   if (spec.keepOffThroughLine && lateralDistance(x, z, ctx.throughOrigin, ctx.heading) < spec.footprintRadius * 0.6) {

@@ -124,6 +124,9 @@ export type DebugSystemName =
   /** Presentation-only cave mouth rock framing — off to verify the raw
    *  terrain cutout / cave seam (world-terrain-019 B). */
   | 'caveMouthRocks'
+  /** Presentation-only cave interior rock/boulder clutter (world-terrain-022)
+   *  — off for A/B density comparison against the bare heightfield mesh. */
+  | 'caveInteriorRocks'
 
 /** `?debugDisableSystems=grass,trees` — central, comma-separated switch for
  *  the systems above. Absent (or a name not listed) means "enabled" — normal

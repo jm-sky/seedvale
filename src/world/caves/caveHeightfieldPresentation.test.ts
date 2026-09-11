@@ -189,8 +189,10 @@ describe('createCaveHeightfieldPresentation', () => {
       caveMaterial,
       maskMaterial,
       rocks: false,
+      interiorRockPlacements: [],
     })
     expect(presentation.rockCount).toBe(0)
+    expect(presentation.interiorRockCount).toBe(0)
     const names = presentation.group.children.map((c) => c.name)
     expect(names).toContain(`cave-interior:${field.caveId}`)
     expect(names).toContain('cave-mouth-mask')
@@ -209,6 +211,7 @@ describe('createCaveHeightfieldPresentation', () => {
       caveMaterial,
       maskMaterial,
       rocks: true,
+      interiorRockPlacements: [],
     })
     const withoutRocks = createCaveHeightfieldPresentation({
       field,
@@ -216,6 +219,7 @@ describe('createCaveHeightfieldPresentation', () => {
       caveMaterial,
       maskMaterial,
       rocks: false,
+      interiorRockPlacements: [],
     })
     expect(withRocks.rockCount).toBeGreaterThanOrEqual(8)
     expect(withRocks.group.children.map((c) => c.name)).toContain('cave-mouth-rocks')
