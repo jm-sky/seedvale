@@ -15,11 +15,11 @@ export const TERRAIN_DIRT_DIFFUSE_LINEAR_NEUTRAL = 0.091705
 export const CAVE_ROCK_DIFFUSE_LINEAR_NEUTRAL = 0.125377
 
 export const TERRAIN_DIRT_DIFFUSE_URL = '/images/textures/dirt_diff_1k.jpg'
-export const CAVE_ROCK_DIFFUSE_URL = '/images/textures/rock_surface_diff_1k.jpg'
+export const CAVE_ROCK_DIFFUSE_URL = '/images/textures/marble_cliff_05_diff_1k.jpg'
 
 /** Default colour-detail strength once the shared texture has loaded. */
 export const TERRAIN_DIRT_DIFFUSE_DEFAULT_INFLUENCE = 0.22
-export const CAVE_ROCK_DIFFUSE_DEFAULT_INFLUENCE = 0.18
+export const CAVE_ROCK_DIFFUSE_DEFAULT_INFLUENCE = 0.25
 
 export type SharedSurfaceDiffuseSampler = {
   /** Stable object referenced by every compiled shader instance. */

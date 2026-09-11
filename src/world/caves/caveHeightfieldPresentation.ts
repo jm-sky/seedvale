@@ -95,7 +95,21 @@ export function createMouthUndersideMask(
  *  too close / too large overlap the void, the capsule clips into solid
  *  (`gap < minGap`, not `openSky`) while Y is still the pit floor, and
  *  `resolveHorizontal` snaps entrance-ward. */
-const ROCK_ALONGS: readonly number[] = [-1.8, -1.35, -0.9, -0.45, 0, 0.45, 0.9, 1.35]
+const ROCK_ALONGS: readonly number[] = [
+  -2.7,
+  -2.25,
+  -1.8,
+  -1.35,
+  -0.9,
+  -0.45,
+  0,
+  0.45,
+  0.9,
+  1.35,
+  1.8,
+  2.25,
+]
+
 const ROCK_OUTSIDE = 0.4
 const ROCK_ANCHOR_OUTSIDE = 0.65
 const ROCK_MARCH_MAX = 4

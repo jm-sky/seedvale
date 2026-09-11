@@ -15,7 +15,7 @@ import { getSharedTerrainDetailNormalMap } from '../../terrain/terrainDetailNorm
 
 /** Central tuning knobs — referenced from GLSL via matching uniforms. */
 export const CAVE_SURFACE_MATERIAL_TUNING = {
-  rockDetailScale: 0.38,
+  rockDetailScale: 0.30,
   rockNormalStrength: 0.42,
   /** Procedural rock normal detail layered under triplanar texture (world-space). */
   proceduralRockStrength: 0.22,
