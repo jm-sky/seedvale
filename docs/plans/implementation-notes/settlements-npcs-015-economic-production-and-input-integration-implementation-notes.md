@@ -1,14 +1,21 @@
 # Implementation Notes: Economic Production and Input Integration
 
 **Plan:** `settlements-npcs-015-economic-production-and-input-integration.md`  
-**Reviewed:** 2026-09-07  
+**Reviewed:** 2026-09-11  
 **Status:** `planned` 📋
 
 ## Review result
 
-READY after this review.
+READY after 2026-09-11 recon.
 
-Current `main` already has the correct storage owners and NPC work seam; 015 should only replace the two recipe execution primitives with one synchronous transaction coordinator. Do not create a production manager, scheduler, reservation registry or new storage abstraction.
+The core architecture from the previous review is still correct: 015 should replace the separate stock-only and item-only recipe execution semantics with one stateless synchronous production transaction, called from existing NPC work-completion seams. Do not create a production manager, scheduler, reservation registry, persistent production state or new storage abstraction.
+
+The previous notes had four important drifts against current `main`:
+
+1. `Inventory` now owns richer state/capacity semantics: item instances, perishable batches, liquid mass, size capacity and content-derived `maxWeight` via `carryCapacityBonus`.
+2. `SettlementEconomy.add/remove` now own settlement mutation history; production must not bypass them by mutating the private `EconomicStock` directly.
+3. `'food'` remains in the legacy `EconomicKind` union for demand/query compatibility, but it is no longer bulk stock and `SettlementEconomy.add/remove('food', ...)` intentionally do nothing/fail. A stock recipe row with `kind: 'food'` is therefore invalid for V1 production.
+4. Household snapshots are now part of real `SaveData`; some older comments in `household.ts` / `SettlementsManager.ts` still describe them as in-session-only or stock-only and are stale.
 
 ## 1. Exact files and symbols
 
@@ -28,7 +35,7 @@ Current `main` already has the correct storage owners and NPC work seam; 015 sho
 - `ARROWS_FROM_BRANCH_PRODUCTION`
 - `ARROWS_FROM_BEAM_PRODUCTION`
 - `HUNTER_ARROW_PRODUCTIONS`
-- `produceFirstAvailableItemRecipe()` — current item-only execution path to collapse into the new shared executor.
+- `produceFirstAvailableItemRecipe()` — current item-only execution path to collapse into the shared executor or retain only as a thin priority wrapper.
 - `productionForRole()` — existing deterministic role lookup; do not replace it with a recipe registry.
 
 ### Settlement stock owner
@@ -38,38 +45,83 @@ Current `main` already has the correct storage owners and NPC work seam; 015 sho
 - `StockAmount`
 - `EconomicStock.query/add/remove/has/hasAll/applyRecipe`
 
-`EconomicStock` owns settlement bulk quantities inside `SettlementEconomy`. It is not an item inventory and should remain unaware of households.
+`EconomicStock` remains the private bulk-quantity store used by `SettlementEconomy`. Its current `applyRecipe()` is not a safe final transaction primitive: duplicate input kinds are checked independently before sequential mutation.
 
-### Settlement economy facade
+Do not expose `EconomicStock` globally for 015.
+
+### Settlement economy facade and history
 
 `src/economy/settlementEconomy.ts`
 
-- `SettlementEconomy`
-- `createSettlementEconomy()`
-- `SettlementEconomy.produce(def)` — current stock-only wrapper around `stock.applyRecipe()`.
-- `SettlementEconomy.items` — settlement concrete-food `Inventory`; do not confuse it with general settlement bulk stock.
-- `snapshot()` — existing authoritative persistence/rebuild projection.
+- `SettlementEconomy.query/add/remove`
+- `SettlementEconomy.produce(def)` — currently calls private `stock.applyRecipe()` directly.
+- `SettlementEconomy.items` — authoritative settlement concrete-food `Inventory`, not generic bulk stock.
+- `depositFood()` / `withdrawFood()` — concrete-food mutation APIs.
+- `snapshot()` — authoritative persistence/rebuild projection.
+- `history()` — bounded mutation history.
 
-Important: `SettlementEconomy` intentionally does not expose its private `EconomicStock`. Prefer a production context that can perform stock reads/mutations through the existing `SettlementEconomy.query/add/remove` facade unless a narrowly scoped internal helper is cleaner. Do not expose `EconomicStock` globally just to satisfy the executor.
+`src/debug/settlementHistory.ts`
+
+- `stock.added`
+- `stock.removed`
+- `food.deposited`
+- `food.withdrawn`
+
+Important change since the previous review: non-food production stock mutations must go through `SettlementEconomy.remove/add(..., simTime)` so the existing history remains authoritative. The shared executor must not reach into the private `EconomicStock` and thereby bypass history.
 
 ### Item owner
 
 `src/items/Inventory.ts`
 
-- `ItemAmount`
-- `Inventory.count/has/remove/add/canAdd`
-- `Inventory.maxWeight`, `maxSize`, `totalWeight()`, `totalSize()`
-- `Inventory.applyRecipe()` — current item-only primitive; not sufficient for mixed transactions.
+Relevant current semantics:
 
-`Inventory.add()` can fail on weight/size. Any transaction that consumes inputs before aggregate output-capacity preflight is incorrect.
+- `ItemAmount` is a count-based recipe quantity.
+- plain stack counts are separate from `ItemInstance`s;
+- `count/has/remove/add` mutate count-backed items;
+- `removeWithFreshness/addWithFreshness` preserve food provenance for transfers;
+- `getFoodBatches()` / internal food batches track perishables;
+- `totalWeight()` includes count items, item instances and liquid contents;
+- `totalSize()` includes count items and instances;
+- `maxWeight` is dynamic: base capacity + held items' `ITEM_CATALOG[kind].carryCapacityBonus`;
+- `maxSize` is independent;
+- `canAdd()` tests the current inventory state only;
+- `applyRecipe()` still performs entry-wise input checks followed by sequential `remove()`/`add()` calls and ignores output `add()` failure.
+
+`src/items/itemCatalog.ts`
+
+- `carryCapacityBonus?: number` is part of current capacity semantics; e.g. a held backpack raises `Inventory.maxWeight`.
+
+`src/items/items.ts`
+
+- `ITEM_DEFS[kind].weight`
+- `itemSizeUnits(kind)`
+
+These definitions are implementation details of `Inventory` capacity. Economy production code should not copy their formulas.
 
 ### Household owner
 
 `src/settlement/household.ts`
 
-- `Household.items` — authoritative concrete item storage for household goods such as branch/beam/arrow and future `iron_rod`.
-- `Household.stock` — household wood-only `EconomicStock`; do not treat it as a generic `EconomicKind` source.
-- `HouseholdRegistry` — settlement-manager lifetime registry; household state survives settlement stream-out/in.
+- `Household.stock` — household wood-only `EconomicStock`; never treat as generic settlement stock.
+- `Household.items` — authoritative generic concrete-item `Inventory`; currently unbounded weight/size and uses stored-food decay semantics.
+- `HouseholdSnapshot` includes stock, water, item counts, item instances, food batches and hay state.
+- `HouseholdRegistry.serialize()` snapshots full household state.
+
+Some comments still say `HouseholdSnapshot` is not part of `SaveData` or that registry serialization is stock-only. Those comments are stale; current persistence code below is authoritative.
+
+### Persistence
+
+`src/persistence/saveData.ts`
+
+- `settlementEconomies: Record<string, SettlementEconomySnapshot>`
+- `households?: Record<HouseholdId, HouseholdSnapshot>`
+
+`src/app/saveState.ts`
+
+- saves `snapshotEconomies()`;
+- saves `snapshotHouseholds()`.
+
+Completed production therefore already persists by mutating the existing owners. Do not add `ProductionState`, a production queue or failed-attempt persistence.
 
 ### NPC work integration
 
@@ -80,26 +132,27 @@ Important: `SettlementEconomy` intentionally does not expose its private `Econom
 - `commitHunterArrowProduction()`
 - `tryAdvanceDevelopment()`
 
-This file is the existing work-completion → economy mutation adapter layer. Integrate the shared executor here rather than adding production calls to `SettlementsManager` or a global tick.
+This remains the work-completion → economy adapter seam.
+
+`src/ai/npcProfessionWork.ts`
+
+- `NpcWorkContext.simTime: () => number`
+- `planArrowCrafting()` — Hunter completion currently calls `commitHunterArrowProduction()`.
+- `planBlacksmithWork()` — existing Blacksmith planner, currently sharpening only; 016 extends this.
 
 `src/ai/NpcAgent.ts`
 
-- `beginIdle()` dispatches profession-specific real work before fallback role work.
-- `beginArrowCrafting()` owns gating/action timing; `commitHunterArrowProduction()` performs the mutation at completion.
+- `beginIdle()` calls `planProfessionWork()` and otherwise falls back to `commitRoleWork()`.
 
-Do not move recipe semantics or transaction code into `NpcAgent`.
+`src/ai/npcLogistics.ts`
 
-### Resource kinds
+- `depositWoodHarvest(..., simTime)` has a no-household fallback through `commitWoodcutterDeposit()`.
 
-`src/economy/kinds.ts`
-
-- `EconomicKind = 'coal' | 'copper_ore' | 'food' | 'gold' | 'iron' | 'water' | 'wood'`
-
-`EconomicKind` is deliberately distinct from `ItemKind`. `iron`/`coal` are settlement-level raw stock; future `iron_rod` is a concrete item and belongs in an `Inventory`.
+Production time should follow the existing completion-time convention: pass the live `simTime`/`simClock` into the commit adapter/executor, not a value captured when work started.
 
 ## 2. Ownership / lifecycle contract
 
-Authoritative runtime ownership is already established:
+Authoritative runtime ownership stays:
 
 ```text
 SettlementsManager
@@ -109,246 +162,308 @@ SettlementsManager
        └─ Household
 ```
 
-Both registries survive settlement streaming. Their snapshots are also the existing carry/persistence path used across world rebuild/save-load; production itself must add no state alongside them.
+Both registries survive settlement streaming. Their snapshots are used for in-session rebuilds and now also feed persistence where applicable.
 
 Therefore:
 
-- completed production persists only because it mutates the existing owners;
-- an in-progress validation/result/reservation must not be persisted;
-- a `WorldBundle` rebuild must not replay completed recipes;
-- executor lifetime should be stateless/module-level, not registered on `WorldBundle`.
-
-Do not add `ProductionState` to `SaveData`.
+- completed recipes persist only as mutations of existing owners;
+- validation/preflight/result state is ephemeral;
+- no completed recipe is replayed after rebuild/load;
+- executor lifetime is stateless/module-level;
+- no camera/player-distance ownership rules belong here.
 
 ## 3. Shared executor contract
 
-Recommended home: `src/economy/production.ts` or a focused sibling such as `src/economy/productionExecutor.ts` if separation materially improves clarity. Do not create a manager class.
+Recommended home: `src/economy/production.ts` or a focused sibling such as `src/economy/productionExecutor.ts`. Do not create a manager class.
 
-The executor should accept:
+Execution context should contain, explicitly:
 
-- one `ProductionDef`,
-- one explicit settlement-stock owner when stock inputs/outputs are present,
-- one explicit item `Inventory` when item inputs/outputs are present.
+- one `ProductionDef`;
+- optional `SettlementEconomy` stock owner;
+- optional item `Inventory` owner;
+- `simTime` / `nowDays` for mutation timestamps and item freshness, defaulting to `0` for compatibility/test callers.
 
-No source discovery.
+No owner discovery.
 
-The caller resolves ownership before execution. For 016 that means:
-
-```text
-stock source/destination = current settlement's SettlementEconomy
-item destination         = Blacksmith's Household.items
-```
-
-For Hunter:
+Examples:
 
 ```text
-stock owner = absent
-item owner  = Hunter household.items
+Hunter
+  stock owner = absent
+  item owner  = Hunter Household.items
+
+Blacksmith (016)
+  stock owner = current SettlementEconomy
+  item owner  = Blacksmith Household.items
 ```
 
-A recipe requiring a category whose owner is absent fails as unavailable destination/source with zero mutation.
+A recipe requiring a category whose owner is absent fails with zero mutation.
 
-## 4. Atomicity — close the design here
+## 4. Stock recipe semantics and the `'food'` compatibility trap
 
-Do not implement production reservations/claims/locks in V1.
+`EconomicKind` still includes `'food'`, but current storage semantics no longer treat food as bulk stock:
 
-Current execution is synchronous on the JS thread. The transaction boundary should be:
+- `SettlementEconomy.query('food')` derives a count from concrete food items;
+- `SettlementEconomy.add('food', ...)` no-ops;
+- `SettlementEconomy.remove('food', ...)` returns false;
+- settlement food mutation uses `depositFood()` / `withdrawFood()`.
 
-1. validate recipe structure/amounts,
-2. aggregate each input/output list by kind,
-3. validate required context owners,
-4. read current live source quantities,
-5. preflight all outputs against the final post-consumption destination state,
-6. perform all mutations synchronously with no callback/await between first and last mutation,
-7. return plain-data `ProductionResult`.
+The existing test demonstrates the dangerous old behavior: a stock recipe can consume a real input and then silently fail to add a `'food'` output because `produce()` bypasses the facade.
 
-This is sufficient for the actual concurrency model. The relevant stale-state case is two sequential execution attempts: the second reads state after the first commit.
+For 015 V1, reject any `ProductionDef.inputs` or `outputs` row whose `kind === 'food'` as `invalid-recipe` / incompatible stock kind before mutation. Concrete food production belongs in `itemInputs` / `itemOutputs` with an explicit `Inventory` owner.
 
-Do not use `SettlementEconomy.reserve()` as production transaction state. Its reservation map belongs to development/payment semantics and currently removes stock at reservation time.
+Do not redesign `EconomicKind` in this plan; removing legacy `'food'` from that union would be a broader economy migration.
 
-## 5. Existing `applyRecipe()` pitfall
+## 5. Validation and aggregation
 
-Both current recipe primitives pre-check entries individually and then mutate sequentially.
+Normalize before reading or mutating owners:
 
-Duplicate input kinds are unsafe without aggregation. Example:
+1. reject non-finite amounts (`NaN`, `Infinity`, `-Infinity`);
+2. reject negative amounts;
+3. normalize zero rows away;
+4. reject stock `'food'` rows;
+5. aggregate each of the four lists by kind;
+6. validate all required owners.
+
+Zero normalization is now closed rather than left to the implementer: zero rows disappear and do not create missing-owner requirements.
+
+Duplicate aggregation is mandatory. Both current `EconomicStock.applyRecipe()` and `Inventory.applyRecipe()` can incorrectly accept duplicate input rows individually and then partially consume them.
+
+## 6. Inventory transaction semantics belong in `Inventory`
+
+Do not implement hypothetical inventory math in `economy/production*.ts`.
+
+A correct item-recipe preflight is no longer simply:
 
 ```text
-wood × 2
-wood × 1
-state: wood = 2
+currentWeight - inputWeight + outputWeight <= currentMaxWeight
 ```
 
-Entry-wise `hasAll()` can pass even though total required is 3; sequential removes can then partially consume.
+because current `Inventory` has state-dependent capacity:
 
-The new executor must aggregate totals by kind before checking or mutating. Apply the same aggregation to outputs for capacity preflight.
+- removing an input such as a capacity-granting backpack can reduce `maxWeight`;
+- producing such an item can increase it;
+- instances and liquid contents contribute to existing weight/size even though `ItemAmount` recipes do not mutate instances;
+- multiple outputs may fit individually but overflow in aggregate;
+- item inputs may free capacity;
+- sequential public `add()` calls can observe intermediate state that differs from the intended aggregate transaction.
 
-Do not rely on `EconomicStock.applyRecipe()` or `Inventory.applyRecipe()` as the final mixed transaction primitive after 015.
+Refactor/add a narrow `Inventory`-owned recipe/delta primitive that can:
 
-## 6. Recipe validation
+- aggregate count-based item inputs/outputs;
+- validate input counts;
+- determine whether the whole count transition is legal under current `Inventory` weight/size/capacity rules;
+- account for content-derived `maxWeight` correctly;
+- commit the already-validated count transition without becoming order-dependent on a series of public `add()` checks;
+- consume perishable inputs using the supplied `nowDays`;
+- create genuinely produced perishable outputs at the supplied `nowDays`.
 
-Before state mutation reject at least:
+The exact helper name is local implementation freedom. Prefer strengthening/replacing the semantics behind `Inventory.applyRecipe()` rather than creating economy-side copies of `ITEM_DEFS`, `itemSizeUnits` or `ITEM_CATALOG` calculations.
 
-- `NaN` / `Infinity` / `-Infinity`,
-- negative amounts,
-- missing required owner/context,
-- any shape that the executor cannot commit deterministically.
+`ItemAmount` recipes remain count-based. They must not consume or synthesize `ItemInstance`s, mutate liquid-container contents or copy source food batches into transformed outputs.
 
-Zero amounts may either normalize away or remain harmless no-ops, but choose one behavior in executor tests and keep it consistent. Do not let zero/invalid rows enter a partial mutation path.
+For food transformation, consumed input freshness follows normal FIFO removal at `nowDays`; output is a newly produced item with acquisition time `nowDays`, not a transfer preserving source provenance.
 
-## 7. Inventory output preflight
+`Household.items` is currently unbounded, but bounded-`Inventory` tests are mandatory so this contract survives other owners/future capacity changes.
 
-`Inventory.canAdd(kind, n)` checks the current inventory, not an arbitrary hypothetical set after multiple output additions/removals.
+## 7. Atomicity / commit boundary
 
-A mixed transaction may consume item inputs first and thereby free weight/size before adding outputs. Conversely several outputs may collectively overflow capacity even if each one individually fits against the original state.
+No production reservations, claims or locks in V1.
 
-Therefore preflight must model the final aggregate item delta, not simply call `canAdd()` independently for each output row.
+The transaction should be:
 
-Minimum correct calculation can use existing public inventory facts:
+1. normalize/validate/aggregate recipe;
+2. validate required owners;
+3. read current live stock/item inputs;
+4. run Inventory-owned aggregate preflight;
+5. once every participant is known to succeed, perform one synchronous commit with no callback/await/interleaving;
+6. return plain-data `ProductionResult`.
 
-- current counts,
-- `totalWeight()` / `maxWeight`,
-- `totalSize()` / `maxSize`,
-- item weight/size definitions already used by `Inventory`.
+All stock availability checks must use the current live `SettlementEconomy.query()` state. Stock mutations must use `SettlementEconomy.remove/add(..., simTime)` so history remains correct.
 
-Prefer adding a small reusable Inventory preflight helper if needed rather than copying weight/size formula into economy code. Do not weaken `Inventory` encapsulation by reading private maps.
+Do not prescribe a mutation order that can still fail halfway. First make the Inventory helper and stock preflight contracts strong enough that the post-preflight commit has no expected failure point. If an invariant is unexpectedly violated during commit, return a transaction/revalidation failure rather than silently continuing.
 
-`Household.items` is currently unbounded, but tests must include a bounded `Inventory` so this contract cannot regress.
+Do not introduce rollback snapshots unless a real unavoidable failure remains after correct preflight; prefer eliminating the failure point.
 
-## 8. Mutation order after successful preflight
+The relevant concurrency/staleness case is sequential JS execution: a second call must re-read state after the first commit. No worker/thread locking tests are needed.
 
-Once all checks pass, there must be no expected failure point left in the commit sequence.
+## 8. `ProductionResult`
 
-Recommended commit order:
+Use a small discriminated plain-data result that distinguishes at least:
 
-1. remove aggregated stock inputs,
-2. remove aggregated item inputs,
-3. add aggregated stock outputs,
-4. add aggregated item outputs.
-
-If implementation keeps public mutation methods that return failure booleans, treat an unexpected failure after preflight as `transaction/revalidation-failure`; do not silently continue. Keep the code synchronous so no other actor can interleave between preflight and commit.
-
-Do not invent rollback snapshots unless a real remaining mutation can fail after a correct preflight; first eliminate that failure through preflight/helper contracts.
-
-## 9. `ProductionResult`
-
-Use a small discriminated union/plain object. It must provide enough information for callers to distinguish:
-
-- success,
-- missing/insufficient input,
-- invalid recipe,
-- missing/incompatible owner/destination,
+- success;
+- missing/insufficient input;
+- invalid recipe;
+- missing/incompatible owner/destination;
 - unexpected transaction/revalidation failure.
 
-A useful result may include recipe id and missing kind/category, but do not turn it into production history or demand state.
+Include recipe id and blocked category/kind where useful, but do not turn this into production history or persistent demand state.
 
-Downstream 017 needs a stable blocked-by-input signal. It does not need failed-attempt persistence from 015.
+Downstream 017 needs a stable blocked-by-input outcome. 015 does not persist failed attempts, timers, Problems or Pressures.
+
+## 9. Existing mutation history
+
+015 should preserve the existing observer model rather than inventing production-specific history.
+
+For settlement bulk stock:
+
+- successful production input consumption should naturally emit existing `stock.removed` events;
+- successful stock outputs should naturally emit existing `stock.added` events;
+- events should receive completion `simTime`.
+
+Do not add a separate `production.completed` settlement history event in 015.
+
+`Household.items` count mutations currently have no generic household-history event type for arbitrary item crafting. Do not add a parallel history subsystem as part of this transaction plan.
 
 ## 10. Hunter migration
 
 Preserve exactly:
 
-- `HUNTER_ARROW_PRODUCTIONS` order: branch before beam,
-- branch recipe: `1 branch → 1 arrow`,
-- beam recipe: `1 beam → 8 arrows`,
-- arrow stock cap = start threshold only,
-- storage owner = `Household.items`,
-- mutation happens in existing completion callback via `commitHunterArrowProduction()`.
+- priority order: branch before beam;
+- `1 branch → 1 arrow`;
+- `1 beam → 8 arrows`;
+- cap 24 is a start threshold only;
+- owner = `Household.items`;
+- mutation happens at work completion.
 
-`produceFirstAvailableItemRecipe()` can become a compatibility wrapper that calls the shared executor for each def in priority order. Prefer this minimal blast radius if it avoids touching unrelated Hunter decision code.
+`produceFirstAvailableItemRecipe()` may remain as a thin priority wrapper that invokes the shared executor for each recipe until one succeeds. It must not retain independent transaction semantics.
 
-## 11. Existing stock-only production
+Thread completion time through the existing path:
 
-`SettlementEconomy.produce()` can remain for compatibility, but it should become a thin stock-only adapter to shared execution rather than owning independent recipe semantics.
+```text
+planArrowCrafting.onComplete
+  → commitHunterArrowProduction(household, ctx.simTime())
+  → shared executor
+```
 
-Do not change `SettlementEconomy` into a mixed-storage coordinator and do not add household references to it.
+Do not move recipe details into `npcProfessionWork.ts`.
 
-`commitRoleWork()` should keep using the same role/work dispatch. Note that current farmer/fisher/miner placeholder `ProductionDef`s are empty no-ops because their real profession flows live elsewhere; 015 must not reinterpret those as real production content.
+## 11. Existing stock-only production / time plumbing
 
-`commitWoodcutterDeposit()` remains tied to successful tree-harvest/deposit action. Never move wood minting back to generic role work.
+`SettlementEconomy.produce()` may remain for compatibility, but it must become a thin stock-only adapter to the shared semantics rather than calling private `stock.applyRecipe()` directly.
+
+Allow it (or the underlying executor call) to receive optional `simTime = 0`, so existing tests/callers remain cheap while real NPC completion supplies live time.
+
+Thread live completion time through current adapters:
+
+- `NpcAgent.beginIdle()` fallback → `commitRoleWork(economy, role, this.simClock)`;
+- `depositWoodHarvest(..., simTime)` no-household fallback → `commitWoodcutterDeposit(economy, simTime)`;
+- Hunter planner → `commitHunterArrowProduction(household, ctx.simTime())`.
+
+Preserve current role semantics:
+
+- farmer/fisher/miner placeholder `ProductionDef`s remain empty successful no-ops; their real profession planners perform the actual work elsewhere;
+- woodcutter yield remains tied to successful tree harvest/deposit and must never return to generic scheduled work.
 
 ## 12. Local exchange / transport boundary
 
-`src/economy/localExchange.ts` already contains claim/revalidation semantics for moving goods, but that subsystem owns exchange/logistics behavior, not recipe transactions.
+`src/economy/localExchange.ts` remains useful only as a conceptual example of live revalidation.
 
-Reuse only conceptual patterns or small neutral helpers if genuinely shared. Do not make production depend on Trader activity, exchange reservations or physical transport.
+Do not make recipe execution depend on:
+
+- Trader activity;
+- exchange reservations;
+- `TransportOrders`;
+- physical delivery claims;
+- another household lookup.
 
 Production receives already-resolved owners. Missing input means blocked.
 
-## 13. Downstream contracts
+## 13. Downstream contract — 016 Blacksmith
 
-### 016 — First processing chain / Blacksmith
-
-015 must leave no architectural decision for 016 around execution:
+015 must leave transaction semantics fully reusable by 016:
 
 ```text
-ProductionDef:
-  inputs      iron × 2, coal × 1
-  itemOutputs iron_rod × 1
+ProductionDef
+  inputs:
+    iron × 2
+    coal × 1
+  itemOutputs:
+    iron_rod × 1
 
-context:
-  SettlementEconomy = stock owner
-  Blacksmith Household.items = item owner
+context
+  stock owner = SettlementEconomy
+  item owner  = Blacksmith Household.items
 ```
 
-016 only needs to define recipe content and wire the existing Blacksmith work completion to the executor. It must not add a Blacksmith-specific transaction helper.
+Correction to the previous notes: 016 **should** add the thin `commitBlacksmithProduction(economy, household, simTime)` adapter already specified by its current plan/implementation notes. That adapter is consistent with `npcWork.ts` ownership.
 
-### 017 — Production demand / economic pressures
+What 016 must not add is Blacksmith-specific transaction logic: no separate validation, reservation, rollback, storage lookup or executor.
 
-015 exposes blocked outcome only. 017 decides whether repeated/persistent shortage becomes an existing Problem/Pressure. 015 does not own shortage history, timers, pressure or AI persistence.
+## 14. Persistence / rebuild
 
-## 14. Performance / off-screen
+No production-specific persistence is needed.
 
-No recurring scan is needed.
+Current code already saves:
 
-One execution is O(recipe rows + distinct kinds) against already-known owners. It should run only on work completion or an explicit caller action.
+- settlement economy snapshots through `SaveData.settlementEconomies`;
+- household snapshots through `SaveData.households`.
 
-No camera/player distance checks belong in the executor. Off-screen/hybrid work that reaches the same completion seam must produce the same deterministic stock/item mutation.
+Thus `iron`/`coal` consumption and a produced household `iron_rod` round-trip by virtue of existing owners.
 
-No Web Worker is justified for this work.
+Do not trust stale comments saying household snapshots are in-session-only; current `SaveData` and `app/saveState.ts` are the source of truth.
 
-## 15. Tests with highest value
+## 15. Performance / off-screen
 
-Prefer a focused new executor test file plus regressions in existing production/npcWork tests.
+No recurring scan.
 
-Required cases:
+One execution is O(recipe rows + distinct kinds) plus bounded Inventory capacity evaluation against the already-known owner. It runs only on work completion or explicit caller action.
 
-- stock-only success/failure,
-- item-only success/failure,
-- mixed stock→item success,
-- mixed missing stock leaves item owner unchanged,
-- mixed missing item input leaves stock unchanged,
-- duplicate stock input kind aggregates correctly,
-- duplicate item input kind aggregates correctly,
-- duplicate outputs aggregate correctly,
-- invalid quantities cause zero mutation,
-- missing context owner causes zero mutation,
-- combined bounded-Inventory outputs reject before input consumption,
-- item inputs freeing capacity are included in final-capacity calculation,
-- second sequential execution revalidates and cannot consume the same source twice,
-- output exactly once,
-- Hunter branch-before-beam behavior unchanged,
-- `commitWoodcutterDeposit()` and `commitRoleWork()` regressions,
+No camera/player-distance checks belong in the executor. Any off-screen/hybrid work path that reaches the same completion seam must get identical deterministic transaction semantics.
+
+No Web Worker is justified.
+
+## 16. Tests with highest value
+
+Prefer a focused executor test file plus regressions in `Inventory.test.ts`, `settlementEconomy.test.ts`, `npcWork.test.ts` and profession-work tests where time plumbing is observable.
+
+Required coverage:
+
+- stock-only success/failure;
+- item-only success/failure;
+- mixed stock → item success;
+- missing stock leaves item owner unchanged;
+- missing item input leaves stock unchanged;
+- duplicate stock inputs aggregate correctly;
+- duplicate item inputs aggregate correctly;
+- duplicate outputs aggregate correctly;
+- non-finite/negative quantities cause zero mutation;
+- zero rows normalize away;
+- missing required owner causes zero mutation;
+- stock `kind: 'food'` is rejected before any other input is consumed;
+- combined bounded-Inventory outputs reject before mutation;
+- item inputs freeing capacity are reflected in aggregate preflight;
+- consuming/producing a capacity-granting item is handled by Inventory semantics without order-dependent partial mutation;
+- existing item instances/liquid mass continue to count toward capacity but are not touched by `ItemAmount` recipes;
+- perishable input consumption uses supplied `nowDays`/FIFO;
+- genuinely produced perishable output is timestamped at supplied `nowDays`;
+- second sequential execution revalidates and cannot consume the same source twice;
+- successful stock production records existing `stock.removed` / `stock.added` history with supplied `simTime`;
+- output occurs exactly once;
+- Hunter branch-before-beam and cap/start semantics remain unchanged;
+- `commitWoodcutterDeposit()` / `commitRoleWork()` regressions;
 - `SettlementEconomy.produce()` regression if retained.
 
-Do not write thread/concurrent-worker tests for this transaction model.
+Do not add thread/concurrent-worker tests for this synchronous model.
 
-## 16. Minimal implementation order
+## 17. Minimal implementation order
 
-1. Add/define `ProductionResult` and explicit execution context.
-2. Add recipe normalization/validation + aggregation helpers.
-3. Add Inventory final-delta capacity preflight helper if needed.
-4. Implement shared synchronous executor.
-5. Route stock-only `SettlementEconomy.produce()` through it or an equivalent shared primitive.
-6. Route `produceFirstAvailableItemRecipe()` / Hunter through it.
-7. Keep `npcWork.ts` as the work-completion seam.
-8. Run targeted executor, Inventory, production and npcWork tests, then typecheck/build as appropriate.
+1. Define `ProductionResult` + explicit execution context including `simTime`.
+2. Strengthen/add the Inventory-owned aggregate recipe preflight/commit primitive and tests first.
+3. Add production normalization/validation/aggregation, including stock-`food` rejection.
+4. Implement the shared synchronous executor.
+5. Route `SettlementEconomy.produce()` through shared semantics and preserve stock history.
+6. Route `produceFirstAvailableItemRecipe()` / Hunter through shared semantics.
+7. Thread completion `simTime` through `npcWork.ts`, `NpcAgent` fallback and `npcLogistics` fallback.
+8. Export the shared executor/result/context from `src/economy/index.ts` if downstream callers need the public barrel.
+9. Run focused Inventory/economy/npcWork/profession tests, then typecheck/build as appropriate.
 
-No Blacksmith recipe/content, pressure system, transport, profession redesign or unrelated economy refactor in this plan.
+No Blacksmith recipe/content, production pressure system, transport redesign, profession redesign or unrelated economy refactor belongs in 015.
 
 ## True open questions / blockers
 
 None found for 015 on current `main`.
 
-The only local implementation choice intentionally left open is file placement/name for the stateless executor and exact discriminant names in `ProductionResult`; ownership, transaction semantics, lifecycle, integration seam and downstream contract are closed.
+The remaining local implementation freedom is limited to naming/file placement of the stateless executor/result types and the exact Inventory helper API. Ownership, food-vs-stock semantics, capacity ownership, time/freshness behavior, history seam, persistence and downstream 016 boundary are closed by current code.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
