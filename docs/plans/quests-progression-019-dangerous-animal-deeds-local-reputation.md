@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~quests-progression-001~~, ~~quests-progression-002~~
+**Depends on:** ~~quests-progression-001~~, ~~quests-progression-002~~, fauna-022
 **Domain:** `quests-progression`
 **Subdomains:** `progression` `relationships` `rewards`
 **Tags:** `reputation` `renown` `fauna` `combat` `social-consequences`
@@ -16,14 +16,17 @@ Rozszerzyć istniejący system lokalnej reputacji tak, aby znaczące zabicie prz
 
 Rozwiązanie ma używać istniejących `ReputationManager`, `SocialConsequence`, ścieżek śmierci fauny oraz pozycji świata i osad. Nie tworzyć `HunterReputation`, globalnej sławy, nowego managera reputacji ani ogólnego event busa.
 
+Plan `fauna-022` dodaje per-animal danger significance dla wyjątkowych wariantów, np. alpha wolf. Ten plan konsumuje już rozstrzygnięte znaczenie konkretnego osobnika zamiast zakładać, że każdy osobnik tego samego `AnimalKind` ma identyczną wartość społeczną.
+
 ## Założenie gameplayowe
 
 Nie każda śmierć zwierzęcia jest społecznym czynem:
 
 ```text
 player zabija niebezpieczne zwierzę
-→ system potwierdza player kill i kontekst zdarzenia
-→ resolver określa znaczenie gatunku i ekspozycję wobec osad
+→ system potwierdza player kill i przechwytuje danger significance osobnika
+→ resolver określa bazowe znaczenie gatunku + significance konkretnego killu
+→ resolver określa ekspozycję wobec osad
 → powstaje 0..N już rozstrzygniętych SocialConsequence
 → ReputationManager aplikuje lokalne delty
 ```
@@ -40,9 +43,12 @@ Dodać narrow kontekst player-caused kill w istniejącej wspólnej ścieżce fin
 type PlayerAnimalKillContext = {
   animalId: string
   animalKind: AnimalKind
+  dangerSignificance: number
   position: { x: number; z: number }
 }
 ```
+
+`dangerSignificance` ma być rozstrzygnięte przez fauna-owned seam w momencie śmierci. Dla zwykłego osobnika wynosi baseline `1`; dla wyjątkowego wariantu, np. alpha wolf z `fauna-022`, może być większe. Quest/reputation domain nie powinien znać konkretnych wariantów zwierząt, jeśli wystarczy ta liczba.
 
 Pozycję skopiować w momencie śmierci. Resolver nie może później czytać pozycji gracza ani zależeć od pozostawania runtime `AnimalAgent` w świecie.
 
@@ -78,17 +84,20 @@ Odpowiedzialności resolvera:
 
 1. odczytać bazowe znaczenie gatunku,
 2. odrzucić gatunek o zerowym znaczeniu,
-3. policzyć dystans od miejsca zdarzenia do każdej osady,
-4. rozstrzygnąć podstawę ekspozycji społecznej,
-5. zastosować płynne attenuation,
-6. zaokrąglić końcowe delty deterministycznie,
-7. zwrócić tylko niezerowe consequences.
+3. zastosować `dangerSignificance` konkretnego osobnika do niezerowego species baseline,
+4. policzyć dystans od miejsca zdarzenia do każdej osady,
+5. rozstrzygnąć podstawę ekspozycji społecznej,
+6. zastosować płynne attenuation,
+7. zaokrąglić końcowe delty deterministycznie,
+8. zwrócić tylko niezerowe consequences.
 
 Resolver nie mutuje managerów i nie przechowuje stanu.
 
-## 4. Klasyfikacja gatunków
+`dangerSignificance` nie może zamienić harmless species w źródło renomy: jeżeli species baseline wynosi zero, wynik pozostaje zero niezależnie od wariantu.
 
-Użyć jawnej, wyczerpującej konfiguracji dla gatunków obecnych w tym mechanizmie:
+## 4. Klasyfikacja gatunków i significance wariantu
+
+Użyć jawnej, wyczerpującej konfiguracji species baseline:
 
 | Gatunek | competence | courage | renown | Znaczenie |
 |---|---:|---:|---:|---|
@@ -99,11 +108,15 @@ Użyć jawnej, wyczerpującej konfiguracji dla gatunków obecnych w tym mechaniz
 
 Pozostałe nieszkodliwe lub gospodarskie gatunki nie dają generic reward. Nie interpretować braku wpisu jako automatycznej nagrody.
 
-Wartości są tunables. Zachować relację:
+Species baseline jest następnie skalowany przez `dangerSignificance` z fauna-owned kill context. V1 musi co najmniej zachować relację:
 
 ```text
-bear > wolf > fox > deer = harmless wildlife = 0
+bear > alpha wolf > normal wolf > fox > deer = harmless wildlife = 0
 ```
+
+Dokładne wartości po przemnożeniu i zaokrągleniu są tunables. Dla `dangerSignificance = 1` wynik musi odpowiadać bazowym wartościom tabeli.
+
+Nie dodawać `alpha` ani innych fauna variants do tej konfiguracji — `quests-progression` nie powinno utrzymywać drugiej listy wariantów.
 
 ## 5. Zasięg wpływu i podstawa wiedzy
 
@@ -138,7 +151,7 @@ Oczekiwany przebieg:
 
 Funkcje muszą być ciągłe na granicach i clampowane do `0..1`. Konkretna interpolacja i punkty pośrednie mają być stałymi testowalnymi, nie magic numbers w integracji runtime.
 
-Po przemnożeniu zastosować jedno jawne, deterministyczne zaokrąglenie. Nie generować consequence, jeśli wszystkie końcowe delty wynoszą zero.
+Po significance i attenuation zastosować jedno jawne, deterministyczne zaokrąglenie. Nie generować consequence, jeśli wszystkie końcowe delty wynoszą zero.
 
 ## 7. Osady i streaming
 
@@ -165,14 +178,17 @@ Istniejące clampy `ReputationManager` nadal obowiązują. Po browser verificati
 Zachować podział:
 
 ```text
+fauna
+→ owns per-animal danger significance
+
 combat/player damage path
-→ potwierdza player kill i przechwytuje kontekst
+→ potwierdza player kill i przechwytuje kontekst + significance
 
 QuestManager seam
 → mówi, czy social outcome tego killu jest quest-owned
 
 animal-deed exposure + consequence resolver
-→ rozstrzyga znaczenie, wiedzę i lokalne delty
+→ rozstrzyga species baseline, significance, wiedzę i lokalne delty
 
 composition root
 → aplikuje zwrócone SocialConsequence
@@ -207,12 +223,14 @@ Jednorazowa iteracja po authoritative settlement definitions jest akceptowalna p
 
 Dodać targeted tests dla:
 
-### Atrybucja i gatunki
+### Atrybucja, gatunki i warianty
 
-- player kill wilka tworzy consequence,
+- player kill normalnego wilka tworzy consequence z baseline significance,
+- player kill alpha wolf tworzy większy consequence niż normalny wolf przy tej samej ekspozycji/dystansie,
+- alpha nadal klasyfikowany jest jako `AnimalKind = wolf`, bez osobnego wpisu w species table,
 - NPC/predator/environment death nie tworzy player reputation,
-- jeleń daje dokładnie `0/0/0`,
-- fox < wolf < bear,
+- jeleń daje dokładnie `0/0/0`, także gdyby otrzymał significance > 1,
+- fox < wolf < alpha wolf < bear,
 - livestock i pozostała harmless wildlife nie dają generic reward.
 
 ### Dystans i attenuation
@@ -225,7 +243,7 @@ Dodać targeted tests dla:
 
 ### Quest overlap
 
-- quest-owned social outcome suppressuje generic deed,
+- quest-owned social outcome suppressuje generic deed także dla alpha wolf,
 - quest bez własnego social outcome nie suppressuje generic deed,
 - consequence przyznawana przy późniejszym raporcie nie powoduje wcześniejszego generic reward,
 - brak hardkodowania konkretnego questa w resolverze.
@@ -255,9 +273,12 @@ Plan nie obejmuje:
 - trophies, achievements i bounty,
 - generowania questów z polowań,
 - nowego settlement-problem subsystemu,
-- reputacji za zwykłe polowanie na jelenie.
+- reputacji za zwykłe polowanie na jelenie,
+- definiowania lub spawnowania wariantów zwierząt — ownership pozostaje w `fauna-022`.
 
 ## 15. Dokumentacja i verification
+
+Przed implementacją zweryfikować kontrakt `dangerSignificance` po implementacji `fauna-022` i użyć faktycznego fauna-owned API zamiast tworzyć drugą tabelę wariantów.
 
 Po implementacji zaktualizować tylko dokumenty opisujące faktycznie zmieniony stan. Ważnym publicznym/architektonicznym funkcjom dodać użyteczny JSDoc i `@domain quests-progression` tam, gdzie pomaga preflight discovery.
 
@@ -271,10 +292,11 @@ Automatycznie:
 Manual browser verification wykonuje User:
 
 1. zabić jelenia blisko osady — brak zmiany,
-2. zabić wilka blisko osady — wzrost lokalnych wartości,
-3. zabić niedźwiedzia — większy efekt niż za wilka,
-4. sprawdzić zdarzenia w dalszych odległościach,
-5. sprawdzić quest-owned kill — brak double reward,
-6. sprawdzić wynik przy streamingu i po save/load.
+2. zabić zwykłego wilka blisko osady — wzrost lokalnych wartości,
+3. zabić alpha wolf w analogicznym kontekście — większy efekt niż za zwykłego wilka,
+4. zabić niedźwiedzia — większy efekt niż za alpha wolf,
+5. sprawdzić zdarzenia w dalszych odległościach,
+6. sprawdzić quest-owned kill — brak double reward,
+7. sprawdzić wynik przy streamingu i po save/load.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
