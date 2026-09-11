@@ -144,13 +144,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 296
+- `CaveHeightfieldPresentation` — type — line 169
 - `createCaveHeightfieldGeometry` — function — line 62
   - domain: world-terrain
 - `createCaveHeightfieldMaterial` — function — line 34
-- `createCaveHeightfieldPresentation` — function — line 315
+- `createCaveHeightfieldPresentation` — function — line 188
   - domain: world-terrain
-- `createMouthRocks` — function — line 204
+- `createMouthRocks` — function — line 128
   - domain: world-terrain
 - `createMouthUndersideMask` — function — line 80
   - domain: world-terrain
