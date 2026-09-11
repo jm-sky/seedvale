@@ -333,6 +333,7 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.ts`
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
+- `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
@@ -979,6 +980,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPropColliders.ts`
 - `settlement/settlementStructures.ts`
 - `world/animalTraps.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/standingTorchProp.ts`
 - `world/trapProp.ts`
 - `world/treeLifecycle.test.ts`
@@ -997,6 +999,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementStructures.ts`
 - `settlement/storageVisuals.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
 - `world/standingTorchProp.ts`
@@ -1425,6 +1428,7 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `settlement/props.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/createPlayerTroughs.ts`
 - `world/playerWellProp.ts`
 

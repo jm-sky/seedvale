@@ -1406,6 +1406,7 @@ Generated from TypeScript imports.
 - `world/beehives.ts`
 - `world/bloodTraces.ts`
 - `world/cartProp.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/createBeehives.ts`
 - `world/createCarts.ts`
 - `world/createCaves.ts`

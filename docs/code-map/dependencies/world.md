@@ -139,6 +139,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/worldBundle.ts`
+- `world/caves/caveAdventureProps.test.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/createCarts.ts`
 
 ## `world/caveColliders.test.ts`
@@ -266,10 +268,43 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/adventureTopology.test.ts`
+- `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/productionTopology.ts`
 - `world/createCaves.archetype.test.ts`
+
+## `world/caves/caveAdventureProps.test.ts`
+
+**Imports**
+
+- `world/cartProp.ts`
+- `world/caves/adventureTopology.ts`
+- `world/caves/caveAdventureProps.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
+- `world/largeCaves.ts`
+
+## `world/caves/caveAdventureProps.ts`
+
+**Imports**
+
+- `settlement/propSpecs.ts`
+- `settlement/propUtils.ts`
+- `settlement/settlementStructures.ts`
+- `world/cartProp.ts`
+- `world/caves/caveContentAnchors.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/caves/caveAdventureProps.test.ts`
+- `world/caves/caveHeightfieldPresentation.ts`
+- `world/createCaves.adventureProps.test.ts`
+- `world/createCaves.ts`
 
 ## `world/caves/caveArchetype.test.ts`
 
@@ -325,7 +360,10 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveAdventureProps.test.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/caves/caveContentAnchors.test.ts`
+- `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveInteriorRocks.test.ts`
 - `world/caves/caveInteriorRocks.ts`
 - `world/createCaves.contentAnchors.test.ts`
@@ -422,6 +460,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/decorProps.ts`
+- `world/caves/caveAdventureProps.ts`
+- `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHeightfieldMaterial.ts`
 - `world/caves/caveHeightfieldMesh.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
@@ -499,6 +539,7 @@ Generated from TypeScript imports.
 - `player/worldWaterEligibility.test.ts`
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/adventureTopology.ts`
+- `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHeightfieldMesh.test.ts`
@@ -620,6 +661,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/cavePresentationLifecycle.test.ts`
+- `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
 
@@ -739,6 +781,7 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldFixtures.ts`
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/adventureTopology.ts`
+- `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHeightfieldPlacement.ts`
@@ -789,6 +832,7 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `player/worldWaterEligibility.test.ts`
 - `world/caveGenerator.ts`
+- `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
@@ -863,6 +907,7 @@ Generated from TypeScript imports.
 
 - `player/worldWaterEligibility.test.ts`
 - `world/caves/adventureTopology.test.ts`
+- `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveMouthGeometry.test.ts`
@@ -1014,6 +1059,7 @@ Generated from TypeScript imports.
 - `world/caveColliders.test.ts`
 - `world/caveColliders.ts`
 - `world/collision.test.ts`
+- `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
@@ -1092,6 +1138,21 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `world/createCarts.test.ts`
 
+## `world/createCaves.adventureProps.test.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `settlement/families.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkManager.ts`
+- `terrain/terrainCutout.ts`
+- `world/caves/caveAdventureProps.ts`
+- `world/caves/cavePresentationLifecycle.ts`
+- `world/collision.ts`
+- `world/createCaves.ts`
+- `world/pointLightBudget.ts`
+
 ## `world/createCaves.archetype.test.ts`
 
 **Imports**
@@ -1164,6 +1225,7 @@ Generated from TypeScript imports.
 - `shared/bootMark.ts`
 - `terrain/chunkManager.ts`
 - `world/caveVolume.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveGroundQuery.ts`
@@ -1179,11 +1241,13 @@ Generated from TypeScript imports.
 - `world/caves/productionTopology.ts`
 - `world/caves/topologyAdapter.ts`
 - `world/largeCaves.ts`
+- `world/pointLightBudget.ts`
 
 **Imported by**
 
 - `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
+- `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
@@ -1873,6 +1937,7 @@ Generated from TypeScript imports.
 - `world/caveGenerator.ts`
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/adventureTopology.ts`
+- `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveContentAnchors.test.ts`
@@ -2612,6 +2677,8 @@ Generated from TypeScript imports.
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `world/createCaves.adventureProps.test.ts`
+- `world/createCaves.ts`
 - `world/createStandingTorches.ts`
 - `world/pointLightBudget.test.ts`
 

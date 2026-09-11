@@ -321,6 +321,7 @@ Generated from TypeScript imports.
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
+- `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
@@ -465,6 +466,7 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `terrain/footstepSurface.test.ts`
 - `terrain/footstepSurface.ts`
+- `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
@@ -974,6 +976,7 @@ Generated from TypeScript imports.
 - `terrain/terrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.ts`
+- `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`

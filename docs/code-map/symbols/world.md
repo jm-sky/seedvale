@@ -133,6 +133,32 @@ Generated from exported TypeScript symbols.
 - `fitsAdventureFootprintBudget` — function — line 131
   - domain: world-terrain
 
+## `world/caves/caveAdventureProps.ts`
+
+- `_resetCaveAdventurePropTemplatesForTests` — function — line 270
+- `adventurePropPlacementFromAnchor` — function — line 90
+  - domain: world-terrain
+- `adventurePropPlacementsFromAnchors` — function — line 104
+- `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT` — const — line 51
+- `CAVE_ADVENTURE_PROPS_GROUP_NAME` — const — line 16
+- `CAVE_ADVENTURE_PROPS_USERDATA_KEY` — const — line 18
+- `CAVE_CRATE_TARGET_HEIGHT` — const — line 48
+- `CAVE_PRESENTATION_PROP_ROLES` — const — line 20
+- `CAVE_SUPPORT_FIT_MAX` — const — line 47
+- `CaveAdventurePropAssetKind` — type — line 29
+- `CaveAdventurePropPlacement` — type — line 31
+- `CaveAdventurePropTemplates` — type — line 139
+- `CavePresentationPropRole` — type — line 27
+- `createCaveAdventurePropsGroup` — function — line 228
+  - domain: world-terrain
+- `CreateCaveAdventurePropsGroupResult` — type — line 216
+- `getCaveAdventurePropTemplates` — function — line 185
+  - domain: world-terrain
+- `preloadCaveAdventurePropTemplates` — function — line 155
+  - domain: world-terrain
+- `presentationAnchorsFromContent` — function — line 72
+  - domain: world-terrain
+
 ## `world/caves/caveArchetype.ts`
 
 - `ADVENTURE_HOME_BAND_MAX` — const — line 36
@@ -226,16 +252,16 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 203
-- `createCaveHeightfieldGeometry` — function — line 54
+- `CaveHeightfieldPresentation` — type — line 222
+- `createCaveHeightfieldGeometry` — function — line 59
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 226
+- `createCaveHeightfieldPresentation` — function — line 250
   - domain: world-terrain
-- `createMouthRocks` — function — line 136
+- `createMouthRocks` — function — line 155
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 72
+- `createMouthUndersideMask` — function — line 77
   - domain: world-terrain
-- `createMouthUndersideMaskMaterial` — function — line 38
+- `createMouthUndersideMaskMaterial` — function — line 43
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
@@ -585,8 +611,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 80
-- `createCaves` — function — line 244
+- `Caves` — type — line 86
+- `createCaves` — function — line 250
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves
