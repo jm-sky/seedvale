@@ -45,28 +45,37 @@ Relevant files:
 
 Current natural topology is effectively one entrance/main route/chamber with an optional short branch (`BRANCH_CHANCE = 0.35`). Adventure must be a separate topology recipe/archetype inside this ownership, while sharing the route-building helpers. Do not grow one function into a large natural/adventure conditional block if a small recipe split around shared primitives is clearer.
 
+### Freeze the natural recipe
+
+For the same seed + site, existing natural topology output and acceptance behavior are regression fixtures for this plan. Do not retune natural dimensions, `BRANCH_CHANCE`, overburden/grade/drop thresholds, route shape or acceptance limits while adding adventure.
+
+If recipe extraction is useful, keep it mechanical: shared helpers may be extracted, but the natural call sequence and parameters must stay behaviorally identical. Add fixed seed/site regression coverage before or together with the split so an apparently harmless refactor cannot silently alter existing caves.
+
 Add new independent `CAVE_RNG_SALT` values for archetype/content/layout decisions. Do not consume extra values from existing natural-cave RNG streams: changing call order would silently change existing seeded natural caves.
 
 Do not put `archetype` into `CaveTopology` merely for rendering. Keep archetype/site metadata alongside the runtime/topology unless a real representation-neutral consumer requires it.
 
-## Cave-site assignment: important acceptance-order detail
+## Cave-site assignment: acceptance order and natural fallback
 
 `pickLargeCaveSites()` currently creates up to 10 deterministic candidates in a 130–620 m ring around origin, with `LARGE_CAVE_MIN_HOME_DIST = 110`, 90 m cave separation, village/road/coast/ridge/slope filters. `createCaves()` then calls `buildProductionCaveTopology()` and drops rejected sites.
 
-Therefore the home guarantee must be applied to **accepted cave runtimes**, not blindly to the first candidate site. A candidate selected as adventure may be rejected by the longer topology even though a nearby natural topology would have been accepted.
+Adventure is harder to accept than natural because it is longer while preserving the same terrain/overburden/grade/drop constraints. The assignment flow must therefore prevent a failed adventure attempt from deleting a cave that the current natural recipe would accept.
 
-Recommended bounded flow:
+Use this bounded flow; do not invent a second siting pass:
 
-1. Keep `pickLargeCaveSites()` as the siting authority; do not invent an extra cave near home.
-2. Establish deterministic archetype preferences for sites without depending on iteration/streaming order.
-3. Build/accept topologies.
-4. Ensure exactly one accepted cave in the preferred home band is adventure. If the preferred candidate cannot accept an adventure topology, deterministically try the next eligible accepted/acceptable candidate by distance/tie-break identity.
-5. If none exists in the preferred band, expand over the already-existing candidate set and choose the nearest site that can accept adventure topology. Do not synthesize a new site.
-6. Other eligible caves use an independent 15% adventure roll.
+1. Call `pickLargeCaveSites()` exactly as the siting authority does today.
+2. Deterministically order candidates in an explicit preferred home band using distance plus stable site/cave identity as tie-break.
+3. Try adventure topology for those candidates in order. The first accepted adventure becomes the guaranteed home adventure cave.
+4. If none accepts in the preferred band, continue over the remaining existing sites, nearest/stable first. Do not synthesize a site and do not weaken adventure acceptance guardrails.
+5. For every remaining site, perform the independent deterministic 15% adventure roll.
+6. If the roll is natural, build the unchanged natural recipe.
+7. If the roll is adventure, try adventure first; **if adventure rejects, immediately try the unchanged natural recipe for the same site**. Keep the natural result if it accepts.
+
+This fallback is a hard regression guard, not an optional tuning choice. A non-guaranteed site must not disappear merely because its new archetype roll selected a recipe that cannot fit its terrain.
 
 The implementation should define the preferred home band explicitly in code/tests. Current siting already excludes <110 m, so the lower bound should not fight `LARGE_CAVE_MIN_HOME_DIST`. Avoid coupling this to camera/player position; home is the origin/current home settlement footprint already passed into `createCaves()`.
 
-Because adventure topology is longer, do not implement the guarantee as “build natural first, then relabel it”: archetype must be known before topology construction. A small pure assignment/selection helper is preferable so guarantee/15% behavior can be tested without Three.js.
+Do not implement the guarantee as “build natural first, then relabel it”: archetype must be known before topology construction. A small pure ordering/roll helper is preferable so deterministic selection can be tested without Three.js, while actual acceptance remains owned by topology construction.
 
 ## Adventure topology shape and footprint
 
@@ -78,7 +87,15 @@ Suggested semantic node IDs should be stable and role-based because later conten
 
 The side branch is mandatory for adventure; do not reuse the natural 35% branch roll for it. Reuse the existing branch clearance calculation and retry/reject deterministically if a candidate branch would smooth-union into the main route.
 
-Before accepting a topology, preserve existing overburden/drop/grade rules. It is acceptable for an adventure recipe to reject terrain that supports a natural cave. The home-guarantee selector must handle that by trying another existing site.
+Before accepting a topology, preserve existing overburden/drop/grade rules. It is acceptable for an adventure recipe to reject terrain that supports a natural cave. Guaranteed selection handles this by trying another existing site; ordinary 15% sites handle it by falling back to the unchanged natural recipe.
+
+### Heightfield footprint budget before build
+
+`DEFAULT_HEIGHTFIELD_CONFIG.cellSize` is currently global and must remain unchanged. Because the retained representation is a rectangular grid, add an adventure-specific pre-build safety check derived from topology bounds and the existing heightfield margins/config. Bound either estimated `nx * nz` directly or equivalent rectangular area with a clear conversion to estimated cells.
+
+The budget should be generous enough for the intended 3–4x route but finite and testable. If an adventure layout exceeds it, deterministically reject/retry that adventure layout; do not increase global cell size, loosen representation limits, move the heightfield to a worker, or silently allocate an unbounded grid.
+
+Keep this guard adventure-specific unless evidence shows a general cave invariant is needed. This plan must not change natural cave acceptance through a new global footprint rule.
 
 ## Content-anchor seam: cave owns placement truth, world owns gameplay objects
 
@@ -183,9 +200,9 @@ MVP preference: use emissive/unlit-looking lantern visuals first, with zero or a
 
 Extend existing focused suites rather than creating broad integration harnesses:
 
-- `productionTopology.test.ts`: natural regression, adventure deterministic route, mandatory branch, side/final semantic nodes, grade/overburden/clearance, compact bounds/route-length ratio;
-- pure archetype assignment tests: home guarantee, deterministic fallback, 15% roll independent from topology RNG, no synthetic site;
-- `createCaves.test.ts`: content descriptors resolve to final heightfield floor with adequate gap and stable IDs; natural caves expose no adventure content; presentation props activate/dispose with cave group;
+- `productionTopology.test.ts`: fixed seed/site natural output + acceptance regression, adventure deterministic route, mandatory branch, side/final semantic nodes, grade/overburden/clearance, compact bounds/route-length ratio, adventure footprint-budget rejection;
+- pure archetype assignment tests: deterministic home ordering, 15% roll independent from topology RNG, no synthetic site;
+- `createCaves.test.ts`: guaranteed candidate fallback across existing sites; ordinary adventure rejection falls back to natural and preserves a cave that natural accepts; content descriptors resolve to final heightfield floor with adequate gap and stable IDs; natural caves expose no adventure content; presentation props activate/dispose with cave group;
 - `worldGeneratedContainers.test.ts`: explicit-Y spec places underground mesh at supplied Y while legacy surface specs still call ground placement; saved contents override initial loot without changing deterministic placement;
 - `treasureGameplay.test.ts`: tier/profile determinism and final profile strictly/range-wise richer than side while legacy default stays unchanged;
 - WorldBundle-level targeted test only if needed to prove the two descriptors become exactly two existing world-generated chest specs.
@@ -194,7 +211,7 @@ Do not write statistical tests expecting exactly 15% in a tiny sample. Test the 
 
 ## Performance guardrails
 
-The expensive part of a long cave is the heightfield's rectangular XZ bounds, not only node count. Add a measurable test/assertion or debug statistic for route length vs bounds/cell count so adventure tuning cannot accidentally create a huge mostly-empty grid.
+The expensive part of a long cave is the heightfield's rectangular XZ bounds, not only node count. Enforce the adventure-specific pre-build bounds/cell budget described above and keep a measurable test/assertion or debug statistic for route length vs bounds/cell count so tuning cannot accidentally create a huge mostly-empty grid.
 
 Do not change global `DEFAULT_HEIGHTFIELD_CONFIG.cellSize` for this plan. Do not move heightfield building to a worker as part of this feature. Keep `PRESENTATION_BUILDS_PER_UPDATE = 1` unless profiling shows a separate problem.
 
@@ -202,11 +219,12 @@ Props must be template-reused/cloned and relevance-streamed. Avoid per-cave mate
 
 ## Suggested implementation order
 
-1. Pure archetype assignment + adventure topology recipe and tests, no treasure/props.
-2. Cave semantic content descriptors resolved against final heightfield.
-3. Explicit-Y world-generated-container seam + two cave chest specs + deterministic side/final loot tiers + persistence tests.
-4. Relevance-streamed cart/wagon/support/lantern presentation using existing assets.
-5. Targeted regression/typecheck/lint/build; User performs browser verification.
+1. Add fixed natural regression fixtures first; then pure archetype ordering/roll + adventure topology recipe + adventure→natural fallback tests, no treasure/props.
+2. Add adventure footprint/cell budget before heightfield construction and test deterministic rejection without changing global heightfield config.
+3. Cave semantic content descriptors resolved against final heightfield.
+4. Explicit-Y world-generated-container seam + two cave chest specs + deterministic side/final loot tiers + persistence tests.
+5. Relevance-streamed cart/wagon/support/lantern presentation using existing assets.
+6. Targeted regression/typecheck/lint/build; User performs browser verification.
 
 Keep each step independently testable. Do not mix topology tuning with container persistence changes in one large edit if avoidable.
 
@@ -215,6 +233,10 @@ Keep each step independently testable. Do not mix topology tuning with container
 - no `AdventureCaveManager`, `DungeonGraph` or cave-specific inventory;
 - no SDF/collider resurrection;
 - no new cave save blob for deterministic archetype/topology/content placement;
+- no natural recipe retuning or natural RNG call-order changes;
+- no dropping an otherwise-valid natural cave because its adventure attempt rejected;
+- no second cave siting pass or synthetic site for the home guarantee;
+- no global heightfield resolution/config change to accommodate adventure;
 - no fake surface terrain height for underground chests;
 - no keys/locks/traps unless scope is explicitly expanded;
 - no fauna/NPC navigation, ore/mining, collapse, lake or dungeon geometry;
