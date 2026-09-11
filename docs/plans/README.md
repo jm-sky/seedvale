@@ -41,7 +41,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                      | Summary                                                               | Pri | Effort | Depends         |
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
-| `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
 | `world-terrain-007-underground-caves.md`                  | Faza 4 fauna/loot/persistence deferred                                | 🔴  | L      | ~~097~~ ~~125~~ |
 | `world-terrain-008-underground-caves-v2.md`               | -                                                                     | 🟡  | XL     | -      |
