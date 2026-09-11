@@ -146,6 +146,8 @@ New `resolveDogPestTarget(home, nearbyRats, radius)` in `dogGuard.ts` — delibe
 
 Not specially wired, per the plan's explicit "no settlement-wide scan/job" instruction: a rat is a normal `AnimalKind` with the normal health/death path, so the player's existing melee-vs-animal interaction and the dog pest-chase above already satisfy "killable by existing mechanisms". No generic NPC→animal combat/threat system reads `AnimalKind` today in a way that would pick up a `'prey'`-role rat as a target on its own, and adding one was explicitly out of scope.
 
+**Follow-up (2026-09-11, fauna-021):** the sentence above assumed player melee already reached rats because they are `AnimalAgent`s. That was wrong relative to targeting sources: rats live on `settlement.rats`, and player combat collectors only scanned `settlement.livestock` + `fauna.getAgents()`. Dog pest-chase was already wired via `nearbyRats`. Player targeting is the fauna-021 follow-up, not a silent part of this plan.
+
 ### 9. Persistence — deliberately none
 
 `rat` was **not** added to `persistence/saveData.ts`'s `ANIMAL_KINDS` set. Rats are reconciled fresh from live settlement state (`ratPopulationTarget`) every time a settlement loads/rebuilds, the same "not a general persistent population model" territory wild ring-spawn animals already occupy — adding per-rat save state was explicitly discouraged by the plan unless something already required it, and nothing does.

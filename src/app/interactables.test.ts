@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createDroppedItems } from '../items/createDroppedItems'
 import { Inventory } from '../items/Inventory'
 import { ITEM_DEFS } from '../items/items'
-import { DROPPED_ITEM_GROUP_RADIUS, groupDroppedItemCandidates, resolveHaySpot, worldItemAllowsAltInteract } from './interactables'
+import { DROPPED_ITEM_GROUP_RADIUS, groupDroppedItemCandidates, itemPromptLabel, resolveHaySpot, worldItemAllowsAltInteract } from './interactables'
 
 describe('resolveHaySpot', () => {
   const garden = { x: 0, z: 0 }
@@ -69,6 +69,19 @@ describe('groupDroppedItemCandidates (plan items-player-022)', () => {
     expect(groups.map((group) => group.kind)).toEqual(['branch', 'axe', 'deer_meat'])
   })
 
+  it('keeps Fresh and Spoiled apples as separate pickup targets (plan items-player-025)', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    dropped.drop('apple', 0, 0, undefined, undefined, {
+      count: 1, acquiredAtDays: 1, accumulatedEffectiveAge: 0, lastCheckpointDays: 1, decayModifier: 1,
+    })
+    dropped.drop('apple', 0.2, 0, undefined, undefined, {
+      count: 1, acquiredAtDays: 1, accumulatedEffectiveAge: 5, lastCheckpointDays: 1, decayModifier: 1,
+    })
+    const groups = groupDroppedItemCandidates(dropped.nodes())
+    expect(groups).toHaveLength(2)
+    expect(groups.every((group) => group.kind === 'apple' && group.memberIds.length === 1)).toBe(true)
+  })
+
   it('does not merge identical kinds beyond the cluster radius', () => {
     const dropped = createDroppedItems(new Scene(), sampleHeight)
     dropped.drop('branch', 0, 0)
@@ -113,9 +126,27 @@ describe('worldItemAllowsAltInteract', () => {
   it('allows single consumable items for the plan-153 pickup+consume alternate', () => {
     expect(worldItemAllowsAltInteract('mushroom')).toBe(true)
     expect(worldItemAllowsAltInteract('herb')).toBe(true)
+    expect(worldItemAllowsAltInteract('apple')).toBe(true)
   })
 
   it('rejects grouped/stacked targets even when the kind is consumable', () => {
     expect(worldItemAllowsAltInteract('mushroom', 2)).toBe(false)
+  })
+
+  it('rejects spoiled perishable food (plan items-player-025)', () => {
+    expect(worldItemAllowsAltInteract('apple', 1, 'spoiled')).toBe(false)
+    expect(worldItemAllowsAltInteract('apple', 1, 'fresh')).toBe(true)
+    expect(worldItemAllowsAltInteract('apple', 1, 'medium')).toBe(true)
+  })
+})
+
+describe('itemPromptLabel (plan items-player-025)', () => {
+  it('keeps the pickup+consume prompt for fresh consumable food', () => {
+    expect(itemPromptLabel('apple', 1, 'fresh')).toBe('[E] Podnieś: jabłko · [R] Zjedz')
+  })
+
+  it('labels spoiled food and omits [R]', () => {
+    expect(itemPromptLabel('apple', 1, 'spoiled')).toBe('Podnieś: jabłko (zepsute)')
+    expect(itemPromptLabel('apple', 1, 'spoiled')).not.toMatch(/\[R\]/)
   })
 })

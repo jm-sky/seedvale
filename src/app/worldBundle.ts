@@ -920,7 +920,7 @@ async function buildWorldSystems(
   // decision/construction/terrain-preparation/buildable integration needs
   // live instances forwarded in, not a late-bound accessor.
   bootMark('droppedItems+wells+workContracts+terrainPrep+buildables')
-  const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
+  const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems, getWorldDays())
   const playerWells = createPlayerWells(
     scene,
     chunkManager.sampleHeight,

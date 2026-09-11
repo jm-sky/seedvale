@@ -1,9 +1,13 @@
 import { type Object3D, type Scene } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
-import type { FoodBatch } from './foodFreshness'
 import type { SaveItemInstance } from './Inventory'
 import { disposeObject3D } from '../assets/loadGltf'
 import { placeOnGround } from '../settlement/props'
+import {
+  type FoodBatch,
+  foodBatchDecomposeAtDays,
+  isFoodBatchDecomposed,
+} from './foodFreshness'
 import { createItemMesh, type ItemKind } from './items'
 
 export type DroppedItem = {
@@ -37,6 +41,12 @@ export type DroppedItems = {
   /** Advances items still in flight (plan 097 phase 2.1). Landed items cost
    *  nothing — only entries in `falling` are touched. */
   tick: (dt: number) => void
+  /** World-time spoiled-food cleanup (plan items-player-025). Removes
+   *  perishable dropped records whose `FoodBatch` has passed
+   *  `foodBatchDecomposeAtDays`. O(1) when `nowDays` is still before the
+   *  cached next expiry; does not iterate landed items from `tick(dt)`.
+   *  Does not fire `onCollected` — decompose is not a pickup. */
+  reconcilePerishableLifecycle: (nowDays: number) => void
   /** Re-arms gravity (the same `falling` mechanism `drop()` uses) for every
    *  landed item within `radius` of `(x, z)` — call after a terrain
    *  modification (dig) so a stone that was already resting there settles
@@ -60,6 +70,7 @@ export function createDroppedItems(
   scene: Scene,
   sampleHeight: HeightSampler,
   initial: readonly DroppedItem[] = [],
+  nowDays = 0,
 ): DroppedItems {
   const items: DroppedItem[] = []
   const meshes = new Map<string, Object3D>()
@@ -70,6 +81,9 @@ export function createDroppedItems(
   // don't change while falling (no throw arc in v1) and a save mid-flight
   // just resumes landed, a sub-second, sub-metre visual difference.
   const falling = new Map<string, { vy: number }>()
+  // Cached min decompose world-day across current perishable drops.
+  // `Infinity` means "nothing scheduled" — reconcile is then a no-op.
+  let nextDecomposeAt = Infinity
 
   const spawnMesh = (item: DroppedItem, yOffset = 0): void => {
     const mesh = createItemMesh(item.kind)
@@ -78,9 +92,37 @@ export function createDroppedItems(
     meshes.set(item.id, mesh)
   }
 
+  const noteDecomposeAt = (item: DroppedItem): void => {
+    if (!item.foodBatch) return
+    const at = foodBatchDecomposeAtDays(item.kind, item.foodBatch)
+    if (at != null && at < nextDecomposeAt) nextDecomposeAt = at
+  }
+
+  const recomputeNextDecomposeAt = (): void => {
+    nextDecomposeAt = Infinity
+    for (const item of items) noteDecomposeAt(item)
+  }
+
+  const disposeNode = (id: string): DroppedItem | null => {
+    const index = items.findIndex((item) => item.id === id)
+    if (index === -1) return null
+    const [item] = items.splice(index, 1)
+    const mesh = meshes.get(id)
+    if (mesh) {
+      mesh.removeFromParent()
+      disposeObject3D(mesh)
+      meshes.delete(id)
+    }
+    falling.delete(id)
+    collectedCallbacks.delete(id)
+    return item ?? null
+  }
+
   for (const item of initial) {
+    if (item.foodBatch && isFoodBatchDecomposed(item.kind, item.foodBatch, nowDays)) continue
     items.push(item)
     spawnMesh(item)
+    noteDecomposeAt(item)
   }
 
   return {
@@ -93,28 +135,20 @@ export function createDroppedItems(
       spawnMesh(item, DROP_SPAWN_HEIGHT)
       falling.set(item.id, { vy: 0 })
       if (onCollected) collectedCallbacks.set(item.id, onCollected)
+      noteDecomposeAt(item)
     },
     collect(id) {
-      const index = items.findIndex((item) => item.id === id)
-      if (index === -1) return null
-      const [item] = items.splice(index, 1)
-      const mesh = meshes.get(id)
-      if (mesh) {
-        mesh.removeFromParent()
-        disposeObject3D(mesh)
-        meshes.delete(id)
-      }
-      falling.delete(id)
       const onCollected = collectedCallbacks.get(id)
-      collectedCallbacks.delete(id)
+      const item = disposeNode(id)
+      if (!item) return null
       onCollected?.()
       const collected: { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: FoodBatch } = {
-        kind: item!.kind,
-        x: item!.x,
-        z: item!.z,
-        instance: item!.instance,
+        kind: item.kind,
+        x: item.x,
+        z: item.z,
+        instance: item.instance,
       }
-      if (item!.foodBatch) collected.foodBatch = item!.foodBatch
+      if (item.foodBatch) collected.foodBatch = item.foodBatch
       return collected
     },
     settleNear(x, z, radius) {
@@ -144,6 +178,14 @@ export function createDroppedItems(
         }
       }
     },
+    reconcilePerishableLifecycle(nowDays) {
+      if (nowDays < nextDecomposeAt) return
+      const expired = items.filter((item) => (
+        item.foodBatch != null && isFoodBatchDecomposed(item.kind, item.foodBatch, nowDays)
+      ))
+      for (const item of expired) disposeNode(item.id)
+      recomputeNextDecomposeAt()
+    },
     dispose() {
       for (const mesh of meshes.values()) {
         mesh.removeFromParent()
@@ -153,6 +195,7 @@ export function createDroppedItems(
       items.length = 0
       falling.clear()
       collectedCallbacks.clear()
+      nextDecomposeAt = Infinity
     },
   }
 }

@@ -178,6 +178,34 @@ export function isFoodBatchSpoiled(kind: ItemKind, batch: FoodBatch, nowDays: nu
 }
 
 /**
+ * How long a perishable may remain in the world after it has become
+ * Spoiled, in effective-age days (plan items-player-025). Dropped food uses
+ * `CARRIED_FOOD_DECAY` (1.0×), so this is 12 world hours on the ground.
+ *
+ * @domain items-player
+ */
+export const WORLD_SPOILED_FOOD_DECAY_DAYS = 0.5
+
+/**
+ * Absolute world-day at which a perishable `FoodBatch` should be removed
+ * from the world. `null` for non-perishable kinds. Derived from effective
+ * age, not `acquiredAtDays + fresh + medium`.
+ *
+ * @domain items-player
+ */
+export function foodBatchDecomposeAtDays(kind: ItemKind, batch: FoodBatch): number | null {
+  const shelf = foodTotalShelfLifeDays(kind)
+  if (shelf == null || !(batch.decayModifier > 0)) return null
+  const remainingEffective = shelf + WORLD_SPOILED_FOOD_DECAY_DAYS - batch.accumulatedEffectiveAge
+  return batch.lastCheckpointDays + remainingEffective / batch.decayModifier
+}
+
+export function isFoodBatchDecomposed(kind: ItemKind, batch: FoodBatch, nowDays: number): boolean {
+  const at = foodBatchDecomposeAtDays(kind, batch)
+  return at != null && nowDays >= at
+}
+
+/**
  * Materialize effective age at `nowDays` and switch the batch onto
  * `nextDecayModifier`. Identity-preserving: `acquiredAtDays` / `sourceSpecies`
  * stay put.

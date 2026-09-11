@@ -4,7 +4,6 @@ import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { DroppedItem, DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
 import type { PlacedTents } from '../items/createPlacedTents'
-import type { FoodBatch } from '../items/foodFreshness'
 import type { ToolKind } from '../items/HeldTool'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { Settlement } from '../settlement/createSettlement'
@@ -27,6 +26,7 @@ import type { WorldGeneratedContainers } from '../world/worldGeneratedContainers
 import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
+import { type FoodBatch, type FreshnessStage, getFoodBatchFreshnessStage } from '../items/foodFreshness'
 import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
@@ -250,22 +250,32 @@ function corpseCandidate(
  *
  * Only the plan-153 pickup+consume quick-action qualifies. Plain world
  * pickup is always `[E]`; `[R]` must never alias generic pickup (tools,
- * materials, grouped stacks, etc.).
+ * materials, grouped stacks, etc.). Spoiled perishable food (plan
+ * items-player-025) is still pick-uppable with `[E]` but is not offered as
+ * a consume shortcut.
  *
  * @domain ui-input
  */
-export function worldItemAllowsAltInteract(kind: ItemKind, quantity = 1): boolean {
+export function worldItemAllowsAltInteract(
+  kind: ItemKind,
+  quantity = 1,
+  freshness?: FreshnessStage,
+): boolean {
+  if (freshness === 'spoiled') return false
   return quantity <= 1 && Boolean(ITEM_CATALOG[kind].consumable)
 }
 
 /** World pickup prompt (plan 153) — adds a `[R] Zjedz`/`Wypij`/`Opatrz`
  *  quick-action for items immediately usable straight out of inventory
  *  (gated on `worldItemAllowsAltInteract`, the same flag execution uses).
- *  Plain pickup keeps the auto-`[E]`-prefixed short form used everywhere else. */
-function itemPromptLabel(kind: ItemKind, quantity = 1): string {
-  const label = ITEM_DEFS[kind].label
+ *  Spoiled dropped food (plan items-player-025) is labelled like crop
+ *  overripe (`(zepsute)`) and omits `[R]`. Plain pickup keeps the
+ *  auto-`[E]`-prefixed short form used everywhere else. */
+export function itemPromptLabel(kind: ItemKind, quantity = 1, freshness?: FreshnessStage): string {
+  const baseLabel = ITEM_DEFS[kind].label
+  const label = freshness === 'spoiled' ? `${baseLabel} (zepsute)` : baseLabel
   const quantityLabel = quantity > 1 ? `${label} ×${quantity}` : label
-  if (!worldItemAllowsAltInteract(kind, quantity)) return `Podnieś: ${quantityLabel}`
+  if (!worldItemAllowsAltInteract(kind, quantity, freshness)) return `Podnieś: ${quantityLabel}`
   const consumable = ITEM_CATALOG[kind].consumable!
   return `[E] Podnieś: ${label} · [R] ${consumeVerbLabel(consumable.need)}`
 }
@@ -781,6 +791,13 @@ export function buildInteractables(
       })
     }
 
+    // Plan fauna-021 — settlement rats are combat targets only. Unarmed
+    // gaze must not grow Observe/feed/mount prompts; the weapon-held
+    // branch of `animalPromptLabel` already yields `Atakuj: szczur`.
+    if (isMeleeTool(heldTool) || isRangedTool(heldTool)) {
+      for (const animal of settlement.rats) pushLiveAnimalCandidate(animal)
+    }
+
     if (withinRange(settlement.landmarks.well.x, settlement.landmarks.well.z, playerPos, GAZE_RANGE)) {
       list.push({
         kind: 'well',
@@ -1002,10 +1019,14 @@ export function buildInteractables(
   }
 
   for (const group of groupDroppedItemCandidates(droppedItems.nodes())) {
+    const first = droppedItems.nodes().find((node) => node.id === group.memberIds[0])
+    const freshness = first?.foodBatch
+      ? getFoodBatchFreshnessStage(group.kind, first.foodBatch, nowDays)
+      : undefined
     list.push({
       kind: 'item',
       position: { x: group.x, z: group.z },
-      promptLabel: itemPromptLabel(group.kind, group.memberIds.length),
+      promptLabel: itemPromptLabel(group.kind, group.memberIds.length, freshness),
       item: {
         id: group.memberIds[0]!,
         kind: group.kind,
@@ -1137,8 +1158,11 @@ export function buildCombatTarget(
     candidates.push({ id: animal.animalId, x: animal.mesh.position.x, z: animal.mesh.position.z, alive: true })
     byId.set(animal.animalId, animal)
   }
+  // Same sources as `forEachLivingCombatAnimal` (plan fauna-021) — kept
+  // inline to avoid a `playerCombat` ↔ `interactables` import cycle.
   for (const settlement of settlements) {
     for (const animal of settlement.livestock) collect(animal)
+    for (const animal of settlement.rats) collect(animal)
   }
   for (const animal of fauna.getAgents()) collect(animal)
 

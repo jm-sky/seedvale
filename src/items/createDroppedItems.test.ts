@@ -79,3 +79,62 @@ describe('createDroppedItems onCollected hook (plan fauna-002)', () => {
     expect(dropped.collect(node!.id)).toEqual({ kind: 'deer_meat', x: 2, z: 3, instance: undefined, foodBatch })
   })
 })
+
+describe('createDroppedItems perishable lifecycle (plan items-player-025)', () => {
+  const freshApple = {
+    count: 1,
+    acquiredAtDays: 10,
+    accumulatedEffectiveAge: 0,
+    lastCheckpointDays: 10,
+    decayModifier: 1,
+  }
+
+  it('does not remove an item the moment it becomes spoiled', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    dropped.drop('apple', 0, 0, undefined, undefined, freshApple)
+    dropped.reconcilePerishableLifecycle(14.1)
+    expect(dropped.nodes()).toHaveLength(1)
+  })
+
+  it('removes a spoiled perishable after WORLD_SPOILED_FOOD_DECAY_DAYS of effective age', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    dropped.drop('apple', 0, 0, undefined, undefined, freshApple)
+    dropped.reconcilePerishableLifecycle(14.5)
+    expect(dropped.nodes()).toHaveLength(0)
+  })
+
+  it('does not remove items based on gravity tick count', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    dropped.drop('apple', 0, 0, undefined, undefined, freshApple)
+    for (let i = 0; i < 120; i++) dropped.tick(1 / 60)
+    expect(dropped.nodes()).toHaveLength(1)
+    dropped.reconcilePerishableLifecycle(10)
+    expect(dropped.nodes()).toHaveLength(1)
+  })
+
+  it('skips already-decomposed records on hydrate and does not fire onCollected', () => {
+    let collected = 0
+    const expired = {
+      id: 'drop:old:1',
+      kind: 'apple' as const,
+      x: 1,
+      z: 2,
+      foodBatch: freshApple,
+    }
+    const dropped = createDroppedItems(new Scene(), sampleHeight, [expired], 14.5)
+    expect(dropped.nodes()).toHaveLength(0)
+    dropped.drop('apple', 0, 0, undefined, () => { collected++ }, freshApple)
+    dropped.reconcilePerishableLifecycle(14.5)
+    expect(dropped.nodes()).toHaveLength(0)
+    expect(collected).toBe(0)
+  })
+
+  it('never removes non-perishable or no-batch drops', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    dropped.drop('stone', 0, 0)
+    dropped.drop('honey', 1, 0)
+    dropped.drop('apple', 2, 0)
+    dropped.reconcilePerishableLifecycle(100)
+    expect(dropped.nodes().map((n) => n.kind)).toEqual(['stone', 'honey', 'apple'])
+  })
+})

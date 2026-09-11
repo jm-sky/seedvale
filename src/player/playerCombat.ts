@@ -47,6 +47,25 @@ export function livingTargetIdForNpc(npcId: string): string {
   return `npc:${npcId}`
 }
 
+/**
+ * Shared living-animal sources for player combat (plan fauna-021).
+ * Livestock, settlement rats, and wild fauna — not a second target registry.
+ * Rats are `AnimalAgent`s on `settlement.rats`, not in `fauna.getAgents()`.
+ *
+ * @domain fauna
+ */
+export function forEachLivingCombatAnimal(
+  settlements: readonly Settlement[],
+  fauna: Fauna,
+  visit: (animal: AnimalAgent) => void,
+): void {
+  for (const settlement of settlements) {
+    for (const animal of settlement.livestock) visit(animal)
+    for (const animal of settlement.rats) visit(animal)
+  }
+  for (const animal of fauna.getAgents()) visit(animal)
+}
+
 /** Living combat targets inside acquisition range/cone (plan 150 §2). `range`
  *  defaults to melee-scale `COMBAT_TARGET_RANGE`; a held bow's own (larger)
  *  attack range should be passed here too — otherwise `[Tab]` cycling and
@@ -74,15 +93,16 @@ export function collectLivingCombatTargets(
     byId.set(id, { id, x, z, interactable })
   }
 
+  forEachLivingCombatAnimal(settlements, fauna, (animal) => {
+    addAnimal(animal, {
+      kind: 'animal',
+      position: animal.mesh.position,
+      promptLabel: '',
+      animal,
+    })
+  })
+
   for (const settlement of settlements) {
-    for (const animal of settlement.livestock) {
-      addAnimal(animal, {
-        kind: 'animal',
-        position: animal.mesh.position,
-        promptLabel: '',
-        animal,
-      })
-    }
     for (const npc of settlement.npcs) {
       if (npc.health.dead) continue
       const { x, z } = npc.mesh.position
@@ -102,14 +122,6 @@ export function collectLivingCombatTargets(
         },
       })
     }
-  }
-  for (const animal of fauna.getAgents()) {
-    addAnimal(animal, {
-      kind: 'animal',
-      position: animal.mesh.position,
-      promptLabel: '',
-      animal,
-    })
   }
 
   const memoryIds = recentTargetIds.map((raw) => (
@@ -132,9 +144,10 @@ export type RangedAnimalCandidate = { id: string, x: number, z: number, animal: 
 /** Live animal candidates for ranged projectile collision (plan 162) —
  *  deliberately not derived from `interactables`'s gaze-scoped `animal`
  *  entries (`GAZE_RANGE` is far shorter than any bow's range): same
- *  settlement-livestock + wild-fauna sources as `collectLivingCombatTargets`,
- *  but returning the raw `AnimalAgent` a projectile hit needs to apply
- *  damage to, over a range wide enough to cover every bow. */
+ *  livestock + settlement-rats + wild-fauna sources as
+ *  `collectLivingCombatTargets` (plan fauna-021), but returning the raw
+ *  `AnimalAgent` a projectile hit needs to apply damage to, over a range
+ *  wide enough to cover every bow. */
 export function collectRangedAnimalCandidates(
   settlements: readonly Settlement[],
   fauna: Fauna,
@@ -150,10 +163,7 @@ export function collectRangedAnimalCandidates(
     seen.add(animal.animalId)
     out.push({ id: livingTargetIdForAnimal(animal.animalId), x, z, animal })
   }
-  for (const settlement of settlements) {
-    for (const animal of settlement.livestock) add(animal)
-  }
-  for (const animal of fauna.getAgents()) add(animal)
+  forEachLivingCombatAnimal(settlements, fauna, add)
   return out
 }
 

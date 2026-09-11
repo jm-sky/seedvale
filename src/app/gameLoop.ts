@@ -92,6 +92,7 @@ import {
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
 import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillPrompt, type TargetedSkillQueryContext } from '../interaction/targetedSkillAction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
+import { getFoodBatchFreshnessStage } from '../items/foodFreshness'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { fuelValue, selectFuelKind } from '../items/itemFuel'
@@ -1776,10 +1777,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           ? target.item.memberIds
           : [target.item.id]
         const grouped = memberIds.length > 1
+        const droppedNode = target.item.source === 'dropped'
+          ? bundle.droppedItems.nodes().find((node) => node.id === target.item.id)
+          : undefined
+        const freshness = droppedNode?.foodBatch
+          ? getFoodBatchFreshnessStage(target.item.kind, droppedNode.foodBatch, dayNight.elapsedDays)
+          : undefined
         // `[R]` is only the plan-153 pickup+consume alternate — never a
-        // second generic pickup key for tools/materials/stacks.
+        // second generic pickup key for tools/materials/stacks. Spoiled
+        // dropped food (plan items-player-025) re-validates from the live
+        // batch rather than trusting the prompt string.
         const altQuickConsume = altInteractPressed
-          && worldItemAllowsAltInteract(target.item.kind, memberIds.length)
+          && worldItemAllowsAltInteract(target.item.kind, memberIds.length, freshness)
         if (interactPressed || altQuickConsume) {
           let picked = 0
           let lastKind: ItemKind | null = null
@@ -2413,6 +2422,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       }
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.droppedItems.tick(dt)
+      bundle.droppedItems.reconcilePerishableLifecycle(dayNight.elapsedDays)
       // Fire fuel burns against `worldDt` (scaled during a rest/sleep
       // time-skip, same as player needs above) rather than raw `dt` — ticked
       // unconditionally, unlike `settlementsManager.update()`/`fauna.update()`
