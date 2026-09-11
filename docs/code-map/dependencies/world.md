@@ -3029,6 +3029,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/socialBehaviour.ts`
+- `fauna/AnimalLife.test.ts`
 - `fauna/AnimalLife.ts`
 - `fauna/animalMetabolismGameplay.test.ts`
 - `fauna/createFauna.ts`

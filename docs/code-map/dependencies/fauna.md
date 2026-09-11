@@ -128,6 +128,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalLife.ts`
 - `shared/StaminaState.ts`
+- `world/timeConversion.ts`
 
 ## `fauna/AnimalLife.ts`
 
