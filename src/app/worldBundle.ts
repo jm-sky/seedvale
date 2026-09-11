@@ -67,7 +67,7 @@ import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '
 import { preloadCartProp } from '../world/cartProp'
 import { type Beehives, createBeehives } from '../world/createBeehives'
 import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
-import { type Caves, createCaves } from '../world/createCaves'
+import { type CaveContentAnchor, type Caves, createCaves } from '../world/createCaves'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
 import { createGrassForagePatches, type GrassForageService } from '../world/createGrassForagePatches'
 import { createOcean, type WorldOcean } from '../world/createOcean'
@@ -138,6 +138,39 @@ const SETTLEMENT_LOAD_RADIUS = 300
 /** Must be > SETTLEMENT_LOAD_RADIUS — hysteresis ring avoiding load/unload
  *  thrashing right at the boundary. */
 const SETTLEMENT_UNLOAD_RADIUS = 420
+
+/**
+ * Materializes each adventure cave's `sideTreasure`/`finalTreasure` content
+ * anchor (plan world-terrain-020 Stage B) as a plain underground
+ * `WorldGeneratedContainerSpec` (Stage C): the anchor's `x/y/z/yaw` is used
+ * exactly — no re-grounding — and loot comes from the matching deterministic
+ * `caveSide`/`caveFinal` profile. Natural caves contribute no matching
+ * anchors. Cave chests are ordinary `WorldGeneratedContainers`, not
+ * `TreasureSiteDefinition` — no keys/locks. Pure so cave→container
+ * composition is testable without booting the rest of `WorldBundle`.
+ *
+ * @domain world-terrain
+ */
+export function caveTreasureContainerSpecs(
+  anchors: readonly CaveContentAnchor[],
+  worldSeed: number,
+): WorldGeneratedContainerSpec[] {
+  const specs: WorldGeneratedContainerSpec[] = []
+  for (const anchor of anchors) {
+    if (anchor.role !== 'sideTreasure' && anchor.role !== 'finalTreasure') continue
+    const profile = anchor.role === 'sideTreasure' ? 'caveSide' : 'caveFinal'
+    specs.push({
+      id: anchor.id,
+      kind: 'chest',
+      x: anchor.x,
+      y: anchor.y,
+      z: anchor.z,
+      yaw: anchor.yaw,
+      initialCounts: generateTreasureLoot(worldSeed, anchor.id, { profile }),
+    })
+  }
+  return specs
+}
 
 /** 3×3 block of chunks around the origin, pinned so the settlement never streams
  *  out from under itself. */
@@ -1004,30 +1037,6 @@ async function buildWorldSystems(
   const chestYaw = darkForestTreasureSite.rotationY + 0.35
   const chestX = darkForestTreasureSite.x + Math.cos(chestYaw) * 2.8
   const chestZ = darkForestTreasureSite.z + Math.sin(chestYaw) * 2.8
-  const worldGeneratedSpecs: WorldGeneratedContainerSpec[] = [
-    {
-      id: darkForestTreasureSite.chestId,
-      kind: 'chest',
-      x: chestX,
-      z: chestZ,
-      yaw: chestYaw,
-      initialCounts: { coin: DARK_FOREST_TREASURE_CHEST_COINS, ruby: 1 },
-    },
-    ...treasureSites.map((site) => ({
-      id: site.chest.containerId,
-      kind: 'chest' as const,
-      x: site.chest.x,
-      z: site.chest.z,
-      yaw: site.chest.yaw,
-      initialCounts: generateTreasureLoot(config.seed, site.id),
-    })),
-  ]
-  const worldGeneratedContainers = createWorldGeneratedContainers(
-    scene,
-    chunkManager.sampleHeight,
-    worldGeneratedSpecs,
-    initialWorldGeneratedContainers,
-  )
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
 
   bootMark('preloadAnimalTroughAndTrapProps')
@@ -1134,6 +1143,36 @@ async function buildWorldSystems(
     config.terrain.region.coastThreshold,
   )
   bootMarkEnd('createCaves')
+
+  // Cave chest specs must be composed after `caves` exists — the anchors'
+  // `y` comes from each cave's own retained heightfield (plan
+  // world-terrain-020 Stage C). Appended to the same `worldGeneratedSpecs`
+  // array as every other systemic chest; no second container owner.
+  const worldGeneratedSpecs: WorldGeneratedContainerSpec[] = [
+    {
+      id: darkForestTreasureSite.chestId,
+      kind: 'chest',
+      x: chestX,
+      z: chestZ,
+      yaw: chestYaw,
+      initialCounts: { coin: DARK_FOREST_TREASURE_CHEST_COINS, ruby: 1 },
+    },
+    ...treasureSites.map((site) => ({
+      id: site.chest.containerId,
+      kind: 'chest' as const,
+      x: site.chest.x,
+      z: site.chest.z,
+      yaw: site.chest.yaw,
+      initialCounts: generateTreasureLoot(config.seed, site.id),
+    })),
+    ...caveTreasureContainerSpecs(caves.contentAnchors(), config.seed),
+  ]
+  const worldGeneratedContainers = createWorldGeneratedContainers(
+    scene,
+    chunkManager.sampleHeight,
+    worldGeneratedSpecs,
+    initialWorldGeneratedContainers,
+  )
 
   // Physical treasure map binds to an existing cave (preferred) or the home
   // cemetery — after caves exist, still pure of loaded-chunk landmark scans.

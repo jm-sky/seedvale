@@ -13,6 +13,11 @@ import { tradeValue } from './tradeCatalog'
 import {
   applyTreasureContentsLosses,
   BLADE_TRAP_DAMAGE,
+  CAVE_FINAL_COIN_MAX,
+  CAVE_FINAL_COIN_MIN,
+  CAVE_FINAL_GOLD_MIN,
+  CAVE_SIDE_COIN_MAX,
+  CAVE_SIDE_COIN_MIN,
   commitForcedEntry,
   describeTreasureContainerInteraction,
   EMPTY_TREASURE_MUTATION,
@@ -106,6 +111,59 @@ describe('treasure loot generation', () => {
     const isolated = generateTreasureLoot(11, 'treasure:ruins:target')
     const fresh = generateTreasureLoot(11, 'treasure:ruins:target')
     expect(isolated).toEqual(fresh)
+  })
+
+  it('default profile (explicit) matches the legacy no-options call for the same seed/site', () => {
+    const implicit = generateTreasureLoot(123, 'treasure:ruins:explicit')
+    const explicit = generateTreasureLoot(123, 'treasure:ruins:explicit', { profile: 'default' })
+    expect(explicit).toEqual(implicit)
+  })
+})
+
+describe('adventure cave chest loot tiers (plan world-terrain-020 Stage C)', () => {
+  it('caveSide is deterministic for the same seed/site', () => {
+    const first = generateTreasureLoot(5, 'cave:a:side-treasure', { profile: 'caveSide' })
+    const second = generateTreasureLoot(5, 'cave:a:side-treasure', { profile: 'caveSide' })
+    expect(second).toEqual(first)
+  })
+
+  it('caveFinal is deterministic for the same seed/site', () => {
+    const first = generateTreasureLoot(5, 'cave:a:final-treasure', { profile: 'caveFinal' })
+    const second = generateTreasureLoot(5, 'cave:a:final-treasure', { profile: 'caveFinal' })
+    expect(second).toEqual(first)
+  })
+
+  it('caveSide never guarantees gold or a bonus large gemstone', () => {
+    for (let i = 0; i < 20; i++) {
+      const loot = generateTreasureLoot(i * 97 + 3, `cave:seed${i}:side-treasure`, { profile: 'caveSide' })
+      expect(loot.coin).toBeGreaterThanOrEqual(CAVE_SIDE_COIN_MIN)
+      expect(loot.coin).toBeLessThanOrEqual(CAVE_SIDE_COIN_MAX)
+      expect(loot.gold).toBeUndefined()
+      const gemCount = GEMSTONE_KINDS.reduce((sum, kind) => sum + (loot[kind] ?? 0), 0)
+      expect(gemCount).toBe(1)
+    }
+  })
+
+  it('caveFinal always guarantees gold plus a bonus large gemstone on top of the base gem', () => {
+    for (let i = 0; i < 20; i++) {
+      const loot = generateTreasureLoot(i * 131 + 7, `cave:seed${i}:final-treasure`, { profile: 'caveFinal' })
+      expect(loot.coin).toBeGreaterThanOrEqual(CAVE_FINAL_COIN_MIN)
+      expect(loot.coin).toBeLessThanOrEqual(CAVE_FINAL_COIN_MAX)
+      expect(loot.gold).toBeGreaterThanOrEqual(CAVE_FINAL_GOLD_MIN)
+      const gemCount = GEMSTONE_KINDS.reduce((sum, kind) => sum + (loot[kind] ?? 0), 0)
+      expect(gemCount).toBeGreaterThanOrEqual(2)
+      const largeGemCount = (loot.ruby_large ?? 0) + (loot.diamond_large ?? 0)
+      expect(largeGemCount).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  it('final is invariantly richer than side: the coin ranges never overlap', () => {
+    expect(CAVE_FINAL_COIN_MIN).toBeGreaterThan(CAVE_SIDE_COIN_MAX)
+    for (let i = 0; i < 20; i++) {
+      const side = generateTreasureLoot(i * 211 + 1, `cave:seed${i}:side-treasure`, { profile: 'caveSide' })
+      const final = generateTreasureLoot(i * 211 + 1, `cave:seed${i}:final-treasure`, { profile: 'caveFinal' })
+      expect(final.coin! > side.coin!).toBe(true)
+    }
   })
 })
 
@@ -287,6 +345,18 @@ describe('treasure container interaction', () => {
 
   it('keeps player-placed / non-treasure containers out of treasure lock/trap state', () => {
     expect(describeTreasureContainerInteraction([], new Set(), new Map(), 'chest:player')).toEqual({
+      kind: 'not-treasure',
+    })
+  })
+
+  it('treats an adventure-cave chest as a normal container — no key/lock (plan world-terrain-020 Stage C)', () => {
+    // Cave chests never enter `TreasureSiteDefinition`, so the generic
+    // interaction path (`describeTreasureContainerInteraction` /
+    // `attemptTreasureUnlock`) sees them exactly like a player-placed chest.
+    expect(describeTreasureContainerInteraction([], new Set(), new Map(), 'cave:x:sideTreasure')).toEqual({
+      kind: 'not-treasure',
+    })
+    expect(attemptTreasureUnlock([], new Set(), 'cave:x:finalTreasure', () => false)).toEqual({
       kind: 'not-treasure',
     })
   })

@@ -17,6 +17,24 @@ export const TREASURE_COIN_MAX = 200
 export const BLADE_TRAP_DAMAGE = 22
 export const FORCE_ENTRY_DURATION_SEC = 3.2
 
+/** Adventure-cave chest loot tiers (plan world-terrain-020 Stage C). Ranges
+ *  are deliberately disjoint — `CAVE_FINAL_COIN_MIN > CAVE_SIDE_COIN_MAX` —
+ *  so "final is richer than side" is a provable range fact, not a
+ *  probabilistic tendency. Final also always adds a guaranteed `gold` stack
+ *  and a second, large-tier gemstone that `caveSide` never rolls. */
+export const CAVE_SIDE_COIN_MIN = 60
+export const CAVE_SIDE_COIN_MAX = 140
+export const CAVE_FINAL_COIN_MIN = 220
+export const CAVE_FINAL_COIN_MAX = 360
+export const CAVE_FINAL_GOLD_MIN = 2
+export const CAVE_FINAL_GOLD_MAX = 4
+
+export type TreasureLootProfile = 'default' | 'caveSide' | 'caveFinal'
+
+export type GenerateTreasureLootOptions = {
+  profile?: TreasureLootProfile
+}
+
 export const GEMSTONE_KINDS = [
   'ruby_small',
   'ruby_medium',
@@ -59,6 +77,14 @@ const GEMSTONE_WEIGHTS: ReadonlyArray<{ kind: GemstoneKind, weight: number }> = 
   { kind: 'diamond_small', weight: 18 },
   { kind: 'diamond_medium', weight: 18 },
   { kind: 'diamond_large', weight: 10 },
+]
+
+/** Guaranteed second gemstone for `caveFinal` — large tier only, so it is
+ *  always at least as valuable as the best `caveSide` roll from
+ *  `GEMSTONE_WEIGHTS`. */
+const CAVE_FINAL_BONUS_GEMSTONE_WEIGHTS: ReadonlyArray<{ kind: GemstoneKind, weight: number }> = [
+  { kind: 'ruby_large', weight: 1 },
+  { kind: 'diamond_large', weight: 1 },
 ]
 
 const ORDINARY_VULNERABLE_LOOT: readonly ItemKind[] = ['hide', 'bread', 'blanket']
@@ -163,12 +189,41 @@ export function serializeTreasureMutations(
   return rows
 }
 
-/** Initial physical chest contents — coins, one gem, optional ordinary loot. */
+/**
+ * Initial physical chest contents. `profile` defaults to `'default'`, which
+ * is the original systemic-treasure distribution (plan world-024/
+ * items-player-026) and every existing caller keeps that exact behavior.
+ * `caveSide` / `caveFinal` are the adventure-cave chest tiers (plan
+ * world-terrain-020 Stage C): `caveFinal` is invariantly richer than
+ * `caveSide` by disjoint coin ranges plus a guaranteed bonus gold stack and
+ * large-tier gemstone `caveSide` never receives — see the tier constants
+ * above.
+ */
 export function generateTreasureLoot(
   worldSeed: number,
   siteId: string,
+  options?: GenerateTreasureLootOptions,
 ): Partial<Record<ItemKind, number>> {
+  const profile = options?.profile ?? 'default'
   const rng = rngFor(worldSeed, siteId, 'loot')
+
+  if (profile === 'caveSide') {
+    const coins = CAVE_SIDE_COIN_MIN + Math.floor(rng() * (CAVE_SIDE_COIN_MAX - CAVE_SIDE_COIN_MIN + 1))
+    const gem = pickWeighted(rng, GEMSTONE_WEIGHTS)
+    return { coin: coins, [gem]: 1 }
+  }
+
+  if (profile === 'caveFinal') {
+    const coins = CAVE_FINAL_COIN_MIN + Math.floor(rng() * (CAVE_FINAL_COIN_MAX - CAVE_FINAL_COIN_MIN + 1))
+    const gold = CAVE_FINAL_GOLD_MIN + Math.floor(rng() * (CAVE_FINAL_GOLD_MAX - CAVE_FINAL_GOLD_MIN + 1))
+    const gem = pickWeighted(rng, GEMSTONE_WEIGHTS)
+    const bonusGem = pickWeighted(rng, CAVE_FINAL_BONUS_GEMSTONE_WEIGHTS)
+    const counts: Partial<Record<ItemKind, number>> = { coin: coins, gold }
+    counts[gem] = (counts[gem] ?? 0) + 1
+    counts[bonusGem] = (counts[bonusGem] ?? 0) + 1
+    return counts
+  }
+
   const coins = TREASURE_COIN_MIN + Math.floor(rng() * (TREASURE_COIN_MAX - TREASURE_COIN_MIN + 1))
   const gem = pickWeighted(rng, GEMSTONE_WEIGHTS)
   const counts: Partial<Record<ItemKind, number>> = { coin: coins, [gem]: 1 }

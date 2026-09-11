@@ -18,8 +18,13 @@ import { createSeededRandom } from './parseSeed'
  * Pure resolver over seed + already-resolved world-place inputs.
  * Does not own meshes, inventory contents, item ownership or lock mutations.
  *
- * Cave treasure is intentionally disabled until a production interior Y
- * placement seam exists for world-generated containers (world-terrain-019).
+ * Cave treasure (locked/keyed, `TreasureSiteDefinition` archetype `'cave'`)
+ * is intentionally disabled — not because of a missing interior-Y seam
+ * (world-terrain-020 Stage C added that: `WorldGeneratedContainerSpec.y`),
+ * but because it still has no key-placement/lock contract. The two
+ * unlocked adventure-cave chests materialized by world-terrain-020 Stage C
+ * are plain `WorldGeneratedContainers`, deliberately outside this
+ * `TreasureSiteDefinition`/keyed-archetype system.
  *
  * @domain world
  */
@@ -102,7 +107,10 @@ export const KEY_HOST_KINDS: readonly LandmarkKind[] = [
 ]
 export const RUINS_CHEST_KINDS: readonly LandmarkKind[] = ['smallRuins', 'ruins']
 
-/** Cave interiors still lack a world-generated-container floor-Y seam. */
+/** world-024 keyed/locked cave treasure (`TreasureSiteDefinition` archetype
+ *  `'cave'`) still has no key-placement/lock contract — this does not gate
+ *  the two unlocked adventure-cave chests from world-terrain-020 Stage C,
+ *  which never go through `TreasureSiteDefinition`. */
 export const CAVE_TREASURE_ENABLED = false
 
 const DEEP_FOREST_CANDIDATE_COUNT = 40

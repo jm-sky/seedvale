@@ -69,6 +69,12 @@ export type WorldGeneratedContainerSpec = {
   z: number
   yaw: number
   initialCounts: Partial<Record<ItemKind, number>>
+  /** Explicit underground world-space Y (plan world-terrain-020 Stage C).
+   *  When present, placement uses this value exactly — no `placeOnGround`,
+   *  no `sampleHeight` — because surface height is meaningless for an
+   *  interior placement (e.g. a cave chest). Omit for ordinary surface
+   *  specs, which keep the existing ground-sampled placement unchanged. */
+  y?: number
 }
 
 /**
@@ -93,7 +99,14 @@ export function createWorldGeneratedContainers(
       ? contentsFromSave(saved.counts, saved.instances, def.capacityUnits, saved.foodBatches)
       : new Inventory(spec.initialCounts, Infinity, [], undefined, def.capacityUnits, STORED_FOOD_DECAY)
     const mesh = createPlacedContainerProp()
-    placeOnGround(mesh, spec.x, spec.z, sampleHeight)
+    if (spec.y !== undefined) {
+      const ox = mesh.position.x
+      const oy = mesh.position.y
+      const oz = mesh.position.z
+      mesh.position.set(spec.x + ox, spec.y + oy, spec.z + oz)
+    } else {
+      placeOnGround(mesh, spec.x, spec.z, sampleHeight)
+    }
     mesh.rotation.y = spec.yaw
     scene.add(mesh)
     entries.push({
