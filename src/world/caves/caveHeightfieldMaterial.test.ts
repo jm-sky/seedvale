@@ -47,7 +47,6 @@ function injectDetailShader(material: THREE.MeshStandardMaterial): {
     vertexShader: [
       '#include <common>',
       '#include <worldpos_vertex>',
-      '#include <defaultnormal_vertex>',
     ].join('\n'),
     fragmentShader: [
       '#include <common>',
@@ -129,11 +128,14 @@ describe('cave surface shader contract', () => {
     expect(fragmentShader).toContain('tY.xzy * blend.y')
     expect(fragmentShader).toContain('tZ.xyz * blend.z')
     expect(fragmentShader).toContain('mat3( viewMatrix )')
+    expect(fragmentShader).toContain('caveTriplanarValueNoise')
+    expect(fragmentShader).toContain('caveWetnessMask( vWorldPos )')
+    expect(fragmentShader).not.toContain('caveOrientationWeights')
     expect(fragmentShader).not.toContain('tbn *')
     expect(fragmentShader).not.toContain('texture2D( normalMap')
     expect(fragmentShader).not.toContain('px * b.x + py * b.y + pz * b.z')
-    expect(vertexShader).toContain('vWorldNormal = mat3( modelMatrix ) * objectNormal')
-    expect(vertexShader).not.toContain('normalize( mat3( modelMatrix ) * objectNormal )')
+    expect(vertexShader).toContain('vWorldPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz')
+    expect(vertexShader).not.toContain('vWorldNormal')
 
     disposeCaveHeightfieldMaterialGpu(mat)
   })

@@ -30,8 +30,8 @@ const NORMAL_MAP_INCLUDE = '#include <normal_fragment_maps>'
 const COLOR_FRAGMENT_INCLUDE = '#include <color_fragment>'
 const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
 
-const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v4-detail'
-const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v4-plain'
+const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v5-detail'
+const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v5-plain'
 
 function caveVec3Normalize(v: CaveVec3, fallback: CaveVec3 = [0, 1, 0]): [number, number, number] {
   const len = Math.hypot(v[0], v[1], v[2])
@@ -155,26 +155,19 @@ vec3 caveViewToWorldDir( vec3 viewDir ) {
     vec3( 0.0, 1.0, 0.0 )
   );
 }
-vec3 caveOrientationWeights( vec3 n ) {
-  float up = n.y;
-  float floorW = smoothstep( 0.18, 0.82, up );
-  float ceilW = smoothstep( 0.18, 0.82, -up );
-  float wallW = clamp( 1.0 - max( floorW, ceilW ), 0.0, 1.0 );
-  return vec3( floorW, wallW, ceilW );
+float caveTriplanarValueNoise( vec3 worldPos, float scale ) {
+  vec3 p = worldPos * scale;
+  return (
+    caveValueNoise( p.yz + vec2( 19.2, 7.4 ) ) +
+    caveValueNoise( p.xz + vec2( 41.0, 13.0 ) ) +
+    caveValueNoise( p.xy + vec2( 8.3, 22.1 ) )
+  ) * ( 1.0 / 3.0 );
 }
-float caveWetnessMask( vec3 worldPos, vec3 orient, vec3 n ) {
-  float floorW = orient.x;
-  float wallW = orient.y;
-  float ceilW = orient.z;
-  vec2 wetP = worldPos.xz * uCaveWetnessScale;
-  float wetMacro = caveValueNoise( wetP + vec2( 19.2, 7.4 ) );
-  float wetMacro2 = caveValueNoise( wetP * 1.85 + vec2( 41.0, 13.0 ) );
+float caveWetnessMask( vec3 worldPos ) {
+  float wetMacro = caveTriplanarValueNoise( worldPos, uCaveWetnessScale );
+  float wetMacro2 = caveTriplanarValueNoise( worldPos, uCaveWetnessScale * 1.85 );
   float wetNoise = wetMacro * 0.68 + wetMacro2 * 0.32;
-  float orientWet = floorW * 0.58 + wallW * 0.72 + ceilW * 0.28;
-  orientWet += wallW * ( 1.0 - smoothstep( 0.15, 0.75, abs( n.y ) ) ) * 0.18;
-  float wetMask = smoothstep( 0.38, 0.78, wetNoise ) * orientWet * uCaveWetnessAmount;
-  wetMask *= mix( 1.0, 0.62, floorW * smoothstep( 0.55, 0.88, wetNoise ) );
-  return clamp( wetMask, 0.0, 1.0 );
+  return clamp( smoothstep( 0.38, 0.78, wetNoise ) * uCaveWetnessAmount, 0.0, 1.0 );
 }
 vec3 caveTriplanarWorldNormal( vec3 worldPos, vec3 worldN, float scale, float strength ) {
   vec3 n = caveSafeNormalize( worldN, vec3( 0.0, 1.0, 0.0 ) );
@@ -213,21 +206,12 @@ void caveProceduralRockPerturb( vec3 worldPos, float scale, inout vec3 worldN ) 
 
 const CAVE_COLOR_CHUNK = /* glsl */ `
   {
-    vec3 n = caveSafeNormalize( vWorldNormal, vec3( 0.0, 1.0, 0.0 ) );
-    vec3 orient = caveOrientationWeights( n );
-    vec2 macroP = vWorldPos.xz * uCaveMacroScale;
-    float macro = caveValueNoise( macroP );
-    float macro2 = caveValueNoise( macroP * 2.15 + vec2( 8.3, 22.1 ) );
+    float macro = caveTriplanarValueNoise( vWorldPos, uCaveMacroScale );
+    float macro2 = caveTriplanarValueNoise( vWorldPos, uCaveMacroScale * 2.15 );
     float macroMix = macro * 0.62 + macro2 * 0.38;
+    diffuseColor.rgb *= 1.0 + ( macroMix - 0.5 ) * 0.09;
 
-    vec3 tint = vec3( 1.0 );
-    tint += orient.x * vec3( 0.07, 0.03, -0.05 );
-    tint += orient.y * vec3( -0.025, -0.02, 0.03 );
-    tint += orient.z * vec3( -0.07, -0.06, -0.06 );
-    tint += ( macroMix - 0.5 ) * 0.09;
-    diffuseColor.rgb *= tint;
-
-    float wetMask = caveWetnessMask( vWorldPos, orient, n );
+    float wetMask = caveWetnessMask( vWorldPos );
     diffuseColor.rgb *= 1.0 - wetMask * uCaveWetDarkening;
     diffuseColor.rgb = mix(
       diffuseColor.rgb,
@@ -239,9 +223,7 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
 
 const CAVE_ROUGHNESS_CHUNK = /* glsl */ `
   {
-    vec3 n = caveSafeNormalize( vWorldNormal, vec3( 0.0, 1.0, 0.0 ) );
-    vec3 orient = caveOrientationWeights( n );
-    float wetMask = caveWetnessMask( vWorldPos, orient, n );
+    float wetMask = caveWetnessMask( vWorldPos );
     roughnessFactor = mix( uCaveDryRoughness, uCaveWetRoughness, wetMask );
   }
 `
@@ -250,9 +232,7 @@ const CAVE_NORMAL_CHUNK = /* glsl */ `
   {
     vec3 geoView = caveSafeNormalize( normal, vec3( 0.0, 0.0, 1.0 ) );
     vec3 geoWorld = caveViewToWorldDir( geoView );
-    vec3 orient = caveOrientationWeights( geoWorld );
-    float detailAmt = uCaveRockNormalStrength * ( orient.y * 1.0 + orient.x * 0.38 + orient.z * 0.48 );
-    vec3 worldN = caveTriplanarWorldNormal( vWorldPos, geoWorld, uCaveRockDetailScale, detailAmt );
+    vec3 worldN = caveTriplanarWorldNormal( vWorldPos, geoWorld, uCaveRockDetailScale, uCaveRockNormalStrength );
     caveProceduralRockPerturb( vWorldPos, uCaveRockDetailScale, worldN );
     vec3 detailView = caveSafeNormalize( mat3( viewMatrix ) * worldN, geoView );
     float keep = max( dot( detailView, geoView ), 0.0 );
@@ -280,15 +260,11 @@ function applyCaveSurfaceShader(
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
-        '#include <common>\nvarying vec3 vWorldPos;\nvarying vec3 vWorldNormal;',
+        '#include <common>\nvarying vec3 vWorldPos;',
       )
       .replace(
         '#include <worldpos_vertex>',
         '#include <worldpos_vertex>\nvWorldPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;',
-      )
-      .replace(
-        '#include <defaultnormal_vertex>',
-        '#include <defaultnormal_vertex>\nvWorldNormal = mat3( modelMatrix ) * objectNormal;',
       )
 
     let frag = shader.fragmentShader
@@ -296,7 +272,6 @@ function applyCaveSurfaceShader(
         '#include <common>',
         `#include <common>
 varying vec3 vWorldPos;
-varying vec3 vWorldNormal;
 uniform sampler2D uCaveDetailNormalMap;
 uniform float uCaveRockDetailScale;
 uniform float uCaveRockNormalStrength;
