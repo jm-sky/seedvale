@@ -10,19 +10,21 @@ import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { useBootMark } from '../shared/bootMark'
 import {
-  createCaveExtractionClient,
-  createCaveExtractionWorkerRunner,
-} from './caves/caveExtractionClient'
+  createCaveHeightfieldMaterial,
+  createCaveHeightfieldPresentation,
+  createMouthUndersideMaskMaterial,
+} from './caves/caveHeightfieldPresentation'
 import {
   buildCaveHeightfieldRepresentation,
   type CaveHeightfieldRepresentation,
+  type SurfaceSampler,
 } from './caves/caveHeightfieldRepresentation'
 import {
   type CaveStreamingStats,
+  createCavePresentationQueue,
   createCaveStreamingController,
 } from './caves/cavePresentationLifecycle'
 import { buildCaveSdfColliders, caveMouthColliderFilter } from './caves/caveSdfColliders'
-import { cavePresentationBounds } from './caves/caveSdfExtraction'
 import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation, DEFAULT_SDF_PARAMS } from './caves/caveSdfField'
 import {
   applyCaveGroundHysteresis,
@@ -39,7 +41,7 @@ import {
   occupancyIntervalAt,
   queryColumnIndex,
 } from './caves/caveSdfQuery'
-import { createCaveSpikeMaterial } from './caves/caveSpikeMaterial'
+import { caveTerrainCutout } from './caves/caveTerrainCutout'
 import {
   MOUTH_INTERIOR_ALONG,
   mouthAlong,
@@ -48,17 +50,15 @@ import {
   mouthLateral,
 } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
-import { finalizeSdfCaveMesh } from './caves/sdfCaveMesh'
 import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition } from './caveVolume'
 import { type LargeCaveSite, pickLargeCaveSites } from './largeCaves'
-import { createLargeCaveVisual, placeLargeCaveVisual } from './largeCaveVisual'
 import type { Scene } from 'three'
 
-/** Short site-shaped input fed to the existing `largeCaveVisual.ts`
- *  rock-framing helper — just enough for a convincing mouth cluster; the
- *  interior beyond it is the procedural mesh, not a rock-lined trench. */
-const MOUTH_FRAMING_LENGTH = 3
+/** Presentation builds run synchronously on the main thread; this many
+ *  caves may build in one `update()` call. Activations are rare and
+ *  nearest-first, so one per frame keeps any hitch to a single cave. */
+const PRESENTATION_BUILDS_PER_UPDATE = 1
 
 /** World-scale grid cell (independent of the terrain chunk grid) used only
  *  to narrow streaming candidates — not cave identity/generation. */
@@ -90,9 +90,11 @@ export type Caves = {
   queryInterior: (x: number, y: number, z: number) => boolean
   /**
    * Presentation/relevance counters (B4). Debug / tests — gameplay must use
-   * `queryGround` / `occupancyAt`, never this.
+   * `queryGround` / `occupancyAt`, never this. `queuedJobs` counts pending
+   * main-thread heightfield builds; there is no async/in-flight path since
+   * world-terrain-019 B.
    */
-  peekStreamingDebug: () => CaveStreamingStats & { queuedJobs: number, inFlightJobs: number }
+  peekStreamingDebug: () => CaveStreamingStats & { queuedJobs: number }
   /** Strict occupancy at `(x, y, z)`. Not hysteretic `queryGround` — torch
    *  / audio callers must not mutate the player's floor hysteresis. */
   contains: (x: number, y: number, z: number) => boolean
@@ -106,8 +108,13 @@ export type Caves = {
 type CaveRuntime = {
   topology: CaveTopology
   definition: CaveDefinition
+  /** Presentation + terrain mouth authority (world-terrain-019 B). */
   heightfield: CaveHeightfieldRepresentation
-  // retained until world-terrain-019 D/E:
+  /** Deterministic sampler the heightfield was built against:
+   *  `sampleBaseHeight - mouthCarveDepth`. Presentation, mask, framing and
+   *  the terrain cutout all evaluate the mouth contour with this one. */
+  walkSurfaceAt: SurfaceSampler
+  // retained until world-terrain-019 D/E (gameplay / collision / camera):
   representation: CaveSdfSpatialRepresentation
   index: CaveSdfColumnIndex
   colliders: readonly Collider[]
@@ -131,15 +138,25 @@ function colliderOwnerKey(caveId: string): string {
   return `cave:${caveId}`
 }
 
+/** One registration for every cave's mouth cutout — cutouts are static
+ *  world-build state, registered once after heightfields exist. */
+const TERRAIN_CUTOUT_OWNER_KEY = 'caves'
+
 /**
  * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B4, plus
- * world-terrain-019 Milestone A): deterministic production `CaveTopology`s,
- * retained heightfield representations (not yet gameplay/presentation
- * authority), retained SDF representations and derived column indexes
- * (cheap, all computed up front), streamed SDF presentation (async
- * extraction) and occupancy-derived cave-wall collision for whichever caves
- * are near the player. Collider registration is relevance-scoped and does
- * not wait for render mesh completion.
+ * world-terrain-019 Milestones A/B): deterministic production
+ * `CaveTopology`s, retained heightfield representations (presentation +
+ * terrain-mouth authority), retained SDF representations and derived column
+ * indexes (transitional gameplay / collision / camera authority until
+ * world-terrain-019 D), streamed heightfield presentation (synchronous
+ * main-thread mesh assembly, nearest-first) and occupancy-derived cave-wall
+ * collision for whichever caves are near the player. Collider registration
+ * is relevance-scoped and does not wait for render mesh completion.
+ *
+ * The mouth is a real hole: every cave registers a `TerrainCutout` with
+ * `ChunkManager` (`caveTerrainCutout.ts`) on the same `mouthOpeningAt`
+ * contour the cave ceiling is clipped on, and the existing `mouthCarveDiscs`
+ * recess still shapes the walk surface / approach.
  *
  * Placement reuses `pickLargeCaveSites()` unchanged; topology generation and
  * terrain acceptance are owned by `productionTopology.ts`. Gameplay
@@ -153,12 +170,13 @@ function colliderOwnerKey(caveId: string): string {
  * survives a rebuild).
  *
  * @system caves
- * @role Owns cave topologies, retained heightfield representations (not yet
- *  gameplay/presentation authority), retained SDF/column-index gameplay space,
- *  streamed interior presentation (async SDF extraction), occupancy-derived
- *  wall colliders, and strict occupancy queries; `PlayerController` ground
- *  goes through `queryGround` and camera through `occupancyAt`. `queryInterior`
- *  is the hysteretic player-position cave-interior signal (audio / diagnostics).
+ * @role Owns cave topologies, retained heightfield representations
+ *  (presentation mesh + terrain mouth cutout), retained SDF/column-index
+ *  gameplay space, streamed interior presentation (main-thread heightfield
+ *  assembly), occupancy-derived wall colliders, and strict occupancy queries;
+ *  `PlayerController` ground goes through `queryGround` and camera through
+ *  `occupancyAt`. `queryInterior` is the hysteretic player-position
+ *  cave-interior signal (audio / diagnostics).
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -192,13 +210,13 @@ export function createCaves(
   // order (it is built on activation, not at world build).
   const analyticSurfaceHeight = (x: number, z: number): number => chunkManager.sampleBaseHeight(x, z)
 
-  // Topology + SDF field + column index are cheap relative to mesh
-  // extraction and must be available to gameplay queries even when the
-  // cave is not activated. Presentation geometry stays lazy on streaming.
+  // Topology + heightfield + SDF field + column index are all computed up
+  // front and must be available to gameplay queries even when the cave is
+  // not activated. Presentation geometry stays lazy on streaming.
   const { bootMark, bootMarkEnd } = useBootMark('createCaves')
   const detailEnabled = isSystemEnabled('caveDetail')
+  const mouthRocksEnabled = isSystemEnabled('caveMouthRocks')
   const v2ByCaveId = new Map<string, CaveRuntime>()
-  const siteByCaveId = new Map<string, LargeCaveSite>()
 
   bootMark('cave.topology')
   const accepted: { site: LargeCaveSite, topology: CaveTopology }[] = []
@@ -220,11 +238,11 @@ export function createCaves(
   bootMarkEnd('cave.sdfRepresentation')
 
   bootMark('cave.heightfield')
-  const heightfields = accepted.map(({ topology }) => (
-    buildCaveHeightfieldRepresentation(
-      topology,
-      (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance),
-    ).heightfield
+  const walkSurfaceSamplers: SurfaceSampler[] = accepted.map(({ topology }) => (
+    (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
+  ))
+  const heightfields = accepted.map(({ topology }, i) => (
+    buildCaveHeightfieldRepresentation(topology, walkSurfaceSamplers[i]!).heightfield
   ))
   bootMarkEnd('cave.heightfield')
 
@@ -236,18 +254,18 @@ export function createCaves(
 
   bootMark('cave.colliders')
   for (let i = 0; i < accepted.length; i++) {
-    const { site, topology } = accepted[i]!
+    const { topology } = accepted[i]!
     const representation = representations[i]!
     const index = indexes[i]!
     v2ByCaveId.set(topology.caveId, {
       topology,
       definition: topologyToCaveDefinition(topology),
       heightfield: heightfields[i]!,
+      walkSurfaceAt: walkSurfaceSamplers[i]!,
       representation,
       index,
       colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation, caveMouthColliderFilter(topology)),
     })
-    siteByCaveId.set(topology.caveId, site)
   }
   bootMarkEnd('cave.colliders')
 
@@ -265,6 +283,18 @@ export function createCaves(
     }
   }
 
+  // Real aperture (world-terrain-019 B): a persistent terrain cutout on the
+  // shared `mouthOpeningAt` contour, owned by the chunk lifecycle so it
+  // survives unload/reload and every re-mesh path. Narrow descriptor only —
+  // the representation itself never crosses into terrain code.
+  bootMark('cave.terrainCutout')
+  const terrainCutouts = runtimes.flatMap((runtime) => {
+    const cutout = caveTerrainCutout(runtime.heightfield, runtime.walkSurfaceAt)
+    return cutout ? [cutout] : []
+  })
+  chunkManager.registerTerrainCutouts(TERRAIN_CUTOUT_OWNER_KEY, terrainCutouts)
+  bootMarkEnd('cave.terrainCutout')
+
   const grid = new Map<string, CaveDefinition[]>()
   for (const def of definitions) {
     const { cx, cz } = gridCellOf(def.entrance.x, def.entrance.z)
@@ -278,8 +308,12 @@ export function createCaves(
   }
 
   const presentations = new Map<string, THREE.Object3D>()
-  const caveMaterial = createCaveSpikeMaterial('sdf')
+  // Shared across every cave presentation; disposed once in `dispose()`,
+  // never by `disposeObject3D()` (`sharedGpu`).
+  const caveMaterial = createCaveHeightfieldMaterial()
   caveMaterial.userData.sharedGpu = true
+  const maskMaterial = createMouthUndersideMaskMaterial()
+  maskMaterial.userData.sharedGpu = true
   let lastGroundHit: CaveGroundHit | null = null
   let lastInteriorRaw: boolean | null = null
   let interiorConfirmed = false
@@ -335,58 +369,54 @@ export function createCaves(
     presentations.delete(caveId)
   }
 
-  function attachPresentation(
-    caveId: string,
-    positions: ArrayLike<number>,
-    indices: ArrayLike<number>,
-    extraction: { sdfSamplingMs: number, surfaceNetsMs: number, representationMs: number, peakTempBytes: number, vertices: number, triangles: number },
-  ): void {
+  /** Builds and attaches one cave's heightfield presentation synchronously.
+   *  Runs from the queue drain; the streaming controller's generation check
+   *  around it (`markBuilding` / `accept`) is what rejects stale work. */
+  function attachPresentation(caveId: string): void {
     const v2 = v2ByCaveId.get(caveId)
-    const site = siteByCaveId.get(caveId)
-    if (!v2 || !site) return
+    if (!v2) return
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
-    const finalized = finalizeSdfCaveMesh(positions, indices, v2.topology, analyticSurfaceHeight)
-    const group = new THREE.Group()
-    group.name = `cave:${caveId}`
-    const mesh = new THREE.Mesh(finalized.geometry, caveMaterial)
-    mesh.name = `cave-interior:${caveId}`
-    mesh.receiveShadow = true
-    group.add(mesh)
-    const tFraming = typeof performance !== 'undefined' ? performance.now() : Date.now()
-    const framingSite = { ...site, length: MOUTH_FRAMING_LENGTH }
-    const framing = createLargeCaveVisual(framingSite)
-    placeLargeCaveVisual(framing, framingSite, (x, z) => chunkManager.sampleBaseHeight(x, z))
-    group.add(framing)
-    scene.add(group)
-    presentations.set(caveId, group)
-    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
-    const framingMs = now - tFraming
-    const activationTotalMs = now - t0
+    const presentation = createCaveHeightfieldPresentation({
+      field: v2.heightfield,
+      walkSurfaceAt: v2.walkSurfaceAt,
+      caveMaterial,
+      maskMaterial,
+      rocks: mouthRocksEnabled,
+    })
+    scene.add(presentation.group)
+    presentations.set(caveId, presentation.group)
+    const activationTotalMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0
     getMonitor().recordHitch('STREAMING', activationTotalMs, 'cave presentation')
     if (isBootMarkMode()) {
       console.log(`[caves] presentation ${caveId}`)
       console.table({
-        'cave.sdfSampling': extraction.sdfSamplingMs,
-        'cave.surfaceNets': extraction.surfaceNetsMs,
-        'cave.clipping': finalized.clippingMs,
-        'cave.bufferGeometry': finalized.bufferGeometryMs,
-        'cave.normalsBounds': finalized.normalsBoundsMs,
-        'cave.framing': framingMs,
+        'cave.meshBuffers': presentation.buffers.meshBuildMs,
+        'cave.assemble': presentation.assembleMs,
         'cave.activationTotal': activationTotalMs,
-        vertices: finalized.vertices,
-        triangles: finalized.triangles,
-        geometryBytes: finalized.geometryBytes,
-        peakTempBytes: extraction.peakTempBytes,
+        vertices: presentation.buffers.vertices,
+        triangles: presentation.buffers.triangles,
+        rimVertices: presentation.buffers.rimVertexCount,
+        skyVertices: presentation.buffers.skyVertexCount,
+        geometryBytes: presentation.buffers.geometryBytes,
+        maskVertices: presentation.maskVertices,
+        rocks: presentation.rockCount,
         colliderCount: v2.colliders.length,
       })
     }
   }
 
-  const presentationJobs = {
-    request: (_caveId: string, _generation: number, _distance: number): void => {},
-    reprioritise: (_caveId: string, _distance: number): void => {},
-    cancel: (_caveId: string): void => {},
-  }
+  const presentationQueue = createCavePresentationQueue((caveId, generation) => {
+    if (!streaming.markBuilding(caveId, generation)) return
+    try {
+      attachPresentation(caveId)
+    } catch (error) {
+      console.error('[caves] presentation build failed', caveId, error)
+      disposePresentation(caveId)
+      streaming.fail(caveId, generation)
+      return
+    }
+    if (!streaming.accept(caveId, generation)) disposePresentation(caveId)
+  })
   const streaming = createCaveStreamingController({
     registerColliders(caveId) {
       const v2 = v2ByCaveId.get(caveId)
@@ -397,54 +427,16 @@ export function createCaves(
       chunkManager.clearColliders(colliderOwnerKey(caveId))
     },
     requestPresentation(caveId, generation, distance) {
-      presentationJobs.request(caveId, generation, distance)
+      presentationQueue.request(caveId, generation, distance)
     },
     reprioritisePresentation(caveId, distance) {
-      presentationJobs.reprioritise(caveId, distance)
+      presentationQueue.reprioritise(caveId, distance)
     },
     cancelPresentation(caveId) {
-      presentationJobs.cancel(caveId)
+      presentationQueue.cancel(caveId)
     },
     disposePresentation,
   })
-  const extraction = createCaveExtractionClient({
-    runner: createCaveExtractionWorkerRunner(),
-    onStarted(caveId, requestId) {
-      streaming.markBuilding(caveId, requestId)
-    },
-    onComplete(result) {
-      const snap = streaming.snapshot(result.caveId)
-      if (!snap || snap.generation !== result.requestId) return
-      if (snap.phase !== 'building' && snap.phase !== 'queued') return
-      attachPresentation(result.caveId, result.positions, result.indices, result.metrics)
-      if (!streaming.accept(result.caveId, result.requestId)) {
-        disposePresentation(result.caveId)
-      }
-    },
-    onError(caveId, requestId, error) {
-      console.error('[caves] presentation extraction failed', caveId, error)
-      streaming.fail(caveId, requestId)
-    },
-  })
-  presentationJobs.request = (caveId, generation, distance) => {
-    const v2 = v2ByCaveId.get(caveId)
-    if (!v2) return
-    extraction.request({
-      caveId,
-      requestId: generation,
-      topology: v2.topology,
-      params: DEFAULT_SDF_PARAMS,
-      detailEnabled,
-      meshBounds: cavePresentationBounds(v2.representation.bounds, v2.topology, DEFAULT_SDF_PARAMS),
-      distance,
-    })
-  }
-  presentationJobs.reprioritise = (caveId, distance) => {
-    extraction.reprioritise(caveId, distance)
-  }
-  presentationJobs.cancel = (caveId) => {
-    extraction.cancel(caveId)
-  }
 
   function queryGround(x: number, y: number, z: number): CaveGroundHit | null {
     let hit: CaveGroundHit | null = null
@@ -486,13 +478,13 @@ export function createCaves(
       for (const caveId of streaming.trackedIds()) {
         if (!nearby.has(caveId)) streaming.drop(caveId)
       }
+      presentationQueue.drain(PRESENTATION_BUILDS_PER_UPDATE)
     },
     queryGround,
     peekGroundQueryDebug: () => groundQueryDebug,
     peekStreamingDebug: () => ({
       ...streaming.stats(),
-      queuedJobs: extraction.queuedCount,
-      inFlightJobs: extraction.inFlightCount,
+      queuedJobs: presentationQueue.queuedCount,
     }),
     occupancyAt(x, y, z) {
       for (const runtime of runtimes) {
@@ -547,8 +539,10 @@ export function createCaves(
       interiorConfirmed = false
       writeGroundQueryDebug(0, 0, 0, null, null, null, 0, null)
       streaming.dispose()
-      extraction.dispose()
+      presentationQueue.clear()
+      chunkManager.clearTerrainCutouts(TERRAIN_CUTOUT_OWNER_KEY)
       caveMaterial.dispose()
+      maskMaterial.dispose()
     },
   }
 }

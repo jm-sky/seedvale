@@ -6,6 +6,7 @@ import {
   CAVE_DEACTIVATE_DISTANCE,
   type CaveStreamingHooks,
   caveWantedAtDistance,
+  createCavePresentationQueue,
   createCaveStreamingController,
 } from './cavePresentationLifecycle'
 
@@ -119,5 +120,105 @@ describe('createCaveStreamingController (plan world-terrain-008 B4.1)', () => {
       registeredColliders: 0,
     })
     expect(streaming.trackedIds()).toEqual([])
+  })
+})
+
+describe('createCavePresentationQueue (world-terrain-019 B)', () => {
+  it('drains nearest first, one job per drain by default', () => {
+    const built: { caveId: string, generation: number }[] = []
+    const queue = createCavePresentationQueue((caveId, generation) => { built.push({ caveId, generation }) })
+    queue.request('far', 0, 70)
+    queue.request('near', 0, 10)
+    queue.request('mid', 0, 40)
+    expect(queue.queuedCount).toBe(3)
+    expect(queue.drain()).toBe(1)
+    expect(built).toEqual([{ caveId: 'near', generation: 0 }])
+    expect(queue.queuedCount).toBe(2)
+    expect(queue.drain(5)).toBe(2)
+    expect(built.map((b) => b.caveId)).toEqual(['near', 'mid', 'far'])
+    expect(queue.drain()).toBe(0)
+  })
+
+  it('cancel removes a pending job; reprioritise reorders; a re-request carries the new generation', () => {
+    const built: { caveId: string, generation: number }[] = []
+    const queue = createCavePresentationQueue((caveId, generation) => { built.push({ caveId, generation }) })
+    queue.request('a', 0, 10)
+    queue.request('b', 0, 20)
+    queue.cancel('a')
+    expect(queue.queuedCount).toBe(1)
+    queue.request('c', 3, 30)
+    queue.reprioritise('c', 5)
+    queue.reprioritise('missing', 1) // no-op
+    queue.drain(2)
+    expect(built).toEqual([{ caveId: 'c', generation: 3 }, { caveId: 'b', generation: 0 }])
+    queue.request('d', 1, 1)
+    queue.request('d', 2, 1)
+    expect(queue.queuedCount).toBe(1)
+    queue.drain()
+    expect(built.at(-1)).toEqual({ caveId: 'd', generation: 2 })
+    queue.request('e', 0, 0)
+    queue.clear()
+    expect(queue.queuedCount).toBe(0)
+  })
+
+  it('with the streaming controller: repeated activate/deactivate builds once per activation and never a stale generation', () => {
+    const attached: string[] = []
+    const disposed: string[] = []
+    const builtGenerations: number[] = []
+    // Mirrors `createCaves()` wiring: synchronous build inside the drain,
+    // guarded by markBuilding/accept.
+    const queue = createCavePresentationQueue((caveId, generation) => {
+      if (!controller.markBuilding(caveId, generation)) return
+      builtGenerations.push(generation)
+      attached.push(caveId)
+      if (!controller.accept(caveId, generation)) disposed.push(caveId)
+    })
+    const controller = createCaveStreamingController({
+      registerColliders: () => {},
+      clearColliders: () => {},
+      requestPresentation: (caveId, generation, distance) => queue.request(caveId, generation, distance),
+      reprioritisePresentation: (caveId, distance) => queue.reprioritise(caveId, distance),
+      cancelPresentation: (caveId) => queue.cancel(caveId),
+      disposePresentation: (caveId) => { disposed.push(caveId) },
+    })
+
+    controller.apply('c', 10)
+    expect(controller.snapshot('c')?.phase).toBe('queued')
+    queue.drain()
+    expect(controller.snapshot('c')?.phase).toBe('active')
+    expect(attached).toEqual(['c'])
+
+    // Walk out (>= 80 m): disposed, generation bumped, nothing pending.
+    controller.apply('c', 90)
+    expect(disposed).toEqual(['c'])
+    expect(queue.queuedCount).toBe(0)
+
+    // Queue then leave before the drain: the stale job is cancelled and a
+    // later drain must not build it.
+    controller.apply('c', 10)
+    expect(queue.queuedCount).toBe(1)
+    controller.apply('c', 90)
+    expect(queue.queuedCount).toBe(0)
+    queue.drain()
+    expect(attached).toEqual(['c'])
+
+    // Come back: builds again with the newer generation.
+    controller.apply('c', 10)
+    queue.drain()
+    expect(attached).toEqual(['c', 'c'])
+    expect(builtGenerations[1]!).toBeGreaterThan(builtGenerations[0]!)
+    expect(controller.stats().activePresentations).toBe(1)
+
+    // A stale generation handed straight to the build is rejected.
+    queue.request('c', builtGenerations[0]!, 5)
+    queue.drain()
+    expect(attached).toEqual(['c', 'c'])
+
+    controller.dispose()
+    queue.clear()
+    // Walk-out, the cancelled-while-queued drop (dispose is a no-op for a
+    // never-attached cave in `createCaves()`), and the final dispose.
+    expect(disposed.filter((id) => id === 'c').length).toBe(3)
+    expect(controller.stats().activePresentations).toBe(0)
   })
 })

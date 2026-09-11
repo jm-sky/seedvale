@@ -111,7 +111,17 @@ export function isNpcCombatDebugMode(): boolean {
  *  perf/mobile/isolation testing (issue 032 diagnostic follow-up) — visual
  *  only, simulation state keeps running underneath. One name added here per
  *  future need, not a new query param per system. */
-export type DebugSystemName = 'grass' | 'trees' | 'animals' | 'npcs' | 'playerModel' | 'weather' | 'caveDetail'
+export type DebugSystemName =
+  | 'grass'
+  | 'trees'
+  | 'animals'
+  | 'npcs'
+  | 'playerModel'
+  | 'weather'
+  | 'caveDetail'
+  /** Presentation-only cave mouth rock framing — off to verify the raw
+   *  terrain cutout / cave seam (world-terrain-019 B). */
+  | 'caveMouthRocks'
 
 /** `?debugDisableSystems=grass,trees` — central, comma-separated switch for
  *  the systems above. Absent (or a name not listed) means "enabled" — normal

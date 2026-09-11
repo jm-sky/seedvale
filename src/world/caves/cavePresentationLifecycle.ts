@@ -181,3 +181,75 @@ export function createCaveStreamingController(hooks: CaveStreamingHooks) {
 
   return { apply, drop, markBuilding, accept, fail, snapshot, stats, trackedIds, dispose }
 }
+
+// ── Main-thread presentation build queue (world-terrain-019 B) ──────────────
+
+export type CavePresentationQueue = {
+  /** Queue (or re-queue with a new generation) one cave's build. */
+  request: (caveId: string, generation: number, distance: number) => void
+  reprioritise: (caveId: string, distance: number) => void
+  cancel: (caveId: string) => void
+  /** Runs up to `maxJobs` pending builds, nearest first. Returns how many
+   *  ran. Call once per frame from the cave update. */
+  drain: (maxJobs?: number) => number
+  readonly queuedCount: number
+  clear: () => void
+}
+
+/**
+ * Nearest-first queue of pending *synchronous* presentation builds. The
+ * heightfield mesh is cheap enough to assemble on the main thread, so no
+ * worker/protocol is involved; the queue only spreads several simultaneous
+ * activations over successive frames (hitch control) while keeping the
+ * request / reprioritise / cancel / generation semantics the streaming
+ * controller expects. A cancelled or re-requested cave never runs its stale
+ * generation — `build` receives the generation the request carried and the
+ * controller's `markBuilding` / `accept` reject anything stale.
+ *
+ * @domain world-terrain
+ */
+export function createCavePresentationQueue(
+  build: (caveId: string, generation: number) => void,
+): CavePresentationQueue {
+  const pending = new Map<string, { generation: number, distance: number }>()
+
+  function drain(maxJobs = 1): number {
+    let ran = 0
+    while (ran < maxJobs && pending.size > 0) {
+      let bestId: string | null = null
+      let bestDistance = Infinity
+      for (const [caveId, job] of pending) {
+        if (bestId === null || job.distance < bestDistance) {
+          bestDistance = job.distance
+          bestId = caveId
+        }
+      }
+      if (bestId === null) break
+      const job = pending.get(bestId)!
+      pending.delete(bestId)
+      build(bestId, job.generation)
+      ran++
+    }
+    return ran
+  }
+
+  return {
+    request(caveId, generation, distance) {
+      pending.set(caveId, { generation, distance })
+    },
+    reprioritise(caveId, distance) {
+      const job = pending.get(caveId)
+      if (job) job.distance = distance
+    },
+    cancel(caveId) {
+      pending.delete(caveId)
+    },
+    drain,
+    get queuedCount() {
+      return pending.size
+    },
+    clear() {
+      pending.clear()
+    },
+  }
+}

@@ -3,7 +3,8 @@
 **Reviewed:** 2026-09-11  
 **Plan:** `docs/plans/world-terrain-019-cave-heightfield-production-migration.md`  
 **Baseline:** `main` at `81f9b1a550e67a03b8b3414eabed81a853a259ff`  
-**Milestone A implemented:** 2026-09-11 — see “Milestone A — implemented” below. SDF remains runtime authority.
+**Milestone A implemented:** 2026-09-11 — see “Milestone A — implemented” below.  
+**Milestone B implemented:** 2026-09-11 — see “Milestone B — implemented” below. Heightfield is presentation + terrain-mouth authority; SDF remains gameplay / collision / camera authority until D.
 
 These notes are a focused implementation handoff, not a restatement of the plan. Current code is authoritative. The final `world-terrain-018` spike differs materially from several earlier notes: production migration must copy the final floor/ceiling-convergence model, not the superseded binary-footprint/vertical-wall approach.
 
@@ -480,6 +481,110 @@ Preserve:
 - shared material ownership: do not let `disposeObject3D()` dispose a shared material per cave unless the existing `userData.sharedGpu` convention handles it; mirror current material lifetime.
 
 Targeted B tests should cover repeated activate/deactivate, stale/cancelled build results if any async path remains, and repeated chunk rebuild/load around the mouth.
+
+### Milestone B — implemented (2026-09-11)
+
+Implemented on `main` after the recon above. Current code remains authoritative for C.
+
+#### What landed
+
+```text
+heightfield → production presentation mesh (main-thread, streamed)
+heightfield → real terrain mouth aperture (persistent ChunkManager cutout)
+
+SDF → queryGround / queryInterior / contains / sampleFloor / sampleCeiling
+SDF → occupancyAt (camera) / colliders
+```
+
+No gameplay, collision, camera, fauna/NPC or location consumer changed. `createCaves.test.ts` asserts `queryGround` / `occupancyAt` / `queryInterior` still call the SDF column index and that relevance colliders are the SDF beads.
+
+#### Production mesh ownership
+
+- `src/world/caves/caveHeightfieldMesh.ts` — pure CPU buffers: `buildHeightfieldMeshBuffers(field)` (floor + ceiling from `floorY`/`ceilY`, shared `gap = 0` rim vertices, no wall strip, ceiling clipped on `ceilY = surfaceY − SURFACE_CLIP_EPS`, deterministic, `HeightfieldMeshBuffers` metrics) and `buildMouthUndersideMaskBuffers(field, mouthOpening, walkSurfaceAt)`.
+- `src/world/caves/caveHeightfieldPresentation.ts` — Three.js only: `createCaveHeightfieldMaterial()` (vertex colours, smooth normals, `FrontSide`), `createMouthUndersideMaskMaterial()`, `createCaveHeightfieldGeometry()`, `createMouthUndersideMask()`, `createMouthRocks()`, `createCaveHeightfieldPresentation({ field, walkSurfaceAt, caveMaterial, maskMaterial, rocks })` → `{ group, buffers, maskVertices, rockCount, assembleMs }`.
+- `src/terrain/gridContour.ts` — `CELL_RING`, `marchCellRing()` (moved out of debug; shared by cave mesher and terrain cutout).
+- `src/debug/caves/caveHeightfieldMesh.ts` is now a re-export shim (spike names preserved); the debug mesh test file was folded into `src/world/caves/caveHeightfieldMesh.test.ts`.
+
+Group layout per cave: `cave:<id>` → `cave-interior:<id>` (mesh), `cave-mouth-mask` (optional), `cave-mouth-rocks` (optional). Materials are owned by `createCaves()` (`userData.sharedGpu = true`, disposed once in `Caves.dispose()`); `disposeObject3D()` disposes per-cave geometry and per-rock materials.
+
+#### Presentation lifecycle
+
+`createCaveStreamingController()` is unchanged (55/80 m, generations, `markBuilding`/`accept`/`fail`). The producer is `createCavePresentationQueue()` in `cavePresentationLifecycle.ts`: a nearest-first list of pending *synchronous* builds with `request` / `reprioritise` / `cancel` / `drain(maxJobs)` / `queuedCount`. `Caves.update()` calls `drain(PRESENTATION_BUILDS_PER_UPDATE = 1)` after `streaming.apply()`, so the nearest cave builds the same frame it becomes wanted and several activations spread over frames. No worker: buffer assembly for a production cave (cell 0.3 m) is a single pass over the grid; `cave presentation` hitch is still recorded through `getMonitor().recordHitch('STREAMING', …)` and `?bootMark` logs `cave.meshBuffers` / `cave.assemble` / vertices / triangles / rim / sky / mask / rocks.
+
+`peekStreamingDebug()` now returns `CaveStreamingStats & { queuedJobs }` — pending main-thread builds; `inFlightJobs` was removed (no async path).
+
+The SDF extraction client / protocol / worker / `sdfCaveMesh.ts` / `caveSpikeMaterial.ts` / `largeCaveVisual.ts` are no longer imported by `createCaves.ts` but remain in place for E.
+
+#### Terrain cutout ownership
+
+- `src/terrain/terrainCutout.ts` — narrow terrain-facing contract `TerrainCutout { id, bounds, openingAt(x,z), surfaceYAt?(x,z) }`, `cutoutsOverlappingChunk()`, and pure `buildCutChunkAttributes(meshData, resolution, chunkSize, originX, originZ, cutouts)` → `CutChunkAttributes { position, normal, color, bareGround, uv, index, cutCellCount, contourVertexCount }`.
+- `src/terrain/buildChunkGeometry.ts` — `buildChunkGeometry(…, cutouts = [])`: regular `PlaneGeometry` path untouched when no cutout overlaps; otherwise an indexed `BufferGeometry` from `buildCutChunkAttributes` (same attributes incl. `uv` for the detail normal map).
+- `src/terrain/chunkManager.ts` — `registerTerrainCutouts(ownerKey, cutouts)` / `clearTerrainCutouts(ownerKey)`; retained `Map` for the manager lifetime; `buildAndAttachMesh()` always passes `cutoutsOverlappingChunk(allTerrainCutouts, …)`, so initial load, unload/reload, dig, scorch and prepare rebuilds all reproduce the hole; register/clear re-meshes already-loaded overlapping chunks (cache hit → Three.js assembly only). Cleared in `dispose()`.
+- `src/world/caves/caveTerrainCutout.ts` — `caveOpenSkyBounds(field)` (box of `gap > 0 ∧ openSky` nodes + 1.5 m margin) and `caveTerrainCutout(field, walkSurfaceAt)` → `{ id: 'cave:<id>', bounds, openingAt: mouthOpeningAt(field, walkSurfaceAt, …), surfaceYAt: walkSurfaceAt }`.
+- `createCaves()` registers all cutouts once under owner key `'caves'` after heightfields exist (boot mark `cave.terrainCutout`) and clears them in `dispose()`. `mouthCarveDiscs` → `modifyTerrain(…, 'system')` recess is unchanged and still shapes the approach.
+
+Cutouts are deterministic world-build state: not a `TerrainModification`, never persisted, never touch `tile.heights` / `sampleHeight` / terrain collision.
+
+#### Mouth contour contract
+
+`mouthOpeningAt(field, walkSurfaceAt, x, z) = min(gap, ceilY − (walkSurfaceAt − SURFACE_CLIP_EPS))` is the single contour for: the cave ceiling clip (per heightfield node via `field.surfaceY`), the terrain cutout (`openingAt`), the underside mask march and the rock framing march. Terrain-side clipping is marching squares on `keep = −openingAt` per 1 m chunk node; a cell with all four nodes kept emits `PlaneGeometry`'s own two triangles, a touched cell emits the `marchCellRing` polygon — never whole-quad deletion, never a rectangle. Because the terrain grid (1 m) is much coarser than the cave grid (0.3 m), each cut edge's crossing is bisected on the real predicate (`refineCrossing`, 6 steps) rather than lerped, and the contour vertex Y is pinned to `surfaceYAt` (the cave's sky rim sits on the walk surface). `caveTerrainCutout.test.ts` checks the production cave's contour vertices against `|openingAt| < 0.1` and `|ceilY − y| < 0.15`.
+
+Chunk boundaries: two chunks evaluate identical world-space node values and identical bisection on the shared edge, so contour vertices coincide (tested with a disc straddling an edge and with the production cave on a shifted grid).
+
+Cache: `ChunkMeshData` (worker output, per node) does not depend on cutouts, so `meshCacheKeyFor` / `modificationsEpoch` are unchanged; the cut index/contour vertices are rebuilt on the main thread on every attach. A cached full-lid *mesh* cannot be restored because `THREE.BufferGeometry` is never cached.
+
+#### Underside mask ownership
+
+Reused as-is from the spike (`buildMouthUndersideMaskBuffers`): rim beam + deep patches + 6 m under-entrance plane. Presentation-only, in the cave group, no colliders, created in `createCaveHeightfieldPresentation()` and disposed by `disposePresentation()`. It still earns its place: the 1 m terrain edge is now within centimetres of the cave rim, but between contour vertices both meshes are piecewise-linear on different grids and the terrain node heights come from the tile (roads/rivers/player digs), so hairline seams remain possible.
+
+#### Framing ownership
+
+`createLargeCaveVisual()` / `placeLargeCaveVisual()` are no longer used by production (`largeCaveVisual.ts` retained for E). Rocks now come from `createMouthRocks()` — the spike's contour-driven arrangement (`createLargeRock` from `decorProps`, placed 0.35 m outside the `mouthOpeningAt = 0` line on `walkSurfaceAt`, six steps along the opening axis). Presentation-only, no colliders. Toggle: `?debugDisableSystems=caveMouthRocks` (new `DebugSystemName`); the entrance must be correct without them.
+
+#### Deviations from the pre-B recon
+
+- `marchCellRing` lives in `src/terrain/gridContour.ts`, not in the cave mesher, because terrain code needs it and must not import cave modules for a generic grid helper.
+- `TerrainCutout` grew an optional `surfaceYAt` — without it the terrain edge over the steep pit wall was ~0.3 m above/below the cave rim at 1 m resolution.
+- Contour crossings are bisected on the predicate rather than lerped from node values (see contract above).
+- No presentation worker/queue protocol; a 40-line main-thread queue in `cavePresentationLifecycle.ts` replaces `createCaveExtractionClient()` for production.
+
+#### Tests (B)
+
+- `src/world/caves/caveHeightfieldMesh.test.ts` — finite/welded buffers, determinism, winding, vertex sharing, rim shared by floor+ceiling, no ceiling over the aperture, sky rim at walk surface, mask placement/determinism.
+- `src/terrain/terrainCutout.test.ts` — overlap query, no-hole == regular sheet (same index/diagonal), exact disc contour (≤ 2 cm), attribute interpolation incl. `uv`, determinism, chunk-boundary identity, surface pinning, union of cutouts, `buildChunkGeometry` cut path.
+- `src/world/caves/caveTerrainCutout.test.ts` — production cave (seed `1136726869`) descriptor bounds, real 64 m / 65-node chunk cut, rebuild identity, shared-edge identity.
+- `src/world/caves/cavePresentationLifecycle.test.ts` — queue ordering/cancel/generation, controller + queue activate/deactivate/stale.
+- `src/world/createCaves.test.ts` — cutout registration, scene attach/detach/dispose via `update()`, shared material, SDF authority spies, dispose clears cutouts.
+
+#### Checks (B)
+
+```text
+vitest: src/world/caves, src/world/createCaves.test.ts, src/terrain, src/debug (70 files, 730 tests)
+vue-tsc --noEmit
+eslint .
+pnpm run build
+```
+
+No browser verification. `pnpm docs:sync` was not run.
+
+#### Known risks after B
+
+- Terrain node heights are tile `floorHeights` (roads, rivers, player digs applied) while the cave rim is `sampleBaseHeight − mouthCarveDepth`; a road/river corridor or a player dig at a mouth would open a vertical seam the mask may not fully cover.
+- Gameplay is still SDF: the player walks the SDF floor/colliders while seeing the heightfield floor/walls; any place the two disagree by more than a step height at the entrance reads as floating/sinking until D.
+- Two grids: the cave rim is piecewise-linear at 0.3 m, the terrain edge at ≤ 1 m with bisected crossings — hairline seams between contour vertices are possible at grazing angles; the underside mask is the intended cover.
+- Presentation assembly is synchronous; a very large cave (many chambers) would be a single-frame hitch. Metrics are logged under `?bootMark`; no worker was added on purpose.
+- `cutoutsOverlappingChunk` runs per mesh build for every chunk (cheap bounds test over a handful of cutouts).
+
+#### Handoff for Milestone C
+
+Start from this implemented state.
+
+- `CaveRuntime` now carries `heightfield` and `walkSurfaceAt` (the sampler the field was built against). C's shared spatial API should take those two, not rebuild the sampler.
+- Neutral contracts still to lift out of `caveSdfQuery.ts`: `CaveVerticalInterval`, `CaveGroundHit`, hysteresis helpers, `pickInterval`; `SURFACE_CLIP_EPS` already lives in `caveSurface.ts`.
+- Heightfield query primitives available: `sampleHeightfieldAt`, `heightfieldNodeGap`/`heightfieldNodeOpenSky`, `mouthOpeningAt`, `heightfieldGapGradient`; debug `caveHeightfieldTraversal.ts` demonstrates column intervals / occupancy / horizontal resolve.
+- `caveOpenSkyBounds()` is a cheap "where does this cave reach the surface" box that C's identity/location lookup can reuse.
+- Do not touch `terrainCutout.ts` / `ChunkManager` cutout ownership in C; it is complete for the mouth. D may need `walkSurfaceAt` to stay the walk authority at the mouth (terrain `sampleHeight` there is the carved recess; the hole is presentation only).
+- `definitions()` / `topologyToCaveDefinition` remain used by streaming bounds (`distanceToBoundsXZ`) and location code.
 
 ## Milestone C — Shared spatial queries + semantic cave locations
 

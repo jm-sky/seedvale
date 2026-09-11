@@ -129,6 +129,7 @@ import {
 } from './riverNetwork'
 import { createRiverQuery } from './riverQuery'
 import { createRiverTileCache } from './riverTileCache'
+import { cutoutsOverlappingChunk, type TerrainCutout } from './terrainCutout'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 import { type LocalWaterSample, sampleLocalWater as sampleLocalWaterPure } from './waterSample'
 
@@ -713,6 +714,16 @@ export type ChunkManager = {
    *  again with the same key to replace, `clearColliders` to remove. */
   registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void
   clearColliders: (ownerKey: string) => void
+  /** Registers persistent system terrain cutouts (real holes in the rendered
+   *  chunk sheet — cave mouths, plan world-terrain-019 B) under `ownerKey`;
+   *  call again with the same key to replace, `clearTerrainCutouts` to
+   *  remove. Retained for this manager's lifetime and applied on *every*
+   *  chunk mesh build/rebuild (initial load, reload, dig/scorch/prepare
+   *  re-mesh); already-loaded overlapping chunks are re-meshed immediately.
+   *  Deterministic world-build state — never a persisted player
+   *  modification, and never a change to `sampleHeight`/collision. */
+  registerTerrainCutouts: (ownerKey: string, cutouts: readonly TerrainCutout[]) => void
+  clearTerrainCutouts: (ownerKey: string) => void
   dispose: () => void
 }
 
@@ -972,6 +983,11 @@ export function createChunkManager(
   // Runtime-only `ChunkMeshData` cache (plan world-terrain-004 Etap C) — never
   // `THREE.BufferGeometry`/`THREE.Mesh`. Cleared in `dispose()`.
   const meshDataCache = createChunkMeshDataCache()
+  // Persistent system terrain cutouts (`terrainCutout.ts`) keyed by owner —
+  // read on every `buildAndAttachMesh`, so a hole survives unload/reload and
+  // every re-mesh path without touching `ChunkMeshData` or its cache.
+  const terrainCutouts = new Map<string, readonly TerrainCutout[]>()
+  let allTerrainCutouts: readonly TerrainCutout[] = []
   const grassSystem = createGrassSystem()
   // Single collision index for the whole world (plan 097 §2.2) — terrain
   // chunks register/clear their own colliders keyed by `chunkKey` below;
@@ -1517,11 +1533,36 @@ export function createChunkManager(
       z,
       terrainMaterial,
       config.terrainCastsShadow,
+      cutoutsOverlappingChunk(allTerrainCutouts, x, z, config.chunkSize, config.chunkSize / (config.resolution - 1)),
     )
     scene.add(mesh)
     rec.mesh = mesh
     rec.meshDispose = dispose
     getMonitor().recordHitch('STREAMING', performance.now() - streamT0, 'chunk mesh')
+  }
+
+  /** Re-meshes every loaded `ready` chunk that `cutouts` overlap — used when
+   *  a cutout set is registered or cleared so the currently visible sheet
+   *  matches what every later build will produce. Cache hit in the common
+   *  case (node data is cutout-independent), so this is Three.js assembly
+   *  only. */
+  function remeshChunksForCutouts(cutouts: readonly TerrainCutout[]): void {
+    if (cutouts.length === 0) return
+    const step = config.chunkSize / (config.resolution - 1)
+    for (const rec of chunks.values()) {
+      if (rec.state !== 'ready' || !rec.tile) continue
+      const { x, z } = chunkCenter(rec.coord, config.chunkSize)
+      if (cutoutsOverlappingChunk(cutouts, x, z, config.chunkSize, step).length === 0) continue
+      buildAndAttachMesh(rec, rec.tile).catch((err: unknown) => logMeshRebuildFailure('terrain cutout', err))
+    }
+  }
+
+  function setTerrainCutouts(ownerKey: string, cutouts: readonly TerrainCutout[] | null): void {
+    const previous = terrainCutouts.get(ownerKey) ?? []
+    if (cutouts && cutouts.length > 0) terrainCutouts.set(ownerKey, cutouts)
+    else terrainCutouts.delete(ownerKey)
+    allTerrainCutouts = [...terrainCutouts.values()].flat()
+    remeshChunksForCutouts([...previous, ...(cutouts ?? [])])
   }
 
   function waitForFinalizeSlot(rec: ChunkRecord): Promise<void> {
@@ -2774,7 +2815,11 @@ export function createChunkManager(
     collidersNear: (x, z) => colliderRegistry.query(x, z),
     registerColliders: (ownerKey, colliders) => colliderRegistry.setColliders(ownerKey, colliders),
     clearColliders: (ownerKey) => colliderRegistry.clearColliders(ownerKey),
+    registerTerrainCutouts: (ownerKey, cutouts) => setTerrainCutouts(ownerKey, cutouts),
+    clearTerrainCutouts: (ownerKey) => setTerrainCutouts(ownerKey, null),
     dispose() {
+      terrainCutouts.clear()
+      allTerrainCutouts = []
       for (const record of [...chunks.values()]) unload(record)
       vegetationRegionBatcher.dispose()
       riverTileCache.disposeAll()

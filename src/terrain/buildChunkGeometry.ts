@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { ChunkMeshData } from './chunkMeshData'
+import { buildCutChunkAttributes, type TerrainCutout } from './terrainCutout'
 import { createTerrainNormalMap } from './terrainDetailNormalMap'
 
 export type ChunkMeshResult = {
@@ -368,18 +369,11 @@ export function buildChunkGeometry(
   chunkOriginZ: number,
   material: THREE.MeshStandardMaterial,
   castShadow: boolean,
+  cutouts: readonly TerrainCutout[] = [],
 ): ChunkMeshResult {
-  const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, resolution - 1, resolution - 1)
-  geometry.rotateX(-Math.PI / 2)
-  const positions = geometry.attributes.position as THREE.BufferAttribute
-  for (let i = 0; i < positions.count; i++) {
-    positions.setY(i, meshData.positionY[i]!)
-  }
-  positions.needsUpdate = true
-
-  geometry.setAttribute('normal', new THREE.BufferAttribute(meshData.normal, 3))
-  geometry.setAttribute('color', new THREE.BufferAttribute(meshData.color, 3))
-  geometry.setAttribute('aBareGround', new THREE.BufferAttribute(meshData.bareGround, 1))
+  const geometry = cutouts.length > 0
+    ? buildCutGeometry(meshData, resolution, chunkSize, chunkOriginX, chunkOriginZ, cutouts)
+    : buildRegularGeometry(meshData, resolution, chunkSize)
 
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(chunkOriginX, 0, chunkOriginZ)
@@ -403,4 +397,49 @@ export function buildChunkGeometry(
       geometry.dispose()
     },
   }
+}
+
+/** The full regular-grid sheet — `PlaneGeometry`'s own index, node Y from
+ *  `meshData`. */
+function buildRegularGeometry(
+  meshData: ChunkMeshData,
+  resolution: number,
+  chunkSize: number,
+): THREE.BufferGeometry {
+  const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, resolution - 1, resolution - 1)
+  geometry.rotateX(-Math.PI / 2)
+  const positions = geometry.attributes.position as THREE.BufferAttribute
+  for (let i = 0; i < positions.count; i++) {
+    positions.setY(i, meshData.positionY[i]!)
+  }
+  positions.needsUpdate = true
+
+  geometry.setAttribute('normal', new THREE.BufferAttribute(meshData.normal, 3))
+  geometry.setAttribute('color', new THREE.BufferAttribute(meshData.color, 3))
+  geometry.setAttribute('aBareGround', new THREE.BufferAttribute(meshData.bareGround, 1))
+  return geometry
+}
+
+/** The same sheet with persistent system cutouts (cave mouths) removed on
+ *  their exact contour — see `terrainCutout.ts`. Only chunks a cutout
+ *  overlaps take this path; the attributes are still assembled from the
+ *  cached worker `ChunkMeshData`. */
+function buildCutGeometry(
+  meshData: ChunkMeshData,
+  resolution: number,
+  chunkSize: number,
+  chunkOriginX: number,
+  chunkOriginZ: number,
+  cutouts: readonly TerrainCutout[],
+): THREE.BufferGeometry {
+  const cut = buildCutChunkAttributes(meshData, resolution, chunkSize, chunkOriginX, chunkOriginZ, cutouts)
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(cut.position, 3))
+  geometry.setAttribute('normal', new THREE.BufferAttribute(cut.normal, 3))
+  geometry.setAttribute('color', new THREE.BufferAttribute(cut.color, 3))
+  geometry.setAttribute('aBareGround', new THREE.BufferAttribute(cut.bareGround, 1))
+  geometry.setAttribute('uv', new THREE.BufferAttribute(cut.uv, 2))
+  geometry.setIndex(new THREE.BufferAttribute(cut.index, 1))
+  geometry.computeBoundingSphere()
+  return geometry
 }
