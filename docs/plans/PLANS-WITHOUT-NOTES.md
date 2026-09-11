@@ -1,12 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-10 22:27:17  
+> Date: 2026-09-11 07:23:45  
 
 ## PLANS
 
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
+- `settlements-npcs-030-non-home-settlement-food-production-v1.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 
 --------------------------------
@@ -59,6 +60,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-019-persistent-and-off-screen-transport-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `settlements-npcs-030-non-home-settlement-food-production-v1.md`
+
+Prompt:
+
+```
+Zrób review planu `settlements-npcs-030-non-home-settlement-food-production-v1.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/settlements-npcs-030-non-home-settlement-food-production-v1.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/settlements-npcs-030-non-home-settlement-food-production-v1-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

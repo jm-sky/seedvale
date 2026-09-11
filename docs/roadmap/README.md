@@ -19,6 +19,7 @@ Plans and current code take precedence over roadmap documents when they disagree
 <!-- AUTO-GENERATED:START -->
 | File |
 |---|
+| `agriculture-and-cultivation.md` |
 | `companions.md` |
 | `domain-debug-and-simulation-observability.md` |
 | `economy-goods-flow.md` |
