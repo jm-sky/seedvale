@@ -489,8 +489,8 @@ describe('cave heightfield mesh', () => {
       const field = build(id)
       const opening = (x: number, z: number): number => mouthOpeningAt(field, walk, x, z)
       const buffers = buildMouthUndersideMaskBuffers(field, opening, walk)
-      expect(buffers.vertices).toBeGreaterThan(24)
-      expect(buffers.triangles).toBeGreaterThan(24)
+      expect(buffers.vertices).toBeGreaterThan(80)
+      expect(buffers.triangles).toBeGreaterThan(80)
       let insideDoorway = 0
       for (let i = 0; i < buffers.vertices; i++) {
         const x = buffers.positions[i * 3]!
@@ -498,10 +498,18 @@ describe('cave heightfield mesh', () => {
         const z = buffers.positions[i * 3 + 2]!
         expect(Number.isFinite(y)).toBe(true)
         expect(y).toBeLessThan(walk(x, z) - 0.01)
-        expect(Math.hypot(x - field.entrance.x, z - field.entrance.z)).toBeLessThan(8)
-        if (opening(x, z) > 0.12) insideDoorway++
+        expect(Math.hypot(x - field.entrance.x, z - field.entrance.z)).toBeLessThan(12)
+        // The 4×4 under-entrance plane sits in the doorway XZ on purpose,
+        // 0.5 m below the mouth floor — it must not count as blocking the
+        // opening. Only geometry near walk height would.
+        if (opening(x, z) > 0.12 && y > walk(x, z) - 0.35) insideDoorway++
         const sample = sampleHeightfieldAt(field, x, z)
-        if (sample.gap > 0 && !sample.outsideGrid && sample.surfaceY - sample.ceilY > 0.12) {
+        if (
+          sample.gap > 0
+          && !sample.outsideGrid
+          && sample.surfaceY - sample.ceilY > 0.12
+          && y >= sample.floorY - 0.05
+        ) {
           expect(y).toBeGreaterThan(sample.ceilY - 0.02)
         }
       }
@@ -518,6 +526,38 @@ describe('cave heightfield mesh', () => {
     expect(a.triangles).toBe(b.triangles)
     expect(arraysEqual(a.positions, b.positions)).toBe(true)
     expect(Array.from(a.indices)).toEqual(Array.from(b.indices))
+  })
+
+  it('includes a flat 4 m plane 0.5 m under the entrance facing up', () => {
+    const field = build('basic')
+    const opening = (x: number, z: number): number => mouthOpeningAt(field, walk, x, z)
+    const { positions, indices } = buildMouthUndersideMaskBuffers(field, opening, walk)
+    const y0 = field.entrance.y - 0.5
+    const xs: number[] = []
+    const zs: number[] = []
+    for (let i = 0; i < positions.length; i += 3) {
+      if (Math.abs(positions[i + 1]! - y0) > 1e-4) continue
+      xs.push(positions[i]!)
+      zs.push(positions[i + 2]!)
+    }
+    expect(xs.length).toBeGreaterThanOrEqual(4)
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(4, 5)
+    expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(4, 5)
+    let up = 0
+    for (let t = 0; t < indices.length; t += 3) {
+      const a = indices[t]! * 3
+      const b = indices[t + 1]! * 3
+      const c = indices[t + 2]! * 3
+      if (
+        Math.abs(positions[a + 1]! - y0) > 1e-4
+        || Math.abs(positions[b + 1]! - y0) > 1e-4
+        || Math.abs(positions[c + 1]! - y0) > 1e-4
+      ) continue
+      const u = [positions[c]! - positions[b]!, positions[c + 1]! - positions[b + 1]!, positions[c + 2]! - positions[b + 2]!]
+      const v = [positions[a]! - positions[b]!, positions[a + 1]! - positions[b + 1]!, positions[a + 2]! - positions[b + 2]!]
+      if (u[2]! * v[0]! - u[0]! * v[2]! > 1e-9) up++
+    }
+    expect(up).toBeGreaterThan(0)
   })
 })
 

@@ -23,21 +23,21 @@ Generated from exported TypeScript symbols.
 
 ## `debug/caves/caveHeightfieldMesh.ts`
 
-- `buildHeightfieldMeshBuffers` — function — line 147
+- `buildHeightfieldMeshBuffers` — function — line 148
   - domain: world-terrain
-- `buildMouthUndersideMaskBuffers` — function — line 485
+- `buildMouthUndersideMaskBuffers` — function — line 631
   - domain: world-terrain
-- `CELL_RING` — const — line 58
-- `createHeightfieldCaveGeometry` — function — line 325
+- `CELL_RING` — const — line 59
+- `createHeightfieldCaveGeometry` — function — line 326
   - domain: world-terrain
-- `createHeightfieldCaveMaterial` — function — line 337
-- `createHeightfieldCaveMesh` — function — line 347
-- `createMouthUndersideMask` — function — line 552
+- `createHeightfieldCaveMaterial` — function — line 338
+- `createHeightfieldCaveMesh` — function — line 348
+- `createMouthUndersideMask` — function — line 700
   - domain: world-terrain
-- `HeightfieldMeshBuffers` — type — line 30
-- `marchCellRing` — function — line 80
+- `HeightfieldMeshBuffers` — type — line 31
+- `marchCellRing` — function — line 81
   - domain: world-terrain
-- `MouthUndersideMaskBuffers` — type — line 382
+- `MouthUndersideMaskBuffers` — type — line 383
 
 ## `debug/caves/caveHeightfieldPlayer.ts`
 

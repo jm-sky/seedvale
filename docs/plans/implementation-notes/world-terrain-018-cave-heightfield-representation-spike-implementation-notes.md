@@ -787,9 +787,13 @@ the same `mouthOpeningAt` contour. Residual millimetre gaps at grazing
 angles could still show the sky / the empty underside of the terrain sheet.
 
 A presentation-only dark-rock box-beam sits under the terrain around that
-contour (`createMouthUndersideMask` in `caveHeightfieldMesh.ts`). It is
-created and disposed with the heightfield cave mesh, carries no collision,
-and is not read by `queryInterior`, floor/ceiling or navigation. It does
-not replace the spatial representation or the terrain cutout. Rock framing
-remains optional (`[4]` / `&rocks=0`); the mask does not depend on it.
+contour (`createMouthUndersideMask` in `caveHeightfieldMesh.ts`), plus a
+few larger underground boxes in front of the approach and out to both
+sides — further from the doorway and deeper in solid ground, so grazing
+views through residual gaps hit rock instead of sky. A flat 4×4 plane sits
+exactly under the mouth floor, 0.5 m down, coloured face up. It is created and
+disposed with the heightfield cave mesh, carries no collision, and is not
+read by `queryInterior`, floor/ceiling or navigation. It does not replace
+the spatial representation or the terrain cutout. Rock framing remains
+optional (`[4]` / `&rocks=0`); the mask does not depend on it.
 

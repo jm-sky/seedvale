@@ -26,6 +26,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `debug/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveOrientation.ts`
 - `world/caves/caveSdfQuery.ts`
 
 **Imported by**

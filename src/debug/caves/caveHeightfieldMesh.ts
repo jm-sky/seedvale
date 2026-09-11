@@ -20,6 +20,7 @@ import {
   Mesh,
   MeshStandardMaterial,
 } from 'three'
+import { openingDirection } from '../../world/caves/caveOrientation'
 import { SURFACE_CLIP_EPS } from '../../world/caves/caveSdfQuery'
 import {
   type CaveHeightfield,
@@ -360,9 +361,10 @@ export function createHeightfieldCaveMesh(field: CaveHeightfield): {
 //
 // Residual millimetre gaps between the terrain cutout and the cave mesh can
 // still show the sky / the empty underside of the terrain sheet from a
-// grazing angle. This is a cheap dark-rock box-beam under the terrain around
-// the mouth contour so those views hit rock instead of background. It does
-// not own spatial representation, collision, or the terrain cutout.
+// grazing angle. A cheap dark-rock box-beam sits under the terrain around
+// the mouth contour, plus larger underground patches in front of and beside
+// the doorway. It does not own spatial representation, collision, or the
+// terrain cutout.
 
 /** Metres outside the opening contour the inner edge of the mask sits. */
 const MASK_INNER = 0.08
@@ -475,10 +477,192 @@ function emitMaskQuad(indices: number[], a: number, b: number, c: number, d: num
   indices.push(a, b, c, a, c, d)
 }
 
+function marchRimDistance(
+  mouthOpening: (x: number, z: number) => number,
+  ox: number,
+  oz: number,
+  dx: number,
+  dz: number,
+): number {
+  for (let d = MASK_MARCH_STEP; d <= MASK_MARCH_MAX; d += MASK_MARCH_STEP) {
+    if (mouthOpening(ox + dx * d, oz + dz * d) <= 0) return d
+  }
+  return 0
+}
+
+/**
+ * Large underground box in the mouth frame (`out` = opening axis, `right`
+ * = lateral). Vertices are pushed onto the same buffers as the rim beam.
+ */
+function emitOrientedBox(
+  positions: number[],
+  indices: number[],
+  cx: number,
+  cy: number,
+  cz: number,
+  halfAlong: number,
+  halfAcross: number,
+  halfY: number,
+  out: { dx: number, dz: number },
+  right: { dx: number, dz: number },
+): void {
+  const base = positions.length / 3
+  const along = [-halfAlong, halfAlong]
+  const across = [-halfAcross, halfAcross]
+  const ys = [cy - halfY, cy + halfY]
+  for (const y of ys) {
+    for (const a of along) {
+      for (const c of across) {
+        positions.push(
+          cx + out.dx * a + right.dx * c,
+          y,
+          cz + out.dz * a + right.dz * c,
+        )
+      }
+    }
+  }
+  // 0: -a -c bottom · 1: -a +c bottom · 2: +a -c bottom · 3: +a +c bottom
+  // 4–7: the same on top.
+  emitMaskQuad(indices, base + 0, base + 2, base + 3, base + 1)
+  emitMaskQuad(indices, base + 4, base + 5, base + 7, base + 6)
+  emitMaskQuad(indices, base + 0, base + 1, base + 5, base + 4)
+  emitMaskQuad(indices, base + 2, base + 6, base + 7, base + 3)
+  emitMaskQuad(indices, base + 0, base + 4, base + 6, base + 2)
+  emitMaskQuad(indices, base + 1, base + 3, base + 7, base + 5)
+}
+
+type DeepPatch = {
+  along: number
+  across: number
+  halfAlong: number
+  halfAcross: number
+  height: number
+  sink: number
+}
+
+/**
+ * Extra catcher patches: larger, further from the doorway, and deeper in
+ * solid ground. The rim beam still covers the millimetre seam; these catch
+ * wider grazing views under the approach and out to the sides without
+ * occupying the opening.
+ */
+function emitDeepMouthPatches(
+  positions: number[],
+  indices: number[],
+  field: CaveHeightfield,
+  mouthOpening: (x: number, z: number) => number,
+  walkSurfaceAt: (x: number, z: number) => number,
+): void {
+  const out = openingDirection(field.entrance.yaw)
+  const right = { dx: out.dz, dz: -out.dx }
+  const c = mouthOpeningCentroid(field, mouthOpening)
+  const front = marchRimDistance(mouthOpening, c.x, c.z, out.dx, out.dz)
+  const left = marchRimDistance(mouthOpening, c.x, c.z, -right.dx, -right.dz)
+  const rightRim = marchRimDistance(mouthOpening, c.x, c.z, right.dx, right.dz)
+
+  const patches: DeepPatch[] = []
+  if (front > 0) {
+    patches.push(
+      { along: front + 2.1, across: 0, halfAlong: 1.6, halfAcross: 2.9, height: 2.2, sink: 1.1 },
+      { along: front + 4.4, across: 0, halfAlong: 1.9, halfAcross: 3.5, height: 2.8, sink: 2.0 },
+    )
+  }
+  if (left > 0) {
+    patches.push(
+      { along: 0.5, across: -(left + 2.2), halfAlong: 2.2, halfAcross: 1.5, height: 2.8, sink: 1.3 },
+      { along: 0.3, across: -(left + 4.0), halfAlong: 2.5, halfAcross: 1.7, height: 3.2, sink: 1.9 },
+    )
+  }
+  if (rightRim > 0) {
+    patches.push(
+      { along: 0.5, across: rightRim + 2.2, halfAlong: 2.2, halfAcross: 1.5, height: 2.8, sink: 1.3 },
+      { along: 0.3, across: rightRim + 4.0, halfAlong: 2.5, halfAcross: 1.7, height: 3.2, sink: 1.9 },
+    )
+  }
+
+  for (const patch of patches) {
+    const away = patch.across === 0
+      ? { along: 1, across: 0 }
+      : { along: 0, across: patch.across > 0 ? 1 : -1 }
+    for (const extra of [0, 1.3, 2.6]) {
+      const along = patch.along + away.along * extra
+      const across = patch.across + away.across * extra
+      const cx = c.x + out.dx * along + right.dx * across
+      const cz = c.z + out.dz * along + right.dz * across
+      let minSurf = Infinity
+      let blocked = false
+      for (const a of [-patch.halfAlong, 0, patch.halfAlong]) {
+        for (const s of [-patch.halfAcross, 0, patch.halfAcross]) {
+          const x = cx + out.dx * a + right.dx * s
+          const z = cz + out.dz * a + right.dz * s
+          minSurf = Math.min(minSurf, walkSurfaceAt(x, z))
+          if (mouthOpening(x, z) > 0) { blocked = true; break }
+          const sample = sampleHeightfieldAt(field, x, z)
+          if (sample.gap > 0 && !sample.outsideGrid) { blocked = true; break }
+        }
+        if (blocked) break
+      }
+      if (blocked || !Number.isFinite(minSurf)) continue
+      const top = minSurf - patch.sink
+      emitOrientedBox(
+        positions,
+        indices,
+        cx,
+        top - patch.height * 0.5,
+        cz,
+        patch.halfAlong,
+        patch.halfAcross,
+        patch.height * 0.5,
+        out,
+        right,
+      )
+      break
+    }
+  }
+}
+
+const UNDER_ENTRANCE_SIZE = 4
+const UNDER_ENTRANCE_DROP = 0.5
+
+/**
+ * Flat 4×4 catcher exactly under the mouth floor, 0.5 m down. Winding is
+ * CCW from above so the coloured face points +Y — looking down through a
+ * floor/lip gap hits dark rock instead of sky.
+ */
+function emitUnderEntrancePlane(
+  positions: number[],
+  indices: number[],
+  field: CaveHeightfield,
+): void {
+  const out = openingDirection(field.entrance.yaw)
+  const right = { dx: out.dz, dz: -out.dx }
+  const y = field.entrance.y - UNDER_ENTRANCE_DROP
+  const h = UNDER_ENTRANCE_SIZE / 2
+  const base = positions.length / 3
+  // CCW from above: verified +Y against `computeVertexNormals()` in the
+  // cave floor mesher (`CELL_RING` / `emitFan`).
+  const ring: readonly (readonly [number, number])[] = [
+    [-h, -h],
+    [h, -h],
+    [h, h],
+    [-h, h],
+  ]
+  for (const [along, across] of ring) {
+    positions.push(
+      field.entrance.x + out.dx * along + right.dx * across,
+      y,
+      field.entrance.z + out.dz * along + right.dz * across,
+    )
+  }
+  emitMaskQuad(indices, base + 0, base + 1, base + 2, base + 3)
+}
+
 /**
  * CPU buffers for the presentation-only mouth underside mask. A closed
- * rectangular beam around the opening contour, under the terrain. Empty
- * when the field has no surface-breaking mouth (SDF comparison path).
+ * rectangular beam around the opening contour, plus larger underground
+ * patches in front of and beside the doorway, and a flat 4×4 under the
+ * mouth floor. Empty when the field has no surface-breaking mouth
+ * (SDF comparison path).
  *
  * @domain world-terrain
  */
@@ -519,6 +703,9 @@ export function buildMouthUndersideMaskBuffers(
     emitMaskQuad(indices, a + 2, a + 3, b + 3, b + 2)
     emitMaskQuad(indices, a + 3, a + 0, b + 0, b + 3)
   }
+
+  emitDeepMouthPatches(positions, indices, field, mouthOpening, walkSurfaceAt)
+  emitUnderEntrancePlane(positions, indices, field)
 
   const pos = new Float32Array(positions)
   const idx = new Uint32Array(indices)
