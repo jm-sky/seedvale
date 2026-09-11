@@ -439,7 +439,7 @@ export function getCaveInteriorRockTemplates(): readonly THREE.Object3D[] {
   if (_templates) return _templates
 
   const clusterSmall = prepareInteriorRockTemplate(
-    createRockCluster(1, 0.31, 0x7d7a72),
+    createRockCluster(1, 0.5, 0x7d7a72),
     INTERIOR_ROCK_SINK_FRACTION,
   )
   clusterSmall.name = 'cave-interior-rock-template:cluster-small'

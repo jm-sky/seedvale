@@ -241,7 +241,7 @@ export function createSeaweed(scale = 1): THREE.Group {
 export function createLargeRock(scale = 1, variant = 0.5): THREE.Group {
   const rock = new THREE.Group()
   const mesh = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.9 * scale, 0),
+    new THREE.IcosahedronGeometry(0.9 * scale, 1),
     new THREE.MeshStandardMaterial({ color: 0x7d7a72, flatShading: true, roughness: 1 }),
   )
   mesh.scale.set(
@@ -273,7 +273,7 @@ export function createRockCluster(scale = 1, variant = 0.5, color = 0x8c8c8c): T
     const a = variant * Math.PI * 2 + i * 2.4
     const r = (0.15 + ((variant * (i + 3)) % 1) * 0.3) * spread
     const pebble = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.16 * scale * (0.7 + (i % 3) * 0.15), 0),
+      new THREE.DodecahedronGeometry(0.16 * scale * (0.7 + (i % 3) * 0.15), 1),
       mat,
     )
     pebble.position.set(Math.cos(a) * r, 0.08 * scale, Math.sin(a) * r)
