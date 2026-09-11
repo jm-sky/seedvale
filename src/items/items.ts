@@ -59,6 +59,12 @@ export type ItemKind =
   | 'dried_meat'
   | 'coin'
   | 'ruby'
+  | 'ruby_small'
+  | 'ruby_medium'
+  | 'ruby_large'
+  | 'diamond_small'
+  | 'diamond_medium'
+  | 'diamond_large'
   | 'key'
   | 'treasure_map_dark_forest'
   | 'herb'
@@ -684,6 +690,60 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XXS',
     color: 0xb02040,
     description: 'Czerwony kamień szlachetny — rzadki i ceniony przez handlarzy.',
+  },
+  ruby_small: {
+    kind: 'ruby_small',
+    label: 'mały rubin',
+    categories: ['resource'],
+    weight: 0.01,
+    size: 'XXS',
+    color: 0xb02040,
+    description: 'Niewielki czerwony kamień szlachetny.',
+  },
+  ruby_medium: {
+    kind: 'ruby_medium',
+    label: 'rubin',
+    categories: ['resource'],
+    weight: 0.02,
+    size: 'XXS',
+    color: 0xb02040,
+    description: 'Czerwony kamień szlachetny — rzadki i ceniony przez handlarzy.',
+  },
+  ruby_large: {
+    kind: 'ruby_large',
+    label: 'duży rubin',
+    categories: ['resource'],
+    weight: 0.05,
+    size: 'XXS',
+    color: 0xb02040,
+    description: 'Duży czerwony kamień szlachetny o wysokiej wartości.',
+  },
+  diamond_small: {
+    kind: 'diamond_small',
+    label: 'mały diament',
+    categories: ['resource'],
+    weight: 0.01,
+    size: 'XXS',
+    color: 0xc8e4f4,
+    description: 'Niewielki przezroczysty kamień szlachetny.',
+  },
+  diamond_medium: {
+    kind: 'diamond_medium',
+    label: 'diament',
+    categories: ['resource'],
+    weight: 0.02,
+    size: 'XXS',
+    color: 0xc8e4f4,
+    description: 'Przezroczysty kamień szlachetny, cenniejszy od rubinu.',
+  },
+  diamond_large: {
+    kind: 'diamond_large',
+    label: 'duży diament',
+    categories: ['resource'],
+    weight: 0.05,
+    size: 'XXS',
+    color: 0xc8e4f4,
+    description: 'Duży przezroczysty kamień szlachetny o wyjątkowej wartości.',
   },
   key: {
     kind: 'key',
@@ -1732,12 +1792,21 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'ruby') {
+  if (
+    kind === 'ruby'
+    || kind === 'ruby_small'
+    || kind === 'ruby_medium'
+    || kind === 'ruby_large'
+    || kind === 'diamond_small'
+    || kind === 'diamond_medium'
+    || kind === 'diamond_large'
+  ) {
+    const radius = kind.endsWith('_small') ? 0.06 : kind.endsWith('_large') ? 0.12 : 0.09
     const mesh = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.09, 0),
-      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.ruby.color, flatShading: true, metalness: 0.2 }),
+      new THREE.OctahedronGeometry(radius, 0),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true, metalness: kind.startsWith('diamond') ? 0.45 : 0.2 }),
     )
-    mesh.position.y = 0.06
+    mesh.position.y = radius * 0.7
     mesh.castShadow = true
     return mesh
   }

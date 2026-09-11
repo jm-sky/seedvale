@@ -29,9 +29,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 58
-- `ContainerActions` — type — line 44
-- `createContainerActions` — function — line 69
+- `ContainerActionDeps` — type — line 76
+- `ContainerActions` — type — line 57
+- `createContainerActions` — function — line 89
 
 ## `app/actions/cookMealIntent.ts`
 
@@ -233,22 +233,22 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 272
+- `createApp` — function — line 273
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 241
+- `NewAppOptions` — type — line 242
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 605
+- `createGameLoop` — function — line 608
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 573
+- `GameLoop` — type — line 576
 - `GameLoopDeps` — type — line 287
 
 ## `app/graphicsSettings.ts`
@@ -288,10 +288,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1141
-- `buildDigTarget` — function — line 1088
+- `buildCombatTarget` — function — line 1143
+- `buildDigTarget` — function — line 1090
 - `buildInteractables` — function — line 435
-- `collectItem` — function — line 1191
+- `collectItem` — function — line 1193
 - `COMBAT_TARGET_CONE_DOT` — const — line 92
 - `COMBAT_TARGET_RANGE` — const — line 77
 - `CombatAimMode` — type — line 82
@@ -339,14 +339,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 112
+- `createSaveState` — function — line 115
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 34
-- `SaveStateDeps` — type — line 55
+- `SaveState` — type — line 35
+- `SaveStateDeps` — type — line 56
 
 ## `app/userActions.ts`
 

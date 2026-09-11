@@ -278,6 +278,16 @@ export type SavePlacedContainer = {
   foodBatches?: Partial<Record<ItemKind, SaveFoodBatch[]>>
 }
 
+/** Plan items-player-026 — sparse forced-entry/trap mutations for a systemic
+ *  treasure chest. Reconstructable trap/loot definitions are not stored. */
+export type SaveTreasureChestMutation = {
+  containerId: string
+  attemptIndex: number
+  trapTriggered?: boolean
+  damaged?: boolean
+  destroyed?: boolean
+}
+
 /** The container currently in the player's hands — same contents shape, no
  *  position/yaw since it has none while carried. */
 export type SaveCarriedContainer = {
@@ -574,7 +584,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 30
+export const CURRENT_SAVE_VERSION = 31
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -670,6 +680,9 @@ export type SaveData = {
   /** Plan world-024 — sparse unlocked systemic treasure chests, keyed by
    *  stable container id. Missing means none unlocked. */
   unlockedTreasureContainerIds?: string[]
+  /** Plan items-player-026 — sparse forced-entry/trap mutation state keyed by
+   *  stable container id. Missing means unattempted. */
+  treasureChestMutations?: SaveTreasureChestMutation[]
   carriedContainer: SaveCarriedContainer | null
   playerWells: SavePlayerWell[]
   terrainPreparations: SaveTerrainPreparation[]
@@ -891,6 +904,21 @@ function isSaveMap(value: unknown): value is SaveMap {
 
 function isResolvedHiddenFindSpotIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
+}
+
+function isTreasureChestMutationEntry(value: unknown): value is SaveTreasureChestMutation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const row = value as Record<string, unknown>
+  if (typeof row.containerId !== 'string') return false
+  if (typeof row.attemptIndex !== 'number' || !Number.isInteger(row.attemptIndex) || row.attemptIndex < 0) return false
+  if (row.trapTriggered !== undefined && typeof row.trapTriggered !== 'boolean') return false
+  if (row.damaged !== undefined && typeof row.damaged !== 'boolean') return false
+  if (row.destroyed !== undefined && typeof row.destroyed !== 'boolean') return false
+  return true
+}
+
+function isTreasureChestMutationsField(value: unknown): value is SaveTreasureChestMutation[] {
+  return Array.isArray(value) && value.every(isTreasureChestMutationEntry)
 }
 
 const BADGE_IDS: ReadonlySet<string> = new Set<BadgeId>(['relic_seeker', 'treasure_hunter'])
@@ -1965,6 +1993,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlacedContainersField(v.placedContainers)) return false
   if (v.worldGeneratedContainers !== undefined && !isWorldGeneratedContainersField(v.worldGeneratedContainers)) return false
   if (v.unlockedTreasureContainerIds !== undefined && !isResolvedHiddenFindSpotIdsField(v.unlockedTreasureContainerIds)) return false
+  if (v.treasureChestMutations !== undefined && !isTreasureChestMutationsField(v.treasureChestMutations)) return false
   if (!isCarriedContainerField(v.carriedContainer)) return false
   if (!isPlayerWellsField(v.playerWells)) return false
   if (!isTerrainPreparationsField(v.terrainPreparations)) return false
@@ -2792,6 +2821,14 @@ function migrateSaveV29ToV30(data: unknown): unknown {
   return { ...v, version: 30 }
 }
 
+/** v30 → v31 (plan items-player-026): sparse forced-entry/trap mutations.
+ *  A pre-plan save has never attempted a systemic chest, so restore already
+ *  defaults a missing field to empty. */
+function migrateSaveV30ToV31(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 31 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2836,6 +2873,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   27: migrateSaveV27ToV28,
   28: migrateSaveV28ToV29,
   29: migrateSaveV29ToV30,
+  30: migrateSaveV30ToV31,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -438,6 +438,9 @@ export type GameLoopDeps = {
   /** Picks a placed container up (with contents) — carried state (plan 164
    *  §8/§15), not an inventory item. */
   pickUpContainer?: (id: string) => void
+  /** Plan items-player-026 — force a locked systemic treasure chest. */
+  forceOpenContainer?: (id: string) => boolean
+  describeWorldGeneratedContainer?: (id: string) => string | null
   /** Runs one active-work session on a player-built well (plan 127, revised
    *  — active work, not elapsed world time) — validates tool/materials,
    *  transitions into the next stage when needed, and starts a work-bout
@@ -614,7 +617,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
+    openContainer, openNpcCorpse, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
     previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, previewPlayerTroughRemoval, removePlayerTrough,
     previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
@@ -1028,6 +1031,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             ?? bundle.fauna.getAgents().find((a) => a.animalId === lead.ledAnimalId())
             ?? null)
           : null,
+        describeWorldGeneratedContainer,
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -1650,7 +1654,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (altInteractPressed) waterGardenPlot?.(target.id)
       } else if (target?.kind === 'container') {
         if (interactPressed) openContainer?.(target.id)
-        if (altInteractPressed) pickUpContainer?.(target.id)
+        if (altInteractPressed) {
+          if (!forceOpenContainer?.(target.id)) pickUpContainer?.(target.id)
+        }
       } else if (target?.kind === 'playerWell') {
         // Unfinished: `[E]` construction bout, `[R]` requirements panel.
         // Completed: `[E]` drinks (or continues repair), `[R]` fills when

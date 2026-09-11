@@ -105,6 +105,8 @@ export type ItemCapability =
   | 'fishing'
   /** Patch tent/bedroll fabric (`items/campRepair.ts`). */
   | 'textile_repair'
+  /** Pry, wedge or strike something open — crates, stuck lids, forced locks. */
+  | 'prying'
 
 /** Genitive Polish phrase used after "Potrzebujesz …" when an action is
  *  refused for a missing capability — keeps requirement messages capability-
@@ -118,6 +120,7 @@ export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
   rock_mining: 'narzędzia do kucia w skale',
   soil_digging: 'narzędzia do kopania',
   wood_chopping: 'narzędzia do rąbania',
+  prying: 'narzędzia do wyważania',
 }
 
 /** Player-facing capability name (plan items-player-024) — shared by the
@@ -132,6 +135,7 @@ export const CAPABILITY_LABEL: Record<ItemCapability, string> = {
   fire_starting: 'Rozpalanie ognia',
   fishing: 'Wędkowanie',
   textile_repair: 'Naprawa tekstyliów',
+  prying: 'Wyważanie',
 }
 
 /** What a `consumable` item restores — `hunger`/`thirst` map to a
@@ -232,6 +236,11 @@ export type ItemCatalogEntry = {
    *  `VillageFire`'s `fuelPerBranch` already burns for. */
   utility?: {
     fuel?: { value: number }
+  }
+  /** Plan items-player-026 — physical survival under blunt damage / fire.
+   *  Absent means ordinary/vulnerable loot. Coins and gemstones are resilient. */
+  physical?: {
+    resilient?: boolean
   }
 }
 
@@ -406,7 +415,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'axe',
     label: 'siekiera',
     holdable: true,
-    capabilities: ['wood_chopping'],
+    capabilities: ['wood_chopping', 'prying'],
     melee: { damage: 20, range: 2.0, arcDot: 0.4, windUp: 0.3, hitWindow: 0.12, recovery: 0.4, staminaCost: 10 },
     defense: { canBlock: true, baseBlockChance: 0.2, partialReduction: 0.45 },
     spawn: 'village_onetime',
@@ -417,6 +426,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'pitchfork',
     label: 'widły',
     holdable: true,
+    capabilities: ['prying'],
     melee: { damage: 14, range: 2.4, arcDot: 0.5, windUp: 0.2, hitWindow: 0.12, recovery: 0.28, staminaCost: 7 },
     defense: { canBlock: true, baseBlockChance: 0.22, partialReduction: 0.5 },
     spawn: 'village_onetime',
@@ -449,7 +459,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'pickaxe',
     label: 'kilof',
     holdable: true,
-    capabilities: ['rock_mining'],
+    capabilities: ['rock_mining', 'prying'],
     melee: null,
     spawn: 'village_onetime',
     modelUrl: '/models/items/pickaxe.glb',
@@ -547,6 +557,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Pickaxe yield from gold deposits (plan 090).',
+    physical: { resilient: true },
   },
   tomato: {
     kind: 'tomato',
@@ -765,6 +776,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'world_chunk',
     modelUrl: null,
     notes: 'Plan 129 / issue 035 — physical currency: Kupiec buy/sell, rare world_chunk pickup, quest reward, land-plot price (`settlement/landPurchase.ts`). Stacks like any other item; near-zero weight and `XXS` gabarite (`items.ts`) so a land-plot price (up to several thousand) does not blow the carry limit. Shells stay barter-only.',
+    physical: { resilient: true },
   },
   herb: {
     kind: 'herb',
@@ -833,7 +845,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     kind: 'battle_axe',
     label: 'topór bojowy',
     holdable: true,
-    capabilities: ['wood_chopping'],
+    capabilities: ['wood_chopping', 'prying'],
     melee: { damage: 28, range: 2.15, arcDot: 0.28, windUp: 0.38, hitWindow: 0.14, recovery: 0.5, staminaCost: 14 },
     defense: { canBlock: true, baseBlockChance: 0.24, partialReduction: 0.5 },
     spawn: 'none',
@@ -1144,7 +1156,68 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Plan quests-progression-009 — treasure loot from the deep-forest ruins chest.',
+    notes: 'Plan quests-progression-009 — treasure loot from the deep-forest ruins chest. Legacy unsized kind; systemic treasure uses ruby_small/medium/large.',
+    physical: { resilient: true },
+  },
+  ruby_small: {
+    kind: 'ruby_small',
+    label: 'mały rubin',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-026 — sized systemic gemstone treasure.',
+    physical: { resilient: true },
+  },
+  ruby_medium: {
+    kind: 'ruby_medium',
+    label: 'rubin',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-026 — sized systemic gemstone treasure.',
+    physical: { resilient: true },
+  },
+  ruby_large: {
+    kind: 'ruby_large',
+    label: 'duży rubin',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-026 — sized systemic gemstone treasure.',
+    physical: { resilient: true },
+  },
+  diamond_small: {
+    kind: 'diamond_small',
+    label: 'mały diament',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-026 — sized systemic gemstone treasure.',
+    physical: { resilient: true },
+  },
+  diamond_medium: {
+    kind: 'diamond_medium',
+    label: 'diament',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-026 — sized systemic gemstone treasure.',
+    physical: { resilient: true },
+  },
+  diamond_large: {
+    kind: 'diamond_large',
+    label: 'duży diament',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-026 — sized systemic gemstone treasure.',
+    physical: { resilient: true },
   },
   key: {
     kind: 'key',
@@ -1416,6 +1489,11 @@ export const CAPABILITY_KINDS: Record<ItemCapability, readonly ItemKind[]> = (()
  *  straight through. */
 export function hasItemCapability(kind: ItemKind | null | undefined, capability: ItemCapability): boolean {
   return kind != null && (ITEM_CATALOG[kind].capabilities?.includes(capability) ?? false)
+}
+
+/** Survives ordinary contents damage and fire (plan items-player-026). */
+export function itemIsResilient(kind: ItemKind): boolean {
+  return ITEM_CATALOG[kind].physical?.resilient === true
 }
 
 /** Kinds declaring a `consumable` effect for each `ConsumableNeed`, **best

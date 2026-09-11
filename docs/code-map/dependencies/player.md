@@ -156,6 +156,7 @@ Generated from TypeScript imports.
 
 - `app/actions/constructionWorkSession.test.ts`
 - `app/actions/constructionWorkSession.ts`
+- `app/actions/containerActions.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/mountActions.ts`
@@ -317,6 +318,7 @@ Generated from TypeScript imports.
 
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `app/actions/containerActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `player/physicalWorkStrength.test.ts`
@@ -366,6 +368,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/containerActions.ts`
 - `app/actions/mountActions.ts`
 - `app/gameLoop.ts`
 - `player/playerDownedRecovery.test.ts`

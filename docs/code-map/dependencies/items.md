@@ -150,6 +150,8 @@ Generated from TypeScript imports.
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/trapInstanceTrade.test.ts`
+- `items/treasureGameplay.test.ts`
+- `items/treasureGameplay.ts`
 - `items/weaponMaintenance.test.ts`
 - `items/weaponMaintenance.ts`
 - `persistence/saveData.ts`
@@ -674,6 +676,7 @@ Generated from TypeScript imports.
 - `ai/npcCombat.test.ts`
 - `ai/npcCombat.ts`
 - `app/actions/actionContracts.ts`
+- `app/actions/containerActions.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
@@ -709,6 +712,8 @@ Generated from TypeScript imports.
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
 - `items/sensibleFood.ts`
+- `items/treasureGameplay.test.ts`
+- `items/treasureGameplay.ts`
 - `persistence/saveData.ts`
 - `player/playerCombat.test.ts`
 - `player/playerDamage.ts`
@@ -951,6 +956,8 @@ Generated from TypeScript imports.
 - `items/timedProcess.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
+- `items/treasureGameplay.test.ts`
+- `items/treasureGameplay.ts`
 - `items/villageTools.test.ts`
 - `persistence/saveData.ts`
 - `player/PlayerTorch.ts`
@@ -1209,6 +1216,7 @@ Generated from TypeScript imports.
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/trapInstanceTrade.test.ts`
+- `items/treasureGameplay.test.ts`
 - `ui-vue/store.ts`
 
 ## `items/trapInstanceLifecycle.test.ts`
@@ -1245,6 +1253,36 @@ Generated from TypeScript imports.
 - `items/tradeCatalog.ts`
 - `items/trapInstanceLifecycle.test.ts`
 - `items/trapInstanceTrade.test.ts`
+
+## `items/treasureGameplay.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+- `items/tradeCatalog.ts`
+- `items/treasureGameplay.ts`
+- `world/treasureSites.ts`
+
+## `items/treasureGameplay.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+- `world/parseSeed.ts`
+- `world/treasureSites.ts`
+
+**Imported by**
+
+- `app/actions/containerActions.ts`
+- `app/createApp.ts`
+- `app/saveState.ts`
+- `app/worldBundle.ts`
+- `items/treasureGameplay.test.ts`
+- `world/worldGeneratedContainers.test.ts`
 
 ## `items/villageTools.test.ts`
 

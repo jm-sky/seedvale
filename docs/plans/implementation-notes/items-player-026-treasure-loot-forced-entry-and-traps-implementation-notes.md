@@ -4,9 +4,9 @@ Plan: `items-player-026-treasure-loot-forced-entry-and-traps.md`
 
 ## Dependency status
 
-`world-024-systemic-treasure-sites-and-keys.md` is still `planned`. Treat it as a real prerequisite, not as an implemented API. Implement `items-player-026` only after `world-024` provides stable systemic `containerId`, lock/unlock mutation ownership, deterministic treasure-site identity, and normal placed-container materialization. Do not invent a temporary parallel treasure chest/lock layer.
+`world-024-systemic-treasure-sites-and-keys.md` is implemented (`verification needed`). Systemic chests use stable `world-container:${siteId}` ids on `WorldGeneratedContainers`, lock mutations live in `unlockedTreasureContainerIds`, and `treasureSites.ts` reconstructs site/key identity from seed. This plan consumes those contracts; it does not invent a parallel chest/lock layer.
 
-The existing authored dark-forest treasure (`worldBundle.ts` + `world/locations/darkForestTreasureSite.ts`) is only a precedent for deterministic initial contents and finite loot. It is not the ownership model for systemic treasure.
+The existing authored dark-forest treasure (`worldBundle.ts` + `world/locations/darkForestTreasureSite.ts`) remains a separate quest chest with its own `ruby` + coin payload.
 
 ## Existing systems to reuse
 

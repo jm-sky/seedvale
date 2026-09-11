@@ -2393,6 +2393,7 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
 - `items/createItemSpawners.ts`
+- `items/treasureGameplay.ts`
 - `items/villageTools.test.ts`
 - `main.ts`
 - `reputation/socialExposure.ts`
@@ -3056,6 +3057,8 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/worldBundle.ts`
+- `items/treasureGameplay.test.ts`
+- `items/treasureGameplay.ts`
 - `world/treasureSites.test.ts`
 
 ## `world/treeHarvest.ts`
@@ -3292,6 +3295,13 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 
+## `world/worldGeneratedContainers.test.ts`
+
+**Imports**
+
+- `items/treasureGameplay.ts`
+- `world/worldGeneratedContainers.ts`
+
 ## `world/worldGeneratedContainers.ts`
 
 **Imports**
@@ -3309,3 +3319,4 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
+- `world/worldGeneratedContainers.test.ts`

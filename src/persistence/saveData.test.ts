@@ -1258,6 +1258,34 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(loadStoredSave({ ...validSave, unlockedTreasureContainerIds: 'open' })).toEqual({ status: 'invalid' })
   })
 
+  it('migrates a v30 save with no treasureChestMutations to the current version (plan items-player-026)', () => {
+    const { treasureChestMutations: _mutations, ...v30Fields } = validSave
+    const result = loadStoredSave({ ...v30Fields, version: 30 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.treasureChestMutations).toBeUndefined()
+  })
+
+  it('round-trips treasureChestMutations and rejects a malformed one (plan items-player-026)', () => {
+    const mutations = [{
+      containerId: 'world-container:treasure:ruins:a',
+      attemptIndex: 2,
+      trapTriggered: true,
+      damaged: true,
+    }]
+    const withMutations = loadStoredSave({ ...validSave, treasureChestMutations: mutations })
+    expect(withMutations.status).toBe('ok')
+    if (withMutations.status === 'ok') {
+      expect(withMutations.data.treasureChestMutations).toEqual(mutations)
+    }
+
+    expect(loadStoredSave({
+      ...validSave,
+      treasureChestMutations: [{ containerId: 'chest:a' }],
+    })).toEqual({ status: 'invalid' })
+  })
+
   it('accepts a persistent habitat occupant record and rejects a malformed one (plan fauna-018)', () => {
     const occupant = {
       habitatId: 'home:cave:bear',

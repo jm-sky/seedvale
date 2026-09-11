@@ -44,6 +44,7 @@ import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawne
 import { createPlacedTents, type PlacedTent, type PlacedTents } from '../items/createPlacedTents'
 import { preloadHeldToolModels } from '../items/heldToolVisual'
 import { preloadItemGlbModels } from '../items/itemModels'
+import { generateTreasureLoot } from '../items/treasureGameplay'
 import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
@@ -111,7 +112,6 @@ import {
   resolveTreasureChestDrafts,
   RUINS_CHEST_KINDS,
   sampleDeepForestTreasureCandidates,
-  TREASURE_CHEST_PLACEHOLDER_COINS,
   TREASURE_KEY_SEARCH_CHUNK_RADIUS,
   TREASURE_SITE_SEARCH_CHUNK_RADIUS,
   type TreasureLandmarkCandidate,
@@ -1019,7 +1019,7 @@ async function buildWorldSystems(
       x: site.chest.x,
       z: site.chest.z,
       yaw: site.chest.yaw,
-      initialCounts: { coin: TREASURE_CHEST_PLACEHOLDER_COINS },
+      initialCounts: generateTreasureLoot(config.seed, site.id),
     })),
   ]
   const worldGeneratedContainers = createWorldGeneratedContainers(

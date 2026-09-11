@@ -91,8 +91,6 @@ export const MIN_TREASURE_HOME_DIST = 200
 export const MAX_TREASURE_HOME_DIST = 640
 export const MIN_KEY_DISTANCE = 64
 export const MAX_KEY_DISTANCE = 220
-/** Placeholder contents — loot balance belongs to items-player-026. */
-export const TREASURE_CHEST_PLACEHOLDER_COINS = 5
 export const TREASURE_SITE_SEARCH_CHUNK_RADIUS = 10
 export const TREASURE_KEY_SEARCH_CHUNK_RADIUS = 5
 export const KEY_HOST_KINDS: readonly LandmarkKind[] = [

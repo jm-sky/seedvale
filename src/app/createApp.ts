@@ -48,6 +48,7 @@ import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { migrateLegacyWaterskinsToInstances } from '../items/liquidContainer'
 import { createPrimaryWeaponSelection } from '../items/primaryWeapons'
 import { createAcquiredInstance } from '../items/trade'
+import { type TreasureChestMutation } from '../items/treasureGameplay'
 import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
 import {
   type BenchmarkFixture,
@@ -430,6 +431,15 @@ export async function createApp(
   // place contract as `resolvedHiddenFindSpotIds` (container actions capture
   // this reference once).
   const unlockedTreasureContainerIds = new Set<string>(initialSave?.unlockedTreasureContainerIds ?? [])
+  const treasureChestMutations = new Map<string, TreasureChestMutation>()
+  for (const row of initialSave?.treasureChestMutations ?? []) {
+    treasureChestMutations.set(row.containerId, {
+      attemptIndex: row.attemptIndex,
+      trapTriggered: row.trapTriggered === true,
+      damaged: row.damaged === true,
+      destroyed: row.destroyed === true,
+    })
+  }
   const badges = new BadgeManager(initialSave?.badges)
   const reputation = new ReputationManager(initialSave?.reputation)
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
@@ -1265,6 +1275,7 @@ export async function createApp(
     tentBlockers: placement.tentBlockers,
     rendererElement: renderer.domElement,
     unlockedTreasureContainerIds,
+    treasureChestMutations,
   })
   const contracts = createWorkContractActions(actionCtx, {
     vueUi,
@@ -1383,6 +1394,7 @@ export async function createApp(
     worldFlags,
     resolvedHiddenFindSpotIds,
     unlockedTreasureContainerIds,
+    treasureChestMutations,
     badges,
     reputation,
     fishingBait,
@@ -1485,6 +1497,7 @@ export async function createApp(
         ground.resetTreasureProgress()
         resolvedHiddenFindSpotIds.clear()
         unlockedTreasureContainerIds.clear()
+        treasureChestMutations.clear()
         badges.reset()
         reputation.reset()
         hud.setPlayerBadges(badges.listEarned())
@@ -2180,6 +2193,8 @@ export async function createApp(
     openContainer: containers.openContainer,
     openNpcCorpse: containers.openNpcCorpse,
     pickUpContainer: containers.pickUpContainer,
+    forceOpenContainer: containers.forceOpenContainer,
+    describeWorldGeneratedContainer: containers.describeWorldGeneratedContainer,
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,
     describeWellRoofRepair: placement.describeWellRoofRepair,

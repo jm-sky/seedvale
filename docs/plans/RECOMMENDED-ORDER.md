@@ -153,10 +153,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-21. `items-player-026` — **Treasure loot, forced entry and traps**  
-  🟡 `M` · **Score:**  19  
-   → **unlocks:** 0/0
-
 ---
 
 ## Initially Blocked

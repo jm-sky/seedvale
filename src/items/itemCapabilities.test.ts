@@ -24,6 +24,8 @@ describe('item capability lookup', () => {
     expect(hasItemCapability('firestarter', 'fire_starting')).toBe(true)
     expect(hasItemCapability('fishing_rod', 'fishing')).toBe(true)
     expect(hasItemCapability('sewing_kit', 'textile_repair')).toBe(true)
+    expect(hasItemCapability('pickaxe', 'prying')).toBe(true)
+    expect(hasItemCapability('axe', 'prying')).toBe(true)
   })
 
   it('is false for a kind without the capability, and for no item at all', () => {
@@ -37,6 +39,8 @@ describe('item capability lookup', () => {
   it('lets several kinds substitute for the same operation', () => {
     expect(hasItemCapability('axe', 'wood_chopping')).toBe(true)
     expect(hasItemCapability('battle_axe', 'wood_chopping')).toBe(true)
+    expect(hasItemCapability('pickaxe', 'prying')).toBe(true)
+    expect(hasItemCapability('pitchfork', 'prying')).toBe(true)
     expect(hasItemCapability('knife', 'meat_harvesting')).toBe(true)
     expect(hasItemCapability('damascus_knife', 'meat_harvesting')).toBe(true)
   })
@@ -47,6 +51,7 @@ describe('item capability lookup', () => {
     expect(CAPABILITY_KINDS.soil_digging).toEqual(['shovel'])
     expect(CAPABILITY_KINDS.rock_mining).toEqual(['pickaxe'])
     expect(CAPABILITY_KINDS.textile_repair).toEqual(['sewing_kit'])
+    expect(CAPABILITY_KINDS.prying).toEqual(['battle_axe', 'axe', 'pitchfork', 'pickaxe'])
   })
 
   it('keeps CAPABILITY_KINDS and the per-entry declarations in sync', () => {

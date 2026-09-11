@@ -15,11 +15,24 @@ import {
 import { skipBatchCount } from '../../items/foodItems'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
+import { CAPABILITY_NEED_LABEL, hasItemCapability } from '../../items/itemCatalog'
 import { INSTANCE_BACKED_KINDS } from '../../items/itemInstances'
+import { ITEM_DEFS } from '../../items/items'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
+import {
+  commitForcedEntry,
+  describeTreasureContainerInteraction,
+  FORCE_ENTRY_DURATION_SEC,
+  quantizeStrength,
+  type TreasureChestMutation,
+  treasureWorldContainerPrompt,
+} from '../../items/treasureGameplay'
+import { physicalWorkDuration } from '../../player/physicalWorkStrength'
+import { applyPlayerDamage } from '../../player/playerDamage'
+import { physicalEffortBusyOptions } from '../../player/PlayerNeeds'
 import { canLootNpcCorpse, corpseLootInventory, transferCorpseCountTo, transferCorpseInstanceTo } from '../../settlement/npcPostDeath'
 import { CHEST_DEPTH, CHEST_WIDTH } from '../../world/containerProp'
-import { attemptTreasureUnlock } from '../../world/treasureSites'
+import { attemptTreasureUnlock, treasureSiteForContainer } from '../../world/treasureSites'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import { evaluatePlacementSite, previewGroundPlacement } from './placementActions'
 import { placementAimSite } from './placementYaw'
@@ -53,6 +66,11 @@ export type ContainerActions = {
   openContainer: (id: string) => void
   openNpcCorpse: (npc: NpcAgent) => void
   pickUpContainer: (id: string) => void
+  /** Plan items-player-026 — force a locked systemic treasure chest. Returns
+   *  true when this chest is a force-entry candidate (so `[R]` must not fall
+   *  through to pick-up). */
+  forceOpenContainer: (id: string) => boolean
+  describeWorldGeneratedContainer: (id: string) => string | null
 }
 
 export type ContainerActionDeps = {
@@ -64,6 +82,8 @@ export type ContainerActionDeps = {
   rendererElement: HTMLElement
   /** Plan world-024 — mutated in place; never reassigned. */
   unlockedTreasureContainerIds: Set<string>
+  /** Plan items-player-026 — mutated in place; never reassigned. */
+  treasureChestMutations: Map<string, TreasureChestMutation>
 }
 
 export function createContainerActions(
@@ -71,7 +91,7 @@ export function createContainerActions(
   deps: ContainerActionDeps,
 ): ContainerActions {
   const { bundle, player, inventory, hud, toast, busy, mouseLook } = ctx
-  const { vueUi, tentBlockers, rendererElement, unlockedTreasureContainerIds } = deps
+  const { vueUi, tentBlockers, rendererElement, unlockedTreasureContainerIds, treasureChestMutations } = deps
 
   /** The transfer screen currently shown — a placed chest or an NPC corpse
    *  (plan npc-010). Opening one overwrites the other; handlers below always
@@ -167,22 +187,30 @@ export function createContainerActions(
     const world = placed ? undefined : bundle.worldGeneratedContainers.find(id)
     const entry = placed ?? world
     if (!entry) return
-    const unlock = attemptTreasureUnlock(
+    const treasure = describeTreasureContainerInteraction(
       bundle.treasureSites,
       unlockedTreasureContainerIds,
+      treasureChestMutations,
       id,
-      (requiredKeyId) => inventory.getInstance(requiredKeyId) != null,
     )
-    if (unlock.kind === 'locked') {
-      toast.show('Skrzynia jest zamknięta. Potrzebujesz pasującego klucza.', 'error')
-      return
+    if (treasure.kind === 'locked') {
+      const unlock = attemptTreasureUnlock(
+        bundle.treasureSites,
+        unlockedTreasureContainerIds,
+        id,
+        (requiredKeyId) => inventory.getInstance(requiredKeyId) != null,
+      )
+      if (unlock.kind === 'locked') {
+        toast.show('Skrzynia jest zamknięta. Potrzebujesz pasującego klucza albo wyłam zamek.', 'error')
+        return
+      }
+      if (unlock.kind === 'unlocked') toast.show('Otwarto skrzynię kluczem.')
     }
-    if (unlock.kind === 'unlocked') toast.show('Otwarto skrzynię kluczem.')
     exitGamePointerLock(rendererElement)
     openTransfer = { kind: 'container', id }
     const def = placed ? CONTAINER_DEFS[placed.kind] : CONTAINER_DEFS.chest
     vueUi.openContainerScreen(
-      def.label,
+      treasure.kind === 'remains' ? 'Szczątki skrzyni' : def.label,
       'container',
       entry.contents.toJSON(),
       buildInventoryGroups(entry.contents, ctx.dayNight.elapsedDays),
@@ -193,6 +221,91 @@ export function createContainerActions(
       inventory.totalWeight(),
       inventory.maxWeight,
     )
+  }
+
+  const describeWorldGeneratedContainer = (id: string): string | null =>
+    treasureWorldContainerPrompt(
+      bundle.treasureSites,
+      unlockedTreasureContainerIds,
+      treasureChestMutations,
+      id,
+    )
+
+  const forceOpenContainer = (id: string): boolean => {
+    const treasure = describeTreasureContainerInteraction(
+      bundle.treasureSites,
+      unlockedTreasureContainerIds,
+      treasureChestMutations,
+      id,
+    )
+    if (treasure.kind === 'not-treasure' || treasure.kind === 'open') return false
+    if (treasure.kind === 'remains') return true
+    if (isActionBlocked(ctx)) return true
+    const held = ctx.heldTool.held()
+    if (!hasItemCapability(held, 'prying') || held == null) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.prying}.`, 'error')
+      return true
+    }
+    const site = treasureSiteForContainer(bundle.treasureSites, id)
+    const entry = bundle.worldGeneratedContainers.find(id)
+    if (!site || !entry) return true
+    const strengthBucket = quantizeStrength(player.effectiveAttributes(ctx.dayNight.elapsedDays).strength)
+    const heldKind = held
+    busy.start(
+      physicalWorkDuration(FORCE_ENTRY_DURATION_SEC, player.effectiveAttributes(ctx.dayNight.elapsedDays).strength),
+      'Wyłamywanie zamka…',
+      () => {
+        const live = bundle.worldGeneratedContainers.find(id)
+        const liveSite = treasureSiteForContainer(bundle.treasureSites, id)
+        const liveTreasure = describeTreasureContainerInteraction(
+          bundle.treasureSites,
+          unlockedTreasureContainerIds,
+          treasureChestMutations,
+          id,
+        )
+        if (!live || !liveSite || liveTreasure.kind !== 'locked') return
+        if (!hasItemCapability(ctx.heldTool.held(), 'prying') || ctx.heldTool.held() !== heldKind) {
+          toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.prying}.`, 'error')
+          return
+        }
+        const result = commitForcedEntry({
+          worldSeed: ctx.getWorldSeed(),
+          site: liveSite,
+          inventory: live.contents,
+          unlockedIds: unlockedTreasureContainerIds,
+          mutations: treasureChestMutations,
+          snapshot: { heldKind, strengthBucket },
+        })
+        if (result.mechanical === 'opened_clean') toast.show('Wyłamano zamek.')
+        else if (result.mechanical === 'opened_damaged') toast.show('Skrzynia ustąpiła, ale zawartość ucierpiała.')
+        else toast.show('Zamek się nie poddał.', 'error')
+        if (result.trapTriggeredNow && result.trap === 'fire') {
+          if (result.destroyed) toast.show('Pułapka ogniowa zniszczyła skrzynię.')
+          else if (result.fireSeverity === 'chest_damaged') toast.show('Pułapka ogniowa uszkodziła skrzynię.')
+          else toast.show('Pułapka ogniowa spaliła kruche przedmioty.')
+        }
+        if (result.bladeDamage > 0) {
+          applyPlayerDamage({
+            player,
+            amount: result.bladeDamage,
+            attackerKey: 'env',
+            heldTool: ctx.heldTool.held(),
+            defenseSkillValue: player.skills.defense.value,
+            playerYaw: mouseLook.state.yaw,
+          })
+          toast.show('Ostrze pułapki cię zraniło.', 'error')
+        }
+        const lost = Object.entries(result.destroyedVulnerable)
+          .filter(([, n]) => (n ?? 0) > 0)
+          .map(([kind, n]) => `${n}× ${ITEM_DEFS[kind as ItemKind].label}`)
+        if (lost.length > 0 && result.mechanical === 'opened_damaged' && !(result.trapTriggeredNow && result.trap === 'fire')) {
+          toast.show(`Zniszczono: ${lost.join(', ')}.`)
+        }
+        if (result.opened || result.destroyed) openContainer(id)
+      },
+      physicalEffortBusyOptions('moderate', ctx.dayNight.dayLengthSec),
+    )
+    return true
   }
 
   const refreshContainerScreenFor = (id: string): void => {
@@ -426,5 +539,14 @@ export function createContainerActions(
     },
   })
 
-  return { previewContainerPlacement, placeContainerAtAim, putDownContainerAtAim, openContainer, openNpcCorpse, pickUpContainer }
+  return {
+    previewContainerPlacement,
+    placeContainerAtAim,
+    putDownContainerAtAim,
+    openContainer,
+    openNpcCorpse,
+    pickUpContainer,
+    forceOpenContainer,
+    describeWorldGeneratedContainer,
+  }
 }

@@ -22,6 +22,7 @@ import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorldBundle } from './worldBundle'
 import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
+import { serializeTreasureMutations, type TreasureChestMutation } from '../items/treasureGameplay'
 import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification, type SaveWorkContract } from '../persistence/saveData'
 import { getActiveSaveId, listSavesResult, type SaveReason, writeSave, type WriteSaveResult } from '../persistence/saveDb'
 import { pickActiveSaveId } from '../persistence/saveSlots'
@@ -78,6 +79,8 @@ export type SaveStateDeps = {
   resolvedHiddenFindSpotIds: ReadonlySet<string>
   /** Plan world-024 — sparse unlocked systemic treasure container ids. */
   unlockedTreasureContainerIds: ReadonlySet<string>
+  /** Plan items-player-026 — sparse forced-entry/trap mutations. */
+  treasureChestMutations: ReadonlyMap<string, TreasureChestMutation>
   badges: BadgeManager
   reputation: ReputationManager
   fishingBait: Map<string, FishingBaitState>
@@ -113,7 +116,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
     config, bundle, player, mouseLook, inventory, heldTool, primaryWeapons, playerTorch,
     questManager, dayNight, mapDiscovery, locationKnowledge, navigationTargets, landOwnership, vueUi, worldFlags, fishingBait,
-    resolvedHiddenFindSpotIds, unlockedTreasureContainerIds, badges, reputation,
+    resolvedHiddenFindSpotIds, unlockedTreasureContainerIds, treasureChestMutations, badges, reputation,
   } = deps
 
   const buildSaveData = (): SaveData => {
@@ -214,6 +217,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     placedContainers: bundle.placedContainers.nodes().map((c) => ({ ...c })),
     worldGeneratedContainers: bundle.worldGeneratedContainers.nodes().map((c) => ({ ...c })),
     unlockedTreasureContainerIds: [...unlockedTreasureContainerIds],
+    treasureChestMutations: serializeTreasureMutations(treasureChestMutations),
     carriedContainer: bundle.placedContainers.carriedNode(),
     playerWells: bundle.playerWells.nodes().map((w) => ({ ...w })),
     terrainPreparations: bundle.terrainPreparations.nodes().map((p) => ({

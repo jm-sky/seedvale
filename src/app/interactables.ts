@@ -509,6 +509,8 @@ export function buildInteractables(
   /** Currently led animal, if any — drives cart hitch prompts and the
    *  `Prowadzisz` animal label. */
   ledAnimal: AnimalAgent | null = null,
+  /** Plan items-player-026 — prompt override for systemic treasure chests. */
+  worldGeneratedContainerPrompt?: (id: string) => string | null,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -610,7 +612,7 @@ export function buildInteractables(
     list.push({
       kind: 'container',
       position: { x: container.x, z: container.z },
-      promptLabel: '[E] Otwórz skrzynię',
+      promptLabel: worldGeneratedContainerPrompt?.(container.id) ?? '[E] Otwórz skrzynię',
       id: container.id,
     })
   }

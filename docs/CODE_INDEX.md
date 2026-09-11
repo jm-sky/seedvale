@@ -74,6 +74,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Inventory](../src/items/Inventory.ts) — item ownership (player *and* NPC), stacks, instances and food batches.
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).
+- [Treasure gameplay](../src/items/treasureGameplay.ts) — deterministic systemic loot, force-entry resolution and trap consequences (plan items-player-026); lock identity stays in `treasureSites.ts`.
 
 ## World simulation
 

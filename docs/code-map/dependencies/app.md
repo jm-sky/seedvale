@@ -103,9 +103,14 @@ Generated from TypeScript imports.
 - `items/container.ts`
 - `items/foodItems.ts`
 - `items/inventoryView.ts`
+- `items/itemCatalog.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/tentPlacement.ts`
+- `items/treasureGameplay.ts`
+- `player/PlayerNeeds.ts`
+- `player/physicalWorkStrength.ts`
+- `player/playerDamage.ts`
 - `settlement/npcPostDeath.ts`
 - `ui-vue/mount.ts`
 - `world/containerProp.ts`
@@ -794,6 +799,7 @@ Generated from TypeScript imports.
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
 - `items/trade.ts`
+- `items/treasureGameplay.ts`
 - `items/weaponMaintenance.ts`
 - `perf/index.ts`
 - `persistence/saveData.ts`
@@ -1289,6 +1295,7 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/primaryWeapons.ts`
+- `items/treasureGameplay.ts`
 - `persistence/saveData.ts`
 - `persistence/saveDb.ts`
 - `persistence/saveSlots.ts`
@@ -1365,6 +1372,7 @@ Generated from TypeScript imports.
 - `items/createPlacedTents.ts`
 - `items/heldToolVisual.ts`
 - `items/itemModels.ts`
+- `items/treasureGameplay.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
