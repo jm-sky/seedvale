@@ -26,9 +26,50 @@ import {
  *  under the required overburden so a station never sits exactly on it. */
 const STATION_SAFETY = 0.35
 
+// ── Representative fixture geometry ─────────────────────────────────────────
+//
+// Everything in this block is **topology** intent — usable width, usable
+// height, station placement and descent. Passage/chamber *length* is not a
+// parameter: it follows from the station positions through the centerline,
+// which is where `CaveTopology` already expresses it.
+//
+// Representation parameters (grid cell size, rim profile, noise) deliberately
+// do NOT live here — they belong to `DEFAULT_HEIGHTFIELD_CONFIG` and the
+// cross-section constants in `caveHeightfieldRepresentation.ts`.
+
 const ENTRANCE_WIDTH = 3
 const ENTRANCE_HEIGHT = 2.6
 const ENTRANCE_YAW = 0
+
+/** Straight reference cave: entrance → passage → main chamber. */
+const BASIC = {
+  passage: { x: 0, z: -8, width: 2.6, height: 2.4, descent: 1 },
+  /** The main chamber. Deliberately much larger than the passage so the
+   *  arrival reads as a room rather than a wide spot: ~4x the passage width
+   *  and ~2.4x its headroom. Both are plain `CaveTopology` dimensions — the
+   *  lobe layout in `buildChamberLobes()` scales off `targetWidth`, so this
+   *  needs no second chamber parameter. */
+  chamber: { x: 0, z: -19.5, width: 11, height: 5.8, descent: 3.2 },
+  /** Ledge beside the lower chamber floor: offset from the chamber node, and
+   *  how far its top sits above that floor. */
+  shelf: { offsetX: -3.4, offsetZ: -1.6, topAboveFloor: 1.1 },
+} as const
+
+/** Curved cave: entrance → passage → widening → chamber. */
+const BEND = {
+  passage: { x: 0, z: -7, width: 2.5, height: 2.4, descent: 0.9 },
+  widening: { x: 5.2, z: -13.5, width: 4.3, height: 3.1, descent: 1.7 },
+  chamber: { x: 10.2, z: -20, width: 9, height: 5.2, descent: 3 },
+  bulge: { x: 1.8, z: 0.4 },
+  overhang: { offsetX: -2.4, offsetZ: 1 },
+} as const
+
+/** Junction cave: entrance → hub → two chambers. */
+const BRANCH = {
+  hub: { x: 0, z: -8, width: 3.4, height: 2.8, descent: 1.1 },
+  left: { x: -7.2, z: -15, width: 6.4, height: 4.2, descent: 2.6 },
+  right: { x: 7.4, z: -14.2, width: 6.8, height: 4.4, descent: 2.7 },
+} as const
 
 /**
  * Shared doorway for every spike fixture — opening faces +Z, interior −Z.
@@ -241,6 +282,23 @@ function overhangFeature(
   }
 }
 
+/** Turns one entry of the geometry blocks above into an anchored node. */
+function station(
+  id: string,
+  kind: CaveTopologyNode['kind'],
+  geo: { x: number, z: number, width: number, height: number, descent: number },
+): CaveTopologyNode {
+  return stationNode({
+    id,
+    kind,
+    x: geo.x,
+    z: geo.z,
+    descent: geo.descent,
+    targetWidth: geo.width,
+    targetHeight: geo.height,
+  })
+}
+
 const ENTRANCE_STATION: FixtureStation = {
   id: 'entrance',
   kind: 'entrance',
@@ -262,46 +320,30 @@ const ENTRANCE_STATION: FixtureStation = {
 export function buildCaveHeightfieldFixture(id: CaveHeightfieldFixtureId): CaveTopology {
   if (id === 'basic') {
     const entrance = stationNode(ENTRANCE_STATION)
-    const passage = stationNode({
-      id: 'passage', kind: 'passage', x: 0, z: -8, descent: 1, targetWidth: 2.6, targetHeight: 2.4,
-    })
-    const chamber = stationNode({
-      id: 'chamber', kind: 'chamber', x: 0, z: -17, descent: 2.1, targetWidth: 6.4, targetHeight: 4.1,
-    })
+    const passage = station('passage', 'passage', BASIC.passage)
+    const chamber = station('chamber', 'chamber', BASIC.chamber)
     return topology(id, [entrance, passage, chamber], [
       { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: runCenterline(entrance, passage) },
       { id: 'seg-passage-chamber', from: 'passage', to: 'chamber', centerline: runCenterline(passage, chamber) },
-    ], [shelfFeature(chamber, -2.1, -1.1, 0.85)])
+    ], [shelfFeature(chamber, BASIC.shelf.offsetX, BASIC.shelf.offsetZ, BASIC.shelf.topAboveFloor)])
   }
 
   if (id === 'bend') {
     const entrance = stationNode(ENTRANCE_STATION)
-    const passage = stationNode({
-      id: 'passage', kind: 'passage', x: 0, z: -7, descent: 0.9, targetWidth: 2.5, targetHeight: 2.4,
-    })
-    const widening = stationNode({
-      id: 'widening', kind: 'widening', x: 5.2, z: -13.5, descent: 1.7, targetWidth: 4.3, targetHeight: 3.1,
-    })
-    const chamber = stationNode({
-      id: 'chamber', kind: 'chamber', x: 9.4, z: -19, descent: 2.4, targetWidth: 6.1, targetHeight: 4.2,
-    })
+    const passage = station('passage', 'passage', BEND.passage)
+    const widening = station('widening', 'widening', BEND.widening)
+    const chamber = station('chamber', 'chamber', BEND.chamber)
     return topology(id, [entrance, passage, widening, chamber], [
       { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: runCenterline(entrance, passage) },
-      { id: 'seg-bend', from: 'passage', to: 'widening', centerline: bendCenterline(passage, widening, 1.8, 0.4) },
+      { id: 'seg-bend', from: 'passage', to: 'widening', centerline: bendCenterline(passage, widening, BEND.bulge.x, BEND.bulge.z) },
       { id: 'seg-widening-chamber', from: 'widening', to: 'chamber', centerline: runCenterline(widening, chamber) },
-    ], [overhangFeature(chamber, -1.9, 0.8)])
+    ], [overhangFeature(chamber, BEND.overhang.offsetX, BEND.overhang.offsetZ)])
   }
 
   const entrance = stationNode(ENTRANCE_STATION)
-  const hub = stationNode({
-    id: 'hub', kind: 'passage', x: 0, z: -8, descent: 1.1, targetWidth: 3.4, targetHeight: 2.8,
-  })
-  const left = stationNode({
-    id: 'left-chamber', kind: 'chamber', x: -6.4, z: -14.2, descent: 2.1, targetWidth: 4.6, targetHeight: 3.3,
-  })
-  const right = stationNode({
-    id: 'right-chamber', kind: 'chamber', x: 6.6, z: -13.4, descent: 2.2, targetWidth: 4.9, targetHeight: 3.5,
-  })
+  const hub = station('hub', 'passage', BRANCH.hub)
+  const left = station('left-chamber', 'chamber', BRANCH.left)
+  const right = station('right-chamber', 'chamber', BRANCH.right)
   return topology('branch', [entrance, hub, left, right], [
     { id: 'seg-entrance-hub', from: 'entrance', to: 'hub', centerline: runCenterline(entrance, hub) },
     { id: 'seg-hub-left', from: 'hub', to: 'left-chamber', centerline: runCenterline(hub, left) },

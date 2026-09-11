@@ -14,7 +14,7 @@ import {
   DirectionalLight,
   DoubleSide,
   FrontSide,
-  type Group,
+  Group,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -27,6 +27,7 @@ import {
   exitGamePointerLock,
 } from '../input/MouseLook'
 import { createRenderer } from '../render/createRenderer'
+import { createLargeRock } from '../settlement/decorProps'
 import { openingDirection } from '../world/caves/caveOrientation'
 import { buildCaveSdfColliders, caveMouthColliderFilter } from '../world/caves/caveSdfColliders'
 import { buildCaveSdfRepresentation } from '../world/caves/caveSdfField'
@@ -35,7 +36,6 @@ import {
 } from '../world/caves/caveSdfQuery'
 import { createCaveSpikeMaterial } from '../world/caves/caveSpikeMaterial'
 import { buildSdfCaveMesh, DEFAULT_SDF_PARAMS } from '../world/caves/sdfCaveMesh'
-import { createLargeCaveVisual, placeLargeCaveVisual } from '../world/largeCaveVisual'
 import {
   buildCaveHeightfieldFixture,
   CAVE_HEIGHTFIELD_FIXTURE_IDS,
@@ -48,12 +48,13 @@ import {
   parseCaveHeightfieldMode,
   parseCaveHeightfieldVariant,
 } from './caves/caveHeightfieldFixtures'
-import { createHeightfieldCaveMesh } from './caves/caveHeightfieldMesh'
+import { createHeightfieldCaveMesh, marchCellRing } from './caves/caveHeightfieldMesh'
 import { createCaveHeightfieldWalker } from './caves/caveHeightfieldPlayer'
 import {
   buildCaveHeightfield,
   type CaveHeightfield,
   DEFAULT_HEIGHTFIELD_CONFIG,
+  mouthOpeningAt,
   sampleHeightfieldAt,
 } from './caves/caveHeightfieldRepresentation'
 import {
@@ -83,6 +84,10 @@ export type CaveHeightfieldSpikeMetrics = {
   caveNodeCount?: number
   /** Vertices on the `gap = 0` contour, shared by floor and ceiling. */
   rimVertexCount?: number
+  /** Vertices on the open-sky contour, where ceiling and terrain meet. */
+  skyVertexCount?: number
+  /** Widest cave span across the main chamber node. */
+  chamberSpan?: number
   /** Persistent field memory (floor/ceiling/surface/coreT arrays). */
   fieldBytes?: number
   /** Width at the mid-passage station where the floor has risen <= 0.3 m. */
@@ -102,6 +107,16 @@ type BuiltVariant = {
   /** Rock framing that masks the terrain-cutout seam (presentation only). */
   rocks: Group | null
   field: CaveHeightfield | null
+  /** Positive where cave void breaks the walk surface. Drives the terrain
+   *  cutout, the cave ceiling clip and the rock placement from one contour. */
+  mouthOpening: ((x: number, z: number) => number) | null
+}
+
+/** Presentation-only mouth rocks for a built variant, or `null` for the SDF
+ *  baseline (which keeps its closed terrain sheet and needs no seam mask). */
+function makeRocks(built: BuiltVariant): Group | null {
+  if (!built.field || !built.mouthOpening) return null
+  return buildMouthRocks(built.field, built.mouthOpening)
 }
 
 function now(): number {
@@ -133,54 +148,100 @@ function writeUrlState(variant: CaveHeightfieldVariant, fixture: CaveHeightfield
 }
 
 const SURFACE_SIZE = 72
-/** 0.5 m per texel — finer than production terrain (1 m) purely so the mouth
- *  cutout below has half-metre granularity. The hillside itself is still the
+/** Terrain texel size. Production terrain is 1 m (`chunkSize` 64 /
+ *  `resolution` 65); 0.5 m here only so the mouth contour below has finer
+ *  vertices to interpolate between. The hillside itself is still the
  *  production analytic sampler. */
 const SURFACE_STEP = 0.5
 
 /**
- * Cave-aware terrain mesh. A quad is dropped when any of its corners sits
- * where the cave void reaches the walk surface — the same
- * `ceilY >= surfaceY - SURFACE_CLIP_EPS` condition the cave mesher uses to
- * drop its ceiling, so the terrain hole and the cave portal stop on one
- * contour. `mouthCarveDepth` only deepens terrain, so without this the
- * surface closes over the mouth (recon finding; shared with production).
+ * Cave-aware terrain mesh.
  *
- * `breaksSurface` is null for the SDF variant, which keeps the closed sheet
- * it has today so the comparison shows exactly what each representation
- * contributes.
+ * The terrain is kept where `mouthOpening(x, z) < 0` and **clipped on that
+ * contour** with the same marching-squares walk the cave mesher uses, where
+ *
+ * ```text
+ * mouthOpening = min(gap, ceilY - (surfaceY - SURFACE_CLIP_EPS))
+ * ```
+ *
+ * i.e. positive only where cave void actually breaks the walk surface. The
+ * previous rule dropped a whole quad if *any* corner was open, which cut up
+ * to a full cell past the contour and past the cave footprint entirely —
+ * that is what opened real holes beside the mouth and exposed the
+ * back-facing cave ceiling. Clipping instead means the terrain stops exactly
+ * where `ceilY = surfaceY`, which is exactly where the cave ceiling now
+ * stops too, at the same height.
+ *
+ * `mouthOpening` is null for the SDF variant, which keeps the closed sheet it
+ * has today so the comparison shows what each representation contributes.
  *
  * @domain world-terrain
  */
-function buildSurfaceMesh(breaksSurface: ((x: number, z: number) => boolean) | null): Mesh {
+function buildSurfaceMesh(mouthOpening: ((x: number, z: number) => number) | null): Mesh {
   const n = Math.round(SURFACE_SIZE / SURFACE_STEP) + 1
   const half = SURFACE_SIZE / 2
-  const positions = new Float32Array(n * n * 3)
-  const open = new Uint8Array(n * n)
+  const nodeX = (ix: number): number => -half + ix * SURFACE_STEP
+  const nodeZ = (iz: number): number => -half + iz * SURFACE_STEP
+  const height = new Float32Array(n * n)
+  const keep = new Float32Array(n * n)
   for (let iz = 0; iz < n; iz++) {
     for (let ix = 0; ix < n; ix++) {
-      const x = -half + ix * SURFACE_STEP
-      const z = -half + iz * SURFACE_STEP
+      const x = nodeX(ix)
+      const z = nodeZ(iz)
       const i = iz * n + ix
-      positions[i * 3] = x
-      positions[i * 3 + 1] = walkSurfaceAt(x, z)
-      positions[i * 3 + 2] = z
-      open[i] = breaksSurface && breaksSurface(x, z) ? 1 : 0
+      height[i] = walkSurfaceAt(x, z)
+      keep[i] = mouthOpening ? -mouthOpening(x, z) : 1
     }
   }
+
+  const positions: number[] = []
   const indices: number[] = []
+  const nodeVertex = new Int32Array(n * n).fill(-1)
+  const edgeVertex = new Int32Array(n * n * 2).fill(-1)
+
+  const pushVertex = (x: number, y: number, z: number): number => {
+    const v = positions.length / 3
+    positions.push(x, y, z)
+    return v
+  }
+  const nodeVertexAt = (ix: number, iz: number): number => {
+    const i = iz * n + ix
+    let v = nodeVertex[i]!
+    if (v < 0) {
+      v = pushVertex(nodeX(ix), height[i]!, nodeZ(iz))
+      nodeVertex[i] = v
+    }
+    return v
+  }
+  const edgeVertexAt = (ixA: number, izA: number, ixB: number, izB: number, t: number): number => {
+    const along = ixB > ixA || izB > izA
+    const loIx = along ? ixA : ixB
+    const loIz = along ? izA : izB
+    const key = ((loIz * n + loIx) * 2) + (ixA === ixB ? 1 : 0)
+    let v = edgeVertex[key]!
+    if (v >= 0) return v
+    const ia = izA * n + ixA
+    const ib = izB * n + ixB
+    v = pushVertex(
+      nodeX(ixA) + (nodeX(ixB) - nodeX(ixA)) * t,
+      height[ia]! + (height[ib]! - height[ia]!) * t,
+      nodeZ(izA) + (nodeZ(izB) - nodeZ(izA)) * t,
+    )
+    edgeVertex[key] = v
+    return v
+  }
+
+  const ring: number[] = []
   for (let iz = 0; iz + 1 < n; iz++) {
     for (let ix = 0; ix + 1 < n; ix++) {
-      const a = iz * n + ix
-      const b = iz * n + ix + 1
-      const c = (iz + 1) * n + ix + 1
-      const d = (iz + 1) * n + ix
-      if (open[a] || open[b] || open[c] || open[d]) continue
-      indices.push(a, d, b, b, d, c)
+      marchCellRing((cx, cz) => keep[cz * n + cx]!, ix, iz, nodeVertexAt, edgeVertexAt, ring)
+      // Terrain faces up: same winding the cave floor uses (verified there).
+      for (let k = 1; k + 1 < ring.length; k++) indices.push(ring[0]!, ring[k]!, ring[k + 1]!)
     }
   }
+
   const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(positions, 3))
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
   geometry.computeBoundingBox()
@@ -194,20 +255,51 @@ function buildSurfaceMesh(breaksSurface: ((x: number, z: number) => boolean) | n
 }
 
 /**
- * Existing production rock framing (`createLargeCaveVisual`, already used by
- * `createCaves()`), reused presentation-only to mask the half-metre stair the
- * terrain cutout leaves around the aperture. It never stands in for
- * traversal or collision — `&rocks=0` hides it so the mouth can be checked
- * without it.
+ * Rock framing for the mouth — **presentation only**.
+ *
+ * Reuses the existing `createLargeRock` prop and places it from the
+ * heightfield's own opening contour: for a few steps along the opening axis
+ * it marches outward until `mouthOpening` turns negative (the terrain edge)
+ * and drops a rock just beyond it. So the rocks sit on the terrain side of
+ * the cut by construction and the corridor stays clear — the previous
+ * `createLargeCaveVisual` layout is the V1 rock-lined-trench arrangement and
+ * put an arc of rocks straight across the approach, and on the *un-carved*
+ * base height, so it floated over the pit.
+ *
+ * These rocks carry no collision (the walk world only reads the heightfield),
+ * so they can never be an invisible blocker; `[4]` / `&rocks=0` removes them
+ * and the entrance must still read and traverse correctly without them.
  *
  * @domain world-terrain
  */
-function buildMouthRocks(fixture: CaveHeightfieldFixtureId): Group {
-  const entrance = buildCaveHeightfieldFixture(fixture).entrance
-  const site = { x: entrance.x, z: entrance.z, yaw: entrance.yaw, length: 3, variant: 0.37 }
-  const group = createLargeCaveVisual(site)
-  placeLargeCaveVisual(group, site, caveHeightfieldBaseSurfaceAt)
+function buildMouthRocks(field: CaveHeightfield, mouthOpening: (x: number, z: number) => number): Group {
+  const group = new Group()
   group.name = 'cave-heightfield-mouth-rocks'
+  const out = openingDirection(field.entrance.yaw)
+  // Lateral axis, perpendicular to the opening direction in XZ.
+  const sideX = -out.dz
+  const sideZ = out.dx
+  let variant = 0.17
+  for (let step = -2; step <= 3; step++) {
+    const along = step * 0.9
+    const ax = field.entrance.x + out.dx * along
+    const az = field.entrance.z + out.dz * along
+    for (const sign of [-1, 1]) {
+      let rim = 0
+      for (let d = 0.2; d <= 4; d += 0.1) {
+        if (mouthOpening(ax + sideX * sign * d, az + sideZ * sign * d) < 0) { rim = d; break }
+      }
+      if (rim <= 0) continue
+      variant = (variant + 0.37) % 1
+      const scale = 0.7 + variant * 0.5
+      const rock = createLargeRock(scale, variant)
+      const rx = ax + sideX * sign * (rim + 0.35)
+      const rz = az + sideZ * sign * (rim + 0.35)
+      rock.position.set(rx, walkSurfaceAt(rx, rz) - 0.25, rz)
+      rock.rotation.y = variant * Math.PI * 2
+      group.add(rock)
+    }
+  }
   return group
 }
 
@@ -230,6 +322,25 @@ function measureWalkableWidth(field: CaveHeightfield, x0: number, z: number): nu
     width += d
   }
   return width
+}
+
+/** Widest cave span across the main chamber node — the readout for "does the
+ *  chamber read as a room?". */
+function measureChamberSpan(
+  field: CaveHeightfield,
+  topology: ReturnType<typeof buildCaveHeightfieldFixture>,
+): number {
+  const chamber = topology.nodes.find((n) => n.kind === 'chamber')
+  if (!chamber) return 0
+  let min = Infinity
+  let max = -Infinity
+  const reach = chamber.targetWidth + 4
+  for (let d = -reach; d <= reach; d += 0.1) {
+    if (sampleHeightfieldAt(field, chamber.position.x + d, chamber.position.z).gap <= 0) continue
+    min = Math.min(min, d)
+    max = Math.max(max, d)
+  }
+  return max >= min ? max - min : 0
 }
 
 function measureFieldQuality(
@@ -263,6 +374,7 @@ function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVarian
   const topology = buildCaveHeightfieldFixture(fixture)
   const built = buildCaveHeightfield(topology, walkSurfaceAt, DEFAULT_HEIGHTFIELD_CONFIG)
   const field = built.heightfield
+  const mouthOpening = (x: number, z: number): number => mouthOpeningAt(field, walkSurfaceAt, x, z)
   const { mesh, buffers } = createHeightfieldCaveMesh(field)
   const totalMs = built.representationMs + buffers.meshBuildMs
   const quality = measureFieldQuality(field, topology)
@@ -271,10 +383,8 @@ function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVarian
   return {
     caveMesh: mesh,
     field,
-    surfaceMesh: buildSurfaceMesh((x, z) => {
-      const sample = sampleHeightfieldAt(field, x, z)
-      return sample.gap > 0 && sample.openSky
-    }),
+    mouthOpening,
+    surfaceMesh: buildSurfaceMesh(mouthOpening),
     rocks: null,
     world: createHeightfieldWalkWorld(field, baseSurfaceAt, walkSurfaceAt),
     metrics: {
@@ -291,6 +401,8 @@ function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVarian
       gridDepth: field.nz,
       caveNodeCount: built.caveNodeCount,
       rimVertexCount: buffers.rimVertexCount,
+      skyVertexCount: buffers.skyVertexCount,
+      chamberSpan: measureChamberSpan(field, topology),
       fieldBytes: field.floorY.byteLength + field.ceilY.byteLength
         + field.surfaceY.byteLength + field.coreT.byteLength,
       walkableWidth: measureWalkableWidth(field, passageX, passageZ),
@@ -323,6 +435,7 @@ function buildSdfVariant(fixture: CaveHeightfieldFixtureId): BuiltVariant {
   return {
     caveMesh,
     field: null,
+    mouthOpening: null,
     surfaceMesh: buildSurfaceMesh(null),
     rocks: null,
     world: createSdfWalkWorld(index, colliders, walkSurfaceAt),
@@ -352,6 +465,8 @@ function reportMetrics(metrics: CaveHeightfieldSpikeMetrics): void {
     gridNodes: metrics.gridWidth != null ? `${metrics.gridWidth}×${metrics.gridDepth}` : 'n/a',
     caveNodeCount: metrics.caveNodeCount ?? 'n/a',
     rimVertexCount: metrics.rimVertexCount ?? 'n/a',
+    skyVertexCount: metrics.skyVertexCount ?? 'n/a',
+    chamberSpan: metrics.chamberSpan != null ? Number(metrics.chamberSpan.toFixed(1)) : 'n/a',
     fieldBytes: metrics.fieldBytes ?? 'n/a',
     walkableWidth: metrics.walkableWidth != null ? Number(metrics.walkableWidth.toFixed(2)) : 'n/a',
     minCoreGap: metrics.minCoreGap != null ? Number(metrics.minCoreGap.toFixed(2)) : 'n/a',
@@ -386,7 +501,8 @@ function renderOverlay(
 ): void {
   const extra = variant === 'heightfield'
     ? `<div>grid ${metrics.gridWidth}×${metrics.gridDepth} nodes @ ${metrics.cellSize} m · field ${metrics.fieldBytes} B</div>
-       <div>cave nodes ${metrics.caveNodeCount} · rim verts ${metrics.rimVertexCount}</div>
+       <div>cave nodes ${metrics.caveNodeCount} · rim ${metrics.rimVertexCount} · sky ${metrics.skyVertexCount}</div>
+       <div>chamber span ${metrics.chamberSpan?.toFixed(1)} m</div>
        <div>walkable ${metrics.walkableWidth?.toFixed(2)} m · min core gap ${metrics.minCoreGap?.toFixed(2)} m ·
          max floor ${metrics.maxFloorSlopeDeg?.toFixed(1)}°</div>`
     : '<div>SDF baseline (production field + Surface Nets, terrain sheet closed)</div>'
@@ -469,7 +585,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
 
   let showRocks = urlParamValue('rocks') !== '0'
   let built = variant === 'sdf' ? buildSdfVariant(fixture) : buildHeightfieldVariant(fixture)
-  built.rocks = showRocks ? buildMouthRocks(fixture) : null
+  built.rocks = showRocks ? makeRocks(built) : null
   scene.add(built.caveMesh)
   scene.add(built.surfaceMesh)
   if (built.rocks) scene.add(built.rocks)
@@ -514,7 +630,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
   const rebuild = (): void => {
     disposeBuilt()
     built = variant === 'sdf' ? buildSdfVariant(fixture) : buildHeightfieldVariant(fixture)
-    built.rocks = showRocks ? buildMouthRocks(fixture) : null
+    built.rocks = showRocks ? makeRocks(built) : null
     built.world.resetGround()
     scene.add(built.caveMesh)
     scene.add(built.surfaceMesh)
@@ -552,8 +668,8 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
     } else if (event.code === 'Digit4') {
       showRocks = !showRocks
       if (showRocks) {
-        built.rocks = buildMouthRocks(fixture)
-        scene.add(built.rocks)
+        built.rocks = makeRocks(built)
+        if (built.rocks) scene.add(built.rocks)
       } else {
         disposeRocks()
       }

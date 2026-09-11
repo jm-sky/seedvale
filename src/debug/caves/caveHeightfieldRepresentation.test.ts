@@ -17,10 +17,12 @@ import {
   DEFAULT_HEIGHTFIELD_CONFIG,
   heightfieldNodeGap,
   heightfieldNodeOpenSky,
+  mouthOpeningAt,
   NC,
   NF,
   R_MIN,
   sampleHeightfieldAt,
+  SMOOTH_K,
   U_CORE,
 } from './caveHeightfieldRepresentation'
 
@@ -229,6 +231,29 @@ describe('cave heightfield field build (plan world-terrain-018)', () => {
   })
 })
 
+describe('cave heightfield union (no fold bias)', () => {
+  it('a node keeps roughly its declared clearance — the union does not inflate the cave', () => {
+    // Regression: the union was a running `smin`/`smax` over one influence per
+    // centerline *station*. `smin(a, a, k) = a - k/4`, so ~18 overlapping
+    // capsules per segment silently deepened the floor and raised the ceiling
+    // (a mouth declaring 2.6 m measured 3.55 m). One influence per run plus
+    // blending only the two dominant operands bounds the bias at k/4 once.
+    const noiseHeadroom = DEFAULT_HEIGHTFIELD_CONFIG.floorDetail.amplitude
+      + DEFAULT_HEIGHTFIELD_CONFIG.ceilingDetail.amplitude
+    const budget = SMOOTH_K / 2 + noiseHeadroom + 0.2
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const topology = buildCaveHeightfieldFixture(id)
+      const field = build(id)
+      for (const node of topology.nodes) {
+        if (node.kind === 'entrance') continue
+        const s = sampleHeightfieldAt(field, node.position.x, node.position.z)
+        expect(s.gap).toBeGreaterThan(0)
+        expect(s.gap - node.targetHeight).toBeLessThan(budget)
+      }
+    }
+  })
+})
+
 describe('cave heightfield chamber and features', () => {
   it('widens into the chamber without a discrete transition', () => {
     const field = build('basic')
@@ -240,6 +265,21 @@ describe('cave heightfield chamber and features', () => {
     for (let i = 1; i < widths.length; i++) {
       expect(widths[i]! - widths[i - 1]!).toBeLessThan(2.2)
     }
+  })
+
+  it('the main chamber reads as a room: far wider and taller than the passage', () => {
+    const topology = buildCaveHeightfieldFixture('basic')
+    const field = build('basic')
+    const passage = topology.nodes.find((n) => n.id === 'passage')!
+    const chamber = topology.nodes.find((n) => n.kind === 'chamber')!
+    const passageSpan = caveWidthAt(field, passage.position.z)
+    const chamberSpan = caveWidthAt(field, chamber.position.z)
+    const passageGap = sampleHeightfieldAt(field, passage.position.x, passage.position.z).gap
+    const chamberGap = sampleHeightfieldAt(field, chamber.position.x, chamber.position.z).gap
+    expect(chamberSpan).toBeGreaterThan(passageSpan * 2.5)
+    expect(chamberSpan).toBeGreaterThan(11)
+    expect(chamberGap).toBeGreaterThan(passageGap * 2)
+    expect(chamberGap).toBeGreaterThan(5)
   })
 
   it('the chamber is irregular — overlapping lobes, not a disc', () => {
@@ -333,6 +373,37 @@ describe('cave heightfield mouth', () => {
         expect(s.ceilY).toBeLessThan(s.surfaceY - SURFACE_CLIP_EPS)
       }
     }
+  })
+
+  it('the terrain opening never exposes a column with no cave under it', () => {
+    // The previous rule dropped a whole terrain quad if *any* corner was open,
+    // cutting past the cave footprint entirely and leaving real holes.
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      for (let z = 7; z >= -9; z -= 0.1) {
+        for (let x = -8; x <= 8; x += 0.1) {
+          if (mouthOpeningAt(field, walk, x, z) <= 0) continue
+          expect(sampleHeightfieldAt(field, x, z).gap).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('cave ceiling and terrain meet at the same height on the opening contour', () => {
+    // Both meshes clip to this contour, so agreeing here is what closes the
+    // seam. They can only differ by SURFACE_CLIP_EPS plus interpolation.
+    const field = build('basic')
+    let checked = 0
+    for (let z = 5; z >= -6; z -= 0.05) {
+      for (let x = -6; x <= 6; x += 0.05) {
+        const s = sampleHeightfieldAt(field, x, z)
+        const sky = s.ceilY - (walk(x, z) - SURFACE_CLIP_EPS)
+        if (sky > s.gap || Math.abs(sky) > 0.01) continue
+        checked++
+        expect(Math.abs(s.ceilY - walk(x, z))).toBeLessThan(0.15)
+      }
+    }
+    expect(checked).toBeGreaterThan(20)
   })
 
   it('cave floor meets the walk surface at the mouth', () => {

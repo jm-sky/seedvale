@@ -105,7 +105,13 @@ export type CaveHeightfieldConfig = {
 }
 
 export const DEFAULT_HEIGHTFIELD_CONFIG: CaveHeightfieldConfig = {
-  cellSize: 0.4,
+  /** 0.3 m, not the spike's original 0.4 m. The rim band that carries the
+   *  whole floor -> wall -> ceiling transition is only 0.35-0.9 m wide, so at
+   *  0.4 m it was resolved by ~2 cells; 0.3 m gives ~3. It also halves how far
+   *  the field's cached `surfaceY` drifts from the real terrain over the steep
+   *  pit wall at the mouth (measured 0.40 m -> 0.19 m), which is the residual
+   *  seam there. Cost is ~1.8x the grid and still well under the SDF path. */
+  cellSize: 0.3,
   centerlineSpacing: 0.5,
   floorDetail: { cellSize: 1.4, amplitude: 0.12 },
   ceilingDetail: { cellSize: 2.1, amplitude: 0.3 },
@@ -219,11 +225,14 @@ export function rimBand(height: number): number {
 
 // ── Influences ──────────────────────────────────────────────────────────────
 
-/** A capsule between two consecutive centerline stations. */
+/** One whole centerline run. Deliberately **not** one influence per station
+ *  pair: the union is a soft min/max, and `smin(a, a, k) = a - k/4`, so
+ *  folding ~18 overlapping capsules per segment silently inflated the cave
+ *  (measured `gap = 3.55 m` at a mouth whose topology declares 2.6 m). A
+ *  segment is one continuous tube and contributes one cross-section. */
 type SegmentInfluence = {
-  kind: 'capsule'
-  a: HeightfieldStation
-  b: HeightfieldStation
+  kind: 'run'
+  stations: readonly HeightfieldStation[]
   minX: number
   maxX: number
   minZ: number
@@ -314,18 +323,20 @@ export function resampleSegmentStations(
   return out
 }
 
-function capsuleInfluence(a: HeightfieldStation, b: HeightfieldStation): SegmentInfluence {
-  const reach = Math.max(a.coreRadius + rimBand(a.height), b.coreRadius + rimBand(b.height))
-    + OUTSIDE_REACH
-  return {
-    kind: 'capsule',
-    a,
-    b,
-    minX: Math.min(a.x, b.x) - reach,
-    maxX: Math.max(a.x, b.x) + reach,
-    minZ: Math.min(a.z, b.z) - reach,
-    maxZ: Math.max(a.z, b.z) + reach,
+function runInfluence(stations: readonly HeightfieldStation[]): SegmentInfluence | null {
+  if (stations.length === 0) return null
+  let minX = Infinity
+  let maxX = -Infinity
+  let minZ = Infinity
+  let maxZ = -Infinity
+  for (const st of stations) {
+    const reach = st.coreRadius + rimBand(st.height) + OUTSIDE_REACH
+    minX = Math.min(minX, st.x - reach)
+    maxX = Math.max(maxX, st.x + reach)
+    minZ = Math.min(minZ, st.z - reach)
+    maxZ = Math.max(maxZ, st.z + reach)
   }
+  return { kind: 'run', stations, minX, maxX, minZ, maxZ }
 }
 
 /**
@@ -367,7 +378,7 @@ export function buildEntranceInfluence(
     coreRadius: radius,
     height: liftedHeight(inner.x, inner.z),
   }
-  return capsuleInfluence(a, b)
+  return runInfluence([a, b])!
 }
 
 /**
@@ -395,10 +406,15 @@ export function buildChamberLobes(topology: CaveTopology): LobeInfluence[] {
       const az = (0.5 + rng() * 0.3) * rc
       const phi = rng() * Math.PI
       const dy = (rng() - 0.5) * 0.8
-      const hf = 0.8 + rng() * 0.35
+      const hf = 0.82 + rng() * 0.18
       const cx = node.position.x + Math.cos(theta) * off
       const cz = node.position.z + Math.sin(theta) * off
-      const height = node.targetHeight * hf
+      // A lobe may sit lower or be shorter than the node, never taller: the
+      // fixture/topology layer sized the overburden clamp
+      // (`anchoredFloorY` -> `minSurfaceOverFootprint`) against exactly
+      // `targetHeight`, so a lobe reaching above it would eat rock that was
+      // never budgeted and could break through thin overburden.
+      const height = (node.targetHeight - Math.max(0, dy)) * hf
       const reach = Math.max(ax, az) + rimBand(height) + OUTSIDE_REACH
       lobes.push({
         kind: 'lobe',
@@ -491,13 +507,35 @@ function influenceCrossSection(
   macroOffset: number,
 ): CrossSection | null {
   if (x < inf.minX || x > inf.maxX || z < inf.minZ || z > inf.maxZ) return null
-  if (inf.kind === 'capsule') {
-    const { dist, t } = distPointToSegmentXZ(x, z, inf.a.x, inf.a.z, inf.b.x, inf.b.z)
-    const coreRadius = inf.a.coreRadius + (inf.b.coreRadius - inf.a.coreRadius) * t
-    const axisY = inf.a.y + (inf.b.y - inf.a.y) * t
-    const height = inf.a.height + (inf.b.height - inf.a.height) * t
+  if (inf.kind === 'run') {
+    const st = inf.stations
+    if (st.length === 1) {
+      const only = st[0]!
+      const radius = Math.max(R_MIN, Math.max(0.7 * only.coreRadius, only.coreRadius + macroOffset))
+      return crossSectionAt(Math.hypot(x - only.x, z - only.z), radius, only.y, only.height)
+    }
+    // Nearest point over the whole polyline, then interpolate the profile
+    // there — one continuous influence, no per-span union.
+    let bestDist = Infinity
+    let bestI = 0
+    let bestT = 0
+    for (let i = 0; i + 1 < st.length; i++) {
+      const a = st[i]!
+      const b = st[i + 1]!
+      const hit = distPointToSegmentXZ(x, z, a.x, a.z, b.x, b.z)
+      if (hit.dist < bestDist) {
+        bestDist = hit.dist
+        bestI = i
+        bestT = hit.t
+      }
+    }
+    const a = st[bestI]!
+    const b = st[bestI + 1]!
+    const coreRadius = a.coreRadius + (b.coreRadius - a.coreRadius) * bestT
+    const axisY = a.y + (b.y - a.y) * bestT
+    const height = a.height + (b.height - a.height) * bestT
     const radius = Math.max(R_MIN, Math.max(0.7 * coreRadius, coreRadius + macroOffset))
-    return crossSectionAt(dist, radius, axisY, height)
+    return crossSectionAt(bestDist, radius, axisY, height)
   }
   const px = x - inf.cx
   const pz = z - inf.cz
@@ -621,10 +659,8 @@ export function buildCaveHeightfield(
 
   const influences: Influence[] = [buildEntranceInfluence(topology.entrance, walkSurfaceAt)]
   for (const seg of topology.segments) {
-    const stations = resampleSegmentStations(topology, seg, config.centerlineSpacing)
-    for (let i = 0; i < stations.length - 1; i++) {
-      influences.push(capsuleInfluence(stations[i]!, stations[i + 1]!))
-    }
+    const run = runInfluence(resampleSegmentStations(topology, seg, config.centerlineSpacing))
+    if (run) influences.push(run)
   }
   for (const lobe of buildChamberLobes(topology)) influences.push(lobe)
   const features = featureFootprints(topology.features)
@@ -653,19 +689,28 @@ export function buildCaveHeightfield(
       const mouthTaper = smoothstep01(-1.5, -0.2, -mouthAlong(x, z, topology.entrance))
       const macroOffset = macroNoise(x, z) * config.macro.amplitude * mouthTaper
 
-      let f = Infinity
-      let c = -Infinity
+      // Union: keep the two dominant operands and blend only those. A running
+      // fold would bias by up to k/4 per step (`smin(a, a, k) = a - k/4`), so
+      // N overlapping influences in a chamber would quietly deepen the floor
+      // and raise the ceiling by N*k/4. This rounds the one junction that
+      // matters and is bias-bounded at k/4 regardless of N.
+      let f1 = Infinity
+      let f2 = Infinity
+      let c1 = -Infinity
+      let c2 = -Infinity
       let tMin = 1
       let qMin = 1
       for (const inf of influences) {
         const cs = influenceCrossSection(inf, x, z, macroOffset)
         if (!cs) continue
-        f = f === Infinity ? cs.f : smin(f, cs.f, SMOOTH_K)
-        c = c === -Infinity ? cs.c : smax(c, cs.c, SMOOTH_K)
+        if (cs.f < f1) { f2 = f1; f1 = cs.f } else if (cs.f < f2) { f2 = cs.f }
+        if (cs.c > c1) { c2 = c1; c1 = cs.c } else if (cs.c > c2) { c2 = cs.c }
         if (cs.t < tMin) tMin = cs.t
         if (cs.q < qMin) qMin = cs.q
       }
-      if (f === Infinity) {
+      let f = f2 === Infinity ? f1 : smin(f1, f2, SMOOTH_K)
+      let c = c2 === -Infinity ? c1 : smax(c1, c2, SMOOTH_K)
+      if (f1 === Infinity) {
         // No influence reaches this node: deep rock, recorded as a closed
         // column rather than as a separate mask. `FAR_GAP` continues the
         // diverging extension, so `gap` keeps decreasing outward and the
@@ -810,6 +855,32 @@ export function sampleHeightfieldAt(field: CaveHeightfield, x: number, z: number
     openSky: out <= 0 && ceilY >= surf - SURFACE_CLIP_EPS,
     outsideGrid: out > 0,
   }
+}
+
+/**
+ * Positive exactly where cave void breaks the walk surface — the mouth /
+ * portal opening.
+ *
+ * ```text
+ * mouthOpening = min(gap, ceilY - (surfaceY - SURFACE_CLIP_EPS))
+ * ```
+ *
+ * One function so the terrain cutout, the cave-ceiling clip and the rock
+ * framing all stop on the *same* contour. `walkSurfaceAt` is passed rather
+ * than read from the field's cached `surfaceY` because that cache is exact
+ * only at nodes; over the steep pit wall its bilinear interpolation is what
+ * was left of the mouth seam.
+ *
+ * @domain world-terrain
+ */
+export function mouthOpeningAt(
+  field: CaveHeightfield,
+  walkSurfaceAt: SurfaceSampler,
+  x: number,
+  z: number,
+): number {
+  const sample = sampleHeightfieldAt(field, x, z)
+  return Math.min(sample.gap, sample.ceilY - (walkSurfaceAt(x, z) - SURFACE_CLIP_EPS))
 }
 
 /** Gradient of `gap` in XZ — the push-out direction for lateral containment. */

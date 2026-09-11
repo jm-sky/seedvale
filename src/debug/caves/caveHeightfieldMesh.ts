@@ -19,10 +19,10 @@ import {
   Mesh,
   MeshStandardMaterial,
 } from 'three'
+import { SURFACE_CLIP_EPS } from '../../world/caves/caveSdfQuery'
 import {
   type CaveHeightfield,
   heightfieldNodeGap,
-  heightfieldNodeOpenSky,
 } from './caveHeightfieldRepresentation'
 
 export type HeightfieldMeshBuffers = {
@@ -34,6 +34,8 @@ export type HeightfieldMeshBuffers = {
   geometryBytes: number
   /** Vertices on the `gap = 0` contour, shared by floor and ceiling. */
   rimVertexCount: number
+  /** Vertices on the open-sky contour, where the ceiling meets the terrain. */
+  skyVertexCount: number
   /** Cells that produced at least one floor triangle. */
   caveCellCount: number
   meshBuildMs: number
@@ -51,12 +53,54 @@ function now(): number {
 /** Ring order of a cell's four corners, CCW seen from above. Verified
  *  against `computeVertexNormals()`'s `(C - B) x (A - B)`: a fan from the
  *  first entry yields +Y. */
-const RING: readonly (readonly [number, number])[] = [
+export const CELL_RING: readonly (readonly [number, number])[] = [
   [0, 0],
   [0, 1],
   [1, 1],
   [1, 0],
 ]
+
+/**
+ * Marching squares over one cell: walks `CELL_RING` and returns the polygon
+ * of the `value > 0` region as vertex indices, emitting an inside corner
+ * through `nodeVertex` and a `value = 0` crossing through `edgeVertex`.
+ *
+ * Shared by the cave mesher and the harness terrain mesher so both stop on
+ * the *same* contour with the *same* linear interpolation. Dropping whole
+ * cells instead over-cut the terrain by up to a full cell past the contour,
+ * which is what opened real holes around the mouth.
+ *
+ * Saddle cells (two inside corners on a diagonal) come back as one merged
+ * polygon rather than two islands — a sub-cell artefact, not a hole.
+ *
+ * @domain world-terrain
+ */
+export function marchCellRing(
+  valueAt: (ix: number, iz: number) => number,
+  ix: number,
+  iz: number,
+  nodeVertex: (ix: number, iz: number) => number,
+  edgeVertex: (ixA: number, izA: number, ixB: number, izB: number, t: number) => number,
+  out: number[],
+): void {
+  out.length = 0
+  for (let k = 0; k < CELL_RING.length; k++) {
+    const [dxA, dzA] = CELL_RING[k]!
+    const [dxB, dzB] = CELL_RING[(k + 1) % CELL_RING.length]!
+    const ixA = ix + dxA
+    const izA = iz + dzA
+    const ixB = ix + dxB
+    const izB = iz + dzB
+    const va = valueAt(ixA, izA)
+    const vb = valueAt(ixB, izB)
+    if (va > 0) out.push(nodeVertex(ixA, izA))
+    if ((va > 0) !== (vb > 0)) {
+      const denom = va - vb
+      const t = Math.abs(denom) < 1e-9 ? 0.5 : Math.max(0, Math.min(1, va / denom))
+      out.push(edgeVertex(ixA, izA, ixB, izB, t))
+    }
+  }
+}
 
 type Builder = {
   positions: number[]
@@ -111,7 +155,15 @@ export function buildHeightfieldMeshBuffers(field: CaveHeightfield): Heightfield
   let rimVertexCount = 0
   let caveCellCount = 0
 
+  const skyVertex = new Int32Array(nodeCount * 2).fill(-1)
+  let skyVertexCount = 0
+
   const gapAt = (i: number): number => heightfieldNodeGap(field, i)
+  /** Metres of rock between the cave ceiling and the walk surface. Negative
+   *  where the void breaks through — the open-sky / portal region. */
+  const surfGapAt = (i: number): number => field.surfaceY[i]! - SURFACE_CLIP_EPS - ceilY[i]!
+  /** Where a ceiling should exist at all: inside the cave *and* under rock. */
+  const ceilExtentAt = (i: number): number => Math.min(gapAt(i), surfGapAt(i))
 
   const floorVertexAt = (ix: number, iz: number): number => {
     const i = iz * nx + ix
@@ -167,48 +219,79 @@ export function buildHeightfieldMeshBuffers(field: CaveHeightfield): Heightfield
     return v
   }
 
+  /** Sky-rim vertex on the open-sky contour `ceilY = surfaceY - eps`. A
+   *  separate cache from `rimVertexAt` because this contour is not the
+   *  floor/ceiling weld — only the ceiling ends here, and it ends at the
+   *  terrain's own height, which is where the terrain mesh stops too. */
+  const skyVertexAt = (ixA: number, izA: number, ixB: number, izB: number, t: number): number => {
+    const along = ixB > ixA || izB > izA
+    const loIx = along ? ixA : ixB
+    const loIz = along ? izA : izB
+    const slot = ixA === ixB ? 1 : 0
+    const key = (loIz * nx + loIx) * 2 + slot
+    let v = skyVertex[key]!
+    if (v >= 0) return v
+    const ia = izA * nx + ixA
+    const ib = izB * nx + ixB
+    const ax = originX + ixA * cellSize
+    const az = originZ + izA * cellSize
+    const bx = originX + ixB * cellSize
+    const bz = originZ + izB * cellSize
+    v = pushVertex(
+      b,
+      ax + (bx - ax) * t,
+      ceilY[ia]! + (ceilY[ib]! - ceilY[ia]!) * t,
+      az + (bz - az) * t,
+      CEILING_COLOR,
+    )
+    skyVertex[key] = v
+    skyVertexCount++
+    return v
+  }
+
+  const ring: number[] = []
   for (let iz = 0; iz + 1 < nz; iz++) {
     for (let ix = 0; ix + 1 < nx; ix++) {
       let insideCount = 0
-      for (const [dx, dz] of RING) {
+      for (const [dx, dz] of CELL_RING) {
         if (gapAt((iz + dz) * nx + (ix + dx)) > 0) insideCount++
       }
       if (insideCount === 0) continue
       caveCellCount++
 
-      // Walk the CCW ring, emitting each inside corner and a rim vertex
-      // wherever the ring crosses `gap = 0`.
-      const floorRing: number[] = []
-      const ceilRing: number[] = []
-      let allOpenSky = true
-      for (let k = 0; k < RING.length; k++) {
-        const [dxA, dzA] = RING[k]!
-        const [dxB, dzB] = RING[(k + 1) % RING.length]!
-        const ixA = ix + dxA
-        const izA = iz + dzA
-        const ixB = ix + dxB
-        const izB = iz + dzB
-        const insideA = gapAt(izA * nx + ixA) > 0
-        const insideB = gapAt(izB * nx + ixB) > 0
-        if (insideA) {
-          floorRing.push(floorVertexAt(ixA, izA))
-          ceilRing.push(ceilVertexAt(ixA, izA))
-          if (!heightfieldNodeOpenSky(field, izA * nx + ixA)) allOpenSky = false
-        }
-        if (insideA !== insideB) {
-          const rim = rimVertexAt(ixA, izA, ixB, izB)
-          floorRing.push(rim)
-          ceilRing.push(rim)
-        }
-      }
-      if (floorRing.length < 3) continue
-      emitFan(b, floorRing, false)
-      // The mouth is an opening, not a roofed passage: drop the ceiling only
-      // where every inside corner of the cell already breaks the surface, so
-      // the portal and the terrain cutout stop on the same contour.
-      if (!allOpenSky) {
-        ceilRing.reverse()
-        emitFan(b, ceilRing, false)
+      // Floor: the whole `gap > 0` region, ending on the floor/ceiling weld.
+      marchCellRing(
+        (cx, cz) => gapAt(cz * nx + cx),
+        ix,
+        iz,
+        floorVertexAt,
+        (axi, azi, bxi, bzi) => rimVertexAt(axi, azi, bxi, bzi),
+        ring,
+      )
+      if (ring.length >= 3) emitFan(b, ring, false)
+
+      // Ceiling: the `gap > 0` region minus the part that breaks the walk
+      // surface, so the portal is a real opening and the ceiling stops on
+      // exactly the contour the terrain mesh stops on.
+      marchCellRing(
+        (cx, cz) => ceilExtentAt(cz * nx + cx),
+        ix,
+        iz,
+        ceilVertexAt,
+        (axi, azi, bxi, bzi, t) => (
+          // Which term closed the ceiling here? On the `gap` term the vertex
+          // is the shared floor/ceiling weld; on the surface term it is the
+          // open-sky rim.
+          gapAt(azi * nx + axi) <= surfGapAt(azi * nx + axi)
+          && gapAt(bzi * nx + bxi) <= surfGapAt(bzi * nx + bxi)
+            ? rimVertexAt(axi, azi, bxi, bzi)
+            : skyVertexAt(axi, azi, bxi, bzi, t)
+        ),
+        ring,
+      )
+      if (ring.length >= 3) {
+        ring.reverse()
+        emitFan(b, ring, false)
       }
     }
   }
@@ -225,6 +308,7 @@ export function buildHeightfieldMeshBuffers(field: CaveHeightfield): Heightfield
     triangles: indices.length / 3,
     geometryBytes: positions.byteLength + indices.byteLength + colors.byteLength,
     rimVertexCount,
+    skyVertexCount,
     caveCellCount,
     meshBuildMs: now() - t0,
   }

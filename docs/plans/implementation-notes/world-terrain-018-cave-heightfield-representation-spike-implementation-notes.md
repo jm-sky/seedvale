@@ -471,7 +471,6 @@ overburden, and strict occupancy only inside real void.
 (413 files / 4611 tests) all pass. **Browser verification is still the
 Player's** — the spike is not complete on automated checks alone.
 
-> **Zrób git commit i push do main, rebase jeżeli trzeba**
 
 ---
 
@@ -611,5 +610,169 @@ Everything visual. Automated checks passed (`npx tsc --noEmit`,
 `pnpm run lint`, `pnpm run build`, `pnpm run test` — 422 files / 4801 tests),
 but geometry quality, the mouth reading as a real opening, traversal feel and
 camera behaviour are the Player's call. See design doc §15 for the checklist.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+---
+
+## Iteration 3 — geometry/config + chamber + entrance refinement (2026-09-11)
+
+Player manual verification of iteration 2 passed: the representation works and
+is clearly cheaper than SDF. This pass fixes what that verification surfaced —
+a main chamber that read too small, and holes/seams where cave meets terrain —
+plus one representation bug found while diagnosing them. Architecture is
+unchanged: `CaveTopology → 2D influences → floorY/ceilY → welded mesh +
+queries`, no binary footprint, no wall mesh.
+
+### The union was inflating the whole cave (root cause found here)
+
+`smin(a, a, k) = a - k/4`, and the union was a *running* fold over one
+influence per centerline **station** — ~18 overlapping capsules per segment.
+Every overlap pushed the floor down and the ceiling up. Measured: a mouth whose
+topology declares `2.6 m` produced `gap = 3.55 m`, and the whole cave was
+~1 m taller and its floor ~0.5 m lower than authored.
+
+Two changes, both of which the design doc already specified and iteration 2 did
+not implement:
+
+- **One influence per centerline run** (`kind: 'run'`), nearest-point over the
+  whole resampled polyline, profile interpolated at that arc position. This is
+  design doc §5.2 verbatim — "a segment contributes one continuous influence,
+  not one influence per station".
+- **Blend only the two dominant operands.** Track the two lowest floors and the
+  two highest ceilings, then `smin`/`smax` those. Bias is bounded at `k/4`
+  once, regardless of how many influences overlap, and the one junction that
+  matters is still rounded.
+
+Passage now measures `gap = 2.44` against a declared `2.4`. A regression test
+pins node clearance to `targetHeight + SMOOTH_K/2 + noise`.
+
+Related correctness fix: a chamber lobe could be **taller** than its node
+(`hf` up to 1.15), but the fixture layer sizes the overburden clamp
+(`anchoredFloorY` → `minSurfaceOverFootprint`) against exactly `targetHeight`.
+A lobe reaching above it ate rock that was never budgeted. Lobe height is now
+`(targetHeight - max(0, dy)) * hf` with `hf ∈ [0.82, 1.0]`, so a lobe may sit
+lower or shorter, never taller.
+
+### Entrance holes/seams — actual cause
+
+Diagnosed in the geometry before changing anything. The terrain cutout dropped
+a whole quad if **any** of its corners was open. That cut up to a full cell
+past the contour *and past the cave footprint entirely*:
+
+- **224 sampled points where terrain was removed with no cave underneath** —
+  a hole straight through the world. This was the visible defect.
+- **240 points where the exposed surface was the cave ceiling, up to 0.98 m
+  lower.** The ceiling faces −Y under `FrontSide`, so from outside it is a
+  back-face: you looked straight into the cave.
+
+The recon hypothesis (over-cut, stepped contour, rim/edge mismatch) was
+correct, and the quad-granularity rule was the whole of it.
+
+Fix — clip instead of drop, on one shared contour:
+
+```text
+mouthOpeningAt(field, walkSurfaceAt, x, z)
+  = min(gap, ceilY - (surfaceY - SURFACE_CLIP_EPS))       > 0  =>  opening
+```
+
+- `marchCellRing()` (exported from `caveHeightfieldMesh.ts`) is now the single
+  marching-squares cell walk, used by the cave mesher **and** the harness
+  terrain mesher, so both stop on the same contour with the same linear
+  interpolation.
+- The cave **ceiling** is clipped against `min(gap, surfGap)` rather than
+  dropped per whole cell. Where the `gap` term closes it, the vertex is the
+  existing shared floor/ceiling weld; where the surface term closes it, a
+  `skyVertex` sits on the opening contour at the ceiling's own height.
+- The **terrain** is clipped against `-mouthOpening`, using the *exact*
+  `walkSurfaceAt` rather than the field's cached `surfaceY` — that cache is
+  exact at cave nodes but bilinear between them, and over the steep pit wall
+  that interpolation error was the last of the seam.
+
+Measured after: **0 of 5,290 terrain-removed samples have no cave under them**
+(was 224 points of pure hole), and on the opening contour the cave ceiling and
+the exact terrain agree to **0.06 m** — i.e. `SURFACE_CLIP_EPS` plus
+interpolation. Both are pinned by tests.
+
+### Rock framing
+
+`createLargeCaveVisual()` is the V1 rock-lined-trench layout: an arc of nine
+rocks straight across the approach, side rocks running 3 m *into* the tunnel,
+and placement on the **un-carved** base height so the cluster floated over the
+carved pit. Replaced with a small local placement that reuses the same
+`createLargeRock` prop but derives positions from the cave's own opening
+contour — march outward from the opening axis until `mouthOpening` turns
+negative, drop a rock just beyond. Rocks therefore sit on the terrain side of
+the cut by construction and the corridor stays clear.
+
+Rocks carry no collision at all (the walk world reads only the heightfield), so
+they cannot be an invisible blocker; `[4]` / `&rocks=0` removes them and the
+entrance geometry is unchanged.
+
+### Geometry/config
+
+Fixture geometry is now three named blocks (`BASIC`, `BEND`, `BRANCH`) holding
+only **topology** intent — usable width, usable height, station XZ, descent,
+feature offsets. No parallel geometry config and no `passageLength`: extent
+still follows from station positions through the centerline, which is where
+`CaveTopology` already expresses it. Representation parameters (cell size, rim
+profile, noise) stay in `DEFAULT_HEIGHTFIELD_CONFIG` and the cross-section
+constants; the split is stated in a comment at the top of the block.
+
+Main chamber `basic`: **6.4 × 4.1 m → 11 × 5.8 m** declared, measuring a
+**12.9 m span with 6.14 m of headroom** against a 2.6 m passage. `bend` and
+`branch` chambers were enlarged proportionally. This needed no new chamber
+parameter — `buildChamberLobes()` already scales every lobe off `targetWidth`.
+
+### `cellSize` 0.4 → 0.3
+
+Not a benchmark study; two geometric reasons, both measured on the existing
+debug path:
+
+- The rim band that carries the entire floor → wall → ceiling transition is
+  only 0.35–0.9 m wide. At 0.4 m it is ~2 cells; at 0.3 m it is ~3. That band
+  is the representation's signature feature.
+- The field's cached `surfaceY` drifts from the real terrain over the steep pit
+  wall by 0.40 m at 0.4 m cells and 0.19 m at 0.3 m.
+
+Per the "no brute force" guardrail the mouth seam also got its own local fix
+(exact sampler in the contour) rather than being left to resolution alone.
+
+### Measured (node, best of 5, `cellSize = 0.3`)
+
+| fixture | HF rep | HF mesh | HF total | SDF total (rep+mesh+index+colliders) | HF tris | SDF tris |
+|---|---:|---:|---:|---:|---:|---:|
+| basic | 30.1 ms | 4.6 ms | **34.8 ms** | **745.3 ms** | 9,844 | 8,306 |
+| bend | 35.1 ms | 4.6 ms | **39.8 ms** | **743.2 ms** | 9,308 | 8,325 |
+| branch | 39.5 ms | 5.4 ms | **44.9 ms** | **625.7 ms** | 10,904 | 9,175 |
+
+Generation is now ~14–21× cheaper than the SDF path on the *same enlarged*
+topology. Note the SDF baseline rose from ~194 ms to ~745 ms for `basic` while
+the heightfield rose from 11.8 ms to 34.8 ms: SDF cost scales with chamber
+**volume**, heightfield with footprint **area**, so enlarging the chamber
+widened the gap rather than narrowing it.
+
+Runtime cost is roughly 1.75× the triangles of iteration 2 (0.3 m cells plus a
+much larger chamber), now comparable to the SDF mesh rather than below it.
+Persistent field memory 94–120 KB. The entrance fix adds no geometry — it
+*removes* triangles by clipping instead of dropping, adds no draw call, and the
+terrain mesh is still one mesh. Mouth rocks are ~10 small prop meshes, one-time
+and deterministic, and can be switched off.
+
+### Gameplay source of truth — unchanged
+
+`floorY`/`ceilY`/`gap` still answer ground, ceiling, occupancy, containment and
+camera. No collision geometry was added, no presentation-only portal. The
+production ground chain (`pickInterval` → `applyCaveGroundHysteresis` →
+`integrateVerticalMotion` → `applySlopeMovementConstraint` → `resolveCameraBoom`)
+is untouched, so the outdoor-terrain-above-the-player protection still holds and
+the full traversal battery still passes against both variants.
+
+### Verification
+
+`npx tsc --noEmit`, `pnpm run lint`, `pnpm run build`, `pnpm run test`
+(422 files / 4824 tests) all pass. **Browser verification is the Player's** —
+entrance quality, chamber scale, geometry smoothness and real FPS are not
+settled by any of the above.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
