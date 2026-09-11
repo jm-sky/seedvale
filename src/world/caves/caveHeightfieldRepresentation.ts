@@ -629,6 +629,28 @@ function topologyBounds(topology: CaveTopology, margin: number): CaveHeightfield
 }
 
 /**
+ * Grid the heightfield build would allocate for `topology` — the same origin
+ * / `nx` / `nz` arithmetic `buildCaveHeightfieldRepresentation()` runs, hoisted
+ * so a topology recipe can price its own rectangular XZ footprint *before*
+ * anything is allocated (plan world-terrain-020's adventure cell budget)
+ * without duplicating the bounds/margin rule or touching the global config.
+ *
+ * @domain world-terrain
+ */
+export function estimateHeightfieldGrid(
+  topology: CaveTopology,
+  config: CaveHeightfieldConfig = DEFAULT_HEIGHTFIELD_CONFIG,
+): { originX: number, originZ: number, nx: number, nz: number, cells: number } {
+  const margin = Math.max(1.5, config.cellSize * 3)
+  const raw = topologyBounds(topology, margin)
+  const originX = Math.floor(raw.minX / config.cellSize) * config.cellSize
+  const originZ = Math.floor(raw.minZ / config.cellSize) * config.cellSize
+  const nx = Math.max(2, Math.ceil((raw.maxX - originX) / config.cellSize) + 1)
+  const nz = Math.max(2, Math.ceil((raw.maxZ - originZ) / config.cellSize) + 1)
+  return { originX, originZ, nx, nz, cells: nx * nz }
+}
+
+/**
  * Builds the production heightfield from `topology`. Deterministic for the
  * same `(topology, config)`; Three.js-free.
  *
@@ -649,12 +671,7 @@ export function buildCaveHeightfieldRepresentation(
 ): CaveHeightfieldBuildResult {
   const t0 = now()
   const seed = hashCaveId(topology.caveId) ^ (topology.seed >>> 0)
-  const margin = Math.max(1.5, config.cellSize * 3)
-  const raw = topologyBounds(topology, margin)
-  const originX = Math.floor(raw.minX / config.cellSize) * config.cellSize
-  const originZ = Math.floor(raw.minZ / config.cellSize) * config.cellSize
-  const nx = Math.max(2, Math.ceil((raw.maxX - originX) / config.cellSize) + 1)
-  const nz = Math.max(2, Math.ceil((raw.maxZ - originZ) / config.cellSize) + 1)
+  const { originX, originZ, nx, nz } = estimateHeightfieldGrid(topology, config)
 
   const influences: Influence[] = [buildEntranceInfluence(topology.entrance, walkSurfaceAt)]
   for (const seg of topology.segments) {

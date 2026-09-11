@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { ChunkManager } from '../terrain/chunkManager'
+import type { CaveArchetype } from './caves/caveArchetype'
 import type { CaveTopology } from './caves/caveTopology'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isBootMarkMode, isSystemEnabled } from '../debug/debugMode'
@@ -8,6 +9,7 @@ import { getMonitor } from '../perf/active'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { useBootMark } from '../shared/bootMark'
+import { assignCaveArchetypes } from './caves/caveArchetype'
 import {
   applyCaveGroundHysteresis,
   applyCaveInteriorHysteresis,
@@ -128,10 +130,19 @@ export type Caves = {
    *  these. */
   sampleFloor: (x: number, z: number) => number | null
   sampleCeiling: (x: number, z: number) => number | null
+  /** Which production recipe built this cave (plan world-terrain-020).
+   *  `null` for an unknown id. Runtime/content metadata only — never a
+   *  spatial query, and deliberately not part of `CaveTopology`, which stays
+   *  representation-neutral. */
+  archetypeOf: (caveId: string) => CaveArchetype | null
   dispose: () => void
 }
 
 type CaveRuntime = {
+  /** Recipe this cave was actually built and accepted with — deterministic
+   *  from the world seed, the existing cave sites and the home settlement,
+   *  so it is never persisted. */
+  archetype: CaveArchetype
   topology: CaveTopology
   definition: CaveDefinition
   /** The one spatial authority (world-terrain-019): presentation, terrain
@@ -237,22 +248,27 @@ export function createCaves(
   const v2ByCaveId = new Map<string, CaveRuntime>()
 
   bootMark('cave.topology')
-  const accepted: { site: LargeCaveSite, topology: CaveTopology }[] = []
-  for (const site of sites) {
-    const topology = buildProductionCaveTopology({
+  const buildTopology = (site: LargeCaveSite, archetype: CaveArchetype): CaveTopology | null =>
+    buildProductionCaveTopology({
       seed,
       site,
+      archetype,
       sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
       sampleBaseHeight: analyticSurfaceHeight,
     })
-    if (topology) accepted.push({ site, topology })
-  }
+
+  // Home-area guarantee plus the per-site archetype roll (plan
+  // world-terrain-020 §3) — ordering and rolls are pure and deterministic in
+  // `caveArchetype.ts`; acceptance stays here, owned by the topology
+  // builders. No second siting pass, no synthesized site.
+  const accepted = assignCaveArchetypes(seed, sites, buildTopology)
   bootMarkEnd('cave.topology')
 
   bootMark('cave.heightfield')
-  for (const { topology } of accepted) {
+  for (const { topology, archetype } of accepted) {
     const walkSurfaceAt: SurfaceSampler = (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
     v2ByCaveId.set(topology.caveId, {
+      archetype,
       topology,
       definition: topologyToCaveDefinition(topology),
       heightfield: buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield,
@@ -558,6 +574,9 @@ export function createCaves(
     },
     sampleCeiling(x, z) {
       return sampleGroundColumn(x, z)?.ceilingY ?? null
+    },
+    archetypeOf(caveId) {
+      return v2ByCaveId.get(caveId)?.archetype ?? null
     },
     dispose() {
       lastGroundHit = null

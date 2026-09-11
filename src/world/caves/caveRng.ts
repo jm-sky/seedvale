@@ -44,6 +44,20 @@ export const CAVE_RNG_SALT = {
   floorDetail: 0x07,
   /** Cave heightfield spike: ceiling detail noise (independent of the floor). */
   ceilDetail: 0x08,
+  /** Plan world-terrain-020: the per-cave `natural` vs `adventure` roll for a
+   *  cave that is not the guaranteed home adventure cave. Its own stream so
+   *  the roll never shifts a cave's structural/feature/branch sequence. */
+  archetype: 0x09,
+  /** Plan world-terrain-020: adventure route leg lengths and turn angles. */
+  adventureLayout: 0x0a,
+  /** Plan world-terrain-020: adventure cross-sections (widths/heights). */
+  adventureShape: 0x0b,
+  /** Plan world-terrain-020: adventure side-branch angle/length. */
+  adventureBranch: 0x0c,
+  /** Plan world-terrain-020: adventure chamber shelf/overhang features. */
+  adventureFeature: 0x0d,
+  /** Plan world-terrain-020: adventure passage centerline wobble. */
+  adventureCenterline: 0x0e,
 } as const
 
 /** Fresh `[0,1)` generator for `(caveId, salt)` — deterministic, and

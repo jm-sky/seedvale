@@ -1,7 +1,7 @@
 # Plan: Adventure cave variant with treasure and abandoned props
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄 — Stage A (archetypes + adventure topology) implemented + technically verified. Stages B+ (treasure anchors, chests, container Y seam, props, wagon, lanterns, loot tiers) are still open.
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~world-terrain-019~~, world-024

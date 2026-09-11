@@ -246,4 +246,26 @@ Keep each step independently testable. Do not mix topology tuning with container
 
 For new important public/architectural helpers, add useful JSDoc and `@domain world-terrain` (or the actual owning domain for cross-domain helpers) when it improves preflight discovery.
 
+## Stage A landed — corrections to the notes above
+
+Stage A (archetypes + adventure topology only; no treasure/props/lights) is implemented. Where the notes' baseline assumptions turned out to need adjusting against real code:
+
+- **Recipe split.** The "small recipe split around shared primitives" happened as `src/world/caves/caveRoute.ts`: `walkSegment` / `planDestination` / `rampInterior` / `unconstrainedFloorY` / `rampStationY` / `minGapBetweenPaths` / `maxCenterlineFloorGrade` / `lowerFeatureIfNeeded` plus `MAX_TRAVERSABLE_FLOOR_GRADE`, `FLOOR_RAMP_STATION_SPACING`, `MAX_TOTAL_DROP`, `MIN_DISCONNECTED_CLEARANCE`. They now take a `RouteContext` instead of five loose arguments. `productionTopology.ts` keeps the natural recipe plus the archetype dispatcher and re-exports the constants existing tests import. A fixed seed/site natural fixture (`cave:8f19a29f`, seed 99) is asserted node-by-node in `productionTopology.test.ts`.
+
+- **Descent rate is a recipe parameter, not a shared constant.** The notes did not anticipate this: `NOMINAL_DESCENT_PER_METER = 0.12` alone spends the whole unchanged `MAX_TOTAL_DROP` (12 m) budget in ~70 m of route after the mandatory ~3.4 m drop behind the mouth, so at 3-4x length *every* adventure site rejected. `RouteContext.descentPerMeter` is now per-recipe: natural keeps 0.12 exactly (`NATURAL_DESCENT_PER_METER`), adventure uses `ADVENTURE_DESCENT_PER_METER = 0.05`. Overburden adaptation, the grade cap and `MAX_TOTAL_DROP` itself are untouched; measured adventure drop is 6.6-7.5 m.
+
+- **Self-separation, not just branch separation.** A folded route also has to avoid smooth-unioning onto *itself*, which would bypass the junction. Legs three or more apart in route order carry the full `MIN_DISCONNECTED_CLEARANCE`; legs one leg apart share the node that connects them, so ordinary curvature legitimately brings them close and they only have to stay out of each other's tube (gap >= 0). Requiring the full clearance at that distance rejected almost every layout.
+
+- **Footprint budget.** `estimateHeightfieldGrid()` is now exported from `caveHeightfieldRepresentation.ts` (the origin/`nx`/`nz` arithmetic hoisted out of `buildCaveHeightfieldRepresentation()`, which calls it) so the recipe prices the exact grid the build would allocate. `fitsAdventureFootprintBudget()` / `ADVENTURE_MAX_HEIGHTFIELD_CELLS = 72_000` gate each layout attempt. Measured: natural ~18k cells, adventure ~37-43k. `DEFAULT_HEIGHTFIELD_CONFIG` is unchanged.
+
+- **Assignment is one pure function.** `assignCaveArchetypes(seed, sites, buildTopology)` in `caveArchetype.ts` owns ordering, the guarantee, the roll and the adventure→natural fallback, and offers each site a given recipe at most once (rejected home candidates are remembered, not rebuilt). `createCaves()` only supplies the builder. Home band is `[LARGE_CAVE_MIN_HOME_DIST, 300]`.
+
+- **Archetype metadata seam.** `Caves.archetypeOf(caveId)` plus `CaveRuntime.archetype`. Nothing was added to `CaveTopology`. New salts: `archetype`, `adventureLayout`, `adventureShape`, `adventureBranch`, `adventureFeature`, `adventureCenterline`.
+
+- **Adventure node ids** (stable, role-based, for Stage B anchors): `adventure-transition`, `adventure-passage-1`, `adventure-chamber-1`, `adventure-passage-2`, `adventure-junction`, `adventure-deep-passage`, `adventure-deep-chamber`, `adventure-final-passage`, `adventure-final-chamber`, `adventure-side-passage`, `adventure-side-chamber`. Exported constants exist for the junction, side chamber and final chamber.
+
+- **Overburden test tolerance.** The dense re-check residual for adventure is ~0.42 m against the natural suite's 0.4 m tolerance (bigger chambers reached over longer interpolated segments). The adventure suite documents 0.5 m; `STATION_SAFETY` itself is unchanged.
+
+Stage B can assume: `Caves.archetypeOf`, the role node ids above, and that adventure caves already exist on the default repro seed. Still to do exactly as written in the notes above: content descriptors resolved against the final heightfield, the explicit-Y `WorldGeneratedContainerSpec` seam, loot tiers, and relevance-streamed props/lanterns.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

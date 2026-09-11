@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { LargeCaveSite } from '../largeCaves'
 import type { CaveTopology } from './caveTopology'
 import { mouthOverburdenRequirement } from './mouthOverburden'
-import { buildProductionCaveTopology, MIN_DISCONNECTED_CLEARANCE, minGapBetweenPaths } from './productionTopology'
+import { buildNaturalCaveTopology, buildProductionCaveTopology, MIN_DISCONNECTED_CLEARANCE, minGapBetweenPaths } from './productionTopology'
 import { minSurfaceOverFootprint } from './terrainFootprint'
 import { PROXY_MARGIN } from './topologyAdapter'
 
@@ -140,6 +140,64 @@ describe('buildProductionCaveTopology (plan world-terrain-008 B1)', () => {
     const cliff = terrainAlongTunnel(baseSite(), 30, -3)
     const topology = buildProductionCaveTopology({ seed: 3, site: baseSite(), sampleHeight: cliff, sampleBaseHeight: cliff })
     expect(topology).toBeNull()
+  })
+
+  // ── Natural regression fixture (plan world-terrain-020) ──────────────────
+  // The `natural` recipe is frozen while other archetypes are added: adding
+  // `adventure`, extracting shared route primitives or re-ordering the
+  // assignment must not move an existing seeded cave by a millimetre.
+  it('keeps the exact seeded natural output it had before archetypes existed', () => {
+    const topology = buildProductionCaveTopology({ seed: 99, site: baseSite(), sampleHeight: gentleHill, sampleBaseHeight: gentleHill })
+    expect(topology).not.toBeNull()
+    expect(topology!.caveId).toBe('cave:8f19a29f')
+    expect(topology!.minClearance).toBe(2.4)
+    const expected: readonly [string, number, number, number, number, number][] = [
+      ['entrance', 200.000000, 127.600000, -140.000000, 3.000000, 2.600000],
+      ['transition', 196.993774, 124.175738, -144.394188, 4.387353, 5.215993],
+      ['passage', 193.279724, 123.282405, -149.823000, 4.001291, 5.380081],
+      ['widening-bend', 191.667848, 122.591991, -155.346044, 5.018041, 5.592305],
+      ['chamber', 190.585832, 121.839188, -161.525385, 9.763208, 10.090667],
+    ]
+    expect(topology!.nodes.map((n) => n.id)).toEqual(expected.map(([id]) => id))
+    topology!.nodes.forEach((node, i) => {
+      const [id, x, y, z, width, height] = expected[i]!
+      expect(node.id).toBe(id)
+      expect(node.position.x).toBeCloseTo(x, 5)
+      expect(node.position.y).toBeCloseTo(y, 5)
+      expect(node.position.z).toBeCloseTo(z, 5)
+      expect(node.targetWidth).toBeCloseTo(width, 5)
+      expect(node.targetHeight).toBeCloseTo(height, 5)
+    })
+    expect(topology!.segments.map((s) => [s.id, s.centerline.length])).toEqual([
+      ['seg-transition', 5],
+      ['seg-passage', 6],
+      ['seg-bend', 5],
+      ['seg-chamber', 6],
+    ])
+    const feature = topology!.features[0]!
+    expect([feature.id, feature.kind]).toEqual(['chamber-shelf', 'shelf'])
+    expect(feature.position.x).toBeCloseTo(193.230477, 5)
+    expect(feature.position.y).toBeCloseTo(125.370922, 5)
+    expect(feature.position.z).toBeCloseTo(-161.988468, 5)
+  })
+
+  it('defaults to the natural recipe when no archetype is asked for', () => {
+    const site = baseSite({ x: 340, z: 95 })
+    const viaDefault = buildProductionCaveTopology({ seed: 21, site, sampleHeight: gentleHill, sampleBaseHeight: gentleHill })
+    const explicitNatural = buildProductionCaveTopology({ seed: 21, site, archetype: 'natural', sampleHeight: gentleHill, sampleBaseHeight: gentleHill })
+    expect(viaDefault).toEqual(explicitNatural)
+    expect(viaDefault).toEqual(buildNaturalCaveTopology({ seed: 21, site, sampleHeight: gentleHill, sampleBaseHeight: gentleHill }))
+  })
+
+  it('never grows adventure role nodes or a mandatory branch: natural keeps its own character', () => {
+    for (let i = 0; i < 12; i++) {
+      const site = baseSite({ x: 150 + i * 37, z: -220 + i * 53 })
+      const topology = buildProductionCaveTopology({ seed: 500 + i, site, sampleHeight: gentleHill, sampleBaseHeight: gentleHill })
+      if (!topology) continue
+      expect(topology.nodes.some((n) => n.id.startsWith('adventure-')), `seed ${500 + i}`).toBe(false)
+      expect(topology.nodes.filter((n) => n.kind === 'chamber').length, `seed ${500 + i}`).toBeLessThanOrEqual(2)
+      expect(topology.features, `seed ${500 + i}`).toHaveLength(1)
+    }
   })
 
   it('sometimes produces a branch, and the branch stays well separated from the main route', () => {
