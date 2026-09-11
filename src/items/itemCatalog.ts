@@ -455,6 +455,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     holdable: true,
     capabilities: ['shearing'],
     melee: { damage: 8, range: 1.5, arcDot: 0.55, windUp: 0.14, hitWindow: 0.08, recovery: 0.18, staminaCost: 4 },
+    defense: { canBlock: true, baseBlockChance: 0.1, partialReduction: 0.25 },
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan fauna-004 — shepherd personal loadout and Kupiec stock. Gates sheep shearing via `shearing`, never by kind identity.',
