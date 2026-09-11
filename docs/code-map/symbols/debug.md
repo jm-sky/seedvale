@@ -25,19 +25,19 @@ Generated from exported TypeScript symbols.
 
 - `buildHeightfieldMeshBuffers` — function — line 148
   - domain: world-terrain
-- `buildMouthUndersideMaskBuffers` — function — line 631
+- `buildMouthUndersideMaskBuffers` — function — line 669
   - domain: world-terrain
 - `CELL_RING` — const — line 59
 - `createHeightfieldCaveGeometry` — function — line 326
   - domain: world-terrain
 - `createHeightfieldCaveMaterial` — function — line 338
 - `createHeightfieldCaveMesh` — function — line 348
-- `createMouthUndersideMask` — function — line 700
+- `createMouthUndersideMask` — function — line 739
   - domain: world-terrain
 - `HeightfieldMeshBuffers` — type — line 31
 - `marchCellRing` — function — line 81
   - domain: world-terrain
-- `MouthUndersideMaskBuffers` — type — line 383
+- `MouthUndersideMaskBuffers` — type — line 384
 
 ## `debug/caves/caveHeightfieldPlayer.ts`
 
