@@ -1,6 +1,6 @@
 /** Plan world-terrain-020 Stage D — presentation-only adventure cave props
- *  (wagon/cart, support, crate, lantern) materialized from Stage B content
- *  anchors when cave presentation is active. No gameplay authority, no
+ *  (wagon/cart, support, crate, lantern→torch light) materialized from Stage B
+ *  content anchors when cave presentation is active. No gameplay authority, no
  *  collision, no terrain re-grounding.
  *
  * @domain world-terrain
@@ -8,7 +8,12 @@
 
 import * as THREE from 'three'
 import type { CaveContentAnchor } from './caveContentAnchors'
-import { LANTERN_FLOOR_MAX, LANTERN_URL } from '../../settlement/propSpecs'
+import { markSharedGpu } from '../../assets/loadGltf'
+import {
+  createProceduralTorchPost,
+  createVillageTorchLight,
+} from '../../settlement/houseLighting'
+import { VILLAGE_TORCH_HEIGHT, VILLAGE_TORCH_URL } from '../../settlement/propSpecs'
 import { loadPropOrFallback } from '../../settlement/propUtils'
 import { createCrate } from '../../settlement/settlementStructures'
 import { CART_MODEL_YAW_OFFSET, createCartProp, preloadCartProp } from '../cartProp'
@@ -47,13 +52,8 @@ const CRATE_URL = '/models/settlement/crate.glb'
 export const CAVE_SUPPORT_FIT_MAX = 2.2
 export const CAVE_CRATE_TARGET_HEIGHT = 0.6
 
-/** Max real PointLights per active adventure cave presentation. */
+/** Max real PointLights per active adventure cave presentation (lantern anchors). */
 export const CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT = 2
-
-const CAVE_LANTERN_LIGHT_COLOR = 0xffb866
-const CAVE_LANTERN_LIGHT_INTENSITY = 1.8
-const CAVE_LANTERN_LIGHT_DISTANCE = 7
-const CAVE_LANTERN_LIGHT_DECAY = 2
 
 function roleToAssetKind(role: CavePresentationPropRole): CaveAdventurePropAssetKind {
   return role === 'wagon' ? 'cart' : role
@@ -107,17 +107,6 @@ export function adventurePropPlacementsFromAnchors(
   return Object.freeze(presentationAnchorsFromContent(anchors).map(adventurePropPlacementFromAnchor))
 }
 
-function markSharedGpu(root: THREE.Object3D): void {
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh
-    if (!mesh.isMesh) return
-    mesh.geometry.userData.sharedGpu = true
-    const mat = mesh.material
-    if (Array.isArray(mat)) mat.forEach((m) => { m.userData.sharedGpu = true })
-    else mat.userData.sharedGpu = true
-  })
-}
-
 /** Simple timber brace when megakit support fails to load. */
 function createProceduralSupport(): THREE.Group {
   const group = new THREE.Group()
@@ -140,14 +129,14 @@ export type CaveAdventurePropTemplates = {
   cart: THREE.Object3D
   support: THREE.Object3D
   crate: THREE.Object3D
-  lantern: THREE.Object3D
+  torchPost: THREE.Object3D
 }
 
 let templates: CaveAdventurePropTemplates | null = null
 let templatesLoad: Promise<void> | null = null
 
 /**
- * Loads support/crate/lantern templates (cart via {@link preloadCartProp}).
+ * Loads support/crate/torch templates (cart via {@link preloadCartProp}).
  * Idempotent; safe to call from world boot before synchronous cave activation.
  *
  * @domain world-terrain
@@ -160,18 +149,18 @@ export async function preloadCaveAdventurePropTemplates(): Promise<void> {
   }
   templatesLoad = (async () => {
     await preloadCartProp()
-    const [support, crate, lantern] = await Promise.all([
+    const [support, crate, torchPost] = await Promise.all([
       loadPropOrFallback(SUPPORT_URL, CAVE_SUPPORT_FIT_MAX, createProceduralSupport, 'max'),
       loadPropOrFallback(CRATE_URL, CAVE_CRATE_TARGET_HEIGHT, () => createCrate(1)),
-      loadPropOrFallback(LANTERN_URL, LANTERN_FLOOR_MAX, () => createCrate(0.35), 'max'),
+      loadPropOrFallback(VILLAGE_TORCH_URL, VILLAGE_TORCH_HEIGHT, createProceduralTorchPost),
     ])
     support.name = 'cave-adventure-prop-template:support'
     crate.name = 'cave-adventure-prop-template:crate'
-    lantern.name = 'cave-adventure-prop-template:lantern'
-    for (const root of [support, crate, lantern]) markSharedGpu(root)
+    torchPost.name = 'cave-adventure-prop-template:torchPost'
+    for (const root of [support, crate, torchPost]) markSharedGpu(root)
     const cart = createCartProp()
     cart.name = 'cave-adventure-prop-template:cart'
-    templates = { cart, support, crate, lantern }
+    templates = { cart, support, crate, torchPost }
   })()
   await templatesLoad
 }
@@ -196,21 +185,17 @@ function templateForKind(
   switch (kind) {
     case 'cart': return tpl.cart
     case 'crate': return tpl.crate
-    case 'lantern': return tpl.lantern
+    case 'lantern': return tpl.torchPost
     case 'support': return tpl.support
   }
 }
 
-function addCaveLanternLight(pivot: THREE.Group): void {
-  const light = new THREE.PointLight(
-    CAVE_LANTERN_LIGHT_COLOR,
-    CAVE_LANTERN_LIGHT_INTENSITY,
-    CAVE_LANTERN_LIGHT_DISTANCE,
-    CAVE_LANTERN_LIGHT_DECAY,
-  )
-  light.castShadow = false
-  light.position.set(0, 0.12, 0)
-  pivot.add(light)
+function placePivotAtAnchor(
+  pivot: THREE.Group,
+  placement: CaveAdventurePropPlacement,
+): void {
+  pivot.position.set(placement.x, placement.y, placement.z)
+  pivot.rotation.y = placement.yaw + placement.yawOffset
 }
 
 export type CreateCaveAdventurePropsGroupResult = {
@@ -220,8 +205,9 @@ export type CreateCaveAdventurePropsGroupResult = {
 }
 
 /**
- * Builds one static props subtree from pre-resolved anchors. World position is
- * anchor x/y/z plus the template's local prepare offset (feet on floor).
+ * Builds one static props subtree from pre-resolved anchors. Pivot world
+ * position is the semantic anchor x/y/z; prepared template root offsets stay
+ * on the cloned child (see `prepareProp` / `preparePropFitMax`).
  *
  * @domain world-terrain
  */
@@ -239,25 +225,24 @@ export function createCaveAdventurePropsGroup(
 
   for (const anchor of presentationAnchors) {
     const placement = adventurePropPlacementFromAnchor(anchor)
-    const src = templateForKind(placement.assetKind, tpl)
     const pivot = new THREE.Group()
     pivot.name = `cave-adventure-prop:${anchor.id}`
-    const mesh = src.clone(true) as THREE.Object3D
-    pivot.add(mesh)
-    pivot.position.set(
-      placement.x + src.position.x,
-      placement.y + src.position.y,
-      placement.z + src.position.z,
-    )
-    pivot.rotation.y = placement.yaw + placement.yawOffset
+    placePivotAtAnchor(pivot, placement)
 
-    if (
-      enableLights
-      && placement.role === 'lantern'
-      && lanternLightCount < CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT
-    ) {
-      addCaveLanternLight(pivot)
-      lanternLightCount++
+    if (placement.role === 'lantern') {
+      const withLight = enableLights && lanternLightCount < CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT
+      if (withLight) {
+        const post = tpl.torchPost.clone(true) as THREE.Object3D
+        const torch = createVillageTorchLight(post)
+        torch.setLit(true)
+        pivot.add(torch.object)
+        lanternLightCount++
+      } else {
+        pivot.add(tpl.torchPost.clone(true))
+      }
+    } else {
+      const src = templateForKind(placement.assetKind, tpl)
+      pivot.add(src.clone(true))
     }
 
     group.add(pivot)

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { WeatherState } from './weather'
-import { applyWeatherOverlay } from './weatherVisuals'
+import {
+  applyWeatherOverlay,
+  fogColorLuminance,
+  resolveSceneFog,
+} from './weatherVisuals'
 
 const baseFog = { fogColor: 0x6a93b0, fogNear: 160, fogFar: 230 }
 
@@ -40,5 +44,34 @@ describe('applyWeatherOverlay', () => {
     const half = applyWeatherOverlay(baseFog, weather({ type: 'rain', intensity: 0.5 }))
     const full = applyWeatherOverlay(baseFog, weather({ type: 'rain', intensity: 1 }))
     expect(half.lightScale).toBeGreaterThan(full.lightScale)
+  })
+})
+
+describe('resolveSceneFog (cave interior)', () => {
+  it('passes outdoor fog through unchanged when not inside a cave', () => {
+    const outdoor = applyWeatherOverlay(baseFog, weather({ type: 'fog', intensity: 1 }))
+    expect(resolveSceneFog(outdoor, false)).toEqual({
+      fogColor: outdoor.fogColor,
+      fogNear: outdoor.fogNear,
+      fogFar: outdoor.fogFar,
+    })
+  })
+
+  it('uses a dark cave profile so weather fog does not brighten the interior', () => {
+    const outdoorFog = applyWeatherOverlay(baseFog, weather({ type: 'fog', intensity: 1 }))
+    const outdoorRain = applyWeatherOverlay(baseFog, weather({ type: 'rain', intensity: 1 }))
+    const caveFog = resolveSceneFog(outdoorFog, true)
+    const caveRain = resolveSceneFog(outdoorRain, true)
+    expect(caveFog).toEqual(caveRain)
+    expect(fogColorLuminance(caveFog.fogColor)).toBeLessThan(fogColorLuminance(outdoorFog.fogColor))
+    expect(fogColorLuminance(caveFog.fogColor)).toBeLessThan(0.08)
+  })
+
+  it('restores the current outdoor overlay after leaving a cave (not a hardcoded default)', () => {
+    const rainy = applyWeatherOverlay(baseFog, weather({ type: 'rain', intensity: 1 }))
+    const afterExit = resolveSceneFog(rainy, false)
+    expect(afterExit.fogColor).toBe(rainy.fogColor)
+    expect(afterExit.fogNear).toBe(rainy.fogNear)
+    expect(afterExit.fogFar).toBe(rainy.fogFar)
   })
 })

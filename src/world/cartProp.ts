@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { disposeObject3D, loadGltf, preparePropFitMax } from '../assets/loadGltf'
+import { disposeObject3D, loadGltf, markSharedGpu, preparePropFitMax } from '../assets/loadGltf'
 
 /** Parked Quaternius pushcart — folder name is historical (see lily pad). */
 export const CART_MODEL_URL = '/models/parked/cart.glb'
@@ -73,6 +73,7 @@ export async function preloadCartProp(): Promise<void> {
     } catch (err) {
       console.warn('[cart] failed to load cart.glb, using procedural prop', err)
       cartTemplate = createProceduralCart()
+      markSharedGpu(cartTemplate)
     }
   })()
   await cartLoad

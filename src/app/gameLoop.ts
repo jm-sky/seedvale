@@ -153,7 +153,7 @@ import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
-import { applyWeatherOverlay } from '../world/weatherVisuals'
+import { applyWeatherOverlay, resolveSceneFog } from '../world/weatherVisuals'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
 import { inspectionTargetRef } from './inspection/inspectionTarget'
 import {
@@ -254,6 +254,7 @@ function applyDayNight(
   scene: Scene,
   chunkManager: WorldBundle['chunkManager'],
   ocean: WorldBundle['ocean'],
+  inCaveInterior: boolean,
 ): ReturnType<typeof skyParamsFromTime> {
   const p = skyParamsFromTime(timeOfDay)
   sky.setParams(
@@ -272,11 +273,12 @@ function applyDayNight(
   lights.sun.intensity = p.sunIntensity * overlay.lightScale
   lights.ambient.intensity = p.ambientIntensity * overlay.lightScale
   lights.hemi.intensity = p.hemiIntensity * overlay.lightScale
+  const sceneFog = resolveSceneFog(overlay, inCaveInterior)
   const fog = scene.fog
   if (fog instanceof Fog) {
-    fog.color.setHex(overlay.fogColor)
-    fog.near = overlay.fogNear
-    fog.far = overlay.fogFar
+    fog.color.setHex(sceneFog.fogColor)
+    fog.near = sceneFog.fogNear
+    fog.far = sceneFog.fogFar
   }
   chunkManager.setWaterDayNight(p.dayFactor, sky.sunPosition)
   chunkManager.setGrassDayNight(p.dayFactor, sky.sunPosition)
@@ -643,6 +645,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  threshold crossing instead of when the weather actually changes. */
   let lastAppliedWeatherType = climate.weather.type
   let lastAppliedWeatherIntensity = climate.weather.intensity
+  let lastAppliedInCaveInterior = bundle.caves.queryInterior(
+    camera.position.x,
+    camera.position.y,
+    camera.position.z,
+  )
   /** Cached `skyParamsFromTime(dayNight.timeOfDay)` — recomputed at most once
    *  per frame (only while unpaused, since `timeOfDay` is frozen otherwise),
    *  instead of once per call site (`ambientAudio`, `dayFactor`, `godRays`). */
@@ -771,7 +778,21 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   }
 
   const resyncDayNight = (): void => {
-    cachedSky = applyDayNight(dayNight.timeOfDay, climate.weather, sky, lights, scene, bundle.chunkManager, bundle.ocean)
+    lastAppliedInCaveInterior = bundle.caves.queryInterior(
+      camera.position.x,
+      camera.position.y,
+      camera.position.z,
+    )
+    cachedSky = applyDayNight(
+      dayNight.timeOfDay,
+      climate.weather,
+      sky,
+      lights,
+      scene,
+      bundle.chunkManager,
+      bundle.ocean,
+      lastAppliedInCaveInterior,
+    )
     bundle.settlementsManager.setDayNight(1 - cachedSky.dayFactor)
     lastAppliedTimeOfDay = dayNight.timeOfDay
     lastAppliedWeatherType = climate.weather.type
@@ -2126,10 +2147,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const weatherVisualChanged =
         climate.weather.type !== lastAppliedWeatherType ||
         Math.abs(climate.weather.intensity - lastAppliedWeatherIntensity) >= 0.03
+      const inCaveInteriorForFog = bundle.caves.queryInterior(
+        camera.position.x,
+        camera.position.y,
+        camera.position.z,
+      )
       if (
         dayNight.enabled &&
         (timeOfDayDelta(dayNight.timeOfDay, lastAppliedTimeOfDay) >= DAY_NIGHT_APPLY_THRESHOLD ||
-          weatherVisualChanged)
+          weatherVisualChanged ||
+          inCaveInteriorForFog !== lastAppliedInCaveInterior)
       ) {
         resyncDayNight()
       }

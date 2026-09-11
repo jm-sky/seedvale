@@ -61,15 +61,7 @@ function loadCached(url: string): Promise<CachedGltf> {
         const diagonal = box ? box.getSize(_meshBoxSize).length() : Infinity
         mesh.castShadow = diagonal >= SMALL_MESH_SHADOW_THRESHOLD
         mesh.receiveShadow = true
-        // Every clone (SkeletonUtils.clone / Object3D.clone(true)) shares this
-        // geometry/material BY REFERENCE with this cached root — flagging it
-        // here, on the geometry/material object itself, survives cloning no
-        // matter how faithfully each clone path copies `userData` on the mesh.
-        // `disposeObject3D` checks this and skips freeing it.
-        mesh.geometry.userData.sharedGpu = true
-        const mat = mesh.material
-        if (Array.isArray(mat)) mat.forEach((m: Material) => { m.userData.sharedGpu = true })
-        else (mat as Material).userData.sharedGpu = true
+        markSharedGpu(mesh)
       })
       // Leaf/canopy materials get a shared vertex wind (plan 066). Materials are
       // shared across every clone of this URL, so patching the cache root once
@@ -179,6 +171,20 @@ export function invalidateGltf(url: string): void {
       else (mat as Material).dispose()
     })
   }).catch(() => { /* load may have failed */ })
+}
+
+/** Marks every mesh geometry/material under `root` as shared across clones.
+ *  `disposeObject3D` skips freeing flagged resources (GLTF cache, procedural
+ *  templates cloned at activation). */
+export function markSharedGpu(root: Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as Mesh
+    if (!mesh.isMesh) return
+    mesh.geometry.userData.sharedGpu = true
+    const mat = mesh.material
+    if (Array.isArray(mat)) mat.forEach((m: Material) => { m.userData.sharedGpu = true })
+    else (mat as Material).userData.sharedGpu = true
+  })
 }
 
 /** Frees geometry/material GPU resources for everything under `object` — but

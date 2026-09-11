@@ -310,4 +310,14 @@ Stage D (wagon/cart, support, crate, lantern visuals; optional bounded cave lant
 
 Stage E (if any) can build on browser-verified prop scale/placement tuning only — no new seam required for presentation attach.
 
+## Pre–Stage E fix (presentation contract)
+
+Small correctness pass before browser tuning (Stage E):
+
+- **Prepared-root offset.** `createCaveAdventurePropsGroup()` pivot world position is exactly semantic anchor `x/y/z`; the cloned template keeps its `prepareProp` / `preparePropFitMax` local root offset once (no `anchor + src.position` on the pivot).
+- **Cave `lantern` role → torch presentation.** Stage B role name unchanged; Stage D uses `VILLAGE_TORCH_URL` / `createProceduralTorchPost` + `createVillageTorchLight()` (shared particle fire, baked `Fire` mesh hidden). No `LANTERN_URL` in adventure cave preload. Reuse is direct via `createVillageTorchLight` — no `CaveTorchSystem`, no `houseLighting` behavior change for settlement torches.
+- **Flicker.** Cave torches call `setLit(true)` at presentation build; there is no cave presentation `update(dt)` hook, so point-light flicker is **static** after the initial `fireVisual.flicker()` sample (particles visible but not animated per frame).
+- **Lights.** Still `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT = 2` real `PointLight`s per active adventure presentation via `PointLightBudget` register/unregister on the props subtree; `castShadow = false`.
+- **Procedural cart fallback.** `preloadCartProp()` marks the procedural singleton template with exported `markSharedGpu()` so `disposeObject3D()` on streamed presentation clones cannot free shared cart geometry/material.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

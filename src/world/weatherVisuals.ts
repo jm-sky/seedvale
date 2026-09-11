@@ -60,3 +60,36 @@ export function applyWeatherOverlay(
     lightScale,
   }
 }
+
+/** Dark falloff for production cave interiors — replaces bright exterior/weather
+ *  fog so `scene.fog` does not wash the heightfield toward sky grey. */
+export const CAVE_INTERIOR_FOG_COLOR = 0x0a0806
+export const CAVE_INTERIOR_FOG_NEAR = 2
+export const CAVE_INTERIOR_FOG_FAR = 55
+
+export type SceneFogParams = Pick<WeatherVisualOverlay, 'fogColor' | 'fogNear' | 'fogFar'>
+
+/** Picks fog written to `scene.fog` after day/night + weather overlay. */
+export function resolveSceneFog(
+  outdoorOverlay: WeatherVisualOverlay,
+  inCaveInterior: boolean,
+): SceneFogParams {
+  if (!inCaveInterior) {
+    return {
+      fogColor: outdoorOverlay.fogColor,
+      fogNear: outdoorOverlay.fogNear,
+      fogFar: outdoorOverlay.fogFar,
+    }
+  }
+  return {
+    fogColor: CAVE_INTERIOR_FOG_COLOR,
+    fogNear: CAVE_INTERIOR_FOG_NEAR,
+    fogFar: CAVE_INTERIOR_FOG_FAR,
+  }
+}
+
+/** sRGB luminance proxy for tests — lower means darker fog wash. */
+export function fogColorLuminance(fogColor: number): number {
+  const c = tmpFogColor.setHex(fogColor)
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+}

@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { LargeCaveSite } from '../largeCaves'
 import type { CaveTopology } from './caveTopology'
+import { LANTERN_URL } from '../../settlement/propSpecs'
 import { CART_MODEL_YAW_OFFSET } from '../cartProp'
 import { buildAdventureCaveTopology } from './adventureTopology'
 import {
@@ -12,6 +13,7 @@ import {
   CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT,
   CAVE_ADVENTURE_PROPS_GROUP_NAME,
   createCaveAdventurePropsGroup,
+  getCaveAdventurePropTemplates,
   preloadCaveAdventurePropTemplates,
   presentationAnchorsFromContent,
 } from './caveAdventureProps'
@@ -112,9 +114,57 @@ describe('cave adventure props (plan world-terrain-020 Stage D)', () => {
     expect(group.children).toHaveLength(propCount)
     expect(lanternLightCount).toBe(Math.min(byRole(FIXTURE_ANCHORS, 'lantern').length, CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT))
     expect(countPointLights(group)).toBe(lanternLightCount)
-    for (const child of group.children) {
-      const light = child.children.find((c) => (c as THREE.PointLight).isPointLight) as THREE.PointLight | undefined
-      if (light) expect(light.castShadow).toBe(false)
+    group.traverse((obj) => {
+      if ((obj as THREE.PointLight).isPointLight) {
+        expect((obj as THREE.PointLight).castShadow).toBe(false)
+      }
+    })
+  })
+
+  it('places pivot at semantic anchor and applies prepared root offset only on the clone', () => {
+    const tpl = getCaveAdventurePropTemplates()
+    const prepared = new THREE.Group()
+    prepared.position.set(0.5, 0.25, -0.3)
+    prepared.add(new THREE.Object3D())
+    const supportAnchor = byRole(FIXTURE_ANCHORS, 'support')[0]!
+    const customTpl = { ...tpl, support: prepared }
+    const { group } = createCaveAdventurePropsGroup([supportAnchor], customTpl)
+    const pivot = group.children[0] as THREE.Group
+    expect(pivot.position.x).toBe(supportAnchor.x)
+    expect(pivot.position.y).toBe(supportAnchor.y)
+    expect(pivot.position.z).toBe(supportAnchor.z)
+    const cloneRoot = pivot.children[0]!
+    expect(cloneRoot.position.x).toBe(0.5)
+    expect(cloneRoot.position.y).toBe(0.25)
+    expect(cloneRoot.position.z).toBe(-0.3)
+    group.updateMatrixWorld(true)
+    const world = new THREE.Vector3()
+    cloneRoot.getWorldPosition(world)
+    const localOffset = new THREE.Vector3(0.5, 0.25, -0.3)
+    localOffset.applyEuler(new THREE.Euler(0, pivot.rotation.y, 0))
+    const expectedOnce = new THREE.Vector3(supportAnchor.x, supportAnchor.y, supportAnchor.z).add(localOffset)
+    const doubleOffset = localOffset.clone().multiplyScalar(2).add(
+      new THREE.Vector3(supportAnchor.x, supportAnchor.y, supportAnchor.z),
+    )
+    expect(world.distanceTo(expectedOnce)).toBeLessThan(1e-5)
+    expect(world.distanceTo(doubleOffset)).toBeGreaterThan(0.01)
+  })
+
+  it('materializes lantern anchors as torch-style lights, not settlement lantern glb', () => {
+    const lanterns = byRole(FIXTURE_ANCHORS, 'lantern')
+    const { group, lanternLightCount } = createCaveAdventurePropsGroup(lanterns)
+    expect(lanternLightCount).toBe(lanterns.length)
+    let settlementLanternAsset = false
+    let pointLights = 0
+    group.traverse((obj) => {
+      const url = obj.userData?.assetUrl as string | undefined
+      if (url === LANTERN_URL) settlementLanternAsset = true
+      if ((obj as THREE.PointLight).isPointLight) pointLights++
+    })
+    expect(settlementLanternAsset).toBe(false)
+    expect(pointLights).toBe(lanterns.length)
+    for (const pivot of group.children) {
+      expect(pivot.children.length).toBeGreaterThan(0)
     }
   })
 })
