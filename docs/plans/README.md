@@ -74,7 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-030-non-home-settlement-food-production-v1.md`            | -       | 🔴 | M      | -      |
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | settlements-npcs-030 |
 | ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | -       | 🔴 | L      | settlements-npcs-030, world-023 |
-| ◼️ `world-024-systemic-treasure-sites-and-keys.md`                             | -       | 🟡 | M      | -      |
+| 💡 `world-024-systemic-treasure-sites-and-keys.md`                             | -       | 🟡 | M      | -      |
 | ◼️ `world-terrain-019-cave-heightfield-production-migration.md`                | -       | 🔴 | XL     | world-terrain-018 |
 | ◼️ `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | settlements-npcs-019 |
 | ◼️ `items-player-026-treasure-loot-forced-entry-and-traps.md`                  | -       | 🟡 | M      | world-024 |
