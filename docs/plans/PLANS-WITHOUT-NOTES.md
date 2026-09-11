@@ -1,10 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 18:46:17  
+> Date: 2026-09-11 20:55:51  
 
 ## PLANS
 
+- `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`
 - `items-player-028-npc-player-storage-access-policies.md`
 - `npc-031-voluntary-expedition-joining.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
@@ -15,6 +16,37 @@
 
 --------------------------------
 ## PROMPTS
+
+### `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`
+
+Prompt:
+
+```
+Zrób review planu `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/fauna-022-animal-variants-and-exceptional-dangerous-animals.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/fauna-022-animal-variants-and-exceptional-dangerous-animals-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
 
 ### `items-player-028-npc-player-storage-access-policies.md`
 

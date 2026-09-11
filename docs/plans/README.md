@@ -80,6 +80,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
 | ◼️ `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~ |
 | 💡 `world-025-persistent-abandoned-cemetery-worldgen-cache.md`                 | -       | 🔴 | M      | ~~world-015~~, ~~world-022~~ |
+| ◼️ `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`            | -       | 🟡 | S      | -      |
 
 ---
 
@@ -208,7 +209,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `022`
+- fauna: `023`
 - items-player: `029`
 - npc: `036`
 - persistence: `005`
