@@ -134,6 +134,29 @@ Generated from exported TypeScript symbols.
 - `CaveWorkerRequest` — type — line 39
 - `CaveWorkerResponse` — type — line 41
 
+## `world/caves/caveHeightfieldMesh.ts`
+
+- `buildHeightfieldMeshBuffers` — function — line 93
+  - domain: world-terrain
+- `buildMouthUndersideMaskBuffers` — function — line 574
+  - domain: world-terrain
+- `HeightfieldMeshBuffers` — type — line 28
+- `MouthUndersideMaskBuffers` — type — line 289
+
+## `world/caves/caveHeightfieldPresentation.ts`
+
+- `CaveHeightfieldPresentation` — type — line 159
+- `createCaveHeightfieldGeometry` — function — line 60
+  - domain: world-terrain
+- `createCaveHeightfieldMaterial` — function — line 32
+- `createCaveHeightfieldPresentation` — function — line 178
+  - domain: world-terrain
+- `createMouthRocks` — function — line 122
+  - domain: world-terrain
+- `createMouthUndersideMask` — function — line 78
+  - domain: world-terrain
+- `createMouthUndersideMaskMaterial` — function — line 44
+
 ## `world/caves/caveHeightfieldRepresentation.ts`
 
 - `APERTURE_LIFT` — const — line 83
@@ -209,10 +232,13 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `CAVE_DEACTIVATE_DISTANCE` — const — line 10
 - `CavePresentationPhase` — type — line 12
+- `CavePresentationQueue` — type — line 187
 - `CaveStreamingHooks` — type — line 29
 - `CaveStreamingSnapshot` — type — line 14
 - `CaveStreamingStats` — type — line 21
 - `caveWantedAtDistance` — function — line 43
+- `createCavePresentationQueue` — function — line 211
+  - domain: world-terrain
 - `createCaveStreamingController` — function — line 62
   - domain: world-terrain
 
@@ -308,6 +334,12 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveSurface.ts`
 
 - `SURFACE_CLIP_EPS` — const — line 15
+  - domain: world-terrain
+
+## `world/caves/caveTerrainCutout.ts`
+
+- `caveOpenSkyBounds` — function — line 31
+- `caveTerrainCutout` — function — line 63
   - domain: world-terrain
 
 ## `world/caves/caveTopology.ts`
@@ -510,9 +542,9 @@ Generated from exported TypeScript symbols.
 ## `world/createCaves.ts`
 
 - `Caves` — type — line 67
-- `createCaves` — function — line 165
+- `createCaves` — function — line 183
   - system: caves
-  - role: Owns cave topologies, retained heightfield representations (not yet gameplay/presentation authority), retained SDF/column-index gameplay space, streamed interior presentation (async SDF extraction), occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
+  - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout), retained SDF/column-index gameplay space, streamed interior presentation (main-thread heightfield assembly), occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves
   - lifecycle: rebuild
 

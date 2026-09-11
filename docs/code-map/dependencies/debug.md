@@ -16,10 +16,10 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `debug/caves/caveHeightfieldTerrain.test.ts`
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `debug/createCaveHeightfieldTestScene.ts`
+- `world/caves/caveHeightfieldMesh.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 
 ## `debug/caves/caveHeightfieldMesh.ts`
@@ -27,12 +27,12 @@ Generated from TypeScript imports.
 **Imports**
 
 - `debug/caves/caveHeightfieldRepresentation.ts`
-- `world/caves/caveOrientation.ts`
-- `world/caves/caveSdfQuery.ts`
+- `terrain/gridContour.ts`
+- `world/caves/caveHeightfieldMesh.ts`
+- `world/caves/caveHeightfieldPresentation.ts`
 
 **Imported by**
 
-- `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `debug/createCaveHeightfieldTestScene.ts`
 
 ## `debug/caves/caveHeightfieldPlayer.ts`
@@ -51,14 +51,6 @@ Generated from TypeScript imports.
 
 - `debug/createCaveHeightfieldTestScene.ts`
 
-## `debug/caves/caveHeightfieldRepresentation.test.ts`
-
-**Imports**
-
-- `debug/caves/caveHeightfieldFixtures.ts`
-- `debug/caves/caveHeightfieldMesh.ts`
-- `debug/caves/caveHeightfieldRepresentation.ts`
-
 ## `debug/caves/caveHeightfieldRepresentation.ts`
 
 **Imports**
@@ -68,7 +60,6 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `debug/caves/caveHeightfieldMesh.ts`
-- `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `debug/caves/caveHeightfieldWalkWorld.ts`

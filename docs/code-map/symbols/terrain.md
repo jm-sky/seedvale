@@ -35,10 +35,10 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/buildChunkGeometry.ts`
 
-- `buildChunkGeometry` — function — line 363
-- `ChunkMeshResult` — type — line 6
-- `createTerrainMaterial` — function — line 34
-- `TerrainWeatherUniforms` — type — line 29
+- `buildChunkGeometry` — function — line 364
+- `ChunkMeshResult` — type — line 7
+- `createTerrainMaterial` — function — line 35
+- `TerrainWeatherUniforms` — type — line 30
 
 ## `terrain/cemeteryAssignment.ts`
 
@@ -179,26 +179,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 905
-- `applyModificationToTile` — function — line 762
-- `ChunkManager` — type — line 487
-- `ChunkManagerConfig` — type — line 326
-- `createChunkManager` — function — line 930
+- `applyChunkWaterDayNight` — function — line 916
+- `applyModificationToTile` — function — line 773
+- `ChunkManager` — type — line 488
+- `ChunkManagerConfig` — type — line 327
+- `createChunkManager` — function — line 941
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 919
-- `drainByBudget` — function — line 880
-- `FinalizeStage` — type — line 427
-- `pickNearestQueuedKey` — function — line 840
-- `pickNextFinalizeKey` — function — line 858
-- `resolveUnloadedLandmark` — function — line 275
+- `CropHarvestOutcome` — type — line 930
+- `drainByBudget` — function — line 891
+- `FinalizeStage` — type — line 428
+- `pickNearestQueuedKey` — function — line 851
+- `pickNextFinalizeKey` — function — line 869
+- `resolveUnloadedLandmark` — function — line 276
   - domain: world-terrain
-- `ringChunkOffsets` — function — line 235
-- `TerrainModification` — type — line 719
-- `tickChunkWaterSurfaces` — function — line 893
+- `ringChunkOffsets` — function — line 236
+- `TerrainModification` — type — line 730
+- `tickChunkWaterSurfaces` — function — line 904
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -321,6 +321,13 @@ Generated from exported TypeScript symbols.
 - `macroMeadowWeightAt` — function — line 316
   - domain: world-terrain
 
+## `terrain/gridContour.ts`
+
+- `CELL_RING` — const — line 12
+  - domain: world-terrain
+- `marchCellRing` — function — line 34
+  - domain: world-terrain
+
 ## `terrain/hydrology.ts`
 
 - `classifyStreams` — function — line 698
@@ -440,6 +447,15 @@ Generated from exported TypeScript symbols.
 - `isWetFloor` — function — line 17
 - `MOUNTAIN_RIDGE_THRESHOLD` — const — line 13
 - `OCEAN_MIX_GATE` — const — line 15
+
+## `terrain/terrainCutout.ts`
+
+- `buildCutChunkAttributes` — function — line 148
+  - domain: world-terrain
+- `CutChunkAttributes` — type — line 57
+- `cutoutsOverlappingChunk` — function — line 76
+- `TerrainCutout` — type — line 34
+- `TerrainCutoutBounds` — type — line 27
 
 ## `terrain/terrainDetailNormalMap.ts`
 

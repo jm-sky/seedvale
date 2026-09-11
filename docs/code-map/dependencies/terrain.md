@@ -73,12 +73,14 @@ Generated from TypeScript imports.
 
 - `config/worldConfig.ts`
 - `terrain/chunkMeshData.ts`
+- `terrain/terrainCutout.ts`
 - `terrain/terrainDetailNormalMap.ts`
 
 **Imported by**
 
 - `terrain/chunkManager.ts`
 - `terrain/scorchFalloff.test.ts`
+- `terrain/terrainCutout.test.ts`
 
 ## `terrain/cemeteryAssignment.test.ts`
 
@@ -310,7 +312,9 @@ Generated from TypeScript imports.
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
+- `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
+- `world/createCaves.test.ts`
 - `world/largeCaves.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/locationsCoarseCache.test.ts`
@@ -425,6 +429,7 @@ Generated from TypeScript imports.
 - `terrain/riverNetwork.ts`
 - `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
+- `terrain/terrainCutout.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `terrain/waterSample.ts`
 - `world/collision.ts`
@@ -450,6 +455,7 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `terrain/footstepSurface.test.ts`
 - `terrain/footstepSurface.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 - `world/createTerrainPreparations.test.ts`
 - `world/createTerrainPreparations.ts`
@@ -501,6 +507,9 @@ Generated from TypeScript imports.
 - `terrain/chunkMeshCache.ts`
 - `terrain/chunkMeshData.test.ts`
 - `terrain/chunkWorkerPool.ts`
+- `terrain/terrainCutout.test.ts`
+- `terrain/terrainCutout.ts`
+- `world/caves/caveTerrainCutout.test.ts`
 
 ## `terrain/chunkVegetation.test.ts`
 
@@ -720,6 +729,14 @@ Generated from TypeScript imports.
 - `terrain/grass.ts`
 - `terrain/grassPlacement.test.ts`
 
+## `terrain/gridContour.ts`
+
+**Imported by**
+
+- `debug/caves/caveHeightfieldMesh.ts`
+- `terrain/terrainCutout.ts`
+- `world/caves/caveHeightfieldMesh.ts`
+
 ## `terrain/hydrology.test.ts`
 
 **Imports**
@@ -923,6 +940,30 @@ Generated from TypeScript imports.
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/map/mapProjection.ts`
+
+## `terrain/terrainCutout.test.ts`
+
+**Imports**
+
+- `terrain/buildChunkGeometry.ts`
+- `terrain/chunkMeshData.ts`
+- `terrain/terrainCutout.ts`
+
+## `terrain/terrainCutout.ts`
+
+**Imports**
+
+- `terrain/chunkMeshData.ts`
+- `terrain/gridContour.ts`
+
+**Imported by**
+
+- `terrain/buildChunkGeometry.ts`
+- `terrain/chunkManager.ts`
+- `terrain/terrainCutout.test.ts`
+- `world/caves/caveTerrainCutout.test.ts`
+- `world/caves/caveTerrainCutout.ts`
+- `world/createCaves.test.ts`
 
 ## `terrain/terrainDetailNormalMap.ts`
 

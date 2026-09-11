@@ -274,6 +274,7 @@ Generated from TypeScript imports.
 - `debug/createCaveHeightfieldTestScene.ts`
 - `settlement/decorProps.test.ts`
 - `settlement/props.ts`
+- `world/caves/caveHeightfieldPresentation.ts`
 
 ## `settlement/families.test.ts`
 
@@ -330,6 +331,7 @@ Generated from TypeScript imports.
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 - `world/hiddenFinds.ts`
 

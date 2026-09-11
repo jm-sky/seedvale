@@ -93,6 +93,8 @@ Generated from TypeScript imports.
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
+- `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
+- `world/createCaves.test.ts`
 - `world/map/mapProjection.ts`
 - `world/worldContext.ts`
