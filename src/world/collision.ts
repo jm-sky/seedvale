@@ -226,19 +226,34 @@ export function resolvePosition(
   entityRadius: number,
   colliders: readonly Collider[],
 ): { x: number, z: number } {
-  let deepest: Push | null = null
+  const resolved = resolvePositionAudited(x, z, entityRadius, colliders)
+  return { x: resolved.x, z: resolved.z }
+}
+
+/** Same push rule as `resolvePosition`, plus which collider won (debug trace). */
+export function resolvePositionAudited(
+  x: number,
+  z: number,
+  entityRadius: number,
+  colliders: readonly Collider[],
+): { x: number, z: number, activeColliderCount: number, influencingCollider: Collider | null } {
+  let deepest: (Push & { collider: Collider }) | null = null
+  let activeColliderCount = 0
 
   for (const collider of colliders) {
     const push = collider.type === 'circle'
       ? resolveCirclePush(collider, x, z, entityRadius)
       : resolveObbPush(collider, x, z, entityRadius)
-    if (push.penetration > 0 && (!deepest || push.penetration > deepest.penetration)) {
-      deepest = push
+    if (push.penetration > 0) {
+      activeColliderCount += 1
+      if (!deepest || push.penetration > deepest.penetration) {
+        deepest = { ...push, collider }
+      }
     }
   }
 
-  if (!deepest) return { x, z }
-  return { x: deepest.x, z: deepest.z }
+  if (!deepest) return { x, z, activeColliderCount, influencingCollider: null }
+  return { x: deepest.x, z: deepest.z, activeColliderCount, influencingCollider: deepest.collider }
 }
 
 export type ColliderRegistry = {

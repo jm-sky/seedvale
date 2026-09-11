@@ -2,6 +2,11 @@ import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { CaveGroundQueryDebug, PlayerGroundTraceTick } from '../debug/playerGroundTrace'
+import type {
+  MovementHeightfieldSnapshot,
+  PlayerMovementTraceRecordInput,
+  PlayerMovementTraceTick,
+} from '../debug/playerMovementTrace'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
@@ -13,6 +18,7 @@ import {
   playJumpTakeoff,
   playWaterLap,
 } from '../audio/playerMoveSounds'
+import { colliderToMovementSnapshot } from '../debug/playerMovementTrace'
 import {
   CAMERA_DISTANCE_DEFAULT,
   CAMERA_DISTANCE_MIN,
@@ -40,9 +46,9 @@ import {
   snapshotTemporaryConditions,
   type TemporaryConditionsState,
 } from '../shared/temporaryConditions'
-import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
+import { applySlopeMovementConstraint, sampleSlope } from '../terrain/slopeConstraint'
 import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
-import { type Collider, colliderActiveAtY, resolvePosition } from '../world/collision'
+import { type Collider, colliderActiveAtY, resolvePosition, resolvePositionAudited } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { humanBodyCarryCapacityKg } from './humanCarryCapacity'
 import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT, rockCeilingMaxY } from './playerDimensions'
@@ -260,6 +266,47 @@ export class PlayerController {
   private sampleFootstepSurface: (x: number, z: number) => FootstepSurface
   private groundTraceRecord: ((tick: PlayerGroundTraceTick) => void) | null = null
   private peekGroundQueryDebug: (() => CaveGroundQueryDebug | null) | null = null
+  private movementTraceRecord: ((tick: PlayerMovementTraceRecordInput) => void) | null = null
+  private peekHeightfieldMovementSample: ((x: number, z: number, playerY: number) => MovementHeightfieldSnapshot) | null = null
+  private movementTraceFrame = 0
+  private movementTracePending: {
+    startX: number
+    startY: number
+    startZ: number
+    grounded: boolean
+    verticalVelocity: number
+    rawWishX: number
+    rawWishZ: number
+    slopeBeforeX: number
+    slopeBeforeZ: number
+    slopeAfterX: number
+    slopeAfterZ: number
+    slopeDeltaX: number
+    slopeDeltaZ: number
+    slopeAngleDeg: number | null
+    candidateX: number
+    candidateZ: number
+    ordinaryBeforeX: number
+    ordinaryBeforeZ: number
+    ordinaryAfterX: number
+    ordinaryAfterZ: number
+    ordinaryDeltaX: number
+    ordinaryDeltaZ: number
+    activeColliderCount: number
+    influencingCollider: ReturnType<typeof colliderToMovementSnapshot>
+    caveBeforeX: number
+    caveBeforeZ: number
+    caveAfterX: number
+    caveAfterZ: number
+    caveDeltaX: number
+    caveDeltaZ: number
+    heightfield: MovementHeightfieldSnapshot
+    intendedX: number
+    intendedZ: number
+    yBeforeVertical: number
+    groundY: number
+    groundSource: PlayerMovementTraceTick['groundSource']
+  } | null = null
   private readonly isCapsule: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
    *  (the wrapper, which also carries the label at a fixed height) for
@@ -541,6 +588,17 @@ export class PlayerController {
   ): void {
     this.groundTraceRecord = record
     this.peekGroundQueryDebug = peek
+  }
+
+  /** Opt-in movement pipeline trace (Cave V2 mouth snap-back recon). */
+  setMovementTraceRecorder(
+    record: ((tick: PlayerMovementTraceRecordInput) => void) | null,
+    peekHeightfield: ((x: number, z: number, playerY: number) => MovementHeightfieldSnapshot) | null,
+  ): void {
+    this.movementTraceRecord = record
+    this.peekHeightfieldMovementSample = peekHeightfield
+    this.movementTracePending = null
+    this.movementTraceFrame = 0
   }
 
   setName(name: string): void {
@@ -950,29 +1008,99 @@ export class PlayerController {
       const baseSpeed = (this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED) * this.encumbranceSpeedMultiplier
       const speed = applySneakSpeedModifier(baseSpeed, this.skills.sneak.active)
       this.wish.normalize().multiplyScalar(speed * dt)
+      const startX = this.mesh.position.x
+      const startY = this.mesh.position.y
+      const startZ = this.mesh.position.z
+      const rawWishX = this.wish.x
+      const rawWishZ = this.wish.z
       // Steep terrain scales down (and, past the max walkable angle, removes)
       // the uphill component of the move — across-slope/downhill are
       // untouched (plan 183).
       const slopeWish = applySlopeMovementConstraint(
-        this.wish.x,
-        this.wish.z,
-        this.mesh.position.x,
-        this.mesh.position.z,
+        rawWishX,
+        rawWishZ,
+        startX,
+        startZ,
         this.sampleHeight,
       )
       this.wish.x = slopeWish.x
       this.wish.z = slopeWish.z
+      const candidateX = startX + slopeWish.x
+      const candidateZ = startZ + slopeWish.z
       // Sneak progresses from distance actually sneaked, not from frames with
       // the toggle on (plan 128 §1 "nie przyznawać XP co klatkę").
       if (this.skills.sneak.active) {
         this.sneakUseDistance = accumulateSneakUse(this.skills, this.sneakUseDistance, this.wish.length())
       }
-      const resolved = this.resolveHorizontalMove(
-        this.mesh.position.x + this.wish.x,
-        this.mesh.position.z + this.wish.z,
-      )
-      this.mesh.position.x = resolved.x
-      this.mesh.position.z = resolved.z
+      if (this.movementTraceRecord) {
+        const colliders = this.collidersNearAtHeight(candidateX, candidateZ)
+        const ordinary = resolvePositionAudited(
+          candidateX,
+          candidateZ,
+          PLAYER_COLLISION_RADIUS,
+          colliders,
+        )
+        const caveBeforeX = ordinary.x
+        const caveBeforeZ = ordinary.z
+        const caveResolved = this.caveHorizontal(
+          caveBeforeX,
+          caveBeforeZ,
+          startY,
+          PLAYER_COLLISION_RADIUS,
+          PLAYER_HEIGHT,
+        )
+        this.mesh.position.x = caveResolved.x
+        this.mesh.position.z = caveResolved.z
+        const slopeSample = sampleSlope(startX, startZ, this.sampleHeight)
+        const slopeAngleDeg = (slopeSample.angleRad * 180) / Math.PI
+        const ground = this.groundAt(startX, startZ)
+        const groundDebug = this.peekGroundQueryDebug?.() ?? null
+        let groundSource: PlayerMovementTraceTick['groundSource'] = groundDebug?.source ?? 'surface'
+        if (this.worldWaterOwnsVertical(startX, startZ, ground)) groundSource = 'water'
+        this.movementTraceFrame += 1
+        this.movementTracePending = {
+          startX,
+          startY,
+          startZ,
+          grounded: this.grounded,
+          verticalVelocity: this.verticalVelocity,
+          rawWishX,
+          rawWishZ,
+          slopeBeforeX: rawWishX,
+          slopeBeforeZ: rawWishZ,
+          slopeAfterX: slopeWish.x,
+          slopeAfterZ: slopeWish.z,
+          slopeDeltaX: slopeWish.x - rawWishX,
+          slopeDeltaZ: slopeWish.z - rawWishZ,
+          slopeAngleDeg,
+          candidateX,
+          candidateZ,
+          ordinaryBeforeX: candidateX,
+          ordinaryBeforeZ: candidateZ,
+          ordinaryAfterX: ordinary.x,
+          ordinaryAfterZ: ordinary.z,
+          ordinaryDeltaX: ordinary.x - candidateX,
+          ordinaryDeltaZ: ordinary.z - candidateZ,
+          activeColliderCount: ordinary.activeColliderCount,
+          influencingCollider: colliderToMovementSnapshot(ordinary.influencingCollider),
+          caveBeforeX,
+          caveBeforeZ,
+          caveAfterX: caveResolved.x,
+          caveAfterZ: caveResolved.z,
+          caveDeltaX: caveResolved.x - caveBeforeX,
+          caveDeltaZ: caveResolved.z - caveBeforeZ,
+          heightfield: this.peekHeightfieldMovementSample?.(caveBeforeX, caveBeforeZ, startY) ?? null,
+          intendedX: slopeWish.x,
+          intendedZ: slopeWish.z,
+          yBeforeVertical: startY,
+          groundY: ground.height,
+          groundSource,
+        }
+      } else {
+        const resolved = this.resolveHorizontalMove(candidateX, candidateZ)
+        this.mesh.position.x = resolved.x
+        this.mesh.position.z = resolved.z
+      }
       // A slope-blocked wish can collapse to zero — keep facing the last
       // direction instead of snapping to atan2(0, 0).
       if (this.wish.lengthSq() > 0) {
@@ -981,6 +1109,7 @@ export class PlayerController {
     }
 
     this.updateVerticalMotion(dt)
+    this.flushMovementTraceRecord()
     this.tickFootsteps(dt)
     this.syncCamera()
     this.syncAnimation()
@@ -1189,6 +1318,58 @@ export class PlayerController {
           -JUMP_TILT_MAX,
           JUMP_TILT_MAX,
         )
+  }
+
+  private flushMovementTraceRecord(): void {
+    const pending = this.movementTracePending
+    const record = this.movementTraceRecord
+    if (!pending || !record) return
+    this.movementTracePending = null
+    record({
+      frame: this.movementTraceFrame,
+      startX: pending.startX,
+      startY: pending.startY,
+      startZ: pending.startZ,
+      grounded: pending.grounded,
+      verticalVelocity: pending.verticalVelocity,
+      rawWishX: pending.rawWishX,
+      rawWishZ: pending.rawWishZ,
+      slopeBeforeX: pending.slopeBeforeX,
+      slopeBeforeZ: pending.slopeBeforeZ,
+      slopeAfterX: pending.slopeAfterX,
+      slopeAfterZ: pending.slopeAfterZ,
+      slopeDeltaX: pending.slopeDeltaX,
+      slopeDeltaZ: pending.slopeDeltaZ,
+      slopeAngleDeg: pending.slopeAngleDeg,
+      candidateX: pending.candidateX,
+      candidateZ: pending.candidateZ,
+      ordinaryBeforeX: pending.ordinaryBeforeX,
+      ordinaryBeforeZ: pending.ordinaryBeforeZ,
+      ordinaryAfterX: pending.ordinaryAfterX,
+      ordinaryAfterZ: pending.ordinaryAfterZ,
+      ordinaryDeltaX: pending.ordinaryDeltaX,
+      ordinaryDeltaZ: pending.ordinaryDeltaZ,
+      activeColliderCount: pending.activeColliderCount,
+      influencingCollider: pending.influencingCollider,
+      caveBeforeX: pending.caveBeforeX,
+      caveBeforeZ: pending.caveBeforeZ,
+      caveAfterX: pending.caveAfterX,
+      caveAfterZ: pending.caveAfterZ,
+      caveDeltaX: pending.caveDeltaX,
+      caveDeltaZ: pending.caveDeltaZ,
+      heightfield: pending.heightfield,
+      groundSource: pending.groundSource,
+      groundY: pending.groundY,
+      yBeforeVertical: pending.yBeforeVertical,
+      yAfterVertical: this.mesh.position.y,
+      groundedAfter: this.grounded,
+      verticalVelocityAfter: this.verticalVelocity,
+      finalX: this.mesh.position.x,
+      finalY: this.mesh.position.y,
+      finalZ: this.mesh.position.z,
+      intendedX: pending.intendedX,
+      intendedZ: pending.intendedZ,
+    })
   }
 
   private emitGroundTrace(

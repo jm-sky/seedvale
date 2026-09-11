@@ -884,6 +884,10 @@ pnpm run build
 
 No browser verification (User pass: `teleportToFirstCave()`, exit centre / 30–60° / near both doorway sides, repeated entry/exit, pushing into an interior wall, hillside above the tunnel, seam teeth). `pnpm docs:sync` not run.
 
+## Mouth exit snap-back — browser still reproduces (post-`d23795e3`)
+
+After commit `d23795e3` (terrain/cache Y mismatch fix in `resolveHeightfieldHorizontal`), targeted tests pass but the User still sees horizontal snap-back at the grey cave floor → green terrain seam when walking out in the browser (`?debugDisableSystems=caveMouthRocks` does not remove it). No further spatial or gameplay fix in that pass — **opt-in runtime movement trace** added (`src/debug/playerMovementTrace.ts`, `seedvale.debug.player.startMovementTrace()` / `stopMovementTrace()` / `printMovementTrace()`) to classify which movement-pipeline stage introduces backward displacement on the real browser tick.
+
 ## Milestone C — Shared spatial queries + semantic cave locations
 
 C should productionise the useful pure parts of `src/debug/caves/caveHeightfieldTraversal.ts`, not the walker/harness itself.

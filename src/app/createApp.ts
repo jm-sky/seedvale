@@ -32,6 +32,7 @@ import { isAdminMode, isDebugMode, isSystemEnabled } from '../debug/debugMode'
 import { installNpcDebugApi } from '../debug/npcDebugApi'
 import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
 import { createPlayerGroundTraceBuffer } from '../debug/playerGroundTrace'
+import { createPlayerMovementTraceBuffer } from '../debug/playerMovementTrace'
 import { findHomeCaveSpawner } from '../fauna/createFauna'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -1660,10 +1661,17 @@ export async function createApp(
   const npcInspector = isDebugMode() ? createNpcInspector(container, bundle, () => dayNight.timeOfDay) : undefined
   const npcInspectTrigger = createNpcInspectTrigger(renderer.domElement)
   const playerGroundTrace = (isDebugMode() || isAdminMode()) ? createPlayerGroundTraceBuffer() : null
+  const playerMovementTrace = (isDebugMode() || isAdminMode()) ? createPlayerMovementTraceBuffer() : null
   if (playerGroundTrace) {
     player.setGroundTraceRecorder(
       playerGroundTrace.record,
       () => bundle.caves.peekGroundQueryDebug(),
+    )
+  }
+  if (playerMovementTrace) {
+    player.setMovementTraceRecorder(
+      (tick) => { playerMovementTrace.record(tick) },
+      (x, z, playerY) => bundle.caves.peekHeightfieldMovementSample(x, z, playerY),
     )
   }
   installNpcDebugApi(
@@ -1683,6 +1691,7 @@ export async function createApp(
     () => dayNight.elapsedDays,
     questManager,
     playerGroundTrace,
+    playerMovementTrace,
   )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {

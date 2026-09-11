@@ -58,6 +58,11 @@ import {
   unfreezeNpc,
 } from './npcInspector'
 import { emptyPlayerGroundTrace, type PlayerGroundTraceBuffer, type PlayerGroundTraceSnapshot } from './playerGroundTrace'
+import {
+  emptyPlayerMovementTrace,
+  type PlayerMovementTraceBuffer,
+  type PlayerMovementTraceSnapshot,
+} from './playerMovementTrace'
 import { findVillageDef } from './villageInspector'
 
 /**
@@ -256,6 +261,12 @@ export type PlayerDebugApi = {
   /** Last ~120 player ground-resolution ticks; latches on a cave surface snap. */
   groundTrace: () => PlayerGroundTraceSnapshot
   clearGroundTrace: () => void
+  /** Opt-in movement pipeline trace (start → walk out of cave → stop → print). */
+  startMovementTrace: () => void
+  stopMovementTrace: () => void
+  movementTrace: () => PlayerMovementTraceSnapshot
+  clearMovementTrace: () => void
+  printMovementTrace: () => string
 }
 
 export type TransportOrderDebugSnapshot = {
@@ -408,6 +419,9 @@ const HELP_TEXT = [
   'player.position() — current player world position {x, y, z}',
   'player.groundTrace() / getPlayerGroundTrace() — last ~120 player ground-resolution ticks; auto-freezes on a >2m upward Y snap or cave→surface takeover. copy(JSON.stringify(seedvale.debug.getPlayerGroundTrace(), null, 2))',
   'player.clearGroundTrace() / clearPlayerGroundTrace() — empty the ring and reset the snap latch before a repro',
+  'player.startMovementTrace() → walk repro → player.stopMovementTrace() → player.printMovementTrace() — horizontal pipeline snap recon (Cave V2 mouth)',
+  'player.movementTrace() — raw JSON snapshot of the movement trace buffer',
+  'player.clearMovementTrace() — empty movement trace buffer and stop recording',
   'player.health() — current player health {hp, maxHp, status}',
   'player.attributes() — current player attributes {strength, agility, endurance, intelligence, wisdom, charisma}',
   'player.needs() — current player needs {hunger, thirst, sleep, rest}',
@@ -470,6 +484,7 @@ export function installNpcDebugApi(
   getElapsedDays: () => number,
   questManager: QuestManager,
   groundTrace?: PlayerGroundTraceBuffer | null,
+  movementTrace?: PlayerMovementTraceBuffer | null,
 ): void {
   if (!isDebugMode() && !isAdminMode()) return
 
@@ -639,6 +654,15 @@ export function installNpcDebugApi(
       temporaryConditions: () => getPlayer().temporaryConditions,
       groundTrace: () => groundTrace?.snapshot() ?? emptyPlayerGroundTrace(),
       clearGroundTrace: () => { groundTrace?.clear() },
+      startMovementTrace: () => { movementTrace?.start() },
+      stopMovementTrace: () => { movementTrace?.stop() },
+      movementTrace: () => movementTrace?.snapshot() ?? emptyPlayerMovementTrace(),
+      clearMovementTrace: () => { movementTrace?.clear() },
+      printMovementTrace: () => {
+        const report = movementTrace?.printReport() ?? 'Movement trace unavailable (?debug=1).'
+        console.log(report)
+        return report
+      },
     },
     npc: (id) => {
       if (!findNpcById(bundle, id)) return null

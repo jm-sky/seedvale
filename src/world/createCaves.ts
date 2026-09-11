@@ -31,6 +31,7 @@ import {
 import {
   buildCaveHeightfieldRepresentation,
   type CaveHeightfieldRepresentation,
+  sampleHeightfieldAt,
   type SurfaceSampler,
 } from './caves/caveHeightfieldRepresentation'
 import {
@@ -77,6 +78,17 @@ export type Caves = {
    * Debug ground-trace only — gameplay must use `queryGround` / `occupancyAt`.
    */
   peekGroundQueryDebug: () => CaveGroundQueryDebug
+  /** Debug movement-trace only — bilinear heightfield sample at `(x,z)` for
+   *  the nearest cave field (smallest outside-grid distance). */
+  peekHeightfieldMovementSample: (x: number, z: number, playerY: number) => {
+    outsideGrid: boolean
+    openSky: boolean
+    gap: number
+    floorY: number
+    ceilY: number
+    surfaceY: number
+    playerY: number
+  } | null
   /** Strict heightfield occupancy — no floor grace, no hysteresis, stateless.
    *  `null` is solid rock / outside cave void / a surface entity above an
    *  underground tunnel; `openSky` at the mouth. Camera boom and swim
@@ -477,6 +489,30 @@ export function createCaves(
     },
     queryGround,
     peekGroundQueryDebug: () => groundQueryDebug,
+    peekHeightfieldMovementSample(x, z, playerY) {
+      let best: ReturnType<typeof sampleHeightfieldAt> | null = null
+      let bestOut = Infinity
+      for (const runtime of runtimes) {
+        const sample = sampleHeightfieldAt(runtime.heightfield, x, z)
+        const outDist = sample.outsideGrid
+          ? Math.hypot(x - runtime.heightfield.originX, z - runtime.heightfield.originZ)
+          : 0
+        if (best == null || outDist < bestOut || (!sample.outsideGrid && best.outsideGrid)) {
+          best = sample
+          bestOut = outDist
+        }
+      }
+      if (!best || best.outsideGrid) return null
+      return {
+        outsideGrid: best.outsideGrid,
+        openSky: best.openSky,
+        gap: best.gap,
+        floorY: best.floorY,
+        ceilY: best.ceilY,
+        surfaceY: best.surfaceY,
+        playerY,
+      }
+    },
     peekStreamingDebug: () => ({
       ...streaming.stats(),
       queuedJobs: presentationQueue.queuedCount,
