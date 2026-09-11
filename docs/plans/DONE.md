@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-terrain-020-adventure-cave-variant`                             | —                   | 2026-09-11 22:52:45 | `world-terrain`  | —          |
 | `world-terrain-021-low-cost-terrain-and-cave-surface-albedo`           | 2026-09-11 21:29:10 | —                   | `world-terrain`  | —          |
 | `world-terrain-022-cave-interior-rock-clutter`                         | 2026-09-11 21:18:18 | —                   | `world-terrain`  | —          |
 | `settlements-npcs-006-wool-to-material`                                | 2026-09-11 14:50:14 | —                   | `settlements-npcs` | —          |

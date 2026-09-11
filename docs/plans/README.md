@@ -63,11 +63,11 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
-| 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-019, fauna-016 |
-| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-019, ~~npc-006~~, ~~npc-007~~ |
-| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-019, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
-| 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-019 |
-| 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-019, world-terrain-017 |
+| 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | ~~world-terrain-019~~, ~~fauna-016~~ |
+| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
+| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~fauna-018~~, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~ |
+| 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
+| 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `settlements-npcs-030-non-home-settlement-food-production-v1.md`            | -       | 🔴 | M      | -      |

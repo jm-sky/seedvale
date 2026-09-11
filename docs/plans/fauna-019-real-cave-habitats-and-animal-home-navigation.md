@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** L
-**Depends on:** world-terrain-019, fauna-016
+**Depends on:** ~~world-terrain-019~~, ~~fauna-016~~
 **Domain:** `fauna`
 **Subdomains:** `habitat` `migration`
 **Tags:** `caves` `home` `navigation` `water-trips`

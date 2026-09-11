@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** world-terrain-019, world-terrain-017
+**Depends on:** ~~world-terrain-019~~, world-terrain-017
 **Domain:** `world`
 **Subdomains:** `resources` `places` `simulation`
 **Tags:** `caves` `mining` `gold` `depletion`

@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** L
-**Depends on:** world-terrain-019, ~~npc-006~~, ~~npc-007~~
+**Depends on:** ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~
 **Domain:** `npc`
 **Subdomains:** `behavior` `work`
 **Tags:** `movement` `navigation` `caves` `spatial-context` `off-screen`

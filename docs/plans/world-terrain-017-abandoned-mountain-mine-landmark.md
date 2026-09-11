@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** world-terrain-019
+**Depends on:** ~~world-terrain-019~~
 **Domain:** `world-terrain`
 **Subdomains:** `terrain` `landmarks`
 **Tags:** `mountains` `caves` `worldgen` `mine`

@@ -1,7 +1,7 @@
 # Plan: Cave Heightfield Production Migration
 
 **Created:** 2026-09-11  
-**Status:** `in progress` 🔄  
+**Status:** `done` ✅  
 **Priority:** high · **Effort:** XL  
 **Depends on:** ~~world-terrain-018~~  
 **Domain:** `world-terrain`  

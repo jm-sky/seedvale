@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** world-terrain-019, fauna-018, fauna-019, quests-progression-002, quests-progression-011
+**Depends on:** ~~world-terrain-019~~, ~~fauna-018~~, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `treasure` `cave` `bear` `hidden-find` `container` `choice-through-action`
