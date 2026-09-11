@@ -24,6 +24,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldQuery.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveInteriorRocks.test.ts`
+- `world/caves/cavePresentationFog.test.ts`
 
 ## `debug/caves/caveHeightfieldMesh.ts`
 

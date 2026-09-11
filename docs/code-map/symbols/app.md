@@ -243,13 +243,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 610
+- `createGameLoop` — function — line 612
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 578
-- `GameLoopDeps` — type — line 287
+- `GameLoop` — type — line 580
+- `GameLoopDeps` — type — line 289
 
 ## `app/graphicsSettings.ts`
 

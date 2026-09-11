@@ -240,7 +240,9 @@ Generated from TypeScript imports.
 - `terrain/resourceDeposits.ts`
 - `tools/assetBrowser/viewer/createAssetSlot.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
+- `world/cartProp.sharedGpu.test.ts`
 - `world/cartProp.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/containerProp.ts`
 - `world/createBeehives.ts`
 - `world/createCaves.ts`

@@ -130,6 +130,12 @@ Generated from TypeScript imports.
 - `world/createCarts.test.ts`
 - `world/createCarts.ts`
 
+## `world/cartProp.sharedGpu.test.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+
 ## `world/cartProp.ts`
 
 **Imports**
@@ -278,6 +284,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `settlement/propSpecs.ts`
 - `world/cartProp.ts`
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveAdventureProps.ts`
@@ -292,6 +299,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `assets/loadGltf.ts`
+- `settlement/houseLighting.ts`
 - `settlement/propSpecs.ts`
 - `settlement/propUtils.ts`
 - `settlement/settlementStructures.ts`
@@ -472,6 +481,7 @@ Generated from TypeScript imports.
 
 - `debug/caves/caveHeightfieldMesh.ts`
 - `world/caves/caveHeightfieldPresentation.test.ts`
+- `world/caves/cavePresentationFog.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/caveHeightfieldQuery.test.ts`
@@ -553,6 +563,7 @@ Generated from TypeScript imports.
 - `world/caves/caveInteriorRocks.test.ts`
 - `world/caves/caveInteriorRocks.ts`
 - `world/caves/caveMouthGeometry.test.ts`
+- `world/caves/cavePresentationFog.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
@@ -649,6 +660,16 @@ Generated from TypeScript imports.
 - `world/caves/mouthCarve.ts`
 - `world/largeCaves.ts`
 - `world/locations/darkForestTreasureSite.ts`
+
+## `world/caves/cavePresentationFog.test.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `world/caves/caveHeightfieldPresentation.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/weather.ts`
+- `world/weatherVisuals.ts`
 
 ## `world/caves/cavePresentationLifecycle.test.ts`
 
@@ -3229,6 +3250,7 @@ Generated from TypeScript imports.
 - `world/animalTraps.test.ts`
 - `world/animalTraps.ts`
 - `world/bloodTraces.ts`
+- `world/caves/cavePresentationFog.test.ts`
 - `world/clouds.test.ts`
 - `world/clouds.ts`
 - `world/groundFog.ts`
@@ -3268,6 +3290,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/gameLoop.ts`
+- `world/caves/cavePresentationFog.test.ts`
 - `world/weatherVisuals.test.ts`
 
 ## `world/wellGroundwater.test.ts`

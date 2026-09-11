@@ -512,6 +512,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `settlement/props.ts`
+- `world/caves/caveAdventureProps.ts`
 - `world/createStandingTorches.ts`
 - `world/standingTorchProp.ts`
 
@@ -980,6 +981,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPropColliders.ts`
 - `settlement/settlementStructures.ts`
 - `world/animalTraps.ts`
+- `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/standingTorchProp.ts`
 - `world/trapProp.ts`

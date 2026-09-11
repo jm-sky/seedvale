@@ -96,8 +96,8 @@ Generated from exported TypeScript symbols.
 - `CART_FIT_MAX` — const — line 7
 - `CART_MODEL_URL` — const — line 5
 - `CART_MODEL_YAW_OFFSET` — const — line 9
-- `createCartProp` — function — line 81
-- `disposeCartProp` — function — line 86
+- `createCartProp` — function — line 82
+- `disposeCartProp` — function — line 87
 - `preloadCartProp` — function — line 63
   - domain: fauna
   - role: Cart visual template (GLB or procedural fallback). Logical hitch is authoritative even when the mesh is the fallback.
@@ -135,26 +135,26 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveAdventureProps.ts`
 
-- `_resetCaveAdventurePropTemplatesForTests` — function — line 270
+- `_resetCaveAdventurePropTemplatesForTests` — function — line 255
 - `adventurePropPlacementFromAnchor` — function — line 90
   - domain: world-terrain
 - `adventurePropPlacementsFromAnchors` — function — line 104
-- `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT` — const — line 51
-- `CAVE_ADVENTURE_PROPS_GROUP_NAME` — const — line 16
-- `CAVE_ADVENTURE_PROPS_USERDATA_KEY` — const — line 18
-- `CAVE_CRATE_TARGET_HEIGHT` — const — line 48
-- `CAVE_PRESENTATION_PROP_ROLES` — const — line 20
-- `CAVE_SUPPORT_FIT_MAX` — const — line 47
-- `CaveAdventurePropAssetKind` — type — line 29
-- `CaveAdventurePropPlacement` — type — line 31
-- `CaveAdventurePropTemplates` — type — line 139
-- `CavePresentationPropRole` — type — line 27
-- `createCaveAdventurePropsGroup` — function — line 228
+- `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT` — const — line 56
+- `CAVE_ADVENTURE_PROPS_GROUP_NAME` — const — line 21
+- `CAVE_ADVENTURE_PROPS_USERDATA_KEY` — const — line 23
+- `CAVE_CRATE_TARGET_HEIGHT` — const — line 53
+- `CAVE_PRESENTATION_PROP_ROLES` — const — line 25
+- `CAVE_SUPPORT_FIT_MAX` — const — line 52
+- `CaveAdventurePropAssetKind` — type — line 34
+- `CaveAdventurePropPlacement` — type — line 36
+- `CaveAdventurePropTemplates` — type — line 128
+- `CavePresentationPropRole` — type — line 32
+- `createCaveAdventurePropsGroup` — function — line 214
   - domain: world-terrain
-- `CreateCaveAdventurePropsGroupResult` — type — line 216
-- `getCaveAdventurePropTemplates` — function — line 185
+- `CreateCaveAdventurePropsGroupResult` — type — line 201
+- `getCaveAdventurePropTemplates` — function — line 174
   - domain: world-terrain
-- `preloadCaveAdventurePropTemplates` — function — line 155
+- `preloadCaveAdventurePropTemplates` — function — line 144
   - domain: world-terrain
 - `presentationAnchorsFromContent` — function — line 72
   - domain: world-terrain
@@ -217,7 +217,7 @@ Generated from exported TypeScript symbols.
 - `CaveVec3` — type — line 34
 - `createCaveHeightfieldMaterial` — function — line 357
 - `CreateCaveHeightfieldMaterialOptions` — type — line 344
-- `disposeCaveHeightfieldMaterialGpu` — function — line 389
+- `disposeCaveHeightfieldMaterialGpu` — function — line 392
 - `perturbCaveWorldNormalOnTangentPlane` — function — line 99
   - domain: world-terrain
 - `reconstructCaveTriplanarWorldNormal` — function — line 59
@@ -252,16 +252,17 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 222
-- `createCaveHeightfieldGeometry` — function — line 59
+- `CaveHeightfieldPresentation` — type — line 247
+- `createCaveHeightfieldGeometry` — function — line 84
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 250
+- `createCaveHeightfieldPresentation` — function — line 275
   - domain: world-terrain
-- `createMouthRocks` — function — line 155
+- `createMouthRocks` — function — line 180
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 77
+- `createMouthUndersideMask` — function — line 102
   - domain: world-terrain
 - `createMouthUndersideMaskMaterial` — function — line 43
+- `exemptCavePresentationFromSceneFog` — function — line 55
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
@@ -1779,6 +1780,12 @@ Generated from exported TypeScript symbols.
 ## `world/weatherVisuals.ts`
 
 - `applyWeatherOverlay` — function — line 39
+- `CAVE_INTERIOR_FOG_COLOR` — const — line 66
+- `CAVE_INTERIOR_FOG_FAR` — const — line 68
+- `CAVE_INTERIOR_FOG_NEAR` — const — line 67
+- `fogColorLuminance` — function — line 92
+- `resolveSceneFog` — function — line 73
+- `SceneFogParams` — type — line 70
 - `WeatherVisualOverlay` — type — line 11
 
 ## `world/wellGroundwater.ts`
