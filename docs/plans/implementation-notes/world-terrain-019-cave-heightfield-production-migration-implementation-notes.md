@@ -815,6 +815,75 @@ pnpm run build
 
 No browser verification — User pass of the mouth from typical approach / grazing / low-camera angles.
 
+## Mouth exit snap-back — fixed (2026-09-11)
+
+Regression after the spatial cutover: walking **out** of the cave, the player was pulled back toward the interior exactly at the grey cave floor → green terrain seam. Browser A/B with `?debugDisableSystems=caveMouthRocks` still reproduced it, so mouth rocks are ruled out (the earlier polish note's "rocks were the snap-back" was only part of the story). Spatial fix only; no rocks / material / topology / terrain / camera changes.
+
+### Reproduced numerically
+
+`createCaves.test.ts` on seed `1136726869`, cave `cave:7fd14c30`, walking the centreline out of the mouth the way `PlayerController` does — containment at the *previous* frame's Y, then ground (hysteretic `queryGround`, else the terrain tile) — with the outdoor ground modelled as production `sampleHeight`: 1 m tile nodes (`apronOriginWorld`, res 65 / chunk 64) carrying the recess `applyModificationToTile` digs, bilinear between nodes.
+
+```text
+along  openSky  gap    floorY  ceilY   surfaceY(cache)  tile   y(prev)   result
+3.07   true     -0.07  4.25    4.18    4.08             4.11   4.04      identity (open sky)
+3.13   false    -0.56  4.54    3.98    4.10             4.12   4.11      identity (y > surf - eps by 0.06)
+…
+4.40   false    -8.41  8.59    0.19    4.65             4.63   4.62      identity (by 0.02)
+4.47   false    -8.80  8.79   -0.01    4.68             4.65   4.63      y < surfaceY - 0.05  → "rock"
+                                                                          deficit 10.7, |∇gap| 6.0 → step 1.78 m
+                                                                          resolved along = 2.75  (snap-back 1.79 m)
+```
+
+Starting 2 m out in the throat, every cave / angle (0°, ±30°, ±45°) / speed (walk, 30 fps sprint) snapped back before the fix and stuck at `along ≈ 2.5–2.8` — the seam.
+
+### Root cause
+
+`resolveHeightfieldHorizontal` decided "surface entity → identity" with `y > sample.surfaceY - SURFACE_CLIP_EPS` (5 cm). Outside the open-sky contour the field is closed rock (`gap = FAR_GAP`, `ceilY` far below the terrain), so any entity that fails that test is treated as being *in rock* and pushed up the `gap` gradient — which points back into the mouth — by up to `radius + 1.5` m per iteration. But an exiting player's Y is not the field's number: it is the **terrain tile** (`sampleHeight`, 1 m bilinear grid with the recess dug on that grid) and it is **one frame behind the XZ** the resolver is asked about (`PlayerController.resolveHorizontalMove` → `caveHorizontal(resolved, mesh.position.y, …)` → `updateVerticalMotion`). `sample.surfaceY` is the 0.3 m bilinear cache of the analytic walk surface. The two disagree by centimetres to decimetres over the mouth pit wall (measured tile − cache down to −0.13 m on the contour, plus slope × step of lag), so 5 cm is not a sampler-agreement bound. The push-back is then repeated every frame the player tries to leave.
+
+Ordering check (`PlayerController.update`): `wish → applySlopeMovementConstraint → resolveHorizontalMove (ordinary colliders → caveHorizontal at mesh.position.y) → updateVerticalMotion (groundAt → integrateVerticalMotion)`. Containment does see the new XZ at the old underground/terrain Y. That lag is a contributing factor (0.02–0.03 m in the trace), but not the root cause: the tile-vs-cache mismatch alone exceeds 5 cm on the pit wall, so a controller reorder would not have fixed it. Left unchanged.
+
+### Fix
+
+`caveHeightfieldQuery.ts`: the surface-entity rule now carries `CAVE_SURFACE_ENTITY_SLACK = 0.75` instead of `SURFACE_CLIP_EPS`:
+
+```text
+identity when  y > sample.surfaceY - CAVE_SURFACE_ENTITY_SLACK
+```
+
+Semantics: the mouth is a portal between the underground floor and the outdoor terrain; an entity within the slack of the walk surface is on the terrain, not in rock. Why this is safe for every wall:
+
+- **Interior walls / doorway flanks still block.** A cave entity next to a wall stands in a *closed standable* column: `ceilY < surfaceY - eps` and `ceilY - floorY >= minGap`, so it is at least `minGap` (1.9 m for the player) below the cached surface, and both numbers come from the same field (no sampler mismatch on that side). The slack is far below that, and below `minGap - JUMP_HEIGHT` (1.3 m), so even a jump apex at the doorway flank stays "underground" and is pushed. Measured on the six production caves + three fixtures: for every rock node within 0.35 m of a closed standable node, `surfaceY(rock) - floorY(standable) >= 1.96 m`.
+- **Rounded fringe outside the doorway still blocks** — the fringe column is closed and holds `gap < minGap`; the entity entering it from standable space is still ≥ `minGap` under the surface (its Y lags), so it is pushed up-gradient as before (`createCaves.test.ts` sweep: every closed column with `gap >= 1` resolves to `>= minGap - 0.25`).
+- **Hillside above a tunnel** — `y ≈ surfaceY` → identity, unchanged.
+- **Pit-rim corners** (terrain past the doorway, 0.8–1.2 m above the pit floor) still hold the capsule: `surfaceY - y ≈ 0.8–1.2 > 0.75`. Rims lower than the slack become step-ups — the same thing ordinary terrain walking does (grounded snap-up is unbounded).
+- Not a blanket identity: an entity a standing clearance below the terrain in the same terrain-side column is still pushed back to the mouth.
+
+### Regression coverage
+
+- `caveHeightfieldQuery.test.ts` (fixture): terrain-side columns past the contour are identity for Y up to `SLACK - 0.01` below the cached surface and still contain an entity `minGap` below it; centre / ±30° / ±45° / ±60° exits onto a 1 m tile terrain with the previous frame's Y are never deflected (walk; 0/±30° also at a 2× sprint step); interior wall and doorway flank still block a capsule at `JUMP_HEIGHT` above the floor; invariant `SLACK + JUMP_HEIGHT < minGap` and `surfaceY - floorY >= minGap` on every closed standable node.
+- `createCaves.test.ts` (seed `1136726869`, all six caves): exit from the throat at 0° / ±30° (walk + 30 fps sprint step) and ±45° (walk) onto the 1 m tile terrain with hysteretic `queryGround`, `back > -0.01` every frame, ends `along >= 6`. Fails without the fix (0.78 m snap-back at `along 3.47`).
+- ±45° at a 30 fps sprint step and ±60° from the throat cross the pit-rim corner and are legitimately held there (pre-existing wall containment; large steps do not slide) — deliberately not asserted as exits.
+
+### The visible "teeth" on the seam
+
+Two presentation-only candidates, both quantified on the production seed with the tile model above; neither has any collision authority (`buildCutChunkAttributes` feeds only chunk render geometry — `sampleHeight` / `heights` untouched; the mask is a `cave-mouth-mask` mesh, no collider registration anywhere in `caves/`):
+
+1. **Terrain cutout contour ridge** (`terrainCutout.ts` / `buildCutChunkAttributes`): contour vertices take the *exact* analytic walk surface (`surfaceYAt`) while the kept grid nodes are 1 m tile heights. Along the contour `walk - tile` ranges **−0.13 … +0.36 m**; where positive, the cut cell's fan triangles form a small upward wedge on the contour — a saw-tooth with ~1 m period at the grass ↔ cave-floor boundary, grass-coloured.
+2. **Mouth underside mask beam** (`buildMouthUndersideMaskBuffers`): the 32-segment dark-rock beam's inner top edge sits at `walkSurfaceAt - MASK_SINK (0.16)`, 0.08 m outside the contour; at 15–35 of 64 contour samples per cave the tile terrain is lower than that, so the beam top pokes through the grass by **up to 0.17 m** — dark, segment-cornered teeth just outside the seam.
+
+Most likely the User sees (2) (dark, contrasting) with (1) underneath. Both are the documented "terrain edge on the 1 m tile grid vs cave rim / mask on the analytic surface" mismatch; not fixed here (presentation polish, out of scope for the spatial regression).
+
+### Tests / checks
+
+```text
+vitest: src/world/caves, src/world/createCaves.test.ts, src/player, src/terrain/terrainCutout.test.ts (374 passed, 2 expected fail)
+vue-tsc --noEmit
+eslint .
+pnpm run build
+```
+
+No browser verification (User pass: `teleportToFirstCave()`, exit centre / 30–60° / near both doorway sides, repeated entry/exit, pushing into an interior wall, hillside above the tunnel, seam teeth). `pnpm docs:sync` not run.
+
 ## Milestone C — Shared spatial queries + semantic cave locations
 
 C should productionise the useful pure parts of `src/debug/caves/caveHeightfieldTraversal.ts`, not the walker/harness itself.

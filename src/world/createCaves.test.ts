@@ -10,10 +10,12 @@ import * as THREE from 'three'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { TerrainCutout } from '../terrain/terrainCutout'
+import type { CaveEntrance } from './caveVolume'
 import type { Collider } from './collision'
 import { createBenchmarkWorldConfig } from '../config/worldConfig'
 import { measureSlope } from '../fauna/createFauna'
 import { resolveCameraBoom } from '../player/cameraBoom'
+import { MOVE_SPEED, SPRINT_MULTIPLIER } from '../player/PlayerController'
 import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT } from '../player/playerDimensions'
 import { villageSizeConfig } from '../settlement/families'
 import {
@@ -434,6 +436,72 @@ describe('createCaves (world-terrain-019 B)', () => {
       expect(boom.y).toBeLessThan(chunkManager.sampleBaseHeight(boom.x, boom.z) - 0.5)
       expect(caves.occupancyAt(boom.x, boom.y, boom.z)).not.toBeNull()
     }
+  })
+
+  it('mouth exit onto 1 m terrain tiles never pushes the walker back into the cave (centre, ±30°, ±45°; walk, and a 30 fps sprint step)', () => {
+    // Regression (world-terrain-019 mouth-exit snap-back). Outdoors the
+    // player's Y is `ChunkManager.sampleHeight` — the 1 m tile grid
+    // (`apronOriginWorld`, res 65 / chunk 64) carrying the mouth recess
+    // (`applyModificationToTile`), bilinear between nodes — and it is one
+    // frame behind the XZ `resolveHorizontal` is asked about. The field's
+    // cached `surfaceY` is the 0.3 m bilinear of the analytic walk surface.
+    // Past the open-sky contour the two disagree by centimetres to
+    // decimetres; a 5 cm surface-entity rule read the exiting player as
+    // underground rock and pushed it up the `gap` gradient back into the
+    // mouth. The exit must be identity at every frame.
+    const tileNode = (ix: number, iz: number, entrance: CaveEntrance): number =>
+      chunkManager.sampleBaseHeight(ix, iz) - mouthCarveDepth(ix, iz, entrance)
+    const tileWalkSurfaceAt = (x: number, z: number, entrance: CaveEntrance): number => {
+      const x0 = Math.floor(x)
+      const z0 = Math.floor(z)
+      const tx = x - x0
+      const tz = z - z0
+      return tileNode(x0, z0, entrance) * (1 - tx) * (1 - tz)
+        + tileNode(x0 + 1, z0, entrance) * tx * (1 - tz)
+        + tileNode(x0, z0 + 1, entrance) * (1 - tx) * tz
+        + tileNode(x0 + 1, z0 + 1, entrance) * tx * tz
+    }
+    const WALK_STEP = MOVE_SPEED / 60
+    const SPRINT_STEP_30FPS = (MOVE_SPEED * SPRINT_MULTIPLIER) / 30
+    let exits = 0
+    for (const def of caves.definitions()) {
+      const entrance = def.entrance
+      const field = productionHeightfield(def.caveId)
+      const out = openingDirection(entrance.yaw)
+      // 45° at a 30 fps sprint step crosses the pit-rim corner (a real
+      // ~0.9 m terrain wall past the doorway) and is legitimately held there.
+      for (const [angleDeg, step] of [
+        [0, WALK_STEP], [0, SPRINT_STEP_30FPS],
+        [30, WALK_STEP], [30, SPRINT_STEP_30FPS], [-30, WALK_STEP], [-30, SPRINT_STEP_30FPS],
+        [45, WALK_STEP], [-45, WALK_STEP],
+      ] as const) {
+        {
+          const heading = entrance.yaw + (angleDeg * Math.PI) / 180
+          const dir = { dx: Math.sin(heading), dz: Math.cos(heading) }
+          // Start in the open-sky mouth throat, on the cave floor.
+          let x = entrance.x + out.dx * 2
+          let z = entrance.z + out.dz * 2
+          expect(sampleHeightfieldAt(field, x, z).openSky).toBe(true)
+          let y = caves.queryGround(x, sampleHeightfieldAt(field, x, z).floorY, z)!.floorY
+          for (let frame = 0; frame < 400 && mouthAlong(x, z, entrance) < 6; frame++) {
+            const candidateX = x + dir.dx * step
+            const candidateZ = z + dir.dz * step
+            // PlayerController order: containment at the previous frame's Y…
+            const resolved = caves.resolveHorizontal(candidateX, candidateZ, y, PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT)
+            const back = (resolved.x - candidateX) * dir.dx + (resolved.z - candidateZ) * dir.dz
+            expect(back, `${def.caveId} ${angleDeg}° step ${step.toFixed(2)} frame ${frame} at along ${mouthAlong(candidateX, candidateZ, entrance).toFixed(2)}`).toBeGreaterThan(-0.01)
+            x = resolved.x
+            z = resolved.z
+            // …then ground (hysteretic cave ground, else the terrain tile).
+            const hit = caves.queryGround(x, y, z)
+            y = hit ? hit.floorY : tileWalkSurfaceAt(x, z, entrance)
+          }
+          expect(mouthAlong(x, z, entrance)).toBeGreaterThanOrEqual(6)
+          exits++
+        }
+      }
+    }
+    expect(exits).toBeGreaterThanOrEqual(10)
   })
 
   it('dispose clears presentation and the terrain cutout registration', () => {

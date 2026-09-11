@@ -40,6 +40,24 @@ export function heightfieldStandingClearance(entityHeight: number): number {
   return entityHeight + CAVE_STANDING_CLEARANCE_MARGIN
 }
 
+/** How far below the field's cached walk surface an entity may still be a
+ *  *surface* entity for horizontal containment — the mouth-exit half of the
+ *  portal semantic.
+ *
+ *  A cave entity next to a wall stands in a closed standable column, where
+ *  `ceilY < surfaceY` and `ceilY - floorY >= minGap`, so it is at least
+ *  `minGap` (≈ 1.9 m for the player) below the cached surface, and both
+ *  numbers come from the same field — that side needs no slack. A surface
+ *  entity's Y is the terrain tile sampler (1 m tiles) one frame behind its
+ *  XZ, while `surfaceY` is the 0.3 m field cache of the analytic walk
+ *  surface; over the mouth pit wall the two disagree by decimetres, so
+ *  `SURFACE_CLIP_EPS` (5 cm) is not a sampler-agreement bound. Below it a
+ *  legitimately exiting entity read as underground rock and was pushed up
+ *  the `gap` gradient back into the mouth (world-terrain-019 snap-back).
+ *  Must stay below `minGap - JUMP_HEIGHT` for any jumping entity so a jump
+ *  at the doorway flank cannot pass through the rim. */
+export const CAVE_SURFACE_ENTITY_SLACK = 0.75
+
 /**
  * The one walkable interval of the heightfield column at `(x, z)`, or
  * `null` where there is no cave void (`outsideGrid`, `gap <= 0`, or void
@@ -179,9 +197,11 @@ const HORIZONTAL_RESOLVE_ITERS = 24
  *
  * Identity — the cave does not interfere — when:
  * - the point is beyond the cave-local grid (`outsideGrid`);
- * - the entity is a surface entity (`y > surfaceY - SURFACE_CLIP_EPS`), so
- *   someone walking the hillside above a tunnel is never dragged toward the
- *   mouth by the gap gradient (`y == null` skips this rule: Y-blind probe);
+ * - the entity is a surface entity (`y > surfaceY - CAVE_SURFACE_ENTITY_SLACK`),
+ *   so someone walking the hillside above a tunnel, or stepping out of the
+ *   mouth onto the terrain beyond the open-sky contour, is never dragged
+ *   toward the mouth by the gap gradient (`y == null` skips this rule:
+ *   Y-blind probe);
  * - the column is `openSky` (mouth / approach), which is what keeps the
  *   portal open without a special case.
  *
@@ -205,7 +225,7 @@ export function resolveHeightfieldHorizontal(
   for (let iter = 0; iter < HORIZONTAL_RESOLVE_ITERS; iter++) {
     const sample = sampleHeightfieldAt(field, px, pz)
     if (sample.outsideGrid) return { x: px, z: pz }
-    if (y != null && y > sample.surfaceY - SURFACE_CLIP_EPS) return { x: px, z: pz }
+    if (y != null && y > sample.surfaceY - CAVE_SURFACE_ENTITY_SLACK) return { x: px, z: pz }
     if (sample.openSky) return { x: px, z: pz }
     const deficit = minGap - sample.gap
     if (deficit <= 1e-4) return { x: px, z: pz }

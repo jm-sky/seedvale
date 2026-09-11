@@ -15,8 +15,10 @@ import {
 } from '../../debug/caves/caveHeightfieldFixtures'
 import { MOVE_SPEED, SPRINT_MULTIPLIER } from '../../player/PlayerController'
 import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT } from '../../player/playerDimensions'
+import { JUMP_HEIGHT } from '../../player/verticalMotion'
 import { applyCaveGroundHysteresis, CAVE_FLOOR_GRACE, CAVE_OCCUPANCY_EPS, CAVE_UNDERGROUND_MISS } from './caveGroundQuery'
 import {
+  CAVE_SURFACE_ENTITY_SLACK,
   heightfieldGroundColumn,
   heightfieldInteriorAt,
   heightfieldOccupancyAt,
@@ -284,13 +286,14 @@ describe('resolveHeightfieldHorizontal (containment)', () => {
     dir: { x: number, z: number },
     step: number,
     frames: number,
+    yOffset = 0,
   ): { x: number, y: number, z: number }[] {
     const len = Math.hypot(dir.x, dir.z)
     const dx = (dir.x / len) * step
     const dz = (dir.z / len) * step
     let x = start.x
     let z = start.z
-    let y = heightfieldGroundColumn(field(), base, x, z)!.floorY
+    let y = heightfieldGroundColumn(field(), base, x, z)!.floorY + yOffset
     const trace: { x: number, y: number, z: number }[] = []
     for (let i = 0; i < frames; i++) {
       const resolved = resolveHeightfieldHorizontal(field(), x + dx, z + dz, y, RADIUS, MIN_GAP)
@@ -298,7 +301,7 @@ describe('resolveHeightfieldHorizontal (containment)', () => {
       z = resolved.z
       const hit = queryHeightfieldGround(field(), base, x, y, z)
       expect(hit, `frame ${i}: capsule left cave space at ${x.toFixed(2)}, ${z.toFixed(2)}`).not.toBeNull()
-      y = hit!.floorY
+      y = hit!.floorY + yOffset
       expect(standable(x, z), `frame ${i}: not standable at ${x.toFixed(2)}, ${z.toFixed(2)}`).toBe(true)
       expect(y).toBeLessThan(base(x, z) - 0.5)
       trace.push({ x, y, z })
@@ -311,8 +314,8 @@ describe('resolveHeightfieldHorizontal (containment)', () => {
    *  never reaches the rim (`gap = 0` contour) or leaves the grid, and — the
    *  accepted harness behaviour — it slides along the wall rather than
    *  sticking or tunnelling through it. */
-  function assertContained(start: { x: number, z: number }, dir: { x: number, z: number }, step: number): void {
-    const trace = walkCapsule(start, dir, step, 240)
+  function assertContained(start: { x: number, z: number }, dir: { x: number, z: number }, step: number, yOffset = 0): void {
+    const trace = walkCapsule(start, dir, step, 240, yOffset)
     for (const p of trace) {
       const sample = sampleHeightfieldAt(field(), p.x, p.z)
       expect(sample.outsideGrid).toBe(false)
@@ -405,6 +408,124 @@ describe('resolveHeightfieldHorizontal (containment)', () => {
       const jumped = resolveHeightfieldHorizontal(field(), x, z, y + 0.4, RADIUS, MIN_GAP)
       expect(jumped.x).toBe(x)
       expect(jumped.z).toBe(z)
+    }
+  })
+
+  /** Centreline columns on the terrain side of the open-sky contour: closed
+   *  rock in the field (`gap < 0`, `ceilY` under the surface), still inside
+   *  the grid — where an exiting walker stands on the terrain. */
+  function terrainSideColumns(): { x: number, z: number }[] {
+    const columns: { x: number, z: number }[] = []
+    for (let z = 0; z <= 8; z += 0.1) {
+      const sample = sampleHeightfieldAt(field(), 0, z)
+      if (sample.outsideGrid) break
+      if (!sample.openSky && sample.gap < 0) columns.push({ x: 0, z })
+    }
+    expect(columns.length).toBeGreaterThan(5)
+    return columns
+  }
+
+  it('mouth exit: a walker on the terrain just past the open-sky contour is a surface entity even when its Y reads below the cached surface', () => {
+    // Regression (world-terrain-019 mouth-exit snap-back): outdoors the
+    // player's Y comes from the 1 m terrain tile, one frame behind its XZ;
+    // the field caches the analytic walk surface at 0.3 m. The two disagree
+    // by decimetres over the mouth pit wall, so the surface-entity rule
+    // must carry `CAVE_SURFACE_ENTITY_SLACK`, not `SURFACE_CLIP_EPS`.
+    for (const { x, z } of terrainSideColumns()) {
+      const sample = sampleHeightfieldAt(field(), x, z)
+      for (const below of [0, SURFACE_CLIP_EPS * 2, 0.3, CAVE_SURFACE_ENTITY_SLACK - 0.01]) {
+        const resolved = resolveHeightfieldHorizontal(field(), x, z, sample.surfaceY - below, RADIUS, MIN_GAP)
+        expect(resolved.x, `z=${z.toFixed(1)} ${below} below the cached surface`).toBe(x)
+        expect(resolved.z, `z=${z.toFixed(1)} ${below} below the cached surface`).toBe(z)
+      }
+    }
+  })
+
+  it('mouth exit: the same terrain-side column still contains an entity that is clearly underground', () => {
+    // The slack is a sampler-agreement bound, not a blanket identity: a
+    // capsule a standing clearance below the terrain there is in rock and
+    // is pushed back toward the mouth.
+    for (const { x, z } of terrainSideColumns()) {
+      const sample = sampleHeightfieldAt(field(), x, z)
+      const resolved = resolveHeightfieldHorizontal(field(), x, z, sample.surfaceY - MIN_GAP, RADIUS, MIN_GAP)
+      expect(resolved.z).toBeLessThan(z - 0.05)
+      expect(standable(resolved.x, resolved.z) || sampleHeightfieldAt(field(), resolved.x, resolved.z).openSky).toBe(true)
+    }
+  })
+
+  it('mouth exit with the previous frame\'s Y: centre and angled exits onto a 1 m tile terrain are never deflected', () => {
+    // Outdoor ground the way `PlayerController` sees it: the walk surface
+    // sampled on 1 m tile nodes and bilinearly interpolated, applied one
+    // frame late (containment runs at the previous frame's Y).
+    const tile = (x: number, z: number): number => {
+      const x0 = Math.floor(x)
+      const z0 = Math.floor(z)
+      const tx = x - x0
+      const tz = z - z0
+      return walk(x0, z0) * (1 - tx) * (1 - tz) + walk(x0 + 1, z0) * tx * (1 - tz)
+        + walk(x0, z0 + 1) * (1 - tx) * tz + walk(x0 + 1, z0 + 1) * tx * tz
+    }
+    // 60° from the throat, and any angle at a 30 fps sprint step beyond
+    // 30°, run into the pit-rim corner — a real terrain wall past the
+    // doorway that legitimately holds the capsule.
+    for (const [angleDeg, step] of [
+      [0, WALK_STEP], [0, SPRINT_STEP * 2],
+      [30, WALK_STEP], [30, SPRINT_STEP * 2], [-30, WALK_STEP], [-30, SPRINT_STEP * 2],
+      [45, WALK_STEP], [-45, WALK_STEP], [60, WALK_STEP], [-60, WALK_STEP],
+    ] as const) {
+      {
+        const heading = (angleDeg * Math.PI) / 180
+        const dir = { x: Math.sin(heading), z: Math.cos(heading) }
+        let x = 0
+        let z = 1.5
+        expect(sampleHeightfieldAt(field(), x, z).openSky).toBe(true)
+        let y = heightfieldGroundColumn(field(), base, x, z)!.floorY
+        for (let frame = 0; frame < 200 && z < 8; frame++) {
+          const cx = x + dir.x * step
+          const cz = z + dir.z * step
+          const resolved = resolveHeightfieldHorizontal(field(), cx, cz, y, RADIUS, MIN_GAP)
+          expect(resolved.x, `${angleDeg}° step ${step.toFixed(2)} frame ${frame} at z=${cz.toFixed(2)}`).toBeCloseTo(cx, 6)
+          expect(resolved.z, `${angleDeg}° step ${step.toFixed(2)} frame ${frame} at z=${cz.toFixed(2)}`).toBeCloseTo(cz, 6)
+          x = resolved.x
+          z = resolved.z
+          const hit = queryHeightfieldGround(field(), base, x, y, z)
+          y = hit ? hit.floorY : tile(x, z)
+        }
+        expect(z).toBeGreaterThanOrEqual(8)
+      }
+    }
+  })
+
+  it('doorway flank and interior wall still block a jumping capsule (surface slack stays below minGap - JUMP_HEIGHT)', () => {
+    // The guardrail the slack relies on: every closed standable column is
+    // at least `minGap` below the cached surface (ceiling under the surface,
+    // gap >= minGap), so a cave entity at a wall — even at its jump apex —
+    // is never within the slack of the surface.
+    expect(CAVE_SURFACE_ENTITY_SLACK + JUMP_HEIGHT).toBeLessThan(MIN_GAP)
+    const f = field()
+    let closed = 0
+    for (let i = 0; i < f.nx * f.nz; i++) {
+      if (heightfieldNodeGap(f, i) < MIN_GAP || heightfieldNodeOpenSky(f, i)) continue
+      expect(f.surfaceY[i]! - f.floorY[i]!).toBeGreaterThanOrEqual(MIN_GAP)
+      closed++
+    }
+    expect(closed).toBeGreaterThan(100)
+    // Interior passage wall at the jump apex.
+    assertContained({ x: 0, z: passage.position.z }, { x: 1, z: 0 }, WALK_STEP, JUMP_HEIGHT)
+    assertContained({ x: 0, z: passage.position.z }, { x: -1, z: 0 }, SPRINT_STEP, JUMP_HEIGHT)
+    // Doorway flank from the open-sky throat, sideways, at the jump apex.
+    // The open-sky pit's own low sides are walkable (openSky is identity),
+    // so the flank assertion is: never in rock, stopped by the flank while
+    // still well under its terrain — not stepped up onto it.
+    for (const [dirX, step] of [[1, WALK_STEP], [-1, SPRINT_STEP]] as const) {
+      const trace = walkCapsule({ x: 0, z: 0.5 }, { x: dirX, z: 0 }, step, 240, JUMP_HEIGHT)
+      const last = trace[trace.length - 1]!
+      const sample = sampleHeightfieldAt(field(), last.x, last.z)
+      expect(sample.gap).toBeGreaterThan(0)
+      expect(Math.abs(last.x)).toBeLessThan(topology.entrance.width / 2 + 1)
+      expect(sample.surfaceY - last.y).toBeGreaterThan(CAVE_SURFACE_ENTITY_SLACK + 0.5)
+      const a = trace[trace.length - 2]!
+      expect(Math.abs(last.x - a.x)).toBeLessThan(step * 0.75)
     }
   })
 
