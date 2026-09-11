@@ -23,16 +23,21 @@ Generated from exported TypeScript symbols.
 
 ## `debug/caves/caveHeightfieldMesh.ts`
 
-- `buildHeightfieldMeshBuffers` — function — line 145
+- `buildHeightfieldMeshBuffers` — function — line 147
   - domain: world-terrain
-- `CELL_RING` — const — line 56
-- `createHeightfieldCaveGeometry` — function — line 323
+- `buildMouthUndersideMaskBuffers` — function — line 485
   - domain: world-terrain
-- `createHeightfieldCaveMaterial` — function — line 335
-- `createHeightfieldCaveMesh` — function — line 345
-- `HeightfieldMeshBuffers` — type — line 28
-- `marchCellRing` — function — line 78
+- `CELL_RING` — const — line 58
+- `createHeightfieldCaveGeometry` — function — line 325
   - domain: world-terrain
+- `createHeightfieldCaveMaterial` — function — line 337
+- `createHeightfieldCaveMesh` — function — line 347
+- `createMouthUndersideMask` — function — line 552
+  - domain: world-terrain
+- `HeightfieldMeshBuffers` — type — line 30
+- `marchCellRing` — function — line 80
+  - domain: world-terrain
+- `MouthUndersideMaskBuffers` — type — line 382
 
 ## `debug/caves/caveHeightfieldPlayer.ts`
 
@@ -156,8 +161,8 @@ Generated from exported TypeScript symbols.
 
 ## `debug/createCaveHeightfieldTestScene.ts`
 
-- `CaveHeightfieldSpikeMetrics` — type — line 71
-- `createCaveHeightfieldTestScene` — function — line 548
+- `CaveHeightfieldSpikeMetrics` — type — line 75
+- `createCaveHeightfieldTestScene` — function — line 558
   - domain: world-terrain
 
 ## `debug/createModelTestScene.ts`
