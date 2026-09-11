@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 16:26:42  
+> Date: 2026-09-11 16:31:09  
 
 ## PLANS
 
@@ -11,7 +11,6 @@
 - `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `world-023-species-driven-sowing-density-and-yield.md`
-- `world-terrain-020-adventure-cave-variant.md`
 
 --------------------------------
 ## PROMPTS
@@ -187,37 +186,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/world-023-species-driven-sowing-density-and-yield-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `world-terrain-020-adventure-cave-variant.md`
-
-Prompt:
-
-```
-Zrób review planu `world-terrain-020-adventure-cave-variant.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/world-terrain-020-adventure-cave-variant.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/world-terrain-020-adventure-cave-variant-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
