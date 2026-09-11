@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 import { getSharedTerrainDetailNormalMap } from '../../terrain/terrainDetailNormalMap'
 import {
+  alignCaveDetailNormalToGeometric,
   CAVE_SURFACE_MATERIAL_TUNING,
   type CaveVec3,
   createCaveHeightfieldMaterial,
@@ -37,6 +38,7 @@ function expectUnitFinite(v: readonly number[]): void {
 }
 
 function injectDetailShader(material: THREE.MeshStandardMaterial): {
+  uniforms: Record<string, { value: unknown }>
   vertexShader: string
   fragmentShader: string
 } {
@@ -62,18 +64,21 @@ function injectDetailShader(material: THREE.MeshStandardMaterial): {
 }
 
 describe('createCaveHeightfieldMaterial', () => {
-  it('stays shared-compatible: one material, one normal map reference', () => {
+  it('stays shared-compatible without enabling Three.js tangent-space normalMap', () => {
     const a = createCaveHeightfieldMaterial()
     const b = createCaveHeightfieldMaterial()
+    const shared = getSharedTerrainDetailNormalMap()
     expect(a).not.toBe(b)
-    expect(a.normalMap).toBe(b.normalMap)
-    expect(a.normalMap).toBe(getSharedTerrainDetailNormalMap())
+    expect(a.normalMap).toBeNull()
+    expect(b.normalMap).toBeNull()
+    expect(a.userData.caveDetailNormalMap).toBe(shared)
+    expect(b.userData.caveDetailNormalMap).toBe(shared)
     expect(a.userData.caveSurfaceDetail).toBe(true)
     expect(a.metalness).toBe(0)
     expect(a.side).toBe(THREE.FrontSide)
     disposeCaveHeightfieldMaterialGpu(a)
     disposeCaveHeightfieldMaterialGpu(b)
-    expect(getSharedTerrainDetailNormalMap().uuid).toBeTruthy()
+    expect(shared.uuid).toBe(getSharedTerrainDetailNormalMap().uuid)
   })
 
   it('installs shader hooks when surface detail is on', () => {
@@ -105,11 +110,18 @@ describe('createCaveHeightfieldMaterial', () => {
 })
 
 describe('cave surface shader contract', () => {
-  it('reconstructs world-space triplanar normals instead of blending tangent samples through tbn', () => {
+  it('perturbs the geometric view normal instead of replacing it through tbn or vWorldNormal', () => {
     const mat = createCaveHeightfieldMaterial()
-    const { vertexShader, fragmentShader } = injectDetailShader(mat)
+    const { uniforms, vertexShader, fragmentShader } = injectDetailShader(mat)
 
+    expect(mat.normalMap).toBeNull()
+    expect(uniforms.uCaveDetailNormalMap?.value).toBe(getSharedTerrainDetailNormalMap())
+    expect(fragmentShader).toContain('uniform sampler2D uCaveDetailNormalMap')
+    expect(fragmentShader).toContain('texture2D( uCaveDetailNormalMap')
     expect(fragmentShader).toContain('caveTriplanarWorldNormal')
+    expect(fragmentShader).toContain('caveViewToWorldDir')
+    expect(fragmentShader).toContain('geoView = caveSafeNormalize( normal')
+    expect(fragmentShader).toContain('mix( geoView, detailView, keep )')
     expect(fragmentShader).toContain('worldPos.zy')
     expect(fragmentShader).toContain('worldPos.xz')
     expect(fragmentShader).toContain('worldPos.xy')
@@ -118,6 +130,7 @@ describe('cave surface shader contract', () => {
     expect(fragmentShader).toContain('tZ.xyz * blend.z')
     expect(fragmentShader).toContain('mat3( viewMatrix )')
     expect(fragmentShader).not.toContain('tbn *')
+    expect(fragmentShader).not.toContain('texture2D( normalMap')
     expect(fragmentShader).not.toContain('px * b.x + py * b.y + pz * b.z')
     expect(vertexShader).toContain('vWorldNormal = mat3( modelMatrix ) * objectNormal')
     expect(vertexShader).not.toContain('normalize( mat3( modelMatrix ) * objectNormal )')
@@ -129,7 +142,8 @@ describe('cave surface shader contract', () => {
     const mat = createCaveHeightfieldMaterial()
     injectDetailShader(mat)
     expect(mat.side).toBe(THREE.FrontSide)
-    expect(mat.normalMap).toBe(getSharedTerrainDetailNormalMap())
+    expect(mat.normalMap).toBeNull()
+    expect(mat.userData.caveDetailNormalMap).toBe(getSharedTerrainDetailNormalMap())
     expect(mat.userData.caveSurfaceDetail).toBe(true)
     disposeCaveHeightfieldMaterialGpu(mat)
   })
@@ -200,5 +214,25 @@ describe('perturbCaveWorldNormalOnTangentPlane', () => {
       expectUnitFinite(out)
       expect(dot3(out, normal), name).toBeGreaterThan(0.9)
     }
+  })
+})
+
+describe('alignCaveDetailNormalToGeometric', () => {
+  it('keeps a flipped detail sample from hiding floor, walls or ceiling', () => {
+    for (const { name, normal } of AXIS_CASES) {
+      const flipped: CaveVec3 = [-normal[0], -normal[1], -normal[2]]
+      const out = alignCaveDetailNormalToGeometric(normal, flipped)
+      expectUnitFinite(out)
+      expect(dot3(out, normal), name).toBeGreaterThan(0.98)
+    }
+  })
+
+  it('preserves an aligned detail sample', () => {
+    const wall: CaveVec3 = [1, 0, 0]
+    const detail: CaveVec3 = [0.96, 0.2, -0.1]
+    const out = alignCaveDetailNormalToGeometric(wall, detail)
+    expectUnitFinite(out)
+    expect(dot3(out, wall)).toBeGreaterThan(0.9)
+    expect(out[1]).not.toBeCloseTo(0, 3)
   })
 })

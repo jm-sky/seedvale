@@ -30,8 +30,8 @@ const NORMAL_MAP_INCLUDE = '#include <normal_fragment_maps>'
 const COLOR_FRAGMENT_INCLUDE = '#include <color_fragment>'
 const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
 
-const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v3-detail'
-const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v3-plain'
+const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v4-detail'
+const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v4-plain'
 
 function caveVec3Normalize(v: CaveVec3, fallback: CaveVec3 = [0, 1, 0]): [number, number, number] {
   const len = Math.hypot(v[0], v[1], v[2])
@@ -104,6 +104,27 @@ export function perturbCaveWorldNormalOnTangentPlane(
   ])
 }
 
+/**
+ * Keep the detailed lighting normal in the geometric hemisphere so a bad
+ * triplanar sample cannot flip a wall to back-facing irradiance.
+ * Matches the mix in `CAVE_NORMAL_CHUNK`.
+ *
+ * @domain world-terrain
+ */
+export function alignCaveDetailNormalToGeometric(
+  geometric: CaveVec3,
+  detail: CaveVec3,
+): [number, number, number] {
+  const g = caveVec3Normalize(geometric)
+  const d = caveVec3Normalize(detail)
+  const keep = Math.max(d[0] * g[0] + d[1] * g[1] + d[2] * g[2], 0)
+  return caveVec3Normalize([
+    g[0] * (1 - keep) + d[0] * keep,
+    g[1] * (1 - keep) + d[1] * keep,
+    g[2] * (1 - keep) + d[2] * keep,
+  ])
+}
+
 const CAVE_SURFACE_GLSL = /* glsl */ `
 float caveHash21( vec2 p ) {
   p = fract( p * vec2( 127.1, 311.7 ) );
@@ -123,6 +144,16 @@ float caveValueNoise( vec2 p ) {
 vec3 caveSafeNormalize( vec3 v, vec3 fallback ) {
   float len2 = dot( v, v );
   return len2 > 1e-10 ? v * inversesqrt( len2 ) : fallback;
+}
+vec3 caveViewToWorldDir( vec3 viewDir ) {
+  return caveSafeNormalize(
+    vec3(
+      dot( vec3( viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0] ), viewDir ),
+      dot( vec3( viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1] ), viewDir ),
+      dot( vec3( viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2] ), viewDir )
+    ),
+    vec3( 0.0, 1.0, 0.0 )
+  );
 }
 vec3 caveOrientationWeights( vec3 n ) {
   float up = n.y;
@@ -151,9 +182,9 @@ vec3 caveTriplanarWorldNormal( vec3 worldPos, vec3 worldN, float scale, float st
   blend = max( blend, vec3( 1e-4 ) );
   blend /= ( blend.x + blend.y + blend.z );
 
-  vec3 tX = texture2D( normalMap, worldPos.zy * scale ).xyz * 2.0 - 1.0;
-  vec3 tY = texture2D( normalMap, worldPos.xz * scale ).xyz * 2.0 - 1.0;
-  vec3 tZ = texture2D( normalMap, worldPos.xy * scale ).xyz * 2.0 - 1.0;
+  vec3 tX = texture2D( uCaveDetailNormalMap, worldPos.zy * scale ).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D( uCaveDetailNormalMap, worldPos.xz * scale ).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D( uCaveDetailNormalMap, worldPos.xy * scale ).xyz * 2.0 - 1.0;
   tX.xy *= strength;
   tY.xy *= strength;
   tZ.xy *= strength;
@@ -217,20 +248,25 @@ const CAVE_ROUGHNESS_CHUNK = /* glsl */ `
 
 const CAVE_NORMAL_CHUNK = /* glsl */ `
   {
-    vec3 n = caveSafeNormalize( vWorldNormal, vec3( 0.0, 1.0, 0.0 ) );
-    vec3 orient = caveOrientationWeights( n );
+    vec3 geoView = caveSafeNormalize( normal, vec3( 0.0, 0.0, 1.0 ) );
+    vec3 geoWorld = caveViewToWorldDir( geoView );
+    vec3 orient = caveOrientationWeights( geoWorld );
     float detailAmt = uCaveRockNormalStrength * ( orient.y * 1.0 + orient.x * 0.38 + orient.z * 0.48 );
-    vec3 worldN = caveTriplanarWorldNormal( vWorldPos, n, uCaveRockDetailScale, detailAmt );
+    vec3 worldN = caveTriplanarWorldNormal( vWorldPos, geoWorld, uCaveRockDetailScale, detailAmt );
     caveProceduralRockPerturb( vWorldPos, uCaveRockDetailScale, worldN );
-    normal = normalize( mat3( viewMatrix ) * worldN );
+    vec3 detailView = caveSafeNormalize( mat3( viewMatrix ) * worldN, geoView );
+    float keep = max( dot( detailView, geoView ), 0.0 );
+    normal = caveSafeNormalize( mix( geoView, detailView, keep ), geoView );
   }
 `
 
 function applyCaveSurfaceShader(
   material: THREE.MeshStandardMaterial,
   tuning: CaveSurfaceMaterialTuning,
+  detailMap: THREE.Texture,
 ): void {
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uCaveDetailNormalMap = { value: detailMap }
     shader.uniforms.uCaveRockDetailScale = { value: tuning.rockDetailScale }
     shader.uniforms.uCaveRockNormalStrength = { value: tuning.rockNormalStrength }
     shader.uniforms.uCaveProceduralRockStrength = { value: tuning.proceduralRockStrength }
@@ -261,6 +297,7 @@ function applyCaveSurfaceShader(
         `#include <common>
 varying vec3 vWorldPos;
 varying vec3 vWorldNormal;
+uniform sampler2D uCaveDetailNormalMap;
 uniform float uCaveRockDetailScale;
 uniform float uCaveRockNormalStrength;
 uniform float uCaveProceduralRockStrength;
@@ -301,7 +338,10 @@ export type CreateCaveHeightfieldMaterialOptions = {
 /** `FrontSide` on purpose: it is the cheapest permanent detector for a
  *  winding regression. Do not "fix" a dark cave with `DoubleSide`. Smooth
  *  normals come from the shared-vertex geometry (`computeVertexNormals`).
- *  Surface polish is shader-only — no mesh position changes. */
+ *  Surface polish is shader-only — no mesh position changes.
+ *  The shared detail texture is a custom sampler, not `material.normalMap`:
+ *  assigning `normalMap` would enable Three.js tangent-space / UV machinery
+ *  on a heightfield mesh that has no UVs. */
 export function createCaveHeightfieldMaterial(
   options: CreateCaveHeightfieldMaterialOptions = {},
 ): THREE.MeshStandardMaterial {
@@ -317,11 +357,10 @@ export function createCaveHeightfieldMaterial(
   })
 
   if (surfaceDetail) {
-    const normalMap = getSharedTerrainDetailNormalMap()
-    material.normalMap = normalMap
-    material.normalScale = new THREE.Vector2(1, 1)
-    applyCaveSurfaceShader(material, tuning)
+    const detailMap = getSharedTerrainDetailNormalMap()
+    applyCaveSurfaceShader(material, tuning, detailMap)
     material.userData.caveSurfaceDetail = true
+    material.userData.caveDetailNormalMap = detailMap
   } else {
     material.roughness = 0.88
     material.customProgramCacheKey = () => SHADER_CACHE_KEY_PLAIN
@@ -339,5 +378,6 @@ export function disposeCaveHeightfieldMaterialGpu(material: THREE.Material): voi
     return
   }
   material.normalMap = null
+  material.userData.caveDetailNormalMap = null
   material.dispose()
 }

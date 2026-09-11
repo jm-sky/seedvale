@@ -857,7 +857,16 @@ Root cause was the normal-detail path, not culling:
 - tangent-space samples from the X/Y/Z projections were blended as `px*bx + py*by + pz*bz` without remapping each sample into world space;
 - that mixed vector was then fed through view-space `tbn` (`normal = tbn * mapN`) as if it were a tangent-space map. Cave heightfield meshes have no UVs, so `tbn` is not a valid projection basis.
 
-Fix (shader-only, same shared material): whiteout-blend + projection swizzle (`X: ZY → zyx`, `Y: XZ → xzy`, `Z: XY → xyz`), then `normal = normalize(mat3(viewMatrix) * worldN)`. Macro colour, wetness, shared texture ownership and `FrontSide` unchanged. A/B toggle still works.
+First shader-only pass (whiteout swizzle + `viewMatrix`) was not enough: lighting still *replaced* the working geometric `normal` from `vWorldNormal`, which is unstable on the welded floor/ceiling fold, and `material.normalMap` still enabled Three.js tangent-space / UV machinery on a mesh with no UVs.
+
+Current contract (shader-only, same shared material):
+
+- do **not** assign `MeshStandardMaterial.normalMap` — bind the shared detail texture as `uCaveDetailNormalMap` so `USE_NORMALMAP` / `uv` / `tbn` stay off;
+- perturb the already-correct view-space `normal` from `normal_fragment_begin` (same basis the plain material lights with);
+- whiteout-blend + projection swizzle (`X: ZY → zyx`, `Y: XZ → xzy`, `Z: XY → xyz`);
+- hemisphere-align the detailed view normal back to the geometric one so a bad sample cannot flip a wall.
+
+Macro colour, wetness, shared texture ownership and `FrontSide` unchanged. A/B toggle still works.
 
 ## Mouth exit snap-back — fixed (2026-09-11)
 
