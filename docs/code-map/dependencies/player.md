@@ -25,6 +25,7 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `player/cameraBoom.ts`
 - `player/humanCarryCapacity.ts`
+- `player/playerDimensions.ts`
 - `player/playerEncumbrance.ts`
 - `player/verticalMotion.ts`
 - `player/worldWaterEligibility.ts`
@@ -104,11 +105,7 @@ Generated from TypeScript imports.
 - `terrain/slopeConstraint.ts`
 - `terrain/waterBodyKind.ts`
 - `world/bloodTraces.ts`
-- `world/caves/caveGameplayQuery.b2-recon.test.ts`
-- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
-- `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
-- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
-- `world/caves/caveGameplayQuery.b3-recon.test.ts`
+- `world/caves/caveHeightfieldQuery.test.ts`
 - `world/createBeehives.ts`
 - `world/createCarts.ts`
 - `world/createDryingRacks.ts`
@@ -259,9 +256,7 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.test.ts`
-- `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
-- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
-- `world/caves/caveGameplayQuery.b3-recon.test.ts`
+- `world/createCaves.test.ts`
 
 ## `player/characterPresentation.test.ts`
 
@@ -372,6 +367,16 @@ Generated from TypeScript imports.
 - `app/actions/mountActions.ts`
 - `app/gameLoop.ts`
 - `player/playerDownedRecovery.test.ts`
+
+## `player/playerDimensions.ts`
+
+**Imported by**
+
+- `debug/caves/caveHeightfieldTraversal.test.ts`
+- `debug/caves/caveHeightfieldTraversal.ts`
+- `player/PlayerController.ts`
+- `world/caves/caveHeightfieldQuery.test.ts`
+- `world/createCaves.test.ts`
 
 ## `player/playerDownedRecovery.test.ts`
 
@@ -518,9 +523,6 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`
 - `player/verticalMotion.test.ts`
-- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
-- `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
-- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 
 ## `player/worldWaterEligibility.test.ts`
@@ -531,8 +533,9 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `player/worldWaterEligibility.ts`
 - `terrain/chunkHeightmap.ts`
-- `world/caves/caveSdfField.ts`
-- `world/caves/caveSdfQuery.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/mouthCarve.ts`
 - `world/caves/productionTopology.ts`
 - `world/largeCaves.ts`
 

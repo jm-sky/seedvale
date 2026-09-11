@@ -99,19 +99,19 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldWalkWorld.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.ts`
-- `world/caves/caveSdfColliders.ts`
-- `world/caves/caveSdfField.ts`
-- `world/caves/caveSdfQuery.ts`
+- `player/playerDimensions.ts`
+- `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/mouthCarve.ts`
-- `world/caves/sdfCaveMesh.ts`
 
 ## `debug/caves/caveHeightfieldTraversal.ts`
 
 **Imports**
 
 - `debug/caves/caveHeightfieldRepresentation.ts`
+- `player/playerDimensions.ts`
 - `player/verticalMotion.ts`
-- `world/caves/caveSdfQuery.ts`
+- `world/caves/caveGroundQuery.ts`
+- `world/caves/caveHeightfieldQuery.ts`
 
 **Imported by**
 
@@ -125,8 +125,7 @@ Generated from TypeScript imports.
 
 - `debug/caves/caveHeightfieldRepresentation.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
-- `world/caves/caveSdfQuery.ts`
-- `world/collision.ts`
+- `world/caves/caveGroundQuery.ts`
 
 **Imported by**
 
@@ -178,11 +177,6 @@ Generated from TypeScript imports.
 - `render/createRenderer.ts`
 - `settlement/decorProps.ts`
 - `world/caves/caveOrientation.ts`
-- `world/caves/caveSdfColliders.ts`
-- `world/caves/caveSdfField.ts`
-- `world/caves/caveSdfQuery.ts`
-- `world/caves/caveSpikeMaterial.ts`
-- `world/caves/sdfCaveMesh.ts`
 
 **Imported by**
 
@@ -232,7 +226,6 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `ui/createDebugGui.ts`
-- `world/caves/sdfCaveMesh.ts`
 - `world/caves/sweepCaveMesh.ts`
 - `world/clouds.ts`
 - `world/createCaves.ts`

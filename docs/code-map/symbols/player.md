@@ -73,23 +73,21 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveGroundQuery` — type — line 199
-- `CaveOccupancyQuery` — type — line 204
-- `ColliderSource` — type — line 192
-- `HeightSampler` — type — line 189
-- `MOVE_SPEED` — const — line 66
-- `PLAYER_COLLISION_RADIUS` — const — line 69
-- `PLAYER_HEIGHT` — const — line 78
-- `PLAYER_MODEL_URL` — const — line 187
-- `PLAYER_STARTING_ATTRIBUTES` — const — line 94
-- `PlayerController` — class — line 216
+- `CaveGroundQuery` — type — line 191
+- `CaveHorizontalResolver` — type — line 207
+- `CaveOccupancyQuery` — type — line 196
+- `ColliderSource` — type — line 184
+- `HeightSampler` — type — line 181
+- `MOVE_SPEED` — const — line 67
+- `PLAYER_MODEL_URL` — const — line 179
+- `PLAYER_STARTING_ATTRIBUTES` — const — line 86
+- `PlayerController` — class — line 221
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
-- `PlayerMovementState` — type — line 61
-- `rockCeilingMaxY` — function — line 83
-- `SPRINT_MULTIPLIER` — const — line 70
+- `PlayerMovementState` — type — line 62
+- `SPRINT_MULTIPLIER` — const — line 72
 
 ## `player/playerDamage.ts`
 
@@ -102,6 +100,13 @@ Generated from exported TypeScript symbols.
 - `PlayerDamageResult` — type — line 37
 - `rollDownedRecoveryHp` — function — line 25
 - `tickPlayerStarvationDamage` — function — line 127
+
+## `player/playerDimensions.ts`
+
+- `PLAYER_COLLISION_RADIUS` — const — line 11
+  - domain: items-player
+- `PLAYER_HEIGHT` — const — line 12
+- `rockCeilingMaxY` — function — line 17
 
 ## `player/playerEncumbrance.ts`
 

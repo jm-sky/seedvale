@@ -308,11 +308,6 @@ Generated from TypeScript imports.
 - `terrain/terrainPreparation.ts`
 - `terrain/waterSample.test.ts`
 - `terrain/waterSample.ts`
-- `world/caves/caveGameplayQuery.b2-recon.test.ts`
-- `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
-- `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
-- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
-- `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
@@ -927,7 +922,6 @@ Generated from TypeScript imports.
 - `navigation/navigation.ts`
 - `player/PlayerController.ts`
 - `terrain/slopeConstraint.test.ts`
-- `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/caves/productionTopology.ts`

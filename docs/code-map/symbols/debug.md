@@ -4,22 +4,19 @@ Generated from exported TypeScript symbols.
 
 ## `debug/caves/caveHeightfieldFixtures.ts`
 
-- `buildCaveHeightfieldFixture` — function — line 320
+- `buildCaveHeightfieldFixture` — function — line 317
   - domain: world-terrain
 - `CAVE_HEIGHTFIELD_ENTRANCE` — const — line 80
 - `CAVE_HEIGHTFIELD_FIXTURE_IDS` — const — line 89
-- `CAVE_HEIGHTFIELD_MODES` — const — line 95
-- `CAVE_HEIGHTFIELD_VARIANTS` — const — line 92
-- `caveHeightfieldBaseSurfaceAt` — function — line 105
+- `CAVE_HEIGHTFIELD_MODES` — const — line 92
+- `caveHeightfieldBaseSurfaceAt` — function — line 102
   - domain: world-terrain
 - `CaveHeightfieldFixtureId` — type — line 90
-- `CaveHeightfieldMode` — type — line 96
-- `CaveHeightfieldVariant` — type — line 93
-- `caveHeightfieldWalkSurfaceAt` — function — line 115
+- `CaveHeightfieldMode` — type — line 93
+- `caveHeightfieldWalkSurfaceAt` — function — line 112
   - domain: world-terrain
-- `parseCaveHeightfieldFixtureId` — function — line 354
-- `parseCaveHeightfieldMode` — function — line 368
-- `parseCaveHeightfieldVariant` — function — line 361
+- `parseCaveHeightfieldFixtureId` — function — line 351
+- `parseCaveHeightfieldMode` — function — line 358
 
 ## `debug/caves/caveHeightfieldMesh.ts`
 
@@ -28,8 +25,8 @@ Generated from exported TypeScript symbols.
 
 ## `debug/caves/caveHeightfieldPlayer.ts`
 
-- `CaveHeightfieldWalker` — type — line 41
-- `createCaveHeightfieldWalker` — function — line 55
+- `CaveHeightfieldWalker` — type — line 43
+- `createCaveHeightfieldWalker` — function — line 57
   - domain: world-terrain
 
 ## `debug/caves/caveHeightfieldTerrain.ts`
@@ -43,39 +40,25 @@ Generated from exported TypeScript symbols.
 
 ## `debug/caves/caveHeightfieldTraversal.ts`
 
-- `createDebugCaveGroundResolver` — function — line 256
+- `createDebugCaveGroundResolver` — function — line 83
   - domain: world-terrain
-- `DebugCaveColumnQuery` — type — line 231
-- `DebugCaveGround` — type — line 233
-- `HEIGHTFIELD_MIN_STANDING_GAP` — const — line 57
-- `HEIGHTFIELD_PLAYER_HEIGHT` — const — line 53
-- `HEIGHTFIELD_PLAYER_RADIUS` — const — line 52
-- `heightfieldCapsuleHitsCeiling` — function — line 317
+- `DebugCaveColumnQuery` — type — line 58
+- `DebugCaveGround` — type — line 60
+- `HEIGHTFIELD_MIN_STANDING_GAP` — const — line 45
+- `HEIGHTFIELD_PLAYER_HEIGHT` — const — line 41
+- `HEIGHTFIELD_PLAYER_RADIUS` — const — line 40
+- `heightfieldCapsuleHitsCeiling` — function — line 156
   - domain: world-terrain
-- `heightfieldColumnIntervals` — function — line 158
+- `heightfieldFloorAt` — function — line 49
+- `HeightfieldVerticalState` — type — line 119
+- `integrateDebugVertical` — function — line 132
   - domain: world-terrain
-- `heightfieldFloorAt` — function — line 221
-- `heightfieldOccupancyAt` — function — line 205
-  - domain: world-terrain
-- `heightfieldRockCeilingMaxY` — function — line 73
-  - domain: world-terrain
-- `HeightfieldSpaceQuery` — type — line 61
-- `HeightfieldVerticalState` — type — line 279
-- `integrateDebugVertical` — function — line 292
-  - domain: world-terrain
-- `queryHeightfieldColumn` — function — line 180
-  - domain: world-terrain
-- `queryHeightfieldSpace` — function — line 91
-  - domain: world-terrain
-- `resolveHeightfieldHorizontal` — function — line 108
-  - domain: world-terrain
+- `queryHeightfieldColumn` — function — line 109
 
 ## `debug/caves/caveHeightfieldWalkWorld.ts`
 
-- `CaveWalkWorld` — type — line 32
-- `createHeightfieldWalkWorld` — function — line 55
-  - domain: world-terrain
-- `createSdfWalkWorld` — function — line 82
+- `CaveWalkWorld` — type — line 26
+- `createHeightfieldWalkWorld` — function — line 48
   - domain: world-terrain
 
 ## `debug/colliderDebugView.ts`
@@ -97,8 +80,8 @@ Generated from exported TypeScript symbols.
 
 ## `debug/createCaveHeightfieldTestScene.ts`
 
-- `CaveHeightfieldSpikeMetrics` — type — line 75
-- `createCaveHeightfieldTestScene` — function — line 558
+- `CaveHeightfieldSpikeMetrics` — type — line 63
+- `createCaveHeightfieldTestScene` — function — line 491
   - domain: world-terrain
 
 ## `debug/createModelTestScene.ts`
