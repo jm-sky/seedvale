@@ -75,7 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-024-systemic-treasure-sites-and-keys.md`                             | -       | 🟡 | M      | -      |
 | 💡 `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | settlements-npcs-019 |
 | 💡 `items-player-026-treasure-loot-forced-entry-and-traps.md`                  | -       | 🟡 | M      | world-024 |
-| ◼️ `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
+| 💡 `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
 | ◼️ `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
 | ◼️ `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 
