@@ -902,12 +902,12 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/actions/mountActions.ts`
 - `debug/caves/caveHeightfieldPlayer.ts`
-- `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `fauna/AnimalAgent.ts`
 - `navigation/navigation.ts`
 - `player/PlayerController.ts`
 - `terrain/slopeConstraint.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
+- `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/caves/productionTopology.ts`
 

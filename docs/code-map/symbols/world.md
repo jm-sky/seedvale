@@ -134,11 +134,68 @@ Generated from exported TypeScript symbols.
 - `CaveWorkerRequest` — type — line 39
 - `CaveWorkerResponse` — type — line 41
 
+## `world/caves/caveHeightfieldRepresentation.ts`
+
+- `APERTURE_LIFT` — const — line 83
+- `BETA` — const — line 46
+- `buildCaveHeightfieldRepresentation` — function — line 645
+  - domain: world-terrain
+- `buildChamberLobes` — function — line 391
+  - domain: world-terrain
+- `buildEntranceInfluence` — function — line 350
+  - domain: world-terrain
+- `CaveHeightfieldBounds` — type — line 125
+- `CaveHeightfieldBuildResult` — type — line 188
+- `CaveHeightfieldConfig` — type — line 102
+- `CaveHeightfieldRepresentation` — type — line 144
+  - domain: world-terrain
+- `closure` — function — line 214
+  - domain: world-terrain
+- `crossSectionAt` — function — line 475
+  - domain: world-terrain
+- `DEFAULT_HEIGHTFIELD_CONFIG` — const — line 111
+- `ENTRANCE_INWARD` — const — line 87
+- `ENTRANCE_OUTWARD` — const — line 85
+- `FAR_GAP` — const — line 79
+- `heightfieldGapGradient` — function — line 886
+- `heightfieldNodeGap` — function — line 799
+- `heightfieldNodeIndex` — function — line 786
+- `heightfieldNodeOpenSky` — function — line 804
+- `heightfieldNodePosition` — function — line 790
+- `HeightfieldSample` — type — line 174
+- `HeightfieldStation` — type — line 165
+- `KAPPA` — const — line 55
+- `mouthOpeningAt` — function — line 875
+  - domain: world-terrain
+- `NC` — const — line 51
+- `NF` — const — line 48
+- `NoiseOctave2D` — type — line 100
+- `OUTSIDE_REACH` — const — line 75
+- `R_MIN` — const — line 71
+- `resampleSegmentStations` — function — line 271
+  - domain: world-terrain
+- `RIM_ASPECT` — const — line 60
+- `RIM_BAND_MAX` — const — line 64
+- `RIM_BAND_MIN` — const — line 61
+- `rimBand` — function — line 221
+- `sampleHeightfieldAt` — function — line 839
+  - domain: world-terrain
+- `SMOOTH_K` — const — line 57
+- `SurfaceSampler` — type — line 195
+- `U_CORE` — const — line 66
+- `U_FADE` — const — line 69
+
 ## `world/caves/caveIdentity.ts`
 
 - `CaveIdentitySite` — type — line 11
   - domain: world-terrain
 - `makeCaveId` — function — line 15
+
+## `world/caves/caveMath.ts`
+
+- `smax` — function — line 21
+- `smin` — function — line 14
+  - domain: world-terrain
 
 ## `world/caves/caveOrientation.ts`
 
@@ -188,55 +245,53 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSdfField.ts`
 
-- `applyMouthGeometryToField` — function — line 99
+- `applyMouthGeometryToField` — function — line 94
   - domain: world-terrain
-- `Bounds` — type — line 59
-- `boxSDF` — function — line 124
-- `buildCaveSdfRepresentation` — function — line 278
+- `Bounds` — type — line 60
+- `boxSDF` — function — line 119
+- `buildCaveSdfRepresentation` — function — line 273
   - domain: world-terrain
-- `buildVoidField` — function — line 246
-- `CaveSdfSpatialRepresentation` — type — line 64
-- `DEFAULT_SDF_PARAMS` — const — line 49
-- `ellipsoidSDF` — function — line 73
-- `FeatureBox` — type — line 70
-- `PathStation` — type — line 71
-- `placePrimitivesAlongPath` — function — line 146
+- `buildVoidField` — function — line 241
+- `CaveSdfSpatialRepresentation` — type — line 65
+- `DEFAULT_SDF_PARAMS` — const — line 50
+- `ellipsoidSDF` — function — line 74
+- `FeatureBox` — type — line 71
+- `PathStation` — type — line 72
+- `placePrimitivesAlongPath` — function — line 141
   - domain: world-terrain
-- `SdfCaveParams` — type — line 34
-- `smin` — function — line 82
-- `VoidPrimitive` — type — line 69
+- `SdfCaveParams` — type — line 35
+- `VoidPrimitive` — type — line 70
 
 ## `world/caves/caveSdfQuery.ts`
 
-- `applyCaveGroundHysteresis` — function — line 443
+- `applyCaveGroundHysteresis` — function — line 440
   - domain: world-terrain
-- `applyCaveInteriorHysteresis` — function — line 419
+- `applyCaveInteriorHysteresis` — function — line 416
   - domain: world-terrain
-- `buildCaveSdfColumnIndex` — function — line 234
+- `buildCaveSdfColumnIndex` — function — line 231
   - domain: world-terrain
-- `CAVE_COLUMN_STEP` — const — line 59
-- `CAVE_FLOOR_GRACE` — const — line 65
-- `CAVE_OCCUPANCY_EPS` — const — line 72
-- `CAVE_UNDERGROUND_MISS` — const — line 88
-- `CaveGroundHit` — type — line 38
-- `CaveGroundHysteresis` — type — line 429
-- `CaveInteriorHysteresis` — type — line 408
-- `CaveSdfColumnIndex` — type — line 46
-- `CaveVerticalInterval` — type — line 30
-- `columnIntervalsAt` — function — line 274
-- `isCaveInteriorAt` — function — line 397
+- `CAVE_COLUMN_STEP` — const — line 62
+- `CAVE_FLOOR_GRACE` — const — line 68
+- `CAVE_OCCUPANCY_EPS` — const — line 75
+- `CAVE_UNDERGROUND_MISS` — const — line 85
+- `CaveGroundHit` — type — line 41
+- `CaveGroundHysteresis` — type — line 426
+- `CaveInteriorHysteresis` — type — line 405
+- `CaveSdfColumnIndex` — type — line 49
+- `CaveVerticalInterval` — type — line 33
+- `columnIntervalsAt` — function — line 271
+- `isCaveInteriorAt` — function — line 394
   - domain: world-terrain
-- `lowestCeilingAt` — function — line 464
-- `lowestFloorAt` — function — line 458
-- `occupancyContains` — function — line 381
-- `occupancyIntervalAt` — function — line 352
+- `lowestCeilingAt` — function — line 461
+- `lowestFloorAt` — function — line 455
+- `occupancyContains` — function — line 378
+- `occupancyIntervalAt` — function — line 349
   - domain: world-terrain
-- `pickInterval` — function — line 291
+- `pickInterval` — function — line 288
   - domain: world-terrain
-- `queryColumnIndex` — function — line 325
+- `queryColumnIndex` — function — line 322
   - domain: world-terrain
-- `SURFACE_CLIP_EPS` — const — line 81
-- `SurfaceHeightSampler` — type — line 93
+- `SurfaceHeightSampler` — type — line 90
 
 ## `world/caves/caveSpikeMaterial.ts`
 
@@ -249,6 +304,11 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `reportCaveSpikeMetrics` — function — line 53
 - `runMedianOfN` — function — line 33
+
+## `world/caves/caveSurface.ts`
+
+- `SURFACE_CLIP_EPS` — const — line 15
+  - domain: world-terrain
 
 ## `world/caves/caveTopology.ts`
 
@@ -449,10 +509,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 62
-- `createCaves` — function — line 154
+- `Caves` — type — line 67
+- `createCaves` — function — line 165
   - system: caves
-  - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation (async SDF extraction), occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
+  - role: Owns cave topologies, retained heightfield representations (not yet gameplay/presentation authority), retained SDF/column-index gameplay space, streamed interior presentation (async SDF extraction), occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves
   - lifecycle: rebuild
 

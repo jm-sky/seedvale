@@ -512,13 +512,13 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `debug/caves/caveHeightfieldRepresentation.test.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`
 - `player/verticalMotion.test.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
+- `world/caves/caveHeightfieldRepresentation.test.ts`
 
 ## `player/worldWaterEligibility.test.ts`
 
