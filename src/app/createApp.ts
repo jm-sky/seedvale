@@ -135,7 +135,7 @@ import { createGroundFog } from '../world/groundFog'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
-import { createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
+import { confirmHomeSettlement, createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
 import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
@@ -637,8 +637,13 @@ export async function createApp(
   coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
   const locationKnowledge = createLocationKnowledge(initialSave?.map.discoveredLocations)
   setActiveLocationKnowledge(locationKnowledge)
+  // Home village is physically known from spawn — confirm before the game
+  // loop so the first proximity tick is a no-op (no boot toast). Missing
+  // home entries in older saves are normalized the same way.
+  confirmHomeSettlement(bundle.settlementsManager.getHomeDef(), locationKnowledge)
   const locationProximityDiscovery = createLocationProximityDiscovery({
     getCaveDefinitions: () => bundle.caves.definitions(),
+    lookupSettlement: lookupSettlementCell,
     catalog: worldLocationCatalog,
     knowledge: locationKnowledge,
   })
@@ -1464,6 +1469,7 @@ export async function createApp(
         questManager.reset()
         mapDiscovery.clear()
         locationKnowledge.clear()
+        confirmHomeSettlement(bundle.settlementsManager.getHomeDef(), locationKnowledge)
         navigationTargets.clear()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
