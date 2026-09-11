@@ -21,9 +21,11 @@ ImageMagick reports mean sRGB channels of approximately:
 - rock: `(0.434, 0.377, 0.319)`, composite mean `0.377`.
 
 Three.js decodes an `SRGBColorSpace` texture before shader use. Do not use the
-sRGB composite means directly as linear shader neutral points. Rock's measured
-mean corresponds to roughly `0.12` linear luminance; treat that only as an
-initial tuning value and verify visually. A scalar luminance modulation is
+sRGB composite means directly as linear shader neutral points. Neutral values
+must be calculated offline by decoding each pixel to linear RGB, computing
+luminance, then averaging. Do not linearize the already averaged sRGB values.
+Record the resulting neutral values for both assets; no runtime pixel scan.
+A scalar luminance modulation is
 preferable to multiplying by raw RGB because both existing materials already
 own their palette.
 
@@ -41,25 +43,25 @@ Relevant existing modules:
 - `src/shared/getFireParticles.ts` — synchronous `TextureLoader.load()` with a
   browser guard.
 
-Do **not** call/await `loadTexture()` from `createTerrainMaterial()` or
-`createCaveHeightfieldMaterial()`. Both material factories are synchronous and
-are called during world construction; changing either to async would expand
-through `ChunkManager`, `createCaves()` and `WorldBundle` for no gameplay gain.
+Keep both material factories synchronous. Start the existing cached
+`loadTexture()` asynchronously without awaiting it in world construction.
+A small shared surface-resource module can own one stable sampler uniform and
+one readiness uniform per asset; every shader references these same objects.
+On success, configure repeat wrapping, mip filters and modest anisotropy,
+assign the loaded texture, then enable influence. No material recompile is
+needed for uniform-value changes.
 
-Use a small presentation-only shared module, preferably under `src/terrain/`,
-with two lazy getters backed by `TextureLoader.load()`:
+Before loading completes, bind a valid shared 1×1 neutral fallback and keep
+influence at zero. A bare `TextureLoader.load()` return value has no image yet;
+it is not a neutral fallback. On failure, handle the rejection, leave influence
+zero and retain the original procedural appearance. Do not poll or retry per
+frame: the existing loader caches rejected promises too.
 
-- one cached `Texture` object per URL/process;
-- configure `colorSpace`, wrapping, mip filters and anisotropy immediately on
-  the returned placeholder texture;
-- no promise/boot wait and no per-world reload;
-- provide a Node-safe injected/fallback texture seam so existing Vitest suites
-  (default Node environment, no `document`) can construct materials without
-  invoking browser image loading.
-
-Do not add these two URLs to `loadTexture()` and then introduce an async
-preloading dependency merely to retrieve its resolved values. If the generic
-loader is extended in a future refactor, that is separate work.
+This adds two full-size assets plus a tiny shared fallback, not a second URL
+cache/loader. Avoid per-material completion callbacks: resource-level completion
+updates only shared uniforms, so disposal during loading cannot resurrect a
+material or retain old worlds. Test the loader with a mock/deferred promise in
+Node; no browser image loading is needed in unit tests.
 
 Process-wide albedo textures must not be disposed by either world owner. This
 matches the existing detail-normal lifetime: a New Game/world rebuild may
@@ -84,7 +86,9 @@ Relevant files/symbols:
 `applyTerrainSurfaceShader()` already injects `vWorldPos` and `vBareGround` and
 places all colour work by replacing `#include <color_fragment>`. Add the dirt
 sampler/uniforms through the same hook; no geometry or `ChunkMeshData` change is
-needed.
+needed. The mask also includes shore/desert sand and scorch patches through
+`bareGroundWeight()` and `Math.max(..., scorchAmt)` in `chunkMeshData.ts`.
+It is not a road-only semantic mask; verify all these surfaces visually.
 
 Keep the established ordering by inserting the dirt modulation after Three's
 base vertex colour but before `MACRO_COLOR_CHUNK`, `WET_SAND_CHUNK` and
@@ -139,11 +143,12 @@ weights” means reuse the weighting formula/convention, not a currently exposed
 value.
 
 Add the smallest correct geometric-normal input for colour triplanar blending.
-Prefer one world-normal varying populated through Three's existing normal
-vertex chunks over recomputing derivatives or adding UVs. Keep its transform
-correct if a cave mesh is later transformed; do not assume `objectNormal` is
-always world-space merely because current heightfield positions are authored in
-world coordinates. Then share a GLSL helper that produces normalized absolute
+The cave material has `flatShading: false`, so Three's existing `vNormal`
+varying is available at the colour include. Use
+`caveViewToWorldDir(normalize(vNormal))`; it converts the existing transformed
+view-space normal into world space. Do not add `vWorldNormal` or use the local
+`normal` variable here: `normal_fragment_begin` executes later.
+Then share a GLSL helper that produces normalized absolute
 axis weights for both rock colour and normal reconstruction where practical.
 
 Projection convention must remain consistent with the working normal shader:
@@ -185,7 +190,10 @@ Add focused tests for:
 - identity-stable lazy caching per asset;
 - sRGB, repeat wrapping, mip filters and anisotropy configuration;
 - distinct dirt/rock texture objects;
-- Node-safe construction without real image/network loading.
+- Node-safe construction without real image/network loading;
+- deferred load keeps influence zero, success updates shared uniforms, and
+  rejection keeps a valid fallback without an unhandled rejection;
+- material disposal before resolution does not recreate or mutate that material.
 
 Prefer an injectable loader/factory seam over switching the whole material
 suite to jsdom or depending on an image load completing.
@@ -205,10 +213,10 @@ Extend `caveHeightfieldMaterial.test.ts` and its `injectDetailShader()` helper:
 - existing `FrontSide`, geometric-hemisphere normal and no-UV assertions stay
   intact.
 
-Update the current assertion that `vWorldNormal` is absent: it was valid for
-the normal-only shader but conflicts with the new colour triplanar requirement.
-Replace it with an assertion for the correct transformed geometric-normal
-varying, not simply removal of coverage.
+Keep the assertion that `vWorldNormal` is absent. Assert reuse of `vNormal`
+and `caveViewToWorldDir` for colour weights. Use Three's actual standard shader
+source for injection/order checks where useful; a minimal fake shader cannot
+prove that a referenced variable is declared at the insertion point.
 
 ### Terrain material
 
@@ -228,13 +236,15 @@ Assert:
 - disposing a terrain material does not dispose the process-wide texture.
 
 Do not attempt to prove shader appearance numerically in Vitest. Shader compile
-success comes from build/runtime; final strengths and scales require the User's
-browser comparison.
+success requires runtime WebGL compilation. Vite build and typecheck do not
+compile injected GLSL; text assertions also cannot prove GLSL validity.
+The User checks browser shader errors, appearance and frame time.
 
 ## Implementation order
 
-1. Add/test the shared synchronous texture getters with a Node-safe seam.
-2. Implement cave albedo, update the world-normal contract and cave tests.
+1. Add/test shared surface uniforms around the existing async texture cache,
+   including neutral loading/error behavior and Node-safe loader mocks.
+2. Implement cave albedo using existing normals and extend cave tests.
 3. Implement terrain albedo and its new focused shader test.
 4. Run typecheck, focused suites and production build.
 5. Update state/code documentation only if the final module creates a new

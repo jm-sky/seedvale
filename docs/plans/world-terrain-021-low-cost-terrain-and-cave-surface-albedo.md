@@ -59,9 +59,11 @@ Load both diffuse textures once through small, explicit shared-resource helpers:
 - use one reasonable anisotropy policy,
 - never clone either texture per material, chunk or cave.
 
-The exact owner may follow the existing
-`src/terrain/terrainDetailNormalMap.ts` lifecycle, but diffuse textures must not
-be disposed when an individual terrain/cave material is disposed.
+Reuse the URL cache in `src/assets/loadTexture.ts` through shared surface
+uniforms. Keep material factories synchronous and do not await loading during
+world construction. Bind a tiny shared neutral fallback and keep influence
+zero until success; on failure preserve the existing procedural appearance.
+Diffuse textures must not be disposed with individual terrain/cave materials.
 
 Do not load the downloaded displacement, EXR normal or EXR roughness maps. The
 existing shared procedural normal map and procedural roughness remain unchanged.
@@ -96,7 +98,8 @@ cave vertex colour
 
 The current triplanar detail normal costs three texture samples. Rock diffuse
 may add exactly one three-way triplanar sample set, bringing cave surface detail
-to six texture samples total.
+to six shader-level sampling calls total. Filtering, mipmaps and anisotropy
+can perform more physical texel reads; this is not a GPU-time guarantee.
 
 Do not add triplanar roughness, AO, displacement or another cave surface map in
 this plan. Roughness stays procedural. Do not add a second cave material or draw
@@ -119,6 +122,9 @@ beach or other exposed ground:
 - zero influence on fully grassy ground by default,
 - preserve biome and vertex-colour identity,
 - preserve wet sand, rain, puddle and snow behaviour.
+
+`vBareGround` also covers shore/desert sand and scorch patches. Include these
+in visual verification rather than assuming the mask identifies only roads.
 
 The dirt asset is a surface-detail modulator, not the terrain's literal base
 colour. Do not place photographic dirt uniformly over every biome and do not
@@ -168,10 +174,10 @@ subtle and remove experimental knobs that are not needed after tuning.
 
 Target:
 
-- two additional shared 1K textures total,
+- two additional shared 1K textures plus a tiny shared neutral loading fallback,
 - one diffuse sample for terrain,
 - three diffuse samples for cave triplanar projection,
-- at most six sampled texture reads for cave surface detail including its
+- at most six shader sampling calls for cave surface detail including its
   existing three-sample normal,
 - zero per-chunk and per-cave texture allocations,
 - zero displacement and additional geometry,
@@ -235,11 +241,16 @@ Automated:
 - `pnpm typecheck`,
 - relevant terrain/cave unit tests,
 - production build,
-- no shader compilation errors,
 - static/test assertion that terrain adds one diffuse sampler and cave adds only
   the three triplanar diffuse reads.
 
+These checks do not compile injected GLSL on the GPU. Shader text assertions
+and a successful production build are not proof of WebGL shader validity.
+
 Manual browser verification — User:
+
+- confirm both material shaders compile without WebGL errors,
+- verify slow/failed image loading retains the procedural appearance.
 
 ### Cave
 
@@ -255,6 +266,7 @@ Manual browser verification — User:
 - transitions are smooth and chunk seams are absent,
 - distant terrain is not noisy,
 - wet sand, rain, puddles and snow remain correct.
+- shore sand, desert and scorched ground retain their intended appearance.
 
 ### Performance
 
