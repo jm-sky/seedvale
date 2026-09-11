@@ -1,6 +1,6 @@
 # Cave Heightfield Representation — Design
 
-**Status:** `implemented in the harness (2026-09-11) — browser verification pending`
+**Status:** `heightfield spike accepted (2026-09-11) — production migration is world-terrain-019`
 **Created:** 2026-09-11
 **Domain:** `world-terrain`
 **Supersedes (as the target representation):** `docs/plans/world-terrain-018-cave-heightfield-representation-spike.md` §4, §7, §8, §9
@@ -15,7 +15,9 @@
 > Implemented in the `?caveHeightfieldTest` harness on 2026-09-11. What was
 > actually built, the measured cost, and what was deferred are recorded in
 > `docs/plans/implementation-notes/world-terrain-018-cave-heightfield-representation-spike-implementation-notes.md`
-> (§ "Iteration 2"). Browser verification is still the Player's.
+> (§ "Iteration 2"). The spike is closed (`world-terrain-018` `done`): heightfield
+> was accepted. Production migration belongs to `world-terrain-019`. Heightfield
+> is not yet the production source of truth.
 
 ---
 
@@ -1182,7 +1184,7 @@ its own noise seed and lattice size. It is asymmetric by construction.
 
 ## 18. Decision this document supports
 
-Proceed to implement §14 in the harness. It is a bounded, ~one-session change that is
-mostly *deleting* the boundary-wall path, and it produces the first geometry the Player
-can actually judge. The representation decision itself stays where
-`docs/design/caves/README.md` puts it: with the Player, in the browser, after that.
+The harness iteration described in §14 was implemented and the spike was accepted
+(`world-terrain-018` `done`). Production caves still use SDF; migrating that
+accepted `floorY + ceilingY` model into `createCaves()` is
+`world-terrain-019-cave-heightfield-production-migration.md`.

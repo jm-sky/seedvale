@@ -3,7 +3,7 @@
 **Created:** 2026-09-11  
 **Status:** `planned` 📋  
 **Priority:** high · **Effort:** XL  
-**Depends on:** world-terrain-018  
+**Depends on:** ~~world-terrain-018~~  
 **Domain:** `world-terrain`  
 **Type:** `feature`  
 **Subdomains:** `terrain` `rendering` `landmarks`  
@@ -49,7 +49,7 @@ SDF nie pozostaje drugim równoległym produkcyjnym systemem.
 
 V1 dostarczył podstawową cave infrastructure i pierwszą produkcyjną integrację, ale jego geometry/runtime model został zastąpiony przez Cave V2.
 
-Po zakończeniu tego planu `world-terrain-007` powinien zostać zamknięty jako historyczny/superseded.
+`world-terrain-007` jest zamknięty (`done`) jako historyczny/superseded. Nie wznawiać V1.
 
 ### `world-terrain-008`
 
@@ -69,13 +69,13 @@ Cave V2 dostarczył kluczową produkcyjną infrastrukturę:
 
 Te elementy należy zachować.
 
-Nie kontynuować SDF jako docelowej reprezentacji tylko dlatego, że był wybrany podczas wcześniejszego representation spike.
+SDF było produkcyjną reprezentacją V2. Nie kontynuować SDF jako docelowej reprezentacji tylko dlatego, że był wybrany podczas wcześniejszego representation spike.
 
-Po zakończeniu tego planu `world-terrain-008` powinien zostać zamknięty jako zakończony etap Cave V2, którego production spatial representation został następnie zastąpiony.
+`world-terrain-008` jest zamknięty (`done`) jako zakończony etap Cave V2/SDF. Oryginalnego B5 SDF cleanup nie realizować w 008 — usunięcie production SDF path należy do tego planu. Production SDF code pozostaje, dopóki ten plan go nie zastąpi.
 
 ### `world-terrain-018`
 
-Heightfield spike wykazał, że dla aktualnych wymagań caves można użyć znacznie tańszej reprezentacji 2.5D:
+Heightfield spike jest zamknięty (`done`). Wykazał, że dla aktualnych wymagań caves można użyć znacznie tańszej reprezentacji 2.5D:
 
 ```text
 one floorY + one ceilingY per (x,z)
@@ -698,12 +698,13 @@ Milestone E wymaga ponownego browser regression tylko wtedy, gdy cleanup dotknie
 
 ## 26. Dokumentacja i zamknięcie poprzednich planów
 
-Po successful production migration:
+`world-terrain-007`, `world-terrain-008` i `world-terrain-018` są już `done`. Downstream cave plans, które wymagają finalnego production cave spatial contract, zależą od tego planu (`world-terrain-019`), nie od zamkniętego 008.
 
-- `world-terrain-007-underground-caves.md` → `done`, historyczny V1;
-- `world-terrain-008-underground-caves-v2.md` → `done`, Cave V2/SDF etap zakończony i superseded representation;
-- `world-terrain-018-cave-heightfield-representation-spike.md` → `done`, spike zakończył decyzję reprezentacji;
-- downstream cave plans zaktualizować tak, aby zależały od `world-terrain-019`, jeśli wymagają finalnego production cave spatial contract.
+Po successful production migration tego planu:
+
+- zaktualizować `docs/STATE.md` tak, aby heightfield był current production spatial representation;
+- usunąć leftover opisy SDF jako production source of truth;
+- nie zostawiać równoległego „SDF or heightfield” contractu dla downstream systems.
 
 Nie zmieniać zależności mechanicznie bez sprawdzenia faktycznej potrzeby danego planu.
 

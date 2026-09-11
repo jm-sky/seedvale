@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011
+**Depends on:** world-terrain-019, fauna-018, fauna-019, quests-progression-002, quests-progression-011
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `treasure` `cave` `bear` `hidden-find` `container` `choice-through-action`
@@ -25,13 +25,13 @@ Do not present this as an artificial A/B dialogue choice.
 
 ## Dependencies
 
-### `world-terrain-008` — Underground Caves V2
+### `world-terrain-019` — Cave heightfield production migration
 
 The quest uses a production real walk-in cave from the shared cave system.
 
 Do not implement a quest-specific cave representation, duplicate cave coordinates, or treat the old decorative fauna den as the destination.
 
-Current cave code remains the source of truth at implementation time. Consume the production cave identity/location/spatial contracts delivered by `world-terrain-008`.
+Current cave code remains the source of truth at implementation time. Consume the production cave identity/location/spatial contracts delivered by `world-terrain-019`.
 
 ### `fauna-019` — real cave habitats and animal home navigation
 
@@ -331,7 +331,7 @@ Verify persistence of:
 - any cave discovery/navigation state already owned by the map/world-location system,
 - social consequences through their existing stores.
 
-Derived cave geometry, cave habitat anchor and other deterministic world data remain derived according to `world-terrain-008` / `fauna-019`; do not serialize duplicate quest coordinates or cave topology.
+Derived cave geometry, cave habitat anchor and other deterministic world data remain derived according to `world-terrain-019` / `fauna-019`; do not serialize duplicate quest coordinates or cave topology.
 
 ## Reuse / integration targets
 
@@ -343,7 +343,7 @@ Implementation should reconfirm current symbols after dependencies land, especia
 - the `quests-progression-011` social-exposure integration point,
 - `src/quests/QuestManager.ts` / current quest-definition APIs,
 - quest outcome APIs from `quests-progression-002`,
-- production cave/world-location APIs after `world-terrain-008`,
+- production cave/world-location APIs after `world-terrain-019`,
 - fauna real-cave habitat APIs from `fauna-019`,
 - persistent occupant APIs/state from `fauna-018`,
 - `src/app/actions/containerActions.ts` and current placed-container ownership,

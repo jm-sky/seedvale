@@ -73,7 +73,7 @@ Reuse `src/world/hiddenFinds.ts` for buried keys. A buried treasure key resolves
 
 ### Caves
 
-Cave treasure consumes the current production Cave V2 stable identity and gameplay-space contracts from `world-terrain-008` when those contracts are available and sufficiently stable.
+Cave treasure consumes the current production Cave V2 stable identity and gameplay-space contracts from `world-terrain-019` when those contracts are available and sufficiently stable.
 
 Do not bind placement to Three.js mesh vertices, SDF extraction details, collider triangles or currently active cave presentation.
 
@@ -356,7 +356,7 @@ src/app/worldBundle.ts
 src/app/interactables.ts
 ```
 
-Cave integration consumes the current production Cave V2 gameplay contract from `world-terrain-008`; current code remains authoritative over implementation notes.
+Cave integration consumes the current production Cave V2 gameplay contract from `world-terrain-019`; current code remains authoritative over implementation notes.
 
 A likely new world-side module is `src/world/treasureSites.ts`, or the closest location consistent with actual ownership after implementation recon.
 

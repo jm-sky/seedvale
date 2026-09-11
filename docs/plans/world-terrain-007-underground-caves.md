@@ -1,7 +1,8 @@
 # Plan: Underground Caves
 
 **Created:** 2026-08-14  
-**Status:** `in progress` 🔄  
+**Status:** `done` ✅  
+**Closed at:** 2026-09-11 10:25
 **Type:** feature  
 **Priority:** low · **Effort:** L  
 **Depends on:** ~~097~~ ~~125~~  
@@ -10,13 +11,29 @@
 > Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-implementation-notes.md`
 > Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-contract.md`
 
-## Implementation status (2026-09-03)
+## Closure (2026-09-11)
+
+This plan is **closed**. Do not continue V1 implementation.
+
+V1 delivered the historical cave infrastructure and the earlier walk-in implementation: deterministic `CaveDefinition` / `CaveVolume` domain and generator, `WorldBundle` lifecycle, streamed interior presentation, mouth rock framing, player floor/ceiling queries, and cave-wall collision through the existing `ColliderRegistry` with optional `minY`/`maxY`.
+
+Further V1 geometry development was **superseded** by `world-terrain-008-underground-caves-v2.md` (`CaveTopology` + production cave architecture). The 2026-09-04 gameplay findings (pipe look, camera escape, entrance scale) are the reason V2 existed; they are not an open V1 punch-list.
+
+Deferred V1 Phase 4 fauna/loot/persistence is **not** unfinished V1 work. Those features have later owners and must not be implemented against the V1 spatial model:
+
+- real cave habitats / fauna home navigation — `fauna-019`
+- NPC cave traversal — `npc-027`
+- cave-aware resources — `world-018`
+- treasure / loot / bear-cave quest — `world-024`, `quests-progression-008`, `items-player-026`
+- production cave spatial contract those plans consume — `world-terrain-019`
+
+## Historical implementation status (2026-09-03)
 
 **Implemented + technically verified:** Faza 0-3 — `CaveDefinition`/`CaveVolume` domain + generator, `WorldBundle` lifecycle, streamed procedural interior presentation, mouth rock framing reuse, player floor/ceiling/collision integration, and cave-wall collision via the existing `ColliderRegistry` with optional vertical envelope (`minY`/`maxY`).
 
-**Not implemented:** Faza 4 — fauna/loot/persistence integration. This remains deferred until the cave spatial model is gameplay-ready.
+**Not implemented in V1:** Faza 4 — fauna/loot/persistence. Owned by the later plans listed in Closure, not by a remaining V1 phase.
 
-**Browser/gameplay-verified:** not yet.
+**Browser/gameplay-verified:** V1 interiors were not accepted as the production cave experience; that judgment drove Cave V2.
 
 ### Regression fix (2026-09-03) — cave interior sat one mouth-depth too high
 
@@ -29,9 +46,9 @@ The fix starts the interior at the carved recess floor and keeps a positive `MOU
 - The contract's `sampleHeight`/`sampleFloor` assumption was incorrect: `sampleFloor` is the underwater seabed sampler. A dedicated `CaveGroundQuery` seam was therefore added for `PlayerController`.
 - The shared `ColliderRegistry` originally had no vertical extent. Cave colliders gained optional `minY`/`maxY` and `colliderActiveAtY()` so cave walls do not leak onto the surface above a tunnel. `PlayerController` uses this filtering; fauna integration remains deferred.
 
-### Why Faza 4 is deferred
+### Why Faza 4 stayed out of V1
 
-The existing `cave`/`wolfDen` habitat-spawner concept in `fauna/createFauna.ts` is a different, surface-oriented mechanism. Rebinding it to real `CaveDefinition`s is a separate integration task. Persistence likewise has no useful cave-specific state consumer until fauna/loot/progression exists.
+The existing `cave`/`wolfDen` habitat-spawner concept in `fauna/createFauna.ts` is a different, surface-oriented mechanism. Rebinding it to real caves is a later-plan integration task (`fauna-019` and related consumers in Closure), not remaining V1 work.
 
 ---
 
@@ -468,8 +485,8 @@ Before implementation, inspect `caveGenerator.ts`, `caveVolume.ts`, `caveMesh.ts
 
 ## 17. Scope / implementation note
 
-The 2026-09-04 gameplay findings mean that the technically verified Faza 2-3 implementation is **not gameplay-final**. The next cave pass should prioritize spatial scale, entrance geometry, gradual initial descent, local overburden safety, procedural rock irregularity and camera containment.
+The 2026-09-04 gameplay findings mean that the technically verified Faza 2-3 implementation is **not gameplay-final**. That next cave pass was Cave V2 (`world-terrain-008`), not a continuation of this V1 plan.
 
-Faza 4 fauna/loot/persistence should remain deferred until the cave geometry is browser-verified as a robust third-person playable space.
+Faza 4 fauna/loot/persistence was never a remaining V1 geometry phase; see Closure.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**

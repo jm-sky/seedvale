@@ -5,7 +5,7 @@
 
 ## Recon result
 
-The plan direction is sound, but current Cave V2 does **not yet expose the final multi-agent semantic API that npc-027 needs**. `world-terrain-008` is still an active dependency (B4/B5 remain), so implementation must reconfirm its final `Caves` contract before coding.
+The plan direction is sound, but current Cave V2 does **not yet expose the final multi-agent semantic API that npc-027 needs**. `world-terrain-008` is `done`; the remaining production cave spatial contract is `world-terrain-019`. Reconfirm the final `Caves` contract before coding.
 
 Current production facts:
 
@@ -187,16 +187,16 @@ npc-027 should not persist route legs, topology waypoint indexes or portal-trans
 
 Before relying on this fully, verify where NPC world position itself is authoritative across settlement stream-out/in. If loaded-agent transform is not persisted/restored as a general location today, do not quietly invent a cave-only location field; solve location ownership coherently or explicitly bound npc-027's first version to loaded/detailed NPCs and document the limitation.
 
-## Dependency on `world-terrain-008`
+## Dependency on `world-terrain-019`
 
-Treat `world-terrain-008` as a real open dependency until B4/B5 settle:
+Treat `world-terrain-019` as the real open production-migration dependency. `world-terrain-008` is closed as the V2/SDF infrastructure stage.
 
 - semantic data already exists independently of render activation — good foundation;
 - presentation/collider streaming is still observer-driven on current `main`;
-- `CaveDefinition`/`topologyToCaveDefinition` are still marked for B5 cleanup;
+- `CaveDefinition`/`topologyToCaveDefinition` leftovers move with the 019 SDF-path removal, not with closed 008 B5;
 - public `Caves` API still contains player-specific stateful queries and lacks cave-specific topology/query lookup.
 
-Immediately before implementing npc-027, reconfirm `createCaves.ts` and the final B4/B5 implementation summary. Adapt these notes to the final facade instead of preserving obsolete names.
+Immediately before implementing npc-027, reconfirm `createCaves.ts` after `world-terrain-019`. Adapt these notes to the final facade instead of preserving obsolete names.
 
 ## High-ROI tests
 

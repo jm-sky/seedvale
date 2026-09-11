@@ -1,8 +1,9 @@
 # Plan: Cave Heightfield Representation Spike
 
 **Created:** 2026-09-10  
-**Status:** `verification needed` 🔍  (iteration 2 — rounded 2.5D representation)  
+**Status:** `done` ✅  
 **Implemented at:** 2026-09-11 08:55
+**Closed at:** 2026-09-11 10:25
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **Domain:** `world-terrain`  
@@ -11,15 +12,30 @@
 **Tags:** `caves` `heightfield` `prototype` `performance`  
 **Roadmap:** -
 
-> **Superseded for the target representation (2026-09-11).** §4, §7, §8 i §9
+## Outcome (2026-09-11)
+
+The spike met its goal. Heightfield was **accepted** as the successor cave spatial representation.
+
+Final model:
+
+- one `floorY` and one `ceilingY` per `(x, z)`;
+- footprint is `gap > 0` (`gap = ceilingY - floorY`);
+- walls come from floor/ceiling convergence, not explicit boundary-wall geometry;
+- shelf is part of the floor (an elevated floor region in XZ);
+- true stacked geometry, multi-interval columns, and genuine undercuts are **out of the model by design**.
+
+The `?caveHeightfieldTest` debug harness remains a reference/test tool. It is not production Cave V2.
+
+Production migration belongs to `world-terrain-019-cave-heightfield-production-migration.md`. This spike does not change `createCaves()`.
+
+> **First iteration superseded for the target representation.** §4, §7, §8 i §9
 > tego planu opisują model `binary footprint + flat floor + flat ceiling +
 > explicit boundary walls`. Pierwsza implementacja pokazała, że to jest
-> właśnie wada, a nie cel. Docelową reprezentację definiuje teraz
-> `docs/design/caves/06-heightfield-cave-representation-design.md`
-> (`floorY` + `ceilingY`, footprint = `gap > 0`, ściany powstają przez
-> zbieżność floor/ceiling). Cel spike'a (§1–§3), harness (§5, §6, §10),
-> metryki (§11), fixtures (§12), ograniczenia 2.5D (§13), non-goals (§14),
-> guardraile (§15) i kryteria decyzji (§18) pozostają aktualne.
+> właśnie wada, a nie cel. Zaakceptowaną reprezentację definiuje
+> `docs/design/caves/06-heightfield-cave-representation-design.md`.
+> Cel spike'a (§1–§3), harness (§5, §6, §10), metryki (§11), fixtures (§12),
+> ograniczenia 2.5D (§13), non-goals (§14) i guardraile (§15) pozostają
+> zapisem eksperymentu. §18 poniżej odnotowuje decyzję C.
 
 ## 1. Cel
 
@@ -381,9 +397,9 @@ Manual comparison powinien odpowiedzieć:
 
 ## 18. Kryterium decyzji po spike'u
 
-Spike nie powinien automatycznie zmienić reprezentacji produkcyjnej.
+Spike nie miał automatycznie zmienić reprezentacji produkcyjnej.
 
-Po manual comparison zapisać wynik jako osobny review/decision note z jedną z decyzji:
+Po manual comparison wynik to decyzja **C — accept direction**:
 
 ```text
 A. reject heightfield → zostać przy SDF
@@ -391,7 +407,7 @@ B. promising but insufficient → kolejny ograniczony spike
 C. accept direction → przygotować osobny plan migracji Cave V2
 ```
 
-Wariant C wymaga zarówno akceptowalnej jakości wizualnej, jak i poprawnego Walk mode/traversal. Dopiero wtedy można planować zmiany `createCaves()`, gameplay queries, collision i streaming.
+Osobny plan migracji: `world-terrain-019-cave-heightfield-production-migration.md`.
 
 ## 19. JSDoc / discoverability
 

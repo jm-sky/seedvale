@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** world-terrain-008
+**Depends on:** world-terrain-019
 **Domain:** `world-terrain`
 **Subdomains:** `terrain` `landmarks`
 **Tags:** `mountains` `caves` `worldgen` `mine`
@@ -100,13 +100,13 @@ The existing world-location system consumes deterministic terrain sampling and r
 
 It must remain a consumer of terrain rather than becoming another terrain generator.
 
-During implementation, reconfirm whether `WorldLocationCatalog` remains the canonical owner for stable semantic world places after `world-terrain-008`. If so, extend it for the abandoned mine instead of introducing a parallel `MineRegistry`. If ownership has moved, use the current canonical mechanism.
+During implementation, reconfirm whether `WorldLocationCatalog` remains the canonical owner for stable semantic world places after `world-terrain-019`. If so, extend it for the abandoned mine instead of introducing a parallel `MineRegistry`. If ownership has moved, use the current canonical mechanism.
 
 ### Cave generation
 
 Existing cave infrastructure already provides deterministic cave siting and stable cave identity.
 
-`world-terrain-008-underground-caves-v2.md` is the production direction and a hard dependency.
+`world-terrain-019-cave-heightfield-production-migration.md` is the production direction and a hard dependency.
 
 Current transitional V1/spike APIs are not the target architecture for this plan.
 
@@ -350,7 +350,7 @@ The exact spatial requirements must use the completed Cave V2 APIs rather than a
 
 ## Existing cave-siting limitation
 
-Recheck cave siting after `world-terrain-008`.
+Recheck cave siting after `world-terrain-019`.
 
 At recon time, the existing pre-V2 siting logic was designed for generic sloped inland caves and could reject strong mountain-ridge values.
 
@@ -544,7 +544,7 @@ Selection should happen at world-generation/catalog construction frequency, not 
 
 ### Phase 1 — Reconfirm Cave V2 and location contracts
 
-After `world-terrain-008` is complete:
+After `world-terrain-019` is complete:
 
 - identify final Cave V2 siting owner;
 - identify stable cave identity;
@@ -598,7 +598,7 @@ Add JSDoc for important architectural/public functions and classes introduced by
 
 ## Likely implementation areas
 
-Exact files must be reconfirmed against current `main` after `world-terrain-008`.
+Exact files must be reconfirmed against current `main` after `world-terrain-019`.
 
 Current likely integration areas include:
 
@@ -750,7 +750,7 @@ Browser/gameplay verification is performed manually by the User.
 
 ## Dependency / blocker
 
-`world-terrain-008-underground-caves-v2.md` is a hard dependency.
+`world-terrain-019-cave-heightfield-production-migration.md` is a hard dependency.
 
 Before implementation, verify that completed Cave V2 provides production ownership for:
 

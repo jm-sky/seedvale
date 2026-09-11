@@ -42,8 +42,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                      | Summary                                                               | Pri | Effort | Depends         |
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
-| `world-terrain-007-underground-caves.md`                  | Faza 4 fauna/loot/persistence deferred                                | 🔴  | L      | ~~097~~ ~~125~~ |
-| `world-terrain-008-underground-caves-v2.md`               | -                                                                     | 🟡  | XL     | -      |
 | `world-terrain-010-waterways-and-vegetation.md`           | Phases 2/8/9 deferred — see plan's "Implementation status"            | 🟡  | M      | -      |
 
 ---
@@ -64,18 +62,18 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
-| 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-008, fauna-016 |
-| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
-| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
-| 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-008 |
-| 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
+| 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-019, fauna-016 |
+| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-019, ~~npc-006~~, ~~npc-007~~ |
+| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-019, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
+| 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-019 |
+| 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-019, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | ◼️ `settlements-npcs-030-non-home-settlement-food-production-v1.md`            | -       | 🔴 | M      | -      |
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | settlements-npcs-030 |
 | ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | -       | 🔴 | L      | settlements-npcs-030, world-023 |
 | 💡 `world-024-systemic-treasure-sites-and-keys.md`                             | -       | 🟡 | M      | -      |
-| ◼️ `world-terrain-019-cave-heightfield-production-migration.md`                | -       | 🔴 | XL     | world-terrain-018 |
+| ◼️ `world-terrain-019-cave-heightfield-production-migration.md`                | -       | 🔴 | XL     | ~~world-terrain-018~~ |
 | ◼️ `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | settlements-npcs-019 |
 | 💡 `items-player-026-treasure-loot-forced-entry-and-traps.md`                  | -       | 🟡 | M      | world-024 |
 | ◼️ `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
@@ -94,7 +92,6 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | Home: Anna/Piotr/Kasia/Marek nadal istnieją, w tej samej kolejności, i oferują authored questy; mała ogród/las osada ma food livelihood bez Tradera/Kowala; osada przy significant ore ma Minera wewnątrz istniejącej liczby domów (bez extra resource family); OUTPOST nadal 1 NPC z forced resource role |
 | `quests-progression-017-rpg-settlement-quest-matrices.md` | Sąsiadująca osada: NPC oferuje generated „Sekret starego miejsca” na realny landmark; interakcja zalicza etap; `Umowa między osadami` prowadzi do NPC w innej osadzie po id (to samo imię w home nie kradnie celu); `Podejrzany transport` to rozmowa+wybór bez quest-owned przesyłki; live „Wilki pod osadą” w home nie znika przez RPG; save/load trzyma te same cele |
 | `items-player-023-systemic-item-utility-and-food-safety.md` | Można rozpalić/dołożyć szyszkę, gałąź i belkę; szyszka daje zauważalnie mniej czasu niż gałąź, belka więcej; automatyczny wybór opału nie spala belki, gdy dostępna jest szyszka/gałąź; komunikaty przy ogniu mówią o paliwie/opale, nie tylko o gałęzi; świeże surowe mięso może spowodować zatrucie zależnie od gatunku, a medium-fresh jest bardziej ryzykowne; pieczone/suszone mięso nie wywołuje raw-meat poisoning i nadal daje większą sytość z zachowanym gatunkowym provenance; save/load nie resetuje sequence deterministycznych food-risk rolls ani aktywnego poisoning |
-| `world-terrain-018-cave-heightfield-representation-spike.md` | `?caveHeightfieldTest` od razu otwiera lekki harness (bez world boot); [1] przełącza heightfield/SDF na **tej samej** topology; [2] Walk/Inspect bez reloadu; Walk: spawn przed wejściem, wejście, przejście basic/bend/branch i powrót, bez przenikania podłogi/ścian/sufitu; Inspect: floor/walls/ceiling i mouth bez dziur; metryki w overlay/console.table |
 | `quests-progression-016-world-driven-settlement-quest-opportunities.md` | Po dniu 2, gdy jama ma pressure: hunter (albo pierwszy dorosły) oferuje generated „Wilki pod osadą”; zniszczenie jamy zalicza questa i wypłaca nagrodę; jeśli problem zniknie przed akceptacją, oferta znika; save/load aktywnego generated questa trzyma tego samego givera i `spawnerId`; authored `wilki-pod-osada` nadal istnieje osobno |
 | `items-player-022-gameplay-interaction-usability-polish.md` | Namiot+podest+posłanie = jeden cel Tab/gaze z inspection wszystkich części i repair per część; `+N%` czytelnie zielone; preview małej/średniej chaty pokazuje wejście przy obrocie; `[F]`/`[G]` oczywiste przy przyciskach; kupka gałęzi+belek to 2 cele Tab; stojąca pochodnia gaśnie po 6 h świata / time-skip / save-load |
 | `quests-progression-015-stable-npc-identity-for-quests.md` | Dwa NPC o tym samym imieniu: rozmowa z niewłaściwym nie zalicza `talk_to_npc` / choice / oferty givera; marker zostaje przy właściwym id; save/load i stream-out/in osady trzymają ten sam target; authored Anna/Piotr/Kasia/Marek nadal oferują, przechodzą etapy, kończą się i wypłacają jak wcześniej |
@@ -150,6 +147,9 @@ Done plans kept here only while they are relevant to current planning or depende
 
 | File                                                                    | Why it's here                               |
 | ----------------------------------------------------------------------- | ------------------------------------------- |
+| `world-terrain-007-underground-caves.md`                                | Historical V1; superseded by Cave V2        |
+| `world-terrain-008-underground-caves-v2.md`                             | Closed V2/SDF stage; 019 is production next |
+| `world-terrain-018-cave-heightfield-representation-spike.md`            | Accepted heightfield spike; 019 migrates it |
 | `2026-08-14--106--player-needs-food-and-cooking.md`                     | Dependency of `126`, `152`, `159`           |
 | `2026-08-11--069--npc-household-resources.md`                           | Dependency of `152`, `070`                  |
 | `2026-08-14--109--megakit-construction-catalog.md`                      | Dependency of `111`                         |

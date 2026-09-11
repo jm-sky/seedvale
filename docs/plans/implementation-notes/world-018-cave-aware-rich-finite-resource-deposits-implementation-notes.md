@@ -2,7 +2,7 @@
 
 ## Current-main findings that matter
 
-- `world-terrain-008` is still `in progress`; `world-terrain-017` and `npc-027` are still `planned`. Full mine content is therefore blocked on the final Cave V2 spatial API and the abandoned-mine landmark contract. Generic reserve/deposit refactoring can be prepared earlier, but do not implement against transitional spike/V1 details.
+- `world-terrain-019` is the remaining production cave spatial dependency (`world-terrain-008` is `done`); `world-terrain-017` and `npc-027` are still `planned`. Full mine content is therefore blocked on the final production cave spatial API and the abandoned-mine landmark contract. Generic reserve/deposit refactoring can be prepared earlier, but do not implement against transitional spike/V1 details.
 - `src/terrain/naturalResources.ts` is still a **surface environmental descriptor**: `NaturalResource` has `id/type/x/z/radius/richness`, is generated from the surface resource grid, and is also consumed by settlement-site/resource-significance logic. Do not turn it into a general cave/world-object state bag.
 - `src/terrain/resourceDeposits.ts` is currently surface-only in several separate places, not just in `queryNearest()`:
   - runtime instances retain a `NaturalResource`;
@@ -15,7 +15,7 @@
 - `src/terrain/depositMining.ts` already has the correct authoritative depletion model: one caller-owned `ResourceDepletionState = Map<string, number>`, `0` is distinct from absence, and player/NPC both mutate through `ResourceDeposits.mine()`. Preserve this ownership.
 - Cross-session persistence now exists: `SaveData.resourceDeposits` is a required sparse `Record<string, number>` and `createApp.ts` restores it into the shared depletion map. No new save field/store is needed for reserve capacity.
 - `src/ai/npcProfessionWork.ts` currently reconstructs miner destination Y using `ctx.sampleHeight(target.x, target.z)`. This must disappear for cave-capable targets; the mining target must carry authoritative position/spatial context. Do not let NPC code independently infer cave floor.
-- Current `src/world/createCaves.ts` exposes global `contains(x,y,z)`, `sampleFloor(x,z)` and `sampleCeiling(x,z)` plus `definitions()`. These queries do **not** identify which `caveId` owns a point and do not expose connectivity. `world-018` should consume the final cave-specific production contract from `world-terrain-008`, not build resource-specific cave identity/connectivity on top of these transitional queries.
+- Current `src/world/createCaves.ts` exposes global `contains(x,y,z)`, `sampleFloor(x,z)` and `sampleCeiling(x,z)` plus `definitions()`. These queries do **not** identify which `caveId` owns a point and do not expose connectivity. `world-018` should consume the final cave-specific production contract from `world-terrain-019`, not build resource-specific cave identity/connectivity on top of these transitional queries.
 
 ## Recommended deposit model
 
@@ -70,7 +70,7 @@ Define stable semantic slots first (e.g. exterior-primary, exterior-secondary, i
 
 Interior placement must use Cave V2's semantic/topological/spatial data without requiring an active cave mesh. Prefer chamber/widening nodes or other production semantic candidates with cave-specific floor/clearance/connectivity validation. Never use render triangles, raycasts, object UUIDs or activation state as authoritative placement.
 
-If Cave V2 does not ultimately expose cave-specific containment/floor/connectivity queries, that is a dependency gap to fix in `world-terrain-008`; do not duplicate them in `terrain/resourceDeposits.ts`.
+If Cave V2 does not ultimately expose cave-specific containment/floor/connectivity queries, that is a dependency gap to fix in `world-terrain-019`; do not duplicate them in `terrain/resourceDeposits.ts`.
 
 ## ResourceDeposits refactor details
 
@@ -117,7 +117,7 @@ After dependencies land, add focused contract tests against the final Cave V2 se
 
 ## Suggested implementation order
 
-1. Reconfirm final `world-terrain-008` and `world-terrain-017` production contracts; stop if cave-specific spatial semantics or stable mine lookup are still missing.
+1. Reconfirm final `world-terrain-019` and `world-terrain-017` production contracts; stop if cave-specific spatial semantics or stable mine lookup are still missing.
 2. Introduce/refactor the canonical mineable-deposit definition and adapt existing surface resources with no gameplay change.
 3. Add optional explicit initial reserve while keeping the existing depletion map/save format unchanged.
 4. Make `ResourceDeposits` XYZ/spatial-context aware, including render grounding and shared query output.

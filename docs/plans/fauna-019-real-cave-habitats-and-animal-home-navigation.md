@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** L
-**Depends on:** world-terrain-008, fauna-016
+**Depends on:** world-terrain-019, fauna-016
 **Domain:** `fauna`
 **Subdomains:** `habitat` `migration`
 **Tags:** `caves` `home` `navigation` `water-trips`
@@ -36,7 +36,7 @@ Seedvale ma obecnie dwa niezależne znaczenia `cave`.
 
 ### Real world cave
 
-`src/world/createCaves.ts` posiada deterministyczne cave definitions/identity oraz runtime cave lifecycle. Cave V2 z `world-terrain-008-underground-caves-v2.md` zmierza do architektury:
+`src/world/createCaves.ts` posiada deterministyczne cave definitions/identity oraz runtime cave lifecycle. Cave V2 (`world-terrain-008`, zamknięty) dostarczył `CaveTopology` i produkcyjną infrastrukturę. Finalny production spatial contract, którego ten plan potrzebuje, pochodzi z `world-terrain-019-cave-heightfield-production-migration.md`:
 
 ```text
 CaveTopology
@@ -104,7 +104,7 @@ AnimalHabitatBinding
   resolved home anchor
 ```
 
-Dokładny TypeScript contract ustalić względem finalnego API `world-terrain-008` B1/B2. Nie wiązać nowego API z transitional `CaveVolume`, jeśli Cave V2 zastępuje go produkcyjnym spatial contractem.
+Dokładny TypeScript contract ustalić względem finalnego production API z `world-terrain-019`. Nie wiązać nowego API z transitional `CaveVolume`, jeśli produkcyjny spatial contract go zastępuje.
 
 Stable reference jest źródłem identity. Resolved coordinates mogą być runtime cache, ale nie drugim authoritative definition.
 
@@ -149,7 +149,7 @@ Query powinno być Y-aware zgodnie z kierunkiem Cave V2 i nie może utrwalać 2.
 
 Nie implementować pełnego ogólnego navmesha, jeśli istniejące local steering + production cave spatial queries wystarczą do niezawodnego przejścia pierwszej L1 cave. Jednocześnie nie kodować sekwencji punktów tylko dla jednego bear questa.
 
-Jeżeli podczas implementacji `world-terrain-008` nie dostarcza jeszcze production gameplay spatial contractu B2/B3 potrzebnego do movement, traktować to jako blocker/dependency do dokończenia, a nie budować równoległy compatibility system w fauna.
+Jeżeli podczas implementacji `world-terrain-019` nie dostarcza jeszcze production gameplay spatial contractu potrzebnego do movement, traktować to jako blocker/dependency do dokończenia, a nie budować równoległy compatibility system w fauna.
 
 ## 4. Wyjście z cave i powrót
 
@@ -251,15 +251,15 @@ Treasure-map quest może dzięki temu wskazać cave/world state, ale nie posiada
 
 Nie uzależniać samego real-cave habitat binding od tego, czy occupant jest persistent.
 
-## 10. Relacja do world-terrain-008
+## 10. Relacja do world-terrain-019
 
-`world-terrain-008-underground-caves-v2.md` jest dependency architektonicznym.
+`world-terrain-019-cave-heightfield-production-migration.md` jest dependency architektonicznym.
 
-Fauna-019 powinien konsumować produkcyjne rezultaty:
+Fauna-019 powinien konsumować produkcyjne rezultaty heightfield migration:
 
-- **B1:** stable production cave identity/topology,
-- **B2:** production entrance + gameplay spatial queries,
-- **B3:** poprawne entity/collision/spatial semantics potrzebne do przechodzenia interior ↔ surface.
+- stable production cave identity/topology,
+- production entrance + gameplay spatial queries,
+- poprawne entity/collision/spatial semantics potrzebne do przechodzenia interior ↔ surface.
 
 Nie zależeć od:
 
@@ -267,9 +267,10 @@ Nie zależeć od:
 - camera state,
 - render activation distance,
 - collider registry jako źródła cave identity,
-- transitional V1 `CaveVolume` jako nowego trwałego contractu.
+- transitional V1 `CaveVolume` jako nowego trwałego contractu,
+- production SDF internals.
 
-Jeżeli B4/B5 nie są potrzebne do render-independent movement contract, fauna-019 nie powinien czekać na kosmetyczny/final cleanup całego Cave V2.
+Nie czekać na kosmetyczny leftover cleanup poza finalnym production spatial contractem.
 
 ## 11. Persistence i reconstruction
 
@@ -382,7 +383,7 @@ Przygotować i utrzymywać:
 
 `docs/plans/implementation-notes/fauna-019-real-cave-habitats-and-animal-home-navigation-implementation-notes.md`
 
-Implementation notes powinny przede wszystkim zapisać aktualny po `world-terrain-008` contract cave identity/topology/spatial queries, dokładny fauna movement seam, `AnimalAgent` home/trip guards, `PreySpawner` population ownership oraz `WorldBundle` composition wiring.
+Implementation notes powinny przede wszystkim zapisać aktualny po `world-terrain-019` contract cave identity/topology/spatial queries, dokładny fauna movement seam, `AnimalAgent` home/trip guards, `PreySpawner` population ownership oraz `WorldBundle` composition wiring.
 
 Nie kopiować do notes całego planu.
 

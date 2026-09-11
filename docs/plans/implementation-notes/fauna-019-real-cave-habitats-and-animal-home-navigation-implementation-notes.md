@@ -2,9 +2,11 @@
 
 Reviewed against `main` on 2026-09-08.
 
+> **Dependency update 2026-09-11.** `world-terrain-008` is `done`. The remaining production cave spatial contract is `world-terrain-019`. Reconfirm current `Caves` APIs at implementation time; do not wait for closed 008 B4/B5 work.
+
 ## Current-code constraints
 
-- `world-terrain-008` is still **in progress**. On current `main`, `src/world/createCaves.ts` still builds `v2ByCaveId` from `buildSpikeTestTopology()` and derives a transitional `CaveDefinition` through `topologyToCaveDefinition()`. Gameplay queries still run through `CaveVolume`.
+- `world-terrain-019` is the open production-migration dependency. On the 2026-09-08 recon, `src/world/createCaves.ts` still built `v2ByCaveId` from `buildSpikeTestTopology()` and derived a transitional `CaveDefinition` through `topologyToCaveDefinition()`. Reconfirm current `main` before implementing — Cave V2/SDF has since landed more of the production path, but heightfield is not yet the production source of truth.
 - The current `Caves` API is not sufficient for fauna-019: `contains(x,y,z)` is 3D, but `sampleFloor(x,z)` / `sampleCeiling(x,z)` are 2.5D and choose across all cave volumes. B2's production Y-aware spatial contract is therefore a real blocker for the final cave-navigation seam. Do **not** add a fauna-local compatibility layer around `CaveVolume` or active cave meshes; finish/consume the world-owned B2 contract instead.
 - Cave presentation is streamed around the observer, while definitions/volumes are precomputed independently of presentation. Preserve that separation: animal simulation must never call `Caves.update()`, inspect `scene`, or force cave mesh activation.
 
@@ -84,7 +86,7 @@ Prefer pure tests around new contracts rather than constructing a Three.js-heavy
 
 ## Implementation order
 
-1. Finish/verify the required `world-terrain-008` B2 production cave spatial + route/anchor seam.
+1. Finish/verify the required `world-terrain-019` production cave spatial + route/anchor seam.
 2. Rename the decorative fauna `cave` spawner safely.
 3. Add cave-backed fauna habitat binding and wire the world query through `buildFauna()` / `createFauna()`.
 4. Generalize AnimalAgent ground/journey bounds, then add cave enter/leave/return routing.

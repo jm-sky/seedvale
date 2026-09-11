@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** world-terrain-008, world-terrain-017
+**Depends on:** world-terrain-019, world-terrain-017
 **Domain:** `world`
 **Subdomains:** `resources` `places` `simulation`
 **Tags:** `caves` `mining` `gold` `depletion`
@@ -197,7 +197,7 @@ Do not place deposit-generation logic inside the world-location/landmark module 
 
 Before implementation, reconfirm current `main` after:
 
-- `world-terrain-008`;
+- `world-terrain-019`;
 - `world-terrain-017`;
 - the separate generic NPC surface/cave movement plan, if NPC cave mining is required for completion.
 
@@ -1093,7 +1093,7 @@ Browser/gameplay verification is performed manually by the User.
 
 ## Dependencies / blockers
 
-### `world-terrain-008-underground-caves-v2.md`
+### `world-terrain-019-cave-heightfield-production-migration.md`
 
 Hard dependency for production:
 

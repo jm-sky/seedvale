@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** L
-**Depends on:** world-terrain-008, ~~npc-006~~, ~~npc-007~~
+**Depends on:** world-terrain-019, ~~npc-006~~, ~~npc-007~~
 **Domain:** `npc`
 **Subdomains:** `behavior` `work`
 **Tags:** `movement` `navigation` `caves` `spatial-context` `off-screen`
@@ -117,7 +117,7 @@ Cave movement requires domain-correct ground/slope/walkability semantics rather 
 
 ### Cave V2
 
-This plan depends on the production result of `docs/plans/world-terrain-008-underground-caves-v2.md`.
+This plan depends on the production result of `docs/plans/world-terrain-019-cave-heightfield-production-migration.md`.
 
 Consume the final Cave V2 contracts rather than transitional spike/V1 compatibility APIs.
 
@@ -134,7 +134,7 @@ floor / ceiling semantics
 collision / traversal validity
 ```
 
-The current `CaveTopology` direction already provides useful semantic data: stable cave identity, entrance, authoritative XYZ nodes, connected segments and XYZ centerlines. After `world-terrain-008`, reconfirm exact production APIs and names before implementation.
+The current `CaveTopology` direction already provides useful semantic data: stable cave identity, entrance, authoritative XYZ nodes, connected segments and XYZ centerlines. After `world-terrain-019`, reconfirm exact production APIs and names before implementation.
 
 ## Spatial-context contract
 
@@ -153,7 +153,7 @@ SpatialContext
   cave(caveId)
 ```
 
-The exact TypeScript representation should follow final Cave V2/world ownership after `world-terrain-008`.
+The exact TypeScript representation should follow final production cave/world ownership after `world-terrain-019`.
 
 Do not create `NpcCaveContext`, `MinerSpatialContext` or `ResourceSpatialContext` if a general world/Cave V2 spatial identity can own the concept.
 
@@ -366,7 +366,7 @@ Reuse shared collider infrastructure where Cave V2 continues to expose collision
 
 NPC cave collision must respect vertical collider extent the same way Player cave movement does. A cave wall below the surface must not block an NPC walking on the hillside above it; a surface collider must not become a cave obstacle merely due to overlapping X/Z unless its vertical extent makes that valid.
 
-If `world-terrain-008` changes Cave V2 collision ownership, follow its final production contract. Do not create a second cave collision world for NPCs.
+If `world-terrain-019` changes cave collision ownership, follow its final production contract. Do not create a second cave collision world for NPCs.
 
 ## Local cave obstacle recovery
 
@@ -435,7 +435,7 @@ Do not add speculative remote-route APIs, persisted route length or exact off-sc
 
 Movement validity must use Cave V2 semantic data independent of presentation streaming.
 
-Current cave presentation/collider activation may be Player-observer-driven. After `world-terrain-008`, reconfirm the production lifecycle.
+Current cave presentation/collider activation may be Player-observer-driven. After `world-terrain-019`, reconfirm the production lifecycle.
 
 Required invariant:
 
@@ -451,7 +451,7 @@ If detailed cave locomotion requires active collision proxies, integrate their a
 
 ## Stage A — Reconfirm final Cave V2 contracts
 
-After `world-terrain-008` reaches its production architecture, identify:
+After `world-terrain-019` reaches its production architecture, identify:
 
 - canonical `caveId` and cave lookup;
 - entrance representation and transition semantics;
@@ -573,7 +573,7 @@ Animal cave traversal may later reuse the same spatial context, transition and C
 
 ## Expected primary files
 
-Reconfirm exact ownership after `world-terrain-008`, but current likely integration points are:
+Reconfirm exact ownership after `world-terrain-019`, but current likely integration points are:
 
 ```text
 src/ai/NpcAgent.ts

@@ -2,7 +2,7 @@
 
 ## Current-state blocker
 
-`world-terrain-008-underground-caves-v2.md` is still **in progress** on current `main`. Do not implement 017 against the present cave contracts and then preserve them for compatibility.
+`world-terrain-008-underground-caves-v2.md` is `done`. The remaining production cave spatial contract is `world-terrain-019`. Do not implement 017 against transitional cave contracts and then preserve them for compatibility.
 
 Current cave runtime is transitional:
 
@@ -10,7 +10,7 @@ Current cave runtime is transitional:
 - `src/world/caveGenerator.ts` still expands legacy `LargeCaveSite` candidates into `CaveDefinition` and performs the pre-V2 overburden validation.
 - `src/world/largeCaves.ts::pickLargeCaveSites()` is still the siting owner. It samples a fixed ring around origin, targets a fixed cave count and explicitly rejects `sampleMountainRidge(x, z) > 0.55`.
 
-That last rule directly conflicts with the abandoned-mountain-mine requirement. Phase 1 of 017 must therefore happen only after 008 exposes its production siting/topology/spatial contracts. The implementing agent should reconfirm those exact symbols then; do not build the mine around `LargeCaveSite`, `topologyToCaveDefinition()` or the current spike-test topology merely because they exist today.
+That last rule directly conflicts with the abandoned-mountain-mine requirement. Phase 1 of 017 must therefore happen only after 019 exposes its production siting/topology/spatial contracts. The implementing agent should reconfirm those exact symbols then; do not build the mine around `LargeCaveSite`, `topologyToCaveDefinition()` or the current spike-test topology merely because they exist today.
 
 ## World-location ownership
 

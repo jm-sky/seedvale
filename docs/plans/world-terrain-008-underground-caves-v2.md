@@ -1,13 +1,31 @@
 # Plan: Underground Caves V2
 
 **Created:** 2026-09-04  
-**Status:** `in progress` 🔄  
+**Status:** `done` ✅  
+**Closed at:** 2026-09-11 10:25
 **Type:** feature  
 **Priority:** medium · **Effort:** XL  
 **Depends on:** none  
 **Domain:** `world-terrain`  
 **Subdomains:** `terrain` `rendering` `landmarks`  
 **Tags:** `caves` `procedural-generation` `collision` `camera`
+
+## Closure (2026-09-11)
+
+This plan is **closed** as the completed Cave V2 architecture and infrastructure stage. Do not continue SDF as the target representation, and do not finish the original B5 SDF/V1 cleanup inside this plan.
+
+V2 delivered production cave infrastructure:
+
+- `CaveTopology` as the representation-neutral layout;
+- world-scale siting and deterministic cave identity;
+- `WorldBundle` lifecycle, streaming, collision, third-person camera, and entrance integration;
+- gameplay ground/query ownership independent of the render mesh.
+
+**SDF was the production spatial representation of V2** (Milestone A decision, implemented through B1–B4). Heightfield was later accepted as the successor representation by `world-terrain-018-cave-heightfield-representation-spike.md`.
+
+Further production migration — replacing SDF with heightfield, leftover V1 adapters (`topologyToCaveDefinition` / `CaveVolume`), and SDF-path removal — belongs to `world-terrain-019-cave-heightfield-production-migration.md`. Production SDF code stays until 019 replaces it.
+
+The original §22 completion gate (B5 V1/Sweep cleanup as part of this plan) is superseded by that split.
 
 ## 1. Cel
 
@@ -864,20 +882,8 @@ Fauna/loot/progression dopiero po ustabilizowaniu spatial modelu.
 
 ## 22. Completion
 
-Plan jest zakończony dopiero gdy:
+Original V2 completion assumed SDF would remain the production representation and that B5 V1/Sweep cleanup would close this plan.
 
-- Milestone A decision SDF jest wdrożona jako production architecture;
-- spike terminology/harness nie jest produkcyjnym runtime;
-- V1 geometry path została usunięta;
-- L1 cave spełnia visual/gameplay acceptance;
-- entrance i surface integration działają;
-- spatial queries nie blokują przyszłego multi-level modelu;
-- collision i camera działają;
-- lifecycle/determinism są zweryfikowane;
-- performance jest zmierzone i akceptowalne;
-- automated verification przechodzi;
-- manual browser verification została wykonana przez Playera.
-
-Dopiero potem planować fauna/loot/quests i większe multi-route cave topology.
+That gate is **superseded**. This plan is closed as the completed Cave V2/SDF infrastructure stage; see Closure. Remaining production representation work is `world-terrain-019`. Do not resume B5 SDF cleanup here.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
