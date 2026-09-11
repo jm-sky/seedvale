@@ -80,7 +80,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | settlements-npcs-030 |
 | 💡 `world-025-persistent-abandoned-cemetery-worldgen-cache.md`                 | -       | 🔴 | M      | ~~world-015~~, ~~world-022~~ |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
-| ◼️ `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`         | -       | 🟡 | M      | fauna-014, ~~world-009~~, items-player-025 |
+| 💡 `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`         | -       | 🟡 | M      | fauna-014, ~~world-009~~, items-player-025 |
  💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |

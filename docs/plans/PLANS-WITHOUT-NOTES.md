@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 22:24:44  
+> Date: 2026-09-11 22:25:32  
 
 ## PLANS
 
-- `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`
 - `npc-031-voluntary-expedition-joining.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`
@@ -14,37 +13,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`
-
-Prompt:
-
-```
-Zrób review planu `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/fauna-023-systemic-animal-attraction-food-blood-and-trap-lures-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `npc-031-voluntary-expedition-joining.md`
 
