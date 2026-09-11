@@ -1122,6 +1122,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`

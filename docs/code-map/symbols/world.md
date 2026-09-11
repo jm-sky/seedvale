@@ -1509,50 +1509,50 @@ Generated from exported TypeScript symbols.
 
 ## `world/treasureSites.ts`
 
-- `abandonedTreasureKeyPickups` — function — line 527
-- `AbandonedTreasureKeyPlacement` — type — line 59
-- `attemptTreasureUnlock` — function — line 552
+- `abandonedTreasureKeyPickups` — function — line 535
+- `AbandonedTreasureKeyPlacement` — type — line 64
+- `attemptTreasureUnlock` — function — line 560
   - domain: world
-- `authoredTreasureReservedIds` — function — line 162
-- `BuriedTreasureKeyPlacement` — type — line 47
-- `buriedTreasureKeyPlacements` — function — line 521
-- `CAVE_TREASURE_ENABLED` — const — line 106
-- `completeTreasureSites` — function — line 476
+- `authoredTreasureReservedIds` — function — line 170
+- `BuriedTreasureKeyPlacement` — type — line 52
+- `buriedTreasureKeyPlacements` — function — line 529
+- `CAVE_TREASURE_ENABLED` — const — line 114
+- `completeTreasureSites` — function — line 484
   - domain: world
-- `CompleteTreasureSitesInput` — type — line 462
-- `KEY_HOST_KINDS` — const — line 96
-- `MAX_KEY_DISTANCE` — const — line 93
-- `MAX_TREASURE_HOME_DIST` — const — line 91
-- `MIN_KEY_DISTANCE` — const — line 92
-- `MIN_TREASURE_HOME_DIST` — const — line 90
-- `MIN_TREASURE_SITE_SEPARATION` — const — line 89
-- `resolveTreasureChestDrafts` — function — line 278
+- `CompleteTreasureSitesInput` — type — line 470
+- `KEY_HOST_KINDS` — const — line 101
+- `MAX_KEY_DISTANCE` — const — line 98
+- `MAX_TREASURE_HOME_DIST` — const — line 96
+- `MIN_KEY_DISTANCE` — const — line 97
+- `MIN_TREASURE_HOME_DIST` — const — line 95
+- `MIN_TREASURE_SITE_SEPARATION` — const — line 94
+- `resolveTreasureChestDrafts` — function — line 286
   - domain: world
-- `ResolveTreasureChestDraftsInput` — type — line 263
-- `resolveTreasureSites` — function — line 507
+- `ResolveTreasureChestDraftsInput` — type — line 271
+- `resolveTreasureSites` — function — line 515
   - domain: world
-- `ResolveTreasureSitesInput` — type — line 494
-- `RUINS_CHEST_KINDS` — const — line 103
-- `sampleDeepForestTreasureCandidates` — function — line 214
+- `ResolveTreasureSitesInput` — type — line 502
+- `RUINS_CHEST_KINDS` — const — line 108
+- `sampleDeepForestTreasureCandidates` — function — line 222
   - domain: world
-- `TARGET_TREASURE_SITE_COUNT` — const — line 88
-- `TREASURE_KEY_SEARCH_CHUNK_RADIUS` — const — line 95
-- `TREASURE_SITE_SEARCH_CHUNK_RADIUS` — const — line 94
-- `TreasureArchetype` — type — line 28
-- `treasureBuriedSpotId` — function — line 158
-- `TreasureChestDraft` — type — line 80
-- `treasureChestId` — function — line 146
-- `TreasureChestPlacement` — type — line 40
-- `treasureKeyInstanceId` — function — line 150
-- `treasureKeyPickupId` — function — line 154
-- `TreasureKeyPlacement` — type — line 69
-- `TreasureLandmarkCandidate` — type — line 30
-- `TreasureSiteDefinition` — type — line 71
-- `treasureSiteForContainer` — function — line 533
-- `treasureSiteId` — function — line 142
-- `TreasureSiteId` — type — line 27
+- `TARGET_TREASURE_SITE_COUNT` — const — line 93
+- `TREASURE_KEY_SEARCH_CHUNK_RADIUS` — const — line 100
+- `TREASURE_SITE_SEARCH_CHUNK_RADIUS` — const — line 99
+- `TreasureArchetype` — type — line 33
+- `treasureBuriedSpotId` — function — line 166
+- `TreasureChestDraft` — type — line 85
+- `treasureChestId` — function — line 154
+- `TreasureChestPlacement` — type — line 45
+- `treasureKeyInstanceId` — function — line 158
+- `treasureKeyPickupId` — function — line 162
+- `TreasureKeyPlacement` — type — line 74
+- `TreasureLandmarkCandidate` — type — line 35
+- `TreasureSiteDefinition` — type — line 76
+- `treasureSiteForContainer` — function — line 541
+- `treasureSiteId` — function — line 150
+- `TreasureSiteId` — type — line 32
   - domain: world
-- `TreasureUnlockAttempt` — type — line 540
+- `TreasureUnlockAttempt` — type — line 548
 
 ## `world/treeHarvest.ts`
 
@@ -1804,7 +1804,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/worldGeneratedContainers.ts`
 
-- `createWorldGeneratedContainers` — function — line 80
+- `createWorldGeneratedContainers` — function — line 86
   - domain: world
 - `SaveWorldGeneratedContainer` — type — line 10
 - `WorldGeneratedContainerEntry` — type — line 20

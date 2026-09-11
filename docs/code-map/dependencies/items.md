@@ -1285,6 +1285,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/createApp.ts`
 - `app/saveState.ts`
+- `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
 - `items/treasureGameplay.test.ts`
 - `world/worldGeneratedContainers.test.ts`

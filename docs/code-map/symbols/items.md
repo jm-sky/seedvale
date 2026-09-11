@@ -490,40 +490,48 @@ Generated from exported TypeScript symbols.
 
 ## `items/treasureGameplay.ts`
 
-- `applyTreasureContentsLosses` — function — line 258
+- `applyTreasureContentsLosses` — function — line 313
 - `BLADE_TRAP_DAMAGE` — const — line 17
-- `commitForcedEntry` — function — line 325
-- `describeTreasureContainerInteraction` — function — line 273
-- `EMPTY_TREASURE_MUTATION` — const — line 48
+- `CAVE_FINAL_COIN_MAX` — const — line 28
+- `CAVE_FINAL_COIN_MIN` — const — line 27
+- `CAVE_FINAL_GOLD_MAX` — const — line 30
+- `CAVE_FINAL_GOLD_MIN` — const — line 29
+- `CAVE_SIDE_COIN_MAX` — const — line 26
+- `CAVE_SIDE_COIN_MIN` — const — line 25
+- `commitForcedEntry` — function — line 380
+- `describeTreasureContainerInteraction` — function — line 328
+- `EMPTY_TREASURE_MUTATION` — const — line 66
 - `FORCE_ENTRY_DURATION_SEC` — const — line 18
-- `ForcedEntryCommitInput` — type — line 299
-- `ForcedEntryCommitResult` — type — line 308
-- `GEMSTONE_KINDS` — const — line 20
-- `GemstoneKind` — type — line 29
-- `generateTreasureLoot` — function — line 167
-- `getTreasureMutation` — function — line 121
-- `isGemstoneKind` — function — line 109
-- `mutationIsDefault` — function — line 128
-- `pryingQuality` — function — line 117
-- `quantizeStrength` — function — line 113
-- `resolveFireSeverity` — function — line 220
-- `resolveMechanicalResult` — function — line 196
-- `resolveTreasureLockDifficulty` — function — line 192
-- `resolveTreasureTrap` — function — line 185
-- `selectDestroyedContents` — function — line 242
-- `serializeTreasureMutations` — function — line 137
-- `snapshotTreasureContents` — function — line 234
+- `ForcedEntryCommitInput` — type — line 354
+- `ForcedEntryCommitResult` — type — line 363
+- `GEMSTONE_KINDS` — const — line 38
+- `GemstoneKind` — type — line 47
+- `generateTreasureLoot` — function — line 202
+- `GenerateTreasureLootOptions` — type — line 34
+- `getTreasureMutation` — function — line 147
+- `isGemstoneKind` — function — line 135
+- `mutationIsDefault` — function — line 154
+- `pryingQuality` — function — line 143
+- `quantizeStrength` — function — line 139
+- `resolveFireSeverity` — function — line 275
+- `resolveMechanicalResult` — function — line 251
+- `resolveTreasureLockDifficulty` — function — line 247
+- `resolveTreasureTrap` — function — line 240
+- `selectDestroyedContents` — function — line 297
+- `serializeTreasureMutations` — function — line 163
+- `snapshotTreasureContents` — function — line 289
 - `TREASURE_COIN_MAX` — const — line 16
 - `TREASURE_COIN_MIN` — const — line 15
   - domain: items-player
-- `TreasureChestMutation` — type — line 41
-- `TreasureContainerInteraction` — type — line 267
-- `TreasureContentsSnapshot` — type — line 230
-- `TreasureFireSeverity` — type — line 33
-- `TreasureForceCapabilitySnapshot` — type — line 35
-- `TreasureMechanicalResult` — type — line 32
-- `TreasureTrapType` — type — line 31
-- `treasureWorldContainerPrompt` — function — line 286
+- `TreasureChestMutation` — type — line 59
+- `TreasureContainerInteraction` — type — line 322
+- `TreasureContentsSnapshot` — type — line 285
+- `TreasureFireSeverity` — type — line 51
+- `TreasureForceCapabilitySnapshot` — type — line 53
+- `TreasureLootProfile` — type — line 32
+- `TreasureMechanicalResult` — type — line 50
+- `TreasureTrapType` — type — line 49
+- `treasureWorldContainerPrompt` — function — line 341
 
 ## `items/weaponMaintenance.ts`
 
