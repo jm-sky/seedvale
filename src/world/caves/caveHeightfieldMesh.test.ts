@@ -209,6 +209,32 @@ describe('cave heightfield mesh (production)', () => {
     }
     expect(checked).toBeGreaterThan(0)
   })
+
+  it('keeps the floor warmer/brighter than the darkened ceiling', () => {
+    const field = build('basic')
+    const { positions, colors, indices } = buildHeightfieldMeshBuffers(field)
+    let floorLuma = 0
+    let floorN = 0
+    let ceilLuma = 0
+    let ceilN = 0
+    for (let t = 0; t < indices.length; t += 3) {
+      const ny = triangleUpSign(positions, indices, t)
+      for (let k = 0; k < 3; k++) {
+        const v = indices[t + k]! * 3
+        const luma = colors[v]! * 0.3 + colors[v + 1]! * 0.59 + colors[v + 2]! * 0.11
+        if (ny > 1e-9) {
+          floorLuma += luma
+          floorN++
+        } else if (ny < -1e-9) {
+          ceilLuma += luma
+          ceilN++
+        }
+      }
+    }
+    expect(floorN).toBeGreaterThan(0)
+    expect(ceilN).toBeGreaterThan(0)
+    expect(floorLuma / floorN).toBeGreaterThan(ceilLuma / ceilN)
+  })
 })
 
 describe('mouth underside mask (production, presentation-only)', () => {

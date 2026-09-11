@@ -41,10 +41,36 @@ export type HeightfieldMeshBuffers = {
   meshBuildMs: number
 }
 
-const FLOOR_COLOR = [0.42, 0.34, 0.27] as const
-const CEILING_COLOR = [0.28, 0.26, 0.24] as const
+const FLOOR_COLOR = [0.45, 0.34, 0.24] as const
+const CEILING_COLOR = [0.22, 0.21, 0.20] as const
 /** Colour at the rim, where floor and ceiling meet and read as wall. */
-const RIM_COLOR = [0.35, 0.32, 0.29] as const
+const RIM_COLOR = [0.32, 0.28, 0.24] as const
+
+function clamp01(v: number): number {
+  return v < 0 ? 0 : v > 1 ? 1 : v
+}
+
+/** Cheap deterministic tonal wobble on already-authored role colours.
+ *  Ceiling darkens slightly with distance from the entrance; floor stays a
+ *  touch warmer. No noise field — two sines plus a distance term. */
+function tintVertexColor(
+  base: readonly [number, number, number],
+  x: number,
+  z: number,
+  entranceX: number,
+  entranceZ: number,
+  role: 'floor' | 'ceiling' | 'rim',
+): [number, number, number] {
+  const wobble = Math.sin(x * 1.73 + z * 2.11) * 0.028 + Math.sin(x * 3.07 - z * 1.43) * 0.016
+  const dist = Math.hypot(x - entranceX, z - entranceZ)
+  const depth = role === 'ceiling' ? Math.min(0.08, dist * 0.0055) : 0
+  const warmth = role === 'floor' ? 0.025 : role === 'rim' ? 0.012 : 0
+  return [
+    clamp01(base[0] * (1 + wobble - depth) + warmth),
+    clamp01(base[1] * (1 + wobble * 0.65 - depth)),
+    clamp01(base[2] * (1 + wobble * 0.4 - depth) - warmth * 0.6),
+  ]
+}
 
 function now(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
@@ -112,12 +138,22 @@ export function buildHeightfieldMeshBuffers(field: CaveHeightfieldRepresentation
   const surfGapAt = (i: number): number => field.surfaceY[i]! - SURFACE_CLIP_EPS - ceilY[i]!
   /** Where a ceiling should exist at all: inside the cave *and* under rock. */
   const ceilExtentAt = (i: number): number => Math.min(gapAt(i), surfGapAt(i))
+  const ex = field.entrance.x
+  const ez = field.entrance.z
+  const shade = (
+    base: readonly [number, number, number],
+    x: number,
+    z: number,
+    role: 'floor' | 'ceiling' | 'rim',
+  ): [number, number, number] => tintVertexColor(base, x, z, ex, ez, role)
 
   const floorVertexAt = (ix: number, iz: number): number => {
     const i = iz * nx + ix
     let v = floorVertex[i]!
     if (v < 0) {
-      v = pushVertex(b, originX + ix * cellSize, floorY[i]!, originZ + iz * cellSize, FLOOR_COLOR)
+      const x = originX + ix * cellSize
+      const z = originZ + iz * cellSize
+      v = pushVertex(b, x, floorY[i]!, z, shade(FLOOR_COLOR, x, z, 'floor'))
       floorVertex[i] = v
     }
     return v
@@ -127,7 +163,9 @@ export function buildHeightfieldMeshBuffers(field: CaveHeightfieldRepresentation
     const i = iz * nx + ix
     let v = ceilVertex[i]!
     if (v < 0) {
-      v = pushVertex(b, originX + ix * cellSize, ceilY[i]!, originZ + iz * cellSize, CEILING_COLOR)
+      const x = originX + ix * cellSize
+      const z = originZ + iz * cellSize
+      v = pushVertex(b, x, ceilY[i]!, z, shade(CEILING_COLOR, x, z, 'ceiling'))
       ceilVertex[i] = v
     }
     return v
@@ -155,12 +193,14 @@ export function buildHeightfieldMeshBuffers(field: CaveHeightfieldRepresentation
     const bz = originZ + izB * cellSize
     const midA = (floorY[ia]! + ceilY[ia]!) * 0.5
     const midB = (floorY[ib]! + ceilY[ib]!) * 0.5
+    const rx = ax + (bx - ax) * t
+    const rz = az + (bz - az) * t
     v = pushVertex(
       b,
-      ax + (bx - ax) * t,
+      rx,
       midA + (midB - midA) * t,
-      az + (bz - az) * t,
-      RIM_COLOR,
+      rz,
+      shade(RIM_COLOR, rx, rz, 'rim'),
     )
     rimVertex[key] = v
     rimVertexCount++
@@ -185,12 +225,14 @@ export function buildHeightfieldMeshBuffers(field: CaveHeightfieldRepresentation
     const az = originZ + izA * cellSize
     const bx = originX + ixB * cellSize
     const bz = originZ + izB * cellSize
+    const sx = ax + (bx - ax) * t
+    const sz = az + (bz - az) * t
     v = pushVertex(
       b,
-      ax + (bx - ax) * t,
+      sx,
       ceilY[ia]! + (ceilY[ib]! - ceilY[ia]!) * t,
-      az + (bz - az) * t,
-      CEILING_COLOR,
+      sz,
+      shade(CEILING_COLOR, sx, sz, 'ceiling'),
     )
     skyVertex[key] = v
     skyVertexCount++

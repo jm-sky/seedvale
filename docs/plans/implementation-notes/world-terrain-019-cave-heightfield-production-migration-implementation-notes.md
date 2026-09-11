@@ -6,7 +6,8 @@
 **Milestone A implemented:** 2026-09-11 — see “Milestone A — implemented” below.  
 **Milestone B implemented:** 2026-09-11 — see “Milestone B — implemented” below. Heightfield is presentation + terrain-mouth authority.  
 **Early gameplay migration (post-B, pre-C):** 2026-09-11 — see “Early gameplay migration — implemented” below. Heightfield became player cave ground / floor / ceiling authority.  
-**Spatial cutover (D + E runtime part, pulled forward before C):** 2026-09-11 — see “Spatial cutover — implemented” below. **Heightfield is the only production spatial authority; SDF runtime deleted.** Sections that describe the SDF column index / colliders / worker as current code are historical from here on.
+**Spatial cutover (D + E runtime part, pulled forward before C):** 2026-09-11 — see “Spatial cutover — implemented” below. **Heightfield is the only production spatial authority; SDF runtime deleted.** Sections that describe the SDF column index / colliders / worker as current code are historical from here on.  
+**Cave entrance presentation polish:** 2026-09-11 — see “Cave entrance presentation polish” below. Presentation-only denser mouth framing + subtle vertex-colour/material tweak; zero spatial/collision changes.
 
 These notes are a focused implementation handoff, not a restatement of the plan. Current code is authoritative. The final `world-terrain-018` spike differs materially from several earlier notes: production migration must copy the final floor/ceiling-convergence model, not the superseded binary-footprint/vertical-wall approach.
 
@@ -764,6 +765,56 @@ No browser verification; `pnpm docs:sync` not run (generated `docs/code-map` / `
 - **Light / visible sky in the cave.** The obvious candidate source — camera occupancy from a different shape than the rendered mesh (SDF void where the heightfield mesh is rock, i.e. camera outside a `FrontSide` mesh looking at daylight through its back faces) — is removed by this cutover; the User's browser pass decides whether anything remains. If it does, the independent candidates are the ones already documented under “Known risks after B”: (a) the terrain edge is on the tile grid (≤ 1 m, bisected crossings) while the cave rim is on the 0.3 m field grid, so hairline seams between contour vertices are possible at grazing angles (the underside mask is the intended cover); (b) terrain node heights are tile `floorHeights` (roads / rivers / player digs) while the cave rim is `sampleBaseHeight − mouthCarveDepth`, so a modified mouth surface opens a vertical seam. Neither is masked here with fog / darkness / invisible geometry.
 - `LOOSE-ENDS.md` 2026-09-10: `PlayerController` still feeds the raw surface `sampleHeight` to `applySlopeMovementConstraint` inside caves (harness uses `withCaveFloorFallback`). Unchanged by this cutover.
 - Milestone C (shared spatial contract + semantic interior locations) remains; `queryGround` / `queryInterior` are still player-stateful closures — do not hand them to NPC/fauna; `occupancyAt` / `resolveHorizontal` / `sampleFloor` / `sampleCeiling` are the stateless, entity-neutral pieces C can build on.
+
+## Cave entrance presentation polish — implemented (2026-09-11)
+
+Presentation-only visual polish of the Cave V2 mouth after the heightfield spatial cutover. **Zero spatial / collision / terrain-cutout changes.**
+
+### What landed
+
+Denser contour-driven framing in `createMouthRocks()`:
+
+- along-axis sample step ~0.55 m (was 0.9 m × 6 fixed steps) with deterministic along-axis jitter;
+- hillside / upper-rim arc sampled from −opening so the back of the terrain hole is covered, not only the left/right walls;
+- two classes on the same `createLargeRock()` pipeline: **anchor** (scale ~1.0–1.45, doorway + hillside sides + back-centre) and **filler** (scale ~0.45–0.9) between them;
+- deterministic variation (scale / yaw / along jitter / outside offset / sink) from a local hash of `(caveId, step, side, channel)` — no `Math.random()`, no sequential RNG;
+- rocks still sit on `walkSurfaceAt` on the terrain side of `mouthOpeningAt = 0`; corridor stays clear; no colliders;
+- cap 30 rocks per entrance (typically low-20s, up from the legacy 12).
+
+Layering from typical camera angles:
+
+```text
+terrain
+    ↓
+rocks overlapping the rim visually
+    ↓
+underside mask (unchanged fallback seam cover)
+    ↓
+cave mesh
+```
+
+`buildMouthUndersideMaskBuffers()` is unchanged. `?debugDisableSystems=caveMouthRocks` still drops only the rocks.
+
+Subtle cave-mesh polish (no new shader, still `FrontSide`):
+
+- `createCaveHeightfieldMaterial()` roughness 0.82 → 0.88;
+- floor vertex colour slightly warmer brown, ceiling darker, rim less uniformly grey;
+- cheap per-vertex sine + entrance-distance tint in `caveHeightfieldMesh.ts`.
+
+### Follow-up (out of scope)
+
+`createLargeRock()` still allocates one `IcosahedronGeometry` + `MeshStandardMaterial` per rock (~20–30 draw calls / materials per active cave mouth). Shared-material or instanced framing is a later perf item, not required at this count.
+
+### Tests / checks
+
+```text
+vitest: src/world/caves/caveHeightfieldPresentation.test.ts src/world/caves/caveHeightfieldMesh.test.ts
+vue-tsc --noEmit
+eslint .
+pnpm run build
+```
+
+No browser verification — User pass of the mouth from typical approach / grazing / low-camera angles.
 
 ## Milestone C — Shared spatial queries + semantic cave locations
 

@@ -28,11 +28,13 @@ import { openingDirection } from './caveOrientation'
 
 /** `FrontSide` on purpose: it is the cheapest permanent detector for a
  *  winding regression. Do not "fix" a dark cave with `DoubleSide`. Smooth
- *  normals come from the shared-vertex geometry (`computeVertexNormals`). */
+ *  normals come from the shared-vertex geometry (`computeVertexNormals`).
+ *  Roughness is high-matte so vertex colours read as damp earth, not wet
+ *  plastic. */
 export function createCaveHeightfieldMaterial(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.82,
+    roughness: 0.88,
     metalness: 0,
     flatShading: false,
     side: THREE.FrontSide,
@@ -96,23 +98,85 @@ export function createMouthUndersideMask(
   return mesh
 }
 
-/** Rock steps along the opening axis (metres). */
-const ROCK_STEP_ALONG = 0.9
-const ROCK_STEPS: readonly number[] = [-2, -1, 0, 1, 2, 3]
-/** Rock centre this far *outside* the contour, on the terrain side. */
-const ROCK_OUTSIDE = 0.35
+/** Base spacing along the opening axis (metres). Jittered per-rock. */
+const ROCK_STEP_ALONG = 0.55
+const ROCK_ALONG_START = -2.4
+const ROCK_ALONG_END = 2.75
+const ROCK_ALONG_JITTER = 0.18
+/** Fillers sit closer to the contour so they overlap the rim visually. */
+const ROCK_OUTSIDE_BASE = 0.14
+const ROCK_OUTSIDE_SPAN = 0.18
+/** Anchors sit a little further out so a ~1.4 scale boulder does not fill the doorway. */
+const ROCK_ANCHOR_OUTSIDE_EXTRA = 0.14
 const ROCK_MARCH_MAX = 4
 const ROCK_MARCH_STEP = 0.1
-const ROCK_SINK = 0.25
+const ROCK_SINK_BASE = 0.18
+const ROCK_SINK_SPAN = 0.14
+const ROCK_MIN_SEPARATION = 0.42
+const MAX_MOUTH_ROCKS = 30
+const ANCHOR_SCALE_MIN = 1
+const ANCHOR_SCALE_SPAN = 0.45
+const FILLER_SCALE_MIN = 0.45
+const FILLER_SCALE_SPAN = 0.45
+/** Hillside / upper-rim samples, radians from −opening (into the hillside). */
+const UPPER_RIM_ANGLES = [-0.85, -0.5, -0.25, 0, 0.25, 0.5, 0.85] as const
+
+type MouthRockKind = 'anchor' | 'filler'
+
+type MouthRockCandidate = {
+  ax: number
+  az: number
+  dirX: number
+  dirZ: number
+  rim: number
+  kind: MouthRockKind
+  stepIndex: number
+  side: number
+}
+
+/** Deterministic `[0,1)` from cave identity + placement indices. Independent
+ *  of call order — not a sequential RNG. */
+function mouthRockUnit(caveId: string, a: number, b: number, channel: number): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < caveId.length; i++) {
+    h = Math.imul(h ^ caveId.charCodeAt(i), 0x01000193) >>> 0
+  }
+  h = Math.imul(h ^ (a + 1) * 0x85ebca6b, 0xc2b2ae35) >>> 0
+  h = Math.imul(h ^ (b + 3) * 0x27d4eb2f, 0x165667b1) >>> 0
+  h = Math.imul(h ^ (channel + 7) * 0x9e3779b9, 0x7feb352d) >>> 0
+  h ^= h >>> 16
+  return h / 4294967296
+}
+
+function marchToRim(
+  mouthOpening: (x: number, z: number) => number,
+  ox: number,
+  oz: number,
+  dx: number,
+  dz: number,
+): number {
+  for (let d = 0.2; d <= ROCK_MARCH_MAX; d += ROCK_MARCH_STEP) {
+    if (mouthOpening(ox + dx * d, oz + dz * d) < 0) return d
+  }
+  return 0
+}
+
+function sideKind(stepIndex: number, along: number): MouthRockKind {
+  if (Math.abs(along) < 0.55) return 'anchor'
+  if (stepIndex <= 1) return 'anchor'
+  return 'filler'
+}
 
 /**
  * Rock framing for the mouth — **presentation only**, derived from the
- * actual opening contour: for a few steps along the opening axis it marches
- * laterally until `mouthOpening` turns negative (the terrain edge) and drops
- * a rock just beyond it, on the walk surface. The rocks therefore sit on the
- * terrain side of the cut by construction and the corridor stays clear. No
- * collision — they can never be an invisible blocker, and the entrance must
- * read/traverse correctly without them (`?debugDisableSystems=caveMouthRocks`).
+ * actual opening contour. Dense, irregular samples along the opening axis
+ * march laterally until `mouthOpening` turns negative (the terrain edge);
+ * a second hillside arc covers the upper/back rim. Anchor boulders build
+ * the portal silhouette; smaller fillers mask hairline cutout seams. Rocks
+ * sit on the walk surface, on the terrain side of the cut, so the corridor
+ * stays clear. No collision — they can never be an invisible blocker, and
+ * the entrance must read/traverse correctly without them
+ * (`?debugDisableSystems=caveMouthRocks`).
  *
  * Replaces the V1 `createLargeCaveVisual()` trench arrangement, which put an
  * arc of rocks across the approach on the un-carved base height.
@@ -129,29 +193,102 @@ export function createMouthRocks(
   const out = openingDirection(field.entrance.yaw)
   const sideX = -out.dz
   const sideZ = out.dx
-  let variant = 0.17
-  for (const step of ROCK_STEPS) {
-    const along = step * ROCK_STEP_ALONG
-    const ax = field.entrance.x + out.dx * along
-    const az = field.entrance.z + out.dz * along
-    for (const sign of [-1, 1]) {
-      let rim = 0
-      for (let d = 0.2; d <= ROCK_MARCH_MAX; d += ROCK_MARCH_STEP) {
-        if (mouthOpening(ax + sideX * sign * d, az + sideZ * sign * d) < 0) {
-          rim = d
+  const caveId = field.caveId
+  const candidates: MouthRockCandidate[] = []
+
+  const stepCount = Math.floor((ROCK_ALONG_END - ROCK_ALONG_START) / ROCK_STEP_ALONG) + 1
+  for (let i = 0; i < stepCount; i++) {
+    const baseAlong = ROCK_ALONG_START + i * ROCK_STEP_ALONG
+    for (const sign of [-1, 1] as const) {
+      const along = baseAlong + (mouthRockUnit(caveId, i, sign, 0) - 0.5) * ROCK_ALONG_JITTER
+      const ax = field.entrance.x + out.dx * along
+      const az = field.entrance.z + out.dz * along
+      const rim = marchToRim(mouthOpening, ax, az, sideX * sign, sideZ * sign)
+      if (rim <= 0) continue
+      candidates.push({
+        ax,
+        az,
+        dirX: sideX * sign,
+        dirZ: sideZ * sign,
+        rim,
+        kind: sideKind(i, along),
+        stepIndex: i,
+        side: sign,
+      })
+    }
+  }
+
+  for (let a = 0; a < UPPER_RIM_ANGLES.length; a++) {
+    const angle = UPPER_RIM_ANGLES[a]!
+    const ca = Math.cos(angle)
+    const sa = Math.sin(angle)
+    const dirX = -out.dx * ca + sideX * sa
+    const dirZ = -out.dz * ca + sideZ * sa
+    const originAlong = -0.12 + (mouthRockUnit(caveId, a, 0, 6) - 0.5) * 0.16
+    const ax = field.entrance.x + out.dx * originAlong
+    const az = field.entrance.z + out.dz * originAlong
+    const rim = marchToRim(mouthOpening, ax, az, dirX, dirZ)
+    if (rim <= 0) continue
+    candidates.push({
+      ax,
+      az,
+      dirX,
+      dirZ,
+      rim,
+      kind: angle === 0 ? 'anchor' : 'filler',
+      stepIndex: 100 + a,
+      side: 0,
+    })
+  }
+
+  candidates.sort((left, right) => {
+    if (left.kind !== right.kind) return left.kind === 'anchor' ? -1 : 1
+    return left.stepIndex - right.stepIndex
+  })
+
+  for (const candidate of candidates) {
+    if (group.children.length >= MAX_MOUTH_ROCKS) break
+    const vOut = mouthRockUnit(caveId, candidate.stepIndex, candidate.side, 1)
+    const vScale = mouthRockUnit(caveId, candidate.stepIndex, candidate.side, 2)
+    const vYaw = mouthRockUnit(caveId, candidate.stepIndex, candidate.side, 3)
+    const vSink = mouthRockUnit(caveId, candidate.stepIndex, candidate.side, 4)
+    const extra = candidate.kind === 'anchor' ? ROCK_ANCHOR_OUTSIDE_EXTRA : 0
+    const outside = ROCK_OUTSIDE_BASE + extra + vOut * ROCK_OUTSIDE_SPAN
+    const dist = candidate.rim + outside
+    let rx = candidate.ax + candidate.dirX * dist
+    let rz = candidate.az + candidate.dirZ * dist
+    if (mouthOpening(rx, rz) >= 0) {
+      let pushed = false
+      for (let extraD = ROCK_MARCH_STEP; extraD <= 0.8; extraD += ROCK_MARCH_STEP) {
+        const px = candidate.ax + candidate.dirX * (dist + extraD)
+        const pz = candidate.az + candidate.dirZ * (dist + extraD)
+        if (mouthOpening(px, pz) < 0) {
+          rx = px
+          rz = pz
+          pushed = true
           break
         }
       }
-      if (rim <= 0) continue
-      variant = (variant + 0.37) % 1
-      const scale = 0.7 + variant * 0.5
-      const rock = createLargeRock(scale, variant)
-      const rx = ax + sideX * sign * (rim + ROCK_OUTSIDE)
-      const rz = az + sideZ * sign * (rim + ROCK_OUTSIDE)
-      rock.position.set(rx, walkSurfaceAt(rx, rz) - ROCK_SINK, rz)
-      rock.rotation.y = variant * Math.PI * 2
-      group.add(rock)
+      if (!pushed) continue
     }
+    let tooClose = false
+    for (const child of group.children) {
+      if (Math.hypot(child.position.x - rx, child.position.z - rz) < ROCK_MIN_SEPARATION) {
+        tooClose = true
+        break
+      }
+    }
+    if (tooClose) continue
+
+    const scale = candidate.kind === 'anchor'
+      ? ANCHOR_SCALE_MIN + vScale * ANCHOR_SCALE_SPAN
+      : FILLER_SCALE_MIN + vScale * FILLER_SCALE_SPAN
+    const rock = createLargeRock(scale, vScale)
+    rock.name = `cave-mouth-rock:${candidate.kind}`
+    rock.userData.mouthRockKind = candidate.kind
+    rock.position.set(rx, walkSurfaceAt(rx, rz) - (ROCK_SINK_BASE + vSink * ROCK_SINK_SPAN), rz)
+    rock.rotation.y = vYaw * Math.PI * 2
+    group.add(rock)
   }
   return group
 }
