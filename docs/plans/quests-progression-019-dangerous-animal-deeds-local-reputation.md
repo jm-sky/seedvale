@@ -10,6 +10,8 @@
 **Tags:** `reputation` `renown` `fauna` `combat` `social-consequences`
 **Roadmap:** `quests-and-reputation.md`
 
+> **Implementation order:** najpierw zrealizować plan `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`. Dopiero po jego implementacji rozpoczynać ten plan, wykorzystując faktyczny fauna-owned kontrakt wariantów i `dangerSignificance`.
+
 ## Cel
 
 Rozszerzyć istniejący system lokalnej reputacji tak, aby znaczące zabicie przez gracza niebezpiecznego dzikiego zwierzęcia mogło zwiększyć `courage`, `competence` i `renown` w osadach, na które czyn realnie oddziałuje.
