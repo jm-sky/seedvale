@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-terrain-019-cave-heightfield-production-migration`              | —                   | 2026-09-11 23:01:49 | `world-terrain`  | fauna-019-real-cave-habitats-and-animal-home-navigation, npc-027-spatial-context-and-cave-traversal, quests-progression-008-treasure-map-bear-cave, world-terrain-017-abandoned-mountain-mine-landmark, world-018-cave-aware-rich-finite-resource-deposits |
 | `world-terrain-020-adventure-cave-variant`                             | —                   | 2026-09-11 22:52:45 | `world-terrain`  | —          |
 | `world-terrain-021-low-cost-terrain-and-cave-surface-albedo`           | 2026-09-11 21:29:10 | —                   | `world-terrain`  | —          |
 | `world-terrain-022-cave-interior-rock-clutter`                         | 2026-09-11 21:18:18 | —                   | `world-terrain`  | —          |

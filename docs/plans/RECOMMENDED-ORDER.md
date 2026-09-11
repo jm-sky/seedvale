@@ -52,10 +52,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 1/3
 3. `items-player-027` — **Player-to-NPC item transfer and equipment**  
    🔴 `M` · ✅ ready · unlocks 2/5
-4. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-5. `settlements-npcs-007` — **Bandages and herbal medicine**  
-   🟡 `M` · ✅ ready · unlocks 0/0
+5. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+   🔴 `M` · ✅ ready · unlocks 2/2
 
 ---
 
@@ -101,63 +101,85 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-8. `npc-030` — **Paid expedition escort Work Contracts**  
+8. `world-terrain-017` — **Abandoned mountain mine landmark**  
+  🔴 `M` · **Score:**  59  
+   → **unlocks:** 2/2
+
+9. `npc-030` — **Paid expedition escort Work Contracts**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 0/0
 
-9. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+10. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-10. `settlements-npcs-007` — **Bandages and herbal medicine**  
+11. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-022` — **Household help and age-based work participation**  
+12. `world-018` — **Cave-aware rich finite resource deposits**  
+  🔴 `M` · **Score:**  47  
+   → **unlocks:** 1/1
+
+13. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-12. `world-023` — **Species-Driven Sowing, Density and Yield**  
+14. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-13. `settlements-npcs-025` — **Resource storage visualization**  
+15. `fauna-022` — **Animal Variants & Exceptional Dangerous Animals**  
+  🔴 `M` · **Score:**  41  
+   → **unlocks:** 1/1
+
+16. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+17. `fauna-019` — **Real cave habitats and animal home navigation**  
+  🟡 `L` · **Score:**  34  
+   → **unlocks:** 1/1
+
+18. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-15. `items-player-014` — **Rope-pullable resource transport**  
+19. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+  🔴 `L` · **Score:**  28  
+   → **unlocks:** 0/0
+
+20. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `tools-005` — **Seedvale Character Preparation Panel**  
+21. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `tools-013` — **NPC decision verification and scenario tooling**  
+22. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
+23. `quests-progression-008` — **Treasure map — bear cave**  
+  🟡 `M` · **Score:**  25  
+   → **unlocks:** 0/0
+
+24. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
   🟡 `M` · **Score:**  21  
+   → **unlocks:** 0/0
+
+25. `items-player-029` — **Wearable armor and combat equipment**  
+  🟡 `L` · **Score:**  14  
    → **unlocks:** 0/0
 
 ---
 
 ## Initially Blocked
 
-- [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)  
-  is blocked by:
-  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
 - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)  
   is blocked by:
   - [`items-player-027-player-to-npc-item-transfer-and-equipment.md`](items-player-027-player-to-npc-item-transfer-and-equipment.md)
-- [`npc-027-spatial-context-and-cave-traversal.md`](npc-027-spatial-context-and-cave-traversal.md)  
-  is blocked by:
-  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
 - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)  
   is blocked by:
   - [`settlements-npcs-019-persistent-and-off-screen-transport.md`](settlements-npcs-019-persistent-and-off-screen-transport.md)
@@ -169,8 +191,10 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)
 - [`quests-progression-008-treasure-map-bear-cave.md`](quests-progression-008-treasure-map-bear-cave.md)  
   is blocked by:
-  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
+- [`quests-progression-019-dangerous-animal-deeds-local-reputation.md`](quests-progression-019-dangerous-animal-deeds-local-reputation.md)  
+  is blocked by:
+  - [`fauna-022-animal-variants-and-exceptional-dangerous-animals.md`](fauna-022-animal-variants-and-exceptional-dangerous-animals.md)
 - [`settlements-npcs-017-production-demand-and-economic-pressures.md`](settlements-npcs-017-production-demand-and-economic-pressures.md)  
   is blocked by:
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)
@@ -180,14 +204,13 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
-  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
 - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)  
   is blocked by:
   - [`settlements-npcs-030-non-home-settlement-food-production-v1.md`](settlements-npcs-030-non-home-settlement-food-production-v1.md)
-- [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)  
+- [`world-025-persistent-abandoned-cemetery-worldgen-cache.md`](world-025-persistent-abandoned-cemetery-worldgen-cache.md)  
   is blocked by:
-  - [`world-terrain-019-cave-heightfield-production-migration.md`](world-terrain-019-cave-heightfield-production-migration.md)
+  - [`world-015-seed-library-and-persistent-worldgen-cache.md`](world-015-seed-library-and-persistent-worldgen-cache.md)
 
 ---
 
@@ -248,6 +271,7 @@ graph TD
   fauna_019["fauna-019 — Real cave habitats and animal home navigation"]
   fauna_020["fauna-020 — Player-owned animals and follow/stay behaviour"]
   fauna_021["fauna-021 — Player combat for settlement rats"]
+  fauna_022["fauna-022 — Animal Variants & Exceptional Dangerous Animals"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -271,6 +295,7 @@ graph TD
   items_player_026["items-player-026 — Treasure loot, forced entry and traps"]
   items_player_027["items-player-027 — Player-to-NPC item transfer and equipment"]
   items_player_028["items-player-028 — NPC player-storage access policies"]
+  items_player_029["items-player-029 — Wearable armor and combat equipment"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -417,6 +442,7 @@ graph TD
   world_022["world-022 — World location discovery hitch and progress"]
   world_023["world-023 — Species-Driven Sowing, Density and Yield"]
   world_024["world-024 — Systemic treasure sites and keys"]
+  world_025["world-025 — Persistent abandoned cemetery worldgen cache"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -517,6 +543,7 @@ graph TD
   fauna_018 --> quests_progression_008
   fauna_019 --> quests_progression_008
   fauna_020 --> quests_progression_012
+  fauna_022 --> quests_progression_019
   items_player_001 --> fauna_002
   items_player_002 --> items_player_025
   items_player_009 --> items_player_013
@@ -676,6 +703,7 @@ graph TD
   world_013 --> world_015
   world_013 --> world_022
   world_014 --> world_022
+  world_015 --> world_025
   world_017 --> npc_024
   world_018 --> quests_progression_010
   world_019 --> quests_progression_010
@@ -683,6 +711,7 @@ graph TD
   world_020 --> world_021
   world_021 --> items_player_019
   world_021 --> ui_input_014
+  world_022 --> world_025
   world_023 --> settlements_npcs_031
   world_024 --> items_player_026
   world_024 --> world_terrain_020
