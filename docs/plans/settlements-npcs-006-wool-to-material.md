@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** medium · **Effort:** M  
-**Depends on:** fauna-004, settlements-npcs-015  
+**Depends on:** fauna-004, ~~settlements-npcs-015~~  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy`  
 **Tags:** `production` `items` `textiles`  

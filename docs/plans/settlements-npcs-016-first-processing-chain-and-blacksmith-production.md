@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
-**Depends on:** settlements-npcs-015  
+**Depends on:** ~~settlements-npcs-015~~  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `production` `blacksmith`  
 **Tags:** `processing` `production-chain` `ore` `coal`  

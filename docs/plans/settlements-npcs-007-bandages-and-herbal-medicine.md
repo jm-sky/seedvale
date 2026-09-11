@@ -3,7 +3,7 @@
 **Created:** 2026-08-29  
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
-**Depends on:** settlements-npcs-006, settlements-npcs-015  
+**Depends on:** settlements-npcs-006, ~~settlements-npcs-015~~  
 **Domain:** `settlements-npcs`  
 **Type:** `feature`  
 **Roadmap:** `textiles-and-herbal-medicine`  
