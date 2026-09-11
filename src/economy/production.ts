@@ -1,6 +1,7 @@
 import type { Role } from '../ai/characters'
 import type { Inventory, ItemAmount } from '../items/Inventory'
 import type { StockAmount } from './stock'
+import { executeProduction } from './productionExecutor'
 
 /**
  * Shared production/processing operation (plan 071). 069 should add farming
@@ -12,12 +13,10 @@ export type ProductionDef = {
   role?: Role
   inputs: readonly StockAmount[]
   outputs: readonly StockAmount[]
-  /** Item-based inputs/outputs (settlements-npcs-003) — for recipes whose
-   *  materials/products are plain `Inventory` items (household-held
-   *  branch/beam/arrow) rather than settlement `EconomicKind` stock. Applied
-   *  via `Inventory.applyRecipe`/`produceFirstAvailableItemRecipe` below,
-   *  never `SettlementEconomy`. Optional so every existing stock-only
-   *  `ProductionDef` is unaffected. */
+  /** Item-based inputs/outputs — for recipes whose materials/products are
+   *  plain `Inventory` items rather than settlement `EconomicKind` stock.
+   *  Mixed recipes run through `executeProduction` with an explicit item
+   *  owner; optional so stock-only defs stay valid. */
   itemInputs?: readonly ItemAmount[]
   itemOutputs?: readonly ItemAmount[]
 }
@@ -89,19 +88,17 @@ export const HUNTER_ARROW_PRODUCTIONS: readonly ProductionDef[] = [
 ]
 
 /**
- * Applies the first recipe in `defs` whose item inputs are available in
- * `inventory`, atomically consuming inputs and producing outputs via
- * `Inventory.applyRecipe`. Returns the applied def, or null when none of
- * them can run. Generic priority-ordered item production — not hunter/arrow
- * specific, so a future item recipe with more than one viable material can
- * reuse it directly.
+ * Applies the first recipe in `defs` that the shared executor can commit
+ * against `inventory`. Priority order is the array order (hunter: branch
+ * before beam). Returns the applied def, or null when none can run.
  */
 export function produceFirstAvailableItemRecipe(
   inventory: Inventory,
   defs: readonly ProductionDef[],
+  simTime = 0,
 ): ProductionDef | null {
   for (const def of defs) {
-    if (inventory.applyRecipe(def.itemInputs ?? [], def.itemOutputs ?? [])) return def
+    if (executeProduction(def, { inventory, simTime }).ok) return def
   }
   return null
 }

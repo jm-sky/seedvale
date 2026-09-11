@@ -63,6 +63,18 @@ export const DEFAULT_MAX_SIZE = 60
  *  settlement `EconomicKind` stock (settlements-npcs-003). */
 export type ItemAmount = { kind: ItemKind, amount: number }
 
+/** Aggregates count rows by kind. Zero rows drop out; non-finite or negative
+ *  amounts make the whole list invalid (`null`). */
+function aggregateItemAmounts(rows: readonly ItemAmount[]): Map<ItemKind, number> | null {
+  const byKind = new Map<ItemKind, number>()
+  for (const { kind, amount } of rows) {
+    if (!Number.isFinite(amount) || amount < 0) return null
+    if (amount === 0) continue
+    byKind.set(kind, (byKind.get(kind) ?? 0) + amount)
+  }
+  return byKind
+}
+
 export type SaveItemInstance = {
   id: string
   kind: ItemKind
@@ -478,18 +490,106 @@ export class Inventory {
     return this.instances.size === 0
   }
 
-  /** Atomic item recipe (settlements-npcs-003) — mirrors
-   *  `EconomicStock.applyRecipe`'s all-or-nothing shape, but against this
-   *  plain-item inventory instead of settlement stock: false and unchanged
-   *  when any input is short, otherwise every input is removed and every
-   *  output added. Generic — not arrow/hunter specific. */
-  applyRecipe(inputs: readonly ItemAmount[], outputs: readonly ItemAmount[]): boolean {
-    for (const { kind, amount } of inputs) {
-      if (!this.has(kind, amount)) return false
-    }
-    for (const { kind, amount } of inputs) this.remove(kind, amount)
-    for (const { kind, amount } of outputs) this.add(kind, amount)
+  /**
+   * Whether a count-based item recipe would succeed against live state:
+   * inputs are aggregated by kind, perishable/instance contents are left
+   * untouched, and the whole output set must fit the post-transition
+   * weight/size/`maxWeight` (including capacity-granting items).
+   */
+  canApplyRecipe(inputs: readonly ItemAmount[], outputs: readonly ItemAmount[]): boolean {
+    return this.prepareCountRecipe(inputs, outputs) !== null
+  }
+
+  /**
+   * All-or-nothing count-based item recipe (settlements-npcs-015).
+   * Aggregates duplicate kinds, rejects non-finite/negative amounts, and
+   * commits only after the combined transition fits. Perishable inputs are
+   * consumed FIFO at `nowDays`; produced perishable outputs are newly
+   * acquired at `nowDays` (not a provenance-preserving transfer).
+   * `ItemInstance`s and liquid contents are never consumed or synthesized.
+   */
+  applyRecipe(inputs: readonly ItemAmount[], outputs: readonly ItemAmount[], nowDays = 0): boolean {
+    const prepared = this.prepareCountRecipe(inputs, outputs)
+    if (!prepared) return false
+    this.commitCountRecipe(prepared, nowDays)
     return true
+  }
+
+  private prepareCountRecipe(
+    inputs: readonly ItemAmount[],
+    outputs: readonly ItemAmount[],
+  ): { inputs: Map<ItemKind, number>, outputs: Map<ItemKind, number> } | null {
+    const aggregatedInputs = aggregateItemAmounts(inputs)
+    const aggregatedOutputs = aggregateItemAmounts(outputs)
+    if (!aggregatedInputs || !aggregatedOutputs) return null
+    for (const [kind, amount] of aggregatedInputs) {
+      if (this.count(kind) < amount) return null
+    }
+    if (!this.countRecipeFits(aggregatedInputs, aggregatedOutputs)) return null
+    return { inputs: aggregatedInputs, outputs: aggregatedOutputs }
+  }
+
+  /** Final weight/size after the count transition, including instance and
+   *  liquid mass that recipes do not touch, and `maxWeight` derived from the
+   *  post-transition `carryCapacityBonus` set. */
+  private countRecipeFits(
+    inputs: ReadonlyMap<ItemKind, number>,
+    outputs: ReadonlyMap<ItemKind, number>,
+  ): boolean {
+    let currentCountWeight = 0
+    let currentCountSize = 0
+    let currentBonus = 0
+    for (const [kind, n] of this.counts) {
+      currentCountWeight += ITEM_DEFS[kind].weight * n
+      currentCountSize += itemSizeUnits(kind) * n
+      const perUnit = ITEM_CATALOG[kind].carryCapacityBonus
+      if (perUnit) currentBonus += perUnit * n
+    }
+    const instanceWeight = this.totalWeight() - currentCountWeight
+    const instanceSize = this.totalSize() - currentCountSize
+
+    let finalCountWeight = currentCountWeight
+    let finalCountSize = currentCountSize
+    let finalBonus = currentBonus
+    for (const [kind, amount] of inputs) {
+      finalCountWeight -= ITEM_DEFS[kind].weight * amount
+      finalCountSize -= itemSizeUnits(kind) * amount
+      const perUnit = ITEM_CATALOG[kind].carryCapacityBonus
+      if (perUnit) finalBonus -= perUnit * amount
+    }
+    for (const [kind, amount] of outputs) {
+      finalCountWeight += ITEM_DEFS[kind].weight * amount
+      finalCountSize += itemSizeUnits(kind) * amount
+      const perUnit = ITEM_CATALOG[kind].carryCapacityBonus
+      if (perUnit) finalBonus += perUnit * amount
+    }
+
+    const finalWeight = finalCountWeight + instanceWeight
+    const finalSize = finalCountSize + instanceSize
+    const finalMaxWeight = this.baseMaxWeight + finalBonus
+    return finalWeight <= finalMaxWeight + 1e-9 && finalSize <= this.maxSize + 1e-9
+  }
+
+  private commitCountRecipe(
+    prepared: { inputs: ReadonlyMap<ItemKind, number>, outputs: ReadonlyMap<ItemKind, number> },
+    nowDays: number,
+  ): void {
+    for (const [kind, amount] of prepared.inputs) this.remove(kind, amount, nowDays)
+    for (const [kind, amount] of prepared.outputs) this.addProduced(kind, amount, nowDays)
+  }
+
+  /** Post-preflight output insert — does not re-check `canAdd()`, so a
+   *  capacity-granting output can raise `maxWeight` for the same commit. */
+  private addProduced(kind: ItemKind, n: number, nowDays: number): void {
+    this.counts.set(kind, this.count(kind) + n)
+    if (isFoodPerishable(kind)) {
+      this.addFoodBatch(kind, createFoodBatch(
+        n,
+        nowDays,
+        this.decayModifier,
+        sourceSpeciesForMeatKind(kind),
+      ))
+    }
   }
 
   remove(kind: ItemKind, n: number, nowDays = 0): boolean {

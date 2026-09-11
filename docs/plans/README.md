@@ -56,7 +56,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                      | -       | 🟡 | L      | ~~npc-006~~, ~~fauna-012~~, ~~fauna-016~~, ~~settlements-npcs-014~~, ~~settlements-npcs-023 ~~ |
-| 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
@@ -91,6 +90,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-npcs-015-economic-production-and-input-integration.md` | Hunter z gałęzią/belką w gospodarstwie craftuje strzały przy `work` (gałąź przed belką, 1→1 / 1→8); brak materiału nie zużywa nic; drwal nadal dodaje drewno osady przy depozycie; mixed/stock recipes nie mintują częściowego wyniku |
 | `ui-input-016-building-placement-construction-ux-coherence.md` | Ghost: ready zielony / preparation bursztyn / invalid czerwony; nearby materiały zmieniają ghost przy ruchu; stromy dom → Przygotuj teren [E] (łopata); pułapka i grządka mają ghost; ogniska mają różne footprinty; namiot i chata pokazują znacznik wejścia; praca ciągła aż do stopu, Esc/touch Przerwij; `[V]` obóz i koryto; `[R]` nie kasuje od razu (potwierdzenie + recovery); palisada Postaw kolejny; pełny obóz nadal kończy preview po confirm |
 | `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | Home: Anna/Piotr/Kasia/Marek nadal istnieją, w tej samej kolejności, i oferują authored questy; mała ogród/las osada ma food livelihood bez Tradera/Kowala; osada przy significant ore ma Minera wewnątrz istniejącej liczby domów (bez extra resource family); OUTPOST nadal 1 NPC z forced resource role |
 | `quests-progression-017-rpg-settlement-quest-matrices.md` | Sąsiadująca osada: NPC oferuje generated „Sekret starego miejsca” na realny landmark; interakcja zalicza etap; `Umowa między osadami` prowadzi do NPC w innej osadzie po id (to samo imię w home nie kradnie celu); `Podejrzany transport` to rozmowa+wybór bez quest-owned przesyłki; live „Wilki pod osadą” w home nie znika przez RPG; save/load trzyma te same cele |

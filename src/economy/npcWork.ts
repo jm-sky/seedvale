@@ -13,8 +13,8 @@ import {
  * Chop → deposit completion. Tree harvest stays in `NpcAgent`; this is the
  * stock mutation committed only after the deposit action succeeds.
  */
-export function commitWoodcutterDeposit(economy: SettlementEconomy): boolean {
-  const produced = economy.produce(WOODCUTTING_PRODUCTION)
+export function commitWoodcutterDeposit(economy: SettlementEconomy, simTime = 0): boolean {
+  const produced = economy.produce(WOODCUTTING_PRODUCTION, simTime)
   tryAdvanceDevelopment(economy)
   return produced
 }
@@ -24,11 +24,11 @@ export function commitWoodcutterDeposit(economy: SettlementEconomy): boolean {
  * hook. Woodcutter yield is *not* applied here — standing at a tree must not
  * mint infinite wood; harvest goes through chop → deposit.
  */
-export function commitRoleWork(economy: SettlementEconomy, role: Role): boolean {
+export function commitRoleWork(economy: SettlementEconomy, role: Role, simTime = 0): boolean {
   const def = productionForRole(role)
   if (!def) return false
   if (def.id === WOODCUTTING_PRODUCTION.id) return false
-  return economy.produce(def)
+  return economy.produce(def, simTime)
 }
 
 /**
@@ -38,8 +38,8 @@ export function commitRoleWork(economy: SettlementEconomy, role: Role): boolean 
  * `household.items`'s branch recipe before beam (§9); returns false when
  * neither material is available.
  */
-export function commitHunterArrowProduction(household: Household): boolean {
-  return produceFirstAvailableItemRecipe(household.items, HUNTER_ARROW_PRODUCTIONS) !== null
+export function commitHunterArrowProduction(household: Household, simTime = 0): boolean {
+  return produceFirstAvailableItemRecipe(household.items, HUNTER_ARROW_PRODUCTIONS, simTime) !== null
 }
 
 /** Reserve then pay the woodshed once stock can cover it. Idempotent. */

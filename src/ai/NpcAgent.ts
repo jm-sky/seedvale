@@ -4186,7 +4186,7 @@ export class NpcAgent {
         destination: copyVec3(this.workplace.position),
         durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
         onComplete: () => {
-          if (this.economy) commitRoleWork(this.economy, this.role)
+          if (this.economy) commitRoleWork(this.economy, this.role, this.simClock)
         },
       })
       return

@@ -8,6 +8,7 @@ import { createSettlementHistoryBuffer } from '../debug/settlementHistory'
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
 import { claimFoodItems, type FoodItemClaim, foodItemCount } from '../items/foodItems'
 import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
+import { executeProduction } from './productionExecutor'
 import { EconomicStock, type StockAmount } from './stock'
 
 export type SettlementDemand = {
@@ -59,7 +60,9 @@ export type SettlementEconomy = {
   add: (kind: EconomicKind, amount: number, simTime?: number) => void
   remove: (kind: EconomicKind, amount: number, simTime?: number) => boolean
   query: (kind: EconomicKind) => number
-  produce: (def: ProductionDef) => boolean
+  /** Stock-only adapter to `executeProduction`. Recipes with item rows fail
+   *  (no item owner is passed). `simTime` is recorded on stock history. */
+  produce: (def: ProductionDef, simTime?: number) => boolean
   reserve: (goods: readonly StockAmount[]) => string | null
   consumeReservation: (id: string) => boolean
   releaseReservation: (id: string) => boolean
@@ -142,8 +145,8 @@ export function createSettlementEconomy(
     query(kind) {
       return kind === 'food' ? foodItemCount(items) : stock.query(kind)
     },
-    produce(def) {
-      return stock.applyRecipe(def.inputs, def.outputs)
+    produce(def, simTime = 0) {
+      return executeProduction(def, { economy: this, simTime }).ok
     },
     reserve(goods) {
       if (!stock.hasAll(goods)) return null

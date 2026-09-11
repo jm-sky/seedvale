@@ -2,7 +2,7 @@
 
 **Plan:** `settlements-npcs-015-economic-production-and-input-integration.md`  
 **Reviewed:** 2026-09-11  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## Review result
 

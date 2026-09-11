@@ -26,6 +26,7 @@ Generated from TypeScript imports.
 - `economy/localExchange.ts`
 - `economy/npcWork.ts`
 - `economy/production.ts`
+- `economy/productionExecutor.ts`
 - `economy/registry.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
@@ -73,6 +74,7 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `economy/initial.ts`
 - `economy/localExchange.ts`
+- `economy/productionExecutor.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
 - `terrain/depositMining.test.ts`
@@ -138,6 +140,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/characters.ts`
+- `economy/productionExecutor.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
 
@@ -147,7 +150,37 @@ Generated from TypeScript imports.
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
 - `economy/production.test.ts`
+- `economy/productionExecutor.test.ts`
+- `economy/productionExecutor.ts`
 - `economy/settlementEconomy.test.ts`
+- `economy/settlementEconomy.ts`
+
+## `economy/productionExecutor.test.ts`
+
+**Imports**
+
+- `economy/production.ts`
+- `economy/productionExecutor.ts`
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `settlement/household.ts`
+
+## `economy/productionExecutor.ts`
+
+**Imports**
+
+- `economy/kinds.ts`
+- `economy/production.ts`
+- `economy/settlementEconomy.ts`
+- `economy/stock.ts`
+- `items/Inventory.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `economy/index.ts`
+- `economy/production.ts`
+- `economy/productionExecutor.test.ts`
 - `economy/settlementEconomy.ts`
 
 ## `economy/registry.test.ts`
@@ -187,6 +220,7 @@ Generated from TypeScript imports.
 - `economy/development.ts`
 - `economy/kinds.ts`
 - `economy/production.ts`
+- `economy/productionExecutor.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
 - `items/foodFreshness.ts`
@@ -202,6 +236,8 @@ Generated from TypeScript imports.
 - `economy/localExchange.ts`
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
+- `economy/productionExecutor.test.ts`
+- `economy/productionExecutor.ts`
 - `economy/registry.ts`
 - `economy/settlementEconomy.test.ts`
 - `interaction/Interactable.ts`
@@ -223,6 +259,7 @@ Generated from TypeScript imports.
 - `economy/development.ts`
 - `economy/index.ts`
 - `economy/production.ts`
+- `economy/productionExecutor.ts`
 - `economy/settlementEconomy.test.ts`
 - `economy/settlementEconomy.ts`
 - `settlement/household.ts`

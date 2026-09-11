@@ -5,6 +5,7 @@ import { createFoodBatch } from './foodFreshness'
 import { DEFAULT_MAX_SIZE, Inventory } from './Inventory'
 import { createTentInstance, isWeaponItemInstance } from './itemInstances'
 import { itemSizeUnits } from './items'
+import { createLiquidContainerInstance, fillLiquidContainer } from './liquidContainer'
 import { createTrapInstance } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
 
@@ -385,5 +386,137 @@ describe('Inventory.applyRecipe (settlements-npcs-003)', () => {
     )).toBe(false)
     expect(inv.count('branch')).toBe(1)
     expect(inv.count('arrow')).toBe(0)
+  })
+
+  it('aggregates duplicate input kinds before consuming', () => {
+    const inv = new Inventory({ branch: 2 }, Infinity)
+    expect(inv.applyRecipe(
+      [{ kind: 'branch', amount: 1 }, { kind: 'branch', amount: 1 }],
+      [{ kind: 'arrow', amount: 1 }],
+    )).toBe(true)
+    expect(inv.count('branch')).toBe(0)
+    expect(inv.count('arrow')).toBe(1)
+  })
+
+  it('rejects duplicate inputs that only pass when checked row-wise', () => {
+    const inv = new Inventory({ branch: 1 }, Infinity)
+    expect(inv.applyRecipe(
+      [{ kind: 'branch', amount: 1 }, { kind: 'branch', amount: 1 }],
+      [{ kind: 'arrow', amount: 1 }],
+    )).toBe(false)
+    expect(inv.count('branch')).toBe(1)
+    expect(inv.count('arrow')).toBe(0)
+  })
+
+  it('aggregates duplicate outputs against combined capacity', () => {
+    const inv = new Inventory({}, 5, undefined, undefined, Infinity)
+    expect(inv.applyRecipe(
+      [],
+      [{ kind: 'stone', amount: 3 }, { kind: 'stone', amount: 3 }],
+    )).toBe(false)
+    expect(inv.count('stone')).toBe(0)
+  })
+
+  it('rejects non-finite and negative amounts without mutating', () => {
+    const inv = new Inventory({ branch: 1 }, Infinity)
+    expect(inv.applyRecipe([{ kind: 'branch', amount: NaN }], [{ kind: 'arrow', amount: 1 }])).toBe(false)
+    expect(inv.applyRecipe([{ kind: 'branch', amount: Infinity }], [{ kind: 'arrow', amount: 1 }])).toBe(false)
+    expect(inv.applyRecipe([{ kind: 'branch', amount: -1 }], [{ kind: 'arrow', amount: 1 }])).toBe(false)
+    expect(inv.count('branch')).toBe(1)
+    expect(inv.count('arrow')).toBe(0)
+  })
+
+  it('normalizes zero rows away as a successful no-op', () => {
+    const inv = new Inventory({ branch: 1 }, Infinity)
+    expect(inv.applyRecipe(
+      [{ kind: 'branch', amount: 0 }],
+      [{ kind: 'arrow', amount: 0 }],
+    )).toBe(true)
+    expect(inv.count('branch')).toBe(1)
+    expect(inv.count('arrow')).toBe(0)
+  })
+
+  it('rejects combined weight overflow before consuming inputs', () => {
+    const inv = new Inventory({ branch: 1 }, 0.5)
+    expect(inv.applyRecipe(
+      [{ kind: 'branch', amount: 1 }],
+      [{ kind: 'stone', amount: 2 }],
+    )).toBe(false)
+    expect(inv.count('branch')).toBe(1)
+    expect(inv.count('stone')).toBe(0)
+  })
+
+  it('rejects combined size overflow before consuming inputs', () => {
+    const inv = new Inventory({ branch: 1 }, 1000, undefined, undefined, 3)
+    expect(inv.applyRecipe(
+      [{ kind: 'branch', amount: 1 }],
+      [{ kind: 'stone', amount: 1 }, { kind: 'stone', amount: 1 }],
+    )).toBe(false)
+    expect(inv.count('branch')).toBe(1)
+    expect(inv.count('stone')).toBe(0)
+  })
+
+  it('lets consumed inputs free capacity for outputs', () => {
+    const inv = new Inventory({ stone: 10 }, 10)
+    expect(inv.applyRecipe(
+      [{ kind: 'stone', amount: 5 }],
+      [{ kind: 'branch', amount: 1 }],
+    )).toBe(true)
+    expect(inv.count('stone')).toBe(5)
+    expect(inv.count('branch')).toBe(1)
+  })
+
+  it('produces a capacity-granting item and other outputs as one aggregate', () => {
+    const inv = new Inventory({}, 5)
+    expect(inv.applyRecipe(
+      [],
+      [{ kind: 'stone', amount: 10 }, { kind: 'backpack', amount: 1 }],
+    )).toBe(true)
+    expect(inv.count('backpack')).toBe(1)
+    expect(inv.count('stone')).toBe(10)
+    expect(inv.maxWeight).toBe(20)
+  })
+
+  it('rejects consuming a capacity-granting item when remaining contents would overflow', () => {
+    const inv = new Inventory({ backpack: 1, stone: 21 }, 20)
+    expect(inv.maxWeight).toBe(35)
+    expect(inv.applyRecipe([{ kind: 'backpack', amount: 1 }], [])).toBe(false)
+    expect(inv.count('backpack')).toBe(1)
+    expect(inv.count('stone')).toBe(21)
+  })
+
+  it('counts existing item instances toward capacity without touching them', () => {
+    const inv = new Inventory({}, 5, undefined, undefined, Infinity)
+    const trap = createTrapInstance('trap_simple')
+    expect(inv.addInstance(trap)).toBe(true)
+    expect(inv.applyRecipe([], [{ kind: 'stone', amount: 4 }])).toBe(false)
+    expect(inv.applyRecipe([], [{ kind: 'stone', amount: 3 }])).toBe(true)
+    expect(inv.getInstance(trap.id)?.kind).toBe('trap_simple')
+    expect(inv.count('stone')).toBe(3)
+  })
+
+  it('counts liquid mass toward capacity without mutating the container', () => {
+    const inv = new Inventory({}, 12)
+    const bucket = fillLiquidContainer(createLiquidContainerInstance('wooden_bucket'), 'water')!
+    expect(inv.addInstance(bucket)).toBe(true)
+    expect(inv.applyRecipe([], [{ kind: 'stone', amount: 2 }])).toBe(false)
+    expect(inv.getInstance(bucket.id)).toMatchObject({ amountLitres: bucket.amountLitres, liquid: 'water' })
+    expect(inv.count('stone')).toBe(0)
+  })
+
+  it('consumes perishable inputs FIFO at nowDays and stamps produced food at nowDays', () => {
+    const inv = new Inventory({ carrot: 2 }, Infinity)
+    expect(inv.applyRecipe(
+      [{ kind: 'carrot', amount: 1 }],
+      [{ kind: 'carrot', amount: 1 }],
+      12,
+    )).toBe(true)
+    expect(inv.count('carrot')).toBe(2)
+    const batches = inv.getFoodBatches('carrot', 12)
+    expect(batches).toHaveLength(2)
+    expect(batches[0]?.acquiredAtDays).toBe(0)
+    expect(batches[0]?.count).toBe(1)
+    expect(batches[1]?.acquiredAtDays).toBe(12)
+    expect(batches[1]?.count).toBe(1)
   })
 })

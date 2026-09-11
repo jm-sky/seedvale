@@ -96,7 +96,7 @@ export function depositWoodHarvest(household: Household | null, economy: Settlem
     household.deposit('wood', amount, economy, simTime)
     if (economy) tryAdvanceDevelopment(economy)
   } else if (economy) {
-    commitWoodcutterDeposit(economy)
+    commitWoodcutterDeposit(economy, simTime)
   }
 }
 

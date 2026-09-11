@@ -18,6 +18,12 @@ describe('commitWoodcutterDeposit', () => {
     expect(eco.query('wood')).toBe(3)
   })
 
+  it('records stock history at the supplied completion time', () => {
+    const eco = createSettlementEconomy('s1', { wood: 1 }, DEMANDS)
+    expect(commitWoodcutterDeposit(eco, 15)).toBe(true)
+    expect(eco.history()[0]).toMatchObject({ type: 'stock.added', kind: 'wood', amount: 2, simTime: 15 })
+  })
+
   it('pays the woodshed once stock covers the requirement', () => {
     const eco = createSettlementEconomy('s1', { wood: 3 }, DEMANDS)
     commitWoodcutterDeposit(eco)
@@ -61,6 +67,12 @@ describe('commitHunterArrowProduction (settlements-npcs-003)', () => {
     expect(commitHunterArrowProduction(household)).toBe(true)
     expect(household.items.count('branch')).toBe(0)
     expect(household.items.count('arrow')).toBe(1)
+  })
+
+  it('does not mint arrows when called with neither material, regardless of simTime', () => {
+    const household = createHousehold('h', 's', 'home')
+    expect(commitHunterArrowProduction(household, 9)).toBe(false)
+    expect(household.items.count('arrow')).toBe(0)
   })
 
   it('falls back to beam once branch is exhausted', () => {

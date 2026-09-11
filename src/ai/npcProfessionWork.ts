@@ -207,7 +207,7 @@ function planArrowCrafting(ctx: NpcWorkContext): NpcPlannedAction | null {
     destination: copyVec3(workplace.position),
     durationSec: ctx.rollWorkDurationSec(),
     onComplete: () => {
-      commitHunterArrowProduction(household)
+      commitHunterArrowProduction(household, ctx.simTime())
     },
   }
 }

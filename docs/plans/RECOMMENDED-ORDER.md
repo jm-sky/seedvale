@@ -8,12 +8,12 @@
    🔴 `M` · ✅ ready · unlocks 4/11
 2. `npc-029` — **NPC accompany/follow commitment**  
    🔴 `M` · 🔒 blocked · unlocks 5/5
-3. `settlements-npcs-015` — **Economic Production and Input Integration**  
-   🔴 `M` · ✅ ready · unlocks 3/6
-4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
-   🔴 `M` · 🔒 blocked · unlocks 1/3
-5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+   🔴 `M` · ✅ ready · unlocks 1/3
+4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2
+5. `items-player-027` — **Player-to-NPC item transfer and equipment**  
+   🔴 `M` · ✅ ready · unlocks 2/4
 
 ---
 
@@ -23,12 +23,12 @@
    🔴 `M` · ✅ ready · unlocks 4/11 · roadmap: `physical-goods-transport`
 2. `npc-029` — **NPC accompany/follow commitment**  
    🔴 `M` · 🔒 blocked · unlocks 5/5 · roadmap: `companions`
-3. `settlements-npcs-015` — **Economic Production and Input Integration**  
-   🔴 `M` · ✅ ready · unlocks 3/6 · roadmap: `economy-production`
-4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
-   🔴 `M` · 🔒 blocked · unlocks 1/3 · roadmap: `economy-production`
-5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+   🔴 `M` · ✅ ready · unlocks 1/3 · roadmap: `economy-production`
+4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2 · roadmap: `economy-production`
+5. `items-player-027` — **Player-to-NPC item transfer and equipment**  
+   🔴 `M` · ✅ ready · unlocks 2/4 · roadmap: `companions`
 
 ---
 
@@ -48,8 +48,8 @@ _No qualifying plans._
 
 1. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
    🔴 `M` · ✅ ready · unlocks 4/11
-2. `settlements-npcs-015` — **Economic Production and Input Integration**  
-   🔴 `M` · ✅ ready · unlocks 3/6
+2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+   🔴 `M` · ✅ ready · unlocks 1/3
 3. `items-player-027` — **Player-to-NPC item transfer and equipment**  
    🔴 `M` · ✅ ready · unlocks 2/4
 4. `fauna-004` — **Sheep wool cycle and shepherd**  
@@ -81,75 +81,71 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:** 127  
    → **unlocks:** 5/5
 
-3. `settlements-npcs-015` — **Economic Production and Input Integration**  
-  🔴 `M` · **Score:** 125  
-   → **unlocks:** 3/6
-
-4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+3. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  89  
    → **unlocks:** 1/3
 
-5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  81  
    → **unlocks:** 1/2
 
-6. `items-player-027` — **Player-to-NPC item transfer and equipment**  
+5. `items-player-027` — **Player-to-NPC item transfer and equipment**  
   🔴 `M` · **Score:**  77  
    → **unlocks:** 2/4
 
-7. `items-player-028` — **NPC player-storage access policies**  
+6. `items-player-028` — **NPC player-storage access policies**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 2/3
 
-8. `fauna-004` — **Sheep wool cycle and shepherd**  
+7. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/2
 
-9. `npc-031` — **Voluntary expedition joining**  
+8. `npc-031` — **Voluntary expedition joining**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-10. `settlements-npcs-006` — **Wool to material**  
+9. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-11. `npc-030` — **Paid expedition escort Work Contracts**  
+10. `npc-030` — **Paid expedition escort Work Contracts**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
+11. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-13. `settlements-npcs-007` — **Bandages and herbal medicine**  
+12. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-022` — **Household help and age-based work participation**  
+13. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-15. `world-023` — **Species-Driven Sowing, Density and Yield**  
+14. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-16. `settlements-npcs-025` — **Resource storage visualization**  
+15. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-17. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+16. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-18. `items-player-014` — **Rope-pullable resource transport**  
+17. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-19. `tools-005` — **Seedvale Character Preparation Panel**  
+18. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-20. `tools-013` — **NPC decision verification and scenario tooling**  
+19. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
@@ -182,14 +178,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
   - [`fauna-004-sheep-wool-and-shepherd.md`](fauna-004-sheep-wool-and-shepherd.md)
-  - [`settlements-npcs-015-economic-production-and-input-integration.md`](settlements-npcs-015-economic-production-and-input-integration.md)
 - [`settlements-npcs-007-bandages-and-herbal-medicine.md`](settlements-npcs-007-bandages-and-herbal-medicine.md)  
   is blocked by:
   - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)
-  - [`settlements-npcs-015-economic-production-and-input-integration.md`](settlements-npcs-015-economic-production-and-input-integration.md)
-- [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)  
-  is blocked by:
-  - [`settlements-npcs-015-economic-production-and-input-integration.md`](settlements-npcs-015-economic-production-and-input-integration.md)
 - [`settlements-npcs-017-production-demand-and-economic-pressures.md`](settlements-npcs-017-production-demand-and-economic-pressures.md)  
   is blocked by:
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)

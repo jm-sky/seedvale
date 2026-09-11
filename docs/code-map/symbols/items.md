@@ -217,20 +217,20 @@ Generated from exported TypeScript symbols.
 ## `items/Inventory.ts`
 
 - `DEFAULT_MAX_SIZE` — const — line 59
-- `EMPTY_INVENTORY_CONTENTS` — const — line 114
-- `Inventory` — class — line 133
+- `EMPTY_INVENTORY_CONTENTS` — const — line 126
+- `Inventory` — class — line 145
   - domain: items-player
   - system: inventory
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `InventoryContentsSnapshot` — type — line 108
-- `inventoryFromContents` — function — line 594
-- `inventoryFullToastText` — function — line 613
+- `InventoryContentsSnapshot` — type — line 120
+- `inventoryFromContents` — function — line 694
+- `inventoryFullToastText` — function — line 713
 - `ItemAmount` — type — line 64
-- `SaveItemInstance` — type — line 66
-- `snapshotInventoryContents` — function — line 584
-- `toSaveItemInstance` — function — line 84
+- `SaveItemInstance` — type — line 78
+- `snapshotInventoryContents` — function — line 684
+- `toSaveItemInstance` — function — line 96
 
 ## `items/inventoryTransfer.ts`
 

@@ -114,6 +114,13 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Save storage](../src/persistence/saveDb.ts) — IndexedDB slots and the active-save id.
 - [Config persistence](../src/config/persistConfig.ts) — the localStorage graphics / player / world domains (device preferences, not save data).
 
+## Economy
+
+- [Production recipes](../src/economy/production.ts) — `ProductionDef` tables, role lookup, and hunter item-recipe priority wrapper.
+- [Production executor](../src/economy/productionExecutor.ts) — synchronous all-or-nothing stock/item/mixed recipe commit (plan settlements-npcs-015).
+- [NPC work adapters](../src/economy/npcWork.ts) — work-completion → economy mutation seam.
+- [Settlement economy](../src/economy/settlementEconomy.ts) — settlement bulk stock, concrete food inventory, demand, and history.
+
 ## NPC AI internals
 
 `NpcAgent.ts` is the coordination core (FSM, action pipeline, `choose()` sequencing) and stays the entry point for NPC behaviour; the modules below own the domain logic it delegates to (`docs/reviews/2026-09-03--NpcAgent-refactor-review.md`).

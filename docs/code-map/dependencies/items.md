@@ -50,6 +50,7 @@ Generated from TypeScript imports.
 - `items/foodFreshness.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
+- `items/liquidContainer.ts`
 - `items/trapItemInstances.ts`
 - `items/weaponMaintenance.ts`
 - `player/PlayerController.ts`
@@ -110,6 +111,8 @@ Generated from TypeScript imports.
 - `app/userActions.ts`
 - `economy/production.test.ts`
 - `economy/production.ts`
+- `economy/productionExecutor.test.ts`
+- `economy/productionExecutor.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
@@ -908,6 +911,7 @@ Generated from TypeScript imports.
 - `debug/householdHistory.ts`
 - `debug/settlementHistory.ts`
 - `economy/initial.ts`
+- `economy/productionExecutor.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalDefs.ts`
@@ -1023,6 +1027,7 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/inspection/buildWorldInspection.ts`
+- `items/Inventory.test.ts`
 - `items/Inventory.ts`
 - `items/inventoryView.ts`
 - `items/itemUseView.ts`

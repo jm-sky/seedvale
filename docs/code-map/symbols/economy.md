@@ -35,16 +35,27 @@ Generated from exported TypeScript symbols.
 
 ## `economy/production.ts`
 
-- `ARROWS_FROM_BEAM_PRODUCTION` — const — line 76
-- `ARROWS_FROM_BRANCH_PRODUCTION` — const — line 67
-- `FARMING_PRODUCTION` — const — line 37
-- `FISHING_PRODUCTION` — const — line 44
-- `HUNTER_ARROW_PRODUCTIONS` — const — line 86
-- `MINING_PRODUCTION` — const — line 51
-- `produceFirstAvailableItemRecipe` — function — line 99
-- `ProductionDef` — type — line 9
-- `productionForRole` — function — line 116
-- `WOODCUTTING_PRODUCTION` — const — line 26
+- `ARROWS_FROM_BEAM_PRODUCTION` — const — line 75
+- `ARROWS_FROM_BRANCH_PRODUCTION` — const — line 66
+- `FARMING_PRODUCTION` — const — line 36
+- `FISHING_PRODUCTION` — const — line 43
+- `HUNTER_ARROW_PRODUCTIONS` — const — line 85
+- `MINING_PRODUCTION` — const — line 50
+- `produceFirstAvailableItemRecipe` — function — line 95
+- `ProductionDef` — type — line 10
+- `productionForRole` — function — line 113
+- `WOODCUTTING_PRODUCTION` — const — line 25
+
+## `economy/productionExecutor.ts`
+
+- `executeProduction` — function — line 64
+  - domain: settlements-npcs
+- `ProductionBlockedCategory` — type — line 23
+- `ProductionContext` — type — line 14
+  - domain: settlements-npcs
+- `ProductionFailureReason` — type — line 25
+- `ProductionResult` — type — line 37
+  - domain: settlements-npcs
 
 ## `economy/registry.ts`
 
@@ -53,14 +64,14 @@ Generated from exported TypeScript symbols.
 
 ## `economy/settlementEconomy.ts`
 
-- `createSettlementEconomy` — function — line 89
-- `SettlementDemand` — type — line 13
-- `SettlementEconomy` — type — line 46
+- `createSettlementEconomy` — function — line 92
+- `SettlementDemand` — type — line 14
+- `SettlementEconomy` — type — line 47
   - domain: settlements
   - system: settlement-economy
   - role: Owns a settlement's bulk stock, demand-driven shortage/surplus and reservations. Not player `Inventory`.
   - owns: SettlementEconomy
-- `SettlementEconomySnapshot` — type — line 31
+- `SettlementEconomySnapshot` — type — line 32
 
 ## `economy/stock.ts`
 

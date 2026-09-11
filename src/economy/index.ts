@@ -20,6 +20,13 @@ export {
   productionForRole,
   WOODCUTTING_PRODUCTION,
 } from './production'
+export {
+  executeProduction,
+  type ProductionBlockedCategory,
+  type ProductionContext,
+  type ProductionFailureReason,
+  type ProductionResult,
+} from './productionExecutor'
 export { createEconomyRegistry, type EconomyRegistry } from './registry'
 export {
   createSettlementEconomy,

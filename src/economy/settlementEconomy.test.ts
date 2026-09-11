@@ -73,10 +73,15 @@ describe('production', () => {
     expect(eco.query('wood')).toBe(3)
   })
 
-  it('produce/reserve never touch food — no real production recipe targets it (plan settlements-npcs-008)', () => {
+  it('produce rejects stock recipes that name food and does not consume other inputs', () => {
     const eco = economy({ wood: 4 })
     eco.depositFood('carrot', 2)
-    eco.produce({ id: 'test.food-noop', inputs: [{ kind: 'wood', amount: 1 }], outputs: [{ kind: 'food', amount: 5 }] })
+    expect(eco.produce({
+      id: 'test.food-noop',
+      inputs: [{ kind: 'wood', amount: 1 }],
+      outputs: [{ kind: 'food', amount: 5 }],
+    })).toBe(false)
+    expect(eco.query('wood')).toBe(4)
     expect(eco.query('food')).toBe(2)
   })
 })

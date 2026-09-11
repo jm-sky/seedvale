@@ -547,6 +547,7 @@ Generated from TypeScript imports.
 - `economy/localExchange.ts`
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
+- `economy/productionExecutor.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`

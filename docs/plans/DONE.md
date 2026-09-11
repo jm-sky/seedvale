@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-026-treasure-loot-forced-entry-and-traps`                | 2026-09-11 13:08:21 | —                   | `items-player`   | —          |
 | `world-024-systemic-treasure-sites-and-keys`                           | 2026-09-11 12:30:03 | —                   | `world`          | —          |
 | `world-terrain-007-underground-caves`                                  | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
 | `world-terrain-008-underground-caves-v2`                               | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
