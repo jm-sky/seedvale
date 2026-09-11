@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 10:28:13  
+> Date: 2026-09-11 12:33:37  
 
 ## PLANS
 
-- `items-player-027-player-to-npc-item-transfer-and-equipment.md`
 - `items-player-028-npc-player-storage-access-policies.md`
 - `npc-031-voluntary-expedition-joining.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
@@ -15,37 +14,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `items-player-027-player-to-npc-item-transfer-and-equipment.md`
-
-Prompt:
-
-```
-Zrób review planu `items-player-027-player-to-npc-item-transfer-and-equipment.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/items-player-027-player-to-npc-item-transfer-and-equipment.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/items-player-027-player-to-npc-item-transfer-and-equipment-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `items-player-028-npc-player-storage-access-policies.md`
 
