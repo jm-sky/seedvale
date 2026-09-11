@@ -201,19 +201,19 @@ Generated from exported TypeScript symbols.
 
 - `buildHeightfieldMeshBuffers` — function — line 119
   - domain: world-terrain
-- `buildMouthUndersideMaskBuffers` — function — line 620
+- `buildMouthUndersideMaskBuffers` — function — line 633
   - domain: world-terrain
 - `HeightfieldMeshBuffers` — type — line 28
 - `MouthUndersideMaskBuffers` — type — line 331
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 156
+- `CaveHeightfieldPresentation` — type — line 198
 - `createCaveHeightfieldGeometry` — function — line 49
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 175
+- `createCaveHeightfieldPresentation` — function — line 217
   - domain: world-terrain
-- `createMouthRocks` — function — line 115
+- `createMouthRocks` — function — line 131
   - domain: world-terrain
 - `createMouthUndersideMask` — function — line 67
   - domain: world-terrain
