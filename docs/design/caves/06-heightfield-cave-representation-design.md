@@ -1,6 +1,6 @@
 # Cave Heightfield Representation — Design
 
-**Status:** `design complete, implementation not started`
+**Status:** `implemented in the harness (2026-09-11) — browser verification pending`
 **Created:** 2026-09-11
 **Domain:** `world-terrain`
 **Supersedes (as the target representation):** `docs/plans/world-terrain-018-cave-heightfield-representation-spike.md` §4, §7, §8, §9
@@ -12,7 +12,10 @@
 > plan world-terrain-018 or its implementation notes disagree with this document,
 > **this document wins for the target representation** and the plan is stale.
 >
-> Nothing here is implemented yet.
+> Implemented in the `?caveHeightfieldTest` harness on 2026-09-11. What was
+> actually built, the measured cost, and what was deferred are recorded in
+> `docs/plans/implementation-notes/world-terrain-018-cave-heightfield-representation-spike-implementation-notes.md`
+> (§ "Iteration 2"). Browser verification is still the Player's.
 
 ---
 
@@ -393,6 +396,28 @@ Why these exponents:
 - `BETA = 0.30` — waist below mid-height, which is what real passages look like: a
   wider floor bowl and a taller dome.
 - `KAPPA = 3` — see §5.5 for why the extension slope matters.
+
+> **Implemented with one refinement (2026-09-11).** The formulas above use a
+> single coordinate `u = d / R` for both surfaces, which makes the rounding
+> eat part of the declared passage width. The implementation splits the two:
+> the **floor** uses `t = (d - coreRadius) / band` — flat across the whole
+> declared usable width `targetWidth`, curving only inside a rim band
+> `band = clamp(RIM_ASPECT · BETA · H, 0.35, 0.9)` added *outside* it — while
+> the **ceiling** uses `q = d / (coreRadius + band)` and domes across the
+> whole section. Both still reach `1` at the same rim, so floor and ceiling
+> converge exactly as specified, and the asymmetry between them is now
+> structural rather than only a difference of exponents. The band cap is
+> `PROXY_MARGIN`, so the rounded fringe stays inside the radius
+> `minSurfaceOverFootprint` already checks overburden against. The clearance
+> guard's `U_CORE` / `U_FADE` are on the floor's `t`, so `minClearance` holds
+> across the entire declared width and fades out before the rim.
+>
+> The diverging extension is also **clamped** to a single far-field plateau
+> (`FAR_GAP = -2·KAPPA·OUTSIDE_REACH`). An influence's bounding box is sized
+> by its widest station, so past the *local* rim `gap` could otherwise dip
+> below the far-field constant and rise again at the box edge — a gradient
+> bump that pushes a trapped capsule the wrong way. `gap` is now
+> non-increasing outward everywhere, which is what lateral containment walks.
 
 ASCII, 2.6 m wide × 2.6 m high passage, `BETA = 0.30`:
 
@@ -1138,6 +1163,16 @@ buys presentation quality that two 2D fields can largely reproduce.
    `base − CAVE_MOUTH_DEPTH`, i.e. the carved surface, which is exactly why the
    surface→cave transition is continuous by construction (§8.1). Local truth, not a
    global base.
+
+   > **Implemented reconciliation (2026-09-11).** The walk surface *is* offered
+   > to the floor union — as a `smin` **candidate**, pushed away by
+   > `SURFACE_BLEND_PUSH · max(0, (surfaceY − SURFACE_CLIP_EPS) − ceilY)`.
+   > Where the cave void reaches the surface (the mouth) the push is zero and
+   > the two floors blend continuously, so "floor starts as the surface, then
+   > the cave is carved into it" is literally true there. Twelve metres under
+   > the hillside the candidate is pushed ~36 m out of `smin` range and the
+   > floor follows the topology centerline exactly. One expression, both
+   > requirements, and no hillside relief inside the tunnel.
 
 The mirrored-ceiling intuition (prompt §9) is likewise not implemented literally: the
 ceiling gets its own exponent (`NC ≠ NF`), its own span (`(1−BETA)·H` vs `BETA·H`), and

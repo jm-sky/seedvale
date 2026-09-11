@@ -10,7 +10,7 @@
  */
 
 import type { CaveVerticalInterval } from '../../world/caves/caveSdfQuery'
-import type { CaveHeightfieldRepresentation } from './caveHeightfieldRepresentation'
+import type { CaveHeightfield } from './caveHeightfieldRepresentation'
 import {
   type CaveSdfColumnIndex,
   lowestFloorAt,
@@ -53,12 +53,12 @@ export type CaveWalkWorld = {
  * @domain world-terrain
  */
 export function createHeightfieldWalkWorld(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   baseSurfaceAt: SurfaceSampler,
   walkSurfaceAt: SurfaceSampler,
 ): CaveWalkWorld {
   const ground = createDebugCaveGroundResolver(
-    (x, y, z) => queryHeightfieldColumn(representation, baseSurfaceAt, x, y, z),
+    (x, y, z) => queryHeightfieldColumn(field, baseSurfaceAt, x, y, z),
     walkSurfaceAt,
   )
   return {
@@ -66,9 +66,9 @@ export function createHeightfieldWalkWorld(
     walkSurfaceAt,
     resolveGround: ground.resolve,
     resetGround: ground.reset,
-    caveFloorAt: (x, z) => heightfieldFloorAt(representation, baseSurfaceAt, x, z),
-    occupancyAt: (x, y, z) => heightfieldOccupancyAt(representation, baseSurfaceAt, x, y, z),
-    resolveHorizontal: (x, z) => resolveHeightfieldHorizontal(representation, x, z, HEIGHTFIELD_PLAYER_RADIUS),
+    caveFloorAt: (x, z) => heightfieldFloorAt(field, baseSurfaceAt, x, z),
+    occupancyAt: (x, y, z) => heightfieldOccupancyAt(field, baseSurfaceAt, x, y, z),
+    resolveHorizontal: (x, z, y) => resolveHeightfieldHorizontal(field, x, z, y, HEIGHTFIELD_PLAYER_RADIUS),
     boomCollidersAt: () => [],
   }
 }

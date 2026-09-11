@@ -1,6 +1,6 @@
 /** Experimental cave heightfield spike — traversal / collision queries
- *  derived from the same 2.5D representation as the mesh, resolved through
- *  the *production* Cave V2 ground contract. Not production cave collision
+ *  derived from the same 2.5D field as the mesh, resolved through the
+ *  *production* Cave V2 ground contract. Not production cave collision
  *  ownership.
  *
  *  Ground resolution deliberately mirrors `createCaves().queryGround` +
@@ -19,6 +19,12 @@
  *  floor). The spike reuses the production helpers instead of re-deriving
  *  the rule, so the harness can actually detect the regression.
  *
+ *  There is no separate collision geometry: presentation and traversal read
+ *  the same two heightfields. Lateral containment is a push-out of the
+ *  `gap = HEIGHTFIELD_MIN_STANDING_GAP` contour, not of a footprint mask —
+ *  with a rounded cross-section the player is stopped by the rising floor
+ *  and the falling ceiling, which is what the geometry actually shows.
+ *
  * @domain world-terrain
  */
 
@@ -31,11 +37,12 @@ import {
   pickInterval,
   SURFACE_CLIP_EPS,
 } from '../../world/caves/caveSdfQuery'
-import { mouthAlong, mouthLateral } from '../../world/caves/mouthCarve'
 import {
-  type CaveHeightfieldRepresentation,
+  type CaveHeightfield,
+  heightfieldGapGradient,
   type HeightfieldSample,
   sampleHeightfieldAt,
+  type SurfaceSampler,
 } from './caveHeightfieldRepresentation'
 
 /** Mirrors `PlayerController`'s `PLAYER_COLLISION_RADIUS` / `PLAYER_HEIGHT`.
@@ -45,18 +52,15 @@ import {
 export const HEIGHTFIELD_PLAYER_RADIUS = 0.35
 export const HEIGHTFIELD_PLAYER_HEIGHT = 1.8
 
-export type SurfaceSampler = (x: number, z: number) => number
+/** Clearance the player capsule needs to occupy a column. The rounded fringe
+ *  below this is geometry the player looks at, not geometry they stand in. */
+export const HEIGHTFIELD_MIN_STANDING_GAP = HEIGHTFIELD_PLAYER_HEIGHT + 0.1
+
+export type { SurfaceSampler }
 
 export type HeightfieldSpaceQuery = HeightfieldSample & {
+  /** The player capsule cannot occupy this column. */
   blocked: boolean
-}
-
-const SD_EPS = 1e-4
-
-function isMouthCorridor(representation: CaveHeightfieldRepresentation, x: number, z: number, pad: number): boolean {
-  const along = mouthAlong(x, z, representation.entrance)
-  const lateral = mouthLateral(x, z, representation.entrance)
-  return along > -0.55 && Math.abs(lateral) < representation.entrance.width * 0.55 + pad
 }
 
 /**
@@ -78,68 +82,67 @@ export function heightfieldRockCeilingMaxY(
 }
 
 /**
- * Space query used by Walk mode and unit tests. `blocked` is true in solid
- * rock beyond the footprint, false in the doorway/approach corridor.
+ * Space query used by Walk mode and unit tests. `blocked` is true wherever
+ * the column cannot hold a standing player — solid rock and the low rounded
+ * fringe alike.
  *
  * @domain world-terrain
  */
 export function queryHeightfieldSpace(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   x: number,
   z: number,
-  radius = HEIGHTFIELD_PLAYER_RADIUS,
+  minGap = HEIGHTFIELD_MIN_STANDING_GAP,
 ): HeightfieldSpaceQuery {
-  const sample = sampleHeightfieldAt(representation, x, z)
-  const mouth = isMouthCorridor(representation, x, z, radius)
-  const blocked = sample.signedDistance > -radius + SD_EPS && !mouth
-  return { ...sample, blocked }
-}
-
-function signedDistanceGradient(
-  representation: CaveHeightfieldRepresentation,
-  x: number,
-  z: number,
-): { gx: number, gz: number } {
-  const e = Math.max(0.08, representation.cellSize * 0.35)
-  const dx = sampleHeightfieldAt(representation, x + e, z).signedDistance
-    - sampleHeightfieldAt(representation, x - e, z).signedDistance
-  const dz = sampleHeightfieldAt(representation, x, z + e).signedDistance
-    - sampleHeightfieldAt(representation, x, z - e).signedDistance
-  return { gx: dx / (2 * e), gz: dz / (2 * e) }
+  const sample = sampleHeightfieldAt(field, x, z)
+  return { ...sample, blocked: sample.gap < minGap && !sample.openSky }
 }
 
 /**
- * Pushes an XZ capsule out of heightfield rock. The doorway/approach is
- * left open so Walk mode can enter from the surface fixture.
+ * Pushes an XZ capsule out of rock and out of the low fringe, along the
+ * gradient of `gap`. The mouth/approach stays open because the aperture
+ * column is `openSky` there, not because of a special case.
  *
  * @domain world-terrain
  */
 export function resolveHeightfieldHorizontal(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   x: number,
   z: number,
+  y: number | null = null,
   radius = HEIGHTFIELD_PLAYER_RADIUS,
+  minGap = HEIGHTFIELD_MIN_STANDING_GAP,
 ): { x: number, z: number } {
   let px = x
   let pz = z
   for (let iter = 0; iter < 24; iter++) {
-    const sample = sampleHeightfieldAt(representation, px, pz)
-    if (isMouthCorridor(representation, px, pz, radius) && sample.signedDistance > -radius) {
-      return { x: px, z: pz }
-    }
-    const penetration = sample.signedDistance + radius
-    if (penetration <= SD_EPS) return { x: px, z: pz }
-    const { gx, gz } = signedDistanceGradient(representation, px, pz)
+    const sample = sampleHeightfieldAt(field, px, pz)
+    // Outdoors the terrain owns containment, exactly as production cave
+    // colliders only exist underground (`colliderActiveAtY`). Without this an
+    // entity walking the hillside would be dragged toward the mouth by the
+    // gap gradient. Beyond the cave-local grid there is no cave at all.
+    if (sample.outsideGrid) return { x: px, z: pz }
+    if (y != null && y > sample.surfaceY - SURFACE_CLIP_EPS) return { x: px, z: pz }
+    if (sample.openSky) return { x: px, z: pz }
+    const deficit = minGap - sample.gap
+    if (deficit <= 1e-4) return { x: px, z: pz }
+    const { gx, gz } = heightfieldGapGradient(field, px, pz)
     const len = Math.hypot(gx, gz)
-    const step = Math.min(Math.max(penetration, representation.cellSize * 0.25), 2.5)
     if (len < 1e-6) {
-      px += Math.sign(representation.entrance.x - px || 0) * step
-      pz += Math.sign(representation.entrance.z - pz || 0) * step
+      // Flat gap field (deep rock): fall back toward the entrance so a
+      // capsule that starts outside the cave is not stranded.
+      const dx = field.entrance.x - px
+      const dz = field.entrance.z - pz
+      const dl = Math.hypot(dx, dz) || 1
+      px += (dx / dl) * field.cellSize
+      pz += (dz / dl) * field.cellSize
       continue
     }
-    const push = step / len
-    px -= gx * push
-    pz -= gz * push
+    // Move up-gradient (toward more clearance) by the shortfall, damped by
+    // the local gradient magnitude and capped to keep the step stable.
+    const step = Math.min(Math.max(deficit / len, field.cellSize * 0.25), radius + 1.5)
+    px += (gx / len) * step
+    pz += (gz / len) * step
   }
   return { x: px, z: pz }
 }
@@ -153,19 +156,17 @@ export function resolveHeightfieldHorizontal(
  * @domain world-terrain
  */
 export function heightfieldColumnIntervals(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   baseSurfaceAt: SurfaceSampler,
   x: number,
   z: number,
 ): CaveVerticalInterval[] {
-  const sample = sampleHeightfieldAt(representation, x, z)
-  if (sample.signedDistance >= 0) return []
-  const surfaceY = baseSurfaceAt(x, z)
-  const clipped = surfaceY - SURFACE_CLIP_EPS
-  const ceilingY = Math.min(sample.ceilingY, clipped)
+  const sample = sampleHeightfieldAt(field, x, z)
+  if (sample.gap <= 0) return []
+  const clipped = baseSurfaceAt(x, z) - SURFACE_CLIP_EPS
+  const ceilingY = Math.min(sample.ceilY, clipped)
   if (ceilingY <= sample.floorY) return []
-  const openSky = sample.openSky || sample.ceilingY > clipped
-  return [{ floorY: sample.floorY, ceilingY, openSky }]
+  return [{ floorY: sample.floorY, ceilingY, openSky: sample.ceilY > clipped }]
 }
 
 /**
@@ -177,13 +178,13 @@ export function heightfieldColumnIntervals(
  * @domain world-terrain
  */
 export function queryHeightfieldColumn(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   baseSurfaceAt: SurfaceSampler,
   x: number,
   y: number,
   z: number,
 ): CaveGroundHit | null {
-  const intervals = heightfieldColumnIntervals(representation, baseSurfaceAt, x, z)
+  const intervals = heightfieldColumnIntervals(field, baseSurfaceAt, x, z)
   const picked = pickInterval(intervals, y)
   if (!picked) return null
   return {
@@ -202,13 +203,13 @@ export function queryHeightfieldColumn(
  * @domain world-terrain
  */
 export function heightfieldOccupancyAt(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   baseSurfaceAt: SurfaceSampler,
   x: number,
   y: number,
   z: number,
 ): CaveVerticalInterval | null {
-  const intervals = heightfieldColumnIntervals(representation, baseSurfaceAt, x, z)
+  const intervals = heightfieldColumnIntervals(field, baseSurfaceAt, x, z)
   for (const interval of intervals) {
     if (y >= interval.floorY - CAVE_OCCUPANCY_EPS && y <= interval.ceilingY) return interval
   }
@@ -218,12 +219,12 @@ export function heightfieldOccupancyAt(
 /** Cave floor at `(x, z)` ignoring Y — the `sampleCaveFloor` half of
  *  `withCaveFloorFallback`. `null` where the column carries no cave space. */
 export function heightfieldFloorAt(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   baseSurfaceAt: SurfaceSampler,
   x: number,
   z: number,
 ): number | null {
-  const intervals = heightfieldColumnIntervals(representation, baseSurfaceAt, x, z)
+  const intervals = heightfieldColumnIntervals(field, baseSurfaceAt, x, z)
   return intervals.length > 0 ? intervals[0]!.floorY : null
 }
 
@@ -314,14 +315,14 @@ export function integrateDebugVertical(
  * @domain world-terrain
  */
 export function heightfieldCapsuleHitsCeiling(
-  representation: CaveHeightfieldRepresentation,
+  field: CaveHeightfield,
   baseSurfaceAt: SurfaceSampler,
   x: number,
   y: number,
   z: number,
   height: number,
 ): boolean {
-  const hit = queryHeightfieldColumn(representation, baseSurfaceAt, x, y, z)
+  const hit = queryHeightfieldColumn(field, baseSurfaceAt, x, y, z)
   if (!hit || hit.openSky) return false
   return y + height > hit.ceilingY + 1e-4
 }

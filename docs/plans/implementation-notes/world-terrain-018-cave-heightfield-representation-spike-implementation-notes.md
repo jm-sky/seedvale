@@ -472,3 +472,144 @@ overburden, and strict occupancy only inside real void.
 Player's** — the spike is not complete on automated checks alone.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+---
+
+## Iteration 2 — rounded 2.5D representation (2026-09-11)
+
+Implements `docs/design/caves/06-heightfield-cave-representation-design.md`.
+The design doc stays the reference for the maths; this section records what
+was actually built, what was deleted, and what was deliberately left out.
+
+### Implemented
+
+**Field — `src/debug/caves/caveHeightfieldRepresentation.ts` (rewritten).**
+`buildCaveHeightfield(topology, walkSurfaceAt, config)` produces one
+node-sampled grid holding `floorY`, `ceilY`, plus two cached derived arrays
+(`surfaceY`, `coreT`). `gap = ceilY - floorY > 0` *is* the footprint; there
+is no `inside`, no `openSky` and no `signedDistance` array any more.
+
+- Cross-section (`crossSectionAt`) is the complementary superellipse
+  `closure(u, n) = 1 - (1 - u^n)^(1/n)` about a waist at `BETA * H`, floor
+  exponent `NF = 2.5`, ceiling exponent `NC = 2`.
+- **Deviation from the design doc, §5.3.** The doc used one coordinate
+  `u = d / (targetWidth / 2)` for both surfaces. The implementation splits
+  them so the rounding does not eat the declared usable width (task §6):
+  the **floor** uses `t = (d - coreRadius) / band` (flat across the whole
+  declared width, curving only inside the rim band) and the **ceiling** uses
+  `q = d / (coreRadius + band)` (a dome across the whole section). Both reach
+  `1` at the same rim, so convergence is unchanged. `band = clamp(RIM_ASPECT *
+  BETA * H, 0.35, 0.9)`; the cap is `PROXY_MARGIN`, so the rounded fringe
+  stays inside the radius `minSurfaceOverFootprint` already checks overburden
+  against.
+- Union is `smin` / soft-max over influences, reusing the **production**
+  `smin` from `caveSdfField.ts`. Influences are the entrance capsule, one
+  capsule per resampled centerline span, and chamber lobes.
+- `FAR_GAP` / `OUTSIDE_REACH`: the diverging extension is clamped to one
+  plateau so `gap` is non-increasing outward everywhere. Without the clamp a
+  capsule's bounding box (sized by its widest station) let `gap` dip below the
+  far-field constant and rise again at the box edge — a gradient bump that
+  would push a trapped capsule the wrong way. Caught by a unit test.
+- **Deviation from the design doc, §17.** The doc rejected a surface-based
+  floor base outright. The reconciliation actually implemented: the walk
+  surface is offered to `smin` as a floor *candidate*, pushed away by
+  `SURFACE_BLEND_PUSH * max(0, (surfaceY - SURFACE_CLIP_EPS) - ceilY)`. At the
+  mouth the cave ceiling reaches the surface, the push is zero and the two
+  floors blend continuously (task §4). Twelve metres under the hillside the
+  candidate is pushed ~36 m out of range and the floor follows the topology
+  centerline exactly, so hillside relief never leaks into the tunnel floor.
+- Features: `shelf` raises `floorY` to the authored box's **top face** over an
+  elliptical footprint (an elevated floor region beside the lower floor — one
+  `floorY` per column, no void underneath); `overhang` lowers `ceilY`. Both
+  fade across the rim band so they cannot break the floor/ceiling weld, and
+  both run *before* the clearance guard so the guard wins in the walkable core.
+- Noise: macro perturbs the **radius** (so floor and ceiling move together and
+  the rim never tears), tapered to zero across the mouth; floor/ceiling detail
+  is additive and attenuated by `1 - closure(...)` so it vanishes at the rim.
+  New salts `lobes` / `macro` / `floorDetail` / `ceilDetail` in the production
+  owner `CAVE_RNG_SALT`; new `createValueNoise2D` in `spikeNoise.ts` replaces
+  the spike's private copy.
+- Clearance guard is **corridor-only** (`U_CORE` / `U_FADE` on the floor's rim
+  coordinate) and raises the ceiling, never lowers the floor.
+
+**Mesh — `src/debug/caves/caveHeightfieldMesh.ts` (rewritten).** Marching
+squares on `gap` over the node grid. Interior floor/ceiling vertices are
+shared between neighbouring cells; the rim vertex on each `gap = 0` crossing
+is shared **between the floor and the ceiling**, so the surface folds over at
+the rim and the cave is closed with no wall pass at all. Winding is
+`(v00, v01, v10)` / `(v10, v01, v11)` for the floor (+Y) and the exact reverse
+for the ceiling (−Y) — verified numerically against
+`computeVertexNormals()`'s `(C - B) x (A - B)` by a unit test.
+`flatShading: false`; `FrontSide` kept on purpose as the permanent winding
+detector.
+
+**Traversal — `caveHeightfieldTraversal.ts`.** Same production chain as
+before (`pickInterval` → `applyCaveGroundHysteresis` → `integrateVerticalMotion`
+→ `applySlopeMovementConstraint` → `resolveCameraBoom`); only the field under
+it changed. Lateral containment now pushes out of the
+`gap = HEIGHTFIELD_MIN_STANDING_GAP` contour along `∇gap` instead of out of a
+footprint mask, and takes the entity's `y`: above the local walk surface, or
+outside the cave-local grid, it is a no-op, mirroring `colliderActiveAtY`.
+`caveHeightfieldPlayer.ts` is unchanged.
+
+**Mouth — `createCaveHeightfieldTestScene.ts`.** The terrain mesh is built
+directly (0.5 m cells, hillside still the production analytic sampler) and
+**drops any quad with a corner where the cave void reaches the walk surface**
+— the same `ceilY >= surfaceY - SURFACE_CLIP_EPS` predicate the cave mesher
+uses to drop its ceiling, so the hole and the portal stop on one contour. The
+entrance influence (`buildEntranceInfluence`) straddles the mouth plane and is
+sized by `APERTURE_LIFT`, which is what makes the aperture break the surface
+at all. Production `createLargeCaveVisual` rocks mask the half-metre cutout
+stair, toggleable with `[4]` / `&rocks=0`.
+
+**Fixtures.** `basic` gains a `shelf`, `bend` gains an `overhang`. Chamber
+scale is unchanged (task §7).
+
+### Measured (node, median of 5; `cellSize = 0.4`)
+
+| fixture | HF rep | HF mesh | HF total | SDF rep | SDF mesh | SDF index+colliders | SDF total |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| basic | 11.0 ms | 0.8 ms | **11.8 ms** | 0.2 ms | 99.8 ms | 93.6 ms | **193.7 ms** |
+| bend | 16.3 ms | 1.1 ms | **17.4 ms** | 0.2 ms | 165.7 ms | 143.6 ms | **309.5 ms** |
+| branch | 17.2 ms | 1.0 ms | **18.2 ms** | 0.1 ms | 132.1 ms | 130.3 ms | **262.6 ms** |
+
+| fixture | HF verts | HF tris | HF geom | HF field | SDF verts | SDF tris | SDF geom |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| basic | 1,892 | 3,602 | 87 KB | 32 KB | 2,350 | 4,655 | 110 KB |
+| bend | 2,244 | 4,300 | 103 KB | 57 KB | 3,217 | 6,391 | 150 KB |
+| branch | 2,574 | 4,974 | 119 KB | 55 KB | 3,433 | 6,811 | 160 KB |
+
+~16× cheaper end to end, ~25–35% fewer triangles, and the SDF column index +
+collider stages have no counterpart at all — the grid *is* the index.
+
+Cost split for `basic` (2,030 nodes): the production analytic terrain sampler
+alone costs **5.1 ms** and the influence/noise loop **4.6 ms**. So roughly
+half the field build is terrain sampling that the SDF path also pays (inside
+`buildCaveSdfColumnIndex`), not representation work. No optimisation was
+applied beyond per-influence bounding-box rejection — measure before tuning.
+
+### Intentionally deferred
+
+- **Genuine 3D overhang.** Only the ceiling-dip reading is implemented; a real
+  volumetric undercut needs two void intervals per column and is out of 2.5D.
+  No second geometry system was added to hide this.
+- **Production migration.** `createCaves()`, the SDF field, the extraction
+  worker, collision and streaming ownership are untouched.
+- **Chamber scale.** Fixtures keep their current size; production 9–10 m
+  chambers are a later comparison.
+- **Field-build optimisation.** Station spatial hashing and coarse-node
+  rejection are known and unimplemented.
+- **Marching-squares saddle cells** merge the two diagonal islands into one
+  polygon rather than separating them, and non-convex cell rings are
+  fan-triangulated. Both are sub-cell (0.4 m) artefacts.
+- **Terrain cutout granularity** is 0.5 m in the harness (production terrain
+  is 1 m); the residual stair is masked by rock props.
+
+### Manual verification pending
+
+Everything visual. Automated checks passed (`npx tsc --noEmit`,
+`pnpm run lint`, `pnpm run build`, `pnpm run test` — 422 files / 4801 tests),
+but geometry quality, the mouth reading as a real opening, traversal feel and
+camera behaviour are the Player's call. See design doc §15 for the checklist.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**

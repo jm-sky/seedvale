@@ -7,6 +7,7 @@
 
 import type {
   CaveTopology,
+  CaveTopologyFeature,
   CaveTopologyNode,
   CaveTopologyPoint,
   CaveTopologySegment,
@@ -172,6 +173,7 @@ function topology(
   fixture: CaveHeightfieldFixtureId,
   nodes: CaveTopologyNode[],
   segments: CaveTopologySegment[],
+  features: CaveTopologyFeature[] = [],
 ): CaveTopology {
   return {
     caveId: `heightfield-spike:${fixture}`,
@@ -179,8 +181,63 @@ function topology(
     entrance: CAVE_HEIGHTFIELD_ENTRANCE,
     nodes,
     segments,
-    features: [],
+    features,
     minClearance: 2.1,
+  }
+}
+
+/**
+ * `shelf` fixture feature — an **elevated floor region / ledge** beside the
+ * lower chamber floor (`docs/plans/world-terrain-008` feature semantics), not
+ * a floating slab. Authored the way `CaveTopologyFeature` expresses it: a box
+ * whose *top face* is the ledge surface, so the heightfield raises `floorY`
+ * to `position.y + size.height / 2` over the footprint.
+ *
+ * @domain world-terrain
+ */
+function shelfFeature(
+  anchor: CaveTopologyNode,
+  offsetX: number,
+  offsetZ: number,
+  topAboveFloor: number,
+): CaveTopologyFeature {
+  const height = 0.6
+  return {
+    id: 'chamber-shelf',
+    kind: 'shelf',
+    anchorNodeId: anchor.id,
+    position: {
+      x: anchor.position.x + offsetX,
+      y: anchor.position.y + topAboveFloor - height / 2,
+      z: anchor.position.z + offsetZ,
+    },
+    size: { width: 3.2, height, depth: 2.4 },
+  }
+}
+
+/**
+ * `overhang` fixture feature — a genuine 3D ceiling/wall element. In 2.5D the
+ * spike can only express it as a local `ceilingY` depression (a rock pendant
+ * read from below); it is deliberately **not** reproduced as a volumetric
+ * undercut. See the design doc's 2.5D limitations.
+ *
+ * @domain world-terrain
+ */
+function overhangFeature(
+  anchor: CaveTopologyNode,
+  offsetX: number,
+  offsetZ: number,
+): CaveTopologyFeature {
+  return {
+    id: 'chamber-overhang',
+    kind: 'overhang',
+    anchorNodeId: anchor.id,
+    position: {
+      x: anchor.position.x + offsetX,
+      y: anchor.position.y + anchor.targetHeight * 0.68,
+      z: anchor.position.z + offsetZ,
+    },
+    size: { width: 3, height: 1.1, depth: 2.2 },
   }
 }
 
@@ -214,7 +271,7 @@ export function buildCaveHeightfieldFixture(id: CaveHeightfieldFixtureId): CaveT
     return topology(id, [entrance, passage, chamber], [
       { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: runCenterline(entrance, passage) },
       { id: 'seg-passage-chamber', from: 'passage', to: 'chamber', centerline: runCenterline(passage, chamber) },
-    ])
+    ], [shelfFeature(chamber, -2.1, -1.1, 0.85)])
   }
 
   if (id === 'bend') {
@@ -232,7 +289,7 @@ export function buildCaveHeightfieldFixture(id: CaveHeightfieldFixtureId): CaveT
       { id: 'seg-entrance-passage', from: 'entrance', to: 'passage', centerline: runCenterline(entrance, passage) },
       { id: 'seg-bend', from: 'passage', to: 'widening', centerline: bendCenterline(passage, widening, 1.8, 0.4) },
       { id: 'seg-widening-chamber', from: 'widening', to: 'chamber', centerline: runCenterline(widening, chamber) },
-    ])
+    ], [overhangFeature(chamber, -1.9, 0.8)])
   }
 
   const entrance = stationNode(ENTRANCE_STATION)

@@ -36,6 +36,14 @@ export const CAVE_RNG_SALT = {
   feature: 0x02,
   centerline: 0x03,
   branch: 0x04,
+  /** Cave heightfield spike (plan world-terrain-018): chamber lobe layout. */
+  lobes: 0x05,
+  /** Cave heightfield spike: low-frequency lateral wall variation. */
+  macro: 0x06,
+  /** Cave heightfield spike: floor detail noise. */
+  floorDetail: 0x07,
+  /** Cave heightfield spike: ceiling detail noise (independent of the floor). */
+  ceilDetail: 0x08,
 } as const
 
 /** Fresh `[0,1)` generator for `(caveId, salt)` — deterministic, and

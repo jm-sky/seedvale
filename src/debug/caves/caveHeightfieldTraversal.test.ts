@@ -18,11 +18,12 @@ import {
   caveHeightfieldWalkSurfaceAt,
 } from './caveHeightfieldFixtures'
 import {
-  buildCaveHeightfieldRepresentation,
+  buildCaveHeightfield,
   DEFAULT_HEIGHTFIELD_CONFIG,
   sampleHeightfieldAt,
 } from './caveHeightfieldRepresentation'
 import {
+  HEIGHTFIELD_MIN_STANDING_GAP,
   HEIGHTFIELD_PLAYER_HEIGHT,
   HEIGHTFIELD_PLAYER_RADIUS,
   heightfieldCapsuleHitsCeiling,
@@ -46,8 +47,8 @@ const walk = caveHeightfieldWalkSurfaceAt
 
 function heightfieldWorld(fixture: 'basic' | 'bend' | 'branch' = 'basic'): CaveWalkWorld {
   const topology = buildCaveHeightfieldFixture(fixture)
-  const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-  return createHeightfieldWalkWorld(representation, base, walk)
+  const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
+  return createHeightfieldWalkWorld(field, base, walk)
 }
 
 function sdfWorld(fixture: 'basic' | 'bend' | 'branch' = 'basic'): CaveWalkWorld {
@@ -85,8 +86,8 @@ function walkPath(
 /** A Y inside the cave void at `z` on the tunnel axis, derived from the
  *  representation rather than guessed from the surface. */
 function interiorProbeY(z: number): number {
-  const { representation } = buildCaveHeightfieldRepresentation(buildCaveHeightfieldFixture('basic'), TEST_CONFIG)
-  const interval = heightfieldColumnIntervals(representation, base, 0, z)[0]
+  const field = buildCaveHeightfield(buildCaveHeightfieldFixture('basic'), walk, TEST_CONFIG).heightfield
+  const interval = heightfieldColumnIntervals(field, base, 0, z)[0]
   if (!interval) throw new Error(`no cave void at z=${z}`)
   return interval.floorY + 0.3
 }
@@ -111,29 +112,34 @@ describe('cave heightfield traversal (plan world-terrain-018)', () => {
     expect(heightfieldRockCeilingMaxY(20.5, 20)).toBe(rockCeilingMaxY(20.5, 20))
   })
 
-  it('returns valid floor/ceiling inside and blocked/outside beyond the boundary', () => {
+  it('returns valid floor/ceiling inside and blocked beyond the standable region', () => {
     const topology = buildCaveHeightfieldFixture('basic')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    const inside = queryHeightfieldSpace(representation, 0, -8)
-    expect(inside.inside).toBe(true)
+    const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
+    const inside = queryHeightfieldSpace(field, 0, -8)
+    expect(inside.gap).toBeGreaterThan(0)
     expect(inside.blocked).toBe(false)
-    expect(inside.ceilingY - inside.floorY).toBeGreaterThanOrEqual(topology.minClearance - 1e-4)
+    expect(inside.ceilY - inside.floorY).toBeGreaterThanOrEqual(topology.minClearance - 1e-4)
 
-    expect(queryHeightfieldSpace(representation, 12, -8).blocked).toBe(true)
-    expect(queryHeightfieldSpace(representation, 0, 6).blocked).toBe(false)
+    // Solid rock beside the tunnel.
+    expect(queryHeightfieldSpace(field, 12, -8).blocked).toBe(true)
+    // The mouth aperture is open sky, so it is never blocked.
+    expect(queryHeightfieldSpace(field, 0, -0.2).blocked).toBe(false)
+    // Well outside the cave the column is closed too — outdoor ownership is
+    // decided by the y-aware walk world, not by this XZ-only cave query.
+    expect(queryHeightfieldSpace(field, 0, 6).blocked).toBe(true)
   })
 
   it('clips heightfield columns to the analytic surface, like the SDF column index', () => {
     const topology = buildCaveHeightfieldFixture('basic')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
+    const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
     for (let z = 1; z >= -18; z -= 0.5) {
-      for (const interval of heightfieldColumnIntervals(representation, base, 0, z)) {
+      for (const interval of heightfieldColumnIntervals(field, base, 0, z)) {
         expect(interval.ceilingY).toBeLessThan(base(0, z))
         expect(interval.ceilingY).toBeGreaterThan(interval.floorY)
       }
     }
     // Solid rock beside the tunnel carries no walkable interval at all.
-    expect(heightfieldColumnIntervals(representation, base, 9, -8)).toHaveLength(0)
+    expect(heightfieldColumnIntervals(field, base, 9, -8)).toHaveLength(0)
   })
 
   describe.each([
@@ -277,24 +283,41 @@ describe('cave heightfield traversal (plan world-terrain-018)', () => {
     })
   })
 
-  it('a player capsule cannot pass through a boundary wall', () => {
+  it('lateral containment pushes out of rock and the low fringe, using the same field', () => {
     const topology = buildCaveHeightfieldFixture('basic')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    expect(sampleHeightfieldAt(representation, 0, -8).inside).toBe(true)
-    const resolved = resolveHeightfieldHorizontal(representation, 10, -8, HEIGHTFIELD_PLAYER_RADIUS)
-    const after = sampleHeightfieldAt(representation, resolved.x, resolved.z)
-    expect(after.signedDistance).toBeLessThanOrEqual(-HEIGHTFIELD_PLAYER_RADIUS + 0.08)
-    expect(Math.abs(resolved.x)).toBeLessThan(3.2)
+    const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
+    expect(sampleHeightfieldAt(field, 0, -8).gap).toBeGreaterThan(0)
+    // Starting inside the wall resolves back into standable cave space, not
+    // into some separate invisible collider.
+    const resolved = resolveHeightfieldHorizontal(field, 3, -8, null, HEIGHTFIELD_PLAYER_RADIUS)
+    const after = sampleHeightfieldAt(field, resolved.x, resolved.z)
+    expect(after.gap).toBeGreaterThanOrEqual(HEIGHTFIELD_MIN_STANDING_GAP - 0.25)
+    expect(Math.abs(resolved.x)).toBeLessThan(3)
+    // A point already in the walkable core is left alone.
+    const settled = resolveHeightfieldHorizontal(field, 0, -8, null, HEIGHTFIELD_PLAYER_RADIUS)
+    expect(settled.x).toBeCloseTo(0, 6)
+    expect(settled.z).toBeCloseTo(-8, 6)
+  })
+
+  it('never drags an outdoor entity toward the mouth', () => {
+    const topology = buildCaveHeightfieldFixture('basic')
+    const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
+    for (const [x, z] of [[0, 6], [4, -8], [-5, -14]] as const) {
+      const y = walk(x, z)
+      const resolved = resolveHeightfieldHorizontal(field, x, z, y, HEIGHTFIELD_PLAYER_RADIUS)
+      expect(resolved.x).toBeCloseTo(x, 6)
+      expect(resolved.z).toBeCloseTo(z, 6)
+    }
   })
 
   it('a player capsule cannot pass through the ceiling', () => {
     const topology = buildCaveHeightfieldFixture('basic')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    const hit = queryHeightfieldColumn(representation, base, 0, interiorProbeY(-17), -17)
+    const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
+    const hit = queryHeightfieldColumn(field, base, 0, interiorProbeY(-17), -17)
     expect(hit).not.toBeNull()
-    expect(heightfieldCapsuleHitsCeiling(representation, base, 0, hit!.ceilingY - 0.2, -17, HEIGHTFIELD_PLAYER_HEIGHT)).toBe(true)
-    expect(heightfieldCapsuleHitsCeiling(representation, base, 0, hit!.floorY, -17, HEIGHTFIELD_PLAYER_HEIGHT)).toBe(false)
-    expect(heightfieldOccupancyAt(representation, base, 0, hit!.floorY + 0.2, -17)).not.toBeNull()
+    expect(heightfieldCapsuleHitsCeiling(field, base, 0, hit!.ceilingY - 0.2, -17, HEIGHTFIELD_PLAYER_HEIGHT)).toBe(true)
+    expect(heightfieldCapsuleHitsCeiling(field, base, 0, hit!.floorY, -17, HEIGHTFIELD_PLAYER_HEIGHT)).toBe(false)
+    expect(heightfieldOccupancyAt(field, base, 0, hit!.floorY + 0.2, -17)).not.toBeNull()
   })
 
   it('builds both variants on the same topology and the same surface sampler', () => {

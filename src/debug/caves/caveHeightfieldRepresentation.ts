@@ -1,29 +1,115 @@
 /** Experimental cave heightfield spike — 2.5D spatial representation.
- *  One floor and one ceiling per `(x, z)`. Not a production Cave V2 path
- *  and not a return to Generalized Sweep ring construction.
+ *
+ *  Two 2D fields on one grid and nothing else:
+ *
+ *  ```text
+ *  floorY(x, z)
+ *  ceilingY(x, z)
+ *      ↓
+ *  gap = ceilingY - floorY      > 0  =>  cave void
+ *  ```
+ *
+ *  There is no stored `inside` mask and no boundary-wall geometry: the cave
+ *  boundary is where the floor and the ceiling converge (`gap -> 0`), so the
+ *  walls are produced by the two heightfields themselves. See
+ *  `docs/design/caves/06-heightfield-cave-representation-design.md`.
+ *
+ *  Not a production Cave V2 path and not a return to Generalized Sweep ring
+ *  construction.
  *
  * @domain world-terrain
  */
 
-import type { CaveTopology, CaveTopologyPoint, CaveTopologySegment } from '../../world/caves/caveTopology'
+import type {
+  CaveTopology,
+  CaveTopologyFeature,
+  CaveTopologyPoint,
+  CaveTopologySegment,
+} from '../../world/caves/caveTopology'
 import type { CaveEntrance } from '../../world/caveVolume'
-import { mouthAlong, mouthLateral } from '../../world/caves/mouthCarve'
-import { type NoiseOctave } from '../../world/caves/spikeNoise'
+import { openingDirection } from '../../world/caves/caveOrientation'
+import { CAVE_RNG_SALT, createCaveRandom } from '../../world/caves/caveRng'
+import { smin } from '../../world/caves/caveSdfField'
+import { SURFACE_CLIP_EPS } from '../../world/caves/caveSdfQuery'
+import { mouthAlong } from '../../world/caves/mouthCarve'
+import { createValueNoise2D } from '../../world/caves/spikeNoise'
+
+// ── Cross-section shape ─────────────────────────────────────────────────────
+
+/** Height of the waist (where floor meets ceiling) as a fraction of the axis
+ *  clearance `H`. Below mid-height: real passages have a wider floor bowl and
+ *  a taller dome. */
+export const BETA = 0.3
+/** Floor closure exponent. Higher = flatter core, steeper rim. */
+export const NF = 2.5
+/** Ceiling closure exponent. Deliberately != `NF` so the ceiling is not a
+ *  mirror of the floor even before noise. */
+export const NC = 2
+/** Metres the floor rises / ceiling falls per metre outside the rim. Keeps
+ *  the soft union from bridging two influences that are laterally close but
+ *  vertically far apart. */
+export const KAPPA = 3
+/** Polynomial smooth-union blend (metres of Y) between influences. */
+export const SMOOTH_K = 0.7
+/** Rim band width as a multiple of the wall rise `BETA * H`. 1 / this is the
+ *  average wall gradient across the band. */
+export const RIM_ASPECT = 0.9
+export const RIM_BAND_MIN = 0.35
+/** Capped at `PROXY_MARGIN` so the rounded fringe stays inside the footprint
+ *  radius `productionTopology` already checks overburden against. */
+export const RIM_BAND_MAX = 0.9
+/** Rim coordinate at which the walkable-core clearance guard starts fading. */
+export const U_CORE = 0.25
+/** Rim coordinate at which the clearance guard is fully off, so floor and
+ *  ceiling are free to converge. */
+export const U_FADE = 0.75
+/** Smallest half-width macro noise may leave. */
+export const R_MIN = 0.6
+/** Metres past its own rim an influence keeps being evaluated. Beyond this
+ *  every influence has driven `gap` to `FAR_GAP`, so the far-field constant
+ *  below joins the diverging extension continuously instead of stepping. */
+export const OUTSIDE_REACH = 2
+/** `gap` in rock no influence reaches, and the floor the diverging extension
+ *  is clamped to. One plateau value means `gap` is non-increasing outward
+ *  everywhere, which is what `resolveHeightfieldHorizontal` walks. */
+export const FAR_GAP = -2 * KAPPA * OUTSIDE_REACH
+
+/** Extra clearance above the walk surface the mouth aperture must reach, so
+ *  the entrance actually breaks the surface instead of nearly touching it. */
+export const APERTURE_LIFT = 0.35
+/** Metres the entrance influence reaches outward past the mouth plane. */
+export const ENTRANCE_OUTWARD = 0.8
+/** Metres the entrance influence reaches inward from the mouth plane. */
+export const ENTRANCE_INWARD = 0.9
+
+/** Soft-union radius used when the walk surface is offered as a floor
+ *  candidate at the mouth. */
+const SURFACE_BLEND_K = 0.5
+/** How hard an irrelevant surface candidate is pushed away per metre of rock
+ *  between the cave ceiling and the surface. */
+const SURFACE_BLEND_PUSH = 3
+
+/** Fraction of a shelf/overhang footprint that stays at full strength before
+ *  the edge ramp starts. */
+const FEATURE_FLAT = 0.5
+
+export type NoiseOctave2D = { cellSize: number, amplitude: number }
 
 export type CaveHeightfieldConfig = {
   cellSize: number
   centerlineSpacing: number
-  floorDetail: NoiseOctave
-  ceilingDetail: NoiseOctave
-  boundaryNoise: NoiseOctave
+  floorDetail: NoiseOctave2D
+  ceilingDetail: NoiseOctave2D
+  /** Low-frequency lateral variation of the half-width. */
+  macro: NoiseOctave2D
 }
 
 export const DEFAULT_HEIGHTFIELD_CONFIG: CaveHeightfieldConfig = {
   cellSize: 0.4,
   centerlineSpacing: 0.5,
-  floorDetail: { cellSize: 1.15, amplitude: 0.11 },
-  ceilingDetail: { cellSize: 1.45, amplitude: 0.16 },
-  boundaryNoise: { cellSize: 1.7, amplitude: 0.13 },
+  floorDetail: { cellSize: 1.4, amplitude: 0.12 },
+  ceilingDetail: { cellSize: 2.1, amplitude: 0.3 },
+  macro: { cellSize: 3, amplitude: 0.45 },
 }
 
 export type CaveHeightfieldBounds = {
@@ -34,25 +120,35 @@ export type CaveHeightfieldBounds = {
 }
 
 /**
- * Canonical 2D grid for the experimental heightfield spike. Indexed
- * row-major `iz * width + ix`. Outside cells are explicit in `inside`.
+ * Canonical grid for the experimental heightfield spike.
+ *
+ * Samples live on grid **nodes** (corners), indexed row-major
+ * `iz * nx + ix`, so the mesher can share vertices between neighbouring
+ * cells. `floorY` and `ceilY` are the only authoritative fields;
+ * `surfaceY` and `coreT` are cached derived values (a pure function of the
+ * node position and of the build, respectively) kept so the cave mesher, the
+ * terrain cutout and the metrics all agree exactly.
  *
  * @domain world-terrain
  */
-export type CaveHeightfieldRepresentation = {
+export type CaveHeightfield = {
   bounds: CaveHeightfieldBounds
   originX: number
   originZ: number
   cellSize: number
-  width: number
-  depth: number
-  inside: Uint8Array
-  openSky: Uint8Array
+  /** Node counts, not cell counts. */
+  nx: number
+  nz: number
   floorY: Float32Array
-  ceilingY: Float32Array
-  signedDistance: Float32Array
+  ceilY: Float32Array
+  /** Walk surface (analytic base minus the production mouth recess). */
+  surfaceY: Float32Array
+  /** Smallest rim coordinate across influences: 0 in the walkable core,
+   *  1 at the rim. Cached for the clearance guard, metrics and tests. */
+  coreT: Float32Array
   minClearance: number
   entrance: CaveEntrance
+  caveId: string
   seed: number
 }
 
@@ -60,93 +156,103 @@ export type HeightfieldStation = {
   x: number
   y: number
   z: number
-  radius: number
+  /** Declared *usable* half-width. The rounded rim is added outside it. */
+  coreRadius: number
   height: number
 }
 
-export type HeightfieldBoundaryEdge = {
-  x0: number
-  z0: number
-  x1: number
-  z1: number
-  floorY0: number
-  ceilingY0: number
-  floorY1: number
-  ceilingY1: number
-  inwardX: number
-  inwardZ: number
-  insideIx: number
-  insideIz: number
-  outsideIx: number
-  outsideIz: number
-}
-
 export type HeightfieldSample = {
-  inside: boolean
-  openSky: boolean
   floorY: number
-  ceilingY: number
-  signedDistance: number
+  ceilY: number
+  /** `ceilY - floorY`. Positive inside cave void, negative in rock. */
+  gap: number
+  surfaceY: number
+  coreT: number
+  /** The cave void reaches the walk surface here — mouth / portal. */
+  openSky: boolean
+  /** Beyond the cave-local grid: no cave here and `surfaceY` is a clamped
+   *  border value, not this point's ground. */
+  outsideGrid: boolean
 }
 
 export type CaveHeightfieldBuildResult = {
-  representation: CaveHeightfieldRepresentation
+  heightfield: CaveHeightfield
   representationMs: number
-  insideCellCount: number
+  /** Nodes carrying cave void (`gap > 0`). */
+  caveNodeCount: number
 }
+
+export type SurfaceSampler = (x: number, z: number) => number
 
 function now(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
 }
 
-function hashCaveId(caveId: string): number {
-  let h = 0x811c9dc5 >>> 0
-  for (let i = 0; i < caveId.length; i++) h = Math.imul(h ^ caveId.charCodeAt(i), 0x01000193) >>> 0
-  return h >>> 0
+function smoothstep01(edge0: number, edge1: number, x: number): number {
+  if (edge1 <= edge0) return x >= edge1 ? 1 : 0
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
 }
 
-function hash2(seed: number, ix: number, iz: number): number {
-  let h = seed >>> 0
-  h = Math.imul(h ^ Math.imul(ix | 0, 0x27d4eb2d), 0x85ebca6b) >>> 0
-  h = Math.imul(h ^ Math.imul(iz | 0, 0x165667b1), 0xc2b2ae35) >>> 0
-  return (h / 4294967296) * 2 - 1
+/** Soft maximum built from the production `smin`, so unions never crease. */
+function smax(a: number, b: number, k: number): number {
+  return -smin(-a, -b, k)
 }
 
-function valueNoise2D(seed: number, cellSize: number, x: number, z: number): number {
-  const fx = x / cellSize
-  const fz = z / cellSize
-  const ix = Math.floor(fx)
-  const iz = Math.floor(fz)
-  const tx = fx - ix
-  const tz = fz - iz
-  const sx = tx * tx * (3 - 2 * tx)
-  const sz = tz * tz * (3 - 2 * tz)
-  const n00 = hash2(seed, ix, iz)
-  const n10 = hash2(seed, ix + 1, iz)
-  const n01 = hash2(seed, ix, iz + 1)
-  const n11 = hash2(seed, ix + 1, iz + 1)
-  const nx0 = n00 + (n10 - n00) * sx
-  const nx1 = n01 + (n11 - n01) * sx
-  return nx0 + (nx1 - nx0) * sz
+/**
+ * Complementary superellipse. `0` at the axis with a zero tangent (a
+ * genuinely flat core) and `1` at the rim with a vertical tangent (a
+ * genuinely vertical wall where floor and ceiling meet).
+ *
+ * @domain world-terrain
+ */
+export function closure(u: number, n: number): number {
+  if (u <= 0) return 0
+  if (u >= 1) return 1
+  return 1 - Math.pow(1 - Math.pow(u, n), 1 / n)
 }
 
-function distPointToSegmentXZ(
-  x: number,
-  z: number,
-  ax: number,
-  az: number,
-  bx: number,
-  bz: number,
-): { dist: number, t: number } {
-  const abx = bx - ax
-  const abz = bz - az
-  const lenSq = abx * abx + abz * abz
-  if (lenSq <= 1e-12) {
-    return { dist: Math.hypot(x - ax, z - az), t: 0 }
-  }
-  const t = Math.max(0, Math.min(1, ((x - ax) * abx + (z - az) * abz) / lenSq))
-  return { dist: Math.hypot(x - (ax + abx * t), z - (az + abz * t)), t }
+/** Rim band width for a station of clearance `height`. */
+export function rimBand(height: number): number {
+  return Math.max(RIM_BAND_MIN, Math.min(RIM_BAND_MAX, RIM_ASPECT * BETA * height))
 }
+
+// ── Influences ──────────────────────────────────────────────────────────────
+
+/** A capsule between two consecutive centerline stations. */
+type SegmentInfluence = {
+  kind: 'capsule'
+  a: HeightfieldStation
+  b: HeightfieldStation
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+/** One deterministic chamber lobe: an ellipse in XZ with its own floor
+ *  offset and clearance. */
+type LobeInfluence = {
+  kind: 'lobe'
+  cx: number
+  cz: number
+  cy: number
+  /** Semi-axes of the *usable* ellipse; the rim band is added outside. */
+  ax: number
+  az: number
+  cos: number
+  sin: number
+  height: number
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+type Influence = SegmentInfluence | LobeInfluence
+
+/** Local cross-section state of one influence at one point. */
+type CrossSection = { f: number, c: number, t: number, q: number }
 
 /**
  * Resamples a topology segment centerline at fixed arc length so footprint
@@ -179,7 +285,7 @@ export function resampleSegmentStations(
       x: pts[0]!.x,
       y: pts[0]!.y,
       z: pts[0]!.z,
-      radius: fromNode.targetWidth / 2,
+      coreRadius: fromNode.targetWidth / 2,
       height: fromNode.targetHeight,
     }]
   }
@@ -197,7 +303,7 @@ export function resampleSegmentStations(
       x: a.x + (b.x - a.x) * localT,
       y: a.y + (b.y - a.y) * localT,
       z: a.z + (b.z - a.z) * localT,
-      radius: (fromNode.targetWidth + (toNode.targetWidth - fromNode.targetWidth) * shapeT) / 2,
+      coreRadius: (fromNode.targetWidth + (toNode.targetWidth - fromNode.targetWidth) * shapeT) / 2,
       height: fromNode.targetHeight + (toNode.targetHeight - fromNode.targetHeight) * shapeT,
     }
   }
@@ -208,14 +314,254 @@ export function resampleSegmentStations(
   return out
 }
 
-function nodeStations(topology: CaveTopology): HeightfieldStation[] {
-  return topology.nodes.map((n) => ({
-    x: n.position.x,
-    y: n.position.y,
-    z: n.position.z,
-    radius: n.targetWidth / 2,
-    height: n.targetHeight,
-  }))
+function capsuleInfluence(a: HeightfieldStation, b: HeightfieldStation): SegmentInfluence {
+  const reach = Math.max(a.coreRadius + rimBand(a.height), b.coreRadius + rimBand(b.height))
+    + OUTSIDE_REACH
+  return {
+    kind: 'capsule',
+    a,
+    b,
+    minX: Math.min(a.x, b.x) - reach,
+    maxX: Math.max(a.x, b.x) + reach,
+    minZ: Math.min(a.z, b.z) - reach,
+    maxZ: Math.max(a.z, b.z) + reach,
+  }
+}
+
+/**
+ * Entrance influence derived from `topology.entrance` — a short capsule
+ * straddling the mouth plane, sized so the aperture ceiling clears the walk
+ * surface by `APERTURE_LIFT`. This is what makes the mouth a real opening
+ * (`openSky`) instead of a passage that stops just under the hillside; it is
+ * the heightfield counterpart of `applyMouthGeometryToField`.
+ *
+ * @domain world-terrain
+ */
+export function buildEntranceInfluence(
+  entrance: CaveEntrance,
+  walkSurfaceAt: SurfaceSampler,
+): SegmentInfluence {
+  const out = openingDirection(entrance.yaw)
+  const outer = {
+    x: entrance.x + out.dx * ENTRANCE_OUTWARD,
+    z: entrance.z + out.dz * ENTRANCE_OUTWARD,
+  }
+  const inner = {
+    x: entrance.x - out.dx * ENTRANCE_INWARD,
+    z: entrance.z - out.dz * ENTRANCE_INWARD,
+  }
+  const radius = entrance.width / 2
+  const liftedHeight = (x: number, z: number): number =>
+    Math.max(entrance.height, walkSurfaceAt(x, z) + APERTURE_LIFT - entrance.y)
+  const a: HeightfieldStation = {
+    x: outer.x,
+    y: entrance.y,
+    z: outer.z,
+    coreRadius: radius,
+    height: liftedHeight(outer.x, outer.z),
+  }
+  const b: HeightfieldStation = {
+    x: inner.x,
+    y: entrance.y,
+    z: inner.z,
+    coreRadius: radius,
+    height: liftedHeight(inner.x, inner.z),
+  }
+  return capsuleInfluence(a, b)
+}
+
+/**
+ * Deterministic chamber lobes. A chamber is the smooth union of 3–5
+ * overlapping ellipses rather than one disc, which changes the *silhouette*
+ * (bays, pinches, an asymmetric long axis) instead of merely wobbling a
+ * circle's boundary.
+ *
+ * @domain world-terrain
+ */
+export function buildChamberLobes(topology: CaveTopology): LobeInfluence[] {
+  const rng = createCaveRandom(topology.caveId, CAVE_RNG_SALT.lobes)
+  const lobes: LobeInfluence[] = []
+  for (const node of topology.nodes) {
+    if (node.kind !== 'chamber' && node.kind !== 'widening') continue
+    const rc = node.targetWidth / 2
+    const count = 3 + Math.floor(rng() * 3)
+    for (let j = 0; j < count; j++) {
+      const theta = (j / count) * Math.PI * 2 + (rng() - 0.5) * 0.9
+      const off = (0.15 + rng() * 0.3) * rc
+      // Semi-axes stay <= rc so the union's reach matches the node's declared
+      // width plus the rim band, which is what `minSurfaceOverFootprint`
+      // (width / 2 + PROXY_MARGIN) was checked against.
+      const ax = (0.5 + rng() * 0.3) * rc
+      const az = (0.5 + rng() * 0.3) * rc
+      const phi = rng() * Math.PI
+      const dy = (rng() - 0.5) * 0.8
+      const hf = 0.8 + rng() * 0.35
+      const cx = node.position.x + Math.cos(theta) * off
+      const cz = node.position.z + Math.sin(theta) * off
+      const height = node.targetHeight * hf
+      const reach = Math.max(ax, az) + rimBand(height) + OUTSIDE_REACH
+      lobes.push({
+        kind: 'lobe',
+        cx,
+        cz,
+        cy: node.position.y + dy,
+        ax,
+        az,
+        cos: Math.cos(phi),
+        sin: Math.sin(phi),
+        height,
+        minX: cx - reach,
+        maxX: cx + reach,
+        minZ: cz - reach,
+        maxZ: cz + reach,
+      })
+    }
+  }
+  return lobes
+}
+
+function distPointToSegmentXZ(
+  x: number,
+  z: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): { dist: number, t: number } {
+  const abx = bx - ax
+  const abz = bz - az
+  const lenSq = abx * abx + abz * abz
+  if (lenSq <= 1e-12) return { dist: Math.hypot(x - ax, z - az), t: 0 }
+  const t = Math.max(0, Math.min(1, ((x - ax) * abx + (z - az) * abz) / lenSq))
+  return { dist: Math.hypot(x - (ax + abx * t), z - (az + abz * t)), t }
+}
+
+/**
+ * Cross-section of one influence at lateral distance `d`.
+ *
+ * ```text
+ *            ceiling apex A+H
+ *                 ___----___
+ *             _--´          `--_       ceiling uses q = d / rimRadius
+ *           /                    \
+ *   waist  |                      |    Yc = A + BETA*H   <- floor meets ceiling
+ *           \_                  _/
+ *             `-__          __-´       floor uses t = (d - coreRadius) / band
+ *   floor axis A  `--------´           flat across the declared usable width
+ * ```
+ *
+ * Splitting the two coordinates is what keeps the rounding from eating the
+ * declared passage width: the floor is flat out to `coreRadius` and only
+ * curves inside the rim band, while the ceiling domes across the whole
+ * section. Both reach `1` at the same `rimRadius`, so they always converge.
+ *
+ * @domain world-terrain
+ */
+export function crossSectionAt(
+  d: number,
+  coreRadius: number,
+  axisY: number,
+  height: number,
+): CrossSection {
+  const band = rimBand(height)
+  const rim = coreRadius + band
+  const waist = axisY + BETA * height
+  if (d >= rim) {
+    // Clamped to the far-field plateau: a capsule's bounding box can reach
+    // further than `OUTSIDE_REACH` past the *local* rim (its box is sized by
+    // the widest station), and without the clamp `gap` would dip below
+    // `FAR_GAP` there and then rise again at the box edge.
+    const outside = Math.min(KAPPA * (d - rim), KAPPA * OUTSIDE_REACH)
+    return { f: waist + outside, c: waist - outside, t: 1, q: 1 }
+  }
+  const t = Math.max(0, (d - coreRadius) / band)
+  const q = d / rim
+  return {
+    f: axisY + BETA * height * closure(t, NF),
+    c: axisY + height - (1 - BETA) * height * closure(q, NC),
+    t,
+    q,
+  }
+}
+
+function influenceCrossSection(
+  inf: Influence,
+  x: number,
+  z: number,
+  macroOffset: number,
+): CrossSection | null {
+  if (x < inf.minX || x > inf.maxX || z < inf.minZ || z > inf.maxZ) return null
+  if (inf.kind === 'capsule') {
+    const { dist, t } = distPointToSegmentXZ(x, z, inf.a.x, inf.a.z, inf.b.x, inf.b.z)
+    const coreRadius = inf.a.coreRadius + (inf.b.coreRadius - inf.a.coreRadius) * t
+    const axisY = inf.a.y + (inf.b.y - inf.a.y) * t
+    const height = inf.a.height + (inf.b.height - inf.a.height) * t
+    const radius = Math.max(R_MIN, Math.max(0.7 * coreRadius, coreRadius + macroOffset))
+    return crossSectionAt(dist, radius, axisY, height)
+  }
+  const px = x - inf.cx
+  const pz = z - inf.cz
+  const lx = px * inf.cos + pz * inf.sin
+  const lz = -px * inf.sin + pz * inf.cos
+  const rEff = Math.min(inf.ax, inf.az)
+  const uNorm = Math.hypot(lx / inf.ax, lz / inf.az)
+  // Metric lateral distance for an ellipse, same normalise-then-rescale
+  // convention `ellipsoidSDF` uses in the production SDF field.
+  const coreRadius = Math.max(R_MIN, Math.max(0.7 * rEff, rEff + macroOffset))
+  return crossSectionAt(uNorm * rEff, coreRadius, inf.cy, inf.height)
+}
+
+// ── Features ────────────────────────────────────────────────────────────────
+
+type FeatureFootprint = {
+  kind: CaveTopologyFeature['kind']
+  cx: number
+  cz: number
+  ax: number
+  az: number
+  /** Shelf: the ledge's top face. Overhang: metres of ceiling dip. */
+  amount: number
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+function featureFootprints(features: readonly CaveTopologyFeature[]): FeatureFootprint[] {
+  return features.map((f) => {
+    const ax = f.size.width / 2
+    const az = f.size.depth / 2
+    return {
+      kind: f.kind,
+      cx: f.position.x,
+      cz: f.position.z,
+      ax,
+      az,
+      amount: f.kind === 'shelf' ? f.position.y + f.size.height / 2 : f.size.height,
+      minX: f.position.x - ax,
+      maxX: f.position.x + ax,
+      minZ: f.position.z - az,
+      maxZ: f.position.z + az,
+    }
+  })
+}
+
+/** 1 at the centre, 0 at the footprint rim, C¹ at both ends and with a
+ *  bounded edge gradient so a ledge stays climbable rather than becoming a
+ *  single-cell cliff. */
+function featureLift(f: FeatureFootprint, x: number, z: number): number {
+  if (x < f.minX || x > f.maxX || z < f.minZ || z > f.maxZ) return 0
+  const r = Math.hypot((x - f.cx) / f.ax, (z - f.cz) / f.az)
+  if (r >= 1) return 0
+  return 1 - smoothstep01(FEATURE_FLAT, 1, r)
+}
+
+// ── Build ───────────────────────────────────────────────────────────────────
+
+function hashCaveId(caveId: string): number {
+  let h = 0x811c9dc5 >>> 0
+  for (let i = 0; i < caveId.length; i++) h = Math.imul(h ^ caveId.charCodeAt(i), 0x01000193) >>> 0
+  return h >>> 0
 }
 
 function topologyBounds(topology: CaveTopology, margin: number): CaveHeightfieldBounds {
@@ -229,349 +575,251 @@ function topologyBounds(topology: CaveTopology, margin: number): CaveHeightfield
     minZ = Math.min(minZ, p.z - r)
     maxZ = Math.max(maxZ, p.z + r)
   }
-  for (const n of topology.nodes) expand(n.position, Math.max(n.targetWidth, 2) / 2 + margin)
+  for (const n of topology.nodes) {
+    expand(n.position, Math.max(n.targetWidth, 2) / 2 + rimBand(n.targetHeight) + margin)
+  }
   for (const seg of topology.segments) for (const p of seg.centerline) expand(p, 2 + margin)
+  const out = openingDirection(topology.entrance.yaw)
+  expand(
+    {
+      x: topology.entrance.x + out.dx * ENTRANCE_OUTWARD,
+      y: topology.entrance.y,
+      z: topology.entrance.z + out.dz * ENTRANCE_OUTWARD,
+    },
+    topology.entrance.width / 2 + RIM_BAND_MAX + margin,
+  )
   return { minX, maxX, minZ, maxZ }
 }
 
-function nearestCoverage(
-  x: number,
-  z: number,
-  capsules: readonly { a: HeightfieldStation, b: HeightfieldStation }[],
-  discs: readonly HeightfieldStation[],
-): { sd: number, floorY: number, height: number } {
-  let bestSd = Infinity
-  let floorY = 0
-  let height = 0
-  for (const { a, b } of capsules) {
-    const { dist, t } = distPointToSegmentXZ(x, z, a.x, a.z, b.x, b.z)
-    const radius = a.radius + (b.radius - a.radius) * t
-    const sd = dist - radius
-    if (sd < bestSd) {
-      bestSd = sd
-      floorY = a.y + (b.y - a.y) * t
-      height = a.height + (b.height - a.height) * t
-    }
-  }
-  for (const d of discs) {
-    const sd = Math.hypot(x - d.x, z - d.z) - d.radius
-    if (sd < bestSd) {
-      bestSd = sd
-      floorY = d.y
-      height = d.height
-    }
-  }
-  return { sd: bestSd, floorY, height }
-}
-
-function isDoorwayOutwardEdge(
-  entrance: CaveEntrance,
-  midX: number,
-  midZ: number,
-  outsideX: number,
-  outsideZ: number,
-): boolean {
-  const alongOut = mouthAlong(outsideX, outsideZ, entrance)
-  const alongMid = mouthAlong(midX, midZ, entrance)
-  if (alongOut <= alongMid) return false
-  if (alongOut <= -0.15) return false
-  return Math.abs(mouthLateral(midX, midZ, entrance)) < entrance.width * 0.55
-}
-
-function cellCenter(rep: Pick<CaveHeightfieldRepresentation, 'originX' | 'originZ' | 'cellSize'>, ix: number, iz: number): { x: number, z: number } {
-  return {
-    x: rep.originX + (ix + 0.5) * rep.cellSize,
-    z: rep.originZ + (iz + 0.5) * rep.cellSize,
-  }
-}
-
-function inGrid(rep: Pick<CaveHeightfieldRepresentation, 'width' | 'depth'>, ix: number, iz: number): boolean {
-  return ix >= 0 && iz >= 0 && ix < rep.width && iz < rep.depth
-}
-
-function cellIndex(width: number, ix: number, iz: number): number {
-  return iz * width + ix
-}
-
 /**
- * Builds the experimental heightfield representation from `topology`.
- * Deterministic for the same topology + config. Three.js-free.
+ * Builds the experimental heightfield from `topology`. Deterministic for the
+ * same `(topology, config)`; Three.js-free.
+ *
+ * `walkSurfaceAt` is the rendered/walkable ground (analytic base minus the
+ * production mouth recess). It is used for two things only: sizing the mouth
+ * aperture, and offering the surface as a floor candidate near the mouth so
+ * the cave floor and the terrain are one continuous surface there. Deep
+ * inside, the surface candidate is pushed out of range and the floor follows
+ * the topology centerline alone — the hillside overhead never leaks into the
+ * cave floor.
  *
  * @domain world-terrain
  */
-export function buildCaveHeightfieldRepresentation(
+export function buildCaveHeightfield(
   topology: CaveTopology,
+  walkSurfaceAt: SurfaceSampler,
   config: CaveHeightfieldConfig = DEFAULT_HEIGHTFIELD_CONFIG,
 ): CaveHeightfieldBuildResult {
   const t0 = now()
   const seed = hashCaveId(topology.caveId) ^ (topology.seed >>> 0)
-  const margin = Math.max(2.2, config.cellSize * 3)
-  const rawBounds = topologyBounds(topology, margin)
-  const originX = Math.floor(rawBounds.minX / config.cellSize) * config.cellSize
-  const originZ = Math.floor(rawBounds.minZ / config.cellSize) * config.cellSize
-  const width = Math.max(2, Math.ceil((rawBounds.maxX - originX) / config.cellSize) + 1)
-  const depth = Math.max(2, Math.ceil((rawBounds.maxZ - originZ) / config.cellSize) + 1)
-  const bounds: CaveHeightfieldBounds = {
-    minX: originX,
-    maxX: originX + width * config.cellSize,
-    minZ: originZ,
-    maxZ: originZ + depth * config.cellSize,
-  }
+  const margin = Math.max(1.5, config.cellSize * 3)
+  const raw = topologyBounds(topology, margin)
+  const originX = Math.floor(raw.minX / config.cellSize) * config.cellSize
+  const originZ = Math.floor(raw.minZ / config.cellSize) * config.cellSize
+  const nx = Math.max(2, Math.ceil((raw.maxX - originX) / config.cellSize) + 1)
+  const nz = Math.max(2, Math.ceil((raw.maxZ - originZ) / config.cellSize) + 1)
 
-  const capsules: { a: HeightfieldStation, b: HeightfieldStation }[] = []
+  const influences: Influence[] = [buildEntranceInfluence(topology.entrance, walkSurfaceAt)]
   for (const seg of topology.segments) {
     const stations = resampleSegmentStations(topology, seg, config.centerlineSpacing)
-    for (let i = 0; i < stations.length - 1; i++) capsules.push({ a: stations[i]!, b: stations[i + 1]! })
+    for (let i = 0; i < stations.length - 1; i++) {
+      influences.push(capsuleInfluence(stations[i]!, stations[i + 1]!))
+    }
   }
-  const discs = nodeStations(topology)
+  for (const lobe of buildChamberLobes(topology)) influences.push(lobe)
+  const features = featureFootprints(topology.features)
 
-  const count = width * depth
-  const inside = new Uint8Array(count)
-  const openSky = new Uint8Array(count)
+  const macroNoise = createValueNoise2D(seed ^ CAVE_RNG_SALT.macro, config.macro.cellSize)
+  const floorNoise = createValueNoise2D(seed ^ CAVE_RNG_SALT.floorDetail, config.floorDetail.cellSize)
+  const ceilNoise = createValueNoise2D(seed ^ CAVE_RNG_SALT.ceilDetail, config.ceilingDetail.cellSize)
+
+  const count = nx * nz
   const floorY = new Float32Array(count)
-  const ceilingY = new Float32Array(count)
-  const signedDistance = new Float32Array(count)
+  const ceilY = new Float32Array(count)
+  const surfaceY = new Float32Array(count)
+  const coreT = new Float32Array(count)
+  let caveNodeCount = 0
 
-  const floorSeed = seed ^ 0x11111111
-  const ceilSeed = seed ^ 0x22222222
-  const boundarySeed = seed ^ 0x33333333
-  const halfW = topology.entrance.width * 0.55
+  for (let iz = 0; iz < nz; iz++) {
+    const z = originZ + iz * config.cellSize
+    for (let ix = 0; ix < nx; ix++) {
+      const x = originX + ix * config.cellSize
+      const i = iz * nx + ix
+      const surf = walkSurfaceAt(x, z)
+      surfaceY[i] = surf
 
-  for (let iz = 0; iz < depth; iz++) {
-    for (let ix = 0; ix < width; ix++) {
-      const x = originX + (ix + 0.5) * config.cellSize
-      const z = originZ + (iz + 0.5) * config.cellSize
-      const coverage = nearestCoverage(x, z, capsules, discs)
-      const boundaryN = valueNoise2D(boundarySeed, config.boundaryNoise.cellSize, x, z) * config.boundaryNoise.amplitude
-      const nearEdge = coverage.sd > -0.9 && coverage.sd < 0.9
-      const sd = coverage.sd + (nearEdge ? boundaryN : 0)
-      const i = cellIndex(width, ix, iz)
-      signedDistance[i] = sd
-      const isInside = sd < 0
-      inside[i] = isInside ? 1 : 0
-      const along = mouthAlong(x, z, topology.entrance)
-      const lateral = mouthLateral(x, z, topology.entrance)
-      openSky[i] = isInside && along > -0.45 && Math.abs(lateral) < halfW ? 1 : 0
-      const floorN = valueNoise2D(floorSeed, config.floorDetail.cellSize, x, z) * config.floorDetail.amplitude
-      const ceilN = valueNoise2D(ceilSeed, config.ceilingDetail.cellSize, x + 19.1, z - 7.3) * config.ceilingDetail.amplitude
-      let fy = coverage.floorY + (isInside ? floorN : 0)
-      let cy = coverage.floorY + coverage.height + (isInside ? ceilN : 0)
-      if (cy - fy < topology.minClearance) {
-        const mid = (fy + cy) * 0.5
-        fy = mid - topology.minClearance * 0.5
-        cy = mid + topology.minClearance * 0.5
+      // Macro variation tapers to zero across the mouth so the aperture
+      // stays a clean, predictable opening.
+      const mouthTaper = smoothstep01(-1.5, -0.2, -mouthAlong(x, z, topology.entrance))
+      const macroOffset = macroNoise(x, z) * config.macro.amplitude * mouthTaper
+
+      let f = Infinity
+      let c = -Infinity
+      let tMin = 1
+      let qMin = 1
+      for (const inf of influences) {
+        const cs = influenceCrossSection(inf, x, z, macroOffset)
+        if (!cs) continue
+        f = f === Infinity ? cs.f : smin(f, cs.f, SMOOTH_K)
+        c = c === -Infinity ? cs.c : smax(c, cs.c, SMOOTH_K)
+        if (cs.t < tMin) tMin = cs.t
+        if (cs.q < qMin) qMin = cs.q
       }
-      floorY[i] = fy
-      ceilingY[i] = cy
+      if (f === Infinity) {
+        // No influence reaches this node: deep rock, recorded as a closed
+        // column rather than as a separate mask. `FAR_GAP` continues the
+        // diverging extension, so `gap` keeps decreasing outward and the
+        // containment gradient never points the wrong way.
+        floorY[i] = surf - FAR_GAP * 0.5
+        ceilY[i] = surf + FAR_GAP * 0.5
+        coreT[i] = 1
+        continue
+      }
+
+      // The walk surface is a floor candidate, but only where the cave void
+      // actually reaches it. Rock between the cave ceiling and the surface
+      // pushes the candidate out of smin's range, so a hillside 12 m above a
+      // tunnel can never become that tunnel's floor.
+      const irrelevance = Math.max(0, (surf - SURFACE_CLIP_EPS) - c)
+      f = smin(f, surf + SURFACE_BLEND_PUSH * irrelevance, SURFACE_BLEND_K)
+
+      // Features: shelf raises the floor (an elevated floor region adjacent
+      // in XZ to the lower floor — still one floorY per column); overhang
+      // dips the ceiling. Both fade out across the rim band so they can never
+      // break the floor/ceiling weld.
+      for (const feat of features) {
+        const lift = featureLift(feat, x, z)
+        if (lift <= 0) continue
+        if (feat.kind === 'shelf') {
+          const rise = Math.max(0, feat.amount - f) * lift * (1 - closure(tMin, NF))
+          f += rise
+        } else {
+          c -= feat.amount * lift * (1 - closure(qMin, NC))
+        }
+      }
+
+      f += config.floorDetail.amplitude * floorNoise(x, z) * (1 - closure(tMin, NF))
+      c += config.ceilingDetail.amplitude * ceilNoise(x, z) * (1 - closure(qMin, NC))
+
+      // Walkable-core clearance only: the rim must stay free to converge.
+      const required = topology.minClearance * (1 - smoothstep01(U_CORE, U_FADE, tMin))
+      if (required > 0) c = smax(c, f + required, 0.25)
+
+      floorY[i] = f
+      ceilY[i] = c
+      coreT[i] = tMin
+      if (c - f > 0) caveNodeCount++
     }
   }
 
-  const representation: CaveHeightfieldRepresentation = {
-    bounds,
+  const heightfield: CaveHeightfield = {
+    bounds: {
+      minX: originX,
+      maxX: originX + (nx - 1) * config.cellSize,
+      minZ: originZ,
+      maxZ: originZ + (nz - 1) * config.cellSize,
+    },
     originX,
     originZ,
     cellSize: config.cellSize,
-    width,
-    depth,
-    inside,
-    openSky,
+    nx,
+    nz,
     floorY,
-    ceilingY,
-    signedDistance,
+    ceilY,
+    surfaceY,
+    coreT,
     minClearance: topology.minClearance,
     entrance: topology.entrance,
+    caveId: topology.caveId,
     seed: topology.seed,
   }
 
-  let insideCellCount = 0
-  for (let i = 0; i < count; i++) if (inside[i]) insideCellCount++
-
-  return {
-    representation,
-    representationMs: now() - t0,
-    insideCellCount,
-  }
+  return { heightfield, representationMs: now() - t0, caveNodeCount }
 }
 
-const NEIGHBORS: readonly { dx: number, dz: number }[] = [
-  { dx: 1, dz: 0 },
-  { dx: -1, dz: 0 },
-  { dx: 0, dz: 1 },
-  { dx: 0, dz: -1 },
-]
+// ── Sampling ────────────────────────────────────────────────────────────────
 
-/**
- * Orthogonal inside→outside grid edges. Each boundary edge is owned once by
- * its inside cell. Doorway-outward edges are omitted so the mouth stays open.
- *
- * @domain world-terrain
- */
-export function extractHeightfieldBoundaryEdges(
-  representation: CaveHeightfieldRepresentation,
-): HeightfieldBoundaryEdge[] {
-  const { width, depth, cellSize, originX, originZ, inside, floorY, ceilingY, entrance } = representation
-  const edges: HeightfieldBoundaryEdge[] = []
-  for (let iz = 0; iz < depth; iz++) {
-    for (let ix = 0; ix < width; ix++) {
-      const i = cellIndex(width, ix, iz)
-      if (!inside[i]) continue
-      const here = cellCenter(representation, ix, iz)
-      for (const { dx, dz } of NEIGHBORS) {
-        const nix = ix + dx
-        const niz = iz + dz
-        const outside = !inGrid(representation, nix, niz) || !inside[cellIndex(width, nix, niz)]
-        if (!outside) continue
-        const neighbor = {
-          x: originX + (nix + 0.5) * cellSize,
-          z: originZ + (niz + 0.5) * cellSize,
-        }
-        const midX = (here.x + neighbor.x) * 0.5
-        const midZ = (here.z + neighbor.z) * 0.5
-        if (isDoorwayOutwardEdge(entrance, midX, midZ, neighbor.x, neighbor.z)) continue
-
-        const hx = originX + ix * cellSize
-        const hz = originZ + iz * cellSize
-        let x0: number
-        let z0: number
-        let x1: number
-        let z1: number
-        if (dx === 1) {
-          x0 = hx + cellSize
-          x1 = hx + cellSize
-          z0 = hz
-          z1 = hz + cellSize
-        } else if (dx === -1) {
-          x0 = hx
-          x1 = hx
-          z0 = hz + cellSize
-          z1 = hz
-        } else if (dz === 1) {
-          x0 = hx + cellSize
-          x1 = hx
-          z0 = hz + cellSize
-          z1 = hz + cellSize
-        } else {
-          x0 = hx
-          x1 = hx + cellSize
-          z0 = hz
-          z1 = hz
-        }
-        const inwardX = -dx
-        const inwardZ = -dz
-        edges.push({
-          x0,
-          z0,
-          x1,
-          z1,
-          floorY0: floorY[i]!,
-          ceilingY0: ceilingY[i]!,
-          floorY1: floorY[i]!,
-          ceilingY1: ceilingY[i]!,
-          inwardX,
-          inwardZ,
-          insideIx: ix,
-          insideIz: iz,
-          outsideIx: nix,
-          outsideIz: niz,
-        })
-      }
-    }
-  }
-  return edges
+export function heightfieldNodeIndex(field: CaveHeightfield, ix: number, iz: number): number {
+  return iz * field.nx + ix
 }
 
-function sampleGridScalar(
-  grid: Float32Array,
-  width: number,
-  depth: number,
+export function heightfieldNodePosition(
+  field: CaveHeightfield,
   ix: number,
   iz: number,
-  outside: number,
-): number {
-  if (ix < 0 || iz < 0 || ix >= width || iz >= depth) return outside
-  return grid[cellIndex(width, ix, iz)]!
+): { x: number, z: number } {
+  return { x: field.originX + ix * field.cellSize, z: field.originZ + iz * field.cellSize }
 }
 
-function bilerp(
-  grid: Float32Array,
-  width: number,
-  depth: number,
-  gx: number,
-  gz: number,
-  outside: number,
-): number {
+/** `gap` at a node. Positive inside cave void. */
+export function heightfieldNodeGap(field: CaveHeightfield, i: number): number {
+  return field.ceilY[i]! - field.floorY[i]!
+}
+
+/** The cave void reaches the walk surface at this node — mouth / portal. */
+export function heightfieldNodeOpenSky(field: CaveHeightfield, i: number): boolean {
+  return field.ceilY[i]! >= field.surfaceY[i]! - SURFACE_CLIP_EPS
+}
+
+function clampedGrid(field: CaveHeightfield, x: number, z: number): { gx: number, gz: number, out: number } {
+  const rawGx = (x - field.originX) / field.cellSize
+  const rawGz = (z - field.originZ) / field.cellSize
+  const maxGx = field.nx - 1.001
+  const maxGz = field.nz - 1.001
+  const gx = Math.max(0, Math.min(maxGx, rawGx))
+  const gz = Math.max(0, Math.min(maxGz, rawGz))
+  const out = Math.hypot((rawGx - gx) * field.cellSize, (rawGz - gz) * field.cellSize)
+  return { gx, gz, out }
+}
+
+function bilerp(grid: Float32Array, nx: number, gx: number, gz: number): number {
   const x0 = Math.floor(gx)
   const z0 = Math.floor(gz)
   const tx = gx - x0
   const tz = gz - z0
-  const n00 = sampleGridScalar(grid, width, depth, x0, z0, outside)
-  const n10 = sampleGridScalar(grid, width, depth, x0 + 1, z0, outside)
-  const n01 = sampleGridScalar(grid, width, depth, x0, z0 + 1, outside)
-  const n11 = sampleGridScalar(grid, width, depth, x0 + 1, z0 + 1, outside)
+  const i00 = z0 * nx + x0
+  const n00 = grid[i00]!
+  const n10 = grid[i00 + 1]!
+  const n01 = grid[i00 + nx]!
+  const n11 = grid[i00 + nx + 1]!
   return n00 * (1 - tx) * (1 - tz) + n10 * tx * (1 - tz) + n01 * (1 - tx) * tz + n11 * tx * tz
 }
 
-function sampleMask(mask: Uint8Array, width: number, depth: number, ix: number, iz: number): number {
-  if (ix < 0 || iz < 0 || ix >= width || iz >= depth) return 0
-  return mask[cellIndex(width, ix, iz)]!
-}
-
 /**
- * Bilinear query against the heightfield grid. Outside the footprint
- * `inside` is false; floor/ceiling still report nearest-centerline heights.
+ * Bilinear query against the heightfield. Outside the grid the sample is
+ * pushed closed proportionally to the distance, so `gap` stays negative
+ * rather than clamping to the border value.
  *
  * @domain world-terrain
  */
-export function sampleHeightfieldAt(
-  representation: CaveHeightfieldRepresentation,
-  x: number,
-  z: number,
-): HeightfieldSample {
-  const maxGx = Math.max(0, representation.width - 1.001)
-  const maxGz = Math.max(0, representation.depth - 1.001)
-  const rawGx = (x - representation.originX) / representation.cellSize - 0.5
-  const rawGz = (z - representation.originZ) / representation.cellSize - 0.5
-  const gx = Math.max(0, Math.min(maxGx, rawGx))
-  const gz = Math.max(0, Math.min(maxGz, rawGz))
-  const extra = Math.hypot(
-    (rawGx - gx) * representation.cellSize,
-    (rawGz - gz) * representation.cellSize,
-  )
-  const sd = bilerp(
-    representation.signedDistance,
-    representation.width,
-    representation.depth,
-    gx,
-    gz,
-    8,
-  ) + extra
-  const floorY = bilerp(representation.floorY, representation.width, representation.depth, gx, gz, 0)
-  const ceilingY = bilerp(representation.ceilingY, representation.width, representation.depth, gx, gz, 0)
-  const x0 = Math.floor(gx)
-  const z0 = Math.floor(gz)
-  const openSky =
-    sampleMask(representation.openSky, representation.width, representation.depth, x0, z0)
-    + sampleMask(representation.openSky, representation.width, representation.depth, x0 + 1, z0)
-    + sampleMask(representation.openSky, representation.width, representation.depth, x0, z0 + 1)
-    + sampleMask(representation.openSky, representation.width, representation.depth, x0 + 1, z0 + 1)
-    > 0
+export function sampleHeightfieldAt(field: CaveHeightfield, x: number, z: number): HeightfieldSample {
+  const { gx, gz, out } = clampedGrid(field, x, z)
+  const floor = bilerp(field.floorY, field.nx, gx, gz)
+  const ceil = bilerp(field.ceilY, field.nx, gx, gz)
+  const surf = bilerp(field.surfaceY, field.nx, gx, gz)
+  const coreT = out > 0 ? 1 : bilerp(field.coreT, field.nx, gx, gz)
+  const shrink = KAPPA * out
+  const floorY = floor + shrink
+  const ceilY = ceil - shrink
   return {
-    inside: sd < 0,
-    openSky: openSky && sd < 0.35,
     floorY,
-    ceilingY,
-    signedDistance: sd,
+    ceilY,
+    gap: ceilY - floorY,
+    surfaceY: surf,
+    coreT,
+    openSky: out <= 0 && ceilY >= surf - SURFACE_CLIP_EPS,
+    outsideGrid: out > 0,
   }
 }
 
-export function heightfieldCellIndex(representation: CaveHeightfieldRepresentation, ix: number, iz: number): number {
-  return cellIndex(representation.width, ix, iz)
-}
-
-export function heightfieldCellCenter(
-  representation: CaveHeightfieldRepresentation,
-  ix: number,
-  iz: number,
-): { x: number, z: number } {
-  return cellCenter(representation, ix, iz)
+/** Gradient of `gap` in XZ — the push-out direction for lateral containment. */
+export function heightfieldGapGradient(
+  field: CaveHeightfield,
+  x: number,
+  z: number,
+): { gx: number, gz: number } {
+  const e = Math.max(0.08, field.cellSize * 0.5)
+  const dx = sampleHeightfieldAt(field, x + e, z).gap - sampleHeightfieldAt(field, x - e, z).gap
+  const dz = sampleHeightfieldAt(field, x, z + e).gap - sampleHeightfieldAt(field, x, z - e).gap
+  return { gx: dx / (2 * e), gz: dz / (2 * e) }
 }

@@ -2,7 +2,7 @@
 
 **Created:** 2026-09-10  
 **Status:** `verification needed` 🔍  
-**Implemented at:** 2026-09-10 18:45  
+**Implemented at:** 2026-09-11 (iteration 2 — rounded 2.5D representation)  
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **Domain:** `world-terrain`  
@@ -10,6 +10,16 @@
 **Subdomains:** `terrain` `rendering`  
 **Tags:** `caves` `heightfield` `prototype` `performance`  
 **Roadmap:** -
+
+> **Superseded for the target representation (2026-09-11).** §4, §7, §8 i §9
+> tego planu opisują model `binary footprint + flat floor + flat ceiling +
+> explicit boundary walls`. Pierwsza implementacja pokazała, że to jest
+> właśnie wada, a nie cel. Docelową reprezentację definiuje teraz
+> `docs/design/caves/06-heightfield-cave-representation-design.md`
+> (`floorY` + `ceilingY`, footprint = `gap > 0`, ściany powstają przez
+> zbieżność floor/ceiling). Cel spike'a (§1–§3), harness (§5, §6, §10),
+> metryki (§11), fixtures (§12), ograniczenia 2.5D (§13), non-goals (§14),
+> guardraile (§15) i kryteria decyzji (§18) pozostają aktualne.
 
 ## 1. Cel
 

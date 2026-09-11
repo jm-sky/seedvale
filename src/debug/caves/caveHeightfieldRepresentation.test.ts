@@ -1,175 +1,427 @@
 import { describe, expect, it } from 'vitest'
+import { STEP_DOWN_MAX } from '../../player/verticalMotion'
+import { SLOPE_MAX_WALKABLE_DEG } from '../../terrain/slopeConstraint'
+import { SURFACE_CLIP_EPS } from '../../world/caves/caveSdfQuery'
 import {
   buildCaveHeightfieldFixture,
   CAVE_HEIGHTFIELD_ENTRANCE,
+  CAVE_HEIGHTFIELD_FIXTURE_IDS,
+  caveHeightfieldWalkSurfaceAt,
 } from './caveHeightfieldFixtures'
 import { buildHeightfieldMeshBuffers } from './caveHeightfieldMesh'
 import {
-  buildCaveHeightfieldRepresentation,
+  buildCaveHeightfield,
+  type CaveHeightfield,
+  closure,
+  crossSectionAt,
   DEFAULT_HEIGHTFIELD_CONFIG,
-  extractHeightfieldBoundaryEdges,
-  heightfieldCellCenter,
+  heightfieldNodeGap,
+  heightfieldNodeOpenSky,
+  NC,
+  NF,
+  R_MIN,
   sampleHeightfieldAt,
+  U_CORE,
 } from './caveHeightfieldRepresentation'
 
 const TEST_CONFIG = { ...DEFAULT_HEIGHTFIELD_CONFIG, cellSize: 0.5 }
+const walk = caveHeightfieldWalkSurfaceAt
 
-function arraysEqual(a: Float32Array | Uint8Array, b: Float32Array | Uint8Array): boolean {
+function build(id: (typeof CAVE_HEIGHTFIELD_FIXTURE_IDS)[number]): CaveHeightfield {
+  return buildCaveHeightfield(buildCaveHeightfieldFixture(id), walk, TEST_CONFIG).heightfield
+}
+
+function arraysEqual(a: Float32Array, b: Float32Array): boolean {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
   return true
 }
 
-function nearestInsideCell(
-  representation: ReturnType<typeof buildCaveHeightfieldRepresentation>['representation'],
-  x: number,
-  z: number,
-): { ix: number, iz: number } | null {
-  let best: { ix: number, iz: number, dist: number } | null = null
-  for (let iz = 0; iz < representation.depth; iz++) {
-    for (let ix = 0; ix < representation.width; ix++) {
-      const i = iz * representation.width + ix
-      if (!representation.inside[i]) continue
-      const c = heightfieldCellCenter(representation, ix, iz)
-      const dist = Math.hypot(c.x - x, c.z - z)
-      if (!best || dist < best.dist) best = { ix, iz, dist }
-    }
-  }
-  return best ? { ix: best.ix, iz: best.iz } : null
-}
-
-function floodInside(
-  representation: ReturnType<typeof buildCaveHeightfieldRepresentation>['representation'],
-  startIx: number,
-  startIz: number,
-): Set<number> {
-  const seen = new Set<number>()
-  const stack = [[startIx, startIz] as const]
-  while (stack.length > 0) {
-    const [ix, iz] = stack.pop()!
-    if (ix < 0 || iz < 0 || ix >= representation.width || iz >= representation.depth) continue
-    const i = iz * representation.width + ix
-    if (seen.has(i) || !representation.inside[i]) continue
-    seen.add(i)
-    stack.push([ix + 1, iz], [ix - 1, iz], [ix, iz + 1], [ix, iz - 1])
-  }
-  return seen
-}
-
-function insideHalfWidthAtZ(
-  representation: ReturnType<typeof buildCaveHeightfieldRepresentation>['representation'],
-  z: number,
-): number {
+function caveWidthAt(field: CaveHeightfield, z: number): number {
   let minX = Infinity
   let maxX = -Infinity
-  for (let iz = 0; iz < representation.depth; iz++) {
-    for (let ix = 0; ix < representation.width; ix++) {
-      const i = iz * representation.width + ix
-      if (!representation.inside[i]) continue
-      const c = heightfieldCellCenter(representation, ix, iz)
-      if (Math.abs(c.z - z) > representation.cellSize) continue
-      minX = Math.min(minX, c.x)
-      maxX = Math.max(maxX, c.x)
-    }
+  for (let ix = 0; ix < field.nx; ix++) {
+    const x = field.originX + ix * field.cellSize
+    if (sampleHeightfieldAt(field, x, z).gap <= 0) continue
+    minX = Math.min(minX, x)
+    maxX = Math.max(maxX, x)
   }
-  return maxX - minX
+  return maxX >= minX ? maxX - minX : 0
 }
 
-describe('cave heightfield representation (plan world-terrain-018)', () => {
-  it('is deterministic: same topology + config → identical arrays', () => {
-    const topology = buildCaveHeightfieldFixture('basic')
-    const a = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    const b = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    expect(a.representation.width).toBe(b.representation.width)
-    expect(a.representation.depth).toBe(b.representation.depth)
-    expect(arraysEqual(a.representation.inside, b.representation.inside)).toBe(true)
-    expect(arraysEqual(a.representation.floorY, b.representation.floorY)).toBe(true)
-    expect(arraysEqual(a.representation.ceilingY, b.representation.ceilingY)).toBe(true)
-    expect(arraysEqual(a.representation.signedDistance, b.representation.signedDistance)).toBe(true)
-  })
-
-  it('every inside cell satisfies min clearance', () => {
-    for (const id of ['basic', 'bend', 'branch'] as const) {
-      const topology = buildCaveHeightfieldFixture(id)
-      const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-      for (let i = 0; i < representation.inside.length; i++) {
-        if (!representation.inside[i]) continue
-        expect(representation.ceilingY[i]! - representation.floorY[i]!).toBeGreaterThanOrEqual(topology.minClearance - 1e-5)
+describe('cave heightfield cross-section (design doc §5.3/§6)', () => {
+  it('closure is flat at the axis and fully closed at the rim', () => {
+    for (const n of [NF, NC]) {
+      expect(closure(0, n)).toBe(0)
+      expect(closure(1, n)).toBe(1)
+      // Zero tangent at the axis: the first 10% of the band lifts almost nothing.
+      expect(closure(0.1, n)).toBeLessThan(0.02)
+      // Vertical tangent at the rim: the last 10% carries a large share.
+      expect(closure(0.95, n)).toBeGreaterThan(0.35)
+      for (let u = 0; u <= 1.0001; u += 0.05) {
+        expect(closure(u, n)).toBeGreaterThanOrEqual(closure(Math.max(0, u - 0.05), n) - 1e-9)
       }
     }
   })
 
-  it('a straight passage has no internal holes along the centerline', () => {
-    const topology = buildCaveHeightfieldFixture('basic')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    for (let z = -0.5; z >= -16.5; z -= 0.5) {
-      const sample = sampleHeightfieldAt(representation, 0, z)
-      expect(sample.inside).toBe(true)
+  it('floor and ceiling converge exactly at the rim and diverge outside it', () => {
+    const coreRadius = 1.3
+    const axisY = 10
+    const height = 2.4
+    const axis = crossSectionAt(0, coreRadius, axisY, height)
+    expect(axis.f).toBeCloseTo(axisY, 6)
+    expect(axis.c).toBeCloseTo(axisY + height, 6)
+
+    // Declared usable width stays flat: the rounding is added outside it.
+    const coreEdge = crossSectionAt(coreRadius, coreRadius, axisY, height)
+    expect(coreEdge.f).toBeCloseTo(axisY, 6)
+
+    let prevGap = Infinity
+    for (let d = 0; d < 4; d += 0.05) {
+      const cs = crossSectionAt(d, coreRadius, axisY, height)
+      const gap = cs.c - cs.f
+      expect(gap).toBeLessThanOrEqual(prevGap + 1e-9)
+      prevGap = gap
+    }
+    // Meet at the rim, then open negative.
+    const rim = coreRadius + 0.648
+    expect(crossSectionAt(rim, coreRadius, axisY, height).c
+      - crossSectionAt(rim, coreRadius, axisY, height).f).toBeCloseTo(0, 4)
+    expect(crossSectionAt(rim + 1, coreRadius, axisY, height).c
+      - crossSectionAt(rim + 1, coreRadius, axisY, height).f).toBeLessThan(-1)
+  })
+})
+
+describe('cave heightfield field build (plan world-terrain-018)', () => {
+  it('is deterministic: same topology + config → identical arrays', () => {
+    const a = build('basic')
+    const b = build('basic')
+    expect(a.nx).toBe(b.nx)
+    expect(a.nz).toBe(b.nz)
+    expect(arraysEqual(a.floorY, b.floorY)).toBe(true)
+    expect(arraysEqual(a.ceilY, b.ceilY)).toBe(true)
+    expect(arraysEqual(a.coreT, b.coreT)).toBe(true)
+  })
+
+  it('contains no NaN or Infinity anywhere', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      for (let i = 0; i < field.floorY.length; i++) {
+        expect(Number.isFinite(field.floorY[i])).toBe(true)
+        expect(Number.isFinite(field.ceilY[i])).toBe(true)
+        expect(Number.isFinite(field.surfaceY[i])).toBe(true)
+        expect(Number.isFinite(field.coreT[i])).toBe(true)
+      }
     }
   })
 
-  it('widening / chamber increases footprint width over the passage', () => {
+  it('holds minClearance across the whole walkable core, and nowhere forces it at the rim', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const topology = buildCaveHeightfieldFixture(id)
+      const field = build(id)
+      let coreNodes = 0
+      let rimNodes = 0
+      for (let i = 0; i < field.floorY.length; i++) {
+        const gap = heightfieldNodeGap(field, i)
+        if (field.coreT[i]! <= U_CORE && gap > 0) {
+          coreNodes++
+          expect(gap).toBeGreaterThanOrEqual(topology.minClearance - 1e-4)
+        }
+        // The §2.4 defect: a rim node must be free to converge below
+        // minClearance, otherwise the section can never be rounded.
+        if (gap > 0 && gap < topology.minClearance * 0.5) rimNodes++
+      }
+      expect(coreNodes).toBeGreaterThan(50)
+      expect(rimNodes).toBeGreaterThan(20)
+    }
+  })
+
+  it('gap reaches zero smoothly at the boundary — no binary footprint edge', () => {
+    const field = build('basic')
+    // Sweep laterally out of the passage: gap must decrease monotonically to
+    // and through zero rather than stepping off a mask edge. Monotonicity is
+    // what `resolveHeightfieldHorizontal` walks, so a bump here would push a
+    // trapped capsule the wrong way.
+    let prev = Infinity
+    let sawSmallPositive = false
+    for (let x = 0; x < 6; x += 0.1) {
+      const gap = sampleHeightfieldAt(field, x, -8).gap
+      expect(gap).toBeLessThanOrEqual(prev + 1e-6)
+      if (gap > 0 && gap < 0.6) sawSmallPositive = true
+      prev = gap
+    }
+    expect(sawSmallPositive).toBe(true)
+    expect(prev).toBeLessThan(0)
+  })
+
+  it('the declared passage width stays walkable — rounding is added outside it', () => {
+    const field = build('basic')
     const topology = buildCaveHeightfieldFixture('basic')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    const passageW = insideHalfWidthAtZ(representation, -8)
-    const chamberW = insideHalfWidthAtZ(representation, -17)
-    expect(passageW).toBeGreaterThan(2)
-    expect(chamberW).toBeGreaterThan(passageW + 1.5)
+    const passage = topology.nodes.find((n) => n.id === 'passage')!
+    const axis = sampleHeightfieldAt(field, 0, passage.position.z)
+    const halfCore = passage.targetWidth / 2
+    // Floor across the declared usable half-width has not climbed into a wall.
+    for (let x = -halfCore + 0.1; x <= halfCore - 0.1; x += 0.1) {
+      const s = sampleHeightfieldAt(field, x, passage.position.z)
+      expect(s.gap).toBeGreaterThan(0)
+      expect(s.floorY - axis.floorY).toBeLessThan(0.35)
+    }
+    // The footprint is wider than the declared width because of the rim band.
+    expect(caveWidthAt(field, passage.position.z)).toBeGreaterThan(passage.targetWidth)
   })
 
-  it('a branch fixture is one connected intended junction', () => {
-    const topology = buildCaveHeightfieldFixture('branch')
-    const { representation, insideCellCount } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    const start = nearestInsideCell(representation, 0, 0)
-    const left = nearestInsideCell(representation, -6.4, -14.2)
-    const right = nearestInsideCell(representation, 6.6, -13.4)
-    expect(start).not.toBeNull()
-    expect(left).not.toBeNull()
-    expect(right).not.toBeNull()
-    const seen = floodInside(representation, start!.ix, start!.iz)
-    expect(seen.has(left!.iz * representation.width + left!.ix)).toBe(true)
-    expect(seen.has(right!.iz * representation.width + right!.ix)).toBe(true)
-    expect(seen.size).toBe(insideCellCount)
+  it('the passage runs unbroken from the mouth to the chamber', () => {
+    const field = build('basic')
+    for (let z = 0.5; z >= -17; z -= 0.25) {
+      expect(sampleHeightfieldAt(field, 0, z).gap).toBeGreaterThan(0)
+    }
   })
 
-  it('boundary wall extraction owns each inside→outside edge once', () => {
-    const topology = buildCaveHeightfieldFixture('branch')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    const edges = extractHeightfieldBoundaryEdges(representation)
-    const keys = edges.map((e) => `${e.insideIx},${e.insideIz}|${e.outsideIx},${e.outsideIz}`)
-    expect(new Set(keys).size).toBe(keys.length)
-    expect(edges.length).toBeGreaterThan(20)
+  it('floor descends smoothly: no step over STEP_DOWN_MAX along the centerline', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      const topology = buildCaveHeightfieldFixture(id)
+      for (const seg of topology.segments) {
+        const pts = seg.centerline
+        for (let i = 0; i + 1 < pts.length; i++) {
+          const a = pts[i]!
+          const b = pts[i + 1]!
+          const steps = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.25))
+          let prev = sampleHeightfieldAt(field, a.x, a.z).floorY
+          for (let k = 1; k <= steps; k++) {
+            const t = k / steps
+            const s = sampleHeightfieldAt(field, a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t)
+            expect(Math.abs(s.floorY - prev)).toBeLessThan(STEP_DOWN_MAX)
+            prev = s.floorY
+          }
+        }
+      }
+    }
   })
 
-  it('inside floor/ceiling arrays contain no invalid values', () => {
+  it('noise never makes the centerline floor unwalkable', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      const topology = buildCaveHeightfieldFixture(id)
+      const e = field.cellSize
+      for (const seg of topology.segments) {
+        for (const p of seg.centerline) {
+          if (sampleHeightfieldAt(field, p.x, p.z).gap <= 0) continue
+          const dx = sampleHeightfieldAt(field, p.x + e, p.z).floorY
+            - sampleHeightfieldAt(field, p.x - e, p.z).floorY
+          const dz = sampleHeightfieldAt(field, p.x, p.z + e).floorY
+            - sampleHeightfieldAt(field, p.x, p.z - e).floorY
+          const deg = (Math.atan(Math.hypot(dx, dz) / (2 * e)) * 180) / Math.PI
+          expect(deg).toBeLessThan(SLOPE_MAX_WALKABLE_DEG)
+        }
+      }
+    }
+  })
+
+  it('macro noise never chokes a passage below the minimum half-width', () => {
+    const field = build('bend')
     const topology = buildCaveHeightfieldFixture('bend')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    for (let i = 0; i < representation.inside.length; i++) {
-      if (!representation.inside[i]) continue
-      expect(Number.isFinite(representation.floorY[i])).toBe(true)
-      expect(Number.isFinite(representation.ceilingY[i])).toBe(true)
-      expect(Number.isFinite(representation.signedDistance[i])).toBe(true)
+    for (const seg of topology.segments) {
+      for (const p of seg.centerline) {
+        expect(caveWidthAt(field, p.z)).toBeGreaterThan(R_MIN * 2)
+      }
+    }
+  })
+})
+
+describe('cave heightfield chamber and features', () => {
+  it('widens into the chamber without a discrete transition', () => {
+    const field = build('basic')
+    const widths: number[] = []
+    for (let z = -9; z >= -17; z -= 0.5) widths.push(caveWidthAt(field, z))
+    expect(widths[0]!).toBeGreaterThan(2)
+    expect(widths[widths.length - 1]!).toBeGreaterThan(widths[0]! + 2)
+    // Monotone-ish widening, no single jump that reads as "tunnel -> circle".
+    for (let i = 1; i < widths.length; i++) {
+      expect(widths[i]! - widths[i - 1]!).toBeLessThan(2.2)
     }
   })
 
-  it('mesh buffers are non-empty and use unique boundary edges from the representation', () => {
+  it('the chamber is irregular — overlapping lobes, not a disc', () => {
+    const field = build('basic')
+    const chamber = buildCaveHeightfieldFixture('basic').nodes.find((n) => n.kind === 'chamber')!
+    const radii: number[] = []
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 24) {
+      let r = 0
+      for (let d = 0.2; d < 10; d += 0.1) {
+        const s = sampleHeightfieldAt(
+          field,
+          chamber.position.x + Math.cos(a) * d,
+          chamber.position.z + Math.sin(a) * d,
+        )
+        if (s.gap <= 0) break
+        r = d
+      }
+      radii.push(r)
+    }
+    const mean = radii.reduce((s, r) => s + r, 0) / radii.length
+    const spread = (Math.max(...radii) - Math.min(...radii)) / mean
+    expect(mean).toBeGreaterThan(1.5)
+    // A disc would be ~0. Lobes must visibly break the circular silhouette.
+    expect(spread).toBeGreaterThan(0.25)
+  })
+
+  it('shelf is an elevated floor region beside the lower floor — one floorY per column', () => {
     const topology = buildCaveHeightfieldFixture('basic')
-    const { representation } = buildCaveHeightfieldRepresentation(topology, TEST_CONFIG)
-    const edges = extractHeightfieldBoundaryEdges(representation)
-    const buffers = buildHeightfieldMeshBuffers(representation)
-    expect(buffers.vertices).toBeGreaterThan(0)
-    expect(buffers.triangles).toBeGreaterThan(0)
-    expect(buffers.boundaryEdgeCount).toBe(edges.length)
-    for (let i = 0; i < buffers.positions.length; i++) {
-      expect(Number.isFinite(buffers.positions[i])).toBe(true)
+    const shelf = topology.features.find((f) => f.kind === 'shelf')!
+    const field = build('basic')
+    const chamber = topology.nodes.find((n) => n.kind === 'chamber')!
+    const onShelf = sampleHeightfieldAt(field, shelf.position.x, shelf.position.z)
+    const besideShelf = sampleHeightfieldAt(field, chamber.position.x, chamber.position.z)
+    expect(onShelf.gap).toBeGreaterThan(0)
+    expect(besideShelf.gap).toBeGreaterThan(0)
+    // Standing on the ledge is higher than the chamber floor next to it...
+    expect(onShelf.floorY).toBeGreaterThan(besideShelf.floorY + 0.4)
+    // ...and there is still exactly one floor/ceiling pair, never a void under it.
+    expect(onShelf.ceilY).toBeGreaterThan(onShelf.floorY)
+    expect(onShelf.floorY).toBeLessThan(onShelf.ceilY)
+  })
+
+  it('shelf keeps minClearance in the core: the guard lifts the ceiling over it', () => {
+    const topology = buildCaveHeightfieldFixture('basic')
+    const shelf = topology.features.find((f) => f.kind === 'shelf')!
+    const field = build('basic')
+    const s = sampleHeightfieldAt(field, shelf.position.x, shelf.position.z)
+    expect(s.coreT).toBeLessThanOrEqual(U_CORE)
+    expect(s.gap).toBeGreaterThanOrEqual(topology.minClearance - 1e-3)
+  })
+
+  it('overhang lowers the ceiling without closing the chamber', () => {
+    const topology = buildCaveHeightfieldFixture('bend')
+    const overhang = topology.features.find((f) => f.kind === 'overhang')!
+    const field = build('bend')
+    const under = sampleHeightfieldAt(field, overhang.position.x, overhang.position.z)
+    const away = sampleHeightfieldAt(
+      field,
+      overhang.position.x + 3.4,
+      overhang.position.z,
+    )
+    expect(under.gap).toBeGreaterThanOrEqual(topology.minClearance - 1e-3)
+    if (away.gap > 0) expect(under.ceilY).toBeLessThan(away.ceilY)
+  })
+})
+
+describe('cave heightfield mouth', () => {
+  it('the entrance aperture breaks the walk surface, and the deep tunnel does not', () => {
+    const field = build('basic')
+    let openAtMouth = 0
+    let openDeep = 0
+    for (let i = 0; i < field.floorY.length; i++) {
+      if (heightfieldNodeGap(field, i) <= 0) continue
+      if (!heightfieldNodeOpenSky(field, i)) continue
+      const iz = Math.floor(i / field.nx)
+      const z = field.originZ + iz * field.cellSize
+      if (z > -2.5) openAtMouth++
+      else openDeep++
+    }
+    expect(openAtMouth).toBeGreaterThan(4)
+    expect(openDeep).toBe(0)
+  })
+
+  it('never leaves a node of any fixture breaking the surface away from the mouth', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const topology = buildCaveHeightfieldFixture(id)
+      const field = build(id)
+      for (const node of topology.nodes) {
+        if (node.kind === 'entrance') continue
+        const s = sampleHeightfieldAt(field, node.position.x, node.position.z)
+        expect(s.ceilY).toBeLessThan(s.surfaceY - SURFACE_CLIP_EPS)
+      }
     }
   })
 
+  it('cave floor meets the walk surface at the mouth', () => {
+    const field = build('basic')
+    const s = sampleHeightfieldAt(field, CAVE_HEIGHTFIELD_ENTRANCE.x, CAVE_HEIGHTFIELD_ENTRANCE.z)
+    expect(Math.abs(s.floorY - walk(CAVE_HEIGHTFIELD_ENTRANCE.x, CAVE_HEIGHTFIELD_ENTRANCE.z)))
+      .toBeLessThan(0.5)
+  })
+})
+
+describe('cave heightfield mesh', () => {
+  it('produces a watertight welded surface with no boundary-wall pass', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      const buffers = buildHeightfieldMeshBuffers(field)
+      expect(buffers.vertices).toBeGreaterThan(0)
+      expect(buffers.triangles).toBeGreaterThan(0)
+      expect(buffers.rimVertexCount).toBeGreaterThan(20)
+      for (let i = 0; i < buffers.positions.length; i++) {
+        expect(Number.isFinite(buffers.positions[i])).toBe(true)
+      }
+    }
+  })
+
+  it('floor triangles face up and ceiling triangles face down', () => {
+    const field = build('basic')
+    const { positions, indices } = buildHeightfieldMeshBuffers(field)
+    let up = 0
+    let down = 0
+    for (let t = 0; t < indices.length; t += 3) {
+      const a = indices[t]! * 3
+      const b = indices[t + 1]! * 3
+      const c = indices[t + 2]! * 3
+      // THREE.computeVertexNormals: n = (C - B) x (A - B)
+      const u = [positions[c]! - positions[b]!, positions[c + 1]! - positions[b + 1]!, positions[c + 2]! - positions[b + 2]!]
+      const v = [positions[a]! - positions[b]!, positions[a + 1]! - positions[b + 1]!, positions[a + 2]! - positions[b + 2]!]
+      const ny = u[2]! * v[0]! - u[0]! * v[2]!
+      if (ny > 1e-9) up++
+      else if (ny < -1e-9) down++
+    }
+    // Both surfaces exist and neither is inverted — with FrontSide, an
+    // inverted floor is an invisible floor (the merged spike's defect).
+    expect(up).toBeGreaterThan(100)
+    expect(down).toBeGreaterThan(100)
+  })
+
+  it('shares vertices between neighbouring cells — no per-cell flat quads', () => {
+    const field = build('basic')
+    const buffers = buildHeightfieldMeshBuffers(field)
+    // Unshared per-cell quads would need >= 4 vertices per emitted triangle
+    // pair. Shared corners bring it well under 1 vertex per triangle.
+    expect(buffers.vertices).toBeLessThan(buffers.triangles)
+    // Every index addresses a real vertex.
+    for (let i = 0; i < buffers.indices.length; i++) {
+      expect(buffers.indices[i]!).toBeLessThan(buffers.vertices)
+    }
+  })
+
+  it('rim vertices are shared by the floor and the ceiling, welding the two surfaces', () => {
+    const field = build('branch')
+    const buffers = buildHeightfieldMeshBuffers(field)
+    // A welded surface has no naked boundary edge except at the open mouth:
+    // count edges used by exactly one triangle.
+    const edgeUse = new Map<string, number>()
+    for (let t = 0; t < buffers.indices.length; t += 3) {
+      const tri = [buffers.indices[t]!, buffers.indices[t + 1]!, buffers.indices[t + 2]!]
+      for (let k = 0; k < 3; k++) {
+        const a = tri[k]!
+        const b = tri[(k + 1) % 3]!
+        const key = a < b ? `${a}:${b}` : `${b}:${a}`
+        edgeUse.set(key, (edgeUse.get(key) ?? 0) + 1)
+      }
+    }
+    let naked = 0
+    for (const uses of edgeUse.values()) if (uses === 1) naked++
+    // Only the mouth portal may leave an open edge loop; a per-cell-quad mesh
+    // would leave thousands.
+    expect(naked).toBeLessThan(edgeUse.size * 0.05)
+  })
+})
+
+describe('cave heightfield fixtures', () => {
   it('does not invent a second topology type — fixtures are CaveTopology', () => {
     const topology = buildCaveHeightfieldFixture('basic')
     expect(topology.entrance).toEqual(CAVE_HEIGHTFIELD_ENTRANCE)
     expect(topology.nodes.some((n) => n.kind === 'entrance')).toBe(true)
     expect(topology.segments.length).toBeGreaterThan(0)
     expect(topology.minClearance).toBeGreaterThan(0)
+    expect(topology.features.some((f) => f.kind === 'shelf')).toBe(true)
+    expect(buildCaveHeightfieldFixture('bend').features.some((f) => f.kind === 'overhang')).toBe(true)
   })
 })
