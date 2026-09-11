@@ -3,7 +3,7 @@
 **Created:** 2026-09-04
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** M/L
-**Depends on:** settlements-npcs-018
+**Depends on:** ~~settlements-npcs-018~~
 **Domain:** `settlements-npcs`  
 **Type:** `feature`  
 **Roadmap:** `physical-goods-transport`
