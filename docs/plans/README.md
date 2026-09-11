@@ -193,8 +193,8 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `021`
-- items-player: `025`
+- fauna: `022`
+- items-player: `026`
 - npc: `029`
 - persistence: `005`
 - quests-progression: `019`

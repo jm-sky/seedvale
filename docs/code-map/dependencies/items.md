@@ -450,6 +450,7 @@ Generated from TypeScript imports.
 - `ai/npcPersonalProvisions.test.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/survivalActions.ts`
+- `app/gameLoop.ts`
 - `app/interactables.ts`
 - `economy/localExchange.test.ts`
 - `economy/settlementEconomy.ts`

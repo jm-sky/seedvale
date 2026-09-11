@@ -91,9 +91,9 @@ Generated from exported TypeScript symbols.
 
 ## `items/createDroppedItems.ts`
 
-- `createDroppedItems` — function — line 59
-- `DroppedItem` — type — line 9
-- `DroppedItems` — type — line 23
+- `createDroppedItems` — function — line 69
+- `DroppedItem` — type — line 13
+- `DroppedItems` — type — line 27
 
 ## `items/createItemSpawners.ts`
 
@@ -115,27 +115,29 @@ Generated from exported TypeScript symbols.
 
 ## `items/foodFreshness.ts`
 
-- `bait` — function — line 280
-- `BAIT_ITEM_PRIORITY` — const — line 289
-- `canMergeFoodBatches` — function — line 214
+- `bait` — function — line 308
+- `BAIT_ITEM_PRIORITY` — const — line 317
+- `canMergeFoodBatches` — function — line 242
 - `CARRIED_FOOD_DECAY` — const — line 54
-- `checkpointFoodBatch` — function — line 187
+- `checkpointFoodBatch` — function — line 215
   - domain: items-player
 - `cloneFoodBatch` — function — line 117
-- `compareFoodBatchesFifo` — function — line 224
+- `compareFoodBatchesFifo` — function — line 252
   - domain: items-player
 - `createFoodBatch` — function — line 122
-- `FOOD_BATCH_MERGE_TOLERANCE_DAYS` — const — line 212
+- `FOOD_BATCH_MERGE_TOLERANCE_DAYS` — const — line 240
 - `FOOD_SOURCE_SPECIES` — const — line 15
 - `FOOD_SOURCE_SPECIES_LABEL` — const — line 39
 - `FoodBatch` — type — line 67
   - domain: items-player
+- `foodBatchDecomposeAtDays` — function — line 196
+  - domain: items-player
 - `foodBatchEffectiveAge` — function — line 144
   - domain: items-player
-- `foodBatchesMergeEqual` — function — line 201
+- `foodBatchesMergeEqual` — function — line 229
 - `foodBatchUsedFraction` — function — line 149
 - `foodFreshnessDef` — function — line 76
-- `foodHungerRelief` — function — line 270
+- `foodHungerRelief` — function — line 298
   - domain: items-player
 - `FoodSourceSpecies` — type — line 13
 - `foodTotalShelfLifeDays` — function — line 81
@@ -144,9 +146,10 @@ Generated from exported TypeScript symbols.
 - `getFoodBatchFreshnessStage` — function — line 163
 - `getFreshnessStage` — function — line 168
 - `getFreshnessStageFromAge` — function — line 155
-- `inheritProcessedFoodBatch` — function — line 239
+- `inheritProcessedFoodBatch` — function — line 267
   - domain: items-player
-- `isBaitCapable` — function — line 284
+- `isBaitCapable` — function — line 312
+- `isFoodBatchDecomposed` — function — line 203
 - `isFoodBatchSpoiled` — function — line 176
 - `isFoodPerishable` — function — line 87
 - `isFoodSourceSpecies` — function — line 19
@@ -157,6 +160,8 @@ Generated from exported TypeScript symbols.
 - `SOURCE_SPECIES_BY_MEAT_KIND` — const — line 23
 - `sourceSpeciesForMeatKind` — function — line 91
 - `STORED_FOOD_DECAY` — const — line 57
+- `WORLD_SPOILED_FOOD_DECAY_DAYS` — const — line 187
+  - domain: items-player
 
 ## `items/foodItems.ts`
 

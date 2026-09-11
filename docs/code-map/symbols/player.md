@@ -55,19 +55,21 @@ Generated from exported TypeScript symbols.
 
 ## `player/playerCombat.ts`
 
-- `collectLivingCombatTargets` — function — line 56
-- `collectRangedAnimalCandidates` — function — line 138
+- `collectLivingCombatTargets` — function — line 75
+- `collectRangedAnimalCandidates` — function — line 151
 - `COMBAT_MODE_TIMEOUT_SEC` — const — line 11
-- `createPlayerCombat` — function — line 213
-- `filterWorldCycleTargets` — function — line 182
-- `findLivingTargetById` — function — line 186
+- `createPlayerCombat` — function — line 223
+- `filterWorldCycleTargets` — function — line 192
+- `findLivingTargetById` — function — line 196
+- `forEachLivingCombatAnimal` — function — line 57
+  - domain: fauna
 - `LivingCombatTarget` — type — line 13
 - `livingTargetIdForAnimal` — function — line 42
 - `livingTargetIdForNpc` — function — line 46
 - `PlayerCombat` — type — line 21
-- `RangedAnimalCandidate` — type — line 130
-- `resolveLivingInteractable` — function — line 197
-- `resolveRangedAimYaw` — function — line 169
+- `RangedAnimalCandidate` — type — line 142
+- `resolveLivingInteractable` — function — line 207
+- `resolveRangedAimYaw` — function — line 179
 
 ## `player/PlayerController.ts`
 

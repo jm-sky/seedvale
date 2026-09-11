@@ -87,6 +87,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `combat/meleeAttack.test.ts`
+- `player/playerCombat.test.ts`
 - `player/playerCombat.ts`
 - `player/playerMelee.ts`
 
@@ -125,6 +126,7 @@ Generated from TypeScript imports.
 - `ai/npcCombat.ts`
 - `app/gameLoop.ts`
 - `combat/projectile.test.ts`
+- `player/playerCombat.test.ts`
 
 ## `combat/rangedAttack.test.ts`
 

@@ -529,6 +529,7 @@ Generated from TypeScript imports.
 - `fauna/faunaCombat.test.ts`
 - `fauna/huntingHooks.ts`
 - `items/highQualityWeapons.test.ts`
+- `player/playerCombat.test.ts`
 
 ## `fauna/faunaDecision.test.ts`
 

@@ -243,13 +243,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 604
+- `createGameLoop` — function — line 605
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 572
-- `GameLoopDeps` — type — line 286
+- `GameLoop` — type — line 573
+- `GameLoopDeps` — type — line 287
 
 ## `app/graphicsSettings.ts`
 
@@ -288,22 +288,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1120
-- `buildDigTarget` — function — line 1067
-- `buildInteractables` — function — line 425
-- `collectItem` — function — line 1167
+- `buildCombatTarget` — function — line 1141
+- `buildDigTarget` — function — line 1088
+- `buildInteractables` — function — line 435
+- `collectItem` — function — line 1191
 - `COMBAT_TARGET_CONE_DOT` — const — line 92
 - `COMBAT_TARGET_RANGE` — const — line 77
 - `CombatAimMode` — type — line 82
 - `DIG_REACH` — const — line 71
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 275
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 285
 - `GAZE_RANGE` — const — line 67
-- `groupDroppedItemCandidates` — function — line 285
+- `groupDroppedItemCandidates` — function — line 295
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 64
 - `INTERACT_RANGE` — const — line 61
-- `resolveHaySpot` — function — line 361
-- `worldItemAllowsAltInteract` — function — line 257
+- `itemPromptLabel` — function — line 274
+- `resolveHaySpot` — function — line 371
+- `worldItemAllowsAltInteract` — function — line 259
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`

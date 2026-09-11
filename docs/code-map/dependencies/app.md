@@ -938,6 +938,7 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/campRepair.ts`
+- `items/foodFreshness.ts`
 - `items/itemCatalog.ts`
 - `items/itemFuel.ts`
 - `items/itemInstances.ts`

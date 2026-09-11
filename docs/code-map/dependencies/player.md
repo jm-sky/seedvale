@@ -326,9 +326,13 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/interactables.ts`
+- `combat/meleeAttack.ts`
+- `combat/projectile.ts`
+- `fauna/faunaCombat.ts`
 - `items/itemCatalog.ts`
 - `player/playerCombat.ts`
 - `player/playerMelee.ts`
+- `shared/HealthState.ts`
 
 ## `player/playerCombat.ts`
 

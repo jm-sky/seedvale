@@ -350,6 +350,7 @@ Roadmap is not another priority system.
 
 ### Currently available roadmaps
 
+- `companions`
 - `domain-debug-and-simulation-observability`
 - `economy-goods-flow`
 - `economy-production`
