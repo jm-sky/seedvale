@@ -75,6 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | settlements-npcs-030 |
 | ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | -       | 🔴 | L      | settlements-npcs-030, world-023 |
 | ◼️ `world-024-systemic-treasure-sites-and-keys.md`                             | -       | 🟡 | M      | -      |
+| ◼️ `world-terrain-019-cave-heightfield-production-migration.md`                | -       | 🔴 | XL     | world-terrain-018 |
 
 ---
 
@@ -206,7 +207,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `014`
 - ui-input: `017`
 - world: `025`
-- world-terrain: `019`
+- world-terrain: `020`
 
 This ids section is maintained automatically from the plan files.
 
