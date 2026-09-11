@@ -34,15 +34,13 @@
 
 ### Bug Fixes
 
-1. `quests-progression-018` — **Quest playtest reachability and dialogue conflicts**  
-   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
+_No qualifying plans._
 
 ---
 
 ### Polish
 
-1. `ui-input-016` — **Building placement and construction UX coherence**  
-   🔴 `L` · ✅ ready · unlocks 0/0
+_No qualifying plans._
 
 ---
 
@@ -111,23 +109,15 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-10. `ui-input-016` — **Building placement and construction UX coherence**  
-  🔴 `L` · **Score:**  40  
-   → **unlocks:** 0/0
-
-11. `quests-progression-018` — **Quest playtest reachability and dialogue conflicts**  
-  🔴 `M` · **Score:**  37  
-   → **unlocks:** 0/0
-
-12. `items-player-014` — **Rope-pullable resource transport**  
+10. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-005` — **Seedvale Character Preparation Panel**  
+11. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `tools-013` — **NPC decision verification and scenario tooling**  
+12. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 

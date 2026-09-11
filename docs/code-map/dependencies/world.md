@@ -1879,15 +1879,21 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `settlement/settlementGenerator.ts`
 - `world/caveVolume.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
+- `world/map/mapData.ts`
+- `world/map/mapDiscovery.ts`
+- `world/map/mapProjection.ts`
 
 ## `world/locations/locationProximityDiscovery.ts`
 
 **Imports**
 
+- `settlement/settlementGenerator.ts`
 - `world/caveVolume.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
@@ -2053,6 +2059,7 @@ Generated from TypeScript imports.
 - `ui-vue/lib/worldLocationDisplay.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationNames.ts`
@@ -2086,6 +2093,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
 - `world/map/mapProjection.test.ts`
 
 ## `world/map/mapDiscovery.ts`
@@ -2101,6 +2109,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/saveState.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.test.ts`
 
@@ -2136,6 +2145,7 @@ Generated from TypeScript imports.
 - `main.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`

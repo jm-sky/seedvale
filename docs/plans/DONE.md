@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `ui-input-016-building-placement-construction-ux-coherence`            | 2026-09-11 01:48:29 | —                   | `ui-input`       | —          |
+| `quests-progression-018-quest-playtest-reachability-and-dialogue-conflicts` | 2026-09-11 00:46:59 | —                   | `quests-progression` | —          |
 | `settlements-npcs-023-profession-staffing-and-settlement-composition`  | 2026-09-11 00:16:10 | —                   | `settlements-npcs` | —          |
 | `quests-progression-017-rpg-settlement-quest-matrices`                 | 2026-09-10 20:25:19 | —                   | `quests-progression` | —          |
 | `items-player-023-systemic-item-utility-and-food-safety`               | 2026-09-10 20:05:38 | —                   | `items-player`   | —          |

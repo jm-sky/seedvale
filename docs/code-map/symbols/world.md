@@ -796,10 +796,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/locationProximityDiscovery.ts`
 
-- `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 9
-- `createLocationProximityDiscovery` — function — line 49
-- `LocationProximityDiscovery` — type — line 43
-- `revealCaveEntrancesInRange` — function — line 20
+- `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 12
+- `confirmHomeSettlement` — function — line 52
+- `createLocationProximityDiscovery` — function — line 118
+- `LocationProximityDiscovery` — type — line 111
+- `revealCaveEntrancesInRange` — function — line 62
+- `revealSettlementsInRange` — function — line 91
+- `SETTLEMENT_PROXIMITY_CELL_RADIUS` — const — line 21
+- `SettlementProximityDef` — type — line 27
 
 ## `world/locations/locationsCoarseCache.ts`
 

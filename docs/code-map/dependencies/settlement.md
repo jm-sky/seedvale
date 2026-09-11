@@ -1271,6 +1271,8 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `world/caves/caveGameplayQuery.b3-chamber-snap-recon.test.ts`
 - `world/createCaves.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
+- `world/locations/locationProximityDiscovery.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/riverWaterQualityResolver.test.ts`
