@@ -119,6 +119,8 @@ export type DebugSystemName =
   | 'playerModel'
   | 'weather'
   | 'caveDetail'
+  /** Presentation-only cave heightfield shader polish (rock detail / wetness). */
+  | 'caveSurfaceDetail'
   /** Presentation-only cave mouth rock framing — off to verify the raw
    *  terrain cutout / cave seam (world-terrain-019 B). */
   | 'caveMouthRocks'

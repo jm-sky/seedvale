@@ -7,7 +7,8 @@
 **Milestone B implemented:** 2026-09-11 — see “Milestone B — implemented” below. Heightfield is presentation + terrain-mouth authority.  
 **Early gameplay migration (post-B, pre-C):** 2026-09-11 — see “Early gameplay migration — implemented” below. Heightfield became player cave ground / floor / ceiling authority.  
 **Spatial cutover (D + E runtime part, pulled forward before C):** 2026-09-11 — see “Spatial cutover — implemented” below. **Heightfield is the only production spatial authority; SDF runtime deleted.** Sections that describe the SDF column index / colliders / worker as current code are historical from here on.  
-**Cave entrance presentation polish:** 2026-09-11 — see “Cave entrance presentation polish” below. Presentation-only denser mouth framing + subtle vertex-colour/material tweak; zero spatial/collision changes.
+**Cave entrance presentation polish:** 2026-09-11 — see “Cave entrance presentation polish” below. Presentation-only denser mouth framing + subtle vertex-colour/material tweak; zero spatial/collision changes.  
+**Cave surface material polish:** 2026-09-11 — see “Cave surface material polish” below. One shared `MeshStandardMaterial` with triplanar + procedural rock detail and deterministic wetness; presentation-only.
 
 These notes are a focused implementation handoff, not a restatement of the plan. Current code is authoritative. The final `world-terrain-018` spike differs materially from several earlier notes: production migration must copy the final floor/ceiling-convergence model, not the superseded binary-footprint/vertical-wall approach.
 
@@ -814,6 +815,38 @@ pnpm run build
 ```
 
 No browser verification — User pass of the mouth from typical approach / grazing / low-camera angles.
+
+## Cave surface material polish — implemented (2026-09-11)
+
+Presentation-only Cave V2 interior material (`caveHeightfieldMaterial.ts`). **No spatial / collision / heightfield / mesh position changes.**
+
+### Architecture
+
+- `createCaves()` still owns one shared `caveMaterial` (`userData.sharedGpu = true`) for every streamed heightfield presentation.
+- `MeshStandardMaterial` + `onBeforeCompile` hooks (macro colour/roughness, wetness, triplanar normal sampling) — not a custom `ShaderMaterial`.
+- Vertex colours from `caveHeightfieldMesh.ts` remain the broad albedo authority; shader multiplies subtle world-space variation on top.
+- `?debugDisableSystems=caveSurfaceDetail` restores the plain high-matte vertex-colour material for A/B.
+
+### Rock detail
+
+- Reuses the process-wide baked detail normal map (`getSharedTerrainDetailNormalMap()` / `terrainDetailNormalMap.ts`) with **world-space triplanar** sampling (no UVs).
+- A light **procedural rock normal perturbation** (deterministic value noise in world XZ) fills micro gaps and can be tuned or replaced later without changing ownership.
+
+### Wetness
+
+- Deterministic world-space value noise at low frequency × orientation weights (floor / wall / ceiling continuous blend).
+- Drives PBR roughness (`dryRoughness` → `wetRoughness`) and subtle albedo darkening/cool tint — not a global uniform wet cave.
+
+### Tests / checks
+
+```text
+vitest: src/world/caves/caveHeightfieldMaterial.test.ts (+ existing cave presentation tests)
+vue-tsc --noEmit
+eslint .
+pnpm run build
+```
+
+Milestone C and broader `world-terrain-019` completion are unchanged by this polish.
 
 ## Mouth exit snap-back — fixed (2026-09-11)
 

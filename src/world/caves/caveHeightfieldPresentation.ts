@@ -26,20 +26,7 @@ import {
 } from './caveHeightfieldRepresentation'
 import { openingDirection } from './caveOrientation'
 
-/** `FrontSide` on purpose: it is the cheapest permanent detector for a
- *  winding regression. Do not "fix" a dark cave with `DoubleSide`. Smooth
- *  normals come from the shared-vertex geometry (`computeVertexNormals`).
- *  Roughness is high-matte so vertex colours read as damp earth, not wet
- *  plastic. */
-export function createCaveHeightfieldMaterial(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    roughness: 0.88,
-    metalness: 0,
-    flatShading: false,
-    side: THREE.FrontSide,
-  })
-}
+export { createCaveHeightfieldMaterial } from './caveHeightfieldMaterial'
 
 /** Dark matte rock, matched to the cave ceiling colour but darker so a
  *  crack-view reads as interior earth rather than a second terrain. */

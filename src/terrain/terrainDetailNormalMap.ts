@@ -97,3 +97,13 @@ export function createTerrainNormalMap(): DataTexture {
   tex.needsUpdate = true
   return tex
 }
+
+/** One process-wide tileable detail normal — terrain chunks and cave interior
+ *  share the same baked map (no per-chunk / per-cave clones). Not disposed
+ *  with individual materials; detach `normalMap` before `Material.dispose()`. */
+let sharedTerrainDetailNormalMap: DataTexture | null = null
+
+export function getSharedTerrainDetailNormalMap(): DataTexture {
+  if (!sharedTerrainDetailNormalMap) sharedTerrainDetailNormalMap = createTerrainNormalMap()
+  return sharedTerrainDetailNormalMap
+}

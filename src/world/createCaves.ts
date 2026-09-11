@@ -17,6 +17,9 @@ import {
 } from './caves/caveGroundQuery'
 import {
   createCaveHeightfieldMaterial,
+  disposeCaveHeightfieldMaterialGpu,
+} from './caves/caveHeightfieldMaterial'
+import {
   createCaveHeightfieldPresentation,
   createMouthUndersideMaskMaterial,
 } from './caves/caveHeightfieldPresentation'
@@ -299,7 +302,9 @@ export function createCaves(
   const presentations = new Map<string, THREE.Object3D>()
   // Shared across every cave presentation; disposed once in `dispose()`,
   // never by `disposeObject3D()` (`sharedGpu`).
-  const caveMaterial = createCaveHeightfieldMaterial()
+  const caveMaterial = createCaveHeightfieldMaterial({
+    surfaceDetail: isSystemEnabled('caveSurfaceDetail'),
+  })
   caveMaterial.userData.sharedGpu = true
   const maskMaterial = createMouthUndersideMaskMaterial()
   maskMaterial.userData.sharedGpu = true
@@ -563,7 +568,7 @@ export function createCaves(
       streaming.dispose()
       presentationQueue.clear()
       chunkManager.clearTerrainCutouts(TERRAIN_CUTOUT_OWNER_KEY)
-      caveMaterial.dispose()
+      disposeCaveHeightfieldMaterialGpu(caveMaterial)
       maskMaterial.dispose()
     },
   }

@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
 import type { ChunkMeshData } from './chunkMeshData'
 import { buildCutChunkAttributes, type TerrainCutout } from './terrainCutout'
-import { createTerrainNormalMap } from './terrainDetailNormalMap'
+import { getSharedTerrainDetailNormalMap } from './terrainDetailNormalMap'
 
 export type ChunkMeshResult = {
   mesh: THREE.Mesh
@@ -70,10 +70,8 @@ export function createTerrainMaterial(
  *  left at 1: tiling is applied per-fragment in the injected shader below,
  *  because the two surface types need two different tilings out of the same
  *  texture and `Texture.repeat` can only express one. */
-let terrainNormalMap: THREE.Texture | null = null
 function getTerrainNormalMap(): THREE.Texture {
-  if (!terrainNormalMap) terrainNormalMap = createTerrainNormalMap()
-  return terrainNormalMap
+  return getSharedTerrainDetailNormalMap()
 }
 
 /** `onBeforeCompile` sees the shader with its `#include` directives still
