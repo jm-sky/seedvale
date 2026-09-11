@@ -136,7 +136,7 @@ function setPrimaryRanged(kind: ItemKind, instances: readonly InventoryInstanceR
     </h1>
     <div class="mb-3 text-[13px] opacity-75">
       Waga: {{ formatWeight(ui.inventory.totalWeight) }} / {{ formatWeight(ui.inventory.maxWeight) }}
-      · Pojemność: {{ ui.inventory.totalSize }} / {{ ui.inventory.maxSize }}
+      · Pojemność: {{ ui.inventory.totalSize.toFixed(2) }} / {{ ui.inventory.maxSize.toFixed(2) }}
       <span
         v-if="ui.inventory.heldTool"
         class="ml-2 opacity-90"
