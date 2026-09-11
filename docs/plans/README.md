@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
 | 💡 `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 | ◼️ `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
+| ◼️ `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~ |
 | 💡 `world-terrain-021-low-cost-terrain-and-cave-surface-albedo.md`             | -       | 🟡 | S      | ~~world-terrain-019~~ |
 
 ---
@@ -211,7 +212,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `029`
 - npc: `036`
 - persistence: `005`
-- quests-progression: `019`
+- quests-progression: `020`
 - settlements: `007`
 - settlements-npcs: `032`
 - tools: `014`
