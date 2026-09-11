@@ -74,6 +74,7 @@ import {
 import { buildCharacterPresentation } from '../player/characterPresentation'
 import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
 import {
+  type CaveFloorSampler,
   type CaveGroundQuery,
   type CaveHorizontalResolver,
   type CaveOccupancyQuery,
@@ -774,6 +775,7 @@ export async function createApp(
     if (!hit) return null
     return { floorY: hit.floorY, ceilingY: hit.openSky ? null : hit.ceilingY }
   }
+  const caveFloorSampler: CaveFloorSampler = (x, z) => bundle.caves.sampleFloor(x, z)
   const caveOccupancyQuery: CaveOccupancyQuery = (x, y, z) => bundle.caves.occupancyAt(x, y, z)
   const caveHorizontalResolver: CaveHorizontalResolver = (x, z, y, radius, entityHeight) =>
     bundle.caves.resolveHorizontal(x, z, y, radius, entityHeight)
@@ -788,6 +790,7 @@ export async function createApp(
     bundle.chunkManager.waterLevel,
     bundle.chunkManager.collidersNear,
     caveGroundQuery,
+    caveFloorSampler,
     caveOccupancyQuery,
     caveHorizontalResolver,
     (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
@@ -1533,6 +1536,7 @@ export async function createApp(
         bundle.chunkManager.waterLevel,
         bundle.chunkManager.collidersNear,
         caveGroundQuery,
+        caveFloorSampler,
         caveOccupancyQuery,
         caveHorizontalResolver,
         (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),

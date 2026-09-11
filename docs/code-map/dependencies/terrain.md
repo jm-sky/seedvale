@@ -957,6 +957,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `navigation/navigation.ts`
 - `player/PlayerController.ts`
+- `player/caveSlopeSampling.test.ts`
 - `terrain/slopeConstraint.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveRoute.ts`

@@ -49,7 +49,7 @@ import {
 import { applySlopeMovementConstraint, sampleSlope } from '../terrain/slopeConstraint'
 import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
 import { type Collider, colliderActiveAtY, resolvePosition, resolvePositionAudited } from '../world/collision'
-import { resolveCameraBoom } from './cameraBoom'
+import { resolveCameraBoom, withCaveFloorFallback } from './cameraBoom'
 import { humanBodyCarryCapacityKg } from './humanCarryCapacity'
 import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT, rockCeilingMaxY } from './playerDimensions'
 import { computeEncumbrance } from './playerEncumbrance'
@@ -195,6 +195,11 @@ export type ColliderSource = (x: number, z: number) => readonly Collider[]
  *  back to `HeightSampler`. Kept as its own alias instead of importing
  *  `Caves` here, same reasoning as `HeightSampler`/`ColliderSource`. */
 export type CaveGroundQuery = (x: number, y: number, z: number) => { floorY: number, ceilingY: number | null } | null
+/** `Caves.sampleFloor` (world-terrain-019) — Y-blind cave floor at `(x, z)`,
+ *  `null` where the column carries no cave space. Only for probes that need
+ *  a floor *next to* the entity rather than under it (slope sampling via
+ *  `withCaveFloorFallback`); the player's own ground stays `CaveGroundQuery`. */
+export type CaveFloorSampler = (x: number, z: number) => number | null
 /** Strict cave occupancy at the sample point (plan world-terrain-008 B3).
  *  `null` is solid / outside void. Keyed by the sample's own Y — not the
  *  player's. Sibling of `CaveGroundQuery`; do not reuse ground hysteresis
@@ -261,6 +266,7 @@ export class PlayerController {
   private waterLevel: number
   private collidersNear: ColliderSource
   private caveGround: CaveGroundQuery
+  private caveFloor: CaveFloorSampler
   private caveOccupancy: CaveOccupancyQuery
   private caveHorizontal: CaveHorizontalResolver
   private sampleFootstepSurface: (x: number, z: number) => FootstepSurface
@@ -398,6 +404,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveFloor: CaveFloorSampler,
     caveOccupancy: CaveOccupancyQuery,
     caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
@@ -410,6 +417,7 @@ export class PlayerController {
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
     this.caveGround = caveGround
+    this.caveFloor = caveFloor
     this.caveOccupancy = caveOccupancy
     this.caveHorizontal = caveHorizontal
     this.sampleFootstepSurface = sampleFootstepSurface
@@ -474,6 +482,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveFloor: CaveFloorSampler,
     caveOccupancy: CaveOccupancyQuery,
     caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
@@ -494,6 +503,7 @@ export class PlayerController {
         waterLevel,
         collidersNear,
         caveGround,
+        caveFloor,
         caveOccupancy,
         caveHorizontal,
         sampleFootstepSurface,
@@ -509,6 +519,7 @@ export class PlayerController {
         waterLevel,
         collidersNear,
         caveGround,
+        caveFloor,
         caveOccupancy,
         caveHorizontal,
         sampleFootstepSurface,
@@ -525,6 +536,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveFloor: CaveFloorSampler,
     caveOccupancy: CaveOccupancyQuery,
     caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
@@ -550,6 +562,7 @@ export class PlayerController {
       waterLevel,
       collidersNear,
       caveGround,
+      caveFloor,
       caveOccupancy,
       caveHorizontal,
       sampleFootstepSurface,
@@ -563,6 +576,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveFloor: CaveFloorSampler,
     caveOccupancy: CaveOccupancyQuery,
     caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
@@ -572,6 +586,7 @@ export class PlayerController {
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
     this.caveGround = caveGround
+    this.caveFloor = caveFloor
     this.caveOccupancy = caveOccupancy
     this.caveHorizontal = caveHorizontal
     this.sampleFootstepSurface = sampleFootstepSurface
@@ -1016,12 +1031,13 @@ export class PlayerController {
       // Steep terrain scales down (and, past the max walkable angle, removes)
       // the uphill component of the move — across-slope/downhill are
       // untouched (plan 183).
+      const slopeHeight = this.slopeHeightSampler(startX, startY, startZ)
       const slopeWish = applySlopeMovementConstraint(
         rawWishX,
         rawWishZ,
         startX,
         startZ,
-        this.sampleHeight,
+        slopeHeight,
       )
       this.wish.x = slopeWish.x
       this.wish.z = slopeWish.z
@@ -1051,7 +1067,7 @@ export class PlayerController {
         )
         this.mesh.position.x = caveResolved.x
         this.mesh.position.z = caveResolved.z
-        const slopeSample = sampleSlope(startX, startZ, this.sampleHeight)
+        const slopeSample = sampleSlope(startX, startZ, slopeHeight)
         const slopeAngleDeg = (slopeSample.angleRad * 180) / Math.PI
         const ground = this.groundAt(startX, startZ)
         const groundDebug = this.peekGroundQueryDebug?.() ?? null
@@ -1170,6 +1186,24 @@ export class PlayerController {
       ? (this.runAction ?? this.walkAction)
       : this.walkAction
     this.playAction(moveAction ?? this.idleAction)
+  }
+
+  /** Height sampler `applySlopeMovementConstraint` probes with. The slope
+   *  probes reach `SLOPE_SAMPLE_STEP` (1.2 m) sideways — wider than a narrow
+   *  tunnel — so inside a cave the raw surface `sampleHeight` reads the
+   *  hillside metres overhead and reports a cliff in every direction, which
+   *  cancelled uphill movement on a perfectly gentle cave floor
+   *  (`LOOSE-ENDS.md` 2026-09-10). `withCaveFloorFallback` is the
+   *  same wrapper the `?caveHeightfieldTest` walk harness already uses:
+   *  probes that miss the cave footprint report the player's own cave floor,
+   *  and outdoors (no cave occupancy) it is the identity — one sampler
+   *  choice, not a second movement system.
+   *
+   *  Occupancy, not `caveGround`: the stateless sibling must not perturb the
+   *  player's per-frame ground hysteresis. */
+  private slopeHeightSampler(x: number, y: number, z: number): HeightSampler {
+    const occupancy = this.caveOccupancy(x, y, z)
+    return withCaveFloorFallback(this.sampleHeight, this.caveFloor, occupancy?.floorY ?? null)
   }
 
   /** Cave-aware floor/ceiling at `(x, z)`, disambiguated from the surface

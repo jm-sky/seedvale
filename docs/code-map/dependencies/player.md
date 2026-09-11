@@ -259,7 +259,15 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.test.ts`
+- `player/caveSlopeSampling.test.ts`
 - `world/createCaves.test.ts`
+
+## `player/caveSlopeSampling.test.ts`
+
+**Imports**
+
+- `player/cameraBoom.ts`
+- `terrain/slopeConstraint.ts`
 
 ## `player/characterPresentation.test.ts`
 

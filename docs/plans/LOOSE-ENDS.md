@@ -9,7 +9,6 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 ## Caves / terrain
 
 - [ ] 2026-09-11 — Cave V3 heightfield: na seed `1136726869` (`cave:0e3cce97`, `seg-chamber`) podłoga koncentruje zjazd widening→chamber na granicy chamber lobe (~2.5 m / ~1.3 m, grade ≈ 4.06 wobec walk-max 1.43), mimo łagodnego centerline. Repro jest przypięte jako `it.fails` w `productionTopology.floor-continuity.test.ts`; poprawka należy do blendu lobe/ramp w `caveHeightfieldRepresentation.ts` (world-terrain-019).
-- [ ] 2026-09-10 — Cave V3: `PlayerController` nadal przekazuje do `applySlopeMovementConstraint` powierzchniowe `sampleHeight`; wewnątrz jaskini ograniczenie ruchu może więc wynikać ze stoku nad jaskinią zamiast z cave floor. Aktualny call site w `PlayerController.ts` nadal używa `this.sampleHeight`; rozwiązanie powinno korzystać z cave-aware floor sampler bez tworzenia drugiego movement systemu.
 - [ ] 2026-08-24 — `Przygotuj teren` na skalistym/górskim gruncie wymaga narzędzi, ale nie ma kary za trudność terenu; jeśli mechanika ma rozróżniać soil/sand/rock także dla większych prac, rozszerzyć istniejący `requiredWork` zamiast dodawać osobny system (world-terrain-002).
 
 ## Quest-enabling world mechanics
