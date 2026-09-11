@@ -98,22 +98,34 @@ Zachować istniejące mechanizmy:
 
 Dłuższa jaskinia nie może omijać istniejących guardrails tylko po to, aby osiągnąć docelową długość.
 
+### Natural cave regression guard
+
+Adventure jest rozszerzeniem obecnego generatora, nie powodem do zmiany istniejącej natural cave.
+
+Dla tego samego seed + site obecny `natural` recipe musi zachować dotychczasowy wynik i acceptance behavior. W ramach tego planu nie retunować natural cave dimensions, RNG consumption/order, `BRANCH_CHANCE`, terrain adaptation, grade/overburden thresholds ani acceptance limits.
+
+Jeżeli rozdzielenie generatora na recipes wymaga refaktoru, ma to być minimalne wydzielenie współdzielonych primitives bez zmiany zachowania `natural`.
+
 ## 3. Archetype assignment
 
 Adventure cave jest wariantem zwykłego cave site, nie osobnym typem world landmark.
 
 ### Home-area guarantee
 
-W pobliżu home settlement świat musi zawsze posiadać co najmniej jedną `adventure` cave.
+W pobliżu home settlement świat musi zawsze posiadać co najmniej jedną `adventure` cave, o ile którykolwiek z istniejących cave sites potrafi zaakceptować adventure topology przy zachowaniu wszystkich production guardrails.
 
-Po wygenerowaniu/wyborze normalnych cave sites:
+Nie wybierać guaranteed archetype dopiero po zbudowaniu natural topology i nie „relabelować” natural cave. Adventure topology musi być rzeczywiście zbudowana i zaakceptowana dla danego site.
 
-1. znaleźć zaakceptowane cave sites w ustalonym home-area radius,
-2. deterministycznie wybrać dokładnie jeden jako guaranteed adventure cave,
-3. jeśli brak site w podstawowym promieniu, rozszerzyć search radius i wybrać najbliższy zaakceptowany site,
-4. nie tworzyć dodatkowej sztucznej jaskini tylko w celu spełnienia gwarancji.
+Bezpieczny bounded flow:
 
-Guaranteed cave powinna być w okolicy home settlement, ale nie tuż przy zabudowaniach. Ustalić minimalny i maksymalny preferowany dystans tak, aby wymagała krótkiej eksploracji zamiast być darmowym loot roomem przy domach.
+1. wygenerować istniejący zestaw sites przez `pickLargeCaveSites()` bez zmiany sitingu,
+2. deterministycznie uporządkować kandydatów w preferowanym home-area band,
+3. próbować adventure topology na tych sites w kolejności; pierwszy zaakceptowany staje się guaranteed adventure cave,
+4. jeśli żaden kandydat w podstawowym band nie akceptuje adventure topology, rozszerzyć wybór na pozostałe istniejące sites i próbować najbliższe według stabilnego tie-breaku,
+5. nie tworzyć dodatkowego/sztucznego cave site i nie osłabiać topology acceptance tylko po to, aby wymusić gwarancję,
+6. pozostałe sites przechodzą zwykły deterministic 15% adventure roll opisany niżej.
+
+Guaranteed cave powinna być w okolicy home settlement, ale nie tuż przy zabudowaniach. Ustalić minimalny i maksymalny preferowany dystans zgodny z istniejącym `LARGE_CAVE_MIN_HOME_DIST`, tak aby nie walczyć z aktualnym siting authority.
 
 Wybór musi zależeć od stabilnego world seed + cave/site identity, a nie kolejności streamowania.
 
@@ -121,10 +133,12 @@ Wybór musi zależeć od stabilnego world seed + cave/site identity, a nie kolej
 
 Dla pozostałych caves:
 
-- `15%` → `adventure`,
+- `15%` → spróbować `adventure`,
 - `85%` → `natural`.
 
 Guaranteed home adventure cave nie bierze udziału w tym rollu.
+
+**Ważny fallback regresyjny:** jeśli niegwarantowany site wylosował `adventure`, ale adventure topology zostaje odrzucona przez istniejące terrain/overburden/grade/clearance/footprint guardrails, spróbować dla tego samego site niezmienionego `natural` recipe. Nie wolno utracić jaskini, która przed tym planem zostałaby poprawnie zaakceptowana jako natural tylko dlatego, że wylosowała adventure archetype.
 
 Nie persistować archetypu, jeśli można go bezpiecznie odtworzyć z world seed, cave sites i home settlement identity.
 
@@ -134,7 +148,9 @@ Adventure cave będzie znacznie większa niż obecna, ale nie powinna bez potrze
 
 Preferować długą, zawijaną trasę o względnie zwartym footprint zamiast bardzo szerokiego rozrzutu XZ.
 
-Nie zwiększać globalnie resolution wszystkich caves tylko dlatego, że adventure cave jest większa.
+Nie zwiększać globalnie resolution wszystkich caves tylko dlatego, że adventure cave jest większa. Nie zmieniać `DEFAULT_HEIGHTFIELD_CONFIG.cellSize` w ramach tego planu.
+
+Przed budową finalnego heightfield adventure topology musi mieć mierzalny, adventure-specific safety budget dla prostokątnego XZ bounds / szacowanej liczby grid cells. Layout przekraczający ten budżet ma zostać deterministycznie odrzucony/retried zgodnie z recipe, a nie powodować globalnej zmiany heightfield resolution lub limitów.
 
 Sprawdzić koszt heightfield bounds, number of cells, generated mesh vertices/indices, topology generation, streamed geometry, props i lights.
 
@@ -248,12 +264,14 @@ Dodać targeted automated tests obejmujące co najmniej:
 
 ### Archetype assignment
 
-- w home-area istnieje dokładnie jedna gwarantowana adventure cave,
+- w home-area istnieje dokładnie jedna gwarantowana adventure cave, gdy istnieje site akceptujący adventure topology,
 - wybór jest deterministyczny,
-- brak site w podstawowym radius uruchamia fallback search,
-- fallback nie tworzy nowego sztucznego cave site,
+- brak akceptowalnego site w podstawowym radius uruchamia fallback po istniejących sites,
+- fallback nie tworzy nowego sztucznego cave site ani nie osłabia acceptance guardrails,
 - pozostałe caves używają 15% deterministic adventure roll,
-- guaranteed cave nie jest ponownie losowana przez 15% roll.
+- guaranteed cave nie jest ponownie losowana przez 15% roll,
+- niegwarantowany site z adventure roll, którego adventure topology zostaje odrzucona, próbuje niezmienionego natural recipe,
+- taki fallback zachowuje natural cave, jeśli ten sam site byłby wcześniej zaakceptowany jako natural.
 
 ### Topology
 
@@ -268,7 +286,8 @@ Adventure cave:
 - nie łamie maximum traversable floor grade,
 - odnogi zachowują wymagane disconnected clearance,
 - topology jest deterministyczna,
-- footprint/bounds nie rosną nieproporcjonalnie do długości trasy.
+- footprint/bounds nie rosną nieproporcjonalnie do długości trasy,
+- przekroczenie adventure-specific heightfield bounds/cell budget powoduje deterministic reject/retry zamiast zmiany globalnego heightfield config.
 
 ### Treasure anchors
 
@@ -283,7 +302,8 @@ Adventure cave:
 
 Normal cave:
 
-- zachowuje dotychczasową topologię/charakter,
+- dla istniejących fixed seed/site fixtures zachowuje dotychczasowy topology output i acceptance behavior,
+- nie zmienia istniejącego RNG consumption/order ani branch probability,
 - nie otrzymuje automatycznie adventure props/chests,
 - istniejące cave tests nadal przechodzą.
 
@@ -306,7 +326,7 @@ Sprawdzić ręcznie:
 11. Wagon i pozostałe props stoją poprawnie na cave floor.
 12. Props nie blokują przejścia.
 13. Save/load po zabraniu loot nie respawnuje zawartości.
-14. Normal caves nadal generują się normalnie.
+14. Normal caves nadal generują się normalnie i nie znikają przez nieudany adventure roll.
 15. Brak widocznych nowych cave traversal/collision regressions.
 16. Brak istotnego freeze przy wejściu/streamowaniu większej cave.
 
@@ -344,9 +364,12 @@ Kopalnia powinna zostać osobnym kolejnym archetypem korzystającym z tego sameg
 - Nie uzależniać cave generation od camera/player position.
 - World seed i cave identity pozostają źródłem deterministycznego layoutu.
 - Mutable state persistować tylko tam, gdzie istniejący system tego wymaga.
+- Nie zmieniać istniejącego natural cave recipe ani jego seeded output/acceptance behavior.
+- Adventure rejection dla niegwarantowanego site nie może usuwać natural cave, która byłaby zaakceptowana dla tego site.
+- Nie zmieniać globalnego heightfield resolution/config w celu zmieszczenia adventure cave; kontrolować adventure footprint przed buildem.
 - Zachować możliwość późniejszego dodania kolejnych archetypów, zwłaszcza `mine`, bez kolejnej przebudowy Cave subsystem.
 
-Przed implementacją przygotować implementation notes zgodnie z `docs/plans/PLANNING.md` i zweryfikować aktualne integration points dla:
+Przed implementacją użyć istniejących implementation notes i zweryfikować tylko integration points, które materialnie zmieniły się od ich baseline, w szczególności:
 
 - `buildProductionCaveTopology()`,
 - cave lifecycle / streaming,
