@@ -20,6 +20,7 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `debug/createCaveHeightfieldTestScene.ts`
 - `world/caves/caveHeightfieldMesh.test.ts`
+- `world/caves/caveHeightfieldPresentation.test.ts`
 - `world/caves/caveHeightfieldQuery.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 

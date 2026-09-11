@@ -272,6 +272,15 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldMesh.test.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 
+## `world/caves/caveHeightfieldPresentation.test.ts`
+
+**Imports**
+
+- `debug/caves/caveHeightfieldFixtures.ts`
+- `world/caves/caveHeightfieldPresentation.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveOrientation.ts`
+
 ## `world/caves/caveHeightfieldPresentation.ts`
 
 **Imports**
@@ -284,6 +293,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `debug/caves/caveHeightfieldMesh.ts`
+- `world/caves/caveHeightfieldPresentation.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/caveHeightfieldQuery.test.ts`
@@ -350,6 +360,7 @@ Generated from TypeScript imports.
 - `player/worldWaterEligibility.test.ts`
 - `world/caves/caveHeightfieldMesh.test.ts`
 - `world/caves/caveHeightfieldMesh.ts`
+- `world/caves/caveHeightfieldPresentation.test.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveHeightfieldQuery.test.ts`
 - `world/caves/caveHeightfieldQuery.ts`
@@ -408,6 +419,7 @@ Generated from TypeScript imports.
 
 - `debug/createCaveHeightfieldTestScene.ts`
 - `world/caves/caveHeightfieldMesh.ts`
+- `world/caves/caveHeightfieldPresentation.test.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/mouthCarve.ts`

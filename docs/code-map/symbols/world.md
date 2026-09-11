@@ -135,26 +135,26 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldMesh.ts`
 
-- `buildHeightfieldMeshBuffers` — function — line 93
+- `buildHeightfieldMeshBuffers` — function — line 119
   - domain: world-terrain
-- `buildMouthUndersideMaskBuffers` — function — line 578
+- `buildMouthUndersideMaskBuffers` — function — line 620
   - domain: world-terrain
 - `HeightfieldMeshBuffers` — type — line 28
-- `MouthUndersideMaskBuffers` — type — line 289
+- `MouthUndersideMaskBuffers` — type — line 331
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 159
-- `createCaveHeightfieldGeometry` — function — line 60
+- `CaveHeightfieldPresentation` — type — line 296
+- `createCaveHeightfieldGeometry` — function — line 62
   - domain: world-terrain
-- `createCaveHeightfieldMaterial` — function — line 32
-- `createCaveHeightfieldPresentation` — function — line 178
+- `createCaveHeightfieldMaterial` — function — line 34
+- `createCaveHeightfieldPresentation` — function — line 315
   - domain: world-terrain
-- `createMouthRocks` — function — line 122
+- `createMouthRocks` — function — line 186
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 78
+- `createMouthUndersideMask` — function — line 80
   - domain: world-terrain
-- `createMouthUndersideMaskMaterial` — function — line 44
+- `createMouthUndersideMaskMaterial` — function — line 46
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
