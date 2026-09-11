@@ -79,7 +79,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 | ◼️ `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
 | ◼️ `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~ |
-| 💡 `world-terrain-021-low-cost-terrain-and-cave-surface-albedo.md`             | -       | 🟡 | S      | ~~world-terrain-019~~ |
 
 ---
 

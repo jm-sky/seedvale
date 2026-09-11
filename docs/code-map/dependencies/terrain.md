@@ -72,6 +72,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `assets/sharedSurfaceDiffuseTextures.ts`
 - `config/worldConfig.ts`
 - `terrain/chunkMeshData.ts`
 - `terrain/terrainCutout.ts`
@@ -79,9 +80,17 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `terrain/buildChunkGeometryMaterial.test.ts`
 - `terrain/chunkManager.ts`
 - `terrain/scorchFalloff.test.ts`
 - `terrain/terrainCutout.test.ts`
+
+## `terrain/buildChunkGeometryMaterial.test.ts`
+
+**Imports**
+
+- `assets/sharedSurfaceDiffuseTextures.ts`
+- `terrain/buildChunkGeometry.ts`
 
 ## `terrain/cemeteryAssignment.test.ts`
 

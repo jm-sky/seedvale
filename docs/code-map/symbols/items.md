@@ -250,34 +250,34 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1466
+- `ARROW_DAMAGE_BONUS` — const — line 1467
 - `BookTier` — type — line 156
-- `CAPABILITY_KINDS` — const — line 1497
+- `CAPABILITY_KINDS` — const — line 1498
 - `CAPABILITY_LABEL` — const — line 132
 - `CAPABILITY_NEED_LABEL` — const — line 116
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1537
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1538
 - `ConsumableNeed` — type — line 147
 - `consumeNeedNoun` — function — line 262
 - `consumeVerbLabel` — function — line 253
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1522
-- `HOLDABLE_KINDS` — const — line 1488
-- `INJURY_TREATMENT_KINDS` — const — line 1559
-- `isMeleeToolKind` — function — line 1481
-- `isRangedTool` — function — line 1473
+- `hasItemCapability` — function — line 1523
+- `HOLDABLE_KINDS` — const — line 1489
+- `INJURY_TREATMENT_KINDS` — const — line 1560
+- `isMeleeToolKind` — function — line 1482
+- `isRangedTool` — function — line 1474
 - `ITEM_CATALOG` — const — line 276
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1580
+- `ITEM_SYSTEM_ROADMAP` — const — line 1581
 - `ItemCapability` — type — line 89
 - `ItemCatalogEntry` — type — line 158
-- `itemIsResilient` — function — line 1527
+- `itemIsResilient` — function — line 1528
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1572
+- `itemTreatsPhysicalInjury` — function — line 1573
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1586
+- `NON_ITEM_PROPS` — const — line 1587
 - `RangedConfig` — type — line 53
 
 ## `items/itemDisplay.ts`

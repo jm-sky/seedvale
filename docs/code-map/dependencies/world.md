@@ -353,6 +353,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `assets/sharedSurfaceDiffuseTextures.ts`
 - `terrain/terrainDetailNormalMap.ts`
 - `world/caves/caveHeightfieldMaterial.ts`
 
@@ -360,6 +361,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `assets/sharedSurfaceDiffuseTextures.ts`
 - `terrain/terrainDetailNormalMap.ts`
 
 **Imported by**

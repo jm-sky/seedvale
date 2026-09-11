@@ -35,10 +35,11 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/buildChunkGeometry.ts`
 
-- `buildChunkGeometry` — function — line 362
-- `ChunkMeshResult` — type — line 7
-- `createTerrainMaterial` — function — line 35
-- `TerrainWeatherUniforms` — type — line 30
+- `buildChunkGeometry` — function — line 414
+- `ChunkMeshResult` — type — line 12
+- `createTerrainMaterial` — function — line 50
+- `TERRAIN_DIRT_DIFFUSE_TUNING` — const — line 41
+- `TerrainWeatherUniforms` — type — line 35
 
 ## `terrain/cemeteryAssignment.ts`
 

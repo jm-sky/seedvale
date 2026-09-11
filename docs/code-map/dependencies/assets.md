@@ -263,6 +263,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `assets/sharedSurfaceDiffuseTextures.ts`
 - `world/clouds.ts`
 - `world/groundFog.ts`
 
@@ -303,3 +304,23 @@ Generated from TypeScript imports.
 
 - `assets/resolveInteractionPoint.test.ts`
 - `settlement/wellInteractionQueue.ts`
+
+## `assets/sharedSurfaceDiffuseTextures.test.ts`
+
+**Imports**
+
+- `assets/sharedSurfaceDiffuseTextures.ts`
+
+## `assets/sharedSurfaceDiffuseTextures.ts`
+
+**Imports**
+
+- `assets/loadTexture.ts`
+
+**Imported by**
+
+- `assets/sharedSurfaceDiffuseTextures.test.ts`
+- `terrain/buildChunkGeometry.ts`
+- `terrain/buildChunkGeometryMaterial.test.ts`
+- `world/caves/caveHeightfieldMaterial.test.ts`
+- `world/caves/caveHeightfieldMaterial.ts`

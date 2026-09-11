@@ -198,3 +198,19 @@ Generated from exported TypeScript symbols.
 - `interactionQueueAnchorFromResolved` — function — line 68
 - `ResolvedInteractionPoint` — type — line 10
 - `resolveInteractionPoint` — function — line 24
+
+## `assets/sharedSurfaceDiffuseTextures.ts`
+
+- `__resetSharedSurfaceDiffuseTexturesForTests` — function — line 73
+- `CAVE_ROCK_DIFFUSE_DEFAULT_INFLUENCE` — const — line 22
+- `CAVE_ROCK_DIFFUSE_LINEAR_NEUTRAL` — const — line 15
+- `CAVE_ROCK_DIFFUSE_URL` — const — line 18
+- `getSharedCaveRockDiffuse` — function — line 132
+  - domain: world-terrain
+- `getSharedTerrainDirtDiffuse` — function — line 115
+  - domain: world-terrain
+- `SharedSurfaceDiffuseLoader` — type — line 68
+- `SharedSurfaceDiffuseSampler` — type — line 24
+- `TERRAIN_DIRT_DIFFUSE_DEFAULT_INFLUENCE` — const — line 21
+- `TERRAIN_DIRT_DIFFUSE_LINEAR_NEUTRAL` — const — line 14
+- `TERRAIN_DIRT_DIFFUSE_URL` — const — line 17
