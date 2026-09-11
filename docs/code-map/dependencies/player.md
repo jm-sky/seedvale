@@ -108,6 +108,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldQuery.test.ts`
 - `world/createBeehives.ts`
 - `world/createCarts.ts`
+- `world/createCaves.test.ts`
 - `world/createDryingRacks.ts`
 - `world/createGrassForagePatches.ts`
 - `world/createPalisades.ts`
@@ -523,6 +524,7 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`
 - `player/verticalMotion.test.ts`
+- `world/caves/caveHeightfieldQuery.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 
 ## `player/worldWaterEligibility.test.ts`

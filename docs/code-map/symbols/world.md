@@ -159,19 +159,20 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveHeightfieldQuery.ts`
 
 - `CAVE_STANDING_CLEARANCE_MARGIN` — const — line 36
-- `heightfieldGroundColumn` — function — line 60
+- `CAVE_SURFACE_ENTITY_SLACK` — const — line 59
+- `heightfieldGroundColumn` — function — line 78
   - domain: world-terrain
-- `heightfieldInteriorAt` — function — line 139
+- `heightfieldInteriorAt` — function — line 157
   - domain: world-terrain
-- `heightfieldOccupancyAt` — function — line 118
+- `heightfieldOccupancyAt` — function — line 136
   - domain: world-terrain
-- `HeightfieldSpaceQuery` — type — line 151
+- `HeightfieldSpaceQuery` — type — line 169
 - `heightfieldStandingClearance` — function — line 39
-- `queryHeightfieldGround` — function — line 87
+- `queryHeightfieldGround` — function — line 105
   - domain: world-terrain
-- `queryHeightfieldSpace` — function — line 163
+- `queryHeightfieldSpace` — function — line 181
   - domain: world-terrain
-- `resolveHeightfieldHorizontal` — function — line 195
+- `resolveHeightfieldHorizontal` — function — line 215
   - domain: world-terrain
 
 ## `world/caves/caveHeightfieldRepresentation.ts`

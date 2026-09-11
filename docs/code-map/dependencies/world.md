@@ -224,6 +224,7 @@ Generated from TypeScript imports.
 - `world/caves/sweepCaveMesh.test.ts`
 - `world/caves/topologyAdapter.test.ts`
 - `world/caves/topologyAdapter.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 - `world/locations/darkForestTreasureSite.test.ts`
 - `world/locations/darkForestTreasureSite.ts`
@@ -303,6 +304,7 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldFixtures.ts`
 - `player/PlayerController.ts`
 - `player/playerDimensions.ts`
+- `player/verticalMotion.ts`
 - `world/caves/caveGroundQuery.ts`
 - `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
@@ -869,12 +871,14 @@ Generated from TypeScript imports.
 
 - `config/worldConfig.ts`
 - `fauna/createFauna.ts`
+- `player/PlayerController.ts`
 - `player/cameraBoom.ts`
 - `player/playerDimensions.ts`
 - `settlement/families.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainCutout.ts`
+- `world/caveVolume.ts`
 - `world/caves/caveGroundQuery.ts`
 - `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
