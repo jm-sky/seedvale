@@ -89,6 +89,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Cemetery assignment](../src/terrain/cemeteryAssignment.ts) — settlement↔cemetery topology (dedicated or shared `SM`) and reverse lookup; abandoned cemeteries have no served settlements.
 - [Cemetery placement](../src/terrain/cemeteryPlacement.ts) — bounded dedicated/shared/abandoned cemetery search over the shared physical gates in `chunkEnvironment.ts`.
 - [Treasure sites](../src/world/treasureSites.ts) — deterministic finite world treasure (ruins/deep-forest chests + matching keys); cave archetype deferred.
+- [Caves](../src/world/createCaves.ts) — Cave V2 lifecycle: production topology, retained heightfield, streamed presentation, spatial queries, and read-only adventure content anchors.
+- [Cave content anchors](../src/world/caves/caveContentAnchors.ts) — semantic interior placement descriptors for adventure caves (world-terrain-020 Stage B); floor Y from the cave's own heightfield.
 
 ## UI wiring
 

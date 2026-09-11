@@ -268,4 +268,16 @@ Stage A (archetypes + adventure topology only; no treasure/props/lights) is impl
 
 Stage B can assume: `Caves.archetypeOf`, the role node ids above, and that adventure caves already exist on the default repro seed. Still to do exactly as written in the notes above: content descriptors resolved against the final heightfield, the explicit-Y `WorldGeneratedContainerSpec` seam, loot tiers, and relevance-streamed props/lanterns.
 
+## Stage B landed — content-anchor seam
+
+Stage B (semantic content anchors only; no chests/props/lights/container Y) is implemented. Corrections against the notes above:
+
+- **Contract.** `CaveContentAnchorRole` / `CaveContentAnchor` live in `src/world/caves/caveContentAnchors.ts`. Roles are `sideTreasure`, `finalTreasure`, `wagon`, `support`, `crate`, `lantern` — none of these were added to `CaveTopologyNodeKind`. Stable ids are `${caveId}:${role}` or `${caveId}:${role}:${ordinal}` for repeating roles. `Caves.contentAnchors()` / `contentAnchorsOf(caveId)` are the public read-only API; `CaveRuntime` stays private. Natural caves return an empty list.
+- **Semantic source.** Side treasure ← `adventure-side-chamber`; final treasure ← `adventure-final-chamber`; wagon ← `adventure-deep-chamber`; supports/crates/lanterns ← deeper chambers/passages. Lookup is by role node id, not array position (shuffling `nodes`/`segments` does not change the result). Additional exported ids: `ADVENTURE_DEEP_CHAMBER_NODE_ID`, `ADVENTURE_DEEP_PASSAGE_NODE_ID`, `ADVENTURE_FINAL_PASSAGE_NODE_ID`.
+- **Y authority.** Each candidate is sampled with `sampleHeightfieldAt(runtime.heightfield, x, z)`; `y = sample.floorY`. Construction never calls `chunkManager.sampleHeight()`, topology node Y, `Caves.sampleFloor()`, or player-stateful `queryGround()`.
+- **Fitting.** Bounded alternatives (`CONTENT_ANCHOR_CANDIDATE_LIMIT = 24`) around the semantic node/segment. Guards: in-void, not `openSky`, `gap >= role.minGap`, `coreT <= maxCoreT`, ring footprint samples, wagon kept off the through-line and off foreign passages. Wagon `minGap`/`footprintRadius` are strictly larger than chest. New RNG salt `adventureContent` (0x0f) only chooses preferred wall-side; it does not touch topology/heightfield streams.
+- **Streaming.** Anchors are built with the heightfield at world construct and do not depend on presentation activation.
+
+Stage C can assume the three required adventure anchors exist with heightfield floor Y, and should wire them into `WorldGeneratedContainerSpec` explicit-Y + loot tiers. Still to do: the container Y seam, chests, loot tiers, and relevance-streamed props/lanterns.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

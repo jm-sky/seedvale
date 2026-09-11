@@ -58,6 +58,9 @@ export const CAVE_RNG_SALT = {
   adventureFeature: 0x0d,
   /** Plan world-terrain-020: adventure passage centerline wobble. */
   adventureCenterline: 0x0e,
+  /** Plan world-terrain-020 Stage B: preferred wall-side for content anchors.
+   *  Own stream so yaw/offset never shifts topology or heightfield noise. */
+  adventureContent: 0x0f,
 } as const
 
 /** Fresh `[0,1)` generator for `(caveId, salt)` — deterministic, and

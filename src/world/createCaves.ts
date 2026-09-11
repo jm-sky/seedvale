@@ -11,6 +11,12 @@ import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlemen
 import { useBootMark } from '../shared/bootMark'
 import { assignCaveArchetypes } from './caves/caveArchetype'
 import {
+  type CaveContentAnchor,
+  resolveCaveContentAnchors,
+} from './caves/caveContentAnchors'
+
+export type { CaveContentAnchor }
+import {
   applyCaveGroundHysteresis,
   applyCaveInteriorHysteresis,
   CAVE_OCCUPANCY_EPS,
@@ -135,6 +141,15 @@ export type Caves = {
    *  spatial query, and deliberately not part of `CaveTopology`, which stays
    *  representation-neutral. */
   archetypeOf: (caveId: string) => CaveArchetype | null
+  /**
+   * Deterministic adventure content anchors for every accepted cave
+   * (plan world-terrain-020 Stage B). Natural caves contribute nothing.
+   * Independent of presentation streaming — these are world definitions,
+   * not meshes. Frozen snapshots; callers must not mutate them.
+   */
+  contentAnchors: () => readonly CaveContentAnchor[]
+  /** Content anchors of one cave. Empty for natural caves and unknown ids. */
+  contentAnchorsOf: (caveId: string) => readonly CaveContentAnchor[]
   dispose: () => void
 }
 
@@ -153,6 +168,9 @@ type CaveRuntime = {
    *  `sampleBaseHeight - mouthCarveDepth`. Presentation, mask, framing and
    *  the terrain cutout all evaluate the mouth contour with this one. */
   walkSurfaceAt: SurfaceSampler
+  /** Adventure content placements resolved against `heightfield`. Empty for
+   *  `natural`. Frozen; never mutated after construction. */
+  contentAnchors: readonly CaveContentAnchor[]
 }
 
 function gridKey(cx: number, cz: number): string {
@@ -195,18 +213,22 @@ const TERRAIN_CUTOUT_OWNER_KEY = 'caves'
  * (ground underground-miss hysteresis, two-sample interior confirmation)
  * is `caveGroundQuery.ts` and is player-stateful here. `CaveVolume` is not
  * consulted. `topologyToCaveDefinition` remains only for `definitions()` /
- * location catalog / streaming bounds.
+ * location catalog / streaming bounds. Adventure caves also expose
+ * deterministic interior content anchors (`contentAnchors` /
+ * `contentAnchorsOf`) resolved against each cave's own heightfield — world
+ * definitions, not presentation, and never a second spatial representation.
  *
  * Same lifecycle as `WorldBundle` (create/dispose alongside it, never
  * survives a rebuild).
  *
  * @system caves
  * @role Owns cave topologies, retained heightfield representations
- *  (presentation mesh + terrain mouth cutout + every spatial query) and
- *  streamed interior presentation; `PlayerController` ground goes through
- *  `queryGround`, lateral containment through `resolveHorizontal`, camera
- *  and swim eligibility through `occupancyAt`. `queryInterior` is the
- *  hysteretic player-position cave-interior signal (audio / diagnostics).
+ *  (presentation mesh + terrain mouth cutout + every spatial query),
+ *  streamed interior presentation, and deterministic adventure content
+ *  anchors; `PlayerController` ground goes through `queryGround`, lateral
+ *  containment through `resolveHorizontal`, camera and swim eligibility
+ *  through `occupancyAt`. `queryInterior` is the hysteretic player-position
+ *  cave-interior signal (audio / diagnostics).
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -267,12 +289,14 @@ export function createCaves(
   bootMark('cave.heightfield')
   for (const { topology, archetype } of accepted) {
     const walkSurfaceAt: SurfaceSampler = (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
+    const heightfield = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
     v2ByCaveId.set(topology.caveId, {
       archetype,
       topology,
       definition: topologyToCaveDefinition(topology),
-      heightfield: buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield,
+      heightfield,
       walkSurfaceAt,
+      contentAnchors: resolveCaveContentAnchors({ archetype, topology, heightfield }),
     })
   }
   bootMarkEnd('cave.heightfield')
@@ -577,6 +601,12 @@ export function createCaves(
     },
     archetypeOf(caveId) {
       return v2ByCaveId.get(caveId)?.archetype ?? null
+    },
+    contentAnchors() {
+      return runtimes.flatMap((runtime) => runtime.contentAnchors)
+    },
+    contentAnchorsOf(caveId) {
+      return v2ByCaveId.get(caveId)?.contentAnchors ?? []
     },
     dispose() {
       lastGroundHit = null

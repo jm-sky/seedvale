@@ -63,11 +63,14 @@ const SIDE_CHAMBER_HEIGHT: readonly [number, number] = [6, 7]
 const FINAL_CHAMBER_WIDTH: readonly [number, number] = [9.5, 11]
 const FINAL_CHAMBER_HEIGHT: readonly [number, number] = [8.5, 10]
 
-/** Node id of the one guaranteed junction, and of the two chambers later
+/** Node id of the one guaranteed junction, and of the chambers/passages later
  *  stages anchor content to. Exported so tests and Stage B never go looking
  *  for "the last chamber in the array". */
 export const ADVENTURE_JUNCTION_NODE_ID = 'adventure-junction'
 export const ADVENTURE_SIDE_CHAMBER_NODE_ID = 'adventure-side-chamber'
+export const ADVENTURE_DEEP_PASSAGE_NODE_ID = 'adventure-deep-passage'
+export const ADVENTURE_DEEP_CHAMBER_NODE_ID = 'adventure-deep-chamber'
+export const ADVENTURE_FINAL_PASSAGE_NODE_ID = 'adventure-final-passage'
 export const ADVENTURE_FINAL_CHAMBER_NODE_ID = 'adventure-final-chamber'
 
 type LegSpec = {
@@ -93,9 +96,9 @@ const MAIN_LEGS: readonly LegSpec[] = [
   { id: 'adventure-chamber-1', kind: 'chamber', turn: [32, 42], length: [7.5, 9.5], width: CHAMBER_WIDTH, height: CHAMBER_HEIGHT },
   { id: 'adventure-passage-2', kind: 'passage', turn: [24, 34], length: [9, 12], width: PASSAGE_WIDTH, height: PASSAGE_HEIGHT, wobble: 1.8 },
   { id: ADVENTURE_JUNCTION_NODE_ID, kind: 'widening', turn: [-34, -26], length: [7.5, 9.5], width: JUNCTION_WIDTH, height: JUNCTION_HEIGHT },
-  { id: 'adventure-deep-passage', kind: 'passage', turn: [-38, -30], length: [9, 12], width: PASSAGE_WIDTH, height: PASSAGE_HEIGHT, wobble: 1.8 },
-  { id: 'adventure-deep-chamber', kind: 'chamber', turn: [-34, -26], length: [7.5, 9.5], width: CHAMBER_WIDTH, height: CHAMBER_HEIGHT },
-  { id: 'adventure-final-passage', kind: 'passage', turn: [-34, -26], length: [9, 12], width: PASSAGE_WIDTH, height: PASSAGE_HEIGHT, wobble: 1.8 },
+  { id: ADVENTURE_DEEP_PASSAGE_NODE_ID, kind: 'passage', turn: [-38, -30], length: [9, 12], width: PASSAGE_WIDTH, height: PASSAGE_HEIGHT, wobble: 1.8 },
+  { id: ADVENTURE_DEEP_CHAMBER_NODE_ID, kind: 'chamber', turn: [-34, -26], length: [7.5, 9.5], width: CHAMBER_WIDTH, height: CHAMBER_HEIGHT },
+  { id: ADVENTURE_FINAL_PASSAGE_NODE_ID, kind: 'passage', turn: [-34, -26], length: [9, 12], width: PASSAGE_WIDTH, height: PASSAGE_HEIGHT, wobble: 1.8 },
   { id: ADVENTURE_FINAL_CHAMBER_NODE_ID, kind: 'chamber', turn: [-30, -22], length: [8, 10], width: FINAL_CHAMBER_WIDTH, height: FINAL_CHAMBER_HEIGHT },
 ]
 
