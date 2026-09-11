@@ -333,6 +333,7 @@ Generated from TypeScript imports.
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
 - `world/createCaves.archetype.test.ts`
+- `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
 - `world/hiddenFinds.ts`

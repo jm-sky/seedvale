@@ -91,6 +91,7 @@ Generated from TypeScript imports.
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.archetype.test.ts`
+- `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
 - `world/map/mapProjection.ts`
 - `world/worldContext.ts`

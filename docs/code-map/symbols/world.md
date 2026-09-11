@@ -120,14 +120,17 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/adventureTopology.ts`
 
+- `ADVENTURE_DEEP_CHAMBER_NODE_ID` — const — line 72
+- `ADVENTURE_DEEP_PASSAGE_NODE_ID` — const — line 71
 - `ADVENTURE_DESCENT_PER_METER` — const — line 50
-- `ADVENTURE_FINAL_CHAMBER_NODE_ID` — const — line 71
+- `ADVENTURE_FINAL_CHAMBER_NODE_ID` — const — line 74
+- `ADVENTURE_FINAL_PASSAGE_NODE_ID` — const — line 73
 - `ADVENTURE_JUNCTION_NODE_ID` — const — line 69
-- `ADVENTURE_MAX_HEIGHTFIELD_CELLS` — const — line 118
+- `ADVENTURE_MAX_HEIGHTFIELD_CELLS` — const — line 121
 - `ADVENTURE_SIDE_CHAMBER_NODE_ID` — const — line 70
-- `buildAdventureCaveTopology` — function — line 210
+- `buildAdventureCaveTopology` — function — line 213
   - domain: world-terrain
-- `fitsAdventureFootprintBudget` — function — line 128
+- `fitsAdventureFootprintBudget` — function — line 131
   - domain: world-terrain
 
 ## `world/caves/caveArchetype.ts`
@@ -143,6 +146,25 @@ Generated from exported TypeScript symbols.
 - `orderHomeAdventureCandidates` — function — line 56
   - domain: world-terrain
 - `rollsAdventure` — function — line 84
+  - domain: world-terrain
+
+## `world/caves/caveContentAnchors.ts`
+
+- `CAVE_CONTENT_ANCHOR_ROLES` — const — line 32
+- `CAVE_CONTENT_PLACEMENT` — const — line 78
+- `CaveContentAnchor` — type — line 50
+  - domain: world-terrain
+- `caveContentAnchorId` — function — line 111
+  - domain: world-terrain
+- `CaveContentAnchorInput` — type — line 60
+- `CaveContentAnchorRole` — type — line 41
+- `chamberContentCandidates` — function — line 200
+  - domain: world-terrain
+- `CONTENT_ANCHOR_CANDIDATE_LIMIT` — const — line 89
+- `ContentAnchorPlacement` — type — line 69
+- `passageWallContentCandidates` — function — line 246
+  - domain: world-terrain
+- `resolveCaveContentAnchors` — function — line 459
   - domain: world-terrain
 
 ## `world/caves/caveGroundQuery.ts`
@@ -167,9 +189,9 @@ Generated from exported TypeScript symbols.
 - `CAVE_SURFACE_MATERIAL_TUNING` — const — line 12
 - `CaveSurfaceMaterialTuning` — type — line 25
 - `CaveVec3` — type — line 27
-- `createCaveHeightfieldMaterial` — function — line 345
-- `CreateCaveHeightfieldMaterialOptions` — type — line 332
-- `disposeCaveHeightfieldMaterialGpu` — function — line 375
+- `createCaveHeightfieldMaterial` — function — line 320
+- `CreateCaveHeightfieldMaterialOptions` — type — line 307
+- `disposeCaveHeightfieldMaterialGpu` — function — line 350
 - `perturbCaveWorldNormalOnTangentPlane` — function — line 92
   - domain: world-terrain
 - `reconstructCaveTriplanarWorldNormal` — function — line 52
@@ -306,7 +328,7 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveRng.ts`
 
 - `CAVE_RNG_SALT` — const — line 34
-- `createCaveRandom` — function — line 65
+- `createCaveRandom` — function — line 68
 
 ## `world/caves/caveRoute.ts`
 
@@ -532,10 +554,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 70
-- `createCaves` — function — line 213
+- `Caves` — type — line 76
+- `createCaves` — function — line 235
   - system: caves
-  - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query) and streamed interior presentation; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
+  - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves
   - lifecycle: rebuild
 

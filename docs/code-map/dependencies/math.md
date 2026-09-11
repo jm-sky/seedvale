@@ -21,4 +21,5 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverNetwork.ts`
 - `world/caveVolume.ts`
+- `world/caves/caveContentAnchors.ts`
 - `world/largeCaves.ts`

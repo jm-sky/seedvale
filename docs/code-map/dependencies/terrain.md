@@ -313,6 +313,7 @@ Generated from TypeScript imports.
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.archetype.test.ts`
+- `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
 - `world/largeCaves.ts`
 - `world/locations/darkForestTreasureSite.ts`
@@ -456,6 +457,7 @@ Generated from TypeScript imports.
 - `terrain/footstepSurface.test.ts`
 - `terrain/footstepSurface.ts`
 - `world/createCaves.archetype.test.ts`
+- `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
 - `world/createTerrainPreparations.test.ts`
@@ -964,6 +966,7 @@ Generated from TypeScript imports.
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.ts`
 - `world/createCaves.archetype.test.ts`
+- `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
 
 ## `terrain/terrainDetailNormalMap.ts`
