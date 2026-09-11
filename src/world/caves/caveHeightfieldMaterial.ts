@@ -24,12 +24,85 @@ export const CAVE_SURFACE_MATERIAL_TUNING = {
 
 export type CaveSurfaceMaterialTuning = typeof CAVE_SURFACE_MATERIAL_TUNING
 
+export type CaveVec3 = readonly [number, number, number]
+
 const NORMAL_MAP_INCLUDE = '#include <normal_fragment_maps>'
 const COLOR_FRAGMENT_INCLUDE = '#include <color_fragment>'
 const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
 
-const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v2-detail'
-const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v2-plain'
+const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v3-detail'
+const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v3-plain'
+
+function caveVec3Normalize(v: CaveVec3, fallback: CaveVec3 = [0, 1, 0]): [number, number, number] {
+  const len = Math.hypot(v[0], v[1], v[2])
+  if (!(len > 1e-8) || !Number.isFinite(len)) return [fallback[0], fallback[1], fallback[2]]
+  return [v[0] / len, v[1] / len, v[2] / len]
+}
+
+/**
+ * World-space triplanar reconstruction: whiteout-blend each tangent-space
+ * sample in its projection basis, swizzle into world, then blend.
+ *
+ * Must stay in lockstep with `caveTriplanarWorldNormal` in the GLSL below.
+ * X uses world ZY UVs → swizzle `.zyx`; Y uses XZ → `.xzy`; Z uses XY → `.xyz`.
+ * Do not blend raw tangent-space samples as `px*bx + py*by + pz*bz`.
+ *
+ * @domain world-terrain
+ */
+export function reconstructCaveTriplanarWorldNormal(
+  worldNormal: CaveVec3,
+  tangentX: CaveVec3,
+  tangentY: CaveVec3,
+  tangentZ: CaveVec3,
+  strength: number,
+): [number, number, number] {
+  const n = caveVec3Normalize(worldNormal)
+  let bx = Math.max(Math.abs(n[0]), 1e-4)
+  let by = Math.max(Math.abs(n[1]), 1e-4)
+  let bz = Math.max(Math.abs(n[2]), 1e-4)
+  const sum = bx + by + bz
+  bx /= sum
+  by /= sum
+  bz /= sum
+
+  const tX: [number, number, number] = [tangentX[0] * strength, tangentX[1] * strength, tangentX[2]]
+  const tY: [number, number, number] = [tangentY[0] * strength, tangentY[1] * strength, tangentY[2]]
+  const tZ: [number, number, number] = [tangentZ[0] * strength, tangentZ[1] * strength, tangentZ[2]]
+
+  // Whiteout: add the geometric normal's other axes, keep signed projection axis.
+  const wX: [number, number, number] = [tX[0] + n[2], tX[1] + n[1], Math.abs(tX[2]) * n[0]]
+  const wY: [number, number, number] = [tY[0] + n[0], tY[1] + n[2], Math.abs(tY[2]) * n[1]]
+  const wZ: [number, number, number] = [tZ[0] + n[0], tZ[1] + n[1], Math.abs(tZ[2]) * n[2]]
+
+  // Swizzle each projection's tangent frame back to world (X: zyx, Y: xzy, Z: xyz).
+  return caveVec3Normalize([
+    wX[2] * bx + wY[0] * by + wZ[0] * bz,
+    wX[1] * bx + wY[2] * by + wZ[1] * bz,
+    wX[0] * bx + wY[1] * by + wZ[2] * bz,
+  ])
+}
+
+/**
+ * Project an XZ slope onto the surface tangent plane so wall/ceiling grain
+ * does not push the normal along the geometric axis. Matches
+ * `caveProceduralRockPerturb` in GLSL.
+ *
+ * @domain world-terrain
+ */
+export function perturbCaveWorldNormalOnTangentPlane(
+  worldNormal: CaveVec3,
+  slopeXz: readonly [number, number],
+  strength: number,
+): [number, number, number] {
+  const n = caveVec3Normalize(worldNormal)
+  const slope: [number, number, number] = [slopeXz[0], 0, slopeXz[1]]
+  const along = n[0] * slope[0] + n[1] * slope[1] + n[2] * slope[2]
+  return caveVec3Normalize([
+    n[0] + (slope[0] - n[0] * along) * strength,
+    n[1] + (slope[1] - n[1] * along) * strength,
+    n[2] + (slope[2] - n[2] * along) * strength,
+  ])
+}
 
 const CAVE_SURFACE_GLSL = /* glsl */ `
 float caveHash21( vec2 p ) {
@@ -47,6 +120,10 @@ float caveValueNoise( vec2 p ) {
   float d = caveHash21( i + vec2( 1.0, 1.0 ) );
   return mix( mix( a, b, f.x ), mix( c, d, f.x ), f.y );
 }
+vec3 caveSafeNormalize( vec3 v, vec3 fallback ) {
+  float len2 = dot( v, v );
+  return len2 > 1e-10 ? v * inversesqrt( len2 ) : fallback;
+}
 vec3 caveOrientationWeights( vec3 n ) {
   float up = n.y;
   float floorW = smoothstep( 0.18, 0.82, up );
@@ -54,7 +131,7 @@ vec3 caveOrientationWeights( vec3 n ) {
   float wallW = clamp( 1.0 - max( floorW, ceilW ), 0.0, 1.0 );
   return vec3( floorW, wallW, ceilW );
 }
-float caveWetnessMask( vec3 worldPos, vec3 orient ) {
+float caveWetnessMask( vec3 worldPos, vec3 orient, vec3 n ) {
   float floorW = orient.x;
   float wallW = orient.y;
   float ceilW = orient.z;
@@ -63,33 +140,49 @@ float caveWetnessMask( vec3 worldPos, vec3 orient ) {
   float wetMacro2 = caveValueNoise( wetP * 1.85 + vec2( 41.0, 13.0 ) );
   float wetNoise = wetMacro * 0.68 + wetMacro2 * 0.32;
   float orientWet = floorW * 0.58 + wallW * 0.72 + ceilW * 0.28;
-  orientWet += wallW * ( 1.0 - smoothstep( 0.15, 0.75, abs( normalize( vWorldNormal ).y ) ) ) * 0.18;
+  orientWet += wallW * ( 1.0 - smoothstep( 0.15, 0.75, abs( n.y ) ) ) * 0.18;
   float wetMask = smoothstep( 0.38, 0.78, wetNoise ) * orientWet * uCaveWetnessAmount;
   wetMask *= mix( 1.0, 0.62, floorW * smoothstep( 0.55, 0.88, wetNoise ) );
   return clamp( wetMask, 0.0, 1.0 );
 }
-vec3 caveTriplanarNormalSample( vec3 worldPos, vec3 blend, float scale ) {
-  vec3 b = abs( blend );
-  b = max( b, 1e-4 );
-  b /= ( b.x + b.y + b.z );
-  vec3 px = texture2D( normalMap, worldPos.yz * scale ).xyz * 2.0 - 1.0;
-  vec3 py = texture2D( normalMap, worldPos.xz * scale ).xyz * 2.0 - 1.0;
-  vec3 pz = texture2D( normalMap, worldPos.xy * scale ).xyz * 2.0 - 1.0;
-  return normalize( px * b.x + py * b.y + pz * b.z );
+vec3 caveTriplanarWorldNormal( vec3 worldPos, vec3 worldN, float scale, float strength ) {
+  vec3 n = caveSafeNormalize( worldN, vec3( 0.0, 1.0, 0.0 ) );
+  vec3 blend = abs( n );
+  blend = max( blend, vec3( 1e-4 ) );
+  blend /= ( blend.x + blend.y + blend.z );
+
+  vec3 tX = texture2D( normalMap, worldPos.zy * scale ).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D( normalMap, worldPos.xz * scale ).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D( normalMap, worldPos.xy * scale ).xyz * 2.0 - 1.0;
+  tX.xy *= strength;
+  tY.xy *= strength;
+  tZ.xy *= strength;
+
+  tX = vec3( tX.xy + n.zy, abs( tX.z ) * n.x );
+  tY = vec3( tY.xy + n.xz, abs( tY.z ) * n.y );
+  tZ = vec3( tZ.xy + n.xy, abs( tZ.z ) * n.z );
+
+  return caveSafeNormalize(
+    tX.zyx * blend.x + tY.xzy * blend.y + tZ.xyz * blend.z,
+    n
+  );
 }
-void caveProceduralRockPerturb( vec3 worldPos, float scale, inout vec3 mapN ) {
+void caveProceduralRockPerturb( vec3 worldPos, float scale, inout vec3 worldN ) {
   float s = scale * 3.6;
   vec2 p = worldPos.xz * s;
   float h = caveValueNoise( p );
   float hx = caveValueNoise( p + vec2( 0.07, 0.0 ) ) - h;
   float hz = caveValueNoise( p + vec2( 0.0, 0.07 ) ) - h;
-  mapN.xy += vec2( hx, hz ) * uCaveProceduralRockStrength;
+  vec3 n = caveSafeNormalize( worldN, vec3( 0.0, 1.0, 0.0 ) );
+  vec3 slope = vec3( hx, 0.0, hz );
+  vec3 tangentSlope = slope - n * dot( n, slope );
+  worldN = caveSafeNormalize( n + tangentSlope * uCaveProceduralRockStrength, n );
 }
 `
 
 const CAVE_COLOR_CHUNK = /* glsl */ `
   {
-    vec3 n = normalize( vWorldNormal );
+    vec3 n = caveSafeNormalize( vWorldNormal, vec3( 0.0, 1.0, 0.0 ) );
     vec3 orient = caveOrientationWeights( n );
     vec2 macroP = vWorldPos.xz * uCaveMacroScale;
     float macro = caveValueNoise( macroP );
@@ -103,7 +196,7 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
     tint += ( macroMix - 0.5 ) * 0.09;
     diffuseColor.rgb *= tint;
 
-    float wetMask = caveWetnessMask( vWorldPos, orient );
+    float wetMask = caveWetnessMask( vWorldPos, orient, n );
     diffuseColor.rgb *= 1.0 - wetMask * uCaveWetDarkening;
     diffuseColor.rgb = mix(
       diffuseColor.rgb,
@@ -115,21 +208,21 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
 
 const CAVE_ROUGHNESS_CHUNK = /* glsl */ `
   {
-    vec3 orient = caveOrientationWeights( normalize( vWorldNormal ) );
-    float wetMask = caveWetnessMask( vWorldPos, orient );
+    vec3 n = caveSafeNormalize( vWorldNormal, vec3( 0.0, 1.0, 0.0 ) );
+    vec3 orient = caveOrientationWeights( n );
+    float wetMask = caveWetnessMask( vWorldPos, orient, n );
     roughnessFactor = mix( uCaveDryRoughness, uCaveWetRoughness, wetMask );
   }
 `
 
 const CAVE_NORMAL_CHUNK = /* glsl */ `
   {
-    vec3 n = normalize( vWorldNormal );
+    vec3 n = caveSafeNormalize( vWorldNormal, vec3( 0.0, 1.0, 0.0 ) );
     vec3 orient = caveOrientationWeights( n );
     float detailAmt = uCaveRockNormalStrength * ( orient.y * 1.0 + orient.x * 0.38 + orient.z * 0.48 );
-    vec3 mapN = caveTriplanarNormalSample( vWorldPos, n, uCaveRockDetailScale );
-    caveProceduralRockPerturb( vWorldPos, uCaveRockDetailScale, mapN );
-    mapN.xy *= detailAmt;
-    normal = normalize( tbn * mapN );
+    vec3 worldN = caveTriplanarWorldNormal( vWorldPos, n, uCaveRockDetailScale, detailAmt );
+    caveProceduralRockPerturb( vWorldPos, uCaveRockDetailScale, worldN );
+    normal = normalize( mat3( viewMatrix ) * worldN );
   }
 `
 
@@ -159,7 +252,7 @@ function applyCaveSurfaceShader(
       )
       .replace(
         '#include <defaultnormal_vertex>',
-        '#include <defaultnormal_vertex>\nvWorldNormal = normalize( mat3( modelMatrix ) * objectNormal );',
+        '#include <defaultnormal_vertex>\nvWorldNormal = mat3( modelMatrix ) * objectNormal;',
       )
 
     let frag = shader.fragmentShader

@@ -848,6 +848,17 @@ pnpm run build
 
 Milestone C and broader `world-terrain-019` completion are unchanged by this polish.
 
+## Cave wall visibility — fixed (2026-09-11)
+
+Regression from the surface-polish commit: with the detailed material, some interior walls vanished; `?debugDisableSystems=caveSurfaceDetail` restored them (geometry / winding / `FrontSide` were fine).
+
+Root cause was the normal-detail path, not culling:
+
+- tangent-space samples from the X/Y/Z projections were blended as `px*bx + py*by + pz*bz` without remapping each sample into world space;
+- that mixed vector was then fed through view-space `tbn` (`normal = tbn * mapN`) as if it were a tangent-space map. Cave heightfield meshes have no UVs, so `tbn` is not a valid projection basis.
+
+Fix (shader-only, same shared material): whiteout-blend + projection swizzle (`X: ZY → zyx`, `Y: XZ → xzy`, `Z: XY → xyz`), then `normal = normalize(mat3(viewMatrix) * worldN)`. Macro colour, wetness, shared texture ownership and `FrontSide` unchanged. A/B toggle still works.
+
 ## Mouth exit snap-back — fixed (2026-09-11)
 
 Regression after the spatial cutover: walking **out** of the cave, the player was pulled back toward the interior exactly at the grey cave floor → green terrain seam. Browser A/B with `?debugDisableSystems=caveMouthRocks` still reproduced it, so mouth rocks are ruled out (the earlier polish note's "rocks were the snap-back" was only part of the story). Spatial fix only; no rocks / material / topology / terrain / camera changes.
