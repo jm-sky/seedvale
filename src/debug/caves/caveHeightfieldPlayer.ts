@@ -30,8 +30,10 @@ import {
   integrateDebugVertical,
 } from './caveHeightfieldTraversal'
 
-/** Mirrors `PlayerController`'s `MOVE_SPEED` / `SPRINT_MULTIPLIER` — see the
- *  duplication note on `HEIGHTFIELD_PLAYER_RADIUS`. */
+/** Mirrors `PlayerController`'s `MOVE_SPEED` / `SPRINT_MULTIPLIER`.
+ *  Duplicated rather than imported so the harness does not pull the whole
+ *  gameplay module graph in; `caveHeightfieldTraversal.test.ts` asserts the
+ *  two never drift. Body dimensions come from `playerDimensions.ts`. */
 const MOVE_SPEED = 8
 const SPRINT_MULTIPLIER = 1.8
 const LOOK_AT_OFFSET_FAR = 0.9
@@ -182,7 +184,7 @@ export async function createCaveHeightfieldWalker(): Promise<CaveHeightfieldWalk
         // boom off the hillside above the cave, and a cave-floor-substituted
         // sampler would defeat that test.
         sampleHeight: world.walkSurfaceAt,
-        colliders: world.boomCollidersAt(model.position.y),
+        colliders: [],
         occupancyAt: world.occupancyAt,
       })
       camera.position.set(boom.x, boom.y, boom.z)

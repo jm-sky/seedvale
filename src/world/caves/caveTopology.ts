@@ -55,9 +55,10 @@ export type CaveTopologyFeature = {
 
 /**
  * Representation-neutral cave layout: what a cave *is*, not what it looks
- * like. Both `sweepCaveMesh.ts` and `sdfCaveMesh.ts` consume exactly the
- * same `CaveTopology` instance for a given seed/entrance, so representation
- * is the only variable in the Milestone A comparison (plan §12).
+ * like. Every representation (the production heightfield in
+ * `caveHeightfieldRepresentation.ts`, the retained Sweep spike) consumes
+ * exactly the same `CaveTopology` instance for a given seed/entrance, so
+ * representation is the only variable between them.
  *
  * @domain world-terrain
  */

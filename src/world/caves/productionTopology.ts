@@ -45,8 +45,9 @@ const CHAMBER_HEIGHT: readonly [number, number] = [9, 11]
 const NOMINAL_DESCENT_PER_METER = 0.12
 /**
  * Max |Δfloor|/Δxz between consecutive topology stations. 40° — below
- * `SLOPE_MAX_WALKABLE_DEG` (55°) so the SDF blend still leaves a ramp the
- * player can walk both ways without a climb-stat buff.
+ * `SLOPE_MAX_WALKABLE_DEG` (55°) so the representation's rim blend / detail
+ * noise still leaves a ramp the player can walk both ways without a
+ * climb-stat buff.
  */
 const TRAVERSABLE_FLOOR_ANGLE_DEG = Math.min(40, SLOPE_MAX_WALKABLE_DEG - 10)
 export const MAX_TRAVERSABLE_FLOOR_GRADE = Math.tan((TRAVERSABLE_FLOOR_ANGLE_DEG * Math.PI) / 180)
@@ -67,9 +68,10 @@ const MAX_FEATURE_DROP = 3
 const BRANCH_CHANCE = 0.35
 /** Minimum surface-to-surface gap (metres) a branch must keep from every
  *  main-route station outside the shared junction's own footprint — must
- *  clear the SDF `smoothK` (`DEFAULT_SDF_PARAMS.smoothK`, 0.9 m) by a safe
- *  margin so a smooth union can never accidentally bridge two logically
- *  disconnected passages (plan §9's "accidental unions"). */
+ *  clear the representation's rim / smooth-union reach (heightfield
+ *  `SMOOTH_K` 0.7 m + rim band) by a safe margin so a smooth union can never
+ *  accidentally bridge two logically disconnected passages (plan §9's
+ *  "accidental unions"). */
 export const MIN_DISCONNECTED_CLEARANCE = 1.5
 
 export type ProductionTopologyInput = {
@@ -124,9 +126,9 @@ function clamp01(t: number): number {
   return t < 0 ? 0 : t > 1 ? 1 : t
 }
 
-/** Extra XZ so a fat dest ellipsoid (chamber/widening) cannot swallow the ramp.
+/** Extra XZ so a fat dest lobe (chamber/widening) cannot swallow the ramp.
  *  Passage-to-passage width changes stay on their planned length. */
-function extraRunForSdf(fromWidth: number, toWidth: number): number {
+function extraRunForWidening(fromWidth: number, toWidth: number): number {
   if (toWidth - fromWidth < 1.5) return 0
   return toWidth * 0.45
 }
@@ -142,7 +144,7 @@ function planDestination(
   toHeight: number,
 ): { x: number, z: number } {
   let dest = toXZ
-  const extra = extraRunForSdf(fromWidth, toWidth)
+  const extra = extraRunForWidening(fromWidth, toWidth)
   for (let i = 0; i < 4; i++) {
     const dist = Math.hypot(dest.x - cursor.x, dest.z - cursor.z)
     const preview = unconstrainedFloorY(
@@ -186,7 +188,7 @@ function rampInterior(
   return out
 }
 
-/** |Δfloor|/Δxz between consecutive centerline samples — topology intent, not SDF. */
+/** |Δfloor|/Δxz between consecutive centerline samples — topology intent, not the representation's floor. */
 export function maxCenterlineFloorGrade(centerline: readonly CaveTopologyPoint[]): number {
   let max = 0
   for (let i = 1; i < centerline.length; i++) {

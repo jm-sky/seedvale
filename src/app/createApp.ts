@@ -72,7 +72,13 @@ import {
 } from '../persistence/saveDb'
 import { buildCharacterPresentation } from '../player/characterPresentation'
 import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
-import { type CaveGroundQuery, type CaveOccupancyQuery, PLAYER_STARTING_ATTRIBUTES, PlayerController } from '../player/PlayerController'
+import {
+  type CaveGroundQuery,
+  type CaveHorizontalResolver,
+  type CaveOccupancyQuery,
+  PLAYER_STARTING_ATTRIBUTES,
+  PlayerController,
+} from '../player/PlayerController'
 import {
   resetPlayerNeeds,
   restorePersistedNeeds,
@@ -277,7 +283,7 @@ export async function createApp(
 ): Promise<() => void> {
   const { bootMark, bootMarkEnd, bootMarksSummary } = useBootMark('createApp')
 
-  // `?caveHeightfieldTest` — isolated heightfield vs SDF cave comparison.
+  // `?caveHeightfieldTest` — isolated cave heightfield harness.
   // Bails out before any world/save/UI bootstrap; see
   // `createCaveHeightfieldTestScene.ts`.
   if (options?.caveHeightfieldTest) {
@@ -767,6 +773,8 @@ export async function createApp(
     return { floorY: hit.floorY, ceilingY: hit.openSky ? null : hit.ceilingY }
   }
   const caveOccupancyQuery: CaveOccupancyQuery = (x, y, z) => bundle.caves.occupancyAt(x, y, z)
+  const caveHorizontalResolver: CaveHorizontalResolver = (x, z, y, radius, entityHeight) =>
+    bundle.caves.resolveHorizontal(x, z, y, radius, entityHeight)
 
   bootMark('PlayerController.create')
   const player = await PlayerController.create(
@@ -779,6 +787,7 @@ export async function createApp(
     bundle.chunkManager.collidersNear,
     caveGroundQuery,
     caveOccupancyQuery,
+    caveHorizontalResolver,
     (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
   )
   bootMarkEnd('PlayerController.create')
@@ -1523,6 +1532,7 @@ export async function createApp(
         bundle.chunkManager.collidersNear,
         caveGroundQuery,
         caveOccupancyQuery,
+        caveHorizontalResolver,
         (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
       )
       // Only a genuinely new world (new seed / New Game) relocates the player

@@ -12,18 +12,21 @@
 
 ## Implementation status (2026-09-11)
 
-**Implemented + technically verified:** Milestone A — Production representation extraction; Milestone B — Production presentation mesh + real terrain entrance.
+**Implemented + technically verified:** Milestone A — Production representation extraction; Milestone B — Production presentation mesh + real terrain entrance; **Milestones D + E (spatial part), pulled forward before C** — heightfield is the only production spatial authority, SDF runtime deleted.
 
 - Production owns `CaveHeightfieldRepresentation` under `src/world/caves/`.
-- `createCaves()` builds one heightfield per accepted topology from the deterministic walk-surface sampler (`sampleBaseHeight - mouthCarveDepth`).
+- `createCaves()` builds one heightfield per accepted topology from the deterministic walk-surface sampler (`sampleBaseHeight - mouthCarveDepth`). Boot path is `site → CaveTopology → CaveHeightfieldRepresentation`; the `cave.sdfRepresentation` / `cave.columnIndex` / `cave.colliders` BootMark stages are gone.
 - Presentation is the heightfield mesh (`caveHeightfieldMesh.ts` / `caveHeightfieldPresentation.ts`), streamed by the unchanged 55/80 m controller through a main-thread nearest-first queue; mouth underside mask and contour-driven rocks are presentation-only.
 - The mouth is a real hole: `ChunkManager.registerTerrainCutouts()` retains a per-cave `TerrainCutout` on the shared `mouthOpeningAt` contour and applies it on every chunk mesh build/rebuild (`terrainCutout.ts`).
-- Early gameplay migration (post-B, 2026-09-11): `queryGround` / `sampleFloor` / `sampleCeiling` read the heightfield (`caveHeightfieldQuery.ts`; neutral ground contract in `caveGroundQuery.ts`) so the player stands on the rendered floor. SDF remains the strict occupancy, interior, collision and camera authority (`occupancyAt`, `contains`, `queryInterior`, colliders) until Milestone D; SDF extraction/worker/mesh files remain in place until E.
-- Debug `?caveHeightfieldTest` reuses the production representation and mesher; it does not keep a second algorithm copy.
+- Every production spatial consumer reads the heightfield through `caveHeightfieldQuery.ts`: `queryGround` / `sampleFloor` / `sampleCeiling` (ground), `occupancyAt` / `contains` (strict, stateless — camera boom, swim eligibility, torch), `queryInterior` (interior + two-sample hysteresis), and the new entity-neutral `Caves.resolveHorizontal` (wall containment, productionised from the accepted `?caveHeightfieldTest` `resolveHeightfieldHorizontal`). `PlayerController` runs ordinary world colliders first, then cave containment. There are no cave wall colliders.
+- SDF cleanup (E, runtime part): `caveSdfField.ts`, `caveSdfQuery.ts`, `caveSdfColliders.ts`, `caveSdfExtraction.ts`, the extraction worker / client / protocol, `sdfCaveMesh.ts`, `caveSpikeMaterial.ts`, the harness SDF comparison variant and the SDF-only regression tests are deleted. Neutral contracts live in `caveGroundQuery.ts` / `caveSurface.ts`.
+- Debug `?caveHeightfieldTest` imports the production representation, mesher and spatial helpers; it does not keep a second algorithm copy.
 
-**Not implemented:** Milestones C–E (shared spatial API + semantic locations, gameplay/collision/camera switch, SDF cleanup).
+**Decision (2026-09-11):** manual production verification showed that the transitional SDF + heightfield dual authority caused correctness bugs (player walking under the terrain, camera reading SDF void that the rendered heightfield treats as rock) and retained ~2 s of boot cost. The accepted heightfield harness already provided coherent ground, occupancy, camera-space and horizontal containment semantics, so the remaining production spatial consumers and SDF cleanup were pulled forward before Milestone C.
 
-**Browser/gameplay-verified:** Milestone B awaits manual browser verification by the User (§25).
+**Not implemented:** Milestone C (shared spatial API + semantic interior locations for fauna / quests / NPC); the E documentation/dependency handoff for downstream plans (`fauna-019`, `quests-progression-008`, `npc-027`) still waits on C's contract; `topologyToCaveDefinition` / `CaveVolume` catalog/streaming leftovers.
+
+**Browser/gameplay-verified:** Milestone B and the D/E spatial cutover await manual browser verification by the User (§25).
 
 ---
 

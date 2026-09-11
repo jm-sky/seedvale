@@ -1,9 +1,10 @@
-/** Representation-neutral cave ground contract (world-terrain-019) — the
- *  underground-miss hysteresis shared by the heightfield ground path and
- *  the transitional SDF harnesses. Pure. */
+/** Representation-neutral cave ground / interior contract
+ *  (world-terrain-019) — the underground-miss ground hysteresis and the
+ *  two-sample interior confirmation the heightfield production path keeps
+ *  per entity. Pure. */
 
 import { describe, expect, it } from 'vitest'
-import { applyCaveGroundHysteresis, CAVE_UNDERGROUND_MISS } from './caveGroundQuery'
+import { applyCaveGroundHysteresis, applyCaveInteriorHysteresis, CAVE_UNDERGROUND_MISS } from './caveGroundQuery'
 
 describe('applyCaveGroundHysteresis', () => {
   const caveHit = { floorY: 2, ceilingY: 8, intervals: [{ floorY: 2, ceilingY: 8 }] }
@@ -36,5 +37,22 @@ describe('applyCaveGroundHysteresis', () => {
   it('a miss exactly at the underground threshold releases (strict >)', () => {
     const resolved = applyCaveGroundHysteresis(null, 2, 2 + CAVE_UNDERGROUND_MISS, caveHit)
     expect(resolved.hit).toBeNull()
+  })
+})
+
+describe('applyCaveInteriorHysteresis', () => {
+  it('ignores a single opposite sample at the mouth boundary', () => {
+    const entered = applyCaveInteriorHysteresis(true, false, false)
+    expect(entered.interior).toBe(false)
+    expect(entered.rememberRaw).toBe(true)
+    const confirmed = applyCaveInteriorHysteresis(true, true, false)
+    expect(confirmed.interior).toBe(true)
+  })
+
+  it('requires two consecutive exterior samples to leave', () => {
+    const flicker = applyCaveInteriorHysteresis(false, true, true)
+    expect(flicker.interior).toBe(true)
+    const left = applyCaveInteriorHysteresis(false, false, true)
+    expect(left.interior).toBe(false)
   })
 })

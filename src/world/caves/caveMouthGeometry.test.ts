@@ -1,5 +1,5 @@
 /** Deterministic Cave V2 mouth geometry: topology entrance → derived
- *  contract → terrain trench + SDF aperture/hood/sides.
+ *  contract → terrain trench + heightfield aperture (open-sky mouth).
  *
  *  Seed `1136726869` / `cave:0e3cce97` is the Grota Czarnego Kamienia
  *  doorway the player verified for B3 mechanics.
@@ -12,8 +12,8 @@ import { createBenchmarkWorldConfig } from '../../config/worldConfig'
 import { measureSlope } from '../../fauna/createFauna'
 import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightmap'
 import { openingDirection } from '../largeCaves'
+import { buildCaveHeightfieldRepresentation, sampleHeightfieldAt } from './caveHeightfieldRepresentation'
 import { makeCaveId } from './caveIdentity'
-import { buildCaveSdfRepresentation } from './caveSdfField'
 import {
   deriveMouthGeometry,
   inMouthAperture,
@@ -101,15 +101,16 @@ describe('seed 1136726869 / cave:0e3cce97 mouth field', () => {
     sampleBaseHeight: surfaceHeightAt,
   })
   if (!topology) throw new Error('production topology rejected Grota Czarnego Kamienia')
-  const sdf = buildCaveSdfRepresentation(topology, undefined, false)
   const { entrance } = topology
   const mouth = deriveMouthGeometry(entrance)
   const out = openingDirection(entrance.yaw)
+  const walkSurfaceAt = (x: number, z: number): number => surfaceHeightAt(x, z) - mouthCarveDepth(x, z, entrance)
+  const field = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
 
-  const sampleAt = (along: number, lateral: number, y: number): number => {
+  const sampleAt = (along: number, lateral: number) => {
     const x = entrance.x + out.dx * along - out.dz * lateral
     const z = entrance.z + out.dz * along + out.dx * lateral
-    return sdf.sample(x, y, z)
+    return sampleHeightfieldAt(field, x, z)
   }
 
   it('keeps the cave identity and entrance intent', () => {
@@ -119,13 +120,23 @@ describe('seed 1136726869 / cave:0e3cce97 mouth field', () => {
     expect(entrance.height).toBe(2.6)
   })
 
-  it('opens the aperture in the SDF and frames it with hood/sides/lip', () => {
-    const midY = mouth.floorY + mouth.apertureHeight * 0.5
-    expect(sampleAt(0.2, 0, midY)).toBeLessThan(0)
-    expect(sampleAt(0.45, 0, mouth.lintelY + mouth.hoodHeight * 0.25)).toBeGreaterThan(0)
-    expect(sampleAt(0.25, mouth.apertureHalfWidth + mouth.frameThickness * 0.55, midY)).toBeGreaterThan(0)
-    expect(sampleAt(0.15, 0, mouth.floorY - mouth.lipDepth * 0.5)).toBeGreaterThan(0)
-    expect(sampleAt(-1.2, 0, midY)).toBeLessThan(0)
+  it('opens the aperture in the heightfield: open sky on the centreline, rock beside the frame, roof inside', () => {
+    // Doorway plane: void reaching the walk surface (portal), tall enough
+    // for the derived aperture.
+    const doorway = sampleAt(0.2, 0)
+    expect(doorway.gap).toBeGreaterThan(0)
+    expect(doorway.openSky).toBe(true)
+    expect(doorway.ceilY - doorway.floorY).toBeGreaterThanOrEqual(mouth.apertureHeight * 0.5)
+    // Beside the frame there is no cave void.
+    expect(sampleAt(0.25, mouth.apertureHalfWidth + mouth.frameThickness * 2).gap).toBeLessThanOrEqual(0)
+    // A couple of metres in, the ceiling is rock overburden — not open sky.
+    const inside = sampleAt(-3, 0)
+    expect(inside.gap).toBeGreaterThan(0)
+    expect(inside.openSky).toBe(false)
+    expect(inside.ceilY).toBeLessThan(surfaceHeightAt(
+      entrance.x + out.dx * -3,
+      entrance.z + out.dz * -3,
+    ))
   })
 
   it('keeps an open-sky approach recess from the shared carve discs', () => {

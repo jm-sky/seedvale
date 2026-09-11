@@ -563,17 +563,23 @@ export function installNpcDebugApi(
     revealAll: (rangeKm?: number) => worldLocationsDebug.list(rangeKm).filter((location) => worldLocations.knowledge.reveal(location.id, 'confirmed', 'exploration')).length,
     listCaves: (rangeKm?: number) => worldLocationsDebug.list(rangeKm).filter(l => l.kind === 'cave'),
     teleportToFirstCave: async () => {
-      console.log('Searching for caves...')
-      const cave = worldLocationsDebug.listCaves().at(0)
+      // Cave definitions are already resolved by `createCaves()` — no need
+      // for the 200 km location-catalog scan `listCaves()` does. Nearest
+      // entrance to the player wins.
+      const { x: px, z: pz } = getPlayerPosition()
+      const cave = bundle.caves.definitions()
+        .map((def) => ({ def, distance: Math.hypot(def.entrance.x - px, def.entrance.z - pz) }))
+        .sort((a, b) => a.distance - b.distance)
+        .at(0)
       if (!cave) {
         console.log('No caves found')
         return false
       }
-      console.log('Teleporting to cave', cave)
+      console.log(`Teleporting to cave ${cave.def.caveId} (${cave.distance.toFixed(0)} m)`, cave.def.entrance)
       return teleportToLocation({
         kind: 'village',
-        position: { x: cave.x, z: cave.z },
-        distance: 0
+        position: { x: cave.def.entrance.x, z: cave.def.entrance.z },
+        distance: 0,
       })
     },
   }

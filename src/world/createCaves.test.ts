@@ -1,10 +1,10 @@
-/** Plan world-terrain-019 Milestone B + early ground migration —
- *  `createCaves()` wiring: heightfield presentation streamed through the
- *  existing controller, terrain cutouts registered with the chunk manager,
- *  player ground / floor / ceiling on the heightfield, and strict occupancy
- *  / interior / collision / camera deliberately still on the SDF column
- *  index. Analytic terrain (seed `1136726869`), fake `ChunkManager`, real
- *  `THREE.Scene`. */
+/** Plan world-terrain-019 — `createCaves()` wiring: heightfield
+ *  presentation streamed through the existing controller, terrain cutouts
+ *  registered with the chunk manager, and *every* spatial query (ground /
+ *  floor / ceiling / occupancy / contains / interior / horizontal
+ *  containment / camera) on the one heightfield — no SDF, no column index,
+ *  no cave collider registration. Analytic terrain (seed `1136726869`),
+ *  fake `ChunkManager`, real `THREE.Scene`. */
 
 import * as THREE from 'three'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -13,6 +13,8 @@ import type { TerrainCutout } from '../terrain/terrainCutout'
 import type { Collider } from './collision'
 import { createBenchmarkWorldConfig } from '../config/worldConfig'
 import { measureSlope } from '../fauna/createFauna'
+import { resolveCameraBoom } from '../player/cameraBoom'
+import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT } from '../player/playerDimensions'
 import { villageSizeConfig } from '../settlement/families'
 import {
   type RawSampleParams,
@@ -24,22 +26,10 @@ import { CAVE_FLOOR_GRACE, CAVE_UNDERGROUND_MISS } from './caves/caveGroundQuery
 import * as caveHeightfieldQuery from './caves/caveHeightfieldQuery'
 import { buildCaveHeightfieldRepresentation, sampleHeightfieldAt } from './caves/caveHeightfieldRepresentation'
 import { CAVE_ACTIVATE_DISTANCE, CAVE_DEACTIVATE_DISTANCE } from './caves/cavePresentationLifecycle'
-import * as caveSdfQuery from './caves/caveSdfQuery'
-import { mouthCarveDepth } from './caves/mouthCarve'
+import { MOUTH_INTERIOR_ALONG, mouthAlong, mouthCarveDepth } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
 import { type Caves, createCaves } from './createCaves'
-
-vi.mock('./caves/caveSdfQuery', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./caves/caveSdfQuery')>()
-  return {
-    ...actual,
-    queryColumnIndex: vi.fn(actual.queryColumnIndex),
-    occupancyIntervalAt: vi.fn(actual.occupancyIntervalAt),
-    isCaveInteriorAt: vi.fn(actual.isCaveInteriorAt),
-    lowestFloorAt: vi.fn(actual.lowestFloorAt),
-    lowestCeilingAt: vi.fn(actual.lowestCeilingAt),
-  }
-})
+import { openingDirection } from './largeCaves'
 
 vi.mock('./caves/caveHeightfieldQuery', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./caves/caveHeightfieldQuery')>()
@@ -47,6 +37,9 @@ vi.mock('./caves/caveHeightfieldQuery', async (importOriginal) => {
     ...actual,
     queryHeightfieldGround: vi.fn(actual.queryHeightfieldGround),
     heightfieldGroundColumn: vi.fn(actual.heightfieldGroundColumn),
+    heightfieldOccupancyAt: vi.fn(actual.heightfieldOccupancyAt),
+    heightfieldInteriorAt: vi.fn(actual.heightfieldInteriorAt),
+    resolveHeightfieldHorizontal: vi.fn(actual.resolveHeightfieldHorizontal),
   }
 })
 
@@ -174,7 +167,8 @@ describe('createCaves (world-terrain-019 B)', () => {
     expect(interior.geometry.getAttribute('position').count).toBeGreaterThan(1000)
     expect(interior.geometry.getAttribute('normal')).toBeDefined()
     expect((interior.material as THREE.MeshStandardMaterial).side).toBe(THREE.FrontSide)
-    expect(chunkManager.colliderOwners.has(`cave:${def.caveId}`)).toBe(true)
+    // No cave colliders: containment is a heightfield query.
+    expect(chunkManager.colliderOwners.size).toBe(0)
     let stats = caves.peekStreamingDebug()
     expect(stats.activePresentations).toBe(1)
     expect(stats.queuedJobs).toBe(0)
@@ -189,7 +183,6 @@ describe('createCaves (world-terrain-019 B)', () => {
     caves.update(farX, z)
     expect(caveGroup(def.caveId)).toBeUndefined()
     expect(disposeSpy).toHaveBeenCalled()
-    expect(chunkManager.colliderOwners.has(`cave:${def.caveId}`)).toBe(false)
     stats = caves.peekStreamingDebug()
     expect(stats.activePresentations).toBe(0)
 
@@ -203,37 +196,41 @@ describe('createCaves (world-terrain-019 B)', () => {
     expect((interior2.material as THREE.Material).userData.sharedGpu).toBe(true)
   })
 
-  it('player ground / floor / ceiling read the heightfield; occupancy, interior and colliders stay SDF', () => {
+  it('every spatial query reads the heightfield and nothing registers cave colliders', () => {
     const def = caves.definitions()[0]!
     const { x, z } = def.entrance
-    const queryColumnIndex = vi.mocked(caveSdfQuery.queryColumnIndex)
-    const lowestFloorAt = vi.mocked(caveSdfQuery.lowestFloorAt)
-    const lowestCeilingAt = vi.mocked(caveSdfQuery.lowestCeilingAt)
-    const occupancyIntervalAt = vi.mocked(caveSdfQuery.occupancyIntervalAt)
-    const isCaveInteriorAt = vi.mocked(caveSdfQuery.isCaveInteriorAt)
     const queryHeightfieldGround = vi.mocked(caveHeightfieldQuery.queryHeightfieldGround)
     const heightfieldGroundColumn = vi.mocked(caveHeightfieldQuery.heightfieldGroundColumn)
-    for (const spy of [queryColumnIndex, lowestFloorAt, lowestCeilingAt, occupancyIntervalAt, isCaveInteriorAt, queryHeightfieldGround, heightfieldGroundColumn]) {
+    const heightfieldOccupancyAt = vi.mocked(caveHeightfieldQuery.heightfieldOccupancyAt)
+    const heightfieldInteriorAt = vi.mocked(caveHeightfieldQuery.heightfieldInteriorAt)
+    const resolveHeightfieldHorizontal = vi.mocked(caveHeightfieldQuery.resolveHeightfieldHorizontal)
+    for (const spy of [queryHeightfieldGround, heightfieldGroundColumn, heightfieldOccupancyAt, heightfieldInteriorAt, resolveHeightfieldHorizontal]) {
       spy.mockClear()
     }
 
     const y = chunkManager.sampleBaseHeight(x, z) - 1
     caves.queryGround(x, y, z)
     expect(queryHeightfieldGround).toHaveBeenCalled()
-    expect(queryColumnIndex).not.toHaveBeenCalled()
     caves.sampleFloor(x, z)
     caves.sampleCeiling(x, z)
     expect(heightfieldGroundColumn).toHaveBeenCalled()
-    expect(lowestFloorAt).not.toHaveBeenCalled()
-    expect(lowestCeilingAt).not.toHaveBeenCalled()
-
     caves.occupancyAt(x, y, z)
-    expect(occupancyIntervalAt).toHaveBeenCalled()
+    expect(heightfieldOccupancyAt).toHaveBeenCalledTimes(1)
+    caves.contains(x, y, z)
+    expect(heightfieldOccupancyAt).toHaveBeenCalledTimes(2)
     caves.queryInterior(x, y, z)
-    expect(isCaveInteriorAt).toHaveBeenCalled()
-    // Colliders registered on relevance are the SDF-derived beads.
+    expect(heightfieldInteriorAt).toHaveBeenCalled()
+    caves.resolveHorizontal(x, z, y, PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT)
+    expect(resolveHeightfieldHorizontal).toHaveBeenCalledWith(
+      expect.anything(),
+      x,
+      z,
+      y,
+      PLAYER_COLLISION_RADIUS,
+      caveHeightfieldQuery.heightfieldStandingClearance(PLAYER_HEIGHT),
+    )
     caves.update(x, z)
-    expect(chunkManager.colliderOwners.get(`cave:${def.caveId}`)!.length).toBeGreaterThan(0)
+    expect(chunkManager.colliderOwners.size).toBe(0)
   })
 
   it('queryGround hands the player exactly the rendered heightfield floor along the cave', () => {
@@ -296,14 +293,157 @@ describe('createCaves (world-terrain-019 B)', () => {
     expect(caves.peekGroundQueryDebug().caveId).toBeNull()
   })
 
-  it('dispose clears presentation, colliders and the terrain cutout registration', () => {
+  it('strict occupancy / contains / interior agree with the heightfield along the production cave', () => {
+    const def = caves.definitions()[0]!
+    const field = productionHeightfield(def.caveId)
+    let closed = 0
+    let mouth = 0
+    for (let z = field.bounds.minZ; z <= field.bounds.maxZ; z += 1) {
+      for (let x = field.bounds.minX; x <= field.bounds.maxX; x += 1) {
+        const sample = sampleHeightfieldAt(field, x, z)
+        const surfaceY = chunkManager.sampleBaseHeight(x, z)
+        if (sample.outsideGrid || sample.gap < 1.5) {
+          // Rock / outside: never occupied, at any Y.
+          expect(caves.occupancyAt(x, surfaceY - 3, z)).toBeNull()
+          expect(caves.contains(x, surfaceY, z)).toBe(false)
+          continue
+        }
+        const mid = sample.floorY + Math.min(1, sample.gap * 0.5)
+        const occ = caves.occupancyAt(x, mid, z)
+        expect(occ).not.toBeNull()
+        expect(occ!.floorY).toBe(sample.floorY)
+        expect(caves.contains(x, mid, z)).toBe(true)
+        // Below the floor (past the occupancy slack) is rock.
+        expect(caves.occupancyAt(x, sample.floorY - 0.5, z)).toBeNull()
+        if (sample.openSky) {
+          expect(occ!.openSky).toBe(true)
+          mouth++
+        } else {
+          expect(occ!.openSky).toBeUndefined()
+          // Surface entity above the tunnel is not in the cave.
+          expect(caves.occupancyAt(x, surfaceY, z)).toBeNull()
+          expect(caves.contains(x, surfaceY + 0.5, z)).toBe(false)
+          // Above the closed ceiling is rock overburden.
+          expect(caves.occupancyAt(x, occ!.ceilingY + 0.2, z)).toBeNull()
+          closed++
+        }
+      }
+    }
+    expect(closed).toBeGreaterThan(50)
+    expect(mouth).toBeGreaterThan(0)
+  })
+
+  it('interior is strict occupancy inside the mouth plane, with two-sample confirmation, and the approach is not interior', () => {
+    const def = caves.definitions()[0]!
+    const field = productionHeightfield(def.caveId)
+    const out = openingDirection(def.entrance.yaw)
+    // Deep interior sample: closed ceiling, well inside the mouth plane.
+    let deep: { x: number, y: number, z: number } | null = null
+    for (let along = -4; along >= -14 && !deep; along -= 0.5) {
+      const x = def.entrance.x + out.dx * along
+      const z = def.entrance.z + out.dz * along
+      const sample = sampleHeightfieldAt(field, x, z)
+      if (sample.outsideGrid || sample.gap < 2 || sample.openSky) continue
+      deep = { x, y: sample.floorY + 0.3, z }
+    }
+    expect(deep).not.toBeNull()
+    // Approach pit sample: open sky outward of the mouth plane.
+    const ax = def.entrance.x + out.dx * 1.5
+    const az = def.entrance.z + out.dz * 1.5
+    const ay = chunkManager.sampleBaseHeight(ax, az) - mouthCarveDepth(ax, az, def.entrance) + 0.2
+    expect(mouthAlong(ax, az, def.entrance)).toBeGreaterThan(MOUTH_INTERIOR_ALONG)
+
+    // Fresh state: two exterior samples, then two interior samples.
+    caves.dispose()
+    caves = createCaves(scene, chunkManager, SEED, villageSizeConfig('MD').footprintRadius, 0.45)
+    expect(caves.queryInterior(ax, ay, az)).toBe(false)
+    expect(caves.queryInterior(ax, ay, az)).toBe(false)
+    // A single interior sample does not flip the confirmed state.
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z)).toBe(false)
+    expect(caves.queryInterior(deep!.x, deep!.y, deep!.z)).toBe(true)
+    // A single boundary flicker back to the approach keeps interior.
+    expect(caves.queryInterior(ax, ay, az)).toBe(true)
+    expect(caves.queryInterior(ax, ay, az)).toBe(false)
+    // Stateless occupancy sees the approach as open-sky void the whole time.
+    expect(caves.occupancyAt(ax, ay, az)?.openSky).toBe(true)
+  })
+
+  it('horizontal containment keeps a player inside the production cave and leaves the hillside alone', () => {
+    const def = caves.definitions()[0]!
+    const field = productionHeightfield(def.caveId)
+    const minGap = caveHeightfieldQuery.heightfieldStandingClearance(PLAYER_HEIGHT)
+    let checked = 0
+    for (let z = field.bounds.minZ; z <= field.bounds.maxZ; z += 1) {
+      for (let x = field.bounds.minX; x <= field.bounds.maxX; x += 1) {
+        const sample = sampleHeightfieldAt(field, x, z)
+        const surfaceY = chunkManager.sampleBaseHeight(x, z)
+        // Hillside above (or beside) the cave: identity.
+        const outdoors = caves.resolveHorizontal(x, z, surfaceY, PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT)
+        expect(outdoors.x).toBe(x)
+        expect(outdoors.z).toBe(z)
+        if (sample.outsideGrid || sample.gap <= 0 || sample.openSky) continue
+        // Any column a capsule could plausibly be pushed into (it holds at
+        // least a crouch of void) resolves toward more clearance, ends in a
+        // column that can hold a standing player, and stays local.
+        const y = sample.floorY + 0.05
+        const resolved = caves.resolveHorizontal(x, z, y, PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT)
+        const after = sampleHeightfieldAt(field, resolved.x, resolved.z)
+        expect(after.gap).toBeGreaterThanOrEqual(sample.gap - 1e-6)
+        expect(Math.hypot(resolved.x - x, resolved.z - z)).toBeLessThan(4)
+        if (sample.gap >= 1) expect(after.gap).toBeGreaterThanOrEqual(minGap - 0.25)
+        if (sample.gap >= minGap) {
+          expect(resolved.x).toBe(x)
+          expect(resolved.z).toBe(z)
+        }
+        checked++
+      }
+    }
+    expect(checked).toBeGreaterThan(50)
+  })
+
+  it('camera boom from the interior stays in heightfield occupancy without any cave collider', () => {
+    const def = caves.definitions()[0]!
+    const field = productionHeightfield(def.caveId)
+    const out = openingDirection(def.entrance.yaw)
+    let origin: { x: number, y: number, z: number } | null = null
+    for (let along = -5; along >= -14 && !origin; along -= 0.5) {
+      const x = def.entrance.x + out.dx * along
+      const z = def.entrance.z + out.dz * along
+      const sample = sampleHeightfieldAt(field, x, z)
+      if (sample.outsideGrid || sample.gap < 2.2 || sample.openSky) continue
+      origin = { x, y: sample.floorY + 1.6, z }
+    }
+    expect(origin).not.toBeNull()
+    const distance = 6
+    const pitch = 0.28
+    for (const yaw of [def.entrance.yaw, def.entrance.yaw + Math.PI, def.entrance.yaw + Math.PI / 2, def.entrance.yaw - Math.PI / 2]) {
+      const cosPitch = Math.cos(pitch)
+      const boom = resolveCameraBoom({
+        originX: origin!.x,
+        originY: origin!.y,
+        originZ: origin!.z,
+        camX: origin!.x + Math.sin(yaw) * cosPitch * distance,
+        camY: origin!.y + Math.sin(pitch) * distance,
+        camZ: origin!.z + Math.cos(yaw) * cosPitch * distance,
+        sampleHeight: chunkManager.sampleHeight,
+        colliders: [],
+        occupancyAt: caves.occupancyAt,
+      })
+      // Never on the overburden above the cave; always inside cave void
+      // (below the ceiling, above the floor, off the walls).
+      expect(boom.y).toBeLessThan(chunkManager.sampleBaseHeight(boom.x, boom.z) - 0.5)
+      expect(caves.occupancyAt(boom.x, boom.y, boom.z)).not.toBeNull()
+    }
+  })
+
+  it('dispose clears presentation and the terrain cutout registration', () => {
     const def = caves.definitions()[0]!
     caves.update(def.entrance.x, def.entrance.z)
     expect(caveGroup(def.caveId)).toBeDefined()
     caves.dispose()
     expect(caveGroup(def.caveId)).toBeUndefined()
     expect(chunkManager.colliderOwners.size).toBe(0)
-    expect(chunkManager.cutoutClears).toEqual(['caves'])
+    expect(chunkManager.cutoutClears).toContain('caves')
     expect(caves.peekStreamingDebug().queuedJobs).toBe(0)
   })
 })

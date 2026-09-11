@@ -1,8 +1,9 @@
 /** Plan world-terrain-008 — transitional L1 adapter.
  *  Turns a `CaveTopology` into a `CaveDefinition` for `definitions()` /
- *  location catalog / streaming bounds. Collision no longer uses this
- *  proxy (B3: `caveSdfColliders.ts`). Gameplay ground does not use it
- *  either (B2: `caveSdfQuery.ts`). Deleting the adapter is B5.
+ *  location catalog / streaming bounds only. No spatial query, collision or
+ *  presentation reads it — the heightfield (`caveHeightfieldQuery.ts`) is
+ *  the authority (world-terrain-019). Deleting the adapter is a
+ *  later-milestone catalog/streaming change.
  *
  * @domain world-terrain
  */

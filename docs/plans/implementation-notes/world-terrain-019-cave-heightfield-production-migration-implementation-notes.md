@@ -5,7 +5,8 @@
 **Baseline:** `main` at `81f9b1a550e67a03b8b3414eabed81a853a259ff`  
 **Milestone A implemented:** 2026-09-11 — see “Milestone A — implemented” below.  
 **Milestone B implemented:** 2026-09-11 — see “Milestone B — implemented” below. Heightfield is presentation + terrain-mouth authority.  
-**Early gameplay migration (post-B, pre-C):** 2026-09-11 — see “Early gameplay migration — implemented” below. Heightfield is also player cave ground / floor / ceiling authority; SDF remains strict occupancy / interior / collider / camera authority until D.
+**Early gameplay migration (post-B, pre-C):** 2026-09-11 — see “Early gameplay migration — implemented” below. Heightfield became player cave ground / floor / ceiling authority.  
+**Spatial cutover (D + E runtime part, pulled forward before C):** 2026-09-11 — see “Spatial cutover — implemented” below. **Heightfield is the only production spatial authority; SDF runtime deleted.** Sections that describe the SDF column index / colliders / worker as current code are historical from here on.
 
 These notes are a focused implementation handoff, not a restatement of the plan. Current code is authoritative. The final `world-terrain-018` spike differs materially from several earlier notes: production migration must copy the final floor/ceiling-convergence model, not the superseded binary-footprint/vertical-wall approach.
 
@@ -13,19 +14,18 @@ These notes are a focused implementation handoff, not a restatement of the plan.
 
 Production cave ownership is concentrated in `src/world/createCaves.ts`.
 
-Current construction chain (after Milestone A):
+Current construction chain (after the spatial cutover, 2026-09-11):
 
 ```text
 pickLargeCaveSites()
   -> buildProductionCaveTopology()
-  -> buildCaveSdfRepresentation()
-  -> buildCaveHeightfieldRepresentation()   // retained, not yet authority
-  -> buildCaveSdfColumnIndex()
-  -> buildCaveSdfColliders()
-  -> CaveRuntime { topology, definition, heightfield, representation, index, colliders }
+  -> buildCaveHeightfieldRepresentation()   // the one spatial authority
+  -> CaveRuntime { topology, definition, heightfield, walkSurfaceAt }
 ```
 
-Presentation is separately relevance-streamed through `createCaveStreamingController()` and the SDF-only extraction client/worker. Gameplay queries remain available even when presentation is inactive.
+(Historical chain during A/B: `buildCaveSdfRepresentation()` → `buildCaveSdfColumnIndex()` → `buildCaveSdfColliders()` alongside the heightfield; all deleted.)
+
+Presentation is separately relevance-streamed through `createCaveStreamingController()` (main-thread heightfield assembly). Gameplay queries remain available even when presentation is inactive.
 
 The migration should preserve that separation. In particular:
 
@@ -42,7 +42,7 @@ Do not couple presentation streaming to gameplay truth during the migration.
 - `CaveTopology` remains the representation-neutral cave identity/layout source: `src/world/caves/caveTopology.ts`.
 - Production topology remains `buildProductionCaveTopology()` in `src/world/caves/productionTopology.ts`.
 - `createCaves()` remains the world-level cave owner and `WorldBundle.caves` remains the rebuild lifetime boundary.
-- `createCaveStreamingController()` keeps 55/80 m presentation hysteresis, generation IDs, stale-result protection and relevance-scoped collider registration unless a later milestone deliberately replaces only the collider hook.
+- `createCaveStreamingController()` keeps 55/80 m presentation hysteresis, generation IDs and stale-result protection (the relevance-scoped collider hook was removed with the SDF beads — nothing else registers on relevance).
 - `definitions()` currently feeds location/discovery code and must not silently disappear in A/B.
 - `queryGround()` is currently player-ground stateful via one closure-level hysteresis state; `queryInterior()` is likewise player-position hysteretic. Do not reuse either as generic multi-entity spatial queries in C/D.
 - `occupancyAt()` is the current stateless camera/strict-space contract.
@@ -663,6 +663,108 @@ Once D moves occupancy / interior / colliders / camera onto the heightfield, `bu
 - `occupancyAt` (swim eligibility, camera) and `queryGround` now come from different representations; `worldWaterOwnsVertical` uses the resolved cave ceiling as its primary gate, so a brief occupancy/ground disagreement only matters where cave floor is below `waterLevel`.
 - The mouth: heightfield `openSky` + analytic-surface clip replaces the SDF portal interval. `createCaves.test.ts` covers the closed interior exhaustively but the recess only through the fixture; the User's browser pass should watch the entrance transition specifically.
 
+### Spatial cutover — implemented (2026-09-11)
+
+Milestone D's spatial half plus Milestone E's runtime cleanup, pulled forward before C.
+
+**Why now.** Manual production verification showed the transitional SDF + heightfield dual authority caused correctness bugs and retained ~2 s of boot cost: the player fell/walked under the grass near a cave and could roam underground to the next cave (ground = heightfield, walls = SDF beads shaped differently from the rendered floor), and the camera occupancy (SDF) could sit in SDF void that the rendered heightfield treats as rock — outside the `FrontSide` mesh, seeing daylight. The accepted heightfield harness already provided coherent ground, occupancy, camera-space and horizontal containment semantics, so the remaining production spatial consumers and SDF cleanup were pulled forward.
+
+#### Final production ownership / data flow
+
+```text
+site
+→ CaveTopology                              productionTopology.ts
+→ CaveHeightfieldRepresentation             caveHeightfieldRepresentation.ts (retained per cave)
+   ├─ presentation                           caveHeightfieldMesh.ts / caveHeightfieldPresentation.ts (lazy, streamed)
+   ├─ terrain mouth                          caveTerrainCutout.ts → ChunkManager.registerTerrainCutouts
+   ├─ ground                                 caveHeightfieldQuery.queryHeightfieldGround  → Caves.queryGround (+ player hysteresis)
+   ├─ floor / ceiling                        caveHeightfieldQuery.heightfieldGroundColumn → Caves.sampleFloor / sampleCeiling
+   ├─ occupancy                              caveHeightfieldQuery.heightfieldOccupancyAt  → Caves.occupancyAt / contains
+   ├─ horizontal containment                 caveHeightfieldQuery.resolveHeightfieldHorizontal → Caves.resolveHorizontal
+   ├─ interior                               caveHeightfieldQuery.heightfieldInteriorAt   → Caves.queryInterior (+ two-sample hysteresis)
+   └─ camera                                 Caves.occupancyAt via createApp caveOccupancyQuery → cameraBoom
+```
+
+`CaveRuntime` is `{ topology, definition, heightfield, walkSurfaceAt }`. BootMarks: `cave.topology`, `cave.heightfield`, `cave.terrainCutout` (≈ 60 + 160 + 1 ms on the reference seed; `cave.sdfRepresentation` / `cave.columnIndex` / `cave.colliders` are gone, ≈ −2 s).
+
+#### Productionised helpers (from `src/debug/caves/caveHeightfieldTraversal.ts` → `src/world/caves/caveHeightfieldQuery.ts`)
+
+- `heightfieldOccupancyAt(field, surfaceHeightAt, x, y, z)` — strict interval: `heightfieldGroundColumn` + `y ∈ [floorY − CAVE_OCCUPANCY_EPS, ceilingY]`. `null` in rock / outside grid / surface entity above a tunnel / above a closed ceiling; `openSky` at the mouth. Stateless.
+- `heightfieldInteriorAt(field, surfaceHeightAt, entrance, x, y, z)` — `mouthAlong ≤ MOUTH_INTERIOR_ALONG && occupancy`.
+- `queryHeightfieldSpace(field, x, z, minGap)` — Y-blind `blocked` flag (harness / tests).
+- `resolveHeightfieldHorizontal(field, x, z, y | null, radius, minGap)` — the accepted containment, unchanged: `outsideGrid` → identity; `y > sample.surfaceY − SURFACE_CLIP_EPS` (surface entity) → identity; `openSky` → identity; otherwise push up the `gap` gradient (`heightfieldGapGradient`) until `gap ≥ minGap`, 24 iterations, step `min(max(deficit/|∇|, 0.25·cellSize), radius + 1.5)`, entrance-ward fallback in flat rock.
+- `heightfieldStandingClearance(entityHeight) = entityHeight + CAVE_STANDING_CLEARANCE_MARGIN (0.1)` — the harness's `HEIGHTFIELD_MIN_STANDING_GAP` rule, entity-neutral.
+- The harness's `heightfieldColumnIntervals()` / `queryHeightfieldColumn()` / `heightfieldFloorAt()` were **not** duplicated into production: they are `heightfieldGroundColumn` / `queryHeightfieldGround` (already production) — the harness now wraps those.
+
+Neutral contracts moved into `caveGroundQuery.ts` when `caveSdfQuery.ts` was deleted: `CAVE_OCCUPANCY_EPS`, `applyCaveInteriorHysteresis` / `CaveInteriorHysteresis`. `SURFACE_CLIP_EPS` stays in `caveSurface.ts`.
+
+#### `Caves` API changes (`src/world/createCaves.ts`)
+
+- `occupancyAt` → first cave whose heightfield column holds `y` (strict, stateless).
+- `contains` → `occupancyAt(...) !== null` (no second implementation).
+- `queryInterior` → `heightfieldInteriorAt` per cave + unchanged `applyCaveInteriorHysteresis` (player-stateful, one closure).
+- **new** `resolveHorizontal(x, z, y, radius, entityHeight)` → `heightfieldStandingClearance(entityHeight)`, `resolveHeightfieldHorizontal` applied sequentially over every runtime (every field but the local cave is `outsideGrid` → identity).
+- `queryGround` / `sampleFloor` / `sampleCeiling` unchanged (already heightfield). `writeGroundQueryDebug` uses `CAVE_OCCUPANCY_EPS` from `caveGroundQuery.ts`.
+- No `registerColliders` / `clearColliders` hooks; `CaveStreamingHooks`, `CaveStreamingSnapshot` and `CaveStreamingStats` lost their collider fields.
+
+#### PlayerController integration (`src/player/PlayerController.ts`)
+
+- New neutral dependency `CaveHorizontalResolver = (x, z, y, radius, entityHeight) => { x, z }`, passed positionally after `caveOccupancy` in the constructor / `create` / capsule fallback / `setGround`; `createApp.ts` wires `bundle.caves.resolveHorizontal` (live `bundle` read, rebuild-safe) in both call-sites.
+- One shared `resolveHorizontalMove(candidateX, candidateZ)` used by `update()` and `gapClose()`:
+
+  ```text
+  requested position
+    → resolvePosition(ordinary world colliders at player Y)   // buildings, trees, rocks, objects…
+    → caveHorizontal(resolved, mesh.position.y, PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT)
+    → final position
+  ```
+
+  Cave containment runs last so the ordinary collider response cannot leave the player in rock; since cave walls are no longer colliders there is nothing for the cave push to re-enter, so one pass suffices. Vertical motion untouched.
+- Player dimensions: `PLAYER_COLLISION_RADIUS` / `PLAYER_HEIGHT` / `rockCeilingMaxY` now live in `src/player/playerDimensions.ts` (no Three.js / GLTF graph) and are re-exported from `PlayerController.ts` for existing importers. The harness imports them directly; its duplicated `HEIGHTFIELD_PLAYER_*` constants are aliases, not copies.
+
+#### Camera
+
+Unchanged `resolveCameraBoom`; the production `occupancyAt` callback is now heightfield occupancy, and `collidersNearAtHeight` no longer contains cave beads (only ordinary world colliders). `createCaves.test.ts` marches the boom from the production interior in four yaws: it never parks above the overburden and always ends in heightfield occupancy.
+
+#### SDF removed
+
+Deleted: `caveSdfField.ts`, `caveSdfQuery.ts`, `caveSdfColliders.ts`, `caveSdfExtraction.ts`, `caveExtraction.worker.ts`, `caveExtractionClient.ts`, `caveExtractionProtocol.ts`, `sdfCaveMesh.ts`, `caveSpikeMaterial.ts` (+ their tests), the harness SDF variant (`createSdfWalkWorld`, `buildSdfVariant`, `CaveHeightfieldVariant`, key `[1]`), and the SDF-only regression harnesses `caveGameplayQuery.b2-recon` / `b3-chamber-snap-recon` / `b3-descending-trace` / `b3-entrance-regression` / `b3-recon`. Their neutral contract cases were re-pinned on the production cave in `createCaves.test.ts` (occupancy / contains / interior sweep, interior two-sample confirmation at the approach, horizontal containment sweep, camera boom) and on the fixture in `caveHeightfieldQuery.test.ts`.
+
+Kept on purpose:
+
+- `spikeTestCave.ts` — topology fixture for `caveTopology.test.ts` / `topologyAdapter.test.ts` / `caveSurfaceIntegration.test.ts` (terrain-aware overburden regression; its SDF-mesh case was dropped).
+- `sweepCaveMesh.ts` / `caveSpikeMetrics.ts` — the retained Sweep spike is not SDF and was not in scope.
+- `caveVolume.ts` / `topologyAdapter.ts` — `definitions()` / location catalog / streaming bounds consumers (`createApp.ts`, `worldLocationCatalog.ts`, treasure-map resolution); C/E handoff.
+- `isSystemEnabled('caveDetail')` is still read by `sweepCaveMesh.ts` only; `createCaves()` no longer reads it.
+
+Ported tests: `worldWaterEligibility.test.ts` (heightfield occupancy/ground), `productionTopology.floor-continuity.test.ts` (heightfield floor — see known issue), `caveMouthGeometry.test.ts` (heightfield aperture), `caveSurfaceIntegration.test.ts` (SDF mesh case removed), `caveGroundQuery.test.ts` (+ interior hysteresis), `cavePresentationLifecycle.test.ts` (no collider hooks), `caveHeightfieldTraversal.test.ts` (production helpers, no SDF variant).
+
+#### NPC / fauna
+
+Not migrated, nothing lost. `NpcAgent.collidersNearAtHeight` / `AnimalAgent.isWalkable` filter colliders by their own Y, and both stand on `sampleHeight` (surface): the cave beads were Y-banded underground and never active for a surface walker — the filter existed only so beads would not block them. NPC/fauna underground cave traversal is not currently supported (no cave ground for them); when it is (fauna-019 / npc-027 after C), they take the same `Caves.resolveHorizontal(x, z, y, radius, height)` — no per-entity cave collision system.
+
+#### `teleportToFirstCave()`
+
+`npcDebugApi.ts` now reads `bundle.caves.definitions()` directly (nearest entrance to the player) instead of `listCaves()`'s 200 km location-catalog scan. Remaining latency, if any, is the generic `teleport(x, z)` in `createApp.ts` (`chunkManager.waitForChunks(chunksNear(...))`) — recorded in `LOOSE-ENDS.md`, out of scope.
+
+#### Tests / checks
+
+```text
+vitest: full suite (422 files; 2 expected-fail cases pinned, see below)
+vue-tsc --noEmit
+eslint .
+pnpm run build
+```
+
+No browser verification; `pnpm docs:sync` not run (generated `docs/code-map` / `CODE_INDEX` navigation still lists the deleted SDF files until the next sync).
+
+#### Known issues / open
+
+- **Heightfield chamber-lobe floor cliff** (`LOOSE-ENDS.md` 2026-09-11): on seed `1136726869` `seg-chamber`, the heightfield floor drops ~2.5 m over ~1.3 m at the chamber lobe boundary (grade ≈ 4.06) while the topology ramp stays under `MAX_TRAVERSABLE_FLOOR_GRADE`; the SDF floor used to keep walk-max. Traversal still works (grounded snap-up is unbounded) — shape/readability issue in `caveHeightfieldRepresentation.ts`, pinned with `it.fails` in `productionTopology.floor-continuity.test.ts`.
+- **Light / visible sky in the cave.** The obvious candidate source — camera occupancy from a different shape than the rendered mesh (SDF void where the heightfield mesh is rock, i.e. camera outside a `FrontSide` mesh looking at daylight through its back faces) — is removed by this cutover; the User's browser pass decides whether anything remains. If it does, the independent candidates are the ones already documented under “Known risks after B”: (a) the terrain edge is on the tile grid (≤ 1 m, bisected crossings) while the cave rim is on the 0.3 m field grid, so hairline seams between contour vertices are possible at grazing angles (the underside mask is the intended cover); (b) terrain node heights are tile `floorHeights` (roads / rivers / player digs) while the cave rim is `sampleBaseHeight − mouthCarveDepth`, so a modified mouth surface opens a vertical seam. Neither is masked here with fog / darkness / invisible geometry.
+- `LOOSE-ENDS.md` 2026-09-10: `PlayerController` still feeds the raw surface `sampleHeight` to `applySlopeMovementConstraint` inside caves (harness uses `withCaveFloorFallback`). Unchanged by this cutover.
+- Milestone C (shared spatial contract + semantic interior locations) remains; `queryGround` / `queryInterior` are still player-stateful closures — do not hand them to NPC/fauna; `occupancyAt` / `resolveHorizontal` / `sampleFloor` / `sampleCeiling` are the stateless, entity-neutral pieces C can build on.
+
 ## Milestone C — Shared spatial queries + semantic cave locations
 
 C should productionise the useful pure parts of `src/debug/caves/caveHeightfieldTraversal.ts`, not the walker/harness itself.
@@ -685,6 +787,8 @@ Downstream `npc-027` needs stateless identity-bearing spatial context, not the p
 
 ## Milestone D — Runtime consumers, collision, camera and lifecycle
 
+**Status: spatial part done 2026-09-11 (see “Spatial cutover — implemented”).** What follows is the original D recon, kept for the lifecycle/streaming review that still applies; the consumer list below is historical.
+
 D is the authority switch.
 
 Current production consumers to recon again immediately before implementation:
@@ -703,6 +807,8 @@ Do not blindly port debug constants for player dimensions into the cave domain. 
 Keep `WorldBundle` rebuild ownership unchanged and ensure no representation/query closure survives `Caves.dispose()`.
 
 ## Milestone E — SDF cleanup and final documentation
+
+**Status: runtime cleanup done 2026-09-11 (see “Spatial cutover — implemented”); remaining E scope is the final docs/dependency handoff after C (`docs/STATE.md` cave text is already heightfield-only; `pnpm docs:sync` still pending for the generated code map).** Original E recon below.
 
 Only after repository search shows no production call-sites should E remove:
 

@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { createBenchmarkWorldConfig } from '../config/worldConfig'
 import { measureSlope } from '../fauna/createFauna'
 import { type RawSampleParams, sampleHeightAt } from '../terrain/chunkHeightmap'
-import { buildCaveSdfRepresentation } from '../world/caves/caveSdfField'
-import { buildCaveSdfColumnIndex, occupancyIntervalAt, queryColumnIndex } from '../world/caves/caveSdfQuery'
+import { heightfieldOccupancyAt, queryHeightfieldGround } from '../world/caves/caveHeightfieldQuery'
+import {
+  buildCaveHeightfieldRepresentation,
+  heightfieldNodePosition,
+  sampleHeightfieldAt,
+} from '../world/caves/caveHeightfieldRepresentation'
+import { mouthCarveDepth } from '../world/caves/mouthCarve'
 import { buildProductionCaveTopology } from '../world/caves/productionTopology'
 import { type LargeCaveSite, openingDirection } from '../world/largeCaves'
 import {
@@ -106,33 +111,33 @@ function buildSeedCave(seed: number, entrance: { x: number, z: number }) {
     sampleBaseHeight: sampleHeight,
   })
   if (!topology) throw new Error('production topology rejected site')
-  const sdf = buildCaveSdfRepresentation(topology)
-  const index = buildCaveSdfColumnIndex(sdf, topology, sampleHeight)
-  return { topology, index, sampleHeight, waterLevel: t.waterLevel }
+  const walkSurfaceAt = (x: number, z: number): number => sampleHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
+  const field = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
+  const occupancyAt = (x: number, y: number, z: number) => heightfieldOccupancyAt(field, sampleHeight, x, y, z)
+  const groundAt = (x: number, y: number, z: number) => queryHeightfieldGround(field, sampleHeight, x, y, z)
+  return { topology, field, occupancyAt, groundAt, sampleHeight, waterLevel: t.waterLevel }
 }
 
 function findClosedInteriorSample(
   built: ReturnType<typeof buildSeedCave>,
   preferFloorBelowWater: boolean,
 ): { x: number, y: number, z: number } | null {
-  const { index, waterLevel } = built
+  const { field, waterLevel } = built
   let fallback: { x: number, y: number, z: number } | null = null
-  for (let iz = 0; iz < index.nz; iz++) {
-    for (let ix = 0; ix < index.nx; ix++) {
-      const intervals = index.columns[iz * index.nx + ix] ?? []
-      for (const interval of intervals) {
-        if (interval.openSky) continue
-        const x = index.originX + ix * index.step
-        const z = index.originZ + iz * index.step
-        const y = interval.floorY + Math.min(0.6, (interval.ceilingY - interval.floorY) * 0.35)
-        if (occupancyIntervalAt(index, x, y, z) == null) continue
-        const sample = { x, y, z }
-        if (preferFloorBelowWater) {
-          if (interval.floorY < waterLevel) return sample
-          continue
-        }
-        fallback ??= sample
+  for (let iz = 0; iz < field.nz; iz++) {
+    for (let ix = 0; ix < field.nx; ix++) {
+      const { x, z } = heightfieldNodePosition(field, ix, iz)
+      const sample = sampleHeightfieldAt(field, x, z)
+      if (sample.gap <= 0 || sample.openSky) continue
+      const y = sample.floorY + Math.min(0.6, sample.gap * 0.35)
+      const occupancy = built.occupancyAt(x, y, z)
+      if (occupancy == null || occupancy.openSky) continue
+      const probe = { x, y, z }
+      if (preferFloorBelowWater) {
+        if (sample.floorY < waterLevel) return probe
+        continue
       }
+      fallback ??= probe
     }
   }
   return fallback
@@ -147,11 +152,11 @@ describe('seed 1136726869 closed interior below waterLevel', () => {
     const SAMPLE = findClosedInteriorSample(built, true)
     expect(SAMPLE, 'production cave still has a closed interior column').not.toBeNull()
 
-    const occupancy = occupancyIntervalAt(built.index, SAMPLE!.x, SAMPLE!.y, SAMPLE!.z)
+    const occupancy = built.occupancyAt(SAMPLE!.x, SAMPLE!.y, SAMPLE!.z)
     expect(occupancy, 'strict occupancy at a closed interior sample').not.toBeNull()
     expect(occupancy!.openSky === true).toBe(false)
 
-    const cave = queryColumnIndex(built.index, SAMPLE!.x, SAMPLE!.y, SAMPLE!.z)
+    const cave = built.groundAt(SAMPLE!.x, SAMPLE!.y, SAMPLE!.z)
     expect(cave).not.toBeNull()
     expect(cave!.openSky === true).toBe(false)
     expect(cave!.floorY).toBeLessThan(built.waterLevel)
@@ -168,7 +173,7 @@ describe('seed 1136726869 closed interior below waterLevel', () => {
     const mouthX = built.topology.entrance.x + out.dx * 0.4
     const mouthZ = built.topology.entrance.z + out.dz * 0.4
     const mouthY = built.sampleHeight(mouthX, mouthZ) - 0.3
-    const mouthOcc = occupancyIntervalAt(built.index, mouthX, mouthY, mouthZ)
+    const mouthOcc = built.occupancyAt(mouthX, mouthY, mouthZ)
     if (mouthOcc?.openSky) {
       expect(worldWaterAppliesInCurrentSpace({ occupancy: mouthOcc, caveCeiling: null })).toBe(true)
     }
@@ -179,15 +184,15 @@ describe('seed 1136726869 closed interior below waterLevel', () => {
     const SAMPLE = findClosedInteriorSample(built, true) ?? findClosedInteriorSample(built, false)
     expect(SAMPLE, 'production cave still has a closed interior column').not.toBeNull()
 
-    const probe = queryColumnIndex(built.index, SAMPLE!.x, SAMPLE!.y, SAMPLE!.z)
+    const probe = built.groundAt(SAMPLE!.x, SAMPLE!.y, SAMPLE!.z)
     expect(probe, 'column still has cave ground at the closed interior sample').not.toBeNull()
     expect(probe!.openSky === true).toBe(false)
 
     const y = probe!.floorY - 0.059
-    const occupancy = occupancyIntervalAt(built.index, SAMPLE!.x, y, SAMPLE!.z)
+    const occupancy = built.occupancyAt(SAMPLE!.x, y, SAMPLE!.z)
     expect(occupancy).toBeNull()
 
-    const cave = queryColumnIndex(built.index, SAMPLE!.x, y, SAMPLE!.z)
+    const cave = built.groundAt(SAMPLE!.x, y, SAMPLE!.z)
     expect(cave).not.toBeNull()
     expect(cave!.openSky === true).toBe(false)
     expect(y).toBeLessThan(cave!.floorY)

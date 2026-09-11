@@ -89,9 +89,6 @@ export const CAVE_HEIGHTFIELD_ENTRANCE: CaveEntrance = {
 export const CAVE_HEIGHTFIELD_FIXTURE_IDS = ['basic', 'bend', 'branch'] as const
 export type CaveHeightfieldFixtureId = (typeof CAVE_HEIGHTFIELD_FIXTURE_IDS)[number]
 
-export const CAVE_HEIGHTFIELD_VARIANTS = ['heightfield', 'sdf'] as const
-export type CaveHeightfieldVariant = (typeof CAVE_HEIGHTFIELD_VARIANTS)[number]
-
 export const CAVE_HEIGHTFIELD_MODES = ['walk', 'inspect'] as const
 export type CaveHeightfieldMode = (typeof CAVE_HEIGHTFIELD_MODES)[number]
 
@@ -356,13 +353,6 @@ export function parseCaveHeightfieldFixtureId(raw: string | null): CaveHeightfie
     return raw as CaveHeightfieldFixtureId
   }
   return 'basic'
-}
-
-export function parseCaveHeightfieldVariant(raw: string | null): CaveHeightfieldVariant {
-  if (raw && (CAVE_HEIGHTFIELD_VARIANTS as readonly string[]).includes(raw)) {
-    return raw as CaveHeightfieldVariant
-  }
-  return 'heightfield'
 }
 
 export function parseCaveHeightfieldMode(raw: string | null): CaveHeightfieldMode {

@@ -1,7 +1,8 @@
 /** Plan world-terrain-008 B4.1 — presentation relevance/lifecycle seam.
  *  Gameplay/spatial truth is *not* owned here: a cave can stay queryable
- *  while presentation is inactive, queued or building. Collider
- *  registration is relevance-scoped and independent of mesh completion.
+ *  while presentation is inactive, queued or building. Since
+ *  world-terrain-019 there is nothing else to register on relevance —
+ *  cave containment is a heightfield query, not a collider set.
  *
  * @domain world-terrain
  */
@@ -14,7 +15,6 @@ export type CavePresentationPhase = 'inactive' | 'queued' | 'building' | 'active
 export type CaveStreamingSnapshot = {
   phase: CavePresentationPhase
   generation: number
-  collidersRegistered: boolean
   wanted: boolean
 }
 
@@ -23,12 +23,9 @@ export type CaveStreamingStats = {
   activePresentations: number
   queued: number
   building: number
-  registeredColliders: number
 }
 
 export type CaveStreamingHooks = {
-  registerColliders: (caveId: string) => void
-  clearColliders: (caveId: string) => void
   requestPresentation: (caveId: string, generation: number, distance: number) => void
   reprioritisePresentation: (caveId: string, distance: number) => void
   cancelPresentation: (caveId: string) => void
@@ -49,13 +46,12 @@ export function caveWantedAtDistance(distance: number, currentlyWanted: boolean)
 type Record = {
   phase: CavePresentationPhase
   generation: number
-  collidersRegistered: boolean
   failed: boolean
 }
 
 /**
- * Owns presentation phase + generation identity + collider-registration
- * flags for the cave runtime. Does not own topology/SDF/queries.
+ * Owns presentation phase + generation identity for the cave runtime. Does
+ * not own topology / heightfield / queries.
  *
  * @domain world-terrain
  */
@@ -66,7 +62,7 @@ export function createCaveStreamingController(hooks: CaveStreamingHooks) {
   function recordOf(caveId: string): Record {
     let rec = records.get(caveId)
     if (!rec) {
-      rec = { phase: 'inactive', generation: 0, collidersRegistered: false, failed: false }
+      rec = { phase: 'inactive', generation: 0, failed: false }
       records.set(caveId, rec)
     }
     return rec
@@ -76,10 +72,6 @@ export function createCaveStreamingController(hooks: CaveStreamingHooks) {
     const rec = recordOf(caveId)
     wanted.delete(caveId)
     rec.failed = false
-    if (rec.collidersRegistered) {
-      hooks.clearColliders(caveId)
-      rec.collidersRegistered = false
-    }
     if (rec.phase !== 'inactive') {
       rec.generation += 1
       rec.phase = 'inactive'
@@ -96,10 +88,6 @@ export function createCaveStreamingController(hooks: CaveStreamingHooks) {
       return
     }
     wanted.add(caveId)
-    if (!rec.collidersRegistered) {
-      hooks.registerColliders(caveId)
-      rec.collidersRegistered = true
-    }
     if (rec.phase === 'inactive') {
       if (rec.failed) return
       rec.phase = 'queued'
@@ -140,7 +128,6 @@ export function createCaveStreamingController(hooks: CaveStreamingHooks) {
     return {
       phase: rec.phase,
       generation: rec.generation,
-      collidersRegistered: rec.collidersRegistered,
       wanted: wanted.has(caveId),
     }
   }
@@ -149,26 +136,23 @@ export function createCaveStreamingController(hooks: CaveStreamingHooks) {
     let activePresentations = 0
     let queued = 0
     let building = 0
-    let registeredColliders = 0
     for (const rec of records.values()) {
       if (rec.phase === 'active') activePresentations++
       else if (rec.phase === 'queued') queued++
       else if (rec.phase === 'building') building++
-      if (rec.collidersRegistered) registeredColliders++
     }
     return {
       wanted: wanted.size,
       activePresentations,
       queued,
       building,
-      registeredColliders,
     }
   }
 
   function trackedIds(): string[] {
     const ids: string[] = []
     for (const [id, rec] of records) {
-      if (wanted.has(id) || rec.phase !== 'inactive' || rec.collidersRegistered) ids.push(id)
+      if (wanted.has(id) || rec.phase !== 'inactive') ids.push(id)
     }
     return ids
   }

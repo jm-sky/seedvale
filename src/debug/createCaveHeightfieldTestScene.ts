@@ -1,6 +1,8 @@
-/** Isolated `?caveHeightfieldTest` harness for the cave heightfield
- *  representation spike. Bypasses WorldBundle / save / streaming — see
- *  `createModelTestScene.ts` for the structural pattern.
+/** Isolated `?caveHeightfieldTest` harness for the production cave
+ *  heightfield representation and its spatial queries. Bypasses WorldBundle
+ *  / save / streaming — see `createModelTestScene.ts` for the structural
+ *  pattern. The former SDF comparison variant was retired with the SDF
+ *  runtime (world-terrain-019).
  *
  * @domain world-terrain
  */
@@ -13,7 +15,6 @@ import {
   Color,
   DirectionalLight,
   DoubleSide,
-  FrontSide,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -29,24 +30,15 @@ import {
 import { createRenderer } from '../render/createRenderer'
 import { createLargeRock } from '../settlement/decorProps'
 import { openingDirection } from '../world/caves/caveOrientation'
-import { buildCaveSdfColliders, caveMouthColliderFilter } from '../world/caves/caveSdfColliders'
-import { buildCaveSdfRepresentation } from '../world/caves/caveSdfField'
-import {
-  buildCaveSdfColumnIndex,
-} from '../world/caves/caveSdfQuery'
-import { createCaveSpikeMaterial } from '../world/caves/caveSpikeMaterial'
-import { buildSdfCaveMesh, DEFAULT_SDF_PARAMS } from '../world/caves/sdfCaveMesh'
 import {
   buildCaveHeightfieldFixture,
   CAVE_HEIGHTFIELD_FIXTURE_IDS,
   caveHeightfieldBaseSurfaceAt,
   type CaveHeightfieldFixtureId,
   type CaveHeightfieldMode,
-  type CaveHeightfieldVariant,
   caveHeightfieldWalkSurfaceAt,
   parseCaveHeightfieldFixtureId,
   parseCaveHeightfieldMode,
-  parseCaveHeightfieldVariant,
 } from './caves/caveHeightfieldFixtures'
 import {
   createHeightfieldCaveMesh,
@@ -65,15 +57,10 @@ import {
   CAVE_HEIGHTFIELD_TERRAIN_ANCHOR,
   CAVE_HEIGHTFIELD_TERRAIN_SEED,
 } from './caves/caveHeightfieldTerrain'
-import {
-  type CaveWalkWorld,
-  createHeightfieldWalkWorld,
-  createSdfWalkWorld,
-} from './caves/caveHeightfieldWalkWorld'
+import { type CaveWalkWorld, createHeightfieldWalkWorld } from './caves/caveHeightfieldWalkWorld'
 import { urlParamValue } from './debugMode'
 
 export type CaveHeightfieldSpikeMetrics = {
-  variant: CaveHeightfieldVariant
   fixture: CaveHeightfieldFixtureId
   representationMs: number
   meshBuildMs: number
@@ -81,28 +68,28 @@ export type CaveHeightfieldSpikeMetrics = {
   vertices: number
   triangles: number
   geometryBytes: number
-  cellSize?: number
-  gridWidth?: number
-  gridDepth?: number
+  cellSize: number
+  gridWidth: number
+  gridDepth: number
   /** Grid nodes carrying cave void (`gap > 0`). */
-  caveNodeCount?: number
+  caveNodeCount: number
   /** Vertices on the `gap = 0` contour, shared by floor and ceiling. */
-  rimVertexCount?: number
+  rimVertexCount: number
   /** Vertices on the open-sky contour, where ceiling and terrain meet. */
-  skyVertexCount?: number
+  skyVertexCount: number
   /** Widest cave span across the main chamber node. */
-  chamberSpan?: number
+  chamberSpan: number
   /** Persistent field memory (floor/ceiling/surface/coreT arrays). */
-  fieldBytes?: number
+  fieldBytes: number
   /** Width at the mid-passage station where the floor has risen <= 0.3 m. */
-  walkableWidth?: number
+  walkableWidth: number
   /** Worst clearance anywhere in the walkable core. */
-  minCoreGap?: number
+  minCoreGap: number
   /** Steepest floor grade along the centerline. */
-  maxFloorSlopeDeg?: number
+  maxFloorSlopeDeg: number
 }
 
-type BuiltVariant = {
+type BuiltFixture = {
   caveMesh: Mesh
   world: CaveWalkWorld
   metrics: CaveHeightfieldSpikeMetrics
@@ -112,26 +99,20 @@ type BuiltVariant = {
   rocks: Group | null
   /** Dark-rock beam under the terrain around the mouth — presentation only,
    *  independent of rock framing. Catches grazing views through residual
-   *  millimetre gaps. Null on the SDF baseline (closed terrain sheet). */
+   *  millimetre gaps. */
   mouthMask: Mesh | null
-  field: CaveHeightfield | null
+  field: CaveHeightfield
   /** Positive where cave void breaks the walk surface. Drives the terrain
    *  cutout, the cave ceiling clip and the rock placement from one contour. */
-  mouthOpening: ((x: number, z: number) => number) | null
+  mouthOpening: (x: number, z: number) => number
 }
 
-/** Presentation-only mouth rocks for a built variant, or `null` for the SDF
- *  baseline (which keeps its closed terrain sheet and needs no seam mask). */
-function makeRocks(built: BuiltVariant): Group | null {
-  if (!built.field || !built.mouthOpening) return null
+/** Presentation-only mouth rocks for a built fixture. */
+function makeRocks(built: BuiltFixture): Group {
   return buildMouthRocks(built.field, built.mouthOpening)
 }
 
-function now(): number {
-  return typeof performance !== 'undefined' ? performance.now() : Date.now()
-}
-
-/** The one analytic surface both representations are built against —
+/** The one analytic surface the representation is built against —
  *  `createCaves()`'s `analyticSurfaceHeight` equivalent. */
 const baseSurfaceAt = caveHeightfieldBaseSurfaceAt
 /** Walkable / rendered surface (base minus the production mouth recess). */
@@ -145,11 +126,11 @@ function spawnPose(): { x: number, y: number, z: number, yaw: number } {
   return { x, y: walkSurfaceAt(x, z), z, yaw: topology.entrance.yaw }
 }
 
-function writeUrlState(variant: CaveHeightfieldVariant, fixture: CaveHeightfieldFixtureId, mode: CaveHeightfieldMode): void {
+function writeUrlState(fixture: CaveHeightfieldFixtureId, mode: CaveHeightfieldMode): void {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
   url.searchParams.set('caveHeightfieldTest', '')
-  url.searchParams.set('variant', variant)
+  url.searchParams.delete('variant')
   url.searchParams.set('fixture', fixture)
   url.searchParams.set('mode', mode)
   window.history.replaceState(null, '', url)
@@ -180,12 +161,9 @@ const SURFACE_STEP = 0.5
  * where `ceilY = surfaceY`, which is exactly where the cave ceiling now
  * stops too, at the same height.
  *
- * `mouthOpening` is null for the SDF variant, which keeps the closed sheet it
- * has today so the comparison shows what each representation contributes.
- *
  * @domain world-terrain
  */
-function buildSurfaceMesh(mouthOpening: ((x: number, z: number) => number) | null): Mesh {
+function buildSurfaceMesh(mouthOpening: (x: number, z: number) => number): Mesh {
   const n = Math.round(SURFACE_SIZE / SURFACE_STEP) + 1
   const half = SURFACE_SIZE / 2
   const nodeX = (ix: number): number => -half + ix * SURFACE_STEP
@@ -198,7 +176,7 @@ function buildSurfaceMesh(mouthOpening: ((x: number, z: number) => number) | nul
       const z = nodeZ(iz)
       const i = iz * n + ix
       height[i] = walkSurfaceAt(x, z)
-      keep[i] = mouthOpening ? -mouthOpening(x, z) : 1
+      keep[i] = -mouthOpening(x, z)
     }
   }
 
@@ -378,7 +356,7 @@ function measureFieldQuality(
   }
 }
 
-function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVariant {
+function buildFixture(fixture: CaveHeightfieldFixtureId): BuiltFixture {
   const topology = buildCaveHeightfieldFixture(fixture)
   const built = buildCaveHeightfield(topology, walkSurfaceAt, DEFAULT_HEIGHTFIELD_CONFIG)
   const field = built.heightfield
@@ -397,7 +375,6 @@ function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVarian
     mouthMask: createMouthUndersideMask(field, mouthOpening, walkSurfaceAt),
     world: createHeightfieldWalkWorld(field, baseSurfaceAt, walkSurfaceAt),
     metrics: {
-      variant: 'heightfield',
       fixture,
       representationMs: built.representationMs,
       meshBuildMs: buffers.meshBuildMs,
@@ -421,49 +398,8 @@ function buildHeightfieldVariant(fixture: CaveHeightfieldFixtureId): BuiltVarian
   }
 }
 
-function buildSdfVariant(fixture: CaveHeightfieldFixtureId): BuiltVariant {
-  const topology = buildCaveHeightfieldFixture(fixture)
-  const t0 = now()
-  const field = buildCaveSdfRepresentation(topology, DEFAULT_SDF_PARAMS)
-  const t1 = now()
-  const meshResult = buildSdfCaveMesh(topology, DEFAULT_SDF_PARAMS, baseSurfaceAt, field)
-  const t2 = now()
-  const material = createCaveSpikeMaterial('sdf')
-  material.side = FrontSide
-  const caveMesh = new Mesh(meshResult.geometry, material)
-  caveMesh.castShadow = true
-  caveMesh.receiveShadow = true
-  caveMesh.name = 'cave-sdf-baseline'
-  const index = buildCaveSdfColumnIndex(field, topology, baseSurfaceAt)
-  const colliders = buildCaveSdfColliders(
-    index,
-    baseSurfaceAt,
-    field,
-    caveMouthColliderFilter(topology),
-  )
-  return {
-    caveMesh,
-    field: null,
-    mouthOpening: null,
-    surfaceMesh: buildSurfaceMesh(null),
-    rocks: null,
-    mouthMask: null,
-    world: createSdfWalkWorld(index, colliders, walkSurfaceAt),
-    metrics: {
-      variant: 'sdf',
-      fixture,
-      representationMs: t1 - t0,
-      meshBuildMs: t2 - t1,
-      totalMs: t2 - t0,
-      vertices: meshResult.metrics.vertices,
-      triangles: meshResult.metrics.triangles,
-      geometryBytes: meshResult.metrics.geometryBytes,
-    },
-  }
-}
-
 function reportMetrics(metrics: CaveHeightfieldSpikeMetrics): void {
-  console.log(`[caveHeightfieldTest] variant=${metrics.variant} fixture=${metrics.fixture}`)
+  console.log(`[caveHeightfieldTest] fixture=${metrics.fixture}`)
   console.table({
     representationMs: Number(metrics.representationMs.toFixed(2)),
     meshBuildMs: Number(metrics.meshBuildMs.toFixed(2)),
@@ -471,16 +407,16 @@ function reportMetrics(metrics: CaveHeightfieldSpikeMetrics): void {
     vertices: metrics.vertices,
     triangles: metrics.triangles,
     geometryBytes: metrics.geometryBytes,
-    cellSize: metrics.cellSize ?? 'n/a',
-    gridNodes: metrics.gridWidth != null ? `${metrics.gridWidth}×${metrics.gridDepth}` : 'n/a',
-    caveNodeCount: metrics.caveNodeCount ?? 'n/a',
-    rimVertexCount: metrics.rimVertexCount ?? 'n/a',
-    skyVertexCount: metrics.skyVertexCount ?? 'n/a',
-    chamberSpan: metrics.chamberSpan != null ? Number(metrics.chamberSpan.toFixed(1)) : 'n/a',
-    fieldBytes: metrics.fieldBytes ?? 'n/a',
-    walkableWidth: metrics.walkableWidth != null ? Number(metrics.walkableWidth.toFixed(2)) : 'n/a',
-    minCoreGap: metrics.minCoreGap != null ? Number(metrics.minCoreGap.toFixed(2)) : 'n/a',
-    maxFloorSlopeDeg: metrics.maxFloorSlopeDeg != null ? Number(metrics.maxFloorSlopeDeg.toFixed(1)) : 'n/a',
+    cellSize: metrics.cellSize,
+    gridNodes: `${metrics.gridWidth}×${metrics.gridDepth}`,
+    caveNodeCount: metrics.caveNodeCount,
+    rimVertexCount: metrics.rimVertexCount,
+    skyVertexCount: metrics.skyVertexCount,
+    chamberSpan: Number(metrics.chamberSpan.toFixed(1)),
+    fieldBytes: metrics.fieldBytes,
+    walkableWidth: Number(metrics.walkableWidth.toFixed(2)),
+    minCoreGap: Number(metrics.minCoreGap.toFixed(2)),
+    maxFloorSlopeDeg: Number(metrics.maxFloorSlopeDeg.toFixed(1)),
   })
 }
 
@@ -504,21 +440,18 @@ function createOverlay(): HTMLDivElement {
 
 function renderOverlay(
   el: HTMLDivElement,
-  variant: CaveHeightfieldVariant,
   fixture: CaveHeightfieldFixtureId,
   mode: CaveHeightfieldMode,
   metrics: CaveHeightfieldSpikeMetrics,
 ): void {
-  const extra = variant === 'heightfield'
-    ? `<div>grid ${metrics.gridWidth}×${metrics.gridDepth} nodes @ ${metrics.cellSize} m · field ${metrics.fieldBytes} B</div>
+  const extra = `<div>grid ${metrics.gridWidth}×${metrics.gridDepth} nodes @ ${metrics.cellSize} m · field ${metrics.fieldBytes} B</div>
        <div>cave nodes ${metrics.caveNodeCount} · rim ${metrics.rimVertexCount} · sky ${metrics.skyVertexCount}</div>
-       <div>chamber span ${metrics.chamberSpan?.toFixed(1)} m</div>
-       <div>walkable ${metrics.walkableWidth?.toFixed(2)} m · min core gap ${metrics.minCoreGap?.toFixed(2)} m ·
-         max floor ${metrics.maxFloorSlopeDeg?.toFixed(1)}°</div>`
-    : '<div>SDF baseline (production field + Surface Nets, terrain sheet closed)</div>'
+       <div>chamber span ${metrics.chamberSpan.toFixed(1)} m</div>
+       <div>walkable ${metrics.walkableWidth.toFixed(2)} m · min core gap ${metrics.minCoreGap.toFixed(2)} m ·
+         max floor ${metrics.maxFloorSlopeDeg.toFixed(1)}°</div>`
   el.innerHTML = `
-    <div style="font-weight:700;margin-bottom:6px">Cave heightfield spike</div>
-    <div>variant: <b>${variant}</b> · fixture: <b>${fixture}</b> · mode: <b>${mode}</b></div>
+    <div style="font-weight:700;margin-bottom:6px">Cave heightfield harness</div>
+    <div>fixture: <b>${fixture}</b> · mode: <b>${mode}</b></div>
     <div style="margin-top:6px">
       representation ${metrics.representationMs.toFixed(1)} ms ·
       mesh ${metrics.meshBuildMs.toFixed(1)} ms ·
@@ -532,7 +465,7 @@ function renderOverlay(
       surface over deepest station: ${deepestSurfaceAbove(fixture).toFixed(1)} m
     </div>
     <div style="margin-top:8px;opacity:0.85">
-      [1] heightfield/SDF · [2] Walk/Inspect · [3] fixture · [4] mouth rocks<br>
+      [2] Walk/Inspect · [3] fixture · [4] mouth rocks<br>
       WASD walk · mouse look · click canvas to lock pointer<br>
       2.5D cannot represent stacked / crossing / shaft geometry or a true overhang
     </div>
@@ -551,12 +484,11 @@ function deepestSurfaceAbove(fixture: CaveHeightfieldFixtureId): number {
 }
 
 /**
- * Ultra-minimal comparison scene for `?caveHeightfieldTest`.
+ * Ultra-minimal scene for `?caveHeightfieldTest`.
  *
  * @domain world-terrain
  */
 export async function createCaveHeightfieldTestScene(container: HTMLElement): Promise<() => void> {
-  let variant = parseCaveHeightfieldVariant(urlParamValue('variant'))
   let fixture = parseCaveHeightfieldFixtureId(urlParamValue('fixture'))
   let mode = parseCaveHeightfieldMode(urlParamValue('mode'))
 
@@ -594,15 +526,15 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
   renderer.domElement.addEventListener('click', blockWalkPointerLockInInspect, true)
 
   let showRocks = urlParamValue('rocks') !== '0'
-  let built = variant === 'sdf' ? buildSdfVariant(fixture) : buildHeightfieldVariant(fixture)
+  let built = buildFixture(fixture)
   built.rocks = showRocks ? makeRocks(built) : null
   scene.add(built.caveMesh)
   scene.add(built.surfaceMesh)
   if (built.mouthMask) scene.add(built.mouthMask)
   if (built.rocks) scene.add(built.rocks)
   reportMetrics(built.metrics)
-  renderOverlay(overlay, variant, fixture, mode, built.metrics)
-  writeUrlState(variant, fixture, mode)
+  renderOverlay(overlay, fixture, mode, built.metrics)
+  writeUrlState(fixture, mode)
 
   const walker = await createCaveHeightfieldWalker()
   scene.add(walker.root)
@@ -644,7 +576,7 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
 
   const rebuild = (): void => {
     disposeBuilt()
-    built = variant === 'sdf' ? buildSdfVariant(fixture) : buildHeightfieldVariant(fixture)
+    built = buildFixture(fixture)
     built.rocks = showRocks ? makeRocks(built) : null
     built.world.resetGround()
     scene.add(built.caveMesh)
@@ -652,8 +584,8 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
     if (built.mouthMask) scene.add(built.mouthMask)
     if (built.rocks) scene.add(built.rocks)
     reportMetrics(built.metrics)
-    renderOverlay(overlay, variant, fixture, mode, built.metrics)
-    writeUrlState(variant, fixture, mode)
+    renderOverlay(overlay, fixture, mode, built.metrics)
+    writeUrlState(fixture, mode)
   }
 
   const applyMode = (): void => {
@@ -669,23 +601,20 @@ export async function createCaveHeightfieldTestScene(container: HTMLElement): Pr
       camera.position.set(cx + 14, cy + 8, cz + 16)
       orbit.update()
     }
-    renderOverlay(overlay, variant, fixture, mode, built.metrics)
-    writeUrlState(variant, fixture, mode)
+    renderOverlay(overlay, fixture, mode, built.metrics)
+    writeUrlState(fixture, mode)
   }
 
   const onHarnessKey = (event: KeyboardEvent): void => {
     if (event.repeat) return
-    if (event.code === 'Digit1') {
-      variant = variant === 'heightfield' ? 'sdf' : 'heightfield'
-      rebuild()
-    } else if (event.code === 'Digit2') {
+    if (event.code === 'Digit2') {
       mode = mode === 'walk' ? 'inspect' : 'walk'
       applyMode()
     } else if (event.code === 'Digit4') {
       showRocks = !showRocks
       if (showRocks) {
         built.rocks = makeRocks(built)
-        if (built.rocks) scene.add(built.rocks)
+        scene.add(built.rocks)
       } else {
         disposeRocks()
       }

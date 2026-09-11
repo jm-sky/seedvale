@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { CaveTopology } from './caves/caveTopology'
-import type { Collider } from './collision'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isBootMarkMode, isSystemEnabled } from '../debug/debugMode'
 import { type CaveGroundQueryDebug, writeHitSnapshot } from '../debug/playerGroundTrace'
@@ -9,13 +8,26 @@ import { getMonitor } from '../perf/active'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { useBootMark } from '../shared/bootMark'
-import { applyCaveGroundHysteresis, type CaveGroundHit, type CaveVerticalInterval } from './caves/caveGroundQuery'
+import {
+  applyCaveGroundHysteresis,
+  applyCaveInteriorHysteresis,
+  CAVE_OCCUPANCY_EPS,
+  type CaveGroundHit,
+  type CaveVerticalInterval,
+} from './caves/caveGroundQuery'
 import {
   createCaveHeightfieldMaterial,
   createCaveHeightfieldPresentation,
   createMouthUndersideMaskMaterial,
 } from './caves/caveHeightfieldPresentation'
-import { heightfieldGroundColumn, queryHeightfieldGround } from './caves/caveHeightfieldQuery'
+import {
+  heightfieldGroundColumn,
+  heightfieldInteriorAt,
+  heightfieldOccupancyAt,
+  heightfieldStandingClearance,
+  queryHeightfieldGround,
+  resolveHeightfieldHorizontal,
+} from './caves/caveHeightfieldQuery'
 import {
   buildCaveHeightfieldRepresentation,
   type CaveHeightfieldRepresentation,
@@ -26,17 +38,6 @@ import {
   createCavePresentationQueue,
   createCaveStreamingController,
 } from './caves/cavePresentationLifecycle'
-import { buildCaveSdfColliders, caveMouthColliderFilter } from './caves/caveSdfColliders'
-import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation, DEFAULT_SDF_PARAMS } from './caves/caveSdfField'
-import {
-  applyCaveInteriorHysteresis,
-  buildCaveSdfColumnIndex,
-  CAVE_OCCUPANCY_EPS,
-  type CaveSdfColumnIndex,
-  isCaveInteriorAt,
-  occupancyContains,
-  occupancyIntervalAt,
-} from './caves/caveSdfQuery'
 import { caveTerrainCutout } from './caves/caveTerrainCutout'
 import {
   MOUTH_INTERIOR_ALONG,
@@ -62,7 +63,7 @@ const CAVE_GRID_CELL = 500
 
 export type Caves = {
   definitions: () => readonly CaveDefinition[]
-  /** Streams cave presentation/collision in/out around the observer
+  /** Streams cave presentation in/out around the observer
    *  (player) position — call once per frame. Cheap: a 3x3 world-grid
    *  lookup, never a scan of every cave. */
   update: (observerX: number, observerZ: number) => void
@@ -76,10 +77,20 @@ export type Caves = {
    * Debug ground-trace only — gameplay must use `queryGround` / `occupancyAt`.
    */
   peekGroundQueryDebug: () => CaveGroundQueryDebug
-  /** Strict occupancy (B3) — no floor grace, no hysteresis. `null` is solid
-   *  rock / outside cave void. Camera boom and derived collision share this.
-   *  Still the SDF column index (transitional until world-terrain-019 D). */
+  /** Strict heightfield occupancy — no floor grace, no hysteresis, stateless.
+   *  `null` is solid rock / outside cave void / a surface entity above an
+   *  underground tunnel; `openSky` at the mouth. Camera boom and swim
+   *  eligibility share this. */
   occupancyAt: (x: number, y: number, z: number) => CaveVerticalInterval | null
+  /**
+   * Entity-neutral horizontal cave containment (world-terrain-019): pushes
+   * an XZ capsule of `radius` that needs `entityHeight` of clearance out of
+   * rock and the low rounded fringe of every cave, along the heightfield's
+   * `gap` gradient. Identity outdoors, on the hillside above a tunnel
+   * (`y` above the walk surface) and in the open-sky mouth. Stateless — no
+   * hysteresis, no teleport-back. Runs *after* ordinary world colliders.
+   */
+  resolveHorizontal: (x: number, z: number, y: number, radius: number, entityHeight: number) => { x: number, z: number }
   /**
    * Hysteretic cave-interior flag for the player's current position.
    * Call once per frame from the player sample — not from camera march.
@@ -93,9 +104,8 @@ export type Caves = {
    * world-terrain-019 B.
    */
   peekStreamingDebug: () => CaveStreamingStats & { queuedJobs: number }
-  /** Strict occupancy at `(x, y, z)`. Not hysteretic `queryGround` — torch
-   *  / audio callers must not mutate the player's floor hysteresis. SDF
-   *  column index (transitional until world-terrain-019 D). */
+  /** `occupancyAt(...) !== null`. Not hysteretic `queryGround` — torch /
+   *  audio callers must not mutate the player's floor hysteresis. */
   contains: (x: number, y: number, z: number) => boolean
   /** Y-blind heightfield floor / ceiling at `(x, z)` — both from the same
    *  cave sample (lowest floor wins where cave bounds overlap). Player
@@ -109,18 +119,14 @@ export type Caves = {
 type CaveRuntime = {
   topology: CaveTopology
   definition: CaveDefinition
-  /** Presentation + terrain mouth + player ground / floor / ceiling
-   *  authority (world-terrain-019 B + early gameplay migration). */
+  /** The one spatial authority (world-terrain-019): presentation, terrain
+   *  mouth, ground / floor / ceiling, strict occupancy, horizontal
+   *  containment, interior and camera space all read this. */
   heightfield: CaveHeightfieldRepresentation
   /** Deterministic sampler the heightfield was built against:
    *  `sampleBaseHeight - mouthCarveDepth`. Presentation, mask, framing and
    *  the terrain cutout all evaluate the mouth contour with this one. */
   walkSurfaceAt: SurfaceSampler
-  // retained until world-terrain-019 D/E (strict occupancy / interior /
-  // wall colliders / camera):
-  representation: CaveSdfSpatialRepresentation
-  index: CaveSdfColumnIndex
-  colliders: readonly Collider[]
 }
 
 function gridKey(cx: number, cz: number): string {
@@ -137,26 +143,20 @@ function distanceToBoundsXZ(bounds: CaveBounds, x: number, z: number): number {
   return Math.hypot(x - cx, z - cz)
 }
 
-function colliderOwnerKey(caveId: string): string {
-  return `cave:${caveId}`
-}
-
 /** One registration for every cave's mouth cutout — cutouts are static
  *  world-build state, registered once after heightfields exist. */
 const TERRAIN_CUTOUT_OWNER_KEY = 'caves'
 
 /**
- * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B4, plus
- * world-terrain-019 Milestones A/B and the early ground migration):
- * deterministic production `CaveTopology`s, retained heightfield
- * representations (presentation + terrain-mouth + player ground / floor /
- * ceiling authority), retained SDF representations and derived column
- * indexes (transitional strict occupancy / interior / collision / camera
- * authority until world-terrain-019 D), streamed heightfield presentation
- * (synchronous main-thread mesh assembly, nearest-first) and
- * occupancy-derived cave-wall collision for whichever caves are near the
- * player. Collider registration is relevance-scoped and does not wait for
- * render mesh completion.
+ * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B4, plus the
+ * world-terrain-019 heightfield migration): deterministic production
+ * `CaveTopology`s, one retained `CaveHeightfieldRepresentation` per cave —
+ * the single spatial authority for presentation, terrain mouth, ground /
+ * floor / ceiling, strict occupancy, horizontal containment, interior and
+ * camera space — and streamed heightfield presentation (synchronous
+ * main-thread mesh assembly, nearest-first). There are no cave wall
+ * colliders: lateral containment is `resolveHorizontal` over the same
+ * field the mesh renders, so gameplay stays coherent with what is visible.
  *
  * The mouth is a real hole: every cave registers a `TerrainCutout` with
  * `ChunkManager` (`caveTerrainCutout.ts`) on the same `mouthOpeningAt`
@@ -164,25 +164,23 @@ const TERRAIN_CUTOUT_OWNER_KEY = 'caves'
  * recess still shapes the walk surface / approach.
  *
  * Placement reuses `pickLargeCaveSites()` unchanged; topology generation and
- * terrain acceptance are owned by `productionTopology.ts`. Player ground /
- * floor / ceiling is the heightfield (`caveHeightfieldQuery.ts`) — one
- * source of truth with the rendered floor; strict containment is still the
- * SDF column index (`caveSdfQuery.ts`), not `CaveVolume`. Wall colliders
- * are derived from strict occupancy (`caveSdfColliders.ts`).
- * `topologyToCaveDefinition` remains only for `definitions()` / location
- * catalog / streaming bounds until later world-terrain-019 milestones.
+ * terrain acceptance are owned by `productionTopology.ts`. All spatial
+ * queries go through `caveHeightfieldQuery.ts`; per-entity continuity
+ * (ground underground-miss hysteresis, two-sample interior confirmation)
+ * is `caveGroundQuery.ts` and is player-stateful here. `CaveVolume` is not
+ * consulted. `topologyToCaveDefinition` remains only for `definitions()` /
+ * location catalog / streaming bounds.
  *
  * Same lifecycle as `WorldBundle` (create/dispose alongside it, never
  * survives a rebuild).
  *
  * @system caves
  * @role Owns cave topologies, retained heightfield representations
- *  (presentation mesh + terrain mouth cutout + player ground), retained
- *  SDF/column-index strict occupancy space, streamed interior presentation
- *  (main-thread heightfield assembly), occupancy-derived wall colliders, and
- *  strict occupancy queries; `PlayerController` ground goes through
- *  `queryGround` (heightfield) and camera through `occupancyAt` (SDF). `queryInterior` is the hysteretic player-position
- *  cave-interior signal (audio / diagnostics).
+ *  (presentation mesh + terrain mouth cutout + every spatial query) and
+ *  streamed interior presentation; `PlayerController` ground goes through
+ *  `queryGround`, lateral containment through `resolveHorizontal`, camera
+ *  and swim eligibility through `occupancyAt`. `queryInterior` is the
+ *  hysteretic player-position cave-interior signal (audio / diagnostics).
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -216,13 +214,10 @@ export function createCaves(
   // order (it is built on activation, not at world build).
   const analyticSurfaceHeight = (x: number, z: number): number => chunkManager.sampleBaseHeight(x, z)
 
-  // Topology + heightfield + SDF field + column index are all computed up
-  // front and must be available to gameplay queries even when the cave is
-  // not activated. Presentation geometry stays lazy on streaming. The
-  // column index (~2 s at boot) now serves only strict occupancy / interior
-  // / colliders / camera — player ground reads the heightfield.
+  // Topology + heightfield are computed up front and must be available to
+  // gameplay queries even when the cave is not activated. Presentation
+  // geometry stays lazy on streaming.
   const { bootMark, bootMarkEnd } = useBootMark('createCaves')
-  const detailEnabled = isSystemEnabled('caveDetail')
   const mouthRocksEnabled = isSystemEnabled('caveMouthRocks')
   const v2ByCaveId = new Map<string, CaveRuntime>()
 
@@ -239,43 +234,17 @@ export function createCaves(
   }
   bootMarkEnd('cave.topology')
 
-  bootMark('cave.sdfRepresentation')
-  const representations = accepted.map(({ topology }) => (
-    buildCaveSdfRepresentation(topology, DEFAULT_SDF_PARAMS, detailEnabled)
-  ))
-  bootMarkEnd('cave.sdfRepresentation')
-
   bootMark('cave.heightfield')
-  const walkSurfaceSamplers: SurfaceSampler[] = accepted.map(({ topology }) => (
-    (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
-  ))
-  const heightfields = accepted.map(({ topology }, i) => (
-    buildCaveHeightfieldRepresentation(topology, walkSurfaceSamplers[i]!).heightfield
-  ))
-  bootMarkEnd('cave.heightfield')
-
-  bootMark('cave.columnIndex')
-  const indexes = accepted.map(({ topology }, i) => (
-    buildCaveSdfColumnIndex(representations[i]!, topology, analyticSurfaceHeight)
-  ))
-  bootMarkEnd('cave.columnIndex')
-
-  bootMark('cave.colliders')
-  for (let i = 0; i < accepted.length; i++) {
-    const { topology } = accepted[i]!
-    const representation = representations[i]!
-    const index = indexes[i]!
+  for (const { topology } of accepted) {
+    const walkSurfaceAt: SurfaceSampler = (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
     v2ByCaveId.set(topology.caveId, {
       topology,
       definition: topologyToCaveDefinition(topology),
-      heightfield: heightfields[i]!,
-      walkSurfaceAt: walkSurfaceSamplers[i]!,
-      representation,
-      index,
-      colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation, caveMouthColliderFilter(topology)),
+      heightfield: buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield,
+      walkSurfaceAt,
     })
   }
-  bootMarkEnd('cave.colliders')
+  bootMarkEnd('cave.heightfield')
 
   const runtimes: readonly CaveRuntime[] = [...v2ByCaveId.values()]
   const definitions: CaveDefinition[] = runtimes.map((v) => v.definition)
@@ -410,7 +379,6 @@ export function createCaves(
         geometryBytes: presentation.buffers.geometryBytes,
         maskVertices: presentation.maskVertices,
         rocks: presentation.rockCount,
-        colliderCount: v2.colliders.length,
       })
     }
   }
@@ -428,14 +396,6 @@ export function createCaves(
     if (!streaming.accept(caveId, generation)) disposePresentation(caveId)
   })
   const streaming = createCaveStreamingController({
-    registerColliders(caveId) {
-      const v2 = v2ByCaveId.get(caveId)
-      if (!v2) return
-      chunkManager.registerColliders(colliderOwnerKey(caveId), v2.colliders)
-    },
-    clearColliders(caveId) {
-      chunkManager.clearColliders(colliderOwnerKey(caveId))
-    },
     requestPresentation(caveId, generation, distance) {
       presentationQueue.request(caveId, generation, distance)
     },
@@ -483,6 +443,16 @@ export function createCaves(
     return best
   }
 
+  /** Strict, stateless heightfield occupancy across every cave — first
+   *  cave whose column holds `y` wins. */
+  function occupancyAt(x: number, y: number, z: number): CaveVerticalInterval | null {
+    for (const runtime of runtimes) {
+      const hit = heightfieldOccupancyAt(runtime.heightfield, analyticSurfaceHeight, x, y, z)
+      if (hit) return hit
+    }
+    return null
+  }
+
   return {
     definitions: () => definitions,
     update(observerX, observerZ) {
@@ -511,17 +481,25 @@ export function createCaves(
       ...streaming.stats(),
       queuedJobs: presentationQueue.queuedCount,
     }),
-    occupancyAt(x, y, z) {
+    occupancyAt,
+    resolveHorizontal(x, z, y, radius, entityHeight) {
+      // Every field is `outsideGrid` except the cave(s) local to the point,
+      // for which the resolver is the identity; sequential application is
+      // the whole multi-cave rule.
+      const minGap = heightfieldStandingClearance(entityHeight)
+      let px = x
+      let pz = z
       for (const runtime of runtimes) {
-        const hit = occupancyIntervalAt(runtime.index, x, y, z)
-        if (hit) return hit
+        const resolved = resolveHeightfieldHorizontal(runtime.heightfield, px, pz, y, radius, minGap)
+        px = resolved.x
+        pz = resolved.z
       }
-      return null
+      return { x: px, z: pz }
     },
     queryInterior(x, y, z) {
       let sample = false
       for (const runtime of runtimes) {
-        if (isCaveInteriorAt(runtime.index, runtime.topology.entrance, x, y, z)) {
+        if (heightfieldInteriorAt(runtime.heightfield, analyticSurfaceHeight, runtime.topology.entrance, x, y, z)) {
           sample = true
           break
         }
@@ -532,10 +510,7 @@ export function createCaves(
       return interiorConfirmed
     },
     contains(x, y, z) {
-      for (const runtime of runtimes) {
-        if (occupancyContains(runtime.index, x, y, z)) return true
-      }
-      return false
+      return occupancyAt(x, y, z) !== null
     },
     sampleFloor(x, z) {
       return sampleGroundColumn(x, z)?.floorY ?? null

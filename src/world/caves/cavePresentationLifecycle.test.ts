@@ -11,28 +11,20 @@ import {
 } from './cavePresentationLifecycle'
 
 function recordHooks(): CaveStreamingHooks & {
-  colliders: string[]
   requests: { caveId: string, generation: number, distance: number }[]
   cancelled: string[]
   disposed: string[]
   reprioritised: { caveId: string, distance: number }[]
 } {
-  const colliders: string[] = []
   const requests: { caveId: string, generation: number, distance: number }[] = []
   const cancelled: string[] = []
   const disposed: string[] = []
   const reprioritised: { caveId: string, distance: number }[] = []
   return {
-    colliders,
     requests,
     cancelled,
     disposed,
     reprioritised,
-    registerColliders: (caveId) => { colliders.push(caveId) },
-    clearColliders: (caveId) => {
-      const i = colliders.indexOf(caveId)
-      if (i !== -1) colliders.splice(i, 1)
-    },
     requestPresentation: (caveId, generation, distance) => {
       requests.push({ caveId, generation, distance })
     },
@@ -56,17 +48,15 @@ describe('caveWantedAtDistance (plan world-terrain-008 B4.1)', () => {
 })
 
 describe('createCaveStreamingController (plan world-terrain-008 B4.1)', () => {
-  it('registers colliders on want before presentation is active, and does not duplicate the request', () => {
+  it('queues one presentation request on want and does not duplicate it', () => {
     const hooks = recordHooks()
     const streaming = createCaveStreamingController(hooks)
     streaming.apply('cave-a', 10)
     streaming.apply('cave-a', 10)
-    expect(hooks.colliders).toEqual(['cave-a'])
     expect(hooks.requests).toHaveLength(1)
     expect(streaming.snapshot('cave-a')).toMatchObject({
       phase: 'queued',
       generation: 0,
-      collidersRegistered: true,
       wanted: true,
     })
     expect(streaming.accept('cave-a', 0)).toBe(true)
@@ -75,18 +65,16 @@ describe('createCaveStreamingController (plan world-terrain-008 B4.1)', () => {
     expect(hooks.requests).toHaveLength(1)
   })
 
-  it('clears colliders on drop without requiring an active presentation, and invalidates generation', () => {
+  it('cancels and disposes on drop without requiring an active presentation, and invalidates generation', () => {
     const hooks = recordHooks()
     const streaming = createCaveStreamingController(hooks)
     streaming.apply('cave-a', 10)
     const generation = streaming.snapshot('cave-a')!.generation
     streaming.drop('cave-a')
-    expect(hooks.colliders).toEqual([])
     expect(hooks.cancelled).toEqual(['cave-a'])
     expect(hooks.disposed).toEqual(['cave-a'])
     expect(streaming.snapshot('cave-a')).toMatchObject({
       phase: 'inactive',
-      collidersRegistered: false,
       wanted: false,
     })
     expect(streaming.snapshot('cave-a')!.generation).toBe(generation + 1)
@@ -105,19 +93,17 @@ describe('createCaveStreamingController (plan world-terrain-008 B4.1)', () => {
     expect(streaming.accept('cave-a', 1)).toBe(true)
   })
 
-  it('dispose leaves no wanted presentation or collider registrations', () => {
+  it('dispose leaves no wanted presentation', () => {
     const hooks = recordHooks()
     const streaming = createCaveStreamingController(hooks)
     streaming.apply('cave-a', 10)
     streaming.apply('cave-b', 20)
     streaming.dispose()
-    expect(hooks.colliders).toEqual([])
     expect(streaming.stats()).toEqual({
       wanted: 0,
       activePresentations: 0,
       queued: 0,
       building: 0,
-      registeredColliders: 0,
     })
     expect(streaming.trackedIds()).toEqual([])
   })
@@ -174,8 +160,6 @@ describe('createCavePresentationQueue (world-terrain-019 B)', () => {
       if (!controller.accept(caveId, generation)) disposed.push(caveId)
     })
     const controller = createCaveStreamingController({
-      registerColliders: () => {},
-      clearColliders: () => {},
       requestPresentation: (caveId, generation, distance) => queue.request(caveId, generation, distance),
       reprioritisePresentation: (caveId, distance) => queue.reprioritise(caveId, distance),
       cancelPresentation: (caveId) => queue.cancel(caveId),

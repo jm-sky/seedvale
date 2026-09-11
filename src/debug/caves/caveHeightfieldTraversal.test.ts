@@ -1,17 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { resolveCameraBoom } from '../../player/cameraBoom'
-import {
-  MOVE_SPEED,
-  PLAYER_COLLISION_RADIUS,
-  PLAYER_HEIGHT,
-  rockCeilingMaxY,
-  SPRINT_MULTIPLIER,
-} from '../../player/PlayerController'
-import { buildCaveSdfColliders, caveMouthColliderFilter } from '../../world/caves/caveSdfColliders'
-import { buildCaveSdfRepresentation } from '../../world/caves/caveSdfField'
-import { buildCaveSdfColumnIndex } from '../../world/caves/caveSdfQuery'
+import { MOVE_SPEED, SPRINT_MULTIPLIER } from '../../player/PlayerController'
+import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT } from '../../player/playerDimensions'
+import { heightfieldGroundColumn, heightfieldStandingClearance } from '../../world/caves/caveHeightfieldQuery'
 import { CAVE_APPROACH_OFFSET, CAVE_APPROACH_RADIUS } from '../../world/caves/mouthCarve'
-import { DEFAULT_SDF_PARAMS } from '../../world/caves/sdfCaveMesh'
 import {
   buildCaveHeightfieldFixture,
   caveHeightfieldBaseSurfaceAt,
@@ -27,19 +19,13 @@ import {
   HEIGHTFIELD_PLAYER_HEIGHT,
   HEIGHTFIELD_PLAYER_RADIUS,
   heightfieldCapsuleHitsCeiling,
-  heightfieldColumnIntervals,
   heightfieldOccupancyAt,
-  heightfieldRockCeilingMaxY,
   integrateDebugVertical,
   queryHeightfieldColumn,
   queryHeightfieldSpace,
   resolveHeightfieldHorizontal,
 } from './caveHeightfieldTraversal'
-import {
-  type CaveWalkWorld,
-  createHeightfieldWalkWorld,
-  createSdfWalkWorld,
-} from './caveHeightfieldWalkWorld'
+import { type CaveWalkWorld, createHeightfieldWalkWorld } from './caveHeightfieldWalkWorld'
 
 const TEST_CONFIG = { ...DEFAULT_HEIGHTFIELD_CONFIG, cellSize: 0.5 }
 const base = caveHeightfieldBaseSurfaceAt
@@ -49,14 +35,6 @@ function heightfieldWorld(fixture: 'basic' | 'bend' | 'branch' = 'basic'): CaveW
   const topology = buildCaveHeightfieldFixture(fixture)
   const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
   return createHeightfieldWalkWorld(field, base, walk)
-}
-
-function sdfWorld(fixture: 'basic' | 'bend' | 'branch' = 'basic'): CaveWalkWorld {
-  const topology = buildCaveHeightfieldFixture(fixture)
-  const field = buildCaveSdfRepresentation(topology, DEFAULT_SDF_PARAMS)
-  const index = buildCaveSdfColumnIndex(field, topology, base)
-  const colliders = buildCaveSdfColliders(index, base, field, caveMouthColliderFilter(topology))
-  return createSdfWalkWorld(index, colliders, walk)
 }
 
 /** Drives the shared ground resolver + production vertical motion along a
@@ -87,7 +65,7 @@ function walkPath(
  *  representation rather than guessed from the surface. */
 function interiorProbeY(z: number): number {
   const field = buildCaveHeightfield(buildCaveHeightfieldFixture('basic'), walk, TEST_CONFIG).heightfield
-  const interval = heightfieldColumnIntervals(field, base, 0, z)[0]
+  const interval = heightfieldGroundColumn(field, base, 0, z)
   if (!interval) throw new Error(`no cave void at z=${z}`)
   return interval.floorY + 0.3
 }
@@ -100,52 +78,47 @@ function throughPath(): { x: number, z: number }[] {
   return points
 }
 
-describe('cave heightfield traversal (plan world-terrain-018)', () => {
-  it('keeps debug player constants aligned with production', () => {
+describe('cave heightfield traversal (plan world-terrain-018 → 019 production helpers)', () => {
+  it('walks the production player capsule and the production movement constants', () => {
     expect(HEIGHTFIELD_PLAYER_RADIUS).toBe(PLAYER_COLLISION_RADIUS)
     expect(HEIGHTFIELD_PLAYER_HEIGHT).toBe(PLAYER_HEIGHT)
+    expect(HEIGHTFIELD_MIN_STANDING_GAP).toBe(heightfieldStandingClearance(PLAYER_HEIGHT))
     expect(MOVE_SPEED).toBe(8)
     expect(SPRINT_MULTIPLIER).toBe(1.8)
-    expect(heightfieldRockCeilingMaxY(24, 20)).toBe(rockCeilingMaxY(24, 20))
-    expect(heightfieldRockCeilingMaxY(null, 20)).toBe(rockCeilingMaxY(null, 20))
-    // Ceiling below the walkable floor is not a clamp, in both.
-    expect(heightfieldRockCeilingMaxY(20.5, 20)).toBe(rockCeilingMaxY(20.5, 20))
   })
 
   it('returns valid floor/ceiling inside and blocked beyond the standable region', () => {
     const topology = buildCaveHeightfieldFixture('basic')
     const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
-    const inside = queryHeightfieldSpace(field, 0, -8)
+    const inside = queryHeightfieldSpace(field, 0, -8, HEIGHTFIELD_MIN_STANDING_GAP)
     expect(inside.gap).toBeGreaterThan(0)
     expect(inside.blocked).toBe(false)
     expect(inside.ceilY - inside.floorY).toBeGreaterThanOrEqual(topology.minClearance - 1e-4)
 
     // Solid rock beside the tunnel.
-    expect(queryHeightfieldSpace(field, 12, -8).blocked).toBe(true)
+    expect(queryHeightfieldSpace(field, 12, -8, HEIGHTFIELD_MIN_STANDING_GAP).blocked).toBe(true)
     // The mouth aperture is open sky, so it is never blocked.
-    expect(queryHeightfieldSpace(field, 0, -0.2).blocked).toBe(false)
+    expect(queryHeightfieldSpace(field, 0, -0.2, HEIGHTFIELD_MIN_STANDING_GAP).blocked).toBe(false)
     // Well outside the cave the column is closed too — outdoor ownership is
     // decided by the y-aware walk world, not by this XZ-only cave query.
-    expect(queryHeightfieldSpace(field, 0, 6).blocked).toBe(true)
+    expect(queryHeightfieldSpace(field, 0, 6, HEIGHTFIELD_MIN_STANDING_GAP).blocked).toBe(true)
   })
 
-  it('clips heightfield columns to the analytic surface, like the SDF column index', () => {
+  it('clips heightfield columns to the analytic surface', () => {
     const topology = buildCaveHeightfieldFixture('basic')
     const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
     for (let z = 1; z >= -18; z -= 0.5) {
-      for (const interval of heightfieldColumnIntervals(field, base, 0, z)) {
-        expect(interval.ceilingY).toBeLessThan(base(0, z))
-        expect(interval.ceilingY).toBeGreaterThan(interval.floorY)
-      }
+      const interval = heightfieldGroundColumn(field, base, 0, z)
+      if (!interval) continue
+      expect(interval.ceilingY).toBeLessThan(base(0, z))
+      expect(interval.ceilingY).toBeGreaterThan(interval.floorY)
     }
     // Solid rock beside the tunnel carries no walkable interval at all.
-    expect(heightfieldColumnIntervals(field, base, 9, -8)).toHaveLength(0)
+    expect(heightfieldGroundColumn(field, base, 9, -8)).toBeNull()
   })
 
-  describe.each([
-    ['heightfield', heightfieldWorld],
-    ['sdf', sdfWorld],
-  ] as const)('%s variant', (_name, makeWorld) => {
+  describe('walk world', () => {
+    const makeWorld = heightfieldWorld
     it('resolves the outdoor surface before the entrance', () => {
       const world = makeWorld()
       const ground = world.resolveGround(0, walk(0, 7), 7)
@@ -262,7 +235,7 @@ describe('cave heightfield traversal (plan world-terrain-018)', () => {
           camY: originY + Math.sin(pitch) * distance,
           camZ: z + Math.cos(yaw) * cosPitch * distance,
           sampleHeight: walk,
-          colliders: world.boomCollidersAt(ground.height),
+          colliders: [],
           occupancyAt: world.occupancyAt,
         })
         // Never parks on the overburden metres above the cave.
@@ -289,12 +262,12 @@ describe('cave heightfield traversal (plan world-terrain-018)', () => {
     expect(sampleHeightfieldAt(field, 0, -8).gap).toBeGreaterThan(0)
     // Starting inside the wall resolves back into standable cave space, not
     // into some separate invisible collider.
-    const resolved = resolveHeightfieldHorizontal(field, 3, -8, null, HEIGHTFIELD_PLAYER_RADIUS)
+    const resolved = resolveHeightfieldHorizontal(field, 3, -8, null, HEIGHTFIELD_PLAYER_RADIUS, HEIGHTFIELD_MIN_STANDING_GAP)
     const after = sampleHeightfieldAt(field, resolved.x, resolved.z)
     expect(after.gap).toBeGreaterThanOrEqual(HEIGHTFIELD_MIN_STANDING_GAP - 0.25)
     expect(Math.abs(resolved.x)).toBeLessThan(3)
     // A point already in the walkable core is left alone.
-    const settled = resolveHeightfieldHorizontal(field, 0, -8, null, HEIGHTFIELD_PLAYER_RADIUS)
+    const settled = resolveHeightfieldHorizontal(field, 0, -8, null, HEIGHTFIELD_PLAYER_RADIUS, HEIGHTFIELD_MIN_STANDING_GAP)
     expect(settled.x).toBeCloseTo(0, 6)
     expect(settled.z).toBeCloseTo(-8, 6)
   })
@@ -304,7 +277,7 @@ describe('cave heightfield traversal (plan world-terrain-018)', () => {
     const field = buildCaveHeightfield(topology, walk, TEST_CONFIG).heightfield
     for (const [x, z] of [[0, 6], [4, -8], [-5, -14]] as const) {
       const y = walk(x, z)
-      const resolved = resolveHeightfieldHorizontal(field, x, z, y, HEIGHTFIELD_PLAYER_RADIUS)
+      const resolved = resolveHeightfieldHorizontal(field, x, z, y, HEIGHTFIELD_PLAYER_RADIUS, HEIGHTFIELD_MIN_STANDING_GAP)
       expect(resolved.x).toBeCloseTo(x, 6)
       expect(resolved.z).toBeCloseTo(z, 6)
     }
@@ -318,23 +291,5 @@ describe('cave heightfield traversal (plan world-terrain-018)', () => {
     expect(heightfieldCapsuleHitsCeiling(field, base, 0, hit!.ceilingY - 0.2, -17, HEIGHTFIELD_PLAYER_HEIGHT)).toBe(true)
     expect(heightfieldCapsuleHitsCeiling(field, base, 0, hit!.floorY, -17, HEIGHTFIELD_PLAYER_HEIGHT)).toBe(false)
     expect(heightfieldOccupancyAt(field, base, 0, hit!.floorY + 0.2, -17)).not.toBeNull()
-  })
-
-  it('builds both variants on the same topology and the same surface sampler', () => {
-    const topology = buildCaveHeightfieldFixture('basic')
-    const heightfield = heightfieldWorld()
-    const sdf = sdfWorld()
-    for (const z of [-8, -12, -17]) {
-      const probeY = interiorProbeY(z)
-      const hf = heightfield.resolveGround(0, probeY, z)
-      const sd = sdf.resolveGround(0, probeY, z)
-      expect(hf.caveFloorY).not.toBeNull()
-      expect(sd.caveFloorY).not.toBeNull()
-      // Same topology + same surface ⇒ floors agree to within representation noise.
-      expect(Math.abs(hf.height - sd.height)).toBeLessThan(1)
-      expect(hf.ceiling).not.toBeNull()
-      expect(sd.ceiling).not.toBeNull()
-      expect(hf.ceiling! - hf.height).toBeGreaterThanOrEqual(topology.minClearance - 0.35)
-    }
   })
 })

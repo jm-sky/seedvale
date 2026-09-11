@@ -1,8 +1,10 @@
-/** Deterministic regression for the 2026-09-05 Cave V2 SDF repro
- *  (`?seed=1922931019&caveSpike=sdf`, cave `cave:641d64fc` at
- *  x = -425.138…, z = 153.052…): the spike cave's entrance rendered as a
- *  black dome standing out of the meadow, and walking the tunnel teleported
- *  the player onto the surface.
+/** Deterministic regression for the 2026-09-05 Cave V2 spike repro
+ *  (`?seed=1922931019`, cave `cave:641d64fc` at x = -425.138…,
+ *  z = 153.052…): the spike cave's entrance rendered as a black dome
+ *  standing out of the meadow, and walking the tunnel teleported the player
+ *  onto the surface. Guards the terrain-aware topology (overburden over the
+ *  whole footprint) — the SDF mesh half of the original regression retired
+ *  with the SDF runtime (world-terrain-019).
  *
  *  Everything here is pure and analytic — `sampleHeightAt` with the same
  *  `RawSampleParams` `ChunkManager` builds for its `sampleBaseHeight`
@@ -18,16 +20,12 @@ import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightm
 import { CAVE_MOUTH_DEPTH } from '../caveGenerator'
 import { createCaveVolume } from '../caveVolume'
 import { LARGE_CAVE_MOUTH_WIDTH } from '../largeCaves'
-import { buildSdfCaveMesh, DEFAULT_SDF_PARAMS } from './sdfCaveMesh'
 import { buildSpikeTestTopology, spikeOverburdenRequirement } from './spikeTestCave'
 import { topologyToCaveDefinition } from './topologyAdapter'
-import type * as THREE from 'three'
 
 const REPRO_SEED = 1922931019
 const REPRO_SITE_X = -425.1383787947449
 const REPRO_SITE_Z = 153.05214273497208
-/** Coarser than the default so the grid stays cheap under vitest. */
-const TEST_SDF_PARAMS = { ...DEFAULT_SDF_PARAMS, cellSize: 0.5 }
 
 function surfaceSampler(seed: number): (x: number, z: number) => number {
   const config = createBenchmarkWorldConfig({ seed, terrainResolution: 193, loadRadius: 4 })
@@ -127,47 +125,4 @@ describe('Cave V2 spike surface integration (seed 1922931019 / cave:641d64fc)', 
     }
     expect(leaks.slice(0, 5)).toEqual([])
   })
-
-  it('puts no SDF geometry above the terrain and leaves the mouth open', () => {
-    const topology = buildSpikeTestTopology(REPRO_SEED, entrance, { surfaceHeightAt })
-    const { geometry } = buildSdfCaveMesh(topology, TEST_SDF_PARAMS, surfaceHeightAt)
-    const positions = geometry.getAttribute('position')
-
-    let worstAboveTerrain = -Infinity
-    for (let i = 0; i < positions.count; i++) {
-      const above = positions.getY(i) - surfaceHeightAt(positions.getX(i), positions.getZ(i))
-      worstAboveTerrain = Math.max(worstAboveTerrain, above)
-    }
-    expect(worstAboveTerrain).toBeLessThanOrEqual(0)
-
-    // An open portal means boundary edges (used by exactly one triangle) near
-    // the mouth. The unclipped iso-surface is closed and has none.
-    expect(boundaryEdgesNearMouth(geometry, entrance)).toBeGreaterThan(0)
-    const unclipped = buildSdfCaveMesh(topology, TEST_SDF_PARAMS).geometry
-    expect(boundaryEdgesNearMouth(unclipped, entrance)).toBe(0)
-  })
 })
-
-function boundaryEdgesNearMouth(geometry: THREE.BufferGeometry, entrance: CaveEntrance): number {
-  const index = geometry.getIndex()!
-  const positions = geometry.getAttribute('position')
-  const uses = new Map<string, number>()
-  for (let i = 0; i < index.count; i += 3) {
-    const tri = [index.getX(i), index.getX(i + 1), index.getX(i + 2)]
-    for (let e = 0; e < 3; e++) {
-      const a = tri[e]!
-      const b = tri[(e + 1) % 3]!
-      const key = a < b ? `${a}:${b}` : `${b}:${a}`
-      uses.set(key, (uses.get(key) ?? 0) + 1)
-    }
-  }
-  let count = 0
-  for (const [key, used] of uses) {
-    if (used !== 1) continue
-    const [a, b] = key.split(':').map(Number) as [number, number]
-    const mx = (positions.getX(a) + positions.getX(b)) / 2
-    const mz = (positions.getZ(a) + positions.getZ(b)) / 2
-    if (Math.hypot(mx - entrance.x, mz - entrance.z) <= 4) count++
-  }
-  return count
-}

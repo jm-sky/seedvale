@@ -51,8 +51,8 @@ export function isModelTestMode(): boolean {
   return urlFlag('modelTest')
 }
 
-/** `?caveHeightfieldTest` — isolated Cave V2 heightfield vs SDF comparison
- *  harness (renderer/camera/one topology/walk+inspect). Bypasses the normal
+/** `?caveHeightfieldTest` — isolated production cave heightfield harness
+ *  (renderer/camera/one fixture topology/walk+inspect). Bypasses the normal
  *  world/save/UI bootstrap entirely. */
 export function isCaveHeightfieldTestMode(): boolean {
   return urlFlag('caveHeightfieldTest')

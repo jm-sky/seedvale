@@ -1,11 +1,12 @@
-/** Representation-neutral cave ground contract (world-terrain-019, lifted
- *  out of `caveSdfQuery.ts` when player ground moved to the heightfield).
+/** Representation-neutral cave ground / occupancy / interior contract
+ *  (world-terrain-019; lifted out of the retired SDF query module when the
+ *  heightfield became the spatial authority).
  *
- *  Owns the *gameplay* half of a cave ground query — what a hit looks like,
- *  how far below a floor an entity still belongs to it, and the per-entity
- *  continuity rule for a single-frame miss. Nothing here knows how the
- *  interval was found: `caveHeightfieldQuery.ts` (production ground) and
- *  `caveSdfQuery.ts` (transitional strict occupancy / interior) both build
+ *  Owns the *gameplay* half of a cave spatial query — what a ground hit
+ *  looks like, how far below a floor an entity still belongs to it, the
+ *  strict-occupancy slack, and the per-entity continuity rules (ground
+ *  underground-miss hysteresis, two-sample interior confirmation). Nothing
+ *  here knows how an interval was found: `caveHeightfieldQuery.ts` builds
  *  on these types.
  *
  * @domain world-terrain
@@ -39,6 +40,13 @@ export const CAVE_FLOOR_GRACE = 2
  *  legitimate cave→surface exit (mouth exit has the two heights meeting). */
 export const CAVE_UNDERGROUND_MISS = 1.5
 
+/** Closed-interval slack for strict occupancy (collision / camera). Far
+ *  smaller than `CAVE_FLOOR_GRACE` — that grace is ground continuity, not
+ *  a solid test. A few centimetres covers floor sampling vs feet-on-floor;
+ *  do not add this to the clipped ceiling: `SURFACE_CLIP_EPS` already keeps
+ *  a surface entity out. */
+export const CAVE_OCCUPANCY_EPS = 0.05
+
 export type CaveGroundHysteresis = {
   hit: CaveGroundHit | null
   remember: CaveGroundHit | null
@@ -66,4 +74,28 @@ export function applyCaveGroundHysteresis(
     return { hit: lastHit, remember: lastHit }
   }
   return { hit: null, remember: null }
+}
+
+export type CaveInteriorHysteresis = {
+  interior: boolean
+  rememberRaw: boolean
+}
+
+/**
+ * Two-sample confirmation so a single mouth-boundary occupancy flicker does
+ * not flip cave-interior state (ambience / diagnostics).
+ *
+ * Per-entity state: callers keep `rememberRaw` / `interior` for *one*
+ * entity's next query.
+ *
+ * @domain world-terrain
+ */
+export function applyCaveInteriorHysteresis(
+  sample: boolean,
+  lastRaw: boolean | null,
+  confirmed: boolean,
+): CaveInteriorHysteresis {
+  if (lastRaw === null) return { interior: sample, rememberRaw: sample }
+  if (sample === lastRaw) return { interior: sample, rememberRaw: sample }
+  return { interior: confirmed, rememberRaw: sample }
 }

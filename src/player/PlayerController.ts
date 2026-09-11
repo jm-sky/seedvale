@@ -45,6 +45,7 @@ import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } 
 import { type Collider, colliderActiveAtY, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { humanBodyCarryCapacityKg } from './humanCarryCapacity'
+import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT, rockCeilingMaxY } from './playerDimensions'
 import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
@@ -64,9 +65,10 @@ export type PlayerMovementState = 'stationary' | 'moving' | 'sprinting'
  *  plan fauna-008) can compare against the authoritative player speed
  *  instead of duplicating these numbers. */
 export const MOVE_SPEED = 8
-/** Matches the capsule fallback's `CapsuleGeometry` radius (plan 097 §2.2) —
- *  the GLB model has no measured collision shape, so this stands in for both. */
-export const PLAYER_COLLISION_RADIUS = 0.35
+// Body dimensions (and the ceiling clamp derived from them) live in
+// `playerDimensions.ts` (neutral owner); re-exported so existing importers
+// keep one entry point.
+export { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT, rockCeilingMaxY }
 export const SPRINT_MULTIPLIER = 1.8
 /** Airborne lean (radians) — no jump clip on the rig (plan 097 §4 pyt. 5), so
  *  this reuses the `crouch()`/`lieDown()` trick of rotating `modelRoot` only. */
@@ -75,17 +77,7 @@ const JUMP_TILT_FACTOR = 0.05
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
-export const PLAYER_HEIGHT = 1.8
 
-/** A reported cave ceiling is rock overburden, not the open sky above a
- *  mouth/approach pit. If clamping to `ceiling - PLAYER_HEIGHT` would put
- *  the player *below* the walkable floor, ignore it. */
-export function rockCeilingMaxY(ceilingY: number | null | undefined, floorY: number): number | undefined {
-  if (ceilingY == null) return undefined
-  const maxY = ceilingY - PLAYER_HEIGHT
-  if (maxY < floorY - 1e-6) return undefined
-  return maxY
-}
 const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
 /** Player starting SPEA (plan npc-019 §6) — slightly above the shared `0.5`
@@ -206,6 +198,19 @@ export type CaveOccupancyQuery = (
   y: number,
   z: number,
 ) => { floorY: number, ceilingY: number, openSky?: boolean } | null
+/** `Caves.resolveHorizontal` (world-terrain-019) — entity-neutral cave
+ *  wall containment over the heightfield: pushes an XZ capsule of `radius`
+ *  needing `entityHeight` of clearance out of rock / the low rounded fringe,
+ *  keyed by the entity's own Y so the hillside above a tunnel is untouched.
+ *  Stateless; runs after ordinary world colliders. Alias, not a `Caves`
+ *  import — same reasoning as `CaveGroundQuery`. */
+export type CaveHorizontalResolver = (
+  x: number,
+  z: number,
+  y: number,
+  radius: number,
+  entityHeight: number,
+) => { x: number, z: number }
 
 /**
  * @domain items-player
@@ -251,6 +256,7 @@ export class PlayerController {
   private collidersNear: ColliderSource
   private caveGround: CaveGroundQuery
   private caveOccupancy: CaveOccupancyQuery
+  private caveHorizontal: CaveHorizontalResolver
   private sampleFootstepSurface: (x: number, z: number) => FootstepSurface
   private groundTraceRecord: ((tick: PlayerGroundTraceTick) => void) | null = null
   private peekGroundQueryDebug: (() => CaveGroundQueryDebug | null) | null = null
@@ -346,6 +352,7 @@ export class PlayerController {
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
     caveOccupancy: CaveOccupancyQuery,
+    caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ) {
     this.camera = camera
@@ -357,6 +364,7 @@ export class PlayerController {
     this.collidersNear = collidersNear
     this.caveGround = caveGround
     this.caveOccupancy = caveOccupancy
+    this.caveHorizontal = caveHorizontal
     this.sampleFootstepSurface = sampleFootstepSurface
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
@@ -420,6 +428,7 @@ export class PlayerController {
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
     caveOccupancy: CaveOccupancyQuery,
+    caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
     modelUrl = PLAYER_MODEL_URL,
   ): Promise<PlayerController> {
@@ -439,6 +448,7 @@ export class PlayerController {
         collidersNear,
         caveGround,
         caveOccupancy,
+        caveHorizontal,
         sampleFootstepSurface,
       )
     } catch (err) {
@@ -453,6 +463,7 @@ export class PlayerController {
         collidersNear,
         caveGround,
         caveOccupancy,
+        caveHorizontal,
         sampleFootstepSurface,
       )
     }
@@ -468,6 +479,7 @@ export class PlayerController {
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
     caveOccupancy: CaveOccupancyQuery,
+    caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): PlayerController {
     const body = new THREE.Mesh(
@@ -492,6 +504,7 @@ export class PlayerController {
       collidersNear,
       caveGround,
       caveOccupancy,
+      caveHorizontal,
       sampleFootstepSurface,
     )
   }
@@ -504,6 +517,7 @@ export class PlayerController {
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
     caveOccupancy: CaveOccupancyQuery,
+    caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): void {
     this.sampleHeight = sampleHeight
@@ -512,6 +526,7 @@ export class PlayerController {
     this.collidersNear = collidersNear
     this.caveGround = caveGround
     this.caveOccupancy = caveOccupancy
+    this.caveHorizontal = caveHorizontal
     this.sampleFootstepSurface = sampleFootstepSurface
     this.snapToGround()
   }
@@ -728,14 +743,7 @@ export class PlayerController {
    *  lunge through walls/houses. */
   gapClose(dx: number, dz: number): void {
     if (dx === 0 && dz === 0) return
-    const candidateX = this.mesh.position.x + dx
-    const candidateZ = this.mesh.position.z + dz
-    const resolved = resolvePosition(
-      candidateX,
-      candidateZ,
-      PLAYER_COLLISION_RADIUS,
-      this.collidersNearAtHeight(candidateX, candidateZ),
-    )
+    const resolved = this.resolveHorizontalMove(this.mesh.position.x + dx, this.mesh.position.z + dz)
     this.mesh.position.x = resolved.x
     this.mesh.position.z = resolved.z
     this.snapToGround()
@@ -959,13 +967,9 @@ export class PlayerController {
       if (this.skills.sneak.active) {
         this.sneakUseDistance = accumulateSneakUse(this.skills, this.sneakUseDistance, this.wish.length())
       }
-      const candidateX = this.mesh.position.x + this.wish.x
-      const candidateZ = this.mesh.position.z + this.wish.z
-      const resolved = resolvePosition(
-        candidateX,
-        candidateZ,
-        PLAYER_COLLISION_RADIUS,
-        this.collidersNearAtHeight(candidateX, candidateZ),
+      const resolved = this.resolveHorizontalMove(
+        this.mesh.position.x + this.wish.x,
+        this.mesh.position.z + this.wish.z,
       )
       this.mesh.position.x = resolved.x
       this.mesh.position.z = resolved.z
@@ -1068,11 +1072,35 @@ export class PlayerController {
   }
 
   /** `collidersNear`, filtered to whatever's actually active at the
-   *  player's current Y (cave walls carry a vertical envelope — plan
-   *  world-terrain-007; everything else is unaffected). */
+   *  player's current Y (Y-banded colliders; everything else is unaffected). */
   private collidersNearAtHeight(x: number, z: number): readonly Collider[] {
     const y = this.mesh.position.y
     return this.collidersNear(x, z).filter((collider) => colliderActiveAtY(collider, y))
+  }
+
+  /** Per-frame XZ movement resolution shared by `update()` and `gapClose()`:
+   *
+   *  ```text
+   *  requested position
+   *    → ordinary world colliders (buildings, trees, rocks, objects…)
+   *    → cave heightfield containment (world-terrain-019)
+   *    → final position
+   *  ```
+   *
+   *  Cave walls are not colliders — `caveHorizontal` pushes the capsule out
+   *  of rock / the low rounded fringe of the same field the floor is read
+   *  from, at the player's current Y (identity outdoors and on the hillside
+   *  above a tunnel). It runs last so the ordinary collider response cannot
+   *  leave the player inside rock; there is no cave collider for it to
+   *  re-enter, so the order needs no second pass. */
+  private resolveHorizontalMove(candidateX: number, candidateZ: number): { x: number, z: number } {
+    const resolved = resolvePosition(
+      candidateX,
+      candidateZ,
+      PLAYER_COLLISION_RADIUS,
+      this.collidersNearAtHeight(candidateX, candidateZ),
+    )
+    return this.caveHorizontal(resolved.x, resolved.z, this.mesh.position.y, PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT)
   }
 
   /** Teleport case (construction, `setPosition`, `setGround`) — snaps straight
