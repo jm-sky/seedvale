@@ -26,6 +26,7 @@ import { serializeTreasureMutations, type TreasureChestMutation } from '../items
 import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification, type SaveWorkContract } from '../persistence/saveData'
 import { getActiveSaveId, listSavesResult, type SaveReason, writeSave, type WriteSaveResult } from '../persistence/saveDb'
 import { pickActiveSaveId } from '../persistence/saveSlots'
+import { isTransportOrderActive } from '../world/transportOrder'
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
  *  written. The split from `src/persistence/` is unchanged by this extraction:
@@ -262,6 +263,13 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       ...c,
       target: { kind: c.target.kind, targetId: c.target.targetId },
     })),
+    // Only active/non-terminal orders — a completed/failed/cancelled record
+    // carries no continuity requirement (plan settlements-npcs-019). Cargo
+    // itself round-trips through `npcStates[id].transportCargo` below, not
+    // through this list.
+    transportOrders: bundle.transportOrders.list()
+      .filter((o) => isTransportOrderActive(o.state))
+      .map((o) => ({ ...o })),
       npcStates: bundle.settlementsManager.snapshotNpcStates(),
       households: bundle.settlementsManager.snapshotHouseholds(),
       npcRelationships: bundle.settlementsManager.snapshotRelationships(),

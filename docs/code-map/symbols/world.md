@@ -727,9 +727,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createTransportOrders.ts`
 
-- `CreateTransportOrderParams` — type — line 14
-- `createTransportOrders` — function — line 53
-- `TransportOrders` — type — line 34
+- `CreateTransportOrderParams` — type — line 16
+- `createTransportOrders` — function — line 62
+- `TransportOrders` — type — line 38
   - domain: settlements-npcs
 
 ## `world/createWater.ts`
@@ -1539,19 +1539,30 @@ Generated from exported TypeScript symbols.
 - `TimeSkipFadeStrength` — type — line 8
 - `TimeSkipTickResult` — type — line 10
 
+## `world/transportOffscreen.ts`
+
+- `estimateOffscreenTravelDays` — function — line 38
+- `OffscreenTransportLookup` — type — line 67
+- `resolveOffscreenTransportArrivals` — function — line 92
+- `resolveTransportEndpointInventory` — function — line 59
+- `TransportEndpointLookup` — type — line 50
+
 ## `world/transportOrder.ts`
 
-- `assignTransportOrder` — function — line 100
-- `cancelTransportOrder` — function — line 152
-- `completeTransportDelivery` — function — line 129
-- `completeTransportPickup` — function — line 112
-- `createTransportOrderRecord` — function — line 79
-- `failTransportOrder` — function — line 145
-- `isTransportOrderActive` — function — line 75
-- `isTransportOrderTerminal` — function — line 71
-- `TransportEndpointRef` — type — line 34
-- `TransportOrder` — type — line 44
-- `TransportOrderState` — type — line 24
+- `assignTransportOrder` — function — line 121
+- `beginOffscreenTransportExecution` — function — line 184
+- `cancelTransportOrder` — function — line 173
+- `clearTransportExecution` — function — line 198
+- `completeTransportDelivery` — function — line 150
+- `completeTransportPickup` — function — line 133
+- `createTransportOrderRecord` — function — line 100
+- `failTransportOrder` — function — line 166
+- `isTransportOrderActive` — function — line 96
+- `isTransportOrderTerminal` — function — line 92
+- `TransportEndpointRef` — type — line 38
+- `TransportExecution` — type — line 55
+- `TransportOrder` — type — line 63
+- `TransportOrderState` — type — line 28
   - domain: settlements-npcs
 
 ## `world/transportTransactions.ts`

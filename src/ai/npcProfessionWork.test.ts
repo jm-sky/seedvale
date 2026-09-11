@@ -43,6 +43,7 @@ function baseCtx(overrides: Partial<NpcWorkContext> = {}): NpcWorkContext {
     household: null,
     economy: null,
     carried: new Inventory(),
+    transportCargo: new Inventory(),
     guardPatrolIndex: 0,
     advanceGuardPatrol: () => {},
     fishAttempt: 0,
@@ -327,28 +328,28 @@ describe('planProfessionWork', () => {
           : null,
       }
       const transportOrders = createTransportOrders()
-      const carried = new Inventory()
+      const transportCargo = new Inventory()
       const ctx = baseCtx({
         role: 'trader',
         npcId: 'npc:trader',
         household,
         economy,
-        carried,
+        transportCargo,
         workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
         householdExchange: householdExchange as unknown as NpcWorkContext['householdExchange'],
         transportOrders,
       })
       const work = planProfessionWork(ctx)!
-      const before = sourceCount + carried.count('carrot') + economy.items.count('carrot')
+      const before = sourceCount + transportCargo.count('carrot') + economy.items.count('carrot')
       work.onComplete?.()
       const order = transportOrders.findByCarrier('npc:trader')
       expect(order?.state).toBe('in-transit')
-      expect(sourceHousehold.items.count('carrot') + carried.count('carrot') + economy.items.count('carrot')).toBe(before)
+      expect(sourceHousehold.items.count('carrot') + transportCargo.count('carrot') + economy.items.count('carrot')).toBe(before)
       work.next?.onComplete?.()
       expect(transportOrders.find(order!.id)?.state).toBe('completed')
-      expect(carried.count('carrot')).toBe(0)
+      expect(transportCargo.count('carrot')).toBe(0)
       expect(economy.items.count('carrot')).toBe(order!.claimedQuantity)
-      expect(sourceHousehold.items.count('carrot') + carried.count('carrot') + economy.items.count('carrot')).toBe(before)
+      expect(sourceHousehold.items.count('carrot') + transportCargo.count('carrot') + economy.items.count('carrot')).toBe(before)
     })
 
     it('resumes an in-transit order without creating a replacement', () => {

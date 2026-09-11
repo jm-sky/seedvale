@@ -317,8 +317,8 @@ Generated from exported TypeScript symbols.
 - `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 60
 - `findWeaponNeedingMaintenance` — function — line 86
 - `NpcWorkContext` — type — line 106
-- `planProfessionWork` — function — line 649
-- `selectTraderCollectionGoods` — function — line 345
+- `planProfessionWork` — function — line 655
+- `selectTraderCollectionGoods` — function — line 351
 
 ## `ai/npcStrategies.ts`
 

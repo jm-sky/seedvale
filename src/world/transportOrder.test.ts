@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   assignTransportOrder,
+  beginOffscreenTransportExecution,
   cancelTransportOrder,
+  clearTransportExecution,
   completeTransportDelivery,
   completeTransportPickup,
   createTransportOrderRecord,
@@ -150,5 +152,41 @@ describe('transport order lifecycle', () => {
     expect(isTransportOrderTerminal('failed')).toBe(true)
     expect(isTransportOrderTerminal('cancelled')).toBe(true)
     expect(isTransportOrderActive('completed')).toBe(false)
+  })
+})
+
+describe('offscreen execution handoff (plan settlements-npcs-019)', () => {
+  it('only begins off-screen execution for an in-transit order', () => {
+    const pending = makeOrder()
+    expect(beginOffscreenTransportExecution(pending, 10)).toBeNull()
+
+    const assigned = assignTransportOrder(makeOrder(), 'npc:1')!
+    expect(beginOffscreenTransportExecution(assigned, 10)).toBeNull()
+
+    const inTransit = completeTransportPickup(assigned, 'npc:1', 2)!
+    const offscreen = beginOffscreenTransportExecution(inTransit, 10)
+    expect(offscreen?.execution).toEqual({ mode: 'off-screen', arrivesAtDays: 10 })
+    // State/quantities untouched — only execution metadata changes.
+    expect(offscreen?.state).toBe('in-transit')
+    expect(offscreen?.claimedQuantity).toBe(2)
+  })
+
+  it('is idempotent — a second handoff on an already off-screen order is a no-op', () => {
+    const inTransit = completeTransportPickup(assignTransportOrder(makeOrder(), 'npc:1')!, 'npc:1', 2)!
+    const offscreen = beginOffscreenTransportExecution(inTransit, 10)!
+    expect(beginOffscreenTransportExecution(offscreen, 99)).toBeNull()
+  })
+
+  it('clears execution metadata without touching state/quantities — resumes detailed execution', () => {
+    const inTransit = completeTransportPickup(assignTransportOrder(makeOrder(), 'npc:1')!, 'npc:1', 2)!
+    const offscreen = beginOffscreenTransportExecution(inTransit, 10)!
+    const detailed = clearTransportExecution(offscreen)
+    expect(detailed?.execution).toBeUndefined()
+    expect(detailed?.state).toBe('in-transit')
+    expect(detailed?.claimedQuantity).toBe(2)
+  })
+
+  it('clearing an order with no execution metadata is a no-op', () => {
+    expect(clearTransportExecution(makeOrder())).toBeNull()
   })
 })

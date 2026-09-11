@@ -279,6 +279,10 @@ export type TransportOrderDebugSnapshot = {
   claimed: number
   delivered: number
   carrier: string | null
+  /** Execution ownership (plan settlements-npcs-019) — `undefined` means
+   *  detailed (a live `NpcAgent` executes it); otherwise off-screen, with
+   *  the absolute `elapsedDays` the captured travel commitment resolves at. */
+  execution: TransportOrder['execution']
 }
 
 function transportOrderSnapshot(order: TransportOrder): TransportOrderDebugSnapshot {
@@ -292,6 +296,7 @@ function transportOrderSnapshot(order: TransportOrder): TransportOrderDebugSnaps
     claimed: order.claimedQuantity,
     delivered: order.deliveredQuantity,
     carrier: order.carrierNpcId,
+    execution: order.execution,
   }
 }
 
@@ -448,7 +453,7 @@ const HELP_TEXT = [
   'injury.npc(id) — physicalInjury, derived severity, SPEA modifiers, treatment eligibility',
   'injury.applyNpcInjury(id, "minor"|"serious"|"critical") / clearNpcInjury(id) — real damage/heal accounting',
   'injury.giveNpcBandage(id) — add a bandage so self-treatment is feasible',
-  'transport(id) / transports() — physical goods TransportOrder snapshot {id,state,source,destination,item,requested,claimed,delivered,carrier}',
+  'transport(id) / transports() — physical goods TransportOrder snapshot {id,state,source,destination,item,requested,claimed,delivered,carrier,execution}',
   'spotAnimal(kind) — simulate spotting an animal for quest progression',
   'quests.list() — quest log/debug snapshot',
   'quests.target(id) — resolve quest world target; e.g. quests.target(\'wolf-den\')',

@@ -226,9 +226,14 @@ function loadoutKindsFor(role: Role): readonly ItemKind[] {
 
 /** Moves the actual personal-loadout instances onto a loot snapshot and
  *  removes them from `personalInventory`. Work/economy payloads on
- *  `NpcAgent.carried` stay out of this path (plan settlements-npcs-026).
- *  Full personalInventory including food-batch freshness remains an
- *  npc-010 follow-up — corpse loot still does not persist food batches. */
+ *  `NpcAgent.carried` stay out of this path (plan settlements-npcs-026), and
+ *  so does `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019)
+ *  — an in-flight `TransportOrder`'s cargo deliberately does not become
+ *  corpse loot; carrier death is a known, unresolved gap (order stays
+ *  `in-transit`, cargo stays on the dead NPC's state) left for a future
+ *  corpse/cargo-handoff plan rather than folded into personal-belongings
+ *  loot here. Full personalInventory including food-batch freshness remains
+ *  an npc-010 follow-up — corpse loot still does not persist food batches. */
 export function extractNpcLoadoutLoot(inventory: Inventory, role: Role): NpcCorpseLootSnapshot {
   const loot = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
   for (const kind of loadoutKindsFor(role)) {

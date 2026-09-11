@@ -1,7 +1,7 @@
 # Plan: Persistent & Off-screen Transport
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M/L
 **Depends on:** ~~settlements-npcs-018~~
 **Domain:** `settlements-npcs`  

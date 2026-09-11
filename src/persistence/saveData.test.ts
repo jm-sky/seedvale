@@ -1293,6 +1293,55 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.treasureChestMutations).toBeUndefined()
   })
 
+  it('migrates a v31 save with no transportOrders/transportCargo to the current version (plan settlements-npcs-019)', () => {
+    const { transportOrders: _orders, ...v31Fields } = validSave
+    const result = loadStoredSave({ ...v31Fields, version: 31 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.transportOrders).toBeUndefined()
+  })
+
+  it('round-trips an in-transit transportOrder and npcStates transportCargo, and rejects a malformed order (plan settlements-npcs-019)', () => {
+    const order = {
+      id: 'transportOrder:1',
+      source: { type: 'household' as const, householdId: 'h1' },
+      destination: { type: 'settlement-storage' as const, settlementId: 's1' },
+      itemKind: 'carrot' as const,
+      requestedQuantity: 3,
+      claimedQuantity: 3,
+      deliveredQuantity: 0,
+      carrierNpcId: 'npc:1',
+      state: 'in-transit' as const,
+      execution: { mode: 'off-screen' as const, arrivesAtDays: 12 },
+    }
+    const withOrder = loadStoredSave({
+      ...validSave,
+      transportOrders: [order],
+      npcStates: {
+        'npc:1': {
+          health: { current: 100, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: null,
+          personalInventory: { counts: {}, instances: [] },
+          transportCargo: { counts: { carrot: 3 }, instances: [] },
+        },
+      },
+    })
+    expect(withOrder.status).toBe('ok')
+    if (withOrder.status === 'ok') {
+      expect(withOrder.data.transportOrders).toEqual([order])
+      expect(withOrder.data.npcStates?.['npc:1']?.transportCargo).toEqual({ counts: { carrot: 3 }, instances: [] })
+    }
+
+    expect(loadStoredSave({ ...validSave, transportOrders: [{ ...order, state: 'orbiting' }] }))
+      .toEqual({ status: 'invalid' })
+    expect(loadStoredSave({ ...validSave, transportOrders: [{ ...order, execution: { mode: 'detailed' } }] }))
+      .toEqual({ status: 'invalid' })
+  })
+
   it('round-trips treasureChestMutations and rejects a malformed one (plan items-player-026)', () => {
     const mutations = [{
       containerId: 'world-container:treasure:ruins:a',

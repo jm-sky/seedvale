@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getStaminaRatio, isExhausted } from '../shared/StaminaState'
+import { gameDaysToRealSeconds } from '../world/timeConversion'
 import {
   ANIMAL_STAMINA_MAX,
   type AnimalMetabolismConfig,
@@ -26,7 +27,10 @@ describe('AnimalLife', () => {
 
   it('hunger/thirst rise over time, capped at 1', () => {
     const life = createAnimalLifeState(0)
-    tickAnimalLife(life, 1000, false)
+    life.hunger = 0
+    life.thirst = 0
+    const dayLengthSec = 480
+    tickAnimalLife(life, gameDaysToRealSeconds(3, dayLengthSec), false)
     expect(life.hunger).toBe(1)
     expect(life.thirst).toBe(1)
   })
@@ -40,8 +44,12 @@ describe('AnimalLife', () => {
     asleep.thirst = 0
     tickAnimalLife(awake, 10, false)
     tickAnimalLife(asleep, 10, false, { hungerThirstRate: SLEEP_HUNGER_THIRST_RATE })
-    expect(asleep.hunger).toBeCloseTo(10 * 0.03 * SLEEP_HUNGER_THIRST_RATE)
-    expect(asleep.thirst).toBeCloseTo(10 * 0.032 * SLEEP_HUNGER_THIRST_RATE)
+    expect(asleep.hunger).toBeCloseTo(
+      10 * DEFAULT_ANIMAL_METABOLISM.hungerRate * SLEEP_HUNGER_THIRST_RATE,
+    )
+    expect(asleep.thirst).toBeCloseTo(
+      10 * DEFAULT_ANIMAL_METABOLISM.thirstRate * SLEEP_HUNGER_THIRST_RATE,
+    )
     expect(asleep.hunger).toBeLessThan(awake.hunger)
     expect(asleep.thirst).toBeLessThan(awake.thirst)
   })

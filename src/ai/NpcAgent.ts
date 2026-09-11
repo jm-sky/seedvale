@@ -1007,6 +1007,11 @@ export class NpcAgent {
    *  `npcState.personalInventory`, not a copy. Survives reconstruction.
    *  Distinct from private `carried` work cargo (plan settlements-npcs-026). */
   readonly personalInventory: Inventory
+  /** Authoritative transport-order cargo (plan settlements-npcs-019) — the
+   *  same `Inventory` object as `npcState.transportCargo`, not a copy.
+   *  Survives reconstruction and off-screen carrier handoff. Distinct from
+   *  `personalInventory` and private `carried` work cargo. */
+  readonly transportCargo: Inventory
   /** `null` only when the role's landmark doesn't exist for this settlement
    *  (e.g. a `woodcutter` with no trees yet) — see `places.ts`'s
    *  `workplaceFor`. Consumed by `beginIdle()`'s `work` scheduled activity. */
@@ -1306,8 +1311,9 @@ export class NpcAgent {
   private readonly workContracts: WorkContracts | null
   /** World-owned transport commitments (plan settlements-npcs-018) — the
    *  Trader collection flow executes a `TransportOrder` from this store,
-   *  never a second copy on the agent. Null in isolated fallbacks. Not
-   *  persisted in 018: `carried` cargo is still transient. */
+   *  never a second copy on the agent. Null in isolated fallbacks. Active
+   *  orders persist and cargo lives on `transportCargo` below, not on
+   *  transient `carried` (plan settlements-npcs-019). */
   private readonly transportOrders: TransportOrders | null
   /** Last player/observer XZ this tick — local reaction data only, never a
    *  global chase target (plan npc-016 §11). */
@@ -1499,6 +1505,7 @@ export class NpcAgent {
     this.voiceActor = voiceActorForIndex(this.gender, treeIndex)
     this.role = character.role
     this.personalInventory = npcState.personalInventory
+    this.transportCargo = npcState.transportCargo
     if (!npcState.health.dead) {
       seedInitialPersonalBelongingsIfNeeded(this.personalInventory, this.role, npcState)
       if (this.role === 'hunter') seedHunterStartingArrows(this.carried)
@@ -4142,6 +4149,7 @@ export class NpcAgent {
       household: this.household,
       economy: this.economy,
       carried: this.carried,
+      transportCargo: this.transportCargo,
       guardPatrolIndex: this.guardPatrolIndex,
       // `% 3` mirrors `npcProfessionWork.ts`'s own fixed 3-point patrol
       // (home/well/market) — both sides know that shape by construction,

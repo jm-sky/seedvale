@@ -1,7 +1,9 @@
 import type { ItemKind } from '../items/items'
 import {
   assignTransportOrder,
+  beginOffscreenTransportExecution,
   cancelTransportOrder,
+  clearTransportExecution,
   completeTransportDelivery,
   completeTransportPickup,
   createTransportOrderRecord,
@@ -25,9 +27,11 @@ export type CreateTransportOrderParams = {
  * settlements-npcs-018). Lookup by id and bounded lookup of the one active
  * order per carrier — no tick, no matching, no pathfinding.
  *
- * 018 does not persist this store and does not carry it across a
- * `WorldBundle` rebuild: in-transit cargo lives in transient
- * `NpcAgent.carried`, so a rebuilt world starts with an empty registry.
+ * Active/non-terminal orders carry across an in-session `WorldBundle`
+ * rebuild and persist as `SaveData.transportOrders` (plan
+ * settlements-npcs-019) via `createTransportOrders(initial)`'s seed param —
+ * no separate restore API. Cargo itself never lives here; see
+ * `transportOrder.ts`'s doc.
  *
  * @domain settlements-npcs
  */
@@ -45,6 +49,11 @@ export type TransportOrders = {
   completeDelivery: (id: string, carrierNpcId: string) => TransportOrder | null
   fail: (id: string) => TransportOrder | null
   cancel: (id: string) => TransportOrder | null
+  /** Detailed → off-screen handoff (plan settlements-npcs-019) — see
+   *  `beginOffscreenTransportExecution`'s doc. */
+  beginOffscreenExecution: (id: string, arrivesAtDays: number) => TransportOrder | null
+  /** Off-screen → detailed handoff — see `clearTransportExecution`'s doc. */
+  clearExecution: (id: string) => TransportOrder | null
   dispose: () => void
 }
 
@@ -56,6 +65,18 @@ export function createTransportOrders(
   const records: TransportOrder[] = [...initial]
 
   const indexOf = (id: string): number => records.findIndex((r) => r.id === id)
+
+  /** Collision-free by construction (plan settlements-npcs-019 §3) —
+   *  restored orders seed `records` directly (not through `nextId`'s
+   *  counter), so a fresh id must be checked against them rather than
+   *  trusted from `Date.now()` uniqueness alone. */
+  const nextId = (): string => {
+    let id: string
+    do {
+      id = `transportOrder:${Date.now()}:${nextTransportOrderId++}`
+    } while (indexOf(id) !== -1)
+    return id
+  }
 
   const findByCarrier = (npcId: string): TransportOrder | undefined => {
     for (const order of records) {
@@ -81,7 +102,7 @@ export function createTransportOrders(
       const carrierNpcId = params.carrierNpcId ?? null
       if (carrierNpcId && findByCarrier(carrierNpcId)) return null
       let record = createTransportOrderRecord({
-        id: `transportOrder:${Date.now()}:${nextTransportOrderId++}`,
+        id: nextId(),
         source: params.source,
         destination: params.destination,
         itemKind: params.itemKind,
@@ -120,6 +141,16 @@ export function createTransportOrders(
       const index = indexOf(id)
       if (index === -1) return null
       return replace(id, cancelTransportOrder(records[index]!))
+    },
+    beginOffscreenExecution(id, arrivesAtDays) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      return replace(id, beginOffscreenTransportExecution(records[index]!, arrivesAtDays))
+    },
+    clearExecution(id) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      return replace(id, clearTransportExecution(records[index]!))
     },
     dispose() {
       records.length = 0

@@ -2,7 +2,8 @@ import type { ItemKind } from '../items/items'
 import type { HouseholdId } from '../settlement/household'
 
 /**
- * Physical goods transport commitment (plan settlements-npcs-018).
+ * Physical goods transport commitment (plan settlements-npcs-018, persistent
+ * & off-screen execution added by settlements-npcs-019).
  *
  * A `TransportOrder` is the authoritative record of a transport obligation —
  * what, from where, to where, by whom, how much, and which stage. It is never
@@ -10,13 +11,16 @@ import type { HouseholdId } from '../settlement/household'
  *
  * ```
  * before pickup:  source owns goods
- * after pickup:   carrier owns goods (`NpcAgent.carried`)
+ * after pickup:   carrier owns goods (`NpcAuthoritativeState.transportCargo`)
  * after unload:   destination owns goods
  * ```
  *
  * Pure domain record: no `THREE`, no runtime object refs. World-owned
- * registry lives in `createTransportOrders.ts`. 018 does not persist
- * in-transit orders — `NpcAgent.carried` is still transient.
+ * registry lives in `createTransportOrders.ts`. Active/non-terminal orders
+ * persist as `SaveData.transportOrders` and carry across an in-session
+ * `WorldBundle` rebuild; cargo itself persists separately, on the carrier's
+ * own `NpcAuthoritativeState.transportCargo` (`settlement/npcState.ts`) —
+ * never reconstructed from this record's quantities.
  *
  * @domain settlements-npcs
  */
@@ -41,6 +45,21 @@ export type TransportEndpointRef =
       settlementId: string
     }
 
+/** Off-screen execution metadata (plan settlements-npcs-019) — set only once
+ *  an `in-transit` order's carrier stops being a live, detailed `NpcAgent`
+ *  (settlement stream-out). Absent means detailed execution: the carrier's
+ *  own physical action/movement flow is authoritative for progress. Never
+ *  set before pickup — an `assigned` order abstracted before pickup simply
+ *  stays `assigned` (goods still belong to source) and resumes the normal
+ *  pickup flow once a live carrier exists again, no timing metadata needed. */
+export type TransportExecution = {
+  mode: 'off-screen'
+  /** Absolute `dayNight.elapsedDays` at which the carrier's remaining travel
+   *  commitment (captured at handoff time, while its live position was still
+   *  known) completes. */
+  arrivesAtDays: number
+}
+
 export type TransportOrder = {
   id: string
   source: TransportEndpointRef
@@ -54,6 +73,8 @@ export type TransportOrder = {
   deliveredQuantity: number
   carrierNpcId: string | null
   state: TransportOrderState
+  /** Optional off-screen execution metadata — see `TransportExecution`. */
+  execution?: TransportExecution
 }
 
 const TERMINAL_STATES: ReadonlySet<TransportOrderState> = new Set([
@@ -153,4 +174,29 @@ export function cancelTransportOrder(order: TransportOrder): TransportOrder | nu
   if (order.state !== 'pending' && order.state !== 'assigned') return null
   if (order.claimedQuantity !== 0 || order.deliveredQuantity !== 0) return null
   return { ...order, state: 'cancelled', carrierNpcId: null }
+}
+
+/** Detailed → off-screen handoff (plan settlements-npcs-019) — only ever an
+ *  `in-transit` order (cargo already claimed): an `assigned` order abstracted
+ *  before pickup stays `assigned` with no execution metadata (see
+ *  `TransportExecution`'s doc). Idempotent guard: a second call against an
+ *  order already off-screen is a no-op, so a caller never has to check first. */
+export function beginOffscreenTransportExecution(
+  order: TransportOrder,
+  arrivesAtDays: number,
+): TransportOrder | null {
+  if (order.state !== 'in-transit') return null
+  if (order.execution) return null
+  return { ...order, execution: { mode: 'off-screen', arrivesAtDays } }
+}
+
+/** Off-screen → detailed handoff — stops off-screen execution ownership once
+ *  a live carrier `NpcAgent` exists again. No-op (returns `null`) when the
+ *  order already has no execution metadata, so a caller never has to check
+ *  first. Leaves `state` untouched: a still-`in-transit` order resumes
+ *  ordinary detailed pickup/delivery, never repeats pickup or unload. */
+export function clearTransportExecution(order: TransportOrder): TransportOrder | null {
+  if (!order.execution) return null
+  const { execution: _execution, ...rest } = order
+  return rest
 }

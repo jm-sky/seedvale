@@ -359,15 +359,15 @@ Generated from exported TypeScript symbols.
 - `claimNpcCorpseForBurial` — function — line 140
 - `cloneNpcCorpseLoot` — function — line 56
 - `cloneNpcPostDeath` — function — line 63
-- `commitNpcDeath` — function — line 251
+- `commitNpcDeath` — function — line 256
 - `corpseLootInventory` — function — line 205
 - `createActiveNpcPostDeath` — function — line 96
 - `createEmptyNpcCorpseLoot` — function — line 77
 - `createLegacyTerminalNpcPostDeath` — function — line 83
-- `dropNpcCorpseLoot` — function — line 309
+- `dropNpcCorpseLoot` — function — line 314
 - `EMPTY_NPC_CORPSE_LOOT` — const — line 54
-- `extractNpcLoadoutLoot` — function — line 232
-- `finalizeExpiredNpcCorpse` — function — line 321
+- `extractNpcLoadoutLoot` — function — line 237
+- `finalizeExpiredNpcCorpse` — function — line 326
 - `FinalizeNpcBurialResult` — type — line 180
 - `finalizeNpcCorpseBurial` — function — line 184
 - `hasActiveNpcCorpse` — function — line 115
@@ -390,10 +390,10 @@ Generated from exported TypeScript symbols.
 - `recoverStaleNpcBurialClaim` — function — line 159
 - `releaseNpcCorpseBurialClaim` — function — line 150
 - `resolveNpcCorpsePhase` — function — line 124
-- `shouldSkipNpcCorpsePresentation` — function — line 333
+- `shouldSkipNpcCorpsePresentation` — function — line 338
 - `snapshotCorpseLoot` — function — line 209
-- `transferCorpseCountTo` — function — line 287
-- `transferCorpseInstanceTo` — function — line 271
+- `transferCorpseCountTo` — function — line 292
+- `transferCorpseInstanceTo` — function — line 276
 
 ## `settlement/npcRelationships.ts`
 
@@ -403,17 +403,17 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 186
-- `createNpcStateRegistry` — function — line 228
+- `createNpcAuthoritativeState` — function — line 211
+- `createNpcStateRegistry` — function — line 254
 - `MAX_HP` — const — line 44
 - `MAX_STAMINA` — const — line 45
-- `NpcAuthoritativeState` — type — line 64
+- `NpcAuthoritativeState` — type — line 74
   - domain: settlements-npcs
 - `NpcGraveVisitRecord` — type — line 36
 - `NpcId` — type — line 32
-- `NpcPhysicalMaxima` — type — line 172
-- `NpcStateRegistry` — type — line 215
-- `NpcStateSnapshot` — type — line 120
+- `NpcPhysicalMaxima` — type — line 197
+- `NpcStateRegistry` — type — line 241
+- `NpcStateSnapshot` — type — line 139
 
 ## `settlement/pathDryness.ts`
 
@@ -670,13 +670,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 215
+- `createSettlementsManager` — function — line 222
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 85
+- `SettlementsManager` — type — line 92
 
 ## `settlement/settlementStructures.ts`
 

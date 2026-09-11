@@ -2,7 +2,7 @@
 
 **Plan:** `settlements-npcs-019-persistent-and-off-screen-transport.md`  
 **Reviewed:** 2026-09-11  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## Review result
 

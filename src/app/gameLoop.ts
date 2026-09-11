@@ -152,6 +152,7 @@ import { firstUpperCase } from '../ui-vue/lib/firstUpperCase'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
+import { resolveOffscreenTransportArrivals } from '../world/transportOffscreen'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay, resolveSceneFog } from '../world/weatherVisuals'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
@@ -854,6 +855,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           player.standUp()
         }
         bundle.settlementsManager.resolveTimeSkip(skip.startTimeOfDay, skip.hours, dayNight.dayLengthSec)
+        // World-owned off-screen transport progression (plan
+        // settlements-npcs-019) — `settlementsManager.resolveTimeSkip` above
+        // only replays *loaded* settlements' live NPCs, so an off-screen
+        // carrier's in-transit order needs its own elapsed-time checkpoint
+        // here, independent of which settlements happen to be streamed in.
+        resolveOffscreenTransportArrivals(
+          bundle.transportOrders,
+          {
+            getHousehold: bundle.settlementsManager.getHousehold,
+            getEconomy: bundle.settlementsManager.getEconomy,
+            getNpcState: bundle.settlementsManager.getNpcState,
+          },
+          dayNight.elapsedDays,
+        )
         // Fauna never live-ticks during a skip (see the `worldDt`/gating
         // comment below) — this is its sole catch-up for the skipped period,
         // mirroring the NPC catch-up above (plan 196).

@@ -283,3 +283,62 @@ describe('NpcAuthoritativeState personalInventory (plan settlements-npcs-026)', 
     expect(state.needsInitialPersonalLoadout).toBe(false)
   })
 })
+
+describe('NpcAuthoritativeState transportCargo (plan settlements-npcs-019)', () => {
+  it('gives every new NPC a distinct empty transport cargo inventory', () => {
+    const registry = createNpcStateRegistry()
+    const a = registry.getOrCreate('0_0:npc:a', 0)
+    const b = registry.getOrCreate('0_0:npc:b', 0)
+    expect(a.transportCargo.isEmpty()).toBe(true)
+    expect(b.transportCargo.isEmpty()).toBe(true)
+    expect(a.transportCargo).not.toBe(b.transportCargo)
+    expect(a.transportCargo).not.toBe(a.personalInventory)
+  })
+
+  it('repeated getOrCreate returns the same transport cargo object — survives NpcAgent dispose/recreate', () => {
+    const registry = createNpcStateRegistry()
+    const first = registry.getOrCreate('0_0:npc:0', 0)
+    first.transportCargo.add('carrot', 3)
+    const again = registry.getOrCreate('0_0:npc:0', 0)
+    expect(again.transportCargo).toBe(first.transportCargo)
+    expect(again.transportCargo.count('carrot')).toBe(3)
+  })
+
+  it('serialize → createNpcStateRegistry preserves cargo across reconstruction (WorldBundle rebuild carry)', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.transportCargo.add('carrot', 5)
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.transportCargo).not.toBe(state.transportCargo)
+    expect(hydrated.transportCargo.count('carrot')).toBe(5)
+  })
+
+  it('round-trip preserves freshness batches like personalInventory does', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    const batch = createFoodBatch(4, 3, 1, 'boar')
+    expect(state.transportCargo.addWithFreshness('raw_meat', 4, [batch], 4)).toBe(true)
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.transportCargo.count('raw_meat')).toBe(4)
+    expect(hydrated.transportCargo.getFoodBatches('raw_meat', 4)[0]).toMatchObject({
+      count: 4,
+      acquiredAtDays: 3,
+      sourceSpecies: 'boar',
+    })
+  })
+
+  it('never reconstructs cargo from a legacy snapshot without transportCargo', () => {
+    const registry = createNpcStateRegistry({
+      '0_0:npc:0': {
+        health: { current: 100, max: 100, dead: false },
+        stamina: { current: 100, max: 100 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    })
+    const state = registry.getOrCreate('0_0:npc:0', 0)
+    expect(state.transportCargo.isEmpty()).toBe(true)
+  })
+})

@@ -175,6 +175,7 @@ Generated from TypeScript imports.
 - `ui-vue/npcDialogueOpen.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/transportOffscreen.ts`
 - `world/transportTransactions.test.ts`
 - `world/transportTransactions.ts`
 - `world/worldGeneratedContainers.ts`

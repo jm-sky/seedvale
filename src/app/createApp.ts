@@ -599,6 +599,7 @@ export async function createApp(
           removedSlots: initialSave.removedPersistentOccupantSlots ?? [],
         }
       : undefined,
+    initialSave?.transportOrders ?? [],
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do

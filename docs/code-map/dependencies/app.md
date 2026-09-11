@@ -1006,6 +1006,7 @@ Generated from TypeScript imports.
 - `world/map/mapDiscovery.ts`
 - `world/playerWell.ts`
 - `world/timeSkip.ts`
+- `world/transportOffscreen.ts`
 - `world/weather.ts`
 - `world/weatherParticles.ts`
 - `world/weatherVisuals.ts`
@@ -1316,6 +1317,7 @@ Generated from TypeScript imports.
 - `world/locations/navigationTargets.ts`
 - `world/map/mapDiscovery.ts`
 - `world/plantedTrees.ts`
+- `world/transportOrder.ts`
 - `world/treeLifecycle.ts`
 
 **Imported by**
@@ -1448,6 +1450,7 @@ Generated from TypeScript imports.
 - `world/siteInfrastructure.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
+- `world/transportOrder.ts`
 - `world/trapProp.ts`
 - `world/treasureSites.ts`
 - `world/treeLifecycle.ts`

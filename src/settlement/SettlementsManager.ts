@@ -27,12 +27,18 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { TransportEndpointRef } from '../world/transportOrder'
 import type { WeatherState } from '../world/weather'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import type { TerrainSamplers } from './settlementTerrain'
 import { createEconomyRegistry } from '../economy'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
+import {
+  estimateOffscreenTravelDays,
+  type OffscreenTransportLookup,
+  resolveOffscreenTransportArrivals,
+} from '../world/transportOffscreen'
 import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
 import {
@@ -66,6 +72,7 @@ import {
 } from './settlementGenerator'
 import { settlementDefFor } from './settlementPlanCache'
 import { createLabeledProp, disposeLabeledProp, type LabeledProp, updateLabelOpacity } from './settlementSignposts'
+import { settlementStorageDestination } from './storageDestinations'
 
 type Entry = {
   def: SettlementDef
@@ -402,6 +409,17 @@ export async function createSettlementsManager(
   // not a fresh default one.
   const npcStates = createNpcStateRegistry(initialNpcStates)
 
+  // Off-screen transport endpoint/carrier lookup (plan settlements-npcs-019)
+  // — built once over the same manager-lifetime `households`/`economies`/
+  // `npcStates` registries above, so it resolves whether or not the owning
+  // settlement is currently streamed in. Never a second storage/carrier
+  // index.
+  const offscreenTransportLookup: OffscreenTransportLookup = {
+    getHousehold: (id) => households.get(id),
+    getEconomy: (id) => economies.get(id),
+    getNpcState: (id) => npcStates.get(id),
+  }
+
   // Symmetric NPC↔NPC relation store (plan 151) — one instance for the
   // world's lifetime, same reasoning as `households`/`npcStates` above
   // (a settlement that streams out and back in must keep its NPCs'
@@ -643,6 +661,19 @@ export async function createSettlementsManager(
         }
         cur.settlement = settlement
         settlement.setDayNight(lastDayNight)
+        // Off-screen → detailed handoff (plan settlements-npcs-019) — a live
+        // `NpcAgent` now exists for any carrier this settlement just
+        // reconstructed; stop off-screen execution ownership before it
+        // resumes its own physical pickup/delivery flow. A no-op for a
+        // carrier with no order, or whose order has no execution metadata
+        // (never went off-screen, or already resolved off-screen to a
+        // terminal state — `findByCarrier` excludes those already).
+        if (transportOrders) {
+          for (const npc of settlement.npcs) {
+            const order = transportOrders.findByCarrier(npc.id)
+            if (order?.execution) transportOrders.clearExecution(order.id)
+          }
+        }
       })
       .catch((err: unknown) => {
         console.error('[SettlementsManager] failed to build settlement', def.id, err)
@@ -661,17 +692,57 @@ export async function createSettlementsManager(
     ensureLoaded(neighborDef)
   }
 
-  function unload(id: string, entry: Entry): void {
+  /** Resolves the live position of an `in-transit` order's destination
+   *  endpoint while `settlement` is still loaded (plan settlements-npcs-019)
+   *  — only ever needed at handoff time, immediately before stream-out, so
+   *  this never has to reconstruct anything from an unloaded settlement.
+   *  `null` only for a `household` endpoint this settlement doesn't
+   *  actually own (should not happen for the current same-settlement Trader
+   *  flow, guarded anyway). */
+  function resolveOffscreenHandoffTargetPosition(
+    ref: TransportEndpointRef,
+    settlement: Settlement,
+  ): { x: number, z: number } | null {
+    if (ref.type === 'household') {
+      const match = settlement.householdStorages.find((s) => s.household.id === ref.householdId)
+      return match ? { x: match.position.x, z: match.position.z } : null
+    }
+    const dest = settlementStorageDestination('food', settlement.landmarks.stockpile, settlement.landmarks.settlementStorage)
+    return { x: dest.x, z: dest.z }
+  }
+
+  /** Detailed → off-screen handoff (plan settlements-npcs-019) — called from
+   *  `unload()` while `settlement`'s `NpcAgent`s and their live positions
+   *  still exist. Only ever an `in-transit` order (cargo already claimed);
+   *  an `assigned` order abstracted before pickup stays `assigned` with no
+   *  execution metadata (see `transportOrder.ts`'s `TransportExecution`
+   *  doc) — it simply resumes ordinary pickup once a live carrier exists
+   *  again, no timing capture needed. Idempotent via
+   *  `TransportOrders.beginOffscreenExecution`'s own guard. */
+  function beginOffscreenTransportHandoff(settlement: Settlement, nowDays: number, dayLengthSec: number): void {
+    if (!transportOrders) return
+    for (const npc of settlement.npcs) {
+      const order = transportOrders.findByCarrier(npc.id)
+      if (!order || order.state !== 'in-transit' || order.execution) continue
+      const target = resolveOffscreenHandoffTargetPosition(order.destination, settlement)
+      const from = { x: npc.mesh.position.x, z: npc.mesh.position.z }
+      const travelDays = target ? estimateOffscreenTravelDays(from, target, dayLengthSec) : 0
+      transportOrders.beginOffscreenExecution(order.id, nowDays + travelDays)
+    }
+  }
+
+  function unload(id: string, entry: Entry, nowDays: number, dayLengthSec: number): void {
     if (entry.settlement) {
       livestock.capture(id, entry.settlement.livestock)
       rats.capture(id, entry.settlement.rats)
+      beginOffscreenTransportHandoff(entry.settlement, nowDays, dayLengthSec)
     }
     entry.settlement?.dispose()
     entries.delete(id)
     syncMidpoints()
   }
 
-  function recheck(playerX: number, playerZ: number): void {
+  function recheck(playerX: number, playerZ: number, nowDays: number, dayLengthSec: number): void {
     lastCheckX = playerX
     lastCheckZ = playerZ
     const playerCell = worldToCell(playerX, playerZ)
@@ -685,8 +756,14 @@ export async function createSettlementsManager(
     for (const [id, entry] of [...entries]) {
       if (entry.def.isHome || entry.pendingPromise) continue
       const dist = Math.hypot(entry.def.x - playerX, entry.def.z - playerZ)
-      if (dist > unloadRadius) unload(id, entry)
+      if (dist > unloadRadius) unload(id, entry, nowDays, dayLengthSec)
     }
+    // World-owned off-screen transport progression (plan
+    // settlements-npcs-019) — bounded to active orders, checked at this
+    // stream-transition checkpoint rather than per frame. Also covers
+    // catch-up right after boot/restore, since `recheck` always fires once
+    // immediately (`lastCheckX`/`lastCheckZ` start at `Infinity`).
+    if (transportOrders) resolveOffscreenTransportArrivals(transportOrders, offscreenTransportLookup, nowDays)
   }
 
   return {
@@ -706,7 +783,7 @@ export async function createSettlementsManager(
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
-        recheck(playerPos.x, playerPos.z)
+        recheck(playerPos.x, playerPos.z, nowDays ?? 0, dayLengthSec)
       }
       for (const entry of entries.values()) {
         entry.settlement?.update(

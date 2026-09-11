@@ -62,6 +62,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementSignposts.ts`
 - `settlement/settlementTerrain.ts`
+- `settlement/storageDestinations.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/resourceDeposits.ts`
@@ -80,6 +81,8 @@ Generated from TypeScript imports.
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
+- `world/transportOffscreen.ts`
+- `world/transportOrder.ts`
 - `world/weather.ts`
 
 **Imported by**
@@ -572,6 +575,8 @@ Generated from TypeScript imports.
 - `settlement/rats.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageVisuals.test.ts`
+- `world/transportOffscreen.test.ts`
+- `world/transportOffscreen.ts`
 - `world/transportOrder.ts`
 
 ## `settlement/householdExchange.test.ts`
@@ -903,6 +908,8 @@ Generated from TypeScript imports.
 - `settlement/npcIdentity.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
+- `world/transportOffscreen.test.ts`
+- `world/transportOffscreen.ts`
 
 ## `settlement/pathDryness.ts`
 
@@ -1474,6 +1481,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
+- `settlement/SettlementsManager.ts`
 - `settlement/storageDestinations.test.ts`
 
 ## `settlement/storageRepair.test.ts`

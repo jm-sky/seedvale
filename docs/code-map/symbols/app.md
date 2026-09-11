@@ -243,13 +243,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 612
+- `createGameLoop` — function — line 613
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 580
-- `GameLoopDeps` — type — line 289
+- `GameLoop` — type — line 581
+- `GameLoopDeps` — type — line 290
 
 ## `app/graphicsSettings.ts`
 
@@ -339,14 +339,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 115
+- `createSaveState` — function — line 116
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 35
-- `SaveStateDeps` — type — line 56
+- `SaveState` — type — line 36
+- `SaveStateDeps` — type — line 57
 
 ## `app/userActions.ts`
 
@@ -364,15 +364,15 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 794
-- `caveTreasureContainerSpecs` — function — line 156
+- `BuiltWorldSystems` — type — line 801
+- `caveTreasureContainerSpecs` — function — line 157
   - domain: world-terrain
-- `createWorldBundle` — function — line 1348
-- `disposeWorldBundle` — function — line 1772
-- `HOME_RADIUS` — const — line 135
-- `homeChunks` — function — line 179
-- `rebuildWorldBundle` — function — line 1556
-- `WorldBundle` — type — line 202
+- `createWorldBundle` — function — line 1359
+- `disposeWorldBundle` — function — line 1793
+- `HOME_RADIUS` — const — line 136
+- `homeChunks` — function — line 180
+- `rebuildWorldBundle` — function — line 1572
+- `WorldBundle` — type — line 203
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

@@ -44,6 +44,13 @@ export type NpcGraveVisitRecord = {
 export const MAX_HP = 100
 export const MAX_STAMINA = 100
 
+/** Transport cargo capacity (plan settlements-npcs-019) — matches
+ *  `NpcAgent`'s pre-019 `NPC_CARRY_MAX_WEIGHT`, the cap a Trader's cargo
+ *  already lived under before it moved off transient `carried`. Kept here
+ *  (not imported from `NpcAgent.ts`, a heavy runtime module) since only
+ *  construction/restore in this file needs it. */
+const TRANSPORT_CARGO_MAX_WEIGHT = 5
+
 /**
  * Authoritative NPC entity state (plan 197 / persistence-001 /
  * settlements-npcs-026) — everything an `NpcAgent` mutates during simulation
@@ -57,7 +64,10 @@ export const MAX_STAMINA = 100
  * Deliberately narrow — `phase`/`pendingAction`/pathfinding/combat-intent/
  * `carried` (transient work/logistics payload) stay owned by `NpcAgent`
  * itself and reset on reconstruction. Personal belongings live on
- * `personalInventory` here, not on `carried`.
+ * `personalInventory` here, not on `carried`. Transport-order cargo (plan
+ * settlements-npcs-019) is a third, still-distinct owner: `transportCargo`
+ * below — never mixed with `personalInventory` (personal belongings) or
+ * `carried` (transient per-profession work payload).
  *
  * @domain settlements-npcs
  */
@@ -111,6 +121,15 @@ export type NpcAuthoritativeState = {
   /** Completed family-grave visit timestamps (plan npc-026) — per-deceased,
    *  keyed by semantic `deceasedNpcId`, not grave mesh identity. */
   graveVisits: NpcGraveVisitRecord[]
+  /** Authoritative transport-order cargo (plan settlements-npcs-019) — the
+   *  carrier-owned goods of an active `TransportOrder`, once claimed on
+   *  pickup. Every NPC always has this container, including when it is
+   *  empty. Direct reference shared with the live `NpcAgent`'s transport
+   *  flow; reconstruction must reuse this object, never re-derive contents
+   *  from `TransportOrder.claimedQuantity`. Distinct from `personalInventory`
+   *  (personal belongings) and `carried` (transient per-profession work
+   *  payload) — never mixed. */
+  readonly transportCargo: Inventory
 }
 
 /** Plain-data snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -140,6 +159,11 @@ export type NpcStateSnapshot = {
   /** Required on current saves. Absent (legacy / older in-session snapshot)
    *  restores as an empty personal inventory — never a profession/role seed. */
   personalInventory?: InventoryContentsSnapshot
+  /** Transport-order cargo (plan settlements-npcs-019). Absent (legacy /
+   *  older in-session snapshot, or an NPC that never carried transport
+   *  cargo) restores as an empty inventory — never reconstructed from a
+   *  `TransportOrder`'s `claimedQuantity`. */
+  transportCargo?: InventoryContentsSnapshot
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
@@ -159,6 +183,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     temporaryConditions: restoreTemporaryConditions(snapshot.temporaryConditions),
     graveVisits: snapshot.graveVisits?.map((entry) => ({ ...entry })) ?? [],
     personalInventory: inventoryFromContents(snapshot.personalInventory),
+    transportCargo: inventoryFromContents(snapshot.transportCargo, TRANSPORT_CARGO_MAX_WEIGHT),
     needsInitialPersonalLoadout: false,
   }
   if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
@@ -201,6 +226,7 @@ export function createNpcAuthoritativeState(
     temporaryConditions: createEmptyTemporaryConditions(),
     graveVisits: [],
     personalInventory: new Inventory(),
+    transportCargo: new Inventory(undefined, TRANSPORT_CARGO_MAX_WEIGHT),
     needsInitialPersonalLoadout: true,
   }
 }
@@ -262,6 +288,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
             ? state.graveVisits.map((entry) => ({ ...entry }))
             : undefined,
           personalInventory: snapshotInventoryContents(state.personalInventory),
+          transportCargo: snapshotInventoryContents(state.transportCargo),
         }
       }
       return out

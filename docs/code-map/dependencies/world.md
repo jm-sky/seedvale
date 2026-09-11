@@ -1624,6 +1624,8 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `world/createTransportOrders.test.ts`
+- `world/transportOffscreen.test.ts`
+- `world/transportOffscreen.ts`
 - `world/transportTransactions.test.ts`
 - `world/transportTransactions.ts`
 
@@ -3034,6 +3036,7 @@ Generated from TypeScript imports.
 - `world/dayNight.ts`
 - `world/timeConversion.test.ts`
 - `world/timeSkip.ts`
+- `world/transportOffscreen.ts`
 
 ## `world/timeSkip.ts`
 
@@ -3048,6 +3051,37 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/modalState.ts`
+
+## `world/transportOffscreen.test.ts`
+
+**Imports**
+
+- `economy/index.ts`
+- `settlement/household.ts`
+- `settlement/npcState.ts`
+- `world/createTransportOrders.ts`
+- `world/transportOffscreen.ts`
+- `world/transportOrder.ts`
+
+## `world/transportOffscreen.ts`
+
+**Imports**
+
+- `economy/index.ts`
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `settlement/household.ts`
+- `settlement/npcState.ts`
+- `world/createTransportOrders.ts`
+- `world/timeConversion.ts`
+- `world/transportOrder.ts`
+- `world/transportTransactions.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `settlement/SettlementsManager.ts`
+- `world/transportOffscreen.test.ts`
 
 ## `world/transportOrder.test.ts`
 
@@ -3065,9 +3099,15 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcProfessionWork.ts`
+- `app/saveState.ts`
+- `app/worldBundle.ts`
 - `debug/npcDebugApi.ts`
+- `persistence/saveData.ts`
+- `settlement/SettlementsManager.ts`
 - `world/createTransportOrders.test.ts`
 - `world/createTransportOrders.ts`
+- `world/transportOffscreen.test.ts`
+- `world/transportOffscreen.ts`
 - `world/transportOrder.test.ts`
 
 ## `world/transportTransactions.test.ts`
@@ -3090,6 +3130,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcProfessionWork.ts`
+- `world/transportOffscreen.ts`
 - `world/transportTransactions.test.ts`
 
 ## `world/trapProp.ts`

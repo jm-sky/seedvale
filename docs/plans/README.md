@@ -58,7 +58,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | ~~settlements-npcs-006~~, ~~settlements-npcs-015~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| 💡 `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | ~~settlements-npcs-018~~ |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
@@ -148,6 +147,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `fauna-020-player-owned-animals-and-follow-stay-behaviour.md` | Transfer konia zachowuje ten sam `animalId`; unload osady nie usuwa owned horse; Follow z hysteresis; Stay nie blokuje potrzeb/threat; dismount przywraca control state; save/load ownership/control/position; brak duplikatu po reload osady; death + tombstone blokuje respawn slotu |
 | `fauna-007-animal-leading-and-cart-harness.md` | Koń/osioł: Prowadź na linie, zwierzę idzie za graczem bez teleportu; Odepnij linę wraca do normalnego AI; potrzeby i threat wygrywają z lead; Przywiąż do wózka / Odepnij wózek; wózek jedzie za zwierzęciem; łańcuch gracz→koń→wózek; krowa nie zaprzęga; hitch nie przeżywa save/load |
 | `fauna-018-persistent-habitat-occupants.md` | Save/load i in-session rebuild zachowują identity/durable state zadeklarowanego occupanta; save przy corpse przywraca corpse; po `readyToRemove()` tombstone blokuje respawn i reconstruction; zwykły habitat fill nie tworzy duplikatu; ordinary fauna nadal nie jest masowo persystowana |
+| `settlements-npcs-019-persistent-and-off-screen-transport.md` | Trader podnosi towar → order `in-transit` → NpcAgent/WorldBundle rebuild nie resetuje `transportCargo`, pickup się nie powtarza; osada carriera streamuje się out mid-transit → order dostaje `execution` off-screen, cargo zostaje u NPC, po powrocie w zasięg dostawa kończy się dokładnie raz (albo już się zakończyła off-screen — bez drugiego unload); save podczas `in-transit` → reload → to samo cargo/order, dostawa raz; time skip dłuższy niż pozostały czas podróży kończy dostawę raz, krótszy zostawia order `in-transit`; ilości source+cargo+destination stałe w każdym scenariuszu |
 
 ---
 

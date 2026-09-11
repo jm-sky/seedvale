@@ -34,6 +34,7 @@ import type { ResidentialBuildingRecord } from '../world/residentialBuilding'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { BedrollRecord, PlatformRecord } from '../world/sleepingUtilities'
 import type { StandingTorchRecord } from '../world/standingTorch'
+import type { TransportOrder } from '../world/transportOrder'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorkContractRecord } from '../world/workContract'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
@@ -235,9 +236,10 @@ export type WorldBundle = {
   dryingRacks: DryingRacks
   hives: Beehives
   workContracts: WorkContracts
-  /** Runtime-only physical transport commitments (plan settlements-npcs-018).
-   *  Not persisted and not carried across rebuild — in-transit cargo lives
-   *  in transient `NpcAgent.carried`. */
+  /** Physical transport commitments (plan settlements-npcs-018). Active/
+   *  non-terminal orders persist (`SaveData.transportOrders`) and carry
+   *  across an in-session rebuild; carrier cargo persists separately on
+   *  `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019). */
   transportOrders: TransportOrders
   /** Plan fauna-010 §3/§4 — world-owned deterministic grass forage patches,
    *  shared by wild herbivores (`fauna`) and settlement livestock alike. */
@@ -694,6 +696,11 @@ type WorldSystemsSeed = {
    *  across rebuild, reset only on a genuinely new world" contract as
    *  `standingTorches`/`palisades` above. */
   workContracts: readonly WorkContractRecord[]
+  /** World-owned physical transport commitments (plan settlements-npcs-018,
+   *  persisted from settlements-npcs-019) — same "carried across rebuild,
+   *  sourced from `SaveData` on a fresh boot" contract as `workContracts`
+   *  above. Only active/non-terminal orders are ever supplied here. */
+  transportOrders?: readonly TransportOrder[]
   economies?: Record<string, SettlementEconomySnapshot>
   households?: Record<HouseholdId, HouseholdSnapshot>
   npcStates?: Record<NpcId, NpcStateSnapshot>
@@ -847,6 +854,7 @@ async function buildWorldSystems(
     dryingRacks: initialDryingRacks,
     hives: initialHives,
     workContracts: initialWorkContracts,
+    transportOrders: initialTransportOrders,
     economies: initialEconomies,
     households: initialHouseholds,
     npcStates: initialNpcStates,
@@ -1077,9 +1085,12 @@ async function buildWorldSystems(
     config.terrain.waterLevel,
   )
   const workContracts = createWorkContracts(scene, chunkManager.sampleHeight, initialWorkContracts)
-  // Runtime-only: 018 does not persist or carry in-transit orders because
-  // cargo still lives in transient `NpcAgent.carried` (see settlements-npcs-019).
-  const transportOrders = createTransportOrders()
+  // Cargo is now authoritative NPC-owned state (`NpcAuthoritativeState
+  // .transportCargo`, plan settlements-npcs-019) — the order registry itself
+  // carries across rebuild and persists via `initialTransportOrders`/
+  // `carriedTransportOrders` below, same "seeded from initial, carried on
+  // rebuild" idiom as `workContracts`.
+  const transportOrders = createTransportOrders(initialTransportOrders ?? [])
   const terrainPreparations = createTerrainPreparations(
     scene,
     chunkManager,
@@ -1496,6 +1507,10 @@ export async function createWorldBundle(
   /** Sparse persistent habitat occupants (plan fauna-018) — same
    *  carry/restore contract as spawn-point lifecycle. */
   initialPersistentOccupants?: PersistentOccupantSnapshot,
+  /** Active/non-terminal transport orders (plan settlements-npcs-019),
+   *  sourced from `SaveData.transportOrders` — same carry/restore contract
+   *  as `initialWorkContracts`. */
+  initialTransportOrders: readonly TransportOrder[] = [],
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1522,6 +1537,7 @@ export async function createWorldBundle(
     dryingRacks: initialDryingRacks,
     hives: initialHives,
     workContracts: initialWorkContracts,
+    transportOrders: initialTransportOrders,
     economies: initialEconomies,
     households: initialHouseholds,
     npcStates: initialNpcStates,
@@ -1682,8 +1698,12 @@ export async function rebuildWorldBundle(
   // `terrainPreparations` above (plan npc-014).
   const carriedWorkContracts = resetCollectedItems ? [] : [...bundle.workContracts.nodes()]
   bundle.workContracts.dispose()
-  // In-transit cargo is still on transient `NpcAgent.carried` — do not keep
-  // orders across rebuild (plan settlements-npcs-018 explicit boundary).
+  // Cargo ownership now lives on authoritative NPC state, so the order
+  // registry itself carries across rebuild the same way (plan
+  // settlements-npcs-019) — every order (not just active ones) rides along,
+  // same "carry everything, filter only for SaveData" contract as `graves`/
+  // `workContracts` above.
+  const carriedTransportOrders = resetCollectedItems ? [] : [...bundle.transportOrders.list()]
   bundle.transportOrders.dispose()
   const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
   // Households (plan 197 §8) and NPC authoritative state (plan 197 §7) get
@@ -1739,6 +1759,7 @@ export async function rebuildWorldBundle(
     dryingRacks: carriedDryingRacks,
     hives: carriedHives,
     workContracts: carriedWorkContracts,
+    transportOrders: carriedTransportOrders,
     economies: carriedEconomies,
     households: carriedHouseholds,
     npcStates: carriedNpcStates,

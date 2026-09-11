@@ -119,6 +119,12 @@ export type NpcWorkContext = {
   household: Household | null
   economy: SettlementEconomy | null
   carried: Inventory
+  /** Authoritative transport-order cargo (plan settlements-npcs-019) — the
+   *  carrier-owned `Inventory` for an active `TransportOrder`, persistent
+   *  across `NpcAgent` reconstruction. Never `carried` (transient
+   *  per-profession work payload) or `personalInventory` (personal
+   *  belongings). */
+  transportCargo: Inventory
   guardPatrolIndex: number
   advanceGuardPatrol: () => void
   fishAttempt: number
@@ -386,7 +392,7 @@ function planTransportOrderExecution(
         orders,
         orderId: order.id,
         carrierNpcId: ctx.npcId,
-        carrier: ctx.carried,
+        carrier: ctx.transportCargo,
         destination: economy.items,
         nowDays: ctx.simTime(),
       })
@@ -424,7 +430,7 @@ function planTransportOrderExecution(
         orders,
         orderId: order.id,
         carrierNpcId: ctx.npcId,
-        carrier: ctx.carried,
+        carrier: ctx.transportCargo,
         source: live.household.items,
         liveTransferableQuantity: Math.min(
           live.household.items.count(current.itemKind),
@@ -455,7 +461,7 @@ function planTraderCollection(ctx: NpcWorkContext, household: Household, economy
   if (existing) return planTransportOrderExecution(ctx, economy, existing)
   const source = hooks.findSurplusSource(household.id, 'food', ctx.home)
   if (!source) return null
-  const goods = selectTraderCollectionGoods(source.household, ctx.carried)
+  const goods = selectTraderCollectionGoods(source.household, ctx.transportCargo)
   if (!goods) return null
   const order = orders.create({
     source: { type: 'household', householdId: source.household.id },

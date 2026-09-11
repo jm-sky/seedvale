@@ -95,4 +95,50 @@ describe('createTransportOrders', () => {
     expect(orders.list()).toEqual([])
     expect(orders.findByCarrier('npc:1')).toBeUndefined()
   })
+
+  it('never reuses an id already present in seeded/restored records (plan settlements-npcs-019 §3)', () => {
+    // The very next id this counter/clock sequence would naturally produce —
+    // seeding it as an already-restored record simulates the exact collision
+    // risk a fresh page load + old save could hit.
+    const probe = createTransportOrders()
+    const first = probe.create(makeParams())!
+    const [, ms, counter] = first.id.split(':')
+    const collidingId = `transportOrder:${ms}:${Number(counter) + 1}`
+    const seeded = createTransportOrderRecord({
+      id: collidingId,
+      source,
+      destination,
+      itemKind: 'bread',
+      requestedQuantity: 1,
+    })
+    const orders = createTransportOrders([seeded])
+    const created = orders.create(makeParams())!
+    expect(created.id).not.toBe(collidingId)
+    const ids = orders.list().map((o) => o.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('beginOffscreenExecution/clearExecution round-trip through the registry', () => {
+    const orders = createTransportOrders()
+    const assigned = orders.create(makeParams({ carrierNpcId: 'npc:1' }))!
+    orders.completePickup(assigned.id, 'npc:1', 2)
+
+    expect(orders.beginOffscreenExecution(assigned.id, 10)?.execution).toEqual({
+      mode: 'off-screen',
+      arrivesAtDays: 10,
+    })
+    expect(orders.find(assigned.id)?.execution).toEqual({ mode: 'off-screen', arrivesAtDays: 10 })
+
+    expect(orders.clearExecution(assigned.id)?.execution).toBeUndefined()
+    expect(orders.find(assigned.id)?.execution).toBeUndefined()
+    // Resuming detailed execution never touches state/quantities.
+    expect(orders.find(assigned.id)?.state).toBe('in-transit')
+    expect(orders.find(assigned.id)?.claimedQuantity).toBe(2)
+  })
+
+  it('beginOffscreenExecution on an unknown id is a no-op', () => {
+    const orders = createTransportOrders()
+    expect(orders.beginOffscreenExecution('nope', 10)).toBeNull()
+    expect(orders.clearExecution('nope')).toBeNull()
+  })
 })

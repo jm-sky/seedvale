@@ -160,14 +160,14 @@ Generated from exported TypeScript symbols.
 - `HiddenTreasureDebugApi` — type — line 172
 - `HouseholdDebugHandle` — type — line 91
 - `InjuryDebugApi` — type — line 208
-- `installNpcDebugApi` — function — line 468
+- `installNpcDebugApi` — function — line 473
 - `LocationsDebugApi` — type — line 123
 - `NpcDebugHandle` — type — line 76
 - `PlayerDebugApi` — type — line 254
 - `QuestsDebugApi` — type — line 244
 - `QuestSpawnPointDebugSnapshot` — type — line 217
 - `QuestTargetDebugSnapshot` — type — line 232
-- `SeedvaleDebugApi` — type — line 334
+- `SeedvaleDebugApi` — type — line 339
 - `SettlementHistoryDebugHandle` — type — line 99
 - `SkillsDebugApi` — type — line 190
 - `TeleportToDebugApi` — type — line 135

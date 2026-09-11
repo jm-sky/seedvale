@@ -41,6 +41,8 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/rats.ts`
+- `world/transportOffscreen.test.ts`
+- `world/transportOffscreen.ts`
 
 ## `economy/initial.test.ts`
 
@@ -249,6 +251,7 @@ Generated from TypeScript imports.
 - `settlement/household.test.ts`
 - `settlement/household.ts`
 - `settlement/storageVisuals.test.ts`
+- `world/transportOffscreen.ts`
 
 ## `economy/stock.ts`
 

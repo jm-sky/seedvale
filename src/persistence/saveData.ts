@@ -23,6 +23,7 @@ import type { SaveGrave } from '../world/npcGraves'
 import type { WellStage } from '../world/playerWell'
 import type { RepairProgress } from '../world/repair'
 import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
+import type { TransportEndpointRef, TransportExecution, TransportOrder, TransportOrderState } from '../world/transportOrder'
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import type { WellWaterKind } from '../world/wellGroundwater'
 import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContainers'
@@ -584,7 +585,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 31
+export const CURRENT_SAVE_VERSION = 32
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -714,6 +715,14 @@ export type SaveData = {
    *  validated against the current contract, including `postDeath` and
    *  `personalInventory`. */
   npcStates?: Record<NpcId, NpcStateSnapshot>
+  /** Active/non-terminal `TransportOrder` commitments (plan
+   *  settlements-npcs-019) — see `world/transportOrder.ts`'s `TransportOrder`.
+   *  Reused directly: the type is already plain data with no runtime object
+   *  refs. Sparse/optional, same fallback contract as `npcStates`; carrier
+   *  cargo itself lives on the carrier's `npcStates[id].transportCargo`, not
+   *  here. Terminal orders (`completed`/`failed`/`cancelled`) are never
+   *  written — they carry no continuity requirement. */
+  transportOrders?: TransportOrder[]
   /** Household authoritative state (stock/water/items), keyed by stable
    *  household id (plan persistence-001) — see `settlement/household.ts`'s
    *  `HouseholdSnapshot`. Same sparse/fallback/optional contract as `npcStates`. */
@@ -1681,6 +1690,7 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
     }
   }
   if (!isInventoryContentsSnapshot(s.personalInventory)) return false
+  if (s.transportCargo !== undefined && !isInventoryContentsSnapshot(s.transportCargo)) return false
   return true
 }
 
@@ -1731,6 +1741,49 @@ function isNpcPostDeathField(value: unknown): boolean {
 function isNpcStatesField(value: unknown): value is Record<NpcId, NpcStateSnapshot> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   return Object.values(value as Record<string, unknown>).every(isNpcStateSnapshot)
+}
+
+const TRANSPORT_ORDER_STATES: ReadonlySet<string> = new Set([
+  'pending', 'assigned', 'in-transit', 'completed', 'failed', 'cancelled',
+] satisfies TransportOrderState[])
+
+function isTransportEndpointRef(value: unknown): value is TransportEndpointRef {
+  if (!value || typeof value !== 'object') return false
+  const r = value as Record<string, unknown>
+  if (r.type === 'household') return typeof r.householdId === 'string'
+  if (r.type === 'settlement-storage') return typeof r.settlementId === 'string'
+  return false
+}
+
+function isTransportExecutionField(value: unknown): value is TransportExecution | undefined {
+  if (value === undefined) return true
+  if (!value || typeof value !== 'object') return false
+  const e = value as Record<string, unknown>
+  return e.mode === 'off-screen' && typeof e.arrivesAtDays === 'number'
+}
+
+/** Validates one persisted `TransportOrder` (plan settlements-npcs-019) —
+ *  mirrors `world/transportOrder.ts`'s own shape. Never reconstructs cargo
+ *  from these fields; this only checks the commitment record round-trips. */
+function isTransportOrder(value: unknown): value is TransportOrder {
+  if (!value || typeof value !== 'object') return false
+  const o = value as Record<string, unknown>
+  return (
+    typeof o.id === 'string' &&
+    isTransportEndpointRef(o.source) &&
+    isTransportEndpointRef(o.destination) &&
+    typeof o.itemKind === 'string' &&
+    typeof o.requestedQuantity === 'number' &&
+    typeof o.claimedQuantity === 'number' &&
+    typeof o.deliveredQuantity === 'number' &&
+    (o.carrierNpcId === null || typeof o.carrierNpcId === 'string') &&
+    typeof o.state === 'string' && TRANSPORT_ORDER_STATES.has(o.state) &&
+    isTransportExecutionField(o.execution)
+  )
+}
+
+function isTransportOrdersField(value: unknown): value is TransportOrder[] {
+  return Array.isArray(value) && value.every(isTransportOrder)
 }
 
 /** Validates one `HouseholdSnapshot` (plan persistence-001) — `stock`/`items
@@ -2013,6 +2066,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isResourceDepositsField(v.resourceDeposits)) return false
   if (!isWorkContractsField(v.workContracts)) return false
   if (v.npcStates !== undefined && !isNpcStatesField(v.npcStates)) return false
+  if (v.transportOrders !== undefined && !isTransportOrdersField(v.transportOrders)) return false
   if (v.households !== undefined && !isHouseholdsField(v.households)) return false
   if (v.npcRelationships !== undefined && !isNpcRelationshipsField(v.npcRelationships)) return false
   if (v.livestock !== undefined && !isLivestockField(v.livestock)) return false
@@ -2831,6 +2885,16 @@ function migrateSaveV30ToV31(data: unknown): unknown {
   return { ...v, version: 31 }
 }
 
+/** v31 → v32 (plan settlements-npcs-019): persistent transport cargo
+ *  (`npcStates[id].transportCargo`) and active `TransportOrder` commitments
+ *  (`transportOrders`). Both fields are optional/sparse and already default
+ *  to empty on restore — no data to migrate, just the version bump this
+ *  project's schema-change workflow requires for any new persisted field. */
+function migrateSaveV31ToV32(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 32 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2876,6 +2940,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   28: migrateSaveV28ToV29,
   29: migrateSaveV29ToV30,
   30: migrateSaveV30ToV31,
+  31: migrateSaveV31ToV32,
 }
 
 function detectStoredVersion(value: unknown): number | null {
