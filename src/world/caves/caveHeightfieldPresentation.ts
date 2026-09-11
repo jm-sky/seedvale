@@ -96,6 +96,19 @@ const ROCK_ANCHOR_OUTSIDE = 0.65
 const ROCK_MARCH_MAX = 4
 const ROCK_MARCH_STEP = 0.1
 const ROCK_SINK = 0.25
+/** Extra pair of substantial flanking rocks, one per side, further out than
+ *  the existing anchor along the same radial line — conceals the remaining
+ *  left/right terrain-to-cave seam. Must clear the anchor's worst-case
+ *  combined horizontal footprint: `createLargeRock`'s per-axis jitter reaches
+ *  ~1.35x, so with both anchor and outer-anchor drawn from the same
+ *  ~1.05-1.25 scale range, minimum safe center separation beyond
+ *  `ROCK_ANCHOR_OUTSIDE` is roughly `0.9*1.35*(1.25+1.25) ≈ 3.0`; 3.2 m
+ *  leaves a small margin. */
+const ROCK_OUTER_ANCHOR_OUTSIDE = ROCK_ANCHOR_OUTSIDE + 3.2
+/** Same scale range as the existing anchors (~1.05-1.25) — substantial, not
+ *  bigger than the established anchor rocks. */
+const ROCK_OUTER_ANCHOR_SCALE_BASE = 1.05
+const ROCK_OUTER_ANCHOR_SCALE_RANGE = 0.2
 
 /**
  * Rock framing for the mouth — **presentation only**, derived from the
@@ -103,7 +116,10 @@ const ROCK_SINK = 0.25
  * until `mouthOpening` turns negative (the terrain edge) and drop a rock
  * just beyond it, on the walk surface. Two doorway-side anchors are
  * slightly larger and further out so they silhouette the portal without
- * overlapping the walkable void. No collision — they can never be an
+ * overlapping the walkable void. A second, further-out pair of comparably
+ * substantial "outer anchors" sits beyond the inner anchors on the same
+ * radial line to help conceal the remaining left/right terrain-to-cave
+ * seam. No collision — they can never be an
  * invisible blocker, and the entrance must read/traverse correctly without
  * them (`?debugDisableSystems=caveMouthRocks`).
  *
@@ -150,6 +166,32 @@ export function createMouthRocks(
       group.add(rock)
     }
   }
+
+  // One additional substantial rock per side, mirrored, sitting further out
+  // than the along=0 anchor on the same radial line — same march-then-place
+  // pattern and safety guard as every rock above, presentation only.
+  for (const sign of [-1, 1]) {
+    let rim = 0
+    for (let d = 0.2; d <= ROCK_MARCH_MAX; d += ROCK_MARCH_STEP) {
+      if (mouthOpening(field.entrance.x + sideX * sign * d, field.entrance.z + sideZ * sign * d) < 0) {
+        rim = d
+        break
+      }
+    }
+    if (rim <= 0) continue
+    variant = (variant + 0.37) % 1
+    const scale = ROCK_OUTER_ANCHOR_SCALE_BASE + variant * ROCK_OUTER_ANCHOR_SCALE_RANGE
+    const rock = createLargeRock(scale, variant)
+    rock.name = 'cave-mouth-rock:outerAnchor'
+    rock.userData.mouthRockKind = 'outerAnchor'
+    const rx = field.entrance.x + sideX * sign * (rim + ROCK_OUTER_ANCHOR_OUTSIDE)
+    const rz = field.entrance.z + sideZ * sign * (rim + ROCK_OUTER_ANCHOR_OUTSIDE)
+    if (mouthOpening(rx, rz) >= 0) continue
+    rock.position.set(rx, walkSurfaceAt(rx, rz) - ROCK_SINK, rz)
+    rock.rotation.y = variant * Math.PI * 2
+    group.add(rock)
+  }
+
   return group
 }
 

@@ -104,6 +104,51 @@ describe('createMouthRocks (presentation only)', () => {
     expect(sides.has(-1)).toBe(true)
   })
 
+  it('adds one substantial outer-anchor rock per side, further out than the inner anchor', () => {
+    const field = build('basic')
+    const opening = openingOf(field)
+    const rocks = createMouthRocks(field, opening, walk)
+    const out = openingDirection(field.entrance.yaw)
+    const sideX = -out.dz
+    const sideZ = out.dx
+    const anchors = rocks.children.filter((c) => c.userData.mouthRockKind === 'anchor')
+    const outerAnchors = rocks.children.filter((c) => c.userData.mouthRockKind === 'outerAnchor')
+    expect(outerAnchors.length).toBe(2)
+    const sides = new Set<number>()
+    for (const rock of outerAnchors) {
+      const dx = rock.position.x - field.entrance.x
+      const dz = rock.position.z - field.entrance.z
+      const along = dx * out.dx + dz * out.dz
+      const lat = dx * sideX + dz * sideZ
+      expect(Math.abs(along)).toBeLessThan(0.2)
+      sides.add(lat > 0 ? 1 : -1)
+
+      // Substantial scale, matching the existing anchor's range: recover the
+      // actual `scale` param from the baked geometry radius (`0.9 * scale`)
+      // rather than `mesh.scale`, which is jitter only.
+      const mesh = rock.children[0] as THREE.Mesh
+      const geom = mesh.geometry as THREE.IcosahedronGeometry
+      const radius = geom.parameters.radius as number
+      expect(radius).toBeGreaterThanOrEqual(0.9 * 1.05 - 1e-6)
+      expect(radius).toBeLessThanOrEqual(0.9 * 1.25 + 1e-6)
+
+      // Further out than, and not overlapping, the same-side inner anchor.
+      const sameSideAnchor = anchors.find((a) => {
+        const adx = a.position.x - field.entrance.x
+        const adz = a.position.z - field.entrance.z
+        return (adx * sideX + adz * sideZ > 0) === (lat > 0)
+      })
+      expect(sameSideAnchor).toBeDefined()
+      if (sameSideAnchor) {
+        const dAnchor = Math.hypot(sameSideAnchor.position.x - field.entrance.x, sameSideAnchor.position.z - field.entrance.z)
+        const dOuter = Math.hypot(dx, dz)
+        expect(dOuter - dAnchor).toBeGreaterThan(2.5)
+      }
+    }
+    expect(sides.has(1)).toBe(true)
+    expect(sides.has(-1)).toBe(true)
+  })
+
   it('is deterministic for identical field and contour', () => {
     const field = build('bend')
     const opening = openingOf(field)

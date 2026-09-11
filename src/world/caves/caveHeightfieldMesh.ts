@@ -568,42 +568,55 @@ function emitDeepMouthPatches(
   }
 }
 
-/** Extent along the opening axis (`out`) — in/out of the mouth. */
-const UNDER_ENTRANCE_LENGTH = 4
-/** Extent left/right of the entrance (`right`). */
-const UNDER_ENTRANCE_WIDTH = 10
+/** Extent toward the cave interior (`out` negative). Left at the original
+ *  symmetric extent — widening this side risks landing inside a real passage
+ *  void column and tripping the ceiling-clearance invariant below. */
+const UNDER_ENTRANCE_HALF_IN = 2
+/** Extent toward the approach/outside (`out` positive). Wider than the old
+ *  symmetric 2 m to close the small front-transition gap — purely outdoor
+ *  terrain here, so only the walk-surface invariant applies. */
+const UNDER_ENTRANCE_HALF_OUT = 3.25
+/** Extent left/right of the entrance (`right`). Wider than the old symmetric
+ *  5 m to close the left/right gaps — same reasoning as HALF_OUT. */
+const UNDER_ENTRANCE_HALF_ACROSS = 7
 const UNDER_ENTRANCE_DROP = 2
+/** Minimum clearance kept below each corner's own local walk surface,
+ *  independent of UNDER_ENTRANCE_DROP. Lets the wider footprint's corners
+ *  clamp downward on sloped terrain so they never approach the walk surface,
+ *  which keeps them clear of both mask invariants (`walk-0.01`, `walk-0.35`)
+ *  regardless of terrain under the newly-widened area. */
+const UNDER_ENTRANCE_MIN_SINK = 0.4
 
 /**
  * Flat catcher exactly under the mouth floor. Winding is CCW from above so
  * the coloured face points +Y — looking down through a floor/lip gap hits
- * dark rock instead of sky.
+ * dark rock instead of sky. Asymmetric: wider toward the approach and sides
+ * (ordinary outdoor terrain) than toward the cave interior (real passage
+ * void), see constant comments above.
  */
 function emitUnderEntrancePlane(
   positions: number[],
   indices: number[],
   field: CaveHeightfieldRepresentation,
+  walkSurfaceAt: (x: number, z: number) => number,
 ): void {
   const out = openingDirection(field.entrance.yaw)
   const right = { dx: out.dz, dz: -out.dx }
-  const y = field.entrance.y - UNDER_ENTRANCE_DROP
-  const halfAlong = UNDER_ENTRANCE_LENGTH / 2
-  const halfAcross = UNDER_ENTRANCE_WIDTH / 2
+  const baseY = field.entrance.y - UNDER_ENTRANCE_DROP
   const base = positions.length / 3
   // `[along, across]`. CCW from above: verified +Y against
   // `computeVertexNormals()` in the cave floor mesher (`CELL_RING` / `emitFan`).
   const ring: readonly (readonly [number, number])[] = [
-    [-halfAlong, -halfAcross],
-    [halfAlong, -halfAcross],
-    [halfAlong, halfAcross],
-    [-halfAlong, halfAcross],
+    [-UNDER_ENTRANCE_HALF_IN, -UNDER_ENTRANCE_HALF_ACROSS],
+    [UNDER_ENTRANCE_HALF_OUT, -UNDER_ENTRANCE_HALF_ACROSS],
+    [UNDER_ENTRANCE_HALF_OUT, UNDER_ENTRANCE_HALF_ACROSS],
+    [-UNDER_ENTRANCE_HALF_IN, UNDER_ENTRANCE_HALF_ACROSS],
   ]
   for (const [along, across] of ring) {
-    positions.push(
-      field.entrance.x + out.dx * along + right.dx * across,
-      y,
-      field.entrance.z + out.dz * along + right.dz * across,
-    )
+    const x = field.entrance.x + out.dx * along + right.dx * across
+    const z = field.entrance.z + out.dz * along + right.dz * across
+    const y = Math.min(baseY, walkSurfaceAt(x, z) - UNDER_ENTRANCE_MIN_SINK)
+    positions.push(x, y, z)
   }
   emitMaskQuad(indices, base + 0, base + 1, base + 2, base + 3)
 }
@@ -656,7 +669,7 @@ export function buildMouthUndersideMaskBuffers(
   }
 
   emitDeepMouthPatches(positions, indices, field, mouthOpening, walkSurfaceAt)
-  emitUnderEntrancePlane(positions, indices, field)
+  emitUnderEntrancePlane(positions, indices, field, walkSurfaceAt)
 
   const pos = new Float32Array(positions)
   const idx = new Uint32Array(indices)

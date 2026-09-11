@@ -16,6 +16,7 @@ import {
   mouthOpeningAt,
   sampleHeightfieldAt,
 } from './caveHeightfieldRepresentation'
+import { openingDirection } from './caveOrientation'
 
 const TEST_CONFIG = { ...DEFAULT_HEIGHTFIELD_CONFIG, cellSize: 0.5 }
 const walk = caveHeightfieldWalkSurfaceAt
@@ -276,5 +277,35 @@ describe('mouth underside mask (production, presentation-only)', () => {
     expect(a.vertices).toBe(b.vertices)
     expect(arraysEqual(a.positions, b.positions)).toBe(true)
     expect(Array.from(a.indices)).toEqual(Array.from(b.indices))
+  })
+
+  it('widens the entrance floor catcher to reach past the old left/right/front extent', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      const opening = (x: number, z: number): number => mouthOpeningAt(field, walk, x, z)
+      const buffers = buildMouthUndersideMaskBuffers(field, opening, walk)
+      const out = openingDirection(field.entrance.yaw)
+      const right = { dx: out.dz, dz: -out.dx }
+      // Points 6 m to each side and 3 m along the approach — outside the old
+      // half-extents (5 m across / 2 m out) but inside the new ones (7 m
+      // across / 3.25 m out). The widened catcher must cover them.
+      const probes: [number, number][] = [
+        [field.entrance.x + right.dx * 6, field.entrance.z + right.dz * 6],
+        [field.entrance.x - right.dx * 6, field.entrance.z - right.dz * 6],
+        [field.entrance.x + out.dx * 3, field.entrance.z + out.dz * 3],
+      ]
+      for (const [px, pz] of probes) {
+        let covered = false
+        for (let i = 0; i < buffers.vertices; i++) {
+          const x = buffers.positions[i * 3]!
+          const z = buffers.positions[i * 3 + 2]!
+          if (Math.hypot(x - px, z - pz) < 1.5) {
+            covered = true
+            break
+          }
+        }
+        expect(covered).toBe(true)
+      }
+    }
   })
 })
