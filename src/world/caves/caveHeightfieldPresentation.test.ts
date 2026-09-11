@@ -53,32 +53,21 @@ function rockSnapshot(group: THREE.Group): number[] {
 }
 
 describe('createMouthRocks (presentation only)', () => {
-  it('places rocks outside the opening contour and leaves the exit path free', () => {
+  it('places rocks outside the opening contour and leaves the corridor free', () => {
     for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
       const field = build(id)
       const opening = openingOf(field)
       const rocks = createMouthRocks(field, opening, walk)
       expect(rocks.children.length).toBeGreaterThan(0)
       const out = openingDirection(field.entrance.yaw)
-      const sideX = -out.dz
-      const sideZ = out.dx
-      const half = field.entrance.width * 0.5
       for (const rock of rocks.children) {
         expect(opening(rock.position.x, rock.position.z)).toBeLessThan(0)
-        const dx = rock.position.x - field.entrance.x
-        const dz = rock.position.z - field.entrance.z
-        const along = dx * out.dx + dz * out.dz
-        const lat = dx * sideX + dz * sideZ
-        expect(along).toBeLessThan(0.55)
-        if (along > -1.1) {
-          expect(Math.abs(lat)).toBeGreaterThan(half * 0.55)
-        }
       }
-      for (let along = 0; along <= 3; along += 0.25) {
+      for (let along = 0; along <= 2; along += 0.25) {
         const cx = field.entrance.x + out.dx * along
         const cz = field.entrance.z + out.dz * along
         for (const rock of rocks.children) {
-          expect(Math.hypot(rock.position.x - cx, rock.position.z - cz)).toBeGreaterThan(1.15)
+          expect(Math.hypot(rock.position.x - cx, rock.position.z - cz)).toBeGreaterThan(0.85)
         }
       }
     }
@@ -87,11 +76,11 @@ describe('createMouthRocks (presentation only)', () => {
   it('frames both doorway flanks, still bounded', () => {
     const field = build('basic')
     const rocks = createMouthRocks(field, openingOf(field), walk)
-    expect(rocks.children.length).toBeGreaterThanOrEqual(6)
-    expect(rocks.children.length).toBeLessThanOrEqual(30)
+    expect(rocks.children.length).toBeGreaterThanOrEqual(8)
+    expect(rocks.children.length).toBeLessThanOrEqual(24)
   })
 
-  it('puts the large anchor rocks on the doorway sides, not the grass lip', () => {
+  it('puts the larger anchor rocks on the doorway sides', () => {
     const field = build('basic')
     const rocks = createMouthRocks(field, openingOf(field), walk)
     const out = openingDirection(field.entrance.yaw)
@@ -99,7 +88,7 @@ describe('createMouthRocks (presentation only)', () => {
     const sideZ = out.dx
     const anchors = rocks.children.filter((c) => c.userData.mouthRockKind === 'anchor')
     const fillers = rocks.children.filter((c) => c.userData.mouthRockKind === 'filler')
-    expect(anchors.length).toBeGreaterThanOrEqual(2)
+    expect(anchors.length).toBe(2)
     expect(fillers.length).toBeGreaterThan(0)
     const sides = new Set<number>()
     for (const rock of anchors) {
@@ -107,7 +96,7 @@ describe('createMouthRocks (presentation only)', () => {
       const dz = rock.position.z - field.entrance.z
       const along = dx * out.dx + dz * out.dz
       const lat = dx * sideX + dz * sideZ
-      expect(Math.abs(along)).toBeLessThan(0.8)
+      expect(Math.abs(along)).toBeLessThan(0.2)
       expect(Math.abs(lat)).toBeGreaterThan(field.entrance.width * 0.4)
       sides.add(lat > 0 ? 1 : -1)
     }
@@ -183,7 +172,7 @@ describe('createCaveHeightfieldPresentation', () => {
       maskMaterial,
       rocks: false,
     })
-    expect(withRocks.rockCount).toBeGreaterThanOrEqual(6)
+    expect(withRocks.rockCount).toBeGreaterThanOrEqual(8)
     expect(withRocks.group.children.map((c) => c.name)).toContain('cave-mouth-rocks')
     expect(withRocks.maskVertices).toBe(withoutRocks.maskVertices)
     expect(withRocks.buffers.vertices).toBe(withoutRocks.buffers.vertices)

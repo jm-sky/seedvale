@@ -772,14 +772,13 @@ Presentation-only visual polish of the Cave V2 mouth after the heightfield spati
 
 ### What landed
 
-Denser contour-driven framing in `createMouthRocks()`:
+Denser contour-driven framing in `createMouthRocks()`, restored to the
+pre-polish placement rule after large overlapping boulders blocked exit:
 
-- along-axis sample step ~0.48 m with deterministic along-axis jitter, **hillside flanks → doorway only** (not onto the approach / grass lip, not onto the pinched back of the hole);
-- no back-rim / upper-lip arc — those boulders hung into the doorway at the cave/grass junction;
-- two classes on the same `createLargeRock()` pipeline: **anchor** (scale ~1.1–1.5, doorway left/right pillars only) and **filler** (scale ~0.45–0.85) on the same flanks;
-- deterministic variation (scale / yaw / along jitter / outside offset / sink) from a local hash of `(caveId, step, side, channel)` — no `Math.random()`, no sequential RNG;
-- rocks still sit on `walkSurfaceAt` on the terrain side of `mouthOpeningAt = 0`; an explicit exit-path keep-out rejects anything on the grass lip or in the walkable corridor;
-- cap 30 rocks per entrance.
+- same contour march as Milestone B (`mouthOpening < 0`, `ROCK_OUTSIDE = 0.4`);
+- denser along-axis samples (−1.8…1.35 m) at the original filler scale (~0.7–1.15);
+- two doorway-side **anchors** only, modestly larger (~1.05–1.25) and further out (`0.65 m`) so they silhouette the portal without overlapping the walkable void;
+- rocks still have no colliders. A capsule that clips through a visual boulder into solid (`gap < minGap`, not `openSky`) while Y is still the pit floor is pushed entrance-ward by `resolveHorizontal` — that was the snap-back. Spatial code was not changed; placement was.
 
 Layering from typical camera angles:
 
