@@ -1,13 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 08:13:01  
+> Date: 2026-09-11 08:14:43  
 
 ## PLANS
 
+- `items-player-026-treasure-loot-forced-entry-and-traps.md`
 - `npc-029-npc-accompany-follow-commitment.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
-- `settlements-npcs-019-persistent-and-off-screen-transport.md`
 - `settlements-npcs-030-non-home-settlement-food-production-v1.md`
 - `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`
 - `tools-005-seedvale-character-preparation-panel.md`
@@ -17,6 +17,37 @@
 
 --------------------------------
 ## PROMPTS
+
+### `items-player-026-treasure-loot-forced-entry-and-traps.md`
+
+Prompt:
+
+```
+Zrób review planu `items-player-026-treasure-loot-forced-entry-and-traps.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/items-player-026-treasure-loot-forced-entry-and-traps.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/items-player-026-treasure-loot-forced-entry-and-traps-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
 
 ### `npc-029-npc-accompany-follow-commitment.md`
 
@@ -65,37 +96,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/quests-progression-008-treasure-map-bear-cave-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-npcs-019-persistent-and-off-screen-transport.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-019-persistent-and-off-screen-transport.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-019-persistent-and-off-screen-transport.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-019-persistent-and-off-screen-transport-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

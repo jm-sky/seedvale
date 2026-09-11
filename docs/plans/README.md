@@ -59,7 +59,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | settlements-npcs-018 |
+| 💡 `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | settlements-npcs-018 |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
@@ -77,6 +77,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-024-systemic-treasure-sites-and-keys.md`                             | -       | 🟡 | M      | -      |
 | ◼️ `world-terrain-019-cave-heightfield-production-migration.md`                | -       | 🔴 | XL     | world-terrain-018 |
 | ◼️ `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | settlements-npcs-019 |
+| ◼️ `items-player-026-treasure-loot-forced-entry-and-traps.md`                  | -       | 🟡 | M      | world-024 |
 
 ---
 
@@ -199,7 +200,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `022`
-- items-player: `026`
+- items-player: `027`
 - npc: `030`
 - persistence: `005`
 - quests-progression: `019`
