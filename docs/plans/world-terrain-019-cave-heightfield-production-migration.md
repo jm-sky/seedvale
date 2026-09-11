@@ -23,7 +23,9 @@
 
 **Browser/gameplay-verified:** not required for Milestone A.
 
----## 1. Cel
+---
+
+## 1. Cel
 
 Zastąpić produkcyjną reprezentację Cave V2 opartą o lokalny 3D SDF sprawdzoną reprezentacją heightfield opartą o:
 
