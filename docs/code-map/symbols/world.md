@@ -150,7 +150,7 @@ Generated from exported TypeScript symbols.
 - `createCaveHeightfieldMaterial` — function — line 34
 - `createCaveHeightfieldPresentation` — function — line 315
   - domain: world-terrain
-- `createMouthRocks` — function — line 186
+- `createMouthRocks` — function — line 204
   - domain: world-terrain
 - `createMouthUndersideMask` — function — line 80
   - domain: world-terrain
