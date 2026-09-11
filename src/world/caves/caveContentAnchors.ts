@@ -31,6 +31,7 @@ import {
   type Heading,
   incomingHeading,
   lateralDistance,
+  type PassageWallBias,
   passageWallCandidates,
   signFromRandom,
   type Xz,
@@ -152,8 +153,9 @@ export function passageWallContentCandidates(
   t: number,
   preferredSign: 1 | -1,
   halfWidth: number,
+  wallBias: PassageWallBias = 'default',
 ): { candidates: Xz[], along: Xz, heading: Heading } {
-  return passageWallCandidates(seg, t, preferredSign, halfWidth, CONTENT_ANCHOR_CANDIDATE_LIMIT)
+  return passageWallCandidates(seg, t, preferredSign, halfWidth, CONTENT_ANCHOR_CANDIDATE_LIMIT, wallBias)
 }
 
 function blocksForeignPassage(
@@ -283,7 +285,8 @@ function placeAlongPassage(
   if (!seg) return placeAtNode(input, node, role, preferredSign, false, ordinal)
   const from = nodeOrNull(input.topology, seg.from)
   const halfWidth = Math.min(node.targetWidth, from?.targetWidth ?? node.targetWidth) / 2
-  const { candidates, along, heading } = passageWallContentCandidates(seg, t, preferredSign, halfWidth)
+  const wallBias: PassageWallBias = role === 'lantern' ? 'tight' : 'default'
+  const { candidates, along, heading } = passageWallContentCandidates(seg, t, preferredSign, halfWidth, wallBias)
   const placed = pickCandidate(
     input.heightfield,
     input.topology,

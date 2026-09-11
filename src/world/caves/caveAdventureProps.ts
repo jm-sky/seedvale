@@ -12,6 +12,7 @@ import { markSharedGpu } from '../../assets/loadGltf'
 import {
   createProceduralTorchPost,
   createVillageTorchLight,
+  type VillageTorch,
 } from '../../settlement/houseLighting'
 import { VILLAGE_TORCH_HEIGHT, VILLAGE_TORCH_URL } from '../../settlement/propSpecs'
 import { loadPropOrFallback } from '../../settlement/propUtils'
@@ -55,12 +56,19 @@ export const CAVE_CRATE_TARGET_HEIGHT = 0.6
 /** Max real PointLights per active adventure cave presentation (lantern anchors). */
 export const CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT = 2
 
+/** Roll applied after anchor yaw so megakit supports read as fallen timbers. */
+export const CAVE_SUPPORT_LAY_FLAT_ROLL = Math.PI / 2
+
+/** `torch.glb` bracket axis vs anchor yaw (wall normal faces the passage). */
+export const CAVE_TORCH_YAW_OFFSET = Math.PI / 2
+
 function roleToAssetKind(role: CavePresentationPropRole): CaveAdventurePropAssetKind {
   return role === 'wagon' ? 'cart' : role
 }
 
 function yawOffsetForRole(role: CavePresentationPropRole): number {
   if (role === 'wagon') return CART_MODEL_YAW_OFFSET
+  if (role === 'lantern') return CAVE_TORCH_YAW_OFFSET
   return 0
 }
 
@@ -107,21 +115,14 @@ export function adventurePropPlacementsFromAnchors(
   return Object.freeze(presentationAnchorsFromContent(anchors).map(adventurePropPlacementFromAnchor))
 }
 
-/** Simple timber brace when megakit support fails to load. */
+/** Fallen timber when megakit support fails to load — low horizontal beam. */
 function createProceduralSupport(): THREE.Group {
   const group = new THREE.Group()
   const wood = new THREE.MeshStandardMaterial({ color: 0x5c4030, flatShading: true, roughness: 0.9 })
-  const postGeo = new THREE.BoxGeometry(0.12, 1.35, 0.12)
-  const beamGeo = new THREE.BoxGeometry(1.05, 0.1, 0.14)
-  const left = new THREE.Mesh(postGeo, wood)
-  left.position.set(-0.42, 0.675, 0)
-  left.castShadow = true
-  const right = left.clone()
-  right.position.x = 0.42
-  const beam = new THREE.Mesh(beamGeo, wood)
-  beam.position.y = 1.22
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.1, 0.14), wood)
+  beam.position.y = 0.05
   beam.castShadow = true
-  group.add(left, right, beam)
+  group.add(beam)
   return group
 }
 
@@ -198,10 +199,25 @@ function placePivotAtAnchor(
   pivot.rotation.y = placement.yaw + placement.yawOffset
 }
 
+function addPropClone(pivot: THREE.Group, src: THREE.Object3D, layFlat: boolean): void {
+  const clone = src.clone(true)
+  if (!layFlat) {
+    pivot.add(clone)
+    return
+  }
+  const orientation = new THREE.Group()
+  orientation.name = 'cave-adventure-prop-orientation'
+  orientation.rotation.z = CAVE_SUPPORT_LAY_FLAT_ROLL
+  orientation.add(clone)
+  pivot.add(orientation)
+}
+
 export type CreateCaveAdventurePropsGroupResult = {
   group: THREE.Group
   propCount: number
   lanternLightCount: number
+  /** Lit adventure torches — tick {@link VillageTorch.update} while presentation is active. */
+  lanternTorches: readonly VillageTorch[]
 }
 
 /**
@@ -222,6 +238,7 @@ export function createCaveAdventurePropsGroup(
 
   const enableLights = options.lanternLights ?? true
   let lanternLightCount = 0
+  const lanternTorches: VillageTorch[] = []
 
   for (const anchor of presentationAnchors) {
     const placement = adventurePropPlacementFromAnchor(anchor)
@@ -235,6 +252,7 @@ export function createCaveAdventurePropsGroup(
         const post = tpl.torchPost.clone(true) as THREE.Object3D
         const torch = createVillageTorchLight(post)
         torch.setLit(true)
+        lanternTorches.push(torch)
         pivot.add(torch.object)
         lanternLightCount++
       } else {
@@ -242,13 +260,18 @@ export function createCaveAdventurePropsGroup(
       }
     } else {
       const src = templateForKind(placement.assetKind, tpl)
-      pivot.add(src.clone(true))
+      addPropClone(pivot, src, placement.role === 'support')
     }
 
     group.add(pivot)
   }
 
-  return { group, propCount: presentationAnchors.length, lanternLightCount }
+  return {
+    group,
+    propCount: presentationAnchors.length,
+    lanternLightCount,
+    lanternTorches: Object.freeze(lanternTorches),
+  }
 }
 
 /** Test-only: reset module singleton between vitest cases. */

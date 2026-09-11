@@ -141,6 +141,10 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
+18. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
+  🟡 `M` · **Score:**  21  
+   → **unlocks:** 0/0
+
 ---
 
 ## Initially Blocked
@@ -323,6 +327,7 @@ graph TD
   quests_progression_016["quests-progression-016 — World-driven settlement quest opportunities"]
   quests_progression_017["quests-progression-017 — RPG settlement quest matrices"]
   quests_progression_018["quests-progression-018 — Quest playtest reachability and dialogue conflicts"]
+  quests_progression_019["quests-progression-019 — Dangerous Animal Deeds & Local Reputation"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -431,6 +436,9 @@ graph TD
   world_terrain_017["world-terrain-017 — Abandoned mountain mine landmark"]
   world_terrain_018["world-terrain-018 — Cave Heightfield Representation Spike"]
   world_terrain_019["world-terrain-019 — Cave Heightfield Production Migration"]
+  world_terrain_020["world-terrain-020 — Adventure cave variant with treasure and abandoned props"]
+  world_terrain_021["world-terrain-021 — Low-Cost Terrain and Cave Surface Albedo"]
+  world_terrain_022["world-terrain-022 — Deterministic Cave Interior Rock Clutter"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -575,6 +583,7 @@ graph TD
   persistence_003 --> persistence_004
   quests_progression_001 --> quests_progression_002
   quests_progression_001 --> quests_progression_011
+  quests_progression_001 --> quests_progression_019
   quests_progression_001 --> settlements_006
   quests_progression_002 --> quests_progression_003
   quests_progression_002 --> quests_progression_004
@@ -582,6 +591,7 @@ graph TD
   quests_progression_002 --> quests_progression_006
   quests_progression_002 --> quests_progression_008
   quests_progression_002 --> quests_progression_010
+  quests_progression_002 --> quests_progression_019
   quests_progression_003 --> quests_progression_005
   quests_progression_004 --> quests_progression_005
   quests_progression_005 --> quests_progression_014
@@ -675,6 +685,7 @@ graph TD
   world_021 --> ui_input_014
   world_023 --> settlements_npcs_031
   world_024 --> items_player_026
+  world_024 --> world_terrain_020
   world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
   world_terrain_010 --> world_terrain_011
@@ -689,4 +700,7 @@ graph TD
   world_terrain_019 --> quests_progression_008
   world_terrain_019 --> world_018
   world_terrain_019 --> world_terrain_017
+  world_terrain_019 --> world_terrain_020
+  world_terrain_019 --> world_terrain_021
+  world_terrain_019 --> world_terrain_022
 ```

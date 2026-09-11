@@ -349,6 +349,7 @@ Generated from TypeScript imports.
 
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveContentAnchors.ts`
+- `world/caves/caveHeightfieldPlacement.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveTopology.ts`
 - `world/caves/mouthCarve.ts`
@@ -451,6 +452,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveInteriorRocks.test.ts`
 - `world/caves/caveInteriorRocks.ts`
@@ -469,6 +471,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/decorProps.ts`
+- `settlement/houseLighting.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHeightfieldMaterial.ts`
@@ -1242,6 +1245,7 @@ Generated from TypeScript imports.
 - `debug/playerGroundTrace.ts`
 - `perf/active.ts`
 - `settlement/families.ts`
+- `settlement/houseLighting.ts`
 - `settlement/settlementGenerator.ts`
 - `shared/bootMark.ts`
 - `terrain/chunkManager.ts`

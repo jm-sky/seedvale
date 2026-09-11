@@ -7,6 +7,7 @@ import { isBootMarkMode, isSystemEnabled } from '../debug/debugMode'
 import { type CaveGroundQueryDebug, writeHitSnapshot } from '../debug/playerGroundTrace'
 import { getMonitor } from '../perf/active'
 import { villageSizeConfig } from '../settlement/families'
+import type { VillageTorch } from '../settlement/houseLighting'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { useBootMark } from '../shared/bootMark'
 import { assignCaveArchetypes } from './caves/caveArchetype'
@@ -88,7 +89,7 @@ export type Caves = {
   /** Streams cave presentation in/out around the observer
    *  (player) position — call once per frame. Cheap: a 3x3 world-grid
    *  lookup, never a scan of every cave. */
-  update: (observerX: number, observerZ: number) => void
+  update: (observerX: number, observerZ: number, dt?: number) => void
   /** Y-aware player ground query over the heightfield (world-terrain-019):
    *  the floor returned is the rendered floor. `null` outside cave space,
    *  including a surface entity above a tunnel. Player-stateful: includes
@@ -363,6 +364,7 @@ export function createCaves(
   }
 
   const presentations = new Map<string, THREE.Object3D>()
+  const adventureLanternTorchesByCave = new Map<string, readonly VillageTorch[]>()
   // Shared across every cave presentation; disposed once in `dispose()`,
   // never by `disposeObject3D()` (`sharedGpu`).
   const caveMaterial = createCaveHeightfieldMaterial({
@@ -431,6 +433,7 @@ export function createCaves(
     group.removeFromParent()
     disposeObject3D(group)
     presentations.delete(caveId)
+    adventureLanternTorchesByCave.delete(caveId)
   }
 
   /** Builds and attaches one cave's heightfield presentation synchronously.
@@ -460,6 +463,9 @@ export function createCaves(
         presentation.group.userData[CAVE_ADVENTURE_PROPS_USERDATA_KEY] = propsRoot
         pointLightBudget.registerSubtree(propsRoot)
       }
+    }
+    if (presentation.adventureLanternTorches.length > 0) {
+      adventureLanternTorchesByCave.set(caveId, presentation.adventureLanternTorches)
     }
     scene.add(presentation.group)
     presentations.set(caveId, presentation.group)
@@ -557,7 +563,10 @@ export function createCaves(
 
   return {
     definitions: () => definitions,
-    update(observerX, observerZ) {
+    update(observerX, observerZ, dt = 0) {
+      for (const torches of adventureLanternTorchesByCave.values()) {
+        for (const torch of torches) torch.update(dt)
+      }
       const { cx, cz } = gridCellOf(observerX, observerZ)
       const nearby = new Set<string>()
       for (let dx = -1; dx <= 1; dx++) {
@@ -661,6 +670,7 @@ export function createCaves(
       writeGroundQueryDebug(0, 0, 0, null, null, null, 0, null)
       streaming.dispose()
       presentationQueue.clear()
+      adventureLanternTorchesByCave.clear()
       chunkManager.clearTerrainCutouts(TERRAIN_CUTOUT_OWNER_KEY)
       disposeCaveHeightfieldMaterialGpu(caveMaterial)
       maskMaterial.dispose()

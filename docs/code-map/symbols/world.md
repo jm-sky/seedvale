@@ -135,28 +135,30 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveAdventureProps.ts`
 
-- `_resetCaveAdventurePropTemplatesForTests` — function — line 255
-- `adventurePropPlacementFromAnchor` — function — line 90
+- `_resetCaveAdventurePropTemplatesForTests` — function — line 278
+- `adventurePropPlacementFromAnchor` — function — line 98
   - domain: world-terrain
-- `adventurePropPlacementsFromAnchors` — function — line 104
-- `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT` — const — line 56
-- `CAVE_ADVENTURE_PROPS_GROUP_NAME` — const — line 21
-- `CAVE_ADVENTURE_PROPS_USERDATA_KEY` — const — line 23
-- `CAVE_CRATE_TARGET_HEIGHT` — const — line 53
-- `CAVE_PRESENTATION_PROP_ROLES` — const — line 25
-- `CAVE_SUPPORT_FIT_MAX` — const — line 52
-- `CaveAdventurePropAssetKind` — type — line 34
-- `CaveAdventurePropPlacement` — type — line 36
-- `CaveAdventurePropTemplates` — type — line 128
-- `CavePresentationPropRole` — type — line 32
-- `createCaveAdventurePropsGroup` — function — line 214
+- `adventurePropPlacementsFromAnchors` — function — line 112
+- `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT` — const — line 57
+- `CAVE_ADVENTURE_PROPS_GROUP_NAME` — const — line 22
+- `CAVE_ADVENTURE_PROPS_USERDATA_KEY` — const — line 24
+- `CAVE_CRATE_TARGET_HEIGHT` — const — line 54
+- `CAVE_PRESENTATION_PROP_ROLES` — const — line 26
+- `CAVE_SUPPORT_FIT_MAX` — const — line 53
+- `CAVE_SUPPORT_LAY_FLAT_ROLL` — const — line 60
+- `CAVE_TORCH_YAW_OFFSET` — const — line 63
+- `CaveAdventurePropAssetKind` — type — line 35
+- `CaveAdventurePropPlacement` — type — line 37
+- `CaveAdventurePropTemplates` — type — line 129
+- `CavePresentationPropRole` — type — line 33
+- `createCaveAdventurePropsGroup` — function — line 230
   - domain: world-terrain
-- `CreateCaveAdventurePropsGroupResult` — type — line 201
-- `getCaveAdventurePropTemplates` — function — line 174
+- `CreateCaveAdventurePropsGroupResult` — type — line 215
+- `getCaveAdventurePropTemplates` — function — line 175
   - domain: world-terrain
-- `preloadCaveAdventurePropTemplates` — function — line 144
+- `preloadCaveAdventurePropTemplates` — function — line 145
   - domain: world-terrain
-- `presentationAnchorsFromContent` — function — line 72
+- `presentationAnchorsFromContent` — function — line 80
   - domain: world-terrain
 
 ## `world/caves/caveArchetype.ts`
@@ -176,21 +178,21 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveContentAnchors.ts`
 
-- `CAVE_CONTENT_ANCHOR_ROLES` — const — line 42
-- `CAVE_CONTENT_PLACEMENT` — const — line 88
-- `CaveContentAnchor` — type — line 60
+- `CAVE_CONTENT_ANCHOR_ROLES` — const — line 43
+- `CAVE_CONTENT_PLACEMENT` — const — line 89
+- `CaveContentAnchor` — type — line 61
   - domain: world-terrain
-- `caveContentAnchorId` — function — line 115
+- `caveContentAnchorId` — function — line 116
   - domain: world-terrain
-- `CaveContentAnchorInput` — type — line 70
-- `CaveContentAnchorRole` — type — line 51
-- `chamberContentCandidates` — function — line 135
+- `CaveContentAnchorInput` — type — line 71
+- `CaveContentAnchorRole` — type — line 52
+- `chamberContentCandidates` — function — line 136
   - domain: world-terrain
-- `CONTENT_ANCHOR_CANDIDATE_LIMIT` — const — line 99
-- `ContentAnchorPlacement` — type — line 79
-- `passageWallContentCandidates` — function — line 150
+- `CONTENT_ANCHOR_CANDIDATE_LIMIT` — const — line 100
+- `ContentAnchorPlacement` — type — line 80
+- `passageWallContentCandidates` — function — line 151
   - domain: world-terrain
-- `resolveCaveContentAnchors` — function — line 329
+- `resolveCaveContentAnchors` — function — line 332
   - domain: world-terrain
 
 ## `world/caves/caveGroundQuery.ts`
@@ -236,14 +238,15 @@ Generated from exported TypeScript symbols.
 
 - `chamberCandidates` — function — line 117
   - domain: world-terrain
-- `footprintHolds` — function — line 195
+- `footprintHolds` — function — line 204
   - domain: world-terrain
 - `Heading` — type — line 16
 - `incomingFromPoints` — function — line 26
 - `incomingHeading` — function — line 36
 - `lateralDistance` — function — line 102
-- `passageWallCandidates` — function — line 164
+- `PassageWallBias` — type — line 164
   - domain: world-terrain
+- `passageWallCandidates` — function — line 172
 - `pointAlongSegment` — function — line 63
 - `segmentLength` — function — line 52
 - `signFromRandom` — function — line 22
@@ -252,17 +255,17 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 247
-- `createCaveHeightfieldGeometry` — function — line 84
+- `CaveHeightfieldPresentation` — type — line 248
+- `createCaveHeightfieldGeometry` — function — line 85
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 275
+- `createCaveHeightfieldPresentation` — function — line 278
   - domain: world-terrain
-- `createMouthRocks` — function — line 180
+- `createMouthRocks` — function — line 181
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 102
+- `createMouthUndersideMask` — function — line 103
   - domain: world-terrain
-- `createMouthUndersideMaskMaterial` — function — line 43
-- `exemptCavePresentationFromSceneFog` — function — line 55
+- `createMouthUndersideMaskMaterial` — function — line 44
+- `exemptCavePresentationFromSceneFog` — function — line 56
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
@@ -612,8 +615,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 86
-- `createCaves` — function — line 250
+- `Caves` — type — line 87
+- `createCaves` — function — line 251
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves

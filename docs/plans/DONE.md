@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-terrain-021-low-cost-terrain-and-cave-surface-albedo`           | 2026-09-11 21:29:10 | —                   | `world-terrain`  | —          |
+| `world-terrain-022-cave-interior-rock-clutter`                         | 2026-09-11 21:18:18 | —                   | `world-terrain`  | —          |
 | `settlements-npcs-006-wool-to-material`                                | 2026-09-11 14:50:14 | —                   | `settlements-npcs` | —          |
 | `fauna-004-sheep-wool-and-shepherd`                                    | 2026-09-11 14:25:00 | —                   | `fauna`          | —          |
 | `settlements-npcs-015-economic-production-and-input-integration`       | 2026-09-11 13:49:40 | —                   | `settlements-npcs` | —          |

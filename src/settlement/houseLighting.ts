@@ -270,6 +270,9 @@ export function createVillageTorchLight(
       // Plan 157 §3.2 — same visibility fix as `createHouseLight` above; an
       // extinguished torch's light previously stayed `visible = true`.
       light.visible = on
+      // Particle pools only write GPU attributes in `update()` — prime once so
+      // torches that are not ticked every frame still show flame on first lit frame.
+      if (on) fireVisual.update(0)
     },
     update(dt) {
       if (!lit) return

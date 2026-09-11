@@ -241,8 +241,8 @@ Generated from exported TypeScript symbols.
 - `createProceduralTorchPost` — function — line 203
 - `createVillageTorchLight` — function — line 224
 - `HouseLight` — type — line 23
-- `ResolvedHouseLampMount` — type — line 365
-- `resolveHouseLampMount` — function — line 407
+- `ResolvedHouseLampMount` — type — line 368
+- `resolveHouseLampMount` — function — line 410
 - `VillageTorch` — type — line 29
 
 ## `settlement/landOwnership.ts`

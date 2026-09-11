@@ -320,5 +320,6 @@ Small correctness pass before browser tuning (Stage E):
 - **Lights.** Still `CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT = 2` real `PointLight`s per active adventure presentation via `PointLightBudget` register/unregister on the props subtree; `castShadow = false`.
 - **Procedural cart fallback.** `preloadCartProp()` marks the procedural singleton template with exported `markSharedGpu()` so `disposeObject3D()` on streamed presentation clones cannot free shared cart geometry/material.
 - **Exterior view / scene fog.** Global `scene.fog` (day/night + weather via `resolveSceneFog` when the camera is in cave occupancy) cannot exclude cave interior surfaces when the camera is outside — `THREE.Fog` is per-camera, not per-volume. Streamed cave presentation opts out: shared heightfield/mouth materials set `fog: false`; `exemptCavePresentationFromSceneFog()` runs on each assembled `cave:*` group (clones `sharedGpu` materials on prop/rock meshes so GLTF cache is not mutated).
+- **Support / torch polish.** Stage D lays megakit supports flat (`CAVE_SUPPORT_LAY_FLAT_ROLL`) with a horizontal procedural fallback. Lantern anchors use `passageWallCandidates` `tight` bias; cave torches add `CAVE_TORCH_YAW_OFFSET` on the presentation pivot.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

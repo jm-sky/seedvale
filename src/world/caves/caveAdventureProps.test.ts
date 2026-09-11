@@ -12,6 +12,8 @@ import {
   adventurePropPlacementsFromAnchors,
   CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT,
   CAVE_ADVENTURE_PROPS_GROUP_NAME,
+  CAVE_SUPPORT_LAY_FLAT_ROLL,
+  CAVE_TORCH_YAW_OFFSET,
   createCaveAdventurePropsGroup,
   getCaveAdventurePropTemplates,
   preloadCaveAdventurePropTemplates,
@@ -126,13 +128,13 @@ describe('cave adventure props (plan world-terrain-020 Stage D)', () => {
     const prepared = new THREE.Group()
     prepared.position.set(0.5, 0.25, -0.3)
     prepared.add(new THREE.Object3D())
-    const supportAnchor = byRole(FIXTURE_ANCHORS, 'support')[0]!
-    const customTpl = { ...tpl, support: prepared }
-    const { group } = createCaveAdventurePropsGroup([supportAnchor], customTpl)
+    const wagonAnchor = byRole(FIXTURE_ANCHORS, 'wagon')[0]!
+    const customTpl = { ...tpl, cart: prepared }
+    const { group } = createCaveAdventurePropsGroup([wagonAnchor], customTpl)
     const pivot = group.children[0] as THREE.Group
-    expect(pivot.position.x).toBe(supportAnchor.x)
-    expect(pivot.position.y).toBe(supportAnchor.y)
-    expect(pivot.position.z).toBe(supportAnchor.z)
+    expect(pivot.position.x).toBe(wagonAnchor.x)
+    expect(pivot.position.y).toBe(wagonAnchor.y)
+    expect(pivot.position.z).toBe(wagonAnchor.z)
     const cloneRoot = pivot.children[0]!
     expect(cloneRoot.position.x).toBe(0.5)
     expect(cloneRoot.position.y).toBe(0.25)
@@ -142,12 +144,43 @@ describe('cave adventure props (plan world-terrain-020 Stage D)', () => {
     cloneRoot.getWorldPosition(world)
     const localOffset = new THREE.Vector3(0.5, 0.25, -0.3)
     localOffset.applyEuler(new THREE.Euler(0, pivot.rotation.y, 0))
-    const expectedOnce = new THREE.Vector3(supportAnchor.x, supportAnchor.y, supportAnchor.z).add(localOffset)
+    const expectedOnce = new THREE.Vector3(wagonAnchor.x, wagonAnchor.y, wagonAnchor.z).add(localOffset)
     const doubleOffset = localOffset.clone().multiplyScalar(2).add(
-      new THREE.Vector3(supportAnchor.x, supportAnchor.y, supportAnchor.z),
+      new THREE.Vector3(wagonAnchor.x, wagonAnchor.y, wagonAnchor.z),
     )
     expect(world.distanceTo(expectedOnce)).toBeLessThan(1e-5)
     expect(world.distanceTo(doubleOffset)).toBeGreaterThan(0.01)
+  })
+
+  it('lays support props flat with a roll orientation group', () => {
+    const supportAnchor = byRole(FIXTURE_ANCHORS, 'support')[0]!
+    const { group } = createCaveAdventurePropsGroup([supportAnchor])
+    const pivot = group.children[0] as THREE.Group
+    const orientation = pivot.children[0] as THREE.Group
+    expect(orientation.name).toBe('cave-adventure-prop-orientation')
+    expect(orientation.rotation.z).toBeCloseTo(CAVE_SUPPORT_LAY_FLAT_ROLL)
+  })
+
+  it('applies torch yaw offset on lantern pivots', () => {
+    const lantern = byRole(FIXTURE_ANCHORS, 'lantern')[0]!
+    const { group } = createCaveAdventurePropsGroup([lantern])
+    const pivot = group.children[0] as THREE.Group
+    expect(pivot.rotation.y).toBeCloseTo(lantern.yaw + CAVE_TORCH_YAW_OFFSET)
+  })
+
+  it('returns lit village torches with primed fire particle buffers', () => {
+    const lantern = byRole(FIXTURE_ANCHORS, 'lantern')[0]!
+    const { lanternTorches } = createCaveAdventurePropsGroup([lantern])
+    expect(lanternTorches).toHaveLength(1)
+    let points: THREE.Points | null = null
+    lanternTorches[0]!.object.traverse((obj) => {
+      if ((obj as THREE.Points).isPoints && !points) points = obj as THREE.Points
+    })
+    expect(points).not.toBeNull()
+    const pos = points!.geometry.getAttribute('position') as THREE.BufferAttribute
+    let sum = 0
+    for (let i = 0; i < pos.count * 3; i++) sum += Math.abs(pos.array[i]!)
+    expect(sum).toBeGreaterThan(0)
   })
 
   it('materializes lantern anchors as torch-style lights, not settlement lantern glb', () => {

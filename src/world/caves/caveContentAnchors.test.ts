@@ -8,7 +8,9 @@ import type { LargeCaveSite } from '../largeCaves'
 import type { CaveTopology } from './caveTopology'
 import {
   ADVENTURE_DEEP_CHAMBER_NODE_ID,
+  ADVENTURE_DEEP_PASSAGE_NODE_ID,
   ADVENTURE_FINAL_CHAMBER_NODE_ID,
+  ADVENTURE_FINAL_PASSAGE_NODE_ID,
   ADVENTURE_SIDE_CHAMBER_NODE_ID,
   buildAdventureCaveTopology,
 } from './adventureTopology'
@@ -21,6 +23,10 @@ import {
   passageWallContentCandidates,
   resolveCaveContentAnchors,
 } from './caveContentAnchors'
+import {
+  lateralDistance,
+  pointAlongSegment,
+} from './caveHeightfieldPlacement'
 import {
   buildCaveHeightfieldRepresentation,
   type CaveHeightfieldRepresentation,
@@ -223,6 +229,31 @@ describe('cave content anchors (plan world-terrain-020 Stage B)', () => {
       topology: FIXTURE.topology,
       heightfield: FIXTURE.heightfield,
     })).toEqual([])
+  })
+
+  it('places lantern anchors on tight passage walls away from the centreline', () => {
+    const anchors = resolveCaveContentAnchors({
+      archetype: 'adventure',
+      topology: FIXTURE.topology,
+      heightfield: FIXTURE.heightfield,
+    })
+    const lanterns = byRole(anchors, 'lantern')
+    expect(lanterns.length).toBe(2)
+    const specs = [
+      { nodeId: ADVENTURE_DEEP_PASSAGE_NODE_ID, t: 0.55 },
+      { nodeId: ADVENTURE_FINAL_PASSAGE_NODE_ID, t: 0.45 },
+    ]
+    for (const anchor of lanterns) {
+      const spec = anchor.id.endsWith(':lantern:0') ? specs[0]! : specs[1]!
+      const { nodeId, t } = spec
+      const node = FIXTURE.topology.nodes.find((n) => n.id === nodeId)!
+      const seg = FIXTURE.topology.segments.find((s) => s.to === nodeId)!
+      const from = FIXTURE.topology.nodes.find((n) => n.id === seg.from)!
+      const halfWidth = Math.min(node.targetWidth, from?.targetWidth ?? node.targetWidth) / 2
+      const { point, heading } = pointAlongSegment(seg, t)
+      const lateral = lateralDistance(anchor.x, anchor.z, point, heading)
+      expect(lateral).toBeGreaterThanOrEqual(halfWidth * 0.35)
+    }
   })
 
   it('does not freeze callers into mutating the returned descriptors', () => {

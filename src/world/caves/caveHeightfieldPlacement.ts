@@ -161,16 +161,25 @@ export function chamberCandidates(
  *
  * @domain world-terrain
  */
+export type PassageWallBias = 'default' | 'tight'
+
+const PASSAGE_WALL_FRACTIONS: Record<PassageWallBias, readonly number[]> = {
+  default: [0.42, 0.32, 0.52, 0.24, 0.18],
+  /** Wall-hugging placements (cave torches) — stay off the walkable centreline. */
+  tight: [0.58, 0.52, 0.65, 0.48, 0.4],
+}
+
 export function passageWallCandidates(
   seg: CaveTopologySegment,
   t: number,
   preferredSign: 1 | -1,
   halfWidth: number,
   limit: number,
+  wallBias: PassageWallBias = 'default',
 ): { candidates: Xz[], along: Xz, heading: Heading } {
   const { point, heading } = pointAlongSegment(seg, t)
   const perp = { dx: -heading.dz * preferredSign, dz: heading.dx * preferredSign }
-  const fractions = [0.42, 0.32, 0.52, 0.24, 0.18]
+  const fractions = PASSAGE_WALL_FRACTIONS[wallBias]
   const out: Xz[] = []
   for (const f of fractions) {
     const o = halfWidth * f

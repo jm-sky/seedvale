@@ -19,6 +19,7 @@ import {
   createCaveAdventurePropsGroup,
   getCaveAdventurePropTemplates,
 } from './caveAdventureProps'
+import type { VillageTorch } from '../../settlement/houseLighting'
 import {
   buildHeightfieldMeshBuffers,
   buildMouthUndersideMaskBuffers,
@@ -257,6 +258,8 @@ export type CaveHeightfieldPresentation = {
   adventurePropCount: number
   /** PointLights attached under lantern props (bounded per cave). */
   adventureLanternLightCount: number
+  /** Lit torches under adventure props — requires per-frame `update(dt)`. */
+  adventureLanternTorches: readonly VillageTorch[]
   /** Main-thread assembly time, mesh buffers included. */
   assembleMs: number
 }
@@ -320,6 +323,7 @@ export function createCaveHeightfieldPresentation(input: {
 
   let adventurePropCount = 0
   let adventureLanternLightCount = 0
+  let adventureLanternTorches: readonly VillageTorch[] = []
   if (input.adventurePropAnchors.length > 0) {
     const adventureProps = createCaveAdventurePropsGroup(
       input.adventurePropAnchors,
@@ -329,6 +333,7 @@ export function createCaveHeightfieldPresentation(input: {
       group.add(adventureProps.group)
       adventurePropCount = adventureProps.propCount
       adventureLanternLightCount = adventureProps.lanternLightCount
+      adventureLanternTorches = adventureProps.lanternTorches
     }
   }
 
@@ -343,6 +348,7 @@ export function createCaveHeightfieldPresentation(input: {
     interiorRockCount,
     adventurePropCount,
     adventureLanternLightCount,
+    adventureLanternTorches,
     assembleMs: now - t0,
   }
 }
