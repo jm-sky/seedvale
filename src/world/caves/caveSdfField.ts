@@ -20,6 +20,7 @@
 
 import type { CaveEntrance } from '../caveVolume'
 import type { CaveTopology, CaveTopologySegment } from './caveTopology'
+import { smin } from './caveMath'
 import {
   type CaveMouthGeometry,
   deriveMouthGeometry,
@@ -77,12 +78,6 @@ export function ellipsoidSDF(x: number, y: number, z: number, p: VoidPrimitive):
   const len = Math.sqrt(dx * dx + dy * dy + dz * dz)
   const scale = Math.min(p.rx, p.ry, p.rz)
   return (len - 1) * scale
-}
-
-export function smin(a: number, b: number, k: number): number {
-  if (k <= 0) return Math.min(a, b)
-  const h = Math.max(k - Math.abs(a - b), 0) / k
-  return Math.min(a, b) - h * h * k * 0.25
 }
 
 /** Smooth-union k for the doorway sleeve — smaller than passage `smoothK`

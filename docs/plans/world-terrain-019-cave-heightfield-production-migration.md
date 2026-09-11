@@ -1,7 +1,7 @@
 # Plan: Cave Heightfield Production Migration
 
 **Created:** 2026-09-11  
-**Status:** `planned` 📋  
+**Status:** `in progress` 🔄  
 **Priority:** high · **Effort:** XL  
 **Depends on:** ~~world-terrain-018~~  
 **Domain:** `world-terrain`  
@@ -10,7 +10,20 @@
 **Tags:** `caves` `heightfield` `migration` `collision` `camera` `streaming`  
 **Roadmap:** -
 
-## 1. Cel
+## Implementation status (2026-09-11)
+
+**Implemented + technically verified:** Milestone A — Production representation extraction.
+
+- Production owns `CaveHeightfieldRepresentation` under `src/world/caves/`.
+- `createCaves()` builds one heightfield per accepted topology from the deterministic walk-surface sampler (`sampleBaseHeight - mouthCarveDepth`).
+- SDF remains the production presentation, gameplay, collision and camera authority.
+- Debug `?caveHeightfieldTest` reuses the production representation; it does not keep a second algorithm copy.
+
+**Not implemented:** Milestones B–E (presentation mesh, terrain cutout, shared spatial API, gameplay/collision/camera switch, SDF cleanup).
+
+**Browser/gameplay-verified:** not required for Milestone A.
+
+---## 1. Cel
 
 Zastąpić produkcyjną reprezentację Cave V2 opartą o lokalny 3D SDF sprawdzoną reprezentacją heightfield opartą o:
 

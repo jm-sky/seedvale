@@ -35,7 +35,7 @@ const STATION_SAFETY = 0.35
 //
 // Representation parameters (grid cell size, rim profile, noise) deliberately
 // do NOT live here — they belong to `DEFAULT_HEIGHTFIELD_CONFIG` and the
-// cross-section constants in `caveHeightfieldRepresentation.ts`.
+// cross-section constants in `src/world/caves/caveHeightfieldRepresentation.ts`.
 
 const ENTRANCE_WIDTH = 3
 const ENTRANCE_HEIGHT = 2.6

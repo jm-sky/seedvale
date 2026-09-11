@@ -2,7 +2,8 @@
 
 **Reviewed:** 2026-09-11  
 **Plan:** `docs/plans/world-terrain-019-cave-heightfield-production-migration.md`  
-**Baseline:** `main` at `81f9b1a550e67a03b8b3414eabed81a853a259ff`
+**Baseline:** `main` at `81f9b1a550e67a03b8b3414eabed81a853a259ff`  
+**Milestone A implemented:** 2026-09-11 — see “Milestone A — implemented” below. SDF remains runtime authority.
 
 These notes are a focused implementation handoff, not a restatement of the plan. Current code is authoritative. The final `world-terrain-018` spike differs materially from several earlier notes: production migration must copy the final floor/ceiling-convergence model, not the superseded binary-footprint/vertical-wall approach.
 
@@ -10,15 +11,16 @@ These notes are a focused implementation handoff, not a restatement of the plan.
 
 Production cave ownership is concentrated in `src/world/createCaves.ts`.
 
-Current construction chain:
+Current construction chain (after Milestone A):
 
 ```text
 pickLargeCaveSites()
   -> buildProductionCaveTopology()
   -> buildCaveSdfRepresentation()
+  -> buildCaveHeightfieldRepresentation()   // retained, not yet authority
   -> buildCaveSdfColumnIndex()
   -> buildCaveSdfColliders()
-  -> CaveRuntime { topology, definition, representation, index, colliders }
+  -> CaveRuntime { topology, definition, heightfield, representation, index, colliders }
 ```
 
 Presentation is separately relevance-streamed through `createCaveStreamingController()` and the SDF-only extraction client/worker. Gameplay queries remain available even when presentation is inactive.
@@ -214,6 +216,98 @@ Do not remove or switch:
 - current `createCaves()` SDF consumers.
 
 Any neutral-helper extraction should be behavior-preserving for SDF and covered by existing tests.
+
+### Milestone A — implemented (2026-09-11)
+
+Implemented on `main` after the recon above. Current code remains authoritative for B.
+
+#### What landed
+
+Production owns a pure heightfield representation and builds it up front for every accepted topology. SDF remains the live presentation / gameplay / collision / camera path. The debug harness no longer contains a second copy of the heightfield algorithm.
+
+#### Final files and symbols
+
+Production representation (`src/world/caves/caveHeightfieldRepresentation.ts`):
+
+- `CaveHeightfieldRepresentation` — grid + `floorY` / `ceilY` / cached `surfaceY` / `coreT`
+- `buildCaveHeightfieldRepresentation(topology, walkSurfaceAt, config?)` → `CaveHeightfieldBuildResult`
+- `CaveHeightfieldConfig` / `DEFAULT_HEIGHTFIELD_CONFIG`
+- `HeightfieldStation`, `HeightfieldSample`, `SurfaceSampler`
+- `resampleSegmentStations()`, `buildEntranceInfluence()`, `buildChamberLobes()`, `crossSectionAt()`
+- `sampleHeightfieldAt()`, `mouthOpeningAt()`, `heightfieldGapGradient()`
+- `heightfieldNodeGap()` / `heightfieldNodeOpenSky()` / node index/position helpers
+- internal shape constants unchanged from the spike (`BETA`, `NF`, `NC`, `KAPPA`, rim band, …)
+
+Neutral helpers extracted from SDF ownership:
+
+- `src/world/caves/caveMath.ts` — `smin`, `smax`. `caveSdfField.ts` now imports `smin` from here and no longer exports it.
+- `src/world/caves/caveSurface.ts` — `SURFACE_CLIP_EPS`. `caveSdfQuery.ts` imports and re-exports it so existing SDF/debug callers keep compiling. Production heightfield imports the constant from `caveSurface.ts`, not from `caveSdfQuery.ts`.
+
+Production construction (`src/world/createCaves.ts`):
+
+```text
+pickLargeCaveSites()
+  -> buildProductionCaveTopology()
+  -> buildCaveSdfRepresentation()
+  -> buildCaveHeightfieldRepresentation(topology, walkSurfaceAt)
+  -> buildCaveSdfColumnIndex()
+  -> buildCaveSdfColliders()
+  -> CaveRuntime { topology, definition, heightfield, representation, index, colliders }
+```
+
+`walkSurfaceAt(x,z) = chunkManager.sampleBaseHeight(x,z) - mouthCarveDepth(x,z, topology.entrance)`.
+
+`CaveRuntime.heightfield` is retained and unused by queries/presentation in A. Boot mark: `cave.heightfield`.
+
+#### Debug reuse
+
+`src/debug/caves/caveHeightfieldRepresentation.ts` is a re-export shim only. Spike names (`CaveHeightfield`, `buildCaveHeightfield`) alias the production types/functions so the harness, mesh, traversal and walker keep compiling without a second algorithm.
+
+Debug modules that now consume production representation through that shim:
+
+- `src/debug/caves/caveHeightfieldMesh.ts`
+- `src/debug/caves/caveHeightfieldTraversal.ts`
+- `src/debug/caves/caveHeightfieldWalkWorld.ts`
+- `src/debug/caves/caveHeightfieldRepresentation.test.ts` (mesh-only)
+- `src/debug/createCaveHeightfieldTestScene.ts`
+
+#### Tests
+
+Moved production-relevant pure tests to `src/world/caves/caveHeightfieldRepresentation.test.ts` (spike fixtures plus a `buildProductionCaveTopology` walk-surface seam test). Debug file keeps mesh/underside-mask tests only. Added `caveMath.test.ts` for the `smin(a,a,k)=a-k/4` identity.
+
+#### Deviations from the pre-A recon
+
+- `SURFACE_CLIP_EPS` lives in a new tiny `caveSurface.ts` rather than being folded into `mouthCarve.ts` or `clipBelowSurface.ts`. Those modules stay mouth-geometry and presentation-triangle owners. SDF query re-exports the constant to avoid churning existing callers.
+- `smin` is no longer re-exported from `caveSdfField.ts`. The only pre-A importer was the debug heightfield.
+- Debug mesh test “flat 4 m plane 0.5 m under the entrance” was already failing on pre-A `main`: mesh uses `UNDER_ENTRANCE_SIZE = 6` and `UNDER_ENTRANCE_DROP = 1`. The kept debug assertion was aligned to those constants. Mesh code itself was not changed.
+- `docs/STATE.md` notes that production now retains a parallel heightfield; SDF is still authority.
+
+#### Checks (A)
+
+```text
+vitest: caveHeightfieldRepresentation (production + debug mesh), caveMath, caveSdfField, caveSdfQuery, caveSdfColliders, caveSdfExtraction, caveHeightfieldTraversal, cavePresentationLifecycle
+vue-tsc --noEmit
+eslint .
+pnpm run build
+```
+
+No browser verification. `pnpm docs:sync` was not run.
+
+#### Handoff for Milestone B
+
+Start from this implemented state, not from the pre-A recon alone.
+
+Focused recon for B:
+
+- `createCaves.ts`: `attachPresentation()`, `disposePresentation()`, `presentationJobs`, `createCaveStreamingController()`, `createCaveExtractionClient()`, `CaveRuntime.heightfield` (already built).
+- `src/debug/caves/caveHeightfieldMesh.ts` — still the authoritative mesh/mask source; it already imports production field helpers via the debug shim.
+- `src/world/caves/caveSurface.ts` — use `SURFACE_CLIP_EPS` from here (or the `caveSdfQuery` re-export) for ceiling clip / mouth opening.
+- Terrain: `ChunkManager` / `buildChunkGeometry()` still emit a full indexed plane; mouth is still only `modifyTerrain()` height recess.
+- Do not switch `queryGround` / `occupancyAt` / `queryInterior` / colliders.
+
+`CaveRuntime.heightfield` is the retained representation B should mesh. Reconstructing the walk-surface sampler as `sampleBaseHeight - mouthCarveDepth(entrance)` matches A and the field's cached `surfaceY`. `mouthOpeningAt(field, walkSurfaceAt, x, z)` is the shared opening contour.
+
+SDF extraction/worker/mesh files stay in place through B.
 
 ## Milestone B — Production presentation mesh + real terrain entrance
 

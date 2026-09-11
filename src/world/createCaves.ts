@@ -14,6 +14,10 @@ import {
   createCaveExtractionWorkerRunner,
 } from './caves/caveExtractionClient'
 import {
+  buildCaveHeightfieldRepresentation,
+  type CaveHeightfieldRepresentation,
+} from './caves/caveHeightfieldRepresentation'
+import {
   type CaveStreamingStats,
   createCaveStreamingController,
 } from './caves/cavePresentationLifecycle'
@@ -39,6 +43,7 @@ import { createCaveSpikeMaterial } from './caves/caveSpikeMaterial'
 import {
   MOUTH_INTERIOR_ALONG,
   mouthAlong,
+  mouthCarveDepth,
   mouthCarveDiscs,
   mouthLateral,
 } from './caves/mouthCarve'
@@ -101,6 +106,8 @@ export type Caves = {
 type CaveRuntime = {
   topology: CaveTopology
   definition: CaveDefinition
+  heightfield: CaveHeightfieldRepresentation
+  // retained until world-terrain-019 D/E:
   representation: CaveSdfSpatialRepresentation
   index: CaveSdfColumnIndex
   colliders: readonly Collider[]
@@ -125,25 +132,29 @@ function colliderOwnerKey(caveId: string): string {
 }
 
 /**
- * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B4):
- * deterministic production `CaveTopology`s, retained SDF representations and
- * derived column indexes (cheap, all computed up front), streamed SDF
- * presentation (async extraction) and occupancy-derived cave-wall collision
- * for whichever caves are near the player. Collider registration is
- * relevance-scoped and does not wait for render mesh completion.
+ * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B4, plus
+ * world-terrain-019 Milestone A): deterministic production `CaveTopology`s,
+ * retained heightfield representations (not yet gameplay/presentation
+ * authority), retained SDF representations and derived column indexes
+ * (cheap, all computed up front), streamed SDF presentation (async
+ * extraction) and occupancy-derived cave-wall collision for whichever caves
+ * are near the player. Collider registration is relevance-scoped and does
+ * not wait for render mesh completion.
  *
  * Placement reuses `pickLargeCaveSites()` unchanged; topology generation and
  * terrain acceptance are owned by `productionTopology.ts`. Gameplay
  * floor/containment is the SDF column index (`caveSdfQuery.ts`), not
  * `CaveVolume`. Wall colliders are derived from strict occupancy
  * (`caveSdfColliders.ts`). `topologyToCaveDefinition` remains only for
- * `definitions()` / location catalog / streaming bounds until B5.
+ * `definitions()` / location catalog / streaming bounds until later
+ * world-terrain-019 milestones.
  *
  * Same lifecycle as `WorldBundle` (create/dispose alongside it, never
  * survives a rebuild).
  *
  * @system caves
- * @role Owns cave topologies, retained SDF/column-index gameplay space,
+ * @role Owns cave topologies, retained heightfield representations (not yet
+ *  gameplay/presentation authority), retained SDF/column-index gameplay space,
  *  streamed interior presentation (async SDF extraction), occupancy-derived
  *  wall colliders, and strict occupancy queries; `PlayerController` ground
  *  goes through `queryGround` and camera through `occupancyAt`. `queryInterior`
@@ -208,6 +219,15 @@ export function createCaves(
   ))
   bootMarkEnd('cave.sdfRepresentation')
 
+  bootMark('cave.heightfield')
+  const heightfields = accepted.map(({ topology }) => (
+    buildCaveHeightfieldRepresentation(
+      topology,
+      (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance),
+    ).heightfield
+  ))
+  bootMarkEnd('cave.heightfield')
+
   bootMark('cave.columnIndex')
   const indexes = accepted.map(({ topology }, i) => (
     buildCaveSdfColumnIndex(representations[i]!, topology, analyticSurfaceHeight)
@@ -222,6 +242,7 @@ export function createCaves(
     v2ByCaveId.set(topology.caveId, {
       topology,
       definition: topologyToCaveDefinition(topology),
+      heightfield: heightfields[i]!,
       representation,
       index,
       colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation, caveMouthColliderFilter(topology)),
