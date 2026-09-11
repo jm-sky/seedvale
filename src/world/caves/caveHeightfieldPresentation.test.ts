@@ -77,7 +77,8 @@ describe('createMouthRocks (presentation only)', () => {
     const field = build('basic')
     const rocks = createMouthRocks(field, openingOf(field), walk)
     expect(rocks.children.length).toBeGreaterThanOrEqual(8)
-    expect(rocks.children.length).toBeLessThanOrEqual(24)
+    // max: ROCK_ALONGS.length × 2 sides + 2 outer anchors
+    expect(rocks.children.length).toBeLessThanOrEqual(26)
   })
 
   it('puts the larger anchor rocks on the doorway sides', () => {
