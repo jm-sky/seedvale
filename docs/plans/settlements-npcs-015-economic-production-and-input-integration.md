@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
-**Depends on:** settlements-npcs-014  
+**Depends on:** ~~settlements-npcs-014~~  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `production`  
 **Tags:** `production` `inventory` `economic-stock`  
