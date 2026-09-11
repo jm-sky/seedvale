@@ -1,94 +1,403 @@
 # Implementation notes: fauna-019 real cave habitats and animal home navigation
 
-Reviewed against `main` on 2026-09-08.
+Reviewed against `main` on 2026-09-11 after the production heightfield cutover.
 
-> **Dependency update 2026-09-11.** `world-terrain-008` is `done`. The remaining production cave spatial contract is `world-terrain-019`. Reconfirm current `Caves` APIs at implementation time; do not wait for closed 008 B4/B5 work.
+## Current truth
 
-## Current-code constraints
+### `src/world/createCaves.ts`
 
-- `world-terrain-019` is the open production-migration dependency. On the 2026-09-08 recon, `src/world/createCaves.ts` still built `v2ByCaveId` from `buildSpikeTestTopology()` and derived a transitional `CaveDefinition` through `topologyToCaveDefinition()`. Reconfirm current `main` before implementing — Cave V2/SDF has since landed more of the production path, but heightfield is not yet the production source of truth.
-- The current `Caves` API is not sufficient for fauna-019: `contains(x,y,z)` is 3D, but `sampleFloor(x,z)` / `sampleCeiling(x,z)` are 2.5D and choose across all cave volumes. B2's production Y-aware spatial contract is therefore a real blocker for the final cave-navigation seam. Do **not** add a fauna-local compatibility layer around `CaveVolume` or active cave meshes; finish/consume the world-owned B2 contract instead.
-- Cave presentation is streamed around the observer, while definitions/volumes are precomputed independently of presentation. Preserve that separation: animal simulation must never call `Caves.update()`, inspect `scene`, or force cave mesh activation.
+`world-terrain-019` is now `done`. Production no longer has the transitional SDF runtime described by the old notes.
 
-## Recommended integration shape
+Each accepted cave has a retained `CaveRuntime` containing:
 
-### World-owned cave query
+- `archetype: CaveArchetype`,
+- `topology: CaveTopology`,
+- legacy/catalog `definition: CaveDefinition`,
+- retained `heightfield: CaveHeightfieldRepresentation`,
+- `walkSurfaceAt: SurfaceSampler`,
+- content/interior-rock metadata.
 
-Extend the production Cave V2 API with a small render-independent, cave-scoped lookup usable by arbitrary entities. It should resolve by stable `caveId` and expose only what fauna needs, conceptually:
+`createCaves()` constructs topology + heightfield up front. Presentation is streamed separately and may be absent while gameplay queries remain valid.
 
-- stable cave identity;
-- entrance transition / mouth anchor;
-- deterministic interior habitat-safe anchor (prefer the semantic main chamber, derived from `CaveTopology`);
-- local Y-aware containment / walkable-floor query for a known cave;
-- enough topology/route semantics to move between interior anchor and entrance without scanning all caves.
+Current public `Caves` spatial API:
 
-Do not expose `CaveTopology` internals directly to `AnimalAgent` if a narrower world query can own the interpretation. Coordinates may be cached by fauna after resolving the stable cave reference, but `caveId` remains authoritative.
+- `queryGround(x,y,z)` — Y-aware heightfield ground, but **player-stateful** because `createCaves()` applies underground-miss hysteresis. Do not share this function between autonomous animals.
+- `occupancyAt(x,y,z)` — strict, stateless heightfield occupancy.
+- `resolveHorizontal(x,z,y,radius,entityHeight)` — entity-neutral horizontal containment over production heightfields.
+- `queryInterior(...)` — hysteretic player/camera interior signal; not an animal habitat-state API.
+- `contains(...)` — shorthand over stateless occupancy.
+- `sampleFloor(x,z)` / `sampleCeiling(x,z)` — Y-blind global convenience selecting a cave sample; not suitable as the authoritative cave-resident movement seam.
+- `archetypeOf(caveId)` / `contentAnchorsOf(caveId)` — examples that stable cave-scoped lookup already fits the `Caves` ownership boundary.
 
-### Composition root
+The missing piece for fauna-019 is therefore **not another spatial representation**. It is a narrow cave-scoped semantic/traversal API over retained `CaveRuntime`.
 
-`src/app/worldBundle.ts::buildFauna()` is the correct wiring boundary. It already adapts `ChunkManager` into narrow sampler/query functions before calling `createFauna()`. Pass the cave-spatial contract here in the same style; do not import `createCaves.ts`, `ChunkManager`, or Three.js cave presentation from `AnimalAgent`.
+### `src/world/caves/caveHeightfieldQuery.ts`
 
-Check build ordering while implementing: the cave query must exist before cave-backed habitats are resolved, but fauna should retain the current startup property of not waiting for cave presentation geometry.
+Useful existing pure/stateless primitives:
 
-### Fauna habitat identity
+- `heightfieldGroundColumn(field, surfaceHeightAt, x, z)`,
+- `queryHeightfieldGround(field, surfaceHeightAt, x, y, z)`,
+- `heightfieldOccupancyAt(...)`,
+- `heightfieldStandingClearance(entityHeight)`,
+- `resolveHeightfieldHorizontal(field, x, z, y, radius, minGap)`.
 
-Keep habitat binding separate from `PreySpawner`. `PreySpawner` currently owns population/respawn lifecycle, not physical-place identity. A cave-backed binding should be a small fauna-owned record/reference resolving a stable world cave into an interior home anchor and entrance route.
+These should remain the one spatial implementation. A new public cave-scoped API should delegate to them for the known `CaveRuntime`, not reimplement floor/containment logic in fauna.
 
-`fauna-018` is still only `planned`. fauna-019 should not depend on persistent-individual storage to define the binding. Conversely, define the binding so fauna-018 can later derive a persistent occupant id from stable habitat identity without persisting cave coordinates/topology.
+Production heightfield is deliberately 2.5D: one walkable interval per `(x,z)`. The important Y-aware distinction for fauna-019 is surface-vs-cave entity context (including a surface entity above a tunnel), not hypothetical multi-level cave support.
 
-## AnimalAgent changes to reuse existing behaviour
+### `src/world/caves/caveTopology.ts`
 
-- Reuse the existing `home`, species `roaming`, hunger/thirst seeking and `AnimalTrip`/`AnimalDef.trips.water` lifecycle from fauna-016. Do not add a cave-specific behaviour FSM.
-- Current `ROAM_RADIUS = 50` is a separate hard home-relative filter used by ordinary food/water/forage target search. An interior cave home will make valid surface targets fail this check. Replace the implicit "distance from home means allowed journey" rule with explicit journey semantics: local roaming remains home-bounded, while committed need/trip/home-return movement may legally leave that band.
-- Keep the existing runaway/chase guards; only exempt intentional committed journeys. Avoid simply increasing `ROAM_RADIUS`, which would change all wild-fauna search behaviour globally.
-- Movement currently receives a surface `HeightSampler` from `buildFauna()` (`chunkManager.sampleHeight`). Introduce one shared movement-ground seam that can select surface or the known cave's Y-aware floor according to route/location context. All autonomous modes that ultimately snap/check movement must use the same seam so wander, food/water seeking, trip movement and return-home cannot disagree.
-- `waterTraversal.ts` / `AnimalAgent.isWalkable()` already centralize physical water traversability. Preserve that ownership; cave navigation should compose with it after the animal reaches surface, not duplicate water checks.
+`CaveTopology` already provides the semantic route graph:
 
-## Route semantics
+```text
+entrance
+nodes[]      { id, kind, position, targetWidth, targetHeight }
+segments[]   { from, to, centerline[] }
+features[]
+```
 
-For the first L1 cave, prefer a small route abstraction over general navmesh/pathfinding. The minimum useful route is:
+`productionTopology.ts` natural caves contain `entrance → transition → passage → widening-bend → chamber`, plus optional branch. Adventure caves use the same topology model.
 
-`interior home -> topology-derived interior route -> entrance -> surface target`
+This is the route source for fauna. Do not infer paths from heightfield pixels, presentation geometry or collider traces.
 
-and the reverse for return-home.
+## Recommended world contract
 
-The route should be derived from Cave V2 topology/spatial semantics, not hard-coded quest/bear waypoints. If B2 exposes only floor queries but no reliable semantic path from main chamber to mouth, extend the world cave contract there rather than making fauna infer a route from render geometry.
+Keep this under world/world-terrain ownership, exposed through `Caves` or a narrow type returned from it.
 
-Threat/combat interruption should continue to use the existing AnimalAgent priority system. After an interrupted journey becomes valid again, recompute/continue from stable habitat + destination intent; transient path nodes do not need persistence.
+Conceptual shape:
 
-## Decorative den rename
+```ts
+export type CaveTraversalPoint = {
+  x: number
+  y: number
+  z: number
+}
 
-`src/fauna/createFauna.ts::SPAWNER_SPECS` still contains `{ type: 'cave', kind: 'bear', ... }`, implemented with the decorative `createCaveMouth()` prop. Rename this lightweight habitat type to `den`/`rockDen` (choose one consistently across `PreySpawner['type']`, marker APIs, persistence snapshots/tests and UI labels) before introducing real cave-backed semantics.
+export type CaveTraversalDescriptor = {
+  caveId: string
+  entrance: CaveTraversalPoint & { yaw: number }
+  home: CaveTraversalPoint
+  routeToEntrance: readonly CaveTraversalPoint[]
+}
+```
 
-This is a naming/identity migration only: do not change thicket/wolf-den placement or spawner lifecycle as collateral work. Verify saved spawner-state compatibility because the spawner type participates in stable spawner ids; changing the string blindly can orphan existing persisted lifecycle state.
+Suggested operations:
 
-## Bear water trips
+```ts
+resolveTraversal(caveId: string): CaveTraversalDescriptor | null
+queryGroundIn(caveId: string, x: number, y: number, z: number): CaveGroundHit | null
+resolveHorizontalIn(
+  caveId: string,
+  x: number,
+  z: number,
+  y: number,
+  radius: number,
+  entityHeight: number,
+): { x: number; z: number }
+```
 
-`AnimalDef.trips.water` is already declarative and currently used by deer/stag. Add bear configuration there; do not branch on `kind === 'bear'` inside trip logic. Choose `searchRadius` large enough to reach useful surface water from a cave entrance, but do not use it as a substitute for cave-route semantics.
+Names are flexible. Contracts are not:
 
-## Determinism and persistence
+- resolve runtime with existing `v2ByCaveId.get(caveId)`,
+- remain stateless per entity,
+- work without presentation activation,
+- do not expose/mutate raw `CaveRuntime` or raw heightfield from fauna,
+- avoid scanning all caves once habitat identity is known.
 
-- Cave topology, entrance, interior anchor and route skeleton should reconstruct from world seed + stable cave identity; do not add them to `SaveData`.
-- Ordinary wild animals remain unpersisted under fauna-019.
-- fauna-018 can later persist a selected cave resident through existing `AnimalAgent.snapshot()/hydrate()` plus stable habitat identity. Do not persist transient route/path state.
-- Note the existing fauna limitation from `docs/state/fauna.md`: ordinary movement target selection uses unseeded randomness. fauna-019 does not need to solve this for ephemeral wildlife, but do not make stable cave/habitat identity depend on those random choices.
+`Caves.resolveHorizontal(...)` may remain the global player-facing convenience; cave residents should prefer the scoped variant during their interior route because they already know the habitat cave.
 
-## Tests worth adding
+## Resolving the interior home
 
-Prefer pure tests around new contracts rather than constructing a Three.js-heavy `AnimalAgent` where avoidable:
+Use topology semantics first, production heightfield second.
 
-- stable `caveId` resolves the same interior habitat anchor without presentation activation;
-- Y-aware cave-floor selection is scoped to the intended cave/route and does not use global `Math.min`-style floor selection;
-- local roaming remains bounded while an explicit need/trip journey can cross the old `ROAM_RADIUS` boundary;
-- route crosses interior -> entrance -> surface and reverse, ending at the actual interior home anchor;
-- decorative den rename preserves restored spawner lifecycle identity or includes an explicit migration;
-- bear receives water-trip behaviour through `AnimalDef` configuration only.
+Recommended algorithm:
+
+1. Resolve `CaveRuntime` by `caveId`.
+2. Pick deterministic semantic chamber candidate:
+   - prefer node `id === 'chamber'` where present;
+   - otherwise choose a deterministic entrance-connected `kind === 'chamber'` candidate from the topology graph.
+3. Use the node X/Z as semantic intent.
+4. Resolve the actual floor from that runtime's retained heightfield.
+5. Verify enough standing clearance for the intended fauna movement contract.
+6. If the preferred chamber point is not standable, deterministically inspect topology-adjacent/other chamber candidates rather than raycasting or random-searching the mesh.
+
+Do not persist the resolved coordinates. `caveId` + deterministic topology/heightfield are authoritative.
+
+## Building `routeToEntrance`
+
+Treat `CaveTopology` as a small graph.
+
+- Find a deterministic path from the selected home node to the `entrance` node.
+- Flatten the participating `segment.centerline` arrays in the correct direction.
+- Deduplicate touching endpoints.
+- For each waypoint X/Z, resolve/snap Y to that cave's production floor.
+- Store the route in one canonical direction (`home → entrance` is convenient); reverse it for return.
+
+The route is tiny and can be cached in the habitat descriptor. No A* grid/navmesh is needed for current L1 topology.
+
+If future topology creates alternate connected routes, path selection must remain deterministic (stable segment/node ordering or explicit deterministic cost/tie-break), not depend on JS object iteration accidents.
+
+## Composition root: `src/app/worldBundle.ts`
+
+Important current startup fact: caves are world-owned critical-path state; fauna is deferred into the `backgroundReady` build. That makes `Caves` available before the real `Fauna` replaces its stub.
+
+Update `buildFauna(...)` to accept the narrow cave contract (or `Caves` if keeping the adapter there), then forward only the functions/types fauna actually needs into `createFauna()`.
+
+Preferred pattern matches existing adapters:
+
+```text
+WorldBundle / Caves
+→ buildFauna adapter
+→ createFauna narrow habitat/spatial hooks
+→ AnimalAgent/modules
+```
+
+Do not import `createCaves.ts`, `ChunkManager` or Three.js cave presentation into `AnimalAgent`, `animalRoaming` or `animalForaging`.
+
+## Fauna habitat binding
+
+Add a small fauna-owned stable reference, separate from population spawners:
+
+```ts
+type AnimalHabitatBinding = {
+  habitatId: string
+  source: { kind: 'cave'; caveId: string }
+}
+```
+
+A resolved runtime companion may cache:
+
+```ts
+{
+  binding,
+  home,
+  entrance,
+  routeToEntrance,
+}
+```
+
+Do not make resolved coordinates authoritative or persistent.
+
+Keep `PreySpawner` as population/respawn ownership. A persistent cave resident from fauna-018 can use the same habitat binding without requiring a `PreySpawner` to represent the physical cave.
+
+## Current fauna movement constraints
+
+### `src/fauna/AnimalAgent.ts`
+
+`ROAM_RADIUS = 50` is still the flat movement-domain/home bound. The agent forwards this into need target selection and uses home-relative limits to prevent runaway movement.
+
+Do not increase `ROAM_RADIUS` globally for caves.
+
+Introduce an explicit journey distinction:
+
+- local roaming / opportunistic search: home-bounded as today,
+- committed need/trip movement: may leave the local band,
+- committed return-home movement: may traverse the cave route to the actual interior home.
+
+Threat/combat priority remains above ordinary journey movement. Interrupted journeys can be recomputed/resumed from stable habitat identity and destination intent.
+
+### `src/fauna/animalForaging.ts`
+
+Current foraging context receives `roamRadius` and `isWalkable`. That contract assumes surface-local search.
+
+Avoid making this module understand cave topology. Prefer:
+
+- target selection remains about resources/destinations,
+- journey/routing layer decides how a cave resident reaches a valid surface target,
+- committed target validation can use explicit journey allowance instead of pretending the target lies inside `ROAM_RADIUS`.
+
+If a minimal signature change is needed, name it in journey terms rather than adding `isCaveBear`/`ignoreRoamRadius` booleans.
+
+### `src/fauna/animalRoaming.ts`
+
+fauna-016 already has committed `AnimalTrip` state (`traveling` / `staying` / `returning`) and destination search intentionally allowed beyond `ROAM_RADIUS`.
+
+Reuse that state machine. The new integration is routing around the surface leg:
+
+```text
+traveling from cave home
+  cave route home→entrance
+  then existing surface travel to destination
+
+returning
+  existing surface travel to entrance
+  then reverse cave route entrance→home
+```
+
+Do not create `CaveTrip` as a second parallel lifecycle unless a generic route/journey abstraction truly cannot express this.
+
+## Ground and horizontal movement seam
+
+Current wild fauna receives surface `chunkManager.sampleHeight` from `buildFauna()`.
+
+Add one reusable movement-ground abstraction so every autonomous mode resolves the same physical ground. Conceptually:
+
+```ts
+type AnimalMovementContext = {
+  surfaceHeight: HeightSampler
+  cave?: {
+    caveId: string
+    queryGround: ...
+    resolveHorizontal: ...
+  }
+}
+```
+
+Exact ownership can be a helper module rather than a type stored verbatim on the agent.
+
+Rules:
+
+- while traversing known cave route, use scoped heightfield floor and cave containment;
+- around/open-sky mouth transition, allow handoff to surface sampler according to the production cave portal semantics;
+- on surface, retain current terrain/collider/water behavior;
+- all cave-resident movement modes must share this seam — wander/needs/trips/return must not snap against different grounds.
+
+Do not route animal movement through player `queryGround()` because its hysteresis storage is shared/player-specific.
+
+## Animal dimensions
+
+`Caves.resolveHorizontal` requires `radius` and `entityHeight`. fauna-019 therefore needs one authoritative way to derive movement dimensions per animal kind/model.
+
+Before adding new constants, inspect existing collision/interaction radii in `AnimalAgent`/fauna combat/interaction code and reuse a shared value where semantics match. If no suitable physical body dimensions exist, add a small declarative species movement/collision dimension field rather than scattered bear-specific numbers.
+
+Do not reuse attack range or interaction distance as wall-collision radius just because the number is nearby.
+
+## Decorative `cave` spawner rename
+
+Current `src/fauna/createFauna.ts::SPAWNER_SPECS` still uses `type: 'cave'` and renders it with `createCaveMouth()`.
+
+Rename the lightweight concept to `rockDen`.
+
+Touch points to inspect before changing:
+
+- `PreySpawner['type']` in `AnimalSpawner.ts`,
+- `SPAWNER_SPECS`,
+- prop/label creation branches in `createFauna.ts`,
+- `destroySpawner` comments/UI text,
+- tests and any stable-id builder using `type`,
+- `SavedSpawnPointState` restoration.
+
+Critical compatibility rule: if the type string participates in the stable spawner id, either keep the legacy id derivation for migrated `rockDen` entries or explicitly translate old snapshot ids. A cosmetic rename must not reset/orphan depletion/recovery/disabled state.
+
+Do not change `wolfDen`, `thicket` or placement policy as collateral work.
+
+## fauna-018 integration is now real
+
+Old notes said fauna-018 was only planned. That is stale.
+
+Current `main` already has:
+
+- `src/fauna/persistentOccupants.ts`,
+- `PersistentOccupantDecl`,
+- `PersistentOccupantSnapshot`,
+- registry creation in `createFauna()`,
+- snapshot/hydrate/rebuild plumbing in `worldBundle.ts`,
+- `Fauna.snapshotPersistentOccupants()`.
+
+No real-cave occupant declaration exists yet.
+
+fauna-019 should provide the stable cave habitat identity/home resolution consumed by this existing registry; do not invent another persistent-animal registry.
+
+## Bear water trip
+
+`AnimalDef.trips.water` remains the correct declarative seam. Add bear there after cave journey routing works.
+
+Do not branch on `kind === 'bear'` in `AnimalTrip` execution.
+
+`searchRadius` controls target discovery only. It must not be used as a replacement for explicit cave entrance routing or as an excuse to expand ordinary roaming.
+
+## Persistence
+
+Persisted:
+
+- existing persistent occupant/AnimalAgent state,
+- stable habitat/cave identity where required by the declaration/snapshot contract.
+
+Reconstructed:
+
+- topology,
+- heightfield,
+- home anchor,
+- route waypoints,
+- floor Y,
+- current route cursor.
+
+Do not save cave geometry or route arrays.
+
+On hydration/rebuild, resolve the cave descriptor before placing/reconstructing an interior resident. If the cave id no longer resolves because generation rules changed incompatibly, fail safely/diagnostically rather than silently spawning the resident at `(0,0)` or a stale saved coordinate.
+
+## Performance
+
+Good path:
+
+```text
+spawn/hydrate once
+→ v2ByCaveId.get(caveId)
+→ resolve + cache small descriptor
+→ route tick queries only known cave runtime
+```
+
+Avoid:
+
+- global cave scan per animal tick,
+- `scene.traverse`, mesh lookup or raycast,
+- calling presentation `update()` to make simulation work,
+- rebuilding route graph per frame,
+- allocating waypoint arrays every tick.
+
+Existing production `resolveHorizontal` loops across cave fields as a generic world resolver. For a cave resident with known identity, a scoped resolver is preferable and avoids multiplying that generic path by many off-screen animals.
+
+## Focused tests
+
+### World tests
+
+Prefer extending/adding tests near `src/world/createCaves*.test.ts` plus pure topology helper tests:
+
+- descriptor resolves by stable `caveId`,
+- descriptor exists with zero active presentation meshes,
+- selected home is a semantic chamber and has a valid production floor,
+- route connects home and entrance in deterministic order,
+- reversed segment centerlines are handled correctly,
+- scoped `queryGroundIn` is stateless and rejects surface-above-tunnel Y,
+- scoped containment delegates to the retained heightfield.
+
+### Fauna tests
+
+- cave habitat binding resolves once and is reused,
+- local roam remains bounded,
+- committed need/water trip may cross the old `ROAM_RADIUS`,
+- outbound route reaches entrance before surface destination movement,
+- return reaches entrance then interior home,
+- combat interruption does not discard habitat identity,
+- bear trip config is declarative,
+- ordinary surface animals retain existing movement,
+- `rockDen` legacy snapshot restores the same lifecycle state,
+- persistent occupant tombstone prevents replacement.
+
+Prefer pure route/journey tests over Three.js-heavy full-agent tests where possible.
 
 ## Implementation order
 
-1. Finish/verify the required `world-terrain-019` production cave spatial + route/anchor seam.
-2. Rename the decorative fauna `cave` spawner safely.
-3. Add cave-backed fauna habitat binding and wire the world query through `buildFauna()` / `createFauna()`.
-4. Generalize AnimalAgent ground/journey bounds, then add cave enter/leave/return routing.
-5. Add bear `trips.water` configuration and focused tests.
-6. Leave persistent concrete cave residents to fauna-018; only ensure the habitat identity contract composes with it.
+1. Add/test cave-scoped semantic/traversal API over current retained `CaveRuntime`.
+2. Add safe `cave` → `rockDen` naming migration for decorative spawners.
+3. Add fauna cave habitat binding and resolve it during `createFauna()` construction/hydration.
+4. Introduce shared animal ground/horizontal seam and species/body dimensions needed by containment.
+5. Add topology-route traversal plus explicit committed journey semantics.
+6. Compose existing needs/water-trip lifecycle with cave exit/return.
+7. Add bear `AnimalDef.trips.water`.
+8. Wire a cave-backed `PersistentOccupantDecl` only when the first consumer (`quests-progression-008`) is ready; fauna-019 itself should prove the reusable contract independently.
+
+## Verification
+
+Run appropriate automated checks:
+
+```text
+npx tsc --noEmit
+npm run lint
+npm run build
+npm run test
+```
+
+Do not run browser verification; the User performs it.
+
+Do not run `pnpm docs:sync` manually; GitHub workflow owns derived-doc synchronization.
