@@ -133,6 +133,14 @@ Generated from exported TypeScript symbols.
 - `CaveVerticalInterval` — type — line 15
   - domain: world-terrain
 
+## `world/caves/caveHeightfieldMaterial.ts`
+
+- `CAVE_SURFACE_MATERIAL_TUNING` — const — line 12
+- `CaveSurfaceMaterialTuning` — type — line 25
+- `createCaveHeightfieldMaterial` — function — line 212
+- `CreateCaveHeightfieldMaterialOptions` — type — line 202
+- `disposeCaveHeightfieldMaterialGpu` — function — line 243
+
 ## `world/caves/caveHeightfieldMesh.ts`
 
 - `buildHeightfieldMeshBuffers` — function — line 119
@@ -144,17 +152,16 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 169
-- `createCaveHeightfieldGeometry` — function — line 62
+- `CaveHeightfieldPresentation` — type — line 156
+- `createCaveHeightfieldGeometry` — function — line 49
   - domain: world-terrain
-- `createCaveHeightfieldMaterial` — function — line 34
-- `createCaveHeightfieldPresentation` — function — line 188
+- `createCaveHeightfieldPresentation` — function — line 175
   - domain: world-terrain
-- `createMouthRocks` — function — line 128
+- `createMouthRocks` — function — line 115
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 80
+- `createMouthUndersideMask` — function — line 67
   - domain: world-terrain
-- `createMouthUndersideMaskMaterial` — function — line 46
+- `createMouthUndersideMaskMaterial` — function — line 33
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
@@ -472,8 +479,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 65
-- `createCaves` — function — line 199
+- `Caves` — type — line 68
+- `createCaves` — function — line 202
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query) and streamed interior presentation; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves

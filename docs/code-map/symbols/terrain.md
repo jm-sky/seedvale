@@ -35,7 +35,7 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/buildChunkGeometry.ts`
 
-- `buildChunkGeometry` — function — line 364
+- `buildChunkGeometry` — function — line 362
 - `ChunkMeshResult` — type — line 7
 - `createTerrainMaterial` — function — line 35
 - `TerrainWeatherUniforms` — type — line 30
@@ -460,6 +460,7 @@ Generated from exported TypeScript symbols.
 ## `terrain/terrainDetailNormalMap.ts`
 
 - `createTerrainNormalMap` — function — line 27
+- `getSharedTerrainDetailNormalMap` — function — line 106
 
 ## `terrain/terrainPreparation.ts`
 

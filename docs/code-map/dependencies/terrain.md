@@ -972,6 +972,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `terrain/buildChunkGeometry.ts`
+- `world/caves/caveHeightfieldMaterial.test.ts`
+- `world/caves/caveHeightfieldMaterial.ts`
 
 ## `terrain/terrainPreparation.test.ts`
 

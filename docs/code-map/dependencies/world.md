@@ -250,6 +250,25 @@ Generated from TypeScript imports.
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
 
+## `world/caves/caveHeightfieldMaterial.test.ts`
+
+**Imports**
+
+- `terrain/terrainDetailNormalMap.ts`
+- `world/caves/caveHeightfieldMaterial.ts`
+
+## `world/caves/caveHeightfieldMaterial.ts`
+
+**Imports**
+
+- `terrain/terrainDetailNormalMap.ts`
+
+**Imported by**
+
+- `world/caves/caveHeightfieldMaterial.test.ts`
+- `world/caves/caveHeightfieldPresentation.ts`
+- `world/createCaves.ts`
+
 ## `world/caves/caveHeightfieldMesh.test.ts`
 
 **Imports**
@@ -287,6 +306,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/decorProps.ts`
+- `world/caves/caveHeightfieldMaterial.ts`
 - `world/caves/caveHeightfieldMesh.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveOrientation.ts`
@@ -904,6 +924,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `world/caveVolume.ts`
 - `world/caves/caveGroundQuery.ts`
+- `world/caves/caveHeightfieldMaterial.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
