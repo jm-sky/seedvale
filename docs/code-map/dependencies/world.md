@@ -2594,6 +2594,7 @@ Generated from TypeScript imports.
 - `assets/houseDefinitionExample.ts`
 - `config/worldConfig.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalTrophyLoot.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
 - `items/createItemSpawners.ts`

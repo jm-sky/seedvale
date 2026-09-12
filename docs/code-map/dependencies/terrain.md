@@ -1130,6 +1130,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCaveJourney.test.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalHarvest.test.ts`
 - `fauna/animalVariants.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/persistentOccupants.test.ts`

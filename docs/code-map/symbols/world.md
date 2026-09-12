@@ -231,9 +231,9 @@ Generated from exported TypeScript symbols.
 - `CAVE_SURFACE_MATERIAL_TUNING` — const — line 17
 - `CaveSurfaceMaterialTuning` — type — line 37
 - `CaveVec3` — type — line 39
-- `createCaveHeightfieldMaterial` — function — line 418
-- `CreateCaveHeightfieldMaterialOptions` — type — line 405
-- `disposeCaveHeightfieldMaterialGpu` — function — line 453
+- `createCaveHeightfieldMaterial` — function — line 423
+- `CreateCaveHeightfieldMaterialOptions` — type — line 410
+- `disposeCaveHeightfieldMaterialGpu` — function — line 458
 - `perturbCaveWorldNormalOnTangentPlane` — function — line 104
   - domain: world-terrain
 - `reconstructCaveTriplanarWorldNormal` — function — line 64

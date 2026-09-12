@@ -95,8 +95,10 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalCaveJourney.test.ts`
 - `fauna/animalDialogue.ts`
+- `fauna/animalHarvest.test.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
+- `fauna/animalTrophyLoot.ts`
 - `fauna/animalVariants.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/faunaCombat.test.ts`
@@ -192,6 +194,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/opportunities/hunterProfessionQuests.test.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
@@ -301,6 +305,7 @@ Generated from TypeScript imports.
 - `fauna/animalCorpse.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalHarvest.test.ts`
 - `fauna/animalLead.test.ts`
 - `fauna/animalLead.ts`
 - `fauna/animalRoaming.ts`
@@ -365,12 +370,24 @@ Generated from TypeScript imports.
 - `fauna/foodWaterTargeting.test.ts`
 - `world/createPlayerTroughs.ts`
 
+## `fauna/animalHarvest.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/animalHarvest.ts`
+- `fauna/animalTrophyLoot.ts`
+- `items/Inventory.ts`
+- `terrain/waterSample.ts`
+
 ## `fauna/animalHarvest.ts`
 
 **Imports**
 
 - `fauna/AnimalAgent.ts`
 - `fauna/animalMeat.ts`
+- `fauna/animalTrophyLoot.ts`
 - `items/Inventory.ts`
 - `items/foodFreshness.ts`
 - `items/items.ts`
@@ -378,6 +395,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/survivalActions.ts`
+- `fauna/animalHarvest.test.ts`
 - `fauna/huntingHooks.ts`
 
 ## `fauna/animalHumanAffinity.ts`
@@ -560,6 +578,19 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/livestock.ts`
+
+## `fauna/animalTrophyLoot.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `items/items.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `fauna/animalHarvest.test.ts`
+- `fauna/animalHarvest.ts`
 
 ## `fauna/animalVariants.test.ts`
 

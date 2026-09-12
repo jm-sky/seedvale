@@ -956,6 +956,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
 - `settlement/SettlementsManager.ts`

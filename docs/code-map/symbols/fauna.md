@@ -4,7 +4,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 942
+- `AnimalAgent` — class — line 950
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
@@ -115,7 +115,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 337
+- `ANIMAL_DEFS` — const — line 344
 - `ANIMAL_LABELS` — const — line 47
 - `AnimalAffinityConfig` — type — line 167
 - `AnimalDef` — type — line 66
@@ -126,7 +126,7 @@ Generated from exported TypeScript symbols.
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 18
-- `dietAcceptsItem` — function — line 315
+- `dietAcceptsItem` — function — line 322
 - `DraftConfig` — type — line 228
 - `LeadConfig` — type — line 222
 - `LivestockProductionConfig` — type — line 257
@@ -174,8 +174,8 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalHarvest.ts`
 
-- `AnimalHarvestResult` — type — line 7
-- `harvestAnimalIntoInventory` — function — line 29
+- `AnimalHarvestResult` — type — line 8
+- `harvestAnimalIntoInventory` — function — line 32
 
 ## `fauna/animalHumanAffinity.ts`
 
@@ -375,6 +375,11 @@ Generated from exported TypeScript symbols.
   - domain: fauna
   - role: Natural-stray grace accumulator (plan fauna-025) — resets the instant the animal is back inside `minDistance` of its own home/wander anchor, so a short flee that ends back near home never latches, while a sustained displacement accumulates toward `shouldBeginNaturalStray`.
 
+## `fauna/animalTrophyLoot.ts`
+
+- `trophyLootKindsForHarvest` — function — line 22
+  - domain: fauna
+
 ## `fauna/animalVariants.ts`
 
 - `ANIMAL_VARIANT_DEFS` — const — line 25
@@ -402,22 +407,22 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `clearsRiverChannel` — function — line 252
-- `createFauna` — function — line 512
+- `clearsRiverChannel` — function — line 258
+- `createFauna` — function — line 518
 - `Fauna` — type — line 89
-- `FAUNA_URLS` — const — line 436
-- `findHomeCaveSpawner` — function — line 395
-- `isDeerEdgeHabitat` — function — line 283
-- `isNearRoadCorridor` — function — line 264
-- `measureSlope` — function — line 322
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 412
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 420
-- `SPAWNER_LABELS` — const — line 404
-- `SPAWNER_RING_OFFSET` — const — line 223
-- `SPAWNER_SPECS` — const — line 358
-- `spawnerDestroyBusyLabel` — function — line 431
-- `spawnerDestroyPromptLabel` — function — line 427
-- `spawnerId` — function — line 388
+- `FAUNA_URLS` — const — line 442
+- `findHomeCaveSpawner` — function — line 401
+- `isDeerEdgeHabitat` — function — line 289
+- `isNearRoadCorridor` — function — line 270
+- `measureSlope` — function — line 328
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 418
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 426
+- `SPAWNER_LABELS` — const — line 410
+- `SPAWNER_RING_OFFSET` — const — line 229
+- `SPAWNER_SPECS` — const — line 364
+- `spawnerDestroyBusyLabel` — function — line 437
+- `spawnerDestroyPromptLabel` — function — line 433
+- `spawnerId` — function — line 394
 
 ## `fauna/dogGuard.ts`
 

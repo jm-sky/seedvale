@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 80
-- `isChannelBusy` — function — line 87
+- `isActionBlocked` — function — line 86
+- `isChannelBusy` — function — line 93
 - `PlayerActionContext` — type — line 31
 
 ## `app/actions/actionContracts.ts`
@@ -256,13 +256,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 298
+- `createApp` — function — line 299
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 267
+- `NewAppOptions` — type — line 268
 
 ## `app/gameLoop.ts`
 

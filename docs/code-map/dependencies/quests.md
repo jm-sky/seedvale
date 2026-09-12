@@ -42,6 +42,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `interaction/resolveInteraction.ts`
 - `quests/QuestManager.test.ts`
+- `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
@@ -85,6 +86,32 @@ Generated from TypeScript imports.
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/quests.test.ts`
 
+## `quests/opportunities/hunterProfessionQuests.test.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `items/Inventory.ts`
+- `quests/QuestManager.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+
+## `quests/opportunities/hunterProfessionQuests.ts`
+
+**Imports**
+
+- `fauna/AnimalSpawner.ts`
+- `items/items.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/opportunities/hunterProfessionQuests.test.ts`
+
 ## `quests/opportunities/rpgQuestMaterialization.ts`
 
 **Imports**
@@ -125,6 +152,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
@@ -200,6 +228,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `quests/QuestManager.ts`
+- `quests/opportunities/hunterProfessionQuests.test.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
@@ -240,6 +270,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`

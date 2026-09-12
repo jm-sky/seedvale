@@ -120,6 +120,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalHarvest.test.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/huntingHooks.ts`
@@ -166,6 +167,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `settlement/household.ts`
 - `settlement/householdResourceTransfer.test.ts`
@@ -1011,6 +1013,7 @@ Generated from TypeScript imports.
 - `fauna/animalForaging.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
+- `fauna/animalTrophyLoot.ts`
 - `fauna/harvestedRemains.ts`
 - `fauna/livestockProduction.ts`
 - `interaction/Interactable.ts`
@@ -1062,6 +1065,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/PlayerTorch.ts`
 - `quests/QuestManager.ts`
+- `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/quests.ts`
 - `settlement/household.ts`
 - `settlement/householdResourceTransfer.ts`
