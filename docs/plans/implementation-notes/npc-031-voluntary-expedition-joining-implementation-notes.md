@@ -1,92 +1,157 @@
 # Implementation Notes: npc-031 — Voluntary expedition joining
 
-## Current dependency state
+## Dependency state on current `main`
 
-- `npc-029` is still `planned`. It is a real blocker: do not invent an accompany/follow record, lifecycle API, persistence fields or follow execution in `npc-031`. Implement against the final public seam from `npc-029` after it lands.
-- `settlements-npcs-019`, the hard dependency of `npc-029`, is currently `verification needed` and already provides persistent NPC transport cargo plus detailed/off-screen execution ownership. `npc-031` must not call that transport machinery directly; any off-screen accompaniment continuity belongs behind `npc-029`.
-- `npc-030` is still `planned`, so there is currently no implemented neutral expedition-context type to reuse. Re-check after `npc-029`; if no shared context exists then, introduce only the minimal source-neutral terms required by the final accompany commitment and voluntary evaluation. Do not depend on paid Work Contract fields.
+- `npc-029` is implemented and `verification needed`. The shared accompany foundation is no longer hypothetical. `src/ai/npcAccompanyCommitment.ts` owns the persistent source-neutral commitment on `NpcAuthoritativeState`; its source union already contains `{ kind: 'voluntary' }` and `{ kind: 'work-contract', contractId }`.
+- `NpcAgent.startAccompany(source, mode?, stayAnchor?)` is the public runtime creation seam. It delegates to the authoritative commitment lifecycle and checks the NPC's active Work Contract. Voluntary joining must call this seam with `{ kind: 'voluntary' }`; do not mutate `accompanyCommitment` directly.
+- `npc-030` is implemented and `verification needed`. Paid escort now proves the full paid path: Work Contract acceptance → provisioning → `serving` assignment → `startAccompany({ kind: 'work-contract', contractId })` → shared npc-029 execution → scope-aware fulfilment/payment.
+- Therefore `npc-031` is no longer blocked by either dependency. Reuse their implemented contracts rather than the older plan assumptions.
 
-## Existing seams to reuse
+## Implemented seams that matter
 
-- `src/ai/NpcAgent.ts` is the coordination point. Higher-priority pressures are resolved before `beginIdle()`. Today `beginIdle()` calls `tryPursueWorkContract()` before ordinary schedule/idle behaviour. Voluntary **initiative** belongs at this idle-duty boundary, not in `npcDecision.ts` as another physiological/safety pressure.
-- Do not let voluntary initiative jump ahead of an accepted Work Contract or the future active accompany commitment. Prefer the idle-duty dispatch seam introduced by `npc-029` if it exists; otherwise keep ordering explicit and small rather than adding another top-level arbitration framework.
-- `src/ai/reactionChance.ts::PlayerSocialState` already carries exactly the relevant social stores into `NpcAgent`: `relationLevel`, legacy `standing`, settlement `reputation`, and `renown`. Use the existing injected `NpcAgentDeps.getPlayerSocial`; do not import `QuestManager` or `ReputationManager` into NPC code and do not use `standing` unless the voluntary-join design explicitly needs that separate legacy signal.
-- `src/reputation/ReputationManager.ts::Reputation` owns `trust`, `competence`, `benevolence`, `courage`, `integrity` in `-100..100`; renown is separate `0..100`. Normalize these in the pure evaluator, not at call sites. Keep renown out of the base willingness score unless it represents awareness/initiative gating.
-- `src/ai/characters.ts::CharacterDef` already exposes `role`, Big Five `personality`, and deterministic `traits`; `curious` is an existing trait. Do not add companion traits/archetypes.
-- `src/settlement/families.ts::FamilyMember` has real `age` and `relation`; `NpcAgent` also receives `familyMembers: FamilyMemberRef[]`. Use these facts for adult/household-cost derivation. Do not persist `lifeStage`, `hasDependants`, or expedition-specific responsibility flags.
-- `NpcAgent.schedule` is already the effective schedule produced by `effectiveScheduleFor(...)`, including trait overlays. Use the effective schedule/current scheduled activity for opportunity cost; do not score against raw role templates separately.
-- `src/ai/approachPlayer.ts` is intentionally narrow and currently has only `ApproachPlayerIntent.kind = 'work_contract_payment'`. Extend that intent union with a voluntary-proposal intent only if NPC initiative needs movement to the player; reuse `isPlayerLocallyEligible()` / `isPlayerApproachArrived()` and existing `NpcAgent` approach execution. Do not create a second approach FSM.
-- Existing ambient player reactions are only a pattern for social inputs: `computeReactionChance()` is pure, but `NpcAgent` currently resolves the final ambient reaction with `Math.random()`. Do **not** reuse that random roll for voluntary initiative. Joining/proposal gating must be reproducible and inspectable as required by the plan.
+### Accompany ownership
 
-## Evaluator boundary
+`src/ai/npcAccompanyCommitment.ts` is authoritative for commitment creation/mode/end rules:
 
-Create one focused pure module near the existing social/decision evaluators, e.g. `src/ai/voluntaryExpeditionJoin.ts`, with a compact input assembled by `NpcAgent`/interaction wiring and an output containing eligibility, score/threshold, blockers and modifier breakdown.
+- `NpcAccompanySourceRef` already has the voluntary source; no type extension is required.
+- `startNpcAccompanyCommitment()` rejects `dead`, `already-active`, `incompatible-work`, and invalid Stay-without-anchor.
+- `NpcAgent.startAccompany()` is the integration seam. A successful voluntary decision should end at this call and leave follow/stay, interruption/resume, persistence and off-screen continuity to npc-029.
+- Do not create voluntary-specific follow state, persistence, return travel or cleanup.
 
-Keep runtime/transient facts outside the evaluator's ownership. The caller should derive and pass facts such as:
+The creation boundary already enforces active Work Contract incompatibility. The willingness evaluator should still expose this as an eligibility blocker so refusal is explainable before mutation; final acceptance must rely on `startAccompany()` as the authoritative race/revalidation guard.
 
-- dead/unable-to-act;
-- adult eligibility from `member.age` (use the same adulthood convention already used by settlement generation/staffing; do not invent a second age threshold);
-- active Work Contract from `workContracts.findActiveWorkByNpc(npcId)`;
-- active accompany commitment through the final `npc-029` API;
-- current critical need / combat / flee / danger eligibility from existing `NpcAgent` state/decision facts;
-- effective scheduled activity and bounded duty conflict;
-- relationship/reputation/renown from `getPlayerSocial()`;
-- neutral expedition terms from the final shared context.
+### Paid escort architecture to reuse without becoming a Work Contract
 
-This keeps invitation evaluation callable synchronously without teaching the evaluator about `NpcAgent`, managers, Three.js, pathfinding or world scans.
+`src/world/workContract.ts` now has a discriminated `WorkContractScope`. The escort branch owns `ExpeditionEscortTerms`, explicit completion policies (`duration`, `destination`, `destination_or_timeout`) and stable destination snapshots. `WorkContractAssignment` has `serving`, `serviceStartedAt` and `serviceEndsAt`.
+
+`src/world/createWorkContracts.ts` exposes `createEscort()` and `beginServing()`, while the existing active-assignment/payment lifecycle remains authoritative. None of these APIs should be called by voluntary joining.
+
+`src/ai/npcWorkContract.ts` now contains deterministic paid-escort scoring. It is useful evidence for existing constants/data access, not the voluntary evaluator itself. Do not implement voluntary joining as `rewardCoins = 0`, do not call `scoreWorkContractOpportunity()`, and do not create a `WorkContractRecord`/assignment.
+
+`src/ai/npcPersonalProvisions.ts` now has `escortAwayHours()`, `estimateEscortProvisionNeed()` and `buildEscortProvisionContext()`. Reuse the neutral away-time/provision calculations where their inputs fit; voluntary joining must not fork another duration/destination-to-away-time estimator.
+
+### Expedition context: remove the remaining paid-name coupling once
+
+`npc-030` implemented the only concrete bounded expedition terms, but they currently live in `src/world/workContract.ts` and are named `ExpeditionEscortTerms`. Voluntary joining must not introduce a second parallel expedition shape.
+
+During npc-031, extract only the source-neutral expedition value types/helpers needed by both paths into a small world/domain module (for example `src/world/expedition.ts`):
+
+- destination ref/snapshot;
+- completion policy;
+- bounded terms;
+- validation of required duration/destination fields.
+
+Then make Work Contracts consume that shared type. Preserve existing escort semantics and persistence shape exactly; this is a type/ownership extraction, not a Work Contract redesign or save migration. Keep compatibility re-exports from `workContract.ts` if that avoids unrelated call-site churn.
+
+Do not extract assignment service timing, reward/payment, employer or Work Contract lifecycle — those remain paid-contract concepts. Do not add objectives, route state or a generic expedition manager.
+
+## Voluntary evaluator boundary
+
+Add one focused pure module near the current NPC decision/social evaluators, e.g. `src/ai/voluntaryExpeditionJoin.ts`.
+
+Its input should be plain data assembled by the caller and should contain only facts needed for the decision: character personality/traits/role, age/household context, effective schedule/current duty, current critical/danger/commitment eligibility, `PlayerSocialState`, and the shared bounded expedition terms plus a coarse danger value when available.
+
+Its result should be inspectable, conceptually:
+
+```ts
+type VoluntaryJoinEvaluation = {
+  eligible: boolean
+  score: number
+  threshold: number
+  blockers: readonly VoluntaryJoinBlocker[]
+  modifiers: readonly VoluntaryJoinModifier[]
+}
+```
+
+Exact names are free to adapt. Keep the evaluator independent from `NpcAgent`, Three.js, managers, pathfinding and world scans.
+
+### Existing data sources
+
+- `src/ai/characters.ts::CharacterDef`: `role`, Big Five `personality`, deterministic traits including `curious`. Do not add recruitable/adventurer traits.
+- `src/settlement/families.ts::FamilyMember` plus the family refs already supplied to `NpcAgent`: derive adulthood/household responsibility from real family state. Reuse the codebase's existing adulthood convention; do not persist `lifeStage`/`hasDependants` flags.
+- `NpcAgent.schedule`: already the effective schedule after trait overlays. Use the effective current activity for duty/opportunity cost; do not independently rescore raw role schedule templates.
+- `src/ai/reactionChance.ts::PlayerSocialState` through `NpcAgentDeps.getPlayerSocial`: personal `relationLevel`, settlement reputation and renown. Keep this injection boundary; do not import `QuestManager`/`ReputationManager` into the evaluator or `NpcAgent`.
+- Reputation dimensions are `trust`, `competence`, `benevolence`, `courage`, `integrity`. Prefer trust/competence and contextual courage. Renown is awareness/initiative plausibility, not a generic willingness bonus.
+- `WorkContracts.findActiveWorkByNpc(npcId)` remains the authoritative active paid-work lookup. Do not add a duplicate busy flag.
+- `authoritativeState.accompanyCommitment` / the npc-029 lifecycle is the authoritative existing-accompany fact. Do not mirror it in evaluator state.
 
 ### Blockers vs modifiers
 
-Use blockers for states that make joining invalid now: death, child/dependent eligibility, incompatible active commitment, active Work Contract, unresolved combat/flee, and genuinely critical survival state. Do not encode these as very large negative weights.
+Use blockers for conditions that make joining invalid now: dead/unable, not independently adult, existing accompany commitment, active Work Contract, unresolved combat/flee/immediate danger, and genuinely critical survival state.
 
-Use modifiers for preferences/opportunity costs: personality, relationship, selective reputation dimensions, schedule conflict, household responsibility, role suitability, expected time/distance and bounded danger.
+Use bounded modifiers for preferences/opportunity cost: openness/curious, smaller extraversion/agreeableness effects, conscientiousness versus duties, neuroticism × danger, personal relationship, selective reputation, role suitability, household responsibility, effective schedule conflict, expected time/distance away and coarse danger.
 
-For player invitation, re-evaluate at the moment the player chooses the invitation action; do not cache an earlier willingness result across world-state changes.
+Do not copy npc-030's paid weights mechanically. Paid escort asks whether compensation offsets cost; voluntary joining needs a positive social/exploration reason to leave ordinary life. A neutral stranger with no meaningful positive reason should fail.
 
-## Initiative vs invitation
+## Invitation and initiative must share one evaluation
 
-Both paths must call the same willingness evaluator.
+### Player invitation
 
-- **Invitation:** one-shot interaction decision. It may be offered only when meaningful expedition context exists; acceptance immediately creates the `npc-029` commitment through its public creation seam.
-- **Initiative:** low-priority idle/social opportunity. Gate local player relevance first with the existing approach range, then evaluate willingness, then apply only an initiative-specific threshold/awareness rule. Do not duplicate the modifier table.
-- Initiative needs a cooldown/throttle. Reuse an existing NPC decision/social cadence where it gives the required semantics; if a proposal-specific cooldown is unavoidable, keep it transient unless persistence is required to prevent save/reload exploits. Never run a per-frame all-NPC recruitment scan.
-- A proactive NPC must first approach and surface a normal interaction/dialogue proposal. Do not create the accompany commitment merely because the initiative score passed.
+Invitation is a one-shot contextual interaction, not a permanent `Recruit` action. At the final accept action:
 
-## Interaction/dialogue ownership
+1. resolve the current shared expedition context;
+2. rebuild current evaluator inputs;
+3. evaluate eligibility/willingness;
+4. if accepted, call `NpcAgent.startAccompany({ kind: 'voluntary' }, 'follow')`;
+5. treat a false/rejected start as a normal failed revalidation, not as partial companion state.
 
-Current dialogue is split between flavor/topic generation and quest overrides; opening dialogue itself is presentational. Keep voluntary invitation/proposal as another explicit interaction action/result rather than embedding mutations in generic dialogue text generation.
+Never cache an earlier willingness result across world-state changes.
 
-The action that accepts a proposal/invitation should own the final revalidation and call to `npc-029`. This avoids a stale UI choice creating a commitment after the NPC becomes busy, enters danger or accepts other work.
+### NPC initiative
 
-Do not route this through `QuestManager.onInteract()` and do not create a permanent `Recruit` action. Quest state may coexist with the conversation but must not become ownership for accompaniment.
+Initiative belongs at the existing low-priority idle/social boundary after higher-priority pressures and active commitments. `NpcAgent` already has throttled social behaviour (`nextSocialAttemptSim`); prefer extending/reusing an existing bounded cadence rather than adding a per-frame recruitment scan.
 
-## Expedition context
+`src/ai/approachPlayer.ts` still has only the `work_contract_payment` intent. If a proactive join proposal needs physical approach, extend this intent union narrowly with a voluntary-proposal payload and reuse `isPlayerLocallyEligible()`, `isPlayerApproachArrived()` and the existing `NpcAgent` approach action. Do not create another approach FSM.
 
-At implementation time inspect `npc-029` first, then `npc-030` if implemented. There must be one neutral representation shared by paid and voluntary accompaniment.
+Passing initiative scoring must only create a proposal opportunity. The NPC approaches and asks; the accompany commitment is created only after the proposal is accepted and final state is revalidated.
 
-Only include facts actually required to bound/evaluate the expedition, such as semantic destination/end condition, expected duration/distance and a coarse danger signal if the shared contract provides them. No route scans, pathfinding, fauna scans or simulated combat are justified for willingness.
+Do not use the ambient social `Math.random()` path. Initiative must be deterministic/inspectable. If variability is needed, derive it from stable NPC/context/time-bucket inputs and expose the result in diagnostics.
 
-If danger is absent/unknown, represent that explicitly or neutrally; do not synthesize precision from nearby fauna or current camera/world detail.
+## Provisioning boundary
 
-## Diagnostics and tests
+Paid escort now explicitly provisions before service. Voluntary travel should not silently bypass ordinary NPC survival logistics, but npc-031 should reuse existing personal/household provision mechanisms rather than create companion supplies.
 
-Extend existing NPC trace/inspection rather than adding companion UI. Record the evaluation result at the decision boundary: invitation/proposal source, blockers, score, threshold, initiative gate and a small expedition-context summary. Avoid logging every idle tick when no real opportunity existed.
+Use the shared expedition terms with the existing escort away-time/provision estimators where applicable. If provisioning is infeasible, represent that as eligibility/cost according to current NPC provision semantics. Do not transfer player-paid provisions, create wages, or create Work Contract state.
 
-Pure evaluator tests should pin relative behavior/invariants rather than overfit every tuning weight. In integration tests specifically prove:
+Do not make voluntary acceptance responsible for follow-time hunger/thirst handling; normal NPC needs continue to interrupt/resume npc-029 accompaniment.
 
-- active Work Contract/future accompany commitment prevents a second commitment;
-- initiative is reached only after higher-priority decisions and existing idle duties permit it;
+## Diagnostics
+
+Extend the existing NPC inspection/decision trace rather than adding a companion debug UI. Record only real invitation/proposal evaluations, not every idle tick:
+
+- source: invitation / initiative;
+- eligible + blockers;
+- score + acceptance threshold;
+- initiative-specific gate/threshold where applicable;
+- modifier breakdown;
+- compact expedition summary;
+- final `startAccompany()` success/rejection when acceptance was attempted.
+
+Important new public/architectural evaluator or shared expedition helpers should have concise JSDoc and `@domain npc` / appropriate world-domain tags for preflight discovery.
+
+## Tests worth pinning
+
+Prefer invariant/relative tests over exact tuning weights:
+
+- active Work Contract blocks voluntary joining before mutation and `startAccompany()` remains the final authority;
+- existing accompany commitment blocks a second commitment;
+- dead/child/critical danger-survival cases are blockers rather than huge negative modifiers;
+- trusted/friendly relation materially improves willingness versus stranger with otherwise equal inputs;
+- openness/curious can help but cannot override hard blockers;
+- conscientiousness increases meaningful schedule/duty cost; neuroticism increases danger sensitivity;
+- high renown alone cannot manufacture willingness;
+- invitation and initiative use the same base evaluator, with initiative only adding its stricter gate;
 - invitation revalidation can refuse after state changes;
-- initiative and invitation use the same base evaluation;
-- high renown alone cannot turn a weak/unsafe willingness result into acceptance;
-- no `WorkContractRecord`, assignment or payment state is created by voluntary acceptance;
-- successful acceptance calls only the `npc-029` commitment seam, leaving follow/persistence/off-screen execution to that system.
+- successful voluntary acceptance creates `{ kind: 'voluntary' }` through `NpcAgent.startAccompany()` and creates no Work Contract/assignment/payment state;
+- npc-029 follow/stay/persistence behavior is not duplicated or changed;
+- extracting shared expedition terms preserves npc-030 contract creation, save shape, fulfilment and evaluator behavior;
+- NPCs without a voluntary opportunity retain existing work/schedule/social behavior.
 
-## Implementation order adjustment
+## Recommended implementation order
 
-1. Do not start feature code until `npc-029` is implemented; reconcile these notes with its final API.
-2. Re-check whether `npc-030` has since introduced the neutral expedition context.
-3. Add the pure evaluator and tests using current social/family/schedule contracts.
-4. Wire invitation with final-state revalidation and `npc-029` commitment creation.
-5. Wire initiative into the post-pressure idle-duty path and narrowly extend `approachPlayer` intent if needed.
-6. Add trace/integration coverage; do not touch follow movement, persistence or off-screen travel here.
+1. Extract the already-implemented bounded expedition terms from Work Contract ownership into the smallest source-neutral world/domain module, preserving npc-030 behavior and compatibility.
+2. Add the pure voluntary eligibility/willingness evaluator and focused tests.
+3. Assemble real character/family/schedule/social/commitment/provision inputs at the existing NPC/interaction boundary.
+4. Wire player invitation with final-state revalidation and `startAccompany({ kind: 'voluntary' })`.
+5. Wire deterministic NPC initiative into the existing idle/social cadence; extend `approachPlayer` only if physical proposal approach needs it.
+6. Add trace/inspection coverage and integration tests. Do not touch npc-029 movement/persistence/off-screen execution or npc-030 payment lifecycle except for the neutral expedition-type extraction.
