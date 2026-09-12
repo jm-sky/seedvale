@@ -11,6 +11,7 @@ import type { HouseholdId } from '../settlement/household'
 import type { HealthState } from '../shared/HealthState'
 import type { TreatableInjurySeverity } from '../shared/injurySeverity'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
+import type { CaveArchetype } from '../world/caves/caveArchetype'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldLocation } from '../world/locations/worldLocationTypes'
@@ -30,6 +31,7 @@ import {
   POISONING_INITIAL_EXPOSURE_SEVERITY,
   type TemporaryConditionsState,
 } from '../shared/temporaryConditions'
+import { DARK_FOREST_TREASURE_LOCATION_ID } from '../world/locations/darkForestTreasureSite'
 import { FAR_RANGE_KM } from '../world/locations/locationConfig'
 import { isAdminMode, isDebugMode } from './debugMode'
 import { type HistoryFilter } from './domainHistory'
@@ -150,6 +152,9 @@ export type TeleportToDebugApi = {
   nextRiver: () => Promise<boolean>
   villageNearest: () => Promise<boolean>
   oceanNearest: () => Promise<boolean>
+  /** Authored Dark Forest treasure ruins — resolves through
+   *  `WorldLocationCatalog.getById`, never a duplicated worldgen lookup. */
+  darkForestTreasure: () => Promise<boolean>
 }
 
 /** `debug.worldLocations` (plan world-012 §19) — inspects/mutates
@@ -171,6 +176,9 @@ export type WorldLocationsDebugApi = {
   revealAll: (rangeKm?: number) => number
   listCaves: (rangeKm?: number) => WorldLocationDebugEntry[]
   teleportToFirstCave: () => Promise<boolean>
+  /** Nearest already-generated cave of `type` (`Caves.definitions` +
+   *  `archetypeOf`) — no `WorldLocationCatalog` scan. `false` when none. */
+  teleportToNearestCave: (type: CaveArchetype) => Promise<boolean>
 }
 
 export type HiddenTreasureDebugApi = {
@@ -462,9 +470,11 @@ const HELP_TEXT = [
   'locations.riversNearby() — several different qualifying rivers near the player, bounded and deduplicated (never multiple fragments of the same river)',
   'teleportTo(locationResult) / teleportTo.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — teleport to a location query result; awaits terrain load first, resolves false if no such location exists',
   'teleportTo.nextRiver() — cycles to the next different qualifying river on each call, wrapping at the end; cursor is debug-only and resets on world rebuild/reseed',
+  'teleportTo.darkForestTreasure() — teleport to the authored Dark Forest treasure ruins; awaits terrain load first, resolves false if the site is unavailable',
   'setFrenzyWolf() — debug combat trigger',
   'hiddenTreasure.markers() / .found() / .teleport(index?) — hidden-treasure flower/dig-marker positions, one-shot found flag, teleport to marker index (default 0)',
   'worldLocations.list() / .listUndiscovered() — cave/cemetery/lake/mountainPeak/settlement locations within 200km of the player, each flagged {discovered}; worldLocations.reveal(id) / .revealAll() — mark as confirmed/exploration (mutates location knowledge only, never map Fog of War)',
+  'worldLocations.teleportToFirstCave() — nearest generated cave entrance of any archetype; worldLocations.teleportToNearestCave(type) — nearest cave of CaveArchetype (\'natural\' | \'adventure\' | \'dungeon\'); both use Caves.definitions, never a catalog scan; false if none',
   'navigation() — pathfinding counters (requests/successes/failures, search time, visited nodes, waypoints, repaths, active routes)',
   'getFrenzyWolves() / getCurrentFrenzyWolf() / getNextFrenzyWolf() — frenzied-wolf DevTools selection; each returned wolf has showDebug()/hideDebug()/toggleDebug()/getDebugInfo()',
   'skills.getSkills() — every skill\'s current {value, xp}; skills.setSkillValue(id, value) — dev-only direct set (can lower, unlike real gameplay); skills.addSkillXp(id, xp) — award raw XP through the normal path',
@@ -558,6 +568,17 @@ export function installNpcDebugApi(
       nextRiver,
       villageNearest: () => teleportToLocation(locations.villageNearest()),
       oceanNearest: () => teleportToLocation(locations.oceanNearest()),
+      darkForestTreasure: async () => {
+        const loc = worldLocations.catalog.getById(DARK_FOREST_TREASURE_LOCATION_ID)
+        if (!loc) return false
+        return teleportToLocation({
+          kind: 'village',
+          position: { x: loc.x, z: loc.z },
+          distance: 0,
+          id: loc.id,
+          name: loc.name,
+        })
+      },
     },
   ) as TeleportToDebugApi
 
@@ -588,6 +609,30 @@ export function installNpcDebugApi(
     }
   }
 
+  async function teleportToNearestCaveEntrance(type?: CaveArchetype): Promise<boolean> {
+    // Cave definitions are already resolved by `createCaves()` — no need
+    // for the 200 km location-catalog scan `listCaves()` does. Nearest
+    // matching entrance to the player wins.
+    const { x: px, z: pz } = getPlayerPosition()
+    const cave = bundle.caves.definitions()
+      .filter((def) => type == null || bundle.caves.archetypeOf(def.caveId) === type)
+      .map((def) => ({ def, distance: Math.hypot(def.entrance.x - px, def.entrance.z - pz) }))
+      .sort((a, b) => a.distance - b.distance)
+      .at(0)
+    if (!cave) {
+      if (type == null) console.log('No caves found')
+      return false
+    }
+    if (type == null) {
+      console.log(`Teleporting to cave ${cave.def.caveId} (${cave.distance.toFixed(0)} m)`, cave.def.entrance)
+    }
+    return teleportToLocation({
+      kind: 'village',
+      position: { x: cave.def.entrance.x, z: cave.def.entrance.z },
+      distance: 0,
+    })
+  }
+
   const worldLocationsDebug: WorldLocationsDebugApi = {
     list: (rangeKm?: number) => {
       const { x, z } = getPlayerPosition()
@@ -605,26 +650,8 @@ export function installNpcDebugApi(
     },
     revealAll: (rangeKm?: number) => worldLocationsDebug.list(rangeKm).filter((location) => worldLocations.knowledge.reveal(location.id, 'confirmed', 'exploration')).length,
     listCaves: (rangeKm?: number) => worldLocationsDebug.list(rangeKm).filter(l => l.kind === 'cave'),
-    teleportToFirstCave: async () => {
-      // Cave definitions are already resolved by `createCaves()` — no need
-      // for the 200 km location-catalog scan `listCaves()` does. Nearest
-      // entrance to the player wins.
-      const { x: px, z: pz } = getPlayerPosition()
-      const cave = bundle.caves.definitions()
-        .map((def) => ({ def, distance: Math.hypot(def.entrance.x - px, def.entrance.z - pz) }))
-        .sort((a, b) => a.distance - b.distance)
-        .at(0)
-      if (!cave) {
-        console.log('No caves found')
-        return false
-      }
-      console.log(`Teleporting to cave ${cave.def.caveId} (${cave.distance.toFixed(0)} m)`, cave.def.entrance)
-      return teleportToLocation({
-        kind: 'village',
-        position: { x: cave.def.entrance.x, z: cave.def.entrance.z },
-        distance: 0,
-      })
-    },
+    teleportToFirstCave: () => teleportToNearestCaveEntrance(),
+    teleportToNearestCave: (type) => teleportToNearestCaveEntrance(type),
   }
 
   const skillsDebug: SkillsDebugApi = {

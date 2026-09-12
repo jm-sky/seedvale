@@ -6,12 +6,15 @@ import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { QuestManager } from '../quests/QuestManager'
 import type { SettlementCell, SettlementDef } from '../settlement/settlementGenerator'
 import type { SettlementsManager } from '../settlement/SettlementsManager'
+import type { CaveArchetype } from '../world/caves/caveArchetype'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
+import type { WorldLocation } from '../world/locations/worldLocationTypes'
 import type { WorldContext } from '../world/worldContext'
 import { createPlayerSkills } from '../player/PlayerSkills'
 import { createEmptyTemporaryConditions } from '../shared/temporaryConditions'
 import { computeRiverTile, riverTileCoordOf } from '../terrain/riverNetwork'
+import { DARK_FOREST_TREASURE_LOCATION_ID } from '../world/locations/darkForestTreasureSite'
 import { installNpcDebugApi } from './npcDebugApi'
 import { createPlayerGroundTraceBuffer } from './playerGroundTrace'
 
@@ -132,6 +135,22 @@ function fakeFauna(opts: {
   }
 }
 
+function fakeCaves(entries: readonly {
+  caveId: string
+  x: number
+  z: number
+  archetype: CaveArchetype
+}[]) {
+  const archetypes = new Map(entries.map((entry) => [entry.caveId, entry.archetype]))
+  return {
+    definitions: () => entries.map((entry) => ({
+      caveId: entry.caveId,
+      entrance: { x: entry.x, z: entry.z },
+    })),
+    archetypeOf: (caveId: string) => archetypes.get(caveId) ?? null,
+  }
+}
+
 function install(
   bundle: WorldBundle,
   opts: {
@@ -140,6 +159,7 @@ function install(
     config?: WorldConfig
     groundTrace?: ReturnType<typeof createPlayerGroundTraceBuffer> | null
     questManager?: { list?: () => unknown[] }
+    catalog?: WorldLocationCatalog
   } = {},
 ) {
   const worldContext = {} as unknown as WorldContext
@@ -148,7 +168,7 @@ function install(
   const getPlayerPosition = opts.getPlayerPosition ?? (() => ({ x: 0, z: 0 }))
   const worldFlags = { hiddenTreasureFound: false }
   const worldLocations = {
-    catalog: { getById: () => null, nearestSettlements: () => [], landmarksWithin: () => [], invalidateScanCache: () => {} } as unknown as WorldLocationCatalog,
+    catalog: opts.catalog ?? { getById: () => null, nearestSettlements: () => [], landmarksWithin: () => [], invalidateScanCache: () => {} } as unknown as WorldLocationCatalog,
     knowledge: { get: () => undefined, has: () => false, reveal: () => false, list: () => [], serialize: () => [], restore: () => {}, clear: () => {} } as unknown as LocationKnowledge,
   }
   const questManager = {
@@ -213,6 +233,9 @@ describe('SeedvaleDebugApi shape', () => {
     expect(typeof api!.locations).toBe('object')
     expect(typeof api!.teleportTo).toBe('function')
     expect(typeof api!.teleportTo.villageNearest).toBe('function')
+    expect(typeof api!.teleportTo.darkForestTreasure).toBe('function')
+    expect(typeof api!.worldLocations.teleportToFirstCave).toBe('function')
+    expect(typeof api!.worldLocations.teleportToNearestCave).toBe('function')
     expect(typeof api!.quests.list).toBe('function')
     expect(typeof api!.quests.target).toBe('function')
     expect(typeof api!.quests.teleportToTarget).toBe('function')
@@ -226,7 +249,7 @@ describe('SeedvaleDebugApi shape', () => {
     const help = api!.help()
     expect(typeof help).toBe('string')
     expect(help.length).toBeGreaterThan(0)
-    for (const word of ['npc', 'village', 'locations', 'teleportTo', 'injury', 'quests']) {
+    for (const word of ['npc', 'village', 'locations', 'teleportTo', 'injury', 'quests', 'darkForestTreasure', 'teleportToNearestCave']) {
       expect(help).toContain(word)
     }
   })
@@ -467,6 +490,121 @@ describe('teleportTo', () => {
     const result = await api!.teleportTo.villageNearest()
     expect(result).toBe(false)
     expect(teleport).not.toHaveBeenCalled()
+  })
+})
+
+describe('teleportTo.darkForestTreasure()', () => {
+  it('teleports to the authoritative catalog position and calls getById with the ruins id', async () => {
+    stubWindow('?debug=1')
+    const site: WorldLocation = {
+      id: DARK_FOREST_TREASURE_LOCATION_ID,
+      kind: 'ruins',
+      x: 412.5,
+      z: -88.25,
+      name: 'Ruiny',
+      discoveryWeight: 0,
+    }
+    const getById = vi.fn((id: string) => (id === DARK_FOREST_TREASURE_LOCATION_ID ? site : null))
+    const catalog = {
+      getById,
+      nearestSettlements: () => [],
+      landmarksWithin: () => [],
+      invalidateScanCache: () => {},
+    } as unknown as WorldLocationCatalog
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const teleport = vi.fn(async () => {})
+    const { api } = install(bundle, { teleport, catalog })
+
+    const result = await api!.teleportTo.darkForestTreasure()
+    expect(result).toBe(true)
+    expect(getById).toHaveBeenCalledWith(DARK_FOREST_TREASURE_LOCATION_ID)
+    expect(teleport).toHaveBeenCalledWith(site.x, site.z)
+  })
+
+  it('resolves false and never calls teleport when the site is unavailable', async () => {
+    stubWindow('?debug=1')
+    const getById = vi.fn(() => null)
+    const catalog = {
+      getById,
+      nearestSettlements: () => [],
+      landmarksWithin: () => [],
+      invalidateScanCache: () => {},
+    } as unknown as WorldLocationCatalog
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const teleport = vi.fn(async () => {})
+    const { api } = install(bundle, { teleport, catalog })
+
+    const result = await api!.teleportTo.darkForestTreasure()
+    expect(result).toBe(false)
+    expect(getById).toHaveBeenCalledWith(DARK_FOREST_TREASURE_LOCATION_ID)
+    expect(teleport).not.toHaveBeenCalled()
+  })
+})
+
+describe('worldLocations cave teleports', () => {
+  const mixedCaves = fakeCaves([
+    { caveId: 'near-adventure', x: 10, z: 0, archetype: 'adventure' },
+    { caveId: 'far-dungeon', x: 100, z: 0, archetype: 'dungeon' },
+    { caveId: 'mid-natural', x: 40, z: 0, archetype: 'natural' },
+  ])
+
+  it('teleportToNearestCave(type) teleports to the nearest cave of that archetype', async () => {
+    stubWindow('?debug=1')
+    const teleport = vi.fn(async () => {})
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      caves: mixedCaves,
+    } as unknown as WorldBundle
+    const { api } = install(bundle, { teleport, getPlayerPosition: () => ({ x: 0, z: 0 }) })
+
+    await expect(api!.worldLocations.teleportToNearestCave('dungeon')).resolves.toBe(true)
+    expect(teleport).toHaveBeenCalledOnce()
+    expect(teleport).toHaveBeenCalledWith(100, 0)
+  })
+
+  it('ignores closer caves of a different archetype', async () => {
+    stubWindow('?debug=1')
+    const teleport = vi.fn(async () => {})
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      caves: mixedCaves,
+    } as unknown as WorldBundle
+    const { api } = install(bundle, { teleport, getPlayerPosition: () => ({ x: 0, z: 0 }) })
+
+    await expect(api!.worldLocations.teleportToNearestCave('natural')).resolves.toBe(true)
+    expect(teleport).toHaveBeenCalledWith(40, 0)
+    expect(teleport).not.toHaveBeenCalledWith(10, 0)
+  })
+
+  it('resolves false and never calls teleport when the archetype is absent', async () => {
+    stubWindow('?debug=1')
+    const teleport = vi.fn(async () => {})
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      caves: fakeCaves([
+        { caveId: 'only-natural', x: 8, z: 0, archetype: 'natural' },
+      ]),
+    } as unknown as WorldBundle
+    const { api } = install(bundle, { teleport, getPlayerPosition: () => ({ x: 0, z: 0 }) })
+
+    await expect(api!.worldLocations.teleportToNearestCave('dungeon')).resolves.toBe(false)
+    expect(teleport).not.toHaveBeenCalled()
+  })
+
+  it('teleportToFirstCave() still picks the nearest entrance of any archetype', async () => {
+    stubWindow('?debug=1')
+    const teleport = vi.fn(async () => {})
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const bundle = {
+      settlementsManager: fakeSettlementsManager({}).manager,
+      caves: mixedCaves,
+    } as unknown as WorldBundle
+    const { api } = install(bundle, { teleport, getPlayerPosition: () => ({ x: 0, z: 0 }) })
+
+    await expect(api!.worldLocations.teleportToFirstCave()).resolves.toBe(true)
+    expect(teleport).toHaveBeenCalledOnce()
+    expect(teleport).toHaveBeenCalledWith(10, 0)
+    log.mockRestore()
   })
 })
 
