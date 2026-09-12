@@ -1,13 +1,14 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-11 22:25:32  
+> Date: 2026-09-12 05:35:07  
 
 ## PLANS
 
 - `npc-031-voluntary-expedition-joining.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`
+- `settlements-npcs-032-player-to-household-resource-transfer.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `world-023-species-driven-sowing-density-and-yield.md`
 
@@ -92,6 +93,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-031-sustainable-seed-recovery-and-replanting-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `settlements-npcs-032-player-to-household-resource-transfer.md`
+
+Prompt:
+
+```
+Zrób review planu `settlements-npcs-032-player-to-household-resource-transfer.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/settlements-npcs-032-player-to-household-resource-transfer.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/settlements-npcs-032-player-to-household-resource-transfer-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
