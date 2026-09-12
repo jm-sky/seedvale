@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** fauna-023
+**Depends on:** ~~fauna-023~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `progression` `rewards` `relationships`
 **Tags:** `hunter` `harvest` `antler` `wildlife` `thicket` `attraction`

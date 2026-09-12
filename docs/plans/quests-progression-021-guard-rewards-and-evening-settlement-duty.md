@@ -3,7 +3,7 @@
 **Created:** 2026-09-12
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** M
-**Depends on:** fauna-022, quests-progression-019
+**Depends on:** ~~fauna-022~~, ~~quests-progression-019~~
 **Domain:** `quests-progression`
 **Type:** `feature`
 **Subdomains:** `quests` `progression` `rewards` `relationships`

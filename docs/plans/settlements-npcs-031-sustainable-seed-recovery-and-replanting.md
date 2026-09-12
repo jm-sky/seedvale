@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
-**Depends on:** settlements-npcs-030, world-023  
+**Depends on:** ~~settlements-npcs-030~~, world-023  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `household` `economy` `logistics`  
 **Tags:** `agriculture` `seeds` `off-screen`  

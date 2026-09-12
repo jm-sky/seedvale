@@ -57,7 +57,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
+| 💡 `quests-progression-020-hunter-profession-quests-and-wildlife-help.md`      | -       | 🔴 | M      | ~~fauna-023~~ |
+| ◼️ `quests-progression-021-guard-rewards-and-evening-settlement-duty.md`       | -       | 🔴 | M      | ~~fauna-022~~, ~~quests-progression-019~~ |
+| 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | ~~items-player-027~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~ |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
@@ -67,19 +69,18 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | ~~settlements-npcs-030~~ |
-| ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | -       | 🔴 | L      | settlements-npcs-030, world-023 |
+| ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | -       | 🔴 | L      | ~~settlements-npcs-030~~, world-023 |
 | 💡 `npc-037-stale-work-contract-target-discovery-and-notice-cleanup.md`        | -       | 🔴 | M      | ~~npc-018~~, ~~npc-028~~ |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | ⚪ | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
-| 💡 `quests-progression-020-profession-quests-guard-rewards-and-wildlife-help.md` | -       | 🔴 | L      | fauna-022, fauna-023, quests-progression-019 |
 | ◼️ `world-terrain-024-dungeon-cave-archetype.md`                               | -       | 🟡 | M      | ~~world-terrain-020~~ |
+| ◼️ `world-terrain-025-underground-cave-pool.md`                                | -       | 🟡 | M      | world-terrain-024 |
 | 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
 | 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
-| ◼️ `world-terrain-025-underground-cave-pool.md`                                | -       | 🟡 | M      | world-terrain-024 |
-| ◼️ `quests-progression-021-guard-rewards-and-evening-settlement-duty.md`       | -       | 🔴 | M      | fauna-022, quests-progression-019 |
+| ◼️ `fauna-027-dungeon-cave-residents-and-pool-foraging.md`                     | -       | 🟡 | M      | ~~fauna-019~~, ~~fauna-022~~, ~~fauna-023~~, world-terrain-024, world-terrain-025 |
 
 ---
 
@@ -185,7 +186,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `027`
+- fauna: `028`
 - items-player: `031`
 - npc: `039`
 - persistence: `005`

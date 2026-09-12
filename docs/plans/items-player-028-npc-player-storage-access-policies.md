@@ -3,7 +3,7 @@
 **Created:** 2026-09-11
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** L
-**Depends on:** items-player-027
+**Depends on:** ~~items-player-027~~
 **Domain:** `items-player`
 **Type:** `feature`
 **Subdomains:** `inventory` `items` `interaction`
