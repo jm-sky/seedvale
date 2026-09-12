@@ -7,7 +7,9 @@ import {
   DROUGHT_STRESS_CAP_DAYS,
   droughtYieldMultiplier,
   findNearestGarden,
+  gardenMaintenanceRoll,
   gardenPlotPromptLabel,
+  gardenWateringRoll,
   getCultivationStatus,
   HYDRATION_SIM_WINDOW_DAYS,
   MAINTENANCE_BASE_DURATION_SEC,
@@ -224,6 +226,39 @@ describe('gardenPlotPromptLabel', () => {
     expect(label).toContain('[E]')
     expect(label).toContain('[R]')
     expect(label).toContain('45')
+  })
+})
+
+describe('gardenMaintenanceRoll / gardenWateringRoll', () => {
+  it('is a pure function of (npcId, gardenId, attempt) — same input, same output', () => {
+    const a = gardenMaintenanceRoll('npc-1', 'garden-1', 5)
+    const b = gardenMaintenanceRoll('npc-1', 'garden-1', 5)
+    expect(a).toBe(b)
+    const c = gardenWateringRoll('npc-1', 'garden-1', 5)
+    const d = gardenWateringRoll('npc-1', 'garden-1', 5)
+    expect(c).toBe(d)
+  })
+
+  it('returns a value in [0, 1)', () => {
+    const roll = gardenMaintenanceRoll('npc-1', 'garden-1', 5)
+    expect(roll).toBeGreaterThanOrEqual(0)
+    expect(roll).toBeLessThan(1)
+  })
+
+  it('changes with a different attempt bucket, so a later visit can re-roll', () => {
+    const first = gardenMaintenanceRoll('npc-1', 'garden-1', 5)
+    const later = gardenMaintenanceRoll('npc-1', 'garden-1', 6)
+    expect(later).not.toBe(first)
+  })
+
+  it('differs by NPC identity and by garden identity', () => {
+    const base = gardenMaintenanceRoll('npc-1', 'garden-1', 5)
+    expect(gardenMaintenanceRoll('npc-2', 'garden-1', 5)).not.toBe(base)
+    expect(gardenMaintenanceRoll('npc-1', 'garden-2', 5)).not.toBe(base)
+  })
+
+  it('maintenance and watering rolls are independent for the same inputs', () => {
+    expect(gardenWateringRoll('npc-1', 'garden-1', 5)).not.toBe(gardenMaintenanceRoll('npc-1', 'garden-1', 5))
   })
 })
 

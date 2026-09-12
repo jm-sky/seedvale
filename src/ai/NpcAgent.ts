@@ -25,8 +25,8 @@ import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
-import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
 import type { NpcBurialHooks } from './burialPressure'
@@ -152,7 +152,12 @@ import { recordBloodHit } from '../world/bloodTraces'
 import { colliderActiveAtY } from '../world/collision'
 import { ensureNpcBurialGrave } from '../world/npcGraves'
 import { PALISADE_WORK_SESSION_HOURS, PALISADE_WORK_SESSION_SEC, palisadeRemainingWork } from '../world/palisade'
-import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
+import {
+  CARE_MAINTAINED_THRESHOLD,
+  gardenMaintenanceRoll,
+  gardenWateringRoll,
+  HYDRATION_DROUGHT_THRESHOLD,
+} from '../world/playerGarden'
 import {
   advanceWellConstruction,
   isWellCompleted,
@@ -4103,6 +4108,11 @@ export class NpcAgent {
    * (`pickNeed({ critical: true })`, the same check `tickCriticalInterrupt`
    * uses) plus health/stamina ratios, so a hungry-but-otherwise-fine NPC can
    * do a little extra work without a new priority system.
+   *
+   * The roll gates a mutation of the persisted `PlayerGardenRecord.care`, so
+   * it uses `gardenMaintenanceRoll` (NPC identity + garden identity + an
+   * hour-of-world-day attempt bucket) instead of `Math.random()` — see
+   * review 2026-09-03 P10 and `docs/plans/LOOSE-ENDS.md`.
    */
   private maybeMaintainNearbyGarden(x: number, z: number): void {
     const foodSources = this.foodSources
@@ -4112,7 +4122,8 @@ export class NpcAgent {
     if (pickNeed(this.needs, { critical: true }) !== 'idle') return
     const garden = foodSources.gardenNear(x, z)
     if (!garden || garden.care >= CARE_MAINTAINED_THRESHOLD) return
-    if (Math.random() >= NPC_GARDEN_MAINTENANCE_CHANCE) return
+    const attempt = Math.floor(this.nowDays() * 24)
+    if (gardenMaintenanceRoll(this.id, garden.id, attempt) >= NPC_GARDEN_MAINTENANCE_CHANCE) return
     foodSources.maintainGarden(garden.id)
   }
 
@@ -4121,6 +4132,10 @@ export class NpcAgent {
    * same "only ever evaluated right after this NPC already arrived at a crop
    * it was harvesting" shape and gates as `maybeMaintainNearbyGarden`. Never
    * a global scan, never a special `WateringAI`.
+   *
+   * Same determinism reasoning as `maybeMaintainNearbyGarden`: gates a
+   * mutation of persisted `PlayerGardenRecord.hydration`, so it uses
+   * `gardenWateringRoll` rather than `Math.random()`.
    */
   private maybeWaterNearbyGarden(x: number, z: number): void {
     const foodSources = this.foodSources
@@ -4130,7 +4145,8 @@ export class NpcAgent {
     if (pickNeed(this.needs, { critical: true }) !== 'idle') return
     const garden = foodSources.gardenNear(x, z)
     if (!garden || garden.hydration >= HYDRATION_DROUGHT_THRESHOLD) return
-    if (Math.random() >= NPC_GARDEN_WATERING_CHANCE) return
+    const attempt = Math.floor(this.nowDays() * 24)
+    if (gardenWateringRoll(this.id, garden.id, attempt) >= NPC_GARDEN_WATERING_CHANCE) return
     foodSources.waterGarden(garden.id)
   }
 
