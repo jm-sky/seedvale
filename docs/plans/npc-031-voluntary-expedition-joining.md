@@ -9,6 +9,7 @@
 **Subdomains:** `decision-making` `relationships` `behavior`
 **Tags:** `companions` `voluntary-joining` `social` `expedition`
 **Roadmap:** `companions.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
