@@ -63,6 +63,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/animalDefs.ts`
+- `fauna/animalVariants.ts`
 - `reputation/ReputationManager.ts`
 - `reputation/SocialNewsLedger.ts`
 

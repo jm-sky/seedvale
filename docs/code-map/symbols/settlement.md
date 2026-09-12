@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 400
-- `CreateSettlementDeps` — type — line 258
-- `Settlement` — type — line 136
-- `settlementSpawnPoint` — function — line 246
+- `createSettlement` — function — line 408
+- `CreateSettlementDeps` — type — line 266
+- `Settlement` — type — line 140
+- `settlementSpawnPoint` — function — line 254
 
 ## `settlement/decorProps.ts`
 
@@ -263,12 +263,12 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/houseLighting.ts`
 
-- `createHouseLight` — function — line 168
-- `createProceduralTorchPost` — function — line 203
-- `createVillageTorchLight` — function — line 224
+- `createHouseLight` — function — line 170
+- `createProceduralTorchPost` — function — line 205
+- `createVillageTorchLight` — function — line 226
 - `HouseLight` — type — line 23
-- `ResolvedHouseLampMount` — type — line 368
-- `resolveHouseLampMount` — function — line 410
+- `ResolvedHouseLampMount` — type — line 371
+- `resolveHouseLampMount` — function — line 413
 - `VillageTorch` — type — line 29
 
 ## `settlement/landOwnership.ts`
@@ -483,15 +483,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 276
-- `buildSettlementProps` — function — line 684
-- `disposeSettlementGroup` — function — line 1871
-- `SettlementHouseBed` — type — line 144
-- `SettlementHouseLandmark` — type — line 110
-- `SettlementLandmarks` — type — line 151
-- `SettlementLandPlot` — type — line 265
-- `SettlementStorageVisuals` — type — line 257
-- `SettlementTreeLandmark` — type — line 283
+- `BlacksmithWorkplace` — type — line 279
+- `buildSettlementProps` — function — line 687
+- `disposeSettlementGroup` — function — line 1886
+- `SettlementHouseBed` — type — line 147
+- `SettlementHouseLandmark` — type — line 113
+- `SettlementLandmarks` — type — line 154
+- `SettlementLandPlot` — type — line 268
+- `SettlementStorageVisuals` — type — line 260
+- `SettlementTreeLandmark` — type — line 286
 
 ## `settlement/propSpecs.ts`
 
@@ -655,13 +655,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementNightCycle.ts`
 
-- `createSettlementNightCycle` — function — line 51
+- `createSettlementNightCycle` — function — line 62
 - `NIGHT_FIRE_IGNITE_CHANCE` — const — line 27
 - `NIGHT_FIRE_THRESHOLD` — const — line 24
   - domain: settlements
   - system: settlement-night-cycle
   - role: Owns the dusk/dawn threshold crossing that drives fire autolight, torches and house-light intensity.
+- `SettlementNightAutoLightPolicy` — type — line 52
 - `SettlementNightCycle` — type — line 49
+- `SettlementNightTorch` — type — line 57
 - `shouldAutoLightNightFire` — function — line 38
 
 ## `settlement/settlementPalisade.ts`
@@ -743,6 +745,13 @@ Generated from exported TypeScript symbols.
 - `classifySettlementTerrain` — function — line 36
 - `MOUNTAIN_RIDGE_THRESHOLD` — const — line 28
 - `TerrainSamplers` — type — line 6
+
+## `settlement/settlementVillageTorch.ts`
+
+- `SettlementVillageTorch` — type — line 12
+  - domain: settlements
+  - system: settlement-lighting
+- `settlementVillageTorchId` — function — line 19
 
 ## `settlement/storageDestinations.ts`
 

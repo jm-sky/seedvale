@@ -2685,6 +2685,7 @@ Generated from TypeScript imports.
 - `items/treasureGameplay.ts`
 - `items/villageTools.test.ts`
 - `main.ts`
+- `quests/guardEveningOfferWindow.ts`
 - `reputation/socialExposure.ts`
 - `settlement/families.ts`
 - `settlement/findSettlementSite.ts`

@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 86
-- `isChannelBusy` — function — line 93
+- `isActionBlocked` — function — line 88
+- `isChannelBusy` — function — line 95
 - `PlayerActionContext` — type — line 31
 
 ## `app/actions/actionContracts.ts`
@@ -256,13 +256,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 298
+- `createApp` — function — line 303
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 267
+- `NewAppOptions` — type — line 272
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -272,8 +272,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 661
-- `GameLoop` — type — line 620
+- `createGameLoop` — function — line 665
+- `GameLoop` — type — line 624
 - `GameLoopDeps` — type — line 301
 
 ## `app/graphicsSettings.ts`
@@ -281,6 +281,11 @@ Generated from exported TypeScript symbols.
 - `createGraphicsSettings` — function — line 54
 - `GraphicsSettings` — type — line 19
 - `GraphicsSettingsDeps` — type — line 41
+
+## `app/guardQuestWiring.ts`
+
+- `createSettlementLightLookup` — function — line 6
+- `syncGuardEveningNightPolicies` — function — line 46
 
 ## `app/inspection/buildWorldInspection.ts`
 
@@ -313,10 +318,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1185
-- `buildDigTarget` — function — line 1132
+- `buildCombatTarget` — function — line 1198
+- `buildDigTarget` — function — line 1145
 - `buildInteractables` — function — line 454
-- `collectItem` — function — line 1235
+- `collectItem` — function — line 1248
 - `COMBAT_TARGET_CONE_DOT` — const — line 99
 - `COMBAT_TARGET_RANGE` — const — line 84
 - `CombatAimMode` — type — line 89
@@ -334,10 +339,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 178
-- `InventoryWiring` — type — line 110
-- `InventoryWiringDeps` — type — line 143
-- `MerchantInventoryView` — type — line 96
+- `createInventoryWiring` — function — line 190
+- `InventoryWiring` — type — line 115
+- `InventoryWiringDeps` — type — line 148
+- `MerchantInventoryView` — type — line 101
 
 ## `app/modalState.ts`
 
@@ -364,7 +369,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 134
+- `createSaveState` — function — line 140
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.

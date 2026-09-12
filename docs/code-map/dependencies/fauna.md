@@ -614,6 +614,7 @@ Generated from TypeScript imports.
 - `fauna/animalVariants.test.ts`
 - `fauna/createFauna.test.ts`
 - `fauna/createFauna.ts`
+- `reputation/animalDeeds.ts`
 
 ## `fauna/bloodSplat.ts`
 

@@ -843,6 +843,7 @@ Generated from TypeScript imports.
 - `app/busyAction.ts`
 - `app/gameLoop.ts`
 - `app/graphicsSettings.ts`
+- `app/guardQuestWiring.ts`
 - `app/inventoryWiring.ts`
 - `app/renderStack.ts`
 - `app/restCampSequence.ts`
@@ -877,7 +878,6 @@ Generated from TypeScript imports.
 - `items/armorItemInstances.ts`
 - `items/container.ts`
 - `items/equipment.ts`
-- `items/guardSword.ts`
 - `items/inventoryView.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`
@@ -899,7 +899,9 @@ Generated from TypeScript imports.
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
 - `quests/cardinalDirection.ts`
+- `quests/guardPersistence.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
@@ -1146,6 +1148,18 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 
+## `app/guardQuestWiring.ts`
+
+**Imports**
+
+- `quests/QuestManager.ts`
+- `quests/settlementLightLookup.ts`
+- `settlement/createSettlement.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+
 ## `app/inspection/buildWorldInspection.test.ts`
 
 **Imports**
@@ -1307,7 +1321,6 @@ Generated from TypeScript imports.
 - `items/books.ts`
 - `items/equipment.ts`
 - `items/foodItems.ts`
-- `items/guardSword.ts`
 - `items/inventoryView.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`
@@ -1320,6 +1333,8 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
 - `quests/QuestManager.ts`
+- `quests/guardPersistence.ts`
+- `quests/guardRewards.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/horseAcquisition.ts`

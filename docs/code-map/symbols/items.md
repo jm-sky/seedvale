@@ -221,13 +221,6 @@ Generated from exported TypeScript symbols.
 - `resolveRawMeatSafetyRisk` — function — line 70
   - domain: items-player
 
-## `items/guardSword.ts`
-
-- `askGuardForSword` — function — line 22
-- `GuardSwordAsk` — type — line 3
-- `GuardSwordAskResult` — type — line 11
-- `shouldGrantQuestSword` — function — line 41
-
 ## `items/HeldTool.ts`
 
 - `createHeldTool` — function — line 69

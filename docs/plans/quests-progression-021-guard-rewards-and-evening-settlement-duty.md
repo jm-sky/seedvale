@@ -1,7 +1,7 @@
 # Plan: Guard Rewards and Evening Settlement Duty
 
 **Created:** 2026-09-12
-**Status:** `implemented` ✅
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~fauna-022~~, ~~quests-progression-019~~
 **Domain:** `quests-progression`

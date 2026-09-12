@@ -23,9 +23,11 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
+- `quests/guardEveningOfferWindow.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
+- `quests/settlementLightLookup.ts`
 - `quests/settlementRatInfestation.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/livestock.ts`
@@ -36,6 +38,7 @@ Generated from TypeScript imports.
 - `app/actions/storageInfestationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `app/guardQuestWiring.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
 - `debug/npcDebugApi.test.ts`
@@ -61,6 +64,58 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `quests/cardinalDirection.test.ts`
 
+## `quests/guardEveningOfferWindow.test.ts`
+
+**Imports**
+
+- `quests/guardEveningOfferWindow.ts`
+
+## `quests/guardEveningOfferWindow.ts`
+
+**Imports**
+
+- `settlement/npcState.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `quests/QuestManager.ts`
+- `quests/guardEveningOfferWindow.test.ts`
+
+## `quests/guardPersistence.ts`
+
+**Imports**
+
+- `quests/guardRewards.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/inventoryWiring.ts`
+
+## `quests/guardRewards.test.ts`
+
+**Imports**
+
+- `items/tradeCatalog.ts`
+- `quests/guardRewards.ts`
+
+## `quests/guardRewards.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `items/tradeCatalog.ts`
+- `quests/quests.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `app/inventoryWiring.ts`
+- `quests/guardPersistence.ts`
+- `quests/guardRewards.test.ts`
+
 ## `quests/materializeAuthoredQuests.test.ts`
 
 **Imports**
@@ -85,6 +140,19 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/quests.test.ts`
+
+## `quests/opportunities/guardProfessionQuests.ts`
+
+**Imports**
+
+- `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `settlement/settlementVillageTorch.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
 
 ## `quests/opportunities/hunterProfessionQuests.test.ts`
 
@@ -152,6 +220,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
@@ -228,6 +297,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `quests/QuestManager.ts`
+- `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
@@ -268,8 +338,10 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/guardRewards.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
@@ -278,6 +350,13 @@ Generated from TypeScript imports.
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
+
+## `quests/settlementLightLookup.ts`
+
+**Imported by**
+
+- `app/guardQuestWiring.ts`
+- `quests/QuestManager.ts`
 
 ## `quests/settlementRatInfestation.test.ts`
 

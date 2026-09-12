@@ -4,15 +4,15 @@ Generated from exported TypeScript symbols.
 
 ## `reputation/animalDeeds.ts`
 
-- `FULL_ANIMAL_DEED_EFFECT_DISTANCE` — const — line 59
-- `MAX_ANIMAL_DEED_INFLUENCE_DISTANCE` — const — line 55
-- `PlayerAnimalKillContext` — type — line 41
+- `FULL_ANIMAL_DEED_EFFECT_DISTANCE` — const — line 62
+- `MAX_ANIMAL_DEED_INFLUENCE_DISTANCE` — const — line 58
+- `PlayerAnimalKillContext` — type — line 42
   - domain: quests-progression
   - system: reputation
   - role: Pure species-baseline resolver producing the generic dangerous- animal-kill social-news signal, plus the canonical distance-attenuation functions `SocialNewsLedger` applies per settlement.
-- `renownFactor` — function — line 92
-- `reputationFactor` — function — line 83
-- `resolveAnimalDeedSignal` — function — line 135
+- `renownFactor` — function — line 95
+- `reputationFactor` — function — line 86
+- `resolveAnimalDeedSignal` — function — line 138
   - domain: quests-progression
 
 ## `reputation/ReputationManager.ts`

@@ -627,24 +627,6 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `items/foodSafety.test.ts`
 
-## `items/guardSword.test.ts`
-
-**Imports**
-
-- `items/guardSword.ts`
-
-## `items/guardSword.ts`
-
-**Imports**
-
-- `items/items.ts`
-
-**Imported by**
-
-- `app/createApp.ts`
-- `app/inventoryWiring.ts`
-- `items/guardSword.test.ts`
-
 ## `items/heldToolVisual.ts`
 
 **Imports**
@@ -1048,7 +1030,6 @@ Generated from TypeScript imports.
 - `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `items/foodSafety.ts`
-- `items/guardSword.ts`
 - `items/heldToolVisual.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryTransfer.ts`
@@ -1075,6 +1056,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/PlayerTorch.ts`
 - `quests/QuestManager.ts`
+- `quests/guardRewards.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/quests.ts`
 - `settlement/household.ts`
@@ -1340,6 +1322,8 @@ Generated from TypeScript imports.
 - `items/trade.ts`
 - `items/trapInstanceTrade.test.ts`
 - `items/treasureGameplay.test.ts`
+- `quests/guardRewards.test.ts`
+- `quests/guardRewards.ts`
 - `ui-vue/store.ts`
 
 ## `items/trapInstanceLifecycle.test.ts`

@@ -229,6 +229,7 @@ Generated from TypeScript imports.
 - `settlement/settlementNightCycle.ts`
 - `settlement/settlementPropColliders.ts`
 - `settlement/settlementSignposts.ts`
+- `settlement/settlementVillageTorch.ts`
 - `settlement/structureRepairCandidates.ts`
 - `settlement/structureStateRegistry.ts`
 - `settlement/wellInteractionQueue.ts`
@@ -261,6 +262,7 @@ Generated from TypeScript imports.
 
 - `app/actions/restActions.ts`
 - `app/createApp.ts`
+- `app/guardQuestWiring.ts`
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `app/worldBundle.ts`
@@ -529,6 +531,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `settlement/props.ts`
+- `settlement/settlementVillageTorch.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/createCaves.ts`
@@ -969,6 +972,9 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
 - `quests/QuestManager.ts`
+- `quests/guardEveningOfferWindow.ts`
+- `quests/guardPersistence.ts`
+- `quests/guardRewards.ts`
 - `quests/materializeAuthoredQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
@@ -1127,6 +1133,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementStructures.ts`
+- `settlement/settlementVillageTorch.ts`
 - `settlement/storageVisuals.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
@@ -1559,6 +1566,18 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
+
+## `settlement/settlementVillageTorch.ts`
+
+**Imports**
+
+- `settlement/houseLighting.ts`
+
+**Imported by**
+
+- `quests/opportunities/guardProfessionQuests.ts`
+- `settlement/createSettlement.ts`
+- `settlement/props.ts`
 
 ## `settlement/storageDestinations.test.ts`
 
