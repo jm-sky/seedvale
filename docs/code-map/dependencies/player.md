@@ -275,6 +275,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/Inventory.ts`
+- `items/armorItemInstances.ts`
+- `items/equipment.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.ts`
 - `player/characterPresentation.ts`
@@ -285,6 +288,10 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/Inventory.ts`
+- `items/equipment.ts`
+- `items/itemDisplay.ts`
+- `items/itemInstances.ts`
 - `player/PlayerSkills.ts`
 - `shared/PhysicalAttributes.ts`
 - `shared/effectivePhysicalAttributes.ts`

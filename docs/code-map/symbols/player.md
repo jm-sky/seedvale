@@ -17,23 +17,31 @@ Generated from exported TypeScript symbols.
 
 ## `player/characterPresentation.ts`
 
-- `aggregateAttributeModifierBadges` — function — line 91
-- `ATTRIBUTE_DISPLAY_SCALE` — const — line 26
+- `aggregateAttributeModifierBadges` — function — line 188
+- `ATTRIBUTE_DISPLAY_SCALE` — const — line 38
   - domain: items-player
   - system: player-ui
   - role: Character Screen presentation snapshot (plan ui-input-013). Vue renders these views; it does not own modifier formulas or effective SPEA. Not persisted — rebuilt from authoritative player/condition/skill state.
-- `buildCharacterAttributeViews` — function — line 112
-- `buildCharacterConditionViews` — function — line 132
-- `buildCharacterPresentation` — function — line 197
-- `buildCharacterSkillViews` — function — line 124
-- `CharacterAttributeView` — type — line 47
-- `CharacterConditionEffectView` — type — line 60
-- `CharacterConditionView` — type — line 65
-- `CharacterModifierBadge` — type — line 42
-- `CharacterPresentation` — type — line 73
-- `CharacterSkillView` — type — line 54
-- `toDisplayAttribute` — function — line 79
-- `toDisplaySkill` — function — line 83
+- `buildCharacterAttributeViews` — function — line 209
+- `buildCharacterConditionViews` — function — line 229
+- `buildCharacterEquipmentSlotViews` — function — line 139
+- `buildCharacterEquipmentView` — function — line 165
+  - domain: items-player
+- `buildCharacterPresentation` — function — line 294
+- `buildCharacterSkillViews` — function — line 221
+- `CharacterAttributeView` — type — line 59
+- `CharacterConditionEffectView` — type — line 72
+- `CharacterConditionView` — type — line 77
+- `CharacterEquipmentSlotView` — type — line 85
+- `CharacterEquipmentView` — type — line 91
+- `CharacterModifierBadge` — type — line 54
+- `CharacterPresentation` — type — line 100
+- `CharacterSkillView` — type — line 66
+- `equipmentModifiersToCharacterView` — function — line 127
+  - domain: items-player
+- `NEUTRAL_CHARACTER_EQUIPMENT_VIEW` — const — line 113
+- `toDisplayAttribute` — function — line 176
+- `toDisplaySkill` — function — line 180
 
 ## `player/humanCarryCapacity.ts`
 

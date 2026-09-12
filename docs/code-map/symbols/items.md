@@ -128,27 +128,28 @@ Generated from exported TypeScript symbols.
 
 ## `items/equipment.ts`
 
-- `composeEquipmentModifiers` — function — line 218
+- `composeEquipmentModifiers` — function — line 228
   - domain: items-player
-- `createEquipmentState` — function — line 94
+- `createEquipmentState` — function — line 104
+- `EQUIPMENT_SLOT_LABEL` — const — line 27
 - `EQUIPMENT_SLOTS` — const — line 17
-- `EquipmentModifiers` — type — line 33
+- `EquipmentModifiers` — type — line 43
 - `EquipmentSlot` — type — line 15
-- `EquipmentState` — type — line 60
+- `EquipmentState` — type — line 70
   - domain: items-player
   - system: equipment
   - role: Tracks which owned armor instance (if any) is worn in each equipment slot.
   - uses: Inventory
-- `equippedArmorInstances` — function — line 169
-- `equippedBodyArmor` — function — line 185
-- `equippedInstanceId` — function — line 191
-- `equippedInstanceIds` — function — line 200
-- `isEquipmentSlot` — function — line 70
-- `NEUTRAL_EQUIPMENT_MODIFIERS` — const — line 43
-- `resolveArmorInstanceEffective` — function — line 262
-- `resolveEquipmentModifiers` — function — line 252
+- `equippedArmorInstances` — function — line 179
+- `equippedBodyArmor` — function — line 195
+- `equippedInstanceId` — function — line 201
+- `equippedInstanceIds` — function — line 210
+- `isEquipmentSlot` — function — line 80
+- `NEUTRAL_EQUIPMENT_MODIFIERS` — const — line 53
+- `resolveArmorInstanceEffective` — function — line 272
+- `resolveEquipmentModifiers` — function — line 262
   - domain: items-player
-- `SavePlayerEquipment` — type — line 27
+- `SavePlayerEquipment` — type — line 37
 
 ## `items/foodFreshness.ts`
 
@@ -279,12 +280,12 @@ Generated from exported TypeScript symbols.
 
 ## `items/inventoryView.ts`
 
-- `buildInventoryGroups` — function — line 246
-- `inventoryCountsForUi` — function — line 282
-- `InventoryGroupView` — type — line 66
-- `InventoryInstanceRow` — type — line 44
-- `ITEM_METER_LABEL` — const — line 38
-- `ItemMeterKind` — type — line 33
+- `buildInventoryGroups` — function — line 238
+- `inventoryCountsForUi` — function — line 274
+- `InventoryGroupView` — type — line 67
+- `InventoryInstanceRow` — type — line 45
+- `ITEM_METER_LABEL` — const — line 39
+- `ItemMeterKind` — type — line 34
 
 ## `items/itemCatalog.ts`
 

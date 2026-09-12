@@ -165,6 +165,8 @@ Generated from TypeScript imports.
 - `items/weaponMaintenance.test.ts`
 - `items/weaponMaintenance.ts`
 - `persistence/saveData.ts`
+- `player/characterPresentation.test.ts`
+- `player/characterPresentation.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
@@ -217,6 +219,7 @@ Generated from TypeScript imports.
 - `items/equipment.ts`
 - `items/inventoryView.ts`
 - `items/trade.ts`
+- `player/characterPresentation.test.ts`
 
 ## `items/books.test.ts`
 
@@ -503,7 +506,10 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
 - `items/equipment.test.ts`
+- `items/inventoryView.ts`
 - `persistence/saveData.ts`
+- `player/characterPresentation.test.ts`
+- `player/characterPresentation.ts`
 - `player/playerDamage.test.ts`
 - `player/playerDamage.ts`
 - `ui-vue/store.ts`
@@ -712,6 +718,7 @@ Generated from TypeScript imports.
 
 - `items/Inventory.ts`
 - `items/armorItemInstances.ts`
+- `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`
@@ -849,6 +856,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `items/itemDisplay.test.ts`
+- `player/characterPresentation.ts`
 
 ## `items/itemFuel.test.ts`
 
@@ -921,6 +929,7 @@ Generated from TypeScript imports.
 - `items/weaponMaintenance.test.ts`
 - `items/weaponMaintenance.ts`
 - `persistence/saveData.ts`
+- `player/characterPresentation.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.test.ts`
 - `world/createPlacedTraps.ts`
