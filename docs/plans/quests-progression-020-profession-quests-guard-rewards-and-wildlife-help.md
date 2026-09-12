@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `progression` `rewards` `relationships`
 **Tags:** `hunter` `guard` `alpha-wolf` `renown` `loot` `wildlife`
 **Roadmap:** `quests-and-reputation.md`
+**Model:** Opus, Sonnet
 
 ## Cel
 
@@ -22,7 +23,7 @@ Przebudować wybrane nagrody i dodać spójne profesyjne zadania dla Huntera ora
 - jednorazowe zadanie wieczorne Strażnika korzystało z rzeczywistych świateł osady,
 - questy profesyjne wiązały się z konkretnym NPC o odpowiedniej roli przez stabilne `NpcId`, bez hardkodowania imion.
 
-Plan ma rozszerzać obecne `QuestDef` / `QuestManager`, settlement quest opportunities, fauna-owned loot/attraction, `ReputationManager`, `DayNightState` i istniejące world flags. Nie tworzyć osobnego profession-quest engine, hunter reputation ani guard reward managera.
+Plan ma rozszerzać obecne `QuestDef` / `QuestManager`, settlement quest opportunities, fauna-owned loot/attraction, `ReputationManager`, `DayNightState`, settlement-owned lighting i istniejące world flags. Nie tworzyć osobnego profession-quest engine, hunter reputation, guard reward managera ani quest-owned systemu świateł.
 
 ## 1. Stan obecny i decyzje architektoniczne
 
@@ -77,6 +78,12 @@ Poroże rozszerza ten właśnie loot pipeline. Nie przyznawać `antler` z `Quest
 `src/items/guardSword.ts::askGuardForSword()` obecnie dopuszcza prezent po `woda-dla-marka` lub przy relacji `>= 1`; `src/app/inventoryWiring.ts` używa persisted `worldFlags.guardSwordGifted`.
 
 To historyczne powiązanie ma zostać usunięte. `woda-dla-marka` nie odblokowuje broni.
+
+### Settlement torches — zweryfikowana luka
+
+Canonical village torches **nie są obecnie player-lightable**. `src/settlement/houseLighting.ts::VillageTorch` jest night-auto, a `src/settlement/settlementNightCycle.ts::createSettlementNightCycle()` automatycznie zapala village torches po przekroczeniu `NIGHT_FIRE_THRESHOLD` i gasi je o świcie.
+
+Dlatego wieczorne zadanie Strażnika wymaga małego rozszerzenia istniejącego settlement-lighting contractu. To jest część tego planu, nie osobny system i nie osobny plan. Quest nie może udawać, że obecne automatyczne pochodnie są już interaktywne.
 
 ## 2. Hunter quest chain — dwa osobne questy, nie dwa stage jednego questa
 
@@ -327,12 +334,12 @@ Gameplay:
 każdego dnia przed wieczorem Strażnik może poprosić o przygotowanie osady
 → quest jest widoczny tylko przez 1 godzinę czasu świata
 → okno wypada między ~17:00 a ~19:00
-→ gracz zapala settlement torches + settlement campfire
+→ gracz ręcznie zapala canonical settlement torches + settlement campfire
 → raport do Strażnika
 → quest nigdy więcej nie jest oferowany przez tego NPC
 ```
 
-### Okno dostępności
+### 7.1 Okno dostępności
 
 Nie wprowadzać real-time timerów.
 
@@ -351,7 +358,7 @@ Quest może pojawić się ponownie kolejnego dnia, jeżeli nie został przyjęty
 
 Nie rozszerzać quest progress o deadline/timestamp tylko dla tego zadania.
 
-### Availability contract
+### 7.2 Availability contract
 
 Aktualne `QuestAvailability` nie zna czasu. Dodać najmniejsze reusable prerequisite/availability predicate dla czasu świata, np.:
 
@@ -363,11 +370,59 @@ Jeżeli daily deterministic start jest materializowany do konkretnego `QuestDef`
 
 Nie wstrzykiwać całego `DayNightState` do quest definitions; wystarczy read-only callback zwracający `timeOfDay`/`elapsedDays`.
 
-### Objective: światła osady
+### 7.3 Canonical village torches — rozszerzenie settlement lighting
 
-Settlement campfire już ma realny `VillageFire` state. Village torch posts/light state należy odczytać z istniejącego settlement props/light ownera.
+Obecny stan kodu:
 
-Dodać world-state objective, np.:
+```text
+VillageTorch
+→ presentation + setLit(lit) + update(dt)
+→ automatyczne zapalenie przy dusk threshold
+→ automatyczne zgaszenie przy dawn threshold
+```
+
+Nie ma kontraktu ręcznego zapalania przez gracza ani stabilnego questowego identity. Rozszerzyć istniejący settlement-owned mechanizm zamiast tworzyć questowe pochodnie.
+
+Minimalny wymagany kontrakt V1:
+
+- canonical village torch ma stabilne id wyprowadzone ze stabilnej tożsamości osady + authored/plan torch slotu, nie z Object3D ani kolejności aktualnie załadowanych meshy,
+- `VillageTorch` lub najbliższy settlement-owned wrapper udostępnia read-only `isLit()`;
+- settlement interaction layer potrafi wskazać konkretną canonical village torch i ręcznie ją zapalić przez normalną interakcję gracza,
+- samo zapalenie nadal mutuje settlement-owned torch state; QuestManager nigdy nie wywołuje `setLit(true)`,
+- nie tworzyć nowego `TorchManager` ani quest-owned tablicy stanów.
+
+Ręczne zapalenie powinno reuse istniejący fire-starting/interaction contract tam, gdzie jest to praktyczne. Nie kopiować osobnej logiki inventory/tool tylko dla questa.
+
+### 7.4 Konflikt z dusk automation
+
+Poza aktywnym wieczornym questem zachować obecne zachowanie **bez regresji**:
+
+```text
+dusk → village torches zapalają się automatycznie
+dawn → village torches gasną automatycznie
+```
+
+W trakcie aktywnego zadania target settlement nie może automatycznie zapalić wymaganych pochodni przed graczem, bo quest zaliczyłby się bez działania.
+
+Nie importować `QuestManager` ani quest id do `settlementNightCycle.ts`. Zamiast tego dodać mały quest-neutralny policy/input po stronie settlement lighting, semantycznie np.:
+
+```ts
+shouldAutoLightTorch(torchId): boolean
+```
+
+lub równoważny settlement-owned override/policy przekazany przez composition root.
+
+Wymagania:
+
+- default = obecne auto-light zachowanie,
+- tylko wymagane canonical torches target settlement mogą mieć auto-light tymczasowo suppressed,
+- quest/app composition aktywuje suppression dopiero dla aktywnego objective,
+- zakończenie/anulowanie/rebuild przywraca normalne zachowanie bez pozostawienia stale suppression,
+- dawn nadal może wygasić pochodnie normalnie; suppression dotyczy auto-zapłonu, nie ownership stanu.
+
+### 7.5 Objective: światła osady
+
+Dopiero po rozszerzeniu settlement lighting dodać questowy world-state objective, np.:
 
 ```ts
 {
@@ -376,11 +431,18 @@ Dodać world-state objective, np.:
 }
 ```
 
-Completion = wszystkie wymagane settlement torch lights + settlement campfire są aktualnie zapalone.
+Completion = wszystkie wymagane canonical settlement torches + settlement campfire są **aktualnie zapalone**.
 
-Quest nie przechowuje kopii `lit` state i nie odpala świateł sam. `QuestManager` dostaje tylko read-only resolver/callback podobnie do innych world-state objectives.
+Quest:
 
-V1 nie obejmuje player-built standing torches — tylko canonical settlement lights konkretnej osady.
+- czyta stan przez read-only resolver,
+- nie przechowuje kopii `lit` state,
+- nie zapala ani nie gasi świateł,
+- nie liczy house lights,
+- nie liczy player-built standing torches,
+- nie liczy dekoracyjnych/cave torches.
+
+`VillageFire` pozostaje ownerem settlement campfire. Village torch state pozostaje ownerowany przez settlement lighting.
 
 Nagroda:
 
@@ -388,25 +450,24 @@ Nagroda:
 - mała `benevolence`/`trust`,
 - niewielka coin reward albo brak item reward; nie `long_sword`.
 
-## 8. Dialog — quest-aware entry zamiast obowiązkowego „Może w czymś ci pomóc?”
+## 8. Dialog — korzystać z finalnego multiple-quest contractu
 
-Obecne `src/ui-vue/NpcDialogueMenu.vue` ma statyczny topic:
+Równolegle implementowany jest fix multiple quests per NPC. Bezpośrednio przed implementacją tego planu ponownie sprawdzić aktualny `main` dla:
 
-```text
-Może w czymś ci pomóc?
-```
+- `QuestManager.onInteract(npcId)`,
+- `QuestDialogOverride` / ewentualnego topic/entry contractu,
+- `labelMarker(npcId)`,
+- `src/ui-vue/store.ts`,
+- `src/ui-vue/NpcDialogueMenu.vue`.
 
-Dopiero jego kliknięcie uruchamia `resolveNpcDialogueHelp()` i odsłania quest offer/report/action.
+Jeżeli fix już wylądował, **nie implementować ponownie** topic selection ani globalnej marker arbitration w ramach `020`. Nowe Hunter/Guard questy mają tylko dostarczyć poprawne `title`, authored player lines/report actions i użyć wspólnego multi-context flow.
 
-W tym planie poprawić warstwę wejściową tak, aby:
+Docelowy UX pozostaje:
 
-- `ready_to_report` pokazywał authored `reportPlayerLine` / semantyczny action label bez konieczności kliknięcia generic help,
-- aktywny required talk action także mógł pojawić się bezpośrednio,
-- offer może nadal używać naturalnego „Mogę jakoś pomóc?” jeżeli nie ma bardziej konkretnej authored linii,
-- Vue nie branchuje po quest id/stage/objective; dostaje resolved action/label ze store/QuestManager seam,
-- samo otwarcie dialogu nadal niczego nie progressuje.
-
-Nie tworzyć drugiego dialogue engine.
+- `ready_to_report` ma być osiągalny bez zasłonięcia przez reminder innego questa,
+- kilka quest contexts tego samego Huntera/Strażnika jest świadomie wybieralnych,
+- Vue nie interpretuje quest id/stage/objective,
+- samo otwarcie dialogu niczego nie progressuje.
 
 ## 9. Persistence / one-shot semantics
 
@@ -433,6 +494,8 @@ Rozszerzyć istniejący persisted progression/worldFlags shape zamiast tworzyć 
 
 Quest completion outcome jest one-shot per stable guard NPC. Nie dodawać osobnego `eveningLightsDone` world flag, jeżeli zwykły quest outcome już rozwiązuje lifetime gating.
 
+Torch auto-light suppression jest runtime policy pochodną aktywnego objective, nie osobnym persisted quest flagiem. Po rebuild/save-load policy ma zostać odtworzona z authoritative quest state.
+
 ## 10. Ownership
 
 ```text
@@ -445,8 +508,11 @@ items
 quests
 → owns player quest lifecycle + counters + profession chain + hand-in
 
-settlement/world
-→ owns torch/campfire lit state
+settlement lighting
+→ owns canonical torch identity, lit state, manual ignition and dusk/dawn behavior
+
+VillageFire
+→ owns settlement campfire state
 
 world time
 → owns timeOfDay / elapsedDays
@@ -455,7 +521,7 @@ reputation
 → owns settlement renown/reputation
 
 app composition
-→ wires read-only lookups/events between owners
+→ wires read-only lookups/events/policies between owners
 ```
 
 Quest code nie może:
@@ -463,8 +529,11 @@ Quest code nie może:
 - ustawiać animal hunger,
 - spawnować antler bez harvest,
 - ustawiać torch/campfire `lit`,
+- zawierać implementacji dusk/dawn lighting,
 - mutować renown bez normalnego consequence path,
 - rozpoznawać alpha przez nazwę/model/scale.
+
+Settlement lighting nie może importować `QuestManager` ani znać quest ids.
 
 ## 11. Relevant files / verified seams
 
@@ -504,10 +573,11 @@ Implementation notes przed kodowaniem mają ponownie sprawdzić aktualne symbole
 
 ### Settlement lights / time
 
-- `src/settlement/VillageFire.ts`,
-- `src/settlement/campfireProps.ts`,
-- `src/settlement/props.ts`,
-- existing village-torch/light owner discovered from those call-sites,
+- `src/settlement/houseLighting.ts` — `VillageTorch`; obecnie night-auto,
+- `src/settlement/settlementNightCycle.ts` — dusk/dawn auto-light owner,
+- `src/settlement/props.ts` — canonical village torch construction/landmarks,
+- `src/settlement/VillageFire.ts` — campfire state,
+- settlement/player interaction registration call-sites dla nowych canonical torch interactions,
 - `src/world/dayNight.ts` — `timeOfDay`, `elapsedDays`, `formatClock`.
 
 ## 12. Testy
@@ -560,20 +630,35 @@ Dodać targeted automated tests co najmniej dla:
 - save/load nie duplikuje sword ani coins,
 - legacy `guardSwordGifted` migrates safely.
 
+### Settlement torch contract
+
+- canonical village torch ma stable id niezależne od mesh identity,
+- `isLit()` odpowiada rzeczywistemu settlement-owned stanowi,
+- manual player ignition zapala właściwą canonical torch,
+- default dusk automation nadal zapala torches poza aktywnym questem,
+- default dawn automation nadal je gasi,
+- suppression jednej target settlement/torch nie wyłącza automatu w innych osadach,
+- settlement lighting nie zna quest id ani nie importuje QuestManager,
+- zakończenie/rebuild usuwa suppression i przywraca default policy.
+
 ### Evening guard lights
 
 - deterministic daily offer window trwa dokładnie 1 game hour i mieści się 17:00–19:00,
 - ten sam seed/day/npc daje ten sam window,
 - nieprzyjęty quest może pojawić się kolejnego dnia,
 - przyjęty quest nie znika po końcu offer window,
-- completion wymaga canonical settlement lights + campfire,
-- player-built torch nie liczy,
+- aktywny objective suppressuje tylko auto-light wymaganych canonical torches,
+- automation nie może samo ukończyć questa,
+- completion wymaga ręcznie zapalonych canonical settlement torches + campfire,
+- house lights/player-built/cave/decorative torches nie liczą,
 - po successful lifetime outcome nie jest oferowany ponownie.
 
 ### Dialogue
 
-- `ready_to_report` ma bezpośredni authored entry/action,
-- generic help nie jest wymagany do report,
+Po merge concurrent multiple-quests fixa testować zgodnie z jego finalnym contractem:
+
+- Hunter/Guard z wieloma quest contexts nie wraca do first-match behavior,
+- `ready_to_report` pozostaje osiągalny obok reminderów/ofert innych questów,
 - otwarcie menu bez wyboru action nie progressuje questa,
 - Vue nie zawiera quest-id-specific branchy.
 
@@ -588,8 +673,9 @@ Browser/manual verification wykonuje User:
 5. Guard renown route: po wysokiej renomie guard oferuje sword recognition.
 6. Guard alpha route: player zabija alpha wolf i otrzymuje recognition; normal wolf nie działa.
 7. Spełnić obie sword routes w różnej kolejności — tylko pierwszy daje miecz, drugi równowartość w monetach.
-8. Evening lights: znaleźć 1h offer window między 17–19, przyjąć quest, zapalić wszystkie settlement lights + campfire, oddać bez przechodzenia przez „Może w czymś ci pomóc?”.
-9. Save/load w połowie Hunter harvest count oraz pomiędzy pierwszą i drugą guard recognition route.
+8. Poza questem sprawdzić dotychczasowy dusk/dawn auto-light village torches.
+9. Evening lights: znaleźć 1h offer window między 17–19, przyjąć quest, potwierdzić że wymagane pochodnie nie zapalają się automatycznie, ręcznie zapalić canonical torches + campfire i oddać zadanie.
+10. Save/load w połowie Hunter harvest count oraz pomiędzy pierwszą i drugą guard recognition route.
 
 AI nie wykonuje browser verification.
 
@@ -608,26 +694,29 @@ Plan nie obejmuje:
 - polowania NPC na zlecenie gracza,
 - deadline/failure timera dla wieczornego questa,
 - player-built lights jako część quest objective,
+- przebudowy wszystkich village lights na paliwo/zużywalne zasoby,
+- wyłączania automatycznego dusk/dawn lighting globalnie,
 - ogólnego generic timed-quest frameworka poza minimalnym world-time availability seam,
 - nowego dialogue-tree engine.
 
 ## 15. Dokumentacja i implementation notes
 
-Przed implementacją przygotować:
+Implementation notes istnieją w:
 
 `docs/plans/implementation-notes/quests-progression-020-profession-quests-guard-rewards-and-wildlife-help-implementation-notes.md`
 
-Notes mają zweryfikować przede wszystkim:
+Przed implementacją ponownie sprawdzić przede wszystkim:
 
+- finalny multiple-quests dialogue/topic contract po równoległym fixie,
 - dokładny fauna-023 consumption callback i możliwość identyfikacji source `thicket`,
 - stable key dla 50% antler roll,
 - obecny player-kill callback, z którego można zapisać alpha deed fact bez duplikowania animal-deed resolvera,
-- dokładny owner village torch lit state,
 - aktualny save migration/default path dla nowych guard reward flags,
-- najwęższy sposób persistowania counted quest objectives.
+- najwęższy sposób persistowania counted quest objectives,
+- dokładne call-sites budowy i interakcji canonical `VillageTorch`, aby dodać manual ignition bez quest awareness w settlement layer.
 
-Po implementacji zaktualizować `docs/state/quests.md`, a jeżeli zmienią się kontrakty domenowe także `docs/state/fauna.md` / `docs/state/persistence.md`.
+Po implementacji zaktualizować `docs/state/quests.md`, a jeżeli zmienią się kontrakty domenowe także `docs/state/fauna.md`, `docs/state/persistence.md` oraz odpowiedni settlement state doc.
 
-Dla nowych ważnych publicznych resolverów/objective progress functions dodać JSDoc z `@domain quests-progression` lub `@domain fauna`, jeśli poprawia to preflight discovery.
+Dla nowych ważnych publicznych resolverów/objective progress functions i settlement-lighting policy dodać JSDoc z `@domain quests-progression`, `@domain fauna` lub `@domain settlements`, jeśli poprawia to preflight discovery.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
