@@ -18,21 +18,21 @@ Docelowy efekt gameplay:
 
 ```text
 mięso na ziemi
-→ wilk wykrywa atrakcyjny bodziec
+→ wilk / lis / niedźwiedź zgodnie ze swoim diet contract wykrywa atrakcyjny bodziec
 → podchodzi
 → zjada mięso
 → szuka kolejnego bodźca
-→ może zostać poprowadzony do pułapki
+→ może zostać poprowadzony dalej
 ```
 
 oraz:
 
 ```text
 świeża krew
-→ drapieżnik / scavenger może ją wyczuć
+→ kompatybilny drapieżnik może ją wyczuć
 → podchodzi i bada miejsce
 → po krótkim investigation cooldown przestaje traktować ten sam ślad jako cel
-→ może wykryć kolejny ślad / mięso / pułapkę
+→ może wykryć kolejny ślad / jedzenie / pułapkę
 ```
 
 Mechanizm ma wzmacniać emergent gameplay i istniejące systemy świata. Nie tworzyć osobnego AI dla wabienia, osobnego modelu diety ani osobnej symulacji zapachu zależnej od kamery/playera.
@@ -81,6 +81,15 @@ Nie tworzyć drugiego blood-scent lifetime.
 
 `animalForaging.ts` posiada istniejący needs-driven pipeline rzeczywistego jedzenia, w tym carcass selection/claim/consumption. Nie duplikować corpse consumption ani obecnego source-target lifecycle.
 
+Aktualny `bear` jest `role: 'predator'`, ale nie ma `diet` ani `scavenging`. W praktyce oznacza to:
+
+- poluje przez istniejący predator behaviour,
+- może autonomicznie znaleźć i zjeść `fresh` corpse, bo świeża padlina ma wartość bazową dla każdego predatora,
+- nie może wybrać `rotting`/`bones`, bo te fazy wymagają `scavenging`,
+- `dietAcceptsItem()` odrzuca dla niego każdy dropped item i trap bait, bo `diet` jest nieobecne.
+
+Ten plan świadomie rozszerza species contract niedźwiedzia, zamiast dodawać wyjątki w attraction resolverze.
+
 ## 1. Wspólny kontrakt attraction source
 
 Zastąpić trapping-only `TrapLureDescriptor` bardziej ogólnym plain-data kontraktem, np.:
@@ -126,6 +135,8 @@ Pułapka nadal:
 - używa istniejącego `TRAP_DEFS[kind].lureRadius`,
 - po wejściu zwierzęcia w trigger radius rozstrzyga detection/capture istniejącym systemem.
 
+**Bear pozostaje niekompatybilny z obecnymi `simple`/`good` traps.** To oznacza, że identyczne mięso leżące luzem może go przyciągać, ale bait zamknięty w aktualnej pułapce nie staje się dla niego attraction source, bo trap-specific `isSpeciesTrappable()` pozostaje dodatkowym gate'em. Nie rozszerzać trap species coverage przy tej okazji.
+
 ### Dropped food
 
 Dropped item staje się attraction source tylko wtedy, gdy:
@@ -138,15 +149,17 @@ Kompatybilność gatunku z itemem rozstrzyga `dietAcceptsItem()` / istniejący d
 
 Freshness może wpływać na strength wyłącznie na podstawie istniejącego `FoodBatch`/freshness API. Nie tworzyć osobnego freshness clock dla zapachu.
 
-V1 powinien zachować prostą, czytelną regułę stage-based zamiast pozornie precyzyjnej symulacji, np.:
+V1 używa prostej stage-based reguły:
 
 ```text
 fresh   → pełna attraction strength
-medium  → słabsza
-spoiled → nadal potencjalnie atrakcyjna dla mięsożercy/scavengera albo wyłączona zgodnie z decyzją implementacyjną niżej
+medium  → słabsza attraction strength
+spoiled meat → kandydat tylko dla species z odpowiednim scavenging capability
+spoiled plant food → nie jest attraction source w V1
+decomposed → brak world record, więc brak source
 ```
 
-Patrz „Decyzje do potwierdzenia”.
+Do rozpoznania mięsa używać istniejącego item metadata (`ITEM_CATALOG[kind].food.bait === 'meat'`) zamiast nowej listy meat items.
 
 ### Blood traces
 
@@ -168,17 +181,78 @@ Blood nie jest jedzeniem i nie jest konsumowany.
 
 Nie wprowadzać tabeli `bloodAttractedSpecies` obok `AnimalDef` bez potrzeby.
 
-Preferowana reguła V1:
+Reguła V1:
 
-- `diet.items` decyduje o dropped food/trap bait,
-- blood attraction jest capability gatunku wynikającym z istniejących cech żywieniowych/predator-scavenger semantics,
-- herbivores nie idą za krwią,
-- wilk/lis mogą reagować,
-- gatunek bez odpowiedniej capability ignoruje źródło.
+- `diet.items` decyduje o dropped food i itemowej kompatybilności bait,
+- trap bait ma dodatkowo istniejący `isSpeciesTrappable()` gate,
+- `role === 'predator'` decyduje o blood attraction dla aktualnego zestawu gatunków,
+- herbivores/livestock nie idą za krwią tylko dlatego, że mogą jeść mięso (`dog` pozostaje kontrprzykładem: ma meat diet, ale nie jest predatorem),
+- `scavenging` decyduje o fallbacku na późniejsze corpse phases i o dopuszczeniu spoiled meat jako attraction source.
 
-Jeżeli istniejące `role`, `diet` i `scavenging` nie dają wystarczająco czystej odpowiedzi, dodać **jedno małe deklaratywne capability do `AnimalDef`** (np. scent/blood attraction), zamiast runtime `kind === 'wolf'`/`kind === 'fox'` branches.
+Nie dodawać runtime branches `kind === 'wolf'`, `kind === 'fox'` ani `kind === 'bear'` do resolvera.
 
-Nie rozszerzać przy tej okazji diety niedźwiedzia ani dzika tylko po to, aby wymusić attraction; to osobna decyzja species design.
+Jeżeli przyszły gatunek ujawni, że `role === 'predator'` jest zbyt szerokie dla blood attraction, wtedy dodać jedno małe deklaratywne capability do `AnimalDef`; nie robić tego prewencyjnie w V1.
+
+## 3a. Bear — świadoma species design decision
+
+Niedźwiedź ma wejść do wspólnego systemu przez istniejące kontrakty, nie przez osobny model wszystkożerności.
+
+### Diet
+
+Dodać `BEAR_DIET: AnimalDietConfig` i przypisać go do `ANIMAL_DEFS.bear.diet`.
+
+`BEAR_DIET.items` ma obejmować:
+
+- wszystkie istniejące surowe mięsa z `MEAT_DIET`,
+- `fish`,
+- naturalne/roślinne food items istniejące już w świecie: `berries`, `apple`, `nuts`, `honey`.
+
+Nie dodawać `grass`: niedźwiedź nie ma korzystać z `GrassForagePatch` jak deer/cow. Nie tworzyć `OmnivoreDiet` ani osobnego `omnivore` enumu — mieszany zestaw `diet.items` już wyraża wszystkożerność.
+
+Dla meat entries preferować współdzielenie/kompozycję istniejącego `MEAT_DIET.items`, nie kopiowanie drugiej niezależnej listy mięsa.
+
+### Scavenging
+
+Obecny `ScavengingConfig` wymaga jednocześnie `rottingValue` i `bonesValue`, co odpowiada wolfowi, ale nie pozwala wyrazić bear = rotting carrion bez jedzenia kości.
+
+Rozszerzyć istniejący contract minimalnie tak, aby fazy były niezależnie opcjonalne, np.:
+
+```ts
+export type ScavengingConfig = {
+  rottingValue?: number
+  bonesValue?: number
+}
+```
+
+`carcassFoodValue()` ma traktować brak konkretnego pola jako brak capability dla tej fazy.
+
+Docelowe różnice:
+
+```text
+wolf → fresh + rotting + bones
+fox  → fresh only
+bear → fresh + rotting, no bones
+```
+
+Bear dostaje `scavenging` z `rottingValue`, bez `bonesValue`. Dokładny relief/score tuning ma pozostać niższy od fresh corpse (`1`) i może zostać dobrany w istniejącej konwencji wartości względnych.
+
+### Attraction matrix
+
+Docelowo bear reaguje na:
+
+| Source | Bear V1 |
+|---|---|
+| fresh/medium raw meat dropped | tak |
+| spoiled meat dropped | tak, przez `scavenging` + meat metadata |
+| fresh corpse | tak, już przez predator carcass baseline |
+| rotting corpse | tak, przez `scavenging.rottingValue` |
+| bones | nie |
+| fresh blood trace | tak, przez predator blood compatibility |
+| berries/apple/nuts/honey dropped | tak, przez `BEAR_DIET.items` |
+| grass forage patch | nie |
+| bait w obecnej pułapce | nie, przez `isSpeciesTrappable()` |
+
+To rozdzielenie zachowuje istniejące różnice między wolf/fox/bear bez drugiego modelu diety.
 
 ## 4. Attraction scoring i wybór celu
 
@@ -222,6 +296,8 @@ Needs pozostają istotne:
 - rzeczywiste jedzenie dropped food daje hunger relief tylko przez udaną konsumpcję,
 - attraction może skłonić do investigation również zanim hunger stanie się krytyczny, ale nie może stale wygrywać z ważniejszymi potrzebami,
 - obecny carcass needs-driven foraging pozostaje authoritative dla corpse claim/consumption.
+
+Dodanie `BEAR_DIET` nie ma przepinać predator hunger search na `findDietTarget()`: bear nadal używa istniejącego carcass branch dla needs-driven corpse seeking. Diet itemów jest authority dla dropped-food attraction/consumption, nie nowym równoległym predator-foraging pipeline.
 
 ## 6. Loose food consumption
 
@@ -308,11 +384,20 @@ Nie zapisujemy relacji A→B→meat→trap. Każdy element jest niezależnym wor
 
 To pozwala graczowi układać mięso/wykorzystywać krew bez player-only quest scripting.
 
+Dla bear trail może składać się z blood + loose food, ale nie kończy się obecnie aktywną pułapką jako celem, ponieważ bear pozostaje poza `TRAP_SPECIES_COMPAT`.
+
 ## 10. Carcasses
 
 Nie duplikować istniejącego `animalForaging.ts` carcass selection, claim ani consumption.
 
-W tym planie carcass może pozostać w obecnym needs-driven pipeline. Jeżeli podczas implementacji wspólny attraction resolver da się rozszerzyć o read-only carcass scent candidate bez tworzenia drugiej authority, można zrobić to tylko wtedy, gdy:
+W tym planie carcass pozostaje w obecnym needs-driven pipeline:
+
+- każdy predator, w tym bear, może użyć `fresh` corpse,
+- `rotting`/`bones` nadal rozstrzyga `carcassFoodValue()` na podstawie `scavenging`,
+- po rozszerzeniu configu bear uzyskuje `rotting`, ale nie `bones`,
+- fox pozostaje fresh-only, wolf zachowuje obecne rotting+bones.
+
+Jeżeli podczas implementacji wspólny attraction resolver da się rozszerzyć o read-only carcass scent candidate bez tworzenia drugiej authority, można zrobić to tylko wtedy, gdy:
 
 - final claim/consume nadal należy wyłącznie do obecnego carcass lifecycle,
 - nie powstają dwa niezależne targety dla tego samego zwłokowego źródła,
@@ -349,6 +434,8 @@ Persistowane authorities pozostają bez zmian:
 
 Po reloadzie/rebuildzie attraction ma zostać ponownie wyprowadzona z aktualnego authoritative world state.
 
+Zmiana `ANIMAL_DEFS.bear` jest species definition, nie per-animal state; nie dodaje nowego SaveData pola.
+
 ## 13. Debugging
 
 Rozszerzyć fauna debug info tak, aby dla obserwowanego zwierzęcia dało się odczytać co najmniej:
@@ -367,16 +454,28 @@ Nie dodawać zwykłego HUD dla scent strength.
 
 Dodać testy domenowe i lifecycle tests obejmujące co najmniej:
 
+### Species contracts
+
+- bear `dietAcceptsItem()` akceptuje raw meat oraz wybrane istniejące itemy wszystkożerne (`fish`, `berries`, `apple`, `nuts`, `honey`),
+- bear nie ma `grass` diet capability,
+- bear `scavenging` akceptuje `rotting`, ale nie `bones`,
+- wolf nadal akceptuje `rotting` + `bones`, fox pozostaje fresh-only,
+- zmiana optional `ScavengingConfig` nie zmienia obecnego wolf tuning.
+
 ### Resolver
 
-- diet-compatible dropped meat jest kandydatem dla wilka/lisa,
+- diet-compatible dropped meat jest kandydatem dla wilka/lisa/niedźwiedzia,
+- diet-compatible dropped plant food jest kandydatem dla niedźwiedzia, ale nie dla wolf/fox,
 - incompatible item nie jest kandydatem,
 - herbivore nie reaguje na blood,
-- blood-compatible predator może wybrać świeży blood source,
+- wolf/fox/bear mogą wybrać świeży blood source,
+- dog z meat diet nie reaguje na blood, bo nie jest predatorem,
+- spoiled meat jest kandydatem dla scavenging-capable wolf/bear, ale nie fox,
 - source poza radius jest ignorowany,
 - wyższa strength / korzystniejsza odległość wpływa na wybór zgodnie z jednym jawnym scorerem,
 - tie-break jest deterministyczny,
 - trap species compatibility nadal obowiązuje,
+- bear odrzuca baited `simple`/`good` trap mimo diet-compatible bait,
 - trap bez bait nie tworzy source.
 
 ### Dropped food
@@ -402,7 +501,8 @@ Dodać testy domenowe i lifecycle tests obejmujące co najmniej:
 - trap attraction/capture z `fauna-014` nadal działa,
 - trap detection cooldown nie jest omijany przez nowy resolver,
 - combat/flee/fire/guard nadal wygrywają nad attraction,
-- carcass claim/consumption pozostaje bez podwójnej authority.
+- carcass claim/consumption pozostaje bez podwójnej authority,
+- bear nadal używa predator carcass path zamiast nowego równoległego diet-foraging branch.
 
 ## Manual verification
 
@@ -410,23 +510,28 @@ User w przeglądarce sprawdza co najmniej:
 
 1. Położenie `raw_meat` na ziemi w pobliżu wilka może spowodować podejście i faktyczne zjedzenie itemu.
 2. Wilk nie „zjada” mięsa natychmiast z dystansu — używa normalnego movement/pathing.
-3. Lis reaguje na zgodne mięso; roślinożerca nie reaguje na meat/blood.
-4. Po zabraniu mięsa przez gracza zanim zwierzę dojdzie, zwierzę nie dostaje hunger relief.
-5. Kilka kawałków mięsa może naturalnie poprowadzić zwierzę dalej.
-6. Świeży ślad krwi może zwabić kompatybilnego drapieżnika; stary/deszczem zmyty działa słabiej lub znika.
-7. Po zbadaniu jednej plamy krwi zwierzę nie stoi na niej w nieskończoność i może przejść do kolejnej.
-8. Trail zakończony zanęconą pułapką może doprowadzić wilka do `good` trap, ale nadal obowiązuje detection/capture roll.
-9. `simple` nadal nie łapie wilka zgodnie z `fauna-014`.
-10. Ucieczka, walka i inne wysokopriorytetowe zachowania przerywają attraction.
-11. Save/load zachowuje dropped meat i trap bait zgodnie z ich obecnym persistence; blood może zniknąć zgodnie z obecnym kontraktem.
+3. Lis reaguje na zgodne świeże mięso; roślinożerca nie reaguje na meat/blood.
+4. Niedźwiedź reaguje na dropped raw meat oraz wybrane dropped plant foods (`berries`/`apple`/`nuts`/`honey`) i faktycznie je konsumuje.
+5. Niedźwiedź reaguje na świeży blood trace.
+6. Niedźwiedź nadal może jeść fresh carcass; hungry bear może użyć rotting carcass, ale nie bones.
+7. Niedźwiedź ignoruje bait w `simple`/`good` trap, ponieważ obecne pułapki go nie obsługują.
+8. Po zabraniu mięsa przez gracza zanim zwierzę dojdzie, zwierzę nie dostaje hunger relief.
+9. Kilka kawałków jedzenia może naturalnie poprowadzić kompatybilne zwierzę dalej.
+10. Świeży ślad krwi może zwabić kompatybilnego drapieżnika; stary/deszczem zmyty działa słabiej lub znika.
+11. Po zbadaniu jednej plamy krwi zwierzę nie stoi na niej w nieskończoność i może przejść do kolejnej.
+12. Trail zakończony zanęconą pułapką może doprowadzić wilka do `good` trap, ale nadal obowiązuje detection/capture roll.
+13. `simple` nadal nie łapie wilka zgodnie z `fauna-014`.
+14. Ucieczka, walka i inne wysokopriorytetowe zachowania przerywają attraction.
+15. Save/load zachowuje dropped food i trap bait zgodnie z ich obecnym persistence; blood może zniknąć zgodnie z obecnym kontraktem.
 
-## Decyzje do potwierdzenia
+## Tuning do ustalenia podczas implementacji
 
-Poniższe kwestie nie blokują przygotowania architektury, ale przed implementacją warto zatwierdzić tuning/gameplay:
+Architektura/species semantics są rozstrzygnięte. Do dobrania pozostają wyłącznie wartości tuningowe:
 
-1. **Spoiled meat:** czy zepsute mięso ma nadal przyciągać wilka/lisa/scavengera (realistycznie: tak, prawdopodobnie nawet mocno), czy V1 ograniczamy attraction do fresh/medium? Rekomendacja: **przyciąga**, ale relief/food-safety pozostaje oddzielnym problemem.
-2. **Blood radius:** czy blood ma mieć większy bazowy sensing radius niż pojedynczy kawałek mięsa? Rekomendacja: **tak**, strength zależna od size/freshness, ale bez kilometrowego scent simulation.
-3. **Bear:** obecnie bear nie ma `diet`/`scavenging`; nie dodawać go automatycznie do blood/meat attraction w tym planie bez osobnej decyzji species design.
+1. **Attraction strength/radius:** blood powinien mieć większy bazowy sensing radius niż pojedynczy kawałek jedzenia; konkretne liczby dobrać w jednym jawnym scorerze.
+2. **Bear relief values:** meat zachowuje istniejącą konwencję `MEAT_DIET`; dla `fish`/`berries`/`apple`/`nuts`/`honey` dobrać wartości względne bez tworzenia drugiego satiety modelu.
+3. **Bear rotting value:** ma być wyraźnie niższe niż fresh corpse `1`, bez nadawania bearowi bones capability.
+4. **Freshness multipliers:** `fresh > medium`; spoiled meat pozostaje atrakcyjne dla scavenging-capable species, ale dokładny multiplier jest tuningiem.
 
 ## Non-goals
 
@@ -437,7 +542,9 @@ Poza zakresem:
 - kilometrowe tropienie po zapachu,
 - persistence transient scent targets/cooldowns,
 - przebudowa całego fauna decision systemu,
-- nowe species diets dla bear/boar tylko dla tego feature,
+- rozszerzanie diety dzika przy tej okazji,
+- nowy osobny omnivore/diet model,
+- rozszerzenie trap species coverage o bear,
 - NPC używający mięsa do zastawiania pułapek,
 - pełna off-screen aggregated scent simulation,
 - disease/poison/food-safety dla zwierząt,
