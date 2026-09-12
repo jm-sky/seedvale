@@ -130,4 +130,13 @@ Priorytetowo testować pure resolver + realne seams, nie snapshoty implementacyj
 5. read seam `dangerSignificance`;
 6. targeted tests + aktualizacja `docs/state/fauna.md`.
 
+## What was implemented
+
+- `src/fauna/animalVariants.ts` — `AnimalVariant` / defs / `resolveAnimalVariantStats` (max-compose with `DANGEROUS_TRAIT_MODIFIERS`) / `wolfDenInitialFillVariant` / `variantTintHex`.
+- `AnimalAgent` takes `variant?: AnimalVariant` (default `normal`), stores immutable `variant` plus resolved `effective` multipliers, exposes `dangerSignificance`, `outgoingDamageFor`, `outgoingDamageVsHuman`.
+- Construction HP/scale/tint and `walkSpeedNow`/`sprintSpeedNow` read the resolved multipliers. All three outgoing attack paths share the damage methods.
+- `markDangerous()` recomputes via the same resolver (no second `DANGEROUS_*` combat pipeline) and still applies the quest label + dedicated tint.
+- `createFauna` ordinary habitat fill: `wolfDen` slot 0 is alpha; other slots and other habitats stay normal. No `AnimalSaveState.variant`.
+- Tests: `animalVariants.test.ts` + wolf-den pack assertion in `createFauna.test.ts`.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

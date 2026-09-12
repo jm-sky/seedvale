@@ -150,6 +150,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - [AnimalAgent](../src/fauna/AnimalAgent.ts) — per-animal decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API.
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
+- [Individual variants](../src/fauna/animalVariants.ts) — per-animal multipliers (`normal`/`alpha`) and wolf-den alpha slot assignment.
 - [Lead / draft helpers](../src/fauna/animalLead.ts) — leadable/draft capability queries and temporary-lead hysteresis distances.
 - [Follow hysteresis](../src/fauna/followHysteresis.ts) — shared distance-band follow primitive used by owned Follow and leading.
 - [Owned animal control](../src/fauna/ownedAnimalControl.ts) — persisted Follow/Stay for player-owned livestock.

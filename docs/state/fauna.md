@@ -20,6 +20,8 @@ When this file and the code disagree, the code wins — update this file.
 
 `AnimalDef` (one entry per `AnimalKind` — predator/prey/livestock species) is the single per-species data table: role, sociability, speeds, detect/flee/notice/panic ranges, and a set of optional capability blocks that follow a consistent convention: **the presence of the field is the capability**, not a separate boolean flag. `mount` (ridable), `production` (egg/milk), `scavenging` (rotting-corpse/bones food value), `diet` (grass/item herbivore or meat diet), `water` (swim capability), `roaming` (species wander band), `trips` (periodic long-range water trips — deer/stag, and now bear, plan fauna-019 §7). A dog "eats meat but doesn't hunt" is expressed purely by its role not being `predator`, gating the carcass-seeking food branch — not a dog-specific flag.
 
+Per-individual strength is a separate, fauna-owned variant (`animalVariants.ts`: `normal` | `alpha`), not a new `AnimalKind` and not a field on `AnimalDef`. Multipliers apply on top of species baselines (HP, outgoing damage, walk/sprint, presentation scale/darkening, `dangerSignificance`). The first consumer is the wolf-den initial pack: slot 0 is an alpha wolf, remaining slots are normal wolves, both `kind === 'wolf'` with the den's real `spawnPointId`. Assignment is the pack slot index, not `animalId`. The quest `markDangerous()` trait uses the same modifier shape and composes by max-per-field so it cannot double-stack on an already exceptional individual. `frenzied` and `rabid` remain independent behaviour/disease states. Downstream reputation reads `AnimalAgent.dangerSignificance`; it should not branch on `variant`.
+
 ## Individual state ownership
 
 One `AnimalAgent` instance per animal holds its own state directly — health, hunger/thirst/stamina, a corpse-lifecycle state object (`animalCorpse.ts`), disease/quest booleans, live combat commitments, and (for livestock only) an owning household reference. **There is no separate authoritative-state object the way NPC has `NpcAuthoritativeState`** — an animal's state lives and dies with the JS object itself. What survives a reload depends entirely on which of the three persistence classes below the individual belongs to.
@@ -86,7 +88,7 @@ Fauna has a genuine four-tier persistence picture plus one sparse exception — 
 **Persisted, thin.** Only the state-machine/clock fields (state, deaths-this-cycle, disabled-at-day) round-trip — position/type/kind are always deterministic and never persisted; a restored `active` spawner simply restarts its respawn timer from zero.
 
 ### Wild fauna
-**Not persisted; population is deterministically reconstructed, individual identity is not.** The fixed spawn table plus seeded placement fully reproduces the population every session, but a specific individual's position/health/hunger/rabies-infection/frenzy/juvenile state simply ceases to exist on unload — a wolf that was rabid, mid-chase, or juvenile at save time comes back as a fresh deterministic spawn. Ordinary wild fauna does not go through `AnimalAgent.snapshot()`.
+**Not persisted; population is deterministically reconstructed, individual identity is not.** The fixed spawn table plus seeded placement fully reproduces the population every session, but a specific individual's position/health/hunger/rabies-infection/frenzy/juvenile state simply ceases to exist on unload — a wolf that was rabid, mid-chase, or juvenile at save time comes back as a fresh deterministic spawn. Ordinary wild fauna does not go through `AnimalAgent.snapshot()`. Wolf-den alpha is reconstructed the same way: slot 0 of the ordinary initial fill is always the alpha, so a rebuild of an active den yields the same assignment without a `variant` field on `AnimalSaveState`.
 
 ### Persistent habitat occupants
 **Persisted per declared slot (plan fauna-018), fauna-owned, sparse.** A stable `habitatId + occupantKey` yields a stable `animalId`. The occupant is a normal `AnimalAgent` using the shared `AnimalSaveState` snapshot (including corpse linger and durable rabies). The slot stays reserved through live → corpse → tombstone, so generic habitat fill/`updateSpawners()` cannot replace it. Tombstone happens at `readyToRemove()`, not on death. Ordinary wild animals are unchanged: they remain unpersisted. `habitatId` may now also match a cave-backed `AnimalHabitatBinding` (plan fauna-019, see above) instead of a `PreySpawner` id — the real-cave home/route are still resolved fresh from `caveId` on every restore, never persisted themselves. The first gameplay consumer is still the treasure-map bear cave; neither contract declares that occupant yet.
@@ -102,13 +104,14 @@ See [persistence.md](./persistence.md) for the full cross-domain classification 
 
 Fauna uses the shared `HealthState`/death primitives every entity uses, and *incoming* damage (player or NPC attacking an animal) goes through the same shared critical-hit/damage pipeline documented in [combat.md](./combat.md).
 
-**Fauna's own outgoing attacks are the one asymmetry:** a flat per-attacker-kind damage lookup table (with a generic fallback), no critical roll, no defense resolution — an older, structurally separate mechanism from the melee/ranged/critical pipeline the rest of combat uses. Fauna has no defense configuration and carries no items, so the *defense* half of this asymmetry is principled; the *critical-roll* half is not obviously so, and whether this is a deliberate simplification or an unmigrated older system is an open maintainer question, not something this document resolves.
+**Fauna's own outgoing attacks are the one asymmetry:** a flat per-attacker-kind damage lookup table (with a generic fallback), multiplied by the individual's variant/quest-trait damage modifier, no critical roll, no defense resolution — an older, structurally separate mechanism from the melee/ranged/critical pipeline the rest of combat uses. Fauna has no defense configuration and carries no items, so the *defense* half of this asymmetry is principled; the *critical-roll* half is not obviously so, and whether this is a deliberate simplification or an unmigrated older system is an open maintainer question, not something this document resolves.
 
 ## Surface exposed to other domains
 
 What fauna exposes for NPC/settlement consumption — the NPC side of consuming these is documented in [npc.md](./npc.md):
 
 - **Three read-only threat accessors** on an animal: whether it's currently threatening a human, its current NPC attack target (if any), and whether it's committed to a live hunt. Consumers (NPC threat response, a household dog's wolf-defense resolution) build their own candidate lists from these; they never import fauna's decision logic directly.
+- **Per-individual danger significance** — `AnimalAgent.dangerSignificance` (and `variant`) for player-kill context. Reputation/quests consume the number; they do not own variant assignment.
 - **The hunting hooks contract** — a nearest-huntable-animal query (with the seeded population-protection roll) and a re-validated harvest operation, bound to the live fauna system through a late-bound accessor (since fauna is constructed after NPCs at boot).
 - **The combat-target adapter** that lets the shared combat resolvers treat an animal as an attackable target without those resolvers knowing anything about `AnimalAgent` internals.
 
@@ -133,6 +136,7 @@ Temporary leading is a separate runtime relation (`AnimalDef.lead`, presence = c
 ```text
 src/fauna/AnimalAgent.ts
 src/fauna/animalDefs.ts
+src/fauna/animalVariants.ts
 src/fauna/animalCorpse.ts
 src/fauna/animalForaging.ts
 src/fauna/animalRoaming.ts

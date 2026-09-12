@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import { wolfDenInitialFillVariant } from './animalVariants'
 import {
   clearsRiverChannel,
   FAUNA_URLS,
@@ -27,6 +28,19 @@ describe('SPAWNER_SPECS rockDen habitat (plan 188)', () => {
 
   it('registers a bear.glb model URL through the shared FAUNA_URLS map', () => {
     expect(FAUNA_URLS.bear).toBe('/models/fauna/bear.glb')
+  })
+})
+
+describe('wolfDen initial pack variants (plan fauna-022)', () => {
+  it('assigns exactly one alpha across the den maxPreyCount, at slot 0', () => {
+    const den = SPAWNER_SPECS.find((spec) => spec.type === 'wolfDen')
+    expect(den).toBeDefined()
+    expect(den?.kind).toBe('wolf')
+    expect(den?.maxPreyCount).toBe(2)
+    const variants = Array.from({ length: den!.maxPreyCount }, (_, i) => wolfDenInitialFillVariant(i))
+    expect(variants.filter((v) => v === 'alpha')).toHaveLength(1)
+    expect(variants[0]).toBe('alpha')
+    expect(variants[1]).toBe('normal')
   })
 })
 

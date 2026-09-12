@@ -135,6 +135,12 @@ import {
 } from './animalOwnership'
 import { type AnimalTrip, findWaterTripDestination, tripDayBucket } from './animalRoaming'
 import {
+  type AnimalVariant,
+  type AnimalVariantDef,
+  resolveAnimalVariantStats,
+  variantTintHex,
+} from './animalVariants'
+import {
   DOG_BARK_COOLDOWN_SEC,
   DOG_BARK_HOWL_RADIUS,
   DOG_BARK_STRANGER_RADIUS,
@@ -215,6 +221,7 @@ export * from './animalForaging'
  *  same reason. `animalRoamingTrips.test.ts` is redirected to import from
  *  the new module (and `./animalDefs` for `ANIMAL_DEFS`) directly. */
 export * from './animalRoaming'
+export type { AnimalVariant } from './animalVariants'
 
 /** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
  *  npc-006) — see `AnimalAgent.chaseNav`/`fleeNav`'s doc for why chase and
@@ -268,11 +275,9 @@ export const RABIES_BITE_INFECTION_CHANCE = 0.35
  *  matches the existing predator detect-range scale (14–20). */
 const RABIES_TARGET_DETECT_RANGE = 14
 
-/** "Groźny wilk" (plan 110) — `markDangerous()` tuning. A visible, tougher
- *  individual, not a separate animal type or model. */
-const DANGEROUS_HP_MULTIPLIER = 2
-const DANGEROUS_DAMAGE_MULTIPLIER = 2
-const DANGEROUS_SCALE_FACTOR = 1.25
+/** Quest `kill_target_animal { dangerous: true }` tint (plan 110). Combat
+ *  /scale/HP multipliers live in `DANGEROUS_TRAIT_MODIFIERS` so they compose
+ *  with variants instead of a second pipeline. */
 const DANGEROUS_TINT_HEX = 0x1a0f0f
 /** Busy-channel duration for shovel-burying a corpse. */
 export const BURY_DURATION_SEC = 1.5
@@ -777,6 +782,9 @@ export type AnimalAgentDeps = {
    *  ground/containment resolution exactly as before. `x`/`z` above must
    *  already equal `cave.home.x`/`cave.home.z` when this is set. */
   cave?: AnimalCaveContext
+  /** Per-individual variant (plan fauna-022). Omitted/`undefined` is `normal`
+   *  so existing call sites keep prior stats and presentation. */
+  variant?: AnimalVariant
 }
 
 /** Per-tick inputs for `AnimalAgent.update()` (plan fauna-017 step 2) — same
@@ -1223,8 +1231,15 @@ export class AnimalAgent {
   private lureSearchCooldown = 0
   /** Set once by `markDangerous()` — a visibly/gameplay-distinct individual
    *  bound to a `kill_target_animal { dangerous: true }` quest stage
-   *  (plan 110), not a separate animal type. */
+   *  (plan 110), not a separate animal type. Composes with `variant` via
+   *  `resolveAnimalVariantStats` (max per field, never a product). */
   private dangerous = false
+  /** Immutable per-individual variant (plan fauna-022). Independent of
+   *  `frenzied` / `rabid` — those are behaviour/disease states. */
+  readonly variant: AnimalVariant
+  /** Resolved multipliers for `variant` + optional quest `dangerous` trait.
+   *  Recomputed only when `markDangerous()` fires; never per tick. */
+  private effective: AnimalVariantDef
   /** Shared id for herd members, assigned only at spawn for species in
    *  `HERD_SPECIES` — never mutated after construction (plan 118). Leadership
    *  is computed on demand (`pickHerdLeader`), not stored. */
@@ -1279,6 +1294,7 @@ export class AnimalAgent {
       spawnPointId,
       humanTaste = false,
       cave,
+      variant = 'normal',
     } = deps
     this.def = def
     this.animalId = animalId
@@ -1289,6 +1305,8 @@ export class AnimalAgent {
     this._household = household ?? null
     this.spawnPointId = spawnPointId
     this.humanTaste = humanTaste
+    this.variant = variant
+    this.effective = resolveAnimalVariantStats(variant)
     this.onDeath = onDeath
     this.cave = cave
     this.caveInteriorNow = cave != null
@@ -1300,7 +1318,7 @@ export class AnimalAgent {
     this.sampleForestFactor = sampleForestFactor
     this.home.set(x, 0, z)
     this.wanderRadius = wanderRadius ?? def.roaming ?? DEFAULT_WANDER_RADIUS
-    this.health = createHealthState(MAX_HP[def.kind])
+    this.health = createHealthState(MAX_HP[def.kind] * this.effective.healthMultiplier)
     this.life = createAnimalLifeState(Math.random(), def.metabolism)
     this.spontaneousVocalizeCooldownSec = initialSpontaneousVocalizeCooldownSec(def.kind)
 
@@ -1336,6 +1354,12 @@ export class AnimalAgent {
     if (this.lifeStage === 'juvenile') {
       this.mesh.scale.multiplyScalar(JUVENILE_SCALE_FACTOR[def.kind] ?? 1)
     }
+    // Variant scale (plan fauna-022) — composition is
+    // template/base × juvenile × variant, applied once at construction.
+    if (this.effective.scaleMultiplier !== 1) {
+      this.mesh.scale.multiplyScalar(this.effective.scaleMultiplier)
+    }
+    this.applyVariantTint(this.effective.visualDarken)
 
     // Prefer skinned model root (child of wrap) so clip bindings resolve.
     const animRoot = this.mesh.children[0] ?? this.mesh
@@ -1686,15 +1710,58 @@ export class AnimalAgent {
    *  the mesh up, tints its material (GLB-sourced meshes only — the capsule
    *  fallback already carries `def.color`), and relabels it so the player can
    *  recognize the specific individual. Idempotent; applied once at bind time
-   *  by `QuestManager`'s injected `applyDangerousTrait`, not at spawn. */
+   *  by `QuestManager`'s injected `applyDangerousTrait`, not at spawn.
+   *
+   *  Combat/scale/HP compose with `variant` via `resolveAnimalVariantStats`
+   *  (max per field) so an alpha wolf is not doubled again. The quest label
+   *  and dedicated tint still apply even when the variant was already
+   *  exceptional. */
   markDangerous(): void {
     if (this.dangerous) return
+    const prevScale = this.effective.scaleMultiplier
     this.dangerous = true
-    this.health.maxHp *= DANGEROUS_HP_MULTIPLIER
+    this.effective = resolveAnimalVariantStats(this.variant, true)
+    this.health.maxHp = MAX_HP[this.def.kind] * this.effective.healthMultiplier
     this.health.currentHp = this.health.maxHp
-    this.mesh.scale.multiplyScalar(DANGEROUS_SCALE_FACTOR)
+    const scaleRatio = this.effective.scaleMultiplier / prevScale
+    if (scaleRatio !== 1) this.mesh.scale.multiplyScalar(scaleRatio)
     if (!this.isCapsule) tintPropMaterials(this.mesh, DANGEROUS_TINT_HEX)
     this.labelController.setName(`Groźny ${ANIMAL_LABELS[this.def.kind]}`)
+  }
+
+  /**
+   * Fauna-owned kill-context significance (plan fauna-022). Baseline `1` for
+   *  a normal individual; greater for exceptional variants (alpha) and the
+   *  quest `dangerous` trait. Reputation/quests consume this number and
+   *  should not branch on `variant` itself.
+   */
+  get dangerSignificance(): number {
+    return this.effective.dangerMultiplier
+  }
+
+  /** Species baseline × this individual's damage multiplier — animal targets. */
+  outgoingDamageFor(preyKind: AnimalKind): number {
+    return damageFor(this.def.kind, preyKind) * this.effective.damageMultiplier
+  }
+
+  /** Species baseline × this individual's damage multiplier — player/NPC. */
+  outgoingDamageVsHuman(): number {
+    return damageVsHuman(this.def.kind) * this.effective.damageMultiplier
+  }
+
+  /** One-time presentation tint from `visualDarken`. Clones GLB materials via
+   *  `tintPropMaterials` so shared cache instances stay untouched; capsules
+   *  already own a unique material. */
+  private applyVariantTint(visualDarken: number): void {
+    const hex = variantTintHex(this.def.color, visualDarken)
+    if (hex == null) return
+    if (this.isCapsule) {
+      const mat = (this.mesh as THREE.Mesh).material
+      const colored = (Array.isArray(mat) ? mat[0] : mat) as THREE.Material & { color?: THREE.Color }
+      colored.color?.setHex(hex)
+      return
+    }
+    tintPropMaterials(this.mesh, hex)
   }
 
   isFrenzied(): boolean {
@@ -2903,7 +2970,7 @@ export class AnimalAgent {
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
     const { x, z } = this.mesh.position
     onHumanHit(
-      damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1),
+      this.outgoingDamageVsHuman(),
       x,
       z,
     )
@@ -2944,7 +3011,7 @@ export class AnimalAgent {
     const { x, z } = this.mesh.position
     onNpcHit(
       targetId,
-      damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1),
+      this.outgoingDamageVsHuman(),
       x,
       z,
       this.animalId,
@@ -3064,19 +3131,21 @@ export class AnimalAgent {
     this.stepNavRescue(this.fleeNav, this.fleeTarget, speed, dt)
   }
 
-  /** Prey move slower at night; predators are unaffected. */
+  /** Prey move slower at night; predators are unaffected. Variant speed
+   *  multiplies the species/night result (plan fauna-022) — not `def.walkSpeed`
+   *  at every call site. */
   private walkSpeedNow(): number {
-    if (this.isNight && this.def.role === 'prey') {
-      return this.def.walkSpeed * NIGHT_PREY_WALK_MULT
-    }
-    return this.def.walkSpeed
+    const base = this.isNight && this.def.role === 'prey'
+      ? this.def.walkSpeed * NIGHT_PREY_WALK_MULT
+      : this.def.walkSpeed
+    return base * this.effective.speedMultiplier
   }
 
   private sprintSpeedNow(): number {
-    if (this.isNight && this.def.role === 'prey') {
-      return this.def.sprintSpeed * NIGHT_PREY_SPRINT_MULT
-    }
-    return this.def.sprintSpeed
+    const base = this.isNight && this.def.role === 'prey'
+      ? this.def.sprintSpeed * NIGHT_PREY_SPRINT_MULT
+      : this.def.sprintSpeed
+    return base * this.effective.speedMultiplier
   }
 
   /** True if `pos` is within that settlement's real footprint + `VILLAGE_AVOID_MARGIN`
@@ -3147,7 +3216,7 @@ export class AnimalAgent {
     this.attackCooldown = ATTACK_COOLDOWN
     this.attackAnimTimer = this.anim.playOnce('attack')
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
-    target.takeDamage(damageFor(this.def.kind, target.def.kind))
+    target.takeDamage(this.outgoingDamageFor(target.def.kind))
     if (this.rabid) this.tryRabiesBiteInfection(target)
   }
 

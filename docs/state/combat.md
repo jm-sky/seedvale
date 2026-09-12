@@ -53,7 +53,7 @@ NPC role-based personal weapons (plan 185 / settlements-npcs-026): `src/ai/npcLo
 
 ## Fauna outgoing attacks
 
-`fauna/faunaCombat.ts`'s flat per-attacker-kind `DAMAGE_TABLE`/`HUMAN_DAMAGE` lookup (with a generic fallback) is a structurally separate, older mechanism from the melee/ranged/critical pipeline above — no critical roll, no defense resolution. It applies only to an animal's own *outgoing* attack (predator biting prey/human/NPC); incoming damage *to* an animal always goes through the shared critical-hit resolver first. Fauna has no `DefenseConfig` and carries no items, so the defense half of this asymmetry is principled; the critical-roll half is not obviously so — see [fauna.md](./fauna.md#combat).
+`fauna/faunaCombat.ts`'s flat per-attacker-kind `DAMAGE_TABLE`/`HUMAN_DAMAGE` lookup (with a generic fallback), multiplied by the individual's variant/quest-trait damage modifier, is a structurally separate, older mechanism from the melee/ranged/critical pipeline above — no critical roll, no defense resolution. It applies only to an animal's own *outgoing* attack (predator biting prey/human/NPC); incoming damage *to* an animal always goes through the shared critical-hit resolver first. Fauna has no `DefenseConfig` and carries no items, so the defense half of this asymmetry is principled; the critical-roll half is not obviously so — see [fauna.md](./fauna.md#combat).
 
 ## Animal attack & NPC defense (plan 179)
 

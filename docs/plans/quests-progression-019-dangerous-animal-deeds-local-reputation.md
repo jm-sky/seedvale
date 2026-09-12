@@ -10,7 +10,7 @@
 **Tags:** `reputation` `renown` `fauna` `combat` `social-consequences`
 **Roadmap:** `quests-and-reputation.md`
 
-> **Implementation order:** najpierw zrealizować plan `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`. Dopiero po jego implementacji rozpoczynać ten plan, wykorzystując faktyczny fauna-owned kontrakt wariantów i `dangerSignificance`.
+> **Implementation order:** `fauna-022-animal-variants-and-exceptional-dangerous-animals.md` is implemented. Consume `AnimalAgent.dangerSignificance` (and `animalId` / `def.kind` / position) — do not invent a second variant table or an `alpha_wolf` kind.
 
 ## Cel
 
@@ -50,7 +50,7 @@ type PlayerAnimalKillContext = {
 }
 ```
 
-`dangerSignificance` ma być rozstrzygnięte przez fauna-owned seam w momencie śmierci. Dla zwykłego osobnika wynosi baseline `1`; dla wyjątkowego wariantu, np. alpha wolf z `fauna-022`, może być większe. Quest/reputation domain nie powinien znać konkretnych wariantów zwierząt, jeśli wystarczy ta liczba.
+`dangerSignificance` jest już fauna-owned: czytać `animal.dangerSignificance` w momencie śmierci (`1` dla zwykłego osobnika, `1.75` dla alpha wolf; questowy `markDangerous()` może podnieść do `2` przez ten sam resolver). `animal.variant` istnieje, ale quest/reputation domain nie powinien na nim branchować, jeżeli wystarczy ta liczba. Nie ma `alpha_wolf` w `AnimalKind`.
 
 Pozycję skopiować w momencie śmierci. Resolver nie może później czytać pozycji gracza ani zależeć od pozostawania runtime `AnimalAgent` w świecie.
 
@@ -280,7 +280,7 @@ Plan nie obejmuje:
 
 ## 15. Dokumentacja i verification
 
-Przed implementacją zweryfikować kontrakt `dangerSignificance` po implementacji `fauna-022` i użyć faktycznego fauna-owned API zamiast tworzyć drugą tabelę wariantów.
+Przed implementacją użyć faktycznego fauna-owned API z `fauna-022`: `AnimalAgent.dangerSignificance`, `AnimalAgent.variant`, `outgoingDamageFor` / `outgoingDamageVsHuman` nie są potrzebne w reputation domain. Nie tworzyć drugiej tabeli wariantów.
 
 Po implementacji zaktualizować tylko dokumenty opisujące faktycznie zmieniony stan. Ważnym publicznym/architektonicznym funkcjom dodać użyteczny JSDoc i `@domain quests-progression` tam, gdzie pomaga preflight discovery.
 

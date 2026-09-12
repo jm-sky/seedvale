@@ -50,6 +50,10 @@ import {
   updateSpawners,
 } from './AnimalSpawner'
 import {
+  type AnimalVariant,
+  wolfDenInitialFillVariant,
+} from './animalVariants'
+import {
   HERD_CLUSTER_RADIUS,
   HERD_SPECIES,
   JUVENILE_SPAWN_CHANCE,
@@ -746,6 +750,8 @@ export async function createFauna(
     /** Resolved cave habitat (plan fauna-019) — only a cave-backed
      *  persistent occupant passes this. */
     cave?: AnimalCaveContext,
+    /** Per-individual variant (plan fauna-022). Omitted → `normal`. */
+    variant?: AnimalVariant,
   ): AnimalAgent => {
     const tpl = templates[kind]
     let visual: Object3D | undefined
@@ -779,6 +785,7 @@ export async function createFauna(
       spawnPointId,
       humanTaste: boundSpawner?.humanTaste ?? false,
       cave,
+      variant,
     })
   }
 
@@ -1118,7 +1125,19 @@ export async function createFauna(
     )
     for (let i = 0; i < ordinary; i++) {
       const spot = findWalkableNear(habitat.x, habitat.z, 0, 4) ?? habitat
-      const agent = spawnAgent(habitat.kind, spot.x, spot.z, undefined, undefined, undefined, habitat.id)
+      const variant = habitat.type === 'wolfDen' ? wolfDenInitialFillVariant(i) : undefined
+      const agent = spawnAgent(
+        habitat.kind,
+        spot.x,
+        spot.z,
+        undefined,
+        undefined,
+        undefined,
+        habitat.id,
+        undefined,
+        undefined,
+        variant,
+      )
       scene.add(agent.mesh)
       agents.push(agent)
       if (habitat.type === 'wolfDen') denWolfAnimalIds.add(agent.animalId)

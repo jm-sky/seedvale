@@ -1,7 +1,12 @@
 # Plan: Animal Variants & Exceptional Dangerous Animals
 
+> Implementation landed. Automated checks are the remaining gate before
+> browser/manual verification (plan §16). Alpha assignment is wolf-den
+> initial-fill slot 0; `markDangerous()` composes via the same modifier
+> shape (max per field). Reputation mapping stays in `quests-progression-019`.
+
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none
