@@ -1,7 +1,7 @@
 # Plan: Underground cave pool
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `implemented` ✅
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~world-terrain-024~~

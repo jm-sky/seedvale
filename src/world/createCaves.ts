@@ -16,10 +16,20 @@ import {
   type CaveContentAnchor,
   resolveCaveContentAnchors,
 } from './caves/caveContentAnchors'
+import {
+  buildDungeonHeightfieldWithPool,
+  type CaveUndergroundPool,
+} from './caves/caveUndergroundPool'
+import {
+  type CaveUndergroundPoolPresentation,
+  createCaveUndergroundPoolPresentation,
+} from './caves/caveUndergroundPoolPresentation'
 import { dungeonChambersFromTopology } from './caves/dungeonChambers'
+import { createWaterMaterial } from './waterMaterial'
 
 export type { CaveContentAnchor }
 export type { CaveTraversalDescriptor, CaveTraversalPoint } from './caves/caveHabitat'
+export type { CaveUndergroundPool } from './caves/caveUndergroundPool'
 export type { DungeonChamber, DungeonChamberClass } from './caves/dungeonChambers'
 import {
   CAVE_ADVENTURE_PROPS_GROUP_NAME,
@@ -179,6 +189,12 @@ export type Caves = {
    */
   dungeonChambersOf: (caveId: string) => readonly DungeonChamber[]
   /**
+   * Deterministic shallow underground pool for an accepted `dungeon` cave
+   * (plan world-terrain-025). `null` for natural/adventure caves and unknown
+   * ids. Independent of presentation streaming.
+   */
+  undergroundPoolOf: (caveId: string) => CaveUndergroundPool | null
+  /**
    * World-owned cave-scoped semantic/traversal contract (plan fauna-019):
    * an interior home anchor and the deterministic route to the entrance for
    * one cave, resolved directly against its retained topology/heightfield —
@@ -238,6 +254,8 @@ type CaveRuntime = {
   interiorRocks: readonly CaveInteriorRockPlacement[]
   /** Frozen dungeon chamber view. Empty unless `archetype === 'dungeon'`. */
   dungeonChambers: readonly DungeonChamber[]
+  /** Frozen dungeon pool contract. `null` unless `archetype === 'dungeon'`. */
+  undergroundPool: CaveUndergroundPool | null
 }
 
 function gridKey(cx: number, cz: number): string {
@@ -362,7 +380,19 @@ export function createCaves(
   bootMark('cave.heightfield')
   for (const { topology, archetype } of accepted) {
     const walkSurfaceAt: SurfaceSampler = (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
-    const heightfield = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
+    let heightfield: CaveHeightfieldRepresentation
+    let undergroundPool: CaveUndergroundPool | null = null
+    if (archetype === 'dungeon') {
+      const built = buildDungeonHeightfieldWithPool(topology, walkSurfaceAt)
+      if (!built) {
+        console.warn(`[caves] dungeon ${topology.caveId} missing pool after acceptance — skipping cave`)
+        continue
+      }
+      heightfield = built.heightfield
+      undergroundPool = built.pool
+    } else {
+      heightfield = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
+    }
     const contentAnchors = resolveCaveContentAnchors({ archetype, topology, heightfield })
     v2ByCaveId.set(topology.caveId, {
       archetype,
@@ -377,6 +407,7 @@ export function createCaves(
         ? resolveCaveInteriorRocks({ archetype, topology, heightfield, contentAnchors })
         : [],
       dungeonChambers: dungeonChambersFromTopology(topology),
+      undergroundPool,
     })
   }
   bootMarkEnd('cave.heightfield')
@@ -429,6 +460,10 @@ export function createCaves(
   caveMaterial.userData.sharedGpu = true
   const maskMaterial = createMouthUndersideMaskMaterial()
   maskMaterial.userData.sharedGpu = true
+  const poolWaterMaterial = createWaterMaterial({ ocean: 0, waterLevel: 0 })
+  poolWaterMaterial.userData.sharedGpu = true
+  const poolPresentationsByCave = new Map<string, CaveUndergroundPoolPresentation>()
+  const CAVE_POOL_PRESENTATION_KEY = 'caveUndergroundPoolPresentation'
   let lastGroundHit: CaveGroundHit | null = null
   const interiorHysteresis: Record<CaveInteriorQueryChannel, { lastRaw: boolean | null, confirmed: boolean }> = {
     player: { lastRaw: null, confirmed: false },
@@ -488,6 +523,12 @@ export function createCaves(
       pointLightBudget.unregisterSubtree(propsRoot)
       delete group.userData[CAVE_ADVENTURE_PROPS_USERDATA_KEY]
     }
+    const poolPresentation = poolPresentationsByCave.get(caveId)
+    if (poolPresentation) {
+      poolPresentation.dispose()
+      poolPresentationsByCave.delete(caveId)
+      delete group.userData[CAVE_POOL_PRESENTATION_KEY]
+    }
     group.removeFromParent()
     disposeObject3D(group)
     presentations.delete(caveId)
@@ -524,6 +565,12 @@ export function createCaves(
     }
     if (presentation.adventureLanternTorches.length > 0) {
       adventureLanternTorchesByCave.set(caveId, presentation.adventureLanternTorches)
+    }
+    if (v2.undergroundPool) {
+      const poolPresentation = createCaveUndergroundPoolPresentation(v2.undergroundPool, poolWaterMaterial)
+      poolPresentation.group.userData[CAVE_POOL_PRESENTATION_KEY] = true
+      presentation.group.add(poolPresentation.group)
+      poolPresentationsByCave.set(caveId, poolPresentation)
     }
     scene.add(presentation.group)
     presentations.set(caveId, presentation.group)
@@ -625,6 +672,9 @@ export function createCaves(
       for (const torches of adventureLanternTorchesByCave.values()) {
         for (const torch of torches) torch.update(dt)
       }
+      for (const poolPresentation of poolPresentationsByCave.values()) {
+        poolPresentation.update(dt)
+      }
       const { cx, cz } = gridCellOf(observerX, observerZ)
       const nearby = new Set<string>()
       for (let dx = -1; dx <= 1; dx++) {
@@ -724,6 +774,9 @@ export function createCaves(
     dungeonChambersOf(caveId) {
       return v2ByCaveId.get(caveId)?.dungeonChambers ?? []
     },
+    undergroundPoolOf(caveId) {
+      return v2ByCaveId.get(caveId)?.undergroundPool ?? null
+    },
     resolveHabitat(caveId, entityHeight) {
       const runtime = v2ByCaveId.get(caveId)
       if (!runtime) return null
@@ -751,9 +804,12 @@ export function createCaves(
       streaming.dispose()
       presentationQueue.clear()
       adventureLanternTorchesByCave.clear()
+      for (const poolPresentation of poolPresentationsByCave.values()) poolPresentation.dispose()
+      poolPresentationsByCave.clear()
       chunkManager.clearTerrainCutouts(TERRAIN_CUTOUT_OWNER_KEY)
       disposeCaveHeightfieldMaterialGpu(caveMaterial)
       maskMaterial.dispose()
+      poolWaterMaterial.dispose()
     },
   }
 }

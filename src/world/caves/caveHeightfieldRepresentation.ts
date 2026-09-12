@@ -35,6 +35,7 @@ import { smax, smin } from './caveMath'
 import { openingDirection } from './caveOrientation'
 import { CAVE_RNG_SALT, createCaveRandom } from './caveRng'
 import { SURFACE_CLIP_EPS } from './caveSurface'
+import { undergroundPoolFloorDepression, type UndergroundPoolFootprintIntent } from './caveUndergroundPoolFootprint'
 import { mouthAlong } from './mouthCarve'
 import { createValueNoise2D } from './spikeNoise'
 
@@ -668,6 +669,7 @@ export function buildCaveHeightfieldRepresentation(
   topology: CaveTopology,
   walkSurfaceAt: SurfaceSampler,
   config: CaveHeightfieldConfig = DEFAULT_HEIGHTFIELD_CONFIG,
+  poolIntent?: UndergroundPoolFootprintIntent | null,
 ): CaveHeightfieldBuildResult {
   const t0 = now()
   const seed = hashCaveId(topology.caveId) ^ (topology.seed >>> 0)
@@ -765,6 +767,10 @@ export function buildCaveHeightfieldRepresentation(
       // Walkable-core clearance only: the rim must stay free to converge.
       const required = topology.minClearance * (1 - smoothstep01(U_CORE, U_FADE, tMin))
       if (required > 0) c = smax(c, f + required, 0.25)
+
+      if (poolIntent) {
+        f -= undergroundPoolFloorDepression(poolIntent, x, z)
+      }
 
       floorY[i] = f
       ceilY[i] = c

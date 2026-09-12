@@ -37,6 +37,7 @@ import {
   rotateXZ,
   walkSegment,
 } from './caveRoute'
+import { dungeonTopologyAcceptsUndergroundPool } from './caveUndergroundPool'
 import { MOUTH_TRANSITION_RANGE } from './mouthOverburden'
 
 const ENTRANCE_HEIGHT = 2.6
@@ -330,6 +331,7 @@ export function buildDungeonCaveTopology(input: CaveRecipeInput): CaveTopology |
     }
     if (!meetsDungeonSemanticContract(topology)) continue
     if (!fitsDungeonFootprintBudget(topology)) continue
+    if (!dungeonTopologyAcceptsUndergroundPool(topology, sampleBaseHeight)) continue
     return topology
   }
   return null

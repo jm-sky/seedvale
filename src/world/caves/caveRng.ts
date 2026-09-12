@@ -80,6 +80,10 @@ export const CAVE_RNG_SALT = {
   dungeonFeature: 0x15,
   /** Plan world-terrain-024: dungeon passage centerline wobble. */
   dungeonCenterline: 0x16,
+  /** Plan world-terrain-025: dungeon underground pool chamber selection. */
+  undergroundPoolSelect: 0x17,
+  /** Plan world-terrain-025: dungeon underground pool footprint shape. */
+  undergroundPoolShape: 0x18,
 } as const
 
 /** Fresh `[0,1)` generator for `(caveId, salt)` — deterministic, and

@@ -243,6 +243,23 @@ describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', ()
     expect(chambers.every((c) => ids.has(c.nodeId))).toBe(true)
     expect(caves.dungeonChambersOf(firstAdventure!.caveId)).toEqual([])
     expect(caves.dungeonChambersOf('cave:deadbeef')).toEqual([])
+    const pool = caves.undergroundPoolOf(firstDungeon.caveId)
+    expect(pool).not.toBeNull()
+    expect(pool!.waterSource).toEqual({ kind: 'lake', quality: 'unsafe' })
+    expect(caves.undergroundPoolOf(firstAdventure!.caveId)).toBeNull()
+  })
+
+  it('exposes exactly one underground pool per accepted dungeon and none elsewhere', () => {
+    for (const { caveId, archetype } of archetypes()) {
+      const pool = caves.undergroundPoolOf(caveId)
+      if (archetype === 'dungeon') {
+        expect(pool).not.toBeNull()
+        expect(pool!.caveId).toBe(caveId)
+      } else {
+        expect(pool).toBeNull()
+      }
+    }
+    expect(caves.undergroundPoolOf('cave:deadbeef')).toBeNull()
   })
 
   it('does not leak dungeon content onto adventure caves', () => {
