@@ -25,10 +25,32 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.test.ts`
+- `reputation/SocialNewsLedger.ts`
 - `reputation/animalDeeds.ts`
 - `reputation/socialExposure.ts`
 - `settlement/lodgingResolver.test.ts`
 - `ui-vue/store.ts`
+
+## `reputation/SocialNewsLedger.test.ts`
+
+**Imports**
+
+- `reputation/SocialNewsLedger.ts`
+- `reputation/animalDeeds.ts`
+
+## `reputation/SocialNewsLedger.ts`
+
+**Imports**
+
+- `reputation/ReputationManager.ts`
+- `reputation/animalDeeds.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/saveState.ts`
+- `reputation/SocialNewsLedger.test.ts`
+- `reputation/animalDeeds.ts`
 
 ## `reputation/animalDeeds.test.ts`
 
@@ -42,11 +64,14 @@ Generated from TypeScript imports.
 
 - `fauna/animalDefs.ts`
 - `reputation/ReputationManager.ts`
+- `reputation/SocialNewsLedger.ts`
 
 **Imported by**
 
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `reputation/SocialNewsLedger.test.ts`
+- `reputation/SocialNewsLedger.ts`
 - `reputation/animalDeeds.test.ts`
 
 ## `reputation/socialExposure.test.ts`
