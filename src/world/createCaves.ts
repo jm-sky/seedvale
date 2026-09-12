@@ -17,6 +17,7 @@ import {
 } from './caves/caveContentAnchors'
 
 export type { CaveContentAnchor }
+export type { CaveTraversalDescriptor, CaveTraversalPoint } from './caves/caveHabitat'
 import {
   CAVE_ADVENTURE_PROPS_GROUP_NAME,
   CAVE_ADVENTURE_PROPS_USERDATA_KEY,
@@ -29,6 +30,7 @@ import {
   type CaveGroundHit,
   type CaveVerticalInterval,
 } from './caves/caveGroundQuery'
+import { type CaveTraversalDescriptor, resolveCaveTraversal } from './caves/caveHabitat'
 import {
   createCaveHeightfieldMaterial,
   disposeCaveHeightfieldMaterialGpu,
@@ -166,6 +168,38 @@ export type Caves = {
   contentAnchors: () => readonly CaveContentAnchor[]
   /** Content anchors of one cave. Empty for natural caves and unknown ids. */
   contentAnchorsOf: (caveId: string) => readonly CaveContentAnchor[]
+  /**
+   * World-owned cave-scoped semantic/traversal contract (plan fauna-019):
+   * an interior home anchor and the deterministic route to the entrance for
+   * one cave, resolved directly against its retained topology/heightfield —
+   * O(1) via `caveId`, no scan of every cave, no dependency on presentation.
+   * `entityHeight` is the resolving occupant's own standing clearance
+   * requirement; `null` when the cave id is unknown or no chamber candidate
+   * is standable for that height. Never persisted — re-resolve after a
+   * `WorldBundle` rebuild.
+   */
+  resolveHabitat: (caveId: string, entityHeight: number) => CaveTraversalDescriptor | null
+  /**
+   * Stateless, cave-scoped ground query for a known occupant of `caveId` —
+   * the fauna-facing counterpart of `queryGround`, without its player-only
+   * underground-miss hysteresis. `null` for an unknown cave id or outside
+   * that cave's void.
+   */
+  queryGroundIn: (caveId: string, x: number, y: number, z: number) => CaveGroundHit | null
+  /**
+   * Cave-scoped horizontal containment for a known occupant of `caveId` —
+   * the fauna-facing counterpart of `resolveHorizontal`, resolved against
+   * only that cave's own field. Identity (`{ x, z }` unchanged) for an
+   * unknown cave id.
+   */
+  resolveHorizontalIn: (
+    caveId: string,
+    x: number,
+    z: number,
+    y: number,
+    radius: number,
+    entityHeight: number,
+  ) => { x: number, z: number }
   dispose: () => void
 }
 
@@ -670,6 +704,22 @@ export function createCaves(
     },
     contentAnchorsOf(caveId) {
       return v2ByCaveId.get(caveId)?.contentAnchors ?? []
+    },
+    resolveHabitat(caveId, entityHeight) {
+      const runtime = v2ByCaveId.get(caveId)
+      if (!runtime) return null
+      return resolveCaveTraversal(runtime.topology, runtime.heightfield, analyticSurfaceHeight, entityHeight)
+    },
+    queryGroundIn(caveId, x, y, z) {
+      const runtime = v2ByCaveId.get(caveId)
+      if (!runtime) return null
+      return queryHeightfieldGround(runtime.heightfield, analyticSurfaceHeight, x, y, z)
+    },
+    resolveHorizontalIn(caveId, x, z, y, radius, entityHeight) {
+      const runtime = v2ByCaveId.get(caveId)
+      if (!runtime) return { x, z }
+      const minGap = heightfieldStandingClearance(entityHeight)
+      return resolveHeightfieldHorizontal(runtime.heightfield, x, z, y, radius, minGap)
     },
     dispose() {
       lastGroundHit = null

@@ -603,7 +603,7 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
       'Chcę wiedzieć, co się dzieje za osadą. Zajrzyj do jaskini, wypatrz jelenia po drodze i przynieś dwa kamienie z gór — wtedy będę pewien, że naprawdę tam byłeś.',
     stages: [
       {
-        objective: { type: 'interact_spawner', spawnerType: 'cave' },
+        objective: { type: 'interact_spawner', spawnerType: 'rockDen' },
         description: 'Sprawdź jaskinię za osadą.',
         reminderLine: 'Byłeś już przy jaskini?',
         progressLine: 'Przy wejściu widać świeże tropy. To miejsce nie jest puste. Teraz wypatrz jelenia.',
@@ -773,7 +773,7 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
       'Ostatnio ktoś widział świeże ślady przy jaskini {cavePlace}. Możesz tam zajrzeć i sprawdzić, czy nie kręci się tam coś niebezpiecznego? Zapłacę ci za fatygę.',
     stages: [
       {
-        objective: { type: 'interact_spawner', spawnerType: 'cave' },
+        objective: { type: 'interact_spawner', spawnerType: 'rockDen' },
         description: 'Sprawdź jaskinię wskazaną przez Kasię.',
         reminderLine: 'Jaskinia jest {cavePlace}. Sprawdź tylko, co się tam dzieje, i wróć do mnie.',
         progressLine:
@@ -936,7 +936,7 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
       'Zgubiłam przesyłkę przy jaskini {cavePlace}. To prywatne listy i rachunki — bez nich nie ogarnę dostawy. Marek już o tym słyszał i chętnie by to przejął „dla porządku”. Dasz radę tam zajrzeć?',
     stages: [
       {
-        objective: { type: 'interact_spawner', spawnerType: 'cave' },
+        objective: { type: 'interact_spawner', spawnerType: 'rockDen' },
         description: 'Sprawdź jaskinię wskazaną przez Kasię.',
         reminderLine: 'Jaskinia jest {cavePlace}. Szukaj przesyłki przy wejściu.',
         progressLine: 'Przy wejściu leży zawinięta przesyłka. Kasia jej szuka — Marek też o niej wie.',

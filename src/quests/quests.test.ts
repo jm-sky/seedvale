@@ -370,15 +370,15 @@ describe('quest dialogue lines and cave binding (plan quests-progression-014)', 
     const scout = bound.find((q) => q.id === 'zwiadowca')!
     expect(check.stages[0]?.objective).toEqual({
       type: 'interact_spawner',
-      spawnerType: 'cave',
+      spawnerType: 'rockDen',
       spawnerId: 'home:cave',
     })
     expect(lost.stages[0]?.objective).toEqual({
       type: 'interact_spawner',
-      spawnerType: 'cave',
+      spawnerType: 'rockDen',
       spawnerId: 'home:cave',
     })
-    expect(scout.stages[0]?.objective).toEqual({ type: 'interact_spawner', spawnerType: 'cave' })
+    expect(scout.stages[0]?.objective).toEqual({ type: 'interact_spawner', spawnerType: 'rockDen' })
     expect(check.offerLine).toContain('na północny wschód od osady')
     expect(check.offerLine).not.toContain('{cavePlace}')
     expect(lost.stages[0]?.reminderLine).toContain('na północny wschód od osady')

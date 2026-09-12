@@ -648,7 +648,7 @@ describe('quests', () => {
     const den = fakeWolfDenSpawner()
     const other = fakeWolfDenSpawner({
       id: 'wolf-den',
-      type: 'cave',
+      type: 'rockDen',
       kind: 'wolf',
       x: 1,
       z: 1,

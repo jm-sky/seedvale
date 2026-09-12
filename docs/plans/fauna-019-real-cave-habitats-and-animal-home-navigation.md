@@ -1,7 +1,7 @@
 # Plan: Real cave habitats and animal home navigation
 
 **Created:** 2026-09-07  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** L  
 **Depends on:** ~~world-terrain-019~~, ~~fauna-016~~  
 **Domain:** `fauna`  
@@ -401,3 +401,18 @@ Nie uruchamiać browser verification — wykonuje je użytkownik.
 Nie uruchamiać ręcznie `pnpm docs:sync`; derived documentation synchronizuje GitHub workflow.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+## Implementacja 2026-09-12
+
+Zaimplementowane w całości, zgodnie z kolejnością z sekcji "Implementacja — kolejność":
+
+1. `Caves.resolveHabitat` / `queryGroundIn` / `resolveHorizontalIn` (`src/world/caves/caveHabitat.ts` + wiring w `createCaves.ts`) — cave-scoped traversal contract, O(1) przez `v2ByCaveId`, bez presentation, z testami (`caveHabitat.test.ts`).
+2. Dekoracyjny spawner `cave` → `rockDen` (`SpawnerType`, `SPAWNER_SPECS`, labels), z zachowanym legacy `cave` id-segmentem w `spawnerId()` — istniejące `SavedSpawnPointState` nie są osierocone.
+3. `AnimalHabitatBinding` + `resolveAnimalCaveHabitat` (`src/fauna/animalCaveHabitat.ts`), wpięte w `createFauna()` (`caveWorld`/`caveHabitats` parametry) i `worldBundle.ts::buildFauna()` (adapter nad już zbudowanym `Caves`).
+4. Wspólny ground/horizontal seam: `AnimalAgent.snapY()` woli cave-scoped floor/containment, fallback do surface `sampleHeight`; `entityRadius`/`entityHeight` z `def.scale`/`def.modelHeight` (reużyte, nie nowa stała).
+5. `advanceCaveRoute` (mały, nie-persystowany cursor — nie nearest-point, żeby folded `adventure` route nie cofał zwierzęcia) + `AnimalAgent.continueTrip()` przechodzi interior↔entrance przed/po surface leg.
+6. `clampBounds()` pomija `ROAM_RADIUS` podczas aktywnego `AnimalTrip` (ogólna poprawka, nie cave-specific) — reszta needs/foraging bez zmian (`animalForaging.ts` nietknięty, zgodnie z notatkami).
+7. `bear: { trips: { water: BEAR_WATER_TRIP } }` w `animalDefs.ts`.
+8. Nie dodano żadnej realnej deklaracji `PersistentOccupantDecl` dla bear/treasure-map (świadomie poza zakresem — `quests-progression-008` pozostaje osobnym pluginem konsumującym ten kontrakt).
+
+Testy: `src/world/caves/caveHabitat.test.ts` (world), `src/fauna/animalCaveJourney.test.ts` (fauna — habitat resolution, ground/wander seam, outbound/return journey przez syntetyczny cave world contract, `clampBounds` podczas trip, non-lethal hit nie gubi habitat identity), plus zaktualizowane istniejące testy przy `rockDen` rename. `npx tsc --noEmit` / `npm run lint:fix` / `npm run build` / `npm run test` — zielone. Browser/gameplay verification pozostaje do wykonania przez użytkownika (patrz sekcja "Manual verification").

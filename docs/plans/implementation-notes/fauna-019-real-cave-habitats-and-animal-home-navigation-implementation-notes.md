@@ -2,6 +2,74 @@
 
 Reviewed against `main` on 2026-09-11 after the production heightfield cutover.
 
+## Implemented (2026-09-12) — final symbol/file map
+
+Everything below this line was the pre-implementation review. What actually
+landed, for future navigation:
+
+- `src/world/caves/caveHabitat.ts` — `resolveCaveTraversal()` (home chamber
+  selection + BFS route over `CaveTopology.segments`) and the
+  `CaveTraversalDescriptor`/`CaveTraversalPoint` types. Pure, no Three.js.
+- `createCaves.ts` gained `resolveHabitat(caveId, entityHeight)` /
+  `queryGroundIn(caveId, x, y, z)` / `resolveHorizontalIn(caveId, ...)` on the
+  `Caves` return value — thin wrappers over `v2ByCaveId.get(caveId)` plus the
+  existing `caveHeightfieldQuery.ts` primitives. No new spatial
+  representation, no player hysteresis reused.
+- `src/fauna/animalCaveHabitat.ts` (new, fauna-owned) — `AnimalHabitatBinding`,
+  `AnimalCaveWorldContract` (the narrow adapter type), `AnimalCaveContext`
+  (per-agent cached runtime companion, includes both `homeToEntrance` and a
+  precomputed `entranceToHome`), `resolveAnimalCaveHabitat()`,
+  `animalCaveEntityDimensions()` (reuses `def.modelHeight` +
+  `ANIMAL_CAPSULE_RADIUS_SCALE * def.scale` — the existing capsule-fallback
+  radius, not a new constant), and `advanceCaveRoute()` (see below).
+- `AnimalAgent.ts`: new optional `AnimalAgentDeps.cave?: AnimalCaveContext`.
+  `snapY()` is the one ground/containment seam — cave-scoped
+  `resolveHorizontalIn`/`queryGroundIn` first, surface `sampleHeight`
+  fallback; tracks `caveInteriorNow`. `continueTrip()` walks
+  `cave.homeToEntrance`/`entranceToHome` via a small **cursor**
+  (`this.caveRouteIndex`, reset at each trip/leg start) rather than a
+  nearest-point search — a folded `adventure` cave route can bring
+  non-adjacent legs close enough together that "nearest waypoint" would
+  regress to an earlier point; a monotonic index cannot. `clampBounds()` now
+  skips its `ROAM_RADIUS` clamp whenever `this.trip` is set (not
+  cave-specific — this is what actually lets any trip's `searchRadius`
+  exceed `ROAM_RADIUS`, previously true only by coincidence for deer).
+  Interior-void wander gating (`caveWanderAccept()`) is deliberately **not**
+  folded into `isWalkable()`: that method also gates
+  `stepWithSlopeAndCollision()`'s per-tick movement steps, and a resident
+  transiently reads as "not interior" for one tick while actually crossing
+  its own mouth (`caveInteriorNow` lags one tick behind `snapY()`) — folding
+  the check in there stalled a resident exactly at its entrance in testing.
+  `caveWanderAccept()` is consulted only from `pickPointNear()` (wander
+  *target selection*), never from movement stepping itself.
+- `createFauna.ts`: new optional `caveWorld`/`caveHabitats` params; the
+  existing persistent-occupant-declaration loop checks a cave-habitat-id map
+  before falling back to `spawnerById` — a cave-backed occupant needs no
+  `PreySpawner` at all. Fails safely (skips) rather than placing at a stale
+  position when the world contract or the cave itself doesn't resolve.
+- `worldBundle.ts::buildFauna()` adapts the already-built `Caves` into the
+  narrow `AnimalCaveWorldContract` shape and forwards it; `caveHabitats`
+  itself is still empty — no consumer declares one yet (by design, see the
+  plan's non-goals).
+- `AnimalSpawner.ts`/`createFauna.ts`: `SpawnerType`'s `'cave'` → `'rockDen'`.
+  `spawnerId()` derives the on-disk id segment from a small
+  `SPAWNER_ID_SEGMENT` map (`rockDen → 'cave'`) instead of the type label
+  itself, so existing `SavedSpawnPointState` keys (`${settlementId}:cave`,
+  `${settlementId}:cave:bear`) are unchanged by the rename.
+- `animalDefs.ts`: `bear.trips.water = BEAR_WATER_TRIP` (declarative, same
+  seam as deer — no `kind === 'bear'` branch anywhere).
+- Tests: `src/world/caves/caveHabitat.test.ts` (world layer, built against
+  real `buildNaturalCaveTopology`/`buildAdventureCaveTopology` +
+  `buildCaveHeightfieldRepresentation`, not a synthetic fixture) and
+  `src/fauna/animalCaveJourney.test.ts` (fauna layer, direct `AnimalAgent`
+  construction against a small fake `AnimalCaveWorldContract` — no Three.js
+  scene, same idiom as `AnimalAgent.test.ts`).
+
+Deliberately not done (matches the plan's non-goals): no real
+`PersistentOccupantDecl` for a bear/cave was wired into `worldBundle.ts` —
+`quests-progression-008` is expected to supply that declaration against this
+now-proven contract.
+
 ## Current truth
 
 ### `src/world/createCaves.ts`

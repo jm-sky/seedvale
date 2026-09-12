@@ -3,7 +3,9 @@ import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
 import type { LocalWaterSample } from '../terrain/waterSample'
+import type { CaveTraversalPoint } from '../world/caves/caveHabitat'
 import type { GrassForageService } from '../world/createGrassForagePatches'
+import type { WaterBodyKind } from '../world/WaterSource'
 import type { FollowHysteresisState } from './followHysteresis'
 import {
   createMovementWatchdog,
@@ -46,6 +48,11 @@ import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderActiveAtY, colliderContainsPoint } from '../world/collision'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
+import {
+  advanceCaveRoute,
+  ANIMAL_CAPSULE_RADIUS_SCALE,
+  type AnimalCaveContext,
+} from './animalCaveHabitat'
 import {
   advanceAnimalCorpse,
   type AnimalCorpseState,
@@ -116,16 +123,16 @@ import {
 } from './AnimalLife'
 import { horseNameForAnimal } from './animalNames'
 import {
+  OWNED_NEED_LEASH_RADIUS,
+  shouldDeferNeedsForLead,
+  STAY_NEED_LEASH_RADIUS,
+} from './animalNeedArbitration'
+import {
   type AnimalOwner,
   deriveOwnerHouseId,
   isPlayerOwned as isPlayerOwnedOwner,
   ownerFromHouseId,
 } from './animalOwnership'
-import {
-  OWNED_NEED_LEASH_RADIUS,
-  shouldDeferNeedsForLead,
-  STAY_NEED_LEASH_RADIUS,
-} from './animalNeedArbitration'
 import { type AnimalTrip, findWaterTripDestination, tripDayBucket } from './animalRoaming'
 import {
   DOG_BARK_COOLDOWN_SEC,
@@ -180,7 +187,6 @@ import {
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
 import { PREY_ALERT_RANGE_BONUS, type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
-import type { WaterBodyKind } from '../world/WaterSource'
 import {
   classifyWaterTraversal,
   shouldApplyDrowningDamage,
@@ -766,6 +772,11 @@ export type AnimalAgentDeps = {
   /** Inherited from an active wolf-den spawner at spawn time (plan
    *  quests-progression-007) — not persisted on the animal. */
   humanTaste?: boolean
+  /** Resolved cave habitat this animal's home is bound to (plan fauna-019).
+   *  Present only for a cave-backed resident — every other animal keeps
+   *  ground/containment resolution exactly as before. `x`/`z` above must
+   *  already equal `cave.home.x`/`cave.home.z` when this is set. */
+  cave?: AnimalCaveContext
 }
 
 /** Per-tick inputs for `AnimalAgent.update()` (plan fauna-017 step 2) — same
@@ -943,6 +954,22 @@ export class AnimalAgent {
   private readonly tmp = new THREE.Vector3()
   private readonly home = new THREE.Vector3()
   private readonly wanderRadius: readonly [number, number]
+  /** Resolved cave habitat (plan fauna-019) — `undefined` for every ordinary
+   *  surface animal, which keeps today's `sampleHeight`-only ground/movement
+   *  unchanged. Cached for this agent's lifetime; never re-resolved except
+   *  by a fresh `AnimalAgent` after a `WorldBundle` rebuild. */
+  private readonly cave?: AnimalCaveContext
+  /** Whether the *last* `snapY()` ground resolution actually hit this cave's
+   *  own occupancy (as opposed to falling back to surface `sampleHeight`) —
+   *  one tick behind, same lag as `waterMode`'s doc. Gates the extra
+   *  cave-rock `isWalkable()` check so a cave resident's surface trip leg
+   *  keeps ordinary walkability rules. */
+  private caveInteriorNow: boolean
+  /** Monotonic cursor into `cave.homeToEntrance`/`entranceToHome` for the
+   *  active trip leg (plan fauna-019 §6) — see `advanceCaveRoute`'s doc for
+   *  why this is a plain index rather than a nearest-point projection.
+   *  Never persisted; reset to 0 whenever a fresh leg starts. */
+  private caveRouteIndex = 0
   /** Committed water/other trip (plan fauna-016 §4) — `null` when not on
    *  one. Only ever read/written by `wander()`'s trip helpers. */
   private trip: AnimalTrip | null = null
@@ -1251,6 +1278,7 @@ export class AnimalAgent {
       household,
       spawnPointId,
       humanTaste = false,
+      cave,
     } = deps
     this.def = def
     this.animalId = animalId
@@ -1262,6 +1290,8 @@ export class AnimalAgent {
     this.spawnPointId = spawnPointId
     this.humanTaste = humanTaste
     this.onDeath = onDeath
+    this.cave = cave
+    this.caveInteriorNow = cave != null
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.sampleLocalWater = sampleLocalWater
@@ -1278,7 +1308,7 @@ export class AnimalAgent {
       this.mesh = visual
       this.isCapsule = false
     } else {
-      const radius = 0.28 * def.scale
+      const radius = ANIMAL_CAPSULE_RADIUS_SCALE * def.scale
       const length = 0.55 * def.scale
       const geometry = new THREE.CapsuleGeometry(radius, length, 3, 6)
       const material = new THREE.MeshStandardMaterial({
@@ -1291,7 +1321,11 @@ export class AnimalAgent {
       this.mesh.userData.faunaCapsule = true
     }
 
-    this.mesh.position.set(x, 0, z)
+    // A cave-bound resident's initial floor comes from its already-resolved
+    // habitat descriptor, not `sampleHeight` (surface-only) or a bare 0 —
+    // `snapY()`'s cave-scoped query needs a previous Y already near the real
+    // floor to pass its grace-window check on the very first tick.
+    this.mesh.position.set(x, cave ? cave.home.y : 0, z)
     this.mesh.name = 'fauna'
     this.mesh.userData.animalKind = def.kind
     this.mesh.userData.animalRole = def.role
@@ -2776,6 +2810,7 @@ export class AnimalAgent {
       phase: 'traveling',
       stayRemainingSec: stayDurationSec,
     }
+    this.caveRouteIndex = 0
     return true
   }
 
@@ -3752,6 +3787,7 @@ export class AnimalAgent {
       phase: 'traveling',
       stayRemainingSec: config.stayDurationSec,
     }
+    this.caveRouteIndex = 0
     return true
   }
 
@@ -3762,10 +3798,30 @@ export class AnimalAgent {
    *  tick") — a threat/combat branch elsewhere in `update()` simply doesn't
    *  call `wander()` for that tick, leaving this state untouched until it
    *  does again. */
+  /** Cave resident's route waypoint for the current trip leg (plan fauna-019
+   *  §6), advancing `caveRouteIndex` in place. `null` for a non-cave animal
+   *  or once the given route is fully walked. */
+  private nextCaveJourneyWaypoint(route: readonly CaveTraversalPoint[]): CaveTraversalPoint | null {
+    if (!this.cave) return null
+    const progress = advanceCaveRoute(route, this.caveRouteIndex, this.mesh.position.x, this.mesh.position.z, TRIP_ARRIVAL_RADIUS)
+    this.caveRouteIndex = progress.index
+    return progress.point
+  }
+
   private continueTrip(dt: number): void {
     const trip = this.trip
     if (!trip) return
     if (trip.phase === 'traveling') {
+      // Cave resident: follow the interior route to the entrance first
+      // (plan fauna-019 §6) — `null` once past the last waypoint (the
+      // entrance itself), at which point this is exactly the pre-existing
+      // direct-to-destination behaviour.
+      const waypoint = this.cave ? this.nextCaveJourneyWaypoint(this.cave.homeToEntrance) : null
+      if (waypoint) {
+        this.sourceDest.set(waypoint.x, 0, waypoint.z)
+        this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+        return
+      }
       this.sourceDest.copy(trip.destination)
       this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
       if (this.arrived(trip.destination, TRIP_ARRIVAL_RADIUS)) trip.phase = 'staying'
@@ -3773,10 +3829,27 @@ export class AnimalAgent {
     }
     if (trip.phase === 'staying') {
       trip.stayRemainingSec -= dt
-      if (trip.stayRemainingSec <= 0) trip.phase = 'returning'
+      if (trip.stayRemainingSec <= 0) {
+        trip.phase = 'returning'
+        // Fresh leg: restart the cursor for the reversed `entranceToHome`
+        // walk below (plan fauna-019 §6) — the outbound leg left it past
+        // the end of `homeToEntrance`.
+        this.caveRouteIndex = 0
+      }
       return
     }
-    // 'returning'
+    // 'returning': surface travel toward the entrance first, then the
+    // reversed interior route to the actual interior home — never straight
+    // to `home` through rock (plan fauna-019 §6). The cursor naturally
+    // starts at the entrance while still far from the cave, so this
+    // degrades to the pre-existing direct-to-home walk for any non-cave
+    // animal (`waypoint` is always `null` there).
+    const waypoint = this.cave ? this.nextCaveJourneyWaypoint(this.cave.entranceToHome) : null
+    if (waypoint) {
+      this.sourceDest.set(waypoint.x, 0, waypoint.z)
+      this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+      return
+    }
     this.sourceDest.set(this.home.x, 0, this.home.z)
     this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
     if (this.arrived(this.sourceDest, TRIP_ARRIVAL_RADIUS)) this.trip = null
@@ -3852,7 +3925,11 @@ export class AnimalAgent {
       const a = Math.random() * Math.PI * 2
       const x = cx + Math.cos(a) * r
       const z = cz + Math.sin(a) * r
-      if (this.isWalkable(x, z) && (this.def.sociability !== 'wild' || this.frenzied || !this.isNearVillage({ x, z }))) {
+      if (
+        this.isWalkable(x, z)
+        && this.caveWanderAccept(x, z)
+        && (this.def.sociability !== 'wild' || this.frenzied || !this.isNearVillage({ x, z }))
+      ) {
         this.target.set(x, 0, z)
         return true
       }
@@ -3877,6 +3954,22 @@ export class AnimalAgent {
       if (colliderContainsPoint(collider, x, z)) return false
     }
     return true
+  }
+
+  /** Extra local-wander acceptance for a cave resident (plan fauna-019 §4):
+   *  a candidate wander point must stay inside this cave's own void while
+   *  the resident is itself resolved as cave-interior. Deliberately *not*
+   *  folded into `isWalkable()` — that method also gates
+   *  `stepWithSlopeAndCollision()`'s per-tick movement steps, and a mouth
+   *  crossing genuinely leaves this cave's local occupancy for a tick before
+   *  `caveInteriorNow` catches up; rejecting movement there would stall a
+   *  resident exactly at its own entrance instead of letting it walk out.
+   *  Horizontal wall containment (`snapY()`'s `resolveHorizontalIn`) is what
+   *  actually keeps a resident out of rock during real movement, mirroring
+   *  `PlayerController`'s push-out-after-the-fact pattern. */
+  private caveWanderAccept(x: number, z: number): boolean {
+    if (!this.cave || !this.caveInteriorNow) return true
+    return this.cave.world.queryGroundIn(this.cave.caveId, x, this.mesh.position.y, z) !== null
   }
 
   /** Resolves this tick's dry/wading/swimming traversal mode (plan
@@ -4081,6 +4174,13 @@ export class AnimalAgent {
 
   private clampBounds(): void {
     if (this.isPlayerOwned() || this._leadAttached) return
+    // A committed trip (plan fauna-016 §4, fauna-019 §6) may legitimately
+    // carry the animal past the local roam band — its own destination
+    // search already bounds how far, and a cave resident's route to/from
+    // the entrance is not expressible as a flat radius around `home` at
+    // all. Ordinary local wander (`this.trip === null`) keeps this bound
+    // exactly as before.
+    if (this.trip) return
     this.mesh.position.x = THREE.MathUtils.clamp(
       this.mesh.position.x,
       this.home.x - ROAM_RADIUS,
@@ -4093,8 +4193,38 @@ export class AnimalAgent {
     )
   }
 
+  /** Ground-height seam every movement mode shares (plan fauna-019 §4): a
+   *  cave-bound resident prefers this cave's own stateless floor query,
+   *  falling back to surface `sampleHeight` once genuinely outside it
+   *  (mouth exit / the surface leg of a trip) — never the player's
+   *  `Caves.queryGround`, which carries player-only hysteresis. Updates
+   *  `caveInteriorNow` for `isWalkable()`'s gate. Every non-cave animal
+   *  keeps exactly the old `sampleHeight`-only path. */
+  private groundHeightAt(x: number, z: number): number {
+    if (!this.cave) return this.sampleHeight(x, z)
+    const hit = this.cave.world.queryGroundIn(this.cave.caveId, x, this.mesh.position.y, z)
+    this.caveInteriorNow = hit !== null
+    return hit ? hit.floorY : this.sampleHeight(x, z)
+  }
+
   private snapY(): void {
-    const terrainY = this.sampleHeight(this.mesh.position.x, this.mesh.position.z)
+    if (this.cave) {
+      // Cave-scoped horizontal containment first (plan fauna-019 §4), same
+      // order `PlayerController` already applies `Caves.resolveHorizontal`
+      // in — identity outside this cave's local grid or for a surface
+      // entity, so this is a no-op for the surface leg of a trip.
+      const resolved = this.cave.world.resolveHorizontalIn(
+        this.cave.caveId,
+        this.mesh.position.x,
+        this.mesh.position.z,
+        this.mesh.position.y,
+        this.cave.entityRadius,
+        this.cave.entityHeight,
+      )
+      this.mesh.position.x = resolved.x
+      this.mesh.position.z = resolved.z
+    }
+    const terrainY = this.groundHeightAt(this.mesh.position.x, this.mesh.position.z)
     let y = terrainY
     const water = this.sampleLocalWater(this.mesh.position.x, this.mesh.position.z)
     if (water.present) {

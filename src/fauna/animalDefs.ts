@@ -301,6 +301,13 @@ const LARGE_ROAMING_RANGE: readonly [number, number] = [10, 24]
 /** Deer/stag water-trip policy (plan fauna-016 §5) — roughly every 2 in-game
  *  days, a short stay, reaching well past `LARGE_ROAMING_RANGE`'s own max. */
 const DEER_WATER_TRIP: WaterTripConfig = { cooldownDays: 2, stayDurationSec: 25, searchRadius: 45 }
+/** Bear water-trip policy (plan fauna-019 §7) — same declarative seam as
+ *  `DEER_WATER_TRIP`, not a `kind === 'bear'` branch in the trip state
+ *  machine. A cave-backed bear's `home` is its interior chamber, so this
+ *  search radius is deliberately allowed to exceed `ROAM_RADIUS`
+ *  (`AnimalAgent.ts`) — `continueTrip()`'s cave-route routing (not this
+ *  radius) is what gets it there. */
+const BEAR_WATER_TRIP: WaterTripConfig = { cooldownDays: 3, stayDurationSec: 30, searchRadius: 65 }
 
 export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   wolf: {
@@ -455,6 +462,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 13,
     playerPanicRange: 5,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    trips: { water: BEAR_WATER_TRIP },
   },
   horse: {
     kind: 'horse',

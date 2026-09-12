@@ -18,7 +18,7 @@ function spawner(overrides: Partial<PreySpawner> = {}): PreySpawner {
     id: 'settlement-a:cave',
     x: 0,
     z: 0,
-    type: 'cave',
+    type: 'rockDen',
     kind: 'deer',
     respawnIntervalDays: 1,
     maxPreyCount: 3,

@@ -31,6 +31,13 @@ import {
   type NearbyNpcCandidate,
   type VillageInfo,
 } from './AnimalAgent'
+import {
+  type AnimalCaveContext,
+  animalCaveEntityDimensions,
+  type AnimalCaveWorldContract,
+  type AnimalHabitatBinding,
+  resolveAnimalCaveHabitat,
+} from './animalCaveHabitat'
 import { findSettlementOutskirtsDestination } from './animalRoaming'
 import {
   defaultSpawnPointScenarioFields,
@@ -329,52 +336,67 @@ export function measureSlope(
 }
 
 /** Habitat spawners — see docs/plans/archive/2026-08-07--predator-prey-system.md.
- *  Caves are predator dens (wolf, and now bear — plan 188: each is its own
- *  physical `PreySpawner` instance/world location, a cave is not a singleton
- *  "the bear cave" resource, see `spawnerId` below); thickets are deer cover.
- *  `wolfDen` (plan 093 Etap E) piggybacks on the same list/shape for a
- *  labeled quest den — `respawnIntervalDays: Infinity` keeps `updateSpawners`
- *  from ever repopulating it; its initial pack is spawned once, tagged with
- *  `spawnPointId` so a cleared den can deplete and be burned. Cave/thicket
+ *  `rockDen` (renamed from `cave` — plan fauna-019 §8, a purely decorative
+ *  `createCaveMouth()` prop, never a real walk-in cave) are predator dens
+ *  (wolf, and now bear — plan 188: each is its own physical `PreySpawner`
+ *  instance/world location, a rock den is not a singleton "the bear den"
+ *  resource, see `spawnerId` below); thickets are deer cover. `wolfDen`
+ *  (plan 093 Etap E) piggybacks on the same list/shape for a labeled quest
+ *  den — `respawnIntervalDays: Infinity` keeps `updateSpawners` from ever
+ *  repopulating it; its initial pack is spawned once, tagged with
+ *  `spawnPointId` so a cleared den can deplete and be burned. RockDen/thicket
  *  intervals are game-days (plan 139). Multiple entries of the same `type`
- *  are supported (see `spawnerId` below) — a bear cave doesn't turn the
- *  existing wolf cave into a multi-species spawner, it's simply a second
- *  `cave`-type habitat placed independently by the same generic loop. */
+ *  are supported (see `spawnerId` below) — a bear den doesn't turn the
+ *  existing wolf den into a multi-species spawner, it's simply a second
+ *  `rockDen`-type habitat placed independently by the same generic loop. */
 export const SPAWNER_SPECS: {
   type: PreySpawner['type']
   kind: AnimalKind
   respawnIntervalDays: number
   maxPreyCount: number
 }[] = [
-  { type: 'cave', kind: 'wolf', respawnIntervalDays: 2, maxPreyCount: 2 },
+  { type: 'rockDen', kind: 'wolf', respawnIntervalDays: 2, maxPreyCount: 2 },
   { type: 'thicket', kind: 'deer', respawnIntervalDays: 1, maxPreyCount: 3 },
   { type: 'wolfDen', kind: 'wolf', respawnIntervalDays: Infinity, maxPreyCount: 2 },
-  // Bear den — solitary occupant, slower respawn than the wolf cave.
-  { type: 'cave', kind: 'bear', respawnIntervalDays: 3, maxPreyCount: 1 },
+  // Bear den — solitary occupant, slower respawn than the wolf den.
+  { type: 'rockDen', kind: 'bear', respawnIntervalDays: 3, maxPreyCount: 1 },
 ]
 
-/** Stable id for a `SPAWNER_SPECS` entry (plan 188) — `${settlementId}:${type}`
- *  for the first spawner of a given `type` (unchanged from pre-188 saves, which
- *  only ever had one spawner per `type`), `${settlementId}:${type}:${kind}` for
- *  any later spawner sharing that `type` (e.g. the bear cave alongside the
- *  wolf cave) so two physical caves never collide on one save-restorable id. */
-export function spawnerId(settlementId: string, type: PreySpawner['type'], kind: AnimalKind, seenOfType: number): string {
-  return seenOfType === 0 ? `${settlementId}:${type}` : `${settlementId}:${type}:${kind}`
+/** Stable on-disk id segment per `type` (plan fauna-019 §8) — decoupled from
+ *  the type label itself so the `cave` -> `rockDen` rename never changes an
+ *  existing save's spawner id / `SavedSpawnPointState` key. `rockDen` keeps
+ *  deriving the pre-rename `cave` segment; every other type still derives
+ *  its own name, unchanged. */
+const SPAWNER_ID_SEGMENT: Record<PreySpawner['type'], string> = {
+  rockDen: 'cave',
+  thicket: 'thicket',
+  grove: 'grove',
+  wolfDen: 'wolfDen',
 }
 
-/** First home-settlement cave (`${settlementId}:cave`) — the original
- *  type-unique cave id from plan 188. */
+/** Stable id for a `SPAWNER_SPECS` entry (plan 188) — `${settlementId}:${segment}`
+ *  for the first spawner of a given `type` (unchanged from pre-188 saves, which
+ *  only ever had one spawner per `type`), `${settlementId}:${segment}:${kind}` for
+ *  any later spawner sharing that `type` (e.g. the bear den alongside the
+ *  wolf den) so two physical dens never collide on one save-restorable id. */
+export function spawnerId(settlementId: string, type: PreySpawner['type'], kind: AnimalKind, seenOfType: number): string {
+  const segment = SPAWNER_ID_SEGMENT[type]
+  return seenOfType === 0 ? `${settlementId}:${segment}` : `${settlementId}:${segment}:${kind}`
+}
+
+/** First home-settlement rock den (`${settlementId}:cave`) — the original
+ *  type-unique cave id from plan 188, unchanged by the `rockDen` rename. */
 export function findHomeCaveSpawner(
   spawners: readonly PreySpawner[],
   settlementId: string,
 ): PreySpawner | undefined {
   const firstId = `${settlementId}:cave`
   return spawners.find((spawner) => spawner.id === firstId)
-    ?? spawners.find((spawner) => spawner.type === 'cave' && spawner.id.startsWith(`${settlementId}:`))
+    ?? spawners.find((spawner) => spawner.type === 'rockDen' && spawner.id.startsWith(`${settlementId}:`))
 }
 
 export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
-  cave: 'jaskinia',
+  rockDen: 'jaskinia',
   thicket: 'zagajnik',
   grove: 'gaj',
   wolfDen: 'wilcza jama',
@@ -382,7 +404,7 @@ export const SPAWNER_LABELS: Record<PreySpawner['type'], string> = {
 
 /** Accusative object of `[E] Zniszcz …` on a `depleted` spawn point. */
 export const SPAWNER_DESTROY_ACCUSATIVE: Record<PreySpawner['type'], string> = {
-  cave: 'jaskinię',
+  rockDen: 'jaskinię',
   thicket: 'zagajnik',
   grove: 'gaj',
   wolfDen: 'wilczą jamę',
@@ -390,7 +412,7 @@ export const SPAWNER_DESTROY_ACCUSATIVE: Record<PreySpawner['type'], string> = {
 
 /** Genitive object of the busy-channel title `Niszczenie …`. */
 export const SPAWNER_DESTROYING_GENITIVE: Record<PreySpawner['type'], string> = {
-  cave: 'jaskini',
+  rockDen: 'jaskini',
   thicket: 'zagajnika',
   grove: 'gaju',
   wolfDen: 'wilczej jamy',
@@ -549,6 +571,17 @@ export async function createFauna(
   /** Restored persistent occupant records/tombstones (save/load or
    *  in-session rebuild). Absent means first construction of each declaration. */
   initialPersistentOccupants?: PersistentOccupantSnapshot,
+  /** Narrow, read-only world-cave contract (plan fauna-019) — the
+   *  composition root's adapter over the real `Caves` instance. Required
+   *  only to resolve a `caveHabitats` binding; absent/no matching binding
+   *  means every occupant declaration falls back to its existing
+   *  `PreySpawner`-backed path unchanged. */
+  caveWorld?: AnimalCaveWorldContract,
+  /** Fauna-owned cave habitat bindings (plan fauna-019) — a
+   *  `PersistentOccupantDecl.habitatId` that matches one of these resolves
+   *  its home/route from the named real cave instead of a `PreySpawner`.
+   *  Absent means no cave-backed habitat this build. */
+  caveHabitats?: readonly AnimalHabitatBinding[],
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
 
@@ -691,6 +724,11 @@ export async function createFauna(
   const occupantRegistry = createPersistentOccupantRegistry(initialPersistentOccupants)
   occupantRegistry.registerDeclarations(occupantDecls)
   const reservedPersistentSlots = occupantRegistry.slotCountsByHabitatId()
+  /** Fauna-owned cave habitat bindings (plan fauna-019), keyed by
+   *  `habitatId` for O(1) lookup from the occupant-declaration loop below —
+   *  never a `PreySpawner` stand-in for the physical cave. */
+  const caveHabitatBindings = new Map<string, AnimalHabitatBinding>()
+  for (const binding of caveHabitats ?? []) caveHabitatBindings.set(binding.habitatId, binding)
   const spawnAgent = (
     kind: AnimalKind,
     x: number,
@@ -705,6 +743,9 @@ export async function createFauna(
     /** Stable id for a persistent habitat occupant (plan fauna-018). Ordinary
      *  callers omit this and keep the per-build `${kind}-${n}` path. */
     explicitAnimalId?: string,
+    /** Resolved cave habitat (plan fauna-019) — only a cave-backed
+     *  persistent occupant passes this. */
+    cave?: AnimalCaveContext,
   ): AnimalAgent => {
     const tpl = templates[kind]
     let visual: Object3D | undefined
@@ -737,6 +778,7 @@ export async function createFauna(
       motherId,
       spawnPointId,
       humanTaste: boundSpawner?.humanTaste ?? false,
+      cave,
     })
   }
 
@@ -841,7 +883,7 @@ export async function createFauna(
     })
   }
   const [spawnerMinOffset, spawnerMaxOffset] = SPAWNER_RING_OFFSET
-  /** Per-`type` counter feeding `spawnerId()` — lets a second `cave`-type
+  /** Per-`type` counter feeding `spawnerId()` — lets a second `rockDen`-type
    *  entry (e.g. the bear den) get its own stable id instead of colliding
    *  with the first (plan 188). */
   const spawnerTypeSeen = new Map<PreySpawner['type'], number>()
@@ -857,11 +899,11 @@ export async function createFauna(
       ? (x: number, z: number) => spawnerSiteOk(x, z) && sampleForestFactor(x, z) > 0.28
       : spawnerSiteOk
     const filter = (x: number, z: number) => baseFilter(x, z) && farFromOtherSpawns(x, z)
-    // Cave prefers a sloped site (plan 083 — carved depression reads as cut
-    // into a hillside); falls back to any valid flat site if none found.
+    // Rock den prefers a sloped site (plan 083 — carved depression reads as
+    // cut into a hillside); falls back to any valid flat site if none found.
     const slopedFilter = (x: number, z: number) =>
       filter(x, z) && measureSlope(x, z, CAVE_SLOPE_SAMPLE_RADIUS, sampleHeight).drop >= CAVE_MIN_SLOPE_DROP
-    const pos = spec.type === 'cave'
+    const pos = spec.type === 'rockDen'
       ? findWalkableNear(
           settlementCenter.x,
           settlementCenter.z,
@@ -902,7 +944,7 @@ export async function createFauna(
     spawnerById.set(spawner.id, spawner)
 
     const groundY = sampleHeight(pos.x, pos.z)
-    if (spec.type === 'cave') {
+    if (spec.type === 'rockDen') {
       const slope = measureSlope(pos.x, pos.z, CAVE_SLOPE_SAMPLE_RADIUS, sampleHeight)
       const facingVillage = Math.atan2(pos.x - settlementCenter.x, pos.z - settlementCenter.z)
       if (
@@ -964,7 +1006,7 @@ export async function createFauna(
     el.className = 'npc-label'
     el.textContent = SPAWNER_LABELS[spec.type]
     const label = new CSS2DObject(el)
-    const labelH = spec.type === 'cave' || spec.type === 'wolfDen'
+    const labelH = spec.type === 'rockDen' || spec.type === 'wolfDen'
       ? CAVE_LABEL_HEIGHT
       : spec.type === 'thicket'
         ? THICKET_LABEL_HEIGHT
@@ -1015,6 +1057,34 @@ export async function createFauna(
   // fill below uses the remaining ordinary capacity so the reserved slot
   // cannot become `maxPreyCount + 1`.
   for (const decl of occupantDecls) {
+    const caveBinding = caveHabitatBindings.get(decl.habitatId)
+    if (caveBinding) {
+      // Cave-backed habitat (plan fauna-019 §9) — no `PreySpawner` stands in
+      // for the physical cave, so a missing/unresolvable descriptor fails
+      // safely (no resident this build) rather than falling back to a
+      // spawner lookup or a stale/(0,0) position.
+      if (!caveWorld) continue
+      const resolved = resolveAnimalCaveHabitat(caveBinding, caveWorld, animalCaveEntityDimensions(ANIMAL_DEFS[decl.kind]))
+      if (!resolved) continue
+      const action = occupantRegistry.restoreAction(decl)
+      if (action.type === 'skip' || action.type === 'mismatch') continue
+      const animalId = persistentAnimalId(decl.habitatId, decl.occupantKey)
+      const agent = spawnAgent(
+        decl.kind,
+        resolved.context.home.x,
+        resolved.context.home.z,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        animalId,
+        resolved.context,
+      )
+      if (action.type === 'hydrate') agent.hydrate(action.record.state)
+      scene.add(agent.mesh)
+      agents.push(agent)
+      continue
+    }
     const habitat = spawnerById.get(decl.habitatId)
     if (!habitat) continue
     const action = occupantRegistry.restoreAction(decl)

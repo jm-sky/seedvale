@@ -128,7 +128,7 @@ function speak(qm: QuestManager, npcName: string, index = 0): string | undefined
   return selectAction(qm.onInteract(npcName), index)
 }
 
-const CAVE_REF = { type: 'interact_spawner', spawnerType: 'cave', spawnerId: 'test-cave' } as const
+const CAVE_REF = { type: 'interact_spawner', spawnerType: 'rockDen', spawnerId: 'test-cave' } as const
 
 describe('relationToLevel', () => {
   it('maps numeric relation to the highest threshold met', () => {
@@ -1036,7 +1036,7 @@ describe('QuestManager gather_item turn-in', () => {
     offerLine: 'offer multi',
     stages: [
       { objective: { type: 'gather_item', kind: 'stone', count: 2 }, description: 'gather stones', reminderLine: 'remind stones' },
-      { objective: { type: 'interact_spawner', spawnerType: 'cave' }, description: 'cave', reminderLine: 'remind cave', progressLine: 'cave done' },
+      { objective: { type: 'interact_spawner', spawnerType: 'rockDen' }, description: 'cave', reminderLine: 'remind cave', progressLine: 'cave done' },
     ],
     reportLine: 'report multi',
     outcomes: [{ id: 'reported', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Piotr' }, delta: 1 }] } }],
@@ -1850,13 +1850,13 @@ describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
     acceptOffer(qm, 'Kasia')
     expect(qm.onInteractObjective({
       type: 'interact_spawner',
-      spawnerType: 'cave',
+      spawnerType: 'rockDen',
       spawnerId: 'home:cave:bear',
     })).toBeNull()
     expect(qm.getState('sprawdz-szlak')).toBe('active')
     expect(qm.onInteractObjective({
       type: 'interact_spawner',
-      spawnerType: 'cave',
+      spawnerType: 'rockDen',
       spawnerId: 'home:cave',
     })?.line).toContain('świeże ślady')
     expect(qm.getState('sprawdz-szlak')).toBe('ready_to_report')
@@ -1890,8 +1890,8 @@ describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
     )[0]!)
     const qm = makeManager([def])
     acceptOffer(qm, 'Kasia')
-    expect(qm.spawnerMarker('cave', 'home:cave')).toBe('?')
-    expect(qm.spawnerMarker('cave', 'home:cave:bear')).toBeNull()
+    expect(qm.spawnerMarker('rockDen', 'home:cave')).toBe('?')
+    expect(qm.spawnerMarker('rockDen', 'home:cave:bear')).toBeNull()
   })
 })
 

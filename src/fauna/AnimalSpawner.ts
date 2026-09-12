@@ -5,13 +5,19 @@ import { effectiveMaxPreyCount, effectiveRespawnIntervalDays } from './wolfDenSc
 /** `wolfDen` (plan 093 Etap E) reuses this same spawner shape — a fixed
  *  `respawnIntervalDays: Infinity` opts it out of `updateSpawners`' respawn
  *  loop below, since a den's pack is a one-time discovered threat, not an
- *  ongoing population like `cave`/`thicket`. It still participates in the
+ *  ongoing population like `rockDen`/`thicket`. It still participates in the
  *  plan-125 depletion/`Zniszcz` lifecycle: pack deaths count, and a cleared
  *  den can be burned. If plan 104 (real underground caves) later lands, the
  *  den's position/label can be re-anchored to an actual cave volume without
  *  touching the quest-facing `WOLF_DEN_ID`/`clear_wolf_den` contract in
  *  `quests.ts`/`QuestManager.ts`. */
-export type SpawnerType = 'cave' | 'thicket' | 'grove' | 'wolfDen'
+/** `rockDen` (plan fauna-019 §8, renamed from `cave`) is the lightweight
+ *  decorative `createCaveMouth()` prop/population spawner — never a real,
+ *  walk-in `CaveTopology`/heightfield cave. The rename exists only to remove
+ *  the naming collision with real caves (`src/world/caves/`); `spawnerId()`
+ *  still derives the on-disk id segment as `cave` for save compatibility, so
+ *  existing `SavedSpawnPointState` entries are not orphaned. */
+export type SpawnerType = 'rockDen' | 'thicket' | 'grove' | 'wolfDen'
 
 /** Single wolf den's stable identity — one per settlement today (mirrors
  *  the existing one-cave/one-thicket-per-settlement reality), so a plain

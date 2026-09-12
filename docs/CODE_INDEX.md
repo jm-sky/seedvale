@@ -89,7 +89,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Cemetery assignment](../src/terrain/cemeteryAssignment.ts) — settlement↔cemetery topology (dedicated or shared `SM`) and reverse lookup; abandoned cemeteries have no served settlements.
 - [Cemetery placement](../src/terrain/cemeteryPlacement.ts) — bounded dedicated/shared/abandoned cemetery search over the shared physical gates in `chunkEnvironment.ts`.
 - [Treasure sites](../src/world/treasureSites.ts) — deterministic finite world treasure (ruins/deep-forest chests + matching keys); cave archetype deferred.
-- [Caves](../src/world/createCaves.ts) — Cave V2 lifecycle: production topology, retained heightfield, streamed presentation, spatial queries, and read-only adventure content anchors.
+- [Caves](../src/world/createCaves.ts) — Cave V2 lifecycle: production topology, retained heightfield, streamed presentation, spatial queries, read-only adventure content anchors, and (plan fauna-019) a cave-scoped semantic/traversal contract (`resolveHabitat`/`queryGroundIn`/`resolveHorizontalIn`) for fauna/quests/NPC.
+- [Cave habitat](../src/world/caves/caveHabitat.ts) — resolves one cave's interior home chamber + entrance route (`CaveTraversalDescriptor`) from its `CaveTopology`/heightfield; consumed only through `Caves.resolveHabitat` above.
 - [Cave content anchors](../src/world/caves/caveContentAnchors.ts) — semantic interior placement descriptors for adventure caves (world-terrain-020 Stage B); floor Y from the cave's own heightfield.
 
 ## UI wiring
@@ -156,6 +157,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.
 - [Roaming](../src/fauna/animalRoaming.ts) — water-trip state machine and shared radial probe.
 - [Persistent occupants](../src/fauna/persistentOccupants.ts) — sparse stable habitat-occupant identity and tombstone registry.
+- [Cave habitat binding](../src/fauna/animalCaveHabitat.ts) — `AnimalHabitatBinding`/`AnimalCaveContext` and the narrow world-cave contract fauna resolves against (plan fauna-019); the only fauna module that touches cave types.
 - [Fauna decision](../src/fauna/faunaDecision.ts) — fixed-priority behaviour table.
 - [Dog guard](../src/fauna/dogGuard.ts) — household-dog guard/bark/pest resolution.
 - [Prey alert](../src/fauna/preyAlertPerception.ts) — extra-range threat-alert relevance.

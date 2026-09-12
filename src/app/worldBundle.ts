@@ -23,6 +23,7 @@ import type { DryingRackRecord } from '../world/dryingRacks'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { GrassForageOverrides } from '../world/grassForage'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { NpcGraves, SaveGrave } from '../world/npcGraves'
 import type { PalisadeSegmentRecord } from '../world/palisade'
 import type { PlantedTreeRecord } from '../world/plantedTrees'
@@ -37,8 +38,8 @@ import type { StandingTorchRecord } from '../world/standingTorch'
 import type { TransportOrder } from '../world/transportOrder'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorkContractRecord } from '../world/workContract'
-import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
+import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
 import { createHuntingHooks } from '../fauna/huntingHooks'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
@@ -92,9 +93,8 @@ import { createTerrainPreparations, type TerrainPreparations } from '../world/cr
 import { createTransportOrders, type TransportOrders } from '../world/createTransportOrders'
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
 import { createFoodSourceHooks } from '../world/foodSources'
-import { createHerbalGatherHooks } from '../world/herbalGathering'
-import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
+import { createHerbalGatherHooks } from '../world/herbalGathering'
 import {
   DARK_FOREST_TREASURE_CHEST_COINS,
   darkForestTreasureMapPickupId,
@@ -491,6 +491,10 @@ function buildFauna(
     maxPreyCount: number
   }[],
   initialPersistentOccupants?: PersistentOccupantSnapshot,
+  /** Already-built `Caves` (plan fauna-019) — adapted below into the narrow
+   *  `AnimalCaveWorldContract` `createFauna()` actually needs, so fauna
+   *  itself never imports `createCaves.ts`. */
+  caves?: Caves,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
 
@@ -558,6 +562,14 @@ function buildFauna(
     // snapshots so in-session rebuild/save wiring is live.
     undefined,
     initialPersistentOccupants,
+    caves && {
+      resolveHabitat: caves.resolveHabitat,
+      queryGroundIn: caves.queryGroundIn,
+      resolveHorizontalIn: caves.resolveHorizontalIn,
+    },
+    // No cave-backed habitat bindings declared yet — same "stays empty
+    // until a consumer supplies them" as `persistentOccupantDecls` above.
+    undefined,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
@@ -1306,6 +1318,7 @@ async function buildWorldSystems(
                 maxPreyCount: 2,
               })),
               initialPersistentOccupants,
+              caves,
             )
           } finally {
             bootMarkEnd('background:buildFauna')
