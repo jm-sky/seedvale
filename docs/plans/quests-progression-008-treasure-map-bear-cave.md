@@ -4,11 +4,12 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~world-terrain-019~~, ~~fauna-018~~, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~
+**Depends on:** ~~world-terrain-019~~, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `treasure` `cave` `bear` `hidden-find` `container` `choice-through-action`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
@@ -84,14 +85,14 @@ Grave disturbance uses the generic social-exposure model implemented by this dep
 
 The quest does not implement witnesses or its own reputation logic.
 
-Required semantics come from `quests-progression-011`:
+Current semantics are:
 
 ```text
-grave disturbed
-→ historical grave-robbing progress always recorded
+grave disturbed for the first time
 → one deterministic social-exposure roll
 → day/night + Sneak modify exposure risk
 → reputation/renown consequence only when exposed
+→ resolved grave spot prevents reroll/re-resolution
 ```
 
 The target grave must use the same ordinary cemetery Hidden Find / grave-disturbance flow so the quest naturally participates in this mechanism.
@@ -335,7 +336,7 @@ Derived cave geometry, cave habitat anchor and other deterministic world data re
 
 ## Reuse / integration targets
 
-Implementation should reconfirm current symbols after dependencies land, especially:
+Implementation should reconfirm current symbols at implementation time, especially:
 
 - `src/world/hiddenFinds.ts` — authored hidden-find integration,
 - `src/app/actions/groundActions.ts` — ordinary shovel/dig + grave disturbance,
@@ -343,7 +344,7 @@ Implementation should reconfirm current symbols after dependencies land, especia
 - the `quests-progression-011` social-exposure integration point,
 - `src/quests/QuestManager.ts` / current quest-definition APIs,
 - quest outcome APIs from `quests-progression-002`,
-- production cave/world-location APIs after `world-terrain-019`,
+- production cave/world-location APIs from `world-terrain-019` and later cave work,
 - fauna real-cave habitat APIs from `fauna-019`,
 - persistent occupant APIs/state from `fauna-018`,
 - `src/app/actions/containerActions.ts` and current placed-container ownership,
