@@ -9,6 +9,7 @@
 **Subdomains:** `inventory` `items`
 **Tags:** `armor` `equipment` `inventory` `merchant` `character-screen`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Goal
 
