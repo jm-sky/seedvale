@@ -585,7 +585,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 32
+export const CURRENT_SAVE_VERSION = 33
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1712,16 +1712,9 @@ function isPlayerConditionsField(value: unknown): value is SaveTemporaryConditio
 const NPC_POST_DEATH_STATUSES: ReadonlySet<string> = new Set(['active', 'claimed', 'terminal'])
 const NPC_CORPSE_CLEANUP_REASONS: ReadonlySet<string> = new Set(['buried', 'decay', 'legacy'])
 
-function isNpcCorpseLoot(value: unknown): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-  const loot = value as Record<string, unknown>
-  if (!loot.counts || typeof loot.counts !== 'object' || Array.isArray(loot.counts)) return false
-  for (const amount of Object.values(loot.counts as Record<string, unknown>)) {
-    if (typeof amount !== 'number') return false
-  }
-  return isSaveItemInstancesField(loot.instances)
-}
-
+/** Corpse loot is a full `InventoryContentsSnapshot` (plan npc-036), not a
+ *  separate corpse-only shape — same validator as `personalInventory`/
+ *  `transportCargo`/household items, including optional `foodBatches`. */
 function isNpcPostDeathField(value: unknown): boolean {
   if (value === null) return true
   if (!value || typeof value !== 'object') return false
@@ -1732,7 +1725,7 @@ function isNpcPostDeathField(value: unknown): boolean {
     typeof p.z === 'number' &&
     typeof p.yaw === 'number' &&
     typeof p.deathAtDays === 'number' &&
-    isNpcCorpseLoot(p.loot) &&
+    isInventoryContentsSnapshot(p.loot) &&
     (p.cleanupReason === null || (typeof p.cleanupReason === 'string' && NPC_CORPSE_CLEANUP_REASONS.has(p.cleanupReason))) &&
     (p.burialClaimantId === undefined || p.burialClaimantId === null || typeof p.burialClaimantId === 'string')
   )
@@ -2895,6 +2888,16 @@ function migrateSaveV31ToV32(data: unknown): unknown {
   return { ...v, version: 32 }
 }
 
+/** v32 → v33 (plan npc-036): NPC corpse loot (`postDeath.loot`) becomes a
+ *  full `InventoryContentsSnapshot` instead of a `{ counts, instances }`-only
+ *  shape, so death handoff can carry perishable freshness batches too. The
+ *  old shape already satisfies the new one with `foodBatches` absent — no
+ *  historical freshness to fabricate — so this is a version bump only. */
+function migrateSaveV32ToV33(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 33 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2941,6 +2944,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   29: migrateSaveV29ToV30,
   30: migrateSaveV30ToV31,
   31: migrateSaveV31ToV32,
+  32: migrateSaveV32ToV33,
 }
 
 function detectStoredVersion(value: unknown): number | null {

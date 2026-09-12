@@ -1,7 +1,7 @@
 # Plan: Lossless NPC inventory → corpse loot handoff
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** ~~npc-010~~, ~~settlements-npcs-026~~

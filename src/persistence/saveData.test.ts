@@ -1097,6 +1097,52 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
           stamina: { current: 0, max: 100 },
           vigor: { current: 0, max: 100 },
           needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: {
+            status: 'active',
+            x: 3,
+            z: 4,
+            yaw: 0.2,
+            deathAtDays: 1.5,
+            loot: {
+              counts: { berries: 3 },
+              instances: [],
+              foodBatches: { berries: [{ count: 3, acquiredAtDays: 1.5, accumulatedEffectiveAge: 0, lastCheckpointDays: 1.5, decayModifier: 1 }] },
+            },
+            cleanupReason: null,
+          },
+          personalInventory: { counts: {}, instances: [] },
+        },
+      },
+    })).toBe(true)
+    expect(isSaveData({
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 0, max: 100, dead: true },
+          stamina: { current: 0, max: 100 },
+          vigor: { current: 0, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: {
+            status: 'active',
+            x: 3,
+            z: 4,
+            yaw: 0.2,
+            deathAtDays: 1.5,
+            loot: { counts: { berries: 3 }, instances: [], foodBatches: { berries: [{ count: 'nope' }] } },
+            cleanupReason: null,
+          },
+          personalInventory: { counts: {}, instances: [] },
+        },
+      },
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 0, max: 100, dead: true },
+          stamina: { current: 0, max: 100 },
+          vigor: { current: 0, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
           postDeath: { status: 'active' },
         },
       },
@@ -1300,6 +1346,39 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     if (result.status !== 'ok') return
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(result.data.transportOrders).toBeUndefined()
+  })
+
+  it('migrates a v32 corpse loot without foodBatches to the current version, fabricating no historical freshness (plan npc-036)', () => {
+    const v32Save = {
+      ...validSave,
+      version: 32,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 0, max: 100, dead: true },
+          stamina: { current: 0, max: 100 },
+          vigor: { current: 0, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: {
+            status: 'active',
+            x: 3,
+            z: 4,
+            yaw: 0.2,
+            deathAtDays: 1.5,
+            loot: { counts: { berries: 3 }, instances: [{ id: 'w1', kind: 'knife', durability: 0.4, sharpness: 0.8 }] },
+            cleanupReason: null,
+          },
+          personalInventory: { counts: {}, instances: [] },
+        },
+      },
+    }
+    const result = loadStoredSave(v32Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.npcStates?.['home:npc:0']?.postDeath?.loot).toEqual({
+      counts: { berries: 3 },
+      instances: [{ id: 'w1', kind: 'knife', durability: 0.4, sharpness: 0.8 }],
+    })
   })
 
   it('round-trips an in-transit transportOrder and npcStates transportCargo, and rejects a malformed order (plan settlements-npcs-019)', () => {

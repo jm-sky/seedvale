@@ -1968,7 +1968,6 @@ export class NpcAgent {
       commitNpcDeath({
         state: this.npcState,
         personalInventory: this.personalInventory,
-        role: this.role,
         x: this.mesh.position.x,
         z: this.mesh.position.z,
         yaw: this.mesh.rotation.y,

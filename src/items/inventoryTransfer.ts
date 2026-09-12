@@ -52,3 +52,32 @@ export function transferInventoryInstance(
   source.addInstance(instance)
   return false
 }
+
+/** Moves every stack, instance and freshness batch out of `source` into
+ *  `destination` — the "whole-inventory ownership handoff" seam (plan
+ *  npc-036), composed only from `transferInventoryCount`/
+ *  `transferInventoryInstance` above so freshness/instance semantics never
+ *  diverge from a single-kind transfer. Enumerates `source`'s own current
+ *  contents once up front, so it is unaffected by `destination` gaining
+ *  weight-derived capacity mid-move. Returns false as soon as one kind/
+ *  instance fails to fit — expected to be unreachable for an `Infinity`-
+ *  capacity destination (a freshly created corpse/handoff inventory), but a
+ *  failure still leaves already-moved rows on `destination`, not rolled
+ *  back, since a real capacity-limited destination has no lossless "put it
+ *  all back" contract to offer beyond what each individual transfer already
+ *  guarantees for its own kind/instance. */
+export function transferAllInventoryContents(
+  source: Inventory,
+  destination: Inventory,
+  nowDays = 0,
+): boolean {
+  if (source === destination) return true
+  for (const [kind, amount] of Object.entries(source.toJSON()) as [ItemKind, number][]) {
+    if (amount <= 0) continue
+    if (!transferInventoryCount(source, destination, kind, amount, nowDays)) return false
+  }
+  for (const row of source.instancesToJSON()) {
+    if (!transferInventoryInstance(source, destination, row.id)) return false
+  }
+  return true
+}
