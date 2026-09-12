@@ -171,27 +171,49 @@ Do not identify alpha via scale, label or `dangerSignificance` threshold alone: 
 
 Coin substitute must use `tradeValue('long_sword')`, not `sellPrice()` and not literal `50`.
 
-## 7. Evening guard quest: current torch architecture contradicts one plan assumption
+## 7. Evening guard quest: settlement torch contract must be extended first
 
-Important current-code discrepancy:
+The source plan has now been corrected to make this explicit. Current code still has the gap:
 
 - `src/settlement/houseLighting.ts::VillageTorch` is documented as **night-auto**, not player-fueled;
 - `src/settlement/settlementNightCycle.ts::createSettlementNightCycle()` sets every village torch `true` automatically at dusk and `false` at dawn;
 - only `VillageFire` has the existing player-lightable campfire lifecycle.
 
-Therefore the plan's statement that canonical village torch posts already have player-owned `lit` state is not true. Do not implement `light_settlement_fires` as a read-only quest lookup over today's torches — it would auto-complete when dusk crosses `NIGHT_FIRE_THRESHOLD`.
+Do not implement `light_settlement_fires` as a read-only lookup over today's torches — it would auto-complete when dusk crosses `NIGHT_FIRE_THRESHOLD`.
 
-Smallest coherent implementation if the intended gameplay remains “player lights all torches + campfire”:
+### Required settlement-owned extension
 
-1. Extend settlement-owned canonical village torches with explicit interaction/state semantics (still in settlements, not quests).
-2. During the active quest opportunity, dusk automation must not pre-light the target settlement's required torches, or the quest is meaningless. Prefer a narrow settlement-night-cycle policy/input, not quest imports inside `settlementNightCycle.ts`.
-3. Add stable ids/positions for canonical torch posts so interaction and quest lookup do not use array position/mesh identity.
-4. Route `[E]` ignition through the same fire-starting capability/inventory conventions already used by standing torch/campfire actions where practical.
-5. Quest completion then reads settlement-owned `isLit()` state for those canonical torches + `VillageFire.isLit()`.
+Before the quest objective:
 
-This is the largest new cross-domain surface in plan 020 and should be implemented before the quest objective itself.
+1. Give canonical settlement torch posts stable identity derived from stable settlement identity + authored/plan torch slot; never use mesh identity or loaded-array index as durable identity.
+2. Expose read-only `isLit()` from `VillageTorch` or the nearest settlement-owned wrapper.
+3. Register a normal player interaction for canonical village torches so `[E]` can manually ignite the selected torch. Reuse existing fire-starting/tool/inventory conventions where practical; do not add quest-only ignition logic.
+4. Keep the lit mutation in settlement lighting. Quest code only observes.
+5. Do not add a `TorchManager` or duplicate torch state in quests.
 
-If scope needs to stay smaller, reduce the V1 quest to the existing player-lightable settlement campfire only; do **not** fake torch progress. That would require updating the source plan before implementation.
+### Dusk automation policy
+
+Outside the active quest, behavior must remain exactly as today:
+
+```text
+dusk → canonical village torches auto-light
+dawn → canonical village torches extinguish
+```
+
+During the active evening-light objective, required torches in the target settlement must not auto-light before the player. Implement this as a narrow **quest-neutral policy/input** to settlement lighting, e.g. `shouldAutoLightTorch(torchId)`, injected/wired from app composition. `settlementNightCycle.ts` must not import `QuestManager` and must not know quest ids.
+
+Policy requirements:
+
+- default returns normal auto-light behavior;
+- suppression is scoped to the target settlement/required torches only;
+- other settlements continue normal dusk automation;
+- dawn extinction remains normal;
+- completion/cancel/rebuild removes suppression;
+- save/load reconstructs suppression from authoritative active quest state rather than persisting another lighting flag.
+
+Then `light_settlement_fires` can read canonical torch `isLit()` + `VillageFire.isLit()` through a read-only lookup.
+
+The source plan does **not** authorize silently reducing the quest to campfire-only. If implementation recon proves manual canonical torches infeasible without disproportionate redesign, stop and update the plan rather than faking torch progress or changing gameplay during implementation.
 
 ## 8. Offer window: use world time lookup, no timers
 
@@ -221,8 +243,10 @@ Focus tests on seams that are easy to regress:
 - normal wolf kill never sets alpha recognition;
 - quest-marked dangerous normal wolf does not count as alpha;
 - first sword route gives `long_sword`, second route gives exactly `tradeValue('long_sword')` coins;
-- time skip crossing into/out of the offer window produces the same result as normal clock progression;
-- evening quest cannot auto-complete from settlement dusk automation.
+- default dusk/dawn village-torch automation remains unchanged without an active evening quest;
+- active evening objective suppresses only the required target torches and cannot auto-complete from dusk automation;
+- manual canonical torch ignition changes settlement-owned state that the quest reads;
+- time skip crossing into/out of the offer window produces the same result as normal clock progression.
 
 After the concurrent multiple-quests fix lands, add at least one integration fixture with Hunter I/II/III or Guard contexts sharing one giver to prove plan 020 content uses the generic multi-context path rather than reintroducing first-match behavior.
 
@@ -233,10 +257,17 @@ After the concurrent multiple-quests fix lands, add at least one integration fix
 3. Add `antler` item + harvest trophy resolver and Hunter I/II opportunities.
 4. Add deer/stag diet + successful-consumption callback + Hunter III opportunity.
 5. Generalize guard gift/sword recognition persistence and dialogue; migrate legacy flag.
-6. Resolve canonical settlement torch interaction/state gap, then add evening quest time availability + world-state objective.
-7. Add/adjust authored player-facing dialogue using the already-landed multi-context UI contract.
-8. Update `docs/state/quests.md`, and update fauna/items/settlement state docs only where implemented contracts changed.
+6. Extend canonical settlement torch identity/state/manual interaction and quest-neutral dusk auto-light policy; lock the existing default behavior with tests.
+7. Add evening quest time availability + read-only settlement-light objective.
+8. Add/adjust authored player-facing dialogue using the already-landed multi-context UI contract.
+9. Update `docs/state/quests.md`, and update fauna/items/settlement/persistence state docs only where implemented contracts changed.
 
-Important architectural/public functions/types added for counted objectives, consumption reporting, guard reward resolution or settlement-light lookup should get concise JSDoc with the appropriate `@domain` tag.
+Important architectural/public functions/types added for counted objectives, consumption reporting, guard reward resolution, canonical settlement torch identity/state or settlement-light policy should get concise JSDoc with the appropriate `@domain` tag.
+
+## 11. Model recommendation
+
+**Model:** Opus, Sonnet
+
+This is cross-domain work across quest lifecycle/persistence, fauna harvest and attraction, guard progression, settlement lighting/interactions and save compatibility. Opus is the safer primary implementation model; Sonnet is the cheaper fallback with acceptable risk if the notes are followed closely.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
