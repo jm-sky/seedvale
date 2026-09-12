@@ -73,10 +73,21 @@ describe('createHousehold', () => {
     const household = createHousehold('h', 's', 'home')
     household.items.remove('bread', household.items.count('bread'))
     const economy = createSettlementEconomy('s', {}, [])
-    household.depositFood('carrot', 20, economy)
+    const result = household.depositFood('carrot', 20, economy)
     expect(household.foodCount()).toBeLessThan(20)
     expect(economy.query('food')).toBeGreaterThan(0)
     expect(household.foodCount() + economy.query('food')).toBe(20)
+    expect(result.storedInHousehold + result.overflowedToSettlement).toBe(20)
+  })
+
+  it('deposit returns stored vs overflow amounts for wood', () => {
+    const household = createHousehold('h', 's', 'home')
+    const economy = createSettlementEconomy('s', {}, [])
+    const before = household.stock.query('wood')
+    const room = 5 - before
+    const result = household.deposit('wood', room + 2, economy)
+    expect(result.storedInHousehold).toBe(room)
+    expect(result.overflowedToSettlement).toBe(2)
   })
 
   it('drops the remainder when no economy is given to absorb overflow', () => {

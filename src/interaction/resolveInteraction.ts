@@ -153,6 +153,8 @@ export function resolveInteraction(
       return { speakerName: target.label, line }
     }
     case 'householdStorage':
+      // Normal play opens the transfer screen from `gameLoop.ts` (`[E]` on
+      // `householdStorage`); this path remains for any legacy/debug caller.
       return { speakerName: 'Magazyn domowy', line: formatHouseholdStorage(target.household) }
     case 'landmark': {
       const override = questManager.onInteractObjective({

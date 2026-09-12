@@ -20,6 +20,7 @@ import type { PlayerTorch } from '../player/PlayerTorch'
 import type { TargetedSkillSelection } from '../player/targetedSkillSelection'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
+import type { Household } from '../settlement/household'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { VillageFire } from '../settlement/VillageFire'
 import type { PlayerObservationInput } from '../simulation/observation'
@@ -443,6 +444,8 @@ export type GameLoopDeps = {
   /** Opens the generic container transfer screen for a placed `chest`
    *  (plan 164 §7). */
   openContainer?: (id: string) => void
+  /** Plan settlements-npcs-032 — player → live `Household` food/wood transfer. */
+  openHouseholdResourceTransfer?: (household: Household) => void
   /** Opens the generic transfer screen over an NPC corpse's persisted loot
    *  (plan npc-010). */
   openNpcCorpse?: (npc: NpcAgent) => void
@@ -639,7 +642,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
+    openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
     previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, previewPlayerTroughRemoval, removePlayerTrough,
     previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
@@ -1838,6 +1841,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             vueUi.openFlavorDialog(view.title, view.description, actions)
           }
         }
+      } else if (target?.kind === 'householdStorage') {
+        if (interactPressed) openHouseholdResourceTransfer?.(target.household)
       } else if (target?.kind === 'settlementStorage') {
         if (interactPressed) {
           const storageDamaged = bundle.settlementsManager.isStorageDamaged(target.settlementId)

@@ -370,6 +370,23 @@ type ContainerScreenState = {
    *  offered in both modes. */
   onTakeAll: (() => void) | null
 }
+
+export type HouseholdTransferSummaryView = {
+  food: number
+  wood: number
+  water: number
+}
+
+type HouseholdTransferScreenState = {
+  open: boolean
+  label: string
+  household: HouseholdTransferSummaryView
+  playerCounts: Partial<Record<ItemKind, number>>
+  playerGroups: readonly InventoryGroupView[]
+  playerTotalWeight: number
+  playerMaxWeight: number
+  onDeposit: ((kind: ItemKind, amount: number) => void) | null
+}
 /** Shared `1..max` amount picker (plan items-player-024) — one reusable
  *  overlay for Inventory "Wyrzuć" and container/corpse "Weź"/"Włóż" instead
  *  of a bespoke stepper per screen. The caller only supplies `label`/`max`
@@ -670,6 +687,10 @@ export const ui = reactive({
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
     onDeposit: null, onWithdraw: null, onDepositInstance: null, onWithdrawInstance: null, onTakeAll: null,
   } as ContainerScreenState,
+  householdTransferScreen: {
+    open: false, label: '', household: { food: 0, wood: 0, water: 0 },
+    playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0, onDeposit: null,
+  } as HouseholdTransferScreenState,
   quantityDialog: { open: false, label: '', max: 1, value: 1, onConfirm: null } as QuantityDialogState,
   actionConfirm: { open: false, title: '', body: '', confirmLabel: 'Potwierdź', onConfirm: null, onOpen: null, onClose: null } as ActionConfirmState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
@@ -1141,6 +1162,43 @@ export function refreshContainerScreen(
 }
 export function closeContainerScreen(): void { ui.containerScreen.open = false }
 export function isContainerScreenOpen(): boolean { return ui.containerScreen.open }
+
+export function configureHouseholdTransferScreen(handlers: Pick<HouseholdTransferScreenState, 'onDeposit'>): void {
+  Object.assign(ui.householdTransferScreen, handlers)
+}
+export function openHouseholdTransferScreen(
+  label: string,
+  household: HouseholdTransferSummaryView,
+  playerCounts: Partial<Record<ItemKind, number>>,
+  playerGroups: readonly InventoryGroupView[],
+  playerTotalWeight: number,
+  playerMaxWeight: number,
+): void {
+  ui.householdTransferScreen.label = label
+  ui.householdTransferScreen.household = { ...household }
+  ui.householdTransferScreen.playerCounts = { ...playerCounts }
+  ui.householdTransferScreen.playerGroups = playerGroups
+  ui.householdTransferScreen.playerTotalWeight = playerTotalWeight
+  ui.householdTransferScreen.playerMaxWeight = playerMaxWeight
+  ui.householdTransferScreen.open = true
+  emitUiOpen()
+}
+export function refreshHouseholdTransferScreen(
+  household: HouseholdTransferSummaryView,
+  playerCounts: Partial<Record<ItemKind, number>>,
+  playerGroups: readonly InventoryGroupView[],
+  playerTotalWeight: number,
+  playerMaxWeight: number,
+): void {
+  if (!ui.householdTransferScreen.open) return
+  ui.householdTransferScreen.household = { ...household }
+  ui.householdTransferScreen.playerCounts = { ...playerCounts }
+  ui.householdTransferScreen.playerGroups = playerGroups
+  ui.householdTransferScreen.playerTotalWeight = playerTotalWeight
+  ui.householdTransferScreen.playerMaxWeight = playerMaxWeight
+}
+export function closeHouseholdTransferScreen(): void { ui.householdTransferScreen.open = false }
+export function isHouseholdTransferScreenOpen(): boolean { return ui.householdTransferScreen.open }
 
 /** Opens the shared quantity dialog (plan items-player-024). Callers only
  *  reach this for `max > 1` — a single-unit stack acts immediately without a

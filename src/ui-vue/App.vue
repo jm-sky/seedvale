@@ -6,6 +6,7 @@ import ActionConfirmOverlay from './screens/ActionConfirmOverlay.vue'
 import BusyOverlay from './screens/BusyOverlay.vue'
 import CharacterScreen from './screens/CharacterScreen.vue'
 import ContainerScreen from './screens/ContainerScreen.vue'
+import HouseholdTransferScreen from './screens/HouseholdTransferScreen.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
 import HudRightColumn from './screens/HudRightColumn.vue'
 import HudScreen from './screens/HudScreen.vue'
@@ -62,6 +63,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <SkillsScreen />
     <MerchantScreen />
     <ContainerScreen />
+    <HouseholdTransferScreen />
     <QuantityDialog />
     <ActionConfirmOverlay />
     <QuickActionsScreen />

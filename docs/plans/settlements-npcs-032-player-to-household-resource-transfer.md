@@ -1,7 +1,7 @@
 # Plan: Player → household resource transfer
 
 **Created:** 2026-09-12  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Type:** feature  
 **Priority:** high · **Effort:** S  
 **Depends on:** none  

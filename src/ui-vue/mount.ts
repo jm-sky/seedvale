@@ -9,6 +9,7 @@ const FORWARDED_FNS = [
   'openInventory', 'refreshInventory', 'isInventoryOpen', 'closeInventory',
   'configureMerchant', 'openMerchant', 'openMerchantFromDialogue', 'refreshMerchant', 'closeMerchant', 'isMerchantOpen',
   'configureContainerScreen', 'openContainerScreen', 'refreshContainerScreen', 'closeContainerScreen', 'isContainerScreenOpen',
+  'configureHouseholdTransferScreen', 'openHouseholdTransferScreen', 'refreshHouseholdTransferScreen', 'closeHouseholdTransferScreen', 'isHouseholdTransferScreenOpen',
   'configurePauseMenu', 'setPauseSeed', 'setPauseActiveSaveName', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'configureFlavorDialog', 'openFlavorDialog', 'setFlavorPrompt', 'setFlavorInteractionPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',

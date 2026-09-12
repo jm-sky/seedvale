@@ -171,6 +171,7 @@ import { createClimateState } from '../world/weather'
 import { createWeatherParticles } from '../world/weatherParticles'
 import { createWorldContext } from '../world/worldContext'
 import { createContainerActions } from './actions/containerActions'
+import { createHouseholdResourceTransferActions } from './actions/householdResourceTransferActions'
 import { createCookMealIntent, runEatAnything } from './actions/cookMealIntent'
 import { createFullCampIntent } from './actions/fullCampIntent'
 import { createGatheringActions } from './actions/gatheringActions'
@@ -1344,6 +1345,10 @@ export async function createApp(
     unlockedTreasureContainerIds,
     treasureChestMutations,
   })
+  const householdTransfer = createHouseholdResourceTransferActions(actionCtx, {
+    vueUi,
+    rendererElement: renderer.domElement,
+  })
   const contracts = createWorkContractActions(actionCtx, {
     vueUi,
     tentBlockers: placement.tentBlockers,
@@ -2273,6 +2278,7 @@ export async function createApp(
     tidyGardenPlot: placement.tidyGardenPlot,
     waterGardenPlot: placement.waterGardenPlot,
     openContainer: containers.openContainer,
+    openHouseholdResourceTransfer: householdTransfer.openHouseholdResourceTransfer,
     openNpcCorpse: containers.openNpcCorpse,
     pickUpContainer: containers.pickUpContainer,
     forceOpenContainer: containers.forceOpenContainer,

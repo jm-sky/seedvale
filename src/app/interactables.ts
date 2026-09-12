@@ -901,7 +901,7 @@ export function buildInteractables(
       list.push({
         kind: 'householdStorage',
         position: { x: hs.position.x, z: hs.position.z },
-        promptLabel: 'Zbadaj: Magazyn domowy',
+        promptLabel: '[E] Przekaż zasoby',
         household: hs.household,
       })
     }

@@ -21,6 +21,14 @@ import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inven
  */
 export type HouseholdId = string
 
+/** Amount kept in the household vs routed to settlement overflow — returned
+ *  by `deposit` / `depositFood` (plan settlements-npcs-032). Units are
+ *  household resource units (food item units or scalar wood). */
+export type HouseholdDepositResult = {
+  storedInHousehold: number
+  overflowedToSettlement: number
+}
+
 /** Water stays source-based (well/`WaterSource`) for 069 — see plan 069
  *  implementation notes §9. `wood` stays household stock — a household is a
  *  family pantry, not a village depot. Deliberately *not* derived from
@@ -173,10 +181,9 @@ function createWaterReserve(initial: number): WaterReserve {
 
 /** Plain-data carry snapshot — mirrors `SettlementEconomy.snapshot()`. Used
  *  to seed a freshly-constructed `HouseholdRegistry` across a `WorldBundle`
- *  rebuild (plan 197 §8), the same `initial*`/`serialize()` idiom
- *  `EconomyRegistry` already uses for the settlement-level stock it sits
- *  next to. Not part of `SaveData` — plan 197 scopes this to the confirmed
- *  in-session rebuild gap only, not full household persistence. */
+ *  rebuild (plan 197 §8) and persisted in `SaveData.households` (sparse/
+ *  optional), the same `initial*`/`serialize()` idiom `EconomyRegistry`
+ *  already uses for the settlement-level stock it sits next to. */
 export type HouseholdSnapshot = {
   stock: Partial<Record<HouseholdResourceKind, number>>
   water: number
@@ -241,7 +248,7 @@ export type Household = {
    * into `history()`; defaults to `0` for callers with no meaningful clock
    * (tests, initial seeding).
    */
-  deposit: (kind: 'wood', amount: number, economy?: SettlementEconomy | null, simTime?: number) => void
+  deposit: (kind: 'wood', amount: number, economy?: SettlementEconomy | null, simTime?: number) => HouseholdDepositResult
   /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
    *  shape, gathered/received food lands as `itemKind` units in `items`. */
   /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
@@ -253,7 +260,7 @@ export type Household = {
     economy?: SettlementEconomy | null,
     simTime?: number,
     batches?: readonly FoodBatch[],
-  ) => void
+  ) => HouseholdDepositResult
   /** Removes exactly one concrete food item (deterministic kind order, see
    *  `items/foodItems.ts`) — the "eat one unit" primitive every consumption
    *  path uses instead of the old `stock.remove('food', 1)`. */
@@ -366,7 +373,7 @@ export function createHousehold(
         ? Math.max(0, foodItemCount(items) - HOUSEHOLD_POLICY.food.target)
         : Math.max(0, stock.query(kind) - HOUSEHOLD_POLICY[kind].target),
     deposit: (kind, amount, economy, simTime = 0) => {
-      if (amount <= 0) return
+      if (amount <= 0) return { storedInHousehold: 0, overflowedToSettlement: 0 }
       const before = shortageOf(kind)
       const capacity = HOUSEHOLD_POLICY[kind].capacity
       const room = Math.max(0, capacity - stock.query(kind))
@@ -378,9 +385,10 @@ export function createHousehold(
       if (before > 0 && shortageOf(kind) === 0) {
         historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind })
       }
+      return { storedInHousehold: toHousehold, overflowedToSettlement: overflow }
     },
     depositFood: (itemKind, amount, economy, simTime = 0, batches) => {
-      if (amount <= 0) return
+      if (amount <= 0) return { storedInHousehold: 0, overflowedToSettlement: 0 }
       const before = shortageOf('food')
       const capacity = HOUSEHOLD_POLICY.food.capacity
       const room = Math.max(0, capacity - foodItemCount(items))
@@ -398,6 +406,7 @@ export function createHousehold(
       if (before > 0 && shortageOf('food') === 0) {
         historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind: 'food' })
       }
+      return { storedInHousehold: toHousehold, overflowedToSettlement: overflow }
     },
     takeFood: (simTime = 0) => {
       const before = shortageOf('food')
