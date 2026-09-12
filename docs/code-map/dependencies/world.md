@@ -280,6 +280,7 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
+- `world/caves/caveHabitat.test.ts`
 - `world/caves/productionTopology.ts`
 - `world/createCaves.archetype.test.ts`
 
@@ -394,10 +395,39 @@ Generated from TypeScript imports.
 
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `debug/caves/caveHeightfieldWalkWorld.ts`
+- `fauna/animalCaveHabitat.ts`
 - `world/caves/caveGroundQuery.test.ts`
 - `world/caves/caveHeightfieldQuery.test.ts`
 - `world/caves/caveHeightfieldQuery.ts`
 - `world/createCaves.test.ts`
+- `world/createCaves.ts`
+
+## `world/caves/caveHabitat.test.ts`
+
+**Imports**
+
+- `world/caves/adventureTopology.ts`
+- `world/caves/caveHabitat.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
+- `world/largeCaves.ts`
+
+## `world/caves/caveHabitat.ts`
+
+**Imports**
+
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveTopology.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalCaveHabitat.ts`
+- `world/caves/caveHabitat.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/caveHeightfieldMaterial.test.ts`
@@ -518,6 +548,8 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/worldWaterEligibility.test.ts`
+- `world/caves/caveHabitat.test.ts`
+- `world/caves/caveHabitat.ts`
 - `world/caves/caveHeightfieldQuery.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.test.ts`
@@ -558,6 +590,8 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
+- `world/caves/caveHabitat.test.ts`
+- `world/caves/caveHabitat.ts`
 - `world/caves/caveHeightfieldMesh.test.ts`
 - `world/caves/caveHeightfieldMesh.ts`
 - `world/caves/caveHeightfieldPlacement.ts`
@@ -811,6 +845,8 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
+- `world/caves/caveHabitat.test.ts`
+- `world/caves/caveHabitat.ts`
 - `world/caves/caveHeightfieldPlacement.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveInteriorRocks.test.ts`
@@ -861,6 +897,7 @@ Generated from TypeScript imports.
 - `world/caveGenerator.ts`
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
+- `world/caves/caveHabitat.test.ts`
 - `world/caves/caveHeightfieldQuery.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
@@ -936,6 +973,7 @@ Generated from TypeScript imports.
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
+- `world/caves/caveHabitat.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
@@ -1257,6 +1295,7 @@ Generated from TypeScript imports.
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveGroundQuery.ts`
+- `world/caves/caveHabitat.ts`
 - `world/caves/caveHeightfieldMaterial.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveHeightfieldQuery.ts`
@@ -1987,6 +2026,7 @@ Generated from TypeScript imports.
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveContentAnchors.test.ts`
+- `world/caves/caveHabitat.test.ts`
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveRoute.ts`

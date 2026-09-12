@@ -25,6 +25,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `debug/faunaInspector.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalCaveHabitat.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalDebugVisual.ts`
 - `fauna/animalDefs.ts`
@@ -64,6 +65,7 @@ Generated from TypeScript imports.
 - `world/WaterSource.ts`
 - `world/animalTraps.ts`
 - `world/bloodTraces.ts`
+- `world/caves/caveHabitat.ts`
 - `world/collision.ts`
 - `world/createGrassForagePatches.ts`
 - `world/waterMirror.ts`
@@ -85,6 +87,7 @@ Generated from TypeScript imports.
 - `debug/npcInspector.ts`
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalSpawner.ts`
+- `fauna/animalCaveJourney.test.ts`
 - `fauna/animalDialogue.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
@@ -188,6 +191,28 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`
 
+## `fauna/animalCaveHabitat.ts`
+
+**Imports**
+
+- `world/caves/caveGroundQuery.ts`
+- `world/caves/caveHabitat.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalCaveJourney.test.ts`
+- `fauna/createFauna.ts`
+
+## `fauna/animalCaveJourney.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalCaveHabitat.ts`
+- `fauna/animalDefs.ts`
+- `terrain/waterSample.ts`
+
 ## `fauna/animalCorpse.test.ts`
 
 **Imports**
@@ -236,6 +261,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalCaveJourney.test.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
@@ -495,6 +521,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
+- `fauna/animalCaveHabitat.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/persistentOccupants.ts`

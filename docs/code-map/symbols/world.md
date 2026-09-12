@@ -210,6 +210,14 @@ Generated from exported TypeScript symbols.
 - `CaveVerticalInterval` — type — line 15
   - domain: world-terrain
 
+## `world/caves/caveHabitat.ts`
+
+- `CaveTraversalDescriptor` — type — line 31
+  - domain: world-terrain
+- `CaveTraversalPoint` — type — line 21
+- `resolveCaveTraversal` — function — line 186
+  - domain: world-terrain
+
 ## `world/caves/caveHeightfieldMaterial.ts`
 
 - `alignCaveDetailNormalToGeometric` — function — line 121
@@ -615,9 +623,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 89
-- `Caves` — type — line 91
-- `createCaves` — function — line 257
+- `CaveInteriorQueryChannel` — type — line 91
+- `Caves` — type — line 93
+- `createCaves` — function — line 291
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves

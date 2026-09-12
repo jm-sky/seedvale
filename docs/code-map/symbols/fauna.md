@@ -4,32 +4,48 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 877
+- `AnimalAgent` — class — line 888
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 402
-- `AnimalAgentDeps` — type — line 740
-- `AnimalSaveState` — type — line 503
-- `AnimalUpdateContext` — type — line 776
-- `BURY_DURATION_SEC` — const — line 272
-- `canPredatorPursueIntoVillage` — function — line 569
-- `FAUNA_SHADOW_DISTANCE` — const — line 239
-- `FaunaAiBranch` — type — line 381
-- `FaunaNavRescueDebugInfo` — type — line 386
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 332
-- `FrenzyWolfCandidate` — type — line 675
-- `HARVEST_MEAT_DURATION_SEC` — const — line 275
-- `isWithinVillageRadius` — function — line 550
-- `NearbyNpcCandidate` — type — line 670
-- `pickNearestEligibleWolf` — function — line 684
-- `pickRabidTarget` — function — line 709
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 257
-- `resolveLureTarget` — function — line 598
-- `villageFleeBiasFalloff` — function — line 577
-- `VillageInfo` — type — line 544
+- `AnimalAgentDebugInfo` — type — line 408
+- `AnimalAgentDeps` — type — line 746
+- `AnimalSaveState` — type — line 509
+- `AnimalUpdateContext` — type — line 787
+- `BURY_DURATION_SEC` — const — line 278
+- `canPredatorPursueIntoVillage` — function — line 575
+- `FAUNA_SHADOW_DISTANCE` — const — line 245
+- `FaunaAiBranch` — type — line 387
+- `FaunaNavRescueDebugInfo` — type — line 392
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 338
+- `FrenzyWolfCandidate` — type — line 681
+- `HARVEST_MEAT_DURATION_SEC` — const — line 281
+- `isWithinVillageRadius` — function — line 556
+- `NearbyNpcCandidate` — type — line 676
+- `pickNearestEligibleWolf` — function — line 690
+- `pickRabidTarget` — function — line 715
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 263
+- `resolveLureTarget` — function — line 604
+- `villageFleeBiasFalloff` — function — line 583
+- `VillageInfo` — type — line 550
+
+## `fauna/animalCaveHabitat.ts`
+
+- `advanceCaveRoute` — function — line 140
+  - domain: fauna
+- `ANIMAL_CAPSULE_RADIUS_SCALE` — const — line 69
+- `AnimalCaveContext` — type — line 42
+- `animalCaveEntityDimensions` — function — line 75
+- `AnimalCaveWorldContract` — type — line 18
+  - domain: fauna
+  - role: Fauna-owned cave habitat binding + the narrow world-cave contract it resolves against (plan fauna-019). This is the only place fauna touches cave types — `AnimalAgent`/`animalRoaming`/`animalForaging` never import `createCaves.ts`, `ChunkManager` or cave presentation; the composition root (`worldBundle.ts`) adapts the real `Caves` instance into `AnimalCaveWorldContract` before it reaches `createFauna()`.
+- `AnimalHabitatBinding` — type — line 34
+- `CaveRouteProgress` — type — line 113
+- `resolveAnimalCaveHabitat` — function — line 91
+  - domain: fauna
+- `ResolvedAnimalCaveHabitat` — type — line 58
 
 ## `fauna/animalCorpse.ts`
 
@@ -72,7 +88,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 305
+- `ANIMAL_DEFS` — const — line 312
 - `ANIMAL_LABELS` — const — line 47
 - `AnimalAffinityConfig` — type — line 162
 - `AnimalDef` — type — line 66
@@ -225,25 +241,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalSpawner.ts`
 
-- `defaultSpawnPointScenarioFields` — function — line 250
-- `depletionThreshold` — function — line 108
-- `DESTROY_SPAWNER_DURATION_SEC` — const — line 50
-- `EMPTY_HABITAT_RESPAWN_MULTIPLIER` — const — line 54
-- `MIN_RECOVERY_POPULATION` — const — line 44
-- `PreySpawner` — type — line 56
-- `RECOVERY_DAYS` — const — line 41
-- `respawnIntervalDaysFor` — function — line 120
-- `restoreSpawnPointState` — function — line 236
-- `SavedSpawnPointState` — type — line 209
-- `shouldDeplete` — function — line 114
-- `snapshotSpawnPointState` — function — line 220
-- `SPAWNER_DESTROY_BRANCH_COST` — const — line 48
-- `SPAWNER_RADIUS` — const — line 102
-- `SpawnerType` — type — line 14
-- `SpawnPointState` — type — line 36
-- `tickSpawnPointRecovery` — function — line 187
-- `updateSpawners` — function — line 137
-- `WOLF_DEN_ID` — const — line 20
+- `defaultSpawnPointScenarioFields` — function — line 256
+- `depletionThreshold` — function — line 114
+- `DESTROY_SPAWNER_DURATION_SEC` — const — line 56
+- `EMPTY_HABITAT_RESPAWN_MULTIPLIER` — const — line 60
+- `MIN_RECOVERY_POPULATION` — const — line 50
+- `PreySpawner` — type — line 62
+- `RECOVERY_DAYS` — const — line 47
+- `respawnIntervalDaysFor` — function — line 126
+- `restoreSpawnPointState` — function — line 242
+- `SavedSpawnPointState` — type — line 215
+- `shouldDeplete` — function — line 120
+- `snapshotSpawnPointState` — function — line 226
+- `SPAWNER_DESTROY_BRANCH_COST` — const — line 54
+- `SPAWNER_RADIUS` — const — line 108
+- `SpawnerType` — type — line 20
+- `SpawnPointState` — type — line 42
+- `tickSpawnPointRecovery` — function — line 193
+- `updateSpawners` — function — line 143
+- `WOLF_DEN_ID` — const — line 26
 
 ## `fauna/bloodSplat.ts`
 
@@ -258,22 +274,22 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `clearsRiverChannel` — function — line 239
-- `createFauna` — function — line 484
-- `Fauna` — type — line 78
-- `FAUNA_URLS` — const — line 408
-- `findHomeCaveSpawner` — function — line 367
-- `isDeerEdgeHabitat` — function — line 270
-- `isNearRoadCorridor` — function — line 251
-- `measureSlope` — function — line 309
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 384
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 392
-- `SPAWNER_LABELS` — const — line 376
-- `SPAWNER_RING_OFFSET` — const — line 210
-- `SPAWNER_SPECS` — const — line 343
-- `spawnerDestroyBusyLabel` — function — line 403
-- `spawnerDestroyPromptLabel` — function — line 399
-- `spawnerId` — function — line 361
+- `clearsRiverChannel` — function — line 246
+- `createFauna` — function — line 506
+- `Fauna` — type — line 85
+- `FAUNA_URLS` — const — line 430
+- `findHomeCaveSpawner` — function — line 389
+- `isDeerEdgeHabitat` — function — line 277
+- `isNearRoadCorridor` — function — line 258
+- `measureSlope` — function — line 316
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 406
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 414
+- `SPAWNER_LABELS` — const — line 398
+- `SPAWNER_RING_OFFSET` — const — line 217
+- `SPAWNER_SPECS` — const — line 352
+- `spawnerDestroyBusyLabel` — function — line 425
+- `spawnerDestroyPromptLabel` — function — line 421
+- `spawnerId` — function — line 382
 
 ## `fauna/dogGuard.ts`
 
