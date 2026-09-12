@@ -75,6 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
+| ◼️ `items-player-030-multi-part-armor-and-equipment-quality.md`                | -       | 🟡 | M      | items-player-029 |
 
 ---
 
@@ -179,7 +180,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `026`
-- items-player: `030`
+- items-player: `031`
 - npc: `039`
 - persistence: `005`
 - quests-progression: `020`
