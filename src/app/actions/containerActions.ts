@@ -409,7 +409,7 @@ export function createContainerActions(
       }
       if (openTransfer.kind === 'npcCorpse') {
         const post = openTransfer.npc.getPostDeath()
-        if (!post || !transferCorpseCountTo(post, inventory, kind, amount)) return
+        if (!post || !transferCorpseCountTo(post, inventory, kind, amount, ctx.dayNight.elapsedDays)) return
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.onInventoryChanged()
         refreshNpcCorpseScreen(openTransfer.npc)
@@ -492,11 +492,12 @@ export function createContainerActions(
       if (openTransfer.kind === 'npcCorpse') {
         const post = openTransfer.npc.getPostDeath()
         if (!post) return
+        const nowDays = ctx.dayNight.elapsedDays
         const loot = corpseLootInventory(post.loot)
         for (const [kind, count] of Object.entries(loot.toJSON()) as [ItemKind, number][]) {
           if (count <= 0) continue
           const n = maxTransferable(inventory, kind, count)
-          if (n > 0 && transferCorpseCountTo(post, inventory, kind, n)) transferredAny = true
+          if (n > 0 && transferCorpseCountTo(post, inventory, kind, n, nowDays)) transferredAny = true
         }
         for (const kind of INSTANCE_BACKED_KINDS) {
           for (const instance of loot.getInstances(kind)) {

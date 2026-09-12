@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { isNpcLoadoutBelonging } from '../ai/npcLoadout'
 import { Inventory } from '../items/Inventory'
+import { createLiquidContainerInstance } from '../items/liquidContainer'
 import { createWeaponInstance } from '../items/weaponMaintenance'
 import { damageHealth } from '../shared/HealthState'
 import {
@@ -10,7 +10,6 @@ import {
   createActiveNpcPostDeath,
   createLegacyTerminalNpcPostDeath,
   dropNpcCorpseLoot,
-  extractNpcLoadoutLoot,
   finalizeExpiredNpcCorpse,
   NPC_CORPSE_BONES_ONSET_DAYS,
   NPC_CORPSE_REMOVE_DAYS,
@@ -44,49 +43,58 @@ describe('npcCorpsePhaseFromElapsedDays', () => {
   })
 })
 
-describe('extractNpcLoadoutLoot / commitNpcDeath', () => {
-  it('moves the actual woodcutter axe+knife instances and leaves ore behind', () => {
-    const carried = new Inventory(undefined, 20)
+describe('commitNpcDeath', () => {
+  it('moves the entire personalInventory losslessly, with role irrelevant to what survives', () => {
+    const state = createNpcAuthoritativeState('home:npc:0', 0)
+    const personal = state.personalInventory
     const axe = createWeaponInstance('axe')
-    const knife = createWeaponInstance('knife')
     axe.durability = 0.4
     axe.sharpness = 0.7
-    carried.addInstance(axe)
-    carried.addInstance(knife)
-    carried.add('coal', 3)
+    const waterskin = createLiquidContainerInstance('waterskin_small')
+    waterskin.liquid = 'water'
+    waterskin.amountLitres = 1
+    personal.addInstance(axe)
+    personal.addInstance(waterskin)
+    // Personal belongings unrelated to any role/loadout classifier — the
+    // pre-npc-036 behaviour dropped these on the floor of `personalInventory`.
+    personal.add('coal', 3)
+    personal.add('bread', 2)
+    personal.add('berries', 4, 1)
 
-    const loot = extractNpcLoadoutLoot(carried, 'woodcutter')
-    expect(loot.instances.map((row) => row.id).sort()).toEqual([axe.id, knife.id].sort())
-    expect(loot.instances.find((row) => row.id === axe.id)?.durability).toBe(0.4)
-    expect(loot.instances.find((row) => row.id === axe.id)?.sharpness).toBe(0.7)
-    expect(carried.holdsAny('axe')).toBe(false)
-    expect(carried.holdsAny('knife')).toBe(false)
-    expect(carried.count('coal')).toBe(3)
-  })
+    state.transportCargo.add('branch', 6)
+    damageHealth(state.health, state.health.maxHp)
 
-  it('does not treat hunter arrows as personal loot', () => {
-    const carried = new Inventory(undefined, 20)
-    // `hunting_bow` is not a maintenance weapon — loadout seeds it as a count.
-    carried.add('hunting_bow', 1)
-    carried.addInstance(createWeaponInstance('knife'))
-    carried.add('arrow', 6)
-    const loot = extractNpcLoadoutLoot(carried, 'hunter')
-    expect(loot.counts.hunting_bow).toBe(1)
-    expect(loot.instances.some((row) => row.kind === 'knife')).toBe(true)
-    expect(loot.counts.arrow ?? 0).toBe(0)
-    expect(carried.count('arrow')).toBe(6)
-    expect(carried.count('hunting_bow')).toBe(0)
+    expect(commitNpcDeath({
+      state, personalInventory: personal, x: 3, z: 5, yaw: 0.4, nowDays: 2,
+    })).toBe(true)
+
+    expect(personal.isEmpty()).toBe(true)
+    const post = state.postDeath!
+    expect(post.loot.instances.map((row) => row.id).sort()).toEqual([axe.id, waterskin.id].sort())
+    expect(post.loot.instances.find((row) => row.id === axe.id)?.durability).toBe(0.4)
+    expect(post.loot.instances.find((row) => row.id === axe.id)?.sharpness).toBe(0.7)
+    const liquidRow = post.loot.instances.find((row) => row.id === waterskin.id)
+    expect(liquidRow?.liquid).toBe('water')
+    expect(liquidRow?.amountLitres).toBe(1)
+    expect(post.loot.counts.coal).toBe(3)
+    expect(post.loot.counts.bread).toBe(2)
+    expect(post.loot.counts.berries).toBe(4)
+    expect(post.loot.foodBatches?.berries?.reduce((sum, b) => sum + b.count, 0)).toBe(4)
+
+    // `transportCargo` is a separate ownership domain (settlements-npcs-019)
+    // and must not be folded into corpse loot.
+    expect(state.transportCargo.count('branch')).toBe(6)
   })
 
   it('commits post-death state once and ignores a second lethal edge', () => {
     const state = createNpcAuthoritativeState('home:npc:0', 0)
-    const carried = new Inventory(undefined, 20)
+    const carried = state.personalInventory
     const knife = createWeaponInstance('knife')
     carried.addInstance(knife)
     damageHealth(state.health, state.health.maxHp)
 
     expect(commitNpcDeath({
-      state, personalInventory: carried, role: 'farmer', x: 3, z: 5, yaw: 0.4, nowDays: 1.5,
+      state, personalInventory: carried, x: 3, z: 5, yaw: 0.4, nowDays: 1.5,
     })).toBe(true)
     expect(state.postDeath?.status).toBe('active')
     expect(state.postDeath?.x).toBe(3)
@@ -97,24 +105,13 @@ describe('extractNpcLoadoutLoot / commitNpcDeath', () => {
     const extra = new Inventory(undefined, 20)
     extra.addInstance(createWeaponInstance('knife'))
     expect(commitNpcDeath({
-      state, personalInventory: extra, role: 'farmer', x: 99, z: 99, yaw: 0, nowDays: 9,
+      state, personalInventory: extra, x: 99, z: 99, yaw: 0, nowDays: 9,
     })).toBe(false)
     expect(state.postDeath?.x).toBe(3)
     expect(state.postDeath?.loot.instances).toHaveLength(1)
     expect(state.postDeath?.loot.instances[0]?.id).toBe(knife.id)
-  })
-})
-
-describe('isNpcLoadoutBelonging', () => {
-  it('classifies only role loadout kinds', () => {
-    expect(isNpcLoadoutBelonging('axe', 'woodcutter')).toBe(true)
-    expect(isNpcLoadoutBelonging('knife', 'woodcutter')).toBe(true)
-    expect(isNpcLoadoutBelonging('coal', 'woodcutter')).toBe(false)
-    expect(isNpcLoadoutBelonging('arrow', 'hunter')).toBe(false)
-    expect(isNpcLoadoutBelonging('hunting_bow', 'hunter')).toBe(true)
-    expect(isNpcLoadoutBelonging('long_sword', 'guard')).toBe(true)
-    expect(isNpcLoadoutBelonging('knife', 'guard')).toBe(false)
-    expect(isNpcLoadoutBelonging('knife', 'farmer')).toBe(true)
+    // The second, ignored edge must not have touched `extra`'s ownership.
+    expect(extra.holdsAny('knife')).toBe(true)
   })
 })
 
@@ -148,8 +145,25 @@ describe('corpse loot transfer', () => {
       loot: { counts: { stone: 2 }, instances: [] },
     })
     const receiver = new Inventory(undefined, 0.01)
-    expect(transferCorpseCountTo(post, receiver, 'stone', 2)).toBe(false)
+    expect(transferCorpseCountTo(post, receiver, 'stone', 2, 0)).toBe(false)
     expect(post.loot.counts.stone).toBe(2)
+  })
+
+  it('preserves freshness batches when moving a partial perishable stack to the receiver', () => {
+    const post = createActiveNpcPostDeath({
+      x: 0, z: 0, yaw: 0, deathAtDays: 5,
+      loot: {
+        counts: { berries: 4 },
+        instances: [],
+        foodBatches: { berries: [{ count: 4, acquiredAtDays: 5, accumulatedEffectiveAge: 0, lastCheckpointDays: 5, decayModifier: 1 }] },
+      },
+    })
+    const receiver = new Inventory(undefined, 20)
+    expect(transferCorpseCountTo(post, receiver, 'berries', 3, 5)).toBe(true)
+    expect(post.loot.counts.berries).toBe(1)
+    expect(post.loot.foodBatches?.berries?.reduce((sum, b) => sum + b.count, 0)).toBe(1)
+    expect(receiver.count('berries')).toBe(3)
+    expect(receiver.getFoodBatches('berries', 5)[0]?.acquiredAtDays).toBe(5)
   })
 })
 
@@ -185,6 +199,28 @@ describe('burial claim and natural cleanup', () => {
     ])
     expect(post.loot.instances).toEqual([])
     expect(post.loot.counts.stone ?? 0).toBe(0)
+  })
+
+  it('splits perishable batches into lossless per-unit drops instead of flattening to day-0 food', () => {
+    const post = createActiveNpcPostDeath({
+      x: 4, z: -1, yaw: 0, deathAtDays: 5,
+      loot: {
+        counts: { berries: 2 },
+        instances: [],
+        foodBatches: { berries: [{ count: 2, acquiredAtDays: 3, accumulatedEffectiveAge: 0, lastCheckpointDays: 3, decayModifier: 1 }] },
+      },
+    })
+    const dropped: { kind: string, foodBatch?: { count: number, acquiredAtDays: number } }[] = []
+    dropNpcCorpseLoot(post, {
+      drop(kind: string, _x: number, _z: number, _instance?: unknown, _onCollected?: unknown, foodBatch?: { count: number, acquiredAtDays: number }) {
+        dropped.push({ kind, foodBatch })
+      },
+    } as never)
+    expect(dropped).toEqual([
+      { kind: 'berries', foodBatch: { count: 1, acquiredAtDays: 3, accumulatedEffectiveAge: 0, lastCheckpointDays: 3, decayModifier: 1 } },
+      { kind: 'berries', foodBatch: { count: 1, acquiredAtDays: 3, accumulatedEffectiveAge: 0, lastCheckpointDays: 3, decayModifier: 1 } },
+    ])
+    expect(post.loot.counts.berries ?? 0).toBe(0)
   })
 
   it('skips rematerializing terminal and expired corpses, not claimed ones', () => {
@@ -236,6 +272,27 @@ describe('NpcStateRegistry postDeath round-trip', () => {
     expect(state.postDeath?.x).toBe(12)
   })
 
+  it('round-trips full corpse contents (stacks, instances and food batches) with an empty post-death personal inventory', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    const axe = createWeaponInstance('axe')
+    state.personalInventory.addInstance(axe)
+    state.personalInventory.add('berries', 5, 2)
+    damageHealth(state.health, state.health.maxHp)
+    expect(commitNpcDeath({
+      state, personalInventory: state.personalInventory, x: 1, z: 1, yaw: 0, nowDays: 2,
+    })).toBe(true)
+
+    const snapshot = before.serialize()
+    expect(snapshot['0_0:npc:0']?.personalInventory).toEqual({ counts: { berries: 0 }, instances: [], foodBatches: {} })
+
+    const hydrated = createNpcStateRegistry(snapshot).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.personalInventory.isEmpty()).toBe(true)
+    expect(hydrated.postDeath?.loot.instances[0]?.id).toBe(axe.id)
+    expect(hydrated.postDeath?.loot.counts.berries).toBe(5)
+    expect(hydrated.postDeath?.loot.foodBatches?.berries?.reduce((sum, b) => sum + b.count, 0)).toBe(5)
+  })
+
   it('round-trips a terminal legacy corpse without fabricating loot', () => {
     const before = createNpcStateRegistry()
     const state = before.getOrCreate('0_0:npc:1', 0)
@@ -263,15 +320,21 @@ describe('NpcStateRegistry postDeath round-trip', () => {
 })
 
 describe('cloneNpcPostDeath', () => {
-  it('does not share loot arrays with the original', () => {
+  it('does not share loot counts, instances or food batches with the original', () => {
     const original = createActiveNpcPostDeath({
       x: 1, z: 2, yaw: 0, deathAtDays: 1,
-      loot: { counts: { stone: 1 }, instances: [{ id: 'a', kind: 'knife' }] },
+      loot: {
+        counts: { stone: 1, berries: 2 },
+        instances: [{ id: 'a', kind: 'knife' }],
+        foodBatches: { berries: [{ count: 2, acquiredAtDays: 1, accumulatedEffectiveAge: 0, lastCheckpointDays: 1, decayModifier: 1 }] },
+      },
     })
     const copy = cloneNpcPostDeath(original)!
-    copy.loot.instances.push({ id: 'b', kind: 'axe' })
+    expect(copy.loot.instances).not.toBe(original.loot.instances)
+    expect(copy.loot.foodBatches?.berries).not.toBe(original.loot.foodBatches?.berries)
     copy.loot.counts.stone = 9
     expect(original.loot.instances).toHaveLength(1)
     expect(original.loot.counts.stone).toBe(1)
+    expect(original.loot.foodBatches?.berries?.[0]?.count).toBe(2)
   })
 })

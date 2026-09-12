@@ -1,8 +1,13 @@
-import type { Role } from '../ai/characters'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemKind } from '../items/items'
-import { isNpcLoadoutBelonging } from '../ai/npcLoadout'
-import { Inventory, type SaveItemInstance } from '../items/Inventory'
+import { expandFoodBatchesToUnits } from '../items/foodItems'
+import {
+  Inventory,
+  type InventoryContentsSnapshot,
+  inventoryFromContents,
+  snapshotInventoryContents,
+} from '../items/Inventory'
+import { transferAllInventoryContents, transferInventoryCount, transferInventoryInstance } from '../items/inventoryTransfer'
 import { decayPhaseFromElapsed } from '../shared/corpseLifecycle'
 
 /**
@@ -24,10 +29,13 @@ export type NpcCorpsePhase = 'bones' | 'fresh' | 'removed' | 'rotting'
 
 export type NpcCorpseCleanupReason = 'buried' | 'decay' | 'legacy'
 
-export type NpcCorpseLootSnapshot = {
-  counts: Partial<Record<ItemKind, number>>
-  instances: SaveItemInstance[]
-}
+/** Transparent alias, not a parallel shape (plan npc-036): a corpse's loot is
+ *  exactly a generic `Inventory`'s full persisted contents — counts,
+ *  instances and perishable freshness batches — so death handoff and corpse
+ *  looting can reuse `snapshotInventoryContents()`/`inventoryFromContents()`
+ *  and the count/instance transfer helpers verbatim instead of a second,
+ *  lossy corpse-only serialization. */
+export type NpcCorpseLootSnapshot = InventoryContentsSnapshot
 
 export type NpcPostDeathState = {
   status: NpcPostDeathStatus
@@ -53,11 +61,11 @@ export const NPC_CORPSE_REMOVE_DAYS = 2
 
 export const EMPTY_NPC_CORPSE_LOOT: NpcCorpseLootSnapshot = { counts: {}, instances: [] }
 
+/** Full-fidelity clone including nested `foodBatches` — a round trip through
+ *  the same generic restore/snapshot helpers used everywhere else, so this
+ *  never has to hand-clone batch arrays itself. */
 export function cloneNpcCorpseLoot(loot: NpcCorpseLootSnapshot): NpcCorpseLootSnapshot {
-  return {
-    counts: { ...loot.counts },
-    instances: loot.instances.map((row) => ({ ...row })),
-  }
+  return snapshotInventoryContents(inventoryFromContents(loot))
 }
 
 export function cloneNpcPostDeath(state: NpcPostDeathState | null): NpcPostDeathState | null {
@@ -202,77 +210,54 @@ export function canLootNpcCorpse(_npcId: string): boolean {
   return true
 }
 
+/** Materializes the corpse's persisted loot as a live `Inventory` — the same
+ *  unbounded capacity used at death handoff, so looting/dropping can never
+ *  reject a legally-owned item for a reason the NPC never had while alive. */
 export function corpseLootInventory(loot: NpcCorpseLootSnapshot): Inventory {
-  return new Inventory(loot.counts, Infinity, Inventory.instancesFromJSON(loot.instances), undefined, Infinity)
+  return inventoryFromContents(loot, Infinity, Infinity)
 }
 
 export function snapshotCorpseLoot(inventory: Inventory): NpcCorpseLootSnapshot {
-  return {
-    counts: inventory.toJSON(),
-    instances: inventory.instancesToJSON(),
-  }
-}
-
-const LOADOUT_KINDS_BY_ROLE_CACHE = new Map<Role, readonly ItemKind[]>()
-
-function loadoutKindsFor(role: Role): readonly ItemKind[] {
-  const cached = LOADOUT_KINDS_BY_ROLE_CACHE.get(role)
-  if (cached) return cached
-  const kinds: ItemKind[] = ['knife', 'axe', 'long_sword', 'hunting_bow', 'shears']
-  const matched = kinds.filter((kind) => isNpcLoadoutBelonging(kind, role))
-  LOADOUT_KINDS_BY_ROLE_CACHE.set(role, matched)
-  return matched
-}
-
-/** Moves the actual personal-loadout instances onto a loot snapshot and
- *  removes them from `personalInventory`. Work/economy payloads on
- *  `NpcAgent.carried` stay out of this path (plan settlements-npcs-026), and
- *  so does `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019)
- *  — an in-flight `TransportOrder`'s cargo deliberately does not become
- *  corpse loot; carrier death is a known, unresolved gap (order stays
- *  `in-transit`, cargo stays on the dead NPC's state) left for a future
- *  corpse/cargo-handoff plan rather than folded into personal-belongings
- *  loot here. Full personalInventory including food-batch freshness remains
- *  an npc-010 follow-up — corpse loot still does not persist food batches. */
-export function extractNpcLoadoutLoot(inventory: Inventory, role: Role): NpcCorpseLootSnapshot {
-  const loot = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
-  for (const kind of loadoutKindsFor(role)) {
-    for (const instance of inventory.getInstances(kind)) {
-      if (!loot.addInstance(instance)) continue
-      inventory.removeInstance(instance.id)
-    }
-    const count = inventory.count(kind)
-    if (count <= 0) continue
-    if (loot.add(kind, count)) inventory.remove(kind, count)
-  }
-  return snapshotCorpseLoot(loot)
+  return snapshotInventoryContents(inventory)
 }
 
 /**
  * One-shot alive→dead consequence. Returns false when post-death state
  * already exists (reconstruction / `die(true)` hydration) so loot and death
  * transform are never minted twice.
+ *
+ * Moves the *entire* `personalInventory` — every stack, item instance and
+ * perishable freshness batch, with no role/loadout filtering (plan npc-036).
+ * Work/economy payloads on `NpcAgent.carried` stay out of this path (plan
+ * settlements-npcs-026), and so does `NpcAuthoritativeState.transportCargo`
+ * (plan settlements-npcs-019) — an in-flight `TransportOrder`'s cargo
+ * deliberately does not become corpse loot; carrier death is a known,
+ * unresolved gap (order stays `in-transit`, cargo stays on the dead NPC's
+ * state) left for a future corpse/cargo-handoff plan.
  */
 export function commitNpcDeath(opts: {
   state: { postDeath: NpcPostDeathState | null }
   personalInventory: Inventory
-  role: Role
   x: number
   z: number
   yaw: number
   nowDays: number
 }): boolean {
   if (opts.state.postDeath) return false
+  const corpse = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
+  transferAllInventoryContents(opts.personalInventory, corpse, opts.nowDays)
   opts.state.postDeath = createActiveNpcPostDeath({
     x: opts.x,
     z: opts.z,
     yaw: opts.yaw,
     deathAtDays: opts.nowDays,
-    loot: extractNpcLoadoutLoot(opts.personalInventory, opts.role),
+    loot: snapshotCorpseLoot(corpse),
   })
   return true
 }
 
+/** Delegates to `transferInventoryInstance()` so corpse looting shares the
+ *  exact same transactional instance move as every other inventory owner. */
 export function transferCorpseInstanceTo(
   postDeath: NpcPostDeathState,
   receiver: Inventory,
@@ -280,37 +265,33 @@ export function transferCorpseInstanceTo(
 ): boolean {
   if (postDeath.status === 'terminal') return false
   const corpse = corpseLootInventory(postDeath.loot)
-  const instance = corpse.getInstance(instanceId)
-  if (!instance) return false
-  if (!receiver.canAddInstance(instance)) return false
-  if (!receiver.addInstance(instance)) return false
-  corpse.removeInstance(instanceId)
+  if (!transferInventoryInstance(corpse, receiver, instanceId)) return false
   postDeath.loot = snapshotCorpseLoot(corpse)
   return true
 }
 
+/** Delegates to `transferInventoryCount()` so a perishable count keeps FIFO
+ *  freshness (checkpointed at `nowDays`) instead of the old manual
+ *  has/canAdd/remove/add, which would silently flatten batches once corpse
+ *  loot can carry them. */
 export function transferCorpseCountTo(
   postDeath: NpcPostDeathState,
   receiver: Inventory,
   kind: ItemKind,
   amount: number,
+  nowDays: number,
 ): boolean {
   if (postDeath.status === 'terminal' || amount <= 0) return false
   const corpse = corpseLootInventory(postDeath.loot)
-  if (!corpse.has(kind, amount)) return false
-  if (!receiver.canAdd(kind, amount)) return false
-  if (!corpse.remove(kind, amount)) return false
-  if (!receiver.add(kind, amount)) {
-    corpse.add(kind, amount)
-    return false
-  }
+  if (!transferInventoryCount(corpse, receiver, kind, amount, nowDays)) return false
   postDeath.loot = snapshotCorpseLoot(corpse)
   return true
 }
 
 /** Unclaimed loot rule: remaining items become world drops at the death
  *  position, then the snapshot is cleared. Mesh expiry alone never deletes
- *  items. */
+ *  items. Perishable stacks split losslessly into per-unit `FoodBatch` drops
+ *  (`expandFoodBatchesToUnits`) instead of flattening back to day-0 food. */
 export function dropNpcCorpseLoot(postDeath: NpcPostDeathState, droppedItems: DroppedItems | null | undefined): void {
   if (!droppedItems) return
   const loot = postDeath.loot
@@ -318,6 +299,14 @@ export function dropNpcCorpseLoot(postDeath: NpcPostDeathState, droppedItems: Dr
     droppedItems.drop(instance.kind, postDeath.x, postDeath.z, instance)
   }
   for (const [kind, amount] of Object.entries(loot.counts) as [ItemKind, number][]) {
+    if (amount <= 0) continue
+    const batches = loot.foodBatches?.[kind]
+    if (batches && batches.length > 0) {
+      for (const unit of expandFoodBatchesToUnits(batches)) {
+        droppedItems.drop(kind, postDeath.x, postDeath.z, undefined, undefined, unit)
+      }
+      continue
+    }
     for (let i = 0; i < amount; i++) droppedItems.drop(kind, postDeath.x, postDeath.z)
   }
   postDeath.loot = createEmptyNpcCorpseLoot()

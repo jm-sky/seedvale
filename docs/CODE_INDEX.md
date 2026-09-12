@@ -139,7 +139,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Grave-visit pressure](../src/ai/graveVisitPressure.ts) — optional family grave visits (`npc-026`).
 - [Animal-corpse cleanup pressure](../src/ai/animalCorpseCleanupPressure.ts) — settlement sanitation of animal corpses (`settlements-npcs-029`).
 - [NPC collider rim](../src/ai/npcColliderRim.ts) — pure collider geometry (walkability, segment bypass, rim points, exterior sampling) shared by movement/rescue.
-- [NPC post-death](../src/settlement/npcPostDeath.ts) — authoritative corpse lifecycle, loadout loot snapshot, burial claim handoff.
+- [NPC post-death](../src/settlement/npcPostDeath.ts) — authoritative corpse lifecycle, full-`personalInventory` loot handoff/snapshot (no role/loadout filtering, plan npc-036), burial claim handoff.
 - [Animal-corpse sanitation](../src/settlement/animalCorpseSanitation.ts) — settlement influence + nearest-household responsibility for animal corpses.
 - [Agent animation set](../src/shared/agentAnimationSet.ts) — clip resolve/crossfade/one-shot/settle owner over an `AnimationMixer`.
 - [Agent status label](../src/ui/agentStatusLabel.ts) — the shared floating name/bars/debug-line CSS2D label and its controller.
