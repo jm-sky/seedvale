@@ -13,6 +13,46 @@ export type TrapItemInstance = ItemInstance & {
   durability: number
 }
 
+/** Wearable armor kinds with per-instance quality (plan items-player-030).
+ *  Explicit list — mirrors weapons; do not derive from catalog here (avoids
+ *  import cycles with `itemCatalog`). */
+export type ArmorKind = 'leather_armor' | 'chainmail'
+
+export const ARMOR_KIND_LIST: readonly ArmorKind[] = ['leather_armor', 'chainmail']
+
+export const ARMOR_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>(ARMOR_KIND_LIST)
+
+export type ArmorQuality = 'common' | 'good' | 'masterwork'
+
+export const ARMOR_QUALITIES: readonly ArmorQuality[] = ['common', 'good', 'masterwork']
+
+export const ARMOR_QUALITY_LABELS: Record<ArmorQuality, string> = {
+  common: 'Zwykła',
+  good: 'Dobra',
+  masterwork: 'Mistrzowska',
+}
+
+export type ArmorItemInstance = ItemInstance & {
+  kind: ArmorKind
+  quality: ArmorQuality
+}
+
+export function isArmorKind(kind: ItemKind): kind is ArmorKind {
+  return ARMOR_KINDS.has(kind)
+}
+
+export function isArmorQuality(value: unknown): value is ArmorQuality {
+  return value === 'common' || value === 'good' || value === 'masterwork'
+}
+
+export function normalizeArmorQuality(value: unknown): ArmorQuality {
+  return isArmorQuality(value) ? value : 'common'
+}
+
+export function isArmorItemInstance(instance: ItemInstance): instance is ArmorItemInstance {
+  return isArmorKind(instance.kind) && isArmorQuality((instance as { quality?: unknown }).quality)
+}
+
 /** Plan 161 — melee tools that carry individual durability/sharpness state.
  *  Central classification: reused by inventory/acquisition/combat/UI instead
  *  of being derived from `ITEM_CATALOG[kind].melee` (which also covers
@@ -151,6 +191,7 @@ export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'trap_simple',
   ...WEAPON_MAINTENANCE_KINDS,
   ...LIQUID_CONTAINER_KINDS,
+  ...ARMOR_KIND_LIST,
 ])
 
 /** Generic physical key. Systemic treasure passes a deterministic `id`;
@@ -210,6 +251,14 @@ export function cloneItemInstance(instance: ItemInstance): ItemInstance {
       condition: clampCampCondition(instance.condition),
     }
     return tent
+  }
+  if (isArmorItemInstance(instance)) {
+    const armor: ArmorItemInstance = {
+      id: instance.id,
+      kind: instance.kind,
+      quality: instance.quality,
+    }
+    return armor
   }
   return { id: instance.id, kind: instance.kind }
 }

@@ -6,14 +6,20 @@ import {
   getFoodBatchFreshnessStage,
 } from './foodFreshness'
 import {
+  ARMOR_QUALITY_LABELS,
   INSTANCE_BACKED_KINDS,
+  isArmorItemInstance,
   isLiquidContainerInstance,
   isTentItemInstance,
   isTrapItemInstance,
   isWeaponItemInstance,
+  type ArmorQuality,
   type ItemInstance,
   type LiquidContainerItemInstance,
 } from './itemInstances'
+import { effectiveInstanceWeight, resolveEffectiveArmorPiece } from './armorItemInstances'
+import { ITEM_CATALOG } from './itemCatalog'
+import { ITEM_DEFS } from './items'
 import { type ItemUseView, resolveConsumeUseView } from './itemUseView'
 import { liquidContainerCapacity } from './liquidContainer'
 import { resolveInstanceSellPrice } from './tradeCatalog'
@@ -39,11 +45,21 @@ export type InventoryInstanceRow = {
   id: string
   /** What `conditionPercent` means for this row — see `ItemMeterKind`. */
   meterKind: ItemMeterKind
-  /** Trap/tent: overall condition. Weapon: durability. Liquid container: fill. */
+  /** Trap/tent: overall condition. Weapon: durability. Liquid container: fill.
+   *  Armor: unused (quality is the grouping key); kept at 100 for sort stability. */
   conditionPercent: number
   /** Weapon instances only — sharpness is shown/sharpened independently of
    *  `conditionPercent` (durability). */
   sharpnessPercent: number | null
+  /** Armor instances only (plan items-player-030). */
+  quality?: ArmorQuality
+  qualityLabel?: string
+  effectiveWeightKg?: number
+  protectionPercent?: number
+  staminaPenaltyLabel?: string
+  movementPenaltyLabel?: string
+  recoveryPenaltyLabel?: string
+  slotLabel?: string
   sellPrice: number
 }
 
@@ -65,6 +81,20 @@ export type InventoryGroupView = {
    *  has no `ITEM_CATALOG[kind].consumable` entry at all. Presentation only;
    *  `survivalActions.ts`'s `consumeItem()` re-validates at execution time. */
   consumeUse: ItemUseView | null
+}
+
+const ARMOR_SLOT_LABEL: Record<string, string> = {
+  head: 'Głowa',
+  body: 'Tułów',
+  arms: 'Ramiona',
+  hands: 'Dłonie',
+  legs: 'Nogi',
+  feet: 'Stopy',
+}
+
+function percentDeltaLabel(multiplier: number): string {
+  const delta = Math.round((multiplier - 1) * 100)
+  return delta === 0 ? '±0%' : `${delta > 0 ? '+' : ''}${delta}%`
 }
 
 function buildTrapGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
@@ -174,6 +204,44 @@ function buildTentGroup(kind: ItemKind, instances: readonly ItemInstance[]): Inv
   }
 }
 
+/** Plan items-player-030 — armor instances grouped by quality; effective
+ *  stats come from the shared quality resolver (not duplicated in Vue). */
+function buildArmorGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
+  const armorInstances = instances.filter(isArmorItemInstance)
+  if (armorInstances.length === 0) return null
+  const baseArmor = ITEM_CATALOG[kind].armor
+  if (!baseArmor) return null
+  const rows: InventoryInstanceRow[] = armorInstances.map((inst) => {
+    const effective = resolveEffectiveArmorPiece(baseArmor, inst.quality, ITEM_DEFS[kind].weight)
+    return {
+      id: inst.id,
+      meterKind: 'condition' as const,
+      conditionPercent: 100,
+      sharpnessPercent: null,
+      quality: inst.quality,
+      qualityLabel: ARMOR_QUALITY_LABELS[inst.quality],
+      effectiveWeightKg: effective.weightKg,
+      protectionPercent: Math.round(effective.damageReduction * 100),
+      staminaPenaltyLabel: percentDeltaLabel(effective.staminaCostMultiplier),
+      movementPenaltyLabel: percentDeltaLabel(effective.movementSpeedMultiplier),
+      recoveryPenaltyLabel: percentDeltaLabel(effective.meleeRecoveryMultiplier),
+      slotLabel: ARMOR_SLOT_LABEL[effective.slot] ?? effective.slot,
+      sellPrice: resolveInstanceSellPrice(inst) ?? 0,
+    }
+  })
+  const first = rows[0]!
+  const allSame = rows.every((r) => r.quality === first.quality)
+  return {
+    kind,
+    count: rows.length,
+    condition: allSame ? 'uniform' : 'mixed',
+    uniformConditionPercent: null,
+    meterKind: null,
+    instances: rows,
+    consumeUse: null,
+  }
+}
+
 /** Derived presentation for inventory UI — not persisted. */
 export function buildInventoryGroups(inventory: Inventory, nowDays = 0): InventoryGroupView[] {
   const groups: InventoryGroupView[] = []
@@ -184,6 +252,7 @@ export function buildInventoryGroups(inventory: Inventory, nowDays = 0): Invento
       ?? buildWeaponGroup(kind, instances)
       ?? buildLiquidContainerGroup(kind, instances, inventory, nowDays)
       ?? buildTentGroup(kind, instances)
+      ?? buildArmorGroup(kind, instances)
     if (group) groups.push(group)
   }
 
@@ -219,3 +288,6 @@ export function inventoryCountsForUi(inventory: Inventory): Partial<Record<ItemK
   }
   return counts
 }
+
+/** Re-export for UI weight display of a concrete instance. */
+export { effectiveInstanceWeight }

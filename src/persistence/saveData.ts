@@ -5,7 +5,7 @@ import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { PersistentOccupantSaveRecord } from '../fauna/persistentOccupants'
 import type { ContainerKind } from '../items/container'
-import type { SavePlayerEquipment } from '../items/equipment'
+import { EQUIPMENT_SLOTS, isEquipmentSlot, type SavePlayerEquipment } from '../items/equipment'
 import type { InventoryContentsSnapshot, SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation } from '../reputation/ReputationManager'
@@ -32,8 +32,8 @@ import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContain
 import { isAnimalStraySave } from '../fauna/animalStray'
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
-import { isBodyArmorKind, isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
-import { isTrapKind } from '../items/itemInstances'
+import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
+import { ARMOR_KIND_LIST, isArmorKind, isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
 import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
@@ -630,7 +630,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 37
+export const CURRENT_SAVE_VERSION = 38
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -671,9 +671,9 @@ export type SaveData = {
   elapsedDays: number
   /** Single held-tool slot (`items/HeldTool.ts`). Null when nothing is in hand. */
   heldTool: ItemKind | null
-  /** Wearable-equipment selection (`items/equipment.ts`, plan items-player-029)
-   *  — identity only, never a copy of item data `Inventory` already owns.
-   *  Absent/empty on older saves; an invalid/no-longer-owned kind restores
+  /** Wearable-equipment selection (`items/equipment.ts`, plan items-player-030)
+   *  — per-slot instance IDs only, never a copy of item data `Inventory` already owns.
+   *  Absent/empty on older saves; an invalid/no-longer-owned id restores
    *  empty rather than recreating the item. */
   playerEquipment?: SavePlayerEquipment
   /** Explicit primary weapon slots (plan ui-input-010) — player configuration,
@@ -865,16 +865,19 @@ function isHeldToolField(value: unknown): value is ItemKind | null {
   return isToolKind(value as ItemKind)
 }
 
-/** Structural shape only — `body`, if present, must be a kind that currently
- *  declares body-armor metadata; whether the restoring player actually still
- *  owns it is `items/equipment.ts`'s `createEquipmentState()` restore check,
- *  not this validator's job (mirrors `isHeldToolField`'s own split). */
+/** Structural shape only — each occupied slot, if present, must be a non-empty
+ *  instance-id string. Ownership/slot compatibility is `createEquipmentState`'s job. */
 function isPlayerEquipmentField(value: unknown): value is SavePlayerEquipment | undefined {
   if (value === undefined) return true
-  if (!value || typeof value !== 'object') return false
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const v = value as Record<string, unknown>
-  if (v.body === undefined) return true
-  return typeof v.body === 'string' && isBodyArmorKind(v.body as ItemKind)
+  for (const key of Object.keys(v)) {
+    if (!isEquipmentSlot(key)) return false
+    const id = v[key]
+    if (id === undefined) continue
+    if (typeof id !== 'string' || id.length === 0) return false
+  }
+  return true
 }
 
 function normalizeSavePrimaryWeaponChoice(
@@ -1172,6 +1175,7 @@ function isSaveItemInstancesField(value: unknown): value is SaveItemInstance[] {
     if (row.liquid !== undefined && row.liquid !== 'water' && row.liquid !== 'milk') return false
     if (row.amountLitres !== undefined && (typeof row.amountLitres !== 'number' || !Number.isFinite(row.amountLitres) || row.amountLitres < 0)) return false
     if (row.condition !== undefined && (typeof row.condition !== 'number' || !Number.isFinite(row.condition))) return false
+    if (row.quality !== undefined && row.quality !== 'common' && row.quality !== 'good' && row.quality !== 'masterwork') return false
     return true
   })
 }
@@ -3171,6 +3175,152 @@ function migrateSaveV36ToV37(data: unknown): unknown {
   }
 }
 
+function armorInstanceRow(id: string, kind: ItemKind): SaveItemInstance {
+  return { id, kind, quality: 'common' }
+}
+
+function migrateArmorCountToInstances(
+  counts: Partial<Record<ItemKind, number>> | undefined,
+  instances: SaveItemInstance[] | undefined,
+  seq: { n: number },
+  mintedByKind: Partial<Record<ItemKind, string[]>>,
+): { counts: Partial<Record<ItemKind, number>>, instances: SaveItemInstance[] } {
+  const nextCounts = { ...(counts ?? {}) }
+  const nextInstances = [...(instances ?? [])]
+  for (const kind of ARMOR_KIND_LIST) {
+    const stacked = nextCounts[kind]
+    if (typeof stacked !== 'number' || stacked <= 0) continue
+    const minted: string[] = mintedByKind[kind] ?? []
+    for (let i = 0; i < stacked; i++) {
+      seq.n += 1
+      const id = `armor:migrated:${seq.n}`
+      nextInstances.push(armorInstanceRow(id, kind))
+      minted.push(id)
+    }
+    mintedByKind[kind] = minted
+    delete nextCounts[kind]
+  }
+  return { counts: nextCounts, instances: nextInstances }
+}
+
+function migrateInventoryContentsArmor(
+  contents: { counts?: Partial<Record<ItemKind, number>>, instances?: SaveItemInstance[] } | undefined,
+  seq: { n: number },
+  mintedByKind: Partial<Record<ItemKind, string[]>>,
+): { counts: Partial<Record<ItemKind, number>>, instances: SaveItemInstance[], foodBatches?: unknown } | undefined {
+  if (!contents || typeof contents !== 'object') return contents as undefined
+  const migrated = migrateArmorCountToInstances(contents.counts, contents.instances, seq, mintedByKind)
+  return { ...contents, counts: migrated.counts, instances: migrated.instances }
+}
+
+/** v37 → v38 (plan items-player-030): count-backed armor → common instances;
+ *  `playerEquipment.body` ItemKind → instance id. */
+function migrateSaveV37ToV38(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const seq = { n: 0 }
+  const playerMinted: Partial<Record<ItemKind, string[]>> = {}
+  const inventory = (v.inventory ?? {}) as Partial<Record<ItemKind, number>>
+  const inventoryInstances = Array.isArray(v.inventoryInstances) ? v.inventoryInstances as SaveItemInstance[] : []
+  const playerInv = migrateArmorCountToInstances(inventory, inventoryInstances, seq, playerMinted)
+
+  const droppedItems = Array.isArray(v.droppedItems)
+    ? (v.droppedItems as Record<string, unknown>[]).map((item) => {
+      if (!item || typeof item.kind !== 'string' || !isArmorKind(item.kind as ItemKind) || item.instance) return item
+      seq.n += 1
+      return { ...item, instance: armorInstanceRow(`armor:migrated:${seq.n}`, item.kind as ItemKind) }
+    })
+    : v.droppedItems
+
+  const otherMinted: Partial<Record<ItemKind, string[]>> = {}
+  const placedContainers = Array.isArray(v.placedContainers)
+    ? (v.placedContainers as Record<string, unknown>[]).map((container) => {
+      if (!container) return container
+      const migrated = migrateArmorCountToInstances(
+        container.counts as Partial<Record<ItemKind, number>> | undefined,
+        container.instances as SaveItemInstance[] | undefined,
+        seq,
+        otherMinted,
+      )
+      return { ...container, counts: migrated.counts, instances: migrated.instances }
+    })
+    : v.placedContainers
+
+  const carried = v.carriedContainer && typeof v.carriedContainer === 'object'
+    ? (() => {
+      const c = v.carriedContainer as Record<string, unknown>
+      const migrated = migrateArmorCountToInstances(
+        c.counts as Partial<Record<ItemKind, number>> | undefined,
+        c.instances as SaveItemInstance[] | undefined,
+        seq,
+        otherMinted,
+      )
+      return { ...c, counts: migrated.counts, instances: migrated.instances }
+    })()
+    : v.carriedContainer
+
+  const households = v.households && typeof v.households === 'object'
+    ? Object.fromEntries(Object.entries(v.households as Record<string, unknown>).map(([id, household]) => {
+      if (!household || typeof household !== 'object') return [id, household]
+      const h = household as Record<string, unknown>
+      const items = migrateInventoryContentsArmor(
+        h.items as { counts?: Partial<Record<ItemKind, number>>, instances?: SaveItemInstance[] },
+        seq,
+        otherMinted,
+      )
+      return [id, items ? { ...h, items } : household]
+    }))
+    : v.households
+
+  const npcStates = v.npcStates && typeof v.npcStates === 'object'
+    ? Object.fromEntries(Object.entries(v.npcStates as Record<string, unknown>).map(([id, state]) => {
+      if (!state || typeof state !== 'object') return [id, state]
+      const s = state as Record<string, unknown>
+      const personalInventory = migrateInventoryContentsArmor(
+        s.personalInventory as { counts?: Partial<Record<ItemKind, number>>, instances?: SaveItemInstance[] },
+        seq,
+        otherMinted,
+      )
+      return [id, personalInventory ? { ...s, personalInventory } : state]
+    }))
+    : v.npcStates
+
+  let playerEquipment: SavePlayerEquipment | undefined
+  const prevEquip = v.playerEquipment
+  if (prevEquip && typeof prevEquip === 'object' && !Array.isArray(prevEquip)) {
+    const pe = prevEquip as Record<string, unknown>
+    const next: SavePlayerEquipment = {}
+    for (const slot of EQUIPMENT_SLOTS) {
+      const raw = pe[slot]
+      if (typeof raw !== 'string' || raw.length === 0) continue
+      if (slot === 'body' && isArmorKind(raw as ItemKind)) {
+        const fromMinted = playerMinted[raw as ItemKind]?.[0]
+        if (fromMinted) {
+          next.body = fromMinted
+          continue
+        }
+        const existing = playerInv.instances.find((row) => row.kind === raw)
+        if (existing) next.body = existing.id
+        continue
+      }
+      next[slot] = raw
+    }
+    if (Object.keys(next).length > 0) playerEquipment = next
+  }
+
+  return {
+    ...v,
+    version: 38,
+    inventory: playerInv.counts,
+    inventoryInstances: playerInv.instances,
+    droppedItems,
+    placedContainers,
+    carriedContainer: carried,
+    households,
+    npcStates,
+    playerEquipment,
+  }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -3222,6 +3372,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   34: migrateSaveV34ToV35,
   35: migrateSaveV35ToV36,
   36: migrateSaveV36ToV37,
+  37: migrateSaveV37ToV38,
 }
 
 function detectStoredVersion(value: unknown): number | null {

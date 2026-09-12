@@ -1,5 +1,6 @@
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
+import type { EquipmentSlot } from '../items/equipment'
 import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
 import type { TradeResult } from '../items/trade'
 import type { SharpenResult } from '../items/weaponMaintenance'
@@ -14,10 +15,10 @@ export type InventoryScreenHandlers = {
    *  maintenance kind — see `HeldTool.equip()`. */
   onEquip?: (kind: ItemKind, instanceId?: string) => void
   onUnequip?: () => void
-  /** "Załóż"/"Zdejmij" for wearable body armor (plan items-player-029) —
+  /** "Załóż"/"Zdejmij" for wearable armor (plan items-player-030) —
    *  distinct from `onEquip`/`onUnequip`, which are `HeldTool`-only. */
-  onEquipArmor?: (kind: ItemKind) => void
-  onUnequipArmor?: () => void
+  onEquipArmor?: (instanceId: string) => void
+  onUnequipArmor?: (slot?: EquipmentSlot) => void
   /** "Zjedz"/"Wypij" (plan 106) — only offered for consumable items. */
   onConsume?: (kind: ItemKind) => void
   /** "Czytaj" (plan items-player-016) — only offered for `ITEM_CATALOG[kind].book` items. */
@@ -52,9 +53,8 @@ export type InventoryScreen = {
     groups: readonly InventoryGroupView[],
     primaryMelee: PrimaryWeaponChoice | null,
     primaryRanged: PrimaryWeaponChoice | null,
-    /** Live-valid equipped body armor (plan items-player-029) — see
-     *  `items/equipment.ts`'s `equippedBodyArmor()`. */
-    equippedBody: ItemKind | null,
+    /** Live-valid equipped armor instance ids by slot (plan items-player-030). */
+    equippedSlots: Partial<Record<EquipmentSlot, string>>,
   ) => void
   dispose: () => void
 }
@@ -75,7 +75,7 @@ export function createInventoryScreen(
   let heldInstanceId: string | null = null
   let primaryMelee: PrimaryWeaponChoice | null = null
   let primaryRanged: PrimaryWeaponChoice | null = null
-  let equippedBody: ItemKind | null = null
+  let equippedSlots: Partial<Record<EquipmentSlot, string>> = {}
 
   const getUi = () => getMountedVueUi()
   const isOpen = () => !disposed && (getUi()?.isInventoryOpen() ?? false)
@@ -93,7 +93,7 @@ export function createInventoryScreen(
       groups,
       primaryMelee,
       primaryRanged,
-      equippedBody,
+      equippedSlots,
       (kind, amount) => handlers.onDrop?.(kind, amount),
       (kind, instanceId) => handlers.onEquip?.(kind, instanceId),
       () => handlers.onUnequip?.(),
@@ -106,8 +106,8 @@ export function createInventoryScreen(
       () => handlers.onPlaceTent?.(),
       (kind, instanceId) => handlers.onSetPrimaryMelee?.(kind, instanceId),
       (kind, instanceId) => handlers.onSetPrimaryRanged?.(kind, instanceId),
-      (kind) => handlers.onEquipArmor?.(kind),
-      () => handlers.onUnequipArmor?.(),
+      (instanceId) => handlers.onEquipArmor?.(instanceId),
+      (slot) => handlers.onUnequipArmor?.(slot),
     )
   }
 
@@ -125,7 +125,7 @@ export function createInventoryScreen(
       if (isOpen()) close()
       else open()
     },
-    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextTotalSize, nextMaxSize, nextHeldTool, nextHeldInstanceId, nextGroups, nextPrimaryMelee, nextPrimaryRanged, nextEquippedBody) {
+    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextTotalSize, nextMaxSize, nextHeldTool, nextHeldInstanceId, nextGroups, nextPrimaryMelee, nextPrimaryRanged, nextEquippedSlots) {
       if (disposed) return
       counts = { ...nextCounts }
       groups = nextGroups
@@ -137,9 +137,9 @@ export function createInventoryScreen(
       heldInstanceId = nextHeldInstanceId
       primaryMelee = nextPrimaryMelee
       primaryRanged = nextPrimaryRanged
-      equippedBody = nextEquippedBody
+      equippedSlots = { ...nextEquippedSlots }
       if (isOpen()) {
-        getUi()?.refreshInventory(counts, totalWeight, maxWeight, totalSize, maxSize, heldTool, heldInstanceId, groups, primaryMelee, primaryRanged, equippedBody)
+        getUi()?.refreshInventory(counts, totalWeight, maxWeight, totalSize, maxSize, heldTool, heldInstanceId, groups, primaryMelee, primaryRanged, equippedSlots)
       }
     },
     dispose() {

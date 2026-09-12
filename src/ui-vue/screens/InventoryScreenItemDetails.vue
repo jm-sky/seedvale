@@ -11,11 +11,12 @@ import { ITEM_METER_LABEL, type ItemMeterKind } from '../../items/inventoryView'
 import { CAPABILITY_LABEL, isMeleeToolKind, isRangedTool } from '../../items/itemCatalog'
 import { type BookTier, consumeNeedNoun, ITEM_CATALOG } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
-import { isWeaponMaintenanceKind } from '../../items/itemInstances'
+import { isArmorKind, isWeaponMaintenanceKind } from '../../items/itemInstances'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
 import { resolveReadBookUseView } from '../../items/itemUseView'
 import { isPrimaryMeleeAssignment, isPrimaryRangedAssignment } from '../../items/primaryWeapons'
 import { tradeValue } from '../../items/tradeCatalog'
+import type { EquipmentSlot } from '../../items/equipment'
 import { SKILL_LABEL } from '../../player/PlayerSkills'
 import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -75,7 +76,16 @@ const ammoText = computed<string | null>(() => {
     .join(' · ')
 })
 const armor = computed(() => catalogEntry.value?.armor ?? null)
-const isEquippedBodyArmor = computed(() => props.selectedItem != null && props.selectedItem === ui.inventory.equippedBody)
+const isArmorItem = computed(() => props.selectedItem != null && isArmorKind(props.selectedItem))
+const equippedInstanceIdSet = computed(() => new Set(Object.values(ui.inventory.equippedSlots)))
+function isArmorInstanceEquipped(id: string): boolean {
+  return equippedInstanceIdSet.value.has(id)
+}
+const anyArmorEquipped = computed(() =>
+  isArmorItem.value
+  && (group.value?.instances.some((row) => isArmorInstanceEquipped(row.id)) ?? false),
+)
+const representativeArmorRow = computed(() => group.value?.instances[0] ?? null)
 const percentDelta = (multiplier: number): string => {
   const delta = Math.round((multiplier - 1) * 100)
   return delta === 0 ? '±0%' : `${delta > 0 ? '+' : ''}${delta}%`
@@ -121,9 +131,25 @@ const imageUrl = computed<string | null>(() => null)
 
 const instanceRows = computed(() => {
   if (!group.value || group.value.instances.length === 0) return []
-  const buckets = new Map<string, { count: number, ids: string[], sellPrice: number, meterKind: ItemMeterKind, conditionPercent: number, sharpnessPercent: number | null }>()
+  const buckets = new Map<string, {
+    count: number
+    ids: string[]
+    sellPrice: number
+    meterKind: ItemMeterKind
+    conditionPercent: number
+    sharpnessPercent: number | null
+    qualityLabel: string | null
+    effectiveWeightKg: number | null
+    protectionPercent: number | null
+    staminaPenaltyLabel: string | null
+    movementPenaltyLabel: string | null
+    recoveryPenaltyLabel: string | null
+    slotLabel: string | null
+  }>()
   for (const row of group.value.instances) {
-    const key = `${row.conditionPercent}:${row.sharpnessPercent ?? ''}`
+    const key = row.quality
+      ? `quality:${row.quality}`
+      : `${row.conditionPercent}:${row.sharpnessPercent ?? ''}`
     const existing = buckets.get(key)
     if (existing) {
       existing.count++
@@ -136,10 +162,20 @@ const instanceRows = computed(() => {
         meterKind: row.meterKind,
         conditionPercent: row.conditionPercent,
         sharpnessPercent: row.sharpnessPercent,
+        qualityLabel: row.qualityLabel ?? null,
+        effectiveWeightKg: row.effectiveWeightKg ?? null,
+        protectionPercent: row.protectionPercent ?? null,
+        staminaPenaltyLabel: row.staminaPenaltyLabel ?? null,
+        movementPenaltyLabel: row.movementPenaltyLabel ?? null,
+        recoveryPenaltyLabel: row.recoveryPenaltyLabel ?? null,
+        slotLabel: row.slotLabel ?? null,
       })
     }
   }
-  return [...buckets.values()].sort((a, b) => b.conditionPercent - a.conditionPercent)
+  return [...buckets.values()].sort((a, b) => {
+    if (a.qualityLabel && b.qualityLabel) return a.qualityLabel.localeCompare(b.qualityLabel)
+    return b.conditionPercent - a.conditionPercent
+  })
 })
 
 /** Player-facing gameplay uses of this item (plan items-player-024) —
@@ -176,8 +212,8 @@ function onDrop(kind: ItemKind): void {
 }
 function onEquip(kind: ItemKind, instanceId?: string): void { ui.inventory.onEquip?.(kind, instanceId) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
-function onEquipArmor(kind: ItemKind): void { ui.inventory.onEquipArmor?.(kind) }
-function onUnequipArmor(): void { ui.inventory.onUnequipArmor?.() }
+function onEquipArmor(instanceId: string): void { ui.inventory.onEquipArmor?.(instanceId) }
+function onUnequipArmor(slot?: EquipmentSlot): void { ui.inventory.onUnequipArmor?.(slot) }
 function isInstanceHeld(id: string): boolean {
   return ui.inventory.heldTool === props.selectedItem && ui.inventory.heldInstanceId === id
 }
@@ -280,7 +316,7 @@ function isInstancePrimaryRanged(id: string): boolean {
 
       <InventoryScreenSection
         label="Waga"
-        :value="formatWeight(item.weight)"
+        :value="formatWeight(representativeArmorRow?.effectiveWeightKg ?? item.weight)"
       />
 
       <InventoryScreenSection
@@ -391,31 +427,43 @@ function isInstancePrimaryRanged(id: string): boolean {
       />
 
       <InventoryScreenSection
+        v-if="representativeArmorRow?.slotLabel"
+        label="Slot"
+        :value="representativeArmorRow.slotLabel"
+      />
+
+      <InventoryScreenSection
+        v-if="representativeArmorRow?.qualityLabel && instanceRows.length <= 1"
+        label="Jakość"
+        :value="representativeArmorRow.qualityLabel"
+      />
+
+      <InventoryScreenSection
         v-if="armor"
         label="Ochrona"
-        :value="`${Math.round(armor.damageReduction * 100)}%`"
+        :value="`${representativeArmorRow?.protectionPercent ?? Math.round(armor.damageReduction * 100)}%`"
       />
 
       <InventoryScreenSection
         v-if="armor"
         label="Wysiłek ataku"
-        :value="percentDelta(armor.staminaCostMultiplier ?? 1)"
+        :value="representativeArmorRow?.staminaPenaltyLabel ?? percentDelta(armor.staminaCostMultiplier ?? 1)"
       />
 
       <InventoryScreenSection
         v-if="armor"
         label="Tempo ataku"
-        :value="percentDelta(armor.meleeRecoveryMultiplier ?? 1)"
+        :value="representativeArmorRow?.recoveryPenaltyLabel ?? percentDelta(armor.meleeRecoveryMultiplier ?? 1)"
       />
 
       <InventoryScreenSection
         v-if="armor"
         label="Ruch"
-        :value="percentDelta(armor.movementSpeedMultiplier ?? 1)"
+        :value="representativeArmorRow?.movementPenaltyLabel ?? percentDelta(armor.movementSpeedMultiplier ?? 1)"
       />
 
       <InventoryScreenSection
-        v-if="isEquippedBodyArmor"
+        v-if="anyArmorEquipped"
         label="Stan"
         value="Założona"
       />
@@ -431,12 +479,21 @@ function isInstancePrimaryRanged(id: string): boolean {
       <div class="flex flex-col gap-2">
         <div
           v-for="row in instanceRows"
-          :key="`${row.conditionPercent}:${row.sharpnessPercent}`"
+          :key="row.qualityLabel ? `quality:${row.qualityLabel}` : `${row.conditionPercent}:${row.sharpnessPercent}`"
           class="flex flex-row items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-2 text-sm"
         >
           <div class="flex flex-wrap items-center gap-2">
             <span class="font-medium">{{ row.count }}×</span>
-            <span class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm">
+            <span
+              v-if="row.qualityLabel"
+              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
+            >
+              {{ row.qualityLabel }}
+            </span>
+            <span
+              v-else
+              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
+            >
               {{ ITEM_METER_LABEL[row.meterKind] }} {{ row.conditionPercent }}%
             </span>
             <span
@@ -444,6 +501,12 @@ function isInstancePrimaryRanged(id: string): boolean {
               class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
             >
               Ostrość {{ row.sharpnessPercent }}%
+            </span>
+            <span
+              v-if="row.effectiveWeightKg != null"
+              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
+            >
+              {{ formatWeight(row.effectiveWeightKg) }}
             </span>
           </div>
           <div
@@ -470,6 +533,12 @@ function isInstancePrimaryRanged(id: string): boolean {
               >
                 Podstawowa
               </span>
+              <span
+                v-if="isArmorItem && isArmorInstanceEquipped(id)"
+                class="rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-medium"
+              >
+                Założona
+              </span>
             </div>
             <div class="flex flex-wrap gap-2">
               <ItemsScreenItemButton
@@ -477,6 +546,18 @@ function isInstancePrimaryRanged(id: string): boolean {
                 class="min-h-0 py-1"
                 label="Weź"
                 @click="onEquip(item.kind, id)"
+              />
+              <ItemsScreenItemButton
+                v-if="isArmorItem && !isArmorInstanceEquipped(id)"
+                class="min-h-0 py-1"
+                label="Załóż"
+                @click="onEquipArmor(id)"
+              />
+              <ItemsScreenItemButton
+                v-if="isArmorItem && isArmorInstanceEquipped(id)"
+                class="min-h-0 py-1"
+                label="Zdejmij"
+                @click="onUnequipArmor(armor?.slot)"
               />
               <ItemsScreenItemButton
                 v-if="isToolKind(item.kind) && isInstanceHeld(id)"
@@ -559,16 +640,6 @@ function isInstancePrimaryRanged(id: string): boolean {
         v-if="showSetPrimaryRanged"
         label="Ustaw jako podstawową broń dystansową"
         @click="setPrimaryRanged(item.kind)"
-      />
-      <ItemsScreenItemButton
-        v-if="armor && !isEquippedBodyArmor"
-        label="Załóż"
-        @click="onEquipArmor(item.kind)"
-      />
-      <ItemsScreenItemButton
-        v-if="armor && isEquippedBodyArmor"
-        label="Zdejmij"
-        @click="onUnequipArmor"
       />
       <ItemsScreenItemButton
         v-if="isToolKind(item.kind) && !isWeaponMaintenanceKind(item.kind) && ui.inventory.heldTool !== item.kind"

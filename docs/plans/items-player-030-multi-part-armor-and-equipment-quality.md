@@ -1,7 +1,7 @@
 # Plan: Multi-part armor and equipment quality
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** items-player-029
 **Domain:** `items-player`

@@ -11,6 +11,7 @@ import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { InteractionGazePrompt } from '../interaction/interactionView'
 import type { InventoryGroupView } from '../items/inventoryView'
+import type { EquipmentSlot } from '../items/equipment'
 import type { ItemKind } from '../items/items'
 import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
 import type { TradeResult } from '../items/trade'
@@ -108,13 +109,12 @@ type InventoryState = {
    *  maintenance kind — see `HeldTool.equip()`. */
   onEquip: ((kind: ItemKind, instanceId?: string) => void) | null
   onUnequip: (() => void) | null
-  /** Live-valid equipped body armor (plan items-player-029) — see
-   *  `items/equipment.ts`'s `equippedBodyArmor()`. */
-  equippedBody: ItemKind | null
-  /** "Załóż"/"Zdejmij" for wearable body armor — distinct from `onEquip`/
+  /** Live-valid equipped armor instance ids by slot (plan items-player-030). */
+  equippedSlots: Partial<Record<EquipmentSlot, string>>
+  /** "Załóż"/"Zdejmij" for wearable armor — distinct from `onEquip`/
    *  `onUnequip`, which are `HeldTool`-only. */
-  onEquipArmor: ((kind: ItemKind) => void) | null
-  onUnequipArmor: (() => void) | null
+  onEquipArmor: ((instanceId: string) => void) | null
+  onUnequipArmor: ((slot?: EquipmentSlot) => void) | null
   /** "Zjedz"/"Wypij" (plan 106) — only offered for `ITEM_CATALOG[kind].consumable` items. */
   onConsume: ((kind: ItemKind) => void) | null
   /** "Czytaj" (plan items-player-016) — only offered for `ITEM_CATALOG[kind].book` items. */
@@ -677,7 +677,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedBody: null, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedSlots: {}, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
@@ -1044,7 +1044,7 @@ export function openInventory(
   groups: readonly InventoryGroupView[],
   primaryMelee: PrimaryWeaponChoice | null,
   primaryRanged: PrimaryWeaponChoice | null,
-  equippedBody: ItemKind | null,
+  equippedSlots: Partial<Record<EquipmentSlot, string>>,
   onDrop: (kind: ItemKind, amount: number) => void,
   onEquip: (kind: ItemKind, instanceId?: string) => void,
   onUnequip: () => void,
@@ -1057,8 +1057,8 @@ export function openInventory(
   onPlaceTent: () => void,
   onSetPrimaryMelee: (kind: ItemKind, instanceId: string | null) => void,
   onSetPrimaryRanged: (kind: ItemKind, instanceId: string | null) => void,
-  onEquipArmor: (kind: ItemKind) => void,
-  onUnequipArmor: () => void,
+  onEquipArmor: (instanceId: string) => void,
+  onUnequipArmor: (slot?: EquipmentSlot) => void,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -1070,7 +1070,7 @@ export function openInventory(
   ui.inventory.heldInstanceId = heldInstanceId
   ui.inventory.primaryMelee = primaryMelee
   ui.inventory.primaryRanged = primaryRanged
-  ui.inventory.equippedBody = equippedBody
+  ui.inventory.equippedSlots = { ...equippedSlots }
   ui.inventory.onDrop = onDrop
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
@@ -1099,7 +1099,7 @@ export function refreshInventory(
   groups: readonly InventoryGroupView[],
   primaryMelee: PrimaryWeaponChoice | null,
   primaryRanged: PrimaryWeaponChoice | null,
-  equippedBody: ItemKind | null,
+  equippedSlots: Partial<Record<EquipmentSlot, string>>,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -1111,7 +1111,7 @@ export function refreshInventory(
   ui.inventory.heldInstanceId = heldInstanceId
   ui.inventory.primaryMelee = primaryMelee
   ui.inventory.primaryRanged = primaryRanged
-  ui.inventory.equippedBody = equippedBody
+  ui.inventory.equippedSlots = { ...equippedSlots }
 }
 export function closeInventory(): void {
   ui.inventory.open = false

@@ -54,7 +54,7 @@ export type DefenseConfig = {
  *  `items/equipment.ts`'s `resolveEquipmentModifiers()` is the only reader —
  *  do not branch on equipped item kind anywhere else. */
 export type ArmorConfig = {
-  slot: 'body'
+  slot: 'head' | 'body' | 'arms' | 'hands' | 'legs' | 'feet'
   /** Fraction of post-active-defense incoming damage removed. */
   damageReduction: number
   /** Multiplier on a melee attack's `MeleeConfig.staminaCost` — the weapon's
@@ -1580,10 +1580,14 @@ export function isMeleeToolKind<K extends ItemKind | null | undefined>(kind: K):
   return kind != null && ITEM_CATALOG[kind]?.melee != null
 }
 
-/** Body-armor-capable kinds (plan items-player-029) — shared by
- *  `items/equipment.ts`'s ownership/validity checks and `SaveData` restore
- *  validation, so both agree on the same "can this actually be worn"
- *  definition instead of each re-deriving it from `armor` presence. */
+/** Armor-capable kinds (plan items-player-030) — any catalog entry with
+ *  `armor` metadata. Shared by equipment ownership checks and save validation. */
+export function isArmorCatalogKind<K extends ItemKind | null | undefined>(kind: K): kind is Extract<K, ItemKind> {
+  return kind != null && ITEM_CATALOG[kind]?.armor != null
+}
+
+/** @deprecated Prefer `isArmorCatalogKind` — kept as a body-slot alias for call sites
+ *  that specifically mean torso armor. */
 export function isBodyArmorKind<K extends ItemKind | null | undefined>(kind: K): kind is Extract<K, ItemKind> {
   return kind != null && ITEM_CATALOG[kind]?.armor?.slot === 'body'
 }

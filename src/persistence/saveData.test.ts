@@ -876,6 +876,28 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     ])
   })
 
+  it('migrates a real v37 save (plan items-player-030) stacked armor into common instances and equips body', () => {
+    const v37Save = {
+      ...validSave,
+      version: 37,
+      inventory: { leather_armor: 1, chainmail: 1, hide: 1 },
+      inventoryInstances: [],
+      playerEquipment: { body: 'leather_armor' },
+    }
+    const result = loadStoredSave(v37Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.inventory.leather_armor).toBeUndefined()
+    expect(result.data.inventory.chainmail).toBeUndefined()
+    expect(result.data.inventory.hide).toBe(1)
+    expect(result.data.inventoryInstances).toEqual([
+      { id: 'armor:migrated:1', kind: 'leather_armor', quality: 'common' },
+      { id: 'armor:migrated:2', kind: 'chainmail', quality: 'common' },
+    ])
+    expect(result.data.playerEquipment).toEqual({ body: 'armor:migrated:1' })
+  })
+
   it('round-trips a partial residential house without persisting lodging', () => {
     const withHouse = {
       ...validSave,

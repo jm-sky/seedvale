@@ -1,17 +1,30 @@
 import type { Inventory } from './Inventory'
-import type { ItemKind } from './items'
-import { isBodyArmorKind, ITEM_CATALOG } from './itemCatalog'
+import { ITEM_DEFS } from './items'
+import {
+  isArmorCatalogKind,
+  ITEM_CATALOG,
+} from './itemCatalog'
+import {
+  isArmorItemInstance,
+  resolveEffectiveArmorPiece,
+  type EffectiveArmorPiece,
+} from './armorItemInstances'
+import type { ArmorItemInstance, ItemInstance } from './itemInstances'
 
-/** Wearable-equipment slot (plan items-player-029). Only `body` exists today;
- *  the type is a union (not hard-coded to one literal) so a future slot
- *  (head/offHand/hands/legs) extends it without changing ownership semantics. */
-export type EquipmentSlot = 'body'
+/** Wearable-equipment slots (plan items-player-030). */
+export type EquipmentSlot = 'head' | 'body' | 'arms' | 'hands' | 'legs' | 'feet'
 
-/** Persisted equipment selection — identity only, never a copy of item data
- *  already owned by `Inventory` (plan items-player-029 §11). */
-export type SavePlayerEquipment = {
-  body?: ItemKind
-}
+export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = [
+  'head',
+  'body',
+  'arms',
+  'hands',
+  'legs',
+  'feet',
+]
+
+/** Persisted equipment selection — instance IDs only; Inventory owns the items. */
+export type SavePlayerEquipment = Partial<Record<EquipmentSlot, string>>
 
 /** Derived gameplay effect of whatever is currently (validly) worn — the
  *  single shape every consumer (damage/melee/movement) reads. Neutral (`1`)
@@ -35,94 +48,218 @@ export const NEUTRAL_EQUIPMENT_MODIFIERS: EquipmentModifiers = {
   sprintStaminaMultiplier: 1,
 }
 
-/** Actor-neutral wearable-equipment state (plan items-player-029) — player-only
- *  in this plan's scope, but the type itself doesn't encode `Player`. Owns only
- *  *which* owned item is worn; `Inventory` remains the sole item owner. Never
- *  trust `body()` directly outside this module for gameplay effects or
- *  presentation — use `equippedBodyArmor()`/`resolveEquipmentModifiers()`,
- *  which re-validate ownership+catalog metadata live so a sold/dropped/traded
- *  item can never leave a ghost bonus, whether or not `syncWithInventory()`
- *  happened to run since the item left the bag.
+/**
+ * Actor-neutral wearable-equipment state (plan items-player-030).
+ * Owns only which owned instance is worn per slot; Inventory remains sole owner.
  *
  * @domain items-player
  * @system equipment
- * @role Tracks which owned item (if any) is currently worn in each equipment slot.
+ * @role Tracks which owned armor instance (if any) is worn in each equipment slot.
  * @uses Inventory
  */
 export type EquipmentState = {
-  /** Raw stored selection — may be stale (sold/dropped/traded away since);
-   *  see the module doc above for why callers should prefer
-   *  `equippedBodyArmor()` instead of trusting this directly. */
-  body: () => ItemKind | null
-  /** Equips `kind` into `body` if `inventory` currently owns it and it
-   *  declares `armor.slot === 'body'`. Returns false (no-op) otherwise. */
-  equip: (kind: ItemKind, inventory: Inventory) => boolean
+  /** Raw stored instance id for a slot — may be stale; prefer live-valid helpers. */
+  getSlot: (slot: EquipmentSlot) => string | null
+  /** Equips a concrete owned armor instance into its catalog slot. */
+  equip: (instanceId: string, inventory: Inventory) => boolean
   unequip: (slot: EquipmentSlot) => void
-  /** Clears `body` if the stored kind is no longer owned by `inventory` — an
-   *  explicit hygiene pass (keeps the raw selection itself honest), not a
-   *  safety requirement: `equippedBodyArmor()`/`resolveEquipmentModifiers()`
-   *  already re-check ownership on every call regardless. */
   syncWithInventory: (inventory: Inventory) => void
-  /** Persisted snapshot — only the still-owned, still-valid selection ever
-   *  round-trips; a stale reference silently exports as empty rather than
-   *  writing a ghost kind into the save. */
   exportState: (inventory: Inventory) => SavePlayerEquipment
 }
 
-/** Restores from `initial` only when the saved kind still declares body-armor
- *  metadata and is actually owned by `inventory` (plan items-player-029 §11) —
- *  an invalid/missing/old-save reference resolves to empty, never recreates
- *  the item. */
+export function isEquipmentSlot(value: unknown): value is EquipmentSlot {
+  return typeof value === 'string' && (EQUIPMENT_SLOTS as readonly string[]).includes(value)
+}
+
+function liveValidArmorInstance(
+  instanceId: string | null | undefined,
+  inventory: Inventory,
+  expectedSlot?: EquipmentSlot,
+): ArmorItemInstance | null {
+  if (!instanceId) return null
+  const instance = inventory.getInstance(instanceId)
+  if (!instance || !isArmorItemInstance(instance) || !isArmorCatalogKind(instance.kind)) return null
+  const slot = ITEM_CATALOG[instance.kind].armor!.slot
+  if (expectedSlot != null && slot !== expectedSlot) return null
+  return instance
+}
+
+/**
+ * Restores from `initial` only when each saved instance id is still owned and
+ * matches the slot. Invalid references resolve empty — never recreate items.
+ *
+ * Also accepts a legacy single `body: ItemKind` string that matches an owned
+ * armor instance kind (post count→instance migration).
+ */
 export function createEquipmentState(inventory: Inventory, initial?: SavePlayerEquipment): EquipmentState {
-  let bodyKind: ItemKind | null = null
-  if (initial?.body != null && isBodyArmorKind(initial.body) && inventory.has(initial.body, 1)) {
-    bodyKind = initial.body
+  const slots: Record<EquipmentSlot, string | null> = {
+    head: null,
+    body: null,
+    arms: null,
+    hands: null,
+    legs: null,
+    feet: null,
+  }
+
+  if (initial) {
+    for (const slot of EQUIPMENT_SLOTS) {
+      const raw = initial[slot]
+      if (typeof raw !== 'string' || raw.length === 0) continue
+      const byId = liveValidArmorInstance(raw, inventory, slot)
+      if (byId) {
+        slots[slot] = byId.id
+        continue
+      }
+      // Legacy body kind → first owned instance of that kind (migration seam).
+      if (slot === 'body' && isArmorCatalogKind(raw as never)) {
+        const match = inventory.getInstances(raw as never).find(
+          (inst) => isArmorItemInstance(inst) && ITEM_CATALOG[inst.kind].armor?.slot === 'body',
+        )
+        if (match) slots.body = match.id
+      }
+    }
+  }
+
+  // One instance cannot occupy multiple slots.
+  const seen = new Set<string>()
+  for (const slot of EQUIPMENT_SLOTS) {
+    const id = slots[slot]
+    if (id == null) continue
+    if (seen.has(id)) {
+      slots[slot] = null
+      continue
+    }
+    seen.add(id)
   }
 
   return {
-    body: () => bodyKind,
-    equip(kind, inv) {
-      if (!isBodyArmorKind(kind) || !inv.has(kind, 1)) return false
-      bodyKind = kind
+    getSlot(slot) {
+      return slots[slot]
+    },
+    equip(instanceId, inv) {
+      const instance = liveValidArmorInstance(instanceId, inv)
+      if (!instance) return false
+      const slot = ITEM_CATALOG[instance.kind].armor!.slot
+      for (const s of EQUIPMENT_SLOTS) {
+        if (slots[s] === instance.id) slots[s] = null
+      }
+      slots[slot] = instance.id
       return true
     },
     unequip(slot) {
-      if (slot === 'body') bodyKind = null
+      slots[slot] = null
     },
     syncWithInventory(inv) {
-      if (bodyKind !== null && !inv.has(bodyKind, 1)) bodyKind = null
+      for (const slot of EQUIPMENT_SLOTS) {
+        if (liveValidArmorInstance(slots[slot], inv, slot) == null) slots[slot] = null
+      }
     },
     exportState(inv) {
-      return bodyKind !== null && inv.has(bodyKind, 1) ? { body: bodyKind } : {}
+      const out: SavePlayerEquipment = {}
+      for (const slot of EQUIPMENT_SLOTS) {
+        const live = liveValidArmorInstance(slots[slot], inv, slot)
+        if (live) out[slot] = live.id
+      }
+      return out
     },
   }
 }
 
-/** The live-valid equipped body armor — `null` when nothing is selected, the
- *  selection is no longer owned, or the owned kind no longer declares
- *  body-armor metadata. Centralizes the "no ghost equipment" invariant (plan
- *  items-player-029 §2) so every consumer (resolver, UI, save export) agrees
- *  on the same answer without each one remembering to call
- *  `EquipmentState.syncWithInventory()` first. */
-export function equippedBodyArmor(equipment: EquipmentState, inventory: Inventory): ItemKind | null {
-  const kind = equipment.body()
-  if (kind === null || !isBodyArmorKind(kind) || !inventory.has(kind, 1)) return null
-  return kind
+/** Live-valid equipped armor instances across all slots (no ghosts). */
+export function equippedArmorInstances(
+  equipment: EquipmentState,
+  inventory: Inventory,
+): readonly ArmorItemInstance[] {
+  const out: ArmorItemInstance[] = []
+  const seen = new Set<string>()
+  for (const slot of EQUIPMENT_SLOTS) {
+    const live = liveValidArmorInstance(equipment.getSlot(slot), inventory, slot)
+    if (!live || seen.has(live.id)) continue
+    seen.add(live.id)
+    out.push(live)
+  }
+  return out
 }
 
-/** The one pure derivation point for every wearable-equipment gameplay effect
- *  (plan items-player-029 §4) — damage/melee/movement code reads this instead
- *  of branching on equipped item kind directly. Returns
- *  `NEUTRAL_EQUIPMENT_MODIFIERS` whenever nothing valid is worn. */
-export function resolveEquipmentModifiers(equipment: EquipmentState, inventory: Inventory): EquipmentModifiers {
-  const kind = equippedBodyArmor(equipment, inventory)
-  if (kind === null) return NEUTRAL_EQUIPMENT_MODIFIERS
-  const armor = ITEM_CATALOG[kind].armor!
-  return {
-    incomingDamageMultiplier: 1 - armor.damageReduction,
-    meleeStaminaMultiplier: armor.staminaCostMultiplier ?? 1,
-    meleeRecoveryMultiplier: armor.meleeRecoveryMultiplier ?? 1,
-    movementSpeedMultiplier: armor.movementSpeedMultiplier ?? 1,
-    sprintStaminaMultiplier: armor.sprintStaminaMultiplier ?? 1,
+/** Compatibility helper — live-valid body piece kind, or null. */
+export function equippedBodyArmor(equipment: EquipmentState, inventory: Inventory): ArmorItemInstance['kind'] | null {
+  const live = liveValidArmorInstance(equipment.getSlot('body'), inventory, 'body')
+  return live?.kind ?? null
+}
+
+/** Live-valid equipped instance id for a slot, or null. */
+export function equippedInstanceId(
+  equipment: EquipmentState,
+  inventory: Inventory,
+  slot: EquipmentSlot,
+): string | null {
+  return liveValidArmorInstance(equipment.getSlot(slot), inventory, slot)?.id ?? null
+}
+
+/** Map of slot → live-valid equipped instance id (for UI). */
+export function equippedInstanceIds(
+  equipment: EquipmentState,
+  inventory: Inventory,
+): Partial<Record<EquipmentSlot, string>> {
+  const out: Partial<Record<EquipmentSlot, string>> = {}
+  for (const slot of EQUIPMENT_SLOTS) {
+    const id = equippedInstanceId(equipment, inventory, slot)
+    if (id) out[slot] = id
   }
+  return out
+}
+
+/**
+ * Fold effective per-piece armor into aggregate modifiers.
+ * Protection multiplies remaining-damage factors; restriction multipliers multiply.
+ *
+ * @domain items-player
+ */
+export function composeEquipmentModifiers(pieces: readonly EffectiveArmorPiece[]): EquipmentModifiers {
+  if (pieces.length === 0) return NEUTRAL_EQUIPMENT_MODIFIERS
+  let incomingDamageMultiplier = 1
+  let meleeStaminaMultiplier = 1
+  let meleeRecoveryMultiplier = 1
+  let movementSpeedMultiplier = 1
+  let sprintStaminaMultiplier = 1
+  for (const piece of pieces) {
+    incomingDamageMultiplier *= 1 - piece.damageReduction
+    meleeStaminaMultiplier *= piece.staminaCostMultiplier
+    meleeRecoveryMultiplier *= piece.meleeRecoveryMultiplier
+    movementSpeedMultiplier *= piece.movementSpeedMultiplier
+    sprintStaminaMultiplier *= piece.sprintStaminaMultiplier
+  }
+  return {
+    incomingDamageMultiplier,
+    meleeStaminaMultiplier,
+    meleeRecoveryMultiplier,
+    movementSpeedMultiplier,
+    sprintStaminaMultiplier,
+  }
+}
+
+function effectivePieceForInstance(instance: ArmorItemInstance): EffectiveArmorPiece | null {
+  const armor = ITEM_CATALOG[instance.kind].armor
+  if (!armor) return null
+  return resolveEffectiveArmorPiece(armor, instance.quality, ITEM_DEFS[instance.kind].weight)
+}
+
+/**
+ * Single derivation point for wearable-equipment gameplay effects.
+ *
+ * @domain items-player
+ */
+export function resolveEquipmentModifiers(equipment: EquipmentState, inventory: Inventory): EquipmentModifiers {
+  const pieces: EffectiveArmorPiece[] = []
+  for (const instance of equippedArmorInstances(equipment, inventory)) {
+    const piece = effectivePieceForInstance(instance)
+    if (piece) pieces.push(piece)
+  }
+  return composeEquipmentModifiers(pieces)
+}
+
+/** Effective display stats for one armor instance (UI + gameplay share this). */
+export function resolveArmorInstanceEffective(instance: ItemInstance): EffectiveArmorPiece | null {
+  if (!isArmorItemInstance(instance)) return null
+  return effectivePieceForInstance(instance)
 }

@@ -25,6 +25,8 @@ import {
   clamp01,
   clampCampCondition,
   cloneItemInstance,
+  isArmorItemInstance,
+  isArmorKind,
   isLiquidContainerInstance,
   isLiquidContainerKind,
   isTentItemInstance,
@@ -32,6 +34,8 @@ import {
   isTrapKind,
   isWeaponItemInstance,
   isWeaponMaintenanceKind,
+  normalizeArmorQuality,
+  type ArmorItemInstance,
   type ItemInstance,
   type LiquidContainerItemInstance,
   type LiquidContent,
@@ -39,6 +43,7 @@ import {
   type TrapItemInstance,
   type WeaponItemInstance,
 } from './itemInstances'
+import { effectiveInstanceWeight } from './armorItemInstances'
 import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
 import { LIQUID_DENSITY_KG_PER_LITRE } from './liquidContainer'
 
@@ -87,6 +92,8 @@ export type SaveItemInstance = {
   amountLitres?: number
   /** Plan items-player-019 — tent instances only; `0..100`, absent → `100`. */
   condition?: number
+  /** Plan items-player-030 — armor instances only; absent/invalid → `common`. */
+  quality?: 'common' | 'good' | 'masterwork'
 }
 
 /** `ItemInstance` → its persisted-row shape — the single conversion used by
@@ -105,6 +112,7 @@ export function toSaveItemInstance(instance: ItemInstance): SaveItemInstance {
     row.amountLitres = instance.amountLitres
   }
   if (isTentItemInstance(instance)) row.condition = instance.condition
+  if (isArmorItemInstance(instance)) row.quality = instance.quality
   return row
 }
 
@@ -293,7 +301,7 @@ export class Inventory {
     let total = 0
     for (const [kind, n] of this.counts) total += ITEM_DEFS[kind].weight * n
     for (const instance of this.instances.values()) {
-      total += ITEM_DEFS[instance.kind].weight
+      total += effectiveInstanceWeight(instance)
       if (isLiquidContainerInstance(instance)) total += instance.amountLitres * LIQUID_DENSITY_KG_PER_LITRE
     }
     return total
@@ -328,7 +336,8 @@ export class Inventory {
   }
 
   canAddInstance(instance: ItemInstance): boolean {
-    return this.hasWeightRoom(instance.kind, 1) && this.hasSizeRoom(instance.kind, 1)
+    const weightOk = this.totalWeight() + effectiveInstanceWeight(instance) <= this.maxWeight + 1e-9
+    return weightOk && this.hasSizeRoom(instance.kind, 1)
   }
 
   /** Adds `n` of `kind` if it fits under `maxWeight`; a no-op (returns false)
@@ -672,6 +681,15 @@ export class Inventory {
           condition: typeof row.condition === 'number' ? clampCampCondition(row.condition) : 100,
         }
         out.push(tent)
+        continue
+      }
+      if (isArmorKind(row.kind)) {
+        const armor: ArmorItemInstance = {
+          id: row.id,
+          kind: row.kind,
+          quality: normalizeArmorQuality(row.quality),
+        }
+        out.push(armor)
         continue
       }
       out.push({ id: row.id, kind: row.kind })

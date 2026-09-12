@@ -40,7 +40,7 @@ import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { CONTAINER_DEFS } from '../items/container'
-import { createEquipmentState, equippedBodyArmor } from '../items/equipment'
+import { createEquipmentState, equippedInstanceIds } from '../items/equipment'
 import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
@@ -53,6 +53,7 @@ import { createPrimaryWeaponSelection } from '../items/primaryWeapons'
 import { createAcquiredInstance } from '../items/trade'
 import { type TreasureChestMutation } from '../items/treasureGameplay'
 import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
+import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import {
   type BenchmarkFixture,
   benchmarkScenarioFromUrl,
@@ -725,6 +726,8 @@ export async function createApp(
   // becomes a fresh `waterskin_medium` instance. Idempotent (a fresh game or
   // an already-migrated save has zero count for these legacy kinds).
   migrateLegacyWaterskinsToInstances(inventory)
+  // Plan items-player-030 — count-backed armor → common instances (idempotent).
+  migrateArmorCountsToInstances(inventory)
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
   const equipment = createEquipmentState(inventory, initialSave?.playerEquipment)
@@ -1824,7 +1827,7 @@ export async function createApp(
       buildInventoryGroups(inventory, dayNight.elapsedDays),
       primaryWeapons.primaryMelee(),
       primaryWeapons.primaryRanged(),
-      equippedBodyArmor(equipment, inventory),
+      equippedInstanceIds(equipment, inventory),
     )
   }
 

@@ -1,6 +1,6 @@
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { createWorldAudio } from '../audio/createWorldAudio'
-import type { EquipmentState } from '../items/equipment'
+import type { EquipmentSlot, EquipmentState } from '../items/equipment'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { InventoryGroupView } from '../items/inventoryView'
@@ -128,10 +128,10 @@ export type InventoryWiring = {
    *  resolution when omitted. */
   equipTool: (kind: ItemKind, instanceId?: string) => void
   unequipTool: () => void
-  /** "Załóż" (plan items-player-029) — no-op if `kind` isn't owned body-armor. */
-  equipArmor: (kind: ItemKind) => void
-  /** "Zdejmij" on the equipped body-armor item. */
-  unequipArmor: () => void
+  /** "Załóż" (plan items-player-030) — equips a concrete armor instance. */
+  equipArmor: (instanceId: string) => void
+  /** "Zdejmij" on an equipment slot (defaults to body when omitted). */
+  unequipArmor: (slot?: EquipmentSlot) => void
   /** HUD primary-weapon shortcuts (plan `ui-input-002` §6) — equip whichever
    *  weapon `primaryWeapons` currently remembers, no-op if none is set. */
   equipPrimaryMeleeWeapon: () => void
@@ -371,16 +371,16 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     deps.refreshInventoryScreen()
   }
 
-  /** "Załóż"/"Zdejmij" for wearable body armor (plan items-player-029) —
+  /** "Załóż"/"Zdejmij" for wearable armor (plan items-player-030) —
    *  independent of `HeldTool`/`playerTorch`: worn equipment has no hand-slot
    *  interaction and isn't a light source. */
-  const equipArmor = (kind: ItemKind): void => {
-    if (!equipment.equip(kind, inventory)) return
+  const equipArmor = (instanceId: string): void => {
+    if (!equipment.equip(instanceId, inventory)) return
     deps.refreshInventoryScreen()
   }
 
-  const unequipArmor = (): void => {
-    equipment.unequip('body')
+  const unequipArmor = (slot: EquipmentSlot = 'body'): void => {
+    equipment.unequip(slot)
     deps.refreshInventoryScreen()
   }
 

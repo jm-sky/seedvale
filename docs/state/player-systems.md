@@ -181,7 +181,7 @@ The player's inventory base is the human body-carry resolver (`player/humanCarry
 
 `ItemCatalogEntry.carryCapacityBonus` is summed over currently-held matching counts into `Inventory.maxWeight`, which is a derived getter, not a stored/persisted field — the same "recompute after load" contract it already had. Feeds the existing overload/movement penalty (`player/playerEncumbrance.ts`) unchanged; encumbrance thresholds themselves are not Strength-aware. A carried chest's own weight (`PlacedContainers.carriedWeightKg()`) also counts toward this overload calculation, alongside `Inventory.totalWeight()`.
 
-Worn body armor (`items/equipment.ts`, plan items-player-029) is a distinct effect from the carried-item `carryCapacityBonus` above: `PlayerController.setEquipmentModifiers()`'s `movementSpeedMultiplier` composes with (not instead of) `setEncumbrance()`'s carry-weight multiplier — the armor's own item weight already participates in encumbrance naturally via `Inventory.totalWeight()`, independent of its `ArmorConfig` movement penalty. Full combat/melee/persistence detail lives in [combat.md](./combat.md#wearable-armor-plan-items-player-029), not duplicated here.
+Worn armor (`items/equipment.ts`, plan items-player-030) is a distinct effect from the carried-item `carryCapacityBonus` above: `PlayerController.setEquipmentModifiers()`'s `movementSpeedMultiplier` composes with (not instead of) `setEncumbrance()`'s carry-weight multiplier — each armor instance's *effective* weight (quality-aware) participates in encumbrance via `Inventory.totalWeight()`, independent of its `ArmorConfig` movement penalty. Full combat/melee/persistence detail lives in [combat.md](./combat.md#wearable-armor-plan-items-player-030), not duplicated here.
 
 ## Entry points
 
