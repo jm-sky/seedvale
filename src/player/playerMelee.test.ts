@@ -201,6 +201,64 @@ describe('createPlayerMelee gap close (plan 124 §3)', () => {
   })
 })
 
+describe('createPlayerMelee wearable-equipment modifiers (plan items-player-029)', () => {
+  it('omitting the multipliers preserves current stamina/recovery behavior exactly', () => {
+    const melee = createPlayerMelee()
+    const stamina = createStaminaState(100)
+    attackNearbyTarget(melee, KNIFE, stamina)
+    expect(stamina.current).toBe(100 - KNIFE.staminaCost)
+    melee.update(KNIFE.windUp + KNIFE.hitWindow + KNIFE.recovery - 0.001)
+    expect(melee.isAttacking()).toBe(true)
+  })
+
+  it('scales the effective stamina gate and drain without mutating MeleeConfig', () => {
+    const melee = createPlayerMelee()
+    const multiplier = 1.25
+    const stamina = createStaminaState(KNIFE.staminaCost) // exactly enough unscaled, not enough scaled
+    const result = melee.requestAttack(
+      KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -1, MELEE_AGILITY_NEUTRAL, multiplier,
+    )
+    expect(result.started).toBe(false)
+    expect(stamina.current).toBe(KNIFE.staminaCost)
+    expect(KNIFE.staminaCost).toBe(ITEM_CATALOG.knife.melee!.staminaCost) // untouched
+
+    const richerStamina = createStaminaState(KNIFE.staminaCost * multiplier)
+    const started = melee.requestAttack(
+      KNIFE, richerStamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -1, MELEE_AGILITY_NEUTRAL, multiplier,
+    )
+    expect(started.started).toBe(true)
+    expect(richerStamina.current).toBeCloseTo(0, 10)
+  })
+
+  it('a recovery multiplier above 1 extends recovery beyond the unmodified duration', () => {
+    const melee = createPlayerMelee()
+    const stamina = createStaminaState(100)
+    const recoveryMultiplier = 1.5
+    melee.requestAttack(
+      KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -1, MELEE_AGILITY_NEUTRAL, 1, recoveryMultiplier,
+    )
+    const unmodifiedTotal = KNIFE.windUp + KNIFE.hitWindow + KNIFE.recovery
+    // Just past the *unmodified* total duration — still recovering with the
+    // multiplier applied, so a new attack must still be rejected.
+    melee.update(unmodifiedTotal + 0.01)
+    expect(melee.state()).not.toBe('idle')
+    const extendedTotal = KNIFE.windUp + KNIFE.hitWindow + KNIFE.recovery * recoveryMultiplier
+    melee.update(extendedTotal - unmodifiedTotal - 0.01 + 0.02)
+    expect(melee.state()).toBe('idle')
+  })
+
+  it('a recovery multiplier does not change Vigor cost (existing windUp+hitWindow+recovery policy stays unscaled)', () => {
+    const melee = createPlayerMelee()
+    const stamina = createStaminaState(100)
+    const vigorWithArmor = createVigorState(100)
+    const vigorNeutral = createVigorState(100)
+    melee.requestAttack(KNIFE, stamina, vigorWithArmor, DAY_LENGTH_SEC, 0, 0, 0, -1, MELEE_AGILITY_NEUTRAL, 1, 2)
+    const melee2 = createPlayerMelee()
+    melee2.requestAttack(KNIFE, createStaminaState(100), vigorNeutral, DAY_LENGTH_SEC, 0, 0, 0, -1, MELEE_AGILITY_NEUTRAL)
+    expect(vigorWithArmor.current).toBeCloseTo(vigorNeutral.current, 10)
+  })
+})
+
 describe('rememberHit / recentTargetIds (plan 124 §1)', () => {
   it('starts empty and records hits, most recent first', () => {
     const melee = createPlayerMelee()

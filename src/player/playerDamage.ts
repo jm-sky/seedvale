@@ -1,3 +1,4 @@
+import type { EquipmentModifiers } from '../items/equipment'
 import type { ToolKind } from '../items/HeldTool'
 import {
   defenseBlockRoll,
@@ -51,10 +52,18 @@ export type ApplyPlayerDamageParams = {
   defenseSkillValue: number
   playerYaw: number
   onCombatHit?: () => void
+  /** Wearable-equipment modifiers (plan items-player-029) — passive armor
+   *  mitigation applies only when a caller actually passes this (derived via
+   *  `items/equipment.ts`'s `resolveEquipmentModifiers()`). Omit for damage
+   *  categories armor must never reduce, e.g. starvation/dehydration
+   *  (`tickPlayerStarvationDamage` below deliberately doesn't pass one). */
+  equipmentModifiers?: EquipmentModifiers
 }
 
-/** Single entry for player HP loss (plan 150 §8) — defense runs first, then
- *  HP is reduced; at 0 the player enters `downed` instead of `dead`. */
+/** Single entry for player HP loss (plan 150 §8) — active held-item defense
+ *  resolves first, then worn-armor passive mitigation (plan items-player-029)
+ *  on whatever damage remains, then HP is reduced; at 0 the player enters
+ *  `downed` instead of `dead`. */
 export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamageResult {
   const {
     player,
@@ -66,6 +75,7 @@ export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamage
     defenseSkillValue,
     playerYaw,
     onCombatHit,
+    equipmentModifiers,
   } = params
 
   if (player.isDowned() || player.health.dead || amount <= 0) {
@@ -98,7 +108,7 @@ export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamage
     awardSkillXp(player.skills, 'defense', SKILL_XP_AWARD.defenseBlock)
   }
 
-  const finalDamage = resolved.finalDamage
+  const finalDamage = resolved.finalDamage * (equipmentModifiers?.incomingDamageMultiplier ?? 1)
   if (finalDamage > 0) {
     player.health.currentHp = Math.max(0, player.health.currentHp - finalDamage)
     onCombatHit?.()

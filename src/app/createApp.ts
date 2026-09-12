@@ -40,6 +40,7 @@ import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { CONTAINER_DEFS } from '../items/container'
+import { createEquipmentState, equippedBodyArmor } from '../items/equipment'
 import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
@@ -171,11 +172,11 @@ import { createClimateState } from '../world/weather'
 import { createWeatherParticles } from '../world/weatherParticles'
 import { createWorldContext } from '../world/worldContext'
 import { createContainerActions } from './actions/containerActions'
-import { createHouseholdResourceTransferActions } from './actions/householdResourceTransferActions'
 import { createCookMealIntent, runEatAnything } from './actions/cookMealIntent'
 import { createFullCampIntent } from './actions/fullCampIntent'
 import { createGatheringActions } from './actions/gatheringActions'
 import { createGroundActions } from './actions/groundActions'
+import { createHouseholdResourceTransferActions } from './actions/householdResourceTransferActions'
 import { createInspectionActions } from './actions/inspectionActions'
 import { createLeadActions } from './actions/leadActions'
 import { createMountActions } from './actions/mountActions'
@@ -719,6 +720,7 @@ export async function createApp(
   migrateLegacyWaterskinsToInstances(inventory)
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
+  const equipment = createEquipmentState(inventory, initialSave?.playerEquipment)
   const primaryWeapons = createPrimaryWeaponSelection()
   if (initialSave) {
     primaryWeapons.restoreState(initialSave)
@@ -1215,6 +1217,7 @@ export async function createApp(
     player,
     inventory,
     heldTool,
+    equipment,
     primaryWeapons,
     playerTorch,
     hud,
@@ -1261,6 +1264,7 @@ export async function createApp(
     player,
     inventory,
     heldTool,
+    equipment,
     playerTorch,
     hud,
     toast,
@@ -1454,6 +1458,7 @@ export async function createApp(
     mouseLook,
     inventory,
     heldTool,
+    equipment,
     primaryWeapons,
     playerTorch,
     questManager,
@@ -1765,6 +1770,8 @@ export async function createApp(
     onDrop: inventoryWiring.dropItems,
     onEquip: inventoryWiring.equipTool,
     onUnequip: inventoryWiring.unequipTool,
+    onEquipArmor: inventoryWiring.equipArmor,
+    onUnequipArmor: inventoryWiring.unequipArmor,
     onConsume: (kind) => survival.consumeItem(kind),
     onRead: (kind) => {
       if (ITEM_CATALOG[kind].treasureMap) inventoryWiring.readTreasureMapItem(kind)
@@ -1802,6 +1809,7 @@ export async function createApp(
       buildInventoryGroups(inventory, dayNight.elapsedDays),
       primaryWeapons.primaryMelee(),
       primaryWeapons.primaryRanged(),
+      equippedBodyArmor(equipment, inventory),
     )
   }
 
@@ -2234,7 +2242,7 @@ export async function createApp(
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, lead, landOwnership, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
     questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork: (mode, x, z) => {

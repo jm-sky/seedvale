@@ -307,8 +307,12 @@ export function tickPlayerStamina(
   sprinting: boolean,
   recoveryAllowed = true,
   effectiveEndurance = 0.5,
+  /** Wearable-equipment sprint-effort modifier (plan items-player-029) — a
+   *  pure multiplier on the sprint drain rate, neutral (`1`) for every caller
+   *  that doesn't pass one. */
+  equipmentSprintDrainMultiplier = 1,
 ): void {
-  if (sprinting) drainStamina(stamina, STAMINA_SPRINT_DRAIN_PER_SEC * dt)
+  if (sprinting) drainStamina(stamina, STAMINA_SPRINT_DRAIN_PER_SEC * equipmentSprintDrainMultiplier * dt)
   else if (recoveryAllowed) {
     restoreStamina(
       stamina,

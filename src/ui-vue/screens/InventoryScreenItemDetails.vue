@@ -74,6 +74,12 @@ const ammoText = computed<string | null>(() => {
     .map((kind) => `${ITEM_DEFS[kind].label}: ${ui.inventory.counts[kind] ?? 0}`)
     .join(' · ')
 })
+const armor = computed(() => catalogEntry.value?.armor ?? null)
+const isEquippedBodyArmor = computed(() => props.selectedItem != null && props.selectedItem === ui.inventory.equippedBody)
+const percentDelta = (multiplier: number): string => {
+  const delta = Math.round((multiplier - 1) * 100)
+  return delta === 0 ? '±0%' : `${delta > 0 ? '+' : ''}${delta}%`
+}
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 /** "Zjedz"/"Wypij" availability (plan items-player-024) — null when `kind`
  *  isn't consumable; otherwise reflects spoiled food / an empty liquid
@@ -170,6 +176,8 @@ function onDrop(kind: ItemKind): void {
 }
 function onEquip(kind: ItemKind, instanceId?: string): void { ui.inventory.onEquip?.(kind, instanceId) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
+function onEquipArmor(kind: ItemKind): void { ui.inventory.onEquipArmor?.(kind) }
+function onUnequipArmor(): void { ui.inventory.onUnequipArmor?.() }
 function isInstanceHeld(id: string): boolean {
   return ui.inventory.heldTool === props.selectedItem && ui.inventory.heldInstanceId === id
 }
@@ -381,6 +389,36 @@ function isInstancePrimaryRanged(id: string): boolean {
         label="Zastosowania"
         :value="capabilityLabels.join(' · ')"
       />
+
+      <InventoryScreenSection
+        v-if="armor"
+        label="Ochrona"
+        :value="`${Math.round(armor.damageReduction * 100)}%`"
+      />
+
+      <InventoryScreenSection
+        v-if="armor"
+        label="Wysiłek ataku"
+        :value="percentDelta(armor.staminaCostMultiplier ?? 1)"
+      />
+
+      <InventoryScreenSection
+        v-if="armor"
+        label="Tempo ataku"
+        :value="percentDelta(armor.meleeRecoveryMultiplier ?? 1)"
+      />
+
+      <InventoryScreenSection
+        v-if="armor"
+        label="Ruch"
+        :value="percentDelta(armor.movementSpeedMultiplier ?? 1)"
+      />
+
+      <InventoryScreenSection
+        v-if="isEquippedBodyArmor"
+        label="Stan"
+        value="Założona"
+      />
     </div>
 
     <div
@@ -521,6 +559,16 @@ function isInstancePrimaryRanged(id: string): boolean {
         v-if="showSetPrimaryRanged"
         label="Ustaw jako podstawową broń dystansową"
         @click="setPrimaryRanged(item.kind)"
+      />
+      <ItemsScreenItemButton
+        v-if="armor && !isEquippedBodyArmor"
+        label="Załóż"
+        @click="onEquipArmor(item.kind)"
+      />
+      <ItemsScreenItemButton
+        v-if="armor && isEquippedBodyArmor"
+        label="Zdejmij"
+        @click="onUnequipArmor"
       />
       <ItemsScreenItemButton
         v-if="isToolKind(item.kind) && !isWeaponMaintenanceKind(item.kind) && ui.inventory.heldTool !== item.kind"

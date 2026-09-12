@@ -14,6 +14,7 @@ import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
 import type { Interactable } from '../interaction/Interactable'
 import type { CampRepairTargetKind } from '../items/campRepair'
+import type { EquipmentState } from '../items/equipment'
 import type { HeldTool } from '../items/HeldTool'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
@@ -93,6 +94,7 @@ import {
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
 import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillPrompt, type TargetedSkillQueryContext } from '../interaction/targetedSkillAction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
+import { resolveEquipmentModifiers } from '../items/equipment'
 import { getFoodBatchFreshnessStage } from '../items/foodFreshness'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -333,6 +335,10 @@ export type GameLoopDeps = {
   restCamp: RestCampSequence
   inventory: Inventory
   heldTool: HeldTool
+  /** Wearable equipment (plan items-player-029) — `resolveEquipmentModifiers()`
+   *  derives this frame's armor effects from this + `inventory` once, reused
+   *  for movement/sprint/melee/combat-damage below. */
+  equipment: EquipmentState
   /** Riding (plan fauna-003) — mount/dismount + per-frame drive. `update()`
    *  must run before `player.update()` each frame so the camera picks up the
    *  fresh seat transform; the `[E]` mount action and the dedicated
@@ -635,7 +641,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, lead, landOwnership, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
     questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startShearAnimal, startCookAt, startIgniteFire,
@@ -834,6 +840,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     timer.update()
     const rawDt = timer.getDelta()
     const dt = Math.min(rawDt, 0.05)
+    // Plan items-player-029 — derived once per frame (cheap: one owned-item
+    // check + a catalog read), reused below for movement/sprint, the player
+    // melee request and player combat-damage mitigation, so armor equip/
+    // unequip never needs a second recomputation seam of its own.
+    const equipmentModifiers = resolveEquipmentModifiers(equipment, inventory)
     if (rawDt > 0) {
       fpsEma = fpsEma * 0.9 + (1 / rawDt) * 0.1
       fpsHudAge += rawDt
@@ -1965,7 +1976,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             // gazed target (plan 123 §3).
             const config = ITEM_CATALOG[held].melee
             if (config && !playerMelee.isAttacking()) {
-              if (player.needs.stamina.current < config.staminaCost) {
+              if (player.needs.stamina.current < config.staminaCost * equipmentModifiers.meleeStaminaMultiplier) {
                 toast.show('Brak siły na atak.', 'error')
               } else {
                 const result = playerMelee.requestAttack(
@@ -1978,6 +1989,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   target.position.x,
                   target.position.z,
                   player.effectiveAttributes(dayNight.elapsedDays).agility,
+                  equipmentModifiers.meleeStaminaMultiplier,
+                  equipmentModifiers.meleeRecoveryMultiplier,
                 )
                 if (result.started) {
                   playerCombat.enter()
@@ -2296,6 +2309,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // order of cost as the HUD weight readout already updated on every
       // inventory mutation) rather than threaded through every mutation site.
       player.setEncumbrance(inventory.totalWeight() + bundle.placedContainers.carriedWeightKg(), inventory.maxWeight)
+      player.setEquipmentModifiers(equipmentModifiers.movementSpeedMultiplier, equipmentModifiers.sprintStaminaMultiplier)
       // Riding (plan fauna-003) drives the mount + syncs the player's seat
       // transform onto `player.mesh` before `player.update()` runs, so this
       // frame's camera/gaze/interactables all see the fresh position. No-op
@@ -2495,6 +2509,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 heldTool: heldTool.held(),
                 defenseSkillValue: player.skills.defense.value,
                 playerYaw: mouseLook.state.yaw,
+                equipmentModifiers,
                 onCombatHit: () => {
                   playerCombat.enter()
                   playerCombat.noteActivity()

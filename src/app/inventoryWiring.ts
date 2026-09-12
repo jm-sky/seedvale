@@ -1,5 +1,6 @@
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { createWorldAudio } from '../audio/createWorldAudio'
+import type { EquipmentState } from '../items/equipment'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { InventoryGroupView } from '../items/inventoryView'
@@ -126,6 +127,10 @@ export type InventoryWiring = {
    *  resolution when omitted. */
   equipTool: (kind: ItemKind, instanceId?: string) => void
   unequipTool: () => void
+  /** "Załóż" (plan items-player-029) — no-op if `kind` isn't owned body-armor. */
+  equipArmor: (kind: ItemKind) => void
+  /** "Zdejmij" on the equipped body-armor item. */
+  unequipArmor: () => void
   /** HUD primary-weapon shortcuts (plan `ui-input-002` §6) — equip whichever
    *  weapon `primaryWeapons` currently remembers, no-op if none is set. */
   equipPrimaryMeleeWeapon: () => void
@@ -139,6 +144,7 @@ export type InventoryWiringDeps = {
   player: PlayerController
   inventory: Inventory
   heldTool: HeldTool
+  equipment: EquipmentState
   primaryWeapons: PrimaryWeaponSelection
   playerTorch: PlayerTorch
   hud: Hud
@@ -168,7 +174,7 @@ export type InventoryWiringDeps = {
 
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
-    bundle, player, inventory, heldTool, primaryWeapons, playerTorch, hud, toast, vueUi,
+    bundle, player, inventory, heldTool, equipment, primaryWeapons, playerTorch, hud, toast, vueUi,
     questManager, reputationManager, worldFlags, playOnce, grantItem,
     locationCatalog, locationKnowledge, navigationTargets, dayNight,
   } = deps
@@ -359,6 +365,19 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     if (playerTorch.isLit()) playerTorch.extinguish()
     heldTool.unequip()
     deps.syncHeldHud()
+    deps.refreshInventoryScreen()
+  }
+
+  /** "Załóż"/"Zdejmij" for wearable body armor (plan items-player-029) —
+   *  independent of `HeldTool`/`playerTorch`: worn equipment has no hand-slot
+   *  interaction and isn't a light source. */
+  const equipArmor = (kind: ItemKind): void => {
+    if (!equipment.equip(kind, inventory)) return
+    deps.refreshInventoryScreen()
+  }
+
+  const unequipArmor = (): void => {
+    equipment.unequip('body')
     deps.refreshInventoryScreen()
   }
 
@@ -595,6 +614,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     dropItems,
     equipTool,
     unequipTool,
+    equipArmor,
+    unequipArmor,
     equipPrimaryMeleeWeapon,
     equipPrimaryRangedWeapon,
     setPrimaryMeleeWeapon,

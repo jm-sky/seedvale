@@ -84,6 +84,14 @@ export type PlayerMelee = {
     targetX: number,
     targetZ: number,
     agility: number,
+    /** Wearable-equipment modifiers (plan items-player-029) — pure multipliers
+     *  on the weapon's own `staminaCost`/agility-resolved recovery, applied at
+     *  use time without mutating `MeleeConfig`. Neutral (`1`) for every caller
+     *  that doesn't pass one. Vigor cost deliberately stays based on the
+     *  unscaled `config.windUp+hitWindow+recovery` (existing policy, plan
+     *  items-player-003 §10) — armor changes cadence/stamina, not Vigor. */
+    equipmentStaminaMultiplier?: number,
+    equipmentRecoveryMultiplier?: number,
   ) => AttackRequestResult
   /** Advances the lifecycle by `dt`. Call once per frame regardless of input. */
   update: (dt: number) => MeleeTickResult
@@ -105,10 +113,11 @@ export function createPlayerMelee(): PlayerMelee {
     state: lifecycle.state,
     isAttacking: lifecycle.isAttacking,
     phaseProgress: lifecycle.phaseProgress,
-    requestAttack(cfg, stamina, vigor, dayLengthSec, playerX, playerZ, targetX, targetZ, agility) {
+    requestAttack(cfg, stamina, vigor, dayLengthSec, playerX, playerZ, targetX, targetZ, agility, equipmentStaminaMultiplier = 1, equipmentRecoveryMultiplier = 1) {
       if (lifecycle.state() !== 'idle') return { started: false, moveX: 0, moveZ: 0 }
-      if (stamina.current < cfg.staminaCost) return { started: false, moveX: 0, moveZ: 0 }
-      drainStamina(stamina, cfg.staminaCost)
+      const staminaCost = cfg.staminaCost * equipmentStaminaMultiplier
+      if (stamina.current < staminaCost) return { started: false, moveX: 0, moveZ: 0 }
+      drainStamina(stamina, staminaCost)
       drainVigor(vigor, physicalEffortVigorCostPerSec('moderate', dayLengthSec) * (cfg.windUp + cfg.hitWindow + cfg.recovery))
 
       let moveX = 0
@@ -132,7 +141,7 @@ export function createPlayerMelee(): PlayerMelee {
         }
       }
 
-      lifecycle.start(cfg, resolveMeleeRecovery(cfg.recovery, agility))
+      lifecycle.start(cfg, resolveMeleeRecovery(cfg.recovery, agility) * equipmentRecoveryMultiplier)
       return { started: true, moveX, moveZ }
     },
     update: lifecycle.update,

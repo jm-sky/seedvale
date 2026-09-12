@@ -477,4 +477,17 @@ Add JSDoc to the important public equipment APIs and modifier resolver, includin
 
 Do not run browser verification. Do not run `pnpm docs:sync` locally when the repository workflow owns derived documentation updates.
 
+## 16. Implementation record (2026-09-12)
+
+Implemented as scoped, with two deliberate deviations from the suggested API surface — both reduce risk without weakening any invariant the plan cares about:
+
+- **No scattered `syncWithInventory()` calls.** Every gameplay/UI/save consumer reads through `equippedBodyArmor()`/`resolveEquipmentModifiers()` (live ownership+catalog re-validation on every call) instead of trusting `EquipmentState.body()` directly. This makes the "no ghost armor bonus" invariant hold *by construction*, without needing `equipment.syncWithInventory()` threaded through every drop/sell/trade call site the way `HeldTool.syncWithInventory()` is. `syncWithInventory()` still exists and is unit-tested (hygiene for the raw accessor), just not wired into the app layer.
+- **`ApplyPlayerDamageParams.equipmentModifiers` is optional, defaulting to neutral.** A caller opts in by passing the resolved modifiers (fauna combat, forced-entry blade trap, mount-fall damage all do); `tickPlayerStarvationDamage()` simply never does. This is the "smallest explicit classification" the plan asked for — no new damage-source/category enum was needed.
+
+Scope trimmed at the asset gate: only `leather_armor` (Quaternius `Armor Leather`) and `chainmail` (Quaternius `Armor Metal`) shipped — both models were already staged locally. The third "padded gambeson" tier from the plan's desired archetypes has no confirmed distinct asset and was **not** added as a placeholder; it's a clean follow-up once a light-armor model is sourced. Both shipped kinds are ground/inventory-pickup GLBs only (`items/itemModels.ts`) — no character-attachment worn visual, per the plan's own explicit allowance to defer that.
+
+`meleeWindUpMultiplier` (optional in the plan's suggested `ArmorConfig`) was not added — no consumer needed it, and the plan itself flags a universal attack-speed field as something to avoid. `sprintStaminaMultiplier` was implemented (`PlayerNeeds.tickPlayerStamina()`'s sprint-drain seam turned out to be a single-line, clean multiplication).
+
+Merchant acquisition: both kinds are Kupiec stock (`items/tradeCatalog.ts`), same acquisition path as the existing weapon tiers — the plan didn't mandate a specific source, and no other item-acquisition mechanism fit better.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

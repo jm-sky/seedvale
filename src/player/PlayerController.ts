@@ -364,6 +364,12 @@ export class PlayerController {
    *  is the sole caller, right before `update()`. */
   private encumbranceSpeedMultiplier = 1
   private encumbranceBlocked = false
+  /** Set once per frame by `setEquipmentModifiers()` (plan items-player-029) —
+   *  derived wearable-equipment movement/sprint effect, composed alongside
+   *  (not instead of) the encumbrance multiplier above. Neutral (`1`) with
+   *  nothing worn. */
+  private equipmentSpeedMultiplier = 1
+  private equipmentSprintStaminaMultiplier = 1
   /** Metres travelled while sneaking since the last Sneak XP award (plan 128
    *  §1). Runtime-only and reset whenever Sneak switches off — standing still
    *  with the toggle on earns nothing. */
@@ -780,6 +786,16 @@ export class PlayerController {
     this.encumbranceBlocked = result.blocked
   }
 
+  /** Recomputes wearable-equipment movement/sprint effects (plan
+   *  items-player-029) — mirrors `setEncumbrance()`'s explicit-setter pattern
+   *  so `PlayerController` never imports `Inventory`/`ITEM_CATALOG` itself;
+   *  `app/gameLoop.ts` derives the values once per frame via
+   *  `items/equipment.ts`'s `resolveEquipmentModifiers()`. */
+  setEquipmentModifiers(movementSpeedMultiplier: number, sprintStaminaMultiplier: number): void {
+    this.equipmentSpeedMultiplier = movementSpeedMultiplier
+    this.equipmentSprintStaminaMultiplier = sprintStaminaMultiplier
+  }
+
   setPosition(x: number, z: number): void {
     this.mesh.position.x = x
     this.mesh.position.z = z
@@ -1016,11 +1032,11 @@ export class PlayerController {
     if (this.encumbranceBlocked) this.wish.set(0, 0, 0)
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
-    tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed, endurance)
+    tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed, endurance, this.equipmentSprintStaminaMultiplier)
     if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting, dayLengthSec)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {
-      const baseSpeed = (this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED) * this.encumbranceSpeedMultiplier
+      const baseSpeed = (this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED) * this.encumbranceSpeedMultiplier * this.equipmentSpeedMultiplier
       const speed = applySneakSpeedModifier(baseSpeed, this.skills.sneak.active)
       this.wish.normalize().multiplyScalar(speed * dt)
       const startX = this.mesh.position.x

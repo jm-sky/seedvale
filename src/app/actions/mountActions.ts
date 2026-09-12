@@ -1,4 +1,5 @@
 import { ANIMAL_LABELS, type AnimalAgent } from '../../fauna/AnimalAgent'
+import { resolveEquipmentModifiers } from '../../items/equipment'
 import { applyPlayerDamage } from '../../player/playerDamage'
 import { tickRidingStamina } from '../../player/PlayerNeeds'
 import { accumulateRidingUse, ridingSpeedMultiplier, ridingStaminaDrainMultiplier } from '../../player/PlayerSkills'
@@ -136,6 +137,7 @@ export function createMountActions(
       heldTool: ctx.heldTool.held(),
       defenseSkillValue: player.skills.defense.value,
       playerYaw: mouseLook.state.yaw,
+      equipmentModifiers: resolveEquipmentModifiers(ctx.equipment, ctx.inventory),
     })
   }
 

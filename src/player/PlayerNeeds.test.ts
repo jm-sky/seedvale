@@ -400,4 +400,21 @@ describe('Endurance-driven Stamina capacity and recovery (plan npc-021)', () => 
     expect(needs.stamina.current).toBe(80)
     expect(physicalEffortStaminaCostPerSec('moderate')).toBe(6)
   })
+
+  it('an omitted equipment sprint-drain multiplier is neutral (plan items-player-029)', () => {
+    const withDefault = createPlayerNeeds()
+    withDefault.stamina.current = 100
+    tickPlayerStamina(withDefault.stamina, 1, true, true, 0.5)
+    const withExplicitNeutral = createPlayerNeeds()
+    withExplicitNeutral.stamina.current = 100
+    tickPlayerStamina(withExplicitNeutral.stamina, 1, true, true, 0.5, 1)
+    expect(withExplicitNeutral.stamina.current).toBe(withDefault.stamina.current)
+  })
+
+  it('scales sprint drain by the wearable-equipment multiplier (plan items-player-029)', () => {
+    const needs = createPlayerNeeds()
+    needs.stamina.current = 100
+    tickPlayerStamina(needs.stamina, 1, true, true, 0.5, 1.5)
+    expect(needs.stamina.current).toBe(100 - 20 * 1.5)
+  })
 })

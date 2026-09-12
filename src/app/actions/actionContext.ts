@@ -2,6 +2,7 @@ import type { PlayerSocialLookup } from '../../ai/reactionChance'
 import type { createWorldAudio } from '../../audio/createWorldAudio'
 import type { createKeyboard } from '../../input/Keyboard'
 import type { createMouseLook } from '../../input/MouseLook'
+import type { EquipmentState } from '../../items/equipment'
 import type { HeldTool } from '../../items/HeldTool'
 import type { Inventory } from '../../items/Inventory'
 import type { ItemKind } from '../../items/items'
@@ -32,6 +33,10 @@ export type PlayerActionContext = {
   player: PlayerController
   inventory: Inventory
   heldTool: HeldTool
+  /** Wearable equipment (plan items-player-029) — passive combat mitigation
+   *  for non-per-frame player-damage call sites (`resolveEquipmentModifiers`
+   *  derives the actual multipliers from this + `inventory` at the call site). */
+  equipment: EquipmentState
   playerTorch: PlayerTorch
   hud: Hud
   toast: Toast

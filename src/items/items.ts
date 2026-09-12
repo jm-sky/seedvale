@@ -75,6 +75,9 @@ export type ItemKind =
   | 'obsidian_sword'
   | 'battle_axe'
   | 'masterwork_sword'
+  /** Plan items-player-029 — wearable body-armor kinds (`items/equipment.ts`). */
+  | 'leather_armor'
+  | 'chainmail'
   | 'berries'
   | 'apple'
   | 'nuts'
@@ -850,6 +853,24 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'LG',
     color: 0xe4ce75,
     description: 'Wysokiej jakości stalowy miecz kowalski. Lepszy od zwykłego miecza, mniej egzotyczny niż damasceńskie ostrza.'
+  },
+  leather_armor: {
+    kind: 'leather_armor',
+    label: 'skórzana zbroja',
+    categories: ['weapon'],
+    weight: 3.5,
+    size: 'LG',
+    color: 0x6b4a2f,
+    description: 'Kaftan ze wzmocnionej skóry. Wyważona ochrona bez wielkiego kosztu ruchliwości.'
+  },
+  chainmail: {
+    kind: 'chainmail',
+    label: 'kolczuga',
+    categories: ['weapon'],
+    weight: 9,
+    size: 'LG',
+    color: 0x9aa0a8,
+    description: 'Ciężka koszula z metalowych ogniw. Najlepsza ochrona, ale wyraźnie męczy i spowalnia.'
   },
   berries: {
     kind: 'berries',

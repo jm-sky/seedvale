@@ -56,6 +56,8 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/items/hunting_bow.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Bow_Wooden2` — same conversion (plan 162 / M50) |
 | `public/models/items/long_bow.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Bow_Golden` — same conversion; gold/light-wood limbs, highest tier (plan 162 / M50) |
 | `public/models/items/arrow.glb` | Medieval Weapons Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Arrow` — same conversion; shared by `arrow`/`broadhead_arrow`/`war_arrow` (plan 162 / M51) |
+| `public/models/items/leather_armor.glb` | Quaternius | [poly.pizza/m/na9KfWiKN8](https://poly.pizza/m/na9KfWiKN8) | CC0 1.0 | `Armor Leather` — worn body armor pickup/inventory mesh (plan items-player-029), no character-attachment visual in V1 |
+| `public/models/items/chainmail.glb` | Quaternius | [poly.pizza/m/TMUoxILh9w](https://poly.pizza/m/TMUoxILh9w) | CC0 1.0 | `Armor Metal` — worn body armor pickup/inventory mesh (plan items-player-029), no character-attachment visual in V1 |
 | `public/models/settlement/hay.glb` | Quaternius | [poly.pizza/m/Yu8TOERkpw](https://poly.pizza/m/Yu8TOERkpw) | CC0 1.0 | `Hay` — clutter przy ogrodach (plan 082) |
 | `public/models/items/pickaxe.glb` | CreativeTrio | [poly.pizza/m/cJp88qPPLc](https://poly.pizza/m/cJp88qPPLc) | CC0 1.0 | `Pickaxe` — dekor przy stockpile; gameplay mining later (plan 082) |
 | `public/models/fauna/sheep.glb` | Quaternius | [poly.pizza/m/C39AUXUUes](https://poly.pizza/m/C39AUXUUes) | CC0 1.0 | `Sheep` — livestock wioski (plan 096) |

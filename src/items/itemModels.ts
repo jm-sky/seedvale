@@ -83,6 +83,11 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
     maxSize: 1.15,
     groundRotation: [0, 0, Math.PI / 2.4],
   },
+  // Quaternius Armor Leather/Armor Metal (plan items-player-029) — worn body
+  // armor, ground/inventory representation only (no character-attachment
+  // visual in V1; see the plan's asset-gate note).
+  leather_armor: { url: '/models/items/leather_armor.glb', maxSize: 0.6 },
+  chainmail: { url: '/models/items/chainmail.glb', maxSize: 0.6 },
   mushroom: { url: '/models/nature/mushroom_a.glb', maxSize: 0.3 },
   // Quaternius Bow_Wooden/Bow_Wooden2/Bow_Golden (Medieval Weapons Pack) — plan 162.
   // Authored Y-long like long_sword/spear/pitchfork; same Z-axis ground rotation.

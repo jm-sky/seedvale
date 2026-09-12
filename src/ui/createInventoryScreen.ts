@@ -14,6 +14,10 @@ export type InventoryScreenHandlers = {
    *  maintenance kind — see `HeldTool.equip()`. */
   onEquip?: (kind: ItemKind, instanceId?: string) => void
   onUnequip?: () => void
+  /** "Załóż"/"Zdejmij" for wearable body armor (plan items-player-029) —
+   *  distinct from `onEquip`/`onUnequip`, which are `HeldTool`-only. */
+  onEquipArmor?: (kind: ItemKind) => void
+  onUnequipArmor?: () => void
   /** "Zjedz"/"Wypij" (plan 106) — only offered for consumable items. */
   onConsume?: (kind: ItemKind) => void
   /** "Czytaj" (plan items-player-016) — only offered for `ITEM_CATALOG[kind].book` items. */
@@ -48,6 +52,9 @@ export type InventoryScreen = {
     groups: readonly InventoryGroupView[],
     primaryMelee: PrimaryWeaponChoice | null,
     primaryRanged: PrimaryWeaponChoice | null,
+    /** Live-valid equipped body armor (plan items-player-029) — see
+     *  `items/equipment.ts`'s `equippedBodyArmor()`. */
+    equippedBody: ItemKind | null,
   ) => void
   dispose: () => void
 }
@@ -68,6 +75,7 @@ export function createInventoryScreen(
   let heldInstanceId: string | null = null
   let primaryMelee: PrimaryWeaponChoice | null = null
   let primaryRanged: PrimaryWeaponChoice | null = null
+  let equippedBody: ItemKind | null = null
 
   const getUi = () => getMountedVueUi()
   const isOpen = () => !disposed && (getUi()?.isInventoryOpen() ?? false)
@@ -85,6 +93,7 @@ export function createInventoryScreen(
       groups,
       primaryMelee,
       primaryRanged,
+      equippedBody,
       (kind, amount) => handlers.onDrop?.(kind, amount),
       (kind, instanceId) => handlers.onEquip?.(kind, instanceId),
       () => handlers.onUnequip?.(),
@@ -97,6 +106,8 @@ export function createInventoryScreen(
       () => handlers.onPlaceTent?.(),
       (kind, instanceId) => handlers.onSetPrimaryMelee?.(kind, instanceId),
       (kind, instanceId) => handlers.onSetPrimaryRanged?.(kind, instanceId),
+      (kind) => handlers.onEquipArmor?.(kind),
+      () => handlers.onUnequipArmor?.(),
     )
   }
 
@@ -114,7 +125,7 @@ export function createInventoryScreen(
       if (isOpen()) close()
       else open()
     },
-    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextTotalSize, nextMaxSize, nextHeldTool, nextHeldInstanceId, nextGroups, nextPrimaryMelee, nextPrimaryRanged) {
+    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextTotalSize, nextMaxSize, nextHeldTool, nextHeldInstanceId, nextGroups, nextPrimaryMelee, nextPrimaryRanged, nextEquippedBody) {
       if (disposed) return
       counts = { ...nextCounts }
       groups = nextGroups
@@ -126,8 +137,9 @@ export function createInventoryScreen(
       heldInstanceId = nextHeldInstanceId
       primaryMelee = nextPrimaryMelee
       primaryRanged = nextPrimaryRanged
+      equippedBody = nextEquippedBody
       if (isOpen()) {
-        getUi()?.refreshInventory(counts, totalWeight, maxWeight, totalSize, maxSize, heldTool, heldInstanceId, groups, primaryMelee, primaryRanged)
+        getUi()?.refreshInventory(counts, totalWeight, maxWeight, totalSize, maxSize, heldTool, heldInstanceId, groups, primaryMelee, primaryRanged, equippedBody)
       }
     },
     dispose() {

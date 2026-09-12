@@ -1,6 +1,7 @@
 import type { BadgeManager } from '../badges/badges'
 import type { WorldConfig } from '../config/worldConfig'
 import type { createMouseLook } from '../input/MouseLook'
+import type { EquipmentState } from '../items/equipment'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { PrimaryWeaponSelection } from '../items/primaryWeapons'
@@ -61,6 +62,7 @@ export type SaveStateDeps = {
   mouseLook: ReturnType<typeof createMouseLook>
   inventory: Inventory
   heldTool: HeldTool
+  equipment: EquipmentState
   primaryWeapons: PrimaryWeaponSelection
   playerTorch: PlayerTorch
   questManager: QuestManager
@@ -115,7 +117,7 @@ export type SaveStateDeps = {
  */
 export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
-    config, bundle, player, mouseLook, inventory, heldTool, primaryWeapons, playerTorch,
+    config, bundle, player, mouseLook, inventory, heldTool, equipment, primaryWeapons, playerTorch,
     questManager, dayNight, mapDiscovery, locationKnowledge, navigationTargets, landOwnership, vueUi, worldFlags, fishingBait,
     resolvedHiddenFindSpotIds, unlockedTreasureContainerIds, treasureChestMutations, badges, reputation,
   } = deps
@@ -157,6 +159,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     timeOfDay: dayNight.timeOfDay,
     elapsedDays: dayNight.elapsedDays,
     heldTool: heldTool.held(),
+    playerEquipment: equipment.exportState(inventory),
     ...primaryWeapons.exportState(),
     treeOverrides: deps.getTreeLifecycle().serializeOverrides(),
     playerTorch: playerTorch.isLit() && playerTorch.source()

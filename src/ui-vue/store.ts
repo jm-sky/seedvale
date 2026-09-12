@@ -95,6 +95,13 @@ type InventoryState = {
    *  maintenance kind — see `HeldTool.equip()`. */
   onEquip: ((kind: ItemKind, instanceId?: string) => void) | null
   onUnequip: (() => void) | null
+  /** Live-valid equipped body armor (plan items-player-029) — see
+   *  `items/equipment.ts`'s `equippedBodyArmor()`. */
+  equippedBody: ItemKind | null
+  /** "Załóż"/"Zdejmij" for wearable body armor — distinct from `onEquip`/
+   *  `onUnequip`, which are `HeldTool`-only. */
+  onEquipArmor: ((kind: ItemKind) => void) | null
+  onUnequipArmor: (() => void) | null
   /** "Zjedz"/"Wypij" (plan 106) — only offered for `ITEM_CATALOG[kind].consumable` items. */
   onConsume: ((kind: ItemKind) => void) | null
   /** "Czytaj" (plan items-player-016) — only offered for `ITEM_CATALOG[kind].book` items. */
@@ -642,7 +649,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedBody: null, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
@@ -997,6 +1004,7 @@ export function openInventory(
   groups: readonly InventoryGroupView[],
   primaryMelee: PrimaryWeaponChoice | null,
   primaryRanged: PrimaryWeaponChoice | null,
+  equippedBody: ItemKind | null,
   onDrop: (kind: ItemKind, amount: number) => void,
   onEquip: (kind: ItemKind, instanceId?: string) => void,
   onUnequip: () => void,
@@ -1009,6 +1017,8 @@ export function openInventory(
   onPlaceTent: () => void,
   onSetPrimaryMelee: (kind: ItemKind, instanceId: string | null) => void,
   onSetPrimaryRanged: (kind: ItemKind, instanceId: string | null) => void,
+  onEquipArmor: (kind: ItemKind) => void,
+  onUnequipArmor: () => void,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -1020,9 +1030,12 @@ export function openInventory(
   ui.inventory.heldInstanceId = heldInstanceId
   ui.inventory.primaryMelee = primaryMelee
   ui.inventory.primaryRanged = primaryRanged
+  ui.inventory.equippedBody = equippedBody
   ui.inventory.onDrop = onDrop
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
+  ui.inventory.onEquipArmor = onEquipArmor
+  ui.inventory.onUnequipArmor = onUnequipArmor
   ui.inventory.onConsume = onConsume
   ui.inventory.onRead = onRead
   ui.inventory.onPlaceTrap = onPlaceTrap
@@ -1046,6 +1059,7 @@ export function refreshInventory(
   groups: readonly InventoryGroupView[],
   primaryMelee: PrimaryWeaponChoice | null,
   primaryRanged: PrimaryWeaponChoice | null,
+  equippedBody: ItemKind | null,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -1057,12 +1071,15 @@ export function refreshInventory(
   ui.inventory.heldInstanceId = heldInstanceId
   ui.inventory.primaryMelee = primaryMelee
   ui.inventory.primaryRanged = primaryRanged
+  ui.inventory.equippedBody = equippedBody
 }
 export function closeInventory(): void {
   ui.inventory.open = false
   ui.inventory.onDrop = null
   ui.inventory.onEquip = null
   ui.inventory.onUnequip = null
+  ui.inventory.onEquipArmor = null
+  ui.inventory.onUnequipArmor = null
   ui.inventory.onSellInstances = null
 }
 export function isInventoryOpen(): boolean { return ui.inventory.open }

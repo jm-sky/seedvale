@@ -47,6 +47,29 @@ export type DefenseConfig = {
   partialReduction: number
 }
 
+/** Passive worn-armor tuning (plan items-player-029) — a distinct mechanic
+ *  from `DefenseConfig`'s active directional block: this applies to whatever
+ *  damage remains *after* active defense, independent of facing. Absent
+ *  multipliers are neutral (`1`); only `damageReduction` is required.
+ *  `items/equipment.ts`'s `resolveEquipmentModifiers()` is the only reader —
+ *  do not branch on equipped item kind anywhere else. */
+export type ArmorConfig = {
+  slot: 'body'
+  /** Fraction of post-active-defense incoming damage removed. */
+  damageReduction: number
+  /** Multiplier on a melee attack's `MeleeConfig.staminaCost` — the weapon's
+   *  own cost stays the source of truth, this scales it at use time. */
+  staminaCostMultiplier?: number
+  /** Multiplier on the Agility-resolved melee recovery duration
+   *  (`combat/meleeAgility.ts`'s `resolveMeleeRecovery()`), composed after it. */
+  meleeRecoveryMultiplier?: number
+  /** Multiplier on the player's movement speed, composed with (not instead
+   *  of) carry-weight encumbrance (`player/playerEncumbrance.ts`). */
+  movementSpeedMultiplier?: number
+  /** Multiplier on the Stamina drain rate while sprinting. */
+  sprintStaminaMultiplier?: number
+}
+
 /** Ranged attack tuning for a held bow (plan 162) — the ranged counterpart of
  *  `MeleeConfig`, read directly by `player/playerRanged.ts` and the shared
  *  projectile resolver instead of a parallel "bow system". */
@@ -246,6 +269,9 @@ export type ItemCatalogEntry = {
   physical?: {
     resilient?: boolean
   }
+  /** Plan items-player-029 — declarative worn-armor gameplay metadata. Absent
+   *  means this kind cannot be equipped into any equipment slot. */
+  armor?: ArmorConfig
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -876,6 +902,40 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: '/models/items/masterwork_sword.glb',
     notes: 'Plan 160 — Kupiec stock. Quaternius Sword_Golden — gold blade, not damascus.',
+  },
+  leather_armor: {
+    kind: 'leather_armor',
+    label: 'skórzana zbroja',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/items/leather_armor.glb',
+    notes: 'Plan items-player-029 — Kupiec stock. Wearable body armor (`items/equipment.ts`), not a `HeldTool` — balanced protection with modest stamina/recovery/movement cost. Quaternius Armor Leather.',
+    armor: {
+      slot: 'body',
+      damageReduction: 0.18,
+      staminaCostMultiplier: 1.08,
+      meleeRecoveryMultiplier: 1.06,
+      movementSpeedMultiplier: 0.97,
+      sprintStaminaMultiplier: 1.12,
+    },
+  },
+  chainmail: {
+    kind: 'chainmail',
+    label: 'kolczuga',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/items/chainmail.glb',
+    notes: 'Plan items-player-029 — Kupiec stock. Wearable body armor (`items/equipment.ts`) — strongest V1 protection, at a clearly noticeable stamina/recovery/movement cost (survivability trade-off, not a flat upgrade over `leather_armor`). Quaternius Armor Metal.',
+    armor: {
+      slot: 'body',
+      damageReduction: 0.32,
+      staminaCostMultiplier: 1.28,
+      meleeRecoveryMultiplier: 1.22,
+      movementSpeedMultiplier: 0.9,
+      sprintStaminaMultiplier: 1.4,
+    },
   },
   berries: {
     kind: 'berries',
@@ -1518,6 +1578,14 @@ export function isRangedTool<K extends ItemKind | null | undefined>(kind: K): ki
  *  shortcuts) don't need to reach into `fauna/` for a plain capability check. */
 export function isMeleeToolKind<K extends ItemKind | null | undefined>(kind: K): kind is Extract<K, ItemKind> {
   return kind != null && ITEM_CATALOG[kind]?.melee != null
+}
+
+/** Body-armor-capable kinds (plan items-player-029) — shared by
+ *  `items/equipment.ts`'s ownership/validity checks and `SaveData` restore
+ *  validation, so both agree on the same "can this actually be worn"
+ *  definition instead of each re-deriving it from `armor` presence. */
+export function isBodyArmorKind<K extends ItemKind | null | undefined>(kind: K): kind is Extract<K, ItemKind> {
+  return kind != null && ITEM_CATALOG[kind]?.armor?.slot === 'body'
 }
 
 /** Item kinds that hold the single "in hand" slot — derived from

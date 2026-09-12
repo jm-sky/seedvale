@@ -5,6 +5,7 @@ import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { PersistentOccupantSaveRecord } from '../fauna/persistentOccupants'
 import type { ContainerKind } from '../items/container'
+import type { SavePlayerEquipment } from '../items/equipment'
 import type { InventoryContentsSnapshot, SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation } from '../reputation/ReputationManager'
@@ -31,7 +32,7 @@ import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContain
 import { isAnimalStraySave } from '../fauna/animalStray'
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
-import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
+import { isBodyArmorKind, isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
 import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
@@ -628,6 +629,11 @@ export type SaveData = {
   elapsedDays: number
   /** Single held-tool slot (`items/HeldTool.ts`). Null when nothing is in hand. */
   heldTool: ItemKind | null
+  /** Wearable-equipment selection (`items/equipment.ts`, plan items-player-029)
+   *  — identity only, never a copy of item data `Inventory` already owns.
+   *  Absent/empty on older saves; an invalid/no-longer-owned kind restores
+   *  empty rather than recreating the item. */
+  playerEquipment?: SavePlayerEquipment
   /** Explicit primary weapon slots (plan ui-input-010) — player configuration,
    *  not the currently held tool. */
   primaryMeleeWeapon: SavePrimaryWeaponChoice | null
@@ -815,6 +821,18 @@ function isHeldToolField(value: unknown): value is ItemKind | null {
   if (value === null) return true
   if (typeof value !== 'string') return false
   return isToolKind(value as ItemKind)
+}
+
+/** Structural shape only — `body`, if present, must be a kind that currently
+ *  declares body-armor metadata; whether the restoring player actually still
+ *  owns it is `items/equipment.ts`'s `createEquipmentState()` restore check,
+ *  not this validator's job (mirrors `isHeldToolField`'s own split). */
+function isPlayerEquipmentField(value: unknown): value is SavePlayerEquipment | undefined {
+  if (value === undefined) return true
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  if (v.body === undefined) return true
+  return typeof v.body === 'string' && isBodyArmorKind(v.body as ItemKind)
 }
 
 function normalizeSavePrimaryWeaponChoice(
@@ -2052,6 +2070,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (typeof v.timeOfDay !== 'number') return false
   if (typeof v.elapsedDays !== 'number') return false
   if (!isHeldToolField(v.heldTool)) return false
+  if (!isPlayerEquipmentField(v.playerEquipment)) return false
   if (!isPrimaryWeaponChoiceField(v.primaryMeleeWeapon, 'melee')) return false
   if (!isPrimaryWeaponChoiceField(v.primaryRangedWeapon, 'ranged')) return false
   if (!isTreeOverridesField(v.treeOverrides)) return false

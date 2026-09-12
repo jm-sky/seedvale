@@ -4,7 +4,7 @@
 
 **Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
-**Last verified:** 2026-09-11
+**Last verified:** 2026-09-12
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -44,6 +44,16 @@ A shot that reaches `maxDistance` without a hit becomes an ordinary dropped-item
 ## Critical hits & defense
 
 `combat/criticalHit.ts`'s `resolveCriticalHit()` is a small shared deterministic modifier, evaluated after hit resolution and before defense, used by both ranged (`RangedConfig.criticalChance`/`criticalMultiplier`) and melee (a flat baseline chance/multiplier — melee weapons don't carry their own critical config). `combat/defenseResolver.ts` (plan 150) resolves block chance/partial damage reduction; see [WEAPONS.md](../items/WEAPONS.md) for per-weapon block numbers.
+
+## Wearable armor (plan items-player-029)
+
+`items/equipment.ts`'s `EquipmentState` (a player-only, actor-neutral `body`-slot selection over an item already owned by `Inventory` — not a second ownership registry) and its pure `resolveEquipmentModifiers()` derivation are the single source of worn-armor gameplay effects, declared per kind as `ITEM_CATALOG[kind].armor` (`ArmorConfig`) on `leather_armor`/`chainmail`. `equippedBodyArmor()` re-validates ownership + catalog metadata on every call, so a sold/dropped/traded item can never leave a ghost bonus even without an explicit sync.
+
+Order for player incoming damage (`player/playerDamage.ts`'s `applyPlayerDamage()`): raw damage → active held-item block (`resolveDefense()` above, unchanged) → passive armor `incomingDamageMultiplier` on whatever remains → HP. A caller opts in by passing `equipmentModifiers`; starvation/dehydration (`tickPlayerStarvationDamage`) deliberately never does, so ordinary body armor cannot reduce non-physical HP drains. Armor mitigation never awards `defense` skill XP (that stays tied to an actual block attempt).
+
+Melee: `player/playerMelee.ts`'s `requestAttack()` takes optional `equipmentStaminaMultiplier`/`equipmentRecoveryMultiplier` params — they scale the weapon's own `staminaCost` and the Agility-resolved recovery duration at use time, without mutating `MeleeConfig`. Vigor cost stays based on the unscaled `windUp+hitWindow+recovery` (existing plan items-player-003 §10 policy, deliberately unaffected by armor). Movement: `PlayerController.setEquipmentModifiers()` mirrors `setEncumbrance()`'s explicit-setter pattern — a `movementSpeedMultiplier` composed alongside (not instead of) carry-weight encumbrance, and a `sprintStaminaMultiplier` scaling `PlayerNeeds.tickPlayerStamina()`'s sprint drain. `app/gameLoop.ts` derives all of this once per frame and reuses it for movement, the melee request and combat-damage mitigation.
+
+Persistence: `SaveData.playerEquipment?: { body?: ItemKind }` — identity only; restore re-validates ownership+catalog metadata, so an invalid/no-longer-owned/old-save reference resolves to empty rather than recreating the item. Out of scope for V1: durability/repair, extra slots (head/hands/legs/offHand), shields, NPC equipment, character-attachment worn visuals (the two current kinds are ground/inventory-pickup GLBs only — see [MODELS.md](../assets/MODELS.md) M79).
 
 ## NPC combat (plan 177)
 
@@ -106,4 +116,5 @@ src/fauna/huntingHooks.ts
 src/fauna/animalHarvest.ts
 src/shared/HealthState.ts
 src/items/weaponMaintenance.ts
+src/items/equipment.ts
 ```
