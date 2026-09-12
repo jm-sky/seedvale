@@ -58,7 +58,32 @@ Every plan starts with:
 **Domain:** `npc`
 ```
 
-Required fields: `Created`, `Status`, `Type`, `Priority`, `Effort`, `Depends on`, `Domain`.
+Required fields at plan creation: `Created`, `Status`, `Type`, `Priority`, `Effort`, `Depends on`, `Domain`.
+
+After implementation notes are created, the plan must also contain:
+
+```md
+**Model:** Sonnet, Grok
+```
+
+`Model` is a two-level implementation recommendation written in this order:
+
+1. best model for the implementation,
+2. cheaper model that should still complete the implementation with low additional risk.
+
+Allowed models: `Composer`, `Grok`, `Sonnet`, `Opus`.
+
+Choose `Model` only **after** `implementation-notes` recon is complete. Base it on the actual implementation surface: architectural ambiguity, number and coupling of systems touched, need for cross-file reasoning, persistence/state ownership risk, refactor complexity, and how constrained the implementation is by the notes. Do not choose from plan title, effort alone, or provider preference.
+
+Optimize cost without meaningfully increasing implementation risk. Prefer Cursor models (`Composer`, `Grok`) when the notes make the work sufficiently bounded. Use `Sonnet` or `Opus` when stronger reasoning materially reduces risk. The second recommendation must be a genuinely safe cheaper fallback, not merely the cheapest available model.
+
+Examples:
+
+```md
+**Model:** Sonnet, Grok
+**Model:** Grok, Composer
+**Model:** Opus, Sonnet
+```
 
 Optional metadata may help AI preflight:
 
@@ -70,7 +95,7 @@ Optional metadata may help AI preflight:
 
 Optional fields: `Subdomains`, `Tags`, `Roadmap`, `Implemented at`.
 
-Closed vocabularies — Status: `draft`, `planned`, `in progress`, `verification needed`, `done`; Type: `feature`, `bug`, `fix`, `polish`, `optimization`, `refactor`, `infrastructure`; Priority: `high`, `medium`, `low`; Effort: `XS`, `S`, `M`, `L`, `XL`.
+Closed vocabularies — Status: `draft`, `planned`, `in progress`, `verification needed`, `done`; Type: `feature`, `bug`, `fix`, `polish`, `optimization`, `refactor`, `infrastructure`; Priority: `high`, `medium`, `low`; Effort: `XS`, `S`, `M`, `L`, `XL`; Model: `Composer`, `Grok`, `Sonnet`, `Opus`.
 
 Keep `Subdomains` and `Tags` short and relevant. They are hints for navigation/preflight, not a replacement for code recon.
 Optional `Roadmap` should point to a file in `docs/roadmap` folder. See `docs/plans/PLAN-METADATA.md` for the full contract, including per-field semantics and consumers.
@@ -106,7 +131,7 @@ Plans and implementation notes should reduce unnecessary recon and decisions dur
 
 ## Implementation Notes
 
-Implementation notes are written **for the AI implementation agent**. Their purpose is to save Claude Code time, context and tokens by removing unnecessary repository rediscovery.
+Implementation notes are written **for the AI implementation agent**. Their purpose is to save implementation-agent time, context and tokens by removing unnecessary repository rediscovery.
 
 For:
 
@@ -131,11 +156,13 @@ Do not copy the plan, source code or obvious instructions.
 
 Quality test:
 
-> Would Claude otherwise need to inspect multiple files or trace relationships to discover this?
+> Would the implementation agent otherwise need to inspect multiple files or trace relationships to discover this?
 
 If not, omit it.
 
 If the plan conflicts with the current code, document the discrepancy and follow the current architecture rather than forcing the code to match the plan.
+
+After the implementation notes are complete, update the source plan's `**Model:**` metadata. Choose exactly two models from `Composer`, `Grok`, `Sonnet`, `Opus`: first the best implementation model, then the cheaper low-risk fallback. This assessment is part of the implementation-notes workflow because only the completed recon provides enough evidence to estimate model requirements responsibly.
 
 ## AI Preflight
 
