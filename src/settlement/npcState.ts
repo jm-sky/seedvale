@@ -1,6 +1,11 @@
 import type { HelperAssignment } from '../ai/helperAssignment'
 import type { NpcPlan } from '../ai/npcPlan'
 import { createNeedState, type NeedState } from '../ai/Needs'
+import {
+  cloneNpcAccompanyCommitment,
+  type NpcAccompanyCommitment,
+} from '../ai/npcAccompanyCommitment'
+import { cloneNpcTravel, type NpcTravelContinuity } from '../ai/npcTravel'
 import { MAX_VIGOR } from '../ai/npcVigor'
 import {
   Inventory,
@@ -67,7 +72,10 @@ const TRANSPORT_CARGO_MAX_WEIGHT = 5
  * `personalInventory` here, not on `carried`. Transport-order cargo (plan
  * settlements-npcs-019) is a third, still-distinct owner: `transportCargo`
  * below — never mixed with `personalInventory` (personal belongings) or
- * `carried` (transient per-profession work payload).
+ * `carried` (transient per-profession work payload). The accompany
+ * commitment (plan npc-029) is semantic intent, not execution internals;
+ * `travel` is the generic spatial continuity checkpoint shared with
+ * off-screen handoff, not a companion-specific engine.
  *
  * @domain settlements-npcs
  */
@@ -130,6 +138,15 @@ export type NpcAuthoritativeState = {
    *  (personal belongings) and `carried` (transient per-profession work
    *  payload) — never mixed. */
   readonly transportCargo: Inventory
+  /** Source-neutral accompany/follow commitment (plan npc-029) — `null` when
+   *  this NPC is not accompanying anyone. Mutable in place like `activePlan`.
+   *  One NPC, one commitment. Round-trips via `NpcStateSnapshot`. */
+  accompanyCommitment: NpcAccompanyCommitment | null
+  /** Generic spatial continuity (plan npc-029, reusing settlements-npcs-019
+   *  off-screen duration math). `null` when there is nothing to preserve
+   *  across reconstruction. Absent `execution` means detailed simulation
+   *  owns progress. */
+  travel: NpcTravelContinuity | null
 }
 
 /** Plain-data snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -164,6 +181,10 @@ export type NpcStateSnapshot = {
    *  cargo) restores as an empty inventory — never reconstructed from a
    *  `TransportOrder`'s `claimedQuantity`. */
   transportCargo?: InventoryContentsSnapshot
+  /** Optional accompany commitment (plan npc-029). Absent means `null`. */
+  accompanyCommitment?: NpcAccompanyCommitment | null
+  /** Optional generic travel checkpoint (plan npc-029). Absent means `null`. */
+  travel?: NpcTravelContinuity | null
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
@@ -184,6 +205,8 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     graveVisits: snapshot.graveVisits?.map((entry) => ({ ...entry })) ?? [],
     personalInventory: inventoryFromContents(snapshot.personalInventory),
     transportCargo: inventoryFromContents(snapshot.transportCargo, TRANSPORT_CARGO_MAX_WEIGHT),
+    accompanyCommitment: cloneNpcAccompanyCommitment(snapshot.accompanyCommitment),
+    travel: cloneNpcTravel(snapshot.travel),
     needsInitialPersonalLoadout: false,
   }
   if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
@@ -227,6 +250,8 @@ export function createNpcAuthoritativeState(
     graveVisits: [],
     personalInventory: new Inventory(),
     transportCargo: new Inventory(undefined, TRANSPORT_CARGO_MAX_WEIGHT),
+    accompanyCommitment: null,
+    travel: null,
     needsInitialPersonalLoadout: true,
   }
 }
@@ -249,6 +274,7 @@ export type NpcStateRegistry = {
   /** Plain-data snapshot of every NPC state created so far — used for both
    *  in-session `WorldBundle` rebuild and `SaveData.npcStates`. */
   serialize: () => Record<NpcId, NpcStateSnapshot>
+  forEach: (fn: (state: NpcAuthoritativeState, id: NpcId) => void) => void
 }
 
 export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>): NpcStateRegistry {
@@ -289,9 +315,14 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
             : undefined,
           personalInventory: snapshotInventoryContents(state.personalInventory),
           transportCargo: snapshotInventoryContents(state.transportCargo),
+          accompanyCommitment: cloneNpcAccompanyCommitment(state.accompanyCommitment) ?? undefined,
+          travel: cloneNpcTravel(state.travel) ?? undefined,
         }
       }
       return out
+    },
+    forEach(fn) {
+      for (const [id, state] of byId) fn(state, id)
     },
   }
 }

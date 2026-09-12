@@ -342,3 +342,48 @@ describe('NpcAuthoritativeState transportCargo (plan settlements-npcs-019)', () 
     expect(state.transportCargo.isEmpty()).toBe(true)
   })
 })
+
+describe('NpcAuthoritativeState accompanyCommitment / travel (plan npc-029)', () => {
+  it('defaults new NPCs to no accompany commitment and no travel checkpoint', () => {
+    const state = createNpcAuthoritativeState('npc:0', 0)
+    expect(state.accompanyCommitment).toBeNull()
+    expect(state.travel).toBeNull()
+  })
+
+  it('round-trips accompany follow/stay through the registry snapshot', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.accompanyCommitment = {
+      target: { kind: 'player' },
+      source: { kind: 'voluntary' },
+      mode: 'stay',
+      stayAnchor: { x: 1, y: 2, z: 3 },
+      startedAtDays: 4.25,
+    }
+    state.travel = {
+      destination: { x: 8, z: 9 },
+      lastPosition: { x: 1, z: 3 },
+      execution: { mode: 'off-screen', departedAtDays: 4, arrivesAtDays: 4.5 },
+    }
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.accompanyCommitment).toEqual(state.accompanyCommitment)
+    expect(hydrated.accompanyCommitment).not.toBe(state.accompanyCommitment)
+    expect(hydrated.travel).toEqual(state.travel)
+    expect(hydrated.travel).not.toBe(state.travel)
+  })
+
+  it('legacy snapshots without accompanyCommitment/travel restore as null', () => {
+    const registry = createNpcStateRegistry({
+      '0_0:npc:0': {
+        health: { current: 100, max: 100, dead: false },
+        stamina: { current: 100, max: 100 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    })
+    const state = registry.getOrCreate('0_0:npc:0', 0)
+    expect(state.accompanyCommitment).toBeNull()
+    expect(state.travel).toBeNull()
+  })
+})

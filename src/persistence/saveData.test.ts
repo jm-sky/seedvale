@@ -1498,6 +1498,51 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       .toEqual({ status: 'invalid' })
   })
 
+  it('round-trips npcStates accompanyCommitment/travel and rejects a malformed commitment (plan npc-029)', () => {
+    const snapshot = {
+      health: { current: 100, max: 100, dead: false },
+      stamina: { current: 100, max: 100 },
+      vigor: { current: 100, max: 100 },
+      needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      postDeath: null,
+      personalInventory: { counts: {}, instances: [] },
+      accompanyCommitment: {
+        target: { kind: 'player' as const },
+        source: { kind: 'voluntary' as const },
+        mode: 'stay' as const,
+        stayAnchor: { x: 1, y: 2, z: 3 },
+        startedAtDays: 4,
+      },
+      travel: {
+        destination: { x: 8, z: 9 },
+        lastPosition: { x: 1, z: 3 },
+        execution: { mode: 'off-screen' as const, departedAtDays: 4, arrivesAtDays: 4.5 },
+      },
+    }
+    const result = loadStoredSave({ ...validSave, npcStates: { 'npc:1': snapshot } })
+    expect(result.status).toBe('ok')
+    if (result.status === 'ok') {
+      expect(result.data.npcStates?.['npc:1']?.accompanyCommitment).toEqual(snapshot.accompanyCommitment)
+      expect(result.data.npcStates?.['npc:1']?.travel).toEqual(snapshot.travel)
+    }
+    expect(loadStoredSave({
+      ...validSave,
+      npcStates: {
+        'npc:1': {
+          ...snapshot,
+          accompanyCommitment: { target: { kind: 'horse' }, source: { kind: 'voluntary' }, mode: 'follow', startedAtDays: 1 },
+        },
+      },
+    })).toEqual({ status: 'invalid' })
+  })
+
+  it('migrates a v35 save without accompanyCommitment/travel to the current version (plan npc-029)', () => {
+    const result = loadStoredSave({ ...validSave, version: 35 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+  })
+
   it('round-trips treasureChestMutations and rejects a malformed one (plan items-player-026)', () => {
     const mutations = [{
       containerId: 'world-container:treasure:ruins:a',

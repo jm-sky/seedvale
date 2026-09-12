@@ -93,6 +93,9 @@ export type NpcTraceEvent =
     drinksAdded: number
     failureReason: string | null
   }
+  | { simTime: number; type: 'accompany.started'; source: 'voluntary' | 'work-contract'; mode: 'follow' | 'stay' }
+  | { simTime: number; type: 'accompany.modeChanged'; mode: 'follow' | 'stay' }
+  | { simTime: number; type: 'accompany.ended'; reason: 'abandoned' | 'cancelled' | 'death' | 'finished' }
 
 export type NpcTraceEventType = NpcTraceEvent['type']
 

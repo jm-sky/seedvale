@@ -1,7 +1,7 @@
 # Plan: NPC accompany/follow commitment
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-019~~

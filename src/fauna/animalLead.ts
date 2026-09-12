@@ -1,5 +1,5 @@
 import type { AnimalDef } from './animalDefs'
-import { type FollowHysteresisState, resolveFollowHysteresis } from './followHysteresis'
+import { type FollowHysteresisState, resolveFollowHysteresis } from '../shared/followHysteresis'
 
 /** Tighter trailing band than owned Follow (plan fauna-007) — a led animal
  *  stays close on the rope instead of ranging out to the household Follow

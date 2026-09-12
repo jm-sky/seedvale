@@ -1,4 +1,4 @@
-import { resolveFollowHysteresis } from './followHysteresis'
+import { resolveFollowHysteresis } from '../shared/followHysteresis'
 
 /** Per-animal Follow/Stay control state for player-owned livestock (plan fauna-020). */
 export type OwnedAnimalControlMode = 'follow' | 'stay'

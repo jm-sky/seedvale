@@ -2,7 +2,7 @@
 
 **Plan:** `npc-029-npc-accompany-follow-commitment.md`  
 **Reviewed:** 2026-09-11  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## Review result
 

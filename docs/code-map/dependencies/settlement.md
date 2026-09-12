@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/npcAnimalThreat.ts`
+- `ai/npcTravel.ts`
 - `ai/reactionChance.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
@@ -926,7 +927,9 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/helperAssignment.ts`
+- `ai/npcAccompanyCommitment.ts`
 - `ai/npcPlan.ts`
+- `ai/npcTravel.ts`
 - `ai/npcVigor.ts`
 - `items/Inventory.ts`
 - `settlement/npcPostDeath.ts`
@@ -943,6 +946,8 @@ Generated from TypeScript imports.
 - `ai/burialPressure.ts`
 - `ai/graveVisitPressure.test.ts`
 - `ai/graveVisitPressure.ts`
+- `ai/npcAccompanyCommitment.test.ts`
+- `ai/npcTravel.test.ts`
 - `app/actions/npcItemTransfer.test.ts`
 - `app/actions/npcItemTransfer.ts`
 - `app/actions/workContractPayment.test.ts`

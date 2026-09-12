@@ -240,6 +240,23 @@ Generated from TypeScript imports.
 - `shared/getFireParticles.ts`
 - `shared/torchConfig.ts`
 
+## `shared/followHysteresis.test.ts`
+
+**Imports**
+
+- `shared/followHysteresis.ts`
+
+## `shared/followHysteresis.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcAccompanyExecution.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalLead.ts`
+- `fauna/ownedAnimalControl.ts`
+- `shared/followHysteresis.test.ts`
+
 ## `shared/foodPoisoningExposure.test.ts`
 
 **Imports**

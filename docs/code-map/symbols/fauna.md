@@ -428,14 +428,6 @@ Generated from exported TypeScript symbols.
 - `FaunaDecisionInput` — type — line 39
 - `scoreFaunaBehaviours` — function — line 155
 
-## `fauna/followHysteresis.ts`
-
-- `FollowHysteresisResult` — type — line 10
-- `FollowHysteresisState` — type — line 6
-- `resolveFollowHysteresis` — function — line 18
-  - domain: fauna
-  - role: Distance-band follow commitment used by owned Follow and leading.
-
 ## `fauna/harvestedRemains.ts`
 
 - `createHarvestedRemains` — function — line 151

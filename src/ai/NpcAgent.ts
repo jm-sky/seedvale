@@ -16,6 +16,7 @@ import type { NpcAuthoritativeState } from '../settlement/npcState'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { NpcStructureRepairHooks } from '../settlement/structureRepairCandidates'
+import type { FollowHysteresisState } from '../shared/followHysteresis'
 import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Palisades } from '../world/createPalisades'
@@ -242,6 +243,18 @@ import {
   tickNeeds,
 } from './Needs'
 import {
+  endNpcAccompanyCommitment,
+  type NpcAccompanyEndReason,
+  type NpcAccompanyMode,
+  type NpcAccompanySourceRef,
+  setNpcAccompanyMode,
+  startNpcAccompanyCommitment,
+} from './npcAccompanyCommitment'
+import {
+  resolveNpcAccompanyMovement,
+  shouldRetargetFollowDestination,
+} from './npcAccompanyExecution'
+import {
   type AnimalThreatResponse,
   decideAnimalThreatResponse,
   type ImmediateAnimalThreat,
@@ -331,6 +344,11 @@ import {
   type NpcStrategyId,
   selectStrategy,
 } from './npcStrategies'
+import {
+  beginOffscreenNpcTravel,
+  reifyNpcTravel,
+  stampNpcTravelCheckpoint,
+} from './npcTravel'
 import {
   applyDamageVigor,
   applySleepVigor,
@@ -557,6 +575,16 @@ export type NpcInspectionSnapshot = {
     paymentApproachIntent?: ApproachPlayerIntent | null
     paymentApproachInterruptReason?: string | null
   } | null
+  /** Accompany/follow commitment (plan npc-029), or `null` when this NPC has
+   *  none — read from `NpcAuthoritativeState`, not from the in-flight action.
+   *  Optional on synthetic test snapshots. */
+  accompany?: {
+    source: 'voluntary' | 'work-contract'
+    contractId?: string
+    mode: 'follow' | 'stay'
+    execution: 'detailed' | 'off-screen'
+    stayAnchor?: { x: number, y: number, z: number }
+  } | null
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -676,6 +704,7 @@ export function classifyPendingActivity(
   if (pending.kind === 'cleanAnimalCorpse' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'visitGrave' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'approachPlayer' && activeNeed === 'idle') return 'idle'
+  if (pending.kind === 'accompany' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
 
@@ -1409,6 +1438,9 @@ export class NpcAgent {
    *  `mining`/`foodSources`/`hunting`. Only ever consulted when this NPC has
    *  an active `helperAssignment` (see `npcState`'s doc). */
   private readonly helperDelivery: HelperDeliveryHooks | null
+  /** Transient follow hysteresis for accompany execution (plan npc-029) —
+   *  never persisted; the commitment itself lives on `npcState`. */
+  private accompanyFollowState: FollowHysteresisState = {}
   /** Local resource exchange (plan settlements-npcs-005) — bounded, same-
    *  settlement household surplus lookup for `food`/`wood` shortage; null in
    *  isolated fallbacks, same as `mining`/`foodSources`/`hunting`/
@@ -1616,6 +1648,14 @@ export class NpcAgent {
         this.mesh.rotation.y = post.yaw
       }
       this.die(true)
+    } else if (this.npcState.travel) {
+      const reified = reifyNpcTravel(this.npcState.travel, this.forest?.getWorldDays() ?? 0)
+      this.mesh.position.set(
+        reified.lastPosition.x,
+        sampleHeight(reified.lastPosition.x, reified.lastPosition.z),
+        reified.lastPosition.z,
+      )
+      this.npcState.travel = this.npcState.accompanyCommitment ? reified : null
     }
   }
 
@@ -1746,6 +1786,17 @@ export class NpcAgent {
           paymentDeadline: assignment.paymentDeadline,
           paymentApproachIntent: this.paymentApproachIntent,
           paymentApproachInterruptReason: this.paymentApproachInterruptReason,
+        }
+      })(),
+      accompany: (() => {
+        const commitment = this.npcState.accompanyCommitment
+        if (!commitment) return null
+        return {
+          source: commitment.source.kind,
+          contractId: commitment.source.kind === 'work-contract' ? commitment.source.contractId : undefined,
+          mode: commitment.mode,
+          execution: this.npcState.travel?.execution?.mode === 'off-screen' ? 'off-screen' as const : 'detailed' as const,
+          stayAnchor: commitment.stayAnchor,
         }
       })(),
       action: this.pendingAction
@@ -2482,6 +2533,10 @@ export class NpcAgent {
     // check); never marked the Plan interrupted before this refactor and
     // still doesn't (a dead NPC's Plan is moot).
     this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: false, markPlanInterrupted: false })
+    if (endNpcAccompanyCommitment(this.npcState, 'death')) {
+      this.npcState.travel = null
+      this.trace.record({ simTime: this.simClock, type: 'accompany.ended', reason: 'death' })
+    }
     this.combatIntent = null
     this.combatMeleeWeapon = null
     this.combatRangedWeapon = null
@@ -2951,6 +3006,31 @@ export class NpcAgent {
             break
           }
         }
+        if (action.kind === 'accompany' && this.npcState.accompanyCommitment?.mode === 'follow') {
+          const movement = resolveNpcAccompanyMovement(
+            this.npcState.accompanyCommitment,
+            this.accompanyFollowState,
+            { x: this.mesh.position.x, z: this.mesh.position.z },
+            { x: observerPos.x, z: observerPos.z },
+          )
+          if (movement.kind !== 'follow') {
+            completeActionLifecycle(this.actionLifecycle)
+            this.leaveActiveQueue()
+            this.pendingAction = null
+            this.phase = 'choose'
+            break
+          }
+          if (shouldRetargetFollowDestination(action.destination, { x: movement.x, z: movement.z })) {
+            action.destination = {
+              x: movement.x,
+              y: this.sampleHeight(movement.x, movement.z),
+              z: movement.z,
+            }
+          }
+          this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
+          this.steerWithRescue(this.resolveSteerTarget(this.tmp), dt)
+          break
+        }
         if (action.followAnimalId && this.shepherdFlock) {
           const live = this.shepherdFlock.resolve(action.followAnimalId)
           if (!live || !live.isAlive) {
@@ -3298,6 +3378,99 @@ export class NpcAgent {
     return this.carried.add('bandage', 1)
   }
 
+  /**
+   * Source-neutral accompany lifecycle over this NPC's authoritative state
+   * (plan npc-029). Later paid-escort / voluntary-join plans call the same
+   * methods; they are not bound to dialogue/UI.
+   *
+   * @domain npc
+   */
+  startAccompany(
+    source: NpcAccompanySourceRef,
+    mode: NpcAccompanyMode = 'follow',
+    stayAnchor?: { x: number, y: number, z: number },
+  ): boolean {
+    const activeWorkContractId = this.workContracts?.findActiveWorkByNpc(this.id)?.contract.id ?? null
+    const result = startNpcAccompanyCommitment(this.npcState, {
+      source,
+      mode,
+      stayAnchor: stayAnchor ?? (mode === 'stay'
+        ? { x: this.mesh.position.x, y: this.mesh.position.y, z: this.mesh.position.z }
+        : undefined),
+      startedAtDays: this.forest?.getWorldDays() ?? this.worldNowDays,
+    }, { activeWorkContractId })
+    if (!result.ok) return false
+    this.accompanyFollowState = {}
+    this.syncAccompanyTravelCheckpoint()
+    this.trace.record({
+      simTime: this.simClock,
+      type: 'accompany.started',
+      source: source.kind,
+      mode: result.commitment.mode,
+    })
+    this.interruptIdleDutyForAccompany()
+    return true
+  }
+
+  setAccompanyMode(mode: NpcAccompanyMode, stayAnchor?: { x: number, y: number, z: number }): boolean {
+    const anchor = stayAnchor ?? (mode === 'stay'
+      ? { x: this.mesh.position.x, y: this.mesh.position.y, z: this.mesh.position.z }
+      : undefined)
+    if (!setNpcAccompanyMode(this.npcState, mode, anchor)) return false
+    this.accompanyFollowState = {}
+    this.syncAccompanyTravelCheckpoint()
+    this.trace.record({ simTime: this.simClock, type: 'accompany.modeChanged', mode })
+    this.interruptIdleDutyForAccompany()
+    return true
+  }
+
+  endAccompany(reason: NpcAccompanyEndReason = 'cancelled'): boolean {
+    if (!endNpcAccompanyCommitment(this.npcState, reason)) return false
+    this.npcState.travel = null
+    this.accompanyFollowState = {}
+    this.trace.record({ simTime: this.simClock, type: 'accompany.ended', reason })
+    this.interruptIdleDutyForAccompany()
+    return true
+  }
+
+  /** Live-position checkpoint for save/rebuild while this agent still exists. */
+  syncAccompanyTravelCheckpoint(): void {
+    if (!this.npcState.accompanyCommitment && !this.npcState.travel) return
+    const livePos = { x: this.mesh.position.x, z: this.mesh.position.z }
+    const dest = this.npcState.accompanyCommitment?.mode === 'stay' && this.npcState.accompanyCommitment.stayAnchor
+      ? { x: this.npcState.accompanyCommitment.stayAnchor.x, z: this.npcState.accompanyCommitment.stayAnchor.z }
+      : this.npcState.travel?.destination ?? livePos
+    this.npcState.travel = stampNpcTravelCheckpoint(this.npcState.travel, livePos, dest)
+  }
+
+  /** Detailed → off-screen handoff (plan npc-029, 019 duration math). */
+  beginOffscreenTravelHandoff(
+    playerX: number,
+    playerZ: number,
+    nowDays: number,
+    dayLengthSec: number,
+  ): void {
+    const from = { x: this.mesh.position.x, z: this.mesh.position.z }
+    const commitment = this.npcState.accompanyCommitment
+    if (commitment) {
+      const dest = commitment.mode === 'stay' && commitment.stayAnchor
+        ? { x: commitment.stayAnchor.x, z: commitment.stayAnchor.z }
+        : { x: playerX, z: playerZ }
+      this.npcState.travel = beginOffscreenNpcTravel(from, dest, nowDays, dayLengthSec)
+      return
+    }
+    if (this.npcState.travel && !this.npcState.travel.execution) {
+      this.npcState.travel = beginOffscreenNpcTravel(from, this.npcState.travel.destination, nowDays, dayLengthSec)
+    }
+  }
+
+  private interruptIdleDutyForAccompany(): void {
+    if (this.health.dead || this.phase === 'combat') return
+    if (this.activeNeed !== 'idle') return
+    this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: true, markPlanInterrupted: false })
+    this.phase = 'choose'
+  }
+
   debugInjuryState(nowDays = this.nowDays()): {
     modifiers: ReturnType<typeof injurySpeaPenalties>
     physicalInjury: number
@@ -3355,8 +3528,19 @@ export class NpcAgent {
         })()
       : ''
     const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
-      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}${huntText}${injuryText}${conditionText}`
+      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})`
+      + `${this.accompanyDebugText()}${householdText}${huntText}${injuryText}${conditionText}`
     this.labelController.setDebugLine(text)
+  }
+
+  private accompanyDebugText(): string {
+    const commitment = this.npcState.accompanyCommitment
+    if (!commitment) return ''
+    const execution = this.npcState.travel?.execution?.mode === 'off-screen' ? 'off-screen' : 'detailed'
+    const source = commitment.source.kind === 'work-contract'
+      ? `work:${commitment.source.contractId}`
+      : 'voluntary'
+    return ` · accompany ${commitment.mode}/${source}/${execution}`
   }
 
   /** Kicks off a `goTo` → `execute` step — the generic replacement for the
@@ -4277,7 +4461,7 @@ export class NpcAgent {
     // pressure candidate itself (no `work` NeedId — implementation notes
     // "Decision integration"), so a genuinely urgent need already pre-empted
     // it before `beginIdle` was ever called.
-    if (this.tryPursueWorkContract(scheduledActivity)) return
+    if (this.tryPursueIdleDuty(scheduledActivity)) return
     if (this.settledIdleActivity !== null && this.settledIdleActivity !== scheduledActivity) {
       this.settledIdleActivity = null
     }
@@ -4342,6 +4526,41 @@ export class NpcAgent {
   }
 
   /**
+   * Idle-duty dispatch (plan npc-029) — accompany first, then Work Contract,
+   * then the ordinary schedule. Deterministic; incompatible work/accompany
+   * pairs are rejected at creation, not re-arbitrated here.
+   */
+  private tryPursueIdleDuty(scheduledActivity: ScheduleActivity): boolean {
+    if (this.tryPursueAccompany()) return true
+    return this.tryPursueWorkContract(scheduledActivity)
+  }
+
+  /**
+   * Accompany/follow idle-duty executor (plan npc-029). Picks the still-active
+   * commitment back up after needs/combat/weather interruption; does not
+   * create or clear it. Missing player position holds in place.
+   */
+  private tryPursueAccompany(): boolean {
+    const commitment = this.npcState.accompanyCommitment
+    if (!commitment || this.health.dead) return false
+    const movement = resolveNpcAccompanyMovement(
+      commitment,
+      this.accompanyFollowState,
+      { x: this.mesh.position.x, z: this.mesh.position.z },
+      { x: this.lastObserverX, z: this.lastObserverZ },
+    )
+    if (movement.kind === 'none') return false
+    const y = this.sampleHeight(movement.x, movement.z)
+    this.startAction({
+      kind: 'accompany',
+      destination: { x: movement.x, y, z: movement.z },
+      durationSec: movement.kind === 'hold' ? 0.8 * this.waitMultiplier : 0.4 * this.waitMultiplier,
+      onComplete: () => {},
+    })
+    return true
+  }
+
+  /**
    * Work Contract commitment entry point (plan npc-015 §5-§11), called only
    * from `beginIdle()` — resumes an already-accepted contract, or otherwise
    * looks for a new one to accept from this NPC's own settlement notice
@@ -4359,6 +4578,7 @@ export class NpcAgent {
    * @domain npc
    */
   private tryPursueWorkContract(scheduledActivity: ScheduleActivity): boolean {
+    if (this.npcState.accompanyCommitment) return false
     const contracts = this.workContracts
     if (!contracts) return false
     const mine = contracts.findActiveWorkByNpc(this.id)

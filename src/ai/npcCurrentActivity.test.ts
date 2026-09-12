@@ -54,6 +54,10 @@ describe('classifyPendingActivity / promoteChainKind', () => {
     expect(classifyPendingActivity({ kind: 'approachPlayer' }, 'idle')).toBe('idle')
   })
 
+  it('reports idle for accompany/follow execution (plan npc-029)', () => {
+    expect(classifyPendingActivity({ kind: 'accompany' }, 'idle')).toBe('idle')
+  })
+
   it('reports idle for animal-corpse sanitation (plan settlements-npcs-029)', () => {
     expect(classifyPendingActivity({ kind: 'cleanAnimalCorpse' }, 'idle')).toBe('idle')
   })

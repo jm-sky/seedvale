@@ -588,7 +588,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 35
+export const CURRENT_SAVE_VERSION = 36
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1718,7 +1718,48 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   }
   if (!isInventoryContentsSnapshot(s.personalInventory)) return false
   if (s.transportCargo !== undefined && !isInventoryContentsSnapshot(s.transportCargo)) return false
+  if (s.accompanyCommitment !== undefined && s.accompanyCommitment !== null && !isNpcAccompanyCommitment(s.accompanyCommitment)) return false
+  if (s.travel !== undefined && s.travel !== null && !isNpcTravelContinuity(s.travel)) return false
   return true
+}
+
+function isNpcWorldPoint(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const p = value as Record<string, unknown>
+  return typeof p.x === 'number' && typeof p.y === 'number' && typeof p.z === 'number'
+}
+
+function isNpcTravelPoint(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const p = value as Record<string, unknown>
+  return typeof p.x === 'number' && typeof p.z === 'number'
+}
+
+function isNpcAccompanyCommitment(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const c = value as Record<string, unknown>
+  if (!c.target || typeof c.target !== 'object' || Array.isArray(c.target)) return false
+  if ((c.target as Record<string, unknown>).kind !== 'player') return false
+  if (!c.source || typeof c.source !== 'object' || Array.isArray(c.source)) return false
+  const source = c.source as Record<string, unknown>
+  if (source.kind === 'work-contract') {
+    if (typeof source.contractId !== 'string') return false
+  } else if (source.kind !== 'voluntary') {
+    return false
+  }
+  if (c.mode !== 'follow' && c.mode !== 'stay') return false
+  if (c.stayAnchor !== undefined && !isNpcWorldPoint(c.stayAnchor)) return false
+  return typeof c.startedAtDays === 'number'
+}
+
+function isNpcTravelContinuity(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const t = value as Record<string, unknown>
+  if (!isNpcTravelPoint(t.destination) || !isNpcTravelPoint(t.lastPosition)) return false
+  if (t.execution === undefined) return true
+  if (!t.execution || typeof t.execution !== 'object' || Array.isArray(t.execution)) return false
+  const e = t.execution as Record<string, unknown>
+  return e.mode === 'off-screen' && typeof e.departedAtDays === 'number' && typeof e.arrivesAtDays === 'number'
 }
 
 function isTemporaryConditionsSnapshotField(value: unknown): value is SaveTemporaryConditionsSnapshot {
@@ -2986,6 +3027,14 @@ function migrateSaveV34ToV35(data: unknown): unknown {
   return { ...v, version: 35, ...(households ? { households } : {}) }
 }
 
+/** v35 → v36 (plan npc-029): optional `npcStates[id].accompanyCommitment`
+ *  and `npcStates[id].travel`. Both are sparse/optional and already default
+ *  to null on restore — version bump only. */
+function migrateSaveV35ToV36(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 36 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -3035,6 +3084,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   32: migrateSaveV32ToV33,
   33: migrateSaveV33ToV34,
   34: migrateSaveV34ToV35,
+  35: migrateSaveV35ToV36,
 }
 
 function detectStoredVersion(value: unknown): number | null {

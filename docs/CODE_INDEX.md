@@ -133,6 +133,9 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NpcAgent](../src/ai/NpcAgent.ts) — per-NPC FSM/action pipeline, `choose()` decision sequencing, movement execution, combat entry seams, public API.
 - [NPC action types](../src/ai/npcAction.ts) — `Phase`/`ActionId`/`NpcPlannedAction`, re-exported from `NpcAgent.ts`.
 - [Approach player](../src/ai/approachPlayer.ts) — locality/arrival helpers for a nearby-player interaction intent (work-contract payment is the first consumer).
+- [NPC accompany commitment](../src/ai/npcAccompanyCommitment.ts) — source-neutral persistent follow/stay commitment and lifecycle helpers (plan npc-029).
+- [NPC accompany execution](../src/ai/npcAccompanyExecution.ts) — hysteresis follow/stay movement over the accompany commitment.
+- [NPC travel continuity](../src/ai/npcTravel.ts) — generic detailed↔off-screen spatial checkpoint (019 duration math, consumed by accompany/return).
 - [NPC logistics](../src/ai/npcLogistics.ts) — the claim→carry→deposit two-leg transfer builder and the economy-withdraw/household-exchange/player-storage-delivery flows built on it.
 - [NPC profession work](../src/ai/npcProfessionWork.ts) — profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith/shepherd/textile_worker) as pure functions.
 - [NPC strategies](../src/ai/npcStrategies.ts) — per-need candidate strategy lists + `selectStrategy()`, the authoritative source `beginNeed()` switches on.
@@ -156,7 +159,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Individual variants](../src/fauna/animalVariants.ts) — per-animal multipliers (`normal`/`alpha`) and wolf-den alpha slot assignment.
 - [Lead / draft helpers](../src/fauna/animalLead.ts) — leadable/draft capability queries and temporary-lead hysteresis distances.
 - [Livestock stray](../src/fauna/animalStray.ts) — durable stray/displacement episode, selection, survival-assist gates, corpse retention, and world lookup classification (plan fauna-024); natural (non-quest) classification grace helpers (plan fauna-025).
-- [Follow hysteresis](../src/fauna/followHysteresis.ts) — shared distance-band follow primitive used by owned Follow and leading.
+- [Follow hysteresis](../src/shared/followHysteresis.ts) — shared distance-band follow primitive used by owned Follow, leading, and NPC accompany.
 - [Owned animal control](../src/fauna/ownedAnimalControl.ts) — persisted Follow/Stay for player-owned livestock.
 - [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim/sanitation-reservation state machine.
 - [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.

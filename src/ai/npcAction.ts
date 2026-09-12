@@ -71,6 +71,10 @@ export type ActionId =
   /** Family grave visit (plan npc-026) — normal `goTo`/`execute` at a persistent
    *  grave position; reads as `idle` to `classifyPendingActivity`. */
   | 'visitGrave'
+  /** Accompany/follow commitment execution (plan npc-029) — moving-target
+   *  follow or stay-at-anchor through ordinary `goTo`/`execute`. Reads as
+   *  `idle` to `classifyPendingActivity` (idle-tier duty, not a NeedId). */
+  | 'accompany'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and

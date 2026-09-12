@@ -32,6 +32,7 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TransportEndpointRef } from '../world/transportOrder'
 import type { WeatherState } from '../world/weather'
 import type { TerrainSamplers } from './settlementTerrain'
+import { resolveOffscreenNpcTravel } from '../ai/npcTravel'
 import { createEconomyRegistry } from '../economy'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
@@ -833,12 +834,15 @@ export async function createSettlementsManager(
     for (const household of settlement.households) household.markAgricultureResolved(nowDays)
   }
 
-  function unload(id: string, entry: Entry, nowDays: number, dayLengthSec: number): void {
+  function unload(id: string, entry: Entry, nowDays: number, dayLengthSec: number, playerX: number, playerZ: number): void {
     if (entry.settlement) {
       stampSettlementAgriculture(entry.settlement, nowDays)
       livestock.capture(id, entry.settlement.livestock)
       rats.capture(id, entry.settlement.rats)
       beginOffscreenTransportHandoff(entry.settlement, nowDays, dayLengthSec)
+      for (const npc of entry.settlement.npcs) {
+        npc.beginOffscreenTravelHandoff(playerX, playerZ, nowDays, dayLengthSec)
+      }
     }
     entry.settlement?.dispose()
     entries.delete(id)
@@ -859,7 +863,7 @@ export async function createSettlementsManager(
     for (const [id, entry] of [...entries]) {
       if (entry.def.isHome || entry.pendingPromise) continue
       const dist = Math.hypot(entry.def.x - playerX, entry.def.z - playerZ)
-      if (dist > unloadRadius) unload(id, entry, nowDays, dayLengthSec)
+      if (dist > unloadRadius) unload(id, entry, nowDays, dayLengthSec, playerX, playerZ)
     }
     // World-owned off-screen transport progression (plan
     // settlements-npcs-019) — bounded to active orders, checked at this
@@ -867,6 +871,7 @@ export async function createSettlementsManager(
     // catch-up right after boot/restore, since `recheck` always fires once
     // immediately (`lastCheckX`/`lastCheckZ` start at `Infinity`).
     if (transportOrders) resolveOffscreenTransportArrivals(transportOrders, offscreenTransportLookup, nowDays)
+    npcStates.forEach((state) => resolveOffscreenNpcTravel(state, nowDays))
   }
 
   return {
@@ -885,6 +890,7 @@ export async function createSettlementsManager(
         stampSettlementAgriculture(entry.settlement, nowDays)
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
+      npcStates.forEach((state) => resolveOffscreenNpcTravel(state, nowDays))
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
       if (nowDays !== undefined) lastNowDays = nowDays
@@ -967,7 +973,13 @@ export async function createSettlementsManager(
       }
       return households.serialize()
     },
-    snapshotNpcStates: () => npcStates.serialize(),
+    snapshotNpcStates: () => {
+      for (const entry of entries.values()) {
+        if (!entry.settlement) continue
+        for (const npc of entry.settlement.npcs) npc.syncAccompanyTravelCheckpoint()
+      }
+      return npcStates.serialize()
+    },
     getNpcState: (id) => npcStates.get(id),
     snapshotRelationships: () => npcRelationships.snapshot(),
     snapshotLivestock: () => {

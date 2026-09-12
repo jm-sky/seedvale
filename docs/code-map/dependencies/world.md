@@ -3189,6 +3189,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcTravel.ts`
 - `app/gameLoop.ts`
 - `settlement/SettlementsManager.ts`
 - `world/transportOffscreen.test.ts`

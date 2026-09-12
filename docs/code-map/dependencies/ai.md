@@ -52,6 +52,8 @@ Generated from TypeScript imports.
 - `ai/graveVisitPressure.ts`
 - `ai/healingPressure.ts`
 - `ai/helperAssignment.ts`
+- `ai/npcAccompanyCommitment.ts`
+- `ai/npcAccompanyExecution.ts`
 - `ai/npcAction.ts`
 - `ai/npcAnimalThreat.ts`
 - `ai/npcAssistance.ts`
@@ -65,6 +67,7 @@ Generated from TypeScript imports.
 - `ai/npcPlan.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcStrategies.ts`
+- `ai/npcTravel.ts`
 - `ai/npcVigor.ts`
 - `ai/npcVoiceLines.ts`
 - `ai/npcWorkContract.ts`
@@ -117,6 +120,7 @@ Generated from TypeScript imports.
 - `shared/agentAnimationSet.ts`
 - `shared/effectivePhysicalAttributes.ts`
 - `shared/enduranceStamina.ts`
+- `shared/followHysteresis.ts`
 - `shared/injuryRecovery.ts`
 - `shared/injurySeverity.ts`
 - `shared/temporaryConditions.ts`
@@ -424,6 +428,43 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/villagePlan.ts`
+
+## `ai/npcAccompanyCommitment.test.ts`
+
+**Imports**
+
+- `ai/npcAccompanyCommitment.ts`
+- `settlement/npcState.ts`
+
+## `ai/npcAccompanyCommitment.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcAccompanyCommitment.test.ts`
+- `ai/npcAccompanyExecution.test.ts`
+- `ai/npcAccompanyExecution.ts`
+- `ai/npcTravel.test.ts`
+- `settlement/npcState.ts`
+
+## `ai/npcAccompanyExecution.test.ts`
+
+**Imports**
+
+- `ai/npcAccompanyCommitment.ts`
+- `ai/npcAccompanyExecution.ts`
+
+## `ai/npcAccompanyExecution.ts`
+
+**Imports**
+
+- `ai/npcAccompanyCommitment.ts`
+- `shared/followHysteresis.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcAccompanyExecution.test.ts`
 
 ## `ai/npcAction.ts`
 
@@ -775,6 +816,27 @@ Generated from TypeScript imports.
 - `ai/npcPlan.ts`
 - `ai/npcStrategies.test.ts`
 - `debug/npcTrace.ts`
+
+## `ai/npcTravel.test.ts`
+
+**Imports**
+
+- `ai/npcAccompanyCommitment.ts`
+- `ai/npcTravel.ts`
+- `settlement/npcState.ts`
+
+## `ai/npcTravel.ts`
+
+**Imports**
+
+- `world/transportOffscreen.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcTravel.test.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/npcState.ts`
 
 ## `ai/npcVigor.test.ts`
 

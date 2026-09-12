@@ -4,31 +4,31 @@
 
 ### Overall
 
-1. `npc-029` — **NPC accompany/follow commitment**  
-   🔴 `M` · ✅ ready · unlocks 6/6
-2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+1. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · ✅ ready · unlocks 1/3
-3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+2. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2
-4. `items-player-028` — **NPC player-storage access policies**  
+3. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
-5. `npc-031` — **Voluntary expedition joining**  
-   🔴 `M` · 🔒 blocked · unlocks 0/0
+4. `npc-031` — **Voluntary expedition joining**  
+   🔴 `M` · ✅ ready · unlocks 0/0
+5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+   🔴 `M` · ✅ ready · unlocks 2/2
 
 ---
 
 ### Roadmap Focus
 
-1. `npc-029` — **NPC accompany/follow commitment**  
-   🔴 `M` · ✅ ready · unlocks 6/6 · roadmap: `companions`
-2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+1. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · ✅ ready · unlocks 1/3 · roadmap: `economy-production`
-3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+2. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2 · roadmap: `economy-production`
-4. `items-player-028` — **NPC player-storage access policies**  
+3. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
-5. `npc-031` — **Voluntary expedition joining**  
-   🔴 `M` · 🔒 blocked · unlocks 0/0 · roadmap: `companions`
+4. `npc-031` — **Voluntary expedition joining**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `companions`
+5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+   🔴 `M` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
 
 ---
 
@@ -47,16 +47,16 @@ _No qualifying plans._
 
 ### Ready Now
 
-1. `npc-029` — **NPC accompany/follow commitment**  
-   🔴 `M` · ✅ ready · unlocks 6/6
-2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+1. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · ✅ ready · unlocks 1/3
-3. `items-player-028` — **NPC player-storage access policies**  
+2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
+3. `npc-031` — **Voluntary expedition joining**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-5. `settlements-npcs-022` — **Household help and age-based work participation**  
-   🔴 `M` · ✅ ready · unlocks 0/0
+5. `npc-030` — **Paid expedition escort Work Contracts**  
+   🔴 `L` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -74,83 +74,79 @@ Only planned plans are ranked.
 done / verification needed satisfy dependencies.  
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
-1. `npc-029` — **NPC accompany/follow commitment**  
-  🔴 `M` · **Score:** 141  
-   → **unlocks:** 6/6
-
-2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+1. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  89  
    → **unlocks:** 1/3
 
-3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+2. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  81  
    → **unlocks:** 1/2
 
-4. `items-player-028` — **NPC player-storage access policies**  
+3. `items-player-028` — **NPC player-storage access policies**  
   🔴 `L` · **Score:**  76  
    → **unlocks:** 2/4
 
-5. `npc-031` — **Voluntary expedition joining**  
+4. `npc-031` — **Voluntary expedition joining**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-6. `world-terrain-017` — **Abandoned mountain mine landmark**  
+5. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-7. `npc-030` — **Paid expedition escort Work Contracts**  
+6. `npc-030` — **Paid expedition escort Work Contracts**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 0/0
 
-8. `world-018` — **Cave-aware rich finite resource deposits**  
+7. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-9. `settlements-npcs-022` — **Household help and age-based work participation**  
+8. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-10. `world-023` — **Species-Driven Sowing, Density and Yield**  
+9. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-11. `settlements-npcs-025` — **Resource storage visualization**  
+10. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-12. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+11. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-13. `fauna-023` — **Systemic animal attraction — food, blood and trap lures**  
+12. `fauna-023` — **Systemic animal attraction — food, blood and trap lures**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 0/0
 
-14. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+13. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-15. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+14. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-16. `items-player-014` — **Rope-pullable resource transport**  
+15. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `tools-005` — **Seedvale Character Preparation Panel**  
+16. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `tools-013` — **NPC decision verification and scenario tooling**  
+17. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-19. `quests-progression-008` — **Treasure map — bear cave**  
+18. `quests-progression-008` — **Treasure map — bear cave**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-20. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
+19. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
@@ -158,12 +154,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
-- [`npc-030-paid-expedition-escort-work-contracts.md`](npc-030-paid-expedition-escort-work-contracts.md)  
-  is blocked by:
-  - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)
-- [`npc-031-voluntary-expedition-joining.md`](npc-031-voluntary-expedition-joining.md)  
-  is blocked by:
-  - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)
 - [`settlements-npcs-017-production-demand-and-economic-pressures.md`](settlements-npcs-017-production-demand-and-economic-pressures.md)  
   is blocked by:
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)

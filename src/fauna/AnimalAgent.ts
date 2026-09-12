@@ -2,11 +2,11 @@ import * as THREE from 'three'
 import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
+import type { FollowHysteresisState } from '../shared/followHysteresis'
 import type { LocalWaterSample } from '../terrain/waterSample'
 import type { CaveTraversalPoint } from '../world/caves/caveHabitat'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { WaterBodyKind } from '../world/WaterSource'
-import type { FollowHysteresisState } from './followHysteresis'
 import {
   createMovementWatchdog,
   type MovementWatchdog,

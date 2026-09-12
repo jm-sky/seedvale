@@ -1,7 +1,8 @@
-/** Pure hysteresis follow-a-target primitive (plan fauna-020 / fauna-007).
- *  Owned Follow/Stay and temporary leading share this, with different
- *  distance bands. Mutates `state.following` so commitment survives across
- *  ticks without a second controller. */
+/** Pure hysteresis follow-a-target primitive (plan fauna-020 / fauna-007 /
+ *  npc-029). Owned animal Follow/Stay, temporary leading, and NPC accompany
+ *  share this, with different distance bands. Mutates `state.following` so
+ *  the start/stop commitment survives across ticks without a second
+ *  controller. */
 
 export type FollowHysteresisState = {
   following?: boolean
@@ -12,18 +13,18 @@ export type FollowHysteresisResult =
   | { kind: 'none' }
 
 /**
- * @domain fauna
- * @role Distance-band follow commitment used by owned Follow and leading.
+ * @domain shared
+ * @role Distance-band follow primitive used by fauna Follow/Lead and NPC accompany.
  */
 export function resolveFollowHysteresis(
   state: FollowHysteresisState,
-  animalPos: { x: number, z: number },
+  actorPos: { x: number, z: number },
   targetPos: { x: number, z: number } | null | undefined,
   startDistance: number,
   stopDistance: number,
 ): FollowHysteresisResult {
   if (!targetPos) return { kind: 'none' }
-  const dist = Math.hypot(targetPos.x - animalPos.x, targetPos.z - animalPos.z)
+  const dist = Math.hypot(targetPos.x - actorPos.x, targetPos.z - actorPos.z)
   let following = state.following ?? false
   if (!following && dist > startDistance) following = true
   if (following && dist < stopDistance) following = false

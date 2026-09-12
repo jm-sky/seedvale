@@ -122,32 +122,67 @@ Generated from exported TypeScript symbols.
 - `tickNeeds` — function — line 42
 - `TickNeedsOptions` — type — line 36
 
+## `ai/npcAccompanyCommitment.ts`
+
+- `cloneNpcAccompanyCommitment` — function — line 68
+- `endNpcAccompanyCommitment` — function — line 151
+  - domain: npc
+- `NpcAccompanyCommitment` — type — line 25
+- `NpcAccompanyEndReason` — type — line 19
+- `NpcAccompanyHost` — type — line 51
+- `NpcAccompanyMode` — type — line 17
+- `NpcAccompanyRejectReason` — type — line 21
+- `NpcAccompanySourceRef` — type — line 13
+- `NpcAccompanyTarget` — type — line 11
+  - domain: npc
+- `NpcAccompanyWorldPoint` — type — line 23
+- `setNpcAccompanyMode` — function — line 126
+  - domain: npc
+- `startNpcAccompanyCommitment` — function — line 97
+  - domain: npc
+- `StartNpcAccompanyConstraints` — type — line 40
+- `StartNpcAccompanyParams` — type — line 33
+- `StartNpcAccompanyResult` — type — line 46
+
+## `ai/npcAccompanyExecution.ts`
+
+- `horizontalDistance` — function — line 27
+- `NPC_ACCOMPANY_FOLLOW_RETARGET_DISTANCE` — const — line 18
+- `NPC_ACCOMPANY_FOLLOW_START_DISTANCE` — const — line 15
+  - domain: npc
+- `NPC_ACCOMPANY_FOLLOW_STOP_DISTANCE` — const — line 16
+- `NPC_ACCOMPANY_STAY_ARRIVE_DISTANCE` — const — line 20
+- `NpcAccompanyMovement` — type — line 22
+- `resolveNpcAccompanyMovement` — function — line 51
+  - domain: npc
+- `shouldRetargetFollowDestination` — function — line 36
+
 ## `ai/npcAction.ts`
 
 - `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 82
+- `NpcPlannedAction` — type — line 86
 - `Phase` — type — line 10
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 647
-- `CurrentActivity` — type — line 481
-- `CurrentActivityKind` — type — line 474
-- `NPC_HEIGHT` — const — line 384
-- `NPC_MODEL_URLS` — const — line 448
-- `NPC_SHADOW_DISTANCE` — const — line 398
-- `NpcAgent` — class — line 995
+- `classifyPendingActivity` — function — line 675
+- `CurrentActivity` — type — line 499
+- `CurrentActivityKind` — type — line 492
+- `NPC_HEIGHT` — const — line 402
+- `NPC_MODEL_URLS` — const — line 466
+- `NPC_SHADOW_DISTANCE` — const — line 416
+- `NpcAgent` — class — line 1024
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 900
-- `NpcInspectionSnapshot` — type — line 496
-- `NpcWhy` — type — line 622
-- `projectNpcWhy` — function — line 687
-- `promoteChainKind` — function — line 639
+- `NpcAgentDeps` — type — line 929
+- `NpcInspectionSnapshot` — type — line 514
+- `NpcWhy` — type — line 650
+- `projectNpcWhy` — function — line 716
+- `promoteChainKind` — function — line 667
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -334,6 +369,26 @@ Generated from exported TypeScript symbols.
 - `selectStrategy` — function — line 154
 - `WaterStrategyContext` — type — line 99
 - `WoodStrategyContext` — type — line 124
+
+## `ai/npcTravel.ts`
+
+- `beginOffscreenNpcTravel` — function — line 89
+  - domain: npc
+- `cloneNpcTravel` — function — line 35
+- `interpolateNpcTravelPosition` — function — line 64
+- `isNpcTravelArrived` — function — line 77
+- `NpcTravelContinuity` — type — line 23
+- `NpcTravelExecution` — type — line 17
+- `NpcTravelHost` — type — line 30
+- `NpcTravelPoint` — type — line 15
+  - domain: npc
+- `reifyNpcTravel` — function — line 118
+  - domain: npc
+- `resolveOffscreenNpcTravel` — function — line 151
+  - domain: npc
+- `stampNpcTravelCheckpoint` — function — line 132
+  - domain: npc
+- `travelProgress01` — function — line 56
 
 ## `ai/npcVigor.ts`
 

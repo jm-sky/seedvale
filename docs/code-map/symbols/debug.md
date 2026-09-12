@@ -156,26 +156,26 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `ConditionsDebugApi` — type — line 201
-- `HiddenTreasureDebugApi` — type — line 173
-- `HouseholdDebugHandle` — type — line 92
-- `InjuryDebugApi` — type — line 209
-- `installNpcDebugApi` — function — line 492
-- `LocationsDebugApi` — type — line 124
+- `ConditionsDebugApi` — type — line 204
+- `HiddenTreasureDebugApi` — type — line 176
+- `HouseholdDebugHandle` — type — line 95
+- `InjuryDebugApi` — type — line 212
+- `installNpcDebugApi` — function — line 496
+- `LocationsDebugApi` — type — line 127
 - `NpcDebugHandle` — type — line 77
-- `PlayerDebugApi` — type — line 268
-- `QuestsDebugApi` — type — line 258
-- `QuestSpawnPointDebugSnapshot` — type — line 231
-- `QuestTargetDebugSnapshot` — type — line 246
-- `SeedvaleDebugApi` — type — line 353
-- `SettlementHistoryDebugHandle` — type — line 100
-- `SkillsDebugApi` — type — line 191
-- `StructureDebugApi` — type — line 221
-- `TeleportToDebugApi` — type — line 136
-- `TransportOrderDebugSnapshot` — type — line 286
-- `VillageDebugHandle` — type — line 107
-- `WorldLocationDebugEntry` — type — line 157
-- `WorldLocationsDebugApi` — type — line 158
+- `PlayerDebugApi` — type — line 271
+- `QuestsDebugApi` — type — line 261
+- `QuestSpawnPointDebugSnapshot` — type — line 234
+- `QuestTargetDebugSnapshot` — type — line 249
+- `SeedvaleDebugApi` — type — line 356
+- `SettlementHistoryDebugHandle` — type — line 103
+- `SkillsDebugApi` — type — line 194
+- `StructureDebugApi` — type — line 224
+- `TeleportToDebugApi` — type — line 139
+- `TransportOrderDebugSnapshot` — type — line 289
+- `VillageDebugHandle` — type — line 110
+- `WorldLocationDebugEntry` — type — line 160
+- `WorldLocationsDebugApi` — type — line 161
 
 ## `debug/npcInspector.ts`
 
@@ -205,11 +205,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 114
-- `NPC_TRACE_CAPACITY` — const — line 112
-- `NpcTraceBuffer` — type — line 105
+- `createNpcTraceBuffer` — function — line 117
+- `NPC_TRACE_CAPACITY` — const — line 115
+- `NpcTraceBuffer` — type — line 108
 - `NpcTraceEvent` — type — line 14
-- `NpcTraceEventType` — type — line 97
+- `NpcTraceEventType` — type — line 100
 
 ## `debug/playerGroundTrace.ts`
 

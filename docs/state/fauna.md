@@ -163,7 +163,7 @@ src/fauna/preyAlertPerception.ts
 src/fauna/animalLead.ts
 src/fauna/animalScare.ts
 src/fauna/animalStray.ts
-src/fauna/followHysteresis.ts
+src/shared/followHysteresis.ts
 src/fauna/ownedAnimalControl.ts
 src/fauna/animalOwnership.ts
 src/world/createCarts.ts

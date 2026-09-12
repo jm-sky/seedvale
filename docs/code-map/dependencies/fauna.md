@@ -43,7 +43,6 @@ Generated from TypeScript imports.
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
-- `fauna/followHysteresis.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
@@ -61,6 +60,7 @@ Generated from TypeScript imports.
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
 - `shared/agentAnimationSet.ts`
+- `shared/followHysteresis.ts`
 - `simulation/index.ts`
 - `simulation/observation.ts`
 - `terrain/slopeConstraint.ts`
@@ -367,7 +367,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/animalDefs.ts`
-- `fauna/followHysteresis.ts`
+- `shared/followHysteresis.ts`
 
 **Imported by**
 
@@ -695,14 +695,6 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/faunaDecision.test.ts`
 
-## `fauna/followHysteresis.ts`
-
-**Imported by**
-
-- `fauna/AnimalAgent.ts`
-- `fauna/animalLead.ts`
-- `fauna/ownedAnimalControl.ts`
-
 ## `fauna/foodWaterTargeting.test.ts`
 
 **Imports**
@@ -837,7 +829,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `fauna/followHysteresis.ts`
+- `shared/followHysteresis.ts`
 
 **Imported by**
 

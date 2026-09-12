@@ -50,6 +50,14 @@ Generated from exported TypeScript symbols.
 - `PoolParticle` — type — line 3
 - `PoolTuning` — type — line 31
 
+## `shared/followHysteresis.ts`
+
+- `FollowHysteresisResult` — type — line 11
+- `FollowHysteresisState` — type — line 7
+- `resolveFollowHysteresis` — function — line 19
+  - domain: shared
+  - role: Distance-band follow primitive used by fauna Follow/Lead and NPC accompany.
+
 ## `shared/foodPoisoningExposure.ts`
 
 - `foodPoisoningExposureEventRoll` — function — line 31

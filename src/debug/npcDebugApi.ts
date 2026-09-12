@@ -81,6 +81,9 @@ export type NpcDebugHandle = {
   freeze: () => boolean
   unfreeze: () => boolean
   reevaluate: () => boolean
+  startAccompany: (mode?: 'follow' | 'stay') => boolean
+  setAccompanyMode: (mode: 'follow' | 'stay') => boolean
+  endAccompany: (reason?: 'abandoned' | 'cancelled' | 'finished') => boolean
 }
 
 /** `debug.household(id).history()` (plan settlements-npcs-013) — the
@@ -449,6 +452,7 @@ const HELP_TEXT = [
   'player.skills() — current player skills {sneak, stealth, sneakUse, sneakUseDistance, sneakUseDuration, sneakUseRange, sneakUseSpeed, sneakUseAccuracy, sneakUseCriticalChance, sneakUseCriticalDamage, sneakUseCriticalMultiplier, sneakUseCriticalChance, sneakUseCriticalDamage, sneakUseCriticalMultiplier}',
   'player.temporaryConditions() — current player temporary conditions {poisoning, bleeding, infection,饥饿, 口渴, 疲劳, 寒冷, 炎热, 中毒, 出血, 感染, 饥饿, 口渴, 疲劳, 寒冷, 炎热, 中毒, 出血, 感染, 饥饿, 口渴, 疲劳, 寒冷, 炎热, 中毒, 出血, 感染}',
   'npc(id) / npcs(filter?) — inspect a live NPC by id / query all loaded NPCs',
+  'npc(id).startAccompany(mode?) / .setAccompanyMode(mode) / .endAccompany(reason?) — accompany/follow commitment (plan npc-029)',
   'npcState(id) — authoritative NPC snapshot including post-death/corpse (works without a live agent)',
   'npc(id).history(filter?) — NPC decision/action trace (plan 170); household(id).history(filter?) — household resource mutations; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); filter: {since?, limit?, types?}',
   'village(id) — resolves by id even if the village is currently unloaded (npcs() is [] then)',
@@ -708,6 +712,23 @@ export function installNpcDebugApi(
         freeze: () => freezeNpc(bundle, id),
         unfreeze: () => unfreezeNpc(bundle, id),
         reevaluate: () => reevaluateNpc(bundle, id),
+        startAccompany: (mode = 'follow') => {
+          const npc = findNpcById(bundle, id)?.npc
+          if (!npc) return false
+          const stayAnchor = mode === 'stay'
+            ? { x: npc.mesh.position.x, y: npc.mesh.position.y, z: npc.mesh.position.z }
+            : undefined
+          return npc.startAccompany({ kind: 'voluntary' }, mode, stayAnchor)
+        },
+        setAccompanyMode: (mode) => {
+          const npc = findNpcById(bundle, id)?.npc
+          if (!npc) return false
+          const stayAnchor = mode === 'stay'
+            ? { x: npc.mesh.position.x, y: npc.mesh.position.y, z: npc.mesh.position.z }
+            : undefined
+          return npc.setAccompanyMode(mode, stayAnchor)
+        },
+        endAccompany: (reason = 'cancelled') => findNpcById(bundle, id)?.npc.endAccompany(reason) ?? false,
       }
     },
     npcs: (filter) => queryNpcs(bundle, getTimeOfDay(), filter),

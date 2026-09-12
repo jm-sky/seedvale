@@ -137,6 +137,18 @@ function buildInspectorText(
     lines.push('  -')
   }
 
+  lines.push('', 'Accompany')
+  if (snapshot.accompany) {
+    lines.push(`  source: ${snapshot.accompany.source}${snapshot.accompany.contractId ? ` ${snapshot.accompany.contractId}` : ''}`)
+    lines.push(`  mode: ${snapshot.accompany.mode}`)
+    lines.push(`  execution: ${snapshot.accompany.execution}`)
+    if (snapshot.accompany.stayAnchor) {
+      lines.push(`  stay anchor: ${snapshot.accompany.stayAnchor.x.toFixed(1)}, ${snapshot.accompany.stayAnchor.z.toFixed(1)}`)
+    }
+  } else {
+    lines.push('  -')
+  }
+
   lines.push('', 'Current action')
   if (snapshot.action) {
     lines.push(`  kind: ${snapshot.action.kind}`)
@@ -187,6 +199,9 @@ function formatWinningModifiers(snapshot: NpcInspectionSnapshot, needId: string)
 function formatEvent(event: NpcTraceEvent): string {
   const t = event.simTime.toFixed(1)
   switch (event.type) {
+    case 'accompany.ended': return `${t}s accompany.ended → ${event.reason}`
+    case 'accompany.modeChanged': return `${t}s accompany.modeChanged → ${event.mode}`
+    case 'accompany.started': return `${t}s accompany.started → ${event.mode} (${event.source})`
     case 'action.completed': return `${t}s action.completed → ${event.action}`
     case 'action.failed': return `${t}s action.failed → ${event.action ?? '-'} (${event.reason})`
     case 'action.planned': return `${t}s action.planned → ${event.action}${event.queueId ? ` @${event.queueId}` : ''}`
