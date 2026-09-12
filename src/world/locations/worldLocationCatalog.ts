@@ -2,6 +2,7 @@ import type { SettlementCell, SettlementDef } from '../../settlement/settlementG
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import type { ChunkManager } from '../../terrain/chunkManager'
 import type { Caves } from '../createCaves'
+import type { AbandonedCemeteryCache, CachedAbandonedCemeteryResult } from './abandonedCemeteryCache'
 import type { WorldLocation, WorldLocationKind } from './worldLocationTypes'
 import { cellFromId, cellsWithinRadius, SETTLEMENT_GRID_STEP, worldToCell } from '../../settlement/settlementGenerator'
 import { isAbandonedCemeteryId } from '../../terrain/cemeteryAssignment'
@@ -57,6 +58,13 @@ export type WorldLocationCatalogDeps = {
    *  caller to batch/debounce into IndexedDB. Best-effort only — must never
    *  affect catalog correctness. */
   onTileDirty?: (tx: number, tz: number, tile: { state: Uint8Array, height: Float32Array }) => void
+  /**
+   * Persistent abandoned-cemetery materialization cache (plan world-025).
+   * Lookup/remember are synchronous session seams; `ready()` is awaited only
+   * by `landmarksInRangeAsync` before expensive probes. A miss always falls
+   * back to `ChunkManager.probeAbandonedCemeteryAtChunk`.
+   */
+  abandonedCemeteryCache?: Pick<AbandonedCemeteryCache, 'lookup' | 'remember' | 'ready'>
   /** Authored expedition ruins site (plan quests-progression-009). */
   getDarkForestTreasureSite?: () => { locationId: string, x: number, z: number } | null
 }
@@ -153,6 +161,8 @@ export type WorldLocationCatalog = {
    * Cooperative `landmarksInRange` (plan world-022). Result is identical to
    * the sync method. Yields between abandoned-cemetery probe batches when
    * enough expensive probes remain that a single stretch could hitch.
+   * Awaits the current abandoned-cemetery cache hydrate (plan world-025)
+   * before scheduling those probes; the sync method never waits.
    * `onProgress` is monotonic and ends at `1`.
    * @domain world
    */
@@ -250,7 +260,17 @@ function decodeCellKey(key: number): { gx: number, gz: number } {
 const NEIGHBOR4: readonly (readonly [number, number])[] = [[1, 0], [-1, 0], [0, 1], [0, -1]]
 
 export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): WorldLocationCatalog {
-  const { getSeed, getCaves, getChunkManager, lookupSettlement, getSampleParams, getChunkSize, hydrateTile, onTileDirty } = deps
+  const {
+    getSeed,
+    getCaves,
+    getChunkManager,
+    lookupSettlement,
+    getSampleParams,
+    getChunkSize,
+    hydrateTile,
+    onTileDirty,
+    abandonedCemeteryCache,
+  } = deps
 
   let diagnostics = emptyLocationScanDiagnostics()
 
@@ -421,7 +441,26 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     return toProbe
   }
 
-  function probeAbandonedChunk(
+  function applyAbandonedResult(
+    result: CachedAbandonedCemeteryResult,
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+    seen: Set<string>,
+    out: WorldLocation[],
+  ): void {
+    if (result.status !== 'found') return
+    if (!isAbandonedCemeteryId(result.id) || seen.has(result.id)) return
+    const km = distanceKm(x, z, result.x, result.z)
+    if (km > maxKm || km <= minKm) return
+    seen.add(result.id)
+    diagnostics.cemeteryAbandonedResolved++
+    out.push(cemeteryLocationFromResolved(result))
+  }
+
+  /** Shared sync/async materialization: session/persistent cache, else canonical probe. */
+  function resolveAbandonedChunk(
     coord: { cx: number, cz: number },
     x: number,
     z: number,
@@ -430,14 +469,18 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     seen: Set<string>,
     out: WorldLocation[],
   ): void {
+    const cached = abandonedCemeteryCache?.lookup(coord.cx, coord.cz)
+    if (cached) {
+      applyAbandonedResult(cached, x, z, minKm, maxKm, seen, out)
+      return
+    }
     diagnostics.cemeteryExpensiveProbes++
     const abandoned = getChunkManager().probeAbandonedCemeteryAtChunk(coord)
-    if (!abandoned || !isAbandonedCemeteryId(abandoned.id) || seen.has(abandoned.id)) return
-    const km = distanceKm(x, z, abandoned.x, abandoned.z)
-    if (km > maxKm || km <= minKm) return
-    seen.add(abandoned.id)
-    diagnostics.cemeteryAbandonedResolved++
-    out.push(cemeteryLocationFromResolved(abandoned))
+    const result: CachedAbandonedCemeteryResult = abandoned && isAbandonedCemeteryId(abandoned.id)
+      ? { status: 'found', id: abandoned.id, x: abandoned.x, z: abandoned.z }
+      : { status: 'none' }
+    abandonedCemeteryCache?.remember(coord.cx, coord.cz, result)
+    applyAbandonedResult(result, x, z, minKm, maxKm, seen, out)
   }
 
   function appendAbandonedProbes(
@@ -449,7 +492,7 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     seen: Set<string>,
     out: WorldLocation[],
   ): void {
-    for (const coord of toProbe) probeAbandonedChunk(coord, x, z, minKm, maxKm, seen, out)
+    for (const coord of toProbe) resolveAbandonedChunk(coord, x, z, minKm, maxKm, seen, out)
   }
 
   async function appendAbandonedProbesAsync(
@@ -478,7 +521,7 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       const batchStart = performance.now()
       let batchCount = 0
       do {
-        probeAbandonedChunk(toProbe[i]!, x, z, minKm, maxKm, seen, out)
+        resolveAbandonedChunk(toProbe[i]!, x, z, minKm, maxKm, seen, out)
         i++
         batchCount++
         if (yieldEvery != null && batchCount >= yieldEvery) break
@@ -738,8 +781,15 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
   ): Promise<WorldLocation[]> {
     const cemeteryStart = performance.now()
     const { seen, out } = settlementCemeteryCandidates(x, z, minKm, maxKm)
+    await abandonedCemeteryCache?.ready()
     const toProbe = collectAbandonedChunksToProbe(x, z, minKm, maxKm)
-    await appendAbandonedProbesAsync(toProbe, x, z, minKm, maxKm, seen, out, options)
+    const remaining: { cx: number, cz: number }[] = []
+    for (const coord of toProbe) {
+      const cached = abandonedCemeteryCache?.lookup(coord.cx, coord.cz)
+      if (cached) applyAbandonedResult(cached, x, z, minKm, maxKm, seen, out)
+      else remaining.push(coord)
+    }
+    await appendAbandonedProbesAsync(remaining, x, z, minKm, maxKm, seen, out, options)
     diagnostics.cemeteryMs += performance.now() - cemeteryStart
     return [
       ...caveCandidates(x, z, minKm, maxKm),

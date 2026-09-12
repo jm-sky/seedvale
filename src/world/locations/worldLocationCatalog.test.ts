@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { IDBFactory } from 'fake-indexeddb'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SettlementCell, SettlementDef } from '../../settlement/settlementGenerator'
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import type { ChunkManager } from '../../terrain/chunkManager'
@@ -10,7 +11,14 @@ import { chunkPassesAbandonedCemeteryRoll } from '../../terrain/cemeteryPlacemen
 import { sampleContinentalnessAt, sampleFloorAt, sampleMountainRidgeAt } from '../../terrain/chunkHeightmap'
 import { isMountainRidge, isOceanMix, isWetFloor } from '../../terrain/terrainClassification'
 import { projectCellAt } from '../map/mapProjection'
+import {
+  type AbandonedCemeteryCache,
+  type CachedAbandonedCemeteryResult,
+  chunkSubKey,
+  createAbandonedCemeteryCache,
+} from './abandonedCemeteryCache'
 import { FAR_RANGE_KM, LOCATION_SCAN_STEP, MEDIUM_RANGE_KM, NEAR_RANGE_KM, WORLD_UNITS_PER_KM } from './locationConfig'
+import { createLocationKnowledge } from './locationKnowledge'
 import {
   abandonedCemeteryChunkIntersectsKmBand,
   createWorldLocationCatalog,
@@ -503,6 +511,7 @@ describe('abandoned cemetery scan (plan world-022)', () => {
     cemeteries: { chunkX: number, chunkZ: number, id: string, x: number, z: number }[],
     probeLog?: { cx: number, cz: number }[],
     seed = SEED,
+    abandonedCemeteryCache?: Pick<AbandonedCemeteryCache, 'lookup' | 'remember' | 'ready'>,
   ) {
     return createWorldLocationCatalog({
       getSeed: () => seed,
@@ -511,7 +520,23 @@ describe('abandoned cemetery scan (plan world-022)', () => {
       lookupSettlement: () => null,
       getSampleParams: () => rawParams({ seed }),
       getChunkSize: () => CHUNK,
+      abandonedCemeteryCache,
     })
+  }
+
+  function memoryCache(
+    initial?: Iterable<readonly [string, CachedAbandonedCemeteryResult]>,
+    ready: () => Promise<void> = async () => {},
+  ): AbandonedCemeteryCache & { store: Map<string, CachedAbandonedCemeteryResult> } {
+    const store = new Map<string, CachedAbandonedCemeteryResult>(initial)
+    return {
+      store,
+      activate() { store.clear() },
+      lookup(cx, cz) { return store.get(chunkSubKey(cx, cz)) },
+      remember(cx, cz, result) { store.set(chunkSubKey(cx, cz), result) },
+      ready,
+      dispose() {},
+    }
   }
 
   it('keeps an abandoned cemetery just inside minKm and just at maxKm', () => {
@@ -639,6 +664,257 @@ describe('abandoned cemetery scan (plan world-022)', () => {
     const result = await promise
     settled = true
     expect(result.filter((l) => l.kind === 'cemetery')).toHaveLength(1)
+  })
+
+  describe('abandoned cemetery worldgen cache (plan world-025)', () => {
+    it('cached positive result produces the same WorldLocation and skips the expensive probe', () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+      const probeLog: { cx: number, cz: number }[] = []
+      const cache = memoryCache([[chunkSubKey(pass.cx, pass.cz), {
+        status: 'found',
+        id: fixture.id,
+        x: fixture.x,
+        z: fixture.z,
+      }]])
+      const result = catalogFor([fixture], probeLog, SEED, cache).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      expect(result.some((l) => l.id === fixture.id && l.kind === 'cemetery' && l.x === fixture.x && l.z === fixture.z)).toBe(true)
+      expect(probeLog.some((c) => c.cx === pass.cx && c.cz === pass.cz)).toBe(false)
+    })
+
+    it('cached negative result produces no cemetery and skips the expensive probe', () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+      const probeLog: { cx: number, cz: number }[] = []
+      const cache = memoryCache([[chunkSubKey(pass.cx, pass.cz), { status: 'none' }]])
+      const result = catalogFor([fixture], probeLog, SEED, cache).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      expect(result.some((l) => l.id === fixture.id)).toBe(false)
+      expect(probeLog.some((c) => c.cx === pass.cx && c.cz === pass.cz)).toBe(false)
+    })
+
+    it('cache miss probes once and remembers immediately', () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+      const probeLog: { cx: number, cz: number }[] = []
+      const cache = memoryCache()
+      const catalog = catalogFor([fixture], probeLog, SEED, cache)
+      catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      expect(probeLog.filter((c) => c.cx === pass.cx && c.cz === pass.cz)).toHaveLength(1)
+      expect(cache.lookup(pass.cx, pass.cz)).toEqual({
+        status: 'found',
+        id: fixture.id,
+        x: fixture.x,
+        z: fixture.z,
+      })
+    })
+
+    it('same-session repeat does not probe the same eligible chunk again', () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+      const probeLog: { cx: number, cz: number }[] = []
+      const cache = memoryCache()
+      const catalog = catalogFor([fixture], probeLog, SEED, cache)
+      catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      expect(probeLog.filter((c) => c.cx === pass.cx && c.cz === pass.cz)).toHaveLength(1)
+    })
+
+    it('landmarksInRangeAsync waits for cache hydration before expensive probes', async () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      let release!: () => void
+      const gate = new Promise<void>((resolve) => { release = resolve })
+      const probeLog: { cx: number, cz: number }[] = []
+      const cache = memoryCache(undefined, () => gate)
+      const pending = catalogFor([cemeteryAtChunk(pass.cx, pass.cz)], probeLog, SEED, cache).landmarksInRangeAsync(
+        0,
+        0,
+        MEDIUM_RANGE_KM,
+        FAR_RANGE_KM,
+        {
+          yieldEveryProbes: 1,
+          yieldToPaint: async () => {},
+        },
+      )
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(probeLog.length).toBe(0)
+      release()
+      await pending
+      expect(probeLog.length).toBeGreaterThan(0)
+    })
+
+    it('landmarksInRange stays synchronous and does not await hydration', () => {
+      const probeLog: { cx: number, cz: number }[] = []
+      const cache = memoryCache(undefined, () => new Promise(() => {}))
+      const result = catalogFor([], probeLog, SEED, cache).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      expect(Array.isArray(result)).toBe(true)
+      expect(probeLog.length).toBeGreaterThan(0)
+    })
+
+    it('sync and async return identical location sets with a shared cache', async () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixtures = [cemeteryAtChunk(pass.cx, pass.cz)]
+      const cache = memoryCache()
+      const sync = catalogFor(fixtures, undefined, SEED, cache).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+        .map((l) => l.id)
+        .sort()
+      const asyncResult = await catalogFor(fixtures, undefined, SEED, cache).landmarksInRangeAsync(
+        0,
+        0,
+        MEDIUM_RANGE_KM,
+        FAR_RANGE_KM,
+      )
+      expect(asyncResult.map((l) => l.id).sort()).toEqual(sync)
+    })
+
+    it('Near → Far and Far → Near stay deterministic with cache reuse', () => {
+      const a = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > 2 && km <= NEAR_RANGE_KM
+      })
+      const b = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= MEDIUM_RANGE_KM + 8 && !(cx === a.cx && cz === a.cz)
+      })
+      const fixtures = [cemeteryAtChunk(a.cx, a.cz), cemeteryAtChunk(b.cx, b.cz)]
+      const cache = memoryCache()
+      const forward = catalogFor(fixtures, undefined, SEED, cache)
+      const near1 = forward.landmarksInRange(0, 0, 0, NEAR_RANGE_KM).map((l) => l.id).sort()
+      const far1 = forward.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM).map((l) => l.id).sort()
+      const backward = catalogFor(fixtures, undefined, SEED, cache)
+      const far2 = backward.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM).map((l) => l.id).sort()
+      const near2 = backward.landmarksInRange(0, 0, 0, NEAR_RANGE_KM).map((l) => l.id).sort()
+      expect(near2).toEqual(near1)
+      expect(far2).toEqual(far1)
+    })
+
+    it('cached existence does not modify LocationKnowledge', () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+      const knowledge = createLocationKnowledge()
+      const cache = memoryCache([[chunkSubKey(pass.cx, pass.cz), {
+        status: 'found',
+        id: fixture.id,
+        x: fixture.x,
+        z: fixture.z,
+      }]])
+      catalogFor([fixture], undefined, SEED, cache).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      expect(knowledge.list()).toEqual([])
+    })
+
+    it('old seed results cannot leak after a later cache activation', () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+      const probeLog: { cx: number, cz: number }[] = []
+      const cache = memoryCache([[chunkSubKey(pass.cx, pass.cz), {
+        status: 'found',
+        id: fixture.id,
+        x: fixture.x,
+        z: fixture.z,
+      }]])
+      cache.activate(99, 'other-world')
+      const result = catalogFor([fixture], probeLog, SEED, cache).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      expect(result.some((l) => l.id === fixture.id)).toBe(true)
+      expect(probeLog.some((c) => c.cx === pass.cx && c.cz === pass.cz)).toBe(true)
+    })
+
+    it('progress stays monotonic and ends at 1 with zero, partial, or full cache hits', async () => {
+      const pass = findRollChunk(SEED, true, (cx, cz) => {
+        const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+        return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+      })
+      const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+
+      async function progressOf(cache: Pick<AbandonedCemeteryCache, 'lookup' | 'remember' | 'ready'>) {
+        const values: number[] = []
+        await catalogFor([fixture], undefined, SEED, cache).landmarksInRangeAsync(
+          0,
+          0,
+          MEDIUM_RANGE_KM,
+          FAR_RANGE_KM,
+          {
+            yieldEveryProbes: 1,
+            yieldToPaint: async () => {},
+            onProgress: (p) => values.push(p),
+          },
+        )
+        expect(values.length).toBeGreaterThan(0)
+        expect(values[values.length - 1]).toBe(1)
+        for (let i = 1; i < values.length; i++) expect(values[i]!).toBeGreaterThanOrEqual(values[i - 1]!)
+      }
+
+      await progressOf(memoryCache())
+      const partial = memoryCache([[chunkSubKey(pass.cx, pass.cz), { status: 'none' }]])
+      await progressOf(partial)
+      const warm = memoryCache()
+      catalogFor([fixture], undefined, SEED, warm).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      await progressOf(warm)
+    })
+
+    describe('warm IndexedDB hydrate', () => {
+      beforeEach(() => {
+        vi.stubGlobal('indexedDB', new IDBFactory())
+      })
+
+      afterEach(() => {
+        vi.unstubAllGlobals()
+      })
+
+      it('reuses a persisted cache after a fresh activation without probing again', async () => {
+        const pass = findRollChunk(SEED, true, (cx, cz) => {
+          const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+          return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+        })
+        const fixture = cemeteryAtChunk(pass.cx, pass.cz)
+        const fp = 'fp-warm'
+        const coldLog: { cx: number, cz: number }[] = []
+        const coldCache = createAbandonedCemeteryCache({ debounceMs: 20 })
+        coldCache.activate(SEED, fp)
+        await coldCache.ready()
+        const coldIds = catalogFor([fixture], coldLog, SEED, coldCache)
+          .landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+          .map((l) => l.id)
+          .sort()
+        expect(coldLog.some((c) => c.cx === pass.cx && c.cz === pass.cz)).toBe(true)
+        await new Promise((resolve) => setTimeout(resolve, 60))
+        coldCache.dispose()
+
+        const warmLog: { cx: number, cz: number }[] = []
+        const warmCache = createAbandonedCemeteryCache()
+        warmCache.activate(SEED, fp)
+        await warmCache.ready()
+        const warmIds = catalogFor([fixture], warmLog, SEED, warmCache)
+          .landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+          .map((l) => l.id)
+          .sort()
+        expect(warmIds).toEqual(coldIds)
+        expect(warmLog.some((c) => c.cx === pass.cx && c.cz === pass.cz)).toBe(false)
+        warmCache.dispose()
+      })
+    })
   })
 })
 

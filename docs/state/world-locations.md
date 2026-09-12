@@ -4,7 +4,7 @@
 
 **Not:** a second terrain-generation reference ([terrain-and-world-generation.md](./terrain-and-world-generation.md) owns the actual sampling/heightmap/biome machinery this domain consumes), UI implementation detail (the map screen's rendering is out of scope unless it changes ownership), or a plan/changelog.
 
-**Last verified:** 2026-09-11
+**Last verified:** 2026-09-12
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -39,7 +39,7 @@ world generation (terrain sampling: continentalness / floor height /
   never the location's own geometry
 ```
 
-The persistent worldgen cache's one current namespace exists for exactly this catalog's coarse classification step — a `(seed, namespace, version, fingerprint)` keyed cache of the classification result, disposable and never a correctness dependency (a miss just re-runs the classification). See [persistence.md](./persistence.md#worldgen-cache) for the general mechanism; this is its only current consumer.
+The persistent worldgen cache currently has two namespaces owned by this catalog, both disposable and never a correctness dependency (a miss just re-runs the canonical work). `locations-coarse` stores coarse 16×16 classification tiles. `abandoned-cemeteries` stores resolved roll-pass abandoned-cemetery chunk results (found placement or confirmed absence) so later discovery can skip `probeAbandonedCemeteryAtChunk`. See [persistence.md](./persistence.md#worldgen-cache) for the general mechanism.
 
 ## Boundaries
 
@@ -52,7 +52,7 @@ The persistent worldgen cache's one current namespace exists for exactly this ca
 ## Limitations
 
 - This domain is not covered by its own dedicated audit pass to the same depth as settlements/NPC/fauna — treat the scope above as the ownership boundary, and verify specific mechanics against source before relying on implementation detail beyond what's stated here.
-- The persistent worldgen cache's versioning discipline (bump the namespace version/fingerprint when generation rules change) currently applies to this domain's one namespace only — core terrain/hydrology generation has no persistent cache of its own kind to keep in sync.
+- The persistent worldgen cache's versioning discipline (bump the namespace version/fingerprint when generation rules change) currently applies to this domain's two namespaces (`locations-coarse`, `abandoned-cemeteries`) — core terrain/hydrology generation has no persistent cache of its own kind to keep in sync.
 
 ## Entry points
 

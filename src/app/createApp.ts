@@ -144,6 +144,10 @@ import { createDayNightState, parseTimeOfDayFromUrl, resetDayNightForNewGame } f
 import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
 import { createGroundFog } from '../world/groundFog'
+import {
+  abandonedCemeteryFingerprint,
+  createAbandonedCemeteryCache,
+} from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
@@ -648,6 +652,7 @@ export async function createApp(
   // world-015 §11/§15) — the catalog stays fully synchronous; this owns the
   // async IndexedDB hydrate/dirty-write side behind a sync seam.
   const coarseCachePersistence = createCoarseCachePersistence()
+  const abandonedCemeteryCache = createAbandonedCemeteryCache()
   const worldLocationCatalog = createWorldLocationCatalog({
     getSeed: () => config.seed,
     getCaves: () => bundle.caves,
@@ -657,12 +662,17 @@ export async function createApp(
     getChunkSize: () => config.terrain.chunkSize,
     hydrateTile: (tx, tz) => coarseCachePersistence.hydrateTile(tx, tz),
     onTileDirty: (tx, tz, tile) => coarseCachePersistence.onTileDirty(tx, tz, tile),
+    abandonedCemeteryCache,
     getDarkForestTreasureSite: () => {
       const site = getActiveDarkForestTreasureSite()
       return site ? { locationId: site.locationId, x: site.x, z: site.z } : null
     },
   })
   coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
+  abandonedCemeteryCache.activate(
+    config.seed,
+    abandonedCemeteryFingerprint(rawSampleParamsFromWorld(config), config.terrain.chunkSize),
+  )
   const locationKnowledge = createLocationKnowledge(initialSave?.map.discoveredLocations)
   setActiveLocationKnowledge(locationKnowledge)
   // Home village is physically known from spawn — confirm before the game
@@ -1531,6 +1541,10 @@ export async function createApp(
       // controller so a late-arriving hydrate from the *old* identity never
       // gets applied to the rebuilt catalog (plan world-015 §9).
       coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
+      abandonedCemeteryCache.activate(
+        config.seed,
+        abandonedCemeteryFingerprint(rawSampleParamsFromWorld(config), config.terrain.chunkSize),
+      )
 
       // Plan 199 — a same-seed rebuild recreates fauna with fresh per-kind
       // id counters; `reset()` below already clears `animalTargets` on a
@@ -2425,6 +2439,7 @@ export async function createApp(
     // tearing down — see this file's `worldGeneration` doc comment above.
     worldGeneration++
     coarseCachePersistence.dispose()
+    abandonedCemeteryCache.dispose()
     disposeWorldBundle(bundle)
     setActiveMonitor(null)
     setActiveAgentCpuDiag(null)

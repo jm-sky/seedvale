@@ -1,7 +1,7 @@
 # Plan: Persistent abandoned cemetery worldgen cache
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** ~~world-015~~, ~~world-022~~
@@ -9,6 +9,15 @@
 **Subdomains:** `places` `simulation`
 **Tags:** `worldgen-cache` `locations` `cemetery` `performance`
 **Roadmap:** -
+
+## Implementation status
+
+Implemented 2026-09-12 on current `main`. Automated checks are the AI verification set; browser/gameplay verification is left to the user.
+
+- `src/world/locations/abandonedCemeteryCache.ts`: `abandoned-cemeteries` namespace, chunk subkey, positive/negative payload, fingerprint of `RawSampleParams` + `chunkSize`, `activate`/`lookup`/`remember`/`ready`/`dispose`, debounced persist, bounded cap, generation-guarded hydrate merge.
+- `src/app/createApp.ts`: activates the cache beside `locations-coarse` on boot and world rebuild; disposes with the coarse cache.
+- `src/world/locations/worldLocationCatalog.ts`: shared lookup-or-probe helper; `landmarksInRangeAsync` awaits `ready()` then skips cached roll-pass chunks in the expensive probe loop; sync `landmarksInRange` never waits for IndexedDB.
+- Docs: `docs/STATE.md`, `docs/state/world-locations.md`, `docs/state/persistence.md`, `docs/state/terrain-and-world-generation.md`.
 
 ## Problem
 
