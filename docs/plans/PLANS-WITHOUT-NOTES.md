@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-12 06:59:13  
+> Date: 2026-09-12 08:20:10  
 
 ## PLANS
 
@@ -44,7 +44,13 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Plik dodaj na branch `main` w repozytorium.
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/fauna-025-livestock-stray-return-and-recovery.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
 ```
 
 ### `npc-031-voluntary-expedition-joining.md`
@@ -75,7 +81,13 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Plik dodaj na branch `main` w repozytorium.
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/npc-031-voluntary-expedition-joining.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
 ```
 
 ### `quests-progression-008-treasure-map-bear-cave.md`
@@ -106,7 +118,13 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Plik dodaj na branch `main` w repozytorium.
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-008-treasure-map-bear-cave.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
 ```
 
 ### `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`
@@ -137,7 +155,13 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Plik dodaj na branch `main` w repozytorium.
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/settlements-npcs-031-sustainable-seed-recovery-and-replanting.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
 ```
 
 ### `settlements-npcs-032-player-to-household-resource-transfer.md`
@@ -168,7 +192,13 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Plik dodaj na branch `main` w repozytorium.
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/settlements-npcs-032-player-to-household-resource-transfer.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
 ```
 
 ### `tools-005-seedvale-character-preparation-panel.md`
@@ -199,7 +229,13 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Plik dodaj na branch `main` w repozytorium.
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/tools-005-seedvale-character-preparation-panel.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
 ```
 
 ### `world-023-species-driven-sowing-density-and-yield.md`
@@ -230,5 +266,11 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Plik dodaj na branch `main` w repozytorium.
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/world-023-species-driven-sowing-density-and-yield.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
 ```
