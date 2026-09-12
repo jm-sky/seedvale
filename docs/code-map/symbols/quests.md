@@ -132,33 +132,34 @@ Generated from exported TypeScript symbols.
 
 ## `quests/QuestManager.ts`
 
-- `AnimalTargetResolver` — type — line 152
-- `ApplySocialConsequence` — type — line 164
-- `DangerousTraitApplier` — type — line 157
-- `HorseRewardAvailability` — type — line 128
-- `ObjectiveRef` — type — line 133
+- `AnimalTargetResolver` — type — line 174
+- `ApplySocialConsequence` — type — line 186
+- `DangerousTraitApplier` — type — line 179
+- `HorseRewardAvailability` — type — line 150
+- `ObjectiveRef` — type — line 155
 - `QUEST_MARKER_AVAILABLE` — const — line 52
 - `QUEST_MARKER_IN_PROGRESS` — const — line 53
 - `QUEST_MARKER_READY` — const — line 54
 - `QUEST_MARKER_TALK_TARGET` — const — line 55
-- `QuestAnimalOwnershipTransfer` — type — line 124
+- `QuestAnimalOwnershipTransfer` — type — line 146
 - `QuestDialogAction` — type — line 57
-- `QuestDialogOverride` — type — line 70
+- `QuestDialogOverride` — type — line 85
   - domain: quests-progression
-- `QuestItemGrant` — type — line 120
-- `QuestListEntry` — type — line 88
-- `QuestManager` — class — line 290
+- `QuestDialogTopic` — type — line 73
+- `QuestItemGrant` — type — line 142
+- `QuestListEntry` — type — line 110
+- `QuestManager` — class — line 312
   - domain: quests-progression
   - system: quest-manager
   - role: Owns quest progress, objective/stage evaluation and NPC relation levels.
   - owns: QuestProgressEntry
   - integration: Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly. World-driven opportunities use a read-only source lookup; QuestManager owns quest progress only.
-- `QuestManagerInitial` — type — line 109
-- `QuestPromisedReward` — type — line 84
-- `QuestSocialAvailabilityLookup` — type — line 169
-- `QuestWorldProgressLookup` — type — line 196
-- `SettlementRatInfestationLookup` — type — line 176
-- `SpawnPointDestructionLookup` — type — line 186
+- `QuestManagerInitial` — type — line 131
+- `QuestPromisedReward` — type — line 106
+- `QuestSocialAvailabilityLookup` — type — line 191
+- `QuestWorldProgressLookup` — type — line 218
+- `SettlementRatInfestationLookup` — type — line 198
+- `SpawnPointDestructionLookup` — type — line 208
 
 ## `quests/quests.ts`
 
