@@ -9,6 +9,7 @@
 **Subdomains:** `domestication` `behavior` `lifecycle`
 **Tags:** `livestock` `stray` `return-home` `recovery` `quests`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Cel
 
