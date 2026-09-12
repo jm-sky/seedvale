@@ -42,7 +42,7 @@ const NORMAL_MAP_INCLUDE = '#include <normal_fragment_maps>'
 const COLOR_FRAGMENT_INCLUDE = '#include <color_fragment>'
 const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
 
-const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v15-detail'
+const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v16-detail'
 const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v5-plain'
 
 function caveVec3Normalize(v: CaveVec3, fallback: CaveVec3 = [0, 1, 0]): [number, number, number] {
@@ -283,9 +283,14 @@ void caveProceduralRockPerturb( vec3 worldPos, float scale, inout vec3 worldN ) 
 }
 `
 
+/** Shared wetness at main() scope — visible to color and roughness chunks below. */
+const CAVE_WETNESS_PREP_CHUNK = /* glsl */ `
+vec3 geoWorld = caveViewToWorldDir( normalize( vNormal ) );
+float wetMask = caveWetnessMask( vWorldPos, geoWorld );
+`
+
 const CAVE_COLOR_CHUNK = /* glsl */ `
   {
-    vec3 geoWorld = caveViewToWorldDir( normalize( vNormal ) );
     diffuseColor.rgb *= caveTriplanarRockAlbedoDetail(
       vWorldPos,
       geoWorld,
@@ -297,7 +302,6 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
     float macroMix = macro * 0.62 + macro2 * 0.38;
     diffuseColor.rgb *= 1.0 + ( macroMix - 0.5 ) * 0.09;
 
-    float wetMask = caveWetnessMask( vWorldPos, geoWorld );
     diffuseColor.rgb *= 1.0 - wetMask * uCaveWetDarkening;
     diffuseColor.rgb = mix(
       diffuseColor.rgb,
@@ -309,8 +313,6 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
 
 const CAVE_ROUGHNESS_CHUNK = /* glsl */ `
   {
-    vec3 geoWorld = caveViewToWorldDir( normalize( vNormal ) );
-    float wetMask = caveWetnessMask( vWorldPos, geoWorld );
     roughnessFactor = mix( uCaveDryRoughness, uCaveWetRoughness, wetMask );
   }
 `
@@ -382,7 +384,10 @@ uniform float uCaveWetRoughness;
 uniform float uCaveWetDarkening;
 ${CAVE_SURFACE_GLSL}`,
       )
-      .replace(COLOR_FRAGMENT_INCLUDE, `${COLOR_FRAGMENT_INCLUDE}\n${CAVE_COLOR_CHUNK}`)
+      .replace(
+        COLOR_FRAGMENT_INCLUDE,
+        `${COLOR_FRAGMENT_INCLUDE}\n${CAVE_WETNESS_PREP_CHUNK}\n${CAVE_COLOR_CHUNK}`,
+      )
       .replace(
         ROUGHNESSMAP_FRAGMENT_INCLUDE,
         `${ROUGHNESSMAP_FRAGMENT_INCLUDE}\n${CAVE_ROUGHNESS_CHUNK}`,

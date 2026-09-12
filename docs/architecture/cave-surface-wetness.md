@@ -17,19 +17,21 @@ vWorldPos (world XYZ)
 vNormal   (view-space geometric normal, Three varying)
         │
         ▼
-caveViewToWorldDir(normalize(vNormal))  →  geoWorld
+caveViewToWorldDir(normalize(vNormal))  →  geoWorld   (main() scope, after #include <color_fragment>)
         │
         ▼
-caveWetnessMask(vWorldPos, geoWorld)
+caveWetnessMask(vWorldPos, geoWorld)  →  wetMask      (computed once per fragment)
   ├─ two octaves of caveTriplanarWetnessNoise
   ├─ mix 0.68 / 0.32
   └─ smoothstep × uCaveWetnessAmount
         │
-        ├─ CAVE_COLOR_CHUNK     → darken + cool tint
-        └─ CAVE_ROUGHNESS_CHUNK → mix dry/wet roughness
+        ├─ CAVE_COLOR_CHUNK     → darken + cool tint (reuses wetMask)
+        └─ CAVE_ROUGHNESS_CHUNK → mix dry/wet roughness (reuses wetMask)
 ```
 
-Both colour and roughness recompute `geoWorld` from **geometric** `vNormal` / the same helper. Detail normals (triplanar rock normal map, procedural rock perturb) are **not** inputs to wetness, so normal-map grain cannot crawl the mask.
+`geoWorld` and `wetMask` are declared at `main()` function scope immediately after Three’s `color_fragment` include and before `roughnessmap_fragment`, so color and roughness share one mask evaluation. They are **not** recomputed in each injected block.
+
+Both colour and roughness use the same **geometric** `geoWorld` derived from `vNormal` / `caveViewToWorldDir`. Detail normals (triplanar rock normal map, procedural rock perturb) are **not** inputs to wetness, so normal-map grain cannot crawl the mask.
 
 ---
 
