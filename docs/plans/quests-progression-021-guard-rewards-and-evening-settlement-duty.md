@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `progression` `rewards` `relationships`
 **Tags:** `guard` `alpha-wolf` `renown` `settlement-lighting` `world-time`
 **Roadmap:** `quests-and-reputation.md`
+**Model:** Opus, Sonnet
 
 ## Cel
 
