@@ -234,15 +234,176 @@ export function createSeaweed(scale = 1): THREE.Group {
   return seaweed
 }
 
+/** Rock surface palette for `createLargeRock` vertex colors — soft natural
+ *  tints rather than a flat mid-gray slab. Tunable after visual check. */
+const LARGE_ROCK_PALETTE = {
+  base: new THREE.Color(0x7d7a72),
+  cool: new THREE.Color(0x5c6168),
+  warm: new THREE.Color(0x8a7b68),
+  moss: new THREE.Color(0x6a7360),
+} as const
+
+/** Soft blotch cell size in local geometry units (~0.9 radius icosahedron).
+ *  Larger → fewer, broader colour patches; smaller → finer mottling. */
+const LARGE_ROCK_NOISE_CELL = 0.68
+/** Second octave cell size — slight extra variety without pixel noise. */
+const LARGE_ROCK_NOISE_CELL_B = 1.05
+/** Bottom / top luminance multipliers along local Y. */
+const LARGE_ROCK_BOTTOM_MUL = 0.78
+const LARGE_ROCK_TOP_MUL = 1.06
+/** Extra lift for faces whose normal points upward. */
+const LARGE_ROCK_UP_FACE_BOOST = 0.07
+/** How strongly accent colours mix into the base (0 = flat base, 1 = full). */
+const LARGE_ROCK_ACCENT_STRENGTH = 0.55
+
+/** Deterministic 0..1 hash from position + seed — no `Math.random()`. */
+function rockHash01(x: number, y: number, z: number, seed: number): number {
+  const n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7 + seed * 19.19) * 43758.5453123
+  return n - Math.floor(n)
+}
+
+/** Low-frequency trilinear value noise — large cells so blotches span many
+ *  flat-shaded faces instead of reading as fine speckles. */
+function rockValueNoise(x: number, y: number, z: number, seed: number, cellSize: number): number {
+  const inv = 1 / cellSize
+  const sx = x * inv
+  const sy = y * inv
+  const sz = z * inv
+  const ix = Math.floor(sx)
+  const iy = Math.floor(sy)
+  const iz = Math.floor(sz)
+  const fx = sx - ix
+  const fy = sy - iy
+  const fz = sz - iz
+  const ux = fx * fx * (3 - 2 * fx)
+  const uy = fy * fy * (3 - 2 * fy)
+  const uz = fz * fz * (3 - 2 * fz)
+
+  const c000 = rockHash01(ix, iy, iz, seed)
+  const c100 = rockHash01(ix + 1, iy, iz, seed)
+  const c010 = rockHash01(ix, iy + 1, iz, seed)
+  const c110 = rockHash01(ix + 1, iy + 1, iz, seed)
+  const c001 = rockHash01(ix, iy, iz + 1, seed)
+  const c101 = rockHash01(ix + 1, iy, iz + 1, seed)
+  const c011 = rockHash01(ix, iy + 1, iz + 1, seed)
+  const c111 = rockHash01(ix + 1, iy + 1, iz + 1, seed)
+
+  const x00 = c000 * (1 - ux) + c100 * ux
+  const x10 = c010 * (1 - ux) + c110 * ux
+  const x01 = c001 * (1 - ux) + c101 * ux
+  const x11 = c011 * (1 - ux) + c111 * ux
+  const y0 = x00 * (1 - uy) + x10 * uy
+  const y1 = x01 * (1 - uy) + x11 * uy
+  return y0 * (1 - uz) + y1 * uz
+}
+
+const _rockColor = new THREE.Color()
+const _rockAccent = new THREE.Color()
+
+/**
+ * Bakes soft, variant-seeded rock surface colours into `geometry` (absolute
+ * RGB; pair with a white `MeshStandardMaterial` + `vertexColors: true`).
+ * Cheap one-shot CPU work at prop creation — no shaders, textures, or extra
+ * draw calls. Compatible with shared-geometry instancing.
+ * `radius` scales noise cells with the icosahedron so blotch size stays
+ * proportional when `createLargeRock`'s `scale` changes.
+ */
+function applyLargeRockVertexColors(geometry: THREE.BufferGeometry, variant: number, radius: number): void {
+  const pos = geometry.getAttribute('position')
+  if (!pos) return
+  const nrm = geometry.getAttribute('normal')
+  const count = pos.count
+  const colors = new Float32Array(count * 3)
+
+  let minY = Infinity
+  let maxY = -Infinity
+  for (let i = 0; i < count; i++) {
+    const y = pos.getY(i)
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+  }
+  const yRange = Math.max(1e-6, maxY - minY)
+  const seed = variant * 97.13 + 11.7
+  // Keep blotch size proportional to the icosahedron radius (tuned at scale=1).
+  const sizeMul = radius / 0.9
+  const cellA = LARGE_ROCK_NOISE_CELL * sizeMul
+  const cellB = LARGE_ROCK_NOISE_CELL_B * sizeMul
+
+  for (let i = 0; i < count; i++) {
+    const x = pos.getX(i)
+    const y = pos.getY(i)
+    const z = pos.getZ(i)
+
+    const nA = rockValueNoise(x, y, z, seed, cellA)
+    const nB = rockValueNoise(x, y, z, seed + 3.17, cellB)
+
+    // Soft mix across four rock tints — large cells keep patches broad.
+    if (nA < 0.34) {
+      _rockAccent.copy(LARGE_ROCK_PALETTE.cool)
+    } else if (nA < 0.67) {
+      _rockAccent.copy(LARGE_ROCK_PALETTE.warm)
+    } else {
+      _rockAccent.copy(LARGE_ROCK_PALETTE.moss)
+    }
+    const mix = (0.2 + nB * LARGE_ROCK_ACCENT_STRENGTH) * (0.55 + nA * 0.45)
+    _rockColor.copy(LARGE_ROCK_PALETTE.base).lerp(_rockAccent, mix)
+
+    const yNorm = (y - minY) / yRange
+    const heightMul = LARGE_ROCK_BOTTOM_MUL + yNorm * (LARGE_ROCK_TOP_MUL - LARGE_ROCK_BOTTOM_MUL)
+    _rockColor.multiplyScalar(heightMul)
+
+    if (nrm) {
+      const ny = nrm.getY(i)
+      if (ny > 0.25) {
+        _rockColor.multiplyScalar(1 + (ny - 0.25) * LARGE_ROCK_UP_FACE_BOOST)
+      }
+    }
+
+    colors[i * 3] = _rockColor.r
+    colors[i * 3 + 1] = _rockColor.g
+    colors[i * 3 + 2] = _rockColor.b
+  }
+
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+}
+
+/**
+ * Uniform per-pebble RGB multiplier (relative to the shared material
+ * `color`) so ore tints from `createRockCluster(..., color)` /
+ * `tintPropMaterials` stay intact while pebbles still differ slightly.
+ */
+function applyPebbleVertexTint(geometry: THREE.BufferGeometry, mulR: number, mulG: number, mulB: number): void {
+  const pos = geometry.getAttribute('position')
+  if (!pos) return
+  const count = pos.count
+  const colors = new Float32Array(count * 3)
+  for (let i = 0; i < count; i++) {
+    colors[i * 3] = mulR
+    colors[i * 3 + 1] = mulG
+    colors[i * 3 + 2] = mulB
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+}
+
 /** Irregular boulder — `IcosahedronGeometry` squashed/stretched per axis from
  *  `variant` (deterministic, no `Math.random()`: the caller already rolled a
  *  seeded `variant` in `chunkEnvironment.ts`, so re-rolling here would break
- *  the "same chunk reload = same world" guarantee). */
+ *  the "same chunk reload = same world" guarantee). Soft vertex-colour
+ *  blotches (cool / warm / mossy) + darker base give surface variety without
+ *  textures or extra draw calls. */
 export function createLargeRock(scale = 1, variant = 0.5): THREE.Group {
   const rock = new THREE.Group()
+  const radius = 0.9 * scale
+  const geometry = new THREE.IcosahedronGeometry(radius, 1)
+  applyLargeRockVertexColors(geometry, variant, radius)
   const mesh = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.9 * scale, 1),
-    new THREE.MeshStandardMaterial({ color: 0x7d7a72, flatShading: true, roughness: 1 }),
+    geometry,
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      flatShading: true,
+      roughness: 1,
+      vertexColors: true,
+    }),
   )
   mesh.scale.set(
     0.75 + variant * 0.6,
@@ -260,10 +421,12 @@ export function createLargeRock(scale = 1, variant = 0.5): THREE.Group {
  *  `items.ts` — pure visual reuse) scattered deterministically from `variant`
  *  via trig offsets rather than `Math.random()`. `color` defaults to plain
  *  rock gray — overridden for ore piles (`terrain/resourceDeposits.ts`, e.g.
- *  rust for iron, near-black for coal, gold for a gold vein). */
+ *  rust for iron, near-black for coal, gold for a gold vein). Per-pebble
+ *  vertex-colour multipliers keep ore / `tintPropMaterials` base colour
+ *  while breaking up a flat monochrome pile. */
 export function createRockCluster(scale = 1, variant = 0.5, color = 0x8c8c8c): THREE.Group {
   const cluster = new THREE.Group()
-  const mat = new THREE.MeshStandardMaterial({ color, flatShading: true })
+  const mat = new THREE.MeshStandardMaterial({ color, flatShading: true, vertexColors: true })
   // Wider spread than a fixed 3-5: `variant` (already a random 0..1 roll from
   // the caller) pushes some clusters up to 9 pebbles for visible size variety
   // between clusters, not just within one.
@@ -272,10 +435,24 @@ export function createRockCluster(scale = 1, variant = 0.5, color = 0x8c8c8c): T
   for (let i = 0; i < count; i++) {
     const a = variant * Math.PI * 2 + i * 2.4
     const r = (0.15 + ((variant * (i + 3)) % 1) * 0.3) * spread
-    const pebble = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.16 * scale * (0.7 + (i % 3) * 0.15), 1),
-      mat,
-    )
+    const geometry = new THREE.DodecahedronGeometry(0.16 * scale * (0.7 + (i % 3) * 0.15), 1)
+    // Soft per-pebble luminance / warm-cool shift (multiplies material.color).
+    const tintRoll = (variant * (i + 17) + i * 0.37) % 1
+    const lum = 0.86 + ((variant * (i + 9)) % 1) * 0.22
+    let mulR = lum
+    let mulG = lum
+    let mulB = lum
+    if (tintRoll < 0.33) {
+      mulR *= 0.94
+      mulG *= 0.97
+      mulB *= 1.05
+    } else if (tintRoll < 0.66) {
+      mulR *= 1.06
+      mulG *= 0.98
+      mulB *= 0.92
+    }
+    applyPebbleVertexTint(geometry, mulR, mulG, mulB)
+    const pebble = new THREE.Mesh(geometry, mat)
     pebble.position.set(Math.cos(a) * r, 0.08 * scale, Math.sin(a) * r)
     pebble.rotation.set(a, a * 1.3, 0)
     // No shadow: same reasoning as `createReed` (perf review A2).
