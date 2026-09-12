@@ -81,6 +81,7 @@ Generated from TypeScript imports.
 - `player/characterPresentation.test.ts`
 - `player/humanCarryCapacity.test.ts`
 - `player/physicalWorkStrength.test.ts`
+- `player/playerDamage.test.ts`
 - `player/playerDamage.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
@@ -174,6 +175,7 @@ Generated from TypeScript imports.
 - `items/sensibleFood.ts`
 - `player/PlayerController.ts`
 - `player/PlayerNeeds.test.ts`
+- `player/playerDamage.test.ts`
 - `player/playerDamage.ts`
 - `player/playerMelee.ts`
 - `player/playerRanged.ts`
@@ -359,12 +361,23 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `player/playerCombat.test.ts`
 
+## `player/playerDamage.test.ts`
+
+**Imports**
+
+- `items/equipment.ts`
+- `player/PlayerController.ts`
+- `player/PlayerNeeds.ts`
+- `player/playerDamage.ts`
+- `shared/HealthState.ts`
+
 ## `player/playerDamage.ts`
 
 **Imports**
 
 - `combat/defenseResolver.ts`
 - `items/HeldTool.ts`
+- `items/equipment.ts`
 - `items/itemCatalog.ts`
 - `player/PlayerController.ts`
 - `player/PlayerNeeds.ts`
@@ -377,6 +390,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/mountActions.ts`
 - `app/gameLoop.ts`
+- `player/playerDamage.test.ts`
 - `player/playerDownedRecovery.test.ts`
 
 ## `player/playerDimensions.ts`

@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.test.ts`
 - `player/PlayerNeeds.ts`
 - `player/playerCombat.test.ts`
+- `player/playerDamage.test.ts`
 - `player/playerDamage.ts`
 - `player/playerDownedRecovery.test.ts`
 - `settlement/npcPostDeath.test.ts`

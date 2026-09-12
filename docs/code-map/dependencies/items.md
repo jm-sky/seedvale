@@ -131,6 +131,8 @@ Generated from TypeScript imports.
 - `items/createDroppedItems.test.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
+- `items/equipment.test.ts`
+- `items/equipment.ts`
 - `items/foodItems.test.ts`
 - `items/foodItems.ts`
 - `items/foodProvenance.test.ts`
@@ -448,6 +450,35 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `items/createPlacedTents.test.ts`
 
+## `items/equipment.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/equipment.ts`
+
+## `items/equipment.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/actions/actionContext.ts`
+- `app/actions/containerActions.ts`
+- `app/actions/mountActions.ts`
+- `app/createApp.ts`
+- `app/gameLoop.ts`
+- `app/inventoryWiring.ts`
+- `app/saveState.ts`
+- `items/equipment.test.ts`
+- `persistence/saveData.ts`
+- `player/playerDamage.test.ts`
+- `player/playerDamage.ts`
+
 ## `items/foodFreshness.test.ts`
 
 **Imports**
@@ -718,6 +749,7 @@ Generated from TypeScript imports.
 - `items/campRepair.ts`
 - `items/coin.test.ts`
 - `items/createPlacedTents.ts`
+- `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/itemCapabilities.test.ts`
@@ -952,6 +984,7 @@ Generated from TypeScript imports.
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
+- `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `items/foodSafety.ts`

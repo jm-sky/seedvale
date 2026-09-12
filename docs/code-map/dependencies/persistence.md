@@ -41,6 +41,7 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/container.ts`
+- `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`

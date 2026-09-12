@@ -15,6 +15,7 @@ Generated from TypeScript imports.
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/equipment.ts`
 - `items/items.ts`
 - `player/PlayerController.ts`
 - `player/PlayerTorch.ts`
@@ -103,6 +104,7 @@ Generated from TypeScript imports.
 - `input/MouseLook.ts`
 - `items/Inventory.ts`
 - `items/container.ts`
+- `items/equipment.ts`
 - `items/foodItems.ts`
 - `items/inventoryView.ts`
 - `items/itemCatalog.ts`
@@ -359,6 +361,7 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `fauna/AnimalAgent.ts`
+- `items/equipment.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/playerDamage.ts`
@@ -825,6 +828,7 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/container.ts`
+- `items/equipment.ts`
 - `items/guardSword.ts`
 - `items/inventoryView.ts`
 - `items/itemCatalog.ts`
@@ -984,6 +988,7 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/campRepair.ts`
+- `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/itemCatalog.ts`
 - `items/itemFuel.ts`
@@ -1226,6 +1231,7 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/books.ts`
+- `items/equipment.ts`
 - `items/foodItems.ts`
 - `items/guardSword.ts`
 - `items/inventoryView.ts`
@@ -1334,6 +1340,7 @@ Generated from TypeScript imports.
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/equipment.ts`
 - `items/primaryWeapons.ts`
 - `items/treasureGameplay.ts`
 - `persistence/saveData.ts`

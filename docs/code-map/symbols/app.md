@@ -4,9 +4,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 75
-- `isChannelBusy` — function — line 82
-- `PlayerActionContext` — type — line 30
+- `isActionBlocked` — function — line 80
+- `isChannelBusy` — function — line 87
+- `PlayerActionContext` — type — line 31
 
 ## `app/actions/actionContracts.ts`
 
@@ -29,9 +29,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 76
-- `ContainerActions` — type — line 57
-- `createContainerActions` — function — line 89
+- `ContainerActionDeps` — type — line 77
+- `ContainerActions` — type — line 58
+- `createContainerActions` — function — line 90
 
 ## `app/actions/cookMealIntent.ts`
 
@@ -81,9 +81,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/mountActions.ts`
 
-- `createMountActions` — function — line 44
-- `DismountReason` — type — line 18
-- `MountActions` — type — line 20
+- `createMountActions` — function — line 45
+- `DismountReason` — type — line 19
+- `MountActions` — type — line 21
 
 ## `app/actions/placementActions.ts`
 
@@ -240,23 +240,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 289
+- `createApp` — function — line 290
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 258
+- `NewAppOptions` — type — line 259
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 633
+- `createGameLoop` — function — line 639
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 601
-- `GameLoopDeps` — type — line 295
+- `GameLoop` — type — line 607
+- `GameLoopDeps` — type — line 297
 
 ## `app/graphicsSettings.ts`
 
@@ -316,10 +316,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 169
-- `InventoryWiring` — type — line 108
-- `InventoryWiringDeps` — type — line 137
-- `MerchantInventoryView` — type — line 94
+- `createInventoryWiring` — function — line 175
+- `InventoryWiring` — type — line 109
+- `InventoryWiringDeps` — type — line 142
+- `MerchantInventoryView` — type — line 95
 
 ## `app/modalState.ts`
 
@@ -346,14 +346,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 116
+- `createSaveState` — function — line 118
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 36
-- `SaveStateDeps` — type — line 57
+- `SaveState` — type — line 37
+- `SaveStateDeps` — type — line 58
 
 ## `app/userActions.ts`
 

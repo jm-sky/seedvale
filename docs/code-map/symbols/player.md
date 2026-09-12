@@ -92,15 +92,15 @@ Generated from exported TypeScript symbols.
 
 ## `player/playerDamage.ts`
 
-- `applyDownedRecovery` — function — line 31
-- `applyPlayerDamage` — function — line 58
-- `ApplyPlayerDamageParams` — type — line 43
-- `DOWNED_DURATION_SEC` — const — line 21
-- `DOWNED_RECOVERY_HP_MAX` — const — line 23
-- `DOWNED_RECOVERY_HP_MIN` — const — line 22
-- `PlayerDamageResult` — type — line 37
-- `rollDownedRecoveryHp` — function — line 25
-- `tickPlayerStarvationDamage` — function — line 127
+- `applyDownedRecovery` — function — line 32
+- `applyPlayerDamage` — function — line 67
+- `ApplyPlayerDamageParams` — type — line 44
+- `DOWNED_DURATION_SEC` — const — line 22
+- `DOWNED_RECOVERY_HP_MAX` — const — line 24
+- `DOWNED_RECOVERY_HP_MIN` — const — line 23
+- `PlayerDamageResult` — type — line 38
+- `rollDownedRecoveryHp` — function — line 26
+- `tickPlayerStarvationDamage` — function — line 137
 
 ## `player/playerDimensions.ts`
 
@@ -118,15 +118,15 @@ Generated from exported TypeScript symbols.
 
 - `AttackRequestResult` — type — line 50
 - `COMBAT_TARGET_MEMORY` — const — line 28
-- `createPlayerMelee` — function — line 100
+- `createPlayerMelee` — function — line 108
 - `FALLBACK_APPROACH_DISTANCE` — const — line 38
 - `LUNGE_STAMINA_COST` — const — line 35
 - `MAX_LUNGE_DISTANCE` — const — line 32
-- `meleeSwingAngle` — function — line 236
+- `meleeSwingAngle` — function — line 245
 - `MeleeTickResult` — type — line 23
-- `pickCombatTarget` — function — line 154
+- `pickCombatTarget` — function — line 163
 - `PlayerMelee` — type — line 59
-- `rankCombatTargets` — function — line 192
+- `rankCombatTargets` — function — line 201
 
 ## `player/PlayerNeeds.ts`
 
@@ -134,10 +134,10 @@ Generated from exported TypeScript symbols.
 - `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 85
 - `createPlayerNeeds` — function — line 219
 - `DEHYDRATION_HP_PER_SEC` — const — line 192
-- `drinkWater` — function — line 385
-- `eatFood` — function — line 381
+- `drinkWater` — function — line 389
+- `eatFood` — function — line 385
 - `hungerSevereDurationSec` — function — line 178
-- `isTakingDeprivationDamage` — function — line 393
+- `isTakingDeprivationDamage` — function — line 397
 - `physicalEffortBusyOptions` — function — line 135
 - `PhysicalEffortIntensity` — type — line 93
 - `physicalEffortStaminaCostPerSec` — function — line 121
@@ -155,15 +155,15 @@ Generated from exported TypeScript symbols.
   - simulation: tick
 - `representedPhysicalEffortVigorPerHour` — function — line 148
 - `resetPlayerNeeds` — function — line 231
-- `restoreNeedsFromSleep` — function — line 375
+- `restoreNeedsFromSleep` — function — line 379
 - `restorePersistedNeeds` — function — line 252
 - `STARVATION_HP_PER_SEC` — const — line 191
 - `thirstSevereDurationSec` — function — line 181
-- `tickHealthRegen` — function — line 402
-- `tickPlayerMovementVigor` — function — line 353
+- `tickHealthRegen` — function — line 406
+- `tickPlayerMovementVigor` — function — line 357
 - `tickPlayerNeeds` — function — line 277
 - `tickPlayerStamina` — function — line 304
-- `tickRidingStamina` — function — line 333
+- `tickRidingStamina` — function — line 337
 
 ## `player/playerRanged.ts`
 
