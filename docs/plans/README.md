@@ -84,6 +84,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-032-player-to-household-resource-transfer.md`             | -       | 🔴 | S      | -      |
 | 💡 `fauna-024-lost-livestock-stray-displacement.md`                            | -       | 🔴 | M      | quests-progression-016, fauna-020 |
 | ◼️ `world-026-storms-thunder-animal-scare-and-snow-visuals.md`                 | -       | 🔴 | M      | -      |
+| ◼️ `fauna-025-livestock-stray-return-and-recovery.md`                          | -       | 🔴 | M      | fauna-024 |
  💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
@@ -237,7 +238,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `025`
+- fauna: `026`
 - items-player: `030`
 - npc: `036`
 - persistence: `005`
