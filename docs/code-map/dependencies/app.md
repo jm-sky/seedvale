@@ -861,6 +861,7 @@ Generated from TypeScript imports.
 - `world/fishing.ts`
 - `world/grassForage.ts`
 - `world/groundFog.ts`
+- `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/locations/locationKnowledge.ts`

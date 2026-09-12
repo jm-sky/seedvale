@@ -180,6 +180,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `persistence/worldgenCacheDb.test.ts`
+- `world/locations/abandonedCemeteryCache.test.ts`
+- `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/locationsCoarseCache.test.ts`
 - `world/locations/locationsCoarseCache.ts`
 - `world/seedLibrary.test.ts`

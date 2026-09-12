@@ -77,7 +77,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | settlements-npcs-030 |
-| 💡 `world-025-persistent-abandoned-cemetery-worldgen-cache.md`                 | -       | 🔴 | M      | ~~world-015~~, ~~world-022~~ |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
 | 💡 `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`         | -       | 🟡 | M      | fauna-014, ~~world-009~~, items-player-025 |
 | ◼️ `settlements-npcs-032-player-to-household-resource-transfer.md`             | -       | 🔴 | S      | -      |
@@ -104,7 +103,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
 | 💡 `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~, fauna-022 |
-| 💡 `world-025-persistent-abandoned-cemetery-worldgen-cache.md`                 | -       | 🔴 | M      | ~~world-015~~, ~~world-022~~ |
+| `world-025-persistent-abandoned-cemetery-worldgen-cache.md`                    | -       | 🔴 | M      | ~~world-015~~, ~~world-022~~ |
 | `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`               | -       | 🔴 | M      | -      |
 | 💡 `items-player-029-wearable-armor-and-combat-equipment.md`                   | -       | 🟡 | L      | -      |
 

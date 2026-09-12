@@ -2064,6 +2064,28 @@ Generated from TypeScript imports.
 - `audio/weatherSounds.ts`
 - `world/lightningEvents.test.ts`
 
+## `world/locations/abandonedCemeteryCache.test.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/locations/abandonedCemeteryCache.ts`
+
+## `world/locations/abandonedCemeteryCache.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `terrain/chunkHeightmap.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `world/locations/abandonedCemeteryCache.test.ts`
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/locations/worldLocationCatalog.ts`
+
 ## `world/locations/darkForestTreasureSite.test.ts`
 
 **Imports**
@@ -2164,6 +2186,7 @@ Generated from TypeScript imports.
 - `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/revealLocationKnowledge.ts`
+- `world/locations/worldLocationCatalog.test.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.test.ts`
 
@@ -2280,7 +2303,9 @@ Generated from TypeScript imports.
 - `terrain/terrainClassification.ts`
 - `world/caveVolume.ts`
 - `world/createCaves.ts`
+- `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/locationConfig.ts`
+- `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationTypes.ts`
 - `world/map/mapProjection.ts`
@@ -2296,6 +2321,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/terrainClassification.ts`
 - `world/createCaves.ts`
+- `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/worldLocationNames.ts`
 - `world/locations/worldLocationTypes.ts`

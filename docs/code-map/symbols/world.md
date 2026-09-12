@@ -920,6 +920,24 @@ Generated from exported TypeScript symbols.
 - `THUNDER_SPEED_OF_SOUND_M_PER_S` — const — line 14
 - `ThunderScareStimulus` — type — line 6
 
+## `world/locations/abandonedCemeteryCache.ts`
+
+- `ABANDONED_CEMETERY_NAMESPACE` — const — line 17
+  - domain: world
+  - system: worldgen-cache
+  - role: Persistent-cache integration for abandoned-cemetery materialization (plan world-025) — stores the deterministic result of a roll-pass `ChunkManager.probeAbandonedCemeteryAtChunk()` so later Near/Guard/Far discovery, other saves on the same seed, and later sessions can skip the expensive `paramsFor` + terrain-sampler path.
+  - integration: Disposable derived data only. A miss or storage failure always falls back to the canonical ChunkManager probe. Never player discovery state, never a second cemetery resolver.
+- `ABANDONED_CEMETERY_VERSION` — const — line 20
+- `AbandonedCemeteryCache` — type — line 82
+- `abandonedCemeteryFingerprint` — function — line 62
+  - domain: world
+  - system: worldgen-cache
+- `CachedAbandonedCemeteryResult` — type — line 22
+- `chunkSubKey` — function — line 26
+- `createAbandonedCemeteryCache` — function — line 103
+  - domain: world
+  - system: worldgen-cache
+
 ## `world/locations/darkForestTreasureSite.ts`
 
 - `caveWorldLocationId` — function — line 80
@@ -1045,16 +1063,16 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldLocationCatalog.ts`
 
-- `abandonedCemeteryChunkIntersectsKmBand` — function — line 186
+- `abandonedCemeteryChunkIntersectsKmBand` — function — line 196
   - domain: world
-- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 131
-- `createWorldLocationCatalog` — function — line 252
-- `emptyLocationScanDiagnostics` — function — line 96
-- `LandmarkQueryOptions` — type — line 120
-- `LocationScanDiagnostics` — type — line 69
-- `settlementLocationId` — function — line 774
-- `WorldLocationCatalog` — type — line 133
-- `WorldLocationCatalogDeps` — type — line 27
+- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 139
+- `createWorldLocationCatalog` — function — line 262
+- `emptyLocationScanDiagnostics` — function — line 104
+- `LandmarkQueryOptions` — type — line 128
+- `LocationScanDiagnostics` — type — line 77
+- `settlementLocationId` — function — line 824
+- `WorldLocationCatalog` — type — line 141
+- `WorldLocationCatalogDeps` — type — line 28
 
 ## `world/locations/worldLocationNames.ts`
 

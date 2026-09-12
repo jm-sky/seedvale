@@ -329,6 +329,8 @@ Generated from TypeScript imports.
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
 - `world/largeCaves.ts`
+- `world/locations/abandonedCemeteryCache.test.ts`
+- `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/locationsCoarseCache.test.ts`
 - `world/locations/locationsCoarseCache.ts`
