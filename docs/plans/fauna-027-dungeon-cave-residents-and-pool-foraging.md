@@ -9,6 +9,7 @@
 **Subdomains:** `habitat` `predation` `population`
 **Tags:** `caves` `dungeon` `residents` `foraging` `fish`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Cel
 
