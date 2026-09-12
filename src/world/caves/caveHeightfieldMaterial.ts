@@ -18,15 +18,15 @@ export const CAVE_SURFACE_MATERIAL_TUNING = {
   rockDetailScale: 0.30,
   rockNormalStrength: 0.42,
   /** Procedural rock normal detail layered under triplanar texture (world-space). */
-  proceduralRockStrength: 0.22,
+  proceduralRockStrength: 0.3,
   rockAlbedoScale: 0.42,
   rockAlbedoLinearNeutral: CAVE_ROCK_DIFFUSE_LINEAR_NEUTRAL,
   macroScale: 0.055,
-  wetnessScale: 0.048,
-  wetnessAmount: 1.0,
-  dryRoughness: 0.87,
-  wetRoughness: 0.60,
-  wetDarkening: 0.20,
+  wetnessScale: 0.25,
+  wetnessAmount: 1.5,
+  dryRoughness: 0.85,
+  wetRoughness: 0.20,
+  wetDarkening: 0.45,
 } as const
 
 export type CaveSurfaceMaterialTuning = typeof CAVE_SURFACE_MATERIAL_TUNING
@@ -174,7 +174,7 @@ float caveWetnessMask( vec3 worldPos ) {
   float wetMacro = caveTriplanarValueNoise( worldPos, uCaveWetnessScale );
   float wetMacro2 = caveTriplanarValueNoise( worldPos, uCaveWetnessScale * 1.85 );
   float wetNoise = wetMacro * 0.68 + wetMacro2 * 0.32;
-  return clamp( smoothstep( 0.38, 0.78, wetNoise ) * uCaveWetnessAmount, 0.0, 1.0 );
+  return clamp( smoothstep( 0.58, 0.72, wetNoise ) * uCaveWetnessAmount, 0.0, 1.0 );
 }
 vec3 caveTriplanarBlendWeights( vec3 worldN ) {
   vec3 blend = abs( worldN );
