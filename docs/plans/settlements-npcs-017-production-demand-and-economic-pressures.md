@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
-**Depends on:** settlements-npcs-016  
+**Depends on:** settlements-npcs-016, settlements-npcs-034  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `npc`  
 **Tags:** `production` `demand` `pressure` `shortage`

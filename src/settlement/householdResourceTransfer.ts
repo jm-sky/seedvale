@@ -2,8 +2,12 @@ import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { Inventory } from '../items/Inventory'
 import type { Household } from './household'
 import { FOOD_ITEM_KINDS } from '../items/foodItems'
-import { fuelValue } from '../items/itemFuel'
 import { hasItemKindCategory, type ItemKind } from '../items/items'
+import {
+  HOUSEHOLD_WOOD_ITEM_KINDS,
+  householdWoodItemValue,
+  type HouseholdWoodItemKind,
+} from './householdWood'
 
 /**
  * Actor-neutral source-inventory → household resource transfer (plan
@@ -14,16 +18,7 @@ import { hasItemKindCategory, type ItemKind } from '../items/items'
  * @system household
  */
 
-export const HOUSEHOLD_WOOD_ITEM_KINDS = ['branch', 'beam'] as const satisfies readonly ItemKind[]
-
-export type HouseholdWoodItemKind = (typeof HOUSEHOLD_WOOD_ITEM_KINDS)[number]
-
-/** Catalog-driven wood contribution per inventory item — only explicit
- *  household-wood kinds; fuel items like `cone` stay excluded. */
-export function householdWoodValue(kind: ItemKind): number | null {
-  if (kind !== 'branch' && kind !== 'beam') return null
-  return fuelValue(kind)
-}
+export { HOUSEHOLD_WOOD_ITEM_KINDS, householdWoodItemValue as householdWoodValue, type HouseholdWoodItemKind } from './householdWood'
 
 export type HouseholdTransferRequest =
   | { resource: 'food', itemKind: ItemKind, amount: number }
@@ -62,7 +57,7 @@ export function transferableHouseholdItemKinds(source: Inventory): ItemKind[] {
 export function householdTransferSummary(household: Household): { food: number, wood: number, water: number } {
   return {
     food: household.foodCount(),
-    wood: household.stock.query('wood'),
+    wood: household.woodCount(),
     water: household.water.current,
   }
 }
@@ -106,12 +101,17 @@ export function transferResourceToHousehold(input: {
     }
   }
 
-  const woodPerItem = householdWoodValue(request.itemKind)
+  const woodPerItem = householdWoodItemValue(request.itemKind)
   if (woodPerItem == null) return { status: 'invalid_resource_item' }
   if (!source.has(request.itemKind, amount)) return { status: 'source_shortage' }
   if (!source.remove(request.itemKind, amount)) return { status: 'source_shortage' }
   const resourceAmount = woodPerItem * amount
-  const { storedInHousehold, overflowedToSettlement } = household.deposit('wood', resourceAmount, economy, nowDays)
+  const { storedInHousehold, overflowedToSettlement } = household.depositWood(
+    request.itemKind as HouseholdWoodItemKind,
+    amount,
+    economy,
+    nowDays,
+  )
   return {
     status: 'transferred',
     resource: 'wood',

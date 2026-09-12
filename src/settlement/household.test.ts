@@ -9,13 +9,14 @@ describe('createHousehold', () => {
     expect(a.foodCount()).toEqual(again.foodCount())
     expect(a.foodCount()).toBeGreaterThan(0)
     expect(a.foodCount()).toBeLessThan(7)
-    expect(a.stock.query('wood')).toBeGreaterThan(0)
-    expect(a.stock.query('wood')).toBeLessThan(5)
+    expect(a.woodCount()).toBeGreaterThan(0)
+    expect(a.woodCount()).toBeLessThan(5)
   })
 
-  it('has no authoritative scalar food quantity — stock never carries a food key', () => {
+  it('has no authoritative scalar food quantity — food lives only in items', () => {
     const household = createHousehold('h', 's', 'home')
-    expect(household.stock.query('food')).toBe(0)
+    expect(household.foodCount()).toBeGreaterThan(0)
+    expect(household.items.count('bread')).toBe(household.foodCount())
   })
 
   it('starts with concrete food items, not just an abstract count', () => {
@@ -83,25 +84,28 @@ describe('createHousehold', () => {
   it('deposit returns stored vs overflow amounts for wood', () => {
     const household = createHousehold('h', 's', 'home')
     const economy = createSettlementEconomy('s', {}, [])
-    const before = household.stock.query('wood')
-    const room = 5 - before
-    const result = household.deposit('wood', room + 2, economy)
+    const before = household.woodCount()
+    const room = 20 - before
+    const result = household.depositWood('branch', room + 2, economy)
     expect(result.storedInHousehold).toBe(room)
     expect(result.overflowedToSettlement).toBe(2)
   })
 
   it('drops the remainder when no economy is given to absorb overflow', () => {
     const household = createHousehold('h', 's', 'home')
-    const before = household.stock.query('wood')
-    household.deposit('wood', 100)
-    expect(household.stock.query('wood')).toBeLessThan(100 + before)
+    const before = household.woodCount()
+    household.depositWood('branch', 100)
+    expect(household.woodCount()).toBeLessThan(100 + before)
   })
 
-  it('never removes more than available (reuses EconomicStock invariants)', () => {
+  it('never claims more wood surplus than is legally removable as whole items', () => {
     const household = createHousehold('h', 's', 'home')
-    const amount = household.stock.query('wood')
-    expect(household.stock.remove('wood', amount + 1)).toBe(false)
-    expect(household.stock.query('wood')).toBe(amount)
+    household.items.remove('branch', household.items.count('branch'))
+    household.items.remove('beam', household.items.count('beam'))
+    household.items.add('beam', 2)
+    expect(household.surplus('wood')).toBe(0)
+    expect(household.claimWoodSurplus(10)).toBe(0)
+    expect(household.items.count('beam')).toBe(2)
   })
 })
 
@@ -188,7 +192,7 @@ describe('household water reserve (plan 122)', () => {
   it('is independent of the wood EconomicStock/food items (not an EconomicKind)', () => {
     const household = createHousehold('h', 's', 'home')
     const waterBefore = household.water.current
-    household.deposit('wood', 5)
+    household.depositWood('branch', 5)
     expect(household.water.current).toBe(waterBefore)
   })
 })
@@ -245,7 +249,7 @@ describe('household.items (plan 178) — generic item storage, including concret
     expect(household.items.count('hide')).toBe(1)
     expect(household.items.count('arrow')).toBe(4)
     // Unrelated to the scalar EconomicStock wood counter.
-    expect(household.stock.query('wood')).not.toBe(0)
+    expect(household.woodCount()).not.toBe(0)
   })
 
   it('round-trips through snapshot()/createHousehold(initial) — WorldBundle rebuild carry', () => {
@@ -279,7 +283,7 @@ describe('household.history (plan settlements-npcs-013)', () => {
 
   it('records wood.deposited on deposit', () => {
     const household = createHousehold('h', 's', 'home')
-    household.deposit('wood', 2, null, 10)
+    household.depositWood('branch', 2, null, 10)
     const events = household.history()
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({ type: 'wood.deposited', amount: 2, overflowed: 0, simTime: 10 })
@@ -288,9 +292,9 @@ describe('household.history (plan settlements-npcs-013)', () => {
   it('records the overflow amount separately from what actually landed in the household', () => {
     const household = createHousehold('h', 's', 'home')
     const economy = createSettlementEconomy('s', {}, [])
-    const before = household.stock.query('wood')
-    const room = 5 - before // wood capacity is 5
-    household.deposit('wood', room + 3, economy, 1)
+    const before = household.woodCount()
+    const room = 20 - before
+    household.depositWood('branch', room + 3, economy, 1)
     const [wood] = household.history()
     expect(wood).toMatchObject({ type: 'wood.deposited', amount: room, overflowed: 3 })
     expect(economy.query('wood')).toBe(3)
@@ -338,9 +342,9 @@ describe('household.history (plan settlements-npcs-013)', () => {
 
   it('assigns a strictly increasing local seq to every recorded event', () => {
     const household = createHousehold('h', 's', 'home')
-    household.deposit('wood', 1, null, 1)
-    household.deposit('wood', 1, null, 1)
-    household.deposit('wood', 1, null, 1)
+    household.depositWood('branch', 1, null, 1)
+    household.depositWood('branch', 1, null, 1)
+    household.depositWood('branch', 1, null, 1)
     const seqs = household.history().map((e) => e.seq)
     expect(seqs).toEqual([...seqs].sort((a, b) => a - b))
     expect(new Set(seqs).size).toBe(seqs.length)
@@ -348,7 +352,7 @@ describe('household.history (plan settlements-npcs-013)', () => {
 
   it('defaults simTime to 0 when the caller has no meaningful clock', () => {
     const household = createHousehold('h', 's', 'home')
-    household.deposit('wood', 1)
+    household.depositWood('branch', 1)
     expect(household.history()[0]).toMatchObject({ simTime: 0 })
   })
 })
@@ -366,10 +370,10 @@ describe('createHouseholdRegistry', () => {
     const registry = createHouseholdRegistry()
     const id = householdIdFor('0_0', 0)
     const first = registry.getOrCreate(id, '0_0', '0_0:home:0')
-    first.deposit('wood', 5)
+    first.depositWood('branch', 5)
     const again = registry.getOrCreate(id, '0_0', '0_0:home:0')
     expect(again).toBe(first)
-    expect(again.stock.query('wood')).toBe(first.stock.query('wood'))
+    expect(again.woodCount()).toBe(first.woodCount())
     expect(again.water.current).toBe(first.water.current)
   })
 
@@ -377,17 +381,17 @@ describe('createHouseholdRegistry', () => {
     const registry = createHouseholdRegistry()
     const a = registry.getOrCreate(householdIdFor('0_0', 0), '0_0', '0_0:home:0')
     const b = registry.getOrCreate(householdIdFor('0_0', 1), '0_0', '0_0:home:1')
-    a.deposit('wood', 5)
-    expect(b.stock.query('wood')).not.toBe(a.stock.query('wood'))
+    a.depositWood('branch', 5)
+    expect(b.woodCount()).not.toBe(a.woodCount())
   })
 
   it('serializes into plain data that seeds a fresh registry with matching (but distinct) stock — WorldBundle rebuild carry (plan 197 §8)', () => {
     const id = householdIdFor('0_0', 0)
     const before = createHouseholdRegistry()
     const household = before.getOrCreate(id, '0_0', '0_0:home:0')
-    household.deposit('wood', 3)
+    household.depositWood('branch', 3)
     household.water.add(2)
-    const woodBefore = household.stock.query('wood')
+    const woodBefore = household.woodCount()
     const waterBefore = household.water.current
     const foodBefore = household.foodCount()
 
@@ -396,7 +400,7 @@ describe('createHouseholdRegistry', () => {
     const hydrated = after.getOrCreate(id, '0_0', '0_0:home:0')
 
     expect(hydrated).not.toBe(household)
-    expect(hydrated.stock.query('wood')).toBe(woodBefore)
+    expect(hydrated.woodCount()).toBe(woodBefore)
     expect(hydrated.water.current).toBe(waterBefore)
     expect(hydrated.foodCount()).toBe(foodBefore)
   })
@@ -488,5 +492,46 @@ describe('Household.resolveHayForage (plan fauna-010 §6)', () => {
     // anchor, not a fresh day-0 one, is what's consulted.
     hydrated.resolveHayForage(10)
     expect(hydrated.items.count('hay')).toBe(countBefore)
+  })
+})
+
+describe('household wood authority (plan settlements-npcs-034)', () => {
+  function zeroWood(household: ReturnType<typeof createHousehold>) {
+    household.items.remove('branch', household.items.count('branch'))
+    household.items.remove('beam', household.items.count('beam'))
+  }
+
+  it('woodCount() sums branch=1 and beam=2', () => {
+    const household = createHousehold('h', 's', 'home')
+    zeroWood(household)
+    household.items.add('branch', 3)
+    household.items.add('beam', 2)
+    expect(household.woodCount()).toBe(7)
+  })
+
+  it('starts with jittered branch items instead of scalar stock', () => {
+    const household = createHousehold(householdIdFor('0_0', 0), '0_0', '0_0:home:0')
+    expect(household.woodCount()).toBeGreaterThan(0)
+    expect(household.items.count('branch')).toBe(household.woodCount())
+  })
+
+  it('does not report claimable surplus for two beams at target 3', () => {
+    const household = createHousehold('h', 's', 'home')
+    zeroWood(household)
+    household.items.add('beam', 2)
+    expect(household.woodCount()).toBe(4)
+    expect(household.surplus('wood')).toBe(0)
+  })
+
+  it('overflows a whole beam when only one branch-equivalent unit of room remains', () => {
+    const household = createHousehold('h', 's', 'home')
+    zeroWood(household)
+    const economy = createSettlementEconomy('s', {}, [])
+    household.depositWood('branch', 19, null)
+    const result = household.depositWood('beam', 1, economy)
+    expect(household.items.count('beam')).toBe(0)
+    expect(result.storedInHousehold).toBe(0)
+    expect(result.overflowedToSettlement).toBe(2)
+    expect(economy.query('wood')).toBe(2)
   })
 })

@@ -1,7 +1,7 @@
 # Plan: Household wood authority and repair correctness
 
 **Created:** 2026-09-12  
-**Status:** `planned` 📋  
+**Status:** `implemented` ✅  
 **Type:** fix  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~  

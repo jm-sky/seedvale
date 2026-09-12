@@ -21,8 +21,9 @@ const sampleHeight = () => 0
 
 function householdWithWood(id: string, wood: number): Household {
   const household = createHousehold(id, 's', `${id}:home`)
-  household.stock.remove('wood', household.stock.query('wood'))
-  household.stock.add('wood', wood)
+  household.items.remove('branch', household.items.count('branch'))
+  household.items.remove('beam', household.items.count('beam'))
+  household.depositWood('branch', wood)
   return household
 }
 
@@ -135,15 +136,15 @@ describe('wood pile visual ownership (settlements-npcs-025 follow-up)', () => {
     const householdB = householdWithWood('b', 6)
 
     settlementVisual.sync(economy.query('wood'))
-    householdAVisual.sync(householdA.stock.query('wood'))
-    householdBVisual.sync(householdB.stock.query('wood'))
+    householdAVisual.sync(householdA.woodCount())
+    householdBVisual.sync(householdB.woodCount())
 
     expect(visibleStages(settlementPile)).toEqual(['Pile_10'])
     expect(visibleStages(householdAPile)).toEqual(['Pile_05'])
     expect(visibleStages(householdBPile)).toEqual(['Pile_10'])
 
-    householdA.stock.add('wood', 9)
-    householdAVisual.sync(householdA.stock.query('wood'))
+    householdA.depositWood('branch', 9)
+    householdAVisual.sync(householdA.woodCount())
     expect(visibleStages(householdAPile)).toEqual(['Pile_18'])
     expect(visibleStages(householdBPile)).toEqual(['Pile_10'])
     expect(visibleStages(settlementPile)).toEqual(['Pile_10'])

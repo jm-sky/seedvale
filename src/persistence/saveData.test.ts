@@ -326,7 +326,7 @@ describe('loadSaveData v1 contract', () => {
         },
       },
       households: {
-        'home:household:0': { stock: { wood: 3 }, water: 2, items: { counts: { bread: 2 }, instances: [] } },
+        'home:household:0': { water: 2, items: { counts: { bread: 2, branch: 3 }, instances: [] } },
       },
       npcRelationships: [{ a: 'home:npc:0', b: 'home:npc:1', value: 4 }],
       livestock: [{
@@ -473,7 +473,7 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData({ ...validSave, households: 'nope' })).toBeNull()
     expect(loadSaveData({
       ...validSave,
-      households: { h: { stock: { wood: 1 }, water: 2, agriculture: { starterSeedsGranted: 'yes' } } },
+      households: { h: { water: 2, items: { counts: { branch: 1 }, instances: [] }, agriculture: { starterSeedsGranted: 'yes' } } },
     })).toBeNull()
   })
 
@@ -1487,7 +1487,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       version: 34,
       elapsedDays: 12.5,
       households: {
-        'home:household:0': { stock: { wood: 3 }, water: 2, items: { counts: { bread: 2 }, instances: [] } },
+        'home:household:0': { water: 2, items: { counts: { bread: 2, branch: 3 }, instances: [] } },
       },
     })
     expect(result.status).toBe('ok')
@@ -1504,9 +1504,8 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       ...validSave,
       households: {
         's:household:0': {
-          stock: { wood: 1 },
           water: 2,
-          items: { counts: { seed_carrot: 1, carrot: 3 }, instances: [] },
+          items: { counts: { seed_carrot: 1, carrot: 3, branch: 1 }, instances: [] },
           agriculture: { starterSeedsGranted: true, lastResolvedAtDays: 8 },
         },
       },
@@ -1597,6 +1596,28 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.status).toBe('ok')
     if (result.status !== 'ok') return
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+  })
+
+  it('migrates v38 household scalar wood into items.branch and drops stock (plan settlements-npcs-034)', () => {
+    const result = loadStoredSave({
+      ...validSave,
+      version: 38,
+      households: {
+        'home:household:0': {
+          stock: { wood: 4 },
+          water: 2,
+          items: { counts: { branch: 2, beam: 1 }, instances: [] },
+        },
+      },
+    })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    const household = result.data.households?.['home:household:0']
+    expect(household).toBeDefined()
+    expect((household as Record<string, unknown>).stock).toBeUndefined()
+    expect(household?.items?.counts?.branch).toBe(6)
+    expect(household?.items?.counts?.beam).toBe(1)
   })
 
   it('round-trips treasureChestMutations and rejects a malformed one (plan items-player-026)', () => {

@@ -43,7 +43,7 @@ function pickFrom(pool: readonly string[]): string {
  *  every time the dialog opens, never cached on the prop. */
 function formatHouseholdStorage(household: Household): string {
   return [
-    `Drewno: ${household.stock.query('wood')}`,
+    `Drewno: ${household.woodCount()}`,
     `Jedzenie: ${household.foodCount()}`,
     `Woda: ${household.water.current}`,
   ].join('\n')

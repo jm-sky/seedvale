@@ -66,7 +66,6 @@ import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '.
 import {
   commitRoleWork,
   type SettlementEconomy,
-  WOODCUTTING_PRODUCTION,
 } from '../economy'
 import { FLOCK_THREAT_RADIUS, senseOwnedFlockThreat, type ShepherdFlockHooks } from '../fauna/shepherdFlock'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial } from '../items/constructionMaterials'
@@ -296,6 +295,7 @@ import {
   canWithdrawFromEconomy,
   depositFoodHarvest,
   depositWoodHarvest,
+  type WoodHarvestDeposit,
   HUNT_YIELD_KINDS,
   type NpcLogisticsCtx,
   planDeliverHuntYieldHome,
@@ -787,14 +787,6 @@ const REST_PHASES: ReadonlySet<Phase> = new Set(['exhausted', 'followPath', 'goS
  *  and must never be flagged as stuck. */
 const WATCHDOG_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'goTo', 'wander'])
 
-/** Household resource flow (plan 069). `WOOD_HARVEST_AMOUNT` mirrors
- *  `WOODCUTTING_PRODUCTION`'s existing settlement yield — a chop still
- *  produces the same amount of wood, it now lands in the chopper's own
- *  household first (capped, overflow to the settlement) instead of going
- *  straight to `SettlementEconomy`. `FOOD_GATHER_AMOUNT` is a new, equally
- *  small constant — there is no real farming yield to reuse yet (071). */
-const WOOD_HARVEST_AMOUNT =
-  WOODCUTTING_PRODUCTION.outputs.find((o) => o.kind === 'wood')?.amount ?? 2
 /** Water logistics (plan 122) — one well trip fills this much of the
  *  household's `WaterBarrel`/`AnimalTrough` reserve. Same order of
  *  magnitude as `npcLogistics.ts`'s `FOOD_GATHER_AMOUNT` (moved there,
@@ -1922,7 +1914,7 @@ export class NpcAgent {
       household: this.household
         ? {
             food: this.household.foodCount(),
-            wood: this.household.stock.query('wood'),
+            wood: this.household.woodCount(),
             water: this.household.water.current,
           }
         : null,
@@ -2950,7 +2942,9 @@ export class NpcAgent {
           // heal/seekShelter above.
           this.activeNeed = 'idle'
           this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
-          this.beginRepairStructure()
+          if (!this.beginRepairStructure()) {
+            this.beginIdle(this.resolveIdleActivity(scheduledActivity, timeOfDay))
+          }
           break
         }
         const need = outcome === 'need' ? (decision as NeedId) : 'idle'
@@ -3583,7 +3577,7 @@ export class NpcAgent {
       : '-'
     const staminaPercent = Math.round(getStaminaRatio(this.stamina) * 100)
     const householdText = this.household
-      ? ` · hh f${this.household.foodCount()} w${this.household.stock.query('wood')} h2o${this.household.water.current}`
+      ? ` · hh f${this.household.foodCount()} w${this.household.woodCount()} h2o${this.household.water.current}`
         + (this.role === 'hunter' ? ` arr${this.household.items.count('arrow')}` : '')
       : ''
     // Hunter-only diagnostics (plan 178 §14) — equipment/ammo carried, the
@@ -4110,7 +4104,7 @@ export class NpcAgent {
           // another NPC/the player may have felled `landmark` first between
           // this chop starting and completing; the chained deposit step
           // must not still mint wood when that happens.
-          let harvestedWood = 0
+          const harvestedYields: WoodHarvestDeposit[] = []
           // `harvestWorldTreeFully` collapses every remaining chop step (up
           // to a full felling) into one call — unlike the player's per-step
           // chop, there's no separate "the tree just fell" transition to
@@ -4144,7 +4138,10 @@ export class NpcAgent {
                 { landmark },
               )
               if (result.ok) {
-                harvestedWood = WOOD_HARVEST_AMOUNT
+                harvestedYields.push({ kind: result.yield.kind as 'branch' | 'beam', count: result.yield.count })
+                if (result.bonusYield) {
+                  harvestedYields.push({ kind: result.bonusYield.kind as 'branch' | 'beam', count: result.bonusYield.count })
+                }
                 if (wasStandingBeforeChop) playActionTreeFall(this.playAt, landmark.position)
               }
             },
@@ -4158,8 +4155,12 @@ export class NpcAgent {
               durationSec: 0.8 * this.waitMultiplier,
               onComplete: () => {
                 relieveNeed(this.needs, 'wood')
-                depositWoodHarvest(this.household, this.economy, harvestedWood, this.simClock)
-                this.progressActivePlan('obtainWood', harvestedWood)
+                depositWoodHarvest(this.household, this.economy, harvestedYields, this.simClock)
+                const harvestedUnits = harvestedYields.reduce((n, y) => {
+                  const per = y.kind === 'beam' ? 2 : 1
+                  return n + y.count * per
+                }, 0)
+                this.progressActivePlan('obtainWood', harvestedUnits)
               },
             },
           })
@@ -5825,7 +5826,8 @@ export class NpcAgent {
   private structureRepairPressureCandidate(): number {
     const hooks = this.structureRepairHooks
     if (!hooks || this.health.dead) return 0
-    return hooks.pressure(this.nowDays())
+    const household = this.household
+    return hooks.pressure(this.nowDays(), (r) => household?.items.has(r.kind, r.count) ?? false)
   }
 
   /** Starts (or resumes) one repair work bout on this NPC's own household
@@ -5836,20 +5838,20 @@ export class NpcAgent {
    *  attempt simply does not start this tick — retried on the next `choose()`
    *  cycle while the pressure remains, same convention as material-blocked
    *  construction work. */
-  private beginRepairStructure(): void {
+  private beginRepairStructure(): boolean {
     const hooks = this.structureRepairHooks
-    if (!hooks || this.health.dead) return
+    if (!hooks || this.health.dead) return false
     const nowDays = this.nowDays()
     const state = hooks.getSnapshot(nowDays)
     if (!state.repair) {
       const household = this.household
-      if (!household) return
+      if (!household) return false
       const outcome = hooks.beginRepair(
         nowDays,
         (r) => household.items.has(r.kind, r.count),
         (r) => { household.items.remove(r.kind, r.count) },
       )
-      if (outcome.status !== 'started') return
+      if (outcome.status !== 'started') return false
     }
     this.startAction({
       kind: 'work',
@@ -5857,6 +5859,7 @@ export class NpcAgent {
       durationSec: STRUCTURE_REPAIR_WORK_SESSION_SEC * this.waitMultiplier,
       onComplete: () => this.executeRepairWorkBout(),
     })
+    return true
   }
 
   private executeRepairWorkBout(): void {

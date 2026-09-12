@@ -8,7 +8,8 @@ import { createSettlementEconomy } from './settlementEconomy'
 function zeroedHousehold() {
   const household = createHousehold('h', 's', 'home')
   household.items.remove('bread', household.items.count('bread'))
-  household.stock.remove('wood', household.stock.query('wood'))
+  household.items.remove('branch', household.items.count('branch'))
+  household.items.remove('beam', household.items.count('beam'))
   return household
 }
 
@@ -20,31 +21,31 @@ function zeroedHousehold() {
 describe('claimHouseholdSurplus (wood — plan settlements-npcs-005)', () => {
   it('claims exactly the requested amount when surplus covers it', () => {
     const household = zeroedHousehold()
-    household.deposit('wood', 7) // target 3, capacity 5 -> surplus 2
+    household.depositWood('branch', 5) // target 3 -> surplus 2
     expect(claimHouseholdSurplus(household, 'wood', 2)).toBe(2)
-    expect(household.stock.query('wood')).toBe(3)
+    expect(household.woodCount()).toBe(3)
   })
 
   it('caps the claim at the current surplus when it is less than requested', () => {
     const household = zeroedHousehold()
-    household.deposit('wood', 5) // target 3 -> surplus 2
+    household.depositWood('branch', 5) // target 3 -> surplus 2
     expect(claimHouseholdSurplus(household, 'wood', 10)).toBe(2)
-    expect(household.stock.query('wood')).toBe(3)
+    expect(household.woodCount()).toBe(3)
   })
 
   it('claims nothing and leaves stock untouched when there is no surplus', () => {
     const household = zeroedHousehold()
-    household.deposit('wood', 1) // below target -> surplus 0
+    household.depositWood('branch', 1) // below target -> surplus 0
     expect(claimHouseholdSurplus(household, 'wood', 5)).toBe(0)
-    expect(household.stock.query('wood')).toBe(1)
+    expect(household.woodCount()).toBe(1)
   })
 
   it('never removes more than it reports claiming (conservation)', () => {
     const household = zeroedHousehold()
-    household.deposit('wood', 8) // target 3 -> surplus 5
-    const before = household.stock.query('wood')
+    household.depositWood('branch', 8) // target 3 -> surplus 5
+    const before = household.woodCount()
     const claimed = claimHouseholdSurplus(household, 'wood', 4)
-    expect(household.stock.query('wood')).toBe(before - claimed)
+    expect(household.woodCount()).toBe(before - claimed)
   })
 
   it('never claims food — a household no longer stores food in stock', () => {

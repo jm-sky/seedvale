@@ -47,7 +47,7 @@ describe('transferResourceToHousehold', () => {
 
   it('deposits wood from branch items with conversion', () => {
     const household = createHousehold('h', 's', 'home')
-    const beforeWood = household.stock.query('wood')
+    const beforeWood = household.woodCount()
     const source = new Inventory({ branch: 2 })
     const economy = createSettlementEconomy('s', {}, [])
     const result = transferResourceToHousehold({
@@ -64,7 +64,7 @@ describe('transferResourceToHousehold', () => {
       resourceAmount: 2,
       storedInHousehold: 2,
     })
-    expect(household.stock.query('wood')).toBe(beforeWood + 2)
+    expect(household.woodCount()).toBe(beforeWood + 2)
     expect(source.count('branch')).toBe(0)
   })
 
@@ -87,7 +87,7 @@ describe('transferResourceToHousehold', () => {
   it('rejects unsupported items and leaves owners unchanged', () => {
     const household = createHousehold('h', 's', 'home')
     const foodBefore = household.foodCount()
-    const woodBefore = household.stock.query('wood')
+    const woodBefore = household.woodCount()
     const source = new Inventory({ arrow: 2 })
     const economy = createSettlementEconomy('s', {}, [])
     const result = transferResourceToHousehold({
@@ -99,7 +99,7 @@ describe('transferResourceToHousehold', () => {
     })
     expect(result.status).toBe('invalid_resource_item')
     expect(household.foodCount()).toBe(foodBefore)
-    expect(household.stock.query('wood')).toBe(woodBefore)
+    expect(household.woodCount()).toBe(woodBefore)
     expect(source.count('arrow')).toBe(2)
   })
 
@@ -158,8 +158,8 @@ describe('transferResourceToHousehold', () => {
 
   it('routes wood overflow to settlement economy', () => {
     const household = createHousehold('h', 's', 'home')
-    const room = 5 - household.stock.query('wood')
-    household.deposit('wood', room)
+    const room = 20 - household.woodCount()
+    household.depositWood('branch', room)
     const source = new Inventory({ branch: 4 })
     const economy = createSettlementEconomy('s', {}, [])
     const result = transferResourceToHousehold({
@@ -214,7 +214,7 @@ describe('transferResourceToHousehold', () => {
     const snap = registry.serialize()
     const restored = createHouseholdRegistry(snap).getOrCreate(id, 's', 's:home:0')
     expect(restored.foodCount()).toBe(2)
-    expect(restored.stock.query('wood')).toBe(household.stock.query('wood'))
+    expect(restored.woodCount()).toBe(household.woodCount())
   })
 })
 

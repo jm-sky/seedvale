@@ -1069,7 +1069,7 @@ export async function createSettlement(
       for (let i = 0; i < householdStorages.length; i++) {
         const household = householdStorages[i]!.household
         if (storageVisual.householdWood.length > 0) {
-          storageVisual.householdWood[i % storageVisual.householdWood.length]!.sync(household.stock.query('wood'))
+          storageVisual.householdWood[i % storageVisual.householdWood.length]!.sync(household.woodCount())
         }
         if (storageVisual.householdFood.length > 0) {
           storageVisual.householdFood[i % storageVisual.householdFood.length]!.sync(household.items)

@@ -104,13 +104,15 @@ describe('planEconomyWithdraw', () => {
 
   it('uses the scalar claim seam for wood (claimEconomySurplus, not a food claim)', () => {
     const economy = createSettlementEconomy('s', { wood: 10 }, [{ kind: 'wood', target: 0 }])
-    const household = createHousehold('h', 's', 'home:h', { stock: { wood: 0 }, water: 4 })
+    const household = createHousehold('h', 's', 'home:h', { water: 4, items: { counts: {}, instances: [] } })
+    household.items.remove('branch', household.items.count('branch'))
     const ctx = baseCtx({ household, economy })
 
     const action = planEconomyWithdraw(ctx, 'wood')
     expect(action).not.toBeNull()
     runTransfer(action)
-    expect(household.stock.query('wood')).toBeGreaterThan(0)
+    expect(household.woodCount()).toBeGreaterThan(0)
+    expect(household.items.count('branch')).toBeGreaterThan(0)
   })
 
   it('a source with no real surplus yields no plan', () => {
@@ -169,9 +171,10 @@ describe('planHouseholdExchange', () => {
     expect(requester.items.count('carrot')).toBeGreaterThan(0)
   })
 
-  it('uses claimHouseholdSurplus (scalar) for wood', () => {
-    const requester = createHousehold('requester', 's', 'home:requester', { stock: { wood: 0 }, water: 4 })
-    const source = createHousehold('source', 's', 'home:source', { stock: { wood: 10 }, water: 4 })
+  it('transfers concrete branch/beam items for wood', () => {
+    const requester = createHousehold('requester', 's', 'home:requester', { water: 4, items: { counts: {}, instances: [] } })
+    requester.items.remove('branch', requester.items.count('branch'))
+    const source = createHousehold('source', 's', 'home:source', { water: 4, items: { counts: { branch: 10 }, instances: [] } })
     const householdExchange = {
       findSurplusSource: () => ({ household: source, position: { x: 1, y: 0, z: 1 } }),
       findById: (id: string) => id === source.id ? { household: source, position: { x: 1, y: 0, z: 1 } } : null,
@@ -181,7 +184,8 @@ describe('planHouseholdExchange', () => {
     const action = planHouseholdExchange(ctx, 'wood')
     expect(action).not.toBeNull()
     runTransfer(action)
-    expect(requester.stock.query('wood')).toBeGreaterThan(0)
+    expect(requester.woodCount()).toBeGreaterThan(0)
+    expect(requester.items.count('branch')).toBeGreaterThan(0)
   })
 
   it('a consumed source yields null (no exchange partner) once its surplus is gone', () => {

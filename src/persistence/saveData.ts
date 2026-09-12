@@ -630,7 +630,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 38
+export const CURRENT_SAVE_VERSION = 39
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1944,14 +1944,8 @@ function isTransportOrdersField(value: unknown): value is TransportOrder[] {
 function isHouseholdSnapshot(value: unknown): value is HouseholdSnapshot {
   if (!value || typeof value !== 'object') return false
   const h = value as Record<string, unknown>
-  if (!h.stock || typeof h.stock !== 'object' || Array.isArray(h.stock)) return false
-  for (const amount of Object.values(h.stock as Record<string, unknown>)) {
-    if (typeof amount !== 'number') return false
-  }
   if (typeof h.water !== 'number') return false
-  if (h.items !== undefined) {
-    if (!isInventoryContentsSnapshot(h.items)) return false
-  }
+  if (!isInventoryContentsSnapshot(h.items)) return false
   if (h.agriculture !== undefined) {
     if (!isHouseholdAgricultureState(h.agriculture)) return false
   }
@@ -3216,6 +3210,33 @@ function migrateInventoryContentsArmor(
 
 /** v37 → v38 (plan items-player-030): count-backed armor → common instances;
  *  `playerEquipment.body` ItemKind → instance id. */
+/** v38 → v39 (plan settlements-npcs-034): household scalar `stock.wood` → `items.branch`. */
+function migrateSaveV38ToV39(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const households = v.households && typeof v.households === 'object'
+    ? Object.fromEntries(Object.entries(v.households as Record<string, unknown>).map(([id, household]) => {
+      if (!household || typeof household !== 'object') return [id, household]
+      const h = household as Record<string, unknown>
+      const stock = h.stock && typeof h.stock === 'object' && !Array.isArray(h.stock)
+        ? h.stock as Record<string, unknown>
+        : null
+      const legacyWood = stock && typeof stock.wood === 'number' && Number.isFinite(stock.wood) && stock.wood > 0
+        ? Math.floor(stock.wood)
+        : 0
+      const itemsRaw = h.items && typeof h.items === 'object' && !Array.isArray(h.items)
+        ? { ...(h.items as Record<string, unknown>) }
+        : { counts: {}, instances: [] }
+      const counts = itemsRaw.counts && typeof itemsRaw.counts === 'object' && !Array.isArray(itemsRaw.counts)
+        ? { ...(itemsRaw.counts as Record<string, number>) }
+        : {}
+      if (legacyWood > 0) counts.branch = (counts.branch ?? 0) + legacyWood
+      const { stock: _removed, ...rest } = h
+      return [id, { ...rest, items: { ...itemsRaw, counts } }]
+    }))
+    : v.households
+  return { ...v, version: 39, households }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3374,6 +3395,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   35: migrateSaveV35ToV36,
   36: migrateSaveV36ToV37,
   37: migrateSaveV37ToV38,
+  38: migrateSaveV38ToV39,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -5,6 +5,7 @@ import type { SettlementStructureStateRegistry } from './structureStateRegistry'
 import {
   hasActiveStructureRepair,
   isStructureRepairProblem,
+  quoteStructureRepair,
   resolveStructureCondition,
   STRUCTURE_REPAIR_RESUME_PRESSURE,
   structureRepairPolicy,
@@ -84,7 +85,7 @@ export type NpcStructureRepairHooks = {
   /** Pure repair-pressure score for `NpcAgent.choose()`'s arbitration (plan
    *  §5) — `STRUCTURE_REPAIR_RESUME_PRESSURE` while an episode is active,
    *  otherwise `structureRepairPressureFromCondition`, `0` above threshold. */
-  pressure: (nowDays: number) => number
+  pressure: (nowDays: number, hasMaterial: (requirement: MaterialRequirement) => boolean) => number
   beginRepair: (
     nowDays: number,
     hasMaterial: (requirement: MaterialRequirement) => boolean,
@@ -108,9 +109,12 @@ export function createNpcStructureRepairHooks(
     position: housePosition,
     getSnapshot: (nowDays) => registry.resolve(settlementId, structureId, nowDays),
     isRepairProblem: (nowDays) => isStructureRepairProblem(policy, registry.resolve(settlementId, structureId, nowDays), nowDays),
-    pressure: (nowDays) => {
+    pressure: (nowDays, hasMaterial) => {
       const state = registry.resolve(settlementId, structureId, nowDays)
       if (hasActiveStructureRepair(state)) return STRUCTURE_REPAIR_RESUME_PRESSURE
+      const quote = quoteStructureRepair(policy, state, nowDays)
+      if (!quote) return 0
+      if (quote.materials.some((requirement) => !hasMaterial(requirement))) return 0
       return structureRepairPressureFromCondition(resolveStructureCondition(state, nowDays), policy)
     },
     beginRepair: (nowDays, hasMaterial, consumeMaterial) =>

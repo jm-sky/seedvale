@@ -24,7 +24,8 @@ import type { SettlementEconomy } from './settlementEconomy'
 export function claimHouseholdSurplus(household: Household, kind: HouseholdResourceKind, amount: number): number {
   const available = Math.min(household.surplus(kind), amount)
   if (available <= 0) return 0
-  return household.stock.remove(kind, available) ? available : 0
+  if (kind === 'wood') return household.claimWoodSurplus(available)
+  return 0
 }
 
 /** Claims up to `amount` from a settlement economy's current surplus of

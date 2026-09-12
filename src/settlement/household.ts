@@ -3,8 +3,15 @@ import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { ItemKind } from '../items/items'
 import { createSequenceAllocator } from '../debug/domainHistory'
 import { createHouseholdHistoryBuffer } from '../debug/householdHistory'
-import { EconomicStock } from '../economy/stock'
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
+import {
+  claimableWoodSurplusValue,
+  householdWoodCountFromItems,
+  householdWoodItemValue,
+  type HouseholdWoodItemBatch,
+  type HouseholdWoodItemKind,
+  selectClaimableWoodItems,
+} from './householdWood'
 import { foodItemCount, skipBatchCount, takeBatchCount, takeOneFoodItem } from '../items/foodItems'
 import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 
@@ -44,15 +51,12 @@ export type HouseholdDepositResult = {
  *  below for why the two kinds need separate mutation entry points. */
 export type HouseholdResourceKind = 'food' | 'wood'
 
-const INITIAL_HOUSEHOLD_STOCK: Record<string, number> = {
-  water: 4,
-  wood: 2,
-}
+const INITIAL_HOUSEHOLD_WATER = 4
+const INITIAL_HOUSEHOLD_WATER_RANDOM_OFFSET = 3
 
-const INITIAL_HOUSEHOLD_RANDOM_OFFSET: Record<string, number> = {
-  water: 3,
-  wood: 2,
-}
+/** Starting branch count — same jittered magnitude the old scalar `stock.wood` used (plan settlements-npcs-034). */
+const INITIAL_HOUSEHOLD_WOOD_BRANCHES = 2
+const INITIAL_HOUSEHOLD_WOOD_BRANCH_RANDOM_OFFSET = 2
 
 /** Starting concrete food (plan settlements-npcs-008) — same jittered
  *  magnitude the old scalar `stock.food` used, converted to a concrete item.
@@ -66,8 +70,6 @@ const INITIAL_HOUSEHOLD_FOOD: Record<string, number> = {
 const INITIAL_HOUSEHOLD_FOOD_RANDOM_OFFSET: Record<string, number> = {
   food: 3,
 }
-
-const HOUSEHOLD_STOCK_KINDS: readonly HouseholdResourceKind[] = ['wood']
 
 type HouseholdPolicy = {
   /** Below this, the household has an urgent shortage. */
@@ -86,8 +88,11 @@ type HouseholdPolicy = {
  *  settlements-npcs-008 (same numbers, new meaning). */
 const HOUSEHOLD_POLICY: Record<HouseholdResourceKind, HouseholdPolicy> = {
   food: { minimum: 1, target: 3, capacity: 7 },
-  wood: { minimum: 1, target: 3, capacity: 5 },
+  wood: { minimum: 1, target: 3, capacity: 20 },
 }
+
+/** Reserve target for wood surplus/claim (branch-equivalent units). */
+export const HOUSEHOLD_WOOD_RESERVE_TARGET = HOUSEHOLD_POLICY.wood.target
 
 /** Household water reserve (plan 122) — deliberately not an `EconomicKind`
  *  (implementation notes §4: no production/trade needs water yet). Same
@@ -197,7 +202,6 @@ export type HouseholdAgricultureState = {
 }
 
 export type HouseholdSnapshot = {
-  stock: Partial<Record<HouseholdResourceKind, number>>
   water: number
   /** Generic item storage (plan 178) — arbitrary `ItemKind`s a household
    *  holds (hunted meat/hide, arrows, bandages, …), distinct from `stock`'s
@@ -239,9 +243,6 @@ export type Household = {
   readonly settlementId: string
   /** The `Place.id` of this household's home. */
   readonly homeId: string
-  /** `wood` only since plan settlements-npcs-008 — concrete food lives in
-   *  `items` instead (see `HouseholdResourceKind`'s doc comment). */
-  readonly stock: EconomicStock
   /** Water reserve backing this household's `WaterBarrel`/`AnimalTrough`
    *  (plan 122) — separate from `stock` since water is not an `EconomicKind`. */
   readonly water: WaterReserve
@@ -261,19 +262,27 @@ export type Household = {
    *  household's own reserve. Distinct from `capacity` overflow (plan 069
    *  §3), which only ever matters at gather time. */
   surplus: (kind: HouseholdResourceKind) => number
+  /** Total branch-equivalent wood held as concrete `branch` / `beam` items. */
+  woodCount: () => number
   /**
-   * Deposits gathered wood, capped at the household's capacity. Any
-   * remainder is routed to `economy` when given, otherwise dropped — mirrors
-   * plan 069 §3/§6 (full household -> village storage). `food` moved to
-   * `depositFood` (plan settlements-npcs-008) — it needs a concrete
-   * `ItemKind`, which a bare scalar `amount` can't carry.
+   * Deposits whole wood items, capped at household capacity (branch-equivalent).
+   * Overflow converts to settlement bulk (`branch`→1, `beam`→2 wood). Drops overflow
+   * when no `economy` is given.
    *
-   * `simTime` (plan settlements-npcs-013) — the caller's own clock (an
-   * `NpcAgent`'s `simClock` in every current call site), recorded verbatim
-   * into `history()`; defaults to `0` for callers with no meaningful clock
-   * (tests, initial seeding).
+   * @domain settlements-npcs
    */
-  deposit: (kind: 'wood', amount: number, economy?: SettlementEconomy | null, simTime?: number) => HouseholdDepositResult
+  depositWood: (
+    itemKind: HouseholdWoodItemKind,
+    amount: number,
+    economy?: SettlementEconomy | null,
+    simTime?: number,
+  ) => HouseholdDepositResult
+  /** Room for more wood in branch-equivalent units (whole items only at deposit). */
+  woodRoom: () => number
+  /** Claims up to `maxValue` surplus wood as whole items; returns value removed. */
+  claimWoodSurplus: (maxValue: number) => number
+  /** Like `claimWoodSurplus`, but returns the concrete item batch removed. */
+  claimWoodSurplusBatch: (maxValue: number) => HouseholdWoodItemBatch[]
   /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
    *  shape, gathered/received food lands as `itemKind` units in `items`. */
   /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
@@ -325,15 +334,15 @@ function hashString(value: string): number {
   return h >>> 0
 }
 
-/** Deterministic small starting wood reserve, jittered per household id so a
- *  settlement's households don't all start identical (same spirit as
- *  `economy/initial.ts`'s `initialStockFor`). */
-function initialHouseholdStock(id: HouseholdId): Partial<Record<HouseholdResourceKind, number>> {
-  const out: Partial<Record<HouseholdResourceKind, number>> = {}
-  for (const kind of HOUSEHOLD_STOCK_KINDS) {
-    out[kind] = INITIAL_HOUSEHOLD_STOCK[kind] + (hashString(`${id}:${kind}`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET[kind])
-  }
-  return out
+function initialHouseholdWoodBranches(id: HouseholdId): number {
+  return INITIAL_HOUSEHOLD_WOOD_BRANCHES
+    + (hashString(`${id}:wood`) % INITIAL_HOUSEHOLD_WOOD_BRANCH_RANDOM_OFFSET)
+}
+
+function legacyWoodBranchesFromSnapshot(initial?: HouseholdSnapshot): number {
+  const legacy = (initial as { stock?: { wood?: number } } | undefined)?.stock?.wood
+  if (typeof legacy !== 'number' || !Number.isFinite(legacy) || legacy <= 0) return 0
+  return Math.floor(legacy)
 }
 
 /** Deterministic small starting concrete food, jittered per household id —
@@ -358,12 +367,18 @@ export function createHousehold(
    *  unresolved. A fully bootstrapped snapshot never re-seeds. */
   starting?: HouseholdStartingContext,
 ): Household {
-  const stock = new EconomicStock(initial?.stock ?? initialHouseholdStock(id))
   const water = createWaterReserve(
-    initial?.water ?? INITIAL_HOUSEHOLD_STOCK.water + (hashString(`${id}:water`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET.water),
+    initial?.water ?? INITIAL_HOUSEHOLD_WATER + (hashString(`${id}:water`) % INITIAL_HOUSEHOLD_WATER_RANDOM_OFFSET),
   )
+  const initialItemCounts: Partial<Record<ItemKind, number>> = initial?.items?.counts
+    ? { ...initial.items.counts }
+    : (initial ? {} : { ...initialHouseholdFoodCounts(id), branch: initialHouseholdWoodBranches(id) })
+  if (initial) {
+    const legacyWood = legacyWoodBranchesFromSnapshot(initial)
+    if (legacyWood > 0) initialItemCounts.branch = (initialItemCounts.branch ?? 0) + legacyWood
+  }
   const items = new Inventory(
-    initial?.items?.counts ?? (initial ? undefined : initialHouseholdFoodCounts(id)),
+    Object.keys(initialItemCounts).length > 0 ? initialItemCounts : undefined,
     Infinity,
     initial?.items ? Inventory.instancesFromJSON(initial.items.instances) : undefined,
     initial?.items?.foodBatches,
@@ -393,41 +408,96 @@ export function createHousehold(
   // formula the public `shortage` property exposes.
   const historyBuf = createHouseholdHistoryBuffer()
   const seq = createSequenceAllocator()
+  const woodPolicy = HOUSEHOLD_POLICY.wood
+
+  function woodCount(): number {
+    return householdWoodCountFromItems(items)
+  }
+
+  function woodRoom(): number {
+    return Math.max(0, woodPolicy.capacity - woodCount())
+  }
+
   function shortageOf(kind: HouseholdResourceKind): number {
     return kind === 'food'
       ? Math.max(0, HOUSEHOLD_POLICY.food.minimum - foodItemCount(items))
-      : Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind))
+      : Math.max(0, woodPolicy.minimum - woodCount())
+  }
+
+  function overflowWoodToEconomy(
+    itemKind: HouseholdWoodItemKind,
+    count: number,
+    economy: SettlementEconomy | null | undefined,
+    simTime: number,
+  ): number {
+    if (count <= 0) return 0
+    const perItem = householdWoodItemValue(itemKind) ?? 0
+    const value = perItem * count
+    if (value > 0 && economy) economy.add('wood', value, simTime)
+    return value
   }
 
   return {
     id,
     settlementId,
     homeId,
-    stock,
     water,
     items,
-    has: (kind, amount) => (kind === 'food' ? foodItemCount(items) >= amount : stock.has(kind, amount)),
+    has: (kind, amount) =>
+      kind === 'food' ? foodItemCount(items) >= amount : woodCount() >= amount,
     shortage: shortageOf,
     shouldAcquire: (kind) =>
-      kind === 'food' ? foodItemCount(items) < HOUSEHOLD_POLICY.food.target : stock.query(kind) < HOUSEHOLD_POLICY[kind].target,
+      kind === 'food' ? foodItemCount(items) < HOUSEHOLD_POLICY.food.target : woodCount() < woodPolicy.target,
     surplus: (kind) =>
       kind === 'food'
         ? Math.max(0, foodItemCount(items) - HOUSEHOLD_POLICY.food.target)
-        : Math.max(0, stock.query(kind) - HOUSEHOLD_POLICY[kind].target),
-    deposit: (kind, amount, economy, simTime = 0) => {
-      if (amount <= 0) return { storedInHousehold: 0, overflowedToSettlement: 0 }
-      const before = shortageOf(kind)
-      const capacity = HOUSEHOLD_POLICY[kind].capacity
-      const room = Math.max(0, capacity - stock.query(kind))
-      const toHousehold = Math.min(amount, room)
-      if (toHousehold > 0) stock.add(kind, toHousehold)
-      const overflow = amount - toHousehold
-      if (overflow > 0 && economy) economy.add(kind, overflow, simTime)
-      historyBuf.record({ simTime, seq: seq.next(), type: 'wood.deposited', amount: toHousehold, overflowed: overflow })
-      if (before > 0 && shortageOf(kind) === 0) {
-        historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind })
+        : claimableWoodSurplusValue(items, woodPolicy.target),
+    woodCount,
+    woodRoom,
+    claimWoodSurplusBatch: (maxValue) => {
+      if (maxValue <= 0) return []
+      const batch = selectClaimableWoodItems(
+        items,
+        woodPolicy.target,
+        Math.min(maxValue, claimableWoodSurplusValue(items, woodPolicy.target)),
+      )
+      for (const { kind, count } of batch) {
+        if (!items.remove(kind, count)) return []
       }
-      return { storedInHousehold: toHousehold, overflowedToSettlement: overflow }
+      return batch
+    },
+    claimWoodSurplus: (maxValue) => {
+      const batch = selectClaimableWoodItems(
+        items,
+        woodPolicy.target,
+        Math.min(maxValue, claimableWoodSurplusValue(items, woodPolicy.target)),
+      )
+      if (batch.length === 0) return 0
+      for (const { kind, count } of batch) {
+        if (!items.remove(kind, count)) return 0
+      }
+      return batch.reduce((sum, { kind, count }) => sum + count * (householdWoodItemValue(kind) ?? 0), 0)
+    },
+    depositWood: (itemKind, amount, economy, simTime = 0) => {
+      if (amount <= 0) return { storedInHousehold: 0, overflowedToSettlement: 0 }
+      const before = shortageOf('wood')
+      const perItem = householdWoodItemValue(itemKind)
+      if (perItem == null) return { storedInHousehold: 0, overflowedToSettlement: 0 }
+      let storedValue = 0
+      let overflowValue = 0
+      for (let i = 0; i < amount; i++) {
+        if (woodCount() + perItem <= woodPolicy.capacity) {
+          items.add(itemKind, 1, simTime)
+          storedValue += perItem
+        } else {
+          overflowValue += overflowWoodToEconomy(itemKind, 1, economy, simTime)
+        }
+      }
+      historyBuf.record({ simTime, seq: seq.next(), type: 'wood.deposited', amount: storedValue, overflowed: overflowValue })
+      if (before > 0 && shortageOf('wood') === 0) {
+        historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind: 'wood' })
+      }
+      return { storedInHousehold: storedValue, overflowedToSettlement: overflowValue }
     },
     depositFood: (itemKind, amount, economy, simTime = 0, batches) => {
       if (amount <= 0) return { storedInHousehold: 0, overflowedToSettlement: 0 }
@@ -469,7 +539,6 @@ export function createHousehold(
       if (result.portionsGranted > 0) items.add(HAY_SOURCE_ITEM_KIND, result.portionsGranted)
     },
     snapshot: () => ({
-      stock: stock.toJSON(),
       water: water.current,
       items: {
         counts: items.toJSON(),

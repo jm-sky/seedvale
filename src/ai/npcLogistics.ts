@@ -8,13 +8,13 @@ import type { HelperAssignment } from './helperAssignment'
 import type { ActionId, NpcPlannedAction } from './npcAction'
 import {
   claimEconomySurplus,
-  claimHouseholdSurplus,
   commitWoodcutterDeposit,
   type SettlementEconomy,
   tryAdvanceDevelopment,
 } from '../economy'
 import { carryFoodClaim, claimFoodItems, deliverCarriedFoodClaim, type FoodItemClaim } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
+import type { HouseholdWoodItemBatch } from '../settlement/householdWood'
 import { settlementStorageDestination } from '../settlement/storageDestinations'
 import { copyVec3, type Vec3 } from '../simulation'
 import { FOOD_THRESHOLD_NORMAL, type NeedState, relieveNeed } from './Needs'
@@ -90,10 +90,21 @@ export type NpcLogisticsCtx = {
  *  `amount` is 0 when the chop step's `harvestWorldTreeFully` call failed
  *  (tree already harvested by someone else, etc., plan 131) — a no-op guard
  *  so a failed harvest never still mints wood at deposit time. */
-export function depositWoodHarvest(household: Household | null, economy: SettlementEconomy | null, amount: number, simTime: number): void {
-  if (amount <= 0) return
+export type WoodHarvestDeposit = { kind: 'branch' | 'beam', count: number }
+
+/** Deposits exact tree-harvest materials into the household (plan settlements-npcs-034). */
+export function depositWoodHarvest(
+  household: Household | null,
+  economy: SettlementEconomy | null,
+  yields: readonly WoodHarvestDeposit[],
+  simTime: number,
+): void {
+  const total = yields.reduce((n, y) => n + y.count, 0)
+  if (total <= 0) return
   if (household) {
-    household.deposit('wood', amount, economy, simTime)
+    for (const { kind, count } of yields) {
+      if (count > 0) household.depositWood(kind, count, economy, simTime)
+    }
     if (economy) tryAdvanceDevelopment(economy)
   } else if (economy) {
     commitWoodcutterDeposit(economy, simTime)
@@ -250,7 +261,8 @@ export function planEconomyWithdraw(ctx: NpcLogisticsCtx, kind: HouseholdResourc
       },
     }, ctx.waitMultiplier)
   }
-  const requested = Math.min(economy.surplus(kind), maxTransfer)
+  const room = kind === 'wood' ? household.woodRoom() : maxTransfer
+  const requested = Math.min(economy.surplus(kind), maxTransfer, room)
   if (requested <= 0) return null
   let claimed = 0
   return buildTransferAction({
@@ -262,7 +274,7 @@ export function planEconomyWithdraw(ctx: NpcLogisticsCtx, kind: HouseholdResourc
     },
     onDeposit: () => {
       if (claimed <= 0) return
-      household.deposit(kind, claimed, economy, ctx.simTime())
+      household.depositWood('branch', claimed, null, ctx.simTime())
       satisfyHouseholdResourceNeed(ctx.needs, household, kind, ctx.simTime())
     },
   }, ctx.waitMultiplier)
@@ -314,17 +326,19 @@ export function planHouseholdExchange(ctx: NpcLogisticsCtx, kind: HouseholdResou
   const requested = Math.min(sourceHousehold.surplus(kind), maxTransfer)
   if (requested <= 0) return null
   const economy = ctx.economy
-  let claimed = 0
+  let claimedBatch: HouseholdWoodItemBatch[] = []
   return buildTransferAction({
     pickupKind: 'exchange',
     pickup,
     deposit,
     onPickup: () => {
-      claimed = claimHouseholdSurplus(sourceHousehold, kind, requested)
+      claimedBatch = sourceHousehold.claimWoodSurplusBatch(requested)
     },
     onDeposit: () => {
-      if (claimed <= 0) return
-      household.deposit(kind, claimed, economy, ctx.simTime())
+      if (claimedBatch.length === 0) return
+      for (const { kind: itemKind, count } of claimedBatch) {
+        if (count > 0) household.depositWood(itemKind, count, economy, ctx.simTime())
+      }
       satisfyHouseholdResourceNeed(ctx.needs, household, kind, ctx.simTime())
     },
   }, ctx.waitMultiplier)

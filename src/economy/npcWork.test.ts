@@ -61,8 +61,14 @@ describe('commitRoleWork', () => {
 })
 
 describe('commitHunterArrowProduction (settlements-npcs-003)', () => {
+  function clearStartingWood(household: ReturnType<typeof createHousehold>) {
+    household.items.remove('branch', household.items.count('branch'))
+    household.items.remove('beam', household.items.count('beam'))
+  }
+
   it('produces arrows into Household.items and consumes the household branch', () => {
     const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
     household.items.add('branch', 1)
     expect(commitHunterArrowProduction(household)).toBe(true)
     expect(household.items.count('branch')).toBe(0)
@@ -71,12 +77,14 @@ describe('commitHunterArrowProduction (settlements-npcs-003)', () => {
 
   it('does not mint arrows when called with neither material, regardless of simTime', () => {
     const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
     expect(commitHunterArrowProduction(household, 9)).toBe(false)
     expect(household.items.count('arrow')).toBe(0)
   })
 
   it('falls back to beam once branch is exhausted', () => {
     const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
     household.items.add('beam', 1)
     expect(commitHunterArrowProduction(household)).toBe(true)
     expect(household.items.count('beam')).toBe(0)
@@ -85,12 +93,14 @@ describe('commitHunterArrowProduction (settlements-npcs-003)', () => {
 
   it('returns false without touching Household.items when neither material is available', () => {
     const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
     expect(commitHunterArrowProduction(household)).toBe(false)
     expect(household.items.count('arrow')).toBe(0)
   })
 
   it('a normal (non-hunter) household is unaffected — no arrow recipe runs implicitly', () => {
     const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
     household.items.add('branch', 2)
     // Regular role-work dispatch (commitRoleWork) never touches Household.items.
     expect(commitRoleWork(createSettlementEconomy('s', {}, []), 'farmer')).toBe(true)
