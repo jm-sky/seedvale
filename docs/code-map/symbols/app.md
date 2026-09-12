@@ -60,6 +60,12 @@ Generated from exported TypeScript symbols.
 - `GroundActions` — type — line 55
 - `GroundActionsDeps` — type — line 79
 
+## `app/actions/householdResourceTransferActions.ts`
+
+- `createHouseholdResourceTransferActions` — function — line 30
+- `HouseholdResourceTransferActions` — type — line 15
+- `HouseholdResourceTransferDeps` — type — line 19
+
 ## `app/actions/inspectionActions.ts`
 
 - `createInspectionActions` — function — line 94
@@ -234,23 +240,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 288
+- `createApp` — function — line 289
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 257
+- `NewAppOptions` — type — line 258
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 630
+- `createGameLoop` — function — line 633
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 598
-- `GameLoopDeps` — type — line 294
+- `GameLoop` — type — line 601
+- `GameLoopDeps` — type — line 295
 
 ## `app/graphicsSettings.ts`
 

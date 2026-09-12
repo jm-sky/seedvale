@@ -34,6 +34,8 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/householdResourceTransferActions.test.ts`
+- `app/actions/householdResourceTransferActions.ts`
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
@@ -286,6 +288,34 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/groundActions.test.ts`
+- `app/createApp.ts`
+
+## `app/actions/householdResourceTransferActions.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/householdResourceTransferActions.ts`
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `settlement/household.ts`
+
+## `app/actions/householdResourceTransferActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `economy/settlementEconomy.ts`
+- `input/MouseLook.ts`
+- `items/inventoryView.ts`
+- `items/items.ts`
+- `settlement/household.ts`
+- `settlement/householdResourceTransfer.ts`
+- `ui-vue/mount.ts`
+
+**Imported by**
+
+- `app/actions/householdResourceTransferActions.test.ts`
 - `app/createApp.ts`
 
 ## `app/actions/inspectionActions.ts`
@@ -748,6 +778,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/householdResourceTransferActions.ts`
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
@@ -976,6 +1007,7 @@ Generated from TypeScript imports.
 - `render/shadowBudget.ts`
 - `settlement/VillageFire.ts`
 - `settlement/families.ts`
+- `settlement/household.ts`
 - `settlement/landOwnership.ts`
 - `settlement/landPurchase.ts`
 - `settlement/storageRepair.ts`

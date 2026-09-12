@@ -121,6 +121,7 @@ Generated from TypeScript imports.
 
 - `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
+- `app/actions/householdResourceTransferActions.ts`
 - `app/actions/inspectionActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/createApp.ts`

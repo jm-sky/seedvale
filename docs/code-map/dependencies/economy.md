@@ -234,6 +234,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/householdResourceTransferActions.test.ts`
+- `app/actions/householdResourceTransferActions.ts`
 - `app/worldBundle.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
@@ -251,6 +253,8 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/household.test.ts`
 - `settlement/household.ts`
+- `settlement/householdResourceTransfer.test.ts`
+- `settlement/householdResourceTransfer.ts`
 - `settlement/storageVisuals.test.ts`
 - `world/transportOffscreen.ts`
 

@@ -33,6 +33,7 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
+- `app/actions/householdResourceTransferActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/saveState.ts`

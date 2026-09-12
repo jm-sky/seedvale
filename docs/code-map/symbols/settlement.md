@@ -205,22 +205,23 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 312
-- `createHouseholdRegistry` — function — line 449
-- `HayForageState` — type — line 112
-- `Household` — type — line 205
+- `createHousehold` — function — line 319
+- `createHouseholdRegistry` — function — line 458
+- `HayForageState` — type — line 120
+- `Household` — type — line 212
+- `HouseholdDepositResult` — type — line 27
 - `HouseholdId` — type — line 22
   - domain: settlements-npcs
   - system: household
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 278
-- `HouseholdRegistry` — type — line 440
-- `HouseholdResourceKind` — type — line 37
-- `HouseholdSnapshot` — type — line 180
-- `resolveHayForage` — function — line 128
-- `WaterReserve` — type — line 143
+- `householdIdFor` — function — line 285
+- `HouseholdRegistry` — type — line 449
+- `HouseholdResourceKind` — type — line 45
+- `HouseholdSnapshot` — type — line 187
+- `resolveHayForage` — function — line 136
+- `WaterReserve` — type — line 151
 
 ## `settlement/householdExchange.ts`
 
@@ -228,6 +229,19 @@ Generated from exported TypeScript symbols.
 - `HouseholdExchangeHooks` — type — line 55
 - `HouseholdSurplusCandidate` — type — line 12
 - `selectHouseholdSurplusSource` — function — line 30
+
+## `settlement/householdResourceTransfer.ts`
+
+- `HOUSEHOLD_WOOD_ITEM_KINDS` — const — line 17
+  - domain: settlements-npcs
+  - system: household
+- `HouseholdTransferRequest` — type — line 28
+- `HouseholdTransferResult` — type — line 32
+- `householdTransferSummary` — function — line 62
+- `HouseholdWoodItemKind` — type — line 19
+- `householdWoodValue` — function — line 23
+- `transferableHouseholdItemKinds` — function — line 51
+- `transferResourceToHousehold` — function — line 75
 
 ## `settlement/householdYard.ts`
 

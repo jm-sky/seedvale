@@ -560,6 +560,9 @@ Generated from TypeScript imports.
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `app/actions/householdResourceTransferActions.test.ts`
+- `app/actions/householdResourceTransferActions.ts`
+- `app/gameLoop.ts`
 - `app/worldBundle.ts`
 - `debug/householdHistory.ts`
 - `debug/npcDebugApi.ts`
@@ -580,6 +583,8 @@ Generated from TypeScript imports.
 - `settlement/household.test.ts`
 - `settlement/householdExchange.test.ts`
 - `settlement/householdExchange.ts`
+- `settlement/householdResourceTransfer.test.ts`
+- `settlement/householdResourceTransfer.ts`
 - `settlement/livestock.ts`
 - `settlement/rats.ts`
 - `settlement/storageDestinations.ts`
@@ -609,6 +614,31 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `settlement/createSettlement.ts`
 - `settlement/householdExchange.test.ts`
+
+## `settlement/householdResourceTransfer.test.ts`
+
+**Imports**
+
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `settlement/household.ts`
+- `settlement/householdResourceTransfer.ts`
+
+## `settlement/householdResourceTransfer.ts`
+
+**Imports**
+
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `items/itemFuel.ts`
+- `items/items.ts`
+- `settlement/household.ts`
+
+**Imported by**
+
+- `app/actions/householdResourceTransferActions.ts`
+- `settlement/householdResourceTransfer.test.ts`
 
 ## `settlement/householdYard.test.ts`
 

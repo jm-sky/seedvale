@@ -92,6 +92,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/householdResourceTransferActions.test.ts`
 - `app/actions/placementRequirementView.ts`
 - `app/actions/restActions.ts`
 - `app/actions/storageInfestationActions.ts`
@@ -162,6 +163,8 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `settlement/household.ts`
+- `settlement/householdResourceTransfer.test.ts`
+- `settlement/householdResourceTransfer.ts`
 - `settlement/landPurchase.test.ts`
 - `settlement/landPurchase.ts`
 - `settlement/npcPostDeath.test.ts`
@@ -518,6 +521,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `items/foodItems.test.ts`
 - `settlement/household.ts`
+- `settlement/householdResourceTransfer.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.test.ts`
 - `settlement/storageVisuals.test.ts`
@@ -654,6 +658,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/containerActions.ts`
+- `app/actions/householdResourceTransferActions.ts`
 - `app/createApp.ts`
 - `app/inventoryWiring.ts`
 - `items/inventoryView.test.ts`
@@ -792,6 +797,7 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
 - `items/itemFuel.test.ts`
+- `settlement/householdResourceTransfer.ts`
 
 ## `items/itemInstances.ts`
 
@@ -904,6 +910,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/householdResourceTransferActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementRequirementView.ts`
 - `app/actions/restActions.ts`
@@ -977,6 +984,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `settlement/household.ts`
+- `settlement/householdResourceTransfer.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageRepair.ts`
