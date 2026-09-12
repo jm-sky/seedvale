@@ -295,13 +295,13 @@ import {
   canWithdrawFromEconomy,
   depositFoodHarvest,
   depositWoodHarvest,
-  type WoodHarvestDeposit,
   HUNT_YIELD_KINDS,
   type NpcLogisticsCtx,
   planDeliverHuntYieldHome,
   planEconomyWithdraw,
   planHouseholdExchange,
   planPlayerStorageDelivery,
+  type WoodHarvestDeposit,
 } from './npcLogistics'
 import {
   createMovementWatchdog,

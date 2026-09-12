@@ -5,8 +5,8 @@ import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import { hasItemKindCategory, type ItemKind } from '../items/items'
 import {
   HOUSEHOLD_WOOD_ITEM_KINDS,
-  householdWoodItemValue,
   type HouseholdWoodItemKind,
+  householdWoodItemValue,
 } from './householdWood'
 
 /**
@@ -18,7 +18,7 @@ import {
  * @system household
  */
 
-export { HOUSEHOLD_WOOD_ITEM_KINDS, householdWoodItemValue as householdWoodValue, type HouseholdWoodItemKind } from './householdWood'
+export { HOUSEHOLD_WOOD_ITEM_KINDS, type HouseholdWoodItemKind, householdWoodItemValue as householdWoodValue } from './householdWood'
 
 export type HouseholdTransferRequest =
   | { resource: 'food', itemKind: ItemKind, amount: number }

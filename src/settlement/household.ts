@@ -4,16 +4,16 @@ import type { ItemKind } from '../items/items'
 import { createSequenceAllocator } from '../debug/domainHistory'
 import { createHouseholdHistoryBuffer } from '../debug/householdHistory'
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
+import { foodItemCount, skipBatchCount, takeBatchCount, takeOneFoodItem } from '../items/foodItems'
+import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 import {
   claimableWoodSurplusValue,
   householdWoodCountFromItems,
-  householdWoodItemValue,
   type HouseholdWoodItemBatch,
   type HouseholdWoodItemKind,
+  householdWoodItemValue,
   selectClaimableWoodItems,
 } from './householdWood'
-import { foodItemCount, skipBatchCount, takeBatchCount, takeOneFoodItem } from '../items/foodItems'
-import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 
 /**
  * NPC household resource layer (plan 069). One family/home has one

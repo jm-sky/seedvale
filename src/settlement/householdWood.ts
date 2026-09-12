@@ -1,6 +1,6 @@
 import type { Inventory } from '../items/Inventory'
-import { fuelValue } from '../items/itemFuel'
 import type { ItemKind } from '../items/items'
+import { fuelValue } from '../items/itemFuel'
 
 /**
  * Household wood item semantics (plan settlements-npcs-034) — concrete
@@ -42,8 +42,8 @@ export function selectClaimableWoodItems(
   maxValue: number,
 ): HouseholdWoodItemBatch[] {
   if (maxValue <= 0) return []
-  let branches = items.count('branch')
-  let beams = items.count('beam')
+  const branches = items.count('branch')
+  const beams = items.count('beam')
   let current = branches + beams * 2
   const out: HouseholdWoodItemBatch[] = []
   let budget = maxValue

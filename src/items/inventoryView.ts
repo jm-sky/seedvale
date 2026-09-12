@@ -1,7 +1,7 @@
-import { EQUIPMENT_SLOT_LABEL } from './equipment'
 import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
 import { effectiveInstanceWeight, resolveEffectiveArmorPiece } from './armorItemInstances'
+import { EQUIPMENT_SLOT_LABEL } from './equipment'
 import {
   type FoodSourceSpecies,
   type FreshnessStage,

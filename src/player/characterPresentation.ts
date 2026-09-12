@@ -1,20 +1,20 @@
-import type { Inventory } from '../items/Inventory'
 import type {
   EquipmentModifiers,
   EquipmentSlot,
   EquipmentState,
 } from '../items/equipment'
+import type { Inventory } from '../items/Inventory'
+import type {
+  AttributeModifierContribution,
+  EffectivePhysicalAttributesResult,
+  ModifierCategory,
+} from '../shared/effectivePhysicalAttributes'
 import {
   EQUIPMENT_SLOTS,
   equippedInstanceId,
 } from '../items/equipment'
 import { itemDisplayName } from '../items/itemDisplay'
 import { ARMOR_QUALITY_LABELS, isArmorItemInstance } from '../items/itemInstances'
-import type {
-  AttributeModifierContribution,
-  EffectivePhysicalAttributesResult,
-  ModifierCategory,
-} from '../shared/effectivePhysicalAttributes'
 import {
   PHYSICAL_ATTRIBUTE_IDS,
   type PhysicalAttributeDelta,

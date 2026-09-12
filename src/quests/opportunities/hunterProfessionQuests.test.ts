@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PreySpawner } from '../../fauna/AnimalSpawner'
+import type { OpportunityNpc } from './worldQuestOpportunityTypes'
 import { Inventory } from '../../items/Inventory'
 import { QuestManager } from '../QuestManager'
 import {
@@ -7,7 +8,6 @@ import {
   hunterProfessionQuestId,
   selectHunterQuestGiver,
 } from './hunterProfessionQuests'
-import type { OpportunityNpc } from './worldQuestOpportunityTypes'
 
 const hunter: OpportunityNpc = { id: 'home:npc:4', name: 'Jan', role: 'hunter', child: false }
 const anna: OpportunityNpc = { id: 'home:npc:0', name: 'Anna', role: 'farmer', child: false }

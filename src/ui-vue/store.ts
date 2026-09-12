@@ -19,7 +19,6 @@ import type { SellPriceContext } from '../items/tradeCatalog'
 import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
 import type { CharacterPresentation } from '../player/characterPresentation'
-import { NEUTRAL_CHARACTER_EQUIPMENT_VIEW } from '../player/characterPresentation'
 import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Reputation } from '../reputation/ReputationManager'
@@ -42,6 +41,7 @@ import {
 import { playUiClick, playUiOpen } from '../audio/uiSounds'
 import { DEFAULT_QUALITY_PRESET } from '../config/qualityProfiles'
 import { isTouchDevice } from '../input/isTouchDevice'
+import { NEUTRAL_CHARACTER_EQUIPMENT_VIEW } from '../player/characterPresentation'
 import { type DayNightState, formatClock, phaseName } from '../world/dayNight'
 
 export type VillagerEntry = { npc: Raw<NpcAgent>; settlementName: string; foodSourceType: FoodSourceType }

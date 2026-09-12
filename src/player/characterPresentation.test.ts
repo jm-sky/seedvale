@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { AttributeModifierContribution } from '../shared/effectivePhysicalAttributes'
+import { createArmorInstance } from '../items/armorItemInstances'
+import { createEquipmentState, resolveEquipmentModifiers } from '../items/equipment'
+import { Inventory } from '../items/Inventory'
 import { resolveEffectivePhysicalAttributesDetailed } from '../shared/effectivePhysicalAttributes'
 import {
   applyPoisoningExposure,
   createEmptyTemporaryConditions,
 } from '../shared/temporaryConditions'
-import { createEquipmentState, resolveEquipmentModifiers } from '../items/equipment'
-import { Inventory } from '../items/Inventory'
-import { createArmorInstance } from '../items/armorItemInstances'
 import {
   aggregateAttributeModifierBadges,
   buildCharacterEquipmentView,

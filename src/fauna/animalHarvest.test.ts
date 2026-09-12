@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { Inventory } from '../items/Inventory'
+import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { AnimalAgent, type AnimalAgentDeps } from './AnimalAgent'
 import { ANIMAL_DEFS } from './animalDefs'
 import { harvestAnimalIntoInventory } from './animalHarvest'
