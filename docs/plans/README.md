@@ -81,7 +81,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
 | 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
 | 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
-| ◼️ `items-player-031-armor-category-and-character-defense-summary.md`          | -       | 🟡 | M      | items-player-030 |
+| 💡 `items-player-031-armor-category-and-character-defense-summary.md`          | -       | 🟡 | M      | items-player-030 |
 
 ---
 
