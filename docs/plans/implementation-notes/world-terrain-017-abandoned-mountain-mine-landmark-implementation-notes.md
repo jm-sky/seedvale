@@ -1,87 +1,327 @@
 # world-terrain-017 — Abandoned mountain mine landmark — implementation notes
 
-## Current-state blocker
+## Recon baseline — 2026-09-12
 
-`world-terrain-008-underground-caves-v2.md` is `done`. The remaining production cave spatial contract is `world-terrain-019`. Do not implement 017 against transitional cave contracts and then preserve them for compatibility.
+`world-terrain-019-cave-heightfield-production-migration.md` is `done`; it is no longer a blocker for 017.
 
-Current cave runtime is transitional:
+The important result is not that cave siting changed — it did not — but that Cave V2 now has a clear production spatial authority.
 
-- `src/world/createCaves.ts` renders accepted caves through Cave V2 (`CaveTopology` + SDF/Sweep presentation), but its authoritative `definitions()` still come from `generateCaveDefinitions()`.
-- `src/world/caveGenerator.ts` still expands legacy `LargeCaveSite` candidates into `CaveDefinition` and performs the pre-V2 overburden validation.
-- `src/world/largeCaves.ts::pickLargeCaveSites()` is still the siting owner. It samples a fixed ring around origin, targets a fixed cave count and explicitly rejects `sampleMountainRidge(x, z) > 0.55`.
+Current flow:
 
-That last rule directly conflicts with the abandoned-mountain-mine requirement. Phase 1 of 017 must therefore happen only after 019 exposes its production siting/topology/spatial contracts. The implementing agent should reconfirm those exact symbols then; do not build the mine around `LargeCaveSite`, `topologyToCaveDefinition()` or the current spike-test topology merely because they exist today.
+```text
+pickLargeCaveSites()
+→ LargeCaveSite
+→ buildProductionCaveTopology()
+→ CaveTopology
+→ CaveHeightfieldRepresentation
+→ terrain cutout / presentation / gameplay queries
+```
+
+Relevant files:
+
+```text
+src/world/largeCaves.ts
+src/world/createCaves.ts
+src/world/caves/productionTopology.ts
+src/world/caves/caveIdentity.ts
+src/world/caves/caveTopology.ts
+src/world/caves/caveHeightfieldRepresentation.ts
+src/world/caves/caveHeightfieldQuery.ts
+src/world/caves/caveHabitat.ts
+src/world/locations/worldLocationCatalog.ts
+src/world/locations/worldLocationTypes.ts
+```
+
+## Cave siting — still the main architectural seam
+
+`src/world/largeCaves.ts::pickLargeCaveSites()` remains the production siting owner.
+
+Current generic policy:
+
+- deterministic seed salt `0xca7e51`;
+- fixed ring around home: `130..620` world units;
+- default target count `10`;
+- bounded attempts per cave;
+- rejects settlements, nearby caves, coasts and roads;
+- requires local slope;
+- explicitly rejects `sampleMountainRidge(x, z) > 0.55`.
+
+That last rule directly conflicts with the abandoned-mountain-mine requirement.
+
+Do **not** reuse `pickLargeCaveSites()` unchanged as the mountain mine search algorithm and do not delete its mountain rejection globally just to make 017 work. It is valid generic cave-population policy.
+
+Preferred implementation direction:
+
+1. factor/reuse the generic site-safety pieces that are genuinely shared;
+2. add a deterministic bounded mountain-site query/validation seam owned by the same cave/worldgen domain;
+3. pass accepted mountain candidates through ordinary production topology acceptance;
+4. keep one cave lifecycle after acceptance.
+
+Do not create `MineCaveGenerator`, `GoldMineCave` or a second cave manager.
+
+## Production cave authority after world-terrain-019
+
+The old notes described the cave runtime as transitional. That is no longer accurate.
+
+Current production facts from `src/world/createCaves.ts`:
+
+- `CaveTopology` is the representation-neutral structural contract.
+- `CaveHeightfieldRepresentation` is the sole production spatial authority.
+- presentation, terrain mouth, ground/floor/ceiling, occupancy, interior and horizontal containment all derive from the heightfield.
+- cave presentation is streamed, but topology/heightfield runtime data is constructed up front and remains available independently of presentation activation.
+- cave mouth integration uses the normal Cave V2 recess + `TerrainCutout` lifecycle.
+
+`CaveVolume` is no longer a production gameplay/spatial authority.
+
+`topologyToCaveDefinition()` still exists because `Caves.definitions()` and a few consumers need a compatibility view / bounds. Do not design new mine logic around `CaveDefinition` internals when the required fact exists on topology/heightfield contracts.
+
+## Stable cave identity
+
+`src/world/caves/productionTopology.ts` derives cave identity through `makeCaveId(seed, site)` before recipe-specific structural RNG.
+
+017 should preserve that ownership:
+
+```text
+site + world seed
+→ stable caveId
+→ topology
+```
+
+Do not use cave array order, runtime map iteration order, streaming activation or Three.js identity.
+
+For the mine semantic identity keep:
+
+```text
+mineId != caveId
+mine landmark → caveId
+```
+
+`mineId` should derive from a stable semantic mine slot/salt plus world seed (and any stable worldgen identity required by the catalog contract), not by simply prefixing the chosen `caveId` and treating both concepts as the same identity.
+
+## Existing archetypes and interior contracts
+
+Current production cave archetypes are:
+
+```text
+natural
+adventure
+```
+
+owned by:
+
+```text
+src/world/caves/caveArchetype.ts
+src/world/caves/productionTopology.ts
+```
+
+`adventure` is a longer/multi-section production recipe. It is **not** a semantic mine type.
+
+Do not introduce a `mine` archetype in 017 unless another generic cave plan has already established that architecture before implementation starts.
+
+An existing natural or adventure cave may be selected if it satisfies the mine's structural/spatial suitability requirements.
+
+Current useful `Caves` APIs include:
+
+```text
+archetypeOf(caveId)
+contentAnchorsOf(caveId)
+resolveHabitat(caveId, entityHeight)
+queryGroundIn(caveId, x, y, z)
+resolveHorizontalIn(caveId, ...)
+```
+
+`resolveHabitat()` is especially useful evidence that production now has a cave-scoped, presentation-independent interior/traversal contract. Do not reintroduce mesh scans or random-bounds probing for mine suitability.
+
+For purely structural capacity checks, prefer `CaveTopology` nodes/segments before paying for richer spatial queries.
 
 ## World-location ownership
 
-`WorldLocationCatalog` is still the canonical deterministic semantic-place owner:
+`WorldLocationCatalog` remains the canonical deterministic semantic-place owner:
 
-- `src/world/locations/worldLocationCatalog.ts`
-- `src/world/locations/worldLocationTypes.ts`
-- `src/world/locations/worldLocationNames.ts`
+```text
+src/world/locations/worldLocationCatalog.ts
+src/world/locations/worldLocationTypes.ts
+src/world/locations/worldLocationNames.ts
+```
 
-The catalog is created once and survives `WorldBundle` rebuilds; its dependencies (`getSeed`, `getCaves`, `getChunkManager`, `getSampleParams`) are thunks specifically so lookup remains correct after the bundle swaps its internals. Preserve that lifetime model for the mine. Do not capture a cave instance, seed or terrain sampler at catalog construction time.
+Its rebuild contract is still important: the catalog is long-lived while seed/caves/chunk-manager/sample params are read through thunks. New mine lookup must preserve this pattern.
 
-`WorldLocation` currently contains only `id/kind/x/z/name/discoveryWeight`; it has no source-reference metadata such as `caveId`. 017 therefore needs a small catalog-owned semantic contract for the mine instead of pretending the generic location shape already carries the required binding. Keep the binding in the world-location domain (for example a mine-specific value returned/resolved by the catalog) and derive the ordinary `WorldLocation` view from it. Do **not** add a separate runtime `MineRegistry`.
+Do not capture a `Caves` instance, seed or terrain sampler once at catalog construction.
 
-`WorldLocationKind` currently has only `settlement | cave | cemetery | lake | mountainPeak`; adding the mine kind also requires updating `WORLD_LOCATION_KINDS` / `worldLocationKindFromId()` and any exhaustive UI/map/name handling found by TypeScript/tests.
+Current `WorldLocationKind` is:
 
-Keep identities separate:
+```text
+settlement | cave | cemetery | lake | mountainPeak | ruins
+```
 
-- `mineId`: semantic landmark identity, derived from seed + stable semantic slot/salt, not from selected `caveId`.
-- `caveId`: Cave V2 identity selected by worldgen.
+The previous notes were stale because they omitted `ruins`.
 
-`WorldLocationCatalog.getById()` is expected to reconstruct deterministic places from self-describing IDs without a persisted global index. The mine should keep that property. Do not persist its geometry or `mineId → caveId` binding in `SaveData` if it can be deterministically reconstructed.
+If 017 adds `abandonedMine`, update:
 
-## Terrain/massif evaluation
+- `WorldLocationKind`;
+- `WORLD_LOCATION_KINDS`;
+- `worldLocationKindFromId()` behaviour through the shared list;
+- `landmarkName()` / naming data;
+- map marker/exhaustive switches;
+- relevant location-discovery filtering/tests.
 
-Use `src/terrain/chunkHeightmap.ts` analytic samplers and the same `RawSampleParams` path already consumed by `WorldLocationCatalog`; do not instantiate chunks to classify candidates.
+`WorldLocation` still has only generic semantic/location fields (`id/kind/x/z/name/discoveryWeight`) and no source-reference metadata such as `caveId`.
 
-Important current fact: `sampleMountainRidgeAt()` is only a connected-ridge-strength signal. It is intentionally not a semantic "massif id" and its meaning is reused by vegetation/resources. Do not change its semantics for this feature.
+Therefore keep a small catalog-owned mine-specific semantic value/resolver and derive the normal `WorldLocation` view from it. Do not create a runtime `MineRegistry` and do not stuff cave topology into `WorldLocation`.
 
-Massif suitability should therefore be a bounded local analysis over existing samplers, not a new noise field. At minimum use several samples over a fixed-radius pattern and combine ridge presence with relief/elevation/coherence. Keep sample count and radii explicit constants so startup/catalog cost is bounded and tests can assert it.
+`WorldLocationCatalog.getById()` is intentionally able to reconstruct deterministic places from self-describing IDs without a persisted global index. Preserve that property for the mine.
 
-The existing coarse location scan/cache (`locationsCoarseCache.ts`) is optimized for reusable lake/mountain-cell classification. Do not automatically put the unique mine-selection result into that tile cache. The persistent worldgen cache is disposable and correctness must not depend on it. Only extend that cache if profiling/recon shows the mine actually reuses the same coarse-cell product.
+Do not persist `mineId → caveId` in `SaveData` if it can be deterministically reconstructed.
 
-## Candidate search and cave integration
+## Terrain / massif evaluation
 
-Do not reuse `pickLargeCaveSites()` as the mine search algorithm. Its current origin-centred `130..620` ring, fixed attempt budget and ordering-dependent separation against already placed caves are implementation details of generic V1 siting, not a regional landmark-selection contract.
+Use the analytic terrain path in `src/terrain/chunkHeightmap.ts` through `RawSampleParams`.
 
-After 008 is complete, prefer a pure/cheap Cave V2 query surface that can answer candidate availability/suitability without building Three.js geometry. The mine selector should operate on deterministic cave metadata/topology/spatial summaries only; presentation remains lazy in `createCaves()`.
+Do not instantiate chunks to classify mountain candidates.
 
-If 008 does not expose a way to request/guarantee a valid cave at a chosen massif, extend the shared Cave V2 siting seam there. Do not special-case a second cave generator inside world locations.
+`sampleMountainRidgeAt()` is only a ridge-strength signal. It is reused by other terrain/vegetation/resource logic and is not a semantic massif identifier. Do not change its meaning.
 
-The current cave mouth uses `ChunkManager.modifyTerrain(..., 'system')` for the small entrance recess. That existing Cave lifecycle detail is not the macro-terrain fallback prohibited by the plan. Do not remove/reimplement the normal Cave V2 entrance integration as part of 017; the prohibition is against creating the massif through runtime terrain edits.
+Massif suitability should be a bounded local analysis over existing samplers.
+
+Recommended shape:
+
+```text
+candidate center
+→ fixed deterministic neighbourhood samples
+→ ridge/mountain presence
+→ elevation + relief
+→ coherence / extent
+→ suitability score + reason
+```
+
+Keep sample count/radii/thresholds explicit constants. Prefer a pure helper with focused tests.
+
+Do not automatically reuse `locationsCoarseCache.ts`. The unique mine choice does not naturally match its reusable lake/mountain-cell product, and cache correctness must remain optional.
+
+## Candidate selection
+
+Do not first select the numerically strongest massif and only then look for caves.
+
+Rank combined candidates so an already-valid cave can beat a slightly stronger massif that would require cave generation.
+
+Required priority:
+
+```text
+existing suitable massif + accepted suitable cave
+> existing suitable massif + guaranteed cave
+> generated massif + suitable/guaranteed cave
+```
+
+Useful candidate factors:
+
+- neighbourhood massif score;
+- accepted cave entrance inside/at the massif edge;
+- structural capacity from topology;
+- overburden/topology acceptance already guaranteed by production builder;
+- usable entrance approach;
+- coast / road / settlement conflicts;
+- stable deterministic tie-break.
+
+Do not overfit to future quest staging or gold placement.
+
+## Cave guarantee
+
+A guaranteed mine cave must still be an ordinary accepted production cave.
+
+Preferred flow:
+
+```text
+selected massif
+→ deterministic bounded mountain-site candidates
+→ shared siting safety validation
+→ buildProductionCaveTopology(...)
+→ first/best accepted production topology by stable ranking
+→ normal createCaves heightfield/runtime lifecycle
+```
+
+Important integration warning: `createCaves()` currently starts from one `sites` array, then calls `assignCaveArchetypes(seed, sites, buildTopology)`.
+
+Adding/removing/reordering generic sites can affect which existing candidate receives the guaranteed home `adventure` archetype. 017 must not accidentally reshuffle unrelated cave archetype assignment merely because it needs one landmark cave.
+
+Before implementation choose an explicit stable integration strategy, for example:
+
+- keep the existing generic site list/order unchanged and add the landmark-required site through a separate shared siting input that has explicit recipe/acceptance handling; or
+- extend the archetype assignment contract so landmark-required candidates are deterministic and do not perturb the existing home guarantee/roll semantics.
+
+Do not simply prepend the mine site to `pickLargeCaveSites()` output.
+
+Whatever strategy is chosen, mine semantics stay outside `CaveArchetype` and the resulting cave joins the same runtime map/lifecycle.
 
 ## Macro-terrain fallback
 
-Treat this as the last phase and as a scope checkpoint.
+This remains the highest-risk part of the plan and the reason the `M` estimate must be re-evaluated during implementation if the seam is broad.
 
-`chunkHeightmap.ts::sampleRawTexel()` is the actual analytic source of mountain massifs and is mirrored through worker-based chunk generation/off-screen sampling. Any guaranteed massif must enter that deterministic input path before downstream sampling. A local `ChunkManager.modifyTerrain()` patch is wrong because it would not become the same macro feature for analytic classification, workers and unloaded terrain.
+The massif cannot be created with `ChunkManager.modifyTerrain()` because correctness must exist before chunks load and be identical for analytic/off-screen sampling.
 
-Before adding a new generic authored-feature framework, first check whether a narrow seed-derived macro constraint can be threaded through existing `RawSampleParams`/region params without duplicating terrain ownership. If this requires widening the terrain-generation contract across main thread + worker payloads + cache fingerprints, stop and reassess the plan effort as instructed by 017 rather than hiding that expansion inside landmark code.
+A valid fallback must enter the same deterministic terrain input path used by `sampleRawTexel()` / analytic sampling and chunk generation.
 
-## Conflicts / siting constraints
+If a new macro constraint is added to shared terrain params, audit at least:
 
-Reuse existing spatial owners rather than duplicating approximations:
+- `RawSampleParams` / `ChunkTileParams` propagation;
+- worker-safe payloads / chunk generation inputs;
+- `rawSampleParamsFromWorld()` and other analytic samplers;
+- terrain/location cache fingerprints based on `RawSampleParams`;
+- seed/persistent-worldgen cache invalidation assumptions.
 
-- roads: current cave creation gets corridors through `ChunkManager.roadCorridorsNear()`;
-- settlements: use current settlement definitions/footprints, not a second settlement noise test;
-- coast: reuse the existing continentalness/coast placement rules;
-- cave overburden/entrance/topology validation: use final Cave V2 validation from 008.
+Do not widen these contracts speculatively. First implement bounded search and prove a macro fallback is actually needed for required seed coverage.
 
-Do not overconstrain the selector with future quest needs. The only semantic requirement here is a believable, accessible mountain mine landmark with a Cave V2 binding.
+If the fallback needs a broad new shared terrain contract, update plan effort from `M` to `L` before coding that phase.
+
+## Existing cave mouth terrain edits are not the forbidden fallback
+
+`createCaves()` still uses the normal cave lifecycle for the entrance:
+
+- local mouth recess via `ChunkManager.modifyTerrain(..., 'system')`;
+- persistent `TerrainCutout` for the real opening.
+
+Do not remove/rewrite this in 017.
+
+The plan prohibition concerns creating the **mountain massif** with runtime edits. Normal Cave V2 mouth integration is allowed and should be reused.
 
 ## Tests worth adding
 
-Focus on pure deterministic contracts rather than rendering:
+Prioritise pure deterministic contracts:
 
-- same seed/config ⇒ same `mineId`, `caveId` and representative position;
-- different streaming/query order does not change selection;
-- selected natural candidate passes bounded massif suitability and Cave V2 suitability;
+- same seed/config ⇒ same `mineId`, `caveId`, entrance position;
+- selection is unchanged by cave presentation activation / streaming order;
+- cave array/map order does not define mine identity;
+- bounded massif classifier distinguishes coherent mountain terrain from isolated ridge/hill/steep lowland;
+- combined ranking prefers an existing suitable cave over generation in a comparable massif;
 - fallback order is stable: natural massif+cave → natural massif+guaranteed cave → guaranteed massif;
-- mine identity remains unchanged when cave arrays/order are perturbed;
-- `WorldLocationCatalog` resolves the mine correctly after dependency thunks switch to a rebuilt `WorldBundle`;
+- guaranteed mountain site passes `buildProductionCaveTopology()` instead of bypassing it;
+- introducing the mine guarantee does not perturb unrelated generic cave identities/archetype assignment;
+- catalog lookup still works after its dependency thunks point at a rebuilt `WorldBundle`;
 - no quest/discovery/save state participates in selection.
 
-Avoid browser verification in the implementation agent; browser verification remains manual.
+For macro fallback add a deterministic test proving analytic terrain and generated chunk/worker path observe the same massif parameters.
+
+## Implementation-agent recon boundary
+
+A future implementing agent should not repeat a repo-wide cave recon.
+
+Start with:
+
+```text
+CLAUDE.md
+docs/STATE.md
+docs/plans/world-terrain-017-abandoned-mountain-mine-landmark.md
+this file
+src/world/largeCaves.ts
+src/world/createCaves.ts
+src/world/caves/productionTopology.ts
+src/world/caves/caveArchetype.ts
+src/world/caves/caveIdentity.ts
+src/world/caves/caveHabitat.ts
+src/world/locations/worldLocationCatalog.ts
+src/world/locations/worldLocationTypes.ts
+src/terrain/chunkHeightmap.ts
+```
+
+Only widen recon if the chosen macro fallback or bootstrap integration requires it.
+
+Browser/gameplay verification remains manual by the User.
