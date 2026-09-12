@@ -1209,10 +1209,12 @@ Generated from exported TypeScript symbols.
 - `GARDEN_PLACEMENT_MESSAGE` — const — line 79
 - `GARDEN_SEPARATION` — const — line 65
 - `GardenHydrationState` — type — line 256
+- `gardenMaintenanceRoll` — function — line 415
 - `GardenMaterialCost` — type — line 48
 - `gardenMaterialRequirements` — function — line 51
 - `GardenPlacementReason` — type — line 77
 - `gardenPlotPromptLabel` — function — line 379
+- `gardenWateringRoll` — function — line 419
 - `getCultivationStatus` — function — line 137
 - `HYDRATION_DROUGHT_THRESHOLD` — const — line 218
 - `HYDRATION_DRY_RATE_PER_DAY` — const — line 203
