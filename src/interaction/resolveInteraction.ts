@@ -126,6 +126,13 @@ export function resolveInteraction(
     }
     case 'house': {
       let line = target.examine
+      const conditionLines: string[] = [`Stan: ${Math.round(target.condition)}%`]
+      if (target.repairActive && target.repairRequiredWork != null && target.repairCompletedWork != null) {
+        conditionLines.push(`Naprawa w toku: ${target.repairCompletedWork.toFixed(1)} / ${target.repairRequiredWork.toFixed(1)} h`)
+      } else if (target.repairNeeded) {
+        conditionLines.push('Uszkodzona — wymaga naprawy.')
+      }
+      line = `${line}\n\n${conditionLines.join('\n')}`
       if (isDebugMode()) {
         const model = target.modelUrl ?? '(procedural fallback)'
         const paste = target.lampMount

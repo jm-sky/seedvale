@@ -142,6 +142,12 @@ export function workplaceFor(
     case 'guard':
     case 'hunter':
       return { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
+    case 'herbalist': {
+      const home = landmarks.homes[homeIndex]
+      return home
+        ? { id: `${settlementId}:workplace:herbalist:${homeIndex}`, type: 'workplace', position: home }
+        : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
+    }
     case 'miner':
       return { id: `${settlementId}:workplace:stockpile`, type: 'workplace', position: landmarks.stockpile }
     case 'shepherd': {
@@ -154,12 +160,6 @@ export function workplaceFor(
       const home = landmarks.homes[homeIndex]
       return home
         ? { id: `${settlementId}:workplace:textile:${homeIndex}`, type: 'workplace', position: home }
-        : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
-    }
-    case 'herbalist': {
-      const home = landmarks.homes[homeIndex]
-      return home
-        ? { id: `${settlementId}:workplace:herbalist:${homeIndex}`, type: 'workplace', position: home }
         : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
     }
     case 'trader':

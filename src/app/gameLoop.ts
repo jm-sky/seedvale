@@ -468,6 +468,17 @@ export type GameLoopDeps = {
     waterAvailable: boolean
   } | null
   workOnWellRoofRepair?: (id: string) => void
+  /** Read-only repair preview for a settlement structure (plan
+   *  settlements-007) — see `placementActions.ts`'s `StructureRepairView`. */
+  describeStructureRepair?: (settlementId: string, structureId: string, x: number, z: number) => {
+    title: string
+    description: string
+    canAct: boolean
+    reasonLabel: string
+    mode: 'start' | 'continue'
+  } | null
+  /** Starts or resumes one repair work bout on a settlement structure. */
+  workOnStructureRepair?: (settlementId: string, structureId: string, x: number, z: number) => void
   /** `[E]` on an unlit standing torch (plan items-player-009) — validates
    *  `fire_starting`, flips its authoritative `lit`, and updates its runtime
    *  flame/light. No-op (including re-checking `lit`) if already lit. */
@@ -626,7 +637,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
+    openContainer, openNpcCorpse, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
     previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, previewPlayerTroughRemoval, removePlayerTrough,
     previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
@@ -1081,6 +1092,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           : null,
         describeWorldGeneratedContainer,
         inventory.hasCapability('shearing'),
+        (settlementId, structureId, nowDays) => bundle.settlementsManager.getStructureSnapshot(settlementId, structureId, nowDays),
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -1802,6 +1814,27 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const preview = previewResidentialCancel?.(target.id)
           if (preview && !preview.canReceive) toast.show(preview.reasonLabel, 'error')
           else if (preview) vueUi.openActionConfirm('Anuluj budowę chaty', preview.body, () => cancelResidentialBuilding?.(target.id))
+        }
+      } else if (target?.kind === 'house') {
+        // Plan settlements-007 — `[E]` keeps the existing examine flavor
+        // (now including live condition/repair status, see
+        // `resolveInteraction.ts`); `[R]` opens the shared repair dialog,
+        // only meaningful once the structure is damaged or already mid-repair.
+        if (interactPressed) {
+          const outcome = resolveInteraction(target, questManager)
+          npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+        }
+        if (altInteractPressed && (target.repairNeeded || target.repairActive)) {
+          const view = describeStructureRepair?.(target.settlementId, target.structureId, target.position.x, target.position.z)
+          if (view) {
+            const actions = [{
+              label: view.mode === 'continue' ? 'Kontynuuj naprawę' : 'Rozpocznij naprawę',
+              enabled: view.canAct,
+              reasonLabel: view.reasonLabel,
+              run: () => workOnStructureRepair?.(target.settlementId, target.structureId, target.position.x, target.position.z),
+            }]
+            vueUi.openFlavorDialog(view.title, view.description, actions)
+          }
         }
       } else if (target?.kind === 'settlementStorage') {
         if (interactPressed) {

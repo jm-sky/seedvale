@@ -15,6 +15,7 @@ import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { RatInfestationState } from '../settlement/ratInfestation'
 import type { RatSaveRecord } from '../settlement/ratPersistence'
+import type { SettlementStructureState } from '../settlement/structureCondition'
 import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
@@ -755,6 +756,13 @@ export type SaveData = {
    *  quests-progression-006 / quests-progression-013) — independent
    *  storage-damage and nest-destroyed facts. */
   storageInfestation?: Record<string, RatInfestationState>
+  /** Sparse settlement-structure condition/repair state (plan
+   *  settlements-007) — `SettlementStructureStateRegistry`'s own composite
+   *  `settlementId:structure:structureId` key, same sparse/fallback contract
+   *  as `grassForagePatches`/`households` above: an absent entry (including
+   *  the whole field, for an older save) restores that structure as pristine
+   *  (`condition: 100`, no active repair). */
+  structureStates?: Record<string, SettlementStructureState>
   /** Sparse grass forage patch depletion overrides (plan fauna-010 §3/§4) —
    *  `patchId -> availableAtDays`, see `world/grassForage.ts`'s
    *  `GrassForageOverrides`. Patch *placement* is deterministic and never
@@ -1982,6 +1990,20 @@ function isStorageInfestationField(value: unknown): value is Record<string, RatI
   return Object.values(value as Record<string, unknown>).every(isRatInfestationState)
 }
 
+function isSettlementStructureState(value: unknown): value is SettlementStructureState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const e = value as Record<string, unknown>
+  if (typeof e.structureId !== 'string' || typeof e.settlementId !== 'string') return false
+  if (typeof e.condition !== 'number' || typeof e.lastConditionUpdateAtDays !== 'number') return false
+  if (e.repair !== undefined && !isRepairProgressField(e.repair)) return false
+  return true
+}
+
+function isStructureStatesField(value: unknown): value is Record<string, SettlementStructureState> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value as Record<string, unknown>).every(isSettlementStructureState)
+}
+
 function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
   if (!value || typeof value !== 'object') return false
   const e = value as Record<string, unknown>
@@ -2075,6 +2097,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlayerConditionsField(v.playerConditions)) return false
   if (v.waterDrinkEventCount !== undefined && typeof v.waterDrinkEventCount !== 'number') return false
   if (v.unsafeFoodEventCount !== undefined && typeof v.unsafeFoodEventCount !== 'number') return false
+  if (v.structureStates !== undefined && !isStructureStatesField(v.structureStates)) return false
   return true
 }
 

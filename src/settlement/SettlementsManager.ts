@@ -9,6 +9,7 @@ import type { AnimalOwner } from '../fauna/animalOwnership'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { OwnedAnimalControlMode } from '../fauna/ownedAnimalControl'
+import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
@@ -74,6 +75,21 @@ import {
 import { settlementDefFor } from './settlementPlanCache'
 import { createLabeledProp, disposeLabeledProp, type LabeledProp, updateLabelOpacity } from './settlementSignposts'
 import { settlementStorageDestination } from './storageDestinations'
+import {
+  applyStructureDamage as applyStructureDamageTx,
+  quoteStructureRepair as quoteStructureRepairTx,
+  resolveStructureCondition,
+  type SettlementStructureState,
+  structureRepairPolicy,
+  type StructureRepairQuote,
+  type StructureRepairStartOutcome,
+} from './structureCondition'
+import { type ResidentialRepairCandidate, residentialRepairCandidates } from './structureRepairCandidates'
+import {
+  beginRegistryStructureRepair,
+  contributeRegistryStructureRepairWork,
+  createSettlementStructureStateRegistry,
+} from './structureStateRegistry'
 
 type Entry = {
   def: SettlementDef
@@ -211,6 +227,56 @@ export type SettlementsManager = {
   transferAnimalOwnership: (animalId: string, owner: AnimalOwner) => boolean
   setOwnedAnimalControl: (animalId: string, mode: OwnedAnimalControlMode) => boolean
   getDetachedLivestock: () => AnimalAgent[]
+  /** Fresh-resolving settlement-structure condition/repair lookup (plan
+   *  settlements-007) — works whether or not `settlementId` is currently
+   *  loaded, same "long-lived registry owner" contract as `getHousehold`/
+   *  `getEconomy` above. Pristine (`condition: 100`, no repair) for a
+   *  structure that was never damaged. */
+  getStructureSnapshot: (settlementId: string, structureId: string, nowDays: number) => SettlementStructureState
+  /** Every stored (i.e. ever-damaged) structure below its role's repair
+   *  threshold for one settlement — V1 only adapts `residential` structures,
+   *  see `structureCondition.ts`'s `structureRepairPolicy`. The narrow
+   *  quest-facing observation seam (plan §9); no quest state lives here. */
+  listRepairProblems: (settlementId: string, nowDays: number) => readonly { structureId: string, condition: number }[]
+  /** Explicit condition-mutation seam (plan §4/§14) — the test/debug fixture
+   *  and any future weather/attack/fire/wear source. */
+  applyStructureDamage: (settlementId: string, structureId: string, amount: number, nowDays: number) => void
+  /** Read-only repair quote — `null` when nothing to repair or a repair is
+   *  already active. V1 residential-only, mirrors `quoteWellRoofRepair`. */
+  quoteStructureRepair: (
+    settlementId: string,
+    structureId: string,
+    nowDays: number,
+    targetCondition?: number,
+  ) => StructureRepairQuote | null
+  /** Atomic begin-repair transaction — `hasMaterial`/`consumeMaterial` are
+   *  the material-source adapter (player `Inventory`, household items, or a
+   *  settlement stock), so this stays the only repair-start implementation
+   *  for every actor. */
+  beginStructureRepair: (params: {
+    settlementId: string
+    structureId: string
+    nowDays: number
+    targetCondition?: number
+    hasMaterial: (requirement: MaterialRequirement) => boolean
+    consumeMaterial: (requirement: MaterialRequirement) => void
+  }) => StructureRepairStartOutcome
+  /** Actor-neutral work contribution to an active repair episode — the same
+   *  seam player `BusyAction` sessions and NPC work bouts both call. */
+  contributeStructureRepairWork: (
+    settlementId: string,
+    structureId: string,
+    workAmount: number,
+    nowDays: number,
+  ) => { acceptedWork: number, completed: boolean }
+  /** Bounded local repair-candidate lookup for one *loaded* settlement's own
+   *  residential houses (plan §5/§10) — the input `NpcAgent`'s pure pressure
+   *  producer reads, never a per-NPC world/plan scan. Empty for an unloaded
+   *  or unknown settlement. */
+  residentialRepairCandidates: (settlementId: string, nowDays: number) => readonly ResidentialRepairCandidate[]
+  /** Save-schema snapshot of every mutated structure so far — see
+   *  `SettlementStructureStateRegistry.serialize`. */
+  snapshotStructureStates: () => Record<string, SettlementStructureState>
   dispose: () => void
 }
 
@@ -357,6 +423,14 @@ export async function createSettlementsManager(
   /** River bank distance (plan fauna drink targeting) — when set, livestock
    *  agents get the same lake/river/ocean classifier as player drink. */
   riverShoreDistance?: (worldX: number, worldZ: number) => number | null,
+  /** Persisted settlement-structure condition/repair state (plan
+   *  settlements-007) — same "one manager-lifetime registry, `initial*`/
+   *  `snapshot*` idiom" contract as `initialStorageInfestation` above. Keyed
+   *  by `SettlementStructureStateRegistry`'s own composite key, not consumed
+   *  by `createSettlement`/`CreateSettlementDeps` — structure repair is
+   *  resolved directly against this registry, independent of whether the
+   *  owning settlement is currently streamed in. */
+  initialStructureStates?: Record<string, SettlementStructureState>,
 ): Promise<SettlementsManager> {
   const naturalWaterKindAt = riverShoreDistance
     ? createNaturalWaterKindAt({
@@ -482,6 +556,14 @@ export async function createSettlementsManager(
 
   const ratInfestation = createRatInfestationRegistry(initialStorageInfestation)
 
+  // Settlement-structure condition/repair (plan settlements-007) — one
+  // manager-lifetime registry, same reasoning as `ratInfestation`/
+  // `households` above: mutable state must survive settlement unload/reload
+  // and in-session `WorldBundle` rebuilds independent of any loaded
+  // `Settlement`/Three.js object.
+  const structureStates = createSettlementStructureStateRegistry(initialStructureStates)
+  const residentialRepairPolicy = structureRepairPolicy('residential')!
+
   // One shared deps object for every `createSettlement` call (createSettlement
   // refactor review, P1) — was a 26-argument positional call duplicated
   // verbatim at both call sites below; `def`/`economy` stay per-call since
@@ -499,6 +581,7 @@ export async function createSettlementsManager(
     livestockPersistence: livestock,
     ratPersistence: rats,
     infestationState: (settlementId) => ratInfestation.get(settlementId),
+    structureStates,
     collidersNear,
     registerColliders,
     clearColliders,
@@ -897,6 +980,42 @@ export async function createSettlementsManager(
     transferAnimalOwnership: (animalId, owner) => transferAnimalOwnership(persistentLivestockCtx, animalId, owner),
     setOwnedAnimalControl: (animalId, mode) => setOwnedAnimalControl(persistentLivestockCtx, animalId, mode),
     getDetachedLivestock: () => detachedLivestock,
+    getStructureSnapshot: (settlementId, structureId, nowDays) => structureStates.resolve(settlementId, structureId, nowDays),
+    listRepairProblems: (settlementId, nowDays) => {
+      const out: { structureId: string, condition: number }[] = []
+      for (const state of structureStates.listForSettlement(settlementId)) {
+        const condition = resolveStructureCondition(state, nowDays)
+        if (condition <= residentialRepairPolicy.repairThreshold) out.push({ structureId: state.structureId, condition })
+      }
+      return out
+    },
+    applyStructureDamage: (settlementId, structureId, amount, nowDays) => {
+      const current = structureStates.resolve(settlementId, structureId, nowDays)
+      structureStates.set(applyStructureDamageTx(current, amount, nowDays))
+    },
+    quoteStructureRepair: (settlementId, structureId, nowDays, targetCondition) => {
+      const state = structureStates.resolve(settlementId, structureId, nowDays)
+      return quoteStructureRepairTx(residentialRepairPolicy, state, nowDays, targetCondition)
+    },
+    beginStructureRepair: ({ consumeMaterial, hasMaterial, nowDays, settlementId, structureId, targetCondition }) =>
+      beginRegistryStructureRepair(
+        structureStates,
+        residentialRepairPolicy,
+        settlementId,
+        structureId,
+        nowDays,
+        hasMaterial,
+        consumeMaterial,
+        targetCondition,
+      ),
+    contributeStructureRepairWork: (settlementId, structureId, workAmount, nowDays) =>
+      contributeRegistryStructureRepairWork(structureStates, settlementId, structureId, workAmount, nowDays),
+    residentialRepairCandidates: (settlementId, nowDays) => {
+      const settlement = entries.get(settlementId)?.settlement
+      if (!settlement) return []
+      return residentialRepairCandidates(settlement, structureStates, nowDays)
+    },
+    snapshotStructureStates: () => structureStates.serialize(),
     dispose() {
       disposed = true
       for (const animal of detachedLivestock) {
@@ -918,6 +1037,7 @@ export async function createSettlementsManager(
       livestock.clear()
       rats.clear()
       ratInfestation.clear()
+      structureStates.clear()
     },
   }
 }

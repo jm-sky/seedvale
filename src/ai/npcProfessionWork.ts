@@ -8,6 +8,7 @@ import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { TransportOrders } from '../world/createTransportOrders'
 import type { CropId } from '../world/cropLifecycle'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { TransportOrder } from '../world/transportOrder'
 import type { Role } from './characters'
 import type { NpcPlannedAction } from './npcAction'
@@ -17,12 +18,10 @@ import {
   commitHunterArrowProduction,
   commitTextileWorkProduction,
   DRESSING_PRODUCTION,
-  TEXTILE_WORKER_PRODUCTIONS,
   type SettlementEconomy,
+  TEXTILE_WORKER_PRODUCTIONS,
   tryAdvanceDevelopment,
 } from '../economy'
-import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
-import { HERBALIST_GATHER_KINDS } from '../world/herbalGathering'
 import { WOOL_YIELD } from '../fauna/livestockProduction'
 import {
   ownedFlockCentroid,
@@ -44,6 +43,7 @@ import { copyVec3 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
 import { type CultivationAnchor, resolveCultivationAnchor } from '../world/cultivationAnchor'
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
+import { HERBALIST_GATHER_KINDS } from '../world/herbalGathering'
 import { CROP_SEED_ITEM } from '../world/plantedCrops'
 import { executeTransportPickup, executeTransportUnload } from '../world/transportTransactions'
 import { depositCarriedItems, HOUSEHOLD_EXCHANGE_MAX_TRANSFER } from './npcLogistics'
@@ -731,11 +731,11 @@ export function planProfessionWork(ctx: NpcWorkContext): NpcPlannedAction | null
     case 'farmer': return planFarmWork(ctx)
     case 'fisher': return planFishingWork(ctx)
     case 'guard': return planGuardPatrol(ctx)
+    case 'herbalist': return planHerbalistWork(ctx)
     case 'hunter': return planArrowCrafting(ctx)
     case 'miner': return planOreGathering(ctx)
     case 'shepherd': return planShepherdWork(ctx)
     case 'textile_worker': return planTextileWork(ctx)
-    case 'herbalist': return planHerbalistWork(ctx)
     case 'trader': return planTraderWork(ctx)
     default: return null
   }

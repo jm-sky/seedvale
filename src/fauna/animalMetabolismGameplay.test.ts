@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createAnimalLifeState, DEFAULT_ANIMAL_METABOLISM, NEED_ELEVATED_THRESHOLD, tickAnimalLife } from './AnimalLife'
 import { gameDaysToRealSeconds } from '../world/timeConversion'
+import { createAnimalLifeState, DEFAULT_ANIMAL_METABOLISM, NEED_ELEVATED_THRESHOLD, tickAnimalLife } from './AnimalLife'
 
 describe('DEFAULT_ANIMAL_METABOLISM thirst pacing', () => {
   it('reaches elevated threshold slower than the legacy ~16s half-bar rate', () => {

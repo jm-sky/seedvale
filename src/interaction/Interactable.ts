@@ -68,6 +68,15 @@ export type Interactable =
     examine: string
     lampMount: { x: number, y: number, z: number } | null
     lampMountSource: string | null
+    /** Stable settlement-structure identity (plan settlements-007) — resolves
+     *  condition/repair against `SettlementsManager`'s structure registry. */
+    settlementId: string
+    structureId: string
+    condition: number
+    repairNeeded: boolean
+    repairActive: boolean
+    repairCompletedWork: number | null
+    repairRequiredWork: number | null
   }
   | {
     kind: 'tree'

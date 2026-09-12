@@ -19,6 +19,13 @@ function houseTarget(promptLabel: string): Interactable {
     examine: '',
     lampMount: null,
     lampMountSource: null,
+    settlementId: 'home',
+    structureId: 'building-house-0',
+    condition: 100,
+    repairNeeded: false,
+    repairActive: false,
+    repairCompletedWork: null,
+    repairRequiredWork: null,
   }
 }
 

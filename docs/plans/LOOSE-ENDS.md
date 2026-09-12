@@ -15,6 +15,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 - [ ] 2026-09-10 — quests-progression-016: household food-shortage opportunity nie ma player → household food transfer. `Household.shortage('food')` istnieje, ale wpłata do magazynu osady nie rozwiązuje niedoboru konkretnego gospodarstwa. Rozszerzyć istniejący inventory/household transfer flow, nie quest-specific bypass.
 - [ ] 2026-09-10 — quests-progression-016: lost-livestock opportunity nie ma realnego predicate/state „zwierzę zaginęło”; `find_animal` jest tylko objective. Potrzebny mechanizm w `fauna`.
+- [ ] 2026-09-12 — settlements-007 wystawia read-only `SettlementsManager.getStructureSnapshot`/`listRepairProblems`, ale żaden quest jeszcze tego nie konsumuje. quests-progression-016 mógłby dodać `structure:<structureId>:repair` opportunity (condition poniżej progu → problem, naprawa/przywrócenie condition → resolution) tym samym mechanizmem co istniejący wolf-den pressure hook — nie kopiować repair state do quest layer.
 
 ## NPC / households / work
 

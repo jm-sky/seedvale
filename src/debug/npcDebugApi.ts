@@ -22,6 +22,7 @@ import type { NpcTraceEvent } from './npcTrace'
 import { matchesQuestSpawnPointId } from '../fauna/wolfDenScenario'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { awardSkillXp, type PlayerSkills, setSkillValueForDebug, type SkillId } from '../player/PlayerSkills'
+import { residentialStructureId } from '../settlement/villagePlan'
 import {
   applyPoisoningExposure,
   clearCondition,
@@ -212,6 +213,19 @@ export type InjuryDebugApi = {
   giveNpcBandage: (npcId: string) => boolean
 }
 
+/** Settlement-structure condition/repair test/debug seam (plan
+ *  settlements-007) — the single way to put damage on a structure without a
+ *  quest-specific flag, mirroring `InjuryDebugApi`'s shape. V1 only has a
+ *  residential adapter, so `damageHouse` is the convenient entry point;
+ *  `damage`/`get` work by raw stable `structureId` for any future role. */
+export type StructureDebugApi = {
+  get: (settlementId: string, structureId: string) => import('../settlement/structureCondition').SettlementStructureState
+  damage: (settlementId: string, structureId: string, amount: number) => void
+  /** `familyIndex` — same index space as `village(id).houses()`. */
+  damageHouse: (settlementId: string, familyIndex: number, amount: number) => void
+  problems: (settlementId: string) => readonly { structureId: string, condition: number }[]
+}
+
 /** Plain snapshot of a spawn-point quest target (`PreySpawner`) — never the
  *  live object, so DevTools / automation can JSON-serialize the result. */
 export type QuestSpawnPointDebugSnapshot = {
@@ -400,6 +414,8 @@ export type SeedvaleDebugApi = {
   conditions: ConditionsDebugApi
   /** Physical injury severity / treatment (plan npc-025). */
   injury: InjuryDebugApi
+  /** Settlement-structure condition/repair (plan settlements-007). */
+  structure: StructureDebugApi
   /** Quest log + spawn-point world-target lookup/teleport. Resolves stable
    *  aliases such as `wolf-den` through `matchesQuestSpawnPointId`. */
   quests: QuestsDebugApi
@@ -453,6 +469,9 @@ const HELP_TEXT = [
   'injury.npc(id) — physicalInjury, derived severity, SPEA modifiers, treatment eligibility',
   'injury.applyNpcInjury(id, "minor"|"serious"|"critical") / clearNpcInjury(id) — real damage/heal accounting',
   'injury.giveNpcBandage(id) — add a bandage so self-treatment is feasible',
+  'structure.get(settlementId, structureId) — resolved condition/repair snapshot',
+  'structure.damage(settlementId, structureId, amount) / damageHouse(settlementId, familyIndex, amount) — real condition mutation, no quest flag',
+  'structure.problems(settlementId) — every stored structure at/below its repair threshold',
   'transport(id) / transports() — physical goods TransportOrder snapshot {id,state,source,destination,item,requested,claimed,delivered,carrier,execution}',
   'spotAnimal(kind) — simulate spotting an animal for quest progression',
   'quests.list() — quest log/debug snapshot',
@@ -646,6 +665,17 @@ export function installNpcDebugApi(
     giveNpcBandage: (npcId) => findNpcById(bundle, npcId)?.npc.giveBandageForDebug() ?? false,
   }
 
+  const structureDebug: StructureDebugApi = {
+    get: (settlementId, structureId) => bundle.settlementsManager.getStructureSnapshot(settlementId, structureId, getElapsedDays()),
+    damage: (settlementId, structureId, amount) => {
+      bundle.settlementsManager.applyStructureDamage(settlementId, structureId, amount, getElapsedDays())
+    },
+    damageHouse: (settlementId, familyIndex, amount) => {
+      bundle.settlementsManager.applyStructureDamage(settlementId, residentialStructureId(familyIndex), amount, getElapsedDays())
+    },
+    problems: (settlementId) => bundle.settlementsManager.listRepairProblems(settlementId, getElapsedDays()),
+  }
+
   const api: SeedvaleDebugApi = {
     player: {
       position: () => {
@@ -715,6 +745,7 @@ export function installNpcDebugApi(
     skills: skillsDebug,
     conditions: conditionsDebug,
     injury: injuryDebug,
+    structure: structureDebug,
     quests: {
       list: () => questManager.list(),
       target: (targetId) => questTargetSnapshot(bundle, targetId),

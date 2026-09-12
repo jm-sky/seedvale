@@ -32,6 +32,7 @@ import {
 import { awardSkillXp, SKILL_XP_AWARD, survivalDurationMultiplier } from '../../player/PlayerSkills'
 import { villageSizeConfig } from '../../settlement/families'
 import { worldToCell } from '../../settlement/settlementGenerator'
+import { STRUCTURE_REPAIR_WORK_SESSION_HOURS, STRUCTURE_REPAIR_WORK_SESSION_SEC } from '../../settlement/structureCondition'
 import { type DigEnv } from '../../terrain/dig'
 import {
   averageAbsHeightDelta,
@@ -320,6 +321,17 @@ export type WellRoofRepairView = {
   waterAvailable: boolean
 }
 
+/** Read-only quote/status for a settlement structure's shared repair target
+ *  (plan settlements-007) — same shape as `WellRoofRepairView` minus the
+ *  well-specific `waterAvailable` field. */
+export type StructureRepairView = {
+  title: string
+  description: string
+  canAct: boolean
+  reasonLabel: string
+  mode: 'start' | 'continue'
+}
+
 export type ConstructionActionView = {
   canWork: boolean
   reasonLabel: string
@@ -371,6 +383,11 @@ export type PlacementActions = {
   describeWellRoofRepair: (id: string) => WellRoofRepairView | null
   /** Starts or resumes one roof-repair work bout on a completed well. */
   workOnWellRoofRepair: (id: string) => void
+  /** Read-only repair preview for a settlement structure (plan settlements-007)
+   *  — same shared quote/begin/contribute target NPC repair work uses. */
+  describeStructureRepair: (settlementId: string, structureId: string, x: number, z: number) => StructureRepairView | null
+  /** Starts or resumes one repair work bout on a settlement structure. */
+  workOnStructureRepair: (settlementId: string, structureId: string, x: number, z: number) => void
   /** Places a new player-built garden plot ahead of the player (plan 174 §1)
    *  — a single-stage placement (unlike a well), immediately usable as a
    *  planting anchor once built. */
@@ -950,6 +967,95 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       ctx.onInventoryChanged()
     }
     startRoofRepairBout(id)
+  }
+
+  /** Read-only quote/status for a settlement structure's shared repair target
+   *  (plan settlements-007) — same shape/reuse-principle as
+   *  `describeWellRoofRepair`: player material availability is checked from
+   *  `Inventory` + nearby dropped items, never a household/settlement stock
+   *  (implementation notes §8 — player repair stays player-supplied). */
+  const describeStructureRepair = (settlementId: string, structureId: string, x: number, z: number): StructureRepairView | null => {
+    const state = bundle.settlementsManager.getStructureSnapshot(settlementId, structureId, dayNight.elapsedDays)
+    if (state.repair) {
+      return {
+        title: 'Naprawa budynku',
+        description: [
+          `Stan przed naprawą: ${Math.round(state.repair.startedCondition)} / 100`,
+          `Cel: ${Math.round(state.repair.targetCondition)} / 100`,
+          `Postęp pracy: ${formatWorkDuration(state.repair.completedWork)} / ${formatWorkDuration(state.repair.requiredWork)}`,
+          'Materiały: dostarczone',
+        ].join('\n'),
+        canAct: true,
+        reasonLabel: '',
+        mode: 'continue',
+      }
+    }
+    const quote = bundle.settlementsManager.quoteStructureRepair(settlementId, structureId, dayNight.elapsedDays)
+    if (!quote) return null
+    const missing = quote.materials.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    const materialLines = quote.materials.length > 0
+      ? quote.materials.map((r) => `${r.count} × ${ITEM_DEFS[r.kind].label}`).join('\n')
+      : 'brak'
+    return {
+      title: 'Napraw budynek',
+      description: [
+        `Stan: ${Math.round(quote.currentCondition)} / 100`,
+        `Po naprawie: ${Math.round(quote.targetCondition)} / 100`,
+        '',
+        'Potrzebne materiały:',
+        materialLines,
+        '',
+        'Czas pracy:',
+        formatWorkDuration(quote.requiredWork),
+      ].join('\n'),
+      canAct: missing.length === 0,
+      reasonLabel: missing.length > 0
+        ? `Brakuje: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`
+        : '',
+      mode: 'start',
+    }
+  }
+
+  const workOnStructureRepair = (settlementId: string, structureId: string, x: number, z: number): void => {
+    if (isActionBlocked(ctx)) return
+    const nowDays = dayNight.elapsedDays
+    let state = bundle.settlementsManager.getStructureSnapshot(settlementId, structureId, nowDays)
+    if (!state.repair) {
+      const outcome = bundle.settlementsManager.beginStructureRepair({
+        settlementId,
+        structureId,
+        nowDays,
+        hasMaterial: (r) => hasMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
+        consumeMaterial: (r) => consumeMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      })
+      if (outcome.status === 'blocked') {
+        toast.show(
+          `Potrzebujesz: ${outcome.missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+          'error',
+        )
+        return
+      }
+      if (outcome.status !== 'started') return
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      state = bundle.settlementsManager.getStructureSnapshot(settlementId, structureId, nowDays)
+    }
+    if (!state.repair) return
+    const remainingHours = repairRemainingWork(state.repair)
+    if (remainingHours <= 0) return
+    startRepresentedWork(
+      remainingHours,
+      STRUCTURE_REPAIR_WORK_SESSION_SEC / STRUCTURE_REPAIR_WORK_SESSION_HOURS,
+      'Naprawa budynku w toku…',
+      'moderate',
+      'heavy',
+      (hours) => {
+        const result = bundle.settlementsManager.contributeStructureRepairWork(settlementId, structureId, hours, dayNight.elapsedDays)
+        applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', result.acceptedWork)
+      },
+    )
   }
 
   /** Places a new player-built garden plot ahead of the player (plan 174 §1)
@@ -2065,6 +2171,8 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     describeWellWork,
     describeWellRoofRepair,
     workOnWellRoofRepair,
+    describeStructureRepair,
+    workOnStructureRepair,
     placeGardenAtAim,
     previewGardenPlacement,
     tidyGardenPlot,

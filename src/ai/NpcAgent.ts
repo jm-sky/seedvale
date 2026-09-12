@@ -15,6 +15,7 @@ import type { HouseholdExchangeHooks } from '../settlement/householdExchange'
 import type { NpcAuthoritativeState } from '../settlement/npcState'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
+import type { NpcStructureRepairHooks } from '../settlement/structureRepairCandidates'
 import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Palisades } from '../world/createPalisades'
@@ -93,6 +94,7 @@ import {
 } from '../settlement/npcPostDeath'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination, resolveHouseholdWoodStorage } from '../settlement/storageDestinations'
+import { STRUCTURE_REPAIR_WORK_SESSION_HOURS, STRUCTURE_REPAIR_WORK_SESSION_SEC } from '../settlement/structureCondition'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
 import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
@@ -975,6 +977,10 @@ export type NpcAgentDeps = {
   graveVisitHooks?: NpcGraveVisitHooks | null
   /** Loaded-settlement animal-corpse sanitation (plan settlements-npcs-029). */
   corpseCleanupHooks?: SettlementCorpseCleanupHooks | null
+  /** This NPC's own household-house repair target (plan settlements-007) —
+   *  `null` when the settlement has no structure registry wired (test/
+   *  isolated fallbacks) or no plan-building exists at this family index. */
+  structureRepairHooks?: NpcStructureRepairHooks | null
 }
 
 /**
@@ -1361,6 +1367,8 @@ export class NpcAgent {
   private readonly burialHooks: NpcBurialHooks | null
   private readonly graveVisitHooks: NpcGraveVisitHooks | null
   private readonly corpseCleanupHooks: SettlementCorpseCleanupHooks | null
+  /** This NPC's own household-house repair target (plan settlements-007). */
+  private readonly structureRepairHooks: NpcStructureRepairHooks | null
   /** Cached from `update()`'s `nowDays` argument (plan npc-026) — absolute
    *  simulation days for persisted grave-visit cooldowns. Falls back to
    *  `forest.getWorldDays()` for isolated callers/tests. */
@@ -1449,6 +1457,7 @@ export class NpcAgent {
       burialHooks,
       graveVisitHooks,
       corpseCleanupHooks,
+      structureRepairHooks,
     } = deps
     const playAt = deps.playAt ?? (() => {})
     const npcId = deps.npcId ?? ''
@@ -1495,6 +1504,7 @@ export class NpcAgent {
     this.burialHooks = burialHooks ?? null
     this.graveVisitHooks = graveVisitHooks ?? null
     this.corpseCleanupHooks = corpseCleanupHooks ?? null
+    this.structureRepairHooks = structureRepairHooks ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
@@ -2723,6 +2733,11 @@ export class NpcAgent {
         const graveVisit = this.graveVisitPressureCandidate()
         const corpseCleanup = this.animalCorpseCleanupPressureCandidate()
         this.lastCorpseCleanup = corpseCleanup
+        // Structure-repair pressure (plan settlements-007) — a fourth
+        // independent pressure producer, competing as a `repairStructure`
+        // decision target the same way weather/heal/burial/grave-visit do
+        // (never a fake `NeedId`, never a second decision engine).
+        const repairPressure = this.structureRepairPressureCandidate()
         const decision = pickActionKind<NpcDecisionTarget>(
           [
             ...candidates.map((c) => ({ kind: c.target, score: c.final })),
@@ -2731,6 +2746,7 @@ export class NpcAgent {
             { kind: 'buryDeceased', score: burial.score },
             { kind: 'visitGrave', score: graveVisit.score },
             { kind: 'cleanAnimalCorpse', score: corpseCleanup.score },
+            { kind: 'repairStructure', score: repairPressure },
           ],
           'idle',
         )
@@ -2783,6 +2799,15 @@ export class NpcAgent {
           this.activeNeed = 'idle'
           this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
           if (corpseCleanup.animalId) this.beginAnimalCorpseCleanup(corpseCleanup.animalId)
+          break
+        }
+        if (outcome === 'repairStructure') {
+          // Maintenance pressure is a world-structure condition, not a Need
+          // (plan settlements-007) — same "never sets activeNeed" contract as
+          // heal/seekShelter above.
+          this.activeNeed = 'idle'
+          this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
+          this.beginRepairStructure()
           break
         }
         const need = outcome === 'need' ? (decision as NeedId) : 'idle'
@@ -5169,6 +5194,53 @@ export class NpcAgent {
     }
     handle.bury()
     this.releaseSanitationCleanupReservation()
+  }
+
+  /** Pure repair-pressure read (plan settlements-007 §5) — `0` when this NPC
+   *  has no structure-repair hooks (settlement built without a structure
+   *  registry) or is dead. Never scans the settlement itself: `structureRepairHooks`
+   *  already binds this NPC's own household house at `NpcAgent.create()` time. */
+  private structureRepairPressureCandidate(): number {
+    const hooks = this.structureRepairHooks
+    if (!hooks || this.health.dead) return 0
+    return hooks.pressure(this.nowDays())
+  }
+
+  /** Starts (or resumes) one repair work bout on this NPC's own household
+   *  house (plan settlements-007 §5/§11) — reuses the generic `goTo` →
+   *  `work` planned-action shape every other NPC construction step already
+   *  uses, so no separate repair runner exists. Materials are drawn from the
+   *  owning `Household.items` (implementation notes §8); a material-blocked
+   *  attempt simply does not start this tick — retried on the next `choose()`
+   *  cycle while the pressure remains, same convention as material-blocked
+   *  construction work. */
+  private beginRepairStructure(): void {
+    const hooks = this.structureRepairHooks
+    if (!hooks || this.health.dead) return
+    const nowDays = this.nowDays()
+    const state = hooks.getSnapshot(nowDays)
+    if (!state.repair) {
+      const household = this.household
+      if (!household) return
+      const outcome = hooks.beginRepair(
+        nowDays,
+        (r) => household.items.has(r.kind, r.count),
+        (r) => { household.items.remove(r.kind, r.count) },
+      )
+      if (outcome.status !== 'started') return
+    }
+    this.startAction({
+      kind: 'work',
+      destination: copyVec3(hooks.position),
+      durationSec: STRUCTURE_REPAIR_WORK_SESSION_SEC * this.waitMultiplier,
+      onComplete: () => this.executeRepairWorkBout(),
+    })
+  }
+
+  private executeRepairWorkBout(): void {
+    const hooks = this.structureRepairHooks
+    if (!hooks || this.health.dead) return
+    hooks.contributeWork(STRUCTURE_REPAIR_WORK_SESSION_HOURS, this.nowDays())
   }
 
   /**

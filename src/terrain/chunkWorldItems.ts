@@ -14,8 +14,8 @@ function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[] {
   }
   return offsets
 }
+import { type ChunkTileParams, computeChunkTile } from './chunkHeightmap'
 import { computeChunkItems, type ItemPlacement } from './chunkItems'
-import { computeChunkTile, type ChunkTileParams } from './chunkHeightmap'
 import { computeChunkVegetation } from './chunkVegetation'
 
 export type WorldChunkItemRef = {

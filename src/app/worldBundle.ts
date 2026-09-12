@@ -403,6 +403,9 @@ function buildSettlementsManager(
   residentialBuildings?: ResidentialBuildings,
   /** NPC burial graves (plan npc-011) — forwarded into every `createSettlement`. */
   npcGraves?: import('../world/npcGraves').NpcGraves,
+  /** Carried across an in-session `rebuildWorldBundle` the same way as
+   *  `initialHouseholds` above, and part of `SaveData` (plan settlements-007). */
+  initialStructureStates?: Record<string, import('../settlement/structureCondition').SettlementStructureState>,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -456,6 +459,7 @@ function buildSettlementsManager(
     residentialBuildings,
     npcGraves,
     chunkManager.riverShoreDistance.bind(chunkManager),
+    initialStructureStates,
   )
 }
 
@@ -734,6 +738,10 @@ type WorldSystemsSeed = {
   storageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>
   /** Authored V1 trigger for home storage infestation on a fresh world. */
   seedHomeStorageInfestation?: boolean
+  /** Plan settlements-007 — seeds the manager-lifetime `SettlementStructureStateRegistry`,
+   *  same "carried across rebuild, sourced from `SaveData` on a fresh boot"
+   *  contract as `households`/`storageInfestation` above. */
+  structureStates?: Record<string, import('../settlement/structureCondition').SettlementStructureState>
   spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
   persistentOccupants?: PersistentOccupantSnapshot
   resourceDepletion: ResourceDepletionState
@@ -882,6 +890,7 @@ async function buildWorldSystems(
     removedRatIds: initialRemovedRatIds,
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
+    structureStates: initialStructureStates,
     spawnerState: initialSpawnerState,
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
@@ -1147,7 +1156,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -1512,6 +1521,10 @@ export async function createWorldBundle(
   initialRemovedRatIds?: readonly string[],
   initialStorageInfestation?: Record<string, import('../settlement/ratInfestation').RatInfestationState>,
   seedHomeStorageInfestation: boolean = false,
+  /** Plan settlements-007 — sparse settlement-structure condition/repair
+   *  state, sourced from `SaveData.structureStates` on a fresh boot; same
+   *  carry/restore contract as `initialStorageInfestation` above. */
+  initialStructureStates?: Record<string, import('../settlement/structureCondition').SettlementStructureState>,
   /** Plan fauna-010 §3/§4 — sparse grass forage depletion overrides, same
    *  "long-lived object owned by `createApp.ts`, mutated in place, threaded
    *  through both `createWorldBundle` and `rebuildWorldBundle`" contract as
@@ -1570,6 +1583,7 @@ export async function createWorldBundle(
     removedRatIds: initialRemovedRatIds,
     storageInfestation: initialStorageInfestation,
     seedHomeStorageInfestation,
+    structureStates: initialStructureStates,
     spawnerState: initialSpawnerState,
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
@@ -1739,6 +1753,7 @@ export async function rebuildWorldBundle(
   const carriedLivestock = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotLivestock()
   const carriedRats = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotRats()
   const carriedStorageInfestation = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotStorageInfestation()
+  const carriedStructureStates = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotStructureStates()
   bundle.caves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.grassForage.dispose()
@@ -1792,6 +1807,7 @@ export async function rebuildWorldBundle(
     removedRatIds: carriedRats?.removedIds,
     storageInfestation: carriedStorageInfestation,
     seedHomeStorageInfestation: false,
+    structureStates: carriedStructureStates,
     spawnerState: carriedSpawnerState,
     persistentOccupants: carriedPersistentOccupants,
     resourceDepletion,

@@ -1,8 +1,8 @@
 import type { HeightSampler } from '../player/PlayerController'
-import { oceanMixAt } from '../terrain/waterBodies'
-import { resolveWaterBodyKind, shoreProbeHits } from '../terrain/waterBodyKind'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { WaterBodyKind } from '../world/WaterSource'
+import { oceanMixAt } from '../terrain/waterBodies'
+import { resolveWaterBodyKind, shoreProbeHits } from '../terrain/waterBodyKind'
 
 export type NaturalWaterKindSamplerDeps = {
   sampleHeight: HeightSampler

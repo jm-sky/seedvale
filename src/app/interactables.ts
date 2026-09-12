@@ -8,6 +8,7 @@ import type { ToolKind } from '../items/HeldTool'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { Settlement } from '../settlement/createSettlement'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
+import type { SettlementStructureState } from '../settlement/structureCondition'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import type { Beehives } from '../world/createBeehives'
@@ -31,6 +32,12 @@ import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from 
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type MeleeHitCandidate, pickCombatTarget } from '../player/playerMelee'
 import { isPlayerPlacedFire, type PlacedFires } from '../settlement/PlacedFires'
+import {
+  hasActiveStructureRepair,
+  isStructureRepairProblem,
+  resolveStructureCondition,
+  structureRepairPolicy,
+} from '../settlement/structureCondition'
 import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { getDigProfileAt, getRockDigProfileAt } from '../terrain/dig'
@@ -515,6 +522,12 @@ export function buildInteractables(
   worldGeneratedContainerPrompt?: (id: string) => string | null,
   /** Player carries a `shearing` tool (plan fauna-004). */
   hasShearingTool = false,
+  /** Fresh-resolving settlement-structure condition lookup (plan
+   *  settlements-007) — `SettlementsManager.getStructureSnapshot` in
+   *  production. Optional so existing callers/tests that never touch
+   *  structure condition keep compiling; a missing resolver leaves every
+   *  `house` candidate pristine/non-repairable. */
+  getStructureSnapshot?: (settlementId: string, structureId: string, nowDays: number) => SettlementStructureState,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -831,18 +844,33 @@ export function buildInteractables(
       })
     }
 
+    const residentialRepairPolicy = structureRepairPolicy('residential')
     for (const house of settlement.landmarks.houses) {
       if (!withinRange(house.position.x, house.position.z, playerPos, GAZE_RANGE)) continue
+      const structureState = getStructureSnapshot?.(settlement.id, house.structureId, nowDays)
+      const condition = structureState ? resolveStructureCondition(structureState, nowDays) : 100
+      const repairActive = structureState ? hasActiveStructureRepair(structureState) : false
+      const repairNeeded = Boolean(
+        structureState && residentialRepairPolicy && isStructureRepairProblem(residentialRepairPolicy, structureState, nowDays),
+      )
+      const repairHint = repairActive || repairNeeded ? ' · [R] Napraw' : ''
       list.push({
         kind: 'house',
         position: house.position,
-        promptLabel: `Obejrzyj: ${house.label}`,
+        promptLabel: `Obejrzyj: ${house.label}${repairHint}`,
         houseId: house.houseId,
         modelUrl: house.modelUrl,
         label: house.label,
         examine: house.examine,
         lampMount: house.lampMount,
         lampMountSource: house.lampMountSource,
+        settlementId: settlement.id,
+        structureId: house.structureId,
+        condition,
+        repairNeeded,
+        repairActive,
+        repairCompletedWork: structureState?.repair?.completedWork ?? null,
+        repairRequiredWork: structureState?.repair?.requiredWork ?? null,
       })
     }
 

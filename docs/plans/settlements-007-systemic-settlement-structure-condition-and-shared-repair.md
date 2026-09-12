@@ -1,7 +1,7 @@
 # Plan: Systemic settlement structure condition and shared repair
 
 **Created:** 2026-09-12  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
 **Depends on:** ~~world-020~~, ~~world-021~~, ~~settlements-005~~, ~~items-player-017~~  

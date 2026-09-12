@@ -8,13 +8,22 @@ import { isRainWeather, type WeatherState } from '../world/weather'
  * `NpcDecisionTarget` is the small generic seam `NpcAgent.choose()` uses to
  * combine this with the existing need pressures in one arbitration, without
  * turning `weather` into a fake Need or building a second decision engine.
- * `'heal'`, `'buryDeceased'`, `'visitGrave'` and `'cleanAnimalCorpse'` reuse
- * the same seam for the same reason — this type is the shared decision-target
- * union, not weather-specific.
+ * `'heal'`, `'buryDeceased'`, `'visitGrave'`, `'cleanAnimalCorpse'` and
+ * `'repairStructure'` (plan settlements-007 — maintenance/repair pressure is
+ * a world-structure condition, not a `NeedId`, same reasoning as weather)
+ * reuse the same seam for the same reason — this type is the shared
+ * decision-target union, not weather-specific.
  *
  * @domain npc
  */
-export type NpcDecisionTarget = NeedId | 'buryDeceased' | 'cleanAnimalCorpse' | 'heal' | 'seekShelter' | 'visitGrave'
+export type NpcDecisionTarget =
+  | NeedId
+  | 'buryDeceased'
+  | 'cleanAnimalCorpse'
+  | 'heal'
+  | 'repairStructure'
+  | 'seekShelter'
+  | 'visitGrave'
 
 /** Below this rain intensity, rain reads as "light" — no shelter pressure at
  *  all, so a lightly rained-on NPC keeps doing whatever it was doing (plan

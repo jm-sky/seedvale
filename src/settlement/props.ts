@@ -104,6 +104,7 @@ import {
   WOOD_PILE_EXTRA_OFFSETS,
   type WoodPileVisual,
 } from './storageVisuals'
+import { residentialStructureId } from './villagePlan'
 import { pathPlansToCorridorData } from './villagePlanner'
 
 export type SettlementHouseLandmark = {
@@ -130,6 +131,11 @@ export type SettlementHouseLandmark = {
    *  point (currently `COTTAGE_4X4_A` only). `null` for every other house,
    *  including the legacy catalog-GLB fallback. */
   bed: SettlementHouseBed | null
+  /** Stable `VillageBuildingPlan.id` (`residentialStructureId`), the explicit
+   *  plan-building ↔ runtime-house mapping settlement-structure condition/
+   *  repair (plan settlements-007) resolves against — never mesh/index
+   *  identity re-derived by a consumer. */
+  structureId: string
 }
 
 /** World-space physical basis for plan 168's `bed` `LodgingOption` — derived
@@ -1149,6 +1155,7 @@ export async function buildSettlementProps(
       lampMount: { x: lampMount.x, y: lampMount.y, z: lampMount.z },
       lampMountSource: lampMount.source,
       bed,
+      structureId: residentialStructureId(plot?.familyIndex ?? i),
     })
 
     const lanternTpl = lampStyle === 'wall' ? lanternWall : lanternFloor

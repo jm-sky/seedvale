@@ -54,19 +54,30 @@ When this file and the code disagree, the code wins — update this file.
    f. Animal        a 'cleanAnimalCorpse' sanitation candidate from a
       sanitation    settlement-bounded corpse view (settlements-npcs-029).
                     Fauna owns corpse state; household is responsibility only.
+   g. Structure     a single 'repairStructure' candidate (settlements-007) —
+      repair        this NPC's *own* household house only, scored from its
+                    resolved condition vs. the residential repair policy's
+                    threshold (`settlement/structureCondition.ts`'s
+                    `structureRepairPressureFromCondition`); an already-active
+                    repair episode holds a fixed resume-pressure instead so it
+                    is not abandoned mid-episode. Never a `NeedId`, never a
+                    settlement-wide scan — bound once at `NpcAgent.create()`
+                    time via `NpcStructureRepairHooks`.
 
 2. ARBITRATION      one winner: a real need | 'seekShelter' | 'heal' |
-                    'buryDeceased' | 'visitGrave' | 'cleanAnimalCorpse' | 'idle'
+                    'buryDeceased' | 'visitGrave' | 'cleanAnimalCorpse' |
+                    'repairStructure' | 'idle'
 
 3. SEQUENCING       fixed priority table (gaps of 10 for future inserts):
                     collapseSleep(100) > seekShelter(90) > need/heal(80,
                     mutually exclusive by construction) > buryDeceased(78)
                     > scheduledSleep(70) > cleanAnimalCorpse(68) >
-                    visitGrave(65) > idle(60)
+                    repairStructure(66) > visitGrave(65) > idle(60)
 
 4. DISPATCH         per decision kind: beginSeekShelter / beginHeal /
                     beginBurial / beginAnimalCorpseCleanup / beginVisitGrave /
-                    ensurePlanForNeed→beginNeed / beginGoSleep / beginIdle
+                    beginRepairStructure / ensurePlanForNeed→beginNeed /
+                    beginGoSleep / beginIdle
 
 5. STRATEGY         (need only) "first available candidate wins" — deliberately
                     not a scoring engine. E.g. food:
@@ -191,6 +202,8 @@ src/ai/healingPressure.ts
 src/ai/burialPressure.ts
 src/ai/graveVisitPressure.ts
 src/ai/animalCorpseCleanupPressure.ts
+src/settlement/structureCondition.ts
+src/settlement/structureRepairCandidates.ts
 src/shared/injurySeverity.ts
 src/shared/injuryRecovery.ts
 src/ai/npcAnimalThreat.ts

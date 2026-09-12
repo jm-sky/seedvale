@@ -34,6 +34,7 @@ import type { WeatherState } from '../world/weather'
 import type { VillageSize } from './families'
 import type { NpcStateRegistry } from './npcState'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
+import type { SettlementStructureStateRegistry } from './structureStateRegistry'
 import { NpcAgent } from '../ai/NpcAgent'
 import { createNpcCrowdPass } from '../ai/npcCrowd'
 import { advanceSocialPairing } from '../ai/socialBehaviour'
@@ -88,6 +89,7 @@ import { cellSeed } from './settlementGenerator'
 import { createSettlementNightCycle } from './settlementNightCycle'
 import { settlementPropColliders } from './settlementPropColliders'
 import { createSettlementSignposts } from './settlementSignposts'
+import { createNpcStructureRepairHooks } from './structureRepairCandidates'
 import { createVillageFire, FUEL_PER_BRANCH, type VillageFire } from './VillageFire'
 import {
   buildWellInteractionQueueConfig,
@@ -287,6 +289,13 @@ export type CreateSettlementDeps = {
   /** Live infestation facts for this settlement (plan quests-progression-013)
    *  — read every tick / prop build, never cached here. */
   infestationState: (settlementId: string) => RatInfestationState
+  /** Settlement-structure condition/repair registry (plan settlements-007) —
+   *  same "one registry owned by `SettlementsManager`, threaded through"
+   *  pattern as `householdRegistry`/`npcStateRegistry` above. Optional so
+   *  existing callers/tests that never touch structure condition keep
+   *  compiling; `null`/absent means no NPC ever gets repair hooks (its own
+   *  house reads as permanently pristine). */
+  structureStates?: SettlementStructureStateRegistry
   // collision
   collidersNear: ColliderSource
   /** Registers this settlement's static colliders (well + houses +
@@ -903,6 +912,9 @@ export async function createSettlement(
         graveVisitHooks,
         corpseCleanupHooks,
         shepherdFlock,
+        structureRepairHooks: deps.structureStates
+          ? createNpcStructureRepairHooks(def.id, familyIndex, landmarks.houses[familyIndex]?.position, deps.structureStates)
+          : null,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

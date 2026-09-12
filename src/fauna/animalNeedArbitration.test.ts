@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import {
   isNeedCritical,
   NEED_CRITICAL_THRESHOLD,
   shouldDeferNeedsForLead,
 } from './animalNeedArbitration'
-import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 
 describe('animalNeedArbitration', () => {
   it('defers ordinary elevated needs during lead but not critical thirst', () => {

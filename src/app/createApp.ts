@@ -586,6 +586,7 @@ export async function createApp(
     initialSave?.removedRatIds,
     initialSave?.storageInfestation,
     initialSave === undefined,
+    initialSave?.structureStates,
     grassForageOverrides,
     (initialSave?.completedTerrainPreparations ?? []).map((p) => ({
       id: p.id,
@@ -2224,6 +2225,8 @@ export async function createApp(
     describeWellWork: placement.describeWellWork,
     describeWellRoofRepair: placement.describeWellRoofRepair,
     workOnWellRoofRepair: placement.workOnWellRoofRepair,
+    describeStructureRepair: placement.describeStructureRepair,
+    workOnStructureRepair: placement.workOnStructureRepair,
     igniteStandingTorch: placement.igniteStandingTorch,
     workOnStandingTorch: placement.workOnStandingTorch,
     describeStandingTorchWork: placement.describeStandingTorchWork,

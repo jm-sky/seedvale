@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planProfessionWork, type NpcWorkContext } from './ai/npcProfessionWork'
+import { type NpcWorkContext, planProfessionWork } from './ai/npcProfessionWork'
 import {
   commitDressingProduction,
   commitTextileWorkProduction,

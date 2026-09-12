@@ -31,6 +31,7 @@ import {
 } from './gardenScale'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 import { plazaCoreRadius } from './villageClearing'
+import { residentialStructureId } from './villagePlan'
 
 /** Matches `worldConfig.settlement.clearing.coreRadius` — used to size
  *  plaza-relative infrastructure (campfire on packed dirt; gardens off it). */
@@ -1089,7 +1090,7 @@ export function buildingsAndLandmarksFromPlots(
 
   for (const plot of plots) {
     if (plot.role === 'house') {
-      pushBuilding('residential', plot, `building-house-${plot.familyIndex ?? 0}`)
+      pushBuilding('residential', plot, residentialStructureId(plot.familyIndex ?? 0))
       pushLandmark('home', plot, String(plot.familyIndex ?? 0))
       continue
     }

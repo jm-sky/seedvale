@@ -3,12 +3,12 @@ import type { Household } from '../settlement/household'
 import type { SettlementEconomy } from './settlementEconomy'
 import { WOODSHED_DEVELOPMENT } from './development'
 import {
+  DRESSING_PRODUCTION,
   HUNTER_ARROW_PRODUCTIONS,
   produceFirstAvailableItemRecipe,
   productionForRole,
-  WOODCUTTING_PRODUCTION,
-  DRESSING_PRODUCTION,
   TEXTILE_WORKER_PRODUCTIONS,
+  WOODCUTTING_PRODUCTION,
   WOOL_MATERIAL_PRODUCTION,
 } from './production'
 import { executeProduction } from './productionExecutor'

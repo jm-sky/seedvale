@@ -1,11 +1,11 @@
 import { SLEEP_HUNGER_THIRST_RATE, type TickNeedsOptions } from '../ai/Needs'
-import { gameDaysToRealSeconds } from '../world/timeConversion'
 import {
   createStaminaState,
   drainStamina,
   restoreStamina,
   type StaminaState,
 } from '../shared/StaminaState'
+import { gameDaysToRealSeconds } from '../world/timeConversion'
 
 export { SLEEP_HUNGER_THIRST_RATE }
 

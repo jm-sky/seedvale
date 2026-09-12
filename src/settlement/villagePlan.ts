@@ -98,6 +98,16 @@ export type VillageBuildingPlan = {
   familyId: string | null
 }
 
+/** Stable `VillageBuildingPlan.id` for a settlement's residential house at
+ *  `familyIndex` (plan settlements-007) — the single owner of this id shape,
+ *  used both when `villagePlanner.ts` materializes `buildings` and wherever
+ *  runtime code (`props.ts`'s house landmarks, structure condition/repair)
+ *  must resolve the same stable identity from a family index instead of
+ *  re-deriving the string by hand. */
+export function residentialStructureId(familyIndex: number): string {
+  return `building-house-${familyIndex}`
+}
+
 export type VillageLandmarkKind =
   | 'well'
   | 'stockpile'
