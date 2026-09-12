@@ -1854,6 +1854,13 @@ Generated from TypeScript imports.
 - `world/createDryingRacks.ts`
 - `world/dryingRacks.test.ts`
 
+## `world/expedition.ts`
+
+**Imported by**
+
+- `ai/voluntaryExpeditionJoin.ts`
+- `world/workContract.ts`
+
 ## `world/fishing.test.ts`
 
 **Imports**
@@ -3512,6 +3519,10 @@ Generated from TypeScript imports.
 - `world/workContract.ts`
 
 ## `world/workContract.ts`
+
+**Imports**
+
+- `world/expedition.ts`
 
 **Imported by**
 

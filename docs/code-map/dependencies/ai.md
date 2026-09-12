@@ -74,6 +74,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `ai/schedule.ts`
 - `ai/socialBehaviour.ts`
+- `ai/voluntaryExpeditionJoin.ts`
 - `ai/weatherPressure.ts`
 - `assets/loadGltf.ts`
 - `audio/actionSounds.ts`
@@ -110,6 +111,7 @@ Generated from TypeScript imports.
 - `settlement/npcPostDeath.ts`
 - `settlement/npcState.ts`
 - `settlement/places.ts`
+- `settlement/professionStaffing.ts`
 - `settlement/props.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/structureCondition.ts`
@@ -269,6 +271,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `ai/schedule.test.ts`
 - `ai/schedule.ts`
+- `ai/voluntaryExpeditionJoin.ts`
 - `economy/npcWork.ts`
 - `economy/production.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
@@ -328,6 +331,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.test.ts`
 - `ai/reactionChance.ts`
 - `ai/socialBehaviour.ts`
+- `ai/voluntaryExpeditionJoin.ts`
 
 ## `ai/dialogueTemplates.test.ts`
 
@@ -946,6 +950,7 @@ Generated from TypeScript imports.
 - `ai/npcDecision.ts`
 - `ai/npcWorkContract.ts`
 - `ai/schedule.test.ts`
+- `ai/voluntaryExpeditionJoin.ts`
 
 ## `ai/socialBehaviour.test.ts`
 
@@ -967,6 +972,29 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/socialBehaviour.test.ts`
 - `settlement/createSettlement.ts`
+
+## `ai/voluntaryExpeditionJoin.test.ts`
+
+**Imports**
+
+- `ai/voluntaryExpeditionJoin.ts`
+
+## `ai/voluntaryExpeditionJoin.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/dialogue.ts`
+- `ai/schedule.ts`
+- `quests/quests.ts`
+- `world/expedition.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/voluntaryExpeditionJoin.test.ts`
+- `app/inventoryWiring.ts`
+- `ui-vue/store.ts`
 
 ## `ai/weatherPressure.test.ts`
 

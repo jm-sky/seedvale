@@ -461,14 +461,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/professionStaffing.ts`
 
-- `adultProfessionCoverage` — function — line 300
+- `adultProfessionCoverage` — function — line 309
   - domain: settlements-npcs
-- `isProfessionAdult` — function — line 273
+- `isAdultAge` — function — line 277
+- `isProfessionAdult` — function — line 282
 - `ProfessionStaffingContext` — type — line 22
   - domain: settlements-npcs
-- `resolveInitialProfessionStaffing` — function — line 402
+- `resolveInitialProfessionStaffing` — function — line 411
   - domain: settlements-npcs
-- `shepherdHouseholdIndex` — function — line 278
+- `shepherdHouseholdIndex` — function — line 287
 - `StaffingPriority` — type — line 12
 
 ## `settlement/props.ts`

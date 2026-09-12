@@ -181,6 +181,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcVoiceLines.ts`
+- `ai/voluntaryExpeditionJoin.ts`
 - `app/actions/actionContracts.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/placementRequirementView.ts`

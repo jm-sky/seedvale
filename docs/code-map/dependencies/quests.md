@@ -231,6 +231,7 @@ Generated from TypeScript imports.
 
 - `ai/npcAssistance.ts`
 - `ai/reactionChance.ts`
+- `ai/voluntaryExpeditionJoin.ts`
 - `app/createApp.ts`
 - `items/trade.test.ts`
 - `items/tradeCatalog.ts`

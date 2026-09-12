@@ -64,6 +64,7 @@ Generated from exported TypeScript symbols.
 - `familyPhrase` — function — line 66
 - `goodbyeLine` — function — line 198
 - `requestAssistanceLine` — function — line 223
+- `voluntaryJoinResponseLine` — function — line 242
 
 ## `ai/graveVisitPressure.ts`
 
@@ -165,24 +166,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 691
-- `CurrentActivity` — type — line 508
-- `CurrentActivityKind` — type — line 501
-- `NPC_HEIGHT` — const — line 411
-- `NPC_MODEL_URLS` — const — line 475
-- `NPC_SHADOW_DISTANCE` — const — line 425
-- `NpcAgent` — class — line 1040
+- `classifyPendingActivity` — function — line 719
+- `CurrentActivity` — type — line 529
+- `CurrentActivityKind` — type — line 522
+- `NPC_HEIGHT` — const — line 432
+- `NPC_MODEL_URLS` — const — line 496
+- `NPC_SHADOW_DISTANCE` — const — line 446
+- `NpcAgent` — class — line 1068
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 945
-- `NpcInspectionSnapshot` — type — line 523
-- `NpcWhy` — type — line 666
-- `projectNpcWhy` — function — line 732
-- `promoteChainKind` — function — line 683
+- `NpcAgentDeps` — type — line 973
+- `NpcInspectionSnapshot` — type — line 544
+- `NpcWhy` — type — line 694
+- `projectNpcWhy` — function — line 760
+- `promoteChainKind` — function — line 711
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -481,6 +482,24 @@ Generated from exported TypeScript symbols.
 - `findConversationPartner` — function — line 60
 - `SocialCandidateView` — type — line 48
 - `SocialParticipant` — type — line 24
+
+## `ai/voluntaryExpeditionJoin.ts`
+
+- `DEFAULT_VOLUNTARY_JOIN_DANGER` — const — line 116
+- `evaluateVoluntaryJoin` — function — line 222
+  - domain: npc
+- `isVoluntaryInitiativeEligible` — function — line 294
+  - domain: npc
+- `isVoluntaryJoinAccepted` — function — line 276
+- `VOLUNTARY_JOIN_THRESHOLD` — const — line 121
+- `VoluntaryExpeditionTerms` — type — line 27
+  - domain: npc
+- `VoluntaryJoinAwareness` — type — line 280
+- `VoluntaryJoinBlocker` — type — line 29
+- `VoluntaryJoinContext` — type — line 60
+- `VoluntaryJoinEvaluation` — type — line 49
+- `VoluntaryJoinModifier` — type — line 47
+- `VoluntaryJoinModifierKey` — type — line 37
 
 ## `ai/weatherPressure.ts`
 
