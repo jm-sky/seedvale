@@ -26,6 +26,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `npc-033-companion-combat-cooperation.md`                                      | -       | 🔴 | L      | npc-029, npc-032, items-player-027, ~~npc-025~~ |
 | `npc-034-expedition-shared-work-and-activities.md`                             | -       | 🔴 | M      | npc-029, npc-032, items-player-028 |
 | `npc-035-shared-expedition-relationship-consequences.md`                       | -       | 🔴 | L      | npc-029, npc-032, npc-033, npc-034 |
+| `npc-038-work-contract-actor-capability-gating.md`                             | -       | 🔴 | M      | -      |
 | `quests-progression-010-abandoned-gold-mine-colony.md`                         | -       | 🔴 | M      | world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002 |
 | `settlements-003-colony-bootstrap.md`                                          | -       | 🔴 | L      | world-019, settlements-npcs-028 |
 | `settlements-004-gold-economic-realization-and-source-entitlements.md`         | -       | 🔴 | M      | -      |
@@ -241,7 +242,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `026`
 - items-player: `030`
-- npc: `038`
+- npc: `039`
 - persistence: `005`
 - quests-progression: `020`
 - settlements: `008`
