@@ -1,7 +1,7 @@
 # Plan: Dungeon cave residents and pool foraging
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~fauna-019~~, ~~fauna-022~~, ~~fauna-023~~, world-terrain-024, world-terrain-025

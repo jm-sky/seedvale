@@ -79,6 +79,73 @@ function resolveHomeNode(
   return null
 }
 
+/** Optional dry-home hint when a chamber hosts an underground pool (plan fauna-027). */
+export type CaveHomePlacementHint = {
+  dryApproach?: { x: number, z: number }
+}
+
+function deterministicHomeOffset(hash: number, attempt: number): { dx: number, dz: number } {
+  const t = (hash + attempt * 0x9e3779b9) >>> 0
+  const angle = ((t % 360) / 360) * Math.PI * 2
+  const radius = 0.8 + ((t >>> 8) % 5) * 0.35
+  return { dx: Math.cos(angle) * radius, dz: Math.sin(angle) * radius }
+}
+
+function fnv1a32(text: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return h >>> 0
+}
+
+/**
+ * Resolves a standable dry home point for one topology chamber node.
+ * Tries validated `dryApproach`, node center, then deterministic offsets.
+ *
+ * @domain world-terrain
+ */
+export function resolveStandableHomePoint(
+  topology: CaveTopology,
+  heightfield: CaveHeightfieldRepresentation,
+  surfaceHeightAt: SurfaceSampler,
+  homeNodeId: string,
+  entityHeight: number,
+  hint?: CaveHomePlacementHint,
+): CaveTraversalPoint | null {
+  const node = topology.nodes.find((n) => n.id === homeNodeId)
+  if (!node || node.kind !== 'chamber') return null
+  const hash = fnv1a32(`${topology.caveId}:home:${homeNodeId}`)
+  const candidates: { x: number, z: number }[] = []
+  if (hint?.dryApproach) candidates.push(hint.dryApproach)
+  candidates.push({ x: node.position.x, z: node.position.z })
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const { dx, dz } = deterministicHomeOffset(hash, attempt)
+    candidates.push({ x: node.position.x + dx, z: node.position.z + dz })
+  }
+  for (const c of candidates) {
+    const floorY = standableFloorAt(heightfield, surfaceHeightAt, c, entityHeight)
+    if (floorY != null) return { x: c.x, y: floorY, z: c.z }
+  }
+  return null
+}
+
+function resolveHomeAtNode(
+  topology: CaveTopology,
+  heightfield: CaveHeightfieldRepresentation,
+  surfaceHeightAt: SurfaceSampler,
+  entityHeight: number,
+  homeNodeId: string,
+  hint?: CaveHomePlacementHint,
+): { node: CaveTopologyNode, home: CaveTraversalPoint } | null {
+  const node = topology.nodes.find((n) => n.id === homeNodeId)
+  if (!node || node.kind !== 'chamber') return null
+  const home = resolveStandableHomePoint(topology, heightfield, surfaceHeightAt, homeNodeId, entityHeight, hint)
+  if (!home) return null
+  return { node, home }
+}
+
 /**
  * Shortest node path over the topology's segment graph (plain BFS — the
  * graph is a handful of nodes, never a navmesh/A* grid problem per plan
@@ -88,7 +155,7 @@ function resolveHomeNode(
  *
  * @domain world-terrain
  */
-function shortestNodePath(topology: CaveTopology, fromId: string, toId: string): readonly string[] | null {
+export function shortestNodePath(topology: CaveTopology, fromId: string, toId: string): readonly string[] | null {
   if (fromId === toId) return [fromId]
   const adjacency = new Map<string, string[]>()
   for (const segment of topology.segments) {
@@ -141,7 +208,7 @@ function segmentBetween(
  *  deduplicated by skipping a segment's first point once the path already
  *  holds it. `null` only if `nodePath` names a pair with no direct segment,
  *  which cannot happen for a path `shortestNodePath` itself produced. */
-function buildRoutePoints(topology: CaveTopology, nodePath: readonly string[]): CaveTopologyPoint[] | null {
+export function buildRoutePoints(topology: CaveTopology, nodePath: readonly string[]): CaveTopologyPoint[] | null {
   const nodeById = new Map(topology.nodes.map((n) => [n.id, n]))
   const first = nodeById.get(nodePath[0]!)
   if (!first) return null
@@ -160,7 +227,7 @@ function buildRoutePoints(topology: CaveTopology, nodePath: readonly string[]): 
  *  floor (plan fauna-019 §3). Falls back to the topology point's own `y`
  *  only where the heightfield genuinely carries no column there, which does
  *  not happen for a waypoint the route itself walked through. */
-function snapRouteFloor(
+export function snapRouteFloor(
   heightfield: CaveHeightfieldRepresentation,
   surfaceHeightAt: SurfaceSampler,
   points: readonly CaveTopologyPoint[],
@@ -169,6 +236,32 @@ function snapRouteFloor(
     const column = heightfieldGroundColumn(heightfield, surfaceHeightAt, p.x, p.z)
     return { x: p.x, y: column ? column.floorY : p.y, z: p.z }
   })
+}
+
+export type ResolveCaveTraversalOptions = {
+  /** Stable topology node id for this resident's home chamber (plan fauna-027). */
+  homeNodeId?: string
+  /** Validated dry point when the home chamber hosts an underground pool. */
+  homePlacementHint?: CaveHomePlacementHint
+}
+
+/**
+ * Deterministic route between two topology node ids, floor-snapped.
+ *
+ * @domain world-terrain
+ */
+export function resolveCaveRouteBetweenNodes(
+  topology: CaveTopology,
+  heightfield: CaveHeightfieldRepresentation,
+  surfaceHeightAt: SurfaceSampler,
+  fromNodeId: string,
+  toNodeId: string,
+): readonly CaveTraversalPoint[] | null {
+  const nodePath = shortestNodePath(topology, fromNodeId, toNodeId)
+  if (!nodePath) return null
+  const rawRoute = buildRoutePoints(topology, nodePath)
+  if (!rawRoute || rawRoute.length === 0) return null
+  return snapRouteFloor(heightfield, surfaceHeightAt, rawRoute)
 }
 
 /**
@@ -189,19 +282,34 @@ export function resolveCaveTraversal(
   heightfield: CaveHeightfieldRepresentation,
   surfaceHeightAt: SurfaceSampler,
   entityHeight: number,
+  options?: ResolveCaveTraversalOptions,
 ): CaveTraversalDescriptor | null {
-  const home = resolveHomeNode(topology, heightfield, surfaceHeightAt, entityHeight)
-  if (!home) return null
-  const nodePath = shortestNodePath(topology, home.node.id, 'entrance')
+  const resolvedHome = options?.homeNodeId
+    ? resolveHomeAtNode(
+      topology,
+      heightfield,
+      surfaceHeightAt,
+      entityHeight,
+      options.homeNodeId,
+      options.homePlacementHint,
+    )
+    : (() => {
+      const home = resolveHomeNode(topology, heightfield, surfaceHeightAt, entityHeight)
+      if (!home) return null
+      return { node: home.node, home: { x: home.node.position.x, y: home.floorY, z: home.node.position.z } }
+    })()
+  if (!resolvedHome) return null
+  const nodePath = shortestNodePath(topology, resolvedHome.node.id, 'entrance')
   if (!nodePath) return null
   const rawRoute = buildRoutePoints(topology, nodePath)
   if (!rawRoute || rawRoute.length === 0) return null
   const routeToEntrance = snapRouteFloor(heightfield, surfaceHeightAt, rawRoute)
+  routeToEntrance[0] = resolvedHome.home
   const entranceWaypoint = routeToEntrance[routeToEntrance.length - 1]!
   return {
     caveId: topology.caveId,
     entrance: { x: entranceWaypoint.x, y: entranceWaypoint.y, z: entranceWaypoint.z, yaw: topology.entrance.yaw },
-    home: routeToEntrance[0]!,
+    home: resolvedHome.home,
     routeToEntrance,
   }
 }

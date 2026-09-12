@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { tradeValue } from '../items/tradeCatalog'
-import { resolveNextGuardReward, type GuardRewardDecision } from './guardRewards'
+import { type GuardRewardDecision, resolveNextGuardReward } from './guardRewards'
 
 const baseInput = {
   guardNpcId: 'home:npc:guard',

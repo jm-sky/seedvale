@@ -12,6 +12,7 @@ import type {
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
+import { isWithinEveningOfferWindow } from './guardEveningOfferWindow'
 import {
   LOST_LIVESTOCK_DEAD_OUTCOME,
   LOST_LIVESTOCK_LIVE_OUTCOME,
@@ -37,7 +38,6 @@ import {
   uniqueOutcomeForState,
   validateQuestDefinitions,
 } from './quests'
-import { isWithinEveningOfferWindow } from './guardEveningOfferWindow'
 import {
   evaluateSettlementLightsObjective,
   type SettlementLightLookup,
@@ -570,6 +570,13 @@ export class QuestManager {
 
   private meetsPrerequisite(def: QuestDef, prereq: QuestPrerequisite): boolean {
     switch (prereq.type) {
+      case 'evening_offer_window':
+        return isWithinEveningOfferWindow(
+          this.worldTime.getWorldSeed(),
+          prereq.giverNpcId,
+          this.worldTime.getElapsedDays(),
+          this.worldTime.getTimeOfDay(),
+        )
       case 'quest_outcome': {
         const resolvedOutcomeId = this.stateOf(prereq.questId).resolvedOutcomeId
         if (!resolvedOutcomeId) return false
@@ -583,13 +590,6 @@ export class QuestManager {
       case 'reputation':
         if (!def.settlementId) return false
         return this.socialAvailability.getReputationDimension(def.settlementId, prereq.dimension) >= prereq.minimum
-      case 'evening_offer_window':
-        return isWithinEveningOfferWindow(
-          this.worldTime.getWorldSeed(),
-          prereq.giverNpcId,
-          this.worldTime.getElapsedDays(),
-          this.worldTime.getTimeOfDay(),
-        )
     }
   }
 
@@ -810,16 +810,16 @@ export class QuestManager {
     switch (objective.type) {
       case 'discover_location':
         return this.worldProgress.hasDiscoveredLocation(objective.locationId)
-      case 'loot_world_container':
-        return this.worldProgress.isWorldContainerLooted(objective.containerId)
-      case 'read_item':
-        return this.worldProgress.hasReadItem(objective.itemKind)
       case 'light_settlement_fires':
         return evaluateSettlementLightsObjective(
           this.settlementLight.getSnapshot(objective.settlementId, objective.torchIds, objective.requireCampfire),
           objective.torchIds,
           objective.requireCampfire,
         )
+      case 'loot_world_container':
+        return this.worldProgress.isWorldContainerLooted(objective.containerId)
+      case 'read_item':
+        return this.worldProgress.hasReadItem(objective.itemKind)
       default:
         return false
     }

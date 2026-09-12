@@ -90,13 +90,13 @@ import {
   resolveSettlementAgricultureCatchUp,
 } from './settlementAgriculture'
 import { cellSeed } from './settlementGenerator'
-import { type SettlementVillageTorch } from './settlementVillageTorch'
 import {
   createSettlementNightCycle,
   type SettlementNightAutoLightPolicy,
 } from './settlementNightCycle'
 import { settlementPropColliders } from './settlementPropColliders'
 import { createSettlementSignposts } from './settlementSignposts'
+import { type SettlementVillageTorch } from './settlementVillageTorch'
 import { createNpcStructureRepairHooks } from './structureRepairCandidates'
 import { createVillageFire, FUEL_PER_BRANCH, type VillageFire } from './VillageFire'
 import {

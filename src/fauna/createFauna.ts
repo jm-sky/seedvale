@@ -760,7 +760,7 @@ export async function createFauna(
    *  only consumed by the ring-spawn loop below (spawner respawns stay
    *  solitary, see its own comment). */
   let nextHerdId = 0
-  const occupantDecls = persistentOccupantDecls ?? []
+  const occupantDecls = isSystemEnabled('animals') ? (persistentOccupantDecls ?? []) : []
   const occupantRegistry = createPersistentOccupantRegistry(initialPersistentOccupants)
   occupantRegistry.registerDeclarations(occupantDecls)
   const reservedPersistentSlots = occupantRegistry.slotCountsByHabitatId()

@@ -1064,6 +1064,8 @@ export class AnimalAgent {
    *  why this is a plain index rather than a nearest-point projection.
    *  Never persisted; reset to 0 whenever a fresh leg starts. */
   private caveRouteIndex = 0
+  /** Cursor for `sourceTarget.caveRoute` during pool water/food pursuit (plan fauna-027). */
+  private sourceCaveRouteIndex = 0
   /** Committed water/other trip (plan fauna-016 §4) — `null` when not on
    *  one. Only ever read/written by `wander()`'s trip helpers. */
   private trip: AnimalTrip | null = null
@@ -4122,6 +4124,13 @@ export class AnimalAgent {
           : OWNED_NEED_LEASH_RADIUS
       }
     }
+    if (this.cave && this.caveInteriorNow) {
+      ctx.caveEnvironmental = {
+        poolWater: this.cave.poolWater,
+        poolFish: this.cave.poolFish,
+        homeToPoolRoute: this.cave.homeToPoolRoute,
+      }
+    }
     return ctx
   }
 
@@ -4143,6 +4152,7 @@ export class AnimalAgent {
       this.sourceTarget = thirstElevated
         ? findWaterTarget(ctx) ?? (hungerElevated ? findFoodTarget(ctx, this, others) : null)
         : findFoodTarget(ctx, this, others)
+      if (this.sourceTarget) this.sourceCaveRouteIndex = 0
       if (!this.sourceTarget) this.sourceSearchCooldown = SOURCE_SEARCH_COOLDOWN_SEC
     }
     if (!this.sourceTarget) return false
@@ -4159,12 +4169,15 @@ export class AnimalAgent {
     this.sourceTarget = null
     this.actionTimer = 0
     this.sourceTargetElapsed = 0
+    this.sourceCaveRouteIndex = 0
   }
 
   private pursueSourceTarget(dt: number): boolean {
     const target = this.sourceTarget
     if (!target) return false
-    const actionKind: FaunaActionKind = target.kind === 'water' ? 'drink' : target.kind === 'carcass' ? 'eat' : 'forage'
+    const actionKind: FaunaActionKind = target.kind === 'water'
+      ? 'drink'
+      : (target.kind === 'carcass' || target.kind === 'environmentalFood') ? 'eat' : 'forage'
     this.setIntent(actionKind, { x: target.x, z: target.z })
     const range = target.kind === 'water' ? WATER_INTERACTION_RANGE : FOOD_INTERACTION_RANGE
     if (this.withinRange(target.x, target.z, range)) {
@@ -4176,6 +4189,22 @@ export class AnimalAgent {
       this.cancelSourceTarget()
       this.sourceSearchCooldown = SOURCE_SEARCH_COOLDOWN_SEC
       return false
+    }
+    const caveRoute = target.caveRoute
+    if (caveRoute && caveRoute.length > 0) {
+      const progress = advanceCaveRoute(
+        caveRoute,
+        this.sourceCaveRouteIndex,
+        this.mesh.position.x,
+        this.mesh.position.z,
+        TRIP_ARRIVAL_RADIUS,
+      )
+      this.sourceCaveRouteIndex = progress.index
+      if (progress.point) {
+        this.sourceDest.set(progress.point.x, 0, progress.point.z)
+        this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+        return true
+      }
     }
     this.sourceDest.set(target.x, 0, target.z)
     this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)

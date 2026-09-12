@@ -3,8 +3,10 @@ import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
+import type { AnimalHabitatBinding } from '../fauna/animalCaveHabitat'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { PersistentOccupantSnapshot } from '../fauna/persistentOccupants'
+import type { PersistentOccupantDecl } from '../fauna/persistentOccupants'
 import type { Settlement } from '../settlement/createSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
@@ -41,6 +43,7 @@ import type { WorkContractRecord } from '../world/workContract'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
+import { buildDungeonResidentsPlan } from '../fauna/dungeonResidents'
 import { createHuntingHooks } from '../fauna/huntingHooks'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
@@ -480,6 +483,22 @@ function buildSettlementsManager(
  *  build concurrently with the home settlement's own (much slower)
  *  `buildSettlementProps`/NPC pipeline instead of waiting for it, via
  *  `Promise.all` in `buildWorldSystems` below. */
+function dungeonFaunaOccupancy(caves?: Caves): {
+  decls: readonly PersistentOccupantDecl[]
+  bindings: readonly AnimalHabitatBinding[]
+} {
+  if (!caves) return { decls: [], bindings: [] }
+  const dungeons = caves.definitions()
+    .filter((def) => caves.archetypeOf(def.caveId) === 'dungeon')
+    .map((def) => ({
+      caveId: def.caveId,
+      entrance: { x: def.entrance.x, z: def.entrance.z },
+      chambers: caves.dungeonChambersOf(def.caveId),
+    }))
+  const plan = buildDungeonResidentsPlan(dungeons)
+  return { decls: plan.decls, bindings: plan.bindings }
+}
+
 function buildFauna(
   scene: Scene,
   chunkManager: ChunkManager,
@@ -541,6 +560,7 @@ function buildFauna(
   })
 
   bootMark('createFauna')
+  const dungeonOccupancy = dungeonFaunaOccupancy(caves)
   return createFauna(
     scene,
     chunkManager.sampleHeight,
@@ -573,16 +593,16 @@ function buildFauna(
     // Persistent occupant declarations stay empty until a consumer (the
     // treasure-map bear cave) supplies them; restore still accepts carried
     // snapshots so in-session rebuild/save wiring is live.
-    undefined,
+    dungeonOccupancy.decls,
     initialPersistentOccupants,
     caves && {
       resolveHabitat: caves.resolveHabitat,
       queryGroundIn: caves.queryGroundIn,
       resolveHorizontalIn: caves.resolveHorizontalIn,
+      undergroundPoolOf: caves.undergroundPoolOf,
+      resolveRouteBetween: caves.resolveRouteBetween,
     },
-    // No cave-backed habitat bindings declared yet — same "stays empty
-    // until a consumer supplies them" as `persistentOccupantDecls` above.
-    undefined,
+    dungeonOccupancy.bindings,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 

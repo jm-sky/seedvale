@@ -324,8 +324,6 @@ export function interactableStableKey(target: Interactable): string {
       return `spawner:${target.spawner.id}`
     case 'standingTorch':
       return `standingTorch:${target.id}`
-    case 'villageTorch':
-      return `villageTorch:${target.torchId}`
     case 'tent':
       return `tent:${target.id}`
     case 'terrainPreparation':
@@ -334,6 +332,8 @@ export function interactableStableKey(target: Interactable): string {
       return `trap:${target.id}`
     case 'tree':
       return `tree:${target.id}`
+    case 'villageTorch':
+      return `villageTorch:${target.torchId}`
     case 'waterEdge':
       return `waterEdge:${target.position.x.toFixed(2)}:${target.position.z.toFixed(2)}`
     case 'well':

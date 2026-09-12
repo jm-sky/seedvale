@@ -333,6 +333,74 @@ describe('findFoodTarget / isSourceTargetValid — carcass tier gating (plan fau
   })
 })
 
+describe('environmental cave pool sources (plan fauna-027)', () => {
+  it('bear selects fish fallback when no carcass and pool fish is available', () => {
+    const ctx = makeCtx({
+      def: ANIMAL_DEFS.bear,
+      caveEnvironmental: {
+        poolWater: null,
+        poolFish: { id: 'pool:fish', kind: 'fish', x: 4, z: 2, chamberNodeId: 'dungeon-chamber-2' },
+        homeToPoolRoute: [{ x: 0, y: 0, z: 0 }, { x: 4, y: 0, z: 2 }],
+      },
+    })
+    ctx.life.hunger = 0.9
+    const target = findFoodTarget(ctx, {}, [])
+    expect(target?.kind).toBe('environmentalFood')
+    expect(target?.environmentalFoodKind).toBe('fish')
+    expect(target?.caveRoute?.length).toBeGreaterThan(0)
+  })
+
+  it('wolf ignores environmental fish with current meat-only diet', () => {
+    const ctx = makeCtx({
+      def: ANIMAL_DEFS.wolf,
+      caveEnvironmental: {
+        poolWater: null,
+        poolFish: { id: 'pool:fish', kind: 'fish', x: 4, z: 2, chamberNodeId: 'dungeon-chamber-2' },
+        homeToPoolRoute: null,
+      },
+    })
+    ctx.life.hunger = 0.9
+    expect(findFoodTarget(ctx, {}, [])).toBeNull()
+  })
+
+  it('environmental fish relief does not deplete the source', () => {
+    const ctx = makeCtx({
+      def: ANIMAL_DEFS.bear,
+      caveEnvironmental: {
+        poolWater: null,
+        poolFish: { id: 'pool:fish', kind: 'fish', x: 0, z: 0, chamberNodeId: 'c' },
+        homeToPoolRoute: null,
+      },
+    })
+    ctx.life.hunger = 0.9
+    const target: SourceTarget = {
+      kind: 'environmentalFood',
+      x: 0,
+      z: 0,
+      environmentalFoodKind: 'fish',
+      environmentalFoodSourceId: 'pool:fish',
+    }
+    applySourceRelief(ctx, target)
+    expect(ctx.life.hunger).toBeLessThan(0.9)
+    expect(isSourceTargetValid(ctx, {}, target)).toBe(true)
+  })
+
+  it('uses pool shoreline for environmental water without roam-radius rejection', () => {
+    const ctx = makeCtx({
+      home: { x: 0, z: 0 },
+      roamRadius: 5,
+      caveEnvironmental: {
+        poolWater: { id: 'pool:water', x: 30, z: 0, chamberNodeId: 'dungeon-chamber-3' },
+        poolFish: null,
+        homeToPoolRoute: [{ x: 0, y: 0, z: 0 }, { x: 30, y: 0, z: 0 }],
+      },
+    })
+    const target = findWaterTarget(ctx)
+    expect(target?.waterSource).toEqual({ kind: 'environmental', id: 'pool:water' })
+    expect(isSourceTargetValid(ctx, {}, target!)).toBe(true)
+  })
+})
+
 describe('hand-feed diet contract (plan fauna-013)', () => {
   it('uses the same relief scale as household feed for a diet item', () => {
     const diet = ANIMAL_DEFS.dog.diet

@@ -1,5 +1,6 @@
 import type { CaveGroundHit } from '../world/caves/caveGroundQuery'
-import type { CaveTraversalDescriptor, CaveTraversalPoint } from '../world/caves/caveHabitat'
+import type { CaveHomePlacementHint, CaveTraversalDescriptor, CaveTraversalPoint } from '../world/caves/caveHabitat'
+import type { CaveUndergroundPool } from '../world/caves/caveUndergroundPool'
 
 /**
  * @domain fauna
@@ -16,7 +17,11 @@ import type { CaveTraversalDescriptor, CaveTraversalPoint } from '../world/caves
  *  Stateless and per-`caveId`, so it is shared across every cave-bound
  *  animal rather than allocated per instance. */
 export type AnimalCaveWorldContract = {
-  resolveHabitat: (caveId: string, entityHeight: number) => CaveTraversalDescriptor | null
+  resolveHabitat: (
+    caveId: string,
+    entityHeight: number,
+    options?: { homeNodeId?: string, homePlacementHint?: CaveHomePlacementHint },
+  ) => CaveTraversalDescriptor | null
   queryGroundIn: (caveId: string, x: number, y: number, z: number) => CaveGroundHit | null
   resolveHorizontalIn: (
     caveId: string,
@@ -26,6 +31,13 @@ export type AnimalCaveWorldContract = {
     radius: number,
     entityHeight: number,
   ) => { x: number, z: number }
+  /** Shallow underground pool for a dungeon cave (plan fauna-027) — cave-local only. */
+  undergroundPoolOf?: (caveId: string) => CaveUndergroundPool | null
+  resolveRouteBetween?: (
+    caveId: string,
+    fromNodeId: string,
+    toNodeId: string,
+  ) => readonly CaveTraversalPoint[] | null
 }
 
 /** Fauna-owned stable reference from one habitat slot to its real-world
@@ -33,7 +45,24 @@ export type AnimalCaveWorldContract = {
  *  never a second persistent definition — see `resolveAnimalCaveHabitat`. */
 export type AnimalHabitatBinding = {
   habitatId: string
-  source: { kind: 'cave', caveId: string }
+  source: { kind: 'cave', caveId: string, homeNodeId?: string }
+}
+
+/** Infinite environmental fish source at a dungeon pool shoreline (plan fauna-027). */
+export type EnvironmentalAnimalFoodSource = {
+  id: string
+  kind: 'fish'
+  x: number
+  z: number
+  chamberNodeId: string
+}
+
+/** Cave-local pool drink target (plan fauna-027). */
+export type EnvironmentalCaveWaterSource = {
+  id: string
+  x: number
+  z: number
+  chamberNodeId: string
 }
 
 /** Per-agent runtime companion cached for the lifetime of one `AnimalAgent`
@@ -42,6 +71,7 @@ export type AnimalHabitatBinding = {
 export type AnimalCaveContext = {
   world: AnimalCaveWorldContract
   caveId: string
+  homeNodeId: string
   home: CaveTraversalPoint
   entrance: CaveTraversalPoint
   /** Route home -> entrance, inclusive of both ends. */
@@ -49,6 +79,10 @@ export type AnimalCaveContext = {
   /** Same waypoints, entrance -> home — precomputed once so a committed
    *  return trip never reverses the array per tick. */
   entranceToHome: readonly CaveTraversalPoint[]
+  /** Cached home → pool chamber route for needs pursuit (plan fauna-027). */
+  homeToPoolRoute: readonly CaveTraversalPoint[] | null
+  poolWater: EnvironmentalCaveWaterSource | null
+  poolFish: EnvironmentalAnimalFoodSource | null
   /** This resident's own physical dimensions for cave wall containment and
    *  standing-clearance checks (plan fauna-019 §4). */
   entityRadius: number
@@ -93,17 +127,48 @@ export function resolveAnimalCaveHabitat(
   world: AnimalCaveWorldContract,
   entityDimensions: { radius: number, height: number },
 ): ResolvedAnimalCaveHabitat | null {
-  const descriptor = world.resolveHabitat(binding.source.caveId, entityDimensions.height)
+  const pool = world.undergroundPoolOf?.(binding.source.caveId) ?? null
+  const homeNodeId = binding.source.homeNodeId
+  const homePlacementHint = pool && homeNodeId === pool.chamberNodeId
+    ? { dryApproach: { x: pool.shorelineApproach.x, z: pool.shorelineApproach.z } }
+    : undefined
+  const descriptor = world.resolveHabitat(binding.source.caveId, entityDimensions.height, {
+    homeNodeId,
+    homePlacementHint,
+  })
   if (!descriptor) return null
+  const homeToPoolRoute = pool && homeNodeId && world.resolveRouteBetween
+    ? world.resolveRouteBetween(binding.source.caveId, homeNodeId, pool.chamberNodeId)
+    : null
+  const shoreline = pool?.shorelineApproach
   return {
     binding,
     context: {
       world,
       caveId: descriptor.caveId,
+      homeNodeId: homeNodeId ?? '',
       home: descriptor.home,
       entrance: { x: descriptor.entrance.x, y: descriptor.entrance.y, z: descriptor.entrance.z },
       homeToEntrance: descriptor.routeToEntrance,
       entranceToHome: [...descriptor.routeToEntrance].reverse(),
+      homeToPoolRoute,
+      poolWater: pool && shoreline
+        ? {
+          id: pool.id,
+          x: shoreline.x,
+          z: shoreline.z,
+          chamberNodeId: pool.chamberNodeId,
+        }
+        : null,
+      poolFish: pool && shoreline
+        ? {
+          id: `${pool.id}:fish`,
+          kind: 'fish',
+          x: shoreline.x,
+          z: shoreline.z,
+          chamberNodeId: pool.chamberNodeId,
+        }
+        : null,
       entityRadius: entityDimensions.radius,
       entityHeight: entityDimensions.height,
     },

@@ -46,10 +46,6 @@ import {
   type ResolvedHouseLampMount,
   resolveHouseLampMount,
 } from './houseLighting'
-import {
-  type SettlementVillageTorch,
-  settlementVillageTorchId,
-} from './settlementVillageTorch'
 import { pickMerchantWagonPose } from './merchantWagon'
 import {
   ANIMAL_TROUGH_HEIGHT,
@@ -99,6 +95,10 @@ import {
   createWheatField,
   layoutCropsGarden,
 } from './settlementStructures'
+import {
+  type SettlementVillageTorch,
+  settlementVillageTorchId,
+} from './settlementVillageTorch'
 import {
   createFoodStorageVisual,
   createWoodPileVisual,

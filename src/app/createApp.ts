@@ -42,12 +42,6 @@ import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '..
 import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import { CONTAINER_DEFS } from '../items/container'
 import { createEquipmentState, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
-import { createSettlementLightLookup, syncGuardEveningNightPolicies } from './guardQuestWiring'
-import {
-  migrateLegacyGuardSwordGift,
-  type GuardWorldProgress,
-} from '../quests/guardPersistence'
-import { buildGuardEveningDutyQuest, selectGuardQuestGiver } from '../quests/opportunities/guardProfessionQuests'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
@@ -97,7 +91,12 @@ import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
+import {
+  type GuardWorldProgress,
+  migrateLegacyGuardSwordGift,
+} from '../quests/guardPersistence'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
+import { buildGuardEveningDutyQuest, selectGuardQuestGiver } from '../quests/opportunities/guardProfessionQuests'
 import { buildHunterProfessionQuests } from '../quests/opportunities/hunterProfessionQuests'
 import {
   nearbyRpgSettlementDefs,
@@ -204,6 +203,7 @@ import { createAppRenderLoop } from './appRenderLoop'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
 import { createGraphicsSettings } from './graphicsSettings'
+import { createSettlementLightLookup, syncGuardEveningNightPolicies } from './guardQuestWiring'
 import { createInventoryWiring } from './inventoryWiring'
 import { createRenderStack } from './renderStack'
 import { createRestCampSequence } from './restCampSequence'

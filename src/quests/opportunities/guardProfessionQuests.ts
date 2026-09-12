@@ -1,5 +1,5 @@
-import type { QuestDef } from '../quests'
 import type { SettlementVillageTorch } from '../../settlement/settlementVillageTorch'
+import type { QuestDef } from '../quests'
 import type { OpportunityNpc } from './worldQuestOpportunityTypes'
 import { adultOpportunityNpcs } from './rpgQuestMatrices'
 

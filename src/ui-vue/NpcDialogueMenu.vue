@@ -53,9 +53,9 @@ const responseText = computed(() => {
     case 'aboutArea': return areaLine.value
     case 'aboutSelf': return aboutSelfLine(state.npc.displayName, state.npc.role, state.npc.familyMembers, archetype.value)
     case 'aboutVillage': return state.settlement ? aboutVillageLine(state.settlement.name, state.settlement.size, state.settlement.terrain, state.settlement.foodSourceType, state.settlement.dominantResource, archetype.value) : ''
-    case 'guardReward': return guardRewardLine.value
     case 'currentActivity': return currentActivityLine(state.npc.getCurrentActivity(state.timeOfDay), archetype.value)
     case 'goodbye': return goodbyeLine(archetype.value)
+    case 'guardReward': return guardRewardLine.value
     case 'help': return state.helpResult?.line ?? ''
     case 'joinProposal': return joinProposalLine.value || 'Chciałbym dołączyć do twojej wyprawy. Zabierzesz mnie?'
     case 'payment': return paymentLine.value || (

@@ -1,5 +1,5 @@
-import type * as THREE from 'three'
 import type { VillageTorch } from './houseLighting'
+import type * as THREE from 'three'
 
 /**
  * Canonical settlement-owned village torch with a stable id (plan

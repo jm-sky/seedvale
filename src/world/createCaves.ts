@@ -43,7 +43,13 @@ import {
   type CaveGroundHit,
   type CaveVerticalInterval,
 } from './caves/caveGroundQuery'
-import { type CaveTraversalDescriptor, resolveCaveTraversal } from './caves/caveHabitat'
+import {
+  type CaveTraversalDescriptor,
+  type CaveTraversalPoint,
+  resolveCaveRouteBetweenNodes,
+  resolveCaveTraversal,
+  type ResolveCaveTraversalOptions,
+} from './caves/caveHabitat'
 import {
   createCaveHeightfieldMaterial,
   disposeCaveHeightfieldMaterialGpu,
@@ -204,7 +210,17 @@ export type Caves = {
    * is standable for that height. Never persisted — re-resolve after a
    * `WorldBundle` rebuild.
    */
-  resolveHabitat: (caveId: string, entityHeight: number) => CaveTraversalDescriptor | null
+  resolveHabitat: (
+    caveId: string,
+    entityHeight: number,
+    options?: ResolveCaveTraversalOptions,
+  ) => CaveTraversalDescriptor | null
+  /** Floor-snapped route between two topology node ids in one cave (plan fauna-027). */
+  resolveRouteBetween: (
+    caveId: string,
+    fromNodeId: string,
+    toNodeId: string,
+  ) => readonly CaveTraversalPoint[] | null
   /**
    * Stateless, cave-scoped ground query for a known occupant of `caveId` —
    * the fauna-facing counterpart of `queryGround`, without its player-only
@@ -777,10 +793,15 @@ export function createCaves(
     undergroundPoolOf(caveId) {
       return v2ByCaveId.get(caveId)?.undergroundPool ?? null
     },
-    resolveHabitat(caveId, entityHeight) {
+    resolveHabitat(caveId, entityHeight, options) {
       const runtime = v2ByCaveId.get(caveId)
       if (!runtime) return null
-      return resolveCaveTraversal(runtime.topology, runtime.heightfield, analyticSurfaceHeight, entityHeight)
+      return resolveCaveTraversal(runtime.topology, runtime.heightfield, analyticSurfaceHeight, entityHeight, options)
+    },
+    resolveRouteBetween(caveId, fromNodeId, toNodeId) {
+      const runtime = v2ByCaveId.get(caveId)
+      if (!runtime) return null
+      return resolveCaveRouteBetweenNodes(runtime.topology, runtime.heightfield, analyticSurfaceHeight, fromNodeId, toNodeId)
     },
     queryGroundIn(caveId, x, y, z) {
       const runtime = v2ByCaveId.get(caveId)

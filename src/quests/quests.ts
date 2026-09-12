@@ -107,6 +107,8 @@ export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
     if (!prerequisites?.length) continue
     for (const prereq of prerequisites) {
       switch (prereq.type) {
+        case 'evening_offer_window':
+          break
         case 'quest_outcome': {
           if (prereq.questId === def.id) {
             throw new QuestDefinitionValidationError(`Quest "${def.id}" cannot depend on its own outcome`)
@@ -148,8 +150,6 @@ export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
               `Quest "${def.id}" reputation minimum ${prereq.minimum} is outside ${REPUTATION_MIN}..${REPUTATION_MAX}`,
             )
           }
-          break
-        case 'evening_offer_window':
           break
       }
     }

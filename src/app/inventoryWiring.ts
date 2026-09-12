@@ -27,12 +27,6 @@ import { isVoluntaryJoinAccepted, type VoluntaryExpeditionTerms } from '../ai/vo
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { readBook } from '../items/books'
 import { expandFoodBatchesToUnits } from '../items/foodItems'
-import {
-  applyGuardClaimMutation,
-  getGuardClaimState,
-  type GuardWorldProgress,
-} from '../quests/guardPersistence'
-import { guardRewardTopicAvailable, resolveNextGuardReward } from '../quests/guardRewards'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -43,6 +37,12 @@ import { previewPricedPurchaseNetCoins, previewTransactionNetCoins, resolveOffer
 import { NEUTRAL_SELL_PRICE_CONTEXT, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
+import {
+  applyGuardClaimMutation,
+  getGuardClaimState,
+  type GuardWorldProgress,
+} from '../quests/guardPersistence'
+import { guardRewardTopicAvailable, resolveNextGuardReward } from '../quests/guardRewards'
 import {
   getHorseAcquisitionState,
   horseOfferStatusHint,

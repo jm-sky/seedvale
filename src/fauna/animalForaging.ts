@@ -5,10 +5,11 @@ import type { Household } from '../settlement/household'
 import type { LocalWaterSample } from '../terrain/waterSample'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { WaterBodyKind } from '../world/WaterSource'
+import type { EnvironmentalAnimalFoodSource, EnvironmentalCaveWaterSource } from './animalCaveHabitat'
 import type { CorpsePhase } from './animalCorpse'
 import type { AnimalDef, AnimalRole, ScavengingConfig } from './animalDefs'
-import type { AnimalDietConfig } from './animalDefs'
 import { shoreProbeHits } from '../terrain/waterBodyKind'
+import { type AnimalDietConfig, dietAcceptsItem } from './animalDefs'
 import { type AnimalLifeState, consumeFood, drinkWater, NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { probeBestPointNear } from './animalRoaming'
 import { classifyWaterTraversal, wadeDepthFor } from './waterTraversal'
@@ -86,6 +87,7 @@ export type WaterSourceRef =
   | { kind: 'natural' }
   | { kind: 'household' }
   | { kind: 'playerTrough', id: string }
+  | { kind: 'environmental', id: string }
 
 /** Narrow world-owned provider seam for finite player-built trough water
  *  (plan items-player-020 §4) — `animalForaging` owns selection/eligibility;
@@ -239,11 +241,13 @@ export type CarcassCandidate = {
 /** A real-world food/water destination an animal is pursuing (plan 094) —
  *  `corpse` is set only for `kind: 'carcass'`, so the eater can release its
  *  claim on cancel/completion. */
-export type SourceTargetKind = 'water' | 'forage' | 'carcass' | 'feed' | 'grassPatch'
+export type SourceTargetKind = 'water' | 'forage' | 'carcass' | 'feed' | 'grassPatch' | 'environmentalFood'
 export type SourceTarget = {
   kind: SourceTargetKind
   x: number
   z: number
+  /** When set, pursue via this cave topology route instead of straight steering (plan fauna-027). */
+  caveRoute?: readonly { x: number, y: number, z: number }[]
   corpse?: CarcassCandidate
   /** Set only for `kind: 'water'` — which finite/infinite source this target
    *  resolves through at completion time (plan items-player-020 §4). */
@@ -265,6 +269,9 @@ export type SourceTarget = {
    *  `GrassForagePatch` id this target resolves through `grassForage` for
    *  live availability checks and final atomic consumption. */
   patchId?: string
+  /** Set only for `kind: 'environmentalFood'` — diet item kind (e.g. `fish`). */
+  environmentalFoodKind?: ItemKind
+  environmentalFoodSourceId?: string
 }
 
 /** Per-tick environment `AnimalAgent` threads into every selection/
@@ -301,6 +308,12 @@ export type ForagingContext = {
    *  anchor (player position for Follow/lead, stay anchor for Stay). */
   needAnchor?: { readonly x: number, readonly z: number }
   needLeashRadius?: number
+  /** Cave-local environmental pool sources (plan fauna-027) — only while inside the bound cave. */
+  caveEnvironmental?: {
+    poolWater: EnvironmentalCaveWaterSource | null
+    poolFish: EnvironmentalAnimalFoodSource | null
+    homeToPoolRoute: readonly { x: number, y: number, z: number }[] | null
+  }
 }
 
 /** Natural shoreline drink point: dry or shallow wade at the edge, never deep
@@ -361,11 +374,44 @@ function findPlayerTroughTarget(ctx: ForagingContext): SourceTarget | null {
     : null
 }
 
+function findEnvironmentalPoolWaterTarget(ctx: ForagingContext): SourceTarget | null {
+  const pool = ctx.caveEnvironmental?.poolWater
+  if (!pool) return null
+  if (!ctx.isWalkable(pool.x, pool.z)) return null
+  const route = ctx.caveEnvironmental?.homeToPoolRoute
+  return {
+    kind: 'water',
+    x: pool.x,
+    z: pool.z,
+    waterSource: { kind: 'environmental', id: pool.id },
+    caveRoute: route && route.length > 0 ? route : undefined,
+  }
+}
+
+function findEnvironmentalDietFoodTarget(ctx: ForagingContext): SourceTarget | null {
+  const fish = ctx.caveEnvironmental?.poolFish
+  if (!fish || !dietAcceptsItem(ctx.def.diet, fish.kind)) return null
+  const relief = dietItemReliefScale(ctx.def.diet, fish.kind)
+  if (relief == null) return null
+  if (!ctx.isWalkable(fish.x, fish.z)) return null
+  const route = ctx.caveEnvironmental?.homeToPoolRoute
+  return {
+    kind: 'environmentalFood',
+    x: fish.x,
+    z: fish.z,
+    environmentalFoodKind: fish.kind,
+    environmentalFoodSourceId: fish.id,
+    caveRoute: route && route.length > 0 ? route : undefined,
+  }
+}
+
 export function findWaterTarget(ctx: ForagingContext): SourceTarget | null {
   const householdTrough = findHouseholdTroughTarget(ctx)
   if (householdTrough) return householdTrough
   const playerTrough = findPlayerTroughTarget(ctx)
   if (playerTrough) return playerTrough
+  const poolWater = findEnvironmentalPoolWaterTarget(ctx)
+  if (poolWater) return poolWater
   const best = probeBestPointNear(
     { x: ctx.x, z: ctx.z },
     WATER_SEARCH_RADIUS,
@@ -443,7 +489,7 @@ export function findGrassPatchTarget(ctx: ForagingContext, grassForage: GrassFor
  *  `findForageTarget()` behaviour unchanged. */
 function findDietTarget(ctx: ForagingContext): SourceTarget | null {
   const diet = ctx.def.diet
-  if (!diet) return findForageTarget(ctx)
+  if (!diet) return findForageTarget(ctx) ?? findEnvironmentalDietFoodTarget(ctx)
   if (ctx.household && diet.items) {
     // Lazy hay top-up (plan fauna-010 §6) — resolved right before reading
     // eligibility, not on a schedule; see `Household.resolveHayForage`'s doc.
@@ -452,9 +498,9 @@ function findDietTarget(ctx: ForagingContext): SourceTarget | null {
     if (feedItemKind) return { kind: 'feed', x: ctx.home.x, z: ctx.home.z, feedItemKind }
   }
   if (diet.grass != null && ctx.grassForage) {
-    return findGrassPatchTarget(ctx, ctx.grassForage)
+    return findGrassPatchTarget(ctx, ctx.grassForage) ?? findEnvironmentalDietFoodTarget(ctx)
   }
-  return null
+  return findEnvironmentalDietFoodTarget(ctx)
 }
 
 /** Best-scoring unclaimed dead prey within `FOOD_SEARCH_RADIUS` (plan
@@ -515,7 +561,10 @@ export function findFoodTarget<T extends CarcassCandidate>(
   eater: unknown,
   others: readonly T[],
 ): SourceTarget | null {
-  return ctx.def.role === 'predator' ? findCarcassTarget(ctx, eater, others) : findDietTarget(ctx)
+  if (ctx.def.role === 'predator') {
+    return findCarcassTarget(ctx, eater, others) ?? findEnvironmentalDietFoodTarget(ctx)
+  }
+  return findDietTarget(ctx)
 }
 
 /** Completion-time (and cancel-time) revalidation — re-checks the *live*
@@ -553,11 +602,22 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
     if (!ctx.isWalkable(target.x, target.z)) return false
     return Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) <= ctx.roamRadius
   }
+  if (target.kind === 'environmentalFood') {
+    const fish = ctx.caveEnvironmental?.poolFish
+    if (!fish || fish.id !== target.environmentalFoodSourceId) return false
+    if (!target.environmentalFoodKind || !dietAcceptsItem(ctx.def.diet, target.environmentalFoodKind)) return false
+    return ctx.isWalkable(target.x, target.z)
+  }
   if (target.kind === 'water' && target.waterSource?.kind === 'playerTrough') {
     if (!ctx.waterSourceProvider?.isAvailable(target.waterSource.id, TROUGH_DRINK_AMOUNT)) return false
   }
+  if (target.kind === 'water' && target.waterSource?.kind === 'environmental') {
+    const pool = ctx.caveEnvironmental?.poolWater
+    if (!pool || pool.id !== target.waterSource.id) return false
+    return ctx.isWalkable(target.x, target.z)
+  }
   if (!ctx.isWalkable(target.x, target.z)) return false
-  if (Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) > ctx.roamRadius) return false
+  if (target.waterSource?.kind !== 'environmental' && Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) > ctx.roamRadius) return false
   if (!withinNeedLeash(ctx, target.x, target.z)) return false
   if (target.kind === 'water' && target.waterSource?.kind === 'natural') {
     return isDrinkableNaturalShorePoint(ctx, target.x, target.z)
@@ -587,9 +647,14 @@ export function applySourceRelief(ctx: ForagingContext, target: SourceTarget): v
       if (ctx.waterSourceProvider?.consume(source.id, TROUGH_DRINK_AMOUNT)) {
         drinkWater(ctx.life)
       }
+    } else if (source.kind === 'environmental') {
+      drinkWater(ctx.life)
     } else {
       drinkWater(ctx.life)
     }
+  } else if (target.kind === 'environmentalFood' && target.environmentalFoodKind) {
+    const relief = dietItemReliefScale(ctx.def.diet, target.environmentalFoodKind) ?? 1
+    consumeFood(ctx.life, relief)
   } else if (target.kind === 'carcass' && target.corpse) {
     // Re-read the live corpse rather than the value cached on `target` at
     // selection time — a failed revalidation (already harvested, phase

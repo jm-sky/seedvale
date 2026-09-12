@@ -1,7 +1,7 @@
 import type { ItemKind } from '../items/items'
-import { tradeValue } from '../items/tradeCatalog'
 import type { NpcId } from '../settlement/npcState'
 import type { RelationLevel } from './quests'
+import { tradeValue } from '../items/tradeCatalog'
 import { relationLevelMeetsMinimum } from './quests'
 
 /** Per-stable-guard claim facts persisted in save (plan quests-progression-021). */
