@@ -76,7 +76,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
 | 💡 `quests-progression-020-profession-quests-guard-rewards-and-wildlife-help.md` | -       | 🔴 | L      | fauna-022, fauna-023, quests-progression-019 |
 | ◼️ `world-terrain-024-dungeon-cave-archetype.md`                               | -       | 🟡 | M      | ~~world-terrain-020~~ |
-| ◼️ `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
+| 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
 
 ---
 
