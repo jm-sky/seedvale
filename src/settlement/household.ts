@@ -184,6 +184,18 @@ function createWaterReserve(initial: number): WaterReserve {
  *  rebuild (plan 197 §8) and persisted in `SaveData.households` (sparse/
  *  optional), the same `initial*`/`serialize()` idiom `EconomyRegistry`
  *  already uses for the settlement-level stock it sits next to. */
+export type HouseholdAgricultureState = {
+  /** True once starter seeds have been evaluated (granted or ineligible).
+   *  Distinct from "currently holding zero seeds" — depletion is a valid
+   *  later state and must not re-trigger bootstrap. */
+  starterSeedsGranted: boolean
+  /** World-day the last agricultural resolve (detailed handoff or aggregate
+   *  catch-up) closed at. Absent means this household has never been
+   *  resolved; catch-up then treats elapsed as 0 rather than the whole
+   *  world history. */
+  lastResolvedAtDays?: number
+}
+
 export type HouseholdSnapshot = {
   stock: Partial<Record<HouseholdResourceKind, number>>
   water: number
@@ -201,13 +213,26 @@ export type HouseholdSnapshot = {
    *  starting from day 0, same "missing means default" contract `items`
    *  above already uses). */
   hayForage?: HayForageState
+  /** One-time starter-seed marker + off-screen catch-up anchor (plan
+   *  settlements-npcs-030). Optional so older snapshots still hydrate. */
+  agriculture?: HouseholdAgricultureState
 }
 
-/** Household starting supply (plan 178 §11) — only ever seeded once, on a
- *  household's genuinely first construction, for a household containing a
- *  `hunter` (see `createSettlement.ts`'s `hasHunter` computation). Not a
- *  general household starting-item mechanism. */
+/** Profession-derived starting items (plan 178 hunter bandages, plan
+ *  settlements-npcs-030 farmer seeds). Applied at first construction, and
+ *  once more for a pre-plan household whose agriculture marker is still
+ *  unresolved. Never a general profession-resource registry. */
+export type HouseholdStartingContext = {
+  /** Any hunter member, including children — same rule as the pre-plan
+   *  `hasHunter` boolean. Agricultural capacity uses adult workforce; this
+   *  flag must not. */
+  hasHunter?: boolean
+  adultFarmerCount?: number
+}
+
 const HUNTER_STARTING_BANDAGES = 5
+export const FARMER_STARTING_SEED_COUNT = 2
+const FARMER_STARTING_SEED_KINDS: readonly ItemKind[] = ['seed_carrot', 'seed_potato', 'seed_cabbage']
 
 export type Household = {
   readonly id: HouseholdId
@@ -280,6 +305,10 @@ export type Household = {
    *  the household-owned side effect, not the NPC's own decision/action
    *  record. */
   history: () => readonly HouseholdHistoryEvent[]
+  /** World-day the last agricultural resolve closed at, if any. */
+  agricultureLastResolvedAtDays: () => number | undefined
+  /** Closes the current agricultural interval at `nowDays` without producing. */
+  markAgricultureResolved: (nowDays: number) => void
 }
 
 export function householdIdFor(settlementId: string, familyIndex: number): HouseholdId {
@@ -324,10 +353,10 @@ export function createHousehold(
    *  household (first-ever construction) gets the usual jittered starting
    *  reserve instead. */
   initial?: HouseholdSnapshot,
-  /** True when this household contains a `hunter` member (plan 178 §11) —
-   *  only consulted on a genuinely first construction (`!initial`), same as
-   *  the jittered starting stock above; a carried household never re-seeds. */
-  hasHunter = false,
+  /** Profession-derived starting items. Consulted on first construction and
+   *  on a restored household whose agriculture starter marker is still
+   *  unresolved. A fully bootstrapped snapshot never re-seeds. */
+  starting?: HouseholdStartingContext,
 ): Household {
   const stock = new EconomicStock(initial?.stock ?? initialHouseholdStock(id))
   const water = createWaterReserve(
@@ -341,8 +370,21 @@ export function createHousehold(
     Infinity,
     STORED_FOOD_DECAY,
   )
-  if (!initial && hasHunter) items.add('bandage', HUNTER_STARTING_BANDAGES)
   let hayForage: HayForageState = initial?.hayForage ?? { nextPortionAtDays: 0, portionsToday: 0, dayAnchor: 0 }
+  let agriculture: HouseholdAgricultureState = initial?.agriculture
+    ? {
+      starterSeedsGranted: initial.agriculture.starterSeedsGranted,
+      lastResolvedAtDays: initial.agriculture.lastResolvedAtDays,
+    }
+    : { starterSeedsGranted: false }
+
+  if (!initial && starting?.hasHunter) items.add('bandage', HUNTER_STARTING_BANDAGES)
+  if (!agriculture.starterSeedsGranted && (!initial || starting)) {
+    if ((starting?.adultFarmerCount ?? 0) > 0) {
+      for (const kind of FARMER_STARTING_SEED_KINDS) items.add(kind, FARMER_STARTING_SEED_COUNT)
+    }
+    agriculture = { ...agriculture, starterSeedsGranted: true }
+  }
 
   // Domain history (plan settlements-npcs-013) — bounded ring + local
   // sequence counter, recorded only at this household's own mutation
@@ -435,8 +477,13 @@ export function createHousehold(
         foodBatches: items.foodBatchesToJSON(),
       },
       hayForage,
+      agriculture: { ...agriculture },
     }),
     history: () => historyBuf.history(),
+    agricultureLastResolvedAtDays: () => agriculture.lastResolvedAtDays,
+    markAgricultureResolved: (nowDays) => {
+      agriculture = { ...agriculture, lastResolvedAtDays: nowDays }
+    },
   }
 }
 
@@ -447,7 +494,7 @@ export function createHousehold(
  * does not reset (plan 069 §22).
  */
 export type HouseholdRegistry = {
-  getOrCreate: (id: HouseholdId, settlementId: string, homeId: string, hasHunter?: boolean) => Household
+  getOrCreate: (id: HouseholdId, settlementId: string, homeId: string, starting?: HouseholdStartingContext) => Household
   get: (id: HouseholdId) => Household | undefined
   clear: () => void
   /** Stock-only snapshot of every household created so far — see
@@ -458,10 +505,10 @@ export type HouseholdRegistry = {
 export function createHouseholdRegistry(initial?: Record<HouseholdId, HouseholdSnapshot>): HouseholdRegistry {
   const byId = new Map<HouseholdId, Household>()
   return {
-    getOrCreate(id, settlementId, homeId, hasHunter) {
+    getOrCreate(id, settlementId, homeId, starting) {
       const existing = byId.get(id)
       if (existing) return existing
-      const created = createHousehold(id, settlementId, homeId, initial?.[id], hasHunter)
+      const created = createHousehold(id, settlementId, homeId, initial?.[id], starting)
       byId.set(id, created)
       return created
     },

@@ -85,6 +85,10 @@ import {
 import { NO_RAT_INFESTATION, type RatInfestationState } from './ratInfestation'
 import { createSettlementRats } from './rats'
 import { type RoadNetworkContext, segmentsNear } from './roadNetwork'
+import {
+  householdStartingContextFromFamily,
+  resolveSettlementAgricultureCatchUp,
+} from './settlementAgriculture'
 import { cellSeed } from './settlementGenerator'
 import { createSettlementNightCycle } from './settlementNightCycle'
 import { settlementPropColliders } from './settlementPropColliders'
@@ -338,6 +342,10 @@ export type CreateSettlementDeps = {
    *  — forwarded into every `NpcAgent.create` call the same way
    *  `getPlayerSocial` is above. */
   getNearbyPlayerWell?: NearbyPlayerWellLookup
+  /** World-day clock for agricultural stream-in catch-up (plan
+   *  settlements-npcs-030). Optional so existing callers/tests keep compiling;
+   *  absent is treated as day 0. */
+  getNowDays?: () => number
   /** Persistent land-plot ownership query (plan 129) — a "for sale" sign is
    *  only materialized for a plot this returns `false` for at build time; a
    *  purchase made later while the settlement stays loaded is picked up live
@@ -580,8 +588,19 @@ export async function createSettlement(
   // `SettlementsManager` so stream-out/stream-in reuses the same stock.
   const households: Household[] = def.families.map((family, familyIndex) => {
     const home = homePlaces[familyIndex % homePlaces.length]!
-    const hasHunter = family.members.some((m) => m.character.role === 'hunter')
-    return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id, hasHunter)
+    return householdRegistry.getOrCreate(
+      householdIdFor(def.id, familyIndex),
+      def.id,
+      home.id,
+      householdStartingContextFromFamily(family),
+    )
+  })
+  resolveSettlementAgricultureCatchUp({
+    isHome: def.isHome,
+    families: def.families,
+    households,
+    nowDays: deps.getNowDays?.() ?? 0,
+    economy,
   })
   // Local resource exchange (plan settlements-npcs-005) — one bounded,
   // same-settlement candidate list built once from `households`/`homePlaces`

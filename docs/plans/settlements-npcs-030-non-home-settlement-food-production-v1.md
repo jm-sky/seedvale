@@ -1,12 +1,13 @@
 # Plan: Non-Home Settlement Food Production v1
 
 **Created:** 2026-09-11  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified; browser/gameplay not yet verified. See [implementation notes](./implementation-notes/settlements-npcs-030-non-home-settlement-food-production-v1-implementation-notes.md).  
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **Domain:** `settlements-npcs`  
 **Type:** `feature`  
 **Roadmap:** `agriculture-and-cultivation`  
+**Implemented at:** 2026-09-12  
 
 ## Cel
 

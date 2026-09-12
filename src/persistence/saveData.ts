@@ -587,7 +587,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 34
+export const CURRENT_SAVE_VERSION = 35
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1803,6 +1803,17 @@ function isHouseholdSnapshot(value: unknown): value is HouseholdSnapshot {
   if (h.items !== undefined) {
     if (!isInventoryContentsSnapshot(h.items)) return false
   }
+  if (h.agriculture !== undefined) {
+    if (!isHouseholdAgricultureState(h.agriculture)) return false
+  }
+  return true
+}
+
+function isHouseholdAgricultureState(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const a = value as Record<string, unknown>
+  if (typeof a.starterSeedsGranted !== 'boolean') return false
+  if (a.lastResolvedAtDays !== undefined && typeof a.lastResolvedAtDays !== 'number') return false
   return true
 }
 
@@ -2931,6 +2942,31 @@ function migrateSaveV33ToV34(data: unknown): unknown {
   return { ...v, version: 34 }
 }
 
+/** v34 → v35 (plan settlements-npcs-030): household agriculture bootstrap
+ *  marker + off-screen catch-up anchor. Existing households are marked
+ *  unresolved so the first post-migration resolve can grant starter seeds
+ *  once; `lastResolvedAtDays` starts at the saved `elapsedDays` so catch-up
+ *  does not replay the world's entire history. */
+function migrateSaveV34ToV35(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const elapsedDays = typeof v.elapsedDays === 'number' ? v.elapsedDays : 0
+  const prev = v.households
+  const households = prev && typeof prev === 'object' && !Array.isArray(prev)
+    ? Object.fromEntries(Object.entries(prev as Record<string, unknown>).map(([id, household]) => {
+      if (!household || typeof household !== 'object' || Array.isArray(household)) return [id, household]
+      const h = household as Record<string, unknown>
+      if (h.agriculture && typeof h.agriculture === 'object' && !Array.isArray(h.agriculture)) {
+        return [id, household]
+      }
+      return [id, {
+        ...h,
+        agriculture: { starterSeedsGranted: false, lastResolvedAtDays: elapsedDays },
+      }]
+    }))
+    : prev
+  return { ...v, version: 35, ...(households ? { households } : {}) }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2979,6 +3015,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   31: migrateSaveV31ToV32,
   32: migrateSaveV32ToV33,
   33: migrateSaveV33ToV34,
+  34: migrateSaveV34ToV35,
 }
 
 function detectStoredVersion(value: unknown): number | null {

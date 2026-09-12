@@ -237,6 +237,35 @@ describe('planProfessionWork', () => {
       expect(household.items.count('seed_carrot')).toBe(0)
       expect(planted).toBe(1)
     })
+
+    it('farms the first settlement cultivation anchor, so a field listed first wins over gardens', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const queried: { x: number, z: number }[] = []
+      const foodSources = {
+        queryHarvestableCrop: (x: number, z: number) => {
+          queried.push({ x, z })
+          return { kind: 'crop' as const, x: 21, z: 31, itemKind: 'carrot' }
+        },
+        harvest: () => ({ count: 1, kind: 'carrot' as const }),
+        findPlantSpot: () => ({ x: 2, z: 2 }),
+        plant: () => true,
+      }
+      const landmarks = {
+        ...LANDMARKS,
+        cultivationAnchors: [
+          { position: { x: 20, z: 30 }, radius: 3.2 },
+          { position: { x: 5, z: 5 }, radius: 4 },
+        ],
+      } as unknown as NpcWorkContext['landmarks']
+      const work = planProfessionWork(baseCtx({
+        role: 'farmer',
+        household,
+        foodSources: foodSources as unknown as NpcWorkContext['foodSources'],
+        landmarks,
+      }))
+      expect(work?.kind).toBe('harvest')
+      expect(queried).toEqual([{ x: 20, z: 30 }])
+    })
   })
 
   describe('fisher', () => {

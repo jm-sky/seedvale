@@ -200,11 +200,40 @@ describe('household.items (plan 178) — generic item storage, including concret
     expect(household.items.count('bandage')).toBe(0)
   })
 
-  it('seeds 5 starting bandages only when hasHunter is true, on first construction', () => {
-    const withHunter = createHousehold('h1', 's', 'home', undefined, true)
+  it('seeds 5 starting bandages only when hasHunter is set, on first construction', () => {
+    const withHunter = createHousehold('h1', 's', 'home', undefined, { hasHunter: true })
     expect(withHunter.items.count('bandage')).toBe(5)
-    const withoutHunter = createHousehold('h2', 's', 'home', undefined, false)
+    const withoutHunter = createHousehold('h2', 's', 'home', undefined, { hasHunter: false })
     expect(withoutHunter.items.count('bandage')).toBe(0)
+  })
+
+  it('grants starter crop seeds once when adultFarmerCount > 0 (plan settlements-npcs-030)', () => {
+    const farmer = createHousehold('h1', 's', 'home', undefined, { adultFarmerCount: 1 })
+    expect(farmer.items.count('seed_carrot')).toBe(2)
+    expect(farmer.items.count('seed_potato')).toBe(2)
+    expect(farmer.items.count('seed_cabbage')).toBe(2)
+    expect(farmer.snapshot().agriculture?.starterSeedsGranted).toBe(true)
+    const other = createHousehold('h2', 's', 'home')
+    expect(other.items.count('seed_carrot')).toBe(0)
+    expect(other.snapshot().agriculture?.starterSeedsGranted).toBe(true)
+  })
+
+  it('does not re-grant starter seeds after they were consumed', () => {
+    const before = createHousehold('h', 's', 'home', undefined, { adultFarmerCount: 1 })
+    before.items.remove('seed_carrot', before.items.count('seed_carrot'))
+    const snapshot = before.snapshot()
+    const after = createHousehold('h', 's', 'home', snapshot, { adultFarmerCount: 1 })
+    expect(after.items.count('seed_carrot')).toBe(0)
+    expect(after.snapshot().agriculture?.starterSeedsGranted).toBe(true)
+  })
+
+  it('grants starter seeds once to a pre-plan agricultural household whose marker is unresolved', () => {
+    const snapshot = createHousehold('h', 's', 'home').snapshot()
+    snapshot.agriculture = { starterSeedsGranted: false, lastResolvedAtDays: 12 }
+    const restored = createHousehold('h', 's', 'home', snapshot, { adultFarmerCount: 1 })
+    expect(restored.items.count('seed_carrot')).toBe(2)
+    expect(restored.snapshot().agriculture?.starterSeedsGranted).toBe(true)
+    expect(restored.agricultureLastResolvedAtDays()).toBe(12)
   })
 
   it('holds arbitrary item kinds (hunted meat/hide, crafted arrows) independent of scalar wood stock', () => {
@@ -220,7 +249,7 @@ describe('household.items (plan 178) — generic item storage, including concret
   })
 
   it('round-trips through snapshot()/createHousehold(initial) — WorldBundle rebuild carry', () => {
-    const before = createHousehold('h', 's', 'home', undefined, true)
+    const before = createHousehold('h', 's', 'home', undefined, { hasHunter: true })
     before.items.add('deer_meat', 3)
     before.items.remove('bandage', 2)
     const foodBefore = before.foodCount()
@@ -232,11 +261,11 @@ describe('household.items (plan 178) — generic item storage, including concret
   })
 
   it('a carried snapshot never re-seeds starting bandages or starting food even when hasHunter is passed again', () => {
-    const before = createHousehold('h', 's', 'home', undefined, true)
+    const before = createHousehold('h', 's', 'home', undefined, { hasHunter: true })
     before.items.remove('bandage', 5)
     before.items.remove('bread', before.items.count('bread'))
     const snapshot = before.snapshot()
-    const after = createHousehold('h', 's', 'home', snapshot, true)
+    const after = createHousehold('h', 's', 'home', snapshot, { hasHunter: true })
     expect(after.items.count('bandage')).toBe(0)
     expect(after.foodCount()).toBe(0)
   })
@@ -381,15 +410,15 @@ describe('createHouseholdRegistry', () => {
 
   it('forwards hasHunter to a genuinely new household (plan 178 §11)', () => {
     const registry = createHouseholdRegistry()
-    const household = registry.getOrCreate(householdIdFor('0_0', 0), '0_0', '0_0:home:0', true)
+    const household = registry.getOrCreate(householdIdFor('0_0', 0), '0_0', '0_0:home:0', { hasHunter: true })
     expect(household.items.count('bandage')).toBe(5)
   })
 
   it('ignores hasHunter when the household already exists (getOrCreate reuses it as-is)', () => {
     const registry = createHouseholdRegistry()
     const id = householdIdFor('0_0', 0)
-    registry.getOrCreate(id, '0_0', '0_0:home:0', false)
-    const again = registry.getOrCreate(id, '0_0', '0_0:home:0', true)
+    registry.getOrCreate(id, '0_0', '0_0:home:0', { hasHunter: false })
+    const again = registry.getOrCreate(id, '0_0', '0_0:home:0', { hasHunter: true })
     expect(again.items.count('bandage')).toBe(0)
   })
 })
