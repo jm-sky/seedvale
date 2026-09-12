@@ -13,6 +13,13 @@ It covers system boundaries, ownership, contracts, lifecycle, dependencies, runt
 - rendering and graphics architecture,
 - durable architectural decisions.
 
+Notable focused notes:
+
+- [`cave-surface-wetness.md`](cave-surface-wetness.md) — Cave heightfield wetness mask (triplanar, anisotropy, noise).
+- [`GRAPHICS.md`](GRAPHICS.md) — graphics / materials standing decisions and log.
+- [`performance-and-workers.md`](performance-and-workers.md) — performance and worker boundaries.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — runtime composition and world lifetime map.
+
 ## This directory does not contain
 
 - **Product vision** — see [`../VISION.md`](../VISION.md) and [`../vision/`](../vision/).
