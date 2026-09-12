@@ -75,6 +75,8 @@ type NpcDialogueMenuState = {
    *  `onPayWage` re-resolves live contract/assignment/inventories. */
   paymentClaim: { contractId: string, npcId: string, coins: number } | null
   onPayWage: (() => string) | null
+  /** "Daj przedmiot" (plan items-player-027) — opens the one-way give sheet. */
+  onGiveItem: (() => void) | null
 }
 type InventoryState = {
   open: boolean
@@ -394,6 +396,18 @@ type HouseholdTransferScreenState = {
   playerMaxWeight: number
   onDeposit: ((kind: ItemKind, amount: number) => void) | null
 }
+/** One-way Player → NPC give sheet (plan items-player-027) — living NPC is
+ *  not a container session; only deposit into `personalInventory`. */
+type NpcGiveItemScreenState = {
+  open: boolean
+  npcName: string
+  playerCounts: Partial<Record<ItemKind, number>>
+  playerGroups: readonly InventoryGroupView[]
+  playerTotalWeight: number
+  playerMaxWeight: number
+  onGive: ((kind: ItemKind, amount: number) => void) | null
+  onGiveInstance: ((instanceId: string) => void) | null
+}
 /** Shared `1..max` amount picker (plan items-player-024) — one reusable
  *  overlay for Inventory "Wyrzuć" and container/corpse "Weź"/"Włóż" instead
  *  of a bespoke stepper per screen. The caller only supplies `label`/`max`
@@ -647,7 +661,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedBody: null, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -698,6 +712,9 @@ export const ui = reactive({
     open: false, label: '', household: { food: 0, wood: 0, water: 0 },
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0, onDeposit: null,
   } as HouseholdTransferScreenState,
+  npcGiveItemScreen: {
+    open: false, npcName: '', playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0, onGive: null, onGiveInstance: null,
+  } as NpcGiveItemScreenState,
   quantityDialog: { open: false, label: '', max: 1, value: 1, onConfirm: null } as QuantityDialogState,
   actionConfirm: { open: false, title: '', body: '', confirmLabel: 'Potwierdź', onConfirm: null, onOpen: null, onClose: null } as ActionConfirmState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
@@ -983,6 +1000,7 @@ export function configureNpcDialogueMenu(handlers: {
   onRequestWater: (npc: NpcAgent) => string
   onAskAboutArea: () => string | Promise<string>
   onPayWage: () => string
+  onGiveItem: () => void
 }): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
@@ -991,6 +1009,7 @@ export function configureNpcDialogueMenu(handlers: {
   ui.npcDialogueMenu.onRequestWater = handlers.onRequestWater
   ui.npcDialogueMenu.onAskAboutArea = handlers.onAskAboutArea
   ui.npcDialogueMenu.onPayWage = handlers.onPayWage
+  ui.npcDialogueMenu.onGiveItem = handlers.onGiveItem
 }
 
 export function openInventory(
@@ -1216,6 +1235,39 @@ export function refreshHouseholdTransferScreen(
 }
 export function closeHouseholdTransferScreen(): void { ui.householdTransferScreen.open = false }
 export function isHouseholdTransferScreenOpen(): boolean { return ui.householdTransferScreen.open }
+
+export function configureNpcGiveItemScreen(handlers: Pick<NpcGiveItemScreenState, 'onGive' | 'onGiveInstance'>): void {
+  Object.assign(ui.npcGiveItemScreen, handlers)
+}
+export function openNpcGiveItemScreen(
+  npcName: string,
+  playerCounts: Partial<Record<ItemKind, number>>,
+  playerGroups: readonly InventoryGroupView[],
+  playerTotalWeight: number,
+  playerMaxWeight: number,
+): void {
+  ui.npcGiveItemScreen.npcName = npcName
+  ui.npcGiveItemScreen.playerCounts = { ...playerCounts }
+  ui.npcGiveItemScreen.playerGroups = playerGroups
+  ui.npcGiveItemScreen.playerTotalWeight = playerTotalWeight
+  ui.npcGiveItemScreen.playerMaxWeight = playerMaxWeight
+  ui.npcGiveItemScreen.open = true
+  emitUiOpen()
+}
+export function refreshNpcGiveItemScreen(
+  playerCounts: Partial<Record<ItemKind, number>>,
+  playerGroups: readonly InventoryGroupView[],
+  playerTotalWeight: number,
+  playerMaxWeight: number,
+): void {
+  if (!ui.npcGiveItemScreen.open) return
+  ui.npcGiveItemScreen.playerCounts = { ...playerCounts }
+  ui.npcGiveItemScreen.playerGroups = playerGroups
+  ui.npcGiveItemScreen.playerTotalWeight = playerTotalWeight
+  ui.npcGiveItemScreen.playerMaxWeight = playerMaxWeight
+}
+export function closeNpcGiveItemScreen(): void { ui.npcGiveItemScreen.open = false }
+export function isNpcGiveItemScreenOpen(): boolean { return ui.npcGiveItemScreen.open }
 
 /** Opens the shared quantity dialog (plan items-player-024). Callers only
  *  reach this for `max > 1` — a single-unit stack acts immediately without a

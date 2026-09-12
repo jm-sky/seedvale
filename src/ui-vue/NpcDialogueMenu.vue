@@ -117,6 +117,11 @@ function openTrade(): void {
   state.onOpenTrade?.()
 }
 
+function giveItem(): void {
+  emitUiClick()
+  state.onGiveItem?.()
+}
+
 function accept(): void {
   emitUiClick(); acceptNpcDialogueOffer()
   topic.value = null
@@ -183,6 +188,13 @@ watch(() => state.open, (open) => {
           @click="askAboutArea"
         >
           Opowiedz mi coś o okolicy.
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="giveItem"
+        >
+          Daj przedmiot
         </button>
         <button
           type="button"

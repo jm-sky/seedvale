@@ -9,6 +9,7 @@ import {
   applyNpcMeleeHit,
   applyNpcRangedHit,
   resolveIncomingNpcDamage,
+  resolveNpcAmmo,
   resolveNpcAmmoKind,
   resolveNpcDefenseConfig,
   resolveNpcMeleeWeapon,
@@ -72,6 +73,22 @@ describe('resolveNpcAmmoKind', () => {
     const carried = new Inventory(undefined, 5)
     carried.add('broadhead_arrow', 2)
     expect(resolveNpcAmmoKind(carried, SHORT_BOW)).toBe('broadhead_arrow')
+  })
+})
+
+describe('resolveNpcAmmo', () => {
+  it('prefers the first inventory that holds compatible ammo', () => {
+    const personal = new Inventory({ arrow: 1 })
+    const carried = new Inventory({ broadhead_arrow: 2 })
+    const ammo = resolveNpcAmmo([personal, carried], SHORT_BOW)
+    expect(ammo).toEqual({ kind: 'arrow', inventory: personal })
+  })
+
+  it('falls through to a later inventory when the first is empty of ammo', () => {
+    const personal = new Inventory()
+    const carried = new Inventory({ arrow: 1 })
+    const ammo = resolveNpcAmmo([personal, carried], SHORT_BOW)
+    expect(ammo).toEqual({ kind: 'arrow', inventory: carried })
   })
 })
 

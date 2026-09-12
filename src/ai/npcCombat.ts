@@ -58,11 +58,31 @@ export function resolveNpcRangedWeapon(carried: Inventory): NpcRangedWeapon | nu
   return null
 }
 
-/** Whether `carried` currently holds at least one unit of any ammo kind
- *  `ranged.ammoKinds` accepts — the actual "can this NPC fire right now"
- *  gate, kept separate from weapon resolution above. */
+/** One resolved ammo unit and the inventory that actually owns it — firing
+ *  must `remove` from this inventory only (plan items-player-027). */
+export type NpcAmmoSource = { kind: ItemKind, inventory: Inventory }
+
+/** Resolves compatible ammo across one or more inventories in caller order.
+ *  First matching `(ammoKind, inventory)` wins — used so personal belongings
+ *  and transient `carried` work supply can both feed ranged combat without
+ *  copying ownership between them (plan items-player-027). */
+export function resolveNpcAmmo(
+  inventories: readonly Inventory[],
+  ranged: RangedConfig,
+): NpcAmmoSource | null {
+  for (const kind of ranged.ammoKinds) {
+    for (const inventory of inventories) {
+      if (inventory.has(kind, 1)) return { kind, inventory }
+    }
+  }
+  return null
+}
+
+/** Whether a single inventory currently holds at least one unit of any ammo
+ *  kind `ranged.ammoKinds` accepts — convenience wrapper over
+ *  `resolveNpcAmmo` for call sites that still pass one bag. */
 export function resolveNpcAmmoKind(carried: Inventory, ranged: RangedConfig): ItemKind | null {
-  return ranged.ammoKinds.find((kind) => carried.has(kind, 1)) ?? null
+  return resolveNpcAmmo([carried], ranged)?.kind ?? null
 }
 
 /** Resolves the first carried item that can block, if any — same

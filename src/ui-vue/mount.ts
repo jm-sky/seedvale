@@ -10,6 +10,7 @@ const FORWARDED_FNS = [
   'configureMerchant', 'openMerchant', 'openMerchantFromDialogue', 'refreshMerchant', 'closeMerchant', 'isMerchantOpen',
   'configureContainerScreen', 'openContainerScreen', 'refreshContainerScreen', 'closeContainerScreen', 'isContainerScreenOpen',
   'configureHouseholdTransferScreen', 'openHouseholdTransferScreen', 'refreshHouseholdTransferScreen', 'closeHouseholdTransferScreen', 'isHouseholdTransferScreenOpen',
+  'configureNpcGiveItemScreen', 'openNpcGiveItemScreen', 'refreshNpcGiveItemScreen', 'closeNpcGiveItemScreen', 'isNpcGiveItemScreenOpen',
   'configurePauseMenu', 'setPauseSeed', 'setPauseActiveSaveName', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
   'configureFlavorDialog', 'openFlavorDialog', 'setFlavorPrompt', 'setFlavorInteractionPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',

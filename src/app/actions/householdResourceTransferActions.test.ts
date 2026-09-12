@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../input/MouseLook', () => ({ exitGamePointerLock: vi.fn() }))
+import type { PlayerActionContext } from './actionContext'
 import { createSettlementEconomy } from '../../economy/settlementEconomy'
 import { Inventory } from '../../items/Inventory'
 import { createHousehold, householdIdFor } from '../../settlement/household'
-import type { PlayerActionContext } from './actionContext'
 import { createHouseholdResourceTransferActions } from './householdResourceTransferActions'
 
 function makeCtx(inventory: Inventory, economy = createSettlementEconomy('s', {}, [])) {

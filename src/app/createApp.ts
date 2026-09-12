@@ -180,6 +180,7 @@ import { createHouseholdResourceTransferActions } from './actions/householdResou
 import { createInspectionActions } from './actions/inspectionActions'
 import { createLeadActions } from './actions/leadActions'
 import { createMountActions } from './actions/mountActions'
+import { createNpcItemTransferActions } from './actions/npcItemTransferActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
 import { createRestActions, REST_IN_TOWN_RADIUS } from './actions/restActions'
@@ -1211,6 +1212,8 @@ export async function createApp(
   // Assigned once `inventoryScreen` exists further down; every caller runs
   // later, so the initial no-op is never the one that fires.
   let refreshInventoryScreen: () => void = () => {}
+  // Assigned once `npcItemTransfer` exists (needs `actionCtx` below).
+  let openNpcGiveItem: (npcId: string, displayName: string) => void = () => {}
 
   const inventoryWiring = createInventoryWiring({
     bundle,
@@ -1235,6 +1238,7 @@ export async function createApp(
     locationKnowledge,
     navigationTargets,
     dayNight,
+    openNpcGiveItem: (npcId, displayName) => openNpcGiveItem(npcId, displayName),
   })
   vueUi.configurePrimaryWeaponShortcuts({
     equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
@@ -1353,6 +1357,11 @@ export async function createApp(
     vueUi,
     rendererElement: renderer.domElement,
   })
+  const npcItemTransfer = createNpcItemTransferActions(actionCtx, {
+    vueUi,
+    rendererElement: renderer.domElement,
+  })
+  openNpcGiveItem = npcItemTransfer.openNpcGiveItem
   const contracts = createWorkContractActions(actionCtx, {
     vueUi,
     tentBlockers: placement.tentBlockers,

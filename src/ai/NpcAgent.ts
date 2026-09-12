@@ -71,7 +71,7 @@ import { FLOCK_THREAT_RADIUS, senseOwnedFlockThreat, type ShepherdFlockHooks } f
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial } from '../items/constructionMaterials'
 import { foodItemCount, takeOneFoodItem } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
-import { ITEM_CATALOG } from '../items/itemCatalog'
+import { ITEM_CATALOG, type RangedConfig } from '../items/itemCatalog'
 import { isLiquidContainerInstance } from '../items/itemInstances'
 import { drinkFromLiquidContainer } from '../items/liquidContainer'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
@@ -266,7 +266,7 @@ import {
   type NpcMeleeWeapon,
   type NpcRangedWeapon,
   resolveIncomingNpcDamage,
-  resolveNpcAmmoKind,
+  resolveNpcAmmo,
   resolveNpcMeleeWeapon,
   resolveNpcRangedWeapon,
 } from './npcCombat'
@@ -2033,7 +2033,13 @@ export class NpcAgent {
   canFightBack(): boolean {
     if (resolveNpcMeleeWeapon(this.personalInventory)) return true
     const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
-    return rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
+    return rangedWeapon != null && this.resolveRangedAmmo(rangedWeapon.ranged) != null
+  }
+
+  /** Personal belongings first, then transient work/`carried` supply — one
+   *  real owner per consumed unit (plan items-player-027). */
+  private resolveRangedAmmo(ranged: RangedConfig) {
+    return resolveNpcAmmo([this.personalInventory, this.carried], ranged)
   }
 
   /** Diagnostic-only: this NPC's live combat/threat state, read straight off
@@ -2108,7 +2114,7 @@ export class NpcAgent {
       if (!meleeWeapon) return false
     } else {
       rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
-      if (!rangedWeapon || !resolveNpcAmmoKind(this.carried, rangedWeapon.ranged)) return false
+      if (!rangedWeapon || !this.resolveRangedAmmo(rangedWeapon.ranged)) return false
     }
 
     this.previousPhase = null
@@ -2258,9 +2264,9 @@ export class NpcAgent {
       // (`beginCombat`/the draw-request gate below); re-resolved here in
       // case it was somehow spent in between — a shot silently fizzles
       // (draw spent, no arrow) rather than throwing on a missing kind.
-      const ammoKind = resolveNpcAmmoKind(this.carried, tick.config)
-      if (ammoKind) {
-        this.carried.remove(ammoKind, 1)
+      const ammo = this.resolveRangedAmmo(tick.config)
+      if (ammo) {
+        ammo.inventory.remove(ammo.kind, 1)
         this.combatAttackAttempt += 1
         // `yawToward` only returns `null` when the target sits exactly on
         // this NPC's own position — `mesh.rotation.y` is a different (and
@@ -2285,8 +2291,8 @@ export class NpcAgent {
           damage: tick.config.damage,
           criticalChance: tick.config.criticalChance ?? 0,
           criticalMultiplier: tick.config.criticalMultiplier ?? MELEE_CRITICAL_MULTIPLIER,
-          ammoKind,
-          attackKey: `ranged:${ammoKind}`,
+          ammoKind: ammo.kind,
+          attackKey: `ranged:${ammo.kind}`,
           attempt: this.combatAttackAttempt,
         }
         this.anim.playOnce('attackRanged')
@@ -2322,7 +2328,7 @@ export class NpcAgent {
       && !this.combatProjectile
       && this.stamina.current >= weapon.ranged.staminaCost
     ) {
-      if (resolveNpcAmmoKind(this.carried, weapon.ranged)) {
+      if (this.resolveRangedAmmo(weapon.ranged)) {
         drainStamina(this.stamina, weapon.ranged.staminaCost)
         this.combatRangedAttack.start(weapon.ranged)
         playCombatBowDraw(this.playAt, this.mesh.position)
@@ -2345,7 +2351,7 @@ export class NpcAgent {
   private reactToAnimalThreat(threat: ImmediateAnimalThreat): void {
     const meleeWeapon = resolveNpcMeleeWeapon(this.personalInventory)
     const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
-    const hasRanged = rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
+    const hasRanged = rangedWeapon != null && this.resolveRangedAmmo(rangedWeapon.ranged) != null
     const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     const decision = decideAnimalThreatResponse({
       hasMeleeCapability: meleeWeapon != null,
@@ -4081,7 +4087,7 @@ export class NpcAgent {
       }
     }
     const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
-    if (!rangedWeapon || !resolveNpcAmmoKind(this.carried, rangedWeapon.ranged)) return false
+    if (!rangedWeapon || !this.resolveRangedAmmo(rangedWeapon.ranged)) return false
     const target = hunting.queryTarget(this.mesh.position.x, this.mesh.position.z, HUNT_SEARCH_RADIUS)
     if (!target) return false
     return this.beginCombat({

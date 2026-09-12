@@ -1,15 +1,15 @@
 import type { SettlementEconomy } from '../../economy/settlementEconomy'
 import type { Household } from '../../settlement/household'
+import type { VueUi } from '../../ui-vue/mount'
+import { exitGamePointerLock } from '../../input/MouseLook'
+import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
+import { hasItemKindCategory, ITEM_DEFS, type ItemKind } from '../../items/items'
 import {
   householdTransferSummary,
   householdWoodValue,
   transferableHouseholdItemKinds,
   transferResourceToHousehold,
 } from '../../settlement/householdResourceTransfer'
-import { exitGamePointerLock } from '../../input/MouseLook'
-import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
-import { hasItemKindCategory, ITEM_DEFS, type ItemKind } from '../../items/items'
-import type { VueUi } from '../../ui-vue/mount'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 export type HouseholdResourceTransferActions = {

@@ -6,8 +6,8 @@ import ActionConfirmOverlay from './screens/ActionConfirmOverlay.vue'
 import BusyOverlay from './screens/BusyOverlay.vue'
 import CharacterScreen from './screens/CharacterScreen.vue'
 import ContainerScreen from './screens/ContainerScreen.vue'
-import HouseholdTransferScreen from './screens/HouseholdTransferScreen.vue'
 import FlavorDialog from './screens/FlavorDialog.vue'
+import HouseholdTransferScreen from './screens/HouseholdTransferScreen.vue'
 import HudRightColumn from './screens/HudRightColumn.vue'
 import HudScreen from './screens/HudScreen.vue'
 import InventoryScreen from './screens/InventoryScreen.vue'
@@ -15,6 +15,7 @@ import LodgingWalkOverlay from './screens/LodgingWalkOverlay.vue'
 import MerchantScreen from './screens/MerchantScreen.vue'
 import MinimapScreen from './screens/MinimapScreen.vue'
 import NotesScreen from './screens/NotesScreen.vue'
+import NpcGiveItemScreen from './screens/NpcGiveItemScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
 import PlacementPreviewOverlay from './screens/PlacementPreviewOverlay.vue'
 import QuantityDialog from './screens/QuantityDialog.vue'
@@ -64,6 +65,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <MerchantScreen />
     <ContainerScreen />
     <HouseholdTransferScreen />
+    <NpcGiveItemScreen />
     <QuantityDialog />
     <ActionConfirmOverlay />
     <QuickActionsScreen />

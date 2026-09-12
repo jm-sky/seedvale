@@ -71,9 +71,7 @@ Weapon selection is currently deterministic by `ITEM_CATALOG` key order (`MELEE_
 
 No new save field is needed for the transfer itself: `personalInventory` already persists through `NpcStateSnapshot` / `SaveData.npcStates`.
 
-However, the plan currently overstates corpse behavior. `src/settlement/npcPostDeath.ts::extractNpcLoadoutLoot()` still transfers only role-filtered loadout kinds and explicitly documents that full `personalInventory` handoff (including food freshness) remains a follow-up. Therefore **do not use corpse round-trip as proof that arbitrary gifted items are preserved on death**.
-
-This plan should not silently broaden `npc-010` corpse persistence unless required by accepted scope. Add a regression test that establishes the current expected behavior for gifted combat gear, and leave non-loadout gifted belongings to the existing corpse-lifecycle follow-up unless the plan is intentionally amended.
+`commitNpcDeath()` (plan npc-036) already moves the entire `personalInventory` into corpse loot — gifted belongings participate automatically. Do not reintroduce role-filtered loadout extraction for this path.
 
 ## Tests worth adding
 

@@ -1,7 +1,7 @@
 # Plan: Player-to-NPC item transfer and equipment
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`, lint, targeted vitest). Browser/manual verification is owned by the user.
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-026~~

@@ -1,9 +1,9 @@
 import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { Inventory } from '../items/Inventory'
+import type { Household } from './household'
 import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import { fuelValue } from '../items/itemFuel'
 import { hasItemKindCategory, type ItemKind } from '../items/items'
-import type { Household } from './household'
 
 /**
  * Actor-neutral source-inventory → household resource transfer (plan

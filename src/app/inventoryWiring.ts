@@ -170,13 +170,15 @@ export type InventoryWiringDeps = {
   locationKnowledge: LocationKnowledge
   navigationTargets: NavigationTargets
   dayNight: DayNightState
+  /** Opens the Player → NPC give sheet (plan items-player-027). */
+  openNpcGiveItem: (npcId: string, displayName: string) => void
 }
 
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, equipment, primaryWeapons, playerTorch, hud, toast, vueUi,
     questManager, reputationManager, worldFlags, playOnce, grantItem,
-    locationCatalog, locationKnowledge, navigationTargets, dayNight,
+    locationCatalog, locationKnowledge, navigationTargets, dayNight, openNpcGiveItem,
   } = deps
 
   let activeMerchantPricing: MerchantPricing | null = null
@@ -601,6 +603,11 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       }
       ui.npcDialogueMenu.paymentClaim = null
       return 'Ta należność nie jest już aktualna.'
+    },
+    onGiveItem: () => {
+      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
+      if (!npc) return
+      openNpcGiveItem(npc.id, npc.displayName)
     },
   })
 
