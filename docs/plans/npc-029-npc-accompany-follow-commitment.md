@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** settlements-npcs-019
+**Depends on:** ~~settlements-npcs-019~~
 **Domain:** `npc`
 **Subdomains:** `behavior` `decision-making` `lifecycle`
 **Tags:** `companions` `follow` `commitment` `travel`

@@ -62,7 +62,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
 | 💡 `items-player-029-wearable-armor-and-combat-equipment.md`                   | -       | 🟡 | L      | -      |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
-| 💡 `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | settlements-npcs-019 |
+| 💡 `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | ~~settlements-npcs-019~~ |
 | 💡 `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
 | 💡 `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
 | 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~ |
