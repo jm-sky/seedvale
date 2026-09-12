@@ -26,7 +26,7 @@ Plan rozszerza istniejące `QuestDef` / `QuestManager`, `ReputationManager`, fau
 
 Nie tworzyć osobnego Guard Quest Engine, Guard Reputation, TorchManager ani drugiego źródła stanu świateł.
 
-> **Split note:** ten plan przejmuje cały Guard scope z `quests-progression-020-profession-quests-guard-rewards-and-wildlife-help.md`. Po utworzeniu tego planu `quests-progression-020` powinien zostać skrócony do Hunter / wildlife-help scope; do tego czasu tekstowe nakładanie się obu planów jest przejściowe, a ten plan jest docelowym ownerem Guard scope.
+> **Split complete:** Guard scope został wydzielony z planu 020. Aktualny plan Huntera to `quests-progression-020-hunter-profession-quests-and-wildlife-help.md`; 021 jest jedynym ownerem Guard rewards / evening-duty scope.
 
 ## 1. Zweryfikowany stan obecny
 
@@ -481,7 +481,7 @@ Przed implementacją przygotować:
 
 `docs/plans/implementation-notes/quests-progression-021-guard-rewards-and-evening-settlement-duty-implementation-notes.md`
 
-Nie robić pełnego recon od zera: przenieść i ponownie zweryfikować Guard-specific ustalenia z istniejących implementation notes `quests-progression-020`, szczególnie aktualne call-sites dla guard reward, alpha player-kill integration, save flags, settlement lighting, interaction dispatch i world-time availability.
+Nie robić pełnego recon od zera: przenieść i ponownie zweryfikować Guard-specific ustalenia z wcześniejszych implementation notes planu 020, szczególnie aktualne call-sites dla guard reward, alpha player-kill integration, save flags, settlement lighting, interaction dispatch i world-time availability.
 
 Po implementacji zaktualizować odpowiednie current-state docs:
 
