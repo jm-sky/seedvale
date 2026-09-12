@@ -22,11 +22,16 @@ export const CAVE_SURFACE_MATERIAL_TUNING = {
   rockAlbedoScale: 0.42,
   rockAlbedoLinearNeutral: CAVE_ROCK_DIFFUSE_LINEAR_NEUTRAL,
   macroScale: 0.055,
-  wetnessScale: 0.25,
-  wetnessAmount: 1.5,
+  wetnessScale: 0.72,
+  wetnessAmount: 1.15,
+  /**
+   * Wall wetness UV scale along world Y (values below 1 yield taller seepage streaks).
+   * Floor/ceiling XZ projection stays isotropic.
+   */
+  wetnessWallAnisotropy: 0.28,
   dryRoughness: 0.85,
-  wetRoughness: 0.20,
-  wetDarkening: 0.45,
+  wetRoughness: 0.25,
+  wetDarkening: 0.40,
 } as const
 
 export type CaveSurfaceMaterialTuning = typeof CAVE_SURFACE_MATERIAL_TUNING
@@ -37,7 +42,7 @@ const NORMAL_MAP_INCLUDE = '#include <normal_fragment_maps>'
 const COLOR_FRAGMENT_INCLUDE = '#include <color_fragment>'
 const ROUGHNESSMAP_FRAGMENT_INCLUDE = '#include <roughnessmap_fragment>'
 
-const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v6-detail'
+const SHADER_CACHE_KEY_DETAIL = 'cave-heightfield-surface-v15-detail'
 const SHADER_CACHE_KEY_PLAIN = 'cave-heightfield-surface-v5-plain'
 
 function caveVec3Normalize(v: CaveVec3, fallback: CaveVec3 = [0, 1, 0]): [number, number, number] {
@@ -148,17 +153,54 @@ float caveValueNoise( vec2 p ) {
   float d = caveHash21( i + vec2( 1.0, 1.0 ) );
   return mix( mix( a, b, f.x ), mix( c, d, f.x ), f.y );
 }
+vec2 caveHash22( vec2 p ) {
+  p = vec2( dot( p, vec2( 127.1, 311.7 ) ), dot( p, vec2( 269.5, 183.3 ) ) );
+  return -1.0 + 2.0 * fract( sin( p ) * 43758.5453123 );
+}
+/** Gradient noise in ~[0,1] — organic iso-lines vs value-noise squares. */
+float caveGradientNoise( vec2 p ) {
+  vec2 i = floor( p );
+  vec2 f = fract( p );
+  vec2 u = f * f * ( 3.0 - 2.0 * f );
+  float n =
+    mix(
+      mix(
+        dot( caveHash22( i ), f ),
+        dot( caveHash22( i + vec2( 1.0, 0.0 ) ), f - vec2( 1.0, 0.0 ) ),
+        u.x
+      ),
+      mix(
+        dot( caveHash22( i + vec2( 0.0, 1.0 ) ), f - vec2( 0.0, 1.0 ) ),
+        dot( caveHash22( i + vec2( 1.0, 1.0 ) ), f - vec2( 1.0, 1.0 ) ),
+        u.x
+      ),
+      u.y
+    );
+  return clamp( n * 0.5 + 0.5, 0.0, 1.0 );
+}
+vec2 caveRotate2( vec2 p, float angle ) {
+  float s = sin( angle );
+  float c = cos( angle );
+  return mat2( c, -s, s, c ) * p;
+}
+/** Wetness-only sample: rotated + lightly warped so thresholds stay blotchy. */
+float caveWetnessSample( vec2 p ) {
+  vec2 q = caveRotate2( p, 0.85 );
+  q += 0.25 * vec2(
+    caveGradientNoise( q * 1.1 + vec2( 3.1, 1.7 ) ),
+    caveGradientNoise( q * 1.1 + vec2( 8.4, 5.2 ) )
+  );
+  return caveGradientNoise( q );
+}
 vec3 caveSafeNormalize( vec3 v, vec3 fallback ) {
   float len2 = dot( v, v );
   return len2 > 1e-10 ? v * inversesqrt( len2 ) : fallback;
 }
 vec3 caveViewToWorldDir( vec3 viewDir ) {
+  // viewMatrix is world→view; for an orthonormal view rotation, view→world is
+  // its transpose — same convention as Three's transformDirectionByInverseViewMatrix.
   return caveSafeNormalize(
-    vec3(
-      dot( vec3( viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0] ), viewDir ),
-      dot( vec3( viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1] ), viewDir ),
-      dot( vec3( viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2] ), viewDir )
-    ),
+    ( vec4( viewDir, 0.0 ) * viewMatrix ).xyz,
     vec3( 0.0, 1.0, 0.0 )
   );
 }
@@ -170,16 +212,32 @@ float caveTriplanarValueNoise( vec3 worldPos, float scale ) {
     caveValueNoise( p.xy + vec2( 8.3, 22.1 ) )
   ) * ( 1.0 / 3.0 );
 }
-float caveWetnessMask( vec3 worldPos ) {
-  float wetMacro = caveTriplanarValueNoise( worldPos, uCaveWetnessScale );
-  float wetMacro2 = caveTriplanarValueNoise( worldPos, uCaveWetnessScale * 1.85 );
-  float wetNoise = wetMacro * 0.68 + wetMacro2 * 0.32;
-  return clamp( smoothstep( 0.58, 0.72, wetNoise ) * uCaveWetnessAmount, 0.0, 1.0 );
-}
 vec3 caveTriplanarBlendWeights( vec3 worldN ) {
   vec3 blend = abs( worldN );
   blend = max( blend, vec3( 1e-4 ) );
   return blend / ( blend.x + blend.y + blend.z );
+}
+float caveTriplanarWetnessNoise( vec3 worldPos, vec3 worldN, float scale ) {
+  vec3 blend = caveTriplanarBlendWeights( worldN );
+  vec3 p = worldPos * scale;
+  // Stretch wall projections along world Y for vertical seepage streaks.
+  float xProjection = caveWetnessSample(
+    vec2( p.y * uCaveWetnessWallAnisotropy, p.z ) + vec2( 19.2, 7.4 )
+  );
+  float yProjection = caveWetnessSample( p.xz + vec2( 41.0, 13.0 ) );
+  float zProjection = caveWetnessSample(
+    vec2( p.x, p.y * uCaveWetnessWallAnisotropy ) + vec2( 8.3, 22.1 )
+  );
+  return
+    xProjection * blend.x +
+    yProjection * blend.y +
+    zProjection * blend.z;
+}
+float caveWetnessMask( vec3 worldPos, vec3 worldN ) {
+  float wetMacro = caveTriplanarWetnessNoise( worldPos, worldN, uCaveWetnessScale );
+  float wetMacro2 = caveTriplanarWetnessNoise( worldPos, worldN, uCaveWetnessScale * 1.85 );
+  float wetNoise = wetMacro * 0.68 + wetMacro2 * 0.32;
+  return clamp( smoothstep( 0.40, 0.58, wetNoise ) * uCaveWetnessAmount, 0.0, 1.0 );
 }
 float caveTriplanarRockAlbedoDetail( vec3 worldPos, vec3 worldN, float scale ) {
   vec3 blend = caveTriplanarBlendWeights( worldN );
@@ -239,7 +297,7 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
     float macroMix = macro * 0.62 + macro2 * 0.38;
     diffuseColor.rgb *= 1.0 + ( macroMix - 0.5 ) * 0.09;
 
-    float wetMask = caveWetnessMask( vWorldPos );
+    float wetMask = caveWetnessMask( vWorldPos, geoWorld );
     diffuseColor.rgb *= 1.0 - wetMask * uCaveWetDarkening;
     diffuseColor.rgb = mix(
       diffuseColor.rgb,
@@ -251,7 +309,8 @@ const CAVE_COLOR_CHUNK = /* glsl */ `
 
 const CAVE_ROUGHNESS_CHUNK = /* glsl */ `
   {
-    float wetMask = caveWetnessMask( vWorldPos );
+    vec3 geoWorld = caveViewToWorldDir( normalize( vNormal ) );
+    float wetMask = caveWetnessMask( vWorldPos, geoWorld );
     roughnessFactor = mix( uCaveDryRoughness, uCaveWetRoughness, wetMask );
   }
 `
@@ -286,6 +345,7 @@ function applyCaveSurfaceShader(
     shader.uniforms.uCaveMacroScale = { value: tuning.macroScale }
     shader.uniforms.uCaveWetnessScale = { value: tuning.wetnessScale }
     shader.uniforms.uCaveWetnessAmount = { value: tuning.wetnessAmount }
+    shader.uniforms.uCaveWetnessWallAnisotropy = { value: tuning.wetnessWallAnisotropy }
     shader.uniforms.uCaveDryRoughness = { value: tuning.dryRoughness }
     shader.uniforms.uCaveWetRoughness = { value: tuning.wetRoughness }
     shader.uniforms.uCaveWetDarkening = { value: tuning.wetDarkening }
@@ -316,6 +376,7 @@ uniform float uCaveProceduralRockStrength;
 uniform float uCaveMacroScale;
 uniform float uCaveWetnessScale;
 uniform float uCaveWetnessAmount;
+uniform float uCaveWetnessWallAnisotropy;
 uniform float uCaveDryRoughness;
 uniform float uCaveWetRoughness;
 uniform float uCaveWetDarkening;
