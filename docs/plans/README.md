@@ -85,6 +85,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `fauna-025-livestock-stray-return-and-recovery.md`                          | -       | 🔴 | M      | fauna-024 |
 | 💡 `settlements-007-systemic-settlement-structure-condition-and-shared-repair.md` | -       | 🔴 | L      | ~~world-020~~, ~~world-021~~, ~~settlements-005~~, ~~items-player-017~~ |
 | 💡 `npc-036-lossless-npc-inventory-corpse-loot-handoff.md`                     | -       | 🔴 | M      | ~~npc-010~~, ~~settlements-npcs-026~~ |
+| 💡 `npc-037-stale-work-contract-target-discovery-and-notice-cleanup.md`        | -       | 🔴 | M      | ~~npc-018~~, ~~npc-028~~ |
  💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
@@ -240,7 +241,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `026`
 - items-player: `030`
-- npc: `037`
+- npc: `038`
 - persistence: `005`
 - quests-progression: `020`
 - settlements: `008`
