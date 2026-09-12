@@ -1,5 +1,6 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { VoluntaryExpeditionTerms } from '../ai/voluntaryExpeditionJoin'
 import type { ActionAvailability, ActionResult } from '../app/actions/actionContracts'
 import type { PlacementPreviewKind, PlacementPreviewUiView } from '../app/actions/placementPreviewActions'
 import type { PlacementPreviewState as PlacementPreviewPresentation, PlacementRequirementView } from '../app/actions/placementRequirementView'
@@ -77,6 +78,16 @@ type NpcDialogueMenuState = {
   onPayWage: (() => string) | null
   /** "Daj przedmiot" (plan items-player-027) — opens the one-way give sheet. */
   onGiveItem: (() => void) | null
+  /** This NPC's own pending voluntary-join proposal (plan npc-031), resolved
+   *  once at open time — same "stable snapshot, re-resolved by the handler"
+   *  shape as `paymentClaim`. `null` when it has nothing to propose. */
+  joinProposal: VoluntaryExpeditionTerms | null
+  /** Player's answer to `joinProposal` — re-validates fresh and, only on
+   *  acceptance, creates the `npc-029` accompany commitment. */
+  onRespondToJoinProposal: ((accept: boolean) => string) | null
+  /** Player-initiated invitation (plan npc-031) — evaluates immediately
+   *  against the chosen duration and returns the NPC's answer as a line. */
+  onProposeJoin: ((durationDays: number) => string) | null
 }
 type InventoryState = {
   open: boolean
@@ -664,7 +675,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedBody: null, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -935,17 +946,19 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.resolveQuestHelp = () => questManager.onInteract(npc.id)
   state.canAskSword = state.getCanAskSword?.() ?? false
   state.paymentClaim = npc.preparePaymentRequest()
+  state.joinProposal = npc.pendingVoluntaryJoinProposal()
   state.open = true
   emitUiOpen()
   playNpcVoice(npc, pickNpcGreetingSound(npc.voiceActor))
 }
-/** Topic the dialogue menu should open on. Payment wage-claim is the only
- *  automatic exception; quest presence must not skip the topic list
- *  (plan quests-progression-014). */
-export function resolveNpcDialogueOpenTopic(): 'payment' | null {
+/** Topic the dialogue menu should open on. Payment wage-claim and a pending
+ *  self-initiated join proposal are the only automatic exceptions; quest
+ *  presence must not skip the topic list (plan quests-progression-014). */
+export function resolveNpcDialogueOpenTopic(): 'payment' | 'joinProposal' | null {
   const state = ui.npcDialogueMenu
   if (!state.open) return null
   if (state.paymentClaim) return 'payment'
+  if (state.joinProposal) return 'joinProposal'
   return null
 }
 /** Resolve the current quest/help payload when the player selects that topic. */
@@ -972,6 +985,7 @@ function resetNpcDialogueMenu(): void {
   state.helpResult = null
   state.resolveQuestHelp = null
   state.paymentClaim = null
+  state.joinProposal = null
 }
 /** `decline: false` means this close is a transition (e.g. into trade — see
  *  `openMerchantFromDialogue`), not the player actually leaving/declining — skip
@@ -1004,6 +1018,8 @@ export function configureNpcDialogueMenu(handlers: {
   onAskAboutArea: () => string | Promise<string>
   onPayWage: () => string
   onGiveItem: () => void
+  onRespondToJoinProposal: (accept: boolean) => string
+  onProposeJoin: (durationDays: number) => string
 }): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
@@ -1013,6 +1029,8 @@ export function configureNpcDialogueMenu(handlers: {
   ui.npcDialogueMenu.onAskAboutArea = handlers.onAskAboutArea
   ui.npcDialogueMenu.onPayWage = handlers.onPayWage
   ui.npcDialogueMenu.onGiveItem = handlers.onGiveItem
+  ui.npcDialogueMenu.onRespondToJoinProposal = handlers.onRespondToJoinProposal
+  ui.npcDialogueMenu.onProposeJoin = handlers.onProposeJoin
 }
 
 export function openInventory(

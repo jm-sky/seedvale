@@ -8,7 +8,18 @@ import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogu
 
 const BACKDROP_CLOSE_GUARD_MS = 300
 
-type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater' | 'aboutArea' | 'payment'
+type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater' | 'aboutArea' | 'payment' | 'proposeJoin' | 'proposeJoinResult' | 'joinProposal'
+
+/** Duration presets offered when the player proposes a voluntary expedition
+ *  (plan npc-031) — presentation-only, mirrors the shape of the paid
+ *  escort's own duration presets without importing anything from the Work
+ *  Contract UI (voluntary joining has no economics to share with it). */
+const JOIN_DURATION_OPTIONS = [
+  { days: 0.5, label: 'pół dnia' },
+  { days: 1, label: '1 dzień' },
+  { days: 2, label: '2 dni' },
+  { days: 3, label: '3 dni' },
+] as const
 const state = ui.npcDialogueMenu
 const topic = ref<Topic | null>(null)
 const openedAt = ref(0)
@@ -25,6 +36,8 @@ const foodLine = ref('')
 const waterLine = ref('')
 const areaLine = ref('')
 const paymentLine = ref('')
+const joinProposeLine = ref('')
+const joinProposalLine = ref('')
 const discoveringArea = ref(false)
 
 const responseText = computed(() => {
@@ -37,11 +50,13 @@ const responseText = computed(() => {
     case 'currentActivity': return currentActivityLine(state.npc.getCurrentActivity(state.timeOfDay), archetype.value)
     case 'goodbye': return goodbyeLine(archetype.value)
     case 'help': return state.helpResult?.line ?? ''
+    case 'joinProposal': return joinProposalLine.value || 'Chciałbym dołączyć do twojej wyprawy. Zabierzesz mnie?'
     case 'payment': return paymentLine.value || (
       state.paymentClaim
         ? `Za wykonaną pracę należy mi się ${state.paymentClaim.coins} monet.`
         : ''
     )
+    case 'proposeJoinResult': return joinProposeLine.value
     case 'requestFood': return foodLine.value
     case 'requestWater': return waterLine.value
     default: return ''
@@ -55,6 +70,8 @@ function resetMenu(): void {
   waterLine.value = ''
   areaLine.value = ''
   paymentLine.value = ''
+  joinProposeLine.value = ''
+  joinProposalLine.value = ''
 }
 function backToTopics(): void { emitUiClick(); resetMenu() }
 function selectTopic(next: Topic): void {
@@ -110,6 +127,27 @@ function payWage(): void {
 function deferWage(): void {
   emitUiClick()
   resetMenu()
+}
+
+function openProposeJoin(): void {
+  emitUiClick()
+  topic.value = 'proposeJoin'
+}
+
+function proposeJoin(days: number): void {
+  emitUiClick()
+  joinProposeLine.value = state.onProposeJoin?.(days) ?? ''
+  topic.value = 'proposeJoinResult'
+}
+
+function acceptJoinProposal(): void {
+  emitUiClick()
+  joinProposalLine.value = state.onRespondToJoinProposal?.(true) ?? ''
+}
+
+function declineJoinProposal(): void {
+  emitUiClick()
+  joinProposalLine.value = state.onRespondToJoinProposal?.(false) ?? ''
 }
 
 function openTrade(): void {
@@ -211,6 +249,13 @@ watch(() => state.open, (open) => {
           Poproś o wodę
         </button>
         <button
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="openProposeJoin"
+        >
+          Zaproponuj udział w wyprawie
+        </button>
+        <button
           v-for="item in ([['help', 'Może w czymś ci pomóc?'], ['aboutSelf', 'Powiedz coś o sobie.'], ['currentActivity', 'Co teraz robisz?'], ['aboutVillage', 'Powiedz coś o wiosce.'], ['goodbye', 'Nic, miłego dnia!']] as const)"
           :key="item[0]"
           type="button"
@@ -218,6 +263,30 @@ watch(() => state.open, (open) => {
           @click="selectTopic(item[0])"
         >
           {{ item[1] }}
+        </button>
+      </div>
+      <div
+        v-else-if="topic === 'proposeJoin'"
+        class="flex flex-col gap-2"
+      >
+        <p class="text-sm leading-relaxed opacity-90">
+          Na jak długo chcesz zaproponować wspólną wyprawę?
+        </p>
+        <button
+          v-for="opt in JOIN_DURATION_OPTIONS"
+          :key="opt.days"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="proposeJoin(opt.days)"
+        >
+          {{ opt.label }}
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+          @click="backToTopics"
+        >
+          Wróć
         </button>
       </div>
       <div
@@ -244,6 +313,25 @@ watch(() => state.open, (open) => {
             @click="deferWage"
           >
             Jeszcze nie
+          </button>
+        </div>
+        <div
+          v-else-if="topic === 'joinProposal' && !joinProposalLine && state.joinProposal"
+          class="flex gap-2"
+        >
+          <button
+            type="button"
+            class="flex-1 cursor-pointer rounded-md bg-white/10 px-3 py-2 text-sm font-medium hover:bg-white/20"
+            @click="acceptJoinProposal"
+          >
+            Weź go ze sobą
+          </button>
+          <button
+            type="button"
+            class="flex-1 cursor-pointer rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+            @click="declineJoinProposal"
+          >
+            Nie tym razem
           </button>
         </div>
         <div

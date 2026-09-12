@@ -94,6 +94,7 @@ import {
   resolveNpcCorpsePhase,
 } from '../settlement/npcPostDeath'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
+import { isAdultAge } from '../settlement/professionStaffing'
 import { householdStorageDestination, resolveHouseholdWoodStorage } from '../settlement/storageDestinations'
 import { STRUCTURE_REPAIR_WORK_SESSION_HOURS, STRUCTURE_REPAIR_WORK_SESSION_SEC } from '../settlement/structureCondition'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
@@ -315,6 +316,7 @@ import {
   buildEscortProvisionContext,
   countPersonalDrinkPortions,
   countPersonalFood,
+  escortAwayHours,
   findDrinkablePersonalWaterContainer,
   provisionContractSupplies,
   readContractProvisionAvailability,
@@ -399,6 +401,15 @@ import {
   type ScheduleTemplate,
 } from './schedule'
 import { conversationAttemptCooldownSec } from './socialBehaviour'
+import {
+  DEFAULT_VOLUNTARY_JOIN_DANGER,
+  evaluateVoluntaryJoin,
+  isVoluntaryInitiativeEligible,
+  isVoluntaryJoinAccepted,
+  type VoluntaryExpeditionTerms,
+  type VoluntaryJoinContext,
+  type VoluntaryJoinEvaluation,
+} from './voluntaryExpeditionJoin'
 import { type NpcDecisionTarget, weatherShelterPressure } from './weatherPressure'
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
@@ -408,6 +419,14 @@ function randRange([min, max]: [number, number]): number {
 
 const WALK_SPEED = 2.4
 const ARRIVE = 0.55
+/** Default bounded context for a self-initiated voluntary-join proposal
+ *  (plan npc-031) — the NPC has no way to know the player's own plans, so it
+ *  offers a short, modest duration rather than an open-ended commitment. The
+ *  player's own invitation flow lets them pick a longer duration instead. */
+const DEFAULT_VOLUNTARY_JOIN_PROPOSAL_TERMS: VoluntaryExpeditionTerms = { completionPolicy: 'duration', durationDays: 1 }
+/** Throttle before this NPC may propose again after a proposal was
+ *  surfaced, accepted, refused, or the player wandered off mid-approach. */
+const VOLUNTARY_JOIN_PROPOSAL_COOLDOWN_DAYS = 1
 export const NPC_HEIGHT = 1.75
 /** Need-marker sphere geometry (review 2026-09-03 §5 E6 / §8 step 7c) —
  *  identical for every NPC, so it's shared at module scope instead of one
@@ -601,6 +620,13 @@ export type NpcInspectionSnapshot = {
     execution: 'detailed' | 'off-screen'
     stayAnchor?: { x: number, y: number, z: number }
   } | null
+  /** This NPC's own pending self-initiated voluntary-join proposal (plan
+   *  npc-031), or `null` when it has nothing to propose right now. Optional
+   *  on synthetic test snapshots. */
+  voluntaryJoin?: {
+    pendingProposal: VoluntaryExpeditionTerms | null
+    cooldownUntilDays: number
+  }
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -1058,6 +1084,10 @@ export class NpcAgent {
   readonly traits: readonly Trait[]
   readonly personality: CharacterDef['personality']
   readonly relation: FamilyRelation
+  /** Real age (plan npc-001), same source `generatePhysicalProfile` already
+   *  consumes at construction — used by voluntary-join adult eligibility and
+   *  age-flexibility scoring (plan npc-031), not persisted separately. */
+  readonly age: number
   readonly health: HealthState
   readonly stamina: StaminaState
   readonly vigor: VigorState
@@ -1380,6 +1410,16 @@ export class NpcAgent {
   /** Transient nearby-player approach for a payable claim. Never persisted. */
   private paymentApproachIntent: ApproachPlayerIntent | null = null
   private paymentApproachInterruptReason: string | null = null
+  /** NPC-initiated voluntary-join proposal (plan npc-031) surfaced through
+   *  the normal dialogue menu once this NPC has approached the player.
+   *  Transient/never persisted — a lost proposal on reload is an ordinary
+   *  missed opportunity, not an exploit, matching implementation notes
+   *  "keep it transient unless persistence is required to prevent
+   *  save/reload exploits". */
+  private pendingJoinProposal: VoluntaryExpeditionTerms | null = null
+  /** Throttle against re-proposing immediately after a proposal was
+   *  surfaced, accepted or refused (plan npc-031 "never spam proposals"). */
+  private voluntaryJoinCooldownUntilDays = 0
   /** Last bounded contract-provision failure, if any (plan npc-017). */
   private lastProvisionFailureReason: string | null = null
   /** The one construction target kind a work contract can reference today
@@ -1581,6 +1621,7 @@ export class NpcAgent {
     this.traits = character.traits
     this.personality = character.personality
     this.relation = member.relation
+    this.age = member.age
     this.health = npcState.health
     this.stamina = npcState.stamina
     this.vigor = npcState.vigor
@@ -1834,6 +1875,10 @@ export class NpcAgent {
           stayAnchor: commitment.stayAnchor,
         }
       })(),
+      voluntaryJoin: {
+        pendingProposal: this.pendingJoinProposal,
+        cooldownUntilDays: this.voluntaryJoinCooldownUntilDays,
+      },
       action: this.pendingAction
         ? {
             kind: this.pendingAction.kind,
@@ -4561,16 +4606,20 @@ export class NpcAgent {
   }
 
   /**
-   * Idle-duty dispatch (plan npc-029, extended by npc-030) — a paid-escort
-   * service boundary first (never masked by the accompany executor claiming
-   * this idle slot every tick), then accompany, then Work Contract, then the
-   * ordinary schedule. Deterministic; incompatible work/accompany pairs are
-   * rejected at creation, not re-arbitrated here.
+   * Idle-duty dispatch (plan npc-029, extended by npc-030/npc-031) — a
+   * paid-escort service boundary first (never masked by the accompany
+   * executor claiming this idle slot every tick), then accompany, then Work
+   * Contract, then a voluntary-join proposal, then the ordinary schedule.
+   * Deterministic; incompatible work/accompany pairs are rejected at
+   * creation, not re-arbitrated here. Voluntary initiative deliberately sits
+   * last — it must never jump ahead of an accepted Work Contract or an
+   * already-active accompany commitment (plan npc-031 implementation notes).
    */
   private tryPursueIdleDuty(scheduledActivity: ScheduleActivity): boolean {
     if (this.tryResolveEscortService()) return true
     if (this.tryPursueAccompany()) return true
-    return this.tryPursueWorkContract(scheduledActivity)
+    if (this.tryPursueWorkContract(scheduledActivity)) return true
+    return this.tryProposeVoluntaryJoin(scheduledActivity)
   }
 
   /**
@@ -4625,6 +4674,173 @@ export class NpcAgent {
       curious: this.traits.includes('curious'),
       danger: DEFAULT_ESCORT_EVALUATION_CONTEXT.danger,
     }
+  }
+
+  /** Bounded, deterministic willingness context for voluntary joining (plan
+   *  npc-031) — every fact `evaluateVoluntaryJoin()` needs, derived from
+   *  already-owned commitment/need/schedule/social state; never a second
+   *  `busy`/`available`/`recruitable` flag. `scheduledActivity` comes from
+   *  whichever caller already resolved it (idle-duty dispatch, or
+   *  `getScheduledActivity(timeOfDay)` for the interaction layer) — this
+   *  never re-derives it from a raw clock itself. */
+  private voluntaryJoinContext(
+    terms: VoluntaryExpeditionTerms,
+    scheduledActivity: ScheduleActivity,
+  ): VoluntaryJoinContext {
+    const criticalNeed = pickNeed(this.needs, { ...this.needPickOptions(), critical: true })
+    const social = this.getPlayerSocial(this.id)
+    const activeWorkContract = this.workContracts?.findActiveWorkByNpc(this.id)
+    return {
+      dead: this.health.dead,
+      isAdult: isAdultAge(this.age),
+      hasIncompatibleAccompany: this.npcState.accompanyCommitment != null,
+      hasIncompatibleWorkContract: activeWorkContract != null,
+      hasCriticalNeed: criticalNeed !== 'idle' || shouldCollapseSleep(this.vigor),
+      inCombatOrFlee: this.phase === 'combat',
+      personality: this.personality,
+      curious: this.traits.includes('curious'),
+      role: this.role,
+      age: this.age,
+      hasSpouse: this.relation === 'husband' || this.relation === 'wife',
+      hasChildren: this.familyMembers.some((member) => member.relation === 'child'),
+      scheduledActivity,
+      hasWorkplace: this.workplace != null,
+      relationLevel: social.relationLevel,
+      trust: social.reputation.trust,
+      competence: social.reputation.competence,
+      courage: social.reputation.courage,
+      awayHours: escortAwayHours(terms, {
+        npcX: this.mesh.position.x,
+        npcZ: this.mesh.position.z,
+        walkSpeed: WALK_SPEED,
+        dayLengthSec: this.dayLengthSec,
+      }),
+      danger: DEFAULT_VOLUNTARY_JOIN_DANGER,
+    }
+  }
+
+  /**
+   * Player-invitation entry point (plan npc-031 §"Player invitation") — the
+   * dialogue/interaction layer calls this only at the moment the player
+   * commits to a proposed duration, never against an earlier cached result
+   * (implementation notes "re-evaluate at the moment the player chooses the
+   * invitation action"). On acceptance this creates the exact same `npc-029`
+   * accompany commitment paid escort uses — no Work Contract, no reward.
+   *
+   * @domain npc
+   */
+  respondToVoluntaryJoinInvitation(terms: VoluntaryExpeditionTerms, timeOfDay: number): VoluntaryJoinEvaluation {
+    const evaluation = evaluateVoluntaryJoin(this.voluntaryJoinContext(terms, this.getScheduledActivity(timeOfDay)))
+    const accepted = isVoluntaryJoinAccepted(evaluation)
+    this.trace.record({
+      simTime: this.simClock,
+      type: 'voluntaryJoin.evaluated',
+      source: 'invitation',
+      accepted,
+      score: evaluation.score,
+      threshold: evaluation.threshold,
+      blockers: evaluation.blockers,
+    })
+    if (accepted) this.startAccompany({ kind: 'voluntary' }, 'follow')
+    return evaluation
+  }
+
+  /** Read-only view of this NPC's own pending self-initiated proposal (plan
+   *  npc-031 §"NPC initiative") for the dialogue layer to surface — resolved
+   *  once, at dialogue-open time, same "stable ids only" shape as
+   *  `preparePaymentRequest()`. `null` when this NPC has nothing to
+   *  propose right now. */
+  pendingVoluntaryJoinProposal(): VoluntaryExpeditionTerms | null {
+    return this.pendingJoinProposal
+  }
+
+  /**
+   * The player's answer to this NPC's own proposal (plan npc-031) — always
+   * clears the pending proposal and starts the re-propose cooldown, whether
+   * accepted or refused. Re-validates fresh against current state, so a
+   * proposal the player sat on can still come back refused if the world
+   * moved on in the meantime.
+   *
+   * @domain npc
+   */
+  respondToVoluntaryJoinProposal(accept: boolean, timeOfDay: number): VoluntaryJoinEvaluation | null {
+    const terms = this.pendingJoinProposal
+    this.pendingJoinProposal = null
+    this.voluntaryJoinCooldownUntilDays = this.nowDays() + VOLUNTARY_JOIN_PROPOSAL_COOLDOWN_DAYS
+    if (!terms) return null
+    const evaluation = evaluateVoluntaryJoin(this.voluntaryJoinContext(terms, this.getScheduledActivity(timeOfDay)))
+    const accepted = accept && isVoluntaryJoinAccepted(evaluation)
+    this.trace.record({
+      simTime: this.simClock,
+      type: 'voluntaryJoin.evaluated',
+      source: 'initiative',
+      accepted,
+      score: evaluation.score,
+      threshold: evaluation.threshold,
+      blockers: evaluation.blockers,
+    })
+    if (accepted) this.startAccompany({ kind: 'voluntary' }, 'follow')
+    return evaluation
+  }
+
+  /**
+   * NPC-initiated voluntary-join proposal (plan npc-031 §"NPC initiative")
+   * — only reached after every higher-priority idle duty already had its
+   * turn (escort service, accompany, Work Contract), per `tryPursueIdleDuty`
+   * ordering. Approaches like `tryRequestWorkPayment()`, then only ever
+   * *surfaces* a normal dialogue proposal on arrival — never creates the
+   * accompany commitment merely because the initiative gate passed.
+   */
+  private tryProposeVoluntaryJoin(scheduledActivity: ScheduleActivity): boolean {
+    if (this.health.dead) return false
+    if (this.pendingJoinProposal) {
+      if (!isPlayerLocallyEligible(
+        this.mesh.position.x,
+        this.mesh.position.z,
+        this.lastObserverX,
+        this.lastObserverZ,
+      )) {
+        this.pendingJoinProposal = null
+        this.voluntaryJoinCooldownUntilDays = this.nowDays() + VOLUNTARY_JOIN_PROPOSAL_COOLDOWN_DAYS
+      }
+      return false
+    }
+    if (this.voluntaryJoinCooldownUntilDays > this.nowDays()) return false
+    if (!isPlayerLocallyEligible(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.lastObserverX,
+      this.lastObserverZ,
+    )) return false
+    const terms = DEFAULT_VOLUNTARY_JOIN_PROPOSAL_TERMS
+    const evaluation = evaluateVoluntaryJoin(this.voluntaryJoinContext(terms, scheduledActivity))
+    const social = this.getPlayerSocial(this.id)
+    if (!isVoluntaryInitiativeEligible(evaluation, {
+      relationLevel: social.relationLevel,
+      renown: Math.max(0, Math.min(1, social.renown / 100)),
+    })) return false
+    this.trace.record({
+      simTime: this.simClock,
+      type: 'voluntaryJoin.initiativeGate',
+      score: evaluation.score,
+      threshold: evaluation.threshold,
+    })
+    if (isPlayerApproachArrived(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.lastObserverX,
+      this.lastObserverZ,
+    )) {
+      this.pendingJoinProposal = terms
+      return true
+    }
+    this.startAction({
+      kind: 'approachPlayer',
+      destination: copyVec3({ x: this.lastObserverX, y: this.mesh.position.y, z: this.lastObserverZ }),
+      durationSec: 0.6 * this.waitMultiplier,
+      onComplete: () => { this.pendingJoinProposal = terms },
+    })
+    return true
   }
 
   /**

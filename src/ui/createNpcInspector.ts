@@ -238,6 +238,8 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'queue.left': return `${t}s queue.left → ${event.queueId}`
     case 'queue.served': return `${t}s queue.served → ${event.queueId}`
     case 'strategy.selected': return `${t}s strategy.selected → ${event.selected ?? '-'} (${event.need})`
+    case 'voluntaryJoin.evaluated': return `${t}s voluntaryJoin.evaluated → ${event.source} ${event.accepted ? 'accepted' : 'refused'} (score ${event.score.toFixed(1)}/${event.threshold.toFixed(1)}${event.blockers.length ? `, blocked: ${event.blockers.join(', ')}` : ''})`
+    case 'voluntaryJoin.initiativeGate': return `${t}s voluntaryJoin.initiativeGate → score ${event.score.toFixed(1)}/${event.threshold.toFixed(1)}`
   }
 }
 

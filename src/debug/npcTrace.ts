@@ -100,6 +100,22 @@ export type NpcTraceEvent =
   | { simTime: number; type: 'accompany.started'; source: 'voluntary' | 'work-contract'; mode: 'follow' | 'stay' }
   | { simTime: number; type: 'accompany.modeChanged'; mode: 'follow' | 'stay' }
   | { simTime: number; type: 'accompany.ended'; reason: 'abandoned' | 'cancelled' | 'death' | 'finished' }
+  /** Voluntary expedition-joining diagnostics (plan npc-031) — a willingness
+   *  decision at an actual boundary (player invitation answered, or this
+   *  NPC's own initiative proposal answered), never one entry per idle tick.
+   *  `initiativeGate` fires once, separately, when this NPC's own initiative
+   *  gate first passes and it starts approaching the player — before the
+   *  proposal itself has been answered. */
+  | {
+    simTime: number
+    type: 'voluntaryJoin.evaluated'
+    source: 'invitation' | 'initiative'
+    accepted: boolean
+    score: number
+    threshold: number
+    blockers: readonly string[]
+  }
+  | { simTime: number; type: 'voluntaryJoin.initiativeGate'; score: number; threshold: number }
 
 export type NpcTraceEventType = NpcTraceEvent['type']
 

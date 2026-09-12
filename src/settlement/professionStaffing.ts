@@ -269,9 +269,18 @@ function isReservedFamily(family: FamilyDef): boolean {
   return family.id.startsWith('family-reserved')
 }
 
-/** Active workforce: `age >= 18`. Children never count toward coverage. */
+/** The settlement-wide adulthood convention (plan npc-031 §"Eligibility
+ *  before scoring" — "use the same adulthood convention already used by
+ *  settlement generation/staffing; do not invent a second age threshold").
+ *  Any other domain gating adult-only behaviour on real age should call this
+ *  rather than re-hardcoding `18`. */
+export function isAdultAge(age: number): boolean {
+  return age >= 18
+}
+
+/** Active workforce. Children never count toward coverage. */
 export function isProfessionAdult(member: FamilyMember): boolean {
-  return member.age >= 18
+  return isAdultAge(member.age)
 }
 
 /** Household index of the settlement's shepherd adult, or `null`. At most one. */

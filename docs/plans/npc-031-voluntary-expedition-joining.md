@@ -1,15 +1,30 @@
 # Plan: Voluntary expedition joining
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** npc-029
+**Depends on:** ~~npc-029~~
 **Domain:** `npc`
 **Subdomains:** `decision-making` `relationships` `behavior`
 **Tags:** `companions` `voluntary-joining` `social` `expedition`
 **Roadmap:** `companions.md`
 **Model:** Opus, Sonnet
+
+## Implementation status
+
+Implemented on `main` (2026-09-12):
+
+- `ai/voluntaryExpeditionJoin.ts`: one pure, deterministic evaluator (`evaluateVoluntaryJoin()`) — hard blockers (dead, not an adult, incompatible active accompany/Work Contract, critical need, unresolved combat/flee) checked before any score; willingness score from Big Five personality + `curious` + a small smooth age-flexibility term, personal relation + trust/competence/courage (courage combined with danger), a small independent role-suitability table, minus household responsibility (spouse/children), a conscientiousness-scaled schedule-conflict cost, expected-away-hours cost, and a neuroticism-amplified/competence-relieved danger cost. Renown deliberately never enters the score — `isVoluntaryInitiativeEligible()` is the separate initiative-only gate (stronger score margin + a `stranger` needing enough renown to plausibly recognize the player). Reuses `ExpeditionEscortTerms` (plan npc-030) directly as the shared neutral expedition context — it already carries no economic field, so no third representation was needed.
+- `settlement/professionStaffing.ts`: extracted `isAdultAge(age)` (the existing `age >= 18` convention) so this plan's adult-eligibility blocker never invents a second threshold; `isProfessionAdult()` now calls it.
+- `ai/NpcAgent.ts`: new `readonly age` field (same `member.age` source `generatePhysicalProfile` already consumes); `voluntaryJoinContext()` assembles the evaluator's input from existing commitment/need/schedule/social state (no new `busy`/`available`/`recruitable` flags); `respondToVoluntaryJoinInvitation()` (player invitation, re-evaluates fresh at the moment the player commits to a duration) and `respondToVoluntaryJoinProposal()` (the player's answer to this NPC's own proposal) both call the same evaluator and, only on acceptance, call the existing `startAccompany({kind:'voluntary'}, 'follow')` seam — no Work Contract, no reward, ever created. `tryProposeVoluntaryJoin()` is wired into `tryPursueIdleDuty()` *after* escort service, accompany and Work Contract, so initiative never jumps the queue; it approaches the player exactly like a payment request (`isPlayerLocallyEligible`/`isPlayerApproachArrived`, ordinary `approachPlayer` action) and only ever surfaces a pending proposal — never creates the commitment itself. A transient (never persisted) per-NPC cooldown throttles re-proposing.
+- Player invitation: a new "Zaproponuj udział w wyprawie" topic in the existing Vue NPC dialogue menu (`ui-vue/NpcDialogueMenu.vue`/`store.ts`, wired in `app/inventoryWiring.ts`) — duration presets (mirroring paid escort's own V1 duration-only UI), immediate accept/refuse resolution, no economics anywhere in the flow.
+- NPC initiative: the same dialogue menu auto-opens a "propose" topic (mirroring the existing payment-claim auto-open exception) with plain accept/decline; declining is an ordinary social result with no commitment and no relationship penalty.
+- Diagnostics: `voluntaryJoin.evaluated`/`voluntaryJoin.initiativeGate` NPC trace events and a `voluntaryJoin` inspection-snapshot field (pending proposal + cooldown), extending the existing trace/inspector rather than a new debug screen.
+- Automated tests: `ai/voluntaryExpeditionJoin.test.ts` (22 cases) covering purity, every blocker, relationship/reputation/personality/danger direction, household/schedule outweighing curiosity, and the initiative gate's stronger margin + renown-for-strangers rule.
+- `docs/state/npc.md` updated with the idle-duty dispatch ordering change and a new "Voluntary expedition joining" paragraph.
+
+Browser/gameplay verification remains manual (see Verification § below).
 
 ## Goal
 

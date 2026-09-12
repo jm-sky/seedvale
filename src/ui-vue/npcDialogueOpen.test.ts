@@ -70,6 +70,7 @@ function stubNpc(
     displayName: name,
     getDialogueLine: () => dialogueLine,
     preparePaymentRequest: () => paymentClaim,
+    pendingVoluntaryJoinProposal: () => null,
     voiceActor: 'alex',
     mesh: { position: { x: 0, y: 0, z: 0 } },
   } as NpcAgent

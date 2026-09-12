@@ -231,3 +231,22 @@ export function requestAssistanceLine(
   if (outcome === 'inventory_full') return 'Nie masz już miejsca w ekwipunku.'
   return 'Wybacz, ale nie chcę się tym dzielić.'
 }
+
+// --- "Zaproponuj udział w wyprawie" (plan npc-031) ---
+
+/** `blockers`' shape is written out inline rather than importing
+ *  `VoluntaryJoinBlocker` from `ai/voluntaryExpeditionJoin`, same "no
+ *  decision-logic import" convention as `requestAssistanceLine` above — the
+ *  willingness *decision* already happened by the time this only turns it
+ *  into a short spoken line. Flat lines regardless of archetype. */
+export function voluntaryJoinResponseLine(accepted: boolean, blockers: readonly string[]): string {
+  if (accepted) return 'Chętnie się przyłączę! Daj znać, gdy ruszamy.'
+  if (blockers.includes('active-accompany') || blockers.includes('active-work-contract')) {
+    return 'Nie mogę teraz — mam już inne zobowiązanie.'
+  }
+  if (blockers.includes('critical-need') || blockers.includes('combat-or-flee')) {
+    return 'Nie teraz, muszę się najpierw tym zająć.'
+  }
+  if (blockers.includes('not-adult')) return 'To nie dla mnie — jestem na to za młody.'
+  return 'Dziękuję za propozycję, ale wolę zostać.'
+}

@@ -22,7 +22,8 @@ import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldBundle } from './worldBundle'
-import { aboutAreaLine, requestAssistanceLine } from '../ai/dialogueTemplates'
+import { aboutAreaLine, requestAssistanceLine, voluntaryJoinResponseLine } from '../ai/dialogueTemplates'
+import { isVoluntaryJoinAccepted, type VoluntaryExpeditionTerms } from '../ai/voluntaryExpeditionJoin'
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { readBook } from '../items/books'
 import { expandFoodBatchesToUnits } from '../items/foodItems'
@@ -608,6 +609,26 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       const npc = ui.npcDialogueMenu.npc as NpcAgent | null
       if (!npc) return
       openNpcGiveItem(npc.id, npc.displayName)
+    },
+    onRespondToJoinProposal: (accept) => {
+      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
+      if (!npc) return 'Coś jest nie tak — spróbuj za chwilę.'
+      const evaluation = npc.respondToVoluntaryJoinProposal(accept, dayNight.timeOfDay)
+      ui.npcDialogueMenu.joinProposal = null
+      // `accept: false` is the player declining the NPC's own offer — an
+      // ordinary social result, not the NPC refusing (plan "Refusal should
+      // be an ordinary social result... not create a permanent anti-
+      // companion state or relationship penalty by default").
+      if (!accept) return 'Rozumiem, innym razem.'
+      if (!evaluation) return 'Ta propozycja już nieaktualna.'
+      return voluntaryJoinResponseLine(isVoluntaryJoinAccepted(evaluation), evaluation.blockers)
+    },
+    onProposeJoin: (durationDays) => {
+      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
+      if (!npc) return 'Coś jest nie tak — spróbuj za chwilę.'
+      const terms: VoluntaryExpeditionTerms = { completionPolicy: 'duration', durationDays }
+      const evaluation = npc.respondToVoluntaryJoinInvitation(terms, dayNight.timeOfDay)
+      return voluntaryJoinResponseLine(isVoluntaryJoinAccepted(evaluation), evaluation.blockers)
     },
   })
 
