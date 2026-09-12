@@ -315,6 +315,10 @@ Generated from TypeScript imports.
 - `items/campRepair.ts`
 - `items/constructionMaterials.test.ts`
 - `items/createPlacedTents.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/structureCondition.ts`
+- `settlement/structureRepairCandidates.ts`
+- `settlement/structureStateRegistry.ts`
 - `world/createPlayerWells.ts`
 - `world/createSleepingUtilities.ts`
 - `world/palisade.test.ts`

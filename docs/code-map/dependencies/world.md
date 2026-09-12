@@ -1147,6 +1147,9 @@ Generated from TypeScript imports.
 - `items/campRepair.ts`
 - `items/createPlacedTents.ts`
 - `persistence/saveData.ts`
+- `settlement/structureCondition.test.ts`
+- `settlement/structureCondition.ts`
+- `settlement/structureStateRegistry.test.ts`
 - `world/condition.test.ts`
 - `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
@@ -2803,6 +2806,7 @@ Generated from TypeScript imports.
 - `items/campRepair.ts`
 - `items/createPlacedTents.ts`
 - `persistence/saveData.ts`
+- `settlement/structureCondition.ts`
 - `world/playerWell.ts`
 - `world/repair.test.ts`
 - `world/sleepingUtilities.ts`

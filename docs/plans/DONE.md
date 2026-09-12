@@ -4,8 +4,15 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-007-systemic-settlement-structure-condition-and-shared-repair` | 2026-09-12 08:02:53 | —                   | `settlements`    | —          |
+| `world-026-storms-thunder-animal-scare-and-snow-visuals`               | 2026-09-12 07:49:56 | —                   | `world`          | —          |
+| `npc-036-lossless-npc-inventory-corpse-loot-handoff`                   | 2026-09-12 07:13:45 | —                   | `npc`            | —          |
+| `fauna-019-real-cave-habitats-and-animal-home-navigation`              | 2026-09-12 06:25:31 | —                   | `fauna`          | —          |
+| `fauna-022-animal-variants-and-exceptional-dangerous-animals`          | 2026-09-12 05:52:56 | —                   | `fauna`          | —          |
+| `settlements-npcs-019-persistent-and-off-screen-transport`             | 2026-09-11 23:48:30 | —                   | `settlements-npcs` | —          |
 | `world-terrain-019-cave-heightfield-production-migration`              | —                   | 2026-09-11 23:01:49 | `world-terrain`  | fauna-019-real-cave-habitats-and-animal-home-navigation, npc-027-spatial-context-and-cave-traversal, quests-progression-008-treasure-map-bear-cave, world-terrain-017-abandoned-mountain-mine-landmark, world-018-cave-aware-rich-finite-resource-deposits |
 | `world-terrain-020-adventure-cave-variant`                             | —                   | 2026-09-11 22:52:45 | `world-terrain`  | —          |
+| `settlements-npcs-007-bandages-and-herbal-medicine`                    | —                   | 2026-09-11 21:57:50 | `settlements-npcs` | —          |
 | `world-terrain-021-low-cost-terrain-and-cave-surface-albedo`           | 2026-09-11 21:29:10 | —                   | `world-terrain`  | —          |
 | `world-terrain-022-cave-interior-rock-clutter`                         | 2026-09-11 21:18:18 | —                   | `world-terrain`  | —          |
 | `settlements-npcs-006-wool-to-material`                                | 2026-09-11 14:50:14 | —                   | `settlements-npcs` | —          |

@@ -130,24 +130,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 645
-- `CurrentActivity` — type — line 479
-- `CurrentActivityKind` — type — line 472
-- `NPC_HEIGHT` — const — line 382
-- `NPC_MODEL_URLS` — const — line 446
-- `NPC_SHADOW_DISTANCE` — const — line 396
-- `NpcAgent` — class — line 989
+- `classifyPendingActivity` — function — line 647
+- `CurrentActivity` — type — line 481
+- `CurrentActivityKind` — type — line 474
+- `NPC_HEIGHT` — const — line 384
+- `NPC_MODEL_URLS` — const — line 448
+- `NPC_SHADOW_DISTANCE` — const — line 398
+- `NpcAgent` — class — line 995
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 898
-- `NpcInspectionSnapshot` — type — line 494
-- `NpcWhy` — type — line 620
-- `projectNpcWhy` — function — line 685
-- `promoteChainKind` — function — line 637
+- `NpcAgentDeps` — type — line 900
+- `NpcInspectionSnapshot` — type — line 496
+- `NpcWhy` — type — line 622
+- `projectNpcWhy` — function — line 687
+- `promoteChainKind` — function — line 639
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -213,13 +213,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcDecision.ts`
 
-- `decideNpcAction` — function — line 90
+- `decideNpcAction` — function — line 93
 - `NPC_DECISION_PRIORITY` — const — line 45
 - `NpcDecisionInput` — type — line 26
 - `NpcDecisionKind` — type — line 24
-- `NpcInterruptInput` — type — line 110
-- `scoreNpcDecisions` — function — line 102
-- `shouldInterruptAction` — function — line 132
+- `NpcInterruptInput` — type — line 113
+- `scoreNpcDecisions` — function — line 105
+- `shouldInterruptAction` — function — line 135
 
 ## `ai/npcLoadout.ts`
 
@@ -422,7 +422,7 @@ Generated from exported TypeScript symbols.
 
 ## `ai/weatherPressure.ts`
 
-- `NpcDecisionTarget` — type — line 17
+- `NpcDecisionTarget` — type — line 19
   - domain: npc
-- `WEATHER_SEVERE_SHELTER_THRESHOLD` — const — line 45
-- `weatherShelterPressure` — function — line 55
+- `WEATHER_SEVERE_SHELTER_THRESHOLD` — const — line 54
+- `weatherShelterPressure` — function — line 64

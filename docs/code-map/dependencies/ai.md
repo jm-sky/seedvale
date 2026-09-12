@@ -109,6 +109,8 @@ Generated from TypeScript imports.
 - `settlement/places.ts`
 - `settlement/props.ts`
 - `settlement/storageDestinations.ts`
+- `settlement/structureCondition.ts`
+- `settlement/structureRepairCandidates.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`

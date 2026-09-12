@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 383
-- `CreateSettlementDeps` — type — line 252
-- `Settlement` — type — line 130
-- `settlementSpawnPoint` — function — line 240
+- `createSettlement` — function — line 392
+- `CreateSettlementDeps` — type — line 254
+- `Settlement` — type — line 132
+- `settlementSpawnPoint` — function — line 242
 
 ## `settlement/decorProps.ts`
 
@@ -455,15 +455,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 270
-- `buildSettlementProps` — function — line 678
-- `disposeSettlementGroup` — function — line 1862
-- `SettlementHouseBed` — type — line 138
-- `SettlementHouseLandmark` — type — line 109
-- `SettlementLandmarks` — type — line 145
-- `SettlementLandPlot` — type — line 259
-- `SettlementStorageVisuals` — type — line 251
-- `SettlementTreeLandmark` — type — line 277
+- `BlacksmithWorkplace` — type — line 276
+- `buildSettlementProps` — function — line 684
+- `disposeSettlementGroup` — function — line 1869
+- `SettlementHouseBed` — type — line 144
+- `SettlementHouseLandmark` — type — line 110
+- `SettlementLandmarks` — type — line 151
+- `SettlementLandPlot` — type — line 265
+- `SettlementStorageVisuals` — type — line 257
+- `SettlementTreeLandmark` — type — line 283
 
 ## `settlement/propSpecs.ts`
 
@@ -669,13 +669,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 224
+- `createSettlementsManager` — function — line 290
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 93
+- `SettlementsManager` — type — line 109
 
 ## `settlement/settlementStructures.ts`
 
@@ -748,6 +748,55 @@ Generated from exported TypeScript symbols.
 - `woodPileVisualState` — function — line 71
 - `WoodPileVisualState` — type — line 43
 
+## `settlement/structureCondition.ts`
+
+- `applyStructureDamage` — function — line 169
+  - domain: settlements
+- `applyStructureRepairWork` — function — line 286
+  - domain: settlements
+- `beginStructureRepair` — function — line 237
+  - domain: settlements
+- `hasActiveStructureRepair` — function — line 55
+- `isStructureRepairProblem` — function — line 152
+- `pristineStructureState` — function — line 42
+- `quoteStructureRepair` — function — line 203
+  - domain: settlements
+- `resolveStructureCondition` — function — line 141
+- `SettlementStructureState` — type — line 31
+  - domain: settlements
+- `STRUCTURE_REPAIR_RESUME_PRESSURE` — const — line 119
+- `STRUCTURE_REPAIR_WORK_SESSION_HOURS` — const — line 310
+- `STRUCTURE_REPAIR_WORK_SESSION_SEC` — const — line 309
+- `structureConditionStateFromSnapshot` — function — line 312
+- `structureRepairPolicy` — function — line 105
+- `StructureRepairPolicy` — type — line 63
+- `structureRepairPressureFromCondition` — function — line 129
+  - domain: settlements
+- `StructureRepairQuote` — type — line 184
+- `StructureRepairStartOutcome` — type — line 221
+- `StructureRepairWorkOutcome` — type — line 271
+
+## `settlement/structureRepairCandidates.ts`
+
+- `createNpcStructureRepairHooks` — function — line 96
+- `NpcStructureRepairHooks` — type — line 78
+  - domain: settlements
+- `ResidentialRepairCandidate` — type — line 26
+  - domain: settlements
+- `residentialRepairCandidates` — function — line 40
+
+## `settlement/structureStateRegistry.ts`
+
+- `beginRegistryStructureRepair` — function — line 57
+  - domain: settlements
+- `contributeRegistryStructureRepairWork` — function — line 76
+- `createSettlementStructureStateRegistry` — function — line 93
+- `SettlementStructureStateRegistry` — type — line 28
+  - domain: settlements
+  - system: structure-condition
+  - role: Owns mutable settlement-structure condition/repair state, keyed by stable structureId.
+  - owns: SettlementStructureState
+
 ## `settlement/villageClearing.ts`
 
 - `ClearingArea` — type — line 10
@@ -768,17 +817,18 @@ Generated from exported TypeScript symbols.
 ## `settlement/villagePlan.ts`
 
 - `FoodSourceType` — type — line 10
+- `residentialStructureId` — function — line 107
 - `VillageBoundary` — type — line 27
 - `VillageBuildingPlan` — type — line 86
 - `VillageBuildingRole` — type — line 78
 - `VillageCenter` — type — line 35
-- `VillageEntrance` — type — line 134
+- `VillageEntrance` — type — line 144
 - `VillageIdentity` — type — line 14
-- `VillageLandmarkKind` — type — line 101
-- `VillageLandmarkPlan` — type — line 111
-- `VillageLayoutPattern` — type — line 146
-- `VillagePathPlan` — type — line 125
-- `VillagePlan` — type — line 162
+- `VillageLandmarkKind` — type — line 111
+- `VillageLandmarkPlan` — type — line 121
+- `VillageLayoutPattern` — type — line 156
+- `VillagePathPlan` — type — line 135
+- `VillagePlan` — type — line 172
 - `VillagePlot` — type — line 59
 - `VillagePlotRole` — type — line 57
 - `VillageZone` — type — line 49
@@ -790,14 +840,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1040
-- `chooseLayoutPattern` — function — line 130
-- `HOUSE_PLOT_RADIUS` — const — line 66
-- `pathPlansToCorridorData` — function — line 1405
-- `planLocalPathsAndEntrances` — function — line 1286
-- `planVillageLayout` — function — line 720
-- `PLOT_SCORE_WEIGHTS` — const — line 40
-- `VillageLayoutDraft` — type — line 99
+- `buildingsAndLandmarksFromPlots` — function — line 1041
+- `chooseLayoutPattern` — function — line 131
+- `HOUSE_PLOT_RADIUS` — const — line 67
+- `pathPlansToCorridorData` — function — line 1406
+- `planLocalPathsAndEntrances` — function — line 1287
+- `planVillageLayout` — function — line 721
+- `PLOT_SCORE_WEIGHTS` — const — line 41
+- `VillageLayoutDraft` — type — line 100
 
 ## `settlement/wellInteractionQueue.ts`
 

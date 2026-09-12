@@ -34,7 +34,8 @@
 
 ### Bug Fixes
 
-_No qualifying plans._
+1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
 
@@ -109,12 +110,12 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  55  
    → **unlocks:** 2/2
 
-10. `settlements-npcs-007` — **Bandages and herbal medicine**  
-  🟡 `M` · **Score:**  47  
-   → **unlocks:** 0/0
-
-11. `world-018` — **Cave-aware rich finite resource deposits**  
+10. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
+   → **unlocks:** 1/1
+
+11. `fauna-024` — **Lost livestock stray displacement**  
+  🔴 `M` · **Score:**  45  
    → **unlocks:** 1/1
 
 12. `settlements-npcs-022` — **Household help and age-based work participation**  
@@ -125,47 +126,55 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-14. `fauna-022` — **Animal Variants & Exceptional Dangerous Animals**  
-  🔴 `M` · **Score:**  41  
-   → **unlocks:** 1/1
-
-15. `settlements-npcs-025` — **Resource storage visualization**  
+14. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-16. `fauna-019` — **Real cave habitats and animal home navigation**  
-  🟡 `L` · **Score:**  34  
-   → **unlocks:** 1/1
+15. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+  🔴 `M` · **Score:**  35  
+   → **unlocks:** 0/0
 
-17. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+16. `fauna-023` — **Systemic animal attraction — food, blood and trap lures**  
+  🟡 `M` · **Score:**  33  
+   → **unlocks:** 0/0
+
+17. `fauna-025` — **Livestock stray return and recovery**  
+  🔴 `M` · **Score:**  33  
+   → **unlocks:** 0/0
+
+18. `settlements-npcs-032` — **Player → household resource transfer**  
+  🔴 `S` · **Score:**  29  
+   → **unlocks:** 0/0
+
+19. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-18. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+20. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-19. `items-player-014` — **Rope-pullable resource transport**  
+21. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-20. `tools-005` — **Seedvale Character Preparation Panel**  
+22. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-21. `tools-013` — **NPC decision verification and scenario tooling**  
+23. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `quests-progression-008` — **Treasure map — bear cave**  
+24. `quests-progression-008` — **Treasure map — bear cave**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-23. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
+25. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-24. `items-player-029` — **Wearable armor and combat equipment**  
+26. `items-player-029` — **Wearable armor and combat equipment**  
   🟡 `L` · **Score:**  14  
    → **unlocks:** 0/0
 
@@ -173,6 +182,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
+- [`fauna-025-livestock-stray-return-and-recovery.md`](fauna-025-livestock-stray-return-and-recovery.md)  
+  is blocked by:
+  - [`fauna-024-lost-livestock-stray-displacement.md`](fauna-024-lost-livestock-stray-displacement.md)
 - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)  
   is blocked by:
   - [`items-player-027-player-to-npc-item-transfer-and-equipment.md`](items-player-027-player-to-npc-item-transfer-and-equipment.md)
@@ -182,12 +194,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`npc-031-voluntary-expedition-joining.md`](npc-031-voluntary-expedition-joining.md)  
   is blocked by:
   - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)
-- [`quests-progression-008-treasure-map-bear-cave.md`](quests-progression-008-treasure-map-bear-cave.md)  
-  is blocked by:
-  - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
-- [`quests-progression-019-dangerous-animal-deeds-local-reputation.md`](quests-progression-019-dangerous-animal-deeds-local-reputation.md)  
-  is blocked by:
-  - [`fauna-022-animal-variants-and-exceptional-dangerous-animals.md`](fauna-022-animal-variants-and-exceptional-dangerous-animals.md)
 - [`settlements-npcs-017-production-demand-and-economic-pressures.md`](settlements-npcs-017-production-demand-and-economic-pressures.md)  
   is blocked by:
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)
@@ -265,6 +271,9 @@ graph TD
   fauna_020["fauna-020 — Player-owned animals and follow/stay behaviour"]
   fauna_021["fauna-021 — Player combat for settlement rats"]
   fauna_022["fauna-022 — Animal Variants & Exceptional Dangerous Animals"]
+  fauna_023["fauna-023 — Systemic animal attraction — food, blood and trap lures"]
+  fauna_024["fauna-024 — Lost livestock stray displacement"]
+  fauna_025["fauna-025 — Livestock stray return and recovery"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -323,6 +332,9 @@ graph TD
   npc_033["npc-033 — Companion combat cooperation"]
   npc_034["npc-034 — Expedition shared work and activities"]
   npc_035["npc-035 — Shared expedition relationship consequences"]
+  npc_036["npc-036 — Lossless NPC inventory → corpse loot handoff"]
+  npc_037["npc-037 — Work Contracts — Stale Target Discovery and Notice Cleanup"]
+  npc_038["npc-038 — Work Contract actor capability gating"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -352,6 +364,7 @@ graph TD
   settlements_004["settlements-004 — Gold Economic Realization & Source Entitlements"]
   settlements_005["settlements-005 — Residential House Construction"]
   settlements_006["settlements-006 — Merchant sell pricing — condition and social standing"]
+  settlements_007["settlements-007 — Systemic settlement structure condition and shared repair"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
   settlements_npcs_002["settlements-npcs-002 — NPC professions — complete profession work integration"]
   settlements_npcs_003["settlements-npcs-003 — Hunter Arrow Production"]
@@ -383,6 +396,7 @@ graph TD
   settlements_npcs_029["settlements-npcs-029 — Animal Corpse Cleanup & Household Sanitation"]
   settlements_npcs_030["settlements-npcs-030 — Non-Home Settlement Food Production v1"]
   settlements_npcs_031["settlements-npcs-031 — Sustainable Seed Recovery and Replanting"]
+  settlements_npcs_032["settlements-npcs-032 — Player → household resource transfer"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -436,6 +450,7 @@ graph TD
   world_023["world-023 — Species-Driven Sowing, Density and Yield"]
   world_024["world-024 — Systemic treasure sites and keys"]
   world_025["world-025 — Persistent abandoned cemetery worldgen cache"]
+  world_026["world-026 — Storms, thunder, animal scare and snow visuals"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -523,6 +538,7 @@ graph TD
   fauna_011 --> fauna_013
   fauna_012 --> fauna_004
   fauna_014 --> fauna_007
+  fauna_014 --> fauna_023
   fauna_015 --> fauna_016
   fauna_016 --> fauna_004
   fauna_016 --> fauna_018
@@ -535,8 +551,10 @@ graph TD
   fauna_017 --> fauna_018
   fauna_018 --> quests_progression_008
   fauna_019 --> quests_progression_008
+  fauna_020 --> fauna_024
   fauna_020 --> quests_progression_012
   fauna_022 --> quests_progression_019
+  fauna_024 --> fauna_025
   items_player_001 --> fauna_002
   items_player_002 --> items_player_025
   items_player_009 --> items_player_013
@@ -544,6 +562,7 @@ graph TD
   items_player_010 --> items_player_013
   items_player_017 --> items_player_020
   items_player_017 --> settlements_005
+  items_player_017 --> settlements_007
   items_player_017 --> ui_input_014
   items_player_018 --> items_player_019
   items_player_018 --> items_player_022
@@ -553,6 +572,7 @@ graph TD
   items_player_022 --> items_player_024
   items_player_022 --> items_player_025
   items_player_024 --> ui_input_016
+  items_player_025 --> fauna_023
   items_player_027 --> items_player_028
   items_player_027 --> npc_033
   items_player_028 --> npc_032
@@ -564,6 +584,7 @@ graph TD
   npc_006 --> npc_027
   npc_007 --> npc_009
   npc_007 --> npc_027
+  npc_010 --> npc_036
   npc_011 --> npc_026
   npc_014 --> npc_015
   npc_015 --> npc_016
@@ -573,6 +594,7 @@ graph TD
   npc_018 --> items_player_017
   npc_018 --> npc_016
   npc_018 --> npc_028
+  npc_018 --> npc_037
   npc_018 --> settlements_005
   npc_018 --> ui_input_014
   npc_019 --> npc_020
@@ -587,6 +609,7 @@ graph TD
   npc_025 --> npc_033
   npc_025 --> ui_input_013
   npc_028 --> npc_016
+  npc_028 --> npc_037
   npc_029 --> npc_030
   npc_029 --> npc_031
   npc_029 --> npc_032
@@ -622,10 +645,12 @@ graph TD
   quests_progression_014 --> quests_progression_018
   quests_progression_015 --> quests_progression_016
   quests_progression_015 --> quests_progression_017
+  quests_progression_016 --> fauna_024
   quests_progression_016 --> quests_progression_017
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022
+  settlements_005 --> settlements_007
   settlements_005 --> ui_input_014
   settlements_006 --> items_player_019
   settlements_npcs_002 --> settlements_npcs_005
@@ -665,6 +690,7 @@ graph TD
   settlements_npcs_026 --> items_player_027
   settlements_npcs_026 --> npc_016
   settlements_npcs_026 --> npc_017
+  settlements_npcs_026 --> npc_036
   settlements_npcs_026 --> quests_progression_010
   settlements_npcs_026 --> settlements_npcs_027
   settlements_npcs_026 --> settlements_npcs_028
@@ -688,6 +714,7 @@ graph TD
   world_006 --> world_016
   world_007 --> quests_progression_011
   world_008 --> items_player_009
+  world_009 --> fauna_023
   world_011 --> world_017
   world_012 --> items_player_016
   world_012 --> quests_progression_009
@@ -701,8 +728,10 @@ graph TD
   world_018 --> quests_progression_010
   world_019 --> quests_progression_010
   world_019 --> settlements_003
+  world_020 --> settlements_007
   world_020 --> world_021
   world_021 --> items_player_019
+  world_021 --> settlements_007
   world_021 --> ui_input_014
   world_022 --> world_025
   world_023 --> settlements_npcs_031

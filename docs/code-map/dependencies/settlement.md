@@ -47,6 +47,7 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
+- `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
 - `player/PlayerController.ts`
 - `settlement/createSettlement.ts`
@@ -63,6 +64,9 @@ Generated from TypeScript imports.
 - `settlement/settlementSignposts.ts`
 - `settlement/settlementTerrain.ts`
 - `settlement/storageDestinations.ts`
+- `settlement/structureCondition.ts`
+- `settlement/structureRepairCandidates.ts`
+- `settlement/structureStateRegistry.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/resourceDeposits.ts`
@@ -223,6 +227,8 @@ Generated from TypeScript imports.
 - `settlement/settlementNightCycle.ts`
 - `settlement/settlementPropColliders.ts`
 - `settlement/settlementSignposts.ts`
+- `settlement/structureRepairCandidates.ts`
+- `settlement/structureStateRegistry.ts`
 - `settlement/wellInteractionQueue.ts`
 - `shared/SettlementName.ts`
 - `shared/bootMark.ts`
@@ -261,6 +267,7 @@ Generated from TypeScript imports.
 - `player/playerCombat.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/lodgingResolver.ts`
+- `settlement/structureRepairCandidates.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
 
@@ -1532,6 +1539,72 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/storageVisuals.test.ts`
 
+## `settlement/structureCondition.test.ts`
+
+**Imports**
+
+- `settlement/structureCondition.ts`
+- `world/condition.ts`
+
+## `settlement/structureCondition.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `settlement/villagePlan.ts`
+- `world/condition.ts`
+- `world/repair.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/actions/placementActions.ts`
+- `app/interactables.ts`
+- `persistence/saveData.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/structureCondition.test.ts`
+- `settlement/structureRepairCandidates.ts`
+- `settlement/structureStateRegistry.test.ts`
+- `settlement/structureStateRegistry.ts`
+
+## `settlement/structureRepairCandidates.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `settlement/createSettlement.ts`
+- `settlement/structureCondition.ts`
+- `settlement/structureStateRegistry.ts`
+- `settlement/villagePlan.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+
+## `settlement/structureStateRegistry.test.ts`
+
+**Imports**
+
+- `settlement/structureCondition.ts`
+- `settlement/structureStateRegistry.ts`
+- `world/condition.ts`
+
+## `settlement/structureStateRegistry.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `settlement/structureCondition.ts`
+
+**Imported by**
+
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `settlement/structureRepairCandidates.ts`
+- `settlement/structureStateRegistry.test.ts`
+
 ## `settlement/villageClearing.test.ts`
 
 **Imports**
@@ -1572,6 +1645,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/npcDebugApi.ts`
 - `economy/initial.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
@@ -1581,6 +1655,8 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/structureCondition.ts`
+- `settlement/structureRepairCandidates.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanDebug.ts`
 - `settlement/villagePlanner.test.ts`

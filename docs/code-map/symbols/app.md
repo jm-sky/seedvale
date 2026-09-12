@@ -81,21 +81,22 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `ConstructionActionView` — type — line 323
-- `createPlacementActions` — function — line 482
-- `evaluatePlacementSite` — function — line 278
-- `GroundPlacementDefinition` — type — line 261
+- `ConstructionActionView` — type — line 335
+- `createPlacementActions` — function — line 499
+- `evaluatePlacementSite` — function — line 279
+- `GroundPlacementDefinition` — type — line 262
   - domain: world
-- `GroundPlacementSite` — type — line 245
-- `PlacementActions` — type — line 342
-- `PlacementBlocker` — type — line 211
-- `PlacementMutationLifecycle` — type — line 272
-- `PlacementPreviewResult` — type — line 222
-- `previewGroundPlacement` — function — line 288
-- `RemovalPreview` — type — line 335
-- `ResidentialWorkView` — type — line 328
-- `WellRoofRepairView` — type — line 314
-- `WellWorkView` — type — line 307
+- `GroundPlacementSite` — type — line 246
+- `PlacementActions` — type — line 354
+- `PlacementBlocker` — type — line 212
+- `PlacementMutationLifecycle` — type — line 273
+- `PlacementPreviewResult` — type — line 223
+- `previewGroundPlacement` — function — line 289
+- `RemovalPreview` — type — line 347
+- `ResidentialWorkView` — type — line 340
+- `StructureRepairView` — type — line 327
+- `WellRoofRepairView` — type — line 315
+- `WellWorkView` — type — line 308
 
 ## `app/actions/placementPreviewActions.ts`
 
@@ -243,12 +244,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 617
+- `createGameLoop` — function — line 628
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 585
+- `GameLoop` — type — line 596
 - `GameLoopDeps` — type — line 294
 
 ## `app/graphicsSettings.ts`
@@ -288,23 +289,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1147
-- `buildDigTarget` — function — line 1094
-- `buildInteractables` — function — line 437
-- `collectItem` — function — line 1197
-- `COMBAT_TARGET_CONE_DOT` — const — line 92
-- `COMBAT_TARGET_RANGE` — const — line 77
-- `CombatAimMode` — type — line 82
-- `DIG_REACH` — const — line 71
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 287
-- `GAZE_RANGE` — const — line 67
-- `groupDroppedItemCandidates` — function — line 297
+- `buildCombatTarget` — function — line 1175
+- `buildDigTarget` — function — line 1122
+- `buildInteractables` — function — line 444
+- `collectItem` — function — line 1225
+- `COMBAT_TARGET_CONE_DOT` — const — line 99
+- `COMBAT_TARGET_RANGE` — const — line 84
+- `CombatAimMode` — type — line 89
+- `DIG_REACH` — const — line 78
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 294
+- `GAZE_RANGE` — const — line 74
+- `groupDroppedItemCandidates` — function — line 304
   - domain: items-player
-- `INTERACT_MIN_DOT` — const — line 64
-- `INTERACT_RANGE` — const — line 61
-- `itemPromptLabel` — function — line 276
-- `resolveHaySpot` — function — line 373
-- `worldItemAllowsAltInteract` — function — line 261
+- `INTERACT_MIN_DOT` — const — line 71
+- `INTERACT_RANGE` — const — line 68
+- `itemPromptLabel` — function — line 283
+- `resolveHaySpot` — function — line 380
+- `worldItemAllowsAltInteract` — function — line 268
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`
@@ -364,14 +365,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 818
+- `BuiltWorldSystems` — type — line 826
 - `caveTreasureContainerSpecs` — function — line 159
   - domain: world-terrain
-- `createWorldBundle` — function — line 1381
-- `disposeWorldBundle` — function — line 1815
+- `createWorldBundle` — function — line 1390
+- `disposeWorldBundle` — function — line 1831
 - `HOME_RADIUS` — const — line 138
 - `homeChunks` — function — line 182
-- `rebuildWorldBundle` — function — line 1594
+- `rebuildWorldBundle` — function — line 1608
 - `WorldBundle` — type — line 205
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).

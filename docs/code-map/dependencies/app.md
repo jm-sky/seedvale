@@ -363,6 +363,7 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `settlement/families.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/structureCondition.ts`
 - `terrain/dig.ts`
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
@@ -1133,6 +1134,7 @@ Generated from TypeScript imports.
 - `settlement/PlacedFires.ts`
 - `settlement/createSettlement.ts`
 - `settlement/landOwnership.ts`
+- `settlement/structureCondition.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`
