@@ -169,17 +169,26 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveArchetype.ts`
 
-- `ADVENTURE_HOME_BAND_MAX` — const — line 36
-- `ADVENTURE_HOME_BAND_MIN` — const — line 35
-- `ADVENTURE_ROLL_CHANCE` — const — line 29
-- `ArchetypeAssignment` — type — line 88
-- `ArchetypeCandidate` — type — line 38
-- `assignCaveArchetypes` — function — line 118
+- `ADVENTURE_HOME_BAND_MAX` — const — line 45
+- `ADVENTURE_HOME_BAND_MIN` — const — line 44
+- `ADVENTURE_ROLL_CHANCE` — const — line 32
+- `ArchetypeAssignment` — type — line 173
+- `ArchetypeCandidate` — type — line 59
+- `assignCaveArchetypes` — function — line 207
   - domain: world-terrain
-- `CaveArchetype` — type — line 24
-- `orderHomeAdventureCandidates` — function — line 56
+- `CaveArchetype` — type — line 27
+- `DUNGEON_OUTER_BAND_MIN` — const — line 51
+- `DUNGEON_PREFERRED_BAND_MAX` — const — line 53
+- `DUNGEON_PREFERRED_BAND_MIN` — const — line 52
+- `DUNGEON_ROLL_CHANCE` — const — line 38
+- `DungeonCandidate` — type — line 68
+- `orderGuaranteedDungeonCandidates` — function — line 117
   - domain: world-terrain
-- `rollsAdventure` — function — line 84
+- `orderHomeAdventureCandidates` — function — line 87
+  - domain: world-terrain
+- `rollsAdventure` — function — line 158
+  - domain: world-terrain
+- `rollsDungeon` — function — line 169
   - domain: world-terrain
 
 ## `world/caves/caveContentAnchors.ts`
@@ -221,7 +230,7 @@ Generated from exported TypeScript symbols.
 - `CaveTraversalDescriptor` — type — line 31
   - domain: world-terrain
 - `CaveTraversalPoint` — type — line 21
-- `resolveCaveTraversal` — function — line 186
+- `resolveCaveTraversal` — function — line 187
   - domain: world-terrain
 
 ## `world/caves/caveHeightfieldMaterial.ts`
@@ -403,7 +412,7 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveRng.ts`
 
 - `CAVE_RNG_SALT` — const — line 34
-- `createCaveRandom` — function — line 73
+- `createCaveRandom` — function — line 87
 
 ## `world/caves/caveRoute.ts`
 
@@ -463,6 +472,40 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `SurfaceHeightSampler` — type — line 30
 
+## `world/caves/dungeonChambers.ts`
+
+- `classifyDungeonChamberId` — function — line 43
+  - domain: world-terrain
+- `DungeonChamber` — type — line 29
+  - domain: world-terrain
+- `DungeonChamberClass` — type — line 21
+- `dungeonChambersFromTopology` — function — line 59
+  - domain: world-terrain
+
+## `world/caves/dungeonTopology.ts`
+
+- `buildDungeonCaveTopology` — function — line 287
+  - domain: world-terrain
+- `DUNGEON_CHAMBER_1_NODE_ID` — const — line 61
+- `DUNGEON_CHAMBER_2_NODE_ID` — const — line 62
+- `DUNGEON_CHAMBER_3_NODE_ID` — const — line 63
+- `DUNGEON_DEEP_CHAMBER_NODE_ID` — const — line 66
+- `DUNGEON_DESCENT_PER_METER` — const — line 46
+- `DUNGEON_FINAL_CHAMBER_NODE_ID` — const — line 67
+- `DUNGEON_JUNCTION_1_NODE_ID` — const — line 59
+- `DUNGEON_JUNCTION_2_NODE_ID` — const — line 60
+- `DUNGEON_LAYOUT_ATTEMPTS` — const — line 147
+- `DUNGEON_MAX_HEIGHTFIELD_CELLS` — const — line 144
+- `DUNGEON_SIDE_CHAMBER_1_NODE_ID` — const — line 64
+- `DUNGEON_SIDE_CHAMBER_2_NODE_ID` — const — line 65
+- `DUNGEON_SIDE_PASSAGE_1_NODE_ID` — const — line 68
+- `DUNGEON_SIDE_PASSAGE_2_NODE_ID` — const — line 69
+- `dungeonBranchDecisionCount` — function — line 226
+- `fitsDungeonFootprintBudget` — function — line 210
+  - domain: world-terrain
+- `meetsDungeonSemanticContract` — function — line 265
+  - domain: world-terrain
+
 ## `world/caves/mouthCarve.ts`
 
 - `CAVE_APPROACH_DEPTH` — const — line 24
@@ -510,11 +553,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/productionTopology.ts`
 
-- `buildNaturalCaveTopology` — function — line 95
+- `buildNaturalCaveTopology` — function — line 105
   - domain: world-terrain
-- `buildProductionCaveTopology` — function — line 82
+- `buildProductionCaveTopology` — function — line 85
   - domain: world-terrain
-- `ProductionTopologyInput` — type — line 66
+- `ProductionTopologyInput` — type — line 69
 
 ## `world/caves/spikeNoise.ts`
 
@@ -629,9 +672,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 91
-- `Caves` — type — line 93
-- `createCaves` — function — line 291
+- `CaveInteriorQueryChannel` — type — line 94
+- `Caves` — type — line 96
+- `createCaves` — function — line 305
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
