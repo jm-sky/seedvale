@@ -135,7 +135,12 @@ import {
   isPlayerOwned as isPlayerOwnedOwner,
   ownerFromHouseId,
 } from './animalOwnership'
-import { type AnimalTrip, findWaterTripDestination, tripDayBucket } from './animalRoaming'
+import {
+  type AnimalTrip,
+  findStrayReturnDestination,
+  findWaterTripDestination,
+  tripDayBucket,
+} from './animalRoaming'
 import {
   type AnimalScareStimulus,
   DEFAULT_FEAR_BASELINE,
@@ -154,11 +159,13 @@ import {
   isStrayEpisodeActive,
   type LostLivestockSourceStatus,
   selectStrayDisplacementTarget,
+  shouldBeginNaturalStray,
   shouldRetainStrayedCorpse,
   snapshotStrayState,
   strayEpisodeSeed,
   straySurvivalFleeRangeBonus,
   straySurvivalFleeSpeedMultiplier,
+  tickStrayClassificationGrace,
 } from './animalStray'
 import {
   type AnimalVariant,
@@ -389,6 +396,15 @@ const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
  *  fauna-016 §5) — looser than `wander()`'s 1.2 since a shoreline point is
  *  probe-selected, not a precise walkable target. */
 const TRIP_ARRIVAL_RADIUS = 2
+/** Bounded search radius around a stray's stored origin when the exact point
+ *  is currently blocked (plan fauna-025) — generous enough to find a
+ *  walkable spot near a fenced yard/building without wandering off toward a
+ *  different destination entirely. */
+const STRAY_RETURN_SEARCH_RADIUS = 12
+/** Cooldown before retrying a failed home-return destination probe (plan
+ *  fauna-025) — same throttling idiom/scale as `SOURCE_SEARCH_COOLDOWN_SEC`,
+ *  cheap enough to retry soon without re-probing every tick. */
+const STRAY_RETURN_RETRY_COOLDOWN_SEC = 4
 /** Chance per expired wander timer, while stamina ratio is below
  *  `STAMINA_REST_THRESHOLD`, that the animal extends the timer and stays put
  *  instead of picking a new wander target — a tired animal rests more. */
@@ -945,6 +961,16 @@ export class AnimalAgent {
   private _leadAttached = false
   /** Durable stray episode (plan fauna-024) — null until first start. */
   private _stray: AnimalStrayState | undefined
+  /** Runtime-only grace accumulator for natural (non-quest) stray
+   *  classification (plan fauna-025) — seconds spent continuously outside
+   *  `STRAY_MIN_DISTANCE` of `home`; resets to 0 on re-entry. Not persisted:
+   *  reconstructible from position/home, and losing a partial grace window
+   *  on stream-out/load is harmless (worst case: one grace window restarts). */
+  private strayClassificationGraceSec = 0
+  /** Runtime-only cooldown before retrying a failed home-return destination
+   *  probe (plan fauna-025) — same reconstructible-from-authoritative-state
+   *  reasoning as `strayClassificationGraceSec`. */
+  private strayReturnRetryCooldown = 0
   /** Runtime-only lead hysteresis — separate from owned Follow commitment. */
   private readonly _leadFollow: FollowHysteresisState = { following: false }
   /** This tick's `playerControlPos` from `AnimalUpdateContext` (plan fauna-020). */
@@ -1594,6 +1620,8 @@ export class AnimalAgent {
     if (!destination) return false
     this._stray = begun.state
     this.trip = null
+    this.strayReturnRetryCooldown = 0
+    this.strayClassificationGraceSec = 0
     this.setLeadAttached(false)
     this.mesh.position.x = destination.x
     this.mesh.position.z = destination.z
@@ -1614,6 +1642,12 @@ export class AnimalAgent {
     this._stray = clearStrayEpisode(this._stray)
     this.setLeadAttached(false)
     this.home.set(originX, 0, originZ)
+    // Any committed trip while stray was active can only be the home-return
+    // leg (plan fauna-025) — clear the runtime commitment/retry state so a
+    // returned animal doesn't keep walking a stale destination.
+    this.trip = null
+    this.strayReturnRetryCooldown = 0
+    this.strayClassificationGraceSec = 0
   }
 
   canInspectStrayedCorpse(): boolean {
@@ -1636,6 +1670,39 @@ export class AnimalAgent {
       dead: this.health.dead,
       stray: this._stray,
     })
+  }
+
+  /**
+   * @domain fauna
+   * @role Natural (non-quest) stray entry (plan fauna-025) — evaluated
+   *  locally every tick on this one agent, no settlement/manager scan.
+   *  Unlike `startLivestockStray()` (quest materialization's displacement
+   *  teleport), the animal has already relocated itself through ordinary
+   *  flee/roam movement, so this only records the episode at the animal's
+   *  current position; `home` still holds the real origin at this point.
+   *  Guard dogs are excluded: a `dog-guard` chase can legitimately range
+   *  well past the ordinary wander band without the dog being lost, and a
+   *  currently player-led animal is under direct control, not lost.
+   */
+  private tickNaturalStrayClassification(dt: number): void {
+    if (
+      this.def.kind === 'dog'
+      || this._leadAttached
+      || !isHouseholdOwned(this._owner)
+      || this._stray
+    ) {
+      this.strayClassificationGraceSec = 0
+      return
+    }
+    const distance = Math.hypot(this.mesh.position.x - this.home.x, this.mesh.position.z - this.home.z)
+    this.strayClassificationGraceSec = tickStrayClassificationGrace(this.strayClassificationGraceSec, distance, dt)
+    if (!shouldBeginNaturalStray(this.strayClassificationGraceSec)) return
+    this.strayClassificationGraceSec = 0
+    const begun = beginStrayState(this._stray, { x: this.home.x, z: this.home.z })
+    if (!begun.started) return
+    this._stray = begun.state
+    this.trip = null
+    this.setLeadAttached(false)
   }
 
   /** True for any live animal whose `def` carries a `mount` config (plan
@@ -1779,6 +1846,7 @@ export class AnimalAgent {
     if (this.alertTimer > 0) this.alertTimer -= dt
     if (this.provokedTimer > 0) this.provokedTimer -= dt
     if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
+    if (this.strayReturnRetryCooldown > 0) this.strayReturnRetryCooldown -= dt
     if (this.howlPauseTimer > 0) this.howlPauseTimer -= dt
     if (this.vocalizeAlertRemainingSec > 0) this.vocalizeAlertRemainingSec -= dt
     this.advanceAge(dt)
@@ -2488,6 +2556,9 @@ export class AnimalAgent {
       && isStrayedAnimalReturned(this._stray, this.mesh.position, this.health.dead)
     ) {
       this.clearLivestockStray()
+    }
+    if (!this.health.dead && !this.mounted) {
+      this.tickNaturalStrayClassification(dt)
     }
     if (this.health.dead) {
       if (!this.corpse.held) {
@@ -4040,7 +4111,44 @@ export class AnimalAgent {
       this.continueTrip(dt)
       return true
     }
+    // An active stray episode claims the shared trip slot outright (plan
+    // fauna-025 §7) — checked before `maybeStartWaterTrip()` so an ordinary
+    // periodic water trip can never start while a home-return attempt should
+    // dominate, regardless of whether this tick's probe actually commits.
+    if (isStrayEpisodeActive(this._stray)) return this.maybeStartStrayReturnTrip()
     return this.maybeStartWaterTrip()
+  }
+
+  /**
+   * @domain fauna
+   * @role Commits (or retries, after a bounded cooldown) a one-way
+   *  home-return trip for an active stray episode (plan fauna-025). Mirrors
+   *  `maybeStartWaterTrip()`'s cheap-when-not-due shape: the destination
+   *  probe only runs when a trip is not already committed and the retry
+   *  cooldown has cleared. A failed probe never teleports or clears the
+   *  episode — it just waits for the next retry window.
+   */
+  private maybeStartStrayReturnTrip(): boolean {
+    if (this.strayReturnRetryCooldown > 0) return false
+    const stray = this._stray
+    if (!stray) return false
+    const destination = findStrayReturnDestination({
+      origin: { x: stray.originX, z: stray.originZ },
+      searchRadius: STRAY_RETURN_SEARCH_RADIUS,
+      isWalkable: (x, z) => this.isWalkable(x, z),
+    })
+    if (!destination) {
+      this.strayReturnRetryCooldown = STRAY_RETURN_RETRY_COOLDOWN_SEC
+      return false
+    }
+    this.trip = {
+      kind: 'home-return',
+      destination: new THREE.Vector3(destination.x, 0, destination.z),
+      phase: 'traveling',
+      stayRemainingSec: 0,
+    }
+    this.caveRouteIndex = 0
+    return true
   }
 
   /** Checks (at most once per bucket change) whether this animal should

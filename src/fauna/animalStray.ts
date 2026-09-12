@@ -52,6 +52,15 @@ export const STRAY_FLEE_SPEED_MULT = 1.12
  */
 export const STRAY_CORPSE_RETENTION_SECONDS = 960
 
+/**
+ * Grace window (plan fauna-025) before sustained displacement past
+ * `STRAY_MIN_DISTANCE` becomes a natural stray episode — long enough that a
+ * single flee burst past the boundary doesn't instantly classify as lost,
+ * short enough that a genuinely sustained displacement still latches within
+ * one chase/scare episode.
+ */
+export const STRAY_CLASSIFICATION_GRACE_SECONDS = 12
+
 export type LivestockStrayCandidate = {
   animalId: string
   kind: AnimalKind
@@ -346,4 +355,33 @@ export function isAnimalStraySave(value: unknown): value is AnimalStrayState {
 /** Deterministic seed for one-shot displacement selection. */
 export function strayEpisodeSeed(animalId: string): number {
   return hashString(`stray:${animalId}`)
+}
+
+/**
+ * @domain fauna
+ * @role Natural-stray grace accumulator (plan fauna-025) — resets the
+ *  instant the animal is back inside `minDistance` of its own home/wander
+ *  anchor, so a short flee that ends back near home never latches, while a
+ *  sustained displacement accumulates toward `shouldBeginNaturalStray`.
+ */
+export function tickStrayClassificationGrace(
+  graceSec: number,
+  distanceFromHome: number,
+  dt: number,
+  minDistance: number = STRAY_MIN_DISTANCE,
+): number {
+  if (distanceFromHome <= minDistance) return 0
+  return graceSec + dt
+}
+
+/**
+ * @domain fauna
+ * @role True once sustained out-of-band displacement has cleared the grace
+ *  window — the caller's cue to begin a natural (non-quest) stray episode.
+ */
+export function shouldBeginNaturalStray(
+  graceSec: number,
+  graceSeconds: number = STRAY_CLASSIFICATION_GRACE_SECONDS,
+): boolean {
+  return graceSec >= graceSeconds
 }

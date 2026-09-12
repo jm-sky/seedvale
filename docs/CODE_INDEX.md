@@ -154,12 +154,12 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
 - [Individual variants](../src/fauna/animalVariants.ts) — per-animal multipliers (`normal`/`alpha`) and wolf-den alpha slot assignment.
 - [Lead / draft helpers](../src/fauna/animalLead.ts) — leadable/draft capability queries and temporary-lead hysteresis distances.
-- [Livestock stray](../src/fauna/animalStray.ts) — durable stray/displacement episode, selection, survival-assist gates, corpse retention, and world lookup classification (plan fauna-024).
+- [Livestock stray](../src/fauna/animalStray.ts) — durable stray/displacement episode, selection, survival-assist gates, corpse retention, and world lookup classification (plan fauna-024); natural (non-quest) classification grace helpers (plan fauna-025).
 - [Follow hysteresis](../src/fauna/followHysteresis.ts) — shared distance-band follow primitive used by owned Follow and leading.
 - [Owned animal control](../src/fauna/ownedAnimalControl.ts) — persisted Follow/Stay for player-owned livestock.
 - [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim/sanitation-reservation state machine.
 - [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.
-- [Roaming](../src/fauna/animalRoaming.ts) — water-trip state machine and shared radial probe.
+- [Roaming](../src/fauna/animalRoaming.ts) — water/settlement/home-return trip state machine and shared radial probe.
 - [Persistent occupants](../src/fauna/persistentOccupants.ts) — sparse stable habitat-occupant identity and tombstone registry.
 - [Cave habitat binding](../src/fauna/animalCaveHabitat.ts) — `AnimalHabitatBinding`/`AnimalCaveContext` and the narrow world-cave contract fauna resolves against (plan fauna-019); the only fauna module that touches cave types.
 - [Fauna decision](../src/fauna/faunaDecision.ts) — fixed-priority behaviour table.

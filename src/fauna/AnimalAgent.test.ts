@@ -615,4 +615,169 @@ describe('AnimalAgent', () => {
       expect(returned.mesh.position.z).toBe(z)
     })
   })
+
+  describe('natural stray return (fauna-025)', () => {
+    /** Player kept far enough away that `senseEnvironment` never reports it
+     *  active — same convention as the other `update()` tests in this file. */
+    function tick(agent: AnimalAgent, others: AnimalAgent[], dt = 1): void {
+      agent.update({
+        dt,
+        others,
+        observerPos: new THREE.Vector3(1000, 0, 1000),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+    }
+
+    it('does not classify a displacement that stays inside the home band as stray', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-natural-0',
+        ownerHouseId: 'home:home:0',
+      }))
+      sheep.mesh.position.set(20, 0, 0) // inside STRAY_MIN_DISTANCE (36)
+      for (let i = 0; i < 60; i++) tick(sheep, [sheep])
+      expect(sheep.isStrayActive()).toBe(false)
+    })
+
+    it('never latches from a single tick just past the boundary', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-natural-1',
+        ownerHouseId: 'home:home:0',
+      }))
+      sheep.mesh.position.set(37, 0, 0)
+      tick(sheep, [sheep], 0.016)
+      expect(sheep.isStrayActive()).toBe(false)
+    })
+
+    it('classifies a natural stray episode after sustained displacement past the grace window, preserving identity', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-natural-2',
+        ownerHouseId: 'home:home:0',
+      }))
+      const owner = sheep.getOwner()
+      // Re-anchored every tick to simulate a sustained displacement (a real
+      // flee/scare keeps re-triggering it) — classification reads position
+      // at the top of `update()`, before this tick's own wander/steering, so
+      // this isolates the grace/distance logic from ordinary wander-home
+      // drift, which is a separate, already-covered concern.
+      for (let i = 0; i < 20 && !sheep.isStrayActive(); i++) {
+        sheep.mesh.position.set(50, 0, 0)
+        tick(sheep, [sheep])
+      }
+      expect(sheep.isStrayActive()).toBe(true)
+      expect(sheep.animalId).toBe('sheep-natural-2')
+      expect(sheep.getOwner()).toEqual(owner)
+      expect(sheep.getStrayState()?.originX).toBe(0)
+      expect(sheep.getStrayState()?.originZ).toBe(0)
+    })
+
+    it('resets grace when the animal re-enters the band before the threshold', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-natural-3',
+        ownerHouseId: 'home:home:0',
+      }))
+      for (let i = 0; i < 8; i++) {
+        sheep.mesh.position.set(50, 0, 0)
+        tick(sheep, [sheep])
+      }
+      expect(sheep.isStrayActive()).toBe(false)
+      sheep.mesh.position.set(1, 0, 0) // back inside the band — resets grace
+      tick(sheep, [sheep])
+      for (let i = 0; i < 8; i++) {
+        sheep.mesh.position.set(50, 0, 0)
+        tick(sheep, [sheep])
+      }
+      expect(sheep.isStrayActive()).toBe(false)
+    })
+
+    it('never naturally classifies a guard dog or a currently lead-attached animal', () => {
+      const dog = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.dog,
+        animalId: 'dog-natural-0',
+        ownerHouseId: 'home:home:0',
+      }))
+      for (let i = 0; i < 20; i++) {
+        dog.mesh.position.set(80, 0, 0)
+        tick(dog, [dog])
+      }
+      expect(dog.isStrayActive()).toBe(false)
+
+      const horse = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.horse,
+        animalId: 'horse-natural-0',
+        ownerHouseId: 'home:home:0',
+      }))
+      horse.setLeadAttached(true)
+      for (let i = 0; i < 20; i++) {
+        horse.mesh.position.set(80, 0, 0)
+        tick(horse, [horse])
+      }
+      expect(horse.isStrayActive()).toBe(false)
+    })
+
+    it('defers a committed return trip while a predator threat is active, then commits once calm', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-natural-4',
+        ownerHouseId: 'home:home:0',
+      }))
+      expect(sheep.startLivestockStray({ random: () => 0.2 })).toBe(true)
+      expect(sheep.isStrayActive()).toBe(true)
+
+      const wolf = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.wolf,
+        animalId: 'wolf-natural-0',
+        x: sheep.mesh.position.x + 2,
+        z: sheep.mesh.position.z,
+      }))
+      tick(sheep, [sheep, wolf])
+      expect(sheep.hasActiveTrip()).toBe(false)
+      expect(sheep.isStrayActive()).toBe(true)
+
+      tick(sheep, [sheep])
+      expect(sheep.hasActiveTrip()).toBe(true)
+    })
+
+    it('arriving inside the return radius clears the episode via the existing predicate', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-natural-6',
+        ownerHouseId: 'home:home:0',
+      }))
+      expect(sheep.startLivestockStray({ random: () => 0.2 })).toBe(true)
+      const origin = sheep.getStrayState()!
+      sheep.mesh.position.set(origin.originX, 0, origin.originZ)
+      tick(sheep, [sheep])
+      expect(sheep.isStrayActive()).toBe(false)
+    })
+
+    it('a failed destination probe never teleports or clears an active stray episode', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-natural-7',
+        ownerHouseId: 'home:home:0',
+        // Blocks the origin and every candidate the return probe could pick
+        // near it (radius 20 covers the whole `STRAY_RETURN_SEARCH_RADIUS`
+        // of 12) while leaving the far-away displacement ring (36-90m out)
+        // walkable, so the initial `startLivestockStray()` teleport still
+        // succeeds and only the later home-return probe fails.
+        collidersNear: () => [{
+          type: 'circle' as const,
+          x: 0,
+          z: 0,
+          radius: 20,
+        }],
+      }))
+      expect(sheep.startLivestockStray({ random: () => 0.2 })).toBe(true)
+      tick(sheep, [sheep])
+      expect(sheep.isStrayActive()).toBe(true)
+      expect(sheep.hasActiveTrip()).toBe(false)
+      expect(Math.hypot(sheep.mesh.position.x, sheep.mesh.position.z)).toBeGreaterThan(6)
+    })
+  })
 })

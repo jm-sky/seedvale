@@ -1,7 +1,7 @@
 # Plan: Livestock stray return and recovery
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified. Browser/manual verification is owned by the user.
 **Priority:** high · **Effort:** M
 **Depends on:** fauna-024
 **Domain:** `fauna`

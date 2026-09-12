@@ -29,7 +29,7 @@ const WATER_TRIP_SEARCH_ATTEMPTS = 16
  *  touches it. `'water'` is the only trip kind so far, but the shape
  *  (destination + phase + committed state) is meant to generalize to a
  *  later trip kind without a second movement system. */
-export type AnimalTripKind = 'water' | 'settlement'
+export type AnimalTripKind = 'water' | 'settlement' | 'home-return'
 export type AnimalTripPhase = 'traveling' | 'staying' | 'returning'
 export type AnimalTrip = {
   kind: AnimalTripKind
@@ -164,5 +164,35 @@ export function findWaterTripDestination(ctx: TripDestinationContext): { x: numb
       const d = Math.hypot(x - ctx.home.x, z - ctx.home.z)
       return hits * 10 - d
     },
+  )
+}
+
+/** Per-call environment for `findStrayReturnDestination` (plan fauna-025) —
+ *  centered on the stray's stored origin, not `home` (which points at the
+ *  displaced site for the whole duration of an episode). */
+export type StrayReturnDestinationContext = {
+  origin: { readonly x: number, readonly z: number }
+  searchRadius: number
+  isWalkable: (x: number, z: number) => boolean
+}
+
+/** Bounded radial-probe search for a walkable one-way home-return
+ *  destination (plan fauna-025 §5/§6) — the stored origin itself is the
+ *  common case and is tried first; `probeBestPointNear` only runs when that
+ *  exact point is currently blocked, closest-valid-candidate wins. Never a
+ *  teleport: a `null` result means the caller retries later, it does not
+ *  fall back to the raw origin. */
+const STRAY_RETURN_SEARCH_ATTEMPTS = 16
+
+export function findStrayReturnDestination(
+  ctx: StrayReturnDestinationContext,
+): { x: number, z: number } | null {
+  if (ctx.isWalkable(ctx.origin.x, ctx.origin.z)) return { x: ctx.origin.x, z: ctx.origin.z }
+  return probeBestPointNear(
+    ctx.origin,
+    ctx.searchRadius,
+    STRAY_RETURN_SEARCH_ATTEMPTS,
+    (x, z) => ctx.isWalkable(x, z),
+    (x, z) => -Math.hypot(x - ctx.origin.x, z - ctx.origin.z),
   )
 }

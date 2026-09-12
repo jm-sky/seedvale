@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  findStrayReturnDestination,
   findWaterTripDestination,
   probeBestPointNear,
   tripDayBucket,
@@ -99,6 +100,36 @@ describe('findWaterTripDestination (plan fauna-016 §5/§6)', () => {
     // this test is only that a domestic animal's search never short-circuits
     // via the village check the way a wild one's does.
     expect(() => findWaterTripDestination(ctx)).not.toThrow()
+  })
+})
+
+describe('findStrayReturnDestination (plan fauna-025 §5/§6)', () => {
+  it('prefers the exact origin when it is already walkable', () => {
+    const dest = findStrayReturnDestination({
+      origin: { x: 12, z: -4 },
+      searchRadius: 10,
+      isWalkable: () => true,
+    })
+    expect(dest).toEqual({ x: 12, z: -4 })
+  })
+
+  it('probes nearby when the exact origin is blocked, never returning the blocked point', () => {
+    const dest = findStrayReturnDestination({
+      origin: { x: 0, z: 0 },
+      searchRadius: 10,
+      isWalkable: (x, z) => Math.hypot(x, z) > 1,
+    })
+    expect(dest).not.toBeNull()
+    expect(Math.hypot(dest!.x, dest!.z)).toBeGreaterThan(1)
+  })
+
+  it('returns null (never teleports) when nothing nearby is walkable either', () => {
+    const dest = findStrayReturnDestination({
+      origin: { x: 0, z: 0 },
+      searchRadius: 10,
+      isWalkable: () => false,
+    })
+    expect(dest).toBeNull()
   })
 })
 

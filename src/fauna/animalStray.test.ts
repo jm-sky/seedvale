@@ -13,12 +13,15 @@ import {
   predatorPressureAt,
   selectLostLivestock,
   selectStrayDisplacementTarget,
+  shouldBeginNaturalStray,
   shouldRetainStrayedCorpse,
   snapshotStrayState,
+  STRAY_CLASSIFICATION_GRACE_SECONDS,
   STRAY_CORPSE_RETENTION_SECONDS,
   STRAY_MIN_DISTANCE,
   STRAY_RETURN_RADIUS,
   straySurvivalFleeRangeBonus,
+  tickStrayClassificationGrace,
 } from './animalStray'
 
 function household(houseId: string): AnimalOwner {
@@ -181,5 +184,32 @@ describe('survival assist and corpse retention (fauna-024)', () => {
     const returned = clearStrayEpisode(live)
     expect(hydrateStrayState(snapshotStrayState(returned))).toEqual(returned)
     expect(hydrateStrayState(undefined)).toBeUndefined()
+  })
+})
+
+describe('natural stray classification grace (fauna-025)', () => {
+  it('resets to zero the instant distance is back inside the band', () => {
+    const grace = tickStrayClassificationGrace(9, STRAY_MIN_DISTANCE - 1, 1)
+    expect(grace).toBe(0)
+    expect(tickStrayClassificationGrace(9, STRAY_MIN_DISTANCE, 1)).toBe(0)
+  })
+
+  it('accumulates only while sustained outside the band', () => {
+    let grace = 0
+    for (let i = 0; i < 5; i++) {
+      grace = tickStrayClassificationGrace(grace, STRAY_MIN_DISTANCE + 1, 1)
+    }
+    expect(grace).toBe(5)
+    expect(shouldBeginNaturalStray(grace)).toBe(false)
+  })
+
+  it('a single tick just past the boundary never immediately classifies as stray', () => {
+    const grace = tickStrayClassificationGrace(0, STRAY_MIN_DISTANCE + 1, 0.016)
+    expect(shouldBeginNaturalStray(grace)).toBe(false)
+  })
+
+  it('classifies once the grace window fully elapses', () => {
+    const grace = tickStrayClassificationGrace(STRAY_CLASSIFICATION_GRACE_SECONDS - 0.5, STRAY_MIN_DISTANCE + 1, 1)
+    expect(shouldBeginNaturalStray(grace)).toBe(true)
   })
 })
