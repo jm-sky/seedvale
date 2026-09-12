@@ -21,8 +21,18 @@ import {
   ADVENTURE_JUNCTION_NODE_ID,
   ADVENTURE_SIDE_CHAMBER_NODE_ID,
 } from './caves/adventureTopology'
-import { ADVENTURE_HOME_BAND_MAX, orderHomeAdventureCandidates } from './caves/caveArchetype'
+import {
+  ADVENTURE_HOME_BAND_MAX,
+  orderGuaranteedDungeonCandidates,
+  orderHomeAdventureCandidates,
+} from './caves/caveArchetype'
 import { estimateHeightfieldGrid } from './caves/caveHeightfieldRepresentation'
+import {
+  DUNGEON_FINAL_CHAMBER_NODE_ID,
+  DUNGEON_JUNCTION_1_NODE_ID,
+  DUNGEON_MAX_HEIGHTFIELD_CELLS,
+  DUNGEON_SIDE_CHAMBER_1_NODE_ID,
+} from './caves/dungeonTopology'
 import { buildProductionCaveTopology } from './caves/productionTopology'
 import { type Caves, createCaves } from './createCaves'
 import { pickLargeCaveSites } from './largeCaves'
@@ -99,7 +109,7 @@ describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', ()
   it('every accepted cave has a known archetype, and an unknown id has none', () => {
     expect(caves.definitions().length).toBeGreaterThan(0)
     for (const { archetype } of archetypes()) {
-      expect(['natural', 'adventure']).toContain(archetype)
+      expect(['natural', 'adventure', 'dungeon']).toContain(archetype)
     }
     expect(caves.archetypeOf('cave:deadbeef')).toBeNull()
   })
@@ -184,6 +194,62 @@ describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', ()
       })
       expect(topology, `natural cave ${caveId} must still be accepted by the natural recipe`).not.toBeNull()
       expect(topology!.nodes.some((n) => n.id.startsWith('adventure-'))).toBe(false)
+      expect(topology!.nodes.some((n) => n.id.startsWith('dungeon-'))).toBe(false)
+    }
+  })
+
+  it('selects a guaranteed dungeon from existing sites without moving the home adventure cave', () => {
+    const sites = productionSites()
+    const chunkManager = fakeChunkManager()
+    const adventureOrder = orderHomeAdventureCandidates(SEED, sites)
+    const firstAdventure = adventureOrder.find((candidate) => buildProductionCaveTopology({
+      seed: SEED,
+      site: candidate.site,
+      archetype: 'adventure',
+      sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
+      sampleBaseHeight: (x, z) => chunkManager.sampleBaseHeight(x, z),
+    }) !== null)
+    expect(firstAdventure).toBeDefined()
+    expect(caves.archetypeOf(firstAdventure!.caveId)).toBe('adventure')
+
+    const dungeonOrder = orderGuaranteedDungeonCandidates(SEED, sites, firstAdventure!.caveId)
+    const firstDungeon = dungeonOrder.find((candidate) => buildProductionCaveTopology({
+      seed: SEED,
+      site: candidate.site,
+      archetype: 'dungeon',
+      sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
+      sampleBaseHeight: (x, z) => chunkManager.sampleBaseHeight(x, z),
+    }) !== null)
+    if (!firstDungeon) {
+      expect(archetypes().every((a) => a.archetype !== 'dungeon')).toBe(true)
+      return
+    }
+    expect(caves.archetypeOf(firstDungeon.caveId)).toBe('dungeon')
+    expect(firstDungeon.caveId).not.toBe(firstAdventure!.caveId)
+    const topology = buildProductionCaveTopology({
+      seed: SEED,
+      site: firstDungeon.site,
+      archetype: 'dungeon',
+      sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
+      sampleBaseHeight: (x, z) => chunkManager.sampleBaseHeight(x, z),
+    })!
+    const ids = new Set(topology.nodes.map((n) => n.id))
+    expect(ids.has(DUNGEON_JUNCTION_1_NODE_ID)).toBe(true)
+    expect(ids.has(DUNGEON_SIDE_CHAMBER_1_NODE_ID)).toBe(true)
+    expect(ids.has(DUNGEON_FINAL_CHAMBER_NODE_ID)).toBe(true)
+    expect(estimateHeightfieldGrid(topology).cells).toBeLessThanOrEqual(DUNGEON_MAX_HEIGHTFIELD_CELLS)
+    const chambers = caves.dungeonChambersOf(firstDungeon.caveId)
+    expect(chambers.length).toBeGreaterThanOrEqual(5)
+    expect(chambers.every((c) => ids.has(c.nodeId))).toBe(true)
+    expect(caves.dungeonChambersOf(firstAdventure!.caveId)).toEqual([])
+    expect(caves.dungeonChambersOf('cave:deadbeef')).toEqual([])
+  })
+
+  it('does not leak dungeon content onto adventure caves', () => {
+    for (const { caveId, archetype } of archetypes()) {
+      if (archetype !== 'adventure') continue
+      expect(caves.dungeonChambersOf(caveId)).toEqual([])
+      expect(caves.contentAnchorsOf(caveId).length).toBeGreaterThan(0)
     }
   })
 })

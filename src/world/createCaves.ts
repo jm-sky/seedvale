@@ -3,6 +3,7 @@ import type { VillageTorch } from '../settlement/houseLighting'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { CaveArchetype } from './caves/caveArchetype'
 import type { CaveTopology } from './caves/caveTopology'
+import type { DungeonChamber } from './caves/dungeonChambers'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isBootMarkMode, isSystemEnabled } from '../debug/debugMode'
 import { type CaveGroundQueryDebug, writeHitSnapshot } from '../debug/playerGroundTrace'
@@ -15,9 +16,11 @@ import {
   type CaveContentAnchor,
   resolveCaveContentAnchors,
 } from './caves/caveContentAnchors'
+import { dungeonChambersFromTopology } from './caves/dungeonChambers'
 
 export type { CaveContentAnchor }
 export type { CaveTraversalDescriptor, CaveTraversalPoint } from './caves/caveHabitat'
+export type { DungeonChamber, DungeonChamberClass } from './caves/dungeonChambers'
 import {
   CAVE_ADVENTURE_PROPS_GROUP_NAME,
   CAVE_ADVENTURE_PROPS_USERDATA_KEY,
@@ -169,6 +172,13 @@ export type Caves = {
   /** Content anchors of one cave. Empty for natural caves and unknown ids. */
   contentAnchorsOf: (caveId: string) => readonly CaveContentAnchor[]
   /**
+   * Stable dungeon chamber view for later fauna/pool plans (world-terrain-024).
+   * Empty for non-dungeon caves and unknown ids. Identity is the topology
+   * node id; classification is derived from those ids, never array position.
+   * Independent of presentation streaming.
+   */
+  dungeonChambersOf: (caveId: string) => readonly DungeonChamber[]
+  /**
    * World-owned cave-scoped semantic/traversal contract (plan fauna-019):
    * an interior home anchor and the deterministic route to the entrance for
    * one cave, resolved directly against its retained topology/heightfield —
@@ -226,6 +236,8 @@ type CaveRuntime = {
    *  `?debugDisableSystems=caveInteriorRocks` disables the system. Frozen;
    *  never mutated after construction. */
   interiorRocks: readonly CaveInteriorRockPlacement[]
+  /** Frozen dungeon chamber view. Empty unless `archetype === 'dungeon'`. */
+  dungeonChambers: readonly DungeonChamber[]
 }
 
 function gridKey(cx: number, cz: number): string {
@@ -272,6 +284,8 @@ const TERRAIN_CUTOUT_OWNER_KEY = 'caves'
  * deterministic interior content anchors (`contentAnchors` /
  * `contentAnchorsOf`) resolved against each cave's own heightfield — world
  * definitions, not presentation, and never a second spatial representation.
+ * Dungeon caves additionally expose a read-only chamber view
+ * (`dungeonChambersOf`) derived from the same retained topology.
  *
  * Same lifecycle as `WorldBundle` (create/dispose alongside it, never
  * survives a rebuild).
@@ -337,10 +351,11 @@ export function createCaves(
       sampleBaseHeight: analyticSurfaceHeight,
     })
 
-  // Home-area guarantee plus the per-site archetype roll (plan
-  // world-terrain-020 §3) — ordering and rolls are pure and deterministic in
-  // `caveArchetype.ts`; acceptance stays here, owned by the topology
-  // builders. No second siting pass, no synthesized site.
+  // Home-area adventure guarantee, then the further dungeon guarantee, plus
+  // per-site dungeon/adventure rolls (plans world-terrain-020 / 024) —
+  // ordering and rolls are pure and deterministic in `caveArchetype.ts`;
+  // acceptance stays here, owned by the topology builders. No second siting
+  // pass, no synthesized site.
   const accepted = assignCaveArchetypes(seed, sites, buildTopology)
   bootMarkEnd('cave.topology')
 
@@ -361,6 +376,7 @@ export function createCaves(
       interiorRocks: interiorRocksEnabled
         ? resolveCaveInteriorRocks({ archetype, topology, heightfield, contentAnchors })
         : [],
+      dungeonChambers: dungeonChambersFromTopology(topology),
     })
   }
   bootMarkEnd('cave.heightfield')
@@ -704,6 +720,9 @@ export function createCaves(
     },
     contentAnchorsOf(caveId) {
       return v2ByCaveId.get(caveId)?.contentAnchors ?? []
+    },
+    dungeonChambersOf(caveId) {
+      return v2ByCaveId.get(caveId)?.dungeonChambers ?? []
     },
     resolveHabitat(caveId, entityHeight) {
       const runtime = v2ByCaveId.get(caveId)

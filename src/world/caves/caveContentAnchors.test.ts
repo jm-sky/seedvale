@@ -237,6 +237,11 @@ describe('cave content anchors (plan world-terrain-020 Stage B)', () => {
       topology: FIXTURE.topology,
       heightfield: FIXTURE.heightfield,
     })).toEqual([])
+    expect(resolveCaveContentAnchors({
+      archetype: 'dungeon',
+      topology: FIXTURE.topology,
+      heightfield: FIXTURE.heightfield,
+    })).toEqual([])
   })
 
   it('places lantern anchors on tight passage walls away from the centreline', () => {

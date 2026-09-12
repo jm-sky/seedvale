@@ -1,16 +1,18 @@
 /** Plan world-terrain-008 Milestone B1 — production `CaveTopology` builder,
- *  extended by plan world-terrain-020 Stage A into an archetype dispatcher.
+ *  extended by plan world-terrain-020 Stage A into an archetype dispatcher
+ *  and by plan world-terrain-024 with the `dungeon` recipe.
  *
  *  This module owns the `natural` recipe (entrance → transition → irregular
  *  passage → widening/bend → main chamber → shelf|overhang, optional short
- *  branch) and routes `adventure` to `adventureTopology.ts`. Both recipes
+ *  branch) and routes `adventure` / `dungeon` to their own files. All recipes
  *  share one set of terrain-aware route primitives (`caveRoute.ts`) — the
  *  natural call sequence, parameters and RNG consumption are exactly what
  *  they have always been, so existing seeded caves do not move.
  *
  *  Reuses `pickLargeCaveSites()` for placement (siting/filtering stays owned
  *  by `largeCaves.ts`) and `makeCaveId()` for identity — topology generation
- *  and acceptance are owned here and in `adventureTopology.ts`; V1's
+ *  and acceptance are owned here, in `adventureTopology.ts` and in
+ *  `dungeonTopology.ts`; V1's
  *  tunnel/chamber `CaveDefinition` graph (`caveGenerator.ts`) is no longer in
  *  the loop.
  *
@@ -36,6 +38,7 @@ import {
   type RouteContext,
   walkSegment,
 } from './caveRoute'
+import { buildDungeonCaveTopology } from './dungeonTopology'
 import { MOUTH_TRANSITION_RANGE } from './mouthOverburden'
 
 export {
@@ -73,15 +76,22 @@ export type ProductionTopologyInput = CaveRecipeInput & {
  * (the site is rejected outright rather than forced above the surface —
  * plan world-terrain-008 §8).
  *
- * A `null` for `adventure` does not mean the site has no cave: `createCaves()`
- * either moves the home guarantee to the next candidate or falls back to the
- * unchanged `natural` recipe for that same site.
+ * A `null` for `adventure` or `dungeon` does not mean the site has no cave:
+ * `createCaves()` either moves the matching guarantee to the next candidate
+ * or falls back through the remaining recipes for that same site.
  *
  * @domain world-terrain
  */
 export function buildProductionCaveTopology(input: ProductionTopologyInput): CaveTopology | null {
-  if (input.archetype === 'adventure') return buildAdventureCaveTopology(input)
-  return buildNaturalCaveTopology(input)
+  const archetype = input.archetype ?? 'natural'
+  switch (archetype) {
+    case 'adventure':
+      return buildAdventureCaveTopology(input)
+    case 'dungeon':
+      return buildDungeonCaveTopology(input)
+    case 'natural':
+      return buildNaturalCaveTopology(input)
+  }
 }
 
 /**

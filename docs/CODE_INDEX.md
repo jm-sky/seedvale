@@ -91,9 +91,10 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Cemetery assignment](../src/terrain/cemeteryAssignment.ts) — settlement↔cemetery topology (dedicated or shared `SM`) and reverse lookup; abandoned cemeteries have no served settlements.
 - [Cemetery placement](../src/terrain/cemeteryPlacement.ts) — bounded dedicated/shared/abandoned cemetery search over the shared physical gates in `chunkEnvironment.ts`.
 - [Treasure sites](../src/world/treasureSites.ts) — deterministic finite world treasure (ruins/deep-forest chests + matching keys); cave archetype deferred.
-- [Caves](../src/world/createCaves.ts) — Cave V2 lifecycle: production topology, retained heightfield, streamed presentation, spatial queries, read-only adventure content anchors, and (plan fauna-019) a cave-scoped semantic/traversal contract (`resolveHabitat`/`queryGroundIn`/`resolveHorizontalIn`) for fauna/quests/NPC.
+- [Caves](../src/world/createCaves.ts) — Cave V2 lifecycle: production topology, retained heightfield, streamed presentation, spatial queries, read-only adventure content anchors, dungeon chamber view (`dungeonChambersOf`, world-terrain-024), and (plan fauna-019) a cave-scoped semantic/traversal contract (`resolveHabitat`/`queryGroundIn`/`resolveHorizontalIn`) for fauna/quests/NPC.
 - [Cave habitat](../src/world/caves/caveHabitat.ts) — resolves one cave's interior home chamber + entrance route (`CaveTraversalDescriptor`) from its `CaveTopology`/heightfield; consumed only through `Caves.resolveHabitat` above.
 - [Cave content anchors](../src/world/caves/caveContentAnchors.ts) — semantic interior placement descriptors for adventure caves (world-terrain-020 Stage B); floor Y from the cave's own heightfield.
+- [Dungeon chambers](../src/world/caves/dungeonChambers.ts) — representation-neutral dungeon chamber list/classification from stable topology node ids (world-terrain-024); consumed through `Caves.dungeonChambersOf`.
 
 ## UI wiring
 

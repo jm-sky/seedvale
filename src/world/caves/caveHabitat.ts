@@ -55,7 +55,8 @@ function standableFloorAt(
  * That order already *is* route order — both recipes push a chamber's node
  * only once its connecting segment has been walked — so the adventure
  * recipe's main-route chamber (`adventure-chamber-1`) is always tried before
- * its deeper/side chambers without a second graph search here.
+ * its deeper/side chambers without a second graph search here. Dungeon uses
+ * the same generic chamber walk.
  *
  * @domain world-terrain
  */

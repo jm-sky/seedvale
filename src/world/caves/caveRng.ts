@@ -66,6 +66,20 @@ export const CAVE_RNG_SALT = {
    *  Own stream so toggling clutter never perturbs topology, heightfield
    *  noise or adventure content-anchor placement. */
   interiorRocks: 0x10,
+  /** Plan world-terrain-024: the per-cave 5% `dungeon` roll for a cave that
+   *  is not the guaranteed dungeon. Own stream so the roll never shifts
+   *  `rollsAdventure()` or any structural/feature/branch sequence. */
+  dungeonArchetype: 0x11,
+  /** Plan world-terrain-024: dungeon route leg lengths and turn angles. */
+  dungeonLayout: 0x12,
+  /** Plan world-terrain-024: dungeon cross-sections (widths/heights). */
+  dungeonShape: 0x13,
+  /** Plan world-terrain-024: dungeon side-branch angle/length. */
+  dungeonBranch: 0x14,
+  /** Plan world-terrain-024: dungeon chamber shelf/overhang features. */
+  dungeonFeature: 0x15,
+  /** Plan world-terrain-024: dungeon passage centerline wobble. */
+  dungeonCenterline: 0x16,
 } as const
 
 /** Fresh `[0,1)` generator for `(caveId, salt)` — deterministic, and

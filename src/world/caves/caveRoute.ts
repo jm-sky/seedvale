@@ -1,6 +1,6 @@
 /** Plan world-terrain-020 Stage A — terrain-aware route primitives shared by
  *  every production cave recipe (`natural` in `productionTopology.ts`,
- *  `adventure` in `adventureTopology.ts`).
+ *  `adventure` in `adventureTopology.ts`, `dungeon` in `dungeonTopology.ts`).
  *
  *  Mechanical extraction out of `productionTopology.ts`: the natural recipe's
  *  call sequence, parameters and float arithmetic are unchanged — the only

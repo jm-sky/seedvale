@@ -1,7 +1,7 @@
 # Plan: Dungeon cave archetype
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented and technically verified (typecheck, lint, targeted vitest); browser/gameplay verification is still open.
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~world-terrain-020~~
@@ -10,6 +10,7 @@
 **Tags:** `caves` `dungeon` `exploration`
 **Roadmap:** -
 **Model:** Opus, Sonnet
+**Implemented at:** 2026-09-12 21:15
 
 ## Cel
 

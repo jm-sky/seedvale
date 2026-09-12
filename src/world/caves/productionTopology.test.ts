@@ -189,12 +189,24 @@ describe('buildProductionCaveTopology (plan world-terrain-008 B1)', () => {
     expect(viaDefault).toEqual(buildNaturalCaveTopology({ seed: 21, site, sampleHeight: gentleHill, sampleBaseHeight: gentleHill }))
   })
 
+  it('does not silently treat dungeon as natural', () => {
+    const site = baseSite({ x: 420, z: -180 })
+    const hill = gentleHillFor(site)
+    const dungeon = buildProductionCaveTopology({ seed: 42, site, archetype: 'dungeon', sampleHeight: hill, sampleBaseHeight: hill })
+    const natural = buildProductionCaveTopology({ seed: 42, site, archetype: 'natural', sampleHeight: hill, sampleBaseHeight: hill })
+    expect(dungeon).not.toBeNull()
+    expect(natural).not.toBeNull()
+    expect(dungeon!.nodes.some((n) => n.id.startsWith('dungeon-'))).toBe(true)
+    expect(natural!.nodes.some((n) => n.id.startsWith('dungeon-'))).toBe(false)
+  })
+
   it('never grows adventure role nodes or a mandatory branch: natural keeps its own character', () => {
     for (let i = 0; i < 12; i++) {
       const site = baseSite({ x: 150 + i * 37, z: -220 + i * 53 })
       const topology = buildProductionCaveTopology({ seed: 500 + i, site, sampleHeight: gentleHill, sampleBaseHeight: gentleHill })
       if (!topology) continue
       expect(topology.nodes.some((n) => n.id.startsWith('adventure-')), `seed ${500 + i}`).toBe(false)
+      expect(topology.nodes.some((n) => n.id.startsWith('dungeon-')), `seed ${500 + i}`).toBe(false)
       expect(topology.nodes.filter((n) => n.kind === 'chamber').length, `seed ${500 + i}`).toBeLessThanOrEqual(2)
       expect(topology.features, `seed ${500 + i}`).toHaveLength(1)
     }

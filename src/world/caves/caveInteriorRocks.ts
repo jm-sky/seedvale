@@ -1,6 +1,6 @@
 /** Plan world-terrain-022 — deterministic, presentation-only rock/boulder
- *  clutter scattered through cave interiors (both `natural` and `adventure`
- *  archetypes). Generic environmental dressing, not semantic content: see
+ *  clutter scattered through cave interiors (`natural`, `adventure` and
+ *  `dungeon` archetypes). Generic environmental dressing, not semantic content: see
  *  `caveContentAnchors.ts` for treasure/wagon/crate/lantern anchors, which
  *  this module reads only as read-only positions to steer clear of.
  *

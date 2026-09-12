@@ -102,6 +102,13 @@ describe('createCaves content anchors (plan world-terrain-020 Stage B)', () => {
     expect(caves.contentAnchorsOf('cave:deadbeef')).toEqual([])
   })
 
+  it('gives dungeon caves no adventure content anchors', () => {
+    for (const def of caves.definitions()) {
+      if (caves.archetypeOf(def.caveId) !== 'dungeon') continue
+      expect(caves.contentAnchorsOf(def.caveId)).toEqual([])
+    }
+  })
+
   it('lists every per-cave anchor exactly once on the world API', () => {
     const combined = caves.definitions().flatMap((d) => caves.contentAnchorsOf(d.caveId))
     expect(caves.contentAnchors()).toEqual(combined)
