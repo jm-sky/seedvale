@@ -48,6 +48,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | NpcAgent refactor | Deep architectural review of `src/ai/NpcAgent.ts` (5 179 lines) — responsibilities, ownership, coupling, decision/strategy seam, presentation split; verdict **REFACTOR / L** with an ordered 2-phase implementation plan | `done` | [2026-09-03--NpcAgent-refactor-review.md](./2026-09-03--NpcAgent-refactor-review.md) |
 | Interactions & targeting UX | Gaze, `[E]`/`[R]`/`[V]`, cycling, prompt semantics — recon only | `done` | [ux/2026-09-10--interactions-targeting-ux-review.md](./ux/2026-09-10--interactions-targeting-ux-review.md) |
 | Items, inventory & equipment UX | Player-facing item lifecycle: pickup, inventory, held tool, capabilities, loot/transfer — recon only | `done` | [ux/2026-09-10--items-inventory-equipment-ux-review.md](./ux/2026-09-10--items-inventory-equipment-ux-review.md) |
+| Living world consistency audit | Cross-domain simulation consistency on `9b7b224` — NPC/households/settlements/fauna, time & schedules, streaming, time skip, save/load, `WorldBundle` rebuild, persistence, death/corpses, decisions, economy, environmental pressures; recon only | `done` | [2026-09-12--living-world-consistency-audit.md](./2026-09-12--living-world-consistency-audit.md) |
 
 ## After each run
 
