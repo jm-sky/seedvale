@@ -12,7 +12,7 @@ import {
   loadGltfAsset,
   prepareProp,
 } from '../assets/loadGltf'
-import { isSystemEnabled } from '../debug/debugMode'
+import { isSystemEnabled, isWildBoarGlbEnabled } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { createCaveMouth, createThicket, tintPropMaterials } from '../settlement/props'
@@ -453,18 +453,31 @@ export function spawnerDestroyBusyLabel(type: PreySpawner['type']): string {
   return `Niszczenie ${SPAWNER_DESTROYING_GENITIVE[type]}…`
 }
 
-/** Wild fauna GLBs (Quaternius pack). Livestock GLBs live in `livestock.ts`. */
+/** Wild fauna GLBs (Quaternius pack + wild_boar). Livestock GLBs live in `livestock.ts`. */
 export const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
   wolf: '/models/fauna/wolf.glb',
   fox: '/models/fauna/fox.glb',
   deer: '/models/fauna/deer.glb',
   stag: '/models/fauna/stag.glb',
   bear: '/models/fauna/bear.glb',
+  boar: '/models/fauna/wild_boar.glb',
 }
 
-/** Primitive-built visuals (`proceduralAnimals.ts`) for species with no GLB —
- *  same role as `AnimalAgent`'s capsule fallback, just species-shaped. Origin
- *  at each animal's feet already, so no `wrapModel`/`prepareProp` needed. */
+/**
+ * GLB URLs actually loaded at boot. `FAUNA_URLS` stays the full catalog
+ * (asset browser); `boar` is gated by `isWildBoarGlbEnabled()` so
+ * `?boarGlb=0` keeps `createBoarModel` without deleting that path.
+ */
+export function faunaGltfUrls(): Partial<Record<AnimalKind, string>> {
+  if (isWildBoarGlbEnabled()) return FAUNA_URLS
+  const { boar: _boar, ...rest } = FAUNA_URLS
+  return rest
+}
+
+/** Primitive-built visuals (`proceduralAnimals.ts`) for species with no GLB,
+ *  a disabled GLB flag, or a load failure — same role as `AnimalAgent`'s
+ *  capsule fallback, just species-shaped. Origin at each animal's feet
+ *  already, so no `wrapModel`/`prepareProp` needed. */
 const PROCEDURAL_FALLBACKS: Partial<Record<AnimalKind, () => Object3D>> = {
   rabbit: createRabbitModel,
   duck: createDuckModel,
@@ -478,7 +491,7 @@ async function loadFaunaTemplates(): Promise<
 > {
   const { bootMark, bootMarkEnd } = useBootMark('loadFaunaTemplates')
   const entries = await Promise.all(
-    (Object.entries(FAUNA_URLS) as [AnimalKind, string][]).map(async ([kind, url]) => {
+    (Object.entries(faunaGltfUrls()) as [AnimalKind, string][]).map(async ([kind, url]) => {
       try {
         bootMark(`loadGltfAsset:${url}`)
         const asset = await loadGltfAsset(url)

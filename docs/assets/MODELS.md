@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-09-12 (wearable body armor `leather_armor`/`chainmail` GLBs wired as ground/inventory pickups M79, plan items-player-029; previously 2026-09-10 draft cart `parked/cart.glb` wired, fauna-007; fishing rod, animal trough, trap good-tier GLB; drink/cook SFX wired; previously rat nest procedural fallback M77 plan quests-progression-013; previously 2026-09-05 reed cluster + shallow coastal seaweed M76 plan world-terrain-010 Phases 5/7; previously 2026-09-04 asset drop — backpack/saddlebags/pan/rope/chest/coin/tomato/roasted_meat/beef/fish GLBs wired; see `docs/tmp/2026-09-04--new-3d-assets.md`)
+**Last updated:** 2026-09-13 (wild boar `wild_boar.glb` wired as `FAUNA_URLS.boar`, M80, `createBoarModel` kept behind `?boarGlb=0`; previously 2026-09-12 wearable body armor `leather_armor`/`chainmail` GLBs wired as ground/inventory pickups M79, plan items-player-029; previously 2026-09-10 draft cart `parked/cart.glb` wired, fauna-007; fishing rod, animal trough, trap good-tier GLB; drink/cook SFX wired; previously rat nest procedural fallback M77 plan quests-progression-013; previously 2026-09-05 reed cluster + shallow coastal seaweed M76 plan world-terrain-010 Phases 5/7; previously 2026-09-04 asset drop — backpack/saddlebags/pan/rope/chest/coin/tomato/roasted_meat/beef/fish GLBs wired; see `docs/tmp/2026-09-04--new-3d-assets.md`)
 
 ## How to use
 
@@ -106,6 +106,7 @@ If the feature needs no new model, do nothing to this file.
 | M77 | Rat nest | Ground burrow behind a residential house for the authored home infestation (plan quests-progression-013). Expected `settlement/rat_nest.glb`; procedural dirt/straw/scrap fallback `createRatNest` is wired and functional | `needed` | plan quests-progression-013 |
 | M78 | Draft cart | Movable player cart pulled by a led draft animal (horse/donkey). Wires parked Quaternius `parked/cart.glb` via `world/cartProp.ts` (`preparePropFitMax(2.2)`); procedural box+wheels fallback. Distinct from the static merchant `wagon.glb` (M03) | `wired` | plan fauna-007 |
 | M79 | Wearable body armor (`leather_armor`/`chainmail`) | First wearable-equipment gameplay layer (`items/equipment.ts`) — a `body`-slot armor item worn from Inventory, not a `HeldTool`. Quaternius `Armor Leather`/`Armor Metal` wired as `ITEM_GLB_SPECS` ground/inventory pickups only; no character-attachment/worn visual in V1 (asset gate — see the plan's non-goals). A third, lighter "padded gambeson" tier is deferred: no distinct asset confirmed yet | `wired` (ground/inventory only) | plan items-player-029 |
+| M80 | Wild boar | Wild `boar` GLB via `FAUNA_URLS` / `createFauna.ts`; `createBoarModel` kept as load-failure and `?boarGlb=0` fallback (feature flag default on) | `wired` | `public/models/fauna/wild_boar.glb` |
 
 ## Wired (reference — do not treat as open work)
 
@@ -114,7 +115,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Area | Examples |
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
-| Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey/dog (Husky+Shiba, see M73); rooster (procedural placeholder, see M72) |
+| Fauna | wolf, fox, deer, stag, bear, boar (`wild_boar.glb`, M80; `?boarGlb=0` reverts to procedural); livestock chicken/sheep/cow/horse/donkey/dog (Husky+Shiba, see M73); rooster (procedural placeholder, see M72) |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed (+reed cluster, see M76), lily pad (shallow water, see M74), seaweed (shallow coastal ocean, see M76), rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169), blacksmith anvil + grind workbench (plan settlements-npcs-002) |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork); backpack, saddlebags, pan, rope, chest, coin, tomato, roasted_meat/beef, fish (2026-09-04 asset drop); 18 skill books sharing 3 closed-book GLBs (plan items-player-016); wearable body armor leather_armor/chainmail, ground/inventory only (plan items-player-029, see M79) |

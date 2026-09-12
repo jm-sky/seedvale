@@ -1476,7 +1476,10 @@ export class AnimalAgent {
     this.anim.resolve({
       idle: ['Idle', 'Idle_2'],
       walk: ['Walk'],
-      gallop: ['Gallop'],
+      // Quaternius packs export `Gallop`; some others `Run`. No run clip
+      // (wild_boar) still sprints on `Walk` — first match wins, same idiom
+      // as Idle/Idle_2. `updateAnim()` also falls back at play time.
+      gallop: ['Gallop', 'Run', 'Walk'],
       // Predators export `Attack`; deer/stag/horse/donkey export
       // `Attack_Headbutt`/`Attack_Kick` instead (plan npc-009) — first match
       // wins, same "smallest existing-compatible name" idiom as Idle/Idle_2.

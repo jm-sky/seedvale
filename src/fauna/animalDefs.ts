@@ -20,8 +20,9 @@ export type AnimalSociability = 'wild' | 'domestic'
  *  (`JUVENILE_SCALE_FACTOR`) until it ages past `JUVENILE_MATURITY_SECONDS`
  *  (plan 118). Only assigned by herding-species spawn logic. */
 export type AnimalLifeStage = 'adult' | 'juvenile'
-/** wolf/fox/deer/stag + livestock (chicken/sheep/cow/horse/donkey) have GLBs
- *  under `public/models/fauna/`; rabbit/duck/boar stay procedural. */
+/** wolf/fox/deer/stag/bear/boar + livestock (chicken/sheep/cow/horse/donkey)
+ *  have GLBs under `public/models/fauna/`; rabbit/duck stay procedural.
+ *  `boar` keeps `createBoarModel` as a feature-flag / load-failure fallback. */
 export type AnimalKind =
   | 'wolf'
   | 'fox'

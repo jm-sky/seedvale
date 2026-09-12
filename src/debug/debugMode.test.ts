@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isCaveHeightfieldTestMode, isModelTestMode } from './debugMode'
+import { isCaveHeightfieldTestMode, isModelTestMode, isWildBoarGlbEnabled } from './debugMode'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -40,5 +40,28 @@ describe('isCaveHeightfieldTestMode', () => {
   it('is not triggered by modelTest', () => {
     stubWindow('?modelTest')
     expect(isCaveHeightfieldTestMode()).toBe(false)
+  })
+})
+
+describe('isWildBoarGlbEnabled', () => {
+  it('is on by default when the flag is absent', () => {
+    stubWindow('')
+    expect(isWildBoarGlbEnabled()).toBe(true)
+  })
+
+  it('stays on for a bare or truthy ?boarGlb', () => {
+    stubWindow('?boarGlb')
+    expect(isWildBoarGlbEnabled()).toBe(true)
+    stubWindow('?boarGlb=1')
+    expect(isWildBoarGlbEnabled()).toBe(true)
+  })
+
+  it('is off for ?boarGlb=0 / false / no', () => {
+    stubWindow('?boarGlb=0')
+    expect(isWildBoarGlbEnabled()).toBe(false)
+    stubWindow('?boarGlb=false')
+    expect(isWildBoarGlbEnabled()).toBe(false)
+    stubWindow('?boarGlb=no')
+    expect(isWildBoarGlbEnabled()).toBe(false)
   })
 })

@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import { wolfDenInitialFillVariant } from './animalVariants'
 import {
   clearsRiverChannel,
   FAUNA_URLS,
+  faunaGltfUrls,
   isDeerEdgeHabitat,
   isNearRoadCorridor,
   SPAWNER_SPECS,
@@ -28,6 +29,27 @@ describe('SPAWNER_SPECS rockDen habitat (plan 188)', () => {
 
   it('registers a bear.glb model URL through the shared FAUNA_URLS map', () => {
     expect(FAUNA_URLS.bear).toBe('/models/fauna/bear.glb')
+  })
+
+  it('registers wild_boar.glb through the shared FAUNA_URLS map', () => {
+    expect(FAUNA_URLS.boar).toBe('/models/fauna/wild_boar.glb')
+  })
+})
+
+describe('faunaGltfUrls (wild-boar GLB feature flag)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('includes boar by default', () => {
+    vi.stubGlobal('window', { location: { search: '' } })
+    expect(faunaGltfUrls().boar).toBe('/models/fauna/wild_boar.glb')
+  })
+
+  it('omits boar when ?boarGlb=0 so createBoarModel stays the visual', () => {
+    vi.stubGlobal('window', { location: { search: '?boarGlb=0' } })
+    expect(faunaGltfUrls().boar).toBeUndefined()
+    expect(faunaGltfUrls().bear).toBe('/models/fauna/bear.glb')
   })
 })
 

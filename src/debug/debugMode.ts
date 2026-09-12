@@ -107,6 +107,21 @@ export function isNpcCombatDebugMode(): boolean {
   return isDebugMode() && urlFlag('debugNpcCombat')
 }
 
+/**
+ * Feature flag for the wild-boar GLB visual (`public/models/fauna/wild_boar.glb`).
+ * Default on. `?boarGlb=0` (or `false`/`no`) keeps `createBoarModel` instead;
+ * load failure still falls back to that procedural mesh either way.
+ */
+export function isWildBoarGlbEnabled(): boolean {
+  if (typeof window === 'undefined') return true
+  try {
+    if (!new URLSearchParams(window.location.search).has('boarGlb')) return true
+    return urlFlag('boarGlb')
+  } catch {
+    return true
+  }
+}
+
 /** Major rendered subsystems that can be independently switched off for
  *  perf/mobile/isolation testing (issue 032 diagnostic follow-up) — visual
  *  only, simulation state keeps running underneath. One name added here per

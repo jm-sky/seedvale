@@ -159,6 +159,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [AnimalAgent](../src/fauna/AnimalAgent.ts) — per-animal decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API.
 - [Animal scare](../src/fauna/animalScare.ts) — generic bounded scare stimulus and stable per-animal probability (thunder is the first source).
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
+- [Wild fauna runtime](../src/fauna/createFauna.ts) — spawn/lifecycle for wild animals and the `FAUNA_URLS` GLB registry.
 - [Individual variants](../src/fauna/animalVariants.ts) — per-animal multipliers (`normal`/`alpha`) and wolf-den alpha slot assignment.
 - [Lead / draft helpers](../src/fauna/animalLead.ts) — leadable/draft capability queries and temporary-lead hysteresis distances.
 - [Livestock stray](../src/fauna/animalStray.ts) — durable stray/displacement episode, selection, survival-assist gates, corpse retention, and world lookup classification (plan fauna-024); natural (non-quest) classification grace helpers (plan fauna-025).

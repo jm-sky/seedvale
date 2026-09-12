@@ -77,6 +77,7 @@ export function createDuckModel(): THREE.Group {
   return root
 }
 
+/** Load-failure / `?boarGlb=0` fallback — live visuals prefer `wild_boar.glb`. */
 export function createBoarModel(): THREE.Group {
   const root = new THREE.Group()
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3d2e22, flatShading: true })
