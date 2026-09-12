@@ -282,6 +282,51 @@ describe('QuestManager kill_target_animal binding', () => {
   })
 })
 
+describe('QuestManager hasSocialOutcomeClaim (plan quests-progression-019 §2)', () => {
+  const groznyWilkDef = runtimeAuthored(QUESTS.find((d) => d.id === 'grozny-wilk')!)
+  const trusted: QuestManagerInitial = { progress: [], relations: { Anna: 6 } }
+
+  it('is false before the quest is even accepted (nothing bound yet)', () => {
+    const qm = makeManager([wolfQuest], () => 'wolf-1')
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(false)
+  })
+
+  it('is false for a bound kill_target_animal quest with no authored social consequence', () => {
+    const qm = makeManager([wolfQuest], () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(false)
+  })
+
+  it('is true for a bound kill_target_animal quest whose complete outcome authors a social consequence (dangerous wolf included)', () => {
+    const qm = new QuestManager([groznyWilkDef], undefined, new Inventory(), trusted, undefined, () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(true)
+  })
+
+  it('is false for an animalId that is not the bound target', () => {
+    const qm = new QuestManager([groznyWilkDef], undefined, new Inventory(), trusted, undefined, () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.hasSocialOutcomeClaim('wolf-2')).toBe(false)
+  })
+
+  it('must be read before the generic animal_died dispatch: it goes false once that dispatch has already advanced the bound stage past kill_target_animal', () => {
+    const qm = new QuestManager([groznyWilkDef], undefined, new Inventory(), trusted, undefined, () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(true)
+    // Simulates AnimalAgent.collapse()'s synchronous onInteractObjective('animal_died') dispatch.
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(false)
+  })
+
+  it('is false once the quest is fully resolved (binding cleared)', () => {
+    const qm = new QuestManager([groznyWilkDef], undefined, new Inventory(), trusted, undefined, () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    speak(qm, 'Anna') // report -> complete
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(false)
+  })
+})
+
 describe('QuestManager find_animal binding', () => {
   const sheepQuest = quest({
     id: 'sheep',

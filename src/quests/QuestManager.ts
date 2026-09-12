@@ -19,6 +19,7 @@ import {
   parseLostLivestockQuestId,
 } from './opportunities/settlementQuestOpportunities'
 import {
+  hasSocialConsequence,
   type QuestConsequences,
   type QuestDef,
   type QuestObjective,
@@ -1128,6 +1129,35 @@ export class QuestManager {
       return { line: stage.progressLine ?? stage.description }
     }
     return null
+  }
+
+  /** Whether `animalId` is right now the bound target of an active
+   *  `kill_target_animal` stage whose quest authors a real social
+   *  consequence on at least one `complete` outcome (plan
+   *  quests-progression-019) — the animal-deed reputation resolver suppresses
+   *  its own generic reward when this is true, so a quest-owned kill is never
+   *  rewarded twice.
+   *
+   *  Must be called *before* dealing the lethal hit, not from the post-kill
+   *  toast/dialogue line: `AnimalAgent.collapse()` synchronously reports
+   *  `animal_died` to `onInteractObjective` while `takeDamage()` is still on
+   *  the stack, which already advances the bound stage past
+   *  `kill_target_animal` before control returns to the caller. Reads
+   *  `animalTargets` directly (unaffected by that advance — only terminal
+   *  `applyOutcome` clears it) rather than reusing `objectiveMatchesRef`,
+   *  which depends on the stage not having moved on yet. */
+  hasSocialOutcomeClaim(animalId: string): boolean {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      if (this.animalTargets.get(def.id) !== animalId) continue
+      const stage = this.currentStage(def, s.stageIndex)
+      if (stage?.objective.type !== 'kill_target_animal') continue
+      if (def.outcomes.some((outcome) => outcome.state === 'complete' && hasSocialConsequence(outcome.consequences))) {
+        return true
+      }
+    }
+    return false
   }
 
   /** Label suffix for `npcId`, or null when no quest wants to flag them.

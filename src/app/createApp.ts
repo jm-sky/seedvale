@@ -110,12 +110,18 @@ import {
 import { QuestManager } from '../quests/QuestManager'
 import { bindDarkForestTreasureQuest, bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
+import {
+  MAX_ANIMAL_DEED_INFLUENCE_DISTANCE,
+  type PlayerAnimalKillContext,
+  resolveAnimalDeedConsequences,
+} from '../reputation/animalDeeds'
 import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
 import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { livestockStrayCandidateFromAgent } from '../settlement/livestock'
 import { settlementNpcDescriptors } from '../settlement/npcIdentity'
+import { settlementsWithinDistance } from '../settlement/settlementProximity'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
 import { drainStamina } from '../shared/StaminaState'
@@ -2254,6 +2260,22 @@ export async function createApp(
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
     questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
+    // Plan quests-progression-019 — resolves the generic dangerous-animal-kill
+    // reputation/renown deed for every settlement the kill is local enough
+    // to, then applies + refreshes through the same seam `groundActions.ts`'s
+    // grave-disturbance exposure uses just above.
+    onPlayerAnimalKill: (kill: PlayerAnimalKillContext, socialOutcomeClaimed: boolean) => {
+      const settlements = settlementsWithinDistance(
+        bundle.settlementsManager.peekDef,
+        kill.position.x,
+        kill.position.z,
+        MAX_ANIMAL_DEED_INFLUENCE_DISTANCE,
+      )
+      const consequences = resolveAnimalDeedConsequences(kill, settlements, { socialOutcomeClaimed })
+      if (consequences.length === 0) return
+      for (const consequence of consequences) applySocialConsequence(reputation, consequence)
+      refreshCharacterReputation()
+    },
     startGroundWork: (mode, x, z) => {
       if (hasItemCapability(heldTool.held(), 'rock_mining')) {
         if (mode === 'level') ground.startPickaxeLevelAt(x, z)

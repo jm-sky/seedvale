@@ -21,6 +21,7 @@ import type { PlayerTorch } from '../player/PlayerTorch'
 import type { TargetedSkillSelection } from '../player/targetedSkillSelection'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
+import type { PlayerAnimalKillContext } from '../reputation/animalDeeds'
 import type { Household } from '../settlement/household'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { VillageFire } from '../settlement/VillageFire'
@@ -356,6 +357,15 @@ export type GameLoopDeps = {
   questManager: QuestManager
   /** Starts/polls lost-livestock stray episodes from live world state. */
   syncLostLivestockQuests: () => void
+  /** A player melee/ranged hit just killed `kill`'s animal (plan
+   *  quests-progression-019) — called once per lethal hit, after the kill
+   *  context is captured from the still-existing `AnimalAgent`.
+   *  `socialOutcomeClaimed` is read from `questManager.hasSocialOutcomeClaim`
+   *  *before* the lethal `takeDamage()` call (see that method's doc for why
+   *  the ordering matters). Composition root resolves nearby settlement
+   *  consequences and applies them — `gameLoop.ts` never touches
+   *  `ReputationManager`/settlement lookups directly. */
+  onPlayerAnimalKill: (kill: PlayerAnimalKillContext, socialOutcomeClaimed: boolean) => void
   ambientAudio: ReturnType<typeof createAmbientAudio>
   fireAudio: ReturnType<typeof createFireAudio>
   houseDoors: ReturnType<typeof createHouseDoorTracker>
@@ -648,7 +658,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
-    questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    questManager, syncLostLivestockQuests, onPlayerAnimalKill, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startShearAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
@@ -788,6 +798,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       ? questManager.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
       : null
     return denOverride?.line ?? override?.line ?? `${label} pada.`
+  }
+
+  /** Snapshots the animal-deed kill context (plan quests-progression-019 §1)
+   *  right after death, while `animal` still exists — the caller must not
+   *  retain the `AnimalAgent` reference and resolve this later; only the
+   *  returned plain data goes to `onPlayerAnimalKill`. */
+  function capturePlayerAnimalKillContext(animal: AnimalAgent): PlayerAnimalKillContext {
+    return {
+      animalId: animal.animalId,
+      animalKind: animal.def.kind,
+      dangerSignificance: animal.dangerSignificance,
+      position: { x: animal.mesh.position.x, z: animal.mesh.position.z },
+    }
   }
 
   /** Currently gaze-highlighted NPC/animal, if any — tracked so we only toggle
@@ -1189,6 +1212,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             `melee:${id}`,
             attackAttemptCounter,
           )
+          // Read before the lethal hit — `takeDamage()` can synchronously
+          // advance this animal's bound quest stage past `kill_target_animal`
+          // (plan quests-progression-019, see `hasSocialOutcomeClaim`'s doc).
+          const socialOutcomeClaimed = questManager.hasSocialOutcomeClaim(animal.animalId)
           animal.takeDamage(critResult.damage, 'player')
           if (weaponInstance) {
             const profile = getWeaponMaintenanceProfile(weaponInstance.kind)
@@ -1202,6 +1229,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const label = ANIMAL_LABELS[animal.def.kind]
           if (killed) {
             toast.show(animalDeathToastLine(animal))
+            onPlayerAnimalKill(capturePlayerAnimalKillContext(animal), socialOutcomeClaimed)
           } else {
             toast.show(critResult.critical ? `Trafienie krytyczne: ${label}!` : `Trafiono: ${label}`)
           }
@@ -1344,6 +1372,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               projectile.attackKey,
               projectile.attempt,
             )
+            // Read before the lethal hit — see the melee call site's identical comment.
+            const socialOutcomeClaimed = questManager.hasSocialOutcomeClaim(animal.animalId)
             animal.takeDamage(critResult.damage, 'player')
             awardSkillXp(player.skills, 'archery', SKILL_XP_AWARD.rangedHit)
             playerCombat.enter()
@@ -1356,6 +1386,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             toast.show(killed
               ? animalDeathToastLine(animal)
               : critResult.critical ? `Trafienie krytyczne: ${label}!` : `Trafiono: ${label}`)
+            if (killed) onPlayerAnimalKill(capturePlayerAnimalKillContext(animal), socialOutcomeClaimed)
             continue
           }
           if (!expired) {

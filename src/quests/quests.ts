@@ -281,6 +281,17 @@ export function uniqueOutcomeForState(
   return matches.length === 1 ? matches[0] : undefined
 }
 
+/** Whether `consequences` carries an actual reputation/renown delta, not
+ *  just an authored-but-empty `social` field (plan quests-progression-019) —
+ *  used by `QuestManager.hasSocialOutcomeClaim` to decide whether a quest
+ *  "owns" the social outcome of a kill it also tracks. */
+export function hasSocialConsequence(consequences: QuestConsequences | undefined): boolean {
+  const social = consequences?.social
+  if (!social) return false
+  if (social.renown !== undefined && social.renown !== 0) return true
+  return Object.values(social.reputation ?? {}).some((delta) => delta !== undefined && delta !== 0)
+}
+
 export type QuestObjective =
   | { type: 'talk_to_npc', npc: QuestNpcRef }
   /** Talking to one of the authored NPCs presents a player dialogue action

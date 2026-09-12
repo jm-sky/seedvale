@@ -1,7 +1,7 @@
 # Plan: Dangerous Animal Deeds & Local Reputation
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~quests-progression-001~~, ~~quests-progression-002~~, fauna-022

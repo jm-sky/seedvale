@@ -7,8 +7,10 @@ import { cellsWithinRadius, SETTLEMENT_GRID_STEP, type SettlementCell, type Sett
  *
  * @domain settlement
  * @system settlement-proximity
- * @role Cheap, bounded "is this world point near a settlement" check, built
- *  on the existing settlement grid instead of loaded/streamed settlements.
+ * @role Cheap, bounded "which settlements are near this world point" checks,
+ *  built on the existing settlement grid instead of loaded/streamed
+ *  settlements — `isNearSettlement`'s fixed-radius boolean check, and
+ *  `settlementsWithinDistance`'s larger-radius full candidate list.
  */
 
 /** Half the settlement grid spacing (plan world-017 §4.2) — derived from the
@@ -42,4 +44,32 @@ export function isNearSettlement(
     if (Math.hypot(def.x - x, def.z - z) <= maxDistance) return true
   }
   return false
+}
+
+/** Every settlement (loaded or not) whose site sits within `maxDistance` of
+ *  `(x, z)` — same non-streaming `peekDef` grid walk as `isNearSettlement`,
+ *  generalized for a much larger `maxDistance` (plan quests-progression-019
+ *  §7, animal-deed reputation exposure): returns every match instead of
+ *  short-circuiting on the first one, and derives the cell search radius
+ *  from `maxDistance` instead of a fixed `1`. The `+1` cell of margin covers
+ *  a site's deterministic offset/local-site-search drift within its own
+ *  cell (see `SETTLEMENT_GRID_STEP`'s doc), so a settlement just inside
+ *  `maxDistance` near a cell boundary is never missed. Exact-filtered by
+ *  real world distance afterward, so the result never depends on the grid
+ *  step choice, only on `maxDistance` itself. */
+export function settlementsWithinDistance(
+  peekDef: (cell: SettlementCell) => SettlementDef | null,
+  x: number,
+  z: number,
+  maxDistance: number,
+): { id: string, x: number, z: number }[] {
+  const center = worldToCell(x, z)
+  const cellRadius = Math.ceil(maxDistance / SETTLEMENT_GRID_STEP) + 1
+  const results: { id: string, x: number, z: number }[] = []
+  for (const cell of cellsWithinRadius(center, cellRadius)) {
+    const def = peekDef(cell)
+    if (!def) continue
+    if (Math.hypot(def.x - x, def.z - z) <= maxDistance) results.push({ id: def.id, x: def.x, z: def.z })
+  }
+  return results
 }

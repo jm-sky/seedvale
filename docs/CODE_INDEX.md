@@ -111,6 +111,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Profession staffing](../src/settlement/professionStaffing.ts) — generation-time adult profession composition from settlement identity; does not change family structure.
 - [ReputationManager](../src/reputation/ReputationManager.ts) — per-settlement reputation dimensions and renown; callers apply an already-resolved `SocialConsequence`.
 - [Social exposure](../src/reputation/socialExposure.ts) — pure day/night + Sneak exposure roll used when a cemetery grave first resolves.
+- [Animal-deed reputation](../src/reputation/animalDeeds.ts) — pure dangerous-animal-kill reputation/renown resolver (plan quests-progression-019): species baseline × fauna-owned `dangerSignificance` × distance attenuation, suppressed when `QuestManager.hasSocialOutcomeClaim` says a quest already owns the kill's social outcome.
 
 ## Persistence
 
