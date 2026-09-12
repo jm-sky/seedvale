@@ -26,7 +26,6 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 ## Fauna
 
 - [ ] 2026-09-12 — `wolfDen` pressure activation (`shouldActivateWolfDenProblem`) może dospawnować wilki poza initial fill; te osobniki są `normal`, nawet gdy oryginalna alfa zginęła. fauna-022 przypisuje alfę tylko do slotu 0 zwykłego initial fill (den ma `respawnIntervalDays: Infinity`). Jeśli odtworzony pack ma znowu mieć alfę, rozszerzyć ten sam slot/identity mechanizm, nie dodawać RNG ani osobnego alpha spawnera.
-- [ ] 2026-09-02 — `AnimalAgent.resolveNpcTarget()` stosuje village exclusion tylko przy acquisition. Predator, który zablokował NPC poza osadą, może kontynuować pościg po wejściu NPC do osady; jeśli granica osady ma być ochroną zachowania, lock trzeba rewalidować w trakcie pościgu.
 - [ ] 2026-09-02 — frenzy branches (`npc-attack-frenzied` / `frenzy-beeline`) nie wywołują `cancelSourceTarget()`, więc wilk może zachować `foodClaimedBy` na padlinie podczas szarży na osadę. Ujednolicić bookkeeping branchy, jeśli claim nie ma celowo przetrwać frenzy.
 - [ ] 2026-09-08 — `AnimalAgent.hydrate()` losuje corpse tip-side przy load dla persystowanego livestock corpse bez death clip; ten sam save może wizualnie odtworzyć zwłoki po przeciwnej stronie. Cosmetic, ale niedeterministyczne.
 - [ ] 2026-09-08 — initial livestock `productionReadyAtDays` jest seedowane runtime RNG, a potem persystowane. Pierwsze utworzenie tej samej deterministycznej sztuki może więc dać różny stagger; użyć stabilnego rolla z identity/seed.
