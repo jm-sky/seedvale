@@ -55,6 +55,14 @@ describe('settlementAgriculture (plan settlements-npcs-030)', () => {
     ]))).toBe(0)
   })
 
+  it('builds starting context from hunter membership and adult farmer coverage', () => {
+    expect(householdStartingContextFromFamily(family([
+      member({ name: 'Ada', role: 'farmer', age: 30 }),
+      member({ name: 'Kid', role: 'farmer', age: 8 }),
+      member({ name: 'Jan', role: 'hunter', age: 40 }),
+    ]))).toEqual({ hasHunter: true, adultFarmerCount: 1 })
+  })
+
   it('does not count a child farmer toward agricultural capacity or starter seeds', () => {
     expect(householdStartingContextFromFamily(family([
       member({ name: 'Kid', role: 'farmer', age: 9 }),
