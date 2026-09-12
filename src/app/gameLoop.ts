@@ -163,6 +163,7 @@ import { resolveOffscreenTransportArrivals } from '../world/transportOffscreen'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyLightningFlash, applyWeatherOverlay, resolveSceneFog } from '../world/weatherVisuals'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
+import { buildHuntableLivestock } from './faunaEncounterComposition'
 import { inspectionTargetRef } from './inspection/inspectionTarget'
 import {
   buildCombatTarget,
@@ -651,6 +652,11 @@ export type GameLoop = {
 /** Reused attraction snapshot buffer (plan fauna-023 §11) — rebuilt once per
  *  fauna pass, never allocated per animal. */
 const attractionSnapshotScratch: AnimalAttractionSource[] = []
+/** Reused huntable-livestock encounter buffer + dedupe set (plan fauna-026
+ *  §2/§11) — rebuilt once per fauna pass after `SettlementsManager.update()`,
+ *  never allocated per predator. */
+const huntableLivestockScratch: AnimalAgent[] = []
+const huntableLivestockSeenScratch = new Set<string>()
 
 export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
@@ -2530,6 +2536,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           )
         })
         syncLostLivestockQuests()
+        // Composition seam for predator → livestock prey acquisition (plan
+        // fauna-026 §1) — built after `settlementsManager.update()` above so
+        // this frame's stream-in/out is already reflected, and before
+        // `Fauna.update()` so wild predators can see it this same pass.
+        // Read-only, deduplicated by `animalId`; never merged into any wild
+        // `others`/`agents` pool (see `buildHuntableLivestock`'s own doc).
+        const huntableLivestock = buildHuntableLivestock(
+          bundle.settlementsManager.getLoaded(),
+          bundle.settlementsManager.getDetachedLivestock(),
+          huntableLivestockScratch,
+          huntableLivestockSeenScratch,
+        )
         withCategory(monitor, 'FAUNA', () => {
           bundle.fauna.update(
             dt,
@@ -2538,6 +2556,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             dayNight.elapsedDays,
             litFires,
             villages,
+            huntableLivestock,
             nearbyHumanCount,
             (amount, attackerX, attackerZ) => {
               const dmg = applyPlayerDamage({

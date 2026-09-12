@@ -79,15 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
-| 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
-<<<<<<< HEAD
-=======
-| 💡 `world-terrain-024-dungeon-cave-archetype.md`                               | -       | 🟡 | M      | ~~world-terrain-020~~ |
-| ◼️ `world-terrain-025-underground-cave-pool.md`                                | -       | 🟡 | M      | world-terrain-024 |
-| `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`      | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
->>>>>>> 73c9e335 (Household wood item authority and repair pressure correctness (settlements-npcs-034))
-| 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
-| `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`      | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
+
 ---
 
 ## Verification needed
@@ -98,6 +90,8 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-npcs-034-household-wood-authority-and-repair-correctness.md` | Household wood jako konkretne `branch`/`beam` w `Household.items` (nie scalar stock); hunter arrow production i structure repair konsumują te same realne itemy, które trafiły do household; `repairStructure` dostaje dodatni pressure tylko gdy naprawa jest realnie możliwa albo epizod już trwa; brak decision livelock przy race scoring/`beginRepairStructure()`; save v39 migruje legacy `stock.wood` do `items.branch` |
+| `fauna-026-predator-livestock-encounter-set.md` | Puść dzikiego wilka w pobliże gospodarstwa z owcą/krową/kurą — wilk realnie wybiera je jako prey (nie tylko dzikie zwierzęta), goni, atakuje i może zabić przez zwykły combat (nie instant-kill); zabite zwierzę przechodzi przez zwykły corpse/`onAnimalDeath`; `huntingPrey()` niesie realny household owner, więc pasterz (`shepherdFlock`) i pies stróżujący (`dogGuard`) reagują na realne polowanie na własny inwentarz, nie tylko na atak na człowieka; pies broni własnego stada wilka polującego na jego household livestock i przestaje po śmierci/oddaleniu wilka; usunięcie zwierzęcia ze świata w trakcie pościgu (np. stream-out osady) natychmiast przerywa pościg bez "ostatniego" trafienia; dzikie polowanie wilk↔dzikie zwierzę działa jak wcześniej, gdy w pobliżu nie ma inwentarza; brak zauważalnego spadku FPS przy większej liczbie zwierząt w pobliżu osady |
 | `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md` | Połóż `raw_meat` przy wilku → podejście i zjedzenie (nie instant z dystansu); lis na świeże mięso, roślinożerca nie; niedźwiedź na mięso + berries/apple/nuts/honey + blood; bear fresh/rotting carcass tak, bones nie; bear ignoruje bait w simple/good trap; zabranie mięsa przed dojściem = brak relief; trail z kilku kawałków/krwi; wilk do good trap z detection/capture; flee/walka przerywają attraction |
 | `items-player-031-armor-category-and-character-defense-summary.md` | Ekwipunek: filtr `Pancerze`, zbroje nie pod `Broń`; Kupiec: filtr `Pancerze` w BUY/OFFER; ekran Postaci: sekcja `Pancerz` z agregatem z `resolveEquipmentModifiers()` i sześcioma slotami; save/load i zmiana zbroi przy otwartym ekranie odświeżają wartości |
 | `items-player-029-wearable-armor-and-combat-equipment.md` | Kupiec sprzedaje `leather_armor`/`chainmail`; „Załóż”/„Zdejmij” w ekwipunku pokazuje ochronę/wysiłek/tempo/ruch; noszona zbroja zauważalnie zmniejsza obrażenia od zwierząt (kolczuga wyraźnie bardziej niż skóra), ale aktywny blok trzymanym przedmiotem nadal działa; kolczuga wyraźnie spowalnia i męczy (atak/sprint/ruch) mocniej niż skórzana; sprzedanie/upuszczenie założonej zbroi natychmiast usuwa efekt bez ducha bonusu; głód/pragnienie nie są łagodzone przez zbroję; save/load zachowuje założony przedmiot (i poprawnie ładuje pusty slot przy starym zapisie); waga zbroi nadal liczy się do przeciążenia ekwipunku |
