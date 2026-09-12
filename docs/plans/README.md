@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-terrain-024-dungeon-cave-archetype.md`                               | -       | 🟡 | M      | ~~world-terrain-020~~ |
 | 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
 | 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
+| ◼️ `world-terrain-025-underground-cave-pool.md`                                | -       | 🟡 | M      | world-terrain-024 |
 
 ---
 
@@ -193,7 +194,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `014`
 - ui-input: `017`
 - world: `027`
-- world-terrain: `025`
+- world-terrain: `026`
 
 This ids section is maintained automatically from the plan files.
 
