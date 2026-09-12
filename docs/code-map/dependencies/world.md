@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `shared/waterPoisoningExposure.ts`
 - `terrain/waterBodyKind.ts`
 - `world/WaterSource.test.ts`
+- `world/caves/caveUndergroundPool.ts`
 - `world/playerWell.test.ts`
 - `world/playerWell.ts`
 - `world/riverWaterQuality.ts`
@@ -301,6 +302,7 @@ Generated from TypeScript imports.
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHabitat.test.ts`
+- `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/dungeonChambers.test.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/productionTopology.ts`
@@ -360,6 +362,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveInteriorRocks.test.ts`
@@ -573,6 +577,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHabitat.test.ts`
 - `world/caves/caveHabitat.ts`
 - `world/caves/caveHeightfieldQuery.test.ts`
+- `world/caves/caveUndergroundPool.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
@@ -600,6 +605,7 @@ Generated from TypeScript imports.
 - `world/caves/caveRng.ts`
 - `world/caves/caveSurface.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
 - `world/caves/mouthCarve.ts`
 - `world/caves/spikeNoise.ts`
 
@@ -628,6 +634,8 @@ Generated from TypeScript imports.
 - `world/caves/cavePresentationFog.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.ts`
+- `world/caves/caveUndergroundPool.test.ts`
+- `world/caves/caveUndergroundPool.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/dungeonTopology.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
@@ -772,6 +780,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveInteriorRocks.ts`
 - `world/caves/caveRng.test.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
 - `world/caves/dungeonTopology.ts`
 - `world/caves/productionTopology.ts`
 
@@ -793,6 +802,7 @@ Generated from TypeScript imports.
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveHeightfieldPlacement.ts`
+- `world/caves/caveUndergroundPool.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/dungeonTopology.ts`
 - `world/caves/productionTopology.ts`
@@ -880,6 +890,8 @@ Generated from TypeScript imports.
 - `world/caves/caveInteriorRocks.test.ts`
 - `world/caves/caveInteriorRocks.ts`
 - `world/caves/caveRoute.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
 - `world/caves/dungeonChambers.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/dungeonTopology.ts`
@@ -889,6 +901,67 @@ Generated from TypeScript imports.
 - `world/caves/spikeTestCave.ts`
 - `world/caves/sweepCaveMesh.ts`
 - `world/caves/topologyAdapter.ts`
+- `world/createCaves.ts`
+
+## `world/caves/caveUndergroundPool.test.ts`
+
+**Imports**
+
+- `world/caves/adventureTopology.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
+- `world/largeCaves.ts`
+
+## `world/caves/caveUndergroundPool.ts`
+
+**Imports**
+
+- `world/WaterSource.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveRoute.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
+- `world/caves/mouthCarve.ts`
+
+**Imported by**
+
+- `world/caves/caveUndergroundPool.test.ts`
+- `world/caves/caveUndergroundPoolPresentation.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/createCaves.ts`
+
+## `world/caves/caveUndergroundPoolFootprint.ts`
+
+**Imports**
+
+- `world/caves/caveRng.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/dungeonChambers.ts`
+- `world/caves/spikeNoise.ts`
+
+**Imported by**
+
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveUndergroundPool.test.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/caveUndergroundPoolPresentation.ts`
+
+## `world/caves/caveUndergroundPoolPresentation.ts`
+
+**Imports**
+
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
+- `world/waterMaterial.ts`
+- `world/waterMirror.ts`
+
+**Imported by**
+
 - `world/createCaves.ts`
 
 ## `world/caves/clipBelowSurface.test.ts`
@@ -930,6 +1003,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveUndergroundPoolFootprint.ts`
 - `world/caves/dungeonChambers.test.ts`
 - `world/createCaves.ts`
 
@@ -959,11 +1033,13 @@ Generated from TypeScript imports.
 - `world/caves/caveRng.ts`
 - `world/caves/caveRoute.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPool.ts`
 - `world/caves/mouthOverburden.ts`
 - `world/largeCaves.ts`
 
 **Imported by**
 
+- `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/dungeonChambers.test.ts`
 - `world/caves/dungeonChambers.ts`
 - `world/caves/dungeonTopology.test.ts`
@@ -993,6 +1069,8 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
+- `world/caves/caveUndergroundPool.test.ts`
+- `world/caves/caveUndergroundPool.ts`
 - `world/caves/clipBelowSurface.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
@@ -1070,6 +1148,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldRepresentation.test.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
+- `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/dungeonChambers.test.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
@@ -1084,6 +1163,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
 - `world/caves/sweepCaveMesh.ts`
 
 ## `world/caves/spikeTestCave.ts`
@@ -1405,12 +1485,15 @@ Generated from TypeScript imports.
 - `world/caves/cavePresentationLifecycle.ts`
 - `world/caves/caveTerrainCutout.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/caveUndergroundPoolPresentation.ts`
 - `world/caves/dungeonChambers.ts`
 - `world/caves/mouthCarve.ts`
 - `world/caves/productionTopology.ts`
 - `world/caves/topologyAdapter.ts`
 - `world/largeCaves.ts`
 - `world/pointLightBudget.ts`
+- `world/waterMaterial.ts`
 
 **Imported by**
 
@@ -2142,6 +2225,7 @@ Generated from TypeScript imports.
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveRoute.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
+- `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/dungeonChambers.test.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/dungeonTopology.ts`
@@ -2219,6 +2303,8 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
 - `quests/quests.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
@@ -2480,6 +2566,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
@@ -3471,6 +3558,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveUndergroundPoolPresentation.ts`
+- `world/createCaves.ts`
 - `world/createOcean.ts`
 - `world/createRiverWater.ts`
 - `world/createWater.ts`
@@ -3494,6 +3583,7 @@ Generated from TypeScript imports.
 - `terrain/grass.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `ui/agentStatusLabel.ts`
+- `world/caves/caveUndergroundPoolPresentation.ts`
 - `world/createLights.ts`
 - `world/createOcean.ts`
 - `world/createRiverWater.ts`

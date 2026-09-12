@@ -349,8 +349,11 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `shared/temporaryConditions.ts`
 - `terrain/riverNetwork.ts`
+- `world/caves/caveArchetype.ts`
+- `world/locations/darkForestTreasureSite.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
 - `world/worldContext.ts`
 
 ## `debug/npcDebugApi.ts`
@@ -386,6 +389,8 @@ Generated from TypeScript imports.
 - `shared/PhysicalAttributes.ts`
 - `shared/injurySeverity.ts`
 - `shared/temporaryConditions.ts`
+- `world/caves/caveArchetype.ts`
+- `world/locations/darkForestTreasureSite.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`

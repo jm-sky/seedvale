@@ -311,56 +311,56 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldRepresentation.ts`
 
-- `APERTURE_LIFT` — const — line 83
-- `BETA` — const — line 46
-- `buildCaveHeightfieldRepresentation` — function — line 667
+- `APERTURE_LIFT` — const — line 84
+- `BETA` — const — line 47
+- `buildCaveHeightfieldRepresentation` — function — line 668
   - domain: world-terrain
-- `buildChamberLobes` — function — line 391
+- `buildChamberLobes` — function — line 392
   - domain: world-terrain
-- `buildEntranceInfluence` — function — line 350
+- `buildEntranceInfluence` — function — line 351
   - domain: world-terrain
-- `CaveHeightfieldBounds` — type — line 125
-- `CaveHeightfieldBuildResult` — type — line 188
-- `CaveHeightfieldConfig` — type — line 102
-- `CaveHeightfieldRepresentation` — type — line 144
+- `CaveHeightfieldBounds` — type — line 126
+- `CaveHeightfieldBuildResult` — type — line 189
+- `CaveHeightfieldConfig` — type — line 103
+- `CaveHeightfieldRepresentation` — type — line 145
   - domain: world-terrain
-- `closure` — function — line 214
+- `closure` — function — line 215
   - domain: world-terrain
-- `crossSectionAt` — function — line 475
+- `crossSectionAt` — function — line 476
   - domain: world-terrain
-- `DEFAULT_HEIGHTFIELD_CONFIG` — const — line 111
-- `ENTRANCE_INWARD` — const — line 87
-- `ENTRANCE_OUTWARD` — const — line 85
-- `estimateHeightfieldGrid` — function — line 640
+- `DEFAULT_HEIGHTFIELD_CONFIG` — const — line 112
+- `ENTRANCE_INWARD` — const — line 88
+- `ENTRANCE_OUTWARD` — const — line 86
+- `estimateHeightfieldGrid` — function — line 641
   - domain: world-terrain
-- `FAR_GAP` — const — line 79
-- `heightfieldGapGradient` — function — line 903
-- `heightfieldNodeGap` — function — line 816
-- `heightfieldNodeIndex` — function — line 803
-- `heightfieldNodeOpenSky` — function — line 821
-- `heightfieldNodePosition` — function — line 807
-- `HeightfieldSample` — type — line 174
-- `HeightfieldStation` — type — line 165
-- `KAPPA` — const — line 55
-- `mouthOpeningAt` — function — line 892
+- `FAR_GAP` — const — line 80
+- `heightfieldGapGradient` — function — line 909
+- `heightfieldNodeGap` — function — line 822
+- `heightfieldNodeIndex` — function — line 809
+- `heightfieldNodeOpenSky` — function — line 827
+- `heightfieldNodePosition` — function — line 813
+- `HeightfieldSample` — type — line 175
+- `HeightfieldStation` — type — line 166
+- `KAPPA` — const — line 56
+- `mouthOpeningAt` — function — line 898
   - domain: world-terrain
-- `NC` — const — line 51
-- `NF` — const — line 48
-- `NoiseOctave2D` — type — line 100
-- `OUTSIDE_REACH` — const — line 75
-- `R_MIN` — const — line 71
-- `resampleSegmentStations` — function — line 271
+- `NC` — const — line 52
+- `NF` — const — line 49
+- `NoiseOctave2D` — type — line 101
+- `OUTSIDE_REACH` — const — line 76
+- `R_MIN` — const — line 72
+- `resampleSegmentStations` — function — line 272
   - domain: world-terrain
-- `RIM_ASPECT` — const — line 60
-- `RIM_BAND_MAX` — const — line 64
-- `RIM_BAND_MIN` — const — line 61
-- `rimBand` — function — line 221
-- `sampleHeightfieldAt` — function — line 856
+- `RIM_ASPECT` — const — line 61
+- `RIM_BAND_MAX` — const — line 65
+- `RIM_BAND_MIN` — const — line 62
+- `rimBand` — function — line 222
+- `sampleHeightfieldAt` — function — line 862
   - domain: world-terrain
-- `SMOOTH_K` — const — line 57
-- `SurfaceSampler` — type — line 195
-- `U_CORE` — const — line 66
-- `U_FADE` — const — line 69
+- `SMOOTH_K` — const — line 58
+- `SurfaceSampler` — type — line 196
+- `U_CORE` — const — line 67
+- `U_FADE` — const — line 70
 
 ## `world/caves/caveIdentity.ts`
 
@@ -412,7 +412,7 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveRng.ts`
 
 - `CAVE_RNG_SALT` — const — line 34
-- `createCaveRandom` — function — line 87
+- `createCaveRandom` — function — line 91
 
 ## `world/caves/caveRoute.ts`
 
@@ -464,6 +464,35 @@ Generated from exported TypeScript symbols.
 - `CaveTopologyPoint` — type — line 21
 - `CaveTopologySegment` — type — line 39
 
+## `world/caves/caveUndergroundPool.ts`
+
+- `buildDungeonHeightfieldWithPool` — function — line 193
+  - domain: world-terrain
+- `CaveUndergroundPool` — type — line 44
+  - domain: world-terrain
+- `dungeonTopologyAcceptsUndergroundPool` — function — line 215
+  - domain: world-terrain
+- `finalizeUndergroundPool` — function — line 145
+  - domain: world-terrain
+- `undergroundPoolId` — function — line 55
+- `walkSurfaceForTopology` — function — line 59
+
+## `world/caves/caveUndergroundPoolFootprint.ts`
+
+- `CAVE_UNDERGROUND_POOL_MAX_DEPTH` — const — line 12
+- `resolveUndergroundPoolFootprintIntent` — function — line 61
+  - domain: world-terrain
+- `undergroundPoolFloorDepression` — function — line 121
+- `UndergroundPoolFootprintIntent` — type — line 28
+  - domain: world-terrain
+- `undergroundPoolFootprintStrength` — function — line 103
+
+## `world/caves/caveUndergroundPoolPresentation.ts`
+
+- `CaveUndergroundPoolPresentation` — type — line 21
+- `createCaveUndergroundPoolPresentation` — function — line 50
+  - domain: world-terrain
+
 ## `world/caves/clipBelowSurface.ts`
 
 - `clipTrianglesBelowSurface` — function — line 38
@@ -484,26 +513,26 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/dungeonTopology.ts`
 
-- `buildDungeonCaveTopology` — function — line 287
+- `buildDungeonCaveTopology` — function — line 288
   - domain: world-terrain
-- `DUNGEON_CHAMBER_1_NODE_ID` — const — line 61
-- `DUNGEON_CHAMBER_2_NODE_ID` — const — line 62
-- `DUNGEON_CHAMBER_3_NODE_ID` — const — line 63
-- `DUNGEON_DEEP_CHAMBER_NODE_ID` — const — line 66
-- `DUNGEON_DESCENT_PER_METER` — const — line 46
-- `DUNGEON_FINAL_CHAMBER_NODE_ID` — const — line 67
-- `DUNGEON_JUNCTION_1_NODE_ID` — const — line 59
-- `DUNGEON_JUNCTION_2_NODE_ID` — const — line 60
-- `DUNGEON_LAYOUT_ATTEMPTS` — const — line 147
-- `DUNGEON_MAX_HEIGHTFIELD_CELLS` — const — line 144
-- `DUNGEON_SIDE_CHAMBER_1_NODE_ID` — const — line 64
-- `DUNGEON_SIDE_CHAMBER_2_NODE_ID` — const — line 65
-- `DUNGEON_SIDE_PASSAGE_1_NODE_ID` — const — line 68
-- `DUNGEON_SIDE_PASSAGE_2_NODE_ID` — const — line 69
-- `dungeonBranchDecisionCount` — function — line 226
-- `fitsDungeonFootprintBudget` — function — line 210
+- `DUNGEON_CHAMBER_1_NODE_ID` — const — line 62
+- `DUNGEON_CHAMBER_2_NODE_ID` — const — line 63
+- `DUNGEON_CHAMBER_3_NODE_ID` — const — line 64
+- `DUNGEON_DEEP_CHAMBER_NODE_ID` — const — line 67
+- `DUNGEON_DESCENT_PER_METER` — const — line 47
+- `DUNGEON_FINAL_CHAMBER_NODE_ID` — const — line 68
+- `DUNGEON_JUNCTION_1_NODE_ID` — const — line 60
+- `DUNGEON_JUNCTION_2_NODE_ID` — const — line 61
+- `DUNGEON_LAYOUT_ATTEMPTS` — const — line 148
+- `DUNGEON_MAX_HEIGHTFIELD_CELLS` — const — line 145
+- `DUNGEON_SIDE_CHAMBER_1_NODE_ID` — const — line 65
+- `DUNGEON_SIDE_CHAMBER_2_NODE_ID` — const — line 66
+- `DUNGEON_SIDE_PASSAGE_1_NODE_ID` — const — line 69
+- `DUNGEON_SIDE_PASSAGE_2_NODE_ID` — const — line 70
+- `dungeonBranchDecisionCount` — function — line 227
+- `fitsDungeonFootprintBudget` — function — line 211
   - domain: world-terrain
-- `meetsDungeonSemanticContract` — function — line 265
+- `meetsDungeonSemanticContract` — function — line 266
   - domain: world-terrain
 
 ## `world/caves/mouthCarve.ts`
@@ -672,9 +701,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 94
-- `Caves` — type — line 96
-- `createCaves` — function — line 305
+- `CaveInteriorQueryChannel` — type — line 104
+- `Caves` — type — line 106
+- `createCaves` — function — line 323
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
