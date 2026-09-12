@@ -355,45 +355,44 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcPostDeath.ts`
 
-- `canLootNpcCorpse` — function — line 201
-- `claimNpcCorpseForBurial` — function — line 140
-- `cloneNpcCorpseLoot` — function — line 56
-- `cloneNpcPostDeath` — function — line 63
-- `commitNpcDeath` — function — line 256
-- `corpseLootInventory` — function — line 205
-- `createActiveNpcPostDeath` — function — line 96
-- `createEmptyNpcCorpseLoot` — function — line 77
-- `createLegacyTerminalNpcPostDeath` — function — line 83
-- `dropNpcCorpseLoot` — function — line 314
-- `EMPTY_NPC_CORPSE_LOOT` — const — line 54
-- `extractNpcLoadoutLoot` — function — line 237
-- `finalizeExpiredNpcCorpse` — function — line 326
-- `FinalizeNpcBurialResult` — type — line 180
-- `finalizeNpcCorpseBurial` — function — line 184
-- `hasActiveNpcCorpse` — function — line 115
-- `isNpcCorpseBuryable` — function — line 172
-- `markNpcPostDeathTerminal` — function — line 134
-- `NPC_CORPSE_BONES_ONSET_DAYS` — const — line 51
-- `NPC_CORPSE_REMOVE_DAYS` — const — line 52
-- `NPC_CORPSE_ROT_ONSET_DAYS` — const — line 50
-- `npcCorpseBurialClaimOwner` — function — line 168
-- `NpcCorpseCleanupReason` — type — line 25
-- `NpcCorpseLootSnapshot` — type — line 27
-- `NpcCorpsePhase` — type — line 23
-- `npcCorpsePhaseFromElapsedDays` — function — line 119
-- `npcCorpseReadyToRemove` — function — line 129
-- `NpcPostDeathState` — type — line 32
-- `NpcPostDeathStatus` — type — line 21
+- `canLootNpcCorpse` — function — line 209
+- `claimNpcCorpseForBurial` — function — line 148
+- `cloneNpcCorpseLoot` — function — line 67
+- `cloneNpcPostDeath` — function — line 71
+- `commitNpcDeath` — function — line 238
+- `corpseLootInventory` — function — line 216
+- `createActiveNpcPostDeath` — function — line 104
+- `createEmptyNpcCorpseLoot` — function — line 85
+- `createLegacyTerminalNpcPostDeath` — function — line 91
+- `dropNpcCorpseLoot` — function — line 295
+- `EMPTY_NPC_CORPSE_LOOT` — const — line 62
+- `finalizeExpiredNpcCorpse` — function — line 315
+- `FinalizeNpcBurialResult` — type — line 188
+- `finalizeNpcCorpseBurial` — function — line 192
+- `hasActiveNpcCorpse` — function — line 123
+- `isNpcCorpseBuryable` — function — line 180
+- `markNpcPostDeathTerminal` — function — line 142
+- `NPC_CORPSE_BONES_ONSET_DAYS` — const — line 59
+- `NPC_CORPSE_REMOVE_DAYS` — const — line 60
+- `NPC_CORPSE_ROT_ONSET_DAYS` — const — line 58
+- `npcCorpseBurialClaimOwner` — function — line 176
+- `NpcCorpseCleanupReason` — type — line 30
+- `NpcCorpseLootSnapshot` — type — line 38
+- `NpcCorpsePhase` — type — line 28
+- `npcCorpsePhaseFromElapsedDays` — function — line 127
+- `npcCorpseReadyToRemove` — function — line 137
+- `NpcPostDeathState` — type — line 40
+- `NpcPostDeathStatus` — type — line 26
   - domain: npc
   - role: Authoritative NPC corpse lifecycle, loot snapshot and burial handoff.
   - owns: NpcPostDeathState
-- `recoverStaleNpcBurialClaim` — function — line 159
-- `releaseNpcCorpseBurialClaim` — function — line 150
-- `resolveNpcCorpsePhase` — function — line 124
-- `shouldSkipNpcCorpsePresentation` — function — line 338
-- `snapshotCorpseLoot` — function — line 209
-- `transferCorpseCountTo` — function — line 292
-- `transferCorpseInstanceTo` — function — line 276
+- `recoverStaleNpcBurialClaim` — function — line 167
+- `releaseNpcCorpseBurialClaim` — function — line 158
+- `resolveNpcCorpsePhase` — function — line 132
+- `shouldSkipNpcCorpsePresentation` — function — line 327
+- `snapshotCorpseLoot` — function — line 220
+- `transferCorpseCountTo` — function — line 277
+- `transferCorpseInstanceTo` — function — line 261
 
 ## `settlement/npcRelationships.ts`
 

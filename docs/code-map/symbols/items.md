@@ -234,6 +234,7 @@ Generated from exported TypeScript symbols.
 
 ## `items/inventoryTransfer.ts`
 
+- `transferAllInventoryContents` — function — line 69
 - `transferInventoryCount` — function — line 19
   - domain: items-player
   - system: inventory

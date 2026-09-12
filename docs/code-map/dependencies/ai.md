@@ -268,7 +268,6 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/families.ts`
 - `settlement/npcPhysicalProfile.ts`
-- `settlement/npcPostDeath.ts`
 - `settlement/places.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
@@ -592,8 +591,6 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcLoadout.test.ts`
-- `settlement/npcPostDeath.test.ts`
-- `settlement/npcPostDeath.ts`
 
 ## `ai/npcLogistics.test.ts`
 

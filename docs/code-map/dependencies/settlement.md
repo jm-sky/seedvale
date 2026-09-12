@@ -817,8 +817,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `ai/npcLoadout.ts`
 - `items/Inventory.ts`
+- `items/liquidContainer.ts`
 - `items/weaponMaintenance.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/npcState.ts`
@@ -828,10 +828,10 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `ai/characters.ts`
-- `ai/npcLoadout.ts`
 - `items/Inventory.ts`
 - `items/createDroppedItems.ts`
+- `items/foodItems.ts`
+- `items/inventoryTransfer.ts`
 - `items/items.ts`
 - `shared/corpseLifecycle.ts`
 

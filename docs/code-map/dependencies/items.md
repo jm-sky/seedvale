@@ -514,6 +514,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `items/foodItems.test.ts`
 - `settlement/household.ts`
+- `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.test.ts`
 - `settlement/storageVisuals.test.ts`
 - `settlement/storageVisuals.ts`
@@ -620,6 +621,7 @@ Generated from TypeScript imports.
 
 - `app/actions/workContractPayment.ts`
 - `items/inventoryTransfer.test.ts`
+- `settlement/npcPostDeath.ts`
 
 ## `items/inventoryView.test.ts`
 
@@ -1038,6 +1040,7 @@ Generated from TypeScript imports.
 - `items/itemUseView.ts`
 - `items/liquidContainer.test.ts`
 - `items/trade.ts`
+- `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
 
 ## `items/primaryWeapons.test.ts`
