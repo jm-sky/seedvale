@@ -172,14 +172,14 @@ Generated from exported TypeScript symbols.
 - `NPC_HEIGHT` — const — line 432
 - `NPC_MODEL_URLS` — const — line 496
 - `NPC_SHADOW_DISTANCE` — const — line 446
-- `NpcAgent` — class — line 1068
+- `NpcAgent` — class — line 1060
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 973
+- `NpcAgentDeps` — type — line 965
 - `NpcInspectionSnapshot` — type — line 544
 - `NpcWhy` — type — line 694
 - `projectNpcWhy` — function — line 760
@@ -272,24 +272,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcLogistics.ts`
 
-- `buildTransferAction` — function — line 167
-- `canDeliverToPlayerStorage` — function — line 345
-- `canExchangeWithHousehold` — function — line 203
-- `canWithdrawFromEconomy` — function — line 189
-- `depositCarriedItems` — function — line 124
-- `depositFoodHarvest` — function — line 112
-- `depositWoodHarvest` — function — line 93
+- `buildTransferAction` — function — line 178
+- `canDeliverToPlayerStorage` — function — line 359
+- `canExchangeWithHousehold` — function — line 214
+- `canWithdrawFromEconomy` — function — line 200
+- `depositCarriedItems` — function — line 135
+- `depositFoodHarvest` — function — line 123
+- `depositWoodHarvest` — function — line 96
 - `HELPER_DELIVERY_ITEM_KIND` — const — line 51
 - `HELPER_DELIVERY_MAX_CARRY` — const — line 52
 - `HOUSEHOLD_EXCHANGE_MAX_TRANSFER` — const — line 39
 - `HUNT_YIELD_KINDS` — const — line 56
 - `NpcLogisticsCtx` — type — line 70
-- `planDeliverHuntYieldHome` — function — line 407
-- `planEconomyWithdraw` — function — line 220
-- `planHouseholdExchange` — function — line 279
-- `planPlayerStorageDelivery` — function — line 368
-- `ResourceTransferPlan` — type — line 159
-- `satisfyHouseholdResourceNeed` — function — line 146
+- `planDeliverHuntYieldHome` — function — line 421
+- `planEconomyWithdraw` — function — line 231
+- `planHouseholdExchange` — function — line 291
+- `planPlayerStorageDelivery` — function — line 382
+- `ResourceTransferPlan` — type — line 170
+- `satisfyHouseholdResourceNeed` — function — line 157
+- `WoodHarvestDeposit` — type — line 93
 
 ## `ai/npcMovementWatchdog.ts`
 

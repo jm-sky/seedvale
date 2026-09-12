@@ -23,7 +23,7 @@ Generated from exported TypeScript symbols.
 
 ## `economy/localExchange.ts`
 
-- `claimEconomySurplus` — function — line 33
+- `claimEconomySurplus` — function — line 34
 - `claimHouseholdSurplus` — function — line 24
 
 ## `economy/npcWork.ts`

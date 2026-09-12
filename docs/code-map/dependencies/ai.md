@@ -665,6 +665,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
+- `settlement/householdWood.ts`
 - `settlement/props.ts`
 - `settlement/storageDestinations.ts`
 - `simulation/index.ts`

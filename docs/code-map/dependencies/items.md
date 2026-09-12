@@ -174,6 +174,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdResourceTransfer.test.ts`
 - `settlement/householdResourceTransfer.ts`
+- `settlement/householdWood.ts`
 - `settlement/landPurchase.test.ts`
 - `settlement/landPurchase.ts`
 - `settlement/npcPostDeath.test.ts`
@@ -878,7 +879,7 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
 - `items/itemFuel.test.ts`
-- `settlement/householdResourceTransfer.ts`
+- `settlement/householdWood.ts`
 
 ## `items/itemInstances.ts`
 
@@ -1078,6 +1079,7 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `settlement/household.ts`
 - `settlement/householdResourceTransfer.ts`
+- `settlement/householdWood.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageRepair.ts`

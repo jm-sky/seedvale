@@ -206,26 +206,27 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 348
-- `createHouseholdRegistry` — function — line 505
-- `FARMER_STARTING_SEED_COUNT` — const — line 234
-- `HayForageState` — type — line 120
-- `Household` — type — line 237
-- `HouseholdAgricultureState` — type — line 187
-- `HouseholdDepositResult` — type — line 27
-- `HouseholdId` — type — line 22
+- `createHousehold` — function — line 357
+- `createHouseholdRegistry` — function — line 574
+- `FARMER_STARTING_SEED_COUNT` — const — line 238
+- `HayForageState` — type — line 125
+- `Household` — type — line 241
+- `HOUSEHOLD_WOOD_RESERVE_TARGET` — const — line 95
+- `HouseholdAgricultureState` — type — line 192
+- `HouseholdDepositResult` — type — line 34
+- `HouseholdId` — type — line 29
   - domain: settlements-npcs
   - system: household
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 314
-- `HouseholdRegistry` — type — line 496
-- `HouseholdResourceKind` — type — line 45
-- `HouseholdSnapshot` — type — line 199
-- `HouseholdStartingContext` — type — line 225
-- `resolveHayForage` — function — line 136
-- `WaterReserve` — type — line 151
+- `householdIdFor` — function — line 323
+- `HouseholdRegistry` — type — line 565
+- `HouseholdResourceKind` — type — line 52
+- `HouseholdSnapshot` — type — line 204
+- `HouseholdStartingContext` — type — line 229
+- `resolveHayForage` — function — line 141
+- `WaterReserve` — type — line 156
 
 ## `settlement/householdExchange.ts`
 
@@ -236,16 +237,23 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/householdResourceTransfer.ts`
 
-- `HOUSEHOLD_WOOD_ITEM_KINDS` — const — line 17
+- `HouseholdTransferRequest` — type — line 23
+- `HouseholdTransferResult` — type — line 27
+- `householdTransferSummary` — function — line 57
+- `transferableHouseholdItemKinds` — function — line 46
+- `transferResourceToHousehold` — function — line 70
+
+## `settlement/householdWood.ts`
+
+- `applyWoodItemBatch` — function — line 77
+- `claimableWoodSurplusValue` — function — line 70
+- `HOUSEHOLD_WOOD_ITEM_KINDS` — const — line 13
   - domain: settlements-npcs
-  - system: household
-- `HouseholdTransferRequest` — type — line 28
-- `HouseholdTransferResult` — type — line 32
-- `householdTransferSummary` — function — line 62
-- `HouseholdWoodItemKind` — type — line 19
-- `householdWoodValue` — function — line 23
-- `transferableHouseholdItemKinds` — function — line 51
-- `transferResourceToHousehold` — function — line 75
+- `householdWoodCountFromItems` — function — line 23
+- `HouseholdWoodItemBatch` — type — line 32
+- `HouseholdWoodItemKind` — type — line 15
+- `householdWoodItemValue` — function — line 18
+- `selectClaimableWoodItems` — function — line 39
 
 ## `settlement/householdYard.ts`
 
@@ -808,12 +816,12 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/structureRepairCandidates.ts`
 
-- `createNpcStructureRepairHooks` — function — line 96
-- `NpcStructureRepairHooks` — type — line 78
+- `createNpcStructureRepairHooks` — function — line 97
+- `NpcStructureRepairHooks` — type — line 79
   - domain: settlements
-- `ResidentialRepairCandidate` — type — line 26
+- `ResidentialRepairCandidate` — type — line 27
   - domain: settlements
-- `residentialRepairCandidates` — function — line 40
+- `residentialRepairCandidates` — function — line 41
 
 ## `settlement/structureStateRegistry.ts`
 

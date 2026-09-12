@@ -274,4 +274,3 @@ Generated from TypeScript imports.
 - `economy/productionExecutor.ts`
 - `economy/settlementEconomy.test.ts`
 - `economy/settlementEconomy.ts`
-- `settlement/household.ts`

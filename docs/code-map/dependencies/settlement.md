@@ -549,11 +549,11 @@ Generated from TypeScript imports.
 - `debug/domainHistory.ts`
 - `debug/householdHistory.ts`
 - `economy/settlementEconomy.ts`
-- `economy/stock.ts`
 - `items/Inventory.ts`
 - `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
+- `settlement/householdWood.ts`
 
 **Imported by**
 
@@ -637,14 +637,28 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
-- `items/itemFuel.ts`
 - `items/items.ts`
 - `settlement/household.ts`
+- `settlement/householdWood.ts`
 
 **Imported by**
 
 - `app/actions/householdResourceTransferActions.ts`
 - `settlement/householdResourceTransfer.test.ts`
+
+## `settlement/householdWood.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemFuel.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `ai/npcLogistics.ts`
+- `settlement/household.ts`
+- `settlement/householdResourceTransfer.ts`
 
 ## `settlement/householdYard.test.ts`
 
@@ -1639,8 +1653,17 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/structureCondition.test.ts`
+- `settlement/structureRepairCandidates.test.ts`
 - `settlement/structureRepairCandidates.ts`
 - `settlement/structureStateRegistry.test.ts`
+- `settlement/structureStateRegistry.ts`
+
+## `settlement/structureRepairCandidates.test.ts`
+
+**Imports**
+
+- `settlement/structureCondition.ts`
+- `settlement/structureRepairCandidates.ts`
 - `settlement/structureStateRegistry.ts`
 
 ## `settlement/structureRepairCandidates.ts`
@@ -1658,6 +1681,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/structureRepairCandidates.test.ts`
 
 ## `settlement/structureStateRegistry.test.ts`
 
@@ -1678,6 +1702,7 @@ Generated from TypeScript imports.
 
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/structureRepairCandidates.test.ts`
 - `settlement/structureRepairCandidates.ts`
 - `settlement/structureStateRegistry.test.ts`
 
