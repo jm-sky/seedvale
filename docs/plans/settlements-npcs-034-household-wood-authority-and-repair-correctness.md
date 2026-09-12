@@ -9,6 +9,7 @@
 **Subdomains:** `household` `economy` `logistics`  
 **Tags:** `wood` `inventory` `repair` `production` `persistence`  
 **Roadmap:** -  
+**Model:** Opus, Sonnet  
 
 ## Cel
 
