@@ -2,6 +2,19 @@
 
 Generated from exported TypeScript symbols.
 
+## `items/armorItemInstances.ts`
+
+- `createArmorInstance` — function — line 33
+  - domain: items-player
+- `EffectiveArmorPiece` — type — line 65
+  - domain: items-player
+- `effectiveInstanceWeight` — function — line 109
+  - domain: items-player
+- `migrateArmorCountsToInstances` — function — line 124
+  - domain: items-player
+- `resolveEffectiveArmorPiece` — function — line 81
+  - domain: items-player
+
 ## `items/books.ts`
 
 - `BookReadOutcome` — type — line 15
@@ -115,18 +128,27 @@ Generated from exported TypeScript symbols.
 
 ## `items/equipment.ts`
 
-- `createEquipmentState` — function — line 76
-- `EquipmentModifiers` — type — line 20
-- `EquipmentSlot` — type — line 8
-- `EquipmentState` — type — line 52
+- `composeEquipmentModifiers` — function — line 218
+  - domain: items-player
+- `createEquipmentState` — function — line 94
+- `EQUIPMENT_SLOTS` — const — line 17
+- `EquipmentModifiers` — type — line 33
+- `EquipmentSlot` — type — line 15
+- `EquipmentState` — type — line 60
   - domain: items-player
   - system: equipment
-  - role: Tracks which owned item (if any) is currently worn in each equipment slot.
+  - role: Tracks which owned armor instance (if any) is worn in each equipment slot.
   - uses: Inventory
-- `equippedBodyArmor` — function — line 107
-- `NEUTRAL_EQUIPMENT_MODIFIERS` — const — line 30
-- `resolveEquipmentModifiers` — function — line 117
-- `SavePlayerEquipment` — type — line 12
+- `equippedArmorInstances` — function — line 169
+- `equippedBodyArmor` — function — line 185
+- `equippedInstanceId` — function — line 191
+- `equippedInstanceIds` — function — line 200
+- `isEquipmentSlot` — function — line 70
+- `NEUTRAL_EQUIPMENT_MODIFIERS` — const — line 43
+- `resolveArmorInstanceEffective` — function — line 262
+- `resolveEquipmentModifiers` — function — line 252
+  - domain: items-player
+- `SavePlayerEquipment` — type — line 27
 
 ## `items/foodFreshness.ts`
 
@@ -231,21 +253,21 @@ Generated from exported TypeScript symbols.
 
 ## `items/Inventory.ts`
 
-- `DEFAULT_MAX_SIZE` — const — line 59
-- `EMPTY_INVENTORY_CONTENTS` — const — line 126
-- `Inventory` — class — line 145
+- `DEFAULT_MAX_SIZE` — const — line 64
+- `EMPTY_INVENTORY_CONTENTS` — const — line 134
+- `Inventory` — class — line 153
   - domain: items-player
   - system: inventory
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `InventoryContentsSnapshot` — type — line 120
-- `inventoryFromContents` — function — line 694
-- `inventoryFullToastText` — function — line 713
-- `ItemAmount` — type — line 64
-- `SaveItemInstance` — type — line 78
-- `snapshotInventoryContents` — function — line 684
-- `toSaveItemInstance` — function — line 96
+- `InventoryContentsSnapshot` — type — line 128
+- `inventoryFromContents` — function — line 712
+- `inventoryFullToastText` — function — line 731
+- `ItemAmount` — type — line 69
+- `SaveItemInstance` — type — line 83
+- `snapshotInventoryContents` — function — line 702
+- `toSaveItemInstance` — function — line 103
 
 ## `items/inventoryTransfer.ts`
 
@@ -257,30 +279,31 @@ Generated from exported TypeScript symbols.
 
 ## `items/inventoryView.ts`
 
-- `buildInventoryGroups` — function — line 178
-- `inventoryCountsForUi` — function — line 213
-- `InventoryGroupView` — type — line 50
-- `InventoryInstanceRow` — type — line 38
-- `ITEM_METER_LABEL` — const — line 32
-- `ItemMeterKind` — type — line 27
+- `buildInventoryGroups` — function — line 246
+- `inventoryCountsForUi` — function — line 282
+- `InventoryGroupView` — type — line 66
+- `InventoryInstanceRow` — type — line 44
+- `ITEM_METER_LABEL` — const — line 38
+- `ItemMeterKind` — type — line 33
 
 ## `items/itemCatalog.ts`
 
 - `ArmorConfig` — type — line 56
 - `ARROW_DAMAGE_BONUS` — const — line 1564
 - `BookTier` — type — line 179
-- `CAPABILITY_KINDS` — const — line 1603
+- `CAPABILITY_KINDS` — const — line 1607
 - `CAPABILITY_LABEL` — const — line 155
 - `CAPABILITY_NEED_LABEL` — const — line 139
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1643
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1647
 - `ConsumableNeed` — type — line 170
 - `consumeNeedNoun` — function — line 288
 - `consumeVerbLabel` — function — line 279
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1628
-- `HOLDABLE_KINDS` — const — line 1594
-- `INJURY_TREATMENT_KINDS` — const — line 1665
-- `isBodyArmorKind` — function — line 1587
+- `hasItemCapability` — function — line 1632
+- `HOLDABLE_KINDS` — const — line 1598
+- `INJURY_TREATMENT_KINDS` — const — line 1669
+- `isArmorCatalogKind` — function — line 1585
+- `isBodyArmorKind` — function — line 1591
 - `isMeleeToolKind` — function — line 1579
 - `isRangedTool` — function — line 1571
 - `ITEM_CATALOG` — const — line 302
@@ -288,14 +311,14 @@ Generated from exported TypeScript symbols.
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1686
+- `ITEM_SYSTEM_ROADMAP` — const — line 1690
 - `ItemCapability` — type — line 112
 - `ItemCatalogEntry` — type — line 181
-- `itemIsResilient` — function — line 1633
+- `itemIsResilient` — function — line 1637
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1678
+- `itemTreatsPhysicalInjury` — function — line 1682
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1692
+- `NON_ITEM_PROPS` — const — line 1696
 - `RangedConfig` — type — line 76
 
 ## `items/itemDisplay.ts`
@@ -315,34 +338,45 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemInstances.ts`
 
-- `clamp01` — function — line 174
-- `clampCampCondition` — function — line 126
-- `cloneItemInstance` — function — line 179
-- `createItemInstanceId` — function — line 142
-- `createKeyInstance` — function — line 158
-- `createTentInstance` — function — line 131
-- `INSTANCE_BACKED_KINDS` — const — line 147
-- `isInstanceBackedKind` — function — line 162
-- `isLiquidContainerInstance` — function — line 110
-- `isLiquidContainerKind` — function — line 84
-- `isTentItemInstance` — function — line 121
-- `isTrapItemInstance` — function — line 170
-- `isTrapKind` — function — line 166
-- `isWeaponItemInstance` — function — line 97
-- `isWeaponMaintenanceKind` — function — line 57
+- `ARMOR_KIND_LIST` — const — line 21
+- `ARMOR_KINDS` — const — line 23
+- `ARMOR_QUALITIES` — const — line 27
+- `ARMOR_QUALITY_LABELS` — const — line 29
+- `ArmorItemInstance` — type — line 35
+- `ArmorKind` — type — line 19
+- `ArmorQuality` — type — line 25
+- `clamp01` — function — line 215
+- `clampCampCondition` — function — line 166
+- `cloneItemInstance` — function — line 220
+- `createItemInstanceId` — function — line 182
+- `createKeyInstance` — function — line 199
+- `createTentInstance` — function — line 171
+- `INSTANCE_BACKED_KINDS` — const — line 187
+- `isArmorItemInstance` — function — line 52
+- `isArmorKind` — function — line 40
+- `isArmorQuality` — function — line 44
+- `isInstanceBackedKind` — function — line 203
+- `isLiquidContainerInstance` — function — line 150
+- `isLiquidContainerKind` — function — line 124
+- `isTentItemInstance` — function — line 161
+- `isTrapItemInstance` — function — line 211
+- `isTrapKind` — function — line 207
+- `isWeaponItemInstance` — function — line 137
+- `isWeaponMaintenanceKind` — function — line 97
 - `ItemInstance` — type — line 4
-- `LIQUID_CONTAINER_KIND_LIST` — const — line 74
-- `LIQUID_CONTAINER_KINDS` — const — line 82
-- `LiquidContainerItemInstance` — type — line 104
-- `LiquidContainerKind` — type — line 67
-- `LiquidContent` — type — line 62
-- `TentItemInstance` — type — line 116
+- `LIQUID_CONTAINER_KIND_LIST` — const — line 114
+- `LIQUID_CONTAINER_KINDS` — const — line 122
+- `LiquidContainerItemInstance` — type — line 144
+- `LiquidContainerKind` — type — line 107
+- `LiquidContent` — type — line 102
+- `normalizeArmorQuality` — function — line 48
+- `TentItemInstance` — type — line 156
 - `TrapItemInstance` — type — line 11
 - `TrapKind` — type — line 9
-- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 39
-- `WEAPON_MAINTENANCE_KINDS` — const — line 55
-- `WeaponItemInstance` — type — line 91
-- `WeaponMaintenanceKind` — type — line 21
+- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 79
+- `WEAPON_MAINTENANCE_KINDS` — const — line 95
+- `WeaponItemInstance` — type — line 131
+- `WeaponMaintenanceKind` — type — line 61
 
 ## `items/itemModels.ts`
 
@@ -451,21 +485,21 @@ Generated from exported TypeScript symbols.
 
 ## `items/trade.ts`
 
-- `createAcquiredInstance` — function — line 140
-- `InstanceSellResult` — type — line 31
-- `OfferBuybackResolution` — type — line 35
-- `previewPricedPurchaseNetCoins` — function — line 290
-- `previewTransactionNetCoins` — function — line 275
-- `resolveOfferBuyback` — function — line 224
+- `createAcquiredInstance` — function — line 141
+- `InstanceSellResult` — type — line 32
+- `OfferBuybackResolution` — type — line 36
+- `previewPricedPurchaseNetCoins` — function — line 292
+- `previewTransactionNetCoins` — function — line 277
+- `resolveOfferBuyback` — function — line 226
   - domain: settlements — merchant buyback for an entire offer basket plus the concrete instance ids settlement should remove for instance-backed kinds.
-- `resolveOfferLineBuyback` — function — line 201
+- `resolveOfferLineBuyback` — function — line 203
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
-- `selectInstancesToSell` — function — line 159
-- `selectInstanceToPlace` — function — line 174
-- `sellInstancesForCoins` — function — line 361
-- `settlePricedPurchase` — function — line 303
-- `settleTransaction` — function — line 331
-- `TradeResult` — type — line 29
+- `selectInstancesToSell` — function — line 161
+- `selectInstanceToPlace` — function — line 176
+- `sellInstancesForCoins` — function — line 363
+- `settlePricedPurchase` — function — line 305
+- `settleTransaction` — function — line 333
+- `TradeResult` — type — line 30
 
 ## `items/tradeCatalog.ts`
 

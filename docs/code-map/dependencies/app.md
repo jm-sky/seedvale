@@ -874,6 +874,7 @@ Generated from TypeScript imports.
 - `input/isTouchDevice.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/container.ts`
 - `items/equipment.ts`
 - `items/guardSword.ts`

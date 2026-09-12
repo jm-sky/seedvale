@@ -60,6 +60,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/armorItemInstances.ts`
 - `items/foodFreshness.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`
@@ -197,6 +198,23 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `items/createItemSpawners.ts`
+
+## `items/armorItemInstances.ts`
+
+**Imports**
+
+- `items/itemCatalog.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `items/Inventory.ts`
+- `items/equipment.test.ts`
+- `items/equipment.ts`
+- `items/inventoryView.ts`
+- `items/trade.ts`
 
 ## `items/books.test.ts`
 
@@ -458,14 +476,19 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/equipment.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
 
 ## `items/equipment.ts`
 
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/itemCatalog.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
 
 **Imported by**
@@ -481,6 +504,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/playerDamage.test.ts`
 - `player/playerDamage.ts`
+- `ui-vue/store.ts`
+- `ui/createInventoryScreen.ts`
 
 ## `items/foodFreshness.test.ts`
 
@@ -684,7 +709,9 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/foodFreshness.ts`
+- `items/itemCatalog.ts`
 - `items/itemInstances.ts`
 - `items/itemUseView.ts`
 - `items/items.ts`
@@ -753,14 +780,17 @@ Generated from TypeScript imports.
 - `fauna/faunaCombat.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/books.test.ts`
 - `items/books.ts`
 - `items/campRepair.ts`
 - `items/coin.test.ts`
 - `items/createPlacedTents.ts`
+- `items/equipment.test.ts`
 - `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/highQualityWeapons.test.ts`
+- `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
 - `items/itemDisplay.ts`
@@ -869,7 +899,9 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/createDroppedItems.test.ts`
+- `items/equipment.ts`
 - `items/inventoryView.test.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
@@ -987,6 +1019,7 @@ Generated from TypeScript imports.
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
 - `items/ItemSpawner.ts`
+- `items/armorItemInstances.ts`
 - `items/books.test.ts`
 - `items/books.ts`
 - `items/campBlanketProp.ts`
@@ -997,6 +1030,7 @@ Generated from TypeScript imports.
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
+- `items/equipment.test.ts`
 - `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/foodItems.ts`
@@ -1251,6 +1285,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`

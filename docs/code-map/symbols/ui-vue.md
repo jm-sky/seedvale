@@ -324,6 +324,6 @@ Generated from exported TypeScript symbols.
 - `ui` — const — line 677
 - `unregisterOverlay` — function — line 820
 - `updateTimeSkipRestUi` — function — line 1411
-- `VillagerContainerOption` — type — line 52
-- `VillagerEntry` — type — line 45
-- `VILLAGERS_PAGE_SIZE` — const — line 47
+- `VillagerContainerOption` — type — line 53
+- `VillagerEntry` — type — line 46
+- `VILLAGERS_PAGE_SIZE` — const — line 48
