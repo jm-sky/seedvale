@@ -28,6 +28,17 @@ export function cultivationAnchorFromSettlementGarden(
   return { position: { x: position.x, z: position.z }, radius: gardenClearingRadius(scale) }
 }
 
+/** Matches `createWheatField`'s default visual radius — the field gameplay
+ *  footprint for Farmer targeting (plan settlements-npcs-030). Not a
+ *  species-specific density/yield table. */
+export const SETTLEMENT_FIELD_CULTIVATION_RADIUS = 3.2
+
+export function cultivationAnchorFromSettlementField(
+  position: { x: number, z: number },
+): CultivationAnchor {
+  return { position: { x: position.x, z: position.z }, radius: SETTLEMENT_FIELD_CULTIVATION_RADIUS }
+}
+
 /** Prefer a caller-supplied anchor (future settlement bootstrap selecting a
  *  Player garden), then settlement-produced anchors, then a position-only
  *  landmark fallback so existing tests/fixtures without scale still farm. */

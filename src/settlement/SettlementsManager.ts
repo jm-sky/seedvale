@@ -431,6 +431,10 @@ export async function createSettlementsManager(
    *  resolved directly against this registry, independent of whether the
    *  owning settlement is currently streamed in. */
   initialStructureStates?: Record<string, SettlementStructureState>,
+  /** World-day clock for agricultural stream-in catch-up (plan
+   *  settlements-npcs-030). Optional; `update()`'s `nowDays` is used as a
+   *  fallback once the game loop has started. */
+  getNowDays?: () => number,
 ): Promise<SettlementsManager> {
   const naturalWaterKindAt = riverShoreDistance
     ? createNaturalWaterKindAt({
@@ -568,6 +572,11 @@ export async function createSettlementsManager(
   // refactor review, P1) — was a 26-argument positional call duplicated
   // verbatim at both call sites below; `def`/`economy` stay per-call since
   // they differ between the home settlement and every streamed-in neighbor.
+  let lastNowDays = 0
+  function currentNowDays(): number {
+    return getNowDays?.() ?? lastNowDays
+  }
+
   const settlementDeps: CreateSettlementDeps = {
     scene,
     sampleHeight,
@@ -596,6 +605,7 @@ export async function createSettlementsManager(
     helperDelivery,
     getPlayerSocial,
     getNearbyPlayerWell,
+    getNowDays: currentNowDays,
     isLandPlotOwned,
     onAnimalDeath,
     workContracts,
@@ -819,8 +829,13 @@ export async function createSettlementsManager(
     }
   }
 
+  function stampSettlementAgriculture(settlement: Settlement, nowDays: number): void {
+    for (const household of settlement.households) household.markAgricultureResolved(nowDays)
+  }
+
   function unload(id: string, entry: Entry, nowDays: number, dayLengthSec: number): void {
     if (entry.settlement) {
+      stampSettlementAgriculture(entry.settlement, nowDays)
       livestock.capture(id, entry.settlement.livestock)
       rats.capture(id, entry.settlement.rats)
       beginOffscreenTransportHandoff(entry.settlement, nowDays, dayLengthSec)
@@ -864,14 +879,17 @@ export async function createSettlementsManager(
       for (const entry of entries.values()) entry.settlement?.setDayNight(t)
     },
     resolveTimeSkip(startTimeOfDay, hours, dayLengthSec) {
+      const nowDays = currentNowDays()
       for (const entry of entries.values()) {
         if (!entry.settlement) continue
+        stampSettlementAgriculture(entry.settlement, nowDays)
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
+      if (nowDays !== undefined) lastNowDays = nowDays
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
-        recheck(playerPos.x, playerPos.z, nowDays ?? 0, dayLengthSec)
+        recheck(playerPos.x, playerPos.z, nowDays ?? lastNowDays, dayLengthSec)
       }
       for (const entry of entries.values()) {
         entry.settlement?.update(
@@ -942,7 +960,13 @@ export async function createSettlementsManager(
     getHousehold: (id) => households.get(id),
     getEconomy: (settlementId) => economies.get(settlementId),
     snapshotEconomies: () => economies.serialize(),
-    snapshotHouseholds: () => households.serialize(),
+    snapshotHouseholds: () => {
+      const nowDays = currentNowDays()
+      for (const entry of entries.values()) {
+        if (entry.settlement) stampSettlementAgriculture(entry.settlement, nowDays)
+      }
+      return households.serialize()
+    },
     snapshotNpcStates: () => npcStates.serialize(),
     getNpcState: (id) => npcStates.get(id),
     snapshotRelationships: () => npcRelationships.snapshot(),

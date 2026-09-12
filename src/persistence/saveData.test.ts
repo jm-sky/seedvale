@@ -468,6 +468,10 @@ describe('loadSaveData v1 contract', () => {
   it('rejects a malformed households record', () => {
     expect(loadSaveData({ ...validSave, households: { h: { water: 'nope' } } })).toBeNull()
     expect(loadSaveData({ ...validSave, households: 'nope' })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      households: { h: { stock: { wood: 1 }, water: 2, agriculture: { starterSeedsGranted: 'yes' } } },
+    })).toBeNull()
   })
 
   it('restores an older save with no reputation field as an empty settlements map', () => {
@@ -1419,6 +1423,39 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     if (result.status !== 'ok') return
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(result.data.livestock).toEqual(validSave.livestock)
+  })
+
+  it('migrates a v34 household without agriculture using saved elapsedDays as the catch-up anchor (plan settlements-npcs-030)', () => {
+    const result = loadStoredSave({
+      ...validSave,
+      version: 34,
+      elapsedDays: 12.5,
+      households: {
+        'home:household:0': { stock: { wood: 3 }, water: 2, items: { counts: { bread: 2 }, instances: [] } },
+      },
+    })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.households?.['home:household:0']?.agriculture).toEqual({
+      starterSeedsGranted: false,
+      lastResolvedAtDays: 12.5,
+    })
+  })
+
+  it('round-trips household agriculture state (plan settlements-npcs-030)', () => {
+    const withAgriculture: SaveData = {
+      ...validSave,
+      households: {
+        's:household:0': {
+          stock: { wood: 1 },
+          water: 2,
+          items: { counts: { seed_carrot: 1, carrot: 3 }, instances: [] },
+          agriculture: { starterSeedsGranted: true, lastResolvedAtDays: 8 },
+        },
+      },
+    }
+    expect(loadSaveData(withAgriculture)).toEqual(withAgriculture)
   })
 
   it('round-trips an in-transit transportOrder and npcStates transportCargo, and rejects a malformed order (plan settlements-npcs-019)', () => {

@@ -13,7 +13,7 @@ import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { createPlacedContainerProp } from '../world/containerProp'
-import { type CultivationAnchor, cultivationAnchorFromSettlementGarden } from '../world/cultivationAnchor'
+import { type CultivationAnchor, cultivationAnchorFromSettlementField, cultivationAnchorFromSettlementGarden } from '../world/cultivationAnchor'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { blacksmithYardGeometry } from './blacksmithYard'
@@ -915,6 +915,8 @@ export async function buildSettlementProps(
     wheat.rotation.y = coreRandom() * Math.PI * 2
     placeOnGround(wheat, wheatX, wheatZ, sampleHeight)
     group.add(wheat)
+    const fieldAnchor = cultivationAnchorFromSettlementField({ x: wheatX, z: wheatZ })
+    landmarks.cultivationAnchors = [fieldAnchor, ...(landmarks.cultivationAnchors ?? [])]
   }
 
   // Trader's market stall (`landmarks.market`, see `places.ts`'s `workplaceFor`)

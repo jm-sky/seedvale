@@ -6,7 +6,6 @@ import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { TransportOrders } from '../world/createTransportOrders'
-import type { CropId } from '../world/cropLifecycle'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { TransportOrder } from '../world/transportOrder'
@@ -44,7 +43,7 @@ import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/deposit
 import { type CultivationAnchor, resolveCultivationAnchor } from '../world/cultivationAnchor'
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { HERBALIST_GATHER_KINDS } from '../world/herbalGathering'
-import { CROP_SEED_ITEM } from '../world/plantedCrops'
+import { CROP_SEED_ITEM, FARM_SEED_PRIORITY } from '../world/plantedCrops'
 import { executeTransportPickup, executeTransportUnload } from '../world/transportTransactions'
 import { depositCarriedItems, HOUSEHOLD_EXCHANGE_MAX_TRANSFER } from './npcLogistics'
 import type { Vector3 } from 'three'
@@ -68,10 +67,6 @@ export const BLACKSMITH_SHARPEN_THRESHOLD = 0.9
  *  garden a harvestable crop is still considered "this farmer's field". */
 const FARM_WORK_RADIUS = 20
 const FARM_PLANT_SEARCH_RADIUS = 3
-/** Deterministic seed priority (mirrors `HUNTER_ARROW_PRODUCTIONS`' branch-
- *  before-beam priority) — a farmer plants whichever of these it already has
- *  a seed for, checked in this fixed order. */
-const FARM_SEED_PRIORITY: readonly CropId[] = ['carrot', 'potato', 'cabbage']
 
 /** Fisher work (plan settlements-npcs-002 §4) — the fish yield delivered
  *  home, same shape as `npcLogistics.ts`'s `HUNT_YIELD_KINDS`. */

@@ -21,6 +21,12 @@ export const CROP_SEED_ITEM: Record<CropId, ItemKind> = {
   cabbage: 'seed_cabbage',
 }
 
+/** Deterministic Farmer / aggregate seed priority (plan settlements-npcs-030).
+ *  Same order as `CROP_IDS` — the detailed planner and off-screen catch-up
+ *  must agree, so this lives next to the seed mapping rather than being
+ *  copied into profession AI. */
+export const FARM_SEED_PRIORITY: readonly CropId[] = CROP_IDS
+
 export const CROP_PLANT_MESSAGE: Record<'water' | 'slope' | 'object' | 'occupied' | 'noGarden', string> = {
   water: 'Tu jest za mokro, by coś zasadzić.',
   slope: 'Teren jest zbyt stromy.',
