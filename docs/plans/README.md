@@ -66,6 +66,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
+| ◼️ `world-terrain-024-dungeon-cave-archetype.md`                               | -       | 🟡 | M      | ~~world-terrain-020~~ |
+| ◼️ `world-terrain-025-underground-cave-pool.md`                                | -       | 🟡 | M      | world-terrain-024 |
+| ◼️ `fauna-027-dungeon-cave-residents-and-pool-foraging.md`                     | -       | 🟡 | M      | ~~fauna-019~~, ~~fauna-022~~, ~~fauna-023~~, world-terrain-024, world-terrain-025 |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | ~~settlements-npcs-030~~ |
@@ -76,11 +79,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
-| ◼️ `world-terrain-024-dungeon-cave-archetype.md`                               | -       | 🟡 | M      | ~~world-terrain-020~~ |
-| ◼️ `world-terrain-025-underground-cave-pool.md`                                | -       | 🟡 | M      | world-terrain-024 |
-| 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
 | 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
-| ◼️ `fauna-027-dungeon-cave-residents-and-pool-foraging.md`                     | -       | 🟡 | M      | ~~fauna-019~~, ~~fauna-022~~, ~~fauna-023~~, world-terrain-024, world-terrain-025 |
+| 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
 
 ---
 
