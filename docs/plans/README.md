@@ -65,7 +65,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | settlements-npcs-019 |
 | 💡 `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
 | 💡 `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
-| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~fauna-018~~, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~ |
+| 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~fauna-018~~, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~ |
 | 💡 `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~, fauna-022 |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
@@ -88,7 +88,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                   | -       | 🟡 | L      | ~~world-terrain-019~~, ~~fauna-016~~ |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
-| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~fauna-018~~, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~ |
+| 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~fauna-018~~, fauna-019, ~~quests-progression-002~~, ~~quests-progression-011~~ |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
