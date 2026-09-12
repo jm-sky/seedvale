@@ -27,7 +27,7 @@ import type { InstancedPropGroup, PropPlacement } from '../../render/instancedPr
 import type { CaveArchetype } from './caveArchetype'
 import type { CaveTopology, CaveTopologyNode, CaveTopologyNodeKind, CaveTopologySegment } from './caveTopology'
 import { buildInstancedProps } from '../../render/instancedProps'
-import { createLargeRock, createRockCluster } from '../../settlement/decorProps'
+import { createLargeRock, createRockCluster, type LargeRockPalette } from '../../settlement/decorProps'
 import { CAVE_CONTENT_PLACEMENT, type CaveContentAnchor } from './caveContentAnchors'
 import {
   chamberCandidates,
@@ -422,6 +422,17 @@ function cloneRockShellWithShadow(source: THREE.Group, castShadow: boolean, name
 
 const INTERIOR_ROCK_SINK_FRACTION = 0.18
 
+/** Warm brown blotches matched to cave heightfield rim/floor tones
+ *  (`RIM_COLOR` / `FLOOR_COLOR` in `caveHeightfieldMesh.ts`), lifted well
+ *  above rim hexes so vertex-colour height shading still reads with walls
+ *  under cave lighting (not muddy). */
+const CAVE_INTERIOR_BOULDER_PALETTE: LargeRockPalette = {
+  base: new THREE.Color(0x9a8a7a),
+  cool: new THREE.Color(0x7e756c),
+  warm: new THREE.Color(0xa88a68),
+  moss: new THREE.Color(0x847a68),
+}
+
 let _templates: THREE.Object3D[] | null = null
 
 /**
@@ -445,7 +456,7 @@ export function getCaveInteriorRockTemplates(): readonly THREE.Object3D[] {
   clusterSmall.name = 'cave-interior-rock-template:cluster-small'
   setTemplateShadow(clusterSmall, false)
 
-  const boulderSourceA = createLargeRock(1, 0.18)
+  const boulderSourceA = createLargeRock(1, 0.18, CAVE_INTERIOR_BOULDER_PALETTE)
   const boulderMediumA = prepareInteriorRockTemplate(
     cloneRockShellWithShadow(boulderSourceA, false, 'cave-interior-rock-template:boulder-medium-a'),
     INTERIOR_ROCK_SINK_FRACTION,
@@ -455,7 +466,7 @@ export function getCaveInteriorRockTemplates(): readonly THREE.Object3D[] {
     INTERIOR_ROCK_SINK_FRACTION,
   )
 
-  const boulderSourceB = createLargeRock(1, 0.74)
+  const boulderSourceB = createLargeRock(1, 0.74, CAVE_INTERIOR_BOULDER_PALETTE)
   const boulderMediumB = prepareInteriorRockTemplate(
     cloneRockShellWithShadow(boulderSourceB, false, 'cave-interior-rock-template:boulder-medium-b'),
     INTERIOR_ROCK_SINK_FRACTION,

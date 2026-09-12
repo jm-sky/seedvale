@@ -235,13 +235,22 @@ export function createSeaweed(scale = 1): THREE.Group {
 }
 
 /** Rock surface palette for `createLargeRock` vertex colors — soft natural
- *  tints rather than a flat mid-gray slab. Tunable after visual check. */
-const LARGE_ROCK_PALETTE = {
+ *  tints rather than a flat mid-gray slab. Tunable after visual check.
+ *  Callers (e.g. cave interiors) may pass a custom palette to match local
+ *  stone without changing the outdoor default. */
+export type LargeRockPalette = {
+  base: THREE.Color
+  cool: THREE.Color
+  warm: THREE.Color
+  moss: THREE.Color
+}
+
+const LARGE_ROCK_PALETTE: LargeRockPalette = {
   base: new THREE.Color(0x7d7a72),
   cool: new THREE.Color(0x5c6168),
   warm: new THREE.Color(0x8a7b68),
   moss: new THREE.Color(0x6a7360),
-} as const
+}
 
 /** Soft blotch cell size in local geometry units (~0.9 radius icosahedron).
  *  Larger → fewer, broader colour patches; smaller → finer mottling. */
@@ -308,7 +317,12 @@ const _rockAccent = new THREE.Color()
  * `radius` scales noise cells with the icosahedron so blotch size stays
  * proportional when `createLargeRock`'s `scale` changes.
  */
-function applyLargeRockVertexColors(geometry: THREE.BufferGeometry, variant: number, radius: number): void {
+function applyLargeRockVertexColors(
+  geometry: THREE.BufferGeometry,
+  variant: number,
+  radius: number,
+  palette: LargeRockPalette,
+): void {
   const pos = geometry.getAttribute('position')
   if (!pos) return
   const nrm = geometry.getAttribute('normal')
@@ -339,14 +353,14 @@ function applyLargeRockVertexColors(geometry: THREE.BufferGeometry, variant: num
 
     // Soft mix across four rock tints — large cells keep patches broad.
     if (nA < 0.34) {
-      _rockAccent.copy(LARGE_ROCK_PALETTE.cool)
+      _rockAccent.copy(palette.cool)
     } else if (nA < 0.67) {
-      _rockAccent.copy(LARGE_ROCK_PALETTE.warm)
+      _rockAccent.copy(palette.warm)
     } else {
-      _rockAccent.copy(LARGE_ROCK_PALETTE.moss)
+      _rockAccent.copy(palette.moss)
     }
     const mix = (0.2 + nB * LARGE_ROCK_ACCENT_STRENGTH) * (0.55 + nA * 0.45)
-    _rockColor.copy(LARGE_ROCK_PALETTE.base).lerp(_rockAccent, mix)
+    _rockColor.copy(palette.base).lerp(_rockAccent, mix)
 
     const yNorm = (y - minY) / yRange
     const heightMul = LARGE_ROCK_BOTTOM_MUL + yNorm * (LARGE_ROCK_TOP_MUL - LARGE_ROCK_BOTTOM_MUL)
@@ -390,12 +404,17 @@ function applyPebbleVertexTint(geometry: THREE.BufferGeometry, mulR: number, mul
  *  seeded `variant` in `chunkEnvironment.ts`, so re-rolling here would break
  *  the "same chunk reload = same world" guarantee). Soft vertex-colour
  *  blotches (cool / warm / mossy) + darker base give surface variety without
- *  textures or extra draw calls. */
-export function createLargeRock(scale = 1, variant = 0.5): THREE.Group {
+ *  textures or extra draw calls. Optional `palette` overrides the outdoor
+ *  default (e.g. warm browns for cave interiors). */
+export function createLargeRock(
+  scale = 1,
+  variant = 0.5,
+  palette: LargeRockPalette = LARGE_ROCK_PALETTE,
+): THREE.Group {
   const rock = new THREE.Group()
   const radius = 0.9 * scale
   const geometry = new THREE.IcosahedronGeometry(radius, 1)
-  applyLargeRockVertexColors(geometry, variant, radius)
+  applyLargeRockVertexColors(geometry, variant, radius, palette)
   const mesh = new THREE.Mesh(
     geometry,
     new THREE.MeshStandardMaterial({
