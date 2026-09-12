@@ -7,7 +7,7 @@ import type { AudioLoopHandle, WorldAudio } from './createWorldAudio'
 import { isRainWeather, type WeatherState } from '../world/weather'
 
 export const AMBIENT_RAIN_LOOP_URL = '/sounds/ambient-rain-loop-01.ogg'
-export const AMBIENT_STORM_WIND_LOOP_URL = '/sounds/ambient-wind-loop-01.ogg'
+export const AMBIENT_STORM_WIND_LOOP_URL = '/sounds/ambient-rain-storm-01.ogg'
 
 /** Thunder one-shots picked from simulated strike distance (`docs/assets/SOUNDS.md` S28). */
 export const THUNDER_SOUND_URLS = {
