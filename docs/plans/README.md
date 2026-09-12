@@ -85,7 +85,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-024-lost-livestock-stray-displacement.md`                            | -       | 🔴 | M      | quests-progression-016, fauna-020 |
 | ◼️ `world-026-storms-thunder-animal-scare-and-snow-visuals.md`                 | -       | 🔴 | M      | -      |
 | ◼️ `fauna-025-livestock-stray-return-and-recovery.md`                          | -       | 🔴 | M      | fauna-024 |
-| ◼️ `settlements-007-systemic-settlement-structure-condition-and-shared-repair.md` | -       | 🔴 | L      | ~~world-020~~, ~~world-021~~, ~~settlements-005~~, ~~items-player-017~~ |
+| 💡 `settlements-007-systemic-settlement-structure-condition-and-shared-repair.md` | -       | 🔴 | L      | ~~world-020~~, ~~world-021~~, ~~settlements-005~~, ~~items-player-017~~ |
  💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
