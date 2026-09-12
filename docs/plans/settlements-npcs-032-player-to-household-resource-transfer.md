@@ -8,7 +8,8 @@
 **Domain:** `settlements-npcs`  
 **Subdomains:** `household` `economy` `logistics`  
 **Tags:** `resource-transfer` `food` `wood` `player` `household` `quests`  
-**Roadmap:** `quests-and-reputation.md`
+**Roadmap:** `quests-and-reputation.md`  
+**Model:** Composer, Grok
 
 ## Cel
 
@@ -541,7 +542,6 @@ Dodać JSDoc do nowego publicznego domain operation, jeśli powstanie:
 
 ```text
 @domain settlements-npcs
-@system household
 ```
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
