@@ -5,9 +5,10 @@
 - `fauna-019` is already implemented. Real-cave fauna uses `AnimalHabitatBinding` → `Caves.resolveHabitat(caveId, entityHeight)` plus cave-scoped `queryGroundIn` / `resolveHorizontalIn`. Do not reimplement cave navigation.
 - `fauna-018` is already implemented in `src/fauna/persistentOccupants.ts`. Use one `PersistentOccupantDecl { habitatId, occupantKey, kind: 'bear' }`; stable animal identity is derived by `persistentAnimalId(habitatId, occupantKey)`, and live/corpse/tombstone persistence stays fauna-owned.
 - `src/app/worldBundle.ts` currently passes `undefined` for both persistent occupant declarations and cave habitat bindings; comments explicitly reserve those seams for this treasure-map bear. Wire the quest cave declaration there instead of spawning a bear from quest code.
-- Production caves already expose stable `caveId`, `archetypeOf()`, `contentAnchorsOf()` and `resolveHabitat()`. Adventure cave content anchors include explicit underground `x/y/z/yaw`; use a cave-owned anchor for the casket instead of inventing interior coordinates.
-- `WorldGeneratedContainers` already support explicit underground `y`, deterministic ids and persisted contents, but `WorldGeneratedContainerEntry.portable` is intentionally `false`. They are therefore useful as reference code, not as the direct owner of this portable casket.
-- `PlacedContainers` already own whole-container carry/put-down semantics: `pickUp()`, `carriedNode()`, `putDownCarried()`, persisted contents and carried weight. This should remain the authoritative portable-container lifecycle.
+- Production caves already expose stable `caveId`, `archetypeOf()`, `contentAnchorsOf()` and `resolveHabitat()`. Adventure cave content anchors include explicit underground `x/y/z/yaw`; use a cave-owned anchor for the treasure chest instead of inventing interior coordinates.
+- `WorldGeneratedContainers` already support explicit underground `y`, deterministic ids and persisted contents, and are intentionally non-portable. Use one as the fixed cave treasure chest.
+- `PlacedContainers` already own whole-container carry/put-down semantics: `pickUp()`, `carriedNode()`, `putDownCarried()`, persisted contents and carried weight. This should remain the authoritative lifecycle once the casket is removed from the fixed chest.
+- Current `Inventory` can hold stack items and `ItemInstance`s, but `ItemInstance` / `SaveItemInstance` cannot own or serialize a nested `Inventory`. Do not introduce generic nested inventories for this quest.
 
 ## Recommended implementation shape
 
@@ -44,36 +45,46 @@ Use a normal `talk_to_npc` stage after the buried-find stage. On that explicit d
 
 Do not use dialogue opening itself as completion. `QuestManager.onInteract(npcId)` already enforces explicit quest dialogue actions.
 
-### 4. Portable cave casket needs one shared-container extension
+### 4. Fixed cave chest containing a portable sealed casket
 
-Do **not** model the quest casket as `WorldGeneratedContainers`: that registry cannot be picked up. Do **not** copy its contents into a second quest payload when picked up.
+Use a two-level physical flow:
 
-Extend `PlacedContainers` minimally so it can seed one authored container with:
+`WorldGenerated chest (fixed in cave)` → `sealed casket` → `{ coin: N, ruby: 1 }`.
 
-- caller-supplied stable id,
-- `ContainerKind`/presentation for a small casket,
-- explicit initial underground `y`,
-- authored initial contents `{ coin: N, ruby: 1 }`.
+The outer chest should be a normal non-portable `WorldGeneratedContainers` entry placed at a stable cave-owned content anchor. Opening this chest is ordinary container interaction and **must not** resolve either quest outcome.
 
-A practical shared extension is an authored/seed record path (`placeAuthored` or initial-record helper) plus optional explicit `y` on the placed record/spawn path. `putDownCarried()` should return to the normal ground-sampled surface path, so explicit underground Y belongs only to the current placed record, not to the carried record.
+The casket is the portable authored object. Do not make the outer chest portable and do not place loose quest coins/ruby directly in it.
 
-The seeded casket must not reappear after it has been handed in or opened/consumed. Absence from `placedContainers` alone is ambiguous on a deterministic fresh rebuild, so use one explicit persisted lifecycle fact owned by the container integration (for example a sparse consumed/opened authored-container state), not a quest-owned duplicate of contents. Keep this as small as possible and reuse it for future authored portable containers.
+Current `Inventory` cannot represent a container instance whose own nested `Inventory` survives serialization. Avoid adding generic `Inventory<Inventory>` / recursive container storage. Instead add a narrow shared seam for a contained portable container:
 
-### 5. Opening = outcome commitment
+- the fixed chest exposes one casket entry with a stable authored casket id;
+- taking that entry atomically removes it from the outer chest and materializes/transfers the same stable casket identity into the portable-container lifecycle;
+- `PlacedContainers` (or a small generalized portable-container layer built from it) owns the casket's actual contents `{ coin: N, ruby: 1 }`, carry state, put-down state and persistence from that point onward;
+- never copy the casket contents through player `Inventory` during extraction.
 
-`containerActions.openContainer(id)` is the single physical open seam for placed/world containers. Add a special policy hook keyed by the authored casket id before opening the transfer UI:
+Prefer extending `ContainerKind` with a small `casket` definition/presentation rather than quest-specific container logic. The extraction seam should be generic enough for future authored portable containers stored in fixed containers, but do not implement arbitrary recursive nesting.
+
+The casket must have one stable id across fixed-chest membership → carried → placed → carried transitions. The extraction operation must be atomic/exact-once so save/load cannot leave both the chest entry and a materialized casket.
+
+Persist only the minimum lifecycle fact needed to distinguish `still inside outer chest`, `materialized portable`, and `consumed/handed in`; do not duplicate the casket's coin/ruby payload in quest progress.
+
+### 5. Opening the casket = outcome commitment
+
+`containerActions.openContainer(id)` is the physical open seam once the casket is materialized as a portable container. Add a policy hook keyed by the authored casket id before opening its transfer UI:
 
 1. if still unopened and quest unresolved, show the existing confirmation UI mechanism;
 2. cancel → no mutation;
 3. confirm → persist casket opened/committed state first, then resolve `treasure_kept` exactly once through `QuestManager`, then allow normal container transfer UI.
 
+Opening the **outer cave chest** never commits an outcome. Only opening the sealed casket does.
+
 Do not infer "opened" from contents being empty; opening is the irreversible decision even if the player leaves loot inside.
 
 The quest outcome API already owns exact-once terminal resolution (`resolvedOutcomeId`). Add the smallest event/action seam needed for a world action to resolve a named authored outcome; do not build a parallel branching system.
 
-### 6. Hand-in = concrete carried-container check
+### 6. Hand-in = concrete carried casket check
 
-The NPC hand-in path must verify the **same stable casket id** is currently carried and still unopened. Extend `PlacedContainers` with a read-only carried id accessor if needed; do not match only by `ContainerKind`.
+The NPC hand-in path must verify the **same stable casket id** is currently carried and still unopened. Extend the portable-container API with a read-only carried id accessor if needed; do not match only by `ContainerKind`.
 
 On successful hand-in:
 
@@ -83,7 +94,7 @@ On successful hand-in:
 - consume/remove the carried casket through a shared container operation,
 - resolve `treasure_returned` exactly once and apply normal authored consequences.
 
-The ruby and remaining coins never need to enter an NPC inventory in V1 unless an existing transfer seam makes that free; consuming the concrete container is sufficient world-state ownership for the agreed NPC share.
+The ruby and remaining coins never need to enter an NPC inventory in V1 unless an existing transfer seam makes that free; consuming the concrete casket is sufficient world-state ownership for the agreed NPC share.
 
 ## Quest definition / objective guidance
 
@@ -91,12 +102,12 @@ Prefer an authored/contextual `QuestDef` in `src/quests/quests.ts` materialized 
 
 1. buried-find objective bound to exact grave spot id,
 2. `talk_to_npc` to interpret the map,
-3. cave/treasure acquisition stage driven by physical casket state,
+3. cave/treasure acquisition stage driven by extracting the physical casket from the fixed chest,
 4. terminal outcome resolved either by opening the casket (`treasure_kept`) or handing in the unopened carried id (`treasure_returned`).
 
 Do not create a "kill bear" objective. The bear is environmental pressure only.
 
-If a new objective type is required, keep it event/state based and generic enough to describe the real world fact (`recover_hidden_find`, `carry_container`, etc.), but do not add types merely to mirror every quest stage when a dialogue action or direct outcome event is sufficient.
+If a new objective type is required, keep it event/state based and generic enough to describe the real world fact (`recover_hidden_find`, `acquire_portable_container`, etc.), but do not add types merely to mirror every quest stage when a dialogue action or direct outcome event is sufficient.
 
 ## Persistence and rebuild traps
 
@@ -104,8 +115,9 @@ If a new objective type is required, keep it event/state based and generic enoug
 - `resolvedHiddenFindSpotIds` already persists the grave one-shot and is the correct guard against repeated digging/exposure.
 - fauna persistent occupant snapshot/tombstone already survives save/load and world-bundle rebuild; no bear fields belong in quest save data.
 - cave topology/habitat/content anchors are deterministic derived data; never serialize them.
-- placed/carried container contents already survive save/load/rebuild. Any new authored-container opened/consumed lifecycle flag must survive the same paths and be copied through `rebuildWorldBundle()`.
-- beware initialization order: fauna is created inside `WorldBundle`, while `QuestManager` is composed in `createApp.ts`. World-authored cave/bear/casket bindings therefore need to be derived from deterministic world/cave context before quest progress exists; never make world creation depend on current quest stage.
+- outer chest contents and the casket materialization state must have one authoritative ownership transition. Never allow both `casket still in chest` and `portable casket exists` after restore/rebuild.
+- placed/carried casket contents must survive save/load/rebuild. Any opened/consumed lifecycle flag must survive the same paths and be copied through `rebuildWorldBundle()`.
+- beware initialization order: fauna/world containers are created inside `WorldBundle`, while `QuestManager` is composed in `createApp.ts`. World-authored cave/bear/chest/casket bindings therefore need to be derived from deterministic world/cave context before quest progress exists; never make world creation depend on current quest stage.
 
 ## Files/symbols to inspect while implementing
 
@@ -116,11 +128,13 @@ If a new objective type is required, keep it event/state based and generic enoug
 - `src/app/actions/groundActions.ts` — `checkBuriedTreasureKeyDig`, `checkHiddenFindDig`, `applyGraveDisturbanceIfExposed`.
 - `src/world/createCaves.ts` / `src/world/caves/*` — cave id, `contentAnchorsOf`, `resolveHabitat`.
 - `src/fauna/animalCaveHabitat.ts`, `src/fauna/persistentOccupants.ts`, `src/fauna/createFauna.ts`.
-- `src/app/worldBundle.ts` — currently-empty persistent occupant / cave habitat declaration seams; cave container specs; rebuild state carry.
-- `src/world/createPlacedContainers.ts` — authoritative portable container lifecycle.
-- `src/world/worldGeneratedContainers.ts` — explicit underground-Y reference implementation only.
-- `src/app/actions/containerActions.ts` — physical open/pick-up/transfer entry points.
-- `src/persistence/saveData.ts`, `src/app/saveState.ts` — only if the shared authored-container lifecycle needs a new sparse persisted field.
+- `src/app/worldBundle.ts` — persistent occupant / cave habitat declaration seams; fixed cave container specs; rebuild state carry.
+- `src/world/worldGeneratedContainers.ts` — fixed outer chest and persisted contents.
+- `src/items/container.ts` — `ContainerKind` / `CONTAINER_DEFS`; add/reuse casket as a shared container kind.
+- `src/items/itemInstances.ts`, `src/items/Inventory.ts` — current item-instance boundary; do not add recursive inventory serialization solely for this quest.
+- `src/world/createPlacedContainers.ts` — authoritative portable-container lifecycle after casket extraction.
+- `src/app/actions/containerActions.ts` — physical open/pick-up/transfer entry points and casket extraction/open hooks.
+- `src/persistence/saveData.ts`, `src/app/saveState.ts` — only for the minimum shared casket ownership/opened/consumed lifecycle state required by the new seam.
 
 ## Verification emphasis
 
@@ -128,13 +142,15 @@ Automated tests should focus on cross-owner invariants rather than presentation:
 
 - target grave resolves exactly once and still uses the existing grave-exposure path;
 - same persistent bear id survives restore, and tombstone prevents recreation;
-- casket exists regardless of bear state;
-- authored casket keeps the same id/contents through placed → carried → placed and save/load;
+- fixed outer chest exists regardless of bear state;
+- opening outer chest does not resolve the quest outcome;
+- casket extraction atomically changes ownership: never both in outer chest and portable;
+- casket keeps the same stable id and contents through extraction → carried → placed → carried and save/load;
 - opening confirmation cancel is a pure no-op;
-- confirmed open resolves only `treasure_kept`, even before loot is removed;
-- carried unopened exact id can resolve `treasure_returned`; wrong/open casket cannot;
+- confirmed casket open resolves only `treasure_kept`, even before loot is removed;
+- carried unopened exact casket id can resolve `treasure_returned`; wrong/open casket cannot;
 - 30% payment derives from the single authored coin amount and cannot combine with full-loot outcome;
-- rebuild/new-load does not respawn a consumed casket.
+- rebuild/new-load does not respawn an extracted or consumed casket inside the outer chest.
 
 Manual browser verification remains the User's responsibility.
 
