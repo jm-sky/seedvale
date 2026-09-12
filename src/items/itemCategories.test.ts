@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasItemCategory, hasItemKindCategory, ITEM_DEFS } from './items'
+import { hasItemCategory, hasItemKindCategory, ITEM_DEFS, primaryItemCategory } from './items'
 
 describe('item categories', () => {
   it('axe matches tool and weapon', () => {
@@ -28,5 +28,13 @@ describe('item categories', () => {
     expect(hasItemCategory(ITEM_DEFS.axe, 'weapon')).toBe(true)
     expect(hasItemCategory(ITEM_DEFS.bread, 'food')).toBe(true)
     expect(hasItemCategory(ITEM_DEFS.bread, 'weapon')).toBe(false)
+  })
+
+  it('wearable armor kinds use armor category, not weapon (plan items-player-031)', () => {
+    expect(hasItemKindCategory('leather_armor', 'armor')).toBe(true)
+    expect(hasItemKindCategory('chainmail', 'armor')).toBe(true)
+    expect(hasItemKindCategory('leather_armor', 'weapon')).toBe(false)
+    expect(hasItemKindCategory('chainmail', 'weapon')).toBe(false)
+    expect(primaryItemCategory(ITEM_DEFS.chainmail)).toBe('armor')
   })
 })

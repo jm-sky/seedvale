@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-031-armor-category-and-character-defense-summary`        | 2026-09-12 20:24:00 | —                   | `items-player`   | —          |
 | `items-player-030-multi-part-armor-and-equipment-quality`              | 2026-09-12 19:20:00 | —                   | `items-player`   | —          |
 | `npc-031-voluntary-expedition-joining`                                 | 2026-09-12 18:48:31 | —                   | `npc`            | —          |
 | `npc-030-paid-expedition-escort-work-contracts`                        | 2026-09-12 18:11:05 | —                   | `npc`            | —          |

@@ -23,6 +23,16 @@ export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = [
   'feet',
 ]
 
+/** Player-facing labels for equipment slots (inventory + Character Screen). */
+export const EQUIPMENT_SLOT_LABEL: Record<EquipmentSlot, string> = {
+  head: 'Głowa',
+  body: 'Tułów',
+  arms: 'Ramiona',
+  hands: 'Dłonie',
+  legs: 'Nogi',
+  feet: 'Stopy',
+}
+
 /** Persisted equipment selection — instance IDs only; Inventory owns the items. */
 export type SavePlayerEquipment = Partial<Record<EquipmentSlot, string>>
 

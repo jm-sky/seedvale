@@ -19,6 +19,7 @@ import type { SellPriceContext } from '../items/tradeCatalog'
 import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
 import type { CharacterPresentation } from '../player/characterPresentation'
+import { NEUTRAL_CHARACTER_EQUIPMENT_VIEW } from '../player/characterPresentation'
 import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Reputation } from '../reputation/ReputationManager'
@@ -753,7 +754,7 @@ export const ui = reactive({
     reputation: null,
     badges: [],
     attributes: { strength: 0, perception: 0, endurance: 0, agility: 0 },
-    presentation: { attributes: [], skills: [], conditions: [] },
+    presentation: { attributes: [], skills: [], conditions: [], equipment: NEUTRAL_CHARACTER_EQUIPMENT_VIEW },
   } as CharacterScreenState,
   skillsScreen: {
     open: false,
@@ -1785,6 +1786,26 @@ function sameCharacterPresentation(a: CharacterPresentation, b: CharacterPresent
       const re = right.effects[j]
       if (!le || !re || le.id !== re.id || le.delta !== re.delta) return false
     }
+  }
+  const eqA = a.equipment
+  const eqB = b.equipment
+  if (
+    eqA.damageReduction !== eqB.damageReduction ||
+    eqA.attackStaminaDelta !== eqB.attackStaminaDelta ||
+    eqA.meleeRecoveryDelta !== eqB.meleeRecoveryDelta ||
+    eqA.movementSpeedDelta !== eqB.movementSpeedDelta ||
+    eqA.sprintStaminaDelta !== eqB.sprintStaminaDelta ||
+    eqA.slots.length !== eqB.slots.length
+  ) return false
+  for (let i = 0; i < eqA.slots.length; i++) {
+    const left = eqA.slots[i]
+    const right = eqB.slots[i]
+    if (
+      !left || !right ||
+      left.slot !== right.slot ||
+      left.itemLabel !== right.itemLabel ||
+      left.qualityLabel !== right.qualityLabel
+    ) return false
   }
   return true
 }

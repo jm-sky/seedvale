@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import UiPanel from '@/components/UiPanel.vue'
 import type { ModifierCategory } from '../../shared/effectivePhysicalAttributes'
 import type { PhysicalAttributeId } from '../../shared/PhysicalAttributes'
+import { EQUIPMENT_SLOT_LABEL } from '../../items/equipment'
 import { SKILL_LABEL } from '../../player/PlayerSkills'
 import CharacterModifierBadge from '../components/CharacterModifierBadge.vue'
 import CharacterSection from '../components/CharacterSection.vue'
@@ -71,6 +72,24 @@ function formatConditionEffects(effects: readonly { id: PhysicalAttributeId, del
   return effects
     .map((effect) => `${ATTRIBUTE_LABEL[effect.id]} ${formatSignedDelta(effect.delta)}`)
     .join(' · ')
+}
+
+const equipment = computed(() => ui.characterScreen.presentation.equipment)
+
+function formatEquipmentPercent(fraction: number): string {
+  const percent = Math.round(fraction * 100)
+  if (percent === 0) return '0%'
+  return percent > 0 ? `+${percent}%` : `−${Math.abs(percent)}%`
+}
+
+function formatDamageReduction(fraction: number): string {
+  const percent = Math.round(fraction * 100)
+  return `${percent}%`
+}
+
+function formatEquippedSlot(itemLabel: string | null, qualityLabel: string | null): string {
+  if (!itemLabel) return '—'
+  return qualityLabel ? `${itemLabel} · ${qualityLabel}` : itemLabel
 }
 
 /** Five reputation dimensions (plan quests-progression-001 §14) — each is
@@ -158,6 +177,44 @@ const reputationRows = computed(() => {
             >
               <span>{{ SKILL_LABEL[row.id] }}</span>
               <span class="text-xs opacity-70">{{ row.value }}</span>
+            </div>
+          </div>
+        </CharacterSection>
+
+        <CharacterSection title="Pancerz">
+          <div class="flex flex-col gap-2 text-sm">
+            <div class="flex items-baseline justify-between gap-3">
+              <span>Redukcja obrażeń</span>
+              <span class="text-xs opacity-70">{{ formatDamageReduction(equipment.damageReduction) }}</span>
+            </div>
+            <div class="flex items-baseline justify-between gap-3">
+              <span>Koszt kondycji ataku</span>
+              <span class="text-xs opacity-70">{{ formatEquipmentPercent(equipment.attackStaminaDelta) }}</span>
+            </div>
+            <div class="flex items-baseline justify-between gap-3">
+              <span>Odnowienie ataku</span>
+              <span class="text-xs opacity-70">{{ formatEquipmentPercent(equipment.meleeRecoveryDelta) }}</span>
+            </div>
+            <div class="flex items-baseline justify-between gap-3">
+              <span>Prędkość ruchu</span>
+              <span class="text-xs opacity-70">{{ formatEquipmentPercent(equipment.movementSpeedDelta) }}</span>
+            </div>
+            <div class="flex items-baseline justify-between gap-3">
+              <span>Koszt sprintu</span>
+              <span class="text-xs opacity-70">{{ formatEquipmentPercent(equipment.sprintStaminaDelta) }}</span>
+            </div>
+            <div class="mt-2 border-t border-white/10 pt-2">
+              <div class="mb-1 text-xs font-semibold uppercase tracking-wide opacity-80">
+                Wyposażone
+              </div>
+              <div
+                v-for="row in equipment.slots"
+                :key="row.slot"
+                class="flex items-baseline justify-between gap-3 text-xs"
+              >
+                <span class="opacity-80">{{ EQUIPMENT_SLOT_LABEL[row.slot] }}</span>
+                <span class="text-right opacity-70">{{ formatEquippedSlot(row.itemLabel, row.qualityLabel) }}</span>
+              </div>
             </div>
           </div>
         </CharacterSection>

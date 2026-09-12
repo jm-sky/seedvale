@@ -2400,6 +2400,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             result: detailedAttributes,
             skills: player.skills,
             conditions: player.temporaryConditions,
+            equipmentModifiers,
+            equipment,
+            inventory,
           })
           : undefined,
       })

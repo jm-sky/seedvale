@@ -41,7 +41,7 @@ import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import { CONTAINER_DEFS } from '../items/container'
-import { createEquipmentState, equippedInstanceIds } from '../items/equipment'
+import { createEquipmentState, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
 import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
@@ -2061,6 +2061,9 @@ export async function createApp(
         result: detailedAttributes,
         skills: player.skills,
         conditions: player.temporaryConditions,
+        equipmentModifiers: resolveEquipmentModifiers(equipment, inventory),
+        equipment,
+        inventory,
       }),
     })
     vueUi.openCharacterScreen()

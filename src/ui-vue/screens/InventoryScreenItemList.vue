@@ -20,7 +20,7 @@ const { categoryLabel } = useItemCategoryLabels()
 type CategoryFilter = 'all' | ItemCategory
 type SortMode = 'category' | 'name' | 'qty'
 
-const CATEGORY_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'knowledge', 'food', 'utility', 'resource']
+const CATEGORY_ORDER: readonly ItemCategory[] = ['weapon', 'armor', 'tool', 'knowledge', 'food', 'utility', 'resource']
 const SORT_LABEL: Record<SortMode, string> = { category: 'Kategoria', name: 'Nazwa', qty: 'Ilość' }
 
 const filter = ref<CategoryFilter>('all')

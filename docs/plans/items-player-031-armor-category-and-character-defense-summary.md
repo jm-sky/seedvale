@@ -1,7 +1,7 @@
 # Plan: Armor category and character defense summary
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Priority:** medium · **Effort:** M
 **Depends on:** items-player-030
 **Domain:** `items-player`

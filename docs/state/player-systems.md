@@ -18,7 +18,7 @@ Gameplay always reads **effective** SPEA from `src/shared/effectivePhysicalAttri
 
 The same resolver can return applied (post-clamp) **modifier contributions** (`resolveEffectivePhysicalAttributesDetailed` / `PlayerController.effectiveAttributesDetailed`). Character Screen aggregates those contributions per attribute and category into badges (`illness` / `injury` / `fatigue` / `effect`); it does not persist badges or recompute formulas. Poisoning is an `illness` contribution with source id `poisoning`. Fatigue is a reserved category with no player source yet.
 
-Character Screen (`src/ui-vue/screens/CharacterScreen.vue`) is the presentation view of current player state: HP/needs, base vs effective SPEA, all eight skills, active condition sources, plus the existing local reputation/renown/known-for badges. Presentation arrays are rebuilt while the screen is open (and once at open); Vue does not own condition timers or modifier state.
+Character Screen (`src/ui-vue/screens/CharacterScreen.vue`) is the presentation view of current player state: HP/needs, base vs effective SPEA, all eight skills, passive equipment-derived armor summary (aggregate modifiers from `resolveEquipmentModifiers()` plus six-slot worn state), active condition sources, plus the existing local reputation/renown/known-for badges. Presentation arrays are rebuilt while the screen is open (and once at open); Vue does not own condition timers, equipment ownership, or modifier state.
 
 Strength currently has three explicit consumers, each with its own mapping (neutral at `0.5`; the Player's starting `0.6` is a small intentional advantage, not a shifted neutral point):
 

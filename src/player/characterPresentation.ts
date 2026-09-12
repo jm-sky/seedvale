@@ -1,3 +1,15 @@
+import type { Inventory } from '../items/Inventory'
+import type {
+  EquipmentModifiers,
+  EquipmentSlot,
+  EquipmentState,
+} from '../items/equipment'
+import {
+  EQUIPMENT_SLOTS,
+  equippedInstanceId,
+} from '../items/equipment'
+import { itemDisplayName } from '../items/itemDisplay'
+import { ARMOR_QUALITY_LABELS, isArmorItemInstance } from '../items/itemInstances'
 import type {
   AttributeModifierContribution,
   EffectivePhysicalAttributesResult,
@@ -70,10 +82,95 @@ export type CharacterConditionView = {
   effects: readonly CharacterConditionEffectView[]
 }
 
+export type CharacterEquipmentSlotView = {
+  slot: EquipmentSlot
+  itemLabel: string | null
+  qualityLabel: string | null
+}
+
+export type CharacterEquipmentView = {
+  damageReduction: number
+  attackStaminaDelta: number
+  meleeRecoveryDelta: number
+  movementSpeedDelta: number
+  sprintStaminaDelta: number
+  slots: readonly CharacterEquipmentSlotView[]
+}
+
 export type CharacterPresentation = {
   attributes: readonly CharacterAttributeView[]
   skills: readonly CharacterSkillView[]
   conditions: readonly CharacterConditionView[]
+  equipment: CharacterEquipmentView
+}
+
+const EMPTY_EQUIPMENT_SLOTS: readonly CharacterEquipmentSlotView[] = EQUIPMENT_SLOTS.map((slot) => ({
+  slot,
+  itemLabel: null,
+  qualityLabel: null,
+}))
+
+export const NEUTRAL_CHARACTER_EQUIPMENT_VIEW: CharacterEquipmentView = {
+  damageReduction: 0,
+  attackStaminaDelta: 0,
+  meleeRecoveryDelta: 0,
+  movementSpeedDelta: 0,
+  sprintStaminaDelta: 0,
+  slots: EMPTY_EQUIPMENT_SLOTS,
+}
+
+/**
+ * Maps aggregate gameplay equipment modifiers to Character Screen deltas.
+ *
+ * @domain items-player
+ */
+export function equipmentModifiersToCharacterView(
+  modifiers: EquipmentModifiers,
+): Omit<CharacterEquipmentView, 'slots'> {
+  return {
+    damageReduction: 1 - modifiers.incomingDamageMultiplier,
+    attackStaminaDelta: modifiers.meleeStaminaMultiplier - 1,
+    meleeRecoveryDelta: modifiers.meleeRecoveryMultiplier - 1,
+    movementSpeedDelta: modifiers.movementSpeedMultiplier - 1,
+    sprintStaminaDelta: modifiers.sprintStaminaMultiplier - 1,
+  }
+}
+
+export function buildCharacterEquipmentSlotViews(
+  equipment: EquipmentState,
+  inventory: Inventory,
+): CharacterEquipmentSlotView[] {
+  return EQUIPMENT_SLOTS.map((slot) => {
+    const instanceId = equippedInstanceId(equipment, inventory, slot)
+    if (!instanceId) {
+      return { slot, itemLabel: null, qualityLabel: null }
+    }
+    const instance = inventory.getInstance(instanceId)
+    if (!instance || !isArmorItemInstance(instance)) {
+      return { slot, itemLabel: null, qualityLabel: null }
+    }
+    return {
+      slot,
+      itemLabel: itemDisplayName(instance.kind),
+      qualityLabel: ARMOR_QUALITY_LABELS[instance.quality],
+    }
+  })
+}
+
+/**
+ * Character Screen equipment snapshot from authoritative equipment state.
+ *
+ * @domain items-player
+ */
+export function buildCharacterEquipmentView(
+  modifiers: EquipmentModifiers,
+  equipment: EquipmentState,
+  inventory: Inventory,
+): CharacterEquipmentView {
+  return {
+    ...equipmentModifiersToCharacterView(modifiers),
+    slots: buildCharacterEquipmentSlotViews(equipment, inventory),
+  }
 }
 
 export function toDisplayAttribute(value: number): number {
@@ -199,10 +296,18 @@ export function buildCharacterPresentation(input: {
   result: EffectivePhysicalAttributesResult
   skills: PlayerSkills
   conditions: TemporaryConditionsState
+  equipmentModifiers: EquipmentModifiers
+  equipment: EquipmentState
+  inventory: Inventory
 }): CharacterPresentation {
   return {
     attributes: buildCharacterAttributeViews(input.base, input.result),
     skills: buildCharacterSkillViews(input.skills),
     conditions: buildCharacterConditionViews(input.result.contributions, input.conditions),
+    equipment: buildCharacterEquipmentView(
+      input.equipmentModifiers,
+      input.equipment,
+      input.inventory,
+    ),
   }
 }

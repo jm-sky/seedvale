@@ -81,8 +81,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
 | 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
 | 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
-| 💡 `items-player-031-armor-category-and-character-defense-summary.md`          | -       | 🟡 | M      | items-player-030 |
-
 ---
 
 ## Verification needed
@@ -94,6 +92,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | Plan | Sprawdź |
 |------|---------|
 | `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md` | Połóż `raw_meat` przy wilku → podejście i zjedzenie (nie instant z dystansu); lis na świeże mięso, roślinożerca nie; niedźwiedź na mięso + berries/apple/nuts/honey + blood; bear fresh/rotting carcass tak, bones nie; bear ignoruje bait w simple/good trap; zabranie mięsa przed dojściem = brak relief; trail z kilku kawałków/krwi; wilk do good trap z detection/capture; flee/walka przerywają attraction |
+| `items-player-031-armor-category-and-character-defense-summary.md` | Ekwipunek: filtr `Pancerze`, zbroje nie pod `Broń`; Kupiec: filtr `Pancerze` w BUY/OFFER; ekran Postaci: sekcja `Pancerz` z agregatem z `resolveEquipmentModifiers()` i sześcioma slotami; save/load i zmiana zbroi przy otwartym ekranie odświeżają wartości |
 | `items-player-029-wearable-armor-and-combat-equipment.md` | Kupiec sprzedaje `leather_armor`/`chainmail`; „Załóż”/„Zdejmij” w ekwipunku pokazuje ochronę/wysiłek/tempo/ruch; noszona zbroja zauważalnie zmniejsza obrażenia od zwierząt (kolczuga wyraźnie bardziej niż skóra), ale aktywny blok trzymanym przedmiotem nadal działa; kolczuga wyraźnie spowalnia i męczy (atak/sprint/ruch) mocniej niż skórzana; sprzedanie/upuszczenie założonej zbroi natychmiast usuwa efekt bez ducha bonusu; głód/pragnienie nie są łagodzone przez zbroję; save/load zachowuje założony przedmiot (i poprawnie ładuje pusty slot przy starym zapisie); waga zbroi nadal liczy się do przeciążenia ekwipunku |
 | `fauna-025-livestock-stray-return-and-recovery.md` | Wywołać flee household livestock i potwierdzić, że małe oddalenie nie tworzy stray; doprowadzić do większego displacement i obserwować naturalne rozpoczęcie stray episode (bez questa); nie pomagać zwierzęciu i sprawdzić, że po uspokojeniu samo próbuje wrócić do home; podczas powrotu wywołać threat/scare i sprawdzić przerwanie oraz późniejszą ponowną próbę (bez teleportu, bez utraty stray); aktywować lost-livestock quest, nie prowadzić zwierzęcia i pozwolić mu wrócić samemu — quest ma rozwiązać się z realnego `returned` state; save/load podczas stray i podczas drogi powrotnej zachowuje pozycję/ownera i pozwala wznowić powrót |
 | `world-026-storms-thunder-animal-scare-and-snow-visuals.md` | Wymuś snow: płatki bez kwadratowych rogów z różnych odległości. Wymuś storm: mocny deszcz/wiatr, flash → opóźniony thunder, warianty thunder bez spamu jednego eventu. Stado livestock: nie każdy grzmot i nie każde zwierzę flees; bliżej domu/opiekuna spokojniejsze. Burza nie tworzy questa ani stray. Cave/interior ścisza deszcz/thunder |

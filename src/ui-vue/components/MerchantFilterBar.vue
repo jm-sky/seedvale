@@ -19,6 +19,7 @@ const { categoryLabel } = useItemCategoryLabels()
 const categoryChips: { id: CategoryFilter, label: string }[] = [
   { id: 'all', label: 'Wszystkie' },
   { id: 'weapon', label: categoryLabel.weapon },
+  { id: 'armor', label: categoryLabel.armor },
   { id: 'resource', label: categoryLabel.resource },
   { id: 'tool', label: categoryLabel.tool },
   { id: 'utility', label: categoryLabel.utility },

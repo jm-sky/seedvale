@@ -1,3 +1,4 @@
+import { EQUIPMENT_SLOT_LABEL } from './equipment'
 import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
 import { effectiveInstanceWeight, resolveEffectiveArmorPiece } from './armorItemInstances'
@@ -81,15 +82,6 @@ export type InventoryGroupView = {
    *  has no `ITEM_CATALOG[kind].consumable` entry at all. Presentation only;
    *  `survivalActions.ts`'s `consumeItem()` re-validates at execution time. */
   consumeUse: ItemUseView | null
-}
-
-const ARMOR_SLOT_LABEL: Record<string, string> = {
-  head: 'Głowa',
-  body: 'Tułów',
-  arms: 'Ramiona',
-  hands: 'Dłonie',
-  legs: 'Nogi',
-  feet: 'Stopy',
 }
 
 function percentDeltaLabel(multiplier: number): string {
@@ -225,7 +217,7 @@ function buildArmorGroup(kind: ItemKind, instances: readonly ItemInstance[]): In
       staminaPenaltyLabel: percentDeltaLabel(effective.staminaCostMultiplier),
       movementPenaltyLabel: percentDeltaLabel(effective.movementSpeedMultiplier),
       recoveryPenaltyLabel: percentDeltaLabel(effective.meleeRecoveryMultiplier),
-      slotLabel: ARMOR_SLOT_LABEL[effective.slot] ?? effective.slot,
+      slotLabel: EQUIPMENT_SLOT_LABEL[effective.slot] ?? effective.slot,
       sellPrice: resolveInstanceSellPrice(inst) ?? 0,
     }
   })

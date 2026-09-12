@@ -5,9 +5,15 @@ import {
   applyPoisoningExposure,
   createEmptyTemporaryConditions,
 } from '../shared/temporaryConditions'
+import { createEquipmentState, resolveEquipmentModifiers } from '../items/equipment'
+import { Inventory } from '../items/Inventory'
+import { createArmorInstance } from '../items/armorItemInstances'
 import {
   aggregateAttributeModifierBadges,
+  buildCharacterEquipmentView,
   buildCharacterPresentation,
+  equipmentModifiersToCharacterView,
+  NEUTRAL_CHARACTER_EQUIPMENT_VIEW,
   toDisplayAttribute,
 } from './characterPresentation'
 import { PLAYER_STARTING_ATTRIBUTES } from './PlayerController'
@@ -45,16 +51,34 @@ describe('aggregateAttributeModifierBadges (plan ui-input-013)', () => {
   })
 })
 
+function emptyEquipmentContext(): {
+  equipmentModifiers: ReturnType<typeof resolveEquipmentModifiers>
+  equipment: ReturnType<typeof createEquipmentState>
+  inventory: Inventory
+} {
+  const inventory = new Inventory({})
+  const equipment = createEquipmentState(inventory)
+  return {
+    inventory,
+    equipment,
+    equipmentModifiers: resolveEquipmentModifiers(equipment, inventory),
+  }
+}
+
 describe('buildCharacterPresentation (plan ui-input-013)', () => {
   it('projects all eight skills on the Character display scale', () => {
     const skills = createPlayerSkills()
     const conditions = createEmptyTemporaryConditions()
     const result = resolveEffectivePhysicalAttributesDetailed(PLAYER_STARTING_ATTRIBUTES, conditions, 0)
+    const { equipment, equipmentModifiers, inventory } = emptyEquipmentContext()
     const view = buildCharacterPresentation({
       base: PLAYER_STARTING_ATTRIBUTES,
       result,
       skills,
       conditions,
+      equipmentModifiers,
+      equipment,
+      inventory,
     })
     expect(view.skills.map((row) => row.id)).toEqual([
       'sneak', 'survival', 'traps', 'defense', 'archery', 'riding', 'medicine', 'repair',
@@ -62,6 +86,7 @@ describe('buildCharacterPresentation (plan ui-input-013)', () => {
     expect(view.skills.every((row) => row.value === toDisplayAttribute(0.2))).toBe(true)
     expect(view.conditions).toEqual([])
     expect(view.attributes.every((row) => row.effective === row.base && row.modifiers.length === 0)).toBe(true)
+    expect(view.equipment).toEqual(NEUTRAL_CHARACTER_EQUIPMENT_VIEW)
   })
 
   it('shows poisoning as an illness with matching SPEA badges', () => {
@@ -69,11 +94,15 @@ describe('buildCharacterPresentation (plan ui-input-013)', () => {
     const conditions = createEmptyTemporaryConditions()
     applyPoisoningExposure(conditions, 0)
     const result = resolveEffectivePhysicalAttributesDetailed(PLAYER_STARTING_ATTRIBUTES, conditions, 0)
+    const { equipment, equipmentModifiers, inventory } = emptyEquipmentContext()
     const view = buildCharacterPresentation({
       base: PLAYER_STARTING_ATTRIBUTES,
       result,
       skills,
       conditions,
+      equipmentModifiers,
+      equipment,
+      inventory,
     })
     const strength = view.attributes.find((row) => row.id === 'strength')
     expect(strength?.effective).toBeLessThan(strength?.base ?? 0)
@@ -87,5 +116,40 @@ describe('buildCharacterPresentation (plan ui-input-013)', () => {
       }),
     ])
     expect(view.conditions[0]?.effects.some((effect) => effect.id === 'strength' && effect.delta < 0)).toBe(true)
+  })
+})
+
+describe('character equipment presentation (plan items-player-031)', () => {
+  it('maps neutral modifiers to zero deltas', () => {
+    expect(equipmentModifiersToCharacterView({
+      incomingDamageMultiplier: 1,
+      meleeStaminaMultiplier: 1,
+      meleeRecoveryMultiplier: 1,
+      movementSpeedMultiplier: 1,
+      sprintStaminaMultiplier: 1,
+    })).toEqual({
+      damageReduction: 0,
+      attackStaminaDelta: 0,
+      meleeRecoveryDelta: 0,
+      movementSpeedDelta: 0,
+      sprintStaminaDelta: 0,
+    })
+  })
+
+  it('projects equipped body armor into slot rows and aggregate deltas', () => {
+    const inventory = new Inventory({})
+    const inst = createArmorInstance('chainmail', 'good')
+    expect(inventory.addInstance(inst)).toBe(true)
+    const equipment = createEquipmentState(inventory)
+    equipment.equip(inst.id, inventory)
+    const modifiers = resolveEquipmentModifiers(equipment, inventory)
+    const view = buildCharacterEquipmentView(modifiers, equipment, inventory)
+    expect(view.damageReduction).toBe(1 - modifiers.incomingDamageMultiplier)
+    expect(view.slots.find((row) => row.slot === 'body')).toEqual({
+      slot: 'body',
+      itemLabel: 'kolczuga',
+      qualityLabel: 'Dobra',
+    })
+    expect(view.slots.filter((row) => row.itemLabel != null)).toHaveLength(1)
   })
 })

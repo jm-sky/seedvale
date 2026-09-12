@@ -141,7 +141,7 @@ export type ItemKind =
  *  and `map_near`/`map_far` (→ `LocationKnowledge`) — a shared item
  *  *category*, not a shared gameplay system; each knowledge item still
  *  drives its own domain. */
-export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon' | 'knowledge'
+export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon' | 'armor' | 'knowledge'
 
 /** Item gabarite (plan 164) — deliberately independent of `weight`. Governs
  *  container/inventory *size* capacity only; a small heavy item and a large
@@ -185,7 +185,7 @@ export function hasItemKindCategory(kind: ItemKind, category: ItemCategory): boo
   return hasItemCategory(ITEM_DEFS[kind], category)
 }
 
-const CATEGORY_SORT_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'knowledge', 'food', 'utility', 'resource']
+const CATEGORY_SORT_ORDER: readonly ItemCategory[] = ['weapon', 'armor', 'tool', 'knowledge', 'food', 'utility', 'resource']
 
 /** Deterministic primary category for sorting — first match in CATEGORY_SORT_ORDER. */
 export function primaryItemCategory(def: Pick<ItemDef, 'categories'>): ItemCategory {
@@ -867,7 +867,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   leather_armor: {
     kind: 'leather_armor',
     label: 'skórzana zbroja',
-    categories: ['weapon'],
+    categories: ['armor'],
     weight: 3.5,
     size: 'LG',
     color: 0x6b4a2f,
@@ -876,7 +876,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   chainmail: {
     kind: 'chainmail',
     label: 'kolczuga',
-    categories: ['weapon'],
+    categories: ['armor'],
     weight: 9,
     size: 'LG',
     color: 0x9aa0a8,
