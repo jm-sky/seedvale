@@ -90,7 +90,7 @@ Generated from exported TypeScript symbols.
 
 ## `debug/debugMode.ts`
 
-- `DebugSystemName` — type — line 114
+- `DebugSystemName` — type — line 129
 - `isAdminMode` — function — line 43
 - `isBootMarkMode` — function — line 33
 - `isCameraDebugMode` — function — line 63
@@ -102,7 +102,8 @@ Generated from exported TypeScript symbols.
 - `isNoShadowsDebugMode` — function — line 70
 - `isNpcCombatDebugMode` — function — line 106
 - `isRenderStateDebugMode` — function — line 84
-- `isSystemEnabled` — function — line 135
+- `isSystemEnabled` — function — line 150
+- `isWildBoarGlbEnabled` — function — line 115
 - `urlParamValue` — function — line 19
 
 ## `debug/domainHistory.ts`

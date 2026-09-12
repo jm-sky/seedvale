@@ -115,25 +115,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 344
-- `ANIMAL_LABELS` — const — line 47
-- `AnimalAffinityConfig` — type — line 167
-- `AnimalDef` — type — line 66
-- `AnimalDietConfig` — type — line 197
-- `AnimalKind` — type — line 25
+- `ANIMAL_DEFS` — const — line 345
+- `ANIMAL_LABELS` — const — line 48
+- `AnimalAffinityConfig` — type — line 168
+- `AnimalDef` — type — line 67
+- `AnimalDietConfig` — type — line 198
+- `AnimalKind` — type — line 26
 - `AnimalLifeStage` — type — line 22
 - `AnimalRole` — type — line 14
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 18
-- `dietAcceptsItem` — function — line 322
-- `DraftConfig` — type — line 228
-- `LeadConfig` — type — line 222
-- `LivestockProductionConfig` — type — line 257
-- `LivestockProductKind` — type — line 244
-- `MountPointConfig` — type — line 235
-- `ScavengingConfig` — type — line 208
-- `WaterTripConfig` — type — line 176
+- `dietAcceptsItem` — function — line 323
+- `DraftConfig` — type — line 229
+- `LeadConfig` — type — line 223
+- `LivestockProductionConfig` — type — line 258
+- `LivestockProductKind` — type — line 245
+- `MountPointConfig` — type — line 236
+- `ScavengingConfig` — type — line 209
+- `WaterTripConfig` — type — line 177
 
 ## `fauna/animalDialogue.ts`
 
@@ -408,9 +408,10 @@ Generated from exported TypeScript symbols.
 ## `fauna/createFauna.ts`
 
 - `clearsRiverChannel` — function — line 273
-- `createFauna` — function — line 533
+- `createFauna` — function — line 546
 - `Fauna` — type — line 89
 - `FAUNA_URLS` — const — line 457
+- `faunaGltfUrls` — function — line 471
 - `findHomeCaveSpawner` — function — line 416
 - `isDeerEdgeHabitat` — function — line 304
 - `isNearRoadCorridor` — function — line 285
@@ -566,17 +567,17 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/proceduralAnimals.ts`
 
-- `createBoarModel` — function — line 80
-- `createChickenModel` — function — line 206
-- `createCowModel` — function — line 161
-- `createDogModel` — function — line 291
-- `createDonkeyModel` — function — line 148
+- `createBoarModel` — function — line 81
+- `createChickenModel` — function — line 207
+- `createCowModel` — function — line 162
+- `createDogModel` — function — line 292
+- `createDonkeyModel` — function — line 149
 - `createDuckModel` — function — line 55
-- `createHorseModel` — function — line 108
+- `createHorseModel` — function — line 109
 - `createRabbitModel` — function — line 24
-- `createRatModel` — function — line 324
-- `createRoosterModel` — function — line 246
-- `createSheepModel` — function — line 185
+- `createRatModel` — function — line 325
+- `createRoosterModel` — function — line 247
+- `createSheepModel` — function — line 186
 
 ## `fauna/shepherdFlock.ts`
 
