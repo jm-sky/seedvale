@@ -753,11 +753,12 @@ Generated from exported TypeScript symbols.
 
 ## `world/createWorkContracts.ts`
 
-- `CreateWorkContractParams` — type — line 35
-- `createWorkContracts` — function — line 180
+- `CreateEscortContractParams` — type — line 59
+- `CreateWorkContractParams` — type — line 40
+- `createWorkContracts` — function — line 203
   - domain: npc
-- `WorkContractAssignmentLookup` — type — line 53
-- `WorkContracts` — type — line 58
+- `WorkContractAssignmentLookup` — type — line 67
+- `WorkContracts` — type — line 72
 
 ## `world/cropLifecycle.ts`
 
@@ -1884,63 +1885,82 @@ Generated from exported TypeScript symbols.
 
 ## `world/workContract.ts`
 
-- `acceptWorkContract` — function — line 512
-- `activeWorkAssignmentCount` — function — line 299
-- `assignmentRewardCoinsDue` — function — line 262
-- `beginContractTravel` — function — line 546
-- `beginContractWork` — function — line 554
-- `canAcceptContract` — function — line 505
-- `cancelWorkContract` — function — line 469
-- `canPostContract` — function — line 326
-- `completeContractWork` — function — line 577
-- `ConstructionContractTarget` — type — line 91
-- `contractHasActiveTarget` — function — line 318
-- `contractRewardRate` — function — line 670
-- `ContractTarget` — type — line 129
-- `createWorkContractRecord` — function — line 365
-- `DEFAULT_PAYMENT_PATIENCE_DAYS` — const — line 62
-- `expectedCandidateWork` — function — line 679
-- `expireWorkAssignmentPayment` — function — line 624
-- `findAssignment` — function — line 312
-- `frozenAssignmentClaimSum` — function — line 248
-- `groupRemainingWork` — function — line 308
-- `hasUnresolvedPaymentClaims` — function — line 274
-- `invalidateWorkContract` — function — line 486
-- `isAssignmentClaimTerminal` — function — line 242
-- `isAssignmentPayable` — function — line 238
-- `isAssignmentWorkActive` — function — line 227
-- `isContractDiscoverable` — function — line 336
-- `isContractTerminal` — function — line 221
-- `isNpcCommitmentFulfilled` — function — line 664
-- `isPaymentRequestEligible` — function — line 286
-- `markWorkAssignmentPaid` — function — line 615
-- `markWorkAssignmentUncollectable` — function — line 638
-- `normalizeRequestedWorkerCount` — function — line 360
-- `noticeBoardId` — function — line 348
-- `PalisadeContractTarget` — type — line 109
-- `PAYMENT_REQUEST_INTERVAL_DAYS` — const — line 59
-- `postWorkContract` — function — line 407
-- `recordNpcWorkContribution` — function — line 692
-- `recordWorkAssignmentPaymentRequest` — function — line 649
-- `refreshContractSettlement` — function — line 280
-- `releaseWorkContract` — function — line 594
-- `ResidentialBuildingContractTarget` — type — line 122
-- `sameContractTarget` — function — line 714
-- `StandingTorchContractTarget` — type — line 116
-- `TerrainPreparationContractTarget` — type — line 100
-- `WORK_SHARE_PRESETS` — const — line 354
-- `WorkContractAdvertisement` — type — line 79
-- `WorkContractAssignment` — type — line 140
-- `WorkContractAssignmentState` — type — line 35
-- `WorkContractClaimTiming` — type — line 53
-- `workContractPaymentPatienceDays` — function — line 68
-- `WorkContractRecord` — type — line 160
-- `WorkContractRelationLevel` — type — line 65
-- `WorkContractReleaseReason` — type — line 48
-- `WorkContractState` — type — line 21
+- `acceptWorkContract` — function — line 705
+- `activeWorkAssignmentCount` — function — line 412
+- `assignmentRewardCoinsDue` — function — line 375
+- `beginContractTravel` — function — line 741
+- `beginContractWork` — function — line 749
+- `beginEscortService` — function — line 763
+- `canAcceptContract` — function — line 696
+- `cancelWorkContract` — function — line 660
+- `canPostContract` — function — line 442
+- `completeContractWork` — function — line 822
+- `ConstructionContractTarget` — type — line 108
+- `contractHasActiveTarget` — function — line 434
+- `contractRewardRate` — function — line 919
+- `ContractTarget` — type — line 147
+- `createExpeditionEscortContractRecord` — function — line 534
+- `createWorkContractRecord` — function — line 485
+- `DEFAULT_PAYMENT_PATIENCE_DAYS` — const — line 76
+- `endEscortService` — function — line 795
+- `ESCORT_DESTINATION_ARRIVAL_RADIUS` — const — line 977
+- `EscortWorkContractRecord` — type — line 311
+- `expectedCandidateWork` — function — line 929
+- `ExpeditionDestinationRef` — type — line 228
+- `ExpeditionEscortCompletionPolicy` — type — line 245
+- `ExpeditionEscortContractScope` — type — line 268
+- `ExpeditionEscortDestination` — type — line 237
+- `ExpeditionEscortTerms` — type — line 247
+- `expireWorkAssignmentPayment` — function — line 876
+- `findAssignment` — function — line 426
+- `frozenAssignmentClaimSum` — function — line 359
+- `groupRemainingWork` — function — line 422
+- `hasUnresolvedPaymentClaims` — function — line 387
+- `invalidateWorkContract` — function — line 677
+- `isAssignmentClaimTerminal` — function — line 353
+- `isAssignmentPayable` — function — line 349
+- `isAssignmentWorkActive` — function — line 338
+- `isContractDiscoverable` — function — line 455
+- `isContractTerminal` — function — line 332
+- `isEscortDestinationArrived` — function — line 982
+- `isEscortServiceDurationDue` — function — line 971
+- `isEscortServiceFulfilled` — function — line 1003
+- `isExpeditionEscortContract` — function — line 319
+- `isMeasurableWorkContract` — function — line 315
+- `isNpcCommitmentFulfilled` — function — line 913
+- `isPaymentRequestEligible` — function — line 399
+- `isValidExpeditionEscortTerms` — function — line 258
+- `markWorkAssignmentPaid` — function — line 867
+- `markWorkAssignmentUncollectable` — function — line 890
+- `MeasurableWorkContractRecord` — type — line 310
+- `MeasurableWorkContractScope` — type — line 194
+- `normalizeRequestedWorkerCount` — function — line 480
+- `noticeBoardId` — function — line 468
+- `PalisadeContractTarget` — type — line 126
+- `PAYMENT_REQUEST_INTERVAL_DAYS` — const — line 73
+- `postWorkContract` — function — line 559
+- `recordNpcWorkContribution` — function — line 942
+- `recordWorkAssignmentPaymentRequest` — function — line 898
+- `refreshContractSettlement` — function — line 393
+- `releaseWorkContract` — function — line 843
+- `ResidentialBuildingContractTarget` — type — line 139
+- `sameContractTarget` — function — line 964
+- `StandingTorchContractTarget` — type — line 133
+- `TerrainPreparationContractTarget` — type — line 117
+- `WORK_SHARE_PRESETS` — const — line 474
+- `WorkContractAdvertisement` — type — line 93
+- `WorkContractAssignment` — type — line 162
+- `WorkContractAssignmentState` — type — line 48
+- `WorkContractClaimTiming` — type — line 67
+- `workContractPaymentPatienceDays` — function — line 82
+- `WorkContractRecord` — type — line 313
+- `WorkContractRelationLevel` — type — line 79
+- `WorkContractReleaseReason` — type — line 62
+- `WorkContractScope` — type — line 280
+- `WorkContractState` — type — line 32
   - domain: npc
-- `WORKER_COUNT_PRESETS` — const — line 358
-- `WorkType` — type — line 83
+- `WORKER_COUNT_PRESETS` — const — line 478
+- `WorkType` — type — line 100
 
 ## `world/worldContext.ts`
 

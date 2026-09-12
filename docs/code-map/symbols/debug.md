@@ -205,11 +205,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 117
-- `NPC_TRACE_CAPACITY` — const — line 115
-- `NpcTraceBuffer` — type — line 108
+- `createNpcTraceBuffer` — function — line 121
+- `NPC_TRACE_CAPACITY` — const — line 119
+- `NpcTraceBuffer` — type — line 112
 - `NpcTraceEvent` — type — line 14
-- `NpcTraceEventType` — type — line 100
+- `NpcTraceEventType` — type — line 104
 
 ## `debug/playerGroundTrace.ts`
 

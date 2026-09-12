@@ -58,7 +58,7 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createNpcInspector.ts`
 
-- `createNpcInspector` — function — line 237
+- `createNpcInspector` — function — line 244
 - `NpcInspector` — type — line 15
 
 ## `ui/createPauseMenu.ts`
@@ -75,8 +75,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createQuickActions.ts`
 
-- `createQuickActions` — function — line 148
-- `QuickActions` — type — line 139
+- `createQuickActions` — function — line 152
+- `QuickActions` — type — line 143
 - `QuickActionsCropSeeds` — type — line 13
 - `QuickActionsHandlers` — type — line 29
 - `QuickActionsTraps` — type — line 9

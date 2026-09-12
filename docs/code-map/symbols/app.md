@@ -187,10 +187,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/workContractActions.ts`
 
-- `createWorkContractActions` — function — line 107
-- `WorkContractActionDeps` — type — line 101
-- `WorkContractActions` — type — line 69
-- `WorkContractQuickActionEntry` — type — line 67
+- `createWorkContractActions` — function — line 147
+- `WorkContractActionDeps` — type — line 141
+- `WorkContractActions` — type — line 103
+- `WorkContractQuickActionEntry` — type — line 101
 
 ## `app/actions/workContractPayment.ts`
 
@@ -358,14 +358,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 118
+- `createSaveState` — function — line 130
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 37
-- `SaveStateDeps` — type — line 58
+- `SaveState` — type — line 38
+- `SaveStateDeps` — type — line 59
 
 ## `app/userActions.ts`
 

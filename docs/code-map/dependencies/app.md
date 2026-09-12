@@ -1415,6 +1415,7 @@ Generated from TypeScript imports.
 - `world/plantedTrees.ts`
 - `world/transportOrder.ts`
 - `world/treeLifecycle.ts`
+- `world/workContract.ts`
 
 **Imported by**
 

@@ -165,24 +165,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 675
-- `CurrentActivity` — type — line 499
-- `CurrentActivityKind` — type — line 492
-- `NPC_HEIGHT` — const — line 402
-- `NPC_MODEL_URLS` — const — line 466
-- `NPC_SHADOW_DISTANCE` — const — line 416
-- `NpcAgent` — class — line 1024
+- `classifyPendingActivity` — function — line 691
+- `CurrentActivity` — type — line 508
+- `CurrentActivityKind` — type — line 501
+- `NPC_HEIGHT` — const — line 411
+- `NPC_MODEL_URLS` — const — line 475
+- `NPC_SHADOW_DISTANCE` — const — line 425
+- `NpcAgent` — class — line 1040
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 929
-- `NpcInspectionSnapshot` — type — line 514
-- `NpcWhy` — type — line 650
-- `projectNpcWhy` — function — line 716
-- `promoteChainKind` — function — line 667
+- `NpcAgentDeps` — type — line 945
+- `NpcInspectionSnapshot` — type — line 523
+- `NpcWhy` — type — line 666
+- `projectNpcWhy` — function — line 732
+- `promoteChainKind` — function — line 683
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -308,24 +308,27 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcPersonalProvisions.ts`
 
-- `buildContractProvisionContext` — function — line 263
-- `CONTRACT_MISSING_DRINK_PENALTY` — const — line 43
-- `CONTRACT_MISSING_FOOD_UNIT_PENALTY` — const — line 41
-- `ContractProvisionAvailability` — type — line 135
-- `ContractProvisionEstimate` — type — line 87
-- `contractProvisionFeasibilityPenalty` — function — line 163
-- `ContractProvisionResult` — type — line 178
-- `contractTravelHours` — function — line 126
-- `countPersonalDrinkPortions` — function — line 51
-- `countPersonalFood` — function — line 46
-- `estimateContractProvisionNeed` — function — line 98
-- `findDrinkablePersonalWaterContainer` — function — line 64
-- `findFillablePersonalWaterskin` — function — line 74
-- `hasFillablePersonalWaterskin` — function — line 83
-- `LOCAL_CONTRACT_TRAVEL_HOURS` — const — line 30
+- `buildContractProvisionContext` — function — line 297
+- `buildEscortProvisionContext` — function — line 343
+- `CONTRACT_MISSING_DRINK_PENALTY` — const — line 47
+- `CONTRACT_MISSING_FOOD_UNIT_PENALTY` — const — line 45
+- `ContractProvisionAvailability` — type — line 168
+- `ContractProvisionEstimate` — type — line 91
+- `contractProvisionFeasibilityPenalty` — function — line 196
+- `ContractProvisionResult` — type — line 211
+- `contractTravelHours` — function — line 159
+- `countPersonalDrinkPortions` — function — line 55
+- `countPersonalFood` — function — line 50
+- `escortAwayHours` — function — line 329
+- `estimateContractProvisionNeed` — function — line 126
+- `estimateEscortProvisionNeed` — function — line 146
+- `findDrinkablePersonalWaterContainer` — function — line 68
+- `findFillablePersonalWaterskin` — function — line 78
+- `hasFillablePersonalWaterskin` — function — line 87
+- `LOCAL_CONTRACT_TRAVEL_HOURS` — const — line 34
   - domain: npc
-- `provisionContractSupplies` — function — line 221
-- `readContractProvisionAvailability` — function — line 144
+- `provisionContractSupplies` — function — line 254
+- `readContractProvisionAvailability` — function — line 177
 
 ## `ai/npcPlan.ts`
 
@@ -429,10 +432,12 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcWorkContract.ts`
 
-- `ScoredWorkContract` — type — line 125
-- `scoreWorkContractOpportunity` — function — line 92
-- `selectBestWorkContract` — function — line 132
-- `WorkContractEvaluationInput` — type — line 60
+- `DEFAULT_ESCORT_EVALUATION_CONTEXT` — const — line 131
+- `EscortEvaluationContext` — type — line 117
+- `ScoredWorkContract` — type — line 267
+- `scoreWorkContractOpportunity` — function — line 257
+- `selectBestWorkContract` — function — line 274
+- `WorkContractEvaluationInput` — type — line 139
 
 ## `ai/reactionChance.ts`
 

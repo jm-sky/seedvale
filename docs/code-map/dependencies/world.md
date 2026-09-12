@@ -3525,6 +3525,7 @@ Generated from TypeScript imports.
 - `app/inspection/buildWorldInspection.test.ts`
 - `app/inspection/buildWorldInspection.ts`
 - `app/inspection/inspectionTarget.ts`
+- `app/saveState.ts`
 - `app/worldBundle.ts`
 - `world/createWorkContracts.test.ts`
 - `world/createWorkContracts.ts`
