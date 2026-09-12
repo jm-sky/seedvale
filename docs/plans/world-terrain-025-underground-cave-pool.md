@@ -12,16 +12,20 @@
 
 ## Cel
 
-Dodać do każdego zaakceptowanego `dungeon` cave jedno deterministyczne podziemne jeziorko / pool, będące rzeczywistą częścią geometrii i semantyki jaskini.
+Dodać do każdego zaakceptowanego `dungeon` cave jeden deterministyczny, **płytki underground pool**, będący rzeczywistą częścią geometrii i semantyki jaskini.
 
 Pool ma:
 
 - znajdować się w jednej z dungeon chambers,
-- posiadać fizyczne zagłębienie w cave floor,
+- posiadać fizyczne, płytkie zagłębienie w cave floor,
 - posiadać widoczną powierzchnię wody,
+- pozostawać w całości w zakresie bezpiecznego brodzenia — bez potrzeby swimming/drowning,
+- umożliwiać graczowi i zwierzętom przejście przez wodę zwykłym ground movement,
 - udostępniać wspólną semantykę `WaterSource`,
-- być `unsafe` dla gracza,
+- być `unsafe` do picia dla gracza,
 - wystawiać stabilny environmental contract dla późniejszej integracji fauna.
+
+`unsafe` opisuje jakość wody do spożycia, nie bezpieczeństwo traversal.
 
 Nie tworzyć osobnego systemu `DungeonWater`.
 
@@ -30,9 +34,9 @@ Docelowy przepływ:
 ```text
 dungeon topology candidate
 → deterministic pool chamber selection
-→ pool geometry intent
+→ shallow pool geometry intent
 → CaveHeightfieldRepresentation + basin
-→ geometry / dry-traversal validation
+→ geometry / wading-traversability validation
 → accepted dungeon
 → water presentation + semantic water source
 ```
@@ -58,8 +62,8 @@ accepted dungeon
 =
 valid topology
 + valid pool chamber
-+ valid basin
-+ valid dry traversal
++ valid shallow basin
++ valid wading traversability
 ```
 
 Guaranteed dungeon z `world-terrain-024` może wtedy próbować kolejnych istniejących cave sites / deterministic candidates zamiast osłabiać guardrails.
@@ -81,6 +85,7 @@ Contract musi co najmniej umożliwiać ustalenie:
 - stable chamber identity,
 - geometry footprint,
 - water level,
+- maximum/local depth potrzebne do walidacji shallow-wading invariant,
 - usable shoreline / approach semantics.
 
 Nie tworzyć globalnego mutable `CaveWaterManager` ani drugiego modelu dungeon rooms.
@@ -109,8 +114,8 @@ Kandydat musi:
 
 - być rzeczywistą chamber, nie passage,
 - mieć wystarczający footprint,
-- pozwalać na basin bez blokowania connectivity,
-- pozostawiać użyteczny suchy brzeg,
+- pozwalać na płytki basin bez blokowania connectivity,
+- pozostawiać użyteczny shoreline / approach area,
 - znajdować się poza bezpośrednią strefą entrance.
 
 Preferować środkową lub głębszą część dungeon. Nie kodować pozycji typu `chamber #4`.
@@ -125,12 +130,13 @@ Jeżeli żadna chamber nie spełnia guardrails, candidate dungeon jest rejected.
 
 Pool nie może być wyłącznie transparentnym water plane nad zwykłym cave floor.
 
-Pool intent musi wpływać na finalny cave heightfield tak, aby powstało rzeczywiste zagłębienie z:
+Pool intent musi wpływać na finalny cave heightfield tak, aby powstało rzeczywiste, ale płytkie zagłębienie z:
 
 - łagodnym wejściem / obrzeżem,
-- obniżonym dnem,
+- niewielkim obniżeniem dna,
 - nieregularnym naturalnym footprintem,
-- czytelnym przejściem między dry floor i wodą.
+- czytelnym przejściem między dry floor i wodą,
+- łagodnym wyjściem z każdego sensownego kierunku wejścia do basin.
 
 Nie tworzyć idealnego walca, koła ani prostokątnego dołu.
 
@@ -138,23 +144,37 @@ Reuse istniejące heightfield sampling, floor, clearance, overburden i rejection
 
 ---
 
-## 6. Depth i dry traversability
+## 6. Shallow depth i traversability
 
-Pool powinien wyglądać jak małe podziemne jeziorko, nie kałuża, ale nie może stać się obowiązkowym water crossing.
+Pool V1 jest **płytkim zbiornikiem do brodzenia**, nie miejscem wymagającym pływania.
 
-Dungeon musi pozostać traversable suchą drogą.
+Podstawowy invariant:
+
+```text
+pool max depth <= safe wading depth
+```
+
+Jeżeli istniejący movement/water system posiada już authority dla granicy brodzenia, reuse ten próg. Nie tworzyć równoległej wartości tylko dla cave. Jeżeli takiego kontraktu nie ma, dobrać najmniejszą lokalną geometryczną granicę gwarantującą normalny ground movement i udokumentować ją przy implementacji zamiast projektować pełny swimming-depth model.
+
+Player i zwierzęta korzystające z normalnego cave ground movement muszą móc:
+
+- wejść do basin,
+- przejść przez płytką wodę,
+- wyjść po drugiej stronie,
+- zrobić to bez przełączenia w swimming state i bez uruchamiania drowning logic.
 
 Pool basin nie może:
 
-- przecinać chamber entrance,
+- tworzyć deep-water pocket,
+- tworzyć nagłego uskoku wymagającego pływania,
+- tworzyć zagłębienia, z którego entity nie może wyjść,
 - blokować segment connectivity,
 - niszczyć required route,
-- tworzyć niemożliwego do opuszczenia zagłębienia,
 - naruszać wall/ceiling clearance.
 
-Wokół części pool pozostawić suchy shoreline corridor.
+Suchy shoreline / bypass nadal jest pożądany dla czytelności przestrzeni, drinking/fill interaction i późniejszego animal feeding approach, ale **nie jest wymagany jako jedyna bezpieczna trasa przez chamber**.
 
-Nie implementować w tym planie nowej mechaniki pływania.
+Nie implementować w tym planie swimming ani drowning mechanics.
 
 ---
 
@@ -179,6 +199,7 @@ Najpierw reuse istniejący water rendering/material mechanism, jeśli nadaje si�
 Water surface:
 
 - znajduje się poniżej otaczającego chamber floor,
+- wizualnie odpowiada płytkiemu basin,
 - nie przecina cave walls,
 - nie wystaje poza basin,
 - aktywuje/dezaktywuje się razem z cave presentation.
@@ -201,6 +222,8 @@ Dla V1 underground pool ma semantykę zwykłego niebezpiecznego lake water:
   quality: 'unsafe'
 }
 ```
+
+`quality: 'unsafe'` oznacza ryzyko związane z **piciem**, nie z wejściem do wody ani jej przekraczaniem.
 
 Nie zakładać, że podziemna woda jest czysta. Obecność zwierząt dodatkowo uzasadnia `unsafe`.
 
@@ -225,19 +248,20 @@ Nie udawać, że underground pool jest globalnym surface lake ani nie rozszerza�
 
 ## 11. Reusable shoreline approach
 
-Środek pool nie jest poprawnym interaction/navigation targetem.
+Środek pool nie jest domyślnym interaction/navigation targetem dla picia, fill ani późniejszego fish feeding, mimo że sama płytka woda pozostaje traversable.
 
 Environmental contract powinien pozwalać deterministycznie uzyskać co najmniej jeden usable shoreline approach point lub równoważną query semantics.
 
 Approach powinien:
 
-- znajdować się na suchym cave floor,
-- leżeć przy brzegu,
+- znajdować się na stabilnym cave floor przy brzegu,
 - posiadać odpowiedni clearance,
 - być osiągalny z chamber route,
-- nie znajdować się wewnątrz basin.
+- pozwalać entity wykonać interaction bez wchodzenia w środek basin.
 
 Nie tworzyć osobnych player i animal shoreline points bez potrzeby. Późniejsza fauna powinna móc reuse tę samą environmental authority.
+
+Shoreline approach nie oznacza, że basin jest zakazane dla movement — traversal przez płytką wodę jest legalny.
 
 ---
 
@@ -247,7 +271,7 @@ Ten plan nie implementuje animal behavior i nie może wprowadzać zależności `
 
 World/cave subsystem publikuje environmental state; fauna jest przyszłym konsumentem.
 
-Contract musi być wystarczający, aby późniejszy plan fauna nie musiał analizować water mesh, odtwarzać pool geometry ani odczytywać presentation objects w celu znalezienia wody.
+Contract musi być wystarczający, aby późniejszy plan fauna nie musiał analizować water mesh, odtwarzać pool geometry ani odczytywać presentation objects w celu znalezienia wody i legalnego podejścia do niej.
 
 Rozszerzenie `AnimalCaveWorldContract` lub `animalForaging` pozostaje własnością późniejszego planu fauna.
 
@@ -286,7 +310,7 @@ Nie utrzymywać globalnie renderowanych underground water surfaces dla nieaktywn
 
 ## 15. Persistence
 
-Chamber selection, geometry, water level i shoreline są deterministyczne i nie powinny być persistowane, jeżeli można je odtworzyć z world seed/cave identity/topology.
+Chamber selection, geometry, water level, shallow depth i shoreline są deterministyczne i nie powinny być persistowane, jeżeli można je odtworzyć z world seed/cave identity/topology.
 
 Pool V1:
 
@@ -333,12 +357,15 @@ Dodać targeted tests dla nowych contracts i guardrails.
 Sprawdzić:
 
 - pool mieści się w wybranej chamber,
-- basin nie przecina required route,
-- istnieje dry shoreline approach,
+- basin nie blokuje required route,
+- istnieje usable shoreline approach,
 - water level jest poniżej otaczającego floor,
 - samples w basin są niższe niż shoreline,
 - samples poza footprint zachowują bazowy chamber floor,
-- clearance/ceiling guardrails są zachowane.
+- clearance/ceiling guardrails są zachowane,
+- maksymalna głębokość pozostaje <= resolved safe wading depth,
+- wejście, przekroczenie i wyjście z basin pozostają legalne dla normalnego ground traversal,
+- basin nie zawiera local deep-water pocket wymagającego swimming/drowning state.
 
 ### Water semantics
 
@@ -348,6 +375,8 @@ Sprawdzić wspólną semantykę:
 kind = lake
 quality = unsafe
 ```
+
+oraz że `unsafe` nie wpływa na geometry/traversability — dotyczy player consumption.
 
 ### Regression
 
@@ -369,16 +398,18 @@ Sprawdzić ręcznie:
 1. Każdy zaakceptowany dungeon posiada dokładnie jeden underground pool.
 2. Pool znajduje się w rzeczywistej chamber, nie w tunnel.
 3. Wygląda jak część cave floor, a nie water plane położony na kamieniu.
-4. Basin ma widoczną głębokość i naturalny, nieregularny shoreline.
-5. Wokół części pool można przejść suchą drogą.
-6. Pool nie blokuje dalszej eksploracji dungeon.
-7. Player nie wpada w miejsce, z którego nie może wyjść.
-8. Water surface nie przecina cave walls.
-9. Player może podejść do stabilnego brzegu.
-10. Jeżeli bounded drink/fill integration została wykonana, korzysta z istniejącego UX i traktuje wodę jako `unsafe`.
-11. Po odstreamowaniu cave water presentation znika poprawnie.
-12. Natural i adventure caves nie otrzymały pool.
-13. Brak zauważalnego regresu wydajności cave rendering.
+4. Basin jest wyraźnie płytki, ale nadal czytelny wizualnie jako zbiornik wody.
+5. Player może wejść do pool, przejść przez niego i wyjść po drugiej stronie zwykłym ruchem.
+6. Wejście do pool nie uruchamia swimming ani drowning behavior.
+7. Nie istnieje głęboki punkt, uskok ani pułapka geometryczna, w której player może utknąć.
+8. Pool nie blokuje dalszej eksploracji dungeon.
+9. Dostępny jest stabilny shoreline/approach point dla interaction.
+10. Suchy fragment brzegu jest czytelny, ale przechodzenie przez sam pool pozostaje legalne.
+11. Water surface nie przecina cave walls.
+12. Jeżeli bounded drink/fill integration została wykonana, korzysta z istniejącego UX i traktuje wodę jako `unsafe` do picia.
+13. Po odstreamowaniu cave water presentation znika poprawnie.
+14. Natural i adventure caves nie otrzymały pool.
+15. Brak zauważalnego regresu wydajności cave rendering.
 
 AI nie wykonuje browser verification.
 
@@ -390,11 +421,13 @@ Po implementacji zaktualizować odpowiednie current-state docs.
 
 Udokumentować wyłącznie stan faktycznie zaimplementowany:
 
-- accepted dungeon posiada guaranteed underground pool,
+- accepted dungeon posiada guaranteed shallow underground pool,
 - pool jest częścią cave environmental state,
-- posiada realny heightfield basin,
+- posiada realny, wadeable heightfield basin,
+- maksymalna głębokość nie wymaga swimming/drowning,
+- gracz i późniejsi fauna consumers mogą traktować basin jako legalny ground traversal,
 - korzysta ze wspólnej semantyki `WaterSource`,
-- woda jest `unsafe`,
+- woda jest `unsafe` do picia,
 - istnieje reusable shoreline/water contract dla przyszłych consumers.
 
 Nie dokumentować jeszcze fish source, bear feeding, cave animal drinking ani player fishing.
@@ -415,8 +448,10 @@ Poza zakresem:
 - bear-specific behavior,
 - fauna spawning,
 - dungeon residents,
-- swimming redesign,
-- underwater combat,
+- deep-water cave pools,
+- swimming mechanics,
+- drowning mechanics,
+- underwater movement/combat,
 - dynamic water level,
 - hydrology simulation,
 - water purification,
@@ -428,16 +463,18 @@ Poza zakresem:
 
 ## Kryterium zakończenia
 
-Plan jest wykonany, gdy każdy **zaakceptowany** `dungeon` posiada deterministyczne podziemne jeziorko, które:
+Plan jest wykonany, gdy każdy **zaakceptowany** `dungeon` posiada deterministyczny płytki underground pool, który:
 
 - znajduje się w poprawnej dungeon chamber,
 - jest częścią dungeon acceptance criteria,
 - posiada rzeczywisty basin w `CaveHeightfieldRepresentation`,
 - posiada spójną water presentation,
-- zachowuje suchą traversable route,
+- pozostaje w całości w safe wading depth,
+- można przekroczyć zwykłym ground movement bez swimming/drowning,
+- nie tworzy geometrycznego ryzyka utonięcia ani uwięzienia,
 - posiada stabilną semantic identity,
 - korzysta ze wspólnej semantyki `WaterSource`,
-- jest `unsafe` dla gracza,
+- jest `unsafe` do picia dla gracza,
 - udostępnia reusable shoreline/water contract dla przyszłego fauna integration,
 - nie wprowadza równoległego cave-water gameplay systemu,
 - nie zmienia zachowania `natural` i `adventure` caves.
