@@ -1,15 +1,15 @@
 import type { Inventory } from './Inventory'
-import { ITEM_DEFS } from './items'
+import type { ArmorItemInstance, ItemInstance } from './itemInstances'
+import {
+  type EffectiveArmorPiece,
+  isArmorItemInstance,
+  resolveEffectiveArmorPiece,
+} from './armorItemInstances'
 import {
   isArmorCatalogKind,
   ITEM_CATALOG,
 } from './itemCatalog'
-import {
-  isArmorItemInstance,
-  resolveEffectiveArmorPiece,
-  type EffectiveArmorPiece,
-} from './armorItemInstances'
-import type { ArmorItemInstance, ItemInstance } from './itemInstances'
+import { ITEM_DEFS } from './items'
 
 /** Wearable-equipment slots (plan items-player-030). */
 export type EquipmentSlot = 'head' | 'body' | 'arms' | 'hands' | 'legs' | 'feet'

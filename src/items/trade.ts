@@ -1,5 +1,5 @@
-import { createArmorInstance, isArmorKind } from './armorItemInstances'
 import type { Inventory } from './Inventory'
+import { createArmorInstance, isArmorKind } from './armorItemInstances'
 import {
   createKeyInstance,
   createTentInstance,

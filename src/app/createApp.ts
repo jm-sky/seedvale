@@ -39,6 +39,7 @@ import { createTouchControls, type TouchControls } from '../input/createTouchCon
 import { isTouchDevice } from '../input/isTouchDevice'
 import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
+import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import { CONTAINER_DEFS } from '../items/container'
 import { createEquipmentState, equippedInstanceIds } from '../items/equipment'
 import { shouldGrantQuestSword } from '../items/guardSword'
@@ -53,7 +54,6 @@ import { createPrimaryWeaponSelection } from '../items/primaryWeapons'
 import { createAcquiredInstance } from '../items/trade'
 import { type TreasureChestMutation } from '../items/treasureGameplay'
 import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
-import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import {
   type BenchmarkFixture,
   benchmarkScenarioFromUrl,

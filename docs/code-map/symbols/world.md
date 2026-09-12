@@ -365,9 +365,9 @@ Generated from exported TypeScript symbols.
 - `CaveInteriorRockPlacement` — type — line 54
 - `CaveInteriorRocksInput` — type — line 70
 - `CaveInteriorRockSizeClass` — type — line 49
-- `createCaveInteriorRocksGroup` — function — line 485
+- `createCaveInteriorRocksGroup` — function — line 496
   - domain: world-terrain
-- `getCaveInteriorRockTemplates` — function — line 438
+- `getCaveInteriorRockTemplates` — function — line 449
   - domain: world-terrain
 - `resolveCaveInteriorRocks` — function — line 212
   - domain: world-terrain

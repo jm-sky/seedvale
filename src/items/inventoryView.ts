@@ -1,24 +1,24 @@
 import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
+import { effectiveInstanceWeight, resolveEffectiveArmorPiece } from './armorItemInstances'
 import {
   type FoodSourceSpecies,
   type FreshnessStage,
   getFoodBatchFreshnessStage,
 } from './foodFreshness'
+import { ITEM_CATALOG } from './itemCatalog'
 import {
   ARMOR_QUALITY_LABELS,
+  type ArmorQuality,
   INSTANCE_BACKED_KINDS,
   isArmorItemInstance,
   isLiquidContainerInstance,
   isTentItemInstance,
   isTrapItemInstance,
   isWeaponItemInstance,
-  type ArmorQuality,
   type ItemInstance,
   type LiquidContainerItemInstance,
 } from './itemInstances'
-import { effectiveInstanceWeight, resolveEffectiveArmorPiece } from './armorItemInstances'
-import { ITEM_CATALOG } from './itemCatalog'
 import { ITEM_DEFS } from './items'
 import { type ItemUseView, resolveConsumeUseView } from './itemUseView'
 import { liquidContainerCapacity } from './liquidContainer'

@@ -1,16 +1,16 @@
-import { ITEM_DEFS, type ItemKind } from './items'
 import type { ArmorConfig } from './itemCatalog'
 import { ITEM_CATALOG } from './itemCatalog'
 import {
-  createItemInstanceId,
-  isArmorItemInstance,
-  normalizeArmorQuality,
+  ARMOR_KIND_LIST,
   type ArmorItemInstance,
   type ArmorKind,
   type ArmorQuality,
+  createItemInstanceId,
+  isArmorItemInstance,
   type ItemInstance,
-  ARMOR_KIND_LIST,
+  normalizeArmorQuality,
 } from './itemInstances'
+import { ITEM_DEFS, type ItemKind } from './items'
 
 export type { ArmorItemInstance, ArmorKind, ArmorQuality } from './itemInstances'
 export {
@@ -18,9 +18,9 @@ export {
   ARMOR_KINDS,
   ARMOR_QUALITIES,
   ARMOR_QUALITY_LABELS,
+  isArmorItemInstance,
   isArmorKind,
   isArmorQuality,
-  isArmorItemInstance,
   normalizeArmorQuality,
 } from './itemInstances'
 

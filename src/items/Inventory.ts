@@ -1,4 +1,5 @@
 import type { InjurySeverity } from '../shared/injurySeverity'
+import { effectiveInstanceWeight } from './armorItemInstances'
 import {
   CARRIED_FOOD_DECAY,
   checkpointFoodBatch,
@@ -22,6 +23,7 @@ import {
   itemTreatsPhysicalInjury,
 } from './itemCatalog'
 import {
+  type ArmorItemInstance,
   clamp01,
   clampCampCondition,
   cloneItemInstance,
@@ -34,16 +36,14 @@ import {
   isTrapKind,
   isWeaponItemInstance,
   isWeaponMaintenanceKind,
-  normalizeArmorQuality,
-  type ArmorItemInstance,
   type ItemInstance,
   type LiquidContainerItemInstance,
   type LiquidContent,
+  normalizeArmorQuality,
   type TentItemInstance,
   type TrapItemInstance,
   type WeaponItemInstance,
 } from './itemInstances'
-import { effectiveInstanceWeight } from './armorItemInstances'
 import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
 import { LIQUID_DENSITY_KG_PER_LITRE } from './liquidContainer'
 

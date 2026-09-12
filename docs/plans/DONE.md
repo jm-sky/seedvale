@@ -4,6 +4,9 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-030-multi-part-armor-and-equipment-quality`              | 2026-09-12 19:20:00 | —                   | `items-player`   | —          |
+| `npc-031-voluntary-expedition-joining`                                 | 2026-09-12 18:48:31 | —                   | `npc`            | —          |
+| `npc-030-paid-expedition-escort-work-contracts`                        | 2026-09-12 18:11:05 | —                   | `npc`            | —          |
 | `quests-progression-019-dangerous-animal-deeds-local-reputation`       | 2026-09-12 14:52:52 | —                   | `quests-progression` | —          |
 | `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures`       | 2026-09-12 14:45:37 | —                   | `fauna`          | —          |
 | `npc-029-npc-accompany-follow-commitment`                              | 2026-09-12 14:16:44 | —                   | `npc`            | —          |

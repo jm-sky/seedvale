@@ -48,32 +48,33 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/decorProps.ts`
 
-- `cemeteryGraveLayout` — function — line 823
-- `CemeterySize` — type — line 791
-- `CemeteryTemplates` — type — line 783
+- `cemeteryGraveLayout` — function — line 842
+- `CemeterySize` — type — line 810
+- `CemeteryTemplates` — type — line 802
 - `createBush` — function — line 103
 - `createCactus` — function — line 144
-- `createCaveMouth` — function — line 932
-- `createCemetery` — function — line 861
-- `createCemeteryPlot` — function — line 768
+- `createCaveMouth` — function — line 951
+- `createCemetery` — function — line 880
+- `createCemeteryPlot` — function — line 787
 - `createCobblePlate` — function — line 178
-- `createExpeditionRuins` — function — line 683
-- `createFallenLog` — function — line 467
+- `createExpeditionRuins` — function — line 702
+- `createFallenLog` — function — line 486
 - `createFelledTree` — function — line 90
 - `createFern` — function — line 163
-- `createGraveStone` — function — line 750
-- `createLargeRock` — function — line 394
+- `createGraveStone` — function — line 769
+- `createLargeRock` — function — line 409
 - `createLilyPad` — function — line 209
 - `createLimbedTree` — function — line 61
-- `createMonolith` — function — line 500
+- `createMonolith` — function — line 519
 - `createReed` — function — line 191
-- `createRockCluster` — function — line 427
+- `createRockCluster` — function — line 446
 - `createSeaweed` — function — line 224
-- `createSmallRuins` — function — line 608
-- `createStoneCircle` — function — line 563
+- `createSmallRuins` — function — line 627
+- `createStoneCircle` — function — line 582
 - `createThicket` — function — line 121
 - `createTree` — function — line 18
 - `createTreeStump` — function — line 40
+- `LargeRockPalette` — type — line 241
 - `TerrainPlacementContext` — type — line 11
 
 ## `settlement/families.ts`

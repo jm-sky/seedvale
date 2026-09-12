@@ -1,6 +1,6 @@
+import type { EquipmentSlot } from '../items/equipment'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
-import type { EquipmentSlot } from '../items/equipment'
 import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
 import type { TradeResult } from '../items/trade'
 import type { SharpenResult } from '../items/weaponMaintenance'

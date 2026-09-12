@@ -10,10 +10,10 @@
    🔴 `M` · 🔒 blocked · unlocks 1/2
 3. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
-4. `npc-031` — **Voluntary expedition joining**  
-   🔴 `M` · ✅ ready · unlocks 0/0
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
+5. `settlements-npcs-034` — **Household wood authority and repair correctness**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -25,16 +25,20 @@
    🔴 `M` · 🔒 blocked · unlocks 1/2 · roadmap: `economy-production`
 3. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
-4. `npc-031` — **Voluntary expedition joining**  
-   🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `companions`
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
+5. `settlements-npcs-033` — **Player Trading with Any NPC**  
+   🔴 `L` · ✅ ready · unlocks 0/0 · roadmap: `economy-goods-flow`
 
 ---
 
 ### Bug Fixes
 
-1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+1. `settlements-npcs-034` — **Household wood authority and repair correctness**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
+2. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
+3. `fauna-026` — **Predator ↔ livestock encounter set**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
@@ -51,12 +55,12 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 1/3
 2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
-3. `npc-031` — **Voluntary expedition joining**  
-   🔴 `M` · ✅ ready · unlocks 0/0
-4. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-5. `npc-030` — **Paid expedition escort Work Contracts**  
-   🔴 `L` · ✅ ready · unlocks 0/0
+4. `settlements-npcs-034` — **Household wood authority and repair correctness**  
+   🔴 `M` · ✅ ready · unlocks 0/0
+5. `world-terrain-024` — **Dungeon cave archetype**  
+   🟡 `M` · ✅ ready · unlocks 2/2
 
 ---
 
@@ -86,70 +90,102 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  76  
    → **unlocks:** 2/4
 
-4. `npc-031` — **Voluntary expedition joining**  
-  🔴 `M` · **Score:**  59  
-   → **unlocks:** 0/0
-
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-6. `npc-030` — **Paid expedition escort Work Contracts**  
-  🔴 `L` · **Score:**  56  
+5. `settlements-npcs-034` — **Household wood authority and repair correctness**  
+  🔴 `M` · **Score:**  55  
    → **unlocks:** 0/0
 
-7. `world-018` — **Cave-aware rich finite resource deposits**  
+6. `world-terrain-024` — **Dungeon cave archetype**  
+  🟡 `M` · **Score:**  51  
+   → **unlocks:** 2/2
+
+7. `settlements-npcs-033` — **Player Trading with Any NPC**  
+  🔴 `L` · **Score:**  50  
+   → **unlocks:** 0/0
+
+8. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-8. `settlements-npcs-022` — **Household help and age-based work participation**  
+9. `quests-progression-020` — **Hunter Profession Quests & Wildlife Help**  
+  🔴 `M` · **Score:**  45  
+   → **unlocks:** 0/0
+
+10. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-9. `world-023` — **Species-Driven Sowing, Density and Yield**  
+11. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-10. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+12. `world-terrain-025` — **Underground cave pool**  
+  🟡 `M` · **Score:**  39  
+   → **unlocks:** 1/1
+
+13. `fauna-027` — **Dungeon cave residents and pool foraging**  
+  🟡 `M` · **Score:**  35  
+   → **unlocks:** 0/0
+
+14. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-025` — **Resource storage visualization**  
+15. `quests-progression-021` — **Guard Rewards and Evening Settlement Duty**  
+  🔴 `M` · **Score:**  33  
+   → **unlocks:** 0/0
+
+16. `settlements-npcs-025` — **Resource storage visualization**  
   ⚪ `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-12. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+17. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+18. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-14. `items-player-014` — **Rope-pullable resource transport**  
+19. `fauna-026` — **Predator ↔ livestock encounter set**  
+  🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+20. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `tools-005` — **Seedvale Character Preparation Panel**  
+21. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `tools-013` — **NPC decision verification and scenario tooling**  
+22. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `quests-progression-008` — **Treasure map — bear cave**  
+23. `quests-progression-008` — **Treasure map — bear cave**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-18. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+24. `world-terrain-023` — **River-aware road routing and canonical crossings**  
   🔴 `L` · **Score:**  24  
+   → **unlocks:** 0/0
+
+25. `items-player-031` — **Armor category and character defense summary**  
+  🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
 ---
 
 ## Initially Blocked
 
+- [`fauna-027-dungeon-cave-residents-and-pool-foraging.md`](fauna-027-dungeon-cave-residents-and-pool-foraging.md)  
+  is blocked by:
+  - [`world-terrain-024-dungeon-cave-archetype.md`](world-terrain-024-dungeon-cave-archetype.md)
+  - [`world-terrain-025-underground-cave-pool.md`](world-terrain-025-underground-cave-pool.md)
 - [`settlements-npcs-017-production-demand-and-economic-pressures.md`](settlements-npcs-017-production-demand-and-economic-pressures.md)  
   is blocked by:
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)
@@ -159,6 +195,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
+- [`world-terrain-025-underground-cave-pool.md`](world-terrain-025-underground-cave-pool.md)  
+  is blocked by:
+  - [`world-terrain-024-dungeon-cave-archetype.md`](world-terrain-024-dungeon-cave-archetype.md)
 
 ---
 
@@ -223,6 +262,8 @@ graph TD
   fauna_023["fauna-023 — Systemic animal attraction — food, blood and trap lures"]
   fauna_024["fauna-024 — Lost livestock stray displacement"]
   fauna_025["fauna-025 — Livestock stray return and recovery"]
+  fauna_026["fauna-026 — Predator ↔ livestock encounter set"]
+  fauna_027["fauna-027 — Dungeon cave residents and pool foraging"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -247,6 +288,8 @@ graph TD
   items_player_027["items-player-027 — Player-to-NPC item transfer and equipment"]
   items_player_028["items-player-028 — NPC player-storage access policies"]
   items_player_029["items-player-029 — Wearable armor and combat equipment"]
+  items_player_030["items-player-030 — Multi-part armor and equipment quality"]
+  items_player_031["items-player-031 — Armor category and character defense summary"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -307,6 +350,8 @@ graph TD
   quests_progression_017["quests-progression-017 — RPG settlement quest matrices"]
   quests_progression_018["quests-progression-018 — Quest playtest reachability and dialogue conflicts"]
   quests_progression_019["quests-progression-019 — Dangerous Animal Deeds & Local Reputation"]
+  quests_progression_020["quests-progression-020 — Hunter Profession Quests & Wildlife Help"]
+  quests_progression_021["quests-progression-021 — Guard Rewards and Evening Settlement Duty"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -346,6 +391,8 @@ graph TD
   settlements_npcs_030["settlements-npcs-030 — Non-Home Settlement Food Production v1"]
   settlements_npcs_031["settlements-npcs-031 — Sustainable Seed Recovery and Replanting"]
   settlements_npcs_032["settlements-npcs-032 — Player → household resource transfer"]
+  settlements_npcs_033["settlements-npcs-033 — Player Trading with Any NPC"]
+  settlements_npcs_034["settlements-npcs-034 — Household wood authority and repair correctness"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -423,6 +470,8 @@ graph TD
   world_terrain_021["world-terrain-021 — Low-Cost Terrain and Cave Surface Albedo"]
   world_terrain_022["world-terrain-022 — Deterministic Cave Interior Rock Clutter"]
   world_terrain_023["world-terrain-023 — River-aware road routing and canonical crossings"]
+  world_terrain_024["world-terrain-024 — Dungeon cave archetype"]
+  world_terrain_025["world-terrain-025 — Underground cave pool"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -500,10 +549,15 @@ graph TD
   fauna_017 --> fauna_013
   fauna_017 --> fauna_018
   fauna_018 --> quests_progression_008
+  fauna_019 --> fauna_027
   fauna_019 --> quests_progression_008
   fauna_020 --> fauna_024
   fauna_020 --> quests_progression_012
+  fauna_022 --> fauna_027
   fauna_022 --> quests_progression_019
+  fauna_022 --> quests_progression_021
+  fauna_023 --> fauna_027
+  fauna_023 --> quests_progression_020
   fauna_024 --> fauna_025
   items_player_001 --> fauna_002
   items_player_002 --> items_player_025
@@ -527,6 +581,8 @@ graph TD
   items_player_027 --> npc_033
   items_player_028 --> npc_032
   items_player_028 --> npc_034
+  items_player_029 --> items_player_030
+  items_player_030 --> items_player_031
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004
@@ -597,12 +653,14 @@ graph TD
   quests_progression_015 --> quests_progression_017
   quests_progression_016 --> fauna_024
   quests_progression_016 --> quests_progression_017
+  quests_progression_019 --> quests_progression_021
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022
   settlements_005 --> settlements_007
   settlements_005 --> ui_input_014
   settlements_006 --> items_player_019
+  settlements_007 --> settlements_npcs_034
   settlements_npcs_002 --> settlements_npcs_005
   settlements_npcs_002 --> settlements_npcs_022
   settlements_npcs_002 --> settlements_npcs_024
@@ -623,9 +681,11 @@ graph TD
   settlements_npcs_014 --> fauna_004
   settlements_npcs_014 --> settlements_npcs_015
   settlements_npcs_014 --> settlements_npcs_018
+  settlements_npcs_014 --> settlements_npcs_033
   settlements_npcs_015 --> settlements_npcs_006
   settlements_npcs_015 --> settlements_npcs_007
   settlements_npcs_015 --> settlements_npcs_016
+  settlements_npcs_015 --> settlements_npcs_034
   settlements_npcs_016 --> settlements_npcs_017
   settlements_npcs_017 --> settlements_npcs_020
   settlements_npcs_018 --> settlements_npcs_019
@@ -650,6 +710,7 @@ graph TD
   settlements_npcs_028 --> settlements_003
   settlements_npcs_030 --> settlements_npcs_031
   settlements_npcs_030 --> world_023
+  settlements_npcs_032 --> settlements_npcs_034
   tools_010 --> tools_011
   tools_011 --> tools_012
   ui_input_001 --> ui_input_008
@@ -704,4 +765,8 @@ graph TD
   world_terrain_019 --> world_terrain_020
   world_terrain_019 --> world_terrain_021
   world_terrain_019 --> world_terrain_022
+  world_terrain_020 --> world_terrain_024
+  world_terrain_024 --> fauna_027
+  world_terrain_024 --> world_terrain_025
+  world_terrain_025 --> fauna_027
 ```
