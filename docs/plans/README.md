@@ -57,7 +57,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~, fauna-022 |
 | 💡 `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
 | 💡 `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |

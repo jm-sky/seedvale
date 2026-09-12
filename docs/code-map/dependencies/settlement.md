@@ -1482,6 +1482,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/createApp.ts`
 - `settlement/settlementProximity.test.ts`
 - `world/riverWaterQualityResolver.ts`
 

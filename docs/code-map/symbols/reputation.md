@@ -2,6 +2,20 @@
 
 Generated from exported TypeScript symbols.
 
+## `reputation/animalDeeds.ts`
+
+- `AnimalDeedSettlementCandidate` — type — line 42
+- `FULL_ANIMAL_DEED_EFFECT_DISTANCE` — const — line 53
+- `MAX_ANIMAL_DEED_INFLUENCE_DISTANCE` — const — line 49
+- `PlayerAnimalKillContext` — type — line 33
+  - domain: quests-progression
+  - system: reputation
+  - role: Pure species-baseline + distance-attenuation resolver for the generic dangerous-animal-kill reputation/renown deed.
+- `renownFactor` — function — line 86
+- `reputationFactor` — function — line 77
+- `resolveAnimalDeedConsequences` — function — line 127
+  - domain: quests-progression
+
 ## `reputation/ReputationManager.ts`
 
 - `applySocialConsequence` — function — line 148

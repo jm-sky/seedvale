@@ -905,11 +905,13 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `render/programPrewarm.ts`
 - `reputation/ReputationManager.ts`
+- `reputation/animalDeeds.ts`
 - `settlement/createSettlement.ts`
 - `settlement/horseAcquisition.ts`
 - `settlement/landOwnership.ts`
 - `settlement/livestock.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/settlementProximity.ts`
 - `settlement/villagePlanDebug.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
@@ -1058,6 +1060,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `render/createPostProcessing.ts`
 - `render/shadowBudget.ts`
+- `reputation/animalDeeds.ts`
 - `settlement/VillageFire.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`

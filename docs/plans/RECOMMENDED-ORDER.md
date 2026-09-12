@@ -146,10 +146,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-19. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
 ---
 
 ## Initially Blocked

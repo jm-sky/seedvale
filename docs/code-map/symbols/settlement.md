@@ -676,11 +676,12 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementProximity.ts`
 
-- `isNearSettlement` — function — line 32
-- `NEAR_SETTLEMENT_DISTANCE` — const — line 19
+- `isNearSettlement` — function — line 34
+- `NEAR_SETTLEMENT_DISTANCE` — const — line 21
   - domain: settlement
   - system: settlement-proximity
-  - role: Cheap, bounded "is this world point near a settlement" check, built on the existing settlement grid instead of loaded/streamed settlements.
+  - role: Cheap, bounded "which settlements are near this world point" checks, built on the existing settlement grid instead of loaded/streamed settlements — `isNearSettlement`'s fixed-radius boolean check, and `settlementsWithinDistance`'s larger-radius full candidate list.
+- `settlementsWithinDistance` — function — line 60
 
 ## `settlement/settlementSignposts.ts`
 

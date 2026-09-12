@@ -311,6 +311,7 @@ Generated from TypeScript imports.
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/persistentOccupants.test.ts`
 - `fauna/preyAlertPerception.ts`
+- `reputation/animalDeeds.ts`
 - `world/animalTraps.ts`
 - `world/cart.test.ts`
 - `world/cart.ts`

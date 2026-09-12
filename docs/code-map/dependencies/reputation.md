@@ -25,9 +25,29 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.test.ts`
+- `reputation/animalDeeds.ts`
 - `reputation/socialExposure.ts`
 - `settlement/lodgingResolver.test.ts`
 - `ui-vue/store.ts`
+
+## `reputation/animalDeeds.test.ts`
+
+**Imports**
+
+- `reputation/animalDeeds.ts`
+
+## `reputation/animalDeeds.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `reputation/ReputationManager.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
+- `reputation/animalDeeds.test.ts`
 
 ## `reputation/socialExposure.test.ts`
 

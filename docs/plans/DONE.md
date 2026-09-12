@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-019-dangerous-animal-deeds-local-reputation`       | 2026-09-12 14:52:52 | —                   | `quests-progression` | —          |
+| `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures`       | 2026-09-12 14:45:37 | —                   | `fauna`          | —          |
 | `npc-029-npc-accompany-follow-commitment`                              | 2026-09-12 14:16:44 | —                   | `npc`            | —          |
 | `items-player-027-player-to-npc-item-transfer-and-equipment`           | 2026-09-12 13:44:14 | —                   | `items-player`   | —          |
 | `items-player-029-wearable-armor-and-combat-equipment`                 | 2026-09-12 13:36:20 | —                   | `items-player`   | —          |
