@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** world-terrain-024
+**Depends on:** ~~world-terrain-024~~
 **Domain:** `world-terrain`
 **Subdomains:** `terrain` `landmarks`
 **Tags:** `caves` `dungeon` `water`
