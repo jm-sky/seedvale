@@ -13,15 +13,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 ## Quest-enabling world mechanics
 
-- [ ] 2026-09-10 — quests-progression-016: household food-shortage opportunity nie ma player → household food transfer. `Household.shortage('food')` istnieje, ale wpłata do magazynu osady nie rozwiązuje niedoboru konkretnego gospodarstwa. Rozszerzyć istniejący inventory/household transfer flow, nie quest-specific bypass.
-- [ ] 2026-09-10 — quests-progression-016: lost-livestock opportunity nie ma realnego predicate/state „zwierzę zaginęło”; `find_animal` jest tylko objective. Potrzebny mechanizm w `fauna`.
 - [ ] 2026-09-12 — settlements-007 wystawia read-only `SettlementsManager.getStructureSnapshot`/`listRepairProblems`, ale żaden quest jeszcze tego nie konsumuje. quests-progression-016 mógłby dodać `structure:<structureId>:repair` opportunity (condition poniżej progu → problem, naprawa/przywrócenie condition → resolution) tym samym mechanizmem co istniejący wolf-den pressure hook — nie kopiować repair state do quest layer.
-
-## NPC / households / work
-
-- [ ] 2026-09-09 — NPC death handoff nadal filtruje loot przez `extractNpcLoadoutLoot`; corpse loot nie przenosi pełnego `personalInventory` ani freshness batches. Lossless transfer perishables wymaga rozszerzenia corpse-loot persistence (npc-010 / settlements-npcs-026 follow-up).
-- [ ] 2026-09-05 — `WorkContracts.post()` / `canPostContract` nie sprawdzają proaktywnie, czy target istnieje i jest unfinished. Martwy target może chwilowo wisieć jako `advertised`; system sam naprawia stan dopiero przy akceptacji. Jeśli ma zniknąć wcześniej, walidację trzeba oprzeć o istniejący target resolver zamiast filtrować osobno każde UI (npc-018).
-- [ ] 2026-09-04 — najęty NPC przy budowie studni nadal omija playerową bramkę `wellStageCapabilities` (`advanceWellConstruction(... capabilities: null)`). Do decyzji projektowej: albo NPC ma własne realne capability/tool requirements, albo jawnie dokumentujemy, że kontrakt pracy zastępuje tę bramkę; nie pozostawiać przypadkowej asymetrii.
 
 ## Fauna
 
