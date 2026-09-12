@@ -358,6 +358,8 @@ export type GameLoopDeps = {
   questManager: QuestManager
   /** Starts/polls lost-livestock stray episodes from live world state. */
   syncLostLivestockQuests: () => void
+  /** Called after quest marker refresh when quest state changed (plan 021). */
+  onQuestStateSynced?: () => void
   /** A player melee/ranged hit just killed `kill`'s animal (plan
    *  quests-progression-019) — called once per lethal hit, after the kill
    *  context is captured from the still-existing `AnimalAgent`.
@@ -507,6 +509,8 @@ export type GameLoopDeps = {
    *  `fire_starting`, flips its authoritative `lit`, and updates its runtime
    *  flame/light. No-op (including re-checking `lit`) if already lit. */
   igniteStandingTorch?: (id: string) => void
+  /** Canonical settlement village torch (plan quests-progression-021). */
+  igniteVillageTorch?: (settlementId: string, torchId: string) => void
   /** `[E]` on an unfinished standing torch (plan items-player-017 §11) — runs
    *  one active-work bout through the actor-neutral construction seam. */
   workOnStandingTorch?: (id: string) => void
@@ -664,7 +668,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
-    questManager, syncLostLivestockQuests, onPlayerAnimalKill, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    questManager, syncLostLivestockQuests, onQuestStateSynced, onPlayerAnimalKill, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startShearAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
@@ -672,7 +676,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
-    previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, previewPlayerTroughRemoval, removePlayerTrough,
+    previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, igniteVillageTorch, previewPlayerTroughRemoval, removePlayerTrough,
     previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
     openWorldInspection, syncWorldInspection,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
@@ -814,6 +818,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     return {
       animalId: animal.animalId,
       animalKind: animal.def.kind,
+      variant: animal.variant,
       dangerSignificance: animal.dangerSignificance,
       position: { x: animal.mesh.position.x, z: animal.mesh.position.z },
     }
@@ -1829,6 +1834,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (repairView) openRepairDialog()
           else if (source) fillWaterskin?.(source)
         }
+      } else if (target?.kind === 'villageTorch') {
+        if (interactPressed && !target.lit) {
+          igniteVillageTorch?.(target.settlementId, target.torchId)
+        }
       } else if (target?.kind === 'standingTorch') {
         // Unfinished (plan items-player-017 §11) — `[E]` runs a construction
         // bout instead, and ignition is never offered until it completes.
@@ -2246,6 +2255,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           bundle.fauna.setSpawnerMarker(spawner.id, questManager.spawnerMarker(spawner.type, spawner.id))
         }
         questManager.clearDirty()
+        onQuestStateSynced?.()
       }
       // While a `timeSkip` is in flight, NPC/fauna/trap simulation is gated
       // off entirely below (`if (!timeSkip.isActive())`, plan 196) — not fed

@@ -90,7 +90,11 @@ import {
   resolveSettlementAgricultureCatchUp,
 } from './settlementAgriculture'
 import { cellSeed } from './settlementGenerator'
-import { createSettlementNightCycle } from './settlementNightCycle'
+import { type SettlementVillageTorch } from './settlementVillageTorch'
+import {
+  createSettlementNightCycle,
+  type SettlementNightAutoLightPolicy,
+} from './settlementNightCycle'
 import { settlementPropColliders } from './settlementPropColliders'
 import { createSettlementSignposts } from './settlementSignposts'
 import { createNpcStructureRepairHooks } from './structureRepairCandidates'
@@ -174,6 +178,10 @@ export type Settlement = {
   householdStorages: readonly { household: Household, position: Vector3 }[]
   /** Only present for MD/LG villages, see `props.ts`'s `buildSettlementProps`. */
   fire?: VillageFire
+  /** Canonical village torch posts with stable ids (plan quests-progression-021). */
+  readonly villageTorches: readonly SettlementVillageTorch[]
+  /** Live dusk auto-light policy — derived from active quests at composition root. */
+  setNightAutoLightPolicy: (policy: SettlementNightAutoLightPolicy) => void
   update: (
     dt: number,
     observerPos: Vector3,
@@ -487,6 +495,7 @@ export async function createSettlement(
       seed,
       def.clearings,
       def.size,
+      def.id,
       def.isHome,
       def.foodSourceType,
       roadSegments,
@@ -945,12 +954,17 @@ export async function createSettlement(
 
   const spawn = settlementSpawnPoint(def, sampleHeight)
   const npcCrowd = createNpcCrowdPass()
+  let nightAutoLightPolicy: SettlementNightAutoLightPolicy = {}
   const nightCycle = createSettlementNightCycle({
     settlementSeed,
     size: def.size,
     fire,
-    villageTorches,
+    villageTorches: villageTorches.map((entry) => ({ id: entry.id, torch: entry.torch })),
     houseLights,
+    autoLightPolicy: {
+      shouldAutoLightTorch: (torchId) => nightAutoLightPolicy.shouldAutoLightTorch?.(torchId) ?? true,
+      shouldAutoLightFire: () => nightAutoLightPolicy.shouldAutoLightFire?.() ?? true,
+    },
   })
 
   let woodshedPlaced = false
@@ -998,6 +1012,10 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
+    villageTorches,
+    setNightAutoLightPolicy(policy) {
+      nightAutoLightPolicy = policy
+    },
     update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpsesIn = [], scareStimulus = null) {
       currentNowDays = nowDays
       refreshSanitationCandidates(nearbyWildCorpsesIn)
@@ -1075,7 +1093,7 @@ export async function createSettlement(
           storageVisual.householdFood[i % storageVisual.householdFood.length]!.sync(household.items)
         }
       }
-      for (const torch of villageTorches) torch.update(dt)
+      for (const entry of villageTorches) entry.torch.update(dt)
       if (houseDoors.update(dt, observerPos)) registerSettlementColliders()
       signposts.update(observerPos)
     },

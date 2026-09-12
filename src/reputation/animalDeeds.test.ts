@@ -12,6 +12,7 @@ function kill(overrides: Partial<PlayerAnimalKillContext> = {}): PlayerAnimalKil
   return {
     animalId: 'wolf-1',
     animalKind: 'wolf',
+    variant: 'normal',
     dangerSignificance: 1,
     position: { x: 0, z: 0 },
     ...overrides,

@@ -62,9 +62,9 @@ type NpcDialogueMenuState = {
   /** Resolves the current quest/help line when the player selects that topic.
    *  Opening the menu must not invoke it (plan quests-progression-014). */
   resolveQuestHelp: (() => QuestDialogOverride | null) | null
-  canAskSword: boolean
-  getCanAskSword: (() => boolean) | null
-  onAskSword: (() => string) | null
+  canClaimGuardReward: boolean
+  getCanClaimGuardReward: (() => boolean) | null
+  onClaimGuardReward: (() => string) | null
   onOpenTrade: (() => void) | null
   /** "Poproś o jedzenie"/"Poproś o wodę" (plan 152) — resolved immediately
    *  against the currently-open `npc`, same shape as `onAskSword`. */
@@ -676,7 +676,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedSlots: {}, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -945,7 +945,7 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.timeOfDay = timeOfDay
   state.helpResult = null
   state.resolveQuestHelp = () => questManager.onInteract(npc.id)
-  state.canAskSword = state.getCanAskSword?.() ?? false
+  state.canClaimGuardReward = state.getCanClaimGuardReward?.() ?? false
   state.paymentClaim = npc.preparePaymentRequest()
   state.joinProposal = npc.pendingVoluntaryJoinProposal()
   state.open = true
@@ -1023,9 +1023,9 @@ export function acceptNpcDialogueOffer(): void {
 }
 export function isNpcDialogueMenuOpen(): boolean { return ui.npcDialogueMenu.open }
 export function configureNpcDialogueMenu(handlers: {
-  onAskSword: () => string
+  onClaimGuardReward: () => string
   onOpenTrade: () => void
-  getCanAskSword: () => boolean
+  getCanClaimGuardReward: () => boolean
   onRequestFood: (npc: NpcAgent) => string
   onRequestWater: (npc: NpcAgent) => string
   onAskAboutArea: () => string | Promise<string>
@@ -1034,9 +1034,9 @@ export function configureNpcDialogueMenu(handlers: {
   onRespondToJoinProposal: (accept: boolean) => string
   onProposeJoin: (durationDays: number) => string
 }): void {
-  ui.npcDialogueMenu.onAskSword = handlers.onAskSword
+  ui.npcDialogueMenu.onClaimGuardReward = handlers.onClaimGuardReward
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
-  ui.npcDialogueMenu.getCanAskSword = handlers.getCanAskSword
+  ui.npcDialogueMenu.getCanClaimGuardReward = handlers.getCanClaimGuardReward
   ui.npcDialogueMenu.onRequestFood = handlers.onRequestFood
   ui.npcDialogueMenu.onRequestWater = handlers.onRequestWater
   ui.npcDialogueMenu.onAskAboutArea = handlers.onAskAboutArea

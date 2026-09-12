@@ -17,7 +17,11 @@ function fakeFire(initiallyLit: boolean) {
 }
 
 function fakeTorch() {
-  return { setLit: vi.fn() } as unknown as import('./props').VillageTorch
+  return { setLit: vi.fn(), isLit: () => false } as unknown as import('./props').VillageTorch
+}
+
+function fakeTorchEntry(id = 'settlement:village-torch:test', torch = fakeTorch()) {
+  return { id, torch }
 }
 
 function fakeHouseLight() {
@@ -52,7 +56,7 @@ describe('createSettlementNightCycle', () => {
       settlementSeed: 1,
       size: 'XL',
       fire,
-      villageTorches: [torch],
+      villageTorches: [fakeTorchEntry('t1', torch)],
       houseLights: [],
     })
 
@@ -77,7 +81,7 @@ describe('createSettlementNightCycle', () => {
       settlementSeed: 1,
       size: 'MD',
       fire: undefined,
-      villageTorches: [torch],
+      villageTorches: [fakeTorchEntry('t1', torch)],
       houseLights: [],
     })
 

@@ -190,6 +190,15 @@ export type Interactable =
    *  re-resolve the record and re-check both themselves before mutating
    *  anything. */
   | { kind: 'standingTorch', position: { x: number, z: number }, promptLabel: string, id: string, lit: boolean, complete: boolean }
+  /** Canonical settlement village torch (plan quests-progression-021). */
+  | {
+    kind: 'villageTorch'
+    position: { x: number, z: number }
+    promptLabel: string
+    settlementId: string
+    torchId: string
+    lit: boolean
+  }
   /** Player-built animal trough (plan items-player-020). */
   | { kind: 'playerTrough', position: { x: number, z: number }, promptLabel: string, id: string, complete: boolean, canFill: boolean }
   /** Player-built palisade segment (plan items-player-010, incremental

@@ -8,7 +8,7 @@ import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogu
 
 const BACKDROP_CLOSE_GUARD_MS = 300
 
-type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater' | 'aboutArea' | 'payment' | 'proposeJoin' | 'proposeJoinResult' | 'joinProposal'
+type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'guardReward' | 'requestFood' | 'requestWater' | 'aboutArea' | 'payment' | 'proposeJoin' | 'proposeJoinResult' | 'joinProposal'
 
 /** Duration presets offered when the player proposes a voluntary expedition
  *  (plan npc-031) — presentation-only, mirrors the shape of the paid
@@ -38,7 +38,7 @@ const helpTopics = computed(() => state.helpResult?.topics ?? [])
 const helpDrilled = ref(false)
 const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
 const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
-const swordLine = ref('')
+const guardRewardLine = ref('')
 const foodLine = ref('')
 const waterLine = ref('')
 const areaLine = ref('')
@@ -53,7 +53,7 @@ const responseText = computed(() => {
     case 'aboutArea': return areaLine.value
     case 'aboutSelf': return aboutSelfLine(state.npc.displayName, state.npc.role, state.npc.familyMembers, archetype.value)
     case 'aboutVillage': return state.settlement ? aboutVillageLine(state.settlement.name, state.settlement.size, state.settlement.terrain, state.settlement.foodSourceType, state.settlement.dominantResource, archetype.value) : ''
-    case 'askSword': return swordLine.value
+    case 'guardReward': return guardRewardLine.value
     case 'currentActivity': return currentActivityLine(state.npc.getCurrentActivity(state.timeOfDay), archetype.value)
     case 'goodbye': return goodbyeLine(archetype.value)
     case 'help': return state.helpResult?.line ?? ''
@@ -72,7 +72,7 @@ const responseText = computed(() => {
 
 function resetMenu(): void {
   topic.value = null
-  swordLine.value = ''
+  guardRewardLine.value = ''
   foodLine.value = ''
   waterLine.value = ''
   areaLine.value = ''
@@ -119,11 +119,11 @@ function helpBack(): void {
   topic.value = null
 }
 
-function askSword(): void {
+function claimGuardReward(): void {
   emitUiClick()
-  swordLine.value = state.onAskSword?.() ?? ''
-  topic.value = 'askSword'
-  state.canAskSword = state.getCanAskSword?.() ?? false
+  guardRewardLine.value = state.onClaimGuardReward?.() ?? ''
+  topic.value = 'guardReward'
+  state.canClaimGuardReward = state.getCanClaimGuardReward?.() ?? false
 }
 
 function requestFood(): void {
@@ -245,12 +245,12 @@ watch(() => state.open, (open) => {
           Handel
         </button>
         <button
-          v-if="isHomeGuard && state.canAskSword"
+          v-if="isHomeGuard && state.canClaimGuardReward"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
-          @click="askSword"
+          @click="claimGuardReward"
         >
-          Poproś o miecz
+          Poproś o uznanie
         </button>
         <button
           v-if="isHomeGuard"

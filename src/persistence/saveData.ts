@@ -131,9 +131,20 @@ export type SaveCart = {
   yaw: number
 }
 
+export type SaveGuardClaimState = {
+  torchGiftClaimed?: boolean
+  swordRewardConsumed?: boolean
+  renownRouteClaimed?: boolean
+  alphaRouteClaimed?: boolean
+}
+
 export type SaveWorldFlags = {
   /** Strażnik already gifted a long_sword (quest or dialogue, plan 090). */
   guardSwordGifted?: boolean
+  /** Player-caused alpha wolf kill deed (plan quests-progression-021). */
+  alphaWolfDeedEarned?: boolean
+  /** Per stable guard NPC reward claims (plan quests-progression-021). */
+  guardClaims?: Record<NpcId, SaveGuardClaimState>
   /** Hidden-treasure easter egg (quick task) already revealed — blocks a
    *  second reward chest from spawning after all 3 flower markers are dug
    *  again post-reload. */
@@ -986,8 +997,19 @@ function isWorldFlagsField(value: unknown): value is SaveWorldFlags {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const flags = value as Record<string, unknown>
   if (flags.guardSwordGifted !== undefined && typeof flags.guardSwordGifted !== 'boolean') return false
+  if (flags.alphaWolfDeedEarned !== undefined && typeof flags.alphaWolfDeedEarned !== 'boolean') return false
   if (flags.hiddenTreasureFound !== undefined && typeof flags.hiddenTreasureFound !== 'boolean') return false
   if (flags.treasureMapDarkForestRead !== undefined && typeof flags.treasureMapDarkForestRead !== 'boolean') return false
+  if (flags.guardClaims !== undefined) {
+    if (!flags.guardClaims || typeof flags.guardClaims !== 'object' || Array.isArray(flags.guardClaims)) return false
+    for (const [npcId, raw] of Object.entries(flags.guardClaims as Record<string, unknown>)) {
+      if (typeof npcId !== 'string' || !raw || typeof raw !== 'object' || Array.isArray(raw)) return false
+      const claim = raw as Record<string, unknown>
+      for (const key of ['torchGiftClaimed', 'swordRewardConsumed', 'renownRouteClaimed', 'alphaRouteClaimed'] as const) {
+        if (claim[key] !== undefined && typeof claim[key] !== 'boolean') return false
+      }
+    }
+  }
   return true
 }
 

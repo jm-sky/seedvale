@@ -69,6 +69,9 @@ export type QuestPrerequisite =
   | { type: 'quest_outcome', questId: string, outcomeIds: readonly QuestOutcomeId[] }
   | { type: 'reputation', dimension: ReputationDimension, minimum: number }
   | { type: 'renown', minimum: number }
+  /** One-hour deterministic evening window for quest offer only (plan
+   *  quests-progression-021) — does not expire an accepted quest. */
+  | { type: 'evening_offer_window', giverNpcId: NpcId }
 
 /** Gates whether a quest is offered at all. Absent = always available
  *  (existing v2 quests keep their current behaviour). */
@@ -145,6 +148,8 @@ export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
               `Quest "${def.id}" reputation minimum ${prereq.minimum} is outside ${REPUTATION_MIN}..${REPUTATION_MAX}`,
             )
           }
+          break
+        case 'evening_offer_window':
           break
       }
     }
@@ -402,6 +407,14 @@ export type QuestObjective =
    *  not `find_animal` (death is not failure). `animalId` is the existing
    *  persistent livestock identity bound at materialization. */
   | { type: 'recover_lost_livestock', animalId: string }
+  /** Manual lighting of canonical settlement torches and campfire (plan
+   *  quests-progression-021) — reads settlement-owned lit state only. */
+  | {
+      type: 'light_settlement_fires'
+      settlementId: string
+      torchIds: readonly string[]
+      requireCampfire: boolean
+    }
 
 /**
  * Player-facing speech available while this stage is active. Selection

@@ -71,6 +71,8 @@ export type PlayerActionContext = {
   getWorldSeed: () => number
   /** Habitat permanently destroyed (`[E] Zniszcz` on a depleted den, etc.). */
   onSpawnPointDestroyed?: () => void
+  /** Settlement or placed campfire lit by the player (plan quests-progression-021). */
+  onCampfireLit?: () => void
   /** World-authored container withdraw (plan quests-progression-009). */
   onWorldContainerWithdraw?: (containerId: string, kind: ItemKind, amount: number) => void
   /** Player knife harvest completed (plan quests-progression-020). */

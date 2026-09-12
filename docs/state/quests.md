@@ -302,8 +302,10 @@ Use these sources:
 
 1. **Authored definitions:** `QUESTS` in `src/quests/quests.ts`.
 2. **Contextual generated definitions:** `buildLandmarkQuests()`, `buildDarkForestTreasureQuest()`, `buildHorseAcquisitionQuest()`, `bindExactCaveQuests()` in the same file.
-3. **World-driven definitions:** `src/quests/opportunities/`.
+3. **World-driven definitions:** `src/quests/opportunities/` (includes Hunter profession chain and home-guard evening lighting duty when settlement torches + campfire exist).
 4. **Runtime truth:** the final materialized `QuestDef[]` assembled in `src/app/createApp.ts` before `new QuestManager(...)`.
+
+Home-guard recognition rewards (`src/quests/guardRewards.ts`) are dialogue-claimed per stable guard `NpcId`, with persisted `worldFlags.alphaWolfDeedEarned` and `worldFlags.guardClaims`; legacy `guardSwordGifted` only blocks a second physical sword.
 
 Representative authored content includes simple delivery/world interaction quests (`relay-anna-piotr`, `shells-dla-kasi`, `woda-dla-marka`), scouting/gathering chains such as `zwiadowca`, animal/world-problem quests, and the authored RPG pack. The exact current list belongs to `QUESTS`/builders rather than being duplicated as a manually maintained second registry here.
 

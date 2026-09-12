@@ -42,11 +42,16 @@ import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '..
 import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import { CONTAINER_DEFS } from '../items/container'
 import { createEquipmentState, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
-import { shouldGrantQuestSword } from '../items/guardSword'
+import { createSettlementLightLookup, syncGuardEveningNightPolicies } from './guardQuestWiring'
+import {
+  migrateLegacyGuardSwordGift,
+  type GuardWorldProgress,
+} from '../quests/guardPersistence'
+import { buildGuardEveningDutyQuest, selectGuardQuestGiver } from '../quests/opportunities/guardProfessionQuests'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
-import { hasItemCapability, ITEM_CATALOG } from '../items/itemCatalog'
+import { CAPABILITY_NEED_LABEL, hasItemCapability, ITEM_CATALOG } from '../items/itemCatalog'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { migrateLegacyWaterskinsToInstances } from '../items/liquidContainer'
@@ -964,6 +969,13 @@ export async function createApp(
     guardSwordGifted: initialSave?.worldFlags?.guardSwordGifted ?? false,
     hiddenTreasureFound: initialSave?.worldFlags?.hiddenTreasureFound ?? false,
     treasureMapDarkForestRead: initialSave?.worldFlags?.treasureMapDarkForestRead ?? false,
+    alphaWolfDeedEarned: initialSave?.worldFlags?.alphaWolfDeedEarned ?? false,
+    guardClaims: { ...(initialSave?.worldFlags?.guardClaims ?? {}) },
+  }
+  const guardProgress: GuardWorldProgress = {
+    alphaWolfDeedEarned: worldFlags.alphaWolfDeedEarned,
+    guardClaims: worldFlags.guardClaims,
+    guardSwordGifted: worldFlags.guardSwordGifted,
   }
 
   const grantItem = (kind: ItemKind, count: number): void => {
@@ -1117,8 +1129,21 @@ export async function createApp(
         spawners: bundle.fauna.getSpawners(),
         persistedQuestIds,
       }))
+      const loadedHome = bundle.settlementsManager.getLoaded().find((settlement) => settlement.id === def.id)
+      const eveningQuest = buildGuardEveningDutyQuest({
+        settlementId: def.id,
+        settlementName: def.name,
+        npcs,
+        villageTorches: loadedHome?.villageTorches ?? [],
+        hasCampfire: Boolean(loadedHome?.fire),
+        persistedQuestIds,
+      })
+      if (eveningQuest) opportunityQuestDefs.push(eveningQuest)
+      const homeGuard = selectGuardQuestGiver(npcs)
+      migrateLegacyGuardSwordGift(guardProgress, homeGuard?.id)
     }
   }
+  const homeGuardNpcId = selectGuardQuestGiver(npcsBySettlement.get(homeSettlementId) ?? [])?.id
   const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]
   const initialQuestState = initialSave?.quests
     ? {
@@ -1133,10 +1158,6 @@ export async function createApp(
     inventory,
     initialQuestState,
     (kind, count) => {
-      if (kind === 'long_sword') {
-        if (!shouldGrantQuestSword(kind, worldFlags.guardSwordGifted, inventory.holdsAny('long_sword'))) return
-        worldFlags.guardSwordGifted = true
-      }
       grantItem(kind, count)
       toast.show(`+${count} ${ITEM_DEFS[kind].label}`, 'pickup')
     },
@@ -1219,7 +1240,18 @@ export async function createApp(
         return status
       },
     },
+    {
+      getWorldSeed: () => config.seed,
+      getTimeOfDay: () => dayNight.timeOfDay,
+      getElapsedDays: () => dayNight.elapsedDays,
+    },
+    createSettlementLightLookup(() => bundle.settlementsManager.getLoaded()),
   )
+
+  const refreshGuardEveningPolicies = (): void => {
+    syncGuardEveningNightPolicies(questManager, () => bundle.settlementsManager.getLoaded())
+  }
+  refreshGuardEveningPolicies()
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
   // above can actually reach it — see those call sites' comments.
@@ -1290,6 +1322,9 @@ export async function createApp(
     navigationTargets,
     dayNight,
     openNpcGiveItem: (npcId, displayName) => openNpcGiveItem(npcId, displayName),
+    guardProgress,
+    homeSettlementId,
+    homeGuardNpcId,
   })
   vueUi.configurePrimaryWeaponShortcuts({
     equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
@@ -1347,6 +1382,10 @@ export async function createApp(
     },
     onPlayerAnimalHarvested: (context) => {
       questManager.onAnimalHarvested(context)
+    },
+    onCampfireLit: () => {
+      questManager.recheckSettlementLightObjectives()
+      refreshGuardEveningPolicies()
     },
   }
 
@@ -1638,6 +1677,11 @@ export async function createApp(
         navigationTargets.clear()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
+        worldFlags.alphaWolfDeedEarned = false
+        worldFlags.guardClaims = {}
+        guardProgress.guardSwordGifted = false
+        guardProgress.alphaWolfDeedEarned = false
+        guardProgress.guardClaims = {}
         worldFlags.hiddenTreasureFound = false
         worldFlags.treasureMapDarkForestRead = false
         ground.resetTreasureProgress()
@@ -2313,7 +2357,7 @@ export async function createApp(
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
-    questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    questManager, syncLostLivestockQuests, onQuestStateSynced: refreshGuardEveningPolicies, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     // Plan quests-progression-019, lazy propagation by quests-progression-022
     // — resolves the generic dangerous-animal-kill signal, enqueues it as
@@ -2325,6 +2369,10 @@ export async function createApp(
     // loaded set catch up lazily via `onSettlementAvailable` above once they
     // actually stream in.
     onPlayerAnimalKill: (kill: PlayerAnimalKillContext, socialOutcomeClaimed: boolean) => {
+      if (kill.animalKind === 'wolf' && kill.variant === 'alpha') {
+        guardProgress.alphaWolfDeedEarned = true
+        worldFlags.alphaWolfDeedEarned = true
+      }
       const signal = resolveAnimalDeedSignal(kill, { socialOutcomeClaimed })
       if (!signal) return
       socialNews.enqueue(signal, kill.position, dayNight.elapsedDays)
@@ -2383,6 +2431,19 @@ export async function createApp(
     describeStructureRepair: placement.describeStructureRepair,
     workOnStructureRepair: placement.workOnStructureRepair,
     igniteStandingTorch: placement.igniteStandingTorch,
+    igniteVillageTorch: (settlementId, torchId) => {
+      if (!inventory.hasCapability('fire_starting')) {
+        toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`, 'error')
+        return
+      }
+      const settlement = bundle.settlementsManager.getLoaded().find((entry) => entry.id === settlementId)
+      const entry = settlement?.villageTorches.find((torch) => torch.id === torchId)
+      if (!entry || entry.torch.isLit()) return
+      entry.torch.setLit(true)
+      toast.show('Zapalono pochodnię.')
+      questManager.recheckSettlementLightObjectives()
+      refreshGuardEveningPolicies()
+    },
     workOnStandingTorch: placement.workOnStandingTorch,
     describeStandingTorchWork: placement.describeStandingTorchWork,
     previewStandingTorchRemoval: placement.previewStandingTorchRemoval,

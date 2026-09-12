@@ -48,14 +48,28 @@ export function shouldAutoLightNightFire(
 
 export type SettlementNightCycle = { apply: (t: number) => void }
 
+/** Quest-neutral dusk auto-light policy (plan quests-progression-021). */
+export type SettlementNightAutoLightPolicy = {
+  shouldAutoLightTorch?: (torchId: string) => boolean
+  shouldAutoLightFire?: () => boolean
+}
+
+export type SettlementNightTorch = {
+  id: string
+  torch: VillageTorch
+}
+
 export function createSettlementNightCycle(params: {
   settlementSeed: number
   size: VillageSize
   fire: VillageFire | undefined
-  villageTorches: readonly VillageTorch[]
+  villageTorches: readonly SettlementNightTorch[]
   houseLights: readonly HouseLight[]
+  autoLightPolicy?: SettlementNightAutoLightPolicy
 }): SettlementNightCycle {
-  const { settlementSeed, size, fire, villageTorches, houseLights } = params
+  const { settlementSeed, size, fire, villageTorches, houseLights, autoLightPolicy } = params
+  const shouldAutoLightTorch = autoLightPolicy?.shouldAutoLightTorch ?? (() => true)
+  const shouldAutoLightFire = autoLightPolicy?.shouldAutoLightFire ?? (() => true)
   let nightFactor = 0
   /** Bumped each time `nightFactor` crosses `NIGHT_FIRE_THRESHOLD` upward —
    *  feeds `shouldAutoLightNightFire`'s seed so the same night (even across a
@@ -65,15 +79,23 @@ export function createSettlementNightCycle(params: {
 
   return {
     apply(t) {
-      if (fire && !fire.isLit() && nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
+      if (
+        fire
+        && !fire.isLit()
+        && shouldAutoLightFire()
+        && nightFactor <= NIGHT_FIRE_THRESHOLD
+        && t > NIGHT_FIRE_THRESHOLD
+      ) {
         nightIndex++
         if (shouldAutoLightNightFire(settlementSeed, nightIndex, size)) fire.light('night')
       }
-      // Village torches: always light at dusk, extinguish at dawn (plan 085).
+      // Village torches: light at dusk, extinguish at dawn (plan 085).
       if (nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
-        for (const torch of villageTorches) torch.setLit(true)
+        for (const entry of villageTorches) {
+          if (shouldAutoLightTorch(entry.id)) entry.torch.setLit(true)
+        }
       } else if (nightFactor > NIGHT_FIRE_THRESHOLD && t <= NIGHT_FIRE_THRESHOLD) {
-        for (const torch of villageTorches) torch.setLit(false)
+        for (const entry of villageTorches) entry.torch.setLit(false)
       }
       nightFactor = t
       for (const light of houseLights) light.setNightIntensity(t)

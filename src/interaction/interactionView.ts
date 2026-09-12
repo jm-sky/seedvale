@@ -324,6 +324,8 @@ export function interactableStableKey(target: Interactable): string {
       return `spawner:${target.spawner.id}`
     case 'standingTorch':
       return `standingTorch:${target.id}`
+    case 'villageTorch':
+      return `villageTorch:${target.torchId}`
     case 'tent':
       return `tent:${target.id}`
     case 'terrainPreparation':

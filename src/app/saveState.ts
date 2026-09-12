@@ -77,7 +77,13 @@ export type SaveStateDeps = {
   navigationTargets: NavigationTargets
   landOwnership: LandOwnershipRegistry
   vueUi: VueUi
-  worldFlags: { guardSwordGifted: boolean, hiddenTreasureFound: boolean, treasureMapDarkForestRead: boolean }
+  worldFlags: {
+    guardSwordGifted: boolean
+    hiddenTreasureFound: boolean
+    treasureMapDarkForestRead: boolean
+    alphaWolfDeedEarned: boolean
+    guardClaims: Record<string, import('../quests/guardPersistence').GuardWorldProgress['guardClaims'][string]>
+  }
   /** Hidden Finds resolved spot ids (plan world-007) — a stable `Set`
    *  reference, never reassigned (`createApp.ts` clears it in place on New
    *  Game), so it's read directly rather than through a live accessor. */

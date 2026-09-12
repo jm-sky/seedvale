@@ -274,6 +274,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       fire.light('player', fuelValue(fuelKind)!)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
+      ctx.onCampfireLit?.()
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.igniteFire)
       toast.show('Ognisko zapłonęło.')
       lifecycle?.onComplete?.('success')

@@ -37,6 +37,11 @@ import {
   uniqueOutcomeForState,
   validateQuestDefinitions,
 } from './quests'
+import { isWithinEveningOfferWindow } from './guardEveningOfferWindow'
+import {
+  evaluateSettlementLightsObjective,
+  type SettlementLightLookup,
+} from './settlementLightLookup'
 import {
   isSettlementRatInfestationResolved,
   settlementRatInfestationReminderLine,
@@ -214,6 +219,13 @@ export type QuestSocialAvailabilityLookup = {
   getRenown(settlementId: string): number
 }
 
+/** Read-only world clock for quest availability (plan quests-progression-021). */
+export type QuestWorldTimeLookup = {
+  getWorldSeed(): number
+  getTimeOfDay(): number
+  getElapsedDays(): number
+}
+
 /** Read-only settlement rat-infestation world snapshot for
  *  `resolve_storage_rat_infestation` (plan quests-progression-013). */
 export type SettlementRatInfestationLookup = {
@@ -261,6 +273,16 @@ export type { WorldQuestSourceLookup, WorldQuestSourceStatus }
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
   getReputationDimension: () => 0,
   getRenown: () => 0,
+}
+
+const NO_WORLD_TIME: QuestWorldTimeLookup = {
+  getWorldSeed: () => 0,
+  getTimeOfDay: () => 0,
+  getElapsedDays: () => 0,
+}
+
+const NO_SETTLEMENT_LIGHT: SettlementLightLookup = {
+  getSnapshot: () => ({ torchLit: {}, campfireLit: false, status: 'unavailable' }),
 }
 
 /** Same headroom as NPC reaction clips (NpcAgent.ts) — a one-shot "thank you", not a focal cue. */
@@ -354,6 +376,8 @@ export class QuestManager {
   private readonly lostLivestockSource: LostLivestockSourceLookup
   private readonly transferAnimalOwnership: QuestAnimalOwnershipTransfer
   private readonly canReserveHorseReward: HorseRewardAvailability
+  private readonly worldTime: QuestWorldTimeLookup
+  private readonly settlementLight: SettlementLightLookup
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -377,6 +401,8 @@ export class QuestManager {
     worldProgress: QuestWorldProgressLookup = NO_WORLD_PROGRESS,
     worldQuestSource: WorldQuestSourceLookup = NO_WORLD_QUEST_SOURCE,
     lostLivestockSource: LostLivestockSourceLookup = NO_LOST_LIVESTOCK_SOURCE,
+    worldTime: QuestWorldTimeLookup = NO_WORLD_TIME,
+    settlementLight: SettlementLightLookup = NO_SETTLEMENT_LIGHT,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -394,6 +420,8 @@ export class QuestManager {
     this.lostLivestockSource = lostLivestockSource
     this.transferAnimalOwnership = transferAnimalOwnership
     this.canReserveHorseReward = canReserveHorseReward
+    this.worldTime = worldTime
+    this.settlementLight = settlementLight
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -424,6 +452,7 @@ export class QuestManager {
         const s = this.stateOf(def.id)
         if (s.state === 'active') this.catchUpActiveWorldObjectives(def, s)
       }
+      this.recheckSettlementLightObjectives()
     }
   }
 
@@ -554,6 +583,13 @@ export class QuestManager {
       case 'reputation':
         if (!def.settlementId) return false
         return this.socialAvailability.getReputationDimension(def.settlementId, prereq.dimension) >= prereq.minimum
+      case 'evening_offer_window':
+        return isWithinEveningOfferWindow(
+          this.worldTime.getWorldSeed(),
+          prereq.giverNpcId,
+          this.worldTime.getElapsedDays(),
+          this.worldTime.getTimeOfDay(),
+        )
     }
   }
 
@@ -778,8 +814,57 @@ export class QuestManager {
         return this.worldProgress.isWorldContainerLooted(objective.containerId)
       case 'read_item':
         return this.worldProgress.hasReadItem(objective.itemKind)
+      case 'light_settlement_fires':
+        return evaluateSettlementLightsObjective(
+          this.settlementLight.getSnapshot(objective.settlementId, objective.torchIds, objective.requireCampfire),
+          objective.torchIds,
+          objective.requireCampfire,
+        )
       default:
         return false
+    }
+  }
+
+  /** Active settlement-light objective for dusk suppression (plan quests-progression-021). */
+  activeSettlementLightDuty(): {
+    settlementId: string
+    torchIds: readonly string[]
+    requireCampfire: boolean
+  } | null {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const objective = this.currentStage(def, s.stageIndex)?.objective
+      if (objective?.type !== 'light_settlement_fires') continue
+      return {
+        settlementId: objective.settlementId,
+        torchIds: objective.torchIds,
+        requireCampfire: objective.requireCampfire,
+      }
+    }
+    return null
+  }
+
+  /** Re-evaluates active `light_settlement_fires` stages after manual ignition. */
+  recheckSettlementLightObjectives(): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      const objective = stage?.objective
+      if (objective?.type !== 'light_settlement_fires') continue
+      const snapshot = this.settlementLight.getSnapshot(
+        objective.settlementId,
+        objective.torchIds,
+        objective.requireCampfire,
+      )
+      if (snapshot.status === 'unavailable') {
+        this.setQuestState(def.id, { state: 'invalidated', stageIndex: s.stageIndex })
+        continue
+      }
+      if (evaluateSettlementLightsObjective(snapshot, objective.torchIds, objective.requireCampfire)) {
+        this.advanceStage(def, s)
+      }
     }
   }
 

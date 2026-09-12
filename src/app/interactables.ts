@@ -896,6 +896,19 @@ export function buildInteractables(
       })
     }
 
+    for (const torch of settlement.villageTorches) {
+      if (!withinRange(torch.position.x, torch.position.z, playerPos, GAZE_RANGE)) continue
+      const lit = torch.torch.isLit()
+      list.push({
+        kind: 'villageTorch',
+        position: { x: torch.position.x, z: torch.position.z },
+        promptLabel: lit ? 'Pochodnia (płonie)' : '[E] Zapal pochodnię',
+        settlementId: settlement.id,
+        torchId: torch.id,
+        lit,
+      })
+    }
+
     for (const hs of settlement.householdStorages) {
       if (!withinRange(hs.position.x, hs.position.z, playerPos, GAZE_RANGE)) continue
       list.push({

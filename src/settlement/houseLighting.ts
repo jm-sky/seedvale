@@ -29,6 +29,8 @@ export type HouseLight = {
 export type VillageTorch = {
   readonly object: THREE.Object3D
   setLit: (lit: boolean) => void
+  /** Read-only lit state for quests and interaction (plan quests-progression-021). */
+  isLit: () => boolean
   update: (dt: number) => void
 }
 
@@ -274,6 +276,7 @@ export function createVillageTorchLight(
       // torches that are not ticked every frame still show flame on first lit frame.
       if (on) fireVisual.update(0)
     },
+    isLit: () => lit,
     update(dt) {
       if (!lit) return
       fireVisual.update(dt)

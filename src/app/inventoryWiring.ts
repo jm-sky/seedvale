@@ -27,7 +27,12 @@ import { isVoluntaryJoinAccepted, type VoluntaryExpeditionTerms } from '../ai/vo
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { readBook } from '../items/books'
 import { expandFoodBatchesToUnits } from '../items/foodItems'
-import { askGuardForSword } from '../items/guardSword'
+import {
+  applyGuardClaimMutation,
+  getGuardClaimState,
+  type GuardWorldProgress,
+} from '../quests/guardPersistence'
+import { guardRewardTopicAvailable, resolveNextGuardReward } from '../quests/guardRewards'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -153,9 +158,16 @@ export type InventoryWiringDeps = {
   vueUi: VueUi
   questManager: QuestManager
   reputationManager: ReputationManager
-  /** Persisted one-shot world flags (`SaveData.worldFlags`) — the guard's
-   *  sword gift is the only consumer today. Mutated in place. */
-  worldFlags: { guardSwordGifted: boolean, treasureMapDarkForestRead: boolean }
+  /** Persisted world flags (`SaveData.worldFlags`) — mutated in place. */
+  worldFlags: {
+    guardSwordGifted: boolean
+    treasureMapDarkForestRead: boolean
+    alphaWolfDeedEarned: boolean
+    guardClaims: GuardWorldProgress['guardClaims']
+  }
+  guardProgress: GuardWorldProgress
+  homeSettlementId: string
+  homeGuardNpcId: string | undefined
   playOnce: ReturnType<typeof createWorldAudio>['playOnce']
   /** Adds an acquired item (creating an `ItemInstance` when the kind needs
    *  one) and re-syncs HUD/held tool — owned by `createApp.ts` because quest
@@ -178,7 +190,7 @@ export type InventoryWiringDeps = {
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, equipment, primaryWeapons, playerTorch, hud, toast, vueUi,
-    questManager, reputationManager, worldFlags, playOnce, grantItem,
+    questManager, reputationManager, worldFlags, guardProgress, homeSettlementId, homeGuardNpcId, playOnce, grantItem,
     locationCatalog, locationKnowledge, navigationTargets, dayNight, openNpcGiveItem,
   } = deps
 
@@ -523,23 +535,48 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     return requestAssistanceLine(kind, 'given')
   }
 
+  const resolveHomeGuardRewardInput = (npc: NpcAgent) => {
+    const settlement = findSettlementForNpc(npc)
+    if (!homeGuardNpcId || npc.id !== homeGuardNpcId || settlement?.id !== homeSettlementId) return null
+    const claims = getGuardClaimState(guardProgress, npc.id)
+    return {
+      guardNpcId: npc.id,
+      relationLevel: questManager.getRelationLevel(npc.id),
+      settlementRenown: reputationManager.getRenown(homeSettlementId),
+      alphaWolfDeedEarned: guardProgress.alphaWolfDeedEarned,
+      playerHasLongSword: inventory.holdsAny('long_sword'),
+      claims,
+      legacySwordGifted: guardProgress.guardSwordGifted,
+    }
+  }
+
   vueUi.configureNpcDialogueMenu({
-    onAskSword: () => {
+    onClaimGuardReward: () => {
       const npc = ui.npcDialogueMenu.npc as NpcAgent | null
-      const result = askGuardForSword({
-        alreadyGifted: worldFlags.guardSwordGifted,
-        guardQuestComplete: questManager.getState('woda-dla-marka') === 'complete',
-        relation: npc ? questManager.getRelation(npc.id) : 0,
-        alreadyHasSword: inventory.holdsAny('long_sword'),
-      })
-      if (result.grant) {
+      if (!npc) return ''
+      const input = resolveHomeGuardRewardInput(npc)
+      if (!input) return 'To nie jest strażnik z twojej osady.'
+      const decision = resolveNextGuardReward(input)
+      if (decision.kind === 'none') return decision.line
+      for (const item of decision.items) grantItem(item.kind, item.count)
+      if (decision.markTorchGift) applyGuardClaimMutation(guardProgress, npc.id, { torchGiftClaimed: true })
+      if (decision.markRenownRoute) applyGuardClaimMutation(guardProgress, npc.id, { renownRouteClaimed: true })
+      if (decision.markAlphaRoute) applyGuardClaimMutation(guardProgress, npc.id, { alphaRouteClaimed: true })
+      if (decision.markSwordConsumed) {
+        applyGuardClaimMutation(guardProgress, npc.id, { swordRewardConsumed: true })
+        guardProgress.guardSwordGifted = true
         worldFlags.guardSwordGifted = true
-        grantItem('long_sword', 1)
-        toast.show('+1 Miecz', 'pickup')
       }
-      return result.line
+      worldFlags.guardClaims = guardProgress.guardClaims
+      return decision.line
     },
-    getCanAskSword: () => !worldFlags.guardSwordGifted,
+    getCanClaimGuardReward: () => {
+      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
+      if (!npc) return false
+      const input = resolveHomeGuardRewardInput(npc)
+      if (!input) return false
+      return guardRewardTopicAvailable(input)
+    },
     onOpenTrade: () => {
       const view = merchantInventoryView()
       const npc = ui.npcDialogueMenu.npc as NpcAgent | null

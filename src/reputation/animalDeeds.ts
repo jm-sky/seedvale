@@ -1,4 +1,5 @@
 import type { AnimalKind } from '../fauna/animalDefs'
+import type { AnimalVariant } from '../fauna/animalVariants'
 import type { ReputationDimension } from './ReputationManager'
 import type { SocialNewsSignal } from './SocialNewsLedger'
 
@@ -41,6 +42,8 @@ import type { SocialNewsSignal } from './SocialNewsLedger'
 export type PlayerAnimalKillContext = {
   animalId: string
   animalKind: AnimalKind
+  /** Fauna-owned variant at kill time (plan quests-progression-021). */
+  variant: AnimalVariant
   dangerSignificance: number
   position: { x: number, z: number }
 }

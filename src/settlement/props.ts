@@ -45,8 +45,11 @@ import {
   type HouseLight,
   type ResolvedHouseLampMount,
   resolveHouseLampMount,
-  type VillageTorch,
 } from './houseLighting'
+import {
+  type SettlementVillageTorch,
+  settlementVillageTorchId,
+} from './settlementVillageTorch'
 import { pickMerchantWagonPose } from './merchantWagon'
 import {
   ANIMAL_TROUGH_HEIGHT,
@@ -696,6 +699,8 @@ export async function buildSettlementProps(
    *  wioski mogą otrzymać dodatkowe obiekty") — a second stockpile/campfire,
    *  not a structural change to the core clearing itself. */
   size: VillageSize,
+  /** Stable settlement id for canonical torch identity (plan quests-progression-021). */
+  settlementId: string,
   /** Non-home settlements skip the forest belt: it's expensive (dozens of
    *  clusters) and would double up with the per-chunk terrain vegetation that,
    *  unlike home chunks, isn't suppressed around them. They still get their
@@ -729,7 +734,7 @@ export async function buildSettlementProps(
   group: THREE.Group
   landmarks: SettlementLandmarks
   houseLights: HouseLight[]
-  villageTorches: VillageTorch[]
+  villageTorches: SettlementVillageTorch[]
   houseAssemblies: HouseAssembly[]
   storageVisual: SettlementStorageVisuals
 }> {
@@ -947,7 +952,7 @@ export async function buildSettlementProps(
   landmarks.noticeBoard.set(boardX, sampleHeight(boardX, boardZ), boardZ)
 
   const houseLights: HouseLight[] = []
-  const villageTorches: VillageTorch[] = []
+  const villageTorches: SettlementVillageTorch[] = []
 
   let lanternFloor: THREE.Object3D | null = null
   let lanternWall: THREE.Object3D | null = null
@@ -1494,7 +1499,7 @@ export async function buildSettlementProps(
   // open gate gap; plaza posts reject path/road corridors.
   {
     const postTpl = torchPostTemplate
-    const placeTorchAt = (x: number, z: number, yaw = 0): boolean => {
+    const placeTorchAt = (slot: string, x: number, z: number, yaw = 0): boolean => {
       if (pointHitsCorridor(x, z, pathCorridors, 0.85)) return false
       if (sampleHeight(x, z) <= waterLevel + 0.55) return false
       const post = postTpl.clone(true)
@@ -1502,7 +1507,12 @@ export async function buildSettlementProps(
       const torch = createVillageTorchLight(post)
       placeOnGround(torch.object, x, z, sampleHeight)
       group.add(torch.object)
-      villageTorches.push(torch)
+      const y = sampleHeight(x, z)
+      villageTorches.push({
+        id: settlementVillageTorchId(settlementId, slot),
+        position: new THREE.Vector3(x, y, z),
+        torch,
+      })
       return true
     }
 
@@ -1529,7 +1539,12 @@ export async function buildSettlementProps(
         const torch = createVillageTorchLight(post)
         placeOnGround(torch.object, tx, tz, sampleHeight)
         group.add(torch.object)
-        villageTorches.push(torch)
+        const y = sampleHeight(tx, tz)
+        villageTorches.push({
+          id: settlementVillageTorchId(settlementId, 'well'),
+          position: new THREE.Vector3(tx, y, tz),
+          torch,
+        })
       }
       await yieldProp()
     }
@@ -1554,7 +1569,7 @@ export async function buildSettlementProps(
           tx = clearings.core.x + Math.cos(ang) * (plazaR + 1.4)
           tz = clearings.core.z + Math.sin(ang) * (plazaR + 1.4)
         }
-        placeTorchAt(tx, tz, ang + Math.PI)
+        placeTorchAt(`plaza:${i}`, tx, tz, ang + Math.PI)
         await yieldProp()
       }
     }
@@ -1591,7 +1606,7 @@ export async function buildSettlementProps(
             const tx = site.x + Math.cos(ang) * radius
             const tz = site.z + Math.sin(ang) * radius
             if (isCoastalPlacement(tx, tz, coastEnv)) continue
-            placeTorchAt(tx, tz, ang + Math.PI)
+            placeTorchAt(side < 0 ? 'gate:left' : 'gate:right', tx, tz, ang + Math.PI)
             await yieldProp()
           }
         }
