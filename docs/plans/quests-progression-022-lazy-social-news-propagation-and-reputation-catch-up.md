@@ -9,6 +9,7 @@
 **Subdomains:** `relationships` `progression` `rewards`
 **Tags:** `reputation` `renown` `social-news` `performance` `persistence`
 **Roadmap:** `quests-and-reputation.md`
+**Model:** Opus, Sonnet
 
 ## Cel
 
