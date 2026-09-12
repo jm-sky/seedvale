@@ -1,9 +1,15 @@
 import type { PreySpawner } from '../../fauna/AnimalSpawner'
 import type {
+  LostLivestockOpportunity,
   SettlementQuestOpportunity,
   WolfDenPressureOpportunity,
   WorldQuestSourceStatus,
 } from './worldQuestOpportunityTypes'
+import {
+  isStrayEpisodeActive,
+  type LivestockStrayCandidate,
+  selectLostLivestock,
+} from '../../fauna/animalStray'
 import { isWolfDenPermanentlyDestroyed, isWolfDenPressureProblem } from '../../fauna/wolfDenScenario'
 
 const WOLF_DEN_PRESSURE_PREFIX = 'world:wolf-den-pressure:'
@@ -95,25 +101,102 @@ export function wolfDenPressureStatusFromSpawners(
  *
  * @domain quests-progression
  */
+const LOST_LIVESTOCK_PREFIX = 'world:lost-livestock:'
+
+export const LOST_LIVESTOCK_LIVE_OUTCOME = 'live_return'
+export const LOST_LIVESTOCK_DEAD_OUTCOME = 'dead_confirmed'
+export const LOST_LIVESTOCK_UNAVAILABLE_OUTCOME = 'unavailable'
+
+/**
+ * Stable generated quest/opportunity id. Deterministic from settlement +
+ * existing livestock identity — never a runtime UUID.
+ *
+ * @domain quests-progression
+ */
+export function lostLivestockQuestId(settlementId: string, animalId: string): string {
+  return `${LOST_LIVESTOCK_PREFIX}${settlementId}:${animalId}`
+}
+
+export function parseLostLivestockQuestId(questId: string): { settlementId: string, animalId: string } | null {
+  if (!questId.startsWith(LOST_LIVESTOCK_PREFIX)) return null
+  const rest = questId.slice(LOST_LIVESTOCK_PREFIX.length)
+  const separator = rest.indexOf(':')
+  if (separator <= 0 || separator === rest.length - 1) return null
+  return { settlementId: rest.slice(0, separator), animalId: rest.slice(separator + 1) }
+}
+
+function lostLivestockOpportunity(
+  settlementId: string,
+  houseId: string,
+  animalId: string,
+): LostLivestockOpportunity {
+  return {
+    id: lostLivestockQuestId(settlementId, animalId),
+    settlementId,
+    kind: 'lost-livestock',
+    houseId,
+    animalId,
+  }
+}
+
+/**
+ * Detects one existing household livestock source as a lightweight candidate.
+ * Prefers an already-active stray episode, otherwise a deterministic eligible pick.
+ *
+ * @domain quests-progression
+ */
+export function collectLostLivestockOpportunities(
+  settlementId: string,
+  livestock: readonly LivestockStrayCandidate[] = [],
+): LostLivestockOpportunity[] {
+  const local = livestock.filter((candidate) => candidate.settlementId === settlementId)
+  const active = local.find((candidate) => isStrayEpisodeActive(candidate.stray))
+  if (active && active.owner?.kind === 'household') {
+    return [lostLivestockOpportunity(settlementId, active.owner.houseId, active.animalId)]
+  }
+  const selected = selectLostLivestock(local, settlementId)
+  if (!selected || selected.owner?.kind !== 'household') return []
+  return [lostLivestockOpportunity(settlementId, selected.owner.houseId, selected.animalId)]
+}
+
 export function collectSettlementQuestOpportunities(input: {
   settlementId: string
   spawners: readonly PreySpawner[]
   persistedQuestIds?: readonly string[]
+  livestock?: readonly LivestockStrayCandidate[]
 }): SettlementQuestOpportunity[] {
   const byId = new Map<string, SettlementQuestOpportunity>()
   for (const opportunity of collectWolfDenPressureOpportunities(input.settlementId, input.spawners)) {
     byId.set(opportunity.id, opportunity)
   }
+  for (const opportunity of collectLostLivestockOpportunities(input.settlementId, input.livestock)) {
+    byId.set(opportunity.id, opportunity)
+  }
   for (const questId of input.persistedQuestIds ?? []) {
-    const parsed = parseWolfDenPressureQuestId(questId)
-    if (!parsed) continue
-    if (settlementIdFromWolfDenSpawnerId(parsed.spawnerId) !== input.settlementId) continue
+    const wolf = parseWolfDenPressureQuestId(questId)
+    if (wolf) {
+      if (settlementIdFromWolfDenSpawnerId(wolf.spawnerId) !== input.settlementId) continue
+      if (byId.has(questId)) continue
+      byId.set(questId, {
+        id: questId,
+        settlementId: input.settlementId,
+        kind: 'wolf-den-pressure',
+        spawnerId: wolf.spawnerId,
+      })
+      continue
+    }
+    const lost = parseLostLivestockQuestId(questId)
+    if (!lost) continue
+    if (lost.settlementId !== input.settlementId) continue
     if (byId.has(questId)) continue
+    const record = (input.livestock ?? []).find((candidate) => candidate.animalId === lost.animalId)
+    const houseId = record?.owner?.kind === 'household' ? record.owner.houseId : `${input.settlementId}:home:0`
     byId.set(questId, {
       id: questId,
       settlementId: input.settlementId,
-      kind: 'wolf-den-pressure',
-      spawnerId: parsed.spawnerId,
+      kind: 'lost-livestock',
+      houseId,
+      animalId: lost.animalId,
     })
   }
   return [...byId.values()]

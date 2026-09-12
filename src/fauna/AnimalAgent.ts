@@ -47,6 +47,7 @@ import { type AgentStatusLabelController, createAgentStatusLabelController } fro
 import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world/animalTraps'
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderActiveAtY, colliderContainsPoint } from '../world/collision'
+import { createSeededRandom } from '../world/parseSeed'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   advanceCaveRoute,
@@ -130,6 +131,7 @@ import {
 import {
   type AnimalOwner,
   deriveOwnerHouseId,
+  isHouseholdOwned,
   isPlayerOwned as isPlayerOwnedOwner,
   ownerFromHouseId,
 } from './animalOwnership'
@@ -141,6 +143,23 @@ import {
   scareFleeOrigin,
   shouldScare,
 } from './animalScare'
+import {
+  type AnimalStrayState,
+  beginStrayState,
+  classifyLostLivestock,
+  clearStrayEpisode,
+  hydrateStrayState,
+  inspectStrayedCorpseState,
+  isStrayedAnimalReturned,
+  isStrayEpisodeActive,
+  type LostLivestockSourceStatus,
+  selectStrayDisplacementTarget,
+  shouldRetainStrayedCorpse,
+  snapshotStrayState,
+  strayEpisodeSeed,
+  straySurvivalFleeRangeBonus,
+  straySurvivalFleeSpeedMultiplier,
+} from './animalStray'
 import {
   type AnimalVariant,
   type AnimalVariantDef,
@@ -545,6 +564,8 @@ export type AnimalSaveState = {
   name?: string
   /** Durable rabies infection (plan fauna-018) — omitted on legacy saves. */
   rabid?: boolean
+  /** Durable stray/displacement episode (plan fauna-024) — omitted when never started. */
+  stray?: AnimalStrayState
 }
 
 type EnvironmentSense = {
@@ -922,6 +943,8 @@ export class AnimalAgent {
   private readonly _control: OwnedAnimalControlState = createFollowOwnedAnimalControlState()
   /** Temporary player lead relation (plan fauna-007) — not ownership, not persisted. */
   private _leadAttached = false
+  /** Durable stray episode (plan fauna-024) — null until first start. */
+  private _stray: AnimalStrayState | undefined
   /** Runtime-only lead hysteresis — separate from owned Follow commitment. */
   private readonly _leadFollow: FollowHysteresisState = { following: false }
   /** This tick's `playerControlPos` from `AnimalUpdateContext` (plan fauna-020). */
@@ -1513,9 +1536,15 @@ export class AnimalAgent {
     }
   }
 
-  /** Presence of `def.lead` (plan fauna-007) — not player ownership. */
+  /** Presence of `def.lead` (plan fauna-007) or an active household stray
+   *  lead seam (plan fauna-024) — not player ownership. */
   isLeadable(): boolean {
-    return isLeadableDef(this.def) && !this.health.dead
+    return !this.health.dead && (isLeadableDef(this.def) || this.isStrayLeadable())
+  }
+
+  /** Temporary lead for household-owned strayed livestock without transferring ownership. */
+  isStrayLeadable(): boolean {
+    return isStrayEpisodeActive(this._stray) && isHouseholdOwned(this._owner) && !this.health.dead && !this.mounted
   }
 
   isDraftAnimal(): boolean {
@@ -1531,6 +1560,82 @@ export class AnimalAgent {
   setLeadAttached(attached: boolean): void {
     this._leadAttached = attached && this.isLeadable() && !this.mounted
     if (!this._leadAttached) this._leadFollow.following = false
+  }
+
+  getStrayState(): AnimalStrayState | undefined {
+    return this._stray
+  }
+
+  isStrayActive(): boolean {
+    return isStrayEpisodeActive(this._stray)
+  }
+
+  /**
+   * @domain fauna
+   * @role Starts a stray/displacement episode on this existing livestock
+   *  individual. Idempotent across restore/materialization.
+   */
+  startLivestockStray(opts: {
+    predators?: readonly { readonly x: number, readonly z: number }[]
+    random?: () => number
+  } = {}): boolean {
+    if (this.health.dead || this.mounted || !isHouseholdOwned(this._owner)) return false
+    const begun = beginStrayState(this._stray, { x: this.home.x, z: this.home.z })
+    if (!begun.started) {
+      this._stray = begun.state
+      return false
+    }
+    const destination = selectStrayDisplacementTarget({
+      origin: { x: this.home.x, z: this.home.z },
+      isValid: (x, z) => this.isWalkable(x, z),
+      predators: opts.predators,
+      random: opts.random ?? createSeededRandom(strayEpisodeSeed(this.animalId)),
+    })
+    if (!destination) return false
+    this._stray = begun.state
+    this.trip = null
+    this.setLeadAttached(false)
+    this.mesh.position.x = destination.x
+    this.mesh.position.z = destination.z
+    this.home.set(destination.x, 0, destination.z)
+    this.snapY()
+    return true
+  }
+
+  /**
+   * @domain fauna
+   * @role Ends the live stray episode, drops survival assist and lead, and
+   *  restores the stored origin as the wander home.
+   */
+  clearLivestockStray(): void {
+    if (!this._stray) return
+    const originX = this._stray.originX
+    const originZ = this._stray.originZ
+    this._stray = clearStrayEpisode(this._stray)
+    this.setLeadAttached(false)
+    this.home.set(originX, 0, originZ)
+  }
+
+  canInspectStrayedCorpse(): boolean {
+    return this.health.dead && isStrayEpisodeActive(this._stray) && this._stray?.corpseInspected !== true
+  }
+
+  /**
+   * @domain fauna
+   * @role Player inspection of a dead strayed livestock corpse.
+   */
+  inspectStrayedCorpse(): boolean {
+    if (!this.canInspectStrayedCorpse()) return false
+    this._stray = inspectStrayedCorpseState(this._stray, true)
+    return this._stray?.corpseInspected === true
+  }
+
+  lostLivestockStatus(): LostLivestockSourceStatus {
+    return classifyLostLivestock({
+      found: true,
+      dead: this.health.dead,
+      stray: this._stray,
+    })
   }
 
   /** True for any live animal whose `def` carries a `mount` config (plan
@@ -2062,6 +2167,7 @@ export class AnimalAgent {
       affinity: serializeHumanAffinity(this.humanAffinityById),
       name: this.name,
       rabid: this.rabid,
+      stray: snapshotStrayState(this._stray),
     }
   }
 
@@ -2122,10 +2228,15 @@ export class AnimalAgent {
     this.name = state.name
     this.labelController.setName(this.getDisplayName())
     this.rabid = state.rabid === true
+    this._stray = hydrateStrayState(state.stray)
+    if (isStrayEpisodeActive(this._stray)) {
+      this.home.set(state.x, 0, state.z)
+    }
   }
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */
   readyToRemove(): boolean {
+    if (shouldRetainStrayedCorpse(this._stray, this.health.dead, this.corpse.timeSinceDeath)) return false
     return corpseReadyToRemove(this.corpse, this.health.dead)
   }
 
@@ -2372,6 +2483,12 @@ export class AnimalAgent {
       scareStimulus = null,
     } = ctx
     this._tickPlayerControlPos = playerControlPos ?? null
+    if (
+      !this.health.dead
+      && isStrayedAnimalReturned(this._stray, this.mesh.position, this.health.dead)
+    ) {
+      this.clearLivestockStray()
+    }
     if (this.health.dead) {
       if (!this.corpse.held) {
         this.corpse.timeSinceDeath += dt
@@ -3218,7 +3335,8 @@ export class AnimalAgent {
       0,
       this.mesh.position.z + this.tmp.z * FLEE_DISTANCE,
     )
-    const speed = this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow()
+    const speed = (this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow())
+      * straySurvivalFleeSpeedMultiplier(this._stray)
     this.stepNavRescue(this.fleeNav, this.fleeTarget, speed, dt)
   }
 
@@ -3327,7 +3445,11 @@ export class AnimalAgent {
     nearbyPredators: readonly AnimalAgent[],
     nearbyRats: readonly AnimalAgent[] = [],
   ): void {
-    const threat = this.nearest(others, 'predator', this.def.fleeRange)
+    const threat = this.nearest(
+      others,
+      'predator',
+      this.def.fleeRange + straySurvivalFleeRangeBonus(this._stray),
+    )
     if (threat) {
       this.lastPreyAlertThreat = null
       this.cancelSourceTarget()
@@ -3363,6 +3485,7 @@ export class AnimalAgent {
       this.def,
       this.mounted,
       this.health.dead,
+      this.isLeadable(),
     )
     if (movement.kind === 'follow') {
       this.cancelSourceTarget()
@@ -3496,7 +3619,7 @@ export class AnimalAgent {
       this.mesh.position.x,
       this.mesh.position.z,
       preyAlertScratch,
-      this.def.fleeRange + PREY_ALERT_RANGE_BONUS,
+      this.def.fleeRange + PREY_ALERT_RANGE_BONUS + straySurvivalFleeRangeBonus(this._stray),
     )
   }
 
@@ -4333,7 +4456,7 @@ export class AnimalAgent {
   }
 
   private clampBounds(): void {
-    if (this.isPlayerOwned() || this._leadAttached) return
+    if (this.isPlayerOwned() || this._leadAttached || isStrayEpisodeActive(this._stray)) return
     // A committed trip (plan fauna-016 §4, fauna-019 §6) may legitimately
     // carry the animal past the local roam band — its own destination
     // search already bounds how far, and a cave resident's route to/from

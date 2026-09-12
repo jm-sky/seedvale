@@ -371,6 +371,38 @@ describe('loadSaveData v1 contract', () => {
     })).toBeNull()
   })
 
+  it('accepts optional livestock stray and rejects malformed entries (plan fauna-024)', () => {
+    const withStray = {
+      ...validSave,
+      livestock: [{
+        settlementId: 'home',
+        animalId: 'sheep-house0-0',
+        kind: 'sheep',
+        ownerHouseId: 'home:home:0',
+        x: 40,
+        z: 12,
+        yaw: 0.5,
+        health: { current: 10, max: 10, dead: false },
+        life: { hunger: 0.2, thirst: 0.1, stamina: 1 },
+        productionReadyAtDays: null,
+        eggPending: false,
+        corpse: null,
+        stray: {
+          active: true,
+          originX: 1,
+          originZ: 2,
+          survivalAssist: true,
+          corpseInspected: false,
+        },
+      }],
+    }
+    expect(loadSaveData(withStray)).toEqual(withStray)
+    expect(loadSaveData({
+      ...withStray,
+      livestock: [{ ...withStray.livestock[0], stray: { active: true } }],
+    })).toBeNull()
+  })
+
   it('accepts optional livestock woolReadyAtDays without a save-version bump (plan fauna-004)', () => {
     const withWool = {
       ...validSave,
@@ -1379,6 +1411,14 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       counts: { berries: 3 },
       instances: [{ id: 'w1', kind: 'knife', durability: 0.4, sharpness: 0.8 }],
     })
+  })
+
+  it('migrates a v33 save without livestock stray to the current version (plan fauna-024)', () => {
+    const result = loadStoredSave({ ...validSave, version: 33 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.livestock).toEqual(validSave.livestock)
   })
 
   it('round-trips an in-transit transportOrder and npcStates transportCargo, and rejects a malformed order (plan settlements-npcs-019)', () => {

@@ -83,6 +83,7 @@ function makeManager(
   settlementRatInfestation?: import('./QuestManager').SettlementRatInfestationLookup,
   spawnPointDestruction?: import('./QuestManager').SpawnPointDestructionLookup,
   worldQuestSource?: import('./QuestManager').WorldQuestSourceLookup,
+  lostLivestockSource?: import('./opportunities/worldQuestOpportunityTypes').LostLivestockSourceLookup,
 ): QuestManager {
   return new QuestManager(
     defs,
@@ -100,6 +101,7 @@ function makeManager(
     spawnPointDestruction,
     undefined,
     worldQuestSource,
+    lostLivestockSource,
   )
 }
 
@@ -2154,6 +2156,107 @@ describe('QuestManager world-driven settlement sources', () => {
     )
     expect(qm.getState(sourceQuest.id)).toBe('active')
     expect(qm.list()[0]?.id).toBe(sourceQuest.id)
+  })
+})
+
+describe('QuestManager lost livestock sources (fauna-024)', () => {
+  const lostQuest = quest({
+    id: 'world:lost-livestock:home:sheep-house0-0',
+    giverName: 'Anna',
+    offerLine: 'offer sheep',
+    stages: [
+      { objective: { type: 'recover_lost_livestock', animalId: 'sheep-house0-0' }, description: 'find', reminderLine: 'remind' },
+    ],
+    reportLine: 'report sheep',
+    outcomes: [
+      { id: 'live_return', state: 'complete', resultText: 'live' },
+      { id: 'dead_confirmed', state: 'complete', resultText: 'dead' },
+      { id: 'unavailable', state: 'failed', resultText: 'gone' },
+    ],
+  })
+
+  function lostLookup(status: import('../fauna/animalStray').LostLivestockSourceStatus | 'untracked') {
+    return { getSnapshot: (questId: string) => questId === lostQuest.id ? status : 'untracked' as const }
+  }
+
+  it('offers only while the world snapshot is still lost', () => {
+    const qm = makeManager(
+      [lostQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      lostLookup('lost-alive'),
+    )
+    expect(qm.isQuestAvailable(lostQuest.id)).toBe(true)
+    expect(qm.onInteract('Anna')?.offer).toBeDefined()
+  })
+
+  it('reads live return from world state, not quest flags', () => {
+    const qm = makeManager(
+      [lostQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      lostLookup('lost-alive'),
+    )
+    qm.onInteract('Anna')?.offer?.onAccept()
+    expect(qm.getState(lostQuest.id)).toBe('active')
+    const polling = makeManager(
+      [lostQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: lostQuest.id, state: 'active', stageIndex: 0 }], relations: {} },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      lostLookup('returned'),
+    )
+    polling.pollLostLivestockSources()
+    expect(polling.getState(lostQuest.id)).toBe('complete')
+    expect(polling.list()[0]?.resolvedOutcomeId).toBe('live_return')
+  })
+
+  it('fails from world unavailable, not a quest-local flag', () => {
+    const qm = makeManager(
+      [lostQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: lostQuest.id, state: 'active', stageIndex: 0 }], relations: {} },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      lostLookup('unavailable'),
+    )
+    qm.pollLostLivestockSources()
+    expect(qm.getState(lostQuest.id)).toBe('failed')
+    expect(qm.list()[0]?.resolvedOutcomeId).toBe('unavailable')
+  })
+
+  it('reads inspected corpse from world state', () => {
+    const qm = makeManager(
+      [lostQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: lostQuest.id, state: 'active', stageIndex: 0 }], relations: {} },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      lostLookup('corpse-inspected'),
+    )
+    qm.pollLostLivestockSources()
+    expect(qm.getState(lostQuest.id)).toBe('complete')
+    expect(qm.list()[0]?.resolvedOutcomeId).toBe('dead_confirmed')
   })
 })
 

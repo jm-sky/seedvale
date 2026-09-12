@@ -1,5 +1,4 @@
 import { ANIMAL_LABELS, type AnimalAgent } from '../../fauna/AnimalAgent'
-import { isLeadableDef } from '../../fauna/animalLead'
 import { CART_HITCH_RANGE, cartAcceptsAnimal } from '../../world/cart'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
@@ -104,7 +103,7 @@ export function createLeadActions(
       || animal.isDead()
       || animal.isMounted()
       || isPlayerMountedOn(animal.animalId)
-      || !isLeadableDef(animal.def)
+      || !animal.isLeadable()
     ) {
       detach()
       return

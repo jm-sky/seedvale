@@ -1,7 +1,9 @@
 import type { PreySpawner } from '../../fauna/AnimalSpawner'
+import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import type { SettlementDef } from '../../settlement/settlementGenerator'
 import type { QuestDef } from '../quests'
 import type {
+  LostLivestockOpportunity,
   OpportunityNpc,
   SettlementQuestOpportunity,
   WolfDenPressureOpportunity,
@@ -15,7 +17,12 @@ import {
   collectRpgQuestOpportunities,
   type RpgCollectInput,
 } from './rpgQuestMatrices'
-import { collectSettlementQuestOpportunities } from './settlementQuestOpportunities'
+import {
+  collectSettlementQuestOpportunities,
+  LOST_LIVESTOCK_DEAD_OUTCOME,
+  LOST_LIVESTOCK_LIVE_OUTCOME,
+  LOST_LIVESTOCK_UNAVAILABLE_OUTCOME,
+} from './settlementQuestOpportunities'
 import { selectSettlementQuestOpportunities } from './settlementQuestSelection'
 
 /**
@@ -53,6 +60,10 @@ export function selectSettlementQuestGiver(
   if (kind === 'wolf-den-pressure') {
     const hunter = pool.find((npc) => npc.role === 'hunter')
     if (hunter) return hunter
+  }
+  if (kind === 'lost-livestock') {
+    const farmer = pool.find((npc) => npc.role === 'farmer')
+    if (farmer) return farmer
   }
   return pool[0]
 }
@@ -105,6 +116,67 @@ function materializeWolfDenPressureQuest(
   }
 }
 
+function materializeLostLivestockQuest(
+  opportunity: LostLivestockOpportunity,
+  giver: OpportunityNpc,
+  settlementName: string,
+): QuestDef {
+  return {
+    id: opportunity.id,
+    title: 'Zagubione zwierzę',
+    description:
+      `Z gospodarstwa w osadzie ${settlementName} zniknęło zwierzę. To to samo, które tam żyło — nie szukaj sobowtóra.`,
+    giverName: giver.name,
+    giver: { npcId: giver.id },
+    offerLine:
+      'Jedno z naszych zwierząt zniknęło z zagrody. Znajdź je, żywym albo nie — musimy wiedzieć, co się stało.',
+    stages: [
+      {
+        objective: { type: 'recover_lost_livestock', animalId: opportunity.animalId },
+        description: 'Odnajdź zagubione zwierzę i sprowadź je do zagrody albo zbadaj zwłoki.',
+        reminderLine: 'Zwierzę wciąż jest zagubione. Szukaj poza osadą.',
+        progressLine: 'Wiem już, co się stało ze zwierzęciem.',
+        failLine: 'Zwierzę zniknęło zanim zdążyłeś je odnaleźć.',
+      },
+    ],
+    reportPromptLine: 'Udało ci się odnaleźć to zwierzę?',
+    reportPlayerLine: 'Znalazłem wasze zwierzę.',
+    reportLine: 'Dzięki. Teraz wiemy, co się z nim stało.',
+    settlementId: opportunity.settlementId,
+    outcomes: [
+      {
+        id: LOST_LIVESTOCK_LIVE_OUTCOME,
+        state: 'complete',
+        resultText: 'Zwierzę wróciło żywe do gospodarstwa.',
+        consequences: {
+          relations: [{ npc: { npcId: giver.id }, delta: 2 }],
+          social: {
+            reputation: { competence: 6, courage: 4, benevolence: 8 },
+            renown: 6,
+          },
+        },
+      },
+      {
+        id: LOST_LIVESTOCK_DEAD_OUTCOME,
+        state: 'complete',
+        resultText: 'Znalazłeś zwłoki zagubionego zwierzęcia.',
+        consequences: {
+          relations: [{ npc: { npcId: giver.id }, delta: 1 }],
+          social: {
+            reputation: { competence: 4, courage: 3, benevolence: 5 },
+            renown: 3,
+          },
+        },
+      },
+      {
+        id: LOST_LIVESTOCK_UNAVAILABLE_OUTCOME,
+        state: 'failed',
+        resultText: 'Zwierzę zniknęło zanim zdążyłeś je odnaleźć.',
+      },
+    ],
+  }
+}
+
 /**
  * Materializes a selected opportunity into a normal `QuestDef`.
  * QuestManager owns later quest progress; this function only builds the definition.
@@ -124,6 +196,9 @@ export function materializeSettlementQuestOpportunity(
   }
   const giver = selectSettlementQuestGiver(npcs, opportunity.kind)
   if (!giver) return undefined
+  if (opportunity.kind === 'lost-livestock') {
+    return materializeLostLivestockQuest(opportunity, giver, settlementName)
+  }
   return materializeWolfDenPressureQuest(opportunity, giver, settlementName)
 }
 
@@ -142,6 +217,7 @@ export function buildWorldDrivenSettlementQuests(input: {
   npcs: readonly OpportunityNpc[]
   persistedQuestIds?: readonly string[]
   includeWorldDriven?: boolean
+  livestock?: readonly LivestockStrayCandidate[]
   rpg?: RpgCollectInput & { context?: RpgMaterializationContext }
 }): QuestDef[] {
   const world = input.includeWorldDriven === false
@@ -150,6 +226,7 @@ export function buildWorldDrivenSettlementQuests(input: {
       settlementId: input.settlementId,
       spawners: input.spawners,
       persistedQuestIds: input.persistedQuestIds,
+      livestock: input.livestock,
     })
   const rpg = input.rpg ? collectRpgQuestOpportunities(input.rpg) : []
   const opportunities = selectSettlementQuestOpportunities({

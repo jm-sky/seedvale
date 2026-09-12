@@ -28,6 +28,7 @@ import type { TransportEndpointRef, TransportExecution, TransportOrder, Transpor
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import type { WellWaterKind } from '../world/wellGroundwater'
 import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContainers'
+import { isAnimalStraySave } from '../fauna/animalStray'
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
 import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
@@ -586,7 +587,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 33
+export const CURRENT_SAVE_VERSION = 34
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1900,7 +1901,8 @@ function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
     (r.woolReadyAtDays === undefined || r.woolReadyAtDays === null || typeof r.woolReadyAtDays === 'number') &&
     isLivestockCorpse(r.corpse) &&
     isAnimalAffinityField(r.affinity) &&
-    (r.rabid === undefined || typeof r.rabid === 'boolean')
+    (r.rabid === undefined || typeof r.rabid === 'boolean') &&
+    (r.stray === undefined || isAnimalStraySave(r.stray))
   )
 }
 
@@ -1955,7 +1957,8 @@ function isAnimalSaveState(value: unknown): boolean {
     isOwnedAnimalControlField(s.control) &&
     isAnimalAffinityField(s.affinity) &&
     (s.name === undefined || typeof s.name === 'string') &&
-    (s.rabid === undefined || typeof s.rabid === 'boolean')
+    (s.rabid === undefined || typeof s.rabid === 'boolean') &&
+    (s.stray === undefined || isAnimalStraySave(s.stray))
   )
 }
 
@@ -2921,6 +2924,13 @@ function migrateSaveV32ToV33(data: unknown): unknown {
   return { ...v, version: 33 }
 }
 
+/** v33 → v34 (plan fauna-024): optional `stray` on livestock/`AnimalSaveState`.
+ *  Absent means no episode, matching pre-migration behaviour. */
+function migrateSaveV33ToV34(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 34 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2968,6 +2978,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   30: migrateSaveV30ToV31,
   31: migrateSaveV31ToV32,
   32: migrateSaveV32ToV33,
+  33: migrateSaveV33ToV34,
 }
 
 function detectStoredVersion(value: unknown): number | null {

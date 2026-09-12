@@ -46,8 +46,9 @@ export function resolveLeadMovement(
   def: AnimalDef,
   mounted: boolean,
   dead: boolean,
+  leadable = isLeadableDef(def),
 ): LeadMovement {
-  if (!attached || dead || mounted || !isLeadableDef(def)) return { kind: 'none' }
+  if (!attached || dead || mounted || !leadable) return { kind: 'none' }
   return resolveFollowHysteresis(
     hysteresis,
     animalPos,

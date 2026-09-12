@@ -1,7 +1,8 @@
 # Implementation Notes: fauna-024 — Lost livestock stray displacement
 
 **Prepared:** 2026-09-12  
-**Plan:** `fauna-024-lost-livestock-stray-displacement.md`
+**Plan:** `fauna-024-lost-livestock-stray-displacement.md`  
+**Status:** `verification needed` 🔍
 
 ## 1. Current architecture to preserve
 
@@ -406,5 +407,22 @@ Also verify deterministic livestock reconstruction does not replace/reset an act
 - Do not spawn a replacement animal for the quest.
 - Do not run browser verification; user performs it manually.
 - Add JSDoc with `@domain fauna` to important public state/operations used across modules.
+
+## What was actually implemented
+
+Domain state lives in `src/fauna/animalStray.ts` on the existing `AnimalAgent` / `AnimalSaveState` path. There is no `QuestAnimal`, no quest id on fauna, and no second livestock registry.
+
+- **Selection** prefers eligible household sheep, then other household livestock, using a deterministic hash of the settlement id. Any existing stray record (active or returned) is ineligible, so restore/materialization cannot redisplace the same animal.
+- **Start** (`AnimalAgent.startLivestockStray`) is idempotent. Destination is a bounded ring probe (`STRAY_MIN_DISTANCE`…`STRAY_MAX_DISTANCE`) that rejects invalid terrain and scores nearby predators as a penalty, then teleports once (trips always return home, so they are not used for V1 displacement). Local wander `home` is the destination; stored `originX/originZ` is the return anchor. `clampBounds` is skipped while the episode is active.
+- **Survival assist** is extra flee range + a modest flee-speed multiplier, gated on `stray.active && stray.survivalAssist`. No HP buff.
+- **Return** is a world predicate on the live tick: alive + inside origin radius (`STRAY_RETURN_RADIUS` = livestock yard max 6) → clear episode, drop lead, restore origin as home.
+- **Corpse** stays the same dead `AnimalAgent`. Uninspected stray corpses skip ordinary 60s TTL until inspect or `STRAY_CORPSE_RETENTION_SECONDS` (960 simulation seconds, including time-skip). Gaze `[E]` inspect takes priority over bury/harvest and does not harvest.
+- **Lead** reuses `animalLead.ts` / `leadActions.ts` via `AnimalAgent.isLeadable()` without transferring `AnimalOwner`. Temporary lead is runtime-only.
+- **Quest** kind `lost-livestock` / objective `recover_lost_livestock` (not `find_animal`). Typed `LostLivestockSourceLookup` maps fauna snapshots to `live_return` / `dead_confirmed` / `unavailable`. V1 starts the episode when the quest is `offered` or `active`. Idle eligible animals are treated as `lost-alive` only so the offer can appear before start; a returned inactive record is `returned`, not redisplaced.
+- **Persistence** is optional `stray` on `AnimalSaveState` / livestock records. `CURRENT_SAVE_VERSION` 33 → 34 is a version bump only (absent stray = never started).
+
+## Tests
+
+`animalStray.test.ts`, `AnimalAgent.test.ts` stray cases, `animalLead.test.ts` leadable override, `QuestManager.test.ts` world-state outcomes, `settlementQuestOpportunities.test.ts` identity/rematerialize, `saveData.test.ts` stray accept/reject and v33 migration.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

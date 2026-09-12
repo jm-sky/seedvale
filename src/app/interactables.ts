@@ -151,6 +151,7 @@ function animalPromptLabel(
   // no ownership/taming gate yet, so the prompt is unconditional whenever no
   // weapon is held.
   if (animal.isPlayerOwned()) return `Steruj: ${label}`
+  if (animal.isLeadable() && !ANIMAL_DEFS[kind].mount) return `Prowadź: ${label}`
   if (ANIMAL_DEFS[kind].mount) return `Dosiądź: ${label}`
   if (canShear && animal.canBeSheared(nowDays)) return `Ostrzyż: ${label}`
   if (canMilk && animal.canBeMilked(nowDays)) return `Wydój: ${label}`
@@ -233,6 +234,15 @@ function corpseCandidate(
   knifeAvailable: boolean,
 ): Interactable | null {
   const label = ANIMAL_LABELS[animal.def.kind]
+  if (animal.canInspectStrayedCorpse()) {
+    return {
+      kind: 'corpse',
+      position: animal.mesh.position,
+      promptLabel: `Zbadaj zwłoki: ${label}`,
+      animal,
+      action: 'inspect',
+    }
+  }
   if (shovelHeld && !animal.readyToRemove()) {
     return {
       kind: 'corpse',

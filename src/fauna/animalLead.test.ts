@@ -52,4 +52,12 @@ describe('animalLead', () => {
     expect(resolveLeadMovement(true, state, animal, far, ANIMAL_DEFS.cow, false, false).kind)
       .toBe('none')
   })
+
+  it('accepts an explicit leadable override for household stray livestock (plan fauna-024)', () => {
+    const state = { following: false }
+    const animal = { x: 0, z: 0 }
+    const far = { x: LEAD_START_DISTANCE + 1, z: 0 }
+    expect(resolveLeadMovement(true, state, animal, far, ANIMAL_DEFS.sheep, false, false, true).kind)
+      .toBe('follow')
+  })
 })

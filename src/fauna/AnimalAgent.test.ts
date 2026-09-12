@@ -550,4 +550,69 @@ describe('AnimalAgent', () => {
       expect(chicken.mesh.position.x).toBeGreaterThan(50)
     })
   })
+
+  describe('lost livestock stray (fauna-024)', () => {
+    it('starts a stray episode on existing household livestock without changing id or owner', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-house0-0',
+        ownerHouseId: 'home:home:0',
+      }))
+      const owner = sheep.getOwner()
+      expect(sheep.startLivestockStray({ random: () => 0.2 })).toBe(true)
+      expect(sheep.animalId).toBe('sheep-house0-0')
+      expect(sheep.getOwner()).toEqual(owner)
+      expect(sheep.isStrayActive()).toBe(true)
+      expect(Math.hypot(sheep.mesh.position.x, sheep.mesh.position.z)).toBeGreaterThanOrEqual(36)
+      expect(sheep.startLivestockStray({ random: () => 0.9 })).toBe(false)
+      expect(sheep.isLeadable()).toBe(true)
+    })
+
+    it('round-trips stray/dead/inspection through snapshot hydrate and clears assist on return', () => {
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-house0-1',
+        ownerHouseId: 'home:home:0',
+      }))
+      sheep.startLivestockStray({ random: () => 0.3 })
+      const live = sheep.snapshot()
+      expect(live.stray?.active).toBe(true)
+      const loaded = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-house0-1',
+        ownerHouseId: 'home:home:0',
+      }))
+      loaded.hydrate(live)
+      expect(loaded.isStrayActive()).toBe(true)
+      expect(loaded.mesh.position.x).toBe(live.x)
+      expect(loaded.mesh.position.z).toBe(live.z)
+
+      loaded.takeDamage(9999)
+      expect(loaded.readyToRemove()).toBe(false)
+      loaded.hydrate({
+        ...loaded.snapshot(),
+        health: { current: 0, max: live.health.max, dead: true },
+        corpse: { timeSinceDeath: 90, meatHarvested: false },
+      })
+      expect(loaded.readyToRemove()).toBe(false)
+      expect(loaded.inspectStrayedCorpse()).toBe(true)
+      expect(loaded.snapshot().stray?.corpseInspected).toBe(true)
+
+      const returned = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-house0-2',
+        ownerHouseId: 'home:home:0',
+      }))
+      returned.startLivestockStray({ random: () => 0.4 })
+      returned.clearLivestockStray()
+      expect(returned.isStrayActive()).toBe(false)
+      expect(returned.snapshot().stray?.survivalAssist).toBe(false)
+      expect(returned.isLeadable()).toBe(false)
+      const x = returned.mesh.position.x
+      const z = returned.mesh.position.z
+      expect(returned.startLivestockStray({ random: () => 0.9 })).toBe(false)
+      expect(returned.mesh.position.x).toBe(x)
+      expect(returned.mesh.position.z).toBe(z)
+    })
+  })
 })

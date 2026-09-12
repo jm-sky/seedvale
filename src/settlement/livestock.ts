@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { AnimalSaveState, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
+import type { LivestockStrayCandidate } from '../fauna/animalStray'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { OwnedAnimalControlMode } from '../fauna/ownedAnimalControl'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
@@ -108,6 +109,23 @@ export function livestockRecordMatchesHouseholdSlot(
   return record.kind === kind
     && recordOwner?.kind === 'household'
     && recordOwner.houseId === ownerHouseId
+}
+
+/** Lightweight stray-selection view of a live livestock agent. */
+export function livestockStrayCandidateFromAgent(
+  settlementId: string,
+  animal: AnimalAgent,
+): LivestockStrayCandidate {
+  return {
+    animalId: animal.animalId,
+    kind: animal.def.kind,
+    settlementId,
+    houseId: animal.ownerHouseId ?? '',
+    dead: animal.isDead(),
+    mounted: animal.isMounted(),
+    owner: animal.getOwner(),
+    stray: animal.getStrayState(),
+  }
 }
 
 /** Narrow view `spawnLivestock()`/`createSettlement.ts` need over the

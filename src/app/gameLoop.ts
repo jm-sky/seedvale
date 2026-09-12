@@ -345,6 +345,8 @@ export type GameLoopDeps = {
   toast: Toast
   hud: Hud
   questManager: QuestManager
+  /** Starts/polls lost-livestock stray episodes from live world state. */
+  syncLostLivestockQuests: () => void
   ambientAudio: ReturnType<typeof createAmbientAudio>
   fireAudio: ReturnType<typeof createFireAudio>
   houseDoors: ReturnType<typeof createHouseDoorTracker>
@@ -631,7 +633,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, lead, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startShearAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
@@ -1936,6 +1938,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           startDepositMine(target.id, target.position.x, target.position.z)
         } else if (target.kind === 'corpse') {
           if (target.action === 'bury') startBuryCorpse(target.animal)
+          else if (target.action === 'inspect') {
+            if (target.animal.inspectStrayedCorpse()) {
+              toast.show('Zbadałeś zwłoki.')
+              questManager.pollLostLivestockSources()
+            }
+          }
           else startHarvestMeat?.(target.animal)
         } else if (target.kind === 'npc') {
           // Buttons need a visible cursor — same pointer-lock release the
@@ -2462,6 +2470,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             lightningScare,
           )
         })
+        syncLostLivestockQuests()
         withCategory(monitor, 'FAUNA', () => {
           bundle.fauna.update(
             dt,

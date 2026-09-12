@@ -33,6 +33,7 @@ import { installNpcDebugApi } from '../debug/npcDebugApi'
 import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
 import { createPlayerGroundTraceBuffer } from '../debug/playerGroundTrace'
 import { createPlayerMovementTraceBuffer } from '../debug/playerMovementTrace'
+import { isHouseholdOwned } from '../fauna/animalOwnership'
 import { findHomeCaveSpawner } from '../fauna/createFauna'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -97,6 +98,7 @@ import {
   type RpgSettlementRef,
 } from '../quests/opportunities/rpgQuestMatrices'
 import {
+  parseLostLivestockQuestId,
   parseWolfDenPressureQuestId,
   wolfDenPressureStatusFromSpawners,
 } from '../quests/opportunities/settlementQuestOpportunities'
@@ -111,6 +113,7 @@ import { applySocialConsequence, ReputationManager } from '../reputation/Reputat
 import { settlementSpawnPoint } from '../settlement/createSettlement'
 import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
+import { livestockStrayCandidateFromAgent } from '../settlement/livestock'
 import { settlementNpcDescriptors } from '../settlement/npcIdentity'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
@@ -1028,6 +1031,10 @@ export async function createApp(
       npcs,
       persistedQuestIds,
       includeWorldDriven: def.isHome,
+      livestock: def.isHome
+        ? (bundle.settlementsManager.getLoaded().find((settlement) => settlement.id === def.id)?.livestock ?? [])
+          .map((animal) => livestockStrayCandidateFromAgent(def.id, animal))
+        : [],
       rpg: {
         settlementId: def.id,
         settlementX: def.x,
@@ -1129,6 +1136,24 @@ export async function createApp(
         return wolfDenPressureStatusFromSpawners(parsed.spawnerId, bundle.fauna.getSpawners())
       },
     },
+    {
+      getSnapshot: (questId) => {
+        const parsed = parseLostLivestockQuestId(questId)
+        if (!parsed) return 'untracked'
+        const animal = bundle.settlementsManager.resolvePersistentAnimal(parsed.animalId)
+        if (!animal) return 'unavailable'
+        const status = animal.lostLivestockStatus()
+        if (
+          status === 'unavailable'
+          && !animal.isDead()
+          && isHouseholdOwned(animal.getOwner())
+          && !animal.isMounted()
+        ) {
+          return 'lost-alive'
+        }
+        return status
+      },
+    },
   )
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
@@ -1143,6 +1168,7 @@ export async function createApp(
     questManager.onInteractObjective({ type: 'animal_died', animalId })
     questManager.onHorseRewardTargetDied(animalId)
     questManager.pollSettlementRatInfestationObjectives()
+    questManager.pollLostLivestockSources()
   }
   // Character Screen's local reputation view (plan quests-progression-001) —
   // refreshed on screen open (`openCharacter` below) and after a social
@@ -1254,6 +1280,22 @@ export async function createApp(
   questManager.pollDestroySpawnPointObjectives()
   questManager.pollWorldDrivenSources()
   questManager.pollWorldProgressionObjectives()
+  const syncLostLivestockQuests = (): void => {
+    for (const def of questDefs) {
+      const parsed = parseLostLivestockQuestId(def.id)
+      if (!parsed) continue
+      const state = questManager.getState(def.id)
+      if (state !== 'offered' && state !== 'active') continue
+      const animal = bundle.settlementsManager.resolvePersistentAnimal(parsed.animalId)
+      if (!animal) continue
+      const predators = bundle.fauna.getAgents()
+        .filter((agent) => agent.def.role === 'predator' && !agent.isDead())
+        .map((agent) => ({ x: agent.mesh.position.x, z: agent.mesh.position.z }))
+      animal.startLivestockStray({ predators })
+    }
+    questManager.pollLostLivestockSources()
+  }
+  syncLostLivestockQuests()
 
   // Riding (plan fauna-003) — livestock has a deterministic per-house
   // `animalId` (`settlement/livestock.ts`), so a saved `mountedAnimalId`
@@ -2174,7 +2216,7 @@ export async function createApp(
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, lead, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork: (mode, x, z) => {
       if (hasItemCapability(heldTool.held(), 'rock_mining')) {

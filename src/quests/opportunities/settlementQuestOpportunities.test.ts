@@ -4,8 +4,11 @@ import type { OpportunityNpc } from './worldQuestOpportunityTypes'
 import { generateFamilies } from '../../settlement/families'
 import { resolveInitialProfessionStaffing } from '../../settlement/professionStaffing'
 import {
+  collectLostLivestockOpportunities,
   collectSettlementQuestOpportunities,
   collectWolfDenPressureOpportunities,
+  lostLivestockQuestId,
+  parseLostLivestockQuestId,
   parseWolfDenPressureQuestId,
   wolfDenPressureQuestId,
   wolfDenPressureSourceStatus,
@@ -82,6 +85,68 @@ describe('wolf-den pressure opportunity identity', () => {
       kind: 'wolf-den-pressure',
       spawnerId: 'home:wolfDen',
     }])
+  })
+})
+
+describe('lost livestock opportunity (fauna-024)', () => {
+  it('binds a stable id to an existing animal and does not invent a new one', () => {
+    const livestock = [{
+      animalId: 'sheep-house0-0',
+      kind: 'sheep' as const,
+      settlementId: 'home',
+      houseId: 'home:home:0',
+      dead: false,
+      mounted: false,
+      owner: { kind: 'household' as const, houseId: 'home:home:0' },
+      stray: undefined,
+    }]
+    const [opportunity] = collectLostLivestockOpportunities('home', livestock)
+    expect(opportunity?.animalId).toBe('sheep-house0-0')
+    expect(opportunity?.id).toBe(lostLivestockQuestId('home', 'sheep-house0-0'))
+    expect(parseLostLivestockQuestId(opportunity!.id)).toEqual({ settlementId: 'home', animalId: 'sheep-house0-0' })
+    const def = materializeSettlementQuestOpportunity(opportunity!, [anna, hunter], 'Dolina')
+    expect(def?.giver.npcId).toBe(anna.id)
+    expect(def?.stages[0]?.objective).toEqual({ type: 'recover_lost_livestock', animalId: 'sheep-house0-0' })
+    const again = materializeSettlementQuestOpportunity(opportunity!, [anna, hunter], 'Dolina')
+    expect(again).toEqual(def)
+  })
+
+  it('reconstructs the same definition from a persisted id without redisplacing identity', () => {
+    const livestock = [{
+      animalId: 'sheep-house0-0',
+      kind: 'sheep' as const,
+      settlementId: 'home',
+      houseId: 'home:home:0',
+      dead: false,
+      mounted: false,
+      owner: { kind: 'household' as const, houseId: 'home:home:0' },
+      stray: {
+        active: true,
+        originX: 1,
+        originZ: 2,
+        survivalAssist: true,
+        corpseInspected: false,
+      },
+    }]
+    const first = buildWorldDrivenSettlementQuests({
+      settlementId: 'home',
+      settlementName: 'Dolina',
+      spawners: [wolfDen({ pressure: 0.75 })],
+      npcs: [anna, hunter],
+      livestock,
+    })
+    const restored = buildWorldDrivenSettlementQuests({
+      settlementId: 'home',
+      settlementName: 'Dolina',
+      spawners: [wolfDen({ pressure: 0.75 })],
+      npcs: [anna, hunter],
+      livestock,
+      persistedQuestIds: [lostLivestockQuestId('home', 'sheep-house0-0')],
+    })
+    const lostDefs = first.filter((def) => def.id.startsWith('world:lost-livestock:'))
+    const restoredLost = restored.filter((def) => def.id.startsWith('world:lost-livestock:'))
+    expect(lostDefs[0]?.id).toBe(lostLivestockQuestId('home', 'sheep-house0-0'))
+    expect(restoredLost[0]).toEqual(lostDefs[0])
   })
 })
 

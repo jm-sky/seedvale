@@ -44,7 +44,7 @@ export type Interactable =
    *  or knife `harvest` for raw_meat (plan 106, only while knife is held and
    *  not yet harvested). The single `HeldTool` slot means these two never
    *  overlap on the same corpse at once. */
-  | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent, action: 'bury' | 'harvest' }
+  | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent, action: 'bury' | 'harvest' | 'inspect' }
   /** `[E]` drinks directly; `[R]` fills a carried empty waterskin (plan 106
    *  §4). `source` is resolved by `app/interactables.ts` at candidate-build
    *  time — a settlement well always plain `createWaterSource('well')`.

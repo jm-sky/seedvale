@@ -373,6 +373,10 @@ export type QuestObjective =
   /** Authored treasure payload removed from a world-generated container (plan
    *  quests-progression-009) — not satisfied by merely opening the UI. */
   | { type: 'loot_world_container', containerId: string }
+  /** Lost household livestock recovered from world state (plan fauna-024) —
+   *  not `find_animal` (death is not failure). `animalId` is the existing
+   *  persistent livestock identity bound at materialization. */
+  | { type: 'recover_lost_livestock', animalId: string }
 
 /**
  * Player-facing speech available while this stage is active. Selection

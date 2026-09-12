@@ -78,6 +78,7 @@ world/settlement state
 Implemented opportunity sources/types:
 
 - `wolf-den-pressure` — a real settlement-owned wolf-den/spawner problem;
+- `lost-livestock` — an existing household livestock individual in a fauna-owned stray episode;
 - RPG matrices:
   - `old-place-secret`,
   - `suspicious-transport`,
@@ -85,7 +86,7 @@ Implemented opportunity sources/types:
 
 Important symbols:
 
-- `collectSettlementQuestOpportunities()` / `collectWolfDenPressureOpportunities()`;
+- `collectSettlementQuestOpportunities()` / `collectWolfDenPressureOpportunities()` / `collectLostLivestockOpportunities()`;
 - `collectRpgQuestOpportunities()`;
 - `selectSettlementQuestOpportunities()`;
 - `materializeSettlementQuestOpportunity()` / `materializeRpgQuestOpportunity()`;
@@ -142,6 +143,7 @@ Implemented `QuestObjective` types:
 - `kill_target_animal`
 - `clear_wolf_den`
 - `find_animal`
+- `recover_lost_livestock`
 
 ### Inventory / collection / discovery
 
@@ -256,7 +258,7 @@ Important boundary: `QuestManager.animalTargets` is runtime-only and is not pers
 - an active wild-fauna individual target cannot be assumed to be the same animal, because ordinary wild individual identity/death state is not persisted;
 - such an untrustworthy active binding becomes `invalidated` rather than silently retargeting a different individual.
 
-World/progression objectives (`discover_location`, `loot_world_container`, destroyed spawn points, rat infestation, etc.) use live injected authoritative state and may catch up after restore.
+World/progression objectives (`discover_location`, `loot_world_container`, destroyed spawn points, rat infestation, lost-livestock stray snapshots, etc.) use live injected authoritative state and may catch up after restore.
 
 For the full save classification and schema ownership, see `docs/state/persistence.md` and `docs/architecture/ARCHITECTURE.md`.
 
@@ -278,7 +280,7 @@ See `docs/state/settlements.md`.
 
 ### Fauna
 
-QuestManager does not scan fauna ownership internally. Target resolution, death/found events, wolf-den state, dangerous marking and ownership transfer are injected or reported from the fauna/world side.
+QuestManager does not scan fauna ownership internally. Target resolution, death/found events, wolf-den state, lost-livestock stray snapshots, dangerous marking and ownership transfer are injected or reported from the fauna/world side.
 
 See `docs/state/fauna.md`.
 

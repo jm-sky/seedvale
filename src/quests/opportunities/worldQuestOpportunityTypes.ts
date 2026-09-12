@@ -1,4 +1,5 @@
 import type { Role } from '../../ai/characters'
+import type { LostLivestockSourceStatus } from '../../fauna/animalStray'
 import type { NpcId } from '../../settlement/npcState'
 
 /**
@@ -12,7 +13,7 @@ import type { NpcId } from '../../settlement/npcState'
  * @system settlement-quest-opportunities
  * @role Data-only opportunity contract between settlement/world systems and quest materialization.
  */
-export type WorldQuestOpportunityKind = 'wolf-den-pressure'
+export type WorldQuestOpportunityKind = 'wolf-den-pressure' | 'lost-livestock'
 
 /**
  * Authored RPG scenario matrices. Eligibility binds real world refs;
@@ -36,6 +37,20 @@ export type WolfDenPressureOpportunity = {
 }
 
 /**
+ * Lost household livestock opportunity. `animalId` is the existing
+ * persistent livestock identity; `houseId` is the household owner slot.
+ *
+ * @domain quests-progression
+ */
+export type LostLivestockOpportunity = {
+  id: string
+  settlementId: string
+  kind: 'lost-livestock'
+  houseId: string
+  animalId: string
+}
+
+/**
  * Lightweight RPG matrix candidate. `sourceId` is a stable world/NPC/settlement
  * ref used both as the quest-id variant and as materialization input.
  *
@@ -49,7 +64,7 @@ export type RpgQuestOpportunity = {
   sourceId: string
 }
 
-export type SettlementQuestOpportunity = WolfDenPressureOpportunity | RpgQuestOpportunity
+export type SettlementQuestOpportunity = WolfDenPressureOpportunity | LostLivestockOpportunity | RpgQuestOpportunity
 
 /**
  * Live source status for a materialized world-driven quest.
@@ -67,6 +82,16 @@ export type WorldQuestSourceStatus = 'untracked' | 'present' | 'resolved' | 'abs
  */
 export type WorldQuestSourceLookup = {
   getStatus: (questId: string) => WorldQuestSourceStatus
+}
+
+/**
+ * Typed lost-livestock world snapshot. Distinct from binary present/resolved
+ * because live return and inspected corpse are different terminals.
+ *
+ * @domain quests-progression
+ */
+export type LostLivestockSourceLookup = {
+  getSnapshot: (questId: string) => LostLivestockSourceStatus | 'untracked'
 }
 
 /**

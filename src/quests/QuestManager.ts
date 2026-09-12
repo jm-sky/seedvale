@@ -4,10 +4,20 @@ import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { ReputationDimension, SocialConsequence } from '../reputation/ReputationManager'
 import type { NpcId } from '../settlement/npcState'
-import type { WorldQuestSourceLookup, WorldQuestSourceStatus } from './opportunities/worldQuestOpportunityTypes'
+import type {
+  LostLivestockSourceLookup,
+  WorldQuestSourceLookup,
+  WorldQuestSourceStatus,
+} from './opportunities/worldQuestOpportunityTypes'
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
+import {
+  LOST_LIVESTOCK_DEAD_OUTCOME,
+  LOST_LIVESTOCK_LIVE_OUTCOME,
+  LOST_LIVESTOCK_UNAVAILABLE_OUTCOME,
+  parseLostLivestockQuestId,
+} from './opportunities/settlementQuestOpportunities'
 import {
   type QuestConsequences,
   type QuestDef,
@@ -198,6 +208,10 @@ const NO_WORLD_QUEST_SOURCE: WorldQuestSourceLookup = {
   getStatus: () => 'untracked',
 }
 
+const NO_LOST_LIVESTOCK_SOURCE: LostLivestockSourceLookup = {
+  getSnapshot: () => 'untracked',
+}
+
 export type { WorldQuestSourceLookup, WorldQuestSourceStatus }
 
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
@@ -290,6 +304,7 @@ export class QuestManager {
   private readonly spawnPointDestruction: SpawnPointDestructionLookup
   private readonly worldProgress: QuestWorldProgressLookup
   private readonly worldQuestSource: WorldQuestSourceLookup
+  private readonly lostLivestockSource: LostLivestockSourceLookup
   private readonly transferAnimalOwnership: QuestAnimalOwnershipTransfer
   private readonly canReserveHorseReward: HorseRewardAvailability
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
@@ -314,6 +329,7 @@ export class QuestManager {
     spawnPointDestruction: SpawnPointDestructionLookup = NO_SPAWN_POINT_DESTRUCTION,
     worldProgress: QuestWorldProgressLookup = NO_WORLD_PROGRESS,
     worldQuestSource: WorldQuestSourceLookup = NO_WORLD_QUEST_SOURCE,
+    lostLivestockSource: LostLivestockSourceLookup = NO_LOST_LIVESTOCK_SOURCE,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -328,6 +344,7 @@ export class QuestManager {
     this.spawnPointDestruction = spawnPointDestruction
     this.worldProgress = worldProgress
     this.worldQuestSource = worldQuestSource
+    this.lostLivestockSource = lostLivestockSource
     this.transferAnimalOwnership = transferAnimalOwnership
     this.canReserveHorseReward = canReserveHorseReward
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
@@ -444,6 +461,8 @@ export class QuestManager {
     if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return false
     const source = this.worldQuestSource.getStatus(def.id)
     if (source !== 'untracked' && source !== 'present') return false
+    const lost = this.lostLivestockSource.getSnapshot(def.id)
+    if (lost !== 'untracked' && lost !== 'lost-alive' && lost !== 'corpse-uninspected') return false
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) return true
     return prerequisites.every((prereq) => this.meetsPrerequisite(def, prereq))
@@ -592,6 +611,37 @@ export class QuestManager {
       if (status === 'resolved') {
         const failed = uniqueOutcomeForState(def, 'failed')
         if (failed) this.applyOutcome(def, failed.id)
+      }
+    }
+  }
+
+  /**
+   * Polls typed lost-livestock world snapshots. Outcomes come from fauna
+   * state, never from quest-local flags.
+   *
+   * @domain quests-progression
+   */
+  pollLostLivestockSources(): void {
+    for (const def of this.defs) {
+      if (!parseLostLivestockQuestId(def.id)) continue
+      const snapshot = this.lostLivestockSource.getSnapshot(def.id)
+      if (snapshot === 'untracked') continue
+      const s = this.stateOf(def.id)
+      if (s.state === 'offered' && snapshot !== 'lost-alive' && snapshot !== 'corpse-uninspected') {
+        this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
+        continue
+      }
+      if (s.state !== 'active') continue
+      if (snapshot === 'returned') {
+        this.applyOutcome(def, LOST_LIVESTOCK_LIVE_OUTCOME)
+        continue
+      }
+      if (snapshot === 'corpse-inspected') {
+        this.applyOutcome(def, LOST_LIVESTOCK_DEAD_OUTCOME)
+        continue
+      }
+      if (snapshot === 'unavailable') {
+        this.applyOutcome(def, LOST_LIVESTOCK_UNAVAILABLE_OUTCOME)
       }
     }
   }
