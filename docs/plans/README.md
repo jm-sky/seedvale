@@ -58,9 +58,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
 | 💡 `items-player-029-wearable-armor-and-combat-equipment.md`                   | -       | 🟡 | L      | -      |
+| 💡 `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 | 💡 `npc-029-npc-accompany-follow-commitment.md`                                | -       | 🔴 | M      | ~~settlements-npcs-019~~ |
 | 💡 `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`         | -       | 🟡 | M      | fauna-014, ~~world-009~~, items-player-025 |
-| 💡 `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 | 💡 `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~, fauna-022 |
 | 💡 `npc-030-paid-expedition-escort-work-contracts.md`                          | -       | 🔴 | L      | npc-029 |
 | 💡 `npc-031-voluntary-expedition-joining.md`                                   | -       | 🔴 | M      | npc-029 |
