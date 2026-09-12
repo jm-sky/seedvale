@@ -9,6 +9,7 @@
 **Subdomains:** `inventory` `items`
 **Tags:** `armor` `equipment` `quality`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
