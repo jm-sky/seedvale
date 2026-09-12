@@ -141,6 +141,8 @@ Implemented `QuestObjective` types:
 
 - `spot_animal`
 - `kill_target_animal`
+- `harvest_animals` — player knife-harvest count per species (`QuestProgressEntry.stageCount`; player-only `QuestManager.onAnimalHarvested`)
+- `feed_habitat_animals` — successful loose-food consumption at a bound `spawnerId` (`QuestManager.onHabitatAnimalFed`; runtime per-`animalId` dedupe only, count persisted)
 - `clear_wolf_den`
 - `find_animal`
 - `recover_lost_livestock`

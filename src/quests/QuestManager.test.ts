@@ -2761,3 +2761,71 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
     expect(reversed.labelMarker('Anna')).toBe(QUEST_MARKER_TALK_TARGET)
   })
 })
+
+describe('counted harvest and habitat feed objectives (plan quests-progression-020)', () => {
+  const harvestQuest = quest({
+    id: 'harvest-q',
+    giverName: 'Jan',
+    giver: { npcId: 'Jan' },
+    offerLine: 'hunt',
+    stages: [
+      { objective: { type: 'harvest_animals', kind: 'deer', count: 2 }, description: 'hunt deer', reminderLine: 'r' },
+      { objective: { type: 'gather_item', kind: 'hide', count: 2 }, description: 'hide', reminderLine: 'r', playerLine: 'hand in' },
+    ],
+    reportLine: 'done',
+    outcomes: [{ id: 'done', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Jan' }, delta: 1 }] } }],
+  })
+
+  it('increments harvest_animals only for matching player harvests', () => {
+    const qm = makeManager([harvestQuest])
+    acceptOffer(qm, 'Jan')
+    qm.onAnimalHarvested({ animalId: 'd1', animalKind: 'deer', lootKinds: ['hide'] })
+    expect(qm.exportProgress().find((e) => e.id === 'harvest-q')?.stageCount).toBe(1)
+    qm.onAnimalHarvested({ animalId: 'd2', animalKind: 'wolf', lootKinds: [] })
+    expect(qm.exportProgress().find((e) => e.id === 'harvest-q')?.stageCount).toBe(1)
+    qm.onAnimalHarvested({ animalId: 'd3', animalKind: 'deer', lootKinds: ['hide'] })
+    expect(qm.getState('harvest-q')).toBe('active')
+    expect(qm.exportProgress().find((e) => e.id === 'harvest-q')?.stageIndex).toBe(1)
+  })
+
+  it('restores counted harvest progress across export/import', () => {
+    const qm = makeManager([harvestQuest])
+    acceptOffer(qm, 'Jan')
+    qm.onAnimalHarvested({ animalId: 'd1', animalKind: 'deer', lootKinds: [] })
+    const saved = qm.exportProgress()
+    const restored = makeManager([harvestQuest], undefined, undefined, { progress: saved, relations: {} })
+    expect(restored.exportProgress().find((e) => e.id === 'harvest-q')?.stageCount).toBe(1)
+  })
+
+  const feedQuest = quest({
+    id: 'feed-q',
+    giverName: 'Jan',
+    giver: { npcId: 'Jan' },
+    offerLine: 'feed',
+    stages: [{
+      objective: {
+        type: 'feed_habitat_animals',
+        spawnerId: 'home:thicket',
+        kinds: ['deer', 'stag'],
+        count: 2,
+        foodKinds: ['apple', 'carrot', 'berries'],
+      },
+      description: 'feed',
+      reminderLine: 'r',
+    }],
+    reportLine: 'fed',
+    outcomes: [{ id: 'fed', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Jan' }, delta: 1 }] } }],
+  })
+
+  it('counts habitat feed only after matching consumption', () => {
+    const qm = makeManager([feedQuest])
+    acceptOffer(qm, 'Jan')
+    qm.onHabitatAnimalFed({ animalId: 'a1', animalKind: 'deer', spawnPointId: 'home:thicket', itemKind: 'apple' })
+    qm.onHabitatAnimalFed({ animalId: 'a1', animalKind: 'deer', spawnPointId: 'home:thicket', itemKind: 'carrot' })
+    expect(qm.exportProgress().find((e) => e.id === 'feed-q')?.stageCount).toBe(1)
+    qm.onHabitatAnimalFed({ animalId: 'a2', animalKind: 'stag', spawnPointId: 'other', itemKind: 'apple' })
+    expect(qm.exportProgress().find((e) => e.id === 'feed-q')?.stageCount).toBe(1)
+    qm.onHabitatAnimalFed({ animalId: 'a3', animalKind: 'stag', spawnPointId: 'home:thicket', itemKind: 'berries' })
+    expect(qm.getState('feed-q')).toBe('ready_to_report')
+  })
+})

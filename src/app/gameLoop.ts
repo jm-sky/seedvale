@@ -2612,6 +2612,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               if (!item) return null
               return { kind: item.kind, foodBatch: item.foodBatch }
             },
+            (event) => {
+              questManager.onHabitatAnimalFed(event)
+            },
             playerObservation,
           )
         })

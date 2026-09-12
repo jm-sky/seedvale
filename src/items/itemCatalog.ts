@@ -788,6 +788,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 134 — secondary knife-harvest yield from any dead animal corpse, alongside its species meat (`createApp.ts`\'s `startHarvestMeat`). Sellable to Kupiec.',
   },
+  antler: {
+    kind: 'antler',
+    label: 'poroże',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan quests-progression-020 — 50% knife-harvest trophy from an adult stag corpse; normal resource/trade item.',
+  },
   cheese: {
     kind: 'cheese',
     label: 'ser',

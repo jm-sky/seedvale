@@ -2174,6 +2174,7 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
   if (typeof e.state !== 'string' || !QUEST_STATES.has(e.state as QuestProgressEntry['state'])) return false
   if (typeof e.stageIndex !== 'number' || !Number.isInteger(e.stageIndex) || e.stageIndex < 0) return false
   if (e.resolvedOutcomeId !== undefined && typeof e.resolvedOutcomeId !== 'string') return false
+  if (e.stageCount !== undefined && (typeof e.stageCount !== 'number' || !Number.isInteger(e.stageCount) || e.stageCount < 0)) return false
   return true
 }
 

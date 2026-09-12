@@ -173,6 +173,7 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   mushroom: 2,
   flower: 2,
   herb: 3,
+  antler: 14,
   coal: 4,
   iron: 6,
   gold: 20,

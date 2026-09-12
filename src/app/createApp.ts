@@ -104,6 +104,7 @@ import {
   parseWolfDenPressureQuestId,
   wolfDenPressureStatusFromSpawners,
 } from '../quests/opportunities/settlementQuestOpportunities'
+import { buildHunterProfessionQuests } from '../quests/opportunities/hunterProfessionQuests'
 import {
   buildWorldDrivenSettlementQuests,
   opportunityNpcsFromSettlement,
@@ -1076,6 +1077,15 @@ export async function createApp(
         if (stage.objective.type === 'interact_landmark') occupiedLandmarkIds.add(stage.objective.landmarkId)
       }
     }
+    if (def.isHome) {
+      opportunityQuestDefs.push(...buildHunterProfessionQuests({
+        settlementId: def.id,
+        settlementName: def.name,
+        npcs,
+        spawners: bundle.fauna.getSpawners(),
+        persistedQuestIds,
+      }))
+    }
   }
   const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]
   const initialQuestState = initialSave?.quests
@@ -1302,6 +1312,9 @@ export async function createApp(
     },
     onWorldContainerWithdraw: () => {
       questManager.pollWorldProgressionObjectives()
+    },
+    onPlayerAnimalHarvested: (context) => {
+      questManager.onAnimalHarvested(context)
     },
   }
 

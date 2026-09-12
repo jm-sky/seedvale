@@ -259,6 +259,8 @@ export type QuestProgressEntry = {
   state: QuestState
   stageIndex: number
   resolvedOutcomeId?: QuestOutcomeId
+  /** Stage-local counted objective progress (plan quests-progression-020). */
+  stageCount?: number
 }
 
 export const QUEST_STATES: ReadonlySet<QuestState> = new Set([
@@ -324,6 +326,18 @@ export type QuestObjective =
    *  global constants or the animal's own AI. */
   | { type: 'spot_animal', kind: AnimalKind, range?: number }
   | { type: 'gather_item', kind: ItemKind, count: number }
+  /** Player knife-harvest count for a species (plan quests-progression-020) —
+   *  incremented from a player-only reporting seam, not inventory counts. */
+  | { type: 'harvest_animals', kind: AnimalKind, count: number }
+  /** Successful loose-food consumption near a habitat spawner (plan
+   *  quests-progression-020 / fauna-023). */
+  | {
+      type: 'feed_habitat_animals'
+      spawnerId: string
+      kinds: readonly AnimalKind[]
+      count: number
+      foodKinds: readonly ItemKind[]
+    }
   /** "A dangerous wolf" (plan 093 Etap D) — defined by kind, but
    *  `QuestManager` binds it to one concrete `AnimalAgent.animalId` the
    *  moment this stage becomes active (via an injected resolver, not by

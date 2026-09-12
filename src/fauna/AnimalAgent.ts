@@ -912,6 +912,14 @@ export type AnimalUpdateContext = {
   consumeAttractedFood?: (droppedItemId: string) => { kind: ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null
   /** Peek a live dropped item without removing it (plan fauna-023 §7). */
   peekAttractedFood?: (droppedItemId: string) => { kind: ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null
+  /** Successful atomic dropped-food consumption (plan quests-progression-020)
+   *  — fired only after relief is applied, not on approach alone. */
+  onAttractedFoodConsumed?: (event: {
+    animalId: string
+    animalKind: AnimalKind
+    spawnPointId?: string
+    itemKind: ItemKind
+  }) => void
   /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
    *  for an owned `dog`'s idle pest-chase (`pursuePest`); every other kind
    *  never reads this. Caller-bounded the same way as `nearbySettlementNpcs`
@@ -1306,6 +1314,7 @@ export class AnimalAgent {
   private attractionConsumeFood: AnimalUpdateContext['consumeAttractedFood'] = undefined
   /** Narrow peek callback captured for this tick from update context. */
   private attractionPeekFood: AnimalUpdateContext['peekAttractedFood'] = undefined
+  private onAttractedFoodConsumedHook: AnimalUpdateContext['onAttractedFoodConsumed'] = undefined
   /** Set once by `markDangerous()` — a visibly/gameplay-distinct individual
    *  bound to a `kill_target_animal { dangerous: true }` quest stage
    *  (plan 110), not a separate animal type. Composes with `variant` via
@@ -1490,6 +1499,12 @@ export class AnimalAgent {
     const factor = JUVENILE_SCALE_FACTOR[this.def.kind]
     if (factor) this.mesh.scale.multiplyScalar(1 / factor)
     this.labelController.label.position.y = this.labelHeight()
+  }
+
+  /** Whether this individual is still in the juvenile life stage (plan
+   *  quests-progression-020 trophy gating). */
+  isJuvenile(): boolean {
+    return this.lifeStage === 'juvenile'
   }
 
   /** Name/HP label height above the mesh root — folds in the juvenile scale
@@ -2569,6 +2584,7 @@ export class AnimalAgent {
       attractionSources = [],
       consumeAttractedFood,
       peekAttractedFood,
+      onAttractedFoodConsumed,
       nearbyRats = [],
       playerObservation = DEFAULT_PLAYER_OBSERVATION,
       playerControlPos,
@@ -2577,6 +2593,7 @@ export class AnimalAgent {
     this._tickPlayerControlPos = playerControlPos ?? null
     this.attractionConsumeFood = consumeAttractedFood
     this.attractionPeekFood = peekAttractedFood
+    this.onAttractedFoodConsumedHook = onAttractedFoodConsumed
     this.attractionClockSec += dt
     pruneAttractionIgnored(this.attractionIgnoreUntil, this.attractionClockSec)
     if (
@@ -3794,7 +3811,15 @@ export class AnimalAgent {
         const consumed = this.attractionConsumeFood?.(droppedId) ?? null
         if (consumed) {
           const relief = dietItemReliefScale(this.def.diet, consumed.kind)
-          if (relief != null) consumeFood(this.life, relief)
+          if (relief != null) {
+            consumeFood(this.life, relief)
+            this.onAttractedFoodConsumedHook?.({
+              animalId: this.animalId,
+              animalKind: this.def.kind,
+              spawnPointId: this.spawnPointId,
+              itemKind: consumed.kind,
+            })
+          }
         }
         this.attractionTarget = null
         this.attractionPhase = null

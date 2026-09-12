@@ -226,6 +226,12 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
         if (!result) return
         let message = `+1 ${ITEM_DEFS[result.meatKind].label}`
         if (result.hide) message += ', +1 skóra'
+        for (const kind of result.lootKinds) message += `, +1 ${ITEM_DEFS[kind].label}`
+        ctx.onPlayerAnimalHarvested?.({
+          animalId: animal.animalId,
+          animalKind: animal.def.kind,
+          lootKinds: [...result.lootKinds, ...(result.hide ? ['hide' as const] : [])],
+        })
         playInventoryPickUp(worldAudio.playOnce)
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.onInventoryChanged()

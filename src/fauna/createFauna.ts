@@ -135,6 +135,12 @@ export type Fauna = {
     /** Atomic dropped-food consume/peek for attraction completion. */
     consumeAttractedFood?: (droppedItemId: string) => { kind: import('../items/items').ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null,
     peekAttractedFood?: (droppedItemId: string) => { kind: import('../items/items').ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null,
+    onAttractedFoodConsumed?: (event: {
+      animalId: string
+      animalKind: import('./AnimalAgent').AnimalKind
+      spawnPointId?: string
+      itemKind: import('../items/items').ItemKind
+    }) => void,
     /** Player-as-observer presentation inputs (npc-023) — forwarded to each
      *  wild `AnimalAgent.update()`. */
     playerObservation?: import('../simulation/observation').PlayerObservationInput,
@@ -1177,6 +1183,7 @@ export async function createFauna(
       attractionSources = [],
       consumeAttractedFood,
       peekAttractedFood,
+      onAttractedFoodConsumed,
       playerObservation,
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
@@ -1209,6 +1216,7 @@ export async function createFauna(
           attractionSources,
           consumeAttractedFood,
           peekAttractedFood,
+          onAttractedFoodConsumed,
           playerObservation,
         })
       }

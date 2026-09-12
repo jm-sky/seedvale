@@ -73,6 +73,12 @@ export type PlayerActionContext = {
   onSpawnPointDestroyed?: () => void
   /** World-authored container withdraw (plan quests-progression-009). */
   onWorldContainerWithdraw?: (containerId: string, kind: ItemKind, amount: number) => void
+  /** Player knife harvest completed (plan quests-progression-020). */
+  onPlayerAnimalHarvested?: (context: {
+    animalId: string
+    animalKind: import('../../fauna/AnimalAgent').AnimalKind
+    lootKinds: readonly ItemKind[]
+  }) => void
 }
 
 /** The standard "another blocking activity is already running" guard: a busy

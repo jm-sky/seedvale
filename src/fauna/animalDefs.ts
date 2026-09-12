@@ -271,6 +271,13 @@ const HERBIVORE_DIET: AnimalDietConfig = {
   items: { hay: 0.9, apple: 0.6, carrot: 0.5 },
 }
 
+/** Wild deer/stag dropped-food diet (plan quests-progression-020) — extends the
+ *  household herbivore set with forage berries for systemic attraction. */
+const DEER_STAG_DIET: AnimalDietConfig = {
+  grass: 1,
+  items: { hay: 0.9, apple: 0.6, carrot: 0.5, berries: 0.55 },
+}
+
 /** Shared meat diet (plan fauna-011 §3/§4, reused by wolf/fox in plan
  *  fauna-014 §2) — no `grass` and no `scavenging` block; `items` lists every
  *  raw/bait-tagged meat `ItemKind` (`itemCatalog.ts`'s `food.bait ===
@@ -393,7 +400,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 18,
     playerPanicRange: 4,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
-    diet: HERBIVORE_DIET,
+    diet: DEER_STAG_DIET,
     // Plan fauna-016 §3/§5: ranges further than the default band and
     // periodically makes a deliberate trip out to water.
     roaming: LARGE_ROAMING_RANGE,
@@ -413,7 +420,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 16,
     playerPanicRange: 4,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
-    diet: HERBIVORE_DIET,
+    diet: DEER_STAG_DIET,
     roaming: LARGE_ROAMING_RANGE,
     trips: { water: DEER_WATER_TRIP },
   },

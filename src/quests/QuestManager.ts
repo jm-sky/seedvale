@@ -137,6 +137,27 @@ type QuestRuntimeProgress = {
   state: QuestState
   stageIndex: number
   resolvedOutcomeId?: QuestOutcomeId
+  /** Stage-local counted objective progress (plan quests-progression-020). */
+  stageCount?: number
+}
+
+/** Player-only harvest report (plan quests-progression-020). */
+export type PlayerAnimalHarvestContext = {
+  animalId: string
+  animalKind: AnimalKind
+  lootKinds: readonly ItemKind[]
+}
+
+/** Successful loose-food consumption report (plan quests-progression-020). */
+export type HabitatAnimalFeedContext = {
+  animalId: string
+  animalKind: AnimalKind
+  spawnPointId?: string
+  itemKind: ItemKind
+}
+
+function isCountedObjective(objective: QuestObjective | undefined): boolean {
+  return objective?.type === 'harvest_animals' || objective?.type === 'feed_habitat_animals'
 }
 
 export type QuestItemGrant = (kind: ItemKind, count: number) => void
@@ -317,6 +338,9 @@ export class QuestManager {
   /** `questId → animalId` bound the moment a `kill_target_animal` stage
    *  becomes active — see `bindAnimalTargetIfNeeded`. */
   private readonly animalTargets = new Map<string, string>()
+  /** Runtime-only feed dedupe per active counted feed stage (plan
+   *  quests-progression-020) — not persisted across save/load. */
+  private readonly feedContributionIds = new Map<string, Set<string>>()
   private readonly playSound: (url: string, volume?: number) => void
   private readonly grantItem: QuestItemGrant
   private readonly resolveAnimalTarget: AnimalTargetResolver
@@ -410,6 +434,7 @@ export class QuestManager {
     for (const def of this.defs) this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
     this.relations.clear()
     this.animalTargets.clear()
+    this.feedContributionIds.clear()
   }
 
   private stateOf(id: string): QuestRuntimeProgress {
@@ -541,11 +566,20 @@ export class QuestManager {
     return this.meetsAvailability(def)
   }
 
-  private objectiveDescription(stage: QuestStage): string {
+  private objectiveDescription(stage: QuestStage, questId: string): string {
     if (stage.objective.type === 'gather_item') {
       const { kind, count } = stage.objective
       const have = Math.min(this.inventory.count(kind), count)
       return `${stage.description} (masz ${have}/${count})`
+    }
+    const s = this.stateOf(questId)
+    if (stage.objective.type === 'harvest_animals') {
+      const current = s.stageCount ?? 0
+      return `${stage.description} (${current}/${stage.objective.count})`
+    }
+    if (stage.objective.type === 'feed_habitat_animals') {
+      const current = s.stageCount ?? 0
+      return `${stage.description} (${current}/${stage.objective.count})`
     }
     return stage.description
   }
@@ -571,7 +605,7 @@ export class QuestManager {
           state: s.state,
           stageIndex: s.stageIndex,
           totalStages: def.stages.length,
-          currentObjective: s.state === 'active' && stage ? this.objectiveDescription(stage) : null,
+          currentObjective: s.state === 'active' && stage ? this.objectiveDescription(stage, def.id) : null,
           resolvedOutcomeId: s.resolvedOutcomeId,
           resultText: resultPresentation(def, s, resolved, stage),
           promisedReward: terminal ? null : promisedShownReward(def),
@@ -676,6 +710,51 @@ export class QuestManager {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
       this.catchUpActiveWorldObjectives(def, s)
+    }
+  }
+
+  /**
+   * Player-only knife harvest (plan quests-progression-020). NPC harvest must
+   * not call this.
+   *
+   * @domain quests-progression
+   */
+  onAnimalHarvested(context: PlayerAnimalHarvestContext): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      const objective = stage?.objective
+      if (objective?.type !== 'harvest_animals' || objective.kind !== context.animalKind) continue
+      const next = Math.min((s.stageCount ?? 0) + 1, objective.count)
+      this.setQuestState(def.id, { ...s, stageCount: next })
+      if (next >= objective.count) this.advanceStage(def, this.stateOf(def.id))
+    }
+  }
+
+  /**
+   * Successful loose-food consumption (plan quests-progression-020).
+   *
+   * @domain quests-progression
+   */
+  onHabitatAnimalFed(context: HabitatAnimalFeedContext): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      const objective = stage?.objective
+      if (objective?.type !== 'feed_habitat_animals') continue
+      if (context.spawnPointId !== objective.spawnerId) continue
+      if (!objective.kinds.includes(context.animalKind)) continue
+      if (!objective.foodKinds.includes(context.itemKind)) continue
+      const dedupeKey = `${def.id}:${s.stageIndex}`
+      const seen = this.feedContributionIds.get(dedupeKey) ?? new Set<string>()
+      if (seen.has(context.animalId)) continue
+      seen.add(context.animalId)
+      this.feedContributionIds.set(dedupeKey, seen)
+      const next = Math.min((s.stageCount ?? 0) + 1, objective.count)
+      this.setQuestState(def.id, { ...s, stageCount: next })
+      if (next >= objective.count) this.advanceStage(def, this.stateOf(def.id))
     }
   }
 
@@ -850,9 +929,10 @@ export class QuestManager {
   /** Advances past the current stage — to the next stage if any remain, or to
    *  `ready_to_report` once the last one clears. Does not resolve the quest. */
   private advanceStage(def: QuestDef, s: QuestRuntimeProgress): void {
+    this.feedContributionIds.delete(`${def.id}:${s.stageIndex}`)
     const nextIndex = s.stageIndex + 1
     const nextState = nextIndex >= def.stages.length ? 'ready_to_report' : 'active'
-    this.setQuestState(def.id, { state: nextState, stageIndex: nextIndex })
+    this.setQuestState(def.id, { state: nextState, stageIndex: nextIndex, stageCount: 0 })
     if (nextState === 'active') this.bindAnimalTargetIfNeeded(def, nextIndex)
   }
 
@@ -868,7 +948,7 @@ export class QuestManager {
       offer: {
         onAccept: () => {
           if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return
-          this.setQuestState(def.id, { state: 'active', stageIndex: 0 })
+          this.setQuestState(def.id, { state: 'active', stageIndex: 0, stageCount: 0 })
           this.bindAnimalTargetIfNeeded(def, 0)
           this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
         },
@@ -1272,6 +1352,12 @@ export class QuestManager {
     return this.defs.map((def) => {
       const s = this.stateOf(def.id)
       const entry: QuestProgressEntry = { id: def.id, state: s.state, stageIndex: s.stageIndex }
+      if (s.state === 'active') {
+        const stage = this.currentStage(def, s.stageIndex)
+        if (isCountedObjective(stage?.objective) && s.stageCount !== undefined) {
+          entry.stageCount = s.stageCount
+        }
+      }
       if ((s.state === 'complete' || s.state === 'failed') && s.resolvedOutcomeId) {
         entry.resolvedOutcomeId = s.resolvedOutcomeId
       }
@@ -1286,6 +1372,7 @@ export class QuestManager {
 
 function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
   const progress: QuestRuntimeProgress = { state: entry.state, stageIndex: entry.stageIndex }
+  if (entry.stageCount !== undefined) progress.stageCount = entry.stageCount
   if ((entry.state === 'complete' || entry.state === 'failed') && entry.resolvedOutcomeId) {
     progress.resolvedOutcomeId = entry.resolvedOutcomeId
   }
@@ -1295,20 +1382,19 @@ function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
 /** Legacy terminal entries without an outcome id take the unique matching
  *  authored outcome; 0 or >1 matches are left unresolved. */
 function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): QuestProgressEntry {
-  if (entry.state !== 'complete' && entry.state !== 'failed') {
-    return { id: entry.id, state: entry.state, stageIndex: entry.stageIndex }
+  const base: QuestProgressEntry = {
+    id: entry.id,
+    state: entry.state,
+    stageIndex: entry.stageIndex,
+    ...(entry.stageCount !== undefined ? { stageCount: entry.stageCount } : {}),
   }
+  if (entry.state !== 'complete' && entry.state !== 'failed') return base
   if (entry.resolvedOutcomeId) {
-    return {
-      id: entry.id,
-      state: entry.state,
-      stageIndex: entry.stageIndex,
-      resolvedOutcomeId: entry.resolvedOutcomeId,
-    }
+    return { ...base, resolvedOutcomeId: entry.resolvedOutcomeId }
   }
   const outcome = uniqueOutcomeForState(def, entry.state)
-  if (!outcome) return { id: entry.id, state: entry.state, stageIndex: entry.stageIndex }
-  return { id: entry.id, state: entry.state, stageIndex: entry.stageIndex, resolvedOutcomeId: outcome.id }
+  if (!outcome) return base
+  return { ...base, resolvedOutcomeId: outcome.id }
 }
 
 function resolvedOutcome(def: QuestDef, progress: QuestRuntimeProgress): QuestOutcome | undefined {

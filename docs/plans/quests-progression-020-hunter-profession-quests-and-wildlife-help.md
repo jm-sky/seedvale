@@ -1,7 +1,7 @@
 # Plan: Hunter Profession Quests & Wildlife Help
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `implemented` ✅
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~fauna-023~~

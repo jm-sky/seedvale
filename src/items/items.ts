@@ -55,6 +55,7 @@ export type ItemKind =
   | 'beef'
   | 'egg'
   | 'hide'
+  | 'antler'
   | 'cheese'
   | 'dried_meat'
   | 'coin'
@@ -673,6 +674,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'MD',
     color: 0x7a5a3f,
     description: 'Skóra zdjęta ze zwierzęcia przy oprawianiu tuszy. Przydatna do wyrobu i handlu.'
+  },
+  antler: {
+    kind: 'antler',
+    label: 'poroże',
+    categories: ['resource'],
+    weight: 1.2,
+    size: 'MD',
+    color: 0xc9b08a,
+    description: 'Poroże ścięte z dorosłego jelenia. Cenne trofeum i surowiec.'
   },
   cheese: {
     kind: 'cheese',

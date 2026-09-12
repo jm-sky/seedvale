@@ -3,12 +3,15 @@ import type { ItemKind } from '../items/items'
 import type { AnimalAgent } from './AnimalAgent'
 import { sourceSpeciesForMeatKind } from '../items/foodFreshness'
 import { meatKindForAnimal } from './animalMeat'
+import { trophyLootKindsForHarvest } from './animalTrophyLoot'
 
 export type AnimalHarvestResult = {
   meatKind: ItemKind
   /** Whether `hide` was also added — `false` only when there was no room
    *  left for it (meat still succeeded). */
   hide: boolean
+  /** Extra knife-harvest loot (e.g. stag antler) added when inventory had room. */
+  lootKinds: readonly ItemKind[]
 }
 
 /**
@@ -37,5 +40,9 @@ export function harvestAnimalIntoInventory(
   animal.harvestMeat()
   inventory.add(meatKind, 1, acquiredAtDays, sourceSpeciesForMeatKind(meatKind))
   const hide = inventory.canAdd('hide', 1) && inventory.add('hide', 1)
-  return { meatKind, hide }
+  const lootKinds: ItemKind[] = []
+  for (const kind of trophyLootKindsForHarvest(animal)) {
+    if (inventory.canAdd(kind, 1) && inventory.add(kind, 1)) lootKinds.push(kind)
+  }
+  return { meatKind, hide, lootKinds }
 }
