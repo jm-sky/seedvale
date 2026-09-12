@@ -85,6 +85,10 @@ export type NpcTraceEvent =
   | { simTime: number; type: 'contract.invalidated'; contractId: string; reason: 'missingTarget' }
   | { simTime: number; type: 'contract.workCompleted'; contractId: string }
   | { simTime: number; type: 'contract.paymentRequested'; contractId: string }
+  /** Expedition-escort service started serving (plan npc-030 §6) — the
+   *  `accepted` → `serving` transition, distinct from `contract.accepted`
+   *  (board acceptance) and `contract.workCompleted` (service fulfilled). */
+  | { simTime: number; type: 'contract.escortServiceStarted'; contractId: string }
   | {
     simTime: number
     type: 'contract.provisioned'

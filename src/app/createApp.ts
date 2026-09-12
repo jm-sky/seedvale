@@ -1973,6 +1973,7 @@ export async function createApp(
     onEquipFishingRod: () => inventoryWiring.equipTool('fishing_rod'),
     onCancelWorkContract: contracts.cancelContract,
     onHireHelp: contracts.openHireHelp,
+    onHireEscort: contracts.openEscortHire,
     onEatAnything: () => runEatAnything(inventory, player, dayNight, survival.consumeItem),
     onCookMeal: () => {
       fullCampIntent.cancel()

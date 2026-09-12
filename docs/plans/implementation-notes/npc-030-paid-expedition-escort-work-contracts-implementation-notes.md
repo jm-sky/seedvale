@@ -2,7 +2,7 @@
 
 **Plan:** `npc-030-paid-expedition-escort-work-contracts.md`  
 **Reviewed:** 2026-09-11  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — see the plan's own "Implementation status" section for what shipped (2026-09-12) and what was deliberately deferred (destination-picker UI).
 
 ## Review result
 

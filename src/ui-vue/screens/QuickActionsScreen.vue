@@ -125,6 +125,11 @@ function hireHelp(): void {
   ui.quickActions.onHireHelp?.()
 }
 
+function hireEscort(): void {
+  closeQuickActions()
+  ui.quickActions.onHireEscort?.()
+}
+
 function plantTree(): void {
   closeQuickActions()
   ui.quickActions.onPlantTree?.()
@@ -242,6 +247,9 @@ const buildActions = computed<Action[]>(() => {
   // "no cost up front" shape as "Zleć budowę studni" — `openHireHelp` itself tells
   // the player when there is nothing eligible to hire help for.
   list.push({ label: 'Zleć pomoc', cost: '', onClick: hireHelp })
+  // "Zleć eskortę" (plan npc-030 §26) — paid expedition-escort Work Contract,
+  // always visible; no world placement step (no target/flag).
+  list.push({ label: 'Zleć eskortę', cost: '', onClick: hireEscort })
 
   return list
     .sort((a, b) => a.label.localeCompare(b.label))

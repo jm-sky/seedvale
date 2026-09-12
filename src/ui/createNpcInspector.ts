@@ -113,10 +113,16 @@ function buildInspectorText(
     lines.push(`  assignment: ${snapshot.contract.assignmentState}`)
     lines.push(`  workers: ${snapshot.contract.requestedWorkerCount}`)
     lines.push(`  reward: ${snapshot.contract.rewardCoins}`)
-    lines.push(`  target: ${snapshot.contract.targetKind}:${snapshot.contract.targetId}`)
-    lines.push(`  work share: ${Math.round(snapshot.contract.requestedWorkShare * 100)}% of ${snapshot.contract.remainingWorkAtCreation.toFixed(1)}h at creation`)
-    lines.push(`  group committed: ${snapshot.contract.npcWorkCompleted.toFixed(1)} / ${snapshot.contract.committedWork.toFixed(1)}h`)
-    lines.push(`  this NPC: ${snapshot.contract.assignmentWorkCompleted.toFixed(1)}h`)
+    if (snapshot.contract.escortCompletionPolicy) {
+      lines.push(`  escort policy: ${snapshot.contract.escortCompletionPolicy}`)
+      lines.push(`  service started: ${snapshot.contract.serviceStartedAt?.toFixed(2) ?? '-'}`)
+      lines.push(`  service ends: ${snapshot.contract.serviceEndsAt?.toFixed(2) ?? '-'}`)
+    } else {
+      lines.push(`  target: ${snapshot.contract.targetKind}:${snapshot.contract.targetId}`)
+      lines.push(`  work share: ${Math.round((snapshot.contract.requestedWorkShare ?? 0) * 100)}% of ${(snapshot.contract.remainingWorkAtCreation ?? 0).toFixed(1)}h at creation`)
+      lines.push(`  group committed: ${(snapshot.contract.npcWorkCompleted ?? 0).toFixed(1)} / ${(snapshot.contract.committedWork ?? 0).toFixed(1)}h`)
+      lines.push(`  this NPC: ${snapshot.contract.assignmentWorkCompleted.toFixed(1)}h`)
+    }
     if (snapshot.contract.rewardCoinsDue != null) {
       lines.push(`  claim: ${snapshot.contract.rewardCoinsDue} coins`)
     }
@@ -212,6 +218,7 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'combat.hit': return `${t}s combat.hit → ${event.targetId}`
     case 'combat.started': return `${t}s combat.started → ${event.targetId}`
     case 'contract.accepted': return `${t}s contract.accepted → ${event.contractId} (score ${event.score.toFixed(1)})`
+    case 'contract.escortServiceStarted': return `${t}s contract.escortServiceStarted → ${event.contractId}`
     case 'contract.evaluated': return `${t}s contract.evaluated → ${event.candidates.map((c) => `${c.contractId}:${c.score.toFixed(1)}`).join(', ') || '-'}`
     case 'contract.invalidated': return `${t}s contract.invalidated → ${event.contractId} (${event.reason})`
     case 'contract.paymentRequested': return `${t}s contract.paymentRequested → ${event.contractId}`

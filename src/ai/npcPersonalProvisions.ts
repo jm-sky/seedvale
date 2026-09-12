@@ -12,7 +12,11 @@ import {
   LIQUID_DRINK_PORTION_LITRES,
 } from '../items/liquidContainer'
 import { realSecondsToGameHours } from '../world/timeConversion'
-import { expectedCandidateWork, type WorkContractRecord } from '../world/workContract'
+import {
+  expectedCandidateWork,
+  type ExpeditionEscortTerms,
+  type MeasurableWorkContractRecord,
+} from '../world/workContract'
 import { NEED_SATISFY_AMOUNT } from './Needs'
 
 /**
@@ -93,8 +97,32 @@ export type ContractProvisionEstimate = {
   skipProvisioning: boolean
 }
 
-/** Bounded, read-only estimate of personal supplies a remote contract may
- *  require — does not mutate inventory and does not simulate the whole trip. */
+/** Reusable core (plan npc-030 §25) — every caller ultimately estimates from
+ *  one `awayHours` figure; only how that figure is derived differs
+ *  (construction: travel + expected measurable work; escort: duration/
+ *  bounded destination estimate, see `estimateEscortProvisionNeed`). */
+function estimateAwayProvisionNeed(
+  awayHours: number,
+  hunger: number,
+  thirst: number,
+  skipProvisioning: boolean,
+): Omit<ContractProvisionEstimate, 'travelHours' | 'workHours'> {
+  const hungerRise = awayHours / 10
+  const thirstRise = awayHours / 8
+  const projectedHunger = Math.min(1, hunger + hungerRise)
+  const projectedThirst = Math.min(1, thirst + thirstRise)
+  const foodUnitsNeeded = skipProvisioning
+    ? 0
+    : Math.ceil(Math.max(0, projectedHunger - PROVISION_HUNGER_BUFFER) / NEED_SATISFY_AMOUNT.food)
+  const drinkPortionsNeeded = skipProvisioning
+    ? 0
+    : Math.ceil(Math.max(0, projectedThirst - PROVISION_THIRST_BUFFER) / NEED_SATISFY_AMOUNT.water)
+  return { awayHours, foodUnitsNeeded, drinkPortionsNeeded, skipProvisioning }
+}
+
+/** Bounded, read-only estimate of personal supplies a remote measurable-work
+ *  contract may require — does not mutate inventory and does not simulate
+ *  the whole trip. */
 export function estimateContractProvisionNeed(input: {
   travelHours: number
   workHours: number
@@ -103,31 +131,36 @@ export function estimateContractProvisionNeed(input: {
 }): ContractProvisionEstimate {
   const awayHours = input.travelHours + input.workHours
   const skipProvisioning = input.travelHours <= LOCAL_CONTRACT_TRAVEL_HOURS && awayHours <= 4
-  const hungerRise = awayHours / 10
-  const thirstRise = awayHours / 8
-  const projectedHunger = Math.min(1, input.hunger + hungerRise)
-  const projectedThirst = Math.min(1, input.thirst + thirstRise)
-  const foodUnitsNeeded = skipProvisioning
-    ? 0
-    : Math.ceil(Math.max(0, projectedHunger - PROVISION_HUNGER_BUFFER) / NEED_SATISFY_AMOUNT.food)
-  const drinkPortionsNeeded = skipProvisioning
-    ? 0
-    : Math.ceil(Math.max(0, projectedThirst - PROVISION_THIRST_BUFFER) / NEED_SATISFY_AMOUNT.water)
   return {
-    awayHours,
+    ...estimateAwayProvisionNeed(awayHours, input.hunger, input.thirst, skipProvisioning),
     travelHours: input.travelHours,
     workHours: input.workHours,
-    foodUnitsNeeded,
-    drinkPortionsNeeded,
-    skipProvisioning,
+  }
+}
+
+/** Escort counterpart of `estimateContractProvisionNeed` (plan npc-030
+ *  §25) — `awayHours` comes from the agreed duration or a bounded
+ *  destination travel-time estimate, never from a measurable-work target.
+ *  A short-enough total absence still skips provisioning, same as a local
+ *  construction contract. */
+export function estimateEscortProvisionNeed(input: {
+  awayHours: number
+  hunger: number
+  thirst: number
+}): ContractProvisionEstimate {
+  const skipProvisioning = input.awayHours <= 4
+  return {
+    ...estimateAwayProvisionNeed(input.awayHours, input.hunger, input.thirst, skipProvisioning),
+    travelHours: input.awayHours,
+    workHours: 0,
   }
 }
 
 export function contractTravelHours(
-  contract: WorkContractRecord,
+  contract: MeasurableWorkContractRecord,
   input: { npcX: number, npcZ: number, walkSpeed: number, dayLengthSec: number },
 ): number {
-  const distance = Math.hypot(contract.x - input.npcX, contract.z - input.npcZ)
+  const distance = Math.hypot(contract.scope.x - input.npcX, contract.scope.z - input.npcZ)
   const travelRealSeconds = input.walkSpeed > 0 ? distance / input.walkSpeed : 0
   return realSecondsToGameHours(travelRealSeconds, input.dayLengthSec)
 }
@@ -259,9 +292,10 @@ export function provisionContractSupplies(input: {
   return { foodProvisioned, drinksAdded, failureReason }
 }
 
-/** Convenience wrapper tying a contract to the estimate/availability helpers. */
+/** Convenience wrapper tying a measurable-work contract to the estimate/
+ *  availability helpers. */
 export function buildContractProvisionContext(input: {
-  contract: WorkContractRecord
+  contract: MeasurableWorkContractRecord
   needs: Pick<NeedState, 'hunger' | 'thirst'>
   personalInventory: Inventory
   household: Household | null
@@ -279,6 +313,49 @@ export function buildContractProvisionContext(input: {
     estimate: estimateContractProvisionNeed({
       travelHours,
       workHours,
+      hunger: input.needs.hunger,
+      thirst: input.needs.thirst,
+    }),
+    availability: readContractProvisionAvailability(input.personalInventory, input.household),
+  }
+}
+
+/** Bounded expected-away-time estimate for an expedition-escort's terms
+ *  (plan npc-030 §21/§25) — duration is the primary commitment cost;
+ *  destination-only terms fall back to a bounded one-way travel-time
+ *  estimate to the already-resolved destination snapshot (never global
+ *  pathfinding). `24` game-hours/day, matching `realSecondsToGameHours`'s
+ *  own day-length convention. */
+export function escortAwayHours(
+  terms: ExpeditionEscortTerms,
+  input: { npcX: number, npcZ: number, walkSpeed: number, dayLengthSec: number },
+): number {
+  if (typeof terms.durationDays === 'number') return terms.durationDays * 24
+  const destination = terms.destination
+  if (!destination) return 0
+  const distance = Math.hypot(destination.x - input.npcX, destination.z - input.npcZ)
+  const travelRealSeconds = input.walkSpeed > 0 ? distance / input.walkSpeed : 0
+  return realSecondsToGameHours(travelRealSeconds, input.dayLengthSec)
+}
+
+/** Escort counterpart of `buildContractProvisionContext` (plan npc-030
+ *  §25). */
+export function buildEscortProvisionContext(input: {
+  terms: ExpeditionEscortTerms
+  needs: Pick<NeedState, 'hunger' | 'thirst'>
+  personalInventory: Inventory
+  household: Household | null
+  npcX: number
+  npcZ: number
+  walkSpeed: number
+  dayLengthSec: number
+}): {
+  estimate: ContractProvisionEstimate
+  availability: ContractProvisionAvailability
+} {
+  return {
+    estimate: estimateEscortProvisionNeed({
+      awayHours: escortAwayHours(input.terms, input),
       hunger: input.needs.hunger,
       thirst: input.needs.thirst,
     }),

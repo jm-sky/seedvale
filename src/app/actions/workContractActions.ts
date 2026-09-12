@@ -8,9 +8,12 @@ import { isStandingTorchConstructionComplete, standingTorchRemainingWork } from 
 import {
   canPostContract,
   type ContractTarget,
+  type ExpeditionEscortCompletionPolicy,
   isContractTerminal,
+  type MeasurableWorkContractRecord,
   noticeBoardId,
   WORK_SHARE_PRESETS,
+  type WorkContractRecord,
   WORKER_COUNT_PRESETS,
   type WorkType,
 } from '../../world/workContract'
@@ -35,6 +38,21 @@ const CONTRACT_EMPLOYER = 'player'
  *  reuses the existing `openFlavorDialog` button-list UI instead of a new
  *  numeric-input widget. */
 const CONTRACT_REWARD_PRESETS = [10, 25, 50, 100] as const
+
+/** Duration presets offered for a paid expedition-escort contract (plan
+ *  npc-030 §26). V1 creation UI only exposes the `duration` completion
+ *  policy — destination-based escort terms are supported end-to-end in the
+ *  domain/evaluation/fulfilment layers (plan §5/§7/§10/§11) but have no
+ *  destination-picker UI yet (no stable, runtime-resolvable "known places"
+ *  list is wired into this action module); duration alone already satisfies
+ *  the plan's "at least one finite boundary" requirement. */
+const ESCORT_DURATION_PRESETS_DAYS = [0.5, 1, 2, 3] as const
+
+function formatEscortDuration(days: number): string {
+  if (days === 0.5) return 'pół dnia'
+  if (days === 1) return '1 dzień'
+  return `${days} dni`
+}
 
 const CONTRACT_TARGET_PLACE_REACH = 2
 /** A construction contract's target is a real `PlayerWellRecord` (plan
@@ -62,6 +80,22 @@ const WORK_TYPE_LABEL: Record<WorkType, string> = {
   palisade: 'segment palisady',
   standing_torch: 'pochodnia',
   residential_building: 'chata',
+}
+
+/** Escort completion-policy display label (plan npc-030 §26). */
+const ESCORT_POLICY_LABEL: Record<ExpeditionEscortCompletionPolicy, string> = {
+  duration: 'eskorta wyprawy (czas)',
+  destination: 'eskorta wyprawy (cel)',
+  destination_or_timeout: 'eskorta wyprawy (cel lub czas)',
+}
+
+/** Display label for any contract listing row, measurable or escort (plan
+ *  npc-030 §26) — the single place notice-board/Quick-Actions listings read
+ *  instead of branching per scope themselves. */
+function contractListLabel(contract: WorkContractRecord): string {
+  return contract.scope.kind === 'expedition_escort'
+    ? ESCORT_POLICY_LABEL[contract.scope.terms.completionPolicy]
+    : WORK_TYPE_LABEL[contract.scope.target.kind]
 }
 
 export type WorkContractQuickActionEntry = { id: string, label: string, cost: string }
@@ -96,6 +130,12 @@ export type WorkContractActions = {
    *  useful remaining work before opening the picker — never trusts an
    *  inspection snapshot. */
   beginHireHelpForTarget: (target: ContractTarget) => void
+  /** Quick Actions "Zleć eskortę" (plan npc-030 §26) — same Work Contract
+   *  creation family as construction hire, but no world placement step: an
+   *  escort has no target/flag, only agreed duration + reward. Reuses the
+   *  same unposted-contract + notice-board flow. V1 UI only offers the
+   *  `duration` completion policy (see `ESCORT_DURATION_PRESETS_DAYS`). */
+  openEscortHire: () => void
 }
 
 export type WorkContractActionDeps = {
@@ -132,7 +172,9 @@ export function createWorkContractActions(
       // or another pending contract's own future well.
       peers: [
         ...bundle.playerWells.nodes(),
-        ...bundle.workContracts.nodes().filter((c) => !isContractTerminal(c.state)),
+        ...bundle.workContracts.nodes()
+          .filter((c): c is MeasurableWorkContractRecord => !isContractTerminal(c.state) && c.scope.kind === 'measurable_work')
+          .map((c) => ({ x: c.scope.x, z: c.scope.z })),
       ],
       footprintRadius: CONTRACT_TARGET_FOOTPRINT_RADIUS,
       separation: CONTRACT_TARGET_SEPARATION,
@@ -345,6 +387,44 @@ export function createWorkContractActions(
     )
   }
 
+  /** Escort counterpart of `beginContractCreation` (plan npc-030 §26) —
+   *  duration → reward → create, no placement step. Never advertises the
+   *  created contract; posting stays the separate notice-board action. */
+  const openEscortHire = (): void => {
+    if (isActionBlocked(ctx)) return
+    vueUi.openFlavorDialog(
+      'Zleć eskortę',
+      'Na jak długo chcesz wynająć eskortę wyprawy?',
+      ESCORT_DURATION_PRESETS_DAYS.map((durationDays) => ({
+        label: formatEscortDuration(durationDays),
+        enabled: true,
+        reasonLabel: '',
+        run: () => vueUi.openFlavorDialog(
+          'Zleć eskortę',
+          'Wybierz wynagrodzenie za usługę. Zlecenie nie zostanie jeszcze ogłoszone — trzeba będzie zanieść ogłoszenie na tablicę w osadzie.',
+          CONTRACT_REWARD_PRESETS.map((reward) => ({
+            label: `${reward} monet`,
+            enabled: true,
+            reasonLabel: '',
+            run: () => {
+              const created = bundle.workContracts.createEscort({
+                employer: CONTRACT_EMPLOYER,
+                terms: { completionPolicy: 'duration', durationDays },
+                rewardCoins: reward,
+                now: dayNight.elapsedDays,
+              })
+              ctx.syncQuickActionAvailability()
+              toast.show(
+                created ? 'Utworzono zlecenie eskorty. Zanieś ogłoszenie do tablicy w osadzie.' : 'Nie udało się utworzyć zlecenia.',
+                created ? 'info' : 'error',
+              )
+            },
+          })),
+        ),
+      })),
+    )
+  }
+
   const openNoticeBoard = (settlementId: string): void => {
     const boardId = noticeBoardId(settlementId)
     const postable = bundle.workContracts.list().filter((c) => c.employer === CONTRACT_EMPLOYER && canPostContract(c))
@@ -356,7 +436,7 @@ export function createWorkContractActions(
       'Tablica ogłoszeń',
       'Wybierz zlecenie do ogłoszenia.',
       postable.map((contract) => ({
-        label: `Zlecenie: ${WORK_TYPE_LABEL[contract.target.kind]} — ${contract.rewardCoins} monet`,
+        label: `Zlecenie: ${contractListLabel(contract)} — ${contract.rewardCoins} monet`,
         enabled: true,
         reasonLabel: '',
         run: () => {
@@ -379,7 +459,7 @@ export function createWorkContractActions(
       .filter((c) => c.employer === CONTRACT_EMPLOYER && !isContractTerminal(c.state))
       .map((c) => ({
         id: c.id,
-        label: `Anuluj: ${WORK_TYPE_LABEL[c.target.kind]} — ${c.rewardCoins} monet`,
+        label: `Anuluj: ${contractListLabel(c)} — ${c.rewardCoins} monet`,
         cost: c.advertisement === 'posted' ? 'ogłoszone' : 'nieogłoszone',
       }))
 
@@ -391,5 +471,6 @@ export function createWorkContractActions(
     quickActionsList,
     openHireHelp,
     beginHireHelpForTarget,
+    openEscortHire,
   }
 }

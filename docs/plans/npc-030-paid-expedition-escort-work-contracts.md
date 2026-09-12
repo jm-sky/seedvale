@@ -1,14 +1,31 @@
 # Plan: Paid expedition escort Work Contracts
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** L
-**Depends on:** npc-029
+**Depends on:** ~~npc-029~~
 **Domain:** `npc`
 **Subdomains:** `work` `decision-making` `behavior` `relationships`
 **Tags:** `companions` `work-contracts` `escort` `expedition`
 **Roadmap:** `companions.md`
+
+## Implementation status
+
+Implemented on `main` (2026-09-12):
+
+- Discriminated `WorkContractScope` (`measurable_work` / `expedition_escort`) on `WorkContractRecord` (`world/workContract.ts`) — existing construction/terrain/palisade/torch/residential fields moved into `measurable_work` scope unchanged; escort adds `ExpeditionEscortTerms` (`duration` / `destination` / `destination_or_timeout`, with a destination snapshot resolved once at creation, never re-resolved live).
+- `serving` assignment state (`accepted → serving`, no fictional travel/work split), `serviceStartedAt`/`serviceEndsAt` on `WorkContractAssignment`.
+- Scope-aware claim freezing reusing the existing lifecycle: `completeContractWork`/`cancelWorkContract`/`invalidateWorkContract`/`releaseWorkContract` all dispatch by scope internally — no new runtime API surface for termination/payment. Exact V1 rules: full reward on fulfilment, proportional-to-elapsed-duration on employer cancellation after service start, `0` on before-start/destination-only/abandonment/death (unless already frozen).
+- `createWorkContracts.ts`: `createEscort()`/`beginServing()`, scope-aware `hasActiveContract`/`findByTarget`/flag spawning (escort never gets a world flag).
+- `ai/npcWorkContract.ts`: scope-dispatching pure evaluator — escort branch scores full reward + suitability (guard/hunter positive, mirroring measurable work's table) + relation/local-reputation/renown (existing `PlayerSocialLookup`) + `curious` trait − expected-away-hours − a bounded conservative danger estimate (no route/world-location danger context wired up; documented default) − schedule conflict.
+- `ai/npcPersonalProvisions.ts`: `estimateEscortProvisionNeed`/`buildEscortProvisionContext`/`escortAwayHours` alongside the unchanged measurable-work estimators.
+- `ai/NpcAgent.ts`: `tryResolveEscortService()` (pure `isEscortServiceFulfilled()` check ahead of the accompany executor each idle-duty tick), `pursueAcceptedEscort()`/`prepareEscortProvisions()`, missing-commitment reconciliation on an already-`serving` assignment via the public `startAccompany()` seam, scope-aware inspection snapshot.
+- Persistence: `SaveWorkContract` mirrors the discriminated scope; `CURRENT_SAVE_VERSION` 37, migration `36 → 37` nests legacy flat fields losslessly into `measurable_work` scope (idempotent against an already-scoped contract).
+- Player creation UI: Quick Actions "Zleć eskortę" (duration + reward, no placement step), reusing the existing notice-board/payment flow unchanged.
+- **Deferred, not implemented:** a destination-picker UI. `destination`/`destination_or_timeout` completion policies, shared-arrival fulfilment and the claim rules around them are fully implemented and unit-tested in the domain layer, but the V1 creation UI (`app/actions/workContractActions.ts`) only exposes the `duration` policy — there is no stable, runtime-resolvable "known places" list wired into that action module yet (this would mean pulling `WorldLocationCatalog`/settlement-registry access into a module that currently has neither), and building that picker was judged out of scope for this plan's own work. A future pass can add a destination picker without touching the domain/evaluation/fulfilment/payment code already in place.
+
+Browser/gameplay verification remains manual (see Verification § below).
 
 ## Goal
 

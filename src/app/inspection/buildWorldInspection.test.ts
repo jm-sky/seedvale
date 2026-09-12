@@ -3,7 +3,7 @@ import type { Interactable } from '../../interaction/Interactable'
 import type { LiquidContainerItemInstance } from '../../items/itemInstances'
 import type { TerrainPreparationRecord } from '../../terrain/terrainPreparation'
 import type { PlayerWellRecord } from '../../world/playerWell'
-import type { WorkContractRecord } from '../../world/workContract'
+import type { ContractTarget, MeasurableWorkContractRecord } from '../../world/workContract'
 import { Inventory } from '../../items/Inventory'
 import { PALISADE_REQUIRED_WORK, type PalisadeSegmentRecord } from '../../world/palisade'
 import {
@@ -53,14 +53,10 @@ function emptyLookup(overrides: Partial<WorldInspectionLookup> = {}): WorldInspe
   }
 }
 
-function contract(targetId: string, kind: WorkContractRecord['target']['kind'] = 'construction'): WorkContractRecord {
+function contract(targetId: string, kind: ContractTarget['kind'] = 'construction'): MeasurableWorkContractRecord {
   return {
     id: 'c:1',
     employer: 'player',
-    workType: kind === 'construction' ? 'construction' : kind,
-    target: { kind, targetId } as WorkContractRecord['target'],
-    x: 0,
-    z: 0,
     rewardCoins: 25,
     state: 'available',
     advertisement: 'not_posted',
@@ -69,10 +65,17 @@ function contract(targetId: string, kind: WorkContractRecord['target']['kind'] =
     postedAt: null,
     requestedWorkerCount: 2,
     assignments: [],
-    requestedWorkShare: 0.5,
-    remainingWorkAtCreation: 4,
-    committedWork: 2,
-    npcWorkCompleted: 0.5,
+    scope: {
+      kind: 'measurable_work',
+      workType: kind,
+      target: { kind, targetId } as ContractTarget,
+      x: 0,
+      z: 0,
+      requestedWorkShare: 0.5,
+      remainingWorkAtCreation: 4,
+      committedWork: 2,
+      npcWorkCompleted: 0.5,
+    },
   }
 }
 

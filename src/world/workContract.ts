@@ -5,16 +5,27 @@
  * `world/createStandingTorches.ts`.
  *
  * Since plan npc-028 a contract is a job, not a single worker's FSM.
- * `WorkContractRecord` owns the posting, target, group commitment and
- * reward ceiling; each hired NPC is a `WorkContractAssignment` with its
- * own execution lifecycle and attributable `workCompleted`. The target
- * itself (`PlayerWellRecord`/`TerrainPreparationRecord`/…) remains the
- * sole owner of actual progress; player and NPCs contribute to the same
- * target through the actor-neutral seam.
+ * `WorkContractRecord` owns the posting, group commitment and reward
+ * ceiling; each hired NPC is a `WorkContractAssignment` with its own
+ * execution lifecycle and attributable claim. The target itself
+ * (`PlayerWellRecord`/`TerrainPreparationRecord`/…) remains the sole owner
+ * of actual progress; player and NPCs contribute to the same target through
+ * the actor-neutral seam.
  *
- * A posted board never duplicates reward/target/state (plan npc-014
- * §8/§12) — it only keeps `postedBoardId` on the contract, and a board's
- * "what's posted here" view is a query over contracts by that field.
+ * Since plan npc-030 a contract's `scope` is a discriminated union: measurable
+ * construction-like work (a real world target with `contributeWork()`
+ * progress) versus a bounded expedition-escort service (no numeric work
+ * target — fulfilment is duration/destination-based, plan npc-030 §1/§11).
+ * Every field that only makes sense for measurable progress
+ * (`workType`/`target`/`x`/`z`/`requestedWorkShare`/`remainingWorkAtCreation`/
+ * `committedWork`/`npcWorkCompleted`) lives on `MeasurableWorkContractScope`,
+ * never as a nullable field on every contract. `WorkContractAssignment`
+ * remains the single shared "one NPC's participation/payment" shape for both
+ * scopes.
+ *
+ * A posted board never duplicates reward/target/state (plan npc-014 §8/§12)
+ * — it only keeps `postedBoardId` on the contract, and a board's "what's
+ * posted here" view is a query over contracts by that field.
  *
  * @domain npc
  */
@@ -28,14 +39,17 @@ export type WorkContractState =
   | 'invalidated'
 
 /** One NPC's execution against a Work Contract (plan npc-028 §1, extended
- *  by npc-016). `payment_due` is a payable claim; `paid` / `unpaid` /
+ *  by npc-016, npc-030). `payment_due` is a payable claim; `paid` / `unpaid` /
  *  `uncollectable` are terminal claim outcomes. `released` is genuine
  *  abandonment/death with no positive wage. Temporary interruptions never
- *  use these states. */
+ *  use these states. `serving` is the expedition-escort counterpart of
+ *  `travelling`/`working` — an accepted escort skips the measurable-work
+ *  travel/work split entirely (plan npc-030 §5). */
 export type WorkContractAssignmentState =
   | 'accepted'
   | 'travelling'
   | 'working'
+  | 'serving'
   | 'payment_due'
   | 'paid'
   | 'unpaid'
@@ -78,16 +92,19 @@ export function workContractPaymentPatienceDays(
 
 export type WorkContractAdvertisement = 'not_posted' | 'posted'
 
-/** One entry per `ContractTarget` variant (plan npc-018 §10, extended by
- *  plan items-player-017 §2/§16 with the two simple buildable targets). */
+/** One entry per measurable `ContractTarget` variant (plan npc-018 §10,
+ *  extended by plan items-player-017 §2/§16 with the two simple buildable
+ *  targets). Expedition escort is deliberately not a `WorkType`/
+ *  `ContractTarget` variant (plan npc-030 §"Work Contract core") — it has no
+ *  actor-neutral `contributeWork()` target. */
 export type WorkType = 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch' | 'residential_building'
 
 /** A concrete, recoverable world target a contract describes work at — never
  *  a display string like "build a well" (plan §3). `targetId` is the stable
  *  identity later NPC construction execution (Plan 2) resolves against; the
- *  placement coordinate itself lives on `WorkContractRecord.x`/`z`, not here,
- *  mirroring the plan's own "target reference" + "target location" split
- *  (plan §2/§11). */
+ *  placement coordinate itself lives on the measurable scope's `x`/`z`, not
+ *  here, mirroring the plan's own "target reference" + "target location"
+ *  split (plan §2/§11). */
 export type ConstructionContractTarget = {
   kind: 'construction'
   targetId: string
@@ -124,8 +141,9 @@ export type ResidentialBuildingContractTarget = {
   targetId: string
 }
 
-/** Union of every contract-target shape — one variant per `WorkType` (plan
- *  npc-018 §10, extended by plan items-player-017 / settlements-005). */
+/** Union of every measurable-work contract-target shape — one variant per
+ *  `WorkType` (plan npc-018 §10, extended by plan items-player-017 /
+ *  settlements-005). */
 export type ContractTarget =
   | ConstructionContractTarget
   | TerrainPreparationContractTarget
@@ -136,18 +154,23 @@ export type ContractTarget =
 /** One NPC's participation in a Work Contract (plan npc-028 §1). Owned by
  *  the contract, never copied onto `NpcAgent`. Historical assignments are
  *  kept after release/settlement so npc-016 can freeze per-assignment
- *  payment claims. */
+ *  payment claims. `serviceStartedAt`/`serviceEndsAt` are the expedition-
+ *  escort service timing (plan npc-030 §6) — absolute `elapsedDays`
+ *  anchors frozen once service starts, `null` for measurable-work
+ *  assignments and for an escort assignment that has not yet started
+ *  serving or has no duration boundary. */
 export type WorkContractAssignment = {
   npcId: string
   state: WorkContractAssignmentState
   acceptedAt: number
   workStartedAt: number | null
-  /** Useful work this NPC actually got accepted by the target — not a
-   *  personal quota. Payment (npc-016) derives a claim from this. */
+  /** Useful measurable-work work this NPC actually got accepted by the
+   *  target — not a personal quota, and not used for escort at all (plan
+   *  npc-030 §11: escort fulfilment is never emulated with fake work
+   *  units). Payment (npc-016) derives a measurable-work claim from this. */
   workCompleted: number
   /** Frozen integer wage for this assignment (plan npc-016 §4). `0` until
-   *  participation permanently ends after positive useful work. Immutable
-   *  once frozen. */
+   *  participation permanently ends. Immutable once frozen. */
   rewardCoinsDue: number
   /** Absolute `elapsedDays` of the last payment request, or `null` if none
    *  has been made yet (plan npc-016 §17). */
@@ -155,36 +178,25 @@ export type WorkContractAssignment = {
   /** Absolute `elapsedDays` after which a still-due claim becomes `unpaid`
    *  (plan npc-016 §18). `null` when no positive claim exists. */
   paymentDeadline: number | null
+  /** Absolute `elapsedDays` this escort assignment began serving (plan
+   *  npc-030 §6). `null` for measurable work and before service starts. */
+  serviceStartedAt: number | null
+  /** Absolute `elapsedDays` this escort assignment's duration boundary
+   *  resolves (plan npc-030 §6) — `serviceStartedAt + terms.durationDays`,
+   *  frozen once at service start. `null` for measurable work and for a
+   *  pure `destination` policy with no duration anchor. */
+  serviceEndsAt: number | null
 }
 
-export type WorkContractRecord = {
-  id: string
-  /** Who issued the contract — always `'player'` today; a `string` (not a
-   *  literal) so a later NPC-employer phase doesn't need a schema change. */
-  employer: string
+/** Fields meaningful only for a real, measurable-progress world target (plan
+ *  npc-030 §1) — grouped together rather than becoming nullable fields on
+ *  every contract. */
+export type MeasurableWorkContractScope = {
+  kind: 'measurable_work'
   workType: WorkType
   target: ContractTarget
   x: number
   z: number
-  /** Maximum total price for the original group `committedWork` (plan
-   *  npc-028 §12) — never a per-worker reward and never multiplied by
-   *  `requestedWorkerCount`. */
-  rewardCoins: number
-  state: WorkContractState
-  advertisement: WorkContractAdvertisement
-  /** The notice board this contract is currently posted at, or `null` when
-   *  `advertisement === 'not_posted'` (including after cancellation/
-   *  invalidation clears a prior posting). */
-  postedBoardId: string | null
-  createdAt: number
-  postedAt: number | null
-  /** How many NPCs may participate in contractual work at once (plan
-   *  npc-028 §4). Frozen after creation; integer `>= 1`. An assignment
-   *  waiting for payment does not occupy a work slot. */
-  requestedWorkerCount: number
-  /** Every NPC that has accepted this contract, including released and
-   *  payment-due history. An NPC may not accept the same contract twice. */
-  assignments: WorkContractAssignment[]
   /** Fraction (0–1] of the target's remaining useful work the NPC group was
    *  asked to perform, chosen at contract creation (plan npc-018 §4/§5).
    *  Presets are 25/50/75/100% — never renegotiated afterward, and never
@@ -210,10 +222,109 @@ export type WorkContractRecord = {
   npcWorkCompleted: number
 }
 
+/** Stable world reference for an escort destination (plan npc-030 §7) —
+ *  never mesh/Object3D identity, never a bare `(x, z)` as the primary
+ *  identity. */
+export type ExpeditionDestinationRef =
+  | { kind: 'settlement', settlementId: string }
+  | { kind: 'location', locationId: string }
+
+/** A destination resolved once, at contract-creation time, by the
+ *  composition/UI layer that actually owns the settlement/location registry
+ *  (plan npc-030 §10 implementation notes — "resolver in app/world
+ *  integration seam, not pure `workContract.ts`"). `x`/`z` are a bounded
+ *  snapshot, never re-resolved live during scoring/fulfilment. */
+export type ExpeditionEscortDestination = {
+  ref: ExpeditionDestinationRef
+  x: number
+  z: number
+}
+
+/** Explicit, persisted completion rule (plan npc-030 §5) — never inferred
+ *  from whichever optional term fields happen to be present. */
+export type ExpeditionEscortCompletionPolicy = 'duration' | 'destination' | 'destination_or_timeout'
+
+export type ExpeditionEscortTerms = {
+  completionPolicy: ExpeditionEscortCompletionPolicy
+  /** Required for `duration` and `destination_or_timeout`. */
+  durationDays?: number
+  /** Required for `destination` and `destination_or_timeout`. */
+  destination?: ExpeditionEscortDestination
+}
+
+/** At least one finite boundary is required (plan npc-030 §5) — a policy
+ *  without the term(s) it needs is invalid and must be rejected at creation,
+ *  never silently defaulted. */
+export function isValidExpeditionEscortTerms(terms: ExpeditionEscortTerms): boolean {
+  if (terms.completionPolicy === 'duration') {
+    return typeof terms.durationDays === 'number' && terms.durationDays > 0
+  }
+  if (terms.completionPolicy === 'destination') {
+    return terms.destination != null
+  }
+  return typeof terms.durationDays === 'number' && terms.durationDays > 0 && terms.destination != null
+}
+
+export type ExpeditionEscortContractScope = {
+  kind: 'expedition_escort'
+  terms: ExpeditionEscortTerms
+}
+
+/**
+ * Discriminated Work Contract scope (plan npc-030 §1) — separates what a
+ * contract *is* (a real, measurable-progress target vs a bounded escort
+ * service) from `WorkContractAssignment`, which continues to describe one
+ * NPC's participation/payment regardless of scope. Not a generic
+ * `ContractObjective<T>` framework for hypothetical future jobs.
+ */
+export type WorkContractScope = MeasurableWorkContractScope | ExpeditionEscortContractScope
+
+type BaseWorkContractRecord = {
+  id: string
+  /** Who issued the contract — always `'player'` today; a `string` (not a
+   *  literal) so a later NPC-employer phase doesn't need a schema change. */
+  employer: string
+  /** Maximum total price for the agreed scope (plan npc-028 §12) — never a
+   *  per-worker reward and never multiplied by `requestedWorkerCount`. For
+   *  expedition escort this is the single worker's full agreed wage (plan
+   *  npc-030 §2: V1 escort is always exactly one worker). */
+  rewardCoins: number
+  state: WorkContractState
+  advertisement: WorkContractAdvertisement
+  /** The notice board this contract is currently posted at, or `null` when
+   *  `advertisement === 'not_posted'` (including after cancellation/
+   *  invalidation clears a prior posting). */
+  postedBoardId: string | null
+  createdAt: number
+  postedAt: number | null
+  /** How many NPCs may participate in contractual work at once (plan
+   *  npc-028 §4). Frozen after creation; integer `>= 1`. An assignment
+   *  waiting for payment does not occupy a work slot. Expedition escort
+   *  forces exactly `1` (plan npc-030 §2/§27). */
+  requestedWorkerCount: number
+  /** Every NPC that has accepted this contract, including released and
+   *  payment-due history. An NPC may not accept the same contract twice. */
+  assignments: WorkContractAssignment[]
+}
+
+export type MeasurableWorkContractRecord = BaseWorkContractRecord & { scope: MeasurableWorkContractScope }
+export type EscortWorkContractRecord = BaseWorkContractRecord & { scope: ExpeditionEscortContractScope }
+
+export type WorkContractRecord = MeasurableWorkContractRecord | EscortWorkContractRecord
+
+export function isMeasurableWorkContract(record: WorkContractRecord): record is MeasurableWorkContractRecord {
+  return record.scope.kind === 'measurable_work'
+}
+
+export function isExpeditionEscortContract(record: WorkContractRecord): record is EscortWorkContractRecord {
+  return record.scope.kind === 'expedition_escort'
+}
+
 const TERMINAL_STATES: ReadonlySet<WorkContractState> = new Set(['cancelled', 'completed', 'invalidated'])
 
 const WORK_ACTIVE_ASSIGNMENT_STATES: ReadonlySet<WorkContractAssignmentState> = new Set([
   'accepted',
+  'serving',
   'travelling',
   'working',
 ])
@@ -254,19 +365,21 @@ export function frozenAssignmentClaimSum(record: WorkContractRecord): number {
 }
 
 /**
- * Deterministic integer wage from one assignment's final `workCompleted`
- * and the frozen group rate (plan npc-016 §4). Floor discards fractional
- * remainder coins rather than introducing a second currency ledger.
- * `alreadyFrozen` clamps the result so the group never exceeds `rewardCoins`.
+ * Deterministic integer wage from one measurable-work assignment's final
+ * `workCompleted` and the frozen group rate (plan npc-016 §4). Floor
+ * discards fractional remainder coins rather than introducing a second
+ * currency ledger. `alreadyFrozen` clamps the result so the group never
+ * exceeds `rewardCoins`. Never used for expedition escort (plan npc-030
+ * §11) — see `endEscortService`/`freezeAssignmentClaimAgainst`.
  */
 export function assignmentRewardCoinsDue(
-  record: WorkContractRecord,
+  record: MeasurableWorkContractRecord,
   workCompleted: number,
   alreadyFrozen = 0,
 ): number {
   if (workCompleted <= 0) return 0
-  if (!(record.committedWork > 0) || !(record.rewardCoins > 0)) return 0
-  const proportional = Math.floor(workCompleted * record.rewardCoins / record.committedWork)
+  if (!(record.scope.committedWork > 0) || !(record.rewardCoins > 0)) return 0
+  const proportional = Math.floor(workCompleted * record.rewardCoins / record.scope.committedWork)
   const remaining = Math.max(0, record.rewardCoins - alreadyFrozen)
   return Math.min(proportional, remaining)
 }
@@ -277,7 +390,7 @@ export function hasUnresolvedPaymentClaims(record: WorkContractRecord): boolean 
 
 /** `settling` → `completed` once every positive claim is terminal
  *  (plan npc-016 §9). Other contract states are left unchanged. */
-export function refreshContractSettlement(record: WorkContractRecord): WorkContractRecord {
+export function refreshContractSettlement<T extends WorkContractRecord>(record: T): T {
   if (record.state !== 'settling') return record
   if (hasUnresolvedPaymentClaims(record)) return record
   return { ...record, state: 'completed' }
@@ -304,9 +417,10 @@ export function activeWorkAssignmentCount(record: WorkContractRecord): number {
   return count
 }
 
-/** Remaining group commitment, never negative (plan npc-028 §7). */
-export function groupRemainingWork(record: WorkContractRecord): number {
-  return Math.max(0, record.committedWork - record.npcWorkCompleted)
+/** Remaining group commitment, never negative (plan npc-028 §7). Measurable
+ *  work only — expedition escort has no numeric work target. */
+export function groupRemainingWork(record: MeasurableWorkContractRecord): number {
+  return Math.max(0, record.scope.committedWork - record.scope.npcWorkCompleted)
 }
 
 export function findAssignment(record: WorkContractRecord, npcId: string): WorkContractAssignment | undefined {
@@ -314,31 +428,37 @@ export function findAssignment(record: WorkContractRecord, npcId: string): WorkC
 }
 
 /** Whether `record` should still show a physical target flag in the world
- *  (plan §5/§10) — true for every non-terminal state. */
+ *  (plan §5/§10) — true for every non-terminal measurable-work contract.
+ *  Expedition escort never spawns a world flag (plan npc-030 §3 runtime
+ *  notes — it has no placed target). */
 export function contractHasActiveTarget(record: WorkContractRecord): boolean {
-  return !isContractTerminal(record.state)
+  return record.scope.kind === 'measurable_work' && !isContractTerminal(record.state)
 }
 
 /** Only an `available`, not-yet-posted contract can be posted (plan §8/§9) —
  *  posting a cancelled/invalidated/already-advertised contract is rejected
  *  rather than silently no-op-ing, so board posting can never duplicate a
- *  publication or resurrect a dead contract. */
+ *  publication or resurrect a dead contract. Scope-neutral. */
 export function canPostContract(record: WorkContractRecord): boolean {
   return record.state === 'available' && record.advertisement === 'not_posted'
 }
 
 /**
- * Posted contracts stay discoverable while a work slot and useful group
- * work remain (plan npc-028 §4/§10) — not only while `state ===
- * 'advertised'`. Target usefulness is the caller's job (the domain does
- * not know the live target).
+ * Posted contracts stay discoverable while a work slot remains and, for
+ * measurable work, useful group work remains (plan npc-028 §4/§10, extended
+ * by npc-030 §4) — not only while `state === 'advertised'`. Expedition
+ * escort has no target-usefulness gate: an open slot on a posted, non-
+ * terminal contract with valid terms is always discoverable. Target
+ * usefulness for measurable work is the caller's job (the domain does not
+ * know the live target).
  */
 export function isContractDiscoverable(record: WorkContractRecord): boolean {
   if (isContractTerminal(record.state)) return false
   if (record.advertisement !== 'posted' || record.postedBoardId == null) return false
   if (record.state !== 'advertised' && record.state !== 'active') return false
-  if (groupRemainingWork(record) <= 0) return false
-  return activeWorkAssignmentCount(record) < record.requestedWorkerCount
+  if (activeWorkAssignmentCount(record) >= record.requestedWorkerCount) return false
+  if (record.scope.kind === 'measurable_work') return groupRemainingWork(record as MeasurableWorkContractRecord) > 0
+  return true
 }
 
 /** Deterministic id for the one notice board a settlement owns — derived
@@ -377,16 +497,12 @@ export function createWorkContractRecord(params: {
   remainingWorkAtCreation: number
   requestedWorkerCount?: number
   now: number
-}): WorkContractRecord {
+}): MeasurableWorkContractRecord {
   const requestedWorkShare = Math.max(0, Math.min(1, params.requestedWorkShare))
   const remainingWorkAtCreation = Math.max(0, params.remainingWorkAtCreation)
   return {
     id: params.id,
     employer: params.employer,
-    workType: params.target.kind,
-    target: params.target,
-    x: params.x,
-    z: params.z,
     rewardCoins: params.rewardCoins,
     state: 'available',
     advertisement: 'not_posted',
@@ -395,36 +511,85 @@ export function createWorkContractRecord(params: {
     postedAt: null,
     requestedWorkerCount: normalizeRequestedWorkerCount(params.requestedWorkerCount ?? 1),
     assignments: [],
-    requestedWorkShare,
-    remainingWorkAtCreation,
-    committedWork: remainingWorkAtCreation * requestedWorkShare,
-    npcWorkCompleted: 0,
+    scope: {
+      kind: 'measurable_work',
+      workType: params.target.kind,
+      target: params.target,
+      x: params.x,
+      z: params.z,
+      requestedWorkShare,
+      remainingWorkAtCreation,
+      committedWork: remainingWorkAtCreation * requestedWorkShare,
+      npcWorkCompleted: 0,
+    },
+  }
+}
+
+/**
+ * Creates a bounded expedition-escort contract (plan npc-030 §26) — no
+ * placed target, no target flag, always exactly one requested worker (plan
+ * §2/§27). `null` if `terms` is not a valid, finite, persisted policy (plan
+ * §5) — never silently defaulted.
+ */
+export function createExpeditionEscortContractRecord(params: {
+  id: string
+  employer: string
+  terms: ExpeditionEscortTerms
+  rewardCoins: number
+  now: number
+}): EscortWorkContractRecord | null {
+  if (!isValidExpeditionEscortTerms(params.terms)) return null
+  return {
+    id: params.id,
+    employer: params.employer,
+    rewardCoins: params.rewardCoins,
+    state: 'available',
+    advertisement: 'not_posted',
+    postedBoardId: null,
+    createdAt: params.now,
+    postedAt: null,
+    requestedWorkerCount: 1,
+    assignments: [],
+    scope: { kind: 'expedition_escort', terms: params.terms },
   }
 }
 
 /** Posts `record` at `boardId` — returns the updated record, or `null` if
  *  `canPostContract` rejects it (see that function for the exact gate). */
-export function postWorkContract(
-  record: WorkContractRecord,
+export function postWorkContract<T extends WorkContractRecord>(
+  record: T,
   boardId: string,
   now: number,
-): WorkContractRecord | null {
+): T | null {
   if (!canPostContract(record)) return null
   return { ...record, state: 'advertised', advertisement: 'posted', postedBoardId: boardId, postedAt: now }
 }
 
-function freezeWorkActiveAssignments(
-  record: WorkContractRecord,
-  outcome: 'payment_due' | 'uncollectable',
-  timing: WorkContractClaimTiming,
-): WorkContractAssignment[] {
-  let frozen = frozenAssignmentClaimSum(record)
-  return record.assignments.map((assignment) => {
-    if (!isAssignmentWorkActive(assignment)) return assignment
-    const next = freezeAssignmentClaimAgainst(record, assignment, outcome, timing, frozen)
-    frozen += Math.max(0, next.rewardCoinsDue - assignment.rewardCoinsDue)
-    return next
-  })
+/**
+ * Escort-scope claim for a genuine early-termination boundary (plan npc-030
+ * §14). `allowProportional` distinguishes an employer-initiated stop
+ * (`cancelWorkContract`/`invalidateWorkContract` — proportional-to-elapsed-
+ * duration once serving) from a single-NPC genuine abandonment/death
+ * (`releaseWorkContract` — always `0` unless a claim was already frozen by
+ * an earlier transition, plan §14's death rule). A destination-only policy
+ * has no duration anchor (`serviceEndsAt == null`) and always yields `0`
+ * before arrival, matching plan §14's "destination-only contract cancelled
+ * before destination → 0".
+ */
+function escortCancellationDue(
+  record: EscortWorkContractRecord,
+  assignment: WorkContractAssignment,
+  now: number,
+  alreadyFrozen: number,
+  allowProportional: boolean,
+): number {
+  if (!allowProportional) return 0
+  if (assignment.state !== 'serving') return 0
+  if (assignment.serviceStartedAt == null || assignment.serviceEndsAt == null) return 0
+  const span = assignment.serviceEndsAt - assignment.serviceStartedAt
+  const elapsedFraction = span > 0 ? Math.max(0, Math.min(1, (now - assignment.serviceStartedAt) / span)) : 0
+  const raw = Math.floor(record.rewardCoins * elapsedFraction)
+  return Math.max(0, Math.min(raw, record.rewardCoins - alreadyFrozen))
 }
 
 function freezeAssignmentClaimAgainst(
@@ -433,9 +598,12 @@ function freezeAssignmentClaimAgainst(
   outcome: 'payment_due' | 'uncollectable',
   timing: WorkContractClaimTiming,
   alreadyFrozen: number,
+  allowEscortProportional: boolean,
 ): WorkContractAssignment {
   if (assignment.rewardCoinsDue > 0) return { ...assignment, state: outcome }
-  const due = assignmentRewardCoinsDue(record, assignment.workCompleted, alreadyFrozen)
+  const due = record.scope.kind === 'expedition_escort'
+    ? escortCancellationDue(record as EscortWorkContractRecord, assignment, timing.now, alreadyFrozen, allowEscortProportional)
+    : assignmentRewardCoinsDue(record as MeasurableWorkContractRecord, assignment.workCompleted, alreadyFrozen)
   if (due <= 0) return { ...assignment, state: 'released', ...emptyPaymentFields() }
   const patience = timing.patienceDaysFor?.(assignment.npcId) ?? DEFAULT_PAYMENT_PATIENCE_DAYS
   return {
@@ -447,6 +615,27 @@ function freezeAssignmentClaimAgainst(
   }
 }
 
+/** Employer-initiated stop of every still-work-active assignment (plan
+ *  §10) — escort assignments credit proportional-to-elapsed-duration
+ *  (`allowEscortProportional: true`), matching the plan's explicit early-
+ *  termination rules for a player cancellation. */
+function freezeWorkActiveAssignments(
+  record: WorkContractRecord,
+  outcome: 'payment_due' | 'uncollectable',
+  timing: WorkContractClaimTiming,
+): WorkContractAssignment[] {
+  let frozen = frozenAssignmentClaimSum(record)
+  return record.assignments.map((assignment) => {
+    if (!isAssignmentWorkActive(assignment)) return assignment
+    const next = freezeAssignmentClaimAgainst(record, assignment, outcome, timing, frozen, true)
+    frozen += Math.max(0, next.rewardCoinsDue - assignment.rewardCoinsDue)
+    return next
+  })
+}
+
+/** Single-NPC genuine abandonment/death (plan §12/§14) — escort never
+ *  credits proportional service here (`allowEscortProportional: false`):
+ *  only a claim already frozen by an earlier transition survives. */
 function freezeAssignmentClaim(
   record: WorkContractRecord,
   assignment: WorkContractAssignment,
@@ -459,17 +648,19 @@ function freezeAssignmentClaim(
     outcome,
     timing,
     frozenAssignmentClaimSum(record) - Math.max(0, assignment.rewardCoinsDue),
+    false,
   )
 }
 
 /** Cancels `record` — clears any publication atomically with the state
  *  change (plan §10). Work-active assignments freeze earned claims as
- *  living `payment_due` (plan npc-016); zero-work assignments are
- *  `released`. Returns `null` (no-op) if already terminal. */
-export function cancelWorkContract(
-  record: WorkContractRecord,
+ *  living `payment_due` (plan npc-016, generalized by npc-030 §14); zero-
+ *  claim assignments are `released`. Returns `null` (no-op) if already
+ *  terminal. */
+export function cancelWorkContract<T extends WorkContractRecord>(
+  record: T,
   timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
-): WorkContractRecord | null {
+): T | null {
   if (isContractTerminal(record.state)) return null
   return {
     ...record,
@@ -483,10 +674,10 @@ export function cancelWorkContract(
 /** Invalidates `record`'s target — same atomic publication cleanup as
  *  `cancelWorkContract`, distinct terminal state (plan §10). Returns `null`
  *  (no-op) if already terminal. */
-export function invalidateWorkContract(
-  record: WorkContractRecord,
+export function invalidateWorkContract<T extends WorkContractRecord>(
+  record: T,
   timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
-): WorkContractRecord | null {
+): T | null {
   if (isContractTerminal(record.state)) return null
   return {
     ...record,
@@ -498,18 +689,20 @@ export function invalidateWorkContract(
 }
 
 /** Whether `npcId` may accept `record` right now (plan npc-028 §4/§10) —
- *  discoverable, a free work slot, useful group work remaining, and this NPC
- *  has never had an assignment on this contract. Callers must still
- *  re-check the live record and the one-active-work-commitment-per-NPC
- *  rule; this predicate is the contract-local half. */
+ *  discoverable, a free work slot, useful group work remaining (measurable
+ *  work only), and this NPC has never had an assignment on this contract.
+ *  Callers must still re-check the live record and the one-active-work-
+ *  commitment-per-NPC rule; this predicate is the contract-local half. */
 export function canAcceptContract(record: WorkContractRecord, npcId: string): boolean {
   return isContractDiscoverable(record) && findAssignment(record, npcId) == null
 }
 
 /** NPC accepts a discovered, still-open contract (plan npc-028 §10) —
  *  adds an assignment without replacing any other worker. `null` if
- *  `canAcceptContract` rejects it. */
-export function acceptWorkContract(record: WorkContractRecord, npcId: string, now: number): WorkContractRecord | null {
+ *  `canAcceptContract` rejects it. Scope-neutral: the resulting assignment
+ *  starts `accepted` regardless of scope; escort service timing is stamped
+ *  separately by `beginEscortService`. */
+export function acceptWorkContract<T extends WorkContractRecord>(record: T, npcId: string, now: number): T | null {
   if (!canAcceptContract(record, npcId)) return null
   const assignment: WorkContractAssignment = {
     npcId,
@@ -517,6 +710,8 @@ export function acceptWorkContract(record: WorkContractRecord, npcId: string, no
     acceptedAt: now,
     workStartedAt: null,
     workCompleted: 0,
+    serviceStartedAt: null,
+    serviceEndsAt: null,
     ...emptyPaymentFields(),
   }
   return {
@@ -526,11 +721,11 @@ export function acceptWorkContract(record: WorkContractRecord, npcId: string, no
   }
 }
 
-function withAssignment(
-  record: WorkContractRecord,
+function withAssignment<T extends WorkContractRecord>(
+  record: T,
   npcId: string,
   update: (assignment: WorkContractAssignment) => WorkContractAssignment | null,
-): WorkContractRecord | null {
+): T | null {
   const index = record.assignments.findIndex((assignment) => assignment.npcId === npcId)
   if (index === -1) return null
   const current = record.assignments[index]!
@@ -541,27 +736,49 @@ function withAssignment(
   return { ...record, assignments }
 }
 
-/** `accepted` → `travelling` (plan npc-015 §6) — only that NPC's
- *  assignment moves; other workers are untouched. */
-export function beginContractTravel(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+/** `accepted` → `travelling` (plan npc-015 §6) — measurable work only; only
+ *  that NPC's assignment moves, other workers are untouched. */
+export function beginContractTravel(record: MeasurableWorkContractRecord, npcId: string): MeasurableWorkContractRecord | null {
   return withAssignment(record, npcId, (assignment) => (
     assignment.state === 'accepted' ? { ...assignment, state: 'travelling' } : null
   ))
 }
 
 /** `travelling` → `working` (plan npc-015 §7), once this worker has reached
- *  the target. */
-export function beginContractWork(record: WorkContractRecord, npcId: string, now: number): WorkContractRecord | null {
+ *  the target. Measurable work only. */
+export function beginContractWork(record: MeasurableWorkContractRecord, npcId: string, now: number): MeasurableWorkContractRecord | null {
   return withAssignment(record, npcId, (assignment) => (
     assignment.state === 'travelling' ? { ...assignment, state: 'working', workStartedAt: now } : null
   ))
 }
 
-function settleWorkPhase(
-  record: WorkContractRecord,
+/**
+ * `accepted` → `serving` for an expedition escort (plan npc-030 §5/§6) —
+ * skips the measurable-work travel/work split entirely (no fictional
+ * `travelling` to a static target). Stamps absolute service timing:
+ * `serviceEndsAt` derives once from `terms.durationDays` when present,
+ * `null` for a pure `destination` policy. `null` if `npcId` has no
+ * `accepted` assignment on this contract.
+ */
+export function beginEscortService(
+  record: EscortWorkContractRecord,
+  npcId: string,
+  now: number,
+): EscortWorkContractRecord | null {
+  const durationDays = record.scope.terms.durationDays
+  const serviceEndsAt = typeof durationDays === 'number' ? now + durationDays : null
+  return withAssignment(record, npcId, (assignment) => (
+    assignment.state === 'accepted'
+      ? { ...assignment, state: 'serving', serviceStartedAt: now, serviceEndsAt }
+      : null
+  ))
+}
+
+function settleWorkPhase<T extends WorkContractRecord>(
+  record: T,
   timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
-): WorkContractRecord {
-  const next: WorkContractRecord = {
+): T {
+  const next: T = {
     ...record,
     state: 'settling',
     assignments: freezeWorkActiveAssignments(record, 'payment_due', timing),
@@ -569,50 +786,85 @@ function settleWorkPhase(
   return refreshContractSettlement(next)
 }
 
+/** Genuine service boundary reached for one escort assignment (plan npc-030
+ *  §11/§13) — pure fulfilment, never emulated with fake work units.
+ *  `outcome.kind === 'fulfilled'` (duration elapsed, shared destination
+ *  arrival, or a `destination_or_timeout` boundary reached either way)
+ *  freezes the full agreed reward. `null` if `npcId` is not currently
+ *  `serving` (including an already-terminal assignment — idempotent). */
+export function endEscortService(
+  record: EscortWorkContractRecord,
+  npcId: string,
+  outcome: { kind: 'fulfilled' },
+  timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
+): EscortWorkContractRecord | null {
+  const assignment = findAssignment(record, npcId)
+  if (!assignment || assignment.state !== 'serving') return null
+  const alreadyFrozen = frozenAssignmentClaimSum(record)
+  const due = Math.max(0, Math.min(record.rewardCoins, record.rewardCoins - alreadyFrozen))
+  void outcome
+  const patience = timing.patienceDaysFor?.(npcId) ?? DEFAULT_PAYMENT_PATIENCE_DAYS
+  const updated: WorkContractAssignment = due > 0
+    ? { ...assignment, state: 'payment_due', rewardCoinsDue: due, lastPaymentRequestAt: null, paymentDeadline: timing.now + patience }
+    : { ...assignment, state: 'released', ...emptyPaymentFields() }
+  const next = withAssignment(record, npcId, () => updated)
+  if (!next) return null
+  return settleWorkPhase(next, timing)
+}
+
 /** Ends the contractual work phase for every still-work-active assignment
- *  (plan npc-028 §15/§16, npc-016 §6) — group commitment fulfilled, or the
- *  real target no longer accepts useful work. Positive contribution freezes
- *  a per-assignment claim; zero-work assignments are `released`. `null` if
- *  `npcId` is not currently work-active on this contract. */
-export function completeContractWork(
-  record: WorkContractRecord,
+ *  (plan npc-028 §15/§16, npc-016 §6, generalized by npc-030 §11) — group
+ *  measurable commitment fulfilled (or the real target no longer accepts
+ *  useful work), or an escort's service boundary was reached. Measurable
+ *  work freezes a proportional-to-`workCompleted` claim; escort freezes the
+ *  full agreed reward via `endEscortService`. `null` if `npcId` is not
+ *  currently work-active on this contract. */
+export function completeContractWork<T extends WorkContractRecord>(
+  record: T,
   npcId: string,
   timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
-): WorkContractRecord | null {
+): T | null {
   const assignment = findAssignment(record, npcId)
   if (!assignment || !isAssignmentWorkActive(assignment)) return null
+  if (record.scope.kind === 'expedition_escort') {
+    return endEscortService(record as EscortWorkContractRecord, npcId, { kind: 'fulfilled' }, timing) as T | null
+  }
   return settleWorkPhase(record, timing)
 }
 
-/** Releases `npcId`'s work participation (plan npc-028 §13, npc-016 §6/§8)
- *  — genuine abandonment/death, never a temporary interruption. A living
- *  worker with useful work keeps a `payment_due` claim and frees the slot;
- *  death with useful work becomes `uncollectable`. Zero-work stops are
- *  `released` with no wage. Reopens a work slot when useful group work
+/** Releases `npcId`'s work participation (plan npc-028 §13, npc-016 §6/§8,
+ *  generalized by npc-030 §12/§14) — genuine abandonment/death, never a
+ *  temporary interruption. A living measurable-work worker with useful work
+ *  keeps a `payment_due` claim; an escort abandonment/death never
+ *  synthesizes a new wage (only a claim already frozen by an earlier
+ *  transition survives). Reopens a work slot when useful group work
  *  remains. Use `invalidateWorkContract` when the target itself is the
  *  problem. */
-export function releaseWorkContract(
-  record: WorkContractRecord,
+export function releaseWorkContract<T extends WorkContractRecord>(
+  record: T,
   npcId: string,
   reason: WorkContractReleaseReason = 'abandoned',
   timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
-): WorkContractRecord | null {
+): T | null {
   const current = findAssignment(record, npcId)
   if (!current || !isAssignmentWorkActive(current)) return null
   const outcome = reason === 'death' ? 'uncollectable' as const : 'payment_due' as const
   const assignments = record.assignments.map((assignment) => (
     assignment.npcId === npcId ? freezeAssignmentClaim(record, assignment, outcome, timing) : assignment
   ))
-  const next: WorkContractRecord = { ...record, assignments }
+  const next: T = { ...record, assignments }
   if (activeWorkAssignmentCount(next) > 0) return { ...next, state: 'active' }
-  if (groupRemainingWork(next) <= 0) return settleWorkPhase(next, timing)
+  if (record.scope.kind === 'measurable_work' && groupRemainingWork(next as MeasurableWorkContractRecord) <= 0) {
+    return settleWorkPhase(next, timing)
+  }
+  if (record.scope.kind === 'expedition_escort') return settleWorkPhase(next, timing)
   if (next.advertisement === 'posted') return { ...next, state: 'advertised' }
   return next
 }
 
 /** Marks a still-payable assignment `paid` (plan npc-016 §15) — inventory
  *  transfer must already have succeeded. Refreshes aggregate settlement. */
-export function markWorkAssignmentPaid(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+export function markWorkAssignmentPaid<T extends WorkContractRecord>(record: T, npcId: string): T | null {
   const current = findAssignment(record, npcId)
   if (!current || !isAssignmentPayable(current)) return null
   const updated = withAssignment(record, npcId, (assignment) => ({ ...assignment, state: 'paid' as const }))
@@ -621,11 +873,11 @@ export function markWorkAssignmentPaid(record: WorkContractRecord, npcId: string
 
 /** Patience expiry: `payment_due` → `unpaid` when `now >= paymentDeadline`
  *  (plan npc-016 §18). Unchanged record if the deadline has not passed. */
-export function expireWorkAssignmentPayment(
-  record: WorkContractRecord,
+export function expireWorkAssignmentPayment<T extends WorkContractRecord>(
+  record: T,
   npcId: string,
   now: number,
-): WorkContractRecord | null {
+): T | null {
   const current = findAssignment(record, npcId)
   if (!current || current.state !== 'payment_due') return null
   if (current.paymentDeadline == null || now < current.paymentDeadline) return record
@@ -635,10 +887,7 @@ export function expireWorkAssignmentPayment(
 
 /** Dead worker with a still-payable claim (plan npc-016 §8) — preserves the
  *  frozen amount and stops payment requests. */
-export function markWorkAssignmentUncollectable(
-  record: WorkContractRecord,
-  npcId: string,
-): WorkContractRecord | null {
+export function markWorkAssignmentUncollectable<T extends WorkContractRecord>(record: T, npcId: string): T | null {
   const current = findAssignment(record, npcId)
   if (!current || !isAssignmentPayable(current)) return null
   const updated = withAssignment(record, npcId, (assignment) => ({ ...assignment, state: 'uncollectable' as const }))
@@ -646,11 +895,11 @@ export function markWorkAssignmentUncollectable(
 }
 
 /** Stamps `lastPaymentRequestAt` on a payable assignment (plan npc-016 §17). */
-export function recordWorkAssignmentPaymentRequest(
-  record: WorkContractRecord,
+export function recordWorkAssignmentPaymentRequest<T extends WorkContractRecord>(
+  record: T,
   npcId: string,
   now: number,
-): WorkContractRecord | null {
+): T | null {
   const current = findAssignment(record, npcId)
   if (!current || !isAssignmentPayable(current)) return null
   return withAssignment(record, npcId, (assignment) => ({ ...assignment, lastPaymentRequestAt: now }))
@@ -658,25 +907,26 @@ export function recordWorkAssignmentPaymentRequest(
 
 /** True once the NPC *group* has performed its full agreed share (plan
  *  npc-028 §15) — independent of contribution distribution and of whether
- *  the underlying target itself is finished. The caller (`NpcAgent`)
- *  still separately checks target completion (plan §16); either condition
- *  ends the contractual work phase. */
-export function isNpcCommitmentFulfilled(record: WorkContractRecord): boolean {
-  return record.npcWorkCompleted >= record.committedWork
+ *  the underlying target itself is finished. Measurable work only. The
+ *  caller (`NpcAgent`) still separately checks target completion (plan
+ *  §16); either condition ends the contractual work phase. */
+export function isNpcCommitmentFulfilled(record: MeasurableWorkContractRecord): boolean {
+  return record.scope.npcWorkCompleted >= record.scope.committedWork
 }
 
-/** Frozen reward rate for attributable work (plan npc-028 §12). `0` when
- *  `committedWork` is 0 so callers never divide by zero. */
-export function contractRewardRate(record: WorkContractRecord): number {
-  return record.committedWork > 0 ? record.rewardCoins / record.committedWork : 0
+/** Frozen reward rate for attributable measurable work (plan npc-028 §12).
+ *  `0` when `committedWork` is 0 so callers never divide by zero. */
+export function contractRewardRate(record: MeasurableWorkContractRecord): number {
+  return record.scope.committedWork > 0 ? record.rewardCoins / record.scope.committedWork : 0
 }
 
 /**
  * Deterministic estimate of how much remaining group work the next
  * accepting candidate would take on (plan npc-028 §11). Not a personal
- * quota — `active + remaining slots`, bounded to at least 1.
+ * quota — `active + remaining slots`, bounded to at least 1. Measurable
+ * work only.
  */
-export function expectedCandidateWork(record: WorkContractRecord): number {
+export function expectedCandidateWork(record: MeasurableWorkContractRecord): number {
   const remaining = groupRemainingWork(record)
   const active = activeWorkAssignmentCount(record)
   const remainingSlots = Math.max(0, record.requestedWorkerCount - active)
@@ -688,18 +938,18 @@ export function expectedCandidateWork(record: WorkContractRecord): number {
  *  `npcId` (plan npc-028 §8) — the only mutation of both
  *  `assignment.workCompleted` and aggregate `npcWorkCompleted`. `null` if
  *  that NPC is not currently `working`. A non-positive amount is a no-op
- *  that still returns the current record. */
+ *  that still returns the current record. Measurable work only. */
 export function recordNpcWorkContribution(
-  record: WorkContractRecord,
+  record: MeasurableWorkContractRecord,
   npcId: string,
   workAmount: number,
-): WorkContractRecord | null {
+): MeasurableWorkContractRecord | null {
   const assignment = findAssignment(record, npcId)
   if (!assignment || assignment.state !== 'working') return null
   if (workAmount <= 0) return record
   return {
     ...record,
-    npcWorkCompleted: record.npcWorkCompleted + workAmount,
+    scope: { ...record.scope, npcWorkCompleted: record.scope.npcWorkCompleted + workAmount },
     assignments: record.assignments.map((entry) => (
       entry.npcId === npcId
         ? { ...entry, workCompleted: entry.workCompleted + workAmount }
@@ -713,4 +963,56 @@ export function recordNpcWorkContribution(
  *  reference equality. */
 export function sameContractTarget(a: ContractTarget, b: ContractTarget): boolean {
   return a.kind === b.kind && a.targetId === b.targetId
+}
+
+/** `now >= serviceEndsAt`, the escort duration boundary (plan npc-030 §11).
+ *  `false` when this assignment has no duration anchor at all (a pure
+ *  `destination` policy, or not yet serving). */
+export function isEscortServiceDurationDue(assignment: WorkContractAssignment, nowDays: number): boolean {
+  return assignment.serviceEndsAt != null && nowDays >= assignment.serviceEndsAt
+}
+
+/** Meaningful shared arrival radius (plan npc-030 §11) — both the player
+ *  and the escort NPC must be within this bound, never only the player. */
+export const ESCORT_DESTINATION_ARRIVAL_RADIUS = 20
+
+/** Shared-arrival predicate (plan npc-030 §11/§10) — the caller supplies
+ *  the resolved destination snapshot plus current player/NPC positions;
+ *  this stays pure and free of any live world-location/settlement lookup. */
+export function isEscortDestinationArrived(
+  destination: { x: number, z: number },
+  playerPos: { x: number, z: number },
+  npcPos: { x: number, z: number },
+  radius: number = ESCORT_DESTINATION_ARRIVAL_RADIUS,
+): boolean {
+  return (
+    Math.hypot(playerPos.x - destination.x, playerPos.z - destination.z) <= radius
+    && Math.hypot(npcPos.x - destination.x, npcPos.z - destination.z) <= radius
+  )
+}
+
+/**
+ * Pure escort fulfilment check (plan npc-030 §11) — never completes a
+ * `destination` policy merely because the player crossed the destination
+ * while the NPC remains materially separated (a missing `npcPos`, e.g. an
+ * off-screen/separated NPC, never counts as arrived). `destination_or_timeout`
+ * completes on whichever boundary is reached first; both are a successful
+ * "contract boundary reached" (plan npc-030 §13's fulfilment payment rule),
+ * never early termination.
+ */
+export function isEscortServiceFulfilled(input: {
+  terms: ExpeditionEscortTerms
+  assignment: WorkContractAssignment
+  nowDays: number
+  playerPos?: { x: number, z: number } | null
+  npcPos?: { x: number, z: number } | null
+}): boolean {
+  const { terms, assignment } = input
+  const durationDue = isEscortServiceDurationDue(assignment, input.nowDays)
+  if (terms.completionPolicy === 'duration') return durationDue
+  const destination = terms.destination
+  const arrived = destination != null && input.playerPos != null && input.npcPos != null
+    && isEscortDestinationArrived(destination, input.playerPos, input.npcPos)
+  if (terms.completionPolicy === 'destination') return arrived
+  return arrived || durationDue
 }

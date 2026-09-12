@@ -110,10 +110,6 @@ const validSave: SaveData = {
   workContracts: [{
     id: 'workContract:1',
     employer: 'player',
-    workType: 'construction',
-    target: { kind: 'construction', targetId: 'contractTarget:1' },
-    x: 14,
-    z: -5,
     rewardCoins: 25,
     state: 'advertised',
     advertisement: 'posted',
@@ -122,10 +118,17 @@ const validSave: SaveData = {
     postedAt: 2.1,
     requestedWorkerCount: 1,
     assignments: [],
-    requestedWorkShare: 0.5,
-    remainingWorkAtCreation: 6,
-    committedWork: 3,
-    npcWorkCompleted: 1,
+    scope: {
+      kind: 'measurable_work',
+      workType: 'construction',
+      target: { kind: 'construction', targetId: 'contractTarget:1' },
+      x: 14,
+      z: -5,
+      requestedWorkShare: 0.5,
+      remainingWorkAtCreation: 6,
+      committedWork: 3,
+      npcWorkCompleted: 1,
+    },
   }],
   persistentHabitatOccupants: [],
   removedPersistentOccupantSlots: [],
@@ -291,7 +294,7 @@ describe('loadSaveData v1 contract', () => {
 
   it('rejects malformed work-contract fields', () => {
     expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], state: 'bogus' }] })).toBeNull()
-    expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], target: { kind: 'bogus', targetId: 'x' } }] })).toBeNull()
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], scope: { ...validSave.workContracts[0]!.scope, target: { kind: 'bogus', targetId: 'x' } } }] })).toBeNull()
     expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], advertisement: 'bogus' }] })).toBeNull()
     expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], requestedWorkerCount: 0 }] })).toBeNull()
     expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], assignments: [{ npcId: 'npc:1', state: 'bogus', acceptedAt: 1, workStartedAt: null, workCompleted: 0 }] }] })).toBeNull()
@@ -583,24 +586,30 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
   })
 
   it('migrates a real v4 save (plan npc-018) into v5, defaulting the new shared-work commitment fields to full-share/never-fulfilled', () => {
-    const {
-      requestedWorkShare: _rs,
-      remainingWorkAtCreation: _rw,
-      committedWork: _cw,
-      npcWorkCompleted: _nc,
-      ...v4Contract
-    } = validSave.workContracts[0]!
+    const current = validSave.workContracts[0]!
+    const { workType, target, x, z } = current.scope as { workType: string, target: unknown, x: number, z: number }
+    const { scope: _scope, ...rest } = current
+    // A genuine pre-npc-018 (and pre-npc-030) contract: flat workType/target/x/z,
+    // no shared-work commitment fields, no discriminated `scope` at all yet.
+    const v4Contract = { ...rest, workType, target, x, z }
     const v4Save = { ...validSave, version: 4, workContracts: [v4Contract] }
     expect(loadStoredSave(v4Save)).toEqual({
       status: 'ok',
       data: {
         ...validSave,
         workContracts: [{
-          ...v4Contract,
-          requestedWorkShare: 1,
-          remainingWorkAtCreation: Number.MAX_SAFE_INTEGER,
-          committedWork: Number.MAX_SAFE_INTEGER,
-          npcWorkCompleted: 0,
+          ...rest,
+          scope: {
+            kind: 'measurable_work',
+            workType,
+            target,
+            x,
+            z,
+            requestedWorkShare: 1,
+            remainingWorkAtCreation: Number.MAX_SAFE_INTEGER,
+            committedWork: Number.MAX_SAFE_INTEGER,
+            npcWorkCompleted: 0,
+          },
         }],
       },
     })
@@ -993,7 +1002,14 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     ['working', 'active', 'working'],
     ['payment_due', 'settling', 'payment_due'],
   ] as const)('migrates a v13 %s contract into one assignment without double-counting work', (oldState, contractState, assignmentState) => {
-    const { requestedWorkerCount: _c, assignments: _a, ...base } = validSave.workContracts[0]!
+    const current = validSave.workContracts[0]!
+    const { requestedWorkerCount: _c, assignments: _a, scope: _scope, ...rest } = current
+    // Genuinely pre-npc-030 flat shape — `scope` did not exist at v13.
+    const { workType, target, x, z, requestedWorkShare, remainingWorkAtCreation, committedWork } = current.scope as {
+      workType: string, target: unknown, x: number, z: number,
+      requestedWorkShare: number, remainingWorkAtCreation: number, committedWork: number,
+    }
+    const base = { ...rest, workType, target, x, z, requestedWorkShare, remainingWorkAtCreation, committedWork }
     const v13Save = {
       ...validSave,
       version: 13,
@@ -1010,10 +1026,14 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.status).toBe('ok')
     if (result.status !== 'ok') return
     expect(result.data.workContracts[0]).toEqual({
-      ...base,
+      ...rest,
       state: contractState,
       requestedWorkerCount: 1,
-      npcWorkCompleted: 2,
+      scope: {
+        kind: 'measurable_work',
+        workType, target, x, z, requestedWorkShare, remainingWorkAtCreation, committedWork,
+        npcWorkCompleted: 2,
+      },
       assignments: [{
         npcId: 'npc:1',
         state: assignmentState,
@@ -1023,6 +1043,8 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
         rewardCoinsDue: assignmentState === 'payment_due' ? 16 : 0,
         lastPaymentRequestAt: null,
         paymentDeadline: null,
+        serviceStartedAt: null,
+        serviceEndsAt: null,
       }],
     })
   })
@@ -1031,14 +1053,20 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     const palisade = {
       ...validSave.workContracts[0]!,
       id: 'workContract:palisade',
-      workType: 'palisade' as const,
-      target: { kind: 'palisade' as const, targetId: 'palisade:1' },
+      scope: {
+        ...validSave.workContracts[0]!.scope,
+        workType: 'palisade' as const,
+        target: { kind: 'palisade' as const, targetId: 'palisade:1' },
+      },
     }
     const torch = {
       ...validSave.workContracts[0]!,
       id: 'workContract:torch',
-      workType: 'standing_torch' as const,
-      target: { kind: 'standing_torch' as const, targetId: 'standingTorch:1' },
+      scope: {
+        ...validSave.workContracts[0]!.scope,
+        workType: 'standing_torch' as const,
+        target: { kind: 'standing_torch' as const, targetId: 'standingTorch:1' },
+      },
     }
     const loaded = loadSaveData({ ...validSave, workContracts: [palisade, torch] })
     expect(loaded?.workContracts).toEqual([palisade, torch])
@@ -1086,6 +1114,10 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       version: 19,
       workContracts: [{
         ...validSave.workContracts[0]!,
+        // `migrateSaveV19ToV20` reads the pre-npc-030 flat `committedWork`
+        // (nested under `scope` since npc-030) to compute the proportional
+        // claim — a genuine v19 save had it at the top level.
+        committedWork: (validSave.workContracts[0]!.scope as { committedWork: number }).committedWork,
         state: 'settling',
         assignments: [legacyAssignment],
       }],
@@ -1098,6 +1130,8 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       rewardCoinsDue: 16,
       lastPaymentRequestAt: null,
       paymentDeadline: null,
+      serviceStartedAt: null,
+      serviceEndsAt: null,
     })
   })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createWorkContractRecord, type WorkContractRecord } from '../world/workContract'
+import { createWorkContractRecord, type MeasurableWorkContractRecord } from '../world/workContract'
 import { scoreWorkContractOpportunity, selectBestWorkContract, type WorkContractEvaluationInput } from './npcWorkContract'
 
 /** `remainingWorkAtCreation` matches the plan's worked example (10h) so
@@ -7,7 +7,7 @@ import { scoreWorkContractOpportunity, selectBestWorkContract, type WorkContract
  *  constant every test below can reason about. */
 const COMMITTED_WORK_HOURS = 10
 
-function makeContract(rewardCoins: number, x = 0, z = 0): WorkContractRecord {
+function makeContract(rewardCoins: number, x = 0, z = 0): MeasurableWorkContractRecord {
   return createWorkContractRecord({
     id: 'workContract:1',
     employer: 'player',
@@ -86,10 +86,10 @@ describe('scoreWorkContractOpportunity', () => {
 
   it('charges the contract\'s own committedWork, not a fixed full-target estimate (plan npc-018 §22)', () => {
     const contract = makeContract(50)
-    expect(contract.committedWork).toBe(COMMITTED_WORK_HOURS)
+    expect(contract.scope.committedWork).toBe(COMMITTED_WORK_HOURS)
     // baseInput's role is 'woodcutter' (+5 suitability, see CONTRACT_SUITABILITY_BY_ROLE).
     const score = scoreWorkContractOpportunity(contract, baseInput({ hasWorkplace: false }))
-    expect(score).toBe(50 + 5 - contract.committedWork * 3)
+    expect(score).toBe(50 + 5 - contract.scope.committedWork * 3)
   })
 
   it('a smaller work share (a smaller committedWork) scores higher than a full one, all else equal', () => {

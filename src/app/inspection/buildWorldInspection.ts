@@ -613,7 +613,7 @@ function buildResidentialInspection(id: string, lookup: WorldInspectionLookup): 
 }
 
 function buildContractSection(record: WorkContractRecord | undefined): InspectionSection | null {
-  if (!record) return null
+  if (!record || record.scope.kind !== 'measurable_work') return null
   const activeWorkers = record.assignments.filter(isAssignmentWorkActive).length
   return {
     title: 'Zlecenie pracy',
@@ -623,10 +623,10 @@ function buildContractSection(record: WorkContractRecord | undefined): Inspectio
       rows: [
         { label: 'Ogłoszenie', value: record.advertisement === 'posted' ? 'ogłoszone' : 'nieogłoszone' },
         { label: 'Najemnicy', value: `${activeWorkers} / ${record.requestedWorkerCount}` },
-        { label: 'Udział pracy', value: `${Math.round(record.requestedWorkShare * 100)}%` },
+        { label: 'Udział pracy', value: `${Math.round(record.scope.requestedWorkShare * 100)}%` },
         { label: 'Wynagrodzenie', value: `${record.rewardCoins} monet` },
-        { label: 'Zadeklarowana praca', value: `${formatHours(record.committedWork)} h` },
-        { label: 'Wykonane przez NPC', value: `${formatHours(record.npcWorkCompleted)} h` },
+        { label: 'Zadeklarowana praca', value: `${formatHours(record.scope.committedWork)} h` },
+        { label: 'Wykonane przez NPC', value: `${formatHours(record.scope.npcWorkCompleted)} h` },
       ],
     }],
   }

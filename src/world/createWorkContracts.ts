@@ -6,11 +6,15 @@ import {
   acceptWorkContract,
   beginContractTravel,
   beginContractWork,
+  beginEscortService,
   cancelWorkContract,
   completeContractWork,
   contractHasActiveTarget,
   type ContractTarget,
+  createExpeditionEscortContractRecord,
   createWorkContractRecord,
+  type EscortWorkContractRecord,
+  type ExpeditionEscortTerms,
   expireWorkAssignmentPayment,
   findAssignment,
   invalidateWorkContract,
@@ -20,6 +24,7 @@ import {
   isContractTerminal,
   markWorkAssignmentPaid,
   markWorkAssignmentUncollectable,
+  type MeasurableWorkContractRecord,
   normalizeRequestedWorkerCount,
   postWorkContract,
   recordNpcWorkContribution,
@@ -49,6 +54,15 @@ export type CreateWorkContractParams = {
   now: number
 }
 
+/** Escort counterpart of `CreateWorkContractParams` (plan npc-030 §26) — no
+ *  target, no `x`/`z`, no work share/worker-count choice (always 1). */
+export type CreateEscortContractParams = {
+  employer: string
+  terms: ExpeditionEscortTerms
+  rewardCoins: number
+  now: number
+}
+
 /** Authoritative lookup of one NPC's assignment on a live contract. */
 export type WorkContractAssignmentLookup = {
   contract: WorkContractRecord
@@ -72,7 +86,12 @@ export type WorkContracts = {
    *  never a placeholder.
    *  Returns `null` if `target` already has a non-terminal contract
    *  (plan §9's one-active-contract-per-target invariant). */
-  create: (params: CreateWorkContractParams) => WorkContractRecord | null
+  create: (params: CreateWorkContractParams) => MeasurableWorkContractRecord | null
+  /** Creates a new `available`/`not_posted` expedition-escort contract (plan
+   *  npc-030 §26) — no placed target, no target flag, always exactly one
+   *  requested worker. `null` if `params.terms` is not a valid, finite
+   *  policy (plan §5). */
+  createEscort: (params: CreateEscortContractParams) => EscortWorkContractRecord | null
   /** Posts `id` at `boardId` — returns the updated record, or `null` if
    *  `id` is unknown or `canPostContract` rejects it (plan §8/§9). */
   post: (id: string, boardId: string, now: number) => WorkContractRecord | null
@@ -117,6 +136,10 @@ export type WorkContracts = {
   /** Assignment `travelling` → `working` (plan npc-015 §7), once this
    *  worker has reached the target. Same guards as `beginTravel`. */
   beginWork: (id: string, npcId: string, now: number) => WorkContractRecord | null
+  /** `accepted` → `serving` for an expedition escort (plan npc-030 §5/§6) —
+   *  stamps absolute service timing. `null` if `id` is unknown or `npcId`
+   *  has no `accepted` assignment on it. */
+  beginServing: (id: string, npcId: string, now: number) => WorkContractRecord | null
   /** Ends the work phase for every still-work-active assignment (plan
    *  npc-028 §15/§16, npc-016 §6). `null` if `id` is unknown or `npcId` is
    *  not currently work-active on it. */
@@ -126,7 +149,7 @@ export type WorkContracts = {
    *  aggregate `npcWorkCompleted` together. `null` if `id` is unknown or
    *  `npcId` is not currently `working`; a non-positive `workAmount` is a
    *  no-op that still returns the current record. */
-  creditNpcWork: (id: string, npcId: string, workAmount: number) => WorkContractRecord | null
+  creditNpcWork: (id: string, npcId: string, workAmount: number) => MeasurableWorkContractRecord | null
   /** Releases `npcId`'s work participation without touching the posting
    *  (plan npc-028 §13, npc-016 §6/§8) — genuine abandonment or death, never
    *  a temporary interruption. `false` if `id` is unknown or `npcId` is not
@@ -185,9 +208,9 @@ export function createWorkContracts(
   const records: WorkContractRecord[] = []
   const flags = new Map<string, THREE.Group>()
 
-  const spawnFlag = (record: WorkContractRecord): void => {
+  const spawnFlag = (record: MeasurableWorkContractRecord): void => {
     const flag = createContractFlagVisual()
-    placeOnGround(flag, record.x, record.z, sampleHeight)
+    placeOnGround(flag, record.scope.x, record.scope.z, sampleHeight)
     scene.add(flag)
     flags.set(record.id, flag)
   }
@@ -202,7 +225,7 @@ export function createWorkContracts(
 
   for (const record of initial) {
     records.push(record)
-    if (contractHasActiveTarget(record)) spawnFlag(record)
+    if (contractHasActiveTarget(record)) spawnFlag(record as MeasurableWorkContractRecord)
   }
 
   const indexOf = (id: string): number => records.findIndex((r) => r.id === id)
@@ -230,7 +253,7 @@ export function createWorkContracts(
     return undefined
   }
 
-  const replace = (id: string, updated: WorkContractRecord | null): WorkContractRecord | null => {
+  const replace = <T extends WorkContractRecord>(id: string, updated: T | null): T | null => {
     if (!updated) return null
     const index = indexOf(id)
     if (index === -1) return null
@@ -243,10 +266,12 @@ export function createWorkContracts(
     nodes: () => records,
     find: (id) => records.find((r) => r.id === id),
     hasActiveContract: (target) =>
-      records.some((r) => !isContractTerminal(r.state) && sameContractTarget(r.target, target)),
+      records.some((r) => (
+        r.scope.kind === 'measurable_work' && !isContractTerminal(r.state) && sameContractTarget(r.scope.target, target)
+      )),
     create(params) {
       const alreadyActive = records.some(
-        (r) => !isContractTerminal(r.state) && sameContractTarget(r.target, params.target),
+        (r) => r.scope.kind === 'measurable_work' && !isContractTerminal(r.state) && sameContractTarget(r.scope.target, params.target),
       )
       if (alreadyActive) return null
       const record = createWorkContractRecord({
@@ -263,6 +288,18 @@ export function createWorkContracts(
       })
       records.push(record)
       spawnFlag(record)
+      return record
+    },
+    createEscort(params) {
+      const record = createExpeditionEscortContractRecord({
+        id: `workContract:${Date.now()}:${nextWorkContractId++}`,
+        employer: params.employer,
+        terms: params.terms,
+        rewardCoins: params.rewardCoins,
+        now: params.now,
+      })
+      if (!record) return null
+      records.push(record)
       return record
     },
     post(id, boardId, now) {
@@ -294,7 +331,9 @@ export function createWorkContracts(
     discoverableAt: (boardId) => records.filter((r) => r.postedBoardId === boardId && isContractDiscoverable(r)),
     findActiveWorkByNpc,
     findPayableByNpc,
-    findByTarget: (target) => records.find((r) => !isContractTerminal(r.state) && sameContractTarget(r.target, target)),
+    findByTarget: (target) => records.find((r) => (
+      r.scope.kind === 'measurable_work' && !isContractTerminal(r.state) && sameContractTarget(r.scope.target, target)
+    )),
     accept(id, npcId, now) {
       if (findActiveWorkByNpc(npcId)) return null
       const index = indexOf(id)
@@ -304,12 +343,23 @@ export function createWorkContracts(
     beginTravel(id, npcId) {
       const index = indexOf(id)
       if (index === -1) return null
-      return replace(id, beginContractTravel(records[index]!, npcId))
+      const record = records[index]!
+      if (record.scope.kind !== 'measurable_work') return null
+      return replace(id, beginContractTravel(record as MeasurableWorkContractRecord, npcId))
     },
     beginWork(id, npcId, now) {
       const index = indexOf(id)
       if (index === -1) return null
-      return replace(id, beginContractWork(records[index]!, npcId, now))
+      const record = records[index]!
+      if (record.scope.kind !== 'measurable_work') return null
+      return replace(id, beginContractWork(record as MeasurableWorkContractRecord, npcId, now))
+    },
+    beginServing(id, npcId, now) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      const record = records[index]!
+      if (record.scope.kind !== 'expedition_escort') return null
+      return replace(id, beginEscortService(record as EscortWorkContractRecord, npcId, now))
     },
     completeWork(id, npcId, timing) {
       const index = indexOf(id)
@@ -327,7 +377,9 @@ export function createWorkContracts(
     creditNpcWork(id, npcId, workAmount) {
       const index = indexOf(id)
       if (index === -1) return null
-      return replace(id, recordNpcWorkContribution(records[index]!, npcId, workAmount))
+      const record = records[index]!
+      if (record.scope.kind !== 'measurable_work') return null
+      return replace(id, recordNpcWorkContribution(record as MeasurableWorkContractRecord, npcId, workAmount))
     },
     markPaid(id, npcId) {
       const index = indexOf(id)

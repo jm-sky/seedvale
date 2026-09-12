@@ -506,11 +506,10 @@ export type SavePlayerGarden = {
 }
 
 /** Persistent player-issued work contract — mirrors `world/workContract.ts`'s
- *  `WorkContractRecord` (plan npc-014). `target`/`x`/`z` round-trip the
- *  contract's concrete world target; `postedBoardId` is the only publication
- *  state kept here — a board never gets its own duplicated posting list, it
- *  is always resolved by querying contracts (see `createWorkContracts.ts`'s
- *  `postedAt`). */
+ *  `WorkContractRecord` (plan npc-014, discriminated `scope` since plan
+ *  npc-030). `postedBoardId` is the only publication state kept here — a
+ *  board never gets its own duplicated posting list, it is always resolved
+ *  by querying contracts (see `createWorkContracts.ts`'s `postedAt`). */
 export type SaveWorkContractState =
   | 'available'
   | 'advertised'
@@ -523,6 +522,7 @@ export type SaveWorkContractAssignmentState =
   | 'accepted'
   | 'travelling'
   | 'working'
+  | 'serving'
   | 'payment_due'
   | 'paid'
   | 'unpaid'
@@ -538,6 +538,10 @@ export type SaveWorkContractAssignment = {
   rewardCoinsDue: number
   lastPaymentRequestAt: number | null
   paymentDeadline: number | null
+  /** Expedition-escort service timing (plan npc-030 §6) — `null` for
+   *  measurable work and before/without a duration boundary. */
+  serviceStartedAt: number | null
+  serviceEndsAt: number | null
 }
 export type SaveConstructionContractTarget = { kind: 'construction', targetId: string }
 /** Mirrors `world/workContract.ts`'s `TerrainPreparationContractTarget`
@@ -554,33 +558,71 @@ export type SaveContractTarget =
   | SavePalisadeContractTarget
   | SaveStandingTorchContractTarget
   | SaveResidentialBuildingContractTarget
-export type SaveWorkContract = {
-  id: string
-  employer: string
+
+/** Mirrors `world/workContract.ts`'s `MeasurableWorkContractScope` (plan
+ *  npc-030 §1). */
+export type SaveMeasurableWorkContractScope = {
+  kind: 'measurable_work'
   workType: 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch' | 'residential_building'
   target: SaveContractTarget
   x: number
   z: number
+  requestedWorkShare: number
+  remainingWorkAtCreation: number
+  committedWork: number
+  npcWorkCompleted: number
+}
+
+/** Mirrors `world/workContract.ts`'s `ExpeditionDestinationRef`/
+ *  `ExpeditionEscortDestination`/`ExpeditionEscortTerms` (plan npc-030
+ *  §7/§10). */
+export type SaveExpeditionDestinationRef =
+  | { kind: 'settlement', settlementId: string }
+  | { kind: 'location', locationId: string }
+export type SaveExpeditionEscortDestination = {
+  ref: SaveExpeditionDestinationRef
+  x: number
+  z: number
+}
+export type SaveExpeditionEscortTerms = {
+  completionPolicy: 'duration' | 'destination' | 'destination_or_timeout'
+  durationDays?: number
+  destination?: SaveExpeditionEscortDestination
+}
+
+/** Mirrors `world/workContract.ts`'s `ExpeditionEscortContractScope` (plan
+ *  npc-030 §1). */
+export type SaveExpeditionEscortContractScope = {
+  kind: 'expedition_escort'
+  terms: SaveExpeditionEscortTerms
+}
+
+export type SaveWorkContractScope = SaveMeasurableWorkContractScope | SaveExpeditionEscortContractScope
+
+type BaseSaveWorkContract = {
+  id: string
+  employer: string
   rewardCoins: number
   state: SaveWorkContractState
   advertisement: SaveWorkContractAdvertisement
   postedBoardId: string | null
   createdAt: number
   postedAt: number | null
-  /** Integer `>= 1` — frozen after creation (plan npc-028 §4/§20). */
+  /** Integer `>= 1` — frozen after creation (plan npc-028 §4/§20); always
+   *  `1` for expedition escort (plan npc-030 §2/§27). */
   requestedWorkerCount: number
   /** Every NPC that has accepted this contract, including released and
    *  payment-due history. Not duplicated onto NPC-side save state. */
   assignments: SaveWorkContractAssignment[]
-  /** Shared-work commitment snapshot (plan npc-018 §23) — mirrors
-   *  `world/workContract.ts`'s `WorkContractRecord` fields of the same name.
-   *  Frozen at creation except `npcWorkCompleted`, which only ever grows
-   *  from accepted NPC work bouts. */
-  requestedWorkShare: number
-  remainingWorkAtCreation: number
-  committedWork: number
-  npcWorkCompleted: number
 }
+
+/** Mirrors `world/workContract.ts`'s `WorkContractRecord` union shape
+ *  exactly (a proper discriminated union, not one object type whose `scope`
+ *  happens to be a union) — required for structural assignability against
+ *  the runtime type at load (plan npc-030). */
+export type SaveWorkContract =
+  | (BaseSaveWorkContract & { scope: SaveMeasurableWorkContractScope })
+  | (BaseSaveWorkContract & { scope: SaveExpeditionEscortContractScope })
 
 /** Single source of truth for the current persisted schema version
  *  (persistence-003). Bump this and add a `CURRENT_SAVE_VERSION - 1 →
@@ -588,7 +630,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 36
+export const CURRENT_SAVE_VERSION = 37
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1565,12 +1607,18 @@ const WORK_CONTRACT_STATES: ReadonlySet<string> = new Set([
 ])
 
 const WORK_CONTRACT_ASSIGNMENT_STATES: ReadonlySet<string> = new Set([
-  'accepted', 'paid', 'payment_due', 'released', 'travelling', 'uncollectable', 'unpaid', 'working',
+  'accepted', 'paid', 'payment_due', 'released', 'serving', 'travelling', 'uncollectable', 'unpaid', 'working',
 ])
 
 const WORK_CONTRACT_TARGET_KINDS: ReadonlySet<string> = new Set([
   'construction', 'palisade', 'residential_building', 'standing_torch', 'terrain_preparation',
 ])
+
+const ESCORT_COMPLETION_POLICIES: ReadonlySet<string> = new Set([
+  'destination', 'destination_or_timeout', 'duration',
+])
+
+const ESCORT_DESTINATION_KINDS: ReadonlySet<string> = new Set(['location', 'settlement'])
 
 function isWorkContractAssignment(value: unknown): value is SaveWorkContractAssignment {
   if (!value || typeof value !== 'object') return false
@@ -1583,7 +1631,55 @@ function isWorkContractAssignment(value: unknown): value is SaveWorkContractAssi
     typeof a.workCompleted === 'number' &&
     typeof a.rewardCoinsDue === 'number' &&
     (a.lastPaymentRequestAt === null || typeof a.lastPaymentRequestAt === 'number') &&
-    (a.paymentDeadline === null || typeof a.paymentDeadline === 'number')
+    (a.paymentDeadline === null || typeof a.paymentDeadline === 'number') &&
+    (a.serviceStartedAt === null || a.serviceStartedAt === undefined || typeof a.serviceStartedAt === 'number') &&
+    (a.serviceEndsAt === null || a.serviceEndsAt === undefined || typeof a.serviceEndsAt === 'number')
+  )
+}
+
+function isMeasurableWorkContractScope(value: unknown): value is SaveMeasurableWorkContractScope {
+  if (!value || typeof value !== 'object') return false
+  const s = value as Record<string, unknown>
+  const target = s.target as Record<string, unknown> | undefined
+  return (
+    s.kind === 'measurable_work' &&
+    typeof s.workType === 'string' && WORK_CONTRACT_TARGET_KINDS.has(s.workType) &&
+    !!target && typeof target === 'object' &&
+    typeof target.kind === 'string' && WORK_CONTRACT_TARGET_KINDS.has(target.kind) &&
+    typeof target.targetId === 'string' &&
+    typeof s.x === 'number' &&
+    typeof s.z === 'number' &&
+    typeof s.requestedWorkShare === 'number' &&
+    typeof s.remainingWorkAtCreation === 'number' &&
+    typeof s.committedWork === 'number' &&
+    typeof s.npcWorkCompleted === 'number'
+  )
+}
+
+function isEscortDestination(value: unknown): value is SaveExpeditionEscortDestination {
+  if (!value || typeof value !== 'object') return false
+  const d = value as Record<string, unknown>
+  const ref = d.ref as Record<string, unknown> | undefined
+  return (
+    !!ref && typeof ref === 'object' &&
+    typeof ref.kind === 'string' && ESCORT_DESTINATION_KINDS.has(ref.kind) &&
+    (ref.kind !== 'settlement' || typeof ref.settlementId === 'string') &&
+    (ref.kind !== 'location' || typeof ref.locationId === 'string') &&
+    typeof d.x === 'number' &&
+    typeof d.z === 'number'
+  )
+}
+
+function isExpeditionEscortContractScope(value: unknown): value is SaveExpeditionEscortContractScope {
+  if (!value || typeof value !== 'object') return false
+  const s = value as Record<string, unknown>
+  if (s.kind !== 'expedition_escort') return false
+  const terms = s.terms as Record<string, unknown> | undefined
+  if (!terms || typeof terms !== 'object') return false
+  return (
+    typeof terms.completionPolicy === 'string' && ESCORT_COMPLETION_POLICIES.has(terms.completionPolicy) &&
+    (terms.durationDays === undefined || typeof terms.durationDays === 'number') &&
+    (terms.destination === undefined || isEscortDestination(terms.destination))
   )
 }
 
@@ -1592,16 +1688,9 @@ function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
   return value.every((entry) => {
     if (!entry || typeof entry !== 'object') return false
     const c = entry as Record<string, unknown>
-    const target = c.target as Record<string, unknown> | undefined
     return (
       typeof c.id === 'string' &&
       typeof c.employer === 'string' &&
-      typeof c.workType === 'string' && WORK_CONTRACT_TARGET_KINDS.has(c.workType) &&
-      !!target && typeof target === 'object' &&
-      typeof target.kind === 'string' && WORK_CONTRACT_TARGET_KINDS.has(target.kind) &&
-      typeof target.targetId === 'string' &&
-      typeof c.x === 'number' &&
-      typeof c.z === 'number' &&
       typeof c.rewardCoins === 'number' &&
       typeof c.state === 'string' && WORK_CONTRACT_STATES.has(c.state) &&
       (c.advertisement === 'not_posted' || c.advertisement === 'posted') &&
@@ -1610,10 +1699,7 @@ function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
       (c.postedAt === null || typeof c.postedAt === 'number') &&
       typeof c.requestedWorkerCount === 'number' && Number.isInteger(c.requestedWorkerCount) && c.requestedWorkerCount >= 1 &&
       Array.isArray(c.assignments) && c.assignments.every(isWorkContractAssignment) &&
-      typeof c.requestedWorkShare === 'number' &&
-      typeof c.remainingWorkAtCreation === 'number' &&
-      typeof c.committedWork === 'number' &&
-      typeof c.npcWorkCompleted === 'number'
+      (isMeasurableWorkContractScope(c.scope) || isExpeditionEscortContractScope(c.scope))
     )
   })
 }
@@ -2590,6 +2676,8 @@ function migrateWorkContractV13ToV14(entry: unknown): Record<string, unknown> {
       rewardCoinsDue: 0,
       lastPaymentRequestAt: null,
       paymentDeadline: null,
+      serviceStartedAt: null,
+      serviceEndsAt: null,
     }]
   } else {
     assignments = []
@@ -2829,6 +2917,8 @@ function migrateAssignmentV19ToV20(
     rewardCoinsDue,
     lastPaymentRequestAt: typeof a.lastPaymentRequestAt === 'number' ? a.lastPaymentRequestAt : null,
     paymentDeadline: typeof a.paymentDeadline === 'number' ? a.paymentDeadline : null,
+    serviceStartedAt: null,
+    serviceEndsAt: null,
   }
 }
 
@@ -3035,6 +3125,52 @@ function migrateSaveV35ToV36(data: unknown): unknown {
   return { ...v, version: 36 }
 }
 
+/** v36 → v37 (plan npc-030): generalizes `SaveWorkContract` into a
+ *  discriminated `scope` — every contract persisted before this plan was
+ *  implicitly measurable-work, so its existing
+ *  `workType`/`target`/`x`/`z`/`requestedWorkShare`/`remainingWorkAtCreation`/
+ *  `committedWork`/`npcWorkCompleted` fields move into
+ *  `scope: { kind: 'measurable_work', ... }` losslessly, 1:1 — no escort
+ *  records are inferred from old data. Every assignment also gains the new
+ *  `serviceStartedAt`/`serviceEndsAt` fields, `null` for every pre-existing
+ *  (measurable-work) assignment. Every other field is left untouched. */
+function migrateSaveV36ToV37(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const workContracts = Array.isArray(v.workContracts) ? v.workContracts : []
+  return {
+    ...v,
+    version: 37,
+    workContracts: workContracts.map((entry) => {
+      const c = entry as Record<string, unknown>
+      const stampAssignments = (assignments: unknown): unknown => (
+        Array.isArray(assignments)
+          ? assignments.map((assignment) => {
+            const a = assignment as Record<string, unknown>
+            return { ...a, serviceStartedAt: a.serviceStartedAt ?? null, serviceEndsAt: a.serviceEndsAt ?? null }
+          })
+          : assignments
+      )
+      // Always strip the legacy flat measurable-work fields from the top
+      // level — idempotent even against a contract that already carries a
+      // discriminated `scope` (e.g. an intermediate fixture built from the
+      // current schema for an older-version migration test), which must
+      // never keep stray duplicate top-level fields alongside it.
+      const {
+        workType, target, x, z, requestedWorkShare, remainingWorkAtCreation, committedWork, npcWorkCompleted,
+        assignments, scope, ...rest
+      } = c
+      const nextScope = scope && typeof scope === 'object'
+        ? scope
+        : { kind: 'measurable_work', workType, target, x, z, requestedWorkShare, remainingWorkAtCreation, committedWork, npcWorkCompleted }
+      return {
+        ...rest,
+        assignments: stampAssignments(assignments),
+        scope: nextScope,
+      }
+    }),
+  }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -3085,6 +3221,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   33: migrateSaveV33ToV34,
   34: migrateSaveV34ToV35,
   35: migrateSaveV35ToV36,
+  36: migrateSaveV36ToV37,
 }
 
 function detectStoredVersion(value: unknown): number | null {

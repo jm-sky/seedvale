@@ -187,10 +187,14 @@ import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   type ContractTarget,
+  type EscortWorkContractRecord,
+  type ExpeditionEscortCompletionPolicy,
   findAssignment,
   isAssignmentWorkActive,
+  isEscortServiceFulfilled,
   isNpcCommitmentFulfilled,
   isPaymentRequestEligible,
+  type MeasurableWorkContractRecord,
   noticeBoardId,
   type WorkContractAssignment,
   type WorkContractAssignmentState,
@@ -308,6 +312,7 @@ import {
 } from './npcMovementWatchdog'
 import {
   buildContractProvisionContext,
+  buildEscortProvisionContext,
   countPersonalDrinkPortions,
   countPersonalFood,
   findDrinkablePersonalWaterContainer,
@@ -371,7 +376,11 @@ import {
   REACTION_SOUND_VOLUME,
   voiceActorForIndex,
 } from './npcVoiceLines'
-import { selectBestWorkContract } from './npcWorkContract'
+import {
+  DEFAULT_ESCORT_EVALUATION_CONTEXT,
+  type EscortEvaluationContext,
+  selectBestWorkContract,
+} from './npcWorkContract'
 import {
   computeReactionChance,
   NEUTRAL_PLAYER_SOCIAL_STATE,
@@ -560,15 +569,22 @@ export type NpcInspectionSnapshot = {
     state: WorkContractState
     assignmentState: WorkContractAssignmentState
     rewardCoins: number
-    targetKind: ContractTarget['kind']
-    targetId: string
-    requestedWorkShare: number
-    remainingWorkAtCreation: number
-    committedWork: number
-    npcWorkCompleted: number
+    /** Measurable-work-only fields (plan npc-030) — `undefined` for an
+     *  expedition-escort contract. */
+    targetKind?: ContractTarget['kind']
+    targetId?: string
+    requestedWorkShare?: number
+    remainingWorkAtCreation?: number
+    committedWork?: number
+    npcWorkCompleted?: number
+    targetRemainingWork?: number | null
     assignmentWorkCompleted: number
     requestedWorkerCount: number
-    targetRemainingWork: number | null
+    /** Expedition-escort-only fields (plan npc-030) — `undefined` for
+     *  measurable work. */
+    escortCompletionPolicy?: ExpeditionEscortCompletionPolicy
+    serviceStartedAt?: number | null
+    serviceEndsAt?: number | null
     rewardCoinsDue?: number
     lastPaymentRequestAt?: number | null
     paymentDeadline?: number | null
@@ -1747,24 +1763,43 @@ export class NpcAgent {
           ?? this.workContracts?.findPayableByNpc(this.id, this.nowDays())
         if (!found) return null
         const { contract: mine, assignment } = found
+        if (mine.scope.kind === 'expedition_escort') {
+          return {
+            id: mine.id,
+            state: mine.state,
+            assignmentState: assignment.state,
+            rewardCoins: mine.rewardCoins,
+            assignmentWorkCompleted: assignment.workCompleted,
+            requestedWorkerCount: mine.requestedWorkerCount,
+            escortCompletionPolicy: mine.scope.terms.completionPolicy,
+            serviceStartedAt: assignment.serviceStartedAt,
+            serviceEndsAt: assignment.serviceEndsAt,
+            rewardCoinsDue: assignment.rewardCoinsDue,
+            lastPaymentRequestAt: assignment.lastPaymentRequestAt,
+            paymentDeadline: assignment.paymentDeadline,
+            paymentApproachIntent: this.paymentApproachIntent,
+            paymentApproachInterruptReason: this.paymentApproachInterruptReason,
+          }
+        }
+        const target = mine.scope.target
         const targetRemainingWork = (() => {
-          if (mine.target.kind === 'construction') {
-            const well = this.findContractWell(mine.target.targetId)
+          if (target.kind === 'construction') {
+            const well = this.findContractWell(target.targetId)
             return well ? wellRemainingWork(well) : null
           }
-          if (mine.target.kind === 'terrain_preparation') {
-            const prep = this.terrainPreparations?.find(mine.target.targetId)
+          if (target.kind === 'terrain_preparation') {
+            const prep = this.terrainPreparations?.find(target.targetId)
             return prep ? terrainPreparationRemainingWork(prep) : null
           }
-          if (mine.target.kind === 'palisade') {
-            const segment = this.palisades?.list().find((e) => e.id === mine.target.targetId)
+          if (target.kind === 'palisade') {
+            const segment = this.palisades?.list().find((e) => e.id === target.targetId)
             return segment ? palisadeRemainingWork(segment) : null
           }
-          if (mine.target.kind === 'residential_building') {
-            const house = this.residentialBuildings?.find(mine.target.targetId)
+          if (target.kind === 'residential_building') {
+            const house = this.residentialBuildings?.find(target.targetId)
             return house ? residentialBuildingRemainingWork(house) : null
           }
-          const torch = this.standingTorches?.list().find((e) => e.id === mine.target.targetId)
+          const torch = this.standingTorches?.list().find((e) => e.id === target.targetId)
           return torch ? standingTorchRemainingWork(torch) : null
         })()
         return {
@@ -1772,12 +1807,12 @@ export class NpcAgent {
           state: mine.state,
           assignmentState: assignment.state,
           rewardCoins: mine.rewardCoins,
-          targetKind: mine.target.kind,
-          targetId: mine.target.targetId,
-          requestedWorkShare: mine.requestedWorkShare,
-          remainingWorkAtCreation: mine.remainingWorkAtCreation,
-          committedWork: mine.committedWork,
-          npcWorkCompleted: mine.npcWorkCompleted,
+          targetKind: target.kind,
+          targetId: target.targetId,
+          requestedWorkShare: mine.scope.requestedWorkShare,
+          remainingWorkAtCreation: mine.scope.remainingWorkAtCreation,
+          committedWork: mine.scope.committedWork,
+          npcWorkCompleted: mine.scope.npcWorkCompleted,
           assignmentWorkCompleted: assignment.workCompleted,
           requestedWorkerCount: mine.requestedWorkerCount,
           targetRemainingWork,
@@ -4526,13 +4561,70 @@ export class NpcAgent {
   }
 
   /**
-   * Idle-duty dispatch (plan npc-029) — accompany first, then Work Contract,
-   * then the ordinary schedule. Deterministic; incompatible work/accompany
-   * pairs are rejected at creation, not re-arbitrated here.
+   * Idle-duty dispatch (plan npc-029, extended by npc-030) — a paid-escort
+   * service boundary first (never masked by the accompany executor claiming
+   * this idle slot every tick), then accompany, then Work Contract, then the
+   * ordinary schedule. Deterministic; incompatible work/accompany pairs are
+   * rejected at creation, not re-arbitrated here.
    */
   private tryPursueIdleDuty(scheduledActivity: ScheduleActivity): boolean {
+    if (this.tryResolveEscortService()) return true
     if (this.tryPursueAccompany()) return true
     return this.tryPursueWorkContract(scheduledActivity)
+  }
+
+  /**
+   * Expedition-escort service-fulfilment check (plan npc-030 §11) — pure
+   * fulfilment, never emulated with fake work units. Only ever looks at a
+   * commitment sourced from a Work Contract; a voluntary accompany
+   * commitment has no contract to resolve. Reconciles a missing commitment
+   * for an already-`serving` assignment first (plan §9 — "active escort
+   * assignment + missing matching commitment → recreate through the npc-029
+   * seam"), so a save/load or reconstruction gap self-heals through the same
+   * public `startAccompany()` seam rather than staying stuck.  Returns
+   * `true` once it has claimed this idle slot (fulfilled this tick, or
+   * merely repaired the commitment for the next tick to drive) — `false`
+   * lets `tryPursueAccompany` continue ordinary follow/stay execution.
+   */
+  private tryResolveEscortService(): boolean {
+    const commitment = this.npcState.accompanyCommitment
+    if (!commitment || commitment.source.kind !== 'work-contract' || this.health.dead) return false
+    const contracts = this.workContracts
+    const record = contracts?.find(commitment.source.contractId)
+    if (!record || record.scope.kind !== 'expedition_escort') return false
+    const assignment = findAssignment(record, this.id)
+    if (!assignment || assignment.state !== 'serving') return false
+    const fulfilled = isEscortServiceFulfilled({
+      terms: record.scope.terms,
+      assignment,
+      nowDays: this.nowDays(),
+      playerPos: { x: this.lastObserverX, z: this.lastObserverZ },
+      npcPos: { x: this.mesh.position.x, z: this.mesh.position.z },
+    })
+    if (!fulfilled) return false
+    contracts!.completeWork(record.id, this.id, this.claimTiming())
+    this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
+    this.endAccompany('finished')
+    return true
+  }
+
+  /** Bounded, deterministic escort-suitability/social/danger context (plan
+   *  npc-030 §19/§20/§24) fed to the pure evaluator. Reputation/renown come
+   *  from the existing `PlayerSocialLookup` (never a duplicate escort
+   *  reputation store); danger stays at the conservative neutral default —
+   *  no route/world-location danger context is wired up yet, and the plan
+   *  explicitly prefers fabricated precision over an honest default. */
+  private escortEvaluationContext(): EscortEvaluationContext {
+    const social = this.getPlayerSocial(this.id)
+    const rep = social.reputation
+    const localReputation = ((rep.trust + rep.courage + rep.integrity) / 3 + 100) / 200
+    return {
+      relationLevel: social.relationLevel,
+      localReputation: Math.max(0, Math.min(1, localReputation)),
+      renown: Math.max(0, Math.min(1, social.renown / 100)),
+      curious: this.traits.includes('curious'),
+      danger: DEFAULT_ESCORT_EVALUATION_CONTEXT.danger,
+    }
   }
 
   /**
@@ -4693,6 +4785,7 @@ export class NpcAgent {
       householdFoodUnits: provisionAvailability.householdFoodUnits,
       householdWaterUnits: provisionAvailability.householdWaterUnits,
       canFillWaterskin: provisionAvailability.canFillWaterskin,
+      escort: this.escortEvaluationContext(),
     })
     this.trace.record({ simTime: this.simClock, type: 'contract.evaluated', candidates: scored.map((s) => ({ contractId: s.contract.id, score: s.score })) })
     if (!best) return false
@@ -4706,7 +4799,7 @@ export class NpcAgent {
 
   /** Bounded post-acceptance provisioning into `personalInventory` (plan
    *  npc-017) — real household transfers only; never mints items. */
-  private prepareWorkContractProvisions(record: WorkContractRecord): void {
+  private prepareWorkContractProvisions(record: MeasurableWorkContractRecord): void {
     const { estimate, availability } = buildContractProvisionContext({
       contract: record,
       needs: this.needs,
@@ -4750,19 +4843,91 @@ export class NpcAgent {
     const contracts = this.workContracts
     if (!contracts) return false
     if (!isAssignmentWorkActive(assignment)) return false
-    if (assignment.state === 'accepted') this.prepareWorkContractProvisions(record)
-    if (record.target.kind === 'construction') return this.pursueConstructionContract(record, assignment, contracts)
-    if (record.target.kind === 'terrain_preparation') return this.pursueTerrainContract(record, assignment, contracts)
-    if (record.target.kind === 'residential_building') return this.pursueResidentialContract(record, assignment, contracts)
-    return this.pursueBuildableContract(record, assignment, contracts)
+    if (record.scope.kind === 'expedition_escort') {
+      return this.pursueAcceptedEscort(record as EscortWorkContractRecord, assignment, contracts)
+    }
+    const measurable = record as MeasurableWorkContractRecord
+    if (assignment.state === 'accepted') this.prepareWorkContractProvisions(measurable)
+    if (measurable.scope.target.kind === 'construction') return this.pursueConstructionContract(measurable, assignment, contracts)
+    if (measurable.scope.target.kind === 'terrain_preparation') return this.pursueTerrainContract(measurable, assignment, contracts)
+    if (measurable.scope.target.kind === 'residential_building') return this.pursueResidentialContract(measurable, assignment, contracts)
+    return this.pursueBuildableContract(measurable, assignment, contracts)
   }
 
-  private pursueConstructionContract(
-    record: WorkContractRecord,
+  /**
+   * Escort counterpart of the measurable-work `pursueConstructionContract`/
+   * etc. family (plan npc-030 §5/§8/§9) — no fictional `travelling`/
+   * `working` toward a static target. `accepted` provisions once (reusing
+   * `prepareWorkContractProvisions`'s existing real-transfer machinery, with
+   * an escort-specific away-hours estimate), stamps service timing via
+   * `beginServing`, then creates the shared npc-029 accompany commitment.
+   * A `serving` assignment with no live commitment (a repaired reconciliation
+   * gap, plan §9) recreates the commitment through the same public
+   * `startAccompany()` seam rather than duplicating its state directly.
+   * Always claims this idle slot — accompany execution itself only resumes
+   * on the *next* idle-duty tick, same "claimed but no fresh action yet"
+   * contract as `pursueAcceptedContract`'s doc comment.
+   */
+  private pursueAcceptedEscort(
+    record: EscortWorkContractRecord,
     assignment: WorkContractAssignment,
     contracts: WorkContracts,
   ): boolean {
-    const well = this.findContractWell(record.target.targetId)
+    if (assignment.state === 'serving') {
+      // Reconciliation: an active escort assignment with no matching
+      // commitment repairs itself through the normal public seam.
+      this.startAccompany({ kind: 'work-contract', contractId: record.id }, 'follow')
+      return true
+    }
+    // assignment.state === 'accepted'
+    this.prepareEscortProvisions(record)
+    const served = contracts.beginServing(record.id, this.id, this.nowDays())
+    if (!served) return true
+    this.startAccompany({ kind: 'work-contract', contractId: record.id }, 'follow')
+    this.trace.record({ simTime: this.simClock, type: 'contract.escortServiceStarted', contractId: record.id })
+    return true
+  }
+
+  /** Escort counterpart of `prepareWorkContractProvisions` (plan npc-030
+   *  §25) — same real-transfer machinery, escort-specific away-hours
+   *  estimate. */
+  private prepareEscortProvisions(record: EscortWorkContractRecord): void {
+    const { estimate, availability } = buildEscortProvisionContext({
+      terms: record.scope.terms,
+      needs: this.needs,
+      personalInventory: this.personalInventory,
+      household: this.household,
+      npcX: this.mesh.position.x,
+      npcZ: this.mesh.position.z,
+      walkSpeed: WALK_SPEED,
+      dayLengthSec: this.dayLengthSec,
+    })
+    const result = provisionContractSupplies({
+      personalInventory: this.personalInventory,
+      household: this.household,
+      estimate,
+      availability,
+      nowDays: this.nowDays(),
+    })
+    this.lastProvisionFailureReason = result.failureReason
+    if (result.foodProvisioned > 0 || result.drinksAdded > 0 || result.failureReason) {
+      this.trace.record({
+        simTime: this.simClock,
+        type: 'contract.provisioned',
+        contractId: record.id,
+        foodProvisioned: result.foodProvisioned,
+        drinksAdded: result.drinksAdded,
+        failureReason: result.failureReason,
+      })
+    }
+  }
+
+  private pursueConstructionContract(
+    record: MeasurableWorkContractRecord,
+    assignment: WorkContractAssignment,
+    contracts: WorkContracts,
+  ): boolean {
+    const well = this.findContractWell(record.scope.target.targetId)
     if (!well) {
       // Target disappeared/became invalid (plan §12) — never leave the
       // contract stuck; hand it back to a terminal state instead.
@@ -4811,15 +4976,15 @@ export class NpcAgent {
    *  (`TerrainPreparations.wasCompleted`, since a completed preparation is
    *  removed from the active registry, plan §16). */
   private pursueTerrainContract(
-    record: WorkContractRecord,
+    record: MeasurableWorkContractRecord,
     assignment: WorkContractAssignment,
     contracts: WorkContracts,
   ): boolean {
     const terrainPreparations = this.terrainPreparations
     if (!terrainPreparations) return false
-    const prep = terrainPreparations.find(record.target.targetId)
+    const prep = terrainPreparations.find(record.scope.target.targetId)
     if (!prep) {
-      if (terrainPreparations.wasCompleted(record.target.targetId)) {
+      if (terrainPreparations.wasCompleted(record.scope.target.targetId)) {
         contracts.completeWork(record.id, this.id, this.claimTiming())
         this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
       } else {
@@ -4952,7 +5117,7 @@ export class NpcAgent {
         }
         const creditedContract = result.acceptedWork > 0
           ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
-          : contracts.find(contractId)
+          : contracts.find(contractId) as MeasurableWorkContractRecord | undefined
         const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
         if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id, this.claimTiming())
       },
@@ -4964,13 +5129,13 @@ export class NpcAgent {
    *  contributes remaining useful work and backs off when the stage is
    *  material-blocked instead of spinning a work/retry loop. */
   private pursueResidentialContract(
-    record: WorkContractRecord,
+    record: MeasurableWorkContractRecord,
     assignment: WorkContractAssignment,
     contracts: WorkContracts,
   ): boolean {
     const runtime = this.residentialBuildings
     if (!runtime) return false
-    const entry = runtime.find(record.target.targetId)
+    const entry = runtime.find(record.scope.target.targetId)
     if (!entry) {
       contracts.invalidateTarget(record.id, this.claimTiming())
       this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
@@ -5009,7 +5174,7 @@ export class NpcAgent {
       return true
     }
     const contractId = record.id
-    const targetId = record.target.targetId
+    const targetId = record.scope.target.targetId
     this.startAction({
       kind: 'work',
       destination,
@@ -5025,7 +5190,7 @@ export class NpcAgent {
         }
         const creditedContract = result.acceptedWork > 0
           ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
-          : contracts.find(contractId)
+          : contracts.find(contractId) as MeasurableWorkContractRecord | undefined
         const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
         if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id, this.claimTiming())
       },
@@ -5044,14 +5209,14 @@ export class NpcAgent {
    *  (unlike terrain preparation), so "missing" always means genuinely
    *  removed/invalidated — no `wasCompleted` bookkeeping needed. */
   private pursueBuildableContract(
-    record: WorkContractRecord,
+    record: MeasurableWorkContractRecord,
     assignment: WorkContractAssignment,
     contracts: WorkContracts,
   ): boolean {
-    const kind = record.target.kind as 'palisade' | 'standing_torch'
+    const kind = record.scope.target.kind as 'palisade' | 'standing_torch'
     const runtime = kind === 'palisade' ? this.palisades : this.standingTorches
     if (!runtime) return false
-    const entry = runtime.list().find((e) => e.id === record.target.targetId)
+    const entry = runtime.list().find((e) => e.id === record.scope.target.targetId)
     if (!entry) {
       contracts.invalidateTarget(record.id, this.claimTiming())
       this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
@@ -5076,7 +5241,7 @@ export class NpcAgent {
       return true
     }
     // assignment.state === 'working'
-    this.runBuildableContractWorkBout(record.id, kind, record.target.targetId, destination)
+    this.runBuildableContractWorkBout(record.id, kind, record.scope.target.targetId, destination)
     return true
   }
 
@@ -5108,7 +5273,7 @@ export class NpcAgent {
         }
         const creditedContract = result.acceptedWork > 0
           ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
-          : contracts.find(contractId)
+          : contracts.find(contractId) as MeasurableWorkContractRecord | undefined
         const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
         if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id, this.claimTiming())
       },

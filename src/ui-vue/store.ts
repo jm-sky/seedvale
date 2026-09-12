@@ -300,6 +300,9 @@ type QuickActionsState = {
    *  active contract yet. Distinct from "Zleć budowę" (`onStartPlacementPreview`
    *  with kind `'workContract'`), which places a brand-new target. */
   onHireHelp: (() => void) | null
+  /** "Zleć eskortę" (plan npc-030 §26) — opens the paid expedition-escort
+   *  creation picker (duration + reward). */
+  onHireEscort: (() => void) | null
   onEatAnything: (() => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }) | null
   onCookMeal: (() => void) | null
   onStartFullCamp: (() => void) | null
@@ -689,7 +692,7 @@ export const ui = reactive({
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null,
     onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onStartPlacementPreview: null, onPlaceTrap: null, onOpen: null, onClose: null,
-    hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null, onHireHelp: null,
+    hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null, onHireHelp: null, onHireEscort: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
     hasFishingRod: false, onEquipFishingRod: null,

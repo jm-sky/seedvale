@@ -90,6 +90,10 @@ export type QuickActionsHandlers = {
    *  already-existing unfinished target, distinct from `onStartPlacementPreview`
    *  with kind `'workContract'` (a brand-new target). */
   onHireHelp?: () => void
+  /** "Zleć eskortę" (plan npc-030 §26) — opens the paid expedition-escort
+   *  creation picker (duration + reward). No world placement step, distinct
+   *  from every other Work Contract entry point. */
+  onHireEscort?: () => void
   /** "Zjedz cokolwiek" (plan ui-input-010) — deterministic hunger-food resolver. */
   onEatAnything?: () => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }
   /** "Ugotuj posiłek" (plan ui-input-010) — multi-stage cook-meal intent. */

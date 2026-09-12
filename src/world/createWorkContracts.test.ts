@@ -1,7 +1,7 @@
 import { Scene } from 'three'
 import { describe, expect, it } from 'vitest'
 import { type CreateWorkContractParams, createWorkContracts } from './createWorkContracts'
-import { postWorkContract, type WorkContractRecord } from './workContract'
+import { type MeasurableWorkContractRecord, postWorkContract, type WorkContractRecord } from './workContract'
 
 const sampleHeight = (): number => 0
 
@@ -25,11 +25,11 @@ describe('createWorkContracts', () => {
     const record = contracts.create(makeParams())!
     expect(record.state).toBe('available')
     expect(record.advertisement).toBe('not_posted')
-    expect(record.x).toBe(5)
-    expect(record.z).toBe(-3)
+    expect(record.scope.x).toBe(5)
+    expect(record.scope.z).toBe(-3)
     expect(record.rewardCoins).toBe(25)
-    expect(record.target).toEqual({ kind: 'construction', targetId: 'well:1' })
-    expect(record.committedWork).toBe(6)
+    expect(record.scope.target).toEqual({ kind: 'construction', targetId: 'well:1' })
+    expect(record.scope.committedWork).toBe(6)
     expect(contracts.nodes()).toEqual([record])
     expect(contracts.find(record.id)).toEqual(record)
   })
@@ -109,8 +109,8 @@ describe('createWorkContracts', () => {
   it('create accepts a terrain_preparation target the same way as construction', () => {
     const contracts = createWorkContracts(new Scene(), sampleHeight)
     const record = contracts.create(makeParams({ target: { kind: 'terrain_preparation', targetId: 'terrainPrep:1' } }))!
-    expect(record.target).toEqual({ kind: 'terrain_preparation', targetId: 'terrainPrep:1' })
-    expect(record.workType).toBe('terrain_preparation')
+    expect(record.scope.target).toEqual({ kind: 'terrain_preparation', targetId: 'terrainPrep:1' })
+    expect(record.scope.workType).toBe('terrain_preparation')
   })
 })
 
@@ -257,9 +257,9 @@ describe('createWorkContracts.creditNpcWork (plan npc-018 §6/§17)', () => {
     contracts.beginTravel(record.id, 'npc:1')
     contracts.beginWork(record.id, 'npc:1', 9)
     const credited = contracts.creditNpcWork(record.id, 'npc:1', 2)
-    expect(credited?.npcWorkCompleted).toBe(2)
+    expect(credited?.scope.npcWorkCompleted).toBe(2)
     expect(credited?.assignments[0]?.workCompleted).toBe(2)
-    expect(contracts.find(record.id)?.npcWorkCompleted).toBe(2)
+    expect((contracts.find(record.id) as MeasurableWorkContractRecord | undefined)?.scope.npcWorkCompleted).toBe(2)
   })
 
   it('rejects crediting the wrong worker, an unknown id, or a non-working assignment', () => {
@@ -286,8 +286,8 @@ describe('createWorkContracts.creditNpcWork (plan npc-018 §6/§17)', () => {
     contracts.beginWork(record.id, 'npc:2', 10)
     contracts.creditNpcWork(record.id, 'npc:1', 2)
     contracts.creditNpcWork(record.id, 'npc:2', 1.5)
-    const fresh = contracts.find(record.id)!
-    expect(fresh.npcWorkCompleted).toBe(3.5)
+    const fresh = contracts.find(record.id) as MeasurableWorkContractRecord
+    expect(fresh.scope.npcWorkCompleted).toBe(3.5)
     expect(fresh.assignments.find((a) => a.npcId === 'npc:1')?.workCompleted).toBe(2)
     expect(fresh.assignments.find((a) => a.npcId === 'npc:2')?.workCompleted).toBe(1.5)
   })

@@ -21,6 +21,7 @@ import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { TreeLifecycle } from '../world/treeLifecycle'
+import type { WorkContractRecord } from '../world/workContract'
 import type { WorldBundle } from './worldBundle'
 import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { serializeTreasureMutations, type TreasureChestMutation } from '../items/treasureGameplay'
@@ -106,6 +107,17 @@ export type SaveStateDeps = {
    *  today, so this round-trips safely; see `app/createApp.ts`'s
    *  `resolveMountAnimal`. */
   getMountedAnimalId: () => string | null
+}
+
+/** Plain-data `SaveWorkContract` from a live `WorkContractRecord` — written
+ *  as an explicit per-scope branch (plan npc-030) rather than one spread
+ *  expression, since `WorkContractRecord`/`SaveWorkContract` are both proper
+ *  discriminated unions and a single ternary can't correlate the two. */
+function toSaveWorkContract(c: WorkContractRecord): SaveWorkContract {
+  if (c.scope.kind === 'expedition_escort') {
+    return { ...c, scope: { ...c.scope } }
+  }
+  return { ...c, scope: { ...c.scope, target: { kind: c.scope.target.kind, targetId: c.scope.target.targetId } } }
 }
 
 /**
@@ -262,10 +274,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     platforms: bundle.sleepingUtilities.platforms.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
     grassForagePatches: bundle.grassForage.serialize(),
-    workContracts: bundle.workContracts.nodes().map((c): SaveWorkContract => ({
-      ...c,
-      target: { kind: c.target.kind, targetId: c.target.targetId },
-    })),
+    workContracts: bundle.workContracts.nodes().map(toSaveWorkContract),
     // Only active/non-terminal orders — a completed/failed/cancelled record
     // carries no continuity requirement (plan settlements-npcs-019). Cargo
     // itself round-trips through `npcStates[id].transportCargo` below, not

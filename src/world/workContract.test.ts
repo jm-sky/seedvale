@@ -63,24 +63,24 @@ describe('createWorkContractRecord', () => {
     expect(record.advertisement).toBe('not_posted')
     expect(record.postedBoardId).toBeNull()
     expect(record.postedAt).toBeNull()
-    expect(record.target).toEqual({ kind: 'construction', targetId: 'contractTarget:1' })
+    expect(record.scope.target).toEqual({ kind: 'construction', targetId: 'contractTarget:1' })
     expect(record.requestedWorkerCount).toBe(1)
     expect(record.assignments).toEqual([])
   })
 
   it('snapshots the work commitment exactly once (plan npc-018 §5)', () => {
     const record = makeRecord({ requestedWorkShare: 0.5, remainingWorkAtCreation: 6 })
-    expect(record.requestedWorkShare).toBe(0.5)
-    expect(record.remainingWorkAtCreation).toBe(6)
-    expect(record.committedWork).toBe(3)
-    expect(record.npcWorkCompleted).toBe(0)
+    expect(record.scope.requestedWorkShare).toBe(0.5)
+    expect(record.scope.remainingWorkAtCreation).toBe(6)
+    expect(record.scope.committedWork).toBe(3)
+    expect(record.scope.npcWorkCompleted).toBe(0)
   })
 
   it('clamps requestedWorkShare to [0, 1] and remainingWorkAtCreation to ≥ 0', () => {
     const over = makeRecord({ requestedWorkShare: 1.5, remainingWorkAtCreation: -4 })
-    expect(over.requestedWorkShare).toBe(1)
-    expect(over.remainingWorkAtCreation).toBe(0)
-    expect(over.committedWork).toBe(0)
+    expect(over.scope.requestedWorkShare).toBe(1)
+    expect(over.scope.remainingWorkAtCreation).toBe(0)
+    expect(over.scope.committedWork).toBe(0)
   })
 
   it('normalizes requestedWorkerCount to an integer ≥ 1 (plan npc-028 §4)', () => {
@@ -246,7 +246,7 @@ describe('NPC assignment lifecycle (plan npc-028)', () => {
       workCompleted: 2,
       rewardCoinsDue: 8,
     })
-    expect(released.npcWorkCompleted).toBe(2)
+    expect(released.scope.npcWorkCompleted).toBe(2)
     expect(released.advertisement).toBe('posted')
     expect(released.postedBoardId).toBe('noticeBoard:home')
     expect(isContractDiscoverable(released)).toBe(true)
@@ -296,7 +296,7 @@ describe('multiple workers (plan npc-028)', () => {
 
   it('does not multiply group commitment by worker count', () => {
     const record = makeRecord({ requestedWorkShare: 0.75, remainingWorkAtCreation: 12, requestedWorkerCount: 3 })
-    expect(record.committedWork).toBe(9)
+    expect(record.scope.committedWork).toBe(9)
   })
 
   it('credits per-assignment work into the aggregate without double-counting', () => {
@@ -312,7 +312,7 @@ describe('multiple workers (plan npc-028)', () => {
     record = recordNpcWorkContribution(record, 'npc:2', 3)!
     expect(findAssignment(record, 'npc:1')?.workCompleted).toBe(5)
     expect(findAssignment(record, 'npc:2')?.workCompleted).toBe(3)
-    expect(record.npcWorkCompleted).toBe(8)
+    expect(record.scope.npcWorkCompleted).toBe(8)
     expect(groupRemainingWork(record)).toBe(0) // committedWork defaults to 6; 5+3 overshoots
   })
 
@@ -329,12 +329,12 @@ describe('multiple workers (plan npc-028)', () => {
     expect(findAssignment(released, 'npc:1')?.rewardCoinsDue).toBe(8)
     expect(findAssignment(released, 'npc:2')?.state).toBe('accepted')
     expect(findAssignment(released, 'npc:3')?.state).toBe('accepted')
-    expect(released.npcWorkCompleted).toBe(2)
+    expect(released.scope.npcWorkCompleted).toBe(2)
     expect(released.state).toBe('active')
     expect(isContractDiscoverable(released)).toBe(true)
     const replacement = acceptWorkContract(released, 'npc:4', 9)!
     expect(findAssignment(replacement, 'npc:4')?.state).toBe('accepted')
-    expect(replacement.committedWork).toBe(record.committedWork)
+    expect(replacement.scope.committedWork).toBe(record.scope.committedWork)
   })
 
   it('completeContractWork settles every still-work-active assignment', () => {
@@ -365,7 +365,7 @@ describe('multiple workers (plan npc-028)', () => {
     expect(cancelled.state).toBe('cancelled')
     expect(findAssignment(cancelled, 'npc:1')).toMatchObject({ state: 'payment_due', workCompleted: 1 })
     expect(findAssignment(cancelled, 'npc:2')?.state).toBe('released')
-    expect(cancelled.npcWorkCompleted).toBe(1)
+    expect(cancelled.scope.npcWorkCompleted).toBe(1)
   })
 })
 
@@ -377,10 +377,10 @@ describe('shared-work commitment accounting (plan npc-018 / npc-028)', () => {
       9,
     )!
     const credited = recordNpcWorkContribution(working, 'npc:1', 2)!
-    expect(credited.npcWorkCompleted).toBe(2)
+    expect(credited.scope.npcWorkCompleted).toBe(2)
     expect(findAssignment(credited, 'npc:1')?.workCompleted).toBe(2)
-    expect(working.npcWorkCompleted).toBe(0)
-    expect(recordNpcWorkContribution(credited, 'npc:1', 1.5)!.npcWorkCompleted).toBe(3.5)
+    expect(working.scope.npcWorkCompleted).toBe(0)
+    expect(recordNpcWorkContribution(credited, 'npc:1', 1.5)!.scope.npcWorkCompleted).toBe(3.5)
   })
 
   it('recordNpcWorkContribution is a no-op for a non-positive amount', () => {
@@ -414,7 +414,7 @@ describe('shared-work commitment accounting (plan npc-018 / npc-028)', () => {
 
   it('expectedCandidateWork splits remaining group work across remaining slots', () => {
     const advertised = makeAdvertised({ requestedWorkerCount: 3, remainingWorkAtCreation: 12, requestedWorkShare: 0.75 })
-    expect(advertised.committedWork).toBe(9)
+    expect(advertised.scope.committedWork).toBe(9)
     expect(expectedCandidateWork(advertised)).toBe(3)
     const one = acceptWorkContract(advertised, 'npc:1', 5)!
     expect(expectedCandidateWork(one)).toBe(3)
