@@ -125,6 +125,7 @@ Generated from TypeScript imports.
 - `audio/doorSounds.ts`
 - `audio/fireSounds.ts`
 - `audio/playerMoveSounds.ts`
+- `audio/weatherSounds.test.ts`
 - `audio/weatherSounds.ts`
 - `player/PlayerController.ts`
 - `settlement/PlacedFires.ts`
@@ -230,14 +231,25 @@ Generated from TypeScript imports.
 
 - `ui-vue/store.ts`
 
+## `audio/weatherSounds.test.ts`
+
+**Imports**
+
+- `audio/createWorldAudio.ts`
+- `audio/weatherSounds.ts`
+- `world/lightningEvents.ts`
+- `world/weather.ts`
+
 ## `audio/weatherSounds.ts`
 
 **Imports**
 
 - `audio/createWorldAudio.ts`
+- `world/lightningEvents.ts`
 - `world/weather.ts`
 
 **Imported by**
 
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `audio/weatherSounds.test.ts`

@@ -1002,6 +1002,7 @@ Generated from TypeScript imports.
 - `world/dayNight.ts`
 - `world/foliageWind.ts`
 - `world/groundFog.ts`
+- `world/lightningEvents.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/map/mapDiscovery.ts`
 - `world/playerWell.ts`

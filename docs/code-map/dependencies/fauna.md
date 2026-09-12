@@ -12,6 +12,7 @@ Generated from TypeScript imports.
 - `fauna/animalHumanAffinity.ts`
 - `fauna/animalLead.ts`
 - `fauna/animalNames.ts`
+- `fauna/animalScare.ts`
 - `fauna/herdCohesion.ts`
 - `terrain/waterSample.ts`
 - `world/createGrassForagePatches.ts`
@@ -36,6 +37,7 @@ Generated from TypeScript imports.
 - `fauna/animalNeedArbitration.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/animalRoaming.ts`
+- `fauna/animalScare.ts`
 - `fauna/animalVariants.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
@@ -483,6 +485,20 @@ Generated from TypeScript imports.
 
 - `fauna/animalDefs.ts`
 - `fauna/animalRoaming.ts`
+
+## `fauna/animalScare.test.ts`
+
+**Imports**
+
+- `fauna/animalScare.ts`
+
+## `fauna/animalScare.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.test.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalScare.test.ts`
 
 ## `fauna/animalVariants.test.ts`
 

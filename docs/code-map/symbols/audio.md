@@ -78,9 +78,9 @@ Generated from exported TypeScript symbols.
 
 ## `audio/createAmbientAudio.ts`
 
-- `AmbientAudio` — type — line 152
-- `caveAmbientMix` — function — line 138
-- `createAmbientAudio` — function — line 174
+- `AmbientAudio` — type — line 155
+- `caveAmbientMix` — function — line 141
+- `createAmbientAudio` — function — line 177
 - `cricketsTimeFactor` — function — line 50
 - `weatherAmbientFactor` — function — line 76
 - `WeatherAmbientFactor` — type — line 67
@@ -162,6 +162,11 @@ Generated from exported TypeScript symbols.
 
 ## `audio/weatherSounds.ts`
 
-- `AMBIENT_RAIN_LOOP_URL` — const — line 10
-- `createWeatherAudio` — function — line 21
-- `WeatherAudio` — type — line 14
+- `AMBIENT_RAIN_LOOP_URL` — const — line 9
+- `AMBIENT_STORM_WIND_LOOP_URL` — const — line 10
+- `createWeatherAudio` — function — line 56
+- `rainGainFor` — function — line 34
+- `stormWindGain` — function — line 43
+- `THUNDER_SOUND_URLS` — const — line 13
+- `thunderVolume` — function — line 48
+- `WeatherAudio` — type — line 25

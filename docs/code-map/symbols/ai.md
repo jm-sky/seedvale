@@ -425,4 +425,4 @@ Generated from exported TypeScript symbols.
 - `NpcDecisionTarget` — type — line 17
   - domain: npc
 - `WEATHER_SEVERE_SHELTER_THRESHOLD` — const — line 45
-- `weatherShelterPressure` — function — line 54
+- `weatherShelterPressure` — function — line 55

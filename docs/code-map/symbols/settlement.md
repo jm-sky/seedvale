@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 382
-- `CreateSettlementDeps` — type — line 251
+- `createSettlement` — function — line 383
+- `CreateSettlementDeps` — type — line 252
 - `Settlement` — type — line 130
-- `settlementSpawnPoint` — function — line 239
+- `settlementSpawnPoint` — function — line 240
 
 ## `settlement/decorProps.ts`
 
@@ -669,7 +669,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 223
+- `createSettlementsManager` — function — line 224
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.

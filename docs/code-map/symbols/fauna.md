@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 896
+- `AnimalAgent` — class — line 906
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 413
-- `AnimalAgentDeps` — type — line 751
-- `AnimalSaveState` — type — line 514
-- `AnimalUpdateContext` — type — line 795
-- `BURY_DURATION_SEC` — const — line 283
-- `canPredatorPursueIntoVillage` — function — line 580
-- `FAUNA_SHADOW_DISTANCE` — const — line 252
-- `FaunaAiBranch` — type — line 392
-- `FaunaNavRescueDebugInfo` — type — line 397
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 343
-- `FrenzyWolfCandidate` — type — line 686
-- `HARVEST_MEAT_DURATION_SEC` — const — line 286
-- `isWithinVillageRadius` — function — line 561
-- `NearbyNpcCandidate` — type — line 681
-- `pickNearestEligibleWolf` — function — line 695
-- `pickRabidTarget` — function — line 720
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 270
-- `resolveLureTarget` — function — line 609
-- `villageFleeBiasFalloff` — function — line 588
-- `VillageInfo` — type — line 555
+- `AnimalAgentDebugInfo` — type — line 420
+- `AnimalAgentDeps` — type — line 758
+- `AnimalSaveState` — type — line 521
+- `AnimalUpdateContext` — type — line 802
+- `BURY_DURATION_SEC` — const — line 290
+- `canPredatorPursueIntoVillage` — function — line 587
+- `FAUNA_SHADOW_DISTANCE` — const — line 259
+- `FaunaAiBranch` — type — line 399
+- `FaunaNavRescueDebugInfo` — type — line 404
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 350
+- `FrenzyWolfCandidate` — type — line 693
+- `HARVEST_MEAT_DURATION_SEC` — const — line 293
+- `isWithinVillageRadius` — function — line 568
+- `NearbyNpcCandidate` — type — line 688
+- `pickNearestEligibleWolf` — function — line 702
+- `pickRabidTarget` — function — line 727
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 277
+- `resolveLureTarget` — function — line 616
+- `villageFleeBiasFalloff` — function — line 595
+- `VillageInfo` — type — line 562
 
 ## `fauna/animalCaveHabitat.ts`
 
@@ -88,25 +88,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 312
+- `ANIMAL_DEFS` — const — line 315
 - `ANIMAL_LABELS` — const — line 47
-- `AnimalAffinityConfig` — type — line 162
+- `AnimalAffinityConfig` — type — line 165
 - `AnimalDef` — type — line 66
-- `AnimalDietConfig` — type — line 192
+- `AnimalDietConfig` — type — line 195
 - `AnimalKind` — type — line 25
 - `AnimalLifeStage` — type — line 22
 - `AnimalRole` — type — line 14
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 18
-- `dietAcceptsItem` — function — line 290
-- `DraftConfig` — type — line 219
-- `LeadConfig` — type — line 213
-- `LivestockProductionConfig` — type — line 248
-- `LivestockProductKind` — type — line 235
-- `MountPointConfig` — type — line 226
-- `ScavengingConfig` — type — line 201
-- `WaterTripConfig` — type — line 171
+- `dietAcceptsItem` — function — line 293
+- `DraftConfig` — type — line 222
+- `LeadConfig` — type — line 216
+- `LivestockProductionConfig` — type — line 251
+- `LivestockProductKind` — type — line 238
+- `MountPointConfig` — type — line 229
+- `ScavengingConfig` — type — line 204
+- `WaterTripConfig` — type — line 174
 
 ## `fauna/animalDialogue.ts`
 
@@ -239,6 +239,23 @@ Generated from exported TypeScript symbols.
 - `tripDayBucket` — function — line 61
 - `TripDestinationContext` — type — line 104
 
+## `fauna/animalScare.ts`
+
+- `AnimalScareContext` — type — line 18
+- `AnimalScareSource` — type — line 8
+  - domain: fauna
+- `AnimalScareStimulus` — type — line 10
+- `DEFAULT_FEAR_BASELINE` — const — line 29
+- `scareFleeDurationSec` — function — line 98
+- `scareFleeOrigin` — function — line 109
+  - domain: fauna
+- `scareProbability` — function — line 72
+  - domain: fauna
+- `scareRoll` — function — line 58
+  - domain: fauna
+- `shouldScare` — function — line 91
+  - domain: fauna
+
 ## `fauna/AnimalSpawner.ts`
 
 - `defaultSpawnPointScenarioFields` — function — line 256
@@ -334,12 +351,12 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/faunaDecision.ts`
 
-- `decideFaunaBehaviour` — function — line 136
-- `FAUNA_BEHAVIOUR_PRIORITY` — const — line 71
+- `decideFaunaBehaviour` — function — line 144
+- `FAUNA_BEHAVIOUR_PRIORITY` — const — line 76
 - `FaunaBehaviourKind` — type — line 23
 - `FaunaDecisionGate` — type — line 18
-- `FaunaDecisionInput` — type — line 38
-- `scoreFaunaBehaviours` — function — line 147
+- `FaunaDecisionInput` — type — line 39
+- `scoreFaunaBehaviours` — function — line 155
 
 ## `fauna/followHysteresis.ts`
 

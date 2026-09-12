@@ -2041,6 +2041,26 @@ Generated from TypeScript imports.
 - `world/largeCaveVisual.ts`
 - `world/largeCaves.test.ts`
 
+## `world/lightningEvents.test.ts`
+
+**Imports**
+
+- `world/lightningEvents.ts`
+- `world/weather.ts`
+
+## `world/lightningEvents.ts`
+
+**Imports**
+
+- `world/weather.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `audio/weatherSounds.test.ts`
+- `audio/weatherSounds.ts`
+- `world/lightningEvents.test.ts`
+
 ## `world/locations/darkForestTreasureSite.test.ts`
 
 **Imports**
@@ -3350,6 +3370,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `audio/createAmbientAudio.ts`
+- `audio/weatherSounds.test.ts`
 - `audio/weatherSounds.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -3361,6 +3382,8 @@ Generated from TypeScript imports.
 - `world/clouds.test.ts`
 - `world/clouds.ts`
 - `world/groundFog.ts`
+- `world/lightningEvents.test.ts`
+- `world/lightningEvents.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
@@ -3368,6 +3391,12 @@ Generated from TypeScript imports.
 - `world/weatherParticles.ts`
 - `world/weatherVisuals.test.ts`
 - `world/weatherVisuals.ts`
+
+## `world/weatherParticles.test.ts`
+
+**Imports**
+
+- `world/weatherParticles.ts`
 
 ## `world/weatherParticles.ts`
 
@@ -3380,6 +3409,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `world/weatherParticles.test.ts`
 
 ## `world/weatherVisuals.test.ts`
 

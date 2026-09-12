@@ -4,27 +4,27 @@ Generated from exported TypeScript symbols.
 
 ## `world/animalTraps.ts`
 
-- `accumulateTrapWeatherWear` — function — line 242
+- `accumulateTrapWeatherWear` — function — line 243
 - `isSpeciesTrappable` — function — line 97
 - `isTrapCooldownActive` — function — line 180
-- `PlacedTrapRecord` — type — line 266
+- `PlacedTrapRecord` — type — line 267
 - `rollTrapDetection` — function — line 137
 - `spendTrapDurability` — function — line 205
 - `startTrapCooldown` — function — line 192
 - `TRAP_BAIT_DETECTION_CUT` — const — line 114
-- `TRAP_CHECK_INTERVAL_SEC` — const — line 321
+- `TRAP_CHECK_INTERVAL_SEC` — const — line 322
 - `TRAP_DEFS` — const — line 51
 - `TRAP_DETECTION_COOLDOWN_DAYS` — const — line 171
-- `TRAP_FOOTPRINT_RADIUS` — const — line 309
+- `TRAP_FOOTPRINT_RADIUS` — const — line 310
 - `TRAP_KIND_BY_ITEM` — const — line 76
 - `TRAP_MAX_DETECTION` — const — line 105
 - `TRAP_MIN_DETECTION` — const — line 104
-- `TRAP_PLACE_REACH` — const — line 314
-- `TRAP_PLACEMENT_MESSAGE` — const — line 301
-- `TRAP_SEPARATION` — const — line 312
-- `TRAP_SETUP_DURATION_SEC` — const — line 317
+- `TRAP_PLACE_REACH` — const — line 315
+- `TRAP_PLACEMENT_MESSAGE` — const — line 302
+- `TRAP_SEPARATION` — const — line 313
+- `TRAP_SETUP_DURATION_SEC` — const — line 318
 - `TRAP_SKILL_DETECTION_CUT` — const — line 107
-- `TRAP_WEATHER_MAX_CATCHUP_CYCLES` — const — line 232
+- `TRAP_WEATHER_MAX_CATCHUP_CYCLES` — const — line 233
 - `TRAP_WEATHER_SEVERITY` — const — line 212
 - `TrapCooldowns` — type — line 176
 - `TrapDef` — type — line 25
@@ -32,13 +32,13 @@ Generated from exported TypeScript symbols.
 - `trapDetectionRoll` — function — line 164
 - `TrapKind` — type — line 18
 - `trapKindForItem` — function — line 81
-- `TrapLureDescriptor` — type — line 291
-- `TrapPlacementReason` — type — line 299
+- `TrapLureDescriptor` — type — line 292
+- `TrapPlacementReason` — type — line 300
 - `TrapState` — type — line 23
-- `trapStateLabel` — function — line 323
+- `trapStateLabel` — function — line 324
 - `TrapUseResult` — type — line 200
-- `TrapWeatherCatchup` — type — line 234
-- `trapWeatherWear` — function — line 223
+- `TrapWeatherCatchup` — type — line 235
+- `trapWeatherWear` — function — line 224
 
 ## `world/beehives.ts`
 
@@ -558,13 +558,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/clouds.ts`
 
-- `CloudAppearance` — type — line 129
-- `cloudAppearanceFor` — function — line 169
+- `CloudAppearance` — type — line 131
+- `cloudAppearanceFor` — function — line 171
 - `CloudCategory` — type — line 22
-- `CloudCategoryWeights` — type — line 85
-- `cloudCategoryWeightsFor` — function — line 92
-- `CloudSystem` — type — line 227
-- `createClouds` — function — line 259
+- `CloudCategoryWeights` — type — line 86
+- `cloudCategoryWeightsFor` — function — line 93
+- `CloudSystem` — type — line 229
+- `createClouds` — function — line 261
 
 ## `world/collision.ts`
 
@@ -905,6 +905,20 @@ Generated from exported TypeScript symbols.
 
 - `createLargeCaveVisual` — function — line 14
 - `placeLargeCaveVisual` — function — line 60
+
+## `world/lightningEvents.ts`
+
+- `createLightningRuntime` — function — line 144
+  - domain: world
+- `LightningEvent` — type — line 39
+  - domain: world
+- `lightningEventsForCycle` — function — line 59
+  - domain: world
+- `LightningPresentation` — type — line 95
+- `LightningRuntimeInput` — type — line 128
+- `LightningThunderCue` — type — line 88
+- `THUNDER_SPEED_OF_SOUND_M_PER_S` — const — line 14
+- `ThunderScareStimulus` — type — line 6
 
 ## `world/locations/darkForestTreasureSite.ts`
 
@@ -1780,46 +1794,52 @@ Generated from exported TypeScript symbols.
 
 ## `world/weather.ts`
 
-- `ClimateState` — type — line 279
-- `computeClimate` — function — line 265
-- `computeRainExposureDays` — function — line 221
-- `computeSnowExposureDays` — function — line 240
-- `computeSurfaceWeather` — function — line 167
-- `computeWeather` — function — line 117
-- `createClimateState` — function — line 292
-- `DAYS_PER_SEASON` — const — line 31
-- `DAYS_PER_YEAR` — const — line 32
-- `getSeason` — function — line 34
-- `getSeasonProgress` — function — line 40
+- `ClimateState` — type — line 287
+- `computeClimate` — function — line 273
+- `computeRainExposureDays` — function — line 229
+- `computeSnowExposureDays` — function — line 248
+- `computeSurfaceWeather` — function — line 175
+- `computeWeather` — function — line 125
+- `createClimateState` — function — line 300
+- `DAYS_PER_SEASON` — const — line 32
+- `DAYS_PER_YEAR` — const — line 33
+- `getSeason` — function — line 35
+- `getSeasonProgress` — function — line 41
+- `isRainWeather` — function — line 74
+  - domain: world
 - `Season` — type — line 8
 - `SEASON_LABELS` — const — line 14
-- `SNOW_ACCUMULATE_WINDOW_DAYS` — const — line 141
-- `SNOW_MELT_WINDOW_DAYS` — const — line 144
-- `SurfaceWeatherState` — type — line 152
-- `temperatureFor` — function — line 70
-- `tickClimate` — function — line 296
-- `WEATHER_CYCLE_DAYS` — const — line 78
+- `SNOW_ACCUMULATE_WINDOW_DAYS` — const — line 149
+- `SNOW_MELT_WINDOW_DAYS` — const — line 152
+- `SurfaceWeatherState` — type — line 160
+- `temperatureFor` — function — line 78
+- `tickClimate` — function — line 304
+- `WEATHER_CYCLE_DAYS` — const — line 86
 - `WEATHER_LABELS` — const — line 21
-- `WeatherState` — type — line 102
+- `WeatherState` — type — line 110
 - `WeatherType` — type — line 9
-- `WETNESS_DRY_WINDOW_DAYS` — const — line 137
-- `WorldClimateState` — type — line 256
+- `WETNESS_DRY_WINDOW_DAYS` — const — line 145
+- `WorldClimateState` — type — line 264
 
 ## `world/weatherParticles.ts`
 
-- `createWeatherParticles` — function — line 221
-- `WeatherParticles` — type — line 207
-- `WeatherParticlesOptions` — type — line 200
+- `createWeatherParticles` — function — line 240
+- `WEATHER_PARTICLE_FRAGMENT_SHADER` — const — line 83
+- `WeatherParticles` — type — line 226
+- `WeatherParticlesOptions` — type — line 219
+- `weatherParticleVisibleFraction` — function — line 187
 
 ## `world/weatherVisuals.ts`
 
-- `applyWeatherOverlay` — function — line 39
-- `CAVE_INTERIOR_FOG_COLOR` — const — line 66
-- `CAVE_INTERIOR_FOG_FAR` — const — line 68
-- `CAVE_INTERIOR_FOG_NEAR` — const — line 67
-- `fogColorLuminance` — function — line 92
-- `resolveSceneFog` — function — line 73
-- `SceneFogParams` — type — line 70
+- `applyLightningFlash` — function — line 73
+  - domain: world
+- `applyWeatherOverlay` — function — line 40
+- `CAVE_INTERIOR_FOG_COLOR` — const — line 91
+- `CAVE_INTERIOR_FOG_FAR` — const — line 93
+- `CAVE_INTERIOR_FOG_NEAR` — const — line 92
+- `fogColorLuminance` — function — line 117
+- `resolveSceneFog` — function — line 98
+- `SceneFogParams` — type — line 95
 - `WeatherVisualOverlay` — type — line 11
 
 ## `world/wellGroundwater.ts`
