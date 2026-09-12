@@ -9,6 +9,7 @@ import { FAUNA_PLAYER_HUMAN_ID } from './animalHumanAffinity'
 import { LEAD_START_DISTANCE } from './animalLead'
 import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { horseNameForAnimal } from './animalNames'
+import { type AnimalScareStimulus, scareFleeOrigin, shouldScare } from './animalScare'
 import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
 
 const sampleHeight = () => 0
@@ -431,6 +432,122 @@ describe('AnimalAgent', () => {
       })
       expect(horse.mesh.position.x).toBeGreaterThan(beforeResume)
       expect(horse.isLeadAttached()).toBe(true)
+    })
+  })
+
+  describe('thunder scare (plan world-026)', () => {
+    const farObserver = new THREE.Vector3(1000, 0, 1000)
+
+    function thunder(eventId: string, overrides: Partial<AnimalScareStimulus> = {}): AnimalScareStimulus {
+      return { source: 'thunder', eventId, strength: 1, simulatedDistanceM: 120, ...overrides }
+    }
+
+    it('does not change movement state when the scare roll fails', () => {
+      const cow = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.cow,
+        animalId: 'calm-cow',
+        ownerHouseId: 'home:home:0',
+      }))
+      const fail = thunder('lightning:fail:calm', { strength: 0.15, simulatedDistanceM: 1400 })
+      expect(shouldScare(fail, {
+        animalId: 'calm-cow',
+        x: 0,
+        z: 0,
+        home: { x: 0, z: 0 },
+        fearBaseline: ANIMAL_DEFS.cow.fearBaseline ?? 0.4,
+        ownerNearby: true,
+        herdmatesNearby: 3,
+      })).toBe(false)
+      cow.update({
+        dt: 0.2,
+        others: [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        nearbySettlementNpcs: [{ id: 'npc-1', x: 1, z: 0, homeId: 'home:home:0' }],
+        scareStimulus: fail,
+      })
+      expect(cow.getDebugInfo().aiBranch).not.toBe('scare-flee')
+      expect(cow.getDebugInfo().intent).not.toBe('flee')
+    })
+
+    it('uses the existing flee seam when the scare roll succeeds', () => {
+      const chicken = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.chicken,
+        animalId: 'spooked-chicken',
+        x: 0,
+        z: 0,
+      }))
+      chicken.mesh.position.set(40, 0, 0)
+      let hit: AnimalScareStimulus | null = null
+      for (let i = 0; i < 80; i++) {
+        const candidate = thunder(`lightning:hit:${i}`, { simulatedDistanceM: 90, strength: 1 })
+        if (shouldScare(candidate, {
+          animalId: 'spooked-chicken',
+          x: 40,
+          z: 0,
+          home: { x: 0, z: 0 },
+          fearBaseline: ANIMAL_DEFS.chicken.fearBaseline ?? 0.88,
+          ownerNearby: false,
+          herdmatesNearby: 0,
+        })) {
+          hit = candidate
+          break
+        }
+      }
+      expect(hit).not.toBeNull()
+      chicken.update({
+        dt: 0.2,
+        others: [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        scareStimulus: hit,
+      })
+      expect(chicken.getDebugInfo().aiBranch).toBe('scare-flee')
+      expect(chicken.getDebugInfo().intent).toBe('flee')
+    })
+
+    it('allows scare-flee to leave the ordinary home roam band', () => {
+      const chicken = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.chicken,
+        animalId: 'edge-chicken',
+        x: 48,
+        z: 0,
+      }))
+      let hit: AnimalScareStimulus | null = null
+      for (let i = 0; i < 200; i++) {
+        const candidate = thunder(`lightning:edge:${i}`, { simulatedDistanceM: 90, strength: 1 })
+        const origin = scareFleeOrigin(candidate.eventId, 'edge-chicken', 48, 0)
+        if (origin.x >= 48) continue
+        if (shouldScare(candidate, {
+          animalId: 'edge-chicken',
+          x: 48,
+          z: 0,
+          home: { x: 0, z: 0 },
+          fearBaseline: ANIMAL_DEFS.chicken.fearBaseline ?? 0.88,
+          ownerNearby: false,
+          herdmatesNearby: 0,
+        })) {
+          hit = candidate
+          break
+        }
+      }
+      expect(hit).not.toBeNull()
+      for (let step = 0; step < 25; step++) {
+        chicken.update({
+          dt: 0.2,
+          others: [],
+          observerPos: farObserver,
+          dayFactor: 1,
+          forestFactor: 0,
+          litFires: [],
+          scareStimulus: step === 0 ? hit : null,
+        })
+      }
+      expect(chicken.mesh.position.x).toBeGreaterThan(50)
     })
   })
 })

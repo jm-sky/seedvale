@@ -250,6 +250,20 @@ describe('tickSettlementLivestock', () => {
     expect(livestock).toBe(originalArray)
     expect(livestock).toHaveLength(0)
   })
+
+  it('forwards one scare stimulus to every local candidate without a global scan', () => {
+    const a = fakeTickAnimal({ animalId: 'chicken-a' })
+    const b = fakeTickAnimal({ animalId: 'chicken-b' })
+    const scareStimulus = {
+      source: 'thunder' as const,
+      eventId: 'lightning:1:0:0',
+      strength: 0.9,
+      simulatedDistanceM: 180,
+    }
+    tickSettlementLivestock([a, b], ctxFor({ scareStimulus }))
+    expect(a.update).toHaveBeenCalledWith(expect.objectContaining({ scareStimulus }))
+    expect(b.update).toHaveBeenCalledWith(expect.objectContaining({ scareStimulus }))
+  })
 })
 
 describe('fillShepherdFlockKinds (plan fauna-004)', () => {

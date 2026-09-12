@@ -151,10 +151,11 @@ import { getVigorRatio } from '../shared/VigorState'
 import { firstUpperCase } from '../ui-vue/lib/firstUpperCase'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
+import { createLightningRuntime } from '../world/lightningEvents'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { resolveOffscreenTransportArrivals } from '../world/transportOffscreen'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
-import { applyWeatherOverlay, resolveSceneFog } from '../world/weatherVisuals'
+import { applyLightningFlash, applyWeatherOverlay, resolveSceneFog } from '../world/weatherVisuals'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
 import { inspectionTargetRef } from './inspection/inspectionTarget'
 import {
@@ -256,6 +257,7 @@ function applyDayNight(
   chunkManager: WorldBundle['chunkManager'],
   ocean: WorldBundle['ocean'],
   inCaveInterior: boolean,
+  flashAmount = 0,
 ): ReturnType<typeof skyParamsFromTime> {
   const p = skyParamsFromTime(timeOfDay)
   sky.setParams(
@@ -269,12 +271,14 @@ function applyDayNight(
   )
   // Weather overlays fog/light on top of the day/night result — `dayFactor`/
   // `elev` (returned below) and the sky dome itself stay weather-independent
-  // in Etap 1 (see `weatherVisuals.ts`'s header comment).
+  // in Etap 1 (see `weatherVisuals.ts`'s header comment). Lightning flash is
+  // a short extra overlay and never writes day/night state.
   const overlay = applyWeatherOverlay({ fogColor: p.fogColor, fogNear: p.fogNear, fogFar: p.fogFar }, weather)
-  lights.sun.intensity = p.sunIntensity * overlay.lightScale
-  lights.ambient.intensity = p.ambientIntensity * overlay.lightScale
-  lights.hemi.intensity = p.hemiIntensity * overlay.lightScale
-  const sceneFog = resolveSceneFog(overlay, inCaveInterior)
+  const presented = applyLightningFlash(overlay, inCaveInterior ? 0 : flashAmount)
+  lights.sun.intensity = p.sunIntensity * presented.lightScale
+  lights.ambient.intensity = p.ambientIntensity * presented.lightScale
+  lights.hemi.intensity = p.hemiIntensity * presented.lightScale
+  const sceneFog = resolveSceneFog(presented, inCaveInterior)
   const fog = scene.fog
   if (fog instanceof Fog) {
     fog.color.setHex(sceneFog.fogColor)
@@ -646,6 +650,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  threshold crossing instead of when the weather actually changes. */
   let lastAppliedWeatherType = climate.weather.type
   let lastAppliedWeatherIntensity = climate.weather.intensity
+  const lightningRuntime = createLightningRuntime()
+  let lightningFlashAmount = 0
+  let lightningScare: import('../fauna/animalScare').AnimalScareStimulus | null = null
   let lastAppliedInCaveInterior = bundle.caves.queryInterior(
     camera.position.x,
     camera.position.y,
@@ -795,6 +802,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       bundle.chunkManager,
       bundle.ocean,
       lastAppliedInCaveInterior,
+      lightningFlashAmount,
     )
     bundle.settlementsManager.setDayNight(1 - cachedSky.dayFactor)
     lastAppliedTimeOfDay = dayNight.timeOfDay
@@ -2159,6 +2167,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // hash when `elapsedDays` crosses into a new weather cycle (plan §17);
       // `season`/`seasonProgress` are trivial arithmetic recomputed every call.
       tickClimate(climate, getSeed(), dayNight.elapsedDays)
+      const lightning = lightningRuntime.tick({
+        seed: getSeed(),
+        elapsedDays: dayNight.elapsedDays,
+        weather: climate.weather,
+        dt,
+        dayLengthSec: dayNight.dayLengthSec,
+        present: !timeSkip.isActive(),
+      })
+      const flashChanged = lightning.flashAmount !== lightningFlashAmount
+        && (lightning.flashAmount === 0 || lightningFlashAmount === 0
+          || Math.abs(lightning.flashAmount - lightningFlashAmount) >= 0.04)
+      lightningFlashAmount = lightning.flashAmount
+      lightningScare = lightning.scareStimulus
       // Pure + bounded (plan 133 — `computeSurfaceWeather`'s lookback is a
       // fixed cycle count, not proportional to `elapsedDays`), so this is
       // cheap enough to re-derive every frame for a smooth rise/dry curve
@@ -2179,7 +2200,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         dayNight.enabled &&
         (timeOfDayDelta(dayNight.timeOfDay, lastAppliedTimeOfDay) >= DAY_NIGHT_APPLY_THRESHOLD ||
           weatherVisualChanged ||
-          inCaveInteriorForFog !== lastAppliedInCaveInterior)
+          inCaveInteriorForFog !== lastAppliedInCaveInterior ||
+          flashChanged)
       ) {
         resyncDayNight()
       }
@@ -2200,7 +2222,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position.z,
         'player',
       )
-      weatherAudio.update(climate.weather, inCaveInterior)
+      weatherAudio.update(climate.weather, inCaveInterior, lightning.thunder)
       ambientAudio.update(
         dt,
         cachedSky.dayFactor,
@@ -2404,6 +2426,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             nearbyWolves,
             playerObservation,
             nearbyWildCorpses,
+            lightningScare,
           )
         })
         withCategory(monitor, 'FAUNA', () => {

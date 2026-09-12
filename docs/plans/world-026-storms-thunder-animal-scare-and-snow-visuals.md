@@ -1,7 +1,7 @@
 # Plan: Storms, thunder, animal scare and snow visuals
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** none
 **Domain:** `world`

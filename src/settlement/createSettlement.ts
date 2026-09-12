@@ -26,8 +26,8 @@ import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
-import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
@@ -215,6 +215,7 @@ export type Settlement = {
      *  — combined with this settlement's own livestock/rats into a local
      *  sanitation candidate view. Never a per-NPC world scan. */
     nearbyWildCorpses?: readonly AnimalAgent[],
+    scareStimulus?: import('../fauna/animalScare').AnimalScareStimulus | null,
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -966,7 +967,7 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpsesIn = []) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpsesIn = [], scareStimulus = null) {
       currentNowDays = nowDays
       refreshSanitationCandidates(nearbyWildCorpsesIn)
       const agentCpu = getAgentCpuDiag()
@@ -1025,6 +1026,7 @@ export async function createSettlement(
         nearbyRats: rats.getAgents(),
         playerObservation,
         playerControlPos: { x: observerPos.x, z: observerPos.z },
+        scareStimulus,
       })
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived

@@ -214,6 +214,7 @@ export const TRAP_WEATHER_SEVERITY: Record<WeatherType, number> = {
   cloudy: 0,
   fog: 0.1,
   rain: 0.35,
+  storm: 0.55,
   snow: 0.5,
 }
 

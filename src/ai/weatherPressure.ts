@@ -1,5 +1,5 @@
-import type { WeatherState } from '../world/weather'
 import type { NeedId } from './Needs'
+import { isRainWeather, type WeatherState } from '../world/weather'
 
 /**
  * Weather → shelter-pressure mapping (plan npc-012). A pure pressure
@@ -48,12 +48,13 @@ export const WEATHER_SEVERE_SHELTER_THRESHOLD = 0.65
  * Pure — same `WeatherState` always yields the same score, no exposure
  * duration/body-temperature/clothing modelling (out of scope, plan §9/§out
  * of scope). `clear`/`cloudy`/`fog` never produce shelter pressure regardless
- * of temperature (plan acceptance §1). Bounded to `[0, 1]`, same convention
+ * of temperature (plan acceptance §1). Storm uses the rain path via
+ * `isRainWeather`. Bounded to `[0, 1]`, same convention
  * as `Needs.ts`'s pressure scores, so it can compete directly against them.
  */
 export function weatherShelterPressure(weather: WeatherState): number {
   const isSnow = weather.type === 'snow'
-  if (weather.type !== 'rain' && !isSnow) return 0
+  if (!isRainWeather(weather.type) && !isSnow) return 0
   const threshold = isSnow ? SNOW_INTENSITY_THRESHOLD : RAIN_INTENSITY_THRESHOLD
   const mult = isSnow ? SNOW_PRESSURE_MULT : RAIN_PRESSURE_MULT
   let pressure = weather.intensity > threshold ? weather.intensity * mult : 0

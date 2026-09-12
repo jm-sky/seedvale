@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import type { WeatherState } from './weather'
 import { isSystemEnabled } from '../debug/debugMode'
+import { isRainWeather, type WeatherState } from './weather'
 
 /** GPU-driven rain/snow (plan 040 §11-13 — closes the Etap 3 deviation noted
  *  in the implementation notes). Per-particle position/fall/drift is computed
@@ -26,9 +26,8 @@ const RAIN_DRIFT = 0.6
 const SNOW_DRIFT = 0.4
 const RAIN_SIZE = 0.16
 const SNOW_SIZE = 0.24
-/** Visible sprite width vs gl_PointSize. Rain is a thin streak; snow stays a
- *  full square (GRAPHICS G13). Height is gl_PointSize — do not shrink RAIN_SIZE
- *  to make rain narrower, that would shorten the drop too. */
+/** Visible sprite width vs gl_PointSize. Rain is a thin streak; snow uses a
+ *  procedural flake mask (GRAPHICS G13) instead of filling the point square. */
 const RAIN_WIDTH_FRAC = 0.35
 const SNOW_WIDTH_FRAC = 1
 const RAIN_MAX_OPACITY = 0.5
@@ -81,23 +80,31 @@ const VERTEX_SHADER = /* glsl */ `
   }
 `
 
-const FRAGMENT_SHADER = /* glsl */ `
+export const WEATHER_PARTICLE_FRAGMENT_SHADER = /* glsl */ `
   #include <common>
   #include <fog_pars_fragment>
 
   uniform vec3 uColor;
   uniform float uOpacity;
   uniform float uWidthFrac;
+  uniform float uFlakeMask;
 
   void main() {
-    float streak = 1.0;
-    // Snow keeps uWidthFrac = 1 and skips the mask so flakes stay full squares.
-    if (uWidthFrac < 0.999) {
+    float mask = 1.0;
+    if (uFlakeMask > 0.5) {
+      vec2 p = gl_PointCoord - vec2(0.5);
+      float r = length(p);
+      float ang = atan(p.y, p.x);
+      float scallop = 0.07 * sin(ang * 6.0) + 0.035 * sin(ang * 3.0 + 1.4);
+      float radius = 0.40 + scallop;
+      mask = 1.0 - smoothstep(radius * 0.52, radius, r);
+      if (mask <= 0.001) discard;
+    } else if (uWidthFrac < 0.999) {
       float halfW = uWidthFrac * 0.5;
-      streak = 1.0 - smoothstep(halfW * 0.55, halfW, abs(gl_PointCoord.x - 0.5));
-      if (streak <= 0.001) discard;
+      mask = 1.0 - smoothstep(halfW * 0.55, halfW, abs(gl_PointCoord.x - 0.5));
+      if (mask <= 0.001) discard;
     }
-    gl_FragColor = vec4(uColor, uOpacity * streak);
+    gl_FragColor = vec4(uColor, uOpacity * mask);
     #include <fog_fragment>
   }
 `
@@ -120,6 +127,7 @@ type EmitterConfig = {
   drift: number
   maxOpacity: number
   widthFrac: number
+  flakeMask: number
 }
 
 function createEmitter(cfg: EmitterConfig): Emitter {
@@ -152,6 +160,7 @@ function createEmitter(cfg: EmitterConfig): Emitter {
       uOpacity: { value: 0 },
       uVisibleFraction: { value: 0 },
       uWidthFrac: { value: cfg.widthFrac },
+      uFlakeMask: { value: cfg.flakeMask },
     },
   ])
 
@@ -161,7 +170,7 @@ function createEmitter(cfg: EmitterConfig): Emitter {
     fog: true,
     uniforms,
     vertexShader: VERTEX_SHADER,
-    fragmentShader: FRAGMENT_SHADER,
+    fragmentShader: WEATHER_PARTICLE_FRAGMENT_SHADER,
   })
 
   const points = new THREE.Points(geometry, material)
@@ -171,6 +180,16 @@ function createEmitter(cfg: EmitterConfig): Emitter {
   points.visible = false
 
   return { points, geometry, material, maxOpacity: cfg.maxOpacity, time: 0 }
+}
+
+/** Intensity/quality gate used by both emitters — kept pure so tests can
+ *  assert the GPU budget contract without a WebGL context. */
+export function weatherParticleVisibleFraction(
+  intensity: number,
+  qualityCeiling: number,
+): number {
+  const densityFraction = Math.min(1, 0.25 + intensity * 0.75)
+  return Math.max(0.12, densityFraction * qualityCeiling)
 }
 
 function updateEmitter(
@@ -192,8 +211,8 @@ function updateEmitter(
   // without changing per-particle size/speed (same formula as the CPU
   // version); `qualityCeiling` additionally caps the budget on weaker
   // devices (plan 103 `quality.lodScale`), without touching GPU buffers.
-  const densityFraction = Math.min(1, 0.25 + intensity * 0.75)
-  u.uVisibleFraction!.value = Math.max(0.12, densityFraction * qualityCeiling)
+  const densityFraction = weatherParticleVisibleFraction(intensity, qualityCeiling)
+  u.uVisibleFraction!.value = densityFraction
   u.uOpacity!.value = emitter.maxOpacity * (0.35 + intensity * 0.65)
 }
 
@@ -227,6 +246,7 @@ export function createWeatherParticles(opts: WeatherParticlesOptions): WeatherPa
     drift: RAIN_DRIFT,
     maxOpacity: RAIN_MAX_OPACITY,
     widthFrac: RAIN_WIDTH_FRAC,
+    flakeMask: 0,
   })
   const snow = createEmitter({
     maxCount: SNOW_MAX_COUNT,
@@ -236,6 +256,7 @@ export function createWeatherParticles(opts: WeatherParticlesOptions): WeatherPa
     drift: SNOW_DRIFT,
     maxOpacity: SNOW_MAX_OPACITY,
     widthFrac: SNOW_WIDTH_FRAC,
+    flakeMask: 1,
   })
 
   function update(
@@ -262,7 +283,14 @@ export function createWeatherParticles(opts: WeatherParticlesOptions): WeatherPa
       : 0
     const qualityCeiling = Math.max(0.25, Math.min(1, opts.getLodScale()))
 
-    updateEmitter(rain, dt, weather.type === 'rain', weather.intensity, sizeScale, qualityCeiling)
+    const raining = isRainWeather(weather.type)
+    const rainIntensity = weather.type === 'storm'
+      ? Math.min(1, 0.55 + weather.intensity * 0.45)
+      : weather.intensity
+    if (raining) {
+      rain.material.uniforms.uDrift!.value = RAIN_DRIFT * (weather.type === 'storm' ? 1.8 : 1)
+    }
+    updateEmitter(rain, dt, raining, rainIntensity, sizeScale, qualityCeiling)
     updateEmitter(snow, dt, weather.type === 'snow', weather.intensity, sizeScale, qualityCeiling)
   }
 

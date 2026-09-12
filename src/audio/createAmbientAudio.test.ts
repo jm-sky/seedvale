@@ -49,6 +49,13 @@ describe('weatherAmbientFactor', () => {
     expect(heavy.crickets).toBeLessThanOrEqual(0)
     expect(heavy.frogs).toBeGreaterThan(0)
   })
+
+  it('treats storm as at least as silencing as rain of the same intensity', () => {
+    const rain = weatherAmbientFactor({ type: 'rain', intensity: 0.7, temperature: 10, startedAt: 0, endsAt: 1 })
+    const storm = weatherAmbientFactor({ type: 'storm', intensity: 0.7, temperature: 10, startedAt: 0, endsAt: 1 })
+    expect(storm.birds).toBeLessThanOrEqual(rain.birds)
+    expect(storm.crickets).toBeLessThanOrEqual(rain.crickets)
+  })
 })
 
 describe('caveAmbientMix', () => {

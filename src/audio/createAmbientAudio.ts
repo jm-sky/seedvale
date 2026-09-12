@@ -1,8 +1,8 @@
 import { MathUtils } from 'three'
-import type { WeatherState, WeatherType } from '../world/weather'
 import type { AmbientSamplers } from './ambientWeights'
 import type { AudioLoopHandle, WorldAudio } from './createWorldAudio'
 import { lakeProximityAt } from '../terrain/waterBodyKind'
+import { isRainWeather, type WeatherState, type WeatherType } from '../world/weather'
 import { type AmbientEventDefinition, createAmbientEventRuntime } from './ambientEvents'
 import { ambientWeightsAt } from './ambientWeights'
 import { frogsTimeFactor } from './frogAmbience'
@@ -66,7 +66,7 @@ export function cricketsTimeFactor(timeOfDay: number): number {
  *  crickets/frogs barely care). */
 export type WeatherAmbientFactor = { birds: number, crickets: number, frogs: number }
 
-const WEATHER_AMBIENT_FACTOR: Record<Exclude<WeatherType, 'rain'>, WeatherAmbientFactor> = {
+const WEATHER_AMBIENT_FACTOR: Record<Exclude<WeatherType, 'rain' | 'storm'>, WeatherAmbientFactor> = {
   clear: { birds: 1, crickets: 1, frogs: 1 },
   cloudy: { birds: 0.7, crickets: 0.85, frogs: 0.9 },
   fog: { birds: 0.5, crickets: 0.8, frogs: 0.85 },
@@ -74,11 +74,14 @@ const WEATHER_AMBIENT_FACTOR: Record<Exclude<WeatherType, 'rain'>, WeatherAmbien
 }
 
 export function weatherAmbientFactor(weather: WeatherState): WeatherAmbientFactor {
-  if (weather.type !== 'rain') return WEATHER_AMBIENT_FACTOR[weather.type]
+  if (!isRainWeather(weather.type)) return WEATHER_AMBIENT_FACTOR[weather.type]
+  const intensity = weather.type === 'storm'
+    ? Math.min(1, weather.intensity * 1.15)
+    : weather.intensity
   return {
-    birds: 1 - weather.intensity * 1.8,
-    crickets: 1 - weather.intensity,
-    frogs: 1 - weather.intensity * 0.6,
+    birds: 1 - intensity * 1.8,
+    crickets: 1 - intensity,
+    frogs: 1 - intensity * 0.6,
   }
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WeatherState } from './weather'
 import {
+  applyLightningFlash,
   applyWeatherOverlay,
   fogColorLuminance,
   resolveSceneFog,
@@ -44,6 +45,21 @@ describe('applyWeatherOverlay', () => {
     const half = applyWeatherOverlay(baseFog, weather({ type: 'rain', intensity: 0.5 }))
     const full = applyWeatherOverlay(baseFog, weather({ type: 'rain', intensity: 1 }))
     expect(half.lightScale).toBeGreaterThan(full.lightScale)
+  })
+
+  it('makes storm darker than rain at equal intensity', () => {
+    const rain = applyWeatherOverlay(baseFog, weather({ type: 'rain', intensity: 1 }))
+    const storm = applyWeatherOverlay(baseFog, weather({ type: 'storm', intensity: 1 }))
+    expect(storm.lightScale).toBeLessThan(rain.lightScale)
+  })
+})
+
+describe('applyLightningFlash', () => {
+  it('boosts light without mutating the base overlay object', () => {
+    const storm = applyWeatherOverlay(baseFog, weather({ type: 'storm', intensity: 1 }))
+    const flashed = applyLightningFlash(storm, 0.8)
+    expect(flashed.lightScale).toBeGreaterThan(storm.lightScale)
+    expect(applyLightningFlash(storm, 0)).toBe(storm)
   })
 })
 

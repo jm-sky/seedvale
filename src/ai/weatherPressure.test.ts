@@ -19,6 +19,13 @@ describe('weatherShelterPressure', () => {
     expect(weatherShelterPressure(weather({ type: 'fog', intensity: 1, temperature: -20 }))).toBe(0)
   })
 
+  it('treats storm as rain-like shelter pressure', () => {
+    const rain = weatherShelterPressure(weather({ type: 'rain', intensity: 0.8, temperature: 10 }))
+    const storm = weatherShelterPressure(weather({ type: 'storm', intensity: 0.8, temperature: 10 }))
+    expect(storm).toBe(rain)
+    expect(storm).toBeGreaterThan(0)
+  })
+
   it('produces no pressure for light rain', () => {
     expect(weatherShelterPressure(weather({ type: 'rain', intensity: 0.4, temperature: 10 }))).toBe(0)
   })

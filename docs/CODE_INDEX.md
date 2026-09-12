@@ -85,7 +85,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Residential buildings](../src/world/residentialBuilding.ts) — player-built house construction, ownership, and completed home identity; runtime collection in `createResidentialBuildings.ts`.
 - [World carts](../src/world/createCarts.ts) — movable draft-cart identity and one-way animal→cart hitch (plan fauna-007). Hitch pose in [cart.ts](../src/world/cart.ts).
 - [Transport orders](../src/world/transportOrder.ts) — world-owned physical goods transport commitment (plan settlements-npcs-018); registry in [createTransportOrders.ts](../src/world/createTransportOrders.ts). Active/non-terminal orders persist (`SaveData.transportOrders`) and carry across a `WorldBundle` rebuild; carrier cargo persists separately on `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019, `src/world/transportOffscreen.ts` for off-screen progression).
-- [Weather](../src/world/weather.ts) — deterministic season/weather and rain/snow exposure.
+- [Weather](../src/world/weather.ts) — deterministic season/weather, rain/storm exposure, and climate cache.
+- [Lightning events](../src/world/lightningEvents.ts) — deterministic storm lightning/thunder schedule and one-shot presentation runtime.
 - [Cemetery assignment](../src/terrain/cemeteryAssignment.ts) — settlement↔cemetery topology (dedicated or shared `SM`) and reverse lookup; abandoned cemeteries have no served settlements.
 - [Cemetery placement](../src/terrain/cemeteryPlacement.ts) — bounded dedicated/shared/abandoned cemetery search over the shared physical gates in `chunkEnvironment.ts`.
 - [Treasure sites](../src/world/treasureSites.ts) — deterministic finite world treasure (ruins/deep-forest chests + matching keys); cave archetype deferred.
@@ -149,6 +150,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 `AnimalAgent.ts` is the per-animal integration point and stays the entry point for runtime behaviour; the modules below own the domain data/logic it delegates to (`docs/reviews/2026-09-03--AnimalAgent-refactor-review.md`).
 
 - [AnimalAgent](../src/fauna/AnimalAgent.ts) — per-animal decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API.
+- [Animal scare](../src/fauna/animalScare.ts) — generic bounded scare stimulus and stable per-animal probability (thunder is the first source).
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
 - [Individual variants](../src/fauna/animalVariants.ts) — per-animal multipliers (`normal`/`alpha`) and wolf-den alpha slot assignment.
 - [Lead / draft helpers](../src/fauna/animalLead.ts) — leadable/draft capability queries and temporary-lead hysteresis distances.
