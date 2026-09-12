@@ -82,6 +82,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
 | 💡 `fauna-023-systemic-animal-attraction-food-blood-and-trap-lures.md`         | -       | 🟡 | M      | fauna-014, ~~world-009~~, items-player-025 |
 | ◼️ `settlements-npcs-032-player-to-household-resource-transfer.md`             | -       | 🔴 | S      | -      |
+| ◼️ `fauna-024-lost-livestock-stray-displacement.md`                            | -       | 🔴 | M      | quests-progression-016, fauna-020 |
  💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | ~~settlements-npcs-015~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
@@ -235,7 +236,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `024`
+- fauna: `025`
 - items-player: `030`
 - npc: `036`
 - persistence: `005`
