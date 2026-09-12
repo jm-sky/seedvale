@@ -3,7 +3,7 @@
 **Created:** 2026-09-04
 **Status:** `draft` 📝
 **Type:** feature
-**Priority:** medium · **Effort:** M
+**Priority:** low · **Effort:** M
 **Depends on:** none
 **Domain:** `world-terrain`
 **Subdomains:** `terrain` `vegetation` `rendering`

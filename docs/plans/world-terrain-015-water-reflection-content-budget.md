@@ -3,7 +3,7 @@
 **Created:** 2026-09-07
 **Status:** `draft` 📝
 **Type:** optimization
-**Priority:** medium · **Effort:** S
+**Priority:** low · **Effort:** S
 **Depends on:** -
 **Domain:** `world-terrain`
 **Subdomains:** `rendering`

@@ -37,8 +37,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `tools-000-weapon-browser-observatory.md`                                      | -       | 🟡 | M      | -      |
 | `tools-006--world-observatory.md`                                              | -       | ⚪ | XL     | -      |
 | `tools-007--mpfb2-npc-hero-character-pipeline.md`                              | -       | 🔴 | L      | -      |
-| `world-terrain-009-seasonal-ground-and-grass-appearance.md`                    | -       | 🟡 | M      | -      |
-| `world-terrain-015-water-reflection-content-budget.md`                         | -       | 🟡 | S      | -      |
+| `world-terrain-009-seasonal-ground-and-grass-appearance.md`                    | -       | ⚪ | M      | -      |
+| `world-terrain-015-water-reflection-content-budget.md`                         | -       | ⚪ | S      | -      |
 
 ---
 
@@ -73,7 +73,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | ~~settlements-npcs-030~~ |
 | ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | -       | 🔴 | L      | settlements-npcs-030, world-023 |
 | 💡 `npc-037-stale-work-contract-target-discovery-and-notice-cleanup.md`        | -       | 🔴 | M      | ~~npc-018~~, ~~npc-028~~ |
-| 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
+| 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | ⚪ | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
