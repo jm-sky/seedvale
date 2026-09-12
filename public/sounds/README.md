@@ -80,6 +80,9 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 | ambient-owl-at-night.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | Random one-shot (not a loop) — night + forest-weight-gated cooldown timer in `audio/createAmbientAudio.ts` |
 | ambient-lake-frogs-loop-01.ogg | frogs-night-1.ogg (~5.6 min field recording, staged at repo root) | — (TBD — provided directly, source/license not yet recorded) | Plan world-016 lake-frog local ambience; ~26 s loopable segment trimmed from the busiest chorus stretch of the original recording, short fade in/out to avoid a click at the loop seam |
 | ambient-cave-01.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | Cave V2 interior bed; wired in `audio/createAmbientAudio.ts` from `Caves.queryInterior` (not landmark name / entrance distance) |
+| thunder-very-close.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | S28; very-close storm thunder one-shot (≤220 m) via `audio/weatherSounds.ts` |
+| thunder-mid.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | S28; mid storm thunder one-shot (220–850 m) |
+| thunder-distant.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | S28; distant storm thunder one-shot (>850 m) |
 
 ## Items / Inventory
 

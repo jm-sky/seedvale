@@ -910,14 +910,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/lightningEvents.ts`
 
-- `createLightningRuntime` — function — line 144
+- `createLightningRuntime` — function — line 141
   - domain: world
 - `LightningEvent` — type — line 39
   - domain: world
 - `lightningEventsForCycle` — function — line 59
   - domain: world
-- `LightningPresentation` — type — line 95
-- `LightningRuntimeInput` — type — line 128
+- `LightningPresentation` — type — line 94
+- `LightningRuntimeInput` — type — line 125
 - `LightningThunderCue` — type — line 88
 - `THUNDER_SPEED_OF_SOUND_M_PER_S` — const — line 14
 - `ThunderScareStimulus` — type — line 6

@@ -164,9 +164,15 @@ Generated from exported TypeScript symbols.
 
 - `AMBIENT_RAIN_LOOP_URL` — const — line 9
 - `AMBIENT_STORM_WIND_LOOP_URL` — const — line 10
-- `createWeatherAudio` — function — line 56
-- `rainGainFor` — function — line 34
-- `stormWindGain` — function — line 43
+- `createWeatherAudio` — function — line 83
+- `rainGainFor` — function — line 45
+- `stormWindGain` — function — line 54
+- `THUNDER_MID_DISTANCE_M` — const — line 24
 - `THUNDER_SOUND_URLS` — const — line 13
-- `thunderVolume` — function — line 48
-- `WeatherAudio` — type — line 25
+- `THUNDER_VERY_CLOSE_DISTANCE_M` — const — line 22
+- `ThunderClip` — type — line 19
+- `thunderClipFor` — function — line 64
+  - domain: audio
+- `thunderSoundUrl` — function — line 70
+- `thunderVolume` — function — line 74
+- `WeatherAudio` — type — line 36

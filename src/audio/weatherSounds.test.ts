@@ -7,11 +7,17 @@ import {
   rainGainFor,
   stormWindGain,
   THUNDER_SOUND_URLS,
+  thunderClipFor,
+  thunderSoundUrl,
   thunderVolume,
 } from './weatherSounds'
 
 function weather(type: WeatherState['type'], intensity = 0.8): WeatherState {
   return { type, intensity, temperature: 12, startedAt: 0, endsAt: 0.3 }
+}
+
+function cue(simulatedDistanceM: number, strength = 1): LightningThunderCue {
+  return { eventId: 'e', strength, simulatedDistanceM }
 }
 
 describe('weather audio gains', () => {
@@ -28,18 +34,29 @@ describe('weather audio gains', () => {
     expect(stormWindGain(weather('storm'), true)).toBe(0)
   })
 
-  it('attenuates thunder in a cave and with distance', () => {
-    const near: LightningThunderCue = {
-      eventId: 'e', variantIndex: 0, strength: 1, simulatedDistanceM: 100,
-    }
-    const far = { ...near, simulatedDistanceM: 1200 }
-    expect(thunderVolume(near, false)).toBeGreaterThan(thunderVolume(far, false))
-    expect(thunderVolume(near, true)).toBeLessThan(thunderVolume(near, false))
+  it('picks thunder clips by simulated distance', () => {
+    expect(thunderClipFor(120)).toBe('veryClose')
+    expect(thunderClipFor(220)).toBe('veryClose')
+    expect(thunderClipFor(500)).toBe('mid')
+    expect(thunderClipFor(850)).toBe('mid')
+    expect(thunderClipFor(1200)).toBe('distant')
+    expect(thunderSoundUrl(120)).toBe(THUNDER_SOUND_URLS.veryClose)
+    expect(thunderSoundUrl(500)).toBe(THUNDER_SOUND_URLS.mid)
+    expect(thunderSoundUrl(1200)).toBe(THUNDER_SOUND_URLS.distant)
+  })
+
+  it('attenuates thunder in a cave and by clip distance', () => {
+    const veryClose = cue(120)
+    const mid = cue(500)
+    const distant = cue(1200)
+    expect(thunderVolume(veryClose, false)).toBeGreaterThan(thunderVolume(mid, false))
+    expect(thunderVolume(mid, false)).toBeGreaterThan(thunderVolume(distant, false))
+    expect(thunderVolume(veryClose, true)).toBeLessThan(thunderVolume(veryClose, false))
   })
 })
 
 describe('createWeatherAudio', () => {
-  it('creates rain then storm-wind loops and disposes both handles', () => {
+  it('creates rain then storm-wind loops and plays each thunder event once', () => {
     const rainHandle: AudioLoopHandle = { setTargetGain: vi.fn(), dispose: vi.fn() }
     const windHandle: AudioLoopHandle = { setTargetGain: vi.fn(), dispose: vi.fn() }
     const playOnce = vi.fn()
@@ -58,17 +75,15 @@ describe('createWeatherAudio', () => {
     expect(worldAudio.createLoop).toHaveBeenCalledTimes(2)
     audio.update(weather('storm', 0.9), false, {
       eventId: 'lightning:1:0:0',
-      variantIndex: 1,
       strength: 0.8,
-      simulatedDistanceM: 200,
+      simulatedDistanceM: 500,
     })
     expect(playOnce).toHaveBeenCalledTimes(1)
-    expect(playOnce.mock.calls[0]![0]).toBe(THUNDER_SOUND_URLS[1])
+    expect(playOnce.mock.calls[0]![0]).toBe(THUNDER_SOUND_URLS.mid)
     audio.update(weather('storm', 0.9), false, {
       eventId: 'lightning:1:0:0',
-      variantIndex: 1,
       strength: 0.8,
-      simulatedDistanceM: 200,
+      simulatedDistanceM: 500,
     })
     expect(playOnce).toHaveBeenCalledTimes(1)
     audio.dispose()

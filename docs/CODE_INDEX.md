@@ -87,6 +87,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Transport orders](../src/world/transportOrder.ts) — world-owned physical goods transport commitment (plan settlements-npcs-018); registry in [createTransportOrders.ts](../src/world/createTransportOrders.ts). Active/non-terminal orders persist (`SaveData.transportOrders`) and carry across a `WorldBundle` rebuild; carrier cargo persists separately on `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019, `src/world/transportOffscreen.ts` for off-screen progression).
 - [Weather](../src/world/weather.ts) — deterministic season/weather, rain/storm exposure, and climate cache.
 - [Lightning events](../src/world/lightningEvents.ts) — deterministic storm lightning/thunder schedule and one-shot presentation runtime.
+- [Weather audio](../src/audio/weatherSounds.ts) — rain/storm loops and distance-banded thunder one-shots.
 - [Cemetery assignment](../src/terrain/cemeteryAssignment.ts) — settlement↔cemetery topology (dedicated or shared `SM`) and reverse lookup; abandoned cemeteries have no served settlements.
 - [Cemetery placement](../src/terrain/cemeteryPlacement.ts) — bounded dedicated/shared/abandoned cemetery search over the shared physical gates in `chunkEnvironment.ts`.
 - [Treasure sites](../src/world/treasureSites.ts) — deterministic finite world treasure (ruins/deep-forest chests + matching keys); cave archetype deferred.

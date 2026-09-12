@@ -8,12 +8,12 @@
    🔴 `M` · ✅ ready · unlocks 6/6
 2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · ✅ ready · unlocks 1/3
-3. `items-player-027` — **Player-to-NPC item transfer and equipment**  
-   🔴 `M` · ✅ ready · unlocks 2/5
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2
-5. `items-player-028` — **NPC player-storage access policies**  
-   🔴 `L` · 🔒 blocked · unlocks 2/4
+4. `items-player-028` — **NPC player-storage access policies**  
+   🔴 `L` · ✅ ready · unlocks 2/4
+5. `npc-031` — **Voluntary expedition joining**  
+   🔴 `M` · 🔒 blocked · unlocks 0/0
 
 ---
 
@@ -23,12 +23,12 @@
    🔴 `M` · ✅ ready · unlocks 6/6 · roadmap: `companions`
 2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · ✅ ready · unlocks 1/3 · roadmap: `economy-production`
-3. `items-player-027` — **Player-to-NPC item transfer and equipment**  
-   🔴 `M` · ✅ ready · unlocks 2/5 · roadmap: `companions`
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 1/2 · roadmap: `economy-production`
-5. `items-player-028` — **NPC player-storage access policies**  
-   🔴 `L` · 🔒 blocked · unlocks 2/4 · roadmap: `companions`
+4. `items-player-028` — **NPC player-storage access policies**  
+   🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
+5. `npc-031` — **Voluntary expedition joining**  
+   🔴 `M` · 🔒 blocked · unlocks 0/0 · roadmap: `companions`
 
 ---
 
@@ -51,12 +51,12 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 6/6
 2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · ✅ ready · unlocks 1/3
-3. `items-player-027` — **Player-to-NPC item transfer and equipment**  
-   🔴 `M` · ✅ ready · unlocks 2/5
+3. `items-player-028` — **NPC player-storage access policies**  
+   🔴 `L` · ✅ ready · unlocks 2/4
 4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-5. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
-   🔴 `M` · ✅ ready · unlocks 2/2
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -82,112 +82,82 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  89  
    → **unlocks:** 1/3
 
-3. `items-player-027` — **Player-to-NPC item transfer and equipment**  
-  🔴 `M` · **Score:**  87  
-   → **unlocks:** 2/5
-
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  81  
    → **unlocks:** 1/2
 
-5. `items-player-028` — **NPC player-storage access policies**  
+4. `items-player-028` — **NPC player-storage access policies**  
   🔴 `L` · **Score:**  76  
    → **unlocks:** 2/4
 
-6. `npc-031` — **Voluntary expedition joining**  
+5. `npc-031` — **Voluntary expedition joining**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-7. `world-terrain-017` — **Abandoned mountain mine landmark**  
+6. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-8. `npc-030` — **Paid expedition escort Work Contracts**  
+7. `npc-030` — **Paid expedition escort Work Contracts**  
   🔴 `L` · **Score:**  56  
    → **unlocks:** 0/0
 
-9. `settlements-npcs-030` — **Non-Home Settlement Food Production v1**  
-  🔴 `M` · **Score:**  55  
-   → **unlocks:** 2/2
-
-10. `world-018` — **Cave-aware rich finite resource deposits**  
+8. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-11. `fauna-024` — **Lost livestock stray displacement**  
-  🔴 `M` · **Score:**  45  
-   → **unlocks:** 1/1
-
-12. `settlements-npcs-022` — **Household help and age-based work participation**  
+9. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-13. `world-023` — **Species-Driven Sowing, Density and Yield**  
+10. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-14. `settlements-npcs-025` — **Resource storage visualization**  
+11. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-15. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+12. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-16. `fauna-023` — **Systemic animal attraction — food, blood and trap lures**  
+13. `fauna-023` — **Systemic animal attraction — food, blood and trap lures**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 0/0
 
-17. `fauna-025` — **Livestock stray return and recovery**  
-  🔴 `M` · **Score:**  33  
-   → **unlocks:** 0/0
-
-18. `settlements-npcs-032` — **Player → household resource transfer**  
-  🔴 `S` · **Score:**  29  
-   → **unlocks:** 0/0
-
-19. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+14. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-20. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+15. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-21. `items-player-014` — **Rope-pullable resource transport**  
+16. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `tools-005` — **Seedvale Character Preparation Panel**  
+17. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `tools-013` — **NPC decision verification and scenario tooling**  
+18. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `quests-progression-008` — **Treasure map — bear cave**  
+19. `quests-progression-008` — **Treasure map — bear cave**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-25. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
+20. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
   🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-26. `items-player-029` — **Wearable armor and combat equipment**  
-  🟡 `L` · **Score:**  14  
    → **unlocks:** 0/0
 
 ---
 
 ## Initially Blocked
 
-- [`fauna-025-livestock-stray-return-and-recovery.md`](fauna-025-livestock-stray-return-and-recovery.md)  
-  is blocked by:
-  - [`fauna-024-lost-livestock-stray-displacement.md`](fauna-024-lost-livestock-stray-displacement.md)
-- [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)  
-  is blocked by:
-  - [`items-player-027-player-to-npc-item-transfer-and-equipment.md`](items-player-027-player-to-npc-item-transfer-and-equipment.md)
 - [`npc-030-paid-expedition-escort-work-contracts.md`](npc-030-paid-expedition-escort-work-contracts.md)  
   is blocked by:
   - [`npc-029-npc-accompany-follow-commitment.md`](npc-029-npc-accompany-follow-commitment.md)
@@ -199,17 +169,10 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`](settlements-npcs-016-first-processing-chain-and-blacksmith-production.md)
 - [`settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`](settlements-npcs-031-sustainable-seed-recovery-and-replanting.md)  
   is blocked by:
-  - [`settlements-npcs-030-non-home-settlement-food-production-v1.md`](settlements-npcs-030-non-home-settlement-food-production-v1.md)
   - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
-- [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)  
-  is blocked by:
-  - [`settlements-npcs-030-non-home-settlement-food-production-v1.md`](settlements-npcs-030-non-home-settlement-food-production-v1.md)
-- [`world-025-persistent-abandoned-cemetery-worldgen-cache.md`](world-025-persistent-abandoned-cemetery-worldgen-cache.md)  
-  is blocked by:
-  - [`world-015-seed-library-and-persistent-worldgen-cache.md`](world-015-seed-library-and-persistent-worldgen-cache.md)
 
 ---
 

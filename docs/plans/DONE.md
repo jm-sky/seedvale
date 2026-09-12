@@ -4,6 +4,13 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-027-player-to-npc-item-transfer-and-equipment`           | 2026-09-12 13:44:14 | —                   | `items-player`   | —          |
+| `items-player-029-wearable-armor-and-combat-equipment`                 | 2026-09-12 13:36:20 | —                   | `items-player`   | —          |
+| `fauna-025-livestock-stray-return-and-recovery`                        | 2026-09-12 10:53:37 | —                   | `fauna`          | —          |
+| `settlements-npcs-030-non-home-settlement-food-production-v1`          | 2026-09-12 10:41:34 | —                   | `settlements-npcs` | —          |
+| `settlements-npcs-032-player-to-household-resource-transfer`           | —                   | 2026-09-12 09:44:03 | `settlements-npcs` | —          |
+| `world-025-persistent-abandoned-cemetery-worldgen-cache`               | 2026-09-12 09:24:02 | —                   | `world`          | —          |
+| `fauna-024-lost-livestock-stray-displacement`                          | 2026-09-12 08:40:34 | —                   | `fauna`          | —          |
 | `settlements-007-systemic-settlement-structure-condition-and-shared-repair` | 2026-09-12 08:02:53 | —                   | `settlements`    | —          |
 | `world-026-storms-thunder-animal-scare-and-snow-visuals`               | 2026-09-12 07:49:56 | —                   | `world`          | —          |
 | `npc-036-lossless-npc-inventory-corpse-loot-handoff`                   | 2026-09-12 07:13:45 | —                   | `npc`            | —          |
@@ -84,9 +91,9 @@
 | `quests-progression-011-grave-robbing-reputation-risk-and-stealth`     | 2026-09-08 10:53:33 | —                   | `quests-progression` | —          |
 | `npc-022-agility-driven-melee-recovery`                                | —                   | 2026-09-07 15:15:55 | `npc`            | npc-004-npc-genealogy-lineages |
 | `npc-019-shared-spea-foundation-and-strength-driven-melee`             | —                   | 2026-09-07 14:44:46 | `npc`            | npc-020-strength-driven-physical-work-and-human-carrying, npc-021-endurance-driven-stamina-capacity-and-recovery, npc-022-agility-driven-melee-recovery, npc-023-perception-driven-observation-and-information-levels, npc-024-temporary-conditions-and-poisoning, npc-025-injury-severity-and-treatment-requirements |
+| `ui-input-009-merchant-item-ownership-and-semantic-item-labels`        | 2026-09-07 12:47:17 | 2026-09-07 14:38:35 | `ui-input`       | —          |
 | `quests-progression-001-reputation-and-renown-foundation`              | 2026-09-07 14:33:04 | —                   | `quests-progression` | —          |
 | `world-017-contextual-river-water-safety`                              | —                   | 2026-09-07 13:55:31 | `world`          | npc-024-temporary-conditions-and-poisoning |
-| `ui-input-009-merchant-item-ownership-and-semantic-item-labels`        | 2026-09-07 12:47:17 | —                   | `ui-input`       | —          |
 | `ui-input-011-new-game-setup-on-empty-save-state`                      | 2026-09-07 12:11:01 | —                   | `ui-input`       | —          |
 | `npc-002-npc-healing`                                                  | 2026-09-06 08:07:25 | —                   | `npc`            | —          |
 | `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats`    | 2026-09-06 07:43:13 | —                   | `fauna`          | —          |

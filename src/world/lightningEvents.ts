@@ -87,7 +87,6 @@ export function lightningEventsForCycle(
 
 export type LightningThunderCue = {
   eventId: string
-  variantIndex: number
   strength: number
   simulatedDistanceM: number
 }
@@ -107,8 +106,6 @@ type ActiveFlash = {
   event: LightningEvent
   ageSec: number
 }
-
-const THUNDER_VARIANT_COUNT = 3
 
 function flashEnvelope(ageSec: number, strength: number): number {
   if (ageSec < 0 || ageSec > FLASH_DURATION_SEC) return 0
@@ -214,7 +211,6 @@ export function createLightningRuntime(): {
         if (!thunder) {
           thunder = {
             eventId: pending.event.eventId,
-            variantIndex: pending.event.slot % THUNDER_VARIANT_COUNT,
             strength: pending.event.strength,
             simulatedDistanceM: pending.event.simulatedDistanceM,
           }
