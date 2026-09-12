@@ -37,6 +37,7 @@ function baseContext(overrides: Partial<VoluntaryJoinContext> = {}): VoluntaryJo
     courage: 0,
     awayHours: 24,
     danger: DEFAULT_VOLUNTARY_JOIN_DANGER,
+    provisionPenalty: 0,
     ...overrides,
   }
 }
@@ -187,6 +188,29 @@ describe('evaluateVoluntaryJoin', () => {
       }))
       expect(curiousButBurdened.score).toBeLessThan(equallyCuriousFree.score)
       expect(isVoluntaryJoinAccepted(curiousButBurdened)).toBe(false)
+    })
+  })
+
+  describe('provisioning feasibility', () => {
+    it('a genuinely infeasible provisioning cost is an unclearable cost, not a categorical blocker', () => {
+      const strongWillingness = baseContext({
+        relationLevel: 'trusted',
+        trust: 90,
+        competence: 90,
+        personality: { ...NEUTRAL_PERSONALITY, openness: 0.9 },
+        curious: true,
+      })
+      const infeasible = evaluateVoluntaryJoin({ ...strongWillingness, provisionPenalty: Number.POSITIVE_INFINITY })
+      expect(infeasible.eligible).toBe(true)
+      expect(infeasible.blockers).toHaveLength(0)
+      expect(infeasible.score).toBe(Number.NEGATIVE_INFINITY)
+      expect(isVoluntaryJoinAccepted(infeasible)).toBe(false)
+    })
+
+    it('a larger (but still feasible) provisioning cost lowers the score', () => {
+      const low = evaluateVoluntaryJoin(baseContext({ provisionPenalty: 0 }))
+      const high = evaluateVoluntaryJoin(baseContext({ provisionPenalty: 5 }))
+      expect(high.score).toBeLessThan(low.score)
     })
   })
 })

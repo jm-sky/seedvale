@@ -314,9 +314,11 @@ import {
 import {
   buildContractProvisionContext,
   buildEscortProvisionContext,
+  contractProvisionFeasibilityPenalty,
   countPersonalDrinkPortions,
   countPersonalFood,
   escortAwayHours,
+  estimateEscortProvisionNeed,
   findDrinkablePersonalWaterContainer,
   provisionContractSupplies,
   readContractProvisionAvailability,
@@ -4690,6 +4692,23 @@ export class NpcAgent {
     const criticalNeed = pickNeed(this.needs, { ...this.needPickOptions(), critical: true })
     const social = this.getPlayerSocial(this.id)
     const activeWorkContract = this.workContracts?.findActiveWorkByNpc(this.id)
+    const awayHours = escortAwayHours(terms, {
+      npcX: this.mesh.position.x,
+      npcZ: this.mesh.position.z,
+      walkSpeed: WALK_SPEED,
+      dayLengthSec: this.dayLengthSec,
+    })
+    // Reuses paid escort's exact provisioning-feasibility estimate (plan
+    // npc-030) — never a second provisioning model. A cost, not a
+    // categorical blocker: `contractProvisionFeasibilityPenalty` already
+    // returns `Number.POSITIVE_INFINITY` when supplies genuinely cannot
+    // cover the trip, which the evaluator folds into `score`.
+    const provisionEstimate = estimateEscortProvisionNeed({
+      awayHours,
+      hunger: this.needs.hunger,
+      thirst: this.needs.thirst,
+    })
+    const provisionAvailability = readContractProvisionAvailability(this.personalInventory, this.household)
     return {
       dead: this.health.dead,
       isAdult: isAdultAge(this.age),
@@ -4709,13 +4728,9 @@ export class NpcAgent {
       trust: social.reputation.trust,
       competence: social.reputation.competence,
       courage: social.reputation.courage,
-      awayHours: escortAwayHours(terms, {
-        npcX: this.mesh.position.x,
-        npcZ: this.mesh.position.z,
-        walkSpeed: WALK_SPEED,
-        dayLengthSec: this.dayLengthSec,
-      }),
+      awayHours,
       danger: DEFAULT_VOLUNTARY_JOIN_DANGER,
+      provisionPenalty: contractProvisionFeasibilityPenalty(provisionEstimate, provisionAvailability),
     }
   }
 

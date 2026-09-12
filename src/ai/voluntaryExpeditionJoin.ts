@@ -1,5 +1,5 @@
 import type { RelationLevel } from '../quests/quests'
-import type { ExpeditionEscortTerms } from '../world/workContract'
+import type { ExpeditionTerms } from '../world/expedition'
 import type { Role } from './characters'
 import type { BigFivePersonality } from './dialogue'
 import type { ScheduleActivity } from './schedule'
@@ -13,7 +13,9 @@ import { idleIntentFor } from './schedule'
  * commitment itself — `NpcAgent` supplies every fact and only ever reads the
  * result, same split as `npcWorkContract.ts`'s escort evaluator.
  *
- * Reuses `ExpeditionEscortTerms` (plan npc-030) as the shared neutral
+ * Reuses `world/expedition.ts::ExpeditionTerms` (extracted from plan
+ * npc-030's Work Contract escort, which re-exports it under its original
+ * `ExpeditionEscortTerms` name for compatibility) as the shared neutral
  * expedition context — it already carries no economic field, so voluntary
  * joining needs no second representation of "what expedition is this".
  *
@@ -22,7 +24,7 @@ import { idleIntentFor } from './schedule'
 
 /** The neutral expedition context shared with paid escort (plan npc-030) —
  *  destination/duration semantics only, never reward/payment. */
-export type VoluntaryExpeditionTerms = ExpeditionEscortTerms
+export type VoluntaryExpeditionTerms = ExpeditionTerms
 
 export type VoluntaryJoinBlocker =
   | 'dead'
@@ -40,6 +42,7 @@ export type VoluntaryJoinModifierKey =
   | 'schedule'
   | 'awayTime'
   | 'danger'
+  | 'provisioning'
 
 export type VoluntaryJoinModifier = { key: VoluntaryJoinModifierKey, value: number }
 
@@ -97,6 +100,15 @@ export type VoluntaryJoinContext = {
   /** Conservative bounded danger estimate, `0..1`. Unknown danger must stay
    *  a neutral default, never fabricated precision. */
   danger: number
+  /** Bounded provisioning-feasibility cost for `awayHours` away from home
+   *  (plan npc-030's `contractProvisionFeasibilityPenalty`, reused as-is —
+   *  never a second provisioning estimator). `Number.POSITIVE_INFINITY`
+   *  when personal/household supplies genuinely cannot cover the trip; this
+   *  never becomes a categorical blocker, only an unclearable cost, same
+   *  convention paid escort already uses. Ordinary follow-time hunger/
+   *  thirst handling stays owned by existing NPC need interruption/resume —
+   *  this is only the up-front feasibility check. */
+  provisionPenalty: number
 }
 
 /** Conservative neutral default for a caller with no better expedition
@@ -246,6 +258,7 @@ export function evaluateVoluntaryJoin(ctx: VoluntaryJoinContext): VoluntaryJoinE
     { key: 'schedule', value: -schedule },
     { key: 'awayTime', value: -awayTime },
     { key: 'danger', value: -danger },
+    { key: 'provisioning', value: -ctx.provisionPenalty },
   ]
   const score = modifiers.reduce((sum, m) => sum + m.value, 0)
 

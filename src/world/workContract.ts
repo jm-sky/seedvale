@@ -29,6 +29,13 @@
  *
  * @domain npc
  */
+import {
+  type ExpeditionCompletionPolicy,
+  type ExpeditionDestination,
+  type ExpeditionTerms,
+  isValidExpeditionTerms,
+} from './expedition'
+
 export type WorkContractState =
   | 'available'
   | 'advertised'
@@ -222,48 +229,16 @@ export type MeasurableWorkContractScope = {
   npcWorkCompleted: number
 }
 
-/** Stable world reference for an escort destination (plan npc-030 §7) —
- *  never mesh/Object3D identity, never a bare `(x, z)` as the primary
- *  identity. */
-export type ExpeditionDestinationRef =
-  | { kind: 'settlement', settlementId: string }
-  | { kind: 'location', locationId: string }
-
-/** A destination resolved once, at contract-creation time, by the
- *  composition/UI layer that actually owns the settlement/location registry
- *  (plan npc-030 §10 implementation notes — "resolver in app/world
- *  integration seam, not pure `workContract.ts`"). `x`/`z` are a bounded
- *  snapshot, never re-resolved live during scoring/fulfilment. */
-export type ExpeditionEscortDestination = {
-  ref: ExpeditionDestinationRef
-  x: number
-  z: number
-}
-
-/** Explicit, persisted completion rule (plan npc-030 §5) — never inferred
- *  from whichever optional term fields happen to be present. */
-export type ExpeditionEscortCompletionPolicy = 'duration' | 'destination' | 'destination_or_timeout'
-
-export type ExpeditionEscortTerms = {
-  completionPolicy: ExpeditionEscortCompletionPolicy
-  /** Required for `duration` and `destination_or_timeout`. */
-  durationDays?: number
-  /** Required for `destination` and `destination_or_timeout`. */
-  destination?: ExpeditionEscortDestination
-}
-
-/** At least one finite boundary is required (plan npc-030 §5) — a policy
- *  without the term(s) it needs is invalid and must be rejected at creation,
- *  never silently defaulted. */
-export function isValidExpeditionEscortTerms(terms: ExpeditionEscortTerms): boolean {
-  if (terms.completionPolicy === 'duration') {
-    return typeof terms.durationDays === 'number' && terms.durationDays > 0
-  }
-  if (terms.completionPolicy === 'destination') {
-    return terms.destination != null
-  }
-  return typeof terms.durationDays === 'number' && terms.durationDays > 0 && terms.destination != null
-}
+/** Escort-facing aliases for the source-neutral expedition types (plan
+ *  npc-031 extracted these to `./expedition.ts`, shared with voluntary
+ *  joining) — kept under their original names so every existing Work
+ *  Contract call site keeps working unchanged. `./expedition.ts` is the
+ *  ownership boundary now; do not redefine these here. */
+export type { ExpeditionDestinationRef } from './expedition'
+export type ExpeditionEscortDestination = ExpeditionDestination
+export type ExpeditionEscortCompletionPolicy = ExpeditionCompletionPolicy
+export type ExpeditionEscortTerms = ExpeditionTerms
+export const isValidExpeditionEscortTerms = isValidExpeditionTerms
 
 export type ExpeditionEscortContractScope = {
   kind: 'expedition_escort'
