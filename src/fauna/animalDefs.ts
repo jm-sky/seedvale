@@ -102,9 +102,10 @@ export type AnimalDef = {
    *  fauna-005) — same "no separate boolean, no per-species branch" shape as
    *  `mount`/`production` above. A `fresh` corpse is always food for any
    *  predator (pre-existing plan 094 baseline); only a species with this
-   *  block will additionally fall back onto a `rotting` corpse or `bones`
-   *  once hungry enough — see `carcassFoodValue()`. Absent for every
-   *  `AnimalKind` but wolf initially. */
+   *  block will additionally fall back onto a `rotting` corpse and/or
+   *  `bones` once hungry enough — see `carcassFoodValue()`. Per-phase values
+   *  are independently optional (plan fauna-023 §3a): wolf rotting+bones,
+   *  bear rotting-only, fox fresh-only (no scavenging block). */
   scavenging?: ScavengingConfig
   /** Basic physiology (plan fauna-010 §1) — hunger/thirst rates and stamina
    *  capacity/drain/regen for this species. `AnimalLife.ts` owns the
@@ -117,10 +118,11 @@ export type AnimalDef = {
    *  fauna-010 §2) — same "no separate boolean, no per-species branch" shape
    *  as `mount`/`production`/`scavenging` above. `findFoodTarget()` still
    *  falls back to the old abstract forage/carcass path for any species
-   *  without one (`bear`/`duck`); a `role: 'predator'` kind with a `diet`
-   *  (`wolf`/`fox`, plan fauna-014 §2) never has it read for hunger either —
-   *  `findFoodTarget()`'s carcass branch always wins for predators — only
-   *  `dietAcceptsItem()` (trap-bait attraction) reads it there. */
+   *  without one (`duck`); a `role: 'predator'` kind with a `diet`
+   *  (`wolf`/`fox`/`bear`, plan fauna-014 §2 / fauna-023 §3a) never has it
+   *  read for hunger either — `findFoodTarget()`'s carcass branch always
+   *  wins for predators — only `dietAcceptsItem()` (trap bait / dropped-
+   *  food attraction) reads it there. */
   diet?: AnimalDietConfig
   /** Minimal declarative water-traversal distinction (plan fauna-015 §5) —
    *  same "no separate boolean, no per-species branch" shape as `mount`/
@@ -197,18 +199,22 @@ export type AnimalDietConfig = {
   items?: Partial<Record<ItemKind, number>>
 }
 
-/** Per-species scavenging preference (plan fauna-005) — the single config
- *  block `carcassFoodValue()` reads instead of a wolf-specific branch in
- *  food selection/consumption. Both values are relative to a fresh kill's
- *  implicit value of 1. */
+/** Per-species scavenging preference (plan fauna-005, optional phases plan
+ *  fauna-023 §3a) — the single config block `carcassFoodValue()` reads
+ *  instead of a wolf-specific branch in food selection/consumption. Each
+ *  phase value is independently optional and relative to a fresh kill's
+ *  implicit value of 1; an absent field means that phase is not food for
+ *  this species (e.g. bear rotting-only, no bones). */
 export type ScavengingConfig = {
   /** Relative food value of a `rotting` corpse for this species — scales
    *  both selection score (`carcassCandidateScore`) and the hunger relief a
-   *  completed eat action grants (`AnimalLife.ts`'s `consumeFood`). */
-  rottingValue: number
+   *  completed eat action grants (`AnimalLife.ts`'s `consumeFood`). Absent
+   *  → rotting is never edible for this species. */
+  rottingValue?: number
   /** Relative food value of `bones` remains for this species — the lowest
-   *  tier, see `SCAVENGE_BONES_HUNGER_THRESHOLD`. */
-  bonesValue: number
+   *  tier, see `SCAVENGE_BONES_HUNGER_THRESHOLD`. Absent → bones are never
+   *  edible for this species. */
+  bonesValue?: number
 }
 
 /** Temporary player-lead trailing band (plan fauna-007). Absent fields use
@@ -284,12 +290,28 @@ const MEAT_DIET: AnimalDietConfig = {
   items: { raw_meat: 0.8, deer_meat: 0.8, wolf_meat: 0.8, boar_meat: 0.8, rabbit_meat: 0.6, beef: 0.8 },
 }
 
-/** Whether `itemKind` is something this diet would eat (plan fauna-014 §2) —
- *  the single authority `resolveLureTarget()` uses to decide if a trap's
- *  bait actually attracts a species, instead of a parallel trap-only bait
- *  table. Absent `diet` (a species with no herbivore/meat diet configured,
- *  e.g. `boar`/`duck`/`bear`) never matches — same "capability absent →
- *  never taken" convention as every other `AnimalDef.diet` consumer. */
+/** Bear omnivore diet (plan fauna-023 §3a) — composes existing `MEAT_DIET`
+ *  meat entries plus plant/fish foods already in the world. No `grass`:
+ *  bear must not enter the herbivore `GrassForagePatch` path. Live hunger
+ *  search still uses the predator carcass branch; this diet is the item
+ *  compatibility/relief authority for dropped-food attraction only. */
+const BEAR_DIET: AnimalDietConfig = {
+  items: {
+    ...MEAT_DIET.items,
+    fish: 0.7,
+    berries: 0.5,
+    apple: 0.5,
+    nuts: 0.55,
+    honey: 0.7,
+  },
+}
+
+/** Whether `itemKind` is something this diet would eat (plan fauna-014 §2 /
+ *  fauna-023) — the single authority attraction uses for trap bait and
+ *  dropped food, instead of a parallel bait table. Absent `diet` (a species
+ *  with no herbivore/meat diet configured, e.g. `boar`/`duck`) never
+ *  matches — same "capability absent → never taken" convention as every
+ *  other `AnimalDef.diet` consumer. */
 export function dietAcceptsItem(diet: AnimalDietConfig | undefined, itemKind: ItemKind): boolean {
   return diet?.items?.[itemKind] != null
 }
@@ -464,7 +486,12 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 0,
     playerNoticeRange: 13,
     playerPanicRange: 5,
+    // Plan fauna-023 §3a: rotting carrion only — no bones capability.
+    scavenging: { rottingValue: 0.35 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    // Plan fauna-023 §3a: inert for hunger (predator carcass branch wins);
+    // live consumers are dropped-food attraction + `dietAcceptsItem()`.
+    diet: BEAR_DIET,
     trips: { water: BEAR_WATER_TRIP },
   },
   horse: {

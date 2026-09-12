@@ -109,7 +109,7 @@ export const TRAP_SKILL_DETECTION_CUT = 0.6
 /** Plan 159 §12 — extra detection cut while the trap carries bait, on top of
  *  the skill-driven cut above. Flat regardless of `'meat' | 'plant'` bait
  *  category or trapped species — bait's main job is *attraction* (plan
- *  fauna-014 §5, `resolveLureTarget`), so a species-vs-bait-type detection
+ *  fauna-014 §5 / fauna-023, `resolveAttractionTarget`), so a species-vs-bait-type detection
  *  matrix would add complexity without a real gameplay distinction. */
 export const TRAP_BAIT_DETECTION_CUT = 0.2
 
@@ -282,19 +282,6 @@ export type PlacedTrapRecord = {
    *  `attachBait`); returned to inventory on disarm/collect before a catch,
    *  consumed on a successful capture. */
   baitKind: ItemKind | null
-}
-
-/** Cheap read-only lure snapshot for one active+baited trap (plan fauna-014
- *  §3/§4) — everything `AnimalAgent`'s throttled lure search needs and
- *  nothing else; deliberately never the Three.js mesh or the trap's own
- *  `PlacedTrapEntry`. Built fresh from live trap state
- *  (`PlacedTraps.activeLures()`), never cached/persisted itself. */
-export type TrapLureDescriptor = {
-  trapId: string
-  kind: TrapKind
-  x: number
-  z: number
-  baitKind: ItemKind
 }
 
 export type TrapPlacementReason = 'ok' | 'water' | 'slope' | 'object' | 'trap'

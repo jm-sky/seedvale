@@ -1020,6 +1020,7 @@ Generated from TypeScript imports.
 - `debug/renderStateDebug.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
+- `fauna/animalAttraction.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/predatorHumanDecision.ts`
 - `input/Keyboard.ts`
@@ -1082,6 +1083,7 @@ Generated from TypeScript imports.
 - `ui/createTimeSkipOverlay.ts`
 - `ui/createToast.ts`
 - `world/WaterSource.ts`
+- `world/animalAttractionSource.ts`
 - `world/clouds.ts`
 - `world/createLights.ts`
 - `world/createSky.ts`

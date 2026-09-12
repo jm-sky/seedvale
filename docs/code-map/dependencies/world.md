@@ -32,6 +32,23 @@ Generated from TypeScript imports.
 - `world/riverWaterQuality.ts`
 - `world/riverWaterQualityResolver.ts`
 
+## `world/animalAttractionSource.ts`
+
+**Imports**
+
+- `items/foodFreshness.ts`
+- `items/items.ts`
+- `world/animalTraps.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalAttraction.test.ts`
+- `fauna/animalAttraction.ts`
+- `fauna/createFauna.ts`
+- `world/createPlacedTraps.ts`
+
 ## `world/animalTraps.test.ts`
 
 **Imports**
@@ -56,9 +73,8 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
-- `fauna/AnimalAgent.ts`
-- `fauna/createFauna.ts`
-- `fauna/trapLure.test.ts`
+- `fauna/animalAttraction.test.ts`
+- `fauna/animalAttraction.ts`
 - `interaction/Interactable.ts`
 - `interaction/targetedSkillAction.test.ts`
 - `interaction/targetedSkillAction.ts`
@@ -67,6 +83,7 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
 - `ui/createQuickActions.ts`
+- `world/animalAttractionSource.ts`
 - `world/animalTraps.test.ts`
 - `world/createPlacedTraps.ts`
 - `world/trapProp.ts`
@@ -108,6 +125,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/worldBundle.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalAttraction.ts`
 - `player/playerDamage.ts`
 - `world/bloodTraces.test.ts`
 
@@ -1436,6 +1454,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
+- `world/animalAttractionSource.ts`
 - `world/animalTraps.ts`
 - `world/trapProp.ts`
 

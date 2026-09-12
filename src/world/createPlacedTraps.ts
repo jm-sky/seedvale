@@ -3,6 +3,7 @@ import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
 import type { TrapItemInstance } from '../items/itemInstances'
 import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
+import type { AnimalAttractionSource } from './animalAttractionSource'
 import { placeOnGround } from '../settlement/props'
 import {
   accumulateTrapWeatherWear,
@@ -18,7 +19,6 @@ import {
   trapDetectionChance,
   trapDetectionRoll,
   type TrapKind,
-  type TrapLureDescriptor,
 } from './animalTraps'
 import { createTrapProp, disposeTrapProp, setTrapPropState } from './trapProp'
 
@@ -50,11 +50,10 @@ export type PlacedTraps = {
   /** Read-only lookup by stable id (plan items-player-021). Returns a copied
    *  record, never the live mesh-bearing entry. */
   get: (id: string) => PlacedTrapRecord | null
-  /** Plan fauna-014 §3/§11 — cheap snapshot of every currently active+baited
-   *  trap, world/fauna-owned (not player/camera-gated) so a future off-screen
-   *  simulation can reuse the same source. Called at most once per fauna
-   *  update pass (`gameLoop.ts`), never per animal. */
-  activeLures: () => readonly TrapLureDescriptor[]
+  /** Plan fauna-014 / fauna-023 — cheap snapshot of every currently
+   *  active+baited trap as generalized attraction sources. Called at most
+   *  once per fauna update pass (`gameLoop.ts`), never per animal. */
+  attractionSources: () => readonly AnimalAttractionSource[]
   place: (
     source: TrapItemInstance,
     x: number,
@@ -211,13 +210,22 @@ export function createPlacedTraps(
       const entry = find(id)
       return entry ? toRecord(entry) : null
     },
-    activeLures() {
-      const lures: TrapLureDescriptor[] = []
+    attractionSources() {
+      const sources: AnimalAttractionSource[] = []
       for (const entry of traps) {
         if (entry.state !== 'active' || entry.baitKind == null) continue
-        lures.push({ trapId: entry.id, kind: entry.kind, x: entry.x, z: entry.z, baitKind: entry.baitKind })
+        sources.push({
+          id: `trap:${entry.id}`,
+          kind: 'trapBait',
+          x: entry.x,
+          z: entry.z,
+          strength: 1,
+          radius: TRAP_DEFS[entry.kind].lureRadius,
+          itemKind: entry.baitKind,
+          trapKind: entry.kind,
+        })
       }
-      return lures
+      return sources
     },
     place(source, x, z, yaw) {
       const trapKind = source.kind === 'trap_good' ? 'good' : 'simple'

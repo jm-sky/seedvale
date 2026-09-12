@@ -4,6 +4,7 @@ import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
 import type { FollowHysteresisState } from '../shared/followHysteresis'
 import type { LocalWaterSample } from '../terrain/waterSample'
+import type { AnimalAttractionSource } from '../world/animalAttractionSource'
 import type { CaveTraversalPoint } from '../world/caves/caveHabitat'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { WaterBodyKind } from '../world/WaterSource'
@@ -44,11 +45,20 @@ import {
 } from '../simulation/observation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
-import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world/animalTraps'
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderActiveAtY, colliderContainsPoint } from '../world/collision'
 import { createSeededRandom } from '../world/parseSeed'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
+import {
+  activeIgnoredAttractionIds,
+  BLOOD_IGNORE_SEC,
+  BLOOD_INVESTIGATE_SEC,
+  isAttractionCompatible,
+  isDroppedFoodStillAttractive,
+  markAttractionIgnored,
+  pruneAttractionIgnored,
+  resolveAttractionTarget,
+} from './animalAttraction'
 import {
   advanceCaveRoute,
   ANIMAL_CAPSULE_RADIUS_SCALE,
@@ -81,11 +91,11 @@ import {
   type AnimalKind,
   type AnimalLifeStage,
   type AnimalRole,
-  dietAcceptsItem,
 } from './animalDefs'
 import {
   applySourceRelief,
   canAcceptHandFeed,
+  dietItemReliefScale,
   DRINK_DURATION_SEC,
   EAT_DURATION_SEC,
   findFoodTarget,
@@ -116,6 +126,7 @@ import {
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
+  consumeFood,
   createAnimalLifeState,
   NEED_ELEVATED_THRESHOLD,
   SLEEP_HUNGER_THIRST_RATE,
@@ -233,6 +244,14 @@ import {
   type WaterTraversalMode,
 } from './waterTraversal'
 
+/** Systemic attraction resolver (plan fauna-023) — re-exported for tests and
+ *  debug tooling that historically imported lure helpers from this file. */
+export {
+  canSenseBlood,
+  foodAttractionStrength,
+  isAttractionCompatible,
+  resolveAttractionTarget,
+} from './animalAttraction'
 /** Corpse/remains/decay/rabies-exposure/claim state machine moved to
  *  `./animalCorpse` (plan fauna-017 step 5) — re-exported wholesale for the
  *  same reason. New test/import sites should prefer `./animalCorpse`
@@ -416,12 +435,12 @@ const ATTACK_STAMINA_COST = 0.05
 /** How often predators re-score flee vs attack toward a noticed human
  *  (plan 055 Phase 6 — movement stays per-frame). */
 const HUMAN_DECISION_INTERVAL_SEC = 0.2
-/** Seconds to wait before re-scanning `lures` for a new candidate once the
- *  current search/target came up empty (plan fauna-014 §11/§12) — a bounded
- *  low-frequency search over a small array, same throttling idiom as
- *  `SOURCE_SEARCH_COOLDOWN_SEC`. */
-const LURE_SEARCH_COOLDOWN_SEC = 2
-type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drink' | 'eat' | 'lure'
+/** Seconds to wait before re-scanning attraction sources once the current
+ *  search/target came up empty (plan fauna-014 §11/§12 / fauna-023) — a
+ *  bounded low-frequency search over a small snapshot, same throttling
+ *  idiom as `SOURCE_SEARCH_COOLDOWN_SEC`. */
+const ATTRACTION_SEARCH_COOLDOWN_SEC = 2
+type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drink' | 'eat' | 'lure' | 'attract'
 
 /** Diagnostic-only label for the mutually-exclusive branch `update()` took
  *  this tick (fauna debug tooling — `AnimalAgent.getDebugInfo()`'s
@@ -525,10 +544,19 @@ export type AnimalAgentDebugInfo = {
    *  not currently pursuing a carcass. `riskPenalty` is always 0 today: the
    *  `carcassCandidateScore` disease/food-safety seam has no consumer yet. */
   foodTarget: { corpsePhase: CorpsePhase, foodValue: number, score: number, riskPenalty: number } | null
-  /** Current trap-bait lure pursuit (plan fauna-014 §13) — `null` when no
-   *  compatible active lure is currently in range/being pursued. Answers
-   *  "why is this animal ignoring/approaching that trap". */
-  lureTarget: { trapId: string, x: number, z: number, baitKind: ItemKind } | null
+  /** Current attraction pursuit (plan fauna-023 §13) — `null` when no
+   *  compatible source is in range/being pursued. Answers "why is this
+   *  animal approaching that food / blood / trap bait". */
+  attractionTarget: {
+    id: string
+    kind: AnimalAttractionSource['kind']
+    x: number
+    z: number
+    strength: number
+    radius: number
+    itemKind?: ItemKind
+    phase: 'approach' | 'investigate' | 'consume' | null
+  } | null
   /** Combat/death presentation state (plan npc-009) — which one-shot clip is
    *  currently pre-empting normal locomotion (if any), and which semantic
    *  clips this species/pack actually resolved (`false` marks a missing-clip
@@ -637,41 +665,6 @@ export function villageFleeBiasFalloff(
   const influenceRadius = village.radius + margin
   if (influenceRadius <= 0) return 0
   return Math.max(0, 1 - distanceFromCenter / influenceRadius)
-}
-
-/**
- * Deterministic best-candidate lure resolution (plan fauna-014 §3/§4/§11) —
- * filters `lures` (already "active + baited", see `PlacedTraps.activeLures()`)
- * down to trap-kind-species-compatible (`isSpeciesTrappable`), diet-compatible
- * (`dietAcceptsItem`) candidates within that trap kind's `lureRadius`, then
- * picks the nearest one. Ties (equal squared distance) break on `trapId` so
- * the result never depends on `lures`' iteration order. Pure and
- * allocation-free — safe to call from a throttled per-animal check without a
- * second candidate-array pass (implementation notes' "avoid allocations in
- * the per-tick path").
- */
-export function resolveLureTarget(
-  lures: readonly TrapLureDescriptor[],
-  def: AnimalDef,
-  x: number,
-  z: number,
-): TrapLureDescriptor | null {
-  let best: TrapLureDescriptor | null = null
-  let bestDistSq = Infinity
-  for (const lure of lures) {
-    if (!isSpeciesTrappable(lure.kind, def.kind)) continue
-    if (!dietAcceptsItem(def.diet, lure.baitKind)) continue
-    const dx = lure.x - x
-    const dz = lure.z - z
-    const distSq = dx * dx + dz * dz
-    const radius = TRAP_DEFS[lure.kind].lureRadius
-    if (distSq > radius * radius) continue
-    if (distSq < bestDistSq || (distSq === bestDistSq && (!best || lure.trapId < best.trapId))) {
-      best = lure
-      bestDistSq = distSq
-    }
-  }
-  return best
 }
 
 /** Dog guard target (plan fauna-011 §9/§10/§13) — the `AnimalAgent` (a live
@@ -907,12 +900,18 @@ export type AnimalUpdateContext = {
    *  site) rather than the global cross-settlement `nearbyNpcs` wolves use.
    *  Defaults to none so every existing caller/test keeps prior behaviour. */
   nearbySettlementNpcs?: readonly NearbyNpcCandidate[]
-  /** Currently active+baited traps (plan fauna-014 §3/§4) — a small,
-   *  world/fauna-owned snapshot (`PlacedTraps.activeLures()`), not a
-   *  per-animal query. Consulted only by `updatePredator`/`updatePrey`'s
-   *  own `pursueLure()`, below any threat/needs response. Defaults to none
+  /** Currently active attraction sources (plan fauna-023 §11) — a small,
+   *  world-owned snapshot assembled once per fauna pass, not a per-animal
+   *  query. Consulted only by `updatePredator`/`updatePrey`'s
+   *  `pursueAttraction()`, below any threat/needs response. Defaults to none
    *  so existing callers/tests keep prior behaviour. */
-  lures?: readonly TrapLureDescriptor[]
+  attractionSources?: readonly AnimalAttractionSource[]
+  /** Atomic dropped-food consume for attraction completion (plan fauna-023
+   *  §6/§7). Absent → food sources can still attract but cannot complete
+   *  consumption. */
+  consumeAttractedFood?: (droppedItemId: string) => { kind: ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null
+  /** Peek a live dropped item without removing it (plan fauna-023 §7). */
+  peekAttractedFood?: (droppedItemId: string) => { kind: ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null
   /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
    *  for an owned `dog`'s idle pest-chase (`pursuePest`); every other kind
    *  never reads this. Caller-bounded the same way as `nearbySettlementNpcs`
@@ -1285,14 +1284,28 @@ export class AnimalAgent {
   private actionTimer = 0
   /** Scratch vector for `steerToward` calls toward `sourceTarget`. */
   private readonly sourceDest = new THREE.Vector3()
-  /** Cached trap-bait lure destination (plan fauna-014 §3/§4) — re-validated
-   *  against the current tick's `lures` every time `pursueLure()` runs (never
-   *  trusted stale), so only `trapId`/position/kind/bait need to survive
-   *  between ticks. Never persisted (implementation notes' "no lure caches"). */
-  private lureTarget: TrapLureDescriptor | null = null
-  /** Seconds remaining before the next failed lure search retries, same
-   *  throttling convention as `sourceSearchCooldown`. */
-  private lureSearchCooldown = 0
+  /** Cached attraction destination (plan fauna-023) — re-validated against
+   *  the current tick's sources every time `pursueAttraction()` runs (never
+   *  trusted stale). Never persisted. */
+  private attractionTarget: AnimalAttractionSource | null = null
+  /** Seconds remaining before the next failed attraction search retries. */
+  private attractionSearchCooldown = 0
+  /** Runtime-only blood investigation ignore map (`sourceId → untilSec`). */
+  private readonly attractionIgnoreUntil = new Map<string, number>()
+  /** Monotonic per-agent clock (seconds) for attraction ignore memory. */
+  private attractionClockSec = 0
+  /** Current attraction phase for debug (`approach`/`investigate`/`consume`). */
+  private attractionPhase: 'approach' | 'investigate' | 'consume' | null = null
+  /** Seconds remaining while investigating a blood source. */
+  private attractionInvestigateTimer = 0
+  /** Seconds spent eating attracted dropped food. */
+  private attractionConsumeTimer = 0
+  /** Scratch set reused when building the ignored-id filter. */
+  private readonly attractionIgnoredScratch = new Set<string>()
+  /** Narrow consume callback captured for this tick from update context. */
+  private attractionConsumeFood: AnimalUpdateContext['consumeAttractedFood'] = undefined
+  /** Narrow peek callback captured for this tick from update context. */
+  private attractionPeekFood: AnimalUpdateContext['peekAttractedFood'] = undefined
   /** Set once by `markDangerous()` — a visibly/gameplay-distinct individual
    *  bound to a `kill_target_animal { dangerous: true }` quest stage
    *  (plan 110), not a separate animal type. Composes with `variant` via
@@ -2183,8 +2196,17 @@ export class AnimalAgent {
             riskPenalty: 0,
           }
         : null,
-      lureTarget: this.lureTarget
-        ? { trapId: this.lureTarget.trapId, x: this.lureTarget.x, z: this.lureTarget.z, baitKind: this.lureTarget.baitKind }
+      attractionTarget: this.attractionTarget
+        ? {
+            id: this.attractionTarget.id,
+            kind: this.attractionTarget.kind,
+            x: this.attractionTarget.x,
+            z: this.attractionTarget.z,
+            strength: this.attractionTarget.strength,
+            radius: this.attractionTarget.radius,
+            itemKind: this.attractionTarget.itemKind,
+            phase: this.attractionPhase,
+          }
         : null,
       presentation: {
         current: this.hurtAnimTimer > 0 ? 'hurt' : this.attackAnimTimer > 0 ? 'attack' : null,
@@ -2544,13 +2566,19 @@ export class AnimalAgent {
       waterSourceProvider,
       nearbyPredators = [],
       nearbySettlementNpcs = [],
-      lures = [],
+      attractionSources = [],
+      consumeAttractedFood,
+      peekAttractedFood,
       nearbyRats = [],
       playerObservation = DEFAULT_PLAYER_OBSERVATION,
       playerControlPos,
       scareStimulus = null,
     } = ctx
     this._tickPlayerControlPos = playerControlPos ?? null
+    this.attractionConsumeFood = consumeAttractedFood
+    this.attractionPeekFood = peekAttractedFood
+    this.attractionClockSec += dt
+    pruneAttractionIgnored(this.attractionIgnoreUntil, this.attractionClockSec)
     if (
       !this.health.dead
       && isStrayedAnimalReturned(this._stray, this.mesh.position, this.health.dead)
@@ -2814,12 +2842,12 @@ export class AnimalAgent {
         }
         case 'predator-normal': {
           this.resetHumanThreatState()
-          this.updatePredator(dt, others, lures)
+          this.updatePredator(dt, others, attractionSources)
           break
         }
         case 'prey-normal': {
           this.resetHumanThreatState()
-          this.updatePrey(dt, others, lures, nearbyPredators, nearbyRats)
+          this.updatePrey(dt, others, attractionSources, nearbyPredators, nearbyRats)
           break
         }
         case 'scare-flee': {
@@ -3448,7 +3476,7 @@ export class AnimalAgent {
     return canPredatorPursueIntoVillage(this.def.kind, this.frenzied)
   }
 
-  private updatePredator(dt: number, others: AnimalAgent[], lures: readonly TrapLureDescriptor[]): void {
+  private updatePredator(dt: number, others: AnimalAgent[], sources: readonly AnimalAttractionSource[]): void {
     const prey = this.resolvePreyTarget(others)
     if (prey && !this.canPursueIntoVillage() && this.isNearVillage(prey.mesh.position)) {
       // Live prey inside the village is not huntable; still allow drink/eat.
@@ -3481,7 +3509,7 @@ export class AnimalAgent {
       return
     }
     if (this.pursueNeeds(dt, others)) return
-    if (this.pursueLure(dt, lures)) return
+    if (this.pursueAttraction(dt, sources)) return
     this.setIntent('wander')
     this.wander(dt)
   }
@@ -3512,7 +3540,7 @@ export class AnimalAgent {
   private updatePrey(
     dt: number,
     others: AnimalAgent[],
-    lures: readonly TrapLureDescriptor[],
+    sources: readonly AnimalAttractionSource[],
     nearbyPredators: readonly AnimalAgent[],
     nearbyRats: readonly AnimalAgent[] = [],
   ): void {
@@ -3538,7 +3566,7 @@ export class AnimalAgent {
     }
     if (this.pursueLead(dt)) return
     if (this.pursueNeeds(dt, others)) return
-    if (this.pursueLure(dt, lures)) return
+    if (this.pursueAttraction(dt, sources)) return
     if (this.def.kind === 'dog' && this.pursuePest(dt, nearbyRats)) return
     if (this.pursueOwnedControl(dt)) return
     this.setIntent('wander')
@@ -3694,33 +3722,102 @@ export class AnimalAgent {
     )
   }
 
-  /** Trap-bait lure pursuit (plan fauna-014 §3/§4/§11) — only reached once
-   *  `updatePredator`/`updatePrey` already ruled out flee/threat/chase and
-   *  real hunger/thirst pursuit above, so it can never pre-empt any of those
-   *  (implementation notes' priority invariants). Re-validates any cached
-   *  `lureTarget` against this tick's live `lures` (never trusts a stale
-   *  snapshot) before falling back to a fresh throttled search. Movement
-   *  reuses `steerToward`, which already stops on arrival — the actual
-   *  detection/capture roll stays entirely `createPlacedTraps.ts`'s, this
-   *  only ever gets the animal close enough to enter that trap's own
-   *  `triggerRadius`. Returns `false` (caller falls back to `wander`) with no
-   *  candidate in range. */
-  private pursueLure(dt: number, lures: readonly TrapLureDescriptor[]): boolean {
-    if (this.lureTarget) {
-      const current = lures.find((l) => l.trapId === this.lureTarget!.trapId)
-      this.lureTarget = current && dietAcceptsItem(this.def.diet, current.baitKind)
-        && isSpeciesTrappable(current.kind, this.def.kind)
-        ? current
-        : null
+  /** Systemic attraction pursuit (plan fauna-023) — trap bait, dropped food
+   *  and blood. Only reached once flee/threat/chase and real hunger/thirst
+   *  pursuit already ruled out above. Re-validates any cached target against
+   *  this tick's live snapshot before falling back to a throttled search.
+   *  Movement reuses `steerToward`; food consume uses atomic
+   *  `consumeAttractedFood` + existing `consumeFood` relief; blood uses
+   *  bounded investigate memory. Trap capture stays in `createPlacedTraps`. */
+  private pursueAttraction(dt: number, sources: readonly AnimalAttractionSource[]): boolean {
+    if (this.attractionInvestigateTimer > 0) {
+      this.attractionInvestigateTimer -= dt
+      this.attractionPhase = 'investigate'
+      this.setIntent('attract', this.attractionTarget
+        ? { x: this.attractionTarget.x, z: this.attractionTarget.z }
+        : undefined)
+      if (this.attractionInvestigateTimer <= 0) {
+        this.attractionTarget = null
+        this.attractionPhase = null
+      }
+      return true
     }
-    if (this.lureSearchCooldown > 0) this.lureSearchCooldown -= dt
-    if (!this.lureTarget && this.lureSearchCooldown <= 0) {
-      this.lureTarget = resolveLureTarget(lures, this.def, this.mesh.position.x, this.mesh.position.z)
-      if (!this.lureTarget) this.lureSearchCooldown = LURE_SEARCH_COOLDOWN_SEC
+
+    if (this.attractionTarget) {
+      const current = sources.find((s) => s.id === this.attractionTarget!.id) ?? null
+      this.attractionTarget = current && isAttractionCompatible(this.def, current) ? current : null
+      if (!this.attractionTarget) {
+        this.attractionPhase = null
+        this.attractionConsumeTimer = 0
+      }
     }
-    if (!this.lureTarget) return false
-    this.setIntent('lure', { x: this.lureTarget.x, z: this.lureTarget.z })
-    this.sourceDest.set(this.lureTarget.x, 0, this.lureTarget.z)
+
+    if (this.attractionSearchCooldown > 0) this.attractionSearchCooldown -= dt
+    if (!this.attractionTarget && this.attractionSearchCooldown <= 0) {
+      const ignored = activeIgnoredAttractionIds(
+        this.attractionIgnoreUntil,
+        this.attractionClockSec,
+        this.attractionIgnoredScratch,
+      )
+      this.attractionTarget = resolveAttractionTarget(
+        sources,
+        this.def,
+        this.mesh.position.x,
+        this.mesh.position.z,
+        ignored,
+      )
+      if (!this.attractionTarget) this.attractionSearchCooldown = ATTRACTION_SEARCH_COOLDOWN_SEC
+      else this.attractionPhase = 'approach'
+    }
+    if (!this.attractionTarget) return false
+
+    const target = this.attractionTarget
+    const dist = Math.hypot(target.x - this.mesh.position.x, target.z - this.mesh.position.z)
+
+    if (target.kind === 'food') {
+      if (dist <= FOOD_INTERACTION_RANGE) {
+        this.attractionPhase = 'consume'
+        this.setIntent('eat', { x: target.x, z: target.z })
+        this.attractionConsumeTimer += dt
+        if (this.attractionConsumeTimer < EAT_DURATION_SEC) return true
+        this.attractionConsumeTimer = 0
+        const droppedId = target.id.startsWith('food:') ? target.id.slice('food:'.length) : target.id
+        const live = this.attractionPeekFood?.(droppedId) ?? null
+        if (
+          !live
+          || !isDroppedFoodStillAttractive(this.def, live.kind, live.foodBatch, this.tickNowDays)
+        ) {
+          this.attractionTarget = null
+          this.attractionPhase = null
+          return true
+        }
+        const consumed = this.attractionConsumeFood?.(droppedId) ?? null
+        if (consumed) {
+          const relief = dietItemReliefScale(this.def.diet, consumed.kind)
+          if (relief != null) consumeFood(this.life, relief)
+        }
+        this.attractionTarget = null
+        this.attractionPhase = null
+        return true
+      }
+      this.attractionConsumeTimer = 0
+    }
+
+    if (target.kind === 'blood' && dist <= FOOD_INTERACTION_RANGE) {
+      markAttractionIgnored(
+        this.attractionIgnoreUntil,
+        target.id,
+        this.attractionClockSec + BLOOD_IGNORE_SEC,
+      )
+      this.attractionInvestigateTimer = BLOOD_INVESTIGATE_SEC
+      this.attractionPhase = 'investigate'
+      this.setIntent('attract', { x: target.x, z: target.z })
+      return true
+    }
+
+    this.attractionPhase = 'approach'
+    this.setIntent('attract', { x: target.x, z: target.z })
+    this.sourceDest.set(target.x, 0, target.z)
     this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
     return true
   }

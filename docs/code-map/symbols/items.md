@@ -91,7 +91,7 @@ Generated from exported TypeScript symbols.
 
 ## `items/createDroppedItems.ts`
 
-- `createDroppedItems` — function — line 69
+- `createDroppedItems` — function — line 76
 - `DroppedItem` — type — line 13
 - `DroppedItems` — type — line 27
 

@@ -398,6 +398,7 @@ Generated from TypeScript imports.
 - `app/interactables.test.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `fauna/animalAttraction.ts`
 - `items/constructionMaterials.test.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.test.ts`
@@ -504,6 +505,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `economy/localExchange.test.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/animalAttraction.ts`
 - `fauna/animalHarvest.ts`
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
@@ -523,6 +525,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/npcState.test.ts`
 - `shared/foodPoisoningExposure.ts`
+- `world/animalAttractionSource.ts`
 - `world/createPlacedContainers.ts`
 - `world/dryingRacks.ts`
 - `world/transportTransactions.test.ts`
@@ -971,6 +974,7 @@ Generated from TypeScript imports.
 - `economy/productionExecutor.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalAttraction.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalForaging.ts`
 - `fauna/animalHarvest.ts`
@@ -1042,6 +1046,7 @@ Generated from TypeScript imports.
 - `ui-vue/playerQuickActions.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
+- `world/animalAttractionSource.ts`
 - `world/animalTraps.ts`
 - `world/containerProp.ts`
 - `world/createPlacedContainers.ts`

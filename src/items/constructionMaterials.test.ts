@@ -17,12 +17,21 @@ function fakeDroppedItems(initial: readonly DroppedItem[]): DroppedItems {
   const items = [...initial]
   return {
     nodes: () => items,
+    get(id) {
+      return items.find((item) => item.id === id) ?? null
+    },
     drop: () => {},
     collect(id) {
       const index = items.findIndex((item) => item.id === id)
       if (index === -1) return null
       const [item] = items.splice(index, 1)
       return { kind: item!.kind, x: item!.x, z: item!.z }
+    },
+    consume(id) {
+      const index = items.findIndex((item) => item.id === id)
+      if (index === -1) return null
+      const [item] = items.splice(index, 1)
+      return item ?? null
     },
     tick: () => {},
     reconcilePerishableLifecycle: () => {},

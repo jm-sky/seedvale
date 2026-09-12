@@ -138,3 +138,26 @@ describe('createDroppedItems perishable lifecycle (plan items-player-025)', () =
     expect(dropped.nodes().map((n) => n.kind)).toEqual(['stone', 'honey', 'apple'])
   })
 })
+
+describe('createDroppedItems.consume (plan fauna-023 §6)', () => {
+  it('removes the record/mesh exactly once without firing onCollected', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    let collectedCount = 0
+    dropped.drop('raw_meat', 2, 3, undefined, () => { collectedCount++ })
+    const [node] = dropped.nodes()
+    expect(node).toBeDefined()
+    const first = dropped.consume(node!.id)
+    expect(first).toEqual(expect.objectContaining({ kind: 'raw_meat', x: 2, z: 3 }))
+    expect(collectedCount).toBe(0)
+    expect(dropped.nodes()).toHaveLength(0)
+    expect(dropped.consume(node!.id)).toBeNull()
+  })
+
+  it('peek get() returns live item without removing it', () => {
+    const dropped = createDroppedItems(new Scene(), sampleHeight)
+    dropped.drop('deer_meat', 1, 1)
+    const [node] = dropped.nodes()
+    expect(dropped.get(node!.id)?.kind).toBe('deer_meat')
+    expect(dropped.nodes()).toHaveLength(1)
+  })
+})

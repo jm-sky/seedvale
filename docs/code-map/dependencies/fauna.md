@@ -26,6 +26,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `debug/faunaInspector.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalAttraction.ts`
 - `fauna/animalCaveHabitat.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalDebugVisual.ts`
@@ -67,7 +68,7 @@ Generated from TypeScript imports.
 - `terrain/waterSample.ts`
 - `ui/agentStatusLabel.ts`
 - `world/WaterSource.ts`
-- `world/animalTraps.ts`
+- `world/animalAttractionSource.ts`
 - `world/bloodTraces.ts`
 - `world/caves/caveHabitat.ts`
 - `world/collision.ts`
@@ -112,7 +113,6 @@ Generated from TypeScript imports.
 - `fauna/persistentOccupants.test.ts`
 - `fauna/persistentOccupants.ts`
 - `fauna/rabies.test.ts`
-- `fauna/trapLure.test.ts`
 - `fauna/villageAvoidance.test.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
@@ -197,6 +197,34 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`
 
+## `fauna/animalAttraction.test.ts`
+
+**Imports**
+
+- `fauna/animalAttraction.ts`
+- `fauna/animalDefs.ts`
+- `fauna/animalForaging.ts`
+- `world/animalAttractionSource.ts`
+- `world/animalTraps.ts`
+
+## `fauna/animalAttraction.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `items/createDroppedItems.ts`
+- `items/foodFreshness.ts`
+- `items/items.ts`
+- `world/animalAttractionSource.ts`
+- `world/animalTraps.ts`
+- `world/bloodTraces.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalAttraction.test.ts`
+
 ## `fauna/animalCaveHabitat.ts`
 
 **Imports**
@@ -267,6 +295,8 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalAttraction.test.ts`
+- `fauna/animalAttraction.ts`
 - `fauna/animalCaveJourney.test.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalForaging.test.ts`
@@ -329,6 +359,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/animalAttraction.test.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `world/createPlayerTroughs.ts`
@@ -607,7 +638,7 @@ Generated from TypeScript imports.
 - `terrain/coastPlacement.ts`
 - `terrain/waterSample.ts`
 - `ui/labelDistance.ts`
-- `world/animalTraps.ts`
+- `world/animalAttractionSource.ts`
 - `world/createGrassForagePatches.ts`
 - `world/dayNight.ts`
 - `world/parseSeed.ts`
@@ -952,13 +983,6 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/createFauna.ts`
-
-## `fauna/trapLure.test.ts`
-
-**Imports**
-
-- `fauna/AnimalAgent.ts`
-- `world/animalTraps.ts`
 
 ## `fauna/villageAvoidance.test.ts`
 

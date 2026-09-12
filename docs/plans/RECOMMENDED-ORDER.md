@@ -110,40 +110,40 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-10. `settlements-npcs-025` — **Resource storage visualization**  
-  🟡 `M` · **Score:**  41  
-   → **unlocks:** 0/0
-
-11. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+10. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-12. `fauna-023` — **Systemic animal attraction — food, blood and trap lures**  
-  🟡 `M` · **Score:**  33  
+11. `settlements-npcs-025` — **Resource storage visualization**  
+  ⚪ `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-13. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+12. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+13. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-15. `items-player-014` — **Rope-pullable resource transport**  
+14. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `tools-005` — **Seedvale Character Preparation Panel**  
+15. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `tools-013` — **NPC decision verification and scenario tooling**  
+16. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `quests-progression-008` — **Treasure map — bear cave**  
+17. `quests-progression-008` — **Treasure map — bear cave**  
   🟡 `M` · **Score:**  25  
+   → **unlocks:** 0/0
+
+18. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+  🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
 19. `quests-progression-019` — **Dangerous Animal Deeds & Local Reputation**  
@@ -426,6 +426,7 @@ graph TD
   world_terrain_020["world-terrain-020 — Adventure cave variant with treasure and abandoned props"]
   world_terrain_021["world-terrain-021 — Low-Cost Terrain and Cave Surface Albedo"]
   world_terrain_022["world-terrain-022 — Deterministic Cave Interior Rock Clutter"]
+  world_terrain_023["world-terrain-023 — River-aware road routing and canonical crossings"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008

@@ -2,6 +2,13 @@
 
 Generated from exported TypeScript symbols.
 
+## `world/animalAttractionSource.ts`
+
+- `AnimalAttractionSource` — type — line 18
+- `AnimalAttractionSourceKind` — type — line 14
+  - domain: world
+  - role: Neutral plain-data attraction source DTO (plan fauna-023 §1) — built once per fauna pass from world-owned trap / dropped-item / blood state. Free of `AnimalDef`, `AnimalAgent`, Three.js objects and mutable callbacks; species compatibility/scoring lives in `fauna/animalAttraction.ts`.
+
 ## `world/animalTraps.ts`
 
 - `accumulateTrapWeatherWear` — function — line 243
@@ -12,17 +19,17 @@ Generated from exported TypeScript symbols.
 - `spendTrapDurability` — function — line 205
 - `startTrapCooldown` — function — line 192
 - `TRAP_BAIT_DETECTION_CUT` — const — line 114
-- `TRAP_CHECK_INTERVAL_SEC` — const — line 322
+- `TRAP_CHECK_INTERVAL_SEC` — const — line 309
 - `TRAP_DEFS` — const — line 51
 - `TRAP_DETECTION_COOLDOWN_DAYS` — const — line 171
-- `TRAP_FOOTPRINT_RADIUS` — const — line 310
+- `TRAP_FOOTPRINT_RADIUS` — const — line 297
 - `TRAP_KIND_BY_ITEM` — const — line 76
 - `TRAP_MAX_DETECTION` — const — line 105
 - `TRAP_MIN_DETECTION` — const — line 104
-- `TRAP_PLACE_REACH` — const — line 315
-- `TRAP_PLACEMENT_MESSAGE` — const — line 302
-- `TRAP_SEPARATION` — const — line 313
-- `TRAP_SETUP_DURATION_SEC` — const — line 318
+- `TRAP_PLACE_REACH` — const — line 302
+- `TRAP_PLACEMENT_MESSAGE` — const — line 289
+- `TRAP_SEPARATION` — const — line 300
+- `TRAP_SETUP_DURATION_SEC` — const — line 305
 - `TRAP_SKILL_DETECTION_CUT` — const — line 107
 - `TRAP_WEATHER_MAX_CATCHUP_CYCLES` — const — line 233
 - `TRAP_WEATHER_SEVERITY` — const — line 212
@@ -32,10 +39,9 @@ Generated from exported TypeScript symbols.
 - `trapDetectionRoll` — function — line 164
 - `TrapKind` — type — line 18
 - `trapKindForItem` — function — line 81
-- `TrapLureDescriptor` — type — line 292
-- `TrapPlacementReason` — type — line 300
+- `TrapPlacementReason` — type — line 287
 - `TrapState` — type — line 23
-- `trapStateLabel` — function — line 324
+- `trapStateLabel` — function — line 311
 - `TrapUseResult` — type — line 200
 - `TrapWeatherCatchup` — type — line 235
 - `trapWeatherWear` — function — line 224
@@ -669,7 +675,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlacedTraps.ts`
 
-- `createPlacedTraps` — function — line 95
+- `createPlacedTraps` — function — line 94
 - `PlacedTrapEntry` — type — line 25
 - `PlacedTraps` — type — line 47
 - `PlacedTrapsHooks` — type — line 38

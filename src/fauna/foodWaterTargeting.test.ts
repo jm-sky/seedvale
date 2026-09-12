@@ -137,6 +137,12 @@ describe('carcassFoodValue (plan fauna-005 — corpse/bone scavenging)', () => {
     expect(carcassFoodValue('rotting', wolfScavenging, 0.7)).not.toBeNull()
     expect(carcassFoodValue('bones', wolfScavenging, 0.7)).toBeNull()
   })
+
+  it('bear rotting-only scavenging rejects bones while keeping wolf tuning (plan fauna-023)', () => {
+    expect(carcassFoodValue('rotting', ANIMAL_DEFS.bear.scavenging, 1)).toBe(0.35)
+    expect(carcassFoodValue('bones', ANIMAL_DEFS.bear.scavenging, 1)).toBeNull()
+    expect(ANIMAL_DEFS.wolf.scavenging).toEqual({ rottingValue: 0.4, bonesValue: 0.15 })
+  })
 })
 
 describe('carcassCandidateScore (plan fauna-005)', () => {
@@ -178,8 +184,9 @@ describe('ANIMAL_DEFS herbivore diet/metabolism (plan fauna-010)', () => {
     }
   })
 
-  it('out-of-scope predators/prey have no diet (unchanged abstract forage)', () => {
-    expect(ANIMAL_DEFS.bear.diet).toBeUndefined()
+  it('duck/boar stay without diet; bear has fauna-023 omnivore diet (inert for hunger)', () => {
+    expect(ANIMAL_DEFS.bear.diet).toBeDefined()
+    expect(ANIMAL_DEFS.bear.diet?.grass).toBeUndefined()
     expect(ANIMAL_DEFS.duck.diet).toBeUndefined()
     expect(ANIMAL_DEFS.boar.diet).toBeUndefined()
   })

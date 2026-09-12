@@ -37,6 +37,7 @@ import type { QuestLog } from '../ui/createQuestLog'
 import type { QuickActions } from '../ui/createQuickActions'
 import type { TimeSkipOverlay } from '../ui/createTimeSkipOverlay'
 import type { Toast } from '../ui/createToast'
+import type { AnimalAttractionSource } from '../world/animalAttractionSource'
 import type { CloudSystem } from '../world/clouds'
 import type { WorldLights } from '../world/createLights'
 import type { WorldSky } from '../world/createSky'
@@ -79,6 +80,7 @@ import { createColliderDebugView } from '../debug/colliderDebugView'
 import { isCameraMeshDebugMode, isColliderDebugMode, isDebugMode, isNpcCombatDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE, selectDietFeedKind } from '../fauna/AnimalAgent'
+import { buildAttractionSnapshot } from '../fauna/animalAttraction'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { combatTargetForAnimal, isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
@@ -636,6 +638,10 @@ export type GameLoop = {
  * @uses WorldBundle PlayerController
  * @simulation tick
  */
+/** Reused attraction snapshot buffer (plan fauna-023 §11) — rebuilt once per
+ *  fauna pass, never allocated per animal. */
+const attractionSnapshotScratch: AnimalAttractionSource[] = []
+
 export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
@@ -2555,9 +2561,26 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             },
             (kind, x, z) => playAnimalAggroSound(kind, worldAudio.playAt, { x, z }),
             (kind, x, z) => playSpontaneousAnimalSound(kind, worldAudio.playAt, { x, z }),
-            // Plan fauna-014 §3/§11 — computed once per pass, not per animal,
-            // and forwarded straight into every `AnimalAgent.update()` call.
-            bundle.placedTraps.activeLures(),
+            // Plan fauna-023 §11 — assembled once per pass from world-owned
+            // trap / dropped-food / blood authorities, not per animal.
+            buildAttractionSnapshot({
+              trapSources: bundle.placedTraps.attractionSources(),
+              droppedItems: bundle.droppedItems.nodes(),
+              bloodTraces: bundle.bloodTraces.snapshot(),
+              seed: getSeed(),
+              elapsedDays: dayNight.elapsedDays,
+              nowDays: dayNight.elapsedDays,
+            }, attractionSnapshotScratch),
+            (droppedItemId) => {
+              const item = bundle.droppedItems.consume(droppedItemId)
+              if (!item) return null
+              return { kind: item.kind, foodBatch: item.foodBatch }
+            },
+            (droppedItemId) => {
+              const item = bundle.droppedItems.get(droppedItemId)
+              if (!item) return null
+              return { kind: item.kind, foodBatch: item.foodBatch }
+            },
             playerObservation,
           )
         })

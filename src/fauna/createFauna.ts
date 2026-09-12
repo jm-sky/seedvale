@@ -3,7 +3,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import type { LocalWaterSample } from '../terrain/waterSample'
-import type { TrapLureDescriptor } from '../world/animalTraps'
+import type { AnimalAttractionSource } from '../world/animalAttractionSource'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerStealthState } from './playerAwareness'
 import {
@@ -127,12 +127,14 @@ export type Fauna = {
      *  (howl); every other wild kind has no `SPONTANEOUS_VOCALIZE_CONFIG`
      *  entry and this stays a no-op for it. */
     onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void,
-    /** Currently active+baited traps (plan fauna-014 §3/§11) —
-     *  `PlacedTraps.activeLures()`, computed once by the caller (`gameLoop.ts`)
-     *  and forwarded unchanged into every `AnimalAgent.update()` call below,
-     *  never a per-animal query. Defaults to none so existing callers/tests
-     *  keep prior behaviour. */
-    lures?: readonly TrapLureDescriptor[],
+    /** Currently active attraction sources (plan fauna-023 §11) — assembled
+     *  once by the caller (`gameLoop.ts`) and forwarded unchanged into every
+     *  `AnimalAgent.update()` call below, never a per-animal query. Defaults
+     *  to none so existing callers/tests keep prior behaviour. */
+    attractionSources?: readonly AnimalAttractionSource[],
+    /** Atomic dropped-food consume/peek for attraction completion. */
+    consumeAttractedFood?: (droppedItemId: string) => { kind: import('../items/items').ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null,
+    peekAttractedFood?: (droppedItemId: string) => { kind: import('../items/items').ItemKind, foodBatch?: import('../items/foodFreshness').FoodBatch } | null,
     /** Player-as-observer presentation inputs (npc-023) — forwarded to each
      *  wild `AnimalAgent.update()`. */
     playerObservation?: import('../simulation/observation').PlayerObservationInput,
@@ -1172,7 +1174,9 @@ export async function createFauna(
       onNpcHit,
       onAnimalAggro,
       onAnimalVocalize,
-      lures = [],
+      attractionSources = [],
+      consumeAttractedFood,
+      peekAttractedFood,
       playerObservation,
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
@@ -1202,7 +1206,9 @@ export async function createFauna(
           timeOfDay,
           grassForage,
           waterSourceProvider,
-          lures,
+          attractionSources,
+          consumeAttractedFood,
+          peekAttractedFood,
           playerObservation,
         })
       }

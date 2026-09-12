@@ -177,15 +177,16 @@ export function isCarcassEdible(opts: {
   return true
 }
 
-/** Food value of a corpse `phase` for a given eater (plan fauna-005) — `null`
- *  when this phase isn't food for this eater right now:
+/** Food value of a corpse `phase` for a given eater (plan fauna-005 /
+ *  fauna-023 §3a) — `null` when this phase isn't food for this eater right
+ *  now:
  *  - `fresh` is always full value (1), the pre-existing plan 094 baseline
  *    available to any predator regardless of `scavenging`.
- *  - `rotting`/`bones` require both the eater's `scavenging` capability
- *    (absent for a non-scavenger, e.g. fox/bear) *and* hunger past that
- *    tier's threshold (`SCAVENGE_ROTTING_HUNGER_THRESHOLD`/
- *    `SCAVENGE_BONES_HUNGER_THRESHOLD`) — a barely-hungry wolf won't fall
- *    back onto carrion just because it exists.
+ *  - `rotting`/`bones` require the matching optional `scavenging` field
+ *    *and* hunger past that tier's threshold
+ *    (`SCAVENGE_ROTTING_HUNGER_THRESHOLD`/`SCAVENGE_BONES_HUNGER_THRESHOLD`)
+ *    — a barely-hungry wolf won't fall back onto carrion just because it
+ *    exists; a bear with rotting-only scavenging never accepts bones.
  *  A `rotting`/`bones` value is always below `fresh`'s 1, so
  *  `carcassCandidateScore` naturally prefers a reachable fresh kill.
  *  Pure/exported so preference/hunger-gating is unit-testable without
@@ -197,7 +198,11 @@ export function carcassFoodValue(
 ): number | null {
   if (phase === 'fresh') return 1
   if (!scavenging) return null
-  if (phase === 'rotting') return hunger >= SCAVENGE_ROTTING_HUNGER_THRESHOLD ? scavenging.rottingValue : null
+  if (phase === 'rotting') {
+    if (scavenging.rottingValue == null) return null
+    return hunger >= SCAVENGE_ROTTING_HUNGER_THRESHOLD ? scavenging.rottingValue : null
+  }
+  if (scavenging.bonesValue == null) return null
   return hunger >= SCAVENGE_BONES_HUNGER_THRESHOLD ? scavenging.bonesValue : null
 }
 

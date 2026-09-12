@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `npc-029-npc-accompany-follow-commitment`                              | 2026-09-12 14:16:44 | —                   | `npc`            | —          |
 | `items-player-027-player-to-npc-item-transfer-and-equipment`           | 2026-09-12 13:44:14 | —                   | `items-player`   | —          |
 | `items-player-029-wearable-armor-and-combat-equipment`                 | 2026-09-12 13:36:20 | —                   | `items-player`   | —          |
 | `fauna-025-livestock-stray-return-and-recovery`                        | 2026-09-12 10:53:37 | —                   | `fauna`          | —          |

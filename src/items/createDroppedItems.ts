@@ -26,6 +26,8 @@ export type DroppedItem = {
 
 export type DroppedItems = {
   nodes: () => readonly DroppedItem[]
+  /** Read-only lookup by stable id (plan fauna-023) — never removes. */
+  get: (id: string) => DroppedItem | null
   /** Places one unit of `kind` at (x, z) as a new pickup, world-persistent
    *  (unlike the renewable spawner pool, dropped items don't respawn — once
    *  collected they're gone for good, same as world-generated ones). Pass
@@ -38,6 +40,11 @@ export type DroppedItems = {
    *  state already is. */
   drop: (kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, onCollected?: () => void, foodBatch?: FoodBatch) => void
   collect: (id: string) => { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: FoodBatch } | null
+  /** World/fauna consumption (plan fauna-023 §6) — removes the record/mesh
+   *  exactly once without firing pickup-only `onCollected` and without
+   *  returning the item to inventory. Returns the removed record, or `null`
+   *  when the id is already gone. */
+  consume: (id: string) => DroppedItem | null
   /** Advances items still in flight (plan 097 phase 2.1). Landed items cost
    *  nothing — only entries in `falling` are touched. */
   tick: (dt: number) => void
@@ -127,6 +134,9 @@ export function createDroppedItems(
 
   return {
     nodes: () => items,
+    get(id) {
+      return items.find((item) => item.id === id) ?? null
+    },
     drop(kind, x, z, instance, onCollected, foodBatch) {
       const item: DroppedItem = { id: `drop:${Date.now()}:${nextDropId++}`, kind, x, z }
       if (instance) item.instance = instance
@@ -150,6 +160,14 @@ export function createDroppedItems(
       }
       if (item.foodBatch) collected.foodBatch = item.foodBatch
       return collected
+    },
+    consume(id) {
+      // World consumption reuses dispose + decompose-cache bookkeeping, but
+      // never the pickup `onCollected` producer hook (plan fauna-023 §6).
+      const item = disposeNode(id)
+      if (!item) return null
+      if (item.foodBatch) recomputeNextDecomposeAt()
+      return item
     },
     settleNear(x, z, radius) {
       for (const item of items) {
