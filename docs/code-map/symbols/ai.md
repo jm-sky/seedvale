@@ -189,13 +189,15 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcCombat.ts`
 
-- `applyNpcMeleeHit` — function — line 88
-- `applyNpcRangedHit` — function — line 113
+- `applyNpcMeleeHit` — function — line 108
+- `applyNpcRangedHit` — function — line 133
+- `NpcAmmoSource` — type — line 63
 - `NpcMeleeWeapon` — type — line 32
 - `NpcRangedWeapon` — type — line 33
-- `resolveIncomingNpcDamage` — function — line 136
-- `resolveNpcAmmoKind` — function — line 64
-- `resolveNpcDefenseConfig` — function — line 71
+- `resolveIncomingNpcDamage` — function — line 156
+- `resolveNpcAmmo` — function — line 69
+- `resolveNpcAmmoKind` — function — line 84
+- `resolveNpcDefenseConfig` — function — line 91
 - `resolveNpcMeleeWeapon` — function — line 38
 - `resolveNpcRangedWeapon` — function — line 52
 

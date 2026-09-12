@@ -85,6 +85,22 @@ Generated from exported TypeScript symbols.
 - `DismountReason` — type — line 19
 - `MountActions` — type — line 21
 
+## `app/actions/npcItemTransfer.ts`
+
+- `giveItemCountToNpc` — function — line 26
+  - domain: items-player
+- `giveItemInstanceToNpc` — function — line 55
+  - domain: items-player
+- `GiveItemToNpcDeps` — type — line 13
+- `GiveItemToNpcResult` — type — line 6
+
+## `app/actions/npcItemTransferActions.ts`
+
+- `createNpcItemTransferActions` — function — line 25
+  - domain: items-player
+- `NpcItemTransferActions` — type — line 9
+- `NpcItemTransferDeps` — type — line 13
+
 ## `app/actions/placementActions.ts`
 
 - `ConstructionActionView` — type — line 335
@@ -240,13 +256,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 290
+- `createApp` — function — line 291
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 259
+- `NewAppOptions` — type — line 260
 
 ## `app/gameLoop.ts`
 
@@ -316,7 +332,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 175
+- `createInventoryWiring` — function — line 177
 - `InventoryWiring` — type — line 109
 - `InventoryWiringDeps` — type — line 142
 - `MerchantInventoryView` — type — line 95

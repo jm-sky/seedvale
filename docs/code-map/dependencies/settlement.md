@@ -885,6 +885,7 @@ Generated from TypeScript imports.
 - `ai/burialPressure.test.ts`
 - `ai/burialPressure.ts`
 - `app/actions/containerActions.ts`
+- `app/actions/npcItemTransfer.test.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.ts`
@@ -942,6 +943,8 @@ Generated from TypeScript imports.
 - `ai/burialPressure.ts`
 - `ai/graveVisitPressure.test.ts`
 - `ai/graveVisitPressure.ts`
+- `app/actions/npcItemTransfer.test.ts`
+- `app/actions/npcItemTransfer.ts`
 - `app/actions/workContractPayment.test.ts`
 - `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`

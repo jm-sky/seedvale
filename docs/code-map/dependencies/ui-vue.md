@@ -123,6 +123,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/householdResourceTransferActions.ts`
 - `app/actions/inspectionActions.ts`
+- `app/actions/npcItemTransferActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -215,6 +216,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/npcItemTransferActions.ts`
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`
 - `app/inventoryWiring.ts`

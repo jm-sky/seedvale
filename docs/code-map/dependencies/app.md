@@ -40,6 +40,7 @@ Generated from TypeScript imports.
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
+- `app/actions/npcItemTransferActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
@@ -373,6 +374,51 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+
+## `app/actions/npcItemTransfer.test.ts`
+
+**Imports**
+
+- `ai/npcCombat.ts`
+- `app/actions/npcItemTransfer.ts`
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+- `items/itemCatalog.ts`
+- `items/itemInstances.ts`
+- `items/liquidContainer.ts`
+- `items/weaponMaintenance.ts`
+- `settlement/npcPostDeath.ts`
+- `settlement/npcState.ts`
+
+## `app/actions/npcItemTransfer.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/inventoryTransfer.ts`
+- `items/items.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `app/actions/npcItemTransfer.test.ts`
+- `app/actions/npcItemTransferActions.ts`
+
+## `app/actions/npcItemTransferActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/npcItemTransfer.ts`
+- `input/MouseLook.ts`
+- `items/inventoryView.ts`
+- `items/items.ts`
+- `ui-vue/mount.ts`
+- `ui-vue/store.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
 
 ## `app/actions/placementActions.ts`
 
@@ -785,6 +831,7 @@ Generated from TypeScript imports.
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
+- `app/actions/npcItemTransferActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`

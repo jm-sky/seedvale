@@ -93,6 +93,8 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/householdResourceTransferActions.test.ts`
+- `app/actions/npcItemTransfer.test.ts`
+- `app/actions/npcItemTransfer.ts`
 - `app/actions/placementRequirementView.ts`
 - `app/actions/restActions.ts`
 - `app/actions/storageInfestationActions.ts`
@@ -496,6 +498,7 @@ Generated from TypeScript imports.
 
 - `ai/npcPersonalProvisions.test.ts`
 - `app/actions/gatheringActions.ts`
+- `app/actions/npcItemTransfer.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
@@ -658,6 +661,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/npcItemTransfer.ts`
 - `app/actions/workContractPayment.ts`
 - `items/inventoryTransfer.test.ts`
 - `settlement/npcPostDeath.ts`
@@ -690,6 +694,7 @@ Generated from TypeScript imports.
 
 - `app/actions/containerActions.ts`
 - `app/actions/householdResourceTransferActions.ts`
+- `app/actions/npcItemTransferActions.ts`
 - `app/createApp.ts`
 - `app/inventoryWiring.ts`
 - `items/inventoryView.test.ts`
@@ -725,6 +730,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContracts.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/npcItemTransfer.test.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/storageInfestationActions.ts`
@@ -847,6 +853,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/npcItemTransfer.test.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.test.ts`
@@ -943,6 +950,8 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/householdResourceTransferActions.ts`
+- `app/actions/npcItemTransfer.ts`
+- `app/actions/npcItemTransferActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementRequirementView.ts`
 - `app/actions/restActions.ts`
@@ -1075,6 +1084,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcPersonalProvisions.test.ts`
 - `ai/npcPersonalProvisions.ts`
+- `app/actions/npcItemTransfer.test.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
@@ -1370,6 +1380,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `app/actions/npcItemTransfer.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`

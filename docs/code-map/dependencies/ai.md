@@ -530,6 +530,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcCombat.test.ts`
 - `ai/npcLoadout.test.ts`
+- `app/actions/npcItemTransfer.test.ts`
 
 ## `ai/npcCrowd.test.ts`
 
