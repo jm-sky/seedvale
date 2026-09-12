@@ -104,6 +104,7 @@ Generated from TypeScript imports.
 - `fauna/animalTrophyLoot.ts`
 - `fauna/animalVariants.test.ts`
 - `fauna/createFauna.ts`
+- `fauna/dungeonResidents.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
@@ -238,12 +239,16 @@ Generated from TypeScript imports.
 
 - `world/caves/caveGroundQuery.ts`
 - `world/caves/caveHabitat.ts`
+- `world/caves/caveUndergroundPool.ts`
 
 **Imported by**
 
+- `app/worldBundle.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCaveJourney.test.ts`
+- `fauna/animalForaging.ts`
 - `fauna/createFauna.ts`
+- `fauna/dungeonResidents.ts`
 
 ## `fauna/animalCaveJourney.test.ts`
 
@@ -316,6 +321,8 @@ Generated from TypeScript imports.
 - `fauna/animalStray.ts`
 - `fauna/animalVariants.test.ts`
 - `fauna/corpseDecay.test.ts`
+- `fauna/dungeonResidents.test.ts`
+- `fauna/dungeonResidents.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/persistentOccupants.test.ts`
 - `fauna/preyAlertPerception.ts`
@@ -352,6 +359,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalLife.ts`
+- `fauna/animalCaveHabitat.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalRoaming.ts`
@@ -714,6 +722,31 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/dogGuard.test.ts`
 
+## `fauna/dungeonResidents.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/dungeonResidents.ts`
+- `world/caves/dungeonChambers.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/largeCaves.ts`
+
+## `fauna/dungeonResidents.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalCaveHabitat.ts`
+- `fauna/animalDefs.ts`
+- `fauna/persistentOccupants.ts`
+- `world/caves/dungeonChambers.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `fauna/dungeonResidents.test.ts`
+
 ## `fauna/faunaCombat.test.ts`
 
 **Imports**
@@ -925,6 +958,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/createFauna.ts`
+- `fauna/dungeonResidents.ts`
 - `fauna/persistentOccupants.test.ts`
 - `persistence/saveData.ts`
 

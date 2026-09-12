@@ -227,11 +227,21 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHabitat.ts`
 
+- `buildRoutePoints` — function — line 211
+- `CaveHomePlacementHint` — type — line 83
 - `CaveTraversalDescriptor` — type — line 31
   - domain: world-terrain
 - `CaveTraversalPoint` — type — line 21
-- `resolveCaveTraversal` — function — line 187
+- `resolveCaveRouteBetweenNodes` — function — line 253
   - domain: world-terrain
+- `resolveCaveTraversal` — function — line 280
+  - domain: world-terrain
+- `ResolveCaveTraversalOptions` — type — line 241
+- `resolveStandableHomePoint` — function — line 109
+  - domain: world-terrain
+- `shortestNodePath` — function — line 158
+  - domain: world-terrain
+- `snapRouteFloor` — function — line 230
 
 ## `world/caves/caveHeightfieldMaterial.ts`
 
@@ -701,9 +711,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 104
-- `Caves` — type — line 106
-- `createCaves` — function — line 323
+- `CaveInteriorQueryChannel` — type — line 110
+- `Caves` — type — line 112
+- `createCaves` — function — line 339
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves

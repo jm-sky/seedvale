@@ -60,19 +60,21 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalCaveHabitat.ts`
 
-- `advanceCaveRoute` — function — line 140
+- `advanceCaveRoute` — function — line 205
   - domain: fauna
-- `ANIMAL_CAPSULE_RADIUS_SCALE` — const — line 69
-- `AnimalCaveContext` — type — line 42
-- `animalCaveEntityDimensions` — function — line 75
-- `AnimalCaveWorldContract` — type — line 18
+- `ANIMAL_CAPSULE_RADIUS_SCALE` — const — line 103
+- `AnimalCaveContext` — type — line 71
+- `animalCaveEntityDimensions` — function — line 109
+- `AnimalCaveWorldContract` — type — line 19
   - domain: fauna
   - role: Fauna-owned cave habitat binding + the narrow world-cave contract it resolves against (plan fauna-019). This is the only place fauna touches cave types — `AnimalAgent`/`animalRoaming`/`animalForaging` never import `createCaves.ts`, `ChunkManager` or cave presentation; the composition root (`worldBundle.ts`) adapts the real `Caves` instance into `AnimalCaveWorldContract` before it reaches `createFauna()`.
-- `AnimalHabitatBinding` — type — line 34
-- `CaveRouteProgress` — type — line 113
-- `resolveAnimalCaveHabitat` — function — line 91
+- `AnimalHabitatBinding` — type — line 46
+- `CaveRouteProgress` — type — line 178
+- `EnvironmentalAnimalFoodSource` — type — line 52
+- `EnvironmentalCaveWaterSource` — type — line 61
+- `resolveAnimalCaveHabitat` — function — line 125
   - domain: fauna
-- `ResolvedAnimalCaveHabitat` — type — line 58
+- `ResolvedAnimalCaveHabitat` — type — line 92
 
 ## `fauna/animalCorpse.ts`
 
@@ -141,36 +143,36 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalForaging.ts`
 
-- `AnimalWaterSourceProvider` — type — line 93
-- `applySourceRelief` — function — line 575
-- `canAcceptHandFeed` — function — line 140
-- `CarcassCandidate` — type — line 225
-- `carcassCandidateScore` — function — line 216
-- `carcassFoodValue` — function — line 194
-- `dietItemReliefScale` — function — line 130
-- `DRINK_DURATION_SEC` — const — line 68
-- `EAT_DURATION_SEC` — const — line 65
-- `findFoodTarget` — function — line 513
-- `findForageTarget` — function — line 392
-- `findGrassPatchTarget` — function — line 419
-- `findHouseholdTroughTarget` — function — line 332
-- `findTroughTarget` — const — line 339
-- `findWaterTarget` — function — line 364
-- `FOOD_INTERACTION_RANGE` — const — line 59
-- `forageEdgeScore` — function — line 107
-- `ForagingContext` — type — line 274
-- `isCarcassEdible` — function — line 167
-- `isDrinkableNaturalShorePoint` — function — line 308
-- `isSourceTargetValid` — function — line 525
-- `selectDietFeedKind` — function — line 118
-- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 72
-- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 77
-- `SourceTarget` — type — line 243
-- `SourceTargetKind` — type — line 242
-- `TROUGH_DRINK_AMOUNT` — const — line 80
-- `tryCommitHandFeed` — function — line 151
-- `WATER_INTERACTION_RANGE` — const — line 62
-- `WaterSourceRef` — type — line 85
+- `AnimalWaterSourceProvider` — type — line 95
+- `applySourceRelief` — function — line 635
+- `canAcceptHandFeed` — function — line 142
+- `CarcassCandidate` — type — line 227
+- `carcassCandidateScore` — function — line 218
+- `carcassFoodValue` — function — line 196
+- `dietItemReliefScale` — function — line 132
+- `DRINK_DURATION_SEC` — const — line 69
+- `EAT_DURATION_SEC` — const — line 66
+- `findFoodTarget` — function — line 559
+- `findForageTarget` — function — line 438
+- `findGrassPatchTarget` — function — line 465
+- `findHouseholdTroughTarget` — function — line 345
+- `findTroughTarget` — const — line 352
+- `findWaterTarget` — function — line 408
+- `FOOD_INTERACTION_RANGE` — const — line 60
+- `forageEdgeScore` — function — line 109
+- `ForagingContext` — type — line 281
+- `isCarcassEdible` — function — line 169
+- `isDrinkableNaturalShorePoint` — function — line 321
+- `isSourceTargetValid` — function — line 574
+- `selectDietFeedKind` — function — line 120
+- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 73
+- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 78
+- `SourceTarget` — type — line 245
+- `SourceTargetKind` — type — line 244
+- `TROUGH_DRINK_AMOUNT` — const — line 81
+- `tryCommitHandFeed` — function — line 153
+- `WATER_INTERACTION_RANGE` — const — line 63
+- `WaterSourceRef` — type — line 86
 
 ## `fauna/animalHarvest.ts`
 
@@ -442,6 +444,15 @@ Generated from exported TypeScript symbols.
 - `resolveDogGuardTarget` — function — line 88
 - `resolveDogPestTarget` — function — line 132
 - `StrangerNpcCandidate` — type — line 159
+
+## `fauna/dungeonResidents.ts`
+
+- `buildDungeonResidentsPlan` — function — line 81
+  - domain: fauna
+- `DungeonCaveResidentInput` — type — line 29
+- `dungeonChamberHabitatId` — function — line 25
+- `dungeonResidentRoll` — function — line 20
+- `DungeonResidentsPlan` — type — line 35
 
 ## `fauna/faunaCombat.ts`
 
