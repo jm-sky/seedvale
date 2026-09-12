@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 - `fauna/animalNeedArbitration.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/animalRoaming.ts`
+- `fauna/animalVariants.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
@@ -91,6 +92,7 @@ Generated from TypeScript imports.
 - `fauna/animalDialogue.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
+- `fauna/animalVariants.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
@@ -269,6 +271,7 @@ Generated from TypeScript imports.
 - `fauna/animalLead.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/animalRoamingTrips.test.ts`
+- `fauna/animalVariants.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/persistentOccupants.test.ts`
@@ -481,6 +484,26 @@ Generated from TypeScript imports.
 - `fauna/animalDefs.ts`
 - `fauna/animalRoaming.ts`
 
+## `fauna/animalVariants.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/animalVariants.ts`
+- `fauna/faunaCombat.ts`
+- `fauna/herdCohesion.ts`
+- `terrain/waterSample.ts`
+
+## `fauna/animalVariants.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalVariants.test.ts`
+- `fauna/createFauna.test.ts`
+- `fauna/createFauna.ts`
+
 ## `fauna/bloodSplat.ts`
 
 **Imports**
@@ -510,6 +533,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `fauna/animalVariants.ts`
 - `fauna/createFauna.ts`
 - `terrain/chunkHeightmap.ts`
 
@@ -523,6 +547,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalCaveHabitat.ts`
 - `fauna/animalRoaming.ts`
+- `fauna/animalVariants.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/persistentOccupants.ts`
 - `fauna/playerAwareness.ts`
@@ -599,6 +624,7 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/interactables.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalVariants.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/huntingHooks.ts`
@@ -686,6 +712,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalVariants.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/herdCohesion.test.ts`
 

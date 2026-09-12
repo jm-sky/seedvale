@@ -56,7 +56,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`            | -       | 🔴 | M      | -      |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `items-player-027-player-to-npc-item-transfer-and-equipment.md`             | -       | 🔴 | M      | ~~settlements-npcs-026~~ |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
@@ -108,7 +107,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | items-player-027 |
 | 💡 `quests-progression-019-dangerous-animal-deeds-local-reputation.md`         | -       | 🟡 | M      | ~~quests-progression-001~~, ~~quests-progression-002~~, fauna-022 |
 | 💡 `world-025-persistent-abandoned-cemetery-worldgen-cache.md`                 | -       | 🔴 | M      | ~~world-015~~, ~~world-022~~ |
-| 💡 `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`            | -       | 🔴 | M      | -      |
+| `fauna-022-animal-variants-and-exceptional-dangerous-animals.md`               | -       | 🔴 | M      | -      |
 | 💡 `items-player-029-wearable-armor-and-combat-equipment.md`                   | -       | 🟡 | L      | -      |
 
 ---
