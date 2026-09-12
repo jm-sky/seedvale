@@ -102,6 +102,21 @@ export type Fauna = {
      *  chicken) isn't spawned here at all — see `settlement/livestock.ts`,
      *  spawned per-settlement instead. */
     villages: readonly VillageInfo[],
+    /** Bounded/local live household/player livestock candidates for wild
+     *  predator prey acquisition (plan fauna-026) — assembled once per fauna
+     *  pass by the caller (`gameLoop.ts`'s `buildHuntableLivestock`, after
+     *  `SettlementsManager.update()` so this frame's stream-in/out is
+     *  reflected) from currently loaded settlements' livestock plus detached
+     *  livestock, deduplicated by `animalId`. Forwarded unchanged to every
+     *  wild `AnimalAgent.update()`'s `huntableLivestock` — never merged into
+     *  `others`/the wild `agents` pool, never ticked here. Membership in
+     *  this set, not `AnimalDef.role`, is what makes an agent
+     *  huntable-as-livestock (see `AnimalUpdateContext.huntableLivestock`'s
+     *  own doc for why `role` alone can't tell livestock apart). Required
+     *  (not optional) so TypeScript forces every caller to make this
+     *  composition decision explicitly instead of silently omitting real
+     *  livestock huntability. */
+    huntableLivestock: readonly AnimalAgent[],
     /** Player + nearby NPCs for predator crowd fear (plan 056). Default 1. */
     nearbyHumanCount?: number,
     /** Fauna→player damage callback when a predator bites in contact range. */
@@ -1173,6 +1188,7 @@ export async function createFauna(
       worldDays,
       litFires,
       villages,
+      huntableLivestock,
       nearbyHumanCount = 1,
       onHumanHit,
       playerStealth,
@@ -1199,6 +1215,7 @@ export async function createFauna(
           forestFactor,
           litFires,
           villages,
+          huntableLivestock,
           nearbyHumanCount,
           onHumanHit,
           playerStealth,

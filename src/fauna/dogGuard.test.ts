@@ -15,7 +15,7 @@ import {
 const HOME = { x: 0, z: 0 }
 
 function wolf(overrides: Partial<DogGuardWolfCandidate>): DogGuardWolfCandidate {
-  return { id: 'wolf-1', x: 5, z: 0, dead: false, npcTarget: null, ...overrides }
+  return { id: 'wolf-1', x: 5, z: 0, dead: false, npcTarget: null, preyTarget: null, ...overrides }
 }
 
 describe('resolveDogGuardTarget', () => {
@@ -92,6 +92,53 @@ describe('resolveDogGuardTarget', () => {
     )
     // Falls into the foreign/assist tier instead, still bounded by DOG_GUARD_ASSIST_RADIUS.
     expect(result).toEqual({ wolfId: 'wolf-1', protectedNpcId: 'npc', ownHousehold: false })
+  })
+
+  it('a wolf hunting this dog\'s own household livestock is an own-household attack (plan fauna-026 §7)', () => {
+    const result = resolveDogGuardTarget(
+      HOME,
+      'house-1',
+      [wolf({ id: 'wolf-sheep', x: 10, z: 0, preyTarget: { animalId: 'sheep-1', ownerHouseId: 'house-1' } })],
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
+    )
+    expect(result).toEqual({ wolfId: 'wolf-sheep', protectedAnimalId: 'sheep-1', ownHousehold: true })
+  })
+
+  it('livestock-prey own-household defense outranks a simultaneous foreign-household NPC threat', () => {
+    const result = resolveDogGuardTarget(
+      HOME,
+      'house-1',
+      [
+        wolf({ id: 'wolf-foreign', x: 8, z: 0, npcTarget: { npcId: 'npc-foreign', homeId: 'house-2' } }),
+        wolf({ id: 'wolf-sheep', x: 12, z: 0, preyTarget: { animalId: 'sheep-1', ownerHouseId: 'house-1' } }),
+      ],
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
+    )
+    expect(result).toEqual({ wolfId: 'wolf-sheep', protectedAnimalId: 'sheep-1', ownHousehold: true })
+  })
+
+  it('a wolf hunting a foreign household\'s livestock is not an assist-tier target (own-household defense only, plan fauna-026 §7)', () => {
+    const result = resolveDogGuardTarget(
+      HOME,
+      'house-1',
+      [wolf({ x: 5, z: 0, preyTarget: { animalId: 'sheep-2', ownerHouseId: 'house-2' } })],
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
+    )
+    expect(result).toBeNull()
+  })
+
+  it('livestock-prey own-household defense is still bounded by the own-household radius', () => {
+    const result = resolveDogGuardTarget(
+      HOME,
+      'house-1',
+      [wolf({ x: DOG_GUARD_OWN_RADIUS + 1, z: 0, preyTarget: { animalId: 'sheep-1', ownerHouseId: 'house-1' } })],
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
+    )
+    expect(result).toBeNull()
   })
 })
 

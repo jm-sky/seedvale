@@ -43,25 +43,40 @@ export const DOG_BARK_COOLDOWN_SEC = 10
 
 /** One live wolf, as seen by a household dog — `npcTarget` is that wolf's
  *  own authoritative committed attack target (never inferred from
- *  proximity), `null` while it isn't attacking anyone. */
+ *  proximity), `null` while it isn't attacking anyone. `preyTarget` is the
+ *  same idea for a committed livestock kill (plan fauna-026) — sourced from
+ *  `AnimalAgent.huntingPrey()`, `null` while the wolf isn't hunting live
+ *  prey. A wolf can carry either, both, or neither independently; both are
+ *  checked for own-household defense. */
 export type DogGuardWolfCandidate = {
   id: string
   x: number
   z: number
   dead: boolean
   npcTarget: { npcId: string, homeId?: string } | null
+  preyTarget: { animalId: string, ownerHouseId?: string } | null
 }
 
 export type DogGuardTargetResolved = {
   wolfId: string
-  protectedNpcId: string
+  /** Set only when the winning candidate came from `npcTarget`. */
+  protectedNpcId?: string
+  /** Set only when the winning candidate came from `preyTarget` (plan
+   *  fauna-026) — a wolf committed to killing this dog's own household's
+   *  livestock, not attacking a person. */
+  protectedAnimalId?: string
   ownHousehold: boolean
 }
 
 /**
- * Full priority order in one pass (plan fauna-011 §10):
- * 1. wolf attacking own household member (`ownRadius` from the dog's home)
+ * Full priority order in one pass (plan fauna-011 §10, extended fauna-026 §7
+ * for own-household livestock prey):
+ * 1. wolf attacking own household member, OR hunting own household livestock
+ *    (`ownRadius` from the dog's home) — either counts as an own-household
+ *    attack.
  * 2. wolf attacking a nearby settlement inhabitant (`assistRadius`, tighter)
+ *    — NPC-only; livestock-prey assist for a foreign household is out of
+ *    scope for this plan (own-household defense is the required behaviour).
  * 3. (no candidate) — a distant/unrelated wolf never wins here regardless of
  *    proximity: it only surfaces as `resolveDogBarkStimulus`'s alert tier.
  *
@@ -81,16 +96,22 @@ export function resolveDogGuardTarget(
   let nearby: DogGuardTargetResolved | null = null
   for (const wolf of nearbyWolves) {
     if (wolf.dead) continue
-    const target = wolf.npcTarget
-    if (!target) continue
     const distFromHome = Math.hypot(wolf.x - home.x, wolf.z - home.z)
-    const isOwnHousehold = target.homeId != null && ownerHouseId != null && target.homeId === ownerHouseId
-    if (isOwnHousehold) {
-      if (distFromHome > ownRadius) continue
-      if (!own) own = { wolfId: wolf.id, protectedNpcId: target.npcId, ownHousehold: true }
-    } else {
-      if (distFromHome > assistRadius) continue
-      if (!nearby) nearby = { wolfId: wolf.id, protectedNpcId: target.npcId, ownHousehold: false }
+    const npcTarget = wolf.npcTarget
+    if (npcTarget) {
+      const isOwnHousehold = npcTarget.homeId != null && ownerHouseId != null && npcTarget.homeId === ownerHouseId
+      if (isOwnHousehold) {
+        if (distFromHome <= ownRadius && !own) own = { wolfId: wolf.id, protectedNpcId: npcTarget.npcId, ownHousehold: true }
+      } else if (distFromHome <= assistRadius && !nearby) {
+        nearby = { wolfId: wolf.id, protectedNpcId: npcTarget.npcId, ownHousehold: false }
+      }
+    }
+    if (own) continue
+    const preyTarget = wolf.preyTarget
+    if (!preyTarget) continue
+    const isOwnHousehold = preyTarget.ownerHouseId != null && ownerHouseId != null && preyTarget.ownerHouseId === ownerHouseId
+    if (isOwnHousehold && distFromHome <= ownRadius) {
+      own = { wolfId: wolf.id, protectedAnimalId: preyTarget.animalId, ownHousehold: true }
     }
   }
   return own ?? nearby

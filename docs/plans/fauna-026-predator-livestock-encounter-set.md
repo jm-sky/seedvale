@@ -1,7 +1,7 @@
 # Plan: Predator ↔ livestock encounter set
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-12 — see implementation notes' "Deviation from plan" section for one corrected assumption)
 **Priority:** high · **Effort:** M
 **Depends on:** none
 **Domain:** `fauna`

@@ -317,6 +317,51 @@ A compile-time production-wiring guard is desirable: keep the `Fauna.update` enc
 - `fauna-004`: existing shepherd threat resolver should become reachable without redesign.
 - `quests-progression-019`: already implemented / verification-needed; no retroactive dependency. Any future settlement-threat narrative work should recon/reuse this seam.
 
+## Deviation from plan — `AnimalDef.role` does not equal "is livestock"
+
+Implemented 2026-09-12. Before writing the resolver, current `src/fauna/animalDefs.ts`
+was re-checked and contradicts one assumption repeated through the plan text
+(§3, §11, test items 7/8): it is **not** true that every household/livestock
+species uses `role: 'livestock'`.
+
+Actual roles for the 7 kinds `settlement/livestock.ts` spawns:
+
+```text
+role: 'livestock'  → horse, donkey, cow, dog
+role: 'prey'       → sheep, chicken, rooster
+```
+
+`sheep`/`chicken`/`rooster` deliberately keep `role: 'prey'` so their own
+flee/threat behaviour (`updatePrey()`) works without a separate branch — this
+predates fauna-026 and was not changed by it (per the plan's own "don't
+reclassify role" constraint, correctly followed).
+
+Consequence for the implementation actually shipped:
+
+- `buildHuntableLivestock()` (`src/app/faunaEncounterComposition.ts`) does
+  **not** filter candidates by `role === 'livestock'`. Membership in the
+  caller-supplied loaded-settlement/detached-livestock collections is what
+  makes an agent "livestock" here — it only defensively excludes an
+  (impossible in practice) `role: 'predator'` entry.
+- `AnimalAgent.resolvePreyTarget()`'s current-target revalidation checks
+  `others.includes(target) || huntableLivestock.includes(target)` — i.e. pool
+  membership — instead of branching on `target.def.role`, since a committed
+  livestock target can legitimately have `role: 'prey'` (sheep) or
+  `role: 'livestock'` (cow).
+- `nearestLivestockCandidate()` does not require `role === 'livestock'`
+  either, for the same reason; it only excludes `role: 'predator'`.
+
+None of this changes the plan's actual intent (a bounded, caller-supplied,
+never-merged livestock encounter set feeding the existing predator/chase/
+attack/death path) — it only corrects which field the implementation may
+safely gate on. Test item 8 ("sheep still has `role === 'livestock'`") is
+implemented instead as "sheep keeps its real `animalDefs.ts` role
+(`'prey'`) and is still selected/killed via the livestock encounter set,"
+which is the behaviour that actually matters.
+
+`docs/state/fauna.md` has been updated to state this `role` split explicitly
+so a future plan doesn't re-inherit the same wrong assumption.
+
 ## Implementation order
 
 1. composition helper + tests,

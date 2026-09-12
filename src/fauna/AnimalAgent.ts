@@ -528,7 +528,7 @@ export type AnimalAgentDebugInfo = {
   /** This tick's resolved guard target (plan fauna-011 §9/§10/§15) — `null`
    *  for any non-dog kind, or a dog with nothing to defend against right
    *  now. Not persisted (`AnimalAgent`'s own field doc). */
-  dogGuard: { protectedNpcId: string, ownHousehold: boolean } | null
+  dogGuard: { protectedNpcId?: string, protectedAnimalId?: string, ownHousehold: boolean } | null
   /** Most recent contextual bark trigger (plan fauna-011 §7/§15) — `null`
    *  for any non-dog kind, or before this dog has ever barked. Transient,
    *  not persisted. */
@@ -672,7 +672,12 @@ export function villageFleeBiasFalloff(
  *  tick by `resolveGuardTarget()`. Never itself persisted or cached across
  *  ticks beyond `dogGuardTarget` (a diagnostic/same-tick convenience, not a
  *  sticky commitment) — see that field's doc. */
-type DogGuardTarget = { wolf: AnimalAgent, protectedNpcId: string, ownHousehold: boolean }
+type DogGuardTarget = {
+  wolf: AnimalAgent
+  protectedNpcId?: string
+  protectedAnimalId?: string
+  ownHousehold: boolean
+}
 
 /** How long a vocalization stays "recent" for `recentVocalizeAlert` readers
  *  (plan fauna-011 §8) — short and spatially local by construction (readers
@@ -691,6 +696,7 @@ const preyAlertScratch: PreyAlertCandidate[] = []
 const preyAlertContextScratch: { context: 'ambient' | 'alert' }[] = []
 const dogGuardWolfScratch: DogGuardWolfCandidate[] = []
 const dogGuardNpcTargetScratch: { npcId: string, homeId?: string }[] = []
+const dogGuardPreyTargetScratch: { animalId: string, ownerHouseId?: string }[] = []
 const dogPestScratch: DogPestCandidate[] = []
 const dogHowlScratch: RecentVocalizeCandidate[] = []
 const dogStrangerScratch: StrangerNpcCandidate[] = []
@@ -937,6 +943,20 @@ export type AnimalUpdateContext = {
   /** Bounded world scare impulse (plan world-026). Caller supplies only the
    *  current event, if any; this animal evaluates it at most once. */
   scareStimulus?: AnimalScareStimulus | null
+  /** Bounded/local live household/player livestock candidates for wild
+   *  predator prey acquisition (plan fauna-026) — a caller-assembled,
+   *  read-only per-fauna-pass view (`gameLoop.ts`'s `buildHuntableLivestock`),
+   *  never a second copy of ownership/state. Membership in this set (not
+   *  `def.role`) is what makes an agent huntable-as-livestock: 3 of the 7
+   *  species spawned by `settlement/livestock.ts` (`sheep`/`chicken`/
+   *  `rooster`) keep `role:'prey'` for their own flee behaviour, only
+   *  `horse`/`donkey`/`cow`/`dog` use `role:'livestock'` (`animalDefs.ts`).
+   *  Consulted only by `resolvePreyTarget()` as a second candidate source
+   *  alongside wild `others`/`role:'prey'`; a livestock candidate is never
+   *  appended to `others` itself, and `Fauna.update()` never ticks it.
+   *  Defaults to none so existing wild-fauna/test callers keep prior
+   *  wild-prey-only behaviour. */
+  huntableLivestock?: readonly AnimalAgent[]
 }
 
 /**
@@ -1243,13 +1263,16 @@ export class AnimalAgent {
    *  decision logic; `updatePrey()` recomputes the real check fresh every
    *  tick regardless of this cached copy. */
   private lastPreyAlertThreat: { x: number, z: number } | null = null
-  /** Locked-in live-hunt target for a predator (plan npc-005) — once set,
-   *  `resolvePreyTarget()` keeps chasing this exact prey animal instead of
-   *  re-picking `nearest(others, 'prey', ...)` every tick, which switched
-   *  chase target (and visibly changed direction) whenever a different prey
-   *  animal happened to be momentarily closer. Cleared when the target dies
-   *  or leaves `detectRange` — the same bound `nearest()` already used to
-   *  find it — so a predator can still lose prey that outruns detection. */
+  /** Locked-in live-hunt target for a predator (plan npc-005; extended
+   *  fauna-026 to livestock) — once set, `resolvePreyTarget()` keeps chasing
+   *  this exact prey animal instead of re-picking the nearest wild/livestock
+   *  candidate every tick, which switched chase target (and visibly changed
+   *  direction) whenever a different prey animal happened to be momentarily
+   *  closer. `role:'prey'` and `role:'livestock'` targets are two distinct
+   *  runtime pools (wild `others` vs. caller-supplied `huntableLivestock`),
+   *  so this can be a live reference into either — cleared when the target
+   *  dies, leaves `detectRange`, or loses membership in its own source pool
+   *  (a foreign-pool stream-out/dispose, see `resolvePreyTarget`'s own doc). */
   private preyTarget: AnimalAgent | null = null
   /** Stuck-movement detection + in-flight repath route for one movement
    *  mode, shared with `NpcAgent` (plan npc-006) — reuses
@@ -2196,7 +2219,11 @@ export class AnimalAgent {
       fleeNav: this.navDebugInfo(this.fleeNav),
       ownerHouseId: this.ownerHouseId ?? null,
       dogGuard: this.dogGuardTarget
-        ? { protectedNpcId: this.dogGuardTarget.protectedNpcId, ownHousehold: this.dogGuardTarget.ownHousehold }
+        ? {
+          protectedNpcId: this.dogGuardTarget.protectedNpcId,
+          protectedAnimalId: this.dogGuardTarget.protectedAnimalId,
+          ownHousehold: this.dogGuardTarget.ownHousehold,
+        }
         : null,
       dogVocalizeStimulus: this.lastBarkStimulus,
       preyAlertThreat: this.lastPreyAlertThreat,
@@ -2589,6 +2616,7 @@ export class AnimalAgent {
       playerObservation = DEFAULT_PLAYER_OBSERVATION,
       playerControlPos,
       scareStimulus = null,
+      huntableLivestock = [],
     } = ctx
     this._tickPlayerControlPos = playerControlPos ?? null
     this.attractionConsumeFood = consumeAttractedFood
@@ -2859,7 +2887,7 @@ export class AnimalAgent {
         }
         case 'predator-normal': {
           this.resetHumanThreatState()
-          this.updatePredator(dt, others, attractionSources)
+          this.updatePredator(dt, others, attractionSources, huntableLivestock)
           break
         }
         case 'prey-normal': {
@@ -3493,8 +3521,13 @@ export class AnimalAgent {
     return canPredatorPursueIntoVillage(this.def.kind, this.frenzied)
   }
 
-  private updatePredator(dt: number, others: AnimalAgent[], sources: readonly AnimalAttractionSource[]): void {
-    const prey = this.resolvePreyTarget(others)
+  private updatePredator(
+    dt: number,
+    others: AnimalAgent[],
+    sources: readonly AnimalAttractionSource[],
+    huntableLivestock: readonly AnimalAgent[],
+  ): void {
+    const prey = this.resolvePreyTarget(others, huntableLivestock)
     if (prey && !this.canPursueIntoVillage() && this.isNearVillage(prey.mesh.position)) {
       // Live prey inside the village is not huntable; still allow drink/eat.
       if (this.pursueNeeds(dt, others)) return
@@ -3847,16 +3880,21 @@ export class AnimalAgent {
     return true
   }
 
-  /** Dog guard-target resolution (plan fauna-011 §9/§10/§13) — thin adapter
-   *  over the pure `resolveDogGuardTarget()` (`dogGuard.ts`, unit-tested
-   *  directly): maps live `nearbyPredators` (caller-bounded, see `update()`'s
-   *  param doc) into that function's narrow candidate shape, then resolves
-   *  the winning wolf id back to its live `AnimalAgent` reference (needed by
-   *  `updateDogGuard()`'s movement/`attack()` call, which the pure function
-   *  deliberately never touches). Disengagement (§13) falls out for free:
-   *  this is recomputed fresh every tick from live state, never a sticky
-   *  commitment, so a dead/retargeted wolf or a target that walked outside
-   *  its tier's radius simply stops being returned — no decay timer needed. */
+  /** Dog guard-target resolution (plan fauna-011 §9/§10/§13, extended
+   *  fauna-026 §7 for own-household livestock prey) — thin adapter over the
+   *  pure `resolveDogGuardTarget()` (`dogGuard.ts`, unit-tested directly):
+   *  maps live `nearbyPredators` (caller-bounded, see `update()`'s param
+   *  doc) into that function's narrow candidate shape — including each
+   *  wolf's own `huntingPrey()` commitment, so a wolf hunting this dog's
+   *  own household's livestock reads as an own-household attack exactly
+   *  like one attacking a household NPC — then resolves the winning wolf id
+   *  back to its live `AnimalAgent` reference (needed by `updateDogGuard()`'s
+   *  movement/`attack()` call, which the pure function deliberately never
+   *  touches; the resolved combat target is always the wolf itself, never a
+   *  second combat path). Disengagement (§13) falls out for free: this is
+   *  recomputed fresh every tick from live state, never a sticky commitment,
+   *  so a dead/retargeted wolf or a target that walked outside its tier's
+   *  radius simply stops being returned — no decay timer needed. */
   private resolveGuardTarget(nearbyPredators: readonly AnimalAgent[]): DogGuardTarget | null {
     let n = 0
     for (const wolf of nearbyPredators) {
@@ -3866,6 +3904,7 @@ export class AnimalAgent {
         z: 0,
         dead: false,
         npcTarget: null,
+        preyTarget: null,
       }))
       c.id = wolf.animalId
       c.x = wolf.mesh.position.x
@@ -3879,6 +3918,15 @@ export class AnimalAgent {
         c.npcTarget = target
       } else {
         c.npcTarget = null
+      }
+      const prey = wolf.huntingPrey()
+      if (prey) {
+        const target = scratchAt(dogGuardPreyTargetScratch, n, (): { animalId: string, ownerHouseId?: string } => ({ animalId: '' }))
+        target.animalId = prey.animalId
+        target.ownerHouseId = prey.ownerHouseId
+        c.preyTarget = target
+      } else {
+        c.preyTarget = null
       }
       n++
     }
@@ -3899,7 +3947,12 @@ export class AnimalAgent {
       }
     }
     if (!wolf) return null
-    return { wolf, protectedNpcId: resolved.protectedNpcId, ownHousehold: resolved.ownHousehold }
+    return {
+      wolf,
+      protectedNpcId: resolved.protectedNpcId,
+      protectedAnimalId: resolved.protectedAnimalId,
+      ownHousehold: resolved.ownHousehold,
+    }
   }
 
   /** Dog guard combat/movement (plan fauna-011 §12) — mirrors
@@ -4523,22 +4576,40 @@ export class AnimalAgent {
     if (this.health.dead) this.collapse()
   }
 
-  /** Stable live-hunt target (plan npc-005 — see `preyTarget`'s doc). Keeps
-   *  returning the same committed prey animal while it's alive and still
-   *  within `detectRange`, instead of re-running `nearest()`'s
-   *  closest-candidate scan every tick. Re-picks only once the locked target
-   *  dies or drifts out of range. */
-  private resolvePreyTarget(others: AnimalAgent[]): AnimalAgent | null {
+  /** Stable live-hunt target (plan npc-005 — see `preyTarget`'s doc; extended
+   *  fauna-026 to a second, caller-supplied `huntableLivestock` candidate
+   *  source). Keeps returning the same committed prey animal while it's
+   *  alive, still a member of the wild `others` pool or the
+   *  `huntableLivestock` encounter set it was found in, and still within
+   *  `detectRange`, instead of re-running a closest-candidate scan every
+   *  tick. Membership can't be told apart by `def.role` — 3 of the 7
+   *  household species (`sheep`/`chicken`/`rooster`) keep `role:'prey'` for
+   *  their own flee/threat behaviour (`animalDefs.ts`) and only `horse`/
+   *  `donkey`/`cow`/`dog` use `role:'livestock'` — so this checks the two
+   *  *pools* directly (`others`/`huntableLivestock` are always disjoint by
+   *  construction, see `huntableLivestock`'s own doc) rather than branching
+   *  on role. That membership check matters independently of `health.dead`:
+   *  a foreign pool can dispose the object outright (settlement stream-out),
+   *  so membership is checked before liveness/range, not instead of it.
+   *  Re-picks only once the locked target dies, loses membership, or drifts
+   *  out of range; the re-pick compares the nearest candidate from each
+   *  source and takes the closer one (`pickNearerPreyCandidate`), so wild
+   *  predator → wild prey behaviour is unchanged whenever `huntableLivestock`
+   *  is empty. */
+  private resolvePreyTarget(others: AnimalAgent[], huntableLivestock: readonly AnimalAgent[]): AnimalAgent | null {
     if (this.preyTarget) {
       const target = this.preyTarget
-      const inRange = Math.hypot(
+      const stillMember = others.includes(target) || huntableLivestock.includes(target)
+      const inRange = stillMember && !target.health.dead && Math.hypot(
         target.mesh.position.x - this.mesh.position.x,
         target.mesh.position.z - this.mesh.position.z,
       ) <= this.def.detectRange
-      if (!target.health.dead && inRange) return target
+      if (inRange) return target
       this.preyTarget = null
     }
-    const found = this.nearest(others, 'prey', this.def.detectRange)
+    const wildPrey = this.nearest(others, 'prey', this.def.detectRange)
+    const livestockPrey = this.nearestLivestockCandidate(huntableLivestock)
+    const found = this.pickNearerPreyCandidate(wildPrey, livestockPrey)
     if (found) this.preyTarget = found
     return found
   }
@@ -4565,6 +4636,53 @@ export class AnimalAgent {
     }
     getAgentCpuDiag().recordNearestScan(candidatesChecked)
     return best
+  }
+
+  /** Nearest live candidate within `detectRange` from the caller-supplied
+   *  `huntableLivestock` encounter set only (plan fauna-026) — mirrors
+   *  `nearest()`'s shape but reads the external source instead of `others`,
+   *  since livestock is never merged into the wild pool. Deliberately does
+   *  not require `def.role === 'livestock'` (unlike `nearest()`'s `role`
+   *  filter): the actual household species split their `role` between
+   *  `'prey'` (sheep/chicken/rooster, for their own flee behaviour) and
+   *  `'livestock'` (horse/donkey/cow/dog) — see `resolvePreyTarget`'s doc —
+   *  so a role filter here would silently drop most real livestock. Only
+   *  excludes an (impossible in practice) `role:'predator'` entry as a
+   *  defensive guard against a composition bug upstream, mirroring
+   *  `nearest()`'s own "don't fully trust the caller" stance. */
+  private nearestLivestockCandidate(huntableLivestock: readonly AnimalAgent[]): AnimalAgent | null {
+    let best: AnimalAgent | null = null
+    let bestD = this.def.detectRange
+    let candidatesChecked = 0
+    for (const o of huntableLivestock) {
+      if (o === this || o.def.role === 'predator' || o.health.dead) continue
+      candidatesChecked++
+      const d = Math.hypot(
+        o.mesh.position.x - this.mesh.position.x,
+        o.mesh.position.z - this.mesh.position.z,
+      )
+      if (d < bestD) {
+        bestD = d
+        best = o
+      }
+    }
+    getAgentCpuDiag().recordNearestScan(candidatesChecked)
+    return best
+  }
+
+  /** Deterministic cross-source prey pick (plan fauna-026 §4) — the closer
+   *  of a nearest-wild-prey and nearest-livestock candidate; an exact
+   *  distance tie resolves by stable `animalId` rather than iteration order
+   *  or `Math.random()`. Either side may be `null` (no wild prey in range,
+   *  or an empty/no-match `huntableLivestock`). */
+  private pickNearerPreyCandidate(wild: AnimalAgent | null, livestock: AnimalAgent | null): AnimalAgent | null {
+    if (!wild) return livestock
+    if (!livestock) return wild
+    const wildDist = Math.hypot(wild.mesh.position.x - this.mesh.position.x, wild.mesh.position.z - this.mesh.position.z)
+    const livestockDist = Math.hypot(livestock.mesh.position.x - this.mesh.position.x, livestock.mesh.position.z - this.mesh.position.z)
+    if (wildDist < livestockDist) return wild
+    if (livestockDist < wildDist) return livestock
+    return wild.animalId <= livestock.animalId ? wild : livestock
   }
 
   private steerToward(dest: THREE.Vector3, speed: number, dt: number): void {

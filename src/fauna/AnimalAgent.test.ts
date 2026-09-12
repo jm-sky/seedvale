@@ -11,6 +11,7 @@ import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { horseNameForAnimal } from './animalNames'
 import { type AnimalScareStimulus, scareFleeOrigin, shouldScare } from './animalScare'
 import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
+import { senseOwnedFlockThreat } from './shepherdFlock'
 
 const sampleHeight = () => 0
 const sampleLocalWater = () => DRY_WATER_SAMPLE
@@ -778,6 +779,213 @@ describe('AnimalAgent', () => {
       expect(sheep.isStrayActive()).toBe(true)
       expect(sheep.hasActiveTrip()).toBe(false)
       expect(Math.hypot(sheep.mesh.position.x, sheep.mesh.position.z)).toBeGreaterThan(6)
+    })
+  })
+
+  describe('predator ↔ livestock encounter set (plan fauna-026)', () => {
+    /** Player kept far enough away that `senseEnvironment` never reports it
+     *  active, and `others`/`huntableLivestock` are two genuinely separate
+     *  arrays — never merged — matching the plan's "two production pools"
+     *  requirement instead of a single shared array. */
+    function tick(
+      wolf: AnimalAgent,
+      others: AnimalAgent[],
+      huntableLivestock: readonly AnimalAgent[],
+      dt = 1,
+    ): void {
+      wolf.update({
+        dt,
+        others,
+        huntableLivestock,
+        observerPos: new THREE.Vector3(1000, 0, 1000),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+    }
+
+    function makeWolf(id: string, x = 0, z = 0): AnimalAgent {
+      return new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: id, x, z }))
+    }
+
+    function makeSheep(id: string, x: number, z: number, ownerHouseId?: string): AnimalAgent {
+      return new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.sheep, animalId: id, x, z, ownerHouseId }))
+    }
+
+    it('a wild wolf with only wild agents in `others` can commit to a household sheep passed separately as `huntableLivestock`', () => {
+      const wolf = makeWolf('wolf-1')
+      const sheep = makeSheep('sheep-1', 5, 0, 'house-1')
+      tick(wolf, [wolf], [sheep])
+      expect(wolf.huntingPrey()).toEqual({ animalId: 'sheep-1', ownerHouseId: 'house-1' })
+      // The fix is a composition seam, not a taxonomy migration.
+      expect(sheep.def.role).toBe(ANIMAL_DEFS.sheep.role)
+    })
+
+    it('picks the nearer of a wild-pool prey and a livestock-pool candidate', () => {
+      const wolfNear = makeWolf('wolf-near')
+      const deerFar = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-far', x: 10, z: 0 }))
+      const sheepClose = makeSheep('sheep-close', 2, 0, 'house-1')
+      tick(wolfNear, [wolfNear, deerFar], [sheepClose])
+      expect(wolfNear.huntingPrey()?.animalId).toBe('sheep-close')
+
+      const wolfFarLivestock = makeWolf('wolf-far-livestock')
+      const deerClose = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-close', x: 2, z: 0 }))
+      const sheepFar = makeSheep('sheep-far', 10, 0, 'house-1')
+      tick(wolfFarLivestock, [wolfFarLivestock, deerClose], [sheepFar])
+      expect(wolfFarLivestock.huntingPrey()?.animalId).toBe('deer-close')
+    })
+
+    it('resolves an exact-distance tie deterministically by animalId, never Math.random()', () => {
+      const wolf = makeWolf('wolf-tie')
+      const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'deer-1', x: 5, z: 0 }))
+      const sheep = makeSheep('sheep-1', 0, 5, 'house-1')
+      tick(wolf, [wolf, deer], [sheep])
+      // 'deer-1' <= 'sheep-1' lexicographically — the wild candidate wins the tie.
+      expect(wolf.huntingPrey()?.animalId).toBe('deer-1')
+    })
+
+    it('never targets a livestock candidate outside detectRange', () => {
+      const wolf = makeWolf('wolf-range')
+      const sheep = makeSheep('sheep-out-of-range', ANIMAL_DEFS.wolf.detectRange + 5, 0, 'house-1')
+      tick(wolf, [wolf], [sheep])
+      expect(wolf.huntingPrey()).toBeNull()
+    })
+
+    it('drops a committed livestock target the instant it disappears from the next encounter set, without one more hit', () => {
+      const wolf = makeWolf('wolf-drop')
+      const sheep = makeSheep('sheep-drop', 0.5, 0, 'house-1') // inside CONTACT_RANGE
+      tick(wolf, [wolf], [sheep])
+      expect(wolf.huntingPrey()?.animalId).toBe('sheep-drop')
+      const hpAfterCommit = sheep.health.currentHp
+
+      // Settlement stream-out: sheep is no longer in this frame's encounter set.
+      tick(wolf, [wolf], [])
+      expect(wolf.huntingPrey()).toBeNull()
+      expect(sheep.health.currentHp).toBe(hpAfterCommit)
+    })
+
+    it('chases and kills a household sheep through the real update/attack/damage/death path, firing onDeath exactly once', () => {
+      const deaths: string[] = []
+      const wolf = makeWolf('wolf-killer')
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-victim',
+        x: 0.5,
+        z: 0, // inside CONTACT_RANGE from the start — isolates combat from movement/stamina.
+        ownerHouseId: 'house-1',
+        onDeath: (id) => deaths.push(id),
+      }))
+      for (let i = 0; i < 10 && !sheep.isDead(); i++) tick(wolf, [wolf], [sheep])
+      expect(sheep.isDead()).toBe(true)
+      expect(deaths).toEqual(['sheep-victim'])
+      // Once dead, the wolf can no longer be "hunting" it.
+      expect(wolf.huntingPrey()).toBeNull()
+    })
+
+    it('persistence regression: a predator-killed household sheep still captures with dead state preserved, through the same LivestockRegistry every other death cause uses', async () => {
+      const { createLivestockRegistry } = await import('../settlement/livestock')
+      const wolf = makeWolf('wolf-persist')
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-persist',
+        x: 0.5,
+        z: 0,
+        ownerHouseId: 'house-1',
+      }))
+      for (let i = 0; i < 10 && !sheep.isDead(); i++) tick(wolf, [wolf], [sheep])
+      expect(sheep.isDead()).toBe(true)
+
+      const registry = createLivestockRegistry()
+      registry.capture('home', [sheep])
+      const { entries } = registry.serialize()
+      expect(entries).toHaveLength(1)
+      expect(entries[0]!.animalId).toBe('sheep-persist')
+      expect(entries[0]!.health.dead).toBe(true)
+    })
+
+    it('never appends a livestock candidate into the wild pool or ticks it from Fauna\'s own loop (no double interaction)', () => {
+      const wolf = makeWolf('wolf-no-merge')
+      const sheep = makeSheep('sheep-no-merge', 5, 0, 'house-1')
+      const others = [wolf]
+      tick(wolf, others, [sheep])
+      expect(others).toEqual([wolf]) // untouched — livestock never appended to `others`
+    })
+
+    it('a real committed household-livestock kill flows into `senseOwnedFlockThreat()` for the right household and not a foreign one', () => {
+      const wolf = makeWolf('wolf-shepherd')
+      const sheep = makeSheep('sheep-flock', 3, 0, 'house-1')
+      tick(wolf, [wolf], [sheep])
+      const prey = wolf.huntingPrey()
+      expect(prey).not.toBeNull()
+
+      const candidate = {
+        animalId: wolf.animalId,
+        kind: wolf.def.kind,
+        x: wolf.mesh.position.x,
+        z: wolf.mesh.position.z,
+        preyAnimalId: prey!.animalId,
+        preyOwnerHouseId: prey!.ownerHouseId,
+      }
+      expect(senseOwnedFlockThreat(0, 0, 'house-1', [candidate])).toEqual(candidate)
+      expect(senseOwnedFlockThreat(0, 0, 'house-2', [candidate])).toBeNull()
+    })
+
+    it('own household dog guard picks up a wolf hunting its own household\'s livestock, and drops it once the prey is gone (plan fauna-026 §7 / fauna-011)', () => {
+      const wolf = makeWolf('wolf-guarded', 5, 0)
+      const sheep = makeSheep('sheep-guarded', 7, 0, 'house-1')
+      tick(wolf, [wolf], [sheep]) // wolf commits to the household's sheep
+      expect(wolf.huntingPrey()?.animalId).toBe('sheep-guarded')
+
+      const dog = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.dog, animalId: 'dog-1', x: 0, z: 0, ownerHouseId: 'house-1' }))
+      dog.update({
+        dt: 1,
+        others: [dog],
+        nearbyPredators: [wolf],
+        observerPos: new THREE.Vector3(1000, 0, 1000),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(dog.getDebugInfo().dogGuard).toEqual({
+        protectedNpcId: undefined,
+        protectedAnimalId: 'sheep-guarded',
+        ownHousehold: true,
+      })
+
+      // Kill the sheep outright — the wolf has nothing left to hunt.
+      sheep.takeDamage(9999)
+      tick(wolf, [wolf], [])
+      expect(wolf.huntingPrey()).toBeNull()
+
+      dog.update({
+        dt: 1,
+        others: [dog],
+        nearbyPredators: [wolf],
+        observerPos: new THREE.Vector3(1000, 0, 1000),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(dog.getDebugInfo().dogGuard).toBeNull()
+    })
+
+    it('a wolf hunting a foreign household\'s livestock does not trigger this dog\'s own-household guard', () => {
+      const wolf = makeWolf('wolf-foreign', 5, 0)
+      const sheep = makeSheep('sheep-foreign', 7, 0, 'house-2')
+      tick(wolf, [wolf], [sheep])
+      expect(wolf.huntingPrey()?.ownerHouseId).toBe('house-2')
+
+      const dog = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.dog, animalId: 'dog-2', x: 0, z: 0, ownerHouseId: 'house-1' }))
+      dog.update({
+        dt: 1,
+        others: [dog],
+        nearbyPredators: [wolf],
+        observerPos: new THREE.Vector3(1000, 0, 1000),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(dog.getDebugInfo().dogGuard).toBeNull()
     })
   })
 })
