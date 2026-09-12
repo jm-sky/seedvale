@@ -77,6 +77,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-020-profession-quests-guard-rewards-and-wildlife-help.md` | -       | 🔴 | L      | fauna-022, fauna-023, quests-progression-019 |
 | ◼️ `world-terrain-024-dungeon-cave-archetype.md`                               | -       | 🟡 | M      | ~~world-terrain-020~~ |
 | 💡 `settlements-npcs-034-household-wood-authority-and-repair-correctness.md`   | -       | 🔴 | M      | ~~settlements-007~~, ~~settlements-npcs-015~~, ~~settlements-npcs-032~~ |
+| 💡 `fauna-026-predator-livestock-encounter-set.md`                             | -       | 🔴 | M      | -      |
 
 ---
 
@@ -182,7 +183,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `026`
+- fauna: `027`
 - items-player: `031`
 - npc: `039`
 - persistence: `005`
