@@ -79,7 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
-| ◼️ `quests-progression-022-lazy-social-news-propagation-and-reputation-catch-up.md` | -       | 🔴 | L      | ~~quests-progression-019~~ |
+| 💡 `quests-progression-022-lazy-social-news-propagation-and-reputation-catch-up.md` | -       | 🔴 | L      | ~~quests-progression-019~~ |
 
 ---
 
