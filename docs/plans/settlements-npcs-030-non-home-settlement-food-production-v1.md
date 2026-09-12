@@ -7,7 +7,7 @@
 **Domain:** `settlements-npcs`  
 **Type:** `feature`  
 **Roadmap:** `agriculture-and-cultivation`  
-**Implemented at:** 2026-09-12  
+**Implemented at:** 2026-09-12 09:23   
 
 ## Cel
 
