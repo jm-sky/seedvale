@@ -989,6 +989,24 @@ Generated from TypeScript imports.
 
 - `main.ts`
 
+## `app/faunaEncounterComposition.test.ts`
+
+**Imports**
+
+- `app/faunaEncounterComposition.ts`
+- `fauna/AnimalAgent.ts`
+
+## `app/faunaEncounterComposition.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+
+**Imported by**
+
+- `app/faunaEncounterComposition.test.ts`
+- `app/gameLoop.ts`
+
 ## `app/gameLoop.ts`
 
 **Imports**
@@ -999,6 +1017,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyAction.ts`
+- `app/faunaEncounterComposition.ts`
 - `app/inspection/inspectionTarget.ts`
 - `app/interactables.ts`
 - `app/modalState.ts`

@@ -4,28 +4,28 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 950
+- `AnimalAgent` — class — line 970
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
 - `AnimalAgentDebugInfo` — type — line 474
-- `AnimalAgentDeps` — type — line 788
+- `AnimalAgentDeps` — type — line 794
 - `AnimalSaveState` — type — line 584
-- `AnimalUpdateContext` — type — line 832
+- `AnimalUpdateContext` — type — line 838
 - `BURY_DURATION_SEC` — const — line 335
 - `canPredatorPursueIntoVillage` — function — line 652
 - `FAUNA_SHADOW_DISTANCE` — const — line 304
 - `FaunaAiBranch` — type — line 453
 - `FaunaNavRescueDebugInfo` — type — line 458
 - `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 395
-- `FrenzyWolfCandidate` — type — line 723
+- `FrenzyWolfCandidate` — type — line 729
 - `HARVEST_MEAT_DURATION_SEC` — const — line 338
 - `isWithinVillageRadius` — function — line 633
-- `NearbyNpcCandidate` — type — line 718
-- `pickNearestEligibleWolf` — function — line 732
-- `pickRabidTarget` — function — line 757
+- `NearbyNpcCandidate` — type — line 724
+- `pickNearestEligibleWolf` — function — line 738
+- `pickRabidTarget` — function — line 763
 - `RABIES_BITE_INFECTION_CHANCE` — const — line 322
 - `villageFleeBiasFalloff` — function — line 660
 - `VillageInfo` — type — line 627
@@ -407,22 +407,22 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `clearsRiverChannel` — function — line 258
-- `createFauna` — function — line 518
+- `clearsRiverChannel` — function — line 273
+- `createFauna` — function — line 533
 - `Fauna` — type — line 89
-- `FAUNA_URLS` — const — line 442
-- `findHomeCaveSpawner` — function — line 401
-- `isDeerEdgeHabitat` — function — line 289
-- `isNearRoadCorridor` — function — line 270
-- `measureSlope` — function — line 328
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 418
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 426
-- `SPAWNER_LABELS` — const — line 410
-- `SPAWNER_RING_OFFSET` — const — line 229
-- `SPAWNER_SPECS` — const — line 364
-- `spawnerDestroyBusyLabel` — function — line 437
-- `spawnerDestroyPromptLabel` — function — line 433
-- `spawnerId` — function — line 394
+- `FAUNA_URLS` — const — line 457
+- `findHomeCaveSpawner` — function — line 416
+- `isDeerEdgeHabitat` — function — line 304
+- `isNearRoadCorridor` — function — line 285
+- `measureSlope` — function — line 343
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 433
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 441
+- `SPAWNER_LABELS` — const — line 425
+- `SPAWNER_RING_OFFSET` — const — line 244
+- `SPAWNER_SPECS` — const — line 379
+- `spawnerDestroyBusyLabel` — function — line 452
+- `spawnerDestroyPromptLabel` — function — line 448
+- `spawnerId` — function — line 409
 
 ## `fauna/dogGuard.ts`
 
@@ -432,15 +432,15 @@ Generated from exported TypeScript symbols.
 - `DOG_GUARD_ASSIST_RADIUS` — const — line 27
 - `DOG_GUARD_OWN_RADIUS` — const — line 22
 - `DOG_PEST_RADIUS` — const — line 16
-- `DogBarkStimulus` — type — line 129
-- `DogGuardTargetResolved` — type — line 55
-- `DogGuardWolfCandidate` — type — line 47
-- `DogPestCandidate` — type — line 101
-- `RecentVocalizeCandidate` — type — line 136
-- `resolveDogBarkStimulus` — function — line 155
-- `resolveDogGuardTarget` — function — line 73
-- `resolveDogPestTarget` — function — line 111
-- `StrangerNpcCandidate` — type — line 138
+- `DogBarkStimulus` — type — line 150
+- `DogGuardTargetResolved` — type — line 60
+- `DogGuardWolfCandidate` — type — line 51
+- `DogPestCandidate` — type — line 122
+- `RecentVocalizeCandidate` — type — line 157
+- `resolveDogBarkStimulus` — function — line 176
+- `resolveDogGuardTarget` — function — line 88
+- `resolveDogPestTarget` — function — line 132
+- `StrangerNpcCandidate` — type — line 159
 
 ## `fauna/faunaCombat.ts`
 

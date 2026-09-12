@@ -264,11 +264,17 @@ Generated from exported TypeScript symbols.
   - integration: Wires world, player, UI, persistence and audio systems together.
 - `NewAppOptions` — type — line 268
 
+## `app/faunaEncounterComposition.ts`
+
+- `buildHuntableLivestock` — function — line 29
+  - domain: app
+  - role: Bounded, read-only per-fauna-pass view of currently materialized household/player livestock — the composition seam feeding wild predator prey acquisition (plan fauna-026). Pure and stateless beyond the two caller-owned scratch buffers it's given: never ticks livestock, never mutates ownership/household state, never queries `LivestockRegistry`. Caller (`gameLoop.ts`) must assemble this after `SettlementsManager.update()` (so this frame's stream-in/out is already reflected) and before `Fauna.update()`.
+
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 655
-- `GameLoop` — type — line 619
-- `GameLoopDeps` — type — line 300
+- `createGameLoop` — function — line 661
+- `GameLoop` — type — line 620
+- `GameLoopDeps` — type — line 301
 
 ## `app/graphicsSettings.ts`
 

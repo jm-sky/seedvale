@@ -14,6 +14,7 @@ Generated from TypeScript imports.
 - `fauna/animalNames.ts`
 - `fauna/animalScare.ts`
 - `fauna/herdCohesion.ts`
+- `fauna/shepherdFlock.ts`
 - `terrain/waterSample.ts`
 - `world/createGrassForagePatches.ts`
 
@@ -84,6 +85,8 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/createApp.ts`
+- `app/faunaEncounterComposition.test.ts`
+- `app/faunaEncounterComposition.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
 - `assets/assetIndex.ts`
@@ -1006,6 +1009,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `fauna/AnimalAgent.test.ts`
 - `fauna/shepherdFlock.test.ts`
 - `settlement/createSettlement.ts`
 - `settlement/livestock.ts`
