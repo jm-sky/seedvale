@@ -57,7 +57,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| ✅ `quests-progression-020-hunter-profession-quests-and-wildlife-help.md`      | -       | 🟢 | M      | ~~fauna-023~~ |
 | 💡 `quests-progression-021-guard-rewards-and-evening-settlement-duty.md`       | -       | 🔴 | M      | ~~fauna-022~~, ~~quests-progression-019~~ |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | ~~items-player-027~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
