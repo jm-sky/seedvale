@@ -24,15 +24,15 @@ import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { TransportOrders } from '../world/createTransportOrders'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
-import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
+import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TransportEndpointRef } from '../world/transportOrder'
 import type { WeatherState } from '../world/weather'
-import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import type { TerrainSamplers } from './settlementTerrain'
 import { createEconomyRegistry } from '../economy'
+import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import {
@@ -145,6 +145,7 @@ export type SettlementsManager = {
     playerObservation?: import('../simulation/observation').PlayerObservationInput,
     /** Dead wild fauna from the loaded `Fauna` (plan settlements-npcs-029). */
     nearbyWildCorpses?: readonly AnimalAgent[],
+    scareStimulus?: import('../fauna/animalScare').AnimalScareStimulus | null,
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -785,7 +786,7 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z, nowDays ?? 0, dayLengthSec)
       }
@@ -807,6 +808,7 @@ export async function createSettlementsManager(
           nearbyPredators,
           playerObservation,
           nearbyWildCorpses,
+          scareStimulus,
         )
       }
       if (detachedLivestock.length > 0) {
@@ -828,6 +830,7 @@ export async function createSettlementsManager(
           playerObservation,
           playerControlPos: { x: playerPos.x, z: playerPos.z },
           resolvePersistenceSettlementId: (animal) => detachedOriginById.get(animal.animalId) ?? 'detached',
+          scareStimulus,
         })
         for (const [animalId, animal] of detachedById) {
           if (!detachedLivestock.includes(animal)) {

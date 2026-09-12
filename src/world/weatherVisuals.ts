@@ -28,6 +28,7 @@ const WEATHER_VISUAL_PROFILES: Record<WeatherType, WeatherVisualProfile> = {
   clear: { lightScale: 1, fogNearMul: 1, fogFarMul: 1, fogTint: null, fogTintStrength: 0 },
   cloudy: { lightScale: 0.8, fogNearMul: 0.8, fogFarMul: 0.85, fogTint: 0x8a97a3, fogTintStrength: 0.35 },
   rain: { lightScale: 0.62, fogNearMul: 0.45, fogFarMul: 0.55, fogTint: 0x5c6b78, fogTintStrength: 0.55 },
+  storm: { lightScale: 0.4, fogNearMul: 0.32, fogFarMul: 0.4, fogTint: 0x3a4654, fogTintStrength: 0.72 },
   fog: { lightScale: 0.75, fogNearMul: 0.12, fogFarMul: 0.32, fogTint: 0xc7cdd2, fogTintStrength: 0.75 },
   snow: { lightScale: 0.78, fogNearMul: 0.6, fogFarMul: 0.65, fogTint: 0xdfe6ec, fogTintStrength: 0.5 },
 }
@@ -58,6 +59,30 @@ export function applyWeatherOverlay(
     fogNear: clampedNear,
     fogFar: Math.max(clampedNear + 6, fogFar),
     lightScale,
+  }
+}
+
+const tmpFlashFog = new Color()
+
+/**
+ * Short lightning flash on top of the weather overlay — does not mutate the
+ * underlying day/night or weather profile, only the presentation copy.
+ *
+ * @domain world
+ */
+export function applyLightningFlash(
+  overlay: WeatherVisualOverlay,
+  flashAmount: number,
+): WeatherVisualOverlay {
+  if (flashAmount <= 0) return overlay
+  const t = flashAmount > 1 ? 1 : flashAmount
+  tmpFlashFog.setHex(overlay.fogColor)
+  tmpFlashFog.lerp(tmpTintColor.setHex(0xf4f0e4), t * 0.55)
+  return {
+    fogColor: tmpFlashFog.getHex(),
+    fogNear: overlay.fogNear,
+    fogFar: overlay.fogFar,
+    lightScale: overlay.lightScale + t * 1.85,
   }
 }
 

@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](../assets/README.md)), stanem implementacji ([STATE.md](../STATE.md)), domeną wody ([WATER.md](../state/water.md)), ani planem ([plans/](../plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-09-02
+**Last updated:** 2026-09-12
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](../state/water.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -38,7 +38,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G10 | Asset alignment browser **Game-like** mode reuses `createRenderer` / `createLights` / `createSky` / `skyParamsFromTime` — no parallel preview rig. Post-processing composer runs in **single-view only** (not 4-up). | `src/tools/assetBrowser/`, plan [088](../plans/archive/2026-08-12--088--asset-alignment-browser.md) |
 | G11 | Profile jakości Low/Medium/High/Custom sterują **tylko gałkami live** (pixel ratio, AO/bloom/god rays, odbicia, shadow map, LOD scale). Nie zastępują optymalizacji architektury i nie rebuildują świata. | `src/config/qualityProfiles.ts`, plan [103](../plans/archive/2026-08-13--103--performance-diagnostics-benchmark.md) |
 | G12 | Third-person kamera zostaje **poza heightfieldem i dużymi colliderami** (domy): boom jest skracany wzdłuż odcinka look-at → desired, bez teleportu gracza i bez osobnego raycastu sceny. | `src/player/cameraBoom.ts`, issue [032](../issues/2026-08-15--032--mobile-black-world-screen.md) |
-| G13 | Deszcz = **wąska pionowa kreska** (`uWidthFrac = 0.35` w `gl_PointCoord.x`); śnieg = **pełny kwadrat sprite'a** (`uWidthFrac = 1`). Wysokość/długość zostaje `gl_PointSize` — nie zwężać deszczu przez `RAIN_SIZE`. Wspólny shader rain/snow. | `src/world/weatherParticles.ts` |
+| G13 | Deszcz = **wąska pionowa kreska** (`uWidthFrac = 0.35` w `gl_PointCoord.x`); śnieg = **proceduralna maska płatka** (`uFlakeMask`, miękki nieregularny kształt z `gl_PointCoord`, bez tekstury). Wysokość/długość zostaje `gl_PointSize` — nie zwężać deszczu przez `RAIN_SIZE`. Wspólny shader rain/snow. | `src/world/weatherParticles.ts` |
 | G14 | `PointLight`'s `distance` (3. arg konstruktora) to **tylko hard cutoff**, nie dźwignia zasięgu. Przy `decay: 2` (fizyczny inverse-square — używany wszędzie w projekcie) jasność w danym punkcie to już ~`intensity / distance²` na długo przed cutoffem. Podbicie `distance` bez podbicia `intensity` **nie zmienia nic widocznego**. Dźwignia "świeci dalej" = **intensity**. | `src/settlement/houseLighting.ts`, `src/player/torchLightPresets.ts`, `src/settlement/campfireProps.ts` |
 | G15 | Materiał GLB z `loadGltf.ts` cache'u jest **jeden obiekt na URL, dzielony przez referencję** między wszystkimi klonami (`sharedGpu`). JS-side override (`material.transparent = true` itp.) w runtime realnie działa, ale subtelna wartość (np. `opacity: 0.7` na jasnym emissive materiale, na tle nocnego nieba) potrafi wizualnie nie różnić się od opaque. Dla efektu, który ma być **jednolity na każdym klonie danego assetu**, wypiecz zmianę w samym GLB (`alphaMode: BLEND`, `baseColorFactor` alpha, `emissiveFactor`) zamiast patchować w JS — patrz log 2026-08-19 po recepturę edycji binarnej bez zewnętrznych narzędzi. | `public/models/settlement/torch.glb`, `src/settlement/houseLighting.ts` |
 | G16 | `shared/getFireParticles.ts`'s trzy presety (`createSparks`/`createEmbers`/`createIgniteBurst`) są tuningowane pod **ognisko na ziemi** — jeden argument `scale` skaluje `size`/`upSpeed`/`spawnRadius` razem, więc "ekonomiczny" mały `scale` (np. 0.35) dla efektu w innym kontekście (np. pochodnia na słupie) robi cząstki jednocześnie mniejsze *i* wolniejsze/niżej latające. Dla nowego kontekstu dodaj **osobny preset** (patrz `createTorchSparks`) zamiast przeskalowywać istniejący w dół. | `src/shared/getFireParticles.ts` |
@@ -64,6 +64,11 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-09-12 — Storm lightning flash + snow flake mask (plan world-026) 🔧
+
+- Snow no longer skips the fragment mask: `uFlakeMask` draws a soft irregular flake from `gl_PointCoord` (no texture, no CPU particle loop). Rain streak mask is unchanged. G13.
+- Storm reuses the existing weather overlay + rain GPU emitter (higher density/drift) plus a short lightning flash on sun/ambient/hemi/fog. Flash does not mutate day/night state or rebuild chunks.
 
 ### 2026-09-02 — Grass filler coverage + road near-field surface detail (plan world-terrain-005) 🔧
 

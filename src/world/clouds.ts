@@ -68,6 +68,7 @@ const WEATHER_CATEGORY_WEIGHTS: Record<WeatherType, Readonly<Record<CloudCategor
   clear: { light: 0.85, dense: 0.15 },
   cloudy: { light: 0.35, dense: 0.65 },
   rain: { light: 0.05, dense: 0.95 },
+  storm: { light: 0.02, dense: 0.98 },
   snow: { light: 0.2, dense: 0.8 },
   fog: { light: 0.85, dense: 0.15 },
 }
@@ -122,6 +123,7 @@ const CLOUD_VISUAL_PROFILES: Record<WeatherType, CloudVisualProfile> = {
   clear: { coverage: 0.15, tint: 0xffffff },
   cloudy: { coverage: 0.85, tint: 0xe8ecf1 },
   rain: { coverage: 0.95, tint: 0x5b6673 },
+  storm: { coverage: 1, tint: 0x3a4450 },
   snow: { coverage: 0.75, tint: 0xf4f7fa },
   fog: { coverage: 0.15, tint: 0xffffff },
 }

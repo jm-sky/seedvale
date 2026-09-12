@@ -473,3 +473,17 @@ If `weatherSounds.ts` is refactored enough to warrant tests, inject/mock the exi
 For new important public weather/event/scare functions add concise JSDoc with `@domain world` or `@domain fauna` so preflight/code-map discovery can find the seam without another broad recon.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+## Implemented (2026-09-12)
+
+Code is authoritative; this section records the V1 seams, not a second spec.
+
+- `WeatherType` includes `storm`. `isRainWeather()` is a type predicate used for wetness, rain exposure, gardens, particles, rain loop, and NPC shelter pressure. Storm has its own visual/cloud/audio/pressure profile and temperature delta.
+- Lightning lives in `src/world/lightningEvents.ts` (not `stormEvents.ts`). The cycle schedule is pure and non-positional: `eventId`, `strength`, `simulatedDistanceM`, `flashAtDays`, `thunderDelaySec`. No player/camera `x/z`.
+- `createLightningRuntime()` is the presentation cursor. Flash starts when world time crosses `flashAtDays`. Thunder cue and scare stimulus emit together after `thunderDelaySec`. Time-skip (`present: false` or a large world-dt jump) consumes the event without flash/thunder/scare. Nothing is persisted.
+- Thunder audio uses `worldAudio.playOnce()` with volume from simulated distance and cave muffle. Clips `/sounds/weather-thunder-01.ogg`…`03.ogg` are documented as S28 `needed` and currently silent. Storm rain reuses the rain loop louder; storm wind reuses the existing wind loop.
+- `AnimalScareStimulus` is `{ source, eventId, strength, simulatedDistanceM }`. Probability uses acoustic distance plus home/owner/herd; species `AnimalDef.fearBaseline` is the sensitivity field. Failed roll does not change movement. Success records a hash-derived flee origin via `scareFleeOrigin(eventId, animalId)` and reuses `fleeFrom()`. `clampBounds()` skips while the scare impulse is active so the displacement is real; it does not set `stray`.
+- Stimulus is forwarded only through `tickSettlementLivestock()` (settlement + detached livestock). No global fauna scan.
+- Snow flake mask is a `uFlakeMask` branch in the existing GPU fragment shader. Rain streak mask, fixed buffers, and quality ceiling are unchanged.
+- Debug forced weather includes `storm` through the existing `ClimateState.forced` / GUI weather list.
+

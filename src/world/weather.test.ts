@@ -10,6 +10,7 @@ import {
   DAYS_PER_YEAR,
   getSeason,
   getSeasonProgress,
+  isRainWeather,
   temperatureFor,
   tickClimate,
   WEATHER_CYCLE_DAYS,
@@ -63,6 +64,25 @@ describe('computeWeather', () => {
   it('never picks snow in summer (weight 0)', () => {
     for (let cycle = 0; cycle < 100; cycle++) {
       expect(computeWeather(7, cycle * 0.3, 'summer').type).not.toBe('snow')
+    }
+  })
+
+  it('can pick storm in summer and is deterministic for the same inputs', () => {
+    let found = false
+    for (let cycle = 0; cycle < 400; cycle++) {
+      const days = cycle * WEATHER_CYCLE_DAYS
+      const a = computeWeather(11, days, 'summer')
+      const b = computeWeather(11, days, 'summer')
+      expect(a).toEqual(b)
+      if (a.type === 'storm') found = true
+    }
+    expect(found).toBe(true)
+  })
+
+  it('does not pick unintended zero-weight types', () => {
+    for (let cycle = 0; cycle < 80; cycle++) {
+      expect(computeWeather(7, cycle * WEATHER_CYCLE_DAYS, 'summer').type).not.toBe('snow')
+      expect(computeWeather(7, cycle * WEATHER_CYCLE_DAYS, 'spring').type).not.toBe('snow')
     }
   })
 
@@ -120,7 +140,7 @@ describe('computeSurfaceWeather', () => {
     for (let cycle = 0; cycle < 5000; cycle++) {
       const days = cycle * cycleDays
       const w = computeWeather(seed, days, getSeason(days))
-      if (w.type === 'rain' || w.type === 'snow') {
+      if (isRainWeather(w.type) || w.type === 'snow') {
         lastWetDay = days
       } else if (lastWetDay >= 0 && days - lastWetDay >= margin) {
         probeDays = days
@@ -139,7 +159,7 @@ describe('computeSurfaceWeather', () => {
     let rainCycleStart = -1
     for (let cycle = 0; cycle < 500; cycle++) {
       const days = cycle * cycleDays
-      if (computeWeather(seed, days, getSeason(days)).type === 'rain') {
+      if (isRainWeather(computeWeather(seed, days, getSeason(days)).type)) {
         rainCycleStart = days
         break
       }
@@ -237,6 +257,16 @@ describe('computeSnowExposureDays', () => {
   })
 })
 
+describe('isRainWeather', () => {
+  it('treats rain and storm as precipitation, nothing else', () => {
+    expect(isRainWeather('rain')).toBe(true)
+    expect(isRainWeather('storm')).toBe(true)
+    expect(isRainWeather('snow')).toBe(false)
+    expect(isRainWeather('clear')).toBe(false)
+    expect(isRainWeather('fog')).toBe(false)
+  })
+})
+
 describe('computeRainExposureDays (plan world-009 §6)', () => {
   it('is 0 for an empty or inverted span', () => {
     expect(computeRainExposureDays(7, 5, 5)).toBe(0)
@@ -265,7 +295,7 @@ describe('computeRainExposureDays (plan world-009 §6)', () => {
       const overlap = Math.min(cycleEnd, to) - Math.max(cycleStart, from)
       if (overlap <= 0) continue
       const w = computeWeather(seed, cycleStart, getSeason(cycleStart))
-      if (w.type === 'rain') expected += overlap * w.intensity
+      if (isRainWeather(w.type)) expected += overlap * w.intensity
     }
     expect(computeRainExposureDays(seed, from, to)).toBeCloseTo(expected, 10)
   })

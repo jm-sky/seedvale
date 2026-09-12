@@ -6,10 +6,10 @@
  *  umożliwiać bezpośrednie wyznaczenie pogody dla dowolnego momentu świata"). */
 
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter'
-export type WeatherType = 'clear' | 'cloudy' | 'rain' | 'fog' | 'snow'
+export type WeatherType = 'clear' | 'cloudy' | 'rain' | 'fog' | 'snow' | 'storm'
 
 const SEASON_ORDER: readonly Season[] = ['spring', 'summer', 'autumn', 'winter']
-const WEATHER_TYPES: readonly WeatherType[] = ['clear', 'cloudy', 'rain', 'fog', 'snow']
+const WEATHER_TYPES: readonly WeatherType[] = ['clear', 'cloudy', 'rain', 'fog', 'snow', 'storm']
 
 export const SEASON_LABELS: Record<Season, string> = {
   spring: 'Wiosna',
@@ -24,6 +24,7 @@ export const WEATHER_LABELS: Record<WeatherType, string> = {
   rain: 'Deszcz',
   fog: 'Mgła',
   snow: 'Śnieg',
+  storm: 'Burza',
 }
 
 /** Canonical calendar (plan fauna-004): 12 world-days per season, 48-day year.
@@ -45,10 +46,10 @@ export function getSeasonProgress(elapsedDays: number): number {
 /** Weighted odds per plan §8 ("wagi, a nie twarde reguły") — a weight of 0
  *  means "never in this season" (no snow in summer). */
 const SEASON_WEATHER_WEIGHTS: Record<Season, Record<WeatherType, number>> = {
-  spring: { clear: 3, cloudy: 4, rain: 4, fog: 3, snow: 0 },
-  summer: { clear: 6, cloudy: 3, rain: 2, fog: 0.5, snow: 0 },
-  autumn: { clear: 2, cloudy: 4, rain: 4, fog: 3, snow: 0.5 },
-  winter: { clear: 2, cloudy: 3.5, rain: 0.5, fog: 1.5, snow: 4 },
+  spring: { clear: 3, cloudy: 4, rain: 3.5, fog: 3, snow: 0, storm: 0.9 },
+  summer: { clear: 5.5, cloudy: 3, rain: 1.6, fog: 0.5, snow: 0, storm: 1.4 },
+  autumn: { clear: 2, cloudy: 4, rain: 3.7, fog: 3, snow: 0.5, storm: 0.5 },
+  winter: { clear: 2, cloudy: 3.5, rain: 0.4, fog: 1.5, snow: 4, storm: 0.1 },
 }
 
 /** Informational baseline °C per season (plan §9); weather nudges it further. */
@@ -65,6 +66,13 @@ const WEATHER_TEMPERATURE_DELTA: Record<WeatherType, number> = {
   rain: -2,
   fog: -1,
   snow: -4,
+  storm: -3,
+}
+
+/** Precipitation that wets the ground, fills gardens, and plays as rain.
+ *  @domain world */
+export function isRainWeather(type: WeatherType): type is 'rain' | 'storm' {
+  return type === 'rain' || type === 'storm'
 }
 
 export function temperatureFor(season: Season, type: WeatherType): number {
@@ -183,7 +191,7 @@ export function computeSurfaceWeather(seed: number, elapsedDays: number): Surfac
     // Rain raises wetness toward an intensity-scaled target; anything else
     // (including snow — snow feeds wetness only through melt, below) lets it
     // decay back toward dry over the drying window.
-    if (w.type === 'rain') {
+    if (isRainWeather(w.type)) {
       const target = clamp01(0.35 + w.intensity * 0.65)
       wetness = Math.max(wetness, target * clamp01(stepDays / WETNESS_RISE_DAYS))
     } else {
@@ -229,7 +237,7 @@ export function computeRainExposureDays(seed: number, fromDays: number, toDays: 
     const overlapDays = Math.min(cycleEnd, toDays) - Math.max(cycleStart, fromDays)
     if (overlapDays <= 0) continue
     const w = computeWeather(seed, cycleStart, getSeason(cycleStart))
-    if (w.type === 'rain') exposure += overlapDays * w.intensity
+    if (isRainWeather(w.type)) exposure += overlapDays * w.intensity
   }
   return exposure
 }

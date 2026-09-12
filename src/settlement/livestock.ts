@@ -841,9 +841,11 @@ export function tickSettlementLivestock(
     playerControlPos?: { x: number, z: number }
     /** Origin namespace for detached individuals (plan fauna-020). */
     resolvePersistenceSettlementId?: (animal: AnimalAgent) => string
+    /** Current world scare impulse (plan world-026) — forwarded unchanged. */
+    scareStimulus?: import('../fauna/animalScare').AnimalScareStimulus | null
   },
 ): void {
-  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, waterSourceProvider, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation, playerControlPos, resolvePersistenceSettlementId } = ctx
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, waterSourceProvider, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation, playerControlPos, resolvePersistenceSettlementId, scareStimulus } = ctx
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
@@ -867,6 +869,7 @@ export function tickSettlementLivestock(
       nearbyRats,
       playerObservation,
       playerControlPos,
+      scareStimulus,
     })
     // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
     // instant its cycle completes, at wherever it's currently standing; the

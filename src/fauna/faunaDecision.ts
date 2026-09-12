@@ -30,6 +30,7 @@ export type FaunaBehaviourKind =
   | 'npc-ignore'
   | 'npc-flee'
   | 'fire-avoid'
+  | 'scare-flee'
   | 'frenzy-beeline'
   | 'dog-guard'
   | 'predator-normal'
@@ -54,6 +55,10 @@ export type FaunaDecisionInput = {
    *  never scores (implementation notes F1). */
   npcIntent: PredatorHumanIntent | null
   fireNearby: boolean
+  /** Short-lived world scare impulse (plan world-026) — thunder is the first
+   *  source. Optional so every pre-world-026 caller/test keeps constructing
+   *  `FaunaDecisionInput` without it. */
+  scareActive?: boolean
   hasStrategicVillage: boolean
   arrivedAtStrategicVillage: boolean
   /** Whether this tick's `AnimalAgent.resolveGuardTarget()` resolved a real
@@ -78,6 +83,7 @@ export const FAUNA_BEHAVIOUR_PRIORITY: Record<FaunaBehaviourKind, number> = {
   'npc-ignore': 60,
   'npc-flee': 60,
   'fire-avoid': 50,
+  'scare-flee': 48,
   'frenzy-beeline': 40,
   'dog-guard': 35,
   'predator-normal': 30,
@@ -125,6 +131,8 @@ function isBehaviourValid(kind: FaunaBehaviourKind, input: FaunaDecisionInput): 
       return input.role === 'predator'
     case 'prey-normal':
       return true
+    case 'scare-flee':
+      return input.scareActive === true && !input.frenzied
   }
 }
 

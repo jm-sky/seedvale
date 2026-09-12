@@ -147,7 +147,7 @@ export function createDebugGui(
   seasonWeather.add(weatherInfo, 'intensity', 0, 1, 0.01).name('Intensywność').listen().disable()
   seasonWeather.add(weatherInfo, 'temperature', -20, 40, 0.1).name('Temperatura (°C)').listen().disable()
   seasonWeather
-    .add(climate, 'forced', ['auto', 'clear', 'cloudy', 'rain', 'fog', 'snow'])
+    .add(climate, 'forced', ['auto', 'clear', 'cloudy', 'rain', 'fog', 'snow', 'storm'])
     .name('Wymuś pogodę')
 
   const terrain = gui.addFolder('Terrain mesh')

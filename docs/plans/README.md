@@ -121,6 +121,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `world-026-storms-thunder-animal-scare-and-snow-visuals.md` | Wymuś snow: płatki bez kwadratowych rogów z różnych odległości. Wymuś storm: mocny deszcz/wiatr, flash → opóźniony thunder, warianty thunder bez spamu jednego eventu. Stado livestock: nie każdy grzmot i nie każde zwierzę flees; bliżej domu/opiekuna spokojniejsze. Burza nie tworzy questa ani stray. Cave/interior ścisza deszcz/thunder |
 | `settlements-npcs-006-wool-to-material.md` | Textile Worker bez WorkContract; przy ≥4 wełny w `Household.items` konsumuje dokładnie 4 wool i tworzy 12 `wool_material`; 0–3 wełny blokuje bez outputu; przerwanie nie zużywa wełny; produkcja nie bierze wełny z innego gospodarstwa/magazynu |
 | `fauna-004-sheep-wool-and-shepherd.md` | 12-dniowy sezon / 48-dniowy rok; shepherd w większych osadach z 2–6 owcami gospodarstwa, nie wszędzie; home `ensureSheep` bez wymuszania shepherd; strzyżenie 4 wełny do household items (nie jedzenie); wełna wraca po 24 dniach bez catch-up; mleko niezależne; pasterz podchodzi do ruchomej owcy i reaguje na wilka atakującego własne stado |
 | `settlements-npcs-015-economic-production-and-input-integration.md` | Hunter z gałęzią/belką w gospodarstwie craftuje strzały przy `work` (gałąź przed belką, 1→1 / 1→8); brak materiału nie zużywa nic; drwal nadal dodaje drewno osady przy depozycie; mixed/stock recipes nie mintują częściowego wyniku |

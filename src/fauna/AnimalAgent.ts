@@ -135,6 +135,13 @@ import {
 } from './animalOwnership'
 import { type AnimalTrip, findWaterTripDestination, tripDayBucket } from './animalRoaming'
 import {
+  type AnimalScareStimulus,
+  DEFAULT_FEAR_BASELINE,
+  scareFleeDurationSec,
+  scareFleeOrigin,
+  shouldScare,
+} from './animalScare'
+import {
   type AnimalVariant,
   type AnimalVariantDef,
   resolveAnimalVariantStats,
@@ -883,6 +890,9 @@ export type AnimalUpdateContext = {
   /** Narrow plain-data player position for player-owned Follow control (plan
    *  fauna-020) — never a `PlayerController` reference. */
   playerControlPos?: { x: number, z: number }
+  /** Bounded world scare impulse (plan world-026). Caller supplies only the
+   *  current event, if any; this animal evaluates it at most once. */
+  scareStimulus?: AnimalScareStimulus | null
 }
 
 /**
@@ -1047,6 +1057,11 @@ export class AnimalAgent {
    *  outstanding egg (plan fauna-002 §2.1). */
   private eggPending = false
   private attackCooldown = 0
+  /** Thunder/world scare — ephemeral, not persisted. */
+  private scareRemainingSec = 0
+  private scareOriginX = 0
+  private scareOriginZ = 0
+  private scareEvaluatedEventId: string | null = null
   private isNight = false
   private highlighted = false
   /** True while `showDebug()`'s world-space overlay is active for this
@@ -2354,6 +2369,7 @@ export class AnimalAgent {
       nearbyRats = [],
       playerObservation = DEFAULT_PLAYER_OBSERVATION,
       playerControlPos,
+      scareStimulus = null,
     } = ctx
     this._tickPlayerControlPos = playerControlPos ?? null
     if (this.health.dead) {
@@ -2436,6 +2452,7 @@ export class AnimalAgent {
     // this tick's bark check (below) share the same resolved target.
     const guardTarget = this.def.kind === 'dog' ? this.resolveGuardTarget(nearbyPredators) : null
     this.dogGuardTarget = guardTarget
+    this.tickScareStimulus(dt, others, observerPos, nearbySettlementNpcs, scareStimulus)
 
     if (this.rabid) {
       // Rabies bypasses normal predator/prey AI entirely, including
@@ -2467,6 +2484,7 @@ export class AnimalAgent {
         npcThreat: npcThreat !== null,
         npcIntent,
         fireNearby: sense.nearestFire !== null,
+        scareActive: this.scareRemainingSec > 0,
         hasStrategicVillage: this.strategicVillage !== null,
         arrivedAtStrategicVillage: this.arrivedAtStrategicVillage(),
         guardActive: guardTarget !== null,
@@ -2614,6 +2632,13 @@ export class AnimalAgent {
         case 'prey-normal': {
           this.resetHumanThreatState()
           this.updatePrey(dt, others, lures, nearbyPredators, nearbyRats)
+          break
+        }
+        case 'scare-flee': {
+          this.resetHumanThreatState()
+          this.cancelSourceTarget()
+          this.setIntent('flee', { x: this.scareOriginX, z: this.scareOriginZ })
+          this.fleeFrom(this.scareOriginX, this.scareOriginZ, dt)
           break
         }
       }
@@ -3092,6 +3117,72 @@ export class AnimalAgent {
       }
     }
     return best
+  }
+
+  private static readonly SCARE_OWNER_PROXIMITY_M = 14
+  private static readonly SCARE_HERD_PROXIMITY_M = 10
+
+  private tickScareStimulus(
+    dt: number,
+    others: AnimalAgent[],
+    observerPos: THREE.Vector3,
+    nearbySettlementNpcs: readonly NearbyNpcCandidate[],
+    stimulus: AnimalScareStimulus | null,
+  ): void {
+    if (this.scareRemainingSec > 0) {
+      this.scareRemainingSec = Math.max(0, this.scareRemainingSec - dt)
+    }
+    if (!stimulus) return
+    if (this.scareEvaluatedEventId === stimulus.eventId) return
+    this.scareEvaluatedEventId = stimulus.eventId
+    if (!shouldScare(stimulus, {
+      animalId: this.animalId,
+      x: this.mesh.position.x,
+      z: this.mesh.position.z,
+      home: { x: this.home.x, z: this.home.z },
+      fearBaseline: this.def.fearBaseline ?? DEFAULT_FEAR_BASELINE,
+      ownerNearby: this.scareCaretakerNearby(observerPos, nearbySettlementNpcs),
+      herdmatesNearby: this.scareHerdmatesNearby(others),
+    })) return
+    const origin = scareFleeOrigin(
+      stimulus.eventId,
+      this.animalId,
+      this.mesh.position.x,
+      this.mesh.position.z,
+    )
+    this.scareOriginX = origin.x
+    this.scareOriginZ = origin.z
+    this.scareRemainingSec = scareFleeDurationSec(stimulus.strength)
+  }
+
+  private scareCaretakerNearby(
+    observerPos: THREE.Vector3,
+    nearbySettlementNpcs: readonly NearbyNpcCandidate[],
+  ): boolean {
+    const r = AnimalAgent.SCARE_OWNER_PROXIMITY_M
+    if (this.isPlayerOwned()) {
+      return Math.hypot(this.mesh.position.x - observerPos.x, this.mesh.position.z - observerPos.z) < r
+    }
+    const houseId = this.ownerHouseId
+    if (!houseId) return false
+    for (const npc of nearbySettlementNpcs) {
+      if (npc.homeId !== houseId) continue
+      if (Math.hypot(this.mesh.position.x - npc.x, this.mesh.position.z - npc.z) < r) return true
+    }
+    return false
+  }
+
+  private scareHerdmatesNearby(others: AnimalAgent[]): number {
+    const r = AnimalAgent.SCARE_HERD_PROXIMITY_M
+    let n = 0
+    for (const other of others) {
+      if (other === this || other.isDead() || other.def.kind !== this.def.kind) continue
+      if (Math.hypot(this.mesh.position.x - other.mesh.position.x, this.mesh.position.z - other.mesh.position.z) > r) {
+        continue
+      }
+      n++
+    }
+    return n
   }
 
   /** Sprints away from (x, z) — shared by fleeing a predator (`updatePrey`),
@@ -4250,6 +4341,9 @@ export class AnimalAgent {
     // all. Ordinary local wander (`this.trip === null`) keeps this bound
     // exactly as before.
     if (this.trip) return
+    // Thunder scare is a short committed flee impulse (plan world-026):
+    // clamp would cancel the displacement the impulse is meant to cause.
+    if (this.scareRemainingSec > 0) return
     this.mesh.position.x = THREE.MathUtils.clamp(
       this.mesh.position.x,
       this.home.x - ROAM_RADIUS,

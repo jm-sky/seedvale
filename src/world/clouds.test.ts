@@ -104,7 +104,7 @@ describe('cloudCategoryWeightsFor', () => {
   })
 
   it('always normalizes to sum to 1', () => {
-    for (const type of ['clear', 'cloudy', 'rain', 'fog', 'snow'] as const) {
+    for (const type of ['clear', 'cloudy', 'rain', 'fog', 'snow', 'storm'] as const) {
       for (const intensity of [0, 0.3, 0.7, 1]) {
         const weights = cloudCategoryWeightsFor(weather({ type, intensity }))
         expect(weights.light + weights.dense).toBeCloseTo(1)

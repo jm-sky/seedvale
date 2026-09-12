@@ -166,6 +166,16 @@ describe('decideFaunaBehaviour — ordering pairs that matter (implementation no
     })).toBe('fire-avoid')
   })
 
+  it('scare-flee beats dog-guard and prey-normal, but loses to fire', () => {
+    expect(decideFaunaBehaviour({ ...base, role: 'livestock', scareActive: true })).toBe('scare-flee')
+    expect(decideFaunaBehaviour({
+      ...base, role: 'livestock', scareActive: true, guardActive: true,
+    })).toBe('scare-flee')
+    expect(decideFaunaBehaviour({
+      ...base, role: 'livestock', scareActive: true, fireNearby: true,
+    })).toBe('fire-avoid')
+  })
+
   it('dog-guard beats the livestock prey-normal fallback', () => {
     expect(decideFaunaBehaviour({ ...base, role: 'livestock', guardActive: false })).toBe('prey-normal')
     expect(decideFaunaBehaviour({ ...base, role: 'livestock', guardActive: true })).toBe('dog-guard')
@@ -225,7 +235,7 @@ describe('FAUNA_BEHAVIOUR_PRIORITY', () => {
     const kinds: FaunaBehaviourKind[] = [
       'player-attack', 'player-ignore', 'player-flee', 'player-flee-prey',
       'npc-attack-frenzied', 'npc-attack', 'npc-ignore', 'npc-flee',
-      'fire-avoid', 'frenzy-beeline', 'dog-guard', 'predator-normal', 'prey-normal',
+      'fire-avoid', 'scare-flee', 'frenzy-beeline', 'dog-guard', 'predator-normal', 'prey-normal',
     ]
     for (const kind of kinds) {
       expect(typeof FAUNA_BEHAVIOUR_PRIORITY[kind]).toBe('number')

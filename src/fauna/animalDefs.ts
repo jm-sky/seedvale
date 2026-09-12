@@ -154,6 +154,9 @@ export type AnimalDef = {
   /** Presence of this field IS the draft/cart-pull capability (plan
    *  fauna-007). Not equivalent to `mount` or `lead`. */
   draft?: DraftConfig
+  /** Species 0..1 fear of sudden world stimuli such as thunder (plan
+   *  world-026). Absent uses `DEFAULT_FEAR_BASELINE` in `animalScare.ts`. */
+  fearBaseline?: number
 }
 
 /** Per-species human-affinity tuning (plan fauna-013) — gain applies only
@@ -491,6 +494,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     draft: { hitchDistance: 2.35 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
+    fearBaseline: 0.55,
   },
   donkey: {
     kind: 'donkey',
@@ -517,6 +521,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     draft: { hitchDistance: 2.15 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
+    fearBaseline: 0.5,
   },
   cow: {
     kind: 'cow',
@@ -534,6 +539,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     production: { product: 'milk', amount: 5, intervalDays: 0.5 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
+    fearBaseline: 0.4,
   },
   sheep: {
     kind: 'sheep',
@@ -551,6 +557,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     production: { product: 'milk', amount: 2, intervalDays: 0.35 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
+    fearBaseline: 0.72,
   },
   chicken: {
     kind: 'chicken',
@@ -567,6 +574,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerPanicRange: 0,
     production: { product: 'egg', amount: 1, intervalDays: 1 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    fearBaseline: 0.88,
   },
   // Plan fauna-009 §2: a distinct AnimalKind for crow vocalization/presence,
   // reusing the chicken's stats — no `production` block (rooster doesn't
@@ -585,6 +593,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 0,
     playerPanicRange: 0,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    fearBaseline: 0.8,
   },
   // Plan fauna-011: household dog. `role: 'livestock'` (not `'predator'`)
   // keeps it off the hunting/carcass-seeking path; `fleeRange: 0` (not
@@ -609,6 +618,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: MEAT_DIET,
     affinity: { gainPerSuccessfulFeed: 0.25, max: 1, trustedThreshold: 0.75 },
+    fearBaseline: 0.22,
   },
   // Plan fauna-016 §7: settlement-habitat pest. `sociability: 'domestic'`
   // (not `'wild'`) is deliberate, not a species-flavor accident — it's what

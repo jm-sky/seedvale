@@ -2,7 +2,7 @@ import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { ToolKind } from '../items/HeldTool'
 import type { ItemCapability } from '../items/itemCatalog'
 import type { GroundPlacementReason } from '../items/tentPlacement'
-import { computeWeather, getSeason, WEATHER_CYCLE_DAYS } from './weather'
+import { computeWeather, getSeason, isRainWeather, WEATHER_CYCLE_DAYS } from './weather'
 
 /**
  * Player-built garden plot (plan 174) — pure domain logic, same split as
@@ -304,7 +304,7 @@ export function resolveGardenHydration(
     if (stepDays <= 0) continue
     const weather = computeWeather(seed, cycleStart, getSeason(cycleStart))
     hydration -= HYDRATION_DRY_RATE_PER_DAY * stepDays
-    if (weather.type === 'rain') hydration += HYDRATION_RAIN_GAIN_PER_DAY * weather.intensity * stepDays
+    if (isRainWeather(weather.type)) hydration += HYDRATION_RAIN_GAIN_PER_DAY * weather.intensity * stepDays
     hydration = clampHydration(hydration)
     if (hydration < HYDRATION_DROUGHT_THRESHOLD) stressDays = Math.min(DROUGHT_STRESS_CAP_DAYS, stressDays + stepDays)
   }
