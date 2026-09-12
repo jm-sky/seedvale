@@ -223,6 +223,7 @@ Generated from TypeScript imports.
 - `settlement/ratInfestation.ts`
 - `settlement/rats.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/settlementAgriculture.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
 - `settlement/settlementPropColliders.ts`
@@ -335,6 +336,8 @@ Generated from TypeScript imports.
 - `settlement/professionStaffing.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/settlementAgriculture.test.ts`
+- `settlement/settlementAgriculture.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
@@ -587,6 +590,8 @@ Generated from TypeScript imports.
 - `settlement/householdResourceTransfer.ts`
 - `settlement/livestock.ts`
 - `settlement/rats.ts`
+- `settlement/settlementAgriculture.test.ts`
+- `settlement/settlementAgriculture.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageVisuals.test.ts`
 - `settlements-npcs-007.test.ts`
@@ -1018,6 +1023,7 @@ Generated from TypeScript imports.
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `settlement/createSettlement.ts`
 - `settlement/professionStaffing.test.ts`
+- `settlement/settlementAgriculture.ts`
 - `settlement/settlementGenerator.ts`
 
 ## `settlement/propSpecs.ts`
@@ -1277,6 +1283,33 @@ Generated from TypeScript imports.
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementSignposts.ts`
 - `terrain/chunkManager.ts`
+
+## `settlement/settlementAgriculture.test.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `economy/settlementEconomy.ts`
+- `settlement/families.ts`
+- `settlement/household.ts`
+- `settlement/settlementAgriculture.ts`
+- `world/cropLifecycle.ts`
+
+## `settlement/settlementAgriculture.ts`
+
+**Imports**
+
+- `economy/settlementEconomy.ts`
+- `settlement/families.ts`
+- `settlement/household.ts`
+- `settlement/professionStaffing.ts`
+- `world/cropLifecycle.ts`
+- `world/plantedCrops.ts`
+
+**Imported by**
+
+- `settlement/createSettlement.ts`
+- `settlement/settlementAgriculture.test.ts`
 
 ## `settlement/settlementGenerator.test.ts`
 

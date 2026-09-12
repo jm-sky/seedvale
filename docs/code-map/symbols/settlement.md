@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 392
-- `CreateSettlementDeps` — type — line 254
-- `Settlement` — type — line 132
-- `settlementSpawnPoint` — function — line 242
+- `createSettlement` — function — line 400
+- `CreateSettlementDeps` — type — line 258
+- `Settlement` — type — line 136
+- `settlementSpawnPoint` — function — line 246
 
 ## `settlement/decorProps.ts`
 
@@ -205,10 +205,12 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 319
-- `createHouseholdRegistry` — function — line 458
+- `createHousehold` — function — line 348
+- `createHouseholdRegistry` — function — line 505
+- `FARMER_STARTING_SEED_COUNT` — const — line 234
 - `HayForageState` — type — line 120
-- `Household` — type — line 212
+- `Household` — type — line 237
+- `HouseholdAgricultureState` — type — line 187
 - `HouseholdDepositResult` — type — line 27
 - `HouseholdId` — type — line 22
   - domain: settlements-npcs
@@ -216,10 +218,11 @@ Generated from exported TypeScript symbols.
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 285
-- `HouseholdRegistry` — type — line 449
+- `householdIdFor` — function — line 314
+- `HouseholdRegistry` — type — line 496
 - `HouseholdResourceKind` — type — line 45
-- `HouseholdSnapshot` — type — line 187
+- `HouseholdSnapshot` — type — line 199
+- `HouseholdStartingContext` — type — line 225
 - `resolveHayForage` — function — line 136
 - `WaterReserve` — type — line 151
 
@@ -472,7 +475,7 @@ Generated from exported TypeScript symbols.
 
 - `BlacksmithWorkplace` — type — line 276
 - `buildSettlementProps` — function — line 684
-- `disposeSettlementGroup` — function — line 1869
+- `disposeSettlementGroup` — function — line 1871
 - `SettlementHouseBed` — type — line 144
 - `SettlementHouseLandmark` — type — line 110
 - `SettlementLandmarks` — type — line 151
@@ -617,6 +620,15 @@ Generated from exported TypeScript symbols.
 - `VillageSegments` — type — line 697
 - `villageSegmentsNear` — function — line 721
 - `yawToward` — function — line 469
+
+## `settlement/settlementAgriculture.ts`
+
+- `householdAgriculturalCapacity` — function — line 18
+  - domain: settlements-npcs
+  - system: household
+- `householdStartingContextFromFamily` — function — line 22
+- `resolveSettlementAgricultureCatchUp` — function — line 72
+- `resolveUnloadedHouseholdAgriculture` — function — line 35
 
 ## `settlement/settlementGenerator.ts`
 

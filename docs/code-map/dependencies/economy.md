@@ -255,6 +255,8 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdResourceTransfer.test.ts`
 - `settlement/householdResourceTransfer.ts`
+- `settlement/settlementAgriculture.test.ts`
+- `settlement/settlementAgriculture.ts`
 - `settlement/storageVisuals.test.ts`
 - `world/transportOffscreen.ts`
 

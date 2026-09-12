@@ -1722,7 +1722,6 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/npcProfessionWork.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/placementActions.ts`
 - `app/gameLoop.ts`
@@ -1731,6 +1730,8 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `interaction/Interactable.ts`
 - `persistence/saveData.ts`
+- `settlement/settlementAgriculture.test.ts`
+- `settlement/settlementAgriculture.ts`
 - `terrain/chunkCrops.ts`
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkManager.ts`
@@ -2653,6 +2654,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `app/actions/placementActions.ts`
 - `app/createApp.ts`
+- `settlement/settlementAgriculture.ts`
 - `terrain/chunkManager.ts`
 - `world/foodSources.ts`
 - `world/plantedCrops.test.ts`

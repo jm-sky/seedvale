@@ -273,6 +273,7 @@ Generated from TypeScript imports.
 - `settlement/places.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
+- `settlement/settlementAgriculture.test.ts`
 - `terrain/naturalResources.ts`
 
 ## `ai/decisionModifiers.test.ts`
@@ -736,7 +737,6 @@ Generated from TypeScript imports.
 - `terrain/depositMining.ts`
 - `terrain/resourceDeposits.ts`
 - `world/createTransportOrders.ts`
-- `world/cropLifecycle.ts`
 - `world/cultivationAnchor.ts`
 - `world/fishing.ts`
 - `world/foodSources.ts`

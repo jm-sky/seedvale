@@ -776,8 +776,10 @@ Generated from exported TypeScript symbols.
   - domain: world
   - system: cultivation
 - `cultivationAnchorFromPlayerGarden` — function — line 18
+- `cultivationAnchorFromSettlementField` — function — line 36
 - `cultivationAnchorFromSettlementGarden` — function — line 24
-- `resolveCultivationAnchor` — function — line 34
+- `resolveCultivationAnchor` — function — line 45
+- `SETTLEMENT_FIELD_CULTIVATION_RADIUS` — const — line 34
 
 ## `world/dayNight.ts`
 
@@ -1196,14 +1198,15 @@ Generated from exported TypeScript symbols.
 
 - `CROP_PLANT_DURATION_SEC` — const — line 14
 - `CROP_PLANT_FOOTPRINT_RADIUS` — const — line 10
-- `CROP_PLANT_MESSAGE` — const — line 24
+- `CROP_PLANT_MESSAGE` — const — line 30
 - `CROP_PLANT_REACH` — const — line 8
 - `CROP_PLANT_SEPARATION` — const — line 12
 - `CROP_SEED_ITEM` — const — line 18
-- `GARDEN_PLANT_RADIUS` — const — line 39
-- `isNearAnyGarden` — function — line 44
-- `makePlantedCropId` — function — line 56
-- `parsePlantedCrops` — function — line 66
+- `FARM_SEED_PRIORITY` — const — line 28
+- `GARDEN_PLANT_RADIUS` — const — line 45
+- `isNearAnyGarden` — function — line 50
+- `makePlantedCropId` — function — line 62
+- `parsePlantedCrops` — function — line 72
 
 ## `world/plantedTrees.ts`
 

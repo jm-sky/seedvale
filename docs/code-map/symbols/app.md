@@ -371,14 +371,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 826
+- `BuiltWorldSystems` — type — line 829
 - `caveTreasureContainerSpecs` — function — line 159
   - domain: world-terrain
-- `createWorldBundle` — function — line 1390
-- `disposeWorldBundle` — function — line 1831
+- `createWorldBundle` — function — line 1393
+- `disposeWorldBundle` — function — line 1834
 - `HOME_RADIUS` — const — line 138
 - `homeChunks` — function — line 182
-- `rebuildWorldBundle` — function — line 1608
+- `rebuildWorldBundle` — function — line 1611
 - `WorldBundle` — type — line 205
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
