@@ -2540,6 +2540,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `assets/houseDefinitionExample.ts`
 - `config/worldConfig.ts`
+- `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
 - `items/createItemSpawners.ts`

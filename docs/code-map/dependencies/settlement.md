@@ -679,6 +679,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalOwnership.ts`
+- `fauna/animalStray.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
 - `fauna/proceduralAnimals.ts`
@@ -693,6 +694,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/createApp.ts`
 - `app/worldBundle.ts`
 - `assets/assetIndex.ts`
 - `persistence/saveData.ts`

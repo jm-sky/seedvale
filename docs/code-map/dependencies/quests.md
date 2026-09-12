@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
 - `quests/settlementRatInfestation.ts`
@@ -144,12 +145,14 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalSpawner.ts`
+- `fauna/animalStray.ts`
 - `fauna/wolfDenScenario.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 
 **Imported by**
 
 - `app/createApp.ts`
+- `quests/QuestManager.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
@@ -170,6 +173,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalSpawner.ts`
+- `fauna/animalStray.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
@@ -190,6 +194,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/characters.ts`
+- `fauna/animalStray.ts`
 - `settlement/npcState.ts`
 
 **Imported by**

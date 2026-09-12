@@ -68,8 +68,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/leadActions.ts`
 
-- `createLeadActions` — function — line 22
-- `LeadActions` — type — line 11
+- `createLeadActions` — function — line 21
+- `LeadActions` — type — line 10
   - domain: fauna
   - role: Temporary player→animal lead attach/detach and cart hitch, keyed by stable `animalId`. Does not own Follow/Stay or AnimalOwner.
 
@@ -234,22 +234,22 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 281
+- `createApp` — function — line 284
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 250
+- `NewAppOptions` — type — line 253
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 628
+- `createGameLoop` — function — line 630
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 596
+- `GameLoop` — type — line 598
 - `GameLoopDeps` — type — line 294
 
 ## `app/graphicsSettings.ts`
@@ -289,23 +289,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1175
-- `buildDigTarget` — function — line 1122
-- `buildInteractables` — function — line 444
-- `collectItem` — function — line 1225
+- `buildCombatTarget` — function — line 1185
+- `buildDigTarget` — function — line 1132
+- `buildInteractables` — function — line 454
+- `collectItem` — function — line 1235
 - `COMBAT_TARGET_CONE_DOT` — const — line 99
 - `COMBAT_TARGET_RANGE` — const — line 84
 - `CombatAimMode` — type — line 89
 - `DIG_REACH` — const — line 78
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 294
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 304
 - `GAZE_RANGE` — const — line 74
-- `groupDroppedItemCandidates` — function — line 304
+- `groupDroppedItemCandidates` — function — line 314
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 71
 - `INTERACT_RANGE` — const — line 68
-- `itemPromptLabel` — function — line 283
-- `resolveHaySpot` — function — line 380
-- `worldItemAllowsAltInteract` — function — line 268
+- `itemPromptLabel` — function — line 293
+- `resolveHaySpot` — function — line 390
+- `worldItemAllowsAltInteract` — function — line 278
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`

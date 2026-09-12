@@ -259,25 +259,26 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 281
-- `disposeLivestock` — function — line 779
-- `fillShepherdFlockKinds` — function — line 41
-- `isPlayerOwnedLivestockRecord` — function — line 97
-- `LIVESTOCK_KINDS` — const — line 74
-- `LIVESTOCK_URLS` — const — line 58
-- `LivestockPersistence` — type — line 117
-- `livestockRecordMatchesHouseholdSlot` — function — line 101
-- `LivestockRegistry` — type — line 139
-- `LivestockSaveRecord` — type — line 87
-- `PersistentLivestockContext` — type — line 690
-- `resolveLivePersistentAnimal` — function — line 698
-- `restoreDetachedPlayerOwnedLivestock` — function — line 762
-- `setOwnedAnimalControl` — function — line 750
-- `spawnAnimalFromRecord` — function — line 177
-- `SpawnAnimalFromRecordDeps` — type — line 166
-- `spawnLivestock` — function — line 536
-- `tickSettlementLivestock` — function — line 796
-- `transferAnimalOwnership` — function — line 725
+- `createLivestockRegistry` — function — line 299
+- `disposeLivestock` — function — line 797
+- `fillShepherdFlockKinds` — function — line 42
+- `isPlayerOwnedLivestockRecord` — function — line 98
+- `LIVESTOCK_KINDS` — const — line 75
+- `LIVESTOCK_URLS` — const — line 59
+- `LivestockPersistence` — type — line 135
+- `livestockRecordMatchesHouseholdSlot` — function — line 102
+- `LivestockRegistry` — type — line 157
+- `LivestockSaveRecord` — type — line 88
+- `livestockStrayCandidateFromAgent` — function — line 115
+- `PersistentLivestockContext` — type — line 708
+- `resolveLivePersistentAnimal` — function — line 716
+- `restoreDetachedPlayerOwnedLivestock` — function — line 780
+- `setOwnedAnimalControl` — function — line 768
+- `spawnAnimalFromRecord` — function — line 195
+- `SpawnAnimalFromRecordDeps` — type — line 184
+- `spawnLivestock` — function — line 554
+- `tickSettlementLivestock` — function — line 814
+- `transferAnimalOwnership` — function — line 743
 
 ## `settlement/lodging.ts`
 

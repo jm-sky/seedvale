@@ -316,7 +316,6 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `fauna/AnimalAgent.ts`
-- `fauna/animalLead.ts`
 - `world/cart.ts`
 
 **Imported by**
@@ -786,6 +785,7 @@ Generated from TypeScript imports.
 - `debug/playerGroundTrace.ts`
 - `debug/playerMovementTrace.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalOwnership.ts`
 - `fauna/createFauna.ts`
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
@@ -826,6 +826,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/horseAcquisition.ts`
 - `settlement/landOwnership.ts`
+- `settlement/livestock.ts`
 - `settlement/npcIdentity.ts`
 - `settlement/villagePlanDebug.ts`
 - `shared/StaminaState.ts`

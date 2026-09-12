@@ -38,6 +38,7 @@ Generated from TypeScript imports.
 - `fauna/animalOwnership.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/animalScare.ts`
+- `fauna/animalStray.ts`
 - `fauna/animalVariants.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
@@ -71,6 +72,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHabitat.ts`
 - `world/collision.ts`
 - `world/createGrassForagePatches.ts`
+- `world/parseSeed.ts`
 - `world/waterMirror.ts`
 
 **Imported by**
@@ -273,6 +275,7 @@ Generated from TypeScript imports.
 - `fauna/animalLead.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/animalRoamingTrips.test.ts`
+- `fauna/animalStray.ts`
 - `fauna/animalVariants.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
@@ -368,7 +371,6 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `app/actions/leadActions.ts`
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalLead.test.ts`
@@ -451,8 +453,11 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/createApp.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalOwnership.test.ts`
+- `fauna/animalStray.test.ts`
+- `fauna/animalStray.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
@@ -499,6 +504,30 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalScare.test.ts`
+
+## `fauna/animalStray.test.ts`
+
+**Imports**
+
+- `fauna/animalOwnership.ts`
+- `fauna/animalStray.ts`
+
+## `fauna/animalStray.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/animalOwnership.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalStray.test.ts`
+- `persistence/saveData.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `settlement/livestock.ts`
 
 ## `fauna/animalVariants.test.ts`
 

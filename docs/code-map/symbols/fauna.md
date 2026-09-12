@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 906
+- `AnimalAgent` — class — line 927
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 420
-- `AnimalAgentDeps` — type — line 758
-- `AnimalSaveState` — type — line 521
-- `AnimalUpdateContext` — type — line 802
-- `BURY_DURATION_SEC` — const — line 290
-- `canPredatorPursueIntoVillage` — function — line 587
-- `FAUNA_SHADOW_DISTANCE` — const — line 259
-- `FaunaAiBranch` — type — line 399
-- `FaunaNavRescueDebugInfo` — type — line 404
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 350
-- `FrenzyWolfCandidate` — type — line 693
-- `HARVEST_MEAT_DURATION_SEC` — const — line 293
-- `isWithinVillageRadius` — function — line 568
-- `NearbyNpcCandidate` — type — line 688
-- `pickNearestEligibleWolf` — function — line 702
-- `pickRabidTarget` — function — line 727
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 277
-- `resolveLureTarget` — function — line 616
-- `villageFleeBiasFalloff` — function — line 595
-- `VillageInfo` — type — line 562
+- `AnimalAgentDebugInfo` — type — line 439
+- `AnimalAgentDeps` — type — line 779
+- `AnimalSaveState` — type — line 540
+- `AnimalUpdateContext` — type — line 823
+- `BURY_DURATION_SEC` — const — line 309
+- `canPredatorPursueIntoVillage` — function — line 608
+- `FAUNA_SHADOW_DISTANCE` — const — line 278
+- `FaunaAiBranch` — type — line 418
+- `FaunaNavRescueDebugInfo` — type — line 423
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 369
+- `FrenzyWolfCandidate` — type — line 714
+- `HARVEST_MEAT_DURATION_SEC` — const — line 312
+- `isWithinVillageRadius` — function — line 589
+- `NearbyNpcCandidate` — type — line 709
+- `pickNearestEligibleWolf` — function — line 723
+- `pickRabidTarget` — function — line 748
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 296
+- `resolveLureTarget` — function — line 637
+- `villageFleeBiasFalloff` — function — line 616
+- `VillageInfo` — type — line 583
 
 ## `fauna/animalCaveHabitat.ts`
 
@@ -277,6 +277,67 @@ Generated from exported TypeScript symbols.
 - `tickSpawnPointRecovery` — function — line 193
 - `updateSpawners` — function — line 143
 - `WOLF_DEN_ID` — const — line 26
+
+## `fauna/animalStray.ts`
+
+- `AnimalStrayState` — type — line 12
+  - domain: fauna
+- `beginStrayState` — function — line 248
+  - domain: fauna
+  - role: Starts a stray episode record. Idempotent: an already-active or previously-ended episode is left untouched so restore/materialization cannot redisplace the same animal.
+- `classifyLostLivestock` — function — line 295
+  - domain: fauna
+  - role: Classifies one livestock individual for quest/world lookup.
+- `clearStrayEpisode` — function — line 270
+  - domain: fauna
+  - role: Ends the live episode, drops survival assist/lead-relevant flags, and keeps origin so a later start is refused.
+- `createEmptyStrayState` — function — line 83
+  - domain: fauna
+  - role: Creates the inactive stray sentinel used before an episode starts.
+- `hydrateStrayState` — function — line 323
+- `inspectStrayedCorpseState` — function — line 283
+  - domain: fauna
+  - role: Marks a dead strayed animal as inspected. Does not harvest or remove.
+- `isAnimalStraySave` — function — line 334
+- `isEligibleLostLivestock` — function — line 143
+  - domain: fauna
+  - role: Eligibility for starting a new stray episode on an existing individual.
+- `isStrayedAnimalReturned` — function — line 116
+  - domain: fauna
+  - role: Pure return predicate — alive strayed livestock inside the stored origin/home radius ends the episode.
+- `isStrayEpisodeActive` — function — line 91
+  - domain: fauna
+  - role: True while this animal currently has a live stray episode.
+- `isStraySurvivalAssistActive` — function — line 99
+  - domain: fauna
+  - role: Survival-assist gate. Never true for ordinary animals.
+- `LivestockStrayCandidate` — type — line 55
+- `LostLivestockSourceStatus` — type — line 26
+  - domain: fauna
+- `predatorPressureAt` — function — line 195
+- `selectLostLivestock` — function — line 174
+  - domain: fauna
+  - role: Deterministic pick of an existing household livestock id. Never invents a new identity. Prefers sheep when any are eligible.
+- `selectStrayDisplacementTarget` — function — line 216
+  - domain: fauna
+  - role: Bounded one-shot destination probe. Invalid terrain is rejected; predator pressure is a score penalty, never a hard exclusion. Falls back to the best valid candidate when every probe still has nearby predators.
+- `shouldRetainStrayedCorpse` — function — line 130
+  - domain: fauna
+  - role: Durable corpse-retention predicate for an unresolved stray death.
+- `snapshotStrayState` — function — line 310
+- `STRAY_CORPSE_RETENTION_SECONDS` — const — line 53
+- `STRAY_FLEE_RANGE_BONUS` — const — line 44
+- `STRAY_FLEE_SPEED_MULT` — const — line 46
+- `STRAY_MAX_DISTANCE` — const — line 38
+- `STRAY_MIN_DISTANCE` — const — line 37
+- `STRAY_PREDATOR_PRESSURE_RADIUS` — const — line 40
+- `STRAY_PREDATOR_SCORE_PENALTY` — const — line 41
+- `STRAY_PROBE_ATTEMPTS` — const — line 39
+- `STRAY_RETURN_RADIUS` — const — line 34
+- `StrayDisplacementContext` — type — line 66
+- `strayEpisodeSeed` — function — line 347
+- `straySurvivalFleeRangeBonus` — function — line 103
+- `straySurvivalFleeSpeedMultiplier` — function — line 107
 
 ## `fauna/animalVariants.ts`
 
