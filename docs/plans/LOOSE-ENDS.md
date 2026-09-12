@@ -15,7 +15,6 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 - [ ] 2026-09-10 — quests-progression-016: household food-shortage opportunity nie ma player → household food transfer. `Household.shortage('food')` istnieje, ale wpłata do magazynu osady nie rozwiązuje niedoboru konkretnego gospodarstwa. Rozszerzyć istniejący inventory/household transfer flow, nie quest-specific bypass.
 - [ ] 2026-09-10 — quests-progression-016: lost-livestock opportunity nie ma realnego predicate/state „zwierzę zaginęło”; `find_animal` jest tylko objective. Potrzebny mechanizm w `fauna`.
-- [ ] 2026-09-10 — quests-progression-016: settlement structure-repair opportunity nie ma generic settlement-building repair + player path. Reuse `world/repair.ts`, nie tworzyć osobnej questowej naprawy.
 
 ## NPC / households / work
 
