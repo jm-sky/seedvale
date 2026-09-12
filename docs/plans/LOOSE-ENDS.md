@@ -20,7 +20,6 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 - [ ] 2026-09-09 — NPC death handoff nadal filtruje loot przez `extractNpcLoadoutLoot`; corpse loot nie przenosi pełnego `personalInventory` ani freshness batches. Lossless transfer perishables wymaga rozszerzenia corpse-loot persistence (npc-010 / settlements-npcs-026 follow-up).
 - [ ] 2026-09-05 — `WorkContracts.post()` / `canPostContract` nie sprawdzają proaktywnie, czy target istnieje i jest unfinished. Martwy target może chwilowo wisieć jako `advertised`; system sam naprawia stan dopiero przy akceptacji. Jeśli ma zniknąć wcześniej, walidację trzeba oprzeć o istniejący target resolver zamiast filtrować osobno każde UI (npc-018).
-- [ ] 2026-09-04 — `NpcAgent.maybeMaintainNearbyGarden` / `maybeWaterNearbyGarden` nadal używają `Math.random()` do mutacji persystowanego `PlayerGardenRecord.care` / `hydration`. Zastąpić seedowanym/deterministycznym roll'em; niekontrolowane RNG nie powinno wpływać na zapisany stan świata.
 - [ ] 2026-09-04 — najęty NPC przy budowie studni nadal omija playerową bramkę `wellStageCapabilities` (`advanceWellConstruction(... capabilities: null)`). Do decyzji projektowej: albo NPC ma własne realne capability/tool requirements, albo jawnie dokumentujemy, że kontrakt pracy zastępuje tę bramkę; nie pozostawiać przypadkowej asymetrii.
 
 ## Fauna

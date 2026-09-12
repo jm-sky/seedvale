@@ -380,3 +380,42 @@ export function gardenPlotPromptLabel(care: number, hydration: number): string {
   const status = getCultivationStatus(care)
   return `[E] Zrób porządek (${CULTIVATION_STATUS_LABEL[status]}, ${Math.round(care)}%) · [R] Podlej (Nawodnienie ${Math.round(hydration)}%)`
 }
+
+/**
+ * Deterministic dice for an NPC's chance to tidy/water a garden plot it just
+ * harvested from (`NpcAgent.maybeMaintainNearbyGarden`/`maybeWaterNearbyGarden`)
+ * — same hash convention as `world/fishing.ts`'s `fishingCatchRoll` and
+ * `world/animalTraps.ts`'s `trapDetectionRoll`. Both gate a mutation of this
+ * same persisted `PlayerGardenRecord`, so the roll must be reproducible from
+ * saved state (`CLAUDE.md` determinism rule) rather than `Math.random()`.
+ * `attempt` is the caller's coarse time bucket (e.g. an hour-of-world-day
+ * count) so a later visit re-rolls instead of repeating the same outcome
+ * forever.
+ */
+function hashString(value: string): number {
+  let h = 2166136261
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function hash01(a: number, b: number, salt: number): number {
+  let h = Math.imul(a ^ salt, 2654435761) ^ Math.imul(b + 0x9e3779b9, 1597334677)
+  h ^= h >>> 15
+  h = Math.imul(h, 2246822519)
+  h ^= h >>> 13
+  return (h >>> 0) / 4294967296
+}
+
+const GARDEN_MAINTENANCE_ROLL_SALT = 0x67617264 // 'gard'
+const GARDEN_WATERING_ROLL_SALT = 0x77617472 // 'watr'
+
+export function gardenMaintenanceRoll(npcId: string, gardenId: string, attempt: number): number {
+  return hash01(hashString(`${npcId}|${gardenId}`), attempt, GARDEN_MAINTENANCE_ROLL_SALT)
+}
+
+export function gardenWateringRoll(npcId: string, gardenId: string, attempt: number): number {
+  return hash01(hashString(`${npcId}|${gardenId}`), attempt, GARDEN_WATERING_ROLL_SALT)
+}
