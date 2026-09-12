@@ -1,7 +1,7 @@
 # Plan: Lazy Social News Propagation & Reputation Catch-Up
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** L
 **Depends on:** ~~quests-progression-019~~
 **Domain:** `quests-progression`

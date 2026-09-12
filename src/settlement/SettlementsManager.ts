@@ -436,6 +436,16 @@ export async function createSettlementsManager(
    *  settlements-npcs-030). Optional; `update()`'s `nowDays` is used as a
    *  fallback once the game loop has started. */
   getNowDays?: () => number,
+  /** Fires once a settlement's full build actually completes — home (its own
+   *  direct `.then()` continuation) and every streamed-in neighbor
+   *  (`ensureLoaded`) alike (plan quests-progression-022 §8). Payload is
+   *  authoritative `SettlementDef` identity only (`id`/`x`/`z`), never a live
+   *  `Settlement`/NPCs/managers. Never fired for a settlement that's merely
+   *  known (a bare `SettlementDef`/pending build) — only once its `Settlement`
+   *  is actually assigned. Callers must stay idempotent: this can fire again
+   *  for the same id after an unload/reload. Deliberately narrow — this
+   *  module never imports reputation/social-news itself. */
+  onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
 ): Promise<SettlementsManager> {
   const naturalWaterKindAt = riverShoreDistance
     ? createNaturalWaterKindAt({
@@ -672,6 +682,7 @@ export async function createSettlementsManager(
     else entries.set(homeDef.id, { def: homeDef, settlement, pendingPromise: null })
     settlement.setDayNight(lastDayNight)
     syncMidpoints()
+    onSettlementAvailable?.({ id: homeDef.id, x: homeDef.x, z: homeDef.z })
     return settlement
   })
   entries.set(homeDef.id, {
@@ -773,6 +784,7 @@ export async function createSettlementsManager(
             if (order?.execution) transportOrders.clearExecution(order.id)
           }
         }
+        onSettlementAvailable?.({ id: def.id, x: def.x, z: def.z })
       })
       .catch((err: unknown) => {
         console.error('[SettlementsManager] failed to build settlement', def.id, err)

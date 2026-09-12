@@ -1,26 +1,34 @@
 import type { AnimalKind } from '../fauna/animalDefs'
-import type { ReputationDimension, SocialConsequence } from './ReputationManager'
+import type { ReputationDimension } from './ReputationManager'
+import type { SocialNewsSignal } from './SocialNewsLedger'
 
 /**
- * Dangerous-animal-deed reputation resolver (plan quests-progression-019) —
- * turns one confirmed player kill of a dangerous wild animal into zero or
- * more already-resolved `SocialConsequence`s for nearby settlements. Deer and
- * livestock/harmless species never generate a deed; only the explicit
- * species baselines below do.
+ * Dangerous-animal-deed reputation resolver (plan quests-progression-019,
+ * refactored by quests-progression-022) — turns one confirmed player kill of
+ * a dangerous wild animal into a distance-independent `SocialNewsSignal`.
+ * Deer and livestock/harmless species never generate a deed; only the
+ * explicit species baselines below do.
+ *
+ * Distance/settlement resolution is no longer this module's job (plan
+ * quests-progression-022 §1/§5): a cold-cache kill used to scan a 3km
+ * settlement grid via `settlementsWithinDistance`/`peekDef`, synchronously
+ * materializing settlement definitions and freezing the main thread. This
+ * module now only produces the base signal; `SocialNewsLedger` applies
+ * `reputationFactor`/`renownFactor` per settlement, lazily, at catch-up time.
  *
  * Deliberately separate from `socialExposure.ts`, which is a random risk
  * roll for grave disturbance — a positive animal deed is fully deterministic
- * for a fixed kill context and settlement set, never a witness/gossip
- * simulation. Pure and stateless: never mutates `ReputationManager`, never
+ * for a fixed kill context, never a witness/gossip simulation. Pure and
+ * stateless: never mutates `ReputationManager`/`SocialNewsLedger`, never
  * imports `QuestManager` or fauna behaviour. Callers own quest-ownership
  * suppression (`options.socialOutcomeClaimed`, fed by
- * `QuestManager.hasSocialOutcomeClaim`) and settlement candidate discovery
- * (`settlement/settlementProximity.ts`'s `settlementsWithinDistance`).
+ * `QuestManager.hasSocialOutcomeClaim`).
  *
  * @domain quests-progression
  * @system reputation
- * @role Pure species-baseline + distance-attenuation resolver for the
- *  generic dangerous-animal-kill reputation/renown deed.
+ * @role Pure species-baseline resolver producing the generic dangerous-
+ *  animal-kill social-news signal, plus the canonical distance-attenuation
+ *  functions `SocialNewsLedger` applies per settlement.
  */
 
 /** Player-caused kill context, captured at the moment of death (plan
@@ -37,15 +45,13 @@ export type PlayerAnimalKillContext = {
   position: { x: number, z: number }
 }
 
-/** Read-only settlement site candidate — id + world position only, exactly
- *  what `settlementsWithinDistance` returns and all this resolver needs. */
-export type AnimalDeedSettlementCandidate = { id: string, x: number, z: number }
-
 /** Maximum distance at which a kill can affect a settlement at all (plan §5)
  *  — not a "radius of knowledge": distance alone is not evidence a
  *  settlement learned of the kill, but the plan's V1 exposure basis is that
  *  a kill local enough to a settlement (within this bound) is knowable to
- *  it. Settlements farther than this never receive a consequence. */
+ *  it. `renownFactor` reaches `0` exactly here, so `SocialNewsLedger` never
+ *  needs a separate distance cutoff — settlements farther than this simply
+ *  attenuate to zero effect. */
 export const MAX_ANIMAL_DEED_INFLUENCE_DISTANCE = 3000
 
 /** Distance within which both `reputationFactor`/`renownFactor` are `1.0`
@@ -113,9 +119,11 @@ function isZeroBaseline(baseline: AnimalDeedBaseline): boolean {
 }
 
 /**
- * Resolves zero or more already-resolved `SocialConsequence`s for one
- * confirmed player animal kill (plan quests-progression-019). Pure: never
- * mutates `settlements`/`kill`, never touches `ReputationManager` itself.
+ * Resolves one confirmed player animal kill into a distance-independent
+ * `SocialNewsSignal`, or `null` when the kill produces no generic deed at
+ * all (plan quests-progression-019, distance/settlement resolution moved to
+ * `SocialNewsLedger` by quests-progression-022). Pure: never mutates `kill`,
+ * never touches `ReputationManager`/`SocialNewsLedger` itself.
  *
  * `options.socialOutcomeClaimed` (from `QuestManager.hasSocialOutcomeClaim`,
  * read *before* the lethal hit) suppresses the generic deed entirely when a
@@ -124,36 +132,21 @@ function isZeroBaseline(baseline: AnimalDeedBaseline): boolean {
  *
  * @domain quests-progression
  */
-export function resolveAnimalDeedConsequences(
+export function resolveAnimalDeedSignal(
   kill: PlayerAnimalKillContext,
-  settlements: readonly AnimalDeedSettlementCandidate[],
   options?: { socialOutcomeClaimed?: boolean },
-): SocialConsequence[] {
-  if (options?.socialOutcomeClaimed) return []
+): SocialNewsSignal | null {
+  if (options?.socialOutcomeClaimed) return null
   const baseline = ANIMAL_DEED_SPECIES_BASELINE[kill.animalKind]
-  if (!baseline || isZeroBaseline(baseline)) return []
+  if (!baseline || isZeroBaseline(baseline)) return null
 
-  const consequences: SocialConsequence[] = []
-  for (const settlement of settlements) {
-    const distance = Math.hypot(settlement.x - kill.position.x, settlement.z - kill.position.z)
-    if (distance > MAX_ANIMAL_DEED_INFLUENCE_DISTANCE) continue
+  const competence = baseline.competence * kill.dangerSignificance
+  const courage = baseline.courage * kill.dangerSignificance
+  const renown = baseline.renown * kill.dangerSignificance
 
-    const repFactor = reputationFactor(distance)
-    const renFactor = renownFactor(distance)
-    const competence = Math.round(baseline.competence * kill.dangerSignificance * repFactor)
-    const courage = Math.round(baseline.courage * kill.dangerSignificance * repFactor)
-    const renown = Math.round(baseline.renown * kill.dangerSignificance * renFactor)
-    if (competence === 0 && courage === 0 && renown === 0) continue
+  const reputation: Partial<Record<ReputationDimension, number>> = {}
+  if (competence !== 0) reputation.competence = competence
+  if (courage !== 0) reputation.courage = courage
 
-    const reputation: Partial<Record<ReputationDimension, number>> = {}
-    if (competence !== 0) reputation.competence = competence
-    if (courage !== 0) reputation.courage = courage
-
-    consequences.push({
-      settlementId: settlement.id,
-      ...(Object.keys(reputation).length > 0 ? { reputation } : {}),
-      ...(renown !== 0 ? { renown } : {}),
-    })
-  }
-  return consequences
+  return { reputation, renown }
 }

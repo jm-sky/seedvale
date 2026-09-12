@@ -408,6 +408,11 @@ function buildSettlementsManager(
   initialStructureStates?: Record<string, import('../settlement/structureCondition').SettlementStructureState>,
   /** World-day clock for agricultural stream-in catch-up (plan settlements-npcs-030). */
   getNowDays?: () => number,
+  /** Settlement-lifecycle "actually built" callback (plan
+   *  quests-progression-022 §8) — forwarded straight into
+   *  `createSettlementsManager`, which fires it once per settlement build
+   *  (home and every streamed-in neighbor), not per `SettlementDef`. */
+  onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -463,6 +468,7 @@ function buildSettlementsManager(
     chunkManager.riverShoreDistance.bind(chunkManager),
     initialStructureStates,
     getNowDays,
+    onSettlementAvailable,
   )
 }
 
@@ -750,6 +756,11 @@ type WorldSystemsSeed = {
   resourceDepletion: ResourceDepletionState
   onAnimalDeath?: (animalId: string) => void
   getPlayerSocial?: PlayerSocialLookup
+  /** Settlement-lifecycle "actually built" callback (plan
+   *  quests-progression-022 §8) — forwarded into `buildSettlementsManager`
+   *  the same way `getPlayerSocial` is above, so it keeps working across
+   *  `rebuildWorldBundle()`. */
+  onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean
   onTrapCapture?: PlacedTrapsHooks['onCapture']
   onTrapBaitReturned?: PlacedTrapsHooks['onBaitReturned']
@@ -898,7 +909,7 @@ async function buildWorldSystems(
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
-    onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: initialBloodTraces,
   } = seed
@@ -1159,7 +1170,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -1549,6 +1560,10 @@ export async function createWorldBundle(
    *  sourced from `SaveData.transportOrders` — same carry/restore contract
    *  as `initialWorkContracts`. */
   initialTransportOrders: readonly TransportOrder[] = [],
+  /** Settlement-lifecycle "actually built" callback (plan
+   *  quests-progression-022 §8) — forwarded into `buildSettlementsManager`
+   *  the same way `getPlayerSocial` is above. */
+  onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1591,7 +1606,7 @@ export async function createWorldBundle(
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
-    onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
   }, isStale)
 }
@@ -1658,6 +1673,10 @@ export async function rebuildWorldBundle(
    *  (plan fauna-010 §3/§4) — the same long-lived object `createApp.ts`
    *  owns and threads through both. */
   grassForageOverrides: GrassForageOverrides = {},
+  /** Same contract as `createWorldBundle`'s own `onSettlementAvailable`
+   *  (plan quests-progression-022 §8) — forwarded into `buildSettlementsManager`
+   *  so the hook keeps firing after an in-session rebuild. */
+  onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -1815,7 +1834,7 @@ export async function rebuildWorldBundle(
     persistentOccupants: carriedPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
-    onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: carriedBloodTraces,
   }, isStale)

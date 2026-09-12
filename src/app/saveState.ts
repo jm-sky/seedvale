@@ -9,6 +9,7 @@ import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { ReputationManager } from '../reputation/ReputationManager'
+import type { SocialNewsLedger } from '../reputation/SocialNewsLedger'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
@@ -87,6 +88,9 @@ export type SaveStateDeps = {
   treasureChestMutations: ReadonlyMap<string, TreasureChestMutation>
   badges: BadgeManager
   reputation: ReputationManager
+  /** Lazy social-news ledger (plan quests-progression-022) — app/session
+   *  owned the same way `reputation` is above, serialized alongside it. */
+  socialNews: SocialNewsLedger
   fishingBait: Map<string, FishingBaitState>
   /** Live accessors — `createApp` replaces these three on a New Game, so they
    *  must not be captured by value. */
@@ -131,7 +135,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
     config, bundle, player, mouseLook, inventory, heldTool, equipment, primaryWeapons, playerTorch,
     questManager, dayNight, mapDiscovery, locationKnowledge, navigationTargets, landOwnership, vueUi, worldFlags, fishingBait,
-    resolvedHiddenFindSpotIds, unlockedTreasureContainerIds, treasureChestMutations, badges, reputation,
+    resolvedHiddenFindSpotIds, unlockedTreasureContainerIds, treasureChestMutations, badges, reputation, socialNews,
   } = deps
 
   const buildSaveData = (): SaveData => {
@@ -185,6 +189,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     resolvedHiddenFindSpotIds: [...resolvedHiddenFindSpotIds],
     badges: badges.exportState(),
     reputation: reputation.exportState(),
+    socialNews: socialNews.serialize(),
     map: {
       discoveredCells: mapDiscovery.serialize(),
       discoveredLocations: locationKnowledge.serialize(),

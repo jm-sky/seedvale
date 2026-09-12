@@ -516,6 +516,62 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData({ ...validSave, reputation: { settlements: 'nope' } })).toBeNull()
   })
 
+  it('restores an older save with no socialNews field as an empty ledger (plan quests-progression-022)', () => {
+    // `validSave` above omits `socialNews` entirely, same backward-compat
+    // fixture every other optional field uses.
+    const loaded = loadSaveData(validSave)
+    expect(loaded?.socialNews).toBeUndefined()
+  })
+
+  it('round-trips a pending social-news event including carriers and dedupe ids', () => {
+    const withSocialNews: SaveData = {
+      ...validSave,
+      socialNews: {
+        nextEventId: 3,
+        events: [
+          {
+            id: 'social-news-2',
+            kind: 'dangerous_animal_deed',
+            occurredAtDays: 5,
+            expiresAtDays: 12,
+            originX: 10,
+            originZ: -20,
+            reputation: { competence: 4, courage: 5 },
+            renown: 5,
+            carriers: [{ settlementId: 'home', x: 10, z: -20, renownSignal: 5 }],
+            processedSettlementIds: ['home'],
+          },
+        ],
+      },
+    }
+    expect(loadSaveData(withSocialNews)).toEqual(withSocialNews)
+  })
+
+  it('rejects a malformed socialNews record', () => {
+    expect(loadSaveData({ ...validSave, socialNews: 'nope' })).toBeNull()
+    expect(loadSaveData({ ...validSave, socialNews: { nextEventId: 0, events: 'nope' } })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      socialNews: { nextEventId: 0, events: [{ id: 'e', kind: 'gossip', occurredAtDays: 0, expiresAtDays: 1, originX: 0, originZ: 0, reputation: {}, renown: 0, carriers: [], processedSettlementIds: [] }] },
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      socialNews: { nextEventId: 0, events: [{ id: 'e', kind: 'dangerous_animal_deed', occurredAtDays: 0, expiresAtDays: 1, originX: 0, originZ: 0, reputation: { trust: 'nope' }, renown: 0, carriers: [], processedSettlementIds: [] }] },
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      socialNews: { nextEventId: 0, events: [{ id: 'e', kind: 'dangerous_animal_deed', occurredAtDays: 0, expiresAtDays: 1, originX: 0, originZ: 0, reputation: {}, renown: 0, carriers: [{ settlementId: 'home', x: 0, z: 0 }], processedSettlementIds: [] }] },
+    })).toBeNull()
+  })
+
+  it('migrates a v39 save without socialNews to the current version (plan quests-progression-022)', () => {
+    const result = loadStoredSave({ ...validSave, version: 39 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.socialNews).toBeUndefined()
+  })
+
   it('rejects malformed npcRelationships/livestock/removedLivestockIds fields', () => {
     expect(loadSaveData({ ...validSave, npcRelationships: [{ a: 'x' }] })).toBeNull()
     expect(loadSaveData({ ...validSave, npcRelationships: 'nope' })).toBeNull()

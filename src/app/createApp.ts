@@ -93,6 +93,7 @@ import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
+import { buildHunterProfessionQuests } from '../quests/opportunities/hunterProfessionQuests'
 import {
   nearbyRpgSettlementDefs,
   OLD_PLACE_LANDMARK_KINDS,
@@ -104,7 +105,6 @@ import {
   parseWolfDenPressureQuestId,
   wolfDenPressureStatusFromSpawners,
 } from '../quests/opportunities/settlementQuestOpportunities'
-import { buildHunterProfessionQuests } from '../quests/opportunities/hunterProfessionQuests'
 import {
   buildWorldDrivenSettlementQuests,
   opportunityNpcsFromSettlement,
@@ -113,17 +113,16 @@ import { QuestManager } from '../quests/QuestManager'
 import { bindDarkForestTreasureQuest, bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import {
-  MAX_ANIMAL_DEED_INFLUENCE_DISTANCE,
   type PlayerAnimalKillContext,
-  resolveAnimalDeedConsequences,
+  resolveAnimalDeedSignal,
 } from '../reputation/animalDeeds'
 import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
+import { createSocialNewsLedger } from '../reputation/SocialNewsLedger'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
 import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { livestockStrayCandidateFromAgent } from '../settlement/livestock'
 import { settlementNpcDescriptors } from '../settlement/npcIdentity'
-import { settlementsWithinDistance } from '../settlement/settlementProximity'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
 import { drainStamina } from '../shared/StaminaState'
@@ -468,6 +467,11 @@ export async function createApp(
   }
   const badges = new BadgeManager(initialSave?.badges)
   const reputation = new ReputationManager(initialSave?.reputation)
+  // Lazy social-news propagation (plan quests-progression-022) — app/session
+  // owned, same lifetime contract as `reputation` just above: an in-session
+  // `rebuildWorldBundle()` of the same world must not clear pending news, so
+  // this deliberately lives here rather than inside `WorldBundle`.
+  const socialNews = createSocialNewsLedger(initialSave?.socialNews)
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
   // Plan 172 — natural crop lifecycle: harvested/removed wild crops, same
   // "shared/mutated in place, reset only on a genuinely new world" contract
@@ -515,6 +519,15 @@ export async function createApp(
   // only wired up further down.
   let refreshCharacterReputationTarget: (() => void) | null = null
   const refreshCharacterReputation = (): void => { refreshCharacterReputationTarget?.() }
+  // Same "target assigned later" indirection as `onAnimalDeath` above (plan
+  // quests-progression-022 §8) — `SettlementsManager` fires this the moment a
+  // settlement (home or a streamed-in neighbor) actually finishes building,
+  // but the social-news catch-up this drives needs `bundle`, which doesn't
+  // exist until just below.
+  let onSettlementAvailableTarget: ((settlement: { id: string, x: number, z: number }) => void) | null = null
+  const onSettlementAvailable = (settlement: { id: string, x: number, z: number }): void => {
+    onSettlementAvailableTarget?.(settlement)
+  }
   // Same "target assigned later" indirection as `onAnimalDeath` above — the
   // trap system is built with the bundle, but awarding Traps XP / toasting
   // the catch needs `player`/`toast`, which only exist further down
@@ -620,6 +633,7 @@ export async function createApp(
         }
       : undefined,
     initialSave?.transportOrders ?? [],
+    onSettlementAvailable,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -628,6 +642,24 @@ export async function createApp(
   worldBundleBackgroundReady.catch(() => {})
 
   nearbyPlayerWellTarget = (x, z, maxDistance) => bundle.playerWells.nearestCompleted(x, z, maxDistance)
+
+  // Plan quests-progression-022 §8 — settlement-lifecycle catch-up: reads
+  // `bundle.settlementsManager.getLoaded()` (cheap, no grid scan, no
+  // procedural settlement generation) rather than trusting the single
+  // settlement `SettlementsManager` just reported, since an earlier-loaded
+  // settlement can become newly eligible once *this* one becomes a fresh
+  // knowledge carrier (see `SocialNewsLedger.catchUpSettlements`'s doc).
+  const catchUpLoadedSettlements = (): void => {
+    const loaded = bundle.settlementsManager.getLoaded().map((s) => ({ id: s.id, x: s.center.x, z: s.center.z }))
+    const consequences = socialNews.catchUpSettlements(loaded, dayNight.elapsedDays)
+    if (consequences.length === 0) return
+    for (const consequence of consequences) applySocialConsequence(reputation, consequence)
+    refreshCharacterReputation()
+  }
+  onSettlementAvailableTarget = () => catchUpLoadedSettlements()
+  // One-time catch-up for whatever's already loaded (home/eager neighbors
+  // built before this closure was wired) — idempotent no-op otherwise.
+  catchUpLoadedSettlements()
   // Plan 159 §10 — fishing bait per spot (flat map, survives stream-out/in
   // for free) and a runtime-only per-spot cast counter feeding the
   // deterministic catch roll (same "not persisted, wild fauna isn't either"
@@ -1505,6 +1537,7 @@ export async function createApp(
     treasureChestMutations,
     badges,
     reputation,
+    socialNews,
     fishingBait,
     getCollectedItemIds: () => collectedItemIds,
     getRemovedCropIds: () => removedCropIds,
@@ -1575,6 +1608,7 @@ export async function createApp(
         resourceDepletion,
         () => worldGeneration !== thisRebuildGeneration,
         grassForageOverrides,
+        onSettlementAvailable,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()
@@ -1612,6 +1646,7 @@ export async function createApp(
         treasureChestMutations.clear()
         badges.reset()
         reputation.reset()
+        socialNews.reset()
         hud.setPlayerBadges(badges.listEarned())
         refreshCharacterReputation()
         resetPlayerNeeds(player.needs)
@@ -2280,21 +2315,20 @@ export async function createApp(
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
     questManager, syncLostLivestockQuests, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
-    // Plan quests-progression-019 — resolves the generic dangerous-animal-kill
-    // reputation/renown deed for every settlement the kill is local enough
-    // to, then applies + refreshes through the same seam `groundActions.ts`'s
-    // grave-disturbance exposure uses just above.
+    // Plan quests-progression-019, lazy propagation by quests-progression-022
+    // — resolves the generic dangerous-animal-kill signal, enqueues it as
+    // pending social news, and only ever catches up currently *loaded*
+    // settlements (`getLoaded()`, no grid scan, no `peekDef`/settlement
+    // generation) — never `settlementsWithinDistance()`, which used to
+    // synchronously materialize every unknown `SettlementDef` within 3km and
+    // freeze the main thread on a cold-cache kill. Settlements outside the
+    // loaded set catch up lazily via `onSettlementAvailable` above once they
+    // actually stream in.
     onPlayerAnimalKill: (kill: PlayerAnimalKillContext, socialOutcomeClaimed: boolean) => {
-      const settlements = settlementsWithinDistance(
-        bundle.settlementsManager.peekDef,
-        kill.position.x,
-        kill.position.z,
-        MAX_ANIMAL_DEED_INFLUENCE_DISTANCE,
-      )
-      const consequences = resolveAnimalDeedConsequences(kill, settlements, { socialOutcomeClaimed })
-      if (consequences.length === 0) return
-      for (const consequence of consequences) applySocialConsequence(reputation, consequence)
-      refreshCharacterReputation()
+      const signal = resolveAnimalDeedSignal(kill, { socialOutcomeClaimed })
+      if (!signal) return
+      socialNews.enqueue(signal, kill.position, dayNight.elapsedDays)
+      catchUpLoadedSettlements()
     },
     startGroundWork: (mode, x, z) => {
       if (hasItemCapability(heldTool.held(), 'rock_mining')) {

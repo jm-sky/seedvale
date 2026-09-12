@@ -7,7 +7,7 @@ import type { PersistentOccupantSaveRecord } from '../fauna/persistentOccupants'
 import type { ContainerKind } from '../items/container'
 import type { InventoryContentsSnapshot, SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
-import type { Reputation } from '../reputation/ReputationManager'
+import type { Reputation, ReputationDimension } from '../reputation/ReputationManager'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
@@ -176,6 +176,32 @@ export type SaveBadges = {
  *  version bump/migration (nothing existing changes meaning). */
 export type SaveReputation = {
   settlements: Record<string, { reputation: Reputation, renown: number }>
+}
+
+/** One pending/resolved-so-far social-news event (plan quests-progression-022
+ *  §13), see `reputation/SocialNewsLedger.ts`'s `SocialNewsEventSnapshot` —
+ *  independently declared here, structurally compatible, same
+ *  `ReputationManager`/`SaveReputation` convention. */
+export type SaveSocialNewsEvent = {
+  id: string
+  kind: 'dangerous_animal_deed'
+  occurredAtDays: number
+  expiresAtDays: number
+  originX: number
+  originZ: number
+  reputation: Partial<Record<ReputationDimension, number>>
+  renown: number
+  carriers: { settlementId: string, x: number, z: number, renownSignal: number }[]
+  processedSettlementIds: string[]
+}
+
+/** Pending social-news queue (plan quests-progression-022) — optional/sparse,
+ *  same "absent means never yet populated" contract as `SaveReputation`
+ *  above: an older save without this field restores an empty ledger, not a
+ *  version bump/migration by itself (see `migrateSaveV39ToV40`). */
+export type SaveSocialNews = {
+  nextEventId: number
+  events: SaveSocialNewsEvent[]
 }
 
 /** Hunger/thirst/vigor pools (`player/PlayerNeeds.ts`) plus the simulation-time
@@ -630,7 +656,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 39
+export const CURRENT_SAVE_VERSION = 40
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -824,6 +850,10 @@ export type SaveData = {
    *  `npcStates`/`households` above — an absent save restores every
    *  settlement as neutral. */
   reputation?: SaveReputation
+  /** Pending lazy social-news queue (plan quests-progression-022), see
+   *  `SaveSocialNews`. Optional, same sparse/fallback contract as
+   *  `reputation` above — an absent save restores an empty ledger. */
+  socialNews?: SaveSocialNews
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -1021,6 +1051,51 @@ function isSaveReputation(value: unknown): value is SaveReputation {
     const s = standing as Record<string, unknown>
     return isReputationField(s.reputation) && typeof s.renown === 'number'
   })
+}
+
+/** Sparse reputation deltas (an event's base signal, or a `SocialConsequence`)
+ *  — unlike `isReputationField` (a full `Reputation` snapshot), every key is
+ *  optional; only present keys are validated. */
+function isPartialReputationField(value: unknown): value is Partial<Record<ReputationDimension, number>> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const r = value as Record<string, unknown>
+  return Object.keys(r).every((key) => (REPUTATION_DIMENSIONS as readonly string[]).includes(key) && typeof r[key] === 'number')
+}
+
+function isSocialNewsCarriersField(value: unknown): value is SaveSocialNewsEvent['carriers'] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false
+    const c = entry as Record<string, unknown>
+    return (
+      typeof c.settlementId === 'string' &&
+      typeof c.x === 'number' && Number.isFinite(c.x) &&
+      typeof c.z === 'number' && Number.isFinite(c.z) &&
+      typeof c.renownSignal === 'number' && Number.isFinite(c.renownSignal)
+    )
+  })
+}
+
+function isSaveSocialNewsEvent(value: unknown): value is SaveSocialNewsEvent {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const e = value as Record<string, unknown>
+  if (typeof e.id !== 'string' || e.kind !== 'dangerous_animal_deed') return false
+  if (typeof e.occurredAtDays !== 'number' || !Number.isFinite(e.occurredAtDays)) return false
+  if (typeof e.expiresAtDays !== 'number' || !Number.isFinite(e.expiresAtDays)) return false
+  if (typeof e.originX !== 'number' || !Number.isFinite(e.originX)) return false
+  if (typeof e.originZ !== 'number' || !Number.isFinite(e.originZ)) return false
+  if (!isPartialReputationField(e.reputation)) return false
+  if (typeof e.renown !== 'number' || !Number.isFinite(e.renown)) return false
+  if (!isSocialNewsCarriersField(e.carriers)) return false
+  if (!Array.isArray(e.processedSettlementIds) || !e.processedSettlementIds.every((id) => typeof id === 'string')) return false
+  return true
+}
+
+function isSaveSocialNews(value: unknown): value is SaveSocialNews {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const v = value as Record<string, unknown>
+  if (typeof v.nextEventId !== 'number' || !Number.isFinite(v.nextEventId)) return false
+  return Array.isArray(v.events) && v.events.every(isSaveSocialNewsEvent)
 }
 
 function isSaveBadges(value: unknown): value is SaveBadges {
@@ -2253,6 +2328,7 @@ export function isSaveData(value: unknown): value is SaveData {
   // Same sparse "object of numbers" shape as `resourceDeposits` above.
   if (v.grassForagePatches !== undefined && !isResourceDepositsField(v.grassForagePatches)) return false
   if (v.reputation !== undefined && !isSaveReputation(v.reputation)) return false
+  if (v.socialNews !== undefined && !isSaveSocialNews(v.socialNews)) return false
   if (!isPlayerConditionsField(v.playerConditions)) return false
   if (v.waterDrinkEventCount !== undefined && typeof v.waterDrinkEventCount !== 'number') return false
   if (v.unsafeFoodEventCount !== undefined && typeof v.unsafeFoodEventCount !== 'number') return false
@@ -3237,6 +3313,14 @@ function migrateSaveV38ToV39(data: unknown): unknown {
   return { ...v, version: 39, households }
 }
 
+/** v39 → v40 (plan quests-progression-022): optional `socialNews` pending
+ *  social-news queue. Absent already restores as an empty ledger (see
+ *  `SaveSocialNews`'s doc) — version bump only. */
+function migrateSaveV39ToV40(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 40 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3396,6 +3480,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   36: migrateSaveV36ToV37,
   37: migrateSaveV37ToV38,
   38: migrateSaveV38ToV39,
+  39: migrateSaveV39ToV40,
 }
 
 function detectStoredVersion(value: unknown): number | null {

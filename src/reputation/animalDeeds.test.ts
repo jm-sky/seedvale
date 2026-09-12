@@ -5,7 +5,7 @@ import {
   MAX_ANIMAL_DEED_INFLUENCE_DISTANCE,
   renownFactor,
   reputationFactor,
-  resolveAnimalDeedConsequences,
+  resolveAnimalDeedSignal,
 } from './animalDeeds'
 
 function kill(overrides: Partial<PlayerAnimalKillContext> = {}): PlayerAnimalKillContext {
@@ -18,12 +18,11 @@ function kill(overrides: Partial<PlayerAnimalKillContext> = {}): PlayerAnimalKil
   }
 }
 
-const home = { id: 'home', x: 0, z: 0 }
-
-function magnitude(consequence: { reputation?: Partial<Record<string, number>>, renown?: number }): number {
-  const reputationSum = Object.values(consequence.reputation ?? {})
+function magnitude(signal: { reputation: Partial<Record<string, number>>, renown: number } | null): number {
+  if (!signal) return 0
+  const reputationSum = Object.values(signal.reputation)
     .reduce((sum: number, v) => sum + Math.abs(v ?? 0), 0)
-  return reputationSum + Math.abs(consequence.renown ?? 0)
+  return reputationSum + Math.abs(signal.renown)
 }
 
 describe('reputationFactor / renownFactor (plan quests-progression-019 §6)', () => {
@@ -63,124 +62,73 @@ describe('reputationFactor / renownFactor (plan quests-progression-019 §6)', ()
   })
 })
 
-describe('resolveAnimalDeedConsequences — species classification (plan §4)', () => {
+describe('resolveAnimalDeedSignal — species classification (plan §4)', () => {
   it('deer is an explicit zero case, even with significance > 1', () => {
-    expect(resolveAnimalDeedConsequences(kill({ animalKind: 'deer', dangerSignificance: 1 }), [home])).toEqual([])
-    expect(resolveAnimalDeedConsequences(kill({ animalKind: 'deer', dangerSignificance: 5 }), [home])).toEqual([])
+    expect(resolveAnimalDeedSignal(kill({ animalKind: 'deer', dangerSignificance: 1 }))).toBeNull()
+    expect(resolveAnimalDeedSignal(kill({ animalKind: 'deer', dangerSignificance: 5 }))).toBeNull()
   })
 
-  it('harmless/livestock kinds absent from the baseline table give no generic reward', () => {
+  it('harmless/livestock kinds absent from the baseline table give no generic signal', () => {
     for (const kind of ['sheep', 'chicken', 'cow', 'horse', 'donkey', 'rabbit', 'duck', 'boar', 'stag', 'dog', 'rat'] as const) {
-      expect(resolveAnimalDeedConsequences(kill({ animalKind: kind }), [home])).toEqual([])
+      expect(resolveAnimalDeedSignal(kill({ animalKind: kind }))).toBeNull()
     }
   })
 
-  it('a normal wolf kill produces a consequence with baseline significance at full effect distance', () => {
-    const [consequence] = resolveAnimalDeedConsequences(kill({ animalKind: 'wolf', dangerSignificance: 1 }), [home])
-    expect(consequence).toEqual({ settlementId: 'home', reputation: { competence: 2, courage: 2 }, renown: 2 })
+  it('a normal wolf kill produces the baseline signal, unattenuated by any distance', () => {
+    const signal = resolveAnimalDeedSignal(kill({ animalKind: 'wolf', dangerSignificance: 1 }))
+    expect(signal).toEqual({ reputation: { competence: 2, courage: 2 }, renown: 2 })
   })
 
-  it('an alpha wolf (dangerSignificance > 1) produces a strictly larger consequence than a normal wolf at the same distance', () => {
-    const [normal] = resolveAnimalDeedConsequences(kill({ animalKind: 'wolf', dangerSignificance: 1 }), [home])
-    const [alpha] = resolveAnimalDeedConsequences(kill({ animalKind: 'wolf', dangerSignificance: 1.75 }), [home])
-    expect(magnitude(alpha!)).toBeGreaterThan(magnitude(normal!))
+  it('an alpha wolf (dangerSignificance > 1) produces a strictly larger signal than a normal wolf', () => {
+    const normal = resolveAnimalDeedSignal(kill({ animalKind: 'wolf', dangerSignificance: 1 }))
+    const alpha = resolveAnimalDeedSignal(kill({ animalKind: 'wolf', dangerSignificance: 1.75 }))
+    expect(magnitude(alpha)).toBeGreaterThan(magnitude(normal))
   })
 
   it('alpha is still classified as plain wolf — no separate species-table entry is consulted for it', () => {
     // Same species baseline consumed for both — only dangerSignificance differs (fauna-022 owns the variant table, not this resolver).
-    const [normal] = resolveAnimalDeedConsequences(kill({ animalKind: 'wolf', dangerSignificance: 1 }), [home])
-    const [scaled] = resolveAnimalDeedConsequences(kill({ animalKind: 'wolf', dangerSignificance: 2 }), [home])
-    expect(scaled!.reputation?.competence).toBe((normal!.reputation?.competence ?? 0) * 2)
+    const normal = resolveAnimalDeedSignal(kill({ animalKind: 'wolf', dangerSignificance: 1 }))
+    const scaled = resolveAnimalDeedSignal(kill({ animalKind: 'wolf', dangerSignificance: 2 }))
+    expect(scaled!.reputation.competence).toBe((normal!.reputation.competence ?? 0) * 2)
   })
 
   it('NPC/predator/environment deaths never reach this resolver — it only ever receives a confirmed player kill context', () => {
     // Documented via the type contract: PlayerAnimalKillContext has no "cause" field,
     // so a non-player death simply never gets captured into one (see gameLoop.ts).
-    expect(resolveAnimalDeedConsequences(kill(), [home]).length).toBeGreaterThan(0)
+    expect(resolveAnimalDeedSignal(kill())).not.toBeNull()
   })
 
-  it('orders fox < wolf < alpha wolf < bear by overall consequence magnitude at the same distance', () => {
-    const fox = magnitude(resolveAnimalDeedConsequences(kill({ animalKind: 'fox', dangerSignificance: 1 }), [home])[0]!)
-    const wolf = magnitude(resolveAnimalDeedConsequences(kill({ animalKind: 'wolf', dangerSignificance: 1 }), [home])[0]!)
-    const alphaWolf = magnitude(resolveAnimalDeedConsequences(kill({ animalKind: 'wolf', dangerSignificance: 1.75 }), [home])[0]!)
-    const bear = magnitude(resolveAnimalDeedConsequences(kill({ animalKind: 'bear', dangerSignificance: 1 }), [home])[0]!)
+  it('orders fox < wolf < alpha wolf < bear by overall signal magnitude', () => {
+    const fox = magnitude(resolveAnimalDeedSignal(kill({ animalKind: 'fox', dangerSignificance: 1 })))
+    const wolf = magnitude(resolveAnimalDeedSignal(kill({ animalKind: 'wolf', dangerSignificance: 1 })))
+    const alphaWolf = magnitude(resolveAnimalDeedSignal(kill({ animalKind: 'wolf', dangerSignificance: 1.75 })))
+    const bear = magnitude(resolveAnimalDeedSignal(kill({ animalKind: 'bear', dangerSignificance: 1 })))
     expect(fox).toBeLessThan(wolf)
     expect(wolf).toBeLessThan(alphaWolf)
     expect(alphaWolf).toBeLessThan(bear)
   })
 })
 
-describe('resolveAnimalDeedConsequences — distance and attenuation (plan §5/§6)', () => {
-  it('is unaffected within FULL_ANIMAL_DEED_EFFECT_DISTANCE', () => {
-    const near = { id: 'near', x: FULL_ANIMAL_DEED_EFFECT_DISTANCE, z: 0 }
-    const [consequence] = resolveAnimalDeedConsequences(kill(), [near])
-    expect(consequence).toEqual({ settlementId: 'near', reputation: { competence: 2, courage: 2 }, renown: 2 })
-  })
-
-  it('drops reputation but can keep renown between 1500 and 3000m', () => {
-    const far = { id: 'far', x: 2000, z: 0 }
-    const [consequence] = resolveAnimalDeedConsequences(kill({ animalKind: 'bear' }), [far])
-    expect(consequence?.reputation).toBeUndefined()
-    expect(consequence?.renown).toBeGreaterThan(0)
-  })
-
-  it('produces nothing beyond MAX_ANIMAL_DEED_INFLUENCE_DISTANCE', () => {
-    const tooFar = { id: 'too-far', x: MAX_ANIMAL_DEED_INFLUENCE_DISTANCE + 1, z: 0 }
-    expect(resolveAnimalDeedConsequences(kill(), [tooFar])).toEqual([])
-  })
-
-  it('exactly at MAX_ANIMAL_DEED_INFLUENCE_DISTANCE may still round to zero and is dropped, not emitted as an empty consequence', () => {
-    const edge = { id: 'edge', x: MAX_ANIMAL_DEED_INFLUENCE_DISTANCE, z: 0 }
-    const result = resolveAnimalDeedConsequences(kill({ animalKind: 'fox' }), [edge])
-    expect(result).toEqual([])
-  })
-
-  it('never emits a consequence whose reputation/renown deltas are all zero after rounding', () => {
-    for (const distance of [1400, 1450, 1499, 2900, 2950, 2999]) {
-      const settlement = { id: 's', x: distance, z: 0 }
-      for (const consequence of resolveAnimalDeedConsequences(kill({ animalKind: 'fox' }), [settlement])) {
-        const total = Object.values(consequence.reputation ?? {}).reduce((sum, v) => sum + Math.abs(v ?? 0), 0)
-          + Math.abs(consequence.renown ?? 0)
-        expect(total).toBeGreaterThan(0)
-      }
-    }
-  })
-
-  it('gives different results to multiple settlements at different distances from one kill', () => {
-    const near = { id: 'near', x: 0, z: 0 }
-    const far = { id: 'far', x: 1200, z: 0 }
-    const consequences = resolveAnimalDeedConsequences(kill({ animalKind: 'bear' }), [near, far])
-    expect(consequences).toHaveLength(2)
-    const nearC = consequences.find((c) => c.settlementId === 'near')!
-    const farC = consequences.find((c) => c.settlementId === 'far')!
-    expect(magnitude(nearC)).toBeGreaterThan(magnitude(farC))
-  })
-})
-
-describe('resolveAnimalDeedConsequences — quest ownership suppression (plan §2)', () => {
+describe('resolveAnimalDeedSignal — quest ownership suppression (plan §2)', () => {
   it('socialOutcomeClaimed suppresses the generic deed entirely, even for an alpha wolf', () => {
-    const result = resolveAnimalDeedConsequences(
+    const result = resolveAnimalDeedSignal(
       kill({ animalKind: 'wolf', dangerSignificance: 1.75 }),
-      [home],
       { socialOutcomeClaimed: true },
     )
-    expect(result).toEqual([])
+    expect(result).toBeNull()
   })
 
   it('does not suppress when socialOutcomeClaimed is false/absent', () => {
-    expect(resolveAnimalDeedConsequences(kill(), [home], { socialOutcomeClaimed: false }).length).toBeGreaterThan(0)
-    expect(resolveAnimalDeedConsequences(kill(), [home]).length).toBeGreaterThan(0)
+    expect(resolveAnimalDeedSignal(kill(), { socialOutcomeClaimed: false })).not.toBeNull()
+    expect(resolveAnimalDeedSignal(kill())).not.toBeNull()
   })
 })
 
-describe('resolveAnimalDeedConsequences — purity', () => {
-  it('never mutates the kill context or settlement candidates it is given', () => {
+describe('resolveAnimalDeedSignal — purity', () => {
+  it('never mutates the kill context it is given', () => {
     const k = kill()
-    const settlements = [home, { id: 'other', x: 500, z: 500 }]
     const kSnapshot = JSON.parse(JSON.stringify(k))
-    const settlementsSnapshot = JSON.parse(JSON.stringify(settlements))
-    resolveAnimalDeedConsequences(k, settlements)
+    resolveAnimalDeedSignal(k)
     expect(k).toEqual(kSnapshot)
-    expect(settlements).toEqual(settlementsSnapshot)
   })
 })
