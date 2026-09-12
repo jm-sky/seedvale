@@ -199,7 +199,9 @@ Once a quest is already offered/active, later social-state drops do not retroact
 
 Quest dialogue is an override layer on top of normal NPC dialogue, not a separate dialogue-tree engine.
 
-`QuestManager.onInteract(npcId)` resolves quest-relevant actions by stable NPC id. Required active talk actions are collected across quest definitions before giver reminders/offers, preventing one quest's reminder from masking another quest's required conversation.
+One NPC can be the giver of, or a required talk target for, several concurrent quest contexts at once (e.g. a giver with two independently active quests, or two simultaneous not-yet-accepted offers) — `QuestManager` does not restrict an NPC to a single active quest and never picks an arbitrary "primary" one.
+
+`QuestManager.onInteract(npcId)` arbitrates every definition's contribution for `npcId` globally, not first-match (plan quests-progression-020). Explicit actionable contributions (required `talk_to_npc` / `talk_to_npc_choice` / stage `dialogueActions` / gather hand-in / report) from every relevant definition are always merged into one flat `actions` list (the aggregation from plan quests-progression-018), so they're never hidden behind a picker. Any other definition that still has something to say — a second offer, a second active quest with only an informational reminder — is exposed instead as a `QuestDialogTopic` (`{ label, resolve() }`) on `QuestDialogOverride.topics`: `label` is always the quest's player-facing `QuestDef.title`, never a questId, and `resolve()` re-reads live quest state rather than a value frozen when the topic list was built. With exactly one quest context for that NPC, `onInteract` returns it directly — no `topics` wrapper, so the single-quest UX is unchanged. The UI only renders `label` and invokes `resolve()`; it never interprets a quest id, stage index, objective type or outcome. Selecting one topic does not accept/complete/advance any quest by itself — only the same explicit player actions above do that.
 
 Explicit player action is required for authored speech that changes quest state:
 
@@ -209,11 +211,11 @@ Explicit player action is required for authored speech that changes quest state:
 - final report/hand-in,
 - stage `dialogueActions`.
 
-Opening the dialogue UI by itself is not completion.
+Opening the dialogue UI by itself is not completion, and neither is opening the topic picker or viewing another quest's topic.
 
 `QuestStage.dialogueActions` are deliberately small and non-terminal: selecting one advances the current stage and may apply normal `QuestConsequences`; it does not introduce a generic branching-dialogue scripting system.
 
-Quest markers are derived from the same lifecycle. Required talk targets take precedence over generic giver/in-progress markers.
+`QuestManager.labelMarker(npcId)` is a global reduction over every definition touching `npcId`, independent of `defs` order: `?` (required dialogue target) outranks `✓` (any quest `ready_to_report`), which outranks `!` (any quest `offered`/available `not_offered`), which outranks `…` (any quest merely `active`). One NPC's marker is never decided by which of several relevant quests happens to appear first in `defs`.
 
 ## Outcomes, rewards and consequences
 

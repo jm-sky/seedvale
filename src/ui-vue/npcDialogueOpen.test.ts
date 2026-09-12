@@ -10,6 +10,7 @@ import {
   resolveNpcDialogueHelp,
   resolveNpcDialogueOpenTopic,
   selectNpcDialogueHelpAction,
+  selectNpcDialogueHelpTopic,
   ui,
 } from './store'
 
@@ -194,6 +195,78 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
     expect(ui.npcDialogueMenu.helpResult?.line).toBe('generic greeting')
     expect(ui.npcDialogueMenu.helpResult?.actions).toBeUndefined()
     expect(qm.getState('relay')).toBe('active')
+    closeNpcDialogueMenu()
+  })
+})
+
+describe('resolveNpcDialogueHelp topic picker contract (plan quests-progression-020)', () => {
+  const KASIA_ID = 'kasia-id'
+  const shellsQuest: QuestDef = {
+    id: 'shells',
+    title: 'Muszle dla Kasi',
+    description: 'shells',
+    giverName: 'Kasia',
+    giver: { npcId: KASIA_ID },
+    offerLine: 'Potrzebuję muszli z plaży.',
+    stages: [
+      { objective: { type: 'interact_well' }, description: 'shell', reminderLine: 'Masz już muszle?' },
+    ],
+    reportLine: 'Dziękuję za muszle.',
+    outcomes: [{ id: 'complete', state: 'complete' }],
+  }
+  const wolvesQuest: QuestDef = {
+    id: 'wolves',
+    title: 'Wilki u kupca',
+    description: 'wolves',
+    giverName: 'Kasia',
+    giver: { npcId: KASIA_ID },
+    offerLine: 'Wilki straszą kupców na trakcie.',
+    stages: [
+      { objective: { type: 'interact_tree' }, description: 'wolves', reminderLine: 'Wilki nadal tam są.' },
+    ],
+    reportLine: 'Dziękuję za pomoc z wilkami.',
+    outcomes: [{ id: 'complete', state: 'complete' }],
+  }
+
+  it('offers a topic per concurrent quest context and keeps each independently reachable', () => {
+    const qm = new QuestManager([shellsQuest, wolvesQuest], undefined, new Inventory())
+    // Both quests are offered by the same NPC (Kasia) at once.
+    qm.onInteract(KASIA_ID)?.topics?.[0]?.resolve().offer?.onAccept()
+    qm.onInteract(KASIA_ID)?.topics?.[1]?.resolve().offer?.onAccept()
+    expect(qm.getState('shells')).toBe('active')
+    expect(qm.getState('wolves')).toBe('active')
+
+    openNpcDialogueMenu(stubNpc('Kasia', KASIA_ID), stubSettlement, qm, 12)
+    resolveNpcDialogueHelp()
+
+    expect(ui.npcDialogueMenu.helpResult?.actions).toBeUndefined()
+    expect(ui.npcDialogueMenu.helpResult?.topics?.map((t) => t.label)).toEqual(['Muszle dla Kasi', 'Wilki u kupca'])
+
+    // Selecting one topic shows only that quest's payload...
+    selectNpcDialogueHelpTopic(0)
+    expect(ui.npcDialogueMenu.helpResult?.line).toBe('Masz już muszle?')
+    expect(ui.npcDialogueMenu.helpResult?.topics).toBeUndefined()
+
+    // ...without removing the other quest: re-deriving the help payload still lists both.
+    resolveNpcDialogueHelp()
+    expect(ui.npcDialogueMenu.helpResult?.topics?.map((t) => t.label)).toEqual(['Muszle dla Kasi', 'Wilki u kupca'])
+
+    // The player can switch to the second quest from the same re-opened list.
+    selectNpcDialogueHelpTopic(1)
+    expect(ui.npcDialogueMenu.helpResult?.line).toBe('Wilki nadal tam są.')
+
+    closeNpcDialogueMenu()
+  })
+
+  it('keeps the existing single-quest UX when the NPC has only one quest context', () => {
+    const qm = new QuestManager([shellsQuest], undefined, new Inventory())
+    openNpcDialogueMenu(stubNpc('Kasia', KASIA_ID), stubSettlement, qm, 12)
+
+    resolveNpcDialogueHelp()
+    expect(ui.npcDialogueMenu.helpResult?.topics).toBeUndefined()
+    expect(ui.npcDialogueMenu.helpResult?.line).toBe('Potrzebuję muszli z plaży.')
+    expect(ui.npcDialogueMenu.helpResult?.offer).toBeDefined()
+
     closeNpcDialogueMenu()
   })
 })

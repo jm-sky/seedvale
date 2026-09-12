@@ -4,7 +4,7 @@ import type { NpcAgent } from '../ai/NpcAgent'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
 import { useOverlayScreen } from './composables/useOverlayScreen'
-import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, resolveNpcDialogueHelp, resolveNpcDialogueOpenTopic, selectNpcDialogueHelpAction, ui } from './store'
+import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, resolveNpcDialogueHelp, resolveNpcDialogueOpenTopic, selectNpcDialogueHelpAction, selectNpcDialogueHelpTopic, ui } from './store'
 
 const BACKDROP_CLOSE_GUARD_MS = 300
 
@@ -29,6 +29,13 @@ useOverlayScreen('npc-dialogue', isNpcDialogueMenuOpen, closeNpcDialogueMenu)
 const archetype = computed(() => (state.npc ? nearestArchetype(state.npc.personality) : 'calm'))
 const hasOffer = computed(() => state.helpResult?.offer != null)
 const helpActions = computed(() => state.helpResult?.actions ?? [])
+/** Other quest contexts this NPC has right now (plan quests-progression-020)
+ *  — a pure navigation layer over `QuestDialogOverride.topics`. */
+const helpTopics = computed(() => state.helpResult?.topics ?? [])
+/** Whether the "help" topic is currently showing one selected quest's
+ *  override rather than the top-level (possibly multi-topic) payload — drives
+ *  what "Wróć" does inside "help" (plan quests-progression-020). */
+const helpDrilled = ref(false)
 const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
 const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
 const swordLine = ref('')
@@ -72,17 +79,44 @@ function resetMenu(): void {
   paymentLine.value = ''
   joinProposeLine.value = ''
   joinProposalLine.value = ''
+  helpDrilled.value = false
 }
 function backToTopics(): void { emitUiClick(); resetMenu() }
 function selectTopic(next: Topic): void {
   emitUiClick()
-  if (next === 'help') resolveNpcDialogueHelp()
+  if (next === 'help') {
+    helpDrilled.value = false
+    resolveNpcDialogueHelp()
+  }
   topic.value = next
 }
 
 function selectHelpAction(index: number): void {
   emitUiClick()
   selectNpcDialogueHelpAction(index)
+}
+
+/** Drills into one quest/topic entry from the multi-quest picker (plan
+ *  quests-progression-020) — replaces the shown "help" payload with that
+ *  quest's own live override. */
+function selectHelpTopic(index: number): void {
+  emitUiClick()
+  helpDrilled.value = true
+  selectNpcDialogueHelpTopic(index)
+}
+
+/** "Wróć" inside the "help" topic: from a drilled-in quest, return to the
+ *  (possibly still multi-quest) top-level payload by re-resolving it live;
+ *  otherwise behave like the generic "Wróć" and leave "help" entirely. */
+function helpBack(): void {
+  emitUiClick()
+  if (helpDrilled.value) {
+    helpDrilled.value = false
+    resolveNpcDialogueHelp()
+    return
+  }
+  resetMenu()
+  topic.value = null
 }
 
 function askSword(): void {
@@ -353,27 +387,43 @@ watch(() => state.open, (open) => {
             Odmów
           </button>
         </div>
-        <div
-          v-else-if="topic === 'help' && helpActions.length"
-          class="flex flex-col gap-2"
-        >
-          <button
-            v-for="(action, index) in helpActions"
-            :key="index"
-            type="button"
-            class="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20"
-            @click="selectHelpAction(index)"
+        <template v-else-if="topic === 'help'">
+          <div
+            v-if="helpActions.length"
+            class="flex flex-col gap-2"
           >
-            {{ action.label }}
-          </button>
+            <button
+              v-for="(action, index) in helpActions"
+              :key="index"
+              type="button"
+              class="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20"
+              @click="selectHelpAction(index)"
+            >
+              {{ action.label }}
+            </button>
+          </div>
+          <div
+            v-if="helpTopics.length"
+            class="flex flex-col gap-2"
+          >
+            <button
+              v-for="(entry, index) in helpTopics"
+              :key="index"
+              type="button"
+              class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+              @click="selectHelpTopic(index)"
+            >
+              {{ entry.label }}
+            </button>
+          </div>
           <button
             type="button"
             class="cursor-pointer self-start rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-            @click="backToTopics"
+            @click="helpBack"
           >
             Wróć
           </button>
-        </div>
+        </template>
         <button
           v-else-if="topic === 'goodbye'"
           type="button"

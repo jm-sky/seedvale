@@ -62,8 +62,23 @@ export type QuestDialogAction = {
 }
 
 /**
+ * One selectable quest/topic entry when an NPC has more than one concurrent
+ * quest context (plan quests-progression-020) — presentation-neutral: it is
+ * never a `QuestDialogAction` (a conscious authored player line that can
+ * mutate quest state) but purely "which quest am I talking about". UI shows
+ * `label` (always `QuestDef.title`, never a questId) and calls `resolve()`
+ * only on selection, re-reading live quest state rather than a value frozen
+ * at menu-open time.
+ */
+export type QuestDialogTopic = {
+  label: string
+  resolve: () => QuestDialogOverride
+}
+
+/**
  * Quest-driven NPC dialogue payload. UI displays `line` / `offer` / `actions`
- * and invokes callbacks; it must not interpret quest ids, stages or outcomes.
+ * / `topics` and invokes callbacks; it must not interpret quest ids, stages
+ * or outcomes.
  *
  * @domain quests-progression
  */
@@ -75,8 +90,15 @@ export type QuestDialogOverride = {
     onDecline: () => void
   }
   /** Conscious player speech for report / talk_to_npc / talk_to_npc_choice /
-   *  stage dialogue actions / gather hand-in. */
+   *  stage dialogue actions / gather hand-in. Always shown directly — never
+   *  hidden behind `topics` — since these are actionable right now. */
   actions?: readonly QuestDialogAction[]
+  /** Other quest contexts this NPC currently has for the player, presented
+   *  as a pure navigation layer alongside `offer`/`actions` (plan
+   *  quests-progression-020) — e.g. a second not-yet-accepted offer, or a
+   *  second active quest with only an informational reminder. Absent when
+   *  this NPC has at most one quest context right now. */
+  topics?: readonly QuestDialogTopic[]
 }
 
 export type { QuestProgressEntry }
@@ -1065,43 +1087,75 @@ export class QuestManager {
     return this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine ?? def.reportLine
   }
 
+  /** One definition's whole contribution to talking to `npcId` right now:
+   *  explicit actions first (talk targets / stage dialogue actions / gather
+   *  hand-in / report), else — only when `npcId` is this def's giver — an
+   *  offer, else a giver reminder. Mirrors the old per-def precedence inside
+   *  `onInteract`, factored out so both the top-level pass and a selected
+   *  `QuestDialogTopic.resolve()` re-read live state through the exact same
+   *  path (plan quests-progression-020). */
+  private resolveNpcQuestContribution(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    const actionable = this.collectQuestActionsForNpc(def, npcId)
+    if (actionable) return actionable
+    if (npcId !== def.giver.npcId) return null
+    return this.handleGiverOffer(def) ?? this.handleGiverReminder(def)
+  }
+
   /** Quest-driven line/offer for talking to `npcId` right now, or null if
    *  this NPC has nothing quest-related to say (caller falls back to normal
    *  dialogue). Matching is by stable NPC id, not display name.
-   *  Explicit quest actions from every definition are collected first so a
-   *  giver reminder cannot hide another quest's `talk_to_npc` / stage
-   *  dialogue action (plan quests-progression-018). `completedFallback`
-   *  (plan 153) — an already-turned-in quest's `reportLine`, used only if
-   *  nothing else this giver offers (a new quest, a reminder, a report)
-   *  takes priority. */
+   *
+   *  Arbitrates every definition's contribution globally (plan
+   *  quests-progression-020) instead of first-match: explicit actionable
+   *  contributions (talk targets / stage dialogue actions / gather hand-in /
+   *  report) from every definition are always merged into one flat `actions`
+   *  list (unchanged aggregation from plan quests-progression-018) — never
+   *  hidden behind topic selection. Any other definition that still has
+   *  something to say right now (a second offer, a second active quest with
+   *  only an informational reminder) becomes a `QuestDialogTopic` instead of
+   *  being silently dropped. With exactly one quest context total, the
+   *  single-quest UX is unchanged (no `topics` wrapper). `completedFallback`
+   *  (plan 153) — an already-turned-in quest's `reportLine`, used only when
+   *  no definition has any contribution at all. */
   onInteract(npcId: NpcId): QuestDialogOverride | null {
-    const actionOverrides: QuestDialogOverride[] = []
+    const actionable: QuestDialogOverride[] = []
+    const passive: { def: QuestDef, override: QuestDialogOverride }[] = []
     let completedFallback: QuestDialogOverride | null = null
+
     for (const def of this.defs) {
-      const collected = this.collectQuestActionsForNpc(def, npcId)
-      if (collected) actionOverrides.push(collected)
+      const contribution = this.resolveNpcQuestContribution(def, npcId)
+      if (contribution) {
+        if (contribution.actions?.length) {
+          actionable.push(contribution)
+        } else {
+          passive.push({ def, override: contribution })
+        }
+        continue
+      }
       const s = this.stateOf(def.id)
       if (npcId === def.giver.npcId && s.state === 'complete' && !completedFallback) {
         completedFallback = { line: def.reportLine }
       }
     }
-    if (actionOverrides.length > 0) {
+
+    const totalContexts = actionable.length + passive.length
+    if (totalContexts === 0) return completedFallback
+    if (totalContexts === 1) return actionable[0] ?? passive[0]!.override
+
+    const topics: QuestDialogTopic[] = passive.map(({ def }) => ({
+      label: def.title,
+      resolve: () => this.resolveNpcQuestContribution(def, npcId) ?? { line: def.reportLine },
+    }))
+
+    if (actionable.length > 0) {
       return {
-        line: actionOverrides[0]!.line,
-        actions: actionOverrides.flatMap((override) => override.actions ?? []),
+        line: actionable[0]!.line,
+        actions: actionable.flatMap((override) => override.actions ?? []),
+        ...(topics.length > 0 ? { topics } : {}),
       }
     }
-    for (const def of this.defs) {
-      if (npcId !== def.giver.npcId) continue
-      const offer = this.handleGiverOffer(def)
-      if (offer) return offer
-    }
-    for (const def of this.defs) {
-      if (npcId !== def.giver.npcId) continue
-      const reminder = this.handleGiverReminder(def)
-      if (reminder) return reminder
-    }
-    return completedFallback
+
+    return { line: DEFAULT_NPC_PROMPT, topics }
   }
 
   /** Quest-driven line for interacting with a non-NPC world object (well/tree/
@@ -1164,7 +1218,15 @@ export class QuestManager {
    *  Matching is by stable NPC id, not display name.
    *  Three visually distinct giver states (plan 153) — available/in-progress
    *  used to share `'!'`, making a quest already accepted indistinguishable
-   *  from one not yet offered at a glance. */
+   *  from one not yet offered at a glance.
+   *
+   *  A global reduction over every definition touching `npcId` (plan
+   *  quests-progression-020), not first-match: one NPC can be the giver of
+   *  several concurrent quests, and an earlier `active` one must not hide a
+   *  later one that is `ready_to_report`. Priority — independent of `defs`
+   *  order — is `?` (required dialogue target) > `✓` (any quest
+   *  `ready_to_report`) > `!` (any quest `offered`/available `not_offered`)
+   *  > `…` (any quest `active`) > `null`. */
   labelMarker(npcId: NpcId): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
@@ -1173,14 +1235,20 @@ export class QuestManager {
         return QUEST_MARKER_TALK_TARGET
       }
     }
+    let hasReady = false
+    let hasAvailable = false
+    let hasActive = false
     for (const def of this.defs) {
       if (npcId !== def.giver.npcId) continue
       const s = this.stateOf(def.id)
-      if (s.state === 'ready_to_report') return QUEST_MARKER_READY
-      if (s.state === 'active') return QUEST_MARKER_IN_PROGRESS
-      if (s.state === 'offered') return QUEST_MARKER_AVAILABLE
-      if (s.state === 'not_offered' && this.meetsAvailability(def)) return QUEST_MARKER_AVAILABLE
+      if (s.state === 'ready_to_report') hasReady = true
+      else if (s.state === 'active') hasActive = true
+      else if (s.state === 'offered') hasAvailable = true
+      else if (s.state === 'not_offered' && this.meetsAvailability(def)) hasAvailable = true
     }
+    if (hasReady) return QUEST_MARKER_READY
+    if (hasAvailable) return QUEST_MARKER_AVAILABLE
+    if (hasActive) return QUEST_MARKER_IN_PROGRESS
     return null
   }
 

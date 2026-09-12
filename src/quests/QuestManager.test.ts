@@ -5,7 +5,7 @@ import type { AuthoredQuestDef, QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
 import { materializeAuthoredQuestDefs } from './materializeAuthoredQuests'
-import { QuestManager } from './QuestManager'
+import { QUEST_MARKER_AVAILABLE, QUEST_MARKER_READY, QUEST_MARKER_TALK_TARGET, QuestManager } from './QuestManager'
 import { bindExactCaveQuests, buildHorseAcquisitionQuest, QUESTS, relationToLevel } from './quests'
 
 const NAME_AS_ID = (['Anna', 'Piotr', 'Kasia', 'Marek'] as const).map((name) => ({ id: name, name }))
@@ -708,7 +708,13 @@ describe('QuestManager dangerous trait binding', () => {
       () => 'wolf-1',
       (animalId) => applied.push(animalId),
     )
-    acceptOffer(qm, 'Anna') // matches the first def with 'Anna' as giver in not_offered/offered
+    // Anna gives two quests at once (plan quests-progression-020), so both
+    // offers are reachable as topics rather than one hiding the other —
+    // select the dangerous-wolf one specifically.
+    const dialog = qm.onInteract('Anna')
+    const topic = dialog?.topics?.find((entry) => entry.label === 'dangerous-wolf')
+    const resolved = topic ? topic.resolve() : dialog
+    resolved?.offer?.onAccept()
     expect(applied).toEqual(['wolf-1'])
   })
 
@@ -2502,5 +2508,256 @@ describe('QuestManager playtest reachability (plan quests-progression-018)', () 
     expect(inventory.count('herb')).toBe(0)
     expect(granted).toEqual([{ kind: 'coin', count: 8 }])
     expect(qm.getState('ziola-dla-anny')).toBe('complete')
+  })
+})
+
+describe('QuestManager multiple quest contexts per NPC (plan quests-progression-020)', () => {
+  /** Accepts the offer for `questId` from `npcId`, whether it's presented
+   *  directly (single quest context) or behind a `QuestDialogTopic` (multiple
+   *  concurrent contexts) — `quest()`'s default `title` is the id, so the
+   *  topic label matches it. */
+  function acceptSpecific(qm: QuestManager, npcId: string, questId: string): void {
+    const dialog = qm.onInteract(npcId)
+    const topic = dialog?.topics?.find((entry) => entry.label === questId)
+    const resolved = topic ? topic.resolve() : dialog
+    resolved?.offer?.onAccept()
+  }
+
+  const reminderQuestA = quest({
+    id: 'reminderA',
+    giverName: 'Anna',
+    offerLine: 'offer A',
+    stages: [{ objective: { type: 'interact_well' }, description: 'wellA', reminderLine: 'remindA' }],
+    reportLine: 'reportA',
+  })
+  const reminderQuestB = quest({
+    id: 'reminderB',
+    giverName: 'Anna',
+    offerLine: 'offer B',
+    stages: [{ objective: { type: 'interact_tree' }, description: 'treeB', reminderLine: 'remindB' }],
+    reportLine: 'reportB',
+  })
+
+  it('reaches both of two concurrently active quests from the same giver', () => {
+    const qm = makeManager([reminderQuestA, reminderQuestB])
+    acceptSpecific(qm, 'Anna', 'reminderA')
+    acceptSpecific(qm, 'Anna', 'reminderB')
+    expect(qm.getState('reminderA')).toBe('active')
+    expect(qm.getState('reminderB')).toBe('active')
+
+    const dialog = qm.onInteract('Anna')
+    expect(dialog?.actions).toBeUndefined()
+    expect(dialog?.offer).toBeUndefined()
+    expect(dialog?.topics?.map((t) => t.label)).toEqual(['reminderA', 'reminderB'])
+    expect(dialog?.topics?.[0]?.resolve()).toEqual({ line: 'remindA' })
+    expect(dialog?.topics?.[1]?.resolve()).toEqual({ line: 'remindB' })
+  })
+
+  it('reaches both of two available offers from the same giver; accepting the first does not mutate the second', () => {
+    const offerQuestA = quest({
+      id: 'offerA',
+      giverName: 'Anna',
+      offerLine: 'Oferta A',
+      stages: [{ objective: { type: 'interact_well' }, description: 'w', reminderLine: 'r' }],
+      reportLine: 'doneA',
+    })
+    const offerQuestB = quest({
+      id: 'offerB',
+      giverName: 'Anna',
+      offerLine: 'Oferta B',
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'r' }],
+      reportLine: 'doneB',
+    })
+    const qm = makeManager([offerQuestA, offerQuestB])
+
+    const dialog = qm.onInteract('Anna')
+    expect(qm.getState('offerA')).toBe('offered')
+    expect(qm.getState('offerB')).toBe('offered')
+    expect(dialog?.topics?.map((t) => t.label)).toEqual(['offerA', 'offerB'])
+
+    acceptSpecific(qm, 'Anna', 'offerA')
+    expect(qm.getState('offerA')).toBe('active')
+    expect(qm.getState('offerB')).toBe('offered')
+
+    const stillReachable = qm.onInteract('Anna')
+    expect(stillReachable?.topics?.map((t) => t.label)).toEqual(['offerA', 'offerB'])
+    expect(stillReachable?.topics?.find((t) => t.label === 'offerB')?.resolve().offer).toBeDefined()
+  })
+
+  it('does not hide ready_to_report behind an unrelated active reminder', () => {
+    const readyQuest = quest({
+      id: 'readyQ',
+      giverName: 'Anna',
+      offerLine: 'offer ready',
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'remindReady' }],
+      reportLine: 'reportReadyLine',
+      reportPromptLine: 'Zrobione?',
+      reportPlayerLine: 'Tak, zrobione.',
+    })
+    const qm = makeManager([reminderQuestA, readyQuest])
+    acceptSpecific(qm, 'Anna', 'reminderA')
+    acceptSpecific(qm, 'Anna', 'readyQ')
+    qm.onInteractObjective({ type: 'interact_tree' })
+    expect(qm.getState('readyQ')).toBe('ready_to_report')
+    expect(qm.getState('reminderA')).toBe('active')
+
+    const dialog = qm.onInteract('Anna')
+    expect(dialog?.line).toBe('Zrobione?')
+    expect(dialog?.actions?.[0]?.label).toBe('Tak, zrobione.')
+    expect(dialog?.topics?.map((t) => t.label)).toEqual(['reminderA'])
+    expect(dialog?.topics?.[0]?.resolve()).toEqual({ line: 'remindA' })
+
+    expect(selectAction(dialog)).toBe('reportReadyLine')
+    expect(qm.getState('readyQ')).toBe('complete')
+    expect(qm.getState('reminderA')).toBe('active')
+  })
+
+  it('keeps an explicit talk_to_npc action reachable alongside another quest\'s reminder', () => {
+    const talkQuest = quest({
+      id: 'talkQ',
+      giverName: 'Anna',
+      offerLine: 'offerTalk',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+        description: 'talk',
+        reminderLine: 'remindTalk',
+        playerLine: 'Cześć Piotrze.',
+        progressLine: 'progressed',
+      }],
+      reportLine: 'doneTalk',
+    })
+    const piotrReminderQuest = quest({
+      id: 'piotrReminderQ',
+      giverName: 'Piotr',
+      offerLine: 'offer reminder',
+      stages: [{ objective: { type: 'interact_well' }, description: 'w', reminderLine: 'remindPiotr' }],
+      reportLine: 'donePiotrReminder',
+    })
+    const qm = makeManager([talkQuest, piotrReminderQuest])
+    acceptSpecific(qm, 'Anna', 'talkQ')
+    acceptSpecific(qm, 'Piotr', 'piotrReminderQ')
+
+    const dialog = qm.onInteract('Piotr')
+    expect(dialog?.actions?.map((a) => a.label)).toEqual(['Cześć Piotrze.'])
+    expect(dialog?.topics?.map((t) => t.label)).toEqual(['piotrReminderQ'])
+
+    expect(selectAction(dialog)).toBe('progressed')
+    expect(qm.getState('talkQ')).toBe('ready_to_report')
+    expect(qm.getState('piotrReminderQ')).toBe('active')
+  })
+
+  it('keeps aggregating multiple explicit actions from different quests into one flat list (plan quests-progression-018)', () => {
+    const talkQuestA = quest({
+      id: 'talkQA',
+      giverName: 'Anna',
+      offerLine: 'offerTalkA',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+        description: 'talk a',
+        reminderLine: 'remindTalkA',
+        playerLine: 'Line A.',
+        progressLine: 'progressed A',
+      }],
+      reportLine: 'doneTalkA',
+    })
+    const talkQuestB = quest({
+      id: 'talkQB',
+      giverName: 'Marek',
+      offerLine: 'offerTalkB',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+        description: 'talk b',
+        reminderLine: 'remindTalkB',
+        playerLine: 'Line B.',
+        progressLine: 'progressed B',
+      }],
+      reportLine: 'doneTalkB',
+    })
+    const qm = makeManager([talkQuestA, talkQuestB])
+    acceptSpecific(qm, 'Anna', 'talkQA')
+    acceptSpecific(qm, 'Marek', 'talkQB')
+
+    const dialog = qm.onInteract('Piotr')
+    expect(dialog?.topics).toBeUndefined()
+    expect(dialog?.actions?.map((a) => a.label)).toEqual(['Line A.', 'Line B.'])
+  })
+
+  it('marker reduction: active + ready_to_report -> ✓', () => {
+    const readyQuest = quest({
+      id: 'readyQ',
+      giverName: 'Anna',
+      offerLine: 'offer ready',
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'r' }],
+      reportLine: 'done',
+    })
+    const forward = makeManager([reminderQuestA, readyQuest])
+    acceptSpecific(forward, 'Anna', 'reminderA')
+    acceptSpecific(forward, 'Anna', 'readyQ')
+    forward.onInteractObjective({ type: 'interact_tree' })
+    expect(forward.getState('readyQ')).toBe('ready_to_report')
+    expect(forward.getState('reminderA')).toBe('active')
+    expect(forward.labelMarker('Anna')).toBe(QUEST_MARKER_READY)
+
+    // Same scenario with `defs` reversed must produce the identical marker (plan quests-progression-020).
+    const reversed = makeManager([readyQuest, reminderQuestA])
+    acceptSpecific(reversed, 'Anna', 'reminderA')
+    acceptSpecific(reversed, 'Anna', 'readyQ')
+    reversed.onInteractObjective({ type: 'interact_tree' })
+    expect(reversed.labelMarker('Anna')).toBe(QUEST_MARKER_READY)
+  })
+
+  it('marker reduction: active + available offer -> !', () => {
+    const availableQuest = quest({
+      id: 'availableQ',
+      giverName: 'Anna',
+      offerLine: 'offer avail',
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'r' }],
+      reportLine: 'done',
+    })
+    const forward = makeManager([reminderQuestA, availableQuest])
+    acceptSpecific(forward, 'Anna', 'reminderA')
+    expect(forward.getState('reminderA')).toBe('active')
+    expect(['not_offered', 'offered']).toContain(forward.getState('availableQ'))
+    expect(forward.labelMarker('Anna')).toBe(QUEST_MARKER_AVAILABLE)
+
+    const reversed = makeManager([availableQuest, reminderQuestA])
+    acceptSpecific(reversed, 'Anna', 'reminderA')
+    expect(reversed.labelMarker('Anna')).toBe(QUEST_MARKER_AVAILABLE)
+  })
+
+  it('marker reduction: ready_to_report giver + required talk target -> ?', () => {
+    const readyQuest = quest({
+      id: 'readyQ',
+      giverName: 'Anna',
+      offerLine: 'offer ready',
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'r' }],
+      reportLine: 'done',
+    })
+    const talkTargetQuest = quest({
+      id: 'talkTargetQ',
+      giverName: 'Piotr',
+      offerLine: 'offer talk target',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Anna' } },
+        description: 'talk',
+        reminderLine: 'remind',
+        playerLine: 'Line.',
+        progressLine: 'progressed',
+      }],
+      reportLine: 'done target',
+    })
+    const forward = makeManager([readyQuest, talkTargetQuest])
+    acceptSpecific(forward, 'Anna', 'readyQ')
+    forward.onInteractObjective({ type: 'interact_tree' })
+    acceptSpecific(forward, 'Piotr', 'talkTargetQ')
+    expect(forward.getState('readyQ')).toBe('ready_to_report')
+    expect(forward.getState('talkTargetQ')).toBe('active')
+    expect(forward.labelMarker('Anna')).toBe(QUEST_MARKER_TALK_TARGET)
+
+    const reversed = makeManager([talkTargetQuest, readyQuest])
+    acceptSpecific(reversed, 'Anna', 'readyQ')
+    reversed.onInteractObjective({ type: 'interact_tree' })
+    acceptSpecific(reversed, 'Piotr', 'talkTargetQ')
+    expect(reversed.labelMarker('Anna')).toBe(QUEST_MARKER_TALK_TARGET)
   })
 })

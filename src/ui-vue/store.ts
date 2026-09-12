@@ -977,6 +977,18 @@ export function selectNpcDialogueHelpAction(index: number): void {
   playNpcVoice(npc, npc ? pickNpcConfirmationSound(npc.voiceActor) : undefined)
   state.helpResult = { line }
 }
+/** Resolve one `QuestDialogTopic` from the current multi-quest picker and
+ *  replace the shown payload with its live override (plan
+ *  quests-progression-020). The picker's own `resolve()` re-reads live quest
+ *  state, so this never freezes a value captured at menu-open time. Callers
+ *  that want to return to the topic list just call `resolveNpcDialogueHelp()`
+ *  again rather than reusing a stale reference. */
+export function selectNpcDialogueHelpTopic(index: number): void {
+  const state = ui.npcDialogueMenu
+  const topicEntry = state.helpResult?.topics?.[index]
+  if (!state.open || !topicEntry) return
+  state.helpResult = topicEntry.resolve()
+}
 function resetNpcDialogueMenu(): void {
   const state = ui.npcDialogueMenu
   state.open = false
