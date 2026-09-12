@@ -9,6 +9,7 @@
 **Subdomains:** `terrain` `landmarks`
 **Tags:** `caves` `dungeon` `exploration`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Cel
 
