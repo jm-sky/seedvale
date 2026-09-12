@@ -74,6 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
+| ◼️ `quests-progression-020-profession-quests-guard-rewards-and-wildlife-help.md` | -       | 🔴 | L      | fauna-022, fauna-023, quests-progression-019 |
 
 ---
 
@@ -183,7 +184,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `031`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `020`
+- quests-progression: `021`
 - settlements: `008`
 - settlements-npcs: `034`
 - tools: `014`
