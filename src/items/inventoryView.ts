@@ -11,6 +11,7 @@ import { ITEM_CATALOG } from './itemCatalog'
 import {
   ARMOR_QUALITY_LABELS,
   type ArmorQuality,
+  IDENTITY_ONLY_ITEM_KINDS,
   INSTANCE_BACKED_KINDS,
   isArmorItemInstance,
   isLiquidContainerInstance,
@@ -87,6 +88,26 @@ export type InventoryGroupView = {
 function percentDeltaLabel(multiplier: number): string {
   const delta = Math.round((multiplier - 1) * 100)
   return delta === 0 ? '±0%' : `${delta > 0 ? '+' : ''}${delta}%`
+}
+
+function buildIdentityOnlyGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
+  if (!IDENTITY_ONLY_ITEM_KINDS.has(kind) || instances.length === 0) return null
+  const rows: InventoryInstanceRow[] = instances.map((inst) => ({
+    id: inst.id,
+    meterKind: 'condition',
+    conditionPercent: 100,
+    sharpnessPercent: null,
+    sellPrice: resolveInstanceSellPrice(inst) ?? 0,
+  }))
+  return {
+    kind,
+    count: instances.length,
+    condition: 'uniform',
+    uniformConditionPercent: 100,
+    meterKind: 'condition',
+    instances: rows,
+    consumeUse: null,
+  }
 }
 
 function buildTrapGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
@@ -245,6 +266,7 @@ export function buildInventoryGroups(inventory: Inventory, nowDays = 0): Invento
       ?? buildLiquidContainerGroup(kind, instances, inventory, nowDays)
       ?? buildTentGroup(kind, instances)
       ?? buildArmorGroup(kind, instances)
+      ?? buildIdentityOnlyGroup(kind, instances)
     if (group) groups.push(group)
   }
 

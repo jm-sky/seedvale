@@ -3,6 +3,7 @@ import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
 import { CONTAINER_DEFS, type ContainerKind, containerTotalWeight } from '../items/container'
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
+import type { ItemInstance } from '../items/itemInstances'
 import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 import { placeOnGround } from '../settlement/props'
 import { createPlacedContainerProp, disposePlacedContainerProp } from './containerProp'
@@ -76,6 +77,9 @@ export type WorldGeneratedContainerSpec = {
   z: number
   yaw: number
   initialCounts: Partial<Record<ItemKind, number>>
+  /** Optional item instances for a fresh container (plan quests-progression-023).
+   *  Ignored when a saved snapshot exists for this container id. */
+  initialInstances?: readonly ItemInstance[]
   /** Explicit underground world-space Y (plan world-terrain-020 Stage C).
    *  When present, placement uses this value exactly — no `placeOnGround`,
    *  no `sampleHeight` — because surface height is meaningless for an
@@ -115,7 +119,14 @@ export function createWorldGeneratedContainers(
     const def = CONTAINER_DEFS[spec.kind]
     const contents = saved
       ? contentsFromSave(saved.counts, saved.instances, def.capacityUnits, saved.foodBatches)
-      : new Inventory(spec.initialCounts, Infinity, [], undefined, def.capacityUnits, STORED_FOOD_DECAY)
+      : new Inventory(
+        spec.initialCounts,
+        Infinity,
+        spec.initialInstances,
+        undefined,
+        def.capacityUnits,
+        STORED_FOOD_DECAY,
+      )
     const mesh = createPlacedContainerProp()
     if (spec.y !== undefined) {
       const ox = mesh.position.x

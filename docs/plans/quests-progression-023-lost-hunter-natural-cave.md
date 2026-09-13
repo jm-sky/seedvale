@@ -1,7 +1,7 @@
 # Plan: Lost hunter — natural cave
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `implemented` ✅
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Model:** Opus, Sonnet

@@ -429,6 +429,11 @@ export type QuestObjective =
  *
  * @domain quests-progression
  */
+/** Side effect applied once when a stage dialogue action or `talk_to_npc`
+ *  selection advances the quest (plan quests-progression-023). */
+export type QuestStageEffect =
+  | { type: 'reveal_location', locationId: string, setNavigation?: boolean }
+
 export type QuestStageDialogueAction = {
   npc: QuestNpcRef
   playerLine: string
@@ -438,7 +443,15 @@ export type QuestStageDialogueAction = {
   physicalOutcomeId?: QuestOutcomeId
   requireCarriedContainerId?: string
   requireCarriedUnopened?: boolean
+  /** Player must own this exact item instance (plan quests-progression-023). */
+  requireItemInstanceId?: string
+  effects?: readonly QuestStageEffect[]
 }
+
+export type QuestLocationReveal = (
+  locationId: string,
+  options?: { setNavigation?: boolean },
+) => void
 
 export type QuestStage = {
   objective: QuestObjective
@@ -462,6 +475,9 @@ export type QuestStage = {
   /** Alternate conscious replies while this stage is active
    *  (plan quests-progression-018). Not a second objective. */
   dialogueActions?: readonly QuestStageDialogueAction[]
+  /** Executed once when this stage's primary `talk_to_npc` action advances
+   *  (plan quests-progression-023). */
+  effects?: readonly QuestStageEffect[]
 }
 
 export type QuestDef = {
@@ -542,6 +558,8 @@ export type AuthoredQuestStageDialogueAction = {
   physicalOutcomeId?: string
   requireCarriedContainerId?: string
   requireCarriedUnopened?: boolean
+  requireItemInstanceId?: string
+  effects?: readonly QuestStageEffect[]
 }
 
 export type AuthoredQuestStage = Omit<QuestStage, 'objective' | 'dialogueActions'> & {

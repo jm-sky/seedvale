@@ -1852,6 +1852,51 @@ describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
 })
 
 describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
+  it('runs reveal_location once when a talk_to_npc stage advances (plan quests-progression-023)', () => {
+    const revealed: string[] = []
+    const def = quest({
+      id: 'reveal-test',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+        description: 'talk',
+        reminderLine: 'remind',
+        playerLine: 'Hej',
+        effects: [{ type: 'reveal_location', locationId: 'cave:test', setNavigation: true }],
+      }],
+      reportLine: 'done',
+    })
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { revealLocation: (locationId) => revealed.push(locationId) },
+    )
+    acceptOffer(qm, 'Anna')
+    const dialog = qm.onInteract('Piotr')
+    selectAction(dialog)
+    expect(revealed).toEqual(['cave:test'])
+    selectAction(qm.onInteract('Piotr'))
+    expect(revealed).toEqual(['cave:test'])
+  })
+
   it('does not resolve ready_to_report until the player selects the report action', () => {
     const qm = makeManager([simpleQuest])
     acceptOffer(qm, 'Anna')

@@ -184,6 +184,12 @@ export function createItemInstanceId(): string {
   return `item:${Date.now()}:${nextInstanceId}`
 }
 
+/** Count-based kinds that may still carry a stable instance id when authored
+ *  content needs physical identity (plan quests-progression-023). */
+export const IDENTITY_ONLY_ITEM_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
+  'hunting_bow',
+])
+
 export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'key',
   'tent',
@@ -192,6 +198,7 @@ export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   ...WEAPON_MAINTENANCE_KINDS,
   ...LIQUID_CONTAINER_KINDS,
   ...ARMOR_KIND_LIST,
+  ...IDENTITY_ONLY_ITEM_KINDS,
 ])
 
 /** Generic physical key. Systemic treasure passes a deterministic `id`;

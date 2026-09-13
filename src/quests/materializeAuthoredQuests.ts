@@ -70,6 +70,8 @@ function materializeDialogueActions(
     physicalOutcomeId: action.physicalOutcomeId,
     requireCarriedContainerId: action.requireCarriedContainerId,
     requireCarriedUnopened: action.requireCarriedUnopened,
+    requireItemInstanceId: action.requireItemInstanceId,
+    effects: action.effects,
     consequences: action.consequences
       ? {
           ...action.consequences,
@@ -101,6 +103,7 @@ export function materializeAuthoredQuestDefs(
         ...stage,
         objective: materializeObjective(stage.objective, resolve),
         dialogueActions: materializeDialogueActions(stage.dialogueActions, resolve),
+        effects: stage.effects,
       })),
       availability: def.availability
         ? {

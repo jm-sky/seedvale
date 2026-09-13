@@ -267,6 +267,7 @@ const NO_WORLD_PROGRESS: QuestWorldProgressLookup = {
 export type QuestPhysicalOutcomeContext = {
   requireCarriedContainerId?: string
   requireCarriedUnopened?: boolean
+  requireItemInstanceId?: string
 }
 
 export type QuestPhysicalOutcomeResolver = {
@@ -281,6 +282,7 @@ const NO_PHYSICAL_OUTCOME: QuestPhysicalOutcomeResolver = {
 
 export type QuestLifecycleHooks = {
   onStageAdvanced?: (questId: string, clearedStageIndex: number) => void
+  revealLocation?: import('./quests').QuestLocationReveal
 }
 
 const NO_WORLD_QUEST_SOURCE: WorldQuestSourceLookup = {
@@ -1210,7 +1212,14 @@ export class QuestManager {
     const s = this.stateOf(def.id)
     if (s.state !== 'active') return null
     const stage = this.currentStage(def, s.stageIndex)
-    const matching = matchingStageDialogueActions(stage, npcId)
+    const matching = matchingStageDialogueActions(stage, npcId).filter((action) => {
+      if (!action.physicalOutcomeId) return true
+      return this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, {
+        requireCarriedContainerId: action.requireCarriedContainerId,
+        requireCarriedUnopened: action.requireCarriedUnopened,
+        requireItemInstanceId: action.requireItemInstanceId,
+      })
+    })
     if (!stage || matching.length === 0) return null
     const stageIndex = s.stageIndex
     return {
@@ -1243,12 +1252,15 @@ export class QuestManager {
       const ctx: QuestPhysicalOutcomeContext = {
         requireCarriedContainerId: action.requireCarriedContainerId,
         requireCarriedUnopened: action.requireCarriedUnopened,
+        requireItemInstanceId: action.requireItemInstanceId,
       }
       if (!this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, ctx)) return fallback
+      this.applyStageEffects(action.effects)
       this.physicalOutcome.onResolve(def.id, action.physicalOutcomeId)
       if (!this.resolveQuest(def.id, action.physicalOutcomeId)) return fallback
       return action.npcLine ?? def.reportLine ?? fallback
     }
+    this.applyStageEffects(action.effects)
     this.applyConsequences(def, action.consequences)
     this.advanceStage(def, current)
     return action.npcLine
@@ -1289,8 +1301,18 @@ export class QuestManager {
     if (current.state !== 'active' || current.stageIndex !== stageIndex) return progressLine
     const stage = this.currentStage(def, current.stageIndex)
     if (stage?.objective.type !== 'talk_to_npc' || stage.objective.npc.npcId !== npcId) return progressLine
+    this.applyStageEffects(stage.effects)
     this.advanceStage(def, current)
     return progressLine
+  }
+
+  private applyStageEffects(effects?: readonly import('./quests').QuestStageEffect[]): void {
+    if (!effects?.length) return
+    for (const effect of effects) {
+      if (effect.type === 'reveal_location') {
+        this.lifecycleHooks.revealLocation?.(effect.locationId, { setNavigation: effect.setNavigation })
+      }
+    }
   }
 
   private selectTalkToNpcChoice(

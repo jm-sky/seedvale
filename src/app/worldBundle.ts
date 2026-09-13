@@ -120,6 +120,13 @@ import {
   getActiveTreasureMapBearCaveBinding,
   setActiveTreasureMapBearCaveBinding,
 } from '../world/locations/treasureMapBearCaveRuntime'
+import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
+import {
+  lostHunterPackContainerSpec,
+  resolveLostHunterNaturalCaveBinding,
+} from '../quests/lostHunterNaturalCave'
+import { setActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
+import { settlementOpportunityNpcsFromDef } from '../quests/opportunities/settlementNpcMaterialization'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -1309,6 +1316,21 @@ async function buildWorldSystems(
       : {},
   )
 
+  const caveAuthoredClaims = new CaveAuthoredAnchorClaims()
+  const lostHunterBinding = resolveLostHunterNaturalCaveBinding({
+    worldSeed: config.seed,
+    settlementDef: homeDef,
+    caveIds: caves.definitions().map((def) => def.caveId),
+    archetypeOf: (caveId) => caves.archetypeOf(caveId) ?? null,
+    contentAnchors: caves.contentAnchors(),
+    claims: caveAuthoredClaims,
+    npcs: settlementOpportunityNpcsFromDef(homeDef),
+  })
+  setActiveLostHunterNaturalCaveBinding(lostHunterBinding)
+  const lostHunterLootAnchor = lostHunterBinding
+    ? caves.contentAnchors().find((anchor) => anchor.id === lostHunterBinding.lootAnchorId)
+    : undefined
+
   const bearCaveFinalAnchor = treasureMapBearCaveBinding
     ? caves.contentAnchors().find((a) => a.id === treasureMapBearCaveBinding.finalTreasureAnchorId)
     : undefined
@@ -1339,6 +1361,9 @@ async function buildWorldSystems(
     ...caveTreasureContainerSpecs(caves.contentAnchors(), config.seed, caveAdventureContentPolicy),
     ...(treasureMapBearCaveBinding && bearCaveFinalAnchor && !bearCaveSourceExtracted
       ? [treasureMapBearCaveSourceContainerSpec(treasureMapBearCaveBinding, bearCaveFinalAnchor)]
+      : []),
+    ...(lostHunterBinding && lostHunterLootAnchor
+      ? [lostHunterPackContainerSpec(lostHunterBinding, lostHunterLootAnchor)]
       : []),
   ]
   const worldGeneratedContainers = createWorldGeneratedContainers(

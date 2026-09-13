@@ -110,9 +110,19 @@ import {
   wolfDenPressureStatusFromSpawners,
 } from '../quests/opportunities/settlementQuestOpportunities'
 import {
+  settlementOpportunityNpcsFromDef,
+} from '../quests/opportunities/settlementNpcMaterialization'
+import {
   buildWorldDrivenSettlementQuests,
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
+import {
+  buildLostHunterNaturalCaveQuest,
+  isLostHunterPackLooted,
+  LOST_HUNTER_KEEP_BOW_OUTCOME,
+  LOST_HUNTER_RETURN_BOW_OUTCOME,
+} from '../quests/lostHunterNaturalCave'
+import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import { QuestManager } from '../quests/QuestManager'
 import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
@@ -161,6 +171,7 @@ import {
   createAbandonedCemeteryCache,
 } from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
+import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import {
   isTreasureMapBearCaveAuthoredCasket,
@@ -1066,6 +1077,7 @@ export async function createApp(
   const merchantHorseId = merchantHorseAnimalId(homeSettlementId)
   const homeNpcDescriptors = settlementNpcDescriptors(homeDef)
   const bearCaveBinding = getActiveTreasureMapBearCaveBinding()
+  const lostHunterBinding = getActiveLostHunterNaturalCaveBinding()
   const bearCaveQuestBinding = bearCaveBinding
     ? {
         mapGraveSpotId: bearCaveBinding.mapGraveSpotId,
@@ -1167,6 +1179,13 @@ export async function createApp(
         persistedQuestIds,
       })
       if (eveningQuest) opportunityQuestDefs.push(eveningQuest)
+      if (lostHunterBinding) {
+        opportunityQuestDefs.push(buildLostHunterNaturalCaveQuest(
+          lostHunterBinding,
+          settlementOpportunityNpcsFromDef(def),
+          def.name,
+        ))
+      }
       const homeGuard = selectGuardQuestGiver(npcs)
       migrateLegacyGuardSwordGift(guardProgress, homeGuard?.id)
     }
@@ -1184,8 +1203,22 @@ export async function createApp(
     canResolve(
       questId: string,
       outcomeId: string,
-      context: { requireCarriedContainerId?: string, requireCarriedUnopened?: boolean },
+      context: {
+        requireCarriedContainerId?: string
+        requireCarriedUnopened?: boolean
+        requireItemInstanceId?: string
+      },
     ): boolean {
+      if (lostHunterBinding && questId === lostHunterBinding.questId) {
+        if (outcomeId === LOST_HUNTER_RETURN_BOW_OUTCOME) {
+          const requiredId = context.requireItemInstanceId ?? lostHunterBinding.bowInstanceId
+          return inventory.getInstance(requiredId)?.kind === 'hunting_bow'
+        }
+        if (outcomeId === LOST_HUNTER_KEEP_BOW_OUTCOME) {
+          return inventory.getInstance(lostHunterBinding.bowInstanceId)?.kind === 'hunting_bow'
+        }
+        return false
+      }
       if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return false
       if (worldFlags.treasureMapBearCaveCasketConsumed) return false
       if (outcomeId === TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID) {
@@ -1204,6 +1237,14 @@ export async function createApp(
       return false
     },
     onResolve(questId: string, outcomeId: string): void {
+      if (lostHunterBinding && questId === lostHunterBinding.questId && outcomeId === LOST_HUNTER_RETURN_BOW_OUTCOME) {
+        const bow = inventory.getInstance(lostHunterBinding.bowInstanceId)
+        if (!bow) return
+        inventory.removeInstance(bow.id)
+        const giverState = bundle.settlementsManager.getNpcState(lostHunterBinding.giverNpcId)
+        giverState?.personalInventory.addInstance(bow)
+        return
+      }
       if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return
       if (outcomeId === TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID) {
         worldFlags.treasureMapBearCaveCasketConsumed = true
@@ -1219,6 +1260,15 @@ export async function createApp(
       if (clearedStageIndex === 1) {
         locationKnowledge.reveal(bearCaveBinding.locationId, 'discovered', 'npc')
       }
+    },
+    revealLocation: (locationId: string, options?: { setNavigation?: boolean }) => {
+      revealLocationKnowledge(
+        locationId,
+        worldLocationCatalog,
+        locationKnowledge,
+        navigationTargets,
+        options,
+      )
     },
   }
 
@@ -1281,9 +1331,15 @@ export async function createApp(
     {
       hasReadItem: (itemKind) => itemKind === 'treasure_map_dark_forest' && worldFlags.treasureMapDarkForestRead,
       hasDiscoveredLocation: (locationId) => locationKnowledge.has(locationId),
-      isWorldContainerLooted: (containerId) => isDarkForestTreasureChestLooted(
-        bundle.worldGeneratedContainers.containerCounts(containerId),
-      ),
+      isWorldContainerLooted: (containerId) => {
+        if (lostHunterBinding && containerId === lostHunterBinding.packContainerId) {
+          const instances = bundle.worldGeneratedContainers.containerInstances(containerId, 'hunting_bow')
+          return isLostHunterPackLooted(instances, lostHunterBinding.bowInstanceId)
+        }
+        return isDarkForestTreasureChestLooted(
+          bundle.worldGeneratedContainers.containerCounts(containerId),
+        )
+      },
       hasResolvedHiddenFindSpot: (spotId) => resolvedHiddenFindSpotIds.has(spotId),
       hasAcquiredPortableContainer: (containerId) => {
         if (!bearCaveBinding || containerId !== bearCaveBinding.casketId) return false
