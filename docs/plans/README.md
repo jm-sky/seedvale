@@ -84,6 +84,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-029-generic-resolution-effects.md`                      | -       | 🔴 | M      | -      |
 | 💡 `quests-progression-030-external-resolution-and-real-problem-offering.md`   | -       | 🔴 | M      | quests-progression-028 |
 | 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | quests-progression-030 |
+| ◼️ `settlements-008-settlement-progression-around-home.md`                     | -       | 🟡 | S      | -      |
 
 ---
 
@@ -201,7 +202,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - npc: `039`
 - persistence: `005`
 - quests-progression: `032`
-- settlements: `008`
+- settlements: `009`
 - settlements-npcs: `035`
 - tools: `014`
 - ui-input: `017`
