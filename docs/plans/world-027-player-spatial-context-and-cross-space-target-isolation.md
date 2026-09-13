@@ -8,7 +8,8 @@
 **Domain:** `world`  
 **Subdomains:** `places` `simulation`  
 **Tags:** `caves` `spatial-context` `interaction` `combat`  
-**Roadmap:** -
+**Roadmap:** -  
+**Model:** Opus, Sonnet
 
 ## Cel
 
