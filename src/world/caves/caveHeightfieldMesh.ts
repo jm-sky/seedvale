@@ -680,3 +680,66 @@ export function buildMouthUndersideMaskBuffers(
     triangles: idx.length / 3,
   }
 }
+
+/** Inset from the opening contour toward the cave interior (metres). */
+const PROXY_RIM_INSET = 0.12
+/** Centre of the backing fan, further inside than the rim ring. */
+const PROXY_CENTER_INSET = 0.45
+/** Preferred drop below the entrance reference height. */
+const PROXY_DROP = 1.15
+
+/**
+ * Minimal CPU buffers for the distant mouth occlusion proxy — a flat
+ * under-entrance catcher plus a shallow backing fan on the opening contour.
+ * Presentation only; much cheaper than the full underside mask.
+ *
+ * @domain world-terrain
+ */
+export function buildCaveMouthProxyBuffers(
+  field: CaveHeightfieldRepresentation,
+  mouthOpening: (x: number, z: number) => number,
+  walkSurfaceAt: (x: number, z: number) => number,
+): MouthUndersideMaskBuffers {
+  const rim = sampleMouthRim(field, mouthOpening)
+  if (rim.length < 3) return emptyMouthMask()
+
+  const positions: number[] = []
+  const indices: number[] = []
+  emitUnderEntrancePlane(positions, indices, field, walkSurfaceAt)
+
+  const c = mouthOpeningCentroid(field, mouthOpening)
+  const out = openingDirection(field.entrance.yaw)
+  const cx = c.x - out.dx * PROXY_CENTER_INSET
+  const cz = c.z - out.dz * PROXY_CENTER_INSET
+  const cy = Math.min(
+    field.entrance.y - PROXY_DROP,
+    walkSurfaceAt(cx, cz) - 0.35,
+  )
+
+  const centerIdx = positions.length / 3
+  positions.push(cx, cy, cz)
+
+  const rimStart = positions.length / 3
+  for (const p of rim) {
+    const ix = p.x - p.ox * PROXY_RIM_INSET
+    const iz = p.z - p.oz * PROXY_RIM_INSET
+    const y = Math.min(cy + 0.25, walkSurfaceAt(ix, iz) - 0.2)
+    positions.push(ix, y, iz)
+  }
+
+  const n = rim.length
+  for (let i = 0; i < n; i++) {
+    const a = rimStart + i
+    const b = rimStart + ((i + 1) % n)
+    indices.push(centerIdx, b, a)
+  }
+
+  const pos = new Float32Array(positions)
+  const idx = new Uint32Array(indices)
+  return {
+    positions: pos,
+    indices: idx,
+    vertices: pos.length / 3,
+    triangles: idx.length / 3,
+  }
+}

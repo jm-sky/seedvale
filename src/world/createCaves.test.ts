@@ -27,6 +27,7 @@ import {
 import { CAVE_FLOOR_GRACE, CAVE_UNDERGROUND_MISS } from './caves/caveGroundQuery'
 import * as caveHeightfieldQuery from './caves/caveHeightfieldQuery'
 import { buildCaveHeightfieldRepresentation, sampleHeightfieldAt } from './caves/caveHeightfieldRepresentation'
+import * as caveHeightfieldPresentation from './caves/caveHeightfieldPresentation'
 import { CAVE_ACTIVATE_DISTANCE, CAVE_DEACTIVATE_DISTANCE } from './caves/cavePresentationLifecycle'
 import { MOUTH_INTERIOR_ALONG, mouthAlong, mouthCarveDepth } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
@@ -130,8 +131,12 @@ beforeAll(() => {
   caves = createCaves(scene, chunkManager, SEED, villageSizeConfig('MD').footprintRadius, 0.45)
 })
 
-function caveGroup(caveId: string): THREE.Object3D | undefined {
-  return scene.children.find((o) => o.name === `cave:${caveId}`)
+function caveGroup(caveId: string, targetScene = scene): THREE.Object3D | undefined {
+  return targetScene.children.find((o) => o.name === `cave:${caveId}`)
+}
+
+function mouthProxyGroup(caveId: string, targetScene = scene): THREE.Object3D | undefined {
+  return targetScene.children.find((o) => o.name === `cave-mouth-proxy:${caveId}`)
 }
 
 describe('createCaves (world-terrain-019 B)', () => {
@@ -161,6 +166,7 @@ describe('createCaves (world-terrain-019 B)', () => {
     caves.update(x, z)
     const group = caveGroup(def.caveId)
     expect(group).toBeDefined()
+    expect(mouthProxyGroup(def.caveId)).toBeUndefined()
     const names = group!.children.map((c) => c.name)
     expect(names).toContain(`cave-interior:${def.caveId}`)
     expect(names).toContain('cave-mouth-mask')
@@ -184,6 +190,7 @@ describe('createCaves (world-terrain-019 B)', () => {
     const farX = def.bounds.maxX + CAVE_DEACTIVATE_DISTANCE + 5
     caves.update(farX, z)
     expect(caveGroup(def.caveId)).toBeUndefined()
+    expect(mouthProxyGroup(def.caveId)).toBeDefined()
     expect(disposeSpy).toHaveBeenCalled()
     stats = caves.peekStreamingDebug()
     expect(stats.activePresentations).toBe(0)
@@ -544,14 +551,93 @@ describe('createCaves (world-terrain-019 B)', () => {
     expect(exits).toBeGreaterThanOrEqual(10)
   })
 
-  it('dispose clears presentation and the terrain cutout registration', () => {
+  describe('distant mouth proxy (world-terrain-026)', () => {
+    function isolatedCaves(): { scene: THREE.Scene, caves: Caves, chunkManager: FakeChunkManager } {
+      const scene = new THREE.Scene()
+      const chunkManager = fakeChunkManager()
+      const caves = createCaves(scene, chunkManager, SEED, villageSizeConfig('MD').footprintRadius, 0.45)
+      return { scene, caves, chunkManager }
+    }
+
+    it('shows a mouth proxy beyond the 55 m activation distance', () => {
+      const { scene, caves } = isolatedCaves()
+      const def = caves.definitions()[0]!
+      const observerX = def.bounds.maxX + CAVE_ACTIVATE_DISTANCE + 8
+      caves.update(observerX, def.entrance.z)
+      expect(caveGroup(def.caveId, scene)).toBeUndefined()
+      expect(mouthProxyGroup(def.caveId, scene)).toBeDefined()
+      expect(caves.peekStreamingDebug().mouthProxies).toBeGreaterThanOrEqual(1)
+      caves.dispose()
+    })
+
+    it('hides the mouth proxy while the full presentation is active', () => {
+      const { scene, caves } = isolatedCaves()
+      const def = caves.definitions()[0]!
+      const { x, z } = def.entrance
+      for (let i = 0; i < 12; i++) caves.update(x, z)
+      expect(caveGroup(def.caveId, scene)).toBeDefined()
+      expect(mouthProxyGroup(def.caveId, scene)).toBeUndefined()
+      caves.dispose()
+    })
+
+    it('restores the mouth proxy when the full presentation is dropped', () => {
+      const { scene, caves } = isolatedCaves()
+      const def = caves.definitions()[0]!
+      const { z } = def.entrance
+      caves.update(def.entrance.x, z)
+      expect(mouthProxyGroup(def.caveId, scene)).toBeUndefined()
+      const farX = def.bounds.maxX + CAVE_DEACTIVATE_DISTANCE + 5
+      caves.update(farX, z)
+      expect(caveGroup(def.caveId, scene)).toBeUndefined()
+      expect(mouthProxyGroup(def.caveId, scene)).toBeDefined()
+      caves.dispose()
+    })
+
+    it('leaves the mouth proxy visible when a full presentation build fails', () => {
+      const { scene, caves } = isolatedCaves()
+      const def = caves.definitions()[0]!
+      const farX = def.bounds.maxX + CAVE_ACTIVATE_DISTANCE + 8
+      caves.update(farX, def.entrance.z)
+      expect(mouthProxyGroup(def.caveId, scene)).toBeDefined()
+      const spy = vi.spyOn(caveHeightfieldPresentation, 'createCaveHeightfieldPresentation').mockImplementation(() => {
+        throw new Error('presentation build failed')
+      })
+      caves.update(def.entrance.x, def.entrance.z)
+      caves.update(def.entrance.x, def.entrance.z)
+      expect(caveGroup(def.caveId, scene)).toBeUndefined()
+      expect(mouthProxyGroup(def.caveId, scene)).toBeDefined()
+      spy.mockRestore()
+      caves.dispose()
+    })
+
+    it('does not couple spatial queries to mouth-proxy presentation state', () => {
+      const { caves, chunkManager: cm } = isolatedCaves()
+      const def = caves.definitions()[0]!
+      const observerX = def.bounds.maxX + CAVE_ACTIVATE_DISTANCE + 8
+      caves.update(observerX, def.entrance.z)
+      const { x, z } = def.entrance
+      const y = cm.sampleBaseHeight(x, z) - 1
+      expect(caves.queryGround(x, y, z)).not.toBeNull()
+      expect(caves.occupancyAt(x, y, z)).not.toBeNull()
+      expect(caves.resolveHorizontal(x, z, y, 0.3, 1.7)).toEqual({ x, z })
+      expect(typeof caves.queryInterior(x, y, z)).toBe('boolean')
+      caves.dispose()
+    })
+  })
+
+  it('dispose clears presentation, mouth proxies, and the terrain cutout registration', () => {
     const def = caves.definitions()[0]!
     caves.update(def.entrance.x, def.entrance.z)
     expect(caveGroup(def.caveId)).toBeDefined()
+    const farX = def.bounds.maxX + CAVE_DEACTIVATE_DISTANCE + 5
+    caves.update(farX, def.entrance.z)
+    expect(mouthProxyGroup(def.caveId)).toBeDefined()
     caves.dispose()
     expect(caveGroup(def.caveId)).toBeUndefined()
+    expect(mouthProxyGroup(def.caveId)).toBeUndefined()
     expect(chunkManager.colliderOwners.size).toBe(0)
     expect(chunkManager.cutoutClears).toContain('caves')
     expect(caves.peekStreamingDebug().queuedJobs).toBe(0)
+    expect(caves.peekStreamingDebug().mouthProxies).toBe(0)
   })
 })

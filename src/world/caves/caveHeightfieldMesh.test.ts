@@ -8,7 +8,7 @@ import {
   CAVE_HEIGHTFIELD_FIXTURE_IDS,
   caveHeightfieldWalkSurfaceAt,
 } from '../../debug/caves/caveHeightfieldFixtures'
-import { buildHeightfieldMeshBuffers, buildMouthUndersideMaskBuffers } from './caveHeightfieldMesh'
+import { buildCaveMouthProxyBuffers, buildHeightfieldMeshBuffers, buildMouthUndersideMaskBuffers } from './caveHeightfieldMesh'
 import {
   buildCaveHeightfieldRepresentation,
   type CaveHeightfieldRepresentation,
@@ -306,6 +306,28 @@ describe('mouth underside mask (production, presentation-only)', () => {
         }
         expect(covered).toBe(true)
       }
+    }
+  })
+})
+
+describe('cave mouth proxy buffers (world-terrain-026)', () => {
+  it('covers production mouths with minimal geometry behind the terrain aperture', () => {
+    for (const id of CAVE_HEIGHTFIELD_FIXTURE_IDS) {
+      const field = build(id)
+      const opening = (x: number, z: number): number => mouthOpeningAt(field, walk, x, z)
+      const buffers = buildCaveMouthProxyBuffers(field, opening, walk)
+      const fullMask = buildMouthUndersideMaskBuffers(field, opening, walk)
+      expect(buffers.vertices).toBeGreaterThan(8)
+      expect(buffers.triangles).toBeGreaterThan(4)
+      expect(buffers.vertices).toBeLessThan(fullMask.vertices)
+      for (let i = 0; i < buffers.vertices; i++) {
+        const x = buffers.positions[i * 3]!
+        const y = buffers.positions[i * 3 + 1]!
+        const z = buffers.positions[i * 3 + 2]!
+        expect(y).toBeLessThan(walk(x, z) - 0.05)
+        expect(Math.hypot(x - field.entrance.x, z - field.entrance.z)).toBeLessThan(14)
+      }
+      expect(opening(field.entrance.x, field.entrance.z)).toBeGreaterThan(0)
     }
   })
 })

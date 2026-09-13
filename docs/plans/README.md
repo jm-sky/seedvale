@@ -75,7 +75,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
 | 💡 `world-027-player-spatial-context-and-cross-space-target-isolation.md`      | -       | 🔴 | L      | ~~world-terrain-019~~ |
-| 💡 `world-terrain-026-cave-distant-mouth-occlusion.md`                         | -       | 🔴 | S      | ~~world-terrain-019~~ |
 
 ---
 
@@ -87,6 +86,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `world-terrain-026-cave-distant-mouth-occlusion.md` | Z kilku odległości i kątów: daleki otwór jaskini nie pokazuje jasnego nieba; wejście w pełną prezentację bez „gołej” dziury; wyjście przywraca proxy; blisko wejścia bez zmian; wnętrze/dungeon normalnie; wielokrotne przejścia przez 55/80 m bez leaków i bez thrashu terenu |
 | `quests-progression-022-lazy-social-news-propagation-and-reputation-catch-up.md` | Na cold world/cache zabij wilka/niedźwiedzia i potwierdź brak freeze; zabicie przy aktywnej osadzie od razu podnosi lokalne competence/courage/renown; zabicie z dala od aktywnych osad nie daje natychmiastowej reputacji, ale odwiedzenie pobliskiej osady w ciągu 7 dni (TTL) daje catch-up; kolejna pobliska osada może dostać słabszy relayed renown bez sztucznego pełnego local reputation; save/load z pending eventem → późniejszy catch-up działa dokładnie raz; po >7 dniach nowo odwiedzona osada nie dostaje starego animal-deed news |
 | `settlements-npcs-034-household-wood-authority-and-repair-correctness.md` | Household wood jako konkretne `branch`/`beam` w `Household.items` (nie scalar stock); hunter arrow production i structure repair konsumują te same realne itemy, które trafiły do household; `repairStructure` dostaje dodatni pressure tylko gdy naprawa jest realnie możliwa albo epizod już trwa; brak decision livelock przy race scoring/`beginRepairStructure()`; save v39 migruje legacy `stock.wood` do `items.branch` |
 | `fauna-026-predator-livestock-encounter-set.md` | Puść dzikiego wilka w pobliże gospodarstwa z owcą/krową/kurą — wilk realnie wybiera je jako prey (nie tylko dzikie zwierzęta), goni, atakuje i może zabić przez zwykły combat (nie instant-kill); zabite zwierzę przechodzi przez zwykły corpse/`onAnimalDeath`; `huntingPrey()` niesie realny household owner, więc pasterz (`shepherdFlock`) i pies stróżujący (`dogGuard`) reagują na realne polowanie na własny inwentarz, nie tylko na atak na człowieka; pies broni własnego stada wilka polującego na jego household livestock i przestaje po śmierci/oddaleniu wilka; usunięcie zwierzęcia ze świata w trakcie pościgu (np. stream-out osady) natychmiast przerywa pościg bez "ostatniego" trafienia; dzikie polowanie wilk↔dzikie zwierzę działa jak wcześniej, gdy w pobliżu nie ma inwentarza; brak zauważalnego spadku FPS przy większej liczbie zwierząt w pobliżu osady |

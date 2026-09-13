@@ -21,6 +21,7 @@ import {
   getCaveAdventurePropTemplates,
 } from './caveAdventureProps'
 import {
+  buildCaveMouthProxyBuffers,
   buildHeightfieldMeshBuffers,
   buildMouthUndersideMaskBuffers,
   type HeightfieldMeshBuffers,
@@ -124,6 +125,40 @@ export function createMouthUndersideMask(
   mesh.receiveShadow = false
   mesh.name = 'cave-mouth-mask'
   return mesh
+}
+
+/**
+ * Cheap distant mouth occlusion — dark backing inside the terrain aperture
+ * while the full cave presentation is inactive. Uses the same
+ * `mouthOpeningAt` contour as the terrain cutout. No collision or gameplay
+ * authority.
+ *
+ * @domain world-terrain
+ */
+export function createCaveMouthProxy(input: {
+  field: CaveHeightfieldRepresentation
+  walkSurfaceAt: SurfaceSampler
+  material: THREE.Material
+}): THREE.Object3D | null {
+  const { field, walkSurfaceAt, material } = input
+  const mouthOpening = (x: number, z: number): number => mouthOpeningAt(field, walkSurfaceAt, x, z)
+  const buffers = buildCaveMouthProxyBuffers(field, mouthOpening, walkSurfaceAt)
+  if (buffers.vertices === 0) return null
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(buffers.positions, 3))
+  geometry.setIndex(new THREE.BufferAttribute(buffers.indices, 1))
+  geometry.computeVertexNormals()
+  geometry.computeBoundingBox()
+  geometry.computeBoundingSphere()
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.castShadow = false
+  mesh.receiveShadow = false
+  mesh.name = 'cave-mouth-proxy-mesh'
+  const group = new THREE.Group()
+  group.name = `cave-mouth-proxy:${field.caveId}`
+  group.add(mesh)
+  exemptCavePresentationFromSceneFog(group)
+  return group
 }
 
 /** Spacing along the opening axis (metres). Denser than the original 0.9 m

@@ -56,6 +56,7 @@ import {
 } from './caves/caveHeightfieldMaterial'
 import {
   createCaveHeightfieldPresentation,
+  createCaveMouthProxy,
   createMouthUndersideMaskMaterial,
 } from './caves/caveHeightfieldPresentation'
 import {
@@ -163,7 +164,7 @@ export type Caves = {
    * main-thread heightfield builds; there is no async/in-flight path since
    * world-terrain-019 B.
    */
-  peekStreamingDebug: () => CaveStreamingStats & { queuedJobs: number }
+  peekStreamingDebug: () => CaveStreamingStats & { queuedJobs: number, mouthProxies: number }
   /** `occupancyAt(...) !== null`. Not hysteretic `queryGround` — torch /
    *  audio callers must not mutate the player's floor hysteresis. */
   contains: (x: number, y: number, z: number) => boolean
@@ -467,6 +468,7 @@ export function createCaves(
   }
 
   const presentations = new Map<string, THREE.Object3D>()
+  const mouthProxies = new Map<string, THREE.Object3D>()
   const adventureLanternTorchesByCave = new Map<string, readonly VillageTorch[]>()
   // Shared across every cave presentation; disposed once in `dispose()`,
   // never by `disposeObject3D()` (`sharedGpu`).
@@ -531,7 +533,48 @@ export function createCaves(
     groundQueryDebug.lateral = entrance ? mouthLateral(x, z, entrance) : null
   }
 
+  function disposeMouthProxy(caveId: string): void {
+    const proxy = mouthProxies.get(caveId)
+    if (!proxy) return
+    proxy.removeFromParent()
+    disposeObject3D(proxy)
+    mouthProxies.delete(caveId)
+  }
+
+  function hideMouthProxy(caveId: string): void {
+    mouthProxies.get(caveId)?.removeFromParent()
+  }
+
+  function showMouthProxy(caveId: string): void {
+    const v2 = v2ByCaveId.get(caveId)
+    if (!v2) return
+    let proxy = mouthProxies.get(caveId)
+    if (!proxy) {
+      const created = createCaveMouthProxy({
+        field: v2.heightfield,
+        walkSurfaceAt: v2.walkSurfaceAt,
+        material: maskMaterial,
+      })
+      if (!created) return
+      mouthProxies.set(caveId, created)
+      proxy = created
+    }
+    if (!proxy.parent) scene.add(proxy)
+  }
+
+  function syncMouthProxies(nearby: ReadonlySet<string>): void {
+    for (const caveId of nearby) {
+      const snap = streaming.snapshot(caveId)
+      if (snap?.phase === 'active') hideMouthProxy(caveId)
+      else showMouthProxy(caveId)
+    }
+    for (const caveId of mouthProxies.keys()) {
+      if (!nearby.has(caveId)) disposeMouthProxy(caveId)
+    }
+  }
+
   function disposePresentation(caveId: string): void {
+    showMouthProxy(caveId)
     const group = presentations.get(caveId)
     if (!group) return
     const propsRoot = group.userData[CAVE_ADVENTURE_PROPS_USERDATA_KEY] as THREE.Object3D | undefined
@@ -590,6 +633,7 @@ export function createCaves(
     }
     scene.add(presentation.group)
     presentations.set(caveId, presentation.group)
+    hideMouthProxy(caveId)
     const activationTotalMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0
     getMonitor().recordHitch('STREAMING', activationTotalMs, 'cave presentation')
     if (isBootMarkMode()) {
@@ -709,6 +753,7 @@ export function createCaves(
         if (!nearby.has(caveId)) streaming.drop(caveId)
       }
       presentationQueue.drain(PRESENTATION_BUILDS_PER_UPDATE)
+      syncMouthProxies(nearby)
     },
     queryGround,
     peekGroundQueryDebug: () => groundQueryDebug,
@@ -736,10 +781,17 @@ export function createCaves(
         playerY,
       }
     },
-    peekStreamingDebug: () => ({
-      ...streaming.stats(),
-      queuedJobs: presentationQueue.queuedCount,
-    }),
+    peekStreamingDebug: () => {
+      let mouthProxyCount = 0
+      for (const proxy of mouthProxies.values()) {
+        if (proxy.parent) mouthProxyCount++
+      }
+      return {
+        ...streaming.stats(),
+        queuedJobs: presentationQueue.queuedCount,
+        mouthProxies: mouthProxyCount,
+      }
+    },
     occupancyAt,
     resolveHorizontal(x, z, y, radius, entityHeight) {
       // Every field is `outsideGrid` except the cave(s) local to the point,
@@ -824,6 +876,7 @@ export function createCaves(
       writeGroundQueryDebug(0, 0, 0, null, null, null, 0, null)
       streaming.dispose()
       presentationQueue.clear()
+      for (const caveId of [...mouthProxies.keys()]) disposeMouthProxy(caveId)
       adventureLanternTorchesByCave.clear()
       for (const poolPresentation of poolPresentationsByCave.values()) poolPresentation.dispose()
       poolPresentationsByCave.clear()

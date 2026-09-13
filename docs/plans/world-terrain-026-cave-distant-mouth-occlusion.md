@@ -1,7 +1,7 @@
 # Plan: Distant Cave Mouth Occlusion
 
 **Created:** 2026-09-13  
-**Status:** `planned` 📋  
+**Status:** `implemented` ✅  
 **Priority:** high · **Effort:** S  
 **Depends on:** ~~world-terrain-019~~  
 **Domain:** `world-terrain`  
