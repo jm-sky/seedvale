@@ -7,6 +7,7 @@
 **Domain:** `world-terrain`
 **Type:** `feature`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Cel
 
