@@ -6,14 +6,34 @@
 
 Quests should expose meaningful opportunities created by the living world rather than function primarily as a list of authored errands.
 
+Seedvale deliberately supports both **authored** and **world-driven** quests. The living-world philosophy does not require every quest to originate from simulation.
+
+## Authored and world-driven quests
+
+Not every quest must emerge naturally from simulation state. Authored quests may deliberately create situations, entities or discoveries needed for designed gameplay and narrative — for example a lost animal, treasure map, hidden cache, unique encounter or story location.
+
+Where an authored quest uses an existing world concept, the resulting state should still belong to the appropriate world system. For example, an authored lost-animal quest may deliberately start a real fauna stray episode rather than maintain quest-only animal state.
+
+For repeatable situations that the simulation can generate naturally, prefer this rule:
+
+- **first occurrence:** authored, to guarantee the intended gameplay experience;
+- **later occurrences:** world-driven or random, arising from simulation state.
+
+If a suitable world situation already exists, an authored quest should bind to and reuse it instead of creating a duplicate.
+
+Some authored content has no natural simulation source at all. Treasure maps, hidden treasures, authored discoveries and deliberately placed narrative situations are valid content and do not require a world system that would independently generate them.
+
+The world must function independently of the player. That does **not** mean all gameplay content must originate from simulation dynamics.
+
 ## Target state
 
 - Quest opportunities emerge from NPC, household, settlement, resource, fauna and world problems.
+- Authored quests remain a first-class source of designed narrative, exploration and guaranteed gameplay situations.
 - Objectives bind to real world entities and state where appropriate.
 - Dialogue and quest availability reflect current relationships and circumstances.
 - Completing or failing a quest applies an authored outcome: item/coin rewards and consequences (relation, reputation/renown) rather than a global EXP grant.
 - Quest history preserves consequences and can influence future opportunities.
-- Authored structures provide reliable gameplay framing while world state supplies the circumstances.
+- Authored structures provide reliable gameplay framing while world state supplies the circumstances where appropriate.
 
 ## Current authored RPG pack
 
@@ -24,8 +44,9 @@ The first hand-authored RPG pack (`quests-progression-005`) is three stories / f
 1. Expand world-problem quest sources.
 2. Add more persistent consequences and chains.
 3. Connect settlement and economic events to quest generation.
-4. Improve discovery of opportunities without making the player the centre of simulation.
+4. Keep authored narrative/exploration content as a deliberate parallel source where simulation is not the right source.
+5. Improve discovery of opportunities without making the player the centre of simulation.
 
 ## Boundaries
 
-Quest logic must remain deterministic and grounded in authoritative world state. LLMs must not replace the simulation or authoritative quest state.
+Quest logic must remain deterministic where it interacts with authoritative world state. Authored quests may create or place narrative situations, but they should reuse existing domain systems for shared concepts instead of creating parallel quest-only state. LLMs must not replace the simulation or authoritative quest state.
