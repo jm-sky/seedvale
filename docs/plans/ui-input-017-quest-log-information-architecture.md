@@ -22,3 +22,5 @@ Przebudować Quest Log tak, aby pozostał czytelny po wzroście liczby authored 
 - ewentualne authored/world-driven metadata mają przychodzić jawnie w DTO;
 - grupowanie powtarzalnych world-driven quests tylko po jawnym `groupKey` i tylko jeśli będzie potrzebne po `quests-progression-031`;
 - bez HUD trackera, map-marker redesignu, nowej persistence i lore journal.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
