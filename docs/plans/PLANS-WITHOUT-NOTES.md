@@ -1,12 +1,15 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-13 12:49:35  
+> Date: 2026-09-13 12:51:58  
 
 ## PLANS
 
 - `quests-progression-023-lost-hunter-natural-cave.md`
 - `quests-progression-024-natural-cave-contraband-cache.md`
+- `quests-progression-025-adventure-cave-old-bones.md`
+- `quests-progression-026-dungeon-bandit-treasure.md`
+- `quests-progression-027-lost-treasure-expedition.md`
 - `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `world-023-species-driven-sowing-density-and-yield.md`
@@ -81,6 +84,117 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-024-natural-cave-contraband-cache.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
+```
+
+### `quests-progression-025-adventure-cave-old-bones.md`
+
+Prompt:
+
+```
+Zrób review planu `quests-progression-025-adventure-cave-old-bones.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/quests-progression-025-adventure-cave-old-bones.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/quests-progression-025-adventure-cave-old-bones-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-025-adventure-cave-old-bones.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
+```
+
+### `quests-progression-026-dungeon-bandit-treasure.md`
+
+Prompt:
+
+```
+Zrób review planu `quests-progression-026-dungeon-bandit-treasure.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/quests-progression-026-dungeon-bandit-treasure.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/quests-progression-026-dungeon-bandit-treasure-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-026-dungeon-bandit-treasure.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
+```
+
+### `quests-progression-027-lost-treasure-expedition.md`
+
+Prompt:
+
+```
+Zrób review planu `quests-progression-027-lost-treasure-expedition.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/quests-progression-027-lost-treasure-expedition.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/quests-progression-027-lost-treasure-expedition-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-027-lost-treasure-expedition.md` i dodaj/ustaw metadata:
 `**Model:** <best>, <cheaper-safe-fallback>`
 Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
 Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
