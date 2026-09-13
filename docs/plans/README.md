@@ -89,6 +89,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `ui-input-017-quest-log-information-architecture.md`                        | -       | 🟡 | M      | quests-progression-031 |
 | ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | -       | 🟡 | M      | -      |
 | 💡 `quests-progression-032-nonlinear-stage-objectives-and-transitions.md`      | -       | 🔴 | M      | -      |
+| ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | -       | 🟡 | M      | settlements-npcs-033 |
 
 ---
 
@@ -206,7 +207,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - npc: `039`
 - persistence: `005`
 - quests-progression: `033`
-- settlements: `012`
+- settlements: `013`
 - settlements-npcs: `035`
 - tools: `014`
 - ui-input: `018`
