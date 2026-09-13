@@ -3,7 +3,7 @@
 **Last verified:** 2026-09-13  
 **Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic quest definitions, objectives, dialogue actions, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
 
-Architecture recon (gaps, overlapping content, recommended stages, what not to build): [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Follow-up plans: `quests-progression-028` … `031`.
+Architecture recon (gaps, overlapping content, recommended stages, what not to build): [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Follow-up plans: `quests-progression-029` … `031`.
 
 This is a **current-state document**, not a roadmap or implementation history. When this file and code disagree, **the code wins**. Planned quest work remains in `docs/plans/`; design direction remains in `docs/vision/quests.md`.
 
@@ -169,7 +169,7 @@ Implemented `QuestObjective` types:
 
 Prefer extending/reusing these objective contracts before adding a parallel quest-specific mechanic.
 
-Event ingress is split: counted/read/poll helpers visit every matching active quest; `onInteractObjective` (`interact_*`, `spot_animal`, `animal_died`, `animal_found`, `wolf_den_cleared`) currently advances the **first** matching def only — see recon P1 / plan `quests-progression-028`.
+Event ingress: counted/read/poll helpers and `onInteractObjective` (`interact_*`, `spot_animal`, `animal_died`, `animal_found`, `wolf_den_cleared`) each visit **every** matching active quest; `onInteractObjective` returns one presentation line (first non-empty in `defs` order) while all matches advance (plan `quests-progression-028`).
 
 ## Animal/world bindings
 

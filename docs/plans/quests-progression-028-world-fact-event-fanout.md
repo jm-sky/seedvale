@@ -1,7 +1,7 @@
 # Plan: World-fact event fan-out
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** fix
 **Priority:** high · **Effort:** S
 **Model:** Composer, Grok

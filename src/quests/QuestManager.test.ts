@@ -461,6 +461,104 @@ describe('QuestManager clear_wolf_den', () => {
   })
 })
 
+describe('QuestManager onInteractObjective fan-out (plan quests-progression-028)', () => {
+  const landmarkId = 'monolith:4:-7:0:3f'
+
+  function landmarkQuestAt(id: string, giverName: string, progressLine: string): QuestDef {
+    return quest({
+      id,
+      giverName,
+      offerLine: `offer ${id}`,
+      stages: [
+        {
+          objective: { type: 'interact_landmark', landmarkId },
+          description: `inspect ${id}`,
+          reminderLine: 'remind',
+          progressLine,
+        },
+      ],
+      reportLine: `report ${id}`,
+    })
+  }
+
+  it('advances every active quest that matches the same interact_landmark fact', () => {
+    const first = landmarkQuestAt('landmark-a', 'Anna', 'inspected a')
+    const second = landmarkQuestAt('landmark-b', 'Piotr', 'inspected b')
+    const qm = makeManager([first, second])
+    acceptOffer(qm, 'Anna')
+    acceptOffer(qm, 'Piotr')
+    expect(qm.getState('landmark-a')).toBe('active')
+    expect(qm.getState('landmark-b')).toBe('active')
+
+    const override = qm.onInteractObjective({ type: 'interact_landmark', landmarkId })
+    expect(override?.line).toBe('inspected a')
+    expect(qm.getState('landmark-a')).toBe('ready_to_report')
+    expect(qm.getState('landmark-b')).toBe('ready_to_report')
+  })
+
+  it('advances every active kill_target_animal quest bound to the same animalId', () => {
+    const wolfA = quest({
+      id: 'wolf-a',
+      giverName: 'Anna',
+      offerLine: 'offer a',
+      stages: [
+        { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill a', reminderLine: 'remind', progressLine: 'killed a' },
+      ],
+      reportLine: 'report a',
+    })
+    const wolfB = quest({
+      id: 'wolf-b',
+      giverName: 'Piotr',
+      offerLine: 'offer b',
+      stages: [
+        { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill b', reminderLine: 'remind' },
+      ],
+      reportLine: 'report b',
+    })
+    const qm = makeManager([wolfA, wolfB], () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    acceptOffer(qm, 'Piotr')
+
+    const override = qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    expect(override?.line).toBe('killed a')
+    expect(qm.getState('wolf-a')).toBe('ready_to_report')
+    expect(qm.getState('wolf-b')).toBe('ready_to_report')
+  })
+
+  it('hasSocialOutcomeClaim stays true when any matching kill quest authors a social complete outcome', () => {
+    const groznyWilkDef = runtimeAuthored(QUESTS.find((d) => d.id === 'grozny-wilk')!)
+    const plainWolf = quest({
+      id: 'plain-wolf',
+      giverName: 'Piotr',
+      offerLine: 'plain',
+      stages: [
+        { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'plain', reminderLine: 'remind' },
+      ],
+      reportLine: 'report',
+    })
+    const trusted: QuestManagerInitial = { progress: [], relations: { Anna: 6 } }
+    const qm = new QuestManager(
+      [groznyWilkDef, plainWolf],
+      undefined,
+      new Inventory(),
+      trusted,
+      undefined,
+      () => 'wolf-1',
+    )
+    acceptOffer(qm, 'Anna')
+    acceptOffer(qm, 'Piotr')
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(true)
+  })
+
+  it('returns the first matching quest progress line in defs order when only one quest matches', () => {
+    const qm = makeManager([simpleQuest])
+    acceptOffer(qm, 'Anna')
+    const override = qm.onInteractObjective({ type: 'interact_well' })
+    expect(override?.line).toBe('well')
+    expect(qm.getState('simple')).toBe('ready_to_report')
+  })
+})
+
 describe('QuestManager interact_landmark', () => {
   const landmarkQuest = quest({
     id: 'landmark',

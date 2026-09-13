@@ -1427,6 +1427,7 @@ export class QuestManager {
   /** Quest-driven line for interacting with a non-NPC world object (well/tree/
    *  spawner/live animal) matching `ref`, or null if no active quest cares. */
   onInteractObjective(ref: ObjectiveRef): QuestDialogOverride | null {
+    let presentation: QuestDialogOverride | null = null
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
@@ -1442,13 +1443,16 @@ export class QuestManager {
       // (handled below via `objectiveMatchesRef`).
       if (ref.type === 'animal_died' && stage.objective.type === 'find_animal' && boundAnimalId === ref.animalId) {
         const line = this.resolveFailedFind(def, stage)
-        return line ? { line } : null
+        if (line && presentation === null) presentation = { line }
+        continue
       }
       if (!objectiveMatchesRef(stage.objective, ref, boundAnimalId)) continue
       this.advanceStage(def, s)
-      return { line: stage.progressLine ?? stage.description }
+      if (presentation === null) {
+        presentation = { line: stage.progressLine ?? stage.description }
+      }
     }
-    return null
+    return presentation
   }
 
   /** Whether `animalId` is right now the bound target of an active
