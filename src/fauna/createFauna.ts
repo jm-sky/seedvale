@@ -1218,8 +1218,19 @@ export async function createFauna(
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       const agentCpu = getAgentCpuDiag()
       agentCpu.beginFaunaAgentUpdates()
+      const diagOn = agentCpu.isEnabled()
       for (const a of agents) {
+        // `forestSampling` (fauna-cpu-diagnostics): caller-side environment
+        // sampling that runs ahead of `AnimalAgent.update()` itself, but
+        // still inside this loop's `faunaAgentUpdatesMs` window — measured
+        // separately so the diagnostic report can show how much of that
+        // total is spent here vs. inside the agent's own update.
+        const forestSampleT0 = diagOn ? performance.now() : 0
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
+        if (diagOn) {
+          agentCpu.addFaunaForestSamplingMs(performance.now() - forestSampleT0)
+          agentCpu.recordForestSample()
+        }
         a.update({
           dt,
           others: agents,
