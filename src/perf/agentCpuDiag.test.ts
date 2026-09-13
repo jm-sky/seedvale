@@ -51,10 +51,25 @@ describe('agentCpuDiag', () => {
         npcCrowdMs: 12,
         npcAgentUpdatesMs: 54,
         faunaAgentUpdatesMs: 81,
+        faunaForestSamplingMs: 6,
+        faunaSensingMs: 15,
+        faunaTargetingMs: 4,
+        faunaDecisionMs: 8,
+        faunaBehaviourMs: 40,
+        faunaLifePresentationMs: 8,
         nearestCalls: 100,
         nearestCandidatesChecked: 2000,
         herdLeaderCalls: 50,
         herdLeaderCandidatesChecked: 10000,
+        faunaUpdateCalls: 220,
+        faunaSensingPasses: 220,
+        faunaDecisionPasses: 200,
+        faunaHighPriorityAgents: 30,
+        faunaExpensiveBehaviourAgents: 150,
+        forestSampleCalls: 220,
+        fireScanCandidates: 440,
+        villageScanCandidates: 660,
+        playerPerceptionChecks: 220,
       },
       categoryMsSum,
       context: {
@@ -69,9 +84,16 @@ describe('agentCpuDiag', () => {
     expect(report!.npc.totalMsPerFrame).toBe(8.6)
     expect(report!.npc.crowdPassMsPerFrame).toBe(1.2)
     expect(report!.fauna.nearestScansPerFrame).toBe(10)
+    expect(report!.fauna.forestSamplingMsPerFrame).toBe(0.6)
+    expect(report!.fauna.behaviourMsPerFrame).toBe(4)
+    expect(report!.fauna.updateCallsPerFrame).toBe(22)
+    expect(report!.fauna.expensiveBehaviourAgentsPerFrame).toBe(15)
     const text = formatAgentCpuReport(report!)
     expect(text).toContain('[Seedvale Agent CPU]')
     expect(text).toContain('NPC (loaded): 18')
     expect(text).toContain('nearest scans: 10.0/frame (100 calls)')
+    expect(text).toContain('AnimalAgent sections:')
+    expect(text).toContain('behaviour: 4.0 ms/frame (40.0 ms cumulative)')
+    expect(text).toContain('expensive behaviour agents/frame: 15.0')
   })
 })

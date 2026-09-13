@@ -452,6 +452,48 @@ type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drin
  *  chase/wander" from the outside. */
 export type FaunaAiBranch = 'rabid' | FaunaBehaviourKind
 
+/** Adaptive-simulation candidate classification (fauna-cpu-diagnostics,
+ *  diagnostic-only, read solely by `update()`'s `agentCpuDiag` counters
+ *  below) — "combat/fleeing/immediate threat", the state that presumably
+ *  can't be throttled without a gameplay-visible cost. Judgment call, not a
+ *  measured boundary: refine once the benchmark shows which branches
+ *  actually dominate `faunaBehaviourMs`. */
+function isFaunaHighPriorityBranch(branch: FaunaAiBranch): boolean {
+  switch (branch) {
+    case 'dog-guard':
+    case 'fire-avoid':
+    case 'npc-attack':
+    case 'npc-attack-frenzied':
+    case 'npc-flee':
+    case 'player-attack':
+    case 'player-flee':
+    case 'player-flee-prey':
+    case 'rabid':
+    case 'scare-flee':
+      return true
+    default:
+      return false
+  }
+}
+
+/** Adaptive-simulation candidate classification (fauna-cpu-diagnostics) —
+ *  branches that run the full predator/prey target-search + behaviour path
+ *  (as opposed to a one-shot flee/ignore/wander reaction) — the ones most
+ *  likely to still need high-frequency simulation. Same judgment-call
+ *  caveat as `isFaunaHighPriorityBranch`. */
+function isFaunaExpensiveBranch(branch: FaunaAiBranch): boolean {
+  switch (branch) {
+    case 'dog-guard':
+    case 'frenzy-beeline':
+    case 'predator-normal':
+    case 'prey-normal':
+    case 'rabid':
+      return true
+    default:
+      return false
+  }
+}
+
 /** One `chaseNav`/`fleeNav` `NavRescue`'s state, serialized for
  *  `AnimalAgent.getDebugInfo()` — no raw Three.js/route internals, just
  *  what's needed to answer "is a repath active, and how far along is it". */
@@ -2592,6 +2634,13 @@ export class AnimalAgent {
   }
 
   update(ctx: AnimalUpdateContext): void {
+    // fauna-cpu-diagnostics: `diagOn` is read once per call so every
+    // instrumentation branch below is a single boolean check (no repeated
+    // `getMonitor()` calls) and stays a true no-op — no `performance.now()`
+    // calls at all — while perf monitoring is off.
+    const agentCpuDiag = getAgentCpuDiag()
+    const diagOn = agentCpuDiag.isEnabled()
+    if (diagOn) agentCpuDiag.recordFaunaUpdateCall()
     const {
       dt,
       others,
@@ -2704,12 +2753,18 @@ export class AnimalAgent {
     this.tickNowDays = nowDays
     this.tickGrassForage = grassForage
     this.tickWaterSourceProvider = waterSourceProvider
+    const sensingT0 = diagOn ? performance.now() : 0
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
+    if (diagOn) {
+      agentCpuDiag.addFaunaSensingMs(performance.now() - sensingT0)
+      agentCpuDiag.recordFaunaSensingPass()
+    }
     // Any predator can notice a nearby NPC (npc-008 step 6 — animal↔NPC
     // threat is a general predator behaviour, not something only a frenzied
     // animal does). `frenzied` no longer gates whether an NPC target is
     // resolved at all; it still forces the engagement via
     // `npc-attack-frenzied`, which skips scoring (`isBehaviourValid`).
+    const targetingT0 = diagOn ? performance.now() : 0
     const npcThreat = this.def.role === 'predator'
       ? this.resolveNpcTarget(nearbyNpcs)
       : null
@@ -2718,7 +2773,13 @@ export class AnimalAgent {
     // this tick's bark check (below) share the same resolved target.
     const guardTarget = this.def.kind === 'dog' ? this.resolveGuardTarget(nearbyPredators) : null
     this.dogGuardTarget = guardTarget
+    if (diagOn) agentCpuDiag.addFaunaTargetingMs(performance.now() - targetingT0)
+    // Scare-stimulus environment check (fauna-cpu-diagnostics: counted as
+    // "sensing" — same "environment/perception check evaluated early in
+    // update()" role as `senseEnvironment`, just a second call site).
+    const scareSensingT0 = diagOn ? performance.now() : 0
     this.tickScareStimulus(dt, others, observerPos, nearbySettlementNpcs, scareStimulus)
+    if (diagOn) agentCpuDiag.addFaunaSensingMs(performance.now() - scareSensingT0)
 
     if (this.rabid) {
       // Rabies bypasses normal predator/prey AI entirely, including
@@ -2729,12 +2790,19 @@ export class AnimalAgent {
       this.resetHumanThreatState()
       this.debugBranch = 'rabid'
       this.lastFaunaDecisionInput = null
+      if (diagOn) {
+        agentCpuDiag.recordFaunaHighPriorityAgent()
+        agentCpuDiag.recordFaunaExpensiveBehaviourAgent()
+      }
+      const rabidBehaviourT0 = diagOn ? performance.now() : 0
       this.updateRabid(dt, others)
+      if (diagOn) agentCpuDiag.addFaunaBehaviourMs(performance.now() - rabidBehaviourT0)
 
     } else {
       // Throttled player-intent refresh (implementation notes F4), computed
       // before selection under exactly the old branch #2 guard so the
       // 0.2s cache window's timing is unchanged.
+      const decisionT0 = diagOn ? performance.now() : 0
       const playerIntent = this.refreshThrottledHumanIntent(sense, observerPos, nearbyHumanCount, dt)
       // Live since npc-008 step 6: `npcThreat` can now be set for a
       // non-frenzied predator, so `npc-attack`/`npc-ignore`/`npc-flee`
@@ -2757,7 +2825,14 @@ export class AnimalAgent {
       }
       this.lastFaunaDecisionInput = decisionInput
       const branch = decideFaunaBehaviour(decisionInput)
+      if (diagOn) {
+        agentCpuDiag.addFaunaDecisionMs(performance.now() - decisionT0)
+        agentCpuDiag.recordFaunaDecisionPass()
+        if (isFaunaHighPriorityBranch(branch)) agentCpuDiag.recordFaunaHighPriorityAgent()
+        if (isFaunaExpensiveBranch(branch)) agentCpuDiag.recordFaunaExpensiveBehaviourAgent()
+      }
       this.debugBranch = branch
+      const behaviourT0 = diagOn ? performance.now() : 0
       switch (branch) {
         case 'dog-guard': {
           this.resetHumanThreatState()
@@ -2922,6 +2997,7 @@ export class AnimalAgent {
       if (this.def.kind === 'dog') {
         this.updateDogVocalization(dt, guardTarget, nearbyPredators, nearbySettlementNpcs, observerPos, onVocalize)
       }
+      if (diagOn) agentCpuDiag.addFaunaBehaviourMs(performance.now() - behaviourT0)
     }
     if (this.threateningHuman && !this.wasThreateningHuman) {
       onAggro?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
@@ -2932,6 +3008,7 @@ export class AnimalAgent {
     // `tickPresentationAndLife()`'s own `snapY()` has run yet (see
     // `debugLastStepDist`'s field doc).
     this.debugLastStepDist = Math.hypot(this.mesh.position.x - debugPrevX, this.mesh.position.z - debugPrevZ)
+    const lifePresentationT0 = diagOn ? performance.now() : 0
     this.tickPresentationAndLife(
       dt,
       observerPos,
@@ -2939,6 +3016,7 @@ export class AnimalAgent {
       nowDays,
       playerObservation,
     )
+    if (diagOn) agentCpuDiag.addFaunaLifePresentationMs(performance.now() - lifePresentationT0)
     if (this.debugActive && this.debugVisual) this.updateDebugVisual()
   }
 
@@ -3348,6 +3426,8 @@ export class AnimalAgent {
       roll: this.cachedPerceptionRoll,
       stealthMultiplier: sneakDetectionMultiplier(playerStealth),
     })
+    const sensingDiag = getAgentCpuDiag()
+    if (sensingDiag.isEnabled()) sensingDiag.recordPlayerPerceptionCheck()
     if (noticed) this.alertTimer = ALERT_HOLD_SEC
     const playerActive = noticed || this.alertTimer > 0
 
@@ -3360,6 +3440,7 @@ export class AnimalAgent {
         nearestFire = fire
       }
     }
+    if (sensingDiag.isEnabled() && litFires.length > 0) sensingDiag.recordFireScan(litFires.length)
 
     return {
       playerActive,
@@ -3373,6 +3454,8 @@ export class AnimalAgent {
    *  loaded/close enough to matter — shared by `fleeFrom`'s village bias and
    *  `wander`/`updatePredator`'s village-avoidance. */
   private nearestVillage(): VillageInfo | null {
+    const villageDiag = getAgentCpuDiag()
+    if (villageDiag.isEnabled()) villageDiag.recordVillageScan(this.currentVillages.length)
     let best: VillageInfo | null = null
     let bestD = Infinity
     for (const v of this.currentVillages) {
@@ -3514,6 +3597,8 @@ export class AnimalAgent {
    *  wild wander targets off settled ground for every wild species,
    *  including wolf. */
   private isNearVillage(pos: { x: number, z: number }): boolean {
+    const villageDiag = getAgentCpuDiag()
+    if (villageDiag.isEnabled()) villageDiag.recordVillageScan(this.currentVillages.length)
     for (const v of this.currentVillages) {
       if (isWithinVillageRadius(pos, v, VILLAGE_AVOID_MARGIN)) return true
     }
