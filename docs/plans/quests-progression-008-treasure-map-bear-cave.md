@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~world-terrain-019~~, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~
+**Depends on:** ~~world-terrain-019~~, ~~world-terrain-024~~, ~~world-terrain-025~~, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `treasure` `cave` `bear` `hidden-find` `container` `choice-through-action`
@@ -24,6 +24,23 @@ The final outcome is determined by what the Player actually does with the treasu
 
 Do not present this as an artificial A/B dialogue choice.
 
+## Current cave-system constraint
+
+The production cave system now has three archetypes: `natural`, `adventure` and `dungeon`.
+
+For V1 this quest should bind to one exact **`adventure` cave**, not simply to any production cave and not automatically to the new `dungeon` archetype.
+
+Reason: the current semantic treasure-placement contract (`Caves.contentAnchorsOf()`) is still adventure-only. Dungeon caves expose their own stable chamber semantics through `Caves.dungeonChambersOf()` and may expose `Caves.undergroundPoolOf()`, but they do not currently provide `sideTreasure` / `finalTreasure` content anchors.
+
+Therefore:
+
+- prefer one deterministic `adventure` cave with a valid `finalTreasure` or `sideTreasure` anchor,
+- do not silently fall back to a dungeon and invent interior coordinates,
+- do not extend dungeon treasure placement solely to satisfy this quest unless implementation recon shows that the shared cave content contract has already been generalized,
+- if no suitable adventure anchor exists for a seed, fail the authored binding explicitly rather than using duplicated/cached coordinates.
+
+A future plan may deliberately migrate this quest to a dungeon, but that requires a shared dungeon content-placement contract first.
+
 ## Dependencies
 
 ### `world-terrain-019` — Cave heightfield production migration
@@ -32,7 +49,17 @@ The quest uses a production real walk-in cave from the shared cave system.
 
 Do not implement a quest-specific cave representation, duplicate cave coordinates, or treat the old decorative fauna den as the destination.
 
-Current cave code remains the source of truth at implementation time. Consume the production cave identity/location/spatial contracts delivered by `world-terrain-019`.
+Current cave code remains the source of truth at implementation time. Consume stable cave identity and the stateless cave spatial contracts delivered by the production cave runtime.
+
+### `world-terrain-024` / `world-terrain-025` — dungeon archetype and underground pool
+
+These plans changed the cave catalog after this quest was originally drafted.
+
+The quest must be archetype-aware when selecting its target. `dungeon` is a real production archetype with stable chamber semantics (`Caves.dungeonChambersOf()`), and dungeon pools are exposed through `Caves.undergroundPoolOf()` where present.
+
+They are **not** quest-owned systems and should not be duplicated here.
+
+V1 still targets `adventure`, because the existing treasure content-anchor contract is adventure-only. The new dungeon APIs are relevant mainly as a guardrail: do not accidentally select a dungeon through a generic cave binder and then assume adventure anchor roles exist.
 
 ### `fauna-019` — real cave habitats and animal home navigation
 
@@ -130,13 +157,13 @@ The recovered-map state must persist through the quest's authoritative progressi
 
 The NPC recognises that the map has been recovered and interprets it.
 
-This advances the quest to the expedition stage and reveals/targets one specific production cave.
+This advances the quest to the expedition stage and reveals/targets one specific production **adventure cave**.
 
 Use the existing world-location/navigation mechanisms available from the real cave system. Prefer stable cave/world-location identity over cached coordinates or runtime object references.
 
 ### 4. Specific cave and specific bear
 
-The destination is one concrete real cave.
+The destination is one concrete real `adventure` cave selected from current generated cave data.
 
 That cave is the home of one **specific persistent bear** configured through `fauna-018` + `fauna-019`.
 
@@ -182,6 +209,8 @@ These are emergent approaches. Do not encode them as quest strategies or objecti
 ### 6. Treasure exists independently
 
 Place one authored portable treasure casket inside the target cave independently of the bear lifecycle.
+
+Resolve the placement from the cave's existing stable `finalTreasure` / `sideTreasure` content anchor. Do not sample surface height, cache a guessed Y, use topology-node Y directly, or invent a quest-only cave coordinate.
 
 The casket must exist whether the bear is:
 
@@ -285,13 +314,16 @@ V1 deliberately uses authored bindings for:
 
 - quest giver,
 - target cemetery/grave,
-- target production cave,
+- target production `adventure` cave,
+- one exact cave content anchor,
 - treasure casket,
 - persistent bear occupant.
 
 Keep bindings explicit and stable rather than introducing procedural selection solely for this quest.
 
 Where possible, reference stable world/entity identities instead of runtime object references or duplicated coordinates.
+
+Do not reuse `bindExactCaveQuests()` blindly: that helper currently binds existing cave quests to a supplied exact cave and is not an archetype/anchor selector. This plan may reuse the same composition pattern, but selection of this quest's cave must validate `Caves.archetypeOf(caveId) === 'adventure'` and resolve a real treasure anchor.
 
 ## State ownership
 
@@ -304,6 +336,7 @@ Keep authoritative state in its owning systems:
 | hidden-find resolution | hidden-find / quest integration seam |
 | grave social exposure | `quests-progression-011` integration |
 | cave identity/topology/spatial representation | world / cave system |
+| cave archetype / content anchor | world / cave system |
 | cave-backed fauna home/navigation | `fauna-019` / fauna |
 | bear identity, snapshot, death/tombstone | `fauna-018` / fauna |
 | bear needs, movement, health, lifecycle | `AnimalAgent` / fauna |
@@ -332,7 +365,7 @@ Verify persistence of:
 - any cave discovery/navigation state already owned by the map/world-location system,
 - social consequences through their existing stores.
 
-Derived cave geometry, cave habitat anchor and other deterministic world data remain derived according to `world-terrain-019` / `fauna-019`; do not serialize duplicate quest coordinates or cave topology.
+Derived cave geometry, archetype, content anchors, cave habitat anchor and other deterministic world data remain derived from the cave/world systems; do not serialize duplicate quest coordinates, chamber ids, anchor positions or cave topology.
 
 ## Reuse / integration targets
 
@@ -343,8 +376,10 @@ Implementation should reconfirm current symbols at implementation time, especial
 - cemetery grave placement/stable identity,
 - the `quests-progression-011` social-exposure integration point,
 - `src/quests/QuestManager.ts` / current quest-definition APIs,
+- `src/quests/quests.ts` — contextual quest binding patterns; treat `bindExactCaveQuests()` as a pattern, not the target-cave selector,
 - quest outcome APIs from `quests-progression-002`,
-- production cave/world-location APIs from `world-terrain-019` and later cave work,
+- `src/world/createCaves.ts` — `Caves.archetypeOf()`, `contentAnchorsOf()`, `dungeonChambersOf()`, `undergroundPoolOf()`, `resolveHabitat()`, `queryGroundIn()`, `resolveHorizontalIn()`,
+- `src/world/caves/caveContentAnchors.ts` — current adventure-only treasure anchor contract,
 - fauna real-cave habitat APIs from `fauna-019`,
 - persistent occupant APIs/state from `fauna-018`,
 - `src/app/actions/containerActions.ts` and current placed-container ownership,
@@ -356,10 +391,12 @@ Current code is the source of truth. If dependencies move responsibilities or sy
 ## Architecture constraints
 
 - The Player participates through ordinary world actions: dig, travel, avoid/fight fauna, pick up casket, open casket, deliver casket.
+- V1 targets one exact `adventure` cave with a real treasure content anchor.
+- Do not treat `dungeon` as interchangeable with `adventure`; current treasure anchors are adventure-only.
 - No quest-spawned bear.
 - No quest-only cave.
 - No quest-owned bear persistence.
-- No duplicate cave/home coordinates owned by the quest.
+- No duplicate cave/home/treasure coordinates owned by the quest.
 - No quest-only inventory or treasure payload.
 - No custom grave-risk calculation in this quest; use `quests-progression-011`.
 - No dialogue A/B choice for the final treasure decision.
@@ -377,6 +414,8 @@ Do not implement in this plan:
 - persistent-wild-animal infrastructure already owned by `fauna-018`,
 - cave-backed fauna navigation already owned by `fauna-019`,
 - a new cave generator,
+- migration of this quest to the `dungeon` archetype without a shared dungeon treasure-placement contract,
+- dungeon pool gameplay,
 - procedural treasure-map generation,
 - procedural quest-giver, grave or cave selection,
 - scripted bear encounter phases,
@@ -394,6 +433,7 @@ The quest itself should add negligible continuous runtime cost.
 - Reuse normal cave streaming; quest references must not keep cave presentation permanently active.
 - Persistent bear simulation follows fauna policies; quest importance alone must not force permanent high-fidelity ticking.
 - Grave exposure is event-driven through `quests-progression-011`.
+- Resolve authored cave/archetype/anchor bindings at composition/world-build time, not through repeated frame scans.
 - Do not add a worker for quest bookkeeping.
 
 ## Automated verification
@@ -411,6 +451,9 @@ Cover, where practical:
 ### Cave/bear
 
 - the quest targets the intended stable real cave identity,
+- selected cave is `adventure`, not `natural`/`dungeon`,
+- selected cave exposes the authored treasure anchor used for placement,
+- no fallback invents coordinates if the anchor is absent,
 - the configured bear uses the cave-backed habitat from `fauna-019`,
 - the bear is not created/despawned by quest stage transitions,
 - bear presence/alive state does not gate treasure existence,
@@ -465,7 +508,8 @@ For grave exposure, verify representative day/night + Sneak combinations accordi
 
 - The map is recovered through the ordinary target-grave Hidden Find / grave-disturbance flow.
 - Grave social risk is provided by `quests-progression-011`, not quest-specific logic.
-- The quest uses one real production cave from the shared cave system.
+- The quest uses one exact real production **adventure cave** from the shared cave system.
+- Its treasure placement comes from the cave's real semantic content-anchor contract rather than authored coordinates.
 - One specific persistent fauna-owned bear has that cave as its actual interior home through `fauna-018` + `fauna-019`.
 - The bear can leave and return through normal ecosystem behaviour and is not a quest guard.
 - Treasure existence is independent of bear state.
