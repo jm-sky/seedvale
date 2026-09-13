@@ -4,6 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
+**Model:** Sonnet, Composer
 **Depends on:** none
 **Domain:** `quests-progression`
 **Subdomains:** `quests`
