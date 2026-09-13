@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `adventure-cave` `family` `heirloom` `choice`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
