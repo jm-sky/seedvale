@@ -12,7 +12,9 @@ import type { TransportOrder } from '../world/transportOrder'
 import type { Role } from './characters'
 import type { NpcPlannedAction } from './npcAction'
 import {
+  BLACKSMITH_IRON_ROD_PRODUCTION,
   claimHouseholdSurplus,
+  commitBlacksmithProduction,
   commitDressingProduction,
   commitHunterArrowProduction,
   commitTextileWorkProduction,
@@ -534,20 +536,41 @@ function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
  * "keep the work action unavailable until the generic dependency exists"
  * outcome, not a bug.
  */
-function planBlacksmithWork(ctx: NpcWorkContext): NpcPlannedAction | null {
-  const { household, workplace } = ctx
-  if (!household || !workplace) return null
-  if (!household.items.has('whetstone', 1)) return null
-  const target = findWeaponNeedingMaintenance(household.items)
-  if (!target) return null
-  return {
-    kind: 'sharpen',
-    destination: copyVec3(workplace.position),
-    durationSec: ctx.rollWorkDurationSec(),
-    onComplete: () => {
-      sharpenWeapon(household.items, target.id, 'whetstone')
-    },
+function blacksmithStockInputsAvailable(economy: SettlementEconomy): boolean {
+  for (const { kind, amount } of BLACKSMITH_IRON_ROD_PRODUCTION.inputs) {
+    if (economy.query(kind) < amount) return false
   }
+  return true
+}
+
+function planBlacksmithWork(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const { household, workplace, economy } = ctx
+  if (!household || !workplace) return null
+
+  const sharpenTarget = findWeaponNeedingMaintenance(household.items)
+  if (sharpenTarget && household.items.has('whetstone', 1)) {
+    return {
+      kind: 'sharpen',
+      destination: copyVec3(workplace.position),
+      durationSec: ctx.rollWorkDurationSec(),
+      onComplete: () => {
+        sharpenWeapon(household.items, sharpenTarget.id, 'whetstone')
+      },
+    }
+  }
+
+  if (economy && blacksmithStockInputsAvailable(economy)) {
+    return {
+      kind: 'work',
+      destination: copyVec3(workplace.position),
+      durationSec: ctx.rollWorkDurationSec(),
+      onComplete: () => {
+        commitBlacksmithProduction(economy, household, ctx.simTime())
+      },
+    }
+  }
+
+  return null
 }
 
 const WOOL_YIELD_KINDS: readonly ItemKind[] = ['wool']

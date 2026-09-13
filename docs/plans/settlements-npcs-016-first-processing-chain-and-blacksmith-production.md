@@ -1,7 +1,7 @@
 # Plan: First Processing Chain and Blacksmith Production
 
 **Created:** 2026-09-01  
-**Status:** `planned` 📋  
+**Status:** `implemented` ✅  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~settlements-npcs-015~~, settlements-npcs-034  

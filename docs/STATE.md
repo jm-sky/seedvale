@@ -65,7 +65,7 @@ Predator/prey/livestock ecosystem built on one shared `AnimalAgent` class — wi
 - Item flags, per-item stats, weapon numbers, gameplay roadmap: [items/CATALOG.md](./items/CATALOG.md), [items/WEAPONS.md](./items/WEAPONS.md)
 - Player survival needs, skills, busy channels, camp rest, settlement lodging, wells, traps, planting, fishing/preservation, cooking, carry capacity, Work Contracts: [state/player-systems.md](./state/player-systems.md)
 - Combat mechanics (melee/ranged/critical hits/NPC combat): [state/combat.md](./state/combat.md)
-- Still not implemented: player-vs-NPC melee/ranged damage (see "Not implemented" below), weapon repair/broken lifecycle, general tool durability (shovel/pickaxe), bow durability, arrow recovery, 3D projectile visuals, full Vue-side crafting, iron_rod smelting/production.
+- Still not implemented: player-vs-NPC melee/ranged damage (see "Not implemented" below), weapon repair/broken lifecycle, general tool durability (shovel/pickaxe), bow durability, arrow recovery, 3D projectile visuals, full Vue-side crafting, player iron_rod crafting (NPC Blacksmith can produce `iron_rod` from settlement ore stock — plan settlements-npcs-016).
 
 ### Quests / progression
 

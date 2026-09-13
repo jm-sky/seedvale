@@ -3,6 +3,7 @@ export { demandsFor, initialFoodFor, initialStockFor, type SettlementEconomySeed
 export { ECONOMIC_KINDS, type EconomicKind, isEconomicKind } from './kinds'
 export { claimEconomySurplus, claimHouseholdSurplus } from './localExchange'
 export {
+  commitBlacksmithProduction,
   commitDressingProduction,
   commitHunterArrowProduction,
   commitRoleWork,
@@ -14,6 +15,7 @@ export {
 export {
   ARROWS_FROM_BEAM_PRODUCTION,
   ARROWS_FROM_BRANCH_PRODUCTION,
+  BLACKSMITH_IRON_ROD_PRODUCTION,
   DRESSING_PRODUCTION,
   FARMING_PRODUCTION,
   FISHING_PRODUCTION,

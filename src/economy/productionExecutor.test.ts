@@ -4,6 +4,7 @@ import { createHousehold } from '../settlement/household'
 import {
   ARROWS_FROM_BEAM_PRODUCTION,
   ARROWS_FROM_BRANCH_PRODUCTION,
+  BLACKSMITH_IRON_ROD_PRODUCTION,
   FARMING_PRODUCTION,
   HUNTER_ARROW_PRODUCTIONS,
   produceFirstAvailableItemRecipe,
@@ -259,6 +260,78 @@ describe('SettlementEconomy.produce stock-only adapter', () => {
     expect(eco.produce(MIXED_ROD)).toBe(false)
     expect(eco.query('iron')).toBe(2)
     expect(household.items.count('iron_rod')).toBe(0)
+  })
+})
+
+describe('BLACKSMITH_IRON_ROD_PRODUCTION (settlements-npcs-016)', () => {
+  it('is the explicit 2 iron + 1 coal → 1 iron_rod recipe', () => {
+    expect(BLACKSMITH_IRON_ROD_PRODUCTION.id).toBe('blacksmith.iron_rod')
+    expect(BLACKSMITH_IRON_ROD_PRODUCTION.role).toBe('blacksmith')
+    expect(BLACKSMITH_IRON_ROD_PRODUCTION.inputs).toEqual([
+      { kind: 'iron', amount: 2 },
+      { kind: 'coal', amount: 1 },
+    ])
+    expect(BLACKSMITH_IRON_ROD_PRODUCTION.outputs).toEqual([])
+    expect(BLACKSMITH_IRON_ROD_PRODUCTION.itemOutputs).toEqual([{ kind: 'iron_rod', amount: 1 }])
+  })
+
+  it('commits mixed stock→item with exact quantities', () => {
+    const eco = economy({ iron: 5, coal: 3 })
+    const household = createHousehold('h', 's', 'home')
+    const result = executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, {
+      economy: eco,
+      inventory: household.items,
+      simTime: 4,
+    })
+    expect(result).toEqual({ ok: true, recipeId: 'blacksmith.iron_rod' })
+    expect(eco.query('iron')).toBe(3)
+    expect(eco.query('coal')).toBe(2)
+    expect(household.items.count('iron_rod')).toBe(1)
+  })
+
+  it('blocks insufficient iron with zero mutation', () => {
+    const eco = economy({ iron: 1, coal: 2 })
+    const household = createHousehold('h', 's', 'home')
+    const result = executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, {
+      economy: eco,
+      inventory: household.items,
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      recipeId: 'blacksmith.iron_rod',
+      reason: 'insufficient-input',
+      category: 'stock',
+      kind: 'iron',
+    })
+    expect(eco.query('iron')).toBe(1)
+    expect(eco.query('coal')).toBe(2)
+    expect(household.items.count('iron_rod')).toBe(0)
+  })
+
+  it('blocks insufficient coal with zero mutation', () => {
+    const eco = economy({ iron: 4, coal: 0 })
+    const household = createHousehold('h', 's', 'home')
+    const result = executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, {
+      economy: eco,
+      inventory: household.items,
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'insufficient-input',
+      category: 'stock',
+      kind: 'coal',
+    })
+    expect(eco.query('iron')).toBe(4)
+    expect(household.items.count('iron_rod')).toBe(0)
+  })
+
+  it('sequential commits consume live stock once', () => {
+    const eco = economy({ iron: 2, coal: 1 })
+    const household = createHousehold('h', 's', 'home')
+    expect(executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, { economy: eco, inventory: household.items }).ok).toBe(true)
+    const second = executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, { economy: eco, inventory: household.items })
+    expect(second).toMatchObject({ ok: false, reason: 'insufficient-input' })
+    expect(household.items.count('iron_rod')).toBe(1)
   })
 })
 

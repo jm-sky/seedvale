@@ -132,6 +132,22 @@ export const TEXTILE_WORKER_PRODUCTIONS: readonly ProductionDef[] = [
   LINEN_BANDAGE_PRODUCTION,
 ]
 
+/**
+ * Blacksmith iron rod processing (plan settlements-npcs-016) — mixed
+ * settlement stock inputs and household item output via `executeProduction`.
+ * Not in `BY_ROLE`; completion goes through `commitBlacksmithProduction` /
+ * `planBlacksmithWork`.
+ *
+ * @domain settlements-npcs
+ */
+export const BLACKSMITH_IRON_ROD_PRODUCTION: ProductionDef = {
+  id: 'blacksmith.iron_rod',
+  role: 'blacksmith',
+  inputs: [{ kind: 'iron', amount: 2 }, { kind: 'coal', amount: 1 }],
+  outputs: [],
+  itemOutputs: [{ kind: 'iron_rod', amount: 1 }],
+}
+
 /** `1 bandage + 1 herb → 1 dressing` (plan settlements-npcs-007). */
 export const DRESSING_PRODUCTION: ProductionDef = {
   id: 'herbalist.dressing',

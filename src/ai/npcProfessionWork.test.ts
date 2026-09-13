@@ -431,16 +431,19 @@ describe('planProfessionWork', () => {
     })
   })
 
-  describe('blacksmith', () => {
-    it('returns null without a whetstone', () => {
+  describe('blacksmith (plan settlements-npcs-016)', () => {
+    const workplace = { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace']
+    const economy = () => createSettlementEconomy('s', {}, [
+      { kind: 'wood', target: 0 },
+      { kind: 'food', target: 0 },
+      { kind: 'water', target: 0 },
+    ])
+
+    it('returns null without household, workplace, or runnable work', () => {
       const household = createHousehold('h', 's', 'home:h')
-      household.items.remove('whetstone', household.items.count('whetstone'))
-      const ctx = baseCtx({
-        role: 'blacksmith',
-        household,
-        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
-      })
-      expect(planProfessionWork(ctx)).toBeNull()
+      expect(planProfessionWork(baseCtx({ role: 'blacksmith', household, workplace }))).toBeNull()
+      expect(planProfessionWork(baseCtx({ role: 'blacksmith', workplace }))).toBeNull()
+      expect(planProfessionWork(baseCtx({ role: 'blacksmith', household }))).toBeNull()
     })
 
     it('finds a weapon to sharpen when a whetstone and a worn weapon exist', () => {
@@ -449,13 +452,89 @@ describe('planProfessionWork', () => {
       const worn = createWeaponInstance('axe')
       household.items.addInstance(worn)
       household.items.updateInstance(worn.id, (inst) => ({ ...inst, sharpness: 0.1 }))
-      const ctx = baseCtx({
+      const eco = economy()
+      eco.add('iron', 4, 0)
+      eco.add('coal', 2, 0)
+      const work = planProfessionWork(baseCtx({
         role: 'blacksmith',
         household,
-        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
-      })
-      const work = planProfessionWork(ctx)
+        workplace,
+        economy: eco,
+      }))
       expect(work?.kind).toBe('sharpen')
+    })
+
+    it('starts processing when stock inputs are available and sharpening is not', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const eco = economy()
+      eco.add('iron', 2, 0)
+      eco.add('coal', 1, 0)
+      const work = planProfessionWork(baseCtx({
+        role: 'blacksmith',
+        household,
+        workplace,
+        economy: eco,
+      }))
+      expect(work?.kind).toBe('work')
+      expect(eco.query('iron')).toBe(2)
+      work?.onComplete()
+      expect(eco.query('iron')).toBe(0)
+      expect(eco.query('coal')).toBe(0)
+      expect(household.items.count('iron_rod')).toBe(1)
+    })
+
+    it('does not start processing when either stock input is missing', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const ecoMissingCoal = economy()
+      ecoMissingCoal.add('iron', 4, 0)
+      expect(planProfessionWork(baseCtx({
+        role: 'blacksmith',
+        household,
+        workplace,
+        economy: ecoMissingCoal,
+      }))).toBeNull()
+
+      const ecoMissingIron = economy()
+      ecoMissingIron.add('coal', 2, 0)
+      expect(planProfessionWork(baseCtx({
+        role: 'blacksmith',
+        household,
+        workplace,
+        economy: ecoMissingIron,
+      }))).toBeNull()
+    })
+
+    it('preview does not mutate economy or household items', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const eco = economy()
+      eco.add('iron', 2, 0)
+      eco.add('coal', 1, 0)
+      const work = planProfessionWork(baseCtx({
+        role: 'blacksmith',
+        household,
+        workplace,
+        economy: eco,
+      }))
+      expect(work?.kind).toBe('work')
+      expect(eco.query('iron')).toBe(2)
+      expect(household.items.count('iron_rod')).toBe(0)
+    })
+
+    it('stale stock on completion fails without partial mutation', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const eco = economy()
+      eco.add('iron', 2, 0)
+      eco.add('coal', 1, 0)
+      const work = planProfessionWork(baseCtx({
+        role: 'blacksmith',
+        household,
+        workplace,
+        economy: eco,
+      }))
+      eco.remove('coal', 1, 0)
+      work?.onComplete()
+      expect(eco.query('iron')).toBe(2)
+      expect(household.items.count('iron_rod')).toBe(0)
     })
   })
 

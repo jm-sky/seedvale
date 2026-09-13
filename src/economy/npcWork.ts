@@ -3,6 +3,7 @@ import type { Household } from '../settlement/household'
 import type { SettlementEconomy } from './settlementEconomy'
 import { WOODSHED_DEVELOPMENT } from './development'
 import {
+  BLACKSMITH_IRON_ROD_PRODUCTION,
   DRESSING_PRODUCTION,
   HUNTER_ARROW_PRODUCTIONS,
   produceFirstAvailableItemRecipe,
@@ -11,7 +12,7 @@ import {
   WOODCUTTING_PRODUCTION,
   WOOL_MATERIAL_PRODUCTION,
 } from './production'
-import { executeProduction } from './productionExecutor'
+import { executeProduction, type ProductionResult } from './productionExecutor'
 
 /**
  * Chop → deposit completion. Tree harvest stays in `NpcAgent`; this is the
@@ -44,6 +45,24 @@ export function commitRoleWork(economy: SettlementEconomy, role: Role, simTime =
  */
 export function commitHunterArrowProduction(household: Household, simTime = 0): boolean {
   return produceFirstAvailableItemRecipe(household.items, HUNTER_ARROW_PRODUCTIONS, simTime) !== null
+}
+
+/**
+ * Blacksmith iron-rod completion (plan settlements-npcs-016) — thin adapter
+ * to the shared executor; returns the full `ProductionResult` for downstream 017.
+ *
+ * @domain settlements-npcs
+ */
+export function commitBlacksmithProduction(
+  economy: SettlementEconomy,
+  household: Household,
+  simTime = 0,
+): ProductionResult {
+  return executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, {
+    economy,
+    inventory: household.items,
+    simTime,
+  })
 }
 
 /**

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createHousehold } from '../settlement/household'
 import { WOODSHED_DEVELOPMENT } from './development'
-import { commitHunterArrowProduction, commitRoleWork, commitWoodcutterDeposit, commitWoolMaterialProduction } from './npcWork'
+import {
+  commitBlacksmithProduction,
+  commitHunterArrowProduction,
+  commitRoleWork,
+  commitWoodcutterDeposit,
+  commitWoolMaterialProduction,
+} from './npcWork'
 import { FARMING_PRODUCTION } from './production'
 import { createSettlementEconomy } from './settlementEconomy'
 
@@ -57,6 +63,39 @@ describe('commitRoleWork', () => {
     const eco = createSettlementEconomy('s1', { wood: 1 }, DEMANDS)
     expect(commitRoleWork(eco, 'guard')).toBe(false)
     expect(commitRoleWork(eco, 'trader')).toBe(false)
+  })
+
+  it('leaves blacksmith without a generic role recipe (plan settlements-npcs-016)', () => {
+    const eco = createSettlementEconomy('s1', { iron: 4, coal: 2 }, DEMANDS)
+    expect(commitRoleWork(eco, 'blacksmith')).toBe(false)
+    expect(eco.query('iron')).toBe(4)
+  })
+})
+
+describe('commitBlacksmithProduction (settlements-npcs-016)', () => {
+  it('returns full ProductionResult and produces one iron_rod', () => {
+    const eco = createSettlementEconomy('s1', { iron: 2, coal: 1 }, DEMANDS)
+    const household = createHousehold('h', 's', 'home')
+    const result = commitBlacksmithProduction(eco, household, 3)
+    expect(result).toEqual({ ok: true, recipeId: 'blacksmith.iron_rod' })
+    expect(eco.query('iron')).toBe(0)
+    expect(eco.query('coal')).toBe(0)
+    expect(household.items.count('iron_rod')).toBe(1)
+  })
+
+  it('returns blocked-by-input without flattening to boolean', () => {
+    const eco = createSettlementEconomy('s1', { iron: 2, coal: 0 }, DEMANDS)
+    const household = createHousehold('h', 's', 'home')
+    const result = commitBlacksmithProduction(eco, household)
+    expect(result).toMatchObject({
+      ok: false,
+      recipeId: 'blacksmith.iron_rod',
+      reason: 'insufficient-input',
+      category: 'stock',
+      kind: 'coal',
+    })
+    expect(eco.query('iron')).toBe(2)
+    expect(household.items.count('iron_rod')).toBe(0)
   })
 })
 

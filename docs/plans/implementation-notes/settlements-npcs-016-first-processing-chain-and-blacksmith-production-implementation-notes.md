@@ -2,7 +2,7 @@
 
 **Plan:** `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  
 **Reviewed:** 2026-09-07  
-**Status:** `planned` 📋
+**Status:** `implemented` ✅
 
 ## Review result
 
