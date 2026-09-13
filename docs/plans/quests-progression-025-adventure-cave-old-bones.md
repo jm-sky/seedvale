@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~world-terrain-020~~
+**Depends on:** world-terrain-028
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `adventure-cave` `family` `heirloom` `story-find`
@@ -20,35 +20,36 @@ Target flow:
 
 ```text
 old disappearance
-→ exact adventure cave
+→ exact EMPTY adventure cave
 → side/deep exploration
 → remains + heirloom cache
 → recover family signet
 → return it to the relative
 ```
 
-This quest should demonstrate that one adventure cave can support more than one independent story without duplicating cave coordinates or forcing a separate cave for every quest.
+## Cave and content-profile binding
 
-## Cave and anchor binding
-
-Bind only an exact cave with:
+Bind one exact cave satisfying:
 
 ```text
 Caves.archetypeOf(caveId) === 'adventure'
++ resolved adventure content profile === EMPTY
 ```
 
-Use existing `Caves.contentAnchorsOf(caveId)`.
+`world-terrain-028` owns the shared adventure cave content-profile contract. `EMPTY` means no automatic generic `caveSide` / `caveFinal` chests are materialized, while the deterministic cave content anchors remain available as placement slots for authored stories.
+
+Use existing `Caves.contentAnchorsOf(caveId)` and claim one available anchor for this story.
 
 Preferred placement order:
 
 1. unclaimed `sideTreasure` anchor;
 2. otherwise an unclaimed `finalTreasure` anchor.
 
-`quests-progression-008` may use the same physical adventure cave, but both quests must never claim the same content anchor.
+This quest must **not** share the bear quest's `QUEST_TREASURE` cave. `quests-progression-008` reserves its own adventure cave/content profile and final treasure slot. Likewise, do not bind this story to a `DOUBLE_TREASURE` cave, because that profile is already a complete standalone exploration encounter with two systemic chests.
 
-At quest composition, maintain a small set of claimed cave-content anchor ids analogous to the existing occupied-landmark composition pattern. This is composition arbitration only, not persisted quest state.
+At composition time maintain deterministic cave/anchor claims through the shared `world-terrain-028` reservation/arbitration seam. Claim state is derived composition data, not persisted quest state.
 
-Do not create a second adventure cave solely for this story and do not cache anchor XYZ.
+If no separate eligible `EMPTY` adventure cave exists for a seed, omit/fail this authored binding explicitly rather than sharing a conflicting cave, replacing another story's content, forcing a cave archetype, or inventing coordinates.
 
 ## World content
 
@@ -90,6 +91,8 @@ Do not require killing cave fauna or clearing the cave. Any animals present are 
 
 The cave may contain modest incidental loot in the remains container; that is world loot and stays with the Player unless explicitly required for hand-in.
 
+Because the cave profile is `EMPTY`, no unrelated generic side/final cave treasure should coexist with this authored story unless a future plan explicitly composes additional content there.
+
 The quest reward for returning the family heirloom should primarily be:
 
 - relationship increase with the giver/family;
@@ -104,23 +107,23 @@ If the Player chooses to keep the ring, V1 may simply leave the quest unresolved
 | State | Owner |
 |---|---|
 | quest stage/outcome | `QuestManager` |
-| cave/archetype/anchor geometry | cave world, derived |
-| anchor claim set | composition-time only |
+| cave/archetype/anchors/content profile | cave/world composition, derived |
+| cave/anchor claim | shared composition-time arbitration, derived |
 | remains container + loot | `WorldGeneratedContainers` |
 | signet instance | normal inventory/item-instance lifecycle |
 | location discovery | world location system |
 | relations/social consequences | existing quest/social systems |
 
-Do not serialize anchor XYZ or create a quest-owned heirloom copy.
+Do not serialize anchor XYZ, the `EMPTY` profile decision, claim sets or a quest-owned heirloom copy.
 
 ## Reuse targets
 
 Recon/implementation should use:
 
-- `src/quests/quests.ts` — `bindExactCaveQuests()` composition pattern, objectives and authored definitions;
+- `docs/plans/world-terrain-028-archetype-aware-cave-story-and-loot-anchors.md` — shared cave profiles/claims/anchors;
+- `src/quests/quests.ts` — contextual binding patterns and objectives;
 - `src/quests/QuestManager.ts` — `loot_world_container` + gather hand-in;
-- `src/app/createApp.ts` — occupied/claimed world-content composition pattern;
-- `src/app/worldBundle.ts`;
+- `src/app/createApp.ts` / `src/app/worldBundle.ts` — shared deterministic cave-content composition;
 - `src/world/createCaves.ts`;
 - `src/world/caves/caveContentAnchors.ts`;
 - `src/world/worldGeneratedContainers.ts`;
@@ -136,12 +139,14 @@ Add JSDoc for reusable/public additions and appropriate `@domain` tags.
 - no procedural family mystery generator;
 - no live missing NPC;
 - no required combat;
+- no sharing the bear quest's `QUEST_TREASURE` cave;
+- no binding to a `DOUBLE_TREASURE` cave;
 - no duplicated adventure treasure anchor;
 - no full jewelry/equipment system beyond the minimal physical heirloom item.
 
 ## Verification
 
-Test adventure-only binding; deterministic unclaimed-anchor selection; no collision with `quests-progression-008`; remains container exists before quest acceptance; exact container loot advances correctly; signet survives save/load; hand-in removes the ring once; reward/outcome cannot duplicate after reload.
+Test adventure-only binding; selected cave resolves as `EMPTY`; deterministic separate-cave/anchor claim; no collision with `quests-progression-008`; no generic two-chest materialization in the selected cave; remains container exists before quest acceptance; exact container loot advances correctly; signet survives save/load; hand-in removes the ring once; reward/outcome cannot duplicate after reload.
 
 Manual browser verification remains the User's responsibility.
 
