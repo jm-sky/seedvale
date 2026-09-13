@@ -1,7 +1,7 @@
 # Plan: Treasure map — bear cave
 
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~world-terrain-019~~, ~~world-terrain-024~~, ~~world-terrain-025~~, world-terrain-028, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~

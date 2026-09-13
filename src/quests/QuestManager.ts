@@ -252,12 +252,35 @@ export type QuestWorldProgressLookup = {
   hasReadItem: (itemKind: ItemKind) => boolean
   hasDiscoveredLocation: (locationId: string) => boolean
   isWorldContainerLooted: (containerId: string) => boolean
+  hasResolvedHiddenFindSpot: (spotId: string) => boolean
+  hasAcquiredPortableContainer: (containerId: string) => boolean
 }
 
 const NO_WORLD_PROGRESS: QuestWorldProgressLookup = {
   hasReadItem: () => false,
   hasDiscoveredLocation: () => false,
   isWorldContainerLooted: () => false,
+  hasResolvedHiddenFindSpot: () => false,
+  hasAcquiredPortableContainer: () => false,
+}
+
+export type QuestPhysicalOutcomeContext = {
+  requireCarriedContainerId?: string
+  requireCarriedUnopened?: boolean
+}
+
+export type QuestPhysicalOutcomeResolver = {
+  canResolve: (questId: string, outcomeId: QuestOutcomeId, context: QuestPhysicalOutcomeContext) => boolean
+  onResolve: (questId: string, outcomeId: QuestOutcomeId) => void
+}
+
+const NO_PHYSICAL_OUTCOME: QuestPhysicalOutcomeResolver = {
+  canResolve: () => false,
+  onResolve: () => {},
+}
+
+export type QuestLifecycleHooks = {
+  onStageAdvanced?: (questId: string, clearedStageIndex: number) => void
 }
 
 const NO_WORLD_QUEST_SOURCE: WorldQuestSourceLookup = {
@@ -378,6 +401,8 @@ export class QuestManager {
   private readonly canReserveHorseReward: HorseRewardAvailability
   private readonly worldTime: QuestWorldTimeLookup
   private readonly settlementLight: SettlementLightLookup
+  private readonly physicalOutcome: QuestPhysicalOutcomeResolver
+  private readonly lifecycleHooks: QuestLifecycleHooks
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -403,6 +428,8 @@ export class QuestManager {
     lostLivestockSource: LostLivestockSourceLookup = NO_LOST_LIVESTOCK_SOURCE,
     worldTime: QuestWorldTimeLookup = NO_WORLD_TIME,
     settlementLight: SettlementLightLookup = NO_SETTLEMENT_LIGHT,
+    physicalOutcome: QuestPhysicalOutcomeResolver = NO_PHYSICAL_OUTCOME,
+    lifecycleHooks: QuestLifecycleHooks = {},
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -422,6 +449,8 @@ export class QuestManager {
     this.canReserveHorseReward = canReserveHorseReward
     this.worldTime = worldTime
     this.settlementLight = settlementLight
+    this.physicalOutcome = physicalOutcome
+    this.lifecycleHooks = lifecycleHooks
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -806,6 +835,38 @@ export class QuestManager {
     }
   }
 
+  /** Authored Hidden Find spot resolved (plan quests-progression-008). */
+  notifyHiddenFindSpotResolved(spotId: string): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      if (stage?.objective.type !== 'recover_hidden_find' || stage.objective.spotId !== spotId) continue
+      this.catchUpActiveWorldObjectives(def, s)
+    }
+  }
+
+  /** Exact portable container entered the carry lifecycle (plan quests-progression-008). */
+  notifyPortableContainerAcquired(containerId: string): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      if (stage?.objective.type !== 'acquire_portable_container' || stage.objective.containerId !== containerId) continue
+      this.catchUpActiveWorldObjectives(def, s)
+    }
+  }
+
+  tryResolvePhysicalOutcome(questId: string, outcomeId: QuestOutcomeId): boolean {
+    const def = this.defs.find((entry) => entry.id === questId)
+    if (!def) return false
+    const s = this.stateOf(questId)
+    if (s.state !== 'active' || s.resolvedOutcomeId) return false
+    if (!this.physicalOutcome.canResolve(questId, outcomeId, {})) return false
+    this.physicalOutcome.onResolve(questId, outcomeId)
+    return this.resolveQuest(questId, outcomeId)
+  }
+
   private isWorldObjectiveSatisfied(objective: QuestObjective): boolean {
     switch (objective.type) {
       case 'discover_location':
@@ -818,6 +879,12 @@ export class QuestManager {
         )
       case 'loot_world_container':
         return this.worldProgress.isWorldContainerLooted(objective.containerId)
+      case 'recover_hidden_find':
+        return this.worldProgress.hasResolvedHiddenFindSpot(objective.spotId)
+      case 'acquire_portable_container':
+        return this.worldProgress.hasAcquiredPortableContainer(objective.containerId)
+      case 'await_quest_outcome':
+        return false
       case 'read_item':
         return this.worldProgress.hasReadItem(objective.itemKind)
       default:
@@ -1015,10 +1082,12 @@ export class QuestManager {
    *  `ready_to_report` once the last one clears. Does not resolve the quest. */
   private advanceStage(def: QuestDef, s: QuestRuntimeProgress): void {
     this.feedContributionIds.delete(`${def.id}:${s.stageIndex}`)
+    const clearedIndex = s.stageIndex
     const nextIndex = s.stageIndex + 1
     const nextState = nextIndex >= def.stages.length ? 'ready_to_report' : 'active'
     this.setQuestState(def.id, { state: nextState, stageIndex: nextIndex, stageCount: 0 })
     if (nextState === 'active') this.bindAnimalTargetIfNeeded(def, nextIndex)
+    this.lifecycleHooks.onStageAdvanced?.(def.id, clearedIndex)
   }
 
   private handleGiverOffer(def: QuestDef): QuestDialogOverride | null {
@@ -1170,6 +1239,16 @@ export class QuestManager {
     const fallback = action?.npcLine ?? stage?.reminderLine ?? def.reportLine
     if (current.state !== 'active' || current.stageIndex !== stageIndex) return fallback
     if (!action || action.npc.npcId !== npcId) return fallback
+    if (action.physicalOutcomeId) {
+      const ctx: QuestPhysicalOutcomeContext = {
+        requireCarriedContainerId: action.requireCarriedContainerId,
+        requireCarriedUnopened: action.requireCarriedUnopened,
+      }
+      if (!this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, ctx)) return fallback
+      this.physicalOutcome.onResolve(def.id, action.physicalOutcomeId)
+      if (!this.resolveQuest(def.id, action.physicalOutcomeId)) return fallback
+      return action.npcLine ?? def.reportLine ?? fallback
+    }
     this.applyConsequences(def, action.consequences)
     this.advanceStage(def, current)
     return action.npcLine

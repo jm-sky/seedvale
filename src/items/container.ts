@@ -19,7 +19,7 @@ import type { GroundPlacementReason } from './tentPlacement'
  *  defer Small/Medium/Large/Barrel/Crate/Sack variants) — kept as a union
  *  (not a literal `'chest'` type) so `CONTAINER_DEFS` stays the single place
  *  a future variant gets added, not a scattered set of string checks. */
-export type ContainerKind = 'chest'
+export type ContainerKind = 'chest' | 'casket'
 
 export type ContainerDef = {
   kind: ContainerKind
@@ -47,6 +47,15 @@ export const CONTAINER_DEFS: Record<ContainerKind, ContainerDef> = {
     baseWeightKg: 4,
     footprintRadius: 0.6,
     separation: 1.6,
+  },
+  casket: {
+    kind: 'casket',
+    itemKind: 'chest',
+    label: 'trumna',
+    capacityUnits: 16,
+    baseWeightKg: 12,
+    footprintRadius: 0.75,
+    separation: 1.8,
   },
 }
 

@@ -403,6 +403,12 @@ export type QuestObjective =
   /** Authored treasure payload removed from a world-generated container (plan
    *  quests-progression-009) — not satisfied by merely opening the UI. */
   | { type: 'loot_world_container', containerId: string }
+  /** One-shot Hidden Find / authored grave spot resolved (plan quests-progression-008). */
+  | { type: 'recover_hidden_find', spotId: string }
+  /** Player picked up the exact portable container (plan quests-progression-008). */
+  | { type: 'acquire_portable_container', containerId: string }
+  /** Terminal stage — only `resolveQuest` / physical hooks may finish the quest. */
+  | { type: 'await_quest_outcome' }
   /** Lost household livestock recovered from world state (plan fauna-024) —
    *  not `find_animal` (death is not failure). `animalId` is the existing
    *  persistent livestock identity bound at materialization. */
@@ -428,6 +434,10 @@ export type QuestStageDialogueAction = {
   playerLine: string
   npcLine?: string
   consequences?: QuestConsequences
+  /** When set, selecting this action tries resolving the outcome physically first. */
+  physicalOutcomeId?: QuestOutcomeId
+  requireCarriedContainerId?: string
+  requireCarriedUnopened?: boolean
 }
 
 export type QuestStage = {
@@ -529,6 +539,9 @@ export type AuthoredQuestStageDialogueAction = {
   playerLine: string
   npcLine?: string
   consequences?: AuthoredQuestConsequences
+  physicalOutcomeId?: string
+  requireCarriedContainerId?: string
+  requireCarriedUnopened?: boolean
 }
 
 export type AuthoredQuestStage = Omit<QuestStage, 'objective' | 'dialogueActions'> & {
@@ -1525,6 +1538,104 @@ export function bindDarkForestTreasureQuest(
       ...stage,
       description: applyMapSourcePlaceToken(stage.description, phrase),
       reminderLine: applyMapSourcePlaceToken(stage.reminderLine, phrase),
+    })),
+  }
+}
+
+export type TreasureMapBearCaveQuestBinding = {
+  mapGraveSpotId: string
+  casketId: string
+  locationId: string
+  directionPhrase: string | null
+}
+
+/** Treasure map bear cave (plan quests-progression-008). */
+export function buildTreasureMapBearCaveQuest(binding: TreasureMapBearCaveQuestBinding): AuthoredQuestDef {
+  const cavePlace = cavePlacePhrase(binding.directionPhrase)
+  return {
+    id: 'skarb-jaskini-niedzwiedzia',
+    title: 'Stary skarb w jaskini',
+    description: `Marek wie o mapie ukrytej na cmentarzu, która prowadzi do jaskini ${cavePlace} ze starym skarbem.`,
+    giverName: 'Marek',
+    offerLine:
+      `Słyszałem, że przed laty ukryto starą mapę skarbu w grobie na naszym cmentarzu. Podobno prowadzi do jaskini ${cavePlace}, gdzie podobno leży zapieczętowana trumna. Odszukaj mapę i zobacz, czy legenda ma sens.`,
+    stages: [
+      {
+        objective: { type: 'recover_hidden_find', spotId: binding.mapGraveSpotId },
+        description: 'Odszukaj na cmentarzu grób ze starą mapą skarbu.',
+        reminderLine: 'Mapa miała być ukryta w grobie na cmentarzu.',
+        progressLine: 'W grobie leżała stara mapa. Marek wie, co dalej.',
+      },
+      {
+        objective: { type: 'talk_to_npc', npcName: 'Marek' },
+        description: `Porozmawiaj z Markiem o mapie i jaskini ${cavePlace}.`,
+        reminderLine: 'Marek czeka na wieści o mapie.',
+        playerLine: 'Znalazłem mapę w grobie. Dokąd prowadzi?',
+        progressLine: `Mapa wskazuje jaskinię ${cavePlace}. Trzeba tam zajrzeć.`,
+      },
+      {
+        objective: { type: 'discover_location', locationId: binding.locationId },
+        description: `Dotrzyj do jaskini ${cavePlace} wskazanej na mapie.`,
+        reminderLine: `Jaskinia ze skarbem jest ${cavePlace}.`,
+        progressLine: 'To ta jaskinia. Gdzieś w środku musi być trumna.',
+      },
+      {
+        objective: { type: 'acquire_portable_container', containerId: binding.casketId },
+        description: 'Zabierz zapieczętowaną trumnę ze skarbem.',
+        reminderLine: 'Musisz znaleźć i zabrać trumnę ze skarbem.',
+        progressLine: 'Masz trumnę. Możesz ją otworzyć albo oddać Markowi nietkniętą.',
+      },
+      {
+        objective: { type: 'await_quest_outcome' },
+        description: 'Otwórz trumnę albo oddaj ją Marcowi.',
+        reminderLine: 'Otwórz trumnę, żeby zatrzymać cały skarb, albo oddaj ją Marcowi za część zapłaty.',
+        dialogueActions: [
+          {
+            npcName: 'Marek',
+            playerLine: 'Mam trumnę. Weź ją — zostawiam resztę tobie.',
+            npcLine: 'Dobrze. Zostawię ci część tego, co w niej było.',
+            physicalOutcomeId: 'treasure_returned',
+            requireCarriedContainerId: binding.casketId,
+            requireCarriedUnopened: true,
+          },
+        ],
+      },
+    ],
+    reportLine: 'Legenda okazała się prawdziwa.',
+    outcomes: [
+      {
+        id: 'treasure_kept',
+        state: 'complete',
+        resultText: 'Cały skarb jest twój — otworzyłeś trumnę sam.',
+      },
+      {
+        id: 'treasure_returned',
+        state: 'complete',
+        resultText: 'Uczciwy układ. Dzięki, że oddałeś trumnę bez otwierania.',
+        consequences: {
+          relations: [{ npcName: 'Marek', delta: 2 }],
+          social: { reputation: { trust: 4, integrity: 3 }, renown: 4 },
+        },
+      },
+    ],
+  }
+}
+
+export function bindTreasureMapBearCaveQuest(
+  def: AuthoredQuestDef,
+  binding: TreasureMapBearCaveQuestBinding | null,
+): AuthoredQuestDef {
+  if (def.id !== 'skarb-jaskini-niedzwiedzia' || !binding) return def
+  const cavePlace = cavePlacePhrase(binding.directionPhrase)
+  return {
+    ...def,
+    description: applyCavePlaceToken(def.description, cavePlace),
+    offerLine: applyCavePlaceToken(def.offerLine, cavePlace),
+    stages: def.stages.map((stage) => ({
+      ...stage,
+      description: applyCavePlaceToken(stage.description, cavePlace),
+      reminderLine: applyCavePlaceToken(stage.reminderLine, cavePlace),
+      progressLine: stage.progressLine ? applyCavePlaceToken(stage.progressLine, cavePlace) : stage.progressLine,
     })),
   }
 }

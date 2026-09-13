@@ -29,6 +29,7 @@ import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../te
 import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
 import { phaseName } from '../../world/dayNight'
 import { findExplicitBuriedSpot, findHiddenFindSpot, HIDDEN_FIND_SEARCH_RADIUS, resolveHiddenFindLoot } from '../../world/hiddenFinds'
+import { findTreasureMapBearCaveMapDig } from '../../world/locations/treasureMapBearCave'
 import { createSeededRandom } from '../../world/parseSeed'
 import { buriedTreasureKeyPlacements } from '../../world/treasureSites'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
@@ -93,6 +94,11 @@ export type GroundActionsDeps = {
   /** App-owned reputation seam (plan quests-progression-011) — applied only
    *  after a cemetery grave's first social-exposure roll succeeds. */
   applySocialConsequence: (consequence: SocialConsequence) => void
+  treasureMapBearCave?: {
+    binding: import('../../world/locations/treasureMapBearCave').TreasureMapBearCaveBinding
+    cemetery: import('../../world/locations/treasureMapBearCave').TreasureMapBearCaveCemeteryInput
+    onMapRecovered: () => void
+  }
 }
 
 function hashString(value: string): number {
@@ -106,7 +112,7 @@ function hashString(value: string): number {
 
 export function createGroundActions(ctx: PlayerActionContext, deps: GroundActionsDeps): GroundActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
-  const { worldFlags, badges, resolvedHiddenFindSpotIds, applySocialConsequence } = deps
+  const { worldFlags, badges, resolvedHiddenFindSpotIds, applySocialConsequence, treasureMapBearCave } = deps
 
   /** Strength-adjusted duration for genuine physical effort. Stamina/Vigor
    *  per-second rates stay on `physicalEffortBusyOptions()` unchanged. */
@@ -277,6 +283,25 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     refreshBadgesUi()
   }
 
+  const checkTreasureMapBearCaveMapDig = (x: number, z: number): boolean => {
+    if (!treasureMapBearCave) return false
+    const match = findTreasureMapBearCaveMapDig(
+      treasureMapBearCave.binding,
+      treasureMapBearCave.cemetery,
+      x,
+      z,
+      (spotId) => resolvedHiddenFindSpotIds.has(spotId),
+    )
+    if (!match) return false
+    resolvedHiddenFindSpotIds.add(match.spotId)
+    const graveSpotId = `${match.cemeteryId}:${match.graveIndex}`
+    resolvedHiddenFindSpotIds.add(graveSpotId)
+    applyGraveDisturbanceIfExposed(match.cemeteryId, graveSpotId)
+    treasureMapBearCave.onMapRecovered()
+    toast.show('Odkopano starą mapę skarbu!', 'pickup')
+    return true
+  }
+
   const startDigAt = (x: number, z: number): void => {
     if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
     const profile = getDigProfileAt(x, z, bundle.chunkManager)
@@ -288,6 +313,10 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     busy.start(physicalDuration(DIG_DURATION_SEC), 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       checkHiddenTreasureDig(x, z)
+      if (checkTreasureMapBearCaveMapDig(x, z)) {
+        ctx.syncQuickActionAvailability()
+        return
+      }
       if (!checkBuriedTreasureKeyDig(x, z)) checkHiddenFindDig(x, z)
       ctx.syncQuickActionAvailability()
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))

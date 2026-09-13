@@ -60,6 +60,7 @@ export type PlacedContainers = {
   pickUp: (id: string) => boolean
   hasCarried: () => boolean
   carriedKind: () => ContainerKind | null
+  carriedId: () => string | null
   /** Base weight + contents weight (plan 164 §8) — the single number
    *  `player/playerEncumbrance.ts` adds on top of `inventory.totalWeight()`. */
   carriedWeightKg: () => number
@@ -67,6 +68,10 @@ export type PlacedContainers = {
   /** Carried → world at a validated spot (caller already ran
    *  `evaluateGroundPlacement`). Null if nothing is carried. */
   putDownCarried: (x: number, z: number, yaw: number) => PlacedContainerRecord | null
+  /** Materializes one carried container without a world mesh (plan quests-progression-008). */
+  adoptCarried: (record: SaveCarriedContainer) => boolean
+  /** Removes the carried container entirely (hand-in consume). */
+  discardCarried: () => boolean
   containerCounts: (id: string) => Partial<Record<ItemKind, number>>
   containerInstances: (id: string, kind: ItemKind) => readonly ItemInstance[]
   containerWeight: (id: string) => number
@@ -182,6 +187,7 @@ export function createPlacedContainers(
     },
     hasCarried: () => carried !== null,
     carriedKind: () => carried?.kind ?? null,
+    carriedId: () => carried?.id ?? null,
     carriedWeightKg: () => (carried ? containerTotalWeight(CONTAINER_DEFS[carried.kind], carried.contents.totalWeight()) : 0),
     carriedNode: () => (carried
       ? { id: carried.id, kind: carried.kind, counts: carried.contents.toJSON(), instances: carried.contents.instancesToJSON(), foodBatches: carried.contents.foodBatchesToJSON() }
@@ -196,6 +202,21 @@ export function createPlacedContainers(
       containers.push(entry)
       carried = null
       return toRecord(entry)
+    },
+    adoptCarried(record) {
+      if (carried) return false
+      const def = CONTAINER_DEFS[record.kind]
+      carried = {
+        id: record.id,
+        kind: record.kind,
+        contents: contentsFromSave(record.counts, record.instances, def.capacityUnits, record.foodBatches),
+      }
+      return true
+    },
+    discardCarried() {
+      if (!carried) return false
+      carried = null
+      return true
     },
     containerCounts: (id) => find(id)?.contents.toJSON() ?? {},
     containerInstances: (id, kind) => find(id)?.contents.getInstances(kind) ?? [],

@@ -109,6 +109,17 @@ import {
   resolveTreasureMapSourcePlace,
   withTreasureMapSourcePlace,
 } from '../world/locations/darkForestTreasureSite'
+import {
+  resolveTreasureMapBearCaveBinding,
+  treasureMapBearCavePersistentOccupant,
+  treasureMapBearCaveProfileReservation,
+  treasureMapBearCaveSourceContainerSpec,
+  type TreasureMapBearCaveCemeteryInput,
+} from '../world/locations/treasureMapBearCave'
+import {
+  getActiveTreasureMapBearCaveBinding,
+  setActiveTreasureMapBearCaveBinding,
+} from '../world/locations/treasureMapBearCaveRuntime'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -574,6 +585,14 @@ function buildFauna(
 
   bootMark('createFauna')
   const dungeonOccupancy = dungeonFaunaOccupancy(caves)
+  const bearBinding = getActiveTreasureMapBearCaveBinding()
+  const bearOccupant = bearBinding ? treasureMapBearCavePersistentOccupant(bearBinding) : null
+  const occupantDecls = bearOccupant
+    ? [...dungeonOccupancy.decls, bearOccupant.decl]
+    : dungeonOccupancy.decls
+  const occupantBindings = bearOccupant
+    ? [...dungeonOccupancy.bindings, bearOccupant.binding]
+    : dungeonOccupancy.bindings
   return createFauna(
     scene,
     chunkManager.sampleHeight,
@@ -603,10 +622,7 @@ function buildFauna(
     naturalWaterKindAt,
     chunkManager.riverShoreDistance,
     extraHabitatSpawners,
-    // Persistent occupant declarations stay empty until a consumer (the
-    // treasure-map bear cave) supplies them; restore still accepts carried
-    // snapshots so in-session rebuild/save wiring is live.
-    dungeonOccupancy.decls,
+    occupantDecls,
     initialPersistentOccupants,
     caves && {
       resolveHabitat: caves.resolveHabitat,
@@ -615,7 +631,7 @@ function buildFauna(
       undergroundPoolOf: caves.undergroundPoolOf,
       resolveRouteBetween: caves.resolveRouteBetween,
     },
-    dungeonOccupancy.bindings,
+    occupantBindings,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
@@ -742,6 +758,8 @@ type WorldSystemsSeed = {
   placedContainers: readonly PlacedContainerRecord[]
   worldGeneratedContainers: readonly SaveWorldGeneratedContainer[]
   carriedContainer: SaveCarriedContainer | null
+  treasureMapBearCaveSourceExtracted?: boolean
+  treasureMapBearCaveCasketConsumed?: boolean
   playerWells: readonly PlayerWellRecord[]
   playerGardens: readonly PlayerGardenRecord[]
   standingTorches: readonly StandingTorchRecord[]
@@ -945,6 +963,8 @@ async function buildWorldSystems(
     onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: initialBloodTraces,
+    treasureMapBearCaveSourceExtracted,
+    treasureMapBearCaveCasketConsumed,
   } = seed
 
   bootMark('createWaterMirror')
@@ -1250,10 +1270,50 @@ async function buildWorldSystems(
   )
   bootMarkEnd('createCaves')
 
+  const homeCemeteryRef = chunkManager.resolveCemeteryForSettlement(homeDef.id)
+  const homeCemeteryDetail = homeCemeteryRef
+    ? chunkManager.resolveCemeteryById(homeCemeteryRef.id)
+    : undefined
+  const cemeteryForBearQuest: TreasureMapBearCaveCemeteryInput | null = homeCemeteryDetail
+    ? {
+        id: homeCemeteryDetail.id,
+        x: homeCemeteryDetail.x,
+        z: homeCemeteryDetail.z,
+        rotationY: 0,
+        scale: 1,
+        cemeterySize: homeCemeteryDetail.cemeterySize ?? 'SM',
+      }
+    : null
+  const adventureCaveInputs = caves.definitions()
+    .filter((def) => caves.archetypeOf(def.caveId) === 'adventure')
+    .map((def) => ({
+      caveId: def.caveId,
+      entranceX: def.entrance.x,
+      entranceZ: def.entrance.z,
+    }))
+  const treasureMapBearCaveBinding = resolveTreasureMapBearCaveBinding({
+    seed: config.seed,
+    homeX: homeDef.x,
+    homeZ: homeDef.z,
+    adventureCaves: adventureCaveInputs,
+    contentAnchors: caves.contentAnchors(),
+    cemetery: cemeteryForBearQuest,
+  })
+  setActiveTreasureMapBearCaveBinding(treasureMapBearCaveBinding)
+
   const caveAdventureContentPolicy = resolveCaveAdventureContentPolicy(
     adventureCaveIdsFromCaves(caves),
     caves.contentAnchors(),
+    treasureMapBearCaveBinding
+      ? { profileReservations: [treasureMapBearCaveProfileReservation(treasureMapBearCaveBinding)] }
+      : {},
   )
+
+  const bearCaveFinalAnchor = treasureMapBearCaveBinding
+    ? caves.contentAnchors().find((a) => a.id === treasureMapBearCaveBinding.finalTreasureAnchorId)
+    : undefined
+  const bearCaveSourceExtracted = treasureMapBearCaveSourceExtracted === true
+    || treasureMapBearCaveCasketConsumed === true
 
   // Cave chest specs must be composed after `caves` exists — the anchors'
   // `y` comes from each cave's own retained heightfield (plan
@@ -1277,6 +1337,9 @@ async function buildWorldSystems(
       initialCounts: generateTreasureLoot(config.seed, site.id),
     })),
     ...caveTreasureContainerSpecs(caves.contentAnchors(), config.seed, caveAdventureContentPolicy),
+    ...(treasureMapBearCaveBinding && bearCaveFinalAnchor && !bearCaveSourceExtracted
+      ? [treasureMapBearCaveSourceContainerSpec(treasureMapBearCaveBinding, bearCaveFinalAnchor)]
+      : []),
   ]
   const worldGeneratedContainers = createWorldGeneratedContainers(
     scene,
@@ -1599,6 +1662,8 @@ export async function createWorldBundle(
    *  sourced from `SaveData.transportOrders` — same carry/restore contract
    *  as `initialWorkContracts`. */
   initialTransportOrders: readonly TransportOrder[] = [],
+  treasureMapBearCaveSourceExtracted: boolean = false,
+  treasureMapBearCaveCasketConsumed: boolean = false,
   /** Settlement-lifecycle "actually built" callback (plan
    *  quests-progression-022 §8) — forwarded into `buildSettlementsManager`
    *  the same way `getPlayerSocial` is above. */
@@ -1616,6 +1681,8 @@ export async function createWorldBundle(
     placedContainers: initialPlacedContainers,
     worldGeneratedContainers: initialWorldGeneratedContainers,
     carriedContainer: initialCarriedContainer,
+    treasureMapBearCaveSourceExtracted,
+    treasureMapBearCaveCasketConsumed,
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
     standingTorches: initialStandingTorches,
@@ -1716,6 +1783,8 @@ export async function rebuildWorldBundle(
    *  (plan quests-progression-022 §8) — forwarded into `buildSettlementsManager`
    *  so the hook keeps firing after an in-session rebuild. */
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
+  treasureMapBearCaveSourceExtracted: boolean = false,
+  treasureMapBearCaveCasketConsumed: boolean = false,
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -1876,6 +1945,8 @@ export async function rebuildWorldBundle(
     onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: carriedBloodTraces,
+    treasureMapBearCaveSourceExtracted,
+    treasureMapBearCaveCasketConsumed,
   }, isStale)
   // A rebuild keeps its historical fully-synchronous contract — callers
   // (`app/createApp.ts`) still see every system, including fauna/item

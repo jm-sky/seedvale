@@ -151,6 +151,9 @@ export type SaveWorldFlags = {
   hiddenTreasureFound?: boolean
   /** Plan quests-progression-009 — treasure map was read at least once. */
   treasureMapDarkForestRead?: boolean
+  treasureMapBearCaveSourceExtracted?: boolean
+  treasureMapBearCaveCasketOpened?: boolean
+  treasureMapBearCaveCasketConsumed?: boolean
 }
 
 /** Player knowledge of a concrete `WorldLocation` (plan world-012 §3/§20) —
@@ -1000,6 +1003,9 @@ function isWorldFlagsField(value: unknown): value is SaveWorldFlags {
   if (flags.alphaWolfDeedEarned !== undefined && typeof flags.alphaWolfDeedEarned !== 'boolean') return false
   if (flags.hiddenTreasureFound !== undefined && typeof flags.hiddenTreasureFound !== 'boolean') return false
   if (flags.treasureMapDarkForestRead !== undefined && typeof flags.treasureMapDarkForestRead !== 'boolean') return false
+  if (flags.treasureMapBearCaveSourceExtracted !== undefined && typeof flags.treasureMapBearCaveSourceExtracted !== 'boolean') return false
+  if (flags.treasureMapBearCaveCasketOpened !== undefined && typeof flags.treasureMapBearCaveCasketOpened !== 'boolean') return false
+  if (flags.treasureMapBearCaveCasketConsumed !== undefined && typeof flags.treasureMapBearCaveCasketConsumed !== 'boolean') return false
   if (flags.guardClaims !== undefined) {
     if (!flags.guardClaims || typeof flags.guardClaims !== 'object' || Array.isArray(flags.guardClaims)) return false
     for (const [npcId, raw] of Object.entries(flags.guardClaims as Record<string, unknown>)) {

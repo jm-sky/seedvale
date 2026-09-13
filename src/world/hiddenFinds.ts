@@ -38,7 +38,7 @@ function hashString(value: string): number {
 
 /** Same "hole visibly reaches the spot" rule `hiddenTreasure.ts`'s
  *  `HIDDEN_TREASURE_DIG_TOLERANCE` uses, generalized to every Hidden Find. */
-const HIDDEN_FIND_DIG_TOLERANCE = (DIG_RADIUS * 0.8) + 0.2
+export const HIDDEN_FIND_DIG_TOLERANCE = (DIG_RADIUS * 0.8) + 0.2
 
 /** Search radius (world units) `getNearbyLandmarks` should be queried with on
  *  every dig — must cover the largest landmark footprint from its anchor

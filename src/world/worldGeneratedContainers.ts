@@ -43,6 +43,8 @@ export type WorldGeneratedContainers = {
   depositInstance: (id: string, instance: import('../items/itemInstances').ItemInstance) => boolean
   withdraw: (id: string, kind: ItemKind, amount: number, nowDays?: number) => { amount: number, batches: readonly FoodBatch[] }
   withdrawInstance: (id: string, instanceId: string) => import('../items/itemInstances').ItemInstance | null
+  /** Removes a fixed container after authored extraction (plan quests-progression-008). */
+  remove: (id: string) => boolean
   dispose: () => void
 }
 
@@ -190,6 +192,15 @@ export function createWorldGeneratedContainers(
       const instance = entry.contents.getInstance(instanceId)
       if (!instance) return null
       return entry.contents.removeInstance(instanceId) ? instance : null
+    },
+    remove(id) {
+      const index = entries.findIndex((entry) => entry.id === id)
+      if (index === -1) return false
+      const [entry] = entries.splice(index, 1)
+      if (!entry) return false
+      scene.remove(entry.mesh)
+      disposePlacedContainerProp(entry.mesh)
+      return true
     },
     dispose() {
       for (const entry of entries) {

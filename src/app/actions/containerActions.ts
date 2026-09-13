@@ -85,6 +85,8 @@ export type ContainerActionDeps = {
   unlockedTreasureContainerIds: Set<string>
   /** Plan items-player-026 — mutated in place; never reassigned. */
   treasureChestMutations: Map<string, TreasureChestMutation>
+  tryExtractTreasureMapBearCasket?: (containerId: string) => boolean
+  confirmOpenAuthoredCasket?: (containerId: string, open: () => void) => void
 }
 
 export function createContainerActions(
@@ -92,7 +94,7 @@ export function createContainerActions(
   deps: ContainerActionDeps,
 ): ContainerActions {
   const { bundle, player, inventory, hud, toast, busy, mouseLook } = ctx
-  const { vueUi, tentBlockers, rendererElement, unlockedTreasureContainerIds, treasureChestMutations } = deps
+  const { vueUi, tentBlockers, rendererElement, unlockedTreasureContainerIds, treasureChestMutations, tryExtractTreasureMapBearCasket, confirmOpenAuthoredCasket } = deps
 
   /** The transfer screen currently shown — a placed chest or an NPC corpse
    *  (plan npc-010). Opening one overwrites the other; handlers below always
@@ -184,6 +186,7 @@ export function createContainerActions(
 
   const openContainer = (id: string): void => {
     if (isActionBlocked(ctx)) return
+    if (tryExtractTreasureMapBearCasket?.(id)) return
     const placed = bundle.placedContainers.find(id)
     const world = placed ? undefined : bundle.worldGeneratedContainers.find(id)
     const entry = placed ?? world
@@ -207,21 +210,25 @@ export function createContainerActions(
       }
       if (unlock.kind === 'unlocked') toast.show('Otwarto skrzynię kluczem.')
     }
-    exitGamePointerLock(rendererElement)
-    openTransfer = { kind: 'container', id }
-    const def = placed ? CONTAINER_DEFS[placed.kind] : CONTAINER_DEFS.chest
-    vueUi.openContainerScreen(
-      treasure.kind === 'remains' ? 'Szczątki skrzyni' : def.label,
-      'container',
-      entry.contents.toJSON(),
-      buildInventoryGroups(entry.contents, ctx.dayNight.elapsedDays),
-      containerTotalWeight(def, entry.contents.totalWeight()),
-      def.capacityUnits,
-      inventoryCountsForUi(inventory),
-      buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
-      inventory.totalWeight(),
-      inventory.maxWeight,
-    )
+    const showScreen = (): void => {
+      exitGamePointerLock(rendererElement)
+      openTransfer = { kind: 'container', id }
+      const def = placed ? CONTAINER_DEFS[placed.kind] : CONTAINER_DEFS.chest
+      vueUi.openContainerScreen(
+        treasure.kind === 'remains' ? 'Szczątki skrzyni' : def.label,
+        'container',
+        entry.contents.toJSON(),
+        buildInventoryGroups(entry.contents, ctx.dayNight.elapsedDays),
+        containerTotalWeight(def, entry.contents.totalWeight()),
+        def.capacityUnits,
+        inventoryCountsForUi(inventory),
+        buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
+        inventory.totalWeight(),
+        inventory.maxWeight,
+      )
+    }
+    if (confirmOpenAuthoredCasket) confirmOpenAuthoredCasket(id, showScreen)
+    else showScreen()
   }
 
   const describeWorldGeneratedContainer = (id: string): string | null =>

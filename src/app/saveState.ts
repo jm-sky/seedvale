@@ -81,6 +81,9 @@ export type SaveStateDeps = {
     guardSwordGifted: boolean
     hiddenTreasureFound: boolean
     treasureMapDarkForestRead: boolean
+    treasureMapBearCaveSourceExtracted: boolean
+    treasureMapBearCaveCasketOpened: boolean
+    treasureMapBearCaveCasketConsumed: boolean
     alphaWolfDeedEarned: boolean
     guardClaims: Record<string, import('../quests/guardPersistence').GuardWorldProgress['guardClaims'][string]>
   }

@@ -67,6 +67,9 @@ function materializeDialogueActions(
     npc: questNpcRef(resolve(action.npcName)),
     playerLine: action.playerLine,
     npcLine: action.npcLine,
+    physicalOutcomeId: action.physicalOutcomeId,
+    requireCarriedContainerId: action.requireCarriedContainerId,
+    requireCarriedUnopened: action.requireCarriedUnopened,
     consequences: action.consequences
       ? {
           ...action.consequences,

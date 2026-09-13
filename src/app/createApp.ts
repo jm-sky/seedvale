@@ -114,7 +114,7 @@ import {
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
-import { bindDarkForestTreasureQuest, bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
+import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import {
   type PlayerAnimalKillContext,
@@ -162,6 +162,17 @@ import {
 } from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import {
+  isTreasureMapBearCaveAuthoredCasket,
+  TREASURE_MAP_BEAR_CAVE_KEPT_OUTCOME_ID,
+  TREASURE_MAP_BEAR_CAVE_QUEST_ID,
+  TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID,
+  treasureMapBearCaveReturnPayout,
+  treasureMapBearCaveSealedCasketCarried,
+} from '../world/locations/treasureMapBearCave'
+import {
+  getActiveTreasureMapBearCaveBinding,
+} from '../world/locations/treasureMapBearCaveRuntime'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
 import { confirmHomeSettlement, createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
@@ -638,6 +649,8 @@ export async function createApp(
         }
       : undefined,
     initialSave?.transportOrders ?? [],
+    initialSave?.worldFlags?.treasureMapBearCaveSourceExtracted ?? false,
+    initialSave?.worldFlags?.treasureMapBearCaveCasketConsumed ?? false,
     onSettlementAvailable,
   )
   bootMarkEnd('createWorldBundle')
@@ -969,6 +982,9 @@ export async function createApp(
     guardSwordGifted: initialSave?.worldFlags?.guardSwordGifted ?? false,
     hiddenTreasureFound: initialSave?.worldFlags?.hiddenTreasureFound ?? false,
     treasureMapDarkForestRead: initialSave?.worldFlags?.treasureMapDarkForestRead ?? false,
+    treasureMapBearCaveSourceExtracted: initialSave?.worldFlags?.treasureMapBearCaveSourceExtracted ?? false,
+    treasureMapBearCaveCasketOpened: initialSave?.worldFlags?.treasureMapBearCaveCasketOpened ?? false,
+    treasureMapBearCaveCasketConsumed: initialSave?.worldFlags?.treasureMapBearCaveCasketConsumed ?? false,
     alphaWolfDeedEarned: initialSave?.worldFlags?.alphaWolfDeedEarned ?? false,
     guardClaims: { ...(initialSave?.worldFlags?.guardClaims ?? {}) },
   }
@@ -1049,12 +1065,24 @@ export async function createApp(
     : null
   const merchantHorseId = merchantHorseAnimalId(homeSettlementId)
   const homeNpcDescriptors = settlementNpcDescriptors(homeDef)
+  const bearCaveBinding = getActiveTreasureMapBearCaveBinding()
+  const bearCaveQuestBinding = bearCaveBinding
+    ? {
+        mapGraveSpotId: bearCaveBinding.mapGraveSpotId,
+        casketId: bearCaveBinding.casketId,
+        locationId: bearCaveBinding.locationId,
+        directionPhrase: bearCaveBinding.directionPhrase,
+      }
+    : null
   const authoredQuestDefs = materializeAuthoredQuestDefs(
     bindExactCaveQuests([
       ...QUESTS,
       ...landmarkQuests,
       bindDarkForestTreasureQuest(buildDarkForestTreasureQuest(), treasureMapBinding),
       buildHorseAcquisitionQuest(merchantHorseId),
+      ...(bearCaveQuestBinding
+        ? [bindTreasureMapBearCaveQuest(buildTreasureMapBearCaveQuest(bearCaveQuestBinding), bearCaveQuestBinding)]
+        : []),
     ], caveBinding).map((def) => ({ ...def, settlementId: homeSettlementId })),
     homeNpcDescriptors,
   )
@@ -1152,6 +1180,48 @@ export async function createApp(
       }
     : undefined
 
+  const physicalOutcomeResolver = {
+    canResolve(
+      questId: string,
+      outcomeId: string,
+      context: { requireCarriedContainerId?: string, requireCarriedUnopened?: boolean },
+    ): boolean {
+      if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return false
+      if (worldFlags.treasureMapBearCaveCasketConsumed) return false
+      if (outcomeId === TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID) {
+        if (worldFlags.treasureMapBearCaveCasketOpened) return false
+        const carriedId = bundle.placedContainers.carriedId()
+        if (context.requireCarriedContainerId && carriedId !== context.requireCarriedContainerId) return false
+        if (context.requireCarriedUnopened && worldFlags.treasureMapBearCaveCasketOpened) return false
+        return carriedId === bearCaveBinding.casketId
+      }
+      if (outcomeId === TREASURE_MAP_BEAR_CAVE_KEPT_OUTCOME_ID) {
+        if (!worldFlags.treasureMapBearCaveCasketOpened) return false
+        const carriedId = bundle.placedContainers.carriedId()
+        const placed = bundle.placedContainers.find(bearCaveBinding.casketId)
+        return carriedId === bearCaveBinding.casketId || placed !== undefined
+      }
+      return false
+    },
+    onResolve(questId: string, outcomeId: string): void {
+      if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return
+      if (outcomeId === TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID) {
+        worldFlags.treasureMapBearCaveCasketConsumed = true
+        bundle.placedContainers.discardCarried()
+        grantItem('coin', treasureMapBearCaveReturnPayout(bearCaveBinding.authoredCoinAmount))
+      }
+    },
+  }
+
+  const questLifecycleHooks = {
+    onStageAdvanced(questId: string, clearedStageIndex: number): void {
+      if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return
+      if (clearedStageIndex === 1) {
+        locationKnowledge.reveal(bearCaveBinding.locationId, 'discovered', 'npc')
+      }
+    },
+  }
+
   const questManager: QuestManager = new QuestManager(
     questDefs,
     worldAudio.playOnce,
@@ -1214,6 +1284,14 @@ export async function createApp(
       isWorldContainerLooted: (containerId) => isDarkForestTreasureChestLooted(
         bundle.worldGeneratedContainers.containerCounts(containerId),
       ),
+      hasResolvedHiddenFindSpot: (spotId) => resolvedHiddenFindSpotIds.has(spotId),
+      hasAcquiredPortableContainer: (containerId) => {
+        if (!bearCaveBinding || containerId !== bearCaveBinding.casketId) return false
+        if (worldFlags.treasureMapBearCaveCasketConsumed) return false
+        if (bundle.placedContainers.carriedId() === containerId) return true
+        if (bundle.placedContainers.find(containerId)) return true
+        return worldFlags.treasureMapBearCaveSourceExtracted
+      },
     },
     {
       getStatus: (questId) => {
@@ -1246,6 +1324,8 @@ export async function createApp(
       getElapsedDays: () => dayNight.elapsedDays,
     },
     createSettlementLightLookup(() => bundle.settlementsManager.getLoaded()),
+    physicalOutcomeResolver,
+    questLifecycleHooks,
   )
 
   const refreshGuardEveningPolicies = (): void => {
@@ -1445,6 +1525,41 @@ export async function createApp(
     rendererElement: renderer.domElement,
     unlockedTreasureContainerIds,
     treasureChestMutations,
+    tryExtractTreasureMapBearCasket: (containerId) => {
+      if (!bearCaveBinding || containerId !== bearCaveBinding.sourceContainerId) return false
+      if (worldFlags.treasureMapBearCaveSourceExtracted || worldFlags.treasureMapBearCaveCasketConsumed) return false
+      if (bundle.placedContainers.hasCarried()) {
+        toast.show('Nie możesz nieść dwóch pojemników naraz.', 'error')
+        return true
+      }
+      if (!bundle.placedContainers.adoptCarried(treasureMapBearCaveSealedCasketCarried(bearCaveBinding))) return false
+      bundle.worldGeneratedContainers.remove(bearCaveBinding.sourceContainerId)
+      worldFlags.treasureMapBearCaveSourceExtracted = true
+      questManager.notifyPortableContainerAcquired(bearCaveBinding.casketId)
+      toast.show('Podniesiono zapieczętowaną trumnę.')
+      actionCtx.syncQuickActionAvailability()
+      return true
+    },
+    confirmOpenAuthoredCasket: (containerId, open) => {
+      if (!isTreasureMapBearCaveAuthoredCasket(bearCaveBinding, containerId)) {
+        open()
+        return
+      }
+      if (worldFlags.treasureMapBearCaveCasketOpened || worldFlags.treasureMapBearCaveCasketConsumed) {
+        open()
+        return
+      }
+      vueUi.openActionConfirm(
+        'Otworzyć trumnę?',
+        'Po otwarciu zatrzymasz cały skarb. Tej decyzji nie cofniesz.',
+        () => {
+          worldFlags.treasureMapBearCaveCasketOpened = true
+          questManager.tryResolvePhysicalOutcome(TREASURE_MAP_BEAR_CAVE_QUEST_ID, TREASURE_MAP_BEAR_CAVE_KEPT_OUTCOME_ID)
+          open()
+        },
+        'Otwórz',
+      )
+    },
   })
   const householdTransfer = createHouseholdResourceTransferActions(actionCtx, {
     vueUi,
@@ -1469,6 +1584,23 @@ export async function createApp(
       applySocialConsequence(reputation, consequence)
       refreshCharacterReputation()
     },
+    treasureMapBearCave: bearCaveBinding ? (() => {
+      const cemeteryRef = bundle.chunkManager.resolveCemeteryForSettlement(homeSettlementId)
+      const cemeteryDetail = cemeteryRef ? bundle.chunkManager.resolveCemeteryById(cemeteryRef.id) : undefined
+      if (!cemeteryDetail) return undefined
+      return {
+        binding: bearCaveBinding,
+        cemetery: {
+          id: cemeteryDetail.id,
+          x: cemeteryDetail.x,
+          z: cemeteryDetail.z,
+          rotationY: 0,
+          scale: 1,
+          cemeterySize: cemeteryDetail.cemeterySize ?? 'SM',
+        },
+        onMapRecovered: () => questManager.notifyHiddenFindSpotResolved(bearCaveBinding.mapGraveSpotId),
+      }
+    })() : undefined,
   })
   const rest = createRestActions(actionCtx, {
     timeSkipOverlay,
@@ -1648,6 +1780,8 @@ export async function createApp(
         () => worldGeneration !== thisRebuildGeneration,
         grassForageOverrides,
         onSettlementAvailable,
+        worldFlags.treasureMapBearCaveSourceExtracted,
+        worldFlags.treasureMapBearCaveCasketConsumed,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()
@@ -1684,6 +1818,9 @@ export async function createApp(
         guardProgress.guardClaims = {}
         worldFlags.hiddenTreasureFound = false
         worldFlags.treasureMapDarkForestRead = false
+        worldFlags.treasureMapBearCaveSourceExtracted = false
+        worldFlags.treasureMapBearCaveCasketOpened = false
+        worldFlags.treasureMapBearCaveCasketConsumed = false
         ground.resetTreasureProgress()
         resolvedHiddenFindSpotIds.clear()
         unlockedTreasureContainerIds.clear()
