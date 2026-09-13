@@ -78,8 +78,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
 | 💡 `quests-progression-023-lost-hunter-natural-cave.md`                        | -       | 🟡 | M      | world-terrain-028, ~~fauna-018~~, ~~fauna-019~~ |
 | ◼️ `quests-progression-024-suspicious-transport-natural-cave-cache.md`         | -       | 🟡 | M      | world-terrain-028 |
-| ◼️ `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | world-terrain-028 |
-| ◼️ `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | world-terrain-028, fauna-027 |
+| 💡 `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | world-terrain-028 |
+| 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | world-terrain-028, fauna-027 |
 | ◼️ `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | world-terrain-028, fauna-027 |
 
 ---
