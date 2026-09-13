@@ -1,6 +1,6 @@
 import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { Fauna } from '../fauna/createFauna'
-import type { Interactable, WorldItemRef } from '../interaction/Interactable'
+import type { Interactable, InteractablePayload, WorldItemRef } from '../interaction/Interactable'
 import type { DroppedItem, DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
 import type { PlacedTents } from '../items/createPlacedTents'
@@ -57,6 +57,11 @@ import {
   isResidentialBuildingComplete,
   residentialBuildingPromptLabel,
 } from '../world/residentialBuilding'
+import {
+  spatialContextsEqual,
+  WORLD_SPATIAL_CONTEXT_SURFACE,
+  type WorldSpatialContext,
+} from '../world/spatialContext'
 import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind, type WaterQuality } from '../world/WaterSource'
@@ -232,7 +237,7 @@ function corpseCandidate(
   animal: AnimalAgent,
   shovelHeld: boolean,
   knifeAvailable: boolean,
-): Interactable | null {
+): InteractablePayload | null {
   const label = ANIMAL_LABELS[animal.def.kind]
   if (animal.canInspectStrayedCorpse()) {
     return {
@@ -442,6 +447,52 @@ function resolveWaterBodyShore(
   return riverPoint ? { kind, position: riverPoint } : null
 }
 
+type SpatialContextResolver = (x: number, y: number, z: number) => WorldSpatialContext
+
+function spatialContextForPayload(
+  payload: InteractablePayload,
+  resolveAt: SpatialContextResolver,
+  worldGeneratedContextById: ReadonlyMap<string, WorldSpatialContext>,
+): WorldSpatialContext {
+  switch (payload.kind) {
+    case 'animal':
+    case 'corpse': {
+      const pos = payload.animal.mesh.position
+      return resolveAt(pos.x, pos.y, pos.z)
+    }
+    case 'container': {
+      const authored = worldGeneratedContextById.get(payload.id)
+      return authored ?? WORLD_SPATIAL_CONTEXT_SURFACE
+    }
+    case 'npc':
+    case 'npcCorpse': {
+      const pos = payload.npc.mesh.position
+      return resolveAt(pos.x, pos.y, pos.z)
+    }
+    default:
+      return WORLD_SPATIAL_CONTEXT_SURFACE
+  }
+}
+
+function finalizeInteractables(
+  payloads: readonly InteractablePayload[],
+  resolveAt: SpatialContextResolver,
+  worldGeneratedContextById: ReadonlyMap<string, WorldSpatialContext>,
+): Interactable[] {
+  return payloads.map((payload) => ({
+    ...payload,
+    spatialContext: spatialContextForPayload(payload, resolveAt, worldGeneratedContextById),
+  }))
+}
+
+/** Drops candidates whose spatial context differs from the player's (plan world-027). */
+export function filterInteractablesSameSpatialContext(
+  interactables: readonly Interactable[],
+  playerContext: WorldSpatialContext,
+): Interactable[] {
+  return interactables.filter((candidate) => spatialContextsEqual(candidate.spatialContext, playerContext))
+}
+
 /** Assembles this frame's `Interactable` candidates from every world system —
  *  NPCs, the well, nearby trees (settlement + streamed via lifecycle), live fauna,
  *  fauna spawn points, player-built campfires, and nearby pickup items
@@ -538,8 +589,14 @@ export function buildInteractables(
    *  structure condition keep compiling; a missing resolver leaves every
    *  `house` candidate pristine/non-repairable. */
   getStructureSnapshot?: (settlementId: string, structureId: string, nowDays: number) => SettlementStructureState,
+  /** Resolves live entity XYZ to gameplay spatial identity (plan world-027).
+   *  Defaults to surface for callers/tests that do not model caves. */
+  resolveSpatialContextAt: SpatialContextResolver = () => WORLD_SPATIAL_CONTEXT_SURFACE,
 ): Interactable[] {
-  const list: Interactable[] = []
+  const list: InteractablePayload[] = []
+  const worldGeneratedContextById = new Map(
+    worldGeneratedContainers.list().map((entry) => [entry.id, entry.spatialContext]),
+  )
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
   const shovelHeld = hasItemCapability(heldTool, 'soil_digging')
   const pickaxeHeld = hasItemCapability(heldTool, 'rock_mining')
@@ -1123,7 +1180,7 @@ export function buildInteractables(
     })
   }
 
-  return list
+  return finalizeInteractables(list, resolveSpatialContextAt, worldGeneratedContextById)
 }
 
 function groundWorkPrompt(
@@ -1147,6 +1204,7 @@ export function buildDigTarget(
   playerYaw: number,
   heldTool: ToolKind | null,
   chunkManager: ChunkManager,
+  playerSpatialContext: WorldSpatialContext = WORLD_SPATIAL_CONTEXT_SURFACE,
 ): Interactable | null {
   const x = playerPos.x - Math.sin(playerYaw) * DIG_REACH
   const z = playerPos.z - Math.cos(playerYaw) * DIG_REACH
@@ -1165,6 +1223,7 @@ export function buildDigTarget(
       promptLabel: groundWorkPrompt('Wykop dołek', profile, canLevel),
       profile,
       canLevel,
+      spatialContext: playerSpatialContext,
     }
   }
 
@@ -1178,6 +1237,7 @@ export function buildDigTarget(
       promptLabel: groundWorkPrompt('Wykop skałę', profile, canLevel),
       profile,
       canLevel,
+      spatialContext: playerSpatialContext,
     }
   }
 
@@ -1203,6 +1263,8 @@ export function buildCombatTarget(
   heldTool: ToolKind | null,
   recentTargetIds: readonly string[],
   aim: CombatAimMode,
+  playerSpatialContext: WorldSpatialContext = WORLD_SPATIAL_CONTEXT_SURFACE,
+  resolveSpatialContextAt: SpatialContextResolver = () => WORLD_SPATIAL_CONTEXT_SURFACE,
 ): Interactable | null {
   if (!isMeleeTool(heldTool) && !isRangedTool(heldTool)) return null
   const range = Math.max(COMBAT_TARGET_RANGE, rangedToolRange(heldTool) ?? 0)
@@ -1211,7 +1273,9 @@ export function buildCombatTarget(
   const byId = new Map<string, AnimalAgent>()
   const collect = (animal: AnimalAgent): void => {
     if (animal.isDead()) return
-    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, range)) return
+    const pos = animal.mesh.position
+    if (!withinRange(pos.x, pos.z, playerPos, range)) return
+    if (!spatialContextsEqual(resolveSpatialContextAt(pos.x, pos.y, pos.z), playerSpatialContext)) return
     candidates.push({ id: animal.animalId, x: animal.mesh.position.x, z: animal.mesh.position.z, alive: true })
     byId.set(animal.animalId, animal)
   }
@@ -1234,11 +1298,13 @@ export function buildCombatTarget(
   )
   const animal = targetId ? byId.get(targetId) ?? null : null
   if (!animal) return null
+  const pos = animal.mesh.position
   return {
     kind: 'animal',
     position: animal.mesh.position,
     promptLabel: animalPromptLabel(animal, heldTool, false, 0, null),
     animal,
+    spatialContext: resolveSpatialContextAt(pos.x, pos.y, pos.z),
   }
 }
 

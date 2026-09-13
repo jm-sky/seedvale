@@ -6,6 +6,10 @@ import { STORED_FOOD_DECAY } from '../items/foodFreshness'
 import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 import { placeOnGround } from '../settlement/props'
 import { createPlacedContainerProp, disposePlacedContainerProp } from './containerProp'
+import {
+  WORLD_SPATIAL_CONTEXT_SURFACE,
+  type WorldSpatialContext,
+} from './spatialContext'
 
 export type SaveWorldGeneratedContainer = {
   id: string
@@ -25,6 +29,7 @@ export type WorldGeneratedContainerEntry = {
   mesh: Object3D
   contents: Inventory
   portable: false
+  spatialContext: WorldSpatialContext
 }
 
 export type WorldGeneratedContainers = {
@@ -75,6 +80,17 @@ export type WorldGeneratedContainerSpec = {
    *  interior placement (e.g. a cave chest). Omit for ordinary surface
    *  specs, which keep the existing ground-sampled placement unchanged. */
   y?: number
+  /** Gameplay spatial identity (plan world-027). Required when `y` is set
+   *  (cave-authored placement); omitted surface specs normalize to surface. */
+  spatialContext?: WorldSpatialContext
+}
+
+function resolveSpecSpatialContext(spec: WorldGeneratedContainerSpec): WorldSpatialContext {
+  if (spec.spatialContext) return spec.spatialContext
+  if (spec.y !== undefined) {
+    throw new Error(`WorldGeneratedContainerSpec ${spec.id} has underground y but no spatialContext`)
+  }
+  return WORLD_SPATIAL_CONTEXT_SURFACE
 }
 
 /**
@@ -117,6 +133,7 @@ export function createWorldGeneratedContainers(
       mesh,
       contents,
       portable: false,
+      spatialContext: resolveSpecSpatialContext(spec),
     })
   }
 

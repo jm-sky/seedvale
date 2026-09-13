@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Interactable } from './Interactable'
+import { type Interactable, surfaceInteractable } from './Interactable'
 import {
   alternateActionState,
   buildInteractionView,
@@ -9,7 +9,7 @@ import {
 } from './interactionView'
 
 function houseTarget(promptLabel: string): Interactable {
-  return {
+  return surfaceInteractable({
     kind: 'house',
     position: { x: 0, z: 0 },
     promptLabel,
@@ -26,7 +26,7 @@ function houseTarget(promptLabel: string): Interactable {
     repairActive: false,
     repairCompletedWork: null,
     repairRequiredWork: null,
-  }
+  })
 }
 
 describe('buildInteractionView (plan ui-input-015)', () => {
@@ -48,35 +48,35 @@ describe('buildInteractionView (plan ui-input-015)', () => {
   })
 
   it('adds inspect without faking E/R slots', () => {
-    const view = buildInteractionView({
+    const view = buildInteractionView(surfaceInteractable({
       kind: 'palisade',
       position: { x: 0, z: 0 },
       promptLabel: '[E] Kontynuuj budowę',
       id: 'p1',
       complete: false,
-    }, { hasInspect: true })
+    }), { hasInspect: true })
     expect(view.actions.some((a) => a.slot === 'inspect')).toBe(true)
     expect(view.actions.filter((a) => a.slot === 'primary' || a.slot === 'alternate')).toHaveLength(2)
   })
 
   it('marks flavor-only status prompts as disabled primary', () => {
-    const view = buildInteractionView({
+    const view = buildInteractionView(surfaceInteractable({
       kind: 'dryingRack',
       position: { x: 0, z: 0 },
       promptLabel: 'Suszy się…',
       id: 'rack',
-    }, { hasInspect: false })
+    }), { hasInspect: false })
     expect(view.actions[0]).toMatchObject({ slot: 'primary', enabled: false })
-    expect(isInteractableActionable({
+    expect(isInteractableActionable(surfaceInteractable({
       kind: 'dryingRack',
       position: { x: 0, z: 0 },
       promptLabel: 'Suszy się…',
       id: 'rack',
-    })).toBe(false)
+    }))).toBe(false)
   })
 
   it('applies well work blocked reasons from context', () => {
-    const view = buildInteractionView({
+    const view = buildInteractionView(surfaceInteractable({
       kind: 'playerWell',
       position: { x: 0, z: 0 },
       promptLabel: '[E] Pracuj nad studnią',
@@ -84,7 +84,7 @@ describe('buildInteractionView (plan ui-input-015)', () => {
       stage: 'pit',
       waterSource: null,
       complete: false,
-    }, {
+    }), {
       hasInspect: false,
       describeWellWork: () => ({ canWork: false, reasonLabel: 'Brak kilofa.' }),
     })
@@ -107,12 +107,12 @@ describe('touch availability helpers', () => {
   })
 
   it('exposes blocked alternate actions', () => {
-    const view = buildInteractionView({
+    const view = buildInteractionView(surfaceInteractable({
       kind: 'cart',
       position: { x: 0, z: 0 },
       promptLabel: 'Wózek',
       id: 'cart',
-    }, { hasInspect: false })
+    }), { hasInspect: false })
     expect(alternateActionState(view)).toBeNull()
     expect(primaryActionState(view)?.enabled).toBe(false)
   })
@@ -127,27 +127,27 @@ describe('targeted skill override', () => {
 
 describe('construction InteractionView (plan ui-input-016)', () => {
   it('does not use [R] inspect on camp or tent', () => {
-    const camp = buildInteractionView({
+    const camp = buildInteractionView(surfaceInteractable({
       kind: 'camp',
       position: { x: 0, z: 0 },
       promptLabel: '[E] Odpocznij · [R] Zbadaj',
       tentId: 't1',
       bedrollId: null,
       platformId: null,
-    }, { hasInspect: true })
+    }), { hasInspect: true })
     expect(camp.actions.find((action) => action.slot === 'primary')?.label).toBe('Odpocznij')
     expect(camp.actions.some((action) => action.slot === 'alternate')).toBe(false)
     expect(camp.actions.some((action) => action.slot === 'inspect')).toBe(true)
   })
 
   it('shows disabled palisade work with the live reason', () => {
-    const view = buildInteractionView({
+    const view = buildInteractionView(surfaceInteractable({
       kind: 'palisade',
       position: { x: 0, z: 0 },
       promptLabel: '',
       id: 'p1',
       complete: false,
-    }, {
+    }), {
       hasInspect: false,
       describePalisadeWork: () => ({ canWork: false, reasonLabel: 'Jesteś zbyt wyczerpany, by kontynuować.' }),
     })
@@ -159,14 +159,14 @@ describe('construction InteractionView (plan ui-input-016)', () => {
   })
 
   it('shows trough fill as disabled when water is missing', () => {
-    const view = buildInteractionView({
+    const view = buildInteractionView(surfaceInteractable({
       kind: 'playerTrough',
       position: { x: 0, z: 0 },
       promptLabel: '',
       id: 'tr1',
       complete: true,
       canFill: true,
-    }, {
+    }), {
       hasInspect: true,
       describePlayerTroughFill: () => ({ canWork: false, reasonLabel: 'Potrzebujesz pojemnika z wodą.' }),
     })

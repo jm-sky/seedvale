@@ -95,6 +95,11 @@ import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition } from './caveVolume'
 import { type LargeCaveSite, pickLargeCaveSites } from './largeCaves'
 import { createNullPointLightBudget, type PointLightBudget } from './pointLightBudget'
+import {
+  caveSpatialContext,
+  WORLD_SPATIAL_CONTEXT_SURFACE,
+  type WorldSpatialContext,
+} from './spatialContext'
 import type { Scene } from 'three'
 
 /** Presentation builds run synchronously on the main thread; this many
@@ -142,6 +147,9 @@ export type Caves = {
    *  underground tunnel; `openSky` at the mouth. Camera boom and swim
    *  eligibility share this. */
   occupancyAt: (x: number, y: number, z: number) => CaveVerticalInterval | null
+  /** Stateless gameplay spatial identity at `(x,y,z)` — not hysteretic
+   *  `queryInterior()`. Open-sky mouth occupancy resolves as surface. */
+  spatialContextAt: (x: number, y: number, z: number) => WorldSpatialContext
   /**
    * Entity-neutral horizontal cave containment (world-terrain-019): pushes
    * an XZ capsule of `radius` that needs `entityHeight` of clearance out of
@@ -716,14 +724,28 @@ export function createCaves(
     return best
   }
 
+  type OccupancyHit = { interval: CaveVerticalInterval, caveId: string }
+
+  /** Shared first-hit scan for `occupancyAt` and `spatialContextAt`. */
+  function occupancyHitAt(x: number, y: number, z: number): OccupancyHit | null {
+    for (const runtime of runtimes) {
+      const hit = heightfieldOccupancyAt(runtime.heightfield, analyticSurfaceHeight, x, y, z)
+      if (hit) return { interval: hit, caveId: runtime.topology.caveId }
+    }
+    return null
+  }
+
   /** Strict, stateless heightfield occupancy across every cave — first
    *  cave whose column holds `y` wins. */
   function occupancyAt(x: number, y: number, z: number): CaveVerticalInterval | null {
-    for (const runtime of runtimes) {
-      const hit = heightfieldOccupancyAt(runtime.heightfield, analyticSurfaceHeight, x, y, z)
-      if (hit) return hit
-    }
-    return null
+    return occupancyHitAt(x, y, z)?.interval ?? null
+  }
+
+  function spatialContextAt(x: number, y: number, z: number): WorldSpatialContext {
+    const hit = occupancyHitAt(x, y, z)
+    if (!hit) return WORLD_SPATIAL_CONTEXT_SURFACE
+    if (hit.interval.openSky === true) return WORLD_SPATIAL_CONTEXT_SURFACE
+    return caveSpatialContext(hit.caveId)
   }
 
   return {
@@ -793,6 +815,7 @@ export function createCaves(
       }
     },
     occupancyAt,
+    spatialContextAt,
     resolveHorizontal(x, z, y, radius, entityHeight) {
       // Every field is `outsideGrid` except the cave(s) local to the point,
       // for which the resolver is the identity; sequential application is

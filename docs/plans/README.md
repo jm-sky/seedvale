@@ -74,7 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
-| 💡 `world-027-player-spatial-context-and-cross-space-target-isolation.md`      | -       | 🔴 | L      | ~~world-terrain-019~~ |
+| ✅ `world-027-player-spatial-context-and-cross-space-target-isolation.md`      | -       | 🟢 | L      | ~~world-terrain-019~~ |
 
 ---
 

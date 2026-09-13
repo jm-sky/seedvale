@@ -41,7 +41,16 @@ describe('worldGeneratedContainers explicit-Y placement (plan world-terrain-020 
     const containers = createWorldGeneratedContainers(
       new Scene(),
       sampleHeight,
-      [{ id: 'cave:x:side-treasure', kind: 'chest', x: 12, y: -7.5, z: 34, yaw: 1.1, initialCounts: { coin: 60 } }],
+      [{
+        id: 'cave:x:side-treasure',
+        kind: 'chest',
+        x: 12,
+        y: -7.5,
+        z: 34,
+        yaw: 1.1,
+        initialCounts: { coin: 60 },
+        spatialContext: { kind: 'cave', caveId: 'cave:x' },
+      }],
     )
     const entry = containers.find('cave:x:side-treasure')
     expect(entry?.mesh.position.y).toBe(-7.5)
@@ -62,7 +71,16 @@ describe('worldGeneratedContainers explicit-Y placement (plan world-terrain-020 
     const containers = createWorldGeneratedContainers(
       new Scene(),
       () => { throw new Error('surface sampleHeight must not be called for an explicit-Y spec') },
-      [{ id: 'cave:x:final-treasure', kind: 'chest', x: 1, y: -12, z: 2, yaw: 0, initialCounts: { coin: 999 } }],
+      [{
+        id: 'cave:x:final-treasure',
+        kind: 'chest',
+        x: 1,
+        y: -12,
+        z: 2,
+        yaw: 0,
+        initialCounts: { coin: 999 },
+        spatialContext: { kind: 'cave', caveId: 'cave:x' },
+      }],
       [{ id: 'cave:x:final-treasure', x: 1, z: 2, yaw: 0, counts: {}, instances: [] }],
     )
     const entry = containers.find('cave:x:final-treasure')

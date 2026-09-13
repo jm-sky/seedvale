@@ -25,9 +25,9 @@ import {
   sampleMountainRidgeAt,
 } from '../terrain/chunkHeightmap'
 import { CAVE_FLOOR_GRACE, CAVE_UNDERGROUND_MISS } from './caves/caveGroundQuery'
+import * as caveHeightfieldPresentation from './caves/caveHeightfieldPresentation'
 import * as caveHeightfieldQuery from './caves/caveHeightfieldQuery'
 import { buildCaveHeightfieldRepresentation, sampleHeightfieldAt } from './caves/caveHeightfieldRepresentation'
-import * as caveHeightfieldPresentation from './caves/caveHeightfieldPresentation'
 import { CAVE_ACTIVATE_DISTANCE, CAVE_DEACTIVATE_DISTANCE } from './caves/cavePresentationLifecycle'
 import { MOUTH_INTERIOR_ALONG, mouthAlong, mouthCarveDepth } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
@@ -340,6 +340,34 @@ describe('createCaves (world-terrain-019 B)', () => {
     }
     expect(closed).toBeGreaterThan(50)
     expect(mouth).toBeGreaterThan(0)
+  })
+
+  it('spatialContextAt resolves surface above closed tunnels and cave id underground (plan world-027)', () => {
+    const def = caves.definitions()[0]!
+    const field = productionHeightfield(def.caveId)
+    let closedSample: { x: number, z: number, surfaceY: number, midY: number } | null = null
+    for (let z = field.bounds.minZ; z <= field.bounds.maxZ && !closedSample; z += 1) {
+      for (let x = field.bounds.minX; x <= field.bounds.maxX; x += 1) {
+        const sample = sampleHeightfieldAt(field, x, z)
+        if (sample.outsideGrid || sample.gap < 1.5 || sample.openSky) continue
+        const surfaceY = chunkManager.sampleBaseHeight(x, z)
+        closedSample = { x, z, surfaceY, midY: sample.floorY + 0.3 }
+      }
+    }
+    expect(closedSample).not.toBeNull()
+    const { x, z, surfaceY, midY } = closedSample!
+    expect(caves.spatialContextAt(x, surfaceY, z)).toEqual({ kind: 'surface' })
+    expect(caves.spatialContextAt(x, midY, z)).toEqual({ kind: 'cave', caveId: def.caveId })
+  })
+
+  it('spatialContextAt treats open-sky mouth occupancy as surface', () => {
+    const def = caves.definitions()[0]!
+    const out = openingDirection(def.entrance.yaw)
+    const ax = def.entrance.x + out.dx * 1.5
+    const az = def.entrance.z + out.dz * 1.5
+    const ay = chunkManager.sampleBaseHeight(ax, az) - mouthCarveDepth(ax, az, def.entrance) + 0.2
+    expect(caves.occupancyAt(ax, ay, az)?.openSky).toBe(true)
+    expect(caves.spatialContextAt(ax, ay, az)).toEqual({ kind: 'surface' })
   })
 
   it('interior is strict occupancy inside the mouth plane, with two-sample confirmation, and the approach is not interior', () => {

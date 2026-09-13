@@ -1,7 +1,7 @@
 # Plan: Player Spatial Context and Cross-Space Target Isolation
 
 **Created:** 2026-09-13  
-**Status:** `planned` 📋  
+**Status:** `implemented` ✅  
 **Type:** fix  
 **Priority:** high · **Effort:** L  
 **Depends on:** ~~world-terrain-019~~  

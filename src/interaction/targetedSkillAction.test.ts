@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PlacedTrapRecord, TrapState } from '../world/animalTraps'
-import type { Interactable } from './Interactable'
 import { SKILL_IDS, SKILL_USE } from '../player/PlayerSkills'
+import { type Interactable, surfaceInteractable } from './Interactable'
 import {
   executeTargetedSkillAction,
   hasImplementedTargetedSkillConsumer,
@@ -12,15 +12,15 @@ import {
   type TargetedSkillQueryContext,
 } from './targetedSkillAction'
 
-function trapTarget(id = 'trap-1', state: TrapState = 'placed'): Extract<Interactable, { kind: 'trap' }> {
-  return {
+function trapTarget(id = 'trap-1', state: TrapState = 'placed'): Interactable {
+  return surfaceInteractable({
     kind: 'trap',
     position: { x: 0, z: 0 },
     promptLabel: '[E] Uzbrój',
     id,
     trapKind: 'simple',
     state,
-  }
+  })
 }
 
 function trapRecord(overrides: Partial<PlacedTrapRecord> = {}): PlacedTrapRecord {
@@ -70,12 +70,12 @@ describe('queryTargetedSkillAction (plan items-player-021)', () => {
     const ctx = contextWith(trapRecord())
     expect(queryTargetedSkillAction('repair', trapTarget(), ctx)).toBeNull()
     expect(queryTargetedSkillAction('medicine', trapTarget(), ctx)).toBeNull()
-    expect(queryTargetedSkillAction('traps', {
+    expect(queryTargetedSkillAction('traps', surfaceInteractable({
       kind: 'item',
       position: { x: 0, z: 0 },
       promptLabel: 'item',
       item: { id: 'x', kind: 'stone', source: 'world' },
-    }, ctx)).toBeNull()
+    }), ctx)).toBeNull()
   })
 
   it('returns no action when the trap record is gone', () => {
@@ -138,7 +138,7 @@ describe('targetedSkillPrompt', () => {
 })
 
 describe('targeted Repair on camp objects (plan items-player-019)', () => {
-  const tentTarget = (): Extract<Interactable, { kind: 'tent' }> => ({
+  const tentTarget = (): Interactable => surfaceInteractable({
     kind: 'tent',
     position: { x: 0, z: 0 },
     promptLabel: '[E] Odpocznij',
@@ -180,14 +180,14 @@ describe('targeted Repair on camp objects (plan items-player-019)', () => {
 
   it('routes a composed camp target to the tent repair id (plan items-player-022)', () => {
     const started: string[] = []
-    const camp: Extract<Interactable, { kind: 'camp' }> = {
+    const camp: Interactable = surfaceInteractable({
       kind: 'camp',
       position: { x: 0, z: 0 },
       promptLabel: '[E] Odpocznij · [R] Zbadaj',
       tentId: 'tent-1',
       bedrollId: 'bed-1',
       platformId: 'plat-1',
-    }
+    })
     const ctx: TargetedSkillQueryContext = {
       getTrap: () => null,
       campRepairAvailable: (kind, id) => kind === 'tent' && id === 'tent-1' ? { mode: 'start' } : null,

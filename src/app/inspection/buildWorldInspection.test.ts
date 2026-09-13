@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { Interactable } from '../../interaction/Interactable'
 import type { LiquidContainerItemInstance } from '../../items/itemInstances'
 import type { TerrainPreparationRecord } from '../../terrain/terrainPreparation'
 import type { PlayerWellRecord } from '../../world/playerWell'
 import type { ContractTarget, MeasurableWorkContractRecord } from '../../world/workContract'
+import { type Interactable, surfaceInteractable } from '../../interaction/Interactable'
 import { Inventory } from '../../items/Inventory'
 import { PALISADE_REQUIRED_WORK, type PalisadeSegmentRecord } from '../../world/palisade'
 import {
@@ -87,7 +87,7 @@ describe('inspectionTargetRef (plan ui-input-014)', () => {
   })
 
   it('returns kind+id for inspectable construction targets', () => {
-    expect(inspectionTargetRef({
+    expect(inspectionTargetRef(surfaceInteractable({
       kind: 'playerWell',
       position: { x: 0, z: 0 },
       promptLabel: '',
@@ -95,7 +95,7 @@ describe('inspectionTargetRef (plan ui-input-014)', () => {
       stage: 'pit',
       waterSource: null,
       complete: false,
-    })).toEqual({ kind: 'playerWell', id: 'well:1' })
+    }))).toEqual({ kind: 'playerWell', id: 'well:1' })
   })
 })
 
@@ -243,22 +243,22 @@ describe('buildWorldInspection (plan ui-input-014)', () => {
   })
 
   it('maps camp and trough interactables to inspection refs', () => {
-    expect(inspectionTargetRef({
+    expect(inspectionTargetRef(surfaceInteractable({
       kind: 'camp',
       position: { x: 0, z: 0 },
       promptLabel: '',
       tentId: 'tent:1',
       bedrollId: null,
       platformId: null,
-    })).toEqual({ kind: 'camp', id: 'tent:1' })
-    expect(inspectionTargetRef({
+    }))).toEqual({ kind: 'camp', id: 'tent:1' })
+    expect(inspectionTargetRef(surfaceInteractable({
       kind: 'playerTrough',
       position: { x: 0, z: 0 },
       promptLabel: '',
       id: 'trough:1',
       complete: true,
       canFill: true,
-    })).toEqual({ kind: 'playerTrough', id: 'trough:1' })
+    }))).toEqual({ kind: 'playerTrough', id: 'trough:1' })
   })
 
   it('disables trough fill when the live check reports missing water', () => {

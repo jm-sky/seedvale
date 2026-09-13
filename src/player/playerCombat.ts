@@ -2,8 +2,10 @@ import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { Fauna } from '../fauna/createFauna'
 import type { Interactable } from '../interaction/Interactable'
 import type { Settlement } from '../settlement/createSettlement'
+import type { WorldSpatialContext } from '../world/spatialContext'
 import { COMBAT_TARGET_CONE_DOT, COMBAT_TARGET_RANGE, type CombatAimMode } from '../app/interactables'
 import { yawToward } from '../combat/meleeAttack'
+import { spatialContextsEqual, WORLD_SPATIAL_CONTEXT_SURFACE } from '../world/spatialContext'
 import { type MeleeHitCandidate, rankCombatTargets } from './playerMelee'
 import type { Vector3 } from 'three'
 
@@ -72,6 +74,8 @@ export function forEachLivingCombatAnimal(
  *  soft-lock resolution can never reach a live animal beyond melee distance
  *  while a ranged weapon is held (plan 162 added the ranged fire/projectile
  *  pipeline but never widened this acquisition range). */
+export type SpatialContextAt = (x: number, y: number, z: number) => WorldSpatialContext
+
 export function collectLivingCombatTargets(
   settlements: readonly Settlement[],
   fauna: Fauna,
@@ -80,14 +84,20 @@ export function collectLivingCombatTargets(
   aim: CombatAimMode,
   recentTargetIds: readonly string[],
   range: number = COMBAT_TARGET_RANGE,
+  playerSpatialContext: WorldSpatialContext = WORLD_SPATIAL_CONTEXT_SURFACE,
+  resolveSpatialContextAt: SpatialContextAt = () => WORLD_SPATIAL_CONTEXT_SURFACE,
 ): LivingCombatTarget[] {
   const candidates: MeleeHitCandidate[] = []
   const byId = new Map<string, LivingCombatTarget>()
 
-  const addAnimal = (animal: { animalId: string, mesh: { position: { x: number, z: number } }, isDead: () => boolean }, interactable: Interactable): void => {
+  const addAnimal = (
+    animal: { animalId: string, mesh: { position: { x: number, y: number, z: number } }, isDead: () => boolean },
+    interactable: Interactable,
+  ): void => {
     if (animal.isDead()) return
-    const { x, z } = animal.mesh.position
+    const { x, y, z } = animal.mesh.position
     if (!withinRange(x, z, playerPos, range)) return
+    if (!spatialContextsEqual(resolveSpatialContextAt(x, y, z), playerSpatialContext)) return
     const id = livingTargetIdForAnimal(animal.animalId)
     candidates.push({ id, x, z, alive: true })
     byId.set(id, { id, x, z, interactable })
@@ -99,14 +109,20 @@ export function collectLivingCombatTargets(
       position: animal.mesh.position,
       promptLabel: '',
       animal,
+      spatialContext: resolveSpatialContextAt(
+        animal.mesh.position.x,
+        animal.mesh.position.y,
+        animal.mesh.position.z,
+      ),
     })
   })
 
   for (const settlement of settlements) {
     for (const npc of settlement.npcs) {
       if (npc.health.dead) continue
-      const { x, z } = npc.mesh.position
+      const { x, y, z } = npc.mesh.position
       if (!withinRange(x, z, playerPos, range)) continue
+      if (!spatialContextsEqual(resolveSpatialContextAt(x, y, z), playerSpatialContext)) continue
       const id = livingTargetIdForNpc(npc.id)
       candidates.push({ id, x, z, alive: true })
       byId.set(id, {
@@ -119,6 +135,7 @@ export function collectLivingCombatTargets(
           promptLabel: '',
           npc,
           settlement,
+          spatialContext: resolveSpatialContextAt(x, y, z),
         },
       })
     }
@@ -153,18 +170,33 @@ export function collectRangedAnimalCandidates(
   fauna: Fauna,
   playerPos: Vector3,
   range: number,
+  playerSpatialContext: WorldSpatialContext = WORLD_SPATIAL_CONTEXT_SURFACE,
+  resolveSpatialContextAt: SpatialContextAt = () => WORLD_SPATIAL_CONTEXT_SURFACE,
 ): RangedAnimalCandidate[] {
   const out: RangedAnimalCandidate[] = []
   const seen = new Set<string>()
   const add = (animal: AnimalAgent): void => {
     if (animal.isDead() || seen.has(animal.animalId)) return
-    const { x, z } = animal.mesh.position
+    const { x, y, z } = animal.mesh.position
     if (!withinRange(x, z, playerPos, range)) return
+    if (!spatialContextsEqual(resolveSpatialContextAt(x, y, z), playerSpatialContext)) return
     seen.add(animal.animalId)
     out.push({ id: livingTargetIdForAnimal(animal.animalId), x, z, animal })
   }
   forEachLivingCombatAnimal(settlements, fauna, add)
   return out
+}
+
+/** Projectile hit test — same spatial domain as at fire time (plan world-027). */
+export function filterRangedCandidatesBySpatialContext(
+  candidates: readonly RangedAnimalCandidate[],
+  context: WorldSpatialContext,
+  resolveSpatialContextAt: SpatialContextAt,
+): RangedAnimalCandidate[] {
+  return candidates.filter((candidate) => {
+    const pos = candidate.animal.mesh.position
+    return spatialContextsEqual(resolveSpatialContextAt(pos.x, pos.y, pos.z), context)
+  })
 }
 
 /** Committed ranged-aim yaw for the current frame (plan 186 §1). A

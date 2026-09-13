@@ -1,9 +1,18 @@
 import { Scene } from 'three'
 import { describe, expect, it } from 'vitest'
+import { surfaceInteractable } from '../interaction/Interactable'
 import { createDroppedItems } from '../items/createDroppedItems'
 import { Inventory } from '../items/Inventory'
 import { ITEM_DEFS } from '../items/items'
-import { DROPPED_ITEM_GROUP_RADIUS, groupDroppedItemCandidates, itemPromptLabel, resolveHaySpot, worldItemAllowsAltInteract } from './interactables'
+import { caveSpatialContext, WORLD_SPATIAL_CONTEXT_SURFACE } from '../world/spatialContext'
+import {
+  DROPPED_ITEM_GROUP_RADIUS,
+  filterInteractablesSameSpatialContext,
+  groupDroppedItemCandidates,
+  itemPromptLabel,
+  resolveHaySpot,
+  worldItemAllowsAltInteract,
+} from './interactables'
 
 describe('resolveHaySpot', () => {
   const garden = { x: 0, z: 0 }
@@ -137,6 +146,43 @@ describe('worldItemAllowsAltInteract', () => {
     expect(worldItemAllowsAltInteract('apple', 1, 'spoiled')).toBe(false)
     expect(worldItemAllowsAltInteract('apple', 1, 'fresh')).toBe(true)
     expect(worldItemAllowsAltInteract('apple', 1, 'medium')).toBe(true)
+  })
+})
+
+describe('filterInteractablesSameSpatialContext (plan world-027)', () => {
+  const cave = caveSpatialContext('cave:loot')
+
+  it('removes surface tree and retains same-cave chest for a cave player', () => {
+    const tree = surfaceInteractable({
+      kind: 'tree',
+      position: { x: 1, z: 2 },
+      promptLabel: '',
+      id: 't1',
+      stage: 'mature',
+      sizeClass: 'medium',
+    })
+    const chest = surfaceInteractable({
+      kind: 'container',
+      position: { x: 1, z: 2 },
+      promptLabel: '',
+      id: 'chest-1',
+    })
+    chest.spatialContext = cave
+    const filtered = filterInteractablesSameSpatialContext([tree, chest], cave)
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.id).toBe('chest-1')
+  })
+
+  it('keeps ordinary surface candidates for a surface player', () => {
+    const tree = surfaceInteractable({
+      kind: 'tree',
+      position: { x: 0, z: 0 },
+      promptLabel: '',
+      id: 't2',
+      stage: 'young',
+      sizeClass: 'small',
+    })
+    expect(filterInteractablesSameSpatialContext([tree], WORLD_SPATIAL_CONTEXT_SURFACE)).toHaveLength(1)
   })
 })
 

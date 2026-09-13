@@ -175,6 +175,7 @@ export function caveTreasureContainerSpecs(
       z: anchor.z,
       yaw: anchor.yaw,
       initialCounts: generateTreasureLoot(worldSeed, anchor.id, { profile }),
+      spatialContext: { kind: 'cave', caveId: anchor.caveId },
     })
   }
   return specs

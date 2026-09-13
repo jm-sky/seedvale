@@ -4,12 +4,15 @@ import { COMBAT_TARGET_RANGE } from '../app/interactables'
 import { resolveMeleeHits } from '../combat/meleeAttack'
 import { sweptProjectileHit } from '../combat/projectile'
 import { MAX_HP } from '../fauna/faunaCombat'
+import { surfaceInteractable } from '../interaction/Interactable'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { createHealthState, damageHealth } from '../shared/HealthState'
+import { caveSpatialContext, WORLD_SPATIAL_CONTEXT_SURFACE } from '../world/spatialContext'
 import {
   collectLivingCombatTargets,
   collectRangedAnimalCandidates,
   createPlayerCombat,
+  filterRangedCandidatesBySpatialContext,
   filterWorldCycleTargets,
   livingTargetIdForAnimal,
   livingTargetIdForNpc,
@@ -67,9 +70,9 @@ describe('resolveRangedAimYaw (plan 186 §1)', () => {
 describe('filterWorldCycleTargets', () => {
   it('excludes living animals and NPCs', () => {
     const list = filterWorldCycleTargets([
-      { kind: 'tree', position: { x: 0, z: 0 }, promptLabel: '', id: 't', stage: 'mature', sizeClass: 'medium', canHarvest: false },
-      { kind: 'animal', position: { x: 0, z: 0 }, promptLabel: '', animal: {} as never },
-      { kind: 'npc', position: { x: 0, z: 0 }, promptLabel: '', npc: {} as never, settlement: {} as never },
+      surfaceInteractable({ kind: 'tree', position: { x: 0, z: 0 }, promptLabel: '', id: 't', stage: 'mature', sizeClass: 'medium', canHarvest: false }),
+      surfaceInteractable({ kind: 'animal', position: { x: 0, z: 0 }, promptLabel: '', animal: {} as never }),
+      surfaceInteractable({ kind: 'npc', position: { x: 0, z: 0 }, promptLabel: '', npc: {} as never, settlement: {} as never }),
     ])
     expect(list).toHaveLength(1)
     expect(list[0]?.kind).toBe('tree')
@@ -104,9 +107,10 @@ function fakeCombatAnimal(
   x: number,
   z: number,
   dead = false,
+  y = 0,
 ): {
   animalId: string
-  mesh: { position: { x: number, z: number } }
+  mesh: { position: { x: number, y: number, z: number } }
   isDead: () => boolean
   takeDamage: (amount: number) => void
   health: ReturnType<typeof createHealthState>
@@ -115,7 +119,7 @@ function fakeCombatAnimal(
   if (dead) damageHealth(health, MAX_HP.rat)
   return {
     animalId,
-    mesh: { position: { x, z } },
+    mesh: { position: { x, y, z } },
     isDead: () => health.dead,
     takeDamage: (amount: number) => damageHealth(health, amount),
     health,
@@ -206,6 +210,49 @@ describe('player combat damage against a settlement rat (plan fauna-021)', () =>
     expect(countAlive()).toBe(1)
     expect(a.health.dead).toBe(true)
     expect(a.health.maxHp).toBe(MAX_HP.rat)
+  })
+})
+
+describe('spatial context isolation (plan world-027)', () => {
+  const playerPos = new Vector3(0, 0, 0)
+  const caveCtx = caveSpatialContext('cave:test')
+  const resolveByY = (_x: number, y: number, _z: number) => (y < 0 ? caveCtx : WORLD_SPATIAL_CONTEXT_SURFACE)
+
+  it('collectLivingCombatTargets rejects other-context animals at overlapping XZ', () => {
+    const surfaceRat = fakeCombatAnimal('surface', 0, -2, false, 8)
+    const caveRat = fakeCombatAnimal('cave', 0, -2, false, -4)
+    const settlement = { livestock: [], rats: [surfaceRat, caveRat], npcs: [] } as never
+    const fauna = { getAgents: () => [] } as never
+    const cavePlayer = collectLivingCombatTargets(
+      [settlement], fauna, playerPos, 0, 'pointer', [], COMBAT_TARGET_RANGE, caveCtx, resolveByY,
+    )
+    expect(cavePlayer.map((t) => t.id)).toEqual([livingTargetIdForAnimal('cave')])
+    const surfacePlayer = collectLivingCombatTargets(
+      [settlement], fauna, playerPos, 0, 'pointer', [], COMBAT_TARGET_RANGE, WORLD_SPATIAL_CONTEXT_SURFACE, resolveByY,
+    )
+    expect(surfacePlayer.map((t) => t.id)).toEqual([livingTargetIdForAnimal('surface')])
+  })
+
+  it('collectRangedAnimalCandidates applies the same context rule', () => {
+    const surfaceRat = fakeCombatAnimal('surface-r', 0, -5, false, 6)
+    const caveRat = fakeCombatAnimal('cave-r', 0, -5, false, -2)
+    const settlement = { livestock: [], rats: [surfaceRat, caveRat], npcs: [] } as never
+    const fauna = { getAgents: () => [] } as never
+    const ranged = collectRangedAnimalCandidates(
+      [settlement], fauna, playerPos, 20, caveCtx, resolveByY,
+    )
+    expect(ranged.map((c) => c.id)).toEqual([livingTargetIdForAnimal('cave-r')])
+  })
+
+  it('filterRangedCandidatesBySpatialContext matches projectile fire context', () => {
+    const surfaceRat = fakeCombatAnimal('s', 0, -3, false, 5)
+    const caveRat = fakeCombatAnimal('c', 0, -3, false, -1)
+    const candidates = [
+      { id: livingTargetIdForAnimal('s'), x: 0, z: -3, animal: surfaceRat as never },
+      { id: livingTargetIdForAnimal('c'), x: 0, z: -3, animal: caveRat as never },
+    ]
+    const caveOnly = filterRangedCandidatesBySpatialContext(candidates, caveCtx, resolveByY)
+    expect(caveOnly.map((c) => c.id)).toEqual([livingTargetIdForAnimal('c')])
   })
 })
 

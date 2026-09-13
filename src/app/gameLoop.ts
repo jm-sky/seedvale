@@ -47,6 +47,7 @@ import type { DayNightState } from '../world/dayNight'
 import type { GroundFogSystem } from '../world/groundFog'
 import type { LocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
+import type { WorldSpatialContext } from '../world/spatialContext'
 import type { TimeSkip } from '../world/timeSkip'
 import type { WaterSource } from '../world/WaterSource'
 import type { ClimateState, WeatherState } from '../world/weather'
@@ -113,6 +114,7 @@ import {
   collectLivingCombatTargets,
   collectRangedAnimalCandidates,
   createPlayerCombat,
+  filterRangedCandidatesBySpatialContext,
   filterWorldCycleTargets,
   findLivingTargetById,
   livingTargetIdForAnimal,
@@ -172,6 +174,7 @@ import {
   collectItem,
   COMBAT_TARGET_RANGE,
   type CombatAimMode,
+  filterInteractablesSameSpatialContext,
   GAZE_RANGE,
   INTERACT_MIN_DOT,
   INTERACT_RANGE,
@@ -771,7 +774,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   /** Live in-flight arrows — ticked every unpaused frame regardless of the
    *  currently held tool, so switching weapons mid-flight doesn't freeze or
    *  drop an already-fired shot. */
-  let activeProjectiles: Projectile[] = []
+  let activeProjectiles: (Projectile & { spatialContext: WorldSpatialContext })[] = []
   /** Soft-locked living-target id the current draw is aimed at, resolved to
    *  a live position again at fire time (the target may have moved) —
    *  `null` fires straight along the live aim yaw instead. */
@@ -1100,7 +1103,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const hasCarriedWaterContainer = LIQUID_CONTAINER_KIND_LIST
         .flatMap((kind) => inventory.getInstances(kind))
         .some((inst) => isLiquidContainerInstance(inst) && inst.liquid === 'water' && inst.amountLitres > 0)
-      const interactables = buildInteractables(
+      const playerSpatialPos = player.mesh.position
+      const resolveSpatialContextAt = (x: number, y: number, z: number) => bundle.caves.spatialContextAt(x, y, z)
+      const playerSpatialContext = resolveSpatialContextAt(
+        playerSpatialPos.x,
+        playerSpatialPos.y,
+        playerSpatialPos.z,
+      )
+      const interactables = filterInteractablesSameSpatialContext(
+        buildInteractables(
         bundle.settlementsManager.getLoaded(),
         bundle.fauna,
         bundle.chunkManager,
@@ -1149,6 +1160,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         describeWorldGeneratedContainer,
         inventory.hasCapability('shearing'),
         (settlementId, structureId, nowDays) => bundle.settlementsManager.getStructureSnapshot(settlementId, structureId, nowDays),
+        resolveSpatialContextAt,
+      ),
+        playerSpatialContext,
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -1283,6 +1297,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             bundle.fauna,
             player.mesh.position,
             RANGED_CANDIDATE_RANGE,
+            playerSpatialContext,
+            resolveSpatialContextAt,
           )
         : []
       // Committed aim direction for this frame (plan 186 §1) — see
@@ -1358,19 +1374,25 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             attackKey: `ranged:${ammoKind}`,
             attempt: attackAttemptCounter,
             ammoKind,
+            spatialContext: playerSpatialContext,
           })
         }
         rangedTargetId = null
       }
       if (activeProjectiles.length > 0) {
-        const nextProjectiles: Projectile[] = []
+        const nextProjectiles: (Projectile & { spatialContext: WorldSpatialContext })[] = []
         for (const projectile of activeProjectiles) {
           const prevX = projectile.x
           const prevZ = projectile.z
           const expired = advanceProjectile(projectile, dt)
+          const projectileHitCandidates = filterRangedCandidatesBySpatialContext(
+            rangedCandidates,
+            projectile.spatialContext,
+            resolveSpatialContextAt,
+          )
           const hitId = sweptProjectileHit(
             prevX, prevZ, projectile.x, projectile.z,
-            rangedCandidates.map((c) => ({ id: c.id, x: c.x, z: c.z, alive: true })),
+            projectileHitCandidates.map((c) => ({ id: c.id, x: c.x, z: c.z, alive: true })),
           )
           const hitCandidate = hitId ? rangedCandidates.find((c) => c.id === hitId) : undefined
           if (hitCandidate && !hitCandidate.animal.isDead()) {
@@ -1427,6 +1449,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         aimMode,
         playerMelee.recentTargetIds(),
         livingTargetRange,
+        playerSpatialContext,
+        resolveSpatialContextAt,
       )
       if (playerCombat.softLockId() && !findLivingTargetById(livingTargets, playerCombat.softLockId())) {
         playerCombat.setSoftLock(null)
@@ -1527,12 +1551,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               held,
               playerMelee.recentTargetIds(),
               aimMode,
+              playerSpatialContext,
+              resolveSpatialContextAt,
             )
             ?? buildDigTarget(
               player.mesh.position,
               mouseLook.state.yaw,
               held,
               bundle.chunkManager,
+              playerSpatialContext,
             )
         }
       } else {
@@ -1555,6 +1582,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           mouseLook.state.yaw,
           held,
           bundle.chunkManager,
+          playerSpatialContext,
         ) ?? buildCombatTarget(
           bundle.settlementsManager.getLoaded(),
           bundle.fauna,
@@ -1563,6 +1591,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           held,
           playerMelee.recentTargetIds(),
           aimMode,
+          playerSpatialContext,
+          resolveSpatialContextAt,
         )
       }
       // While mounted, the only player action is the dedicated Dismount
@@ -1823,6 +1853,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               position: target.position,
               promptLabel: target.promptLabel,
               source,
+              spatialContext: target.spatialContext,
             }, questManager)
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
             drinkFromWaterSource?.(source)

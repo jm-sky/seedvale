@@ -1864,7 +1864,8 @@ export async function createApp(
     () => ({ x: player.mesh.position.x, z: player.mesh.position.z }),
     async (x, z) => {
       await bundle.chunkManager.waitForChunks(chunksNear(x, z, config.terrain.chunkSize))
-      player.setPosition(x, z)
+      const surfaceY = bundle.chunkManager.sampleHeight(x, z)
+      player.setPosition(x, z, { groundQuerySeedY: surfaceY })
     },
     worldFlags,
     { catalog: worldLocationCatalog, knowledge: locationKnowledge },

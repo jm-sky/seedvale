@@ -39,8 +39,22 @@ describe('caveTreasureContainerSpecs (plan world-terrain-020 Stage C)', () => {
     const final = specs.find((s) => s.id === 'cave:adv1:finalTreasure')
     expect(side).toBeDefined()
     expect(final).toBeDefined()
-    expect(side).toMatchObject({ kind: 'chest', x: 1, y: -2, z: 3, yaw: 0.1 })
-    expect(final).toMatchObject({ kind: 'chest', x: 4, y: -6, z: 8, yaw: 0.9 })
+    expect(side).toMatchObject({
+      kind: 'chest',
+      x: 1,
+      y: -2,
+      z: 3,
+      yaw: 0.1,
+      spatialContext: { kind: 'cave', caveId: 'cave:adv1' },
+    })
+    expect(final).toMatchObject({
+      kind: 'chest',
+      x: 4,
+      y: -6,
+      z: 8,
+      yaw: 0.9,
+      spatialContext: { kind: 'cave', caveId: 'cave:adv1' },
+    })
   })
 
   it('gives a natural cave (no anchors) zero cave treasure chests', () => {

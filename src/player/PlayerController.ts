@@ -796,9 +796,12 @@ export class PlayerController {
     this.equipmentSprintStaminaMultiplier = sprintStaminaMultiplier
   }
 
-  setPosition(x: number, z: number): void {
+  setPosition(x: number, z: number, options?: { groundQuerySeedY?: number }): void {
     this.mesh.position.x = x
     this.mesh.position.z = z
+    if (options?.groundQuerySeedY !== undefined) {
+      this.mesh.position.y = options.groundQuerySeedY
+    }
     this.snapToGround()
     this.syncCamera()
   }

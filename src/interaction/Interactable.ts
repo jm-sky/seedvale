@@ -13,6 +13,7 @@ import type { CropGrowthStage, CropId } from '../world/cropLifecycle'
 import type { WellStage } from '../world/playerWell'
 import type { TreeGrowthStage, TreeSizeClass } from '../world/treeLifecycle'
 import type { WaterSource } from '../world/WaterSource'
+import { WORLD_SPATIAL_CONTEXT_SURFACE, type WorldSpatialContext } from '../world/spatialContext'
 
 export type WorldItemRef = {
   id: string
@@ -29,7 +30,7 @@ export type WorldItemRef = {
  *  item pickups) so `pickInGaze` and the `[E]` interact handler can treat them
  *  uniformly. Built fresh each frame in `app/createApp.ts` — nothing here is
  *  persisted or owns lifetime. */
-export type Interactable =
+export type InteractablePayload =
   | { kind: 'npc', position: { x: number, z: number }, promptLabel: string, npc: NpcAgent, settlement: Settlement }
   /** Dead NPC corpse (plan npc-010) — `[E]` opens the existing inventory
    *  transfer screen over persisted corpse loot. Neutral in v1: no ownership
@@ -223,3 +224,13 @@ export type Interactable =
   | { kind: 'noticeBoard', position: { x: number, z: number }, promptLabel: string, settlementId: string }
   /** Movable draft cart (plan fauna-007). */
   | { kind: 'cart', position: { x: number, z: number }, promptLabel: string, id: string }
+
+/** Per-frame interaction candidate with authoritative spatial identity (plan world-027). */
+export type Interactable = InteractablePayload & {
+  spatialContext: WorldSpatialContext
+}
+
+/** Test/caller helper — attaches canonical surface context to a payload. */
+export function surfaceInteractable(payload: InteractablePayload): Interactable {
+  return { ...payload, spatialContext: WORLD_SPATIAL_CONTEXT_SURFACE }
+}
