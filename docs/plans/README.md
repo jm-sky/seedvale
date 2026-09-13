@@ -79,7 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-024-suspicious-transport-natural-cave-cache.md`         | -       | 🟡 | M      | world-terrain-028 |
 | 💡 `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | world-terrain-028 |
 | 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | world-terrain-028, fauna-027 |
-| ◼️ `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | world-terrain-028, fauna-027 |
+| 💡 `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | world-terrain-028, fauna-027 |
 
 ---
 
