@@ -124,7 +124,7 @@ import {
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
-import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS } from '../quests/quests'
+import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS, questStageObjectiveSlots } from '../quests/quests'
 import {
   isSuspiciousTransportCacheLooted,
   SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
@@ -1111,7 +1111,9 @@ export async function createApp(
   const occupiedLandmarkIds = new Set<string>()
   for (const quest of landmarkQuests) {
     for (const stage of quest.stages) {
-      if (stage.objective.type === 'interact_landmark') occupiedLandmarkIds.add(stage.objective.landmarkId)
+      for (const slot of questStageObjectiveSlots(stage)) {
+        if (slot.objective.type === 'interact_landmark') occupiedLandmarkIds.add(slot.objective.landmarkId)
+      }
     }
   }
   const neighborDefs = nearbyRpgSettlementDefs(homeDef, (cell) => bundle.settlementsManager.peekDef(cell))
@@ -1172,7 +1174,9 @@ export async function createApp(
     for (const quest of generated) {
       opportunityQuestDefs.push(quest)
       for (const stage of quest.stages) {
-        if (stage.objective.type === 'interact_landmark') occupiedLandmarkIds.add(stage.objective.landmarkId)
+        for (const slot of questStageObjectiveSlots(stage)) {
+          if (slot.objective.type === 'interact_landmark') occupiedLandmarkIds.add(slot.objective.landmarkId)
+        }
       }
     }
     if (def.isHome) {

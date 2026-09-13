@@ -95,14 +95,16 @@ export class QuestDefinitionValidationError extends Error {}
 
 /** Validates final runtime quest definitions once, after composition-root
  *  settlement binding. Throws `QuestDefinitionValidationError` on invalid
- *  authored prerequisites, `talk_to_npc_choice` objectives, or stage
- *  dialogue actions — never clamps thresholds at runtime. */
+ *  authored prerequisites, `talk_to_npc_choice` objectives, stage
+ *  dialogue actions, or nonlinear stage flow — never clamps thresholds at
+ *  runtime. */
 export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
   const byId = new Map(defs.map((def) => [def.id, def]))
   for (const def of defs) {
     validatePlayerDialogueLines(def)
     validateTalkToNpcChoiceObjective(def)
     validateStageDialogueActions(def)
+    validateNonlinearStageFlow(def)
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) continue
     for (const prereq of prerequisites) {
@@ -171,30 +173,38 @@ function validatePlayerDialogueLines(def: QuestDef): void {
 }
 
 function validateTalkToNpcChoiceObjective(def: QuestDef): void {
-  for (const stage of def.stages) {
-    const objective = stage.objective
-    if (objective.type !== 'talk_to_npc_choice') continue
-    if (objective.choices.length < 2) {
-      throw new QuestDefinitionValidationError(
-        `Quest "${def.id}" talk_to_npc_choice needs at least 2 choices`,
-      )
-    }
-    const ids = objective.choices.map((choice) => choice.npc.npcId)
-    if (new Set(ids).size !== ids.length) {
-      throw new QuestDefinitionValidationError(
-        `Quest "${def.id}" talk_to_npc_choice has duplicate npcId`,
-      )
-    }
-    for (const choice of objective.choices) {
-      if (choice.playerLine.trim().length === 0) {
+  for (const [stageIndex, stage] of def.stages.entries()) {
+    const slots = questStageObjectiveSlots(stage)
+    for (const slot of slots) {
+      const objective = slot.objective
+      if (objective.type !== 'talk_to_npc_choice') continue
+      if (slots.length > 1) {
         throw new QuestDefinitionValidationError(
-          `Quest "${def.id}" talk_to_npc_choice is missing a playerLine for "${choice.npc.npcId}"`,
+          `Quest "${def.id}" stage ${stageIndex} talk_to_npc_choice is legacy/single-objective only`,
         )
       }
-      if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) {
+      if (objective.choices.length < 2) {
         throw new QuestDefinitionValidationError(
-          `Quest "${def.id}" talk_to_npc_choice references unknown outcome "${choice.outcomeId}"`,
+          `Quest "${def.id}" talk_to_npc_choice needs at least 2 choices`,
         )
+      }
+      const ids = objective.choices.map((choice) => choice.npc.npcId)
+      if (new Set(ids).size !== ids.length) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" talk_to_npc_choice has duplicate npcId`,
+        )
+      }
+      for (const choice of objective.choices) {
+        if (choice.playerLine.trim().length === 0) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" talk_to_npc_choice is missing a playerLine for "${choice.npc.npcId}"`,
+          )
+        }
+        if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" talk_to_npc_choice references unknown outcome "${choice.outcomeId}"`,
+          )
+        }
       }
     }
   }
@@ -229,6 +239,147 @@ function validateStageDialogueActions(def: QuestDef): void {
   }
 }
 
+/**
+ * Validates multi-objective slots, result ids and forward-only transitions
+ * (plan quests-progression-032).
+ *
+ * @domain quests-progression
+ */
+function validateNonlinearStageFlow(def: QuestDef): void {
+  const stageIds = new Map<string, number>()
+  for (const [stageIndex, stage] of def.stages.entries()) {
+    if (stage.id === undefined) continue
+    if (stage.id.trim().length === 0) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" stage ${stageIndex} id is empty`)
+    }
+    if (stageIds.has(stage.id)) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" has duplicate stage id "${stage.id}"`)
+    }
+    stageIds.set(stage.id, stageIndex)
+  }
+
+  for (const [stageIndex, stage] of def.stages.entries()) {
+    if (stage.objectives) {
+      if (stage.objectives.length < 2) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} objectives must have at least 2 slots`,
+        )
+      }
+      if (stage.mode !== 'all' && stage.mode !== 'any') {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} with multiple objectives requires mode 'all' or 'any'`,
+        )
+      }
+    }
+
+    const slots = questStageObjectiveSlots(stage)
+    const slotIds = new Set<string>()
+    const slotResultIds = new Set<string>()
+    for (const slot of slots) {
+      if (!slot.id || slot.id.trim().length === 0) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} has an empty objective slot id`,
+        )
+      }
+      if (slotIds.has(slot.id)) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} has duplicate objective slot id "${slot.id}"`,
+        )
+      }
+      slotIds.add(slot.id)
+      if (slot.resultId !== undefined) {
+        if (slot.resultId.trim().length === 0) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} slot "${slot.id}" resultId is empty`,
+          )
+        }
+        if (slotResultIds.has(slot.resultId)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} has duplicate slot resultId "${slot.resultId}"`,
+          )
+        }
+        slotResultIds.add(slot.resultId)
+      }
+      if (
+        slots.length > 1
+        && (slot.objective.type === 'talk_to_npc_choice' || slot.objective.type === 'await_quest_outcome')
+      ) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} ${slot.objective.type} is legacy/single-objective only`,
+        )
+      }
+    }
+
+    const transitions = stage.transitions
+    if (!transitions) continue
+    if (transitions.length === 0) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" stage ${stageIndex} transitions is empty`,
+      )
+    }
+
+    const transitionResultIds = new Set<string>()
+    let hasDefault = false
+    for (const transition of transitions) {
+      const hasStage = transition.toStageId !== undefined
+      const hasOutcome = transition.toOutcomeId !== undefined
+      if (hasStage === hasOutcome) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} transition must target exactly one of toStageId or toOutcomeId`,
+        )
+      }
+      if (transition.resultId !== undefined) {
+        if (transition.resultId.trim().length === 0) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} transition resultId is empty`,
+          )
+        }
+        if (transitionResultIds.has(transition.resultId)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} has duplicate transition resultId "${transition.resultId}"`,
+          )
+        }
+        transitionResultIds.add(transition.resultId)
+        const allowed = questStageMode(stage) === 'all'
+          ? stage.resultId === transition.resultId
+          : slotResultIds.has(transition.resultId)
+        if (!allowed) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} transition references unknown resultId "${transition.resultId}"`,
+          )
+        }
+      } else if (hasDefault) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} has more than one default transition`,
+        )
+      } else {
+        hasDefault = true
+      }
+      if (transition.toStageId !== undefined) {
+        const targetIndex = stageIds.get(transition.toStageId)
+        if (targetIndex === undefined) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} transition references unknown stage "${transition.toStageId}"`,
+          )
+        }
+        if (targetIndex <= stageIndex) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} transition to "${transition.toStageId}" is not forward-only`,
+          )
+        }
+      }
+      if (
+        transition.toOutcomeId !== undefined
+        && !def.outcomes.some((outcome) => outcome.id === transition.toOutcomeId)
+      ) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage ${stageIndex} transition references unknown outcome "${transition.toOutcomeId}"`,
+        )
+      }
+    }
+  }
+}
+
 export type QuestOutcomeId = string
 
 /** Direct player compensation — items/coins. Relation/reputation/renown
@@ -257,6 +408,14 @@ export type QuestOutcome = {
   consequences?: QuestConsequences
 }
 
+/** Stage-local progress for one objective slot (plan quests-progression-032).
+ *
+ *  @domain quests-progression */
+export type QuestStageSlotProgress = {
+  completed?: boolean
+  count?: number
+}
+
 /** Persisted/runtime quest progress. `resolvedOutcomeId` is set only for
  *  `complete`/`failed`; `invalidated` and in-progress states omit it. */
 export type QuestProgressEntry = {
@@ -264,8 +423,13 @@ export type QuestProgressEntry = {
   state: QuestState
   stageIndex: number
   resolvedOutcomeId?: QuestOutcomeId
-  /** Stage-local counted objective progress (plan quests-progression-020). */
+  /** Stage-local counted objective progress (plan quests-progression-020).
+   *  Legacy single-objective stages only; multi-objective stages use
+   *  `stageSlotProgress`. */
   stageCount?: number
+  /** Per-slot progress for the current multi-objective stage, keyed by
+   *  stable slot id (plan quests-progression-032). Absent = empty. */
+  stageSlotProgress?: Record<string, QuestStageSlotProgress>
 }
 
 export const QUEST_STATES: ReadonlySet<QuestState> = new Set([
@@ -453,8 +617,56 @@ export type QuestLocationReveal = (
   options?: { setNavigation?: boolean },
 ) => void
 
-export type QuestStage = {
+/** Legacy single-`objective` stages normalize to this slot id. */
+export const LEGACY_QUEST_OBJECTIVE_SLOT_ID = 'primary'
+
+export type QuestObjectiveSlotId = string
+
+export type QuestStageMode = 'all' | 'any'
+
+/**
+ * One objective in a stage. Multi-objective stages declare these explicitly;
+ * a legacy `QuestStage.objective` normalizes to `{ id: 'primary', objective }`.
+ *
+ * @domain quests-progression
+ */
+export type QuestStageObjectiveSlot = {
+  id: QuestObjectiveSlotId
   objective: QuestObjective
+  /** Used by `any` transitions when this slot is the one that completes the stage. */
+  resultId?: string
+}
+
+/**
+ * Declarative jump after a stage completes. Exactly one of `toStageId` or
+ * `toOutcomeId`. Absent `resultId` is the default path. Targets are
+ * forward-only stage ids or authored outcomes — not a graph engine.
+ *
+ * @domain quests-progression
+ */
+export type QuestStageTransition = {
+  resultId?: string
+  toStageId?: string
+  toOutcomeId?: QuestOutcomeId
+}
+
+export type QuestStage = {
+  /** Stable id for transition targets. Required only when referenced. */
+  id?: string
+  objective: QuestObjective
+  /**
+   * Full objective list. When present it is the authority and must have at
+   * least two slots; otherwise `objective` is the sole legacy slot.
+   *
+   * @domain quests-progression
+   */
+  objectives?: readonly QuestStageObjectiveSlot[]
+  /** Required when `objectives` has two or more entries. */
+  mode?: QuestStageMode
+  /** Stage-level result used when an `all` stage completes. */
+  resultId?: string
+  /** Forward jumps after this stage completes. Absent = linear next stage. */
+  transitions?: readonly QuestStageTransition[]
   /** Shown in the quest log for this stage. */
   description: string
   /** Giver's line while this stage is the active one (not yet cleared). */
@@ -478,6 +690,70 @@ export type QuestStage = {
   /** Executed once when this stage's primary `talk_to_npc` action advances
    *  (plan quests-progression-023). */
   effects?: readonly QuestStageEffect[]
+}
+
+/**
+ * Normalized objective slots for a stage. Legacy `objective` becomes one
+ * slot named `primary`. Accepts authored or runtime stages.
+ *
+ * @domain quests-progression
+ */
+export function questStageObjectiveSlots<O>(stage: {
+  objective: O
+  objectives?: readonly { id: string, objective: O, resultId?: string }[]
+  resultId?: string
+}): readonly { id: string, objective: O, resultId?: string }[] {
+  if (stage.objectives && stage.objectives.length > 0) return stage.objectives
+  return [{
+    id: LEGACY_QUEST_OBJECTIVE_SLOT_ID,
+    objective: stage.objective,
+    ...(stage.resultId ? { resultId: stage.resultId } : {}),
+  }]
+}
+
+/** `all` for legacy/single-objective stages; otherwise the authored mode. */
+export function questStageMode(stage: QuestStage): QuestStageMode {
+  return questStageObjectiveSlots(stage).length <= 1 ? 'all' : (stage.mode ?? 'all')
+}
+
+export function isLegacySingleObjectiveStage(stage: QuestStage): boolean {
+  return !stage.objectives || stage.objectives.length === 0
+}
+
+/**
+ * Event-based slots persist completion/count. World-state slots are
+ * reconstructed from authoritative domain lookups after restore.
+ *
+ * @domain quests-progression
+ */
+export function objectiveNeedsPersistedSlotProgress(objective: QuestObjective): boolean {
+  switch (objective.type) {
+    case 'acquire_portable_container':
+    case 'destroy_spawn_point':
+    case 'discover_location':
+    case 'light_settlement_fires':
+    case 'loot_world_container':
+    case 'read_item':
+    case 'recover_hidden_find':
+    case 'recover_lost_livestock':
+    case 'resolve_storage_rat_infestation':
+      return false
+    default:
+      return true
+  }
+}
+
+export function matchStageTransition(
+  stage: QuestStage | undefined,
+  resultId: string | undefined,
+): QuestStageTransition | undefined {
+  const transitions = stage?.transitions
+  if (!transitions?.length) return undefined
+  if (resultId) {
+    const named = transitions.find((transition) => transition.resultId === resultId)
+    if (named) return named
+  }
+  return transitions.find((transition) => transition.resultId === undefined)
 }
 
 export type QuestDef = {
@@ -562,8 +838,15 @@ export type AuthoredQuestStageDialogueAction = {
   effects?: readonly QuestStageEffect[]
 }
 
-export type AuthoredQuestStage = Omit<QuestStage, 'objective' | 'dialogueActions'> & {
+export type AuthoredQuestStageObjectiveSlot = {
+  id: QuestObjectiveSlotId
   objective: AuthoredQuestObjective
+  resultId?: string
+}
+
+export type AuthoredQuestStage = Omit<QuestStage, 'objective' | 'objectives' | 'dialogueActions'> & {
+  objective: AuthoredQuestObjective
+  objectives?: readonly AuthoredQuestStageObjectiveSlot[]
   dialogueActions?: readonly AuthoredQuestStageDialogueAction[]
 }
 
@@ -1515,6 +1798,13 @@ export function treasureMapSourcePlacePhrase(
   return where
 }
 
+function bindCaveObjective<T extends { type: string, spawnerId?: string }>(objective: T, caveId: string | undefined): T {
+  if (objective.type === 'interact_spawner' && caveId) {
+    return { ...objective, spawnerId: caveId }
+  }
+  return objective
+}
+
 /** Binds exact home-cave identity and cheap direction prose onto the
  *  authored cave quests. Direction is already-resolved presentation data
  *  — never persisted. */
@@ -1533,9 +1823,11 @@ export function bindExactCaveQuests(
       stages: def.stages.map((stage) => ({
         ...stage,
         reminderLine: applyCavePlaceToken(stage.reminderLine, cavePlace),
-        objective: stage.objective.type === 'interact_spawner' && caveId
-          ? { ...stage.objective, spawnerId: caveId }
-          : stage.objective,
+        objective: bindCaveObjective(stage.objective, caveId),
+        objectives: stage.objectives?.map((slot) => ({
+          ...slot,
+          objective: bindCaveObjective(slot.objective, caveId),
+        })),
       })),
     }
   })

@@ -2972,3 +2972,212 @@ describe('counted harvest and habitat feed objectives (plan quests-progression-0
     expect(qm.getState('feed-q')).toBe('ready_to_report')
   })
 })
+
+describe('nonlinear stage objectives and transitions (plan quests-progression-032)', () => {
+  const anyQuest = quest({
+    id: 'any-q',
+    giverName: 'Anna',
+    offerLine: 'offer any',
+    stages: [
+      {
+        objective: { type: 'interact_well' },
+        objectives: [
+          { id: 'well', objective: { type: 'interact_well' }, resultId: 'well' },
+          { id: 'tree', objective: { type: 'interact_tree' }, resultId: 'tree' },
+        ],
+        mode: 'any',
+        transitions: [
+          { resultId: 'well', toStageId: 'after-well' },
+          { resultId: 'tree', toOutcomeId: 'failed' },
+        ],
+        description: 'choose',
+        reminderLine: 'remind',
+        progressLine: 'chosen',
+      },
+      {
+        id: 'after-well',
+        objective: { type: 'interact_landmark', landmarkId: 'lm-1' },
+        description: 'landmark',
+        reminderLine: 'go',
+      },
+    ],
+    reportLine: 'report any',
+    outcomes: [
+      { id: 'complete', state: 'complete' },
+      { id: 'failed', state: 'failed', resultText: 'failed path' },
+    ],
+  })
+
+  const allQuest = quest({
+    id: 'all-q',
+    giverName: 'Anna',
+    offerLine: 'offer all',
+    stages: [{
+      objective: { type: 'interact_well' },
+      objectives: [
+        { id: 'well', objective: { type: 'interact_well' } },
+        { id: 'tree', objective: { type: 'interact_tree' } },
+      ],
+      mode: 'all',
+      description: 'both',
+      reminderLine: 'remind',
+      progressLine: 'progress',
+    }],
+    reportLine: 'report all',
+  })
+
+  it('keeps legacy single-objective lifecycle including counted stageCount', () => {
+    const qm = makeManager([simpleQuest])
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(qm.getState('simple')).toBe('ready_to_report')
+    speak(qm, 'Anna')
+    expect(qm.getState('simple')).toBe('complete')
+  })
+
+  it('any: either slot completes the stage and a later fact for the other is a no-op', () => {
+    const qm = makeManager([anyQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteractObjective({ type: 'interact_well' })?.line).toBe('chosen')
+    expect(qm.getState('any-q')).toBe('active')
+    expect(qm.exportProgress().find((e) => e.id === 'any-q')?.stageIndex).toBe(1)
+    expect(qm.onInteractObjective({ type: 'interact_tree' })).toBeNull()
+    expect(qm.exportProgress().find((e) => e.id === 'any-q')?.stageIndex).toBe(1)
+  })
+
+  it('any: a different result can terminate through an existing outcome exactly once', () => {
+    const granted: string[] = []
+    const qm = makeManager(
+      [quest({
+        ...anyQuest,
+        outcomes: [
+          { id: 'complete', state: 'complete' },
+          {
+            id: 'failed',
+            state: 'failed',
+            resultText: 'failed path',
+            reward: { visibility: 'shown', items: [{ kind: 'coin', count: 1 }] },
+          },
+        ],
+      })],
+      undefined,
+      (kind, count) => { granted.push(`${kind}:${count}`) },
+    )
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_tree' })
+    expect(qm.getState('any-q')).toBe('failed')
+    expect(qm.exportProgress().find((e) => e.id === 'any-q')?.resolvedOutcomeId).toBe('failed')
+    expect(granted).toEqual(['coin:1'])
+    qm.onInteractObjective({ type: 'interact_tree' })
+    expect(granted).toEqual(['coin:1'])
+  })
+
+  it('all: either order works and the first completion survives save/load', () => {
+    const qm = makeManager([allQuest])
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_tree' })
+    expect(qm.getState('all-q')).toBe('active')
+    const saved = qm.exportProgress()
+    expect(saved.find((e) => e.id === 'all-q')?.stageSlotProgress).toEqual({
+      tree: { completed: true },
+    })
+    const restored = makeManager([allQuest], undefined, undefined, { progress: saved, relations: {} })
+    expect(restored.getState('all-q')).toBe('active')
+    restored.onInteractObjective({ type: 'interact_tree' })
+    expect(restored.getState('all-q')).toBe('active')
+    restored.onInteractObjective({ type: 'interact_well' })
+    expect(restored.getState('all-q')).toBe('ready_to_report')
+  })
+
+  it('keeps independent counts for two counted slots', () => {
+    const counted = quest({
+      id: 'count-q',
+      giverName: 'Jan',
+      giver: { npcId: 'Jan' },
+      offerLine: 'hunt',
+      stages: [{
+        objective: { type: 'harvest_animals', kind: 'deer', count: 2 },
+        objectives: [
+          { id: 'deer', objective: { type: 'harvest_animals', kind: 'deer', count: 2 } },
+          { id: 'wolf', objective: { type: 'harvest_animals', kind: 'wolf', count: 2 } },
+        ],
+        mode: 'all',
+        description: 'hunt both',
+        reminderLine: 'r',
+      }],
+      reportLine: 'done',
+    })
+    const qm = makeManager([counted])
+    acceptOffer(qm, 'Jan')
+    qm.onAnimalHarvested({ animalId: 'd1', animalKind: 'deer', lootKinds: [] })
+    qm.onAnimalHarvested({ animalId: 'w1', animalKind: 'wolf', lootKinds: [] })
+    const progress = qm.exportProgress().find((e) => e.id === 'count-q')?.stageSlotProgress
+    expect(progress).toEqual({
+      deer: { count: 1 },
+      wolf: { count: 1 },
+    })
+    qm.onAnimalHarvested({ animalId: 'd2', animalKind: 'deer', lootKinds: [] })
+    expect(qm.getState('count-q')).toBe('active')
+    qm.onAnimalHarvested({ animalId: 'w2', animalKind: 'wolf', lootKinds: [] })
+    expect(qm.getState('count-q')).toBe('ready_to_report')
+  })
+
+  it('does not overwrite animal targets across two bound slots', () => {
+    const animals = quest({
+      id: 'animals-q',
+      giverName: 'Anna',
+      offerLine: 'hunt',
+      stages: [{
+        objective: { type: 'kill_target_animal', kind: 'wolf' },
+        objectives: [
+          { id: 'wolf', objective: { type: 'kill_target_animal', kind: 'wolf' } },
+          { id: 'bear', objective: { type: 'kill_target_animal', kind: 'bear' } },
+        ],
+        mode: 'all',
+        description: 'kill both',
+        reminderLine: 'r',
+        progressLine: 'down',
+      }],
+      reportLine: 'done',
+    })
+    const qm = makeManager([animals], (kind) => kind === 'wolf' ? 'wolf-1' : 'bear-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.hasSocialOutcomeClaim('wolf-1')).toBe(false)
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    expect(qm.getState('animals-q')).toBe('active')
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })).toBeNull()
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'bear-1' })
+    expect(qm.getState('animals-q')).toBe('ready_to_report')
+  })
+
+  it('still fans out a world fact across matching quests', () => {
+    const second = quest({
+      id: 'all-q-2',
+      giverName: 'Piotr',
+      offerLine: 'offer all 2',
+      stages: [{
+        objective: { type: 'interact_well' },
+        objectives: [
+          { id: 'well', objective: { type: 'interact_well' } },
+          { id: 'tree', objective: { type: 'interact_tree' } },
+        ],
+        mode: 'all',
+        description: 'both',
+        reminderLine: 'remind',
+      }],
+      reportLine: 'report all 2',
+    })
+    const qm = makeManager([allQuest, second])
+    acceptOffer(qm, 'Anna')
+    acceptOffer(qm, 'Piotr')
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(qm.getState('all-q')).toBe('active')
+    expect(qm.getState('all-q-2')).toBe('active')
+    expect(qm.exportProgress().find((e) => e.id === 'all-q')?.stageSlotProgress).toEqual({
+      well: { completed: true },
+    })
+    expect(qm.exportProgress().find((e) => e.id === 'all-q-2')?.stageSlotProgress).toEqual({
+      well: { completed: true },
+    })
+  })
+})

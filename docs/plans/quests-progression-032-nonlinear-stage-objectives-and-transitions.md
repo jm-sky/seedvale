@@ -1,7 +1,7 @@
 # Plan: Nonlinear stage objectives and transitions
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Model:** Sonnet, Composer
@@ -10,6 +10,10 @@
 **Subdomains:** `quests`
 **Tags:** `branching` `objectives` `transitions`
 **Roadmap:** `quests-and-reputation.md`
+
+## Implementation status
+
+Implemented 2026-09-13. Automated tests cover legacy single-objective lifecycle (including `stageCount` save/restore), `any`/`all` completion, result-based forward stage/outcome transitions, per-slot save/load, independent counted/animal slots, validation and authored NPC slot materialization. Browser/gameplay verification remains user-owned.
 
 ## Goal
 

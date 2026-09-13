@@ -2272,6 +2272,18 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
   if (typeof e.stageIndex !== 'number' || !Number.isInteger(e.stageIndex) || e.stageIndex < 0) return false
   if (e.resolvedOutcomeId !== undefined && typeof e.resolvedOutcomeId !== 'string') return false
   if (e.stageCount !== undefined && (typeof e.stageCount !== 'number' || !Number.isInteger(e.stageCount) || e.stageCount < 0)) return false
+  if (e.stageSlotProgress !== undefined) {
+    if (!e.stageSlotProgress || typeof e.stageSlotProgress !== 'object' || Array.isArray(e.stageSlotProgress)) return false
+    for (const [slotId, progress] of Object.entries(e.stageSlotProgress as Record<string, unknown>)) {
+      if (slotId.length === 0) return false
+      if (!progress || typeof progress !== 'object' || Array.isArray(progress)) return false
+      const slot = progress as Record<string, unknown>
+      if (slot.completed !== undefined && typeof slot.completed !== 'boolean') return false
+      if (slot.count !== undefined && (typeof slot.count !== 'number' || !Number.isInteger(slot.count) || slot.count < 0)) {
+        return false
+      }
+    }
+  }
   return true
 }
 

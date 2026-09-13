@@ -472,3 +472,126 @@ describe('quest stage dialogue actions (plan quests-progression-018)', () => {
     expect(() => validateQuestDefinitions([bad])).toThrow(/dialogueActions is empty/)
   })
 })
+
+describe('validateQuestDefinitions nonlinear stages (plan quests-progression-032)', () => {
+  const base = runtimeQuest({
+    ...runtimeAuthored(QUESTS.find((q) => q.id === 'relay-anna-piotr')!),
+    id: 'nonlinear',
+    outcomes: [
+      { id: 'complete', state: 'complete' },
+      { id: 'failed', state: 'failed' },
+    ],
+  })
+
+  function nonlinear(partial: Partial<typeof base> & { stages: typeof base.stages }): QuestDef {
+    return runtimeQuest({ ...base, ...partial })
+  }
+
+  it('accepts a valid any-stage with forward transitions', () => {
+    expect(() => validateQuestDefinitions([nonlinear({
+      stages: [
+        {
+          objective: { type: 'interact_well' },
+          objectives: [
+            { id: 'well', objective: { type: 'interact_well' }, resultId: 'well' },
+            { id: 'tree', objective: { type: 'interact_tree' }, resultId: 'tree' },
+          ],
+          mode: 'any',
+          transitions: [
+            { resultId: 'well', toStageId: 'after-well' },
+            { resultId: 'tree', toOutcomeId: 'failed' },
+          ],
+          description: 'choose',
+          reminderLine: 'r',
+        },
+        {
+          id: 'after-well',
+          objective: { type: 'interact_tree' },
+          description: 'next',
+          reminderLine: 'r',
+        },
+      ],
+    })])).not.toThrow()
+  })
+
+  it('rejects duplicate objective slot ids', () => {
+    expect(() => validateQuestDefinitions([nonlinear({
+      stages: [{
+        objective: { type: 'interact_well' },
+        objectives: [
+          { id: 'well', objective: { type: 'interact_well' } },
+          { id: 'well', objective: { type: 'interact_tree' } },
+        ],
+        mode: 'all',
+        description: 'd',
+        reminderLine: 'r',
+      }],
+    })])).toThrow(/duplicate objective slot id/)
+  })
+
+  it('rejects a multi-objective stage without mode', () => {
+    expect(() => validateQuestDefinitions([nonlinear({
+      stages: [{
+        objective: { type: 'interact_well' },
+        objectives: [
+          { id: 'well', objective: { type: 'interact_well' } },
+          { id: 'tree', objective: { type: 'interact_tree' } },
+        ],
+        description: 'd',
+        reminderLine: 'r',
+      }],
+    })])).toThrow(/requires mode/)
+  })
+
+  it('rejects an unknown transition stage target', () => {
+    expect(() => validateQuestDefinitions([nonlinear({
+      stages: [{
+        objective: { type: 'interact_well' },
+        transitions: [{ toStageId: 'missing' }],
+        description: 'd',
+        reminderLine: 'r',
+      }],
+    })])).toThrow(/unknown stage/)
+  })
+
+  it('rejects an unknown transition outcome', () => {
+    expect(() => validateQuestDefinitions([nonlinear({
+      stages: [{
+        objective: { type: 'interact_well' },
+        transitions: [{ toOutcomeId: 'nope' }],
+        description: 'd',
+        reminderLine: 'r',
+      }],
+    })])).toThrow(/unknown outcome/)
+  })
+
+  it('rejects backward and self stage transitions', () => {
+    expect(() => validateQuestDefinitions([nonlinear({
+      stages: [
+        {
+          id: 'first',
+          objective: { type: 'interact_well' },
+          description: 'd',
+          reminderLine: 'r',
+        },
+        {
+          id: 'second',
+          objective: { type: 'interact_tree' },
+          transitions: [{ toStageId: 'first' }],
+          description: 'd',
+          reminderLine: 'r',
+        },
+      ],
+    })])).toThrow(/not forward-only/)
+
+    expect(() => validateQuestDefinitions([nonlinear({
+      stages: [{
+        id: 'only',
+        objective: { type: 'interact_well' },
+        transitions: [{ toStageId: 'only' }],
+        description: 'd',
+        reminderLine: 'r',
+      }],
+    })])).toThrow(/not forward-only/)
+  })
+})

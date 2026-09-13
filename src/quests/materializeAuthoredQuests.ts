@@ -4,10 +4,12 @@ import type {
   AuthoredQuestDef,
   AuthoredQuestObjective,
   AuthoredQuestStageDialogueAction,
+  AuthoredQuestStageObjectiveSlot,
   QuestDef,
   QuestNpcRef,
   QuestObjective,
   QuestStageDialogueAction,
+  QuestStageObjectiveSlot,
 } from './quests'
 
 export class AuthoredNpcResolutionError extends Error {}
@@ -58,6 +60,17 @@ function materializeObjective(
   return objective
 }
 
+function materializeObjectiveSlot(
+  slot: AuthoredQuestStageObjectiveSlot,
+  resolve: (name: string) => NpcId,
+): QuestStageObjectiveSlot {
+  return {
+    id: slot.id,
+    objective: materializeObjective(slot.objective, resolve),
+    ...(slot.resultId !== undefined ? { resultId: slot.resultId } : {}),
+  }
+}
+
 function materializeDialogueActions(
   actions: readonly AuthoredQuestStageDialogueAction[] | undefined,
   resolve: (name: string) => NpcId,
@@ -102,6 +115,7 @@ export function materializeAuthoredQuestDefs(
       stages: def.stages.map((stage) => ({
         ...stage,
         objective: materializeObjective(stage.objective, resolve),
+        objectives: stage.objectives?.map((slot) => materializeObjectiveSlot(slot, resolve)),
         dialogueActions: materializeDialogueActions(stage.dialogueActions, resolve),
         effects: stage.effects,
       })),

@@ -3,7 +3,7 @@
 **Last verified:** 2026-09-13  
 **Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic quest definitions, objectives, dialogue actions, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
 
-Architecture recon (gaps, overlapping content, recommended stages, what not to build): [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Follow-up plans: `quests-progression-029` … `031`.
+Architecture recon (gaps, overlapping content, recommended stages, what not to build): [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Follow-up plans: `quests-progression-029` … `031`. Nonlinear stage objectives/transitions: plan `quests-progression-032`.
 
 This is a **current-state document**, not a roadmap or implementation history. When this file and code disagree, **the code wins**. Planned quest work remains in `docs/plans/`; design direction remains in `docs/vision/quests.md`.
 
@@ -125,7 +125,7 @@ Objective completion and quest resolution are distinct. Clearing the last object
 
 ## Stages and objective vocabulary
 
-Each `QuestDef` contains ordered `QuestStage`s. Each stage has one objective plus player-facing description/reminder/progress/failure/dialogue text.
+Each `QuestDef` contains ordered `QuestStage`s. A stage may keep a single `objective` (legacy sugar, slot id `primary`) or declare `objectives` with `mode: 'all' | 'any'`. Optional `id` identifies a stage as a forward transition target. Optional `transitions` map a result id to another stage id or an authored `QuestOutcome`; missing transitions keep linear `stageIndex + 1` / `ready_to_report`. `talk_to_npc_choice` and `await_quest_outcome` remain single-objective only. Existing one-objective quests are unchanged (plan quests-progression-032).
 
 Implemented `QuestObjective` types:
 
@@ -169,7 +169,7 @@ Implemented `QuestObjective` types:
 
 Prefer extending/reusing these objective contracts before adding a parallel quest-specific mechanic.
 
-Event ingress: counted/read/poll helpers and `onInteractObjective` (`interact_*`, `spot_animal`, `animal_died`, `animal_found`, `wolf_den_cleared`) each visit **every** matching active quest; `onInteractObjective` returns one presentation line (first non-empty in `defs` order) while all matches advance (plan `quests-progression-028`).
+Event ingress: counted/read/poll helpers and `onInteractObjective` (`interact_*`, `spot_animal`, `animal_died`, `animal_found`, `wolf_den_cleared`) each visit **every** matching active quest, then **every unfinished objective slot** of the current stage; `onInteractObjective` returns one presentation line (first non-empty in `defs` order) while all matches advance (plans `quests-progression-028`, `quests-progression-032`).
 
 ## Animal/world bindings
 
@@ -260,7 +260,9 @@ Persisted quest progress is represented by `QuestProgressEntry`:
 - quest id,
 - lifecycle state,
 - stage index,
-- optional `resolvedOutcomeId`.
+- optional `resolvedOutcomeId`,
+- optional `stageCount` for a legacy single counted objective,
+- optional `stageSlotProgress` (plan quests-progression-032) — per-slot completion/count for the current multi-objective stage, keyed by stable slot id. Absent on old saves means empty current-stage progress. Event-based slots persist a completion bit; world-state slots are reconstructed from authoritative lookups after restore.
 
 Quest-owned player↔NPC relation values are also restored into `QuestManager`; legacy name-keyed relation entries are normalized to stable NPC ids where unambiguous.
 

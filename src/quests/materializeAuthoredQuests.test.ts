@@ -129,6 +129,28 @@ describe('materializeAuthoredQuestDefs', () => {
       consequences: { relations: [{ npc: { npcId: 'home:npc:0' }, delta: -1 }] },
     }])
   })
+
+  it('materializes NPC-bearing objectives inside every multi-objective slot', () => {
+    const branched: AuthoredQuestDef = {
+      ...relay,
+      id: 'branch-talk',
+      stages: [{
+        objective: { type: 'talk_to_npc', npcName: 'Piotr' },
+        objectives: [
+          { id: 'piotr', objective: { type: 'talk_to_npc', npcName: 'Piotr' }, resultId: 'piotr' },
+          { id: 'marek', objective: { type: 'talk_to_npc', npcName: 'Marek' }, resultId: 'marek' },
+        ],
+        mode: 'any',
+        description: 'talk',
+        reminderLine: 'remind',
+      }],
+    }
+    const [def] = materializeAuthoredQuestDefs([branched], descriptors)
+    expect(def?.stages[0]?.objectives).toEqual([
+      { id: 'piotr', objective: { type: 'talk_to_npc', npc: { npcId: 'home:npc:0' } }, resultId: 'piotr' },
+      { id: 'marek', objective: { type: 'talk_to_npc', npc: { npcId: 'home:npc:2' } }, resultId: 'marek' },
+    ])
+  })
 })
 
 describe('normalizeLegacyQuestRelations', () => {

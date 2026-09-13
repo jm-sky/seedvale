@@ -21,6 +21,10 @@ import {
 } from './opportunities/settlementQuestOpportunities'
 import {
   hasSocialConsequence,
+  isLegacySingleObjectiveStage,
+  LEGACY_QUEST_OBJECTIVE_SLOT_ID,
+  matchStageTransition,
+  objectiveNeedsPersistedSlotProgress,
   type QuestConsequences,
   type QuestDef,
   type QuestObjective,
@@ -30,6 +34,10 @@ import {
   type QuestProgressEntry,
   type QuestReward,
   type QuestStage,
+  questStageMode,
+  type QuestStageObjectiveSlot,
+  questStageObjectiveSlots,
+  type QuestStageSlotProgress,
   type QuestState,
   RELATION_LEVEL_THRESHOLDS,
   type RelationLevel,
@@ -144,6 +152,8 @@ type QuestRuntimeProgress = {
   resolvedOutcomeId?: QuestOutcomeId
   /** Stage-local counted objective progress (plan quests-progression-020). */
   stageCount?: number
+  /** Per-slot progress for the current multi-objective stage (plan quests-progression-032). */
+  stageSlotProgress?: Record<string, QuestStageSlotProgress>
 }
 
 /** Player-only harvest report (plan quests-progression-020). */
@@ -163,6 +173,10 @@ export type HabitatAnimalFeedContext = {
 
 function isCountedObjective(objective: QuestObjective | undefined): boolean {
   return objective?.type === 'harvest_animals' || objective?.type === 'feed_habitat_animals'
+}
+
+function animalTargetKey(questId: string, stageIndex: number, slotId: string): string {
+  return `${questId}\n${stageIndex}\n${slotId}`
 }
 
 export type QuestItemGrant = (kind: ItemKind, count: number) => void
@@ -361,10 +375,16 @@ function matchingStageDialogueActions(
   return stage?.dialogueActions?.filter((action) => action.npc.npcId === npcId) ?? []
 }
 
-function isRequiredDialogueTarget(stage: QuestStage | undefined, npcId: NpcId): boolean {
+function isRequiredDialogueTarget(
+  stage: QuestStage | undefined,
+  npcId: NpcId,
+  unfinishedSlots: readonly QuestStageObjectiveSlot[],
+): boolean {
   if (!stage) return false
-  if (matchingTalkChoice(stage.objective, npcId)) return true
-  if (stage.objective.type === 'talk_to_npc' && stage.objective.npc.npcId === npcId) return true
+  for (const slot of unfinishedSlots) {
+    if (matchingTalkChoice(slot.objective, npcId)) return true
+    if (slot.objective.type === 'talk_to_npc' && slot.objective.npc.npcId === npcId) return true
+  }
   return matchingStageDialogueActions(stage, npcId).length > 0
 }
 
@@ -382,8 +402,9 @@ export class QuestManager {
   private readonly inventory: Inventory
   private readonly states = new Map<string, QuestRuntimeProgress>()
   private readonly relations = new Map<string, number>()
-  /** `questId → animalId` bound the moment a `kill_target_animal` stage
-   *  becomes active — see `bindAnimalTargetIfNeeded`. */
+  /** `questId` + stage index + slot id → `animalId`, bound when a
+   *  `kill_target_animal` / `find_animal` slot becomes active — see
+   *  `bindAnimalTargetIfNeeded`. */
   private readonly animalTargets = new Map<string, string>()
   /** Runtime-only feed dedupe per active counted feed stage (plan
    *  quests-progression-020) — not persisted across save/load. */
@@ -466,9 +487,16 @@ export class QuestManager {
         // different individual — only livestock's deterministic spawn makes
         // rebinding trustworthy (plan 110).
         const stage = restored.state === 'active' ? def?.stages[restored.stageIndex] : undefined
-        const objective = stage?.objective
-        if (def && (objective?.type === 'kill_target_animal' || objective?.type === 'find_animal')) {
-          if (!LIVESTOCK_KINDS.has(objective.kind)) {
+        const slots = stage ? questStageObjectiveSlots(stage) : []
+        const animalSlots = slots.filter((slot) => (
+          slot.objective.type === 'kill_target_animal' || slot.objective.type === 'find_animal'
+        ))
+        if (def && animalSlots.length > 0) {
+          const wild = animalSlots.some((slot) => (
+            (slot.objective.type === 'kill_target_animal' || slot.objective.type === 'find_animal')
+            && !LIVESTOCK_KINDS.has(slot.objective.kind)
+          ))
+          if (wild) {
             this.states.set(entry.id, { state: 'invalidated', stageIndex: restored.stageIndex })
             continue
           }
@@ -520,6 +548,103 @@ export class QuestManager {
     return def.stages[stageIndex]
   }
 
+  private unfinishedSlots(def: QuestDef, s: QuestRuntimeProgress): QuestStageObjectiveSlot[] {
+    const stage = this.currentStage(def, s.stageIndex)
+    if (!stage || s.state !== 'active') return []
+    return questStageObjectiveSlots(stage).filter((slot) => !this.isSlotComplete(s, stage, slot))
+  }
+
+  private isSlotComplete(
+    s: QuestRuntimeProgress,
+    stage: QuestStage,
+    slot: QuestStageObjectiveSlot,
+  ): boolean {
+    const progress = s.stageSlotProgress?.[slot.id]
+    if (progress?.completed) return true
+    if (isCountedObjective(slot.objective) && 'count' in slot.objective) {
+      return this.slotCount(s, stage, slot) >= slot.objective.count
+    }
+    return false
+  }
+
+  private slotCount(
+    s: QuestRuntimeProgress,
+    stage: QuestStage,
+    slot: QuestStageObjectiveSlot,
+  ): number {
+    const fromMap = s.stageSlotProgress?.[slot.id]?.count
+    if (fromMap !== undefined) return fromMap
+    if (isLegacySingleObjectiveStage(stage) && slot.id === LEGACY_QUEST_OBJECTIVE_SLOT_ID) {
+      return s.stageCount ?? 0
+    }
+    return 0
+  }
+
+  private writeSlotProgress(
+    def: QuestDef,
+    s: QuestRuntimeProgress,
+    slotId: string,
+    patch: QuestStageSlotProgress,
+  ): QuestRuntimeProgress {
+    const next: QuestRuntimeProgress = {
+      ...s,
+      stageSlotProgress: {
+        ...s.stageSlotProgress,
+        [slotId]: { ...s.stageSlotProgress?.[slotId], ...patch },
+      },
+    }
+    this.setQuestState(def.id, next)
+    return this.stateOf(def.id)
+  }
+
+  /**
+   * Records that one unfinished slot is satisfied, then completes the stage
+   * when `any`/`all` rules say so. Ingress/polls report facts here instead of
+   * branching themselves (plan quests-progression-032).
+   *
+   * @domain quests-progression
+   */
+  private completeObjectiveSlot(
+    def: QuestDef,
+    s: QuestRuntimeProgress,
+    slot: QuestStageObjectiveSlot,
+  ): void {
+    if (s.state !== 'active') return
+    const stage = this.currentStage(def, s.stageIndex)
+    if (!stage) return
+    if (s.stageSlotProgress?.[slot.id]?.completed) return
+
+    const mode = questStageMode(stage)
+    if (mode === 'any' || questStageObjectiveSlots(stage).length <= 1) {
+      this.advanceStage(def, s, slot.resultId)
+      return
+    }
+
+    const updated = this.writeSlotProgress(def, s, slot.id, {
+      completed: true,
+      ...(isCountedObjective(slot.objective) && 'count' in slot.objective
+        ? { count: slot.objective.count }
+        : {}),
+    })
+    const remaining = this.unfinishedSlots(def, updated)
+    if (remaining.length === 0) this.advanceStage(def, updated, stage.resultId)
+  }
+
+  private clearFeedDedupe(questId: string, stageIndex: number): void {
+    const prefix = `${questId}:${stageIndex}`
+    this.feedContributionIds.delete(prefix)
+    for (const key of [...this.feedContributionIds.keys()]) {
+      if (key.startsWith(`${prefix}:`)) this.feedContributionIds.delete(key)
+    }
+  }
+
+  private clearAnimalTargetsForQuest(questId: string): void {
+    const needle = `${questId}\n`
+    for (const key of [...this.animalTargets.keys()]) {
+      if (key === questId || key.startsWith(needle)) this.animalTargets.delete(key)
+    }
+  }
+
   /** Interact-range override for an active `spot_animal` stage targeting
    *  `kind`, if any (plan 153) — lets a skittish species' quest objective be
    *  reachable without touching the global `INTERACT_RANGE`/`GAZE_RANGE` or
@@ -528,9 +653,11 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const objective = this.currentStage(def, s.stageIndex)?.objective
-      if (objective?.type === 'spot_animal' && objective.kind === kind && objective.range) {
-        return objective.range
+      for (const slot of this.unfinishedSlots(def, s)) {
+        const objective = slot.objective
+        if (objective.type === 'spot_animal' && objective.kind === kind && objective.range) {
+          return objective.range
+        }
       }
     }
     return null
@@ -634,19 +761,19 @@ export class QuestManager {
   }
 
   private objectiveDescription(stage: QuestStage, questId: string): string {
-    if (stage.objective.type === 'gather_item') {
-      const { kind, count } = stage.objective
-      const have = Math.min(this.inventory.count(kind), count)
-      return `${stage.description} (masz ${have}/${count})`
-    }
     const s = this.stateOf(questId)
-    if (stage.objective.type === 'harvest_animals') {
-      const current = s.stageCount ?? 0
-      return `${stage.description} (${current}/${stage.objective.count})`
-    }
-    if (stage.objective.type === 'feed_habitat_animals') {
-      const current = s.stageCount ?? 0
-      return `${stage.description} (${current}/${stage.objective.count})`
+    const unfinished = questStageObjectiveSlots(stage).filter((slot) => !this.isSlotComplete(s, stage, slot))
+    if (unfinished.length === 1) {
+      const objective = unfinished[0]!.objective
+      if (objective.type === 'gather_item') {
+        const { kind, count } = objective
+        const have = Math.min(this.inventory.count(kind), count)
+        return `${stage.description} (masz ${have}/${count})`
+      }
+      if (objective.type === 'harvest_animals' || objective.type === 'feed_habitat_animals') {
+        const current = this.slotCount(s, stage, unfinished[0]!)
+        return `${stage.description} (${current}/${objective.count})`
+      }
     }
     return stage.description
   }
@@ -688,11 +815,10 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type !== 'resolve_storage_rat_infestation') continue
-      if (!def.settlementId) continue
+      const slot = this.unfinishedSlots(def, s).find((entry) => entry.objective.type === 'resolve_storage_rat_infestation')
+      if (!slot || !def.settlementId) continue
       const snapshot = this.settlementRatInfestation.getSnapshot(def.settlementId)
-      if (isSettlementRatInfestationResolved(snapshot)) this.advanceStage(def, s)
+      if (isSettlementRatInfestationResolved(snapshot)) this.completeObjectiveSlot(def, s, slot)
     }
   }
 
@@ -702,10 +828,10 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type !== 'destroy_spawn_point') continue
-      if (!this.spawnPointDestruction.isPermanentlyDestroyed(stage.objective.spawnerId)) continue
-      this.advanceStage(def, s)
+      const slot = this.unfinishedSlots(def, s).find((entry) => entry.objective.type === 'destroy_spawn_point')
+      if (!slot || slot.objective.type !== 'destroy_spawn_point') continue
+      if (!this.spawnPointDestruction.isPermanentlyDestroyed(slot.objective.spawnerId)) continue
+      this.completeObjectiveSlot(def, s, slot)
     }
   }
 
@@ -790,12 +916,21 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      const objective = stage?.objective
-      if (objective?.type !== 'harvest_animals' || objective.kind !== context.animalKind) continue
-      const next = Math.min((s.stageCount ?? 0) + 1, objective.count)
-      this.setQuestState(def.id, { ...s, stageCount: next })
-      if (next >= objective.count) this.advanceStage(def, this.stateOf(def.id))
+      for (const slot of this.unfinishedSlots(def, s)) {
+        const objective = slot.objective
+        if (objective.type !== 'harvest_animals' || objective.kind !== context.animalKind) continue
+        const stage = this.currentStage(def, s.stageIndex)
+        if (!stage) continue
+        const next = Math.min(this.slotCount(s, stage, slot) + 1, objective.count)
+        const current = this.stateOf(def.id)
+        if (isLegacySingleObjectiveStage(stage)) {
+          this.setQuestState(def.id, { ...current, stageCount: next })
+        } else {
+          this.writeSlotProgress(def, current, slot.id, { count: next })
+        }
+        if (next >= objective.count) this.completeObjectiveSlot(def, this.stateOf(def.id), slot)
+        break
+      }
     }
   }
 
@@ -808,20 +943,29 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      const objective = stage?.objective
-      if (objective?.type !== 'feed_habitat_animals') continue
-      if (context.spawnPointId !== objective.spawnerId) continue
-      if (!objective.kinds.includes(context.animalKind)) continue
-      if (!objective.foodKinds.includes(context.itemKind)) continue
-      const dedupeKey = `${def.id}:${s.stageIndex}`
-      const seen = this.feedContributionIds.get(dedupeKey) ?? new Set<string>()
-      if (seen.has(context.animalId)) continue
-      seen.add(context.animalId)
-      this.feedContributionIds.set(dedupeKey, seen)
-      const next = Math.min((s.stageCount ?? 0) + 1, objective.count)
-      this.setQuestState(def.id, { ...s, stageCount: next })
-      if (next >= objective.count) this.advanceStage(def, this.stateOf(def.id))
+      for (const slot of this.unfinishedSlots(def, s)) {
+        const objective = slot.objective
+        if (objective.type !== 'feed_habitat_animals') continue
+        if (context.spawnPointId !== objective.spawnerId) continue
+        if (!objective.kinds.includes(context.animalKind)) continue
+        if (!objective.foodKinds.includes(context.itemKind)) continue
+        const stage = this.currentStage(def, s.stageIndex)
+        if (!stage) continue
+        const dedupeKey = `${def.id}:${s.stageIndex}:${slot.id}`
+        const seen = this.feedContributionIds.get(dedupeKey) ?? new Set<string>()
+        if (seen.has(context.animalId)) continue
+        seen.add(context.animalId)
+        this.feedContributionIds.set(dedupeKey, seen)
+        const next = Math.min(this.slotCount(s, stage, slot) + 1, objective.count)
+        const current = this.stateOf(def.id)
+        if (isLegacySingleObjectiveStage(stage)) {
+          this.setQuestState(def.id, { ...current, stageCount: next })
+        } else {
+          this.writeSlotProgress(def, current, slot.id, { count: next })
+        }
+        if (next >= objective.count) this.completeObjectiveSlot(def, this.stateOf(def.id), slot)
+        break
+      }
     }
   }
 
@@ -830,9 +974,11 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type !== 'read_item' || stage.objective.itemKind !== itemKind) continue
-      this.advanceStage(def, s)
+      const slot = this.unfinishedSlots(def, s).find((entry) => (
+        entry.objective.type === 'read_item' && entry.objective.itemKind === itemKind
+      ))
+      if (!slot) continue
+      this.completeObjectiveSlot(def, s, slot)
       this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
     }
   }
@@ -842,8 +988,10 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type !== 'recover_hidden_find' || stage.objective.spotId !== spotId) continue
+      const slot = this.unfinishedSlots(def, s).find((entry) => (
+        entry.objective.type === 'recover_hidden_find' && entry.objective.spotId === spotId
+      ))
+      if (!slot) continue
       this.catchUpActiveWorldObjectives(def, s)
     }
   }
@@ -853,8 +1001,10 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type !== 'acquire_portable_container' || stage.objective.containerId !== containerId) continue
+      const slot = this.unfinishedSlots(def, s).find((entry) => (
+        entry.objective.type === 'acquire_portable_container' && entry.objective.containerId === containerId
+      ))
+      if (!slot) continue
       this.catchUpActiveWorldObjectives(def, s)
     }
   }
@@ -871,6 +1021,10 @@ export class QuestManager {
 
   private isWorldObjectiveSatisfied(objective: QuestObjective): boolean {
     switch (objective.type) {
+      case 'acquire_portable_container':
+        return this.worldProgress.hasAcquiredPortableContainer(objective.containerId)
+      case 'await_quest_outcome':
+        return false
       case 'discover_location':
         return this.worldProgress.hasDiscoveredLocation(objective.locationId)
       case 'light_settlement_fires':
@@ -881,14 +1035,10 @@ export class QuestManager {
         )
       case 'loot_world_container':
         return this.worldProgress.isWorldContainerLooted(objective.containerId)
-      case 'recover_hidden_find':
-        return this.worldProgress.hasResolvedHiddenFindSpot(objective.spotId)
-      case 'acquire_portable_container':
-        return this.worldProgress.hasAcquiredPortableContainer(objective.containerId)
-      case 'await_quest_outcome':
-        return false
       case 'read_item':
         return this.worldProgress.hasReadItem(objective.itemKind)
+      case 'recover_hidden_find':
+        return this.worldProgress.hasResolvedHiddenFindSpot(objective.spotId)
       default:
         return false
     }
@@ -903,12 +1053,14 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const objective = this.currentStage(def, s.stageIndex)?.objective
-      if (objective?.type !== 'light_settlement_fires') continue
-      return {
-        settlementId: objective.settlementId,
-        torchIds: objective.torchIds,
-        requireCampfire: objective.requireCampfire,
+      for (const slot of this.unfinishedSlots(def, s)) {
+        const objective = slot.objective
+        if (objective.type !== 'light_settlement_fires') continue
+        return {
+          settlementId: objective.settlementId,
+          torchIds: objective.torchIds,
+          requireCampfire: objective.requireCampfire,
+        }
       }
     }
     return null
@@ -919,39 +1071,47 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      const objective = stage?.objective
-      if (objective?.type !== 'light_settlement_fires') continue
-      const snapshot = this.settlementLight.getSnapshot(
-        objective.settlementId,
-        objective.torchIds,
-        objective.requireCampfire,
-      )
-      if (snapshot.status === 'unavailable') {
-        this.setQuestState(def.id, { state: 'invalidated', stageIndex: s.stageIndex })
-        continue
-      }
-      if (evaluateSettlementLightsObjective(snapshot, objective.torchIds, objective.requireCampfire)) {
-        this.advanceStage(def, s)
+      for (const slot of this.unfinishedSlots(def, s)) {
+        const objective = slot.objective
+        if (objective.type !== 'light_settlement_fires') continue
+        const snapshot = this.settlementLight.getSnapshot(
+          objective.settlementId,
+          objective.torchIds,
+          objective.requireCampfire,
+        )
+        if (snapshot.status === 'unavailable') {
+          this.setQuestState(def.id, { state: 'invalidated', stageIndex: s.stageIndex })
+          break
+        }
+        if (evaluateSettlementLightsObjective(snapshot, objective.torchIds, objective.requireCampfire)) {
+          this.completeObjectiveSlot(def, this.stateOf(def.id), slot)
+        }
       }
     }
   }
 
   private catchUpActiveWorldObjectives(def: QuestDef, s: QuestRuntimeProgress): void {
+    const seen = new Set<number>()
     let current = s
     while (current.state === 'active') {
+      if (seen.has(current.stageIndex)) break
+      seen.add(current.stageIndex)
       const stage = this.currentStage(def, current.stageIndex)
-      if (!stage || !this.isWorldObjectiveSatisfied(stage.objective)) break
-      this.advanceStage(def, current)
+      if (!stage) break
+      const slot = this.unfinishedSlots(def, current).find((entry) => this.isWorldObjectiveSatisfied(entry.objective))
+      if (!slot) break
+      this.completeObjectiveSlot(def, current, slot)
       current = this.stateOf(def.id)
     }
   }
 
   private maybeAdvanceResolvedStorageRatInfestation(def: QuestDef, s: QuestRuntimeProgress): boolean {
     if (!def.settlementId) return false
+    const slot = this.unfinishedSlots(def, s).find((entry) => entry.objective.type === 'resolve_storage_rat_infestation')
+    if (!slot) return false
     const snapshot = this.settlementRatInfestation.getSnapshot(def.settlementId)
     if (!isSettlementRatInfestationResolved(snapshot)) return false
-    this.advanceStage(def, s)
+    this.completeObjectiveSlot(def, s, slot)
     return true
   }
 
@@ -989,11 +1149,23 @@ export class QuestManager {
   invalidateStaleAnimalTargets(): void {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
-      if (s.state !== 'active' || !this.animalTargets.has(def.id)) continue
-      const objective = this.currentStage(def, s.stageIndex)?.objective
-      if (objective?.type !== 'kill_target_animal' && objective?.type !== 'find_animal') continue
-      this.animalTargets.delete(def.id)
-      if (!LIVESTOCK_KINDS.has(objective.kind)) {
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      if (!stage) continue
+      let invalidated = false
+      for (const slot of questStageObjectiveSlots(stage)) {
+        if (slot.objective.type !== 'kill_target_animal' && slot.objective.type !== 'find_animal') continue
+        const key = animalTargetKey(def.id, s.stageIndex, slot.id)
+        if (!this.animalTargets.has(key) && !this.animalTargets.has(def.id)) continue
+        this.animalTargets.delete(key)
+        this.animalTargets.delete(def.id)
+        if (!LIVESTOCK_KINDS.has(slot.objective.kind)) {
+          invalidated = true
+          continue
+        }
+      }
+      if (invalidated) {
+        this.clearAnimalTargetsForQuest(def.id)
         this.setQuestState(def.id, { state: 'invalidated', stageIndex: s.stageIndex })
         continue
       }
@@ -1008,13 +1180,18 @@ export class QuestManager {
    *  quest, since `animalTargets` only gets an entry once resolution
    *  succeeds). */
   private bindAnimalTargetIfNeeded(def: QuestDef, stageIndex: number): void {
-    if (this.animalTargets.has(def.id)) return
-    const objective = this.currentStage(def, stageIndex)?.objective
-    if (objective?.type !== 'kill_target_animal' && objective?.type !== 'find_animal') return
-    const animalId = this.resolveAnimalTarget(objective.kind)
-    if (animalId) {
-      this.animalTargets.set(def.id, animalId)
-      if (objective.type === 'kill_target_animal' && objective.dangerous) this.applyDangerousTrait(animalId)
+    const stage = this.currentStage(def, stageIndex)
+    if (!stage) return
+    for (const slot of questStageObjectiveSlots(stage)) {
+      if (slot.objective.type !== 'kill_target_animal' && slot.objective.type !== 'find_animal') continue
+      const key = animalTargetKey(def.id, stageIndex, slot.id)
+      if (this.animalTargets.has(key)) continue
+      const animalId = this.resolveAnimalTarget(slot.objective.kind)
+      if (!animalId) continue
+      this.animalTargets.set(key, animalId)
+      if (slot.objective.type === 'kill_target_animal' && slot.objective.dangerous) {
+        this.applyDangerousTrait(animalId)
+      }
     }
   }
 
@@ -1045,7 +1222,7 @@ export class QuestManager {
 
     const stageIndex = outcome.state === 'complete' ? def.stages.length : current.stageIndex
     this.setQuestState(def.id, { state: outcome.state, stageIndex, resolvedOutcomeId: outcome.id })
-    this.animalTargets.delete(def.id)
+    this.clearAnimalTargetsForQuest(def.id)
 
     if (outcome.reward?.items) {
       for (const item of outcome.reward.items) this.grantItem(item.kind, item.count)
@@ -1080,12 +1257,24 @@ export class QuestManager {
     return outcome.resultText ?? stage?.failLine ?? QUEST_FAILED_FALLBACK_LINE
   }
 
-  /** Advances past the current stage — to the next stage if any remain, or to
-   *  `ready_to_report` once the last one clears. Does not resolve the quest. */
-  private advanceStage(def: QuestDef, s: QuestRuntimeProgress): void {
-    this.feedContributionIds.delete(`${def.id}:${s.stageIndex}`)
+  /** Advances past the current stage — to the next stage if any remain, a
+   *  declared transition target, or `ready_to_report` once the last one
+   *  clears. Does not resolve the quest unless a transition names an outcome. */
+  private advanceStage(def: QuestDef, s: QuestRuntimeProgress, resultId?: string): void {
+    this.clearFeedDedupe(def.id, s.stageIndex)
+    const stage = this.currentStage(def, s.stageIndex)
     const clearedIndex = s.stageIndex
-    const nextIndex = s.stageIndex + 1
+    const transition = matchStageTransition(stage, resultId)
+    if (transition?.toOutcomeId) {
+      this.applyOutcome(def, transition.toOutcomeId)
+      this.lifecycleHooks.onStageAdvanced?.(def.id, clearedIndex)
+      return
+    }
+    let nextIndex = s.stageIndex + 1
+    if (transition?.toStageId) {
+      const target = def.stages.findIndex((entry) => entry.id === transition.toStageId)
+      if (target >= 0) nextIndex = target
+    }
     const nextState = nextIndex >= def.stages.length ? 'ready_to_report' : 'active'
     this.setQuestState(def.id, { state: nextState, stageIndex: nextIndex, stageCount: 0 })
     if (nextState === 'active') this.bindAnimalTargetIfNeeded(def, nextIndex)
@@ -1118,7 +1307,7 @@ export class QuestManager {
     if (s.state !== 'active') return null
     const stage = this.currentStage(def, s.stageIndex)
     if (!stage) return null
-    if (stage.objective.type === 'resolve_storage_rat_infestation') {
+    if (this.unfinishedSlots(def, s).some((slot) => slot.objective.type === 'resolve_storage_rat_infestation')) {
       return { line: this.storageRatInfestationReminder(def, stage) }
     }
     return { line: stage.reminderLine }
@@ -1130,24 +1319,26 @@ export class QuestManager {
     if (s.state === 'active') {
       const stage = this.currentStage(def, s.stageIndex)
       if (!stage) return null
-      if (stage.objective.type === 'resolve_storage_rat_infestation') {
+      if (this.unfinishedSlots(def, s).some((slot) => slot.objective.type === 'resolve_storage_rat_infestation')) {
         if (this.maybeAdvanceResolvedStorageRatInfestation(def, s)) {
           const updated = this.stateOf(def.id)
           if (updated.state === 'ready_to_report') return this.reportOverride(def)
         }
         return null
       }
-      if (stage.objective.type === 'gather_item') {
-        const { kind, count } = stage.objective
-        const isFinalStage = s.stageIndex >= def.stages.length - 1
+      const gatherSlot = this.unfinishedSlots(def, s).find((slot) => slot.objective.type === 'gather_item')
+      if (gatherSlot && gatherSlot.objective.type === 'gather_item') {
+        const { kind, count } = gatherSlot.objective
+        const isFinalStage = s.stageIndex >= def.stages.length - 1 && this.unfinishedSlots(def, s).length === 1 && !stage.transitions
         if (isFinalStage && !uniqueOutcomeForState(def, 'complete')) return null
         if (!this.inventory.has(kind, count)) return null
         const stageIndex = s.stageIndex
+        const slotId = gatherSlot.id
         return {
           line: stage.reminderLine,
           actions: [{
             label: stage.playerLine ?? def.reportPlayerLine ?? DEFAULT_GATHER_PLAYER_LINE,
-            onSelect: () => this.selectGatherTurnIn(def, stageIndex),
+            onSelect: () => this.selectGatherTurnIn(def, stageIndex, slotId),
           }],
         }
       }
@@ -1167,8 +1358,8 @@ export class QuestManager {
   private resolveTalkToNpcChoice(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
     const s = this.stateOf(def.id)
     if (s.state !== 'active') return null
-    const stage = this.currentStage(def, s.stageIndex)
-    const choice = matchingTalkChoice(stage?.objective, npcId)
+    const choiceSlot = this.unfinishedSlots(def, s).find((slot) => matchingTalkChoice(slot.objective, npcId))
+    const choice = matchingTalkChoice(choiceSlot?.objective, npcId)
     if (!choice) return null
     if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) return null
     const stageIndex = s.stageIndex
@@ -1196,14 +1387,18 @@ export class QuestManager {
     const s = this.stateOf(def.id)
     if (s.state !== 'active') return null
     const stage = this.currentStage(def, s.stageIndex)
-    if (stage?.objective.type !== 'talk_to_npc' || stage.objective.npc.npcId !== npcId) return null
+    if (!stage) return null
+    const slot = this.unfinishedSlots(def, s).find((entry) => (
+      entry.objective.type === 'talk_to_npc' && entry.objective.npc.npcId === npcId
+    ))
+    if (!slot || slot.objective.type !== 'talk_to_npc') return null
     const stageIndex = s.stageIndex
     const progressLine = stage.progressLine ?? stage.description
     return {
       line: DEFAULT_NPC_PROMPT,
       actions: [{
         label: stage.playerLine ?? DEFAULT_TALK_PLAYER_LINE,
-        onSelect: () => this.selectTalkToNpc(def, npcId, stageIndex, progressLine),
+        onSelect: () => this.selectTalkToNpc(def, npcId, stageIndex, slot.id, progressLine),
       }],
     }
   }
@@ -1296,13 +1491,22 @@ export class QuestManager {
     return this.resolveSuccessfulTurnIn(def) ?? def.reportLine
   }
 
-  private selectTalkToNpc(def: QuestDef, npcId: NpcId, stageIndex: number, progressLine: string): string {
+  private selectTalkToNpc(
+    def: QuestDef,
+    npcId: NpcId,
+    stageIndex: number,
+    slotId: string,
+    progressLine: string,
+  ): string {
     const current = this.stateOf(def.id)
     if (current.state !== 'active' || current.stageIndex !== stageIndex) return progressLine
     const stage = this.currentStage(def, current.stageIndex)
-    if (stage?.objective.type !== 'talk_to_npc' || stage.objective.npc.npcId !== npcId) return progressLine
+    const slot = this.unfinishedSlots(def, current).find((entry) => entry.id === slotId)
+    if (!stage || !slot || slot.objective.type !== 'talk_to_npc' || slot.objective.npc.npcId !== npcId) {
+      return progressLine
+    }
     this.applyStageEffects(stage.effects)
-    this.advanceStage(def, current)
+    this.completeObjectiveSlot(def, current, slot)
     return progressLine
   }
 
@@ -1325,32 +1529,40 @@ export class QuestManager {
     const outcome = def.outcomes.find((entry) => entry.id === outcomeId)
     const resolvedLine = outcome?.resultText ?? def.reportLine
     if (current.state !== 'active' || current.stageIndex !== stageIndex) return resolvedLine
-    const choice = matchingTalkChoice(this.currentStage(def, current.stageIndex)?.objective, npcId)
+    const choice = matchingTalkChoice(
+      this.unfinishedSlots(def, current).find((slot) => matchingTalkChoice(slot.objective, npcId))?.objective,
+      npcId,
+    )
     if (!choice || choice.outcomeId !== outcomeId) return resolvedLine
     const applied = this.applyOutcome(def, outcomeId)
     return applied ? (applied.resultText ?? def.reportLine) : resolvedLine
   }
 
-  private selectGatherTurnIn(def: QuestDef, stageIndex: number): string {
+  private selectGatherTurnIn(def: QuestDef, stageIndex: number, slotId: string): string {
     const current = this.stateOf(def.id)
     const stage = this.currentStage(def, current.stageIndex)
-    if (current.state !== 'active' || current.stageIndex !== stageIndex || stage?.objective.type !== 'gather_item') {
+    const slot = this.unfinishedSlots(def, current).find((entry) => entry.id === slotId)
+    if (
+      current.state !== 'active'
+      || current.stageIndex !== stageIndex
+      || !stage
+      || !slot
+      || slot.objective.type !== 'gather_item'
+    ) {
       return stage?.reminderLine ?? def.reportLine
     }
-    const { kind, count } = stage.objective
-    const isFinalStage = current.stageIndex >= def.stages.length - 1
-    if (isFinalStage) {
-      const outcome = uniqueOutcomeForState(def, 'complete')
-      if (!outcome) return stage.reminderLine
-      if (!this.inventory.has(kind, count)) return stage.reminderLine
-      if (!this.inventory.remove(kind, count)) return stage.reminderLine
-      const applied = this.applyOutcome(def, outcome.id)
-      return applied ? def.reportLine : stage.reminderLine
-    }
+    const { kind, count } = slot.objective
     if (!this.inventory.has(kind, count)) return stage.reminderLine
     if (!this.inventory.remove(kind, count)) return stage.reminderLine
-    this.advanceStage(def, current)
-    return this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine ?? def.reportLine
+    const remainingBefore = this.unfinishedSlots(def, current).length
+    this.completeObjectiveSlot(def, current, slot)
+    const after = this.stateOf(def.id)
+    if (after.state === 'ready_to_report' && remainingBefore === 1 && current.stageIndex >= def.stages.length - 1 && !stage.transitions) {
+      const outcome = uniqueOutcomeForState(def, 'complete')
+      if (outcome && this.applyOutcome(def, outcome.id)) return def.reportLine
+    }
+    if (after.state === 'complete' || after.state === 'failed') return def.reportLine
+    return this.currentStage(def, after.stageIndex)?.reminderLine ?? def.reportLine
   }
 
   /** One definition's whole contribution to talking to `npcId` right now:
@@ -1437,20 +1649,24 @@ export class QuestManager {
 
       this.bindAnimalTargetIfNeeded(def, s.stageIndex)
 
-      const boundAnimalId = this.animalTargets.get(def.id)
-      // `find_animal`'s bound target dying is failure, not progress — unlike
-      // `kill_target_animal`, where the same `animal_died` ref means success
-      // (handled below via `objectiveMatchesRef`).
-      if (ref.type === 'animal_died' && stage.objective.type === 'find_animal' && boundAnimalId === ref.animalId) {
-        const line = this.resolveFailedFind(def, stage)
-        if (line && presentation === null) presentation = { line }
-        continue
+      let matched = false
+      for (const slot of this.unfinishedSlots(def, this.stateOf(def.id))) {
+        const boundAnimalId = this.animalTargets.get(animalTargetKey(def.id, s.stageIndex, slot.id))
+        if (ref.type === 'animal_died' && slot.objective.type === 'find_animal' && boundAnimalId === ref.animalId) {
+          const line = this.resolveFailedFind(def, stage)
+          if (line && presentation === null) presentation = { line }
+          matched = true
+          break
+        }
+        if (!objectiveMatchesRef(slot.objective, ref, boundAnimalId)) continue
+        this.completeObjectiveSlot(def, this.stateOf(def.id), slot)
+        if (presentation === null) {
+          presentation = { line: stage.progressLine ?? stage.description }
+        }
+        matched = true
+        break
       }
-      if (!objectiveMatchesRef(stage.objective, ref, boundAnimalId)) continue
-      this.advanceStage(def, s)
-      if (presentation === null) {
-        presentation = { line: stage.progressLine ?? stage.description }
-      }
+      if (!matched) continue
     }
     return presentation
   }
@@ -1474,9 +1690,13 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      if (this.animalTargets.get(def.id) !== animalId) continue
       const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type !== 'kill_target_animal') continue
+      if (!stage) continue
+      const claimed = questStageObjectiveSlots(stage).some((slot) => {
+        if (slot.objective.type !== 'kill_target_animal') return false
+        return this.animalTargets.get(animalTargetKey(def.id, s.stageIndex, slot.id)) === animalId
+      })
+      if (!claimed) continue
       if (def.outcomes.some((outcome) => outcome.state === 'complete' && hasSocialConsequence(outcome.consequences))) {
         return true
       }
@@ -1501,7 +1721,7 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      if (isRequiredDialogueTarget(this.currentStage(def, s.stageIndex), npcId)) {
+      if (isRequiredDialogueTarget(this.currentStage(def, s.stageIndex), npcId, this.unfinishedSlots(def, s))) {
         return QUEST_MARKER_TALK_TARGET
       }
     }
@@ -1529,11 +1749,13 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      const stage = this.currentStage(def, s.stageIndex)
-      if (stage?.objective.type !== 'interact_spawner') continue
-      if (stage.objective.spawnerType !== spawnerType) continue
-      if (stage.objective.spawnerId != null && stage.objective.spawnerId !== spawnerId) continue
-      return '?'
+      for (const slot of this.unfinishedSlots(def, s)) {
+        const objective = slot.objective
+        if (objective.type !== 'interact_spawner') continue
+        if (objective.spawnerType !== spawnerType) continue
+        if (objective.spawnerId != null && objective.spawnerId !== spawnerId) continue
+        return '?'
+      }
     }
     return null
   }
@@ -1544,8 +1766,13 @@ export class QuestManager {
       const entry: QuestProgressEntry = { id: def.id, state: s.state, stageIndex: s.stageIndex }
       if (s.state === 'active') {
         const stage = this.currentStage(def, s.stageIndex)
-        if (isCountedObjective(stage?.objective) && s.stageCount !== undefined) {
-          entry.stageCount = s.stageCount
+        if (stage && isLegacySingleObjectiveStage(stage)) {
+          if (isCountedObjective(stage.objective) && s.stageCount !== undefined) {
+            entry.stageCount = s.stageCount
+          }
+        } else if (stage) {
+          const slotProgress = exportedStageSlotProgress(stage, s)
+          if (slotProgress) entry.stageSlotProgress = slotProgress
         }
       }
       if ((s.state === 'complete' || s.state === 'failed') && s.resolvedOutcomeId) {
@@ -1563,6 +1790,7 @@ export class QuestManager {
 function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
   const progress: QuestRuntimeProgress = { state: entry.state, stageIndex: entry.stageIndex }
   if (entry.stageCount !== undefined) progress.stageCount = entry.stageCount
+  if (entry.stageSlotProgress !== undefined) progress.stageSlotProgress = entry.stageSlotProgress
   if ((entry.state === 'complete' || entry.state === 'failed') && entry.resolvedOutcomeId) {
     progress.resolvedOutcomeId = entry.resolvedOutcomeId
   }
@@ -1577,6 +1805,7 @@ function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): Qu
     state: entry.state,
     stageIndex: entry.stageIndex,
     ...(entry.stageCount !== undefined ? { stageCount: entry.stageCount } : {}),
+    ...(entry.stageSlotProgress !== undefined ? { stageSlotProgress: entry.stageSlotProgress } : {}),
   }
   if (entry.state !== 'complete' && entry.state !== 'failed') return base
   if (entry.resolvedOutcomeId) {
@@ -1621,4 +1850,20 @@ function promisedShownReward(def: QuestDef): QuestPromisedReward | null {
     if (!sameShownReward(outcome.reward, first)) return null
   }
   return { items: first.items ?? [] }
+}
+
+function exportedStageSlotProgress(
+  stage: QuestStage,
+  s: QuestRuntimeProgress,
+): Record<string, QuestStageSlotProgress> | undefined {
+  const out: Record<string, QuestStageSlotProgress> = {}
+  for (const slot of questStageObjectiveSlots(stage)) {
+    const progress = s.stageSlotProgress?.[slot.id]
+    if (!progress) continue
+    const exported: QuestStageSlotProgress = {}
+    if (isCountedObjective(slot.objective) && progress.count !== undefined) exported.count = progress.count
+    if (progress.completed && objectiveNeedsPersistedSlotProgress(slot.objective)) exported.completed = true
+    if (exported.completed || exported.count !== undefined) out[slot.id] = exported
+  }
+  return Object.keys(out).length > 0 ? out : undefined
 }
