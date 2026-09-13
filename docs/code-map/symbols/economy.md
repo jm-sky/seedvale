@@ -28,31 +28,35 @@ Generated from exported TypeScript symbols.
 
 ## `economy/npcWork.ts`
 
-- `commitDressingProduction` — function — line 80
+- `commitBlacksmithProduction` — function — line 56
   - domain: settlements-npcs
-- `commitHunterArrowProduction` — function — line 45
-- `commitRoleWork` — function — line 31
-- `commitTextileWorkProduction` — function — line 71
+- `commitDressingProduction` — function — line 99
   - domain: settlements-npcs
-- `commitWoodcutterDeposit` — function — line 20
-- `commitWoolMaterialProduction` — function — line 58
+- `commitHunterArrowProduction` — function — line 46
+- `commitRoleWork` — function — line 32
+- `commitTextileWorkProduction` — function — line 90
   - domain: settlements-npcs
-- `tryAdvanceDevelopment` — function — line 88
+- `commitWoodcutterDeposit` — function — line 21
+- `commitWoolMaterialProduction` — function — line 77
+  - domain: settlements-npcs
+- `tryAdvanceDevelopment` — function — line 107
 
 ## `economy/production.ts`
 
 - `ARROWS_FROM_BEAM_PRODUCTION` — const — line 75
 - `ARROWS_FROM_BRANCH_PRODUCTION` — const — line 66
-- `DRESSING_PRODUCTION` — const — line 136
+- `BLACKSMITH_IRON_ROD_PRODUCTION` — const — line 143
+  - domain: settlements-npcs
+- `DRESSING_PRODUCTION` — const — line 152
 - `FARMING_PRODUCTION` — const — line 36
 - `FISHING_PRODUCTION` — const — line 43
 - `FLAX_LINEN_PRODUCTION` — const — line 109
 - `HUNTER_ARROW_PRODUCTIONS` — const — line 85
 - `LINEN_BANDAGE_PRODUCTION` — const — line 119
 - `MINING_PRODUCTION` — const — line 50
-- `produceFirstAvailableItemRecipe` — function — line 150
+- `produceFirstAvailableItemRecipe` — function — line 166
 - `ProductionDef` — type — line 10
-- `productionForRole` — function — line 168
+- `productionForRole` — function — line 184
 - `TEXTILE_WORKER_PRODUCTIONS` — const — line 129
 - `WOODCUTTING_PRODUCTION` — const — line 25
 - `WOOL_MATERIAL_PRODUCTION` — const — line 99

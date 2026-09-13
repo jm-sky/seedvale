@@ -356,11 +356,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 64
-- `findWeaponNeedingMaintenance` — function — line 86
-- `NpcWorkContext` — type — line 106
-- `planProfessionWork` — function — line 723
-- `selectTraderCollectionGoods` — function — line 353
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 66
+- `findWeaponNeedingMaintenance` — function — line 88
+- `NpcWorkContext` — type — line 108
+- `planProfessionWork` — function — line 746
+- `selectTraderCollectionGoods` — function — line 355
 
 ## `ai/npcStrategies.ts`
 
