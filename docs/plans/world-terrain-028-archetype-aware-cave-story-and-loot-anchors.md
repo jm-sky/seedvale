@@ -190,7 +190,7 @@ Do not change natural topology/acceptance merely to force placement.
 This supports:
 
 - `quests-progression-023` — lost hunter;
-- `quests-progression-024` — contraband cache.
+- `quests-progression-024` — `suspicious-transport` natural-cave cache variant.
 
 ## Dungeon cave anchors
 
