@@ -1,10 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-13 18:37:47  
+> Date: 2026-09-13 18:40:47  
 
 ## PLANS
 
+- `quests-progression-032-nonlinear-stage-objectives-and-transitions.md`
 - `settlements-008-settlement-progression-around-home.md`
 - `settlements-009-settlement-outskirts-and-pasture.md`
 - `settlements-010-closed-and-cautious-settlement-character.md`
@@ -16,6 +17,43 @@
 
 --------------------------------
 ## PROMPTS
+
+### `quests-progression-032-nonlinear-stage-objectives-and-transitions.md`
+
+Prompt:
+
+```
+Zrób review planu `quests-progression-032-nonlinear-stage-objectives-and-transitions.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/quests-progression-032-nonlinear-stage-objectives-and-transitions.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/quests-progression-032-nonlinear-stage-objectives-and-transitions-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-032-nonlinear-stage-objectives-and-transitions.md` i dodaj/ustaw metadata:
+`**Model:** <best>, <cheaper-safe-fallback>`
+Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
+Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
+Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
+
+Pliki dodaj na branch `main` w repozytorium.
+```
 
 ### `settlements-008-settlement-progression-around-home.md`
 

@@ -88,6 +88,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-010-closed-and-cautious-settlement-character.md`               | -       | 🟡 | M      | -      |
 | ◼️ `ui-input-017-quest-log-information-architecture.md`                        | -       | 🟡 | M      | quests-progression-031 |
 | ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | -       | 🟡 | M      | -      |
+| ◼️ `quests-progression-032-nonlinear-stage-objectives-and-transitions.md`      | -       | 🔴 | M      | -      |
 
 ---
 
@@ -204,7 +205,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `032`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `032`
+- quests-progression: `033`
 - settlements: `012`
 - settlements-npcs: `035`
 - tools: `014`
