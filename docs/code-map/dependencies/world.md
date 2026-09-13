@@ -308,6 +308,27 @@ Generated from TypeScript imports.
 - `world/caves/productionTopology.ts`
 - `world/createCaves.archetype.test.ts`
 
+## `world/caves/caveAdventureContentPolicy.test.ts`
+
+**Imports**
+
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/caveRng.ts`
+
+## `world/caves/caveAdventureContentPolicy.ts`
+
+**Imports**
+
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/caveRng.ts`
+
+**Imported by**
+
+- `app/worldBundle.caveTreasure.test.ts`
+- `app/worldBundle.ts`
+- `world/caves/caveAdventureContentPolicy.test.ts`
+
 ## `world/caves/caveAdventureProps.test.ts`
 
 **Imports**
@@ -373,6 +394,18 @@ Generated from TypeScript imports.
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.ts`
 
+## `world/caves/caveContentAnchors.dungeon.test.ts`
+
+**Imports**
+
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/dungeonChambers.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/largeCaves.ts`
+
 ## `world/caves/caveContentAnchors.test.ts`
 
 **Imports**
@@ -397,11 +430,17 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveRng.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/caveUndergroundPoolFootprint.ts`
+- `world/caves/dungeonChambers.ts`
 
 **Imported by**
 
+- `world/caves/caveAdventureContentPolicy.test.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveAdventureProps.ts`
+- `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveInteriorRocks.test.ts`
@@ -632,6 +671,7 @@ Generated from TypeScript imports.
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveAdventureProps.test.ts`
+- `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
@@ -791,6 +831,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/adventureTopology.ts`
+- `world/caves/caveAdventureContentPolicy.test.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveContentAnchors.ts`
@@ -948,6 +990,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `fauna/animalCaveHabitat.ts`
+- `world/caves/caveContentAnchors.dungeon.test.ts`
+- `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
 - `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/caveUndergroundPoolPresentation.ts`
@@ -965,6 +1009,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
 - `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/caveUndergroundPool.ts`
@@ -1024,6 +1069,8 @@ Generated from TypeScript imports.
 
 - `fauna/dungeonResidents.test.ts`
 - `fauna/dungeonResidents.ts`
+- `world/caves/caveContentAnchors.dungeon.test.ts`
+- `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
 - `world/caves/caveUndergroundPoolFootprint.ts`
 - `world/caves/dungeonChambers.test.ts`
@@ -1062,6 +1109,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `fauna/dungeonResidents.test.ts`
+- `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
 - `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/dungeonChambers.test.ts`
@@ -1086,6 +1134,7 @@ Generated from TypeScript imports.
 - `player/worldWaterEligibility.test.ts`
 - `world/caveGenerator.ts`
 - `world/caves/caveAdventureProps.test.ts`
+- `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
 - `world/caves/caveHabitat.test.ts`
@@ -2247,6 +2296,7 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveArchetype.ts`
+- `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
 - `world/caves/caveHabitat.test.ts`

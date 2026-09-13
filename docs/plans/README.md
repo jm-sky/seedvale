@@ -59,7 +59,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | ~~items-player-027~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~world-terrain-024~~, ~~world-terrain-025~~, ~~world-terrain-028~~, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~ |
+| 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~world-terrain-024~~, ~~world-terrain-025~~, world-terrain-028, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016, settlements-npcs-034 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
@@ -76,11 +76,11 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
 | ✅ `world-027-player-spatial-context-and-cross-space-target-isolation.md`      | -       | 🟢 | L      | ~~world-terrain-019~~ |
 | 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
-| ◼️ `quests-progression-023-lost-hunter-natural-cave.md`                        | -       | 🟡 | M      | ~~world-terrain-028~~, ~~fauna-018~~, ~~fauna-019~~ |
-| ◼️ `quests-progression-024-suspicious-transport-natural-cave-cache.md`                   | -       | 🟡 | M      | ~~world-terrain-028~~ |
-| ◼️ `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | ~~world-terrain-028~~ |
-| ◼️ `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | ~~world-terrain-028~~, fauna-027 |
-| ◼️ `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | ~~world-terrain-028~~, fauna-027 |
+| 💡 `quests-progression-023-lost-hunter-natural-cave.md`                        | -       | 🟡 | M      | world-terrain-028, ~~fauna-018~~, ~~fauna-019~~ |
+| ◼️ `quests-progression-024-suspicious-transport-natural-cave-cache.md`         | -       | 🟡 | M      | world-terrain-028 |
+| ◼️ `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | world-terrain-028 |
+| ◼️ `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | world-terrain-028, fauna-027 |
+| ◼️ `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | world-terrain-028, fauna-027 |
 
 ---
 

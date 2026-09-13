@@ -139,6 +139,24 @@ Generated from exported TypeScript symbols.
 - `fitsAdventureFootprintBudget` — function — line 131
   - domain: world-terrain
 
+## `world/caves/caveAdventureContentPolicy.ts`
+
+- `ADVENTURE_CAVE_CONTENT_PROFILES` — const — line 11
+- `AdventureCaveContentProfile` — type — line 13
+- `CaveAdventureContentPolicy` — type — line 69
+  - domain: world-terrain
+- `CaveAdventureProfileReservationRequest` — type — line 24
+  - domain: world-terrain
+- `CaveContentAnchorClaimRequest` — type — line 35
+  - domain: world-terrain
+- `CaveContentReservationRequests` — type — line 40
+- `DOUBLE_TREASURE_PROFILE_THRESHOLD` — const — line 16
+- `resolveCaveAdventureContentPolicy` — function — line 89
+  - domain: world-terrain
+- `ResolvedAnchorClaim` — type — line 45
+- `UnresolvedReservation` — type — line 58
+- `UnresolvedReservationReason` — type — line 51
+
 ## `world/caves/caveAdventureProps.ts`
 
 - `_resetCaveAdventurePropTemplatesForTests` — function — line 278
@@ -193,21 +211,21 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveContentAnchors.ts`
 
-- `CAVE_CONTENT_ANCHOR_ROLES` — const — line 43
-- `CAVE_CONTENT_PLACEMENT` — const — line 89
-- `CaveContentAnchor` — type — line 61
+- `CAVE_CONTENT_ANCHOR_ROLES` — const — line 46
+- `CAVE_CONTENT_PLACEMENT` — const — line 98
+- `CaveContentAnchor` — type — line 66
   - domain: world-terrain
-- `caveContentAnchorId` — function — line 116
+- `caveContentAnchorId` — function — line 132
   - domain: world-terrain
-- `CaveContentAnchorInput` — type — line 71
-- `CaveContentAnchorRole` — type — line 52
-- `chamberContentCandidates` — function — line 136
+- `CaveContentAnchorInput` — type — line 78
+- `CaveContentAnchorRole` — type — line 57
+- `chamberContentCandidates` — function — line 154
   - domain: world-terrain
-- `CONTENT_ANCHOR_CANDIDATE_LIMIT` — const — line 100
-- `ContentAnchorPlacement` — type — line 80
-- `passageWallContentCandidates` — function — line 151
+- `CONTENT_ANCHOR_CANDIDATE_LIMIT` — const — line 116
+- `ContentAnchorPlacement` — type — line 89
+- `passageWallContentCandidates` — function — line 169
   - domain: world-terrain
-- `resolveCaveContentAnchors` — function — line 332
+- `resolveCaveContentAnchors` — function — line 605
   - domain: world-terrain
 
 ## `world/caves/caveGroundQuery.ts`
@@ -426,7 +444,7 @@ Generated from exported TypeScript symbols.
 ## `world/caves/caveRng.ts`
 
 - `CAVE_RNG_SALT` — const — line 34
-- `createCaveRandom` — function — line 91
+- `createCaveRandom` — function — line 98
 
 ## `world/caves/caveRoute.ts`
 

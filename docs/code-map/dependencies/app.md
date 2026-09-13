@@ -1504,6 +1504,7 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `items/treasureGameplay.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
 - `world/createCaves.ts`
 
 ## `app/worldBundle.ts`
@@ -1550,6 +1551,7 @@ Generated from TypeScript imports.
 - `world/beehives.ts`
 - `world/bloodTraces.ts`
 - `world/cartProp.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/createBeehives.ts`
 - `world/createCarts.ts`

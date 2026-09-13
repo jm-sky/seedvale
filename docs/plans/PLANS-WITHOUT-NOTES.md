@@ -1,12 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-13 14:24:26  
+> Date: 2026-09-13 15:05:49  
 
 ## PLANS
 
-- `quests-progression-023-lost-hunter-natural-cave.md`
-- `quests-progression-024-natural-cave-contraband-cache.md`
+- `quests-progression-024-suspicious-transport-natural-cave-cache.md`
 - `quests-progression-025-adventure-cave-old-bones.md`
 - `quests-progression-026-dungeon-bandit-treasure.md`
 - `quests-progression-027-lost-treasure-expedition.md`
@@ -17,22 +16,22 @@
 --------------------------------
 ## PROMPTS
 
-### `quests-progression-023-lost-hunter-natural-cave.md`
+### `quests-progression-024-suspicious-transport-natural-cave-cache.md`
 
 Prompt:
 
 ```
-Zrób review planu `quests-progression-023-lost-hunter-natural-cave.md`
+Zrób review planu `quests-progression-024-suspicious-transport-natural-cave-cache.md`
 
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/quests-progression-023-lost-hunter-natural-cave.md`
+- `docs/plans/quests-progression-024-suspicious-transport-natural-cave-cache.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/quests-progression-023-lost-hunter-natural-cave-implementation-notes.md`
+`docs/plans/implementation-notes/quests-progression-024-suspicious-transport-natural-cave-cache-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -45,44 +44,7 @@ Umieść w nim:
 Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-023-lost-hunter-natural-cave.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
-
-### `quests-progression-024-natural-cave-contraband-cache.md`
-
-Prompt:
-
-```
-Zrób review planu `quests-progression-024-natural-cave-contraband-cache.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/quests-progression-024-natural-cave-contraband-cache.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/quests-progression-024-natural-cave-contraband-cache-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-024-natural-cave-contraband-cache.md` i dodaj/ustaw metadata:
+Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-024-suspicious-transport-natural-cave-cache.md` i dodaj/ustaw metadata:
 `**Model:** <best>, <cheaper-safe-fallback>`
 Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
 Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
