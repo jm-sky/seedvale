@@ -5,7 +5,7 @@
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Model:** Composer, Grok
-**Depends on:** quests-progression-028
+**Depends on:** ~~quests-progression-028~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests`
 **Tags:** `world-driven` `emergent-quests` `fauna`

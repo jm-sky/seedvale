@@ -59,10 +59,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | ~~items-player-027~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016, settlements-npcs-034 |
+| 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | ~~settlements-npcs-016~~, settlements-npcs-034 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
-| ✅ `world-terrain-025-underground-cave-pool.md`                                | -       | 🟡 | M      | ~~world-terrain-024~~ |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
 | ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | ~~settlements-npcs-030~~ |
@@ -73,15 +72,12 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
-| ✅ `world-027-player-spatial-context-and-cross-space-target-isolation.md`      | -       | 🟢 | L      | ~~world-terrain-019~~ |
 | 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
-| ✅ `quests-progression-023-lost-hunter-natural-cave.md`                        | -       | ✅ | M      | world-terrain-028, ~~fauna-018~~, ~~fauna-019~~ |
-| 💡 `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | world-terrain-028 |
-| 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | world-terrain-028, fauna-027 |
-| 💡 `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | world-terrain-028, fauna-027 |
-| ✅ `quests-progression-028-world-fact-event-fanout.md`                         | -       | ✅ | S      | -      |
+| 💡 `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | ~~world-terrain-028~~ |
+| 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | ~~world-terrain-028~~, ~~fauna-027~~ |
+| 💡 `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | ~~world-terrain-028~~, ~~fauna-027~~ |
 | 💡 `quests-progression-029-generic-resolution-effects.md`                      | -       | 🔴 | M      | -      |
-| 💡 `quests-progression-030-external-resolution-and-real-problem-offering.md`   | -       | 🔴 | M      | quests-progression-028 |
+| 💡 `quests-progression-030-external-resolution-and-real-problem-offering.md`   | -       | 🔴 | M      | ~~quests-progression-028~~ |
 | 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | quests-progression-030 |
 | ◼️ `settlements-008-settlement-progression-around-home.md`                     | -       | 🟡 | S      | -      |
 | ◼️ `settlements-009-settlement-outskirts-and-pasture.md`                       | -       | 🟡 | M      | -      |

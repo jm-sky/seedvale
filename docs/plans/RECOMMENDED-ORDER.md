@@ -8,12 +8,12 @@
    🔴 `M` · ✅ ready · unlocks 1/2
 2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `settlements-npcs-033` — **Player Trading with Any NPC**  
+   🔴 `L` · ✅ ready · unlocks 1/1
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-4. `quests-progression-028` — **World-fact event fan-out**  
-   🔴 `S` · ✅ ready · unlocks 1/2
-5. `settlements-npcs-033` — **Player Trading with Any NPC**  
-   🔴 `L` · ✅ ready · unlocks 0/0
+5. `quests-progression-030` — **External resolution and authored/world-driven problem offering**  
+   🔴 `M` · ✅ ready · unlocks 1/2
 
 ---
 
@@ -23,20 +23,18 @@
    🔴 `M` · ✅ ready · unlocks 1/2 · roadmap: `economy-production`
 2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `settlements-npcs-033` — **Player Trading with Any NPC**  
+   🔴 `L` · ✅ ready · unlocks 1/1 · roadmap: `economy-goods-flow`
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
-4. `quests-progression-028` — **World-fact event fan-out**  
-   🔴 `S` · ✅ ready · unlocks 1/2 · roadmap: `quests-and-reputation`
-5. `settlements-npcs-033` — **Player Trading with Any NPC**  
-   🔴 `L` · ✅ ready · unlocks 0/0 · roadmap: `economy-goods-flow`
+5. `quests-progression-030` — **External resolution and authored/world-driven problem offering**  
+   🔴 `M` · ✅ ready · unlocks 1/2 · roadmap: `quests-and-reputation`
 
 ---
 
 ### Bug Fixes
 
-1. `quests-progression-028` — **World-fact event fan-out**  
-   🔴 `S` · ✅ ready · unlocks 1/2 · type: fix
-2. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
@@ -53,12 +51,12 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 1/2
 2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `settlements-npcs-033` — **Player Trading with Any NPC**  
+   🔴 `L` · ✅ ready · unlocks 1/1
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-4. `quests-progression-028` — **World-fact event fan-out**  
-   🔴 `S` · ✅ ready · unlocks 1/2
-5. `settlements-npcs-033` — **Player Trading with Any NPC**  
-   🔴 `L` · ✅ ready · unlocks 0/0
+5. `quests-progression-030` — **External resolution and authored/world-driven problem offering**  
+   🔴 `M` · ✅ ready · unlocks 1/2
 
 ---
 
@@ -84,25 +82,25 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  76  
    → **unlocks:** 2/4
 
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `settlements-npcs-033` — **Player Trading with Any NPC**  
+  🔴 `L` · **Score:**  64  
+   → **unlocks:** 1/1
+
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-4. `quests-progression-028` — **World-fact event fan-out**  
-  🔴 `S` · **Score:**  53  
+5. `quests-progression-030` — **External resolution and authored/world-driven problem offering**  
+  🔴 `M` · **Score:**  53  
    → **unlocks:** 1/2
-
-5. `settlements-npcs-033` — **Player Trading with Any NPC**  
-  🔴 `L` · **Score:**  50  
-   → **unlocks:** 0/0
 
 6. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-7. `quests-progression-030` — **External resolution and real problem offering**  
-  🔴 `M` · **Score:**  43  
-   → **unlocks:** 1/1
+7. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+  🟡 `M` · **Score:**  45  
+   → **unlocks:** 0/0
 
 8. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
@@ -120,16 +118,16 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-12. `quests-progression-027` — **Lost treasure expedition — dungeon cave**  
+12. `quests-progression-031` — **Per-source opportunity defs and live gating**  
+  🟡 `M` · **Score:**  35  
+   → **unlocks:** 1/1
+
+13. `quests-progression-027` — **Lost treasure expedition — dungeon cave**  
   🟡 `L` · **Score:**  34  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-025` — **Resource storage visualization**  
+14. `settlements-npcs-025` — **Resource storage visualization**  
   ⚪ `M` · **Score:**  31  
-   → **unlocks:** 0/0
-
-14. `quests-progression-024` — **Suspicious transport — natural cave cache variant**  
-  🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
 15. `quests-progression-025` — **Old bones — adventure cave**  
@@ -152,39 +150,62 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-20. `tools-005` — **Seedvale Character Preparation Panel**  
+20. `quests-progression-032` — **Nonlinear stage objectives and transitions**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-21. `tools-013` — **NPC decision verification and scenario tooling**  
+21. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+22. `tools-013` — **NPC decision verification and scenario tooling**  
+  🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+23. `world-terrain-023` — **River-aware road routing and canonical crossings**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-23. `quests-progression-031` — **Per-source opportunity defs and live gating**  
+24. `ui-input-017` — **Quest log information architecture**  
+  🟡 `M` · **Score:**  23  
+   → **unlocks:** 0/0
+
+25. `world-terrain-027` — **Landmark variety and quest hooks**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-24. `world-terrain-027` — **Landmark variety and quest hooks**  
-  🟡 `M` · **Score:**  21  
+26. `settlements-008` — **Settlement progression around home**  
+  🟡 `S` · **Score:**  19  
+   → **unlocks:** 0/0
+
+27. `settlements-009` — **Settlement outskirts and pasture**  
+  🟡 `M` · **Score:**  17  
+   → **unlocks:** 0/0
+
+28. `settlements-010` — **Closed and cautious settlement character**  
+  🟡 `M` · **Score:**  17  
+   → **unlocks:** 0/0
+
+29. `settlements-011` — **Plaza layout, paving and core protection**  
+  🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
 ---
 
 ## Initially Blocked
 
-- [`quests-progression-030-external-resolution-and-real-problem-offering.md`](quests-progression-030-external-resolution-and-real-problem-offering.md)  
-  is blocked by:
-  - [`quests-progression-028-world-fact-event-fanout.md`](quests-progression-028-world-fact-event-fanout.md)
 - [`quests-progression-031-per-source-opportunity-defs.md`](quests-progression-031-per-source-opportunity-defs.md)  
   is blocked by:
   - [`quests-progression-030-external-resolution-and-real-problem-offering.md`](quests-progression-030-external-resolution-and-real-problem-offering.md)
+- [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)  
+  is blocked by:
+  - [`settlements-npcs-033-player-trading-with-any-npc.md`](settlements-npcs-033-player-trading-with-any-npc.md)
 - [`settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`](settlements-npcs-031-sustainable-seed-recovery-and-replanting.md)  
   is blocked by:
   - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)
+- [`ui-input-017-quest-log-information-architecture.md`](ui-input-017-quest-log-information-architecture.md)  
+  is blocked by:
+  - [`quests-progression-031-per-source-opportunity-defs.md`](quests-progression-031-per-source-opportunity-defs.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
@@ -350,8 +371,9 @@ graph TD
   quests_progression_027["quests-progression-027 — Lost treasure expedition — dungeon cave"]
   quests_progression_028["quests-progression-028 — World-fact event fan-out"]
   quests_progression_029["quests-progression-029 — Generic quest resolution effects"]
-  quests_progression_030["quests-progression-030 — External resolution and real problem offering"]
+  quests_progression_030["quests-progression-030 — External resolution and authored/world-driven problem offering"]
   quests_progression_031["quests-progression-031 — Per-source opportunity defs and live gating"]
+  quests_progression_032["quests-progression-032 — Nonlinear stage objectives and transitions"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -359,6 +381,11 @@ graph TD
   settlements_005["settlements-005 — Residential House Construction"]
   settlements_006["settlements-006 — Merchant sell pricing — condition and social standing"]
   settlements_007["settlements-007 — Systemic settlement structure condition and shared repair"]
+  settlements_008["settlements-008 — Settlement progression around home"]
+  settlements_009["settlements-009 — Settlement outskirts and pasture"]
+  settlements_010["settlements-010 — Closed and cautious settlement character"]
+  settlements_011["settlements-011 — Plaza layout, paving and core protection"]
+  settlements_012["settlements-012 — Regional specialist trade and settlement-scale quality"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
   settlements_npcs_002["settlements-npcs-002 — NPC professions — complete profession work integration"]
   settlements_npcs_003["settlements-npcs-003 — Hunter Arrow Production"]
@@ -422,6 +449,7 @@ graph TD
   ui_input_014["ui-input-014 — Construction Status, Inspection and Context Actions"]
   ui_input_015["ui-input-015 — Interaction Targeting and Action Semantics"]
   ui_input_016["ui-input-016 — Building placement and construction UX coherence"]
+  ui_input_017["ui-input-017 — Quest log information architecture"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
@@ -666,6 +694,7 @@ graph TD
   quests_progression_019 --> quests_progression_022
   quests_progression_028 --> quests_progression_030
   quests_progression_030 --> quests_progression_031
+  quests_progression_031 --> ui_input_017
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022
@@ -723,6 +752,7 @@ graph TD
   settlements_npcs_030 --> settlements_npcs_031
   settlements_npcs_030 --> world_023
   settlements_npcs_032 --> settlements_npcs_034
+  settlements_npcs_033 --> settlements_012
   settlements_npcs_034 --> settlements_npcs_016
   settlements_npcs_034 --> settlements_npcs_017
   tools_010 --> tools_011

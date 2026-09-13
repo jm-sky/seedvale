@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** world-terrain-028
+**Depends on:** ~~world-terrain-028~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `adventure-cave` `family` `heirloom` `choice`

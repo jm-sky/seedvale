@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** L
-**Depends on:** world-terrain-028, fauna-027
+**Depends on:** ~~world-terrain-028~~, ~~fauna-027~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `dungeon` `expedition` `treasure` `choice`

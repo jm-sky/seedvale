@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-028-world-fact-event-fanout`                       | —                   | 2026-09-13 18:32:55 | `quests-progression` | quests-progression-030-external-resolution-and-real-problem-offering |
+| `quests-progression-024-suspicious-transport-natural-cave-cache`       | 2026-09-13 18:12:26 | —                   | `quests-progression` | —          |
 | `quests-progression-023-lost-hunter-natural-cave`                      | 2026-09-13 15:54:52 | —                   | `quests-progression` | —          |
 | `quests-progression-008-treasure-map-bear-cave`                        | —                   | 2026-09-13 15:15:39 | `quests-progression` | —          |
 | `world-terrain-028-archetype-aware-cave-story-and-loot-anchors`        | 2026-09-13 15:05:59 | —                   | `world-terrain`  | —          |
