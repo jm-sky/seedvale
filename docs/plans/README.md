@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
 | ◼️ `world-terrain-028-archetype-aware-cave-story-and-loot-anchors.md`          | -       | 🟡 | M      | ~~world-terrain-020~~, ~~world-terrain-024~~, ~~world-terrain-025~~ |
 | ◼️ `quests-progression-023-lost-hunter-natural-cave.md`                        | -       | 🟡 | M      | world-terrain-028, ~~fauna-018~~, ~~fauna-019~~ |
+| ◼️ `quests-progression-024-natural-cave-contraband-cache.md`                   | -       | 🟡 | M      | world-terrain-028 |
 
 ---
 
@@ -193,7 +194,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `032`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `024`
+- quests-progression: `025`
 - settlements: `008`
 - settlements-npcs: `035`
 - tools: `014`
