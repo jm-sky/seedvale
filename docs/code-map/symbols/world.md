@@ -211,7 +211,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveAuthoredAnchorClaims.ts`
 
-- `CaveAuthoredAnchorClaims` — class — line 7
+- `CaveAuthoredAnchorClaims` — class — line 11
   - domain: world-terrain
 
 ## `world/caves/caveContentAnchors.ts`

@@ -388,6 +388,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveInteriorRocks.test.ts`
@@ -410,6 +411,8 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `world/caves/caveAuthoredAnchorClaims.test.ts`
 
 ## `world/caves/caveContentAnchors.dungeon.test.ts`
@@ -456,6 +459,8 @@ Generated from TypeScript imports.
 
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `world/caves/caveAdventureContentPolicy.test.ts`
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.test.ts`
@@ -2410,6 +2415,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/quests.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
 - `world/locations/darkForestTreasureSite.test.ts`
@@ -3936,5 +3942,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `world/locations/treasureMapBearCave.ts`
 - `world/worldGeneratedContainers.test.ts`

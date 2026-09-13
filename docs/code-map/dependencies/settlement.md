@@ -981,6 +981,7 @@ Generated from TypeScript imports.
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcIdentity.ts`

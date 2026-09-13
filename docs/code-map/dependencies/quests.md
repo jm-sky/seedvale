@@ -47,6 +47,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
 - `ui/createQuestLog.ts`
@@ -232,12 +233,14 @@ Generated from TypeScript imports.
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `terrain/chunkEnvironment.ts`
 
 **Imported by**
 
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
 
 ## `quests/opportunities/rpgQuestMatrices.test.ts`
 
@@ -270,6 +273,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 
 ## `quests/opportunities/settlementNpcMaterialization.ts`
 
@@ -368,6 +373,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/settlementQuestSelection.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 
 ## `quests/quests.test.ts`
 
@@ -409,6 +416,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.test.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/suspiciousTransportCaveCache.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
@@ -432,3 +441,53 @@ Generated from TypeScript imports.
 
 - `quests/QuestManager.ts`
 - `quests/settlementRatInfestation.test.ts`
+
+## `quests/suspiciousTransportCaveCache.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `quests/QuestManager.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `quests/suspiciousTransportCaveCache.ts`
+- `world/caves/caveAuthoredAnchorClaims.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/worldGeneratedContainers.ts`
+
+## `quests/suspiciousTransportCaveCache.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `settlement/npcState.ts`
+- `world/caves/caveArchetype.ts`
+- `world/caves/caveAuthoredAnchorClaims.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/worldGeneratedContainers.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/suspiciousTransportCaveCacheRuntime.ts`
+
+## `quests/suspiciousTransportCaveCacheRuntime.ts`
+
+**Imports**
+
+- `quests/suspiciousTransportCaveCache.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`

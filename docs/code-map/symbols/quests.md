@@ -92,11 +92,11 @@ Generated from exported TypeScript symbols.
 
 ## `quests/opportunities/rpgQuestMaterialization.ts`
 
-- `materializeRpgQuestOpportunity` — function — line 252
+- `materializeRpgQuestOpportunity` — function — line 259
   - domain: quests-progression
   - system: settlement-quest-opportunities
   - role: Materializes a selected RPG matrix candidate into a normal QuestDef.
-- `RpgMaterializationContext` — type — line 10
+- `RpgMaterializationContext` — type — line 15
 
 ## `quests/opportunities/rpgQuestMatrices.ts`
 
@@ -105,21 +105,25 @@ Generated from exported TypeScript symbols.
 - `collectOldPlaceSecretCandidate` — function — line 124
   - domain: quests-progression
   - role: Collects a lightweight RPG candidate bound to a real landmark id.
-- `collectRpgQuestOpportunities` — function — line 216
+- `collectRpgQuestOpportunities` — function — line 249
   - domain: quests-progression
   - system: settlement-quest-opportunities
   - role: Collects RPG matrix candidates without building QuestDefs.
-- `collectSettlementAgreementCandidate` — function — line 178
+- `collectSettlementAgreementCandidate` — function — line 211
   - domain: quests-progression
   - role: Collects a lightweight RPG candidate bound to a target settlement id.
-- `collectSuspiciousTransportCandidate` — function — line 147
+- `collectSuspiciousTransportCandidate` — function — line 184
   - domain: quests-progression
   - role: Collects a lightweight RPG candidate bound to a counterpart NPC id.
-- `nearbyRpgSettlementDefs` — function — line 241
+- `nearbyRpgSettlementDefs` — function — line 274
   - domain: quests-progression
 - `OLD_PLACE_LANDMARK_KINDS` — const — line 18
   - domain: quests-progression
 - `parseRpgQuestId` — function — line 75
+- `pickSuspiciousTransportNpcs` — function — line 147
+  - domain: quests-progression
+- `pickSuspiciousTransportReceiver` — function — line 165
+  - domain: quests-progression
 - `RPG_NEIGHBOR_SETTLEMENT_LIMIT` — const — line 32
   - domain: quests-progression
 - `RPG_QUEST_PREFIX` — const — line 10
@@ -313,3 +317,28 @@ Generated from exported TypeScript symbols.
   - domain: quests-progression
   - system: settlement-rat-infestation
   - role: Pure world-condition helpers for the settlement rat infestation quest (plan quests-progression-006 §5, quests-progression-013 §11).
+
+## `quests/suspiciousTransportCaveCache.ts`
+
+- `buildSuspiciousTransportCaveCacheQuest` — function — line 169
+  - domain: quests-progression
+- `createSuspiciousTransportEvidenceInstance` — function — line 59
+- `isSuspiciousTransportCacheLooted` — function — line 156
+- `resolveSuspiciousTransportCaveCacheBinding` — function — line 96
+  - domain: quests-progression
+- `SUSPICIOUS_TRANSPORT_CAVE_CACHE_RESERVATION_KEY` — const — line 17
+- `SUSPICIOUS_TRANSPORT_EVIDENCE_KIND` — const — line 23
+- `SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME` — const — line 21
+- `SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME` — const — line 19
+- `SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME` — const — line 20
+- `suspiciousTransportCacheContainerId` — function — line 55
+- `suspiciousTransportCacheContainerSpec` — function — line 139
+  - domain: quests-progression
+- `SuspiciousTransportCaveCacheBinding` — type — line 30
+  - domain: quests-progression
+- `suspiciousTransportEvidenceInstanceId` — function — line 51
+
+## `quests/suspiciousTransportCaveCacheRuntime.ts`
+
+- `getActiveSuspiciousTransportCaveCacheBinding` — function — line 12
+- `setActiveSuspiciousTransportCaveCacheBinding` — function — line 6

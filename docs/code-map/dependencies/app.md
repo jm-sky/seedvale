@@ -404,6 +404,7 @@ Generated from TypeScript imports.
 
 - `app/actions/npcItemTransfer.test.ts`
 - `app/actions/npcItemTransferActions.ts`
+- `app/createApp.ts`
 
 ## `app/actions/npcItemTransferActions.ts`
 
@@ -832,6 +833,7 @@ Generated from TypeScript imports.
 - `app/actions/inspectionActions.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
+- `app/actions/npcItemTransfer.ts`
 - `app/actions/npcItemTransferActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
@@ -911,6 +913,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`
+- `quests/suspiciousTransportCaveCache.ts`
+- `quests/suspiciousTransportCaveCacheRuntime.ts`
 - `render/programPrewarm.ts`
 - `reputation/ReputationManager.ts`
 - `reputation/SocialNewsLedger.ts`
@@ -1538,6 +1542,8 @@ Generated from TypeScript imports.
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
+- `quests/suspiciousTransportCaveCache.ts`
+- `quests/suspiciousTransportCaveCacheRuntime.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
