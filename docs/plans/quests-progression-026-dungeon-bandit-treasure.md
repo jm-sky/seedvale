@@ -6,152 +6,85 @@
 **Priority:** medium · **Effort:** M
 **Depends on:** world-terrain-028, fauna-027
 **Domain:** `quests-progression`
-**Subdomains:** `quests` `rewards`
-**Tags:** `dungeon` `bandit-treasure` `loot` `exploration`
+**Subdomains:** `quests` `relationships` `rewards`
+**Tags:** `dungeon` `bandit-treasure` `loot` `choice`
 **Roadmap:** -
 
 ## Goal
 
-Add a treasure-hunt quest using a real `dungeon` cave that was once used by bandits as a hideout/cache network.
-
-The bandits are historical context in V1. The dungeon is not populated with quest-spawned human enemies. Current cave residents remain ordinary fauna-owned animals.
-
-Target experience:
+Use a real dungeon as a historical bandit cache network. No living quest bandits: current residents remain fauna-owned animals.
 
 ```text
-rumour / old clue
-→ exact dungeon cave
+old bandit clue
+→ exact dungeon
 → optional side caches
-→ deeper main bandit stash
-→ physical loot is the primary reward
+→ deep main stash + bandit ledger + marked valuable
+→ decide what to do with identifiable stolen property
 ```
 
-This quest should use the dungeon's branching layout rather than treating it as one large room.
+## NPCs and clue
 
-## Dungeon binding
+Use generated NPCs with stable `NpcId`s.
 
-Bind one exact cave satisfying:
+- giver: prefer adult `guard`; fallback `hunter` or other adult who plausibly knows local routes/history;
+- claimant: prefer an adult `trader` from the same settlement or nearby settlement.
 
-```text
-Caves.archetypeOf(caveId) === 'dungeon'
-+ stable dungeon chamber semantics
-+ world-terrain-028 side/deep loot anchors
-```
+The giver has an old report/rumour locating the historical hideout. The claimant does **not** initially know their property is there.
 
-Use `Caves.dungeonChambersOf(caveId)` for chamber classification and `Caves.contentAnchorsOf(caveId)` for final safe placement.
+## Dungeon and loot layout
 
-Do not use dungeon topology array indexes, chamber-centre Y, surface height or presentation meshes as loot positions.
+Bind one exact `dungeon` with `world-terrain-028` side/deep anchors. The quest may coexist with `quests-progression-027` in the same dungeon.
 
-The quest may share the same guaranteed dungeon with `quests-progression-027`; anchor roles are deliberately separated so both stories can coexist.
+- side chambers: one or two optional fixed caches;
+- deep chamber: main stash;
+- never claim `finalTreasure`, reserved for stories that require the dungeon endpoint.
 
-## Bandit cache layout
+All caches are `WorldGeneratedContainers` and exist before quest activation.
 
-Create several fixed `WorldGeneratedContainers` entries from cave-owned anchors:
+The deep stash contains ordinary loot plus two story items:
 
-- one or two optional side-chamber caches (`sideTreasure` / side `loot` anchors);
-- one main bandit stash in a `deep` chamber `loot` anchor.
+1. a **bandit ledger** identifying at least one past robbery/owner;
+2. one **marked valuable** tied to the claimant, using the smallest reusable physical item-instance representation available at implementation time.
 
-Do **not** consume the dungeon `finalTreasure` anchor in this quest. Reserve final-chamber treasure semantics for stories that need the true end of the dungeon, especially `quests-progression-027`.
+Do not create quest-only inventory state.
 
-Cache identities must derive from stable cave/anchor ids and remain deterministic across rebuilds.
+## Stages
 
-## Loot
+1. generated giver reveals the exact dungeon;
+2. Player explores optional side caches;
+3. Player loots the exact deep stash;
+4. ledger identifies the generated trader/claimant;
+5. Player chooses what to do with the marked valuable and evidence.
 
-Use existing item/inventory systems only.
+Dungeon residents are never required kills and may already be absent/dead.
 
-The caches may contain a tuned mix of:
+## Outcomes
 
-- coin,
-- weapons/tools already present in the catalog,
-- trade goods/food where appropriate,
-- one more valuable existing item in the deep stash if balance permits.
+### `return_marked_property`
 
-No `BanditLoot` state or quest-specific inventory is allowed.
+Give the physical marked valuable to its claimant and report the ledger. Strong trust/integrity/benevolence result and claimant relation gain. Player keeps ordinary bandit loot.
 
-The Player keeps actual container contents. Do not duplicate the treasure again through `QuestReward`.
+### `give_evidence_to_guard`
 
-## Quest giver / discovery
+Hand the ledger and marked valuable to the guard/giver for formal recovery. Stronger competence/integrity/renown result; smaller claimant relation gain; physical items leave Player inventory.
 
-A specific authored NPC knows an old story, ledger entry or rumour pointing to the cave. V1 does not need a new physical map item if dialogue can reveal the location through existing `LocationKnowledge`.
+### `keep_marked_property`
 
-The world caches exist before the quest. If the Player discovers and empties the main stash early, later quest progress should read the authoritative container/world state and catch up rather than respawning treasure.
+Keep the valuable and do not surrender the evidence. The item remains with Player; no duplicated reward. Lower/negative integrity/trust outcome and no claimant reward.
 
-## Quest flow
+If current systems cannot support all three physical hand-ins safely, implement the first and third outcomes first; do not fake the middle path with quest flags.
 
-1. Giver shares the bandit-cache story and reveals the exact dungeon location.
-2. Player explores the dungeon. Side caches are optional rewards and do not gate completion.
-3. Reaching/looting the exact deep main stash completes the core world objective through `loot_world_container(mainBanditStashId)`.
-4. Return/report to the giver if desired for narrative closure and a small social reward.
+## Ownership / reuse
 
-Do not require killing dungeon residents or clearing every chamber.
+QuestManager owns progress/outcome only; generated NPC systems own identities; cave world owns anchors; `WorldGeneratedContainers` owns caches; inventory owns ledger/valuable; fauna owns residents; social systems own consequences.
 
-## Dungeon residents
+Reuse generated-NPC opportunity patterns, `quests.ts`, `QuestManager.ts`, `createApp.ts`, `worldBundle.ts`, `createCaves.ts`, `dungeonChambers.ts`, `caveContentAnchors.ts`, `worldGeneratedContainers.ts`, item-instance contracts and `revealLocationKnowledge.ts`.
 
-`fauna-027` / current `src/fauna/dungeonResidents.ts` owns dungeon animals.
-
-Quest code must not:
-
-- create extra bears/wolves,
-- require a specific resident to be alive,
-- count resident deaths as progress,
-- reset animals when the Player leaves,
-- store animal state in quest progress.
-
-The dungeon can therefore be easier or harder depending on actual world history when the Player arrives.
-
-## Outcomes / rewards
-
-Use one normal completion such as `bandit_stash_found`.
-
-Primary reward = physical loot already taken from the world containers.
-
-Optional report reward should be small (relation/renown or modest coin) and must not recreate the main treasure value.
-
-No moral ownership branch is required in V1. A future stolen-property/law system may attach consequences to specific historical loot without changing this cave-content architecture.
-
-## Ownership / persistence
-
-| State | Owner |
-|---|---|
-| quest progress/outcome | `QuestManager` |
-| cave/chambers/anchors | cave world, derived |
-| cache inventories | `WorldGeneratedContainers` |
-| dungeon residents | fauna |
-| location knowledge | world location system |
-| social reward | existing quest/social systems |
-
-All cache content exists independently of quest activation.
-
-## Reuse targets
-
-Implementation recon should focus on:
-
-- `src/quests/quests.ts`;
-- `src/quests/QuestManager.ts` — `loot_world_container`;
-- `src/app/createApp.ts` — contextual quest composition / anchor claims;
-- `src/app/worldBundle.ts`;
-- `src/world/createCaves.ts`;
-- `src/world/caves/dungeonChambers.ts`;
-- `src/world/caves/caveContentAnchors.ts` after `world-terrain-028`;
-- `src/world/worldGeneratedContainers.ts`;
-- `src/fauna/dungeonResidents.ts`;
-- `src/world/locations/revealLocationKnowledge.ts`.
-
-Add JSDoc for important reusable/public additions and appropriate `@domain` tags.
-
-## Non-goals
-
-- no living bandit faction in V1;
-- no quest mobs;
-- no dungeon clear objective;
-- no new combat pipeline;
-- no final-chamber treasure claim;
-- no duplicated cave coordinates;
-- no generic crime/stolen-property framework.
+Add JSDoc for important reusable/public additions with appropriate `@domain` tags.
 
 ## Verification
 
-Test dungeon-only binding; side/deep anchor classification; main stash never uses `finalTreasure`; side caches remain optional; early looting does not respawn treasure; only the main stash completes the objective; fauna state is irrelevant to quest completion; save/load/rebuild preserves exact cache depletion without duplication.
+Test dungeon-only binding, deterministic guard/trader selection, side caches optional, deep stash exact, no `finalTreasure` claim, physical return/guard/keep outcomes, distinct social consequences, fauna independence and no loot duplication after save/load/rebuild.
 
 Manual browser verification remains the User's responsibility.
 
