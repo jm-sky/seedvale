@@ -901,10 +901,13 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/cardinalDirection.ts`
 - `quests/guardPersistence.ts`
+- `quests/lostHunterNaturalCave.ts`
+- `quests/lostHunterNaturalCaveRuntime.ts`
 - `quests/materializeAuthoredQuests.ts`
 - `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`
@@ -957,6 +960,7 @@ Generated from TypeScript imports.
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/locationsCoarseCache.ts`
 - `world/locations/navigationTargets.ts`
+- `world/locations/revealLocationKnowledge.ts`
 - `world/locations/treasureMapBearCave.ts`
 - `world/locations/treasureMapBearCaveRuntime.ts`
 - `world/locations/worldLocationCatalog.ts`
@@ -1531,6 +1535,9 @@ Generated from TypeScript imports.
 - `items/heldToolVisual.ts`
 - `items/itemModels.ts`
 - `items/treasureGameplay.ts`
+- `quests/lostHunterNaturalCave.ts`
+- `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -1556,6 +1563,7 @@ Generated from TypeScript imports.
 - `world/cartProp.ts`
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.ts`
+- `world/caves/caveAuthoredAnchorClaims.ts`
 - `world/createBeehives.ts`
 - `world/createCarts.ts`
 - `world/createCaves.ts`

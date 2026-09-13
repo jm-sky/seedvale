@@ -209,6 +209,11 @@ Generated from exported TypeScript symbols.
 - `rollsDungeon` — function — line 169
   - domain: world-terrain
 
+## `world/caves/caveAuthoredAnchorClaims.ts`
+
+- `CaveAuthoredAnchorClaims` — class — line 7
+  - domain: world-terrain
+
 ## `world/caves/caveContentAnchors.ts`
 
 - `CAVE_CONTENT_ANCHOR_ROLES` — const — line 46
@@ -2118,9 +2123,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/worldGeneratedContainers.ts`
 
-- `createWorldGeneratedContainers` — function — line 104
+- `createWorldGeneratedContainers` — function — line 108
   - domain: world
-- `SaveWorldGeneratedContainer` — type — line 14
-- `WorldGeneratedContainerEntry` — type — line 24
-- `WorldGeneratedContainers` — type — line 35
-- `WorldGeneratedContainerSpec` — type — line 72
+- `SaveWorldGeneratedContainer` — type — line 15
+- `WorldGeneratedContainerEntry` — type — line 25
+- `WorldGeneratedContainers` — type — line 36
+- `WorldGeneratedContainerSpec` — type — line 73

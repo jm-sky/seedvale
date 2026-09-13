@@ -387,6 +387,7 @@ Generated from TypeScript imports.
 
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `quests/lostHunterNaturalCave.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveInteriorRocks.test.ts`
@@ -395,6 +396,21 @@ Generated from TypeScript imports.
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.ts`
+
+## `world/caves/caveAuthoredAnchorClaims.test.ts`
+
+**Imports**
+
+- `world/caves/caveAuthoredAnchorClaims.ts`
+
+## `world/caves/caveAuthoredAnchorClaims.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostHunterNaturalCave.ts`
+- `world/caves/caveAuthoredAnchorClaims.test.ts`
 
 ## `world/caves/caveContentAnchors.dungeon.test.ts`
 
@@ -438,6 +454,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostHunterNaturalCave.ts`
 - `world/caves/caveAdventureContentPolicy.test.ts`
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.test.ts`
@@ -2390,6 +2408,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `quests/lostHunterNaturalCave.ts`
 - `quests/quests.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
@@ -2552,6 +2571,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/createApp.ts`
 - `app/inventoryWiring.ts`
 
 ## `world/locations/seedProfile.test.ts`
@@ -3902,6 +3922,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/container.ts`
 - `items/foodFreshness.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
@@ -3913,5 +3934,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
+- `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostHunterNaturalCave.ts`
 - `world/locations/treasureMapBearCave.ts`
 - `world/worldGeneratedContainers.test.ts`

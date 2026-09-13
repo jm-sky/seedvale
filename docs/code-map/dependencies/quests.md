@@ -116,6 +116,51 @@ Generated from TypeScript imports.
 - `quests/guardPersistence.ts`
 - `quests/guardRewards.test.ts`
 
+## `quests/lostHunterNaturalCave.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `quests/lostHunterNaturalCave.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `world/caves/caveAuthoredAnchorClaims.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/worldGeneratedContainers.ts`
+
+## `quests/lostHunterNaturalCave.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `quests/quests.ts`
+- `settlement/npcState.ts`
+- `settlement/settlementGenerator.ts`
+- `world/caves/caveArchetype.ts`
+- `world/caves/caveAuthoredAnchorClaims.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/worldGeneratedContainers.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostHunterNaturalCaveRuntime.ts`
+
+## `quests/lostHunterNaturalCaveRuntime.ts`
+
+**Imports**
+
+- `quests/lostHunterNaturalCave.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+
 ## `quests/materializeAuthoredQuests.test.ts`
 
 **Imports**
@@ -226,6 +271,21 @@ Generated from TypeScript imports.
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 
+## `quests/opportunities/settlementNpcMaterialization.ts`
+
+**Imports**
+
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostHunterNaturalCave.ts`
+
 ## `quests/opportunities/settlementQuestOpportunities.test.ts`
 
 **Imports**
@@ -303,6 +363,7 @@ Generated from TypeScript imports.
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/settlementQuestSelection.ts`
@@ -339,6 +400,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/guardRewards.ts`
+- `quests/lostHunterNaturalCave.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
 - `quests/opportunities/guardProfessionQuests.ts`

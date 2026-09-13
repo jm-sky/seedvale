@@ -273,12 +273,12 @@ Generated from exported TypeScript symbols.
 
 ## `items/inventoryView.ts`
 
-- `buildInventoryGroups` — function — line 238
-- `inventoryCountsForUi` — function — line 274
-- `InventoryGroupView` — type — line 67
-- `InventoryInstanceRow` — type — line 45
-- `ITEM_METER_LABEL` — const — line 39
-- `ItemMeterKind` — type — line 34
+- `buildInventoryGroups` — function — line 259
+- `inventoryCountsForUi` — function — line 296
+- `InventoryGroupView` — type — line 68
+- `InventoryInstanceRow` — type — line 46
+- `ITEM_METER_LABEL` — const — line 40
+- `ItemMeterKind` — type — line 35
 
 ## `items/itemCatalog.ts`
 
@@ -339,22 +339,23 @@ Generated from exported TypeScript symbols.
 - `ArmorItemInstance` — type — line 35
 - `ArmorKind` — type — line 19
 - `ArmorQuality` — type — line 25
-- `clamp01` — function — line 215
+- `clamp01` — function — line 222
 - `clampCampCondition` — function — line 166
-- `cloneItemInstance` — function — line 220
+- `cloneItemInstance` — function — line 227
 - `createItemInstanceId` — function — line 182
-- `createKeyInstance` — function — line 199
+- `createKeyInstance` — function — line 206
 - `createTentInstance` — function — line 171
-- `INSTANCE_BACKED_KINDS` — const — line 187
+- `IDENTITY_ONLY_ITEM_KINDS` — const — line 189
+- `INSTANCE_BACKED_KINDS` — const — line 193
 - `isArmorItemInstance` — function — line 52
 - `isArmorKind` — function — line 40
 - `isArmorQuality` — function — line 44
-- `isInstanceBackedKind` — function — line 203
+- `isInstanceBackedKind` — function — line 210
 - `isLiquidContainerInstance` — function — line 150
 - `isLiquidContainerKind` — function — line 124
 - `isTentItemInstance` — function — line 161
-- `isTrapItemInstance` — function — line 211
-- `isTrapKind` — function — line 207
+- `isTrapItemInstance` — function — line 218
+- `isTrapKind` — function — line 214
 - `isWeaponItemInstance` — function — line 137
 - `isWeaponMaintenanceKind` — function — line 97
 - `ItemInstance` — type — line 4
