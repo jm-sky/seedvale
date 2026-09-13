@@ -75,6 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
 | ✅ `world-027-player-spatial-context-and-cross-space-target-isolation.md`      | -       | 🟢 | L      | ~~world-terrain-019~~ |
+| ◼️ `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
 
 ---
 
@@ -196,7 +197,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `014`
 - ui-input: `017`
 - world: `028`
-- world-terrain: `027`
+- world-terrain: `028`
 
 This ids section is maintained automatically from the plan files.
 
