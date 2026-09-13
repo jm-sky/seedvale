@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 970
+- `AnimalAgent` — class — line 1012
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 474
-- `AnimalAgentDeps` — type — line 794
-- `AnimalSaveState` — type — line 584
-- `AnimalUpdateContext` — type — line 838
+- `AnimalAgentDebugInfo` — type — line 516
+- `AnimalAgentDeps` — type — line 836
+- `AnimalSaveState` — type — line 626
+- `AnimalUpdateContext` — type — line 880
 - `BURY_DURATION_SEC` — const — line 335
-- `canPredatorPursueIntoVillage` — function — line 652
+- `canPredatorPursueIntoVillage` — function — line 694
 - `FAUNA_SHADOW_DISTANCE` — const — line 304
 - `FaunaAiBranch` — type — line 453
-- `FaunaNavRescueDebugInfo` — type — line 458
+- `FaunaNavRescueDebugInfo` — type — line 500
 - `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 395
-- `FrenzyWolfCandidate` — type — line 729
+- `FrenzyWolfCandidate` — type — line 771
 - `HARVEST_MEAT_DURATION_SEC` — const — line 338
-- `isWithinVillageRadius` — function — line 633
-- `NearbyNpcCandidate` — type — line 724
-- `pickNearestEligibleWolf` — function — line 738
-- `pickRabidTarget` — function — line 763
+- `isWithinVillageRadius` — function — line 675
+- `NearbyNpcCandidate` — type — line 766
+- `pickNearestEligibleWolf` — function — line 780
+- `pickRabidTarget` — function — line 805
 - `RABIES_BITE_INFECTION_CHANCE` — const — line 322
-- `villageFleeBiasFalloff` — function — line 660
-- `VillageInfo` — type — line 627
+- `villageFleeBiasFalloff` — function — line 702
+- `VillageInfo` — type — line 669
 
 ## `fauna/animalAttraction.ts`
 
