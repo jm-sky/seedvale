@@ -260,6 +260,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldMesh.ts`
 
+- `buildCaveMouthProxyBuffers` — function — line 698
+  - domain: world-terrain
 - `buildHeightfieldMeshBuffers` — function — line 119
   - domain: world-terrain
 - `buildMouthUndersideMaskBuffers` — function — line 633
@@ -288,17 +290,19 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 253
-- `createCaveHeightfieldGeometry` — function — line 90
+- `CaveHeightfieldPresentation` — type — line 288
+- `createCaveHeightfieldGeometry` — function — line 91
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 283
+- `createCaveHeightfieldPresentation` — function — line 318
   - domain: world-terrain
-- `createMouthRocks` — function — line 186
+- `createCaveMouthProxy` — function — line 138
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 108
+- `createMouthRocks` — function — line 221
   - domain: world-terrain
-- `createMouthUndersideMaskMaterial` — function — line 44
-- `exemptCavePresentationFromSceneFog` — function — line 56
+- `createMouthUndersideMask` — function — line 109
+  - domain: world-terrain
+- `createMouthUndersideMaskMaterial` — function — line 45
+- `exemptCavePresentationFromSceneFog` — function — line 57
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
@@ -711,9 +715,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 110
-- `Caves` — type — line 112
-- `createCaves` — function — line 339
+- `CaveInteriorQueryChannel` — type — line 111
+- `Caves` — type — line 113
+- `createCaves` — function — line 340
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
