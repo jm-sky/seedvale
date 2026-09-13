@@ -4,6 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
+**Model:** Opus, Sonnet
 **Depends on:** ~~world-terrain-020~~, ~~world-terrain-024~~, ~~world-terrain-025~~
 **Domain:** `world-terrain`
 **Subdomains:** `terrain` `landmarks`
