@@ -2,7 +2,7 @@
 
 **Reviewed:** 2026-09-13  
 **Plan:** `docs/plans/world-terrain-028-archetype-aware-cave-story-and-loot-anchors.md`  
-**Baseline:** `main` at `2edf2022d870b0c9610346eabc70ae830e171f4a`
+**Baseline:** `main` at `cecb8551ee670ba97807678d9b60d913c351fbe5`
 
 ## Main recon findings
 
@@ -93,7 +93,15 @@ Do not make `bindExactCaveQuests()` the selector/arbitrator; it currently decora
 
 Do not activate a live `QUEST_TREASURE` reservation for a planned quest unless its authored world treasure is materialized in the same implementation. Otherwise `world-terrain-028` would deliberately suppress generic treasure but leave a reserved empty cave. The shared resolver can be implemented/tested now with fabricated reservation requests; follow-up quest plans should submit their real requests when their world content lands.
 
-Dungeon stories `quests-progression-026` and `027` intentionally may share one cave, so arbitration must be anchor-level rather than globally “one story per cave”. Adventure profile reservations are the exception: `quests-progression-008` and `025` require distinct caves/profiles.
+Current planned consumer contracts worth preserving in the generic arbitration seam:
+
+- `quests-progression-008`: one adventure cave, `QUEST_TREASURE`, claims `finalTreasure`;
+- `quests-progression-025`: a different adventure cave constrained to `EMPTY` before its authored claim;
+- `quests-progression-023`: one natural cave must expose both `storyFind` and `loot`; bind both anchors atomically to the same cave;
+- `quests-progression-024`: this is a **variant of the existing `suspicious-transport` opportunity**, not a new quest catalog entry; its cave variant claims one natural-cave `loot` anchor only when that matrix variant is materialized;
+- `quests-progression-026` and `027`: may intentionally share one dungeon, so conflicts must be detected at anchor level rather than by globally locking a cave.
+
+Keep reservation keys story/system-owned and declarative; `world-terrain` should not import quest ids/stages or encode these consumers as cave-generation branches.
 
 ## Materialization / persistence
 
