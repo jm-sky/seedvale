@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `relationships` `rewards`
 **Tags:** `dungeon` `expedition` `treasure` `choice`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
