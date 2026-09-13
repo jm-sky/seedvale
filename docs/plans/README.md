@@ -85,6 +85,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | quests-progression-030 |
 | ◼️ `settlements-008-settlement-progression-around-home.md`                     | -       | 🟡 | S      | -      |
 | ◼️ `settlements-009-settlement-outskirts-and-pasture.md`                       | -       | 🟡 | M      | -      |
+| ◼️ `settlements-010-closed-and-cautious-settlement-character.md`               | -       | 🟡 | M      | -      |
+| ◼️ `ui-input-017-quest-log-information-architecture.md`                        | -       | 🟡 | M      | quests-progression-031 |
 
 ---
 
@@ -202,10 +204,10 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - npc: `039`
 - persistence: `005`
 - quests-progression: `032`
-- settlements: `010`
+- settlements: `011`
 - settlements-npcs: `035`
 - tools: `014`
-- ui-input: `017`
+- ui-input: `018`
 - world: `028`
 - world-terrain: `029`
 
