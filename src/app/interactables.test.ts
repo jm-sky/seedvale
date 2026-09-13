@@ -170,7 +170,8 @@ describe('filterInteractablesSameSpatialContext (plan world-027)', () => {
     chest.spatialContext = cave
     const filtered = filterInteractablesSameSpatialContext([tree, chest], cave)
     expect(filtered).toHaveLength(1)
-    expect(filtered[0]?.id).toBe('chest-1')
+    const [survivor] = filtered
+    expect(survivor && 'id' in survivor ? survivor.id : undefined).toBe('chest-1')
   })
 
   it('keeps ordinary surface candidates for a surface player', () => {
