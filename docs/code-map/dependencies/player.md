@@ -346,10 +346,12 @@ Generated from TypeScript imports.
 - `combat/meleeAttack.ts`
 - `combat/projectile.ts`
 - `fauna/faunaCombat.ts`
+- `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
 - `player/playerCombat.ts`
 - `player/playerMelee.ts`
 - `shared/HealthState.ts`
+- `world/spatialContext.ts`
 
 ## `player/playerCombat.ts`
 
@@ -362,6 +364,7 @@ Generated from TypeScript imports.
 - `interaction/Interactable.ts`
 - `player/playerMelee.ts`
 - `settlement/createSettlement.ts`
+- `world/spatialContext.ts`
 
 **Imported by**
 

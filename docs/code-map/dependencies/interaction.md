@@ -20,6 +20,7 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
 - `world/playerWell.ts`
+- `world/spatialContext.ts`
 - `world/treeLifecycle.ts`
 
 **Imported by**
@@ -28,12 +29,14 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/inspection/buildWorldInspection.test.ts`
 - `app/inspection/inspectionTarget.ts`
+- `app/interactables.test.ts`
 - `app/interactables.ts`
 - `interaction/interactionView.test.ts`
 - `interaction/interactionView.ts`
 - `interaction/resolveInteraction.ts`
 - `interaction/targetedSkillAction.test.ts`
 - `interaction/targetedSkillAction.ts`
+- `player/playerCombat.test.ts`
 - `player/playerCombat.ts`
 
 ## `interaction/findInteractionTarget.test.ts`

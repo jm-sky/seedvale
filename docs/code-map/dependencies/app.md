@@ -1121,6 +1121,7 @@ Generated from TypeScript imports.
 - `world/locations/locationProximityDiscovery.ts`
 - `world/map/mapDiscovery.ts`
 - `world/playerWell.ts`
+- `world/spatialContext.ts`
 - `world/timeSkip.ts`
 - `world/transportOffscreen.ts`
 - `world/weather.ts`
@@ -1234,9 +1235,11 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/interactables.ts`
+- `interaction/Interactable.ts`
 - `items/Inventory.ts`
 - `items/createDroppedItems.ts`
 - `items/items.ts`
+- `world/spatialContext.ts`
 
 ## `app/interactables.ts`
 
@@ -1291,6 +1294,7 @@ Generated from TypeScript imports.
 - `world/playerTrough.ts`
 - `world/playerWell.ts`
 - `world/residentialBuilding.ts`
+- `world/spatialContext.ts`
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
 - `world/worldGeneratedContainers.ts`

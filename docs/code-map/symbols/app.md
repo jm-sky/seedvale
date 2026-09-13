@@ -272,9 +272,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 665
-- `GameLoop` — type — line 624
-- `GameLoopDeps` — type — line 301
+- `createGameLoop` — function — line 668
+- `GameLoop` — type — line 627
+- `GameLoopDeps` — type — line 304
 
 ## `app/graphicsSettings.ts`
 
@@ -318,23 +318,24 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1198
-- `buildDigTarget` — function — line 1145
-- `buildInteractables` — function — line 454
-- `collectItem` — function — line 1248
-- `COMBAT_TARGET_CONE_DOT` — const — line 99
-- `COMBAT_TARGET_RANGE` — const — line 84
-- `CombatAimMode` — type — line 89
-- `DIG_REACH` — const — line 78
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 304
-- `GAZE_RANGE` — const — line 74
-- `groupDroppedItemCandidates` — function — line 314
+- `buildCombatTarget` — function — line 1258
+- `buildDigTarget` — function — line 1202
+- `buildInteractables` — function — line 505
+- `collectItem` — function — line 1314
+- `COMBAT_TARGET_CONE_DOT` — const — line 104
+- `COMBAT_TARGET_RANGE` — const — line 89
+- `CombatAimMode` — type — line 94
+- `DIG_REACH` — const — line 83
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 309
+- `filterInteractablesSameSpatialContext` — function — line 489
+- `GAZE_RANGE` — const — line 79
+- `groupDroppedItemCandidates` — function — line 319
   - domain: items-player
-- `INTERACT_MIN_DOT` — const — line 71
-- `INTERACT_RANGE` — const — line 68
-- `itemPromptLabel` — function — line 293
-- `resolveHaySpot` — function — line 390
-- `worldItemAllowsAltInteract` — function — line 278
+- `INTERACT_MIN_DOT` — const — line 76
+- `INTERACT_RANGE` — const — line 73
+- `itemPromptLabel` — function — line 298
+- `resolveHaySpot` — function — line 395
+- `worldItemAllowsAltInteract` — function — line 283
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`
@@ -394,15 +395,15 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 860
+- `BuiltWorldSystems` — type — line 861
 - `caveTreasureContainerSpecs` — function — line 162
   - domain: world-terrain
-- `createWorldBundle` — function — line 1424
-- `disposeWorldBundle` — function — line 1873
+- `createWorldBundle` — function — line 1425
+- `disposeWorldBundle` — function — line 1874
 - `HOME_RADIUS` — const — line 141
-- `homeChunks` — function — line 185
-- `rebuildWorldBundle` — function — line 1646
-- `WorldBundle` — type — line 208
+- `homeChunks` — function — line 186
+- `rebuildWorldBundle` — function — line 1647
+- `WorldBundle` — type — line 209
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

@@ -14,8 +14,10 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/Interactable.ts`
 
-- `Interactable` — type — line 32
-- `WorldItemRef` — type — line 17
+- `Interactable` — type — line 229
+- `InteractablePayload` — type — line 33
+- `surfaceInteractable` — function — line 234
+- `WorldItemRef` — type — line 18
 
 ## `interaction/interactionView.ts`
 

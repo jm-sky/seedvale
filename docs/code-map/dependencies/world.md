@@ -1519,6 +1519,7 @@ Generated from TypeScript imports.
 - `world/caves/topologyAdapter.ts`
 - `world/largeCaves.ts`
 - `world/pointLightBudget.ts`
+- `world/spatialContext.ts`
 - `world/waterMaterial.ts`
 
 **Imported by**
@@ -3298,6 +3299,26 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `world/createSleepingUtilities.ts`
 
+## `world/spatialContext.test.ts`
+
+**Imports**
+
+- `world/spatialContext.ts`
+
+## `world/spatialContext.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `app/interactables.test.ts`
+- `app/interactables.ts`
+- `interaction/Interactable.ts`
+- `player/playerCombat.test.ts`
+- `player/playerCombat.ts`
+- `world/createCaves.ts`
+- `world/spatialContext.test.ts`
+- `world/worldGeneratedContainers.ts`
+
 ## `world/standingTorch.test.ts`
 
 **Imports**
@@ -3785,6 +3806,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `settlement/props.ts`
 - `world/containerProp.ts`
+- `world/spatialContext.ts`
 
 **Imported by**
 

@@ -715,9 +715,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 111
-- `Caves` — type — line 113
-- `createCaves` — function — line 340
+- `CaveInteriorQueryChannel` — type — line 116
+- `Caves` — type — line 118
+- `createCaves` — function — line 348
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
@@ -1641,6 +1641,14 @@ Generated from exported TypeScript symbols.
 - `PLATFORM_VISUAL_SCALE` — const — line 47
 - `PLATFORM_WIDTH` — const — line 46
 
+## `world/spatialContext.ts`
+
+- `caveSpatialContext` — function — line 15
+- `spatialContextsEqual` — function — line 20
+- `WORLD_SPATIAL_CONTEXT_SURFACE` — const — line 13
+- `WorldSpatialContext` — type — line 8
+  - domain: world
+
 ## `world/standingTorch.ts`
 
 - `isStandingTorchConstructionComplete` — function — line 131
@@ -2062,9 +2070,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/worldGeneratedContainers.ts`
 
-- `createWorldGeneratedContainers` — function — line 86
+- `createWorldGeneratedContainers` — function — line 102
   - domain: world
-- `SaveWorldGeneratedContainer` — type — line 10
-- `WorldGeneratedContainerEntry` — type — line 20
-- `WorldGeneratedContainers` — type — line 30
-- `WorldGeneratedContainerSpec` — type — line 65
+- `SaveWorldGeneratedContainer` — type — line 14
+- `WorldGeneratedContainerEntry` — type — line 24
+- `WorldGeneratedContainers` — type — line 35
+- `WorldGeneratedContainerSpec` — type — line 70

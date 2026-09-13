@@ -63,21 +63,23 @@ Generated from exported TypeScript symbols.
 
 ## `player/playerCombat.ts`
 
-- `collectLivingCombatTargets` — function — line 75
-- `collectRangedAnimalCandidates` — function — line 151
-- `COMBAT_MODE_TIMEOUT_SEC` — const — line 11
-- `createPlayerCombat` — function — line 223
-- `filterWorldCycleTargets` — function — line 192
-- `findLivingTargetById` — function — line 196
-- `forEachLivingCombatAnimal` — function — line 57
+- `collectLivingCombatTargets` — function — line 79
+- `collectRangedAnimalCandidates` — function — line 168
+- `COMBAT_MODE_TIMEOUT_SEC` — const — line 13
+- `createPlayerCombat` — function — line 255
+- `filterRangedCandidatesBySpatialContext` — function — line 191
+- `filterWorldCycleTargets` — function — line 224
+- `findLivingTargetById` — function — line 228
+- `forEachLivingCombatAnimal` — function — line 59
   - domain: fauna
-- `LivingCombatTarget` — type — line 13
-- `livingTargetIdForAnimal` — function — line 42
-- `livingTargetIdForNpc` — function — line 46
-- `PlayerCombat` — type — line 21
-- `RangedAnimalCandidate` — type — line 142
-- `resolveLivingInteractable` — function — line 207
-- `resolveRangedAimYaw` — function — line 179
+- `LivingCombatTarget` — type — line 15
+- `livingTargetIdForAnimal` — function — line 44
+- `livingTargetIdForNpc` — function — line 48
+- `PlayerCombat` — type — line 23
+- `RangedAnimalCandidate` — type — line 159
+- `resolveLivingInteractable` — function — line 239
+- `resolveRangedAimYaw` — function — line 211
+- `SpatialContextAt` — type — line 77
 
 ## `player/PlayerController.ts`
 
