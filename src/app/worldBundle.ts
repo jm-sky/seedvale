@@ -51,6 +51,17 @@ import { createPlacedTents, type PlacedTent, type PlacedTents } from '../items/c
 import { preloadHeldToolModels } from '../items/heldToolVisual'
 import { preloadItemGlbModels } from '../items/itemModels'
 import { generateTreasureLoot } from '../items/treasureGameplay'
+import {
+  lostHunterPackContainerSpec,
+  resolveLostHunterNaturalCaveBinding,
+} from '../quests/lostHunterNaturalCave'
+import { setActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
+import { settlementOpportunityNpcsFromDef } from '../quests/opportunities/settlementNpcMaterialization'
+import {
+  resolveSuspiciousTransportCaveCacheBinding,
+  suspiciousTransportCacheContainerSpec,
+} from '../quests/suspiciousTransportCaveCache'
+import { setActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspiciousTransportCaveCacheRuntime'
 import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
@@ -71,13 +82,14 @@ import {
 } from '../terrain/resourceDeposits'
 import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '../world/bloodTraces'
 import { preloadCartProp } from '../world/cartProp'
-import { preloadCaveAdventurePropTemplates } from '../world/caves/caveAdventureProps'
-import { type Beehives, createBeehives } from '../world/createBeehives'
-import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
 import {
   type CaveAdventureContentPolicy,
   resolveCaveAdventureContentPolicy,
 } from '../world/caves/caveAdventureContentPolicy'
+import { preloadCaveAdventurePropTemplates } from '../world/caves/caveAdventureProps'
+import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
+import { type Beehives, createBeehives } from '../world/createBeehives'
+import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
 import { type CaveContentAnchor, type Caves, createCaves } from '../world/createCaves'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
 import { createGrassForagePatches, type GrassForageService } from '../world/createGrassForagePatches'
@@ -109,26 +121,19 @@ import {
   resolveTreasureMapSourcePlace,
   withTreasureMapSourcePlace,
 } from '../world/locations/darkForestTreasureSite'
+import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import {
   resolveTreasureMapBearCaveBinding,
+  type TreasureMapBearCaveCemeteryInput,
   treasureMapBearCavePersistentOccupant,
   treasureMapBearCaveProfileReservation,
   treasureMapBearCaveSourceContainerSpec,
-  type TreasureMapBearCaveCemeteryInput,
 } from '../world/locations/treasureMapBearCave'
 import {
   getActiveTreasureMapBearCaveBinding,
   setActiveTreasureMapBearCaveBinding,
 } from '../world/locations/treasureMapBearCaveRuntime'
-import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
-import {
-  lostHunterPackContainerSpec,
-  resolveLostHunterNaturalCaveBinding,
-} from '../quests/lostHunterNaturalCave'
-import { setActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
-import { settlementOpportunityNpcsFromDef } from '../quests/opportunities/settlementNpcMaterialization'
-import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
-import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { createNpcGraves } from '../world/npcGraves'
 import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
@@ -1317,6 +1322,7 @@ async function buildWorldSystems(
   )
 
   const caveAuthoredClaims = new CaveAuthoredAnchorClaims()
+  const homeOpportunityNpcs = settlementOpportunityNpcsFromDef(homeDef)
   const lostHunterBinding = resolveLostHunterNaturalCaveBinding({
     worldSeed: config.seed,
     settlementDef: homeDef,
@@ -1324,11 +1330,25 @@ async function buildWorldSystems(
     archetypeOf: (caveId) => caves.archetypeOf(caveId) ?? null,
     contentAnchors: caves.contentAnchors(),
     claims: caveAuthoredClaims,
-    npcs: settlementOpportunityNpcsFromDef(homeDef),
+    npcs: homeOpportunityNpcs,
   })
   setActiveLostHunterNaturalCaveBinding(lostHunterBinding)
   const lostHunterLootAnchor = lostHunterBinding
     ? caves.contentAnchors().find((anchor) => anchor.id === lostHunterBinding.lootAnchorId)
+    : undefined
+
+  const suspiciousTransportCaveCacheBinding = resolveSuspiciousTransportCaveCacheBinding({
+    worldSeed: config.seed,
+    settlementId: homeDef.id,
+    npcs: homeOpportunityNpcs,
+    caveIds: caves.definitions().map((def) => def.caveId),
+    archetypeOf: (caveId) => caves.archetypeOf(caveId) ?? null,
+    contentAnchors: caves.contentAnchors(),
+    claims: caveAuthoredClaims,
+  })
+  setActiveSuspiciousTransportCaveCacheBinding(suspiciousTransportCaveCacheBinding)
+  const suspiciousTransportLootAnchor = suspiciousTransportCaveCacheBinding
+    ? caves.contentAnchors().find((anchor) => anchor.id === suspiciousTransportCaveCacheBinding.lootAnchorId)
     : undefined
 
   const bearCaveFinalAnchor = treasureMapBearCaveBinding
@@ -1364,6 +1384,12 @@ async function buildWorldSystems(
       : []),
     ...(lostHunterBinding && lostHunterLootAnchor
       ? [lostHunterPackContainerSpec(lostHunterBinding, lostHunterLootAnchor)]
+      : []),
+    ...(suspiciousTransportCaveCacheBinding && suspiciousTransportLootAnchor
+      ? [suspiciousTransportCacheContainerSpec(
+        suspiciousTransportCaveCacheBinding,
+        suspiciousTransportLootAnchor,
+      )]
       : []),
   ]
   const worldGeneratedContainers = createWorldGeneratedContainers(

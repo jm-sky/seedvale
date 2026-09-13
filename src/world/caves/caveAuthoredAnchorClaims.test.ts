@@ -10,4 +10,11 @@ describe('CaveAuthoredAnchorClaims', () => {
     expect(claims.tryClaimNaturalStoryPair('story', 'loot')).toBe(false)
     expect(claims.tryClaimAnchor('other')).toBe(true)
   })
+
+  it('skips a later loot-only claim on an already reserved pair', () => {
+    const claims = new CaveAuthoredAnchorClaims()
+    expect(claims.tryClaimNaturalStoryPair('story-a', 'loot-a')).toBe(true)
+    expect(claims.tryClaimAnchor('loot-a')).toBe(false)
+    expect(claims.tryClaimAnchor('loot-b')).toBe(true)
+  })
 })

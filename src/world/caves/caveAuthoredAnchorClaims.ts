@@ -2,6 +2,10 @@
  * In-memory composition-time claims for authored cave content anchors.
  * Not persisted — rebuilt deterministically on each world bundle assembly.
  *
+ * Callers must apply requests in stable reservation-key order
+ * (`quests-progression-023` story+loot pair, then `quests-progression-024`
+ * loot-only, then later consumers). Conflicts skip the later request.
+ *
  * @domain world-terrain
  */
 export class CaveAuthoredAnchorClaims {
@@ -25,7 +29,10 @@ export class CaveAuthoredAnchorClaims {
     return true
   }
 
-  /** Reserves a single anchor (e.g. natural `loot` for quests-progression-024). */
+  /**
+   * Reserves a single anchor (e.g. natural `loot` for quests-progression-024).
+   * Returns false when the anchor is already claimed.
+   */
   tryClaimAnchor(anchorId: string): boolean {
     if (this.claimedAnchorIds.has(anchorId)) return false
     this.claimedAnchorIds.add(anchorId)

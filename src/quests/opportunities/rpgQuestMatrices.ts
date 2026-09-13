@@ -138,6 +138,43 @@ export function collectOldPlaceSecretCandidate(input: {
 }
 
 /**
+ * Deterministic trader giver + counterpart/guard receiver for
+ * `suspicious-transport`. Shared by candidate collection and cave-cache
+ * binding so ids stay aligned.
+ *
+ * @domain quests-progression
+ */
+export function pickSuspiciousTransportNpcs(
+  npcs: readonly OpportunityNpc[],
+): { giver: OpportunityNpc, counterpart: OpportunityNpc } | undefined {
+  const adults = adultOpportunityNpcs(npcs)
+  if (adults.length < 2) return undefined
+  const giver = adults.find((npc) => npc.role === 'trader') ?? adults[0]!
+  const remaining = adults.filter((npc) => npc.id !== giver.id)
+  const counterpart = remaining.find((npc) => npc.role === 'guard') ?? remaining[0]
+  if (!counterpart) return undefined
+  return { giver, counterpart }
+}
+
+/**
+ * Preserves `opportunity.sourceId` when that NPC is still a valid adult
+ * receiver; otherwise the first remaining adult `guard`, then any adult.
+ *
+ * @domain quests-progression
+ */
+export function pickSuspiciousTransportReceiver(
+  npcs: readonly OpportunityNpc[],
+  sourceId: string,
+  excludeId?: string,
+): OpportunityNpc | undefined {
+  const adults = adultOpportunityNpcs(npcs)
+  const source = adults.find((npc) => npc.id === sourceId)
+  if (source) return source
+  const remaining = adults.filter((npc) => npc.id !== excludeId)
+  return remaining.find((npc) => npc.role === 'guard') ?? remaining[0]
+}
+
+/**
  * `Podejrzany transport` — same-settlement mystery + choice between two
  * real adults. No quest-owned parcel or economy transfer.
  *
@@ -148,13 +185,9 @@ export function collectSuspiciousTransportCandidate(input: {
   settlementId: string
   npcs: readonly OpportunityNpc[]
 }): RpgQuestOpportunity | undefined {
-  const adults = adultOpportunityNpcs(input.npcs)
-  if (adults.length < 2) return undefined
-  const giver = adults.find((npc) => npc.role === 'trader') ?? adults[0]!
-  const remaining = adults.filter((npc) => npc.id !== giver.id)
-  const counterpart = remaining.find((npc) => npc.role === 'guard') ?? remaining[0]
-  if (!counterpart) return undefined
-  return rpgOpportunity('suspicious-transport', input.settlementId, counterpart.id)
+  const roles = pickSuspiciousTransportNpcs(input.npcs)
+  if (!roles) return undefined
+  return rpgOpportunity('suspicious-transport', input.settlementId, roles.counterpart.id)
 }
 
 function distanceSq(

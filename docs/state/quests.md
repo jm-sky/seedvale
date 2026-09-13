@@ -83,7 +83,7 @@ Implemented opportunity sources/types:
 - `lost-livestock` — an existing household livestock individual in a fauna-owned stray episode;
 - RPG matrices:
   - `old-place-secret`,
-  - `suspicious-transport`,
+  - `suspicious-transport` (dialogue-only, or a natural-cave cache variant of the same matrix id when a free `loot` anchor exists),
   - `settlement-agreement`.
 
 Important symbols:

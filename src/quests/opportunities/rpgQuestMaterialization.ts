@@ -1,15 +1,22 @@
 import type { LandmarkKind } from '../../terrain/chunkEnvironment'
 import type { QuestDef } from '../quests'
+import type { SuspiciousTransportCaveCacheBinding } from '../suspiciousTransportCaveCache'
 import type {
   OpportunityNpc,
   RpgQuestOpportunity,
 } from './worldQuestOpportunityTypes'
 import { LANDMARK_LABELS } from '../../terrain/chunkEnvironment'
-import { adultOpportunityNpcs } from './rpgQuestMatrices'
+import { buildSuspiciousTransportCaveCacheQuest } from '../suspiciousTransportCaveCache'
+import {
+  adultOpportunityNpcs,
+  pickSuspiciousTransportReceiver,
+} from './rpgQuestMatrices'
 
 export type RpgMaterializationContext = {
   npcsBySettlement: ReadonlyMap<string, readonly OpportunityNpc[]>
   settlementNameById: ReadonlyMap<string, string>
+  /** When present and matching this opportunity id, use the cave-cache variant. */
+  suspiciousTransportCaveCache?: SuspiciousTransportCaveCacheBinding | null
 }
 
 function landmarkKindFromId(landmarkId: string): LandmarkKind | undefined {
@@ -262,7 +269,15 @@ export function materializeRpgQuestOpportunity(
   }
 
   if (opportunity.matrixId === 'suspicious-transport') {
-    const counterpart = npcs.find((npc) => npc.id === opportunity.sourceId)
+    const cave = context?.suspiciousTransportCaveCache
+    if (cave && cave.questId === opportunity.id) {
+      const giver = npcs.find((npc) => npc.id === cave.giverNpcId)
+      const counterpart = npcs.find((npc) => npc.id === cave.counterpartNpcId)
+      if (giver && counterpart && !giver.child && !counterpart.child) {
+        return buildSuspiciousTransportCaveCacheQuest(cave, giver, counterpart, settlementName)
+      }
+    }
+    const counterpart = pickSuspiciousTransportReceiver(npcs, opportunity.sourceId)
     if (!counterpart) return undefined
     const giver = pickGiver(npcs, 'trader', counterpart.id)
     if (!giver) return undefined

@@ -1,7 +1,7 @@
 # Plan: Suspicious transport — natural cave cache variant
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Model:** Opus, Sonnet
@@ -78,5 +78,9 @@ Add JSDoc for important reusable/public additions with appropriate `@domain` tag
 Test that this is a variant of `suspicious-transport`, not a duplicate quest; generated trader/counterpart ids remain stable; only a valid natural cave is used; cache exists before acceptance; early-loot catch-up works; physical hand-ins match outcomes; no goods or rewards duplicate after save/load/rebuild.
 
 Manual browser verification remains the User's responsibility.
+
+## Implementation status
+
+Implemented on current `main`. Technical verification is automated tests plus typecheck/lint of the touched quest/world seams. Browser/gameplay verification is still the User's.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

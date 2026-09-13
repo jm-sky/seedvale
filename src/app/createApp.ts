@@ -95,6 +95,13 @@ import {
   type GuardWorldProgress,
   migrateLegacyGuardSwordGift,
 } from '../quests/guardPersistence'
+import {
+  buildLostHunterNaturalCaveQuest,
+  isLostHunterPackLooted,
+  LOST_HUNTER_KEEP_BOW_OUTCOME,
+  LOST_HUNTER_RETURN_BOW_OUTCOME,
+} from '../quests/lostHunterNaturalCave'
+import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
 import { buildGuardEveningDutyQuest, selectGuardQuestGiver } from '../quests/opportunities/guardProfessionQuests'
 import { buildHunterProfessionQuests } from '../quests/opportunities/hunterProfessionQuests'
@@ -105,26 +112,27 @@ import {
   type RpgSettlementRef,
 } from '../quests/opportunities/rpgQuestMatrices'
 import {
+  settlementOpportunityNpcsFromDef,
+} from '../quests/opportunities/settlementNpcMaterialization'
+import {
   parseLostLivestockQuestId,
   parseWolfDenPressureQuestId,
   wolfDenPressureStatusFromSpawners,
 } from '../quests/opportunities/settlementQuestOpportunities'
 import {
-  settlementOpportunityNpcsFromDef,
-} from '../quests/opportunities/settlementNpcMaterialization'
-import {
   buildWorldDrivenSettlementQuests,
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
-import {
-  buildLostHunterNaturalCaveQuest,
-  isLostHunterPackLooted,
-  LOST_HUNTER_KEEP_BOW_OUTCOME,
-  LOST_HUNTER_RETURN_BOW_OUTCOME,
-} from '../quests/lostHunterNaturalCave'
-import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import { QuestManager } from '../quests/QuestManager'
 import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS } from '../quests/quests'
+import {
+  isSuspiciousTransportCacheLooted,
+  SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
+  SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
+  SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME,
+  SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
+} from '../quests/suspiciousTransportCaveCache'
+import { getActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspiciousTransportCaveCacheRuntime'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import {
   type PlayerAnimalKillContext,
@@ -171,8 +179,12 @@ import {
   createAbandonedCemeteryCache,
 } from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
-import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
+import { confirmHomeSettlement, createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
+import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
+import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
+import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
 import {
   isTreasureMapBearCaveAuthoredCasket,
   TREASURE_MAP_BEAR_CAVE_KEPT_OUTCOME_ID,
@@ -184,10 +196,6 @@ import {
 import {
   getActiveTreasureMapBearCaveBinding,
 } from '../world/locations/treasureMapBearCaveRuntime'
-import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
-import { confirmHomeSettlement, createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
-import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
-import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
 import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
@@ -213,6 +221,7 @@ import { createHouseholdResourceTransferActions } from './actions/householdResou
 import { createInspectionActions } from './actions/inspectionActions'
 import { createLeadActions } from './actions/leadActions'
 import { createMountActions } from './actions/mountActions'
+import { giveItemInstanceToNpc } from './actions/npcItemTransfer'
 import { createNpcItemTransferActions } from './actions/npcItemTransferActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
@@ -1078,6 +1087,7 @@ export async function createApp(
   const homeNpcDescriptors = settlementNpcDescriptors(homeDef)
   const bearCaveBinding = getActiveTreasureMapBearCaveBinding()
   const lostHunterBinding = getActiveLostHunterNaturalCaveBinding()
+  const suspiciousTransportCaveCache = getActiveSuspiciousTransportCaveCacheBinding()
   const bearCaveQuestBinding = bearCaveBinding
     ? {
         mapGraveSpotId: bearCaveBinding.mapGraveSpotId,
@@ -1117,7 +1127,11 @@ export async function createApp(
     z: def.z,
     npcs: npcsBySettlement.get(def.id) ?? [],
   }))
-  const rpgContext = { npcsBySettlement, settlementNameById }
+  const rpgContext = {
+    npcsBySettlement,
+    settlementNameById,
+    suspiciousTransportCaveCache,
+  }
   const persistedQuestIds = initialSave?.quests.progress.map((entry) => entry.id)
   const opportunityQuestDefs: ReturnType<typeof buildWorldDrivenSettlementQuests> = []
   for (const def of opportunitySettlements) {
@@ -1219,6 +1233,21 @@ export async function createApp(
         }
         return false
       }
+      if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
+        const requiredId = context.requireItemInstanceId ?? suspiciousTransportCaveCache.evidenceInstanceId
+        const evidence = inventory.getInstance(requiredId)
+        if (evidence?.kind !== SUSPICIOUS_TRANSPORT_EVIDENCE_KIND) return false
+        if (outcomeId === SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME) return true
+        const npcId = outcomeId === SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME
+          ? suspiciousTransportCaveCache.giverNpcId
+          : outcomeId === SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME
+            ? suspiciousTransportCaveCache.counterpartNpcId
+            : null
+        if (!npcId) return false
+        const npcState = bundle.settlementsManager.getNpcState(npcId)
+        if (!npcState || npcState.health.dead) return false
+        return npcState.personalInventory.canAddInstance(evidence)
+      }
       if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return false
       if (worldFlags.treasureMapBearCaveCasketConsumed) return false
       if (outcomeId === TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID) {
@@ -1243,6 +1272,23 @@ export async function createApp(
         inventory.removeInstance(bow.id)
         const giverState = bundle.settlementsManager.getNpcState(lostHunterBinding.giverNpcId)
         giverState?.personalInventory.addInstance(bow)
+        return
+      }
+      if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
+        if (outcomeId === SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME) return
+        const npcId = outcomeId === SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME
+          ? suspiciousTransportCaveCache.giverNpcId
+          : outcomeId === SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME
+            ? suspiciousTransportCaveCache.counterpartNpcId
+            : null
+        if (!npcId) return
+        giveItemInstanceToNpc(
+          {
+            playerInventory: inventory,
+            getNpcState: (id) => bundle.settlementsManager.getNpcState(id),
+          },
+          { npcId, instanceId: suspiciousTransportCaveCache.evidenceInstanceId },
+        )
         return
       }
       if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return
@@ -1335,6 +1381,13 @@ export async function createApp(
         if (lostHunterBinding && containerId === lostHunterBinding.packContainerId) {
           const instances = bundle.worldGeneratedContainers.containerInstances(containerId, 'hunting_bow')
           return isLostHunterPackLooted(instances, lostHunterBinding.bowInstanceId)
+        }
+        if (suspiciousTransportCaveCache && containerId === suspiciousTransportCaveCache.cacheContainerId) {
+          const instances = bundle.worldGeneratedContainers.containerInstances(
+            containerId,
+            SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
+          )
+          return isSuspiciousTransportCacheLooted(instances, suspiciousTransportCaveCache.evidenceInstanceId)
         }
         return isDarkForestTreasureChestLooted(
           bundle.worldGeneratedContainers.containerCounts(containerId),
