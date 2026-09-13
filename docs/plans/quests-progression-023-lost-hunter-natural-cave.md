@@ -4,6 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
+**Model:** Opus, Sonnet
 **Depends on:** world-terrain-028, ~~fauna-018~~, ~~fauna-019~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships` `rewards`
