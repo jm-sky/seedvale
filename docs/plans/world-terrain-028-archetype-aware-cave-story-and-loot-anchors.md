@@ -12,219 +12,278 @@
 
 ## Goal
 
-Extend the existing cave-owned semantic placement contract so `natural` and `dungeon` caves can host persistent story evidence and loot without quest code inventing underground coordinates.
+Extend the cave-owned semantic placement contract so `natural`, `adventure` and `dungeon` caves can host persistent story evidence and loot without quest code inventing underground coordinates.
 
-Current production state:
+Also replace the current unconditional two-chest materialization for every `adventure` cave with one shared deterministic content-profile contract.
 
-- `adventure` caves expose deterministic `Caves.contentAnchorsOf(caveId)` placements such as `sideTreasure` and `finalTreasure`;
-- `natural` caves currently return no content anchors;
-- `dungeon` caves expose stable semantic chambers through `Caves.dungeonChambersOf(caveId)`, but chamber centres are topology semantics, not safe final placement coordinates.
+Current production facts:
 
-The target contract is:
+- `adventure` caves expose `sideTreasure` / `finalTreasure` and prop anchors;
+- `caveTreasureContainerSpecs()` currently turns both treasure anchors into generic chests for every adventure cave;
+- `natural` caves currently expose no content anchors;
+- `dungeon` caves have stable chamber semantics but no final safe placement contract yet.
 
-```text
-stable cave identity
-+ archetype / semantic topology node
-+ retained cave heightfield
-→ deterministic, floor-snapped, collision-aware content anchor
-→ world/quest content may consume anchor identity
-```
-
-This plan is shared infrastructure for cave stories such as:
-
-- natural cave: missing hunter / contraband cache,
-- dungeon cave: bandit treasure / lost treasure expedition,
-- future non-quest cave loot and environmental storytelling.
-
-Do not add quest knowledge to cave topology or cave generation.
+Anchors are deterministic placement slots. They must not imply that loot is automatically present.
 
 ## Existing authority to preserve
 
-Reuse and extend:
+Reuse/extend:
 
-- `src/world/caves/caveContentAnchors.ts` — current adventure semantic placement and fit logic;
-- `src/world/caves/caveHeightfieldPlacement.ts` — bounded placement candidates and footprint checks;
-- `src/world/caves/dungeonChambers.ts` — stable dungeon chamber identity/classification;
-- `src/world/caves/productionTopology.ts` — stable natural node ids (`chamber`, optional `branch-chamber`);
-- `src/world/createCaves.ts` — public `contentAnchorsOf()` world contract;
-- retained `CaveHeightfieldRepresentation` — final floor/clearance authority.
+- `src/world/caves/caveContentAnchors.ts`;
+- `src/world/caves/caveHeightfieldPlacement.ts`;
+- `src/world/caves/dungeonChambers.ts`;
+- `src/world/caves/productionTopology.ts`;
+- `src/world/createCaves.ts` / `Caves.contentAnchorsOf()`;
+- `src/world/caves/caveRng.ts` / `createCaveRandom()`;
+- retained `CaveHeightfieldRepresentation`;
+- `src/app/worldBundle.ts::caveTreasureContainerSpecs()` as the current materialization seam.
 
-Do not use:
-
-- surface `sampleHeight()` for underground content,
-- topology node Y as final floor Y,
-- presentation mesh raycasts,
-- player/camera state,
-- streamed mesh activation,
-- quest-owned cached coordinates.
+Do not use surface height, topology-node Y, mesh raycasts, player/camera state, streamed presentation state or quest-owned copied coordinates.
 
 ## Shared anchor vocabulary
 
-Keep the current adventure roles and ids backward-compatible. Do not rename or invalidate existing `sideTreasure`, `finalTreasure`, `wagon`, `support`, `crate` or `lantern` anchors.
+Keep existing adventure roles/ids stable:
 
-Add the smallest shared roles required by story content:
+```text
+sideTreasure
+finalTreasure
+wagon
+support
+crate
+lantern
+```
+
+Add only the shared roles needed by new stories:
 
 ```text
 storyFind
 loot
 ```
 
-`storyFind` means a safe location for narrative evidence/props such as remains, an abandoned pack or expedition traces.
+`storyFind` = safe location for narrative evidence/props.
 
-`loot` means a safe location for a container or compact authored loot source that is not semantically the final treasure.
+`loot` = safe location for a compact authored container/cache that is not semantically the cave's final treasure.
 
-Existing `sideTreasure` / `finalTreasure` remain stronger semantic roles where the topology provides them.
-
-A role describes content placement semantics, not quest state. Cave code must not know concepts such as `hunter`, `bandit`, `contraband` or `expedition`.
-
-## Source-node identity
-
-Extend `CaveContentAnchor` with stable semantic source information sufficient to distinguish repeated roles in different chambers.
-
-Preferred shape:
-
-```ts
-sourceNodeId?: string
-```
-
-For new natural/dungeon anchors this should be populated from the stable topology node id.
-
-Anchor identity for repeated roles must derive from:
+For repeated new roles, stable identity should derive from:
 
 ```text
 caveId + role + sourceNodeId
 ```
 
-rather than topology array index or iteration-order ordinal.
+Add `sourceNodeId?: string` or equivalent stable semantic source metadata. Preserve existing adventure ids.
 
-Preserve existing adventure anchor ids where changing them would invalidate current authored bindings/saves. A separate node-keyed id helper is acceptable for new repeated anchors.
+## Adventure cave content profiles
+
+Introduce one derived content profile for each accepted `adventure` cave. Exact type names may differ, but semantics are fixed:
+
+```text
+EMPTY
+QUEST_TREASURE
+DOUBLE_TREASURE
+```
+
+### A. `EMPTY` — standard
+
+This is the normal adventure cave.
+
+- no automatic generic chest at `sideTreasure`;
+- no automatic generic chest at `finalTreasure`;
+- anchors still exist and can be claimed by authored stories;
+- intended pool for future adventure-cave quests such as `quests-progression-025`.
+
+An empty adventure cave is valid generated world space, not failed content generation.
+
+### B. `QUEST_TREASURE` — authored single treasure
+
+Reserved profile used by `quests-progression-008`.
+
+- resolved before any generic loot roll;
+- exactly one authored treasure placement, at the real `finalTreasure` anchor;
+- no generic `caveSide` chest;
+- no generic `caveFinal` loot;
+- `sideTreasure` remains unused by this profile;
+- the story owns the actual payload/lifecycle, while cave/world composition owns the stable cave/profile/anchor binding.
+
+The physical treasure must exist independently of quest acceptance or current quest stage.
+
+The shared world layer must not know bear quest stages. Use a stable reservation key/profile request rather than quest-specific branching in cave generation.
+
+### C. `DOUBLE_TREASURE` — standalone exploration encounter
+
+Preserve today's two-chest experience as a rarer systemic encounter:
+
+```text
+sideTreasure  → generic caveSide chest
+finalTreasure → generic caveFinal chest
+```
+
+This is effectively a small no-story exploration quest that may be expanded later.
+
+For **unreserved** adventure caves:
+
+```text
+80% EMPTY
+20% DOUBLE_TREASURE
+```
+
+Use a new dedicated `CAVE_RNG_SALT` stream for this profile roll. Do not reuse `adventureContent`, because changing loot/profile decisions must not perturb anchor placement.
+
+## Reservation / arbitration order
+
+Authored reservations win before the 80/20 generic roll:
+
+```text
+accepted adventure caves
+→ deterministic authored reservation/claim arbitration
+→ apply reserved profile(s)
+→ roll EMPTY vs DOUBLE_TREASURE only for remaining caves
+→ materialize allowed content
+```
+
+Requirements:
+
+- stable reservation keys and cave/anchor ids;
+- deterministic reconstruction on rebuild/load;
+- no persisted claim set;
+- a reserved cave never later becomes `DOUBLE_TREASURE`;
+- two authored systems cannot silently claim the same cave/anchor;
+- if a required authored reservation cannot be satisfied, omit/fail that authored binding explicitly rather than sharing conflicting content, forcing coordinates or duplicating loot.
+
+Known consumers:
+
+- `quests-progression-008` → one `QUEST_TREASURE` adventure cave, owns `finalTreasure`;
+- `quests-progression-025` → a **different** `EMPTY` adventure cave, then claims one available story/treasure anchor.
+
+## Materialization contract
+
+Refactor `caveTreasureContainerSpecs()` (or replace it with the smallest equivalent shared helper) so it consumes the resolved content profile instead of blindly materializing all treasure anchors.
+
+Required result:
+
+```text
+EMPTY
+→ zero generic cave treasure containers
+
+QUEST_TREASURE
+→ zero generic caveSide/caveFinal containers
+→ expose/reserve exactly finalTreasure for authored story content
+
+DOUBLE_TREASURE
+→ materialize sideTreasure + finalTreasure exactly as today
+```
+
+Do not remove anchors for `EMPTY` or `QUEST_TREASURE`; they remain deterministic placement opportunities.
+
+Mutable container state stays in `WorldGeneratedContainers` or the owning portable-container system.
 
 ## Natural cave anchors
 
-For every accepted `natural` cave, derive anchors only from stable natural topology nodes.
+For every accepted `natural` cave derive anchors from stable natural topology nodes.
 
-Required V1 set:
+Required V1:
 
-- main `chamber`:
-  - one `storyFind`,
-  - one `loot`;
-- optional `branch-chamber` when present:
-  - optional `storyFind`,
-  - optional `loot`.
+- main `chamber`: one required `storyFind` + one required `loot`;
+- optional `branch-chamber`: optional `storyFind` + optional `loot`.
 
-The main chamber placements are required for a natural cave to be eligible for authored story binding. Optional branch anchors may be omitted when no safe footprint fits.
+Do not change natural topology/acceptance merely to force placement.
 
-Do not alter the natural topology recipe or acceptance rules merely to make content fit. Placement must adapt inside the already accepted cave.
+This supports:
+
+- `quests-progression-023` — lost hunter;
+- `quests-progression-024` — contraband cache.
 
 ## Dungeon cave anchors
 
-Use `Caves.dungeonChambersOf()` semantics / the equivalent retained topology view. Do not rediscover dungeon chamber meaning from array positions.
+Use `Caves.dungeonChambersOf()` semantics and retained cave heightfield placement.
 
-Required V1 set:
+Required V1:
 
-- every usable non-entrance dungeon chamber:
-  - one `storyFind`,
-  - one `loot` where a safe placement fits;
-- every `side` chamber:
-  - one `sideTreasure` where a safe placement fits;
-- `final` chamber:
-  - one required `finalTreasure`;
-- `deep` chamber:
-  - ensure at least one usable `loot` anchor so a major non-final stash can exist independently of the final reward.
+- usable non-entrance chamber: `storyFind` and `loot` where safe;
+- each `side` chamber: `sideTreasure` where safe;
+- `deep` chamber: at least one usable `loot`;
+- `final` chamber: one required `finalTreasure`.
 
-Entrance-adjacent chambers may expose `storyFind` when safe, but should not receive a required treasure anchor solely to satisfy this plan.
-
-This allows multiple stories to use the same dungeon without fighting for one final point, for example:
+This supports coexistence:
 
 ```text
-bandit caches → side/deep loot anchors
-lost expedition traces → storyFind anchors
-true expedition treasure → finalTreasure
+quests-progression-026
+→ side/deep bandit caches
+
+quests-progression-027
+→ storyFind trail + finalTreasure
 ```
 
-## Placement and overlap rules
+Do not use chamber centres directly as final placement coordinates.
 
-Reuse the existing bounded deterministic candidate search and footprint/clearance logic.
+## Placement rules
 
-Add inter-anchor footprint avoidance for anchors sharing one chamber/node so `storyFind` and `loot` cannot resolve to overlapping placements.
+Reuse bounded deterministic candidate search and heightfield footprint/clearance checks.
 
-Required properties:
+Required:
 
-- deterministic for the same world seed + accepted cave topology;
-- bounded candidate count;
 - floor Y from retained cave heightfield;
-- enough clearance for compact world props/containers;
-- keep required anchors away from through-lines/doorways where existing helpers support it;
-- no overlap with already accepted anchors in the same semantic area;
-- optional anchors fail closed rather than forcing invalid placement.
+- bounded candidate count;
+- deterministic same seed/cave result;
+- no overlap between anchors sharing one chamber/node;
+- avoid mandatory through-lines/doorways;
+- optional anchors fail closed;
+- required final dungeon treasure failure makes the cave ineligible for authored content requiring it — never invent coordinates.
 
-If a required final dungeon treasure placement genuinely cannot be resolved, the cave must be ineligible for authored content requiring it; do not invent coordinates or mutate topology at runtime.
+## Public contract
 
-## Public cave contract
+Keep `Caves.contentAnchors()` / `contentAnchorsOf(caveId)` as the shared placement lookup.
 
-Keep `Caves.contentAnchors()` / `contentAnchorsOf(caveId)` as the shared public lookup rather than adding quest-specific cave APIs.
+Expose resolved adventure profile/reservation information through a read-only world/composition seam where consumers need it. Do not make quests infer the profile from whether a chest currently exists.
 
-Update comments/types that still describe the contract as adventure-only.
+`Caves.dungeonChambersOf()` remains chamber-classification authority.
 
-Consumers should be able to filter by:
+## Ownership / persistence
 
-- `caveId`,
-- `role`,
-- `sourceNodeId` where relevant.
+Derived, do not serialize:
 
-`Caves.dungeonChambersOf()` remains the chamber/classification authority. Content anchors complement it; they do not replace it.
-
-## Ownership and persistence
-
-Anchors are deterministic derived world data and must not be serialized.
-
-Persist only actual world content placed at them through its owning system, e.g. `WorldGeneratedContainers` contents/removal state.
-
-Do not persist:
-
-- anchor XYZ,
-- source node ids as duplicated quest coordinates,
-- anchor-generation RNG state,
+- cave anchors/XYZ;
+- source node ids as copied quest coordinates;
+- adventure content profiles;
+- profile RNG state;
+- authored cave/anchor claim sets;
 - dungeon chamber arrays.
 
-After rebuild/load, re-resolve the same anchor identity from the world seed/cave data.
-
-## Performance
-
-Anchor generation happens once per accepted cave during world construction, not per frame.
-
-Keep work bounded per cave. Dungeon anchors may be more numerous than adventure anchors but the number of dungeon chambers is already small and fixed by the dungeon recipe.
-
-Do not introduce mesh raycasts, scene scans or streaming-triggered recomputation.
+Persist only mutable world content through its owning system.
 
 ## Integration targets
 
-Implementation recon should start from:
+- `src/world/caves/caveContentAnchors.ts`;
+- `src/world/caves/caveHeightfieldPlacement.ts`;
+- `src/world/caves/caveRng.ts`;
+- `src/world/caves/dungeonChambers.ts`;
+- `src/world/caves/productionTopology.ts`;
+- `src/world/caves/dungeonTopology.ts`;
+- `src/world/createCaves.ts`;
+- `src/app/worldBundle.ts::caveTreasureContainerSpecs()`;
+- `src/app/worldBundle.caveTreasure.test.ts`;
+- contextual/occupied content composition patterns in `src/app/createApp.ts` where useful.
 
-- `src/world/caves/caveContentAnchors.ts`,
-- `src/world/caves/caveHeightfieldPlacement.ts`,
-- `src/world/caves/dungeonChambers.ts`,
-- `src/world/caves/productionTopology.ts`,
-- `src/world/caves/dungeonTopology.ts`,
-- `src/world/createCaves.ts`,
-- current cave-anchor tests.
-
-Add JSDoc for new/changed public architectural helpers and use `@domain world-terrain` where useful for preflight discovery.
+Add JSDoc for important shared/public additions with `@domain world-terrain` where useful.
 
 ## Verification
 
-Automated verification should cover at least:
+Automated tests should cover:
 
-- existing adventure anchor ids/roles remain stable;
-- natural caves expose required main `storyFind` + `loot` anchors;
-- optional natural branch anchors only exist when the branch exists and placement fits;
-- dungeon anchors map to stable `sourceNodeId` values and correct chamber classes;
-- dungeon final chamber exposes one stable `finalTreasure`;
-- side/deep loot anchors are deterministic;
-- same-chamber anchors do not overlap footprints;
-- underground Y is resolved from the cave heightfield, not surface height or topology Y;
-- anchors are independent of presentation streaming and player/camera position;
-- no new serialization is required for derived anchor geometry.
+- existing adventure anchor ids remain stable;
+- `EMPTY` keeps anchors but creates zero generic treasure chests;
+- `DOUBLE_TREASURE` creates exactly current side + final chests and existing loot tiers;
+- unreserved profile decision is deterministic with exact 80/20 threshold;
+- profile roll uses its own RNG stream;
+- authored reservation overrides generic profile roll;
+- `QUEST_TREASURE` reserves only final authored treasure placement and creates no generic cave loot;
+- conflicting authored claims fail explicitly;
+- profile/claims reconstruct without save fields;
+- natural main anchors exist and optional branch anchors follow branch availability;
+- dungeon anchors map to stable chamber/source identities;
+- dungeon final chamber has one stable `finalTreasure`;
+- same-chamber anchors do not overlap;
+- underground Y comes from retained cave heightfield;
+- no placement depends on presentation streaming or player/camera state.
 
 Manual browser verification remains the User's responsibility.
 
