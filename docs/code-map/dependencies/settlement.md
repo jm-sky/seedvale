@@ -1092,6 +1092,7 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureProps.ts`
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
+- `world/locations/treasureMapBearCave.ts`
 - `world/standingTorchProp.ts`
 - `world/treasureSites.test.ts`
 - `world/treasureSites.ts`
@@ -1196,6 +1197,7 @@ Generated from TypeScript imports.
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaveVisual.ts`
+- `world/locations/treasureMapBearCave.ts`
 - `world/locations/worldLocationNames.ts`
 - `world/npcGraves.ts`
 - `world/treasureSites.test.ts`

@@ -249,6 +249,7 @@ Generated from TypeScript imports.
 - `fauna/animalForaging.ts`
 - `fauna/createFauna.ts`
 - `fauna/dungeonResidents.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 ## `fauna/animalCaveJourney.test.ts`
 
@@ -961,6 +962,7 @@ Generated from TypeScript imports.
 - `fauna/dungeonResidents.ts`
 - `fauna/persistentOccupants.test.ts`
 - `persistence/saveData.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 ## `fauna/playerAwareness.test.ts`
 

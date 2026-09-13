@@ -85,13 +85,13 @@ Generated from exported TypeScript symbols.
 ## `items/container.ts`
 
 - `CONTAINER_DEFS` — const — line 41
-- `CONTAINER_PLACE_REACH` — const — line 72
-- `CONTAINER_PLACEMENT_MESSAGE` — const — line 55
-- `CONTAINER_SETUP_DURATION_SEC` — const — line 75
+- `CONTAINER_PLACE_REACH` — const — line 81
+- `CONTAINER_PLACEMENT_MESSAGE` — const — line 64
+- `CONTAINER_SETUP_DURATION_SEC` — const — line 84
 - `ContainerDef` — type — line 24
 - `ContainerKind` — type — line 22
-- `ContainerPlacementReason` — type — line 53
-- `containerTotalWeight` — function — line 66
+- `ContainerPlacementReason` — type — line 62
+- `containerTotalWeight` — function — line 75
 
 ## `items/cookingFireResolver.ts`
 

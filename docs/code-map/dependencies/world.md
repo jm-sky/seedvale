@@ -328,6 +328,8 @@ Generated from TypeScript imports.
 - `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
 - `world/caves/caveAdventureContentPolicy.test.ts`
+- `world/locations/treasureMapBearCave.test.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 ## `world/caves/caveAdventureProps.test.ts`
 
@@ -447,6 +449,8 @@ Generated from TypeScript imports.
 - `world/caves/caveInteriorRocks.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.ts`
+- `world/locations/treasureMapBearCave.test.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 ## `world/caves/caveGroundQuery.test.ts`
 
@@ -1677,6 +1681,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 ## `world/createPlacedTraps.test.ts`
 
@@ -2261,6 +2266,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `world/hiddenFinds.test.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 ## `world/largeCaveVisual.ts`
 
@@ -2390,6 +2396,7 @@ Generated from TypeScript imports.
 - `world/locations/darkForestTreasureSite.test.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/locations/locationProximityDiscovery.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 ## `world/locations/darkForestTreasureSiteRuntime.ts`
 
@@ -2567,6 +2574,49 @@ Generated from TypeScript imports.
 
 - `world/locations/seedProfile.test.ts`
 - `world/seedLibrary.ts`
+
+## `world/locations/treasureMapBearCave.test.ts`
+
+**Imports**
+
+- `app/worldBundle.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/locations/treasureMapBearCave.ts`
+
+## `world/locations/treasureMapBearCave.ts`
+
+**Imports**
+
+- `fauna/animalCaveHabitat.ts`
+- `fauna/persistentOccupants.ts`
+- `settlement/propUtils.ts`
+- `settlement/props.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/createPlacedContainers.ts`
+- `world/hiddenFinds.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/worldGeneratedContainers.ts`
+
+**Imported by**
+
+- `app/actions/groundActions.ts`
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `world/locations/treasureMapBearCave.test.ts`
+- `world/locations/treasureMapBearCaveRuntime.ts`
+
+## `world/locations/treasureMapBearCaveRuntime.ts`
+
+**Imports**
+
+- `world/locations/treasureMapBearCave.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
 
 ## `world/locations/worldLocationCatalog.test.ts`
 
@@ -3863,4 +3913,5 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
+- `world/locations/treasureMapBearCave.ts`
 - `world/worldGeneratedContainers.test.ts`

@@ -771,7 +771,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlacedContainers.ts`
 
-- `createPlacedContainers` — function — line 117
+- `createPlacedContainers` — function — line 122
 - `PlacedContainerEntry` — type — line 36
 - `PlacedContainerRecord` — type — line 14
 - `PlacedContainers` — type — line 50
@@ -1005,6 +1005,7 @@ Generated from exported TypeScript symbols.
 - `ExplicitBuriedPlacement` — type — line 169
 - `findExplicitBuriedSpot` — function — line 210
 - `findHiddenFindSpot` — function — line 185
+- `HIDDEN_FIND_DIG_TOLERANCE` — const — line 41
 - `HIDDEN_FIND_SEARCH_RADIUS` — const — line 49
 - `HiddenFindLandmark` — type — line 51
 - `HiddenFindLoot` — type — line 61
@@ -1182,6 +1183,35 @@ Generated from exported TypeScript symbols.
 - `generateSeedName` — function — line 82
 - `sampleStartupTerrainProfile` — function — line 36
 - `SeedTerrainProfile` — type — line 23
+
+## `world/locations/treasureMapBearCave.ts`
+
+- `findTreasureMapBearCaveMapDig` — function — line 220
+- `isTreasureMapBearCaveAuthoredCasket` — function — line 241
+- `resolveTreasureMapBearCaveBinding` — function — line 128
+  - domain: quests-progression
+- `ResolveTreasureMapBearCaveInput` — type — line 45
+- `TREASURE_MAP_BEAR_CAVE_COINS` — const — line 18
+- `TREASURE_MAP_BEAR_CAVE_KEPT_OUTCOME_ID` — const — line 21
+- `TREASURE_MAP_BEAR_CAVE_QUEST_ID` — const — line 15
+- `TREASURE_MAP_BEAR_CAVE_RESERVATION_KEY` — const — line 13
+- `TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID` — const — line 20
+- `TreasureMapBearCaveBinding` — type — line 54
+- `treasureMapBearCaveCasketId` — function — line 78
+- `TreasureMapBearCaveCaveInput` — type — line 39
+- `TreasureMapBearCaveCemeteryInput` — type — line 30
+- `treasureMapBearCaveHabitatId` — function — line 70
+- `treasureMapBearCavePersistentOccupant` — function — line 175
+- `treasureMapBearCaveProfileReservation` — function — line 165
+- `treasureMapBearCaveReturnPayout` — function — line 82
+- `treasureMapBearCaveSealedCasketCarried` — function — line 208
+- `treasureMapBearCaveSourceContainerId` — function — line 74
+- `treasureMapBearCaveSourceContainerSpec` — function — line 191
+
+## `world/locations/treasureMapBearCaveRuntime.ts`
+
+- `getActiveTreasureMapBearCaveBinding` — function — line 9
+- `setActiveTreasureMapBearCaveBinding` — function — line 5
 
 ## `world/locations/worldLocationCatalog.ts`
 
@@ -2088,9 +2118,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/worldGeneratedContainers.ts`
 
-- `createWorldGeneratedContainers` — function — line 102
+- `createWorldGeneratedContainers` — function — line 104
   - domain: world
 - `SaveWorldGeneratedContainer` — type — line 14
 - `WorldGeneratedContainerEntry` — type — line 24
 - `WorldGeneratedContainers` — type — line 35
-- `WorldGeneratedContainerSpec` — type — line 70
+- `WorldGeneratedContainerSpec` — type — line 72

@@ -283,6 +283,7 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `world/dayNight.ts`
 - `world/hiddenFinds.ts`
+- `world/locations/treasureMapBearCave.ts`
 - `world/parseSeed.ts`
 - `world/treasureSites.ts`
 - `world/treeHarvest.ts`
@@ -956,6 +957,8 @@ Generated from TypeScript imports.
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/locationsCoarseCache.ts`
 - `world/locations/navigationTargets.ts`
+- `world/locations/treasureMapBearCave.ts`
+- `world/locations/treasureMapBearCaveRuntime.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
@@ -1580,6 +1583,8 @@ Generated from TypeScript imports.
 - `world/herbalGathering.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
+- `world/locations/treasureMapBearCave.ts`
+- `world/locations/treasureMapBearCaveRuntime.ts`
 - `world/map/mapProjection.ts`
 - `world/npcGraves.ts`
 - `world/palisade.ts`
@@ -1624,3 +1629,4 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
 - `ui/createNpcInspector.ts`
+- `world/locations/treasureMapBearCave.test.ts`

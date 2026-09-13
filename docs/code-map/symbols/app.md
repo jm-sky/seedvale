@@ -31,7 +31,7 @@ Generated from exported TypeScript symbols.
 
 - `ContainerActionDeps` — type — line 77
 - `ContainerActions` — type — line 58
-- `createContainerActions` — function — line 90
+- `createContainerActions` — function — line 92
 
 ## `app/actions/cookMealIntent.ts`
 
@@ -56,9 +56,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/groundActions.ts`
 
-- `createGroundActions` — function — line 107
-- `GroundActions` — type — line 55
-- `GroundActionsDeps` — type — line 79
+- `createGroundActions` — function — line 113
+- `GroundActions` — type — line 56
+- `GroundActionsDeps` — type — line 80
 
 ## `app/actions/householdResourceTransferActions.ts`
 
@@ -256,13 +256,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 303
+- `createApp` — function — line 314
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 272
+- `NewAppOptions` — type — line 283
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -370,7 +370,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 140
+- `createSaveState` — function — line 143
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
@@ -395,14 +395,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 873
-- `caveTreasureContainerSpecs` — function — line 170
-- `createWorldBundle` — function — line 1443
-- `disposeWorldBundle` — function — line 1892
-- `HOME_RADIUS` — const — line 145
-- `homeChunks` — function — line 196
-- `rebuildWorldBundle` — function — line 1665
-- `WorldBundle` — type — line 219
+- `BuiltWorldSystems` — type — line 891
+- `caveTreasureContainerSpecs` — function — line 181
+- `createWorldBundle` — function — line 1506
+- `disposeWorldBundle` — function — line 1963
+- `HOME_RADIUS` — const — line 156
+- `homeChunks` — function — line 207
+- `rebuildWorldBundle` — function — line 1732
+- `WorldBundle` — type — line 230
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle
