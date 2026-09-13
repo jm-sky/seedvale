@@ -188,13 +188,13 @@ export type Caves = {
    *  representation-neutral. */
   archetypeOf: (caveId: string) => CaveArchetype | null
   /**
-   * Deterministic adventure content anchors for every accepted cave
-   * (plan world-terrain-020 Stage B). Natural caves contribute nothing.
+   * Deterministic content anchors for every accepted cave (plan
+   * world-terrain-020 / world-terrain-028). Roles vary by archetype.
    * Independent of presentation streaming — these are world definitions,
    * not meshes. Frozen snapshots; callers must not mutate them.
    */
   contentAnchors: () => readonly CaveContentAnchor[]
-  /** Content anchors of one cave. Empty for natural caves and unknown ids. */
+  /** Content anchors of one cave. Empty for unknown ids. */
   contentAnchorsOf: (caveId: string) => readonly CaveContentAnchor[]
   /**
    * Stable dungeon chamber view for later fauna/pool plans (world-terrain-024).
@@ -418,7 +418,12 @@ export function createCaves(
     } else {
       heightfield = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
     }
-    const contentAnchors = resolveCaveContentAnchors({ archetype, topology, heightfield })
+    const contentAnchors = resolveCaveContentAnchors({
+      archetype,
+      topology,
+      heightfield,
+      undergroundPool: archetype === 'dungeon' ? undergroundPool : null,
+    })
     v2ByCaveId.set(topology.caveId, {
       archetype,
       topology,

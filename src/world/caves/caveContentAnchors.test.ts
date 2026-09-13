@@ -220,18 +220,7 @@ describe('cave content anchors (plan world-terrain-020 Stage B)', () => {
     expect(chamberContentCandidates(node, incoming, 1)).toEqual(chamber)
   })
 
-  it('gives a natural cave no adventure content anchors', () => {
-    const hill = gentleHillFor(SITE)
-    const topology = buildProductionCaveTopology({
-      seed: 42,
-      site: SITE,
-      sampleHeight: hill,
-      sampleBaseHeight: hill,
-    })
-    expect(topology).not.toBeNull()
-    const walkSurfaceAt = (x: number, z: number): number => hill(x, z) - mouthCarveDepth(x, z, topology!.entrance)
-    const heightfield = buildCaveHeightfieldRepresentation(topology!, walkSurfaceAt).heightfield
-    expect(resolveCaveContentAnchors({ archetype: 'natural', topology: topology!, heightfield })).toEqual([])
+  it('gives a natural cave no adventure prop anchors on foreign topologies', () => {
     expect(resolveCaveContentAnchors({
       archetype: 'natural',
       topology: FIXTURE.topology,
@@ -242,6 +231,29 @@ describe('cave content anchors (plan world-terrain-020 Stage B)', () => {
       topology: FIXTURE.topology,
       heightfield: FIXTURE.heightfield,
     })).toEqual([])
+  })
+
+  it('places required natural main-chamber storyFind and loot with stable source ids', () => {
+    const hill = gentleHillFor(SITE)
+    const topology = buildProductionCaveTopology({
+      seed: 42,
+      site: SITE,
+      archetype: 'natural',
+      sampleHeight: hill,
+      sampleBaseHeight: hill,
+    })
+    expect(topology).not.toBeNull()
+    const walkSurfaceAt = (x: number, z: number): number => hill(x, z) - mouthCarveDepth(x, z, topology!.entrance)
+    const heightfield = buildCaveHeightfieldRepresentation(topology!, walkSurfaceAt).heightfield
+    const anchors = resolveCaveContentAnchors({ archetype: 'natural', topology: topology!, heightfield })
+    const caveId = topology!.caveId
+    const story = anchors.filter((a) => a.role === 'storyFind')
+    const loot = anchors.filter((a) => a.role === 'loot')
+    expect(story.some((a) => a.id === `${caveId}:storyFind:chamber`)).toBe(true)
+    expect(loot.some((a) => a.id === `${caveId}:loot:chamber`)).toBe(true)
+    if (topology!.nodes.some((n) => n.id === 'branch-chamber')) {
+      expect(story.some((a) => a.sourceNodeId === 'branch-chamber')).toBe(true)
+    }
   })
 
   it('places lantern anchors on tight passage walls away from the centreline', () => {

@@ -74,6 +74,10 @@ import { preloadCartProp } from '../world/cartProp'
 import { preloadCaveAdventurePropTemplates } from '../world/caves/caveAdventureProps'
 import { type Beehives, createBeehives } from '../world/createBeehives'
 import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
+import {
+  type CaveAdventureContentPolicy,
+  resolveCaveAdventureContentPolicy,
+} from '../world/caves/caveAdventureContentPolicy'
 import { type CaveContentAnchor, type Caves, createCaves } from '../world/createCaves'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
 import { createGrassForagePatches, type GrassForageService } from '../world/createGrassForagePatches'
@@ -148,24 +152,30 @@ const SETTLEMENT_LOAD_RADIUS = 300
 const SETTLEMENT_UNLOAD_RADIUS = 420
 
 /**
- * Materializes each adventure cave's `sideTreasure`/`finalTreasure` content
- * anchor (plan world-terrain-020 Stage B) as a plain underground
- * `WorldGeneratedContainerSpec` (Stage C): the anchor's `x/y/z/yaw` is used
- * exactly — no re-grounding — and loot comes from the matching deterministic
- * `caveSide`/`caveFinal` profile. Natural caves contribute no matching
- * anchors. Cave chests are ordinary `WorldGeneratedContainers`, not
- * `TreasureSiteDefinition` — no keys/locks. Pure so cave→container
- * composition is testable without booting the rest of `WorldBundle`.
+ * Materializes `DOUBLE_TREASURE` adventure caves' `sideTreasure`/
+ * `finalTreasure` anchors (plan world-terrain-028) as plain underground
+ * `WorldGeneratedContainerSpec`s: the anchor's `x/y/z/yaw` is used exactly —
+ * no re-grounding — and loot comes from the matching deterministic
+ * `caveSide`/`caveFinal` profile. `EMPTY`/`QUEST_TREASURE` and non-adventure
+ * caves (including dungeon treasure roles) produce no generic chests here.
  *
  * @domain world-terrain
  */
+function adventureCaveIdsFromCaves(caves: Caves): string[] {
+  return caves.definitions()
+    .filter((def) => caves.archetypeOf(def.caveId) === 'adventure')
+    .map((def) => def.caveId)
+}
+
 export function caveTreasureContainerSpecs(
   anchors: readonly CaveContentAnchor[],
   worldSeed: number,
+  adventureContentPolicy: CaveAdventureContentPolicy,
 ): WorldGeneratedContainerSpec[] {
   const specs: WorldGeneratedContainerSpec[] = []
   for (const anchor of anchors) {
     if (anchor.role !== 'sideTreasure' && anchor.role !== 'finalTreasure') continue
+    if (adventureContentPolicy.profileOf(anchor.caveId) !== 'DOUBLE_TREASURE') continue
     const profile = anchor.role === 'sideTreasure' ? 'caveSide' : 'caveFinal'
     specs.push({
       id: anchor.id,
@@ -239,6 +249,8 @@ export type WorldBundle = {
    *  never persisted. */
   querySiteInfrastructure: (site: SiteBounds) => SiteInfrastructure
   caves: Caves
+  /** Derived adventure cave loot profiles + authored reservations (plan world-terrain-028). */
+  caveAdventureContentPolicy: CaveAdventureContentPolicy
   dryingRacks: DryingRacks
   hives: Beehives
   workContracts: WorkContracts
@@ -1238,6 +1250,11 @@ async function buildWorldSystems(
   )
   bootMarkEnd('createCaves')
 
+  const caveAdventureContentPolicy = resolveCaveAdventureContentPolicy(
+    adventureCaveIdsFromCaves(caves),
+    caves.contentAnchors(),
+  )
+
   // Cave chest specs must be composed after `caves` exists — the anchors'
   // `y` comes from each cave's own retained heightfield (plan
   // world-terrain-020 Stage C). Appended to the same `worldGeneratedSpecs`
@@ -1259,7 +1276,7 @@ async function buildWorldSystems(
       yaw: site.chest.yaw,
       initialCounts: generateTreasureLoot(config.seed, site.id),
     })),
-    ...caveTreasureContainerSpecs(caves.contentAnchors(), config.seed),
+    ...caveTreasureContainerSpecs(caves.contentAnchors(), config.seed, caveAdventureContentPolicy),
   ]
   const worldGeneratedContainers = createWorldGeneratedContainers(
     scene,
@@ -1318,6 +1335,7 @@ async function buildWorldSystems(
       gardens: playerGardens.nodes(),
     }),
     caves,
+    caveAdventureContentPolicy,
     dryingRacks: createEmptyDryingRacks(),
     hives: createEmptyBeehives(),
     workContracts,

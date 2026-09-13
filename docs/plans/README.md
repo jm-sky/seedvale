@@ -59,7 +59,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | ~~items-player-027~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~world-terrain-024~~, ~~world-terrain-025~~, world-terrain-028, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~ |
+| 💡 `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | ~~world-terrain-019~~, ~~world-terrain-024~~, ~~world-terrain-025~~, ~~world-terrain-028~~, ~~fauna-018~~, ~~fauna-019~~, ~~quests-progression-002~~, ~~quests-progression-011~~ |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016, settlements-npcs-034 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
@@ -76,12 +76,12 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
 | ✅ `world-027-player-spatial-context-and-cross-space-target-isolation.md`      | -       | 🟢 | L      | ~~world-terrain-019~~ |
 | 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
-| 💡 `world-terrain-028-archetype-aware-cave-story-and-loot-anchors.md`          | -       | 🟡 | M      | ~~world-terrain-020~~, ~~world-terrain-024~~, ~~world-terrain-025~~ |
-| ◼️ `quests-progression-023-lost-hunter-natural-cave.md`                        | -       | 🟡 | M      | world-terrain-028, ~~fauna-018~~, ~~fauna-019~~ |
-| ◼️ `quests-progression-024-natural-cave-contraband-cache.md`                   | -       | 🟡 | M      | world-terrain-028 |
-| ◼️ `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | world-terrain-028 |
-| ◼️ `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | world-terrain-028, fauna-027 |
-| ◼️ `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | world-terrain-028, fauna-027 |
+| ✅ `world-terrain-028-archetype-aware-cave-story-and-loot-anchors.md`          | -       | 🟡 | M      | ~~world-terrain-020~~, ~~world-terrain-024~~, ~~world-terrain-025~~ |
+| ◼️ `quests-progression-023-lost-hunter-natural-cave.md`                        | -       | 🟡 | M      | ~~world-terrain-028~~, ~~fauna-018~~, ~~fauna-019~~ |
+| ◼️ `quests-progression-024-natural-cave-contraband-cache.md`                   | -       | 🟡 | M      | ~~world-terrain-028~~ |
+| ◼️ `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | ~~world-terrain-028~~ |
+| ◼️ `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | ~~world-terrain-028~~, fauna-027 |
+| ◼️ `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | ~~world-terrain-028~~, fauna-027 |
 
 ---
 
@@ -107,6 +107,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `settlements-npcs-015-economic-production-and-input-integration.md` | Hunter z gałęzią/belką w gospodarstwie craftuje strzały przy `work` (gałąź przed belką, 1→1 / 1→8); brak materiału nie zużywa nic; drwal nadal dodaje drewno osady przy depozycie; mixed/stock recipes nie mintują częściowego wyniku |
 | `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | Kowal: sharpening nadal pierwszeństwo przy whetstone i broń poniżej progu; inaczej przy `iron`×2 + `coal`×1 w stocku osady kończy `work` → `iron_rod` w `Household.items`; brak któregoś inputu nie startuje processing; zużycie stocku przed completion = blocked bez częściowej mutacji; miner deposit bez zmian; brak osobnego production ticka |
 | `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | Home: Anna/Piotr/Kasia/Marek nadal istnieją, w tej samej kolejności, i oferują authored questy; mała ogród/las osada ma food livelihood bez Tradera/Kowala; osada przy significant ore ma Minera wewnątrz istniejącej liczby domów (bez extra resource family); OUTPOST nadal 1 NPC z forced resource role |
+| `world-terrain-028-archetype-aware-cave-story-and-loot-anchors.md` | Większość adventure caves bez auto-skrzyń; ~20% ma dwa skrzynie jak dawniej; natural/dungeon mają storyFind/loot (i dungeon side/final treasure anchors); rebuild/save bez nowych pól profilu; dungeon sideTreasure nie spawnuje adventure loot |
 | `world-024-systemic-treasure-sites-and-keys.md` | Locked chest without the matching key; key is a meaningful distance from its chest; abandoned pickup and buried shovel path; cemetery grave key (if generated) still applies grave-robbing reputation; correct key opens the normal chest UI, another `key` instance does not; save/reload before and after taking/moving a key, and after unlocking/looting; streamed/reloaded looted chests stay empty and unlocked; no cave treasure yet |
 | `items-player-026-treasure-loot-forced-entry-and-traps.md` | Systemic chest has 50–200 coins plus a sized ruby/diamond; matching key opens without trap risk; `[R] Wyłam` needs a held pry tool (axe/pickaxe/battle_axe/pitchfork) and is a timed action; failed attempt can retry but save/reload does not reroll the same attempt; mechanical damage/fire leave coins and gems; destroyed chest leaves remains with surviving valuables once; blade trap hurts through normal HP; player-placed chests stay unchanged |
 | `npc-016-work-contracts-payment-and-employer-interaction.md` | Najemnik po skończonej pracy podchodzi tylko gdy gracz jest w pobliżu; dialog otwiera Zapłać N / Jeszcze nie; monety schodzą z gracza do `personalInventory` NPC; za mało monet / pełny ekwipunek NPC nic nie rusza; powtórne Zapłać nic nie robi; śmierć najemnika nie obciąża gracza; save/load zachowuje należność i już wypłacone monety |

@@ -84,6 +84,13 @@ export const CAVE_RNG_SALT = {
   undergroundPoolSelect: 0x17,
   /** Plan world-terrain-025: dungeon underground pool footprint shape. */
   undergroundPoolShape: 0x18,
+  /** Plan world-terrain-028: adventure cave generic loot profile roll
+   *  (`EMPTY` vs `DOUBLE_TREASURE`). Independent of anchor placement. */
+  adventureContentProfile: 0x19,
+  /** Plan world-terrain-028: natural cave story/loot anchor wall-side rolls. */
+  naturalContentAnchor: 0x1a,
+  /** Plan world-terrain-028: dungeon cave content-anchor wall-side rolls. */
+  dungeonContentAnchor: 0x1b,
 } as const
 
 /** Fresh `[0,1)` generator for `(caveId, salt)` — deterministic, and

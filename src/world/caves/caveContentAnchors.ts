@@ -1,15 +1,15 @@
-/** Plan world-terrain-020 Stage B — deterministic semantic content anchors
- *  for `adventure` caves.
+/** Plan world-terrain-020 Stage B / world-terrain-028 — deterministic semantic
+ *  content anchors for accepted cave archetypes.
  *
  *  Topology still describes only shape/connectivity. Content *role* is a
  *  separate contract: the cave subsystem points at stable interior places
- *  (`sideTreasure`, `wagon`, …) without turning `CaveTopologyNodeKind` into
- *  a loot/dungeon vocabulary. Floor Y and clearance come from the cave's
- *  own retained `CaveHeightfieldRepresentation` — never from surface
- *  terrain, topology-node Y, or the player-stateful `Caves.queryGround()`.
+ *  (`sideTreasure`, `wagon`, `storyFind`, `loot`, …) without turning
+ *  `CaveTopologyNodeKind` into a loot/dungeon vocabulary. Floor Y and
+ *  clearance come from the cave's own retained
+ *  `CaveHeightfieldRepresentation` — never from surface terrain,
+ *  topology-node Y, or the player-stateful `Caves.queryGround()`.
  *
- *  Natural caves contribute an empty list. Anchors are world definitions
- *  and do not depend on presentation streaming.
+ *  Anchors are world definitions and do not depend on presentation streaming.
  *
  * @domain world-terrain
  */
@@ -17,6 +17,9 @@
 import type { CaveArchetype } from './caveArchetype'
 import type { CaveHeightfieldRepresentation } from './caveHeightfieldRepresentation'
 import type { CaveTopology, CaveTopologyNode, CaveTopologySegment } from './caveTopology'
+import type { CaveUndergroundPool } from './caveUndergroundPool'
+import { dungeonChambersFromTopology, type DungeonChamber } from './dungeonChambers'
+import { undergroundPoolFootprintStrength } from './caveUndergroundPoolFootprint'
 import { distanceToSegment } from '../../math/segment'
 import {
   ADVENTURE_DEEP_CHAMBER_NODE_ID,
@@ -47,6 +50,8 @@ export const CAVE_CONTENT_ANCHOR_ROLES = [
   'support',
   'crate',
   'lantern',
+  'storyFind',
+  'loot',
 ] as const
 
 export type CaveContentAnchorRole = (typeof CAVE_CONTENT_ANCHOR_ROLES)[number]
@@ -66,6 +71,8 @@ export type CaveContentAnchor = {
   y: number
   z: number
   yaw: number
+  /** Stable topology/chamber source for topology-derived anchors (world-terrain-028). */
+  sourceNodeId?: string
 }
 
 export type CaveContentAnchorInput = {
@@ -73,6 +80,8 @@ export type CaveContentAnchorInput = {
   topology: CaveTopology
   /** The retained heightfield of *this* cave — do not sample a neighbour. */
   heightfield: CaveHeightfieldRepresentation
+  /** Frozen dungeon pool contract — required for pool-aware dungeon anchors. */
+  undergroundPool?: CaveUndergroundPool | null
 }
 
 /** Gap / footprint / rim guards per role. Wagon is deliberately larger than
@@ -93,7 +102,14 @@ export const CAVE_CONTENT_PLACEMENT: Record<CaveContentAnchorRole, ContentAnchor
   support: { minGap: 2.0, footprintRadius: 0.7, maxCoreT: 0.7, keepOffThroughLine: true, keepOffForeignPassages: true },
   crate: { minGap: 1.5, footprintRadius: 0.5, maxCoreT: 0.6, keepOffThroughLine: true, keepOffForeignPassages: true },
   lantern: { minGap: 1.4, footprintRadius: 0.3, maxCoreT: 0.78, keepOffThroughLine: true, keepOffForeignPassages: false },
+  storyFind: { minGap: 1.5, footprintRadius: 0.45, maxCoreT: 0.6, keepOffThroughLine: true, keepOffForeignPassages: true },
+  loot: { minGap: 1.5, footprintRadius: 0.55, maxCoreT: 0.55, keepOffThroughLine: true, keepOffForeignPassages: true },
 }
+
+const NATURAL_MAIN_CHAMBER_NODE_ID = 'chamber'
+const NATURAL_BRANCH_CHAMBER_NODE_ID = 'branch-chamber'
+
+const ANCHOR_FOOTPRINT_COLLISION_MARGIN = 0.25
 
 /** Hard cap on XZ alternatives tried for one anchor. Fitting is bounded and
  *  deterministic — never an unbounded search and never runtime random. */
@@ -117,7 +133,9 @@ export function caveContentAnchorId(
   caveId: string,
   role: CaveContentAnchorRole,
   ordinal?: number,
+  sourceNodeId?: string,
 ): string {
+  if (sourceNodeId !== undefined) return `${caveId}:${role}:${sourceNodeId}`
   return ordinal === undefined ? `${caveId}:${role}` : `${caveId}:${role}:${ordinal}`
 }
 
@@ -234,6 +252,56 @@ function pickCandidate(
   return required ? fallback : null
 }
 
+function poolRejectsWetPlacement(
+  pool: CaveUndergroundPool | null | undefined,
+  x: number,
+  z: number,
+  floorY: number,
+): boolean {
+  if (!pool) return false
+  const strength = undergroundPoolFootprintStrength(pool.footprint, x, z)
+  if (strength < 0.15) return false
+  return pool.waterLevel - floorY > 0.04
+}
+
+function overlapsAcceptedAnchor(
+  x: number,
+  z: number,
+  spec: ContentAnchorPlacement,
+  sourceNodeId: string,
+  placed: readonly CaveContentAnchor[],
+): boolean {
+  for (const anchor of placed) {
+    if (anchor.sourceNodeId !== sourceNodeId) continue
+    const other = CAVE_CONTENT_PLACEMENT[anchor.role]
+    const minDist = spec.footprintRadius + other.footprintRadius + ANCHOR_FOOTPRINT_COLLISION_MARGIN
+    if (Math.hypot(anchor.x - x, anchor.z - z) < minDist) return true
+  }
+  return false
+}
+
+function pickCandidateStrictNoOverlap(
+  field: CaveHeightfieldRepresentation,
+  topology: CaveTopology,
+  candidates: readonly Xz[],
+  spec: ContentAnchorPlacement,
+  ctx: FitContext,
+  sourceNodeId: string,
+  placed: readonly CaveContentAnchor[],
+  pool: CaveUndergroundPool | null | undefined,
+): { x: number, y: number, z: number } | null {
+  const limit = Math.min(candidates.length, CONTENT_ANCHOR_CANDIDATE_LIMIT)
+  for (let i = 0; i < limit; i++) {
+    const c = candidates[i]!
+    const result = evaluateCandidate(field, topology, c.x, c.z, spec, ctx)
+    if (!result.ok) continue
+    if (poolRejectsWetPlacement(pool, c.x, c.z, result.floorY)) continue
+    if (overlapsAcceptedAnchor(c.x, c.z, spec, sourceNodeId, placed)) continue
+    return { x: c.x, y: result.floorY, z: c.z }
+  }
+  return null
+}
+
 function nodeOrNull(topology: CaveTopology, id: string): CaveTopologyNode | null {
   return topology.nodes.find((n) => n.id === id) ?? null
 }
@@ -321,17 +389,134 @@ function crateCandidatesAround(wagon: CaveContentAnchor, heading: Heading, prefe
   ]
 }
 
-/**
- * Resolve the adventure content-anchor set against one cave's final
- * heightfield. Natural caves return an empty list. Callers must pass the
- * matching runtime field — overlapping cave bounds must not be resolved
- * through `Caves.sampleFloor`.
- *
- * @domain world-terrain
- */
-export function resolveCaveContentAnchors(input: CaveContentAnchorInput): readonly CaveContentAnchor[] {
-  if (input.archetype !== 'adventure') return EMPTY_ANCHORS
+function placeAtNodeStrict(
+  input: CaveContentAnchorInput,
+  node: CaveTopologyNode,
+  role: CaveContentAnchorRole,
+  preferredSign: 1 | -1,
+  sourceNodeId: string,
+  placed: readonly CaveContentAnchor[],
+  yawOverride?: number,
+): CaveContentAnchor | null {
+  const heading = incomingHeading(input.topology, node.id)
+  const spec = CAVE_CONTENT_PLACEMENT[role]
+  const placedPoint = pickCandidateStrictNoOverlap(
+    input.heightfield,
+    input.topology,
+    chamberContentCandidates(node, heading, preferredSign),
+    spec,
+    { heading, throughOrigin: { x: node.position.x, z: node.position.z }, homeNodeId: node.id },
+    sourceNodeId,
+    placed,
+    input.undergroundPool,
+  )
+  if (!placedPoint) return null
+  const yaw = yawOverride ?? yawFacing(-heading.dx, -heading.dz)
+  return freezeAnchor({
+    id: caveContentAnchorId(input.topology.caveId, role, undefined, sourceNodeId),
+    caveId: input.topology.caveId,
+    role,
+    x: placedPoint.x,
+    y: placedPoint.y,
+    z: placedPoint.z,
+    yaw,
+    sourceNodeId,
+  })
+}
 
+function resolveNaturalCaveContentAnchors(input: CaveContentAnchorInput): readonly CaveContentAnchor[] {
+  const { topology } = input
+  const mainChamber = nodeOrNull(topology, NATURAL_MAIN_CHAMBER_NODE_ID)
+  if (!mainChamber) return EMPTY_ANCHORS
+
+  const random = createCaveRandom(topology.caveId, CAVE_RNG_SALT.naturalContentAnchor)
+  const mainSign = signFromRandom(random)
+  const branchSign = signFromRandom(random)
+
+  const anchors: CaveContentAnchor[] = []
+  const pushStrict = (node: CaveTopologyNode, role: 'storyFind' | 'loot', sign: 1 | -1, required: boolean): void => {
+    const anchor = placeAtNodeStrict(input, node, role, sign, node.id, anchors)
+    if (anchor) anchors.push(anchor)
+    else if (required) {
+      // Required anchors may be absent — cave stays accepted; consumers fail closed.
+    }
+  }
+
+  pushStrict(mainChamber, 'storyFind', mainSign, true)
+  pushStrict(mainChamber, 'loot', signFromRandom(random), true)
+
+  const branchChamber = nodeOrNull(topology, NATURAL_BRANCH_CHAMBER_NODE_ID)
+  if (branchChamber) {
+    pushStrict(branchChamber, 'storyFind', branchSign, false)
+    pushStrict(branchChamber, 'loot', signFromRandom(random), false)
+  }
+
+  return anchors.length === 0 ? EMPTY_ANCHORS : Object.freeze(anchors)
+}
+
+function resolveDungeonCaveContentAnchors(input: CaveContentAnchorInput): readonly CaveContentAnchor[] {
+  const { topology } = input
+  const chambers = dungeonChambersFromTopology(topology)
+  if (chambers.length === 0) return EMPTY_ANCHORS
+
+  const random = createCaveRandom(topology.caveId, CAVE_RNG_SALT.dungeonContentAnchor)
+  const anchors: CaveContentAnchor[] = []
+  const nodeById = new Map(topology.nodes.map((n) => [n.id, n]))
+
+  const chamberNode = (ch: DungeonChamber): CaveTopologyNode | null => nodeById.get(ch.nodeId) ?? null
+
+  const pushOptional = (node: CaveTopologyNode, role: CaveContentAnchorRole, sourceNodeId: string): void => {
+    const sign = signFromRandom(random) as 1 | -1
+    const anchor = placeAtNodeStrict(input, node, role, sign, sourceNodeId, anchors)
+    if (anchor) anchors.push(anchor)
+  }
+
+  const pushRequired = (node: CaveTopologyNode, role: CaveContentAnchorRole, sourceNodeId: string): CaveContentAnchor | null => {
+    const sign = signFromRandom(random) as 1 | -1
+    const anchor = placeAtNodeStrict(input, node, role, sign, sourceNodeId, anchors)
+    if (anchor) anchors.push(anchor)
+    return anchor
+  }
+
+  for (const ch of chambers) {
+    if (ch.class !== 'side') continue
+    const node = chamberNode(ch)
+    if (!node) continue
+    pushOptional(node, 'sideTreasure', ch.nodeId)
+  }
+
+  const deep = chambers.find((c) => c.class === 'deep')
+  if (deep) {
+    const node = chamberNode(deep)
+    if (node) pushRequired(node, 'loot', deep.nodeId)
+  }
+
+  const final = chambers.find((c) => c.class === 'final')
+  if (final) {
+    const node = chamberNode(final)
+    if (node) pushRequired(node, 'finalTreasure', final.nodeId)
+  }
+
+  for (const ch of chambers) {
+    if (ch.class === 'entrance-adjacent') continue
+    const node = chamberNode(ch)
+    if (!node) continue
+    if (ch.class === 'final' || ch.class === 'deep') {
+      if (ch.class === 'deep') pushOptional(node, 'storyFind', ch.nodeId)
+      if (ch.class === 'final') {
+        pushOptional(node, 'storyFind', ch.nodeId)
+        pushOptional(node, 'loot', ch.nodeId)
+      }
+      continue
+    }
+    pushOptional(node, 'storyFind', ch.nodeId)
+    pushOptional(node, 'loot', ch.nodeId)
+  }
+
+  return anchors.length === 0 ? EMPTY_ANCHORS : Object.freeze(anchors)
+}
+
+function resolveAdventureCaveContentAnchors(input: CaveContentAnchorInput): readonly CaveContentAnchor[] {
   const { topology, heightfield } = input
   const sideChamber = nodeOrNull(topology, ADVENTURE_SIDE_CHAMBER_NODE_ID)
   const finalChamber = nodeOrNull(topology, ADVENTURE_FINAL_CHAMBER_NODE_ID)
@@ -408,4 +593,24 @@ export function resolveCaveContentAnchors(input: CaveContentAnchorInput): readon
   if (finalPassage) push(placeAlongPassage(input, finalPassage, 'lantern', 0.45, lantern1Sign, 1))
 
   return Object.freeze(anchors)
+}
+
+/**
+ * Resolve one accepted cave's content anchors against its retained heightfield.
+ * Callers must pass the matching runtime field — overlapping cave bounds must
+ * not be resolved through `Caves.sampleFloor`.
+ *
+ * @domain world-terrain
+ */
+export function resolveCaveContentAnchors(input: CaveContentAnchorInput): readonly CaveContentAnchor[] {
+  switch (input.archetype) {
+    case 'adventure':
+      return resolveAdventureCaveContentAnchors(input)
+    case 'natural':
+      return resolveNaturalCaveContentAnchors(input)
+    case 'dungeon':
+      return resolveDungeonCaveContentAnchors(input)
+    default:
+      return EMPTY_ANCHORS
+  }
 }
