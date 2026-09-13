@@ -105,7 +105,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 ## Reputation / progression
 
-- [QuestManager](../src/quests/QuestManager.ts) — quest progress, objective evaluation and player↔NPC relations keyed by stable `NpcId`.
+- [QuestManager](../src/quests/QuestManager.ts) — quest progress, objective evaluation and player↔NPC relations keyed by stable `NpcId`. Architecture recon: [2026-09-13 quest system](./reviews/2026-09-13--quest-system-architecture-recon.md).
 - [Authored quests](../src/quests/quests.ts) — name-keyed authored definitions; composition root materializes them to `QuestNpcRef`.
 - [Settlement quest opportunities](../src/quests/opportunities/settlementQuestOpportunities.ts) — world-driven and RPG matrix candidates selected at composition root into normal `QuestDef`s.
 - [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.

@@ -50,6 +50,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Items, inventory & equipment UX | Player-facing item lifecycle: pickup, inventory, held tool, capabilities, loot/transfer — recon only | `done` | [ux/2026-09-10--items-inventory-equipment-ux-review.md](./ux/2026-09-10--items-inventory-equipment-ux-review.md) |
 | Living world consistency audit | Cross-domain simulation consistency on `9b7b224` — NPC/households/settlements/fauna, time & schedules, streaming, time skip, save/load, `WorldBundle` rebuild, persistence, death/corpses, decisions, economy, environmental pressures; recon only | `done` | [2026-09-12--living-world-consistency-audit.md](./2026-09-12--living-world-consistency-audit.md) |
 | Independent simulation architecture review | Independent boundary audit of current `main` (`1c0b88a8`) — NPC + households + settlements + fauna as one simulation; ownership, persistence, determinism, elapsed time, skip vs tick, loaded vs unloaded, death, economy, livestock; recon only, no living-world audit read | `done` | [2026-09-12--independent-simulation-architecture-review.md](./2026-09-12--independent-simulation-architecture-review.md) |
+| Quest system architecture recon | Cross-cut of implemented quests vs simulation: lifecycle, parallel quests, objectives, paths/outcomes, rewards, contracts, persistence; no engine rewrite; follow-up plans `quests-progression-028`…`031` | `done` | [2026-09-13--quest-system-architecture-recon.md](./2026-09-13--quest-system-architecture-recon.md) |
 
 ## After each run
 

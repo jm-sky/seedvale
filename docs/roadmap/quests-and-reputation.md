@@ -6,6 +6,8 @@ This document records the current direction for quests, reputation and quest-dri
 
 It is a roadmap, not an implementation plan. Concrete changes should be split into focused plans under `docs/plans/` and verified against the current code before implementation.
 
+**2026-09-13 checkpoint:** implementation recon is in [docs/reviews/2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Do not replace `QuestManager`. Next infrastructure: `quests-progression-028` … `031`. Work contracts remain a sibling of quests, not a JobManager.
+
 ## Current state
 
 ### Quests

@@ -1,7 +1,9 @@
 # Quests / progression — current state
 
-**Last verified:** 2026-09-12  
+**Last verified:** 2026-09-13  
 **Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic quest definitions, objectives, dialogue actions, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
+
+Architecture recon (gaps, overlapping content, recommended stages, what not to build): [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Follow-up plans: `quests-progression-028` … `031`.
 
 This is a **current-state document**, not a roadmap or implementation history. When this file and code disagree, **the code wins**. Planned quest work remains in `docs/plans/`; design direction remains in `docs/vision/quests.md`.
 
@@ -94,6 +96,8 @@ Important symbols:
 
 The opportunity record is data-only and is neither quest progress nor authoritative world state.
 
+Definitions are assembled once at composition root (`QuestManager` takes `readonly QuestDef[]` and has no `registerDef`). Wolf-den pressure still appears mid-session because its def is always materialized and `WorldQuestSourceLookup` gates offering. Lost-livestock currently materializes one candidate per settlement; `createApp.syncLostLivestockQuests` may call `startLivestockStray` when that quest is offered/active (fauna also owns natural stray episodes — plan fauna-025). Plans `030`/`031` address offering real problems without quest-created strays and per-animal defs.
+
 ## Core lifecycle
 
 `QuestState` currently supports:
@@ -153,13 +157,19 @@ Implemented `QuestObjective` types:
 - `read_item`
 - `discover_location`
 - `loot_world_container`
+- `recover_hidden_find`
+- `acquire_portable_container`
 
 ### System/world-state conditions
 
 - `resolve_storage_rat_infestation`
 - `destroy_spawn_point`
+- `light_settlement_fires`
+- `await_quest_outcome` — never auto-clears; terminal choice / physical resolver
 
 Prefer extending/reusing these objective contracts before adding a parallel quest-specific mechanic.
+
+Event ingress is split: counted/read/poll helpers visit every matching active quest; `onInteractObjective` (`interact_*`, `spot_animal`, `animal_died`, `animal_found`, `wolf_den_cleared`) currently advances the **first** matching def only — see recon P1 / plan `quests-progression-028`.
 
 ## Animal/world bindings
 
