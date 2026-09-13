@@ -13,7 +13,8 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 ## Quest-enabling world mechanics
 
-- [ ] 2026-09-12 — settlements-007 wystawia read-only `SettlementsManager.getStructureSnapshot`/`listRepairProblems`, ale żaden quest jeszcze tego nie konsumuje. quests-progression-016 mógłby dodać `structure:<structureId>:repair` opportunity (condition poniżej progu → problem, naprawa/przywrócenie condition → resolution) tym samym mechanizmem co istniejący wolf-den pressure hook — nie kopiować repair state do quest layer.
+- [ ] 2026-09-12 — settlements-007 wystawia read-only `SettlementsManager.getStructureSnapshot`/`listRepairProblems`, ale żaden quest jeszcze tego nie konsumuje. Po `quests-progression-030`/`031` dodać `structure:<structureId>:repair` opportunity tym samym mechanizmem co wolf-den pressure (016) — nie kopiować repair state do quest layer. Recon: `docs/reviews/2026-09-13--quest-system-architecture-recon.md`.
+- [ ] 2026-09-13 — Authored `wilki-pod-osada` i generated `world:wolf-den-pressure:*` opowiadają tę samą historię destroy-den; authored `zagubiona-owca` (`find_animal`) nakłada się na `world:lost-livestock:*`. Nie scalać w infrastrukturze — osobny content cleanup po 030/031.
 
 ## Fauna
 

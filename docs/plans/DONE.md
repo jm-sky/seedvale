@@ -4,7 +4,21 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-023-lost-hunter-natural-cave`                      | 2026-09-13 15:54:52 | —                   | `quests-progression` | —          |
+| `quests-progression-008-treasure-map-bear-cave`                        | —                   | 2026-09-13 15:15:39 | `quests-progression` | —          |
+| `world-terrain-028-archetype-aware-cave-story-and-loot-anchors`        | 2026-09-13 15:05:59 | —                   | `world-terrain`  | —          |
+| `world-027-player-spatial-context-and-cross-space-target-isolation`    | 2026-09-13 11:36:03 | —                   | `world`          | —          |
+| `world-terrain-026-cave-distant-mouth-occlusion`                       | 2026-09-13 06:11:17 | —                   | `world-terrain`  | —          |
+| `settlements-npcs-016-first-processing-chain-and-blacksmith-production` | 2026-09-13 04:20:07 | —                   | `settlements-npcs` | —          |
+| `fauna-027-dungeon-cave-residents-and-pool-foraging`                   | 2026-09-12 23:50:07 | —                   | `fauna`          | —          |
+| `world-terrain-025-underground-cave-pool`                              | 2026-09-12 23:09:28 | —                   | `world-terrain`  | —          |
+| `quests-progression-021-guard-rewards-and-evening-settlement-duty`     | 2026-09-12 22:33:52 | —                   | `quests-progression` | —          |
+| `quests-progression-022-lazy-social-news-propagation-and-reputation-catch-up` | 2026-09-12 21:43:07 | —                   | `quests-progression` | —          |
+| `world-terrain-024-dungeon-cave-archetype`                             | 2026-09-12 21:11:15 | —                   | `world-terrain`  | —          |
+| `fauna-026-predator-livestock-encounter-set`                           | 2026-09-12 20:41:06 | —                   | `fauna`          | —          |
+| `settlements-npcs-034-household-wood-authority-and-repair-correctness` | 2026-09-12 20:26:12 | —                   | `settlements-npcs` | —          |
 | `items-player-031-armor-category-and-character-defense-summary`        | 2026-09-12 20:24:00 | —                   | `items-player`   | —          |
+| `quests-progression-020-hunter-profession-quests-and-wildlife-help`    | 2026-09-12 20:18:30 | —                   | `quests-progression` | —          |
 | `items-player-030-multi-part-armor-and-equipment-quality`              | 2026-09-12 19:20:00 | —                   | `items-player`   | —          |
 | `npc-031-voluntary-expedition-joining`                                 | 2026-09-12 18:48:31 | —                   | `npc`            | —          |
 | `npc-030-paid-expedition-escort-work-contracts`                        | 2026-09-12 18:11:05 | —                   | `npc`            | —          |

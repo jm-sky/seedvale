@@ -80,6 +80,10 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-025-adventure-cave-old-bones.md`                        | -       | 🟡 | M      | world-terrain-028 |
 | 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | world-terrain-028, fauna-027 |
 | 💡 `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | world-terrain-028, fauna-027 |
+| 💡 `quests-progression-028-world-fact-event-fanout.md`                         | -       | 🔴 | S      | -      |
+| 💡 `quests-progression-029-generic-resolution-effects.md`                      | -       | 🔴 | M      | -      |
+| 💡 `quests-progression-030-external-resolution-and-real-problem-offering.md`   | -       | 🔴 | M      | quests-progression-028 |
+| 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | quests-progression-030 |
 
 ---
 
@@ -196,7 +200,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `032`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `028`
+- quests-progression: `032`
 - settlements: `008`
 - settlements-npcs: `035`
 - tools: `014`
