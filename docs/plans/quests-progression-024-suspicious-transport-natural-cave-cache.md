@@ -69,6 +69,8 @@ QuestManager owns progress/outcome only; opportunity/materialization owns genera
 
 Reuse `src/quests/opportunities/rpgQuestMatrices.ts`, `rpgQuestMaterialization.ts`, `worldQuestOpportunityTypes.ts`, `quests.ts`, `QuestManager.ts`, `createApp.ts`, `worldBundle.ts`, `worldGeneratedContainers.ts`, `createCaves.ts` and location knowledge.
 
+Current `caveAdventureContentPolicy` validates claims only for `adventure` caves. Natural-cave authored claims must use one shared archetype-neutral composition arbiter (also needed by `quests-progression-023`), not a quest-local or persisted claim registry.
+
 Add JSDoc for important reusable/public additions with appropriate `@domain` tags.
 
 ## Verification
