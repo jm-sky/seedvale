@@ -9,6 +9,7 @@
 **Subdomains:** `terrain` `rendering` `landmarks`  
 **Tags:** `caves` `streaming` `terrain-cutout` `lod` `occlusion`  
 **Roadmap:** -  
+**Model:** Sonnet, Composer  
 
 ## 1. Problem
 
