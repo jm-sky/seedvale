@@ -1,7 +1,7 @@
-/** Plan world-terrain-020 Stage B — `createCaves()` owns the content-anchor
- *  seam: adventure caves expose the required roles against their retained
- *  heightfield; natural caves expose none; availability does not wait on
- *  presentation streaming. */
+/** Plan world-terrain-020 Stage B + world-terrain-028 — `createCaves()` owns
+ *  the content-anchor seam: adventure caves expose the required roles against
+ *  their retained heightfield; natural/dungeon caves expose archetype story/loot
+ *  anchors; availability does not wait on presentation streaming. */
 
 import * as THREE from 'three'
 import { beforeAll, describe, expect, it } from 'vitest'
@@ -91,21 +91,33 @@ describe('createCaves content anchors (plan world-terrain-020 Stage B)', () => {
     }
   })
 
-  it('gives every natural cave an empty adventure content list', () => {
+  it('gives every natural cave main-chamber storyFind and loot anchors', () => {
     const naturalIds = caves.definitions()
       .map((d) => d.caveId)
       .filter((id) => caves.archetypeOf(id) === 'natural')
     expect(naturalIds.length).toBeGreaterThan(0)
     for (const caveId of naturalIds) {
-      expect(caves.contentAnchorsOf(caveId)).toEqual([])
+      const anchors = caves.contentAnchorsOf(caveId)
+      expect(anchors.some((a) => a.role === 'storyFind' && a.sourceNodeId === 'chamber')).toBe(true)
+      expect(anchors.some((a) => a.role === 'loot' && a.sourceNodeId === 'chamber')).toBe(true)
+      expect(anchors.every((a) => a.role === 'storyFind' || a.role === 'loot')).toBe(true)
+      expect(anchors.every((a) => a.caveId === caveId)).toBe(true)
     }
     expect(caves.contentAnchorsOf('cave:deadbeef')).toEqual([])
   })
 
-  it('gives dungeon caves no adventure content anchors', () => {
-    for (const def of caves.definitions()) {
-      if (caves.archetypeOf(def.caveId) !== 'dungeon') continue
-      expect(caves.contentAnchorsOf(def.caveId)).toEqual([])
+  it('exposes dungeon chamber content anchors without adventure props', () => {
+    const dungeonIds = caves.definitions()
+      .map((d) => d.caveId)
+      .filter((id) => caves.archetypeOf(id) === 'dungeon')
+    expect(dungeonIds.length).toBeGreaterThan(0)
+    for (const caveId of dungeonIds) {
+      const anchors = caves.contentAnchorsOf(caveId)
+      expect(anchors.length).toBeGreaterThan(0)
+      expect(anchors.filter((a) => a.role === 'finalTreasure')).toHaveLength(1)
+      expect(anchors.some((a) => a.role === 'loot')).toBe(true)
+      expect(anchors.every((a) => a.role !== 'wagon' && a.role !== 'support' && a.role !== 'crate' && a.role !== 'lantern')).toBe(true)
+      expect(anchors.every((a) => a.caveId === caveId && typeof a.sourceNodeId === 'string')).toBe(true)
     }
   })
 
