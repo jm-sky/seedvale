@@ -7,6 +7,7 @@
 **Domain:** `world`  
 **Type:** `feature`  
 **Roadmap:** `agriculture-and-cultivation`  
+**Model:** Sonnet, Composer
 
 ## Cel
 
