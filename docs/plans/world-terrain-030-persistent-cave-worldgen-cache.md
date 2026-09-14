@@ -9,6 +9,7 @@
 **Subdomains:** `terrain` `landmarks`
 **Tags:** `worldgen` `cache` `caves` `heightfield` `performance`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
