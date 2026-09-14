@@ -74,6 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
 | 💡 `items-player-032-npc-player-storage-resource-and-context-rules.md`         | 🟡 | L      | items-player-028                                                                                                                                                                | companions                              |
 | 💡 `quests-progression-034-quest-giver-cap-markers-dialogue-and-target-lifecycle.md` | 🔴 | M      | ~~quests-progression-033~~                                                                                                                                                      | quests-and-reputation                   |
+| 💡 `ui-input-019-character-screen-settlement-reputation-and-quest-choice-clarity.md` | 🟡 | M      | ~~quests-progression-001~~, ~~world-012~~                                                                                                                                       | -                                       |
 
 ---
 
@@ -209,7 +210,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `015`
 - settlements-npcs: `037`
 - tools: `014`
-- ui-input: `019`
+- ui-input: `020`
 - world: `028`
 - world-terrain: `034`
 
