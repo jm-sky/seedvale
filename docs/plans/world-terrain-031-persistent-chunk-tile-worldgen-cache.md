@@ -9,6 +9,7 @@
 **Subdomains:** `chunks` `terrain` `vegetation`
 **Tags:** `worldgen` `cache` `worker` `chunks` `performance`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
