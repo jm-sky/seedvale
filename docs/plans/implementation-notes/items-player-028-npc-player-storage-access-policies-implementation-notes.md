@@ -2,148 +2,331 @@
 
 Plan: `items-player-028-npc-player-storage-access-policies.md`
 
-## Current-code findings
+## Recon outcome
 
-- `items-player-027` is still `planned`. Its UI/application action for direct Player → NPC transfer does not exist yet, but the important lower-level primitive already does: `src/items/inventoryTransfer.ts::{transferInventoryCount, transferInventoryInstance}`. Reuse those for final ownership moves into `NpcAuthoritativeState.personalInventory`; do not wait for or duplicate the future 027 UI layer.
-- `src/world/createPlacedContainers.ts` is the authoritative owner of player-container contents. `PlacedContainerEntry.contents` is an `Inventory`; `deposit/withdraw` and instance variants already preserve capacity, freshness and concrete instance identity.
-- The same physical container identity survives pickup/re-placement via `id`, but current carried state keeps only `{ id, kind, contents }`. `PlacedContainerRecord`, `SaveCarriedContainer`, runtime `CarriedContainer`, `toRecord()` and `carriedNode()` currently know nothing about access policy. If policy is container-owned, all of those lifecycle shapes must preserve it or pickup will silently drop permissions.
-- `WorldBundle` already carries `placedContainers.nodes()` plus `placedContainers.carriedNode()` through rebuilds. Keep policy inside that existing state path rather than adding a parallel bundle-level registry unless implementation proves the record shape materially worse.
-- Persistence mirrors container shapes in `src/persistence/saveData.ts` (`SavePlacedContainer` / `SaveCarriedContainer`). Old saves must restore with a deny-by-default/empty policy. Do not make missing policy mean broad access.
-- `src/world/helperDeliveryHooks.ts` is currently a narrow write-only NPC seam: target lookup, `hasRoom`, `deposit`. `npcLogistics.ts::planPlayerStorageDelivery` uses it for the existing helper food-delivery flow. This is the natural first consumer to migrate to policy-aware deposit semantics; do not leave a bypass where helper delivery can write into a container while the new policy says deposit is forbidden.
-- `NpcAgent.carried` remains transient work/logistics cargo. `NpcAuthoritativeState.personalInventory` remains persistent personal ownership. The storage access layer must not choose between them; the caller/purpose does.
+The two-stage split is supported by the current codebase.
 
-## Recommended ownership and types
+Stage 1 can be implemented without inventing new NPC role state or item ownership:
 
-Keep the policy owned by the physical player container, using one shared policy type imported by both runtime and save shapes. A practical placement is a small module near `createPlacedContainers.ts`, e.g. `src/world/playerStorageAccess.ts`, rather than embedding authorization logic in `NpcAgent` or Vue.
+- actor authorization can be resolved from existing authoritative systems;
+- the container already has stable identity and one authoritative `Inventory`;
+- generic atomic inventory transfer helpers already exist;
+- helper delivery is a real NPC-side deposit consumer that can prove the policy gate;
+- resource/category rules and assignment-aware authority are independent complexity and can safely move to `items-player-032`.
 
-Prefer a persisted shape roughly equivalent to:
+Do not pull Stage 2 concerns back into this implementation unless current code makes the Stage 1 seam impossible without them.
+
+## Current verified ownership
+
+### Player containers
+
+`src/world/createPlacedContainers.ts` is authoritative for player-owned chest contents.
+
+Current relevant shapes:
+
+- `PlacedContainerRecord` — persisted placed container;
+- `SaveCarriedContainer` — persisted carried container;
+- `PlacedContainerEntry` — live placed container with `contents: Inventory`;
+- internal `CarriedContainer` — currently `{ id, kind, contents }`;
+- `toRecord()` / `nodes()` — placed serialization;
+- `carriedNode()` — carried serialization;
+- `spawn()` — restore placed record;
+- `pickUp()` — moves the same `Inventory` from placed to carried;
+- `putDownCarried()` — moves it back;
+- `adoptCarried()` — restores carried save state.
+
+The same `id` survives pickup and re-placement. Store the policy on the same lifecycle path. A parallel registry keyed by id is unnecessary unless implementation finds a concrete blocker.
+
+Expected Stage 1 extensions:
+
+```text
+PlacedContainerRecord.accessPolicy?
+SaveCarriedContainer.accessPolicy?
+PlacedContainerEntry.accessPolicy
+CarriedContainer.accessPolicy
+```
+
+`place()` should create the restrictive default. Missing/legacy `accessPolicy` in `spawn()` / `adoptCarried()` must restore the same restrictive default.
+
+### WorldBundle / persistence
+
+Existing rebuild flow already carries `placedContainers.nodes()` and `placedContainers.carriedNode()`. Keeping policy inside those shapes automatically follows the established world-bundle ownership path.
+
+`src/persistence/saveData.ts` mirrors placed/carried container save data. Update its corresponding validation/normalization without adding a new top-level storage-policy registry.
+
+Do not bump save version mechanically for an additive optional field if current persistence conventions allow defaulting missing data.
+
+## Stage 1 policy shape
+
+Keep the persisted policy deliberately small:
 
 ```ts
-type StorageAccessGrant = {
-  npcId: NpcId
-  source: { type: 'manual' } | { type: 'work_contract', id: string } | { type: 'expedition', id: string }
-}
+type StorageAccessEffect = 'allow' | 'deny'
 
-type StorageResourceRule = {
-  withdraw: StorageAccessMode
-  deposit: StorageAccessMode
-  minimumReserve?: number
-  maxPerWithdrawal?: number
+type StorageActorPolicy = {
+  default: StorageAccessEffect
+  companions?: StorageAccessEffect
+  hired?: StorageAccessEffect
+  npcs?: Partial<Record<NpcId, StorageAccessEffect>>
 }
 
 type PlayerStorageAccessPolicy = {
-  grants: StorageAccessGrant[]
-  // resource/default rules, kept minimal to actual V1 consumers
+  withdraw: StorageActorPolicy
+  deposit: StorageActorPolicy
 }
 ```
 
-The important part is grant identity: revoke by `(npcId, source)` rather than by NPC alone, so ending an expedition cannot erase a separate manual grant.
+A small module such as `src/world/playerStorageAccess.ts` is the natural owner for:
 
-Do not introduce persisted transient authorization state derived from an active assignment if the owning assignment system can recreate/remove the grant reliably. If temporary grants are persisted, their source id must be sufficient to validate/prune stale grants on restore.
+- types;
+- default construction/normalization;
+- pure actor policy evaluation;
+- policy-aware transfer seam.
 
-## Container lifecycle
+Do not embed evaluator logic in Vue, `NpcAgent`, or `createPlacedContainers.ts` beyond storage/lifecycle plumbing.
 
-Extend the existing container lifecycle consistently:
+### Canonical precedence
 
-- `PlacedContainerRecord.accessPolicy?`
-- `SaveCarriedContainer.accessPolicy?`
-- `PlacedContainerEntry.accessPolicy`
-- runtime `CarriedContainer.accessPolicy`
-- `spawn()` restores it;
-- `place()` creates the restrictive default;
-- `pickUp()` moves the same policy with the same `id`;
-- `putDownCarried()` restores the same policy;
-- `toRecord()` / `carriedNode()` serialize it.
+Pure evaluator semantics:
 
-Do not make NPC access possible while the container is carried. `PlacedContainers.find(id)` already naturally enforces this because carried containers are removed from `containers`; the policy can survive while `findTarget`/commit returns unavailable.
+```text
+explicit npc rule
+→ matching group rules
+→ default
+```
 
-## Policy seam and mutation boundary
+If multiple groups match:
 
-Do not expose raw `PlacedContainers.withdraw()` to NPC callers that are meant to obey policy. Add a policy-aware application/domain seam which performs the final revalidation immediately before mutation.
+```text
+any deny → deny
+else any allow → allow
+else default
+```
 
-Keep read and commit separate:
+This avoids ordered-array semantics and produces a safe deterministic result for NPCs that are both companion and hired.
+
+## Dynamic group resolution
+
+### `companions`
+
+`src/settlement/npcState.ts::NpcAuthoritativeState.accompanyCommitment` is the authoritative source-neutral accompany fact.
+
+Do not add/persist:
 
 ```ts
-evaluateStorageAccess(request) // advisory only
+npc.isCompanion
+```
+
+or a storage-specific companion membership cache.
+
+The policy layer should receive/access a narrow resolver keyed by `NpcId`, backed by the authoritative NPC state registry. Membership is evaluated again at commit.
+
+### `hired`
+
+`src/world/createWorkContracts.ts::WorkContracts.findActiveWorkByNpc(npcId)` is the authoritative active paid-work lookup.
+
+Do not duplicate assignment state into the NPC or storage policy.
+
+Use a narrow resolver/predicate so `playerStorageAccess.ts` does not need to understand full Work Contract records. The resolver can answer only whether the actor currently has an active paid assignment.
+
+Because an escort can also have an accompany commitment, the actor may match both groups. The deny-safe group merge handles this without introducing group priority.
+
+### Missing/unloaded NPCs
+
+The policy is keyed by stable `NpcId`; runtime mesh/agent presence is not authorization state.
+
+Explicit `npcs[npcId]` entries remain harmless if the NPC is unloaded, dead, or no longer present in runtime presentation.
+
+Dynamic group membership should resolve `false` when its authoritative source cannot establish active membership.
+
+## Policy-aware transfer seam
+
+Keep read/evaluate separate from commit.
+
+Suggested conceptual API:
+
+```ts
+evaluateStorageAccess(request)
 tryWithdraw(request)
 tryWithdrawInstance(request)
 tryDeposit(request)
 tryDepositInstance(request)
 ```
 
-The commit operation should re-resolve the placed container by id and then validate, in current state:
+Do not over-generalize request purpose in Stage 1. `StorageAccessPurpose`, assignment tokens, resource classes and reserve rules are Stage 2.
 
-1. actor grant;
-2. operation permission;
-3. structured purpose/authority when mode is `assigned_only`;
-4. concrete resource classification;
-5. current amount/instance;
-6. destination capacity;
-7. `maxPerWithdrawal`;
-8. reserve floor;
-9. authoritative transfer.
+A Stage 1 transfer request needs only what is necessary to authorize actor + operation and execute the concrete inventory move.
 
-Return semantic failure/result codes; NPC planners and UI should not infer failure reason from `0` alone.
+### Commit ordering
 
-For count-backed withdrawals into another `Inventory`, prefer `transferInventoryCount(entry.contents, destination, ...)` after computing the policy-safe amount. For concrete instances use `transferInventoryInstance(...)`. This avoids the existing dangerous shape `withdraw -> destination.add` and preserves freshness/identity atomically.
+At commit, re-resolve in this order:
 
-Deposits from an `Inventory` should likewise use the generic transfer helpers where the source is a real inventory (`NpcAgent.carried` or `personalInventory`). Keep raw `PlacedContainers.deposit*` as lower-level container mutation for existing player/container operations if needed; the NPC-facing seam is where authorization belongs.
+1. placed container by id;
+2. current policy;
+3. explicit actor override;
+4. current companion/hired predicates;
+5. selected operation permission;
+6. current source resource / instance;
+7. destination capacity;
+8. authoritative inventory mutation.
 
-## Resource classification
+Advisory evaluation must never become a reservation or durable authorization token.
 
-Do not create a second broad item taxonomy. Current `ITEM_CATALOG` already exposes intrinsic signals that can be composed:
+### Carried containers
 
-- food / consumable metadata;
-- `melee`, `ranged`, `defense` for weapons;
-- `capabilities` for tools;
-- `container` for liquid containers;
-- treatment metadata for medicine.
+`PlacedContainers.find(id)` naturally returns nothing for the currently carried container because pickup removes it from the placed collection.
 
-One caveat: ammunition is not currently an intrinsic item flag; it is declared by ranged weapons through `RangedConfig.ammoKinds`. If V1 needs an `ammunition` policy class, derive it centrally from catalog ranged configs or add one canonical helper. Do not add a manually maintained ammo list beside the catalog.
+Preserve that property. The policy follows the carried record but NPC access should return a semantic unavailable/not-world-accessible failure until the chest is put down again.
 
-Reserve keys should stay concrete/fungible (`ItemKind` for count-backed items). Do not apply one numeric reserve to heterogeneous `food` or `tool` categories.
+## Atomic transfer reuse
 
-For instance-backed resources, especially filled liquid containers and maintained weapons, access checks must operate on the concrete instance. A water rule must never turn a liquid-container instance into scalar water.
+`src/items/inventoryTransfer.ts` already exposes:
 
-## `assigned_only` authority
+- `transferInventoryCount(source, destination, kind, n, nowDays)`;
+- `transferInventoryInstance(source, destination, instanceId)`.
 
-Keep `StorageAccessPurpose` as small as the first real consumers require. It should carry identifiers, not booleans such as `assigned: true`.
+Both preflight destination capacity and preserve source state on failure. Count transfers preserve freshness through `removeWithFreshness` / `addWithFreshness`; instance transfers preserve concrete instance identity.
 
-The storage module must not import and interpret complete Work Contract / expedition / quest state. Prefer injected/narrow validators owned by those systems, or a validated authority token/id whose owner can confirm it at commit time.
+Use these whenever both ownership sides are real `Inventory`s.
 
-Because `items-player-027` is not implemented yet, avoid coupling 028 to any future 027 UI/action type. Depend only on stable shared primitives (`NpcId`, `Inventory`, item metadata, transfer helpers).
+Do not implement NPC withdrawal as:
 
-## Existing helper-delivery migration
+```text
+PlacedContainers.withdraw()
+→ destination.add()
+```
 
-`HelperDeliveryHooks.deposit()` currently bypasses any future policy. Change this consumer as part of 028 so there is one authorization path for NPC → player-container deposits.
+because the second step can fail after source mutation.
 
-Preserve its current logistics behavior:
+Raw `PlacedContainers.deposit*` / `withdraw*` can remain for existing player container actions; the important boundary is that NPC-side access covered by this feature has one policy-aware gate.
 
-- planning checks target/room only as advisory;
-- NPC physically travels;
-- commit rechecks the live container;
-- partial capacity acceptance remains possible where that flow expects it;
-- undelivered cargo stays with the NPC.
+## Helper delivery migration
 
-The existing helper assignment itself can provide the structured deposit purpose/authority; it must not automatically imply withdrawal access.
+`src/world/helperDeliveryHooks.ts` currently exposes:
+
+```ts
+findTarget(containerId)
+hasRoom(containerId, kind)
+deposit(containerId, kind, amount, nowDays?, batches?)
+```
+
+`deposit()` directly delegates to `containers.deposit()` and therefore has no actor identity.
+
+`src/ai/npcLogistics.ts::planPlayerStorageDelivery` is the existing consumer.
+
+Change the narrow helper seam so commit can identify the delivering `NpcId` and pass through Stage 1 deposit authorization.
+
+Preserve existing logistics semantics:
+
+- candidate generation remains advisory;
+- physical travel remains unchanged;
+- commit rechecks live target and capacity;
+- partial deposit stays possible where current helper flow expects it;
+- remainder stays with `NpcAgent.carried`;
+- helper assignment by itself does not imply withdrawal access.
+
+Do not add a `helpers` storage group in Stage 1 unless current implementation proves there is no practical way to configure the existing consumer through explicit NPC/group policy. The agreed public selectors are `companions`, `hired`, plus explicit NPC override.
+
+## Destination ownership stays with caller
+
+Stage 1 does not choose between:
+
+- `NpcAuthoritativeState.personalInventory`,
+- `NpcAgent.carried`,
+- `NpcAuthoritativeState.transportCargo`.
+
+Caller/action owns that semantic decision and passes the correct inventory to the transfer seam.
+
+This avoids turning storage access into another logistics or equipment owner.
+
+## UI integration
+
+Existing `src/ui-vue/screens/ContainerScreen.vue` and the container action/store flow already own chest interaction presentation. Extend that surface rather than adding a separate companion/storage manager screen.
+
+Relevant current integration points to verify during implementation:
+
+- `src/ui-vue/screens/ContainerScreen.vue`;
+- `src/ui-vue/store.ts` container-screen state/actions;
+- `src/app/actions/containerActions.ts` opening/refreshing a placed chest;
+- existing NPC/villager presentation data if a selector is needed for per-NPC override.
+
+Prefer a compact permissions section with operation-level controls.
+
+Do not expose a generic ordered rule editor in Stage 1.
+
+All writes should route through an application action such as a focused `updatePlayerStorageAccessPolicy(containerId, patch)` rather than mutating a Vue copy and hoping save state catches up.
+
+## Persistence/default normalization
+
+Provide one canonical `createDefaultPlayerStorageAccessPolicy()` / normalization helper and reuse it for:
+
+- fresh `place()`;
+- missing policy on `spawn()`;
+- missing policy on `adoptCarried()`;
+- save-data validation/defaulting;
+- tests.
+
+Avoid several independent `{ default: 'deny' }` literals that may diverge when Stage 2 extends the schema.
+
+Stage 2 should be able to migrate/extend this type additively rather than replacing container ownership.
 
 ## Tests worth adding
 
-Focus unit tests on boundaries rather than NPC pathfinding:
+Focus on pure boundaries:
 
-- policy survives placed → carried → placed and save-shape serialization;
-- old/missing policy restores restrictive defaults;
-- two independent grants for one NPC; revoking one source preserves the other;
-- withdraw denied after policy changes between advisory evaluation and commit;
-- reserve + `maxPerWithdrawal` under sequential NPC commits;
-- failed destination capacity leaves source unchanged;
-- concrete instance withdrawal preserves instance id/state;
-- carried container is unavailable to NPCs while keeping its policy;
-- deposit allowed while withdrawal forbidden;
-- existing helper delivery cannot bypass deposit policy.
+- default policy is withdraw deny + deposit deny;
+- explicit NPC allow/deny beats groups;
+- companion + hired with one deny resolves deny;
+- only allow matches resolves allow;
+- no match uses default;
+- companion result changes when `accompanyCommitment` changes before commit;
+- hired result changes when active work assignment changes before commit;
+- placed → carried → placed preserves the exact policy;
+- save/restore preserves policy;
+- missing old-save policy defaults restrictive;
+- carried container cannot be committed against by NPC;
+- count transfer failure leaves source unchanged;
+- instance transfer preserves id/state;
+- withdraw and deposit are independent;
+- helper delivery cannot bypass deposit policy;
+- player-side chest actions are unaffected.
 
-Use existing `inventoryTransfer` tests as the atomic-transfer contract; do not duplicate all Inventory behavior in storage-policy tests.
+Use existing `inventoryTransfer` tests as the transfer contract rather than duplicating all `Inventory` behavior.
 
-## Main implementation risk
+## Stage 2 boundary
 
-The largest risk is creating two mutation paths: policy-aware NPC storage access plus legacy helper/direct calls to `PlacedContainers.deposit/withdraw`. During implementation, search all NPC-side callers of those raw methods/hooks and route them through the policy seam. Player UI/container interactions may remain direct because the player is the owner, but NPC access must have one authoritative gate.
+Do not implement these in 028:
+
+- item/category classifier;
+- resource-specific overrides;
+- `assigned_only`;
+- `StorageAccessPurpose`;
+- Work Contract / expedition authority validation beyond the `hired` boolean selector;
+- source-identity grants;
+- reserve floors;
+- per-withdrawal maximum;
+- autonomous food/water acquisition from player storage;
+- work-material or expedition provisioning semantics.
+
+The Stage 1 seam should accept concrete item/instance transfer requests without interpreting why that resource is being moved. `items-player-032` will add that second authorization dimension.
+
+## Main implementation risks
+
+1. **Policy loss during pickup.** Current carried shape has no policy; update every placed/carried conversion path together.
+2. **Duplicated companion/hired state.** Resolve from existing authoritative systems at evaluation/commit.
+3. **Legacy NPC bypass.** `HelperDeliveryHooks.deposit()` must not remain a direct unguarded write path.
+4. **Unsafe withdraw-then-add.** Reuse `inventoryTransfer` for true ownership moves.
+5. **Stage 2 leakage.** Keep Stage 1 actor authorization independent of resource taxonomy and assignment authority.
+6. **UI becoming source of truth.** Persist policy on container state; Vue only edits through actions.
+
+## Recommended implementation order
+
+1. Add policy types/default/evaluator tests.
+2. Thread policy through placed/carried/runtime/save container shapes.
+3. Add narrow authoritative group resolvers.
+4. Add policy-aware transfer API using inventory transfer primitives.
+5. Migrate helper delivery deposit.
+6. Add UI editing and refresh wiring.
+7. Add persistence/TOCTOU/regression tests.
+
+Add JSDoc to public policy evaluation/transfer functions and the central policy type when useful for preflight discovery; prefer `@domain items-player`.
