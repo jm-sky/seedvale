@@ -870,7 +870,6 @@ Generated from TypeScript imports.
 - `debug/playerGroundTrace.ts`
 - `debug/playerMovementTrace.ts`
 - `fauna/AnimalAgent.ts`
-- `fauna/animalOwnership.ts`
 - `fauna/createFauna.ts`
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`

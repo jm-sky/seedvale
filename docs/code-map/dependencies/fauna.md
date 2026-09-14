@@ -515,7 +515,6 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `app/createApp.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalOwnership.test.ts`
 - `fauna/animalStray.test.ts`
