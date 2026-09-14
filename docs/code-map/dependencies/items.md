@@ -981,6 +981,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcTradeAvailability.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/actionContracts.ts`
 - `app/actions/containerActions.ts`

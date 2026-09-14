@@ -50,6 +50,7 @@ Generated from TypeScript imports.
 - `fauna/ownedAnimalControl.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/predatorHumanDecision.ts`
+- `fauna/predatorIntentCommitment.ts`
 - `fauna/preyAlertPerception.ts`
 - `fauna/waterTraversal.ts`
 - `items/items.ts`
@@ -999,6 +1000,26 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/predatorHumanDecision.test.ts`
+- `fauna/predatorIntentCommitment.test.ts`
+- `fauna/predatorIntentCommitment.ts`
+
+## `fauna/predatorIntentCommitment.test.ts`
+
+**Imports**
+
+- `fauna/predatorHumanDecision.ts`
+- `fauna/predatorIntentCommitment.ts`
+
+## `fauna/predatorIntentCommitment.ts`
+
+**Imports**
+
+- `fauna/predatorHumanDecision.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/predatorIntentCommitment.test.ts`
 
 ## `fauna/preyAlertPerception.test.ts`
 

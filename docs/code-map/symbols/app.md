@@ -340,10 +340,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 190
-- `InventoryWiring` — type — line 115
-- `InventoryWiringDeps` — type — line 148
-- `MerchantInventoryView` — type — line 101
+- `createInventoryWiring` — function — line 201
+- `InventoryWiring` — type — line 126
+- `InventoryWiringDeps` — type — line 159
+- `MerchantInventoryView` — type — line 112
 
 ## `app/modalState.ts`
 

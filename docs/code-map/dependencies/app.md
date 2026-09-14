@@ -1329,6 +1329,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/dialogueTemplates.ts`
+- `ai/npcTradeAvailability.ts`
 - `ai/voluntaryExpeditionJoin.ts`
 - `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`

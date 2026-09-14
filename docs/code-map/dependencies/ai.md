@@ -166,6 +166,8 @@ Generated from TypeScript imports.
 
 - `ai/dialogueTemplates.ts`
 - `ai/npcCurrentActivity.test.ts`
+- `ai/npcTradeAvailability.test.ts`
+- `ai/npcTradeAvailability.ts`
 - `ai/npcWhy.test.ts`
 - `app/actions/containerActions.ts`
 - `app/dialogueTimeControl.ts`
@@ -270,6 +272,7 @@ Generated from TypeScript imports.
 - `ai/nameCultures.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcTradeAvailability.ts`
 - `ai/npcVoiceLines.ts`
 - `ai/npcWorkContract.ts`
 - `ai/reactionChance.ts`
@@ -847,6 +850,28 @@ Generated from TypeScript imports.
 - `ai/npcPlan.ts`
 - `ai/npcStrategies.test.ts`
 - `debug/npcTrace.ts`
+
+## `ai/npcTradeAvailability.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `ai/npcTradeAvailability.ts`
+- `settlement/household.ts`
+
+## `ai/npcTradeAvailability.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `ai/characters.ts`
+- `items/items.ts`
+- `settlement/household.ts`
+
+**Imported by**
+
+- `ai/npcTradeAvailability.test.ts`
+- `app/inventoryWiring.ts`
 
 ## `ai/npcTravel.test.ts`
 

@@ -568,6 +568,8 @@ Generated from TypeScript imports.
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcTradeAvailability.test.ts`
+- `ai/npcTradeAvailability.ts`
 - `app/actions/householdResourceTransferActions.test.ts`
 - `app/actions/householdResourceTransferActions.ts`
 - `app/gameLoop.ts`

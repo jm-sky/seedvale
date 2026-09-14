@@ -483,6 +483,7 @@ Generated from exported TypeScript symbols.
 - `createAcquiredInstance` — function — line 142
 - `InstanceSellResult` — type — line 33
 - `OfferBuybackResolution` — type — line 37
+- `OwnedGoodsPurchaseLine` — type — line 368
 - `previewPricedPurchaseNetCoins` — function — line 296
 - `previewTransactionNetCoins` — function — line 281
 - `resolveOfferBuyback` — function — line 230
@@ -491,40 +492,50 @@ Generated from exported TypeScript symbols.
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
 - `selectInstancesToSell` — function — line 165
 - `selectInstanceToPlace` — function — line 180
-- `sellInstancesForCoins` — function — line 367
+- `sellInstancesForCoins` — function — line 432
+- `settleOwnedGoodsPurchase` — function — line 388
+  - domain: settlements-npcs
 - `settlePricedPurchase` — function — line 309
 - `settleTransaction` — function — line 337
 - `TradeResult` — type — line 31
 
 ## `items/tradeCatalog.ts`
 
+- `BASE_BUY_FACTOR` — const — line 212
+  - domain: settlements — full-condition buy-from-NPC factor bounds (plan settlements-npcs-033) — a markup over `tradeValue` the player pays an ordinary NPC. `MIN_BUY_FACTOR` intentionally equals `MAX_SELL_FACTOR` so the best possible buy price never undercuts the best possible merchant buyback for the same nominal value — no standing can create a buy→sell(merchant) arbitrage loop.
 - `BASE_SELL_FACTOR` — const — line 202
   - domain: settlements — full-condition sell factor bounds (plan settlements-006).
-- `BROKEN_SELL_MULTIPLIER` — const — line 304
-- `canSell` — function — line 233
-- `fullConditionSellFactor` — function — line 266
+- `BROKEN_SELL_MULTIPLIER` — const — line 340
+- `canSell` — function — line 243
+- `fullConditionBuyFactor` — function — line 310
+  - domain: settlements — social buy factor for player purchases from an ordinary NPC (plan settlements-npcs-033) — reuses the exact same `relationshipEffect`/`reputationEffect` inputs as merchant sell pricing, but *subtracted* rather than added: better relation/reputation must never raise what the player pays, worse standing must never lower it.
+- `fullConditionSellFactor` — function — line 276
   - domain: settlements — sell factor for a full-condition item before durability scaling.
-- `isMerchantStock` — function — line 217
+- `isMerchantStock` — function — line 227
+- `MAX_BUY_FACTOR` — const — line 214
 - `MAX_SELL_FACTOR` — const — line 204
 - `MERCHANT_PRICES` — const — line 14
 - `MERCHANT_STOCK` — const — line 94
-- `merchantPrice` — function — line 213
+- `merchantPrice` — function — line 223
+- `MIN_BUY_FACTOR` — const — line 213
 - `MIN_SELL_FACTOR` — const — line 203
 - `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 194
   - domain: settlements — neutral social standing for merchant sell pricing.
-- `offerValue` — function — line 295
-- `relationshipEffect` — function — line 242
+- `npcSalePrice` — function — line 323
+  - domain: settlements — player-buys-from-NPC unit price in coins for one ordinary trade-eligible good (plan settlements-npcs-033 §5/§6). Base value reuses the same catalog as merchant stock (`merchantPrice`, falling back to `tradeValue` for kinds the merchant doesn't stock) so no profession/dialogue code hardcodes its own price.
+- `offerValue` — function — line 331
+- `relationshipEffect` — function — line 252
   - domain: settlements — relation tier bonus in percentage points (0.01 = 1 pp).
-- `reputationEffect` — function — line 255
+- `reputationEffect` — function — line 265
   - domain: settlements — weighted reputation × renown amplification (percentage points).
-- `resolveInstanceSellPrice` — function — line 307
+- `resolveInstanceSellPrice` — function — line 343
   - domain: settlements — merchant buyback for a concrete item instance — price is derived, never stored.
-- `roundSellPrice` — function — line 275
+- `roundSellPrice` — function — line 285
   - domain: settlements — deterministic integer coin rounding shared by stack and instance pricing.
-- `sellPrice` — function — line 285
+- `sellPrice` — function — line 295
   - domain: settlements — merchant buyback for a stackable kind at full condition.
-- `SellPriceContext` — type — line 206
-- `tradeValue` — function — line 222
+- `SellPriceContext` — type — line 216
+- `tradeValue` — function — line 232
 
 ## `items/trapItemInstances.ts`
 

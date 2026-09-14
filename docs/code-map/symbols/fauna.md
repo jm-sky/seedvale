@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1012
+- `AnimalAgent` — class — line 1028
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 516
-- `AnimalAgentDeps` — type — line 836
-- `AnimalSaveState` — type — line 626
-- `AnimalUpdateContext` — type — line 880
-- `BURY_DURATION_SEC` — const — line 335
-- `canPredatorPursueIntoVillage` — function — line 694
-- `FAUNA_SHADOW_DISTANCE` — const — line 304
-- `FaunaAiBranch` — type — line 453
-- `FaunaNavRescueDebugInfo` — type — line 500
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 395
-- `FrenzyWolfCandidate` — type — line 771
-- `HARVEST_MEAT_DURATION_SEC` — const — line 338
-- `isWithinVillageRadius` — function — line 675
-- `NearbyNpcCandidate` — type — line 766
-- `pickNearestEligibleWolf` — function — line 780
-- `pickRabidTarget` — function — line 805
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 322
-- `villageFleeBiasFalloff` — function — line 702
-- `VillageInfo` — type — line 669
+- `AnimalAgentDebugInfo` — type — line 526
+- `AnimalAgentDeps` — type — line 852
+- `AnimalSaveState` — type — line 642
+- `AnimalUpdateContext` — type — line 896
+- `BURY_DURATION_SEC` — const — line 343
+- `canPredatorPursueIntoVillage` — function — line 710
+- `FAUNA_SHADOW_DISTANCE` — const — line 312
+- `FaunaAiBranch` — type — line 463
+- `FaunaNavRescueDebugInfo` — type — line 510
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 403
+- `FrenzyWolfCandidate` — type — line 787
+- `HARVEST_MEAT_DURATION_SEC` — const — line 346
+- `isWithinVillageRadius` — function — line 691
+- `NearbyNpcCandidate` — type — line 782
+- `pickNearestEligibleWolf` — function — line 796
+- `pickRabidTarget` — function — line 821
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 330
+- `villageFleeBiasFalloff` — function — line 718
+- `VillageInfo` — type — line 685
 
 ## `fauna/animalAttraction.ts`
 
@@ -465,12 +465,12 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/faunaDecision.ts`
 
-- `decideFaunaBehaviour` — function — line 144
+- `decideFaunaBehaviour` — function — line 145
 - `FAUNA_BEHAVIOUR_PRIORITY` — const — line 76
 - `FaunaBehaviourKind` — type — line 23
 - `FaunaDecisionGate` — type — line 18
 - `FaunaDecisionInput` — type — line 39
-- `scoreFaunaBehaviours` — function — line 155
+- `scoreFaunaBehaviours` — function — line 156
 
 ## `fauna/harvestedRemains.ts`
 
@@ -555,20 +555,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/predatorHumanDecision.ts`
 
-- `CLOSE_ATTACK_CHANCE` — const — line 87
-- `countNearbyHumans` — function — line 199
-- `CROWD_ATTACK_BLOCK_COUNT` — const — line 93
-- `decidePredatorHumanIntent` — function — line 154
-- `humanProximityFear` — function — line 102
-- `hungerAttackPressure` — function — line 113
-- `isAttackRollSuppressed` — function — line 118
-- `NEARBY_HUMAN_RADIUS` — const — line 193
+- `CLOSE_ATTACK_CHANCE` — const — line 88
+- `countNearbyHumans` — function — line 200
+- `CROWD_ATTACK_BLOCK_COUNT` — const — line 94
+- `decidePredatorHumanIntent` — function — line 155
+- `humanProximityFear` — function — line 103
+- `hungerAttackPressure` — function — line 114
+- `isAttackRollSuppressed` — function — line 119
+- `NEARBY_HUMAN_RADIUS` — const — line 194
 - `PredatorHumanDecisionInput` — type — line 17
 - `PredatorHumanIntent` — type — line 15
-- `PROVOCATION_SECONDS` — const — line 95
-- `PROVOKED_FLEE_HP_RATIO` — const — line 91
-- `RETALIATION_ATTACK_CHANCE` — const — line 89
-- `scorePredatorHumanIntents` — function — line 122
+- `PROVOCATION_SECONDS` — const — line 96
+- `PROVOKED_FLEE_HP_RATIO` — const — line 92
+- `RETALIATION_ATTACK_CHANCE` — const — line 90
+- `scorePredatorHumanIntents` — function — line 123
+
+## `fauna/predatorIntentCommitment.ts`
+
+- `clearPredatorIntentCommitment` — function — line 60
+- `createPredatorIntentCommitment` — function — line 51
+- `PREDATOR_INTENT_COMMIT_SEC` — const — line 23
+  - domain: fauna
+- `PredatorIntentCommitment` — type — line 25
+- `predatorIntentDebugInfo` — function — line 65
+- `PredatorIntentDebugInfo` — type — line 34
+- `resolveCommittedPredatorIntent` — function — line 80
+- `ResolveCommittedPredatorIntentArgs` — type — line 40
 
 ## `fauna/preyAlertPerception.ts`
 

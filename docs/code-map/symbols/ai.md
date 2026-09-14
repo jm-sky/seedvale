@@ -176,17 +176,18 @@ Generated from exported TypeScript symbols.
 - `classifyPendingActivity` — function — line 721
 - `CurrentActivity` — type — line 531
 - `CurrentActivityKind` — type — line 524
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 837
 - `NPC_HEIGHT` — const — line 434
 - `NPC_MODEL_URLS` — const — line 498
 - `NPC_SHADOW_DISTANCE` — const — line 448
-- `NpcAgent` — class — line 1062
+- `NpcAgent` — class — line 1065
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 967
+- `NpcAgentDeps` — type — line 970
 - `NpcInspectionSnapshot` — type — line 546
 - `NpcWhy` — type — line 696
 - `projectNpcWhy` — function — line 762
@@ -381,6 +382,16 @@ Generated from exported TypeScript symbols.
 - `selectStrategy` — function — line 154
 - `WaterStrategyContext` — type — line 99
 - `WoodStrategyContext` — type — line 124
+
+## `ai/npcTradeAvailability.ts`
+
+- `NpcTradeOffer` — type — line 13
+  - domain: settlements-npcs
+- `npcTradeQuantityAvailable` — function — line 64
+  - domain: settlements-npcs
+- `resolveNpcTradeOffers` — function — line 81
+  - domain: settlements-npcs
+- `TradeReserveNpc` — type — line 23
 
 ## `ai/npcTravel.ts`
 
