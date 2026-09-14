@@ -2,7 +2,7 @@
 
 **Plan:** `settlements-npcs-020-economy-driven-transport-demand-integration.md`  
 **Reviewed:** 2026-09-14  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## Review result
 

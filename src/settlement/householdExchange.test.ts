@@ -55,6 +55,23 @@ describe('selectHouseholdSurplusSource', () => {
     source.items.remove('carrot', source.items.count('carrot'))
     expect(selectHouseholdSurplusSource(candidates, 'requester', 'food', { x: 0, z: 0 })).toBeNull()
   })
+
+  it('skips a nearer household whose surplus is fully committed and picks the next', () => {
+    const near = householdWithFood('near', 20)
+    const far = householdWithFood('far', 20)
+    const candidates = [
+      { household: near, position: { x: 5, z: 0 } },
+      { household: far, position: { x: 100, z: 0 } },
+    ]
+    const picked = selectHouseholdSurplusSource(
+      candidates,
+      'requester',
+      'food',
+      { x: 0, z: 0 },
+      (household) => (household.id === 'near' ? 0 : household.surplus('food')),
+    )
+    expect(picked?.household.id).toBe('far')
+  })
 })
 
 describe('createHouseholdExchangeHooks', () => {

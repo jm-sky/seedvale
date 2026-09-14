@@ -21,6 +21,12 @@ import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
 import type { NpcDecisionDiagnostics, SettlementDecisionReport } from './npcDecisionReport'
 import type { NpcTraceEvent } from './npcTrace'
+import {
+  committedIncomingFood,
+  committedOutgoingFood,
+  uncommittedHouseholdFoodSurplus,
+  uncoveredSettlementFoodShortage,
+} from '../economy'
 import { matchesQuestSpawnPointId } from '../fauna/wolfDenScenario'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { awardSkillXp, type PlayerSkills, setSkillValueForDebug, type SkillId } from '../player/PlayerSkills'
@@ -95,6 +101,18 @@ export type NpcDebugHandle = {
   endAccompany: (reason?: 'abandoned' | 'cancelled' | 'finished') => boolean
 }
 
+export type HouseholdFoodSupplyDebugSnapshot = {
+  surplus: number
+  outgoing: number
+  available: number
+}
+
+export type SettlementFoodTransportDebugSnapshot = {
+  shortage: number
+  incoming: number
+  uncovered: number
+}
+
 /** `debug.household(id).history()` (plan settlements-npcs-013) — the
  *  household's own bounded mutation history; see `npcInspector.ts`'s
  *  `householdHistory` doc for why this stays separate from member NPCs'
@@ -103,6 +121,9 @@ export type NpcDebugHandle = {
  *  streaming) — only `null` when this household id has never been built. */
 export type HouseholdDebugHandle = {
   history: (filter?: HistoryFilter) => readonly HouseholdHistoryEvent[] | null
+  /** Derived food surplus vs pre-pickup transport commitments (plan
+   *  settlements-npcs-020). */
+  foodSupply: () => HouseholdFoodSupplyDebugSnapshot
 }
 
 /** `debug.settlement(id).history()` — the merged NPC/household/economy
@@ -113,6 +134,9 @@ export type SettlementHistoryDebugHandle = {
   history: (filter?: HistoryFilter) => readonly DomainHistoryEnvelope[] | null
   /** Loaded-NPC decision/crisis report (plan tools-013). */
   decisions: (filter?: HistoryFilter) => SettlementDecisionReport | null
+  /** Derived settlement-food transport demand (plan settlements-npcs-020).
+   *  `null` when this settlement has no economy yet. */
+  foodTransport: () => SettlementFoodTransportDebugSnapshot | null
 }
 
 export type { AnimalAgentDebugInfo } from '../fauna/AnimalAgent'
@@ -473,7 +497,7 @@ const HELP_TEXT = [
   'npc(id) / npcs(filter?) — inspect a live NPC by id / query all loaded NPCs',
   'npc(id).startAccompany(mode?) / .setAccompanyMode(mode) / .endAccompany(reason?) — accompany/follow commitment (plan npc-029)',
   'npcState(id) — authoritative NPC snapshot including post-death/corpse (works without a live agent)',
-  'npc(id).history(filter?) — NPC decision/action trace (plan 170); npc(id).decisions(filter?) — causal cycles/threat/contract diagnostics (plan tools-013); household(id).history(filter?) — household resource mutations; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); settlement(id).decisions(filter?) — loaded-NPC crisis/decision report (plan tools-013); filter: {since?, limit?, types?}',
+  'npc(id).history(filter?) — NPC decision/action trace (plan 170); npc(id).decisions(filter?) — causal cycles/threat/contract diagnostics (plan tools-013); household(id).history(filter?) — household resource mutations; household(id).foodSupply() — live food surplus vs pre-pickup transport commitments; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); settlement(id).decisions(filter?) — loaded-NPC crisis/decision report (plan tools-013); settlement(id).foodTransport() — derived food shortage / incoming / uncovered demand (plan settlements-npcs-020); filter: {since?, limit?, types?}',
   'village(id) — resolves by id even if the village is currently unloaded (npcs() is [] then)',
   'villages() — lists currently loaded villages only',
   'village(id).houses() / villages()[i].houses() — per-house definitionId + hasBed; null while unloaded',
@@ -773,13 +797,38 @@ export function installNpcDebugApi(
     },
     npcs: (filter) => queryNpcs(bundle, getTimeOfDay(), filter),
     npcState: (id) => bundle.settlementsManager.snapshotNpcStates()[id] ?? null,
-    household: (id) => (bundle.settlementsManager.getHousehold(id) ? { history: (filter) => householdHistory(bundle, id, filter) } : null),
-    settlement: (id) => (findVillageDef(bundle.settlementsManager, id)
-      ? {
-          history: (filter) => settlementHistory(bundle, id, filter),
-          decisions: (filter) => settlementDecisionReport(bundle, id, filter),
-        }
-      : null),
+    household: (id) => {
+      const household = bundle.settlementsManager.getHousehold(id)
+      if (!household) return null
+      return {
+        history: (filter) => householdHistory(bundle, id, filter),
+        foodSupply: () => {
+          const orders = bundle.transportOrders.list()
+          return {
+            surplus: household.surplus('food'),
+            outgoing: committedOutgoingFood(orders, id),
+            available: uncommittedHouseholdFoodSurplus(household, orders),
+          }
+        },
+      }
+    },
+    settlement: (id) => {
+      if (!findVillageDef(bundle.settlementsManager, id)) return null
+      return {
+        history: (filter) => settlementHistory(bundle, id, filter),
+        decisions: (filter) => settlementDecisionReport(bundle, id, filter),
+        foodTransport: () => {
+          const economy = bundle.settlementsManager.getEconomy(id)
+          if (!economy) return null
+          const orders = bundle.transportOrders.list()
+          return {
+            shortage: economy.shortage('food'),
+            incoming: committedIncomingFood(orders, id),
+            uncovered: uncoveredSettlementFoodShortage(economy, orders),
+          }
+        },
+      }
+    },
     setFrenzyWolf: () => setFrenzyWolf(bundle),
     setFrenzyWolves: (count) => setFrenzyWolves(bundle, count),
     village: (id) => {

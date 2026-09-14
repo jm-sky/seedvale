@@ -17,6 +17,12 @@ export type HouseholdSurplusCandidate = {
   position: { x: number, z: number }
 }
 
+/** Optional live surplus override for `selectHouseholdSurplusSource` —
+ *  transport demand subtracts pre-pickup commitments without a second
+ *  household search (plan settlements-npcs-020). Defaults to
+ *  `household.surplus(kind)`. */
+export type HouseholdSurplusLookup = (household: Household, kind: HouseholdResourceKind) => number
+
 /**
  * Picks the best local surplus source of `kind` for a shortage at `near`,
  * excluding `excludeHouseholdId` (a household never trades with itself).
@@ -32,12 +38,13 @@ export function selectHouseholdSurplusSource(
   excludeHouseholdId: HouseholdId,
   kind: HouseholdResourceKind,
   near: { x: number, z: number },
+  surplusOf: HouseholdSurplusLookup = (household, resourceKind) => household.surplus(resourceKind),
 ): HouseholdSurplusCandidate | null {
   let best: HouseholdSurplusCandidate | null = null
   let bestDistSq = Infinity
   for (const candidate of candidates) {
     if (candidate.household.id === excludeHouseholdId) continue
-    if (candidate.household.surplus(kind) <= 0) continue
+    if (surplusOf(candidate.household, kind) <= 0) continue
     const dx = candidate.position.x - near.x
     const dz = candidate.position.z - near.z
     const distSq = dx * dx + dz * dz
@@ -57,6 +64,7 @@ export type HouseholdExchangeHooks = {
     excludeHouseholdId: HouseholdId,
     kind: HouseholdResourceKind,
     near: { x: number, z: number },
+    surplusOf?: HouseholdSurplusLookup,
   ) => HouseholdSurplusCandidate | null
   /** Stable-id lookup of a candidate already on this settlement's local
    *  list — used to resolve a `TransportOrder` household endpoint back to
@@ -70,8 +78,8 @@ export type HouseholdExchangeHooks = {
  *  factory does not need to be recreated as stock changes. */
 export function createHouseholdExchangeHooks(candidates: readonly HouseholdSurplusCandidate[]): HouseholdExchangeHooks {
   return {
-    findSurplusSource: (excludeHouseholdId, kind, near) =>
-      selectHouseholdSurplusSource(candidates, excludeHouseholdId, kind, near),
+    findSurplusSource: (excludeHouseholdId, kind, near, surplusOf) =>
+      selectHouseholdSurplusSource(candidates, excludeHouseholdId, kind, near, surplusOf),
     findById: (householdId) => candidates.find((candidate) => candidate.household.id === householdId) ?? null,
   }
 }

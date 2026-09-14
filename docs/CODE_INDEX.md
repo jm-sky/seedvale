@@ -129,6 +129,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Production recipes](../src/economy/production.ts) — `ProductionDef` tables, role lookup, hunter item-recipe priority wrapper, and textile wool-material recipe.
 - [Production executor](../src/economy/productionExecutor.ts) — synchronous all-or-nothing stock/item/mixed recipe commit (plan settlements-npcs-015).
 - [Production shortage](../src/economy/productionShortage.ts) — compact blocked-input observations on settlement economy (plan settlements-npcs-017).
+- [Food transport demand](../src/economy/foodTransportDemand.ts) — derived uncovered settlement food shortage and uncommitted household surplus from live economy + active `TransportOrder`s (plan settlements-npcs-020). Not persisted.
 - [NPC work adapters](../src/economy/npcWork.ts) — work-completion → economy mutation seam.
 - [Settlement economy](../src/economy/settlementEconomy.ts) — settlement bulk stock, concrete food inventory, demand, history, and production-shortage state.
 

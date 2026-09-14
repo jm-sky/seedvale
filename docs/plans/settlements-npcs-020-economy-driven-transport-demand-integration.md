@@ -1,7 +1,7 @@
 # Plan: Economy-driven Transport Demand Integration
 
 **Created:** 2026-09-04  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** S/M  
 **Depends on:** ~~settlements-npcs-017~~, ~~settlements-npcs-018~~, ~~settlements-npcs-019~~  
@@ -10,6 +10,17 @@
 **Tags:** `transport` `shortage` `surplus` `trader`  
 **Roadmap:** `physical-goods-transport`  
 **Model:** Sonnet, Composer  
+**Implemented at:** 2026-09-14 15:30  
+
+## Implementation summary
+
+Vertical slice: uncovered `SettlementEconomy.shortage('food')` + uncommitted household food surplus → Trader work creates a `TransportOrder` → pickup/unload mutates authoritative inventories → shortage falls.
+
+Derived accounting: `src/economy/foodTransportDemand.ts` (incoming `requestedQuantity`/`claimedQuantity`, pre-pickup outgoing, optional per-kind and `excludeOrderId`). No demand registry, no extra tick.
+
+Trader ordering in `planTraderWork()`: resume `findByCarrier` first; food uses `planTraderCollection` (own household eligible as source); wood keeps the 014/018 direct-deposit baseline.
+
+Source selection reuses `HouseholdExchangeHooks.findSurplusSource` with a `surplusOf` callback for uncommitted supply. Quantity is `min(uncovered, aggregate uncommitted, kind-uncommitted, HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food, carrier room)`.
 
 ## Recon result — 2026-09-14
 
@@ -148,7 +159,7 @@ after unload   → destination inventory
 
 `TransportOrders.findByCarrier(npcId)` egzekwuje jeden aktywny transport per carrier.
 
-Registry nie posiada obecnie endpoint/item-specific query dla incoming/outgoing commitments. 020 może dodać mały derived helper/query potrzebny do accounting; nie tworzyć nowego registry demand.
+Incoming/outgoing food commitments są derived z `TransportOrders.list()` przez `src/economy/foodTransportDemand.ts` — bez osobnego demand registry.
 
 ### Trader
 

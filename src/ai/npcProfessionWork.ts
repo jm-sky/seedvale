@@ -1,6 +1,6 @@
 import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
-import type { Household, HouseholdResourceKind } from '../settlement/household'
+import type { Household } from '../settlement/household'
 import type { HouseholdExchangeHooks } from '../settlement/householdExchange'
 import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
@@ -17,6 +17,7 @@ import {
   commitBlacksmithProduction,
   commitDressingProduction,
   commitHunterArrowProduction,
+  committedOutgoingFood,
   commitTextileWorkProduction,
   DRESSING_PRODUCTION,
   HUNTER_ARROW_PRODUCTIONS,
@@ -25,6 +26,8 @@ import {
   type SettlementEconomy,
   TEXTILE_WORKER_PRODUCTIONS,
   tryAdvanceDevelopment,
+  uncommittedHouseholdFoodSurplus,
+  uncoveredSettlementFoodShortage,
 } from '../economy'
 import { WOOL_YIELD } from '../fauna/livestockProduction'
 import {
@@ -33,7 +36,7 @@ import {
   selectSeparatedOwnedSheep,
   type ShepherdFlockHooks,
 } from '../fauna/shepherdFlock'
-import { claimFoodItems, FOOD_ITEM_KINDS } from '../items/foodItems'
+import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
@@ -76,12 +79,6 @@ const FARM_PLANT_SEARCH_RADIUS = 3
 /** Fisher work (plan settlements-npcs-002 §4) — the fish yield delivered
  *  home, same shape as `npcLogistics.ts`'s `HUNT_YIELD_KINDS`. */
 const FISH_YIELD_KINDS: readonly ItemKind[] = ['fish']
-
-/** Trader work (plan settlements-npcs-002 §7) — a trader only ever moves
- *  kinds both `Household` and `SettlementEconomy` actually share; `iron`/
- *  `coal`/`gold` stay settlement-only (plan 131), water stays a `Household`-
- *  only reserve (plan 122), so `food`/`wood` are the only eligible pair. */
-const TRADER_TRANSFER_KINDS: readonly HouseholdResourceKind[] = ['food', 'wood']
 
 /** Blacksmith work (plan settlements-npcs-002 §8/§10) — the first (stable,
  *  lowest-id) `WeaponItemInstance` across every `WEAPON_MAINTENANCE_KIND_LIST`
@@ -377,12 +374,13 @@ export function selectTraderCollectionGoods(
   household: Household,
   carrier: Inventory,
   maxTransfer = HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food,
+  committedOfKind: (kind: ItemKind) => number = () => 0,
 ): { kind: ItemKind, quantity: number } | null {
   const surplus = household.surplus('food')
   if (surplus <= 0) return null
   const cap = Math.min(surplus, maxTransfer)
   for (const kind of FOOD_ITEM_KINDS) {
-    const available = household.items.count(kind)
+    const available = household.items.count(kind) - Math.max(0, committedOfKind(kind))
     if (available <= 0) continue
     let quantity = Math.min(available, cap)
     while (quantity > 0 && !carrier.canAdd(kind, quantity)) quantity -= 1
@@ -458,8 +456,12 @@ function planTransportOrderExecution(
         carrier: ctx.transportCargo,
         source: live.household.items,
         liveTransferableQuantity: Math.min(
-          live.household.items.count(current.itemKind),
-          live.household.surplus('food'),
+          Math.max(
+            0,
+            live.household.items.count(current.itemKind)
+              - committedOutgoingFood(orders.list(), live.household.id, current.id, current.itemKind),
+          ),
+          uncommittedHouseholdFoodSurplus(live.household, orders.list(), current.id),
         ),
         nowDays: ctx.simTime(),
       })
@@ -469,24 +471,37 @@ function planTransportOrderExecution(
 }
 
 /**
- * Trader cross-household collection (plan settlements-npcs-014, migrated
- * onto `TransportOrder` by settlements-npcs-018) — a bounded, same-settlement
- * pickup of *another* household's real food surplus, physically carried to
- * the settlement's storage. Source discovery stays on
+ * Trader food collection (plan settlements-npcs-014/018, gated by uncovered
+ * settlement food shortage in settlements-npcs-020) — a bounded,
+ * same-settlement pickup of uncommitted food surplus, including this
+ * trader's own household. Opportunity is derived from live economy + active
+ * orders (not a demand registry). Source discovery stays on
  * `HouseholdExchangeHooks.findSurplusSource`; the commitment itself is a
- * world-owned order executed by this NPC's existing action chain. Temporary
- * interruption resumes the same non-terminal order instead of creating a
- * replacement.
+ * world-owned order executed by this NPC's existing action chain.
  */
-function planTraderCollection(ctx: NpcWorkContext, household: Household, economy: SettlementEconomy): NpcPlannedAction | null {
+function planTraderCollection(ctx: NpcWorkContext, economy: SettlementEconomy): NpcPlannedAction | null {
   const hooks = ctx.householdExchange
   const orders = ctx.transportOrders
   if (!hooks || !orders || !ctx.npcId) return null
   const existing = orders.findByCarrier(ctx.npcId)
   if (existing) return planTransportOrderExecution(ctx, economy, existing)
-  const source = hooks.findSurplusSource(household.id, 'food', ctx.home)
+  const active = orders.list()
+  const needed = uncoveredSettlementFoodShortage(economy, active)
+  if (needed <= 0) return null
+  const source = hooks.findSurplusSource(
+    '\0',
+    'food',
+    ctx.home,
+    (candidate) => uncommittedHouseholdFoodSurplus(candidate, active),
+  )
   if (!source) return null
-  const goods = selectTraderCollectionGoods(source.household, ctx.transportCargo)
+  const available = uncommittedHouseholdFoodSurplus(source.household, active)
+  const goods = selectTraderCollectionGoods(
+    source.household,
+    ctx.transportCargo,
+    Math.min(HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food, needed, available),
+    (kind) => committedOutgoingFood(active, source.household.id, undefined, kind),
+  )
   if (!goods) return null
   const order = orders.create({
     source: { type: 'household', householdId: source.household.id },
@@ -500,46 +515,33 @@ function planTraderCollection(ctx: NpcWorkContext, household: Household, economy
 }
 
 /**
- * Trader's `work` schedule block (plan settlements-npcs-002 §7) — a
- * bounded, local economic effect instead of a full market simulation: when
- * this trader's own household has real surplus (`Household.surplus`, never
- * its own reserve) in a kind the settlement's shared economy actually has a
- * shortage in, the trader carries that surplus to market and deposits it
- * into `SettlementEconomy`. Preserved as-is (plan settlements-npcs-014
- * implementation notes §6/§16 — regression baseline) as the trader's first
- * choice; when this trader's own household has nothing to bring,
- * `planTraderCollection` is the plan's new capability: a physical pickup
- * from *another* household.
+ * Trader's `work` schedule block (plan settlements-npcs-002 §7,
+ * settlements-npcs-020) — resume any active `TransportOrder` first, then
+ * evaluate uncovered settlement food demand through `planTraderCollection`.
+ * Wood still uses the 014/018 own-household direct deposit when there is no
+ * food transport to run.
  */
 function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   const { household } = ctx
   const economy = ctx.economy
   if (!household || !economy || !ctx.workplace) return null
-  const kind = TRADER_TRANSFER_KINDS.find((k) => household.surplus(k) > 0 && economy.hasShortage(k))
-  if (!kind) return planTraderCollection(ctx, household, economy)
+  const orders = ctx.transportOrders
+  if (orders && ctx.npcId) {
+    const existing = orders.findByCarrier(ctx.npcId)
+    if (existing) return planTransportOrderExecution(ctx, economy, existing)
+  }
+  const food = planTraderCollection(ctx, economy)
+  if (food) return food
+  if (!(household.surplus('wood') > 0 && economy.hasShortage('wood'))) return null
   const workplace = ctx.workplace
   return {
     kind: 'work',
     destination: copyVec3(workplace.position),
     durationSec: ctx.rollWorkDurationSec(),
     onComplete: () => {
-      if (kind === 'food') {
-        // Concrete-item counterpart of the wood claim below (plan
-        // settlements-npcs-008) — this trader's full surplus is the
-        // requested amount, so the cap is a no-op in practice. `batches`
-        // (plan settlements-npcs-014) keeps this claim's freshness intact
-        // across the transfer instead of resetting it to day 0.
-        const claimed = claimFoodItems(household.items, household.surplus('food'), ctx.simTime())
-        for (const { kind: itemKind, amount, batches } of claimed) economy.depositFood(itemKind, amount, ctx.simTime(), batches)
-        return
-      }
-      // Reuses the same atomic claim seam local exchange uses
-      // (`economy/localExchange.ts`) — this trader's full surplus is the
-      // requested amount, so the cap is a no-op in practice, just a shared
-      // claim path.
-      const amount = claimHouseholdSurplus(household, kind, household.surplus(kind))
+      const amount = claimHouseholdSurplus(household, 'wood', household.surplus('wood'))
       if (amount <= 0) return
-      economy.add(kind, amount, ctx.simTime())
+      economy.add('wood', amount, ctx.simTime())
       tryAdvanceDevelopment(economy)
     },
   }
