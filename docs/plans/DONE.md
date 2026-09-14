@@ -4,6 +4,11 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-025-adventure-cave-old-bones`                      | 2026-09-14 06:53:18 | —                   | `quests-progression` | —          |
+| `quests-progression-029-generic-resolution-effects`                    | 2026-09-14 06:11:25 | —                   | `quests-progression` | —          |
+| `quests-progression-033-quest-offer-selection-prioritization-and-abandonment` | 2026-09-14 05:51:12 | —                   | `quests-progression` | —          |
+| `settlements-npcs-035-household-wells-and-population-scaling`          | 2026-09-14 05:32:38 | —                   | `settlements-npcs` | —          |
+| `quests-progression-032-nonlinear-stage-objectives-and-transitions`    | 2026-09-13 20:17:38 | —                   | `quests-progression` | —          |
 | `quests-progression-028-world-fact-event-fanout`                       | —                   | 2026-09-13 18:32:55 | `quests-progression` | quests-progression-030-external-resolution-and-real-problem-offering |
 | `quests-progression-024-suspicious-transport-natural-cave-cache`       | 2026-09-13 18:12:26 | —                   | `quests-progression` | —          |
 | `quests-progression-023-lost-hunter-natural-cave`                      | 2026-09-13 15:54:52 | —                   | `quests-progression` | —          |
