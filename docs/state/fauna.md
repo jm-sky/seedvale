@@ -4,7 +4,7 @@
 
 **Not:** NPC decision-consumption logic ([npc.md](./npc.md) owns how a hunter/farmer *consumes* what this doc exposes), settlement economy internals ([settlements.md](./settlements.md)), combat resolver internals ([combat.md](./combat.md) owns the damage pipeline; this doc covers only fauna's own outgoing-damage asymmetry), water-traversal ownership ([water.md](./water.md) owns the physical water answer; this doc covers only how fauna consumes it), or a plan/changelog.
 
-**Last verified:** 2026-09-12
+**Last verified:** 2026-09-14
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -31,6 +31,8 @@ Population/spawner state is a separate, smaller mechanism: a habitat spawner (ca
 ## Behaviour
 
 Top-level arbitration is a fixed priority table (14 behaviour kinds, gaps of 10, an ordered scan with a validity gate per candidate) — **structurally parallel to NPC's top-level sequencing layer, not to its pressure layer**: player-attack/ignore/flee > player-flee-prey > npc-attack-frenzied > npc-attack/ignore/flee > fire-avoid > scare-flee > frenzy-beeline > dog-guard > predator-normal > prey-normal (always valid — the guaranteed catch-all). Three hard gates (dead/mounted/rabid) bypass the whole table before it's ever reached.
+
+**Predator vs-human intent** (`predatorHumanDecision.ts` + `predatorIntentCommitment.ts`) is a layer under that table, not a second arbitrator: scoring (hunger/fear/close-aggression) still runs every tick while a player or NPC encounter is active, but the random aggression roll is frozen for that encounter and adopted `attack`/`flee` is held for a short window unless a hard condition already in the scorer fires (low-HP provoked flee, fire/crowd attack-roll suppression, provocation reroll, target loss). Player and NPC keep separate commitment state so they cannot clobber each other. `ignore` is not held, so a calm bear can still react the moment the situation becomes real.
 
 **Fauna has no equivalent of NPC's three-independent-pressure-producer competition.** The priority table above is entirely about threat/social override behaviour — it contains no hunger/thirst/need candidate at all. Hunger- and thirst-driven food/water-seeking is resolved **inside** the predator/prey catch-all branches via ad hoc internal branching (e.g. "seek water first if hunger is elevated, else seek food"), never as a scored candidate contesting against fire-avoid/dog-guard/etc. This means the behaviour pipeline is genuinely **two-tier and asymmetric**: a fixed-priority threat/social override table on top, un-arbitrated hardcoded-order need-seeking underneath — not a single unified pressure competition the way NPC's needs layer is.
 

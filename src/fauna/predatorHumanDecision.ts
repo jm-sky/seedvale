@@ -33,7 +33,8 @@ export type PredatorHumanDecisionInput = {
   provoked: boolean
   /**
    * Caller-supplied 0–1 roll for wolf close/retaliation branches.
-   * Tests pass a fixed value; runtime rolls once per decision refresh.
+   * Tests pass a fixed value; runtime holds one roll per encounter via
+   * `predatorIntentCommitment.ts` rather than re-rolling every refresh.
    */
   aggressionRoll: number
   /** When true (wolf den with active problem), humans are less feared and

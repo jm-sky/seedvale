@@ -40,7 +40,7 @@ export type FaunaDecisionInput = {
   role: AnimalRole
   frenzied: boolean
   playerActive: boolean
-  /** Throttled `decidePredatorHumanIntent()` result, `null` unless
+  /** Committed `decidePredatorHumanIntent()` result, `null` unless
    *  `playerActive && role === 'predator'` (see implementation notes F4 —
    *  the caller must compute this under exactly that condition, same as
    *  today's branch #2). */
@@ -49,7 +49,7 @@ export type FaunaDecisionInput = {
    *  `nearbyNpcs`, see `AnimalAgent.resolveNpcTarget`) — resolved for any
    *  predator, frenzied or not (npc-008 step 6). */
   npcThreat: boolean
-  /** Throttled intent for the non-frenzied NPC-threat path (`npc-attack` /
+  /** Committed intent for the non-frenzied NPC-threat path (`npc-attack` /
    *  `npc-ignore` / `npc-flee`), live since npc-008 step 6. `null` for a
    *  frenzied predator, which resolves via `npc-attack-frenzied` instead and
    *  never scores (implementation notes F1). */
@@ -138,8 +138,9 @@ function isBehaviourValid(kind: FaunaBehaviourKind, input: FaunaDecisionInput): 
 
 /** Runtime path: allocation-free ordered scan over `isBehaviourValid` —
  *  called every tick from `AnimalAgent.update()` (implementation notes
- *  §2.3: branch *selection* itself is untimed, only the intent inputs feeding
- *  it are throttled). `prey-normal` is always valid, so this never returns
+ *  §2.3: branch *selection* itself is untimed; the intent inputs feeding it
+ *  are re-scored every tick with an encounter-stable roll and a short
+ *  attack/flee hold). `prey-normal` is always valid, so this never returns
  *  `null` and no `fallback` argument is needed. */
 export function decideFaunaBehaviour(input: FaunaDecisionInput): FaunaBehaviourKind {
   for (const kind of BEHAVIOUR_ORDER) {

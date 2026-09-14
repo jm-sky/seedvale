@@ -231,11 +231,19 @@ import {
 } from './ownedAnimalControl'
 import { detectionRoll, isPlayerNoticed, type PlayerStealthState, sneakDetectionMultiplier } from './playerAwareness'
 import {
-  decidePredatorHumanIntent,
   NEARBY_HUMAN_RADIUS,
+  type PredatorHumanDecisionInput,
   type PredatorHumanIntent,
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
+import {
+  clearPredatorIntentCommitment,
+  createPredatorIntentCommitment,
+  type PredatorIntentCommitment,
+  type PredatorIntentDebugInfo,
+  predatorIntentDebugInfo,
+  resolveCommittedPredatorIntent,
+} from './predatorIntentCommitment'
 import { PREY_ALERT_RANGE_BONUS, type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
 import {
   classifyWaterTraversal,
@@ -432,9 +440,11 @@ const EXTENDED_IDLE_CHANCE = 0.5
  *  aligned with the shared effort resource without a separate combat stamina
  *  subsystem. Small relative to `ANIMAL_STAMINA_MAX` (1). */
 const ATTACK_STAMINA_COST = 0.05
-/** How often predators re-score flee vs attack toward a noticed human
- *  (plan 055 Phase 6 — movement stays per-frame). */
+/** Armed value for the player/NPC force-rescore latch. `takeDamage` and
+ *  `resetHumanThreatState` zero the matching timer; a live encounter then
+ *  treats that 0 as a provocation reroll. Not a courage re-roll cadence. */
 const HUMAN_DECISION_INTERVAL_SEC = 0.2
+const PLAYER_INTENT_TARGET_KEY = 'player'
 /** Seconds to wait before re-scanning attraction sources once the current
  *  search/target came up empty (plan fauna-014 §11/§12 / fauna-023) — a
  *  bounded low-frequency search over a small snapshot, same throttling
@@ -536,6 +546,12 @@ export type AnimalAgentDebugInfo = {
   behaviourCandidates: ScoredAction<FaunaBehaviourKind>[] | null
   intent: FaunaActionKind | null
   threateningHuman: boolean
+  /** Adopted player-encounter intent plus whether the short attack/flee
+   *  hold is still running. `null` when no player encounter is active. */
+  predatorHumanIntent: PredatorIntentDebugInfo | null
+  /** Same commitment snapshot for the NPC encounter, kept separate so the
+   *  two caches cannot clobber each other (npc-008 step 6). */
+  predatorNpcIntent: PredatorIntentDebugInfo | null
   health: { current: number, max: number }
   stamina: { current: number, max: number }
   strategicVillage: { x: number, z: number, radius: number } | null
@@ -1214,21 +1230,17 @@ export class AnimalAgent {
   /** Shared planned-action seam (plan 055) — movement bodies stay local. */
   private actionLifecycle: ActionLifecycle = createActionLifecycle()
   private pendingAction: PlannedAction<FaunaActionKind> | null = null
-  /** Staggered human flee/attack reevaluation while the player alert is held. */
+  /** Force-rescore latch for the player encounter. `takeDamage` /
+   *  `resetHumanThreatState` set this to 0; `refreshThrottledHumanIntent`
+   *  treats 0 while already in-encounter as a provocation reroll, then arms
+   *  it. Not a 0.2 s courage re-roll. */
   private humanDecisionTimer = 0
-  private cachedHumanIntent: PredatorHumanIntent = 'flee'
-  /** Roll paired with `cachedHumanIntent` so the 0.2s window does not flicker. */
-  private cachedAggressionRoll = 0
-  /** Same staggered-reevaluation idiom as `humanDecisionTimer`, kept separate
-   *  (own timer/cache/roll) rather than shared — since npc-008 step 6 made
-   *  `npcThreat` general, a predator can have `sense.playerActive` and an
-   *  NPC target true in the same tick, and `refreshThrottledHumanIntent`/
-   *  `refreshThrottledNpcIntent` would otherwise race on one shared cache
-   *  (whichever runs second overwrites the other's in-flight intent). Only
-   *  ever written by `refreshThrottledNpcIntent`. */
+  private humanIntentCommitment: PredatorIntentCommitment = createPredatorIntentCommitment()
+  /** Same latch as `humanDecisionTimer`, kept separate so a tick that sees
+   *  both a player and an NPC cannot clobber the other's force-reroll
+   *  (npc-008 step 6). */
   private npcDecisionTimer = 0
-  private cachedNpcIntent: PredatorHumanIntent = 'flee'
-  private cachedNpcAggressionRoll = 0
+  private npcIntentCommitment: PredatorIntentCommitment = createPredatorIntentCommitment()
   /** Counts down after a player hit — feeds wolf retaliation (plan 056 ext). */
   private provokedTimer = 0
   /** This tick's `decideFaunaBehaviour()` input (npc-008 step 4) — `null`
@@ -1239,7 +1251,7 @@ export class AnimalAgent {
   private lastFaunaDecisionInput: FaunaDecisionInput | null = null
   /** Runtime-only trait set by the `setFrenzyWolf()` DevTools command (plan
    *  179 §3/§4) — not a new species/FSM, just an input to the existing
-   *  predator-human decision (see `decideHumanResponse`/`decideNpcResponse`'s
+   *  predator-human decision (see `buildHumanDecisionInput`/`buildNpcDecisionInput`'s
    *  `provoked: this.provokedTimer > 0 || this.frenzied`) and to village
    *  wander-avoidance (`pickPointNear`). Never persisted (plan 179 §3
    *  "Persistence": wild fauna isn't a save source in V1). */
@@ -2241,6 +2253,8 @@ export class AnimalAgent {
       behaviourCandidates: this.lastFaunaDecisionInput ? scoreFaunaBehaviours(this.lastFaunaDecisionInput) : null,
       intent: this.pendingAction?.kind ?? null,
       threateningHuman: this.threateningHuman,
+      predatorHumanIntent: predatorIntentDebugInfo(this.humanIntentCommitment),
+      predatorNpcIntent: predatorIntentDebugInfo(this.npcIntentCommitment),
       health: { current: this.health.currentHp, max: this.health.maxHp },
       stamina: { current: this.life.stamina.current, max: this.life.stamina.max },
       strategicVillage: village ? { x: village.x, z: village.z, radius: village.radius } : null,
@@ -3020,8 +3034,8 @@ export class AnimalAgent {
     if (this.debugActive && this.debugVisual) this.updateDebugVisual()
   }
 
-  /** Resets the four-field human/NPC-threat throttle state shared by every
-   *  decision branch that doesn't want an immediate re-score this tick
+  /** Resets the human/NPC-threat throttle and commitment state shared by
+   *  every decision branch that doesn't want an immediate re-score this tick
    *  (plan fauna-017 step 8, review P1) — six inline copies before this
    *  consolidation (the `rabid` gate, `dog-guard`, `fire-avoid`,
    *  `frenzy-beeline`, `predator-normal`, `prey-normal`). Deliberately not
@@ -3033,6 +3047,8 @@ export class AnimalAgent {
     this.humanDecisionTimer = 0
     this.npcDecisionTimer = 0
     this.provokedTimer = 0
+    clearPredatorIntentCommitment(this.humanIntentCommitment)
+    clearPredatorIntentCommitment(this.npcIntentCommitment)
   }
 
   /** Feeds this tick's steering-relevant state to the `showDebug()` overlay
@@ -3080,44 +3096,45 @@ export class AnimalAgent {
     }
   }
 
-  /** Throttled player-intent refresh (implementation notes F4) — decrements
-   *  `humanDecisionTimer` and re-rolls `cachedHumanIntent`/`cachedAggressionRoll`
-   *  only once it expires (`HUMAN_DECISION_INTERVAL_SEC`), under exactly the
-   *  condition the old inline branch used (`sense.playerActive && role ===
-   *  'predator'`). Returns `null` outside that condition — extracted
-   *  verbatim from the pre-refactor branch #2 body so `decideFaunaBehaviour`
-   *  can be fed the (still throttled) result before selection, without
-   *  changing the cache's timing. */
+  /** Player-intent refresh (implementation notes F4) — scores every tick
+   *  while the player is an active threat, but the aggression roll and
+   *  adopted attack/flee intent live on `humanIntentCommitment` for the
+   *  encounter. `humanDecisionTimer <= 0` while already in-encounter is the
+   *  provocation reroll latch (`takeDamage`), not a 0.2 s courage cadence. */
   private refreshThrottledHumanIntent(
     sense: EnvironmentSense,
     observerPos: THREE.Vector3,
     nearbyHumanCount: number,
     dt: number,
   ): PredatorHumanIntent | null {
-    if (!(sense.playerActive && this.def.role === 'predator')) return null
-    this.humanDecisionTimer -= dt
-    if (this.humanDecisionTimer <= 0) {
-      this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
-      this.cachedAggressionRoll = Math.random()
-      this.cachedHumanIntent = this.decideHumanResponse(
-        sense,
-        observerPos,
-        nearbyHumanCount,
-        this.cachedAggressionRoll,
-      )
+    if (!(sense.playerActive && this.def.role === 'predator')) {
+      clearPredatorIntentCommitment(this.humanIntentCommitment)
+      return null
     }
-    return this.cachedHumanIntent
+    const inEncounter = this.humanIntentCommitment.targetKey === PLAYER_INTENT_TARGET_KEY
+    const forceReroll = this.humanDecisionTimer <= 0 && inEncounter
+    const nextRoll = !inEncounter || forceReroll
+      ? Math.random()
+      : this.humanIntentCommitment.aggressionRoll
+    const intent = resolveCommittedPredatorIntent(this.humanIntentCommitment, {
+      input: this.buildHumanDecisionInput(sense, observerPos, nearbyHumanCount),
+      dt,
+      targetKey: PLAYER_INTENT_TARGET_KEY,
+      nextRoll,
+      forceReroll,
+    })
+    this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+    return intent
   }
 
-  private decideHumanResponse(
+  private buildHumanDecisionInput(
     sense: EnvironmentSense,
     observerPos: THREE.Vector3,
     nearbyHumanCount: number,
-    aggressionRoll: number,
-  ): PredatorHumanIntent {
+  ): PredatorHumanDecisionInput {
     const ctx = this.buildDecisionContext(sense, nearbyHumanCount)
     const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
-    return decidePredatorHumanIntent({
+    return {
       hunger: ctx.needs?.hunger ?? this.life.hunger,
       humanDistance: sense.playerDistance > 0
         ? sense.playerDistance
@@ -3136,9 +3153,9 @@ export class AnimalAgent {
       // behaves like a permanently provoked one (reduced fear, willing to
       // attack), with the same low-HP flee floor still applying.
       provoked: this.provokedTimer > 0 || this.frenzied,
-      aggressionRoll,
+      aggressionRoll: this.humanIntentCommitment.aggressionRoll,
       humanTaste: this.humanTaste,
-    })
+    }
   }
 
   /** Nearest NPC candidate within `playerNoticeRange`, or `null` (plan 179
@@ -3199,26 +3216,25 @@ export class AnimalAgent {
     return found
   }
 
-  /** Same `decidePredatorHumanIntent` scoring as `decideHumanResponse`, fed
-   *  a noticed NPC's distance instead of the player's (plan 179 §5 — "NPC
-   *  jako pełnoprawny human target obok playera", not a parallel decision
-   *  system). Crowd fear counts other candidates near `target` rather than
-   *  reusing `countNearbyHumans` (that helper always counts the player as
-   *  present, which doesn't hold when the player is the one who isn't the
-   *  active threat here). */
-  private decideNpcResponse(
+  /** Same scoring input as `buildHumanDecisionInput`, fed a noticed NPC's
+   *  distance instead of the player's (plan 179 §5 — "NPC jako pełnoprawny
+   *  human target obok playera", not a parallel decision system). Crowd fear
+   *  counts other candidates near `target` rather than reusing
+   *  `countNearbyHumans` (that helper always counts the player as present,
+   *  which doesn't hold when the player is the one who isn't the active
+   *  threat here). */
+  private buildNpcDecisionInput(
     target: NearbyNpcCandidate,
     nearbyNpcs: readonly NearbyNpcCandidate[],
     sense: EnvironmentSense,
-    aggressionRoll: number,
-  ): PredatorHumanIntent {
+  ): PredatorHumanDecisionInput {
     const hpRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     let crowd = 1
     for (const npc of nearbyNpcs) {
       if (npc === target) continue
       if (Math.hypot(npc.x - target.x, npc.z - target.z) <= NEARBY_HUMAN_RADIUS) crowd++
     }
-    return decidePredatorHumanIntent({
+    return {
       hunger: this.life.hunger,
       humanDistance: Math.hypot(target.x - this.mesh.position.x, target.z - this.mesh.position.z),
       playerNoticeRange: this.def.playerNoticeRange,
@@ -3228,9 +3244,9 @@ export class AnimalAgent {
       kind: this.def.kind,
       selfHpRatio: hpRatio,
       provoked: this.provokedTimer > 0 || this.frenzied,
-      aggressionRoll,
+      aggressionRoll: this.npcIntentCommitment.aggressionRoll,
       humanTaste: this.humanTaste,
-    })
+    }
   }
 
   hasActiveTrip(): boolean {
@@ -3250,32 +3266,39 @@ export class AnimalAgent {
     return true
   }
 
-  /** Same throttled-refresh idiom as `refreshThrottledHumanIntent`, for the
+  /** Same refresh idiom as `refreshThrottledHumanIntent`, for the
    *  non-frenzied npc-threat path (`npc-attack`/`npc-ignore`/`npc-flee`,
    *  live since npc-008 step 6). Only engages when `npcThreat &&
    *  !this.frenzied` — a frenzied predator's `npcThreat` instead resolves
    *  via `npc-attack-frenzied`, which skips scoring entirely (implementation
-   *  notes F1). Uses its own `npcDecisionTimer`/`cachedNpcIntent`/
-   *  `cachedNpcAggressionRoll` rather than sharing
-   *  `refreshThrottledHumanIntent`'s cache — step 6 means `sense.playerActive`
-   *  and `npcThreat` can both be true in the same tick (predator sees player
-   *  and NPC at once), and a shared cache would let whichever of the two
-   *  refreshes runs second clobber the other's in-flight intent (see
-   *  `npcDecisionTimer`'s doc). */
+   *  notes F1). Uses its own timer/commitment rather than sharing the player
+   *  cache — step 6 means `sense.playerActive` and `npcThreat` can both be
+   *  true in the same tick. */
   private refreshThrottledNpcIntent(
     npcThreat: NearbyNpcCandidate | null,
     nearbyNpcs: readonly NearbyNpcCandidate[],
     sense: EnvironmentSense,
     dt: number,
   ): PredatorHumanIntent | null {
-    if (!(npcThreat && !this.frenzied)) return null
-    this.npcDecisionTimer -= dt
-    if (this.npcDecisionTimer <= 0) {
-      this.npcDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
-      this.cachedNpcAggressionRoll = Math.random()
-      this.cachedNpcIntent = this.decideNpcResponse(npcThreat, nearbyNpcs, sense, this.cachedNpcAggressionRoll)
+    if (!(npcThreat && !this.frenzied)) {
+      clearPredatorIntentCommitment(this.npcIntentCommitment)
+      return null
     }
-    return this.cachedNpcIntent
+    const targetKey = npcThreat.id
+    const inEncounter = this.npcIntentCommitment.targetKey === targetKey
+    const forceReroll = this.npcDecisionTimer <= 0 && inEncounter
+    const nextRoll = !inEncounter || forceReroll
+      ? Math.random()
+      : this.npcIntentCommitment.aggressionRoll
+    const intent = resolveCommittedPredatorIntent(this.npcIntentCommitment, {
+      input: this.buildNpcDecisionInput(npcThreat, nearbyNpcs, sense),
+      dt,
+      targetKey,
+      nextRoll,
+      forceReroll,
+    })
+    this.npcDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+    return intent
   }
 
   /** True once a frenzied wolf is within `FRENZY_VILLAGE_ARRIVAL_RADIUS` of
