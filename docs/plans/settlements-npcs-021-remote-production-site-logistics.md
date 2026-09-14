@@ -9,6 +9,7 @@
 **Subdomains:** `economy` `logistics`
 **Tags:** `transport` `production` `remote-sites` `mining`
 **Roadmap:** `physical-goods-transport.md`
+**Model:** Sonnet, Composer
 
 ## Recon Result — 2026-09-14
 
