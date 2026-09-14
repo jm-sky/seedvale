@@ -1,455 +1,417 @@
 # Plan: Remote Production Site Logistics
 
 **Created:** 2026-09-04
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** settlements-npcs-018, settlements-npcs-019, settlements-npcs-020
+**Depends on:** ~~settlements-npcs-018~~, ~~settlements-npcs-019~~, settlements-npcs-020
 **Domain:** `settlements-npcs`
 **Subdomains:** `economy` `logistics`
-**Tags:** `transport` `production` `remote-sites`
+**Tags:** `transport` `production` `remote-sites` `mining`
 **Roadmap:** `physical-goods-transport.md`
 
-## Status Note
+## Recon Result — 2026-09-14
 
-This plan remains `draft` until `settlements-npcs-018`, `settlements-npcs-019` and `settlements-npcs-020` are implemented and their actual transport contracts are known.
+The draft-exit recon is complete enough to choose a concrete first slice.
 
-Before promotion to `planned`, perform focused recon of the implemented transport architecture and the remote authoritative goods sources available in the current world/economy model. Then choose the smallest viable vertical slice and determine whether production plans such as `settlements-npcs-015`, `settlements-npcs-016` or `settlements-npcs-017` are actual dependencies for that slice.
+Implemented transport foundation:
 
-Do not treat planned API shapes from 018–020 as implementation truth.
+- `src/world/transportOrder.ts` owns authoritative `TransportOrder` commitments and endpoint identity,
+- `src/world/createTransportOrders.ts` owns the world-level order registry,
+- `src/world/transportTransactions.ts` owns transactional inventory pickup/unload,
+- `NpcAuthoritativeState.transportCargo` owns cargo after pickup,
+- `src/world/transportOffscreen.ts` owns off-screen completion for `in-transit` orders,
+- `settlements-npcs-020` already implements economy-derived transport demand for local household food supply and is currently in verification.
+
+Existing mining provides the smallest useful remote-production slice:
+
+```text
+ResourceDeposit
+→ Miner extracts real ore
+→ NpcAgent.carried
+→ Miner walks to settlement stockpile
+→ SettlementEconomy.add(...)
+```
+
+The current flow has two architectural problems relevant to this plan:
+
+1. `NpcAgent.carried` is transient, so extracted ore can be lost across NPC reconstruction after the deposit has already been depleted.
+2. Ore becomes settlement stock only through the miner's direct deposit flow, so there is no persistent remote ownership boundary and no transport delay between remote extraction and local economic availability.
+
+021 replaces that final ownership path with one persistent remote-site inventory and the existing transport system.
 
 ## Goal
 
-Extend physical goods transport from settlement-local circulation to the first economically meaningful flow from a **remote authoritative goods source** to a destination that can use those goods.
-
-The first slice does not require a new production-site framework. A production site, resource site, existing storage/output point or another existing world-owned source is sufficient if it owns real goods outside the destination's local inventory.
-
-Target loop:
+Make the first remote production flow physically and economically meaningful:
 
 ```text
-remote authoritative goods source
-        ↓
-real goods remain at source
-        ↓
-economic need at destination
-        ↓
-transport opportunity
-        ↓
-TransportOrder
-        ↓
-physical / off-screen transport
-        ↓
-authoritative destination inventory
-        ↓
-goods become economically available
-```
-
-The key invariant is:
-
-> Goods produced or stored remotely are not available to the destination until transport completes.
-
-This makes location and travel time economically meaningful without adding a parallel logistics economy.
-
-## Core Principle
-
-Production/resource ownership, economic demand and transport remain separate responsibilities:
-
-```text
-source mechanism
-→ creates or owns real goods at a remote location
-
-economy
-→ determines whether moving those goods is useful
-
-transport
-→ moves ownership through the world
-```
-
-Remote ownership must not magically increase settlement stock merely because the source belongs to or is associated with that settlement.
-
-## 1. Pre-implementation Recon
-
-After 018–020 are implemented, verify the actual code for:
-
-### Transport
-
-- persistent transport-order model and ownership,
-- stable source/destination references,
-- source resolution and pickup semantics,
-- cargo ownership after pickup,
-- destination delivery semantics,
-- active commitment queries,
-- carrier assignment/availability,
-- persistence and off-screen progression,
-- economic-demand integration introduced by 020.
-
-### Remote goods sources
-
-Identify existing world-owned sources that can support the first slice. Verify:
-
-- authoritative owner of the goods,
-- stable identity across streaming/save-load,
-- location in world space,
-- source availability/query semantics,
-- whether the source already participates in settlement/economic relationships,
-- whether goods are concrete `Inventory` items, bulk stock or another existing authoritative representation.
-
-### Production, if relevant
-
-Only if the chosen vertical slice uses production/input demand, inspect the implemented results of 015–017 and determine their actual dependency relationship with 021.
-
-Do not introduce a new `RemoteSite` abstraction if current world/resource/place mechanisms already represent the required source.
-
-## 2. First Vertical Slice
-
-Choose the smallest existing remote goods flow that proves:
-
-```text
-remote goods exist
-        ↓
-they are not locally available
-        ↓
-existing economic demand makes movement useful
-        ↓
-existing TransportOrder moves them
-        ↓
-destination gains authoritative ownership
-```
-
-A preferred candidate, if it already exists naturally after the production plans, is:
-
-```text
-mine / remote production source
-→ raw material
+ResourceDeposit
+→ Miner extracts ore
+→ persistent resource-site Inventory
+→ derived settlement ore need
+→ Trader/carrier TransportOrder
+→ NpcAuthoritativeState.transportCargo
 → settlement storage
-→ downstream production consumer
+→ SettlementEconomy availability changes
 ```
 
-For example, `mine → raw material → settlement → Blacksmith` is valuable if the implemented economy already supports it cheaply.
+Core invariant:
 
-It is not mandatory. Do not build a mine, Blacksmith chain or large production subsystem merely to satisfy this example.
+> Ore extracted at a remote resource site is not settlement-owned or economically available until transport completes.
 
-A simpler flow such as:
+The implementation must reuse the existing mining, inventory, economy and transport systems rather than introduce a parallel logistics subsystem.
+
+## 1. First Vertical Slice
+
+The supported first slice is:
 
 ```text
-remote resource/output source
-→ settlement shortage
-→ settlement storage
+remote ore deposit
+→ mined ore stored at that resource site
+→ Trader carries ore to owning settlement storage
 ```
 
-fully satisfies the first 021 slice if it reuses the actual architecture cleanly.
+Supported ore kinds should follow the existing mining mapping in `terrain/depositMining.ts` rather than introduce a new resource taxonomy.
 
-## 3. Remote Source Ownership
+This plan does not require a new mine building, mine profession model, generic production-site framework or inter-settlement trade system.
 
-Goods at the remote source must have one authoritative owner.
+## 2. Resource Site Identity
 
-```text
-before pickup    remote source owns goods
-after pickup     carrier / in-transit owner owns goods
-after delivery   destination owns goods
+Reuse existing stable `NaturalResource.id` / deposit id as the remote-site identity.
+
+Do not create a second persistent mine id when the resource deposit already has stable deterministic identity and depletion persistence.
+
+The transport endpoint extension should be conceptually:
+
+```ts
+TransportEndpointRef
+  | { type: 'household', householdId: HouseholdId }
+  | { type: 'settlement-storage', settlementId: string }
+  | { type: 'resource-site', resourceId: string }
 ```
 
-The remote source must not simultaneously contribute those goods to destination inventory or economic availability before delivery.
+Exact naming may differ if implementation notes identify a stronger existing convention, but identity must remain the existing resource id.
 
-Reuse the ownership rules established by 018–019 rather than introducing remote-production-specific cargo state.
+## 3. Persistent Resource-site Inventory
 
-## 4. Reuse Transport Source and Destination Abstractions
-
-021 must use the source/destination model actually implemented by 018.
-
-If that model needs a minimal extension to resolve the chosen remote source, extend the shared abstraction rather than introducing a second transport path such as `RemoteDelivery` or `ProductionHaul`.
-
-Transport execution should not need to know why a source owns its goods.
-
-Exact union shapes, reference names and resolver APIs must be determined from the implemented code during draft exit recon.
-
-## 5. Economic Reason for Transport
-
-Remote supply alone must not automatically create transport.
-
-The first slice should reuse the economic → transport mechanism from 020:
-
-```text
-remote source has available goods
-+
-destination has uncovered economic need
-+
-existing active commitments do not already cover it
-        ↓
-transport opportunity exists
-```
-
-The destination need may be a settlement shortage or, if already supported naturally, a production-input need.
-
-Do not create parallel state such as:
-
-- `RemoteProductionDeliverySystem`,
-- `MineDeliveryManager`,
-- `ResourceHaulingScheduler`,
-- `needsOreDelivery`.
-
-Demand should remain derived from authoritative economic state.
-
-## 6. Available Remote Supply
-
-Remote supply should likewise be derived from authoritative source state and active transport commitments.
+Add a world-owned inventory store keyed by resource id for goods that have already been physically extracted but have not yet been transported.
 
 Conceptually:
 
 ```text
-availableRemoteSupply =
-    current source availability
-    - goods already committed for pre-pickup transport
+resourceId → Inventory
 ```
 
-This is a derived query, not persistent economic state.
+Requirements:
 
-After pickup, goods no longer count as remote source supply because ownership has already moved to the carrier/in-transit owner.
+- one authoritative `Inventory` per site with stored goods,
+- lifetime independent of the rendered/streamed `ResourceDeposit` instance,
+- persistence across save/load and in-session `WorldBundle` rebuild,
+- sparse storage: sites with no stored goods need no persisted record,
+- use shared `InventoryContentsSnapshot` serialization rather than a new item-storage format.
 
-Reuse commitment accounting from 020 and any source reservation semantics actually introduced by 018–019.
+This inventory owns only extracted goods waiting at the site. Deposit depletion remains owned by the existing `ResourceDepletionState`.
 
-## 7. No Fixed Delivery Route
+Do not merge resource depletion and extracted-item ownership into one state object.
 
-Do not model the first flow as a special permanent route such as:
+## 4. Mining Ownership Transition
+
+Change the Miner flow so successful extraction produces ore into the resource site's authoritative inventory instead of carrying it all the way to the settlement stockpile.
+
+Target ownership:
 
 ```text
-mine always delivers to Blacksmith
+before extraction
+ResourceDeposit / ResourceDepletionState owns remaining natural resource
+
+successful extraction
+resource-site Inventory owns produced ore
+
+after transport pickup
+NpcAuthoritativeState.transportCargo owns ore
+
+after delivery
+SettlementEconomy.items owns ore
 ```
 
-The useful movement should emerge from source availability, destination demand and existing world relationships/accessibility.
+The Miner may still physically travel to the deposit and perform the existing extraction action. The important change is the post-extraction ownership boundary.
 
-The first vertical slice may have only one practical source/destination pair, but generic transport execution must not encode a specific profession or resource chain.
+Do not use `NpcAgent.carried` as persistent remote-site ownership.
 
-## 8. Carrier Execution
+## 5. Transport Endpoint Resolution
 
-Reuse carrier execution from 018–019.
+Extend the shared transport endpoint mechanism rather than create `MineDelivery`, `OreHaul` or a second transport transaction path.
 
-Detailed execution may look conceptually like:
+`resource-site` must resolve through the same concepts used by existing endpoints:
+
+- identity → authoritative inventory,
+- identity → world position for detailed carrier travel.
+
+`src/world/transportOffscreen.ts::resolveTransportEndpointInventory()` must be able to resolve resource-site inventory without requiring the rendered deposit to be loaded.
+
+Detailed execution in `src/ai/npcProfessionWork.ts` must resolve the same site's stable position and inventory before pickup.
+
+Do not encode mutable position inside `TransportOrder`; endpoint identity remains authoritative and position is derived.
+
+## 6. Trader Is the First Carrier
+
+Reuse the existing Trader profession as the first generic carrier.
+
+Responsibilities remain separated:
 
 ```text
-carrier
-→ travel to remote source
-→ pickup
-→ travel to destination
-→ unload
+Miner
+→ extracts resources
+
+Trader/carrier
+→ evaluates useful movement and executes TransportOrder
 ```
 
-Off-screen execution must advance the same accepted transport commitment through the fidelity mechanism from 019.
+Do not make the Miner automatically carry every extracted batch home as part of mining completion.
 
-021 must not add a remote-hauling NPC FSM or force the carrier/source to remain in detailed simulation.
+Do not add a new carrier profession or remote-hauling NPC FSM.
 
-## 9. Remote Availability Delay
+## 7. Economic Reason for Ore Transport
 
-021 introduces one essential economic consequence of distance:
+Remote ore supply alone must not cause unconditional transport.
+
+Transport opportunity should be derived from:
 
 ```text
-remote goods exist at T0
-≠
-goods available at destination at T0
+available uncommitted ore at resource site
++
+settlement economic need for that ore
+-
+active transport commitments already covering that movement
 ```
 
-The goods become available to the destination only after valid delivery.
+Reuse the accounting pattern established by `src/economy/foodTransportDemand.ts`:
 
-This first slice does not require transport pricing, wages, fuel, animal feed, road-quality costs or other logistics economics. Travel/transport delay is sufficient to make location meaningful.
+- derive incoming commitment coverage from active `TransportOrder`s,
+- derive outgoing reservation coverage from pre-pickup orders,
+- do not persist a separate demand registry,
+- after pickup the source inventory already reflects goods leaving the site.
 
-## 10. Downstream Production Integration — Optional Slice Extension
+The ore demand query should use existing `SettlementEconomy` / production-shortage mechanisms where they already expose a real need. Do not invent `needsOreDelivery` state.
 
-If the chosen remote goods are an input to an already implemented production chain, verify the stronger consequence:
+If the current economy exposes only a narrower concrete ore need, implement that smallest real need rather than a speculative generic resource allocator.
+
+## 8. Available Remote Supply
+
+Available site supply is derived live:
 
 ```text
-required input exists remotely
-but has not arrived
-        ↓
-destination production still lacks the input
-
-transport delivery
-        ↓
-destination inventory changes
-        ↓
-existing production logic can use the input
+siteInventory.count(itemKind)
+- pre-pickup committed quantity from this resource-site endpoint
 ```
 
-This is a preferred integration when it falls naturally out of the implemented 015–017 systems, but it is not required to complete the base 021 remote-logistics slice.
+This is not persistent reservation state.
 
-Do not make production read remote goods as local merely because source and destination belong to the same settlement.
+Pickup must revalidate the current site inventory and other active commitments immediately before `executeTransportPickup()`.
 
-## 11. Source and Destination Revalidation
+## 9. Order Creation and Execution
 
-Use the live revalidation semantics from the transport foundation.
+Reuse the existing `TransportOrders` registry and `planTransportOrderExecution()` flow.
 
-Before pickup, resolve the remote source and verify actual available goods. If source state changed, follow the partial/failure/reservation semantics implemented by 018–019.
-
-Before unload, resolve the destination and apply the shared destination acceptance/recovery rules.
-
-If economic demand changes after pickup, do not destroy or duplicate physical cargo. Once the carrier owns the goods, transport must preserve coherent ownership and recovery semantics even if the original derived opportunity is no longer current.
-
-## 12. Streaming and Simulation Fidelity
-
-Remote logistics must remain independent of the player and camera.
-
-The selected flow must remain coherent when:
-
-- the source is outside detailed simulation,
-- the carrier transitions off-screen,
-- the destination is unloaded,
-- the player is elsewhere,
-- save/load or time skip crosses an active transport.
-
-These mechanics belong primarily to 019. 021 should verify that its new remote source participates correctly rather than reimplementing them.
-
-Remote source production/output must not require player observation unless the existing source system itself intentionally requires detailed simulation.
-
-## 13. Determinism and Performance
-
-Reuse deterministic selection/tie-breaking and bounded evaluation from 018–020.
-
-Do not introduce global per-frame scanning across:
+Expected Trader behavior:
 
 ```text
-all remote sources
-× all settlements
-× all goods
-× all carriers
+resume existing order first
+→ otherwise evaluate existing food collection
+→ evaluate remote ore opportunity
+→ create assigned TransportOrder
+→ travel to resource site
+→ executeTransportPickup()
+→ travel to settlement storage
+→ executeTransportUnload()
 ```
 
-Prefer existing settlement/source relationships, bounded candidate discovery, normal work/economic evaluation cadence and indexed active-order queries.
+The exact ordering between food and ore opportunities should preserve existing food-shortage behavior. Remote ore must not silently starve an urgent food transport commitment.
 
-021 adds no global logistics tick.
+One active transport per carrier remains enforced by `TransportOrders.findByCarrier()`.
 
-## 14. Failure and Ownership
+## 10. Destination Availability
 
-Remote-specific failures may include:
+Delivery into `SettlementEconomy.items` is the moment ore becomes settlement-local economic stock.
 
-- source disappears or becomes invalid before pickup,
-- goods are consumed or claimed before pickup,
-- source ownership/availability changes,
-- destination need changes,
-- carrier cannot reach the source,
-- streaming occurs during the trip.
+Before delivery:
 
-Reuse generic failure/recovery behavior from 018–019 wherever possible.
+```text
+resource-site inventory contains ore
+settlement economy does not
+```
+
+After delivery:
+
+```text
+resource-site inventory decreased at pickup
+transportCargo owns goods during transit
+settlement economy inventory increases at unload
+```
+
+Existing production should observe the delivered stock through its normal economy/inventory queries. Do not add a remote-ore read path to production.
+
+## 11. Persistence and Off-screen Simulation
+
+The flow must survive:
+
+- resource deposit render streaming,
+- settlement stream-out/in,
+- carrier stream-out after pickup,
+- save/load before pickup,
+- save/load during transport,
+- in-session `WorldBundle` rebuild.
+
+Resource-site inventory must be manager/world-owned state, not state attached only to a rendered deposit instance.
+
+Off-screen transport after pickup continues through the existing 019 mechanism. This plan should only extend endpoint inventory resolution where needed.
+
+Pre-pickup orders may remain assigned while detailed execution is unavailable, matching the existing transport contract.
+
+## 12. Failure and Revalidation
+
+Before pickup:
+
+- resource id must still resolve to the expected site,
+- source inventory must still contain transferable goods,
+- active-order accounting must be recomputed,
+- zero transferable quantity follows existing transport failure semantics.
+
+After pickup:
+
+- physical cargo remains authoritative on `transportCargo`,
+- source depletion or later demand changes must not duplicate or delete cargo,
+- destination rejection keeps cargo in transit according to existing transaction semantics.
 
 The invariant remains:
 
-> Goods have exactly one authoritative owner and may never be duplicated or silently deleted.
+> Extracted ore has exactly one authoritative owner.
 
-## 15. Observability
+## 13. Determinism and Performance
 
-Reuse transport/economy diagnostics and history mechanisms available after 018–020.
+Do not introduce a global per-frame scan across all deposits × settlements × item kinds.
 
-For the selected vertical slice it should be possible to determine at least:
+Prefer bounded discovery around the Trader's own settlement and known/resource-related candidate sites.
 
-- remote source availability,
-- destination economic need,
-- active commitment coverage,
-- created transport order,
-- pickup/ownership transition,
-- delivery,
-- resulting destination availability.
+Reuse deterministic ordering/tie-breaking. If multiple sites can satisfy the same need, candidate selection must have a stable tie-break based on existing identity after distance/priority comparison.
 
-Do not introduce a separate permanent logistics-history subsystem solely for 021.
+No new global logistics tick.
 
-## 16. Focused Tests
+## 14. Observability
 
-021 tests should focus on the new remote-source boundary rather than duplicate the complete 018–020 transport test suite.
+Existing transport diagnostics should remain useful for the new endpoint.
+
+For the first slice it should be possible to inspect:
+
+- resource id,
+- resource-site inventory quantity,
+- active outgoing commitment quantity,
+- derived settlement need,
+- created `TransportOrder`,
+- carrier and cargo after pickup,
+- completed delivery and resulting settlement stock.
+
+Do not add a separate logistics history subsystem.
+
+## 15. Focused Tests
 
 Required coverage:
 
-### Remote goods do not teleport
+### Extraction creates remote ownership
 
 ```text
-remote source owns goods
-→ destination inventory remains unchanged before delivery
+Miner extracts ore
+→ resource depletion changes
+→ resource-site inventory gains ore
+→ settlement inventory does not change
 ```
 
-### Remote source can satisfy transport demand
+### Reconstruction does not lose extracted ore
 
 ```text
-remote source availability
-+
-destination uncovered economic need
-→ existing transport mechanism can create/accept an order
+ore extracted to resource-site inventory
+→ NPC reconstruction / stream transition
+→ site still owns the same ore
 ```
 
-### Delivery changes destination availability
+### Commitment accounting prevents double promise
+
+Two active pre-pickup orders cannot commit more ore than the site's current inventory.
+
+### Pickup transfers ownership
 
 ```text
-remote source
-→ pickup
-→ transport
-→ delivery
-→ authoritative destination inventory increases
+resource-site inventory
+→ executeTransportPickup()
+→ transportCargo
 ```
 
-### Remote goods remain unavailable locally before delivery
+with no duplication.
 
-If the destination or downstream system queries local availability before arrival, the remote goods must not satisfy it.
+### Delivery changes local availability
 
-### Existing transport invariants remain valid
+```text
+transportCargo
+→ executeTransportUnload()
+→ SettlementEconomy.items
+```
 
-Use focused integration coverage to confirm the selected remote source works with the ownership, active-commitment and off-screen mechanisms already tested by 018–020. Do not duplicate their full test matrices unless 021 changes those mechanisms.
+and the ore becomes visible through existing economy/production queries only after delivery.
 
-If downstream production is included in the selected slice, add one integration test showing that production cannot consume the remote input before delivery and can observe it after delivery.
+### Persistence
 
-## 17. Explicit Non-goals
+Resource-site inventory and active resource-site `TransportOrder` endpoints round-trip through save/load.
 
-Outside 021 base scope:
+### Existing transport regression
 
-- building a new remote production framework solely for transport,
-- full mine simulation,
-- mandatory Blacksmith integration,
-- generic production-input logistics,
-- multiple competing settlements,
+Household-food transport from settlements-npcs-020 continues to work unchanged.
+
+## 16. Explicit Non-goals
+
+Outside 021 scope:
+
+- mine buildings,
+- full mine lifecycle simulation,
+- generic `RemoteSite` framework,
+- arbitrary production-site recipes,
+- delivery from settlement to remote workplaces,
 - inter-settlement trade,
-- merchants and caravans,
-- carts and wagons,
-- pack animals,
-- transport pricing or wages,
-- fuel/feed costs,
+- merchants/caravans,
+- carts/wagons/pack animals,
+- transport prices/wages,
 - road-quality economics,
 - route optimization,
 - logistics hubs,
-- new warehouse subsystem,
-- global resource allocation,
-- production planning AI,
-- generic supply-chain solver.
+- generic supply-chain solver,
+- global resource allocation AI,
+- replacement of existing `ResourceDeposits` depletion logic.
 
-## 18. Extension Path
+## 17. Implementation Guidance
 
-After 021, Seedvale should have one coherent chain:
+Prefer extending these existing seams:
 
-```text
-remote authoritative source
-        ↓
-economic demand
-        ↓
-TransportOrder
-        ↓
-physical/off-screen movement
-        ↓
-destination inventory
-        ↓
-economic availability changes
-```
+- `terrain/resourceDeposits.ts` / `terrain/depositMining.ts` — extraction identity/depletion,
+- shared `Inventory` / `InventoryContentsSnapshot` — extracted goods ownership,
+- `world/transportOrder.ts` — endpoint identity,
+- `world/transportOffscreen.ts` — endpoint inventory resolution,
+- `world/transportTransactions.ts` — pickup/unload ownership transfer,
+- `economy/foodTransportDemand.ts` pattern — derived commitment accounting,
+- `ai/npcProfessionWork.ts` — Miner extraction and Trader order execution.
 
-The same mechanism can later expand to multiple remote sites, delivery from settlements to remote workplaces and finally inter-settlement movement without replacing the transport model.
+Do not make `TransportOrder` own cargo and do not make `ResourceDeposits` own transport decisions.
 
-Only after this slice is proven should separate plans be evaluated for pack animals/carts/wagons, inter-settlement goods transport and merchant/caravan economics.
-
-## Implementation Guidance
-
-This plan describes behavior and ownership boundaries, not a required class layout.
-
-After 018–020, prefer their implemented abstractions over special APIs for remote production. Extend shared mechanisms only where the selected remote source proves a real missing capability.
-
-Add useful JSDoc to important new public/architectural functions or classes introduced by the implementation. For important discovery points, consider `@domain settlements-npcs`.
+Add useful JSDoc for new public/architectural symbols, with `@domain settlements-npcs` where appropriate.
 
 ## Verification
 
 ### Automated
 
-- focused tests for the selected remote-source integration,
-- relevant existing transport/economy tests,
+- focused resource-site inventory tests,
+- mining ownership-transition tests,
+- transport endpoint/resolver tests,
+- commitment-accounting tests,
+- persistence tests,
+- existing 018–020 transport/economy tests,
 - typecheck,
 - lint,
 - build.
@@ -458,49 +420,16 @@ Add useful JSDoc to important new public/architectural functions or classes intr
 
 The player performs final browser verification.
 
-For the selected vertical slice verify:
+Verify:
 
-1. a remote authoritative source owns real goods,
-2. the destination has a real economic need,
-3. those goods are not available at the destination before transport,
-4. an existing transport commitment is created/accepted,
-5. pickup transfers ownership from source to carrier/in-transit owner,
-6. the trip proceeds using detailed or off-screen execution as appropriate,
-7. delivery transfers ownership into the authoritative destination inventory,
-8. destination economic availability changes only after delivery,
-9. the flow remains coherent when the player does not observe the full trip.
-
-If downstream production is part of the chosen slice, additionally verify that it reacts only after the input physically arrives.
-
-## Draft Exit Criteria
-
-Move this plan from `draft` to `planned` only after:
-
-```text
-018–020 implemented
-        ↓
-recon actual transport architecture
-+
-recon available remote authoritative sources
-        ↓
-choose smallest viable vertical slice
-        ↓
-determine whether 015–017 are actual dependencies
-        ↓
-rewrite 021 to concrete implemented types and boundaries
-```
-
-Specifically:
-
-- `settlements-npcs-018` is implemented,
-- `settlements-npcs-019` is implemented,
-- `settlements-npcs-020` is implemented,
-- the actual transport source/destination and ownership contracts are confirmed,
-- at least one real remote authoritative goods source is identified,
-- its stable identity and ownership semantics are confirmed,
-- the smallest viable vertical slice is selected,
-- production-plan dependencies are added only if the selected slice genuinely requires them,
-- the plan is updated to actual implemented APIs and integration boundaries,
-- the selected slice does not require an unrelated large production subsystem.
+1. Miner extracts ore at a remote deposit.
+2. Settlement stock does not immediately increase.
+3. Extracted ore remains available at the site even if the Miner leaves/reconstructs.
+4. Trader accepts the useful transport opportunity.
+5. Pickup removes ore from site inventory and puts it into authoritative transport cargo.
+6. Carrier can continue through detailed/off-screen transport.
+7. Settlement stock increases only at unload.
+8. Existing downstream production sees the ore only after arrival.
+9. Existing food transport remains functional.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
