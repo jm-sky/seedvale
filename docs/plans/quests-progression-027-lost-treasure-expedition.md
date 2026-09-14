@@ -41,8 +41,8 @@ Stages follow those four discoveries, then a final dialogue choice. Early lootin
 
 ## Outcomes
 
-- `journal_to_family`: hand over the physical journal/personal effects to the second stakeholder; strongest trust/benevolence result. Player keeps the treasure.
-- `journal_to_sponsor`: give journal to sponsor; larger coin payment and sponsor relation, weaker second-stakeholder relation.
+- `journal_to_family`: hand over the exact physical journal to the second stakeholder; strongest trust/benevolence result. Personal effects remain optional evidence/loot and are not required for terminal hand-in. Player keeps the treasure.
+- `journal_to_sponsor`: give the exact journal to sponsor; larger coin payment and sponsor relation, weaker second-stakeholder relation.
 - `keep_journal_and_treasure`: keep journal too; no extra reward and weaker/negative trust/integrity consequence.
 
 Do not add a treasure-return branch; the choice is about the expedition record, which keeps this distinct from quest 008.
@@ -55,10 +55,12 @@ QuestManager owns quest state; generated NPC systems own identities; cave world 
 
 Reuse generated-NPC materialization patterns, `quests.ts`, `QuestManager.ts`, `createApp.ts`, `worldBundle.ts`, `createCaves.ts`, `dungeonChambers.ts`, `caveContentAnchors.ts`, `worldGeneratedContainers.ts`, item-instance contracts and location knowledge.
 
+Reuse the existing generalized cave anchor-claim arbitration and `WorldGeneratedContainerSpec.initialInstances`; do not add parallel reservation or fresh-container instance mechanisms. Terminal journal hand-in must reuse the existing atomic single-instance Player → NPC transfer primitive rather than introducing multi-instance transfer for this quest.
+
 Add JSDoc for important reusable/public additions with appropriate `@domain` tags.
 
 ## Verification
 
-Test deterministic stakeholders, dungeon binding, ordered anchors, coexistence with 026, pre-existing final treasure, early-loot catch-up, physical journal outcomes, fauna independence and no duplication after save/load/rebuild. Manual browser verification remains the User's responsibility.
+Test deterministic stakeholders, dungeon binding, ordered anchors, coexistence with 026, pre-existing final treasure, early-loot catch-up, exact physical journal outcomes, fauna independence and no duplication after save/load/rebuild. Manual browser verification remains the User's responsibility.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
