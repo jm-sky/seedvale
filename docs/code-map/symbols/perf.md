@@ -9,20 +9,21 @@ Generated from exported TypeScript symbols.
 
 ## `perf/agentCpuDiag.ts`
 
-- `AgentCpuDiag` — type — line 141
-- `AgentCpuDiagTotals` — type — line 28
-- `AgentCpuReport` — type — line 80
-- `buildAgentCpuReport` — function — line 431
-- `createAgentCpuDiag` — function — line 212
-- `formatAgentCpuReport` — function — line 518
-- `getAgentCpuDiag` — function — line 427
-- `setActiveAgentCpuDiag` — function — line 423
+- `AgentCpuDiag` — type — line 196
+- `AgentCpuDiagTotals` — type — line 33
+- `AgentCpuReport` — type — line 111
+- `buildAgentCpuReport` — function — line 661
+- `createAgentCpuDiag` — function — line 310
+- `emptyAgentCpuDiagTotals` — function — line 253
+- `formatAgentCpuReport` — function — line 796
+- `getAgentCpuDiag` — function — line 657
+- `setActiveAgentCpuDiag` — function — line 653
 
 ## `perf/benchmark.ts`
 
-- `BenchmarkHost` — type — line 43
-- `BenchmarkRunner` — type — line 31
-- `createBenchmarkRunner` — function — line 118
+- `BenchmarkHost` — type — line 48
+- `BenchmarkRunner` — type — line 36
+- `createBenchmarkRunner` — function — line 123
 
 ## `perf/benchmarkFixture.ts`
 
@@ -56,6 +57,22 @@ Generated from exported TypeScript symbols.
 - `getGpuTimer` — function — line 131
 - `GpuTimer` — type — line 11
 - `setActiveGpuTimer` — function — line 127
+
+## `perf/grassFinalizationDiag.ts`
+
+- `buildGrassFinalizationReport` — function — line 335
+- `createGrassFinalizationDiag` — function — line 217
+- `formatGrassFinalizationReport` — function — line 401
+- `getGrassFinalizationDiag` — function — line 325
+- `GrassBucketStageSample` — type — line 114
+- `GrassBuildSample` — type — line 123
+- `GrassFinalizationDiag` — type — line 138
+- `GrassFinalizationDiagTotals` — type — line 35
+- `GrassFinalizationReport` — type — line 68
+- `GrassFinalizationStageStats` — type — line 19
+- `GrassSpeciesFinalizationStats` — type — line 25
+- `readJsHeapUsedBytes` — function — line 329
+- `setActiveGrassFinalizationDiag` — function — line 321
 
 ## `perf/isolationProbe.ts`
 
@@ -104,8 +121,8 @@ Generated from exported TypeScript symbols.
 
 ## `perf/report.ts`
 
-- `buildReport` — function — line 17
-- `formatReport` — function — line 137
+- `buildReport` — function — line 18
+- `formatReport` — function — line 140
 
 ## `perf/sceneCensus.ts`
 
@@ -123,23 +140,23 @@ Generated from exported TypeScript symbols.
 
 ## `perf/types.ts`
 
-- `BudgetKind` — type — line 153
-- `HitchEvent` — type — line 56
-- `HitchReportRow` — type — line 103
-- `IsolationProbeRow` — type — line 111
-- `PERF_CATEGORIES` — const — line 8
-- `PERF_CATEGORY_COUNT` — const — line 25
-- `PERF_CATEGORY_INDEX` — const — line 27
-- `PERF_SEVERITY_RANK` — const — line 44
-- `PerfAttribution` — type — line 183
-- `PerfCategory` — type — line 23
-- `PerfContext` — type — line 73
-- `PerfDetection` — type — line 161
-- `PerfFilter` — type — line 51
-- `PerfLiveStats` — type — line 132
-- `PerfLogEvent` — type — line 170
-- `PerfReportJson` — type — line 189
-- `PerfSeverity` — type — line 42
-- `PerfSuspect` — type — line 155
-- `ScenarioAnchor` — type — line 63
-- `ScenarioRoute` — type — line 65
+- `BudgetKind` — type — line 154
+- `HitchEvent` — type — line 57
+- `HitchReportRow` — type — line 104
+- `IsolationProbeRow` — type — line 112
+- `PERF_CATEGORIES` — const — line 9
+- `PERF_CATEGORY_COUNT` — const — line 26
+- `PERF_CATEGORY_INDEX` — const — line 28
+- `PERF_SEVERITY_RANK` — const — line 45
+- `PerfAttribution` — type — line 184
+- `PerfCategory` — type — line 24
+- `PerfContext` — type — line 74
+- `PerfDetection` — type — line 162
+- `PerfFilter` — type — line 52
+- `PerfLiveStats` — type — line 133
+- `PerfLogEvent` — type — line 171
+- `PerfReportJson` — type — line 190
+- `PerfSeverity` — type — line 43
+- `PerfSuspect` — type — line 156
+- `ScenarioAnchor` — type — line 64
+- `ScenarioRoute` — type — line 66

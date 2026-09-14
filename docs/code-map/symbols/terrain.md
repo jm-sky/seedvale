@@ -182,26 +182,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 943
-- `applyModificationToTile` — function — line 800
-- `ChunkManager` — type — line 506
-- `ChunkManagerConfig` — type — line 345
-- `createChunkManager` — function — line 968
+- `applyChunkWaterDayNight` — function — line 944
+- `applyModificationToTile` — function — line 801
+- `ChunkManager` — type — line 507
+- `ChunkManagerConfig` — type — line 346
+- `createChunkManager` — function — line 969
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 957
-- `drainByBudget` — function — line 918
-- `FinalizeStage` — type — line 446
-- `pickNearestQueuedKey` — function — line 878
-- `pickNextFinalizeKey` — function — line 896
-- `resolveUnloadedLandmark` — function — line 288
+- `CropHarvestOutcome` — type — line 958
+- `drainByBudget` — function — line 919
+- `FinalizeStage` — type — line 447
+- `pickNearestQueuedKey` — function — line 879
+- `pickNextFinalizeKey` — function — line 897
+- `resolveUnloadedLandmark` — function — line 289
   - domain: world-terrain
-- `ringChunkOffsets` — function — line 248
-- `TerrainModification` — type — line 757
-- `tickChunkWaterSurfaces` — function — line 931
+- `ringChunkOffsets` — function — line 249
+- `TerrainModification` — type — line 758
+- `tickChunkWaterSurfaces` — function — line 932
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -315,9 +315,9 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/grass.ts`
 
-- `createGrassSystem` — function — line 435
-- `GrassSystem` — type — line 44
-- `WorldGrassChunk` — type — line 13
+- `createGrassSystem` — function — line 439
+- `GrassSystem` — type — line 48
+- `WorldGrassChunk` — type — line 14
 
 ## `terrain/grassPlacement.ts`
 

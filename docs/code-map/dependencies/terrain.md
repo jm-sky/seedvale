@@ -423,6 +423,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `items/items.ts`
 - `perf/active.ts`
+- `perf/grassFinalizationDiag.ts`
 - `perf/programCensus.ts`
 - `player/PlayerController.ts`
 - `render/instancedProps.ts`
@@ -731,6 +732,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `perf/grassFinalizationDiag.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/distanceLod.ts`
@@ -762,6 +764,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `perf/grassFinalizationDiag.ts`
 - `terrain/chunkHeightmap.worker.ts`
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkWorkerPool.ts`

@@ -12,6 +12,8 @@ Generated from TypeScript imports.
 
 - `perf/agentCpuDiag.test.ts`
 - `perf/agentCpuDiag.ts`
+- `perf/grassFinalizationDiag.test.ts`
+- `perf/grassFinalizationDiag.ts`
 - `perf/index.ts`
 - `terrain/chunkManager.ts`
 - `ui/createDebugGui.ts`
@@ -46,6 +48,7 @@ Generated from TypeScript imports.
 - `perf/types.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/livestock.ts`
 
 ## `perf/benchmark.ts`
 
@@ -55,6 +58,7 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `perf/agentCpuDiag.ts`
 - `perf/benchmarkScenarios.ts`
+- `perf/grassFinalizationDiag.ts`
 - `perf/isolationProbe.ts`
 - `perf/monitor.ts`
 - `perf/programCensus.ts`
@@ -135,6 +139,31 @@ Generated from TypeScript imports.
 - `perf/index.ts`
 - `perf/isolationProbe.ts`
 
+## `perf/grassFinalizationDiag.test.ts`
+
+**Imports**
+
+- `perf/active.ts`
+- `perf/grassFinalizationDiag.ts`
+- `perf/monitor.ts`
+
+## `perf/grassFinalizationDiag.ts`
+
+**Imports**
+
+- `perf/active.ts`
+- `terrain/grassPlacement.ts`
+
+**Imported by**
+
+- `perf/benchmark.ts`
+- `perf/grassFinalizationDiag.test.ts`
+- `perf/index.ts`
+- `perf/report.ts`
+- `perf/types.ts`
+- `terrain/chunkManager.ts`
+- `terrain/grass.ts`
+
 ## `perf/index.ts`
 
 **Imports**
@@ -146,6 +175,7 @@ Generated from TypeScript imports.
 - `perf/benchmarkScenarios.ts`
 - `perf/flags.ts`
 - `perf/gpuTimer.ts`
+- `perf/grassFinalizationDiag.ts`
 - `perf/isolationProbe.ts`
 - `perf/monitor.ts`
 - `perf/programCensus.ts`
@@ -205,6 +235,7 @@ Generated from TypeScript imports.
 - `perf/active.ts`
 - `perf/agentCpuDiag.test.ts`
 - `perf/benchmark.ts`
+- `perf/grassFinalizationDiag.test.ts`
 - `perf/index.ts`
 - `perf/isolationProbe.ts`
 - `perf/report.test.ts`
@@ -259,6 +290,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `perf/agentCpuDiag.ts`
+- `perf/grassFinalizationDiag.ts`
 - `perf/monitor.ts`
 - `perf/percentile.ts`
 - `perf/sceneCensus.ts`
@@ -292,6 +324,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `perf/agentCpuDiag.ts`
+- `perf/grassFinalizationDiag.ts`
 - `perf/sceneCensus.ts`
 
 **Imported by**

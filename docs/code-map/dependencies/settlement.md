@@ -770,6 +770,7 @@ Generated from TypeScript imports.
 - `fauna/ownedAnimalControl.ts`
 - `fauna/proceduralAnimals.ts`
 - `fauna/shepherdFlock.ts`
+- `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
