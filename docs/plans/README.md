@@ -84,7 +84,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `ui-input-017-quest-log-information-architecture.md`                        | -       | 🟡 | M      | quests-progression-031 |
 | ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | -       | 🟡 | M      | -      |
 | ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | -       | 🟡 | M      | settlements-npcs-033 |
-| ◼️ `quests-progression-033-quest-offer-selection-prioritization-and-abandonment.md` | -       | 🔴 | M      | ~~quests-progression-020~~, ~~quests-progression-028~~ |
+| 💡 `quests-progression-033-quest-offer-selection-prioritization-and-abandonment.md` | -       | 🔴 | M      | ~~quests-progression-020~~, ~~quests-progression-028~~ |
 
 ---
 
