@@ -3,6 +3,7 @@
 **Created:** 2026-09-14
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** M
+**Model:** Sonnet, Composer
 **Depends on:** ~~quests-progression-020~~, ~~quests-progression-028~~
 **Domain:** `quests-progression`  
 **Type:** `feature`  
