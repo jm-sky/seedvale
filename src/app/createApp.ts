@@ -1675,7 +1675,13 @@ export async function createApp(
     renown: reputation.getRenown(context.settlementId),
   })
   onAnimalDeathTarget = (animalId) => {
-    questManager.onInteractObjective({ type: 'animal_died', animalId })
+    const agent = bundle.fauna.getAgents().find((a) => a.animalId === animalId)
+      ?? bundle.settlementsManager.resolvePersistentAnimal(animalId)
+    questManager.onInteractObjective({
+      type: 'animal_died',
+      animalId,
+      ...(agent ? { kind: agent.def.kind } : {}),
+    })
     questManager.onHorseRewardTargetDied(animalId)
     questManager.pollSettlementRatInfestationObjectives()
     questManager.pollLostLivestockSources()
@@ -1762,6 +1768,7 @@ export async function createApp(
     syncHeldHud()
     syncQuickActionAvailability()
     inventoryWiring.syncMerchantIfOpen()
+    questManager.notifyInventoryChanged()
   }
 
   const actionCtx: PlayerActionContext = {

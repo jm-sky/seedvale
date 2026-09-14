@@ -157,4 +157,11 @@ Likely integration/tests only as needed:
 
 Browser verification belongs to the User.
 
+## What was actually implemented
+
+- Derived ordinary giver cap of 2 (`active` + `ready_to_report`); `urgency: 'urgent'` and `exposure: 'story'` bypass it. No new `QuestOfferPolicy` field.
+- `labelMarker` uses the same gather-hand-in predicate as dialogue; `QuestManager.notifyInventoryChanged()` is the narrow dirty hook (`createApp` `onInventoryChanged`).
+- Abandon actions are `topicScoped`; Vue still only renders label/callback.
+- `animal_died` binds an unbound matching-kind slot to the dying id instead of calling `resolveAnimalTarget` (which skips corpses). Exact identity is unchanged.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

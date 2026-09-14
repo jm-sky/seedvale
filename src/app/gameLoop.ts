@@ -815,7 +815,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  same as the original melee-only inline version. */
   function animalDeathToastLine(animal: AnimalAgent): string {
     const label = ANIMAL_LABELS[animal.def.kind]
-    const override = questManager.onInteractObjective({ type: 'animal_died', animalId: animal.animalId })
+    const override = questManager.onInteractObjective({
+      type: 'animal_died',
+      animalId: animal.animalId,
+      kind: animal.def.kind,
+    })
     const denOverride = bundle.fauna.isWolfDenCleared()
       ? questManager.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
       : null

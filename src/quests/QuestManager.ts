@@ -76,6 +76,15 @@ export type QuestDialogAction = {
   label: string
   /** Re-reads live quest state, then advances or resolves. Returns the NPC reply. */
   onSelect: () => string
+  /**
+   * Multi-quest aggregation keeps this action inside the quest's
+   * `QuestDialogTopic` instead of flattening it next to other quests'
+   * speech. Single-quest dialogue still shows it directly. Owned by
+   * `QuestManager` — Vue only renders `label`/`onSelect`.
+   *
+   * @domain quests-progression
+   */
+  topicScoped?: boolean
 }
 
 /**
@@ -208,7 +217,7 @@ export type ObjectiveRef =
   | { type: 'interact_tree' }
   | { type: 'interact_spawner', spawnerType: SpawnerType, spawnerId: string }
   | { type: 'spot_animal', kind: AnimalKind }
-  | { type: 'animal_died', animalId: string }
+  | { type: 'animal_died', animalId: string, kind?: AnimalKind }
   | { type: 'wolf_den_cleared', denId: string }
   /** A live `[E]`-interacted animal matches this exact instance — reported
    *  by `resolveInteraction.ts`'s `animal` case alongside `spot_animal`
@@ -360,6 +369,8 @@ const QUEST_ABANDON_NPC_REPLY = 'Szkoda, ale rozumiem. Może innym razem.'
  *  candidate discovery (plan quests-progression-033) — reuses
  *  `QuestWorldTimeLookup.getElapsedDays()` rather than a cooldown manager. */
 const OFFER_DECLINE_SUPPRESSION_DAYS = 1
+/** Derived ordinary giver capacity (plan quests-progression-034) — not persisted. */
+const MAX_ORDINARY_ACTIVE_GIVER_QUESTS = 2
 const DEFAULT_TALK_PLAYER_LINE = 'Chciałem ci coś powiedzieć.'
 const DEFAULT_REPORT_PLAYER_LINE = 'Zdaję relację z zadania.'
 const DEFAULT_REPORT_PROMPT = 'No i jak? Udało się?'
@@ -574,6 +585,24 @@ export class QuestManager {
 
   clearDirty(): void {
     this.dirty = false
+  }
+
+  /**
+   * Inventory can make a `gather_item` hand-in actionable without a quest
+   * lifecycle transition. Marks dirty only when an active gather stage
+   * exists, so `labelMarker` can refresh `✓` without per-frame work.
+   *
+   * @domain quests-progression
+   */
+  notifyInventoryChanged(): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      if (this.unfinishedSlots(def, s).some((slot) => slot.objective.type === 'gather_item')) {
+        this.dirty = true
+        return
+      }
+    }
   }
 
   private currentStage(def: QuestDef, stageIndex: number): QuestStage | undefined {
@@ -852,6 +881,41 @@ export class QuestManager {
     return def.offer?.urgency === 'urgent'
   }
 
+  /**
+   * Explicit active-cap exception (plan quests-progression-034): urgent or
+   * story-exposure metadata, never a heuristic over world facts.
+   *
+   * @domain quests-progression
+   */
+  private bypassesActiveGiverCap(def: QuestDef): boolean {
+    return this.isUrgentOffer(def) || this.isStoryExposure(def)
+  }
+
+  /**
+   * Ordinary `active`/`ready_to_report` quests this NPC gave — foreign-quest
+   * targets never occupy this NPC's capacity.
+   *
+   * @domain quests-progression
+   */
+  private activeOrdinaryGiverQuestCount(npcId: NpcId): number {
+    let count = 0
+    for (const def of this.defs) {
+      if (def.giver.npcId !== npcId) continue
+      if (this.bypassesActiveGiverCap(def)) continue
+      const state = this.stateOf(def.id).state
+      if (state === 'active' || state === 'ready_to_report') count++
+    }
+    return count
+  }
+
+  private hasOrdinaryGiverCapacity(npcId: NpcId): boolean {
+    return this.activeOrdinaryGiverQuestCount(npcId) < MAX_ORDINARY_ACTIVE_GIVER_QUESTS
+  }
+
+  private canAcceptOrdinaryGiverQuest(def: QuestDef): boolean {
+    return this.bypassesActiveGiverCap(def) || this.hasOrdinaryGiverCapacity(def.giver.npcId)
+  }
+
   /** Whether a `story`-exposure offer may be generically declined — see
    *  `QuestOfferPolicy.exposure`'s doc comment. */
   private isDeclinable(def: QuestDef): boolean {
@@ -891,9 +955,11 @@ export class QuestManager {
    * right now: at most one `normal`-urgency candidate and one `urgent`
    * candidate — each only when that slot isn't already occupied by an
    * existing `offered` def for this giver — plus every eligible
-   * `story`-exposure candidate, which never competes for a slot. Pure/
-   * read-only; `admitOffersForGiver` is the only mutating caller (plan
-   * quests-progression-033).
+   * `story`-exposure candidate, which never competes for a slot. Ordinary
+   * (`normal` urgency/exposure) candidates are also withheld when this
+   * giver already has two ordinary `active`/`ready_to_report` quests (plan
+   * quests-progression-034). Pure/read-only; `admitOffersForGiver` is the
+   * only mutating caller (plan quests-progression-033).
    *
    * @domain quests-progression
    */
@@ -914,7 +980,7 @@ export class QuestManager {
 
     const capped = eligible.filter((def) => !this.isStoryExposure(def))
     const ranked = rankQuestOfferCandidates(capped.map((def) => this.offerRankSignal(def)))
-    if (!normalSlotTaken) {
+    if (!normalSlotTaken && this.hasOrdinaryGiverCapacity(npcId)) {
       const pick = ranked.find((def) => !this.isUrgentOffer(def))
       if (pick) selected.add(pick.id)
     }
@@ -1390,6 +1456,36 @@ export class QuestManager {
     }
   }
 
+  /**
+   * Death-time bind for an unbound `kill_target_animal` / `find_animal`
+   * slot (plan quests-progression-034). Does **not** call
+   * `resolveAnimalTarget`: that lookup skips already-dead animals and would
+   * silently retarget a different live individual. When the world reports
+   * the dying animal's `kind`, the unbound slot of that kind binds to this
+   * exact `animalId` and then matches. Without `kind`, the slot stays
+   * unbound — exact identity is still required.
+   *
+   * @domain quests-progression
+   */
+  private bindDyingAnimalTargetIfUnbound(
+    def: QuestDef,
+    stageIndex: number,
+    animalId: string,
+    kind: AnimalKind | undefined,
+  ): void {
+    if (!kind) return
+    const stage = this.currentStage(def, stageIndex)
+    if (!stage) return
+    for (const slot of questStageObjectiveSlots(stage)) {
+      if (slot.objective.type !== 'kill_target_animal' && slot.objective.type !== 'find_animal') continue
+      if (slot.objective.kind !== kind) continue
+      const key = animalTargetKey(def.id, stageIndex, slot.id)
+      if (this.animalTargets.has(key)) continue
+      this.animalTargets.set(key, animalId)
+      this.lifecycleHooks.onAnimalTargetBound?.(def.id, animalId)
+    }
+  }
+
   /** Terminal resolution. Callers pick the outcome; this never scans for a
    *  "best" result. Returns false when the quest or outcome is unknown, or
    *  the quest is already terminal (`complete`/`failed`/`invalidated`). */
@@ -1483,6 +1579,7 @@ export class QuestManager {
     const questId = def.id
     return {
       label: QUEST_ABANDON_PLAYER_LINE,
+      topicScoped: true,
       onSelect: () => {
         this.abandonQuest(questId)
         return QUEST_ABANDON_NPC_REPLY
@@ -1534,10 +1631,12 @@ export class QuestManager {
    *  quests-progression-033). */
   private handleGiverOffer(def: QuestDef): QuestDialogOverride | null {
     if (this.stateOf(def.id).state !== 'offered') return null
+    if (!this.canAcceptOrdinaryGiverQuest(def)) return null
     return {
       line: def.offerLine,
       offer: {
         onAccept: () => {
+          if (!this.canAcceptOrdinaryGiverQuest(def)) return
           if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return
           this.setQuestState(def.id, { state: 'active', stageIndex: 0, stageCount: 0 })
           this.bindAnimalTargetIfNeeded(def, 0)
@@ -1571,6 +1670,42 @@ export class QuestManager {
     return { line: stage.reminderLine }
   }
 
+  /**
+   * Read-only: the current unfinished `gather_item` slot is ready to hand
+   * in at the giver. Shared by `collectGiverActions` and `labelMarker` so
+   * the `✓` glyph matches the live dialogue action (plan
+   * quests-progression-034). Does not mutate quest state.
+   *
+   * @domain quests-progression
+   */
+  private gatherHandInSlot(def: QuestDef): QuestStageObjectiveSlot | undefined {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return undefined
+    const stage = this.currentStage(def, s.stageIndex)
+    if (!stage) return undefined
+    const gatherSlot = this.unfinishedSlots(def, s).find((slot) => slot.objective.type === 'gather_item')
+    if (!gatherSlot || gatherSlot.objective.type !== 'gather_item') return undefined
+    const isFinalStage = s.stageIndex >= def.stages.length - 1
+      && this.unfinishedSlots(def, s).length === 1
+      && !stage.transitions
+    if (isFinalStage && !uniqueOutcomeForState(def, 'complete')) return undefined
+    if (!this.inventory.has(gatherSlot.objective.kind, gatherSlot.objective.count)) return undefined
+    return gatherSlot
+  }
+
+  /**
+   * Giver has a completion/hand-in/report action available right now —
+   * `ready_to_report` or a live gather turn-in — without calling
+   * `onInteract()` (plan quests-progression-034).
+   *
+   * @domain quests-progression
+   */
+  private hasGiverCompletionActionNow(def: QuestDef, npcId: NpcId): boolean {
+    if (npcId !== def.giver.npcId) return false
+    if (this.stateOf(def.id).state === 'ready_to_report') return true
+    return this.gatherHandInSlot(def) !== undefined
+  }
+
   /** Active giver contribution: report/gather-turn-in actions when ready,
    *  plus (plan quests-progression-033) a generic opt-out action so an
    *  `active` quest's reminder is never action-less just because its
@@ -1590,16 +1725,14 @@ export class QuestManager {
         }
         return abandonAction ? { line: this.storageRatInfestationReminder(def, stage), actions: [abandonAction] } : null
       }
-      const gatherSlot = this.unfinishedSlots(def, s).find((slot) => slot.objective.type === 'gather_item')
-      if (gatherSlot && gatherSlot.objective.type === 'gather_item') {
-        const { kind, count } = gatherSlot.objective
-        const isFinalStage = s.stageIndex >= def.stages.length - 1 && this.unfinishedSlots(def, s).length === 1 && !stage.transitions
-        const readyToTurnIn = !(isFinalStage && !uniqueOutcomeForState(def, 'complete')) && this.inventory.has(kind, count)
-        if (!readyToTurnIn) {
+      const unfinishedGather = this.unfinishedSlots(def, s).find((slot) => slot.objective.type === 'gather_item')
+      if (unfinishedGather && unfinishedGather.objective.type === 'gather_item') {
+        const readySlot = this.gatherHandInSlot(def)
+        if (!readySlot) {
           return abandonAction ? { line: stage.reminderLine, actions: [abandonAction] } : null
         }
         const stageIndex = s.stageIndex
-        const slotId = gatherSlot.id
+        const slotId = readySlot.id
         const actions: QuestDialogAction[] = [{
           label: stage.playerLine ?? def.reportPlayerLine ?? DEFAULT_GATHER_PLAYER_LINE,
           onSelect: () => this.selectGatherTurnIn(def, stageIndex, slotId),
@@ -1873,13 +2006,14 @@ export class QuestManager {
    *  contributions (talk targets / stage dialogue actions / gather hand-in /
    *  report) from every definition are always merged into one flat `actions`
    *  list (unchanged aggregation from plan quests-progression-018) — never
-   *  hidden behind topic selection. Any other definition that still has
-   *  something to say right now (a second offer, a second active quest with
-   *  only an informational reminder) becomes a `QuestDialogTopic` instead of
-   *  being silently dropped. With exactly one quest context total, the
-   *  single-quest UX is unchanged (no `topics` wrapper). `completedFallback`
-   *  (plan 153) — an already-turned-in quest's `reportLine`, used only when
-   *  no definition has any contribution at all.
+   *  hidden behind topic selection. Generic abandon actions are
+   *  `topicScoped` (plan quests-progression-034): with multiple quest
+   *  contexts they stay behind `QuestDialogTopic` labelled with
+   *  `QuestDef.title`, so they are never flattened into indistinguishable
+   *  buttons. With exactly one quest context total, the single-quest UX is
+   *  unchanged (no `topics` wrapper). `completedFallback` (plan 153) — an
+   *  already-turned-in quest's `reportLine`, used only when no definition
+   *  has any contribution at all.
    *
    *  Selected `not_offered` candidates are admitted to `offered` once up
    *  front — see `admitOffersForGiver` — so the per-def loop below only ever
@@ -1887,18 +2021,13 @@ export class QuestManager {
    *  quests-progression-033). */
   onInteract(npcId: NpcId): QuestDialogOverride | null {
     this.admitOffersForGiver(npcId)
-    const actionable: QuestDialogOverride[] = []
-    const passive: { def: QuestDef, override: QuestDialogOverride }[] = []
+    const contexts: { def: QuestDef, override: QuestDialogOverride }[] = []
     let completedFallback: QuestDialogOverride | null = null
 
     for (const def of this.defs) {
       const contribution = this.resolveNpcQuestContribution(def, npcId)
       if (contribution) {
-        if (contribution.actions?.length) {
-          actionable.push(contribution)
-        } else {
-          passive.push({ def, override: contribution })
-        }
+        contexts.push({ def, override: contribution })
         continue
       }
       const s = this.stateOf(def.id)
@@ -1907,19 +2036,28 @@ export class QuestManager {
       }
     }
 
-    const totalContexts = actionable.length + passive.length
-    if (totalContexts === 0) return completedFallback
-    if (totalContexts === 1) return actionable[0] ?? passive[0]!.override
+    if (contexts.length === 0) return completedFallback
+    if (contexts.length === 1) return contexts[0]!.override
 
-    const topics: QuestDialogTopic[] = passive.map(({ def }) => ({
-      label: def.title,
-      resolve: () => this.resolveNpcQuestContribution(def, npcId) ?? { line: def.reportLine },
-    }))
+    const immediate = contexts.flatMap(({ override }) => (
+      (override.actions ?? []).filter((action) => !action.topicScoped)
+        .map((action) => ({ line: override.line, action }))
+    ))
+    const topics: QuestDialogTopic[] = contexts
+      .filter(({ override }) => {
+        const actions = override.actions ?? []
+        const hasImmediate = actions.some((action) => !action.topicScoped)
+        return !hasImmediate || actions.some((action) => action.topicScoped)
+      })
+      .map(({ def }) => ({
+        label: def.title,
+        resolve: () => this.resolveNpcQuestContribution(def, npcId) ?? { line: def.reportLine },
+      }))
 
-    if (actionable.length > 0) {
+    if (immediate.length > 0) {
       return {
-        line: actionable[0]!.line,
-        actions: actionable.flatMap((override) => override.actions ?? []),
+        line: immediate[0]!.line,
+        actions: immediate.map((entry) => entry.action),
         ...(topics.length > 0 ? { topics } : {}),
       }
     }
@@ -1938,7 +2076,11 @@ export class QuestManager {
       const stage = this.currentStage(def, s.stageIndex)
       if (!stage) continue
 
-      this.bindAnimalTargetIfNeeded(def, s.stageIndex)
+      if (ref.type === 'animal_died') {
+        this.bindDyingAnimalTargetIfUnbound(def, s.stageIndex, ref.animalId, ref.kind)
+      } else {
+        this.bindAnimalTargetIfNeeded(def, s.stageIndex)
+      }
 
       let matched = false
       for (const slot of this.unfinishedSlots(def, this.stateOf(def.id))) {
@@ -2005,12 +2147,13 @@ export class QuestManager {
    *  quests-progression-020), not first-match: one NPC can be the giver of
    *  several concurrent quests, and an earlier `active` one must not hide a
    *  later one that is `ready_to_report`. Priority — independent of `defs`
-   *  order — is `?` (required dialogue target) > `✓` (any quest
-   *  `ready_to_report`) > `!` (any quest `offered`/exposable `not_offered`)
-   *  > `…` (any quest `active`) > `null`. `not_offered` counts only when the
-   *  offer cap would actually expose it right now — see `selectableOfferIds`
-   *  (plan quests-progression-033) — so a capped/suppressed candidate
-   *  doesn't flag an NPC with `!` for an offer dialogue won't actually show. */
+   *  order — is `?` (required dialogue target) > `✓` (completion / hand-in /
+   *  report available now, including an `active` gather turn-in) > `!` (any
+   *  quest `offered`/exposable `not_offered`) > `…` (any quest `active`) >
+   *  `null`. `not_offered` counts only when the offer cap would actually
+   *  expose it right now — see `selectableOfferIds` (plan
+   *  quests-progression-033) — so a capped/suppressed candidate doesn't flag
+   *  an NPC with `!` for an offer dialogue won't actually show. */
   labelMarker(npcId: NpcId): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
@@ -2024,11 +2167,11 @@ export class QuestManager {
     let hasActive = false
     const exposable = this.selectableOfferIds(npcId)
     for (const def of this.defs) {
+      if (this.hasGiverCompletionActionNow(def, npcId)) hasReady = true
       if (npcId !== def.giver.npcId) continue
       const s = this.stateOf(def.id)
-      if (s.state === 'ready_to_report') hasReady = true
-      else if (s.state === 'active') hasActive = true
-      else if (s.state === 'offered') hasAvailable = true
+      if (s.state === 'active') hasActive = true
+      else if (s.state === 'offered' && this.canAcceptOrdinaryGiverQuest(def)) hasAvailable = true
       else if (s.state === 'not_offered' && exposable.has(def.id)) hasAvailable = true
     }
     if (hasReady) return QUEST_MARKER_READY

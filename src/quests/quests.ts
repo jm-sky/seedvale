@@ -86,7 +86,8 @@ export type QuestAvailability = {
 }
 
 /**
- * Small optional offer-selection policy (plan quests-progression-033).
+ * Small optional offer-selection and active-capacity policy (plans
+ * quests-progression-033 / quests-progression-034).
  * `QuestManager` exposes at most one `normal`-urgency offer per giver plus
  * one `urgent` offer beyond that cap; `priority` only breaks ties among
  * otherwise-equal ranked candidates (continuation/relation still dominate —
@@ -94,8 +95,13 @@ export type QuestAvailability = {
  * linear-history exception: it is never capped or delayed by the ranking,
  * and — since it represents a scripted beat rather than a spam-prone errand
  * — its offer cannot be generically declined (`QuestManager` omits
- * `QuestDialogOverride.offer.onDecline` for it). Absent = `{ urgency:
- * 'normal', exposure: 'normal' }`.
+ * `QuestDialogOverride.offer.onDecline` for it).
+ *
+ * Ordinary `active`/`ready_to_report` giver quests also occupy a derived
+ * per-giver slot (max 2). `urgency: 'urgent'` or `exposure: 'story'` is the
+ * explicit bypass for that active cap — not every world-driven quest, and
+ * never a heuristic inside `QuestManager`. Absent = `{ urgency: 'normal',
+ * exposure: 'normal' }`.
  *
  * @domain quests-progression
  */

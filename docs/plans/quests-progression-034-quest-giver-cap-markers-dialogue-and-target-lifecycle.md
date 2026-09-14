@@ -1,13 +1,19 @@
 # Plan: Quest giver cap, markers, dialogue and target lifecycle
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~quests-progression-033~~
 **Domain:** `quests-progression`  
 **Type:** `fix`  
 **Model:** Sonnet, Composer
 **Roadmap:** `quests-and-reputation.md`  
+
+## Implementation status
+
+Implemented 2026-09-14. Ordinary giver `active`/`ready_to_report` quests occupy a derived per-giver capacity of 2 (`QuestManager.activeOrdinaryGiverQuestCount`); admission and stale `onAccept` both gate on it. `QuestOfferPolicy.urgency: 'urgent'` and `exposure: 'story'` bypass that cap without blocking foreign-quest talk/hand-in/report. `labelMarker` treats a live gather hand-in as `✓` (outranking `!`); `notifyInventoryChanged()` dirties only when an active gather stage exists. Generic abandon actions are `topicScoped` so multi-quest NPC dialogue uses titled `QuestDialogTopic`s instead of duplicate "Przykro mi…" buttons. `animal_died` no longer rebinds via `resolveAnimalTarget` (that skipped the corpse and could steal another live animal); an unbound slot binds to the dying exact id when the world reports `kind`. No save-version bump — capacity is derived.
+
+Automated quest/dialogue tests are green. Browser/gameplay verification remains user-owned.
 
 ## Goal
 
