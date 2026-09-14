@@ -35,6 +35,19 @@ The world must function independently of the player. That does **not** mean all 
 - Quest history preserves consequences and can influence future opportunities.
 - Authored structures provide reliable gameplay framing while world state supplies the circumstances where appropriate.
 
+## Larger settlements broaden quest space
+
+Settlement size should broaden quest possibilities, not gate interesting content away from small villages.
+
+Larger settlements should eventually support additional quest types such as:
+
+- larger, longer-range quests with stronger story and rewards, e.g. the planned gold-mine storyline;
+- specialist-NPC quests from roles such as specialist vendors or a mayor;
+- in-settlement stories: conspiracy, deception, disputes, rivalry and competing interests;
+- inter-settlement opportunities involving trade, transport, shortages, routes and regional problems.
+
+Small settlements can still produce important, unusual or multi-stage quests when world state or authored content justifies it.
+
 ## Current authored RPG pack
 
 The first hand-authored RPG pack (`quests-progression-005`) is three stories / five `QuestDef`s: a branching lost-shipment choice (`zaginiona-przesylka`), a local material dispute with one outcome-dependent follow-up (`sporne-drewno` → `drewno-dla-anny` or `drewno-dla-piotra`), and a renown-gated boar hunt (`dzik-przy-szlaku`). Branching uses a narrow `talk_to_npc_choice` objective on the existing `onInteract` path — not a dialogue tree, quest-item inventory, or land grant.
