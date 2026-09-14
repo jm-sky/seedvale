@@ -63,7 +63,7 @@ import {
   resolveCropHarvest,
   resolveCropStage,
 } from '../world/cropLifecycle'
-import { createCropStageMesh } from '../world/cropVisuals'
+import { createCropPlacementVisual } from '../world/cropVisuals'
 import { siteChunkContainsPoint } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { makePlantedCropId } from '../world/plantedCrops'
@@ -2006,11 +2006,7 @@ export function createChunkManager(
       if (config.removedCropIds.has(placement.id)) return null
       const def = CROP_DEFS[placement.cropId]
       const stage = resolveCropStage(def, placement.stageStartedAt, worldDaysForCrops)
-      const cropMesh = createCropStageMesh(def.harvestItem, stage)
-      cropMesh.userData.cropId = placement.id
-      cropMesh.userData.cropDefId = placement.cropId
-      cropMesh.userData.cropStage = stage
-      placeOnGround(cropMesh, placement.x, placement.z, sampleTileHeight)
+      const cropMesh = createCropPlacementVisual(placement, def, stage, sampleTileHeight)
       return cropMesh
     })
     if (rec.crops) assignRenderLayer(rec.crops, REFLECTION_SKIPPED_LAYER)
@@ -2762,11 +2758,7 @@ export function createChunkManager(
 
       const def = CROP_DEFS[cropId]
       const stage = resolveCropStage(def, record.stageStartedAt, worldDays)
-      const cropMesh = createCropStageMesh(def.harvestItem, stage)
-      cropMesh.userData.cropId = id
-      cropMesh.userData.cropDefId = cropId
-      cropMesh.userData.cropStage = stage
-      placeOnGround(cropMesh, x, z, (sx, sz) => readField('heights', sx, sz))
+      const cropMesh = createCropPlacementVisual(record, def, stage, (sx, sz) => readField('heights', sx, sz))
       assignRenderLayer(cropMesh, REFLECTION_SKIPPED_LAYER)
       if (!rec.crops) {
         rec.crops = new THREE.Group()

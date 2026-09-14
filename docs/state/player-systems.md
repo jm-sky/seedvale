@@ -125,7 +125,7 @@ Bait (plan 159, reworked plan fauna-014, generalized plan fauna-023) is an optio
 
 ## Seed planting & natural food (plans 126, 159)
 
-Quick Actions "Zasadź drzewo" consumes one generic `tree_seed` (species chosen by the same local-habitat-suitability signal procedural placement already uses) and enters the existing `TreeLifecycle` as a `sapling` anchored at the planting day — see [terrain-and-world-generation.md](./terrain-and-world-generation.md#trees). "Zasadź: marchew/ziemniak/kapustę" plants a crop lifecycle entity, only within reach of a settlement garden or a player-built garden plot (below). Both reuse the shared ground-placement evaluator plus a short busy channel; the seed is spent only once the world mutation succeeds.
+Quick Actions "Zasadź drzewo" consumes one generic `tree_seed` (species chosen by the same local-habitat-suitability signal procedural placement already uses) and enters the existing `TreeLifecycle` as a `sapling` anchored at the planting day — see [terrain-and-world-generation.md](./terrain-and-world-generation.md#trees). "Zasadź: marchew/ziemniak/kapustę" consumes one sowing-unit `seed_*` item and creates one `CropPlacement` (plan world-023): logical plant count and base harvest live on `CROP_DEFS`, the visual cluster is a bounded deterministic layout, and interaction/harvest stay at placement level. Planting is only valid within reach of a settlement garden or a player-built garden plot (below). Both reuse the shared ground-placement evaluator plus a short busy channel; the seed is spent only once the world mutation succeeds.
 
 ## Player garden plots & NPC need sources (plan 174)
 

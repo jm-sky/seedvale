@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CROP_SEED_ITEM, GARDEN_PLANT_RADIUS, isNearAnyGarden, makePlantedCropId, parsePlantedCrops } from './plantedCrops'
+import { CROP_IDS } from './cropLifecycle'
+import { CROP_SEED_ITEM, GARDEN_PLANT_RADIUS, isNearAnyGarden, isPlantedCropId, makePlantedCropId, parsePlantedCrops } from './plantedCrops'
 
 describe('makePlantedCropId', () => {
   it('is deterministic for the same seed/position', () => {
@@ -35,6 +36,20 @@ describe('CROP_SEED_ITEM', () => {
     expect(CROP_SEED_ITEM.carrot).toBe('seed_carrot')
     expect(CROP_SEED_ITEM.potato).toBe('seed_potato')
     expect(CROP_SEED_ITEM.cabbage).toBe('seed_cabbage')
+  })
+
+  it('is complete for every CropId', () => {
+    for (const id of CROP_IDS) {
+      expect(CROP_SEED_ITEM[id]).toMatch(/^seed_/)
+    }
+    expect(Object.keys(CROP_SEED_ITEM)).toHaveLength(CROP_IDS.length)
+  })
+})
+
+describe('isPlantedCropId', () => {
+  it('recognizes the planted namespace and rejects procedural wild ids', () => {
+    expect(isPlantedCropId(makePlantedCropId(3, 5, -1))).toBe(true)
+    expect(isPlantedCropId('0:0:crop0')).toBe(false)
   })
 })
 

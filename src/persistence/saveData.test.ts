@@ -638,6 +638,18 @@ describe('loadSaveData v1 contract', () => {
     })
   })
 
+  it('migrates a v42 save (plan world-023) without multiplying planted-crop records', () => {
+    const plantedCrops = [
+      { id: 'planted-crop:1:2:3', x: 2, z: 3, cropId: 'carrot' as const, stageStartedAt: 4.5 },
+      { id: 'planted-crop:1:8:9', x: 8, z: 9, cropId: 'potato' as const, stageStartedAt: 1.2 },
+    ]
+    const result = loadStoredSave({ ...validSave, version: 42, plantedCrops })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.plantedCrops).toEqual(plantedCrops)
+  })
+
   it('migrates a v39 save without socialNews to the current version (plan quests-progression-022)', () => {
     const result = loadStoredSave({ ...validSave, version: 39 })
     expect(result.status).toBe('ok')

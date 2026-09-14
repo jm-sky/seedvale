@@ -1,13 +1,14 @@
 # Plan: Species-Driven Sowing, Density and Yield
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-030~~
 **Domain:** `world`  
 **Type:** `feature`  
 **Roadmap:** `agriculture-and-cultivation`  
 **Model:** Sonnet, Composer
+**Implemented at:** 2026-09-14
 
 ## Cel
 
@@ -541,25 +542,15 @@ Nie zakładać, że każdy wymieniony plik musi zostać zmieniony.
 
 ## 20. Species values — decyzja przed implementacją
 
-Plan świadomie nie ustala jeszcze konkretnych wartości dla:
+Ustalone wartości gameplay (zakodowane w `CROP_DEFS` / `CROP_VISUAL_INSTANCE_BUDGET`):
 
-- `logicalPlantsPerSowingUnit` dla carrot;
-- `logicalPlantsPerSowingUnit` dla potato;
-- `logicalPlantsPerSowingUnit` dla cabbage;
-- docelowego `yieldCount` każdego species;
-- maksymalnej / docelowej liczby rendered instances per placement.
+| Species | `logicalPlantsPerSowingUnit` | `yieldCount` | max rendered instances (planted) |
+| ------- | ---------------------------: | -----------: | -------------------------------: |
+| carrot  | 8 | 5 | 6 |
+| potato  | 4 | 8 | 4 |
+| cabbage | 3 | 2 | 3 |
 
-Przed finalnym ustawieniem `CROP_DEFS` ustalić je jako krótką decyzję gameplay/design.
-
-Dla każdego species wartości powinny uwzględniać osobno:
-
-1. sensowną relację sowing unit → logical plants;
-2. charakter gatunku i liczbę zbieranych food items na population;
-3. balans produkcji żywności;
-4. visual readability;
-5. rendering budget.
-
-Nie wymaga to per-plant runtime simulation.
+Uzasadnienie: marchew to gęsta garść drobnych roślin (plon poniżej liczby roślin); ziemniak daje więcej bulw niż krzaków; kapusta to kilka główek, z których jedna zwykle nie dochodzi. Wild/natural placement renderuje 1 instancję. `yieldCount` i rendered count są celowo niezależne od siebie i od logical count.
 
 ## 21. Tests
 

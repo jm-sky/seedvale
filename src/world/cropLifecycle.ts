@@ -16,17 +16,60 @@ export type CropDefinition = {
   matureAfterDays: number
   /** Game-days the `mature` harvest window stays open before `spoiled`. */
   spoilAfterDays: number
+  /**
+   * Logical biological plants established by one planted sowing unit
+   * (`seed_*` ×1 → one `CropPlacement`). Presentation and harvest may use
+   * different bounded/total numbers; this is not a runtime entity count.
+   *
+   * @domain world
+   */
+  logicalPlantsPerSowingUnit: number
   harvestItem: ItemKind
   /** Optional yield when harvesting a `spoiled` crop — absent means spoiled
    *  crops give no normal yield (plan §12 of the implementation notes). */
   spoiledItem?: ItemKind
+  /** Base food count for one healthy mature `CropPlacement` before
+   *  cultivation care/hydration modifiers. Justified by logical population
+   *  and species production, not equal to plant or rendered count. */
   yieldCount: number
 }
 
+/**
+ * Shared species table (plan world-023). One `seed_*` item is a sowing unit,
+ * not a single biological seed. Values keep plant-count, harvest and
+ * presentation as separate concepts:
+ *
+ * - carrot: a handful of small seeds → dense cluster; not every root is
+ *   marketable, so yield is below plant count.
+ * - potato: a few seed potatoes → fewer plants, but each produces several
+ *   tubers, so yield is above plant count.
+ * - cabbage: a few seedlings → large heads; one typically fails to size.
+ */
 export const CROP_DEFS: Record<CropId, CropDefinition> = {
-  carrot: { id: 'carrot', matureAfterDays: 1.5, spoilAfterDays: 1.5, harvestItem: 'carrot', yieldCount: 1 },
-  potato: { id: 'potato', matureAfterDays: 2, spoilAfterDays: 2, harvestItem: 'potato', yieldCount: 1 },
-  cabbage: { id: 'cabbage', matureAfterDays: 1.75, spoilAfterDays: 1.75, harvestItem: 'cabbage', yieldCount: 1 },
+  carrot: {
+    id: 'carrot',
+    matureAfterDays: 1.5,
+    spoilAfterDays: 1.5,
+    logicalPlantsPerSowingUnit: 8,
+    harvestItem: 'carrot',
+    yieldCount: 5,
+  },
+  potato: {
+    id: 'potato',
+    matureAfterDays: 2,
+    spoilAfterDays: 2,
+    logicalPlantsPerSowingUnit: 4,
+    harvestItem: 'potato',
+    yieldCount: 8,
+  },
+  cabbage: {
+    id: 'cabbage',
+    matureAfterDays: 1.75,
+    spoilAfterDays: 1.75,
+    logicalPlantsPerSowingUnit: 3,
+    harvestItem: 'cabbage',
+    yieldCount: 2,
+  },
 }
 
 export const CROP_IDS: readonly CropId[] = ['carrot', 'potato', 'cabbage']

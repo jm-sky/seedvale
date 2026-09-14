@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Role } from '../ai/characters'
 import type { FamilyDef, FamilyMember } from './families'
 import { createSettlementEconomy } from '../economy/settlementEconomy'
-import { CROP_DEFS } from '../world/cropLifecycle'
+import { CROP_DEFS, resolveCropHarvest } from '../world/cropLifecycle'
 import { createHousehold, FARMER_STARTING_SEED_COUNT } from './household'
 import {
   householdAgriculturalCapacity,
@@ -94,14 +94,17 @@ describe('settlementAgriculture (plan settlements-npcs-030)', () => {
   it('produces concrete crop items from real seeds using CROP_DEFS timing', () => {
     const household = createHousehold('h', 's', 'home', undefined, { adultFarmerCount: 1 })
     household.markAgricultureResolved(0)
+    const economy = createSettlementEconomy('s', {}, [])
     const cycle = CROP_DEFS.carrot.matureAfterDays
     resolveUnloadedHouseholdAgriculture({
       household,
       capacity: 1,
       nowDays: cycle * 2,
+      economy,
     })
     expect(household.items.count('seed_carrot')).toBe(FARMER_STARTING_SEED_COUNT - 2)
-    expect(household.items.count('carrot')).toBe(2 * CROP_DEFS.carrot.yieldCount)
+    expect(household.items.count('carrot') + economy.items.count('carrot')).toBe(2 * CROP_DEFS.carrot.yieldCount)
+    expect(resolveCropHarvest(CROP_DEFS.carrot, 'mature')?.count).toBe(CROP_DEFS.carrot.yieldCount)
     expect(household.agricultureLastResolvedAtDays()).toBe(cycle * 2)
   })
 
@@ -152,13 +155,14 @@ describe('settlementAgriculture (plan settlements-npcs-030)', () => {
 
   it('does not consume seeds already spent on a remaining detailed crop', () => {
     const household = createHousehold('h', 's', 'home')
+    const economy = createSettlementEconomy('s', {}, [])
     household.items.add('seed_carrot', 1)
     household.markAgricultureResolved(0)
-    resolveUnloadedHouseholdAgriculture({ household, capacity: 1, nowDays: 10 })
+    resolveUnloadedHouseholdAgriculture({ household, capacity: 1, nowDays: 10, economy })
     expect(household.items.count('seed_carrot')).toBe(0)
-    expect(household.items.count('carrot')).toBe(1)
+    expect(household.items.count('carrot') + economy.items.count('carrot')).toBe(CROP_DEFS.carrot.yieldCount)
     household.markAgricultureResolved(10)
-    resolveUnloadedHouseholdAgriculture({ household, capacity: 1, nowDays: 20 })
-    expect(household.items.count('carrot')).toBe(1)
+    resolveUnloadedHouseholdAgriculture({ household, capacity: 1, nowDays: 20, economy })
+    expect(household.items.count('carrot') + economy.items.count('carrot')).toBe(CROP_DEFS.carrot.yieldCount)
   })
 })

@@ -75,4 +75,11 @@ Do not add tests asserting `logicalPlantsPerSowingUnit === yieldCount` or render
 4. Apply the required save semantic-version migration and migration tests.
 5. Run focused crop/agriculture/persistence tests, then `pnpm lint:fix`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
+## What was actually implemented
+
+- `CropDefinition.logicalPlantsPerSowingUnit` plus species yield values on `CROP_DEFS` (carrot 8/5, potato 4/8, cabbage 3/2). `resolveCropHarvest()` still returns `def.yieldCount` for mature crops; player garden modifiers stay downstream.
+- Planting flow unchanged: one seed item → one `CropPlacement` for player and Farmer. Aggregate catch-up already multiplied `def.yieldCount`, so it shares the new base yield without an agriculture-specific table.
+- Presentation: `resolveCropVisualLayout()` / `createCropPlacementVisual()` in `cropVisuals.ts`. Planted clusters are `InstancedMesh` groups keyed from `placement.id + cropId`; wild crops stay one instance. Interaction/harvest remain placement-level. Footprint/separation unchanged.
+- Save v43 is a semantic identity migration: one legacy planted record stays one record of the same `cropId`. Visual transforms are not persisted.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

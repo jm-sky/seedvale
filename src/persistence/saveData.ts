@@ -673,7 +673,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 42
+export const CURRENT_SAVE_VERSION = 43
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -3442,6 +3442,26 @@ function migrateSaveV41ToV42(data: unknown): unknown {
   return { ...v, version: 42, livestock, rats, persistentHabitatOccupants }
 }
 
+/** v42 → v43 (plan world-023): planted-crop records keep the same identity
+ *  (`id`/`x`/`z`/`cropId`/`stageStartedAt`). Semantics change from
+ *  one-plant-per-record to one sowing-unit/population per record, derived
+ *  from `CROP_DEFS` — do not fan a legacy placement into multiple records. */
+function migrateSaveV42ToV43(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const plantedCrops = Array.isArray(v.plantedCrops) ? v.plantedCrops.map((entry) => {
+    if (!entry || typeof entry !== 'object') return entry
+    const rec = entry as Record<string, unknown>
+    return {
+      id: rec.id,
+      x: rec.x,
+      z: rec.z,
+      cropId: rec.cropId,
+      stageStartedAt: rec.stageStartedAt,
+    }
+  }) : v.plantedCrops
+  return { ...v, version: 43, plantedCrops }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3604,6 +3624,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   39: migrateSaveV39ToV40,
   40: migrateSaveV40ToV41,
   41: migrateSaveV41ToV42,
+  42: migrateSaveV42ToV43,
 }
 
 function detectStoredVersion(value: unknown): number | null {

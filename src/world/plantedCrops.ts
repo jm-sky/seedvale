@@ -65,6 +65,13 @@ export function makePlantedCropId(seed: number, x: number, z: number): string {
   return `planted-crop:${seed}:${qx}:${qz}`
 }
 
+/** Planted sowing units use a distinct id namespace from procedural wild
+ *  crops (`${cx}:${cz}:crop${i}`). Presentation may use this to keep wild
+ *  finds sparse without a second lifecycle. */
+export function isPlantedCropId(id: string): boolean {
+  return id.startsWith('planted-crop:')
+}
+
 const VALID_CROP_IDS: ReadonlySet<string> = new Set(CROP_IDS)
 
 /** Defensive parse of saved planted-crop records — malformed entries are
