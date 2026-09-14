@@ -3,6 +3,7 @@
 **Created:** 2026-09-15
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** S
+**Model:** Sonnet, Composer
 **Depends on:** none
 **Domain:** `settlements`
 **Type:** `fix`
