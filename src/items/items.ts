@@ -97,6 +97,9 @@ export type ItemKind =
   | 'long_bow'
   /** Plan quests-progression-025 — identity-backed family heirloom. */
   | 'signet_ring'
+  /** Plan quests-progression-026 — bandit-cache ledger and marked stolen property. */
+  | 'bandit_ledger'
+  | 'marked_valuable'
   | 'arrow'
   | 'broadhead_arrow'
   | 'war_arrow'
@@ -1028,6 +1031,24 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xc9a227,
     description: 'Stary pierścień z herbem rodziny. Rozpoznawalny dla tych, którzy pamiętają zaginionego przodka.',
   },
+  bandit_ledger: {
+    kind: 'bandit_ledger',
+    label: 'bandycki rejestr',
+    categories: ['resource'],
+    weight: 0.2,
+    size: 'SM',
+    color: 0x6b5344,
+    description: 'Poplamiony rejestr napadów. Wskazuje ofiary i skradzione przedmioty z dawnej bandyckiej kryjówki.',
+  },
+  marked_valuable: {
+    kind: 'marked_valuable',
+    label: 'oznaczony klejnot',
+    categories: ['resource'],
+    weight: 0.08,
+    size: 'XS',
+    color: 0xb8860b,
+    description: 'Cenny przedmiot z wyraźnym znakiem właściciela. Łatwy do rozpoznania dla kogoś, kto go stracił.',
+  },
   long_bow: {
     kind: 'long_bow',
     label: 'długi łuk',
@@ -1933,6 +1954,32 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     )
     mesh.rotation.x = -Math.PI / 2
     mesh.position.y = 0.03
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'bandit_ledger') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.02, 0.16),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS.bandit_ledger.color,
+        flatShading: true,
+        roughness: 0.85,
+      }),
+    )
+    mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'marked_valuable') {
+    const mesh = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.045, 0),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS.marked_valuable.color,
+        flatShading: true,
+        metalness: 0.55,
+      }),
+    )
+    mesh.position.y = 0.04
     mesh.castShadow = true
     return mesh
   }

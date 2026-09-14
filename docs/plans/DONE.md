@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-031-per-source-opportunity-defs`                   | 2026-09-14 09:24:06 | —                   | `quests-progression` | —          |
 | `quests-progression-030-external-resolution-and-real-problem-offering` | 2026-09-14 09:04:44 | —                   | `quests-progression` | —          |
 | `quests-progression-025-adventure-cave-old-bones`                      | 2026-09-14 06:53:18 | —                   | `quests-progression` | —          |
 | `quests-progression-029-generic-resolution-effects`                    | 2026-09-14 06:11:25 | —                   | `quests-progression` | —          |

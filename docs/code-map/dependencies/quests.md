@@ -67,6 +67,53 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `quests/cardinalDirection.test.ts`
 
+## `quests/dungeonBanditTreasure.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `quests/dungeonBanditTreasure.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/worldGeneratedContainers.ts`
+
+## `quests/dungeonBanditTreasure.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `settlement/npcState.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveArchetype.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/worldGeneratedContainers.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/dungeonBanditTreasure.test.ts`
+- `quests/dungeonBanditTreasureRuntime.ts`
+
+## `quests/dungeonBanditTreasureRuntime.ts`
+
+**Imports**
+
+- `quests/dungeonBanditTreasure.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+
 ## `quests/guardEveningOfferWindow.test.ts`
 
 **Imports**
@@ -317,6 +364,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
@@ -414,6 +463,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `quests/QuestManager.ts`
+- `quests/dungeonBanditTreasure.test.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
@@ -459,6 +510,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/materializeAuthoredQuests.test.ts`

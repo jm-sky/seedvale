@@ -993,6 +993,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
 - `quests/QuestManager.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/guardEveningOfferWindow.ts`
 - `quests/guardPersistence.ts`
 - `quests/guardRewards.ts`

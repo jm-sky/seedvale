@@ -80,4 +80,51 @@ describe('resolveCaveAdventureContentPolicy (plan world-terrain-028)', () => {
       expect(second.profileOf(id)).toBe(first.profileOf(id))
     }
   })
+
+  it('accepts dungeon loot and sideTreasure anchor claims without adventure membership', () => {
+    const caveId = 'cave:dungeon-1'
+    const lootId = `${caveId}:loot:deep`
+    const sideId = `${caveId}:sideTreasure:side-a`
+    const anchors: CaveContentAnchor[] = [
+      { ...anchor(caveId, sideId), role: 'sideTreasure' },
+      { ...anchor(caveId, lootId), role: 'loot' },
+    ]
+    const policy = resolveCaveAdventureContentPolicy([], anchors, {
+      anchorClaims: [
+        { reservationKey: 'quests-progression-026:side:' + sideId, anchorId: sideId },
+        { reservationKey: 'quests-progression-026:deep', anchorId: lootId },
+      ],
+    })
+    expect(policy.claimOf('quests-progression-026:deep')).toEqual({
+      reservationKey: 'quests-progression-026:deep',
+      anchorId: lootId,
+      caveId,
+    })
+    expect(policy.claimOf('quests-progression-026:side:' + sideId)?.anchorId).toBe(sideId)
+    expect(policy.profileOf(caveId)).toBeUndefined()
+    expect(policy.unresolved).toEqual([])
+  })
+
+  it('allows 026 deep/side claims to coexist with a disjoint 027 finalTreasure claim', () => {
+    const caveId = 'cave:shared-dungeon'
+    const lootId = `${caveId}:loot:deep`
+    const sideId = `${caveId}:sideTreasure:side-a`
+    const finalId = `${caveId}:finalTreasure`
+    const anchors: CaveContentAnchor[] = [
+      { ...anchor(caveId, sideId), role: 'sideTreasure' },
+      { ...anchor(caveId, lootId), role: 'loot' },
+      { ...anchor(caveId, finalId), role: 'finalTreasure' },
+    ]
+    const policy = resolveCaveAdventureContentPolicy([], anchors, {
+      anchorClaims: [
+        { reservationKey: 'quests-progression-026:deep', anchorId: lootId },
+        { reservationKey: 'quests-progression-026:side:' + sideId, anchorId: sideId },
+        { reservationKey: 'quests-progression-027:final', anchorId: finalId },
+      ],
+    })
+    expect(policy.claimOf('quests-progression-026:deep')?.anchorId).toBe(lootId)
+    expect(policy.claimOf('quests-progression-026:side:' + sideId)?.anchorId).toBe(sideId)
+    expect(policy.claimOf('quests-progression-027:final')?.anchorId).toBe(finalId)
+    expect(policy.unresolved).toEqual([])
+  })
 })

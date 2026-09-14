@@ -1,6 +1,7 @@
 # Implementation notes: quests-progression-026 dungeon bandit treasure
 
 **Reviewed:** 2026-09-13  
+**Implemented:** 2026-09-14  
 **Plan:** `docs/plans/quests-progression-026-dungeon-bandit-treasure.md`  
 **Baseline:** `main` at `3fe62b1f3c55efc53b76332e867dd83d7edfd1c8`
 
@@ -10,19 +11,27 @@
 - `fauna-027` is implemented in code but still `verification needed`. Its residents are normal fauna-owned persistent `AnimalAgent`s; this quest must not own, respawn or require killing them.
 - Do not use `finalTreasure`; `quests-progression-027` needs that endpoint independently.
 
+## Implementation corrections vs earlier notes
+
+- `WorldGeneratedContainerSpec.initialInstances` was **already present** at implement time (added for earlier cave quests). No container-layer change was required; saved rows still fully replace fresh seeds.
+- Shared cave **anchor claims** were generalized: `resolveCaveAdventureContentPolicy()` now accepts dungeon anchors from the supplied `contentAnchors` list. Adventure profile reservation/roll remains adventure-only.
+
+## Shipped entry points
+
+- Binding/content/quest: `src/quests/dungeonBanditTreasure.ts` + `dungeonBanditTreasureRuntime.ts`
+- World composition: `src/app/worldBundle.ts` (shared policy claims + side/deep specs)
+- App wiring: `src/app/createApp.ts` (QuestDef, physical dual-transfer for guard path, deep loot hook)
+- Story kinds: `bandit_ledger`, `marked_valuable` (identity-only instance-backed)
+
 ## Important current-code gaps
 
 ### Shared cave claim arbitration is still adventure-only
 
-`src/world/caves/caveAdventureContentPolicy.ts::resolveCaveAdventureContentPolicy()` validates `anchorClaims` against `adventureCaveIds` and returns `cave_not_adventure` for dungeon anchors. Before this quest can safely coexist with `quests-progression-027`, generalize the **anchor-claim** half to all supplied `CaveContentAnchor`s while leaving adventure profile reservation/80:20 profile logic adventure-only.
-
-Do not add a quest-local claimed-anchor set. Keep deterministic reservation keys, sorted arbitration and `claimOf()`/`unresolved` semantics. A small rename away from `CaveAdventureContentPolicy` is justified only if needed to make the now-shared responsibility clear.
+~~`src/world/caves/caveAdventureContentPolicy.ts::resolveCaveAdventureContentPolicy()` validates `anchorClaims` against `adventureCaveIds` and returns `cave_not_adventure` for dungeon anchors.~~ **Resolved 2026-09-14** — anchor claims validate against the full supplied anchor list; profile logic stays adventure-only.
 
 ### World-generated container specs cannot seed item instances
 
-`WorldGeneratedContainerSpec` currently has only `initialCounts`; `createWorldGeneratedContainers()` restores persisted `instances`, but fresh specs cannot declare them. The marked valuable therefore cannot be a real exact physical instance without extending this seam.
-
-Add the smallest generic support, e.g. `initialInstances?: readonly ItemInstance[]`, used only when there is no saved record. Saved container state must always win on restore/rebuild so the story item cannot reappear after removal.
+~~`WorldGeneratedContainerSpec` currently has only `initialCounts`…~~ **Already resolved before 026** — use `initialInstances` when no saved record exists.
 
 ## Dungeon binding and cache materialization
 

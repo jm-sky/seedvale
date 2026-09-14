@@ -151,7 +151,7 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `CaveContentReservationRequests` — type — line 40
 - `DOUBLE_TREASURE_PROFILE_THRESHOLD` — const — line 16
-- `resolveCaveAdventureContentPolicy` — function — line 89
+- `resolveCaveAdventureContentPolicy` — function — line 90
   - domain: world-terrain
 - `ResolvedAnchorClaim` — type — line 45
 - `UnresolvedReservation` — type — line 58

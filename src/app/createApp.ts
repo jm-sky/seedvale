@@ -95,6 +95,16 @@ import {
   migrateLegacyGuardSwordGift,
 } from '../quests/guardPersistence'
 import {
+  buildDungeonBanditTreasureQuest,
+  DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME,
+  DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME,
+  DUNGEON_BANDIT_LEDGER_KIND,
+  DUNGEON_BANDIT_MARKED_VALUABLE_KIND,
+  DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME,
+  isDungeonBanditDeepStashLooted,
+} from '../quests/dungeonBanditTreasure'
+import { getActiveDungeonBanditTreasureBinding } from '../quests/dungeonBanditTreasureRuntime'
+import {
   buildLostHunterNaturalCaveQuest,
   isLostHunterPackLooted,
 } from '../quests/lostHunterNaturalCave'
@@ -1092,6 +1102,7 @@ export async function createApp(
   const bearCaveBinding = getActiveTreasureMapBearCaveBinding()
   const lostHunterBinding = getActiveLostHunterNaturalCaveBinding()
   const oldBonesBinding = getActiveOldBonesAdventureCaveBinding()
+  const dungeonBanditBinding = getActiveDungeonBanditTreasureBinding()
   const suspiciousTransportCaveCache = getActiveSuspiciousTransportCaveCacheBinding()
   const bearCaveQuestBinding = bearCaveBinding
     ? {
@@ -1217,6 +1228,17 @@ export async function createApp(
           def.name,
         ))
       }
+      if (dungeonBanditBinding) {
+        const homeNpcs = settlementOpportunityNpcsFromDef(def)
+        const neighborNpcs = neighborDefs.flatMap((neighbor) => (
+          settlementOpportunityNpcsFromDef(neighbor)
+        ))
+        opportunityQuestDefs.push(buildDungeonBanditTreasureQuest(
+          dungeonBanditBinding,
+          [...homeNpcs, ...neighborNpcs],
+          def.name,
+        ))
+      }
       const homeGuard = selectGuardQuestGiver(npcs)
       migrateLegacyGuardSwordGift(guardProgress, homeGuard?.id)
     }
@@ -1265,6 +1287,25 @@ export async function createApp(
         if (!npcState || npcState.health.dead) return false
         return npcState.personalInventory.canAddInstance(signet)
       }
+      if (dungeonBanditBinding && questId === dungeonBanditBinding.questId) {
+        const marked = inventory.getInstance(dungeonBanditBinding.markedValuableInstanceId)
+        if (marked?.kind !== DUNGEON_BANDIT_MARKED_VALUABLE_KIND) return false
+        if (outcomeId === DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME) return true
+        if (outcomeId === DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME) {
+          const npcState = bundle.settlementsManager.getNpcState(dungeonBanditBinding.claimantNpcId)
+          if (!npcState || npcState.health.dead) return false
+          return npcState.personalInventory.canAddInstance(marked)
+        }
+        if (outcomeId === DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME) {
+          const ledger = inventory.getInstance(dungeonBanditBinding.ledgerInstanceId)
+          if (ledger?.kind !== DUNGEON_BANDIT_LEDGER_KIND) return false
+          const npcState = bundle.settlementsManager.getNpcState(dungeonBanditBinding.giverNpcId)
+          if (!npcState || npcState.health.dead) return false
+          return npcState.personalInventory.canAddInstance(marked)
+            && npcState.personalInventory.canAddInstance(ledger)
+        }
+        return false
+      }
       if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
         const requiredId = context.requireItemInstanceId ?? suspiciousTransportCaveCache.evidenceInstanceId
         const evidence = inventory.getInstance(requiredId)
@@ -1298,6 +1339,31 @@ export async function createApp(
           },
           { npcId, instanceId: oldBonesBinding.signetInstanceId },
         )
+        return
+      }
+      if (dungeonBanditBinding && questId === dungeonBanditBinding.questId) {
+        if (outcomeId === DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME) return
+        const transferDeps = {
+          playerInventory: inventory,
+          getNpcState: (id: string) => bundle.settlementsManager.getNpcState(id),
+        }
+        if (outcomeId === DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME) {
+          giveItemInstanceToNpc(transferDeps, {
+            npcId: dungeonBanditBinding.claimantNpcId,
+            instanceId: dungeonBanditBinding.markedValuableInstanceId,
+          })
+          return
+        }
+        if (outcomeId === DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME) {
+          giveItemInstanceToNpc(transferDeps, {
+            npcId: dungeonBanditBinding.giverNpcId,
+            instanceId: dungeonBanditBinding.markedValuableInstanceId,
+          })
+          giveItemInstanceToNpc(transferDeps, {
+            npcId: dungeonBanditBinding.giverNpcId,
+            instanceId: dungeonBanditBinding.ledgerInstanceId,
+          })
+        }
         return
       }
       if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
@@ -1429,6 +1495,16 @@ export async function createApp(
             OLD_BONES_SIGNET_KIND,
           )
           return isOldBonesRemainsLooted(instances, oldBonesBinding.signetInstanceId)
+        }
+        if (dungeonBanditBinding && containerId === dungeonBanditBinding.deepContainerId) {
+          const instances = bundle.worldGeneratedContainers.containerInstances(
+            containerId,
+            DUNGEON_BANDIT_MARKED_VALUABLE_KIND,
+          )
+          return isDungeonBanditDeepStashLooted(
+            instances,
+            dungeonBanditBinding.markedValuableInstanceId,
+          )
         }
         if (suspiciousTransportCaveCache && containerId === suspiciousTransportCaveCache.cacheContainerId) {
           const instances = bundle.worldGeneratedContainers.containerInstances(

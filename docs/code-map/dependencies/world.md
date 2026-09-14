@@ -327,6 +327,8 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
+- `quests/dungeonBanditTreasure.test.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `world/caves/caveAdventureContentPolicy.test.ts`
@@ -389,6 +391,7 @@ Generated from TypeScript imports.
 
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `world/caves/caveArchetype.test.ts`
@@ -459,6 +462,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `quests/dungeonBanditTreasure.test.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/oldBonesAdventureCave.test.ts`
@@ -1140,6 +1145,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `fauna/dungeonResidents.test.ts`
+- `quests/dungeonBanditTreasure.test.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
 - `world/caves/caveUndergroundPool.test.ts`
@@ -2417,6 +2424,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/quests.ts`
@@ -3947,6 +3955,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
+- `quests/dungeonBanditTreasure.test.ts`
+- `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/oldBonesAdventureCave.test.ts`

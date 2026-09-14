@@ -901,6 +901,8 @@ Generated from TypeScript imports.
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
 - `quests/cardinalDirection.ts`
+- `quests/dungeonBanditTreasure.ts`
+- `quests/dungeonBanditTreasureRuntime.ts`
 - `quests/guardPersistence.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
@@ -1540,10 +1542,13 @@ Generated from TypeScript imports.
 - `items/heldToolVisual.ts`
 - `items/itemModels.ts`
 - `items/treasureGameplay.ts`
+- `quests/dungeonBanditTreasure.ts`
+- `quests/dungeonBanditTreasureRuntime.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/oldBonesAdventureCaveRuntime.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `quests/suspiciousTransportCaveCacheRuntime.ts`

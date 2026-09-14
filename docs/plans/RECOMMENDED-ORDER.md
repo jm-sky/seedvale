@@ -110,71 +110,63 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-10. `quests-progression-026` — **Bandit treasure — dungeon cave**  
-  🟡 `M` · **Score:**  37  
-   → **unlocks:** 0/0
-
-11. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+10. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-12. `quests-progression-031` — **Per-source opportunity defs and live gating**  
-  🟡 `M` · **Score:**  35  
-   → **unlocks:** 1/1
-
-13. `quests-progression-027` — **Lost treasure expedition — dungeon cave**  
+11. `quests-progression-027` — **Lost treasure expedition — dungeon cave**  
   🟡 `L` · **Score:**  34  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-025` — **Resource storage visualization**  
+12. `settlements-npcs-025` — **Resource storage visualization**  
   ⚪ `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-15. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+13. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-16. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+14. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-17. `items-player-014` — **Rope-pullable resource transport**  
+15. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `tools-005` — **Seedvale Character Preparation Panel**  
+16. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-19. `tools-013` — **NPC decision verification and scenario tooling**  
+17. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-20. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+18. `world-terrain-023` — **River-aware road routing and canonical crossings**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-21. `ui-input-017` — **Quest log information architecture**  
+19. `ui-input-017` — **Quest log information architecture**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-22. `world-terrain-027` — **Landmark variety and quest hooks**  
+20. `world-terrain-027` — **Landmark variety and quest hooks**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-23. `settlements-008` — **Settlement progression around home**  
+21. `settlements-008` — **Settlement progression around home**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-24. `settlements-009` — **Settlement outskirts and pasture**  
+22. `settlements-009` — **Settlement outskirts and pasture**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-25. `settlements-010` — **Closed and cautious settlement character**  
+23. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-26. `settlements-011` — **Plaza layout, paving and core protection**  
+24. `settlements-011` — **Plaza layout, paving and core protection**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -191,9 +183,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`](settlements-npcs-031-sustainable-seed-recovery-and-replanting.md)  
   is blocked by:
   - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)
-- [`ui-input-017-quest-log-information-architecture.md`](ui-input-017-quest-log-information-architecture.md)  
-  is blocked by:
-  - [`quests-progression-031-per-source-opportunity-defs.md`](quests-progression-031-per-source-opportunity-defs.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)

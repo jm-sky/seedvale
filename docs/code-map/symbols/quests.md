@@ -10,6 +10,51 @@ Generated from exported TypeScript symbols.
   - domain: quests-progression
 - `CardinalSector` — type — line 4
 
+## `quests/dungeonBanditTreasure.ts`
+
+- `buildDungeonBanditTreasureQuest` — function — line 375
+  - domain: quests-progression
+- `createDungeonBanditLedgerInstance` — function — line 91
+- `createDungeonBanditMarkedValuableInstance` — function — line 95
+- `DUNGEON_BANDIT_DEEP_RESERVATION_KEY` — const — line 20
+- `DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME` — const — line 25
+- `DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME` — const — line 26
+- `DUNGEON_BANDIT_LEDGER_KIND` — const — line 28
+- `DUNGEON_BANDIT_MARKED_VALUABLE_KIND` — const — line 29
+- `DUNGEON_BANDIT_QUEST_PREFIX` — const — line 22
+- `DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME` — const — line 24
+- `DUNGEON_BANDIT_TREASURE_RESERVATION_PREFIX` — const — line 18
+- `dungeonBanditAnchorClaims` — function — line 253
+- `dungeonBanditCaveReservationRequests` — function — line 268
+- `dungeonBanditClaimsMatch` — function — line 279
+  - domain: quests-progression
+- `dungeonBanditContainerId` — function — line 78
+- `dungeonBanditContainerSpecs` — function — line 351
+- `dungeonBanditDeepReservationKey` — function — line 62
+- `dungeonBanditDeepStashContainerSpec` — function — line 331
+  - domain: quests-progression
+- `dungeonBanditLedgerInstanceId` — function — line 70
+- `dungeonBanditMarkedValuableInstanceId` — function — line 74
+- `dungeonBanditQuestId` — function — line 82
+- `dungeonBanditSideCacheContainerSpecs` — function — line 300
+  - domain: quests-progression
+- `dungeonBanditSideReservationKey` — function — line 66
+- `DungeonBanditTreasureBinding` — type — line 38
+  - domain: quests-progression
+- `EligibleDungeonBanditCave` — type — line 160
+- `eligibleDungeonBanditCaves` — function — line 172
+  - domain: quests-progression
+- `isDungeonBanditDeepStashLooted` — function — line 363
+- `resolveDungeonBanditTreasureBinding` — function — line 205
+  - domain: quests-progression
+- `selectDungeonBanditNpcs` — function — line 126
+  - domain: quests-progression
+
+## `quests/dungeonBanditTreasureRuntime.ts`
+
+- `getActiveDungeonBanditTreasureBinding` — function — line 12
+- `setActiveDungeonBanditTreasureBinding` — function — line 6
+
 ## `quests/guardEveningOfferWindow.ts`
 
 - `deterministicEveningOfferWindowStart` — function — line 27

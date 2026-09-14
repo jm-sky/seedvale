@@ -189,6 +189,8 @@ export function createItemInstanceId(): string {
 export const IDENTITY_ONLY_ITEM_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'hunting_bow',
   'signet_ring',
+  'bandit_ledger',
+  'marked_valuable',
 ])
 
 export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([

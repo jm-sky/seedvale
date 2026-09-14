@@ -81,8 +81,9 @@ function anchorIndexById(anchors: readonly CaveContentAnchor[]): Map<string, Cav
 }
 
 /**
- * Deterministic profile roll + authored arbitration for accepted adventure
- * caves. Anchor claims are validated against the supplied anchor list.
+ * Deterministic adventure profile roll + authored arbitration.
+ * Profile reservations/rolls stay adventure-only; anchor claims validate
+ * against the full supplied anchor list (any archetype, including dungeon).
  *
  * @domain world-terrain
  */
@@ -122,10 +123,6 @@ export function resolveCaveAdventureContentPolicy(
     const anchor = anchorById.get(req.anchorId)
     if (!anchor) {
       unresolved.push({ reservationKey: req.reservationKey, reason: 'anchor_not_found' })
-      continue
-    }
-    if (!adventureSet.has(anchor.caveId)) {
-      unresolved.push({ reservationKey: req.reservationKey, reason: 'cave_not_adventure' })
       continue
     }
     const existingOwner = anchorOwner.get(req.anchorId)
