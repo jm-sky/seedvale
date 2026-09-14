@@ -3,6 +3,7 @@
 **Created:** 2026-09-13
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
+**Model:** Opus, Sonnet
 **Depends on:** none
 **Domain:** `settlements`
 **Type:** `feature`
