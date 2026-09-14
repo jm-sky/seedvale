@@ -1,7 +1,7 @@
 # Plan: Persistent cave worldgen cache
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** L
 **Depends on:** none
@@ -124,5 +124,36 @@ pnpm build
 Browser verification is done by the user. Compare cold/warm `createCaves` boot marks; verify topology/heightfield work drops materially and natural/adventure/dungeon behaviour remains unchanged.
 
 After implementation update `docs/state/persistence.md` and `docs/state/terrain-and-world-generation.md`. Add useful `@domain world-terrain` / `@system worldgen-cache` JSDoc tags.
+
+## Implementation
+
+Implemented on `main`.
+
+- `src/persistence/worldgenFingerprint.ts` — the shared `stableStringify` /
+  `hashString` / `worldgenFingerprint` primitive; `locationsCoarseCache.ts` and
+  `abandonedCemeteryCache.ts` now use it instead of their own copies.
+- `src/world/caves/caveWorldgenCache.ts` — `caves-v2` namespace/version,
+  `manifest` + `cave:<caveId>` payloads, `caveWorldgenFingerprint()`, explicit
+  structural validators, `loadCaveWorldgenSnapshot()` and best-effort batched
+  `persistCaveWorldgen()` over the unchanged `worldgenCacheDb.ts`.
+- `src/world/createCaves.ts` — optional `CreateCavesOptions`
+  (`hydratedWorldgen` / `onWorldgenBuilt`); siting + archetype/topology is now
+  lazy so a manifest hit skips it, cached and fresh per-cave data converge into
+  one runtime-construction block, and a cached dungeon whose pool can no longer
+  be built falls back to a full fresh pass.
+- `src/app/worldBundle.ts` — resolves the fingerprint and awaits the cache read
+  immediately before `createCaves()`; the write is fire-and-forget.
+- `src/world/caves/caveWorldgenCache.test.ts` — round trip, typed-array
+  preservation, full/partial hits, malformed manifest/heightfield,
+  seed/fingerprint/version misses, mouth-cutout replay on hit and storage-failure
+  fallback.
+
+`interiorRocks`, `CaveDefinition` and `DungeonChamber[]` are deliberately not
+persisted — the first is presentation-only and debug-gated, the other two are
+cheap derivations from the cached topology.
+
+`pnpm test`, `npx tsc --noEmit` and `pnpm build` pass. Browser verification
+(cold vs warm `cave.topology` / `cave.heightfield` boot marks, natural /
+adventure / dungeon behaviour) is the user's.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

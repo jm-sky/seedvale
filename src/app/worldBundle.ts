@@ -110,6 +110,11 @@ import {
 } from '../world/caves/caveAdventureContentPolicy'
 import { preloadCaveAdventurePropTemplates } from '../world/caves/caveAdventureProps'
 import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
+import {
+  caveWorldgenFingerprint,
+  loadCaveWorldgenSnapshot,
+  persistCaveWorldgen,
+} from '../world/caves/caveWorldgenCache'
 import { type Beehives, createBeehives } from '../world/createBeehives'
 import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
 import { type CaveContentAnchor, type Caves, createCaves } from '../world/createCaves'
@@ -1293,14 +1298,38 @@ async function buildWorldSystems(
   // on the critical path rather than deferred, unlike `itemSpawners`/
   // `dryingRacks`/`hives` below, which need the home settlement's built
   // `landmarks` and so must wait for `homeReady` regardless.
+  // Persistent cave worldgen cache (plan world-terrain-030): the read has to
+  // finish *before* the synchronous cave build it is meant to replace, so it
+  // belongs here in the already-async composition root — never inside
+  // `createCaves()` or behind a gameplay query. A miss, a malformed record or
+  // an IndexedDB failure simply generates normally.
+  const caveHomeFootprintRadius = villageSizeConfig(homeDef.size).footprintRadius
+  const caveWorldgenCacheFingerprint = caveWorldgenFingerprint({
+    params: sampleParams,
+    waterLevel: chunkManager.waterLevel,
+    coastThreshold: config.terrain.region.coastThreshold,
+    homeFootprintRadius: caveHomeFootprintRadius,
+  })
+  bootMark('caveWorldgenCacheRead')
+  const hydratedCaveWorldgen = await loadCaveWorldgenSnapshot(config.seed, caveWorldgenCacheFingerprint)
+  bootMarkEnd('caveWorldgenCacheRead')
+
   bootMark('createCaves')
   const caves = createCaves(
     scene,
     chunkManager,
     config.seed,
-    villageSizeConfig(homeDef.size).footprintRadius,
+    caveHomeFootprintRadius,
     config.terrain.region.coastThreshold,
     pointLightBudget,
+    {
+      hydratedWorldgen: hydratedCaveWorldgen,
+      onWorldgenBuilt: (result) => {
+        // Best-effort and deliberately not awaited — cave availability must
+        // never depend on persistence.
+        void persistCaveWorldgen(config.seed, caveWorldgenCacheFingerprint, result)
+      },
+    },
   )
   bootMarkEnd('createCaves')
 

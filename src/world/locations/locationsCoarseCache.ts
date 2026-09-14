@@ -1,5 +1,6 @@
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import { cacheKey, type CacheRecord, enforceCacheCap, listCacheRecords, putCacheRecords } from '../../persistence/worldgenCacheDb'
+import { worldgenFingerprint } from '../../persistence/worldgenFingerprint'
 
 /**
  * @domain world
@@ -29,39 +30,13 @@ export function tileSubKey(tx: number, tz: number): string {
   return `tile:${tx}:${tz}`
 }
 
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value)
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`
-  const record = value as Record<string, unknown>
-  const keys = Object.keys(record).sort()
-  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(record[k])}`).join(',')}}`
-}
-
-/** Non-cryptographic 64-bit-ish string hash (two 32-bit lanes) — collisions
- *  only degrade the cache (a false-positive fingerprint match is
- *  astronomically unlikely and would just mean stale-looking-valid coarse
- *  bytes get reused; a mismatch only ever causes a harmless miss), never
- *  correctness of gameplay itself. */
-function hashString(s: string): string {
-  let h1 = 0xdeadbeef
-  let h2 = 0x41c6ce57
-  for (let i = 0; i < s.length; i++) {
-    const ch = s.charCodeAt(i)
-    h1 = Math.imul(h1 ^ ch, 2654435761)
-    h2 = Math.imul(h2 ^ ch, 1597334677)
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
-  return (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36)
-}
-
 /** Fingerprints every deterministic input `classifyCoarseCell` samples
  *  through (plan §8) — the full `RawSampleParams` a given world build uses,
  *  not a hand-picked subset that could quietly miss a newly-added terrain
  *  field. `seed` is already part of the cache's top-level key, but including
  *  it here too is harmless (just redundant), not incorrect. */
 export function locationsCoarseFingerprint(params: RawSampleParams): string {
-  return hashString(stableStringify(params))
+  return worldgenFingerprint(params)
 }
 
 const DEFAULT_DEBOUNCE_MS = 4000

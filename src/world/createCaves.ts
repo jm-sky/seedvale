@@ -84,6 +84,12 @@ import {
 } from './caves/cavePresentationLifecycle'
 import { caveTerrainCutout } from './caves/caveTerrainCutout'
 import {
+  type CaveDerivedPayload,
+  type CaveManifestEntry,
+  type CaveWorldgenBuildResult,
+  type CaveWorldgenSnapshot,
+} from './caves/caveWorldgenCache'
+import {
   MOUTH_INTERIOR_ALONG,
   mouthAlong,
   mouthCarveDepth,
@@ -302,6 +308,25 @@ function distanceToBoundsXZ(bounds: CaveBounds, x: number, z: number): number {
 const TERRAIN_CUTOUT_OWNER_KEY = 'caves'
 
 /**
+ * Optional persistent-worldgen seam (plan world-terrain-030). Omitting it
+ * keeps `createCaves()` exactly as it was: a fully synchronous, fully fresh
+ * deterministic generation pass. The composition root (`createWorldBundle()`)
+ * resolves the IndexedDB read *before* calling in — `createCaves()` itself
+ * never touches persistence, and no `Caves` query ever awaits storage.
+ *
+ * @domain world-terrain
+ * @system worldgen-cache
+ */
+export type CreateCavesOptions = {
+  /** Already-read and structurally validated cache view, or `null`/absent for
+   *  a normal cold generation pass. */
+  hydratedWorldgen?: CaveWorldgenSnapshot | null
+  /** Called once worldgen finished with what was actually (re)generated, so
+   *  the caller can schedule a best-effort batched write. Never awaited. */
+  onWorldgenBuilt?: (result: CaveWorldgenBuildResult) => void
+}
+
+/**
  * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B4, plus the
  * world-terrain-019 heightfield migration): deterministic production
  * `CaveTopology`s, one retained `CaveHeightfieldRepresentation` per cave —
@@ -352,25 +377,8 @@ export function createCaves(
   homeRadius: number,
   coastThreshold: number,
   pointLightBudget: PointLightBudget = createNullPointLightBudget(),
+  options?: CreateCavesOptions,
 ): Caves {
-  const homeFootprint = Math.max(homeRadius, villageSizeConfig('MD').footprintRadius)
-  const villages = cellsWithinRadius({ gx: 0, gz: 0 }, 3).map((cell) => ({
-    x: cell.gx * SETTLEMENT_GRID_STEP,
-    z: cell.gz * SETTLEMENT_GRID_STEP,
-    radius: cell.gx === 0 && cell.gz === 0 ? homeFootprint : villageSizeConfig('MD').footprintRadius,
-  }))
-
-  const sites = pickLargeCaveSites({
-    seed,
-    sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
-    sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
-    sampleMountainRidge: (x, z) => chunkManager.sampleMountainRidge(x, z),
-    waterLevel: chunkManager.waterLevel,
-    coastThreshold,
-    roadsNear: (x, z, querySize) => chunkManager.roadCorridorsNear(x, z, querySize),
-    villages,
-  })
-
   // Deterministic analytic surface — `sampleHeight` reads the chunk tile once
   // a chunk is resident, so topology would otherwise depend on streaming
   // order (it is built on activation, not at world build).
@@ -384,7 +392,6 @@ export function createCaves(
   const interiorRocksEnabled = isSystemEnabled('caveInteriorRocks')
   const v2ByCaveId = new Map<string, CaveRuntime>()
 
-  bootMark('cave.topology')
   const buildTopology = (site: LargeCaveSite, archetype: CaveArchetype): CaveTopology | null =>
     buildProductionCaveTopology({
       seed,
@@ -394,53 +401,122 @@ export function createCaves(
       sampleBaseHeight: analyticSurfaceHeight,
     })
 
-  // Home-area adventure guarantee, then the further dungeon guarantee, plus
-  // per-site dungeon/adventure rolls (plans world-terrain-020 / 024) —
-  // ordering and rolls are pure and deterministic in `caveArchetype.ts`;
-  // acceptance stays here, owned by the topology builders. No second siting
-  // pass, no synthesized site.
-  const accepted = assignCaveArchetypes(seed, sites, buildTopology)
+  /** The full fresh siting + archetype/topology pass. Deliberately lazy: a
+   *  persistent-cache manifest hit skips it entirely, and skipping
+   *  `pickLargeCaveSites()`'s terrain sampling is most of the win. */
+  const generateAccepted = (): readonly CaveManifestEntry[] => {
+    const homeFootprint = Math.max(homeRadius, villageSizeConfig('MD').footprintRadius)
+    const villages = cellsWithinRadius({ gx: 0, gz: 0 }, 3).map((cell) => ({
+      x: cell.gx * SETTLEMENT_GRID_STEP,
+      z: cell.gz * SETTLEMENT_GRID_STEP,
+      radius: cell.gx === 0 && cell.gz === 0 ? homeFootprint : villageSizeConfig('MD').footprintRadius,
+    }))
+    const sites = pickLargeCaveSites({
+      seed,
+      sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
+      sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
+      sampleMountainRidge: (x, z) => chunkManager.sampleMountainRidge(x, z),
+      waterLevel: chunkManager.waterLevel,
+      coastThreshold,
+      roadsNear: (x, z, querySize) => chunkManager.roadCorridorsNear(x, z, querySize),
+      villages,
+    })
+    // Home-area adventure guarantee, then the further dungeon guarantee, plus
+    // per-site dungeon/adventure rolls (plans world-terrain-020 / 024) —
+    // ordering and rolls are pure and deterministic in `caveArchetype.ts`;
+    // acceptance stays here, owned by the topology builders. No second siting
+    // pass, no synthesized site.
+    return assignCaveArchetypes(seed, sites, buildTopology)
+  }
+
+  const freshlyBuilt: CaveDerivedPayload[] = []
+
+  /**
+   * Fills `v2ByCaveId` for `entries`, reusing `snapshot`'s validated per-cave
+   * derived worldgen where available and rebuilding only the caves it is
+   * missing. Cached and fresh data converge here so there is exactly one
+   * runtime-construction block.
+   *
+   * Returns `false` only when hydrated data proved unusable (a cached dungeon
+   * topology whose pool can no longer be built) — the caller then throws the
+   * whole cache away and regenerates rather than silently dropping a cave and
+   * changing world identity.
+   */
+  const populateRuntimes = (
+    entries: readonly CaveManifestEntry[],
+    snapshot: CaveWorldgenSnapshot | null,
+  ): boolean => {
+    for (const entry of entries) {
+      const { topology, archetype } = entry
+      const walkSurfaceAt: SurfaceSampler = (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
+      const cached = snapshot?.derivedFor(entry) ?? null
+      let heightfield: CaveHeightfieldRepresentation
+      let undergroundPool: CaveUndergroundPool | null = null
+      let contentAnchors: readonly CaveContentAnchor[]
+      if (cached) {
+        heightfield = cached.heightfield
+        undergroundPool = cached.undergroundPool
+        contentAnchors = cached.contentAnchors
+      } else {
+        if (archetype === 'dungeon') {
+          const built = buildDungeonHeightfieldWithPool(topology, walkSurfaceAt)
+          if (!built) {
+            if (snapshot) return false
+            console.warn(`[caves] dungeon ${topology.caveId} missing pool after acceptance — skipping cave`)
+            continue
+          }
+          heightfield = built.heightfield
+          undergroundPool = built.pool
+        } else {
+          heightfield = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
+        }
+        contentAnchors = resolveCaveContentAnchors({
+          archetype,
+          topology,
+          heightfield,
+          undergroundPool: archetype === 'dungeon' ? undergroundPool : null,
+        })
+        freshlyBuilt.push({ caveId: topology.caveId, heightfield, contentAnchors, undergroundPool })
+      }
+      v2ByCaveId.set(topology.caveId, {
+        archetype,
+        topology,
+        definition: topologyToCaveDefinition(topology),
+        heightfield,
+        walkSurfaceAt,
+        contentAnchors,
+        // Presentation-only, so skip the CPU work entirely when the debug
+        // system disables it — unlike `contentAnchors`, it never renders, and
+        // it is deliberately never part of the persistent cache payload.
+        interiorRocks: interiorRocksEnabled
+          ? resolveCaveInteriorRocks({ archetype, topology, heightfield, contentAnchors })
+          : [],
+        dungeonChambers: dungeonChambersFromTopology(topology),
+        undergroundPool,
+      })
+    }
+    return true
+  }
+
+  const hydrated = options?.hydratedWorldgen ?? null
+
+  bootMark('cave.topology')
+  let manifestHydrated = hydrated !== null
+  let accepted = hydrated?.accepted ?? generateAccepted()
   bootMarkEnd('cave.topology')
 
   bootMark('cave.heightfield')
-  for (const { topology, archetype } of accepted) {
-    const walkSurfaceAt: SurfaceSampler = (x, z) => analyticSurfaceHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
-    let heightfield: CaveHeightfieldRepresentation
-    let undergroundPool: CaveUndergroundPool | null = null
-    if (archetype === 'dungeon') {
-      const built = buildDungeonHeightfieldWithPool(topology, walkSurfaceAt)
-      if (!built) {
-        console.warn(`[caves] dungeon ${topology.caveId} missing pool after acceptance — skipping cave`)
-        continue
-      }
-      heightfield = built.heightfield
-      undergroundPool = built.pool
-    } else {
-      heightfield = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
-    }
-    const contentAnchors = resolveCaveContentAnchors({
-      archetype,
-      topology,
-      heightfield,
-      undergroundPool: archetype === 'dungeon' ? undergroundPool : null,
-    })
-    v2ByCaveId.set(topology.caveId, {
-      archetype,
-      topology,
-      definition: topologyToCaveDefinition(topology),
-      heightfield,
-      walkSurfaceAt,
-      contentAnchors,
-      // Presentation-only, so skip the CPU work entirely when the debug
-      // system disables it — unlike `contentAnchors`, it never renders.
-      interiorRocks: interiorRocksEnabled
-        ? resolveCaveInteriorRocks({ archetype, topology, heightfield, contentAnchors })
-        : [],
-      dungeonChambers: dungeonChambersFromTopology(topology),
-      undergroundPool,
-    })
+  if (!populateRuntimes(accepted, hydrated)) {
+    console.warn('[caves] cached cave worldgen is stale — regenerating from scratch')
+    v2ByCaveId.clear()
+    freshlyBuilt.length = 0
+    manifestHydrated = false
+    accepted = generateAccepted()
+    populateRuntimes(accepted, null)
   }
   bootMarkEnd('cave.heightfield')
+
+  options?.onWorldgenBuilt?.({ manifestHydrated, accepted, freshlyBuilt })
 
   const runtimes: readonly CaveRuntime[] = [...v2ByCaveId.values()]
   const definitions: CaveDefinition[] = runtimes.map((v) => v.definition)

@@ -1,5 +1,6 @@
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import { cacheKey, type CacheRecord, enforceCacheCap, listCacheRecords, putCacheRecords } from '../../persistence/worldgenCacheDb'
+import { worldgenFingerprint } from '../../persistence/worldgenFingerprint'
 
 /**
  * @domain world
@@ -27,29 +28,6 @@ export function chunkSubKey(cx: number, cz: number): string {
   return `chunk:${cx}:${cz}`
 }
 
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value)
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`
-  const record = value as Record<string, unknown>
-  const keys = Object.keys(record).sort()
-  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(record[k])}`).join(',')}}`
-}
-
-/** Non-cryptographic 64-bit-ish string hash (two 32-bit lanes) — collisions
- *  only degrade the cache, never correctness of gameplay itself. */
-function hashString(s: string): string {
-  let h1 = 0xdeadbeef
-  let h2 = 0x41c6ce57
-  for (let i = 0; i < s.length; i++) {
-    const ch = s.charCodeAt(i)
-    h1 = Math.imul(h1 ^ ch, 2654435761)
-    h2 = Math.imul(h2 ^ ch, 1597334677)
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
-  return (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36)
-}
-
 /**
  * Fingerprints every deterministic world/terrain input capable of changing
  * abandoned-cemetery placement: the full `RawSampleParams` a world build uses,
@@ -60,7 +38,7 @@ function hashString(s: string): string {
  * @system worldgen-cache
  */
 export function abandonedCemeteryFingerprint(params: RawSampleParams, chunkSize: number): string {
-  return hashString(stableStringify({ params, chunkSize }))
+  return worldgenFingerprint({ params, chunkSize })
 }
 
 function isCachedAbandonedCemeteryResult(value: unknown): value is CachedAbandonedCemeteryResult {

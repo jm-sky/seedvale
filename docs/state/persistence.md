@@ -99,7 +99,11 @@ Don't restate the current schema-version number in more than one place — it be
 
 **The persistent worldgen cache is not gameplay persistence and must not be confused with it.** It is a separate, disposable, `(seed, namespace, version, fingerprint) → payload` key-value cache living in its own database store — structurally outside `SaveData` entirely, never referenced from its type or validator, and never required to load a save. A fingerprint mismatch is treated as a cache miss (silently regenerate), never as something to migrate — migrating would imply a correctness obligation this cache explicitly disclaims. This is the mechanism the project's Determinism convention ("bump that namespace's version/fingerprint when generation rules change") governs — it applies independently, per namespace, and has nothing to do with `SaveData`'s own version number.
 
-Today there are two namespaces, both owned by [world-locations.md](./world-locations.md)'s discovery system: coarse tile classification (`locations-coarse`) and resolved abandoned-cemetery chunk results (`abandoned-cemeteries`). Core terrain/hydrology generation itself has no persistent cache of this kind; its own in-session caches (chunk mesh data, river tiles, settlement-plan memoization) are ordinary evictable performance caches over pure functions, not versioned across sessions.
+Today there are three namespaces. Two are owned by [world-locations.md](./world-locations.md)'s discovery system: coarse tile classification (`locations-coarse`) and resolved abandoned-cemetery chunk results (`abandoned-cemeteries`). The third, `caves-v2`, is owned by the cave subsystem (`src/world/caves/caveWorldgenCache.ts`) and holds Cave V2 *retained worldgen* — a `manifest` record with the accepted `{ archetype, topology }` list in generation order, plus one `cave:<caveId>` record per accepted cave carrying its `CaveHeightfieldRepresentation` (typed arrays stored directly through structured clone), content anchors and dungeon pool. Every namespace fingerprints its own deterministic configuration inputs and versions its own algorithm identity; all three share the stable-fingerprint primitive in `src/persistence/worldgenFingerprint.ts`.
+
+Cave topology and heightfields remain deterministic reconstruction; `caves-v2` is disposable acceleration over that, never an authority over cave identity. `createCaves()` stays fully synchronous and produces the same world with an empty cache — the read is awaited by `createWorldBundle()` before it, the write is fire-and-forget after it, a missing or malformed per-cave record rebuilds just that cave, and a malformed manifest regenerates everything. Presentation, mouth terrain modifications, terrain cutouts and every gameplay consequence of a content anchor (quests, containers, loot, fauna, discovery) are rebuilt normally and are deliberately not cached.
+
+Core terrain/hydrology generation itself has no persistent cache of this kind; its own in-session caches (chunk mesh data, river tiles, settlement-plan memoization) are ordinary evictable performance caches over pure functions, not versioned across sessions.
 
 ## Known persistence limitations
 
@@ -118,6 +122,7 @@ src/persistence/saveSlots.ts
 src/persistence/seedDb.ts
 src/persistence/seedRecord.ts
 src/persistence/worldgenCacheDb.ts
+src/persistence/worldgenFingerprint.ts
 src/app/saveState.ts
 src/app/createApp.ts
 src/app/worldBundle.ts
