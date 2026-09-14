@@ -9,6 +9,10 @@ import {
   type SettlementCell,
   type SettlementDef,
 } from './settlementGenerator'
+import {
+  resolveSettlementProgressionPolicy,
+  type SettlementProgressionPolicy,
+} from './settlementProgression'
 
 /** Shared generation context for the single settlement-definition cache
  *  (plan 047 §9.14–15). Both `SettlementsManager` and `RoadNetwork` must
@@ -45,9 +49,19 @@ export function setSettlementRiverQuery(query: RiverQuery | null): void {
 
 const defCache = new Map<string, SettlementDef | null>()
 
+/** Derived near/far size policy for the current world. Cleared with defs. */
+let progressionPolicy: SettlementProgressionPolicy | null | undefined
+
 export function clearSettlementDefCache(): void {
   defCache.clear()
   activeRiverQuery = null
+  progressionPolicy = undefined
+}
+
+function progressionPolicyFor(ctx: SettlementResolveContext): SettlementProgressionPolicy | null {
+  if (progressionPolicy !== undefined) return progressionPolicy
+  progressionPolicy = resolveSettlementProgressionPolicy(ctx, activeRiverQuery ?? undefined)
+  return progressionPolicy
 }
 
 export function settlementDefFor(
@@ -56,6 +70,7 @@ export function settlementDefFor(
 ): SettlementDef | null {
   const key = cellKey(cell)
   if (defCache.has(key)) return defCache.get(key)!
+  const minimumSize = progressionPolicyFor(ctx)?.minimumFor(cell) ?? undefined
   const def = generateSettlementDef(
     cell,
     ctx.seed,
@@ -67,6 +82,7 @@ export function settlementDefFor(
     ctx.region,
     ctx.homeSize ?? 'auto',
     activeRiverQuery ?? undefined,
+    minimumSize,
   )
   defCache.set(key, def)
   return def
@@ -74,4 +90,9 @@ export function settlementDefFor(
 
 export function cachedSettlementDefCount(): number {
   return defCache.size
+}
+
+/** Test/debug seam: `undefined` before first resolve, then the memoized policy (or `null`). */
+export function cachedSettlementProgressionPolicy(): SettlementProgressionPolicy | null | undefined {
+  return progressionPolicy
 }

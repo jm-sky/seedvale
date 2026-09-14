@@ -146,6 +146,13 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
     expect(a.paths.some((p) => p.id.startsWith('path-entrance-'))).toBe(true)
   })
 
+  it('auto home clamps the ordinary roll to SM or MD', () => {
+    for (const seed of [3, 17, 88, 201, 404, 1001, 2048]) {
+      const def = defOf({ gx: 0, gz: 0 }, seed, flatHeight, 0, 56, samplers, 1, region)
+      expect(def.size === 'SM' || def.size === 'MD').toBe(true)
+    }
+  })
+
   it('homeSize override locks home size without changing non-home rolls (issue 020)', () => {
     const homeSm = defOf(
       { gx: 0, gz: 0 }, 7, flatHeight, 0, 56, samplers, 1, region, 'SM',
@@ -163,6 +170,21 @@ describe('generateVillagePlan / generateSettlementDef (plan 047 seam)', () => {
     const cell = { gx: 1, gz: 1 }
     const other = planOf(cell, 88, flatHeight, 0, 56, samplers, 1, region, 'XL')
     expect(other.identity.size).toBe(rollVillageSize('forest', cellSeed(88, cell)))
+  })
+
+  it('minimumSize raises a small roll but keeps a naturally larger XL', () => {
+    const cell = { gx: 6, gz: 0 }
+    let xlSeed: number | undefined
+    let smSeed: number | undefined
+    for (let seed = 1; seed < 800 && (xlSeed === undefined || smSeed === undefined); seed++) {
+      const rolled = rollVillageSize('forest', cellSeed(seed, cell))
+      if (rolled === 'XL') xlSeed ??= seed
+      if (rolled === 'SM') smSeed ??= seed
+    }
+    expect(xlSeed).toBeDefined()
+    expect(smSeed).toBeDefined()
+    expect(defOf(cell, xlSeed!, flatHeight, 0, 56, samplers, 1, region, 'auto', undefined, 'LG').size).toBe('XL')
+    expect(defOf(cell, smSeed!, flatHeight, 0, 56, samplers, 1, region, 'auto', undefined, 'LG').size).toBe('LG')
   })
 
   it('skips a non-home ocean cell instead of placing a village in the water', () => {

@@ -17,6 +17,8 @@ import { createSeededRandom } from '../world/parseSeed'
 import {
   type FamilyDef,
   generateFamilies,
+  maxRolledVillageSize,
+  minRolledVillageSize,
   type RolledVillageSize,
   rollVillageSize,
   type VillageSize,
@@ -230,6 +232,25 @@ type SettlementGenContext = {
  *  is included. Comfortably past the widest channel's own carve reach. */
 const RIVER_QUERY_MARGIN = 24
 
+/** Existing resource-outpost predicate (plan 032 §7). Shared by final identity
+ *  and the settlement-progression feasibility probe so a raised minimum size
+ *  cannot hide an outpost that the ordinary path would still produce. */
+function wouldBecomeResourceOutpost(
+  isHome: boolean,
+  terrain: SettlementTerrain,
+  dominantResource: NaturalResource | null,
+  seedForCell: number,
+): boolean {
+  return (
+    !isHome &&
+    terrain === 'mountain' &&
+    dominantResource !== null &&
+    dominantResource.richness >= OUTPOST_RICHNESS_THRESHOLD &&
+    RESOURCE_ROLE[dominantResource.type] !== undefined &&
+    rollIsOutpost(seedForCell)
+  )
+}
+
 /** Step 1 of the plan 047 seam: cell + world seed → resource scan context. */
 function resolveSettlementContext(
   cell: SettlementCell,
@@ -242,6 +263,7 @@ function resolveSettlementContext(
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
   riverQuery?: RiverQuery,
+  minimumSize?: RolledVillageSize,
 ): SettlementGenContext {
   const isHome = cell.gx === 0 && cell.gz === 0
   const seedForCell = cellSeed(seed, cell)
@@ -283,10 +305,17 @@ function resolveSettlementContext(
     region,
     terrainSamplers,
   )
-  const provisionalSize =
+  let provisionalSize: RolledVillageSize =
     isHome && homeSize !== 'auto'
       ? homeSize
       : rollVillageSize(provisionalTerrain, seedForCell)
+  // Default auto home stays a starter village (SM/MD): keep the existing
+  // roll stream and clamp the result, so we do not introduce a new RNG.
+  if (isHome && homeSize === 'auto') {
+    provisionalSize = minRolledVillageSize(provisionalSize, 'MD')
+  } else if (!isHome && minimumSize) {
+    provisionalSize = maxRolledVillageSize(provisionalSize, minimumSize)
+  }
 
   // One river query per settlement, sized to cover every position site search
   // or the layout planner can reach: the widest site-search box this cell may
@@ -380,14 +409,7 @@ function resolveVillageIdentity(
   )
   const nameCulture = pickNameCulture(ctx.seedForCell)
 
-  // Resource Outposts (§7) — never for the home settlement.
-  const isOutpost =
-    !ctx.isHome &&
-    terrain === 'mountain' &&
-    dominantResource !== null &&
-    dominantResource.richness >= OUTPOST_RICHNESS_THRESHOLD &&
-    RESOURCE_ROLE[dominantResource.type] !== undefined &&
-    rollIsOutpost(ctx.seedForCell)
+  const isOutpost = wouldBecomeResourceOutpost(ctx.isHome, terrain, dominantResource, ctx.seedForCell)
 
   // Lock provisional size — do not call `rollVillageSize` again (plan 047 §6).
   const size = isOutpost ? 'OUTPOST' : ctx.provisionalSize
@@ -453,6 +475,76 @@ type SettlementCore = {
   region: RegionParams
 }
 
+export type SettlementSiteProbe = {
+  provisionalSize: RolledVillageSize
+  site: { x: number, z: number, y: number } | null
+  wouldBeOutpost: boolean
+}
+
+/**
+ * Site/outpost feasibility probe for settlement-progression target selection.
+ * Stops before families, profession staffing, layout, clearings and props.
+ *
+ * @domain settlements
+ */
+export function probeSettlementSite(
+  cell: SettlementCell,
+  seed: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+  localSearchRadius: number,
+  terrainSamplers: TerrainSamplers,
+  heightScale: number,
+  region: RegionParams,
+  homeSize: HomeVillageSize = 'auto',
+  riverQuery?: RiverQuery,
+  minimumSize?: RolledVillageSize,
+): SettlementSiteProbe {
+  const ctx = resolveSettlementContext(
+    cell,
+    seed,
+    sampleHeight,
+    waterLevel,
+    localSearchRadius,
+    terrainSamplers,
+    heightScale,
+    region,
+    homeSize,
+    riverQuery,
+    minimumSize,
+  )
+  const site = chooseSettlementSite(ctx)
+  if (!site) {
+    return { provisionalSize: ctx.provisionalSize, site: null, wouldBeOutpost: false }
+  }
+  const terrain = classifySettlementTerrain(
+    site.x,
+    site.z,
+    site.y,
+    ctx.waterLevel,
+    ctx.heightScale,
+    ctx.region,
+    ctx.terrainSamplers,
+  )
+  const dominantResource = dominantResourceNear(
+    site.x,
+    site.z,
+    RESOURCE_INFLUENCE_RADIUS,
+    ctx.seed,
+    ctx.resourceEnv,
+  )
+  return {
+    provisionalSize: ctx.provisionalSize,
+    site,
+    wouldBeOutpost: wouldBecomeResourceOutpost(
+      ctx.isHome,
+      terrain,
+      dominantResource,
+      ctx.seedForCell,
+    ),
+  }
+}
+
 /** Single generation pass shared by `generateVillagePlan` / `generateSettlementDef`.
  *  Returns `null` when the cell has no habitable dry site (non-home ocean). */
 function generateSettlementCore(
@@ -466,6 +558,7 @@ function generateSettlementCore(
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
   riverQuery?: RiverQuery,
+  minimumSize?: RolledVillageSize,
 ): SettlementCore | null {
   const ctx = resolveSettlementContext(
     cell,
@@ -478,6 +571,7 @@ function generateSettlementCore(
     region,
     homeSize,
     riverQuery,
+    minimumSize,
   )
   const site = chooseSettlementSite(ctx)
   if (!site) return null
@@ -592,6 +686,7 @@ export function generateVillagePlan(
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
   riverQuery?: RiverQuery,
+  minimumSize?: RolledVillageSize,
 ): VillagePlan | null {
   return generateSettlementCore(
     cell,
@@ -604,6 +699,7 @@ export function generateVillagePlan(
     region,
     homeSize,
     riverQuery,
+    minimumSize,
   )?.plan ?? null
 }
 
@@ -642,6 +738,8 @@ function settlementDefFromPlan(
  *  Thin compatibility wrapper over `generateSettlementCore` (plan 047): one
  *  generation pass, then clearings + `SettlementDef` projection.
  *  Order still follows plan 032 §1's "teren → środowisko → zasoby → wioski".
+ *  `minimumSize` is an optional progression floor for a normal (non-home)
+ *  cell; omitted cells keep the ordinary `rollVillageSize()` path.
  */
 export function generateSettlementDef(
   cell: SettlementCell,
@@ -654,6 +752,7 @@ export function generateSettlementDef(
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
   riverQuery?: RiverQuery,
+  minimumSize?: RolledVillageSize,
 ): SettlementDef | null {
   const core = generateSettlementCore(
     cell,
@@ -666,6 +765,7 @@ export function generateSettlementDef(
     region,
     homeSize,
     riverQuery,
+    minimumSize,
   )
   if (!core) return null
   const { plan, families, sampleHeight: height, waterLevel: water, region: reg } = core

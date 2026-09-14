@@ -1,13 +1,17 @@
 # Plan: Settlement progression around home
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Model:** Sonnet, Composer
 **Depends on:** none
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** -
+
+## Implementation status
+
+Worldgen-only: `homeSize: auto` clamps home to `SM`/`MD`; a memoized near/far policy in `settlementPlanCache.ts` raises `provisionalSize` on one feasible cell per ring (`settlementProgression.ts` + `probeSettlementSite()`). Explicit `homeSize` is unchanged. Browser/gameplay verification remains with the user.
 
 ## Cel
 

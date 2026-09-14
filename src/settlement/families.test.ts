@@ -3,6 +3,9 @@ import type { NaturalResource } from '../terrain/naturalResources'
 import {
   cobbleCountForSize,
   generateFamilies,
+  maxRolledVillageSize,
+  minRolledVillageSize,
+  rolledVillageSizeRank,
   rollVillageSize,
   VILLAGE_SIZE_CONFIG,
   type VillageSize,
@@ -64,6 +67,18 @@ describe('rollVillageSize', () => {
       expect(size).not.toBe('OUTPOST')
     }
     expect(seen.has('XL')).toBe(true)
+  })
+})
+
+describe('rolled village size order', () => {
+  it('ranks SM < MD < LG < XL and clamps with max/min', () => {
+    expect(rolledVillageSizeRank('SM')).toBeLessThan(rolledVillageSizeRank('MD'))
+    expect(rolledVillageSizeRank('MD')).toBeLessThan(rolledVillageSizeRank('LG'))
+    expect(rolledVillageSizeRank('LG')).toBeLessThan(rolledVillageSizeRank('XL'))
+    expect(maxRolledVillageSize('SM', 'LG')).toBe('LG')
+    expect(maxRolledVillageSize('XL', 'MD')).toBe('XL')
+    expect(minRolledVillageSize('LG', 'MD')).toBe('MD')
+    expect(minRolledVillageSize('SM', 'SM')).toBe('SM')
   })
 })
 

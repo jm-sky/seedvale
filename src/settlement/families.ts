@@ -191,6 +191,35 @@ const SIZE_WEIGHTS: Record<SettlementTerrain, Record<VillageSize, number>> = {
 
 const ROLLED_SIZES: readonly RolledVillageSize[] = ['SM', 'MD', 'LG', 'XL']
 
+/** Normal-tier order `SM < MD < LG < XL`. `OUTPOST` is outside this scale. */
+const ROLLED_VILLAGE_SIZE_RANK: Record<RolledVillageSize, number> = {
+  SM: 0,
+  MD: 1,
+  LG: 2,
+  XL: 3,
+}
+
+/** Rank of a normal village size for min/max clamps. `OUTPOST` is not ranked. */
+export function rolledVillageSizeRank(size: RolledVillageSize): number {
+  return ROLLED_VILLAGE_SIZE_RANK[size]
+}
+
+/** Larger of two normal sizes by `SM < MD < LG < XL`. */
+export function maxRolledVillageSize(
+  a: RolledVillageSize,
+  b: RolledVillageSize,
+): RolledVillageSize {
+  return rolledVillageSizeRank(a) >= rolledVillageSizeRank(b) ? a : b
+}
+
+/** Smaller of two normal sizes by `SM < MD < LG < XL`. */
+export function minRolledVillageSize(
+  a: RolledVillageSize,
+  b: RolledVillageSize,
+): RolledVillageSize {
+  return rolledVillageSizeRank(a) <= rolledVillageSizeRank(b) ? a : b
+}
+
 /** Chance a family is a lone adult vs. a couple (`SOLO_CHANCE`), and — given
  *  a couple — the additional chance they also have a child
  *  (`COUPLE_WITH_CHILD_CHANCE` on top of `SOLO_CHANCE`). Wstępne, jak reszta. */
