@@ -34,6 +34,10 @@ describe('SPAWNER_SPECS rockDen habitat (plan 188)', () => {
   it('registers wild_boar.glb through the shared FAUNA_URLS map', () => {
     expect(FAUNA_URLS.boar).toBe('/models/fauna/wild_boar.glb')
   })
+
+  it('registers rabbit.glb through the shared FAUNA_URLS map', () => {
+    expect(FAUNA_URLS.rabbit).toBe('/models/fauna/rabbit.glb')
+  })
 })
 
 describe('faunaGltfUrls (wild-boar GLB feature flag)', () => {

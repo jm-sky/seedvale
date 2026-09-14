@@ -453,7 +453,7 @@ export function spawnerDestroyBusyLabel(type: PreySpawner['type']): string {
   return `Niszczenie ${SPAWNER_DESTROYING_GENITIVE[type]}…`
 }
 
-/** Wild fauna GLBs (Quaternius pack + wild_boar). Livestock GLBs live in `livestock.ts`. */
+/** Wild fauna GLBs (Quaternius pack + wild_boar/rabbit). Livestock GLBs live in `livestock.ts`. */
 export const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
   wolf: '/models/fauna/wolf.glb',
   fox: '/models/fauna/fox.glb',
@@ -461,6 +461,7 @@ export const FAUNA_URLS: Partial<Record<AnimalKind, string>> = {
   stag: '/models/fauna/stag.glb',
   bear: '/models/fauna/bear.glb',
   boar: '/models/fauna/wild_boar.glb',
+  rabbit: '/models/fauna/rabbit.glb',
 }
 
 /**
