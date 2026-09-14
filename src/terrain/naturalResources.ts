@@ -221,6 +221,30 @@ function resourceAtCell(cell: ResourceCell, seed: number, env: ResourceEnv): Nat
   return { id: `resource_${cell.rx}_${cell.rz}`, type: picked, x, z, radius, richness }
 }
 
+const RESOURCE_ID_PATTERN = /^resource_(-?\d+)_(-?\d+)$/
+
+function parseResourceId(id: string): ResourceCell | null {
+  const match = RESOURCE_ID_PATTERN.exec(id)
+  if (!match) return null
+  return { rx: Number(match[1]), rz: Number(match[2]) }
+}
+
+/**
+ * Deterministic lookup of one resource-grid cell by its stable id
+ * (`resource_{rx}_{rz}`). Does not scan neighboring cells and does not
+ * require a streamed deposit instance — used by transport pickup travel
+ * (plan settlements-npcs-021). `null` when the id is malformed or that
+ * cell currently generates no resource.
+ *
+ * @domain settlements-npcs
+ */
+export function resourceById(id: string, seed: number, env: ResourceEnv): NaturalResource | null {
+  const cell = parseResourceId(id)
+  if (!cell) return null
+  const resource = resourceAtCell(cell, seed, env)
+  return resource?.id === id ? resource : null
+}
+
 /** All resources within `radius` of `(x, z)` — scans the handful of resource
  *  grid cells that could possibly overlap, evaluating each deterministically. */
 export function resourcesNear(

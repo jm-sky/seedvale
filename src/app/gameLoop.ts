@@ -949,6 +949,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             getHousehold: bundle.settlementsManager.getHousehold,
             getEconomy: bundle.settlementsManager.getEconomy,
             getNpcState: bundle.settlementsManager.getNpcState,
+            getResourceSiteInventory: (id) => bundle.resourceSiteInventories.get(id),
           },
           dayNight.elapsedDays,
         )

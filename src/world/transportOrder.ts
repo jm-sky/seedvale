@@ -33,8 +33,8 @@ export type TransportOrderState =
   | 'failed'
   | 'cancelled'
 
-/** First-slice endpoints. Position is a projection resolved from landmarks,
- *  never part of endpoint identity. */
+/** Endpoints. Position is a projection resolved from landmarks / the
+ *  deterministic resource grid, never part of endpoint identity. */
 export type TransportEndpointRef =
   | {
       type: 'household'
@@ -43,6 +43,10 @@ export type TransportEndpointRef =
   | {
       type: 'settlement-storage'
       settlementId: string
+    }
+  | {
+      type: 'resource-site'
+      resourceId: string
     }
 
 /** Off-screen execution metadata (plan settlements-npcs-019) — set only once

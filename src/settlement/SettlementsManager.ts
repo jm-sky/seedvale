@@ -28,6 +28,7 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
+import type { ResourceSiteInventories } from '../world/resourceSiteInventory'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TransportEndpointRef } from '../world/transportOrder'
 import type { WeatherState } from '../world/weather'
@@ -389,6 +390,9 @@ export async function createSettlementsManager(
    *  — forwarded into every `createSettlement` call the same way
    *  `workContracts` is above. */
   transportOrders?: TransportOrders,
+  /** World-owned extracted goods at remote resource sites (plan settlements-npcs-021). */
+  resourceSiteInventories?: ResourceSiteInventories,
+  resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null,
   /** Player-built wells (plan 127/npc-015) — forwarded the same way. */
   playerWells?: PlayerWells,
   /** World-dropped items — forwarded the same way, for NPC construction
@@ -512,6 +516,7 @@ export async function createSettlementsManager(
     getHousehold: (id) => households.get(id),
     getEconomy: (id) => economies.get(id),
     getNpcState: (id) => npcStates.get(id),
+    getResourceSiteInventory: (id) => resourceSiteInventories?.get(id),
   }
 
   // Symmetric NPC↔NPC relation store (plan 151) — one instance for the
@@ -622,6 +627,8 @@ export async function createSettlementsManager(
     onAnimalDeath,
     workContracts,
     transportOrders,
+    resourceSiteInventories,
+    resolveResourceSitePosition,
     playerWells,
     droppedItems,
     grassForage,

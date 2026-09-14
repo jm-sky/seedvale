@@ -5,6 +5,7 @@ import type { NpcAuthoritativeState, NpcId } from '../settlement/npcState'
 import type { TransportOrders } from './createTransportOrders'
 import type { TransportEndpointRef } from './transportOrder'
 import { tryAdvanceDevelopment } from '../economy'
+import { creditDeliveredOreToStock } from '../economy/oreTransportDemand'
 import { realSecondsToGameDays } from './timeConversion'
 import { executeTransportUnload } from './transportTransactions'
 
@@ -18,7 +19,9 @@ import { executeTransportUnload } from './transportTransactions'
  * never needs to reach into a source. Both endpoint lookups here (household/
  * settlement-storage) resolve through `SettlementsManager`'s manager-lifetime
  * registries, which survive settlement stream-out/in independently of any
- * currently-loaded `Settlement` — never a second storage abstraction.
+ * Never a second storage abstraction. Resource-site sources resolve through
+ * the world-owned site inventory store (plan settlements-npcs-021) and do
+ * not require a loaded deposit instance.
  *
  * @domain settlements-npcs
  */
@@ -46,22 +49,24 @@ export function estimateOffscreenTravelDays(
 
 /** Manager-lifetime endpoint lookups (`SettlementsManager.getHousehold`/
  *  `getEconomy`) — resolve fresh every call, independent of whether the
- *  owning settlement is currently streamed in. */
+ *  owning settlement is currently streamed in. Resource-site inventories
+ *  are world-owned (plan settlements-npcs-021) and do not require a loaded
+ *  `ResourceDeposits` render instance. */
 export type TransportEndpointLookup = {
   getHousehold: (id: HouseholdId) => Household | undefined
   getEconomy: (settlementId: string) => SettlementEconomy | undefined
+  getResourceSiteInventory?: (resourceId: string) => Inventory | undefined
 }
 
 /** Resolves a `TransportEndpointRef` to its authoritative `Inventory`, or
- *  `null` when that endpoint doesn't (yet) exist. First slice only —
- *  `household`/`settlement-storage`, see `transportOrder.ts`'s
- *  `TransportEndpointRef`. */
+ *  `null` when that endpoint doesn't (yet) exist. */
 export function resolveTransportEndpointInventory(
   ref: TransportEndpointRef,
   lookup: TransportEndpointLookup,
 ): Inventory | null {
   if (ref.type === 'household') return lookup.getHousehold(ref.householdId)?.items ?? null
-  return lookup.getEconomy(ref.settlementId)?.items ?? null
+  if (ref.type === 'settlement-storage') return lookup.getEconomy(ref.settlementId)?.items ?? null
+  return lookup.getResourceSiteInventory?.(ref.resourceId) ?? null
 }
 
 export type OffscreenTransportLookup = TransportEndpointLookup & {
@@ -113,7 +118,10 @@ export function resolveOffscreenTransportArrivals(
     })
     if (result.ok && order.destination.type === 'settlement-storage') {
       const economy = lookup.getEconomy(order.destination.settlementId)
-      if (economy) tryAdvanceDevelopment(economy)
+      if (economy) {
+        creditDeliveredOreToStock(economy, order.itemKind, result.delivered, nowDays)
+        tryAdvanceDevelopment(economy)
+      }
     }
   }
 }

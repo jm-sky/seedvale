@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createSettlementEconomy } from '../economy'
+import { Inventory } from '../items/Inventory'
 import { createHousehold } from '../settlement/household'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { createTransportOrders } from './createTransportOrders'
@@ -60,6 +61,17 @@ describe('resolveTransportEndpointInventory', () => {
   it('returns null for an endpoint that does not (yet) resolve', () => {
     expect(resolveTransportEndpointInventory({ type: 'household', householdId: 'missing' }, makeLookup())).toBeNull()
     expect(resolveTransportEndpointInventory({ type: 'settlement-storage', settlementId: 'missing' }, makeLookup())).toBeNull()
+    expect(resolveTransportEndpointInventory({ type: 'resource-site', resourceId: 'missing' }, makeLookup())).toBeNull()
+  })
+
+  it('resolves a resource-site endpoint through getResourceSiteInventory', () => {
+    const site = new Inventory({}, Infinity, undefined, undefined, Infinity)
+    site.add('iron', 4)
+    const inv = resolveTransportEndpointInventory(
+      { type: 'resource-site', resourceId: 'resource_1_2' },
+      makeLookup({ getResourceSiteInventory: (id) => (id === 'resource_1_2' ? site : undefined) }),
+    )
+    expect(inv).toBe(site)
   })
 })
 
@@ -163,5 +175,39 @@ describe('resolveOffscreenTransportArrivals', () => {
     }, 999)
     expect(orders.find('order:1')?.state).toBe('in-transit')
     expect(carrierState.transportCargo.count('carrot')).toBe(3)
+  })
+
+  it('credits delivered ore into settlement stock, not leftover items', () => {
+    const economy = createSettlementEconomy('s1', { iron: 0 }, [])
+    const carrierState = createNpcAuthoritativeState('npc:carrier', 0)
+    carrierState.transportCargo.add('iron', 2)
+    const orders = createTransportOrders([
+      {
+        ...completeTransportPickup(
+          assignTransportOrder(
+            createTransportOrderRecord({
+              id: 'order:ore',
+              source: { type: 'resource-site', resourceId: 'resource_1_2' },
+              destination: { type: 'settlement-storage', settlementId: 's1' },
+              itemKind: 'iron',
+              requestedQuantity: 2,
+            }),
+            'npc:carrier',
+          )!,
+          'npc:carrier',
+          2,
+        )!,
+        execution: { mode: 'off-screen', arrivesAtDays: 4 },
+      },
+    ])
+    resolveOffscreenTransportArrivals(orders, {
+      getHousehold: () => undefined,
+      getEconomy: (id) => (id === 's1' ? economy : undefined),
+      getNpcState: (id) => (id === 'npc:carrier' ? carrierState : undefined),
+    }, 5)
+    expect(orders.find('order:ore')?.state).toBe('completed')
+    expect(carrierState.transportCargo.count('iron')).toBe(0)
+    expect(economy.items.count('iron')).toBe(0)
+    expect(economy.query('iron')).toBe(2)
   })
 })

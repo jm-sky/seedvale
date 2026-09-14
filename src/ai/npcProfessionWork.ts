@@ -8,6 +8,7 @@ import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { TransportOrders } from '../world/createTransportOrders'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
+import type { ResourceSiteInventories } from '../world/resourceSiteInventory'
 import type { TransportOrder } from '../world/transportOrder'
 import type { Role } from './characters'
 import type { NpcPlannedAction } from './npcAction'
@@ -19,14 +20,18 @@ import {
   commitHunterArrowProduction,
   committedOutgoingFood,
   commitTextileWorkProduction,
+  creditDeliveredOreToStock,
   DRESSING_PRODUCTION,
   HUNTER_ARROW_PRODUCTIONS,
+  ORE_TRANSPORT_MAX_TRANSFER,
   preflightProductionInputs,
   type ProductionDef,
   type SettlementEconomy,
   TEXTILE_WORKER_PRODUCTIONS,
   tryAdvanceDevelopment,
   uncommittedHouseholdFoodSurplus,
+  uncommittedResourceSiteOre,
+  uncoveredOreProductionNeed,
   uncoveredSettlementFoodShortage,
 } from '../economy'
 import { WOOL_YIELD } from '../fauna/livestockProduction'
@@ -47,7 +52,7 @@ import {
   settlementStorageDestination,
 } from '../settlement/storageDestinations'
 import { copyVec3 } from '../simulation'
-import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
+import { isMineableOre, MINE_DURATION_SEC, ORE_ITEM } from '../terrain/depositMining'
 import { type CultivationAnchor, resolveCultivationAnchor } from '../world/cultivationAnchor'
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { HERBALIST_GATHER_KINDS } from '../world/herbalGathering'
@@ -139,6 +144,12 @@ export type NpcWorkContext = {
   /** World-owned transport commitments (plan settlements-npcs-018). Null in
    *  isolated fallbacks — trader collection then cannot run. */
   transportOrders: TransportOrders | null
+  /** World-owned extracted-ore inventories at remote resource sites
+   *  (plan settlements-npcs-021). Null in isolated fallbacks. */
+  resourceSiteInventories?: ResourceSiteInventories | null
+  /** Deterministic world position for a resource-site endpoint. Independent
+   *  of whether that deposit is currently streamed in. */
+  resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null
   /** Already-resolved human Strength (`resolveHumanStrengthProfile()`), the
    *  same value melee uses — not raw base SPEA. Physical-work planners
    *  (currently ore mining) read this; generic `rollWorkDurationSec()` does
@@ -158,48 +169,34 @@ export type NpcWorkContext = {
 
 /**
  * Miner's `work` schedule block tries a real ore extraction before falling
- * back to the idle workplace stand (plan 131) — reuses the same
- * `ResourceDeposits` the player's pickaxe mines (via the injected `mining`
- * hooks), so extraction/depletion keeps one owner; no NPC-only ore
- * registry. Ore is settlement-level raw stock (implementation notes §3),
- * not household — `Household` stays a family food/wood pantry. `null` when
- * there's no mining hooks, no loaded deposit nearby, or no carry room, so
- * the caller falls back to the pre-131 idle-work stand (plan 131 §7:
- * profession is a preference, not the only way to act).
+ * back to the idle workplace stand (plan 131 / settlements-npcs-021) — reuses
+ * the same `ResourceDeposits` the player's pickaxe mines (via the injected
+ * `mining` hooks), so extraction/depletion keeps one owner. Successful yield
+ * lands in the world-owned resource-site `Inventory` for that deposit id,
+ * not in transient `carried` and not in `SettlementEconomy`. Transport to
+ * the settlement is a later Trader `TransportOrder`. `null` when there's no
+ * mining hooks, no site store, no loaded deposit nearby, or the site cannot
+ * accept the yield.
  */
 const ORE_SEARCH_RADIUS = 80
 
 function planOreGathering(ctx: NpcWorkContext): NpcPlannedAction | null {
-  const { carried, economy, mining } = ctx
-  if (!mining || !economy) return null
+  const { economy, mining, resourceSiteInventories } = ctx
+  if (!mining || !economy || !resourceSiteInventories) return null
   const target = mining.queryNearest(ctx.x, ctx.z, ORE_SEARCH_RADIUS)
   if (!target) return null
   const itemKind = ORE_ITEM[target.type]
-  if (!carried.canAdd(itemKind, 1)) return null
+  const site = resourceSiteInventories.getOrCreate(target.id)
+  if (!site.canAdd(itemKind, 1)) return null
 
-  // Set by the `mine` step's onComplete, consumed by the chained `deposit`
-  // step's onComplete: depletion (another NPC/the player got there first)
-  // must not still credit the settlement economy.
-  let minedCount = 0
   return {
     kind: 'mine',
     destination: copyVec3({ x: target.x, y: ctx.sampleHeight(target.x, target.z), z: target.z }),
     durationSec: physicalWorkDuration(MINE_DURATION_SEC * ctx.waitMultiplier, ctx.strength),
     onComplete: () => {
       const result = mining.mine(target.id)
-      if (result.ok && carried.add(result.yield.kind, result.yield.count)) {
-        minedCount = result.yield.count
-      }
-    },
-    next: {
-      kind: 'deposit',
-      destination: copyVec3(ctx.landmarks.stockpile),
-      durationSec: 0.8 * ctx.waitMultiplier,
-      onComplete: () => {
-        if (minedCount <= 0) return
-        carried.remove(itemKind, minedCount)
-        economy.add(oreEconomicKind(target.type), minedCount, ctx.simTime())
-      },
+      if (!result.ok) return
+      resourceSiteInventories.getOrCreate(target.id).add(result.yield.kind, result.yield.count)
     },
   }
 }
@@ -395,13 +392,14 @@ function planTransportOrderExecution(
   order: TransportOrder,
 ): NpcPlannedAction | null {
   const orders = ctx.transportOrders
-  const hooks = ctx.householdExchange
   if (!orders || !ctx.npcId) return null
-  const unloadDestination = copyVec3(settlementStorageDestination(
-    'food',
-    ctx.landmarks.stockpile,
-    ctx.landmarks.settlementStorage,
-  ))
+  const unloadDestination = isMineableOre(order.itemKind)
+    ? copyVec3(ctx.landmarks.stockpile)
+    : copyVec3(settlementStorageDestination(
+      'food',
+      ctx.landmarks.stockpile,
+      ctx.landmarks.settlementStorage,
+    ))
   const unload: NpcPlannedAction = {
     kind: 'deposit',
     destination: unloadDestination,
@@ -419,32 +417,97 @@ function planTransportOrderExecution(
         destination: economy.items,
         nowDays: ctx.simTime(),
       })
-      if (result.ok) tryAdvanceDevelopment(economy)
+      if (result.ok) {
+        creditDeliveredOreToStock(economy, current.itemKind, result.delivered, ctx.simTime())
+        tryAdvanceDevelopment(economy)
+      }
     },
   }
   if (order.state === 'in-transit') return unload
-  if (order.state !== 'assigned' || order.source.type !== 'household') return null
-  const source = hooks?.findById(order.source.householdId)
-  if (!source) {
+  if (order.state !== 'assigned') return null
+
+  const pickup = planTransportPickup(ctx, order, orders, unload)
+  return pickup
+}
+
+function planTransportPickup(
+  ctx: NpcWorkContext,
+  order: TransportOrder,
+  orders: NonNullable<NpcWorkContext['transportOrders']>,
+  unload: NpcPlannedAction,
+): NpcPlannedAction | null {
+  if (order.source.type === 'household') {
+    const hooks = ctx.householdExchange
+    const source = hooks?.findById(order.source.householdId)
+    if (!source) {
+      orders.fail(order.id)
+      return null
+    }
+    return {
+      kind: 'work',
+      destination: copyVec3({
+        x: source.position.x,
+        y: ctx.sampleHeight(source.position.x, source.position.z),
+        z: source.position.z,
+      }),
+      durationSec: 1.2 * ctx.waitMultiplier,
+      onComplete: () => {
+        const current = orders.find(order.id)
+        if (!current || current.state !== 'assigned') return
+        if (current.source.type !== 'household') {
+          orders.fail(order.id)
+          return
+        }
+        const live = hooks?.findById(current.source.householdId)
+        if (!live) {
+          orders.fail(order.id)
+          return
+        }
+        executeTransportPickup({
+          orders,
+          orderId: order.id,
+          carrierNpcId: ctx.npcId,
+          carrier: ctx.transportCargo,
+          source: live.household.items,
+          liveTransferableQuantity: Math.min(
+            Math.max(
+              0,
+              live.household.items.count(current.itemKind)
+                - committedOutgoingFood(orders.list(), live.household.id, current.id, current.itemKind),
+            ),
+            uncommittedHouseholdFoodSurplus(live.household, orders.list(), current.id),
+          ),
+          nowDays: ctx.simTime(),
+        })
+      },
+      next: unload,
+    }
+  }
+
+  if (order.source.type !== 'resource-site') return null
+  const resourceId = order.source.resourceId
+  const position = ctx.resolveResourceSitePosition?.(resourceId)
+  const site = ctx.resourceSiteInventories?.get(resourceId)
+  if (!position || !site) {
     orders.fail(order.id)
     return null
   }
   return {
     kind: 'work',
     destination: copyVec3({
-      x: source.position.x,
-      y: ctx.sampleHeight(source.position.x, source.position.z),
-      z: source.position.z,
+      x: position.x,
+      y: ctx.sampleHeight(position.x, position.z),
+      z: position.z,
     }),
     durationSec: 1.2 * ctx.waitMultiplier,
     onComplete: () => {
       const current = orders.find(order.id)
       if (!current || current.state !== 'assigned') return
-      if (current.source.type !== 'household') {
+      if (current.source.type !== 'resource-site') {
         orders.fail(order.id)
         return
       }
-      const live = hooks?.findById(current.source.householdId)
+      const live = ctx.resourceSiteInventories?.get(current.source.resourceId)
       if (!live) {
         orders.fail(order.id)
         return
@@ -454,14 +517,13 @@ function planTransportOrderExecution(
         orderId: order.id,
         carrierNpcId: ctx.npcId,
         carrier: ctx.transportCargo,
-        source: live.household.items,
-        liveTransferableQuantity: Math.min(
-          Math.max(
-            0,
-            live.household.items.count(current.itemKind)
-              - committedOutgoingFood(orders.list(), live.household.id, current.id, current.itemKind),
-          ),
-          uncommittedHouseholdFoodSurplus(live.household, orders.list(), current.id),
+        source: live,
+        liveTransferableQuantity: uncommittedResourceSiteOre(
+          live,
+          orders.list(),
+          current.source.resourceId,
+          current.id,
+          current.itemKind,
         ),
         nowDays: ctx.simTime(),
       })
@@ -514,12 +576,67 @@ function planTraderCollection(ctx: NpcWorkContext, economy: SettlementEconomy): 
   return planTransportOrderExecution(ctx, economy, order)
 }
 
+function selectResourceSiteSource(
+  ctx: NpcWorkContext,
+  kind: ItemKind,
+  active: readonly TransportOrder[],
+): { resourceId: string, inventory: Inventory } | null {
+  const sites = ctx.resourceSiteInventories
+  const resolvePosition = ctx.resolveResourceSitePosition
+  if (!sites || !resolvePosition) return null
+  let best: { resourceId: string, inventory: Inventory, dist: number } | null = null
+  for (const [resourceId, inventory] of sites.entries()) {
+    const available = uncommittedResourceSiteOre(inventory, active, resourceId, undefined, kind)
+    if (available <= 0) continue
+    const position = resolvePosition(resourceId)
+    if (!position) continue
+    const dist = Math.hypot(position.x - ctx.x, position.z - ctx.z)
+    if (
+      !best
+      || dist < best.dist
+      || (dist === best.dist && resourceId < best.resourceId)
+    ) {
+      best = { resourceId, inventory, dist }
+    }
+  }
+  return best ? { resourceId: best.resourceId, inventory: best.inventory } : null
+}
+
+/**
+ * Remote ore haul (plan settlements-npcs-021) — derived from a live
+ * blacksmith stock shortage plus uncommitted resource-site supply. Reuses
+ * the same `TransportOrder` execution as food collection.
+ */
+function planTraderOreCollection(ctx: NpcWorkContext, economy: SettlementEconomy): NpcPlannedAction | null {
+  const orders = ctx.transportOrders
+  const sites = ctx.resourceSiteInventories
+  if (!orders || !sites || !ctx.npcId) return null
+  const existing = orders.findByCarrier(ctx.npcId)
+  if (existing) return planTransportOrderExecution(ctx, economy, existing)
+  const active = orders.list()
+  const need = uncoveredOreProductionNeed(economy, active)
+  if (!need) return null
+  const source = selectResourceSiteSource(ctx, need.kind, active)
+  if (!source) return null
+  const available = uncommittedResourceSiteOre(source.inventory, active, source.resourceId, undefined, need.kind)
+  let quantity = Math.min(need.quantity, available, ORE_TRANSPORT_MAX_TRANSFER)
+  while (quantity > 0 && !ctx.transportCargo.canAdd(need.kind, quantity)) quantity -= 1
+  if (quantity <= 0) return null
+  const order = orders.create({
+    source: { type: 'resource-site', resourceId: source.resourceId },
+    destination: { type: 'settlement-storage', settlementId: economy.settlementId },
+    itemKind: need.kind,
+    requestedQuantity: quantity,
+    carrierNpcId: ctx.npcId,
+  })
+  if (!order) return null
+  return planTransportOrderExecution(ctx, economy, order)
+}
+
 /**
  * Trader's `work` schedule block (plan settlements-npcs-002 §7,
- * settlements-npcs-020) — resume any active `TransportOrder` first, then
- * evaluate uncovered settlement food demand through `planTraderCollection`.
- * Wood still uses the 014/018 own-household direct deposit when there is no
- * food transport to run.
+ * settlements-npcs-020/021) — resume any active `TransportOrder` first, then
+ * evaluate uncovered settlement food demand, then remote ore, then wood.
  */
 function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   const { household } = ctx
@@ -532,6 +649,8 @@ function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   }
   const food = planTraderCollection(ctx, economy)
   if (food) return food
+  const ore = planTraderOreCollection(ctx, economy)
+  if (ore) return ore
   if (!(household.surplus('wood') > 0 && economy.hasShortage('wood'))) return null
   const workplace = ctx.workplace
   return {

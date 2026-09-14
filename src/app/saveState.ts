@@ -287,6 +287,10 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     bedrolls: bundle.sleepingUtilities.bedrolls.nodes().map((b) => ({ ...b })),
     platforms: bundle.sleepingUtilities.platforms.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
+    resourceSiteInventories: (() => {
+      const snapshot = bundle.resourceSiteInventories.serialize()
+      return Object.keys(snapshot).length > 0 ? snapshot : undefined
+    })(),
     grassForagePatches: bundle.grassForage.serialize(),
     workContracts: bundle.workContracts.nodes().map(toSaveWorkContract),
     // Only active/non-terminal orders — a completed/failed/cancelled record

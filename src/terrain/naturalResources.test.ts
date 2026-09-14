@@ -5,6 +5,7 @@ import {
   type NaturalResource,
   RESOURCE_TYPES,
   resourceAttractionAt,
+  resourceById,
   type ResourceEnv,
   resourcesNear,
 } from './naturalResources'
@@ -179,6 +180,19 @@ describe('resourcesNear / dominantResourceNear', () => {
       const found = resourcesNear(0, 0, 500, seed, env)
       for (const r of found) expect(r.x).toBeGreaterThanOrEqual(0)
     }
+  })
+})
+
+describe('resourceById', () => {
+  it('round-trips a resourcesNear result without scanning neighboring cells', () => {
+    const env = constantEnv({})
+    const found = resourcesNear(0, 0, 600, 7, env)
+    expect(found.length).toBeGreaterThan(0)
+    for (const resource of found.slice(0, 8)) {
+      expect(resourceById(resource.id, 7, env)).toEqual(resource)
+    }
+    expect(resourceById('not-a-resource', 7, env)).toBeNull()
+    expect(resourceById('resource_abc_1', 7, env)).toBeNull()
   })
 })
 

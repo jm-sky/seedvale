@@ -234,6 +234,7 @@ import { hasExplicitUrlSeed, randomSeed, setUrlSearchParam, syncSeedInUrl } from
 import { parsePlantedCrops } from '../world/plantedCrops'
 import { parsePlantedTrees } from '../world/plantedTrees'
 import { PLAYER_TROUGH_MATERIAL_REQUIREMENTS } from '../world/playerTrough'
+import { createResourceSiteInventories } from '../world/resourceSiteInventory'
 import { listSeedRecords, resolveNewGameSeed } from '../world/seedLibrary'
 import { BEDROLL_MATERIAL_REQUIREMENTS, PLATFORM_MATERIAL_REQUIREMENTS } from '../world/sleepingUtilities'
 import { createTimeSkip } from '../world/timeSkip'
@@ -559,6 +560,11 @@ export async function createApp(
   // only on a genuinely new world" contract as the ids/arrays above, and
   // persisted the same way (`SaveData.resourceDeposits`).
   let resourceDepletion: ResourceDepletionState = new Map(Object.entries(initialSave?.resourceDeposits ?? {}))
+  // Plan settlements-npcs-021 — extracted goods waiting at remote resource
+  // sites, same "carried across rebuild, reset only on a genuinely new
+  // world" contract as `resourceDepletion` above. Independent of deposit
+  // depletion (`SaveData.resourceDeposits`).
+  let resourceSiteInventories = createResourceSiteInventories(initialSave?.resourceSiteInventories ?? {})
   // Plan fauna-010 §3/§4 — sparse grass forage patch depletion overrides,
   // same "long-lived object owned here, mutated in place by the live
   // service, carried across `rebuildWorldBundle`" contract as
@@ -703,6 +709,7 @@ export async function createApp(
     initialSave?.worldFlags?.treasureMapBearCaveSourceExtracted ?? false,
     initialSave?.worldFlags?.treasureMapBearCaveCasketConsumed ?? false,
     onSettlementAvailable,
+    resourceSiteInventories,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -2062,6 +2069,7 @@ export async function createApp(
         plantedCrops = []
         modifications = []
         resourceDepletion = new Map()
+        resourceSiteInventories = createResourceSiteInventories()
         grassForageOverrides = {}
         resetDayNightForNewGame(dayNight)
         treeLifecycle = createTreeLifecycle(config.seed, {})
@@ -2100,6 +2108,7 @@ export async function createApp(
         onSettlementAvailable,
         worldFlags.treasureMapBearCaveSourceExtracted,
         worldFlags.treasureMapBearCaveCasketConsumed,
+        resourceSiteInventories,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()

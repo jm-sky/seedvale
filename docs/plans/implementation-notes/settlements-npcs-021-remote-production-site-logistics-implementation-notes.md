@@ -1,5 +1,8 @@
 # Implementation Notes: settlements-npcs-021 — Remote Production Site Logistics
 
+**Plan:** `settlements-npcs-021-remote-production-site-logistics.md`
+**Status:** `verification needed` 🔍
+
 ## 1. Current transport contracts to preserve
 
 ### `src/world/transportOrder.ts`

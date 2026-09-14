@@ -1695,6 +1695,45 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       .toEqual({ status: 'invalid' })
   })
 
+  it('round-trips a resource-site transport endpoint and optional resourceSiteInventories (plan settlements-npcs-021)', () => {
+    const order = {
+      id: 'transportOrder:ore',
+      source: { type: 'resource-site' as const, resourceId: 'resource_1_2' },
+      destination: { type: 'settlement-storage' as const, settlementId: 's1' },
+      itemKind: 'iron' as const,
+      requestedQuantity: 2,
+      claimedQuantity: 2,
+      deliveredQuantity: 0,
+      carrierNpcId: 'npc:1',
+      state: 'in-transit' as const,
+      execution: { mode: 'off-screen' as const, arrivesAtDays: 12 },
+    }
+    const withOre = loadStoredSave({
+      ...validSave,
+      transportOrders: [order],
+      resourceSiteInventories: {
+        resource_1_2: { counts: { iron: 3 }, instances: [] },
+      },
+    })
+    expect(withOre.status).toBe('ok')
+    if (withOre.status === 'ok') {
+      expect(withOre.data.transportOrders).toEqual([order])
+      expect(withOre.data.resourceSiteInventories).toEqual({
+        resource_1_2: { counts: { iron: 3 }, instances: [] },
+      })
+    }
+
+    expect(loadStoredSave({ ...validSave, resourceSiteInventories: undefined }).status).toBe('ok')
+    expect(loadStoredSave({
+      ...validSave,
+      resourceSiteInventories: { resource_1_2: { counts: { iron: 'nope' }, instances: [] } },
+    })).toEqual({ status: 'invalid' })
+    expect(loadStoredSave({
+      ...validSave,
+      transportOrders: [{ ...order, source: { type: 'resource-site' } }],
+    })).toEqual({ status: 'invalid' })
+  })
+
   it('round-trips npcStates accompanyCommitment/travel and rejects a malformed commitment (plan npc-029)', () => {
     const snapshot = {
       health: { current: 100, max: 100, dead: false },

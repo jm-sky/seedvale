@@ -29,6 +29,7 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
+import type { ResourceSiteInventories } from '../world/resourceSiteInventory'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
 import type { VillageSize } from './families'
@@ -372,6 +373,9 @@ export type CreateSettlementDeps = {
    *  `workContracts`. Runtime-only in 018: not persisted, not carried
    *  across a `WorldBundle` rebuild. */
   transportOrders?: TransportOrders
+  /** World-owned extracted goods at remote resource sites (plan settlements-npcs-021). */
+  resourceSiteInventories?: ResourceSiteInventories
+  resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null
   /** Player-built wells (plan 127/npc-015) — the construction target NPC
    *  Work Contract execution advances, forwarded the same way. */
   playerWells?: PlayerWells
@@ -442,6 +446,8 @@ export async function createSettlement(
     infestationState = () => NO_RAT_INFESTATION,
     workContracts,
     transportOrders,
+    resourceSiteInventories,
+    resolveResourceSitePosition,
     playerWells,
     droppedItems,
     grassForage,
@@ -945,6 +951,8 @@ export async function createSettlement(
         householdExchange,
         workContracts,
         transportOrders,
+        resourceSiteInventories,
+        resolveResourceSitePosition,
         playerWells,
         droppedItems,
         terrainPreparations,

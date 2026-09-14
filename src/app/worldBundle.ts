@@ -97,6 +97,7 @@ import {
   createChunkManager,
   type TerrainModification,
 } from '../terrain/chunkManager'
+import { resourceById } from '../terrain/naturalResources'
 import {
   createResourceDeposits,
   type ResourceDeposits,
@@ -163,6 +164,10 @@ import {
 } from '../world/locations/treasureMapBearCaveRuntime'
 import { rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { createNpcGraves } from '../world/npcGraves'
+import {
+  createResourceSiteInventories,
+  type ResourceSiteInventories,
+} from '../world/resourceSiteInventory'
 import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
 import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
 import { preloadTrapProps } from '../world/trapProp'
@@ -309,6 +314,10 @@ export type WorldBundle = {
    *  across an in-session rebuild; carrier cargo persists separately on
    *  `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019). */
   transportOrders: TransportOrders
+  /** Extracted goods waiting at remote resource sites (plan settlements-npcs-021).
+   *  World-owned, independent of streamed deposit instances; persists as
+   *  `SaveData.resourceSiteInventories` and survives an in-session rebuild. */
+  resourceSiteInventories: ResourceSiteInventories
   /** Plan fauna-010 §3/§4 — world-owned deterministic grass forage patches,
    *  shared by wild herbivores (`fauna`) and settlement livestock alike. */
   grassForage: GrassForageService
@@ -445,6 +454,8 @@ function buildSettlementsManager(
    *  `buildWorldSystems`), so they're passed directly rather than late-bound. */
   workContracts?: WorkContracts,
   transportOrders?: TransportOrders,
+  resourceSiteInventories?: ResourceSiteInventories,
+  resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null,
   playerWells?: PlayerWells,
   droppedItems?: DroppedItems,
   /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
@@ -522,6 +533,8 @@ function buildSettlementsManager(
     seedHomeStorageInfestation,
     workContracts,
     transportOrders,
+    resourceSiteInventories,
+    resolveResourceSitePosition,
     playerWells,
     droppedItems,
     grassForage,
@@ -821,6 +834,10 @@ type WorldSystemsSeed = {
    *  sourced from `SaveData` on a fresh boot" contract as `workContracts`
    *  above. Only active/non-terminal orders are ever supplied here. */
   transportOrders?: readonly TransportOrder[]
+  /** Extracted goods waiting at remote resource sites (plan settlements-npcs-021).
+   *  Same long-lived, createApp-owned object as `resourceDepletion` — mutated
+   *  in place, carried across rebuild, reset only on a genuinely new world. */
+  resourceSiteInventories?: ResourceSiteInventories
   economies?: Record<string, SettlementEconomySnapshot>
   households?: Record<HouseholdId, HouseholdSnapshot>
   npcStates?: Record<NpcId, NpcStateSnapshot>
@@ -984,6 +1001,7 @@ async function buildWorldSystems(
     hives: initialHives,
     workContracts: initialWorkContracts,
     transportOrders: initialTransportOrders,
+    resourceSiteInventories: initialResourceSiteInventories,
     economies: initialEconomies,
     households: initialHouseholds,
     npcStates: initialNpcStates,
@@ -1005,6 +1023,8 @@ async function buildWorldSystems(
     treasureMapBearCaveSourceExtracted,
     treasureMapBearCaveCasketConsumed,
   } = seed
+
+  const resourceSiteInventories = initialResourceSiteInventories ?? createResourceSiteInventories()
 
   bootMark('createWaterMirror')
   const waterMirror = createWaterMirror({
@@ -1063,6 +1083,10 @@ async function buildWorldSystems(
   bootMark('createWorldContext')
   const worldContext = createWorldContext(() => chunkManager, config, dayNight)
   bootMarkEnd('createWorldContext')
+  const resolveResourceSitePosition = (resourceId: string): { x: number, z: number } | null => {
+    const resource = resourceById(resourceId, config.seed, worldContext)
+    return resource ? { x: resource.x, z: resource.z } : null
+  }
   const forest: SettlementForestHooks = {
     lifecycle: treeLifecycle,
     getWorldDays,
@@ -1262,7 +1286,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -1600,6 +1624,7 @@ async function buildWorldSystems(
     hives: createEmptyBeehives(),
     workContracts,
     transportOrders,
+    resourceSiteInventories,
     grassForage,
     riverWaterQuality,
   }
@@ -1865,6 +1890,11 @@ export async function createWorldBundle(
    *  quests-progression-022 §8) — forwarded into `buildSettlementsManager`
    *  the same way `getPlayerSocial` is above. */
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
+  /** Plan settlements-npcs-021 — same "long-lived object owned by
+   *  `createApp.ts`, mutated in place, threaded through both
+   *  `createWorldBundle` and `rebuildWorldBundle`" contract as
+   *  `resourceDepletion` above. */
+  initialResourceSiteInventories?: ResourceSiteInventories,
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1894,6 +1924,7 @@ export async function createWorldBundle(
     hives: initialHives,
     workContracts: initialWorkContracts,
     transportOrders: initialTransportOrders,
+    resourceSiteInventories: initialResourceSiteInventories,
     economies: initialEconomies,
     households: initialHouseholds,
     npcStates: initialNpcStates,
@@ -1982,6 +2013,11 @@ export async function rebuildWorldBundle(
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
   treasureMapBearCaveSourceExtracted: boolean = false,
   treasureMapBearCaveCasketConsumed: boolean = false,
+  /** Same contract as `createWorldBundle`'s own `initialResourceSiteInventories`
+   *  (plan settlements-npcs-021) — the same long-lived object `createApp.ts`
+   *  owns and threads through both. Falls back to the live bundle field so an
+   *  in-session rebuild never drops extracted ore. */
+  resourceSiteInventories?: ResourceSiteInventories,
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -2124,6 +2160,7 @@ export async function rebuildWorldBundle(
     hives: carriedHives,
     workContracts: carriedWorkContracts,
     transportOrders: carriedTransportOrders,
+    resourceSiteInventories: resourceSiteInventories ?? bundle.resourceSiteInventories,
     economies: carriedEconomies,
     households: carriedHouseholds,
     npcStates: carriedNpcStates,

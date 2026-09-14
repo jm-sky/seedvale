@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ShepherdFlockHooks } from '../fauna/shepherdFlock'
 import type { NpcWorkContext } from './npcProfessionWork'
-import { createSettlementEconomy } from '../economy'
+import { BLACKSMITH_IRON_ROD_PRODUCTION, createSettlementEconomy } from '../economy'
 import { WOOL_YIELD } from '../fauna/livestockProduction'
 import { Inventory } from '../items/Inventory'
 import { createWeaponInstance } from '../items/weaponMaintenance'
@@ -11,6 +11,7 @@ import { createHouseholdExchangeHooks } from '../settlement/householdExchange'
 import { MINE_DURATION_SEC } from '../terrain/depositMining'
 import { createTransportOrders } from '../world/createTransportOrders'
 import { FISHING_CAST_DURATION_SEC } from '../world/fishing'
+import { createResourceSiteInventories } from '../world/resourceSiteInventory'
 import { BLACKSMITH_SHARPEN_THRESHOLD, findWeaponNeedingMaintenance, planProfessionWork, selectTraderCollectionGoods } from './npcProfessionWork'
 
 const HOME = { x: 0, y: 0, z: 0 }
@@ -108,28 +109,28 @@ describe('planProfessionWork', () => {
       mine: () => ({ ok: true as const, yield: { kind: 'iron' as const, count: 1 }, remaining: 4 }),
     }
 
-    it('returns null without carry room for the ore kind', () => {
-      const carried = new Inventory(undefined, 0.001)
-      const ctx = baseCtx({ role: 'miner', mining, economy: createSettlementEconomy('s', {}, []), carried })
-      expect(planProfessionWork(ctx)).toBeNull()
-    })
-
-    it('returns null without mining hooks or economy', () => {
+    it('returns null without mining hooks, economy, or resource-site inventories', () => {
       expect(planProfessionWork(baseCtx({ role: 'miner' }))).toBeNull()
+      expect(planProfessionWork(baseCtx({
+        role: 'miner',
+        mining,
+        economy: createSettlementEconomy('s', {}, []),
+      }))).toBeNull()
     })
 
-    it('preserves legacy mining duration at Strength 0.5 and leaves the deposit step unchanged', () => {
+    it('preserves legacy mining duration at Strength 0.5 and does not chain a stockpile deposit', () => {
       const ctx = baseCtx({
         role: 'miner',
         mining,
         economy: createSettlementEconomy('s', {}, []),
+        resourceSiteInventories: createResourceSiteInventories(),
         strength: 0.5,
         waitMultiplier: 2,
       })
       const work = planProfessionWork(ctx)
       expect(work?.kind).toBe('mine')
       expect(work?.durationSec).toBe(MINE_DURATION_SEC * 2)
-      expect(work?.next?.durationSec).toBe(0.8 * 2)
+      expect(work?.next).toBeUndefined()
     })
 
     it('applies the shared physical-work Strength rule to mining only', () => {
@@ -137,20 +138,61 @@ describe('planProfessionWork', () => {
         role: 'miner',
         mining,
         economy: createSettlementEconomy('s', {}, []),
+        resourceSiteInventories: createResourceSiteInventories(),
         strength: 1,
       }))
       const weak = planProfessionWork(baseCtx({
         role: 'miner',
         mining,
         economy: createSettlementEconomy('s', {}, []),
+        resourceSiteInventories: createResourceSiteInventories(),
         strength: 0,
       }))
       expect(strong?.durationSec).toBe(physicalWorkDuration(MINE_DURATION_SEC, 1))
       expect(weak?.durationSec).toBe(physicalWorkDuration(MINE_DURATION_SEC, 0))
       expect(strong?.durationSec).toBeLessThan(MINE_DURATION_SEC)
       expect(weak?.durationSec).toBeGreaterThan(MINE_DURATION_SEC)
-      expect(strong?.next?.durationSec).toBe(0.8)
-      expect(weak?.next?.durationSec).toBe(0.8)
+      expect(strong?.next).toBeUndefined()
+      expect(weak?.next).toBeUndefined()
+    })
+
+    it('deposits extracted ore into the resource-site inventory, not settlement stock or carried', () => {
+      const sites = createResourceSiteInventories()
+      const economy = createSettlementEconomy('s', { iron: 0 }, [])
+      const carried = new Inventory()
+      const work = planProfessionWork(baseCtx({
+        role: 'miner',
+        mining,
+        economy,
+        resourceSiteInventories: sites,
+        carried,
+      }))
+      work?.onComplete?.()
+      expect(sites.get('d1')?.count('iron')).toBe(1)
+      expect(economy.query('iron')).toBe(0)
+      expect(economy.items.count('iron')).toBe(0)
+      expect(carried.count('iron')).toBe(0)
+    })
+
+    it('keeps already-extracted site goods after a reconstructed miner context', () => {
+      const sites = createResourceSiteInventories()
+      const economy = createSettlementEconomy('s', { iron: 0 }, [])
+      planProfessionWork(baseCtx({
+        role: 'miner',
+        mining,
+        economy,
+        resourceSiteInventories: sites,
+      }))?.onComplete?.()
+      expect(sites.get('d1')?.count('iron')).toBe(1)
+      planProfessionWork(baseCtx({
+        role: 'miner',
+        mining,
+        economy,
+        resourceSiteInventories: sites,
+        npcId: 'npc:miner-rebuilt',
+      }))?.onComplete?.()
+      expect(sites.get('d1')?.count('iron')).toBe(2)
+      expect(economy.query('iron')).toBe(0)
     })
   })
 
@@ -786,6 +828,228 @@ describe('planProfessionWork', () => {
       }))
       expect(first.findByCarrier('npc:trader')?.source).toEqual({ type: 'household', householdId: 'near' })
       expect(second.findByCarrier('npc:trader')?.source).toEqual(first.findByCarrier('npc:trader')?.source)
+    })
+
+    function economyWithIronShortage() {
+      const economy = createSettlementEconomy('s', { iron: 0, coal: 1 }, [])
+      economy.observeProductionOutcome({
+        ok: false,
+        recipeId: BLACKSMITH_IRON_ROD_PRODUCTION.id,
+        reason: 'insufficient-input',
+        category: 'stock',
+        kind: 'iron',
+      }, 0)
+      return economy
+    }
+
+    it('creates a resource-site ore order from a blacksmith stock shortage', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const economy = economyWithIronShortage()
+      const sites = createResourceSiteInventories()
+      sites.getOrCreate('resource_1_2').add('iron', 5)
+      const transportOrders = createTransportOrders()
+      const work = planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: (id) => (id === 'resource_1_2' ? { x: 20, z: 0 } : null),
+      }))
+      expect(work?.kind).toBe('work')
+      const order = transportOrders.findByCarrier('npc:trader')
+      expect(order?.source).toEqual({ type: 'resource-site', resourceId: 'resource_1_2' })
+      expect(order?.destination).toEqual({ type: 'settlement-storage', settlementId: 's' })
+      expect(order?.itemKind).toBe('iron')
+      expect(order?.requestedQuantity).toBe(3)
+      expect(order?.state).toBe('assigned')
+    })
+
+    it('picks up site ore through the shared transport transaction and credits stock on unload', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const economy = economyWithIronShortage()
+      const sites = createResourceSiteInventories()
+      sites.getOrCreate('resource_1_2').add('iron', 5)
+      const transportOrders = createTransportOrders()
+      const transportCargo = new Inventory()
+      const work = planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        transportCargo,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: (id) => (id === 'resource_1_2' ? { x: 20, z: 0 } : null),
+      }))!
+      work.onComplete?.()
+      const order = transportOrders.findByCarrier('npc:trader')
+      expect(order?.state).toBe('in-transit')
+      expect(sites.get('resource_1_2')?.count('iron')).toBe(2)
+      expect(transportCargo.count('iron')).toBe(3)
+      expect(economy.query('iron')).toBe(0)
+      work.next?.onComplete?.()
+      expect(transportOrders.find(order!.id)?.state).toBe('completed')
+      expect(transportCargo.count('iron')).toBe(0)
+      expect(economy.query('iron')).toBe(3)
+      expect(economy.items.count('iron')).toBe(0)
+    })
+
+    it('prefers uncovered food transport over remote ore', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      household.items.remove('bread', household.items.count('bread'))
+      const economy = createSettlementEconomy('s', { iron: 0, coal: 1 }, [{ kind: 'food', target: 8 }])
+      economy.observeProductionOutcome({
+        ok: false,
+        recipeId: BLACKSMITH_IRON_ROD_PRODUCTION.id,
+        reason: 'insufficient-input',
+        category: 'stock',
+        kind: 'iron',
+      }, 0)
+      const sourceHousehold = createHousehold('source', 's', 'home:source')
+      sourceHousehold.items.remove('bread', sourceHousehold.items.count('bread'))
+      sourceHousehold.depositFood('carrot', 10)
+      const sites = createResourceSiteInventories()
+      sites.getOrCreate('resource_1_2').add('iron', 5)
+      const transportOrders = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        householdExchange: {
+          findSurplusSource: () => ({ household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }),
+          findById: (id: string) => id === sourceHousehold.id
+            ? { household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }
+            : null,
+        } as unknown as NpcWorkContext['householdExchange'],
+        transportOrders,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+      }))
+      const order = transportOrders.findByCarrier('npc:trader')
+      expect(order?.itemKind).toBe('carrot')
+      expect(order?.source).toEqual({ type: 'household', householdId: 'source' })
+    })
+
+    it('does not create an ore order without a production shortage or site supply', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const workplace = { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace']
+      const sites = createResourceSiteInventories()
+      sites.getOrCreate('resource_1_2').add('iron', 5)
+      const noShortage = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: createSettlementEconomy('s', { iron: 0, coal: 1 }, []),
+        workplace,
+        transportOrders: noShortage,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+      }))
+      expect(noShortage.list()).toEqual([])
+
+      const noSupply = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: economyWithIronShortage(),
+        workplace,
+        transportOrders: noSupply,
+        resourceSiteInventories: createResourceSiteInventories(),
+        resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+      }))
+      expect(noSupply.list()).toEqual([])
+    })
+
+    it('does not double-promise ore already covered by an incoming order', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const economy = economyWithIronShortage()
+      const sites = createResourceSiteInventories()
+      sites.getOrCreate('resource_1_2').add('iron', 5)
+      const transportOrders = createTransportOrders()
+      transportOrders.create({
+        source: { type: 'resource-site', resourceId: 'resource_1_2' },
+        destination: { type: 'settlement-storage', settlementId: 's' },
+        itemKind: 'iron',
+        requestedQuantity: 2,
+        carrierNpcId: 'npc:other',
+      })
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+      }))
+      expect(transportOrders.findByCarrier('npc:trader')).toBeUndefined()
+      expect(transportOrders.list()).toHaveLength(1)
+    })
+
+    it('resumes an in-transit ore order without creating a replacement', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const economy = economyWithIronShortage()
+      const sites = createResourceSiteInventories()
+      const transportOrders = createTransportOrders()
+      const existing = transportOrders.create({
+        source: { type: 'resource-site', resourceId: 'resource_1_2' },
+        destination: { type: 'settlement-storage', settlementId: 's' },
+        itemKind: 'iron',
+        requestedQuantity: 2,
+        carrierNpcId: 'npc:trader',
+      })!
+      transportOrders.completePickup(existing.id, 'npc:trader', 2)
+      const work = planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+      }))
+      expect(work?.kind).toBe('deposit')
+      expect(transportOrders.list()).toHaveLength(1)
+      expect(transportOrders.findByCarrier('npc:trader')?.id).toBe(existing.id)
+    })
+
+    it('picks the nearest resource site, then the stable smaller id', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const economy = economyWithIronShortage()
+      const sites = createResourceSiteInventories()
+      sites.getOrCreate('resource_b').add('iron', 5)
+      sites.getOrCreate('resource_a').add('iron', 5)
+      const positions: Record<string, { x: number, z: number }> = {
+        resource_a: { x: 10, z: 0 },
+        resource_b: { x: 10, z: 0 },
+      }
+      const transportOrders = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy,
+        x: 0,
+        z: 0,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: (id) => positions[id] ?? null,
+      }))
+      expect(transportOrders.findByCarrier('npc:trader')?.source).toEqual({
+        type: 'resource-site',
+        resourceId: 'resource_a',
+      })
     })
   })
 

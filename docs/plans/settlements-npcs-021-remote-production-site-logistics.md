@@ -1,15 +1,26 @@
 # Plan: Remote Production Site Logistics
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** ~~settlements-npcs-018~~, ~~settlements-npcs-019~~, settlements-npcs-020
+**Depends on:** ~~settlements-npcs-018~~, ~~settlements-npcs-019~~, ~~settlements-npcs-020~~
 **Domain:** `settlements-npcs`
 **Subdomains:** `economy` `logistics`
 **Tags:** `transport` `production` `remote-sites` `mining`
 **Roadmap:** `physical-goods-transport.md`
 **Model:** Sonnet, Composer
+**Implemented at:** 2026-09-14
+
+## Implementation summary
+
+Vertical slice: Miner extracts ore into a world-owned resource-site `Inventory` keyed by `NaturalResource.id`; uncovered blacksmith iron/coal stock shortage + uncommitted site supply → Trader `TransportOrder` with `{ type: 'resource-site', resourceId }` source; pickup/unload reuse `executeTransportPickup` / `executeTransportUnload`; unload credits `SettlementEconomy` bulk stock (blacksmith reads stock, not `items`).
+
+Store: `src/world/resourceSiteInventory.ts`, owned by `createApp.ts` like `resourceDepletion` (rebuild-survive, New Game reset). Persist as optional sparse `SaveData.resourceSiteInventories` (`InventoryContentsSnapshot`); no save-version bump. Depletion stays in `SaveData.resourceDeposits`.
+
+Demand: `src/economy/oreTransportDemand.ts` (incoming/outgoing commitment accounting, iron then coal). No demand registry. Food transport still wins in `planTraderWork()`.
+
+Position for pickup: `resourceById()` in `src/terrain/naturalResources.ts`. Off-screen lookup: `getResourceSiteInventory`. Extracted ore is not settlement-owned until transport completes.
 
 ## Recon Result — 2026-09-14
 

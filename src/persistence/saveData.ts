@@ -798,6 +798,11 @@ export type SaveData = {
    *  `NaturalResource.id`. Sparse — an absent id restores as untouched
    *  (deterministic initial from richness); `0` means depleted. */
   resourceDeposits: Record<string, number>
+  /** Extracted-but-not-yet-transported goods at a remote resource site
+   *  (plan settlements-npcs-021), keyed by `NaturalResource.id`. Sparse/
+   *  optional — absent or empty means no stored remote goods. Independent
+   *  of `resourceDeposits` depletion. */
+  resourceSiteInventories?: Record<string, InventoryContentsSnapshot>
   workContracts: SaveWorkContract[]
   /** NPC authoritative state (health/needs/stamina/vigor/helper assignment/
    *  active plan/post-death/personal inventory), keyed by stable npc id
@@ -1902,6 +1907,11 @@ function isInventoryContentsSnapshot(value: unknown): value is InventoryContents
   return isSaveItemInstancesField(items.instances) && isOptionalFoodBatchesField(items.foodBatches)
 }
 
+function isResourceSiteInventoriesField(value: unknown): value is Record<string, InventoryContentsSnapshot> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value as Record<string, unknown>).every(isInventoryContentsSnapshot)
+}
+
 /** Validates one `NpcStateSnapshot` (plan persistence-001 / npc-010 /
  *  settlements-npcs-026) — mirrors `settlement/npcState.ts`'s own shape;
  *  `physicalInjury` is optional (absent means `0`), `injuryRecoveryUpdatedAtDays`
@@ -2027,6 +2037,7 @@ function isTransportEndpointRef(value: unknown): value is TransportEndpointRef {
   const r = value as Record<string, unknown>
   if (r.type === 'household') return typeof r.householdId === 'string'
   if (r.type === 'settlement-storage') return typeof r.settlementId === 'string'
+  if (r.type === 'resource-site') return typeof r.resourceId === 'string'
   return false
 }
 
@@ -2381,6 +2392,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isBedrollsField(v.bedrolls)) return false
   if (!isPlatformsField(v.platforms)) return false
   if (!isResourceDepositsField(v.resourceDeposits)) return false
+  if (v.resourceSiteInventories !== undefined && !isResourceSiteInventoriesField(v.resourceSiteInventories)) return false
   if (!isWorkContractsField(v.workContracts)) return false
   if (v.npcStates !== undefined && !isNpcStatesField(v.npcStates)) return false
   if (v.transportOrders !== undefined && !isTransportOrdersField(v.transportOrders)) return false

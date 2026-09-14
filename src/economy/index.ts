@@ -19,6 +19,17 @@ export {
   tryAdvanceDevelopment,
 } from './npcWork'
 export {
+  committedIncomingOre,
+  committedOutgoingOre,
+  creditDeliveredOreToStock,
+  isOreTransportKind,
+  ORE_TRANSPORT_KINDS,
+  ORE_TRANSPORT_MAX_TRANSFER,
+  type OreTransportKind,
+  uncommittedResourceSiteOre,
+  uncoveredOreProductionNeed,
+} from './oreTransportDemand'
+export {
   ARROWS_FROM_BEAM_PRODUCTION,
   ARROWS_FROM_BRANCH_PRODUCTION,
   BLACKSMITH_IRON_ROD_PRODUCTION,
