@@ -9,6 +9,7 @@
 **Subdomains:** `vegetation` `rendering` `chunks`
 **Tags:** `performance` `grass` `streaming` `allocation`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Cel
 
