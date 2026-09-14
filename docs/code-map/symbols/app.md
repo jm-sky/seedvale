@@ -256,13 +256,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 364
+- `createApp` — function — line 369
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 333
+- `NewAppOptions` — type — line 338
 
 ## `app/faunaEncounterComposition.ts`
 

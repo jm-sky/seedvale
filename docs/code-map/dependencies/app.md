@@ -967,6 +967,7 @@ Generated from TypeScript imports.
 - `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
+- `world/locations/knownSettlementReputation.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/locationsCoarseCache.ts`

@@ -1146,6 +1146,17 @@ Generated from exported TypeScript symbols.
 - `getActiveDarkForestTreasureSite` — function — line 11
 - `setActiveDarkForestTreasureSite` — function — line 7
 
+## `world/locations/knownSettlementReputation.ts`
+
+- `KnownSettlementOption` — type — line 12
+  - domain: ui-input
+- `listKnownSettlementOptions` — function — line 39
+  - domain: ui-input
+- `resolveCharacterReputationSettlementId` — function — line 65
+  - domain: ui-input
+- `settlementIdFromLocationId` — function — line 23
+  - domain: ui-input
+
 ## `world/locations/locationConfig.ts`
 
 - `CEMETERY_SEARCH_CHUNK_RADIUS` — const — line 45
@@ -1194,8 +1205,10 @@ Generated from exported TypeScript symbols.
 
 - `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 12
 - `confirmHomeSettlement` — function — line 52
-- `createLocationProximityDiscovery` — function — line 118
-- `LocationProximityDiscovery` — type — line 111
+- `createLocationProximityDiscovery` — function — line 140
+- `findSettlementContainingPlayer` — function — line 119
+  - domain: ui-input
+- `LocationProximityDiscovery` — type — line 133
 - `revealCaveEntrancesInRange` — function — line 62
 - `revealSettlementsInRange` — function — line 91
 - `SETTLEMENT_PROXIMITY_CELL_RADIUS` — const — line 21

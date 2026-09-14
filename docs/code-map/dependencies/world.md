@@ -2526,6 +2526,28 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `world/locations/locationProximityDiscovery.ts`
 
+## `world/locations/knownSettlementReputation.test.ts`
+
+**Imports**
+
+- `world/locations/knownSettlementReputation.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
+
+## `world/locations/knownSettlementReputation.ts`
+
+**Imports**
+
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `world/locations/knownSettlementReputation.test.ts`
+
 ## `world/locations/locationConfig.ts`
 
 **Imported by**
@@ -2579,6 +2601,8 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `world/locations/knownSettlementReputation.test.ts`
+- `world/locations/knownSettlementReputation.ts`
 - `world/locations/locationKnowledge.test.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/locationProximityDiscovery.ts`
@@ -2775,6 +2799,8 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `world/locations/knownSettlementReputation.test.ts`
+- `world/locations/knownSettlementReputation.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
@@ -2818,6 +2844,8 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/lib/mapColors.ts`
 - `ui-vue/lib/worldLocationDisplay.ts`
+- `world/locations/knownSettlementReputation.test.ts`
+- `world/locations/knownSettlementReputation.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
