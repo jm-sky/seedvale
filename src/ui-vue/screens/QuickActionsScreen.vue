@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FishingRod, FlameIcon, LockIcon, ScrollText, ShovelIcon, Sword, TractorIcon, TreesIcon, Utensils, Zap } from 'lucide-vue-next'
+import { ArrowDownToLine, BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FishingRod, FlameIcon, LockIcon, ScrollText, ShovelIcon, Sword, TractorIcon, TreesIcon, Utensils, Zap } from 'lucide-vue-next'
 import { type Component, computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { PlacementPreviewKind } from '../../app/actions/placementPreviewActions'
@@ -18,6 +18,7 @@ import QuickActionsButton from '../components/QuickActionsButton.vue'
 import SkillsHudButton from '../components/SkillsHudButton.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
+import { hudWeaponShortcuts } from '../hudWeaponShortcuts'
 import { FIRE_COST_ITEMS, formatCostItems, visibleFireActions } from '../playerQuickActions'
 import {
   backToQuickActionsCategories,
@@ -27,6 +28,7 @@ import {
   isQuickActionsOpen,
   type QuickActionsCategoryId,
   selectQuickActionsCategory,
+  sheatheCombatWeapon,
   showToast,
   toggleQuickActions,
   ui,
@@ -309,6 +311,24 @@ const categories = computed(() => (
     { id: 'zlecenia', visible: ui.quickActions.workContracts.length > 0, icon: ScrollText },
   ] as const satisfies readonly { id: QuickActionsCategoryId, visible: boolean, icon: Component }[]
 ).filter((c) => c.visible))
+
+const weaponShortcuts = computed(() => hudWeaponShortcuts({
+  combatWeapon: ui.hud.combatWeapon,
+  primaryMeleeLabel: ui.hud.primaryMeleeLabel,
+  primaryRangedLabel: ui.hud.primaryRangedLabel,
+}))
+
+function onWeaponShortcut(action: 'melee' | 'ranged' | 'sheathe'): void {
+  if (action === 'sheathe') sheatheCombatWeapon()
+  else if (action === 'melee') equipPrimaryMelee()
+  else equipPrimaryRanged()
+}
+
+function weaponShortcutIcon(action: 'melee' | 'ranged' | 'sheathe'): Component {
+  if (action === 'sheathe') return ArrowDownToLine
+  if (action === 'ranged') return BowArrow
+  return Sword
+}
 </script>
 
 <template>
@@ -319,22 +339,17 @@ const categories = computed(() => (
   >
     <SkillsHudButton />
     <button
-      v-if="ui.hud.primaryRangedLabel"
+      v-for="shortcut in weaponShortcuts"
+      :key="shortcut.id"
       type="button"
       class="pointer-events-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-black/40 text-ink hover:bg-black/60"
-      :aria-label="`Broń dystansowa: ${ui.hud.primaryRangedLabel}`"
-      @click="equipPrimaryRanged"
+      :aria-label="shortcut.ariaLabel"
+      @click="onWeaponShortcut(shortcut.action)"
     >
-      <BowArrow :size="20" />
-    </button>
-    <button
-      v-if="ui.hud.primaryMeleeLabel"
-      type="button"
-      class="pointer-events-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-white/25 bg-black/40 text-ink hover:bg-black/60"
-      :aria-label="`Broń biała: ${ui.hud.primaryMeleeLabel}`"
-      @click="equipPrimaryMelee"
-    >
-      <Sword :size="20" />
+      <component
+        :is="weaponShortcutIcon(shortcut.action)"
+        :size="20"
+      />
     </button>
     <button
       type="button"

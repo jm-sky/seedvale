@@ -76,6 +76,7 @@ import {
 } from '../persistence/saveDb'
 import { buildCharacterPresentation } from '../player/characterPresentation'
 import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
+import { createPlayerCombatMode } from '../player/playerCombatMode'
 import {
   type CaveFloorSampler,
   type CaveGroundQuery,
@@ -837,6 +838,7 @@ export async function createApp(
     primaryWeapons.restoreState(initialSave)
   }
   primaryWeapons.syncWithInventory(inventory)
+  const playerCombatMode = createPlayerCombatMode()
   /** Whether the player could build a palisade segment right now, ignoring
    *  position — same "own the rare/costly component, full cost re-checked at
    *  build time" gate `hasWoodenTorch` uses, just against a count instead of
@@ -991,21 +993,36 @@ export async function createApp(
         heldTool.unequip()
       }
       player.setHeldTool(null)
+      playerCombatMode.reconcile(
+        { kind: heldTool.held(), instanceId: heldTool.heldInstanceId() },
+        { melee: primaryWeapons.primaryMelee(), ranged: primaryWeapons.primaryRanged() },
+      )
+      hud.setCombatWeapon(playerCombatMode.activeWeapon())
       return
     }
     const held = heldTool.held()
     if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && held === 'wooden_torch') {
       hud.setHeldTool('pochodnia (płonie)')
       player.setHeldTool(held)
+      playerCombatMode.reconcile(
+        { kind: held, instanceId: heldTool.heldInstanceId() },
+        { melee: primaryWeapons.primaryMelee(), ranged: primaryWeapons.primaryRanged() },
+      )
+      hud.setCombatWeapon(playerCombatMode.activeWeapon())
       return
     }
     hud.setHeldTool(held ? ITEM_DEFS[held].label : '')
     player.setHeldTool(held)
     primaryWeapons.syncWithInventory(inventory)
+    playerCombatMode.reconcile(
+      { kind: heldTool.held(), instanceId: heldTool.heldInstanceId() },
+      { melee: primaryWeapons.primaryMelee(), ranged: primaryWeapons.primaryRanged() },
+    )
     hud.setPrimaryWeapons(
       primaryWeapons.primaryMelee() ? ITEM_DEFS[primaryWeapons.primaryMelee()!.kind].label : '',
       primaryWeapons.primaryRanged() ? ITEM_DEFS[primaryWeapons.primaryRanged()!.kind].label : '',
     )
+    hud.setCombatWeapon(playerCombatMode.activeWeapon())
   }
   syncHeldHud()
 
@@ -1694,6 +1711,7 @@ export async function createApp(
     heldTool,
     equipment,
     primaryWeapons,
+    playerCombatMode,
     playerTorch,
     hud,
     toast,
@@ -1718,6 +1736,7 @@ export async function createApp(
   vueUi.configurePrimaryWeaponShortcuts({
     equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
     equipRanged: inventoryWiring.equipPrimaryRangedWeapon,
+    sheathe: inventoryWiring.sheatheCombatWeapon,
   })
 
   const timeSkip = createTimeSkip(dayNight)
@@ -2796,6 +2815,7 @@ export async function createApp(
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
     questManager, syncLostLivestockQuests, onQuestStateSynced: refreshGuardEveningPolicies, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
+    toggleCombatMode: inventoryWiring.toggleCombatMode,
     // Plan quests-progression-019, lazy propagation by quests-progression-022
     // — resolves the generic dangerous-animal-kill signal, enqueues it as
     // pending social news, and only ever catches up currently *loaded*

@@ -19,6 +19,7 @@ import type { SellPriceContext } from '../items/tradeCatalog'
 import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
 import type { CharacterPresentation } from '../player/characterPresentation'
+import type { CombatWeaponCategory } from '../player/playerCombatMode'
 import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Reputation } from '../reputation/ReputationManager'
@@ -643,6 +644,8 @@ type HudState = {
    *  `held`. Backed by `items/primaryWeapons.ts`, not a separate UI model. */
   primaryMeleeLabel: string
   primaryRangedLabel: string
+  /** Drawn primary combat category (plan ui-input-018) — `null` while inactive. */
+  combatWeapon: CombatWeaponCategory | null
   /** Dedicated Dismount button (plan fauna-003 §10) — `active` gates the
    *  HUD's own always-visible button, independent of touch-device chrome. */
   mounted: { active: boolean, animalLabel: string, onDismount: (() => void) | null }
@@ -822,6 +825,7 @@ export const ui = reactive({
     aimTargetScreen: null,
     primaryMeleeLabel: '',
     primaryRangedLabel: '',
+    combatWeapon: null,
     mounted: { active: false, animalLabel: '', onDismount: null },
     leading: { active: false, animalLabel: '', onDetach: null },
   } as HudState,
@@ -2022,7 +2026,14 @@ export function setHudPrimaryWeapons(meleeLabel: string, rangedLabel: string): v
   ui.hud.primaryMeleeLabel = meleeLabel
   ui.hud.primaryRangedLabel = rangedLabel
 }
-export type PrimaryWeaponShortcuts = { equipMelee: () => void, equipRanged: () => void }
+export function setHudCombatWeapon(category: CombatWeaponCategory | null): void {
+  ui.hud.combatWeapon = category
+}
+export type PrimaryWeaponShortcuts = {
+  equipMelee: () => void
+  equipRanged: () => void
+  sheathe: () => void
+}
 let primaryWeaponShortcutsHandler: PrimaryWeaponShortcuts | null = null
 export function configurePrimaryWeaponShortcuts(handler: PrimaryWeaponShortcuts | null): void {
   primaryWeaponShortcutsHandler = handler
@@ -2032,6 +2043,9 @@ export function equipPrimaryMelee(): void {
 }
 export function equipPrimaryRanged(): void {
   primaryWeaponShortcutsHandler?.equipRanged()
+}
+export function sheatheCombatWeapon(): void {
+  primaryWeaponShortcutsHandler?.sheathe()
 }
 export function setHudPlayerNeeds(needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }): void {
   const p = ui.hud.playerNeeds

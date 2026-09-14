@@ -34,6 +34,9 @@ export type KeyState = {
   skills: boolean
   /** Edge-triggered: set true on KeyC keydown, cleared by consumeCharacter(). */
   character: boolean
+  /** Edge-triggered: set true on KeyX keydown, cleared by consumeCombatMode() —
+   *  draw/sheathe the last primary combat weapon (plan ui-input-018). */
+  combatMode: boolean
   /** Edge-triggered: set true on Space keydown, cleared by consumeJump(). */
   jump: boolean
   /** Edge-triggered: set true on Tab keydown, cleared by consumeCycleTarget()
@@ -81,6 +84,7 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   KeyM: 'minimap',
   KeyU: 'skills',
   KeyC: 'character',
+  KeyX: 'combatMode',
   Space: 'jump',
   Tab: 'cycleTarget',
   Equal: 'plus',
@@ -94,7 +98,7 @@ const KEY_MAP: Record<string, keyof KeyState> = {
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'comma', 'cycleTarget', 'dismount', 'drop', 'inspect', 'interact', 'inventory', 'jump', 'minimap', 'minus', 'period', 'plus', 'questLog', 'quickActions', 'rotateLeft', 'skills'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'combatMode', 'comma', 'cycleTarget', 'dismount', 'drop', 'inspect', 'interact', 'inventory', 'jump', 'minimap', 'minus', 'period', 'plus', 'questLog', 'quickActions', 'rotateLeft', 'skills'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -136,6 +140,8 @@ export function createKeyboard(): {
   consumeSkills: () => boolean
   /** Reads and clears the pending character-screen toggle press (`C`). */
   consumeCharacter: () => boolean
+  /** Reads and clears the pending combat-mode draw/sheathe press (`X`, plan ui-input-018). */
+  consumeCombatMode: () => boolean
   /** Reads and clears the pending jump press (`Space`). */
   consumeJump: () => boolean
   /** Reads and clears the pending interaction-cycle press (`Tab`, plan 153). */
@@ -170,6 +176,7 @@ export function createKeyboard(): {
     minimap: false,
     skills: false,
     character: false,
+    combatMode: false,
     jump: false,
     cycleTarget: false,
     plus: false,
@@ -203,7 +210,7 @@ export function createKeyboard(): {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
-  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'inspect' | 'questLog' | 'drop' | 'rotateLeft' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget' | 'plus' | 'minus' | 'comma' | 'period' | 'dismount'): boolean => {
+  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'inspect' | 'questLog' | 'drop' | 'rotateLeft' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'combatMode' | 'jump' | 'cycleTarget' | 'plus' | 'minus' | 'comma' | 'period' | 'dismount'): boolean => {
     if (!state[key]) return false
     state[key] = false
     return true
@@ -223,6 +230,7 @@ export function createKeyboard(): {
     consumeMinimap: () => consume('minimap'),
     consumeSkills: () => consume('skills'),
     consumeCharacter: () => consume('character'),
+    consumeCombatMode: () => consume('combatMode'),
     consumeJump: () => consume('jump'),
     consumeCycleTarget: () => consume('cycleTarget'),
     consumePlus: () => consume('plus'),

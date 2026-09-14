@@ -73,6 +73,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Gaze target ranking](../src/interaction/findInteractionTarget.ts) — `pickInGaze` / `rankInGaze` with tie-breaks and hysteresis (plan ui-input-015).
 - [Inventory](../src/items/Inventory.ts) — item ownership (player *and* NPC), stacks, instances and food batches.
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
+- [Player combat mode](../src/player/playerCombatMode.ts) — runtime drawn-primary state for HUD/keyboard sheathe-toggle (plan ui-input-018); does not own `HeldTool` or combat damage.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).
 - [Treasure gameplay](../src/items/treasureGameplay.ts) — deterministic systemic loot, force-entry resolution and trap consequences (plan items-player-026); lock identity stays in `treasureSites.ts`.
 

@@ -18,6 +18,8 @@ export type Hud = {
   /** Primary melee/ranged weapon shortcut labels (plan `ui-input-002` §6) —
    *  empty string hides the corresponding shortcut button. */
   setPrimaryWeapons: (meleeLabel: string, rangedLabel: string) => void
+  /** Drawn primary combat category for HUD shortcut mapping (plan ui-input-018). */
+  setCombatWeapon: (category: 'melee' | 'ranged' | null) => void
   /** Ratios (0-1) for the HUD bars (plan 106 + issue 034). `hp` is HealthState. */
   setPlayerNeeds: (needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }) => void
   /** Active temporary condition label — empty hides (plan npc-024). */
@@ -59,6 +61,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setHeldTool: (label) => { if (!disposed) getUi()?.setHudHeldTool(label) },
     setHeldAmmo: (ammoLabel, count) => { if (!disposed) getUi()?.setHudHeldAmmo(ammoLabel, count) },
     setPrimaryWeapons: (meleeLabel, rangedLabel) => { if (!disposed) getUi()?.setHudPrimaryWeapons(meleeLabel, rangedLabel) },
+    setCombatWeapon: (category) => { if (!disposed) getUi()?.setHudCombatWeapon(category) },
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
     setPlayerCondition: (label) => { if (!disposed) getUi()?.setHudPlayerCondition(label) },
     setAiming: (aiming, targetScreen) => { if (!disposed) getUi()?.setHudAiming(aiming, targetScreen ?? null) },

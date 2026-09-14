@@ -386,6 +386,8 @@ export type GameLoopDeps = {
   /** Runtime targeted-skill selection (plan items-player-021) — not persisted. */
   targetedSkillSelection: TargetedSkillSelection
   openCharacter: () => void
+  /** Keyboard `X` combat-mode draw/sheathe (plan ui-input-018). */
+  toggleCombatMode: () => void
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
   /** Start the axe chop channel for a gaze-selected tree (plan 057). */
   startTreeChop: (treeId: string, x: number, z: number) => void
@@ -675,7 +677,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, equipment, mount, lead, landOwnership, toast, hud,
     questManager, syncLostLivestockQuests, onQuestStateSynced, onPlayerAnimalKill, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
-    targetedSkillSelection,
+    targetedSkillSelection, toggleCombatMode,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startShearAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
@@ -1038,6 +1040,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const minimapConsumed = keyboard.consumeMinimap()
       const skillsConsumed = keyboard.consumeSkills()
       const characterConsumed = keyboard.consumeCharacter()
+      keyboard.consumeCombatMode()
       setHighlight(null)
       vueUi.setCycleTargetAvailable(false)
       vueUi.setInspectAvailable(false)
@@ -2227,6 +2230,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (keyboard.consumeInventory()) openInventory()
       if (keyboard.consumeSkills()) openSkills()
       if (keyboard.consumeCharacter()) openCharacter()
+      if (keyboard.consumeCombatMode()) toggleCombatMode()
       if (keyboard.consumeQuickActions()) quickActions.toggle()
       if (keyboard.consumeMinimap()) {
         vueUi.toggleWorldMap(player.mesh.position.x, player.mesh.position.z)

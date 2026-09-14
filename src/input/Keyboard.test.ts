@@ -49,3 +49,30 @@ describe('Keyboard inspect (plan ui-input-014)', () => {
     expect(keyboard.consumeInspect()).toBe(false)
   })
 })
+
+describe('Keyboard combat mode (plan ui-input-018)', () => {
+  let keyboard: ReturnType<typeof createKeyboard>
+
+  beforeEach(() => {
+    keyboard = createKeyboard()
+  })
+
+  afterEach(() => {
+    keyboard.dispose()
+  })
+
+  it('latches combatMode on KeyX and consumeCombatMode clears the edge', () => {
+    press('KeyX')
+    expect(keyboard.state.combatMode).toBe(true)
+    expect(keyboard.consumeCombatMode()).toBe(true)
+    expect(keyboard.state.combatMode).toBe(false)
+    expect(keyboard.consumeCombatMode()).toBe(false)
+  })
+
+  it('does not retrigger combatMode on key repeat', () => {
+    press('KeyX')
+    expect(keyboard.consumeCombatMode()).toBe(true)
+    press('KeyX', true)
+    expect(keyboard.consumeCombatMode()).toBe(false)
+  })
+})

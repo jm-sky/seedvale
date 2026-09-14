@@ -1,7 +1,8 @@
 # Plan: Player combat mode and weapon toggle
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+**Implemented at:** 2026-09-14 18:30
 **Priority:** medium · **Effort:** S
 **Model:** Sonnet, Composer
 **Depends on:** none
@@ -260,6 +261,12 @@ Verify manually:
 Prefer extending the current `HeldTool` / `PrimaryWeaponSelection` / `inventoryWiring` / UI-store seams rather than introducing a `CombatManager` or parallel equipment state.
 
 Add JSDoc to the new Combat Mode state/controller and important public operations so preflight/code-map discovery can identify ownership and intent; use `@domain ui-input` where appropriate.
+
+## Implementation status
+
+Implemented. Runtime Combat Mode lives in `src/player/playerCombatMode.ts` and is not persisted. Draw/sheathe goes through `inventoryWiring` only after `HeldTool.equip()` / `unequip()`. `createApp.ts` `syncHeldHud` reconciles against the actual hand and current primary choices. Keyboard `KeyX` is edge-triggered in `Keyboard.ts` and consumed in `gameLoop.ts` (drained while a modal is open). HUD mapping is `hudWeaponShortcuts()` for both desktop and touch clusters.
+
+Automated tests cover the state/action seam and HUD mapping. Browser/gameplay verification is still open.
 
 ## Non-goals
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { BowArrow, Crosshair, Search, Sword, Zap } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { ArrowDownToLine, BowArrow, Crosshair, Search, Sword, Zap } from 'lucide-vue-next'
+import { type Component, computed } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { alternateActionState, primaryActionState } from '../../interaction/interactionView'
-import { equipPrimaryMelee, equipPrimaryRanged, ui } from '../store'
+import { hudWeaponShortcuts } from '../hudWeaponShortcuts'
+import { equipPrimaryMelee, equipPrimaryRanged, sheatheCombatWeapon, ui } from '../store'
 
 const touch = isTouchDevice()
 const primaryAction = computed(() => primaryActionState(ui.flavorDialog.interactionPrompt))
@@ -11,6 +12,23 @@ const alternateAction = computed(() => alternateActionState(ui.flavorDialog.inte
 const showAlternate = computed(() => alternateAction.value != null)
 const alternateEnabled = computed(() => alternateAction.value?.enabled ?? false)
 const primaryEnabled = computed(() => primaryAction.value?.enabled ?? true)
+const weaponShortcuts = computed(() => hudWeaponShortcuts({
+  combatWeapon: ui.hud.combatWeapon,
+  primaryMeleeLabel: ui.hud.primaryMeleeLabel,
+  primaryRangedLabel: ui.hud.primaryRangedLabel,
+}))
+
+function onWeaponShortcut(action: 'melee' | 'ranged' | 'sheathe'): void {
+  if (action === 'sheathe') sheatheCombatWeapon()
+  else if (action === 'melee') equipPrimaryMelee()
+  else equipPrimaryRanged()
+}
+
+function weaponShortcutIcon(action: 'melee' | 'ranged' | 'sheathe'): Component {
+  if (action === 'sheathe') return ArrowDownToLine
+  if (action === 'ranged') return BowArrow
+  return Sword
+}
 </script>
 
 <template>
@@ -34,24 +52,18 @@ const primaryEnabled = computed(() => primaryAction.value?.enabled ?? true)
         <Crosshair :size="20" />
       </button>
       <button
-        v-if="ui.hud.primaryRangedLabel"
+        v-for="shortcut in weaponShortcuts"
+        :key="shortcut.id"
         type="button"
         class="pointer-events-auto flex size-11 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
         :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
-        :aria-label="`Broń dystansowa: ${ui.hud.primaryRangedLabel}`"
-        @click="equipPrimaryRanged"
+        :aria-label="shortcut.ariaLabel"
+        @click="onWeaponShortcut(shortcut.action)"
       >
-        <BowArrow :size="18" />
-      </button>
-      <button
-        v-if="ui.hud.primaryMeleeLabel"
-        type="button"
-        class="pointer-events-auto flex size-11 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(20,24,28,0.6)] text-ink [-webkit-tap-highlight-color:transparent]"
-        :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
-        :aria-label="`Broń biała: ${ui.hud.primaryMeleeLabel}`"
-        @click="equipPrimaryMelee"
-      >
-        <Sword :size="18" />
+        <component
+          :is="weaponShortcutIcon(shortcut.action)"
+          :size="18"
+        />
       </button>
       <button
         type="button"

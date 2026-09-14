@@ -7,6 +7,7 @@ import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { PrimaryWeaponSelection } from '../items/primaryWeapons'
 import type { TradeResult } from '../items/trade'
+import type { CombatWeaponCategory, PlayerCombatMode } from '../player/playerCombatMode'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
@@ -151,10 +152,14 @@ export type InventoryWiring = {
   equipArmor: (instanceId: string) => void
   /** "Zdejmij" on an equipment slot (defaults to body when omitted). */
   unequipArmor: (slot?: EquipmentSlot) => void
-  /** HUD primary-weapon shortcuts (plan `ui-input-002` §6) — equip whichever
-   *  weapon `primaryWeapons` currently remembers, no-op if none is set. */
+  /** HUD primary-weapon shortcuts (plan `ui-input-002` §6 / ui-input-018) —
+   *  draw the configured primary, or sheathe when Combat Mode is active. */
   equipPrimaryMeleeWeapon: () => void
   equipPrimaryRangedWeapon: () => void
+  sheatheCombatWeapon: () => void
+  /** Keyboard `X` — sheathe when active, otherwise draw lastActiveWeapon
+   *  with fallback to the other configured primary. */
+  toggleCombatMode: () => void
   setPrimaryMeleeWeapon: (kind: ItemKind, instanceId: string | null) => void
   setPrimaryRangedWeapon: (kind: ItemKind, instanceId: string | null) => void
 }
@@ -166,6 +171,7 @@ export type InventoryWiringDeps = {
   heldTool: HeldTool
   equipment: EquipmentState
   primaryWeapons: PrimaryWeaponSelection
+  playerCombatMode: PlayerCombatMode
   playerTorch: PlayerTorch
   hud: Hud
   toast: Toast
@@ -203,7 +209,7 @@ export type InventoryWiringDeps = {
 
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
-    bundle, player, inventory, heldTool, equipment, primaryWeapons, playerTorch, hud, toast, vueUi,
+    bundle, player, inventory, heldTool, equipment, primaryWeapons, playerCombatMode, playerTorch, hud, toast, vueUi,
     questManager, reputationManager, worldFlags, guardProgress, homeSettlementId, homeGuardNpcId, playOnce, grantItem,
     locationCatalog, locationKnowledge, navigationTargets, dayNight, openNpcGiveItem,
   } = deps
@@ -507,15 +513,47 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     deps.refreshInventoryScreen()
   }
 
-  const equipPrimary = (choice: ReturnType<PrimaryWeaponSelection['primaryMelee']>): void => {
-    if (!choice) return
+  const equipPrimary = (
+    choice: ReturnType<PrimaryWeaponSelection['primaryMelee']>,
+    category: CombatWeaponCategory,
+  ): boolean => {
+    if (!choice) return false
     if (playerTorch.isLit()) playerTorch.extinguish()
-    if (!heldTool.equip(choice.kind, choice.instanceId ?? undefined)) return
+    if (!heldTool.equip(choice.kind, choice.instanceId ?? undefined)) return false
+    playerCombatMode.noteDrawn(category)
     deps.syncHeldHud()
     deps.refreshInventoryScreen()
+    return true
   }
-  const equipPrimaryMeleeWeapon = (): void => equipPrimary(primaryWeapons.primaryMelee())
-  const equipPrimaryRangedWeapon = (): void => equipPrimary(primaryWeapons.primaryRanged())
+  const equipPrimaryMeleeWeapon = (): void => {
+    equipPrimary(primaryWeapons.primaryMelee(), 'melee')
+  }
+  const equipPrimaryRangedWeapon = (): void => {
+    equipPrimary(primaryWeapons.primaryRanged(), 'ranged')
+  }
+
+  /** Sheathes the drawn primary combat weapon and leaves the hand empty (V1). */
+  const sheatheCombatWeapon = (): void => {
+    if (!playerCombatMode.isActive()) return
+    playerCombatMode.noteSheathed()
+    unequipTool()
+  }
+
+  const toggleCombatMode = (): void => {
+    if (playerCombatMode.isActive()) {
+      sheatheCombatWeapon()
+      return
+    }
+    const last = playerCombatMode.lastActiveWeapon()
+    const other: CombatWeaponCategory = last === 'melee' ? 'ranged' : 'melee'
+    const draw = (category: CombatWeaponCategory): boolean =>
+      equipPrimary(
+        category === 'melee' ? primaryWeapons.primaryMelee() : primaryWeapons.primaryRanged(),
+        category,
+      )
+    if (draw(last) || draw(other)) return
+    toast.show('Nie masz skonfigurowanej broni.', 'info')
+  }
 
   const setPrimaryMeleeWeapon = (kind: ItemKind, instanceId: string | null): void => {
     if (!isMeleeToolKind(kind) || !inventoryOwnsPrimaryWeaponChoice(inventory, kind, instanceId)) return
@@ -812,6 +850,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     unequipArmor,
     equipPrimaryMeleeWeapon,
     equipPrimaryRangedWeapon,
+    sheatheCombatWeapon,
+    toggleCombatMode,
     setPrimaryMeleeWeapon,
     setPrimaryRangedWeapon,
   }
