@@ -1,6 +1,6 @@
 # Seedvale — Performance & Rendering Strategy
 
-**Updated:** 2026-09-07
+**Updated:** 2026-09-14
 **Status:** active
 **Scope:** CPU · GPU · memory · rendering · chunk streaming · scalability
 
@@ -105,6 +105,8 @@ Potential follow-ups such as cheaper AO/depth reuse or dynamic resolution requir
 ### CPU simulation scalability
 
 Current NPC/fauna simulation is not the primary performance target. There are future O(N²)-style proximity/predator-prey pressures. When population scale makes them measurable, prefer one shared coarse spatial-query mechanism rather than parallel NPC/fauna systems.
+
+NPC category wall-clock is `SettlementsManager.update()`. While the perf monitor is active, `src/perf/agentCpuDiag.ts` splits that total into crowd pass, NPC agent updates, livestock, rats, social pairing, settlement streaming (`recheck`), settlement maintenance (storage visuals / doors / torches / signposts), and a remaining `unattributed` remainder. Do not treat a large `unattributed` as a new subsystem — inspect the current `update()` path first.
 
 ## Techniques already in use
 

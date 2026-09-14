@@ -169,6 +169,11 @@ describe('buildReport', () => {
       totals: {
         npcCrowdMs: 5,
         npcAgentUpdatesMs: 15,
+        npcLivestockMs: 3,
+        npcRatsMs: 2,
+        npcSocialMs: 0,
+        npcStreamingMs: 1,
+        npcMaintenanceMs: 1,
         faunaAgentUpdatesMs: 30,
         faunaForestSamplingMs: 2,
         faunaSensingMs: 6,
@@ -225,6 +230,8 @@ describe('buildReport', () => {
     const text = formatReport(report)
     expect(text).toContain('[Seedvale Agent CPU]')
     expect(text).toContain('crowd pass:')
+    expect(text).toContain('livestock:')
+    expect(text).toContain('unattributed:')
     expect(text).toContain('nearest scans:')
   })
 })

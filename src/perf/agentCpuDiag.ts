@@ -6,15 +6,38 @@ import { PERF_CATEGORY_INDEX } from './types'
  *  counters and a few `performance.now()` spans — only recorded while
  *  `getMonitor().isEnabled()` (benchmark, `?perf=1`, or GUI toggle).
  *
+ *  NPC wall-clock (`PERF_CATEGORY_INDEX.NPC`) is `SettlementsManager.update()`.
+ *  Existing crowd/agent spans sit inside each `Settlement.update()`; the
+ *  remaining NPC sections are the real sibling blocks that used to collapse
+ *  into a single `other` remainder:
+ *    livestock    `tickSettlementLivestock` (loaded + detached)
+ *    rats         `rats.update`
+ *    social       `advanceSocialPairing`
+ *    streaming    `SettlementsManager.recheck` (stream-in/out, def resolve)
+ *    maintenance  woodshed / storage visuals / torches / doors / signposts
+ *    unattributed remainder of NPC total after those spans
+ *
  *  Fauna's `AnimalAgent.update()` breakdown (fauna-cpu-diagnostics) uses a
  *  handful of *cumulative* spans rather than per-function profiling — each
  *  `addFauna*Ms` call adds one timed region's elapsed time onto a running
  *  total, so one logical section (e.g. "targeting") can be measured across
  *  two or more non-adjacent call sites inside `update()` without extra
- *  begin/end state. */
+ *  begin/end state. Livestock/rats share `AnimalAgent.update()`, so those
+ *  fauna section counters still include settlement-owned animals; the NPC
+ *  livestock/rats spans are the wall-clock of those ticks inside NPC total. */
 export type AgentCpuDiagTotals = {
   npcCrowdMs: number
   npcAgentUpdatesMs: number
+  /** `tickSettlementLivestock` — loaded settlements and detached livestock. */
+  npcLivestockMs: number
+  /** `Settlement.rats.update` — settlement-owned `AnimalAgent` ticks. */
+  npcRatsMs: number
+  /** `advanceSocialPairing` — campfire conversation pairing. */
+  npcSocialMs: number
+  /** `SettlementsManager.recheck` — stream-in/out, def resolve, off-screen travel. */
+  npcStreamingMs: number
+  /** Settlement `update()` tail: woodshed, storage visuals, torches, doors, signposts. */
+  npcMaintenanceMs: number
   faunaAgentUpdatesMs: number
   /** `createFauna.ts`'s per-agent `sampleForestFactor()` call, measured
    *  separately from `AnimalAgent.update()` itself — shows how much of
@@ -64,9 +87,19 @@ export type AgentCpuReport = {
     totalMsPerFrame: number
     crowdPassMsPerFrame: number
     agentUpdatesMsPerFrame: number
-    otherMsPerFrame: number
+    livestockMsPerFrame: number
+    ratsMsPerFrame: number
+    socialMsPerFrame: number
+    streamingMsPerFrame: number
+    maintenanceMsPerFrame: number
+    unattributedMsPerFrame: number
     crowdPassCumulativeMs: number
     agentUpdatesCumulativeMs: number
+    livestockCumulativeMs: number
+    ratsCumulativeMs: number
+    socialCumulativeMs: number
+    streamingCumulativeMs: number
+    maintenanceCumulativeMs: number
   }
   fauna: {
     totalMsPerFrame: number
@@ -111,6 +144,16 @@ export type AgentCpuDiag = {
   endNpcCrowd: () => void
   beginNpcAgentUpdates: () => void
   endNpcAgentUpdates: () => void
+  beginNpcLivestock: () => void
+  endNpcLivestock: () => void
+  beginNpcRats: () => void
+  endNpcRats: () => void
+  beginNpcSocial: () => void
+  endNpcSocial: () => void
+  beginNpcStreaming: () => void
+  endNpcStreaming: () => void
+  beginNpcMaintenance: () => void
+  endNpcMaintenance: () => void
   beginFaunaAgentUpdates: () => void
   endFaunaAgentUpdates: () => void
   addFaunaForestSamplingMs: (ms: number) => void
@@ -138,6 +181,11 @@ function emptyTotals(): AgentCpuDiagTotals {
   return {
     npcCrowdMs: 0,
     npcAgentUpdatesMs: 0,
+    npcLivestockMs: 0,
+    npcRatsMs: 0,
+    npcSocialMs: 0,
+    npcStreamingMs: 0,
+    npcMaintenanceMs: 0,
     faunaAgentUpdatesMs: 0,
     faunaForestSamplingMs: 0,
     faunaSensingMs: 0,
@@ -165,6 +213,11 @@ export function createAgentCpuDiag(): AgentCpuDiag {
   const totals = emptyTotals()
   let npcCrowdStart = Number.NaN
   let npcAgentStart = Number.NaN
+  let npcLivestockStart = Number.NaN
+  let npcRatsStart = Number.NaN
+  let npcSocialStart = Number.NaN
+  let npcStreamingStart = Number.NaN
+  let npcMaintenanceStart = Number.NaN
   let faunaAgentStart = Number.NaN
 
   return {
@@ -186,6 +239,51 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       if (!this.isEnabled() || !Number.isFinite(npcAgentStart)) return
       totals.npcAgentUpdatesMs += performance.now() - npcAgentStart
       npcAgentStart = Number.NaN
+    },
+    beginNpcLivestock() {
+      if (!this.isEnabled()) return
+      npcLivestockStart = performance.now()
+    },
+    endNpcLivestock() {
+      if (!this.isEnabled() || !Number.isFinite(npcLivestockStart)) return
+      totals.npcLivestockMs += performance.now() - npcLivestockStart
+      npcLivestockStart = Number.NaN
+    },
+    beginNpcRats() {
+      if (!this.isEnabled()) return
+      npcRatsStart = performance.now()
+    },
+    endNpcRats() {
+      if (!this.isEnabled() || !Number.isFinite(npcRatsStart)) return
+      totals.npcRatsMs += performance.now() - npcRatsStart
+      npcRatsStart = Number.NaN
+    },
+    beginNpcSocial() {
+      if (!this.isEnabled()) return
+      npcSocialStart = performance.now()
+    },
+    endNpcSocial() {
+      if (!this.isEnabled() || !Number.isFinite(npcSocialStart)) return
+      totals.npcSocialMs += performance.now() - npcSocialStart
+      npcSocialStart = Number.NaN
+    },
+    beginNpcStreaming() {
+      if (!this.isEnabled()) return
+      npcStreamingStart = performance.now()
+    },
+    endNpcStreaming() {
+      if (!this.isEnabled() || !Number.isFinite(npcStreamingStart)) return
+      totals.npcStreamingMs += performance.now() - npcStreamingStart
+      npcStreamingStart = Number.NaN
+    },
+    beginNpcMaintenance() {
+      if (!this.isEnabled()) return
+      npcMaintenanceStart = performance.now()
+    },
+    endNpcMaintenance() {
+      if (!this.isEnabled() || !Number.isFinite(npcMaintenanceStart)) return
+      totals.npcMaintenanceMs += performance.now() - npcMaintenanceStart
+      npcMaintenanceStart = Number.NaN
     },
     beginFaunaAgentUpdates() {
       if (!this.isEnabled()) return
@@ -271,6 +369,11 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       Object.assign(totals, emptyTotals())
       npcCrowdStart = Number.NaN
       npcAgentStart = Number.NaN
+      npcLivestockStart = Number.NaN
+      npcRatsStart = Number.NaN
+      npcSocialStart = Number.NaN
+      npcStreamingStart = Number.NaN
+      npcMaintenanceStart = Number.NaN
       faunaAgentStart = Number.NaN
     },
   }
@@ -282,6 +385,16 @@ const NOOP: AgentCpuDiag = {
   endNpcCrowd: () => {},
   beginNpcAgentUpdates: () => {},
   endNpcAgentUpdates: () => {},
+  beginNpcLivestock: () => {},
+  endNpcLivestock: () => {},
+  beginNpcRats: () => {},
+  endNpcRats: () => {},
+  beginNpcSocial: () => {},
+  endNpcSocial: () => {},
+  beginNpcStreaming: () => {},
+  endNpcStreaming: () => {},
+  beginNpcMaintenance: () => {},
+  endNpcMaintenance: () => {},
   beginFaunaAgentUpdates: () => {},
   endFaunaAgentUpdates: () => {},
   addFaunaForestSamplingMs: () => {},
@@ -326,9 +439,15 @@ export function buildAgentCpuReport(input: {
   const faunaTotalMs = input.categoryMsSum[PERF_CATEGORY_INDEX.FAUNA]! / frames
   const crowdMs = input.totals.npcCrowdMs / frames
   const npcAgentMs = input.totals.npcAgentUpdatesMs / frames
+  const livestockMs = input.totals.npcLivestockMs / frames
+  const ratsMs = input.totals.npcRatsMs / frames
+  const socialMs = input.totals.npcSocialMs / frames
+  const streamingMs = input.totals.npcStreamingMs / frames
+  const maintenanceMs = input.totals.npcMaintenanceMs / frames
   const faunaAgentMs = input.totals.faunaAgentUpdatesMs / frames
+  const npcAttributedMs = crowdMs + npcAgentMs + livestockMs + ratsMs + socialMs + streamingMs + maintenanceMs
 
-  const hasNpc = npcTotalMs >= 0.01 || crowdMs >= 0.01 || npcAgentMs >= 0.01
+  const hasNpc = npcTotalMs >= 0.01 || npcAttributedMs >= 0.01
   const hasFauna = faunaTotalMs >= 0.01 || faunaAgentMs >= 0.01
     || input.totals.nearestCalls > 0 || input.totals.herdLeaderCalls > 0
     || input.totals.faunaUpdateCalls > 0
@@ -344,9 +463,19 @@ export function buildAgentCpuReport(input: {
       totalMsPerFrame: round1(npcTotalMs),
       crowdPassMsPerFrame: round1(crowdMs),
       agentUpdatesMsPerFrame: round1(npcAgentMs),
-      otherMsPerFrame: round1(Math.max(0, npcTotalMs - crowdMs - npcAgentMs)),
+      livestockMsPerFrame: round1(livestockMs),
+      ratsMsPerFrame: round1(ratsMs),
+      socialMsPerFrame: round1(socialMs),
+      streamingMsPerFrame: round1(streamingMs),
+      maintenanceMsPerFrame: round1(maintenanceMs),
+      unattributedMsPerFrame: round1(Math.max(0, npcTotalMs - npcAttributedMs)),
       crowdPassCumulativeMs: round1(input.totals.npcCrowdMs),
       agentUpdatesCumulativeMs: round1(input.totals.npcAgentUpdatesMs),
+      livestockCumulativeMs: round1(input.totals.npcLivestockMs),
+      ratsCumulativeMs: round1(input.totals.npcRatsMs),
+      socialCumulativeMs: round1(input.totals.npcSocialMs),
+      streamingCumulativeMs: round1(input.totals.npcStreamingMs),
+      maintenanceCumulativeMs: round1(input.totals.npcMaintenanceMs),
     },
     fauna: {
       totalMsPerFrame: round1(faunaTotalMs),
@@ -399,7 +528,12 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `  total: ${npc.totalMsPerFrame.toFixed(1)} ms/frame`,
     `  crowd pass: ${npc.crowdPassMsPerFrame.toFixed(1)} ms/frame (${npc.crowdPassCumulativeMs.toFixed(1)} ms cumulative)`,
     `  agent updates: ${npc.agentUpdatesMsPerFrame.toFixed(1)} ms/frame (${npc.agentUpdatesCumulativeMs.toFixed(1)} ms cumulative)`,
-    `  other (livestock/rats/social/...): ${npc.otherMsPerFrame.toFixed(1)} ms/frame`,
+    `  livestock: ${npc.livestockMsPerFrame.toFixed(1)} ms/frame (${npc.livestockCumulativeMs.toFixed(1)} ms cumulative)`,
+    `  rats: ${npc.ratsMsPerFrame.toFixed(1)} ms/frame (${npc.ratsCumulativeMs.toFixed(1)} ms cumulative)`,
+    `  social: ${npc.socialMsPerFrame.toFixed(1)} ms/frame (${npc.socialCumulativeMs.toFixed(1)} ms cumulative)`,
+    `  streaming: ${npc.streamingMsPerFrame.toFixed(1)} ms/frame (${npc.streamingCumulativeMs.toFixed(1)} ms cumulative)`,
+    `  maintenance: ${npc.maintenanceMsPerFrame.toFixed(1)} ms/frame (${npc.maintenanceCumulativeMs.toFixed(1)} ms cumulative)`,
+    `  unattributed: ${npc.unattributedMsPerFrame.toFixed(1)} ms/frame`,
     '',
     'FAUNA:',
     `  total: ${fauna.totalMsPerFrame.toFixed(1)} ms/frame`,

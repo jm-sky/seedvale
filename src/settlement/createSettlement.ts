@@ -1052,7 +1052,9 @@ export async function createSettlement(
       // Social Place conversation pairing (plan 151) — reuses this
       // settlement's own already-updated `agents` list (no global registry);
       // a no-op pass when nobody is currently settled at the campfire.
+      agentCpu.beginNpcSocial()
       advanceSocialPairing(agents, relations, dayLengthSec)
+      agentCpu.endNpcSocial()
       // Plan fauna-011 §7: an owned dog's stranger-bark check reuses this
       // settlement's own already-updated `agents` list — cheap and already
       // in scope, no separate global candidate collection needed.
@@ -1062,6 +1064,7 @@ export async function createSettlement(
       // Plan fauna-016 §7/§9 — ticked ahead of `tickSettlementLivestock` so a
       // dog's idle pest-chase (`nearbyRats` below) sees this frame's rat
       // positions, not the previous one's.
+      agentCpu.beginNpcRats()
       rats.update({
         dt,
         observerPos,
@@ -1072,6 +1075,8 @@ export async function createSettlement(
         timeOfDay,
         dogCount: livestock.reduce((n, a) => n + (a.def.kind === 'dog' && !a.isDead() ? 1 : 0), 0),
       })
+      agentCpu.endNpcRats()
+      agentCpu.beginNpcLivestock()
       tickSettlementLivestock(livestock, {
         dt,
         settlementId: def.id,
@@ -1094,6 +1099,8 @@ export async function createSettlement(
         playerControlPos: { x: observerPos.x, z: observerPos.z },
         scareStimulus,
       })
+      agentCpu.endNpcLivestock()
+      agentCpu.beginNpcMaintenance()
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived
       // sync every tick; each controller no-ops unless its own visual state
@@ -1113,6 +1120,7 @@ export async function createSettlement(
       for (const entry of villageTorches) entry.torch.update(dt)
       if (houseDoors.update(dt, observerPos)) registerSettlementColliders()
       signposts.update(observerPos)
+      agentCpu.endNpcMaintenance()
     },
     setDayNight(t) {
       nightCycle.apply(t)

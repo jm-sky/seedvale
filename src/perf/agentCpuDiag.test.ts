@@ -27,6 +27,16 @@ describe('agentCpuDiag', () => {
     diag.endNpcCrowd()
     diag.beginNpcAgentUpdates()
     diag.endNpcAgentUpdates()
+    diag.beginNpcLivestock()
+    diag.endNpcLivestock()
+    diag.beginNpcRats()
+    diag.endNpcRats()
+    diag.beginNpcSocial()
+    diag.endNpcSocial()
+    diag.beginNpcStreaming()
+    diag.endNpcStreaming()
+    diag.beginNpcMaintenance()
+    diag.endNpcMaintenance()
     diag.beginFaunaAgentUpdates()
     diag.endFaunaAgentUpdates()
     diag.recordNearestScan(8)
@@ -50,6 +60,11 @@ describe('agentCpuDiag', () => {
       totals: {
         npcCrowdMs: 12,
         npcAgentUpdatesMs: 54,
+        npcLivestockMs: 8,
+        npcRatsMs: 4,
+        npcSocialMs: 1,
+        npcStreamingMs: 5,
+        npcMaintenanceMs: 2,
         faunaAgentUpdatesMs: 81,
         faunaForestSamplingMs: 6,
         faunaSensingMs: 15,
@@ -83,6 +98,12 @@ describe('agentCpuDiag', () => {
     expect(report).not.toBeNull()
     expect(report!.npc.totalMsPerFrame).toBe(8.6)
     expect(report!.npc.crowdPassMsPerFrame).toBe(1.2)
+    expect(report!.npc.livestockMsPerFrame).toBe(0.8)
+    expect(report!.npc.ratsMsPerFrame).toBe(0.4)
+    expect(report!.npc.socialMsPerFrame).toBe(0.1)
+    expect(report!.npc.streamingMsPerFrame).toBe(0.5)
+    expect(report!.npc.maintenanceMsPerFrame).toBe(0.2)
+    expect(report!.npc.unattributedMsPerFrame).toBe(0)
     expect(report!.fauna.nearestScansPerFrame).toBe(10)
     expect(report!.fauna.forestSamplingMsPerFrame).toBe(0.6)
     expect(report!.fauna.behaviourMsPerFrame).toBe(4)
@@ -91,6 +112,12 @@ describe('agentCpuDiag', () => {
     const text = formatAgentCpuReport(report!)
     expect(text).toContain('[Seedvale Agent CPU]')
     expect(text).toContain('NPC (loaded): 18')
+    expect(text).toContain('livestock: 0.8 ms/frame (8.0 ms cumulative)')
+    expect(text).toContain('rats: 0.4 ms/frame (4.0 ms cumulative)')
+    expect(text).toContain('social: 0.1 ms/frame (1.0 ms cumulative)')
+    expect(text).toContain('streaming: 0.5 ms/frame (5.0 ms cumulative)')
+    expect(text).toContain('maintenance: 0.2 ms/frame (2.0 ms cumulative)')
+    expect(text).toContain('unattributed: 0.0 ms/frame')
     expect(text).toContain('nearest scans: 10.0/frame (100 calls)')
     expect(text).toContain('AnimalAgent sections:')
     expect(text).toContain('behaviour: 4.0 ms/frame (40.0 ms cumulative)')

@@ -35,6 +35,7 @@ import type { TerrainSamplers } from './settlementTerrain'
 import { resolveOffscreenNpcTravel } from '../ai/npcTravel'
 import { createEconomyRegistry } from '../economy'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
+import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import {
@@ -906,8 +907,11 @@ export async function createSettlementsManager(
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
       if (nowDays !== undefined) lastNowDays = nowDays
+      const agentCpu = getAgentCpuDiag()
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
+        agentCpu.beginNpcStreaming()
         recheck(playerPos.x, playerPos.z, nowDays ?? lastNowDays, dayLengthSec)
+        agentCpu.endNpcStreaming()
       }
       for (const entry of entries.values()) {
         entry.settlement?.update(
@@ -931,6 +935,7 @@ export async function createSettlementsManager(
         )
       }
       if (detachedLivestock.length > 0) {
+        agentCpu.beginNpcLivestock()
         tickSettlementLivestock(detachedLivestock, {
           dt,
           settlementId: 'detached',
@@ -961,6 +966,7 @@ export async function createSettlementsManager(
           const origin = detachedOriginById.get(animal.animalId)
           if (origin) livestock.upsert(origin, animal)
         }
+        agentCpu.endNpcLivestock()
       }
       for (const instances of midpoints.values()) {
         for (const inst of instances) updateLabelOpacity(inst, playerPos)
