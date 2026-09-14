@@ -7,6 +7,7 @@
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** `economy-goods-flow.md`
+**Model:** Opus, Sonnet
 
 ## Cel
 
