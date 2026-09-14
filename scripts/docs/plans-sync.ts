@@ -1,6 +1,6 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { AVAILABLE_DOMAINS, LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
+import { AVAILABLE_DOMAINS, LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_ROADMAP_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
 import { listRoadmapFiles, repairPlanMetadata } from './plan-metadata.js'
 
 const README_PATH = resolve(PLANS_PATH, 'README.md')
@@ -12,7 +12,8 @@ const REVIEW_SUFFIX = '-review.md'
 const DRAFT_HEADING = '## Drafts'
 const PLANNED_HEADING = '## Planned'
 const PLAN_TITLE_PAD_END_SIZE = 78
-const TABLE_HEADER = `| ${'File'.padEnd(PLAN_TITLE_PAD_END_SIZE)} | Pri | Effort | Depends |`
+const ROADMAP_PAD_SIZE = 26
+const TABLE_HEADER = `| ${'File'.padEnd(PLAN_TITLE_PAD_END_SIZE)} | Pri | Effort | Depends | Roadmap       |`
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
 const PLANNED_END_TAG = '## Verification needed'
@@ -100,6 +101,7 @@ const buildRow = (
 ): string => {
   const headerBlock = extractHeaderBlock(content)
   const isPlanned = headerBlock.match(PLAN_STATUS_RE)?.[1]?.trim() === 'planned'
+  let roadmap: string
 
   const priorityWord = matchOne(
     headerBlock,
@@ -107,6 +109,17 @@ const buildRow = (
     file,
     'Priority',
   )
+
+  try {
+    roadmap = matchOne(
+      headerBlock,
+      PLAN_ROADMAP_RE,
+      file,
+      'Roadmap',
+    )?.replaceAll('`', '').replace('.md', '') ?? '-'
+  } catch {
+    roadmap = '-'
+  }
 
   const priorityEmoji = PRIORITY_EMOJI[priorityWord.toLowerCase()]
 
@@ -132,7 +145,7 @@ const buildRow = (
   const marker = getNotesMarker(isPlanned, hasNotes)
   const title = getPaddedPlanTitle(marker, file)
 
-  return `| ${title} | ${priorityEmoji} | ${effort.padEnd(6)} | ${depends.padEnd(6)} |`
+  return `| ${title} | ${priorityEmoji} | ${effort.padEnd(6)} | ${depends.padEnd(7)} | ${roadmap.padEnd(ROADMAP_PAD_SIZE)} |`
 }
 
 const validateUniqueIds = (plans: PlanInfo[]): void => {
