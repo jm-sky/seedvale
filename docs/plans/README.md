@@ -74,6 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | ⚪ | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~                                                                                                                              | -                                       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
 | 💡 `ui-input-019-character-screen-settlement-reputation-and-quest-choice-clarity.md` | 🟡 | M      | ~~quests-progression-001~~, ~~world-012~~                                                                                                                                       | -                                       |
+| ◼️ `settlements-015-settlement-palisade-collision.md`                          | 🔴 | S      | -                                                                                                                                                                               | -                                       |
 
 ---
 
@@ -206,7 +207,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - npc: `039`
 - persistence: `005`
 - quests-progression: `035`
-- settlements: `015`
+- settlements: `016`
 - settlements-npcs: `037`
 - tools: `014`
 - ui-input: `020`
