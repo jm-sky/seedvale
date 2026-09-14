@@ -89,6 +89,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `fauna-028-animal-agent-update-cadence.md` | Benchmark przed/po: `FAUNA`/`livestock` `behaviour` i `life/presentation` ms/frame wyraźnie w dół, `expensive behaviour agents/frame` znacznie poniżej ~27.8, `high-priority agents/frame` bez zmian; wizualnie — zwierzęta blisko gracza (≤20 m) animują się bez zmian, dalekie wolniej ale bez zacinania/teleportów; wilk atakujący/uciekający, spłoszone stado, pies broniący zagrody, jeździec, zwierzę na lince i wóz z zaprzęgiem reagują klatka po klatce; zwierzę tonące traci HP natychmiast; zwierzęta poza ekranem nadal jedzą, piją, dojrzewają i wędrują; brak nowego periodycznego spike'u co N klatek |
 | `ui-input-017-quest-log-information-architecture.md` | Quest Log otwiera się na Bieżące (active + ready_to_report); Oferty i Historia osobno; `not_offered` nigdy nie widać; ready_to_report na górze Bieżących i wyróżnione; failed/invalidated/abandoned w Historii z własnymi etykietami, nie jako sukces |
 | `settlements-npcs-033-player-trading-with-any-npc.md` | Hunter produkuje strzały ponad protected reserve → dialog Huntera pokazuje `Handel` z tylko nadwyżką strzał; zakup zmniejsza `Household.items` i zwiększa ekwipunek gracza dokładnie o kupioną ilość, a monety trafiają do `personalInventory` Huntera; reserve (per-hunter `HUNT_RESUPPLY_ARROW_TARGET`) nigdy nie schodzi poniżej progu w ofercie; zmiana relacji/reputacji zmienia cenę we właściwym kierunku (lepsza relacja ≤ cena, gorsza ≥ cena) bez arbitrażu z merchant buyback; zwykły NPC bez uprawnionych dóbr nie pokazuje `Handel` i nie generuje fake stocku; zamknięcie/otwarcie ekranu odświeża ofertę z żywego stanu; Kupiec nadal ma pełny `MERCHANT_STOCK`, konia i barter; save/load po handlu zachowuje zredukowany stock, przedmioty gracza i monety NPC bez nowego pola w `SaveData` |
 | `settlements-npcs-017-production-demand-and-economic-pressures.md` | Start z iron+coal: kowal robi pręty; wyczerp input → jeden persistent shortage (nie per kowal); presja w inspect bez nowego AI; przywróć input → shortage znika, produkcja wraca; hunter household A/B niezależne; save/load zachowuje tylko nadal zablokowany shortage |
@@ -201,7 +202,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `028`
+- fauna: `029`
 - items-player: `032`
 - npc: `039`
 - persistence: `005`

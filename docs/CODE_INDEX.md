@@ -162,6 +162,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - [AnimalAgent](../src/fauna/AnimalAgent.ts) — per-animal decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API.
 - [Animal scare](../src/fauna/animalScare.ts) — generic bounded scare stimulus and stable per-animal probability (thunder is the first source).
+- [Animal update cadence](../src/fauna/animalUpdateCadence.ts) — shared stateless importance/cadence policy for the one `AnimalAgent.update()` (wild fauna and livestock alike): which sections stay full-rate and how often behaviour/presentation may run.
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
 - [Wild fauna runtime](../src/fauna/createFauna.ts) — spawn/lifecycle for wild animals and the `FAUNA_URLS` GLB registry.
 - [Individual variants](../src/fauna/animalVariants.ts) — per-animal multipliers (`normal`/`alpha`) and wolf-den alpha slot assignment.

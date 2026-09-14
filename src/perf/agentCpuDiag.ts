@@ -61,6 +61,13 @@ export type AgentCpuDiagTotals = {
   livestockPestRatCandidates: number
   livestockNearestCalls: number
   livestockNearestCandidatesChecked: number
+  /** Cadence counters (plan fauna-028) — `AnimalAgent` classified as
+   *  `immediate` vs. reduced-cadence, and how often each cadence-gated
+   *  section actually executed. */
+  livestockFullRateAgents: number
+  livestockReducedCadenceAgents: number
+  livestockBehaviourExecutions: number
+  livestockPresentationExecutions: number
   /** `Settlement.rats.update` — settlement-owned `AnimalAgent` ticks. */
   npcRatsMs: number
   /** `advanceSocialPairing` — campfire conversation pairing. */
@@ -100,7 +107,15 @@ export type AgentCpuDiagTotals = {
   faunaSensingPasses: number
   faunaDecisionPasses: number
   faunaHighPriorityAgents: number
+  /** Counted when an expensive branch's behaviour section **actually ran**
+   *  (plan fauna-028). Before cadence existed, classification and execution
+   *  were the same tick, so this stays directly comparable to older runs. */
   faunaExpensiveBehaviourAgents: number
+  /** Cadence counters (plan fauna-028) — see the livestock pair above. */
+  faunaFullRateAgents: number
+  faunaReducedCadenceAgents: number
+  faunaBehaviourExecutions: number
+  faunaPresentationExecutions: number
   /** Sensing/cache candidates. */
   forestSampleCalls: number
   fireScanCandidates: number
@@ -150,6 +165,10 @@ export type AgentCpuReport = {
     livestockPestRatCandidatesPerFrame: number
     livestockNearestScansPerFrame: number
     livestockNearestCandidatesPerFrame: number
+    livestockFullRateAgentsPerFrame: number
+    livestockReducedCadenceAgentsPerFrame: number
+    livestockBehaviourExecutionsPerFrame: number
+    livestockPresentationExecutionsPerFrame: number
     ratsCumulativeMs: number
     socialCumulativeMs: number
     streamingCumulativeMs: number
@@ -178,6 +197,10 @@ export type AgentCpuReport = {
     decisionPassesPerFrame: number
     highPriorityAgentsPerFrame: number
     expensiveBehaviourAgentsPerFrame: number
+    fullRateAgentsPerFrame: number
+    reducedCadenceAgentsPerFrame: number
+    behaviourExecutionsPerFrame: number
+    presentationExecutionsPerFrame: number
     forestSamplesPerFrame: number
     fireScanCandidatesPerFrame: number
     villageScanCandidatesPerFrame: number
@@ -240,6 +263,12 @@ export type AgentCpuDiag = {
   recordFaunaDecisionPass: () => void
   recordFaunaHighPriorityAgent: () => void
   recordFaunaExpensiveBehaviourAgent: () => void
+  /** Cadence counters (plan fauna-028) — routed to whichever channel owns
+   *  the current `AnimalAgent.update()` call (livestock vs. wild fauna), the
+   *  same owner rule `addSectionMs` uses, so one tick is never counted twice. */
+  recordAnimalCadence: (fullRate: boolean) => void
+  recordAnimalBehaviourExecution: () => void
+  recordAnimalPresentationExecution: () => void
   recordForestSample: () => void
   recordFireScan: (candidatesChecked: number) => void
   recordVillageScan: (candidatesChecked: number) => void
@@ -280,6 +309,10 @@ function emptyTotals(): AgentCpuDiagTotals {
     livestockPestRatCandidates: 0,
     livestockNearestCalls: 0,
     livestockNearestCandidatesChecked: 0,
+    livestockFullRateAgents: 0,
+    livestockReducedCadenceAgents: 0,
+    livestockBehaviourExecutions: 0,
+    livestockPresentationExecutions: 0,
     npcRatsMs: 0,
     npcSocialMs: 0,
     npcStreamingMs: 0,
@@ -300,6 +333,10 @@ function emptyTotals(): AgentCpuDiagTotals {
     faunaDecisionPasses: 0,
     faunaHighPriorityAgents: 0,
     faunaExpensiveBehaviourAgents: 0,
+    faunaFullRateAgents: 0,
+    faunaReducedCadenceAgents: 0,
+    faunaBehaviourExecutions: 0,
+    faunaPresentationExecutions: 0,
     forestSampleCalls: 0,
     fireScanCandidates: 0,
     villageScanCandidates: 0,
@@ -325,6 +362,14 @@ export function createAgentCpuDiag(): AgentCpuDiag {
   let npcMaintenanceStart = Number.NaN
   let faunaAgentStart = Number.NaN
   let faunaAgentDepth = 0
+
+  function addCadenceCount(
+    faunaKey: 'faunaFullRateAgents' | 'faunaReducedCadenceAgents' | 'faunaBehaviourExecutions' | 'faunaPresentationExecutions',
+    livestockKey: 'livestockFullRateAgents' | 'livestockReducedCadenceAgents' | 'livestockBehaviourExecutions' | 'livestockPresentationExecutions',
+  ): void {
+    if (livestockAgentDepth > 0) totals[livestockKey]++
+    else if (faunaAgentDepth > 0) totals[faunaKey]++
+  }
 
   function addSectionMs(faunaKey: 'faunaSensingMs' | 'faunaTargetingMs' | 'faunaDecisionMs' | 'faunaBehaviourMs' | 'faunaLifePresentationMs', livestockKey: 'livestockSensingMs' | 'livestockTargetingMs' | 'livestockDecisionMs' | 'livestockBehaviourMs' | 'livestockLifePresentationMs', ms: number): void {
     if (livestockAgentDepth > 0) totals[livestockKey] += ms
@@ -536,6 +581,19 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.faunaExpensiveBehaviourAgents++
     },
+    recordAnimalCadence(fullRate) {
+      if (!this.isEnabled()) return
+      if (fullRate) addCadenceCount('faunaFullRateAgents', 'livestockFullRateAgents')
+      else addCadenceCount('faunaReducedCadenceAgents', 'livestockReducedCadenceAgents')
+    },
+    recordAnimalBehaviourExecution() {
+      if (!this.isEnabled()) return
+      addCadenceCount('faunaBehaviourExecutions', 'livestockBehaviourExecutions')
+    },
+    recordAnimalPresentationExecution() {
+      if (!this.isEnabled()) return
+      addCadenceCount('faunaPresentationExecutions', 'livestockPresentationExecutions')
+    },
     recordForestSample() {
       if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.forestSampleCalls++
@@ -638,6 +696,9 @@ const NOOP: AgentCpuDiag = {
   recordFaunaDecisionPass: () => {},
   recordFaunaHighPriorityAgent: () => {},
   recordFaunaExpensiveBehaviourAgent: () => {},
+  recordAnimalCadence: () => {},
+  recordAnimalBehaviourExecution: () => {},
+  recordAnimalPresentationExecution: () => {},
   recordForestSample: () => {},
   recordFireScan: () => {},
   recordVillageScan: () => {},
@@ -733,6 +794,10 @@ export function buildAgentCpuReport(input: {
       livestockPestRatCandidatesPerFrame: round1(input.totals.livestockPestRatCandidates / frames),
       livestockNearestScansPerFrame: round1(input.totals.livestockNearestCalls / frames),
       livestockNearestCandidatesPerFrame: round1(input.totals.livestockNearestCandidatesChecked / frames),
+      livestockFullRateAgentsPerFrame: round1(input.totals.livestockFullRateAgents / frames),
+      livestockReducedCadenceAgentsPerFrame: round1(input.totals.livestockReducedCadenceAgents / frames),
+      livestockBehaviourExecutionsPerFrame: round1(input.totals.livestockBehaviourExecutions / frames),
+      livestockPresentationExecutionsPerFrame: round1(input.totals.livestockPresentationExecutions / frames),
       ratsMsPerFrame: round1(ratsMs),
       socialMsPerFrame: round1(socialMs),
       streamingMsPerFrame: round1(streamingMs),
@@ -777,6 +842,10 @@ export function buildAgentCpuReport(input: {
       decisionPassesPerFrame: round1(input.totals.faunaDecisionPasses / frames),
       highPriorityAgentsPerFrame: round1(input.totals.faunaHighPriorityAgents / frames),
       expensiveBehaviourAgentsPerFrame: round1(input.totals.faunaExpensiveBehaviourAgents / frames),
+      fullRateAgentsPerFrame: round1(input.totals.faunaFullRateAgents / frames),
+      reducedCadenceAgentsPerFrame: round1(input.totals.faunaReducedCadenceAgents / frames),
+      behaviourExecutionsPerFrame: round1(input.totals.faunaBehaviourExecutions / frames),
+      presentationExecutionsPerFrame: round1(input.totals.faunaPresentationExecutions / frames),
       forestSamplesPerFrame: round1(input.totals.forestSampleCalls / frames),
       fireScanCandidatesPerFrame: round1(input.totals.fireScanCandidates / frames),
       villageScanCandidatesPerFrame: round1(input.totals.villageScanCandidates / frames),
@@ -828,6 +897,10 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `    dog guard scans: ${npc.livestockDogGuardScansPerFrame.toFixed(1)}/frame (${npc.livestockGuardPredatorCandidatesPerFrame.toFixed(1)} predator candidates/frame)`,
     `    pest scans: ${npc.livestockPestScansPerFrame.toFixed(1)}/frame (${npc.livestockPestRatCandidatesPerFrame.toFixed(1)} rat candidates/frame)`,
     `    nearest scans: ${npc.livestockNearestScansPerFrame.toFixed(1)}/frame (${npc.livestockNearestCandidatesPerFrame.toFixed(1)} candidates/frame)`,
+    `    full-rate agents/frame: ${npc.livestockFullRateAgentsPerFrame.toFixed(1)}`,
+    `    reduced-cadence agents/frame: ${npc.livestockReducedCadenceAgentsPerFrame.toFixed(1)}`,
+    `    behaviour executions/frame: ${npc.livestockBehaviourExecutionsPerFrame.toFixed(1)}`,
+    `    presentation executions/frame: ${npc.livestockPresentationExecutionsPerFrame.toFixed(1)}`,
     `  rats: ${npc.ratsMsPerFrame.toFixed(1)} ms/frame (${npc.ratsCumulativeMs.toFixed(1)} ms cumulative)`,
     `  social: ${npc.socialMsPerFrame.toFixed(1)} ms/frame (${npc.socialCumulativeMs.toFixed(1)} ms cumulative)`,
     `  streaming: ${npc.streamingMsPerFrame.toFixed(1)} ms/frame (${npc.streamingCumulativeMs.toFixed(1)} ms cumulative)`,
@@ -854,6 +927,10 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `    decision passes/frame: ${fauna.decisionPassesPerFrame.toFixed(1)}`,
     `    high-priority agents/frame: ${fauna.highPriorityAgentsPerFrame.toFixed(1)}`,
     `    expensive behaviour agents/frame: ${fauna.expensiveBehaviourAgentsPerFrame.toFixed(1)}`,
+    `    full-rate agents/frame: ${fauna.fullRateAgentsPerFrame.toFixed(1)}`,
+    `    reduced-cadence agents/frame: ${fauna.reducedCadenceAgentsPerFrame.toFixed(1)}`,
+    `    behaviour executions/frame: ${fauna.behaviourExecutionsPerFrame.toFixed(1)}`,
+    `    presentation executions/frame: ${fauna.presentationExecutionsPerFrame.toFixed(1)}`,
     '',
     '  sensing/cache:',
     `    forest samples/frame: ${fauna.forestSamplesPerFrame.toFixed(1)}`,

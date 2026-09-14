@@ -41,6 +41,7 @@ Generated from TypeScript imports.
 - `fauna/animalRoaming.ts`
 - `fauna/animalScare.ts`
 - `fauna/animalStray.ts`
+- `fauna/animalUpdateCadence.ts`
 - `fauna/animalVariants.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
@@ -603,6 +604,19 @@ Generated from TypeScript imports.
 
 - `fauna/animalHarvest.test.ts`
 - `fauna/animalHarvest.ts`
+
+## `fauna/animalUpdateCadence.test.ts`
+
+**Imports**
+
+- `fauna/animalUpdateCadence.ts`
+
+## `fauna/animalUpdateCadence.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalUpdateCadence.test.ts`
 
 ## `fauna/animalVariants.test.ts`
 

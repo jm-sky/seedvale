@@ -179,6 +179,14 @@ import {
   tickStrayClassificationGrace,
 } from './animalStray'
 import {
+  animalBehaviourIntervalSec,
+  animalCadencePhase01,
+  animalPresentationIntervalSec,
+  type AnimalUpdateImportance,
+  isCadenceDue,
+  resolveAnimalUpdateImportance,
+} from './animalUpdateCadence'
+import {
   type AnimalVariant,
   type AnimalVariantDef,
   resolveAnimalVariantStats,
@@ -281,6 +289,10 @@ export * from './animalForaging'
  *  same reason. `animalRoamingTrips.test.ts` is redirected to import from
  *  the new module (and `./animalDefs` for `ANIMAL_DEFS`) directly. */
 export * from './animalRoaming'
+/** Shared importance/cadence policy (plan fauna-028) — re-exported so
+ *  `AnimalAgentDebugInfo.updateImportance`'s type is reachable wherever that
+ *  type already is. */
+export * from './animalUpdateCadence'
 export type { AnimalVariant } from './animalVariants'
 
 /** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
@@ -419,6 +431,11 @@ const VILLAGE_FLEE_BIAS_WEIGHT = 0.9
  *  constructor override, so `createFauna.ts`'s wild/wandering spawns are
  *  unaffected. */
 const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
+/** Seconds banked into both cadence accumulators at construction/hydration
+ *  (plan fauna-028) — larger than any interval `animalUpdateCadence.ts` can
+ *  return, so a fresh agent's first tick runs every section exactly as it did
+ *  before cadence existed. */
+const CADENCE_PRIME_SEC = 1
 /** How close a trip's destination/return-to-home counts as "arrived" (plan
  *  fauna-016 §5) — looser than `wander()`'s 1.2 since a shoreline point is
  *  probe-selected, not a precise walkable target. */
@@ -538,6 +555,9 @@ export type AnimalAgentDebugInfo = {
    *  miejscu mimo moving === true"): the AI branch is issuing a step but
    *  `stepWithSlopeAndCollision()` isn't actually advancing the position. */
   lastStepDistance: number
+  /** Last resolved update-cadence class (plan fauna-028) — `immediate` means
+   *  every section ran at full rate this tick. Diagnostic only. */
+  updateImportance: AnimalUpdateImportance
   aiBranch: FaunaAiBranch
   /** `scoreFaunaBehaviours()` over this tick's decision input (npc-008 step
    *  4) — shows why `aiBranch` won, ranked highest first. `null` while a
@@ -1090,6 +1110,21 @@ export class AnimalAgent {
    *  and drowning (`tickDrowning`). Not consulted by `isWalkable()` itself,
    *  which re-derives ability fresh per candidate point instead. */
   private waterMode: WaterTraversalMode = 'dry'
+  /** Seconds accumulated since the behaviour (movement) section last ran
+   *  (plan fauna-028). Flushed in full as that section's `dt`, so a throttled
+   *  animal covers the same distance over the same wall-clock time — the
+   *  cadence lowers the step count, never the world's speed. Seeded from a
+   *  deterministic per-animal phase so a population does not all flush on the
+   *  same frame. */
+  private behaviourAccumSec: number
+  /** Same accumulator for the presentation-only section (plan fauna-028). */
+  private presentationAccumSec: number
+  /** Deterministic `[0,1)` per-agent cadence phase (plan fauna-028) — only
+   *  ever shortens an interval, so every movement guardrail still holds. */
+  private readonly cadencePhase: number
+  /** Last resolved cadence class, for `getDebugInfo()` only — never read
+   *  back by any decision logic. */
+  private lastUpdateImportance: AnimalUpdateImportance = 'immediate'
   private readonly collidersNear: ColliderSource
   /** Optional habitat sampler (plan 094) — only wild fauna's `createFauna.ts`
    *  passes one; livestock's spawn path omits it, and forage search falls
@@ -1562,6 +1597,14 @@ export class AnimalAgent {
 
     assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
 
+    // Both accumulators start above any cadence interval so a freshly spawned
+    // or hydrated animal runs every section on its very first tick; the
+    // deterministic per-agent phase then spreads later flush frames across
+    // the population (plan fauna-028).
+    this.cadencePhase = animalCadencePhase01(this.animalId)
+    this.behaviourAccumSec = CADENCE_PRIME_SEC
+    this.presentationAccumSec = CADENCE_PRIME_SEC
+
     this.snapY()
     this.pickWanderTarget()
   }
@@ -1921,34 +1964,39 @@ export class AnimalAgent {
       this.mesh.position.z = result.z
     }
 
-    this.tickPresentationAndLife(
-      dt,
-      observerPos,
-      this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
-    )
+    // A ridden mount is `immediate` by definition (plan fauna-028): every
+    // section runs unconditionally at the real frame `dt`, and the cadence
+    // accumulators are flushed so a dismount does not carry a stale backlog
+    // into the first autonomous tick.
+    this.behaviourAccumSec = 0
+    this.presentationAccumSec = 0
+    this.tickMovementTail()
+    this.tickLife(dt, this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1)
+    this.tickPresentation(dt, observerPos)
   }
 
-  /** The per-tick tail every movement mode shares (plan fauna-017 step 3,
-   *  D2 fix) — timer decrements, maturity/production, position snap,
-   *  animation, water traversal, drowning, needs, bars, label distance
-   *  state, mixer. `hungerThirstRate` is the one genuine caller difference
-   *  (night slowdown does not apply while sprinting); `nowDays` only
-   *  matters for `tickProduction()` and defaults to 0 (harmless: no
-   *  mountable species has a `production` config today, so `driveMounted()`
-   *  calling this with the default is inert, not a behaviour change).
-   *  `clampBounds()` stays out — the one documented, intentional
-   *  difference: a ridden animal must be able to leave its own home
-   *  radius. Before this method, `driveMounted()` skipped every timer
-   *  decrement and `advanceAge`/`tickProduction` entirely, and always
-   *  passed `{}` (rate 1) instead of the real night rate — a ridden animal
-   *  starved/dehydrated at double the stabled rate at night, and a hit
-   *  mount's hurt-clip timer never counted down until dismount. */
-  private tickPresentationAndLife(
+  /** Simulation-critical half of the per-tick tail every movement mode
+   *  shares (plan fauna-017 step 3 D2 fix; split out by plan fauna-028) —
+   *  timer decrements, maturity/production, drowning and needs. **Never
+   *  throttled:** it always runs once per `update()` with the real frame
+   *  `dt`, so gameplay timing is identical whether or not this tick's
+   *  behaviour/presentation sections ran.
+   *
+   *  `hungerThirstRate` is the one genuine caller difference (night slowdown
+   *  does not apply while sprinting); `nowDays` only matters for
+   *  `tickProduction()` and defaults to 0 (harmless: no mountable species
+   *  has a `production` config today, so `driveMounted()` calling this with
+   *  the default is inert, not a behaviour change).
+   *
+   *  Reads `waterMode`/`sprinting` as last resolved by `tickMovementTail()`/
+   *  the behaviour section — correct across a throttled tick, because both
+   *  only change when the animal actually moved.
+   *
+   *  @domain fauna */
+  private tickLife(
     dt: number,
-    observerPos: THREE.Vector3,
     hungerThirstRate: number,
     nowDays = 0,
-    playerObservation: PlayerObservationInput = DEFAULT_PLAYER_OBSERVATION,
   ): void {
     if (this.attackCooldown > 0) this.attackCooldown -= dt
     if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt
@@ -1962,11 +2010,43 @@ export class AnimalAgent {
     this.advanceAge(dt)
     this.tickProduction(nowDays)
     this.tickWoolProduction(nowDays)
-    this.snapY()
-    this.updateAnim()
-    this.resolveWaterTraversal()
     this.tickDrowning(dt)
     tickAnimalLife(this.life, dt, this.sprinting, { hungerThirstRate }, this.def.metabolism, this.swimExertionNow())
+  }
+
+  /** Movement-critical tail (plan fauna-028) — the two position-derived
+   *  resolutions, run exactly when the behaviour section ran (or every tick
+   *  from `driveMounted()`). Both are pure functions of the animal's current
+   *  `(x, z)`, and inside `update()` the position only changes in the
+   *  behaviour section, so this is a move into the right section rather than
+   *  a throttle: every other entry point that relocates an animal
+   *  (constructor, `hydrate()`, `collapse()`, stray start) already calls
+   *  `snapY()` itself.
+   *
+   *  @domain fauna */
+  private tickMovementTail(): void {
+    this.snapY()
+    this.resolveWaterTraversal()
+  }
+
+  /** Presentation-only tail (plan fauna-028) — locomotion clip choice, the
+   *  shared status-label sync (bars, observation level, distance opacity /
+   *  shadow-casting) and the `AnimationMixer`. Cadence-gated by
+   *  `animalPresentationIntervalSec()`; `dt` is the accumulated time since
+   *  this section last ran, which for a mixer is a plain playback advance
+   *  (an animation LOD), never a simulation step.
+   *
+   *  Deliberately contains nothing from hunger/thirst, maturity, production,
+   *  drowning, death/corpse lifecycle or gameplay timers — those all live in
+   *  `tickLife()` and stay full-rate.
+   *
+   *  @domain fauna */
+  private tickPresentation(
+    dt: number,
+    observerPos: THREE.Vector3,
+    playerObservation: PlayerObservationInput = DEFAULT_PLAYER_OBSERVATION,
+  ): void {
+    this.updateAnim()
     const distance = this.mesh.position.distanceTo(observerPos)
     const observationLevel = resolveStableObservationLevel(
       { perception: playerObservation.perception, distance },
@@ -2249,6 +2329,7 @@ export class AnimalAgent {
       moving: this.moving,
       sprinting: this.sprinting,
       lastStepDistance: this.debugLastStepDist,
+      updateImportance: this.lastUpdateImportance,
       aiBranch: this.debugBranch,
       behaviourCandidates: this.lastFaunaDecisionInput ? scoreFaunaBehaviours(this.lastFaunaDecisionInput) : null,
       intent: this.pendingAction?.kind ?? null,
@@ -2420,6 +2501,11 @@ export class AnimalAgent {
     }
     this.name = state.name
     this.labelController.setName(this.getDisplayName())
+    // Re-prime both cadence gates (plan fauna-028) so a hydrated individual
+    // runs every section on its first tick after restore, exactly like a
+    // freshly constructed one.
+    this.behaviourAccumSec = CADENCE_PRIME_SEC
+    this.presentationAccumSec = CADENCE_PRIME_SEC
     this.rabid = state.rabid === true
     this._stray = hydrateStrayState(state.stray)
     if (isStrayEpisodeActive(this._stray)) {
@@ -2756,8 +2842,11 @@ export class AnimalAgent {
       this.vocalizeAlertContext = 'ambient'
     }
     this.isNight = dayFactor <= 0
-    this.moving = false
-    this.sprinting = false
+    // `moving`/`sprinting` are deliberately *not* reset here (plan fauna-028):
+    // on a tick whose behaviour section is skipped they must keep the last
+    // resolved locomotion state, or a throttled animal would flicker to the
+    // idle clip and report `sprinting: false` into `tickLife()`'s stamina
+    // bookkeeping. They are reset inside the behaviour gate instead.
     // Diagnostic-only snapshot for `debugLastStepDist` (see its field doc) —
     // never read by movement/AI logic itself.
     const debugPrevX = this.mesh.position.x
@@ -2795,6 +2884,12 @@ export class AnimalAgent {
     this.tickScareStimulus(dt, others, observerPos, nearbySettlementNpcs, scareStimulus)
     if (diagOn) agentCpuDiag.addFaunaSensingMs(performance.now() - scareSensingT0)
 
+    // Branch selection (sensing/targeting/decision) stays full-rate no matter
+    // what this tick's cadence turns out to be (plan fauna-028) — it is what
+    // makes `isFaunaHighPriorityBranch(branch)` below this tick's *real*
+    // answer, so a throttled animal can never react a tick late to entering
+    // combat, threat or flee.
+    let branch: FaunaAiBranch
     if (this.rabid) {
       // Rabies bypasses normal predator/prey AI entirely, including
       // human/NPC/fire fear (plan fauna-001: "chore zwierzęta nie powinny
@@ -2802,16 +2897,9 @@ export class AnimalAgent {
       // never flees or considers human/NPC targets, it single-mindedly
       // chases the nearest live animal (see `updateRabid`).
       this.resetHumanThreatState()
-      this.debugBranch = 'rabid'
+      branch = 'rabid'
       this.lastFaunaDecisionInput = null
-      if (diagOn) {
-        agentCpuDiag.recordFaunaHighPriorityAgent()
-        agentCpuDiag.recordFaunaExpensiveBehaviourAgent()
-      }
-      const rabidBehaviourT0 = diagOn ? performance.now() : 0
-      this.updateRabid(dt, others)
-      if (diagOn) agentCpuDiag.addFaunaBehaviourMs(performance.now() - rabidBehaviourT0)
-
+      if (diagOn) agentCpuDiag.recordFaunaHighPriorityAgent()
     } else {
       // Throttled player-intent refresh (implementation notes F4), computed
       // before selection under exactly the old branch #2 guard so the
@@ -2838,198 +2926,243 @@ export class AnimalAgent {
         guardActive: guardTarget !== null,
       }
       this.lastFaunaDecisionInput = decisionInput
-      const branch = decideFaunaBehaviour(decisionInput)
+      branch = decideFaunaBehaviour(decisionInput)
       if (diagOn) {
         agentCpuDiag.addFaunaDecisionMs(performance.now() - decisionT0)
         agentCpuDiag.recordFaunaDecisionPass()
         if (isFaunaHighPriorityBranch(branch)) agentCpuDiag.recordFaunaHighPriorityAgent()
+      }
+    }
+    this.debugBranch = branch
+
+    // Importance/cadence (plan fauna-028) — one shared policy for wild fauna
+    // and livestock alike. `immediate` yields a 0 s interval, i.e. exactly
+    // the pre-cadence behaviour.
+    const importance = resolveAnimalUpdateImportance({
+      highPriorityBranch: isFaunaHighPriorityBranch(branch),
+      engaged: this.preyTarget !== null || this.threateningHuman || this.frenzied,
+      playerCoupled: this._leadAttached || this.isPlayerOwned(),
+      committedTraversal: this.trip !== null || this.cave !== undefined,
+      swimming: this.waterMode === 'swimming',
+      oneShotAnimActive: this.hurtAnimTimer > 0 || this.attackAnimTimer > 0,
+      observerDistance: sense.playerDistance,
+    })
+    this.lastUpdateImportance = importance
+    this.behaviourAccumSec += dt
+    this.presentationAccumSec += dt
+    if (diagOn) agentCpuDiag.recordAnimalCadence(importance === 'immediate')
+
+    const behaviourInterval = animalBehaviourIntervalSec(importance, this.walkSpeedNow(), this.cadencePhase)
+    const runBehaviour = isCadenceDue(this.behaviourAccumSec, behaviourInterval)
+    if (runBehaviour) {
+      // Accumulated time is flushed in full, so a throttled animal covers the
+      // same ground over the same wall-clock time — fewer, slightly larger
+      // steps, never a slower world. `animalBehaviourIntervalSec` caps the
+      // interval so that step stays under `MAX_THROTTLED_STEP_M`.
+      const behaviourDt = this.behaviourAccumSec
+      this.behaviourAccumSec = 0
+      this.moving = false
+      this.sprinting = false
+      if (diagOn) {
+        agentCpuDiag.recordAnimalBehaviourExecution()
         if (isFaunaExpensiveBranch(branch)) agentCpuDiag.recordFaunaExpensiveBehaviourAgent()
       }
-      this.debugBranch = branch
       const behaviourT0 = diagOn ? performance.now() : 0
-      switch (branch) {
-        case 'dog-guard': {
-          this.resetHumanThreatState()
-          this.updateDogGuard(dt, guardTarget!)
-          break
-        }
-        case 'fire-avoid': {
-          // `!this.frenzied` (enforced by `isBehaviourValid`): FIRE_AVOID_RADIUS
-          // (11) is bigger than a wolf's NPC-notice radius (playerNoticeRange,
-          // 10 — see senseNpcThreat), and a settlement's campfire sits right by
-          // its buildings. Without this bypass a frenzied wolf gets
-          // flee-repelled by the fire before it can ever notice an NPC
-          // (npcThreat, above) or finish its village beeline
-          // (moveTowardStrategicVillage, below) — it just oscillates outside
-          // the fire radius, short of the village (plan 179 follow-up).
-          // Mirrors the existing `this.frenzied` bypass in `pickPointNear()`.
-          this.resetHumanThreatState()
-          this.cancelSourceTarget()
-          this.setIntent('flee', { x: sense.nearestFire!.x, z: sense.nearestFire!.z })
-          this.fleeFrom(sense.nearestFire!.x, sense.nearestFire!.z, dt)
-          break
-        }
-        case 'frenzy-beeline': {
-          // No `cancelSourceTarget()` here either — same asymmetry as
-          // `npc-attack-frenzied` below, on purpose (implementation notes
-          // F2, not fixed here): a frenzied predator committed to reaching
-          // the village keeps whatever source claim it already held.
-          this.resetHumanThreatState()
-          this.moveTowardStrategicVillage(dt)
-          break
-        }
-        case 'npc-attack': {
-          if (isNpcCombatDebugMode()) {
-            logNpcThreatBranch({
-              label: 'npcThreat ON',
-              animalId: this.animalId,
-              kind: this.def.kind,
-              frenzied: this.frenzied,
-              npcThreat: npcThreat!,
-              playerActive: sense.playerActive,
-            })
+      if (branch === 'rabid') {
+        this.updateRabid(behaviourDt, others)
+      } else {
+        switch (branch) {
+          case 'dog-guard': {
+            this.resetHumanThreatState()
+            this.updateDogGuard(behaviourDt, guardTarget!)
+            break
           }
-          this.cancelSourceTarget()
-          this.threateningHuman = true
-          this.setIntent('attack', { x: npcThreat!.x, z: npcThreat!.z })
-          this.chaseNpc(npcThreat!, dt, onNpcHit)
-          break
-        }
-        case 'npc-attack-frenzied': {
-          // No `cancelSourceTarget()` here — asymmetric with the other
-          // branches on purpose (implementation notes F2, not fixed here).
-          if (!this.threateningHuman && isNpcCombatDebugMode()) {
-            logNpcThreatBranch({
-              label: 'threat state ON',
-              animalId: this.animalId,
-              kind: this.def.kind,
-              frenzied: this.frenzied,
-              npcThreat: npcThreat!,
-              playerActive: sense.playerActive,
-            })
+          case 'fire-avoid': {
+            // `!this.frenzied` (enforced by `isBehaviourValid`): FIRE_AVOID_RADIUS
+            // (11) is bigger than a wolf's NPC-notice radius (playerNoticeRange,
+            // 10 — see senseNpcThreat), and a settlement's campfire sits right by
+            // its buildings. Without this bypass a frenzied wolf gets
+            // flee-repelled by the fire before it can ever notice an NPC
+            // (npcThreat, above) or finish its village beeline
+            // (moveTowardStrategicVillage, below) — it just oscillates outside
+            // the fire radius, short of the village (plan 179 follow-up).
+            // Mirrors the existing `this.frenzied` bypass in `pickPointNear()`.
+            this.resetHumanThreatState()
+            this.cancelSourceTarget()
+            this.setIntent('flee', { x: sense.nearestFire!.x, z: sense.nearestFire!.z })
+            this.fleeFrom(sense.nearestFire!.x, sense.nearestFire!.z, behaviourDt)
+            break
           }
-          this.threateningHuman = true
-          this.setIntent('attack', { x: npcThreat!.x, z: npcThreat!.z })
-          this.chaseNpc(npcThreat!, dt, onNpcHit)
-          break
-        }
-        case 'npc-flee': {
-          if (isNpcCombatDebugMode()) {
-            logNpcThreatBranch({
-              label: 'npcThreat ON',
-              animalId: this.animalId,
-              kind: this.def.kind,
-              frenzied: this.frenzied,
-              npcThreat: npcThreat!,
-              playerActive: sense.playerActive,
-            })
+          case 'frenzy-beeline': {
+            // No `cancelSourceTarget()` here either — same asymmetry as
+            // `npc-attack-frenzied` below, on purpose (implementation notes
+            // F2, not fixed here): a frenzied predator committed to reaching
+            // the village keeps whatever source claim it already held.
+            this.resetHumanThreatState()
+            this.moveTowardStrategicVillage(behaviourDt)
+            break
           }
-          this.cancelSourceTarget()
-          this.threateningHuman = false
-          this.setIntent('flee', { x: npcThreat!.x, z: npcThreat!.z })
-          this.fleeFrom(npcThreat!.x, npcThreat!.z, dt)
-          break
-        }
-        case 'npc-ignore': {
-          if (isNpcCombatDebugMode()) {
-            logNpcThreatBranch({
-              label: 'npcThreat ON',
-              animalId: this.animalId,
-              kind: this.def.kind,
-              frenzied: this.frenzied,
-              npcThreat: npcThreat!,
-              playerActive: sense.playerActive,
-            })
+          case 'npc-attack': {
+            if (isNpcCombatDebugMode()) {
+              logNpcThreatBranch({
+                label: 'npcThreat ON',
+                animalId: this.animalId,
+                kind: this.def.kind,
+                frenzied: this.frenzied,
+                npcThreat: npcThreat!,
+                playerActive: sense.playerActive,
+              })
+            }
+            this.cancelSourceTarget()
+            this.threateningHuman = true
+            this.setIntent('attack', { x: npcThreat!.x, z: npcThreat!.z })
+            this.chaseNpc(npcThreat!, behaviourDt, onNpcHit)
+            break
           }
-          this.cancelSourceTarget()
-          this.threateningHuman = false
-          this.setIntent('wander')
-          this.wander(dt)
-          break
+          case 'npc-attack-frenzied': {
+            // No `cancelSourceTarget()` here — asymmetric with the other
+            // branches on purpose (implementation notes F2, not fixed here).
+            if (!this.threateningHuman && isNpcCombatDebugMode()) {
+              logNpcThreatBranch({
+                label: 'threat state ON',
+                animalId: this.animalId,
+                kind: this.def.kind,
+                frenzied: this.frenzied,
+                npcThreat: npcThreat!,
+                playerActive: sense.playerActive,
+              })
+            }
+            this.threateningHuman = true
+            this.setIntent('attack', { x: npcThreat!.x, z: npcThreat!.z })
+            this.chaseNpc(npcThreat!, behaviourDt, onNpcHit)
+            break
+          }
+          case 'npc-flee': {
+            if (isNpcCombatDebugMode()) {
+              logNpcThreatBranch({
+                label: 'npcThreat ON',
+                animalId: this.animalId,
+                kind: this.def.kind,
+                frenzied: this.frenzied,
+                npcThreat: npcThreat!,
+                playerActive: sense.playerActive,
+              })
+            }
+            this.cancelSourceTarget()
+            this.threateningHuman = false
+            this.setIntent('flee', { x: npcThreat!.x, z: npcThreat!.z })
+            this.fleeFrom(npcThreat!.x, npcThreat!.z, behaviourDt)
+            break
+          }
+          case 'npc-ignore': {
+            if (isNpcCombatDebugMode()) {
+              logNpcThreatBranch({
+                label: 'npcThreat ON',
+                animalId: this.animalId,
+                kind: this.def.kind,
+                frenzied: this.frenzied,
+                npcThreat: npcThreat!,
+                playerActive: sense.playerActive,
+              })
+            }
+            this.cancelSourceTarget()
+            this.threateningHuman = false
+            this.setIntent('wander')
+            this.wander(behaviourDt)
+            break
+          }
+          case 'player-attack': {
+            this.cancelSourceTarget()
+            this.threateningHuman = true
+            this.setIntent('attack', copyVec3(observerPos))
+            this.chaseHuman(observerPos, behaviourDt, onHumanHit)
+            break
+          }
+          case 'player-flee': {
+            this.cancelSourceTarget()
+            this.threateningHuman = false
+            this.setIntent('flee', copyVec3(observerPos))
+            this.fleeFrom(observerPos.x, observerPos.z, behaviourDt)
+            break
+          }
+          case 'player-flee-prey': {
+            this.cancelSourceTarget()
+            this.threateningHuman = false
+            this.setIntent('flee', copyVec3(observerPos))
+            this.fleeFrom(observerPos.x, observerPos.z, behaviourDt)
+            break
+          }
+          case 'player-ignore': {
+            // A bold predator (bear, playtest fixes plan §3) noticing a distant,
+            // non-threatening human just keeps doing what it was doing instead
+            // of panicking — same "no reaction" shape as `updatePredator`'s
+            // no-prey-found wander, not a new idle mechanic.
+            this.cancelSourceTarget()
+            this.threateningHuman = false
+            this.setIntent('wander')
+            this.wander(behaviourDt)
+            break
+          }
+          case 'predator-normal': {
+            this.resetHumanThreatState()
+            this.updatePredator(behaviourDt, others, attractionSources, huntableLivestock)
+            break
+          }
+          case 'prey-normal': {
+            this.resetHumanThreatState()
+            this.updatePrey(behaviourDt, others, attractionSources, nearbyPredators, nearbyRats)
+            break
+          }
+          case 'scare-flee': {
+            this.resetHumanThreatState()
+            this.cancelSourceTarget()
+            this.setIntent('flee', { x: this.scareOriginX, z: this.scareOriginZ })
+            this.fleeFrom(this.scareOriginX, this.scareOriginZ, behaviourDt)
+            break
+          }
         }
-        case 'player-attack': {
-          this.cancelSourceTarget()
-          this.threateningHuman = true
-          this.setIntent('attack', copyVec3(observerPos))
-          this.chaseHuman(observerPos, dt, onHumanHit)
-          break
-        }
-        case 'player-flee': {
-          this.cancelSourceTarget()
-          this.threateningHuman = false
-          this.setIntent('flee', copyVec3(observerPos))
-          this.fleeFrom(observerPos.x, observerPos.z, dt)
-          break
-        }
-        case 'player-flee-prey': {
-          this.cancelSourceTarget()
-          this.threateningHuman = false
-          this.setIntent('flee', copyVec3(observerPos))
-          this.fleeFrom(observerPos.x, observerPos.z, dt)
-          break
-        }
-        case 'player-ignore': {
-          // A bold predator (bear, playtest fixes plan §3) noticing a distant,
-          // non-threatening human just keeps doing what it was doing instead
-          // of panicking — same "no reaction" shape as `updatePredator`'s
-          // no-prey-found wander, not a new idle mechanic.
-          this.cancelSourceTarget()
-          this.threateningHuman = false
-          this.setIntent('wander')
-          this.wander(dt)
-          break
-        }
-        case 'predator-normal': {
-          this.resetHumanThreatState()
-          this.updatePredator(dt, others, attractionSources, huntableLivestock)
-          break
-        }
-        case 'prey-normal': {
-          this.resetHumanThreatState()
-          this.updatePrey(dt, others, attractionSources, nearbyPredators, nearbyRats)
-          break
-        }
-        case 'scare-flee': {
-          this.resetHumanThreatState()
-          this.cancelSourceTarget()
-          this.setIntent('flee', { x: this.scareOriginX, z: this.scareOriginZ })
-          this.fleeFrom(this.scareOriginX, this.scareOriginZ, dt)
-          break
-        }
-      }
 
-      // A frenzied predator can still expose itself as an NPC threat
-      // while actively engaging the player.
-      if (
-        this.frenzied
-        && npcThreat
-        && (branch === 'player-attack' || branch === 'player-ignore'
-          || branch === 'player-flee' || branch === 'player-flee-prey')
-      ) {
-        this.threateningHuman = true
-      }
-      if (this.def.kind === 'dog') {
-        this.updateDogVocalization(dt, guardTarget, nearbyPredators, nearbySettlementNpcs, observerPos, onVocalize)
+        // A frenzied predator can still expose itself as an NPC threat
+        // while actively engaging the player.
+        if (
+          this.frenzied
+          && npcThreat
+          && (branch === 'player-attack' || branch === 'player-ignore'
+            || branch === 'player-flee' || branch === 'player-flee-prey')
+        ) {
+          this.threateningHuman = true
+        }
+        if (this.def.kind === 'dog') {
+          this.updateDogVocalization(behaviourDt, guardTarget, nearbyPredators, nearbySettlementNpcs, observerPos, onVocalize)
+        }
       }
       if (diagOn) agentCpuDiag.addFaunaBehaviourMs(performance.now() - behaviourT0)
+      this.clampBounds()
+      // Diagnostic-only — only reads x/z, so it doesn't depend on whether the
+      // movement tail's own `snapY()` has run yet (see `debugLastStepDist`'s
+      // field doc).
+      this.debugLastStepDist = Math.hypot(this.mesh.position.x - debugPrevX, this.mesh.position.z - debugPrevZ)
     }
     if (this.threateningHuman && !this.wasThreateningHuman) {
       onAggro?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
     }
     this.wasThreateningHuman = this.threateningHuman
-    this.clampBounds()
-    // Diagnostic-only — only reads x/z, so it doesn't depend on whether
-    // `tickPresentationAndLife()`'s own `snapY()` has run yet (see
-    // `debugLastStepDist`'s field doc).
-    this.debugLastStepDist = Math.hypot(this.mesh.position.x - debugPrevX, this.mesh.position.z - debugPrevZ)
+
+    // Simulation-critical life tick (full rate, real `dt`) plus the two
+    // cadence-gated tails. `tickMovementTail()` is timed into the same
+    // life/presentation span it lived in before the split, so the benchmark's
+    // `behaviour` / `life/presentation` numbers stay directly comparable
+    // across this change.
     const lifePresentationT0 = diagOn ? performance.now() : 0
-    this.tickPresentationAndLife(
-      dt,
-      observerPos,
-      this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
-      nowDays,
-      playerObservation,
-    )
+    if (runBehaviour) this.tickMovementTail()
+    this.tickLife(dt, this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1, nowDays)
+    const presentationInterval = animalPresentationIntervalSec(importance, sense.playerDistance, this.cadencePhase)
+    if (isCadenceDue(this.presentationAccumSec, presentationInterval)) {
+      const presentationDt = this.presentationAccumSec
+      this.presentationAccumSec = 0
+      if (diagOn) agentCpuDiag.recordAnimalPresentationExecution()
+      this.tickPresentation(presentationDt, observerPos, playerObservation)
+    }
     if (diagOn) agentCpuDiag.addFaunaLifePresentationMs(performance.now() - lifePresentationT0)
     if (this.debugActive && this.debugVisual) this.updateDebugVisual()
   }

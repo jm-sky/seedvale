@@ -127,7 +127,16 @@ Seedvale is single-player; no multiplayer, netcode or WebSocket layer exists or 
 
 ## Fauna simulation granularity
 
-Fauna has no chunk-based streaming: `Fauna` keeps every wild/livestock `AnimalAgent` in one flat array and simulates all of them every frame regardless of distance from the player, unlike NPC settlements (load/unload by distance) or terrain (chunk streaming). This is a deliberate, if undocumented-until-now, tradeoff — it's what makes off-screen corpse decay and behavior correct without a separate off-screen simulation path. A future distance-based culling optimization for fauna would need to preserve that "still ticks off-screen" property (e.g. a coarser off-screen update, not a frozen one) rather than silently stopping simulation for out-of-range animals.
+Fauna has no chunk-based streaming: `Fauna` keeps every wild/livestock `AnimalAgent` in one flat array and ticks all of them every frame regardless of distance from the player, unlike NPC settlements (load/unload by distance) or terrain (chunk streaming). This is a deliberate tradeoff — it's what makes off-screen corpse decay and behaviour correct without a separate off-screen simulation path.
+
+That "every agent, every frame" rule now holds at the level of `AnimalAgent.update()` being *called*, not of every section inside it running (plan fauna-028). One shared importance/cadence policy (`src/fauna/animalUpdateCadence.ts`, consumed inside the single shared `update()` — not a scheduler, not a second pipeline) classifies each animal as `immediate` / `active` / `routine` and lowers how often two sections run:
+
+- **behaviour** (the movement/steering half of the decision branch), and
+- **presentation** (locomotion clip choice, status-label sync, `AnimationMixer`).
+
+Everything else — corpse/decay, stray classification, sensing, targeting, the decision itself, and the whole needs/timers/maturity/production/drowning life tick — still runs at full rate with the real frame `dt`. Skipped time is accumulated and flushed in full, so a throttled animal covers the same ground over the same wall-clock time; the cadence interval is additionally capped so a flushed movement step can never exceed a fixed metre budget. Because the intervals are expressed in seconds, the throttling self-disables once frames are long enough that `dt` already exceeds them.
+
+Combat, threat, flee, scare, guard, rabies, a committed hunt, a mounted/led/player-owned animal, a committed trip or cave route, active water traversal and anything within direct-interaction range of the player all stay `immediate`. Distance to the player is one importance signal among many, never the only one, and camera visibility is not an input at all: this is a coarser off-screen update, not a frozen one.
 
 ## Related systems
 

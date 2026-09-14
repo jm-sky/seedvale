@@ -228,6 +228,12 @@ export function formatReport(report: PerfReportJson): string {
     '',
     'Recommendation:',
     report.recommendation,
+    // Agent-CPU breakdown, appended as its own block after the main report
+    // (the layout `docs/performance/results/` already records). Restores a
+    // section `formatReport` silently stopped emitting — `formatAgentCpuReport`
+    // was still imported here but no longer called, which is exactly what
+    // `report.test.ts`'s `[Seedvale Agent CPU]` assertion was failing on.
+    ...(report.agentCpu ? ['', '---', '', formatAgentCpuReport(report.agentCpu)] : []),
   ].join('\n')
 }
 

@@ -4,6 +4,12 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `ui-input-017-quest-log-information-architecture`                      | 2026-09-14 13:32:52 | —                   | `ui-input`       | —          |
+| `settlements-npcs-017-production-demand-and-economic-pressures`        | 2026-09-14 12:18:18 | —                   | `settlements-npcs` | —          |
+| `fauna-028-animal-agent-update-cadence`                                | 2026-09-14 12:17:28 | —                   | `fauna`          | —          |
+| `world-terrain-027-landmark-variety-and-quest-hooks`                   | 2026-09-14 12:02:55 | —                   | `world-terrain`  | —          |
+| `settlements-npcs-033-player-trading-with-any-npc`                     | 2026-09-14 11:31:53 | —                   | `settlements-npcs` | —          |
+| `quests-progression-026-dungeon-bandit-treasure`                       | 2026-09-14 11:05:05 | —                   | `quests-progression` | —          |
 | `quests-progression-031-per-source-opportunity-defs`                   | 2026-09-14 09:24:06 | —                   | `quests-progression` | —          |
 | `quests-progression-030-external-resolution-and-real-problem-offering` | 2026-09-14 09:04:44 | —                   | `quests-progression` | —          |
 | `quests-progression-025-adventure-cave-old-bones`                      | 2026-09-14 06:53:18 | —                   | `quests-progression` | —          |

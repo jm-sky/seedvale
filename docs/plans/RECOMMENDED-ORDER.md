@@ -4,31 +4,31 @@
 
 ### Overall
 
-1. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
-   🔴 `M` · ✅ ready · unlocks 1/2
-2. `items-player-028` — **NPC player-storage access policies**  
+1. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
-3. `settlements-npcs-033` — **Player Trading with Any NPC**  
-   🔴 `L` · ✅ ready · unlocks 1/2
-4. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
-   🟡 `M` · 🔒 blocked · unlocks 1/1
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+   🟡 `M` · ✅ ready · unlocks 1/1
+3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
+4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+   🔴 `M` · ✅ ready · unlocks 0/0
+5. `settlements-013` — **Horse training progression, vendor and paddock**  
+   🟡 `M` · 🔒 blocked · unlocks 0/0
 
 ---
 
 ### Roadmap Focus
 
-1. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
-   🔴 `M` · ✅ ready · unlocks 1/2 · roadmap: `economy-production`
-2. `items-player-028` — **NPC player-storage access policies**  
+1. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
-3. `settlements-npcs-033` — **Player Trading with Any NPC**  
-   🔴 `L` · ✅ ready · unlocks 1/2 · roadmap: `economy-goods-flow`
-4. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
-   🟡 `M` · 🔒 blocked · unlocks 1/1 · roadmap: `economy-goods-flow`
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+   🟡 `M` · ✅ ready · unlocks 1/1 · roadmap: `economy-goods-flow`
+3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
+4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `economy-goods-flow`
+5. `world-018` — **Cave-aware rich finite resource deposits**  
+   🔴 `M` · 🔒 blocked · unlocks 1/1 · roadmap: `quests-abandoned-gold-mine-colony`
 
 ---
 
@@ -47,14 +47,14 @@ _No qualifying plans._
 
 ### Ready Now
 
-1. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
-   🔴 `M` · ✅ ready · unlocks 1/2
-2. `items-player-028` — **NPC player-storage access policies**  
+1. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
-3. `settlements-npcs-033` — **Player Trading with Any NPC**  
-   🔴 `L` · ✅ ready · unlocks 1/2
-4. `world-terrain-017` — **Abandoned mountain mine landmark**  
+2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+   🟡 `M` · ✅ ready · unlocks 1/1
+3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
+4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 5. `settlements-npcs-022` — **Household help and age-based work participation**  
    🔴 `M` · ✅ ready · unlocks 0/0
 
@@ -74,99 +74,87 @@ Only planned plans are ranked.
 done / verification needed satisfy dependencies.  
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
-1. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
-  🔴 `M` · **Score:**  83  
-   → **unlocks:** 1/2
-
-2. `items-player-028` — **NPC player-storage access policies**  
+1. `items-player-028` — **NPC player-storage access policies**  
   🔴 `L` · **Score:**  76  
    → **unlocks:** 2/4
 
-3. `settlements-npcs-033` — **Player Trading with Any NPC**  
-  🔴 `L` · **Score:**  74  
-   → **unlocks:** 1/2
-
-4. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-6. `settlements-013` — **Horse training progression, vendor and paddock**  
+4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+  🔴 `M` · **Score:**  55  
+   → **unlocks:** 0/0
+
+5. `settlements-013` — **Horse training progression, vendor and paddock**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-7. `world-018` — **Cave-aware rich finite resource deposits**  
+6. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-8. `settlements-npcs-022` — **Household help and age-based work participation**  
+7. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-9. `world-023` — **Species-Driven Sowing, Density and Yield**  
+8. `world-023` — **Species-Driven Sowing, Density and Yield**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-10. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+9. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-11. `quests-progression-027` — **Lost treasure expedition — dungeon cave**  
+10. `quests-progression-027` — **Lost treasure expedition — dungeon cave**  
   🟡 `L` · **Score:**  34  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-025` — **Resource storage visualization**  
+11. `settlements-npcs-025` — **Resource storage visualization**  
   ⚪ `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-13. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+12. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
+13. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-15. `items-player-014` — **Rope-pullable resource transport**  
+14. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `tools-005` — **Seedvale Character Preparation Panel**  
+15. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `tools-013` — **NPC decision verification and scenario tooling**  
+16. `tools-013` — **NPC decision verification and scenario tooling**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+17. `world-terrain-023` — **River-aware road routing and canonical crossings**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-19. `ui-input-017` — **Quest log information architecture**  
-  🟡 `M` · **Score:**  23  
-   → **unlocks:** 0/0
-
-20. `world-terrain-027` — **Landmark variety and quest hooks**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-21. `settlements-008` — **Settlement progression around home**  
+18. `settlements-008` — **Settlement progression around home**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-22. `settlements-009` — **Settlement outskirts and pasture**  
+19. `settlements-009` — **Settlement outskirts and pasture**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-23. `settlements-010` — **Closed and cautious settlement character**  
+20. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-24. `settlements-011` — **Plaza layout, paving and core protection**  
+21. `settlements-011` — **Plaza layout, paving and core protection**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -174,9 +162,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
-- [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)  
-  is blocked by:
-  - [`settlements-npcs-033-player-trading-with-any-npc.md`](settlements-npcs-033-player-trading-with-any-npc.md)
 - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)  
   is blocked by:
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
@@ -252,6 +237,7 @@ graph TD
   fauna_025["fauna-025 — Livestock stray return and recovery"]
   fauna_026["fauna-026 — Predator ↔ livestock encounter set"]
   fauna_027["fauna-027 — Dungeon cave residents and pool foraging"]
+  fauna_028["fauna-028 — AnimalAgent importance/cadence — ograniczenie częstotliwości drogiej pracy"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -400,6 +386,7 @@ graph TD
   settlements_npcs_033["settlements-npcs-033 — Player Trading with Any NPC"]
   settlements_npcs_034["settlements-npcs-034 — Household wood authority and repair correctness"]
   settlements_npcs_035["settlements-npcs-035 — Household wells and population scaling"]
+  settlements_npcs_036["settlements-npcs-036 — Generic NPC-Owned Goods Trading"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -737,6 +724,7 @@ graph TD
   settlements_npcs_030 --> world_023
   settlements_npcs_032 --> settlements_npcs_034
   settlements_npcs_033 --> settlements_012
+  settlements_npcs_033 --> settlements_npcs_036
   settlements_npcs_034 --> settlements_npcs_016
   settlements_npcs_034 --> settlements_npcs_017
   tools_010 --> tools_011

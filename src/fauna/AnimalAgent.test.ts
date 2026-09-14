@@ -805,6 +805,208 @@ describe('AnimalAgent', () => {
     })
   })
 
+  // Plan fauna-028: the cadence split must reduce how often the expensive
+  // sections run without changing a single gameplay rule. Everything here is
+  // driven with a real 60 Hz `dt`, because that is the only regime in which
+  // any gate can actually close (an interval is a *seconds* budget, so a slow
+  // frame runs every section, exactly as before).
+  describe('update cadence (plan fauna-028)', () => {
+    const FRAME = 1 / 60
+    const FAR = new THREE.Vector3(1000, 0, 1000)
+
+    function tickFrames(agent: AnimalAgent, frames: number, ctx: Record<string, unknown> = {}): void {
+      for (let i = 0; i < frames; i++) {
+        agent.update({
+          dt: FRAME,
+          others: [agent],
+          observerPos: FAR,
+          dayFactor: 1,
+          forestFactor: 0,
+          litFires: [],
+          ...ctx,
+        } as Parameters<AnimalAgent['update']>[0])
+      }
+    }
+
+    it('runs every section at full rate for an animal right next to the player', () => {
+      // `observerPos` inside the direct-interaction radius ⇒ `immediate`.
+      const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'near-deer', x: 0, z: 0 }))
+      const near = new THREE.Vector3(3, 0, 0)
+      let moved = 0
+      for (let i = 0; i < 12; i++) {
+        const before = deer.mesh.position.x
+        deer.update({
+          dt: FRAME,
+          others: [deer],
+          observerPos: near,
+          dayFactor: 1,
+          forestFactor: 0,
+          litFires: [],
+        })
+        if (deer.mesh.position.x !== before) moved++
+      }
+      expect(deer.getDebugInfo().updateImportance).toBe('immediate')
+      expect(moved).toBe(12)
+    })
+
+    it('keeps a threatened prey animal frame-responsive instead of throttling it', () => {
+      // A player-noticed prey animal resolves `player-flee-prey`, a
+      // high-priority branch — it must steer on every single frame even
+      // though the observer is far outside the proximity radius.
+      const rabbit = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId: 'fleeing-rabbit', x: 0, z: 0 }))
+      const hunter = new THREE.Vector3(2.5, 0, 0)
+      let stepped = 0
+      for (let i = 0; i < 12; i++) {
+        const before = rabbit.mesh.position.clone()
+        rabbit.update({
+          dt: FRAME,
+          others: [rabbit],
+          observerPos: hunter,
+          dayFactor: 1,
+          forestFactor: 0,
+          litFires: [],
+        })
+        if (!rabbit.mesh.position.equals(before)) stepped++
+      }
+      expect(rabbit.getDebugInfo().aiBranch).toBe('player-flee-prey')
+      expect(rabbit.getDebugInfo().updateImportance).toBe('immediate')
+      expect(stepped).toBe(12)
+    })
+
+    it('gives a far, idle wild animal reduced behaviour cadence but the same travel over time', () => {
+      const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'far-deer', x: 0, z: 0 }))
+      let stepped = 0
+      const frames = 60
+      for (let i = 0; i < frames; i++) {
+        const before = deer.mesh.position.clone()
+        tickFrames(deer, 1)
+        if (!deer.mesh.position.equals(before)) stepped++
+      }
+      expect(deer.getDebugInfo().updateImportance).toBe('routine')
+      // Fewer movement steps than frames — that is the whole point — but the
+      // animal is still genuinely simulating and moving off-screen.
+      expect(stepped).toBeLessThan(frames)
+      expect(stepped).toBeGreaterThan(0)
+      expect(deer.mesh.position.distanceTo(new THREE.Vector3(0, deer.mesh.position.y, 0))).toBeGreaterThan(0.5)
+    })
+
+    it('keeps gameplay timers on real time regardless of cadence', () => {
+      // `attackCooldown` lives in the always-full-rate life tick. Sixty 1/60 s
+      // frames must burn exactly one second of it whether or not the
+      // behaviour/presentation gates closed in between.
+      const wolf = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'cooldown-wolf', x: 0, z: 0 }))
+      const prey = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId: 'bitten-rabbit', x: 0.2, z: 0 }))
+      wolf.update({ dt: 1, others: [wolf, prey], observerPos: FAR, dayFactor: 1, forestFactor: 0, litFires: [] })
+      const cooled = wolf.getDebugInfo()
+      expect(cooled.aiBranch).toBe('predator-normal')
+      // One attack has happened, so the cooldown is armed; run it down at 60 Hz.
+      const beforeHp = prey.health.currentHp
+      tickFrames(wolf, 60, { others: [wolf, prey] })
+      // Cooldown (0.6 s) elapsed well inside one second, so the wolf bit again.
+      expect(prey.health.currentHp).toBeLessThan(beforeHp)
+    })
+
+    it('advances hunger/thirst identically whether or not the cadence gates close', () => {
+      // Same species, same id (⇒ same cadence phase), same starting needs and
+      // the same two seconds of simulated time — but one is driven at 60 Hz,
+      // where the routine gates actually close, and the other at 1 Hz, where
+      // every `dt` already exceeds every interval so nothing is ever gated.
+      const throttled = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'needs-far', x: 0, z: 0 }))
+      const ungated = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'needs-far', x: 0, z: 0 }))
+      for (const agent of [throttled, ungated]) {
+        agent.life.hunger = 0.4
+        agent.life.thirst = 0.3
+        agent.life.stamina.current = agent.life.stamina.max
+      }
+      for (let i = 0; i < 120; i++) {
+        throttled.update({ dt: FRAME, others: [throttled], observerPos: FAR, dayFactor: 1, forestFactor: 0, litFires: [] })
+      }
+      for (let i = 0; i < 2; i++) {
+        ungated.update({ dt: 1, others: [ungated], observerPos: FAR, dayFactor: 1, forestFactor: 0, litFires: [] })
+      }
+      expect(throttled.getDebugInfo().updateImportance).toBe('routine')
+      expect(throttled.life.hunger).toBeCloseTo(ungated.life.hunger, 10)
+      expect(throttled.life.thirst).toBeCloseTo(ungated.life.thirst, 10)
+    })
+
+    it('does not delay drowning damage — deep water is never throttled', () => {
+      const deepWater = () => ({ present: true as const, waterSurfaceHeight: 0, floorHeight: -8, depth: 8 })
+      const deer = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.deer,
+        animalId: 'drowning-deer',
+        sampleLocalWater: deepWater,
+      }))
+      deer.life.stamina.current = 0
+      const before = deer.health.currentHp
+      let damagedFrames = 0
+      for (let i = 0; i < 10; i++) {
+        const hp = deer.health.currentHp
+        deer.update({ dt: FRAME, others: [deer], observerPos: FAR, dayFactor: 1, forestFactor: 0, litFires: [] })
+        if (deer.health.currentHp < hp) damagedFrames++
+      }
+      expect(deer.health.currentHp).toBeLessThan(before)
+      // Every frame, not one in N: `swimming` alone forces `immediate`, and
+      // `tickDrowning()` is in the full-rate life tick either way.
+      expect(damagedFrames).toBe(10)
+      expect(deer.getDebugInfo().updateImportance).toBe('immediate')
+    })
+
+    it('keeps corpse/death lifecycle timing on real time', () => {
+      const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'dead-deer', x: 0, z: 0 }))
+      deer.takeDamage(9999)
+      expect(deer.isDead()).toBe(true)
+      tickFrames(deer, 60)
+      expect(deer.getDebugInfo().position).toBeTruthy()
+      expect(deer.corpsePhase()).toBe('fresh')
+      // 60 × 1/60 s of decay, unthrottled.
+      expect(deer.getDebugInfo().dead).toBe(true)
+    })
+
+    it('never throttles a mounted, led or player-owned animal', () => {
+      const led = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.horse, animalId: 'led-horse', x: 0, z: 0 }))
+      led.setLeadAttached(true)
+      tickFrames(led, 1)
+      expect(led.getDebugInfo().updateImportance).toBe('immediate')
+
+      const owned = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.horse, animalId: 'owned-horse', x: 0, z: 0 }))
+      owned.transferOwnershipToPlayer()
+      tickFrames(owned, 1, { playerControlPos: { x: 40, z: 0 } })
+      expect(owned.getDebugInfo().updateImportance).toBe('immediate')
+
+      // A ridden mount bypasses `update()` entirely and is driven every frame
+      // by `driveMounted()`, which runs all three sections unconditionally.
+      const mount = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.horse, animalId: 'ridden-horse', x: 0, z: 0 }))
+      mount.setMounted(true)
+      const startX = mount.mesh.position.x
+      for (let i = 0; i < 10; i++) mount.driveMounted(FRAME, 1, 0, false)
+      expect(mount.mesh.position.x).toBeGreaterThan(startX)
+    })
+
+    it('uses the same mechanism for livestock as for wild fauna', () => {
+      const cow = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.cow,
+        animalId: 'cadence-cow',
+        ownerHouseId: 'home:home:0',
+      }))
+      tickFrames(cow, 1)
+      expect(cow.getDebugInfo().updateImportance).toBe('routine')
+      tickFrames(cow, 1, { observerPos: new THREE.Vector3(2, 0, 0) })
+      expect(cow.getDebugInfo().updateImportance).toBe('immediate')
+    })
+
+    it('bases cadence on observer distance, never on camera visibility', () => {
+      // There is no camera/frustum input on `AnimalUpdateContext` at all, and
+      // the simulation-critical half runs at full rate for every classification
+      // — so an animal nobody is looking at still ages, feeds and decides.
+      const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'offscreen-deer', x: 0, z: 0 }))
+      const beforeHunger = deer.life.hunger
+      tickFrames(deer, 60)
+      expect(deer.getDebugInfo().updateImportance).toBe('routine')
+      expect(deer.life.hunger).toBeGreaterThan(beforeHunger)
+      expect(deer.getDebugInfo().aiBranch).toBe('prey-normal')
+    })
+  })
+
   describe('predator ↔ livestock encounter set (plan fauna-026)', () => {
     /** Player kept far enough away that `senseEnvironment` never reports it
      *  active, and `others`/`huntableLivestock` are two genuinely separate

@@ -14,6 +14,17 @@ When this file and the code disagree, the code wins — update this file.
 
 `src/fauna/AnimalAgent.ts` is the central per-animal integration point (decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API) and is supposed to stay one class. Species taxonomy lives in `animalDefs.ts`; corpse/remains/decay/rabies-exposure/food-claim state in `animalCorpse.ts`; food/water source selection and atomic relief in `animalForaging.ts`; water-trip commitment and the shared radial probe in `animalRoaming.ts`. Top-level behaviour arbitration is already a tested priority table in `faunaDecision.ts`. Thunder/world scare is a short impulse on that same table (`scare-flee`), not a weather-owned movement manager: `animalScare.ts` rolls a stable `(eventId, animalId)` probability and `AnimalAgent` reuses `fleeFrom()`. The remaining composed modules (combat, water-traversal classification, predator/human decision, dog-guard, prey-alert perception, herd cohesion, spawner lifecycle, hunting hooks, harvest, meat, livestock production) are called as thin adapters. This is a real structural difference from the NPC domain — fauna already had the decision-table shape the NPC refactor later copied, and the later AnimalAgent split (fauna-017) moved ownership, not arbitration.
 
+**Update cadence (plan fauna-028).** `AnimalAgent.update()` is internally split into four sections with different update rates, driven by one shared stateless policy in `animalUpdateCadence.ts` — the *same* policy for wild fauna and livestock, consumed inside the one shared `update()`. There is no scheduler, no agent registry and no second update pipeline.
+
+| Section | Rate |
+|---|---|
+| corpse/decay, stray classification, sensing, targeting, scare, decision | always full rate |
+| `tickLife()` — timers, `advanceAge`, production/wool, drowning, `tickAnimalLife` | always full rate, real frame `dt` |
+| behaviour branch execution (movement/steering) + `tickMovementTail()` (`snapY`, `resolveWaterTraversal`) | `immediate` 0 s · `active` 1/30 s · `routine` 1/12 s |
+| `tickPresentation()` — locomotion clip, label sync, `AnimationMixer` | full rate ≤20 m · 1/20 s ≤36 m · 1/10 s beyond |
+
+Importance is `immediate` for any high-priority branch (combat/threat/flee/scare/dog-guard/fire-avoid/rabid), a committed hunt or `threateningHuman`/`frenzied`, a led / player-owned / mounted animal, an active `AnimalTrip` or cave-habitat resident, an actively swimming animal, a live hurt/attack one-shot, or anything within 12 m of the player; `active` inside 36 m; `routine` beyond. Skipped time is accumulated and flushed in full — a throttled animal covers the same distance over the same wall-clock time — and the interval is capped so one flushed movement step stays under a fixed metre budget. Because intervals are in seconds, the whole mechanism self-disables once `dt` exceeds them. Off-screen animals still exist, still age, still feed and still decide; camera visibility is not an input.
+
 **Livestock and rats are not a parallel type.** Both are plain `AnimalAgent` instances of the exact same class wild fauna uses, distinguished only by ownership/registration — see [Persistence classes](#persistence-classes) and [Settlement/ecosystem interactions](#settlementecosystem-interactions).
 
 ## Species data
@@ -170,6 +181,7 @@ src/fauna/dogGuard.ts
 src/fauna/preyAlertPerception.ts
 src/fauna/animalLead.ts
 src/fauna/animalScare.ts
+src/fauna/animalUpdateCadence.ts
 src/fauna/animalStray.ts
 src/shared/followHysteresis.ts
 src/fauna/ownedAnimalControl.ts
