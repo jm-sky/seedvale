@@ -7,6 +7,7 @@
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Cel
 
