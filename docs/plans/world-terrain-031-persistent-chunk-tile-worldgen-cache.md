@@ -1,7 +1,7 @@
 # Plan: Persistent chunk tile worldgen cache
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** L
 **Depends on:** none
@@ -169,5 +169,42 @@ pnpm build
 Browser verification is done by the user. Compare cold/warm traversal of the same region: fewer tile worker jobs with identical terrain/vegetation/items/crops/roads/rivers/cemeteries; digging/building remains save-local; clearing seed cache cleanly returns to cold generation.
 
 After implementation update `docs/state/persistence.md` and `docs/state/terrain-and-world-generation.md`. Add useful `@domain world-terrain` / `@system worldgen-cache` JSDoc tags.
+
+## Implementation
+
+Implemented on `main`.
+
+- `src/persistence/worldgenCacheDb.ts` — two generic seams, both keeping the
+  module's "never throw into gameplay" rule: `getCacheRecord()` (direct
+  primary-key read, no `by_seed` hydrate) and `deleteCacheRecords()`
+  (exact-key eviction in one transaction). `listCacheRecords()` /
+  `enforceCacheCap()` are unchanged and stay the small namespaces' path.
+- `src/terrain/chunkTileWorldgenCache.ts` — the `chunk-tiles` namespace:
+  `chunk:<cx>:<cz>` records holding the unchanged `ChunkTileResult`,
+  `chunkTileFingerprint()` over the whole `ChunkTileParams` (so any new
+  deterministic param field invalidates by itself), structural validation
+  against `(resolution + 2)²`, `cloneChunkTileForRuntime()`, a best-effort
+  read/write pair and bounded hit/miss/invalid/write/eviction counters.
+- Bounds: a per-seed **byte** budget (128 MiB) tracked in a small `meta`
+  manifest record read through the same direct lookup; over budget, the
+  least-recently-used tiles are dropped by exact key. A cache hit updates
+  recency in memory only and never opens a write transaction.
+- `src/terrain/chunkManager.ts` — `acquireCanonicalTile()` sits between
+  `paramsFor()` and `requestChunkTile()` inside `ensureLoaded()`: a hit skips
+  the worker, a miss runs it and schedules the fire-and-forget write. Both
+  paths converge on the single existing `rec.tile = … → waitForFinalizeSlot()`
+  finalize pipeline, always through a runtime clone, so the canonical object a
+  pending IndexedDB write holds is never mutated by `attachChunkMesh()`.
+  Record identity is re-checked after the cache read and after the worker
+  result, and the failure/cleanup paths are identity-checked too, so an unload
+  or rebuild under the same key can neither start a pointless worker job nor
+  let a stale result attach to a replacement `ChunkRecord`.
+
+Terrain modifications, terrain cutouts, tree/crop lifecycle, planted crops,
+collected item ids, resource depletion, mesh data and grass stay downstream and
+are not cached; `ChunkMeshDataCache` remains a separate session-local LRU.
+
+Verified: `pnpm test` (503 files), `npx tsc --noEmit`, `pnpm run lint:fix`,
+`pnpm run build`. Browser cold/warm traversal comparison is the user's.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

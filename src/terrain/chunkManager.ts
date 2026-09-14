@@ -109,6 +109,12 @@ import {
 } from './chunkHeightmap'
 import { createChunkMeshDataCache } from './chunkMeshCache'
 import {
+  chunkTileFingerprint,
+  cloneChunkTileForRuntime,
+  loadCachedChunkTile,
+  persistChunkTile,
+} from './chunkTileWorldgenCache'
+import {
   cancelChunkGrass,
   cancelChunkMesh,
   cancelChunkTile,
@@ -2099,6 +2105,35 @@ export function createChunkManager(
     rebuildColliders(rec)
   }
 
+  /** Canonical base tile for `record`, from the persistent `chunk-tiles`
+   *  worldgen cache when a same-fingerprint record exists, otherwise from the
+   *  tile worker — which then also feeds a fire-and-forget cache write (plan
+   *  world-terrain-031).
+   *
+   *  The returned object is *canonical*: the caller must hand runtime a
+   *  `cloneChunkTileForRuntime()` copy, because a pending IndexedDB write may
+   *  still hold this one while `attachChunkMesh()` replays player/system
+   *  terrain modifications in place.
+   *
+   *  `null` means the chunk was unloaded (or rebuilt under the same key) while
+   *  awaiting storage or the worker — nothing may attach in that case. The
+   *  worker is only started once the cache read is known to be a miss, so an
+   *  unload during the read cancels the generation outright.
+   *
+   *  @domain world-terrain
+   *  @system worldgen-cache */
+  async function acquireCanonicalTile(record: ChunkRecord, params: ChunkTileParams): Promise<ChunkTileResult | null> {
+    const key = record.key
+    const fingerprint = chunkTileFingerprint(params)
+    const cached = await loadCachedChunkTile(config.seed, params, fingerprint)
+    if (chunks.get(key) !== record) return null
+    if (cached) return cached
+    const fresh = await requestChunkTile(key, params)
+    if (chunks.get(key) !== record) return null
+    void persistChunkTile(config.seed, params, fingerprint, fresh)
+    return fresh
+  }
+
   function ensureLoaded(coord: ChunkCoord): Promise<void> {
     const key = chunkKey(coord)
     const existing = chunks.get(key)
@@ -2116,22 +2151,24 @@ export function createChunkManager(
     const { x, z } = chunkCenter(coord, config.chunkSize)
     const riverSegments = riverChannelSegmentsNear(riverChains, x, z, config.chunkSize)
 
-    const promise = requestChunkTile(key, paramsFor(coord, riverSegments))
-      .then((tile) => {
+    const promise = acquireCanonicalTile(record, paramsFor(coord, riverSegments))
+      .then((canonical) => {
+        if (!canonical) return // unloaded (or rebuilt) while generating
         const rec = chunks.get(key)
-        if (!rec) return // unloaded while generating
-        rec.tile = tile
+        if (rec !== record) return
+        rec.tile = cloneChunkTileForRuntime(canonical)
         return waitForFinalizeSlot(rec)
       })
       .catch((err: unknown) => {
         if (!(err instanceof HeightmapGenerationCancelledError)) {
           console.error('[chunkManager] chunk generation failed', err)
         }
-        chunks.delete(key)
+        // Identity-checked: a cancelled generation must never delete the
+        // replacement record a re-`ensureLoaded()` already put under this key.
+        if (chunks.get(key) === record) chunks.delete(key)
       })
       .finally(() => {
-        const rec = chunks.get(key)
-        if (rec) rec.pendingPromise = undefined
+        if (chunks.get(key) === record) record.pendingPromise = undefined
       })
 
     record.pendingPromise = promise

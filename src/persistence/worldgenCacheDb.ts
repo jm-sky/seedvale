@@ -68,6 +68,59 @@ export async function listCacheRecords<TPayload = unknown>(seed: number, namespa
   }
 }
 
+/** Direct primary-key read for one `(seed, namespace, version, subKey)`
+ *  record (plan world-terrain-031) — the namespace-wide `listCacheRecords()`
+ *  above materializes every payload for a seed, which is fine for a handful of
+ *  small records but unusable for a namespace whose records are hundreds of
+ *  KiB each (chunk tiles). Same rule as the rest of this module: any
+ *  IndexedDB failure resolves as `null`, never throws into gameplay.
+ *
+ * @domain persistence
+ * @system worldgen-cache
+ */
+export async function getCacheRecord<TPayload = unknown>(seed: number, namespace: string, version: number, subKey: string): Promise<CacheRecord<TPayload> | null> {
+  try {
+    const db = await openSeedvaleDb()
+    try {
+      const key = cacheKey(seed, namespace, version, subKey)
+      return await new Promise<CacheRecord<TPayload> | null>((resolve, reject) => {
+        const tx = db.transaction(WORLDGEN_CACHE_STORE, 'readonly')
+        const req = tx.objectStore(WORLDGEN_CACHE_STORE).get(key)
+        req.onsuccess = () => resolve((req.result as CacheRecord<TPayload> | undefined) ?? null)
+        req.onerror = () => reject(req.error)
+      })
+    } finally {
+      db.close()
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Exact-key deletion for namespace-owned eviction (plan world-terrain-031) —
+ *  a namespace that tracks its own victims (e.g. a byte-budget manifest) can
+ *  drop them in one transaction without `enforceCacheCap()` loading every
+ *  payload for the seed first. Deleting a key that is already gone is a no-op.
+ *
+ * @domain persistence
+ * @system worldgen-cache
+ */
+export async function deleteCacheRecords(keys: readonly string[]): Promise<void> {
+  if (keys.length === 0) return
+  try {
+    const db = await openSeedvaleDb()
+    try {
+      await withStore(db, 'readwrite', (store) => {
+        for (const key of keys) store.delete(key)
+      }, () => undefined)
+    } finally {
+      db.close()
+    }
+  } catch {
+    // ignore — eviction is best-effort against disposable data
+  }
+}
+
 /** Bounded batch upsert (plan §16) — one readwrite transaction for the whole
  *  batch instead of one per record. Never throws into a gameplay path; a
  *  failure here only means this session's dirty tiles stay unpersisted. */

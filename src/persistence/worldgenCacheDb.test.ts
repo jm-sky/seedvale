@@ -5,7 +5,9 @@ import {
   type CacheRecord,
   countCacheForSeed,
   deleteCacheForSeed,
+  deleteCacheRecords,
   enforceCacheCap,
+  getCacheRecord,
   listCacheRecords,
   putCacheRecords,
 } from './worldgenCacheDb'
@@ -27,6 +29,27 @@ describe('worldgenCacheDb — generic (seed, namespace, version, key) cache (pla
     await putCacheRecords([record(1, 'a', 'fp', 10), record(1, 'b', 'fp', 20)])
     const rows = await listCacheRecords(1, 'ns', 1)
     expect(rows.map((r) => r.payload).sort()).toEqual(['payload:a', 'payload:b'])
+  })
+
+  it('getCacheRecord reads one record by primary key (plan world-terrain-031 §Direct-record lookup)', async () => {
+    await putCacheRecords([record(1, 'a', 'fp', 10), record(1, 'b', 'fp', 20)])
+    const row = await getCacheRecord<string>(1, 'ns', 1, 'a')
+    expect(row?.payload).toBe('payload:a')
+    expect(await getCacheRecord(1, 'ns', 1, 'missing')).toBeNull()
+    expect(await getCacheRecord(1, 'ns', 2, 'a')).toBeNull()
+    expect(await getCacheRecord(2, 'ns', 1, 'a')).toBeNull()
+  })
+
+  it('getCacheRecord resolves null instead of throwing when IndexedDB is unavailable', async () => {
+    vi.stubGlobal('indexedDB', undefined)
+    await expect(getCacheRecord(1, 'ns', 1, 'a')).resolves.toBeNull()
+  })
+
+  it('deleteCacheRecords drops exactly the given primary keys in one transaction', async () => {
+    await putCacheRecords([record(1, 'a', 'fp', 10), record(1, 'b', 'fp', 20), record(1, 'c', 'fp', 30)])
+    await deleteCacheRecords([cacheKey(1, 'ns', 1, 'a'), cacheKey(1, 'ns', 1, 'c'), cacheKey(1, 'ns', 1, 'gone')])
+    const rows = await listCacheRecords(1, 'ns', 1)
+    expect(rows.map((r) => r.payload)).toEqual(['payload:b'])
   })
 
   it('cache for one seed never leaks into a query for another seed (plan §19 "seed A never reaches seed B")', async () => {
