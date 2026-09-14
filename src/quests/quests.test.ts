@@ -42,7 +42,7 @@ describe('buildLandmarkQuests', () => {
 
   it('builds one quest per resolved kind, binding its stage to the resolved landmarkId', () => {
     const quests = buildLandmarkQuests((kind) => `${kind}:resolved`)
-    expect(quests).toHaveLength(3)
+    expect(quests).toHaveLength(5)
     for (const quest of quests) {
       const objective = quest.stages[0]!.objective
       expect(objective.type).toBe('interact_landmark')
@@ -58,7 +58,7 @@ describe('buildLandmarkQuests', () => {
       requested.push(kind)
       return `${kind}:id`
     })
-    expect(requested.sort()).toEqual(['cemetery', 'monolith', 'smallRuins'])
+    expect(requested.sort()).toEqual(['cemetery', 'monolith', 'shipwreck', 'smallRuins', 'tower'])
   })
 
   it('produces quest ids that are stable and distinct', () => {

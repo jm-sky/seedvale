@@ -118,3 +118,8 @@ Fauna: [quaternius-ultimate-animated-animals-license.txt](./quaternius-ultimate-
 Research: [../research/2026-08-07-3d-asset-sources.md](../research/2026-08-07-3d-asset-sources.md).
 
 | `public/models/settlement/megakit/*.glb` (176 szt.) | Medieval Village MegaKit Standard / Quaternius | [quaternius.itch.io/medieval-village-megakit](https://quaternius.itch.io/medieval-village-megakit) | CC0 1.0 | Full Standard kit (walls/roofs/doors/windows/floors) — parked except home Kupiec `wagon.glb`; see `public/models/settlement/megakit/README.md`. License: [quaternius-medieval-village-megakit-license.txt](./quaternius-medieval-village-megakit-license.txt) |
+| `public/models/parked/boat.glb` | Cute Fish Pack / Quaternius | [quaternius.com](https://quaternius.com/packs.html) | CC0 1.0 | `Boat` — coastal `boat` landmark (plan world-terrain-027); also parked draft source |
+| `public/models/world/shipwreck.glb` | ❓ ustalić | ❓ | ❓ | Shipwreck landmark (`shipwreck`) — plan world-terrain-027; attribution TODO |
+| `public/models/world/tower_stone.glb` | ❓ ustalić | ❓ | ❓ | Stone tower landmark (`tower`) — plan world-terrain-027; attribution TODO |
+| `public/models/nature/old_tree.glb` | ❓ ustalić | ❓ | ❓ | Old tree landmark (`oldTree`) — plan world-terrain-027; attribution TODO |
+| `public/models/parked/ship.glb`, `ship_small.glb`, `port_medium.glb` | ❓ ustalić | ❓ | ❓ | Parked (unwired) — moved from `public/models/` root during world-terrain-027 |

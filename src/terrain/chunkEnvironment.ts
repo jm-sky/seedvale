@@ -25,6 +25,11 @@ export type EnvironmentKind =
   | 'smallRuins'
   | 'ruins'
   | 'cemetery'
+  | 'boat'
+  | 'shipwreck'
+  | 'tower'
+  | 'oldTree'
+  | 'wagon'
 
 export type EnvironmentPlacement = {
   x: number
@@ -35,17 +40,15 @@ export type EnvironmentPlacement = {
   /** Meaning depends on `kind`: boulder irregularity 0..1 (`largeRock`/
    *  `rockCluster`), log length in world units (`fallenLog`), unused
    *  (`campfire`), height/count/damage variation 0..1 (`monolith`/
-   *  `stoneCircle`/`smallRuins`/`cemetery`) — see `createLargeRock`/
-   *  `createRockCluster`/`createFallenLog`/`createMonolith`/
-   *  `createStoneCircle`/`createSmallRuins`/`createCemetery`
-   *  in `settlement/props.ts`. */
+   *  `stoneCircle`/`smallRuins`/`cemetery`/`boat`/`shipwreck`/`tower`/
+   *  `oldTree`/`wagon`) — see factories in `settlement/props.ts`. */
   variant: number
-  /** Stable identity, present only for the four proper "landmark" kinds
-   *  (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`) — purely derived from
-   *  `(seed, chunk, kind, ordinal)`, so it regenerates identically on every
-   *  chunk reload without needing save-game persistence (plan 110). Absent
-   *  for the purely decorative kinds (rock/log/campfire), which have no
-   *  identity need. See `deriveLandmarkId`. */
+  /** Stable identity for proper landmark kinds (`monolith`/`stoneCircle`/
+   *  `smallRuins`/`ruins`/`cemetery`/`boat`/`shipwreck`/`tower`/`oldTree`/
+   *  `wagon`) — purely derived from `(seed, chunk, kind, ordinal)`, so it
+   *  regenerates identically on every chunk reload without needing save-game
+   *  persistence (plan 110; extended world-terrain-027). Absent for the
+   *  purely decorative kinds (rock/log/campfire). See `deriveLandmarkId`. */
   id?: string
   /** Cemetery layout size (plan 173) — SM/MD/LG differ in footprint, grave
    *  count, spacing and aisle layout (`createCemetery` in
@@ -79,6 +82,13 @@ const ROAD_TINT_REJECT = 0.15
 const MONOLITH_CHANCE = 0.02
 const STONE_CIRCLE_CHANCE = 0.008
 const SMALL_RUINS_CHANCE = 0.008
+/** Rare coastal / road / natural landmarks (plan world-terrain-027). Own RNG
+ *  streams appended after existing landmark salts so prior rolls stay stable. */
+const WAGON_CHANCE = 0.04
+const BOAT_CHANCE = 0.014
+const TOWER_CHANCE = 0.006
+const OLD_TREE_CHANCE = 0.005
+const SHIPWRECK_CHANCE = 0.003
 /** Multi-point landmarks want sturdier, flatter footing than a single rock. */
 const SLOPE_REJECT_LANDMARK = 0.6
 /** Keep the whole landmark footprint inside its own chunk (simpler than
@@ -86,6 +96,26 @@ const SLOPE_REJECT_LANDMARK = 0.6
 const MONOLITH_MARGIN = 1.2
 const STONE_CIRCLE_MARGIN = 4
 const SMALL_RUINS_MARGIN = 2.5
+const WAGON_MARGIN = 2.5
+const BOAT_MARGIN = 2.5
+const TOWER_MARGIN = 4
+const OLD_TREE_MARGIN = 5
+const SHIPWRECK_MARGIN = 6
+/** Shoreline band above water for boats (same idea as shell placement). */
+const BOAT_MAX_HEIGHT_ABOVE_WATER = 2.5
+const BOAT_MIN_HEIGHT_ABOVE_WATER = -0.15
+/** Shipwreck may sit slightly lower / partially in shallow water. */
+const SHIPWRECK_MAX_HEIGHT_ABOVE_WATER = 2.2
+const SHIPWRECK_MIN_HEIGHT_ABOVE_WATER = -0.8
+/** Lateral offset past a road corridor edge before a wagon is accepted. */
+const WAGON_SHOULDER_MIN = 1.2
+const WAGON_SHOULDER_MAX = 4.5
+/** Circular footprint checks against roads / slope samples. */
+const TOWER_FOOTPRINT_RADIUS = 3.2
+const SHIPWRECK_FOOTPRINT_RADIUS = 5.5
+const OLD_TREE_FOOTPRINT_RADIUS = 2.8
+/** Vegetation trees cleared around an accepted old-tree landmark. */
+export const OLD_TREE_CLEARANCE_RADIUS = 8
 /** Weighted roll for cemetery size (plan 173) — most cemeteries stay small;
  *  LG is a deliberately rarer, bigger village-fringe landmark. */
 const CEMETERY_SIZE_WEIGHTS: readonly [CemeterySize, number][] = [
@@ -102,9 +132,20 @@ export const LANDMARK_BIAS_MAX = 2
 
 export type LandmarkBiasKind = 'monolith' | 'stoneCircle' | 'smallRuins'
 
-/** The four `EnvironmentKind`s that carry a stable `EnvironmentPlacement.id`
- *  (plan 110) — the only ones a landmark quest can target (plan 132). */
-export type LandmarkKind = 'monolith' | 'stoneCircle' | 'smallRuins' | 'ruins' | 'cemetery'
+/** `EnvironmentKind`s that carry a stable `EnvironmentPlacement.id`
+ *  (plan 110) — the only ones a landmark quest can target (plan 132;
+ *  extended world-terrain-027). */
+export type LandmarkKind =
+  | 'monolith'
+  | 'stoneCircle'
+  | 'smallRuins'
+  | 'ruins'
+  | 'cemetery'
+  | 'boat'
+  | 'shipwreck'
+  | 'tower'
+  | 'oldTree'
+  | 'wagon'
 
 /** Display label for interaction prompts/dialogue speaker names (plan 132) —
  *  same role as `ANIMAL_LABELS`/`SPAWNER_LABELS` for their own domains. */
@@ -114,6 +155,11 @@ export const LANDMARK_LABELS: Record<LandmarkKind, string> = {
   smallRuins: 'Ruiny',
   ruins: 'Ruiny',
   cemetery: 'Cmentarz',
+  boat: 'Łódź',
+  shipwreck: 'Wrak',
+  tower: 'Wieża',
+  oldTree: 'Stare drzewo',
+  wagon: 'Porzucony wóz',
 }
 
 export type LandmarkBiasInput = {
@@ -259,7 +305,7 @@ function hashChunk(cx: number, cz: number, salt: number): number {
   return (h ^ (h >>> 16)) >>> 0
 }
 
-/** Stable id for one of the four proper landmark kinds — pure function of
+/** Stable id for a proper landmark kind — pure function of
  *  `(seed, chunk, kind, ordinal)`, so identical world seed + chunk coords
  *  regenerate the exact same id (plan 110). `ordinal` distinguishes multiple
  *  rolls of the same `kind` in one chunk; today each kind rolls at most once
@@ -275,6 +321,25 @@ function nearTree(vegetation: readonly VegetationPlacement[], x: number, z: numb
     if (v.kind === 'tree' && Math.hypot(v.x - x, v.z - z) <= radius) return true
   }
   return false
+}
+
+/** Drop ordinary vegetation trees inside an old-tree landmark's clearance
+ *  radius so the landmark sits in a real clearing (plan world-terrain-027).
+ *  Pure / worker-safe — does not mutate `vegetation` or `environment`. */
+export function clearVegetationAroundOldTrees(
+  vegetation: readonly VegetationPlacement[],
+  environment: readonly EnvironmentPlacement[],
+  clearanceRadius = OLD_TREE_CLEARANCE_RADIUS,
+): VegetationPlacement[] {
+  const oldTrees = environment.filter((p) => p.kind === 'oldTree')
+  if (oldTrees.length === 0) return vegetation as VegetationPlacement[]
+  return vegetation.filter((v) => {
+    if (v.kind !== 'tree') return true
+    for (const tree of oldTrees) {
+      if (Math.hypot(v.x - tree.x, v.z - tree.z) <= clearanceRadius) return false
+    }
+    return true
+  })
 }
 
 /** Minimal terrain view `resolveCemeteryPlacement` needs — cemetery
@@ -534,6 +599,249 @@ export function computeChunkEnvironment(
       variant: authored.variant,
       id: authored.id,
     })
+  }
+
+  const footprintClearsRoads = (wx: number, wz: number, radius: number): boolean => {
+    for (const seg of params.roadSegments) {
+      if (distanceToSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz) < radius + seg.halfWidth + 1.5) {
+        return false
+      }
+    }
+    return true
+  }
+
+  const footprintSlopeOk = (wx: number, wz: number, radius: number, maxSlope: number): boolean => {
+    if (slopeAt(wx, wz) > maxSlope) return false
+    const samples = [
+      [radius * 0.7, 0],
+      [-radius * 0.7, 0],
+      [0, radius * 0.7],
+      [0, -radius * 0.7],
+    ] as const
+    for (const [dx, dz] of samples) {
+      if (slopeAt(wx + dx, wz + dz) > maxSlope) return false
+    }
+    return true
+  }
+
+  const inVillageClearing = (wx: number, wz: number, pad: number): boolean => {
+    for (const clearing of params.clearings) {
+      if (Math.hypot(wx - clearing.x, wz - clearing.z) <= clearing.radius + pad) return true
+    }
+    for (const disk of params.regional) {
+      if (Math.hypot(wx - disk.x, wz - disk.z) <= disk.radius * 0.55) return true
+    }
+    return false
+  }
+
+  const shoreYawAt = (wx: number, wz: number): number => {
+    const d = 2.5
+    const cXP = sample(tile.continentalness, wx + d, wz)
+    const cXM = sample(tile.continentalness, wx - d, wz)
+    const cZP = sample(tile.continentalness, wx, wz + d)
+    const cZM = sample(tile.continentalness, wx, wz - d)
+    // Gradient of continentalness points inland; boat/ship long axis faces shore.
+    return Math.atan2(-(cXP - cXM), -(cZP - cZM))
+  }
+
+  const isCoastalBand = (continentalness: number): boolean =>
+    continentalness >= region.oceanThreshold - 0.02 && continentalness <= region.coastThreshold + 0.04
+
+  // --- Abandoned wagon: beside a road corridor, not on it (world-terrain-027) ---
+  const wagonRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 7) ^ 0x6a18d)
+  {
+    const segments = params.roadSegments
+    if (segments.length > 0) {
+      const seg = segments[Math.floor(wagonRandom() * segments.length)]!
+      const t = wagonRandom()
+      const alongX = seg.ax + (seg.bx - seg.ax) * t
+      const alongZ = seg.az + (seg.bz - seg.az) * t
+      const len = Math.hypot(seg.bx - seg.ax, seg.bz - seg.az) || 1
+      const nx = -(seg.bz - seg.az) / len
+      const nz = (seg.bx - seg.ax) / len
+      const side = wagonRandom() < 0.5 ? -1 : 1
+      const shoulder = seg.halfWidth + WAGON_SHOULDER_MIN + wagonRandom() * (WAGON_SHOULDER_MAX - WAGON_SHOULDER_MIN)
+      const wx = alongX + nx * side * shoulder
+      const wz = alongZ + nz * side * shoulder
+      const halfMargin = half - WAGON_MARGIN
+      const inChunk =
+        Math.abs(wx - coord.cx * chunkSize) <= halfMargin && Math.abs(wz - coord.cz * chunkSize) <= halfMargin
+      const h = sample(tile.heights, wx, wz)
+      if (
+        inChunk
+        && h > waterLevel + 0.35
+        && slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK
+        && !inVillageClearing(wx, wz, 2)
+        && wagonRandom() <= WAGON_CHANCE
+      ) {
+        const yaw = Math.atan2(seg.bx - seg.ax, seg.bz - seg.az) + (wagonRandom() - 0.5) * 0.35
+        placements.push({
+          x: wx,
+          z: wz,
+          kind: 'wagon',
+          scale: 0.95 + wagonRandom() * 0.15,
+          rotationY: yaw,
+          variant: wagonRandom(),
+          id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'wagon', 0),
+        })
+      }
+    }
+  }
+
+  // --- Shore boat: coastal band near waterline ---
+  const boatRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 8) ^ 0x71c4e)
+  {
+    const wx = coord.cx * chunkSize + (boatRandom() * 2 - 1) * (half - BOAT_MARGIN)
+    const wz = coord.cz * chunkSize + (boatRandom() * 2 - 1) * (half - BOAT_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    const continentalness = sample(tile.continentalness, wx, wz)
+    const heightAbove = h - waterLevel
+    if (
+      isCoastalBand(continentalness)
+      && heightAbove >= BOAT_MIN_HEIGHT_ABOVE_WATER
+      && heightAbove <= BOAT_MAX_HEIGHT_ABOVE_WATER
+      && sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT
+      && slopeAt(wx, wz) <= SLOPE_REJECT_FLAT
+      && footprintClearsRoads(wx, wz, 2)
+      && !inVillageClearing(wx, wz, 3)
+      && boatRandom() <= BOAT_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'boat',
+        scale: 0.9 + boatRandom() * 0.25,
+        rotationY: shoreYawAt(wx, wz) + (boatRandom() - 0.5) * 0.4,
+        variant: boatRandom(),
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'boat', 0),
+      })
+    }
+  }
+
+  // --- Stone tower: coastal overlook or mountain ridge ---
+  const towerRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 9) ^ 0x82b59)
+  {
+    const wx = coord.cx * chunkSize + (towerRandom() * 2 - 1) * (half - TOWER_MARGIN)
+    const wz = coord.cz * chunkSize + (towerRandom() * 2 - 1) * (half - TOWER_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    const continentalness = sample(tile.continentalness, wx, wz)
+    const ridge = sample(tile.mountainRidge, wx, wz)
+    const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
+    const coastal =
+      isCoastalBand(continentalness) && h > waterLevel + 1.2 && h <= waterLevel + 8
+    const mountain = ridge >= 0.45 && altitude01 >= 0.35
+    if (
+      (coastal || mountain)
+      && h > waterLevel + 0.5
+      && sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT
+      && footprintSlopeOk(wx, wz, TOWER_FOOTPRINT_RADIUS, SLOPE_REJECT_LANDMARK)
+      && footprintClearsRoads(wx, wz, TOWER_FOOTPRINT_RADIUS)
+      && !inVillageClearing(wx, wz, 4)
+      && towerRandom() <= TOWER_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'tower',
+        scale: 0.95 + towerRandom() * 0.2,
+        rotationY: towerRandom() * Math.PI * 2,
+        variant: coastal ? 0.25 + towerRandom() * 0.25 : 0.55 + towerRandom() * 0.4,
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'tower', 0),
+      })
+    }
+  }
+
+  // --- Old tree: rare natural landmark with clearing ---
+  const oldTreeRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 10) ^ 0x93d02)
+  {
+    const wx = coord.cx * chunkSize + (oldTreeRandom() * 2 - 1) * (half - OLD_TREE_MARGIN)
+    const wz = coord.cz * chunkSize + (oldTreeRandom() * 2 - 1) * (half - OLD_TREE_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
+    const moistureRegion = sample(tile.moistureRegion, wx, wz)
+    const continentalness = sample(tile.continentalness, wx, wz)
+    const ridge = sample(tile.mountainRidge, wx, wz)
+    const forestDensity = forestDensityAt(moistureRegion, altitude, continentalness, ridge, region)
+    const biome = biomeWeightsAt(moistureRegion, altitude, region)
+    const suitable =
+      forestDensity >= 0.25 || biome.forest >= 0.35 || (biome.desert < 0.4 && biome.swamp < 0.45 && altitude > 0.08)
+    if (
+      suitable
+      && h > waterLevel + 0.6
+      && sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT
+      && footprintSlopeOk(wx, wz, OLD_TREE_FOOTPRINT_RADIUS, SLOPE_REJECT_LANDMARK)
+      && footprintClearsRoads(wx, wz, OLD_TREE_FOOTPRINT_RADIUS)
+      && !inVillageClearing(wx, wz, 5)
+      && oldTreeRandom() <= OLD_TREE_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'oldTree',
+        scale: 0.95 + oldTreeRandom() * 0.2,
+        rotationY: oldTreeRandom() * Math.PI * 2,
+        variant: oldTreeRandom(),
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'oldTree', 0),
+      })
+    }
+  }
+
+  // --- Shipwreck: very rare large coastal landmark ---
+  const shipRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 11) ^ 0xa4e17)
+  {
+    const wx = coord.cx * chunkSize + (shipRandom() * 2 - 1) * (half - SHIPWRECK_MARGIN)
+    const wz = coord.cz * chunkSize + (shipRandom() * 2 - 1) * (half - SHIPWRECK_MARGIN)
+    const h = sample(tile.heights, wx, wz)
+    const continentalness = sample(tile.continentalness, wx, wz)
+    const heightAbove = h - waterLevel
+    const offsets = [
+      [0, 0],
+      [SHIPWRECK_FOOTPRINT_RADIUS * 0.55, 0],
+      [-SHIPWRECK_FOOTPRINT_RADIUS * 0.55, 0],
+      [0, SHIPWRECK_FOOTPRINT_RADIUS * 0.55],
+      [0, -SHIPWRECK_FOOTPRINT_RADIUS * 0.55],
+    ] as const
+    let shoreHits = 0
+    let shallowHits = 0
+    let footprintOk = true
+    for (const [dx, dz] of offsets) {
+      const sx = wx + dx
+      const sz = wz + dz
+      const sh = sample(tile.heights, sx, sz) - waterLevel
+      const sc = sample(tile.continentalness, sx, sz)
+      if (!isCoastalBand(sc) && sc > region.coastThreshold + 0.08) {
+        footprintOk = false
+        break
+      }
+      if (slopeAt(sx, sz) > SLOPE_REJECT_FLAT) {
+        footprintOk = false
+        break
+      }
+      if (sh >= 0) shoreHits++
+      if (sh < 0 && sh >= SHIPWRECK_MIN_HEIGHT_ABOVE_WATER) shallowHits++
+    }
+    if (
+      footprintOk
+      && isCoastalBand(continentalness)
+      && heightAbove >= SHIPWRECK_MIN_HEIGHT_ABOVE_WATER
+      && heightAbove <= SHIPWRECK_MAX_HEIGHT_ABOVE_WATER
+      && shoreHits >= 2
+      && (shallowHits >= 1 || heightAbove <= 1.2)
+      && sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT
+      && footprintClearsRoads(wx, wz, SHIPWRECK_FOOTPRINT_RADIUS)
+      && !inVillageClearing(wx, wz, 6)
+      && shipRandom() <= SHIPWRECK_CHANCE
+    ) {
+      placements.push({
+        x: wx,
+        z: wz,
+        kind: 'shipwreck',
+        scale: 0.95 + shipRandom() * 0.15,
+        rotationY: shoreYawAt(wx, wz) + (shipRandom() - 0.5) * 0.5,
+        variant: shipRandom(),
+        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'shipwreck', 0),
+      })
+    }
   }
 
   return placements

@@ -122,9 +122,10 @@ export type InteractablePayload =
    *  the prompt needs; durability itself is resolved by `PlacedTraps` at
    *  interact time, never from this per-frame snapshot. */
   | { kind: 'trap', position: { x: number, z: number }, promptLabel: string, id: string, trapKind: TrapKind, state: TrapState }
-  /** Procedural landmark (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`) —
-   *  purely a quest-objective/flavor interaction, no held-tool mechanic
-   *  (plan 132). `landmarkId` is the stable `EnvironmentPlacement.id`. */
+  /** Procedural landmark (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`/
+   *  `boat`/`shipwreck`/`tower`/`oldTree`/`wagon`) — purely a quest-objective/
+   *  flavor interaction, no held-tool mechanic (plan 132 / world-terrain-027).
+   *  `landmarkId` is the stable `EnvironmentPlacement.id`. */
   | { kind: 'landmark', position: { x: number, z: number }, promptLabel: string, landmarkId: string, envKind: LandmarkKind }
   /** Settlement sale-plot sign (plan 129) — `[E]` attempts to purchase it.
    *  Only carries stable references; current price/ownership is resolved

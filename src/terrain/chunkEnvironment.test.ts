@@ -6,11 +6,13 @@ import { clearCemeteryPlacementCaches } from './cemeteryPlacement'
 import {
   cemeteryFitsVillageFringe,
   cemeteryFootprintClearsRoads,
+  clearVegetationAroundOldTrees,
   computeChunkEnvironment,
   deriveLandmarkId,
   LANDMARK_BIAS_MAX,
   LANDMARK_BIAS_MIN,
   landmarkChanceBias,
+  OLD_TREE_CLEARANCE_RADIUS,
   resolveCemeteryPlacement,
   rollCemeterySize,
 } from './chunkEnvironment'
@@ -157,6 +159,14 @@ describe('deriveLandmarkId', () => {
     expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(123, 4, -7, 'cemetery', 0))
   })
 
+  it('covers new landmark kinds with stable prefixes', () => {
+    for (const kind of ['boat', 'shipwreck', 'tower', 'oldTree', 'wagon'] as const) {
+      const id = deriveLandmarkId(99, 1, 2, kind, 0)
+      expect(id.startsWith(`${kind}:`)).toBe(true)
+      expect(id).toBe(deriveLandmarkId(99, 1, 2, kind, 0))
+    }
+  })
+
   it('differs across ordinal for the same kind/chunk (future multi-roll support)', () => {
     expect(deriveLandmarkId(123, 4, -7, 'monolith', 0)).not.toBe(deriveLandmarkId(123, 4, -7, 'monolith', 1))
   })
@@ -180,6 +190,172 @@ describe('rollCemeterySize', () => {
       seen.add(size)
     }
     expect(seen).toEqual(new Set(['LG', 'MD', 'SM']))
+  })
+})
+
+describe('landmark variety (world-terrain-027)', () => {
+  const CHUNK_SIZE = 64
+  const RESOLUTION = 17
+
+  function baseParams(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
+    return {
+      cx: 0,
+      cz: 0,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      seed: 1,
+      heightScale: 18,
+      waterLevel: 0.45,
+      noiseScale: 120,
+      detailAmplitude: 0.55,
+      hillsScale: 420,
+      hillsAmplitude: 0.28,
+      hillsFbm: { octaves: 3, persistence: 0.55, lacunarity: 2.0, exponentiation: 1.15 },
+      fbm: { octaves: 4, persistence: 0.65, lacunarity: 2.0, exponentiation: 1.35 },
+      biome: {
+        noiseScale: 96,
+        fbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+      },
+      region: {
+        continentScale: 2200,
+        continentFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        mountainScale: 1800,
+        mountainFbm: { octaves: 2, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.2 },
+        mountainThreshold: 0.62,
+        mountainThresholdWidth: 0.14,
+        worleyCellSize: 260,
+        ridgeSharpness: 2.0,
+        mountainGain: 0.8,
+        oceanThreshold: 0.32,
+        coastThreshold: 0.45,
+        oceanDetailWeight: 0.25,
+        moistureRegionScale: 2000,
+        moistureRegionFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        desertThreshold: 0.35,
+        desertThresholdWidth: 0.12,
+        swampThreshold: 0.72,
+        swampThresholdWidth: 0.15,
+        roadNetwork: {
+          roadHalfWidth: 5,
+          roadHeightStrength: 0.85,
+          roadTintStrength: 0.8,
+          pathHalfWidth: 1.5,
+          pathHeightStrength: 0.2,
+          pathTintStrength: 0.4,
+          smoothingWindow: 10,
+          maxNeighborRoads: 3,
+          dockSearchRadius: 140,
+          edgeWobbleAmplitude: 0.15,
+          edgeWobbleScale: 0.06,
+          potholeDepth: 0.12,
+          potholeThreshold: 0.72,
+          meanderAmplitude: 2,
+          meanderScale: 0.04,
+          surfaceDetailEnabled: true,
+          rutDepth: 0.05,
+          rutOffsetFraction: 0.42,
+          rutWidthFraction: 0.16,
+          microBumpStrength: 0.025,
+          microBumpScale: 0.6,
+        },
+        village: {
+          coreRadius: 9,
+          houseRadius: 4.5,
+          heightStrength: 0.8,
+          tintStrength: 0.75,
+          regionalHeightStrengthFlat: 0.3,
+          regionalHeightStrengthMountain: 0.15,
+        },
+      },
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments: [],
+      clearings: [],
+      regional: [],
+      riverSegments: [],
+      cemeterySettlements: [],
+      ...overrides,
+    }
+  }
+
+  it('keeps existing landmark placements stable when new kinds are added', () => {
+    const params = baseParams({ seed: 42 })
+    const tile = computeChunkTile(params)
+    const env = computeChunkEnvironment({ cx: 0, cz: 0 }, tile, params, [])
+    const classic = env
+      .filter((p) => p.kind === 'monolith' || p.kind === 'stoneCircle' || p.kind === 'smallRuins')
+      .map((p) => `${p.kind}:${p.id}:${p.x.toFixed(3)}:${p.z.toFixed(3)}`)
+    const again = computeChunkEnvironment({ cx: 0, cz: 0 }, tile, params, [])
+      .filter((p) => p.kind === 'monolith' || p.kind === 'stoneCircle' || p.kind === 'smallRuins')
+      .map((p) => `${p.kind}:${p.id}:${p.x.toFixed(3)}:${p.z.toFixed(3)}`)
+    expect(again).toEqual(classic)
+  })
+
+  it('places wagons beside a road corridor, not on the road footprint', () => {
+    let found = false
+    for (let seed = 0; seed < 400 && !found; seed++) {
+      const params = baseParams({
+        seed,
+        roadSegments: [roadSegment({ halfWidth: 4 })],
+      })
+      const tile = computeChunkTile(params)
+      const wagon = computeChunkEnvironment({ cx: 0, cz: 0 }, tile, params, []).find((p) => p.kind === 'wagon')
+      if (!wagon) continue
+      found = true
+      expect(wagon.id?.startsWith('wagon:')).toBe(true)
+      const dist = Math.abs(wagon.z) // road is along X axis at z=0 in roadSegment()
+      expect(dist).toBeGreaterThanOrEqual(4 + 1.2 - 0.01)
+      expect(dist).toBeLessThanOrEqual(4 + 4.5 + 0.01)
+    }
+    expect(found).toBe(true)
+  })
+
+  it('never places boat or shipwreck far inland above the coastal height band', () => {
+    for (const seed of [7, 11, 19, 23, 41, 77, 101]) {
+      const params = baseParams({ seed })
+      const tile = computeChunkTile(params)
+      const env = computeChunkEnvironment({ cx: 0, cz: 0 }, tile, params, [])
+      for (const p of env) {
+        if (p.kind !== 'boat' && p.kind !== 'shipwreck') continue
+        const o = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+        const h = sampleApronGridWeighted(
+          tile.heights,
+          o.apronRes,
+          apronGridWeights(o.apronRes, o.x, o.z, o.step, p.x, p.z),
+        )
+        const c = sampleApronGridWeighted(
+          tile.continentalness,
+          o.apronRes,
+          apronGridWeights(o.apronRes, o.x, o.z, o.step, p.x, p.z),
+        )
+        expect(c).toBeGreaterThanOrEqual(params.region.oceanThreshold - 0.02)
+        expect(c).toBeLessThanOrEqual(params.region.coastThreshold + 0.04)
+        expect(h - params.waterLevel).toBeLessThanOrEqual(3)
+      }
+    }
+  })
+
+  it('clearVegetationAroundOldTrees removes nearby trees only', () => {
+    const environment = [
+      {
+        x: 10,
+        z: 10,
+        kind: 'oldTree' as const,
+        scale: 1,
+        rotationY: 0,
+        variant: 0.5,
+        id: 'oldTree:0:0:0:1',
+      },
+    ]
+    const vegetation = [
+      { x: 10.5, z: 10.2, kind: 'tree' as const, speciesIndex: 0, scale: 1, rotationY: 0, sizeJitter: 1 },
+      { x: 40, z: 40, kind: 'tree' as const, speciesIndex: 0, scale: 1, rotationY: 0, sizeJitter: 1 },
+      { x: 11, z: 11, kind: 'bush' as const, speciesIndex: 0, scale: 1, rotationY: 0, sizeJitter: 1 },
+    ]
+    const cleared = clearVegetationAroundOldTrees(vegetation, environment, OLD_TREE_CLEARANCE_RADIUS)
+    expect(cleared.some((v) => v.kind === 'tree' && v.x === 10.5)).toBe(false)
+    expect(cleared.some((v) => v.kind === 'tree' && v.x === 40)).toBe(true)
+    expect(cleared.some((v) => v.kind === 'bush')).toBe(true)
   })
 })
 

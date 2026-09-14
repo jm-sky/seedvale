@@ -33,6 +33,11 @@ const LANDMARK_FLAVOR_LINES: Record<LandmarkKind, readonly string[]> = {
   smallRuins: ['Fragment starego muru, resztki fundamentów. Nikt tu dawno nie mieszkał.'],
   ruins: ['Większe ruiny, porośnięte mchem. Ktoś tu kiedyś mieszkał — dawno temu.'],
   cemetery: ['Ciche miejsce. Kilka nagrobków, zarośniętych chwastami.'],
+  boat: ['Mała łódź wyrzucona na brzeg. Deski są spękane od słonej wody.'],
+  shipwreck: ['Wrak większego statku. Kadłub pęknięty, ładownia częściowo zawalona.'],
+  tower: ['Samotna kamienna wieża. Okna puste, w środku cisza.'],
+  oldTree: ['Ogromne stare drzewo. Pień gruby jak kilka ludzi, korona góruje nad okolicą.'],
+  wagon: ['Porzucony wóz obok drogi. Jedno koło skrzywiło się, skrzynia jest pusta.'],
 }
 
 function pickFrom(pool: readonly string[]): string {

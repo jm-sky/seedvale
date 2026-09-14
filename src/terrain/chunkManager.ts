@@ -11,6 +11,7 @@ import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
 import { getProgramCensus } from '../perf/programCensus'
+import { createLandmarkProp, preloadLandmarkTemplates } from '../settlement/landmarkProps'
 import {
   BUSH_SPECS,
   CACTUS_SPECS,
@@ -200,6 +201,7 @@ function preloadPropTemplates(): void {
   void getCemeteryTemplates.start()
   void getGraveTemplates.start()
   void preloadCampfireTemplates()
+  void preloadLandmarkTemplates()
   preloadTreeStumpTemplate()
 }
 
@@ -219,6 +221,11 @@ const ENVIRONMENT_COLLISION_RADIUS: Record<EnvironmentKind, number> = {
   smallRuins: 0,
   ruins: 0,
   cemetery: 0,
+  boat: 1.2,
+  shipwreck: 3.5,
+  tower: 1.6,
+  oldTree: 1.4,
+  wagon: 1.5,
 }
 
 /** Flat trunk collision radius for every tree — `VegetationPlacement.scale`
@@ -308,6 +315,12 @@ function createProceduralEnvironmentProp(
   variant: number,
 ): THREE.Object3D {
   switch (kind) {
+    case 'boat':
+    case 'oldTree':
+    case 'shipwreck':
+    case 'tower':
+    case 'wagon':
+      return createLandmarkProp(kind, scale)
     case 'campfire':
       return createCampfire(scale)
     case 'cemetery':

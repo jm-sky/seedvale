@@ -1804,6 +1804,67 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): AuthoredQuestDef
     })
   }
 
+  const shipwreckId = resolve('shipwreck')
+  if (shipwreckId) {
+    quests.push({
+      id: 'zaginiony-ladunek',
+      title: 'Zaginiony ładunek',
+      description: 'Marek prosi o odnalezienie wraku, z którego miał nadejść ładunek.',
+      giverName: 'Marek',
+      offerLine:
+        'Miał nadejść transport z wybrzeża, a zamiast tego nadeszły plotki o wraku. Odnajdziesz ten statek i sprawdzisz, co zostało z ładunku?',
+      stages: [
+        {
+          objective: { type: 'interact_landmark', landmarkId: shipwreckId },
+          description: 'Odnajdź i zbadaj wrak na wybrzeżu.',
+          reminderLine: 'Udało ci się znaleźć ten wrak?',
+          progressLine:
+            'Wrak leży przy brzegu. Część ładowni jest zalana, śladów świeżej załogi nie widać.',
+        },
+      ],
+      reportPromptLine: 'Wiedziałeś już coś o tym wraku?',
+      reportPlayerLine: 'Znalazłem wrak. Ładunek jest rozrzucony albo zniszczony — załogi nie ma.',
+      reportLine: 'Wiedziałem, że to źle się skończyło. Dzięki, że sprawdziłeś na własne oczy.',
+      outcomes: [
+        {
+          id: 'reported',
+          state: 'complete',
+          consequences: { relations: [{ npcName: 'Marek', delta: 1 }] },
+        },
+      ],
+    })
+  }
+
+  const towerId = resolve('tower')
+  if (towerId) {
+    quests.push({
+      id: 'samotna-wieza',
+      title: 'Samotna wieża',
+      description: 'Piotr widział światło albo ruch przy samotnej wieży i chce, żebyś to sprawdził.',
+      giverName: 'Piotr',
+      offerLine:
+        'Z daleka widać samotną wieżę. Ktoś przysięgał, że w nocy coś tam migotało. Podejdziesz bliżej i sprawdzisz, czy ktoś tam jest?',
+      stages: [
+        {
+          objective: { type: 'interact_landmark', landmarkId: towerId },
+          description: 'Zbadaj samotną wieżę.',
+          reminderLine: 'Byłeś już przy tej wieży?',
+          progressLine: 'Wieża stoi pusta. Schody kruszą się, nikogo nie ma — i nie było od dawna.',
+        },
+      ],
+      reportPromptLine: 'Co jest z tą wieżą?',
+      reportPlayerLine: 'Wieża jest opuszczona. Żadnego ruchu, żadnego światła.',
+      reportLine: 'Czasem cisza też jest odpowiedzią. Dzięki za sprawdzenie.',
+      outcomes: [
+        {
+          id: 'reported',
+          state: 'complete',
+          consequences: { relations: [{ npcName: 'Piotr', delta: 1 }] },
+        },
+      ],
+    })
+  }
+
   return quests
 }
 

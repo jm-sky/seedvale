@@ -1,7 +1,7 @@
 # Plan: Landmark variety and quest hooks
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~quests-progression-016~~, ~~world-024~~
 **Domain:** `world-terrain`

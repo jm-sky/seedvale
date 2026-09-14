@@ -3,7 +3,7 @@ import type {
   ChunkWorkerResponse,
 } from './chunkHeightmapProtocol'
 import { computeChunkCrops } from './chunkCrops'
-import { computeChunkEnvironment } from './chunkEnvironment'
+import { clearVegetationAroundOldTrees, computeChunkEnvironment } from './chunkEnvironment'
 import { computeChunkTile } from './chunkHeightmap'
 import { computeChunkItems } from './chunkItems'
 import { computeChunkMeshData } from './chunkMeshData'
@@ -56,6 +56,7 @@ ctx.onmessage = ({ data }) => {
       const vegetation = computeChunkVegetation({ cx: params.cx, cz: params.cz }, tile, params)
       const items = computeChunkItems({ cx: params.cx, cz: params.cz }, tile, params, vegetation)
       const environment = computeChunkEnvironment({ cx: params.cx, cz: params.cz }, tile, params, vegetation)
+      const clearedVegetation = clearVegetationAroundOldTrees(vegetation, environment)
       const crops = computeChunkCrops({ cx: params.cx, cz: params.cz }, tile, params)
       ctx.postMessage(
         {
@@ -70,7 +71,7 @@ ctx.onmessage = ({ data }) => {
           mountainRidge,
           moistureRegion,
           roadTint,
-          vegetation,
+          vegetation: clearedVegetation,
           items,
           environment,
           crops,

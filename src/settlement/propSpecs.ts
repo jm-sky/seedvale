@@ -129,6 +129,18 @@ export const CAMPFIRE_UNLIT_URL = '/models/settlement/campfire_unlit.glb'
 /** Longest-axis fit ≈ procedural stone-ring diameter (`createCampfire` radius 0.6 × 2). */
 export const CAMPFIRE_FIT_MAX = 1.2
 
+/** Procedural landmark GLBs (plan world-terrain-027). */
+export const LANDMARK_BOAT_URL = '/models/parked/boat.glb'
+export const LANDMARK_BOAT_FIT_MAX = 3.2
+export const LANDMARK_SHIPWRECK_URL = '/models/world/shipwreck.glb'
+export const LANDMARK_SHIPWRECK_FIT_MAX = 12
+export const LANDMARK_TOWER_URL = '/models/world/tower_stone.glb'
+export const LANDMARK_TOWER_FIT_MAX = 10
+export const LANDMARK_OLD_TREE_URL = '/models/nature/old_tree.glb'
+export const LANDMARK_OLD_TREE_FIT_MAX = 14
+export const LANDMARK_WAGON_URL = '/models/settlement/megakit/wagon.glb'
+export const LANDMARK_WAGON_FIT_MAX = 3.6
+
 export const COBBLE_URL = '/models/nature/rock_path_round_wide.glb'
 /** Longest-axis fit for one plaza cobble plate (plan 140) — a loose patch of
  *  utrwardzone ground near the well, not a road tile. */

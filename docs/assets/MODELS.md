@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-09-14 (rabbit `fauna/rabbit.glb` wired as `FAUNA_URLS.rabbit`, M82, `createRabbitModel` load-failure fallback; bear `fauna/bear.glb` confirmed wired as M61; previously settlement rat `fauna/rat.glb` via `rats.ts` / `AnimalAgent`, M81; previously 2026-09-13 wild boar `wild_boar.glb` as `FAUNA_URLS.boar`, M80, `?boarGlb=0`; previously 2026-09-12 wearable body armor M79; previously draft cart fauna-007; fishing rod, trough, trap good-tier GLB; drink/cook SFX; rat nest M77; reed/seaweed M76; 2026-09-04 item asset drop — see `docs/tmp/2026-09-04--new-3d-assets.md`)
+**Last updated:** 2026-09-14 (procedural landmark variety M83–M87 — boat/shipwreck/tower/oldTree/wagon, plan world-terrain-027; previously rabbit `fauna/rabbit.glb` as M82; bear M61; settlement rat M81; wild boar M80; wearable armor M79; draft cart fauna-007; see earlier notes)
 
 ## How to use
 
@@ -109,6 +109,11 @@ If the feature needs no new model, do nothing to this file.
 | M80 | Wild boar | Wild `boar` GLB via `FAUNA_URLS` / `createFauna.ts`; `createBoarModel` kept as load-failure and `?boarGlb=0` fallback (feature flag default on) | `wired` | `public/models/fauna/wild_boar.glb` |
 | M81 | Settlement rat | Settlement-local pest via `settlement/rats.ts` (not `FAUNA_URLS`); load-once + `SkeletonUtils.clone` into `AnimalAgent`. GLB clips are FBX-style `RatArmature|Rat_Idle` / `Rat_Walk` / `Rat_Run` / `Rat_Attack` / `Rat_Death` (+ unused `Rat_Jump`) — renamed to bare semantic names at template load so existing `AnimalAgent` resolve works. Missing `Idle_2` / `Gallop` / hit-react → AnimalAgent fallbacks. `createRatModel` procedural fallback on load failure | `wired` | `public/models/fauna/rat.glb` |
 | M82 | Rabbit (fauna) | Wild `rabbit` GLB via `FAUNA_URLS` / `createFauna.ts`; clips `Idle`/`Walk` match `AnimalAgent` resolve (gallop falls back to `Walk`); `createRabbitModel` kept as load-failure fallback | `wired` | `public/models/fauna/rabbit.glb` |
+| M83 | Shore boat landmark | Procedural coastal `boat` landmark (`chunkEnvironment`); Cute Fish Pack boat via `parked/boat.glb`, preload/clone in chunk finalize | `wired` | plan world-terrain-027 (`parked/boat.glb`) |
+| M84 | Shipwreck landmark | Rare coastal `shipwreck` landmark; dedicated wreck mesh (not scaled boat) | `wired` | plan world-terrain-027 (`world/shipwreck.glb`) |
+| M85 | Stone tower landmark | Rare coastal/mountain `tower` landmark; dedicated stone tower (not settlement `watchtower.glb`) | `wired` | plan world-terrain-027 (`world/tower_stone.glb`) |
+| M86 | Old tree landmark | Rare natural `oldTree` landmark with local vegetation clearance; dedicated model (not scaled normal tree); not in `TreeLifecycle` | `wired` | plan world-terrain-027 (`nature/old_tree.glb`) |
+| M87 | Abandoned wagon landmark | Road-adjacent `wagon` landmark; reuses MegaKit merchant wagon mesh as a static prop (distinct from player draft `parked/cart.glb`, M78) | `wired` | plan world-terrain-027 (`settlement/megakit/wagon.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -118,7 +123,8 @@ Keep this section short. Prefer CREDITS for the full credited set.
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
 | Fauna | wolf, fox, deer, stag, bear (M61), rabbit (M82), boar (`wild_boar.glb`, M80; `?boarGlb=0` reverts to procedural); livestock chicken/sheep/cow/horse/donkey/dog (Husky+Shiba, see M73); rooster (procedural placeholder, see M72); duck (procedural); settlement rats (`rat.glb`, M81) |
-| Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed (+reed cluster, see M76), lily pad (shallow water, see M74), seaweed (shallow coastal ocean, see M76), rock/log, ore piles, cemetery / gravestones |
+| Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed (+reed cluster, see M76), lily pad (shallow water, see M74), seaweed (shallow coastal ocean, see M76), rock/log, ore piles, cemetery / gravestones, old tree landmark (M86) |
+| World landmarks (active) | shoreline boat (M83), shipwreck (M84), stone tower (M85), abandoned wagon (M87); interact via `interact_landmark` |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169), blacksmith anvil + grind workbench (plan settlements-npcs-002) |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork); backpack, saddlebags, pan, rope, chest, coin, tomato, roasted_meat/beef, fish (2026-09-04 asset drop); 18 skill books sharing 3 closed-book GLBs (plan items-player-016); wearable body armor leather_armor/chainmail, ground/inventory only (plan items-player-029, see M79) |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
