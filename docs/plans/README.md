@@ -75,7 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-008-settlement-progression-around-home.md`                     | 🟡 | S      | -       | -                          |
 | ◼️ `settlements-009-settlement-outskirts-and-pasture.md`                       | 🟡 | M      | -       | -                          |
 | ◼️ `settlements-010-closed-and-cautious-settlement-character.md`               | 🟡 | M      | -       | -                          |
-| ◼️ `ui-input-017-quest-log-information-architecture.md`                        | 🟡 | M      | quests-progression-031 | quests-and-reputation      |
+| 💡 `ui-input-017-quest-log-information-architecture.md`                        | 🟡 | M      | quests-progression-031 | quests-and-reputation      |
 | ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | 🟡 | M      | -       | -                          |
 | ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | 🟡 | M      | settlements-npcs-033 | economy-goods-flow         |
 | ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | 🟡 | M      | settlements-012 | -                          |
