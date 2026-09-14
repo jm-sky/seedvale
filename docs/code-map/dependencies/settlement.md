@@ -1364,6 +1364,7 @@ Generated from TypeScript imports.
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverFord.ts`
+- `terrain/roadBridge.ts`
 - `world/parseSeed.ts`
 
 **Imported by**

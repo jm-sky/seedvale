@@ -5,7 +5,7 @@ Generated from exported TypeScript symbols.
 ## `shared/agentAnimationSet.ts`
 
 - `AgentAnimationSet` — type — line 17
-- `createAgentAnimationSet` — function — line 55
+- `createAgentAnimationSet` — function — line 56
 
 ## `shared/bootMark.ts`
 

@@ -246,6 +246,7 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureProps.ts`
 - `world/containerProp.ts`
 - `world/createBeehives.ts`
+- `world/createBridge.ts`
 - `world/createCaves.ts`
 - `world/createDryingRacks.ts`
 - `world/createGrassForagePatches.ts`

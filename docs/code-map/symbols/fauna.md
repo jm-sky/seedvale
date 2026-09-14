@@ -431,23 +431,23 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `clearsRiverChannel` — function — line 280
-- `createFauna` — function — line 554
-- `Fauna` — type — line 96
-- `FAUNA_URLS` — const — line 464
-- `faunaGltfUrls` — function — line 479
-- `findHomeCaveSpawner` — function — line 423
-- `isDeerEdgeHabitat` — function — line 311
-- `isNearRoadCorridor` — function — line 292
-- `measureSlope` — function — line 350
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 440
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 448
-- `SPAWNER_LABELS` — const — line 432
-- `SPAWNER_RING_OFFSET` — const — line 251
-- `SPAWNER_SPECS` — const — line 386
-- `spawnerDestroyBusyLabel` — function — line 459
-- `spawnerDestroyPromptLabel` — function — line 455
-- `spawnerId` — function — line 416
+- `clearsRiverChannel` — function — line 281
+- `createFauna` — function — line 555
+- `Fauna` — type — line 97
+- `FAUNA_URLS` — const — line 465
+- `faunaGltfUrls` — function — line 480
+- `findHomeCaveSpawner` — function — line 424
+- `isDeerEdgeHabitat` — function — line 312
+- `isNearRoadCorridor` — function — line 293
+- `measureSlope` — function — line 351
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 441
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 449
+- `SPAWNER_LABELS` — const — line 433
+- `SPAWNER_RING_OFFSET` — const — line 252
+- `SPAWNER_SPECS` — const — line 387
+- `spawnerDestroyBusyLabel` — function — line 460
+- `spawnerDestroyPromptLabel` — function — line 456
+- `spawnerId` — function — line 417
 
 ## `fauna/dogGuard.ts`
 

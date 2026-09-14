@@ -139,34 +139,34 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmap.ts`
 
-- `apronGridWeights` — function — line 699
-- `ApronGridWeights` — type — line 690
-- `apronOriginWorld` — function — line 670
-- `ChunkTileData` — type — line 354
-- `ChunkTileParams` — type — line 237
-- `ClearingSegment` — type — line 169
-- `computeChunkTile` — function — line 1116
-- `createLocalTerrainSampler` — function — line 1191
+- `apronGridWeights` — function — line 710
+- `ApronGridWeights` — type — line 701
+- `apronOriginWorld` — function — line 681
+- `ChunkTileData` — type — line 365
+- `ChunkTileParams` — type — line 238
+- `ClearingSegment` — type — line 170
+- `computeChunkTile` — function — line 1138
+- `createLocalTerrainSampler` — function — line 1213
   - domain: world-terrain
-- `createWorldTerrainSampler` — function — line 1231
+- `createWorldTerrainSampler` — function — line 1253
   - domain: world-terrain
-- `extractCoreGrid` — function — line 754
-- `RawSampleParams` — type — line 335
-- `RegionalSmoothingSegment` — type — line 229
-- `RegionParams` — type — line 20
-- `RiverChannelSegment` — type — line 205
-- `RoadCorridorSegment` — type — line 151
-- `RoadNetworkParams` — type — line 88
-- `sampleApronGrid` — function — line 737
-- `sampleApronGridWeighted` — function — line 722
-- `sampleBiomeAt` — function — line 641
-- `sampleContinentalnessAt` — function — line 645
-- `sampleFloorAt` — function — line 637
-- `sampleHeightAt` — function — line 633
-- `sampleMoistureRegionAt` — function — line 653
-- `sampleMountainRidgeAt` — function — line 661
-- `VegetationKind` — type — line 18
-- `VillageClearingParams` — type — line 69
+- `extractCoreGrid` — function — line 765
+- `RawSampleParams` — type — line 345
+- `RegionalSmoothingSegment` — type — line 230
+- `RegionParams` — type — line 21
+- `RiverChannelSegment` — type — line 206
+- `RoadCorridorSegment` — type — line 152
+- `RoadNetworkParams` — type — line 89
+- `sampleApronGrid` — function — line 748
+- `sampleApronGridWeighted` — function — line 733
+- `sampleBiomeAt` — function — line 652
+- `sampleContinentalnessAt` — function — line 656
+- `sampleFloorAt` — function — line 648
+- `sampleHeightAt` — function — line 644
+- `sampleMoistureRegionAt` — function — line 664
+- `sampleMountainRidgeAt` — function — line 672
+- `VegetationKind` — type — line 19
+- `VillageClearingParams` — type — line 70
 
 ## `terrain/chunkHeightmapProtocol.ts`
 
@@ -182,26 +182,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 957
-- `applyModificationToTile` — function — line 814
-- `ChunkManager` — type — line 520
-- `ChunkManagerConfig` — type — line 353
-- `createChunkManager` — function — line 982
+- `applyChunkWaterDayNight` — function — line 986
+- `applyModificationToTile` — function — line 843
+- `ChunkManager` — type — line 535
+- `ChunkManagerConfig` — type — line 356
+- `createChunkManager` — function — line 1011
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 971
-- `drainByBudget` — function — line 932
-- `FinalizeStage` — type — line 454
-- `pickNearestQueuedKey` — function — line 892
-- `pickNextFinalizeKey` — function — line 910
-- `resolveUnloadedLandmark` — function — line 296
+- `CropHarvestOutcome` — type — line 1000
+- `drainByBudget` — function — line 961
+- `FinalizeStage` — type — line 457
+- `pickNearestQueuedKey` — function — line 921
+- `pickNextFinalizeKey` — function — line 939
+- `resolveUnloadedLandmark` — function — line 299
   - domain: world-terrain
-- `ringChunkOffsets` — function — line 256
-- `TerrainModification` — type — line 771
-- `tickChunkWaterSurfaces` — function — line 945
+- `ringChunkOffsets` — function — line 259
+- `TerrainModification` — type — line 800
+- `tickChunkWaterSurfaces` — function — line 974
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -497,6 +497,17 @@ Generated from exported TypeScript symbols.
 
 - `createRiverTileCache` — function — line 24
 - `RiverTileCache` — type — line 14
+
+## `terrain/roadBridge.ts`
+
+- `bridgeDeckYAt` — function — line 72
+- `isOnAnyBridgeDeck` — function — line 82
+- `isOnBridgeDeck` — function — line 63
+- `RoadBridgeSpec` — type — line 23
+  - domain: world-terrain
+  - system: roads
+  - role: Bridge *projection* geometry — the plain-data `RoadBridgeSpec` an already-declared canonical `RoadRiverCrossing(kind = 'bridge')` (plan world-terrain-023) is turned into, plus the one oriented-footprint test every consumer shares (plan world-terrain-033). Mirrors `riverFord.ts`'s split: this module owns worker-safe type + pure query, `roadNetwork.ts` owns the settlement-layer projection (`bridgeSpecOf`) and bounded query (`bridgesNear`), same "terrain owns the shared shape, settlement produces it" seam `RoadCorridorSegment`/`FordProjection` already use.
+  - integration: `terrain/chunkHeightmap.ts` reads isOnBridgeDeck to suppress road-height/tint shaping under an open span (never the river carve). `terrain/chunkManager.ts` reads the same test for bridge presentation ownership and the shared movement-ground query (`sampleBridgeDeck`/`sampleSurfaceGround`). No THREE.js, no route/crossing search — every bridge here is already decided.
 
 ## `terrain/slopeConstraint.ts`
 

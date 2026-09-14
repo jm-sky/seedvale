@@ -1518,6 +1518,17 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `world/createBridge.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `terrain/roadBridge.ts`
+
+**Imported by**
+
+- `terrain/chunkManager.ts`
+
 ## `world/createCarts.test.ts`
 
 **Imports**

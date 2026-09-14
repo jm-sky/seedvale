@@ -247,6 +247,7 @@ Generated from TypeScript imports.
 
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverFord.ts`
+- `terrain/roadBridge.ts`
 
 ## `terrain/chunkHeightmap.ts`
 
@@ -258,6 +259,7 @@ Generated from TypeScript imports.
 - `terrain/chunkGrid.ts`
 - `terrain/fbm.ts`
 - `terrain/riverFord.ts`
+- `terrain/roadBridge.ts`
 - `terrain/waterBodies.ts`
 - `terrain/worleyNoise.ts`
 - `world/parseSeed.ts`
@@ -464,10 +466,12 @@ Generated from TypeScript imports.
 - `terrain/riverNetwork.ts`
 - `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
+- `terrain/roadBridge.ts`
 - `terrain/terrainCutout.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `terrain/waterSample.ts`
 - `world/collision.ts`
+- `world/createBridge.ts`
 - `world/createRiverWater.ts`
 - `world/createWater.ts`
 - `world/cropLifecycle.ts`
@@ -1011,6 +1015,23 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `terrain/chunkManager.ts`
+
+## `terrain/roadBridge.test.ts`
+
+**Imports**
+
+- `terrain/roadBridge.ts`
+
+## `terrain/roadBridge.ts`
+
+**Imported by**
+
+- `settlement/roadNetwork.ts`
+- `terrain/chunkHeightmap.test.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkManager.ts`
+- `terrain/roadBridge.test.ts`
+- `world/createBridge.ts`
 
 ## `terrain/scorchFalloff.test.ts`
 

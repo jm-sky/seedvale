@@ -753,6 +753,11 @@ Generated from exported TypeScript symbols.
 - `Beehives` — type — line 15
 - `createBeehives` — function — line 63
 
+## `world/createBridge.ts`
+
+- `BridgePresentation` — type — line 51
+- `createBridge` — function — line 60
+
 ## `world/createCarts.ts`
 
 - `CartEntry` — type — line 15

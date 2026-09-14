@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 412
-- `CreateSettlementDeps` — type — line 267
-- `Settlement` — type — line 141
-- `settlementSpawnPoint` — function — line 255
+- `createSettlement` — function — line 421
+- `CreateSettlementDeps` — type — line 268
+- `Settlement` — type — line 142
+- `settlementSpawnPoint` — function — line 256
 
 ## `settlement/decorProps.ts`
 
@@ -647,28 +647,31 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/roadNetwork.ts`
 
-- `clearRoadNetworkCaches` — function — line 102
-- `entranceToward` — function — line 129
-- `findRoute` — function — line 249
+- `bridgesNear` — function — line 1057
   - domain: world-terrain
-- `fordsNear` — function — line 945
+- `bridgeSpecOf` — function — line 1016
+- `clearRoadNetworkCaches` — function — line 103
+- `entranceToward` — function — line 130
+- `findRoute` — function — line 250
   - domain: world-terrain
-- `meanderRoute` — function — line 512
-- `MidpointSignpost` — type — line 777
-- `midpointSignpostsFor` — function — line 791
-- `neighborsFor` — function — line 160
-- `RoadNetworkContext` — type — line 61
-- `RoadRoute` — type — line 87
-- `RoadSegment` — type — line 51
-- `RoadSegmentKind` — type — line 49
-- `RoutePoint` — type — line 39
-- `RouteSearchOptions` — type — line 214
-- `routeToMinorLocation` — function — line 842
-- `segmentsNear` — function — line 867
-- `SettlementSignpost` — type — line 742
-- `signpostsForSettlement` — function — line 754
-- `VillageSegments` — type — line 976
-- `villageSegmentsNear` — function — line 1000
+- `fordsNear` — function — line 946
+  - domain: world-terrain
+- `meanderRoute` — function — line 513
+- `MidpointSignpost` — type — line 778
+- `midpointSignpostsFor` — function — line 792
+- `neighborsFor` — function — line 161
+- `RoadNetworkContext` — type — line 62
+- `RoadRoute` — type — line 88
+- `RoadSegment` — type — line 52
+- `RoadSegmentKind` — type — line 50
+- `RoutePoint` — type — line 40
+- `RouteSearchOptions` — type — line 215
+- `routeToMinorLocation` — function — line 843
+- `segmentsNear` — function — line 868
+- `SettlementSignpost` — type — line 743
+- `signpostsForSettlement` — function — line 755
+- `VillageSegments` — type — line 1089
+- `villageSegmentsNear` — function — line 1113
 
 ## `settlement/roadRiverCrossing.ts`
 
@@ -792,13 +795,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 293
+- `createSettlementsManager` — function — line 294
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 112
+- `SettlementsManager` — type — line 113
 
 ## `settlement/settlementStructures.ts`
 
