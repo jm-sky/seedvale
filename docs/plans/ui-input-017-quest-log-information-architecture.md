@@ -3,6 +3,7 @@
 **Created:** 2026-09-13
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
+**Model:** Sonnet, Composer
 **Depends on:** quests-progression-031
 **Domain:** `ui-input`
 **Type:** `feature`
