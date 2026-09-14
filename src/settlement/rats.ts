@@ -1,14 +1,20 @@
+import * as THREE from 'three'
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { LocalWaterSample } from '../terrain/waterSample'
 import type { Household } from './household'
 import type { RatPersistence } from './ratPersistence'
-import { disposeObject3D } from '../assets/loadGltf'
+import {
+  disposeObject3D,
+  type GltfAsset,
+  loadGltfAsset,
+  prepareProp,
+} from '../assets/loadGltf'
 import { type SettlementEconomy } from '../economy'
 import { ANIMAL_DEFS, AnimalAgent, type VillageInfo } from '../fauna/AnimalAgent'
 import { createRatModel } from '../fauna/proceduralAnimals'
 import { createSeededRandom } from '../world/parseSeed'
 import type { Scene } from 'three'
-import type * as THREE from 'three'
 
 /**
  * @domain fauna
@@ -185,7 +191,71 @@ function nextRatIndexFromSaved(saved: ReadonlyMap<string, import('./ratPersisten
   return max + 1
 }
 
-export function createSettlementRats(deps: SettlementRatsDeps): SettlementRats {
+/** Settlement-local pest GLB — not wild-fauna `FAUNA_URLS`. */
+export const RAT_URL = '/models/fauna/rat.glb'
+
+/** Semantic clip suffixes `AnimalAgent` already resolves. FBX exports use
+ *  `RatArmature|Rat_Idle` etc.; strip the species prefix so existing
+ *  exact/`|Idle` matching works without changing `agentAnimationSet`. */
+const RAT_CLIP_SEMANTIC = ['Idle', 'Walk', 'Run', 'Attack', 'Death'] as const
+
+/** Maps `…|Rat_Idle` / `Rat_Walk` → `Idle` / `Walk`. Leaves unmatched names
+ *  (e.g. `Jump`) unchanged. */
+export function normalizeRatClipName(name: string): string {
+  for (const semantic of RAT_CLIP_SEMANTIC) {
+    const suffix = `_${semantic.toLowerCase()}`
+    if (name.toLowerCase().endsWith(suffix)) return semantic
+  }
+  return name
+}
+
+function wrapModel(model: THREE.Object3D): THREE.Group {
+  const wrap = new THREE.Group()
+  wrap.add(model)
+  return wrap
+}
+
+let ratTemplate: GltfAsset | null = null
+let ratTemplatePromise: Promise<void> | null = null
+
+async function ensureRatTemplate(): Promise<void> {
+  if (ratTemplatePromise) {
+    await ratTemplatePromise
+    return
+  }
+  ratTemplatePromise = (async () => {
+    try {
+      const asset = await loadGltfAsset(RAT_URL)
+      const prepared = asset.clone()
+      prepareProp(prepared, ANIMAL_DEFS.rat.modelHeight)
+      const animations = asset.animations.map((clip) => {
+        const renamed = clip.clone()
+        renamed.name = normalizeRatClipName(clip.name)
+        return renamed
+      })
+      ratTemplate = {
+        root: prepared,
+        animations,
+        clone: () => cloneSkinned(prepared) as THREE.Group,
+      }
+    } catch (err) {
+      console.warn(`[rats] failed to load ${RAT_URL}, procedural fallback`, err)
+      ratTemplate = null
+    }
+  })()
+  await ratTemplatePromise
+}
+
+function visualForRat(): { visual: THREE.Object3D, animations: THREE.AnimationClip[] } {
+  if (ratTemplate) {
+    return { visual: wrapModel(ratTemplate.clone()), animations: ratTemplate.animations }
+  }
+  return { visual: createRatModel(), animations: [] }
+}
+
+export async function createSettlementRats(deps: SettlementRatsDeps): Promise<SettlementRats> {
+  await ensureRatTemplate()
+
   let agents: AnimalAgent[] = []
   const saved = deps.ratPersistence?.getSaved(deps.settlementId)
   const removed = deps.ratPersistence?.getRemoved(deps.settlementId)
@@ -194,6 +264,7 @@ export function createSettlementRats(deps: SettlementRatsDeps): SettlementRats {
   const random = createSeededRandom(deps.settlementSeed ^ 0x2a7d)
 
   function spawnOne(x: number, z: number, animalId: string, hydrate?: import('../fauna/AnimalAgent').AnimalSaveState): void {
+    const { visual, animations } = visualForRat()
     const agent = new AnimalAgent({
       def: ANIMAL_DEFS.rat,
       animalId,
@@ -203,8 +274,8 @@ export function createSettlementRats(deps: SettlementRatsDeps): SettlementRats {
       collidersNear: deps.collidersNear,
       x,
       z,
-      visual: createRatModel(),
-      animations: [],
+      visual,
+      animations,
       onDeath: deps.onAnimalDeath,
     })
     if (hydrate) agent.hydrate(hydrate)

@@ -1,16 +1,37 @@
 import { describe, expect, it } from 'vitest'
 import {
   infestationReplenishmentRoll,
+  normalizeRatClipName,
   RAT_INFESTATION_FLOOR,
   RAT_INFESTATION_PRESSURE_BONUS,
   RAT_MIN_REPRODUCTION_MULTIPLIER,
   RAT_POPULATION_CAP,
+  RAT_URL,
   ratDogReproductionMultiplier,
   ratNormalPopulationTarget,
   ratPopulationTarget,
   ratReconcileAction,
   shouldInfestationReplenish,
 } from './rats'
+
+describe('RAT_URL / normalizeRatClipName', () => {
+  it('points at the settlement pest GLB', () => {
+    expect(RAT_URL).toBe('/models/fauna/rat.glb')
+  })
+
+  it('strips Rat_ prefixes to AnimalAgent semantic names', () => {
+    expect(normalizeRatClipName('RatArmature|Rat_Idle')).toBe('Idle')
+    expect(normalizeRatClipName('RatArmature|Rat_Walk')).toBe('Walk')
+    expect(normalizeRatClipName('RatArmature|Rat_Run')).toBe('Run')
+    expect(normalizeRatClipName('RatArmature|Rat_Attack')).toBe('Attack')
+    expect(normalizeRatClipName('RatArmature|Rat_Death')).toBe('Death')
+  })
+
+  it('leaves unmatched clips unchanged', () => {
+    expect(normalizeRatClipName('RatArmature|Rat_Jump')).toBe('RatArmature|Rat_Jump')
+    expect(normalizeRatClipName('Idle')).toBe('Idle')
+  })
+})
 
 describe('ratPopulationTarget (plan fauna-016 §7 / quests-progression-013)', () => {
   it('is zero with no food available', () => {

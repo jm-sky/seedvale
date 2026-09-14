@@ -684,7 +684,7 @@ export async function createSettlement(
   // Reuses the same household/home-position pairing as
   // `householdExchangeCandidates` above for both spawn anchors and the
   // nearest-household food-drain target.
-  const rats = createSettlementRats({
+  const rats = await createSettlementRats({
     scene,
     sampleHeight,
     waterLevel,
