@@ -5,14 +5,23 @@ import type {
   ClearingSegment,
   RegionalSmoothingSegment,
   RegionParams,
+  RiverChannelSegment,
   RoadCorridorSegment,
 } from '../terrain/chunkHeightmap'
+import type { FordProjection } from '../terrain/riverFord'
+import type { RoadRiverCrossing } from './roadRiverCrossing'
 import type { TerrainSamplers } from './settlementTerrain'
+import { directionFromYaw, yawToward } from '../math/segment'
 import { clearCemeteryCaches } from '../terrain/cemeteryAssignment'
 import { clearCemeteryPlacementCaches } from '../terrain/cemeteryPlacement'
 import { createSeededRandom } from '../world/parseSeed'
 import { villageSizeConfig } from './families'
 import { clearMinorLocationCaches, minorLocationsFor } from './minorLocations'
+import {
+  crossingsForPolyline,
+  evaluateRoadRiverCrossing,
+  riverHitsOnEdge,
+} from './roadRiverCrossing'
 import {
   cellsWithinRadius,
   type SettlementCell,
@@ -23,6 +32,7 @@ import {
   clearSettlementDefCache,
   settlementDefFor,
   type SettlementResolveContext,
+  worldRiverQuery,
 } from './settlementPlanCache'
 import { pathPlansToCorridorData } from './villagePlanner'
 
@@ -63,9 +73,27 @@ export type RoadNetworkContext = {
   homeSize?: HomeVillageSize
 }
 
+/**
+ * One resolved inter-settlement road (or settlement↔minor-location path):
+ * final geometry *and* the canonical road↔river crossing decisions made while
+ * routing it. The route result is the single owner of crossing semantics
+ * (plan world-terrain-023 §3) — terrain projects a declared `ford`, and
+ * `world-terrain-033` will project a declared `bridge`, but no downstream
+ * stage may decide that a crossing exists or reclassify its kind.
+ *
+ * Every crossing record is a real intersection of `points` with canonical
+ * river water, and every such intersection has exactly one record.
+ */
+export type RoadRoute = {
+  points: RoutePoint[]
+  segments: RoadSegment[]
+  kind: RoadSegmentKind
+  crossings: RoadRiverCrossing[]
+}
+
 // Settlement defs resolve through the shared `settlementPlanCache` (plan 047
 // §9.14–15) — do not keep a second authoritative layout/def cache here.
-const routeCache = new Map<string, RoadSegment[] | null>()
+const routeCache = new Map<string, RoadRoute | null>()
 
 /** Both module-level caches below are keyed by cell/id, not by seed — a new
  *  world (new seed, or GUI-driven terrain param change) must call this before
@@ -121,7 +149,7 @@ export function entranceToward(
 /** All of a settlement's candidate neighbor settlements (by actual site
  *  distance, not grid distance — `findSettlementSite` jitters each cell's
  *  center), nearest first — the full ring-1 set (up to 8), *not* capped to
- *  `maxNeighborRoads`. Callers cap: `roadSegmentsForSettlement` walks this
+ *  `maxNeighborRoads`. Callers cap: `roadRoutesForSettlement` walks this
  *  list trying each in turn until `maxNeighborRoads` routes actually succeed
  *  (a nearby candidate across open water/impassable terrain shouldn't leave a
  *  settlement with zero roads when a slightly farther one would connect fine).
@@ -151,7 +179,10 @@ const NEIGHBOR_OFFSETS = [
 ] as const
 
 /** Clearance above `waterLevel` a route needs to consider a cell dry land —
- *  water is still a hard reject (no bridges yet, see roads-and-paths plan). */
+ *  water is still a hard reject. This is the *lake/ocean* gate: a node whose
+ *  terrain sits at or below the sea is never road. Rivers are handled
+ *  separately and analytically (`roadRiverCrossing.ts`) — their carved channel
+ *  is often above this level, so elevation alone can never see them. */
 const ROUTE_WATER_CLEARANCE = 0.5
 /** Mountains are *not* a hard reject — real roads cross mountains (passes,
  *  switchbacks), just at real cost. This multiplies a step's distance by
@@ -179,22 +210,61 @@ const DEFAULT_ROUTING_OPTIONS: RoutingOptions = {
   seed: 0,
 }
 
+/** Everything a single route search needs beyond its two endpoints. */
+export type RouteSearchOptions = RoutingOptions & {
+  sampleHeight: HeightSampler
+  sampleMountainRidge: (x: number, z: number) => number
+  waterLevel: number
+  /** Canonical river geometry covering the whole search envelope, queried
+   *  **once** by the caller (`riverSegmentsForEnvelope`) — never re-queried
+   *  per neighbor expansion. Empty means river-agnostic routing, exactly the
+   *  pre-world-terrain-023 behaviour. */
+  riverSegments: readonly RiverChannelSegment[]
+  /** Infrastructure policy: a `road` may ford or bridge, a `path` is ford-only
+   *  (plan §12) — a bridge-required edge is rejected so the path detours. */
+  routeKind: RoadSegmentKind
+  /** Stable route identity; canonical crossing ids derive from it. */
+  routeId: string
+}
+
 /**
  * Finds a route between two points that favors small elevation change over
  * the shortest straight line, via A* over a coarse world-space grid bounded
  * to the two points' bounding box (+ margin). Returns `null` if no walkable
- * route exists within the search grid (e.g. `b` is across open water). Pure/
- * analytic — safe to call before any chunk around the route is generated.
+ * route exists within the search grid (e.g. `b` is across open water, or every
+ * remaining way across a river needs infrastructure this route kind may not
+ * build). Pure/analytic — safe to call before any chunk around the route is
+ * generated.
+ *
+ * River awareness is **edge**-based (plan §5): every candidate A* step is
+ * tested against the canonical river water footprint, so a 9 m step can never
+ * leap a 3 m stream unnoticed just because both its endpoints are dry. A
+ * crossing step is priced through the one canonical evaluator
+ * (`roadRiverCrossing.ts`) — a cheap ford, an expensive bridge, or a hard
+ * reject — so a decent ford a few hundred metres away naturally beats an
+ * unnecessary bridge.
+ *
+ * @domain world-terrain
  */
 export function findRoute(
   a: { x: number, z: number },
   b: { x: number, z: number },
-  sampleHeight: HeightSampler,
-  sampleMountainRidge: (x: number, z: number) => number,
-  waterLevel: number,
-  opts: RoutingOptions = DEFAULT_ROUTING_OPTIONS,
-): RoutePoint[] | null {
-  const { gridStep, elevationWeight, smoothingWindow, meanderAmplitude, meanderScale, seed } = opts
+  opts: RouteSearchOptions,
+): RoadRoute | null {
+  const {
+    gridStep,
+    elevationWeight,
+    smoothingWindow,
+    meanderAmplitude,
+    meanderScale,
+    seed,
+    sampleHeight,
+    sampleMountainRidge,
+    waterLevel,
+    riverSegments,
+    routeKind,
+    routeId,
+  } = opts
   // Wide enough that the search grid has room to route *around* a mountain
   // when that's cheaper, not just straight through it (see MOUNTAIN_COST_WEIGHT).
   const margin = gridStep * 5
@@ -236,6 +306,31 @@ export function findRoute(
     return r
   }
 
+  // Undirected edge cache: a neighbour expansion re-reaches the same step from
+  // both sides, and crossing evaluation is the only non-trivial part of an
+  // edge's cost. Keyed on the sorted node-key pair.
+  const edgeSpan = (maxCols + 1) * (maxRows + 1) + 1
+  const crossingCostCache = new Map<number, number | null>()
+  /** Deterministic infrastructure cost of the river crossings on one A* step,
+   *  or `null` when the step needs a crossing this route kind cannot build. */
+  const crossingCost = (k1: number, k2: number, ax: number, az: number, bx: number, bz: number): number | null => {
+    if (riverSegments.length === 0) return 0
+    const ek = k1 < k2 ? k1 * edgeSpan + k2 : k2 * edgeSpan + k1
+    const cached = crossingCostCache.get(ek)
+    if (cached !== undefined) return cached
+    let total = 0
+    for (const hit of riverHitsOnEdge(ax, az, bx, bz, riverSegments)) {
+      const verdict = evaluateRoadRiverCrossing(hit.facts, routeKind)
+      if (verdict.kind === 'reject') {
+        crossingCostCache.set(ek, null)
+        return null
+      }
+      total += verdict.cost
+    }
+    crossingCostCache.set(ek, total)
+    return total
+  }
+
   const start = toGrid(a.x, a.z)
   const goal = toGrid(b.x, b.z)
   const startKey = key(start.ix, start.iz)
@@ -269,11 +364,17 @@ export function findRoute(
       const nKey = key(nix, niz)
       if (closed.has(nKey) || !walkable(nix, niz)) continue
 
+      const from = toWorld(cur.ix, cur.iz)
+      const to = toWorld(nix, niz)
+      const infrastructure = crossingCost(curKey, nKey, from.x, from.z, to.x, to.z)
+      if (infrastructure === null) continue
+
       const stepDist = Math.hypot(dx * gridStep, dz * gridStep)
       const ridge = (ridgeAt(cur.ix, cur.iz) + ridgeAt(nix, niz)) * 0.5
       const cost =
         stepDist * (1 + MOUNTAIN_COST_WEIGHT * ridge * ridge) +
-        elevationWeight * Math.abs(heightAt(nix, niz) - heightAt(cur.ix, cur.iz))
+        elevationWeight * Math.abs(heightAt(nix, niz) - heightAt(cur.ix, cur.iz)) +
+        infrastructure
       const tentativeG = (gScore.get(curKey) ?? Infinity) + cost
 
       if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
@@ -303,14 +404,110 @@ export function findRoute(
     return { x: w.x, z: w.z, h: heightAt(ix, iz) }
   })
 
-  const meandered = meanderRoute(raw, sampleHeight, meanderAmplitude, meanderScale, seed)
-  return smoothProfile(meandered, smoothingWindow)
+  // Materialize the exact crossing points A* priced into the geometry itself,
+  // and lock them (plus their immediate approaches) against lateral meander —
+  // otherwise meander could slide the polyline off the crossing it paid for,
+  // or through a river it never evaluated (plan §7).
+  const anchored = withCrossingAnchors(raw, riverSegments, sampleHeight)
+  const planned = crossingsForPolyline(anchored.points, riverSegments, routeKind, routeId)
+  if (!planned) return null
+
+  const meandered = meanderRoute(
+    anchored.points,
+    sampleHeight,
+    meanderAmplitude,
+    meanderScale,
+    seed,
+    anchored.locked,
+  )
+  let finalPoints = meandered
+  let crossings = crossingsForPolyline(meandered, riverSegments, routeKind, routeId)
+  if (!crossings || !sameCrossingTopology(crossings, planned)) {
+    // Meander changed the route's river topology. Deterministically fall back
+    // to the anchor-exact geometry rather than shipping a road whose crossing
+    // records no longer describe it — "the meander is only a few metres" is
+    // not an argument at stream/bank scale.
+    finalPoints = anchored.points
+    crossings = planned
+  }
+
+  const points = smoothProfile(finalPoints, smoothingWindow)
+  return { points, segments: toSegments(points, routeKind), kind: routeKind, crossings }
+}
+
+/** Distance (m) under which a resolved crossing point is considered to already
+ *  be a route waypoint rather than a new anchor to insert. */
+const CROSSING_ANCHOR_EPSILON = 0.5
+
+/** Inserts the exact road×river intersection points into an A* chain and
+ *  reports which indices must not be meandered laterally (the anchors plus
+ *  their immediate approach points). */
+function withCrossingAnchors(
+  points: readonly { x: number, z: number, h: number }[],
+  riverSegments: readonly RiverChannelSegment[],
+  sampleHeight: HeightSampler,
+): { points: { x: number, z: number, h: number }[], locked: Set<number> } {
+  if (riverSegments.length === 0 || points.length < 2) {
+    return { points: [...points], locked: new Set() }
+  }
+
+  const out: { x: number, z: number, h: number }[] = []
+  const anchors: { x: number, z: number }[] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]!
+    const b = points[i + 1]!
+    out.push(a)
+    for (const hit of riverHitsOnEdge(a.x, a.z, b.x, b.z, riverSegments)) {
+      const { x, z } = hit.facts
+      anchors.push({ x, z })
+      const prev = out[out.length - 1]!
+      if (Math.hypot(x - prev.x, z - prev.z) < CROSSING_ANCHOR_EPSILON) continue
+      if (Math.hypot(x - b.x, z - b.z) < CROSSING_ANCHOR_EPSILON) continue
+      out.push({ x, z, h: sampleHeight(x, z) })
+    }
+  }
+  out.push(points[points.length - 1]!)
+
+  // Lock by proximity rather than by insertion index: an anchor that collapsed
+  // onto an existing waypoint still has to hold that waypoint in place.
+  const locked = new Set<number>()
+  for (const anchor of anchors) {
+    let bestIdx = 0
+    let bestDist = Infinity
+    for (let i = 0; i < out.length; i++) {
+      const d = Math.hypot(out[i]!.x - anchor.x, out[i]!.z - anchor.z)
+      if (d < bestDist) {
+        bestDist = d
+        bestIdx = i
+      }
+    }
+    locked.add(bestIdx)
+    locked.add(bestIdx - 1)
+    locked.add(bestIdx + 1)
+  }
+  return { points: out, locked }
+}
+
+/** Same number of crossings, in the same order, with the same kinds — the
+ *  bijection the acceptance invariant asks for, checked against the finished
+ *  polyline rather than assumed from the A* chain. */
+function sameCrossingTopology(
+  a: readonly RoadRiverCrossing[],
+  b: readonly RoadRiverCrossing[],
+): boolean {
+  if (a.length !== b.length) return false
+  return a.every((crossing, i) => crossing.kind === b[i]!.kind)
 }
 
 /**
  * Offsets interior waypoints perpendicular to the local path tangent so the
  * corridor centerline isn't a ruler between A* grid cells. Endpoints stay
  * fixed (settlement / dock anchors). Pure + deterministic for a given seed.
+ *
+ * `locked` holds indices that must keep their exact X/Z — canonical river
+ * crossing anchors and their immediate approach points (plan
+ * world-terrain-023 §7), so post-processing can never slide the road off the
+ * crossing the route actually declared.
  */
 export function meanderRoute(
   points: { x: number; z: number; h: number }[],
@@ -318,11 +515,13 @@ export function meanderRoute(
   amplitude: number,
   scale: number,
   seed: number,
+  locked?: ReadonlySet<number>,
 ): { x: number; z: number; h: number }[] {
   if (points.length < 3 || amplitude <= 0) return points
   const noise = createNoise2D(createSeededRandom(seed ^ 0xa5f3c1e9))
   return points.map((p, i) => {
     if (i === 0 || i === points.length - 1) return p
+    if (locked?.has(i)) return p
     const prev = points[i - 1]!
     const next = points[i + 1]!
     const tx = next.x - prev.x
@@ -398,13 +597,113 @@ function corridorHalfWidthMargin(halfWidth: number, edgeWobbleAmplitude: number)
   return halfWidth * (1 + Math.max(0, edgeWobbleAmplitude)) + 2
 }
 
-/** All road (inter-settlement) + path (settlement↔own minor location)
- *  segments belonging to one settlement. Cached per pair/location key, so
- *  resolving the same settlement from multiple nearby chunks is cheap after
- *  the first A* search. */
-function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext): RoadSegment[] {
-  const out: RoadSegment[] = []
-  const opts = routingOptionsFrom(ctx)
+/** Slack added to the A* search envelope when querying hydrology, so a channel
+ *  whose carve reach just laps into the envelope is still seen. */
+const RIVER_ENVELOPE_PADDING = 64
+
+/** Canonical river geometry for one whole route search, queried **once** from
+ *  the world-scoped analytical `RiverQuery` (plan §4/§15). Reading the single
+ *  registration in `settlementPlanCache.ts` — rather than a per-context field —
+ *  is what guarantees `ChunkManager`'s and `SettlementsManager`'s road contexts
+ *  resolve the shared route cache against identical hydrology whichever asks
+ *  first. Empty when no world query is registered (unit tests, hydrology-less
+ *  callers): routing then behaves exactly as it did before this plan. */
+function riverSegmentsForEnvelope(
+  a: { x: number, z: number },
+  b: { x: number, z: number },
+  gridStep: number,
+): RiverChannelSegment[] {
+  const query = worldRiverQuery()
+  if (!query) return []
+  const margin = gridStep * 5
+  const size =
+    Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z)) + margin * 2 + RIVER_ENVELOPE_PADDING
+  return query.segmentsNear((a.x + b.x) * 0.5, (a.z + b.z) * 0.5, size)
+}
+
+function searchOptionsFor(
+  a: { x: number, z: number },
+  b: { x: number, z: number },
+  ctx: RoadNetworkContext,
+  routeKind: RoadSegmentKind,
+  routeId: string,
+): RouteSearchOptions {
+  const routing = routingOptionsFrom(ctx)
+  return {
+    ...routing,
+    sampleHeight: ctx.sampleHeight,
+    sampleMountainRidge: ctx.terrainSamplers.sampleMountainRidge,
+    waterLevel: ctx.waterLevel,
+    riverSegments: riverSegmentsForEnvelope(a, b, routing.gridStep),
+    routeKind,
+    routeId,
+  }
+}
+
+/** The inter-settlement road between two settlements, resolved once and shared
+ *  by roads, signposts and midpoint signposts.
+ *
+ *  Computed in a **canonical endpoint orientation** (sorted settlement id
+ *  first): the route cache is order-independent by `pairKey`, so without this
+ *  the A* direction — and therefore the geometry and crossing ids — would
+ *  depend on which settlement happened to resolve the edge first. Consumers
+ *  already orient the returned waypoints themselves by endpoint distance. */
+function routeBetween(
+  def: SettlementDef,
+  neighbor: SettlementDef,
+  ctx: RoadNetworkContext,
+): RoadRoute | null {
+  const key = pairKey(def.id, neighbor.id)
+  const cached = routeCache.get(key)
+  if (cached !== undefined) return cached
+
+  const [first, second] = def.id < neighbor.id ? [def, neighbor] : [neighbor, def]
+  const from = entranceToward(first, second)
+  const to = entranceToward(second, first)
+  const route = findRoute(from, to, searchOptionsFor(from, to, ctx, 'road', key))
+  routeCache.set(key, route)
+  return route
+}
+
+/** The settlement→minor-location path, resolved once and shared by path
+ *  corridors and NPC waypoint lookups. `path` is ford-only in V1 (plan §12) —
+ *  a crossing that would need a bridge rejects the edge, so the path detours
+ *  to a safe ford or simply doesn't exist. */
+function routeToLocation(
+  def: SettlementDef,
+  loc: { x: number, z: number, kind: string },
+  ctx: RoadNetworkContext,
+): RoadRoute | null {
+  const key = `${def.id}:${loc.kind}`
+  const cached = routeCache.get(key)
+  if (cached !== undefined) return cached
+
+  const from = entranceToward(def, loc)
+  const route = findRoute(from, loc, searchOptionsFor(from, loc, ctx, 'path', key))
+  routeCache.set(key, route)
+  return route
+}
+
+/** Waypoints of a cached route oriented to start near `def` — `routeCache` is
+ *  symmetric, so the stored orientation follows the canonical id order rather
+ *  than the asking settlement. */
+function orientedFrom(route: RoadRoute, def: { x: number, z: number }): RoutePoint[] {
+  const { segments } = route
+  const firstA = segments[0]!.a
+  const lastB = segments[segments.length - 1]!.b
+  const distFirst = Math.hypot(firstA.x - def.x, firstA.z - def.z)
+  const distLast = Math.hypot(lastB.x - def.x, lastB.z - def.z)
+  return distFirst <= distLast
+    ? [segments[0]!.a, ...segments.map((s) => s.b)]
+    : [segments[segments.length - 1]!.b, ...[...segments].reverse().map((s) => s.a)]
+}
+
+/** All road (inter-settlement) + path (settlement↔own minor location) routes
+ *  belonging to one settlement, carrying geometry *and* their canonical river
+ *  crossings. Cached per pair/location key, so resolving the same settlement
+ *  from multiple nearby chunks is cheap after the first A* search. */
+function roadRoutesForSettlement(def: SettlementDef, ctx: RoadNetworkContext): RoadRoute[] {
+  const out: RoadRoute[] = []
   const maxRoads = Math.max(0, ctx.region.roadNetwork.maxNeighborRoads)
 
   // Walk candidates nearest-first, but count *successful* routes toward the
@@ -413,22 +712,9 @@ function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext):
   let connected = 0
   for (const neighbor of neighborsFor({ gx: def.gx, gz: def.gz }, ctx)) {
     if (connected >= maxRoads) break
-    const key = pairKey(def.id, neighbor.id)
-    let segments = routeCache.get(key)
-    if (segments === undefined) {
-      const points = findRoute(
-        entranceToward(def, neighbor),
-        entranceToward(neighbor, def),
-        ctx.sampleHeight,
-        ctx.terrainSamplers.sampleMountainRidge,
-        ctx.waterLevel,
-        opts,
-      )
-      segments = points ? toSegments(points, 'road') : null
-      routeCache.set(key, segments)
-    }
-    if (segments) {
-      out.push(...segments)
+    const route = routeBetween(def, neighbor, ctx)
+    if (route) {
+      out.push(route)
       connected++
     }
   }
@@ -441,34 +727,17 @@ function roadSegmentsForSettlement(def: SettlementDef, ctx: RoadNetworkContext):
     ctx.region.roadNetwork.dockSearchRadius,
   )
   for (const loc of locations) {
-    const key = `${def.id}:${loc.kind}`
-    let segments = routeCache.get(key)
-    if (segments === undefined) {
-      const points = findRoute(
-        entranceToward(def, loc),
-        loc,
-        ctx.sampleHeight,
-        ctx.terrainSamplers.sampleMountainRidge,
-        ctx.waterLevel,
-        opts,
-      )
-      segments = points ? toSegments(points, 'path') : null
-      routeCache.set(key, segments)
-    }
-    if (segments) out.push(...segments)
+    const route = routeToLocation(def, loc, ctx)
+    if (route) out.push(route)
   }
 
   return out
 }
 
-/**
- * Three.js `rotation.y` so a prop whose long axis is local +X points toward
- * world direction `(dx, dz)`. (`atan2(dz, dx)` alone is wrong: Y-rotation maps
- * +X to `(cos θ, −sin θ)` in XZ.)
- */
-export function yawToward(dx: number, dz: number): number {
-  return Math.atan2(-dz, dx)
-}
+// Lives in `math/segment.ts` so `roadRiverCrossing.ts` can use the same
+// convention without importing back into the road graph; re-exported here for
+// this module's existing consumers.
+export { yawToward }
 
 export type SettlementSignpost = {
   position: { x: number, z: number }
@@ -480,10 +749,9 @@ export type SettlementSignpost = {
 /** One signpost per connected neighbor road, placed just past the
  *  settlement's own footprint (`clearings.regional.radius`) so it doesn't
  *  land among houses/props. Reuses the same `routeCache` as
- *  `roadSegmentsForSettlement` — no duplicate A* search if that already ran
+ *  `roadRoutesForSettlement` — no duplicate A* search if that already ran
  *  for this def. */
 export function signpostsForSettlement(def: SettlementDef, ctx: RoadNetworkContext): SettlementSignpost[] {
-  const opts = routingOptionsFrom(ctx)
   const maxRoads = Math.max(0, ctx.region.roadNetwork.maxNeighborRoads)
   const minDist = def.clearings.regional.radius + 3
   const out: SettlementSignpost[] = []
@@ -491,34 +759,11 @@ export function signpostsForSettlement(def: SettlementDef, ctx: RoadNetworkConte
   let connected = 0
   for (const neighbor of neighborsFor({ gx: def.gx, gz: def.gz }, ctx)) {
     if (connected >= maxRoads) break
-    const key = pairKey(def.id, neighbor.id)
-    let segments = routeCache.get(key)
-    if (segments === undefined) {
-      const points = findRoute(
-        entranceToward(def, neighbor),
-        entranceToward(neighbor, def),
-        ctx.sampleHeight,
-        ctx.terrainSamplers.sampleMountainRidge,
-        ctx.waterLevel,
-        opts,
-      )
-      segments = points ? toSegments(points, 'road') : null
-      routeCache.set(key, segments)
-    }
-    if (!segments || segments.length === 0) continue
+    const route = routeBetween(def, neighbor, ctx)
+    if (!route || route.segments.length === 0) continue
     connected++
 
-    // routeCache is symmetric (pairKey) — whichever settlement resolved this
-    // edge first becomes `a`, so orient the waypoint list to start near `def`
-    // regardless of which side that was.
-    const firstA = segments[0]!.a
-    const lastB = segments[segments.length - 1]!.b
-    const distFirst = Math.hypot(firstA.x - def.x, firstA.z - def.z)
-    const distLast = Math.hypot(lastB.x - def.x, lastB.z - def.z)
-    const points = distFirst <= distLast
-      ? [segments[0]!.a, ...segments.map((s) => s.b)]
-      : [segments[segments.length - 1]!.b, ...[...segments].reverse().map((s) => s.a)]
-
+    const points = orientedFrom(route, def)
     let idx = points.findIndex((p) => Math.hypot(p.x - def.x, p.z - def.z) >= minDist)
     if (idx <= 0) idx = points.length - 1
     const at = points[idx]!
@@ -548,29 +793,10 @@ export function midpointSignpostsFor(
   neighbor: SettlementDef,
   ctx: RoadNetworkContext,
 ): [MidpointSignpost, MidpointSignpost] | null {
-  const key = pairKey(def.id, neighbor.id)
-  let segments = routeCache.get(key)
-  if (segments === undefined) {
-    const points = findRoute(
-      entranceToward(def, neighbor),
-      entranceToward(neighbor, def),
-      ctx.sampleHeight,
-      ctx.terrainSamplers.sampleMountainRidge,
-      ctx.waterLevel,
-      routingOptionsFrom(ctx),
-    )
-    segments = points ? toSegments(points, 'road') : null
-    routeCache.set(key, segments)
-  }
-  if (!segments || segments.length === 0) return null
+  const route = routeBetween(def, neighbor, ctx)
+  if (!route || route.segments.length === 0) return null
 
-  const firstA = segments[0]!.a
-  const lastB = segments[segments.length - 1]!.b
-  const distFirst = Math.hypot(firstA.x - def.x, firstA.z - def.z)
-  const distLast = Math.hypot(lastB.x - def.x, lastB.z - def.z)
-  const points = distFirst <= distLast
-    ? [segments[0]!.a, ...segments.map((s) => s.b)]
-    : [segments[segments.length - 1]!.b, ...[...segments].reverse().map((s) => s.a)]
+  const points = orientedFrom(route, def)
   if (points.length < 2) return null
 
   const arc: number[] = [0]
@@ -612,7 +838,7 @@ export function midpointSignpostsFor(
 /** Resolved route (waypoints, not corridor data) from a settlement to its own
  *  minor location of `kind`, if it has one — used by `createSettlement.ts` to
  *  give NPCs real waypoints to walk instead of a straight line. Reuses the
- *  same cache as `roadSegmentsForSettlement`. */
+ *  same cache as `roadRoutesForSettlement`. */
 export function routeToMinorLocation(
   def: SettlementDef,
   kind: 'dock',
@@ -628,22 +854,9 @@ export function routeToMinorLocation(
   const loc = locations.find((l) => l.kind === kind)
   if (!loc) return []
 
-  const key = `${def.id}:${loc.kind}`
-  let segments = routeCache.get(key)
-  if (segments === undefined) {
-    const points = findRoute(
-      entranceToward(def, loc),
-      loc,
-      ctx.sampleHeight,
-      ctx.terrainSamplers.sampleMountainRidge,
-      ctx.waterLevel,
-      routingOptionsFrom(ctx),
-    )
-    segments = points ? toSegments(points, 'path') : null
-    routeCache.set(key, segments)
-  }
-  if (!segments || segments.length === 0) return []
-  return [segments[0]!.a, ...segments.map((s) => s.b)]
+  const route = routeToLocation(def, loc, ctx)
+  if (!route || route.segments.length === 0) return []
+  return [route.segments[0]!.a, ...route.segments.map((s) => s.b)]
 }
 
 /** Road/path corridor segments near a chunk's world-space footprint —
@@ -668,7 +881,7 @@ export function segmentsNear(
   for (const c of cellsWithinRadius(cell, 1)) {
     const def = defFor(c, ctx)
     if (!def) continue
-    for (const seg of roadSegmentsForSettlement(def, ctx)) {
+    for (const seg of roadRoutesForSettlement(def, ctx).flatMap((route) => route.segments)) {
       const isRoad = seg.kind === 'road'
       const halfWidth = isRoad ? ctx.region.roadNetwork.roadHalfWidth : ctx.region.roadNetwork.pathHalfWidth
       const margin = corridorHalfWidthMargin(halfWidth, ctx.region.roadNetwork.edgeWobbleAmplitude)
@@ -689,6 +902,72 @@ export function segmentsNear(
         heightStrength: isRoad ? ctx.region.roadNetwork.roadHeightStrength : ctx.region.roadNetwork.pathHeightStrength,
         tintStrength: isRoad ? ctx.region.roadNetwork.roadTintStrength : ctx.region.roadNetwork.pathTintStrength,
       })
+    }
+  }
+  return out
+}
+
+/** Approach length (m) added either side of a crossing's channel span, so the
+ *  ford's raised bar ties into dry road instead of ending at the bank. */
+const FORD_APPROACH_MARGIN = 2
+
+function fordProjectionOf(
+  crossing: RoadRiverCrossing,
+  kind: RoadSegmentKind,
+  rn: RegionParams['roadNetwork'],
+): FordProjection {
+  const dir = directionFromYaw(crossing.angle)
+  const halfWidth = (kind === 'road' ? rn.roadHalfWidth : rn.pathHalfWidth)
+    * (1 + Math.max(0, rn.edgeWobbleAmplitude))
+  return {
+    x: crossing.x,
+    z: crossing.z,
+    dirX: dir.x,
+    dirZ: dir.z,
+    halfLength: crossing.span * 0.5 + FORD_APPROACH_MARGIN,
+    halfWidth,
+  }
+}
+
+/**
+ * Declared ford crossings whose shaping footprint reaches a world-space box —
+ * the crossing counterpart to `segmentsNear`, resolved from the exact same
+ * cached routes, so terrain can only ever shape a ford the route itself
+ * declared. Bridges are deliberately *not* projected here: their runtime
+ * projection is `world-terrain-033`'s, and until then a canonical `bridge`
+ * record simply has no terrain effect.
+ *
+ * Called by `chunkManager.paramsFor()` (chunk terrain) and its local-water
+ * sampling wiring, main-thread only.
+ *
+ * @domain world-terrain
+ */
+export function fordsNear(
+  worldX: number,
+  worldZ: number,
+  size: number,
+  ctx: RoadNetworkContext,
+): FordProjection[] {
+  const cell = worldToCell(worldX, worldZ)
+  const half = size / 2
+  const minX = worldX - half
+  const maxX = worldX + half
+  const minZ = worldZ - half
+  const maxZ = worldZ + half
+
+  const out: FordProjection[] = []
+  for (const c of cellsWithinRadius(cell, 1)) {
+    const def = defFor(c, ctx)
+    if (!def) continue
+    for (const route of roadRoutesForSettlement(def, ctx)) {
+      for (const crossing of route.crossings) {
+        if (crossing.kind !== 'ford') continue
+        const ford = fordProjectionOf(crossing, route.kind, ctx.region.roadNetwork)
+        const reach = Math.max(ford.halfLength, ford.halfWidth)
+        if (ford.x + reach < minX || ford.x - reach > maxX) continue
+        if (ford.z + reach < minZ || ford.z - reach > maxZ) continue
+        out.push(ford)
+      }
     }
   }
   return out

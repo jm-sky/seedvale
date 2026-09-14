@@ -17,8 +17,11 @@ import { worldgenFingerprint } from '../../persistence/worldgenFingerprint'
 
 export const ABANDONED_CEMETERY_NAMESPACE = 'abandoned-cemeteries'
 /** Bump on any change to the cached payload shape or abandoned-cemetery
- *  placement algorithm — an old-version record is a cache miss, never migrated. */
-export const ABANDONED_CEMETERY_VERSION = 1
+ *  placement algorithm — an old-version record is a cache miss, never migrated.
+ *  v2: river-aware road routing (plan world-terrain-023) changes regional road
+ *  geometry for an unchanged seed, and placement rejects footprints that clear
+ *  nearby roads. */
+export const ABANDONED_CEMETERY_VERSION = 2
 
 export type CachedAbandonedCemeteryResult =
   | { status: 'none' }

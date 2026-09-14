@@ -6,7 +6,7 @@ import { LinearSpline } from '../math/linearSpline'
 import { projectOntoSegment } from '../math/segment'
 import { createSeededRandom } from '../world/parseSeed'
 import { fbm01, type FbmParams } from './fbm'
-import { fordBedHeight, fordStrength } from './riverFord'
+import { fordBedHeight, fordInfluenceAt, type FordProjection } from './riverFord'
 import { computeBodyScale, detectWaterBodies } from './waterBodies'
 import { worleyRidge } from './worleyNoise'
 
@@ -298,6 +298,15 @@ export type ChunkTileParams = {
    *  that sampler must stay carving-agnostic to avoid a circular dependency —
    *  excluded from `RawSampleParams` for the same reason `roadSegments` is. */
   riverSegments: RiverChannelSegment[]
+  /** Declared road↔river ford crossings whose footprint reaches this chunk —
+   *  see `riverFord.ts`'s `FordProjection`. Projected main-thread by
+   *  `roadNetwork.ts`'s `fordsNear` from the canonical `RoadRiverCrossing`
+   *  records a route already owns, for the same reason `roadSegments` is
+   *  computed there: routing is main-thread settlement logic, the worker only
+   *  ever sees plain numbers. Absent/empty means no declared crossing here,
+   *  and then river carving is exactly the natural channel however much a
+   *  road happens to overlap it (plan world-terrain-023 §8). */
+  fordProjections?: FordProjection[]
   /** Settlement summaries near this chunk for assignment-driven cemetery placement
    *  (`cemeteryPlacement.ts`) — populated by `chunkManager.paramsFor()`. */
   /** Empty when no settlements are near this chunk — assignment-driven cemeteries are skipped. */
@@ -335,6 +344,7 @@ export type RawSampleParams = Omit<
   | 'clearings'
   | 'regional'
   | 'riverSegments'
+  | 'fordProjections'
   | 'cemeterySettlements'
   | 'cemeteryRoadSegments'
   | 'cemeteryClearings'
@@ -855,7 +865,7 @@ function applyTerrainCorridors(
   clearingSegments: readonly ClearingSegment[],
   roadNoise: NoiseFunction2D,
   roadNetwork: RoadNetworkParams,
-): { floorH: number; tint: number; roadFalloff: number } {
+): { floorH: number; tint: number } {
   let bestRoadFalloff = 0
   let bestRoadTargetH = 0
   let bestRoadHeightStrength = 0
@@ -897,14 +907,12 @@ function applyTerrainCorridors(
     return {
       floorH: MathUtils.lerp(floorH, bestClearingTargetH, hard),
       tint: bestTint,
-      roadFalloff: bestRoadFalloff,
     }
   }
-  if (bestRoadFalloff <= 0) return { floorH, tint: bestTint, roadFalloff: 0 }
+  if (bestRoadFalloff <= 0) return { floorH, tint: bestTint }
   return {
     floorH: MathUtils.lerp(floorH, bestRoadTargetH, bestRoadFalloff * bestRoadHeightStrength),
     tint: bestTint,
-    roadFalloff: bestRoadFalloff,
   }
 }
 
@@ -967,10 +975,11 @@ const RIVER_CHANNEL_INNER_FRACTION = 0.5
  * seam (both ends of each `smoothstep` span are flat). Returns `null` beyond
  * the channel's bank-top edge, where carving has no effect at all.
  *
- * `roadFalloff` (this texel's road/path corridor influence, 0 away from any
- * corridor) turns an overlap into a ford: the bed is raised toward the
- * canonical water surface so the crossing stays shallow and traversable,
- * instead of the road dropping into a full-depth channel. See
+ * `fordInfluence` (0..1) is this texel's *declared* ford influence, resolved
+ * from `ChunkTileParams.fordProjections` — never from an incidental road ×
+ * river overlap (plan world-terrain-023). Where it is positive the bed is
+ * raised toward the canonical water surface so the crossing stays shallow and
+ * traversable, instead of the road dropping into a full-depth channel. See
  * `riverFord.ts` — the water surface itself, and therefore the rendered
  * ribbon, is untouched. */
 function riverChannelCandidate(
@@ -978,7 +987,7 @@ function riverChannelCandidate(
   wz: number,
   floorH: number,
   seg: RiverChannelSegment,
-  roadFalloff: number,
+  fordInfluence: number,
 ): number | null {
   const { distSq, t } = projectOntoSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz)
   const channelHalfWidth = MathUtils.lerp(seg.aChannelHalfWidth, seg.bChannelHalfWidth, t)
@@ -987,11 +996,7 @@ function riverChannelCandidate(
 
   const waterHalfWidth = MathUtils.lerp(seg.aWaterHalfWidth, seg.bWaterHalfWidth, t)
   const waterH = MathUtils.lerp(seg.aWaterH, seg.bWaterH, t)
-  const bedH = fordBedHeight(
-    MathUtils.lerp(seg.aBedH, seg.bBedH, t),
-    waterH,
-    fordStrength(roadFalloff, waterHalfWidth * 2),
-  )
+  const bedH = fordBedHeight(MathUtils.lerp(seg.aBedH, seg.bBedH, t), waterH, fordInfluence)
   const bedFlatRadius = waterHalfWidth * RIVER_CHANNEL_INNER_FRACTION
 
   if (dist <= bedFlatRadius) return bedH
@@ -1014,11 +1019,11 @@ function applyRiverChannel(
   wz: number,
   floorH: number,
   segments: readonly RiverChannelSegment[],
-  roadFalloff: number,
+  fordInfluence: number,
 ): number {
   let best: number | null = null
   for (const seg of segments) {
-    const candidate = riverChannelCandidate(wx, wz, floorH, seg, roadFalloff)
+    const candidate = riverChannelCandidate(wx, wz, floorH, seg, fordInfluence)
     if (candidate === null) continue
     if (best === null || candidate < best) best = candidate
   }
@@ -1052,7 +1057,6 @@ function computeChunkTexel(
   const sample = sampleRawTexel(wx, wz, noise, params)
   let floorH = sample.floorH
   let tint = 0
-  let roadFalloff = 0
   // Stage 1: broad, weak village-wide leveling (see `applyRegionalSmoothing`'s
   // doc comment for why this runs first instead of joining the corridor
   // "strongest segment wins" competition below).
@@ -1073,19 +1077,21 @@ function computeChunkTexel(
     )
     floorH = corridor.floorH
     tint = corridor.tint
-    roadFalloff = corridor.roadFalloff
   }
   // Stage 3: river channel carving (plan 189) — locally deepens terrain
   // along the same canonical, already-meandered chain the water ribbon
   // renders, so terrain and water agree by construction. Runs after
   // roads/clearings per the plan's `base -> modifiers -> river channel ->
-  // final` ordering, and takes stage 2's road corridor influence with it:
-  // where a road crosses a small enough channel the carve is raised into a
-  // shallow ford (`riverFord.ts`) instead of dropping the road into a
-  // full-depth channel. Everywhere else `roadFalloff` is 0 and the profile
-  // is unchanged.
+  // final` ordering, and projects any *declared* ford crossing over it
+  // (plan world-terrain-023): inside a `FordProjection` the carve is raised
+  // into a shallow, traversable bar (`riverFord.ts`) instead of dropping the
+  // road into a full-depth channel. Everywhere else the influence is 0 and
+  // the natural profile is unchanged — an incidental road × river overlap
+  // with no canonical crossing record never shallows the channel.
   if (params.riverSegments.length > 0) {
-    floorH = applyRiverChannel(wx, wz, floorH, params.riverSegments, roadFalloff)
+    const fords = params.fordProjections
+    const fordInfluence = fords && fords.length > 0 ? fordInfluenceAt(wx, wz, fords) : 0
+    floorH = applyRiverChannel(wx, wz, floorH, params.riverSegments, fordInfluence)
   }
 
   return {

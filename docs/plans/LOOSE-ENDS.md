@@ -33,8 +33,6 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 ## Settlement / world correctness
 
 - [ ] 2026-08-25 — `buildHouseWallCollidersLocal()` nadal iteruje tylko `def.walls`; `def.corners` nie mają własnego collidera. Zwykle maskują to sąsiednie ściany, ale corner przy otworze/door module nie ma takiego invariant — przy najbliższym dotykaniu house collision dodać jawne pokrycie/test.
-- [ ] 2026-09-06 — river ford podnosi carved terrain, ale nie aktualizuje canonical `RiverChannelSegment.waterH/bedH`; `sampleLocalWater` nadal widzi pierwotną głębokość. Dziś zwykle nieszkodliwe, bo ford powstaje na małych kanałach, ale terrain i water authority są tam rozbieżne.
-- [ ] 2026-09-06 — `roadNetwork.findRoute` nadal nie modeluje rzek: A* nie zna kanałów, więc crossing wynika przypadkowo z elevation cost; duża rzeka może dostać drogę bez brodu/mostu. Follow-up powinien dodać river-aware crossing cost oraz mosty jako istniejący world/road mechanism, nie specjalny wyjątek renderera.
 
 ## Off-screen simulation
 

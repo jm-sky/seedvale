@@ -1,7 +1,7 @@
 # Plan: River-aware road routing and canonical crossings
 
 **Created:** 2026-09-12
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented and technically verified (typecheck, lint, full `vitest`); browser/gameplay verification is still open.
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none

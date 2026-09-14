@@ -6,6 +6,7 @@ import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
 import type { ChunkMeshData, ChunkMeshTileGrids } from './chunkMeshData'
 import type { FbmParams } from './fbm'
+import type { FordProjection } from './riverFord'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
@@ -49,7 +50,7 @@ import {
   SEAWEED_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
-import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
+import { fordsNear, type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { cellFromId } from '../settlement/settlementGenerator'
 import { setSettlementRiverQuery, settlementDefFor } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
@@ -474,6 +475,12 @@ type ChunkRecord = {
    *  generation — plan 189) and reused by `attachChunkMesh` for the water
    *  ribbon, instead of retaining `riverTiles` a second time. */
   riverChains?: RiverChain[]
+  /** Declared road↔river ford crossings shaping this chunk — the exact
+   *  `ChunkTileParams.fordProjections` its terrain was generated from, kept so
+   *  `sampleLocalWater` reports the same shaped ford bed the ground actually
+   *  has (plan world-terrain-023 §9) without re-resolving routes on a hot
+   *  per-agent query. Empty/undefined for the common no-crossing chunk. */
+  fordProjections?: FordProjection[]
   /** Non-living tree stage meshes (limbed/felled/stump) — few and mutated
    *  individually, so never instanced (plan 087 §2.3/§2.5). Also receives
    *  whatever `refreshTreeVisual` swaps a tree into afterward, including a
@@ -1215,6 +1222,10 @@ export function createChunkManager(
       clearings: village.clearings,
       regional: village.regional,
       riverSegments,
+      // Only routes' own canonical `ford` crossings shape a channel — an
+      // incidental road × river overlap stays a natural river (plan
+      // world-terrain-023 §8).
+      fordProjections: fordsNear(x, z, config.chunkSize, roadCtx),
       cemeterySettlements,
       cemeteryRoadSegments,
       cemeteryClearings,
@@ -2150,8 +2161,12 @@ export function createChunkManager(
     const riverChains = retainRiverTilesFor(record)
     const { x, z } = chunkCenter(coord, config.chunkSize)
     const riverSegments = riverChannelSegmentsNear(riverChains, x, z, config.chunkSize)
+    const params = paramsFor(coord, riverSegments)
+    // Same declared fords the tile is shaped from, so `sampleLocalWater` and
+    // the ground agree on the ford's depth.
+    record.fordProjections = params.fordProjections
 
-    const promise = acquireCanonicalTile(record, paramsFor(coord, riverSegments))
+    const promise = acquireCanonicalTile(record, params)
       .then((canonical) => {
         if (!canonical) return // unloaded (or rebuilt) while generating
         const rec = chunks.get(key)
@@ -2529,6 +2544,7 @@ export function createChunkManager(
         riverSegments,
         worldX,
         worldZ,
+        rec?.fordProjections ?? [],
       )
     },
     sampleForestFactor: (x, z) => {

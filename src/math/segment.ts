@@ -36,6 +36,23 @@ export function distanceToSegment(
   return Math.sqrt(projectOntoSegment(px, pz, ax, az, bx, bz).distSq)
 }
 
+/**
+ * Three.js `rotation.y` so a prop whose long axis is local +X points toward
+ * world direction `(dx, dz)`. (`atan2(dz, dx)` alone is wrong: Y-rotation maps
+ * +X to `(cos θ, −sin θ)` in XZ.) Lives here rather than in
+ * `settlement/roadNetwork.ts` (which re-exports it for its existing consumers)
+ * so leaf geometry modules can use the same convention without importing back
+ * into the road graph.
+ */
+export function yawToward(dx: number, dz: number): number {
+  return Math.atan2(-dz, dx)
+}
+
+/** Unit world direction for a `yawToward` angle — the exact inverse. */
+export function directionFromYaw(angle: number): { x: number, z: number } {
+  return { x: Math.cos(angle), z: -Math.sin(angle) }
+}
+
 /** 2D corridor capsule — planner/palisade/path hit tests share this shape. */
 export type CorridorSegment2D = {
   ax: number

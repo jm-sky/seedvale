@@ -1,4 +1,5 @@
 import type { RiverChannelSegment } from './chunkHeightmap'
+import { fordBedHeight, fordInfluenceAt, type FordProjection } from './riverFord'
 import { riverWaterSampleAt } from './riverNetwork'
 
 /**
@@ -36,6 +37,13 @@ export const DRY_WATER_SAMPLE: LocalWaterSample = { present: false }
  * sits inside it: a carved mountain stream can sit entirely above the
  * global `waterLevel`, where the lake/ocean check alone would (wrongly)
  * report dry land.
+ *
+ * `fords` are the declared road↔river ford crossings whose footprint reaches
+ * the point (`ChunkTileParams.fordProjections`, same data terrain carving
+ * gets). Inside one, the reported floor is the *shaped* ford bed rather than
+ * the natural channel bed — the same `fordBedHeight` terrain used — so
+ * gameplay depth agrees with the ground the player actually walks on. The
+ * canonical water surface is never modified (plan world-terrain-023 §9).
  */
 export function sampleLocalWater(
   clampedHeight: number,
@@ -44,15 +52,19 @@ export function sampleLocalWater(
   riverSegments: readonly RiverChannelSegment[],
   x: number,
   z: number,
+  fords: readonly FordProjection[] = [],
 ): LocalWaterSample {
   if (riverSegments.length > 0) {
     const river = riverWaterSampleAt(riverSegments, x, z)
     if (river && river.distanceToWaterEdge < 0) {
+      const bedH = fords.length > 0
+        ? fordBedHeight(river.bedH, river.waterH, fordInfluenceAt(x, z, fords))
+        : river.bedH
       return {
         present: true,
         waterSurfaceHeight: river.waterH,
-        floorHeight: river.bedH,
-        depth: Math.max(0, river.waterH - river.bedH),
+        floorHeight: bedH,
+        depth: Math.max(0, river.waterH - bedH),
       }
     }
   }

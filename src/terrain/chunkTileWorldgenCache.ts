@@ -38,8 +38,12 @@ export const CHUNK_TILE_CACHE_NAMESPACE = 'chunk-tiles'
  * hashes the whole `ChunkTileParams`); this version covers *algorithm*
  * identity. An old-version record is a plain cache miss — records are never
  * migrated.
+ *
+ * v2: river-aware road routing (plan world-terrain-023) — river carving now
+ * shapes a ford only inside an explicitly declared crossing footprint, and
+ * regional road geometry itself changes for an unchanged seed.
  */
-export const CHUNK_TILE_CACHE_VERSION = 1
+export const CHUNK_TILE_CACHE_VERSION = 2
 
 /** Small byte-budget manifest record living in the same namespace — see
  *  `ChunkTileMetaPayload`. Its `fingerprint` field is a constant because the

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RiverChannelSegment } from './chunkHeightmap'
+import { FORD_WATER_DEPTH, type FordProjection } from './riverFord'
 import { sampleLocalWater } from './waterSample'
 
 const WATER_LEVEL = 10
@@ -59,6 +60,44 @@ describe('sampleLocalWater (plan fauna-015)', () => {
     // Even if the (contrived) clamped height also reads as lake/ocean water,
     // being inside the river channel must resolve to the river's own numbers.
     const sample = sampleLocalWater(WATER_LEVEL, WATER_LEVEL - 100, WATER_LEVEL, segments, 0, 0)
+    expect(sample).toEqual({ present: true, waterSurfaceHeight: 19, floorHeight: 18, depth: 1 })
+  })
+})
+
+/** Plan world-terrain-023 §9 — a declared ford shapes the bed, so gameplay
+ *  water depth has to agree with the ground the player walks on while
+ *  canonical hydrology stays road-independent. */
+describe('sampleLocalWater at a declared ford', () => {
+  const segments = [riverSegment()]
+  /** Road crossing the stream at the origin, running north→south. */
+  const ford: FordProjection = { x: 0, z: 0, dirX: 0, dirZ: 1, halfLength: 6, halfWidth: 5 }
+
+  it('reports the shaped ford bed, not the natural channel bed', () => {
+    const sample = sampleLocalWater(
+      WATER_LEVEL + 20, WATER_LEVEL + 20, WATER_LEVEL, segments, 0, 0, [ford],
+    )
+    expect(sample.present).toBe(true)
+    if (!sample.present) return
+    expect(sample.waterSurfaceHeight).toBe(19)
+    expect(sample.floorHeight).toBeCloseTo(19 - FORD_WATER_DEPTH, 6)
+    expect(sample.depth).toBeCloseTo(FORD_WATER_DEPTH, 6)
+  })
+
+  it('leaves the canonical water surface untouched', () => {
+    const natural = sampleLocalWater(WATER_LEVEL + 20, WATER_LEVEL + 20, WATER_LEVEL, segments, 0, 0)
+    const forded = sampleLocalWater(
+      WATER_LEVEL + 20, WATER_LEVEL + 20, WATER_LEVEL, segments, 0, 0, [ford],
+    )
+    expect(natural.present && forded.present).toBe(true)
+    if (!natural.present || !forded.present) return
+    expect(forded.waterSurfaceHeight).toBe(natural.waterSurfaceHeight)
+    expect(forded.depth).toBeLessThan(natural.depth)
+  })
+
+  it('reports natural depth again just outside the crossing footprint', () => {
+    const sample = sampleLocalWater(
+      WATER_LEVEL + 20, WATER_LEVEL + 20, WATER_LEVEL, segments, 8, 0, [ford],
+    )
     expect(sample).toEqual({ present: true, waterSurfaceHeight: 19, floorHeight: 18, depth: 1 })
   })
 })

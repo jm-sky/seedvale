@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChunkTileParams } from './chunkHeightmap'
+import type { FordProjection } from './riverFord'
 import {
   apronGridWeights,
   apronOriginWorld,
@@ -537,7 +538,22 @@ describe('chunkHeightmap road x river ford', () => {
     tintStrength: 0.8,
   }
 
-  function tile(riverSegments: RiverChannelSegment[], roadSegments: RoadCorridorSegment[]) {
+  /** The canonical `ford` crossing a river-aware route would declare where
+   *  `roadSeg` meets `streamSeg` — south→north through the chunk centre. */
+  const fordProjection: FordProjection = {
+    x: 0,
+    z: 0,
+    dirX: 0,
+    dirZ: 1,
+    halfLength: 6,
+    halfWidth: 5,
+  }
+
+  function tile(
+    riverSegments: RiverChannelSegment[],
+    roadSegments: RoadCorridorSegment[],
+    fordProjections: FordProjection[] = [],
+  ) {
     const params = rawParams({ seed: 42 })
     return computeChunkTile({
       ...params,
@@ -551,6 +567,7 @@ describe('chunkHeightmap road x river ford', () => {
       clearings: [],
       regional: [],
       riverSegments,
+      fordProjections,
     })
   }
 
@@ -561,25 +578,35 @@ describe('chunkHeightmap road x river ford', () => {
     return grid[iz * origin.apronRes + ix]!
   }
 
-  it('raises the streambed under a road crossing into a shallow ford', () => {
-    const withRoad = tile([streamSeg], [roadSeg])
+  it('raises the streambed under a declared ford crossing', () => {
+    const forded = tile([streamSeg], [roadSeg], [fordProjection])
     const noRoad = tile([streamSeg], [])
-    expect(at(withRoad.floorHeights, 0, 0)).toBeGreaterThan(at(noRoad.floorHeights, 0, 0))
+    expect(at(forded.floorHeights, 0, 0)).toBeGreaterThan(at(noRoad.floorHeights, 0, 0))
   })
 
-  it('keeps the forded bed below the canonical water surface', () => {
-    const withRoad = tile([streamSeg], [roadSeg])
-    expect(at(withRoad.floorHeights, 0, 0)).toBeLessThan(waterH)
+  it('keeps the forded bed below the canonical (unchanged) water surface', () => {
+    const forded = tile([streamSeg], [roadSeg], [fordProjection])
+    expect(at(forded.floorHeights, 0, 0)).toBeLessThan(waterH)
   })
 
-  it('leaves the channel unforded away from the road corridor', () => {
-    const withRoad = tile([streamSeg], [roadSeg])
+  it('leaves an incidental road x river overlap a natural channel (plan world-terrain-023)', () => {
+    // Same road and same small stream, but no route declared a crossing here:
+    // terrain must not invent one on its own any more.
+    const overlap = tile([streamSeg], [roadSeg])
     const noRoad = tile([streamSeg], [])
-    // 20 m along the stream — well outside the road's 5 m half-width.
-    expect(at(withRoad.floorHeights, 20, 0)).toBeCloseTo(at(noRoad.floorHeights, 20, 0), 5)
+    expect(at(overlap.floorHeights, 0, 0)).toBeCloseTo(at(noRoad.floorHeights, 0, 0), 5)
   })
 
-  it('does not ford a big river, which needs a bridge rather than a raised bar', () => {
+  it('leaves the channel unforded outside the declared ford footprint', () => {
+    const forded = tile([streamSeg], [roadSeg], [fordProjection])
+    const noRoad = tile([streamSeg], [])
+    // 20 m along the stream — well outside the crossing's own footprint.
+    expect(at(forded.floorHeights, 20, 0)).toBeCloseTo(at(noRoad.floorHeights, 20, 0), 5)
+  })
+
+  it('does not shallow a big river: a bridge crossing projects no ford at all', () => {
+    // `world-terrain-033` owns bridge projection; a `bridge` record never
+    // reaches `fordProjections`, so the channel stays full depth.
     const withRoad = tile([bigRiverSeg], [roadSeg])
     const noRoad = tile([bigRiverSeg], [])
     expect(at(withRoad.floorHeights, 0, 0)).toBeCloseTo(at(noRoad.floorHeights, 0, 0), 5)
@@ -593,7 +620,7 @@ describe('chunkHeightmap road x river ford', () => {
       }
       return max
     }
-    const forded = maxStepAlong(tile([streamSeg], [roadSeg]).floorHeights)
+    const forded = maxStepAlong(tile([streamSeg], [roadSeg], [fordProjection]).floorHeights)
     const unforded = maxStepAlong(tile([streamSeg], []).floorHeights)
     expect(forded).toBeLessThan(unforded)
     // And in absolute terms: no texel-to-texel step reads as a terrain edge.
@@ -602,22 +629,27 @@ describe('chunkHeightmap road x river ford', () => {
 
   it('stays seam-free across two chunks sharing the crossing', () => {
     const params = rawParams({ seed: 11 })
+    const seamZ = CHUNK_SIZE / 2
+    // Put the crossing *on* the shared boundary, so both chunks have to shape
+    // the same ford from the same projection data.
+    const seamStream: RiverChannelSegment = { ...streamSeg, az: seamZ, bz: seamZ }
+    const seamRoad: RoadCorridorSegment = { ...roadSeg, az: seamZ - 40, bz: seamZ + 40 }
     const shared = {
       ...params,
       chunkSize: CHUNK_SIZE,
       resolution: RESOLUTION,
       isHomeChunk: false,
       vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
-      roadSegments: [roadSeg],
+      roadSegments: [seamRoad],
       clearings: [],
       regional: [],
-      riverSegments: [streamSeg],
+      riverSegments: [seamStream],
+      fordProjections: [{ ...fordProjection, z: seamZ }],
     }
     const south = computeChunkTile({ ...shared, cx: 0, cz: 0 })
     const north = computeChunkTile({ ...shared, cx: 0, cz: 1 })
     const southOrigin = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
     const northOrigin = apronOriginWorld(0, 1, CHUNK_SIZE, RESOLUTION)
-    const seamZ = CHUNK_SIZE / 2
     const sz = Math.round((seamZ - southOrigin.z) / southOrigin.step)
     const nz = Math.round((seamZ - northOrigin.z) / northOrigin.step)
     for (let ix = 0; ix < southOrigin.apronRes; ix++) {

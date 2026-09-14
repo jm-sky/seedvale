@@ -24,8 +24,8 @@ When this file and the code disagree, the code wins — update this file.
 `chunkHeightmap.ts`'s `computeChunkTexel()` runs three ordered terrain-modifier stages on the raw procedural texel, each consuming the previous stage's output:
 
 1. `applyRegionalSmoothing()` — broad, weak settlement-driven leveling around a settlement footprint (the mechanism behind "why is the ground near a village suspiciously flat"), applied before anything else.
-2. `applyTerrainCorridors()` — sharp road/path/clearing blend, consuming corridor waypoints (`RoadCorridorSegment`) that `settlement/roadNetwork.ts` computes between settlements; emits `roadFalloff` for both the road texture and the river-ford blend below.
-3. `applyRiverChannel()` — river channel carving (see [Hydrology / rivers](#hydrology--rivers) below), only ever lowers terrain, consumes stage 2's `roadFalloff` for the ford blend.
+2. `applyTerrainCorridors()` — sharp road/path/clearing blend, consuming corridor waypoints (`RoadCorridorSegment`) that `settlement/roadNetwork.ts` computes between settlements.
+3. `applyRiverChannel()` — river channel carving (see [Hydrology / rivers](#hydrology--rivers) below), only ever lowers terrain, and raises the bed into a shallow ford **only** inside an explicitly declared crossing footprint (`ChunkTileParams.fordProjections`, plan world-terrain-023). An incidental road × river overlap no longer shallows a channel.
 
 ## Mountains
 
@@ -78,9 +78,9 @@ When this file and the code disagree, the code wins — update this file.
 
 The hydrology simulation, river-tile geometry, and rendering are canonical in [water.md](./water.md) — this domain owns only the terrain-side integration surface:
 
-- River channel carving is stage 3 of [Terrain shaping stages](#terrain-shaping-stages) above (`applyRiverChannel`), consuming stage 2's road `roadFalloff` for the ford blend (`terrain/riverFord.ts`).
+- River channel carving is stage 3 of [Terrain shaping stages](#terrain-shaping-stages) above (`applyRiverChannel`), consuming the declared ford projections `settlement/roadNetwork.ts` supplies (`terrain/riverFord.ts` owns the shaping maths only).
 - `terrain/riverQuery.ts` exposes an analytical, streaming-independent river-geometry lookup that `settlement/findSettlementSite.ts`/`villagePlanner.ts` consume to hard-reject a settlement site/plot overlapping a live river channel.
-- `settlement/roadNetwork.ts`'s corridor waypoints determine where a road crosses a river; the ford itself is emergent terrain deformation, never a separate ford mesh/segment.
+- `settlement/roadNetwork.ts` routes river-aware: its A* prices every candidate **edge** against canonical river water through the one evaluator (`settlement/roadRiverCrossing.ts`), and the resolved `RoadRoute.crossings` are the canonical `ford`/`bridge` records. No terrain, renderer or runtime stage may decide a crossing exists or reclassify one; terrain only projects a declared ford, and `world-terrain-033` will project a declared bridge. Details in [water.md](./water.md).
 - `fauna/createFauna.ts` consumes `ChunkManager.riverShoreDistance` to gate wild spawn and habitat-spawner placement away from river channels.
 
 ## World locations

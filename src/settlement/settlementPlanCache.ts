@@ -47,6 +47,19 @@ export function setSettlementRiverQuery(query: RiverQuery | null): void {
   activeRiverQuery = query
 }
 
+/** The world's canonical river lookup, for the other world-scoped worldgen
+ *  consumers that must see the *same* hydrology as settlement placement —
+ *  currently `roadNetwork.ts`'s river-aware routing (plan world-terrain-023
+ *  §4). Reading the one registration rather than threading a query through
+ *  each `RoadNetworkContext` is what makes caller order (`ChunkManager`'s road
+ *  context vs. `SettlementsManager`'s) worldgen-insignificant: both contexts
+ *  share one route cache, so both must resolve routes against identical
+ *  rivers. `null` before registration — routing then behaves river-agnostically,
+ *  exactly as it did before this plan. */
+export function worldRiverQuery(): RiverQuery | null {
+  return activeRiverQuery
+}
+
 const defCache = new Map<string, SettlementDef | null>()
 
 /** Derived near/far size policy for the current world. Cleared with defs. */

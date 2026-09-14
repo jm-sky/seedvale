@@ -367,6 +367,21 @@ Once the implementation truly resolves the corresponding `LOOSE-ENDS.md` entries
 
 Do not duplicate detailed crossing policy across multiple state documents.
 
+## Implementation outcome (2026-09-14)
+
+Implemented as planned. Decisions worth recording for `world-terrain-033`:
+
+- **Crossing authority** is `src/settlement/roadRiverCrossing.ts`: `riverHitsOnEdge()` (edge × water-footprint, with a closest-approach fallback for tangent/near-bank passes), `evaluateRoadRiverCrossing(facts, routeKind)` and `crossingsForPolyline()`. All ford/bridge thresholds and costs live there.
+- **Records are derived from the final polyline**, not from the A* chain. A* prices/rejects edges; `findRoute` then inserts exact crossing anchors, locks them plus their approach points against meander, and re-derives `RoadRiverCrossing[]` from the finished geometry. If meander changed the crossing topology, the route deterministically falls back to the anchor-exact (un-meandered) geometry. That is what makes the bijection invariant hold by construction rather than by tolerance.
+- **Traversal merging**: two hits belong to one physical crossing exactly when the road between them never leaves the water (`insideWater` midpoint test). This covers both the anchor split and a river wider than the 9 m grid step. The record is anchored at the traversal's midpoint and classified against the widest water it meets.
+- **River source** is the existing world-scoped registration: `settlementPlanCache.ts` gained `worldRiverQuery()` next to `setSettlementRiverQuery()`. No `RoadNetworkContext` field was added, so `ChunkManager`'s and `SettlementsManager`'s contexts cannot disagree. Hydrology is queried **once per route** for the whole search envelope.
+- **Route orientation is canonicalized** (sorted settlement id first) inside the new `routeBetween()` helper, which also replaced the three duplicated `findRoute` call sites. Crossing ids are `${routeKey}#${ordinal}`.
+- **`RoadRoute`** (`points` / `segments` / `kind` / `crossings`) is what `routeCache` now stores. `world-terrain-033` should read `kind === 'bridge'` records from here; `span`, `crossSin`, `angle`, `waterWidth`, `channelWidth`, `waterH` and `naturalBedH` are already on the record.
+- **Ford projection**: `roadNetwork.fordsNear()` → `ChunkTileParams.fordProjections` (`FordProjection` = oriented ellipse; `riverFord.ts` keeps only `fordInfluenceAt` / `fordBedHeight` / `FORD_WATER_DEPTH`). `ChunkRecord.fordProjections` carries the same data into `sampleLocalWater()`, so no hot-path route resolution happens. Bridges are deliberately not projected anywhere yet.
+- **Worldgen caches**: `CHUNK_TILE_CACHE_VERSION` and `ABANDONED_CEMETERY_VERSION` bumped to 2 (road geometry and ford shaping change for an unchanged seed). No `SaveData` change, no migration.
+- `yawToward` moved to `math/segment.ts` (re-exported from `roadNetwork.ts`) so the crossing module could use the same convention without a circular import; `directionFromYaw` is its inverse, used to build ford projections.
+- A road crossing a river wider than one A* step is priced on each crossing edge, so a wide bridge is somewhat over-priced. Deterministic, and it only strengthens the intended "prefer a reasonable ford" bias.
+
 ## Guardrails
 
 - No second river representation.
