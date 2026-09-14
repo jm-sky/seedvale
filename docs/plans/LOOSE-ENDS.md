@@ -16,6 +16,13 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 - [ ] 2026-09-12 — settlements-007 wystawia read-only `SettlementsManager.getStructureSnapshot`/`listRepairProblems`, ale żaden quest jeszcze tego nie konsumuje. Po `quests-progression-030`/`031` dodać `structure:<structureId>:repair` opportunity tym samym mechanizmem co wolf-den pressure (016) — nie kopiować repair state do quest layer. Recon: `docs/reviews/2026-09-13--quest-system-architecture-recon.md`.
 - [ ] 2026-09-13 — Authored `wilki-pod-osada` i generated `world:wolf-den-pressure:*` opowiadają tę samą historię destroy-den; authored `zagubiona-owca` (`find_animal`) nakłada się na `world:lost-livestock:*`. Nie scalać w infrastrukturze — osobny content cleanup po 030/031.
 
+## Quest system architecture
+
+- [ ] 2026-09-14 — Quest giver / target lifecycle: brak spójnej polityki dla śmierci, zniknięcia albo zmiany roli NPC będącego giverem, beneficiary lub wymaganym targetem aktywnego questa. Do ustalenia: invalidation, przejęcie przez innego NPC, alternatywne hand-in i konsekwencje dla outcome. Recon: `docs/reviews/2026-09-13--quest-system-architecture-recon.md`.
+- [ ] 2026-09-14 — Deadlines / time pressure: brak ogólnego mechanizmu typu „do jutra”, „przed zmrokiem”, „zanim ktoś umrze”. Powinien opierać się na authoritative world time i lifecycle questa, bez quest-local zegara równoległego do symulacji. Recon: `docs/reviews/2026-09-13--quest-system-architecture-recon.md`.
+- [ ] 2026-09-14 — Truly dynamic runtime opportunities: `quests-progression-031` rozwiązuje live gating dla stabilnych source identities znanych przy boot/rebuild, ale nie dla nowych source identities powstających całkowicie w runtime. Potrzebny osobny mechanizm dopiero przy konkretnym consumerze, bez ogólnego `QuestFactory` na zapas. Recon: `docs/reviews/2026-09-13--quest-system-architecture-recon.md`.
+- [ ] 2026-09-14 — NPC jako resolver / współuczestnik: quest runtime słabo modeluje sytuację, gdy NPC sam rozwiązuje problem albo wykonuje część tego samego zadania razem z graczem. Docelowo reuse world facts / source state i quest outcomes zamiast player-only duplikacji akcji. Recon: `docs/reviews/2026-09-13--quest-system-architecture-recon.md`.
+
 ## Fauna
 
 - [ ] 2026-09-14 — `settlements-013` świadomie używa nowego paddock haystack jako **nieskończonego** źródła pożywienia dla vendor horses. Docelowo zastąpić to finite authoritative hay stock + realnym consumption/replenishment, bez łączenia z istniejącym sleep haystack i bez tworzenia osobnej horse-food economy. Paddock haystack ma pozostać food-only, bez capability noclegu.
