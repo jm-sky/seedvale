@@ -58,8 +58,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createNpcInspector.ts`
 
-- `createNpcInspector` — function — line 246
-- `NpcInspector` — type — line 15
+- `createNpcInspector` — function — line 304
+- `NpcInspector` — type — line 20
 
 ## `ui/createPauseMenu.ts`
 

@@ -34,6 +34,7 @@ Generated from TypeScript imports.
 - `ai/npcVigor.test.ts`
 - `ai/weatherPressure.test.ts`
 - `ai/weatherPressure.ts`
+- `debug/npcDecisionReport.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `fauna/AnimalLife.ts`
@@ -176,6 +177,7 @@ Generated from TypeScript imports.
 - `assets/assetIndex.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `debug/npcDecisionReport.ts`
 - `debug/npcInspector.test.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
@@ -954,6 +956,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcWorkContract.test.ts`
+- `debug/npcTrace.ts`
 
 ## `ai/reactionChance.test.ts`
 

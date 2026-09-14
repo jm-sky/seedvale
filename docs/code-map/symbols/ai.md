@@ -173,35 +173,38 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 721
-- `CurrentActivity` — type — line 531
-- `CurrentActivityKind` — type — line 524
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 837
-- `NPC_HEIGHT` — const — line 434
-- `NPC_MODEL_URLS` — const — line 498
-- `NPC_SHADOW_DISTANCE` — const — line 448
-- `NpcAgent` — class — line 1065
+- `classifyPendingActivity` — function — line 722
+- `CurrentActivity` — type — line 532
+- `CurrentActivityKind` — type — line 525
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 838
+- `NPC_HEIGHT` — const — line 435
+- `NPC_MODEL_URLS` — const — line 499
+- `NPC_SHADOW_DISTANCE` — const — line 449
+- `NpcAgent` — class — line 1066
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 970
-- `NpcInspectionSnapshot` — type — line 546
-- `NpcWhy` — type — line 696
-- `projectNpcWhy` — function — line 762
-- `promoteChainKind` — function — line 713
+- `NpcAgentDeps` — type — line 971
+- `NpcInspectionSnapshot` — type — line 547
+- `NpcWhy` — type — line 697
+- `projectNpcWhy` — function — line 763
+- `promoteChainKind` — function — line 714
 
 ## `ai/npcAnimalThreat.ts`
 
+- `AnimalThreatArbitration` — type — line 115
 - `AnimalThreatDecisionInput` — type — line 76
 - `AnimalThreatResponse` — type — line 74
-- `decideAnimalThreatResponse` — function — line 117
+- `arbitrateAnimalThreat` — function — line 125
+- `decideAnimalThreatResponse` — function — line 150
 - `IMMEDIATE_ANIMAL_THREAT_RADIUS` — const — line 48
 - `ImmediateAnimalThreat` — type — line 35
 - `scoreAnimalThreatIntents` — function — line 97
 - `senseImmediateAnimalThreat` — function — line 54
+- `serializableDefendScore` — function — line 141
 - `ThreateningAnimalCandidate` — type — line 16
 
 ## `ai/npcAssistance.ts`
@@ -454,10 +457,15 @@ Generated from exported TypeScript symbols.
 
 - `DEFAULT_ESCORT_EVALUATION_CONTEXT` — const — line 131
 - `EscortEvaluationContext` — type — line 117
-- `ScoredWorkContract` — type — line 267
-- `scoreWorkContractOpportunity` — function — line 257
-- `selectBestWorkContract` — function — line 274
+- `EscortWorkContractScoreBreakdown` — type — line 185
+- `MeasurableWorkContractScoreBreakdown` — type — line 174
+- `ScoredWorkContract` — type — line 336
+- `scoreWorkContractOpportunity` — function — line 318
+- `scoreWorkContractOpportunityDetailed` — function — line 326
+- `selectBestWorkContract` — function — line 347
 - `WorkContractEvaluationInput` — type — line 139
+- `WorkContractProvisionPenalty` — type — line 172
+- `WorkContractScoreBreakdown` — type — line 200
 
 ## `ai/reactionChance.ts`
 

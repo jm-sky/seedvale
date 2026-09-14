@@ -248,6 +248,7 @@ Generated from TypeScript imports.
 - `debug/domainHistory.test.ts`
 - `debug/householdHistory.ts`
 - `debug/npcDebugApi.ts`
+- `debug/npcDecisionReport.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `debug/settlementHistory.ts`
@@ -369,6 +370,7 @@ Generated from TypeScript imports.
 - `debug/householdHistory.ts`
 - `debug/locationQueries.ts`
 - `debug/locationSearch.ts`
+- `debug/npcDecisionReport.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `debug/playerGroundTrace.ts`
@@ -403,6 +405,29 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `debug/npcDebugApi.test.ts`
 
+## `debug/npcDecisionReport.test.ts`
+
+**Imports**
+
+- `debug/npcDecisionReport.ts`
+- `debug/npcTrace.ts`
+
+## `debug/npcDecisionReport.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/NpcAgent.ts`
+- `debug/domainHistory.ts`
+- `debug/npcTrace.ts`
+
+**Imported by**
+
+- `debug/npcDebugApi.ts`
+- `debug/npcDecisionReport.test.ts`
+- `debug/npcInspector.ts`
+- `ui/createNpcInspector.ts`
+
 ## `debug/npcInspectTrigger.ts`
 
 **Imports**
@@ -431,6 +456,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `debug/domainHistory.ts`
 - `debug/householdHistory.ts`
+- `debug/npcDecisionReport.ts`
 - `debug/npcTrace.ts`
 - `debug/settlementHistory.ts`
 - `debug/villageInspector.ts`
@@ -459,12 +485,15 @@ Generated from TypeScript imports.
 - `ai/decisionModifiers.ts`
 - `ai/npcPlan.ts`
 - `ai/npcStrategies.ts`
+- `ai/npcWorkContract.ts`
 - `debug/domainHistory.ts`
 
 **Imported by**
 
 - `ai/NpcAgent.ts`
 - `debug/npcDebugApi.ts`
+- `debug/npcDecisionReport.test.ts`
+- `debug/npcDecisionReport.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.test.ts`
 - `ui/createNpcInspector.ts`

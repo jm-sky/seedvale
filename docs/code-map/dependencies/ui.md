@@ -126,6 +126,7 @@ Generated from TypeScript imports.
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
 - `app/worldBundle.ts`
+- `debug/npcDecisionReport.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 

@@ -157,47 +157,68 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `ConditionsDebugApi` — type — line 212
-- `HiddenTreasureDebugApi` — type — line 184
-- `HouseholdDebugHandle` — type — line 97
-- `InjuryDebugApi` — type — line 220
-- `installNpcDebugApi` — function — line 506
-- `LocationsDebugApi` — type — line 129
-- `NpcDebugHandle` — type — line 79
-- `PlayerDebugApi` — type — line 279
-- `QuestsDebugApi` — type — line 269
-- `QuestSpawnPointDebugSnapshot` — type — line 242
-- `QuestTargetDebugSnapshot` — type — line 257
-- `SeedvaleDebugApi` — type — line 364
-- `SettlementHistoryDebugHandle` — type — line 105
-- `SkillsDebugApi` — type — line 202
-- `StructureDebugApi` — type — line 232
-- `TeleportToDebugApi` — type — line 141
-- `TransportOrderDebugSnapshot` — type — line 297
-- `VillageDebugHandle` — type — line 112
-- `WorldLocationDebugEntry` — type — line 165
-- `WorldLocationsDebugApi` — type — line 166
+- `ConditionsDebugApi` — type — line 221
+- `HiddenTreasureDebugApi` — type — line 193
+- `HouseholdDebugHandle` — type — line 104
+- `InjuryDebugApi` — type — line 229
+- `installNpcDebugApi` — function — line 518
+- `LocationsDebugApi` — type — line 138
+- `NpcDebugHandle` — type — line 84
+- `PlayerDebugApi` — type — line 288
+- `QuestsDebugApi` — type — line 278
+- `QuestSpawnPointDebugSnapshot` — type — line 251
+- `QuestTargetDebugSnapshot` — type — line 266
+- `SeedvaleDebugApi` — type — line 373
+- `SettlementHistoryDebugHandle` — type — line 112
+- `SkillsDebugApi` — type — line 211
+- `StructureDebugApi` — type — line 241
+- `TeleportToDebugApi` — type — line 150
+- `TransportOrderDebugSnapshot` — type — line 306
+- `VillageDebugHandle` — type — line 121
+- `WorldLocationDebugEntry` — type — line 174
+- `WorldLocationsDebugApi` — type — line 175
+
+## `debug/npcDecisionReport.ts`
+
+- `buildNpcDecisionDiagnostics` — function — line 232
+- `NPC_TRACE_LIFETIME_NOTE` — const — line 14
+  - domain: tools
+- `NpcAnimalThreatProjection` — type — line 40
+- `NpcAnimalThreatResponseProjection` — type — line 28
+- `NpcCombatSummaryProjection` — type — line 58
+- `NpcContractEvaluationProjection` — type — line 52
+- `NpcDecisionCycleProjection` — type — line 20
+- `NpcDecisionDiagnostics` — type — line 65
+- `projectNpcAnimalThreat` — function — line 153
+- `projectNpcCombatSummary` — function — line 197
+- `projectNpcContractEvaluations` — function — line 209
+- `projectNpcDecisionCycles` — function — line 100
+- `SettlementDecisionReport` — type — line 74
 
 ## `debug/npcInspector.ts`
 
-- `DomainHistoryEnvelope` — type — line 149
-- `findNpcById` — function — line 67
-- `freezeNpc` — function — line 274
-- `FrenzyWolfDebugResult` — type — line 51
-- `householdHistory` — function — line 131
-- `isNpcRegistered` — function — line 78
-- `matchesNpcFilter` — function — line 88
-- `npcHistory` — function — line 118
-- `NpcQueryFilter` — type — line 38
-- `NpcQueryResult` — type — line 46
-- `NpcRegistryEntry` — type — line 36
-- `npcWhy` — function — line 114
-- `queryNpcs` — function — line 104
-- `reevaluateNpc` — function — line 290
-- `setFrenzyWolf` — function — line 307
-- `settlementHistory` — function — line 213
-- `sortDomainHistory` — function — line 186
-- `unfreezeNpc` — function — line 282
+- `DomainHistoryEnvelope` — type — line 191
+- `findNpcById` — function — line 73
+- `freezeNpc` — function — line 316
+- `FrenzyWolfDebugResult` — type — line 57
+- `FrenzyWolvesDebugResult` — type — line 377
+- `householdHistory` — function — line 173
+- `isNpcRegistered` — function — line 84
+- `matchesNpcFilter` — function — line 94
+- `npcDecisionReport` — function — line 131
+- `npcHistory` — function — line 124
+- `NpcQueryFilter` — type — line 44
+- `NpcQueryResult` — type — line 52
+- `NpcRegistryEntry` — type — line 42
+- `npcWhy` — function — line 120
+- `queryNpcs` — function — line 110
+- `reevaluateNpc` — function — line 332
+- `setFrenzyWolf` — function — line 349
+- `setFrenzyWolves` — function — line 386
+- `settlementDecisionReport` — function — line 143
+- `settlementHistory` — function — line 255
+- `sortDomainHistory` — function — line 228
+- `unfreezeNpc` — function — line 324
 
 ## `debug/npcInspectTrigger.ts`
 
@@ -206,11 +227,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 137
-- `NPC_TRACE_CAPACITY` — const — line 135
-- `NpcTraceBuffer` — type — line 128
-- `NpcTraceEvent` — type — line 14
-- `NpcTraceEventType` — type — line 120
+- `createNpcTraceBuffer` — function — line 154
+- `NPC_TRACE_CAPACITY` — const — line 152
+- `NpcTraceBuffer` — type — line 145
+- `NpcTraceEvent` — type — line 15
+- `NpcTraceEventType` — type — line 137
 
 ## `debug/playerGroundTrace.ts`
 
