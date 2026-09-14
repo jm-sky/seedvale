@@ -8,6 +8,7 @@ import { caveSpatialContext, WORLD_SPATIAL_CONTEXT_SURFACE } from '../world/spat
 import {
   DROPPED_ITEM_GROUP_RADIUS,
   filterInteractablesSameSpatialContext,
+  grindstoneInteractPosition,
   groupDroppedItemCandidates,
   itemPromptLabel,
   resolveHaySpot,
@@ -195,5 +196,19 @@ describe('itemPromptLabel (plan items-player-025)', () => {
   it('labels spoiled food and omits [R]', () => {
     expect(itemPromptLabel('apple', 1, 'spoiled')).toBe('Podnieś: jabłko (zepsute)')
     expect(itemPromptLabel('apple', 1, 'spoiled')).not.toMatch(/\[R\]/)
+  })
+})
+
+describe('grindstoneInteractPosition', () => {
+  it('uses the workbench, not the NPC access anchor', () => {
+    const workplace = {
+      position: { x: 10, z: 4 },
+      workbenchPosition: { x: 11.2, z: 4.4 },
+    }
+    expect(grindstoneInteractPosition(workplace)).toEqual({ x: 11.2, z: 4.4 })
+    expect(grindstoneInteractPosition(workplace)).not.toEqual({
+      x: workplace.position.x,
+      z: workplace.position.z,
+    })
   })
 })

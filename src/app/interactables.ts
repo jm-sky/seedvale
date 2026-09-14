@@ -385,6 +385,15 @@ function withinRange(x: number, z: number, playerPos: { x: number, z: number }, 
   return dx * dx + dz * dz <= range * range
 }
 
+/** Player `[E]` position for a blacksmith grind workbench — the geometry
+ *  workbench, never the NPC access anchor stored on `workplace.position`. */
+export function grindstoneInteractPosition(workplace: {
+  position: { x: number, z: number }
+  workbenchPosition: { x: number, z: number }
+}): { x: number, z: number } {
+  return { x: workplace.workbenchPosition.x, z: workplace.workbenchPosition.z }
+}
+
 /** Picks the settlement's actual physical hay-bale placement nearest the
  *  player, among those within `range` (plan 168 hay-range bugfix) — pulled
  *  out of `buildInteractables` as a small pure function so the "use the real
@@ -1037,6 +1046,18 @@ export function buildInteractables(
         position: { x: settlement.landmarks.noticeBoard.x, z: settlement.landmarks.noticeBoard.z },
         promptLabel: '[E] Tablica ogłoszeń',
         settlementId: settlement.id,
+      })
+    }
+
+    for (const workplace of settlement.landmarks.blacksmithWorkplaces) {
+      const position = grindstoneInteractPosition(workplace)
+      if (!withinRange(position.x, position.z, playerPos, GAZE_RANGE)) continue
+      list.push({
+        kind: 'grindstone',
+        position,
+        promptLabel: '[E] Naostrz broń',
+        settlementId: settlement.id,
+        familyIndex: workplace.familyIndex,
       })
     }
   }

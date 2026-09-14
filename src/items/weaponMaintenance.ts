@@ -15,6 +15,33 @@ import {
   type WeaponMaintenanceKind,
 } from './itemInstances'
 
+export type SharpenSource = 'whetstone' | 'grindstone'
+
+export type OwnedWeaponMaintenance = {
+  instanceId: string
+  kind: WeaponMaintenanceKind
+  sharpness: number
+  sharpnessPercent: number
+}
+
+/** Live weapon-maintenance instances currently in `inventory` — one row per
+ *  `instanceId`, including duplicates of the same kind. */
+export function listOwnedWeaponMaintenance(inventory: Inventory): OwnedWeaponMaintenance[] {
+  const out: OwnedWeaponMaintenance[] = []
+  for (const kind of WEAPON_MAINTENANCE_KIND_LIST) {
+    for (const instance of inventory.getInstances(kind)) {
+      if (!isWeaponItemInstance(instance)) continue
+      out.push({
+        instanceId: instance.id,
+        kind: instance.kind,
+        sharpness: instance.sharpness,
+        sharpnessPercent: weaponSharpnessPercent(instance),
+      })
+    }
+  }
+  return out
+}
+
 /** Sharpness/durability loss per resolved hit, and how much a whetstone
  *  restores — flat across the maintenance set for v1 (plan 161 §"Maintenance
  *  profile" allows quality/material to vary this later via the same
@@ -93,11 +120,11 @@ export function applySharpnessWear(
 
 export type SharpenResult = 'ok' | 'invalid' | 'already_max' | 'no_whetstone'
 
-/** Sharpening domain operation (plan 161 §"Whetstone") — validates, mutates
- *  the exact `Inventory` instance, and consumes one `whetstone` atomically.
- *  A failed attempt (invalid instance / already at max) never touches the
- *  whetstone count. */
-export function sharpenWeapon(inventory: Inventory, instanceId: string, source: 'whetstone'): SharpenResult {
+/** Sharpening domain operation (plan 161 §"Whetstone") — validates and mutates
+ *  the exact `Inventory` instance. `whetstone` consumes one osełka atomically
+ *  after a successful update; `grindstone` uses the same profile amount and
+ *  never requires or consumes a whetstone. Failed attempts never mutate. */
+export function sharpenWeapon(inventory: Inventory, instanceId: string, source: SharpenSource): SharpenResult {
   const instance = inventory.getInstance(instanceId)
   if (!instance || !isWeaponItemInstance(instance)) return 'invalid'
   const profile = getWeaponMaintenanceProfile(instance.kind)
@@ -109,7 +136,7 @@ export function sharpenWeapon(inventory: Inventory, instanceId: string, source: 
     return { ...weapon, sharpness: clamp01(weapon.sharpness + profile.sharpeningAmount) }
   })
   if (!applied) return 'invalid'
-  inventory.remove('whetstone', 1)
+  if (source === 'whetstone') inventory.remove('whetstone', 1)
   return 'ok'
 }
 

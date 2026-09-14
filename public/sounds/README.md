@@ -179,6 +179,8 @@ falls back to grass. See `docs/assets/SOUNDS.md` S01.
 | action-casting-fishing-rod.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | `playActionFishingCast` — rod cast start, `startFishing` |
 | action-drink-01.ogg | drink.ogg | — (TBD — staged from `public/new/`, source/license not recorded in repo) | S19 drink/gulp — `playActionDrink` (inventory thirst + lake/river drink); well draw still `action-well-01` |
 | action-cook-01.ogg | cooking-on-stove.ogg | — (TBD — staged from `public/new/`, source/license not recorded in repo) | S20 cook — `playActionCook` at lit campfire cook channel start |
+| grindstone_workbench.ogg | — | — (TBD — provided directly in `public/sounds/`) | S23 grind workbench sharpen — `playActionGrindstoneSharpen` |
+| gridstone_sharpen.ogg | — | — (TBD — provided directly in `public/sounds/`; filename typo `gridstone`) | S23 inventory whetstone sharpen — `playActionWhetstoneSharpen` |
 
 ## License notes (2026-08-12 batch)
 

@@ -2829,6 +2829,7 @@ export async function createApp(
     repairSettlementStorage: storageInfestation.repairSettlementStorage,
     destroyRatNest: storageInfestation.destroyRatNest,
     openNoticeBoard: contracts.openNoticeBoard,
+    openGrindstoneSharpen: inventoryWiring.openGrindstoneSharpen,
     openWorldInspection: inspection.openFromTarget,
     syncWorldInspection: inspection.syncOpenView,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,

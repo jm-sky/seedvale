@@ -223,6 +223,15 @@ export type InteractablePayload =
    *  (`world/workContract.ts`'s `noticeBoardId`) and its `postedAt()` query
    *  at interact time — never a cached list of postings. */
   | { kind: 'noticeBoard', position: { x: number, z: number }, promptLabel: string, settlementId: string }
+  /** Settlement grind workbench (blacksmith yard) — `[E]` opens the existing
+   *  weapon-maintenance sharpen picker over player inventory instances. */
+  | {
+    kind: 'grindstone'
+    position: { x: number, z: number }
+    promptLabel: string
+    settlementId: string
+    familyIndex: number
+  }
   /** Movable draft cart (plan fauna-007). */
   | { kind: 'cart', position: { x: number, z: number }, promptLabel: string, id: string }
 

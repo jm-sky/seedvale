@@ -286,6 +286,8 @@ export function interactableStableKey(target: Interactable): string {
       return `dryingRack:${target.id}`
     case 'gardenPlot':
       return `gardenPlot:${target.id}`
+    case 'grindstone':
+      return `grindstone:${target.settlementId}:${target.familyIndex}`
     case 'hay':
       return `hay:${target.settlementId}`
     case 'hive':

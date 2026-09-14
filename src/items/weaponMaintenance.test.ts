@@ -6,6 +6,7 @@ import {
   createWeaponInstance,
   getSharpnessDamageModifier,
   getWeaponMaintenanceProfile,
+  listOwnedWeaponMaintenance,
   migrateWeaponCountsToInstances,
   sharpenWeapon,
   weaponDurabilityPercent,
@@ -137,6 +138,52 @@ describe('sharpenWeapon', () => {
   it('rejects an unknown instance id', () => {
     const inventory = new Inventory({ whetstone: 1 })
     expect(sharpenWeapon(inventory, 'missing', 'whetstone')).toBe('invalid')
+  })
+
+  it('grindstone increases sharpness without a whetstone', () => {
+    const instance = { ...createWeaponInstance('knife'), sharpness: 0.4 }
+    const inventory = new Inventory({}, undefined, [instance])
+    expect(sharpenWeapon(inventory, instance.id, 'grindstone')).toBe('ok')
+    expect(inventory.count('whetstone')).toBe(0)
+    const updated = inventory.getInstance(instance.id)
+    expect(updated && isWeaponItemInstance(updated) ? updated.sharpness : null).toBeGreaterThan(0.4)
+  })
+
+  it('grindstone does not consume an existing whetstone', () => {
+    const instance = { ...createWeaponInstance('knife'), sharpness: 0.4 }
+    const inventory = new Inventory({ whetstone: 2 }, undefined, [instance])
+    expect(sharpenWeapon(inventory, instance.id, 'grindstone')).toBe('ok')
+    expect(inventory.count('whetstone')).toBe(2)
+  })
+
+  it('grindstone refuses an already-max instance without mutating', () => {
+    const instance = createWeaponInstance('knife')
+    const inventory = new Inventory({}, undefined, [instance])
+    expect(sharpenWeapon(inventory, instance.id, 'grindstone')).toBe('already_max')
+    const updated = inventory.getInstance(instance.id)
+    expect(updated && isWeaponItemInstance(updated) ? updated.sharpness : null).toBe(1)
+  })
+
+  it('sharpens only the chosen instance among two of the same kind', () => {
+    const dull = { ...createWeaponInstance('knife'), sharpness: 0.3 }
+    const other = { ...createWeaponInstance('knife'), sharpness: 0.5 }
+    const inventory = new Inventory({}, undefined, [dull, other])
+    expect(sharpenWeapon(inventory, dull.id, 'grindstone')).toBe('ok')
+    const dullAfter = inventory.getInstance(dull.id)
+    const otherAfter = inventory.getInstance(other.id)
+    expect(dullAfter && isWeaponItemInstance(dullAfter) ? dullAfter.sharpness : null).toBeGreaterThan(0.3)
+    expect(otherAfter && isWeaponItemInstance(otherAfter) ? otherAfter.sharpness : null).toBeCloseTo(0.5)
+  })
+})
+
+describe('listOwnedWeaponMaintenance', () => {
+  it('lists each instance of the same kind separately', () => {
+    const a = { ...createWeaponInstance('knife'), sharpness: 0.2 }
+    const b = { ...createWeaponInstance('knife'), sharpness: 1 }
+    const inventory = new Inventory({}, undefined, [a, b])
+    const rows = listOwnedWeaponMaintenance(inventory)
+    expect(rows.map((row) => row.instanceId).sort()).toEqual([a.id, b.id].sort())
+    expect(rows.every((row) => row.kind === 'knife')).toBe(true)
   })
 })
 

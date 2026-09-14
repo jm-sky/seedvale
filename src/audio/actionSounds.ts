@@ -24,6 +24,8 @@ export const ACTION_DRINK_SOUND_URL = '/sounds/action-drink-01.ogg'
 export const ACTION_COOK_SOUND_URL = '/sounds/action-cook-01.ogg'
 export const ACTION_BOW_DRAW_SOUND_URL = '/sounds/bow-draw.ogg'
 export const ACTION_BOW_RELEASE_SOUND_URL = '/sounds/bow-release.ogg'
+export const ACTION_WHETSTONE_SHARPEN_SOUND_URL = '/sounds/gridstone_sharpen.ogg'
+export const ACTION_GRINDSTONE_SHARPEN_SOUND_URL = '/sounds/grindstone_workbench.ogg'
 
 const ACTION_DIG_SFX_VOLUME = 0.45
 const ACTION_CHOP_SFX_VOLUME = 0.5
@@ -39,6 +41,8 @@ const ACTION_DRINK_SFX_VOLUME = 0.35
 const ACTION_COOK_SFX_VOLUME = 0.4
 const ACTION_BOW_DRAW_SFX_VOLUME = 0.45
 const ACTION_BOW_RELEASE_SFX_VOLUME = 0.55
+const ACTION_WHETSTONE_SHARPEN_SFX_VOLUME = 0.45
+const ACTION_GRINDSTONE_SHARPEN_SFX_VOLUME = 0.5
 
 type PlayOnce = (url: string, volume?: number) => void
 
@@ -105,6 +109,16 @@ export function playActionDrink(playAt: PlayAt, position: WorldSoundPosition): v
 /** Campfire cooking channel start (plan 106 S20). */
 export function playActionCook(playAt: PlayAt, position: WorldSoundPosition): void {
   playAt(ACTION_COOK_SOUND_URL, position, ACTION_COOK_SFX_VOLUME)
+}
+
+/** Inventory "Naostrz" with a whetstone (S23). */
+export function playActionWhetstoneSharpen(playOnce: PlayOnce): void {
+  playOnce(ACTION_WHETSTONE_SHARPEN_SOUND_URL, ACTION_WHETSTONE_SHARPEN_SFX_VOLUME)
+}
+
+/** Blacksmith grind-workbench sharpen (no whetstone). */
+export function playActionGrindstoneSharpen(playOnce: PlayOnce): void {
+  playOnce(ACTION_GRINDSTONE_SHARPEN_SOUND_URL, ACTION_GRINDSTONE_SHARPEN_SFX_VOLUME)
 }
 
 /** Bowstring draw — play when a ranged draw actually starts (plan 162 S22).

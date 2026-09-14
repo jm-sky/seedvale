@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-09-12
+**Last updated:** 2026-09-14
 
 ## How to use
 
@@ -75,7 +75,7 @@ If the feature needs no new sound, do nothing to this file.
 | S20 | Sizzle / cook | `[R]` cooking raw_meat at a lit campfire | `wired` | plan 106 — `action-cook-01.ogg` via `playActionCook` at campfire cook channel start |
 | S21 | Snow ambience (wind flurry) | Weather = `snow` (plan 040 Etap 1) | `needed` | No asset yet — snow stays visual-only (`world/weatherParticles.ts`) until acquired |
 | S22 | Bow draw / release (twang) | Ranged attack draw start / arrow release (plan 162) | `wired` | `public/sounds/bow-draw.ogg`/`bow-release.ogg` via `playActionBowDraw`/`playActionBowRelease` (`src/audio/actionSounds.ts`) — draw plays on a successful `requestDraw()`, release plays on the frame the shot actually fires (not on an early-release cancel). Arrow hit/kill still reuses `playActionMeleeHit`/`playActionMeleeKill` (S-none — no dedicated arrow-impact clip) |
-| S23 | Whetstone sharpening (scrape) | Inventory "Naostrz" action (plan 161) | `needed` | Currently silent |
+| S23 | Whetstone / grindstone sharpening | Inventory "Naostrz" and blacksmith grind workbench `[E]` | `wired` | `gridstone_sharpen.ogg` via `playActionWhetstoneSharpen`; `grindstone_workbench.ogg` via `playActionGrindstoneSharpen` (`src/audio/actionSounds.ts`) |
 | S24 | Bear growl (aggro) | Plays once a bear commits to chasing a human (`animalSounds.ts`'s `playAnimalAggroSound`, wired through `Fauna`'s `onAnimalAggro`) | `needed` | plan 188 (`sounds/bear-growl.ogg`), silent until the clip is wired in |
 | S25 | NPC friendly-talk murmur | Short, non-verbal chatter when a Social Place `conversation` actually begins (plan settlements-npcs-004 §3) | `needed` | Plumbing wired (`ai/npcVoiceLines.ts`'s `NPC_FRIENDLY_TALK_SOUND_URLS`/`pickNpcFriendlyTalkSound`, called from `NpcAgent.beginConversation()`), pools left empty — silent no-op until clips are added. Suggested naming once acquired: `/sounds/npc-talk-{gender}-{NN}.ogg` (male/female pools, no per-actor split) |
 | S26 | Melee attack swing (whoosh/grunt) + animal death vocal | Melee attack-start presentation for NPC/animal combat; a species-agnostic animal death sound (plan npc-009) | `needed` | No swing/whoosh asset exists — melee attack start is animation-only (ranged reuses `bow-draw`/`bow-release` via `playCombatBowDraw`/`playActionBowRelease`). No dedicated animal death/whimper clip exists either — `AnimalAgent.collapse()`'s death sound (`playAnimalCombatDeath`, `src/audio/actionSounds.ts`) deliberately reuses the vocal-free `action-melee-hit-01` impact clip instead of the human moan+fall `action-melee-kill-01` (NPC-only, via `playNpcCombatDeath`) |

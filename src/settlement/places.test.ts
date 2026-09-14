@@ -110,7 +110,11 @@ describe('workplaceFor', () => {
     })
 
     it('scenario B — one blacksmith household resolves its own workplace, not a settlement-wide one', () => {
-      const workplace: BlacksmithWorkplace = { familyIndex: 1, position: new Vector3(11, 0, 11) }
+      const workplace: BlacksmithWorkplace = {
+        familyIndex: 1,
+        position: new Vector3(11, 0, 11),
+        workbenchPosition: new Vector3(12, 0, 11.4),
+      }
       const landmarks = makeLandmarks({ blacksmithWorkplaces: [workplace] })
 
       expect(workplaceFor('s1', 'blacksmith', landmarks, 0, 1)?.position).toBe(workplace.position)
@@ -121,7 +125,11 @@ describe('workplaceFor', () => {
     })
 
     it('scenario C — two blacksmith members in one household resolve the same stable Place id', () => {
-      const workplace: BlacksmithWorkplace = { familyIndex: 1, position: new Vector3(11, 0, 11) }
+      const workplace: BlacksmithWorkplace = {
+        familyIndex: 1,
+        position: new Vector3(11, 0, 11),
+        workbenchPosition: new Vector3(12, 0, 11.4),
+      }
       const landmarks = makeLandmarks({ blacksmithWorkplaces: [workplace] })
 
       const first = workplaceFor('s1', 'blacksmith', landmarks, 0, 1)
@@ -131,8 +139,16 @@ describe('workplaceFor', () => {
     })
 
     it('scenario D — two blacksmith households resolve distinct ids/positions, never the old singleton id', () => {
-      const w0: BlacksmithWorkplace = { familyIndex: 0, position: new Vector3(1, 0, 1) }
-      const w2: BlacksmithWorkplace = { familyIndex: 2, position: new Vector3(9, 0, 9) }
+      const w0: BlacksmithWorkplace = {
+        familyIndex: 0,
+        position: new Vector3(1, 0, 1),
+        workbenchPosition: new Vector3(2, 0, 1.4),
+      }
+      const w2: BlacksmithWorkplace = {
+        familyIndex: 2,
+        position: new Vector3(9, 0, 9),
+        workbenchPosition: new Vector3(10, 0, 9.4),
+      }
       const landmarks = makeLandmarks({ blacksmithWorkplaces: [w0, w2] })
 
       const place0 = workplaceFor('s1', 'blacksmith', landmarks, 0, 0)

@@ -26,6 +26,7 @@ import type { WorldBundle } from './worldBundle'
 import { aboutAreaLine, requestAssistanceLine, voluntaryJoinResponseLine } from '../ai/dialogueTemplates'
 import { npcTradeQuantityAvailable, resolveNpcTradeOffers } from '../ai/npcTradeAvailability'
 import { isVoluntaryJoinAccepted, type VoluntaryExpeditionTerms } from '../ai/voluntaryExpeditionJoin'
+import { playActionGrindstoneSharpen, playActionWhetstoneSharpen } from '../audio/actionSounds'
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { readBook } from '../items/books'
 import { expandFoodBatchesToUnits } from '../items/foodItems'
@@ -46,7 +47,7 @@ import {
   settleTransaction,
 } from '../items/trade'
 import { NEUTRAL_SELL_PRICE_CONTEXT, npcSalePrice, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
-import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
+import { listOwnedWeaponMaintenance, type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
 import {
   applyGuardClaimMutation,
@@ -130,6 +131,8 @@ export type InventoryWiring = {
   syncMerchantIfOpen: () => void
   sellInventoryInstances: (instanceIds: readonly string[]) => TradeResult
   sharpenInventoryWeapon: (instanceId: string) => SharpenResult
+  /** `[E]` on a blacksmith grind workbench — FlavorDialog over live instances. */
+  openGrindstoneSharpen: () => void
   /** "Czytaj" (plan items-player-016) — interprets `kind` against
    *  `ITEM_CATALOG[kind].book` + `player.skills`, then resyncs the Skills
    *  screen state and shows the outcome via the existing toast pipeline. */
@@ -334,9 +337,49 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     if (result === 'ok') {
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       deps.refreshInventoryScreen()
+      playActionWhetstoneSharpen(playOnce)
       toast.show('Naostrzono broń.', 'pickup')
     }
     return result
+  }
+
+  const applyGrindstoneSharpen = (instanceId: string): SharpenResult => {
+    const result = sharpenWeapon(inventory, instanceId, 'grindstone')
+    if (result === 'ok') {
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      deps.refreshInventoryScreen()
+      playActionGrindstoneSharpen(playOnce)
+      toast.show('Naostrzono broń.', 'pickup')
+    } else if (result === 'already_max') {
+      toast.show('Ostrość jest już maksymalna.', 'error')
+    } else {
+      toast.show('Nie można naostrzyć tej broni.', 'error')
+    }
+    return result
+  }
+
+  const openGrindstoneSharpen = (): void => {
+    const weapons = listOwnedWeaponMaintenance(inventory)
+    if (weapons.length === 0) {
+      toast.show('Nie masz broni do naostrzenia.', 'info')
+      return
+    }
+    vueUi.openFlavorDialog(
+      'Kamień szlifierski',
+      'Wybierz broń do naostrzenia.',
+      weapons.map((weapon) => {
+        const maxed = weapon.sharpness >= 1
+        return {
+          label: `${ITEM_DEFS[weapon.kind].label} · Ostrość ${weapon.sharpnessPercent}%`,
+          enabled: !maxed,
+          reasonLabel: maxed ? 'Naostrzona' : '',
+          run: () => {
+            const result = applyGrindstoneSharpen(weapon.instanceId)
+            if (result === 'ok') openGrindstoneSharpen()
+          },
+        }
+      }),
+    )
   }
 
   const percent = (value: number): string => `${Math.round(value * 100)}%`
@@ -759,6 +802,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     syncMerchantIfOpen,
     sellInventoryInstances,
     sharpenInventoryWeapon,
+    openGrindstoneSharpen,
     readBookItem,
     readTreasureMapItem,
     dropItems,

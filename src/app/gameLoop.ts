@@ -555,6 +555,9 @@ export type GameLoopDeps = {
   /** `[E]` on a settlement notice board (plan npc-014) — opens the physical-
    *  posting panel listing the player's own postable contracts. */
   openNoticeBoard?: (settlementId: string) => void
+  /** `[E]` on a blacksmith grind workbench — opens the weapon-maintenance
+   *  picker over the player's live inventory instances. */
+  openGrindstoneSharpen?: () => void
   /** `[E]` repair action on damaged settlement storage (plan quests-progression-006). */
   repairSettlementStorage?: (settlementId: string) => void
   /** `[E]` destroy action on an intact infestation nest (plan quests-progression-013). */
@@ -677,7 +680,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard,
+    openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard, openGrindstoneSharpen,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
     previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, igniteVillageTorch, previewPlayerTroughRemoval, removePlayerTrough,
     previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
@@ -1959,6 +1962,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) destroyRatNest?.(target.settlementId)
       } else if (target?.kind === 'noticeBoard') {
         if (interactPressed) openNoticeBoard?.(target.settlementId)
+      } else if (target?.kind === 'grindstone') {
+        if (interactPressed) openGrindstoneSharpen?.()
       } else if (target?.kind === 'terrainPreparation') {
         if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {

@@ -297,6 +297,9 @@ export type BlacksmithWorkplace = {
    *  `landmarks.homes`/`landmarks.houses`/`SettlementDef.families`. */
   familyIndex: number
   position: THREE.Vector3
+  /** Grind workbench world position from `blacksmithYardGeometry().workbench`
+   *  — player `[E]` target; not the NPC access `position`. */
+  workbenchPosition: THREE.Vector3
 }
 
 export type SettlementTreeLandmark = {
@@ -1398,6 +1401,11 @@ export async function buildSettlementProps(
         geometry.anchor.x,
         sampleHeight(geometry.anchor.x, geometry.anchor.z),
         geometry.anchor.z,
+      ),
+      workbenchPosition: new THREE.Vector3(
+        geometry.workbench.x,
+        sampleHeight(geometry.workbench.x, geometry.workbench.z),
+        geometry.workbench.z,
       ),
     })
   }
