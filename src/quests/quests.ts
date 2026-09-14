@@ -9,6 +9,7 @@ import {
   DARK_FOREST_TREASURE_LOCATION_ID,
   darkForestTreasureChestId,
 } from '../world/locations/darkForestTreasureSite'
+import { treasureMapBearCaveReturnPayout } from '../world/locations/treasureMapBearCave'
 
 export type QuestState =
   /** Conscious player opt-out of an accepted quest (plan
@@ -447,6 +448,9 @@ export type QuestOutcome = {
   resultText?: string
   reward?: QuestReward
   consequences?: QuestConsequences
+  /** World mutations applied exactly once with this terminal outcome
+   *  (plan quests-progression-029). `reward` / `consequences` stay sugar. */
+  effects?: readonly QuestStageEffect[]
 }
 
 /** Stage-local progress for one objective slot (plan quests-progression-032).
@@ -643,9 +647,13 @@ export type QuestObjective =
  * @domain quests-progression
  */
 /** Side effect applied once when a stage dialogue action or `talk_to_npc`
- *  selection advances the quest (plan quests-progression-023). */
+ *  selection advances the quest, or when a terminal outcome is applied
+ *  (plan quests-progression-023 / quests-progression-029). */
 export type QuestStageEffect =
   | { type: 'reveal_location', locationId: string, setNavigation?: boolean }
+  | { type: 'transfer_item_instance', instanceId: string, toNpc: QuestNpcRef }
+  | { type: 'transfer_animal_ownership', animalId: string }
+  | { type: 'discard_carried_container', containerId: string }
 
 export type QuestStageDialogueAction = {
   npc: QuestNpcRef
@@ -1960,6 +1968,7 @@ export type TreasureMapBearCaveQuestBinding = {
   casketId: string
   locationId: string
   directionPhrase: string | null
+  authoredCoinAmount: number
 }
 
 /** Treasure map bear cave (plan quests-progression-008). */
@@ -1985,6 +1994,7 @@ export function buildTreasureMapBearCaveQuest(binding: TreasureMapBearCaveQuestB
         reminderLine: 'Marek czeka na wieści o mapie.',
         playerLine: 'Znalazłem mapę w grobie. Dokąd prowadzi?',
         progressLine: `Mapa wskazuje jaskinię ${cavePlace}. Trzeba tam zajrzeć.`,
+        effects: [{ type: 'reveal_location', locationId: binding.locationId }],
       },
       {
         objective: { type: 'discover_location', locationId: binding.locationId },
@@ -2025,6 +2035,11 @@ export function buildTreasureMapBearCaveQuest(binding: TreasureMapBearCaveQuestB
         id: 'treasure_returned',
         state: 'complete',
         resultText: 'Uczciwy układ. Dzięki, że oddałeś trumnę bez otwierania.',
+        effects: [{ type: 'discard_carried_container', containerId: binding.casketId }],
+        reward: {
+          visibility: 'hidden',
+          items: [{ kind: 'coin', count: treasureMapBearCaveReturnPayout(binding.authoredCoinAmount) }],
+        },
         consequences: {
           relations: [{ npcName: 'Marek', delta: 2 }],
           social: { reputation: { trust: 4, integrity: 3 }, renown: 4 },

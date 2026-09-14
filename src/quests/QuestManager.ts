@@ -35,6 +35,7 @@ import {
   type QuestProgressEntry,
   type QuestReward,
   type QuestStage,
+  type QuestStageEffect,
   questStageMode,
   type QuestStageObjectiveSlot,
   questStageObjectiveSlots,
@@ -306,6 +307,10 @@ const NO_PHYSICAL_OUTCOME: QuestPhysicalOutcomeResolver = {
 export type QuestLifecycleHooks = {
   onStageAdvanced?: (questId: string, clearedStageIndex: number) => void
   revealLocation?: import('./quests').QuestLocationReveal
+  /** Player → NPC exact-instance hand-in (plan quests-progression-029). */
+  transferItemInstance?: (instanceId: string, npcId: NpcId) => boolean
+  /** Consume the matching carried container (plan quests-progression-029). */
+  discardCarriedContainer?: (containerId: string) => boolean
 }
 
 const NO_WORLD_QUEST_SOURCE: WorldQuestSourceLookup = {
@@ -1143,8 +1148,7 @@ export class QuestManager {
     if (!def) return false
     const s = this.stateOf(questId)
     if (s.state !== 'active' || s.resolvedOutcomeId) return false
-    if (!this.physicalOutcome.canResolve(questId, outcomeId, {})) return false
-    this.physicalOutcome.onResolve(questId, outcomeId)
+    if (!def.outcomes.some((entry) => entry.id === outcomeId)) return false
     return this.resolveQuest(questId, outcomeId)
   }
 
@@ -1345,8 +1349,9 @@ export class QuestManager {
     const outcome = def.outcomes.find((entry) => entry.id === outcomeId)
     if (!outcome) return null
 
-    if (outcome.state === 'complete' && def.horseRewardAnimalId) {
-      if (!this.transferAnimalOwnership(def.horseRewardAnimalId)) {
+    if (outcome.state === 'complete') {
+      const animalId = this.completeOutcomeAnimalId(def, outcome)
+      if (animalId && !this.transferAnimalOwnership(animalId)) {
         const failed = uniqueOutcomeForState(def, 'failed')
         return failed ? this.applyOutcome(def, failed.id) : null
       }
@@ -1356,6 +1361,7 @@ export class QuestManager {
     this.setQuestState(def.id, { state: outcome.state, stageIndex, resolvedOutcomeId: outcome.id })
     this.clearAnimalTargetsForQuest(def.id)
 
+    this.applyEffects(outcome.effects, { skipAnimalOwnership: true })
     if (outcome.reward?.items) {
       for (const item of outcome.reward.items) this.grantItem(item.kind, item.count)
     }
@@ -1647,12 +1653,12 @@ export class QuestManager {
         requireItemInstanceId: action.requireItemInstanceId,
       }
       if (!this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, ctx)) return fallback
-      this.applyStageEffects(action.effects)
+      this.applyEffects(action.effects)
       this.physicalOutcome.onResolve(def.id, action.physicalOutcomeId)
       if (!this.resolveQuest(def.id, action.physicalOutcomeId)) return fallback
       return action.npcLine ?? def.reportLine ?? fallback
     }
-    this.applyStageEffects(action.effects)
+    this.applyEffects(action.effects)
     this.applyConsequences(def, action.consequences)
     this.advanceStage(def, current)
     return action.npcLine
@@ -1702,16 +1708,36 @@ export class QuestManager {
     if (!stage || !slot || slot.objective.type !== 'talk_to_npc' || slot.objective.npc.npcId !== npcId) {
       return progressLine
     }
-    this.applyStageEffects(stage.effects)
+    this.applyEffects(stage.effects)
     this.completeObjectiveSlot(def, current, slot)
     return progressLine
   }
 
-  private applyStageEffects(effects?: readonly import('./quests').QuestStageEffect[]): void {
+  private completeOutcomeAnimalId(def: QuestDef, outcome: QuestOutcome): string | undefined {
+    const fromEffect = outcome.effects?.find((effect) => effect.type === 'transfer_animal_ownership')
+    if (fromEffect?.type === 'transfer_animal_ownership') return fromEffect.animalId
+    return def.horseRewardAnimalId
+  }
+
+  private applyEffects(
+    effects: readonly QuestStageEffect[] | undefined,
+    options?: { skipAnimalOwnership?: boolean },
+  ): void {
     if (!effects?.length) return
     for (const effect of effects) {
-      if (effect.type === 'reveal_location') {
-        this.lifecycleHooks.revealLocation?.(effect.locationId, { setNavigation: effect.setNavigation })
+      switch (effect.type) {
+        case 'discard_carried_container':
+          this.lifecycleHooks.discardCarriedContainer?.(effect.containerId)
+          break
+        case 'reveal_location':
+          this.lifecycleHooks.revealLocation?.(effect.locationId, { setNavigation: effect.setNavigation })
+          break
+        case 'transfer_animal_ownership':
+          if (!options?.skipAnimalOwnership) this.transferAnimalOwnership(effect.animalId)
+          break
+        case 'transfer_item_instance':
+          this.lifecycleHooks.transferItemInstance?.(effect.instanceId, effect.toNpc.npcId)
+          break
       }
     }
   }

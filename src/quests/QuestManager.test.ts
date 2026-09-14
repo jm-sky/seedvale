@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { SocialConsequence } from '../reputation/ReputationManager'
+import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
 import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup } from './QuestManager'
 import type { AuthoredQuestDef, QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
+import {
+  buildLostHunterNaturalCaveQuest,
+  createLostHunterBowInstance,
+  LOST_HUNTER_KEEP_BOW_OUTCOME,
+  LOST_HUNTER_RETURN_BOW_OUTCOME,
+  lostHunterBowInstanceId,
+} from './lostHunterNaturalCave'
 import { materializeAuthoredQuestDefs } from './materializeAuthoredQuests'
 import { QUEST_MARKER_AVAILABLE, QUEST_MARKER_READY, QUEST_MARKER_TALK_TARGET, QuestManager } from './QuestManager'
-import { bindExactCaveQuests, buildHorseAcquisitionQuest, QUESTS, relationToLevel } from './quests'
+import { bindExactCaveQuests, buildHorseAcquisitionQuest, buildTreasureMapBearCaveQuest, QUESTS, relationToLevel } from './quests'
 
 const NAME_AS_ID = (['Anna', 'Piotr', 'Kasia', 'Marek'] as const).map((name) => ({ id: name, name }))
 
@@ -3384,3 +3392,291 @@ describe('QuestManager offer selection, decline suppression and abandonment (pla
     expect(qm.getState('hiddenQ')).toBe('not_offered')
   })
 })
+
+describe('QuestManager generic resolution effects (plan quests-progression-029)', () => {
+  const GIVER_ID = 'home:npc:0'
+  const WITNESS_ID = 'home:npc:2'
+  const BOW_CAVE = 'cave-a'
+  const CASKET_ID = 'casket-test'
+  const CAVE_LOCATION = 'cave:test-bear'
+
+  function hunterNpc(
+    id: string,
+    role: SettlementOpportunityNpc['role'],
+    householdId: string,
+  ): SettlementOpportunityNpc {
+    return {
+      id,
+      name: id,
+      role,
+      child: false,
+      householdId,
+      familyIndex: Number(householdId.slice(1)),
+    }
+  }
+
+  function lostHunterQuest() {
+    return buildLostHunterNaturalCaveQuest(
+      {
+        questId: 'world:lost-hunter:home:cave-a',
+        settlementId: 'home',
+        giverNpcId: GIVER_ID,
+        witnessNpcId: WITNESS_ID,
+        caveId: BOW_CAVE,
+        caveLocationId: 'cave:cave-a',
+        storyAnchorId: 'story',
+        lootAnchorId: 'loot',
+        packContainerId: 'pack',
+        bowInstanceId: lostHunterBowInstanceId(BOW_CAVE),
+      },
+      [
+        hunterNpc(GIVER_ID, 'farmer', 'f0'),
+        hunterNpc(WITNESS_ID, 'hunter', 'f1'),
+      ],
+      'Osada',
+    )
+  }
+
+  function bearCaveQuest() {
+    return runtimeAuthored(buildTreasureMapBearCaveQuest({
+      mapGraveSpotId: 'grave-1',
+      casketId: CASKET_ID,
+      locationId: CAVE_LOCATION,
+      directionPhrase: 'na północ od osady',
+      authoredCoinAmount: 240,
+    }))
+  }
+
+  function makeEffectManager(opts: {
+    defs: readonly QuestDef[]
+    inventory?: Inventory
+    initial?: QuestManagerInitial
+    grantItem?: (kind: string, count: number) => void
+    transferAnimalOwnership?: (animalId: string) => boolean
+    carriedContainerId?: string | null
+    transferItemInstance?: (instanceId: string, npcId: string) => boolean
+    discardCarriedContainer?: (containerId: string) => boolean
+    revealLocation?: (locationId: string) => void
+  }): QuestManager {
+    const inventory = opts.inventory ?? new Inventory()
+    return new QuestManager(
+      opts.defs,
+      undefined,
+      inventory,
+      opts.initial,
+      opts.grantItem,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      opts.transferAnimalOwnership,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        canResolve: (_questId, _outcomeId, context) => {
+          if (context.requireItemInstanceId && !inventory.getInstance(context.requireItemInstanceId)) {
+            return false
+          }
+          if (context.requireCarriedContainerId) {
+            if (opts.carriedContainerId !== context.requireCarriedContainerId) return false
+          }
+          return Boolean(context.requireItemInstanceId || context.requireCarriedContainerId)
+        },
+        onResolve: () => {},
+      },
+      {
+        revealLocation: opts.revealLocation,
+        transferItemInstance: opts.transferItemInstance,
+        discardCarriedContainer: opts.discardCarriedContainer,
+      },
+    )
+  }
+
+  it('returns the lost-hunter bow to the giver inventory exactly once', () => {
+    const def = lostHunterQuest()
+    const bow = createLostHunterBowInstance(BOW_CAVE)
+    const inventory = new Inventory({}, 100, [bow])
+    const giverInventory = new Inventory()
+    const transfers: string[] = []
+    const grants: Array<{ kind: string, count: number }> = []
+    const qm = makeEffectManager({
+      defs: [def],
+      inventory,
+      initial: {
+        progress: [{ id: def.id, state: 'active', stageIndex: def.stages.length - 1 }],
+        relations: {},
+      },
+      grantItem: (kind, count) => grants.push({ kind, count }),
+      transferItemInstance: (instanceId, npcId) => {
+        transfers.push(`${npcId}:${instanceId}`)
+        const instance = inventory.getInstance(instanceId)
+        if (!instance || npcId !== GIVER_ID) return false
+        if (!inventory.removeInstance(instanceId)) return false
+        return giverInventory.addInstance(instance)
+      },
+    })
+
+    expect(speak(qm, GIVER_ID, 0)).toBeDefined()
+    expect(qm.getState(def.id)).toBe('complete')
+    expect(qm.exportProgress().find((entry) => entry.id === def.id)?.resolvedOutcomeId).toBe(
+      LOST_HUNTER_RETURN_BOW_OUTCOME,
+    )
+    expect(transfers).toEqual([`${GIVER_ID}:${bow.id}`])
+    expect(inventory.getInstance(bow.id)).toBeNull()
+    expect(giverInventory.getInstance(bow.id)).toEqual(bow)
+    expect(grants).toEqual([{ kind: 'coin', count: 4 }])
+
+    expect(qm.resolveQuest(def.id, LOST_HUNTER_RETURN_BOW_OUTCOME)).toBe(false)
+    const restored = makeEffectManager({
+      defs: [def],
+      inventory,
+      initial: { progress: qm.exportProgress(), relations: {} },
+      transferItemInstance: (instanceId, npcId) => {
+        transfers.push(`restored:${npcId}:${instanceId}`)
+        return true
+      },
+    })
+    speak(restored, GIVER_ID, 0)
+    expect(transfers).toEqual([`${GIVER_ID}:${bow.id}`])
+    expect(giverInventory.getInstances('hunting_bow')).toHaveLength(1)
+  })
+
+  it('keeps the lost-hunter bow with the player', () => {
+    const def = lostHunterQuest()
+    const bow = createLostHunterBowInstance(BOW_CAVE)
+    const inventory = new Inventory({}, 100, [bow])
+    const transfers: string[] = []
+    const qm = makeEffectManager({
+      defs: [def],
+      inventory,
+      initial: {
+        progress: [{ id: def.id, state: 'active', stageIndex: def.stages.length - 1 }],
+        relations: {},
+      },
+      transferItemInstance: (instanceId) => {
+        transfers.push(instanceId)
+        return true
+      },
+    })
+
+    expect(speak(qm, GIVER_ID, 1)).toBeDefined()
+    expect(qm.exportProgress().find((entry) => entry.id === def.id)?.resolvedOutcomeId).toBe(
+      LOST_HUNTER_KEEP_BOW_OUTCOME,
+    )
+    expect(transfers).toEqual([])
+    expect(inventory.getInstance(bow.id)).toEqual(bow)
+  })
+
+  it('reveals the bear-cave location from stage effects, not a quest-id hook', () => {
+    const def = bearCaveQuest()
+    const revealed: string[] = []
+    const qm = makeEffectManager({
+      defs: [def],
+      initial: { progress: [{ id: def.id, state: 'active', stageIndex: 1 }], relations: {} },
+      revealLocation: (locationId) => revealed.push(locationId),
+    })
+    speak(qm, 'Marek')
+    expect(revealed).toEqual([CAVE_LOCATION])
+    speak(qm, 'Marek')
+    expect(revealed).toEqual([CAVE_LOCATION])
+  })
+
+  it('discards the returned bear-cave casket and grants the binding payout through QuestManager', () => {
+    const def = bearCaveQuest()
+    const discarded: string[] = []
+    const grants: Array<{ kind: string, count: number }> = []
+    const qm = makeEffectManager({
+      defs: [def],
+      carriedContainerId: CASKET_ID,
+      initial: {
+        progress: [{ id: def.id, state: 'active', stageIndex: def.stages.length - 1 }],
+        relations: {},
+      },
+      grantItem: (kind, count) => grants.push({ kind, count }),
+      discardCarriedContainer: (containerId) => {
+        discarded.push(containerId)
+        return true
+      },
+    })
+
+    expect(speak(qm, 'Marek')).toBeDefined()
+    expect(qm.getState(def.id)).toBe('complete')
+    expect(discarded).toEqual([CASKET_ID])
+    expect(grants).toEqual([{ kind: 'coin', count: 72 }])
+
+    const restored = makeEffectManager({
+      defs: [def],
+      carriedContainerId: CASKET_ID,
+      initial: { progress: qm.exportProgress(), relations: {} },
+      grantItem: (kind, count) => grants.push({ kind, count }),
+      discardCarriedContainer: (containerId) => {
+        discarded.push(containerId)
+        return true
+      },
+    })
+    speak(restored, 'Marek')
+    expect(discarded).toEqual([CASKET_ID])
+    expect(grants).toEqual([{ kind: 'coin', count: 72 }])
+  })
+
+  it('keeps opened bear-cave treasure without discarding the casket', () => {
+    const def = bearCaveQuest()
+    const discarded: string[] = []
+    const grants: Array<{ kind: string, count: number }> = []
+    const qm = makeEffectManager({
+      defs: [def],
+      initial: {
+        progress: [{ id: def.id, state: 'active', stageIndex: def.stages.length - 1 }],
+        relations: {},
+      },
+      grantItem: (kind, count) => grants.push({ kind, count }),
+      discardCarriedContainer: (containerId) => {
+        discarded.push(containerId)
+        return true
+      },
+    })
+
+    expect(qm.tryResolvePhysicalOutcome(def.id, 'treasure_kept')).toBe(true)
+    expect(qm.getState(def.id)).toBe('complete')
+    expect(discarded).toEqual([])
+    expect(grants).toEqual([])
+    expect(qm.tryResolvePhysicalOutcome(def.id, 'treasure_kept')).toBe(false)
+  })
+
+  it('transfers animal ownership from an outcome effect without horseRewardAnimalId sugar', () => {
+    const transferred: string[] = []
+    const def = quest({
+      id: 'animal-effect',
+      giverName: 'Kasia',
+      offerLine: 'offer',
+      stages: [
+        { objective: { type: 'interact_well' }, description: 'well', reminderLine: 'remind' },
+      ],
+      reportLine: 'report',
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        effects: [{ type: 'transfer_animal_ownership', animalId: 'horse-1' }],
+      }],
+    })
+    const qm = makeEffectManager({
+      defs: [def],
+      transferAnimalOwnership: (animalId) => {
+        transferred.push(animalId)
+        return true
+      },
+    })
+    acceptOffer(qm, 'Kasia')
+    qm.onInteractObjective({ type: 'interact_well' })
+    speak(qm, 'Kasia')
+    expect(transferred).toEqual(['horse-1'])
+    expect(qm.getState('animal-effect')).toBe('complete')
+  })
+})
+

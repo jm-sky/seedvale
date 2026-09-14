@@ -255,6 +255,7 @@ export function buildLostHunterNaturalCaveQuest(
             playerLine: 'Znalazłem go martwego. Łuk zostaje przy mnie.',
             npcLine: 'Rozumiem… Przynajmniej wiemy, co się stało.',
             physicalOutcomeId: LOST_HUNTER_KEEP_BOW_OUTCOME,
+            requireItemInstanceId: binding.bowInstanceId,
           },
         ],
       },
@@ -264,6 +265,11 @@ export function buildLostHunterNaturalCaveQuest(
       {
         id: LOST_HUNTER_RETURN_BOW_OUTCOME,
         state: 'complete',
+        effects: [{
+          type: 'transfer_item_instance',
+          instanceId: binding.bowInstanceId,
+          toNpc: { npcId: binding.giverNpcId },
+        }],
         reward: { visibility: 'hidden', items: [{ kind: 'coin', count: 4 }] },
         consequences: {
           relations: [{ npc: { npcId: binding.giverNpcId }, delta: 3 }],

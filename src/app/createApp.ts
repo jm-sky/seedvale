@@ -98,8 +98,6 @@ import {
 import {
   buildLostHunterNaturalCaveQuest,
   isLostHunterPackLooted,
-  LOST_HUNTER_KEEP_BOW_OUTCOME,
-  LOST_HUNTER_RETURN_BOW_OUTCOME,
 } from '../quests/lostHunterNaturalCave'
 import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
@@ -198,8 +196,6 @@ import {
   isTreasureMapBearCaveAuthoredCasket,
   TREASURE_MAP_BEAR_CAVE_KEPT_OUTCOME_ID,
   TREASURE_MAP_BEAR_CAVE_QUEST_ID,
-  TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID,
-  treasureMapBearCaveReturnPayout,
   treasureMapBearCaveSealedCasketCarried,
 } from '../world/locations/treasureMapBearCave'
 import {
@@ -1104,6 +1100,7 @@ export async function createApp(
         casketId: bearCaveBinding.casketId,
         locationId: bearCaveBinding.locationId,
         directionPhrase: bearCaveBinding.directionPhrase,
+        authoredCoinAmount: bearCaveBinding.authoredCoinAmount,
       }
     : null
   const authoredQuestDefs = materializeAuthoredQuestDefs(
@@ -1244,15 +1241,15 @@ export async function createApp(
         requireItemInstanceId?: string
       },
     ): boolean {
-      if (lostHunterBinding && questId === lostHunterBinding.questId) {
-        if (outcomeId === LOST_HUNTER_RETURN_BOW_OUTCOME) {
-          const requiredId = context.requireItemInstanceId ?? lostHunterBinding.bowInstanceId
-          return inventory.getInstance(requiredId)?.kind === 'hunting_bow'
-        }
-        if (outcomeId === LOST_HUNTER_KEEP_BOW_OUTCOME) {
-          return inventory.getInstance(lostHunterBinding.bowInstanceId)?.kind === 'hunting_bow'
-        }
+      if (context.requireItemInstanceId && !inventory.getInstance(context.requireItemInstanceId)) {
         return false
+      }
+      if (context.requireCarriedContainerId) {
+        if (bearCaveBinding && context.requireCarriedContainerId === bearCaveBinding.casketId) {
+          if (worldFlags.treasureMapBearCaveCasketConsumed) return false
+          if (context.requireCarriedUnopened && worldFlags.treasureMapBearCaveCasketOpened) return false
+        }
+        if (bundle.placedContainers.carriedId() !== context.requireCarriedContainerId) return false
       }
       if (oldBonesBinding && questId === oldBonesBinding.questId) {
         const requiredId = context.requireItemInstanceId ?? oldBonesBinding.signetInstanceId
@@ -1284,32 +1281,9 @@ export async function createApp(
         if (!npcState || npcState.health.dead) return false
         return npcState.personalInventory.canAddInstance(evidence)
       }
-      if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return false
-      if (worldFlags.treasureMapBearCaveCasketConsumed) return false
-      if (outcomeId === TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID) {
-        if (worldFlags.treasureMapBearCaveCasketOpened) return false
-        const carriedId = bundle.placedContainers.carriedId()
-        if (context.requireCarriedContainerId && carriedId !== context.requireCarriedContainerId) return false
-        if (context.requireCarriedUnopened && worldFlags.treasureMapBearCaveCasketOpened) return false
-        return carriedId === bearCaveBinding.casketId
-      }
-      if (outcomeId === TREASURE_MAP_BEAR_CAVE_KEPT_OUTCOME_ID) {
-        if (!worldFlags.treasureMapBearCaveCasketOpened) return false
-        const carriedId = bundle.placedContainers.carriedId()
-        const placed = bundle.placedContainers.find(bearCaveBinding.casketId)
-        return carriedId === bearCaveBinding.casketId || placed !== undefined
-      }
-      return false
+      return Boolean(context.requireItemInstanceId || context.requireCarriedContainerId)
     },
     onResolve(questId: string, outcomeId: string): void {
-      if (lostHunterBinding && questId === lostHunterBinding.questId && outcomeId === LOST_HUNTER_RETURN_BOW_OUTCOME) {
-        const bow = inventory.getInstance(lostHunterBinding.bowInstanceId)
-        if (!bow) return
-        inventory.removeInstance(bow.id)
-        const giverState = bundle.settlementsManager.getNpcState(lostHunterBinding.giverNpcId)
-        giverState?.personalInventory.addInstance(bow)
-        return
-      }
       if (oldBonesBinding && questId === oldBonesBinding.questId) {
         if (outcomeId === OLD_BONES_KEEP_SIGNET_OUTCOME) return
         const npcId = outcomeId === OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME
@@ -1342,24 +1316,11 @@ export async function createApp(
           },
           { npcId, instanceId: suspiciousTransportCaveCache.evidenceInstanceId },
         )
-        return
-      }
-      if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return
-      if (outcomeId === TREASURE_MAP_BEAR_CAVE_RETURNED_OUTCOME_ID) {
-        worldFlags.treasureMapBearCaveCasketConsumed = true
-        bundle.placedContainers.discardCarried()
-        grantItem('coin', treasureMapBearCaveReturnPayout(bearCaveBinding.authoredCoinAmount))
       }
     },
   }
 
   const questLifecycleHooks = {
-    onStageAdvanced(questId: string, clearedStageIndex: number): void {
-      if (questId !== TREASURE_MAP_BEAR_CAVE_QUEST_ID || !bearCaveBinding) return
-      if (clearedStageIndex === 1) {
-        locationKnowledge.reveal(bearCaveBinding.locationId, 'discovered', 'npc')
-      }
-    },
     revealLocation: (locationId: string, options?: { setNavigation?: boolean }) => {
       revealLocationKnowledge(
         locationId,
@@ -1368,6 +1329,22 @@ export async function createApp(
         navigationTargets,
         options,
       )
+    },
+    transferItemInstance: (instanceId: string, npcId: string) => (
+      giveItemInstanceToNpc(
+        {
+          playerInventory: inventory,
+          getNpcState: (id) => bundle.settlementsManager.getNpcState(id),
+        },
+        { npcId, instanceId },
+      ).status === 'ok'
+    ),
+    discardCarriedContainer: (containerId: string) => {
+      if (bundle.placedContainers.carriedId() !== containerId) return false
+      if (bearCaveBinding && containerId === bearCaveBinding.casketId) {
+        worldFlags.treasureMapBearCaveCasketConsumed = true
+      }
+      return bundle.placedContainers.discardCarried()
     },
   }
 

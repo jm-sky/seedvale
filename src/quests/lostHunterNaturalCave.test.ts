@@ -137,6 +137,12 @@ describe('lost hunter natural cave (plan quests-progression-023)', () => {
       locationId: 'cave:cave-a',
       setNavigation: true,
     }])
+    expect(quest.stages[3]?.dialogueActions?.[1]?.requireItemInstanceId).toBe(binding!.bowInstanceId)
+    expect(quest.outcomes.find((outcome) => outcome.id === 'return_bow_to_family')?.effects).toEqual([{
+      type: 'transfer_item_instance',
+      instanceId: binding!.bowInstanceId,
+      toNpc: { npcId: binding!.giverNpcId },
+    }])
   })
 
   it('uses initialInstances only for a fresh world container', () => {

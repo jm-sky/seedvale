@@ -1,7 +1,7 @@
 # Plan: Generic quest resolution effects
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented and technically verified (`vue-tsc`/lint/targeted vitest); browser/gameplay verification is still open.
 **Type:** refactor
 **Priority:** high · **Effort:** M
 **Model:** Composer, Sonnet
@@ -10,6 +10,7 @@
 **Subdomains:** `quests` `rewards`
 **Tags:** `consequences` `persistence`
 **Roadmap:** `quests-and-reputation.md`
+**Implemented at:** 2026-09-14 06:20
 
 ## Goal
 
