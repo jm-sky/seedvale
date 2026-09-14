@@ -44,6 +44,7 @@ Generated from TypeScript imports.
 - `perf/report.test.ts`
 - `perf/report.ts`
 - `perf/types.ts`
+- `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 
 ## `perf/benchmark.ts`

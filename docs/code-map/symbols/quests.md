@@ -341,22 +341,22 @@ Generated from exported TypeScript symbols.
 - `AuthoredQuestStageDialogueAction` — type — line 958
   - domain: quests-progression
 - `AuthoredQuestStageObjectiveSlot` — type — line 970
-- `bindDarkForestTreasureQuest` — function — line 1975
-- `bindExactCaveQuests` — function — line 1948
-- `bindTreasureMapBearCaveQuest` — function — line 2082
-- `buildDarkForestTreasureQuest` — function — line 1818
-- `buildHorseAcquisitionQuest` — function — line 1865
+- `bindDarkForestTreasureQuest` — function — line 2036
+- `bindExactCaveQuests` — function — line 2009
+- `bindTreasureMapBearCaveQuest` — function — line 2143
+- `buildDarkForestTreasureQuest` — function — line 1879
+- `buildHorseAcquisitionQuest` — function — line 1926
 - `buildLandmarkQuests` — function — line 1712
-- `buildTreasureMapBearCaveQuest` — function — line 2001
-- `CAVE_PLACE_TOKEN` — const — line 1908
-- `cavePlacePhrase` — function — line 1912
+- `buildTreasureMapBearCaveQuest` — function — line 2062
+- `CAVE_PLACE_TOKEN` — const — line 1969
+- `cavePlacePhrase` — function — line 1973
 - `externalResolutionOutcome` — function — line 524
   - domain: quests-progression
 - `hasSocialConsequence` — function — line 535
 - `isLegacySingleObjectiveStage` — function — line 799
 - `LandmarkResolver` — type — line 1701
 - `LEGACY_QUEST_OBJECTIVE_SLOT_ID` — const — line 701
-- `MAP_SOURCE_PLACE_TOKEN` — const — line 1815
+- `MAP_SOURCE_PLACE_TOKEN` — const — line 1876
 - `matchStageTransition` — function — line 826
 - `objectiveNeedsPersistedSlotProgress` — function — line 809
   - domain: quests-progression
@@ -405,8 +405,8 @@ Generated from exported TypeScript symbols.
 - `relationToLevel` — function — line 52
 - `RESOLVED_WITHOUT_PLAYER_OUTCOME` — const — line 515
   - domain: quests-progression
-- `TreasureMapBearCaveQuestBinding` — type — line 1992
-- `treasureMapSourcePlacePhrase` — function — line 1928
+- `TreasureMapBearCaveQuestBinding` — type — line 2053
+- `treasureMapSourcePlacePhrase` — function — line 1989
 - `uniqueOutcomeForState` — function — line 500
 - `validateQuestDefinitions` — function — line 143
 

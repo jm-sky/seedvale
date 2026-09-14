@@ -203,6 +203,7 @@ Generated from TypeScript imports.
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/quests.ts`
+- `settlement/landmarkProps.ts`
 - `terrain/cemeteryPlacement.test.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkEnvironment.test.ts`
@@ -425,6 +426,7 @@ Generated from TypeScript imports.
 - `perf/programCensus.ts`
 - `player/PlayerController.ts`
 - `render/instancedProps.ts`
+- `settlement/landmarkProps.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`

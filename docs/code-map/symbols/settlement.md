@@ -282,6 +282,12 @@ Generated from exported TypeScript symbols.
 - `resolveHouseLampMount` — function — line 413
 - `VillageTorch` — type — line 29
 
+## `settlement/landmarkProps.ts`
+
+- `createLandmarkProp` — function — line 152
+- `isLandmarkGlbKind` — function — line 146
+- `preloadLandmarkTemplates` — function — line 127
+
 ## `settlement/landOwnership.ts`
 
 - `createLandOwnershipRegistry` — function — line 22
@@ -514,8 +520,8 @@ Generated from exported TypeScript symbols.
 - `CAMPFIRE_FIT_MAX` — const — line 130
 - `CAMPFIRE_UNLIT_URL` — const — line 128
 - `CEMETERY_SPECS` — const — line 80
-- `COBBLE_FIT_MAX` — const — line 135
-- `COBBLE_URL` — const — line 132
+- `COBBLE_FIT_MAX` — const — line 147
+- `COBBLE_URL` — const — line 144
 - `CROPS_FIT_MAX` — const — line 103
 - `CROPS_URL` — const — line 101
 - `DOCK_SPECS` — const — line 64
@@ -523,11 +529,21 @@ Generated from exported TypeScript symbols.
 - `FARM_HEIGHT` — const — line 99
 - `FARM_URL` — const — line 96
 - `FERN_SPECS` — const — line 27
-- `FIRE_FX_URL` — const — line 145
+- `FIRE_FX_URL` — const — line 157
 - `GRAVE_SPECS` — const — line 84
-- `LANTERN_FLOOR_MAX` — const — line 146
-- `LANTERN_URL` — const — line 143
-- `LANTERN_WALL_MAX` — const — line 149
+- `LANDMARK_BOAT_FIT_MAX` — const — line 134
+- `LANDMARK_BOAT_URL` — const — line 133
+- `LANDMARK_OLD_TREE_FIT_MAX` — const — line 140
+- `LANDMARK_OLD_TREE_URL` — const — line 139
+- `LANDMARK_SHIPWRECK_FIT_MAX` — const — line 136
+- `LANDMARK_SHIPWRECK_URL` — const — line 135
+- `LANDMARK_TOWER_FIT_MAX` — const — line 138
+- `LANDMARK_TOWER_URL` — const — line 137
+- `LANDMARK_WAGON_FIT_MAX` — const — line 142
+- `LANDMARK_WAGON_URL` — const — line 141
+- `LANTERN_FLOOR_MAX` — const — line 158
+- `LANTERN_URL` — const — line 155
+- `LANTERN_WALL_MAX` — const — line 161
 - `LILY_SPECS` — const — line 51
 - `REED_SPECS` — const — line 42
 - `RESOURCE_GOLD_SPECS` — const — line 88
@@ -535,17 +551,17 @@ Generated from exported TypeScript symbols.
 - `ROCK_CLUSTER_SPECS` — const — line 72
 - `ROCK_SPECS` — const — line 68
 - `SEAWEED_SPECS` — const — line 60
-- `TABLE_LAMP_FIT_MAX` — const — line 158
-- `TABLE_LAMP_URL` — const — line 157
+- `TABLE_LAMP_FIT_MAX` — const — line 170
+- `TABLE_LAMP_URL` — const — line 169
 - `TRAP_GOOD_FIT_MAX` — const — line 115
 - `TRAP_GOOD_URL` — const — line 114
 - `TREE_SPECS` — const — line 5
-- `TREE_STUMP_HEIGHT` — const — line 140
-- `TREE_STUMP_URL` — const — line 137
+- `TREE_STUMP_HEIGHT` — const — line 152
+- `TREE_STUMP_URL` — const — line 149
 - `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 126
-- `VILLAGE_TORCH_HEIGHT` — const — line 150
-- `VILLAGE_TORCH_URL` — const — line 144
-- `WALL_URL` — const — line 142
+- `VILLAGE_TORCH_HEIGHT` — const — line 162
+- `VILLAGE_TORCH_URL` — const — line 156
+- `WALL_URL` — const — line 154
 - `WELL_HEIGHT` — const — line 107
 - `WELL_URL` — const — line 105
 - `WOOD_PILE_COLLISION_RADIUS` — const — line 124
@@ -723,13 +739,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 291
+- `createSettlementsManager` — function — line 292
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 110
+- `SettlementsManager` — type — line 111
 
 ## `settlement/settlementStructures.ts`
 

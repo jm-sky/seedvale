@@ -117,25 +117,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDefs.ts`
 
-- `ANIMAL_DEFS` — const — line 345
-- `ANIMAL_LABELS` — const — line 48
-- `AnimalAffinityConfig` — type — line 168
-- `AnimalDef` — type — line 67
-- `AnimalDietConfig` — type — line 198
-- `AnimalKind` — type — line 26
+- `ANIMAL_DEFS` — const — line 346
+- `ANIMAL_LABELS` — const — line 49
+- `AnimalAffinityConfig` — type — line 169
+- `AnimalDef` — type — line 68
+- `AnimalDietConfig` — type — line 199
+- `AnimalKind` — type — line 27
 - `AnimalLifeStage` — type — line 22
 - `AnimalRole` — type — line 14
   - domain: fauna
   - role: Species taxonomy and per-kind tuning data for `AnimalAgent` — no runtime/agent state, no Three.js. Moved out of `AnimalAgent.ts` (plan fauna-017 step 1): 31% of that file was this module's data sitting above the class. Re-exported wholesale from `AnimalAgent.ts` via `export *`, so every existing importer of species types/`ANIMAL_DEFS` is unaffected.
 - `AnimalSociability` — type — line 18
-- `dietAcceptsItem` — function — line 323
-- `DraftConfig` — type — line 229
-- `LeadConfig` — type — line 223
-- `LivestockProductionConfig` — type — line 258
-- `LivestockProductKind` — type — line 245
-- `MountPointConfig` — type — line 236
-- `ScavengingConfig` — type — line 209
-- `WaterTripConfig` — type — line 177
+- `dietAcceptsItem` — function — line 324
+- `DraftConfig` — type — line 230
+- `LeadConfig` — type — line 224
+- `LivestockProductionConfig` — type — line 259
+- `LivestockProductKind` — type — line 246
+- `MountPointConfig` — type — line 237
+- `ScavengingConfig` — type — line 210
+- `WaterTripConfig` — type — line 178
 
 ## `fauna/animalDialogue.ts`
 
@@ -410,10 +410,10 @@ Generated from exported TypeScript symbols.
 ## `fauna/createFauna.ts`
 
 - `clearsRiverChannel` — function — line 273
-- `createFauna` — function — line 546
+- `createFauna` — function — line 547
 - `Fauna` — type — line 89
 - `FAUNA_URLS` — const — line 457
-- `faunaGltfUrls` — function — line 471
+- `faunaGltfUrls` — function — line 472
 - `findHomeCaveSpawner` — function — line 416
 - `isDeerEdgeHabitat` — function — line 304
 - `isNearRoadCorridor` — function — line 285

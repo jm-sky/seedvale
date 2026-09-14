@@ -230,6 +230,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
+- `settlement/landmarkProps.ts`
 - `settlement/livestock.ts`
 - `settlement/propUtils.ts`
 - `settlement/props.ts`

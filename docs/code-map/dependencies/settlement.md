@@ -50,6 +50,7 @@ Generated from TypeScript imports.
 - `fauna/ownedAnimalControl.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
+- `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
 - `settlement/createSettlement.ts`
 - `settlement/household.ts`
@@ -735,6 +736,18 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `settlement/landPurchase.test.ts`
 
+## `settlement/landmarkProps.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `settlement/propSpecs.ts`
+- `terrain/chunkEnvironment.ts`
+
+**Imported by**
+
+- `terrain/chunkManager.ts`
+
 ## `settlement/livestock.test.ts`
 
 **Imports**
@@ -1088,6 +1101,7 @@ Generated from TypeScript imports.
 - `assets/assetIndex.ts`
 - `settlement/campfireProps.ts`
 - `settlement/houseLighting.ts`
+- `settlement/landmarkProps.ts`
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementPropColliders.test.ts`

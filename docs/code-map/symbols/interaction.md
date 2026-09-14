@@ -14,9 +14,9 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/Interactable.ts`
 
-- `Interactable` — type — line 229
+- `Interactable` — type — line 230
 - `InteractablePayload` — type — line 33
-- `surfaceInteractable` — function — line 234
+- `surfaceInteractable` — function — line 235
 - `WorldItemRef` — type — line 18
 
 ## `interaction/interactionView.ts`
@@ -39,9 +39,9 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/resolveInteraction.ts`
 
-- `formatSettlementStorageLines` — function — line 53
+- `formatSettlementStorageLines` — function — line 58
 - `InteractionOutcome` — type — line 13
-- `resolveInteraction` — function — line 110
+- `resolveInteraction` — function — line 115
 
 ## `interaction/targetedSkillAction.ts`
 
