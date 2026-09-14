@@ -75,8 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
 | 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | ~~world-terrain-028~~, ~~fauna-027~~ |
 | 💡 `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | ~~world-terrain-028~~, ~~fauna-027~~ |
-| 💡 `quests-progression-030-external-resolution-and-real-problem-offering.md`   | -       | 🔴 | M      | ~~quests-progression-028~~, quests-progression-029 |
-| 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | quests-progression-030 |
+| 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | ~~quests-progression-030~~ |
 | ◼️ `settlements-008-settlement-progression-around-home.md`                     | -       | 🟡 | S      | -      |
 | ◼️ `settlements-009-settlement-outskirts-and-pasture.md`                       | -       | 🟡 | M      | -      |
 | ◼️ `settlements-010-closed-and-cautious-settlement-character.md`               | -       | 🟡 | M      | -      |
@@ -95,6 +94,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `quests-progression-030-external-resolution-and-real-problem-offering.md` | Wilcza jama: zniszczenie przez gracza → `den_destroyed` / ready_to_report; aktywny quest, den znika bez destroy → `resolved_without_player` bez item reward; offer niezaakceptowany + source gone → `not_offered`. Authored `zagubiona-owca`: accept startuje realny stray (lub reuse istniejącego); generated lost-livestock dla spokojnej owcy nie oferuje i nie teleportuje; naturalny stray → offerable; naturalny `returned` → `live_return` |
 | `quests-progression-033-quest-offer-selection-prioritization-and-abandonment.md` | NPC z wieloma questami nie oferuje wszystkiego naraz (tylko 1 normalna nowa oferta); po ukończeniu/decline/abandon pojawia się kolejna sensowna oferta; declined quest nie wraca od razu (suppression); opcjonalna kara relation/reputation przy abandon działa tylko tam, gdzie zdefiniowana; story quest (np. jaskinia niedźwiedzia, zaginiony myśliwy, podejrzany transport, stare kości) respektuje authored wyjątki i nie pokazuje generic decline/abandon; nagły problem świata może przebić normalną ofertę (urgent), ale nie tworzy lawiny urgentów; problem świata trwa dalej po decline/abandon |
 | `world-terrain-026-cave-distant-mouth-occlusion.md` | Z kilku odległości i kątów: daleki otwór jaskini nie pokazuje jasnego nieba; wejście w pełną prezentację bez „gołej” dziury; wyjście przywraca proxy; blisko wejścia bez zmian; wnętrze/dungeon normalnie; wielokrotne przejścia przez 55/80 m bez leaków i bez thrashu terenu |
 | `quests-progression-022-lazy-social-news-propagation-and-reputation-catch-up.md` | Na cold world/cache zabij wilka/niedźwiedzia i potwierdź brak freeze; zabicie przy aktywnej osadzie od razu podnosi lokalne competence/courage/renown; zabicie z dala od aktywnych osad nie daje natychmiastowej reputacji, ale odwiedzenie pobliskiej osady w ciągu 7 dni (TTL) daje catch-up; kolejna pobliska osada może dostać słabszy relayed renown bez sztucznego pełnego local reputation; save/load z pending eventem → późniejszy catch-up działa dokładnie raz; po >7 dniach nowo odwiedzona osada nie dostaje starego animal-deed news |

@@ -505,6 +505,29 @@ export function uniqueOutcomeForState(
   return matches.length === 1 ? matches[0] : undefined
 }
 
+/**
+ * Outcome id for a world source that resolved without the player completing
+ * the objective (plan quests-progression-030). Prefer this named outcome over
+ * `uniqueOutcomeForState(..., 'failed')` when multiple failed outcomes exist.
+ *
+ * @domain quests-progression
+ */
+export const RESOLVED_WITHOUT_PLAYER_OUTCOME = 'resolved_without_player'
+
+/**
+ * Selects the terminal outcome when a world-driven source becomes `resolved`
+ * while the quest is still `active`. Prefers an authored
+ * `resolved_without_player` id; otherwise the unique failed outcome.
+ *
+ * @domain quests-progression
+ */
+export function externalResolutionOutcome(
+  def: { outcomes: readonly QuestOutcome[] },
+): QuestOutcome | undefined {
+  return def.outcomes.find((outcome) => outcome.id === RESOLVED_WITHOUT_PLAYER_OUTCOME)
+    ?? uniqueOutcomeForState(def, 'failed')
+}
+
 /** Whether `consequences` carries an actual reputation/renown delta, not
  *  just an authored-but-empty `social` field (plan quests-progression-019) —
  *  used by `QuestManager.hasSocialOutcomeClaim` to decide whether a quest
@@ -1120,6 +1143,9 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
     ],
   },
   {
+    // Authored narrative may start a real fauna stray on accept via
+    // `QuestLifecycleHooks.onAnimalTargetBound` in createApp (plan
+    // quests-progression-030). Generated `world:lost-livestock:*` must not.
     id: 'zagubiona-owca',
     title: 'Zagubiona owca',
     description: 'Annie zawieruszyła się owca. Znajdź ją i daj znać.',

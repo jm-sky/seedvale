@@ -33,7 +33,6 @@ import { installNpcDebugApi } from '../debug/npcDebugApi'
 import { createNpcInspectTrigger } from '../debug/npcInspectTrigger'
 import { createPlayerGroundTraceBuffer } from '../debug/playerGroundTrace'
 import { createPlayerMovementTraceBuffer } from '../debug/playerMovementTrace'
-import { isHouseholdOwned } from '../fauna/animalOwnership'
 import { findHomeCaveSpawner } from '../fauna/createFauna'
 import { createTouchControls, type TouchControls } from '../input/createTouchControls'
 import { isTouchDevice } from '../input/isTouchDevice'
@@ -1346,6 +1345,18 @@ export async function createApp(
       }
       return bundle.placedContainers.discardCarried()
     },
+    // Authored `zagubiona-owca` may start a real fauna-owned stray for its
+    // bound sheep (plan quests-progression-030). Generated lost-livestock
+    // never uses this hook — it only observes existing stray/corpse state.
+    onAnimalTargetBound: (questId: string, animalId: string) => {
+      if (questId !== 'zagubiona-owca') return
+      const animal = bundle.settlementsManager.resolvePersistentAnimal(animalId)
+      if (!animal || animal.isStrayActive()) return
+      const predators = bundle.fauna.getAgents()
+        .filter((agent) => agent.def.role === 'predator' && !agent.isDead())
+        .map((agent) => ({ x: agent.mesh.position.x, z: agent.mesh.position.z }))
+      animal.startLivestockStray({ predators })
+    },
   }
 
   const questManager: QuestManager = new QuestManager(
@@ -1449,19 +1460,13 @@ export async function createApp(
     {
       getSnapshot: (questId) => {
         const parsed = parseLostLivestockQuestId(questId)
+        // Recognized generated lost-livestock ids must return a concrete
+        // fauna snapshot (never `untracked`) so calm/returned/unavailable
+        // animals stay non-offerable (plan quests-progression-030).
         if (!parsed) return 'untracked'
         const animal = bundle.settlementsManager.resolvePersistentAnimal(parsed.animalId)
         if (!animal) return 'unavailable'
-        const status = animal.lostLivestockStatus()
-        if (
-          status === 'unavailable'
-          && !animal.isDead()
-          && isHouseholdOwned(animal.getOwner())
-          && !animal.isMounted()
-        ) {
-          return 'lost-alive'
-        }
-        return status
+        return animal.lostLivestockStatus()
       },
     },
     {
@@ -1619,18 +1624,8 @@ export async function createApp(
   questManager.pollWorldDrivenSources()
   questManager.pollWorldProgressionObjectives()
   const syncLostLivestockQuests = (): void => {
-    for (const def of questDefs) {
-      const parsed = parseLostLivestockQuestId(def.id)
-      if (!parsed) continue
-      const state = questManager.getState(def.id)
-      if (state !== 'offered' && state !== 'active') continue
-      const animal = bundle.settlementsManager.resolvePersistentAnimal(parsed.animalId)
-      if (!animal) continue
-      const predators = bundle.fauna.getAgents()
-        .filter((agent) => agent.def.role === 'predator' && !agent.isDead())
-        .map((agent) => ({ x: agent.mesh.position.x, z: agent.mesh.position.z }))
-      animal.startLivestockStray({ predators })
-    }
+    // World-driven lost-livestock only observes fauna episodes — never starts
+    // them. Authored `zagubiona-owca` starts stray via onAnimalTargetBound.
     questManager.pollLostLivestockSources()
   }
   syncLostLivestockQuests()

@@ -20,6 +20,7 @@ import {
   parseLostLivestockQuestId,
 } from './opportunities/settlementQuestOpportunities'
 import {
+  externalResolutionOutcome,
   hasSocialConsequence,
   isLegacySingleObjectiveStage,
   LEGACY_QUEST_OBJECTIVE_SLOT_ID,
@@ -306,6 +307,12 @@ const NO_PHYSICAL_OUTCOME: QuestPhysicalOutcomeResolver = {
 
 export type QuestLifecycleHooks = {
   onStageAdvanced?: (questId: string, clearedStageIndex: number) => void
+  /**
+   * Fired once when a `find_animal` / `kill_target_animal` target is newly
+   * bound. Authored narrative may start a real domain incident here (plan
+   * quests-progression-030); generated world-driven quests must not.
+   */
+  onAnimalTargetBound?: (questId: string, animalId: string) => void
   revealLocation?: import('./quests').QuestLocationReveal
   /** Player → NPC exact-instance hand-in (plan quests-progression-029). */
   transferItemInstance?: (instanceId: string, npcId: NpcId) => boolean
@@ -972,9 +979,11 @@ export class QuestManager {
   /** Polls live world-driven source status for generated settlement quests.
    *  Unaccepted offers disappear when the source problem is gone. An accepted
    *  quest whose source resolved without completing the objective takes the
-   *  existing `failed` outcome (no normal player reward). A missing source
-   *  binding on an active quest is `invalidated`. Call after spawn-point
-   *  destruction catch-up so a player destroy still completes normally.
+   *  authored `resolved_without_player` outcome when present (else unique
+   *  failed) through the same `applyOutcome` path — never invent a parallel
+   *  external-resolution pipeline. A missing source binding on an active
+   *  quest is `invalidated`. Call after spawn-point destruction catch-up so a
+   *  player destroy still completes normally.
    *
    * @domain quests-progression
    */
@@ -993,8 +1002,8 @@ export class QuestManager {
         continue
       }
       if (status === 'resolved') {
-        const failed = uniqueOutcomeForState(def, 'failed')
-        if (failed) this.applyOutcome(def, failed.id)
+        const outcome = externalResolutionOutcome(def)
+        if (outcome) this.applyOutcome(def, outcome.id)
       }
     }
   }
@@ -1322,6 +1331,7 @@ export class QuestManager {
       const animalId = this.resolveAnimalTarget(slot.objective.kind)
       if (!animalId) continue
       this.animalTargets.set(key, animalId)
+      this.lifecycleHooks.onAnimalTargetBound?.(def.id, animalId)
       if (slot.objective.type === 'kill_target_animal' && slot.objective.dangerous) {
         this.applyDangerousTrait(animalId)
       }

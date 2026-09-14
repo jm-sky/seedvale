@@ -2,6 +2,7 @@ import type { PreySpawner } from '../../fauna/AnimalSpawner'
 import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import type { SettlementDef } from '../../settlement/settlementGenerator'
 import type { QuestDef } from '../quests'
+import { RESOLVED_WITHOUT_PLAYER_OUTCOME } from '../quests'
 import type {
   LostLivestockOpportunity,
   OpportunityNpc,
@@ -108,7 +109,7 @@ function materializeWolfDenPressureQuest(
         },
       },
       {
-        id: 'resolved_without_player',
+        id: RESOLVED_WITHOUT_PLAYER_OUTCOME,
         state: 'failed',
         resultText: 'Zagrożenie z jamy zniknęło zanim zdążyłeś zniszczyć siedlisko.',
       },

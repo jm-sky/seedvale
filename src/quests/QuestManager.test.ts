@@ -14,7 +14,14 @@ import {
 } from './lostHunterNaturalCave'
 import { materializeAuthoredQuestDefs } from './materializeAuthoredQuests'
 import { QUEST_MARKER_AVAILABLE, QUEST_MARKER_READY, QUEST_MARKER_TALK_TARGET, QuestManager } from './QuestManager'
-import { bindExactCaveQuests, buildHorseAcquisitionQuest, buildTreasureMapBearCaveQuest, QUESTS, relationToLevel } from './quests'
+import {
+  bindExactCaveQuests,
+  buildHorseAcquisitionQuest,
+  buildTreasureMapBearCaveQuest,
+  QUESTS,
+  relationToLevel,
+  RESOLVED_WITHOUT_PLAYER_OUTCOME,
+} from './quests'
 
 const NAME_AS_ID = (['Anna', 'Piotr', 'Kasia', 'Marek'] as const).map((name) => ({ id: name, name }))
 
@@ -2337,9 +2344,36 @@ describe('QuestManager world-driven settlement sources', () => {
     status = 'resolved'
     qm.pollWorldDrivenSources()
     expect(qm.getState(sourceQuest.id)).toBe('failed')
-    expect(qm.list()[0]?.resolvedOutcomeId).toBe('resolved_without_player')
+    expect(qm.list()[0]?.resolvedOutcomeId).toBe(RESOLVED_WITHOUT_PLAYER_OUTCOME)
     expect(granted).toEqual([])
     expect(qm.getRelation('Anna')).toBe(0)
+  })
+
+  it('prefers named resolved_without_player when multiple failed outcomes exist', () => {
+    const multiFailed = quest({
+      ...sourceQuest,
+      outcomes: [
+        { id: 'den_destroyed', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 2 }] } },
+        { id: RESOLVED_WITHOUT_PLAYER_OUTCOME, state: 'failed', resultText: 'gone' },
+        { id: 'other_failed', state: 'failed', resultText: 'other' },
+      ],
+    })
+    let status: import('./QuestManager').WorldQuestSourceStatus = 'present'
+    const qm = makeManager(
+      [multiFailed],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { getStatus: () => status },
+    )
+    acceptOffer(qm, 'Anna')
+    status = 'resolved'
+    qm.pollWorldDrivenSources()
+    expect(qm.getState(multiFailed.id)).toBe('failed')
+    expect(qm.list()[0]?.resolvedOutcomeId).toBe(RESOLVED_WITHOUT_PLAYER_OUTCOME)
   })
 
   it('lets a player destroy complete before external-resolution polling', () => {
@@ -2362,6 +2396,49 @@ describe('QuestManager world-driven settlement sources', () => {
     expect(speak(qm, 'Anna')).toBe('report den')
     expect(qm.getState(sourceQuest.id)).toBe('complete')
     expect(qm.getRelation('Anna')).toBe(2)
+  })
+
+  it('documents why destroy catch-up must run before external source polling', () => {
+    let status: import('./QuestManager').WorldQuestSourceStatus = 'present'
+    const qm = makeManager(
+      [sourceQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { isPermanentlyDestroyed: () => true },
+      { getStatus: () => status },
+    )
+    acceptOffer(qm, 'Anna')
+    status = 'resolved'
+    // Wrong order: external resolution would steal the outcome before destroy
+    // catch-up can advance the objective (createApp polls destroy first).
+    qm.pollWorldDrivenSources()
+    expect(qm.getState(sourceQuest.id)).toBe('failed')
+    expect(qm.list()[0]?.resolvedOutcomeId).toBe(RESOLVED_WITHOUT_PLAYER_OUTCOME)
+    qm.pollDestroySpawnPointObjectives()
+    expect(qm.getState(sourceQuest.id)).toBe('failed')
+  })
+
+  it('does not externally fail a quest already past active via destroy', () => {
+    let status: import('./QuestManager').WorldQuestSourceStatus = 'present'
+    const qm = makeManager(
+      [sourceQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { isPermanentlyDestroyed: () => true },
+      { getStatus: () => status },
+    )
+    acceptOffer(qm, 'Anna')
+    status = 'resolved'
+    qm.pollDestroySpawnPointObjectives()
+    expect(qm.getState(sourceQuest.id)).toBe('ready_to_report')
+    qm.pollWorldDrivenSources()
+    expect(qm.getState(sourceQuest.id)).toBe('ready_to_report')
   })
 
   it('invalidates an active generated quest whose source binding is gone', () => {
@@ -2435,6 +2512,44 @@ describe('QuestManager lost livestock sources (fauna-024)', () => {
     expect(qm.onInteract('Anna')?.offer).toBeDefined()
   })
 
+  it('keeps a calm or returned generated source non-offerable without manufacturing stray', () => {
+    for (const status of ['unavailable', 'returned'] as const) {
+      const qm = makeManager(
+        [lostQuest],
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        lostLookup(status),
+      )
+      expect(qm.isQuestAvailable(lostQuest.id)).toBe(false)
+      expect(qm.onInteract('Anna')).toBeNull()
+      expect(qm.getState(lostQuest.id)).toBe('not_offered')
+    }
+  })
+
+  it('becomes offerable when a natural stray snapshot appears', () => {
+    let status: import('../fauna/animalStray').LostLivestockSourceStatus | 'untracked' = 'unavailable'
+    const qm = makeManager(
+      [lostQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { getSnapshot: () => status },
+    )
+    expect(qm.isQuestAvailable(lostQuest.id)).toBe(false)
+    status = 'lost-alive'
+    expect(qm.isQuestAvailable(lostQuest.id)).toBe(true)
+    expect(qm.onInteract('Anna')?.offer).toBeDefined()
+  })
+
   it('reads live return from world state, not quest flags', () => {
     const qm = makeManager(
       [lostQuest],
@@ -2497,6 +2612,76 @@ describe('QuestManager lost livestock sources (fauna-024)', () => {
     qm.pollLostLivestockSources()
     expect(qm.getState(lostQuest.id)).toBe('complete')
     expect(qm.list()[0]?.resolvedOutcomeId).toBe('dead_confirmed')
+  })
+})
+
+describe('QuestManager authored zagubiona-owca stray trigger (plan 030)', () => {
+  const sheepDef = runtimeAuthored(QUESTS.find((d) => d.id === 'zagubiona-owca')!)
+
+  it('notifies onAnimalTargetBound when the authored sheep quest binds its target', () => {
+    const bound: Array<{ questId: string, animalId: string }> = []
+    const qm = new QuestManager(
+      [sheepDef],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'sheep-house0-0',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        onAnimalTargetBound: (questId, animalId) => {
+          bound.push({ questId, animalId })
+        },
+      },
+    )
+    acceptOffer(qm, 'Anna')
+    expect(bound).toEqual([{ questId: 'zagubiona-owca', animalId: 'sheep-house0-0' }])
+  })
+
+  it('does not re-bind or re-notify while the target stays bound', () => {
+    let calls = 0
+    const qm = new QuestManager(
+      [sheepDef],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'sheep-house0-0',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        onAnimalTargetBound: () => {
+          calls += 1
+        },
+      },
+    )
+    acceptOffer(qm, 'Anna')
+    expect(calls).toBe(1)
+    qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })
+    expect(calls).toBe(1)
   })
 })
 

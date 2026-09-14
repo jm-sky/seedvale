@@ -1,11 +1,11 @@
 # Plan: External resolution and authored/world-driven problem offering
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Model:** Composer, Grok
-**Depends on:** ~~quests-progression-028~~, quests-progression-029
+**Depends on:** ~~quests-progression-028~~, ~~quests-progression-029~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests`
 **Tags:** `world-driven` `emergent-quests` `fauna`

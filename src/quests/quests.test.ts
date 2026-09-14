@@ -6,9 +6,12 @@ import {
   bindExactCaveQuests,
   buildDarkForestTreasureQuest,
   buildLandmarkQuests,
+  externalResolutionOutcome,
   QuestDefinitionValidationError,
   QUESTS,
   rankQuestOfferCandidates,
+  RESOLVED_WITHOUT_PLAYER_OUTCOME,
+  uniqueOutcomeForState,
   validateQuestDefinitions,
 } from './quests'
 
@@ -640,5 +643,39 @@ describe('rankQuestOfferCandidates (plan quests-progression-033)', () => {
     const second = rankQuestOfferCandidates(candidates).map((d) => d.id)
     expect(first).toEqual(second)
     expect(first).toEqual(['x', 'y', 'z'])
+  })
+})
+
+describe('externalResolutionOutcome (plan quests-progression-030)', () => {
+  it('prefers resolved_without_player over a unique-failed guess when both exist', () => {
+    const def = runtimeQuest({
+      id: 'wolf',
+      title: 'wolf',
+      description: 'wolf',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      reportLine: 'report',
+      stages: [{ objective: { type: 'interact_well' }, description: 'well', reminderLine: 'r' }],
+      outcomes: [
+        { id: RESOLVED_WITHOUT_PLAYER_OUTCOME, state: 'failed', resultText: 'gone' },
+        { id: 'other_failed', state: 'failed', resultText: 'other' },
+      ],
+    })
+    expect(uniqueOutcomeForState(def, 'failed')).toBeUndefined()
+    expect(externalResolutionOutcome(def)?.id).toBe(RESOLVED_WITHOUT_PLAYER_OUTCOME)
+  })
+
+  it('falls back to the unique failed outcome when the named id is absent', () => {
+    const def = runtimeQuest({
+      id: 'simple-fail',
+      title: 'simple',
+      description: 'simple',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      reportLine: 'report',
+      stages: [{ objective: { type: 'interact_well' }, description: 'well', reminderLine: 'r' }],
+      outcomes: [{ id: 'only_failed', state: 'failed', resultText: 'gone' }],
+    })
+    expect(externalResolutionOutcome(def)?.id).toBe('only_failed')
   })
 })

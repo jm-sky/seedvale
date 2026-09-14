@@ -569,6 +569,29 @@ describe('AnimalAgent', () => {
       expect(sheep.isLeadable()).toBe(true)
     })
 
+    it('authored zagubiona-owca trigger starts or reuses a real fauna stray episode', () => {
+      // Mirrors createApp onAnimalTargetBound for zagubiona-owca (plan 030):
+      // start only when no compatible episode exists; never invent a second one.
+      const ensureAuthoredStray = (animal: AnimalAgent): boolean => {
+        if (animal.isStrayActive()) return false
+        return animal.startLivestockStray({ random: () => 0.2 })
+      }
+
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-house0-authored',
+        ownerHouseId: 'home:home:0',
+      }))
+      expect(ensureAuthoredStray(sheep)).toBe(true)
+      expect(sheep.isStrayActive()).toBe(true)
+      const x = sheep.mesh.position.x
+      const z = sheep.mesh.position.z
+      expect(ensureAuthoredStray(sheep)).toBe(false)
+      expect(sheep.mesh.position.x).toBe(x)
+      expect(sheep.mesh.position.z).toBe(z)
+      expect(sheep.isStrayActive()).toBe(true)
+    })
+
     it('round-trips stray/dead/inspection through snapshot hydrate and clears assist on return', () => {
       const sheep = new AnimalAgent(makeDeps({
         def: ANIMAL_DEFS.sheep,

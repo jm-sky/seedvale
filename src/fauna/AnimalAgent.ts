@@ -1774,7 +1774,7 @@ export class AnimalAgent {
    * @domain fauna
    * @role Natural (non-quest) stray entry (plan fauna-025) — evaluated
    *  locally every tick on this one agent, no settlement/manager scan.
-   *  Unlike `startLivestockStray()` (quest materialization's displacement
+   *  Unlike `startLivestockStray()` (authored narrative displacement
    *  teleport), the animal has already relocated itself through ordinary
    *  flee/roam movement, so this only records the episode at the animal's
    *  current position; `home` still holds the real origin at this point.
