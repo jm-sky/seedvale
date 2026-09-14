@@ -65,6 +65,7 @@ Generated from TypeScript imports.
 - `combat/combatIntent.ts`
 - `fauna/AnimalAgent.ts`
 - `settlement/createSettlement.ts`
+- `settlement/props.ts`
 
 ## `simulation/interactionQueue.test.ts`
 

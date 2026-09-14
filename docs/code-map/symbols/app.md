@@ -318,10 +318,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1258
-- `buildDigTarget` — function — line 1202
+- `buildCombatTarget` — function — line 1263
+- `buildDigTarget` — function — line 1207
 - `buildInteractables` — function — line 505
-- `collectItem` — function — line 1314
+- `collectItem` — function — line 1319
 - `COMBAT_TARGET_CONE_DOT` — const — line 104
 - `COMBAT_TARGET_RANGE` — const — line 89
 - `CombatAimMode` — type — line 94

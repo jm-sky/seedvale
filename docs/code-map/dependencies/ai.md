@@ -107,6 +107,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
+- `settlement/householdWells.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/npcState.ts`

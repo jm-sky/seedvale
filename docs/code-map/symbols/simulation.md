@@ -23,8 +23,10 @@ Generated from exported TypeScript symbols.
 ## `simulation/interactionQueue.ts`
 
 - `createInteractionQueue` — function — line 80
+- `householdWellQueueId` — function — line 158
 - `InteractionQueue` — type — line 28
 - `InteractionQueueConfig` — type — line 10
+- `settlementWellQueueId` — function — line 163
 - `wellQueueId` — function — line 153
 
 ## `simulation/observation.ts`

@@ -243,6 +243,17 @@ Generated from exported TypeScript symbols.
 - `transferableHouseholdItemKinds` — function — line 46
 - `transferResourceToHousehold` — function — line 70
 
+## `settlement/householdWells.ts`
+
+- `minimumHouseholdWellCount` — function — line 21
+  - domain: settlements-npcs
+- `resolveNearestWaterWellTarget` — function — line 98
+  - domain: settlements-npcs
+- `selectHouseholdWellFamilyIndices` — function — line 35
+  - domain: settlements-npcs
+- `SettlementWellSource` — type — line 80
+- `WaterWellTarget` — type — line 85
+
 ## `settlement/householdWood.ts`
 
 - `applyWoodItemBatch` — function — line 77
@@ -483,15 +494,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 279
-- `buildSettlementProps` — function — line 687
-- `disposeSettlementGroup` — function — line 1886
-- `SettlementHouseBed` — type — line 147
-- `SettlementHouseLandmark` — type — line 113
-- `SettlementLandmarks` — type — line 154
-- `SettlementLandPlot` — type — line 268
-- `SettlementStorageVisuals` — type — line 260
-- `SettlementTreeLandmark` — type — line 286
+- `BlacksmithWorkplace` — type — line 295
+- `buildSettlementProps` — function — line 703
+- `disposeSettlementGroup` — function — line 1933
+- `SettlementHouseBed` — type — line 148
+- `SettlementHouseLandmark` — type — line 114
+- `SettlementLandmarks` — type — line 164
+- `SettlementLandPlot` — type — line 284
+- `SettlementStorageVisuals` — type — line 276
+- `SettlementTreeLandmark` — type — line 302
+- `SettlementWellLandmark` — type — line 155
 
 ## `settlement/propSpecs.ts`
 
@@ -864,18 +876,21 @@ Generated from exported TypeScript symbols.
 ## `settlement/villagePlan.ts`
 
 - `FoodSourceType` — type — line 10
+- `householdWellLandmarkId` — function — line 127
+- `householdWellPlotId` — function — line 113
+- `parseHouseholdWellFamilyIndex` — function — line 119
 - `residentialStructureId` — function — line 107
 - `VillageBoundary` — type — line 27
 - `VillageBuildingPlan` — type — line 86
 - `VillageBuildingRole` — type — line 78
 - `VillageCenter` — type — line 35
-- `VillageEntrance` — type — line 144
+- `VillageEntrance` — type — line 164
 - `VillageIdentity` — type — line 14
-- `VillageLandmarkKind` — type — line 111
-- `VillageLandmarkPlan` — type — line 121
-- `VillageLayoutPattern` — type — line 156
-- `VillagePathPlan` — type — line 135
-- `VillagePlan` — type — line 172
+- `VillageLandmarkKind` — type — line 131
+- `VillageLandmarkPlan` — type — line 141
+- `VillageLayoutPattern` — type — line 176
+- `VillagePathPlan` — type — line 155
+- `VillagePlan` — type — line 192
 - `VillagePlot` — type — line 59
 - `VillagePlotRole` — type — line 57
 - `VillageZone` — type — line 49
@@ -887,14 +902,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1041
-- `chooseLayoutPattern` — function — line 131
-- `HOUSE_PLOT_RADIUS` — const — line 67
-- `pathPlansToCorridorData` — function — line 1406
-- `planLocalPathsAndEntrances` — function — line 1287
-- `planVillageLayout` — function — line 721
-- `PLOT_SCORE_WEIGHTS` — const — line 41
-- `VillageLayoutDraft` — type — line 100
+- `buildingsAndLandmarksFromPlots` — function — line 1076
+- `chooseLayoutPattern` — function — line 132
+- `HOUSE_PLOT_RADIUS` — const — line 68
+- `pathPlansToCorridorData` — function — line 1447
+- `planLocalPathsAndEntrances` — function — line 1328
+- `planVillageLayout` — function — line 722
+- `PLOT_SCORE_WEIGHTS` — const — line 42
+- `VillageLayoutDraft` — type — line 101
 
 ## `settlement/wellInteractionQueue.ts`
 

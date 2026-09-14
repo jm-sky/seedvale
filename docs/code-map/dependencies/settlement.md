@@ -649,6 +649,25 @@ Generated from TypeScript imports.
 - `app/actions/householdResourceTransferActions.ts`
 - `settlement/householdResourceTransfer.test.ts`
 
+## `settlement/householdWells.test.ts`
+
+**Imports**
+
+- `settlement/householdWells.ts`
+
+## `settlement/householdWells.ts`
+
+**Imports**
+
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `settlement/householdWells.test.ts`
+- `settlement/villagePlanner.test.ts`
+- `settlement/villagePlanner.ts`
+
 ## `settlement/householdWood.ts`
 
 **Imports**
@@ -1144,6 +1163,7 @@ Generated from TypeScript imports.
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
+- `simulation/index.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/coastPlacement.ts`
 - `world/containerProp.ts`
@@ -1807,6 +1827,7 @@ Generated from TypeScript imports.
 
 - `settlement/families.ts`
 - `settlement/gardenScale.ts`
+- `settlement/householdWells.ts`
 - `settlement/householdYard.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
@@ -1822,6 +1843,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `settlement/families.ts`
 - `settlement/gardenScale.ts`
+- `settlement/householdWells.ts`
 - `settlement/pathDryness.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
