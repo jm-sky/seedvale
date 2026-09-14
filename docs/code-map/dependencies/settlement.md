@@ -346,6 +346,8 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/settlementProgression.test.ts`
+- `settlement/settlementProgression.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
@@ -1445,6 +1447,8 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.test.ts`
+- `settlement/settlementProgression.ts`
 - `settlement/settlementProximity.test.ts`
 - `settlement/settlementProximity.ts`
 - `settlement/settlementSignposts.test.ts`
@@ -1508,6 +1512,7 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `player/PlayerController.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementProgression.ts`
 - `settlement/settlementTerrain.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverQuery.ts`
@@ -1517,7 +1522,36 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/settlementProgression.test.ts`
 - `terrain/chunkManager.ts`
+
+## `settlement/settlementProgression.test.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.ts`
+- `settlement/settlementTerrain.ts`
+- `terrain/chunkHeightmap.ts`
+
+## `settlement/settlementProgression.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `player/PlayerController.ts`
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementTerrain.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverQuery.ts`
+
+**Imported by**
+
+- `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.test.ts`
 
 ## `settlement/settlementPropColliders.test.ts`
 
@@ -1616,6 +1650,8 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.test.ts`
+- `settlement/settlementProgression.ts`
 
 ## `settlement/settlementVillageTorch.ts`
 

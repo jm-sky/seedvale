@@ -84,9 +84,12 @@ Generated from exported TypeScript symbols.
 - `FamilyMember` — type — line 145
 - `FamilyMemberRef` — type — line 171
 - `FamilyRelation` — type — line 143
-- `generateFamilies` — function — line 402
+- `generateFamilies` — function — line 431
+- `maxRolledVillageSize` — function — line 208
+- `minRolledVillageSize` — function — line 216
 - `RolledVillageSize` — type — line 18
-- `rollVillageSize` — function — line 210
+- `rolledVillageSizeRank` — function — line 203
+- `rollVillageSize` — function — line 239
 - `VILLAGE_SIZE_CONFIG` — const — line 64
 - `VillageSize` — type — line 15
 - `villageSizeConfig` — function — line 117
@@ -673,16 +676,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 137
-- `cellKey` — function — line 122
-- `cellSeed` — function — line 165
-- `cellsWithinRadius` — function — line 149
-- `generateSettlementDef` — function — line 646
-- `generateVillagePlan` — function — line 584
-- `SETTLEMENT_GRID_STEP` — const — line 64
-- `SettlementCell` — type — line 70
-- `SettlementDef` — type — line 72
-- `worldToCell` — function — line 126
+- `cellFromId` — function — line 139
+- `cellKey` — function — line 124
+- `cellSeed` — function — line 167
+- `cellsWithinRadius` — function — line 151
+- `generateSettlementDef` — function — line 744
+- `generateVillagePlan` — function — line 678
+- `probeSettlementSite` — function — line 490
+  - domain: settlements
+- `SETTLEMENT_GRID_STEP` — const — line 66
+- `SettlementCell` — type — line 72
+- `SettlementDef` — type — line 74
+- `SettlementSiteProbe` — type — line 478
+- `worldToCell` — function — line 128
 
 ## `settlement/settlementNightCycle.ts`
 
@@ -705,11 +711,30 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedSettlementDefCount` — function — line 75
-- `clearSettlementDefCache` — function — line 48
-- `setSettlementRiverQuery` — function — line 42
-- `settlementDefFor` — function — line 53
-- `SettlementResolveContext` — type — line 16
+- `cachedSettlementDefCount` — function — line 91
+- `cachedSettlementProgressionPolicy` — function — line 96
+- `clearSettlementDefCache` — function — line 55
+- `setSettlementRiverQuery` — function — line 46
+- `settlementDefFor` — function — line 67
+- `SettlementResolveContext` — type — line 20
+
+## `settlement/settlementProgression.ts`
+
+- `chebyshevCellDistance` — function — line 55
+- `orderProgressionCandidates` — function — line 89
+  - domain: settlements
+- `resolveSettlementProgressionPolicy` — function — line 151
+  - domain: settlements
+- `SETTLEMENT_PROGRESSION_FAR_ORDER_SALT` — const — line 20
+- `SETTLEMENT_PROGRESSION_FAR_RING` — const — line 16
+- `SETTLEMENT_PROGRESSION_NEAR_ORDER_SALT` — const — line 19
+- `SETTLEMENT_PROGRESSION_NEAR_RING` — const — line 14
+- `SettlementProgressionPolicy` — type — line 47
+  - domain: settlements
+- `settlementProgressionRingCells` — function — line 64
+  - domain: settlements
+- `SettlementProgressionTarget` — type — line 36
+- `SettlementProgressionWorldInput` — type — line 25
 
 ## `settlement/settlementPropColliders.ts`
 

@@ -94,6 +94,7 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.ts`
 - `settlement/settlementSignposts.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`

@@ -280,6 +280,8 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.test.ts`
+- `settlement/settlementProgression.ts`
 - `settlement/settlementTerrain.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
@@ -950,6 +952,7 @@ Generated from TypeScript imports.
 
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.ts`
 - `terrain/chunkManager.ts`
 - `terrain/riverQuery.test.ts`
 
