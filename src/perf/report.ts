@@ -1,4 +1,5 @@
 import type { AgentCpuReport } from './agentCpuDiag'
+import type { GrassFinalizationReport } from './grassFinalizationDiag'
 import type { SessionTotals } from './monitor'
 import type { IsolationProbeRow, PerfContext, PerfReportJson } from './types'
 import { formatAgentCpuReport } from './agentCpuDiag'
@@ -22,6 +23,7 @@ export function buildReport(input: {
   scene?: SceneCensus
   isolation?: IsolationProbeRow[]
   agentCpu?: AgentCpuReport | null
+  grassFinalization?: GrassFinalizationReport | null
   /** False only for `current` (plan tools-001 §2) — no fixed anchor, so it
    *  can't be trusted in an automated baseline comparison. Defaults true. */
   canonical?: boolean
@@ -131,6 +133,7 @@ export function buildReport(input: {
     recommendation,
     context: ctx,
     agentCpu: input.agentCpu ?? undefined,
+    grassFinalization: input.grassFinalization ?? undefined,
   }
 }
 

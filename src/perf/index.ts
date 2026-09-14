@@ -24,6 +24,18 @@ export {
 export { createGpuTimer, getGpuTimer, setActiveGpuTimer } from './gpuTimer'
 export type { GpuTimer } from './gpuTimer'
 export {
+  buildGrassFinalizationReport,
+  createGrassFinalizationDiag,
+  formatGrassFinalizationReport,
+  getGrassFinalizationDiag,
+  setActiveGrassFinalizationDiag,
+} from './grassFinalizationDiag'
+export type {
+  GrassFinalizationDiag,
+  GrassFinalizationDiagTotals,
+  GrassFinalizationReport,
+} from './grassFinalizationDiag'
+export {
   formatIsolationReport,
   runIsolationProbes,
 } from './isolationProbe'

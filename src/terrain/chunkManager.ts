@@ -10,6 +10,7 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
+import { getGrassFinalizationDiag, readJsHeapUsedBytes } from '../perf/grassFinalizationDiag'
 import { getProgramCensus } from '../perf/programCensus'
 import { createLandmarkProp, preloadLandmarkTemplates } from '../settlement/landmarkProps'
 import {
@@ -1412,20 +1413,39 @@ export function createChunkManager(
     requestChunkGrass(key, params)
       .then((data) => {
         const rec = chunks.get(key)
-        if (!rec) return // chunk unloaded while generating
+        if (!rec) {
+          getGrassFinalizationDiag().recordDiscarded('unloaded')
+          return
+        }
         rec.grassPending = false
         const dist = chebyshevDistance(coord, lastPlayerChunk)
-        if (dist > grassUnloadRadius) return // out of range by the time the result came back
+        if (dist > grassUnloadRadius) {
+          getGrassFinalizationDiag().recordDiscarded('outOfRange')
+          return
+        }
+        const diag = getGrassFinalizationDiag()
+        const timed = diag.isEnabled()
+        const tCallback0 = timed ? performance.now() : 0
+        const heap0 = timed ? readJsHeapUsedBytes() : null
         const t0 = performance.now()
         const grass = grassSystem.buildGrassChunkMeshes(data, x, z)
         getMonitor().recordHitch('GRASS', performance.now() - t0, 'grass generation')
         rec.grass = grass
         if (grass) {
-          if (isSystemEnabled('grass')) scene.add(grass.mesh)
+          const tLod0 = timed ? performance.now() : 0
           const { mainFrac, fillerFrac, geometryTier } = grassLodForDistance(dist)
           grass.setLodFraction(mainFrac, fillerFrac)
           grass.setGeometryLod(geometryTier)
           applyGrassDebugVisibility(grass)
+          if (timed) diag.recordLodApply(performance.now() - tLod0, grass.geometryCount())
+          const tAttach0 = timed ? performance.now() : 0
+          if (isSystemEnabled('grass')) scene.add(grass.mesh)
+          if (timed) diag.recordSceneAttach(performance.now() - tAttach0)
+        }
+        if (timed) {
+          const heap1 = readJsHeapUsedBytes()
+          const heapDelta = heap0 != null && heap1 != null ? heap1 - heap0 : null
+          diag.recordCallback(performance.now() - tCallback0, heapDelta)
         }
       })
       .catch((err: unknown) => {

@@ -7,6 +7,11 @@ import type { PerfMonitor } from './monitor'
 import type { PerfReportJson } from './types'
 import { worldToChunk } from '../terrain/chunkGrid'
 import { buildAgentCpuReport, formatAgentCpuReport, getAgentCpuDiag } from './agentCpuDiag'
+import {
+  buildGrassFinalizationReport,
+  formatGrassFinalizationReport,
+  getGrassFinalizationDiag,
+} from './grassFinalizationDiag'
 import { formatIsolationReport, runIsolationProbes } from './isolationProbe'
 import { formatProgramAttributionReport, formatProgramCensusReport, formatProgramCompileCostReport, getProgramCensus } from './programCensus'
 import { buildReport, formatReport } from './report'
@@ -194,11 +199,13 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
 
         // Phase: measured session.
         getAgentCpuDiag().reset()
+        getGrassFinalizationDiag().reset()
         monitor.setSource('benchmark', true)
         monitor.beginSession()
         await sleep(durationSec * 1000)
         const totals = monitor.endSession()
         const agentCpuTotals = getAgentCpuDiag().snapshot()
+        const grassFinalizationTotals = getGrassFinalizationDiag().snapshot()
         if (streamTimer) window.clearInterval(streamTimer)
 
         const scene = censusScene(host.isolation.scene)
@@ -216,12 +223,14 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
           categoryMsSum: totals.categoryMsSum,
           context: baseContext,
         })
+        const grassFinalization = buildGrassFinalizationReport(grassFinalizationTotals)
         const report = buildReport({
           durationSec,
           scenario: id,
           totals,
           canonical: id !== 'current',
           agentCpu,
+          grassFinalization,
           context: {
             ...baseContext,
             timeOfDay,
@@ -238,6 +247,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         console.log(formatReport(report))
         console.log(report)
         if (agentCpu) console.log(formatAgentCpuReport(agentCpu))
+        if (grassFinalization) console.log(formatGrassFinalizationReport(grassFinalization))
         // Plan 149 Phase 0 program-census diagnostic (docs/performance/audits/
         // 2026-09-01--program-census.md) — the census (`?programCensus=1` or
         // `?benchmark=stream`, see `src/perf/flags.ts`) accumulates for the
@@ -266,6 +276,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
           const headers: string[] = [
             'Seedvale Benchmark',
             agentCpu ? 'Seedvale Agent CPU' : undefined,
+            grassFinalization ? 'Seedvale Grass Finalization' : undefined,
             programCensus.enabled ? 'Seedvale Program Census' : undefined,
             programCensus.enabled ? 'Seedvale Program Attribution' : undefined,
             programCensus.enabled ? 'Seedvale Program Compile Cost' : undefined,
@@ -284,6 +295,11 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
 
           if (agentCpu) {
             content.push(formatAgentCpuReport(agentCpu))
+            content.push('\n---\n')
+          }
+
+          if (grassFinalization) {
+            content.push(formatGrassFinalizationReport(grassFinalization))
             content.push('\n---\n')
           }
 

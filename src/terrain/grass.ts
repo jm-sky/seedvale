@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { ChunkCoord } from './chunkGrid'
 import type { ChunkTileData, RegionParams, RiverChannelSegment } from './chunkHeightmap'
 import type { GrassGeometryLodTier } from './distanceLod'
+import { getGrassFinalizationDiag } from '../perf/grassFinalizationDiag'
 import { REFLECTION_SKIPPED_LAYER } from '../world/waterMirror'
 import {
   computeChunkGrass,
@@ -32,6 +33,9 @@ export type WorldGrassChunk = {
    *  which only changes how many instances of the *current* geometry draw.
    *  No-op on the filler bucket, which stays a single cheap near-only shape. */
   setGeometryLod: (tier: GrassGeometryLodTier) => void
+  /** Number of `BufferGeometry`s currently cached on this chunk (near plus
+   *  any lazily built mid/far tiers). Used by grass-finalization diagnostics. */
+  geometryCount: () => number
   /** Dev-only hard visibility switch, independent of `setLodFraction` — a
    *  hidden bucket's `InstancedMesh.visible` is set `false` outright rather
    *  than drawing 0 instances, since the main-bucket branch of
@@ -476,6 +480,10 @@ export function createGrassSystem(): GrassSystem {
     chunkOriginX: number,
     chunkOriginZ: number,
   ): WorldGrassChunk | null {
+    const diag = getGrassFinalizationDiag()
+    const timed = diag.isEnabled()
+    const tBuild0 = timed ? performance.now() : 0
+
     const group = new THREE.Group()
     group.position.set(chunkOriginX, 0, chunkOriginZ)
     group.name = 'chunk-grass'
@@ -493,13 +501,25 @@ export function createGrassSystem(): GrassSystem {
     }
     const subMeshes: SubMesh[] = []
     let totalCount = 0
+    let allocationSetupMs = 0
+    let instanceMatrixBindMs = 0
+    let boundsMs = 0
+    let buckets = 0
+    let geometriesCreated = 0
+    let instancedAttributesCreated = 0
+    let instancesFull = 0
+    let instancesFiller = 0
 
     for (const id of GRASS_SPECIES_ORDER) {
       const bucket = data[id]
       if (!bucket) continue
       totalCount += bucket.count
       const isFiller = id === 'filler'
+      buckets += 1
+      if (isFiller) instancesFiller += bucket.count
+      else instancesFull += bucket.count
 
+      const tAlloc0 = timed ? performance.now() : 0
       // Instanced (per-blade) attributes are shared by reference across every
       // tier's geometry below — three.js's WebGLAttributes caches GPU buffers
       // by attribute object identity, so attaching the same object to several
@@ -508,6 +528,7 @@ export function createGrassSystem(): GrassSystem {
       const aBaseColor = new THREE.InstancedBufferAttribute(bucket.baseColors, 3)
       const aTipColor = new THREE.InstancedBufferAttribute(bucket.tipColors, 3)
       const aWindFactor = new THREE.InstancedBufferAttribute(bucket.windFactors, 1)
+      instancedAttributesCreated += 4
 
       function buildTierGeometry(tier: GrassGeometryLodTier): THREE.BufferGeometry {
         const tpl = isFiller ? fillerTemplate : tieredTemplate(id as TieredSpeciesId, tier)
@@ -523,6 +544,7 @@ export function createGrassSystem(): GrassSystem {
         geometry.setAttribute('aBaseColor', aBaseColor)
         geometry.setAttribute('aTipColor', aTipColor)
         geometry.setAttribute('aWindFactor', aWindFactor)
+        geometriesCreated += 1
         return geometry
       }
 
@@ -537,9 +559,6 @@ export function createGrassSystem(): GrassSystem {
       }
 
       const mesh = new THREE.InstancedMesh(geometryForTier('near'), material, bucket.count)
-      mesh.instanceMatrix = new THREE.InstancedBufferAttribute(bucket.matrices, 16)
-      mesh.instanceMatrix.needsUpdate = true
-      mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
       // No sun shadows — dense fin clusters painted black contact blobs under
       // every tuft (reads as plastic stickers). Terrain AO still softens a bit.
       mesh.castShadow = false
@@ -552,8 +571,22 @@ export function createGrassSystem(): GrassSystem {
       // sun's shadow camera never draws grass anyway (`castShadow = false`
       // below), so the main camera is the only one that needs this layer.
       mesh.layers.set(REFLECTION_SKIPPED_LAYER)
+      const tAlloc1 = timed ? performance.now() : 0
+
+      const tBind0 = timed ? performance.now() : 0
+      mesh.instanceMatrix = new THREE.InstancedBufferAttribute(bucket.matrices, 16)
+      mesh.instanceMatrix.needsUpdate = true
+      instancedAttributesCreated += 1
+      const tBind1 = timed ? performance.now() : 0
+
+      const tBounds0 = timed ? performance.now() : 0
+      mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
+      const tBounds1 = timed ? performance.now() : 0
       // Filler starts hidden; chunkManager enables it only in the near field.
+      // Applied after bounds so `computeBoundingSphere` still walks every
+      // instance instead of an empty `count`.
       if (isFiller) mesh.count = 0
+
       group.add(mesh)
       subMeshes.push({
         mesh,
@@ -562,13 +595,55 @@ export function createGrassSystem(): GrassSystem {
         geometryForTier: isFiller ? null : geometryForTier,
         geometryCache,
       })
+
+      if (timed) {
+        const allocMs = tAlloc1 - tAlloc0
+        const bindMs = tBind1 - tBind0
+        const bucketBoundsMs = tBounds1 - tBounds0
+        allocationSetupMs += allocMs
+        instanceMatrixBindMs += bindMs
+        boundsMs += bucketBoundsMs
+        diag.recordBucket({
+          id,
+          instances: bucket.count,
+          filler: isFiller,
+          allocationSetupMs: allocMs,
+          instanceMatrixBindMs: bindMs,
+          boundsMs: bucketBoundsMs,
+        })
+      }
     }
 
-    if (totalCount === 0) return null
+    if (totalCount === 0) {
+      if (timed) diag.recordEmptyBuild()
+      return null
+    }
+
+    if (timed) {
+      diag.recordBuild({
+        durationMs: performance.now() - tBuild0,
+        allocationSetupMs,
+        instanceMatrixBindMs,
+        boundsMs,
+        buckets,
+        instancedMeshes: subMeshes.length,
+        geometriesCreated,
+        instancedAttributesCreated,
+        instancesFull,
+        instancesFiller,
+        matrixInstancesBound: instancesFull + instancesFiller,
+        sharedMaterialRefs: subMeshes.length,
+      })
+    }
 
     return {
       mesh: group,
       fullCount: totalCount,
+      geometryCount() {
+        let n = 0
+        for (const sub of subMeshes) n += Object.keys(sub.geometryCache).length
+        return n
+      },
       setLodFraction(fraction, fillerFraction = 0) {
         const mainFrac = Math.max(0, Math.min(1, fraction))
         const fillFrac = Math.max(0, Math.min(1, fillerFraction))

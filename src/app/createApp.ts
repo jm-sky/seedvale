@@ -57,10 +57,12 @@ import {
   benchmarkScenarioFromUrl,
   createAgentCpuDiag,
   createBenchmarkRunner,
+  createGrassFinalizationDiag,
   createPerfMonitor,
   isPerfUrlEnabled,
   setActiveAgentCpuDiag,
   setActiveGpuTimer,
+  setActiveGrassFinalizationDiag,
   setActiveMonitor,
   setActiveProgramCensus,
 } from '../perf'
@@ -91,10 +93,6 @@ import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
 import {
-  type GuardWorldProgress,
-  migrateLegacyGuardSwordGift,
-} from '../quests/guardPersistence'
-import {
   buildDungeonBanditTreasureQuest,
   DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME,
   DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME,
@@ -104,6 +102,10 @@ import {
   isDungeonBanditDeepStashLooted,
 } from '../quests/dungeonBanditTreasure'
 import { getActiveDungeonBanditTreasureBinding } from '../quests/dungeonBanditTreasureRuntime'
+import {
+  type GuardWorldProgress,
+  migrateLegacyGuardSwordGift,
+} from '../quests/guardPersistence'
 import {
   buildLostHunterNaturalCaveQuest,
   isLostHunterPackLooted,
@@ -391,6 +393,8 @@ export async function createApp(
   setActiveMonitor(perfMonitor)
   const agentCpuDiag = createAgentCpuDiag()
   setActiveAgentCpuDiag(agentCpuDiag)
+  const grassFinalizationDiag = createGrassFinalizationDiag()
+  setActiveGrassFinalizationDiag(grassFinalizationDiag)
   if (isPerfUrlEnabled()) perfMonitor.setSource('url', true)
   // Seed-source precedence (plan persistence-004 §9, world-015 §3): a caller-
   // resolved Seed Library choice (`options.seed`, boot `StartScreen`'s New
@@ -2958,6 +2962,7 @@ export async function createApp(
     disposeWorldBundle(bundle)
     setActiveMonitor(null)
     setActiveAgentCpuDiag(null)
+    setActiveGrassFinalizationDiag(null)
     setActiveProgramCensus(null)
     setActiveGpuTimer(null)
     gpuTimer.dispose()
