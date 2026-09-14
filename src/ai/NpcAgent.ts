@@ -830,8 +830,11 @@ const HUNT_SEARCH_RADIUS = 140
 /** A hunt attempt tops carried arrows up to this many from the household's
  *  own crafted stock (arrow crafting, `npcProfessionWork.ts`) before
  *  checking whether it can actually fire — bounded so one resupply can't
- *  strip the whole household stock into a single carry trip. */
-const HUNT_RESUPPLY_ARROW_TARGET = 8
+ *  strip the whole household stock into a single carry trip. Exported as the
+ *  Hunter's own protected trade reserve per hunter household member (plan
+ *  settlements-npcs-033 §3) — trade must never sell below what a hunt would
+ *  otherwise resupply. */
+export const HUNT_RESUPPLY_ARROW_TARGET = 8
 /** One expedition yields at most this many kills (plan §2) — carry weight
  *  (`NPC_CARRY_MAX_WEIGHT`) already caps it in practice most of the time via
  *  `harvestAnimalIntoInventory`'s own `canAdd` gate; this is the explicit

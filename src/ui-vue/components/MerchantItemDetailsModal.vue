@@ -52,7 +52,13 @@ const capabilities = computed(() => catalogEntry.value?.capabilities ?? [])
 const book = computed(() => catalogEntry.value?.book ?? null)
 const bookSkillValue = computed<number | null>(() => book.value ? getSkillValue(book.value.skill) : null)
 function percent(value: number): string { return `${Math.round(value * 100)}%` }
-const buyPrice = computed<number | null>(() => props.kind ? merchantPrice(props.kind) : null)
+const buyPrice = computed<number | null>(() => {
+  if (!props.kind) return null
+  if (ui.merchant.mode === 'npcGoods') {
+    return ui.merchant.npcStock.find((entry) => entry.kind === props.kind)?.unitPrice ?? null
+  }
+  return merchantPrice(props.kind)
+})
 const barterValue = computed<number>(() => props.kind ? tradeValue(props.kind) : 0)
 const itemCategoryText = computed(() => item.value ? item.value.categories.map((cat) => categoryLabel[cat]).join(' · ') : '')
 const itemCategoryIcon = computed(() => item.value ? CATEGORY_ICON[primaryItemCategory(item.value)] : Sword)

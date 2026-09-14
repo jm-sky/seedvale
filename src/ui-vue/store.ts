@@ -65,6 +65,13 @@ type NpcDialogueMenuState = {
   canClaimGuardReward: boolean
   getCanClaimGuardReward: (() => boolean) | null
   onClaimGuardReward: (() => string) | null
+  /** Whether the open NPC has anything live to trade right now (plan
+   *  settlements-npcs-033) — resolved from actual trade availability
+   *  (merchant catalog, or a household's real surplus goods), not from
+   *  `npc.role === 'trader'`. Same "resolved once at open time" convention
+   *  as `canClaimGuardReward`. */
+  canTrade: boolean
+  getCanTrade: (() => boolean) | null
   onOpenTrade: (() => void) | null
   /** "Poproś o jedzenie"/"Poproś o wodę" (plan 152) — resolved immediately
    *  against the currently-open `npc`, same shape as `onAskSword`. */
@@ -342,15 +349,36 @@ export type MerchantHorseOffer = {
   onPurchase: (offer: Partial<Record<ItemKind, number>>) => TradeResult
 }
 
+/** One live sellable good row for an ordinary NPC trade session (plan
+ *  settlements-npcs-033) — the BUY column's counterparty-stock equivalent of
+ *  `MERCHANT_STOCK`, except quantity-limited and per-NPC instead of a fixed
+ *  global catalog. `unitPrice` is already the live social price
+ *  (`npcSalePrice` resolved against the open NPC's context). */
+export type NpcTradeStockRow = {
+  kind: ItemKind
+  quantity: number
+  unitPrice: number
+}
+
+/** Which stock the open trade screen renders the BUY column from (plan
+ *  settlements-npcs-033 §1/§10) — `'merchant'` keeps the exact existing
+ *  `MERCHANT_STOCK` catalog + OFFER/barter + horse special; `'npcGoods'` is
+ *  an ordinary NPC's real, quantity-limited household surplus with no
+ *  barter/OFFER column (coin-only V1, see the plan's §8 barter caution). */
+export type MerchantMode = 'merchant' | 'npcGoods'
+
 type MerchantState = {
   open: boolean
   npc: NpcAgent | null
+  mode: MerchantMode
   counts: Partial<Record<ItemKind, number>>
   groups: readonly InventoryGroupView[]
   pricing: MerchantPricing | null
   horseOffer: MerchantHorseOffer | null
+  npcStock: readonly NpcTradeStockRow[]
   /** Settles one mixed BUY+OFFER basket atomically (plan ui-input-003) —
-   *  supersedes the old single-target onBuyCoins/onBuyBarter/onSellCoins. */
+   *  supersedes the old single-target onBuyCoins/onBuyBarter/onSellCoins.
+   *  For `mode: 'npcGoods'` the basket is BUY-only; `offer` is always empty. */
   onSettleTransaction: ((
     purchases: Partial<Record<ItemKind, number>>,
     offer: Partial<Record<ItemKind, number>>,
@@ -676,7 +704,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canClaimGuardReward: false, getCanClaimGuardReward: null, onClaimGuardReward: null, canTrade: false, getCanTrade: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null, onGiveItem: null, joinProposal: null, onRespondToJoinProposal: null, onProposeJoin: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, equippedSlots: {}, onEquipArmor: null, onUnequipArmor: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -717,7 +745,7 @@ export const ui = reactive({
     visible: false, label: '', valid: false, state: 'invalid', canConfirm: false, confirmLabel: 'Zatwierdź [E]',
     reasonLabel: '', supportsRotation: false, requirements: [], supportsRepeat: false, repeatEnabled: false,
   } as PlacementPreviewState,
-  merchant: { open: false, npc: null, counts: {}, groups: [], pricing: null, horseOffer: null, onSettleTransaction: null, onSellInstances: null } as MerchantState,
+  merchant: { open: false, npc: null, mode: 'merchant', counts: {}, groups: [], pricing: null, horseOffer: null, npcStock: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', mode: 'container', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
@@ -946,6 +974,7 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.helpResult = null
   state.resolveQuestHelp = () => questManager.onInteract(npc.id)
   state.canClaimGuardReward = state.getCanClaimGuardReward?.() ?? false
+  state.canTrade = state.getCanTrade?.() ?? false
   state.paymentClaim = npc.preparePaymentRequest()
   state.joinProposal = npc.pendingVoluntaryJoinProposal()
   state.open = true
@@ -1026,6 +1055,7 @@ export function configureNpcDialogueMenu(handlers: {
   onClaimGuardReward: () => string
   onOpenTrade: () => void
   getCanClaimGuardReward: () => boolean
+  getCanTrade: () => boolean
   onRequestFood: (npc: NpcAgent) => string
   onRequestWater: (npc: NpcAgent) => string
   onAskAboutArea: () => string | Promise<string>
@@ -1037,6 +1067,7 @@ export function configureNpcDialogueMenu(handlers: {
   ui.npcDialogueMenu.onClaimGuardReward = handlers.onClaimGuardReward
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
   ui.npcDialogueMenu.getCanClaimGuardReward = handlers.getCanClaimGuardReward
+  ui.npcDialogueMenu.getCanTrade = handlers.getCanTrade
   ui.npcDialogueMenu.onRequestFood = handlers.onRequestFood
   ui.npcDialogueMenu.onRequestWater = handlers.onRequestWater
   ui.npcDialogueMenu.onAskAboutArea = handlers.onAskAboutArea
@@ -1143,14 +1174,18 @@ export function configureMerchant(handlers: Pick<MerchantState, 'onSettleTransac
 export function openMerchant(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
-  pricing: MerchantPricing,
+  mode: MerchantMode,
+  pricing: MerchantPricing | null,
   npc: NpcAgent | null = null,
   horseOffer: MerchantHorseOffer | null = null,
+  npcStock: readonly NpcTradeStockRow[] = [],
 ): void {
   ui.merchant.counts = { ...counts }
   ui.merchant.groups = groups
+  ui.merchant.mode = mode
   ui.merchant.pricing = pricing
   ui.merchant.horseOffer = horseOffer
+  ui.merchant.npcStock = npcStock
   ui.merchant.npc = npc ? markRaw(npc) : null
   ui.merchant.open = true
 }
@@ -1158,27 +1193,32 @@ export function openMerchant(
 export function openMerchantFromDialogue(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
-  pricing: MerchantPricing,
+  mode: MerchantMode,
+  pricing: MerchantPricing | null,
   horseOffer: MerchantHorseOffer | null = null,
+  npcStock: readonly NpcTradeStockRow[] = [],
 ): void {
   const npc = ui.npcDialogueMenu.npc as NpcAgent | null
   closeNpcDialogueMenu({ decline: false })
-  openMerchant(counts, groups, pricing, npc, horseOffer)
+  openMerchant(counts, groups, mode, pricing, npc, horseOffer, npcStock)
 }
 export function refreshMerchant(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
   horseOffer?: MerchantHorseOffer | null,
+  npcStock?: readonly NpcTradeStockRow[],
 ): void {
   ui.merchant.counts = { ...counts }
   ui.merchant.groups = groups
   if (horseOffer !== undefined) ui.merchant.horseOffer = horseOffer
+  if (npcStock !== undefined) ui.merchant.npcStock = npcStock
 }
 export function closeMerchant(): void {
   ui.merchant.open = false
   ui.merchant.npc = null
   ui.merchant.pricing = null
   ui.merchant.horseOffer = null
+  ui.merchant.npcStock = []
 }
 export function isMerchantOpen(): boolean { return ui.merchant.open }
 

@@ -203,6 +203,16 @@ export const BASE_SELL_FACTOR = 0.90
 export const MIN_SELL_FACTOR = 0.80
 export const MAX_SELL_FACTOR = 1.05
 
+/** @domain settlements — full-condition buy-from-NPC factor bounds (plan
+ *  settlements-npcs-033) — a markup over `tradeValue` the player pays an
+ *  ordinary NPC. `MIN_BUY_FACTOR` intentionally equals `MAX_SELL_FACTOR` so
+ *  the best possible buy price never undercuts the best possible merchant
+ *  buyback for the same nominal value — no standing can create a
+ *  buy→sell(merchant) arbitrage loop. */
+export const BASE_BUY_FACTOR = 1.15
+export const MIN_BUY_FACTOR = MAX_SELL_FACTOR
+export const MAX_BUY_FACTOR = 1.30
+
 export type SellPriceContext = {
   relation: number
   relationLevel: RelationLevel
@@ -290,6 +300,32 @@ export function sellPrice(
   const nominal = tradeValue(kind)
   const raw = nominal * fullConditionSellFactor(context)
   return roundSellPrice(capStockedBuyback(kind, raw))
+}
+
+/** @domain settlements — social buy factor for player purchases from an
+ *  ordinary NPC (plan settlements-npcs-033) — reuses the exact same
+ *  `relationshipEffect`/`reputationEffect` inputs as merchant sell pricing,
+ *  but *subtracted* rather than added: better relation/reputation must
+ *  never raise what the player pays, worse standing must never lower it. */
+export function fullConditionBuyFactor(context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT): number {
+  return clamp(
+    BASE_BUY_FACTOR - relationshipEffect(context) - reputationEffect(context),
+    MIN_BUY_FACTOR,
+    MAX_BUY_FACTOR,
+  )
+}
+
+/** @domain settlements — player-buys-from-NPC unit price in coins for one
+ *  ordinary trade-eligible good (plan settlements-npcs-033 §5/§6).
+ *  Base value reuses the same catalog as merchant stock (`merchantPrice`,
+ *  falling back to `tradeValue` for kinds the merchant doesn't stock) so no
+ *  profession/dialogue code hardcodes its own price. */
+export function npcSalePrice(
+  kind: ItemKind,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+): number {
+  const nominal = merchantPrice(kind) ?? tradeValue(kind)
+  return roundSellPrice(nominal * fullConditionBuyFactor(context))
 }
 
 export function offerValue(offer: Partial<Record<ItemKind, number>>): number {

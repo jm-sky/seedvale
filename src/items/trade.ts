@@ -363,6 +363,71 @@ export function settleTransaction(
   return 'ok'
 }
 
+/** One resolved purchase line for `settleOwnedGoodsPurchase` — `unitPrice`
+ *  is caller-resolved (live `npcSalePrice`), not looked up here. */
+export type OwnedGoodsPurchaseLine = {
+  kind: ItemKind
+  count: number
+  unitPrice: number
+}
+
+/**
+ * Atomic explicit-owner item purchase for ordinary NPC trade (plan
+ * settlements-npcs-033) — moves real existing stock/instances from `source`
+ * to `buyer`, and the coin total from `buyer` to `paymentDestination`. Same
+ * preflight-then-mutate shape as `settleTransaction`, but never mints a
+ * replacement instance the way a catalog purchase does: stack goods move
+ * exact counts, instance-backed goods move `source`'s own worst-condition
+ * instances. Every line's live ownership/price is the caller's
+ * responsibility (see the live revalidation contract in the plan's
+ * implementation notes) — this only re-checks that `source` still actually
+ * holds what each line claims before mutating anything.
+ *
+ * @domain settlements-npcs
+ */
+export function settleOwnedGoodsPurchase(
+  buyer: Inventory,
+  source: Inventory,
+  paymentDestination: Inventory,
+  lines: readonly OwnedGoodsPurchaseLine[],
+): TradeResult {
+  const active = lines.filter((line) => line.count > 0)
+  if (active.length === 0) return 'invalid_offer'
+  let totalPrice = 0
+  const purchases: Partial<Record<ItemKind, number>> = {}
+  for (const { kind, count, unitPrice } of active) {
+    if (!Number.isInteger(count) || count <= 0) return 'invalid_offer'
+    if (!Number.isInteger(unitPrice) || unitPrice < 0) return 'invalid_offer'
+    const ownedEnough = isInstanceBackedKind(kind)
+      ? source.countInstances(kind) >= count
+      : source.has(kind, count)
+    if (!ownedEnough) return 'not_sold'
+    purchases[kind] = (purchases[kind] ?? 0) + count
+    totalPrice += unitPrice * count
+  }
+  if (totalPrice > 0 && !buyer.has('coin', totalPrice)) return 'cannot_afford'
+  if (!wouldFitAfterTransaction(buyer, {}, purchases, totalPrice)) return 'full'
+  if (totalPrice > 0 && !wouldFitAfterTransaction(paymentDestination, {}, {}, -totalPrice)) return 'full'
+  for (const { kind, count } of active) {
+    if (isInstanceBackedKind(kind)) {
+      for (const id of selectInstancesToSell(source.getInstances(kind), count)) {
+        const instance = source.getInstance(id)
+        if (!instance) continue
+        source.removeInstance(id)
+        buyer.addInstance(instance)
+      }
+    } else {
+      source.remove(kind, count)
+      buyer.add(kind, count)
+    }
+  }
+  if (totalPrice > 0) {
+    buyer.remove('coin', totalPrice)
+    paymentDestination.add('coin', totalPrice)
+  }
+  return 'ok'
+}
+
 /** Sell concrete instances by id. Validates and prices before any mutation. */
 export function sellInstancesForCoins(
   inventory: Inventory,
