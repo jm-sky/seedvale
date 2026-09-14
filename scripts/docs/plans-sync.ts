@@ -12,7 +12,7 @@ const REVIEW_SUFFIX = '-review.md'
 const DRAFT_HEADING = '## Drafts'
 const PLANNED_HEADING = '## Planned'
 const PLAN_TITLE_PAD_END_SIZE = 78
-const TABLE_HEADER = `| ${'File'.padEnd(PLAN_TITLE_PAD_END_SIZE)} | Summary | Pri | Effort | Depends |`
+const TABLE_HEADER = `| ${'File'.padEnd(PLAN_TITLE_PAD_END_SIZE)} | Pri | Effort | Depends |`
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
 const PLANNED_END_TAG = '## Verification needed'
@@ -132,7 +132,7 @@ const buildRow = (
   const marker = getNotesMarker(isPlanned, hasNotes)
   const title = getPaddedPlanTitle(marker, file)
 
-  return `| ${title} | -       | ${priorityEmoji} | ${effort.padEnd(6)} | ${depends.padEnd(6)} |`
+  return `| ${title} | ${priorityEmoji} | ${effort.padEnd(6)} | ${depends.padEnd(6)} |`
 }
 
 const validateUniqueIds = (plans: PlanInfo[]): void => {
