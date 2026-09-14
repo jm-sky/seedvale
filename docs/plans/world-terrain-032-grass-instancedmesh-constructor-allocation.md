@@ -1,7 +1,7 @@
 # Plan: Grass InstancedMesh constructor allocation optimization
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`vue-tsc --noEmit`, focused Vitest, `pnpm build` all green). Browser/manual verification (`?benchmark=stream`) not performed by the agent — see [implementation notes](./implementation-notes/world-terrain-032-grass-instancedmesh-constructor-allocation-implementation-notes.md).
 **Type:** optimization
 **Priority:** high · **Effort:** S
 **Depends on:** none

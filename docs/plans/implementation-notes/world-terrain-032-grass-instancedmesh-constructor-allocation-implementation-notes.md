@@ -153,3 +153,14 @@ Avoid asserting private Three.js constructor internals in Seedvale tests.
 6. Compare `allocation/setup`, `build total`, callback max and grass hitch count/max with benchmark 018.
 
 If this does not produce a material reduction, do not continue into pooling, incremental finalization or geometry reuse in the same task.
+
+## Result
+
+Implemented exactly as described above: `buildGrassChunkMeshes()` in `src/terrain/grass.ts` now constructs `new THREE.InstancedMesh(geometryForTier('near'), material, 0)`, binds `bucket.matrices` as `instanceMatrix`, then sets `mesh.count = bucket.count` before the existing filler/bounds handling. No changes to `GrassBucketData`, worker pipeline, LOD, density, or shaders.
+
+Extended `src/terrain/grassBounds.test.ts` (existing grass-system test file, no new file created) with two focused cases:
+
+- non-filler bucket: `mesh.count === bucket.count`, `mesh.instanceMatrix.array === bucket.matrices` (no copy), count survives `setGeometryLod`,
+- filler bucket: `mesh.count === 0` right after build, `fullCount` equals the bucket count, `setLodFraction(1, fillerFraction)` restores/zeroes the filler draw count.
+
+Verification: `pnpm vitest run src/terrain/grassBounds.test.ts` (7/7 pass), `pnpm type-check` (clean), `pnpm build` (succeeds). Browser/manual `?benchmark=stream` verification left to the user per the plan.

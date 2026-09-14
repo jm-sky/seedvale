@@ -582,7 +582,11 @@ export function createGrassSystem(): GrassSystem {
         return geo
       }
 
-      const mesh = new THREE.InstancedMesh(geometryForTier('near'), material, bucket.count)
+      // Constructed with count 0 so Three.js's InstancedMesh constructor does
+      // not allocate its own throwaway `Float32Array(bucket.count * 16)` and
+      // run an identity `setMatrixAt` loop over it — dead work, since the
+      // worker-owned `bucket.matrices` replaces it immediately below.
+      const mesh = new THREE.InstancedMesh(geometryForTier('near'), material, 0)
       // No sun shadows — dense fin clusters painted black contact blobs under
       // every tuft (reads as plastic stickers). Terrain AO still softens a bit.
       mesh.castShadow = false
@@ -600,6 +604,7 @@ export function createGrassSystem(): GrassSystem {
       const tBind0 = timed ? performance.now() : 0
       mesh.instanceMatrix = new THREE.InstancedBufferAttribute(bucket.matrices, 16)
       mesh.instanceMatrix.needsUpdate = true
+      mesh.count = bucket.count
       instancedAttributesCreated += 1
       const tBind1 = timed ? performance.now() : 0
 

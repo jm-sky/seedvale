@@ -45,6 +45,29 @@ function syntheticTriBucket(): GrassBucketData {
   }
 }
 
+function syntheticBucket(id: 'tri' | 'filler', count: number): GrassBucketData {
+  const scaleX = 0.16
+  const scaleY = 0.52
+  const matrices = new Float32Array(count * 16)
+  const acc = createGrassBoundsAccumulator()
+  for (let i = 0; i < count; i++) {
+    const pos = new THREE.Vector3(i * 2, 0, i * -1.5)
+    new THREE.Matrix4()
+      .compose(pos, new THREE.Quaternion(), new THREE.Vector3(scaleX, scaleY, scaleX))
+      .toArray(matrices, i * 16)
+    expandGrassInstanceBounds(acc, id, pos.x, pos.y, pos.z, scaleX, scaleY, 1)
+  }
+  return {
+    count,
+    matrices,
+    phases: new Float32Array(count),
+    baseColors: new Float32Array(count * 3),
+    tipColors: new Float32Array(count * 3),
+    windFactors: new Float32Array(count).fill(1),
+    bounds: finalizeGrassBounds(acc)!,
+  }
+}
+
 describe('grass bucket bounds', () => {
   it('returns null for an empty accumulator', () => {
     expect(finalizeGrassBounds(createGrassBoundsAccumulator())).toBeNull()
@@ -111,6 +134,42 @@ describe('grass bucket bounds', () => {
     const system = createGrassSystem()
     try {
       expect(system.buildGrassChunkMeshes({}, 10, 20)).toBeNull()
+    } finally {
+      system.dispose()
+    }
+  })
+
+  it('non-filler mesh count and instanceMatrix bind the worker bucket without copying (world-terrain-032)', () => {
+    const tri = syntheticBucket('tri', 5)
+    const system = createGrassSystem()
+    try {
+      const chunk = system.buildGrassChunkMeshes({ tri }, 0, 0)!
+      const mesh = chunk.mesh.children[0] as THREE.InstancedMesh
+      expect(mesh.count).toBe(tri.count)
+      expect(mesh.instanceMatrix.array).toBe(tri.matrices)
+      chunk.setGeometryLod('mid')
+      expect(mesh.count).toBe(tri.count)
+      chunk.dispose()
+    } finally {
+      system.dispose()
+    }
+  })
+
+  it('filler bucket starts hidden (count 0) and setLodFraction restores it from fullCount', () => {
+    const filler = syntheticBucket('filler', 20)
+    const system = createGrassSystem()
+    try {
+      const chunk = system.buildGrassChunkMeshes({ filler }, 0, 0)!
+      const mesh = chunk.mesh.children[0] as THREE.InstancedMesh
+      expect(mesh.count).toBe(0)
+      expect(chunk.fullCount).toBe(filler.count)
+
+      chunk.setLodFraction(1, 0.5)
+      expect(mesh.count).toBe(Math.round(filler.count * 0.5))
+
+      chunk.setLodFraction(1, 0)
+      expect(mesh.count).toBe(0)
+      chunk.dispose()
     } finally {
       system.dispose()
     }
