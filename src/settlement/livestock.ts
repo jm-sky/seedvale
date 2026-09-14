@@ -32,6 +32,7 @@ import {
   createSheepModel,
 } from '../fauna/proceduralAnimals'
 import { SHEPHERD_FLOCK_SALT, shepherdFlockSize } from '../fauna/shepherdFlock'
+import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { createSeededRandom } from '../world/parseSeed'
 import { type VillageSize, villageSizeConfig } from './families'
 import { homePlaceId } from './places'
@@ -864,11 +865,15 @@ export function tickSettlementLivestock(
   },
 ): void {
   const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, waterSourceProvider, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation, playerControlPos, resolvePersistenceSettlementId, scareStimulus } = ctx
+  const agentCpu = getAgentCpuDiag()
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
   // kinds regardless of the value passed.
+  agentCpu.beginLivestockAnimalUpdates()
+  agentCpu.enterLivestockAgentUpdates()
   for (const animal of livestock) {
+    agentCpu.recordLivestockAgentUpdate(animal.animalId, animal.def.kind === 'dog')
     animal.update({
       dt,
       others: livestock,
@@ -902,6 +907,9 @@ export function tickSettlementLivestock(
       onAnimalVocalize?.(animal.def.kind, animal.mesh.position.x, animal.mesh.position.z)
     }
   }
+  agentCpu.leaveLivestockAgentUpdates()
+  agentCpu.endLivestockAnimalUpdates()
+  agentCpu.beginLivestockPostUpdate()
   if (livestock.some((a) => a.readyToRemove())) {
     const kept: AnimalAgent[] = []
     for (const animal of livestock) {
@@ -917,4 +925,5 @@ export function tickSettlementLivestock(
     livestock.length = 0
     livestock.push(...kept)
   }
+  agentCpu.endLivestockPostUpdate()
 }

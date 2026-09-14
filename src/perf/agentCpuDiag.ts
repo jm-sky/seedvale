@@ -24,12 +24,44 @@ import { PERF_CATEGORY_INDEX } from './types'
  *  two or more non-adjacent call sites inside `update()` without extra
  *  begin/end state. Livestock/rats share `AnimalAgent.update()`, so those
  *  fauna section counters still include settlement-owned animals; the NPC
- *  livestock/rats spans are the wall-clock of those ticks inside NPC total. */
+ *  livestock/rats spans are the wall-clock of those ticks inside NPC total.
+ *
+ *  Livestock inner breakdown (livestock-cpu-diagnostics) is gated by a
+ *  short-lived `enterLivestockAgentUpdates` channel around the
+ *  `tickSettlementLivestock` `animal.update` loop so the same
+ *  `addFauna*Ms` deltas can be copied without a second `performance.now()`
+ *  pair and without changing `AnimalUpdateContext`. */
 export type AgentCpuDiagTotals = {
   npcCrowdMs: number
   npcAgentUpdatesMs: number
   /** `tickSettlementLivestock` — loaded settlements and detached livestock. */
   npcLivestockMs: number
+  /** Nested: loaded-settlement `tickSettlementLivestock` only. */
+  npcLivestockLoadedMs: number
+  /** Nested: detached tick + `includes`/`upsert` bookkeeping. */
+  npcLivestockDetachedMs: number
+  /** `animal.update` loop inside `tickSettlementLivestock`. */
+  livestockAnimalUpdatesMs: number
+  /** Egg drop + `readyToRemove` scan/splice after the update loop. */
+  livestockPostUpdateMs: number
+  /** Detached `includes`/`upsert` after `tickSettlementLivestock`. */
+  livestockDetachedBookkeepingMs: number
+  livestockSensingMs: number
+  livestockTargetingMs: number
+  livestockDecisionMs: number
+  livestockBehaviourMs: number
+  livestockLifePresentationMs: number
+  livestockUpdateCalls: number
+  livestockUniqueAnimals: number
+  livestockDuplicateUpdates: number
+  livestockDetachedAnimals: number
+  livestockDogUpdates: number
+  livestockDogGuardScans: number
+  livestockGuardPredatorCandidates: number
+  livestockPestScans: number
+  livestockPestRatCandidates: number
+  livestockNearestCalls: number
+  livestockNearestCandidatesChecked: number
   /** `Settlement.rats.update` — settlement-owned `AnimalAgent` ticks. */
   npcRatsMs: number
   /** `advanceSocialPairing` — campfire conversation pairing. */
@@ -96,6 +128,29 @@ export type AgentCpuReport = {
     crowdPassCumulativeMs: number
     agentUpdatesCumulativeMs: number
     livestockCumulativeMs: number
+    livestockLoadedMsPerFrame: number
+    livestockDetachedMsPerFrame: number
+    livestockUnattributedMsPerFrame: number
+    livestockAnimalUpdatesMsPerFrame: number
+    livestockPostUpdateMsPerFrame: number
+    livestockDetachedBookkeepingMsPerFrame: number
+    livestockSensingMsPerFrame: number
+    livestockTargetingMsPerFrame: number
+    livestockDecisionMsPerFrame: number
+    livestockBehaviourMsPerFrame: number
+    livestockLifePresentationMsPerFrame: number
+    livestockOtherUpdateMsPerFrame: number
+    livestockUpdateCallsPerFrame: number
+    livestockUniqueAnimalsPerFrame: number
+    livestockDuplicateUpdatesPerFrame: number
+    livestockDetachedAnimalsPerFrame: number
+    livestockDogUpdatesPerFrame: number
+    livestockDogGuardScansPerFrame: number
+    livestockGuardPredatorCandidatesPerFrame: number
+    livestockPestScansPerFrame: number
+    livestockPestRatCandidatesPerFrame: number
+    livestockNearestScansPerFrame: number
+    livestockNearestCandidatesPerFrame: number
     ratsCumulativeMs: number
     socialCumulativeMs: number
     streamingCumulativeMs: number
@@ -146,6 +201,24 @@ export type AgentCpuDiag = {
   endNpcAgentUpdates: () => void
   beginNpcLivestock: () => void
   endNpcLivestock: () => void
+  beginNpcLivestockLoaded: () => void
+  endNpcLivestockLoaded: () => void
+  beginNpcLivestockDetached: () => void
+  endNpcLivestockDetached: () => void
+  beginLivestockAnimalUpdates: () => void
+  endLivestockAnimalUpdates: () => void
+  beginLivestockPostUpdate: () => void
+  endLivestockPostUpdate: () => void
+  beginLivestockDetachedBookkeeping: () => void
+  endLivestockDetachedBookkeeping: () => void
+  beginLivestockFrame: () => void
+  endLivestockFrame: () => void
+  enterLivestockAgentUpdates: () => void
+  leaveLivestockAgentUpdates: () => void
+  recordLivestockAgentUpdate: (animalId: string, isDog: boolean) => void
+  recordLivestockDetachedCount: (count: number) => void
+  recordLivestockGuardScan: (predatorCandidates: number) => void
+  recordLivestockPestScan: (ratCandidates: number) => void
   beginNpcRats: () => void
   endNpcRats: () => void
   beginNpcSocial: () => void
@@ -177,11 +250,36 @@ export type AgentCpuDiag = {
   reset: () => void
 }
 
+export function emptyAgentCpuDiagTotals(): AgentCpuDiagTotals {
+  return emptyTotals()
+}
+
 function emptyTotals(): AgentCpuDiagTotals {
   return {
     npcCrowdMs: 0,
     npcAgentUpdatesMs: 0,
     npcLivestockMs: 0,
+    npcLivestockLoadedMs: 0,
+    npcLivestockDetachedMs: 0,
+    livestockAnimalUpdatesMs: 0,
+    livestockPostUpdateMs: 0,
+    livestockDetachedBookkeepingMs: 0,
+    livestockSensingMs: 0,
+    livestockTargetingMs: 0,
+    livestockDecisionMs: 0,
+    livestockBehaviourMs: 0,
+    livestockLifePresentationMs: 0,
+    livestockUpdateCalls: 0,
+    livestockUniqueAnimals: 0,
+    livestockDuplicateUpdates: 0,
+    livestockDetachedAnimals: 0,
+    livestockDogUpdates: 0,
+    livestockDogGuardScans: 0,
+    livestockGuardPredatorCandidates: 0,
+    livestockPestScans: 0,
+    livestockPestRatCandidates: 0,
+    livestockNearestCalls: 0,
+    livestockNearestCandidatesChecked: 0,
     npcRatsMs: 0,
     npcSocialMs: 0,
     npcStreamingMs: 0,
@@ -214,6 +312,13 @@ export function createAgentCpuDiag(): AgentCpuDiag {
   let npcCrowdStart = Number.NaN
   let npcAgentStart = Number.NaN
   let npcLivestockStart = Number.NaN
+  let npcLivestockLoadedStart = Number.NaN
+  let npcLivestockDetachedStart = Number.NaN
+  let livestockAnimalUpdatesStart = Number.NaN
+  let livestockPostUpdateStart = Number.NaN
+  let livestockDetachedBookkeepingStart = Number.NaN
+  let livestockAgentDepth = 0
+  const livestockFrameIds = new Set<string>()
   let npcRatsStart = Number.NaN
   let npcSocialStart = Number.NaN
   let npcStreamingStart = Number.NaN
@@ -248,6 +353,89 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       if (!this.isEnabled() || !Number.isFinite(npcLivestockStart)) return
       totals.npcLivestockMs += performance.now() - npcLivestockStart
       npcLivestockStart = Number.NaN
+    },
+    beginNpcLivestockLoaded() {
+      if (!this.isEnabled()) return
+      npcLivestockLoadedStart = performance.now()
+    },
+    endNpcLivestockLoaded() {
+      if (!this.isEnabled() || !Number.isFinite(npcLivestockLoadedStart)) return
+      totals.npcLivestockLoadedMs += performance.now() - npcLivestockLoadedStart
+      npcLivestockLoadedStart = Number.NaN
+    },
+    beginNpcLivestockDetached() {
+      if (!this.isEnabled()) return
+      npcLivestockDetachedStart = performance.now()
+    },
+    endNpcLivestockDetached() {
+      if (!this.isEnabled() || !Number.isFinite(npcLivestockDetachedStart)) return
+      totals.npcLivestockDetachedMs += performance.now() - npcLivestockDetachedStart
+      npcLivestockDetachedStart = Number.NaN
+    },
+    beginLivestockAnimalUpdates() {
+      if (!this.isEnabled()) return
+      livestockAnimalUpdatesStart = performance.now()
+    },
+    endLivestockAnimalUpdates() {
+      if (!this.isEnabled() || !Number.isFinite(livestockAnimalUpdatesStart)) return
+      totals.livestockAnimalUpdatesMs += performance.now() - livestockAnimalUpdatesStart
+      livestockAnimalUpdatesStart = Number.NaN
+    },
+    beginLivestockPostUpdate() {
+      if (!this.isEnabled()) return
+      livestockPostUpdateStart = performance.now()
+    },
+    endLivestockPostUpdate() {
+      if (!this.isEnabled() || !Number.isFinite(livestockPostUpdateStart)) return
+      totals.livestockPostUpdateMs += performance.now() - livestockPostUpdateStart
+      livestockPostUpdateStart = Number.NaN
+    },
+    beginLivestockDetachedBookkeeping() {
+      if (!this.isEnabled()) return
+      livestockDetachedBookkeepingStart = performance.now()
+    },
+    endLivestockDetachedBookkeeping() {
+      if (!this.isEnabled() || !Number.isFinite(livestockDetachedBookkeepingStart)) return
+      totals.livestockDetachedBookkeepingMs += performance.now() - livestockDetachedBookkeepingStart
+      livestockDetachedBookkeepingStart = Number.NaN
+    },
+    beginLivestockFrame() {
+      if (!this.isEnabled()) return
+      livestockFrameIds.clear()
+    },
+    endLivestockFrame() {
+      if (!this.isEnabled()) return
+      totals.livestockUniqueAnimals += livestockFrameIds.size
+      livestockFrameIds.clear()
+    },
+    enterLivestockAgentUpdates() {
+      if (!this.isEnabled()) return
+      livestockAgentDepth++
+    },
+    leaveLivestockAgentUpdates() {
+      if (!this.isEnabled() || livestockAgentDepth <= 0) return
+      livestockAgentDepth--
+    },
+    recordLivestockAgentUpdate(animalId, isDog) {
+      if (!this.isEnabled()) return
+      totals.livestockUpdateCalls++
+      if (livestockFrameIds.has(animalId)) totals.livestockDuplicateUpdates++
+      else livestockFrameIds.add(animalId)
+      if (isDog) totals.livestockDogUpdates++
+    },
+    recordLivestockDetachedCount(count) {
+      if (!this.isEnabled()) return
+      totals.livestockDetachedAnimals += count
+    },
+    recordLivestockGuardScan(predatorCandidates) {
+      if (!this.isEnabled() || livestockAgentDepth <= 0) return
+      totals.livestockDogGuardScans++
+      totals.livestockGuardPredatorCandidates += predatorCandidates
+    },
+    recordLivestockPestScan(ratCandidates) {
+      if (!this.isEnabled() || livestockAgentDepth <= 0) return
+      totals.livestockPestScans++
+      totals.livestockPestRatCandidates += ratCandidates
     },
     beginNpcRats() {
       if (!this.isEnabled()) return
@@ -301,22 +489,27 @@ export function createAgentCpuDiag(): AgentCpuDiag {
     addFaunaSensingMs(ms) {
       if (!this.isEnabled()) return
       totals.faunaSensingMs += ms
+      if (livestockAgentDepth > 0) totals.livestockSensingMs += ms
     },
     addFaunaTargetingMs(ms) {
       if (!this.isEnabled()) return
       totals.faunaTargetingMs += ms
+      if (livestockAgentDepth > 0) totals.livestockTargetingMs += ms
     },
     addFaunaDecisionMs(ms) {
       if (!this.isEnabled()) return
       totals.faunaDecisionMs += ms
+      if (livestockAgentDepth > 0) totals.livestockDecisionMs += ms
     },
     addFaunaBehaviourMs(ms) {
       if (!this.isEnabled()) return
       totals.faunaBehaviourMs += ms
+      if (livestockAgentDepth > 0) totals.livestockBehaviourMs += ms
     },
     addFaunaLifePresentationMs(ms) {
       if (!this.isEnabled()) return
       totals.faunaLifePresentationMs += ms
+      if (livestockAgentDepth > 0) totals.livestockLifePresentationMs += ms
     },
     recordFaunaUpdateCall() {
       if (!this.isEnabled()) return
@@ -358,6 +551,10 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       if (!this.isEnabled()) return
       totals.nearestCalls++
       totals.nearestCandidatesChecked += candidatesChecked
+      if (livestockAgentDepth > 0) {
+        totals.livestockNearestCalls++
+        totals.livestockNearestCandidatesChecked += candidatesChecked
+      }
     },
     recordHerdLeaderScan(candidatesChecked) {
       if (!this.isEnabled()) return
@@ -370,6 +567,13 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       npcCrowdStart = Number.NaN
       npcAgentStart = Number.NaN
       npcLivestockStart = Number.NaN
+      npcLivestockLoadedStart = Number.NaN
+      npcLivestockDetachedStart = Number.NaN
+      livestockAnimalUpdatesStart = Number.NaN
+      livestockPostUpdateStart = Number.NaN
+      livestockDetachedBookkeepingStart = Number.NaN
+      livestockAgentDepth = 0
+      livestockFrameIds.clear()
       npcRatsStart = Number.NaN
       npcSocialStart = Number.NaN
       npcStreamingStart = Number.NaN
@@ -387,6 +591,24 @@ const NOOP: AgentCpuDiag = {
   endNpcAgentUpdates: () => {},
   beginNpcLivestock: () => {},
   endNpcLivestock: () => {},
+  beginNpcLivestockLoaded: () => {},
+  endNpcLivestockLoaded: () => {},
+  beginNpcLivestockDetached: () => {},
+  endNpcLivestockDetached: () => {},
+  beginLivestockAnimalUpdates: () => {},
+  endLivestockAnimalUpdates: () => {},
+  beginLivestockPostUpdate: () => {},
+  endLivestockPostUpdate: () => {},
+  beginLivestockDetachedBookkeeping: () => {},
+  endLivestockDetachedBookkeeping: () => {},
+  beginLivestockFrame: () => {},
+  endLivestockFrame: () => {},
+  enterLivestockAgentUpdates: () => {},
+  leaveLivestockAgentUpdates: () => {},
+  recordLivestockAgentUpdate: () => {},
+  recordLivestockDetachedCount: () => {},
+  recordLivestockGuardScan: () => {},
+  recordLivestockPestScan: () => {},
   beginNpcRats: () => {},
   endNpcRats: () => {},
   beginNpcSocial: () => {},
@@ -440,6 +662,14 @@ export function buildAgentCpuReport(input: {
   const crowdMs = input.totals.npcCrowdMs / frames
   const npcAgentMs = input.totals.npcAgentUpdatesMs / frames
   const livestockMs = input.totals.npcLivestockMs / frames
+  const livestockLoadedMs = input.totals.npcLivestockLoadedMs / frames
+  const livestockDetachedMs = input.totals.npcLivestockDetachedMs / frames
+  const livestockAnimalMs = input.totals.livestockAnimalUpdatesMs / frames
+  const livestockSensingMs = input.totals.livestockSensingMs / frames
+  const livestockTargetingMs = input.totals.livestockTargetingMs / frames
+  const livestockDecisionMs = input.totals.livestockDecisionMs / frames
+  const livestockBehaviourMs = input.totals.livestockBehaviourMs / frames
+  const livestockLifeMs = input.totals.livestockLifePresentationMs / frames
   const ratsMs = input.totals.npcRatsMs / frames
   const socialMs = input.totals.npcSocialMs / frames
   const streamingMs = input.totals.npcStreamingMs / frames
@@ -448,6 +678,7 @@ export function buildAgentCpuReport(input: {
   const npcAttributedMs = crowdMs + npcAgentMs + livestockMs + ratsMs + socialMs + streamingMs + maintenanceMs
 
   const hasNpc = npcTotalMs >= 0.01 || npcAttributedMs >= 0.01
+    || input.totals.livestockUpdateCalls > 0
   const hasFauna = faunaTotalMs >= 0.01 || faunaAgentMs >= 0.01
     || input.totals.nearestCalls > 0 || input.totals.herdLeaderCalls > 0
     || input.totals.faunaUpdateCalls > 0
@@ -464,6 +695,36 @@ export function buildAgentCpuReport(input: {
       crowdPassMsPerFrame: round1(crowdMs),
       agentUpdatesMsPerFrame: round1(npcAgentMs),
       livestockMsPerFrame: round1(livestockMs),
+      livestockLoadedMsPerFrame: round1(livestockLoadedMs),
+      livestockDetachedMsPerFrame: round1(livestockDetachedMs),
+      livestockUnattributedMsPerFrame: round1(Math.max(0, livestockMs - livestockLoadedMs - livestockDetachedMs)),
+      livestockAnimalUpdatesMsPerFrame: round1(livestockAnimalMs),
+      livestockPostUpdateMsPerFrame: round1(input.totals.livestockPostUpdateMs / frames),
+      livestockDetachedBookkeepingMsPerFrame: round1(input.totals.livestockDetachedBookkeepingMs / frames),
+      livestockSensingMsPerFrame: round1(livestockSensingMs),
+      livestockTargetingMsPerFrame: round1(livestockTargetingMs),
+      livestockDecisionMsPerFrame: round1(livestockDecisionMs),
+      livestockBehaviourMsPerFrame: round1(livestockBehaviourMs),
+      livestockLifePresentationMsPerFrame: round1(livestockLifeMs),
+      livestockOtherUpdateMsPerFrame: round1(Math.max(0,
+        livestockAnimalMs
+        - livestockSensingMs
+        - livestockTargetingMs
+        - livestockDecisionMs
+        - livestockBehaviourMs
+        - livestockLifeMs,
+      )),
+      livestockUpdateCallsPerFrame: round1(input.totals.livestockUpdateCalls / frames),
+      livestockUniqueAnimalsPerFrame: round1(input.totals.livestockUniqueAnimals / frames),
+      livestockDuplicateUpdatesPerFrame: round1(input.totals.livestockDuplicateUpdates / frames),
+      livestockDetachedAnimalsPerFrame: round1(input.totals.livestockDetachedAnimals / frames),
+      livestockDogUpdatesPerFrame: round1(input.totals.livestockDogUpdates / frames),
+      livestockDogGuardScansPerFrame: round1(input.totals.livestockDogGuardScans / frames),
+      livestockGuardPredatorCandidatesPerFrame: round1(input.totals.livestockGuardPredatorCandidates / frames),
+      livestockPestScansPerFrame: round1(input.totals.livestockPestScans / frames),
+      livestockPestRatCandidatesPerFrame: round1(input.totals.livestockPestRatCandidates / frames),
+      livestockNearestScansPerFrame: round1(input.totals.livestockNearestCalls / frames),
+      livestockNearestCandidatesPerFrame: round1(input.totals.livestockNearestCandidatesChecked / frames),
       ratsMsPerFrame: round1(ratsMs),
       socialMsPerFrame: round1(socialMs),
       streamingMsPerFrame: round1(streamingMs),
@@ -529,6 +790,27 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `  crowd pass: ${npc.crowdPassMsPerFrame.toFixed(1)} ms/frame (${npc.crowdPassCumulativeMs.toFixed(1)} ms cumulative)`,
     `  agent updates: ${npc.agentUpdatesMsPerFrame.toFixed(1)} ms/frame (${npc.agentUpdatesCumulativeMs.toFixed(1)} ms cumulative)`,
     `  livestock: ${npc.livestockMsPerFrame.toFixed(1)} ms/frame (${npc.livestockCumulativeMs.toFixed(1)} ms cumulative)`,
+    `    loaded tick: ${npc.livestockLoadedMsPerFrame.toFixed(1)} ms/frame`,
+    `    detached tick: ${npc.livestockDetachedMsPerFrame.toFixed(1)} ms/frame`,
+    `    unattributed: ${npc.livestockUnattributedMsPerFrame.toFixed(1)} ms/frame`,
+    `    animal updates: ${npc.livestockAnimalUpdatesMsPerFrame.toFixed(1)} ms/frame`,
+    `    post-update (egg/readyToRemove): ${npc.livestockPostUpdateMsPerFrame.toFixed(1)} ms/frame`,
+    `    detached bookkeeping: ${npc.livestockDetachedBookkeepingMsPerFrame.toFixed(1)} ms/frame`,
+    '    AnimalAgent sections:',
+    `      sensing: ${npc.livestockSensingMsPerFrame.toFixed(1)} ms/frame`,
+    `      targeting: ${npc.livestockTargetingMsPerFrame.toFixed(1)} ms/frame`,
+    `      decision: ${npc.livestockDecisionMsPerFrame.toFixed(1)} ms/frame`,
+    `      behaviour: ${npc.livestockBehaviourMsPerFrame.toFixed(1)} ms/frame`,
+    `      life/presentation: ${npc.livestockLifePresentationMsPerFrame.toFixed(1)} ms/frame`,
+    `      other update: ${npc.livestockOtherUpdateMsPerFrame.toFixed(1)} ms/frame`,
+    `    update calls/frame: ${npc.livestockUpdateCallsPerFrame.toFixed(1)}`,
+    `    unique animals/frame: ${npc.livestockUniqueAnimalsPerFrame.toFixed(1)}`,
+    `    duplicate updates/frame: ${npc.livestockDuplicateUpdatesPerFrame.toFixed(1)}`,
+    `    detached animals/frame: ${npc.livestockDetachedAnimalsPerFrame.toFixed(1)}`,
+    `    dog updates/frame: ${npc.livestockDogUpdatesPerFrame.toFixed(1)}`,
+    `    dog guard scans: ${npc.livestockDogGuardScansPerFrame.toFixed(1)}/frame (${npc.livestockGuardPredatorCandidatesPerFrame.toFixed(1)} predator candidates/frame)`,
+    `    pest scans: ${npc.livestockPestScansPerFrame.toFixed(1)}/frame (${npc.livestockPestRatCandidatesPerFrame.toFixed(1)} rat candidates/frame)`,
+    `    nearest scans: ${npc.livestockNearestScansPerFrame.toFixed(1)}/frame (${npc.livestockNearestCandidatesPerFrame.toFixed(1)} candidates/frame)`,
     `  rats: ${npc.ratsMsPerFrame.toFixed(1)} ms/frame (${npc.ratsCumulativeMs.toFixed(1)} ms cumulative)`,
     `  social: ${npc.socialMsPerFrame.toFixed(1)} ms/frame (${npc.socialCumulativeMs.toFixed(1)} ms cumulative)`,
     `  streaming: ${npc.streamingMsPerFrame.toFixed(1)} ms/frame (${npc.streamingCumulativeMs.toFixed(1)} ms cumulative)`,

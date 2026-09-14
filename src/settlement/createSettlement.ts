@@ -1077,6 +1077,7 @@ export async function createSettlement(
       })
       agentCpu.endNpcRats()
       agentCpu.beginNpcLivestock()
+      agentCpu.beginNpcLivestockLoaded()
       tickSettlementLivestock(livestock, {
         dt,
         settlementId: def.id,
@@ -1099,6 +1100,7 @@ export async function createSettlement(
         playerControlPos: { x: observerPos.x, z: observerPos.z },
         scareStimulus,
       })
+      agentCpu.endNpcLivestockLoaded()
       agentCpu.endNpcLivestock()
       agentCpu.beginNpcMaintenance()
       placeWoodshedIfComplete()

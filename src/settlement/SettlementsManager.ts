@@ -908,6 +908,8 @@ export async function createSettlementsManager(
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
       if (nowDays !== undefined) lastNowDays = nowDays
       const agentCpu = getAgentCpuDiag()
+      agentCpu.beginLivestockFrame()
+      agentCpu.recordLivestockDetachedCount(detachedLivestock.length)
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         agentCpu.beginNpcStreaming()
         recheck(playerPos.x, playerPos.z, nowDays ?? lastNowDays, dayLengthSec)
@@ -936,6 +938,7 @@ export async function createSettlementsManager(
       }
       if (detachedLivestock.length > 0) {
         agentCpu.beginNpcLivestock()
+        agentCpu.beginNpcLivestockDetached()
         tickSettlementLivestock(detachedLivestock, {
           dt,
           settlementId: 'detached',
@@ -956,6 +959,7 @@ export async function createSettlementsManager(
           resolvePersistenceSettlementId: (animal) => detachedOriginById.get(animal.animalId) ?? 'detached',
           scareStimulus,
         })
+        agentCpu.beginLivestockDetachedBookkeeping()
         for (const [animalId, animal] of detachedById) {
           if (!detachedLivestock.includes(animal)) {
             detachedById.delete(animalId)
@@ -966,8 +970,11 @@ export async function createSettlementsManager(
           const origin = detachedOriginById.get(animal.animalId)
           if (origin) livestock.upsert(origin, animal)
         }
+        agentCpu.endLivestockDetachedBookkeeping()
+        agentCpu.endNpcLivestockDetached()
         agentCpu.endNpcLivestock()
       }
+      agentCpu.endLivestockFrame()
       for (const instances of midpoints.values()) {
         for (const inst of instances) updateLabelOpacity(inst, playerPos)
       }

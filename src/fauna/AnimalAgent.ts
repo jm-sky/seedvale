@@ -3772,6 +3772,7 @@ export class AnimalAgent {
    *  competes with real household defense. Returns `true` when it consumed
    *  this tick's movement. */
   private pursuePest(dt: number, nearbyRats: readonly AnimalAgent[]): boolean {
+    getAgentCpuDiag().recordLivestockPestScan(nearbyRats.length)
     if (nearbyRats.length === 0) return false
     let n = 0
     for (const rat of nearbyRats) {
@@ -3986,6 +3987,7 @@ export class AnimalAgent {
    *  so a dead/retargeted wolf or a target that walked outside its tier's
    *  radius simply stops being returned — no decay timer needed. */
   private resolveGuardTarget(nearbyPredators: readonly AnimalAgent[]): DogGuardTarget | null {
+    getAgentCpuDiag().recordLivestockGuardScan(nearbyPredators.length)
     let n = 0
     for (const wolf of nearbyPredators) {
       const c = scratchAt(dogGuardWolfScratch, n, () => ({

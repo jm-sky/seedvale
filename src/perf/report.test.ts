@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAgentCpuReport } from './agentCpuDiag'
+import { buildAgentCpuReport, emptyAgentCpuDiagTotals } from './agentCpuDiag'
 import { createPerfMonitor } from './monitor'
 import { buildReport, formatReport } from './report'
 import { PERF_CATEGORY_COUNT, PERF_CATEGORY_INDEX } from './types'
@@ -167,6 +167,7 @@ describe('buildReport', () => {
     const agentCpu = buildAgentCpuReport({
       frames: 10,
       totals: {
+        ...emptyAgentCpuDiagTotals(),
         npcCrowdMs: 5,
         npcAgentUpdatesMs: 15,
         npcLivestockMs: 3,
