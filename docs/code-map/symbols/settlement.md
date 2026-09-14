@@ -698,10 +698,9 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPalisade.ts`
 
-- `PALISADE_GATE_HALF_ANGLE` — const — line 17
-- `plantEntrancePalisade` — function — line 61
-- `pointHitsCorridor` — function — line 39
-- `WALL_HALF_LENGTH` — const — line 15
+- `PALISADE_GATE_HALF_ANGLE` — const — line 19
+- `plantEntrancePalisade` — function — line 48
+- `WALL_HALF_LENGTH` — const — line 17
 
 ## `settlement/settlementPlanCache.ts`
 
@@ -920,14 +919,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1076
-- `chooseLayoutPattern` — function — line 132
-- `HOUSE_PLOT_RADIUS` — const — line 68
-- `pathPlansToCorridorData` — function — line 1447
-- `planLocalPathsAndEntrances` — function — line 1328
-- `planVillageLayout` — function — line 722
-- `PLOT_SCORE_WEIGHTS` — const — line 42
-- `VillageLayoutDraft` — type — line 101
+- `buildingsAndLandmarksFromPlots` — function — line 1223
+- `chooseLayoutPattern` — function — line 145
+- `HOUSE_PLOT_RADIUS` — const — line 69
+- `householdWellLocalBand` — function — line 79
+  - domain: settlements-npcs
+- `pathPlansToCorridorData` — function — line 1594
+- `planLocalPathsAndEntrances` — function — line 1475
+- `planVillageLayout` — function — line 835
+- `PLOT_SCORE_WEIGHTS` — const — line 43
+- `VillageLayoutDraft` — type — line 114
 
 ## `settlement/wellInteractionQueue.ts`
 

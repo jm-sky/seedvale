@@ -9,5 +9,7 @@ Generated from exported TypeScript symbols.
 
 ## `math/segment.ts`
 
+- `CorridorSegment2D` — type — line 40
 - `distanceToSegment` — function — line 28
+- `pointHitsCorridor` — function — line 49
 - `projectOntoSegment` — function — line 3

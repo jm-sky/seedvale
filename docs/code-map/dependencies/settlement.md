@@ -706,6 +706,7 @@ Generated from TypeScript imports.
 - `settlement/householdYard.test.ts`
 - `settlement/props.ts`
 - `settlement/villagePlanner.test.ts`
+- `settlement/villagePlanner.ts`
 
 ## `settlement/landOwnership.ts`
 
@@ -1844,6 +1845,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `math/segment.ts`
 - `settlement/families.ts`
 - `settlement/gardenScale.ts`
 - `settlement/householdWells.ts`
@@ -1863,6 +1865,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/gardenScale.ts`
 - `settlement/householdWells.ts`
+- `settlement/householdYard.ts`
 - `settlement/pathDryness.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
