@@ -1341,15 +1341,19 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/roadNetwork.ts`
+- `settlement/roadRiverCrossing.ts`
+- `terrain/chunkHeightmap.ts`
 
 ## `settlement/roadNetwork.ts`
 
 **Imports**
 
 - `config/worldConfig.ts`
+- `math/segment.ts`
 - `player/PlayerController.ts`
 - `settlement/families.ts`
 - `settlement/minorLocations.ts`
+- `settlement/roadRiverCrossing.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementTerrain.ts`
@@ -1357,6 +1361,7 @@ Generated from TypeScript imports.
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkHeightmap.ts`
+- `terrain/riverFord.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
@@ -1365,9 +1370,31 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/roadNetwork.test.ts`
+- `settlement/roadRiverCrossing.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementSignposts.ts`
 - `terrain/chunkManager.ts`
+
+## `settlement/roadRiverCrossing.test.ts`
+
+**Imports**
+
+- `settlement/roadRiverCrossing.ts`
+- `terrain/chunkHeightmap.ts`
+
+## `settlement/roadRiverCrossing.ts`
+
+**Imports**
+
+- `math/segment.ts`
+- `settlement/roadNetwork.ts`
+- `terrain/chunkHeightmap.ts`
+
+**Imported by**
+
+- `settlement/roadNetwork.test.ts`
+- `settlement/roadNetwork.ts`
+- `settlement/roadRiverCrossing.test.ts`
 
 ## `settlement/settlementAgriculture.test.ts`
 

@@ -8,12 +8,12 @@
    🔴 `L` · ✅ ready · unlocks 2/4
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2
-3. `settlements-013` — **Horse training progression, vendor and paddock**  
+3. `settlements-npcs-021` — **Remote Production Site Logistics**  
+   🔴 `M` · ✅ ready · unlocks 0/0
+4. `settlements-013` — **Horse training progression, vendor and paddock**  
    🟡 `M` · 🔒 blocked · unlocks 1/1
-4. `settlements-014` — **Persistent settlement definition worldgen cache**  
+5. `settlements-014` — **Persistent settlement definition worldgen cache**  
    🔴 `M` · 🔒 blocked · unlocks 0/0
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
-   🔴 `M` · ✅ ready · unlocks 2/2
 
 ---
 
@@ -23,12 +23,12 @@
    🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2 · roadmap: `economy-goods-flow`
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `settlements-npcs-021` — **Remote Production Site Logistics**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `physical-goods-transport`
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
-4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+5. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
    🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `economy-goods-flow`
-5. `settlements-013` — **Horse training progression, vendor and paddock**  
-   🟡 `M` · 🔒 blocked · unlocks 1/1 · no roadmap
 
 ---
 
@@ -51,12 +51,12 @@ _No qualifying plans._
    🔴 `L` · ✅ ready · unlocks 2/4
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
-   🔴 `M` · ✅ ready · unlocks 2/2
-4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+3. `settlements-npcs-021` — **Remote Production Site Logistics**  
    🔴 `M` · ✅ ready · unlocks 0/0
-5. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
+5. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -82,21 +82,21 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  73  
    → **unlocks:** 2/2
 
-3. `settlements-013` — **Horse training progression, vendor and paddock**  
+3. `settlements-npcs-021` — **Remote Production Site Logistics**  
+  🔴 `M` · **Score:**  63  
+   → **unlocks:** 0/0
+
+4. `settlements-013` — **Horse training progression, vendor and paddock**  
   🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-4. `world-terrain-017` — **Abandoned mountain mine landmark**  
+5. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-5. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+6. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 0/0
-
-6. `world-terrain-023` — **River-aware road routing and canonical crossings**  
-  🔴 `M` · **Score:**  55  
-   → **unlocks:** 2/2
 
 7. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
@@ -130,31 +130,23 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-15. `world-terrain-032` — **Grass InstancedMesh constructor allocation optimization**  
-  🔴 `S` · **Score:**  29  
-   → **unlocks:** 0/0
-
-16. `world-terrain-033` — **Road bridge projection and traversal**  
+15. `world-terrain-033` — **Road bridge projection and traversal**  
   🔴 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-17. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+16. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-18. `items-player-014` — **Rope-pullable resource transport**  
+17. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-19. `tools-005` — **Seedvale Character Preparation Panel**  
+18. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-20. `ui-input-018` — **Player combat mode and weapon toggle**  
-  🟡 `S` · **Score:**  19  
-   → **unlocks:** 0/0
-
-21. `settlements-010` — **Closed and cautious settlement character**  
+19. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -174,12 +166,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
-- [`world-terrain-029-persistent-road-route-worldgen-cache.md`](world-terrain-029-persistent-road-route-worldgen-cache.md)  
-  is blocked by:
-  - [`world-terrain-023-river-aware-road-routing-and-crossings.md`](world-terrain-023-river-aware-road-routing-and-crossings.md)
-- [`world-terrain-033-road-bridge-projection-and-traversal.md`](world-terrain-033-road-bridge-projection-and-traversal.md)  
-  is blocked by:
-  - [`world-terrain-023-river-aware-road-routing-and-crossings.md`](world-terrain-023-river-aware-road-routing-and-crossings.md)
 
 ---
 

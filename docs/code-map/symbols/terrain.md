@@ -139,32 +139,32 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmap.ts`
 
-- `apronGridWeights` — function — line 689
-- `ApronGridWeights` — type — line 680
-- `apronOriginWorld` — function — line 660
-- `ChunkTileData` — type — line 344
+- `apronGridWeights` — function — line 699
+- `ApronGridWeights` — type — line 690
+- `apronOriginWorld` — function — line 670
+- `ChunkTileData` — type — line 354
 - `ChunkTileParams` — type — line 237
 - `ClearingSegment` — type — line 169
-- `computeChunkTile` — function — line 1110
-- `createLocalTerrainSampler` — function — line 1185
+- `computeChunkTile` — function — line 1116
+- `createLocalTerrainSampler` — function — line 1191
   - domain: world-terrain
-- `createWorldTerrainSampler` — function — line 1225
+- `createWorldTerrainSampler` — function — line 1231
   - domain: world-terrain
-- `extractCoreGrid` — function — line 744
-- `RawSampleParams` — type — line 326
+- `extractCoreGrid` — function — line 754
+- `RawSampleParams` — type — line 335
 - `RegionalSmoothingSegment` — type — line 229
 - `RegionParams` — type — line 20
 - `RiverChannelSegment` — type — line 205
 - `RoadCorridorSegment` — type — line 151
 - `RoadNetworkParams` — type — line 88
-- `sampleApronGrid` — function — line 727
-- `sampleApronGridWeighted` — function — line 712
-- `sampleBiomeAt` — function — line 631
-- `sampleContinentalnessAt` — function — line 635
-- `sampleFloorAt` — function — line 627
-- `sampleHeightAt` — function — line 623
-- `sampleMoistureRegionAt` — function — line 643
-- `sampleMountainRidgeAt` — function — line 651
+- `sampleApronGrid` — function — line 737
+- `sampleApronGridWeighted` — function — line 722
+- `sampleBiomeAt` — function — line 641
+- `sampleContinentalnessAt` — function — line 645
+- `sampleFloorAt` — function — line 637
+- `sampleHeightAt` — function — line 633
+- `sampleMoistureRegionAt` — function — line 653
+- `sampleMountainRidgeAt` — function — line 661
 - `VegetationKind` — type — line 18
 - `VillageClearingParams` — type — line 69
 
@@ -182,26 +182,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 950
-- `applyModificationToTile` — function — line 807
-- `ChunkManager` — type — line 513
-- `ChunkManagerConfig` — type — line 352
-- `createChunkManager` — function — line 975
+- `applyChunkWaterDayNight` — function — line 957
+- `applyModificationToTile` — function — line 814
+- `ChunkManager` — type — line 520
+- `ChunkManagerConfig` — type — line 353
+- `createChunkManager` — function — line 982
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 964
-- `drainByBudget` — function — line 925
-- `FinalizeStage` — type — line 453
-- `pickNearestQueuedKey` — function — line 885
-- `pickNextFinalizeKey` — function — line 903
-- `resolveUnloadedLandmark` — function — line 295
+- `CropHarvestOutcome` — type — line 971
+- `drainByBudget` — function — line 932
+- `FinalizeStage` — type — line 454
+- `pickNearestQueuedKey` — function — line 892
+- `pickNextFinalizeKey` — function — line 910
+- `resolveUnloadedLandmark` — function — line 296
   - domain: world-terrain
-- `ringChunkOffsets` — function — line 255
-- `TerrainModification` — type — line 764
-- `tickChunkWaterSurfaces` — function — line 938
+- `ringChunkOffsets` — function — line 256
+- `TerrainModification` — type — line 771
+- `tickChunkWaterSurfaces` — function — line 945
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -221,34 +221,34 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkTileWorldgenCache.ts`
 
-- `CHUNK_TILE_CACHE_BYTE_BUDGET` — const — line 58
+- `CHUNK_TILE_CACHE_BYTE_BUDGET` — const — line 62
 - `CHUNK_TILE_CACHE_NAMESPACE` — const — line 30
   - domain: world-terrain
   - system: worldgen-cache
   - role: Persistent-cache adapter for canonical worker-generated chunk tiles (plan world-terrain-031): one `chunk:<cx>:<cz>` record per chunk holding the unchanged `ChunkTileResult` — the eight apron-inclusive terrain grids plus the deterministic vegetation/item/environment/crop placements. Stores the existing worker contract verbatim; there is deliberately no cache-specific terrain model and no `SaveData` field.
   - integration: Disposable derived data only. `ChunkManager.ensureLoaded()` generates exactly the same chunk with an empty cache — a miss, a malformed record or an IndexedDB failure always falls back to the tile worker. The payload is *base* worldgen: player/system terrain modifications, terrain cutouts, tree/crop lifecycle, collected items, resource depletion, mesh data and every Three.js object stay downstream and are never cached here, so two same-seed saves share only deterministic generation output.
-- `CHUNK_TILE_CACHE_VERSION` — const — line 42
-- `CHUNK_TILE_META_SUBKEY` — const — line 47
-- `ChunkTileCacheStats` — type — line 88
-- `ChunkTileCacheStorage` — type — line 224
-- `chunkTileFingerprint` — function — line 81
+- `CHUNK_TILE_CACHE_VERSION` — const — line 46
+- `CHUNK_TILE_META_SUBKEY` — const — line 51
+- `ChunkTileCacheStats` — type — line 92
+- `ChunkTileCacheStorage` — type — line 228
+- `chunkTileFingerprint` — function — line 85
   - domain: world-terrain
   - system: worldgen-cache
-- `chunkTileSubKey` — function — line 65
-- `cloneChunkTileForRuntime` — function — line 201
+- `chunkTileSubKey` — function — line 69
+- `cloneChunkTileForRuntime` — function — line 205
   - domain: world-terrain
   - system: worldgen-cache
-- `estimateChunkTileBytes` — function — line 180
-- `getChunkTileCacheStats` — function — line 114
-- `loadCachedChunkTile` — function — line 325
+- `estimateChunkTileBytes` — function — line 184
+- `getChunkTileCacheStats` — function — line 118
+- `loadCachedChunkTile` — function — line 329
   - domain: world-terrain
   - system: worldgen-cache
-- `persistChunkTile` — function — line 373
+- `persistChunkTile` — function — line 377
   - domain: world-terrain
   - system: worldgen-cache
-- `resetChunkTileCacheMetadata` — function — line 308
-- `resetChunkTileCacheStats` — function — line 118
-- `validateCachedChunkTile` — function — line 158
+- `resetChunkTileCacheMetadata` — function — line 312
+- `resetChunkTileCacheStats` — function — line 122
+- `validateCachedChunkTile` — function — line 162
   - domain: world-terrain
   - system: worldgen-cache
 
@@ -436,9 +436,14 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/riverFord.ts`
 
-- `FORD_WATER_DEPTH` — const — line 36
-- `fordBedHeight` — function — line 77
-- `fordStrength` — function — line 57
+- `FORD_WATER_DEPTH` — const — line 31
+  - domain: terrain
+  - system: water
+  - role: Ford *shaping* maths — the small amount of pure geometry that turns an already-declared road↔river crossing into a shallow, traversable bed instead of the road falling into a full-depth carved channel.
+  - integration: Since plan world-terrain-023 this module no longer decides whether a crossing exists: `settlement/roadRiverCrossing.ts` owns that, and `settlement/roadNetwork.ts` projects each declared `ford` crossing into compact, worker-safe FordProjection data on `ChunkTileParams.fordProjections` (the same "resolve nearby routes main-thread, ship plain numbers to the worker" seam as `RoadCorridorSegment`). `chunkHeightmap.ts`'s river-carving stage and `ChunkManager.sampleLocalWater()` both read the influence through fordInfluenceAt and the shaped bed through fordBedHeight, so gameplay water depth and terrain agree by construction. An incidental road × river overlap with no declared crossing leaves the canonical channel completely natural. Seam-safety follows the same argument roads and rivers already use: a projection is plain world-space geometry handed to every chunk its influence reaches, so two chunks sharing a boundary compute an identical ford there.
+- `fordBedHeight` — function — line 106
+- `fordInfluenceAt` — function — line 76
+- `FordProjection` — type — line 41
 
 ## `terrain/riverNetwork.ts`
 
@@ -586,12 +591,12 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/waterSample.ts`
 
-- `DRY_WATER_SAMPLE` — const — line 23
-- `LocalWaterSample` — type — line 19
+- `DRY_WATER_SAMPLE` — const — line 24
+- `LocalWaterSample` — type — line 20
   - domain: terrain
   - system: water
   - role: Single physical "what water, if any, is at this point" answer (plan fauna-015) — the one thing world/terrain owns so fauna (and, later, any other gameplay consumer) never re-derives lake/ocean vs. river depth logic itself. Pure/allocation-light so it's safe to call from a hot per-agent movement path; `ChunkManager.sampleLocalWater` is the only wiring that turns real chunk/river data into these inputs.
-- `sampleLocalWater` — function — line 40
+- `sampleLocalWater` — function — line 48
 
 ## `terrain/worleyNoise.ts`
 

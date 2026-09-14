@@ -4,6 +4,9 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-terrain-023-river-aware-road-routing-and-crossings`             | 2026-09-14 18:26:49 | —                   | `world-terrain`  | —          |
+| `ui-input-018-player-combat-mode-and-weapon-toggle`                    | 2026-09-14 18:24:57 | —                   | `ui-input`       | —          |
+| `world-terrain-032-grass-instancedmesh-constructor-allocation`         | 2026-09-14 17:56:12 | —                   | `world-terrain`  | —          |
 | `world-terrain-031-persistent-chunk-tile-worldgen-cache`               | 2026-09-14 15:46:21 | —                   | `world-terrain`  | —          |
 | `world-terrain-030-persistent-cave-worldgen-cache`                     | 2026-09-14 15:20:51 | —                   | `world-terrain`  | —          |
 | `fauna-029-animal-water-route-preference-and-corpse-world-time`        | 2026-09-14 14:55:25 | —                   | `fauna`          | —          |

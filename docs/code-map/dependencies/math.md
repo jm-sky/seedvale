@@ -15,6 +15,8 @@ Generated from TypeScript imports.
 
 - `fauna/createFauna.ts`
 - `settlement/props.ts`
+- `settlement/roadNetwork.ts`
+- `settlement/roadRiverCrossing.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`

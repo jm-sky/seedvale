@@ -647,24 +647,46 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/roadNetwork.ts`
 
-- `clearRoadNetworkCaches` — function — line 74
-- `entranceToward` — function — line 101
-- `findRoute` — function — line 189
-- `meanderRoute` — function — line 315
-- `MidpointSignpost` — type — line 532
-- `midpointSignpostsFor` — function — line 546
-- `neighborsFor` — function — line 132
-- `RoadNetworkContext` — type — line 51
-- `RoadSegment` — type — line 41
-- `RoadSegmentKind` — type — line 39
-- `RoutePoint` — type — line 29
-- `routeToMinorLocation` — function — line 616
-- `segmentsNear` — function — line 654
-- `SettlementSignpost` — type — line 473
-- `signpostsForSettlement` — function — line 485
-- `VillageSegments` — type — line 697
-- `villageSegmentsNear` — function — line 721
-- `yawToward` — function — line 469
+- `clearRoadNetworkCaches` — function — line 102
+- `entranceToward` — function — line 129
+- `findRoute` — function — line 249
+  - domain: world-terrain
+- `fordsNear` — function — line 945
+  - domain: world-terrain
+- `meanderRoute` — function — line 512
+- `MidpointSignpost` — type — line 777
+- `midpointSignpostsFor` — function — line 791
+- `neighborsFor` — function — line 160
+- `RoadNetworkContext` — type — line 61
+- `RoadRoute` — type — line 87
+- `RoadSegment` — type — line 51
+- `RoadSegmentKind` — type — line 49
+- `RoutePoint` — type — line 39
+- `RouteSearchOptions` — type — line 214
+- `routeToMinorLocation` — function — line 842
+- `segmentsNear` — function — line 867
+- `SettlementSignpost` — type — line 742
+- `signpostsForSettlement` — function — line 754
+- `VillageSegments` — type — line 976
+- `villageSegmentsNear` — function — line 1000
+
+## `settlement/roadRiverCrossing.ts`
+
+- `crossingsForPolyline` — function — line 306
+  - domain: world-terrain
+- `CrossingVerdict` — type — line 113
+- `evaluateRoadRiverCrossing` — function — line 126
+  - domain: world-terrain
+- `riverHitsOnEdge` — function — line 196
+  - domain: world-terrain
+- `RoadEdgeRiverHit` — type — line 180
+- `RoadRiverCrossing` — type — line 55
+- `RoadRiverCrossingFacts` — type — line 27
+- `RoadRiverCrossingKind` — type — line 21
+  - domain: world-terrain
+  - system: roads
+  - role: The single canonical road × river crossing authority (plan world-terrain-023). Decides *whether* a road polyline meets canonical river water, *where* exactly, and *what kind* of infrastructure that crossing is (`ford` / `bridge`) or that it is not supported at all. Pure and allocation-light so `roadNetwork.ts`'s A* can price every candidate edge through it.
+  - integration: `roadNetwork.ts` is the only caller: it prices edges with riverHitsOnEdge/evaluateRoadRiverCrossing during the search and then derives the route's canonical RoadRiverCrossing records from the *final* polyline with crossingsForPolyline. No terrain, renderer or runtime stage may reclassify a crossing: terrain only projects a declared `ford` (`terrain/riverFord.ts`) and `world-terrain-033` only projects a declared `bridge`.
 
 ## `settlement/settlementAgriculture.ts`
 
@@ -716,12 +738,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedSettlementDefCount` — function — line 91
-- `cachedSettlementProgressionPolicy` — function — line 96
-- `clearSettlementDefCache` — function — line 55
+- `cachedSettlementDefCount` — function — line 104
+- `cachedSettlementProgressionPolicy` — function — line 109
+- `clearSettlementDefCache` — function — line 68
 - `setSettlementRiverQuery` — function — line 46
-- `settlementDefFor` — function — line 67
+- `settlementDefFor` — function — line 80
 - `SettlementResolveContext` — type — line 20
+- `worldRiverQuery` — function — line 59
 
 ## `settlement/settlementProgression.ts`
 

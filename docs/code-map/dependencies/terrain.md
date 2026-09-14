@@ -246,6 +246,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `terrain/chunkHeightmap.ts`
+- `terrain/riverFord.ts`
 
 ## `terrain/chunkHeightmap.ts`
 
@@ -275,7 +276,10 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.ts`
 - `settlement/minorLocations.ts`
 - `settlement/props.ts`
+- `settlement/roadNetwork.test.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/roadRiverCrossing.test.ts`
+- `settlement/roadRiverCrossing.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.ts`
@@ -456,6 +460,7 @@ Generated from TypeScript imports.
 - `terrain/distanceLod.ts`
 - `terrain/fbm.ts`
 - `terrain/grass.ts`
+- `terrain/riverFord.ts`
 - `terrain/riverNetwork.ts`
 - `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
@@ -922,8 +927,13 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `settlement/roadNetwork.ts`
+- `terrain/chunkHeightmap.test.ts`
 - `terrain/chunkHeightmap.ts`
+- `terrain/chunkManager.ts`
 - `terrain/riverFord.test.ts`
+- `terrain/waterSample.test.ts`
+- `terrain/waterSample.ts`
 
 ## `terrain/riverNetwork.test.ts`
 
@@ -1183,6 +1193,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `terrain/chunkHeightmap.ts`
+- `terrain/riverFord.ts`
 - `terrain/waterSample.ts`
 
 ## `terrain/waterSample.ts`
@@ -1190,6 +1201,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `terrain/chunkHeightmap.ts`
+- `terrain/riverFord.ts`
 - `terrain/riverNetwork.ts`
 
 **Imported by**
