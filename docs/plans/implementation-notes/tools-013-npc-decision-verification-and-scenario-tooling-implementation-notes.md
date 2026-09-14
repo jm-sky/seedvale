@@ -2,46 +2,20 @@
 
 ## Recon baseline
 
-Current `main` already contains the core NPC observability stack. Implementation should extend it, not replace it.
+Refreshed against current `main` on 2026-09-14. The core observability stack already exists and should be extended, not replaced.
 
-### Existing ownership
+- `src/debug/npcTrace.ts` owns bounded typed semantic history (`NPC_TRACE_CAPACITY = 150`).
+- `src/ai/NpcAgent.ts` owns live per-NPC traces and records authoritative need/strategy/action/combat/threat/Work Contract transitions.
+- `src/debug/npcInspector.ts` resolves live NPCs and exposes NPC/settlement histories through shared `HistoryFilter` semantics.
+- `src/debug/npcDebugApi.ts` owns `window.seedvale.debug`; extend this API rather than creating another global.
+- `src/ui/createNpcInspector.ts` is debug-only, vanilla DOM, low-frequency and bounded; keep it that way.
+- Live NPC trace history is not persisted across settlement unload/rebuild.
 
-- `src/debug/npcTrace.ts`
-  - `NpcTraceEvent` is the authoritative typed semantic history contract.
-  - `createNpcTraceBuffer()` delegates to shared `createBoundedHistoryBuffer()`.
-  - `NPC_TRACE_CAPACITY` is 150.
-  - Events are intentionally transition-level, not tick-level.
+Since the original recon, `npc-030` added scope-discriminated Work Contracts and expedition escort. tools-013 must account for that current implementation.
 
-- `src/ai/NpcAgent.ts`
-  - owns the live per-NPC trace buffer and records authoritative transitions.
-  - records `need.selected` with full pressures and scored candidates.
-  - records `strategy.selected` with strategy candidates and winner.
-  - records action lifecycle, combat, animal-threat and Work Contract events.
-  - do not move diagnostics ownership out of authoritative transition call-sites.
+## Animal threat scoring
 
-- `src/debug/npcInspector.ts`
-  - `findNpcById()` / `queryNpcs()` always re-resolve currently loaded settlements.
-  - `npcHistory()` returns one live NPC trace and applies existing `HistoryFilter`.
-  - `settlementHistory()` already merges NPC + household + settlement histories.
-  - live NPC history disappears when the `NpcAgent` disappears through streaming/rebuild; household/economy history has different lifetime ownership.
-
-- `src/debug/npcDebugApi.ts`
-  - owns `window.seedvale.debug` in `?debug=1` mode.
-  - `NpcDebugHandle` exposes `state()`, `history()`, `why()`, `freeze()`, `unfreeze()`, `reevaluate()`.
-  - settlement handle already exposes merged `history()`.
-  - wolf debug helpers already expose `setFrenzyWolf()`, `getFrenzyWolves()`, current/next frenzied wolf.
-  - keep new output JSON-serializable and independent from UI state.
-
-- `src/ui/createNpcInspector.ts`
-  - vanilla DOM, debug gated, low-frequency refresh (`REFRESH_INTERVAL_MS = 150`).
-  - renders at most `HISTORY_RENDER_LIMIT = 50` events.
-  - `formatEvent()` already knows `animalThreat.*`, combat and `contract.*` event families.
-  - `buildInspectorText()` already renders current needs, winner modifiers, strategy, plan, active Work Contract, action, queue, household and history.
-  - extend formatting/projections here rather than creating a second inspector.
-
-## Threat decision seam
-
-`src/ai/npcAnimalThreat.ts` is already the correct pure scoring owner.
+`src/ai/npcAnimalThreat.ts` remains the correct pure owner.
 
 Relevant symbols:
 
@@ -49,190 +23,196 @@ Relevant symbols:
 - `scoreAnimalThreatIntents()`
 - `decideAnimalThreatResponse()`
 - `senseImmediateAnimalThreat()`
-- `IMMEDIATE_ANIMAL_THREAT_RADIUS`
 
-The scorer currently derives:
+The scorer already produces `defend` and `flee` candidates from weapon capability, health and neuroticism. `NpcAgent` currently records only the chosen response, `canFight` and health ratio.
 
-- combat capability from melee/ranged availability,
-- defend/flee scores from health,
-- Big Five neuroticism risk bias,
-- `defend = -Infinity` when the NPC cannot fight.
+Implementation guidance:
 
-Important implementation decision:
+- calculate threat scores once and use that same result for both selection and diagnostics,
+- do not reproduce scoring in `NpcAgent`, inspector or debug code,
+- record enough plain data to explain the arbitration: candidate scores, melee/ranged capability, health ratio and neuroticism,
+- represent unavailable `defend` safely: internal `-Infinity` must not leak as an unsafe/non-portable JSON value.
 
-- avoid calling `scoreAnimalThreatIntents()` once for diagnostics and again for the actual choice.
-- prefer one scored result flowing through the existing decision path so the values recorded in `animalThreat.response` are exactly the values used to choose the response.
-- if a small pure selector helper over already-scored candidates is useful, keep it in `npcAnimalThreat.ts`; do not reproduce the formula in `NpcAgent` or debug code.
+## Work Contract scoring is now scope-aware
 
-Likely trace payload extension:
+`src/ai/npcWorkContract.ts` remains the single scoring owner.
 
-- chosen response,
-- candidate scores (`defend`, `flee`),
-- `hasMeleeCapability`, `hasRangedCapability`,
-- health ratio,
-- neuroticism used by the scorer.
-
-Keep values plain-data and sufficient to explain the result without copying unrelated NPC state.
-
-## Work Contract scoring seam
-
-`src/ai/npcWorkContract.ts` is the correct pure scoring owner.
-
-Relevant symbols:
+Current relevant symbols include:
 
 - `WorkContractEvaluationInput`
 - `scoreWorkContractOpportunity()`
 - `selectBestWorkContract()`
 - `ScoredWorkContract`
+- `EscortEvaluationContext`
+- `DEFAULT_ESCORT_EVALUATION_CONTEXT`
 
-Current score combines:
+`WorkContractRecord.scope.kind` now distinguishes:
+
+- `measurable_work`
+- `expedition_escort`
+
+`contract.evaluated` still stores only `{ contractId, score }`, so the diagnostics gap remains.
+
+### `measurable_work` breakdown
+
+The current formula uses:
 
 - expected reward,
 - role suitability,
-- travel-hour penalty,
-- expected-work penalty,
-- schedule conflict penalty,
-- provision feasibility penalty.
+- travel cost,
+- expected-work cost,
+- schedule conflict,
+- provisioning feasibility penalty.
 
-Current API only exposes final `score` per candidate.
+### `expedition_escort` breakdown
 
-Important implementation decision:
+The current formula uses:
 
-Refactor the pure scorer minimally so it can return both total and structured components from a single calculation, for example an internal/public result shape containing:
+- offered `rewardCoins`,
+- escort-specific role suitability,
+- relation bonus,
+- local reputation bonus,
+- renown bonus,
+- `curious` trait bonus,
+- expected-away cost (`escortAwayHours()`),
+- danger penalty,
+- schedule conflict,
+- provisioning feasibility penalty via `estimateEscortProvisionNeed()`.
 
-- `expectedReward`,
-- `suitability`,
-- `travelCost`,
-- `workCost`,
-- `scheduleConflict`,
-- `provisionPenalty`,
-- `score`.
+Do not force these into one flat pseudo-formula. Prefer a discriminated diagnostics result, e.g. conceptually:
 
-`selectBestWorkContract()` should consume that same result rather than calculate totals independently. Preserve the current acceptance rule (`score > 0`) and stable tie behaviour.
+- `kind: 'measurable_work'` + measurable terms + total score,
+- `kind: 'expedition_escort'` + escort terms + total score.
 
-Handle impossible provisioning explicitly. Current scorer returns `Number.NEGATIVE_INFINITY`; browser-facing plain-data/JSON surfaces should not accidentally rely on non-finite JSON serialization. Prefer a serializable reason/availability representation in trace/debug projections while preserving the actual scoring semantics inside the pure decision function.
+Exact names should follow current code terminology.
 
-## Standard need/strategy decision history
+Important architecture decision:
 
-Do not add duplicate decision events prematurely.
+- refactor the pure evaluator so each candidate's terms and final score are calculated once,
+- `selectBestWorkContract()` must select from that same structured result,
+- `scoreWorkContractOpportunity()` may remain as a compatibility wrapper returning only `.score`,
+- preserve existing acceptance semantics (`score > 0`) and deterministic stable ties,
+- impossible provisioning must remain rejection-equivalent internally but expose a serialization-safe reason/state in trace/debug data.
 
-`need.selected` already carries:
+`src/ai/npcPersonalProvisions.ts` is part of this seam: measurable work and escort use different estimators but the diagnostic result should reflect the actual scope-specific path used.
 
-- selected `NeedId`,
-- full `NpcPressure[]`,
-- scored `ScoredNeedCandidate[]` including modifiers.
+## Existing Work Contract lifecycle to reuse
 
-`strategy.selected` already carries:
+Do not assume every Work Contract is construction.
 
-- need,
-- all `NpcStrategyCandidate[]`,
-- selected strategy or `null`.
+Current code already has expedition escort integrated into the shared Work Contract lifecycle. `NpcAgent` starts the existing npc-029 accompany commitment and already emits `contract.escortServiceStarted`.
 
-`action.planned` follows those events.
+Causal projections should therefore group by `contractId` and, where known, scope:
 
-The missing piece is presentation/projection. Build a pure causal projection over history rather than another recorder.
+- measurable work: evaluation → acceptance → provisioning/travel/work/completion events already present,
+- escort: evaluation → acceptance → `contract.escortServiceStarted` → real interruption/resume/completion lifecycle.
 
-Because events currently have `simTime` but no per-NPC sequence number, projection should preserve original array order for equal timestamps. Do not invent a global sequence allocator solely for tooling unless a real ambiguity is demonstrated by tests.
+Do not add a second escort trace or diagnostics-owned escort state machine. Do not access construction/build-target fields until `contract.scope.kind` has been discriminated.
 
-## Suggested projection module boundary
+## Standard need/strategy history
 
-First preference: add small exported pure helpers in `src/debug/npcInspector.ts` if they remain compact.
+Do not add duplicate events.
 
-If the code becomes substantial, a narrow `src/debug/npcDecisionReport.ts` is justified. It should accept existing event arrays/snapshots and return plain data only. It must not import THREE, mutate agents, call scoring functions or own buffers.
+`need.selected` already includes pressures and scored candidates; `strategy.selected` already includes strategy candidates and selected strategy; action lifecycle follows afterward.
 
-Useful result shapes:
+The missing piece is projection/presentation. Build pure read-only projections over `NpcTraceEvent[]`. Preserve original event order for equal `simTime`; do not add a global sequence system solely for tooling unless tests demonstrate an actual ambiguity.
 
-- per-NPC recent decision cycles,
-- per-NPC threat summary,
-- per-NPC contract evaluation cycle,
-- settlement report aggregating those projections for currently loaded NPCs.
+## Projection boundary
 
-Avoid a generic analytics framework.
+Prefer small exported helpers in `src/debug/npcInspector.ts`. If this becomes too large, a narrow `src/debug/npcDecisionReport.ts` is appropriate.
+
+Such code must:
+
+- accept existing trace/history data,
+- return plain serializable data,
+- remain deterministic and read-only,
+- never call scoring functions to reconstruct past decisions,
+- never own buffers or simulation state.
+
+Useful projections:
+
+- recent NPC decision cycles,
+- threat arbitration summary,
+- scope-aware Work Contract evaluation/lifecycle cycle,
+- loaded-settlement report aggregating current NPC traces.
 
 ## Wolf-pack scenario
 
-Reuse the existing path:
+Reuse the current path through `setFrenzyWolf()` and fauna's real frenzy mechanism.
 
-`npcDebugApi.ts` → `npcInspector.setFrenzyWolf()` → `pickNearestEligibleWolf()` → `AnimalAgent.setFrenzied()`.
+A convenience `setFrenzyWolves(count)` may repeatedly use the existing single-wolf primitive. It should report partial success when fewer eligible wolves exist.
 
-`setFrenzyWolf()` already excludes dead/frenzied wolves and chooses the nearest eligible wolf relative to loaded villages. A pack helper can call/reuse this bounded mechanism repeatedly.
+Do not directly change NPC threat decisions, begin NPC combat or fabricate trace events. Normal fauna/NPC simulation must produce the result.
 
-Do not directly:
+## Contract scenario setup
 
-- set an NPC's threat state,
-- invoke `reactToAnimalThreat()` from debug code,
-- start NPC combat,
-- fabricate trace events.
+Any setup helper must use the authoritative Work Contract creation/posting path for the requested scope.
 
-The real fauna and NPC simulation must produce the response.
+- measurable construction scenario: reuse the existing measurable-work/construction creation path,
+- escort scenario: reuse the existing escort Work Contract creation/posting path where it is already safely reachable.
 
-A helper such as `setFrenzyWolves(count)` may be useful, but use the current single-wolf primitive internally and return concrete success/failure information for each requested wolf. Do not silently claim a requested pack size when fewer wolves are eligible.
+Inspect `src/world/createWorkContracts.ts`, `src/world/workContract.ts` and the relevant player/WorldBundle seams before adding helpers. If a clean public seam is not available from debug code, provide inspection/reporting only instead of widening production APIs solely for tooling.
 
-## Contract scenario boundary
+Never fabricate acceptance, assignment, escort-service-start or accompany state.
 
-Recon found no equivalent purpose-built contract scenario helper in `window.seedvale.debug`.
+## NPC inspector
 
-Do not create contracts by writing to `NpcAgent` commitments. Any helper must enter through the authoritative Work Contract/public construction path used by gameplay.
+Keep `src/ui/createNpcInspector.ts` bounded and low-frequency.
 
-Before implementing a convenience setup helper, inspect the current `src/world/createWorkContracts.ts`, `src/world/workContract.ts`, and the relevant player-built construction manager target types. If the required public posting seam is not safely available from the current `WorldBundle`, omit contract creation from the helper and provide inspection/reporting only; do not widen production APIs solely for debug convenience without a clear ownership-safe seam.
+Useful additions only:
 
-## UI scope
+- threat candidate scores + inputs,
+- scope-aware Work Contract breakdown,
+- compact causal cycles,
+- existing escort lifecycle events folded into the same contract view.
 
-`createNpcInspector.ts` currently renders flat event strings. The smallest useful change is:
+Do not turn it into a general world observatory or recalculate scores in the UI.
 
-- retain raw recent history,
-- add compact sections for recent decision cycles / threat arbitration / contract evaluation breakdown,
-- avoid increasing refresh frequency,
-- avoid recalculating scores in the modal,
-- keep rendering bounded.
+## Tests
 
-A settlement-wide report does not need a large new modal in this plan if DevTools output is sufficient for the first version. Prefer useful diagnostics over UI scope growth.
-
-## Tests to reuse/extend
-
-Locate and extend current focused tests rather than adding broad integration harnesses. Relevant files already present in the repository include:
+Extend focused tests around:
 
 - `src/debug/npcTrace.test.ts`
 - `src/debug/npcInspector.test.ts`
 - `src/debug/npcDebugApi.test.ts`
 - `src/ai/npcWorkContract.test.ts`
-- tests adjacent to `src/ai/npcAnimalThreat.ts`
+- animal-threat scorer tests.
 
-High-value pure tests:
+High-value assertions:
 
-- Work Contract breakdown total exactly matches existing score semantics.
-- positive/negative selection and stable tie behaviour remain unchanged.
-- impossible provisioning remains rejected and becomes safely representable in diagnostics.
-- animal threat recorded candidate scores select the same winner as before.
-- unarmed NPC still cannot choose defend.
-- projection groups events without reordering same-time events.
-- settlement report includes each currently loaded NPC once and respects filters.
-- wolf-pack helper returns partial success when fewer wolves are available.
+- threat diagnostics reflect exactly the scores used by production selection,
+- unarmed NPC still cannot choose defend,
+- measurable-work breakdown totals match existing score semantics,
+- escort breakdown totals match existing score semantics including relation/reputation/renown/curious/danger/away-time,
+- compatibility number scorer (if retained) equals structured `.score`,
+- `score > 0` acceptance and stable ties remain unchanged,
+- impossible provisioning is rejected and serialized safely,
+- projections preserve same-time ordering,
+- Work Contract projection handles both scopes and existing escort lifecycle without construction assumptions,
+- settlement reports include only currently loaded NPC traces and do not duplicate events,
+- wolf-pack helper reports partial success correctly.
 
 ## Performance guardrails
 
 - no per-tick trace events,
 - no unbounded arrays,
-- no repeated settlement/world scans from render-loop paths,
-- projections should run only on explicit debug query or existing low-frequency inspector refresh,
-- reuse the current bounded 150-event NPC history rather than maintaining derived history state,
+- no derived diagnostics state kept alongside the authoritative trace,
+- no render-loop world/settlement scans,
+- projections run only on explicit debug query or existing low-frequency inspector refresh,
 - scenario helpers remain debug-only.
 
 ## Implementation order
 
-1. Make pure threat and Work Contract scorers expose structured diagnostics without changing their decisions.
-2. Extend `NpcTraceEvent` payloads and authoritative `NpcAgent` recording sites.
-3. Add pure causal/report projections over existing histories.
-4. Expose those projections through `npcDebugApi.ts` using current handles.
-5. Add bounded wolf-pack convenience setup by reusing `setFrenzyWolf()`.
-6. Improve `createNpcInspector.ts` presentation only after the data contract is stable.
-7. Extend focused tests and run normal automated checks.
-8. Leave browser/manual scenario verification to the User.
+1. Expose structured diagnostics from the existing pure threat and scope-aware Work Contract scorers without changing decisions.
+2. Extend trace payloads at authoritative `NpcAgent` recording sites.
+3. Add pure causal/report projections, including both Work Contract scopes and existing escort lifecycle events.
+4. Expose projections through the current debug API.
+5. Add bounded wolf-pack setup by reusing `setFrenzyWolf()`.
+6. Add contract setup helpers only where current production-safe creation seams already exist.
+7. Improve inspector presentation after the diagnostic data contract is stable.
+8. Extend focused automated tests.
+9. Browser/manual scenario verification remains the User's responsibility.
 
-## Explicit follow-up boundary
-
-If wolf-pack verification shows missing coordinated defense, alarm propagation or tactically implausible group behaviour, create a separate `npc`/`fauna` gameplay plan. Do not solve those findings inside this tools plan.
-
-Likewise, if contract verification reveals bad economics/priority values, create a separate NPC Work Contract behaviour plan rather than tuning scores as part of diagnostics.
+If verification reveals bad defend/flee balance, coordinated-defense gaps, bad Work Contract economics or escort weighting/danger assumptions, create separate gameplay plans. Do not tune gameplay policy inside tools-013.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
