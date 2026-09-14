@@ -73,6 +73,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | 🟡 | M      | settlements-012                                                                                                                                                                 | -                                       |
 | 💡 `settlements-npcs-036-generic-npc-owned-goods-trading.md`                   | 🔴 | M      | ~~settlements-npcs-033~~                                                                                                                                                        | economy-goods-flow                      |
 | 💡 `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | 🔴 | S      | ~~settlements-npcs-017~~, ~~settlements-npcs-018~~, ~~settlements-npcs-019~~                                                                                                    | physical-goods-transport                |
+| ◼️ `settlements-014-persistent-settlement-definition-worldgen-cache.md`        | 🔴 | M      | -                                                                                                                                                                               | -                                       |
+| ◼️ `world-terrain-029-persistent-road-route-worldgen-cache.md`                 | 🔴 | M      | world-terrain-023                                                                                                                                                               | -                                       |
 
 ---
 
@@ -205,12 +207,12 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - npc: `039`
 - persistence: `005`
 - quests-progression: `034`
-- settlements: `014`
+- settlements: `015`
 - settlements-npcs: `037`
 - tools: `014`
 - ui-input: `018`
 - world: `028`
-- world-terrain: `029`
+- world-terrain: `030`
 
 This ids section is maintained automatically from the plan files.
 
