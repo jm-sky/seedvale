@@ -600,27 +600,29 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/rats.ts`
 
-- `createSettlementRats` — function — line 188
-- `infestationReplenishmentRoll` — function — line 96
-- `RAT_DOG_REPRODUCTION_PRESSURE` — const — line 35
-- `RAT_INFESTATION_FLOOR` — const — line 32
-- `RAT_INFESTATION_PRESSURE_BONUS` — const — line 30
-- `RAT_MIN_REPRODUCTION_MULTIPLIER` — const — line 37
-- `RAT_POPULATION_CAP` — const — line 26
+- `createSettlementRats` — function — line 256
+- `infestationReplenishmentRoll` — function — line 102
+- `normalizeRatClipName` — function — line 204
+- `RAT_DOG_REPRODUCTION_PRESSURE` — const — line 41
+- `RAT_INFESTATION_FLOOR` — const — line 38
+- `RAT_INFESTATION_PRESSURE_BONUS` — const — line 36
+- `RAT_MIN_REPRODUCTION_MULTIPLIER` — const — line 43
+- `RAT_POPULATION_CAP` — const — line 32
   - domain: fauna
   - system: settlement-rats
   - role: Settlement-local rat population pressure/reconciliation (plan fauna-016 §7/§8/§9, quests-progression-006, quests-progression-013) — deliberately not a `RatManager`: rats are plain `AnimalAgent('rat')` instances this module spawns toward a small, food-driven target population. Infestation replenishment is a separate nest-gated roll; excess live rats are never deleted just because the target falls.
-- `RAT_RECONCILE_INTERVAL_DAYS` — const — line 39
-- `ratDogReproductionMultiplier` — function — line 86
-- `RatFoodSite` — type — line 138
-- `ratNormalPopulationTarget` — function — line 71
-- `ratPopulationTarget` — function — line 79
-- `RatPressureInputs` — type — line 45
-- `ratReconcileAction` — function — line 121
-- `RatReconcileAction` — type — line 50
-- `SettlementRats` — type — line 161
-- `SettlementRatsDeps` — type — line 140
-- `shouldInfestationReplenish` — function — line 107
+- `RAT_RECONCILE_INTERVAL_DAYS` — const — line 45
+- `RAT_URL` — const — line 195
+- `ratDogReproductionMultiplier` — function — line 92
+- `RatFoodSite` — type — line 144
+- `ratNormalPopulationTarget` — function — line 77
+- `ratPopulationTarget` — function — line 85
+- `RatPressureInputs` — type — line 51
+- `ratReconcileAction` — function — line 127
+- `RatReconcileAction` — type — line 56
+- `SettlementRats` — type — line 167
+- `SettlementRatsDeps` — type — line 146
+- `shouldInfestationReplenish` — function — line 113
 
 ## `settlement/roadNetwork.ts`
 
