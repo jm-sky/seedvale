@@ -906,6 +906,8 @@ Generated from TypeScript imports.
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/oldBonesAdventureCave.ts`
+- `quests/oldBonesAdventureCaveRuntime.ts`
 - `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
@@ -1541,6 +1543,8 @@ Generated from TypeScript imports.
 - `items/treasureGameplay.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/oldBonesAdventureCave.ts`
+- `quests/oldBonesAdventureCaveRuntime.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `quests/suspiciousTransportCaveCacheRuntime.ts`
@@ -1642,5 +1646,6 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
+- `quests/oldBonesAdventureCave.test.ts`
 - `ui/createNpcInspector.ts`
 - `world/locations/treasureMapBearCave.test.ts`

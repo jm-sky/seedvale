@@ -72,6 +72,40 @@ Generated from exported TypeScript symbols.
 - `resolveAuthoredNpcId` — function — line 27
   - domain: quests-progression
 
+## `quests/oldBonesAdventureCave.ts`
+
+- `buildOldBonesAdventureCaveQuest` — function — line 295
+  - domain: quests-progression
+- `createOldBonesSignetInstance` — function — line 66
+- `eligibleOldBonesAdventureAnchors` — function — line 173
+  - domain: quests-progression
+- `isOldBonesRemainsLooted` — function — line 283
+- `OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME` — const — line 22
+- `OLD_BONES_KEEP_SIGNET_OUTCOME` — const — line 23
+- `OLD_BONES_QUEST_PREFIX` — const — line 19
+- `OLD_BONES_RESERVATION_KEY` — const — line 17
+- `OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME` — const — line 21
+- `OLD_BONES_SIGNET_KIND` — const — line 25
+- `OldBonesAdventureCaveBinding` — type — line 32
+  - domain: quests-progression
+- `oldBonesAnchorClaim` — function — line 242
+- `oldBonesCaveReservationRequests` — function — line 251
+- `oldBonesProfileReservation` — function — line 232
+- `oldBonesQuestId` — function — line 62
+- `oldBonesRemainsContainerId` — function — line 58
+- `oldBonesRemainsContainerSpec` — function — line 266
+  - domain: quests-progression
+- `oldBonesSignetInstanceId` — function — line 54
+- `resolveOldBonesAdventureCaveBinding` — function — line 196
+  - domain: quests-progression
+- `selectOldBonesNpcs` — function — line 93
+  - domain: quests-progression
+
+## `quests/oldBonesAdventureCaveRuntime.ts`
+
+- `getActiveOldBonesAdventureCaveBinding` — function — line 10
+- `setActiveOldBonesAdventureCaveBinding` — function — line 6
+
 ## `quests/opportunities/guardProfessionQuests.ts`
 
 - `buildGuardEveningDutyQuest` — function — line 66

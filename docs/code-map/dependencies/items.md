@@ -170,6 +170,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/lostHunterNaturalCave.test.ts`
+- `quests/oldBonesAdventureCave.test.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
@@ -916,6 +917,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/characterPresentation.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.test.ts`
@@ -1063,6 +1065,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/quests.ts`
 - `quests/suspiciousTransportCaveCache.ts`

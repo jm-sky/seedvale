@@ -327,6 +327,8 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
+- `quests/oldBonesAdventureCave.test.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `world/caves/caveAdventureContentPolicy.test.ts`
 - `world/locations/treasureMapBearCave.test.ts`
 - `world/locations/treasureMapBearCave.ts`
@@ -459,6 +461,8 @@ Generated from TypeScript imports.
 
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/oldBonesAdventureCave.test.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `world/caves/caveAdventureContentPolicy.test.ts`
@@ -2414,6 +2418,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/quests.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `terrain/chunkEnvironment.ts`
@@ -3942,6 +3947,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/oldBonesAdventureCave.test.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `world/locations/treasureMapBearCave.ts`

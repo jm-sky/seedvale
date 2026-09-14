@@ -187,6 +187,52 @@ Generated from TypeScript imports.
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/quests.test.ts`
 
+## `quests/oldBonesAdventureCave.test.ts`
+
+**Imports**
+
+- `app/worldBundle.ts`
+- `items/Inventory.ts`
+- `quests/oldBonesAdventureCave.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `settlement/npcIdentity.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/worldGeneratedContainers.ts`
+
+## `quests/oldBonesAdventureCave.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `quests/quests.ts`
+- `settlement/npcState.ts`
+- `settlement/settlementGenerator.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/worldGeneratedContainers.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/oldBonesAdventureCave.test.ts`
+- `quests/oldBonesAdventureCaveRuntime.ts`
+
+## `quests/oldBonesAdventureCaveRuntime.ts`
+
+**Imports**
+
+- `quests/oldBonesAdventureCave.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+
 ## `quests/opportunities/guardProfessionQuests.ts`
 
 **Imports**
@@ -290,6 +336,8 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/oldBonesAdventureCave.test.ts`
+- `quests/oldBonesAdventureCave.ts`
 
 ## `quests/opportunities/settlementQuestOpportunities.test.ts`
 
@@ -410,6 +458,7 @@ Generated from TypeScript imports.
 - `quests/lostHunterNaturalCave.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`

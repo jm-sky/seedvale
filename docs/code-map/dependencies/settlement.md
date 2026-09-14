@@ -847,6 +847,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/oldBonesAdventureCave.test.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `settlement/createSettlement.ts`
@@ -978,6 +979,7 @@ Generated from TypeScript imports.
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
@@ -1390,6 +1392,7 @@ Generated from TypeScript imports.
 - `debug/villageInspector.test.ts`
 - `debug/villageInspector.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/oldBonesAdventureCave.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
