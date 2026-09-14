@@ -3,13 +3,14 @@ import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { FamilyDef } from './families'
 import type { VillageIdentity } from './villagePlan'
+import { pointHitsCorridor } from '../math/segment'
 import { generateFamilies } from './families'
 import { gardenClearingRadius, gardenPlazaMinCenterDist, type GardenScale } from './gardenScale'
 import { selectHouseholdWellFamilyIndices } from './householdWells'
 import { householdYardRadius } from './householdYard'
 import { plazaCoreRadius } from './villageClearing'
 import { householdWellPlotId } from './villagePlan'
-import { chooseLayoutPattern, planVillageLayout, PLOT_SCORE_WEIGHTS } from './villagePlanner'
+import { chooseLayoutPattern, householdWellLocalBand, planVillageLayout, PLOT_SCORE_WEIGHTS } from './villagePlanner'
 
 const flatHeight = (): number => 12
 const WATER = 0
@@ -168,13 +169,19 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     const householdPlots = layout.plots.filter((p) => p.id.startsWith('plot-household-well-'))
     expect(householdPlots.map((p) => p.familyIndex).sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual(expected)
     expect(new Set(householdPlots.map((p) => p.id)).size).toBe(householdPlots.length)
+    const yardR = householdYardRadius()
     for (const familyIndex of expected) {
       const plot = layout.plots.find((p) => p.id === householdWellPlotId(familyIndex))
       const house = layout.plots.find((p) => p.role === 'house' && p.familyIndex === familyIndex)
       expect(plot).toBeDefined()
       expect(house).toBeDefined()
       expect(layout.landmarks.some((l) => l.id === `landmark-well-household-${familyIndex}`)).toBe(true)
-      expect(Math.hypot(plot!.x - house!.x, plot!.z - house!.z)).toBeGreaterThan(house!.radius)
+      const dist = Math.hypot(plot!.x - house!.x, plot!.z - house!.z)
+      const band = householdWellLocalBand(house!.radius)
+      expect(dist).toBeGreaterThanOrEqual(house!.radius + plot!.radius - 0.01)
+      expect(dist).toBeGreaterThanOrEqual(yardR + plot!.radius - 0.01)
+      expect(dist).toBeGreaterThanOrEqual(band.min - 0.01)
+      expect(dist).toBeLessThanOrEqual(band.max + 0.01)
     }
   })
 
@@ -183,10 +190,64 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     const families = generateFamilies(15, 'LG', false, 'polish')
     const a = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 15, flatHeight, WATER)
     const b = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 15, flatHeight, WATER)
+    expect(a).toEqual(b)
     const idsA = a.plots.filter((p) => p.id.startsWith('plot-household-well-')).map((p) => p.id)
-    const idsB = b.plots.filter((p) => p.id.startsWith('plot-household-well-')).map((p) => p.id)
-    expect(idsA).toEqual(idsB)
     expect(idsA).toEqual(selectHouseholdWellFamilyIndices(families, 15).map(householdWellPlotId))
+  })
+
+  it('keeps household wells local to their house and off local path corridors', () => {
+    const sizes: VillageIdentity['size'][] = ['SM', 'MD', 'LG', 'XL']
+    const seeds = [3, 14, 25, 36, 47]
+    const yardR = householdYardRadius()
+    for (const size of sizes) {
+      for (const seed of seeds) {
+        const id = identity({ id: `hw_geo_${size}_${seed}`, size })
+        const families = generateFamilies(seed, size, false, 'polish')
+        const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, seed, flatHeight, WATER)
+        const wells = layout.plots.filter((p) => p.id.startsWith('plot-household-well-'))
+        const expected = selectHouseholdWellFamilyIndices(families, seed)
+        expect(wells.map((p) => p.familyIndex).sort((a, b) => (a ?? 0) - (b ?? 0)), `${size} ${seed}`).toEqual(
+          expected,
+        )
+        const plaza = layout.plots.find((p) => p.id === 'plot-infra-well')
+        expect(plaza?.x, `${size} ${seed} plaza`).toBe(layout.center.x)
+        expect(plaza?.z, `${size} ${seed} plaza`).toBe(layout.center.z)
+
+        const knownCorridors = layout.paths
+          .filter(
+            (p) =>
+              p.id.startsWith('path-house-') ||
+              p.id.startsWith('path-zone-') ||
+              p.id.startsWith('path-entrance-'),
+          )
+          .flatMap((path) => {
+            const segs = []
+            for (let i = 0; i < path.points.length - 1; i++) {
+              const a = path.points[i]!
+              const b = path.points[i + 1]!
+              segs.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, halfWidth: path.halfWidth })
+            }
+            return segs
+          })
+
+        for (const well of wells) {
+          const house = layout.plots.find((p) => p.role === 'house' && p.familyIndex === well.familyIndex)
+          expect(house, `${size} ${seed} ${well.id}`).toBeDefined()
+          const dist = Math.hypot(well.x - house!.x, well.z - house!.z)
+          const band = householdWellLocalBand(house!.radius)
+          expect(dist, `${size} ${seed} ${well.id} min house`).toBeGreaterThanOrEqual(
+            house!.radius + well.radius - 0.01,
+          )
+          expect(dist, `${size} ${seed} ${well.id} min yard`).toBeGreaterThanOrEqual(yardR + well.radius - 0.01)
+          expect(dist, `${size} ${seed} ${well.id} band min`).toBeGreaterThanOrEqual(band.min - 0.01)
+          expect(dist, `${size} ${seed} ${well.id} band max`).toBeLessThanOrEqual(band.max + 0.01)
+          expect(
+            pointHitsCorridor(well.x, well.z, knownCorridors, well.radius),
+            `${size} ${seed} ${well.id} on house/zone/entrance path`,
+          ).toBe(false)
+        }
+      }
+    }
   })
 
   it('keeps garden plots outside the plaza disk (plan 095)', () => {

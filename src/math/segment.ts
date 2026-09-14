@@ -35,3 +35,27 @@ export function distanceToSegment(
 ): number {
   return Math.sqrt(projectOntoSegment(px, pz, ax, az, bx, bz).distSq)
 }
+
+/** 2D corridor capsule — planner/palisade/path hit tests share this shape. */
+export type CorridorSegment2D = {
+  ax: number
+  az: number
+  bx: number
+  bz: number
+  halfWidth: number
+}
+
+/** True when `(x,z)` lies inside any corridor capsule (+ extra clearance). */
+export function pointHitsCorridor(
+  x: number,
+  z: number,
+  corridors: readonly CorridorSegment2D[],
+  extraClearance: number,
+): boolean {
+  for (const seg of corridors) {
+    const need = seg.halfWidth + extraClearance
+    const { distSq } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
+    if (distSq < need * need) return true
+  }
+  return false
+}

@@ -40,14 +40,16 @@ Household wells should be added only after house plots exist, because the house 
 
 - resolve the corresponding `plot-house-{familyIndex}`;
 - create a separate `role: 'infrastructure'` plot with stable id such as `plot-household-well-{familyIndex}`;
-- use the residential zone (or house plot vicinity) plus `attractor: { x: house.x, z: house.z }`;
-- set a preferred ring outside the house footprint/yard clearance, not at the house center;
-- let existing `pickPlot()` perform slope, dry-path, river, spacing and fallback handling;
+- use the real residential zone plus `attractor: { x: house.x, z: house.z }`;
+- set `minAttractorDistance` / `maxAttractorDistance` from `householdWellLocalBand()` (yard + house pad + well radius) so locality is a hard invariant, not a score bonus;
+- sample and fall back around the house; do not use the village-center ring or the permissive center-polar last fallback for this request;
+- reject full-capsule hits on predicted plaza spokes (all houses, non-public zones, and entrance rays from the same deterministic `pickEntranceAtAngle` as later path planning) via `pointHitsCorridor` in `src/math/segment.ts`;
+- let existing `pickPlot()` still perform slope, dry-path, river and spacing checks;
 - emit a `VillageLandmarkPlan` of kind `well` with a stable non-central index/id tied to `familyIndex`.
 
 Do not materialize these via `houseYardPlacements()`. `householdYardRadius()` currently guarantees clearance only for the existing barrel/trough/wood/storage offsets; silently adding a full well there would invalidate that contract and its tests.
 
-Watch the fallback behavior in `pickPlot()`: its final fallback is intentionally permissive except for river push-out. If a household-well preferred ring is too tight in dense LG/XL villages, prefer tuning that placement request/ring over creating a second placement algorithm.
+The global last `pickPlot()` fallback stays permissive for other roles. Household wells opt into local-attractor mode via `maxAttractorDistance`; that mode must not land on the house pad or a plaza corridor. Paths to plots placed *after* household wells (`path-plot-*` for sale/garden/stockpile) are not knowable without a plots↔paths cycle — do not solve those by reordering the planner.
 
 ## Runtime projection: remove only the harmful singleton assumption
 

@@ -93,6 +93,8 @@ families / house plots
 
 Wykorzystać istniejący `pickPlot()` zamiast tworzyć osobny algorytm placementu.
 
+Household well jest local-attractor plotem: `attractor` + twarde `minAttractorDistance`/`maxAttractorDistance` (pas z `householdYardRadius()` / house radius / well radius). `pickPlot()` sampluje i robi fallback wokół domu, nie po pierścieniu osady; `attractor` nie jest tylko scoringiem. Placement odrzuca przyszłe plaza corridors (`center→house`, `center→zone`, predicted entrances) pełną kapsułą — bez czekania na `VillagePathPlan[]`.
+
 Household well powinna:
 
 - być blisko własnego domu;

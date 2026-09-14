@@ -17,7 +17,7 @@ import type {
   VillageZone,
   VillageZoneKind,
 } from './villagePlan'
-import { projectOntoSegment } from '../math/segment'
+import { pointHitsCorridor, projectOntoSegment } from '../math/segment'
 import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
@@ -30,6 +30,7 @@ import {
   packGardenScales,
 } from './gardenScale'
 import { selectHouseholdWellFamilyIndices } from './householdWells'
+import { householdYardRadius } from './householdYard'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 import { plazaCoreRadius } from './villageClearing'
 import { householdWellPlotId, parseHouseholdWellFamilyIndex, residentialStructureId } from './villagePlan'
@@ -67,6 +68,18 @@ const PLOT_RIVER_MARGIN = 1
  *  as a separate "yard radius" field here. */
 export const HOUSE_PLOT_RADIUS = 4.5
 const INFRA_PLOT_RADIUS = 2.4
+
+/**
+ * Hard local band for a household well around its assigned house
+ * (settlements-npcs-035 follow-up). Min clears house pad + yard props;
+ * max keeps the well at the farmstead instead of the village ring.
+ *
+ * @domain settlements-npcs
+ */
+export function householdWellLocalBand(housePlotRadius: number): { min: number, max: number } {
+  const min = Math.max(housePlotRadius, householdYardRadius()) + INFRA_PLOT_RADIUS
+  return { min, max: min + HOUSE_PLOT_RADIUS }
+}
 const WORK_PLOT_RADIUS = 5.5
 const FOOD_PLOT_RADIUS = 6
 const LIVESTOCK_PLOT_RADIUS = 5
@@ -382,7 +395,7 @@ type PlotPlacementRequest = {
   radius: number
   familyIndex: number | null
   familyId: string | null
-  /** Preferred distance from village center (houses). */
+  /** Preferred distance from village center (houses), or from attractor in local mode. */
   preferredRing?: number
   /** Hard reject when closer than this to plaza center (gardens stay off the square). */
   minCenterDist?: number
@@ -390,8 +403,35 @@ type PlotPlacementRequest = {
   maxCenterDist?: number
   /** Prefer proximity to this point (resource / related plot). */
   attractor?: { x: number, z: number } | null
+  /** Hard min distance to attractor — local-attractor mode when set with max. */
+  minAttractorDistance?: number
+  /**
+   * Hard max distance to attractor. Together with `attractor` this switches
+   * `pickPlot()` into local sampling/fallback instead of the village ring.
+   */
+  maxAttractorDistance?: number
+  /** Future plaza corridors (center→endpoint) the footprint must not sit on. */
+  avoidSpokes?: readonly { x: number, z: number, halfWidth?: number }[]
   /** Force exact position (well at plaza) — still records a plot. */
   forced?: { x: number, z: number } | null
+}
+
+function isLocalAttractorMode(req: PlotPlacementRequest): boolean {
+  return req.attractor != null && req.maxAttractorDistance != null
+}
+
+function spokeCorridors(
+  center: VillageCenter,
+  endpoints: readonly { x: number, z: number, halfWidth?: number }[] | undefined,
+): { ax: number, az: number, bx: number, bz: number, halfWidth: number }[] {
+  if (!endpoints || endpoints.length === 0) return []
+  return endpoints.map((ep) => ({
+    ax: center.x,
+    az: center.z,
+    bx: ep.x,
+    bz: ep.z,
+    halfWidth: ep.halfWidth ?? LOCAL_PATH_HALF_WIDTH,
+  }))
 }
 
 function scorePlotCandidate(
@@ -439,10 +479,23 @@ function scorePlotCandidate(
     }
   }
 
+  if (req.avoidSpokes && req.avoidSpokes.length > 0) {
+    if (pointHitsCorridor(x, z, spokeCorridors(center, req.avoidSpokes), req.radius)) {
+      return null
+    }
+  }
+
   const w = PLOT_SCORE_WEIGHTS
   const distCenter = Math.hypot(x - center.x, z - center.z)
   if (req.minCenterDist != null && distCenter < req.minCenterDist) return null
   if (req.maxCenterDist != null && distCenter > req.maxCenterDist) return null
+
+  const local = isLocalAttractorMode(req)
+  if (local && req.attractor) {
+    const dAtt = Math.hypot(x - req.attractor.x, z - req.attractor.z)
+    if (req.minAttractorDistance != null && dAtt < req.minAttractorDistance) return null
+    if (req.maxAttractorDistance != null && dAtt > req.maxAttractorDistance) return null
+  }
 
   const outside = distCenter + req.radius - boundary.radius
 
@@ -459,7 +512,12 @@ function scorePlotCandidate(
     score -= Math.hypot(x - req.zone.x, z - req.zone.z) * w.distToZone
   }
 
-  if (req.role === 'house' || req.role === 'livestock') {
+  if (local && req.attractor) {
+    const dAtt = Math.hypot(x - req.attractor.x, z - req.attractor.z)
+    if (req.preferredRing != null) {
+      score -= Math.abs(dAtt - req.preferredRing) * w.preferredRingPenalty
+    }
+  } else if (req.role === 'house' || req.role === 'livestock') {
     score -= Math.abs(distCenter - (req.preferredRing ?? distCenter)) * w.preferredRingPenalty
     score -= distCenter * w.distToCenterHouse * 0.25
   } else if (req.preferredRing != null) {
@@ -523,6 +581,57 @@ function pushOutOfRiver(
   return { x, z }
 }
 
+function makePlacedPlot(
+  req: PlotPlacementRequest,
+  x: number,
+  z: number,
+  y: number,
+  rotation: number,
+): VillagePlot {
+  return {
+    id: req.id,
+    role: req.role,
+    x,
+    z,
+    y,
+    radius: req.radius,
+    rotation,
+    zoneId: req.zone?.id ?? null,
+    familyIndex: req.familyIndex,
+    familyId: req.familyId,
+  }
+}
+
+/** Local-attractor last-resort gates: proximity, spokes, plaza ring, river. */
+function localFallbackInvariantsHold(
+  x: number,
+  z: number,
+  req: PlotPlacementRequest,
+  center: VillageCenter,
+  riverSegments: readonly RiverChannelSegment[],
+): boolean {
+  const attractor = req.attractor
+  if (!attractor || req.maxAttractorDistance == null) return false
+  const dAtt = Math.hypot(x - attractor.x, z - attractor.z)
+  if (req.minAttractorDistance != null && dAtt < req.minAttractorDistance) return false
+  if (dAtt > req.maxAttractorDistance) return false
+  const distCenter = Math.hypot(x - center.x, z - center.z)
+  if (req.minCenterDist != null && distCenter < req.minCenterDist) return false
+  if (req.maxCenterDist != null && distCenter > req.maxCenterDist) return false
+  if (req.avoidSpokes && req.avoidSpokes.length > 0) {
+    if (pointHitsCorridor(x, z, spokeCorridors(center, req.avoidSpokes), req.radius)) {
+      return false
+    }
+  }
+  if (
+    riverSegments.length > 0 &&
+    footprintOverlapsRiver(riverSegments, x, z, req.radius + PLOT_RIVER_MARGIN)
+  ) {
+    return false
+  }
+  return true
+}
+
 function pickPlot(
   req: PlotPlacementRequest,
   center: VillageCenter,
@@ -536,50 +645,32 @@ function pickPlot(
 ): VillagePlot {
   if (req.forced) {
     const y = sampleHeight(req.forced.x, req.forced.z)
-    return {
-      id: req.id,
-      role: req.role,
-      x: req.forced.x,
-      z: req.forced.z,
-      y,
-      radius: req.radius,
-      rotation: tieBreakNoise(seedForCell, req.id) * 100,
-      zoneId: req.zone?.id ?? null,
-      familyIndex: req.familyIndex,
-      familyId: req.familyId,
-    }
+    return makePlacedPlot(req, req.forced.x, req.forced.z, y, tieBreakNoise(seedForCell, req.id) * 100)
   }
 
   const random = createSeededRandom(seedForCell ^ hashPlotId(req.id))
   const minSpacing = req.role === 'house' ? houseSpacing * 0.55 : req.radius * 1.4
   const zone = req.zone
-  const baseAngle = zone
-    ? Math.atan2(zone.z - center.z, zone.x - center.x)
-    : primaryAxisAngle(seedForCell ^ hashPlotId(req.id))
-  const preferredRing =
-    req.preferredRing ??
-    (zone ? Math.hypot(zone.x - center.x, zone.z - center.z) : boundary.radius * 0.35)
+  const local = isLocalAttractorMode(req)
+  const attractor = req.attractor
+  const baseAngle = local && attractor
+    ? Math.atan2(attractor.z - center.z, attractor.x - center.x)
+    : zone
+      ? Math.atan2(zone.z - center.z, zone.x - center.x)
+      : primaryAxisAngle(seedForCell ^ hashPlotId(req.id))
+  const minAtt = req.minAttractorDistance ?? 0
+  const maxAtt = req.maxAttractorDistance
+  const preferredRing = local
+    ? (req.preferredRing ?? (minAtt + (maxAtt ?? minAtt)) * 0.5)
+    : (req.preferredRing ??
+      (zone ? Math.hypot(zone.x - center.x, zone.z - center.z) : boundary.radius * 0.35))
 
-  let best: VillagePlot | null = null
-  let bestScore = -Infinity
-
-  const attempts = req.role === 'house' ? PLOT_CANDIDATE_ATTEMPTS * 2 : PLOT_CANDIDATE_ATTEMPTS
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    const angle = baseAngle + (random() - 0.5) * 1.4 + attempt * 0.37
-    let dist =
-      req.role === 'house' || req.role === 'livestock' || req.maxCenterDist != null
-        ? preferredRing * (0.75 + random() * 0.5)
-        : preferredRing * (0.35 + random() * 0.7)
-    if (req.minCenterDist != null) dist = Math.max(dist, req.minCenterDist)
-    if (req.maxCenterDist != null) dist = Math.min(dist, req.maxCenterDist)
-    const x = center.x + Math.cos(angle) * dist
-    const z = center.z + Math.sin(angle) * dist
-    const y = sampleHeight(x, z)
-    const score = scorePlotCandidate(
+  const scoreAt = (x: number, z: number, ring: number): number | null =>
+    scorePlotCandidate(
       x,
       z,
-      y,
-      { ...req, preferredRing },
+      sampleHeight(x, z),
+      { ...req, preferredRing: ring },
       center,
       boundary,
       existing,
@@ -589,25 +680,82 @@ function pickPlot(
       riverSegments,
       minSpacing,
     )
+
+  let best: VillagePlot | null = null
+  let bestScore = -Infinity
+
+  const attempts =
+    req.role === 'house' || local ? PLOT_CANDIDATE_ATTEMPTS * 2 : PLOT_CANDIDATE_ATTEMPTS
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    let x: number
+    let z: number
+    let angle: number
+    if (local && attractor && maxAtt != null) {
+      const sideSign = attempt % 2 === 0 ? 1 : -1
+      angle =
+        baseAngle +
+        sideSign * (Math.PI / 2) +
+        (random() - 0.5) * 0.9 +
+        Math.floor(attempt / 2) * 0.23 * sideSign
+      let dist = preferredRing + (random() - 0.5) * (maxAtt - minAtt) * 0.6
+      dist = Math.max(minAtt, Math.min(maxAtt, dist))
+      x = attractor.x + Math.cos(angle) * dist
+      z = attractor.z + Math.sin(angle) * dist
+    } else {
+      angle = baseAngle + (random() - 0.5) * 1.4 + attempt * 0.37
+      let dist =
+        req.role === 'house' || req.role === 'livestock' || req.maxCenterDist != null
+          ? preferredRing * (0.75 + random() * 0.5)
+          : preferredRing * (0.35 + random() * 0.7)
+      if (req.minCenterDist != null) dist = Math.max(dist, req.minCenterDist)
+      if (req.maxCenterDist != null) dist = Math.min(dist, req.maxCenterDist)
+      x = center.x + Math.cos(angle) * dist
+      z = center.z + Math.sin(angle) * dist
+    }
+    const score = scoreAt(x, z, preferredRing)
     if (score === null) continue
     if (score > bestScore) {
       bestScore = score
-      best = {
-        id: req.id,
-        role: req.role,
-        x,
-        z,
-        y,
-        radius: req.radius,
-        rotation: angle,
-        zoneId: zone?.id ?? null,
-        familyIndex: req.familyIndex,
-        familyId: req.familyId,
-      }
+      best = makePlacedPlot(req, x, z, sampleHeight(x, z), angle)
     }
   }
 
   if (best) return best
+
+  if (local && attractor && maxAtt != null) {
+    const localRings = [minAtt, preferredRing, minAtt + (maxAtt - minAtt) * 0.65, maxAtt]
+    const seen = new Set<number>()
+    for (const ring of localRings) {
+      const capped = Math.max(minAtt, Math.min(maxAtt, ring))
+      if (seen.has(capped)) continue
+      seen.add(capped)
+      for (let i = 0; i < 16; i++) {
+        const angle = baseAngle + Math.PI / 2 + (i / 16) * Math.PI * 2
+        const fx = attractor.x + Math.cos(angle) * capped
+        const fz = attractor.z + Math.sin(angle) * capped
+        const score = scoreAt(fx, fz, preferredRing)
+        if (score === null) continue
+        return makePlacedPlot(req, fx, fz, sampleHeight(fx, fz), angle)
+      }
+    }
+
+    for (const ring of localRings) {
+      const capped = Math.max(minAtt, Math.min(maxAtt, ring))
+      for (let i = 0; i < 24; i++) {
+        const angle = baseAngle + Math.PI / 2 + (i / 24) * Math.PI * 2
+        const rawFx = attractor.x + Math.cos(angle) * capped
+        const rawFz = attractor.z + Math.sin(angle) * capped
+        const { x: fx, z: fz } = pushOutOfRiver(rawFx, rawFz, center, req.radius, riverSegments)
+        if (!localFallbackInvariantsHold(fx, fz, req, center, riverSegments)) continue
+        return makePlacedPlot(req, fx, fz, sampleHeight(fx, fz), angle)
+      }
+    }
+
+    const angle = baseAngle + Math.PI / 2
+    const fx = attractor.x + Math.cos(angle) * minAtt
+    const fz = attractor.z + Math.sin(angle) * minAtt
+    return makePlacedPlot(req, fx, fz, sampleHeight(fx, fz), angle)
+  }
 
   // Deterministic fallback: prefer the requested ring (keeps campfire / market
   // off the well when public-zone center ≈ plaza — plan 076). Houses still hug
@@ -641,33 +789,9 @@ function pickPlot(
         const angle = base + (i / 12) * Math.PI * 2
         const fx = center.x + Math.cos(angle) * ring
         const fz = center.z + Math.sin(angle) * ring
-        const score = scorePlotCandidate(
-          fx,
-          fz,
-          sampleHeight(fx, fz),
-          { ...req, preferredRing: fallbackRing },
-          center,
-          boundary,
-          existing,
-          seedForCell,
-          sampleHeight,
-          waterLevel,
-          riverSegments,
-          minSpacing,
-        )
+        const score = scoreAt(fx, fz, fallbackRing)
         if (score === null) continue
-        return {
-          id: req.id,
-          role: req.role,
-          x: fx,
-          z: fz,
-          y: sampleHeight(fx, fz),
-          radius: req.radius,
-          rotation: angle,
-          zoneId: zone?.id ?? null,
-          familyIndex: req.familyIndex,
-          familyId: req.familyId,
-        }
+        return makePlacedPlot(req, fx, fz, sampleHeight(fx, fz), angle)
       }
       if (req.maxCenterDist != null && ring >= req.maxCenterDist) break
     }
@@ -682,18 +806,7 @@ function pickPlot(
       ? zone.z
       : center.z + Math.sin(baseAngle) * fallbackRing
   const { x: fx, z: fz } = pushOutOfRiver(rawFx, rawFz, center, req.radius, riverSegments)
-  return {
-    id: req.id,
-    role: req.role,
-    x: fx,
-    z: fz,
-    y: sampleHeight(fx, fz),
-    radius: req.radius,
-    rotation: baseAngle,
-    zoneId: zone?.id ?? null,
-    familyIndex: req.familyIndex,
-    familyId: req.familyId,
-  }
+  return makePlacedPlot(req, fx, fz, sampleHeight(fx, fz), baseAngle)
 }
 
 function hashPlotId(plotId: string): number {
@@ -800,26 +913,60 @@ export function planVillageLayout(
   })
 
   const selectedHouseholdWells = selectHouseholdWellFamilyIndices(families, seedForCell)
+  const waterAngle = downhillAngle(center.x, center.z, boundary.radius, sampleHeight)
+  const entranceAngles = preferredEntranceAngles(
+    pattern,
+    seedForCell,
+    entranceCountFor(identity),
+    waterAngle,
+  )
+  const predictedEntrances = entranceAngles.map((angle, index) => {
+    const kind: 'road' | 'path' =
+      identity.size === 'OUTPOST'
+        ? 'path'
+        : index === 0 || identity.size === 'LG' || identity.size === 'XL'
+          ? 'road'
+          : 'path'
+    return pickEntranceAtAngle(
+      angle,
+      index,
+      kind,
+      center,
+      boundary,
+      seedForCell,
+      sampleHeight,
+      waterLevel,
+    )
+  })
+  const householdWellSpokes = [
+    ...plots.filter((plot) => plot.role === 'house').map((plot) => ({ x: plot.x, z: plot.z })),
+    ...zones.filter((zone) => zone.kind !== 'public').map((zone) => ({ x: zone.x, z: zone.z })),
+    ...predictedEntrances.map((entrance) => ({
+      x: entrance.x,
+      z: entrance.z,
+      halfWidth: entrance.kind === 'road' ? LOCAL_ROAD_HALF_WIDTH : LOCAL_PATH_HALF_WIDTH,
+    })),
+  ]
   for (const familyIndex of selectedHouseholdWells) {
     const house = plots.find((plot) => plot.role === 'house' && plot.familyIndex === familyIndex)
     if (!house) continue
     const family = families[familyIndex]
-    const houseDist = Math.hypot(house.x - center.x, house.z - center.z)
-    const houseZone = residential
-      ? { ...residential, x: house.x, z: house.z }
-      : null
+    const { min: minAtt, max: maxAtt } = householdWellLocalBand(house.radius)
     plots.push(
       pickPlot(
         {
           id: householdWellPlotId(familyIndex),
           role: 'infrastructure',
-          zone: houseZone,
+          zone: residential,
           radius: INFRA_PLOT_RADIUS,
           familyIndex,
           familyId: family?.id ?? house.familyId,
-          preferredRing: Math.max(houseDist, houseMinCenterDist),
+          preferredRing: minAtt,
           minCenterDist: houseMinCenterDist,
           attractor: { x: house.x, z: house.z },
+          minAttractorDistance: minAtt,
+          maxAttractorDistance: maxAtt,
+          avoidSpokes: householdWellSpokes,
         },
         center,
         boundary,

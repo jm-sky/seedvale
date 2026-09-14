@@ -2,13 +2,15 @@ import * as THREE from 'three'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import type { SettlementSite } from './findSettlementSite'
 import type { VillagePlan } from './villagePlan'
-import { projectOntoSegment } from '../math/segment'
+import { pointHitsCorridor } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { type VillageSize, villageSizeConfig } from './families'
 import { WALL_URL } from './propSpecs'
 import { loadPropOrFallback } from './propUtils'
 import { yawToward } from './roadNetwork'
+
+export { pointHitsCorridor }
 
 const WALL_TARGET_HEIGHT = 1.85
 /** Approximate world half-width of a wall segment after `prepareProp` height fit. */
@@ -33,21 +35,6 @@ function createPalisadeStake(): THREE.Group {
   stake.castShadow = true
   g.add(stake)
   return g
-}
-
-/** True when `(x,z)` lies inside any corridor capsule (+ extra clearance). */
-export function pointHitsCorridor(
-  x: number,
-  z: number,
-  corridors: readonly RoadCorridorSegment[],
-  extraClearance: number,
-): boolean {
-  for (const seg of corridors) {
-    const need = seg.halfWidth + extraClearance
-    const { distSq } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
-    if (distSq < need * need) return true
-  }
-  return false
 }
 
 /**
