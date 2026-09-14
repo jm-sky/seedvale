@@ -10,9 +10,9 @@ import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { OpportunityNpc } from './opportunities/worldQuestOpportunityTypes'
 import type { QuestDef } from './quests'
-import { adultOpportunityNpcs } from './opportunities/rpgQuestMatrices'
-import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
 import { DUNGEON_DEEP_CHAMBER_NODE_ID } from '../world/caves/dungeonTopology'
+import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
+import { adultOpportunityNpcs } from './opportunities/rpgQuestMatrices'
 
 /** Stable reservation-key prefix for dungeon bandit-cache arbitration. */
 export const DUNGEON_BANDIT_TREASURE_RESERVATION_PREFIX = 'quests-progression-026'

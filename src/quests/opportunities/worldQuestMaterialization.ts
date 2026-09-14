@@ -2,7 +2,6 @@ import type { PreySpawner } from '../../fauna/AnimalSpawner'
 import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import type { SettlementDef } from '../../settlement/settlementGenerator'
 import type { QuestDef } from '../quests'
-import { RESOLVED_WITHOUT_PLAYER_OUTCOME } from '../quests'
 import type {
   LostLivestockOpportunity,
   OpportunityNpc,
@@ -10,6 +9,7 @@ import type {
   WolfDenPressureOpportunity,
 } from './worldQuestOpportunityTypes'
 import { flattenedSettlementMembers, settlementNpcId } from '../../settlement/npcIdentity'
+import { RESOLVED_WITHOUT_PLAYER_OUTCOME } from '../quests'
 import {
   materializeRpgQuestOpportunity,
   type RpgMaterializationContext,

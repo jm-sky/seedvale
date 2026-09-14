@@ -1,11 +1,11 @@
 import type { PreySpawner } from '../../fauna/AnimalSpawner'
+import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import type {
   LostLivestockOpportunity,
   SettlementQuestOpportunity,
   WolfDenPressureOpportunity,
   WorldQuestSourceStatus,
 } from './worldQuestOpportunityTypes'
-import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import { isWolfDenPermanentlyDestroyed, isWolfDenPressureProblem } from '../../fauna/wolfDenScenario'
 
 const WOLF_DEN_PRESSURE_PREFIX = 'world:wolf-den-pressure:'

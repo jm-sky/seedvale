@@ -187,10 +187,10 @@ export function createItemInstanceId(): string {
 /** Count-based kinds that may still carry a stable instance id when authored
  *  content needs physical identity (plans quests-progression-023 / 025). */
 export const IDENTITY_ONLY_ITEM_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
-  'hunting_bow',
-  'signet_ring',
   'bandit_ledger',
+  'hunting_bow',
   'marked_valuable',
+  'signet_ring',
 ])
 
 export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
