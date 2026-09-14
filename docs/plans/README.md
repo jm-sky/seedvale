@@ -72,7 +72,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | 🟡 | M      | ~~settlements-npcs-033~~                                                                                                                                                        | economy-goods-flow                      |
 | ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | 🟡 | M      | settlements-012                                                                                                                                                                 | -                                       |
 | 💡 `settlements-npcs-036-generic-npc-owned-goods-trading.md`                   | 🔴 | M      | ~~settlements-npcs-033~~                                                                                                                                                        | economy-goods-flow                      |
-| ◼️ `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | 🔴 | S      | ~~settlements-npcs-017~~, ~~settlements-npcs-018~~, ~~settlements-npcs-019~~                                                                                                    | physical-goods-transport                |
+| 💡 `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | 🔴 | S      | ~~settlements-npcs-017~~, ~~settlements-npcs-018~~, ~~settlements-npcs-019~~                                                                                                    | physical-goods-transport                |
 
 ---
 
