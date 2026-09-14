@@ -9,6 +9,7 @@
 **Subdomains:** `roads` `terrain` `rendering`
 **Tags:** `bridges` `roads` `rivers` `streaming` `traversal` `determinism`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## 1. Goal
 
