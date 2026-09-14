@@ -14,6 +14,15 @@ export const TREE_SPECS = [
   { url: '/models/nature/pine_5.glb', height: 4.0 },
 ] as const
 
+/** Deciduous living trees for the fauna `thicket` (zagajnik) marker —
+ *  `TREE_SPECS` 0–3. Deadtree/pines stay on the vegetation catalog only. */
+export const THICKET_TREE_SPECS = [
+  TREE_SPECS[0],
+  TREE_SPECS[1],
+  TREE_SPECS[2],
+  TREE_SPECS[3],
+] as const
+
 export const BUSH_SPECS = [
   { url: '/models/nature/bush_a.glb', height: 1.4 },
   { url: '/models/nature/bush_b.glb', height: 1.8 },

@@ -15,7 +15,14 @@ import {
 import { isSystemEnabled, isWildBoarGlbEnabled } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
-import { createCaveMouth, createThicket, tintPropMaterials } from '../settlement/props'
+import {
+  createCaveMouth,
+  createThicket,
+  createTree,
+  loadPropTemplates,
+  THICKET_TREE_SPECS,
+  tintPropMaterials,
+} from '../settlement/props'
 import { useBootMark } from '../shared/bootMark'
 import { isCoastalPlacement } from '../terrain/coastPlacement'
 import { labelOpacityForDistance } from '../ui/labelDistance'
@@ -82,8 +89,8 @@ const SPAWNER_ROAD_CLEARANCE = 1
 
 /** Label height above ground for a cave mouth (prop ~1.1 m tall at scale 1). */
 const CAVE_LABEL_HEIGHT = 1.8
-/** Label above a thicket crown (~createTree at ~0.7 scale → crown ~2.5 m). */
-const THICKET_LABEL_HEIGHT = 3.2
+/** Label above a thicket canopy (~4 m TREE_SPECS GLBs, slightly scaled). */
+const THICKET_LABEL_HEIGHT = 5.8
 const DEFAULT_SPAWNER_LABEL_HEIGHT = 0.6
 
 export type Fauna = {
@@ -635,8 +642,12 @@ export async function createFauna(
   const denWolfAnimalIds = new Set<string>()
   bootMark('loadFaunaTemplates')
   let templates: Partial<Record<AnimalKind, FaunaTemplate>>
+  let thicketTreeTemplates: Object3D[]
   try {
-    templates = await loadFaunaTemplates()
+    ;[templates, thicketTreeTemplates] = await Promise.all([
+      loadFaunaTemplates(),
+      loadPropTemplates(THICKET_TREE_SPECS, () => createTree(1)),
+    ])
   } finally {
     bootMarkEnd('loadFaunaTemplates')
   }
@@ -1008,7 +1019,7 @@ export async function createFauna(
       spawnerMeshes.push(mouth)
       spawnerMeshById.set(spawner.id, mouth)
     } else if (spec.type === 'thicket') {
-      const thicket = createThicket(1, random())
+      const thicket = createThicket(1, random(), thicketTreeTemplates)
       thicket.position.set(pos.x, groundY, pos.z)
       thicket.rotation.y = random() * Math.PI * 2
       scene.add(thicket)

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { patchProceduralFoliageMaterial } from '../world/foliageWind'
-import { applyTerrainTilt, rotateOffsetY, sampleLocalTerrain, type TerrainSampler } from './propUtils'
+import { applyTerrainTilt, clonePropWithYaw, rotateOffsetY, sampleLocalTerrain, type TerrainSampler } from './propUtils'
 
 /** World placement context an individual stone-circle stone / cemetery grave
  *  needs to sample its own terrain height/normal (plan 173) — `worldX/worldZ`
@@ -113,29 +113,36 @@ export function createBush(scale = 1): THREE.Group {
   return bush
 }
 
-/** Tight cluster of five small trees — visual for the prey `thicket`
- *  spawner (`createFauna.ts`). Origin at feet; footprint ~2.5 m at scale 1.
- *  `variant` (0..1) jitters tree scales/offsets so two thickets don't look
- *  identical. Reuses `createTree` so foliage wind matches other procedural
- *  crowns. */
-export function createThicket(scale = 1, variant = 0.5): THREE.Group {
+/** Cluster of four trees — visual for the prey `thicket` spawner
+ *  (`createFauna.ts`). Origin at feet; footprint ~7 m at scale 1 so ~4 m
+ *  nature GLBs read as a grove. `variant` (0..1) jitters scale/offset/yaw.
+ *  Clones `treeTemplates` (TREE_SPECS 0–3) when provided; otherwise
+ *  procedural `createTree`. Decorative only — not `TreeLifecycle`. */
+export function createThicket(
+  scale = 1,
+  variant = 0.5,
+  treeTemplates?: THREE.Object3D[],
+): THREE.Group {
   const group = new THREE.Group()
-  // Five trees packed close around the origin (~72° apart) — reads as a
-  // dense little grove, not a few scattered trees.
+  // Four trunks around the origin (~90° apart), spaced for GLB canopies.
   const placements: Array<{ angle: number, radius: number, size: number }> = [
-    { angle: 0.15 + variant * 0.4, radius: 0.7, size: 0.68 },
-    { angle: 1.4 + variant * 0.3, radius: 0.55, size: 0.5 },
-    { angle: 2.65 + variant * 0.35, radius: 0.75, size: 0.6 },
-    { angle: 3.9 + variant * 0.25, radius: 0.5, size: 0.48 },
-    { angle: 5.15 + variant * 0.3, radius: 0.65, size: 0.58 },
+    { angle: 0.15 + variant * 0.4, radius: 2.4, size: 0.95 },
+    { angle: 1.72 + variant * 0.3, radius: 2.7, size: 0.82 },
+    { angle: 3.29 + variant * 0.35, radius: 2.5, size: 0.9 },
+    { angle: 4.86 + variant * 0.25, radius: 2.85, size: 0.78 },
   ]
+  const templates = treeTemplates != null && treeTemplates.length > 0 ? treeTemplates : null
   for (let i = 0; i < placements.length; i++) {
     const p = placements[i]!
     const sizeJitter = 0.9 + ((variant * (i + 3)) % 1) * 0.25
-    const tree = createTree(scale * p.size * sizeJitter)
+    const yaw = variant * 4.2 + i * 1.7
+    const treeScale = scale * p.size * sizeJitter
+    const tree = templates
+      ? clonePropWithYaw(templates, i, treeScale, yaw)
+      : createTree(treeScale)
     const r = p.radius * scale * (0.9 + ((variant * (i + 5)) % 1) * 0.2)
     tree.position.set(Math.sin(p.angle) * r, 0, Math.cos(p.angle) * r)
-    tree.rotation.y = variant * 4.2 + i * 1.7
+    if (!templates) tree.rotation.y = yaw
     group.add(tree)
   }
   return group
