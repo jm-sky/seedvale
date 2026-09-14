@@ -213,6 +213,30 @@ describe('planProfessionWork', () => {
       expect(household.items.count('carrot')).toBe(2)
     })
 
+    it('deposits recovered cultivated seeds into Household.items', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const before = household.items.count('seed_carrot')
+      const foodSources = {
+        queryHarvestableCrop: () => ({ kind: 'crop' as const, x: 1, z: 1, itemKind: 'carrot' }),
+        harvest: () => ({
+          count: 1,
+          kind: 'carrot' as const,
+          recoveredSeeds: { kind: 'seed_carrot' as const, count: 2 },
+        }),
+        findPlantSpot: () => ({ x: 2, z: 2 }),
+        plant: () => true,
+      }
+      const work = planProfessionWork(baseCtx({
+        role: 'farmer',
+        household,
+        foodSources: foodSources as unknown as NpcWorkContext['foodSources'],
+      }))
+      expect(work?.kind).toBe('harvest')
+      work?.onComplete?.()
+      expect(household.items.count('carrot')).toBe(1)
+      expect(household.items.count('seed_carrot')).toBe(before + 2)
+    })
+
     it('plants household seed around a Player-garden anchor without duplicating crop state', () => {
       const household = createHousehold('h', 's', 'home:h')
       household.items.add('seed_carrot', 1)

@@ -7,14 +7,14 @@ import { playActionFishingCast } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { ANIMAL_LABELS } from '../../fauna/AnimalAgent'
 import { BAIT_ITEM_PRIORITY, isFoodBatchSpoiled } from '../../items/foodFreshness'
-import { inventoryFullToastText } from '../../items/Inventory'
-import { ITEM_DEFS } from '../../items/items'
+import { type Inventory, inventoryFullToastText } from '../../items/Inventory'
+import { ITEM_DEFS, itemSizeUnits } from '../../items/items'
 import { trapInstanceFromWorld } from '../../items/trapItemInstances'
 import { awardSkillXp, SKILL_XP_AWARD } from '../../player/PlayerSkills'
 import { damageHealth } from '../../shared/HealthState'
 import { TRAP_DEFS } from '../../world/animalTraps'
 import { HIVE_STING_DAMAGE, honeyAvailable, rollHiveSting } from '../../world/beehives'
-import { CROP_DEFS, resolveCropHarvest } from '../../world/cropLifecycle'
+import { CROP_DEFS, recoveredSeedCountForHarvest, resolveCropHarvest } from '../../world/cropLifecycle'
 import { isDryingComplete, pickDryingRecipe, resolveDryingOutput, startDryingProcess } from '../../world/dryingRacks'
 import {
   applyFishingBait as applyFishingBaitToSpot,
@@ -23,8 +23,30 @@ import {
   isBaitActive,
   rollFishingCatch,
 } from '../../world/fishing'
+import { CROP_SEED_ITEM, isPlantedCropId } from '../../world/plantedCrops'
 import { cultivationYieldCount, findNearestGarden, resolveCultivationCare } from '../../world/playerGarden'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
+
+function inventoryCanAcceptHarvest(
+  inventory: Inventory,
+  produceKind: ItemKind,
+  produceCount: number,
+  seedKind: ItemKind,
+  seedCount: number,
+): boolean {
+  let extraWeight = 0
+  let extraSize = 0
+  if (produceCount > 0) {
+    extraWeight += ITEM_DEFS[produceKind].weight * produceCount
+    extraSize += itemSizeUnits(produceKind) * produceCount
+  }
+  if (seedCount > 0) {
+    extraWeight += ITEM_DEFS[seedKind].weight * seedCount
+    extraSize += itemSizeUnits(seedKind) * seedCount
+  }
+  return inventory.totalWeight() + extraWeight <= inventory.maxWeight + 1e-9
+    && inventory.totalSize() + extraSize <= inventory.maxSize + 1e-9
+}
 
 /** Food/resource gathering the player does on already-existing world objects:
  *  animal traps (plan 141 + plan 159's bait), lake/river/ocean fishing (plan
@@ -357,22 +379,32 @@ export function createGatheringActions(
     toast.show(`Ul spłonął. +${reward} miodu`, 'pickup')
   }
 
-  /** Plan 172 — single `[E]` harvest action for a naturally-generated wild
-   *  crop, reusing the existing gather/inventory flow. Mirrors the `item`
-   *  branch's mutation order (`gameLoop.ts`): the capacity check happens
-   *  *before* `ChunkManager.harvestCrop` removes anything from the world, so
-   *  a full inventory never destroys a crop for nothing. `cropId`/`stage`
-   *  come from the same-frame `Interactable` snapshot; `harvestCrop` still
-   *  re-validates the authoritative current stage itself. */
+  /** Plan 172 / settlements-npcs-031 — `[E]` harvest for wild or planted
+   *  crops. Capacity is checked against the effective produce + recovered
+   *  seed goods *before* `ChunkManager.harvestCrop` removes the crop, so a
+   *  full inventory never destroys a harvest for nothing. Recovery uses the
+   *  shared cultivated resolver; the formula is not copied here. */
   const harvestCrop = (id: string, cropId: CropId, stage: CropGrowthStage, x: number, z: number): void => {
     if (isActionBlocked(ctx)) return
-    const expectedYield = resolveCropHarvest(CROP_DEFS[cropId], stage)
+    const def = CROP_DEFS[cropId]
+    const expectedYield = resolveCropHarvest(def, stage)
     if (!expectedYield) {
       toast.show('Nie ma tu jeszcze nic do zebrania.', 'error')
       return
     }
-    if (!inventory.canAdd(expectedYield.kind, expectedYield.count)) {
-      toast.show(inventoryFullToastText(inventory, expectedYield.kind, expectedYield.count), 'error')
+    const garden = findNearestGarden(bundle.playerGardens.list(), x, z)
+    let count = expectedYield.count
+    let hydrationDead = false
+    if (garden) {
+      const care = resolveCultivationCare(garden, dayNight.elapsedDays)
+      const hydrationState = bundle.playerGardens.hydrationOf(garden.id, dayNight.elapsedDays)
+      hydrationDead = (hydrationState?.hydration ?? 100) <= 0
+      count = cultivationYieldCount(expectedYield.count, care, hydrationState?.droughtStressDays ?? 0, hydrationDead)
+    }
+    const recovered = recoveredSeedCountForHarvest(def, expectedYield, count, isPlantedCropId(id))
+    const seedKind = CROP_SEED_ITEM[cropId]
+    if ((count > 0 || recovered > 0) && !inventoryCanAcceptHarvest(inventory, expectedYield.kind, count, seedKind, recovered)) {
+      toast.show(inventoryFullToastText(inventory, count > 0 ? expectedYield.kind : seedKind, count > 0 ? count : recovered), 'error')
       return
     }
     const outcome = bundle.chunkManager.harvestCrop(id)
@@ -380,29 +412,21 @@ export function createGatheringActions(
       toast.show('Ta roślina już zniknęła.', 'error')
       return
     }
-    // Plan 176 §13 / settlements-npcs-001 §6/§7 — a crop inside a player
-    // garden plot's radius has its yield scaled by the plot's resolved care
-    // and hydration/drought stress; a crop nowhere near a plot (wild, or on
-    // a settlement's decorative garden) keeps its full yield.
-    const garden = findNearestGarden(bundle.playerGardens.list(), x, z)
-    let count = outcome.yield.count
-    let hydrationDead = false
-    if (garden) {
-      const care = resolveCultivationCare(garden, dayNight.elapsedDays)
-      const hydrationState = bundle.playerGardens.hydrationOf(garden.id, dayNight.elapsedDays)
-      hydrationDead = (hydrationState?.hydration ?? 100) <= 0
-      count = cultivationYieldCount(outcome.yield.count, care, hydrationState?.droughtStressDays ?? 0, hydrationDead)
-      bundle.playerGardens.recordHarvest(garden.id, dayNight.elapsedDays)
-    }
+    if (garden) bundle.playerGardens.recordHarvest(garden.id, dayNight.elapsedDays)
     if (count <= 0) {
       toast.show(hydrationDead ? 'Roślina uschła z powodu suszy.' : 'Zbiory zniszczone przez zaniedbanie grządki.', 'error')
       return
     }
     inventory.add(outcome.yield.kind, count, dayNight.elapsedDays)
+    if (recovered > 0) inventory.add(seedKind, recovered)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     playInventoryPickUp(worldAudio.playOnce)
-    toast.show(`+${count} ${ITEM_DEFS[outcome.yield.kind].label}`, 'pickup')
+    const produceLabel = `+${count} ${ITEM_DEFS[outcome.yield.kind].label}`
+    toast.show(
+      recovered > 0 ? `${produceLabel} · +${recovered} ${ITEM_DEFS[seedKind].label}` : produceLabel,
+      'pickup',
+    )
   }
 
   return {

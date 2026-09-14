@@ -4334,6 +4334,9 @@ export class NpcAgent {
         }
         if (result.count <= 0) return
         household?.depositFood(result.kind, result.count, this.economy, this.simClock)
+        if (result.recoveredSeeds && result.recoveredSeeds.count > 0) {
+          household?.items.add(result.recoveredSeeds.kind, result.recoveredSeeds.count)
+        }
         household?.takeFood(this.simClock)
         relieveNeed(this.needs, 'food')
       },

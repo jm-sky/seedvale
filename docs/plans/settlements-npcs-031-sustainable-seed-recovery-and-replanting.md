@@ -1,14 +1,15 @@
 # Plan: Sustainable Seed Recovery and Replanting
 
 **Created:** 2026-09-11  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified; browser/gameplay not yet verified. See [implementation notes](./implementation-notes/settlements-npcs-031-sustainable-seed-recovery-and-replanting-implementation-notes.md).  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
-**Depends on:** ~~settlements-npcs-030~~, world-023  
+**Depends on:** ~~settlements-npcs-030~~, ~~world-023~~  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `household` `economy` `logistics`  
 **Tags:** `agriculture` `seeds` `off-screen`  
 **Roadmap:** `agriculture-and-cultivation`  
+**Implemented at:** 2026-09-14  
 
 ## Cel
 

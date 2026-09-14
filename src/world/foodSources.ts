@@ -3,8 +3,8 @@ import type { ChunkManager } from '../terrain/chunkManager'
 import type { PlayerGardens } from './createPlayerGardens'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { evaluateGroundPlacement } from '../items/tentPlacement'
-import { CROP_DEFS, type CropGrowthStage, type CropId, resolveCropHarvest } from './cropLifecycle'
-import { CROP_PLANT_FOOTPRINT_RADIUS, CROP_PLANT_SEPARATION } from './plantedCrops'
+import { CROP_DEFS, type CropGrowthStage, type CropId, recoveredSeedCountForHarvest, resolveCropHarvest } from './cropLifecycle'
+import { CROP_PLANT_FOOTPRINT_RADIUS, CROP_PLANT_SEPARATION, CROP_SEED_ITEM, isPlantedCropId } from './plantedCrops'
 import { cultivationYieldCount, findNearestGarden, resolveCultivationCare } from './playerGarden'
 
 /**
@@ -42,7 +42,14 @@ export type SettlementFoodSourceHooks = {
    *  (mature `harvestItem` or spoiled `spoiledItem`, already resolved by
    *  `ChunkManager.harvestCrop`) — so a caller depositing the yield never has
    *  to re-derive it from `cropId`. */
-  harvest: (target: FoodSourceTarget) => { count: number, kind: ItemKind } | null
+  harvest: (target: FoodSourceTarget) => {
+    count: number
+    kind: ItemKind
+    /** Recovered cultivated seed goods, or `null` when this harvest is not a
+     *  planted sowing unit (wild crop, food item, spoiled yield, or failed
+     *  produce). Caller deposits into player Inventory / Household.items. */
+    recoveredSeeds: { kind: ItemKind, count: number } | null
+  } | null
   /** Nearest player-built garden plot within reach of `(x, z)` (plan 176
    *  §6.1's "NPC already at the field" condition) — only ever called right
    *  after `harvest` succeeded for a `crop` target, never as an independent
@@ -173,7 +180,7 @@ export function createFoodSourceHooks(
     },
     harvest(target) {
       if (target.kind === 'item') {
-        return chunkManager.collectItem(target.id) ? { count: 1, kind: target.itemKind } : null
+        return chunkManager.collectItem(target.id) ? { count: 1, kind: target.itemKind, recoveredSeeds: null } : null
       }
       const outcome = chunkManager.harvestCrop(target.id)
       if (!outcome.ok) return null
@@ -185,7 +192,13 @@ export function createFoodSourceHooks(
         count = cultivationYieldCount(count, care, hydrationState?.droughtStressDays ?? 0, (hydrationState?.hydration ?? 100) <= 0)
         playerGardens.recordHarvest(garden.id, getWorldDays())
       }
-      return { count, kind: outcome.yield.kind }
+      const def = CROP_DEFS[target.cropId]
+      const recovered = recoveredSeedCountForHarvest(def, outcome.yield, count, isPlantedCropId(target.id))
+      return {
+        count,
+        kind: outcome.yield.kind,
+        recoveredSeeds: recovered > 0 ? { kind: CROP_SEED_ITEM[target.cropId], count: recovered } : null,
+      }
     },
     gardenNear(x, z) {
       const garden = findNearestGarden(playerGardens.list(), x, z)

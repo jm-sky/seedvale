@@ -67,7 +67,7 @@ export function makePlantedCropId(seed: number, x: number, z: number): string {
 
 /** Planted sowing units use a distinct id namespace from procedural wild
  *  crops (`${cx}:${cz}:crop${i}`). Presentation may use this to keep wild
- *  finds sparse without a second lifecycle. */
+ *  finds sparse; seed recovery uses it as the cultivated/planted context. */
 export function isPlantedCropId(id: string): boolean {
   return id.startsWith('planted-crop:')
 }

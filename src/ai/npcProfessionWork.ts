@@ -283,6 +283,9 @@ function planFarmWork(ctx: NpcWorkContext): NpcPlannedAction | null {
       onComplete: () => {
         const result = foodSources.harvest(target)
         if (result && result.count > 0) household?.depositFood(result.kind, result.count, economy, ctx.simTime())
+        if (result?.recoveredSeeds && result.recoveredSeeds.count > 0) {
+          household?.items.add(result.recoveredSeeds.kind, result.recoveredSeeds.count)
+        }
       },
     }
   }

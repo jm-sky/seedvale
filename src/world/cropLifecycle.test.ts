@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   CROP_DEFS,
   type CropDefinition,
+  recoveredSeedCountForHarvest,
   resolveCropHarvest,
   resolveCropStage,
+  resolveCultivatedSeedRecovery,
   rollCropPhase,
 } from './cropLifecycle'
 
@@ -14,6 +16,7 @@ const def: CropDefinition = {
   logicalPlantsPerSowingUnit: 8,
   harvestItem: 'carrot',
   yieldCount: 1,
+  healthySeedRecovery: 2,
 }
 
 describe('resolveCropStage', () => {
@@ -112,5 +115,49 @@ describe('resolveCropHarvest', () => {
   it('spoiled yields spoiledItem when defined, never the normal harvest item', () => {
     const withSpoiled: CropDefinition = { ...def, spoiledItem: 'branch' }
     expect(resolveCropHarvest(withSpoiled, 'spoiled')).toEqual({ kind: 'branch', count: 1 })
+  })
+})
+
+describe('resolveCultivatedSeedRecovery (plan settlements-npcs-031)', () => {
+  const twelve: CropDefinition = { ...def, yieldCount: 12, healthySeedRecovery: 2 }
+
+  it('recovers 2 sowing units from a full healthy yield for current species', () => {
+    for (const cropId of Object.keys(CROP_DEFS) as (keyof typeof CROP_DEFS)[]) {
+      const d = CROP_DEFS[cropId]
+      expect(d.healthySeedRecovery).toBe(2)
+      expect(resolveCultivatedSeedRecovery(d, d.yieldCount)).toBe(2)
+    }
+  })
+
+  it('applies floor(healthyRecovery * realized / base) and clamps to the species cap', () => {
+    expect(resolveCultivatedSeedRecovery(twelve, 12)).toBe(2)
+    expect(resolveCultivatedSeedRecovery(twelve, 11)).toBe(1)
+    expect(resolveCultivatedSeedRecovery(twelve, 6)).toBe(1)
+    expect(resolveCultivatedSeedRecovery(twelve, 5)).toBe(0)
+    expect(resolveCultivatedSeedRecovery(twelve, 0)).toBe(0)
+  })
+
+  it('recovers zero when realized yield is zero', () => {
+    expect(resolveCultivatedSeedRecovery(def, 0)).toBe(0)
+    expect(resolveCultivatedSeedRecovery(twelve, -1)).toBe(0)
+  })
+
+  it('is deterministic and never uses Math.random', () => {
+    expect(resolveCultivatedSeedRecovery(twelve, 7)).toBe(resolveCultivatedSeedRecovery(twelve, 7))
+    expect(resolveCultivatedSeedRecovery(twelve, 7)).toBe(1)
+  })
+})
+
+describe('recoveredSeedCountForHarvest', () => {
+  it('does not recover seed from a natural/wild crop', () => {
+    const base = resolveCropHarvest(def, 'mature')!
+    expect(recoveredSeedCountForHarvest(def, base, base.count, false)).toBe(0)
+    expect(recoveredSeedCountForHarvest(def, base, base.count, true)).toBe(2)
+  })
+
+  it('does not recover seed from a spoiled-item yield', () => {
+    const spoiled: CropDefinition = { ...def, spoiledItem: 'branch' }
+    const base = resolveCropHarvest(spoiled, 'spoiled')!
+    expect(recoveredSeedCountForHarvest(spoiled, base, 1, true)).toBe(0)
   })
 })

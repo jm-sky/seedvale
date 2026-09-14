@@ -30,8 +30,15 @@ export type CropDefinition = {
   spoiledItem?: ItemKind
   /** Base food count for one healthy mature `CropPlacement` before
    *  cultivation care/hydration modifiers. Justified by logical population
-   *  and species production, not equal to plant or rendered count. */
+   *  and species production, not equal to plant or rendered count. Also the
+   *  denominator for cultivated seed recovery. */
   yieldCount: number
+  /**
+   * Sowing units recoverable from one healthy, fully-yielding planted
+   * `CropPlacement`. Species data, not per-placement state. Current Phase 3
+   * crops all use `2` (replacement + one surplus unit).
+   */
+  healthySeedRecovery: number
 }
 
 /**
@@ -53,6 +60,7 @@ export const CROP_DEFS: Record<CropId, CropDefinition> = {
     logicalPlantsPerSowingUnit: 8,
     harvestItem: 'carrot',
     yieldCount: 5,
+    healthySeedRecovery: 2,
   },
   potato: {
     id: 'potato',
@@ -61,6 +69,7 @@ export const CROP_DEFS: Record<CropId, CropDefinition> = {
     logicalPlantsPerSowingUnit: 4,
     harvestItem: 'potato',
     yieldCount: 8,
+    healthySeedRecovery: 2,
   },
   cabbage: {
     id: 'cabbage',
@@ -69,6 +78,7 @@ export const CROP_DEFS: Record<CropId, CropDefinition> = {
     logicalPlantsPerSowingUnit: 3,
     harvestItem: 'cabbage',
     yieldCount: 2,
+    healthySeedRecovery: 2,
   },
 }
 
@@ -138,4 +148,41 @@ export function resolveCropHarvest(def: CropDefinition, stage: CropGrowthStage):
   if (stage === 'mature') return { kind: def.harvestItem, count: def.yieldCount }
   if (stage === 'spoiled' && def.spoiledItem) return { kind: def.spoiledItem, count: 1 }
   return null
+}
+
+/**
+ * Cultivated seed recovery from one planted `CropPlacement` (plan
+ * settlements-npcs-031). Pure, actor-neutral, deterministic. Uses the
+ * final realized produce count after cultivation modifiers; does not know
+ * household reserve, settlement storage, or profession policy.
+ *
+ * Natural crops must not call this — callers supply planted/cultivated
+ * context and skip recovery when the harvest is not a planted sowing unit.
+ *
+ * @domain world
+ */
+export function resolveCultivatedSeedRecovery(
+  def: CropDefinition,
+  realizedYield: number,
+): number {
+  if (realizedYield <= 0 || def.yieldCount <= 0 || def.healthySeedRecovery <= 0) return 0
+  const recovered = Math.floor(def.healthySeedRecovery * realizedYield / def.yieldCount)
+  return Math.max(0, Math.min(def.healthySeedRecovery, recovered))
+}
+
+/**
+ * Recovered sowing-unit count for a harvest that already has a realized
+ * produce count. Zero for wild/natural crops, spoiled-item yields, and
+ * failed produce. Does not copy recovery math into player or NPC adapters.
+ *
+ * @domain world
+ */
+export function recoveredSeedCountForHarvest(
+  def: CropDefinition,
+  baseYield: CropHarvestYield,
+  realizedProduceCount: number,
+  planted: boolean,
+): number {
+  if (!planted || baseYield.kind !== def.harvestItem) return 0
+  return resolveCultivatedSeedRecovery(def, realizedProduceCount)
 }

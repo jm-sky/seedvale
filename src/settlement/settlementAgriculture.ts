@@ -1,15 +1,17 @@
 import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { FamilyDef } from './families'
 import type { Household, HouseholdStartingContext } from './household'
-import { CROP_DEFS } from '../world/cropLifecycle'
+import { CROP_DEFS, resolveCultivatedSeedRecovery } from '../world/cropLifecycle'
 import { CROP_SEED_ITEM, FARM_SEED_PRIORITY } from '../world/plantedCrops'
 import { adultProfessionCoverage } from './professionStaffing'
 
 /**
- * Non-home settlement agriculture v1 (plan settlements-npcs-030).
- * Capacity and off-screen catch-up are derived from deterministic family
- * composition plus existing `CROP_DEFS` — not a second crop lifecycle or
- * profession registry.
+ * Non-home settlement agriculture v1 (plan settlements-npcs-030) plus
+ * cultivated seed recovery (plan settlements-npcs-031). Capacity and
+ * off-screen catch-up are derived from deterministic family composition
+ * plus existing `CROP_DEFS` — not a second crop lifecycle or profession
+ * registry. Seed reserve/surplus is derived from real `Household.items`,
+ * never a persisted second stock.
  *
  * @domain settlements-npcs
  * @system household
@@ -26,11 +28,52 @@ export function householdStartingContextFromFamily(family: FamilyDef): Household
   }
 }
 
+/** Sowing units needed to fully plant the next production round. */
+export function householdSeedReserveRequirement(capacity: number): number {
+  return Math.max(0, capacity)
+}
+
+/** Real seed stock across every cultivated `seed_*` ItemKind. */
+export function householdSeedStockCount(household: Household): number {
+  let n = 0
+  for (const cropId of FARM_SEED_PRIORITY) n += household.items.count(CROP_SEED_ITEM[cropId])
+  return n
+}
+
+/**
+ * Surplus sowing units above the next-round reserve. Classification only —
+ * does not discard recovered seeds or mint a second inventory.
+ */
+export function householdSeedSurplusCount(household: Household, capacity: number): number {
+  return Math.max(0, householdSeedStockCount(household) - householdSeedReserveRequirement(capacity))
+}
+
+/**
+ * Closed-form completed sowing batches for one crop kind. Cost is O(1) in
+ * elapsed time: recovery that at least replaces the consumed seed lifts the
+ * seed-count cap, so a long unloaded interval cannot expand into a
+ * per-cycle loop.
+ */
+export function completedAgricultureBatches(input: {
+  availableSeeds: number
+  recoveredPerHarvest: number
+  farmerDays: number
+  cycleDays: number
+}): number {
+  const { availableSeeds, recoveredPerHarvest, farmerDays, cycleDays } = input
+  if (availableSeeds <= 0 || farmerDays <= 0 || cycleDays <= 0) return 0
+  const maxByTime = Math.floor(farmerDays / cycleDays)
+  if (maxByTime <= 0) return 0
+  if (recoveredPerHarvest >= 1) return maxByTime
+  return Math.min(availableSeeds, maxByTime)
+}
+
 /**
  * Bounded off-screen production for one household. Cost is proportional to
  * crop kinds (currently 3), not elapsed world days. Mutates real
  * `Household.items` through `depositFood` so capacity/overflow stay on the
- * existing Household → SettlementEconomy path.
+ * existing Household → SettlementEconomy path. Recovered seed is applied as
+ * a net change to the same inventory (never by replaying historical cycles).
  */
 export function resolveUnloadedHouseholdAgriculture(input: {
   household: Household
@@ -55,10 +98,18 @@ export function resolveUnloadedHouseholdAgriculture(input: {
     const seedKind = CROP_SEED_ITEM[cropId]
     const available = household.items.count(seedKind)
     if (available <= 0) continue
-    const batches = Math.min(available, Math.floor(remainingFarmerDays / cycleDays))
+    const recoveredPerHarvest = resolveCultivatedSeedRecovery(def, def.yieldCount)
+    const batches = completedAgricultureBatches({
+      availableSeeds: available,
+      recoveredPerHarvest,
+      farmerDays: remainingFarmerDays,
+      cycleDays,
+    })
     if (batches <= 0) continue
-    if (!household.items.remove(seedKind, batches, nowDays)) continue
     household.depositFood(def.harvestItem, batches * def.yieldCount, economy, nowDays)
+    const netSeeds = batches * (recoveredPerHarvest - 1)
+    if (netSeeds > 0) household.items.add(seedKind, netSeeds)
+    else if (netSeeds < 0) household.items.remove(seedKind, -netSeeds)
     remainingFarmerDays -= batches * cycleDays
   }
 
