@@ -4,6 +4,7 @@
 **Status:** `planned` 📋
 **Type:** polish
 **Priority:** high · **Effort:** M
+**Model:** Sonnet, Composer
 **Depends on:** ~~quests-progression-009~~, ~~quests-progression-014~~, ~~items-player-031~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests`
