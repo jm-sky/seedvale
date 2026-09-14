@@ -201,6 +201,10 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
 
 describe('resolveNpcDialogueHelp topic picker contract (plan quests-progression-020)', () => {
   const KASIA_ID = 'kasia-id'
+  // This suite tests the topic-navigation contract for purely passive
+  // concurrent reminders, not the active-quest opt-out (plan
+  // quests-progression-033) — both fixtures disable it so their reminders
+  // stay action-less, matching the scenario this suite is about.
   const shellsQuest: QuestDef = {
     id: 'shells',
     title: 'Muszle dla Kasi',
@@ -213,6 +217,7 @@ describe('resolveNpcDialogueHelp topic picker contract (plan quests-progression-
     ],
     reportLine: 'Dziękuję za muszle.',
     outcomes: [{ id: 'complete', state: 'complete' }],
+    abandonment: { allowed: false },
   }
   const wolvesQuest: QuestDef = {
     id: 'wolves',
@@ -226,13 +231,16 @@ describe('resolveNpcDialogueHelp topic picker contract (plan quests-progression-
     ],
     reportLine: 'Dziękuję za pomoc z wilkami.',
     outcomes: [{ id: 'complete', state: 'complete' }],
+    abandonment: { allowed: false },
   }
 
   it('offers a topic per concurrent quest context and keeps each independently reachable', () => {
     const qm = new QuestManager([shellsQuest, wolvesQuest], undefined, new Inventory())
-    // Both quests are offered by the same NPC (Kasia) at once.
-    qm.onInteract(KASIA_ID)?.topics?.[0]?.resolve().offer?.onAccept()
-    qm.onInteract(KASIA_ID)?.topics?.[1]?.resolve().offer?.onAccept()
+    // Only one of the two competing offers from the same giver (Kasia) is
+    // exposed at a time (plan quests-progression-033's offer cap);
+    // accepting it exposes the other on the next interaction.
+    qm.onInteract(KASIA_ID)?.offer?.onAccept()
+    qm.onInteract(KASIA_ID)?.topics?.find((t) => t.label === 'Wilki u kupca')?.resolve().offer?.onAccept()
     expect(qm.getState('shells')).toBe('active')
     expect(qm.getState('wolves')).toBe('active')
 

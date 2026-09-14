@@ -285,5 +285,9 @@ export function buildLostHunterNaturalCaveQuest(
         },
       },
     ],
+    // The bow's return-or-keep choice IS the resolution (plan
+    // quests-progression-033) — a generic opt-out here would strand the
+    // bound `bowInstanceId` outside any quest tracking.
+    abandonment: { allowed: false },
   }
 }

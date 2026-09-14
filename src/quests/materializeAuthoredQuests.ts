@@ -140,6 +140,20 @@ export function materializeAuthoredQuestDefs(
             }
           : undefined,
       })),
+      abandonment: def.abandonment
+        ? {
+            allowed: def.abandonment.allowed,
+            consequences: def.abandonment.consequences
+              ? {
+                  ...def.abandonment.consequences,
+                  relations: def.abandonment.consequences.relations?.map((rel) => ({
+                    npc: questNpcRef(resolve(rel.npcName)),
+                    delta: rel.delta,
+                  })),
+                }
+              : undefined,
+          }
+        : undefined,
     }
   })
 }

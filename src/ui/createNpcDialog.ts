@@ -1,7 +1,7 @@
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type NpcDialogHandlers = { onClose?: () => void }
-export type NpcDialogOffer = { onAccept: () => void; onDecline: () => void }
+export type NpcDialogOffer = { onAccept: () => void; onDecline?: () => void }
 export type NpcDialog = {
   /** `progress` (0..1) draws a thin bar under the prompt — e.g. bow draw-time. */
   setPrompt: (text: string | null, highlighted?: boolean, progress?: number | null) => void
@@ -24,7 +24,7 @@ export function createNpcDialog(_parent: HTMLElement, handlers: NpcDialogHandler
     getUi()?.closeFlavorDialog()
     const offer = currentOffer
     currentOffer = null
-    offer?.onDecline()
+    offer?.onDecline?.()
     handlers.onClose?.()
   }
   return {

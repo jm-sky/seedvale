@@ -11,6 +11,11 @@ import {
 } from '../world/locations/darkForestTreasureSite'
 
 export type QuestState =
+  /** Conscious player opt-out of an accepted quest (plan
+   *  quests-progression-033) — terminal, distinct from `failed`/`invalidated`:
+   *  the player chose to stop, the binding wasn't lost and the objective
+   *  wasn't missed. See `QuestManager.abandonQuest()`. */
+  | 'abandoned'
   | 'active'
   | 'complete'
   /** The stage's bound world entity can no longer be completed (e.g. a
@@ -77,6 +82,42 @@ export type QuestPrerequisite =
  *  (existing v2 quests keep their current behaviour). */
 export type QuestAvailability = {
   prerequisites: readonly QuestPrerequisite[]
+}
+
+/**
+ * Small optional offer-selection policy (plan quests-progression-033).
+ * `QuestManager` exposes at most one `normal`-urgency offer per giver plus
+ * one `urgent` offer beyond that cap; `priority` only breaks ties among
+ * otherwise-equal ranked candidates (continuation/relation still dominate —
+ * see `rankQuestOfferCandidates`). `exposure: 'story'` marks an authored
+ * linear-history exception: it is never capped or delayed by the ranking,
+ * and — since it represents a scripted beat rather than a spam-prone errand
+ * — its offer cannot be generically declined (`QuestManager` omits
+ * `QuestDialogOverride.offer.onDecline` for it). Absent = `{ urgency:
+ * 'normal', exposure: 'normal' }`.
+ *
+ * @domain quests-progression
+ */
+export type QuestOfferPolicy = {
+  priority?: number
+  urgency?: 'normal' | 'urgent'
+  exposure?: 'normal' | 'story'
+}
+
+/**
+ * Small optional opt-out policy for an `active` quest (plan
+ * quests-progression-033). Absent = `{ allowed: true }` — ordinary quests
+ * may be abandoned by the player with no automatic penalty. A story quest
+ * that must not be generically abandoned sets `allowed: false` and instead
+ * resolves withdrawal through its own authored outcomes/transitions.
+ * `consequences` reuses `QuestConsequences` and applies exactly once, the
+ * same way outcome consequences do — see `QuestManager.abandonQuest()`.
+ *
+ * @domain quests-progression
+ */
+export type QuestAbandonment = {
+  allowed: boolean
+  consequences?: QuestConsequences
 }
 
 const RELATION_LEVEL_ORDER: readonly RelationLevel[] = ['stranger', 'acquainted', 'friendly', 'trusted']
@@ -430,9 +471,17 @@ export type QuestProgressEntry = {
   /** Per-slot progress for the current multi-objective stage, keyed by
    *  stable slot id (plan quests-progression-032). Absent = empty. */
   stageSlotProgress?: Record<string, QuestStageSlotProgress>
+  /** Decline cooldown (plan quests-progression-033) — world-clock day
+   *  (`QuestWorldTimeLookup.getElapsedDays()`) before which this `not_offered`
+   *  entry is skipped by offer-candidate discovery, so a just-declined offer
+   *  doesn't reappear on the very next conversation. Only ever set on a
+   *  `not_offered` entry; cleared implicitly once the offer is re-admitted.
+   *  Absent on older saves = unsuppressed. */
+  offerSuppressedUntilDay?: number
 }
 
 export const QUEST_STATES: ReadonlySet<QuestState> = new Set([
+  'abandoned',
   'active',
   'complete',
   'failed',
@@ -797,6 +846,55 @@ export type QuestDef = {
   /** Authored terminal results. Objective completion is not resolution —
    *  a caller picks one of these. `invalidated` is not an outcome. */
   outcomes: readonly QuestOutcome[]
+  /** Offer-selection policy (plan quests-progression-033). Absent = normal
+   *  urgency/exposure, no authored priority. */
+  offer?: QuestOfferPolicy
+  /** Active-quest opt-out policy (plan quests-progression-033). Absent =
+   *  abandonable with no automatic consequence. */
+  abandonment?: QuestAbandonment
+}
+
+/** Small quest-facing facts `QuestManager` computes per `not_offered`
+ *  candidate before ranking — never world-domain detail (wolf counts, water
+ *  stock, …); a source system that wants to influence ranking expresses it
+ *  through `QuestOfferPolicy.priority`/`urgency` on the materialized def
+ *  instead (plan quests-progression-033).
+ *
+ * @domain quests-progression
+ */
+export type QuestOfferRankSignal = {
+  def: QuestDef
+  urgency: 'normal' | 'urgent'
+  /** Whether this candidate authored-continues an already-resolved quest
+   *  (a `quest_outcome` availability prerequisite) — ranked above a fresh
+   *  errand competing for the same giver's offer slot. */
+  isStoryContinuation: boolean
+  /** Player↔NPC relation toward the giver — see `QuestManager.getRelation`. */
+  relation: number
+  /** Authored/source tie-break signal — `QuestOfferPolicy.priority`, default 0. */
+  priority: number
+}
+
+/**
+ * Deterministic offer-candidate order — pure, no quest state of its own.
+ * `urgent` candidates sort above `normal` ones; within a tier: story
+ * continuation, then relation, then authored `priority`, then a stable
+ * `QuestDef.id` tie-break. No randomness (plan quests-progression-033).
+ *
+ * @domain quests-progression
+ */
+export function rankQuestOfferCandidates(
+  candidates: readonly QuestOfferRankSignal[],
+): readonly QuestDef[] {
+  return [...candidates]
+    .sort((a, b) => {
+      if (a.urgency !== b.urgency) return a.urgency === 'urgent' ? -1 : 1
+      if (a.isStoryContinuation !== b.isStoryContinuation) return a.isStoryContinuation ? -1 : 1
+      if (a.relation !== b.relation) return b.relation - a.relation
+      if (a.priority !== b.priority) return b.priority - a.priority
+      return a.def.id < b.def.id ? -1 : a.def.id > b.def.id ? 1 : 0
+    })
+    .map((signal) => signal.def)
 }
 
 export type AuthoredQuestObjective =
@@ -854,15 +952,20 @@ export type AuthoredQuestOutcome = Omit<QuestOutcome, 'consequences'> & {
   consequences?: AuthoredQuestConsequences
 }
 
+export type AuthoredQuestAbandonment = Omit<QuestAbandonment, 'consequences'> & {
+  consequences?: AuthoredQuestConsequences
+}
+
 /** Name-keyed authored quest content. Identity-bearing fields become
  *  `QuestNpcRef` at composition-root materialization — never matched by
  *  display name at runtime.
  *
  *  @domain quests-progression */
-export type AuthoredQuestDef = Omit<QuestDef, 'giver' | 'stages' | 'availability' | 'outcomes'> & {
+export type AuthoredQuestDef = Omit<QuestDef, 'giver' | 'stages' | 'availability' | 'outcomes' | 'abandonment'> & {
   stages: readonly AuthoredQuestStage[]
   availability?: { prerequisites: readonly AuthoredQuestPrerequisite[] }
   outcomes: readonly AuthoredQuestOutcome[]
+  abandonment?: AuthoredQuestAbandonment
 }
 
 export const QUESTS: readonly AuthoredQuestDef[] = [
@@ -1928,6 +2031,10 @@ export function buildTreasureMapBearCaveQuest(binding: TreasureMapBearCaveQuestB
         },
       },
     ],
+    // The carried casket's own physical open/return choice IS the
+    // resolution (plan quests-progression-033) — a generic opt-out here
+    // would strand that carried instance outside any quest tracking.
+    abandonment: { allowed: false },
   }
 }
 

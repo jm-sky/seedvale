@@ -1008,7 +1008,7 @@ export function closeNpcDialogueMenu(opts?: { decline?: boolean }): void {
   if (!state.open) return
   const npc = state.npc as NpcAgent | null
   if (opts?.decline !== false) {
-    state.helpResult?.offer?.onDecline()
+    state.helpResult?.offer?.onDecline?.()
     playNpcVoice(npc, npc ? pickNpcFarewellSound(npc.voiceActor) : undefined)
   }
   resetNpcDialogueMenu()

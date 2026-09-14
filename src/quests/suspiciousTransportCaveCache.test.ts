@@ -308,7 +308,10 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
     accept(qm, trader.id)
     speak(qm, trader.id)
     expect(revealed).toEqual(['cave:cave-a'])
-    speak(qm, trader.id)
+    // Talking again on the `loot_world_container` stage doesn't re-reveal —
+    // this stage has no talk-driven action, only the generic active-quest
+    // opt-out (plan quests-progression-033), which this poke must not select.
+    qm.onInteract(trader.id)
     expect(revealed).toEqual(['cave:cave-a'])
     qm.pollWorldProgressionObjectives()
     expect(qm.exportProgress()[0]?.stageIndex).toBe(2)
