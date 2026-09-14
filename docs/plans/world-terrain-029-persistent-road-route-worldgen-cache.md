@@ -4,11 +4,12 @@
 **Status:** `planned` 📋
 **Type:** optimization
 **Priority:** high · **Effort:** M
-**Depends on:** ~~world-terrain-023~~, world-terrain-033  
+**Depends on:** ~~world-terrain-023~~, ~~world-terrain-033~~  
 **Domain:** `world-terrain`
 **Subdomains:** `roads` `terrain`
 **Tags:** `worldgen` `cache` `roads` `routing` `performance`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
@@ -19,18 +20,19 @@ The existing `roadNetwork.ts` runtime `routeCache` remains the synchronous autho
 ## Recon
 
 - `src/settlement/roadNetwork.ts` owns `routeCache` and coarse-grid A* (`findRoute`).
-- A* repeatedly samples height/ridge, reconstructs a chain, meanders it and smooths its profile.
-- Settlement-pair keys are order-independent through `pairKey(idA, idB)`; forward/reverse lookup must keep sharing one route.
+- A* repeatedly samples height/ridge, reconstructs a chain, anchors canonical river crossings, meanders unconstrained points and smooths its profile.
+- Settlement-pair keys are order-independent through `pairKey(idA, idB)`; `routeBetween()` computes in canonical sorted-id orientation so forward/reverse lookup shares one physical route and crossing ids.
 - `roadSegmentsForSettlement()`, signpost consumers and `routeToMinorLocation()` reuse the road-network route path rather than owning separate generators.
 - Cache is currently session-only and cleared by `clearRoadNetworkCaches()`.
-- `world-terrain-023` changes the canonical result from effectively raw segments to a route carrying geometry plus authoritative ford/bridge crossing decisions. Persisting today's segment-only shape first would create immediate rework.
+- `world-terrain-023` is implemented: `routeCache` already stores canonical `RoadRoute | null` with authoritative ford/bridge crossing records.
+- `world-terrain-033` is implemented and projects bridge presentation/traversal from those same canonical crossing records.
 - Reuse `src/persistence/worldgenCacheDb.ts`; roads remain deterministic reconstruction, not `SaveData`.
 
-## Dependency on world-terrain-023
+## Dependency on world-terrain-023 / 033
 
-Implement this plan after `world-terrain-023-river-aware-road-routing-and-crossings.md`.
+Both dependencies are already implemented in the current codebase.
 
-The persistent payload must be the post-023 canonical `RoadRoute | null`, including crossing records. Do not introduce an interim persistent `RoadSegment[]` format.
+The persistent payload must be the current canonical `RoadRoute | null`, including crossing records. Do not introduce an alternate persistent shape that recomputes or separately stores crossing semantics.
 
 This preserves one authority:
 
@@ -50,11 +52,11 @@ Namespace: `road-routes` with explicit version.
 Reuse runtime identity where possible:
 
 - settlement↔settlement: stable order-independent pair key;
-- settlement↔minor-location: stable settlement id + stable minor-location/path identity established by the post-023 cache.
+- settlement↔minor-location: stable settlement id + stable minor-location/path identity established by the current route cache.
 
 Do not key persistent minor routes only by transient object identity.
 
-Payload: post-023 `RoadRoute | null`. Cached `null` is valid and avoids repeated deterministic route failures.
+Payload: current `RoadRoute | null`. Cached `null` is valid and avoids repeated deterministic route failures.
 
 Do not persist signposts, per-chunk clipped corridors, fords or bridges separately; they project from the route result.
 
@@ -66,7 +68,7 @@ Fingerprint deterministic inputs that can change route/crossing output:
 - `waterLevel` / relevant region configuration;
 - routing options/constants (`gridStep`, elevation/mountain costs, meander/smoothing);
 - canonical river/hydrology config;
-- post-023 ford/bridge classifier and crossing-cost configuration;
+- ford/bridge classifier and crossing-cost configuration;
 - settlement-generation identity that can move endpoints/entrances;
 - minor-location identity/config for path routes.
 
@@ -83,14 +85,14 @@ Required lifecycle:
 1. activate for current seed + fingerprint;
 2. hydrate matching routes into existing `routeCache`;
 3. route computed while hydrate is in flight wins over older hydrated data;
-4. miss runs the canonical post-023 resolver;
+4. miss runs the canonical current resolver;
 5. fresh result enters runtime cache immediately and is queued for async batch persistence;
 6. rebuild/new seed clears session cache and invalidates previous hydrate generation;
 7. read/write failure is equivalent to a miss.
 
 Use `putCacheRecords()` and `enforceCacheCap()`. Populate only routes requested by ordinary world/gameplay logic; never scan all settlement pairs to warm cache.
 
-## Post-023 invariants
+## Current route invariants
 
 Cached routes must preserve exactly the same invariants as fresh routes:
 
