@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** optimization
 **Priority:** high · **Effort:** M
-**Depends on:** world-terrain-023
+**Depends on:** ~~world-terrain-023~~, world-terrain-033  
 **Domain:** `world-terrain`
 **Subdomains:** `roads` `terrain`
 **Tags:** `worldgen` `cache` `roads` `routing` `performance`
