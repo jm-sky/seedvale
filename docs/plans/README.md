@@ -79,6 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | 🟡 | M      | -       | -                          |
 | ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | 🟡 | M      | settlements-npcs-033 | economy-goods-flow         |
 | ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | 🟡 | M      | settlements-012 | -                          |
+| ◼️ `settlements-npcs-036-generic-npc-owned-goods-trading.md`                   | 🔴 | M      | settlements-npcs-033 | economy-goods-flow         |
 
 ---
 
@@ -206,7 +207,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `005`
 - quests-progression: `034`
 - settlements: `014`
-- settlements-npcs: `036`
+- settlements-npcs: `037`
 - tools: `014`
 - ui-input: `018`
 - world: `028`
