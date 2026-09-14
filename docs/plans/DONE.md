@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-terrain-033-road-bridge-projection-and-traversal`               | 2026-09-14 21:55:41 | —                   | `world-terrain`  | —          |
+| `settlements-npcs-021-remote-production-site-logistics`                | 2026-09-14 21:43:01 | —                   | `settlements-npcs` | —          |
 | `world-terrain-023-river-aware-road-routing-and-crossings`             | 2026-09-14 18:26:49 | —                   | `world-terrain`  | —          |
 | `ui-input-018-player-combat-mode-and-weapon-toggle`                    | 2026-09-14 18:24:57 | —                   | `ui-input`       | —          |
 | `world-terrain-032-grass-instancedmesh-constructor-allocation`         | 2026-09-14 17:56:12 | —                   | `world-terrain`  | —          |

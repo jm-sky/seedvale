@@ -5,30 +5,30 @@
 ### Overall
 
 1. `items-player-028` — **NPC player-storage access policies**  
-   🔴 `L` · ✅ ready · unlocks 2/4
+   🔴 `M` · ✅ ready · unlocks 3/5
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2
-3. `settlements-npcs-021` — **Remote Production Site Logistics**  
-   🔴 `M` · ✅ ready · unlocks 0/0
-4. `settlements-013` — **Horse training progression, vendor and paddock**  
+3. `settlements-013` — **Horse training progression, vendor and paddock**  
    🟡 `M` · 🔒 blocked · unlocks 1/1
-5. `settlements-014` — **Persistent settlement definition worldgen cache**  
+4. `settlements-014` — **Persistent settlement definition worldgen cache**  
    🔴 `M` · 🔒 blocked · unlocks 0/0
+5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+   🔴 `M` · ✅ ready · unlocks 2/2
 
 ---
 
 ### Roadmap Focus
 
 1. `items-player-028` — **NPC player-storage access policies**  
-   🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
+   🔴 `M` · ✅ ready · unlocks 3/5 · roadmap: `companions`
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2 · roadmap: `economy-goods-flow`
-3. `settlements-npcs-021` — **Remote Production Site Logistics**  
-   🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `physical-goods-transport`
-4. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
-5. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
    🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `economy-goods-flow`
+5. `settlements-013` — **Horse training progression, vendor and paddock**  
+   🟡 `M` · 🔒 blocked · unlocks 1/1 · no roadmap
 
 ---
 
@@ -48,14 +48,14 @@ _No qualifying plans._
 ### Ready Now
 
 1. `items-player-028` — **NPC player-storage access policies**  
-   🔴 `L` · ✅ ready · unlocks 2/4
+   🔴 `M` · ✅ ready · unlocks 3/5
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2
-3. `settlements-npcs-021` — **Remote Production Site Logistics**  
-   🔴 `M` · ✅ ready · unlocks 0/0
-4. `world-terrain-017` — **Abandoned mountain mine landmark**  
+3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-5. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+   🔴 `M` · ✅ ready · unlocks 0/0
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
    🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
@@ -75,78 +75,74 @@ done / verification needed satisfy dependencies.
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 1. `items-player-028` — **NPC player-storage access policies**  
-  🔴 `L` · **Score:**  76  
-   → **unlocks:** 2/4
+  🔴 `M` · **Score:**  93  
+   → **unlocks:** 3/5
 
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
   🟡 `M` · **Score:**  73  
    → **unlocks:** 2/2
 
-3. `settlements-npcs-021` — **Remote Production Site Logistics**  
-  🔴 `M` · **Score:**  63  
-   → **unlocks:** 0/0
-
-4. `settlements-013` — **Horse training progression, vendor and paddock**  
+3. `settlements-013` — **Horse training progression, vendor and paddock**  
   🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-6. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+5. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 0/0
 
-7. `world-018` — **Cave-aware rich finite resource deposits**  
+6. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-8. `settlements-npcs-022` — **Household help and age-based work participation**  
+7. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-9. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+8. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-10. `settlements-009` — **Settlement outskirts and pasture**  
+9. `settlements-009` — **Settlement outskirts and pasture**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-11. `settlements-011` — **Plaza layout, paving and core protection**  
+10. `settlements-011` — **Plaza layout, paving and core protection**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-12. `settlements-014` — **Persistent settlement definition worldgen cache**  
+11. `settlements-014` — **Persistent settlement definition worldgen cache**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-025` — **Resource storage visualization**  
+12. `settlements-npcs-025` — **Resource storage visualization**  
   ⚪ `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-14. `world-terrain-029` — **Persistent road route worldgen cache**  
-  🔴 `M` · **Score:**  29  
+13. `world-terrain-029` — **Persistent road route worldgen cache**  
+  🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-15. `world-terrain-033` — **Road bridge projection and traversal**  
-  🔴 `M` · **Score:**  29  
-   → **unlocks:** 0/0
-
-16. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+14. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-17. `items-player-014` — **Rope-pullable resource transport**  
+15. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `tools-005` — **Seedvale Character Preparation Panel**  
+16. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-19. `settlements-010` — **Closed and cautious settlement character**  
+17. `items-player-032` — **NPC player-storage resource and context rules**  
+  🟡 `L` · **Score:**  20  
+   → **unlocks:** 0/0
+
+18. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -154,6 +150,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
+- [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
+  is blocked by:
+  - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
 - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)  
   is blocked by:
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
@@ -260,6 +259,7 @@ graph TD
   items_player_029["items-player-029 — Wearable armor and combat equipment"]
   items_player_030["items-player-030 — Multi-part armor and equipment quality"]
   items_player_031["items-player-031 — Armor category and character defense summary"]
+  items_player_032["items-player-032 — NPC player-storage resource and context rules"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -586,6 +586,7 @@ graph TD
   items_player_025 --> fauna_023
   items_player_027 --> items_player_028
   items_player_027 --> npc_033
+  items_player_028 --> items_player_032
   items_player_028 --> npc_032
   items_player_028 --> npc_034
   items_player_029 --> items_player_030
@@ -809,4 +810,5 @@ graph TD
   world_terrain_028 --> quests_progression_025
   world_terrain_028 --> quests_progression_026
   world_terrain_028 --> quests_progression_027
+  world_terrain_033 --> world_terrain_029
 ```
