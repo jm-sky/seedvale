@@ -228,7 +228,6 @@ export function formatReport(report: PerfReportJson): string {
     '',
     'Recommendation:',
     report.recommendation,
-    ...(report.agentCpu ? ['', formatAgentCpuReport(report.agentCpu)] : []),
   ].join('\n')
 }
 
