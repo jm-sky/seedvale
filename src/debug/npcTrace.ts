@@ -3,6 +3,7 @@ import type { NeedId, NpcPressure } from '../ai/Needs'
 import type { ActionId, Phase } from '../ai/NpcAgent'
 import type { NpcGoalId, NpcPlanState } from '../ai/npcPlan'
 import type { NpcStrategyCandidate, NpcStrategyId } from '../ai/npcStrategies'
+import type { WorkContractScoreBreakdown } from '../ai/npcWorkContract'
 import { createBoundedHistoryBuffer } from './domainHistory'
 
 /**
@@ -64,7 +65,19 @@ export type NpcTraceEvent =
    *  `response` fires once per `reactToAnimalThreat()` call with the actual
    *  chosen response, not candidate scores. */
   | { simTime: number; type: 'animalThreat.sensed'; animalId: string; distance: number }
-  | { simTime: number; type: 'animalThreat.response'; response: 'defend' | 'flee'; canFight: boolean; healthRatio: number }
+  | {
+      simTime: number
+      type: 'animalThreat.response'
+      response: 'defend' | 'flee'
+      canFight: boolean
+      healthRatio: number
+      /** `null` when defend was not a real option (`-Infinity` in the scorer). */
+      defendScore: number | null
+      fleeScore: number
+      hasMeleeCapability: boolean
+      hasRangedCapability: boolean
+      neuroticism: number
+    }
   /** Persistent Plan lifecycle (plan ai-004) — recorded at establishment,
    *  every lifecycle-state transition, real progress, and completion. Never
    *  per-tick; a Plan can sit `active` across many ticks with no trace
@@ -80,7 +93,11 @@ export type NpcTraceEvent =
    *  candidate + its score, not one event per candidate) whenever this NPC
    *  has no active commitment and its board has something posted —
    *  deterministic and plain-data, per plan §3/§14. */
-  | { simTime: number; type: 'contract.evaluated'; candidates: readonly { contractId: string; score: number }[] }
+  | {
+      simTime: number
+      type: 'contract.evaluated'
+      candidates: readonly { contractId: string; score: number; breakdown: WorkContractScoreBreakdown }[]
+    }
   | { simTime: number; type: 'contract.accepted'; contractId: string; score: number }
   | { simTime: number; type: 'contract.invalidated'; contractId: string; reason: 'missingTarget' }
   | { simTime: number; type: 'contract.workCompleted'; contractId: string }

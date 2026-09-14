@@ -19,6 +19,7 @@ import type { TransportOrder } from '../world/transportOrder'
 import type { WorldContext } from '../world/worldContext'
 import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
+import type { NpcDecisionDiagnostics, SettlementDecisionReport } from './npcDecisionReport'
 import type { NpcTraceEvent } from './npcTrace'
 import { matchesQuestSpawnPointId } from '../fauna/wolfDenScenario'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
@@ -50,13 +51,17 @@ import {
   findNpcById,
   freezeNpc,
   type FrenzyWolfDebugResult,
+  type FrenzyWolvesDebugResult,
   householdHistory,
+  npcDecisionReport,
   npcHistory,
   type NpcQueryFilter,
   type NpcQueryResult,
   queryNpcs,
   reevaluateNpc,
   setFrenzyWolf,
+  setFrenzyWolves,
+  settlementDecisionReport,
   settlementHistory,
   unfreezeNpc,
 } from './npcInspector'
@@ -79,6 +84,8 @@ import { findVillageDef } from './villageInspector'
 export type NpcDebugHandle = {
   state: () => NpcInspectionSnapshot | null
   history: (filter?: HistoryFilter) => readonly NpcTraceEvent[] | null
+  /** Causal decision cycles, threat arbitration and contract breakdowns (plan tools-013). */
+  decisions: (filter?: HistoryFilter) => NpcDecisionDiagnostics | null
   why: () => NpcWhy | null
   freeze: () => boolean
   unfreeze: () => boolean
@@ -104,6 +111,8 @@ export type HouseholdDebugHandle = {
  *  unrecognized settlement id, not merely an unbuilt one (`[]` then). */
 export type SettlementHistoryDebugHandle = {
   history: (filter?: HistoryFilter) => readonly DomainHistoryEnvelope[] | null
+  /** Loaded-NPC decision/crisis report (plan tools-013). */
+  decisions: (filter?: HistoryFilter) => SettlementDecisionReport | null
 }
 
 export type { AnimalAgentDebugInfo } from '../fauna/AnimalAgent'
@@ -383,6 +392,8 @@ export type SeedvaleDebugApi = {
   transports: () => TransportOrderDebugSnapshot[]
   /** `setFrenzyWolf()` (plan 179 §3) — see `npcInspector.ts`'s doc. */
   setFrenzyWolf: () => FrenzyWolfDebugResult | string
+  /** Reuses `setFrenzyWolf()` up to `count` times (plan tools-013). */
+  setFrenzyWolves: (count: number) => FrenzyWolvesDebugResult | string
   /** Resolves by id whether or not the village is currently loaded — `npcs()`
    *  is `[]` when unloaded. `null` for an unrecognized id. */
   village: (id: string) => VillageDebugHandle | null
@@ -462,7 +473,7 @@ const HELP_TEXT = [
   'npc(id) / npcs(filter?) — inspect a live NPC by id / query all loaded NPCs',
   'npc(id).startAccompany(mode?) / .setAccompanyMode(mode) / .endAccompany(reason?) — accompany/follow commitment (plan npc-029)',
   'npcState(id) — authoritative NPC snapshot including post-death/corpse (works without a live agent)',
-  'npc(id).history(filter?) — NPC decision/action trace (plan 170); household(id).history(filter?) — household resource mutations; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); filter: {since?, limit?, types?}',
+  'npc(id).history(filter?) — NPC decision/action trace (plan 170); npc(id).decisions(filter?) — causal cycles/threat/contract diagnostics (plan tools-013); household(id).history(filter?) — household resource mutations; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); settlement(id).decisions(filter?) — loaded-NPC crisis/decision report (plan tools-013); filter: {since?, limit?, types?}',
   'village(id) — resolves by id even if the village is currently unloaded (npcs() is [] then)',
   'villages() — lists currently loaded villages only',
   'village(id).houses() / villages()[i].houses() — per-house definitionId + hasBed; null while unloaded',
@@ -471,7 +482,8 @@ const HELP_TEXT = [
   'teleportTo(locationResult) / teleportTo.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — teleport to a location query result; awaits terrain load first, resolves false if no such location exists',
   'teleportTo.nextRiver() — cycles to the next different qualifying river on each call, wrapping at the end; cursor is debug-only and resets on world rebuild/reseed',
   'teleportTo.darkForestTreasure() — teleport to the authored Dark Forest treasure ruins; awaits terrain load first, resolves false if the site is unavailable',
-  'setFrenzyWolf() — debug combat trigger',
+  'setFrenzyWolf() — debug combat trigger (one wolf)',
+  'setFrenzyWolves(count) — mark up to count eligible wolves frenzied toward the nearest loaded village (plan tools-013)',
   'hiddenTreasure.markers() / .found() / .teleport(index?) — hidden-treasure flower/dig-marker positions, one-shot found flag, teleport to marker index (default 0)',
   'worldLocations.list() / .listUndiscovered() — cave/cemetery/lake/mountainPeak/settlement locations within 200km of the player, each flagged {discovered}; worldLocations.reveal(id) / .revealAll() — mark as confirmed/exploration (mutates location knowledge only, never map Fog of War)',
   'worldLocations.teleportToFirstCave() — nearest generated cave entrance of any archetype; worldLocations.teleportToNearestCave(type) — nearest cave of CaveArchetype (\'natural\' | \'adventure\' | \'dungeon\'); both use Caves.definitions, never a catalog scan; false if none',
@@ -735,6 +747,7 @@ export function installNpcDebugApi(
       return {
         state: () => findNpcById(bundle, id)?.npc.createInspectionSnapshot(getTimeOfDay()) ?? null,
         history: (filter) => npcHistory(bundle, id, filter),
+        decisions: (filter) => npcDecisionReport(bundle, id, filter),
         why: () => findNpcById(bundle, id)?.npc.why(getTimeOfDay()) ?? null,
         freeze: () => freezeNpc(bundle, id),
         unfreeze: () => unfreezeNpc(bundle, id),
@@ -761,8 +774,14 @@ export function installNpcDebugApi(
     npcs: (filter) => queryNpcs(bundle, getTimeOfDay(), filter),
     npcState: (id) => bundle.settlementsManager.snapshotNpcStates()[id] ?? null,
     household: (id) => (bundle.settlementsManager.getHousehold(id) ? { history: (filter) => householdHistory(bundle, id, filter) } : null),
-    settlement: (id) => (findVillageDef(bundle.settlementsManager, id) ? { history: (filter) => settlementHistory(bundle, id, filter) } : null),
+    settlement: (id) => (findVillageDef(bundle.settlementsManager, id)
+      ? {
+          history: (filter) => settlementHistory(bundle, id, filter),
+          decisions: (filter) => settlementDecisionReport(bundle, id, filter),
+        }
+      : null),
     setFrenzyWolf: () => setFrenzyWolf(bundle),
+    setFrenzyWolves: (count) => setFrenzyWolves(bundle, count),
     village: (id) => {
       const def = findVillageDef(bundle.settlementsManager, id)
       return def ? villageHandle(def) : null

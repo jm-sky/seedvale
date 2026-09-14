@@ -168,37 +168,84 @@ export type WorkContractEvaluationInput = {
   escort?: EscortEvaluationContext
 }
 
-function scoreMeasurableWorkOpportunity(
+/** Serializable provision penalty for trace/debug surfaces (plan tools-013). */
+export type WorkContractProvisionPenalty = number | 'impossible'
+
+export type MeasurableWorkContractScoreBreakdown = {
+  scope: 'measurable'
+  expectedReward: number
+  suitability: number
+  travelCost: number
+  workCost: number
+  scheduleConflict: number
+  provisionPenalty: WorkContractProvisionPenalty
+  score: number
+}
+
+export type EscortWorkContractScoreBreakdown = {
+  scope: 'expedition_escort'
+  rewardCoins: number
+  suitability: number
+  awayCost: number
+  scheduleConflict: number
+  relationBonus: number
+  reputationBonus: number
+  renownBonus: number
+  curiousBonus: number
+  dangerPenalty: number
+  provisionPenalty: WorkContractProvisionPenalty
+  score: number
+}
+
+export type WorkContractScoreBreakdown = MeasurableWorkContractScoreBreakdown | EscortWorkContractScoreBreakdown
+
+function finalizeProvisionScore(
+  baseScore: number,
+  rawProvisionPenalty: number,
+): { provisionPenalty: WorkContractProvisionPenalty, score: number } {
+  if (!Number.isFinite(rawProvisionPenalty)) {
+    return { provisionPenalty: 'impossible', score: Number.NEGATIVE_INFINITY }
+  }
+  return { provisionPenalty: rawProvisionPenalty, score: baseScore - rawProvisionPenalty }
+}
+
+function scoreMeasurableWorkOpportunityDetailed(
   contract: MeasurableWorkContractRecord,
   input: WorkContractEvaluationInput,
-): number {
+): MeasurableWorkContractScoreBreakdown {
   const travelHours = contractTravelHours(contract, input)
   const suitability = CONTRACT_SUITABILITY_BY_ROLE[input.role] ?? 0
   const scheduleConflict =
     input.hasWorkplace && idleIntentFor(input.scheduledActivity) === 'work' ? CONTRACT_SCHEDULE_CONFLICT_PENALTY : 0
   const expectedWork = expectedCandidateWork(contract)
   const expectedReward = expectedWork * contractRewardRate(contract)
-  const baseScore =
-    expectedReward
-    + suitability
-    - travelHours * CONTRACT_TRAVEL_HOUR_COST
-    - expectedWork * CONTRACT_WORK_HOUR_COST
-    - scheduleConflict
+  const travelCost = travelHours * CONTRACT_TRAVEL_HOUR_COST
+  const workCost = expectedWork * CONTRACT_WORK_HOUR_COST
+  const baseScore = expectedReward + suitability - travelCost - workCost - scheduleConflict
   const estimate = estimateContractProvisionNeed({
     travelHours,
     workHours: expectedWork,
     hunger: input.hunger,
     thirst: input.thirst,
   })
-  const provisionPenalty = contractProvisionFeasibilityPenalty(estimate, {
+  const rawProvisionPenalty = contractProvisionFeasibilityPenalty(estimate, {
     personalFoodUnits: input.personalFoodUnits,
     personalDrinkPortions: input.personalDrinkPortions,
     householdFoodUnits: input.householdFoodUnits,
     householdWaterUnits: input.householdWaterUnits,
     canFillWaterskin: input.canFillWaterskin,
   })
-  if (!Number.isFinite(provisionPenalty)) return Number.NEGATIVE_INFINITY
-  return baseScore - provisionPenalty
+  const { provisionPenalty, score } = finalizeProvisionScore(baseScore, rawProvisionPenalty)
+  return {
+    scope: 'measurable',
+    expectedReward,
+    suitability,
+    travelCost,
+    workCost,
+    scheduleConflict,
+    provisionPenalty,
+    score,
+  }
 }
 
 /** Escort-scope net-value score (plan npc-030 §16-§25) — same
@@ -207,10 +254,10 @@ function scoreMeasurableWorkOpportunity(
  *  `expectedCandidateWork`, plan §17), cost is driven by expected away time
  *  rather than travel + work, and relation/reputation/renown/personality/
  *  danger contribute real, bounded terms instead of being ignored. */
-function scoreEscortOpportunity(
+function scoreEscortOpportunityDetailed(
   contract: EscortWorkContractRecord,
   input: WorkContractEvaluationInput,
-): number {
+): EscortWorkContractScoreBreakdown {
   const terms = contract.scope.terms
   const escort = input.escort ?? DEFAULT_ESCORT_EVALUATION_CONTEXT
   const awayHours = escortAwayHours(terms, input)
@@ -222,6 +269,7 @@ function scoreEscortOpportunity(
   const renownBonus = escort.renown * ESCORT_RENOWN_WEIGHT
   const curiousBonus = escort.curious ? ESCORT_CURIOUS_BONUS : 0
   const dangerPenalty = escort.danger * ESCORT_DANGER_WEIGHT
+  const awayCost = awayHours * ESCORT_AWAY_HOUR_COST
   const baseScore =
     contract.rewardCoins
     + suitability
@@ -229,7 +277,7 @@ function scoreEscortOpportunity(
     + reputationBonus
     + renownBonus
     + curiousBonus
-    - awayHours * ESCORT_AWAY_HOUR_COST
+    - awayCost
     - dangerPenalty
     - scheduleConflict
   const estimate = estimateEscortProvisionNeed({
@@ -237,15 +285,28 @@ function scoreEscortOpportunity(
     hunger: input.hunger,
     thirst: input.thirst,
   })
-  const provisionPenalty = contractProvisionFeasibilityPenalty(estimate, {
+  const rawProvisionPenalty = contractProvisionFeasibilityPenalty(estimate, {
     personalFoodUnits: input.personalFoodUnits,
     personalDrinkPortions: input.personalDrinkPortions,
     householdFoodUnits: input.householdFoodUnits,
     householdWaterUnits: input.householdWaterUnits,
     canFillWaterskin: input.canFillWaterskin,
   })
-  if (!Number.isFinite(provisionPenalty)) return Number.NEGATIVE_INFINITY
-  return baseScore - provisionPenalty
+  const { provisionPenalty, score } = finalizeProvisionScore(baseScore, rawProvisionPenalty)
+  return {
+    scope: 'expedition_escort',
+    rewardCoins: contract.rewardCoins,
+    suitability,
+    awayCost,
+    scheduleConflict,
+    relationBonus,
+    reputationBonus,
+    renownBonus,
+    curiousBonus,
+    dangerPenalty,
+    provisionPenalty,
+    score,
+  }
 }
 
 /** Deterministic net-value score for `contract` given `input` — see this
@@ -258,13 +319,25 @@ export function scoreWorkContractOpportunity(
   contract: WorkContractRecord,
   input: WorkContractEvaluationInput,
 ): number {
-  if (contract.scope.kind === 'expedition_escort') {
-    return scoreEscortOpportunity(contract as EscortWorkContractRecord, input)
-  }
-  return scoreMeasurableWorkOpportunity(contract as MeasurableWorkContractRecord, input)
+  return scoreWorkContractOpportunityDetailed(contract, input).score
 }
 
-export type ScoredWorkContract = { contract: WorkContractRecord, score: number }
+/** Full score breakdown from a single evaluation pass (plan tools-013). */
+export function scoreWorkContractOpportunityDetailed(
+  contract: WorkContractRecord,
+  input: WorkContractEvaluationInput,
+): WorkContractScoreBreakdown {
+  if (contract.scope.kind === 'expedition_escort') {
+    return scoreEscortOpportunityDetailed(contract as EscortWorkContractRecord, input)
+  }
+  return scoreMeasurableWorkOpportunityDetailed(contract as MeasurableWorkContractRecord, input)
+}
+
+export type ScoredWorkContract = {
+  contract: WorkContractRecord
+  score: number
+  breakdown: WorkContractScoreBreakdown
+}
 
 /** Scores every entry in `candidates` and returns the best one, or `null` if
  *  none scores above zero (plan §3: never a fixed reward threshold, but a
@@ -275,7 +348,10 @@ export function selectBestWorkContract(
   candidates: readonly WorkContractRecord[],
   input: WorkContractEvaluationInput,
 ): { best: ScoredWorkContract | null, scored: readonly ScoredWorkContract[] } {
-  const scored = candidates.map((contract) => ({ contract, score: scoreWorkContractOpportunity(contract, input) }))
+  const scored = candidates.map((contract) => {
+    const breakdown = scoreWorkContractOpportunityDetailed(contract, input)
+    return { contract, score: breakdown.score, breakdown }
+  })
   let best: ScoredWorkContract | null = null
   for (const entry of scored) {
     if (entry.score > 0 && (best === null || entry.score > best.score)) best = entry

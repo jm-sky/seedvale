@@ -1,7 +1,7 @@
 # Plan: NPC decision verification and scenario tooling
 
 **Created:** 2026-09-10
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** none
 **Domain:** `tools`

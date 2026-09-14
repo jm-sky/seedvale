@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { CombatTargetHandle } from '../combat/combatIntent'
 import {
+  arbitrateAnimalThreat,
   decideAnimalThreatResponse,
   IMMEDIATE_ANIMAL_THREAT_RADIUS,
+  scoreAnimalThreatIntents,
   senseImmediateAnimalThreat,
   type ThreateningAnimalCandidate,
 } from './npcAnimalThreat'
@@ -57,6 +59,29 @@ describe('senseImmediateAnimalThreat (plan 179 §7/§10/§12)', () => {
       preyOwnerHouseId: 'home:0',
     }
     expect(senseImmediateAnimalThreat(0, 0, [flockOnly])).toBeNull()
+  })
+})
+
+describe('arbitrateAnimalThreat (plan tools-013)', () => {
+  it('records the same winner as scoreAnimalThreatIntents', () => {
+    const input = { hasMeleeCapability: true, hasRangedCapability: false, healthRatio: 1, neuroticism: 0.5 }
+    const scored = scoreAnimalThreatIntents(input)
+    const arbitration = arbitrateAnimalThreat(input)
+    const defend = scored.find((c) => c.kind === 'defend')!.score
+    const flee = scored.find((c) => c.kind === 'flee')!.score
+    expect(arbitration.defendScore).toBe(defend)
+    expect(arbitration.fleeScore).toBe(flee)
+    expect(arbitration.response).toBe(decideAnimalThreatResponse(input))
+  })
+
+  it('leaves defendScore non-finite only for unarmed NPCs', () => {
+    const arbitration = arbitrateAnimalThreat({
+      hasMeleeCapability: false,
+      hasRangedCapability: false,
+      healthRatio: 1,
+    })
+    expect(arbitration.defendScore).toBe(-Infinity)
+    expect(arbitration.response).toBe('flee')
   })
 })
 

@@ -109,11 +109,44 @@ export function scoreAnimalThreatIntents(
   ]
 }
 
+/** Authoritative defend/flee arbitration for one threat decision (plan
+ *  tools-013) — scores once and returns the chosen response plus the exact
+ *  candidate scores used by `pickHighestScore`. */
+export type AnimalThreatArbitration = {
+  response: AnimalThreatResponse
+  defendScore: number
+  fleeScore: number
+  hasMeleeCapability: boolean
+  hasRangedCapability: boolean
+  healthRatio: number
+  neuroticism: number
+}
+
+export function arbitrateAnimalThreat(input: AnimalThreatDecisionInput): AnimalThreatArbitration {
+  const scored = scoreAnimalThreatIntents(input)
+  const defendScore = scored.find((c) => c.kind === 'defend')!.score
+  const fleeScore = scored.find((c) => c.kind === 'flee')!.score
+  return {
+    response: pickHighestScore(scored)?.kind ?? 'flee',
+    defendScore,
+    fleeScore,
+    hasMeleeCapability: input.hasMeleeCapability,
+    hasRangedCapability: input.hasRangedCapability,
+    healthRatio: input.healthRatio,
+    neuroticism: input.neuroticism ?? 0.5,
+  }
+}
+
+/** JSON-safe defend score — `null` when defend was not a real option. */
+export function serializableDefendScore(score: number): number | null {
+  return Number.isFinite(score) ? score : null
+}
+
 /** Minimal V1 rule (plan 179 §14): a capable, healthy combatant leans
  *  `defend`; an unarmed or badly-hurt NPC leans `flee`. `defend` requires
  *  *some* usable combat capability — an unarmed/out-of-ammo NPC always
  *  flees rather than producing a combat intent 177 would immediately reject
  *  (plan 179 §15). */
 export function decideAnimalThreatResponse(input: AnimalThreatDecisionInput): AnimalThreatResponse {
-  return pickHighestScore(scoreAnimalThreatIntents(input))?.kind ?? 'flee'
+  return arbitrateAnimalThreat(input).response
 }

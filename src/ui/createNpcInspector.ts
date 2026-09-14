@@ -2,6 +2,11 @@ import type { NpcAgent, NpcInspectionSnapshot } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { NpcTraceEvent } from '../debug/npcTrace'
 import { needLabel } from '../ai/Needs'
+import {
+  projectNpcAnimalThreat,
+  projectNpcContractEvaluations,
+  projectNpcDecisionCycles,
+} from '../debug/npcDecisionReport'
 import { freezeNpc, isNpcRegistered, reevaluateNpc, unfreezeNpc } from '../debug/npcInspector'
 
 /**
@@ -183,14 +188,67 @@ function buildInspectorText(
     lines.push('  household: -')
   }
 
-  lines.push('', 'History')
+  lines.push('', 'Recent decision cycles')
   const events = npc.history()
+  for (const cycle of [...projectNpcDecisionCycles(events, 5)].reverse()) {
+    lines.push(
+      `  ${cycle.simTime.toFixed(1)}s need=${cycle.need ?? '-'} → strategy=${cycle.selectedStrategy ?? '-'} → action=${cycle.action ?? '-'}`,
+    )
+  }
+  if (projectNpcDecisionCycles(events, 1).length === 0) lines.push('  -')
+
+  lines.push('', 'Animal threat')
+  const threat = projectNpcAnimalThreat(events)
+  if (threat.lastSensed) {
+    lines.push(`  last sensed: ${threat.lastSensed.animalId} @ ${threat.lastSensed.distance.toFixed(1)}m (${threat.lastSensed.simTime.toFixed(1)}s)`)
+  } else {
+    lines.push('  last sensed: -')
+  }
+  const lastResponse = threat.responses[threat.responses.length - 1]
+  if (lastResponse) {
+    lines.push(
+      `  last response: ${lastResponse.response} (defend ${lastResponse.defendScore?.toFixed(2) ?? 'n/a'}, flee ${lastResponse.fleeScore.toFixed(2)}, hp ${(lastResponse.healthRatio * 100).toFixed(0)}%, neuro ${lastResponse.neuroticism.toFixed(2)})`,
+    )
+  } else {
+    lines.push('  last response: -')
+  }
+  lines.push(`  combat: started ${threat.combatStarted}, ended ${threat.combatEnded}, hits ${threat.combatHitsTaken}${threat.diedInCombat ? ', died' : ''}`)
+
+  lines.push('', 'Work contract evaluations')
+  const contractPasses = [...projectNpcContractEvaluations(events, 3)].reverse()
+  if (contractPasses.length === 0) {
+    lines.push('  -')
+  } else {
+    for (const pass of contractPasses) {
+      lines.push(`  ${pass.simTime.toFixed(1)}s evaluated:`)
+      for (const c of pass.candidates) {
+        lines.push(`    ${c.contractId}: ${formatContractBreakdown(c)}`)
+      }
+      lines.push(`    accepted: ${pass.accepted ? `${pass.accepted.contractId} (${pass.accepted.score.toFixed(1)})` : '-'}`)
+    }
+  }
+
+  lines.push('', 'History')
   const recent = events.slice(-HISTORY_RENDER_LIMIT).reverse()
   for (const event of recent) {
     lines.push(`  ${formatEvent(event)}`)
   }
 
   return lines.join('\n')
+}
+
+function formatContractBreakdown(candidate: {
+  contractId: string
+  score: number
+  breakdown: import('../ai/npcWorkContract').WorkContractScoreBreakdown
+}): string {
+  const b = candidate.breakdown
+  if (b.scope === 'measurable') {
+    const prov = b.provisionPenalty === 'impossible' ? 'impossible' : b.provisionPenalty.toFixed(1)
+    return `score ${candidate.score.toFixed(1)} (reward ${b.expectedReward.toFixed(1)}, suit ${b.suitability}, travel -${b.travelCost.toFixed(1)}, work -${b.workCost.toFixed(1)}, sched -${b.scheduleConflict}, prov -${prov})`
+  }
+  const prov = b.provisionPenalty === 'impossible' ? 'impossible' : b.provisionPenalty.toFixed(1)
+  return `score ${candidate.score.toFixed(1)} (reward ${b.rewardCoins}, suit ${b.suitability}, away -${b.awayCost.toFixed(1)}, danger -${b.dangerPenalty.toFixed(1)}, prov -${prov})`
 }
 
 /** Personality/role breakdown behind the winning need (plan ai-002) — reads
@@ -211,7 +269,7 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'action.completed': return `${t}s action.completed → ${event.action}`
     case 'action.failed': return `${t}s action.failed → ${event.action ?? '-'} (${event.reason})`
     case 'action.planned': return `${t}s action.planned → ${event.action}${event.queueId ? ` @${event.queueId}` : ''}`
-    case 'animalThreat.response': return `${t}s animalThreat.response → ${event.response} (canFight ${event.canFight ? 'yes' : 'no'}, hp ${(event.healthRatio * 100).toFixed(0)}%)`
+    case 'animalThreat.response': return `${t}s animalThreat.response → ${event.response} (defend ${event.defendScore?.toFixed(2) ?? 'n/a'}, flee ${event.fleeScore.toFixed(2)}, canFight ${event.canFight ? 'yes' : 'no'}, hp ${(event.healthRatio * 100).toFixed(0)}%)`
     case 'animalThreat.sensed': return `${t}s animalThreat.sensed → ${event.animalId} @ ${event.distance.toFixed(1)}m`
     case 'combat.died': return `${t}s combat.died`
     case 'combat.ended': return `${t}s combat.ended (${event.outcome})`

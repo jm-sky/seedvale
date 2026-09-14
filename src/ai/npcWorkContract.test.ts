@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createWorkContractRecord, type MeasurableWorkContractRecord } from '../world/workContract'
-import { scoreWorkContractOpportunity, selectBestWorkContract, type WorkContractEvaluationInput } from './npcWorkContract'
+import {
+  scoreWorkContractOpportunity,
+  scoreWorkContractOpportunityDetailed,
+  selectBestWorkContract,
+  type WorkContractEvaluationInput,
+} from './npcWorkContract'
 
 /** `remainingWorkAtCreation` matches the plan's worked example (10h) so
  *  `committedWork` (with the default 100% share) is a stable, non-zero
@@ -82,6 +87,37 @@ describe('scoreWorkContractOpportunity', () => {
     const woodcutter = scoreWorkContractOpportunity(contract, baseInput({ role: 'woodcutter', hasWorkplace: false }))
     const guard = scoreWorkContractOpportunity(contract, baseInput({ role: 'guard', hasWorkplace: false }))
     expect(woodcutter).toBeGreaterThan(guard)
+  })
+
+  it('detailed breakdown totals match the public score', () => {
+    const contract = makeContract(50)
+    const input = baseInput({ hasWorkplace: false })
+    const score = scoreWorkContractOpportunity(contract, input)
+    const detailed = scoreWorkContractOpportunityDetailed(contract, input)
+    expect(detailed.score).toBe(score)
+    if (detailed.scope === 'measurable') {
+      const recomposed =
+        detailed.expectedReward
+        + detailed.suitability
+        - detailed.travelCost
+        - detailed.workCost
+        - detailed.scheduleConflict
+        - (detailed.provisionPenalty === 'impossible' ? Infinity : detailed.provisionPenalty)
+      expect(recomposed).toBe(score)
+    }
+  })
+
+  it('represents impossible provisioning as impossible without breaking JSON surfaces', () => {
+    const farAway = makeContract(200, 5000, 5000)
+    const detailed = scoreWorkContractOpportunityDetailed(farAway, baseInput({
+      householdFoodUnits: 0,
+      householdWaterUnits: 0,
+      hunger: 0.6,
+      thirst: 0.6,
+    }))
+    expect(detailed.provisionPenalty).toBe('impossible')
+    expect(detailed.score).toBe(Number.NEGATIVE_INFINITY)
+    expect(JSON.stringify({ penalty: detailed.provisionPenalty })).toContain('impossible')
   })
 
   it('charges the contract\'s own committedWork, not a fixed full-target estimate (plan npc-018 §22)', () => {

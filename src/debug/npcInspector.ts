@@ -9,6 +9,12 @@ import { villageSizeConfig } from '../settlement/families'
 import { type HouseholdId, householdIdFor } from '../settlement/household'
 import { isDebugMode } from './debugMode'
 import { filterHistory, type HistoryFilter } from './domainHistory'
+import {
+  buildNpcDecisionDiagnostics,
+  NPC_TRACE_LIFETIME_NOTE,
+  type NpcDecisionDiagnostics,
+  type SettlementDecisionReport,
+} from './npcDecisionReport'
 import { findVillageDef } from './villageInspector'
 
 /**
@@ -119,6 +125,42 @@ export function npcHistory(bundle: WorldBundle, id: string, filter?: HistoryFilt
   const history = findNpcById(bundle, id)?.npc.history()
   if (!history) return null
   return filter ? filterHistory(history, filter) : history
+}
+
+/** Compact decision/crisis diagnostics for one live NPC (plan tools-013). */
+export function npcDecisionReport(
+  bundle: WorldBundle,
+  id: string,
+  filter?: HistoryFilter,
+): NpcDecisionDiagnostics | null {
+  const entry = findNpcById(bundle, id)
+  if (!entry) return null
+  return buildNpcDecisionDiagnostics(entry.npc.id, entry.npc.history(), filter)
+}
+
+/** Settlement-wide decision review for currently loaded NPC traces only (plan
+ *  tools-013). */
+export function settlementDecisionReport(
+  bundle: WorldBundle,
+  id: string,
+  filter?: HistoryFilter,
+): SettlementDecisionReport | null {
+  const def = findVillageDef(bundle.settlementsManager, id)
+  if (!def) return null
+  const loaded = bundle.settlementsManager.getLoaded().find((s) => s.id === id)
+  const npcs: NpcDecisionDiagnostics[] = []
+  if (loaded) {
+    for (const npc of loaded.npcs) {
+      npcs.push(buildNpcDecisionDiagnostics(npc.id, npc.history(), filter))
+    }
+  }
+  return {
+    settlementId: id,
+    settlementName: def.name,
+    traceLifetimeNote: NPC_TRACE_LIFETIME_NOTE,
+    loadedNpcCount: npcs.length,
+    npcs,
+  }
 }
 
 /** `debug.household(id).history()` — the household's own bounded mutation
@@ -330,4 +372,28 @@ export function setFrenzyWolf(bundle: WorldBundle): FrenzyWolfDebugResult | stri
       z: picked.village.z,
     },
   }
+}
+
+export type FrenzyWolvesDebugResult = {
+  requested: number
+  succeeded: number
+  results: readonly (FrenzyWolfDebugResult | string)[]
+}
+
+/** Marks up to `count` eligible wolves frenzied by reusing `setFrenzyWolf()`
+ *  (plan tools-013). Stops early when no more wolves are eligible; never
+ *  claims full success when fewer wolves were available. */
+export function setFrenzyWolves(bundle: WorldBundle, count: number): FrenzyWolvesDebugResult | string {
+  if (!isDebugMode()) return 'Debug mode disabled'
+  if (!Number.isFinite(count) || count < 1) return 'Count must be a positive integer'
+  const max = Math.floor(count)
+  const results: (FrenzyWolfDebugResult | string)[] = []
+  let succeeded = 0
+  for (let i = 0; i < max; i++) {
+    const result = setFrenzyWolf(bundle)
+    results.push(result)
+    if (typeof result === 'string') break
+    succeeded++
+  }
+  return { requested: max, succeeded, results }
 }

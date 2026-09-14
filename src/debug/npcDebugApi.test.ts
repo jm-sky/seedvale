@@ -228,6 +228,7 @@ describe('SeedvaleDebugApi shape', () => {
     expect(typeof api!.npc).toBe('function')
     expect(typeof api!.npcs).toBe('function')
     expect(typeof api!.setFrenzyWolf).toBe('function')
+    expect(typeof api!.setFrenzyWolves).toBe('function')
     expect(typeof api!.village).toBe('function')
     expect(typeof api!.villages).toBe('function')
     expect(typeof api!.locations).toBe('object')

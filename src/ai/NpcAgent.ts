@@ -262,9 +262,10 @@ import {
 } from './npcAccompanyExecution'
 import {
   type AnimalThreatResponse,
-  decideAnimalThreatResponse,
+  arbitrateAnimalThreat,
   type ImmediateAnimalThreat,
   senseImmediateAnimalThreat,
+  serializableDefendScore,
   type ThreateningAnimalCandidate,
 } from './npcAnimalThreat'
 import { type AssistanceRequestKind, type AssistanceResult, resolveNpcAssistance } from './npcAssistance'
@@ -2483,12 +2484,13 @@ export class NpcAgent {
     const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
     const hasRanged = rangedWeapon != null && this.resolveRangedAmmo(rangedWeapon.ranged) != null
     const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
-    const decision = decideAnimalThreatResponse({
+    const arbitration = arbitrateAnimalThreat({
       hasMeleeCapability: meleeWeapon != null,
       hasRangedCapability: hasRanged,
       healthRatio,
       neuroticism: this.personality.neuroticism,
     })
+    const decision = arbitration.response
     this.lastAnimalThreatResponse = decision
     this.trace.record({
       simTime: this.simClock,
@@ -2496,6 +2498,11 @@ export class NpcAgent {
       response: decision,
       canFight: meleeWeapon != null || hasRanged,
       healthRatio,
+      defendScore: serializableDefendScore(arbitration.defendScore),
+      fleeScore: arbitration.fleeScore,
+      hasMeleeCapability: arbitration.hasMeleeCapability,
+      hasRangedCapability: arbitration.hasRangedCapability,
+      neuroticism: arbitration.neuroticism,
     })
     if (isNpcCombatDebugMode()) {
       console.log(
@@ -5047,7 +5054,11 @@ export class NpcAgent {
       canFillWaterskin: provisionAvailability.canFillWaterskin,
       escort: this.escortEvaluationContext(),
     })
-    this.trace.record({ simTime: this.simClock, type: 'contract.evaluated', candidates: scored.map((s) => ({ contractId: s.contract.id, score: s.score })) })
+    this.trace.record({
+      simTime: this.simClock,
+      type: 'contract.evaluated',
+      candidates: scored.map((s) => ({ contractId: s.contract.id, score: s.score, breakdown: s.breakdown })),
+    })
     if (!best) return false
     const accepted = contracts.accept(best.contract.id, this.id, this.simClock)
     if (!accepted) return false
