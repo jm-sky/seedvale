@@ -3,10 +3,11 @@
 **Created:** 2026-09-14
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
-**Depends on:** settlements-012
+**Depends on:** settlements-009, settlements-012
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Cel
 
