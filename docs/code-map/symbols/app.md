@@ -256,13 +256,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 350
+- `createApp` — function — line 362
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 319
+- `NewAppOptions` — type — line 331
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -272,8 +272,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 668
-- `GameLoop` — type — line 627
+- `createGameLoop` — function — line 671
+- `GameLoop` — type — line 630
 - `GameLoopDeps` — type — line 304
 
 ## `app/graphicsSettings.ts`
@@ -318,32 +318,33 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1263
-- `buildDigTarget` — function — line 1207
-- `buildInteractables` — function — line 505
-- `collectItem` — function — line 1319
+- `buildCombatTarget` — function — line 1284
+- `buildDigTarget` — function — line 1228
+- `buildInteractables` — function — line 514
+- `collectItem` — function — line 1340
 - `COMBAT_TARGET_CONE_DOT` — const — line 104
 - `COMBAT_TARGET_RANGE` — const — line 89
 - `CombatAimMode` — type — line 94
 - `DIG_REACH` — const — line 83
 - `DROPPED_ITEM_GROUP_RADIUS` — const — line 309
-- `filterInteractablesSameSpatialContext` — function — line 489
+- `filterInteractablesSameSpatialContext` — function — line 498
 - `GAZE_RANGE` — const — line 79
+- `grindstoneInteractPosition` — function — line 390
 - `groupDroppedItemCandidates` — function — line 319
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 76
 - `INTERACT_RANGE` — const — line 73
 - `itemPromptLabel` — function — line 298
-- `resolveHaySpot` — function — line 395
+- `resolveHaySpot` — function — line 404
 - `worldItemAllowsAltInteract` — function — line 283
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 201
-- `InventoryWiring` — type — line 126
-- `InventoryWiringDeps` — type — line 159
-- `MerchantInventoryView` — type — line 112
+- `createInventoryWiring` — function — line 204
+- `InventoryWiring` — type — line 127
+- `InventoryWiringDeps` — type — line 162
+- `MerchantInventoryView` — type — line 113
 
 ## `app/modalState.ts`
 
@@ -395,14 +396,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 918
-- `caveTreasureContainerSpecs` — function — line 208
-- `createWorldBundle` — function — line 1642
-- `disposeWorldBundle` — function — line 2099
-- `HOME_RADIUS` — const — line 183
-- `homeChunks` — function — line 234
-- `rebuildWorldBundle` — function — line 1868
-- `WorldBundle` — type — line 257
+- `BuiltWorldSystems` — type — line 925
+- `caveTreasureContainerSpecs` — function — line 215
+- `createWorldBundle` — function — line 1674
+- `disposeWorldBundle` — function — line 2131
+- `HOME_RADIUS` — const — line 190
+- `homeChunks` — function — line 241
+- `rebuildWorldBundle` — function — line 1900
+- `WorldBundle` — type — line 264
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

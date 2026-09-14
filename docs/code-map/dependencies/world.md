@@ -329,6 +329,8 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/dungeonBanditTreasure.ts`
+- `quests/lostTreasureExpedition.test.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `world/caves/caveAdventureContentPolicy.test.ts`
@@ -393,6 +395,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveContentAnchors.ts`
@@ -466,6 +469,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureExpedition.test.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
@@ -1105,6 +1110,8 @@ Generated from TypeScript imports.
 
 - `fauna/dungeonResidents.test.ts`
 - `fauna/dungeonResidents.ts`
+- `quests/lostTreasureExpedition.test.ts`
+- `quests/lostTreasureExpedition.ts`
 - `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
@@ -2426,6 +2433,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/quests.ts`
 - `quests/suspiciousTransportCaveCache.ts`
@@ -3961,6 +3969,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureExpedition.test.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`

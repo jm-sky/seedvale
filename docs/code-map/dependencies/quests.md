@@ -104,6 +104,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/dungeonBanditTreasureRuntime.ts`
+- `quests/lostTreasureExpedition.test.ts`
 
 ## `quests/dungeonBanditTreasureRuntime.ts`
 
@@ -208,6 +209,54 @@ Generated from TypeScript imports.
 **Imports**
 
 - `quests/lostHunterNaturalCave.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+
+## `quests/lostTreasureExpedition.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `quests/dungeonBanditTreasure.ts`
+- `quests/lostTreasureExpedition.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/dungeonChambers.ts`
+- `world/worldGeneratedContainers.ts`
+
+## `quests/lostTreasureExpedition.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `settlement/npcState.ts`
+- `world/caves/caveAdventureContentPolicy.ts`
+- `world/caves/caveArchetype.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/dungeonChambers.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/worldGeneratedContainers.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/lostTreasureExpedition.test.ts`
+- `quests/lostTreasureExpeditionRuntime.ts`
+
+## `quests/lostTreasureExpeditionRuntime.ts`
+
+**Imports**
+
+- `quests/lostTreasureExpedition.ts`
 
 **Imported by**
 
@@ -391,6 +440,8 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureExpedition.test.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/oldBonesAdventureCave.ts`
 
@@ -467,6 +518,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/dungeonBanditTreasure.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/opportunities/guardProfessionQuests.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`
@@ -515,6 +567,7 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
 - `quests/oldBonesAdventureCave.ts`

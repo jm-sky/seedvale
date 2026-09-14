@@ -504,14 +504,14 @@ Generated from exported TypeScript symbols.
 ## `settlement/props.ts`
 
 - `BlacksmithWorkplace` — type — line 295
-- `buildSettlementProps` — function — line 704
-- `disposeSettlementGroup` — function — line 1934
+- `buildSettlementProps` — function — line 707
+- `disposeSettlementGroup` — function — line 1942
 - `SettlementHouseBed` — type — line 148
 - `SettlementHouseLandmark` — type — line 114
 - `SettlementLandmarks` — type — line 164
 - `SettlementLandPlot` — type — line 284
 - `SettlementStorageVisuals` — type — line 276
-- `SettlementTreeLandmark` — type — line 302
+- `SettlementTreeLandmark` — type — line 305
 - `SettlementWellLandmark` — type — line 155
 
 ## `settlement/propSpecs.ts`

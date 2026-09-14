@@ -1018,6 +1018,7 @@ Generated from TypeScript imports.
 - `quests/guardPersistence.ts`
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureExpedition.ts`
 - `quests/materializeAuthoredQuests.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/opportunities/hunterProfessionQuests.ts`

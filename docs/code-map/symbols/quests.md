@@ -107,6 +107,49 @@ Generated from exported TypeScript symbols.
 - `getActiveLostHunterNaturalCaveBinding` — function — line 10
 - `setActiveLostHunterNaturalCaveBinding` — function — line 6
 
+## `quests/lostTreasureExpedition.ts`
+
+- `buildLostTreasureExpeditionQuest` — function — line 385
+  - domain: quests-progression
+- `createLostTreasureExpeditionJournalInstance` — function — line 83
+- `EligibleLostTreasureExpeditionCave` — type — line 144
+- `eligibleLostTreasureExpeditionCaves` — function — line 188
+  - domain: quests-progression
+- `isLostTreasureExpeditionCampLooted` — function — line 368
+- `isLostTreasureExpeditionEvidenceLooted` — function — line 372
+- `isLostTreasureExpeditionFinalTreasureLooted` — function — line 376
+- `isLostTreasureExpeditionJournalPackLooted` — function — line 354
+- `LOST_TREASURE_EXPEDITION_CAMP_RESERVATION_KEY` — const — line 20
+- `LOST_TREASURE_EXPEDITION_EVIDENCE_RESERVATION_KEY` — const — line 22
+- `LOST_TREASURE_EXPEDITION_FINAL_RESERVATION_KEY` — const — line 23
+- `LOST_TREASURE_EXPEDITION_JOURNAL_KIND` — const — line 31
+- `LOST_TREASURE_EXPEDITION_JOURNAL_RESERVATION_KEY` — const — line 21
+- `LOST_TREASURE_EXPEDITION_JOURNAL_TO_FAMILY_OUTCOME` — const — line 27
+- `LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME` — const — line 28
+- `LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME` — const — line 29
+- `LOST_TREASURE_EXPEDITION_QUEST_PREFIX` — const — line 25
+- `LOST_TREASURE_EXPEDITION_RESERVATION_PREFIX` — const — line 18
+- `lostTreasureExpeditionAnchorClaims` — function — line 274
+- `LostTreasureExpeditionBinding` — type — line 47
+  - domain: quests-progression
+- `lostTreasureExpeditionCaveReservationRequests` — function — line 285
+- `lostTreasureExpeditionClaimsMatch` — function — line 296
+  - domain: quests-progression
+- `lostTreasureExpeditionContainerId` — function — line 65
+- `lostTreasureExpeditionContainerSpecs` — function — line 334
+  - domain: quests-progression
+- `lostTreasureExpeditionJournalInstanceId` — function — line 69
+- `lostTreasureExpeditionQuestId` — function — line 73
+- `resolveLostTreasureExpeditionBinding` — function — line 222
+  - domain: quests-progression
+- `selectLostTreasureExpeditionNpcs` — function — line 118
+  - domain: quests-progression
+
+## `quests/lostTreasureExpeditionRuntime.ts`
+
+- `getActiveLostTreasureExpeditionBinding` — function — line 12
+- `setActiveLostTreasureExpeditionBinding` — function — line 6
+
 ## `quests/materializeAuthoredQuests.ts`
 
 - `AuthoredNpcResolutionError` — class — line 15

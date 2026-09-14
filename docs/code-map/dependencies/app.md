@@ -906,6 +906,8 @@ Generated from TypeScript imports.
 - `quests/guardPersistence.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/lostTreasureExpedition.ts`
+- `quests/lostTreasureExpeditionRuntime.ts`
 - `quests/materializeAuthoredQuests.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/oldBonesAdventureCaveRuntime.ts`
@@ -1333,6 +1335,7 @@ Generated from TypeScript imports.
 - `ai/voluntaryExpeditionJoin.ts`
 - `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`
+- `audio/actionSounds.ts`
 - `audio/createWorldAudio.ts`
 - `audio/inventorySounds.ts`
 - `items/HeldTool.ts`
@@ -1547,6 +1550,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasureRuntime.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/lostTreasureExpedition.ts`
+- `quests/lostTreasureExpeditionRuntime.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/oldBonesAdventureCaveRuntime.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`

@@ -16,6 +16,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
+- `app/inventoryWiring.ts`
 
 ## `audio/ambientEvents.test.ts`
 
