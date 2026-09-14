@@ -1,72 +1,93 @@
 # Plan: Economy-driven Transport Demand Integration
 
 **Created:** 2026-09-04  
-**Status:** `draft` 📝  
+**Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** high · **Effort:** S/M  
-**Depends on:** settlements-npcs-017, settlements-npcs-018, settlements-npcs-019  
+**Depends on:** ~~settlements-npcs-017~~, ~~settlements-npcs-018~~, ~~settlements-npcs-019~~  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `logistics`  
 **Tags:** `transport` `shortage` `surplus` `trader`  
 **Roadmap:** `physical-goods-transport`  
 
-## Status Note
+## Recon result — 2026-09-14
 
-Ten plan pozostaje w statusie `draft`, dopóki `settlements-npcs-018` i `settlements-npcs-019` nie zostaną zaimplementowane.
+Draft exit criteria są spełnione.
 
-`018` i `019` definiują fundamenty, od których zależy ten plan:
+`settlements-npcs-018` i `019` są zaimplementowane i dostarczają rzeczywisty transport foundation:
+
+- `src/world/transportOrder.ts` — authoritative `TransportOrder` i lifecycle `pending → assigned → in-transit → completed`, plus `failed` / `cancelled`,
+- `src/world/createTransportOrders.ts` — world-owned registry, create/assign/find/findByCarrier i lifecycle mutations,
+- `src/world/transportTransactions.ts` — transactional pickup/unload z realnym transferem inventory i rollbackiem,
+- `NpcAuthoritativeState.transportCargo` — authoritative carrier-owned cargo po pickup,
+- `src/world/transportOffscreen.ts` — off-screen progression dla `in-transit`,
+- persistence `TransportOrder` + cargo działa przez istniejący save/load flow,
+- debug API potrafi odczytać transport order.
+
+Post-018 Trader flow również jest już zmigrowany:
 
 ```text
+planTraderWork()
+    ↓
+planTraderCollection()
+    ↓
 TransportOrder
-transport ownership / registry
-pickup / cargo / delivery semantics
-active-order lifecycle
-persistence
-off-screen progression
-NPC transport commitment
+    ↓
+executeTransportPickup()
+    ↓
+transportCargo
+    ↓
+executeTransportUnload()
 ```
 
-Nazwy i API opisane w `018` i `019` są obecnie kontraktami projektowymi, a nie source of truth implementacji.
+Nie ma już potrzeby migrowania lokalnego carry flow do `TransportOrder` w ramach 020.
 
-Przed zmianą statusu tego planu na `planned` należy wykonać focused recon faktycznie zaimplementowanego kodu `018`–`019`, a także ponownie sprawdzić post-018 local circulation / Trader flow z `settlements-npcs-014`.
+Brakujący element to powiązanie **powodu utworzenia orderu** z authoritative economy state oraz accounting już istniejących transport commitments.
 
 ## Goal
 
-Połączyć istniejący stan ekonomii osady z fizycznym transportem tak, aby realny shortage mógł prowadzić do powstania realnego `TransportOrder`.
+Połączyć rzeczywisty stan ekonomii osady z istniejącym fizycznym transportem tak, aby realny settlement food shortage prowadził do realnego `TransportOrder`, bez osobnego demand registry ani drugiego systemu logistyki.
 
 Pierwszy vertical slice:
 
 ```text
 SettlementEconomy food shortage
         ↓
-derived uncovered transport opportunity
+derived uncovered demand
         ↓
-Household food surplus
+local household uncommitted food surplus
         ↓
-Trader evaluates opportunity during normal work
+Trader normal profession work evaluation
         ↓
-TransportOrder
+existing TransportOrder flow
         ↓
 physical / off-screen transport
         ↓
-authoritative settlement food inventory mutation
+settlement inventory mutation
         ↓
 shortage decreases naturally
 ```
 
-Plan nie tworzy osobnego `TradeSystem`, `TransportDemandRegistry`, market stock ani równoległego modelu ekonomii.
+Kluczowy invariant:
 
-Ekonomia pozostaje źródłem powodów do transportu.
+```text
+Transport demand is derived from authoritative economy state.
+```
 
-Transport pozostaje mechanizmem realizacji przepływu dóbr.
+Nie tworzyć trwałego:
+
+```text
+TransportDemand
+EconomicDeliveryNeed
+TradeRequest
+SettlementImportRequest
+```
 
 ## Current State
 
-Aktualny kod posiada już fundamenty pierwszego slice:
-
 ### Settlement economy
 
-`SettlementEconomy` posiada:
+`SettlementEconomy` posiada derived:
 
 ```text
 query(kind)
@@ -76,21 +97,17 @@ hasShortage(kind)
 hasSurplus(kind)
 ```
 
-Shortage jest derived state względem `SettlementDemand.target`.
+Dla `food` stan pochodzi z realnego settlement-level `Inventory`.
 
-Dla `food` `SettlementEconomy.query('food')` odczytuje rzeczywiste concrete food items przechowywane w settlement-level `Inventory`.
-
-Oznacza to, że po poprawnej dostawie nie potrzeba osobnego feedback state:
+Po dostawie:
 
 ```text
-food delivered
-    ↓
-authoritative settlement inventory changes
-    ↓
-query('food') changes
-    ↓
-shortage('food') changes automatically
+inventory changes
+→ query('food') changes
+→ shortage('food') changes
 ```
+
+Nie potrzeba osobnego feedback state.
 
 ### Household economy
 
@@ -102,221 +119,165 @@ shouldAcquire(kind)
 surplus(kind)
 ```
 
-Dla `food` stan również pochodzi z realnego `Household.items`.
+Food surplus pochodzi z realnego `Household.items`.
 
-### Local goods circulation
+### Local household lookup
 
-`settlements-npcs-014` posiada już działający lokalny przepływ:
-
-```text
-Household surplus
-    ↓
-Trader
-    ↓
-SettlementEconomy
-```
-
-Istniejący household surplus lookup:
+Istniejący household exchange flow:
 
 - działa lokalnie w obrębie osady,
-- wybiera household posiadający realny surplus,
-- używa deterministic nearest-first selection,
-- posiada stabilny tie-break przez household id,
-- ponownie waliduje live surplus przy rzeczywistym claimie.
+- wybiera realny household surplus,
+- jest deterministic nearest-first,
+- posiada stable household-id tie-break,
+- ponownie waliduje live stock przy claimie.
+
+Reuse tego mechanizmu; nie tworzyć drugiego world-wide household search.
+
+### Transport foundation
+
+`TransportOrder` jest authoritative commitment, ale nie właścicielem cargo.
+
+Ownership:
+
+```text
+before pickup  → source household inventory
+after pickup   → NpcAuthoritativeState.transportCargo
+after unload   → destination inventory
+```
+
+`TransportOrders.findByCarrier(npcId)` egzekwuje jeden aktywny transport per carrier.
+
+Registry nie posiada obecnie endpoint/item-specific query dla incoming/outgoing commitments. 020 może dodać mały derived helper/query potrzebny do accounting; nie tworzyć nowego registry demand.
 
 ### Trader
 
-Trader już wykonuje własne profession work evaluation przez istniejący NPC work flow.
+`planTraderCollection()` już tworzy/obsługuje `TransportOrder` i korzysta z istniejących transakcji pickup/unload.
 
-Nie potrzeba osobnego economy tick ani transport scheduler tylko dla tego planu.
+020 ma zmienić **ekonomiczny warunek i ilość** prowadzącą do orderu, a nie transport execution.
 
-Trader nie jest jednak właścicielem transport demand. Jest pierwszym aktorem, który podczas normalnego work evaluation może zauważyć i zrealizować istniejącą ekonomicznie okazję do transportu.
-
-### Missing transport integration
-
-Obecny local circulation wykonuje transport bez world-owned persistent transport order.
-
-`018` i `019` mają dostarczyć tę warstwę.
-
-Ten plan ma podłączyć istniejącą ekonomię do tego mechanizmu.
-
-## Architectural Goal
-
-Docelowa zależność:
-
-```text
-authoritative economy state
-    ↓
-derived transport opportunity
-    ↓
-existing NPC work decision
-    ↓
-TransportOrder
-    ↓
-transport execution
-    ↓
-real inventory mutation
-    ↓
-new economy state
-```
-
-Kluczowy invariant:
-
-```text
-Transport demand is derived from authoritative economy state.
-```
-
-Nie przechowywać osobnego, trwałego:
-
-```text
-TransportDemand
-EconomicDeliveryNeed
-TradeRequest
-SettlementImportRequest
-```
-
-jeżeli stan może zostać wyliczony z:
-
-```text
-shortage
-surplus
-active TransportOrders
-```
-
-Nie trzeba również tworzyć `TransportOpportunity` jako trwałego typu lub registry, jeżeli pierwszy slice może wyliczać małego lokalnego candidate'a na żądanie.
-
-## 1. Focused Recon after 018–019
-
-Przed implementacją sprawdzić faktycznie zaimplementowane API:
-
-- `TransportOrder` shape,
-- transport registry ownership,
-- order lifecycle,
-- source ownership przed pickup,
-- cargo ownership po pickup,
-- destination resolution i delivery semantics,
-- aktywne order queries,
-- carrier assignment,
-- NPC commitment rules,
-- cancellation / failure,
-- persistence,
-- off-screen progression,
-- reconstruction po stream-in / load.
-
-Następnie ponownie sprawdzić `settlements-npcs-014` i aktualny Trader/local circulation flow, ponieważ `018` ma go zmigrować na `TransportOrder` i obecne granice mogą już nie istnieć w tej samej postaci.
-
-Plan należy dopasować do kodu.
-
-Nie kopiować mechanicznie nazw ani API z draftów `018` i `019`.
-
-## 2. First Supported Demand: Settlement Food Shortage
+## 1. First Supported Demand
 
 Pierwsza implementacja obsługuje wyłącznie:
 
 ```text
-SettlementEconomy shortage('food')
+SettlementEconomy.shortage('food')
 ```
 
-Nie dodawać w tym planie:
+Poza zakresem tego slice:
 
 - household shortage transport,
-- production input transport,
-- generic resource marketplace,
+- wood demand,
+- production input logistics,
 - cross-settlement trade,
 - dynamic pricing,
-- caravan planning,
-- transport priorities pomiędzy wieloma klasami demand.
+- caravans,
+- generic carrier marketplace.
 
-Pierwszy przypadek ma być mały i kompletny.
+## 2. Uncovered Destination Demand
 
-Warunek wejściowy:
+Nie tworzyć orderu tylko dlatego, że:
 
 ```text
 economy.shortage('food') > 0
 ```
 
-ale rzeczywista ilość potrzebna do transportu musi uwzględniać już aktywne dostawy.
+Najpierw odjąć aktywne transport commitments już kierowane do settlement storage.
 
-## 3. Uncovered Demand and Committed Supply
-
-Nie rezerwować ekonomicznego stocku tylko dlatego, że istnieje transport opportunity.
-
-Wartości potrzebne do anti-over-ordering pozostają derived queries, a nie persistent economic state.
-
-### Destination side
-
-Wyliczyć logicznie:
+Logicznie:
 
 ```text
-needed =
-    currentSettlementShortage
-    - goodsAlreadyCommittedTowardDestination
+uncoveredDemand =
+    currentSettlementFoodShortage
+    - incomingCommittedFood
 ```
 
-`goodsAlreadyCommittedTowardDestination` oznacza aktywne transporty, których cargo nadal ma dotrzeć do tej osady jako food.
+`incomingCommittedFood` obejmuje aktywne `TransportOrder`:
 
-Dokładne lifecycle states należy dopasować do implementacji 018–019.
+- `itemKind` będący food item,
+- destination = bieżące `settlement-storage`,
+- stan nadal oznaczający niedostarczone goods.
 
-Jeżeli:
+Accounting quantity:
+
+- `pending` / `assigned` → `requestedQuantity`,
+- `in-transit` → `claimedQuantity`,
+- terminal states → `0`.
+
+Jeżeli `uncoveredDemand <= 0`, Trader nie tworzy kolejnego orderu.
+
+Nie zapisywać tej wartości do persistence.
+
+## 3. Uncommitted Source Supply
+
+Household surplus nie może zostać obiecany wielu orderom przed pickup.
+
+Logicznie:
 
 ```text
-needed <= 0
+availableSourceSurplus =
+    currentHouseholdFoodSurplus
+    - prePickupCommittedFood
 ```
 
-nie tworzyć kolejnego orderu.
-
-### Source side
-
-Analogicznie source household nie może obiecać tego samego surplusu wielu transportom.
-
-Wyliczyć logicznie:
+`prePickupCommittedFood` obejmuje aktywne ordery z source = ten household, które nadal oczekują na pickup:
 
 ```text
-available =
-    currentHouseholdSurplus
-    - goodsAlreadyCommittedForPickupFromSource
+pending
+assigned
 ```
 
-Po realnym pickup cargo nie należy już do household source.
+Nie odejmować `in-transit`, ponieważ po pickup goods nie należą już do source household.
 
-Dlatego source-side commitment powinien uwzględniać tylko transporty, które nadal oczekują na pickup.
+Nie tworzyć osobnego reservation subsystem.
 
-Nie tworzyć osobnego persistent reservation record ani commitment subsystem.
+## 4. Economy-to-Transport Derived Helper
 
-## 4. Source Selection
-
-Reuse istniejącego lokalnego household surplus lookup.
-
-Preferowany flow:
+Dodać mały pure/derived boundary odpowiedzialny za wyliczenie:
 
 ```text
-uncovered settlement food shortage
-        ↓
-existing local household surplus lookup
-        ↓
-household with food surplus
-        ↓
-subtract active pre-pickup commitments
-        ↓
-usable source
+uncovered destination demand
+uncommitted household supply
 ```
 
-Jeżeli istniejący lookup po implementacji 018 nie uwzględnia active transport commitments, rozszerzyć istniejący mechanizm albo dodać mały adapter wokół niego.
+Może korzystać z `TransportOrders.list()` albo minimalnego query helpera w registry.
 
-Nie tworzyć drugiego world-wide household search.
+Nie dodawać globalnego ticka ani nowego persistent managera.
+
+Jeżeli implementacja wybierze helper publiczny/architektoniczny, dodać JSDoc z ownership i `@domain settlements-npcs`.
+
+## 5. Source Selection
+
+Reuse istniejącego local household surplus lookup.
+
+Flow:
+
+```text
+uncovered settlement food demand
+        ↓
+existing local surplus selection
+        ↓
+subtract pre-pickup commitments
+        ↓
+first deterministic usable household
+```
 
 Selection pozostaje:
 
 ```text
 same settlement
 nearest first
-stable id tie-break
-deterministic
+stable household id tie-break
 ```
 
-## 5. Evaluation Cadence
+Jeżeli pierwszy household ma cały surplus committed, lookup powinien przejść do następnego realnego candidate'a zamiast kończyć bez wyniku.
 
-Pierwsza wersja nie posiada osobnego:
+Nie tworzyć alternatywnego household index tylko dla 020.
+
+## 6. Trader Integration Point
+
+Integration point pozostaje istniejący Trader profession work flow w `src/ai/npcProfessionWork.ts`.
+
+020 nie dodaje:
 
 ```text
 TransportDemandSystem.tick()
@@ -324,62 +285,27 @@ EconomyTransportScheduler
 SettlementLogisticsTick
 ```
 
-Opportunity istnieje semantycznie niezależnie od Tradera, bo wynika z economy state.
-
-W pierwszym vertical slice jest jednak oceniana podczas istniejącego Trader profession work flow.
+Podczas normalnego `planTraderWork()` / `planTraderCollection()`:
 
 ```text
-Trader enters normal work decision
-        ↓
-evaluate existing economy-derived opportunity
-        ↓
-find suitable household surplus
-        ↓
-create / accept TransportOrder
+1. resume existing active order if carrier already committed,
+2. otherwise derive uncovered settlement demand,
+3. find source with uncommitted surplus,
+4. create assigned TransportOrder for current Trader,
+5. execute existing pickup / delivery path.
 ```
 
-Dzięki temu:
+Najważniejszy guardrail:
 
-- nie powstaje dodatkowy global tick,
-- system pozostaje bounded,
-- decyzja jest częścią normalnego życia NPC,
-- player/camera nie sterują ekonomią,
-- przyszły inny carrier może reuse ten sam economy-to-transport boundary bez wiązania demand z rolą Trader.
+> Nie zepsuć resume semantics istniejącego aktywnego orderu przez ponowną ocenę ekonomii przy każdym planner call.
 
-## 6. Local Circulation Migration Boundary
-
-Po implementacji `018` należy zidentyfikować faktyczną granicę pomiędzy:
-
-```text
-economic decision
-```
-
-a:
-
-```text
-transport execution
-```
-
-w aktualnym post-018 Trader/local circulation flow.
-
-020 powinien zmienić wyłącznie warunek ekonomiczny prowadzący do transportu:
-
-```text
-settlement has uncovered food shortage
-+
-source household has uncommitted food surplus
-→ create / accept TransportOrder
-```
-
-Nie utrzymywać równolegle legacy carry flow i `TransportOrder` flow dla tego samego przypadku.
-
-Nie zakładać przed reconem, że dzisiejsze `beginTraderCollection()` albo inne obecne metody nadal będą właściwym integration point.
+Aktywny order jest commitmentem i ma zostać dokończony zgodnie z transport lifecycle.
 
 ## 7. Carrier Boundary
 
-Pierwszy slice nie tworzy generic carrier marketplace.
+Pierwszy slice korzysta wyłącznie z aktualnego Tradera wykonującego normalny work evaluation.
 
-Carrierem jest Trader, który właśnie wykonuje własne normalne work evaluation.
+Reuse `TransportOrders.findByCarrier()` / create guard.
 
 Nie dodawać:
 
@@ -390,251 +316,199 @@ carrier scoring
 global idle NPC search
 ```
 
-Minimalna zasada:
-
-```text
-current Trader
-    ↓
-can accept transport commitment?
-    ↓
-yes → create / accept order
-no  → skip
-```
-
-Reuse aktualnych NPC commitment / availability rules po implementacji `018`–`019`.
-
-Nie integrować transportu z `WorkContractRecord` samym w sobie. Work Contracts są jedynie precedentem dla zasady, że NPC nie powinien posiadać sprzecznych aktywnych commitmentów.
-
 ## 8. Quantity
 
-Transport amount powinien być ograniczony przez:
+Nowy order powinien mieć:
 
 ```text
-uncovered destination shortage
-available uncommitted source surplus
-existing transport/order capacity
-```
-
-czyli logicznie:
-
-```text
-amount = min(
-    needed,
-    available,
-    carrierOrOrderCapacity
+requestedQuantity = min(
+    uncoveredDestinationDemand,
+    availableUncommittedSourceSurplus,
+    existingLocalTransferCap
 )
 ```
 
-Jeżeli 018 nie posiada jawnej capacity semantics, wykorzystać istniejący bounded transfer convention z local goods circulation zamiast projektować nowy capacity subsystem.
+Reuse istniejącego bounded transfer convention (`HOUSEHOLD_EXCHANGE_MAX_TRANSFER` / aktualny Trader transfer cap).
 
-Nie dodawać nowego weight/logistics model tylko na potrzeby 020.
+Nie dodawać weight/capacity subsystem.
+
+Rzeczywisty pickup nadal może być mniejszy po live revalidation.
 
 ## 9. Pickup Revalidation
 
-Source selection nie gwarantuje, że goods nadal istnieją przy pickup.
+Nie duplikować istniejącej transakcji.
 
-Przed pickup:
+`executeTransportPickup()` już:
 
-```text
-re-read live household surplus
-re-check order state
-re-check source ownership
-```
+- wymaga `assigned`,
+- przyjmuje caller-provided live transferable quantity,
+- ogranicza claim do `requestedQuantity`,
+- przenosi realne items do `transportCargo`,
+- failuje order przy zerowym live transferable quantity,
+- nie mutuje orderu przed poprawnym transferem inventory,
+- zachowuje conservation.
 
-Jeżeli goods zniknęły, zachować conservation zgodnie z lifecycle z 018–019, np. przez partial pickup albo fail/cancel order, zależnie od rzeczywistego transport contract.
+020 powinien tylko dostarczyć poprawnie wyliczony live surplus przy pickup.
 
-Nie tworzyć goods z powietrza.
+## 10. Delivery and Feedback
 
-Nie pozwolić na ujemny inventory.
-
-## 10. Delivery and Economy Feedback
-
-Delivery musi użyć authoritative destination resolution i mutation boundary dostarczonego przez zaimplementowane `018`.
-
-Docelowo:
-
-```text
-TransportOrder cargo
-    ↓
-destination resolution from transport foundation
-    ↓
-authoritative settlement food inventory mutation
-    ↓
-SettlementEconomy.query / shortage changes
-```
-
-Obecne `SettlementEconomy.depositFood(...)` jest przykładem aktualnego mutation API, ale 020 nie może omijać abstraction wprowadzonej przez 018, jeżeli transport foundation dostarczy wspólny destination delivery seam.
+Reuse istniejący `executeTransportUnload()` i aktualny settlement-storage destination resolution.
 
 Nie modyfikować shortage bezpośrednio.
 
-To zamyka pierwszy pełny loop:
+Loop:
 
 ```text
 shortage
-    ↓
-transport opportunity
-    ↓
-TransportOrder
-    ↓
-pickup / transport / delivery
-    ↓
-real inventory mutation
-    ↓
-lower shortage
+→ uncovered demand
+→ TransportOrder
+→ pickup
+→ transport
+→ unload to settlement storage
+→ economy query sees new inventory
+→ shortage decreases
 ```
 
-## 11. No Persistent Demand State
+## 11. Persistence and Off-screen
 
-Nie zapisywać osobnego transport-demand state do save.
+020 nie dodaje persistence ani off-screen execution.
 
-Po reloadzie authoritative:
+To już zapewnia 019.
+
+Nie zapisywać derived transport demand.
+
+Po reloadzie wystarczają:
 
 ```text
-SettlementEconomy
-+
-Households
-+
+SettlementEconomy state
+Household inventories
 active TransportOrders
+NPC transportCargo
 ```
 
-powinny wystarczyć do ponownego wyliczenia uncovered demand i available uncommitted supply.
+Economy-to-transport layer nie może zależeć od current simulation fidelity.
 
-## 12. Off-screen Compatibility
+## 12. Determinism
 
-020 nie implementuje off-screen transport.
-
-To należy do `019`.
-
-020 musi jedynie tworzyć taki sam `TransportOrder` niezależnie od tego, czy później zostanie wykonany przez detailed physical simulation czy off-screen progression.
-
-Economy layer nie może znać aktualnej fidelity transportu.
-
-## 13. Determinism
-
-Przy identycznym stanie świata:
+Przy identycznym:
 
 ```text
-same shortage
-same active orders
-same household surplus
-same Trader
+shortage
+active orders
+household inventories
+Trader
 ```
 
-selection powinien prowadzić do tego samego source/order candidate.
+wynik source selection i requested quantity powinien być identyczny.
 
-Unikać `Math.random()` w:
+Nie używać `Math.random()` w demand/accounting/selection.
 
-- demand evaluation,
-- source selection,
-- committed-supply accounting,
-- carrier acceptance.
+## 13. Performance
 
-Reuse deterministic nearest-first + stable-id conventions istniejącego local exchange.
+020 jest wykonywany w bounded Trader work cadence, nie per-frame.
 
-## 14. Performance
+Pierwszy slice ma lokalny zakres jednej osady.
 
-Nie wykonywać:
+Dopuszczalny jest mały scan `TransportOrders.list()` podczas Trader evaluation, jeżeli liczba aktywnych orderów pozostaje niewielka. Nie dodawać indeksów bez potrzeby.
 
-```text
-all settlements
-×
-all households
-×
-all goods
-×
-all NPCs
-×
-every frame
-```
+Jeżeli profiling/realny scale pokaże koszt, można później rozszerzyć registry o endpoint/item indexes.
 
-Pierwszy slice jest ograniczony przez istniejący Trader work cadence.
+## 14. Observability
 
-Source search pozostaje lokalny dla jednej osady.
+Reuse istniejący transport debug API.
 
-Active-order queries powinny reuse registry/indexy z 018–019. Jeżeli takich query nie ma, dodać minimalny query/index helper potrzebny do tego use case zamiast pełnego global scan w hot path.
-
-## 15. Observability
-
-Dodać tylko minimalną diagnostykę potrzebną do zweryfikowania pełnej pętli.
-
-Powinno dać się ustalić:
+Minimalnie powinno dać się ustalić:
 
 ```text
-settlement shortage
-uncovered shortage
+current shortage
+incoming committed quantity
+uncovered demand
 selected source household
 source surplus
-pre-pickup outgoing commitments
-incoming commitments
-created TransportOrder
-pickup
-delivery
+pre-pickup committed quantity
+requested quantity
+order id/state
+claimed quantity
+delivered quantity
 resulting shortage
 ```
 
-Reuse transport/domain history/debug tooling z 018–019.
+Nie tworzyć osobnego economy transport debugger.
 
-Nie tworzyć osobnego economy transport debugger, jeśli obecne narzędzia wystarczą.
+## 15. Tests
 
-## 16. Tests
-
-Dodać focused deterministic tests obejmujące co najmniej:
+Dodać focused deterministic tests.
 
 ### Basic demand
 
 ```text
-settlement food shortage
+settlement shortage > 0
 +
-household food surplus
-→ transport order can be created
+household uncommitted food surplus > 0
+→ Trader creates assigned TransportOrder
 ```
 
 ### No shortage
 
 ```text
-settlement has enough food
-→ no order
+settlement shortage = 0
+→ no new order
 ```
 
-### No source
-
-```text
-settlement shortage
-+
-no household surplus
-→ no order
-```
-
-### Destination commitment
+### Incoming covers shortage
 
 ```text
 shortage = 5
-active incoming = 5
-→ no additional order
+active incoming commitment = 5
+→ no new order
 ```
 
 ### Partial uncovered demand
 
 ```text
 shortage = 5
-active incoming = 3
-→ max new demand = 2
+active incoming commitment = 3
+→ new requested quantity <= 2
 ```
 
 ### Source commitment
 
 ```text
 household surplus = 4
-active pre-pickup outgoing = 3
-→ max available source = 1
+pre-pickup outgoing commitment = 3
+→ available source <= 1
+```
+
+### In-transit is not source reservation
+
+```text
+household current surplus = 4
+old order from household is already in-transit
+→ old claimed cargo is not subtracted again from household surplus
+```
+
+### Alternative source
+
+```text
+nearest household surplus fully committed
+second household has uncommitted surplus
+→ deterministic selection chooses second household
+```
+
+### Resume active order
+
+```text
+Trader already has assigned/in-transit order
+→ planner resumes same order
+→ no replacement order
 ```
 
 ### Pickup revalidation
 
 ```text
 source selected
-goods consumed before pickup
-→ no duplication / no negative stock
+stock changes before pickup
+→ existing pickup transaction claims current live amount or fails safely
 ```
 
 ### Feedback loop
@@ -648,11 +522,7 @@ shortage
 → shortage decreases
 ```
 
-### Determinism
-
-Ten sam stan świata powinien wybrać ten sam source.
-
-## 17. Explicit Non-goals
+## 16. Explicit Non-goals
 
 Poza zakresem:
 
@@ -672,34 +542,25 @@ Poza zakresem:
 - strategic trade routes,
 - world-wide logistics planner.
 
-Te przypadki mogą rozszerzyć ten sam mechanizm później.
+## 17. Extension Path
 
-## 18. Extension Path
-
-Po zamknięciu pierwszego slice ten sam wzorzec może zostać rozszerzony:
+Po tym slice ten sam mechanizm może zostać rozszerzony kolejno na:
 
 ```text
 Household shortage
-    ↓
-TransportOrder
+→ TransportOrder
 ```
-
-następnie:
 
 ```text
 Production input shortage
-    ↓
-TransportOrder
+→ TransportOrder
 ```
-
-i później:
 
 ```text
 Settlement shortage
-    ↓
-other settlement surplus
-    ↓
-inter-settlement transport
++
+remote settlement surplus
+→ inter-settlement TransportOrder
 ```
 
 Każdy kolejny etap powinien reuse:
@@ -712,15 +573,7 @@ derived uncovered demand / committed supply
 TransportOrder
 ```
 
-bez tworzenia równoległych logistics systems.
-
-## 19. Implementation Documentation
-
-Jeżeli implementacja doda ważne publiczne lub architektoniczne helpery odpowiedzialne za economy-to-transport boundary, active-order queries albo transport-opportunity derivation, dodać zwięzły JSDoc opisujący ownership i responsibility.
-
-Tam gdzie pomaga to AI preflight / code discovery, użyć odpowiedniego `@domain` tagu zgodnie z istniejącymi conventions.
-
-Nie dodawać JSDoc mechanicznie do lokalnych lub oczywistych helperów.
+bez równoległych logistics systems.
 
 ## Verification
 
@@ -739,29 +592,14 @@ Scenariusz:
 
 ```text
 1. stworzyć settlement food shortage,
-2. pozostawić household z food surplus,
+2. pozostawić co najmniej dwa households z różnym food surplus,
 3. pozwolić Traderowi wejść w normalny work flow,
-4. potwierdzić powstanie TransportOrder,
-5. obserwować pickup,
-6. obserwować transport,
-7. obserwować delivery,
-8. potwierdzić wzrost settlement food inventory,
-9. potwierdzić spadek shortage,
-10. potwierdzić brak duplicate order po pokryciu demand.
+4. potwierdzić powstanie jednego właściwego TransportOrder,
+5. obserwować pickup i delivery,
+6. potwierdzić wzrost settlement food inventory,
+7. potwierdzić spadek shortage,
+8. potwierdzić brak duplicate order przy już pokrytym incoming demand,
+9. sprawdzić zachowanie po stream-out / stream-in podczas in-transit.
 ```
-
-## Draft Exit Criteria
-
-Plan może zmienić status z `draft` na `planned` dopiero gdy:
-
-- `settlements-npcs-018` jest zaimplementowany,
-- `settlements-npcs-019` jest zaimplementowany,
-- wykonano focused recon ich aktualnego kodu,
-- wykonano ponowny recon post-018 Trader/local circulation flow z `settlements-npcs-014`,
-- zidentyfikowano rzeczywistą granicę między economic decision i transport execution,
-- potwierdzono rzeczywiste `TransportOrder` lifecycle/API,
-- potwierdzono NPC transport commitment semantics,
-- potwierdzono active-order query / accounting możliwości,
-- zaktualizowano ten plan do rzeczywistych nazw typów i plików.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
