@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** optimization
 **Priority:** high · **Effort:** M
-**Depends on:** none
+**Depends on:** settlements-009, settlements-011, settlements-012, settlements-013
 **Domain:** `settlements`
 **Subdomains:** `development` `resources`
 **Tags:** `worldgen` `cache` `settlement` `performance`
