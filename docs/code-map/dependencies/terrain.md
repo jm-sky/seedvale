@@ -303,6 +303,8 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/chunkMeshData.test.ts`
 - `terrain/chunkMeshData.ts`
+- `terrain/chunkTileWorldgenCache.test.ts`
+- `terrain/chunkTileWorldgenCache.ts`
 - `terrain/chunkVegetation.test.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/chunkWorkerPool.ts`
@@ -326,6 +328,8 @@ Generated from TypeScript imports.
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
+- `world/caves/caveWorldgenCache.test.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
@@ -378,6 +382,8 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.worker.ts`
 - `terrain/chunkManager.test.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkTileWorldgenCache.test.ts`
+- `terrain/chunkTileWorldgenCache.ts`
 - `terrain/chunkWorkerPool.ts`
 
 ## `terrain/chunkItems.test.ts`
@@ -444,6 +450,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkMeshCache.ts`
 - `terrain/chunkMeshData.ts`
+- `terrain/chunkTileWorldgenCache.ts`
 - `terrain/chunkWorkerPool.ts`
 - `terrain/chunkWorldItems.ts`
 - `terrain/distanceLod.ts`
@@ -475,9 +482,11 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/worldBundle.ts`
 - `terrain/chunkManager.test.ts`
+- `terrain/chunkTileWorldgenCache.test.ts`
 - `terrain/digAction.ts`
 - `terrain/footstepSurface.test.ts`
 - `terrain/footstepSurface.ts`
+- `world/caves/caveWorldgenCache.test.ts`
 - `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
@@ -537,6 +546,30 @@ Generated from TypeScript imports.
 - `terrain/terrainCutout.test.ts`
 - `terrain/terrainCutout.ts`
 - `world/caves/caveTerrainCutout.test.ts`
+
+## `terrain/chunkTileWorldgenCache.test.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkHeightmapProtocol.ts`
+- `terrain/chunkManager.ts`
+- `terrain/chunkTileWorldgenCache.ts`
+
+## `terrain/chunkTileWorldgenCache.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `persistence/worldgenFingerprint.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkHeightmapProtocol.ts`
+
+**Imported by**
+
+- `terrain/chunkManager.ts`
+- `terrain/chunkTileWorldgenCache.test.ts`
 
 ## `terrain/chunkVegetation.test.ts`
 
@@ -1034,6 +1067,7 @@ Generated from TypeScript imports.
 - `terrain/terrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/caveTerrainCutout.ts`
+- `world/caves/caveWorldgenCache.test.ts`
 - `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`

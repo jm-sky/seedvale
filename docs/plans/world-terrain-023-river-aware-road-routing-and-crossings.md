@@ -25,12 +25,12 @@ road route search
 → deep/wide channel = bridge or reroute
 → canonical crossing record
 → ford terrain/water projection here
-→ bridge runtime projection in world-terrain-029
+→ bridge runtime projection in world-terrain-033
 ```
 
-The route result becomes the single owner of road↔river crossing semantics. Terrain shaping may project a declared ford, and `world-terrain-029` may project a declared bridge, but neither may independently decide whether a crossing exists or what kind it is.
+The route result becomes the single owner of road↔river crossing semantics. Terrain shaping may project a declared ford, and `world-terrain-033` may project a declared bridge, but neither may independently decide whether a crossing exists or what kind it is.
 
-This plan intentionally stops before bridge visualization/traversal. `world-terrain-029-road-bridge-projection-and-traversal.md` depends on the canonical `bridge` crossing produced here.
+This plan intentionally stops before bridge visualization/traversal. `world-terrain-033-road-bridge-projection-and-traversal.md` depends on the canonical `bridge` crossing produced here.
 
 ## 2. Current state verified in code
 
@@ -128,7 +128,7 @@ Invariants:
 
 `routeCache` should cache this richer result (or `null`) under the existing order-independent pair/location keys. Existing route/signpost/minor-location consumers continue reading geometry from the same cache and must not launch independent route searches.
 
-The canonical `kind = 'bridge'` record is the explicit dependency contract consumed by `world-terrain-029`; this plan does not instantiate it.
+The canonical `kind = 'bridge'` record is the explicit dependency contract consumed by `world-terrain-033`; this plan does not instantiate it.
 
 ## 4. Feed canonical river data into routing
 
@@ -178,7 +178,7 @@ Initial policy should reuse production ford tuning rather than invent unrelated 
 
 Move ford-vs-bridge policy out of `riverFord.ts`; that module should retain/provide ford shaping maths but consume an already-declared ford influence.
 
-Bridge feasibility/cost belongs here because A* must compare bridge vs detour/ford before `world-terrain-029` exists. Bridge **presentation and traversal** do not.
+Bridge feasibility/cost belongs here because A* must compare bridge vs detour/ford before `world-terrain-033` exists. Bridge **presentation and traversal** do not.
 
 Keep V1 deterministic and static. Do not add seasonal/current/weather-dependent crossing availability.
 
@@ -241,11 +241,11 @@ This makes gameplay water depth agree with the actual shaped terrain while keepi
 
 Do not modify water height and do not create a second water surface.
 
-## 10. Bridge handoff to world-terrain-029
+## 10. Bridge handoff to world-terrain-033
 
 This plan owns only the semantic bridge decision needed by routing.
 
-For `kind = 'bridge'`, guarantee a stable crossing record with enough canonical facts for `world-terrain-029` to derive the visual/traversal spec without re-running river intersection/classification.
+For `kind = 'bridge'`, guarantee a stable crossing record with enough canonical facts for `world-terrain-033` to derive the visual/traversal spec without re-running river intersection/classification.
 
 Explicitly out of scope here:
 
@@ -255,7 +255,7 @@ Explicitly out of scope here:
 - bridge-span road-terrain masking,
 - runtime chunk dedup/ownership.
 
-Those belong to `world-terrain-029-road-bridge-projection-and-traversal.md`.
+Those belong to `world-terrain-033-road-bridge-projection-and-traversal.md`.
 
 Do not add temporary renderer-only bridge logic in this plan.
 
@@ -330,7 +330,7 @@ Extend `src/terrain/chunkHeightmap.test.ts`, `riverFord.test.ts` and/or focused 
 4. local-water depth uses the same effective ford bed as terrain,
 5. ford projection is seam-safe across chunk boundaries.
 
-Bridge runtime/terrain-mask tests belong to `world-terrain-029`, not this plan.
+Bridge runtime/terrain-mask tests belong to `world-terrain-033`, not this plan.
 
 ## 15. Performance constraints
 
@@ -359,8 +359,8 @@ Add JSDoc for important new architectural/public crossing functions/types where 
 
 ## 17. Non-goals
 
-- bridge visualization, streaming, collision or walkable deck — `world-terrain-029`,
-- bridge terrain-span masking — `world-terrain-029`,
+- bridge visualization, streaming, collision or walkable deck — `world-terrain-033`,
+- bridge terrain-span masking — `world-terrain-033`,
 - player-built bridges,
 - bridge damage/repair/decay,
 - bridge construction economy,
@@ -381,7 +381,7 @@ Add JSDoc for important new architectural/public crossing functions/types where 
 - Final crossing topology survives route meandering/post-processing exactly.
 - Minor-location paths never silently request a full bridge in V1.
 - Route/crossing output is deterministic across repeated generation, caller order and chunk streaming order.
-- The bridge record is sufficient for `world-terrain-029` to project runtime infrastructure without reclassification.
+- The bridge record is sufficient for `world-terrain-033` to project runtime infrastructure without reclassification.
 - No save migration is required.
 
 ## 19. Verification
@@ -403,8 +403,8 @@ Manual/browser verification is performed by the user. For this plan verify at mi
 - a small stream road crossing produces a visible/usable ford,
 - an undeclared incidental road×river overlap does not create a ford,
 - local water depth at the ford agrees with shaped terrain,
-- a large/deep river no longer gets a naked crossing; until `world-terrain-029` is implemented, a canonical `bridge` decision is allowed to have no bridge presentation yet.
+- a large/deep river no longer gets a naked crossing; until `world-terrain-033` is implemented, a canonical `bridge` decision is allowed to have no bridge presentation yet.
 
-Bridge visual/traversal verification belongs to `world-terrain-029`.
+Bridge visual/traversal verification belongs to `world-terrain-033`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

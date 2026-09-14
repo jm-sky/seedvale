@@ -8,6 +8,13 @@ Generated from exported TypeScript symbols.
 - `DevelopmentStatus` — type — line 3
 - `WOODSHED_DEVELOPMENT` — const — line 14
 
+## `economy/foodTransportDemand.ts`
+
+- `committedIncomingFood` — function — line 26
+- `committedOutgoingFood` — function — line 47
+- `uncommittedHouseholdFoodSurplus` — function — line 76
+- `uncoveredSettlementFoodShortage` — function — line 68
+
 ## `economy/initial.ts`
 
 - `demandsFor` — function — line 77

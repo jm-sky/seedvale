@@ -355,6 +355,7 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.ts`
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
+- `world/caves/caveWorldgenCache.test.ts`
 - `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
@@ -579,6 +580,8 @@ Generated from TypeScript imports.
 - `debug/householdHistory.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
+- `economy/foodTransportDemand.test.ts`
+- `economy/foodTransportDemand.ts`
 - `economy/localExchange.test.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.test.ts`
@@ -626,6 +629,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
 - `settlement/createSettlement.ts`
 - `settlement/householdExchange.test.ts`

@@ -4,7 +4,7 @@
 
 These notes capture the focused recon needed to implement `world-terrain-023` without repeating broad repository discovery.
 
-The plan has been split: `world-terrain-023` now owns river-aware routing, canonical crossing semantics and ford projection only. Bridge visualization, streaming, terrain masking and traversal moved to `world-terrain-029-road-bridge-projection-and-traversal.md`.
+The plan has been split: `world-terrain-023` now owns river-aware routing, canonical crossing semantics and ford projection only. Bridge visualization, streaming, terrain masking and traversal moved to `world-terrain-033-road-bridge-projection-and-traversal.md`.
 
 Current code is authoritative. Re-check touched symbols before editing because nearby terrain/worldgen work may continue to evolve.
 
@@ -163,7 +163,7 @@ Each crossing needs stable semantic data, not runtime presentation state:
 
 Do not store `THREE.Object3D`, chunk ownership, colliders or bridge runtime handles in this result.
 
-`world-terrain-029` consumes `kind = 'bridge'` from this same record. If 029 later needs another deterministic semantic fact, extend this contract rather than letting it rediscover crossings.
+`world-terrain-033` consumes `kind = 'bridge'` from this same record. If 029 later needs another deterministic semantic fact, extend this contract rather than letting it rediscover crossings.
 
 ## Symmetry / route cache
 
@@ -244,7 +244,7 @@ Preserve the ordering, but replace implicit overlap authority with explicit ford
 
 The worker-safe projection should be analogous to `RoadCorridorSegment[]` / `RiverChannelSegment[]`: compact numeric data relevant to this chunk only.
 
-Do **not** add bridge-span masking here in `023`; that belongs to `world-terrain-029` once canonical bridge records exist.
+Do **not** add bridge-span masking here in `023`; that belongs to `world-terrain-033` once canonical bridge records exist.
 
 ## Road corridor projection seam
 
@@ -341,7 +341,7 @@ Required cases:
 - `sampleLocalWater` effective depth matches shaped ford bed,
 - ford projection is seam-safe across chunk boundaries.
 
-Do not add bridge visual/traversal/mask tests here; they are `world-terrain-029` scope.
+Do not add bridge visual/traversal/mask tests here; they are `world-terrain-033` scope.
 
 ## Suggested implementation order
 
@@ -353,7 +353,7 @@ Do not add bridge visual/traversal/mask tests here; they are `world-terrain-029`
 6. Fix effective ford bed in local-water sampling.
 7. Add determinism/integration tests and update state docs.
 
-This completes the semantic dependency required by `world-terrain-029` without mixing runtime bridge work back into this plan.
+This completes the semantic dependency required by `world-terrain-033` without mixing runtime bridge work back into this plan.
 
 ## Documentation after implementation
 
@@ -363,7 +363,7 @@ Update the current-state docs that actually own changed behaviour, likely:
 - `docs/state/terrain-and-world-generation.md`,
 - `docs/STATE.md` only if its short summary needs the capability.
 
-Once the implementation truly resolves the corresponding `LOOSE-ENDS.md` entries, remove them according to that file's convention. The bridge-presentation part remains covered by planned `world-terrain-029` until implemented.
+Once the implementation truly resolves the corresponding `LOOSE-ENDS.md` entries, remove them according to that file's convention. The bridge-presentation part remains covered by planned `world-terrain-033` until implemented.
 
 Do not duplicate detailed crossing policy across multiple state documents.
 
@@ -378,4 +378,4 @@ Do not duplicate detailed crossing policy across multiple state documents.
 - No uncontrolled RNG or caller-order-dependent crossing ids.
 - Preserve the shared route cache for roads/signposts/minor-location routes.
 - `path` is ford-only in V1; do not introduce path bridge tiers.
-- No bridge mesh, streamed runtime, deck ground/collider or bridge-span terrain mask in `023`; those are `world-terrain-029`.
+- No bridge mesh, streamed runtime, deck ground/collider or bridge-span terrain mask in `023`; those are `world-terrain-033`.

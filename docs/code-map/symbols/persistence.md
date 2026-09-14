@@ -182,8 +182,24 @@ Generated from exported TypeScript symbols.
   - system: worldgen-cache
   - role: Generic `(seed, namespace, version, key) -> payload` disposable derived-data store (plan world-015 §11/§12) — a persistence primitive, never a source of world truth. A namespace owner (e.g. `world/locations/locationsCoarseCache.ts`) decides its own payload shape, fingerprint and versioning; this module only knows how to store/retrieve/ bound it.
   - integration: Runtime correctness must never depend on this succeeding — a read miss or write failure always falls back to normal procedural generation at the call site.
-- `countCacheForSeed` — function — line 108
-- `deleteCacheForSeed` — function — line 91
-- `enforceCacheCap` — function — line 131
+- `countCacheForSeed` — function — line 161
+- `deleteCacheForSeed` — function — line 144
+- `deleteCacheRecords` — function — line 108
+  - domain: persistence
+  - system: worldgen-cache
+- `enforceCacheCap` — function — line 184
+- `getCacheRecord` — function — line 81
+  - domain: persistence
+  - system: worldgen-cache
 - `listCacheRecords` — function — line 57
-- `putCacheRecords` — function — line 74
+- `putCacheRecords` — function — line 127
+
+## `persistence/worldgenFingerprint.ts`
+
+- `hashString` — function — line 28
+- `stableStringify` — function — line 16
+  - domain: persistence
+  - system: worldgen-cache
+  - role: The one stable-fingerprint primitive every worldgen-cache namespace owner uses to turn its deterministic inputs into the `fingerprint` field of a `CacheRecord` (plan world-015 §8). Namespace owners decide *what* goes into the fingerprint; this module only decides how a value becomes a stable string.
+  - integration: A fingerprint mismatch is always a plain cache miss, never a migration and never a correctness problem — so this hash may be cheap and non-cryptographic.
+- `worldgenFingerprint` — function — line 43

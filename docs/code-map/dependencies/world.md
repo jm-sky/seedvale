@@ -401,6 +401,7 @@ Generated from TypeScript imports.
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveInteriorRocks.test.ts`
 - `world/caves/caveInteriorRocks.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/caves/productionTopology.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
@@ -484,6 +485,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveInteriorRocks.test.ts`
 - `world/caves/caveInteriorRocks.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.ts`
 - `world/locations/treasureMapBearCave.test.ts`
@@ -734,6 +736,7 @@ Generated from TypeScript imports.
 - `world/caves/caveTerrainCutout.ts`
 - `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/caveUndergroundPool.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/dungeonTopology.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
@@ -992,6 +995,7 @@ Generated from TypeScript imports.
 - `world/caves/caveRoute.ts`
 - `world/caves/caveUndergroundPool.ts`
 - `world/caves/caveUndergroundPoolFootprint.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/caves/dungeonChambers.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/dungeonTopology.ts`
@@ -1036,6 +1040,7 @@ Generated from TypeScript imports.
 - `world/caves/caveHabitat.dungeon.test.ts`
 - `world/caves/caveUndergroundPool.test.ts`
 - `world/caves/caveUndergroundPoolPresentation.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/caves/dungeonTopology.ts`
 - `world/createCaves.ts`
 
@@ -1067,6 +1072,39 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/createCaves.ts`
+
+## `world/caves/caveWorldgenCache.test.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `persistence/worldgenCacheDb.ts`
+- `settlement/families.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkManager.ts`
+- `terrain/terrainCutout.ts`
+- `world/caves/caveWorldgenCache.ts`
+- `world/collision.ts`
+- `world/createCaves.ts`
+
+## `world/caves/caveWorldgenCache.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `persistence/worldgenFingerprint.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/caves/caveArchetype.ts`
+- `world/caves/caveContentAnchors.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPool.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/caves/caveWorldgenCache.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/clipBelowSurface.test.ts`
@@ -1419,6 +1457,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `world/caveColliders.test.ts`
 - `world/caveColliders.ts`
+- `world/caves/caveWorldgenCache.test.ts`
 - `world/collision.test.ts`
 - `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
@@ -1607,6 +1646,7 @@ Generated from TypeScript imports.
 - `world/caves/caveTopology.ts`
 - `world/caves/caveUndergroundPool.ts`
 - `world/caves/caveUndergroundPoolPresentation.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/caves/dungeonChambers.ts`
 - `world/caves/mouthCarve.ts`
 - `world/caves/productionTopology.ts`
@@ -1620,6 +1660,7 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.caveTreasure.test.ts`
 - `app/worldBundle.ts`
+- `world/caves/caveWorldgenCache.test.ts`
 - `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
@@ -1968,6 +2009,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
 - `app/worldBundle.ts`
+- `economy/foodTransportDemand.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `world/createTransportOrders.test.ts`
@@ -2411,6 +2453,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `persistence/worldgenCacheDb.ts`
+- `persistence/worldgenFingerprint.ts`
 - `terrain/chunkHeightmap.ts`
 
 **Imported by**
@@ -2576,6 +2619,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `persistence/worldgenCacheDb.ts`
+- `persistence/worldgenFingerprint.ts`
 - `terrain/chunkHeightmap.ts`
 
 **Imported by**
@@ -3630,6 +3674,7 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/worldBundle.ts`
 - `debug/npcDebugApi.ts`
+- `economy/foodTransportDemand.ts`
 - `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `world/createTransportOrders.test.ts`

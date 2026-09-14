@@ -4,7 +4,16 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-terrain-031-persistent-chunk-tile-worldgen-cache`               | 2026-09-14 15:46:21 | —                   | `world-terrain`  | —          |
+| `world-terrain-030-persistent-cave-worldgen-cache`                     | 2026-09-14 15:20:51 | —                   | `world-terrain`  | —          |
+| `fauna-029-animal-water-route-preference-and-corpse-world-time`        | 2026-09-14 14:55:25 | —                   | `fauna`          | —          |
+| `settlements-npcs-020-economy-driven-transport-demand-integration`     | 2026-09-14 14:55:23 | —                   | `settlements-npcs` | —          |
+| `tools-013-npc-decision-verification-and-scenario-tooling`             | 2026-09-14 14:26:15 | —                   | `tools`          | —          |
+| `settlements-npcs-031-sustainable-seed-recovery-and-replanting`        | 2026-09-14 14:12:33 | —                   | `settlements-npcs` | —          |
 | `ui-input-017-quest-log-information-architecture`                      | 2026-09-14 13:32:52 | —                   | `ui-input`       | —          |
+| `world-023-species-driven-sowing-density-and-yield`                    | 2026-09-14 13:08:02 | —                   | `world`          | —          |
+| `quests-progression-027-lost-treasure-expedition`                      | 2026-09-14 13:05:15 | —                   | `quests-progression` | —          |
+| `settlements-008-settlement-progression-around-home`                   | 2026-09-14 12:58:11 | —                   | `settlements`    | —          |
 | `settlements-npcs-017-production-demand-and-economic-pressures`        | 2026-09-14 12:18:18 | —                   | `settlements-npcs` | —          |
 | `fauna-028-animal-agent-update-cadence`                                | 2026-09-14 12:17:28 | —                   | `fauna`          | —          |
 | `world-terrain-027-landmark-variety-and-quest-hooks`                   | 2026-09-14 12:02:55 | —                   | `world-terrain`  | —          |

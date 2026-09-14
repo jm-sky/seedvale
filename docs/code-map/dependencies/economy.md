@@ -16,11 +16,35 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.test.ts`
 - `economy/settlementEconomy.ts`
 
+## `economy/foodTransportDemand.test.ts`
+
+**Imports**
+
+- `economy/foodTransportDemand.ts`
+- `economy/settlementEconomy.ts`
+- `settlement/household.ts`
+- `world/createTransportOrders.ts`
+
+## `economy/foodTransportDemand.ts`
+
+**Imports**
+
+- `economy/settlementEconomy.ts`
+- `items/items.ts`
+- `settlement/household.ts`
+- `world/transportOrder.ts`
+
+**Imported by**
+
+- `economy/foodTransportDemand.test.ts`
+- `economy/index.ts`
+
 ## `economy/index.ts`
 
 **Imports**
 
 - `economy/development.ts`
+- `economy/foodTransportDemand.ts`
 - `economy/initial.ts`
 - `economy/kinds.ts`
 - `economy/localExchange.ts`
@@ -39,6 +63,7 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `debug/npcDebugApi.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/rats.ts`
@@ -273,6 +298,8 @@ Generated from TypeScript imports.
 - `app/actions/householdResourceTransferActions.test.ts`
 - `app/actions/householdResourceTransferActions.ts`
 - `app/worldBundle.ts`
+- `economy/foodTransportDemand.test.ts`
+- `economy/foodTransportDemand.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
 - `economy/localExchange.test.ts`

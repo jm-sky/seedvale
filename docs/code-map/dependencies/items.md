@@ -1009,6 +1009,7 @@ Generated from TypeScript imports.
 - `combat/projectile.ts`
 - `debug/householdHistory.ts`
 - `debug/settlementHistory.ts`
+- `economy/foodTransportDemand.ts`
 - `economy/initial.ts`
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.ts`

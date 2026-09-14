@@ -785,6 +785,7 @@ Generated from TypeScript imports.
 - `items/weaponMaintenance.ts`
 - `player/physicalWorkStrength.ts`
 - `settlement/household.ts`
+- `settlement/householdExchange.ts`
 - `terrain/depositMining.ts`
 - `world/createTransportOrders.ts`
 - `world/fishing.ts`

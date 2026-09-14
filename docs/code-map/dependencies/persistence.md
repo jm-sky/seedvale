@@ -184,9 +184,22 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `persistence/worldgenCacheDb.test.ts`
+- `terrain/chunkTileWorldgenCache.test.ts`
+- `terrain/chunkTileWorldgenCache.ts`
+- `world/caves/caveWorldgenCache.test.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/locations/abandonedCemeteryCache.test.ts`
 - `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/locationsCoarseCache.test.ts`
 - `world/locations/locationsCoarseCache.ts`
 - `world/seedLibrary.test.ts`
 - `world/seedLibrary.ts`
+
+## `persistence/worldgenFingerprint.ts`
+
+**Imported by**
+
+- `terrain/chunkTileWorldgenCache.ts`
+- `world/caves/caveWorldgenCache.ts`
+- `world/locations/abandonedCemeteryCache.ts`
+- `world/locations/locationsCoarseCache.ts`

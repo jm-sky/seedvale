@@ -7,13 +7,13 @@
 1. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
-   🟡 `M` · ✅ ready · unlocks 1/1
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
+   🟡 `M` · ✅ ready · unlocks 2/2
+3. `settlements-013` — **Horse training progression, vendor and paddock**  
+   🟡 `M` · 🔒 blocked · unlocks 1/1
+4. `settlements-014` — **Persistent settlement definition worldgen cache**  
+   🔴 `M` · 🔒 blocked · unlocks 0/0
+5. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
-4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
-   🔴 `M` · ✅ ready · unlocks 0/0
-5. `settlements-013` — **Horse training progression, vendor and paddock**  
-   🟡 `M` · 🔒 blocked · unlocks 0/0
 
 ---
 
@@ -22,13 +22,13 @@
 1. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4 · roadmap: `companions`
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
-   🟡 `M` · ✅ ready · unlocks 1/1 · roadmap: `economy-goods-flow`
+   🟡 `M` · ✅ ready · unlocks 2/2 · roadmap: `economy-goods-flow`
 3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
 4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
    🔴 `M` · ✅ ready · unlocks 0/0 · roadmap: `economy-goods-flow`
-5. `world-018` — **Cave-aware rich finite resource deposits**  
-   🔴 `M` · 🔒 blocked · unlocks 1/1 · roadmap: `quests-abandoned-gold-mine-colony`
+5. `settlements-013` — **Horse training progression, vendor and paddock**  
+   🟡 `M` · 🔒 blocked · unlocks 1/1 · no roadmap
 
 ---
 
@@ -50,13 +50,13 @@ _No qualifying plans._
 1. `items-player-028` — **NPC player-storage access policies**  
    🔴 `L` · ✅ ready · unlocks 2/4
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
-   🟡 `M` · ✅ ready · unlocks 1/1
+   🟡 `M` · ✅ ready · unlocks 2/2
 3. `world-terrain-017` — **Abandoned mountain mine landmark**  
    🔴 `M` · ✅ ready · unlocks 2/2
 4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
    🔴 `M` · ✅ ready · unlocks 0/0
-5. `settlements-npcs-022` — **Household help and age-based work participation**  
-   🔴 `M` · ✅ ready · unlocks 0/0
+5. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+   🔴 `M` · ✅ ready · unlocks 2/2
 
 ---
 
@@ -79,82 +79,82 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
    → **unlocks:** 2/4
 
 2. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
-  🟡 `M` · **Score:**  59  
+  🟡 `M` · **Score:**  73  
+   → **unlocks:** 2/2
+
+3. `settlements-013` — **Horse training progression, vendor and paddock**  
+  🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-3. `world-terrain-017` — **Abandoned mountain mine landmark**  
+4. `world-terrain-017` — **Abandoned mountain mine landmark**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 2/2
 
-4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
+5. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
   🔴 `M` · **Score:**  55  
    → **unlocks:** 0/0
 
-5. `settlements-013` — **Horse training progression, vendor and paddock**  
-  🟡 `M` · **Score:**  47  
-   → **unlocks:** 0/0
+6. `world-terrain-023` — **River-aware road routing and canonical crossings**  
+  🔴 `M` · **Score:**  55  
+   → **unlocks:** 2/2
 
-6. `world-018` — **Cave-aware rich finite resource deposits**  
+7. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-7. `settlements-npcs-022` — **Household help and age-based work participation**  
+8. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
-
-8. `world-023` — **Species-Driven Sowing, Density and Yield**  
-  🔴 `M` · **Score:**  43  
-   → **unlocks:** 1/1
 
 9. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-10. `quests-progression-027` — **Lost treasure expedition — dungeon cave**  
-  🟡 `L` · **Score:**  34  
+10. `settlements-009` — **Settlement outskirts and pasture**  
+  🟡 `M` · **Score:**  31  
+   → **unlocks:** 1/1
+
+11. `settlements-011` — **Plaza layout, paving and core protection**  
+  🟡 `M` · **Score:**  31  
+   → **unlocks:** 1/1
+
+12. `settlements-014` — **Persistent settlement definition worldgen cache**  
+  🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-025` — **Resource storage visualization**  
+13. `settlements-npcs-025` — **Resource storage visualization**  
   ⚪ `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-12. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+14. `world-terrain-029` — **Persistent road route worldgen cache**  
+  🔴 `M` · **Score:**  29  
+   → **unlocks:** 0/0
+
+15. `world-terrain-032` — **Grass InstancedMesh constructor allocation optimization**  
+  🔴 `S` · **Score:**  29  
+   → **unlocks:** 0/0
+
+16. `world-terrain-033` — **Road bridge projection and traversal**  
+  🔴 `M` · **Score:**  29  
+   → **unlocks:** 0/0
+
+17. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-031` — **Sustainable Seed Recovery and Replanting**  
-  🔴 `L` · **Score:**  28  
-   → **unlocks:** 0/0
-
-14. `items-player-014` — **Rope-pullable resource transport**  
+18. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `tools-005` — **Seedvale Character Preparation Panel**  
+19. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `tools-013` — **NPC decision verification and scenario tooling**  
-  🔴 `M` · **Score:**  27  
-   → **unlocks:** 0/0
-
-17. `world-terrain-023` — **River-aware road routing and canonical crossings**  
-  🔴 `L` · **Score:**  24  
-   → **unlocks:** 0/0
-
-18. `settlements-008` — **Settlement progression around home**  
+20. `ui-input-018` — **Player combat mode and weapon toggle**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-19. `settlements-009` — **Settlement outskirts and pasture**  
-  🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
-20. `settlements-010` — **Closed and cautious settlement character**  
-  🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
-21. `settlements-011` — **Plaza layout, paving and core protection**  
+21. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -165,12 +165,21 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)  
   is blocked by:
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
-- [`settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`](settlements-npcs-031-sustainable-seed-recovery-and-replanting.md)  
+- [`settlements-014-persistent-settlement-definition-worldgen-cache.md`](settlements-014-persistent-settlement-definition-worldgen-cache.md)  
   is blocked by:
-  - [`world-023-species-driven-sowing-density-and-yield.md`](world-023-species-driven-sowing-density-and-yield.md)
+  - [`settlements-009-settlement-outskirts-and-pasture.md`](settlements-009-settlement-outskirts-and-pasture.md)
+  - [`settlements-011-plaza-layout-paving-and-core-protection.md`](settlements-011-plaza-layout-paving-and-core-protection.md)
+  - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
+  - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)
 - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
   is blocked by:
   - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
+- [`world-terrain-029-persistent-road-route-worldgen-cache.md`](world-terrain-029-persistent-road-route-worldgen-cache.md)  
+  is blocked by:
+  - [`world-terrain-023-river-aware-road-routing-and-crossings.md`](world-terrain-023-river-aware-road-routing-and-crossings.md)
+- [`world-terrain-033-road-bridge-projection-and-traversal.md`](world-terrain-033-road-bridge-projection-and-traversal.md)  
+  is blocked by:
+  - [`world-terrain-023-river-aware-road-routing-and-crossings.md`](world-terrain-023-river-aware-road-routing-and-crossings.md)
 
 ---
 
@@ -352,6 +361,7 @@ graph TD
   settlements_011["settlements-011 — Plaza layout, paving and core protection"]
   settlements_012["settlements-012 — Regional specialist trade and settlement-scale quality"]
   settlements_013["settlements-013 — Horse training progression, vendor and paddock"]
+  settlements_014["settlements-014 — Persistent settlement definition worldgen cache"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
   settlements_npcs_002["settlements-npcs-002 — NPC professions — complete profession work integration"]
   settlements_npcs_003["settlements-npcs-003 — Hunter Arrow Production"]
@@ -418,6 +428,7 @@ graph TD
   ui_input_015["ui-input-015 — Interaction Targeting and Action Semantics"]
   ui_input_016["ui-input-016 — Building placement and construction UX coherence"]
   ui_input_017["ui-input-017 — Quest log information architecture"]
+  ui_input_018["ui-input-018 — Player combat mode and weapon toggle"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
@@ -472,6 +483,11 @@ graph TD
   world_terrain_026["world-terrain-026 — Distant Cave Mouth Occlusion"]
   world_terrain_027["world-terrain-027 — Landmark variety and quest hooks"]
   world_terrain_028["world-terrain-028 — Archetype-aware cave story and loot anchors"]
+  world_terrain_029["world-terrain-029 — Persistent road route worldgen cache"]
+  world_terrain_030["world-terrain-030 — Persistent cave worldgen cache"]
+  world_terrain_031["world-terrain-031 — Persistent chunk tile worldgen cache"]
+  world_terrain_032["world-terrain-032 — Grass InstancedMesh constructor allocation optimization"]
+  world_terrain_033["world-terrain-033 — Road bridge projection and traversal"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -674,7 +690,11 @@ graph TD
   settlements_005 --> ui_input_014
   settlements_006 --> items_player_019
   settlements_007 --> settlements_npcs_034
+  settlements_009 --> settlements_014
+  settlements_011 --> settlements_014
   settlements_012 --> settlements_013
+  settlements_012 --> settlements_014
+  settlements_013 --> settlements_014
   settlements_npcs_002 --> settlements_npcs_005
   settlements_npcs_002 --> settlements_npcs_022
   settlements_npcs_002 --> settlements_npcs_024
@@ -788,6 +808,8 @@ graph TD
   world_terrain_019 --> world_terrain_026
   world_terrain_020 --> world_terrain_024
   world_terrain_020 --> world_terrain_028
+  world_terrain_023 --> world_terrain_029
+  world_terrain_023 --> world_terrain_033
   world_terrain_024 --> fauna_027
   world_terrain_024 --> quests_progression_008
   world_terrain_024 --> world_terrain_025

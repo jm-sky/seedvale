@@ -1585,6 +1585,7 @@ Generated from TypeScript imports.
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/caves/caveAuthoredAnchorClaims.ts`
+- `world/caves/caveWorldgenCache.ts`
 - `world/createBeehives.ts`
 - `world/createCarts.ts`
 - `world/createCaves.ts`

@@ -233,10 +233,11 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/householdExchange.ts`
 
-- `createHouseholdExchangeHooks` — function — line 71
-- `HouseholdExchangeHooks` — type — line 55
+- `createHouseholdExchangeHooks` — function — line 79
+- `HouseholdExchangeHooks` — type — line 62
 - `HouseholdSurplusCandidate` — type — line 12
-- `selectHouseholdSurplusSource` — function — line 30
+- `HouseholdSurplusLookup` — type — line 24
+- `selectHouseholdSurplusSource` — function — line 36
 
 ## `settlement/householdResourceTransfer.ts`
 
