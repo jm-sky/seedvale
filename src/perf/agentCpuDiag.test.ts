@@ -39,9 +39,11 @@ describe('agentCpuDiag', () => {
     diag.endNpcMaintenance()
     diag.beginFaunaAgentUpdates()
     diag.endFaunaAgentUpdates()
+    diag.beginFaunaAgentUpdates()
     diag.recordNearestScan(8)
     diag.recordNearestScan(4)
     diag.recordHerdLeaderScan(20)
+    diag.endFaunaAgentUpdates()
 
     const totals = diag.snapshot()
     expect(totals.nearestCalls).toBe(2)
@@ -64,7 +66,7 @@ describe('agentCpuDiag', () => {
         npcLivestockMs: 8,
         npcLivestockLoadedMs: 6,
         npcLivestockDetachedMs: 2,
-        livestockAnimalUpdatesMs: 7,
+        livestockAnimalUpdatesMs: 10,
         livestockPostUpdateMs: 0.5,
         livestockDetachedBookkeepingMs: 0.4,
         livestockSensingMs: 0.5,
@@ -131,13 +133,15 @@ describe('agentCpuDiag', () => {
     expect(report!.fauna.behaviourMsPerFrame).toBe(4)
     expect(report!.fauna.updateCallsPerFrame).toBe(22)
     expect(report!.fauna.expensiveBehaviourAgentsPerFrame).toBe(15)
+    expect(report!.npc.livestockOtherUpdateMsPerFrame).toBe(0.3)
+    expect(report!.fauna.otherUpdateMsPerFrame).toBe(0)
     const text = formatAgentCpuReport(report!)
     expect(text).toContain('[Seedvale Agent CPU]')
     expect(text).toContain('NPC (loaded): 18')
     expect(text).toContain('livestock: 0.8 ms/frame (8.0 ms cumulative)')
     expect(text).toContain('loaded tick: 0.6 ms/frame')
     expect(text).toContain('detached tick: 0.2 ms/frame')
-    expect(text).toContain('animal updates: 0.7 ms/frame')
+    expect(text).toContain('animal updates: 1.0 ms/frame')
     expect(text).toContain('duplicate updates/frame: 1.0')
     expect(text).toContain('rats: 0.4 ms/frame (4.0 ms cumulative)')
     expect(text).toContain('social: 0.1 ms/frame (1.0 ms cumulative)')
@@ -147,6 +151,8 @@ describe('agentCpuDiag', () => {
     expect(text).toContain('nearest scans: 10.0/frame (100 calls)')
     expect(text).toContain('AnimalAgent sections:')
     expect(text).toContain('behaviour: 4.0 ms/frame (40.0 ms cumulative)')
+    expect(text).toContain('other update: 0.3 ms/frame')
+    expect(text).toContain('other update: 0.0 ms/frame')
     expect(text).toContain('expensive behaviour agents/frame: 15.0')
   })
 
@@ -177,13 +183,107 @@ describe('agentCpuDiag', () => {
     expect(totals.livestockSensingMs).toBe(2)
     expect(totals.livestockTargetingMs).toBe(1)
     expect(totals.livestockBehaviourMs).toBe(0)
-    expect(totals.faunaBehaviourMs).toBe(9)
+    expect(totals.faunaSensingMs).toBe(0)
+    expect(totals.faunaTargetingMs).toBe(0)
+    expect(totals.faunaBehaviourMs).toBe(0)
     expect(totals.livestockNearestCalls).toBe(1)
     expect(totals.livestockNearestCandidatesChecked).toBe(4)
-    expect(totals.nearestCalls).toBe(2)
+    expect(totals.nearestCalls).toBe(0)
     expect(totals.livestockDogGuardScans).toBe(1)
     expect(totals.livestockGuardPredatorCandidates).toBe(3)
     expect(totals.livestockUniqueAnimals).toBe(2)
     setActiveMonitor(null)
+  })
+
+  it('routes wild-fauna AnimalAgent deltas only to FAUNA counters', () => {
+    const monitor = createPerfMonitor()
+    monitor.setSource('benchmark', true)
+    setActiveMonitor(monitor)
+    const diag = createAgentCpuDiag()
+
+    diag.beginFaunaAgentUpdates()
+    diag.recordFaunaUpdateCall()
+    diag.addFaunaSensingMs(3)
+    diag.addFaunaBehaviourMs(5)
+    diag.addFaunaLifePresentationMs(4)
+    diag.recordNearestScan(7)
+    diag.endFaunaAgentUpdates()
+
+    const totals = diag.snapshot()
+    expect(totals.faunaSensingMs).toBe(3)
+    expect(totals.faunaBehaviourMs).toBe(5)
+    expect(totals.faunaLifePresentationMs).toBe(4)
+    expect(totals.faunaUpdateCalls).toBe(1)
+    expect(totals.nearestCalls).toBe(1)
+    expect(totals.livestockSensingMs).toBe(0)
+    expect(totals.livestockBehaviourMs).toBe(0)
+    expect(totals.livestockLifePresentationMs).toBe(0)
+    expect(totals.livestockNearestCalls).toBe(0)
+    setActiveMonitor(null)
+  })
+
+  it('does not leak livestock or unscoped (rats) deltas into FAUNA counters', () => {
+    const monitor = createPerfMonitor()
+    monitor.setSource('benchmark', true)
+    setActiveMonitor(monitor)
+    const diag = createAgentCpuDiag()
+
+    diag.enterLivestockAgentUpdates()
+    diag.addFaunaBehaviourMs(2)
+    diag.addFaunaLifePresentationMs(3)
+    diag.recordFaunaUpdateCall()
+    diag.leaveLivestockAgentUpdates()
+    diag.addFaunaBehaviourMs(11)
+    diag.addFaunaLifePresentationMs(13)
+    diag.recordFaunaUpdateCall()
+    diag.recordNearestScan(9)
+
+    const totals = diag.snapshot()
+    expect(totals.livestockBehaviourMs).toBe(2)
+    expect(totals.livestockLifePresentationMs).toBe(3)
+    expect(totals.faunaBehaviourMs).toBe(0)
+    expect(totals.faunaLifePresentationMs).toBe(0)
+    expect(totals.faunaUpdateCalls).toBe(0)
+    expect(totals.nearestCalls).toBe(0)
+    setActiveMonitor(null)
+  })
+
+  it('keeps other update non-negative when section sums exceed the wall-clock', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    categoryMsSum[PERF_CATEGORY_INDEX.NPC] = 50
+    categoryMsSum[PERF_CATEGORY_INDEX.FAUNA] = 80
+    const report = buildAgentCpuReport({
+      frames: 10,
+      totals: {
+        ...emptyAgentCpuDiagTotals(),
+        npcLivestockMs: 40,
+        livestockAnimalUpdatesMs: 30,
+        livestockSensingMs: 10,
+        livestockTargetingMs: 10,
+        livestockDecisionMs: 10,
+        livestockBehaviourMs: 20,
+        livestockLifePresentationMs: 20,
+        faunaAgentUpdatesMs: 80,
+        faunaForestSamplingMs: 10,
+        faunaSensingMs: 20,
+        faunaTargetingMs: 20,
+        faunaDecisionMs: 20,
+        faunaBehaviourMs: 40,
+        faunaLifePresentationMs: 40,
+      },
+      categoryMsSum,
+      context: {
+        loadedChunks: 1,
+        npcCount: 1,
+        faunaCount: 1,
+        pixelRatio: 1,
+        quality: 'High',
+      },
+    })
+    expect(report).not.toBeNull()
+    expect(report!.npc.livestockOtherUpdateMsPerFrame).toBe(0)
+    expect(report!.fauna.otherUpdateMsPerFrame).toBe(0)
+    expect(report!.npc.livestockBehaviourMsPerFrame).toBe(2)
+    expect(report!.fauna.behaviourMsPerFrame).toBe(4)
   })
 })

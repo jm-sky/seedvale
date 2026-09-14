@@ -22,15 +22,14 @@ import { PERF_CATEGORY_INDEX } from './types'
  *  `addFauna*Ms` call adds one timed region's elapsed time onto a running
  *  total, so one logical section (e.g. "targeting") can be measured across
  *  two or more non-adjacent call sites inside `update()` without extra
- *  begin/end state. Livestock/rats share `AnimalAgent.update()`, so those
- *  fauna section counters still include settlement-owned animals; the NPC
- *  livestock/rats spans are the wall-clock of those ticks inside NPC total.
+ *  begin/end state.
  *
- *  Livestock inner breakdown (livestock-cpu-diagnostics) is gated by a
- *  short-lived `enterLivestockAgentUpdates` channel around the
- *  `tickSettlementLivestock` `animal.update` loop so the same
- *  `addFauna*Ms` deltas can be copied without a second `performance.now()`
- *  pair and without changing `AnimalUpdateContext`. */
+ *  `addFauna*Ms` and fauna adaptive counters route to **one** owner:
+ *    livestock channel (`enterLivestockAgentUpdates`) → livestock sections
+ *    fauna agent-update span (`beginFaunaAgentUpdates`) → FAUNA sections
+ *    otherwise (settlement rats, unscoped callers) → neither
+ *  The same delta is never added to both reports. Behaviour and
+ *  life/presentation are sequential spans inside `AnimalAgent.update()`. */
 export type AgentCpuDiagTotals = {
   npcCrowdMs: number
   npcAgentUpdatesMs: number
@@ -173,6 +172,7 @@ export type AgentCpuReport = {
     behaviourCumulativeMs: number
     lifePresentationMsPerFrame: number
     lifePresentationCumulativeMs: number
+    otherUpdateMsPerFrame: number
     updateCallsPerFrame: number
     sensingPassesPerFrame: number
     decisionPassesPerFrame: number
@@ -324,6 +324,12 @@ export function createAgentCpuDiag(): AgentCpuDiag {
   let npcStreamingStart = Number.NaN
   let npcMaintenanceStart = Number.NaN
   let faunaAgentStart = Number.NaN
+  let faunaAgentDepth = 0
+
+  function addSectionMs(faunaKey: 'faunaSensingMs' | 'faunaTargetingMs' | 'faunaDecisionMs' | 'faunaBehaviourMs' | 'faunaLifePresentationMs', livestockKey: 'livestockSensingMs' | 'livestockTargetingMs' | 'livestockDecisionMs' | 'livestockBehaviourMs' | 'livestockLifePresentationMs', ms: number): void {
+    if (livestockAgentDepth > 0) totals[livestockKey] += ms
+    else if (faunaAgentDepth > 0) totals[faunaKey] += ms
+  }
 
   return {
     isEnabled: () => getMonitor().isEnabled(),
@@ -476,88 +482,89 @@ export function createAgentCpuDiag(): AgentCpuDiag {
     beginFaunaAgentUpdates() {
       if (!this.isEnabled()) return
       faunaAgentStart = performance.now()
+      faunaAgentDepth++
     },
     endFaunaAgentUpdates() {
-      if (!this.isEnabled() || !Number.isFinite(faunaAgentStart)) return
-      totals.faunaAgentUpdatesMs += performance.now() - faunaAgentStart
-      faunaAgentStart = Number.NaN
+      if (!this.isEnabled()) return
+      if (Number.isFinite(faunaAgentStart)) {
+        totals.faunaAgentUpdatesMs += performance.now() - faunaAgentStart
+        faunaAgentStart = Number.NaN
+      }
+      if (faunaAgentDepth > 0) faunaAgentDepth--
     },
     addFaunaForestSamplingMs(ms) {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.faunaForestSamplingMs += ms
     },
     addFaunaSensingMs(ms) {
       if (!this.isEnabled()) return
-      totals.faunaSensingMs += ms
-      if (livestockAgentDepth > 0) totals.livestockSensingMs += ms
+      addSectionMs('faunaSensingMs', 'livestockSensingMs', ms)
     },
     addFaunaTargetingMs(ms) {
       if (!this.isEnabled()) return
-      totals.faunaTargetingMs += ms
-      if (livestockAgentDepth > 0) totals.livestockTargetingMs += ms
+      addSectionMs('faunaTargetingMs', 'livestockTargetingMs', ms)
     },
     addFaunaDecisionMs(ms) {
       if (!this.isEnabled()) return
-      totals.faunaDecisionMs += ms
-      if (livestockAgentDepth > 0) totals.livestockDecisionMs += ms
+      addSectionMs('faunaDecisionMs', 'livestockDecisionMs', ms)
     },
     addFaunaBehaviourMs(ms) {
       if (!this.isEnabled()) return
-      totals.faunaBehaviourMs += ms
-      if (livestockAgentDepth > 0) totals.livestockBehaviourMs += ms
+      addSectionMs('faunaBehaviourMs', 'livestockBehaviourMs', ms)
     },
     addFaunaLifePresentationMs(ms) {
       if (!this.isEnabled()) return
-      totals.faunaLifePresentationMs += ms
-      if (livestockAgentDepth > 0) totals.livestockLifePresentationMs += ms
+      addSectionMs('faunaLifePresentationMs', 'livestockLifePresentationMs', ms)
     },
     recordFaunaUpdateCall() {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.faunaUpdateCalls++
     },
     recordFaunaSensingPass() {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.faunaSensingPasses++
     },
     recordFaunaDecisionPass() {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.faunaDecisionPasses++
     },
     recordFaunaHighPriorityAgent() {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.faunaHighPriorityAgents++
     },
     recordFaunaExpensiveBehaviourAgent() {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.faunaExpensiveBehaviourAgents++
     },
     recordForestSample() {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.forestSampleCalls++
     },
     recordFireScan(candidatesChecked) {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.fireScanCandidates += candidatesChecked
     },
     recordVillageScan(candidatesChecked) {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.villageScanCandidates += candidatesChecked
     },
     recordPlayerPerceptionCheck() {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.playerPerceptionChecks++
     },
     recordNearestScan(candidatesChecked) {
       if (!this.isEnabled()) return
-      totals.nearestCalls++
-      totals.nearestCandidatesChecked += candidatesChecked
       if (livestockAgentDepth > 0) {
         totals.livestockNearestCalls++
         totals.livestockNearestCandidatesChecked += candidatesChecked
+        return
       }
+      if (faunaAgentDepth <= 0) return
+      totals.nearestCalls++
+      totals.nearestCandidatesChecked += candidatesChecked
     },
     recordHerdLeaderScan(candidatesChecked) {
-      if (!this.isEnabled()) return
+      if (!this.isEnabled() || livestockAgentDepth > 0 || faunaAgentDepth <= 0) return
       totals.herdLeaderCalls++
       totals.herdLeaderCandidatesChecked += candidatesChecked
     },
@@ -579,6 +586,7 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       npcStreamingStart = Number.NaN
       npcMaintenanceStart = Number.NaN
       faunaAgentStart = Number.NaN
+      faunaAgentDepth = 0
     },
   }
 }
@@ -755,6 +763,15 @@ export function buildAgentCpuReport(input: {
       behaviourCumulativeMs: round1(input.totals.faunaBehaviourMs),
       lifePresentationMsPerFrame: round1(input.totals.faunaLifePresentationMs / frames),
       lifePresentationCumulativeMs: round1(input.totals.faunaLifePresentationMs),
+      otherUpdateMsPerFrame: round1(Math.max(0,
+        faunaAgentMs
+        - input.totals.faunaForestSamplingMs / frames
+        - input.totals.faunaSensingMs / frames
+        - input.totals.faunaTargetingMs / frames
+        - input.totals.faunaDecisionMs / frames
+        - input.totals.faunaBehaviourMs / frames
+        - input.totals.faunaLifePresentationMs / frames,
+      )),
       updateCallsPerFrame: round1(input.totals.faunaUpdateCalls / frames),
       sensingPassesPerFrame: round1(input.totals.faunaSensingPasses / frames),
       decisionPassesPerFrame: round1(input.totals.faunaDecisionPasses / frames),
@@ -829,6 +846,7 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `    decision: ${fauna.decisionMsPerFrame.toFixed(1)} ms/frame (${fauna.decisionCumulativeMs.toFixed(1)} ms cumulative)`,
     `    behaviour: ${fauna.behaviourMsPerFrame.toFixed(1)} ms/frame (${fauna.behaviourCumulativeMs.toFixed(1)} ms cumulative)`,
     `    life/presentation: ${fauna.lifePresentationMsPerFrame.toFixed(1)} ms/frame (${fauna.lifePresentationCumulativeMs.toFixed(1)} ms cumulative)`,
+    `    other update: ${fauna.otherUpdateMsPerFrame.toFixed(1)} ms/frame`,
     '',
     '  adaptive candidates:',
     `    agent updates/frame: ${fauna.updateCallsPerFrame.toFixed(1)}`,
