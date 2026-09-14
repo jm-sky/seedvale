@@ -19,6 +19,7 @@
     "plans:migrate-metadata": "tsx scripts/docs/migrate-plan-metadata.ts",
     "plans:cleanup-metadata": "tsx scripts/docs/cleanup-plan-metadata.ts",
     "assets:report": "tsx scripts/docs/generate-local-assets-report.ts",
+    "assets:list-character-animations": "tsx scripts/assets/list-character-animations.ts",
     "docs:map-audit": "tsx scripts/docs/docs-map-audit.ts",
     "docs:navigation-candidates": "tsx scripts/docs/docs-navigation-candidates.ts",
     "docs:readme-index": "tsx scripts/docs/docs-readme-index.ts",

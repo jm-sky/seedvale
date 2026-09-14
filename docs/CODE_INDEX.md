@@ -209,7 +209,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 ### debug
 
-- `../src/debug/createHouseTestScene.ts` — debug factory; open first when tracing creation and setup of domain objects.
+- `../src/debug/createCaveHeightfieldTestScene.ts` — debug factory; open first when tracing creation and setup of domain objects.
 
 ### economy
 
@@ -223,9 +223,17 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - `../src/input/createTouchControls.ts` — input factory; open first when tracing creation and setup of domain objects.
 
+### interaction
+
+- `../src/interaction/Interactable.ts` — Interactable; open first for the primary interaction domain logic.
+
 ### items
 
 - `../src/items/Inventory.ts` — items domain entry; open first for the main items data and API surface.
+
+### perf
+
+- `../src/perf/agentCpuDiag.ts` — agentCpuDiag; open first for the primary perf domain logic.
 
 ### persistence
 
@@ -243,6 +251,10 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - `../src/render/createPostProcessing.ts` — render factory; open first when tracing creation and setup of domain objects.
 
+### reputation
+
+- `../src/reputation/ReputationManager.ts` — primary reputation manager; open first for domain coordination and state management.
+
 ### scene
 
 - `../src/scene/createCamera.ts` — scene factory; open first when tracing creation and setup of domain objects.
@@ -250,18 +262,6 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 ### settlement
 
 - `../src/settlement/settlementGenerator.ts` — primary settlement generator; open first for domain generation logic.
-
-### shared
-
-- `../src/shared/StaminaState.ts` — StaminaState; open first for the primary shared domain logic.
-
-### simulation
-
-- `../src/simulation/actionLifecycle.ts` — primary simulation lifecycle; open first for entity lifecycle behaviour.
-
-### terrain
-
-- `../src/terrain/chunkManager.ts` — primary terrain manager; open first for domain coordination and state management.
 
 <!-- AI_NAVIGATION_INDEX_END -->
 
