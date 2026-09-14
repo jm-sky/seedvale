@@ -9,7 +9,7 @@
 **Subdomains:** `household` `economy` `logistics`  
 **Tags:** `agriculture` `seeds` `off-screen`  
 **Roadmap:** `agriculture-and-cultivation`  
-**Implemented at:** 2026-09-14  
+**Implemented at:** 2026-09-14 16:12  
 
 ## Cel
 
