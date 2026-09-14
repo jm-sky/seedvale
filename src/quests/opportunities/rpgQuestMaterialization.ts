@@ -109,7 +109,7 @@ function materializeSuspiciousTransport(
         reminderLine: `${counterpart.name} może wiedzieć więcej o tej przesyłce.`,
         playerLine: `${giver.name} mówi o jakiejś przesyłce, o której nie chce rozmawiać.`,
         progressLine:
-          `Słyszałem o tej przesyłce. ${giver.name} nie chce powiedzieć, skąd przyszła. Zdecyduj, czy zostawiasz to między wami, czy mówisz mi, co wiesz.`,
+          `Słyszałem o tej przesyłce. ${giver.name} nie chce powiedzieć, skąd przyszła. Zdecyduj, czy zatajasz ten niejasny układ, czy ujawniasz go.`,
       },
       {
         objective: {
@@ -120,19 +120,19 @@ function materializeSuspiciousTransport(
               outcomeId: 'keep_quiet',
               npcLine:
                 `No? ${counterpart.name} cię namawiał, żebyś to rozdmuchiwał? Zostaw to. Nie każda przesyłka musi mieć świadków.`,
-              playerLine: 'Zostawiam to między nami. Nie będę o tym rozgłaszał.',
+              playerLine: 'Zataję ten niejasny układ. Nikomu nie powiem o tej przesyłce.',
             },
             {
               npc: { npcId: counterpart.id },
               outcomeId: 'report_it',
               npcLine:
                 'Jeśli ta przesyłka jest niejasna, powiedz wprost. Osada nie potrzebuje cichych układów za plecami.',
-              playerLine: `Mówię ci o przesyłce ${giver.name}. Nie chcę, żeby to zostało w cieniu.`,
+              playerLine: `Zgłaszam przesyłkę ${giver.name}. Osada powinna wiedzieć o tym układzie.`,
             },
           ],
         },
-        description: `Zdecyduj, czy zostawiasz sprawę ${giver.name}, czy zgłaszasz ją ${counterpart.name}.`,
-        reminderLine: 'Zdecydowałeś już, co z tą przesyłką?',
+        description: `Zdecyduj, czy zatajasz niejasny układ ${giver.name}, czy zgłaszasz go ${counterpart.name}.`,
+        reminderLine: 'Zdecydowałeś już, czy zataić tę przesyłkę, czy ją ujawnić?',
       },
     ],
     reportLine: 'Ta przesyłka nie jest już tylko szeptem.',

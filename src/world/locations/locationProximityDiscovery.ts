@@ -108,6 +108,28 @@ export function revealSettlementsInRange(
   return revealed
 }
 
+/**
+ * Settlement whose `VillagePlan.boundary` currently contains the player —
+ * the same area check as physical village confirmation, not nearest-loaded
+ * or `REST_IN_TOWN_RADIUS`. `null` outside every nearby settlement footprint.
+ * Overlaps (rare) pick the smaller stable `id`.
+ *
+ * @domain ui-input
+ */
+export function findSettlementContainingPlayer(
+  playerX: number,
+  playerZ: number,
+  lookupSettlement: (cell: SettlementCell) => SettlementProximityDef | null,
+): SettlementProximityDef | null {
+  let found: SettlementProximityDef | null = null
+  for (const cell of cellsWithinRadius(worldToCell(playerX, playerZ), SETTLEMENT_PROXIMITY_CELL_RADIUS)) {
+    const def = lookupSettlement(cell)
+    if (!def || !isInsideSettlementBoundary(playerX, playerZ, def)) continue
+    if (!found || def.id < found.id) found = def
+  }
+  return found
+}
+
 export type LocationProximityDiscovery = {
   /** Throttled proximity pass — call each frame; work runs at most a few
    *  times per second. Returns newly confirmed caves/settlements (and first-
@@ -120,6 +142,10 @@ export function createLocationProximityDiscovery(deps: {
   lookupSettlement: (cell: SettlementCell) => SettlementProximityDef | null
   catalog: WorldLocationCatalog
   knowledge: LocationKnowledge
+  /** Fires on the throttled proximity pass with the settlement currently
+   *  containing the player, or `null` when outside every nearby footprint.
+   *  Character Screen last-visited tracking — not a world-state mutation. */
+  onInsideSettlement?: (settlementId: string | null) => void
   checkIntervalS?: number
   now?: () => number
 }): LocationProximityDiscovery {
@@ -128,6 +154,7 @@ export function createLocationProximityDiscovery(deps: {
     lookupSettlement,
     catalog,
     knowledge,
+    onInsideSettlement,
     checkIntervalS = DEFAULT_CHECK_INTERVAL_S,
     now = () => performance.now() / 1000,
   } = deps
@@ -138,6 +165,7 @@ export function createLocationProximityDiscovery(deps: {
       const t = now()
       if (t < nextCheckAt) return []
       nextCheckAt = t + checkIntervalS
+      onInsideSettlement?.(findSettlementContainingPlayer(playerX, playerZ, lookupSettlement)?.id ?? null)
       const revealed = [
         ...revealCaveEntrancesInRange(playerX, playerZ, getCaveDefinitions(), catalog, knowledge),
         ...revealSettlementsInRange(playerX, playerZ, lookupSettlement, catalog, knowledge),

@@ -378,6 +378,16 @@ describe('QuestManager path for Podejrzany transport', () => {
     })!
     const def = materializeRpgQuestOpportunity(candidate, neighborNpcs, 'Lasowa')!
     expect(() => validateQuestDefinitions([def])).not.toThrow()
+    const choiceStage = def.stages[1]
+    expect(choiceStage?.objective).toMatchObject({ type: 'talk_to_npc_choice' })
+    if (choiceStage?.objective.type === 'talk_to_npc_choice') {
+      expect(choiceStage.objective.choices[0]?.playerLine).toBe(
+        'Zataję ten niejasny układ. Nikomu nie powiem o tej przesyłce.',
+      )
+      expect(choiceStage.objective.choices[1]?.playerLine).toBe(
+        'Zgłaszam przesyłkę Anna. Osada powinna wiedzieć o tym układzie.',
+      )
+    }
     const qm = new QuestManager([def], undefined, new Inventory())
     accept(qm, neighborAdult.id)
     speak(qm, neighborGuard.id)

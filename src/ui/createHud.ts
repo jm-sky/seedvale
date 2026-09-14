@@ -35,8 +35,8 @@ export type Hud = {
   /** Reputation Badges / Achievements (plan world-007 §9) — on-demand, not
    *  per-frame (see `store.ts`'s `setCharacterBadges` doc comment). */
   setPlayerBadges: (badges: readonly BadgeDef[]) => void
-  /** Local settlement reputation/renown for the Character Screen (plan
-   *  quests-progression-001) — on-demand (screen open + social consequence),
+  /** Known-settlement reputation for the Character Screen (plan
+   *  ui-input-019) — on-demand (screen open + selection + social consequence),
    *  never per-frame (see `store.ts`'s `CharacterReputationView` doc). */
   setCharacterReputation: (view: CharacterReputationView) => void
   /** Dedicated Dismount button (plan fauna-003 §10) — visible only while

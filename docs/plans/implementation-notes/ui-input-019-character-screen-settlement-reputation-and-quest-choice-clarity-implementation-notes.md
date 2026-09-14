@@ -247,4 +247,8 @@ Tests:
 
 Browser verification belongs to the User.
 
+## Implementation result
+
+Shipped as above. `lastVisitedSettlementId` is session runtime state (updated on VillagePlan.boundary presence / proximity ticks), carried across in-session WorldBundle rebuild, not a new `SaveData` field. Manual selector is presentation-only (`configureCharacterScreen`). Suspicious-transport matrix and cave-cache variant were the only choice-text edits.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

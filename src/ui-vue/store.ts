@@ -154,10 +154,10 @@ type PauseMenuState = {
   onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildWoodPile: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null; onLightWoodenTorch: (() => ActionResult) | null
   onNewGame: ((name: string, seedChoice: SeedChoice) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
-  /** Plan quests-progression-001 — unlike Skills, Character Screen needs a
-   *  settlement-context refresh at open time (see `CharacterReputationView`'s
-   *  doc), so it gets the same `onQuestLog`/`onInventory`-style app callback
-   *  instead of the Pause Menu calling `openCharacterScreen()` directly. */
+  /** Plan ui-input-019 — Character Screen needs a known-settlement reputation
+   *  refresh at open time (see `CharacterReputationView`'s doc), so it gets
+   *  the same `onQuestLog`/`onInventory`-style app callback instead of the
+   *  Pause Menu calling `openCharacterScreen()` directly. */
   onCharacter: (() => void) | null
   saveStatus: string
 }
@@ -561,28 +561,43 @@ export type CharacterStats = {
    *  push so we do not allocate modifier/skill arrays every frame. */
   presentation?: CharacterPresentation,
 }
-/** Local settlement reputation/renown for the Character Screen (plan
- *  quests-progression-001) — the settlement "aktualnie istotny dla pozycji/
- *  kontekstu gracza", resolved by app code (never a UI-owned remembered
- *  settlement id) and pushed via `setCharacterReputation` on screen open and
- *  after a social consequence. `null` outside any settlement's context —
- *  the screen then shows "Brak lokalnej reputacji" but still lists badges. */
-export type CharacterReputationView = {
+/** One known settlement the Character Screen can inspect (plan ui-input-019).
+ *  Presentation only — Vue never owns world knowledge or reputation. */
+export type CharacterSettlementOption = {
+  settlementId: string
+  settlementName: string
+}
+/** Standing payload for the currently selected settlement. */
+export type CharacterReputationStandingView = {
+  settlementId: string
   settlementName: string
   reputation: Reputation
   renown: number
-} | null
+}
+/** Local settlement reputation/renown for the Character Screen (plan
+ *  ui-input-019) — known-settlement options plus one selected standing,
+ *  pushed via `setCharacterReputation` on screen open, selection change,
+ *  and after a social consequence. Never per-frame. `selected` is `null`
+ *  only when the player knows no settlements — the screen then shows
+ *  "Brak lokalnej reputacji" but still lists badges. */
+export type CharacterReputationView = {
+  settlements: readonly CharacterSettlementOption[]
+  selectedSettlementId: string | null
+  selected: CharacterReputationStandingView | null
+}
 /** Reputation Badges / Achievements (plan world-007 §9) — pushed on demand
  *  (`setCharacterBadges`) rather than once/frame like the rest of this
  *  screen: it only ever changes on a discrete Hidden Find event. `reputation`
  *  is pushed separately (`setCharacterReputation`) since its own refresh
- *  points differ (screen open + social consequence, not Hidden Finds). */
-type CharacterScreenState = CharacterStats & {
+ *  points differ (screen open + social consequence + selection, not Hidden Finds). */
+type CharacterScreenState = {
   open: boolean
   reputation: CharacterReputationView
   badges: readonly BadgeDef[]
   presentation: CharacterPresentation
-}
+  /** Presentation-only selection — must not mutate world/reputation state. */
+  onSelectSettlement: ((settlementId: string) => void) | null
+} & CharacterStats
 /** Skills screen (plan 124, progression added by plan 128,
  *  targeted selection by plan items-player-021) — same presentation-only
  *  convention as `CharacterScreenState`: these mirror `PlayerController.skills`,
@@ -782,10 +797,11 @@ export const ui = reactive({
     vigor: { current: 100, max: 100 },
     hunger: { current: 100, max: 100 },
     thirst: { current: 100, max: 100 },
-    reputation: null,
+    reputation: { settlements: [], selectedSettlementId: null, selected: null },
     badges: [],
     attributes: { strength: 0, perception: 0, endurance: 0, agility: 0 },
     presentation: { attributes: [], skills: [], conditions: [], equipment: NEUTRAL_CHARACTER_EQUIPMENT_VIEW },
+    onSelectSettlement: null,
   } as CharacterScreenState,
   skillsScreen: {
     open: false,
@@ -1758,6 +1774,11 @@ export function toggleCharacterScreen(): void {
   if (ui.characterScreen.open) closeCharacterScreen()
   else openCharacterScreen()
 }
+export function configureCharacterScreen(handlers: {
+  onSelectSettlement: (settlementId: string) => void
+}): void {
+  ui.characterScreen.onSelectSettlement = handlers.onSelectSettlement
+}
 /** Pushed once/frame by `gameLoop.ts` regardless of whether the screen is
  *  open — same convention as `setHudPlayerNeeds` — with a cheap bail so an
  *  unchanged frame doesn't touch the reactive object. Presentation arrays
@@ -1860,8 +1881,8 @@ export function setCharacterBadges(badges: readonly BadgeDef[]): void {
   ui.characterScreen.badges = badges
 }
 
-/** Pushed on demand — screen open and after a social consequence, never
- *  once/frame (plan quests-progression-001, see `CharacterReputationView`). */
+/** Pushed on demand — screen open, settlement selection, and after a social
+ *  consequence, never once/frame (plan ui-input-019, see `CharacterReputationView`). */
 export function setCharacterReputation(view: CharacterReputationView): void {
   ui.characterScreen.reputation = view
 }

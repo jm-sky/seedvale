@@ -250,6 +250,13 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
       SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
       SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
     ])
+    const terminal = caveDef.stages[2]
+    expect(terminal?.dialogueActions?.[0]?.playerLine).toBe(
+      'Oddaję ci przesyłkę i zataję ten układ. Nikomu nie powiem.',
+    )
+    expect(terminal?.dialogueActions?.[1]?.playerLine).toBe(
+      'Znalazłem przesyłkę Kasia. Oddaję ci dowód i zgłaszam ten układ.',
+    )
   })
 
   it('leaves the dialogue-only matrix unchanged when no cave binding matches', () => {
@@ -372,7 +379,7 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
     inventory.addInstance(createSuspiciousTransportEvidenceInstance(binding.caveId))
     const traderActions = qm.onInteract(trader.id)
     expect(traderActions?.actions?.map((action) => action.label)).toEqual([
-      'Odbieram przesyłkę. Nikomu nie powiem.',
+      'Oddaję ci przesyłkę i zataję ten układ. Nikomu nie powiem.',
       'Zostawiam tę rzecz sobie. Nikomu jej nie oddam.',
     ])
     traderActions?.actions?.[0]?.onSelect()

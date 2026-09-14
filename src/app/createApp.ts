@@ -1,7 +1,6 @@
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
-import type { Settlement } from '../settlement/createSettlement'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
@@ -211,8 +210,14 @@ import {
 } from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { listKnownSettlementOptions, resolveCharacterReputationSettlementId } from '../world/locations/knownSettlementReputation'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
-import { confirmHomeSettlement, createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
+import {
+  confirmHomeSettlement,
+  createLocationProximityDiscovery,
+  findSettlementContainingPlayer,
+  revealSettlementsInRange,
+} from '../world/locations/locationProximityDiscovery'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
 import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
@@ -255,7 +260,7 @@ import { giveItemInstanceToNpc } from './actions/npcItemTransfer'
 import { createNpcItemTransferActions } from './actions/npcItemTransferActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
-import { createRestActions, REST_IN_TOWN_RADIUS } from './actions/restActions'
+import { createRestActions } from './actions/restActions'
 import { createStorageInfestationActions } from './actions/storageInfestationActions'
 import { createSurvivalActions } from './actions/survivalActions'
 import { createTerrainPreparationActions } from './actions/terrainPreparationActions'
@@ -590,8 +595,15 @@ export async function createApp(
   // (built alongside `questManager` below) needs to push a fresh Character
   // Screen reputation view, but the settlement lookup/`hud` it needs are
   // only wired up further down.
-  let refreshCharacterReputationTarget: (() => void) | null = null
-  const refreshCharacterReputation = (): void => { refreshCharacterReputationTarget?.() }
+  let refreshCharacterReputationTarget: ((mode?: 'open' | 'standing') => void) | null = null
+  const refreshCharacterReputation = (mode: 'open' | 'standing' = 'standing'): void => {
+    refreshCharacterReputationTarget?.(mode)
+  }
+  // Session presentation/last-visit memory for Character Screen reputation
+  // (plan ui-input-019) — not persisted; survives in-session WorldBundle
+  // rebuild. Do not derive this from ReputationManager's sparse entries.
+  let lastVisitedSettlementId: string | null = null
+  let selectedSettlementId: string | null = null
   // Same "target assigned later" indirection as `onAnimalDeath` above (plan
   // quests-progression-022 §8) — `SettlementsManager` fires this the moment a
   // settlement (home or a streamed-in neighbor) actually finishes building,
@@ -803,6 +815,9 @@ export async function createApp(
     lookupSettlement: lookupSettlementCell,
     catalog: worldLocationCatalog,
     knowledge: locationKnowledge,
+    onInsideSettlement: (settlementId) => {
+      if (settlementId) lastVisitedSettlementId = settlementId
+    },
   })
   const navigationTargets = createNavigationTargets()
   navigationTargets.restore(
@@ -958,6 +973,13 @@ export async function createApp(
     const homeSpawn = settlementSpawnPoint(bundle.settlementsManager.getHomeDef(), bundle.chunkManager.sampleHeight)
     player.setPosition(homeSpawn.x, homeSpawn.z)
   }
+
+  const currentAtSpawn = findSettlementContainingPlayer(
+    player.mesh.position.x,
+    player.mesh.position.z,
+    lookupSettlementCell,
+  )
+  lastVisitedSettlementId = currentAtSpawn?.id ?? bundle.settlementsManager.getHomeDef().id
 
   player.setName(config.player.name)
   player.setMoveAudio(worldAudio.playAt)
@@ -1686,27 +1708,58 @@ export async function createApp(
     questManager.pollSettlementRatInfestationObjectives()
     questManager.pollLostLivestockSources()
   }
-  // Character Screen's local reputation view (plan quests-progression-001) —
-  // refreshed on screen open (`openCharacter` below) and after a social
-  // consequence (the `applySocialConsequence` callback above), never
-  // per-frame. Resolves "the settlement currently relevant to the player's
-  // position" the same "nearest loaded settlement within town range" way
-  // `restActions.ts`'s `nearestSettlementInRange` does — outside any
-  // settlement's range, the screen shows no local reputation at all.
-  refreshCharacterReputationTarget = (): void => {
-    let nearest: Settlement | null = null
-    let bestDist = Infinity
-    for (const settlement of bundle.settlementsManager.getLoaded()) {
-      const dist = settlement.center.distanceTo(player.mesh.position)
-      if (dist <= REST_IN_TOWN_RADIUS && dist < bestDist) {
-        nearest = settlement
-        bestDist = dist
-      }
+  // Character Screen's known-settlement reputation view (plan ui-input-019) —
+  // refreshed on screen open (`openCharacter` below), on selector change, and
+  // after a social consequence, never per-frame. Known options come from
+  // `LocationKnowledge` ∩ the world-location catalog; standing is read from
+  // `ReputationManager` for the selected id only.
+  refreshCharacterReputationTarget = (mode = 'standing'): void => {
+    let currentId: string | null = null
+    if (mode === 'open') {
+      revealSettlementsInRange(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        lookupSettlementCell,
+        worldLocationCatalog,
+        locationKnowledge,
+      )
+      currentId = findSettlementContainingPlayer(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        lookupSettlementCell,
+      )?.id ?? null
+      if (currentId) lastVisitedSettlementId = currentId
     }
-    hud.setCharacterReputation(nearest
-      ? { settlementName: nearest.name, reputation: reputation.getReputation(nearest.id), renown: reputation.getRenown(nearest.id) }
-      : null)
+    const options = listKnownSettlementOptions(locationKnowledge, worldLocationCatalog)
+    selectedSettlementId = resolveCharacterReputationSettlementId({
+      options,
+      currentSettlementId: mode === 'open' ? currentId : null,
+      lastVisitedSettlementId,
+      homeSettlementId,
+      previousSelectedSettlementId: selectedSettlementId,
+    })
+    const selected = options.find((option) => option.settlementId === selectedSettlementId) ?? null
+    hud.setCharacterReputation({
+      settlements: options,
+      selectedSettlementId: selected?.settlementId ?? null,
+      selected: selected
+        ? {
+            settlementId: selected.settlementId,
+            settlementName: selected.settlementName,
+            reputation: reputation.getReputation(selected.settlementId),
+            renown: reputation.getRenown(selected.settlementId),
+          }
+        : null,
+    })
   }
+  vueUi.configureCharacterScreen({
+    onSelectSettlement: (settlementId) => {
+      const options = listKnownSettlementOptions(locationKnowledge, worldLocationCatalog)
+      if (!options.some((option) => option.settlementId === settlementId)) return
+      selectedSettlementId = settlementId
+      refreshCharacterReputation('standing')
+    },
+  })
 
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
   hud.setPlayerBadges(badges.listEarned())
@@ -2162,8 +2215,10 @@ export async function createApp(
         badges.reset()
         reputation.reset()
         socialNews.reset()
+        selectedSettlementId = null
+        lastVisitedSettlementId = bundle.settlementsManager.getHomeDef().id
         hud.setPlayerBadges(badges.listEarned())
-        refreshCharacterReputation()
+        refreshCharacterReputation('standing')
         resetPlayerNeeds(player.needs)
         fishingBait.clear()
         fishingAttempts.clear()
@@ -2595,10 +2650,10 @@ export async function createApp(
   }
   const openCharacter = () => {
     exitGamePointerLock(renderer.domElement)
-    // Settlement context can only be stale between opens (plan
-    // quests-progression-001 — never a remembered `currentSettlementId`), so
-    // resolve it fresh right here rather than relying on the boot-time push.
-    refreshCharacterReputation()
+    // Known-settlement reputation is resolved fresh on open: current
+    // settlement wins when the player is inside one; otherwise the previous
+    // selection / last visited / home fallback (plan ui-input-019).
+    refreshCharacterReputation('open')
     const detailedAttributes = player.effectiveAttributesDetailed(dayNight.elapsedDays)
     hud.setCharacterStats({
       hp: { current: player.health.currentHp, max: player.health.maxHp },

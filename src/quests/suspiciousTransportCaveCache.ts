@@ -209,14 +209,14 @@ export function buildSuspiciousTransportCaveCacheQuest(
       },
       {
         objective: { type: 'await_quest_outcome' },
-        description: `Zdecyduj, czy oddajesz przesyłkę ${giver.name}, zgłaszasz ją ${counterpart.name}, czy zostawiasz charakterystyczny przedmiot sobie.`,
-        reminderLine: 'Zdecydowałeś już, co z tą przesyłką?',
+        description: `Zdecyduj, czy oddajesz przesyłkę ${giver.name} i zatajasz ten układ, zgłaszasz ją ${counterpart.name}, czy zostawiasz charakterystyczny przedmiot sobie.`,
+        reminderLine: 'Zdecydowałeś już, czy zataić tę przesyłkę, ujawnić ją, czy zatrzymać rzecz sobie?',
         dialogueActions: [
           {
             npc: { npcId: giver.id },
             physicalOutcomeId: SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME,
             requireItemInstanceId: binding.evidenceInstanceId,
-            playerLine: 'Odbieram przesyłkę. Nikomu nie powiem.',
+            playerLine: 'Oddaję ci przesyłkę i zataję ten układ. Nikomu nie powiem.',
             npcLine:
               `No? ${counterpart.name} cię namawiał, żebyś to rozdmuchiwał? Zostaw to. Nie każda przesyłka musi mieć świadków.`,
           },
@@ -224,7 +224,7 @@ export function buildSuspiciousTransportCaveCacheQuest(
             npc: { npcId: counterpart.id },
             physicalOutcomeId: SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
             requireItemInstanceId: binding.evidenceInstanceId,
-            playerLine: `Znalazłem przesyłkę ${giver.name}. Oddaję ci dowód.`,
+            playerLine: `Znalazłem przesyłkę ${giver.name}. Oddaję ci dowód i zgłaszam ten układ.`,
             npcLine:
               'Jeśli ta przesyłka jest niejasna, powiedz wprost. Osada nie potrzebuje cichych układów za plecami.',
           },

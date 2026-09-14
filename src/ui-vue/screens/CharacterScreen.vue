@@ -7,6 +7,7 @@ import { EQUIPMENT_SLOT_LABEL } from '../../items/equipment'
 import { SKILL_LABEL } from '../../player/PlayerSkills'
 import CharacterModifierBadge from '../components/CharacterModifierBadge.vue'
 import CharacterSection from '../components/CharacterSection.vue'
+import CharacterSettlementSelect from '../components/CharacterSettlementSelect.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { closeCharacterScreen, isCharacterScreenOpen, ui } from '../store'
 
@@ -95,7 +96,7 @@ function formatEquippedSlot(itemLabel: string | null, qualityLabel: string | nul
 /** Five reputation dimensions (plan quests-progression-001 §14) — each is
  *  its own `-100..100` value, deliberately never averaged into one score. */
 const reputationRows = computed(() => {
-  const rep = ui.characterScreen.reputation?.reputation
+  const rep = ui.characterScreen.reputation.selected?.reputation
   if (!rep) return []
   return [
     { key: 'trust', label: 'Zaufanie', value: rep.trust },
@@ -105,6 +106,10 @@ const reputationRows = computed(() => {
     { key: 'integrity', label: 'Uczciwość', value: rep.integrity },
   ]
 })
+
+function onSelectSettlement(settlementId: string): void {
+  ui.characterScreen.onSelectSettlement?.(settlementId)
+}
 </script>
 
 <template>
@@ -261,24 +266,28 @@ const reputationRows = computed(() => {
           title="Reputacja"
         >
           <div
-            v-if="ui.characterScreen.reputation"
+            v-if="ui.characterScreen.reputation.settlements.length > 0"
             class="flex flex-col gap-2"
           >
-            <div class="text-sm">
-              {{ ui.characterScreen.reputation.settlementName }}
-            </div>
-            <div
-              v-for="row in reputationRows"
-              :key="row.key"
-              class="flex items-baseline justify-between text-xs"
-            >
-              <span class="opacity-80">{{ row.label }}</span>
-              <span class="opacity-70">{{ row.value }}</span>
-            </div>
-            <div class="mt-1 flex items-baseline justify-between text-xs">
-              <span class="opacity-80">Rozpoznawalność</span>
-              <span class="opacity-70">{{ ui.characterScreen.reputation.renown }}</span>
-            </div>
+            <CharacterSettlementSelect
+              :options="ui.characterScreen.reputation.settlements"
+              :selected-settlement-id="ui.characterScreen.reputation.selectedSettlementId"
+              @select="onSelectSettlement"
+            />
+            <template v-if="ui.characterScreen.reputation.selected">
+              <div
+                v-for="row in reputationRows"
+                :key="row.key"
+                class="flex items-baseline justify-between text-xs"
+              >
+                <span class="opacity-80">{{ row.label }}</span>
+                <span class="opacity-70">{{ row.value }}</span>
+              </div>
+              <div class="mt-1 flex items-baseline justify-between text-xs">
+                <span class="opacity-80">Rozpoznawalność</span>
+                <span class="opacity-70">{{ ui.characterScreen.reputation.selected.renown }}</span>
+              </div>
+            </template>
           </div>
           <div
             v-else

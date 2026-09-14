@@ -1,7 +1,7 @@
 # Plan: Character Screen settlement reputation and quest choice clarity
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~quests-progression-001~~, ~~world-012~~
 **Domain:** `ui-input`  
@@ -262,5 +262,9 @@ Manual browser verification — User:
 - Avoid allocations/work every frame while Character Screen is closed.
 - Quest choice clarity is authored-content improvement, not a second consequence engine.
 - Add/update JSDoc for new public presentation contracts/helpers with `@domain ui-input` where useful for preflight discovery.
+
+## Implementation summary
+
+Implemented 2026-09-14. Character Screen reputation is a known-settlement selector plus one standing payload: options from `LocationKnowledge` ∩ catalog settlements, standing from `ReputationManager` for the selected id. Current village (VillagePlan.boundary) wins on open; otherwise previous selection / last visited (session field updated by proximity discovery, not persisted) / home. Searchable combo is local to the screen. Suspicious-transport keep_quiet / report_it wording now reads as concealment vs disclosure; cave-cache variant matched. Automated tests cover listing, selection fallbacks, proximity presence, and choice text. Browser/gameplay verification remains with the User.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

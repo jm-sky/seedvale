@@ -11,6 +11,7 @@ import {
   CAVE_ENTRANCE_DISCOVERY_RADIUS,
   confirmHomeSettlement,
   createLocationProximityDiscovery,
+  findSettlementContainingPlayer,
   revealCaveEntrancesInRange,
   revealSettlementsInRange,
   type SettlementProximityDef,
@@ -319,5 +320,41 @@ describe('createLocationProximityDiscovery settlements', () => {
     expect(discovery.update(foreign.plan.boundary.x, foreign.plan.boundary.z)).toEqual([])
     now += 0.25
     expect(discovery.update(foreign.plan.boundary.x, foreign.plan.boundary.z)).toEqual([])
+  })
+
+  it('reports the settlement currently containing the player on each throttled pass', () => {
+    let now = 0
+    const inside: (string | null)[] = []
+    const discovery = createLocationProximityDiscovery({
+      getCaveDefinitions: () => [],
+      lookupSettlement: lookupFrom([home, foreign]),
+      catalog,
+      knowledge: createLocationKnowledge(),
+      checkIntervalS: 0.25,
+      now: () => now,
+      onInsideSettlement: (id) => { inside.push(id) },
+    })
+    discovery.update(foreign.plan.boundary.x, foreign.plan.boundary.z)
+    now += 0.25
+    discovery.update(-400, -400)
+    expect(inside).toEqual([foreign.id, null])
+  })
+})
+
+describe('findSettlementContainingPlayer', () => {
+  const home = settlementDef(0, 0, 'Dolina', 40)
+  const foreign = settlementDef(1, 0, 'Brzeg', 40)
+  const lookup = lookupFrom([home, foreign])
+
+  it('returns the settlement whose VillagePlan.boundary contains the player', () => {
+    expect(findSettlementContainingPlayer(foreign.plan.boundary.x, foreign.plan.boundary.z, lookup)?.id)
+      .toBe(foreign.id)
+    expect(findSettlementContainingPlayer(home.plan.boundary.x, home.plan.boundary.z, lookup)?.id)
+      .toBe(home.id)
+  })
+
+  it('returns null just outside the boundary — not the nearest settlement', () => {
+    const outside = foreign.plan.boundary.x + foreign.plan.boundary.radius + 1
+    expect(findSettlementContainingPlayer(outside, foreign.plan.boundary.z, lookup)).toBeNull()
   })
 })
