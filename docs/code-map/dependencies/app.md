@@ -225,6 +225,7 @@ Generated from TypeScript imports.
 - `world/cropLifecycle.ts`
 - `world/dryingRacks.ts`
 - `world/fishing.ts`
+- `world/plantedCrops.ts`
 - `world/playerGarden.ts`
 
 **Imported by**

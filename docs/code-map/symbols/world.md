@@ -871,16 +871,20 @@ Generated from exported TypeScript symbols.
 
 ## `world/cropLifecycle.ts`
 
-- `CROP_DEFS` — const — line 48
-- `CROP_IDS` — const — line 75
+- `CROP_DEFS` — const — line 55
+- `CROP_IDS` — const — line 85
 - `CropDefinition` — type — line 13
 - `CropGrowthStage` — type — line 7
-- `CropHarvestYield` — type — line 132
+- `CropHarvestYield` — type — line 142
 - `CropId` — type — line 11
-- `CropPlacement` — type — line 79
-- `resolveCropHarvest` — function — line 137
-- `resolveCropStage` — function — line 113
-- `rollCropPhase` — function — line 128
+- `CropPlacement` — type — line 89
+- `recoveredSeedCountForHarvest` — function — line 180
+  - domain: world
+- `resolveCropHarvest` — function — line 147
+- `resolveCropStage` — function — line 123
+- `resolveCultivatedSeedRecovery` — function — line 164
+  - domain: world
+- `rollCropPhase` — function — line 138
 
 ## `world/cropVisuals.ts`
 
@@ -964,10 +968,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/foodSources.ts`
 
-- `createFoodSourceHooks` — function — line 163
+- `createFoodSourceHooks` — function — line 170
 - `FoodSourceTarget` — type — line 19
-- `nearestFoodSource` — function — line 98
-- `nearestHarvestableCrop` — function — line 138
+- `nearestFoodSource` — function — line 105
+- `nearestHarvestableCrop` — function — line 145
 - `SettlementFoodSourceHooks` — type — line 26
 
 ## `world/gardenPlotProp.ts`

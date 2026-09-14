@@ -50,9 +50,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/gatheringActions.ts`
 
-- `createGatheringActions` — function — line 67
-- `GatheringActionDeps` — type — line 56
-- `GatheringActions` — type — line 35
+- `createGatheringActions` — function — line 89
+- `GatheringActionDeps` — type — line 78
+- `GatheringActions` — type — line 57
 
 ## `app/actions/groundActions.ts`
 

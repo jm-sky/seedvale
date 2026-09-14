@@ -3044,6 +3044,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcProfessionWork.ts`
+- `app/actions/gatheringActions.ts`
 - `app/actions/placementActions.ts`
 - `app/createApp.ts`
 - `settlement/settlementAgriculture.ts`

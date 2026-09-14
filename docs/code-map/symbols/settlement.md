@@ -667,12 +667,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementAgriculture.ts`
 
-- `householdAgriculturalCapacity` — function — line 18
+- `completedAgricultureBatches` — function — line 57
+- `householdAgriculturalCapacity` — function — line 20
   - domain: settlements-npcs
   - system: household
-- `householdStartingContextFromFamily` — function — line 22
-- `resolveSettlementAgricultureCatchUp` — function — line 72
-- `resolveUnloadedHouseholdAgriculture` — function — line 35
+- `householdSeedReserveRequirement` — function — line 32
+- `householdSeedStockCount` — function — line 37
+- `householdSeedSurplusCount` — function — line 47
+- `householdStartingContextFromFamily` — function — line 24
+- `resolveSettlementAgricultureCatchUp` — function — line 123
+- `resolveUnloadedHouseholdAgriculture` — function — line 78
 
 ## `settlement/settlementGenerator.ts`
 
