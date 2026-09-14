@@ -1,23 +1,14 @@
 # Implementation Notes: Production Demand and Economic Pressures
 
 **Plan:** `settlements-npcs-017-production-demand-and-economic-pressures.md`  
-**Reviewed:** 2026-09-09  
-**Status:** `planned` 📋
+**Reviewed:** 2026-09-14  
+**Status:** `verification needed` 🔍
 
 ## Review result
 
-BLOCKED until `settlements-npcs-015` and `settlements-npcs-016` are implemented.
+Implemented on current `main` after 015/016/`034`. There is still no generic persistent `Problem` registry — shortage is economy-owned compact state, and pressure is a diagnostic producer in `choose()` (`lastPressures`), not a new `NpcDecisionTarget` / ProductionAI.
 
-Current `main` does **not** yet contain the production contract assumed by 017:
-
-- `src/economy/production.ts` still has the old `ProductionDef` + `produceFirstAvailableItemRecipe()` model;
-- `SettlementEconomy.produce()` still returns `boolean` and delegates directly to `EconomicStock.applyRecipe()`;
-- there is no shared mixed stock/item executor and no `ProductionResult`;
-- Blacksmith iron-rod processing from 016 is not implemented.
-
-Do not implement 017 by recreating those pieces. Treat the implementation notes for 015/016 as dependency contracts, then reconcile against the code actually produced by those plans.
-
-A second important discrepancy: there is currently **no generic persistent `Problem` registry/model** in NPC AI. The implemented architecture is pressure-oriented, while persistent `NpcPlan` is still need-centric. Do not invent `ProductionProblem` / `ProductionGoal` / `ProductionStrategy` classes merely to match the wording of the plan.
+Planner pre-gates (blacksmith/hunter) are the persistent observation seam; `ProductionResult.insufficient-input` covers in-bout races. `SettlementDemand` is unchanged.
 
 ## 1. Current AI seams to reuse
 

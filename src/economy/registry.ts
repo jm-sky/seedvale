@@ -30,6 +30,7 @@ export function createEconomyRegistry(
         snapshot?.stock ?? initialStockFor(seed),
         demandsFor(seed),
         snapshot?.food ?? { counts: initialFoodFor(seed), instances: [] },
+        snapshot?.productionShortages,
       )
       byId.set(seed.id, created)
       return created

@@ -59,7 +59,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ------------------------------------------------------------------------------ | --- | ------ | ------- | ------------- |
 | 💡 `items-player-028-npc-player-storage-access-policies.md`                    | 🔴 | L      | ~~items-player-027~~ | companions                 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | 🟡 | M      | ~~155~~ ~~122~~ | physical-resource-storage-and-logistics |
-| 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | 🔴 | M      | ~~settlements-npcs-016~~, settlements-npcs-034 | economy-production         |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | 🔴 | M      | ~~settlements-npcs-002~~ | npc-professions-households-and-age |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ | quests-abandoned-gold-mine-colony |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | 🔴 | M      | ~~world-terrain-019~~ | quests-abandoned-gold-mine-colony |
@@ -91,6 +90,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-npcs-017-production-demand-and-economic-pressures.md` | Start z iron+coal: kowal robi pręty; wyczerp input → jeden persistent shortage (nie per kowal); presja w inspect bez nowego AI; przywróć input → shortage znika, produkcja wraca; hunter household A/B niezależne; save/load zachowuje tylko nadal zablokowany shortage |
 | `world-terrain-027-landmark-variety-and-quest-hooks.md` | Łódź naturalnie na brzegu; wrak wyraźnie większy; wieża na wybrzeżu/w górach; stare drzewo = dedykowany model + polana; wóz przy drodze, nie na niej; landmarki nie nachodzą na osady; `interact_landmark` działa bez questa; questy wraku/wieży wiążą realne `landmarkId`; loot nie jest wymagany w V1 |
 | `quests-progression-026-dungeon-bandit-treasure.md` | Guard/hunter giver oferuje loch; deep stash ma rejestr + oznaczony łup; side cache opcjonalne i nie blokują; `finalTreasure` nietknięty; return/guard/keep działają fizycznie (guard zabiera oba itemy); fauna nie jest wymagana; save/rebuild bez respawnu story items |
 | `quests-progression-031-per-source-opportunity-defs.md` | Kilka zwierząt w gospodarstwie: każde ma stabilny `world:lost-livestock:…` def, ale Quest Log / oferta tylko dla zwierzęcia z aktywnym `lost-alive`/`corpse-uninspected`; naturalny stray mid-session na spokojnym wcześniej zwierzęciu → opportunity bez reloadu; generated nigdy nie woła `startLivestockStray`; authored `zagubiona-owca` i generated nie pokazują dwóch questów dla tego samego zwierzęcia; save z aktywnym `world:lost-livestock:…` odbudowuje ten sam def; limit RPG matrices bez regresji |

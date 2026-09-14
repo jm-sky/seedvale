@@ -19,6 +19,9 @@ import {
   commitHunterArrowProduction,
   commitTextileWorkProduction,
   DRESSING_PRODUCTION,
+  HUNTER_ARROW_PRODUCTIONS,
+  preflightProductionInputs,
+  type ProductionDef,
   type SettlementEconomy,
   TEXTILE_WORKER_PRODUCTIONS,
   tryAdvanceDevelopment,
@@ -220,16 +223,31 @@ const HUNTER_ARROW_STOCK_CAP = 24
  * action that can't produce anything.
  */
 function planArrowCrafting(ctx: NpcWorkContext): NpcPlannedAction | null {
-  const { household, workplace } = ctx
+  const { household, workplace, economy } = ctx
   if (!household || !workplace) return null
   if (household.items.count('arrow') >= HUNTER_ARROW_STOCK_CAP) return null
-  if (!household.items.has('branch', 1) && !household.items.has('beam', 1)) return null
+  if (!household.items.has('branch', 1) && !household.items.has('beam', 1)) {
+    observeIntendedRecipeBlocks(economy, HUNTER_ARROW_PRODUCTIONS, {
+      inventory: household.items,
+    }, ctx.simTime(), household.id)
+    return null
+  }
   return {
     kind: 'work',
     destination: copyVec3(workplace.position),
     durationSec: ctx.rollWorkDurationSec(),
     onComplete: () => {
-      commitHunterArrowProduction(household, ctx.simTime())
+      const produced = commitHunterArrowProduction(household, ctx.simTime())
+      if (!economy) return
+      if (produced) {
+        for (const def of HUNTER_ARROW_PRODUCTIONS) {
+          economy.observeProductionOutcome({ ok: true, recipeId: def.id }, ctx.simTime(), household.id)
+        }
+        return
+      }
+      observeIntendedRecipeBlocks(economy, HUNTER_ARROW_PRODUCTIONS, {
+        inventory: household.items,
+      }, ctx.simTime(), household.id)
     },
   }
 }
@@ -536,11 +554,21 @@ function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
  * "keep the work action unavailable until the generic dependency exists"
  * outcome, not a bug.
  */
-function blacksmithStockInputsAvailable(economy: SettlementEconomy): boolean {
-  for (const { kind, amount } of BLACKSMITH_IRON_ROD_PRODUCTION.inputs) {
-    if (economy.query(kind) < amount) return false
+function blacksmithCanProcess(economy: SettlementEconomy, inventory: Inventory): boolean {
+  return preflightProductionInputs(BLACKSMITH_IRON_ROD_PRODUCTION, { economy, inventory }).ok
+}
+
+function observeIntendedRecipeBlocks(
+  economy: SettlementEconomy | null,
+  defs: readonly ProductionDef[],
+  ctx: { economy?: SettlementEconomy, inventory?: Inventory },
+  simTime: number,
+  householdId?: string,
+): void {
+  if (!economy) return
+  for (const def of defs) {
+    economy.observeProductionOutcome(preflightProductionInputs(def, ctx), simTime, householdId)
   }
-  return true
 }
 
 function planBlacksmithWork(ctx: NpcWorkContext): NpcPlannedAction | null {
@@ -559,7 +587,7 @@ function planBlacksmithWork(ctx: NpcWorkContext): NpcPlannedAction | null {
     }
   }
 
-  if (economy && blacksmithStockInputsAvailable(economy)) {
+  if (economy && blacksmithCanProcess(economy, household.items)) {
     return {
       kind: 'work',
       destination: copyVec3(workplace.position),
@@ -570,6 +598,9 @@ function planBlacksmithWork(ctx: NpcWorkContext): NpcPlannedAction | null {
     }
   }
 
+  if (economy) {
+    observeIntendedRecipeBlocks(economy, [BLACKSMITH_IRON_ROD_PRODUCTION], { economy, inventory: household.items }, ctx.simTime())
+  }
   return null
 }
 

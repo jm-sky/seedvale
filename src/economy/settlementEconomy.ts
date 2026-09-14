@@ -8,7 +8,14 @@ import { createSettlementHistoryBuffer } from '../debug/settlementHistory'
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
 import { claimFoodItems, type FoodItemClaim, foodItemCount } from '../items/foodItems'
 import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
-import { executeProduction } from './productionExecutor'
+import { executeProduction, type ProductionResult } from './productionExecutor'
+import {
+  applyProductionOutcome,
+  loadProductionShortages,
+  type ProductionShortageRecord,
+  revalidateProductionShortages,
+  snapshotProductionShortages,
+} from './productionShortage'
 import { EconomicStock, type StockAmount } from './stock'
 
 export type SettlementDemand = {
@@ -36,6 +43,8 @@ export type SettlementEconomySnapshot = {
     instances: readonly SaveItemInstance[]
     foodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>
   }
+  /** Compact blocked-recipe observations (plan settlements-npcs-017). Absent = none. */
+  productionShortages?: readonly ProductionShortageRecord[]
 }
 
 /**
@@ -87,6 +96,9 @@ export type SettlementEconomy = {
   /** Bounded settlement-level mutation history (plan settlements-npcs-013) —
    *  see `debug/settlementHistory.ts`. */
   history: () => readonly SettlementHistoryEvent[]
+  observeProductionOutcome: (result: ProductionResult, simTime?: number, householdId?: string) => void
+  revalidateProductionShortages: (simTime: number, itemOwner?: { householdId: string, inventory: Inventory }) => void
+  productionShortages: () => readonly ProductionShortageRecord[]
 }
 
 export function createSettlementEconomy(
@@ -100,6 +112,7 @@ export function createSettlementEconomy(
     instances: readonly SaveItemInstance[]
     foodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>
   },
+  initialShortages?: readonly ProductionShortageRecord[],
 ): SettlementEconomy {
   const stock = new EconomicStock(initial)
   const items = new Inventory(
@@ -123,12 +136,13 @@ export function createSettlementEconomy(
   // deposit/withdraw; development reservation/completion is out of scope).
   const historyBuf = createSettlementHistoryBuffer()
   const seq = createSequenceAllocator()
+  const productionShortages = loadProductionShortages(initialShortages)
 
   function targetOf(kind: EconomicKind): number {
     return demandByKind.get(kind) ?? 0
   }
 
-  return {
+  const created: SettlementEconomy = {
     settlementId,
     items,
     add(kind, amount, simTime = 0) {
@@ -208,6 +222,7 @@ export function createSettlementEconomy(
       return true
     },
     snapshot() {
+      const shortages = snapshotProductionShortages(productionShortages)
       return {
         stock: stock.toJSON(),
         food: {
@@ -215,8 +230,23 @@ export function createSettlementEconomy(
           instances: items.instancesToJSON(),
           foodBatches: items.foodBatchesToJSON(),
         },
+        ...(shortages.length > 0 ? { productionShortages: shortages } : {}),
       }
     },
     history: () => historyBuf.history(),
+    observeProductionOutcome(result, simTime = 0, householdId) {
+      applyProductionOutcome(productionShortages, result, simTime, householdId)
+    },
+    revalidateProductionShortages(simTime, itemOwner) {
+      revalidateProductionShortages(productionShortages, {
+        simTime,
+        economy: this,
+        itemOwner,
+      })
+    },
+    productionShortages: () => snapshotProductionShortages(productionShortages),
   }
+
+  created.revalidateProductionShortages(0)
+  return created
 }

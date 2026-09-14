@@ -1,7 +1,7 @@
 # Plan: Production Demand and Economic Pressures
 
 **Created:** 2026-09-01  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~settlements-npcs-016~~, settlements-npcs-034  
@@ -9,6 +9,7 @@
 **Subdomains:** `economy` `npc`  
 **Tags:** `production` `demand` `pressure` `shortage`
 **Roadmap:** `economy-production`  
+**Implemented at:** 2026-09-14 12:15  
 
 ## Goal
 

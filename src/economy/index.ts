@@ -25,6 +25,7 @@ export {
   MINING_PRODUCTION,
   produceFirstAvailableItemRecipe,
   type ProductionDef,
+  productionDefById,
   productionForRole,
   TEXTILE_WORKER_PRODUCTIONS,
   WOODCUTTING_PRODUCTION,
@@ -32,11 +33,17 @@ export {
 } from './production'
 export {
   executeProduction,
+  preflightProductionInputs,
   type ProductionBlockedCategory,
   type ProductionContext,
   type ProductionFailureReason,
   type ProductionResult,
 } from './productionExecutor'
+export {
+  isProductionShortagePersistent,
+  PRODUCTION_SHORTAGE_PERSISTENCE_SEC,
+  type ProductionShortageRecord,
+} from './productionShortage'
 export { createEconomyRegistry, type EconomyRegistry } from './registry'
 export {
   createSettlementEconomy,

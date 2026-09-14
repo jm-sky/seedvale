@@ -184,3 +184,24 @@ const BY_ROLE: Partial<Record<Role, ProductionDef>> = {
 export function productionForRole(role: Role): ProductionDef | null {
   return BY_ROLE[role] ?? null
 }
+
+const PRODUCTION_BY_ID: ReadonlyMap<string, ProductionDef> = new Map(
+  [
+    WOODCUTTING_PRODUCTION,
+    FARMING_PRODUCTION,
+    FISHING_PRODUCTION,
+    MINING_PRODUCTION,
+    ARROWS_FROM_BRANCH_PRODUCTION,
+    ARROWS_FROM_BEAM_PRODUCTION,
+    WOOL_MATERIAL_PRODUCTION,
+    FLAX_LINEN_PRODUCTION,
+    LINEN_BANDAGE_PRODUCTION,
+    BLACKSMITH_IRON_ROD_PRODUCTION,
+    DRESSING_PRODUCTION,
+  ].map((def) => [def.id, def]),
+)
+
+/** Lookup used by production-shortage revalidation — unknown ids are dropped. */
+export function productionDefById(id: string): ProductionDef | null {
+  return PRODUCTION_BY_ID.get(id) ?? null
+}

@@ -4,7 +4,7 @@
 
 **Not:** settlement generation, `Household`/`SettlementEconomy` internals (that's [SETTLEMENTS.md](./settlements.md)), fauna's own behaviour pipeline or `AnimalAgent` internals (that's [fauna.md](./fauna.md) — this doc only covers how NPCs *consume* what fauna exposes), combat resolver internals ([combat.md](./combat.md) owns those; this doc covers only where combat hands off into NPC state), the work-contract commitment record itself ([player-systems.md](./player-systems.md)'s Work Contracts section owns that; this doc covers only the NPC-side evaluation/execution), or a plan/changelog.
 
-**Last verified:** 2026-09-12
+**Last verified:** 2026-09-14
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -66,6 +66,10 @@ When this file and the code disagree, the code wins — update this file.
                     is not abandoned mid-episode. Never a `NeedId`, never a
                     settlement-wide scan — bound once at `NpcAgent.create()`
                     time via `NpcStructureRepairHooks`.
+   h. Production    diagnostic `NpcPressure` rows from economy-owned
+      shortage      blocked-recipe observations (settlements-npcs-017).
+                    Visible in inspection/`lastPressures`; not a
+                    `NeedId` and not a `pickActionKind` winner.
 
 2. ARBITRATION      one winner: a real need | 'seekShelter' | 'heal' |
                     'buryDeceased' | 'visitGrave' | 'cleanAnimalCorpse' |

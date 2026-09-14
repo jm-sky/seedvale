@@ -54,19 +54,16 @@ type NormalizedRecipe = {
 }
 
 /**
- * Stateless all-or-nothing production commit (plan settlements-npcs-015).
- * Validates and aggregates the recipe, preflights every participating owner,
- * then mutates once. Empty recipes are successful no-ops and do not require
- * owners.
+ * Same owner/input checks `executeProduction` runs before mutating.
+ * Used by planners and shortage revalidation so 017 does not duplicate recipe rules.
  *
  * @domain settlements-npcs
  */
-export function executeProduction(
+export function preflightProductionInputs(
   def: ProductionDef,
   ctx: ProductionContext = {},
 ): ProductionResult {
   const recipeId = def.id
-  const simTime = ctx.simTime ?? 0
   const normalized = normalizeRecipe(def)
   if (!normalized.ok) {
     return {
@@ -110,6 +107,35 @@ export function executeProduction(
       return fail(recipeId, 'unavailable-destination', 'item', itemKind(itemInputs, itemOutputs))
     }
   }
+
+  return { ok: true, recipeId }
+}
+
+/**
+ * Stateless all-or-nothing production commit (plan settlements-npcs-015).
+ * Validates and aggregates the recipe, preflights every participating owner,
+ * then mutates once. Empty recipes are successful no-ops and do not require
+ * owners.
+ *
+ * @domain settlements-npcs
+ */
+export function executeProduction(
+  def: ProductionDef,
+  ctx: ProductionContext = {},
+): ProductionResult {
+  const preflight = preflightProductionInputs(def, ctx)
+  if (!preflight.ok) return preflight
+
+  const recipeId = def.id
+  const simTime = ctx.simTime ?? 0
+  const normalized = normalizeRecipe(def)
+  if (!normalized.ok) return preflight
+
+  const { stockInputs, stockOutputs, itemInputs, itemOutputs } = normalized.recipe
+  const needsStock = stockInputs.length > 0 || stockOutputs.length > 0
+  const needsItems = itemInputs.length > 0 || itemOutputs.length > 0
+  const economy = ctx.economy
+  const inventory = ctx.inventory
 
   if (inventory && needsItems && !inventory.applyRecipe(itemInputs, itemOutputs, simTime)) {
     return { ok: false, recipeId, reason: 'transaction-failed' }

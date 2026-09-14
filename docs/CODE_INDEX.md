@@ -127,8 +127,9 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - [Production recipes](../src/economy/production.ts) — `ProductionDef` tables, role lookup, hunter item-recipe priority wrapper, and textile wool-material recipe.
 - [Production executor](../src/economy/productionExecutor.ts) — synchronous all-or-nothing stock/item/mixed recipe commit (plan settlements-npcs-015).
+- [Production shortage](../src/economy/productionShortage.ts) — compact blocked-input observations on settlement economy (plan settlements-npcs-017).
 - [NPC work adapters](../src/economy/npcWork.ts) — work-completion → economy mutation seam.
-- [Settlement economy](../src/economy/settlementEconomy.ts) — settlement bulk stock, concrete food inventory, demand, and history.
+- [Settlement economy](../src/economy/settlementEconomy.ts) — settlement bulk stock, concrete food inventory, demand, history, and production-shortage state.
 
 ## NPC AI internals
 
@@ -145,6 +146,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NPC strategies](../src/ai/npcStrategies.ts) — per-need candidate strategy lists + `selectStrategy()`, the authoritative source `beginNeed()` switches on.
 - [NPC decision](../src/ai/npcDecision.ts) — the top-level `choose()`/`tickCriticalInterrupt()` priority tables, fauna-style.
 - [Burial pressure](../src/ai/burialPressure.ts) — household/social burial of a deceased NPC (`npc-011`).
+- [Economic pressure](../src/ai/economicPressure.ts) — persistent production-input shortage → diagnostic `NpcPressure` (plan settlements-npcs-017); not a decision-target winner.
 - [Grave-visit pressure](../src/ai/graveVisitPressure.ts) — optional family grave visits (`npc-026`).
 - [Animal-corpse cleanup pressure](../src/ai/animalCorpseCleanupPressure.ts) — settlement sanitation of animal corpses (`settlements-npcs-029`).
 - [NPC collider rim](../src/ai/npcColliderRim.ts) — pure collider geometry (walkability, segment bypass, rim points, exterior sampling) shared by movement/rescue.

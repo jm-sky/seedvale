@@ -492,7 +492,9 @@ describe('planProfessionWork', () => {
         household,
         workplace,
         economy: ecoMissingCoal,
+        simTime: () => 4,
       }))).toBeNull()
+      expect(ecoMissingCoal.productionShortages()).toMatchObject([{ kind: 'coal' }])
 
       const ecoMissingIron = economy()
       ecoMissingIron.add('coal', 2, 0)
@@ -501,7 +503,9 @@ describe('planProfessionWork', () => {
         household,
         workplace,
         economy: ecoMissingIron,
+        simTime: () => 4,
       }))).toBeNull()
+      expect(ecoMissingIron.productionShortages()).toMatchObject([{ kind: 'iron' }])
     })
 
     it('preview does not mutate economy or household items', () => {
@@ -535,6 +539,7 @@ describe('planProfessionWork', () => {
       work?.onComplete()
       expect(eco.query('iron')).toBe(2)
       expect(household.items.count('iron_rod')).toBe(0)
+      expect(eco.productionShortages()).toMatchObject([{ kind: 'coal' }])
     })
   })
 

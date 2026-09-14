@@ -12,7 +12,7 @@ import {
   WOODCUTTING_PRODUCTION,
   WOOL_MATERIAL_PRODUCTION,
 } from './production'
-import { executeProduction } from './productionExecutor'
+import { executeProduction, preflightProductionInputs } from './productionExecutor'
 import { createSettlementEconomy } from './settlementEconomy'
 
 const DEMANDS = [
@@ -36,6 +36,18 @@ const MIXED_ROD: ProductionDef = {
 }
 
 describe('executeProduction (settlements-npcs-015)', () => {
+  it('preflightProductionInputs matches blocked executeProduction without mutating', () => {
+    const eco = economy({ iron: 1, coal: 1 })
+    const inventory = new Inventory()
+    const blocked = executeProduction(MIXED_ROD, { economy: eco, inventory })
+    const eco2 = economy({ iron: 1, coal: 1 })
+    const inventory2 = new Inventory()
+    const preflight = preflightProductionInputs(MIXED_ROD, { economy: eco2, inventory: inventory2 })
+    expect(preflight).toEqual(blocked)
+    expect(eco2.query('iron')).toBe(1)
+    expect(inventory2.count('iron_rod')).toBe(0)
+  })
+
   it('commits a stock-only recipe with exact quantities', () => {
     const eco = economy({ wood: 4, water: 1 })
     const result = executeProduction({

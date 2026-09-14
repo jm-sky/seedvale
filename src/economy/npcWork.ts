@@ -58,11 +58,13 @@ export function commitBlacksmithProduction(
   household: Household,
   simTime = 0,
 ): ProductionResult {
-  return executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, {
+  const result = executeProduction(BLACKSMITH_IRON_ROD_PRODUCTION, {
     economy,
     inventory: household.items,
     simTime,
   })
+  economy.observeProductionOutcome(result, simTime)
+  return result
 }
 
 /**

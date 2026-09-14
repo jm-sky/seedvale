@@ -228,6 +228,7 @@ import {
   type Personality,
   pickDialogueLine,
 } from './dialogue'
+import { productionShortagePressures } from './economicPressure'
 import {
   recordGraveVisit,
   resolveGraveVisitPressure,
@@ -2843,6 +2844,17 @@ export class NpcAgent {
         // current needs/shortage inputs; `lastPressures` feeds diagnostics
         // (`createInspectionSnapshot`).
         const pressures = generateNeedPressures(this.needs, this.needPickOptions())
+        this.economy?.revalidateProductionShortages(
+          this.simClock,
+          this.household
+            ? { householdId: this.household.id, inventory: this.household.items }
+            : undefined,
+        )
+        const economicPressures = productionShortagePressures(
+          this.economy?.productionShortages() ?? [],
+          this.simClock,
+          this.household?.id,
+        )
         // Personality/role preference layer (plan ai-002) — re-scores the
         // same candidates `generateNeedPressures` produced; it cannot add or
         // remove one. Kept out of `Needs.ts` so base pressure semantics stay
@@ -2886,7 +2898,7 @@ export class NpcAgent {
           ],
           'idle',
         )
-        this.lastPressures = pressures
+        this.lastPressures = [...pressures, ...economicPressures]
         this.lastDecisionCandidates = candidates
         // Persistent Plan (plan ai-004) — checked against the same fresh
         // pressures the need pick just used, before deciding what's next:

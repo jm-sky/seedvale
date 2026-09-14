@@ -564,6 +564,14 @@ describe('loadSaveData v1 contract', () => {
     })).toBeNull()
   })
 
+  it('migrates a v40 save (plan settlements-npcs-017) into v41 without fabricating shortages', () => {
+    const result = loadStoredSave({ ...validSave, version: 40 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.settlementEconomies.home.productionShortages).toBeUndefined()
+  })
+
   it('migrates a v39 save without socialNews to the current version (plan quests-progression-022)', () => {
     const result = loadStoredSave({ ...validSave, version: 39 })
     expect(result.status).toBe('ok')

@@ -1,5 +1,6 @@
 import type { BadgeId } from '../badges/badges'
 import type { WorldConfig } from '../config/worldConfig'
+import type { ProductionShortageRecord } from '../economy/productionShortage'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
@@ -28,13 +29,14 @@ import type { TransportEndpointRef, TransportExecution, TransportOrder, Transpor
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import type { WellWaterKind } from '../world/wellGroundwater'
 import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContainers'
+import { isEconomicKind } from '../economy/kinds'
 import { isAnimalStraySave } from '../fauna/animalStray'
 import { EQUIPMENT_SLOTS, isEquipmentSlot, type SavePlayerEquipment } from '../items/equipment'
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
 import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { ARMOR_KIND_LIST, isArmorKind, isTrapKind } from '../items/itemInstances'
-import { type ItemKind } from '../items/items'
+import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { isPreparationSize, type PreparationSize } from '../terrain/terrainPreparation'
@@ -670,7 +672,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 40
+export const CURRENT_SAVE_VERSION = 41
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1140,6 +1142,19 @@ function isSaveBadges(value: unknown): value is SaveBadges {
  *  "object of numbers" check `stock` always used; `food.instances` reuses
  *  `isSaveItemInstancesField` (food items are plain counts today, but the
  *  shape is the same `SaveItemInstance[]` every other `Inventory` uses). */
+function isProductionShortageRecord(value: unknown): value is ProductionShortageRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const v = value as Record<string, unknown>
+  if (typeof v.recipeId !== 'string' || v.recipeId.length === 0) return false
+  if (v.category !== 'stock' && v.category !== 'item') return false
+  if (typeof v.kind !== 'string') return false
+  if (v.category === 'stock' && !isEconomicKind(v.kind)) return false
+  if (v.category === 'item' && !(v.kind in ITEM_DEFS)) return false
+  if (v.householdId !== undefined && typeof v.householdId !== 'string') return false
+  return typeof v.firstBlockedSimTime === 'number' && Number.isFinite(v.firstBlockedSimTime)
+    && typeof v.lastBlockedSimTime === 'number' && Number.isFinite(v.lastBlockedSimTime)
+}
+
 function isSettlementEconomySnapshot(value: unknown): value is SettlementEconomySnapshot {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const v = value as Record<string, unknown>
@@ -1152,6 +1167,11 @@ function isSettlementEconomySnapshot(value: unknown): value is SettlementEconomy
   if (!food.counts || typeof food.counts !== 'object' || Array.isArray(food.counts)) return false
   for (const amount of Object.values(food.counts as Record<string, unknown>)) {
     if (typeof amount !== 'number') return false
+  }
+  if (v.productionShortages !== undefined) {
+    if (!Array.isArray(v.productionShortages) || !v.productionShortages.every(isProductionShortageRecord)) {
+      return false
+    }
   }
   return isSaveItemInstancesField(food.instances) && isOptionalFoodBatchesField(food.foodBatches)
 }
@@ -3362,6 +3382,13 @@ function migrateSaveV39ToV40(data: unknown): unknown {
   return { ...v, version: 40 }
 }
 
+/** v40 → v41 (plan settlements-npcs-017): optional compact production-shortage
+ *  observations on each settlement economy snapshot. Absent restores as none. */
+function migrateSaveV40ToV41(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 41 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3522,6 +3549,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   37: migrateSaveV37ToV38,
   38: migrateSaveV38ToV39,
   39: migrateSaveV39ToV40,
+  40: migrateSaveV40ToV41,
 }
 
 function detectStoredVersion(value: unknown): number | null {

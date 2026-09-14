@@ -96,6 +96,7 @@ describe('commitBlacksmithProduction (settlements-npcs-016)', () => {
     })
     expect(eco.query('iron')).toBe(2)
     expect(household.items.count('iron_rod')).toBe(0)
+    expect(eco.productionShortages()).toMatchObject([{ kind: 'coal' }])
   })
 })
 
