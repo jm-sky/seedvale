@@ -18,7 +18,7 @@ The tooling must make it practical to answer:
 
 - what decisions an NPC made over time and why,
 - how a settlement reacted to an animal attack such as a wolf pack,
-- whether NPCs evaluated, accepted, interrupted, resumed and completed construction Work Contracts,
+- whether NPCs evaluated, accepted, interrupted, resumed and completed Work Contracts across supported contract scopes,
 - which inputs and score components caused a decision to win or lose.
 
 The goal is observability and repeatable verification. This plan must not change gameplay decision policy merely to make tests pass.
@@ -34,6 +34,7 @@ Existing mechanisms already provide the core data path:
 - `src/ui/createNpcInspector.ts` renders a low-frequency debug modal for one NPC and currently shows the newest 50 trace entries.
 - `src/ai/npcAnimalThreat.ts` performs pure deterministic `defend` vs `flee` scoring.
 - `src/ai/npcWorkContract.ts` performs pure deterministic Work Contract scoring and returns the scored candidates plus the selected positive candidate.
+- Work Contracts are now scope-discriminated (`measurable_work` / `expedition_escort`); the pure evaluator dispatches by `contract.scope.kind` and escort scoring includes relation/reputation/renown/personality/danger/away-time inputs in addition to shared schedule/provision concerns.
 - `src/debug/domainHistory.ts` provides shared bounded-history/filtering primitives and should remain the common mechanism for filtering timelines.
 
 Do not introduce a second trace buffer, event bus, decision logger or diagnostics-owned simulation state.
@@ -52,11 +53,14 @@ A developer should be able to inspect one decision cycle as a causal chain inste
 
 This makes it difficult to answer why two nearby NPCs behaved differently during the same attack.
 
-### 3. Work Contract diagnostics record total scores without score breakdown
+### 3. Work Contract diagnostics record total scores without scope-aware breakdown
 
-`contract.evaluated` records `{ contractId, score }[]`, and `contract.accepted` records the selected score. `npcWorkContract.ts` internally combines reward, role suitability, travel cost, expected work cost, schedule conflict and provisioning feasibility.
+`contract.evaluated` records `{ contractId, score }[]`, and `contract.accepted` records the selected score. `npcWorkContract.ts` now dispatches scoring by `contract.scope.kind`:
 
-The trace should expose enough structured breakdown to explain why a contract was accepted or rejected without recomputing the decision in debug code.
+- `measurable_work` combines expected reward, role suitability, travel cost, expected-work cost, schedule conflict and provisioning feasibility,
+- `expedition_escort` combines offered reward, escort-specific role suitability, relation/local reputation/renown, `curious`, expected-away cost, danger, schedule conflict and provisioning feasibility.
+
+The trace should expose enough structured, scope-aware breakdown to explain why any supported contract was accepted or rejected without recomputing the decision in debug code.
 
 ### 4. Settlement-wide crisis review is cumbersome
 
@@ -84,10 +88,13 @@ The tooling should make scenario setup and result collection reproducible withou
 Extend existing typed trace data where the authoritative decision is made:
 
 - animal threat response: record candidate scores and the inputs required to explain the arbitration,
-- Work Contract evaluation: record a structured score breakdown for every evaluated candidate,
-- retain the existing selected/accepted events and semantic transition model.
+- Work Contract evaluation: record a structured, scope-aware score breakdown for every evaluated candidate,
+- retain the existing selected/accepted events and semantic transition model,
+- retain existing escort lifecycle events such as `contract.escortServiceStarted` and include them in projections rather than creating parallel escort-only diagnostics.
 
-Prefer plain serializable data. Do not store live object references.
+For Work Contracts, the diagnostic shape should discriminate by contract scope rather than force unrelated terms into one flat pseudo-formula. Preserve the production evaluator as the single source of scoring truth.
+
+Prefer plain serializable data. Do not store live object references. Non-finite internal scores such as impossible provisioning must not leak through JSON surfaces without an explicit serializable representation/reason.
 
 For standard needs/strategies, reuse the information already present on `need.selected` and `strategy.selected`; do not duplicate it into a new event family unless implementation recon proves a concrete gap.
 
@@ -97,7 +104,7 @@ Add pure projection helpers over `NpcTraceEvent[]` that group related semantic e
 
 - decision cycles,
 - threat responses,
-- contract evaluation/acceptance cycles.
+- Work Contract evaluation/acceptance/lifecycle cycles, including measurable work and expedition escort.
 
 Projection code must be read-only and deterministic. It must not rerun scoring functions to infer historical reasons.
 
@@ -110,7 +117,7 @@ At minimum it should support:
 - recent decisions for all loaded NPCs in one settlement,
 - animal-threat response summary per NPC,
 - combat outcome summary,
-- Work Contract evaluation/acceptance summary,
+- Work Contract evaluation/acceptance/lifecycle summary across supported scopes,
 - filtering by NPC/event/scenario-relevant event families.
 
 Respect the current streaming boundary: live `NpcAgent` traces are not persisted across settlement unload/rebuild. The tooling must state this clearly rather than pretending history is complete.
@@ -128,13 +135,14 @@ Useful operations should include:
 - triggering a bounded wolf-pack scenario by reusing the existing frenzy mechanism rather than mutating NPC state,
 - collecting the resulting report after normal simulation has processed the event.
 
-If a contract scenario helper is added, it must create/post contracts through the same public `WorkContracts`/construction APIs used by gameplay. Never inject `contract.accepted` or NPC commitment state directly.
+If a contract scenario helper is added, it must create/post contracts through the same public `WorkContracts` APIs used by gameplay for that scope. Never inject `contract.accepted`, escort commitment state or NPC assignment state directly.
 
 ### E. NPC inspector UI
 
 Extend `src/ui/createNpcInspector.ts` only where it materially improves manual verification:
 
-- show score breakdowns for threat and contract decisions,
+- show score breakdowns for threat and Work Contract decisions,
+- distinguish Work Contract scope where relevant,
 - present recent causal decision cycles more clearly than a flat raw event dump,
 - keep the existing low-frequency refresh and debug-only lifecycle.
 
@@ -157,11 +165,17 @@ Document and support these initial scenarios:
    - inspect settlement-wide sensed/responded/combat/flee/death outcomes,
    - verify independent NPC decisions can be compared from one report.
 
-4. **Construction Work Contract**
+4. **Measurable Work Contract (construction)**
    - post a real construction contract,
-   - inspect all candidate scores and breakdowns,
+   - inspect all candidate scores and measurable-work breakdowns,
    - verify acceptance/rejection reason,
    - inspect interruption by urgent needs and later continuation using existing contract/action lifecycle.
+
+5. **Expedition escort Work Contract**
+   - post a real escort contract through the existing Work Contract path,
+   - inspect all candidate scores and escort-specific breakdowns,
+   - verify relation/reputation/role/personality/danger/away-time/provision terms are visible where they actually contributed,
+   - inspect `accepted → escortServiceStarted` and subsequent interruption/resume/completion through the existing accompany + contract lifecycle.
 
 These are verification workflows, not scripted gameplay assertions requiring NPCs to make one predetermined choice.
 
@@ -172,6 +186,7 @@ These are verification workflows, not scripted gameplay assertions requiring NPC
 - Keep buffers bounded.
 - Never compute alternate historical decisions in the inspector/debug layer.
 - Keep all scoring deterministic and pure in the existing decision modules.
+- Work Contract diagnostics must dispatch from the same scope-aware scoring result used by production decisions; do not duplicate measurable/escort formulas in `NpcAgent` or debug code.
 - Avoid broad `NpcAgent` refactors.
 - No persistence work in this plan. NPC trace lifetime remains tied to live agents unless a separate persistence plan is created later.
 - No new group AI / settlement-defense policy. The wolf-pack scenario observes current per-NPC behaviour; gameplay changes discovered during verification become separate NPC/fauna plans.
@@ -190,13 +205,19 @@ Primary:
 - `src/ai/npcAnimalThreat.ts`
 - `src/ai/npcWorkContract.ts`
 
+Related Work Contract lifecycle/context that may need recon but should not be widened solely for tooling:
+
+- `src/world/workContract.ts`
+- `src/world/createWorkContracts.ts`
+- `src/ai/npcPersonalProvisions.ts`
+
 Tests should extend the existing focused test locations around:
 
 - NPC trace buffering/filtering,
 - NPC inspector projections,
 - debug API plain-data surfaces,
 - `npcAnimalThreat` scoring,
-- `npcWorkContract` scoring.
+- `npcWorkContract` scoring for both `measurable_work` and `expedition_escort`.
 
 Only add a new narrow debug/projection module if keeping these projections inside `npcInspector.ts` would make that file materially less coherent.
 
@@ -206,8 +227,12 @@ Automated verification should cover:
 
 - new trace event payloads remain plain data and bounded,
 - threat candidate scores in trace match the actual pure scorer inputs/result,
-- contract score breakdown sums to the actual candidate score, including impossible provisioning,
+- measurable-work breakdown sums to the actual candidate score,
+- escort breakdown sums to the actual candidate score and preserves relation/reputation/renown/personality/danger/away-time semantics,
+- impossible provisioning remains rejected but is represented safely on JSON/debug surfaces,
+- production Work Contract selection semantics (`score > 0`, deterministic stable ties) remain unchanged for both scopes,
 - projection helpers preserve deterministic chronological ordering,
+- contract projections include existing escort lifecycle events without duplicating them,
 - settlement reports do not duplicate events and only include currently loaded NPC traces,
 - filters remain compatible with existing `HistoryFilter`,
 - debug scenario helpers reject/no-op cleanly when prerequisites are absent,
@@ -218,6 +243,7 @@ Manual browser verification by the User:
 - inspect an ordinary NPC over several decision cycles,
 - run one-wolf and multi-wolf village attacks and compare NPC responses,
 - post a construction contract and inspect why NPCs accept/reject it,
+- post an expedition escort contract and inspect why NPCs accept/reject it and how service lifecycle is represented,
 - confirm inspector/debug output remains readable during active simulation,
 - confirm no visible simulation behaviour changed solely because diagnostics are enabled.
 
@@ -225,7 +251,7 @@ Manual browser verification by the User:
 
 - Changing defend/flee balance.
 - Coordinated settlement defense, alarm propagation or group tactics.
-- Changing contract economics or acceptance policy.
+- Changing Work Contract economics, escort danger policy or acceptance policy.
 - Persisting NPC trace history across streaming/save-load.
 - Full world observatory UI.
 
