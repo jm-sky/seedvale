@@ -111,6 +111,18 @@ import {
   isLostHunterPackLooted,
 } from '../quests/lostHunterNaturalCave'
 import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
+import {
+  buildLostTreasureExpeditionQuest,
+  isLostTreasureExpeditionCampLooted,
+  isLostTreasureExpeditionEvidenceLooted,
+  isLostTreasureExpeditionFinalTreasureLooted,
+  isLostTreasureExpeditionJournalPackLooted,
+  LOST_TREASURE_EXPEDITION_JOURNAL_KIND,
+  LOST_TREASURE_EXPEDITION_JOURNAL_TO_FAMILY_OUTCOME,
+  LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME,
+  LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME,
+} from '../quests/lostTreasureExpedition'
+import { getActiveLostTreasureExpeditionBinding } from '../quests/lostTreasureExpeditionRuntime'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
 import {
   buildOldBonesAdventureCaveQuest,
@@ -1107,6 +1119,7 @@ export async function createApp(
   const lostHunterBinding = getActiveLostHunterNaturalCaveBinding()
   const oldBonesBinding = getActiveOldBonesAdventureCaveBinding()
   const dungeonBanditBinding = getActiveDungeonBanditTreasureBinding()
+  const lostTreasureExpeditionBinding = getActiveLostTreasureExpeditionBinding()
   const suspiciousTransportCaveCache = getActiveSuspiciousTransportCaveCacheBinding()
   const bearCaveQuestBinding = bearCaveBinding
     ? {
@@ -1243,6 +1256,17 @@ export async function createApp(
           def.name,
         ))
       }
+      if (lostTreasureExpeditionBinding) {
+        const homeNpcs = settlementOpportunityNpcsFromDef(def)
+        const neighborNpcs = neighborDefs.flatMap((neighbor) => (
+          settlementOpportunityNpcsFromDef(neighbor)
+        ))
+        opportunityQuestDefs.push(buildLostTreasureExpeditionQuest(
+          lostTreasureExpeditionBinding,
+          [...homeNpcs, ...neighborNpcs],
+          def.name,
+        ))
+      }
       const homeGuard = selectGuardQuestGiver(npcs)
       migrateLegacyGuardSwordGift(guardProgress, homeGuard?.id)
     }
@@ -1310,6 +1334,21 @@ export async function createApp(
         }
         return false
       }
+      if (lostTreasureExpeditionBinding && questId === lostTreasureExpeditionBinding.questId) {
+        const requiredId = context.requireItemInstanceId ?? lostTreasureExpeditionBinding.journalInstanceId
+        const journal = inventory.getInstance(requiredId)
+        if (journal?.kind !== LOST_TREASURE_EXPEDITION_JOURNAL_KIND) return false
+        if (outcomeId === LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME) return true
+        const npcId = outcomeId === LOST_TREASURE_EXPEDITION_JOURNAL_TO_FAMILY_OUTCOME
+          ? lostTreasureExpeditionBinding.stakeholderNpcId
+          : outcomeId === LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME
+            ? lostTreasureExpeditionBinding.sponsorNpcId
+            : undefined
+        if (!npcId) return false
+        const npcState = bundle.settlementsManager.getNpcState(npcId)
+        if (!npcState || npcState.health.dead) return false
+        return npcState.personalInventory.canAddInstance(journal)
+      }
       if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
         const requiredId = context.requireItemInstanceId ?? suspiciousTransportCaveCache.evidenceInstanceId
         const evidence = inventory.getInstance(requiredId)
@@ -1368,6 +1407,23 @@ export async function createApp(
             instanceId: dungeonBanditBinding.ledgerInstanceId,
           })
         }
+        return
+      }
+      if (lostTreasureExpeditionBinding && questId === lostTreasureExpeditionBinding.questId) {
+        if (outcomeId === LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME) return
+        const npcId = outcomeId === LOST_TREASURE_EXPEDITION_JOURNAL_TO_FAMILY_OUTCOME
+          ? lostTreasureExpeditionBinding.stakeholderNpcId
+          : outcomeId === LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME
+            ? lostTreasureExpeditionBinding.sponsorNpcId
+            : undefined
+        if (!npcId) return
+        giveItemInstanceToNpc(
+          {
+            playerInventory: inventory,
+            getNpcState: (id) => bundle.settlementsManager.getNpcState(id),
+          },
+          { npcId, instanceId: lostTreasureExpeditionBinding.journalInstanceId },
+        )
         return
       }
       if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
@@ -1516,6 +1572,28 @@ export async function createApp(
             SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
           )
           return isSuspiciousTransportCacheLooted(instances, suspiciousTransportCaveCache.evidenceInstanceId)
+        }
+        if (lostTreasureExpeditionBinding && containerId === lostTreasureExpeditionBinding.campContainerId) {
+          return isLostTreasureExpeditionCampLooted(
+            bundle.worldGeneratedContainers.containerCounts(containerId),
+          )
+        }
+        if (lostTreasureExpeditionBinding && containerId === lostTreasureExpeditionBinding.journalContainerId) {
+          const instances = bundle.worldGeneratedContainers.containerInstances(
+            containerId,
+            LOST_TREASURE_EXPEDITION_JOURNAL_KIND,
+          )
+          return isLostTreasureExpeditionJournalPackLooted(instances, lostTreasureExpeditionBinding.journalInstanceId)
+        }
+        if (lostTreasureExpeditionBinding && containerId === lostTreasureExpeditionBinding.evidenceContainerId) {
+          return isLostTreasureExpeditionEvidenceLooted(
+            bundle.worldGeneratedContainers.containerCounts(containerId),
+          )
+        }
+        if (lostTreasureExpeditionBinding && containerId === lostTreasureExpeditionBinding.finalTreasureContainerId) {
+          return isLostTreasureExpeditionFinalTreasureLooted(
+            bundle.worldGeneratedContainers.containerCounts(containerId),
+          )
         }
         return isDarkForestTreasureChestLooted(
           bundle.worldGeneratedContainers.containerCounts(containerId),

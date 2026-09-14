@@ -188,6 +188,7 @@ export function createItemInstanceId(): string {
  *  content needs physical identity (plans quests-progression-023 / 025). */
 export const IDENTITY_ONLY_ITEM_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
   'bandit_ledger',
+  'expedition_journal',
   'hunting_bow',
   'marked_valuable',
   'signet_ring',

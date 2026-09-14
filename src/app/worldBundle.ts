@@ -64,6 +64,13 @@ import {
 } from '../quests/lostHunterNaturalCave'
 import { setActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import {
+  lostTreasureExpeditionCaveReservationRequests,
+  lostTreasureExpeditionClaimsMatch,
+  lostTreasureExpeditionContainerSpecs,
+  resolveLostTreasureExpeditionBinding,
+} from '../quests/lostTreasureExpedition'
+import { setActiveLostTreasureExpeditionBinding } from '../quests/lostTreasureExpeditionRuntime'
+import {
   OLD_BONES_RESERVATION_KEY,
   oldBonesCaveReservationRequests,
   oldBonesRemainsContainerSpec,
@@ -1353,6 +1360,16 @@ async function buildWorldSystems(
     archetypeOf: (caveId) => caves.archetypeOf(caveId) ?? null,
     contentAnchors: caves.contentAnchors(),
   })
+  const lostTreasureExpeditionCandidate = resolveLostTreasureExpeditionBinding({
+    worldSeed: config.seed,
+    settlementId: homeDef.id,
+    homeNpcs: homeOpportunityNpcs,
+    neighborNpcsBySettlement: neighborOpportunityNpcsBySettlement,
+    caveIds: caves.definitions().map((def) => def.caveId),
+    archetypeOf: (caveId) => caves.archetypeOf(caveId) ?? null,
+    dungeonChambersOf: (caveId) => caves.dungeonChambersOf(caveId),
+    contentAnchors: caves.contentAnchors(),
+  })
 
   const caveAdventureContentPolicy = resolveCaveAdventureContentPolicy(
     adventureCaveIdsFromCaves(caves),
@@ -1372,6 +1389,9 @@ async function buildWorldSystems(
           : []),
         ...(dungeonBanditCandidate
           ? dungeonBanditCaveReservationRequests(dungeonBanditCandidate).anchorClaims ?? []
+          : []),
+        ...(lostTreasureExpeditionCandidate
+          ? lostTreasureExpeditionCaveReservationRequests(lostTreasureExpeditionCandidate).anchorClaims ?? []
           : []),
       ],
     },
@@ -1400,6 +1420,15 @@ async function buildWorldSystems(
     ? dungeonBanditCandidate
     : null
   setActiveDungeonBanditTreasureBinding(dungeonBanditBinding)
+
+  const lostTreasureExpeditionBinding = lostTreasureExpeditionCandidate
+    && lostTreasureExpeditionClaimsMatch(
+      lostTreasureExpeditionCandidate,
+      (key) => caveAdventureContentPolicy.claimOf(key),
+    )
+    ? lostTreasureExpeditionCandidate
+    : null
+  setActiveLostTreasureExpeditionBinding(lostTreasureExpeditionBinding)
 
   const caveAuthoredClaims = new CaveAuthoredAnchorClaims()
   const lostHunterBinding = resolveLostHunterNaturalCaveBinding({
@@ -1466,6 +1495,9 @@ async function buildWorldSystems(
       : []),
     ...(dungeonBanditBinding
       ? dungeonBanditContainerSpecs(dungeonBanditBinding, caves.contentAnchors())
+      : []),
+    ...(lostTreasureExpeditionBinding
+      ? lostTreasureExpeditionContainerSpecs(lostTreasureExpeditionBinding, caves.contentAnchors())
       : []),
     ...(lostHunterBinding && lostHunterLootAnchor
       ? [lostHunterPackContainerSpec(lostHunterBinding, lostHunterLootAnchor)]

@@ -188,6 +188,7 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   signet_ring: 40,
   bandit_ledger: 15,
   marked_valuable: 55,
+  expedition_journal: 20,
 }
 
 /** @domain settlements — neutral social standing for merchant sell pricing. */

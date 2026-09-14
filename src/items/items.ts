@@ -100,6 +100,8 @@ export type ItemKind =
   /** Plan quests-progression-026 — bandit-cache ledger and marked stolen property. */
   | 'bandit_ledger'
   | 'marked_valuable'
+  /** Plan quests-progression-027 — lost expedition's physical journal. */
+  | 'expedition_journal'
   | 'arrow'
   | 'broadhead_arrow'
   | 'war_arrow'
@@ -1049,6 +1051,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xb8860b,
     description: 'Cenny przedmiot z wyraźnym znakiem właściciela. Łatwy do rozpoznania dla kogoś, kto go stracił.',
   },
+  expedition_journal: {
+    kind: 'expedition_journal',
+    label: 'dziennik wyprawy',
+    categories: ['resource'],
+    weight: 0.25,
+    size: 'SM',
+    color: 0x4a3624,
+    description: 'Dziennik dowódcy zaginionej wyprawy. Opisuje ostatnie dni podróży po legendarny skarb.',
+  },
   long_bow: {
     kind: 'long_bow',
     label: 'długi łuk',
@@ -1980,6 +1991,19 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
       }),
     )
     mesh.position.y = 0.04
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'expedition_journal') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.03, 0.19),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS.expedition_journal.color,
+        flatShading: true,
+        roughness: 0.85,
+      }),
+    )
+    mesh.position.y = 0.02
     mesh.castShadow = true
     return mesh
   }

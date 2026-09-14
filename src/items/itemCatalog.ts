@@ -1134,6 +1134,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: 'Plan quests-progression-026 — identity-backed marked property from the dungeon bandit deep stash. Not merchant stock.',
     physical: { resilient: true },
   },
+  expedition_journal: {
+    kind: 'expedition_journal',
+    label: 'dziennik wyprawy',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan quests-progression-027 — identity-backed journal from the dungeon lost-treasure-expedition leader pack. Not merchant stock.',
+    physical: { resilient: true },
+  },
   long_bow: {
     kind: 'long_bow',
     label: 'długi łuk',
