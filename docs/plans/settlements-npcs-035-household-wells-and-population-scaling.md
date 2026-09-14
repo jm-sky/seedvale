@@ -9,6 +9,7 @@
 **Subdomains:** `household` `logistics`
 **Tags:** `water` `well` `village-generation` `npc-needs`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Cel
 
