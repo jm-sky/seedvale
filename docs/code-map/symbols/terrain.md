@@ -315,21 +315,39 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/grass.ts`
 
-- `createGrassSystem` — function — line 439
-- `GrassSystem` — type — line 48
+- `createGrassSystem` — function — line 455
+- `grassBladeLocalPositions` — function — line 342
+  - domain: world-terrain
+- `GrassSystem` — type — line 50
 - `WorldGrassChunk` — type — line 14
+
+## `terrain/grassBounds.ts`
+
+- `createGrassBoundsAccumulator` — function — line 87
+- `expandGrassInstanceBounds` — function — line 105
+  - domain: world-terrain
+- `finalizeGrassBounds` — function — line 141
+  - domain: world-terrain
+- `GrassBoundsAccumulator` — type — line 18
+- `grassBoundsContainsPoint` — function — line 150
+- `GrassBucketBounds` — type — line 11
+- `grassInstanceConservativeRadius` — function — line 76
+  - domain: world-terrain
+- `grassSpeciesLocalExtent` — function — line 66
+  - domain: world-terrain
+- `transformGrassLocalPoint` — function — line 164
 
 ## `terrain/grassPlacement.ts`
 
-- `computeChunkGrass` — function — line 323
-- `GRASS_SPECIES_ORDER` — const — line 22
-- `GrassBucketData` — type — line 58
-- `GrassChunkData` — type — line 67
-- `GrassComputeParams` — type — line 34
-- `GrassSpeciesId` — type — line 18
-- `GrassTileGrids` — type — line 26
-- `macroMeadowNoiseFor` — function — line 300
-- `macroMeadowWeightAt` — function — line 316
+- `computeChunkGrass` — function — line 349
+- `GRASS_SPECIES_ORDER` — const — line 31
+- `GrassBucketData` — type — line 67
+- `GrassChunkData` — type — line 80
+- `GrassComputeParams` — type — line 43
+- `GrassSpeciesId` — type — line 27
+- `GrassTileGrids` — type — line 35
+- `macroMeadowNoiseFor` — function — line 326
+- `macroMeadowWeightAt` — function — line 342
   - domain: world-terrain
 
 ## `terrain/gridContour.ts`

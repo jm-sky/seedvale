@@ -695,6 +695,8 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/distanceLod.test.ts`
 - `terrain/grass.ts`
+- `terrain/grassBounds.test.ts`
+- `terrain/grassPlacement.test.ts`
 
 ## `terrain/fbm.ts`
 
@@ -742,12 +744,34 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `terrain/chunkManager.ts`
+- `terrain/grassBounds.test.ts`
+- `terrain/grassPlacement.test.ts`
+
+## `terrain/grassBounds.test.ts`
+
+**Imports**
+
+- `terrain/distanceLod.ts`
+- `terrain/grass.ts`
+- `terrain/grassBounds.ts`
+- `terrain/grassPlacement.ts`
+
+## `terrain/grassBounds.ts`
+
+**Imported by**
+
+- `terrain/grassBounds.test.ts`
+- `terrain/grassPlacement.test.ts`
+- `terrain/grassPlacement.ts`
 
 ## `terrain/grassPlacement.test.ts`
 
 **Imports**
 
 - `terrain/chunkHeightmap.ts`
+- `terrain/distanceLod.ts`
+- `terrain/grass.ts`
+- `terrain/grassBounds.ts`
 - `terrain/grassPlacement.ts`
 - `terrain/riverNetwork.ts`
 
@@ -759,6 +783,7 @@ Generated from TypeScript imports.
 - `terrain/biomeRegions.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/fbm.ts`
+- `terrain/grassBounds.ts`
 - `terrain/riverNetwork.ts`
 - `world/parseSeed.ts`
 
@@ -769,6 +794,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkWorkerPool.ts`
 - `terrain/grass.ts`
+- `terrain/grassBounds.test.ts`
 - `terrain/grassPlacement.test.ts`
 
 ## `terrain/gridContour.ts`
