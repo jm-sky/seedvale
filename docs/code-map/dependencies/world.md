@@ -2635,6 +2635,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `quests/quests.ts`
 - `world/locations/treasureMapBearCave.test.ts`
 - `world/locations/treasureMapBearCaveRuntime.ts`
 

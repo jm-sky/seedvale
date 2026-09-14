@@ -9,7 +9,9 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `items/Inventory.ts`
 - `quests/QuestManager.ts`
+- `quests/lostHunterNaturalCave.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.ts`
 
@@ -148,6 +150,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `quests/QuestManager.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
 
@@ -334,6 +337,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `quests/QuestManager.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/oldBonesAdventureCave.test.ts`
@@ -442,6 +446,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `terrain/chunkEnvironment.ts`
 - `world/locations/darkForestTreasureSite.ts`
+- `world/locations/treasureMapBearCave.ts`
 
 **Imported by**
 

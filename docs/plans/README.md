@@ -75,7 +75,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
 | 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | ~~world-terrain-028~~, ~~fauna-027~~ |
 | 💡 `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | ~~world-terrain-028~~, ~~fauna-027~~ |
-| 💡 `quests-progression-029-generic-resolution-effects.md`                      | -       | 🔴 | M      | -      |
 | 💡 `quests-progression-030-external-resolution-and-real-problem-offering.md`   | -       | 🔴 | M      | ~~quests-progression-028~~, quests-progression-029 |
 | 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | quests-progression-030 |
 | ◼️ `settlements-008-settlement-progression-around-home.md`                     | -       | 🟡 | S      | -      |
