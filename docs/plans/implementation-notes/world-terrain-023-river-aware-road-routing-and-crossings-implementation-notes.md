@@ -4,7 +4,9 @@
 
 These notes capture the focused recon needed to implement `world-terrain-023` without repeating broad repository discovery.
 
-Current code is authoritative. Re-check touched symbols before editing because `world-terrain-010` is still in progress.
+The plan has been split: `world-terrain-023` now owns river-aware routing, canonical crossing semantics and ford projection only. Bridge visualization, streaming, terrain masking and traversal moved to `world-terrain-029-road-bridge-projection-and-traversal.md`.
+
+Current code is authoritative. Re-check touched symbols before editing because nearby terrain/worldgen work may continue to evolve.
 
 ## Primary ownership
 
@@ -27,49 +29,40 @@ Key symbols:
 - `routeToMinorLocation()`
 - `clearRoadNetworkCaches()`
 
-Important current behaviour:
+Current behaviour:
 
-- `routeCache` is module-local and keyed by sorted pair/location ids.
-- A* has `gridStep = 9`, an envelope margin of `gridStep * 5`, 8-neighbour movement, hard rejection only for sampled terrain below `waterLevel + 0.5`, and continuous mountain/elevation costs.
-- River geometry is not part of the search today.
+- `routeCache` is module-local and stores `RoadSegment[] | null` under sorted pair/location identities.
+- A* uses `gridStep = 9`, margin `gridStep * 5`, 8-neighbour movement, open-water rejection and continuous mountain/elevation costs.
+- River geometry is not part of the search.
 - `findRoute()` reconstructs the A* chain, then runs `meanderRoute()`, then `smoothProfile()`.
-- All road consumers share the same route cache; preserve this single-route-source property when the cache value becomes richer.
+- Roads, signposts and minor-location routes share the same route cache.
 
-Do not add a second road graph or bridge planner.
+Preserve that single-route-source property when the cache value becomes a richer route result. Do not add a second road graph or bridge planner.
 
 ## Canonical analytical river source
 
 `src/terrain/riverQuery.ts`
 
-`RiverQuery.segmentsNear(x, z, size)` is the correct pre-streaming lookup. It computes through the same pure river-tile path as production river carving and water rendering.
+`RiverQuery.segmentsNear(x, z, size)` is the correct pre-streaming river lookup. It computes through the same pure river-tile/channel path as production river carving/rendering.
 
 Do not use `riverTileCache.ts` for route planning: that cache is reference-counted to loaded chunks and has the wrong lifetime.
 
-`createRiverQuery()` internally keeps up to 64 tiles and is deterministic for fixed `RawSampleParams`.
+### Existing world-scoped registration
 
-### World-scoped registration already exists
-
-`src/settlement/settlementPlanCache.ts`
-
-- `setSettlementRiverQuery(query)` stores the analytical river query used while resolving settlement defs.
-- `ChunkManager` currently creates/registers that query during world construction.
+`src/settlement/settlementPlanCache.ts` already exposes `setSettlementRiverQuery(query)`. `ChunkManager` currently creates/registers a `createRiverQuery(fallbackParams)` during world construction.
 
 `RoadNetworkContext` is constructed in at least:
 
-- `src/terrain/chunkManager.ts`
-- `src/settlement/SettlementsManager.ts`
+- `src/terrain/chunkManager.ts`,
+- `src/settlement/SettlementsManager.ts`.
 
-This matters because whichever caller resolves a route first populates `routeCache`. After this plan both contexts must see equivalent river data; otherwise caller order could become worldgen-significant.
+Whichever caller resolves a route first populates `routeCache`; after this plan both contexts must see equivalent canonical river data or caller order becomes worldgen-significant.
 
-Prefer sharing the already world-scoped analytical query or an equivalent narrow callback over configuring a second road-specific hydrology path.
+Prefer sharing the already world-scoped analytical query or a narrow equivalent callback over independently configuring road hydrology.
 
-## River channel facts available to routing
+## River facts available to routing
 
-`src/terrain/riverNetwork.ts`
-
-`riverChannelSegmentsNear()` emits `RiverChannelSegment` derived from canonical meandered/smoothed river chains.
-
-At each endpoint the segment carries:
+`RiverChannelSegment` from the terrain river pipeline carries endpoint values for:
 
 - centerline X/Z,
 - `waterHalfWidth`,
@@ -77,160 +70,76 @@ At each endpoint the segment carries:
 - `waterH`,
 - `bedH`.
 
-The values are derived from flow accumulation through:
-
-- `flowFactor()`
-- `widthFromAccumulation()`
-- `exposedBankFromFlow()`
-- `submergedDepthFromFlow()`
-
-Canonical river invariants from the current implementation:
-
-```text
-bedY < waterY < bankTopY
-waterWidth < channelWidth
-```
-
-Use interpolation at the actual road/river intersection. Do not classify from terrain elevation alone.
-
-## Existing ford implementation
-
-`src/terrain/riverFord.ts`
-
-Current constants/behaviour:
-
-- full ford up to water width 6 m,
-- smooth fade from 6 to 9 m,
-- no ford at 9 m and above,
-- `FORD_WATER_DEPTH = 0.12`.
-
-Current functions:
-
-- `fordStrength(roadFalloff, waterWidth)`
-- `fordBedHeight(bedH, waterH, ford)`
-
-The width gate currently acts as an implicit crossing decision inside terrain shaping. That is the piece that must stop being authoritative.
-
-Keep the bed-shaping maths, but move ford-vs-bridge policy to one road/river crossing evaluator. Terrain should receive an explicit ford influence from the route result.
-
-Depth must join width in the route classifier so a narrow but deep channel cannot be declared safely fordable just because it fits under the old width threshold.
-
-## Terrain stage ordering
-
-`src/terrain/chunkHeightmap.ts`
-
-Relevant ordering is intentional:
-
-```text
-1. regional smoothing
-2. road/path/clearing corridor shaping
-3. river channel carving
-```
-
-`applyRiverChannel()` currently receives the stage-2 road falloff and calls the ford helpers while constructing the channel candidate.
-
-Preserve this ordering.
-
-For fords:
-
-- stage 3 should use an explicit canonical ford crossing influence,
-- only declared fords may raise the bed.
-
-For bridges:
-
-- keep the river carve natural beneath the bridge,
-- prevent stage-2 road shaping from building a terrain berm across the bridge span; clip/mask the road corridor height effect through the span or split its projection around the span.
-
-Do not introduce runtime terrain deformation.
-
-## Road corridor projection
-
-`roadNetwork.ts::segmentsNear()` converts cached `RoadSegment`s into worker-safe `RoadCorridorSegment[]` using the region road/path half-width, height strength and tint strength.
-
-This is the natural projection seam for terrain work.
-
-Likely implementation shape:
-
-- route result retains semantic crossings,
-- nearby-query code projects compact crossing records alongside corridor segments,
-- chunk params carry only numeric data needed by the worker,
-- `chunkHeightmap.ts` consumes those projections without re-running river classification.
-
-Avoid embedding Three.js/runtime object state in the route result.
-
-## Critical post-processing issue: meander
-
-`findRoute()` currently does:
-
-```text
-A* grid chain
-→ meanderRoute()
-→ smoothProfile()
-```
-
-A river-aware A* alone is insufficient because `meanderRoute()` moves interior X/Z positions after the crossing cost was chosen.
-
-The implementation must preserve crossing topology across this step.
-
-Recommended concrete order:
-
-1. During A* edge evaluation, detect/cost river crossings.
-2. Reconstruct selected edges.
-3. Re-resolve the selected edge crossings exactly and insert stable crossing anchors into the route geometry.
-4. Mark crossing anchors (and, if needed, immediately adjacent approach points) as locked against lateral meander.
-5. Meander only unconstrained points.
-6. Run final intersection validation against canonical river segments.
-7. Reject/re-route deterministically if final intersections do not bijectively match the declared crossing records.
-8. Run `smoothProfile()` after the X/Z crossing geometry is fixed.
-
-Do not rely on “meander amplitude is only 2 m” as a correctness argument; narrow streams and bank widths are of the same order.
+Interpolate these at the actual crossing point. Do not classify from terrain elevation alone.
 
 ## Edge-based river detection
 
-Node tests are insufficient because `gridStep = 9` can leap over a river while both nodes remain dry.
+Node tests are insufficient because a 9 m A* step can cross a narrower river while both endpoints remain dry.
 
-Evaluate each candidate A* edge against river segments.
+Evaluate candidate A* **edges** against canonical river footprints.
 
-For performance, fetch canonical river segments once for the route-search envelope rather than calling `RiverQuery.segmentsNear()` for every A* neighbor expansion.
+For performance:
 
-`RiverQuery` accepts a square centered query. Build a square covering the existing A* rectangle plus enough channel reach/epsilon to avoid dropping a segment whose water/channel footprint touches an edge near the query boundary.
+1. build the existing bounded A* search envelope,
+2. issue one square `RiverQuery.segmentsNear()` query large enough to cover it plus channel reach/epsilon,
+3. reuse that local segment set during neighbor expansion.
 
-Then perform a local geometric test for each A* edge.
+Do not call hydrology generation/query independently for every neighbor.
 
-The test must reason about the river **water/channel footprint**, not just exact centerline-line intersection; diagonal/tangent cases near the water edge should not slip through.
+The geometric test must account for water/channel footprint, not only exact centerline-line intersection; tangent/diagonal cases near a bank must not become naked crossings.
 
-Use existing math helpers such as `projectOntoSegment` where suitable rather than duplicating segment projection maths.
+Reuse existing geometry helpers such as `projectOntoSegment` where they fit instead of duplicating projection maths.
+
+## One crossing evaluator
+
+The current `src/terrain/riverFord.ts` is terrain-oriented and locally decides ford strength from arbitrary road overlap + width. That cannot remain the semantic classifier.
+
+Create one pure road↔river evaluator, preferably a focused `roadRiverCrossing.ts` if it keeps ownership clear.
+
+Inputs should be canonical crossing facts plus route kind/approach facts as needed. Outputs must be sufficient for A* to distinguish:
+
+- safe ford,
+- bridge candidate,
+- unsupported/infeasible crossing.
+
+Ford policy should reuse current production tuning as guidance:
+
+- full ford historically through water width 6 m,
+- fades to none by 9 m,
+- shaped target water depth is `FORD_WATER_DEPTH = 0.12`.
+
+But width alone is insufficient: depth must prevent a narrow/deep channel from becoming a ford.
+
+Bridge feasibility/cost stays in `023` because routing must know whether a crossing may be selected. Bridge runtime projection does not.
+
+Keep all thresholds/cost policy near this evaluator rather than scattering them through A*, terrain and rendering.
 
 ## Crossing cost policy
 
-Keep the existing A* base cost intact for non-river steps:
+Preserve the existing base A* cost for non-river steps:
 
 ```text
 step distance
-+ mountain ridge multiplier
++ mountain ridge cost
 + elevation delta cost
 ```
 
-A crossing edge adds a deterministic infrastructure cost.
+A crossing edge adds deterministic infrastructure cost.
 
-The cost should be continuous enough to rank candidate locations:
+Expected ranking:
 
-- narrower/shallower ford cheaper,
-- wider/deeper ford candidate more expensive,
-- bridge significantly more expensive than a good ford,
-- excessive bridge span infeasible/hard reject.
+- narrow/shallow ford = low/moderate cost,
+- increasingly marginal ford = higher cost,
+- bridge = significantly more expensive than a good ford,
+- excessive/unsupported bridge span/geometry = hard reject.
 
-Do not let a small stream become an enormous detour just because “river = big constant penalty”.
+This lets a nearby natural ford beat an unnecessary bridge without making every small stream cause a huge detour.
 
-Do not let a bridge be free enough that A* ignores nearby fords.
+The bridge cost is only a routing semantic here; do not instantiate bridge geometry in `023`.
 
-Keep tuning constants near the canonical crossing evaluator, not scattered between routing and terrain code.
+## Canonical route result
 
-## Canonical crossing result
-
-Use one road-owned result object, not separate ford and bridge discovery passes.
-
-A useful shape is conceptually:
+Replace `routeCache`'s raw segment payload with one road-owned result carrying geometry and crossing records, conceptually:
 
 ```ts
 type RoadRoute = {
@@ -240,195 +149,233 @@ type RoadRoute = {
 }
 ```
 
-Each crossing needs enough stable data to project terrain and bridge specs without asking “what kind is this?” again.
-
-Recommended facts:
+Each crossing needs stable semantic data, not runtime presentation state:
 
 - stable id,
-- route key / ordinal if useful for debugging,
 - kind `ford | bridge`,
 - world X/Z,
 - road direction/yaw,
-- canonical water/channel widths,
-- water height,
+- canonical water width,
+- canonical channel width,
+- canonical water height,
 - natural bed height,
-- effective ford bed or parameters to derive it,
-- bridge span/approach extent when kind is bridge.
+- bridge-feasibility facts only if needed downstream and already used by routing.
 
-Do not store derived Three.js meshes/colliders in the cache.
+Do not store `THREE.Object3D`, chunk ownership, colliders or bridge runtime handles in this result.
 
-Crossing ids should be constructed from deterministic route identity + deterministic crossing ordinal/river geometry, never from array insertion order that can vary with query/cache order.
+`world-terrain-029` consumes `kind = 'bridge'` from this same record. If 029 later needs another deterministic semantic fact, extend this contract rather than letting it rediscover crossings.
 
 ## Symmetry / route cache
 
-`pairKey(idA, idB)` is order-independent and the first resolver currently fixes the cached route orientation.
+`pairKey(idA, idB)` is order-independent while current cache orientation depends on whichever side resolved first. Existing consumers compensate by checking endpoint distance.
 
-Existing consumers already orient cached route points as needed by comparing endpoint distance (for example midpoint signposts).
+When crossing identity is added:
 
-When adding crossing ids/orientation:
+- physical crossing id must not depend on A→B vs B→A lookup,
+- crossing ordinal must not reverse into a different id,
+- cache population order must not change route/crossing semantics.
 
-- keep physical crossing identity independent of whether A or B asked first,
-- be careful that crossing ordinal does not reverse into a different id when the route is traversed backward,
-- canonicalize orientation/order when creating the cached route result.
+Canonicalizing computation orientation by sorted endpoint identity is a reasonable option, but verify it does not alter current entrance selection semantics before adopting it.
 
-A simple option is to always compute/cache the route in sorted-id endpoint order and reverse only for consumers that need caller-relative traversal. Verify that this does not alter existing entrance selection semantics before adopting it.
+## Critical post-processing issue: meander
 
-## Fords: effective water depth
+Current route order is:
 
-Current loose-end mismatch:
+```text
+A* grid chain
+→ meanderRoute()
+→ smoothProfile()
+```
 
-- terrain bed is raised by ford shaping,
-- canonical `RiverChannelSegment.bedH` remains the natural bed,
-- local water sampling can therefore report a deeper water column than the terrain actually has.
+A river-aware A* alone is insufficient because `meanderRoute()` changes interior X/Z after crossing costs were chosen.
 
-Do **not** mutate canonical river hydrology.
+Recommended implementation order for selected route geometry:
 
-Instead centralize an effective-bed helper and use it both in:
+1. detect/cost crossings during A* edge evaluation,
+2. reconstruct selected edges,
+3. resolve selected crossings exactly and insert stable crossing anchors,
+4. lock crossing anchors and, if necessary, immediate approach points against lateral meander,
+5. meander only unconstrained points,
+6. run final canonical-river intersection validation,
+7. reject/re-route deterministically if final intersections do not bijectively match crossing records,
+8. run `smoothProfile()` after X/Z topology is fixed.
 
-- `chunkHeightmap.ts` ford carving,
-- `ChunkManager.sampleLocalWater()` (or the helper it delegates to) whenever `(x,z)` lies inside a declared ford influence.
+Do not rely on the small meander amplitude as a correctness argument; it is comparable to narrow stream/bank widths.
 
-Keep canonical `waterH` unchanged.
+## Minor-location path rule
 
-This resolves the loose end without making the river network depend on roads.
+`routeToMinorLocation()` uses the same route search/cache as inter-settlement roads, but produces `kind = 'path'` segments.
 
-## Bridges: ownership and lifecycle
+The plan now resolves the V1 policy explicitly:
 
-No suitable generic mutable structure owner was found.
+- `road`: may use `ford` or `bridge`,
+- `path`: safe ford only; a bridge-required edge is rejected so routing detours or fails.
 
-Do not use:
+Pass route kind into the canonical evaluator/cost policy where necessary. Do not fork a separate path-river algorithm.
 
-- `SettlementStructureStateRegistry` — settlement-building condition/repair state,
-- `WorldGeneratedContainers` — container-specific,
-- `SettlementsManager` as semantic owner — bridges must exist independently of endpoint settlement streaming.
+## Existing ford implementation to reuse
 
-Bridge semantics stay in the deterministic road route result.
+`src/terrain/riverFord.ts`
 
-For runtime projection, choose the closest existing chunk-attached deterministic world prop/collider pattern during implementation preflight. `ChunkManager` is the correct lifecycle boundary to inspect first because it already:
+Current functions:
 
-- requests nearby road corridors for chunk generation,
-- owns terrain/chunk attachment/removal,
-- owns world collider integration used by player/world movement.
+- `fordStrength(roadFalloff, waterWidth)`,
+- `fordBedHeight(bedH, waterH, ford)`.
 
-A bridge query should be spatial (`bridgesNear` / `roadStructuresNear`) and return stable numeric specs from the route result. Runtime rendering can then dedup by stable id when a bridge overlaps chunk boundaries.
+After `023`, arbitrary road overlap must no longer decide whether a ford exists.
 
-Do not make bridge existence depend on camera/player presence.
+Keep/rework the bed profile maths so it consumes an explicit canonical ford influence. Width/depth classification belongs to the crossing evaluator.
 
-## Bridge geometry constraints
+`FORD_WATER_DEPTH` remains useful as the shaped-depth target unless implementation evidence justifies changing it.
 
-V1 bridge can be visually simple, but topology must be real.
+## Terrain stage ordering
 
-At minimum derive:
+`src/terrain/chunkHeightmap.ts` intentionally applies:
 
-- center = canonical crossing point,
-- yaw = road direction through crossing,
-- span = channel/water width + bounded bank/abutment clearance,
-- deck Y = approach-road profile high enough to stay above canonical water with clearance,
-- width = compatible with road corridor width,
-- collider/walkable deck aligned to the visual deck.
+```text
+1. regional smoothing
+2. road/path/clearing shaping
+3. river channel carving
+```
 
-Do not flatten the river to make the bridge walkable.
+`riverChannelCandidate()` currently receives stage-2 `roadFalloff` and calls `fordStrength()` / `fordBedHeight()`.
 
-If existing NPC movement samples only terrain Y and ignores bridge colliders/ground surfaces on long-range paths, treat that as a concrete integration point to solve in this plan rather than adding an invisible terrain causeway. Check current movement ground/collider seams during implementation preflight.
+Preserve the ordering, but replace implicit overlap authority with explicit ford projection data.
 
-## Minor-location paths
+The worker-safe projection should be analogous to `RoadCorridorSegment[]` / `RiverChannelSegment[]`: compact numeric data relevant to this chunk only.
 
-`routeToMinorLocation()` uses the same route cache and `findRoute()` as inter-settlement roads, with `kind = 'path'` only applied when segments are produced.
+Do **not** add bridge-span masking here in `023`; that belongs to `world-terrain-029` once canonical bridge records exist.
 
-Therefore crossing policy should know the route kind at or before classification if road/path policy differs.
+## Road corridor projection seam
 
-Prefer V1 rule:
+`roadNetwork.ts::segmentsNear()` already turns cached routes into worker-safe `RoadCorridorSegment[]` using road/path widths and strengths.
 
-- `road`: ford or bridge,
-- `path`: ford if safe, otherwise reroute/fail,
+Use the same general pattern for nearby canonical ford influences:
 
-unless current dock/path generation proves a small bridge is necessary. This avoids introducing bridge tiers now while still keeping one classifier/evaluator.
+- route result retains crossing semantics,
+- bounded main-thread query projects compact ford data,
+- chunk params carry only numeric worker-safe values,
+- `chunkHeightmap.ts` consumes projection without re-running classification.
 
-If implemented, pass route kind into the evaluator; do not fork a second path-river algorithm.
+Avoid Three.js/runtime objects in terrain worker payloads.
 
-## Persistence and worldgen cache
+## Effective ford water depth
 
-Current regional route cache is in-memory only and cleared by `clearRoadNetworkCaches()`.
+Current mismatch:
 
-No SaveData field owns roads/fords/bridges.
+- terrain ford raises the carved bed,
+- canonical `RiverChannelSegment.bedH` remains natural,
+- `src/terrain/waterSample.ts::sampleLocalWater()` reports canonical `waterH - bedH`.
+
+Do not mutate river hydrology.
+
+Centralize an effective-bed helper and use the same calculation in:
+
+- `chunkHeightmap.ts` ford shaping,
+- `ChunkManager.sampleLocalWater()` or its river-water helper when the point lies within a declared ford influence.
+
+Canonical `waterH` stays unchanged.
+
+This fixes gameplay/terrain agreement without making river generation depend on roads.
+
+## ChunkManager integration
+
+`src/terrain/chunkManager.ts` already:
+
+- constructs `fallbackParams`,
+- calls `setSettlementRiverQuery(createRiverQuery(fallbackParams))`,
+- constructs the main `roadCtx`,
+- calls `segmentsNear()` while building `ChunkTileParams`,
+- owns `sampleLocalWater()` wiring.
+
+Important implementation detail: retain/reuse the analytical river query when wiring `roadCtx`; do not create one query for settlement placement and an unrelated differently configured query for roads.
+
+`paramsFor()` is the natural place to add nearby ford projection data for the worker.
+
+`sampleLocalWater()` is the natural runtime seam for applying the same effective ford bed to physical water queries.
+
+No bridge mesh/collider/ground work belongs here in `023`.
+
+## SettlementsManager integration
+
+`src/settlement/SettlementsManager.ts` also constructs/uses `RoadNetworkContext` for road/signpost behaviour.
+
+Because `routeCache` is shared module state, this context must receive the same canonical river contract as the `ChunkManager` context. Otherwise the first caller to resolve a route could change cached worldgen output.
+
+Do not make `SettlementsManager` own crossing state; it only needs equivalent route-query inputs.
+
+## Persistence / worldgen cache
+
+Current regional route cache is in-memory and cleared by `clearRoadNetworkCaches()`.
+
+No `SaveData` field owns roads/fords/bridges.
 
 Expected V1 persistence action: none.
 
-Before implementation finishes, re-check `world-015` persistent worldgen-cache code for any namespace that now stores settlement/road route output. If none, do not add one and do not bump `CURRENT_SAVE_VERSION`.
-
-If such a cache has appeared, bump only its relevant namespace/fingerprint because route output changes for identical seeds after river-aware routing.
+Before finishing implementation, re-check whether persistent worldgen caching now stores regional road output. If so, update only the existing relevant namespace fingerprint/version because route output for the same seed changes after river-aware routing. Do not add a bridge/ford persistence list.
 
 ## Tests to create/extend
 
-### `roadNetwork` / crossing geometry
+### Routing / crossing geometry
 
-Cover with synthetic samplers + a deterministic fake/narrow `RiverQuery` where possible; do not depend on expensive full-world generation for every unit test.
+Prefer synthetic height/mountain samplers plus a deterministic fake/narrow river query where possible rather than expensive full-world generation for every unit test.
 
 Required cases:
 
-- 9 m step crossing a <9 m river with dry endpoints,
-- ford chosen for narrow/shallow crossing,
-- nearby ford preferred over wide bridge,
-- wide/deep crossing yields bridge or reroute/null, never naked road,
-- infeasible bridge span rejected,
-- meander cannot create/remove undeclared crossing,
-- route A↔B cache symmetry,
-- same seed/context repeated equality,
-- cache clear prevents seed leakage.
+- 9 m edge crosses a <9 m river with dry endpoints and is still detected,
+- narrow/shallow crossing yields one `ford`,
+- nearby good ford beats a more expensive bridge location,
+- wide/deep crossing yields `bridge`, reroute or `null`, never naked road,
+- unsupported/excessive bridge geometry is rejected,
+- meander cannot create/remove an undeclared crossing,
+- A↔B cache symmetry/stable crossing ids,
+- identical inputs repeat deeply equal,
+- cache clear prevents seed/config leakage,
+- minor-location path never emits `bridge`.
 
-### terrain / water
+### Terrain / water
 
-- arbitrary road/rive overlap without explicit `ford` no longer alters bed,
-- declared ford raises bed with bounded `FORD_WATER_DEPTH`,
-- water height unchanged,
-- local water effective depth matches shaped bed,
-- bridge keeps natural river carve beneath span,
-- chunk-boundary projection continuity.
+- arbitrary road×river overlap without explicit ford no longer alters bed,
+- declared ford raises bed using bounded profile,
+- canonical water height remains unchanged,
+- `sampleLocalWater` effective depth matches shaped ford bed,
+- ford projection is seam-safe across chunk boundaries.
 
-### bridge specs
-
-Keep spec derivation pure and test without Three.js where possible:
-
-- stable id,
-- stable position/yaw/span,
-- spatial query/dedup around chunk boundaries.
-
-## Documentation after implementation
-
-Update the documents that own current state:
-
-- `docs/state/water.md`
-- `docs/state/terrain-and-world-generation.md`
-- `docs/STATE.md` only if its short summary needs the new road-crossing capability
-- plan status + implementation notes findings if implementation diverges
-
-Remove the two covered entries from `docs/plans/LOOSE-ENDS.md` once the implementation actually fixes them; the plan itself may remove/mark them as planned only if repository convention treats a dedicated plan as sufficient.
-
-Do not duplicate detailed crossing rules into multiple state docs.
+Do not add bridge visual/traversal/mask tests here; they are `world-terrain-029` scope.
 
 ## Suggested implementation order
 
-1. Add pure crossing geometry/classifier + tests.
-2. Extend route result/cache and feed `RiverQuery` into every road context.
-3. Add edge-aware river cost to A*.
-4. Lock/materialize crossing anchors through meander + final invariant validation.
-5. Project explicit ford records into chunk terrain; remove implicit overlap classification.
-6. Fix effective ford bed in local water sampling.
-7. Add bridge spec derivation and chunk/world runtime projection + collider/walkability.
-8. Mask road terrain shaping through bridge spans.
-9. Add integration/topology tests and update state docs.
+1. Add pure edge-intersection/crossing evaluator + focused tests.
+2. Extend route result/cache and feed canonical river query into every road context.
+3. Add edge-aware river costs/feasibility to A* with explicit route kind.
+4. Materialize crossing anchors through meander + final topology validation.
+5. Project explicit ford records into chunk terrain and remove implicit-overlap classification.
+6. Fix effective ford bed in local-water sampling.
+7. Add determinism/integration tests and update state docs.
 
-This order keeps the semantic owner stable before adding presentation.
+This completes the semantic dependency required by `world-terrain-029` without mixing runtime bridge work back into this plan.
+
+## Documentation after implementation
+
+Update the current-state docs that actually own changed behaviour, likely:
+
+- `docs/state/water.md`,
+- `docs/state/terrain-and-world-generation.md`,
+- `docs/STATE.md` only if its short summary needs the capability.
+
+Once the implementation truly resolves the corresponding `LOOSE-ENDS.md` entries, remove them according to that file's convention. The bridge-presentation part remains covered by planned `world-terrain-029` until implemented.
+
+Do not duplicate detailed crossing policy across multiple state documents.
 
 ## Guardrails
 
-- No renderer-only bridge/ford classification.
 - No second river representation.
-- No per-frame intersection checks.
-- No separate bridge planner.
-- No settlement-owned bridge state.
-- No SaveData bridge list in V1.
-- No fake terrain causeway under a bridge.
-- No uncontrolled RNG.
-- No caller-order-dependent route result.
-- Preserve existing road/signpost/minor-location consumers through the same route cache.
+- No node-only river detection.
+- No renderer/terrain reclassification of ford vs bridge.
+- No per-frame road↔river intersection checks.
+- No global bridge planner.
+- No SaveData bridge/ford list.
+- No uncontrolled RNG or caller-order-dependent crossing ids.
+- Preserve the shared route cache for roads/signposts/minor-location routes.
+- `path` is ford-only in V1; do not introduce path bridge tiers.
+- No bridge mesh, streamed runtime, deck ground/collider or bridge-span terrain mask in `023`; those are `world-terrain-029`.
