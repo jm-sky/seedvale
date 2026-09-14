@@ -1,7 +1,24 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { AVAILABLE_DOMAINS, LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_ROADMAP_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
+import {
+  ARCHIVED_PLANS_PATH,
+  AVAILABLE_DOMAINS,
+  COMPLETED_STATUSES,
+  LEGACY_PLAN_FILE_RE,
+  LEGACY_PLAN_ID_RE,
+  NOTES_PATH,
+  NOTES_SUFFIX,
+  PLAN_DEPENDS_RE,
+  PLAN_EFFORT_RE,
+  PLAN_FILE_RE,
+  PLAN_PRIORITY_RE,
+  PLAN_ROADMAP_RE,
+  PLAN_STATUS_RE,
+  PLANS_PATH,
+  type Status,
+} from './config.js'
 import { listRoadmapFiles, repairPlanMetadata } from './plan-metadata.js'
+import { parseDependencies } from './plans-recommended-order.js'
 
 const README_PATH = resolve(PLANS_PATH, 'README.md')
 const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
@@ -12,11 +29,11 @@ const REVIEW_SUFFIX = '-review.md'
 const DRAFT_HEADING = '## Drafts'
 const PLANNED_HEADING = '## Planned'
 const PLAN_TITLE_PAD_END_SIZE = 78
-const ROADMAP_PAD_SIZE = 26
-const TABLE_HEADER = `| ${'File'.padEnd(PLAN_TITLE_PAD_END_SIZE)} | Pri | Effort | Depends | Roadmap       |`
+const DEPENDS_HEADER = 'Depends'
+const ROADMAP_HEADER = 'Roadmap'
+const TABLE_HEADER_RE = /^\| File\s+\| Pri \| Effort \| Depends\s+\| Roadmap\s+\|$/
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
-const PLANNED_END_TAG = '## Verification needed'
 
 const PRIORITY_EMOJI: Record<string, string> = {
   high: '🔴',
@@ -30,6 +47,19 @@ type PlanInfo = {
   file: string
   domain: string
   id: number
+}
+
+type TableRowCells = {
+  depends: string
+  effort: string
+  pri: string
+  roadmap: string
+  title: string
+}
+
+type TableColumnWidths = {
+  dependsWidth: number
+  roadmapWidth: number
 }
 
 const hasImplementationNotes = (
@@ -94,11 +124,31 @@ const getNotesMarker = (isPlanned: boolean, hasNotes: boolean): string => !isPla
 const getPlanTitle = (marker: string, file: string): string => marker ? `${marker} \`${file}\`` : `\`${file}\``
 const getPaddedPlanTitle = (marker: string, file: string): string => getPlanTitle(marker, file).padEnd(PLAN_TITLE_PAD_END_SIZE)
 
-const buildRow = (
+const formatDependsCell = (
+  raw: string,
+  statusById: Map<string, Status>,
+): string => {
+  const tokens = parseDependencies(raw)
+
+  if (tokens.length === 0) return '-'
+
+  return tokens
+    .map(id => {
+      const status = statusById.get(id)
+
+      return status !== undefined && COMPLETED_STATUSES.has(status)
+        ? `~~${id}~~`
+        : id
+    })
+    .join(', ')
+}
+
+const buildRowCells = (
   file: string,
   content: string,
   hasNotes: boolean,
-): string => {
+  statusById: Map<string, Status>,
+): TableRowCells => {
   const headerBlock = extractHeaderBlock(content)
   const isPlanned = headerBlock.match(PLAN_STATUS_RE)?.[1]?.trim() === 'planned'
   let roadmap: string
@@ -141,11 +191,93 @@ const buildRow = (
     'Depends on',
   ).trim()
 
-  const depends = dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
   const marker = getNotesMarker(isPlanned, hasNotes)
-  const title = getPaddedPlanTitle(marker, file)
 
-  return `| ${title} | ${priorityEmoji} | ${effort.padEnd(6)} | ${depends.padEnd(7)} | ${roadmap.padEnd(ROADMAP_PAD_SIZE)} |`
+  return {
+    depends: formatDependsCell(dependsRaw, statusById),
+    effort,
+    pri: priorityEmoji,
+    roadmap,
+    title: getPaddedPlanTitle(marker, file),
+  }
+}
+
+const computeColumnWidths = (rows: TableRowCells[]): TableColumnWidths => {
+  let dependsWidth = DEPENDS_HEADER.length
+  let roadmapWidth = ROADMAP_HEADER.length
+
+  for (const row of rows) {
+    dependsWidth = Math.max(dependsWidth, row.depends.length)
+    roadmapWidth = Math.max(roadmapWidth, row.roadmap.length)
+  }
+
+  return {
+    dependsWidth,
+    roadmapWidth,
+  }
+}
+
+const formatTableHeader = (widths: TableColumnWidths): string =>
+  `| ${'File'.padEnd(PLAN_TITLE_PAD_END_SIZE)} | Pri | Effort | ${DEPENDS_HEADER.padEnd(widths.dependsWidth)} | ${ROADMAP_HEADER.padEnd(widths.roadmapWidth)} |`
+
+const formatTableSeparator = (widths: TableColumnWidths): string =>
+  `| ${'-'.repeat(PLAN_TITLE_PAD_END_SIZE)} | --- | ------ | ${'-'.repeat(widths.dependsWidth)} | ${'-'.repeat(widths.roadmapWidth)} |`
+
+const formatTableRow = (row: TableRowCells, widths: TableColumnWidths): string =>
+  `| ${row.title} | ${row.pri} | ${row.effort.padEnd(6)} | ${row.depends.padEnd(widths.dependsWidth)} | ${row.roadmap.padEnd(widths.roadmapWidth)} |`
+
+const recordPlanStatus = (
+  statusById: Map<string, Status>,
+  file: string,
+  content: string,
+): void => {
+  const status = (content.match(PLAN_STATUS_RE)?.[1]?.trim() ?? 'done') as Status
+  const modern = file.match(PLAN_FILE_RE)
+
+  if (modern) {
+    statusById.set(`${modern[1]}-${modern[2]}`, status)
+  }
+
+  const legacyId = file.match(LEGACY_PLAN_ID_RE)?.[1]
+
+  if (legacyId) {
+    statusById.set(legacyId, status)
+  }
+}
+
+/**
+ * Status lookup for Depends strikethrough: current plans, archive, and
+ * legacy date-ID files (numeric IDs such as `155`).
+ */
+const buildStatusById = async (
+  plans: PlanInfo[],
+  legacyPlans: string[],
+): Promise<Map<string, Status>> => {
+  const statusById = new Map<string, Status>()
+
+  for (const plan of plans) {
+    const content = await readFile(resolve(PLANS_PATH, plan.file), 'utf8')
+
+    recordPlanStatus(statusById, plan.file, content)
+  }
+
+  for (const file of legacyPlans) {
+    const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
+
+    recordPlanStatus(statusById, file, content)
+  }
+
+  const archivedFiles = await readdir(ARCHIVED_PLANS_PATH)
+
+  for (const file of archivedFiles) {
+    if (isSupportFile(file)) continue
+
+    const content = await readFile(resolve(ARCHIVED_PLANS_PATH, file), 'utf8')
+
+    recordPlanStatus(statusById, file, content)
+  }
+
+  return statusById
 }
 
 const validateUniqueIds = (plans: PlanInfo[]): void => {
@@ -199,7 +331,7 @@ const computeNextPlanIds = (
 const findStatusTableRange = (
   lines: string[],
   heading: string,
-): { separatorIdx: number; lastRowIdx: number } => {
+): { headerIdx: number; separatorIdx: number; lastRowIdx: number } => {
   const headingIdx = lines.findIndex(
     line => line.trim() === heading,
   )
@@ -223,7 +355,7 @@ const findStatusTableRange = (
     (line, i) =>
       i > headingIdx &&
       i < sectionEndIdx &&
-      line.trim() === TABLE_HEADER,
+      TABLE_HEADER_RE.test(line.trim()),
   )
 
   if (headerIdx === -1) {
@@ -243,6 +375,7 @@ const findStatusTableRange = (
   }
 
   return {
+    headerIdx,
     lastRowIdx,
     separatorIdx,
   }
@@ -293,31 +426,43 @@ const getPlannedFiles = (
  *
  * @domain tools
  */
+/**
+ * Fully rebuild a generated status section's table (header, separator and
+ * data rows) from the current set of cells. Shared by Draft and Planned so
+ * both tables share the same Depends/Roadmap column widths.
+ *
+ * @domain tools
+ */
 const rebuildStatusSection = (
   lines: string[],
   heading: string,
-  rows: string[],
+  rows: TableRowCells[],
+  widths: TableColumnWidths,
 ): string[] => {
-  const { separatorIdx, lastRowIdx } = findStatusTableRange(lines, heading)
-  const existingRowCount = lastRowIdx - separatorIdx
+  const { headerIdx, lastRowIdx } = findStatusTableRange(lines, heading)
+  const formatted = [
+    formatTableHeader(widths),
+    formatTableSeparator(widths),
+    ...rows.map(row => formatTableRow(row, widths)),
+  ]
 
-  lines.splice(separatorIdx + 1, existingRowCount, ...rows)
+  lines.splice(headerIdx, lastRowIdx - headerIdx + 1, ...formatted)
 
   return lines
 }
 
-const getDraftRows = async (
+const getRowCells = async (
   files: string[],
-): Promise<string[]> => {
-  const rows: string[] = []
+  implementationNotesFiles: string[],
+  statusById: Map<string, Status>,
+): Promise<TableRowCells[]> => {
+  const rows: TableRowCells[] = []
 
   for (const file of files) {
     const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
+    const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
 
-    // Draft plans never carry an implementation-notes marker (buildRow's
-    // marker is derived from the plan's own `planned` status, so `hasNotes`
-    // has no effect here).
-    rows.push(buildRow(file, content, false))
+    rows.push(buildRowCells(file, content, hasNotes, statusById))
   }
 
   return rows
@@ -390,62 +535,29 @@ const getExistingFiles = (
   lines: string[],
   lastRowIdx: number,
   separatorIdx: number,
-): Set<string> => {
-  const existingFiles = new Set<string>()
+): string[] => {
+  const existingFiles: string[] = []
 
   for (let i = separatorIdx + 1; i <= lastRowIdx; i++) {
     const match = lines[i].match(/`([^`]+\.md)`/)
 
     if (match) {
-      existingFiles.add(match[1])
+      existingFiles.push(match[1])
     }
   }
 
   return existingFiles
 }
 
-const handleMissingPlans = async (
+const handleMissingPlans = (
   missing: string[],
-  implementationNotesFiles: string[],
   lines: string[],
   lastRowIdx: number,
-): Promise<string[]> => {
+): string[] => {
   if (missing.length > 0) {
-    const newRows: string[] = []
+    const placeholders = missing.map(file => `| \`${file}\` |`)
 
-    for (const file of missing) {
-      const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
-      const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
-
-      newRows.push(buildRow(file, content, hasNotes))
-    }
-
-    lines.splice(lastRowIdx + 1, 0, ...newRows)
-  }
-
-  return lines
-}
-
-const syncPlannedRows = async (
-  lines: string[],
-  plans: PlanInfo[],
-  implementationNotesFiles: string[],
-): Promise<string[]> => {
-  const planFiles = new Set(plans.map(plan => plan.file))
-  const startIdx = lines.findIndex(line => line.trim() === PLANNED_HEADING)
-  const endIdx = lines.findIndex(line => line.trim() === PLANNED_END_TAG)
-
-  for (let idx = startIdx; idx <= endIdx; idx++) {
-    const match = lines[idx]?.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
-
-    if (!match) continue
-
-    const file = match[2]
-    if (!planFiles.has(file)) continue
-
-    const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
-    const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
-    lines[idx] = buildRow(file, content, hasNotes)
+    lines.splice(lastRowIdx + 1, 0, ...placeholders)
   }
 
   return lines
@@ -594,6 +706,8 @@ const main = async () => {
   validateUniqueIds(plans)
   await repairPlans(plans)
 
+  const statusById = await buildStatusById(plans, legacyPlans)
+
   const plannedFiles: string[] =
     await getPlannedFiles(plans)
 
@@ -607,13 +721,6 @@ const main = async () => {
   )
   let readmeLines = readmeContent.split('\n')
 
-  const draftRows = await getDraftRows(draftFiles)
-  readmeLines = rebuildStatusSection(
-    readmeLines,
-    DRAFT_HEADING,
-    draftRows,
-  )
-
   const {
     lastRowIdx,
     separatorIdx,
@@ -624,14 +731,14 @@ const main = async () => {
     lastRowIdx,
     separatorIdx,
   )
+  const existingFileSet = new Set(existingFiles)
 
   const missing = plannedFiles.filter(
-    file => !existingFiles.has(file),
+    file => !existingFileSet.has(file),
   )
 
-  readmeLines = await handleMissingPlans(
+  readmeLines = handleMissingPlans(
     missing,
-    implementationNotesFiles,
     readmeLines,
     lastRowIdx,
   )
@@ -641,10 +748,36 @@ const main = async () => {
       readmeLines,
     )
 
-  readmeLines = await syncPlannedRows(
+  const plannedRange = findPlannedTableRange(readmeLines)
+  const plannedOrder = getExistingFiles(
     readmeLines,
-    plans,
+    plannedRange.lastRowIdx,
+    plannedRange.separatorIdx,
+  )
+
+  const draftRows = await getRowCells(
+    draftFiles,
     implementationNotesFiles,
+    statusById,
+  )
+  const plannedRows = await getRowCells(
+    plannedOrder,
+    implementationNotesFiles,
+    statusById,
+  )
+  const widths = computeColumnWidths([...draftRows, ...plannedRows])
+
+  readmeLines = rebuildStatusSection(
+    readmeLines,
+    DRAFT_HEADING,
+    draftRows,
+    widths,
+  )
+  readmeLines = rebuildStatusSection(
+    readmeLines,
+    PLANNED_HEADING,
+    plannedRows,
+    widths,
   )
 
   readmeLines = updatePlanningNextPlanIds(
