@@ -36,6 +36,22 @@ Generated from TypeScript imports.
 
 - `ui-vue/store.ts`
 
+## `ui-vue/hudWeaponShortcuts.test.ts`
+
+**Imports**
+
+- `ui-vue/hudWeaponShortcuts.ts`
+
+## `ui-vue/hudWeaponShortcuts.ts`
+
+**Imports**
+
+- `player/playerCombatMode.ts`
+
+**Imported by**
+
+- `ui-vue/hudWeaponShortcuts.test.ts`
+
 ## `ui-vue/lib/drawMap.ts`
 
 **Imports**
@@ -223,6 +239,7 @@ Generated from TypeScript imports.
 - `persistence/saveDb.ts`
 - `player/PlayerSkills.ts`
 - `player/characterPresentation.ts`
+- `player/playerCombatMode.ts`
 - `quests/QuestManager.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`

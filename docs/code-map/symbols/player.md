@@ -81,6 +81,18 @@ Generated from exported TypeScript symbols.
 - `resolveRangedAimYaw` — function — line 211
 - `SpatialContextAt` — type — line 77
 
+## `player/playerCombatMode.ts`
+
+- `CombatWeaponCategory` — type — line 9
+- `createPlayerCombatMode` — function — line 76
+  - domain: ui-input
+- `PlayerCombatMode` — type — line 34
+  - domain: ui-input
+  - system: player-combat-mode
+  - role: Tracks whether the player currently has the configured primary melee or ranged weapon drawn, for HUD/keyboard draw-sheathe and future observers.
+- `PlayerCombatModeHeld` — type — line 11
+- `PlayerCombatModePrimaries` — type — line 16
+
 ## `player/PlayerController.ts`
 
 - `CaveFloorSampler` — type — line 202

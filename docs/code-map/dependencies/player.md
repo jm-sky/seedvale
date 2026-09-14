@@ -372,6 +372,31 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `player/playerCombat.test.ts`
 
+## `player/playerCombatMode.test.ts`
+
+**Imports**
+
+- `items/HeldTool.ts`
+- `items/Inventory.ts`
+- `items/primaryWeapons.ts`
+- `items/weaponMaintenance.ts`
+- `player/playerCombatMode.ts`
+
+## `player/playerCombatMode.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `items/primaryWeapons.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/inventoryWiring.ts`
+- `player/playerCombatMode.test.ts`
+- `ui-vue/hudWeaponShortcuts.ts`
+- `ui-vue/store.ts`
+
 ## `player/playerDamage.test.ts`
 
 **Imports**

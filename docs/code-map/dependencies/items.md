@@ -37,6 +37,7 @@ Generated from TypeScript imports.
 - `items/itemCapabilities.test.ts`
 - `persistence/saveData.ts`
 - `player/PlayerController.ts`
+- `player/playerCombatMode.test.ts`
 - `player/playerDamage.ts`
 - `tools/assetBrowser/gripEdit.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
@@ -168,6 +169,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/characterPresentation.test.ts`
 - `player/characterPresentation.ts`
+- `player/playerCombatMode.test.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.test.ts`
@@ -1070,6 +1072,7 @@ Generated from TypeScript imports.
 - `items/villageTools.test.ts`
 - `persistence/saveData.ts`
 - `player/PlayerTorch.ts`
+- `player/playerCombatMode.ts`
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/guardRewards.ts`
@@ -1179,6 +1182,8 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `items/primaryWeapons.test.ts`
 - `persistence/saveData.ts`
+- `player/playerCombatMode.test.ts`
+- `player/playerCombatMode.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
 
@@ -1453,6 +1458,7 @@ Generated from TypeScript imports.
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/weaponMaintenance.test.ts`
+- `player/playerCombatMode.test.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
 - `ui-vue/store.ts`

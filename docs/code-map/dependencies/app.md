@@ -899,6 +899,7 @@ Generated from TypeScript imports.
 - `player/PlayerTorch.ts`
 - `player/characterPresentation.ts`
 - `player/humanCarryCapacity.ts`
+- `player/playerCombatMode.ts`
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
 - `quests/cardinalDirection.ts`
@@ -1355,6 +1356,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
+- `player/playerCombatMode.ts`
 - `quests/QuestManager.ts`
 - `quests/guardPersistence.ts`
 - `quests/guardRewards.ts`
