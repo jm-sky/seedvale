@@ -177,26 +177,26 @@ Generated from exported TypeScript symbols.
 
 ## `quests/opportunities/settlementQuestOpportunities.ts`
 
-- `collectLostLivestockOpportunities` — function — line 148
+- `collectLostLivestockOpportunities` — function — line 146
   - domain: quests-progression
-- `collectSettlementQuestOpportunities` — function — line 162
-- `collectWolfDenPressureOpportunities` — function — line 70
+- `collectSettlementQuestOpportunities` — function — line 163
+- `collectWolfDenPressureOpportunities` — function — line 66
   - domain: quests-progression
   - system: settlement-quest-opportunities
   - role: Collects world-driven candidates from authoritative fauna spawners.
-- `LOST_LIVESTOCK_DEAD_OUTCOME` — const — line 107
-- `LOST_LIVESTOCK_LIVE_OUTCOME` — const — line 106
-- `LOST_LIVESTOCK_UNAVAILABLE_OUTCOME` — const — line 108
-- `lostLivestockQuestId` — function — line 116
+- `LOST_LIVESTOCK_DEAD_OUTCOME` — const — line 103
+- `LOST_LIVESTOCK_LIVE_OUTCOME` — const — line 102
+- `LOST_LIVESTOCK_UNAVAILABLE_OUTCOME` — const — line 104
+- `lostLivestockQuestId` — function — line 112
   - domain: quests-progression
-- `parseLostLivestockQuestId` — function — line 120
-- `parseWolfDenPressureQuestId` — function — line 27
-- `settlementIdFromWolfDenSpawnerId` — function — line 33
-- `wolfDenPressureQuestId` — function — line 23
+- `parseLostLivestockQuestId` — function — line 116
+- `parseWolfDenPressureQuestId` — function — line 23
+- `settlementIdFromWolfDenSpawnerId` — function — line 29
+- `wolfDenPressureQuestId` — function — line 19
   - domain: quests-progression
-- `wolfDenPressureSourceStatus` — function — line 84
+- `wolfDenPressureSourceStatus` — function — line 80
   - domain: quests-progression
-- `wolfDenPressureStatusFromSpawners` — function — line 91
+- `wolfDenPressureStatusFromSpawners` — function — line 87
 
 ## `quests/opportunities/settlementQuestSelection.ts`
 

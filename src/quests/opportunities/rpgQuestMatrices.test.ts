@@ -286,6 +286,38 @@ describe('shared opportunity selection', () => {
     expect(selected.filter((opportunity) => opportunity.kind === 'rpg-matrix')).toHaveLength(1)
   })
 
+  it('keeps every world-driven lost-livestock candidate outside the RPG limit', () => {
+    const lost = [
+      {
+        id: 'world:lost-livestock:home:sheep-a',
+        settlementId: 'home',
+        kind: 'lost-livestock' as const,
+        houseId: 'home:home:0',
+        animalId: 'sheep-a',
+      },
+      {
+        id: 'world:lost-livestock:home:sheep-b',
+        settlementId: 'home',
+        kind: 'lost-livestock' as const,
+        houseId: 'home:home:0',
+        animalId: 'sheep-b',
+      },
+      {
+        id: 'world:lost-livestock:home:cow-a',
+        settlementId: 'home',
+        kind: 'lost-livestock' as const,
+        houseId: 'home:home:0',
+        animalId: 'cow-a',
+      },
+    ]
+    const selected = selectSettlementQuestOpportunities({
+      candidates: lost,
+      limit: 1,
+    })
+    expect(selected).toHaveLength(3)
+    expect(selected.every((opportunity) => opportunity.kind === 'lost-livestock')).toBe(true)
+  })
+
   it('always rematerializes a persisted generated id even after the live source disappears', () => {
     const persistedId = rpgQuestId('old-place-secret', '1_0', 'stoneCircle:8:8:0:1')
     const defs = buildWorldDrivenSettlementQuests({

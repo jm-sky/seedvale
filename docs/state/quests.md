@@ -96,7 +96,7 @@ Important symbols:
 
 The opportunity record is data-only and is neither quest progress nor authoritative world state.
 
-Definitions are assembled once at composition root (`QuestManager` takes `readonly QuestDef[]` and has no `registerDef`). Wolf-den pressure still appears mid-session because its def is always materialized and `WorldQuestSourceLookup` gates offering. Lost-livestock currently materializes one candidate per settlement and is offerable only while fauna already reports `lost-alive` / `corpse-uninspected` — generated sync never calls `startLivestockStray` (plan quests-progression-030). Authored `zagubiona-owca` may start a real fauna stray for its bound sheep via `onAnimalTargetBound`. Plan `031` still covers per-animal defs / mid-session materialization.
+Definitions are assembled once at composition root (`QuestManager` takes `readonly QuestDef[]` and has no `registerDef`). Wolf-den pressure still appears mid-session because its def is always materialized and `WorldQuestSourceLookup` gates offering. Lost-livestock materializes one generated def per household livestock `animalId` at composition root (plan quests-progression-031) and is offerable only while fauna already reports `lost-alive` / `corpse-uninspected` — calm/`returned`/`unavailable` snapshots stay `not_offered` and hidden from the quest log; generated sync never calls `startLivestockStray` (plan quests-progression-030). Authored `zagubiona-owca` may start a real fauna stray for its bound sheep via `onAnimalTargetBound`. When authored or generated already claims an animal (`offered`/`active`/`ready_to_report`), the other flow is suppressed for that same individual.
 
 ## Core lifecycle
 

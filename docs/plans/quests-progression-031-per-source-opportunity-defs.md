@@ -1,7 +1,7 @@
 # Plan: Per-source opportunity defs and live gating
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~quests-progression-030~~
 **Domain:** `quests-progression`

@@ -730,9 +730,61 @@ export class QuestManager {
     if (source !== 'untracked' && source !== 'present') return false
     const lost = this.lostLivestockSource.getSnapshot(def.id)
     if (lost !== 'untracked' && lost !== 'lost-alive' && lost !== 'corpse-uninspected') return false
+    const lostParsed = parseLostLivestockQuestId(def.id)
+    if (lostParsed && this.isAnimalClaimedByOtherQuest(def.id, lostParsed.animalId)) return false
+    if (this.isAuthoredLivestockFindBlockedByClaimedTarget(def)) return false
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) return true
     return prerequisites.every((prereq) => this.meetsPrerequisite(def, prereq))
+  }
+
+  /**
+   * True when another in-flight quest already covers this livestock individual
+   * (generated `recover_lost_livestock` or a bound `find_animal` target).
+   * Prevents authored + generated double offers for the same stray episode.
+   */
+  private isAnimalClaimedByOtherQuest(questId: string, animalId: string): boolean {
+    for (const other of this.defs) {
+      if (other.id === questId) continue
+      const state = this.stateOf(other.id).state
+      if (state !== 'offered' && state !== 'active' && state !== 'ready_to_report') continue
+      for (const [stageIndex, stage] of other.stages.entries()) {
+        for (const slot of questStageObjectiveSlots(stage)) {
+          if (
+            slot.objective.type === 'recover_lost_livestock'
+            && slot.objective.animalId === animalId
+          ) {
+            return true
+          }
+          if (slot.objective.type !== 'find_animal' && slot.objective.type !== 'kill_target_animal') {
+            continue
+          }
+          const key = animalTargetKey(other.id, stageIndex, slot.id)
+          if (this.animalTargets.get(key) === animalId || this.animalTargets.get(other.id) === animalId) {
+            return true
+          }
+        }
+      }
+    }
+    return false
+  }
+
+  /**
+   * Authored livestock `find_animal` (e.g. zagubiona-owca) stays hidden when
+   * the resolver's current pick is already claimed by a generated lost-livestock
+   * quest for the same individual.
+   */
+  private isAuthoredLivestockFindBlockedByClaimedTarget(def: QuestDef): boolean {
+    if (parseLostLivestockQuestId(def.id)) return false
+    for (const stage of def.stages) {
+      for (const slot of questStageObjectiveSlots(stage)) {
+        if (slot.objective.type !== 'find_animal') continue
+        if (!LIVESTOCK_KINDS.has(slot.objective.kind)) continue
+        const predicted = this.resolveAnimalTarget(slot.objective.kind)
+        if (predicted && this.isAnimalClaimedByOtherQuest(def.id, predicted)) return true
+      }
+    }
+    return false
   }
 
   /** True while a horse-reward quest has reserved its target (plan

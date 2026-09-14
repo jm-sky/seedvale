@@ -19,26 +19,26 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 ## Drafts
 
-| File                                                                           | Summary | Pri | Effort | Depends |
-| ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| `npc-004-npc-genealogy-lineages.md`                                            | -       | ⚪ | S      | -      |
-| `npc-032-expedition-needs-and-survival.md`                                     | -       | 🔴 | L      | npc-029, npc-017, npc-025, items-player-028 |
-| `npc-033-companion-combat-cooperation.md`                                      | -       | 🔴 | L      | npc-029, npc-032, items-player-027, ~~npc-025~~ |
-| `npc-034-expedition-shared-work-and-activities.md`                             | -       | 🔴 | M      | npc-029, npc-032, items-player-028 |
-| `npc-035-shared-expedition-relationship-consequences.md`                       | -       | 🔴 | L      | npc-029, npc-032, npc-033, npc-034 |
-| `npc-038-work-contract-actor-capability-gating.md`                             | -       | 🔴 | M      | -      |
-| `quests-progression-010-abandoned-gold-mine-colony.md`                         | -       | 🔴 | M      | world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002 |
-| `settlements-003-colony-bootstrap.md`                                          | -       | 🔴 | L      | world-019, settlements-npcs-028 |
-| `settlements-004-gold-economic-realization-and-source-entitlements.md`         | -       | 🔴 | M      | -      |
-| `settlements-npcs-020-economy-driven-transport-demand-integration.md`          | -       | 🔴 | S      | settlements-npcs-017, settlements-npcs-018, settlements-npcs-019 |
-| `settlements-npcs-021-remote-production-site-logistics.md`                     | -       | 🔴 | M      | settlements-npcs-018, settlements-npcs-019, settlements-npcs-020 |
-| `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md`           | -       | 🔴 | M      | settlements-npcs-026 |
-| `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`     | -       | 🔴 | L      | settlements-npcs-026, settlements-npcs-027, settlements-npcs-019 |
-| `tools-000-weapon-browser-observatory.md`                                      | -       | 🟡 | M      | -      |
-| `tools-006--world-observatory.md`                                              | -       | ⚪ | XL     | -      |
-| `tools-007--mpfb2-npc-hero-character-pipeline.md`                              | -       | 🔴 | L      | -      |
-| `world-terrain-009-seasonal-ground-and-grass-appearance.md`                    | -       | ⚪ | M      | -      |
-| `world-terrain-015-water-reflection-content-budget.md`                         | -       | ⚪ | S      | -      |
+| File                                                                           | Pri | Effort | Depends |
+| ------------------------------------------------------------------------------ | --- | ------ | ------- |
+| `npc-004-npc-genealogy-lineages.md`                                            | ⚪ | S      | -      |
+| `npc-032-expedition-needs-and-survival.md`                                     | 🔴 | L      | npc-029, npc-017, npc-025, items-player-028 |
+| `npc-033-companion-combat-cooperation.md`                                      | 🔴 | L      | npc-029, npc-032, items-player-027, ~~npc-025~~ |
+| `npc-034-expedition-shared-work-and-activities.md`                             | 🔴 | M      | npc-029, npc-032, items-player-028 |
+| `npc-035-shared-expedition-relationship-consequences.md`                       | 🔴 | L      | npc-029, npc-032, npc-033, npc-034 |
+| `npc-038-work-contract-actor-capability-gating.md`                             | 🔴 | M      | -      |
+| `quests-progression-010-abandoned-gold-mine-colony.md`                         | 🔴 | M      | world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002 |
+| `settlements-003-colony-bootstrap.md`                                          | 🔴 | L      | world-019, settlements-npcs-028 |
+| `settlements-004-gold-economic-realization-and-source-entitlements.md`         | 🔴 | M      | -      |
+| `settlements-npcs-020-economy-driven-transport-demand-integration.md`          | 🔴 | S      | settlements-npcs-017, settlements-npcs-018, settlements-npcs-019 |
+| `settlements-npcs-021-remote-production-site-logistics.md`                     | 🔴 | M      | settlements-npcs-018, settlements-npcs-019, settlements-npcs-020 |
+| `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md`           | 🔴 | M      | settlements-npcs-026 |
+| `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`     | 🔴 | L      | settlements-npcs-026, settlements-npcs-027, settlements-npcs-019 |
+| `tools-000-weapon-browser-observatory.md`                                      | 🟡 | M      | -      |
+| `tools-006--world-observatory.md`                                              | ⚪ | XL     | -      |
+| `tools-007--mpfb2-npc-hero-character-pipeline.md`                              | 🔴 | L      | -      |
+| `world-terrain-009-seasonal-ground-and-grass-appearance.md`                    | ⚪ | M      | -      |
+| `world-terrain-015-water-reflection-content-budget.md`                         | ⚪ | S      | -      |
 
 ---
 
@@ -55,34 +55,33 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 > 💡 - plan have `-implementation-notes.md`, ◼️ - have not
 
-| File                                                                           | Summary | Pri | Effort | Depends |
-| ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `items-player-028-npc-player-storage-access-policies.md`                    | -       | 🔴 | L      | ~~items-player-027~~ |
-| 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
-| 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | ~~settlements-npcs-016~~, settlements-npcs-034 |
-| 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
-| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
-| 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~ |
-| 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
-| ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | -       | 🔴 | M      | ~~settlements-npcs-030~~ |
-| ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | -       | 🔴 | L      | ~~settlements-npcs-030~~, world-023 |
-| 💡 `npc-037-stale-work-contract-target-discovery-and-notice-cleanup.md`        | -       | 🔴 | M      | ~~npc-018~~, ~~npc-028~~ |
-| 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | ⚪ | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
-| ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
-| 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
-| 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | -       | 🔴 | L      | -      |
-| 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | -       | 🔴 | L      | ~~settlements-npcs-014~~ |
-| 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | -       | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
-| 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | -       | 🟡 | M      | ~~world-terrain-028~~, ~~fauna-027~~ |
-| 💡 `quests-progression-027-lost-treasure-expedition.md`                        | -       | 🟡 | L      | ~~world-terrain-028~~, ~~fauna-027~~ |
-| 💡 `quests-progression-031-per-source-opportunity-defs.md`                     | -       | 🟡 | M      | ~~quests-progression-030~~ |
-| ◼️ `settlements-008-settlement-progression-around-home.md`                     | -       | 🟡 | S      | -      |
-| ◼️ `settlements-009-settlement-outskirts-and-pasture.md`                       | -       | 🟡 | M      | -      |
-| ◼️ `settlements-010-closed-and-cautious-settlement-character.md`               | -       | 🟡 | M      | -      |
-| ◼️ `ui-input-017-quest-log-information-architecture.md`                        | -       | 🟡 | M      | quests-progression-031 |
-| ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | -       | 🟡 | M      | -      |
-| ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | -       | 🟡 | M      | settlements-npcs-033 |
-| ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | -       | 🟡 | M      | settlements-012 |
+| File                                                                           | Pri | Effort | Depends |
+| ------------------------------------------------------------------------------ | --- | ------ | ------- |
+| 💡 `items-player-028-npc-player-storage-access-policies.md`                    | 🔴 | L      | ~~items-player-027~~ |
+| 💡 `items-player-014-rope-pullable-resource-transport.md`                      | 🟡 | M      | ~~155~~ ~~122~~ |
+| 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | 🔴 | M      | ~~settlements-npcs-016~~, settlements-npcs-034 |
+| 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | 🔴 | M      | ~~settlements-npcs-002~~ |
+| 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | 🔴 | L      | ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~ |
+| 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | 🔴 | M      | ~~world-terrain-019~~ |
+| 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | 🔴 | M      | ~~world-terrain-019~~, world-terrain-017 |
+| ◼️ `world-023-species-driven-sowing-density-and-yield.md`                      | 🔴 | M      | ~~settlements-npcs-030~~ |
+| ◼️ `settlements-npcs-031-sustainable-seed-recovery-and-replanting.md`          | 🔴 | L      | ~~settlements-npcs-030~~, world-023 |
+| 💡 `npc-037-stale-work-contract-target-discovery-and-notice-cleanup.md`        | 🔴 | M      | ~~npc-018~~, ~~npc-028~~ |
+| 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | ⚪ | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
+| ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -      |
+| 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | 🔴 | M      | -      |
+| 💡 `world-terrain-023-river-aware-road-routing-and-crossings.md`               | 🔴 | L      | -      |
+| 💡 `settlements-npcs-033-player-trading-with-any-npc.md`                       | 🔴 | L      | ~~settlements-npcs-014~~ |
+| 💡 `world-terrain-027-landmark-variety-and-quest-hooks.md`                     | 🟡 | M      | ~~quests-progression-016~~, ~~world-024~~ |
+| 💡 `quests-progression-026-dungeon-bandit-treasure.md`                         | 🟡 | M      | ~~world-terrain-028~~, ~~fauna-027~~ |
+| 💡 `quests-progression-027-lost-treasure-expedition.md`                        | 🟡 | L      | ~~world-terrain-028~~, ~~fauna-027~~ |
+| ◼️ `settlements-008-settlement-progression-around-home.md`                     | 🟡 | S      | -      |
+| ◼️ `settlements-009-settlement-outskirts-and-pasture.md`                       | 🟡 | M      | -      |
+| ◼️ `settlements-010-closed-and-cautious-settlement-character.md`               | 🟡 | M      | -      |
+| ◼️ `ui-input-017-quest-log-information-architecture.md`                        | 🟡 | M      | quests-progression-031 |
+| ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | 🟡 | M      | -      |
+| ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | 🟡 | M      | settlements-npcs-033 |
+| ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | 🟡 | M      | settlements-012 |
 
 ---
 
@@ -94,6 +93,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `quests-progression-031-per-source-opportunity-defs.md` | Kilka zwierząt w gospodarstwie: każde ma stabilny `world:lost-livestock:…` def, ale Quest Log / oferta tylko dla zwierzęcia z aktywnym `lost-alive`/`corpse-uninspected`; naturalny stray mid-session na spokojnym wcześniej zwierzęciu → opportunity bez reloadu; generated nigdy nie woła `startLivestockStray`; authored `zagubiona-owca` i generated nie pokazują dwóch questów dla tego samego zwierzęcia; save z aktywnym `world:lost-livestock:…` odbudowuje ten sam def; limit RPG matrices bez regresji |
 | `quests-progression-030-external-resolution-and-real-problem-offering.md` | Wilcza jama: zniszczenie przez gracza → `den_destroyed` / ready_to_report; aktywny quest, den znika bez destroy → `resolved_without_player` bez item reward; offer niezaakceptowany + source gone → `not_offered`. Authored `zagubiona-owca`: accept startuje realny stray (lub reuse istniejącego); generated lost-livestock dla spokojnej owcy nie oferuje i nie teleportuje; naturalny stray → offerable; naturalny `returned` → `live_return` |
 | `quests-progression-033-quest-offer-selection-prioritization-and-abandonment.md` | NPC z wieloma questami nie oferuje wszystkiego naraz (tylko 1 normalna nowa oferta); po ukończeniu/decline/abandon pojawia się kolejna sensowna oferta; declined quest nie wraca od razu (suppression); opcjonalna kara relation/reputation przy abandon działa tylko tam, gdzie zdefiniowana; story quest (np. jaskinia niedźwiedzia, zaginiony myśliwy, podejrzany transport, stare kości) respektuje authored wyjątki i nie pokazuje generic decline/abandon; nagły problem świata może przebić normalną ofertę (urgent), ale nie tworzy lawiny urgentów; problem świata trwa dalej po decline/abandon |
 | `world-terrain-026-cave-distant-mouth-occlusion.md` | Z kilku odległości i kątów: daleki otwór jaskini nie pokazuje jasnego nieba; wejście w pełną prezentację bez „gołej” dziury; wyjście przywraca proxy; blisko wejścia bez zmian; wnętrze/dungeon normalnie; wielokrotne przejścia przez 55/80 m bez leaków i bez thrashu terenu |

@@ -2615,6 +2615,141 @@ describe('QuestManager lost livestock sources (fauna-024)', () => {
   })
 })
 
+describe('QuestManager per-source lost livestock defs (plan 031)', () => {
+  const lostA = quest({
+    id: 'world:lost-livestock:home:sheep-a',
+    giverName: 'Anna',
+    offerLine: 'offer A',
+    stages: [
+      { objective: { type: 'recover_lost_livestock', animalId: 'sheep-a' }, description: 'find A', reminderLine: 'remind A' },
+    ],
+    reportLine: 'report A',
+    outcomes: [
+      { id: 'live_return', state: 'complete', resultText: 'live' },
+      { id: 'dead_confirmed', state: 'complete', resultText: 'dead' },
+      { id: 'unavailable', state: 'failed', resultText: 'gone' },
+    ],
+  })
+  const lostB = quest({
+    id: 'world:lost-livestock:home:sheep-b',
+    giverName: 'Anna',
+    offerLine: 'offer B',
+    stages: [
+      { objective: { type: 'recover_lost_livestock', animalId: 'sheep-b' }, description: 'find B', reminderLine: 'remind B' },
+    ],
+    reportLine: 'report B',
+    outcomes: [
+      { id: 'live_return', state: 'complete', resultText: 'live' },
+      { id: 'dead_confirmed', state: 'complete', resultText: 'dead' },
+      { id: 'unavailable', state: 'failed', resultText: 'gone' },
+    ],
+  })
+
+  it('hides calm pre-materialized defs from list and keeps them not_offered', () => {
+    const qm = makeManager(
+      [lostA, lostB],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getSnapshot: (questId) => (
+          questId.startsWith('world:lost-livestock:') ? 'unavailable' : 'untracked'
+        ),
+      },
+    )
+    expect(qm.isQuestAvailable(lostA.id)).toBe(false)
+    expect(qm.isQuestAvailable(lostB.id)).toBe(false)
+    expect(qm.list()).toHaveLength(0)
+    expect(qm.onInteract('Anna')).toBeNull()
+  })
+
+  it('offers only the animal whose live snapshot is lost', () => {
+    const qm = makeManager(
+      [lostA, lostB],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getSnapshot: (questId) => {
+          if (questId === lostA.id) return 'unavailable'
+          if (questId === lostB.id) return 'lost-alive'
+          return 'untracked'
+        },
+      },
+    )
+    expect(qm.isQuestAvailable(lostA.id)).toBe(false)
+    expect(qm.isQuestAvailable(lostB.id)).toBe(true)
+    expect(qm.onInteract('Anna')?.offer).toBeDefined()
+    expect(qm.getState(lostB.id)).toBe('offered')
+    expect(qm.getState(lostA.id)).toBe('not_offered')
+    expect(qm.list().map((entry) => entry.id)).toEqual([lostB.id])
+  })
+
+  it('suppresses generated opportunity while authored quest claims the same animal', () => {
+    const authored = runtimeAuthored(QUESTS.find((d) => d.id === 'zagubiona-owca')!)
+    const qm = new QuestManager(
+      [authored, lostB],
+      undefined,
+      new Inventory(),
+      { progress: [{ id: 'zagubiona-owca', state: 'active', stageIndex: 0 }], relations: {} },
+      undefined,
+      () => 'sheep-b',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getSnapshot: (questId) => (questId === lostB.id ? 'lost-alive' : 'untracked'),
+      },
+    )
+    expect(qm.getState('zagubiona-owca')).toBe('active')
+    expect(qm.isQuestAvailable(lostB.id)).toBe(false)
+    expect(qm.list().some((entry) => entry.id === lostB.id)).toBe(false)
+  })
+
+  it('suppresses authored find when a generated lost-livestock quest already claims the animal', () => {
+    const authored = runtimeAuthored(QUESTS.find((d) => d.id === 'zagubiona-owca')!)
+    const qm = new QuestManager(
+      [authored, lostB],
+      undefined,
+      new Inventory(),
+      {
+        progress: [{ id: lostB.id, state: 'active', stageIndex: 0 }],
+        relations: {},
+      },
+      undefined,
+      () => 'sheep-b',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getSnapshot: (questId) => (questId === lostB.id ? 'lost-alive' : 'untracked'),
+      },
+    )
+    expect(qm.getState(lostB.id)).toBe('active')
+    expect(qm.isQuestAvailable('zagubiona-owca')).toBe(false)
+  })
+})
+
 describe('QuestManager authored zagubiona-owca stray trigger (plan 030)', () => {
   const sheepDef = runtimeAuthored(QUESTS.find((d) => d.id === 'zagubiona-owca')!)
 

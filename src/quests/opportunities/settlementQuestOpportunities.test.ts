@@ -88,18 +88,38 @@ describe('wolf-den pressure opportunity identity', () => {
   })
 })
 
-describe('lost livestock opportunity (fauna-024)', () => {
-  it('binds a stable id to an existing animal and does not invent a new one', () => {
-    const livestock = [{
-      animalId: 'sheep-house0-0',
-      kind: 'sheep' as const,
+describe('lost livestock opportunity (fauna-024 / plan 031)', () => {
+  function householdAnimal(
+    animalId: string,
+    overrides: Partial<{
+      kind: 'sheep' | 'cow' | 'chicken'
+      houseId: string
+      dead: boolean
+      mounted: boolean
+      stray: {
+        active: boolean
+        originX: number
+        originZ: number
+        survivalAssist: boolean
+        corpseInspected: boolean
+      } | undefined
+    }> = {},
+  ) {
+    const houseId = overrides.houseId ?? 'home:home:0'
+    return {
+      animalId,
+      kind: overrides.kind ?? 'sheep' as const,
       settlementId: 'home',
-      houseId: 'home:home:0',
-      dead: false,
-      mounted: false,
-      owner: { kind: 'household' as const, houseId: 'home:home:0' },
-      stray: undefined,
-    }]
+      houseId,
+      dead: overrides.dead ?? false,
+      mounted: overrides.mounted ?? false,
+      owner: { kind: 'household' as const, houseId },
+      stray: overrides.stray,
+    }
+  }
+
+  it('binds a stable id to an existing animal and does not invent a new one', () => {
+    const livestock = [householdAnimal('sheep-house0-0')]
     const [opportunity] = collectLostLivestockOpportunities('home', livestock)
     expect(opportunity?.animalId).toBe('sheep-house0-0')
     expect(opportunity?.id).toBe(lostLivestockQuestId('home', 'sheep-house0-0'))
@@ -111,23 +131,68 @@ describe('lost livestock opportunity (fauna-024)', () => {
     expect(again).toEqual(def)
   })
 
-  it('reconstructs the same definition from a persisted id without redisplacing identity', () => {
-    const livestock = [{
-      animalId: 'sheep-house0-0',
-      kind: 'sheep' as const,
-      settlementId: 'home',
-      houseId: 'home:home:0',
-      dead: false,
-      mounted: false,
-      owner: { kind: 'household' as const, houseId: 'home:home:0' },
-      stray: {
-        active: true,
-        originX: 1,
-        originZ: 2,
-        survivalAssist: true,
-        corpseInspected: false,
+  it('returns one stable opportunity per household animal, not a single pick', () => {
+    const livestock = [
+      householdAnimal('sheep-house0-1'),
+      householdAnimal('cow-house0-0', { kind: 'cow' }),
+      householdAnimal('sheep-house0-0'),
+      {
+        animalId: 'wild-deer',
+        kind: 'sheep' as const,
+        settlementId: 'home',
+        houseId: '',
+        dead: false,
+        mounted: false,
+        owner: null,
+        stray: undefined,
       },
-    }]
+    ]
+    const opportunities = collectLostLivestockOpportunities('home', livestock)
+    expect(opportunities.map((entry) => entry.animalId)).toEqual([
+      'cow-house0-0',
+      'sheep-house0-0',
+      'sheep-house0-1',
+    ])
+    expect(opportunities.map((entry) => entry.id)).toEqual([
+      lostLivestockQuestId('home', 'cow-house0-0'),
+      lostLivestockQuestId('home', 'sheep-house0-0'),
+      lostLivestockQuestId('home', 'sheep-house0-1'),
+    ])
+  })
+
+  it('keeps a def for a calm animal even when another animal is already straying', () => {
+    const livestock = [
+      householdAnimal('sheep-house0-0'),
+      householdAnimal('sheep-house0-1', {
+        stray: {
+          active: true,
+          originX: 1,
+          originZ: 2,
+          survivalAssist: true,
+          corpseInspected: false,
+        },
+      }),
+    ]
+    const opportunities = collectLostLivestockOpportunities('home', livestock)
+    expect(opportunities.map((entry) => entry.animalId)).toEqual([
+      'sheep-house0-0',
+      'sheep-house0-1',
+    ])
+  })
+
+  it('reconstructs the same definition from a persisted id without redisplacing identity', () => {
+    const livestock = [
+      householdAnimal('sheep-house0-0', {
+        stray: {
+          active: true,
+          originX: 1,
+          originZ: 2,
+          survivalAssist: true,
+          corpseInspected: false,
+        },
+      }),
+      householdAnimal('sheep-house0-1'),
+    ]
     const first = buildWorldDrivenSettlementQuests({
       settlementId: 'home',
       settlementName: 'Dolina',
@@ -140,13 +205,18 @@ describe('lost livestock opportunity (fauna-024)', () => {
       settlementName: 'Dolina',
       spawners: [wolfDen({ pressure: 0.75 })],
       npcs: [anna, hunter],
-      livestock,
-      persistedQuestIds: [lostLivestockQuestId('home', 'sheep-house0-0')],
+      livestock: [householdAnimal('sheep-house0-0'), householdAnimal('sheep-house0-1')],
+      persistedQuestIds: [lostLivestockQuestId('home', 'sheep-house0-1')],
     })
     const lostDefs = first.filter((def) => def.id.startsWith('world:lost-livestock:'))
-    const restoredLost = restored.filter((def) => def.id.startsWith('world:lost-livestock:'))
-    expect(lostDefs[0]?.id).toBe(lostLivestockQuestId('home', 'sheep-house0-0'))
-    expect(restoredLost[0]).toEqual(lostDefs[0])
+    expect(lostDefs.map((def) => def.id).sort()).toEqual([
+      lostLivestockQuestId('home', 'sheep-house0-0'),
+      lostLivestockQuestId('home', 'sheep-house0-1'),
+    ])
+    expect(restored.some((def) => def.id === lostLivestockQuestId('home', 'sheep-house0-1'))).toBe(true)
+    expect(
+      restored.find((def) => def.id === lostLivestockQuestId('home', 'sheep-house0-1')),
+    ).toEqual(lostDefs.find((def) => def.id === lostLivestockQuestId('home', 'sheep-house0-1')))
   })
 })
 

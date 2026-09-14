@@ -5,11 +5,7 @@ import type {
   WolfDenPressureOpportunity,
   WorldQuestSourceStatus,
 } from './worldQuestOpportunityTypes'
-import {
-  isStrayEpisodeActive,
-  type LivestockStrayCandidate,
-  selectLostLivestock,
-} from '../../fauna/animalStray'
+import type { LivestockStrayCandidate } from '../../fauna/animalStray'
 import { isWolfDenPermanentlyDestroyed, isWolfDenPressureProblem } from '../../fauna/wolfDenScenario'
 
 const WOLF_DEN_PRESSURE_PREFIX = 'world:wolf-den-pressure:'
@@ -140,8 +136,10 @@ function lostLivestockOpportunity(
 }
 
 /**
- * Detects one existing household livestock source as a lightweight candidate.
- * Prefers an already-active stray episode, otherwise a deterministic eligible pick.
+ * Detects every existing household livestock identity as a lightweight
+ * candidate (wolf-den shape: pre-materialize known sources, live-gate later).
+ * Does not invent animals and does not prefer a single stray/`selectLostLivestock`
+ * pick — availability comes from fauna snapshots at offer time.
  *
  * @domain quests-progression
  */
@@ -149,14 +147,17 @@ export function collectLostLivestockOpportunities(
   settlementId: string,
   livestock: readonly LivestockStrayCandidate[] = [],
 ): LostLivestockOpportunity[] {
-  const local = livestock.filter((candidate) => candidate.settlementId === settlementId)
-  const active = local.find((candidate) => isStrayEpisodeActive(candidate.stray))
-  if (active && active.owner?.kind === 'household') {
-    return [lostLivestockOpportunity(settlementId, active.owner.houseId, active.animalId)]
+  const byAnimalId = new Map<string, LostLivestockOpportunity>()
+  for (const candidate of livestock) {
+    if (candidate.settlementId !== settlementId) continue
+    if (candidate.owner?.kind !== 'household') continue
+    if (!candidate.animalId || byAnimalId.has(candidate.animalId)) continue
+    byAnimalId.set(
+      candidate.animalId,
+      lostLivestockOpportunity(settlementId, candidate.owner.houseId, candidate.animalId),
+    )
   }
-  const selected = selectLostLivestock(local, settlementId)
-  if (!selected || selected.owner?.kind !== 'household') return []
-  return [lostLivestockOpportunity(settlementId, selected.owner.houseId, selected.animalId)]
+  return [...byAnimalId.values()].sort((a, b) => a.animalId.localeCompare(b.animalId))
 }
 
 export function collectSettlementQuestOpportunities(input: {
