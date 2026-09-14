@@ -915,7 +915,7 @@ export async function createApp(
     camera,
     keyboard.state,
     mouseLook.state,
-    bundle.chunkManager.sampleHeight,
+    bundle.chunkManager.sampleSurfaceGround,
     bundle.chunkManager.sampleFloor,
     bundle.chunkManager.waterLevel,
     bundle.chunkManager.collidersNear,
@@ -2163,7 +2163,7 @@ export async function createApp(
       const rebuiltPrewarm = await prewarmRenderPrograms(renderer, scene, camera)
       if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = rebuiltPrewarm
       player.setGround(
-        bundle.chunkManager.sampleHeight,
+        bundle.chunkManager.sampleSurfaceGround,
         bundle.chunkManager.sampleFloor,
         bundle.chunkManager.waterLevel,
         bundle.chunkManager.collidersNear,

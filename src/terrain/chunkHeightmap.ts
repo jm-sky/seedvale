@@ -7,6 +7,7 @@ import { projectOntoSegment } from '../math/segment'
 import { createSeededRandom } from '../world/parseSeed'
 import { fbm01, type FbmParams } from './fbm'
 import { fordBedHeight, fordInfluenceAt, type FordProjection } from './riverFord'
+import { isOnAnyBridgeDeck, type RoadBridgeSpec } from './roadBridge'
 import { computeBodyScale, detectWaterBodies } from './waterBodies'
 import { worleyRidge } from './worleyNoise'
 
@@ -307,6 +308,15 @@ export type ChunkTileParams = {
    *  and then river carving is exactly the natural channel however much a
    *  road happens to overlap it (plan world-terrain-023 §8). */
   fordProjections?: FordProjection[]
+  /** Declared road↔river bridge crossings whose deck footprint reaches this
+   *  chunk — see `roadBridge.ts`'s `RoadBridgeSpec`. Projected main-thread by
+   *  `roadNetwork.ts`'s `bridgesNear` from the canonical `RoadRiverCrossing`
+   *  records a route already owns, same reasoning as `fordProjections`.
+   *  Absent/empty means no declared bridge reaches this chunk. Inside a
+   *  spec's deck footprint, road corridor height/tint shaping is suppressed
+   *  (plan world-terrain-033 §8) so the road doesn't carve a causeway under
+   *  the deck — canonical river carving (stage 3) is never touched by this. */
+  bridgeProjections?: RoadBridgeSpec[]
   /** Settlement summaries near this chunk for assignment-driven cemetery placement
    *  (`cemeteryPlacement.ts`) — populated by `chunkManager.paramsFor()`. */
   /** Empty when no settlements are near this chunk — assignment-driven cemeteries are skipped. */
@@ -345,6 +355,7 @@ export type RawSampleParams = Omit<
   | 'regional'
   | 'riverSegments'
   | 'fordProjections'
+  | 'bridgeProjections'
   | 'cemeterySettlements'
   | 'cemeteryRoadSegments'
   | 'cemeteryClearings'
@@ -765,6 +776,11 @@ export function extractCoreGrid(
   return out
 }
 
+/** Shared empty array for `applyTerrainCorridors`'s `roadSegments` argument
+ *  when a texel's bridge deck footprint suppresses road shaping — avoids a
+ *  per-texel allocation. */
+const EMPTY_ROAD_SEGMENTS: readonly RoadCorridorSegment[] = []
+
 /** Fraction of a corridor's half-width that stays at full strength before
  *  tapering (roads/paths). Lower = longer soft edge into surrounding ground. */
 const CORRIDOR_INNER_FRACTION = 0.32
@@ -1064,13 +1080,19 @@ function computeChunkTexel(
     floorH = applyRegionalSmoothing(wx, wz, floorH, params.regional)
   }
   // Stage 2: sharp road/path/clearing blend on top of the (now gently
-  // leveled) base.
+  // leveled) base. Inside a declared bridge's deck footprint (plan
+  // world-terrain-033 §8) the road corridor's own height/tint contribution is
+  // suppressed — a real deck sits above this ground, so shaping a causeway
+  // toward it here would carve a berm through the river underneath. Clearings
+  // are untouched (a village pad never legitimately overlaps a river bridge).
   if (params.roadSegments.length > 0 || params.clearings.length > 0) {
+    const bridges = params.bridgeProjections
+    const bridged = bridges != null && bridges.length > 0 && isOnAnyBridgeDeck(wx, wz, bridges)
     const corridor = applyTerrainCorridors(
       wx,
       wz,
       floorH,
-      params.roadSegments,
+      bridged ? EMPTY_ROAD_SEGMENTS : params.roadSegments,
       params.clearings,
       noise.roadDetail,
       params.region.roadNetwork,

@@ -25,6 +25,7 @@ import {
 } from '../settlement/props'
 import { useBootMark } from '../shared/bootMark'
 import { isCoastalPlacement } from '../terrain/coastPlacement'
+import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { skyParamsFromTime } from '../world/dayNight'
 import { createSeededRandom } from '../world/parseSeed'
@@ -630,8 +631,24 @@ export async function createFauna(
    *  its home/route from the named real cave instead of a `PreySpawner`.
    *  Absent means no cave-backed habitat this build. */
   caveHabitats?: readonly AnimalHabitatBinding[],
+  /** Shared bridge-deck movement-ground query (plan world-terrain-033 §7) —
+   *  composed below into a bridge-aware `sampleHeight`/`sampleLocalWater`
+   *  used only for the `AnimalAgent` this factory constructs, never
+   *  reassigned onto the raw `sampleHeight`/`sampleLocalWater` above (both
+   *  stay pure terrain for spawn-site/habitat placement, where a bridge deck
+   *  is not terrain). Optional so existing callers/tests keep compiling. */
+  sampleBridgeDeck?: (x: number, z: number) => number | null,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
+
+  // Bridge-aware ground/water composed once, consumed only by the
+  // `AnimalAgent` construction inside `spawnAgent` below.
+  const agentSampleHeight: HeightSampler = sampleBridgeDeck
+    ? (x, z) => sampleBridgeDeck(x, z) ?? sampleHeight(x, z)
+    : sampleHeight
+  const agentSampleLocalWater: (x: number, z: number) => LocalWaterSample = sampleBridgeDeck
+    ? (x, z) => (sampleBridgeDeck(x, z) != null ? DRY_WATER_SAMPLE : sampleLocalWater(x, z))
+    : sampleLocalWater
 
   const random = createSeededRandom(seed ^ 0xfa11)
   let agents: AnimalAgent[] = []
@@ -816,9 +833,9 @@ export async function createFauna(
     return new AnimalAgent({
       def: ANIMAL_DEFS[kind],
       animalId,
-      sampleHeight,
+      sampleHeight: agentSampleHeight,
       waterLevel,
-      sampleLocalWater,
+      sampleLocalWater: agentSampleLocalWater,
       naturalWaterKindAt,
       collidersNear,
       x,

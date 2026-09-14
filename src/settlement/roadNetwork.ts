@@ -9,6 +9,7 @@ import type {
   RoadCorridorSegment,
 } from '../terrain/chunkHeightmap'
 import type { FordProjection } from '../terrain/riverFord'
+import type { RoadBridgeSpec } from '../terrain/roadBridge'
 import type { RoadRiverCrossing } from './roadRiverCrossing'
 import type { TerrainSamplers } from './settlementTerrain'
 import { directionFromYaw, yawToward } from '../math/segment'
@@ -971,6 +972,118 @@ export function fordsNear(
     }
   }
   return out
+}
+
+/** Bank/abutment clearance (m) added either side of a bridge's channel span —
+ *  mirrors `FORD_APPROACH_MARGIN`, just larger: a bridge deck needs real
+ *  abutments on dry ground, not just a raised bar tying into the road. */
+const BRIDGE_APPROACH_MARGIN = 3
+/** Minimum clearance (m) the deck keeps above the canonical water surface,
+ *  applied only when the route's own smoothed profile doesn't already clear
+ *  it — an ordinary crossing keeps the real road profile untouched. */
+const BRIDGE_WATER_CLEARANCE = 0.6
+/** Visual deck slab thickness (m) — presentation-only; `riverFord.ts` has no
+ *  equivalent since a ford has no deck to draw. */
+const BRIDGE_DECK_THICKNESS = 0.3
+
+/** Smoothed route-profile height at the route point nearest `(x, z)` — the
+ *  crossing anchor is inserted into the final polyline by `world-terrain-023`,
+ *  so the nearest point is the crossing itself (or immediately adjacent on a
+ *  very short edge). Reading the already-built profile instead of re-sampling
+ *  terrain/water avoids a renderer-time `sampleHeight()` feedback loop, since
+ *  chunk terrain shaping itself depends on the bridge mask. */
+function routeProfileHeightAt(route: RoadRoute, x: number, z: number): number {
+  let best: RoutePoint | undefined
+  let bestDistSq = Infinity
+  for (const p of route.points) {
+    const dx = p.x - x
+    const dz = p.z - z
+    const distSq = dx * dx + dz * dz
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq
+      best = p
+    }
+  }
+  return best?.hs ?? 0
+}
+
+/** Canonical bridge crossing + final route profile -> deterministic
+ *  presentation-free deck spec (plan world-terrain-033 §4). `span` reuses the
+ *  crossing's own road-aligned span (obliqueness already folded in by
+ *  `roadRiverCrossing.ts`) plus bank clearance; `deckY` prefers the real road
+ *  profile and only lifts toward `waterH` when that profile would otherwise
+ *  sit too low. */
+export function bridgeSpecOf(
+  crossing: RoadRiverCrossing,
+  route: RoadRoute,
+  rn: RegionParams['roadNetwork'],
+): RoadBridgeSpec {
+  const dir = directionFromYaw(crossing.angle)
+  const halfWidth = (route.kind === 'road' ? rn.roadHalfWidth : rn.pathHalfWidth)
+    * (1 + Math.max(0, rn.edgeWobbleAmplitude))
+  const profileH = routeProfileHeightAt(route, crossing.x, crossing.z)
+  const deckY = Math.max(profileH, crossing.waterH + BRIDGE_WATER_CLEARANCE)
+  return {
+    id: crossing.id,
+    x: crossing.x,
+    z: crossing.z,
+    yaw: crossing.angle,
+    dirX: dir.x,
+    dirZ: dir.z,
+    span: crossing.span + BRIDGE_APPROACH_MARGIN * 2,
+    width: halfWidth * 2,
+    deckY,
+    deckThickness: BRIDGE_DECK_THICKNESS,
+  }
+}
+
+/**
+ * Declared bridge crossings whose deck footprint reaches a world-space box —
+ * the bridge counterpart to `fordsNear`, resolved from the exact same cached
+ * routes so a rendered bridge always traces back to one canonical
+ * `RoadRiverCrossing(kind = 'bridge')`. Unlike `fordsNear` (pure shaping
+ * influence, order/duplication-tolerant), this is runtime *identity*: results
+ * are deduped by `RoadBridgeSpec.id` — the same inter-settlement route is
+ * discoverable while iterating nearby settlement cells from both endpoints —
+ * and returned in stable `id` order so no caller ever sees a different
+ * instance for the same bridge depending on query origin. A bridge spanning a
+ * chunk boundary therefore still resolves to exactly one spec everywhere.
+ *
+ * Called by `chunkManager.ts`'s `paramsFor()` (terrain mask) and its bridge
+ * presentation / movement-ground-query wiring, main-thread only.
+ *
+ * @domain world-terrain
+ */
+export function bridgesNear(
+  worldX: number,
+  worldZ: number,
+  size: number,
+  ctx: RoadNetworkContext,
+): RoadBridgeSpec[] {
+  const cell = worldToCell(worldX, worldZ)
+  const half = size / 2
+  const minX = worldX - half
+  const maxX = worldX + half
+  const minZ = worldZ - half
+  const maxZ = worldZ + half
+
+  const byId = new Map<string, RoadBridgeSpec>()
+  for (const c of cellsWithinRadius(cell, 1)) {
+    const def = defFor(c, ctx)
+    if (!def) continue
+    for (const route of roadRoutesForSettlement(def, ctx)) {
+      if (route.kind !== 'road') continue
+      for (const crossing of route.crossings) {
+        if (crossing.kind !== 'bridge') continue
+        const spec = bridgeSpecOf(crossing, route, ctx.region.roadNetwork)
+        const reach = Math.max(spec.span, spec.width) * 0.5
+        if (spec.x + reach < minX || spec.x - reach > maxX) continue
+        if (spec.z + reach < minZ || spec.z - reach > maxZ) continue
+        byId.set(spec.id, spec)
+      }
+    }
+  }
+  return [...byId.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 }
 
 export type VillageSegments = {

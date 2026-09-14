@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ChunkTileParams } from './chunkHeightmap'
 import type { FordProjection } from './riverFord'
+import type { RoadBridgeSpec } from './roadBridge'
 import {
   apronGridWeights,
   apronOriginWorld,
@@ -655,6 +656,158 @@ describe('chunkHeightmap road x river ford', () => {
     for (let ix = 0; ix < southOrigin.apronRes; ix++) {
       expect(south.floorHeights[sz * southOrigin.apronRes + ix]).toBeCloseTo(
         north.floorHeights[nz * northOrigin.apronRes + ix]!,
+        5,
+      )
+    }
+  })
+})
+
+/** Plan world-terrain-033 §8 — a declared bridge's deck footprint suppresses
+ *  the road corridor's own height/tint shaping so it doesn't carve a causeway
+ *  through the river underneath; the canonical river carve and the road's
+ *  approach shaping outside the span are both untouched. */
+describe('chunkHeightmap road x river bridge', () => {
+  const CHUNK_SIZE = 64
+  const RESOLUTION = 33
+  const groundH = sampleFloorAt(0, 0, rawParams({ seed: 42 }))
+  const waterH = groundH - 0.3
+  const bedH = waterH - 0.5
+
+  /** A genuinely big river — bridge territory, never fordable. Runs east-west
+   *  (along X) through the chunk centre, like `bigRiverSeg` in the ford
+   *  fixture above. */
+  const bigRiverSeg: RiverChannelSegment = {
+    ax: -40,
+    az: 0,
+    aBedH: bedH,
+    aWaterH: waterH,
+    aWaterHalfWidth: 5.5,
+    aChannelHalfWidth: 11,
+    bx: 40,
+    bz: 0,
+    bBedH: bedH,
+    bWaterH: waterH,
+    bWaterHalfWidth: 5.5,
+    bChannelHalfWidth: 11,
+  }
+  /** Road running south→north straight across it. */
+  const roadSeg: RoadCorridorSegment = {
+    ax: 0,
+    az: -40,
+    ah: groundH,
+    bx: 0,
+    bz: 40,
+    bh: groundH,
+    halfWidth: 5,
+    heightStrength: 0.85,
+    tintStrength: 0.8,
+  }
+
+  /** The canonical `bridge` crossing a river-aware route would declare where
+   *  `roadSeg` meets `bigRiverSeg` — deck long axis along the road (+Z),
+   *  short axis across it, covering the channel plus a little clearance. */
+  const bridgeSpec: RoadBridgeSpec = {
+    id: 'bridge-test',
+    x: 0,
+    z: 0,
+    yaw: 0,
+    dirX: 0,
+    dirZ: 1,
+    span: 22,
+    width: 12,
+    deckY: groundH + 1,
+    deckThickness: 0.3,
+  }
+
+  function tile(
+    riverSegments: RiverChannelSegment[],
+    roadSegments: RoadCorridorSegment[],
+    bridgeProjections: RoadBridgeSpec[] = [],
+  ) {
+    const params = rawParams({ seed: 42 })
+    return computeChunkTile({
+      ...params,
+      cx: 0,
+      cz: 0,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments,
+      clearings: [],
+      regional: [],
+      riverSegments,
+      bridgeProjections,
+    })
+  }
+
+  const origin = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+  const at = (grid: Float32Array, x: number, z: number): number => {
+    const ix = Math.round((x - origin.x) / origin.step)
+    const iz = Math.round((z - origin.z) / origin.step)
+    return grid[iz * origin.apronRes + ix]!
+  }
+
+  it('suppresses road tint inside the open bridge span', () => {
+    const unbridged = tile([bigRiverSeg], [roadSeg])
+    const bridged = tile([bigRiverSeg], [roadSeg], [bridgeSpec])
+    expect(at(unbridged.roadTint, 0, 0)).toBeGreaterThan(0)
+    expect(at(bridged.roadTint, 0, 0)).toBe(0)
+  })
+
+  it('suppresses road height shaping (exposed-bank anchor) inside the open span', () => {
+    const bridged = tile([bigRiverSeg], [roadSeg], [bridgeSpec])
+    const noRoad = tile([bigRiverSeg], [])
+    // Exposed-bank band: beyond the water edge (5.5) but inside the channel
+    // (11) — the river carve blends toward this exact texel's floorH, so a
+    // suppressed road here must agree exactly with "no road at all".
+    expect(at(bridged.floorHeights, 0, 8)).toBeCloseTo(at(noRoad.floorHeights, 0, 8), 5)
+  })
+
+  it('leaves road shaping active on the approach, outside the span', () => {
+    // 30 m along the road — well outside the bridge's own span (11 half-span).
+    const bridged = tile([bigRiverSeg], [roadSeg], [bridgeSpec])
+    expect(at(bridged.roadTint, 0, 30)).toBeGreaterThan(0)
+  })
+
+  it('keeps the canonical river bed/water profile unchanged under the deck', () => {
+    const bridged = tile([bigRiverSeg], [roadSeg], [bridgeSpec])
+    const noRoad = tile([bigRiverSeg], [])
+    expect(at(bridged.floorHeights, 0, 0)).toBeCloseTo(at(noRoad.floorHeights, 0, 0), 5)
+    expect(at(bridged.floorHeights, 0, 0)).toBeLessThan(waterH)
+  })
+
+  it('stays seam-free across two chunks sharing the bridge mask', () => {
+    const params = rawParams({ seed: 11 })
+    const seamZ = CHUNK_SIZE / 2
+    const seamRiver: RiverChannelSegment = { ...bigRiverSeg, az: seamZ, bz: seamZ }
+    const seamRoad: RoadCorridorSegment = { ...roadSeg, az: seamZ - 40, bz: seamZ + 40 }
+    const seamBridge: RoadBridgeSpec = { ...bridgeSpec, z: seamZ }
+    const shared = {
+      ...params,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments: [seamRoad],
+      clearings: [],
+      regional: [],
+      riverSegments: [seamRiver],
+      bridgeProjections: [seamBridge],
+    }
+    const south = computeChunkTile({ ...shared, cx: 0, cz: 0 })
+    const north = computeChunkTile({ ...shared, cx: 0, cz: 1 })
+    const southOrigin = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+    const northOrigin = apronOriginWorld(0, 1, CHUNK_SIZE, RESOLUTION)
+    const sz = Math.round((seamZ - southOrigin.z) / southOrigin.step)
+    const nz = Math.round((seamZ - northOrigin.z) / northOrigin.step)
+    for (let ix = 0; ix < southOrigin.apronRes; ix++) {
+      expect(south.floorHeights[sz * southOrigin.apronRes + ix]).toBeCloseTo(
+        north.floorHeights[nz * northOrigin.apronRes + ix]!,
+        5,
+      )
+      expect(south.roadTint[sz * southOrigin.apronRes + ix]).toBeCloseTo(
+        north.roadTint[nz * northOrigin.apronRes + ix]!,
         5,
       )
     }

@@ -50,6 +50,7 @@ import {
   type InteractionQueue,
   wellQueueId,
 } from '../simulation'
+import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { applyTreeStageVisual } from '../world/treeVisuals'
 import {
@@ -272,6 +273,14 @@ export type CreateSettlementDeps = {
    *  `spawnLivestock` → every livestock `AnimalAgent`, the same water/floor/
    *  river seam wild fauna's `createFauna.ts` uses. */
   sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  /** Shared bridge-deck movement-ground query (plan world-terrain-033 §7) —
+   *  composed locally into a bridge-aware `sampleHeight`/`sampleLocalWater`
+   *  used only for `NpcAgent`/`spawnLivestock`/`createSettlementRats`
+   *  construction below, never reassigned onto the raw `sampleHeight`/
+   *  `sampleLocalWater` this function otherwise uses for prop/building
+   *  placement (a bridge deck is not terrain there). Optional so existing
+   *  callers/tests that don't model bridges keep compiling. */
+  sampleBridgeDeck?: (x: number, z: number) => number | null
   naturalWaterKindAt?: (x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null
   localRadius: number
   seed: number
@@ -415,6 +424,7 @@ export async function createSettlement(
     sampleHeight,
     waterLevel,
     sampleLocalWater,
+    sampleBridgeDeck,
     naturalWaterKindAt,
     localRadius,
     seed,
@@ -452,6 +462,17 @@ export async function createSettlement(
     residentialBuildings,
     npcGraves,
   } = deps
+
+  // Bridge-aware ground/water composed once, used only where NPC/livestock
+  // movement is actually constructed below (plan world-terrain-033 §7) — the
+  // raw `sampleHeight`/`sampleLocalWater` above stay untouched for prop/
+  // building placement, where a bridge deck is not terrain.
+  const surfaceSampleHeight: HeightSampler = sampleBridgeDeck
+    ? (x, z) => sampleBridgeDeck(x, z) ?? sampleHeight(x, z)
+    : sampleHeight
+  const surfaceSampleLocalWater: (x: number, z: number) => LocalWaterSample = sampleBridgeDeck
+    ? (x, z) => (sampleBridgeDeck(x, z) != null ? DRY_WATER_SAMPLE : sampleLocalWater(x, z))
+    : sampleLocalWater
 
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
 
@@ -658,9 +679,9 @@ export async function createSettlement(
   try {
     livestock = await spawnLivestock(
       scene,
-      sampleHeight,
+      surfaceSampleHeight,
       waterLevel,
-      sampleLocalWater,
+      surfaceSampleLocalWater,
       naturalWaterKindAt,
       collidersNear,
       landmarks.homes,
@@ -686,9 +707,9 @@ export async function createSettlement(
   // nearest-household food-drain target.
   const rats = await createSettlementRats({
     scene,
-    sampleHeight,
+    sampleHeight: surfaceSampleHeight,
     waterLevel,
-    sampleLocalWater,
+    sampleLocalWater: surfaceSampleLocalWater,
     collidersNear,
     householdSites: householdExchangeCandidates.map(({ household, position }) => ({
       household,
@@ -915,7 +936,7 @@ export async function createSettlement(
       if (npcState.postDeath) finalizeExpiredNpcCorpse(npcState.postDeath, nowDays, droppedItems)
       if (shouldSkipNpcCorpsePresentation(npcState, nowDays)) return null
       const agent = await NpcAgent.create({
-        sampleHeight,
+        sampleHeight: surfaceSampleHeight,
         waterLevel,
         collidersNear,
         landmarks,

@@ -37,6 +37,7 @@ import { createEconomyRegistry } from '../economy'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
+import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import {
   estimateOffscreenTravelDays,
@@ -447,7 +448,18 @@ export async function createSettlementsManager(
    *  for the same id after an unload/reload. Deliberately narrow — this
    *  module never imports reputation/social-news itself. */
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
+  /** Shared bridge-deck movement-ground query (plan world-terrain-033 §7) —
+   *  composed locally into a bridge-aware `sampleHeight`/`sampleLocalWater`
+   *  wherever an `NpcAgent`/livestock `AnimalAgent` is actually constructed
+   *  (`createSettlement.ts`, `spawnAnimalDeps` below), never reassigned onto
+   *  the raw `sampleHeight` this function otherwise threads unchanged into
+   *  routing/prop placement. Defaults to "no bridges" for callers/tests that
+   *  don't pass one. */
+  sampleBridgeDeck: (x: number, z: number) => number | null = () => null,
 ): Promise<SettlementsManager> {
+  const surfaceSampleHeight: HeightSampler = (x, z) => sampleBridgeDeck(x, z) ?? sampleHeight(x, z)
+  const surfaceSampleLocalWater = (x: number, z: number): LocalWaterSample =>
+    sampleBridgeDeck(x, z) != null ? DRY_WATER_SAMPLE : sampleLocalWater(x, z)
   const naturalWaterKindAt = riverShoreDistance
     ? createNaturalWaterKindAt({
       sampleHeight,
@@ -550,9 +562,9 @@ export async function createSettlementsManager(
 
   const spawnAnimalDeps: SpawnAnimalFromRecordDeps = {
     scene,
-    sampleHeight,
+    sampleHeight: surfaceSampleHeight,
     waterLevel,
-    sampleLocalWater,
+    sampleLocalWater: surfaceSampleLocalWater,
     naturalWaterKindAt,
     collidersNear,
     onAnimalDeath,
@@ -594,6 +606,7 @@ export async function createSettlementsManager(
     sampleHeight,
     waterLevel,
     sampleLocalWater,
+    sampleBridgeDeck,
     localRadius,
     seed,
     householdRegistry: households,

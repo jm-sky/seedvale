@@ -535,6 +535,7 @@ function buildSettlementsManager(
     initialStructureStates,
     getNowDays,
     onSettlementAvailable,
+    chunkManager.sampleBridgeDeck,
   )
 }
 
@@ -671,6 +672,7 @@ function buildFauna(
       resolveRouteBetween: caves.resolveRouteBetween,
     },
     occupantBindings,
+    chunkManager.sampleBridgeDeck,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
