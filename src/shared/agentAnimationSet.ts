@@ -26,9 +26,10 @@ export type AgentAnimationSet<K extends string> = {
    *  instead of snapping to it, unlike every subsequent transition). No-op
    *  if `key` didn't resolve to a clip. */
   playImmediate: (key: K) => void
-  /** Crossfades to `key` — a no-op if it's already running at (near) full
-   *  weight, otherwise fades every other resolved clip out over 0.2s while
-   *  fading `key` in over the same window. The normal idle/walk/interact
+  /** Crossfades to `key` — a no-op if it's already the current clip
+   *  (callers like `NpcAgent.syncAnimation` invoke this every tick).
+   *  Otherwise fades the previous current clip out over 0.2s while fading
+   *  `key` in over the same window. The normal idle/walk/interact
    *  transition. */
   play: (key: K) => void
   /** Plays `key` once (`LoopOnce`, clamped on its last frame) and fades
@@ -58,6 +59,7 @@ export function createAgentAnimationSet<K extends string>(
 ): AgentAnimationSet<K> {
   const mixer = new THREE.AnimationMixer(root)
   const actions = new Map<K, THREE.AnimationAction | null>()
+  let current: THREE.AnimationAction | null = null
 
   function allActions(): THREE.AnimationAction[] {
     const out: THREE.AnimationAction[] = []
@@ -89,16 +91,17 @@ export function createAgentAnimationSet<K extends string>(
       }
     },
     playImmediate: (key) => {
-      actions.get(key)?.play()
+      const action = actions.get(key)
+      if (!action) return
+      action.play()
+      current = action
     },
     play: (key) => {
       const next = actions.get(key)
-      if (!next) return
-      if (next.isRunning() && next.getEffectiveWeight() > 0.9) return
-      next.reset().fadeIn(0.2).play()
-      for (const action of allActions()) {
-        if (action !== next) action.fadeOut(0.2)
-      }
+      if (!next || next === current) return
+      current?.fadeOut(0.2)
+      next.reset().setEffectiveWeight(1).fadeIn(0.2).play()
+      current = next
     },
     playOnce: (key) => {
       const action = actions.get(key)
@@ -110,6 +113,7 @@ export function createAgentAnimationSet<K extends string>(
         if (other !== action) other.fadeOut(0.15)
       }
       action.setEffectiveWeight(1).fadeIn(0.1).play()
+      current = action
       return action.getClip().duration
     },
     settleAtEnd: (key) => {
@@ -124,6 +128,7 @@ export function createAgentAnimationSet<K extends string>(
       action.setEffectiveWeight(1)
       action.play()
       action.time = action.getClip().duration
+      current = action
       mixer.update(0)
     },
     has: (key) => actions.get(key) != null,
@@ -132,6 +137,7 @@ export function createAgentAnimationSet<K extends string>(
     },
     stopAll: () => {
       mixer.stopAllAction()
+      current = null
     },
   }
 }

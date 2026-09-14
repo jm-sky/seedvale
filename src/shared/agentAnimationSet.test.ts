@@ -18,12 +18,12 @@ function setup() {
     walk: ['Walk'],
     attack: ['Attack'],
   })
-  return anim
+  return { anim, root }
 }
 
 describe('createAgentAnimationSet', () => {
   it('resolves the first matching clip name from each candidate list', () => {
-    const anim = setup()
+    const { anim } = setup()
     expect(anim.has('idle')).toBe(true)
     expect(anim.has('walk')).toBe(true)
     expect(anim.has('attack')).toBe(true)
@@ -55,7 +55,7 @@ describe('createAgentAnimationSet', () => {
   })
 
   it('playImmediate starts the clip at full weight with no fade-in delay', () => {
-    const anim = setup()
+    const { anim } = setup()
     anim.playImmediate('idle')
     // No update() call yet — a raw .play() (unlike a crossfaded play()) must
     // already read as running at full weight the instant it's called.
@@ -75,22 +75,61 @@ describe('createAgentAnimationSet', () => {
   })
 
   it('play crossfades: the outgoing clip fades toward zero weight, the incoming one toward full', () => {
-    const anim = setup()
+    const { anim } = setup()
     anim.playImmediate('idle')
     anim.play('walk')
     // Advance well past the 0.2s crossfade window.
     anim.update(1)
-    // Read weight indirectly: playOnce's fade-out list would silently no-op
-    // on an already-zero-weight action, so re-triggering walk's play() a
-    // second time (already near full weight, isRunning) must itself be a
-    // no-op per the "already running at >0.9 weight" guard — verified by
-    // has() staying true and no throw.
+    // Re-triggering walk's play() must itself be a no-op (already current)
+    // — verified by has() staying true and no throw.
     expect(anim.has('walk')).toBe(true)
     expect(() => anim.play('walk')).not.toThrow()
   })
 
+  it('repeated play(walk) during fade-in advances clip time (NpcAgent per-tick loop)', () => {
+    const { anim, root } = setup()
+    anim.playImmediate('idle')
+    // Mirror NpcAgent.syncAnimation: play the same locomotion key every
+    // frame while moving. The old weight>0.9 guard reset Walk each tick
+    // before fade-in could finish, so time never left frame 0.
+    for (let i = 0; i < 30; i++) {
+      anim.play('walk')
+      anim.update(1 / 60)
+    }
+    // Walk is a 1s 0→1 track on .rotation[y]. After ~0.5s the value must
+    // have advanced; a per-frame reset would leave it near 0.
+    expect(root.rotation.y).toBeGreaterThan(0.3)
+  })
+
+  it('play(idle) then play(walk) then play(walk) does not restart walk', () => {
+    const { anim, root } = setup()
+    anim.playImmediate('idle')
+    anim.play('walk')
+    anim.update(0.25)
+    const afterFirst = root.rotation.y
+    anim.play('walk')
+    anim.update(0.25)
+    expect(root.rotation.y).toBeGreaterThan(afterFirst)
+  })
+
+  it('playOnce then play(idle) still switches back to locomotion', () => {
+    const { anim, root } = setup()
+    anim.playImmediate('idle')
+    anim.playOnce('attack')
+    anim.update(0.6)
+    const afterAttack = root.rotation.y
+    anim.play('idle')
+    anim.update(0.5)
+    // Idle's 0→1 track over 1s — after 0.5s of idle the pose must have
+    // moved off the clamped attack end (attack duration is 0.5s, last
+    // value 1). Idle at t=0.5 is ~0.5.
+    expect(root.rotation.y).not.toBeCloseTo(afterAttack, 1)
+    expect(root.rotation.y).toBeGreaterThan(0.3)
+    expect(root.rotation.y).toBeLessThan(0.7)
+  })
+
   it('playOnce returns the clip duration and 0 for an unresolved key', () => {
-    const anim = setup()
+    const { anim } = setup()
     expect(anim.playOnce('attack')).toBeCloseTo(0.5)
     const root = new THREE.Object3D()
     const empty = createAgentAnimationSet<'missing'>(root, [])
@@ -98,7 +137,7 @@ describe('createAgentAnimationSet', () => {
   })
 
   it('settleAtEnd jumps to the clip\'s last frame and stops every other resolved clip', () => {
-    const anim = setup()
+    const { anim } = setup()
     anim.playImmediate('idle')
     anim.playImmediate('walk')
     anim.settleAtEnd('attack')
@@ -115,7 +154,7 @@ describe('createAgentAnimationSet', () => {
   })
 
   it('stopAll and update never throw regardless of resolve state', () => {
-    const anim = setup()
+    const { anim } = setup()
     anim.playImmediate('idle')
     anim.update(0.1)
     anim.stopAll()
