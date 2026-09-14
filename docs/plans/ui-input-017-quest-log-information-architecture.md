@@ -1,7 +1,7 @@
 # Plan: Quest log information architecture
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Model:** Sonnet, Composer
 **Depends on:** quests-progression-031

@@ -83,6 +83,13 @@ Generated from exported TypeScript symbols.
 - `NavigationTargetMinimapPlacement` — type — line 47
 - `selectNearbyMinimapPois` — function — line 33
 
+## `ui-vue/lib/questLogBuckets.ts`
+
+- `projectQuestLog` — function — line 41
+- `questLogBucket` — function — line 26
+- `QuestLogBuckets` — type — line 6
+- `QuestLogFilter` — type — line 4
+
 ## `ui-vue/lib/utils.ts`
 
 - `cn` — function — line 5

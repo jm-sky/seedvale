@@ -50,6 +50,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
+- `ui-vue/lib/questLogBuckets.test.ts`
+- `ui-vue/lib/questLogBuckets.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
 - `ui/createQuestLog.ts`
@@ -526,6 +528,8 @@ Generated from TypeScript imports.
 - `quests/suspiciousTransportCaveCache.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
+- `ui-vue/lib/questLogBuckets.test.ts`
+- `ui-vue/lib/questLogBuckets.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 
 ## `quests/settlementLightLookup.ts`

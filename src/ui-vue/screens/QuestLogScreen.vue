@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { QuestState } from '../../quests/quests'
 import { ITEM_DEFS, type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
+import {
+  projectQuestLog,
+  type QuestLogFilter,
+} from '../lib/questLogBuckets'
 import { closeQuestLog, isQuestLogOpen, ui } from '../store'
-
-type Filter = 'all' | 'active' | 'complete'
 
 const STATE_LABEL: Record<QuestState, string> = {
   not_offered: 'niedostępny',
@@ -19,21 +21,19 @@ const STATE_LABEL: Record<QuestState, string> = {
   abandoned: 'porzucony',
 }
 
-const filter = ref<Filter>('all')
+const FILTERS: readonly { id: QuestLogFilter, label: string }[] = [
+  { id: 'current', label: 'Bieżące' },
+  { id: 'offers', label: 'Oferty' },
+  { id: 'history', label: 'Historia' },
+]
+
+const filter = ref<QuestLogFilter>('current')
 const panel = ref<HTMLElement | null>(null)
 useOverlayScreen('quest-log', isQuestLogOpen, closeQuestLog)
 useTouchScroll(panel)
 
-// `failed`/`invalidated`/`abandoned` are terminal like `complete` — nothing
-// actionable remains, so they're grouped into the "Zakończone" filter rather
-// than appearing under "W trakcie".
-function matchesFilter(state: QuestState): boolean {
-  if (filter.value === 'all') return true
-  if (filter.value === 'complete') {
-    return state === 'complete' || state === 'failed' || state === 'invalidated' || state === 'abandoned'
-  }
-  return state === 'active' || state === 'offered' || state === 'ready_to_report'
-}
+const projected = computed(() => projectQuestLog(ui.questLog.entries))
+const visibleEntries = computed(() => projected.value[filter.value])
 
 function formatReward(items: ReadonlyArray<{ kind: ItemKind, count: number }>): string {
   return items.map((item) => `${item.count}× ${ITEM_DEFS[item.kind].label}`).join(', ')
@@ -57,28 +57,29 @@ function formatReward(items: ReadonlyArray<{ kind: ItemKind, count: number }>): 
 
       <div class="mb-3 flex gap-1">
         <button
-          v-for="item in ([['all', 'Wszystkie'], ['active', 'W trakcie'], ['complete', 'Zakończone']] as const)"
-          :key="item[0]"
+          v-for="item in FILTERS"
+          :key="item.id"
           type="button"
           class="cursor-pointer rounded-md px-2 py-1 text-xs"
-          :class="filter === item[0] ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'"
-          @click="filter = item[0]"
+          :class="filter === item.id ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'"
+          @click="filter = item.id"
         >
-          {{ item[1] }}
+          {{ item.label }} ({{ projected.counts[item.id] }})
         </button>
       </div>
 
       <div class="flex flex-col gap-2">
         <div
-          v-if="ui.questLog.entries.filter((e) => matchesFilter(e.state)).length === 0"
+          v-if="visibleEntries.length === 0"
           class="text-sm opacity-60"
         >
           Brak zadań w tej kategorii.
         </div>
         <div
-          v-for="entry in ui.questLog.entries.filter((e) => matchesFilter(e.state))"
+          v-for="entry in visibleEntries"
           :key="entry.id"
-          class="rounded-md bg-white/5 p-3"
+          class="rounded-md p-3"
+          :class="entry.state === 'ready_to_report' ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'"
         >
           <div class="font-semibold text-sm">
             {{ entry.title }}

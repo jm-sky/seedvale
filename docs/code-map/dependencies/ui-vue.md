@@ -103,6 +103,25 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/lib/minimapLocationMarkers.test.ts`
 
+## `ui-vue/lib/questLogBuckets.test.ts`
+
+**Imports**
+
+- `quests/QuestManager.ts`
+- `quests/quests.ts`
+- `ui-vue/lib/questLogBuckets.ts`
+
+## `ui-vue/lib/questLogBuckets.ts`
+
+**Imports**
+
+- `quests/QuestManager.ts`
+- `quests/quests.ts`
+
+**Imported by**
+
+- `ui-vue/lib/questLogBuckets.test.ts`
+
 ## `ui-vue/lib/utils.ts`
 
 ## `ui-vue/lib/worldLocationDisplay.ts`
