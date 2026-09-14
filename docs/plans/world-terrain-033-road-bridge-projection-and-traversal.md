@@ -1,7 +1,7 @@
 # Plan: Road bridge projection and traversal
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** world-terrain-023
@@ -10,6 +10,25 @@
 **Tags:** `bridges` `roads` `rivers` `streaming` `traversal` `determinism`
 **Roadmap:** -
 **Model:** Opus, Sonnet
+
+## Implementation status (2026-09-14)
+
+**Implemented + technically verified** (`npx tsc --noEmit`, full `vitest` suite, `eslint .` all clean):
+
+- `terrain/roadBridge.ts` — worker-safe `RoadBridgeSpec` + the one shared oriented-footprint test (`isOnBridgeDeck`/`bridgeDeckYAt`/`isOnAnyBridgeDeck`) presentation, terrain-mask and ground-query all use.
+- `settlement/roadNetwork.ts` — `bridgeSpecOf()` (deck Y from the route's own smoothed profile at the crossing anchor, clearance-corrected only when needed) and `bridgesNear()` (id-deduped, stably ordered, mirrors `fordsNear()`).
+- `terrain/chunkHeightmap.ts` — `ChunkTileParams.bridgeProjections`; stage 2 suppresses the road corridor's height/tint contribution inside a deck footprint (approach shaping and stage 3's canonical river carve untouched); `chunkTileFingerprint()` covers it automatically (generic full-params hash).
+- `terrain/chunkManager.ts` — retains `bridgeSpecs` per chunk like `fordProjections`; owner-chunk-only presentation lifecycle (`attachChunkBridges`, disposed on unload, `chunkOwnsAnyBridge` keeps a bridge-only chunk from skipping the content finalize stage); `sampleBridgeDeck`/`sampleSurfaceGround` public API.
+- `world/createBridge.ts` — minimal procedural V1 presentation (deck + rails + piers, shared geometry/material, `userData.sharedGpu`), no obstacle collider for the deck.
+- Movement: `PlayerController` gets `chunkManager.sampleSurfaceGround` as its `sampleHeight` (both call sites in `createApp.ts`) — cave-first `groundAt()`/slope probe/camera boom all become bridge-aware for free through the existing injected dependency; ocean/lake water ownership already excludes the deck since `deckY > waterLevel`. `NpcAgent`/`AnimalAgent` (settlement livestock, rats, wild fauna) get a locally-composed bridge-aware `sampleHeight`/`sampleLocalWater` at their construction call sites only (`createSettlement.ts`, `createFauna.ts`) — never the raw `sampleHeight`/`sampleLocalWater` used for prop/spawn-site placement in the same files — via one new optional `sampleBridgeDeck` dependency threaded from `ChunkManager` through `SettlementsManager`/`worldBundle.ts`. `AnimalAgent`'s water gating is fixed by the same composition (`sampleLocalWater` reports "not present" on a deck footprint) since `NpcAgent`'s own walkability check only ever gated on the global ocean/lake plane, never river water.
+- Tests: `terrain/roadBridge.test.ts`, `settlement/roadNetwork.test.ts` (`bridgeSpecOf`), `terrain/chunkHeightmap.test.ts` (`chunkHeightmap road x river bridge` — suppression, approach shaping, river-carve invariance, chunk-seam agreement).
+
+**Not implemented:**
+
+- Obstacle colliders for rails/piers — plan §9 marks these optional ("if the final visual needs them"); V1 presentation is walk-through on the sides, matching "do not turn the obstacle registry into a floor system."
+- A ChunkManager-level streaming/dedup integration test — this codebase's existing `chunkManager.test.ts` only exercises pure exported helpers, never a live `createChunkManager()` (worker pool / IndexedDB / THREE scene); owner-chunk dedup and unload/reload are exercised only through the pure `ownsBridgeSpec`/`worldToChunk` logic and the unit-tested pure modules above. Streaming/dedup/traversal itself is browser/manual-verified per this plan's own §17.
+
+**Browser/manual verification:** not performed by this pass — see §17, to be done separately.
 
 ## 1. Goal
 

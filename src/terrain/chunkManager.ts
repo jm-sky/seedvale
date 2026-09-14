@@ -7,6 +7,7 @@ import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtoc
 import type { ChunkMeshData, ChunkMeshTileGrids } from './chunkMeshData'
 import type { FbmParams } from './fbm'
 import type { FordProjection } from './riverFord'
+import type { RoadBridgeSpec } from './roadBridge'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
@@ -50,10 +51,11 @@ import {
   SEAWEED_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
-import { fordsNear, type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
+import { bridgesNear, fordsNear, type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
 import { cellFromId } from '../settlement/settlementGenerator'
 import { setSettlementRiverQuery, settlementDefFor } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
+import { type BridgePresentation, createBridge } from '../world/createBridge'
 import { createChunkRiver, type WorldRiver } from '../world/createRiverWater'
 import { createChunkWater, type WorldWater } from '../world/createWater'
 import {
@@ -143,6 +145,7 @@ import {
 } from './riverNetwork'
 import { createRiverQuery } from './riverQuery'
 import { createRiverTileCache } from './riverTileCache'
+import { bridgeDeckYAt } from './roadBridge'
 import { cutoutsOverlappingChunk, type TerrainCutout } from './terrainCutout'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 import { type LocalWaterSample, sampleLocalWater as sampleLocalWaterPure } from './waterSample'
@@ -481,6 +484,18 @@ type ChunkRecord = {
    *  has (plan world-terrain-023 §9) without re-resolving routes on a hot
    *  per-agent query. Empty/undefined for the common no-crossing chunk. */
   fordProjections?: FordProjection[]
+  /** Declared bridge decks whose footprint reaches this chunk — the exact
+   *  `ChunkTileParams.bridgeProjections` its terrain was generated from, kept
+   *  so the shared movement-ground query (`sampleBridgeDeck`) never re-runs
+   *  `bridgesNear` on a hot per-agent query (plan world-terrain-033 §7).
+   *  Empty/undefined for the common no-bridge-nearby chunk. */
+  bridgeSpecs?: RoadBridgeSpec[]
+  /** This chunk's own bridge presentation instances — only populated on the
+   *  chunk that *owns* each spec (`worldToChunk(spec.x, spec.z)` resolves to
+   *  this chunk), so a bridge whose footprint reaches a neighboring chunk is
+   *  never instantiated twice (plan world-terrain-033 §9). Keyed by
+   *  `RoadBridgeSpec.id`. */
+  bridges?: Map<string, BridgePresentation>
   /** Non-living tree stage meshes (limbed/felled/stump) — few and mutated
    *  individually, so never instanced (plan 087 §2.3/§2.5). Also receives
    *  whatever `refreshTreeVisual` swaps a tree into afterward, including a
@@ -531,6 +546,20 @@ export type ChunkManager = {
   setWeatherSurface: (wetness: number, snowAmount: number) => void
   sampleHeight: HeightSampler
   sampleFloor: HeightSampler
+  /** Deck Y of the nearest loaded/relevant declared bridge at `(x, z)`, or
+   *  `null` outside every deck footprint — the shared movement-ground primer
+   *  (plan world-terrain-033 §7). Bounded to the point's own owning chunk's
+   *  retained bridge specs, safe in a movement hot path like
+   *  `sampleLocalWater`. Never mutates hydrology or `sampleHeight` itself. */
+  sampleBridgeDeck: (x: number, z: number) => number | null
+  /** Terrain height, or a declared bridge's deck Y when `(x, z)` sits inside
+   *  its footprint — the shared surface *movement*-ground query (plan
+   *  world-terrain-033 §7). Cave ownership is resolved separately by callers
+   *  (`Caves.queryGround` first, this only when that misses) — see
+   *  `PlayerController.groundAt()`. Do not use this in place of
+   *  `sampleHeight` for placement/worldgen code, where a bridge deck is not
+   *  terrain. */
+  sampleSurfaceGround: HeightSampler
   sampleBiome: (x: number, z: number) => number
   sampleContinentalness: (x: number, z: number) => number
   sampleMountainRidge: (x: number, z: number) => number
@@ -1226,6 +1255,9 @@ export function createChunkManager(
       // incidental road × river overlap stays a natural river (plan
       // world-terrain-023 §8).
       fordProjections: fordsNear(x, z, config.chunkSize, roadCtx),
+      // Declared bridge decks whose footprint reaches this chunk — never a
+      // second river/route search (plan world-terrain-033 §5).
+      bridgeProjections: bridgesNear(x, z, config.chunkSize, roadCtx),
       cemeterySettlements,
       cemeteryRoadSegments,
       cemeteryClearings,
@@ -1738,7 +1770,7 @@ export function createChunkManager(
           finishFinalize(rec)
           return
         }
-        if (chunkNeedsContent(tile)) {
+        if (chunkNeedsContent(tile) || chunkOwnsAnyBridge(rec)) {
           rec.finalizeStage = 'content'
           finalizeQueue.push(rec.key)
         } else {
@@ -2114,6 +2146,44 @@ export function createChunkManager(
       rec.environment,
     ])
     rebuildColliders(rec)
+    attachChunkBridges(rec)
+  }
+
+  /** One deterministic owner-chunk rule, shared by `attachChunkBridges` and
+   *  the finalize-stage content gate below: the chunk containing the deck
+   *  center owns runtime presentation (plan world-terrain-033 §9). */
+  function ownsBridgeSpec(rec: ChunkRecord, spec: RoadBridgeSpec): boolean {
+    const owner = worldToChunk(spec.x, spec.z, config.chunkSize)
+    return owner.cx === rec.coord.cx && owner.cz === rec.coord.cz
+  }
+
+  /** Whether this chunk owns presentation for at least one of its retained
+   *  bridge specs — a chunk can reach a bridge's terrain-mask footprint
+   *  without owning it, so this is stricter than `!!rec.bridgeSpecs?.length`.
+   *  Used to keep the 'content' finalize stage from being skipped for a
+   *  bridge-owning chunk that otherwise has no vegetation/items/environment
+   *  (`chunkNeedsContent` alone doesn't know about bridges). */
+  function chunkOwnsAnyBridge(rec: ChunkRecord): boolean {
+    return (rec.bridgeSpecs ?? []).some((spec) => ownsBridgeSpec(rec, spec))
+  }
+
+  /** Instantiates V1 bridge presentation for every declared bridge this chunk
+   *  *owns* — a bridge spanning a chunk boundary reaches every overlapping
+   *  chunk's `bridgeSpecs` (terrain-mask/ground-query needs), but only its
+   *  owner chunk builds presentation, so it is never instantiated twice.
+   *  Deterministic: the same spec always resolves to the same owner, so
+   *  reload always recreates the same instance. */
+  function attachChunkBridges(rec: ChunkRecord): void {
+    const specs = rec.bridgeSpecs
+    if (!specs || specs.length === 0) return
+    for (const spec of specs) {
+      if (!ownsBridgeSpec(rec, spec)) continue
+      if (rec.bridges?.has(spec.id)) continue
+      const presentation = createBridge(spec)
+      scene.add(presentation.group)
+      rec.bridges ??= new Map()
+      rec.bridges.set(spec.id, presentation)
+    }
   }
 
   /** Canonical base tile for `record`, from the persistent `chunk-tiles`
@@ -2165,6 +2235,10 @@ export function createChunkManager(
     // Same declared fords the tile is shaped from, so `sampleLocalWater` and
     // the ground agree on the ford's depth.
     record.fordProjections = params.fordProjections
+    // Same declared bridges the terrain mask suppressed road shaping under,
+    // retained for the shared movement-ground query and this chunk's own
+    // (possibly empty) owner-chunk presentation below.
+    record.bridgeSpecs = params.bridgeProjections
 
     const promise = acquireCanonicalTile(record, params)
       .then((canonical) => {
@@ -2247,6 +2321,10 @@ export function createChunkManager(
       record.riverTiles = undefined
     }
     removeGrass(record)
+    if (record.bridges) {
+      for (const presentation of record.bridges.values()) presentation.dispose()
+      record.bridges = undefined
+    }
     if (record.vegetationExtras) {
       disposeObject3D(record.vegetationExtras)
       record.vegetationExtras.removeFromParent()
@@ -2467,6 +2545,20 @@ export function createChunkManager(
     }
   }
 
+  /** Deck Y at `(worldX, worldZ)` from the point's own owning chunk's
+   *  retained `bridgeSpecs` — `null` outside every declared bridge deck's
+   *  footprint. A bridge spanning a chunk boundary is still resolved
+   *  correctly from either side: the terrain-mask query (`paramsFor`) already
+   *  retains a spec on every chunk its footprint reaches, not only its owner
+   *  chunk (plan world-terrain-033 §7/§10). Bounded to one map lookup, safe
+   *  in a movement hot path. */
+  function sampleBridgeDeckAt(worldX: number, worldZ: number): number | null {
+    const coord = worldToChunk(worldX, worldZ, config.chunkSize)
+    const rec = chunks.get(chunkKey(coord))
+    if (!rec?.bridgeSpecs || rec.bridgeSpecs.length === 0) return null
+    return bridgeDeckYAt(rec.bridgeSpecs, worldX, worldZ)
+  }
+
   return {
     update,
     tickWater(dt) {
@@ -2490,6 +2582,8 @@ export function createChunkManager(
     },
     sampleHeight: (x, z) => readField('heights', x, z),
     sampleFloor: (x, z) => readField('floorHeights', x, z),
+    sampleBridgeDeck: sampleBridgeDeckAt,
+    sampleSurfaceGround: (x, z) => sampleBridgeDeckAt(x, z) ?? readField('heights', x, z),
     sampleBiome: (x, z) => readField('biomes', x, z),
     sampleContinentalness: (x, z) => readField('continentalness', x, z),
     sampleMountainRidge: (x, z) => readField('mountainRidge', x, z),
