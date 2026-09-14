@@ -525,8 +525,16 @@ export async function createSettlement(
   pointLightBudget.registerSubtree(group)
 
   const registerSettlementColliders = (): void => {
+    const wellColliders = (landmarks.wells && landmarks.wells.length > 0)
+      ? landmarks.wells.map((well) => ({
+          type: 'circle' as const,
+          x: well.position.x,
+          z: well.position.z,
+          radius: WELL_COLLISION_RADIUS,
+        }))
+      : [{ type: 'circle' as const, x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS }]
     registerColliders(def.id, [
-      { type: 'circle', x: landmarks.well.x, z: landmarks.well.z, radius: WELL_COLLISION_RADIUS },
+      ...wellColliders,
       ...settlementHouseColliders(landmarks.houses, houseAssemblies),
       ...settlementPropColliders(landmarks),
     ])
@@ -721,26 +729,35 @@ export async function createSettlement(
     maxVisibleSlots: 8,
     servingCapacity: 1,
   }
-  const queues = new Map<string, InteractionQueue>([
-    [
-      wellQid,
+  const queues = new Map<string, InteractionQueue>()
+  const wellEntries = landmarks.wells && landmarks.wells.length > 0
+    ? landmarks.wells
+    : [{
+        queueId: wellQid,
+        position: landmarks.well,
+        prop: landmarks.wellProp,
+      }]
+  for (const well of wellEntries) {
+    const queueId = well.queueId
+    queues.set(
+      queueId,
       createInteractionQueue(
-        wellQid,
-        landmarks.wellProp
+        queueId,
+        well.prop
           ? buildWellInteractionQueueConfig(
-              landmarks.wellProp,
-              copyVec3(landmarks.well),
+              well.prop,
+              copyVec3(well.position),
               wellQueueRest,
             )
           : {
-              anchor: copyVec3(landmarks.well),
+              anchor: copyVec3(well.position),
               lineDir: { x: 0, z: 1 },
               servingOffset: WELL_QUEUE_SERVING_OFFSET_FALLBACK,
               ...wellQueueRest,
             },
       ),
-    ],
-  ])
+    )
+  }
 
   // 1 family = 1 house: every member of a family shares that family's home
   // place (`homePlaces[familyIndex]`), not a bare `i % homePlaces.length`

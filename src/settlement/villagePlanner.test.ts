@@ -1,15 +1,45 @@
 import { describe, expect, it } from 'vitest'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { NaturalResource } from '../terrain/naturalResources'
+import type { FamilyDef } from './families'
 import type { VillageIdentity } from './villagePlan'
 import { generateFamilies } from './families'
 import { gardenClearingRadius, gardenPlazaMinCenterDist, type GardenScale } from './gardenScale'
+import { selectHouseholdWellFamilyIndices } from './householdWells'
 import { householdYardRadius } from './householdYard'
 import { plazaCoreRadius } from './villageClearing'
+import { householdWellPlotId } from './villagePlan'
 import { chooseLayoutPattern, planVillageLayout, PLOT_SCORE_WEIGHTS } from './villagePlanner'
 
 const flatHeight = (): number => 12
 const WATER = 0
+
+function stubFamily(id: string, size: number): FamilyDef {
+  return {
+    id,
+    members: Array.from({ length: size }, (_, i) => ({
+      name: `${id}-${i}`,
+      lastName: 'Test',
+      relation: size === 1 ? 'single' : i === 0 ? 'husband' : i === 1 ? 'wife' : 'child',
+      character: {
+        name: `${id}-${i}`,
+        lastName: 'Test',
+        gender: i === 1 && size > 1 ? 'female' : 'male',
+        role: 'woodcutter',
+        personality: {
+          openness: 0.5,
+          conscientiousness: 0.5,
+          extraversion: 0.5,
+          agreeableness: 0.5,
+          neuroticism: 0.5,
+        },
+        traits: ['curious'],
+      },
+      scale: 1,
+      age: i >= 2 ? 8 : 30,
+    })),
+  }
+}
 
 function identity(partial: Partial<VillageIdentity> & Pick<VillageIdentity, 'size' | 'id'>): VillageIdentity {
   return {
@@ -122,6 +152,41 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     for (const house of layout.plots.filter((p) => p.role === 'house')) {
       expect(Math.hypot(house.x - well.x, house.z - well.z)).toBeGreaterThanOrEqual(minDist - 0.01)
     }
+  })
+
+  it('keeps a central plaza well and adds household wells for selected families', () => {
+    const id = identity({ id: 'hw_1', size: 'MD' })
+    const families = [stubFamily('a', 3), stubFamily('b', 1), stubFamily('c', 3)]
+    const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 21, flatHeight, WATER)
+    const central = layout.plots.find((p) => p.id === 'plot-infra-well')
+    expect(central?.x).toBe(layout.center.x)
+    expect(central?.z).toBe(layout.center.z)
+    expect(layout.landmarks.some((l) => l.kind === 'well' && l.plotId === 'plot-infra-well')).toBe(true)
+
+    const expected = selectHouseholdWellFamilyIndices(families, 21)
+    expect(expected).toEqual([0, 2])
+    const householdPlots = layout.plots.filter((p) => p.id.startsWith('plot-household-well-'))
+    expect(householdPlots.map((p) => p.familyIndex).sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual(expected)
+    expect(new Set(householdPlots.map((p) => p.id)).size).toBe(householdPlots.length)
+    for (const familyIndex of expected) {
+      const plot = layout.plots.find((p) => p.id === householdWellPlotId(familyIndex))
+      const house = layout.plots.find((p) => p.role === 'house' && p.familyIndex === familyIndex)
+      expect(plot).toBeDefined()
+      expect(house).toBeDefined()
+      expect(layout.landmarks.some((l) => l.id === `landmark-well-household-${familyIndex}`)).toBe(true)
+      expect(Math.hypot(plot!.x - house!.x, plot!.z - house!.z)).toBeGreaterThan(house!.radius)
+    }
+  })
+
+  it('reproduces the same household-well plots for the same seed and families', () => {
+    const id = identity({ id: 'hw_2', size: 'LG' })
+    const families = generateFamilies(15, 'LG', false, 'polish')
+    const a = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 15, flatHeight, WATER)
+    const b = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 15, flatHeight, WATER)
+    const idsA = a.plots.filter((p) => p.id.startsWith('plot-household-well-')).map((p) => p.id)
+    const idsB = b.plots.filter((p) => p.id.startsWith('plot-household-well-')).map((p) => p.id)
+    expect(idsA).toEqual(idsB)
+    expect(idsA).toEqual(selectHouseholdWellFamilyIndices(families, 15).map(householdWellPlotId))
   })
 
   it('keeps garden plots outside the plaza disk (plan 095)', () => {

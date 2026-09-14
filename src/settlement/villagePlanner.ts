@@ -29,9 +29,10 @@ import {
   gardenUnitsFromHouses,
   packGardenScales,
 } from './gardenScale'
+import { selectHouseholdWellFamilyIndices } from './householdWells'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 import { plazaCoreRadius } from './villageClearing'
-import { residentialStructureId } from './villagePlan'
+import { householdWellPlotId, parseHouseholdWellFamilyIndex, residentialStructureId } from './villagePlan'
 
 /** Matches `worldConfig.settlement.clearing.coreRadius` — used to size
  *  plaza-relative infrastructure (campfire on packed dirt; gardens off it). */
@@ -798,6 +799,40 @@ export function planVillageLayout(
     )
   })
 
+  const selectedHouseholdWells = selectHouseholdWellFamilyIndices(families, seedForCell)
+  for (const familyIndex of selectedHouseholdWells) {
+    const house = plots.find((plot) => plot.role === 'house' && plot.familyIndex === familyIndex)
+    if (!house) continue
+    const family = families[familyIndex]
+    const houseDist = Math.hypot(house.x - center.x, house.z - center.z)
+    const houseZone = residential
+      ? { ...residential, x: house.x, z: house.z }
+      : null
+    plots.push(
+      pickPlot(
+        {
+          id: householdWellPlotId(familyIndex),
+          role: 'infrastructure',
+          zone: houseZone,
+          radius: INFRA_PLOT_RADIUS,
+          familyIndex,
+          familyId: family?.id ?? house.familyId,
+          preferredRing: Math.max(houseDist, houseMinCenterDist),
+          minCenterDist: houseMinCenterDist,
+          attractor: { x: house.x, z: house.z },
+        },
+        center,
+        boundary,
+        plots,
+        seedForCell,
+        sampleHeight,
+        waterLevel,
+        sizeCfg.houseSpacing,
+        riverSegments,
+      ),
+    )
+  }
+
   const infra = sizeCfg.infrastructure
   const stockpileAttractor =
     identity.dominantResource && identity.dominantResource.richness >= SIGNIFICANT_RICHNESS
@@ -1119,6 +1154,12 @@ export function buildingsAndLandmarksFromPlots(
     if (plot.id === 'plot-infra-well') {
       pushBuilding('public', plot, 'building-well')
       pushLandmark('well', plot, '0')
+      continue
+    }
+    const householdWellFamily = parseHouseholdWellFamilyIndex(plot.id)
+    if (householdWellFamily != null) {
+      pushBuilding('utility', plot, `building-household-well-${householdWellFamily}`)
+      pushLandmark('well', plot, `household-${householdWellFamily}`)
       continue
     }
     const stockpileMatch = /^plot-infra-stockpile-(\d+)$/.exec(plot.id)

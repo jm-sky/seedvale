@@ -1,7 +1,7 @@
 # Plan: Household wells and population scaling
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none

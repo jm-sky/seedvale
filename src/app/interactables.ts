@@ -884,13 +884,18 @@ export function buildInteractables(
       for (const animal of settlement.rats) pushLiveAnimalCandidate(animal)
     }
 
-    if (withinRange(settlement.landmarks.well.x, settlement.landmarks.well.z, playerPos, GAZE_RANGE)) {
-      list.push({
-        kind: 'well',
-        position: settlement.landmarks.well,
-        promptLabel: WATER_SOURCE_PROMPT,
-        source: createWaterSource('well'),
-      })
+    const settlementWells = settlement.landmarks.wells && settlement.landmarks.wells.length > 0
+      ? settlement.landmarks.wells
+      : [{ position: settlement.landmarks.well }]
+    for (const well of settlementWells) {
+      if (withinRange(well.position.x, well.position.z, playerPos, GAZE_RANGE)) {
+        list.push({
+          kind: 'well',
+          position: well.position,
+          promptLabel: WATER_SOURCE_PROMPT,
+          source: createWaterSource('well'),
+        })
+      }
     }
 
     // Plan 168 follow-up — the settlement's hay fallback as a real `[E]`

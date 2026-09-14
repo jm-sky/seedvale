@@ -559,11 +559,16 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       blockers.push({ x: tree.x, z: tree.z, radius: 1.2 })
     }
     for (const settlement of bundle.settlementsManager.getLoaded()) {
-      blockers.push({
-        x: settlement.landmarks.well.x,
-        z: settlement.landmarks.well.z,
-        radius: 1.6,
-      })
+      const settlementWells = settlement.landmarks.wells && settlement.landmarks.wells.length > 0
+        ? settlement.landmarks.wells
+        : [{ position: settlement.landmarks.well }]
+      for (const well of settlementWells) {
+        blockers.push({
+          x: well.position.x,
+          z: well.position.z,
+          radius: 1.6,
+        })
+      }
       for (const house of settlement.landmarks.houses) {
         blockers.push({ x: house.position.x, z: house.position.z, radius: 2.2 })
       }

@@ -16,8 +16,10 @@ export {
 } from './actionLifecycle'
 export {
   createInteractionQueue,
+  householdWellQueueId,
   type InteractionQueue,
   type InteractionQueueConfig,
+  settlementWellQueueId,
   wellQueueId,
 } from './interactionQueue'
 export {

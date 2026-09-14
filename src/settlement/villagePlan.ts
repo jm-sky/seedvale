@@ -108,6 +108,26 @@ export function residentialStructureId(familyIndex: number): string {
   return `building-house-${familyIndex}`
 }
 
+/** Stable infrastructure plot id for a household well at `familyIndex`
+ *  (plan settlements-npcs-035). Distinct from the plaza `plot-infra-well`. */
+export function householdWellPlotId(familyIndex: number): string {
+  return `plot-household-well-${familyIndex}`
+}
+
+/** Inverse of {@link householdWellPlotId}; `null` when `plotId` is not a
+ *  household-well plot. */
+export function parseHouseholdWellFamilyIndex(plotId: string): number | null {
+  const match = /^plot-household-well-(\d+)$/.exec(plotId)
+  if (!match) return null
+  return Number(match[1])
+}
+
+/** Stable landmark id for a household well, matching
+ *  `buildingsAndLandmarksFromPlots`' `landmark-well-${idSuffix}` shape. */
+export function householdWellLandmarkId(familyIndex: number): string {
+  return `landmark-well-household-${familyIndex}`
+}
+
 export type VillageLandmarkKind =
   | 'well'
   | 'stockpile'

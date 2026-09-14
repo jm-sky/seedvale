@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   createInteractionQueue,
+  householdWellQueueId,
+  settlementWellQueueId,
   wellQueueId,
 } from './interactionQueue'
 import { vec3 } from './types'
@@ -20,6 +22,12 @@ function makeQueue(overrides?: Partial<Parameters<typeof createInteractionQueue>
 describe('interactionQueue', () => {
   it('wellQueueId namespaces by settlement', () => {
     expect(wellQueueId('3_5')).toBe('3_5:well')
+  })
+
+  it('householdWellQueueId is stable and distinct from the central well', () => {
+    expect(householdWellQueueId('3_5', 2)).toBe('3_5:well:household:2')
+    expect(settlementWellQueueId('3_5', null)).toBe('3_5:well')
+    expect(settlementWellQueueId('3_5', 2)).toBe('3_5:well:household:2')
   })
 
   it('join is FIFO and idempotent', () => {

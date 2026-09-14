@@ -11,6 +11,7 @@ import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../as
 import { isDebugMode } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
+import { settlementWellQueueId } from '../simulation'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { createPlacedContainerProp } from '../world/containerProp'
 import { type CultivationAnchor, cultivationAnchorFromSettlementField, cultivationAnchorFromSettlementGarden } from '../world/cultivationAnchor'
@@ -107,7 +108,7 @@ import {
   WOOD_PILE_EXTRA_OFFSETS,
   type WoodPileVisual,
 } from './storageVisuals'
-import { residentialStructureId } from './villagePlan'
+import { parseHouseholdWellFamilyIndex, residentialStructureId } from './villagePlan'
 import { pathPlansToCorridorData } from './villagePlanner'
 
 export type SettlementHouseLandmark = {
@@ -151,10 +152,25 @@ export type SettlementHouseBed = {
   facing: number | null
 }
 
+export type SettlementWellLandmark = {
+  id: string
+  position: THREE.Vector3
+  prop?: THREE.Object3D
+  familyIndex: number | null
+  isCentral: boolean
+  queueId: string
+}
+
 export type SettlementLandmarks = {
   well: THREE.Vector3
   /** Well mesh (GLB or procedural fallback) — drink-queue anchors (Phase 6). */
   wellProp?: THREE.Object3D
+  /**
+   * Central plaza well plus household wells (plan settlements-npcs-035).
+   * `well` / `wellProp` remain central-only compatibility aliases. Omitted
+   * from fixtures that only construct the plaza well.
+   */
+  wells?: SettlementWellLandmark[]
   stockpile: THREE.Vector3
   /** Second wood pile when `infrastructure.stockpiles > 1` (LG/XL). */
   stockpileSecondary?: THREE.Vector3
@@ -749,6 +765,7 @@ export async function buildSettlementProps(
 
   const landmarks: SettlementLandmarks = {
     well: new THREE.Vector3(),
+    wells: [],
     stockpile: new THREE.Vector3(),
     garden: new THREE.Vector3(),
     gardens: [],
@@ -781,11 +798,41 @@ export async function buildSettlementProps(
   const wellLm = landmarkOf(plan, 'well')
   const wellX = wellLm?.x ?? site.x
   const wellZ = wellLm?.z ?? site.z
-  const well = await loadPropOrFallback(WELL_URL, WELL_HEIGHT, createWell)
+  const wellTemplate = await loadPropOrFallback(WELL_URL, WELL_HEIGHT, createWell)
+  const well = wellTemplate.clone(true)
   placeOnGround(well, wellX, wellZ, sampleHeight)
   group.add(well)
   landmarks.well.set(wellX, sampleHeight(wellX, wellZ), wellZ)
   landmarks.wellProp = well
+  const wells: SettlementWellLandmark[] = [{
+    id: wellLm?.id ?? 'landmark-well-0',
+    position: landmarks.well,
+    prop: well,
+    familyIndex: null,
+    isCentral: true,
+    queueId: settlementWellQueueId(settlementId, null),
+  }]
+  const householdWellLandmarks = (plan?.landmarks ?? []).filter(
+    (lm) => lm.kind === 'well' && lm.plotId != null && parseHouseholdWellFamilyIndex(lm.plotId) != null,
+  )
+  for (const lm of householdWellLandmarks) {
+    const familyIndex = parseHouseholdWellFamilyIndex(lm.plotId!)
+    if (familyIndex == null) continue
+    const hw = wellTemplate.clone(true)
+    placeOnGround(hw, lm.x, lm.z, sampleHeight)
+    group.add(hw)
+    const position = new THREE.Vector3(lm.x, sampleHeight(lm.x, lm.z), lm.z)
+    wells.push({
+      id: lm.id,
+      position,
+      prop: hw,
+      familyIndex,
+      isCentral: false,
+      queueId: settlementWellQueueId(settlementId, familyIndex),
+    })
+  }
+  if (householdWellLandmarks.length > 0) await yieldProp()
+  landmarks.wells = wells
 
   const { x: stockX, z: stockZ } = placeFromLandmark(
     site, landmarkOf(plan, 'stockpile', 0), 4, 1.5, sampleHeight, waterLevel, coreRandom,

@@ -76,6 +76,7 @@ import { isLiquidContainerInstance } from '../items/itemInstances'
 import { drinkFromLiquidContainer } from '../items/liquidContainer'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
+import { resolveNearestWaterWellTarget } from '../settlement/householdWells'
 import {
   generatePhysicalProfile,
   type PhysicalProfile,
@@ -2999,8 +3000,9 @@ export class NpcAgent {
         this.wait -= dt
         // Face the well while drawing water so Interact reads as a drink.
         if (this.pendingAction?.kind === 'drink' && this.pendingAction.queueId) {
-          const dx = this.landmarks.well.x - this.mesh.position.x
-          const dz = this.landmarks.well.z - this.mesh.position.z
+          const wellPos = this.queues.get(this.pendingAction.queueId)?.config.anchor ?? this.landmarks.well
+          const dx = wellPos.x - this.mesh.position.x
+          const dz = wellPos.z - this.mesh.position.z
           if (Math.hypot(dx, dz) > 0.05) {
             this.mesh.rotation.y = Math.atan2(dx, dz)
           }
@@ -3144,18 +3146,19 @@ export class NpcAgent {
           this.phase = 'execute'
           this.wait = action.durationSec
           // Well draw SFX for queued well drinks (destination is offset from
-          // the mesh center) and for any legacy drink aimed at the well.
-          if (
-            action.kind === 'drink'
-            && (
-              action.queueId === this.wellQueueId
-              || Math.hypot(
+          // the mesh center) and for any legacy drink aimed at the plaza well.
+          if (action.kind === 'drink') {
+            const queuedWell = action.queueId ? this.queues.get(action.queueId) : undefined
+            if (queuedWell) {
+              playActionWell(this.playAt, queuedWell.config.anchor)
+            } else if (
+              Math.hypot(
                 action.destination.x - this.landmarks.well.x,
                 action.destination.z - this.landmarks.well.z,
               ) < 0.5
-            )
-          ) {
-            playActionWell(this.playAt, this.landmarks.well)
+            ) {
+              playActionWell(this.playAt, this.landmarks.well)
+            }
           } else if (action.kind === 'chop') {
             playActionChop(this.playAt, action.destination)
           }
@@ -3698,19 +3701,26 @@ export class NpcAgent {
   }
 
   /** Picks the water-fetch destination for `beginNeed`'s `water`/`waterDuty`
-   *  branches (plan 127 §10) — the settlement's own well, or a nearer
-   *  completed player-built well when one exists within
+   *  branches (plan 127 §10 / settlements-npcs-035) — nearest settlement well
+   *  (central or household) or a nearer completed player-built well within
    *  `PLAYER_WELL_WATER_SEARCH_RADIUS` of this NPC's household home. Called
    *  only when a water action actually starts, never per frame; no
    *  well-specific NPC behaviour beyond "prefer the closer usable source". */
-  private resolveWaterWellTarget(): { position: { x: number, y: number, z: number }, isVillageWell: boolean } {
-    const nearby = this.getNearbyPlayerWell?.(this.home.x, this.home.z, PLAYER_WELL_WATER_SEARCH_RADIUS)
-    if (nearby) {
-      const toNearby = Math.hypot(nearby.x - this.home.x, nearby.z - this.home.z)
-      const toVillage = Math.hypot(this.landmarks.well.x - this.home.x, this.landmarks.well.z - this.home.z)
-      if (toNearby < toVillage) return { position: nearby, isVillageWell: false }
-    }
-    return { position: this.landmarks.well, isVillageWell: true }
+  private resolveWaterWellTarget(): {
+    position: { x: number, y: number, z: number }
+    queueId: string | null
+    isSettlementWell: boolean
+  } {
+    const nearby = this.getNearbyPlayerWell?.(this.home.x, this.home.z, PLAYER_WELL_WATER_SEARCH_RADIUS) ?? null
+    const wells = this.landmarks.wells
+    const settlementWells = wells && wells.length > 0
+      ? wells.map((well) => ({ position: well.position, queueId: well.queueId }))
+      : [{ position: this.landmarks.well, queueId: this.wellQueueId }]
+    return resolveNearestWaterWellTarget({
+      home: this.home,
+      settlementWells,
+      playerWell: nearby,
+    })
   }
 
   /** Records a Plan lifecycle-state transition and applies it — the single
@@ -3924,8 +3934,8 @@ export class NpcAgent {
         }
         case 'well': {
           const wellTarget = this.resolveWaterWellTarget()
-          const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
-          if (queue && this.wellQueueId) {
+          const queue = wellTarget.queueId ? this.queues.get(wellTarget.queueId) : undefined
+          if (queue && wellTarget.queueId) {
             // Leave any prior queue before joining so an agent is never in two.
             this.leaveActiveQueue()
             queue.join(this.id)
@@ -3933,7 +3943,7 @@ export class NpcAgent {
               kind: 'drink',
               destination: queue.worldDestination(this.id),
               durationSec: 1.2 * this.waitMultiplier,
-              queueId: this.wellQueueId,
+              queueId: wellTarget.queueId,
               onComplete: () => {
                 relieveNeed(this.needs, 'water')
               },
@@ -3968,7 +3978,7 @@ export class NpcAgent {
         return
       }
       const wellTarget = this.resolveWaterWellTarget()
-      const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
+      const queue = wellTarget.queueId ? this.queues.get(wellTarget.queueId) : undefined
       const fetchStep = (destination: ReturnType<typeof copyVec3>, queueId?: string): NpcPlannedAction => ({
         kind: 'drink',
         destination,
@@ -3986,10 +3996,10 @@ export class NpcAgent {
           },
         },
       })
-      if (queue && this.wellQueueId) {
+      if (queue && wellTarget.queueId) {
         this.leaveActiveQueue()
         queue.join(this.id)
-        this.startAction(fetchStep(queue.worldDestination(this.id), this.wellQueueId))
+        this.startAction(fetchStep(queue.worldDestination(this.id), wellTarget.queueId))
         return
       }
       this.startAction(fetchStep(copyVec3(wellTarget.position)))

@@ -149,7 +149,17 @@ export function createInteractionQueue(
   return queue
 }
 
-/** Convenience id for a settlement's well drink queue. */
+/** Convenience id for a settlement's central plaza well drink queue. */
 export function wellQueueId(settlementId: string): string {
   return `${settlementId}:well`
+}
+
+/** Drink queue for a household well (plan settlements-npcs-035). */
+export function householdWellQueueId(settlementId: string, familyIndex: number): string {
+  return `${settlementId}:well:household:${familyIndex}`
+}
+
+/** Central (`familyIndex === null`) or household well queue id. */
+export function settlementWellQueueId(settlementId: string, familyIndex: number | null): string {
+  return familyIndex == null ? wellQueueId(settlementId) : householdWellQueueId(settlementId, familyIndex)
 }
