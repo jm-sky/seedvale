@@ -74,7 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-033-road-bridge-projection-and-traversal.md`                 | 🔴 | M      | ~~world-terrain-023~~                                                                                                                                                           | -                                       |
 | ◼️ `world-terrain-029-persistent-road-route-worldgen-cache.md`                 | 🔴 | M      | ~~world-terrain-023~~, world-terrain-033                                                                                                                                        | -                                       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
-| ◼️ `items-player-032-npc-player-storage-resource-and-context-rules.md`         | 🟡 | L      | items-player-028                                                                                                                                                                | companions                              |
+| 💡 `items-player-032-npc-player-storage-resource-and-context-rules.md`         | 🟡 | L      | items-player-028                                                                                                                                                                | companions                              |
 
 ---
 
