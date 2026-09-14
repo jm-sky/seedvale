@@ -1,22 +1,41 @@
 # Implementation notes: quests-progression-027 lost treasure expedition
 
-**Reviewed:** 2026-09-13  
+**Reviewed:** 2026-09-14  
 **Plan:** `docs/plans/quests-progression-027-lost-treasure-expedition.md`  
-**Baseline:** `main` at `aa2e7d75547627883578d856f914389363f19a32`
+**Baseline:** current `main` recon on 2026-09-14
 
 ## Dependency status
 
 - `world-terrain-028` is implemented and `verification needed`. Dungeon caves already expose deterministic `storyFind`, `loot`, `sideTreasure` and required `finalTreasure` anchors through `Caves.contentAnchorsOf()`.
 - `fauna-027` is implemented in code and `verification needed`. Dungeon residents are ordinary fauna-owned persistent `AnimalAgent`s; this quest must not spawn, own, reset or require killing them.
-- `quests-progression-026` is still planned. Its notes reserve side/deep cache space and explicitly leave `finalTreasure` to this quest. Both plans need the same generalized cave-anchor claim seam, so do not add a second reservation mechanism here.
+- `quests-progression-026` is still planned. Its notes reserve side/deep cache space and explicitly leave `finalTreasure` to this quest. Both plans must reuse the same cave-anchor claim seam; do not add a second reservation mechanism here.
 
-## Shared cave claims must be generalized first
+## Recon result — the three risky seams
 
-`src/world/caves/caveAdventureContentPolicy.ts::resolveCaveAdventureContentPolicy()` currently validates `anchorClaims` only against `adventureCaveIds`; a dungeon anchor returns `cave_not_adventure`.
+The 2026-09-14 recon removes two previously assumed prerequisites and narrows the third:
 
-Generalize only the **anchor-claim** part to all supplied `CaveContentAnchor`s. Keep adventure profile reservation and the `EMPTY` / `QUEST_TREASURE` / `DOUBLE_TREASURE` roll adventure-only. Preserve sorted reservation arbitration, stable reservation keys, `claimOf()` and explicit unresolved conflicts.
+1. **Anchor claims are already generalized.** `src/world/caves/caveAdventureContentPolicy.ts::resolveCaveAdventureContentPolicy()` validates `anchorClaims` against the full supplied `CaveContentAnchor[]`, independent of adventure-cave profile reservation. Dungeon anchors are therefore already valid claim targets.
+2. **Fresh instance-backed container seeding already exists.** `src/world/worldGeneratedContainers.ts::WorldGeneratedContainerSpec` already exposes `initialInstances?: readonly ItemInstance[]`. `createWorldGeneratedContainers()` uses them only when no saved record exists; saved `counts` + `instances` remain authoritative.
+3. **Single-instance Player → NPC transfer is already atomic and sufficient.** `src/app/actions/npcItemTransfer.ts::giveItemInstanceToNpc()` delegates to `src/items/inventoryTransfer.ts::transferInventoryInstance()`, which validates destination capacity before source mutation and rolls back if destination insertion fails. Keep terminal hand-in to the exact journal only; personal effects are optional evidence/loot and must not force a new multi-instance transaction API.
 
-This quest should claim every anchor it materializes: the selected ordered `storyFind` trail and the exact `finalTreasure`. Claim ids must derive from stable cave/anchor identity, not array position. If 026 and 027 select the same dungeon, their disjoint claims must coexist; any accidental overlap must fail explicitly.
+These are reuse constraints, not implementation tasks. Do not recreate or broaden them unless current code has materially changed.
+
+## Cave anchor claims — reuse current contract
+
+Use `CaveContentReservationRequests.anchorClaims` with stable `reservationKey` + exact `anchorId`.
+
+Current guarantees in `resolveCaveAdventureContentPolicy()` that this quest should rely on:
+
+- anchor claims are sorted by `reservationKey` before arbitration;
+- any supplied cave archetype is valid if the `anchorId` exists;
+- duplicate anchor ownership becomes explicit `anchor_already_claimed` unresolved state;
+- missing anchors become explicit `anchor_not_found` unresolved state;
+- `claimOf(reservationKey)` returns the resolved `{ reservationKey, anchorId, caveId }`;
+- adventure content-profile reservation/roll remains adventure-only and is unrelated to dungeon anchor claiming.
+
+This quest should claim every anchor it materializes: the selected ordered `storyFind` trail and the exact `finalTreasure`. Claim ids must derive from stable cave/anchor identity, not array position.
+
+If 026 and 027 select the same dungeon, their disjoint claims must coexist; accidental overlap must fail explicitly. Add/extend focused policy tests for that coexistence, but do not change the reservation architecture.
 
 ## Dungeon selection and ordered trail
 
@@ -41,15 +60,20 @@ Use stable container ids derived from cave id + claimed anchor id. All undergrou
 
 Early looting must catch up from authoritative container/inventory state. Never respawn or refill a container because the quest was accepted later or restored at an earlier stage.
 
-## Journal and personal effects require instance-backed initialization
+## Journal initialization — reuse existing `initialInstances`
 
-`src/world/worldGeneratedContainers.ts::WorldGeneratedContainerSpec` currently supports `initialCounts` only. Restored containers already preserve `instances`, but a fresh spec cannot seed exact instances.
+Do not add another world-container seeding seam. `WorldGeneratedContainerSpec.initialInstances` already exists and is used only for fresh containers.
 
-Add the same minimal generic seam needed by 026, e.g. `initialInstances?: readonly ItemInstance[]`, and pass it only when no saved container record exists. Saved mutable state must win completely on load/rebuild.
+Use it for the expedition journal:
 
-The expedition journal should be a dedicated instance-backed story item with a deterministic instance id tied to this binding. Personal effects should also be instance-backed if they participate in an exact hand-in; do not use generic count-backed loot if the quest must prove ownership of the specific expedition record.
+- dedicated instance-backed story item;
+- deterministic instance id derived from stable expedition binding, preferably dungeon id + journal role;
+- seed through `initialInstances` only in the leader-pack container spec;
+- saved mutable state must win completely on load/rebuild, so a journal moved to player/NPC inventory never reappears in the source container.
 
-The final treasure itself can remain ordinary authored loot unless the design needs identity for another system. `WorldGeneratedContainers` remains the mutable-content owner.
+Personal effects may be instance-backed when useful for story identity, but they are not required for terminal outcome resolution. The final treasure may remain ordinary authored loot unless another system needs identity.
+
+Add a focused regression test that constructs a fresh container with `initialInstances`, removes the journal, rebuilds from the saved container record, and proves the journal is not re-seeded.
 
 ## Stakeholder selection
 
@@ -77,17 +101,28 @@ Reuse existing objective vocabulary:
 
 The stage sequence should derive completion from live world content, not from a transient "opened" event. This is what makes pre-looted containers and save/load catch-up safe.
 
-## Exact journal hand-in must reuse Player → NPC transfer
+## Exact journal hand-in — single-instance only
 
-`src/app/actions/npcItemTransfer.ts::giveItemInstanceToNpc()` already performs atomic single-instance ownership transfer into `NpcAuthoritativeState.personalInventory`, preserving concrete identity.
+The terminal transfer contract is intentionally narrow:
 
-Inject a narrow quest hand-in callback that delegates to this primitive; do not mutate player/NPC inventories inside `QuestManager`.
+- `journal_to_family` transfers the exact journal instance to the second stakeholder;
+- `journal_to_sponsor` transfers the exact journal instance to the sponsor;
+- `keep_journal_and_treasure` performs no inventory mutation;
+- personal effects are not mandatory hand-in items.
 
-For `journal_to_family`, if both journal and personal effects are mandatory, avoid a partial two-item transfer. Either add a small atomic multi-instance transfer primitive in the existing inventory-transfer layer or validate both destination capacity/source ownership before committing both. Do not transfer the first item and then discover the second cannot move.
+Reuse `src/app/actions/npcItemTransfer.ts::giveItemInstanceToNpc()`; it already:
 
-`journal_to_sponsor` transfers only the exact journal if that is the authored requirement. `keep_journal_and_treasure` performs no inventory mutation.
+- re-resolves the NPC by stable `npcId` at commit time;
+- rejects missing/dead recipients;
+- validates exact source instance ownership;
+- validates destination capacity;
+- delegates the atomic move to `transferInventoryInstance()`.
 
-Resolve the terminal outcome only after the required physical transfer succeeds.
+Inject a narrow quest hand-in callback that delegates to this primitive and returns success/failure. Do not mutate player/NPC inventories inside `QuestManager`.
+
+Resolve the terminal outcome only after `giveItemInstanceToNpc()` returns `status: 'ok'`. On `source_missing`, `recipient_missing`, `recipient_dead` or `destination_full`, keep the quest unresolved and surface the normal failed-action path rather than granting rewards/consequences.
+
+Do **not** add an atomic multi-instance transfer primitive for this quest. If future gameplay genuinely needs multi-item transactional hand-ins, plan that separately around the shared inventory-transfer layer.
 
 ## Consequences and rewards
 
@@ -104,20 +139,30 @@ The player always keeps the final treasure; no outcome should remove or respawn 
 ## Persistence / rebuild traps
 
 - Quest progress persists; dungeon selection, stakeholder selection and anchor claims should reconstruct deterministically and stay unpersisted.
-- Container mutable state persists. Fresh `initialInstances` must never be merged back into an existing saved container.
-- Journal/effects moved to player or NPC inventory must not reappear in their source container after `WorldBundle` rebuild.
+- Container mutable state persists. Existing `initialInstances` must never be merged back into an existing saved container.
+- Journal moved to player or NPC inventory must not reappear in its source container after `WorldBundle` rebuild.
 - Do not infer quest progress from fauna state; dungeon residents may independently die, move or survive.
 - Do not depend on 026 implementation order. Shared anchor arbitration must support both reservation sets deterministically whether 026 is present now or added later.
 
 ## Suggested implementation order
 
-1. Generalize cave anchor claims beyond adventure caves and add 026/027 coexistence tests.
-2. Add fresh-spec instance seeding to `WorldGeneratedContainers` with no-respawn save/rebuild tests.
-3. Add story item kinds and deterministic dungeon/anchor/stakeholder binding helper.
+1. Add/extend only the focused 026/027 dungeon-anchor coexistence tests; no reservation refactor should be needed.
+2. Add the journal no-respawn regression test around the already-existing `initialInstances` contract.
+3. Add story item kind(s) and deterministic dungeon/anchor/stakeholder binding helper.
 4. Materialize all expedition containers/content before quest construction.
 5. Build the contextual `QuestDef` and live-state catch-up objectives.
-6. Wire exact physical hand-in and terminal outcomes/consequences.
+6. Wire exact single-journal hand-in through `giveItemInstanceToNpc()` and terminal outcomes/consequences.
 
-Focused tests should cover deterministic stakeholder/dungeon selection, ordered story anchors, unique `finalTreasure` claim, coexistence with 026, pre-looted stage catch-up, journal identity through container → player → NPC, missing second stakeholder, no duplication after save/load/rebuild, and fauna independence.
+Focused tests should cover deterministic stakeholder/dungeon selection, ordered story anchors, unique `finalTreasure` claim, coexistence with 026, pre-looted stage catch-up, journal identity through container → player → NPC, failed journal hand-in without outcome resolution, missing second stakeholder, no duplication after save/load/rebuild, and fauna independence.
+
+## Guardrails for implementation
+
+- Do not generalize cave anchor claims again; current code already supports dungeon anchors.
+- Do not add a second container instance-seeding API; use `initialInstances`.
+- Do not add quest-owned inventory mutation.
+- Do not add multi-instance atomic transfer solely for personal effects.
+- Do not persist deterministic cave/stakeholder/claim bindings unless an existing persistence contract proves reconstruction unsafe.
+- Do not make dungeon fauna quest-owned or completion-gating.
+- Do not synthesize missing dungeon anchors.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
