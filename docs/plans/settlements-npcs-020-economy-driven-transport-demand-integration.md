@@ -9,6 +9,7 @@
 **Subdomains:** `economy` `logistics`  
 **Tags:** `transport` `shortage` `surplus` `trader`  
 **Roadmap:** `physical-goods-transport`  
+**Model:** Sonnet, Composer  
 
 ## Recon result — 2026-09-14
 
