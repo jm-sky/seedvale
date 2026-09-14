@@ -2043,8 +2043,18 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `ui/createQuickActions.ts`
 - `world/cropLifecycle.test.ts`
+- `world/cropVisuals.test.ts`
 - `world/cropVisuals.ts`
 - `world/foodSources.ts`
+- `world/plantedCrops.test.ts`
+- `world/plantedCrops.ts`
+
+## `world/cropVisuals.test.ts`
+
+**Imports**
+
+- `world/cropLifecycle.ts`
+- `world/cropVisuals.ts`
 - `world/plantedCrops.ts`
 
 ## `world/cropVisuals.ts`
@@ -2053,10 +2063,13 @@ Generated from TypeScript imports.
 
 - `items/items.ts`
 - `world/cropLifecycle.ts`
+- `world/parseSeed.ts`
+- `world/plantedCrops.ts`
 
 **Imported by**
 
 - `terrain/chunkManager.ts`
+- `world/cropVisuals.test.ts`
 
 ## `world/cultivationAnchor.test.ts`
 
@@ -2986,6 +2999,7 @@ Generated from TypeScript imports.
 - `world/caves/caveRng.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/createBeehives.ts`
+- `world/cropVisuals.ts`
 - `world/grassForage.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
@@ -3016,6 +3030,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `world/cropLifecycle.ts`
 - `world/plantedCrops.ts`
 
 ## `world/plantedCrops.ts`
@@ -3033,6 +3048,8 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `settlement/settlementAgriculture.ts`
 - `terrain/chunkManager.ts`
+- `world/cropVisuals.test.ts`
+- `world/cropVisuals.ts`
 - `world/foodSources.ts`
 - `world/plantedCrops.test.ts`
 

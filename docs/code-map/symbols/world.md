@@ -871,20 +871,28 @@ Generated from exported TypeScript symbols.
 
 ## `world/cropLifecycle.ts`
 
-- `CROP_DEFS` — const — line 26
-- `CROP_IDS` — const — line 32
+- `CROP_DEFS` — const — line 48
+- `CROP_IDS` — const — line 75
 - `CropDefinition` — type — line 13
 - `CropGrowthStage` — type — line 7
-- `CropHarvestYield` — type — line 89
+- `CropHarvestYield` — type — line 132
 - `CropId` — type — line 11
-- `CropPlacement` — type — line 36
-- `resolveCropHarvest` — function — line 94
-- `resolveCropStage` — function — line 70
-- `rollCropPhase` — function — line 85
+- `CropPlacement` — type — line 79
+- `resolveCropHarvest` — function — line 137
+- `resolveCropStage` — function — line 113
+- `rollCropPhase` — function — line 128
 
 ## `world/cropVisuals.ts`
 
-- `createCropStageMesh` — function — line 12
+- `createCropPlacementVisual` — function — line 128
+  - domain: world
+- `createCropStageMesh` — function — line 105
+- `CROP_VISUAL_INSTANCE_BUDGET` — const — line 10
+- `CropVisualTransform` — type — line 36
+- `resolveCropRenderedCount` — function — line 63
+  - domain: world
+- `resolveCropVisualLayout` — function — line 75
+  - domain: world
 
 ## `world/cultivationAnchor.ts`
 
@@ -1360,8 +1368,9 @@ Generated from exported TypeScript symbols.
 - `FARM_SEED_PRIORITY` — const — line 28
 - `GARDEN_PLANT_RADIUS` — const — line 45
 - `isNearAnyGarden` — function — line 50
+- `isPlantedCropId` — function — line 71
 - `makePlantedCropId` — function — line 62
-- `parsePlantedCrops` — function — line 72
+- `parsePlantedCrops` — function — line 79
 
 ## `world/plantedTrees.ts`
 
