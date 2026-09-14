@@ -1200,11 +1200,17 @@ export class AnimalAgent {
   private howlPauseTimer = 0
   /** Bounds how long a dead animal's `update()` keeps ticking its own
    *  `anim` (plan npc-009) so the one-shot death clip actually plays out —
-   *  `null` when there was no death clip to play (manual tip fallback, no
-   *  mixer work needed). Elapsed time is real-time (`deathAnimElapsedSec`),
-   *  not world-days — a death clip must not stretch across corpse decay. */
+   *  `null` when there is no clip in flight (no Death clip, clip already
+   *  finished and tipped, or hydrate/skip). Elapsed time is real-time
+   *  (`deathAnimElapsedSec`), not world-days — a death clip must not stretch
+   *  across corpse decay. Linger pose is always `tipCorpse()`, never the
+   *  clip's last frame. */
   private deathAnimDurationSec: number | null = null
   private deathAnimElapsedSec = 0
+  /** Fresh/rotting linger tip already applied — `tipCorpse()` is otherwise
+   *  not idempotent (Y offset stacks). Bones/harvest `settleRootForRemains`
+   *  clears `rotation.z` but must not re-tip. */
+  private corpseTipped = false
   /** Name+stat-bars label owner (plan fauna-017 step 4c, review E6) —
    *  replaces 13 hand-rolled DOM/percent-cache fields with the shared
    *  controller `NpcAgent` already uses (`ui/agentStatusLabel.ts`). Bars are
@@ -2462,12 +2468,11 @@ export class AnimalAgent {
    *  `update()` tick, so no default/random state (`Math.random()`-seeded
    *  `life`/production stagger) can influence simulation first. Position/yaw
    *  override the deterministic spawn point; `y` is still resolved from live
-   *  terrain (`snapY()`), never persisted. A dead individual's presentation
-   *  (tipped pose, or hidden + harvested-remains mesh) is re-derived directly
-   *  here; natural corpse-decay presentation (tint/bones) self-corrects on
-   *  the next `update()` tick from the restored `deathAtDays` — see
-   *  `advanceAnimalCorpse()`. Never reports `onDeath` — that already fired,
-   *  before this save was taken. */
+   *  A dead individual's presentation (tipped pose, or hidden + harvested-
+   *  remains mesh) is re-derived directly here; natural corpse-decay
+   *  presentation (tint/bones) self-corrects on the next `update()` tick
+   *  from the restored `deathAtDays` — see `advanceAnimalCorpse()`. Never
+   *  reports `onDeath` — that already fired, before this save was taken. */
   hydrate(state: AnimalSaveState): void {
     this.mesh.position.x = state.x
     this.mesh.position.z = state.z
@@ -2489,21 +2494,16 @@ export class AnimalAgent {
       this.corpse.meatHarvested = state.corpse.meatHarvested
       this.corpse.harvestedAtDays = state.corpse.harvestedAtDays ?? null
       this.tickNowDays = Math.max(this.tickNowDays, state.corpse.deathAtDays)
-      this.anim.stopAll()
       if (this.corpse.meatHarvested) {
+        this.anim.stopAll()
         hideLivingVisual(this)
         void spawnHarvestedRemains(this.corpse, this)
         this.labelController.el.style.display = 'none'
-      } else if (this.anim.has('death')) {
-        // Plan fauna-017 step 4b: settle on the death clip's own final pose
-        // (same as a live `collapse()`) instead of always manually tipping
-        // the corpse — only species/packs with no death clip fall back to
-        // the manual tip below.
-        this.anim.settleAtEnd('death')
       } else {
-        const side = Math.random() < 0.5 ? 1 : -1
-        this.mesh.rotation.z = side * (Math.PI / 2)
-        this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
+        // Linger pose is the same root tip for every species — Death clip
+        // is live-FX only and is not restored on hydrate (clip + tip would
+        // double-rotate).
+        this.tipCorpse()
       }
       this.labelController.settleAtZeroHp()
     }
@@ -2544,9 +2544,13 @@ export class AnimalAgent {
    *  `update()` uses — plan fauna-017 D3). A corpse ages from
    *  `deathAtDays` vs live `elapsedDays`, so skip must not add seconds here
    *  (plan fauna-029) — the next `update()` reads `nowDays` after the clock
-   *  has already jumped. */
+   *  has already jumped. Death-clip FX is not replayed after a skip: linger
+   *  pose is `tipCorpse()` immediately. */
   resolveTimeSkip(elapsedSeconds: number): void {
-    if (this.health.dead) return
+    if (this.health.dead) {
+      this.tipCorpse()
+      return
+    }
     tickAnimalLife(this.life, elapsedSeconds, false, {}, this.def.metabolism)
     this.advanceAge(elapsedSeconds)
   }
@@ -2628,11 +2632,11 @@ export class AnimalAgent {
     }
   }
 
-  /** Death presentation: plays the GLB's own `Death` clip when the species
-   *  has one (plan npc-009); falls back to tipping the corpse onto its side
-   *  (relative to its facing direction) for species/packs with no such clip
-   *  (sheep, chicken, bear, capsule fallback) instead of leaving it frozen
-   *  standing up. */
+  /** Death presentation: plays the GLB's own `Death` clip as a short FX
+   *  when the species has one (plan npc-009), then tips the corpse onto its
+   *  side. Species/packs with no clip (sheep, chicken, bear, capsule
+   *  fallback) tip immediately instead of freezing standing up. Linger pose
+   *  is always the root tip — never the clip's last frame. */
   private collapse(): void {
     // D1 (plan fauna-017 step 6b): a predator that dies while holding a
     // carcass claim (its own `sourceTarget.corpse`) must release it here —
@@ -2646,14 +2650,25 @@ export class AnimalAgent {
     this.deathAnimElapsedSec = 0
     if (this.anim.has('death')) {
       this.deathAnimDurationSec = this.anim.playOnce('death')
+      if (this.deathAnimDurationSec <= 0) this.tipCorpse()
     } else {
-      this.anim.stopAll()
-      const side = Math.random() < 0.5 ? 1 : -1
-      this.mesh.rotation.z = side * (Math.PI / 2)
-      this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
+      this.tipCorpse()
     }
     this.labelController.settleAtZeroHp()
     void spawnDeathSplat(this.corpse, this)
+  }
+
+  /** Shared fresh/rotting linger pose: stop any Death/idle clip (bind pose)
+   *  then roll the root onto its side. Idempotent — Y offset must not stack.
+   *  Bones/harvest still call `settleRootForRemains()` to upright. */
+  private tipCorpse(): void {
+    if (this.corpseTipped) return
+    this.anim.stopAll()
+    const side = Math.random() < 0.5 ? 1 : -1
+    this.mesh.rotation.z = side * (Math.PI / 2)
+    this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
+    this.corpseTipped = true
+    this.deathAnimDurationSec = null
   }
 
   /** Current natural-decay phase (plan 188) — `'fresh'` for the lifetime of
@@ -2802,13 +2817,16 @@ export class AnimalAgent {
       if (this.corpse.deathAtDays == null) this.corpse.deathAtDays = nowDays
       this.advanceCorpseDecay(dt, others, observerPos)
       // Keep the mixer advancing only long enough for the one-shot death
-      // clip to actually play (plan npc-009) — `null` when there was no clip
-      // to play (manual tip fallback, no mixer work needed), so a
-      // permanently dead animal never costs a per-frame mixer update for the
-      // rest of the session. Real-time elapsed, not world-days (fauna-029).
-      if (this.deathAnimDurationSec != null && this.deathAnimElapsedSec < this.deathAnimDurationSec) {
-        this.deathAnimElapsedSec += dt
-        this.anim.update(dt)
+      // clip to actually play (plan npc-009) — `null` when there is no clip
+      // in flight, so a permanently dead animal never costs a per-frame
+      // mixer update. Real-time elapsed, not world-days (fauna-029). When
+      // the clip finishes, linger pose is the root tip, not the last frame.
+      if (this.deathAnimDurationSec != null) {
+        if (this.deathAnimElapsedSec < this.deathAnimDurationSec) {
+          this.deathAnimElapsedSec += dt
+          this.anim.update(dt)
+        }
+        if (this.deathAnimElapsedSec >= this.deathAnimDurationSec) this.tipCorpse()
       }
       this.lastFaunaDecisionInput = null
       return
@@ -5190,7 +5208,7 @@ export class AnimalAgent {
   /** Upright the corpse root and snap Y to terrain/cave floor / water bed
    *  before remains attach (plan fauna-029). Not live `snapY()` — that
    *  floats a swimming body to the surface. Fresh/rotting tip pose is left
-   *  to `collapse()` until bones/harvest call this. */
+   *  to `tipCorpse()` until bones/harvest call this. */
   settleRootForRemains(): void {
     this.mesh.rotation.z = 0
     const y = this.groundHeightAt(this.mesh.position.x, this.mesh.position.z)

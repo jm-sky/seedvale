@@ -1229,4 +1229,89 @@ describe('AnimalAgent', () => {
       expect(dog.getDebugInfo().dogGuard).toBeNull()
     })
   })
+
+  describe('corpse linger pose (root tip; Death clip is FX only)', () => {
+    const deadTick = (
+      agent: AnimalAgent,
+      dt = 1,
+      nowDays = 0,
+    ) => agent.update({
+      dt,
+      others: [],
+      observerPos: new THREE.Vector3(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+      nowDays,
+    })
+
+    it('tips a species with no Death clip on collapse', () => {
+      const sheep = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.sheep, animalId: 'sheep-corpse' }))
+      sheep.takeDamage(9999)
+      expect(sheep.isDead()).toBe(true)
+      expect(Math.abs(sheep.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+    })
+
+    it('plays Death as FX then tips rather than leaving the mesh standing', () => {
+      const stag = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.stag,
+        animalId: 'stag-corpse',
+        animations: [new THREE.AnimationClip('Death', 0.4, [])],
+      }))
+      stag.takeDamage(9999)
+      expect(stag.isDead()).toBe(true)
+      expect(stag.mesh.rotation.z).toBe(0)
+      deadTick(stag, 0.5)
+      expect(Math.abs(stag.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+    })
+
+    it('tips immediately on time-skip and does not stack the Y offset', () => {
+      const stag = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.stag,
+        animalId: 'stag-skip',
+        animations: [new THREE.AnimationClip('Death', 2, [])],
+      }))
+      const y0 = stag.mesh.position.y
+      stag.takeDamage(9999)
+      expect(stag.mesh.rotation.z).toBe(0)
+      stag.resolveTimeSkip(8 * 3600)
+      expect(Math.abs(stag.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+      const y1 = stag.mesh.position.y
+      expect(y1).toBeGreaterThan(y0)
+      stag.resolveTimeSkip(8 * 3600)
+      expect(stag.mesh.position.y).toBe(y1)
+      deadTick(stag, 1)
+      expect(stag.mesh.position.y).toBe(y1)
+      expect(Math.abs(stag.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+    })
+
+    it('hydrates an unharvested corpse with the root tip even when a Death clip exists', () => {
+      const live = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.stag,
+        animalId: 'stag-save',
+        animations: [new THREE.AnimationClip('Death', 1, [])],
+      }))
+      live.takeDamage(9999)
+      expect(live.mesh.rotation.z).toBe(0)
+      const saved = live.snapshot()
+      const restored = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.stag,
+        animalId: 'stag-save',
+        animations: [new THREE.AnimationClip('Death', 1, [])],
+      }))
+      restored.hydrate(saved)
+      expect(Math.abs(restored.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+    })
+
+    it('settleRootForRemains uprights a tipped corpse without re-tipping on later ticks', () => {
+      const sheep = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.sheep, animalId: 'sheep-bones' }))
+      sheep.takeDamage(9999)
+      sheep.settleRootForRemains()
+      expect(sheep.mesh.rotation.z).toBe(0)
+      const y = sheep.mesh.position.y
+      deadTick(sheep, 1)
+      expect(sheep.mesh.rotation.z).toBe(0)
+      expect(sheep.mesh.position.y).toBe(y)
+    })
+  })
 })
