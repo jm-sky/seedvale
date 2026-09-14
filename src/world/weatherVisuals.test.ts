@@ -3,7 +3,10 @@ import type { WeatherState } from './weather'
 import {
   applyLightningFlash,
   applyWeatherOverlay,
+  applyWeatherSkyOverlay,
   fogColorLuminance,
+  GRASS_WIND_AMP_MAX,
+  grassWindAmpFor,
   resolveSceneFog,
 } from './weatherVisuals'
 
@@ -89,5 +92,56 @@ describe('resolveSceneFog (cave interior)', () => {
     expect(afterExit.fogColor).toBe(rainy.fogColor)
     expect(afterExit.fogNear).toBe(rainy.fogNear)
     expect(afterExit.fogFar).toBe(rainy.fogFar)
+  })
+})
+
+const baseSky = { turbidity: 1.4, rayleigh: 1.15 }
+
+describe('applyWeatherSkyOverlay', () => {
+  it('leaves turbidity/rayleigh untouched for clear weather', () => {
+    const overlay = applyWeatherSkyOverlay(baseSky, weather({ type: 'clear', intensity: 0 }))
+    expect(overlay.turbidity).toBe(baseSky.turbidity)
+    expect(overlay.rayleigh).toBe(baseSky.rayleigh)
+  })
+
+  it('raises turbidity and lowers rayleigh for storm', () => {
+    const overlay = applyWeatherSkyOverlay(baseSky, weather({ type: 'storm', intensity: 1 }))
+    expect(overlay.turbidity).toBeGreaterThan(baseSky.turbidity)
+    expect(overlay.rayleigh).toBeLessThan(baseSky.rayleigh)
+  })
+
+  it('makes storm a stronger sky overlay than rain at equal intensity', () => {
+    const rain = applyWeatherSkyOverlay(baseSky, weather({ type: 'rain', intensity: 1 }))
+    const storm = applyWeatherSkyOverlay(baseSky, weather({ type: 'storm', intensity: 1 }))
+    expect(storm.turbidity).toBeGreaterThan(rain.turbidity)
+    expect(storm.rayleigh).toBeLessThan(rain.rayleigh)
+    expect(rain.turbidity).toBeGreaterThan(baseSky.turbidity)
+    expect(rain.rayleigh).toBeLessThan(baseSky.rayleigh)
+  })
+
+  it('never raises rayleigh above the day/night base for any weather type', () => {
+    for (const type of ['clear', 'cloudy', 'rain', 'fog', 'snow', 'storm'] as const) {
+      const overlay = applyWeatherSkyOverlay(baseSky, weather({ type, intensity: 1 }))
+      expect(overlay.rayleigh).toBeLessThanOrEqual(baseSky.rayleigh)
+    }
+  })
+})
+
+describe('grassWindAmpFor', () => {
+  it('is identity for clear weather', () => {
+    expect(grassWindAmpFor(weather({ type: 'clear', intensity: 0 }))).toBe(1)
+  })
+
+  it('makes storm stronger than rain at equal intensity', () => {
+    const rain = grassWindAmpFor(weather({ type: 'rain', intensity: 1 }))
+    const storm = grassWindAmpFor(weather({ type: 'storm', intensity: 1 }))
+    expect(rain).toBeGreaterThan(1)
+    expect(storm).toBeGreaterThan(rain)
+  })
+
+  it('never exceeds GRASS_WIND_AMP_MAX', () => {
+    for (const type of ['clear', 'cloudy', 'rain', 'fog', 'snow', 'storm'] as const) {
+      expect(grassWindAmpFor(weather({ type, intensity: 1 }))).toBeLessThanOrEqual(GRASS_WIND_AMP_MAX)
+    }
   })
 })

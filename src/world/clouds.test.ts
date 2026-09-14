@@ -24,12 +24,26 @@ describe('cloudAppearanceFor', () => {
     expect(fog.tint).toBe(clear.tint)
   })
 
-  it('increases coverage and darkens tint for rain, scaled by intensity', () => {
-    const half = cloudAppearanceFor(weather({ type: 'rain', intensity: 0.5 }), NOON)
+  it('increases coverage and darkens tint for rain, scaled by intensity above the floor', () => {
+    const high = cloudAppearanceFor(weather({ type: 'rain', intensity: 0.8 }), NOON)
     const full = cloudAppearanceFor(weather({ type: 'rain', intensity: 1 }), NOON)
-    expect(full.coverage).toBeGreaterThan(half.coverage)
-    expect(half.coverage).toBeGreaterThan(0.15)
-    expect(full.tint).toBeLessThan(half.tint)
+    expect(full.coverage).toBeGreaterThan(high.coverage)
+    expect(high.coverage).toBeGreaterThan(0.72)
+    expect(full.tint).toBeLessThan(high.tint)
+  })
+
+  it('keeps storm coverage near-full even at low or forced intensity', () => {
+    const weak = cloudAppearanceFor(weather({ type: 'storm', intensity: 0.4 }), NOON)
+    const forced = cloudAppearanceFor(weather({ type: 'storm', intensity: 0.7 }), NOON)
+    expect(weak.coverage).toBeGreaterThanOrEqual(0.92)
+    expect(forced.coverage).toBeGreaterThanOrEqual(0.92)
+  })
+
+  it('gives rain a coverage floor below storm at the same low intensity', () => {
+    const rain = cloudAppearanceFor(weather({ type: 'rain', intensity: 0.4 }), NOON)
+    const storm = cloudAppearanceFor(weather({ type: 'storm', intensity: 0.4 }), NOON)
+    expect(rain.coverage).toBeGreaterThanOrEqual(0.72)
+    expect(rain.coverage).toBeLessThan(storm.coverage)
   })
 
   it('makes cloudy and snow read lighter than rain at equal intensity', () => {

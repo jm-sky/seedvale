@@ -50,11 +50,14 @@ const LOCAL_Y = 1
 
 /**
  * Vertex-shader tip sway (`grass.ts` VERTEX_SHADER): world XZ after
- * `instanceMatrix`. Included so frustum culling stays conservative while
- * blades bend — slightly larger than Three.js's matrix-only sphere, never
- * smaller.
+ * `instanceMatrix`, scaled by weather `uWindAmp`. Sized for
+ * `grassWindAmpFor`'s ceiling (`GRASS_WIND_AMP_MAX` = 1.8 in
+ * `weatherVisuals.ts`) so frustum culling stays conservative at peak
+ * storm displacement — slightly larger than Three.js's matrix-only
+ * sphere, never smaller. Do not import `weatherVisuals` from here
+ * (worker placement loop).
  */
-const WIND_SWAY_PAD = Math.hypot(0.14, 0.1)
+const WIND_SWAY_PAD = Math.hypot(0.14, 0.1) * 1.8
 
 const BOUNDS_EPSILON = 0.02
 

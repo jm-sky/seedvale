@@ -348,27 +348,27 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/grass.ts`
 
-- `createGrassSystem` — function — line 455
-- `grassBladeLocalPositions` — function — line 342
+- `createGrassSystem` — function — line 457
+- `grassBladeLocalPositions` — function — line 343
   - domain: world-terrain
 - `GrassSystem` — type — line 50
 - `WorldGrassChunk` — type — line 14
 
 ## `terrain/grassBounds.ts`
 
-- `createGrassBoundsAccumulator` — function — line 87
-- `expandGrassInstanceBounds` — function — line 105
+- `createGrassBoundsAccumulator` — function — line 90
+- `expandGrassInstanceBounds` — function — line 108
   - domain: world-terrain
-- `finalizeGrassBounds` — function — line 141
+- `finalizeGrassBounds` — function — line 144
   - domain: world-terrain
 - `GrassBoundsAccumulator` — type — line 18
-- `grassBoundsContainsPoint` — function — line 150
+- `grassBoundsContainsPoint` — function — line 153
 - `GrassBucketBounds` — type — line 11
-- `grassInstanceConservativeRadius` — function — line 76
+- `grassInstanceConservativeRadius` — function — line 79
   - domain: world-terrain
-- `grassSpeciesLocalExtent` — function — line 66
+- `grassSpeciesLocalExtent` — function — line 69
   - domain: world-terrain
-- `transformGrassLocalPoint` — function — line 164
+- `transformGrassLocalPoint` — function — line 167
 
 ## `terrain/grassPlacement.ts`
 

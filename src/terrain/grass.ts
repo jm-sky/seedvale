@@ -75,8 +75,9 @@ export type GrassSystem = {
     chunkOriginX: number,
     chunkOriginZ: number,
   ) => WorldGrassChunk | null
-  /** Advances the shared wind clock — call once per frame, not per chunk. */
-  update: (dt: number) => void
+  /** Advances the shared wind clock and weather amplitude — call once per
+   *  frame, not per chunk. `windAmp` defaults to the clear-sky rest pose. */
+  update: (dt: number, windAmp?: number) => void
   /** 0 = full night, 1 = full day — darkens grass in step with sky/fog/lights.
    *  `sunDirection` drives cheap fake subsurface/backlighting (plan 066). */
   setDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
@@ -356,6 +357,7 @@ const VERTEX_SHADER = /* glsl */ `
   attribute float aWindFactor;
 
   uniform float uTime;
+  uniform float uWindAmp;
 
   varying vec3 vColor;
   varying float vFogDepth;
@@ -385,8 +387,8 @@ const VERTEX_SHADER = /* glsl */ `
     float bend = bladeT * bladeT;
     float sway = sin(uTime * 1.6 + aPhase + worldPos.x * 0.12 + worldPos.z * 0.09);
     float swayZ = cos(uTime * 1.3 + aPhase * 1.3 + worldPos.x * 0.09);
-    worldPos.x += sway * 0.14 * bend * aWindFactor;
-    worldPos.z += swayZ * 0.1 * bend * aWindFactor;
+    worldPos.x += sway * 0.14 * bend * aWindFactor * uWindAmp;
+    worldPos.z += swayZ * 0.1 * bend * aWindFactor * uWindAmp;
 
     vWorldPos = worldPos.xyz;
     vec4 mvPosition = viewMatrix * worldPos;
@@ -482,6 +484,7 @@ export function createGrassSystem(): GrassSystem {
       THREE.UniformsLib.fog,
       {
         uTime: { value: 0 },
+        uWindAmp: { value: 1 },
         uDayFactor: { value: 1 },
         // Normalized sun direction from Sky — updated via setDayNight.
         uSunDirection: { value: new THREE.Vector3(0, 1, 0) },
@@ -752,8 +755,9 @@ export function createGrassSystem(): GrassSystem {
   return {
     createChunkGrass,
     buildGrassChunkMeshes,
-    update(dt) {
+    update(dt, windAmp = 1) {
       material.uniforms.uTime!.value += dt
+      material.uniforms.uWindAmp!.value = windAmp
     },
     setDayNight(dayFactor, sunDirection) {
       material.uniforms.uDayFactor!.value = dayFactor

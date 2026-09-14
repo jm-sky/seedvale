@@ -1,13 +1,12 @@
 import { Color } from 'three'
 import type { WeatherState, WeatherType } from './weather'
 
-/** Weather → fog/light overlay applied on top of `skyParamsFromTime`'s
- *  day/night result (`gameLoop.ts`'s `applyDayNight`). Deliberately leaves
- *  `dayFactor`/`elev`/the sky dome itself untouched (plan §5: "na początku
- *  nie trzeba przebudowywać materiałów całego świata") — grass/water/ocean
- *  day-night shading and god rays stay weather-independent in Etap 1. No
- *  literal cloud geometry exists yet (`docs/STATE.md` — clouds not
- *  implemented); "cloudy" reads here as dimmer light + hazier fog instead. */
+/** Weather → fog/light/sky-dome overlay applied on top of `skyParamsFromTime`'s
+ *  day/night result (`gameLoop.ts`'s `applyDayNight`). `dayFactor` / `elev` /
+ *  sun angles stay weather-independent so grass/water/ocean day-night shading
+ *  and god rays keep a single time-of-day signal; the Sky.js dome's
+ *  turbidity/rayleigh and the fog/light intensities are the weather layer.
+ *  Billboard clouds live in `clouds.ts`; grass wind amplitude is `grassWindAmpFor`. */
 export type WeatherVisualOverlay = {
   fogColor: number
   fogNear: number
@@ -60,6 +59,69 @@ export function applyWeatherOverlay(
     fogFar: Math.max(clampedNear + 6, fogFar),
     lightScale,
   }
+}
+
+export type WeatherSkyOverlay = {
+  turbidity: number
+  rayleigh: number
+}
+
+type WeatherSkyProfile = {
+  /** Multiplier on day/night turbidity. 1 = unchanged. */
+  turbidityMul: number
+  /** Multiplier on day/night rayleigh. Always <= 1 — raising rayleigh
+   *  washes the dome white (plan 066). */
+  rayleighMul: number
+}
+
+const WEATHER_SKY_PROFILES: Record<WeatherType, WeatherSkyProfile> = {
+  clear: { turbidityMul: 1, rayleighMul: 1 },
+  cloudy: { turbidityMul: 1, rayleighMul: 1 },
+  fog: { turbidityMul: 1, rayleighMul: 1 },
+  snow: { turbidityMul: 1, rayleighMul: 1 },
+  rain: { turbidityMul: 1.45, rayleighMul: 0.75 },
+  storm: { turbidityMul: 2.1, rayleighMul: 0.48 },
+}
+
+/** Pure — blends Sky.js turbidity/rayleigh toward the weather profile by
+ *  `intensity`. Does not touch sun angles or `dayFactor`. Rayleigh is never
+ *  raised above the day/night base.
+ *
+ * @domain world
+ */
+export function applyWeatherSkyOverlay(
+  base: { turbidity: number, rayleigh: number },
+  weather: WeatherState,
+): WeatherSkyOverlay {
+  const profile = WEATHER_SKY_PROFILES[weather.type]
+  const t = weather.intensity
+  return {
+    turbidity: base.turbidity * (1 + (profile.turbidityMul - 1) * t),
+    rayleigh: base.rayleigh * (1 + (profile.rayleighMul - 1) * t),
+  }
+}
+
+/** Ceiling for `grassWindAmpFor` — `grassBounds.ts`'s `WIND_SWAY_PAD` must
+ *  cover this displacement so frustum culling stays conservative. */
+export const GRASS_WIND_AMP_MAX = 1.8
+
+const GRASS_WIND_AMP: Record<WeatherType, number> = {
+  clear: 1,
+  cloudy: 1,
+  fog: 1,
+  snow: 1.15,
+  rain: 1.35,
+  storm: 1.8,
+}
+
+/** Pure — shared grass-shader `uWindAmp`. 1 is the clear-sky rest pose.
+ *
+ * @domain world
+ */
+export function grassWindAmpFor(weather: WeatherState): number {
+  const profile = GRASS_WIND_AMP[weather.type]
+  const amp = 1 + (profile - 1) * weather.intensity
+  return amp > GRASS_WIND_AMP_MAX ? GRASS_WIND_AMP_MAX : amp
 }
 
 const tmpFlashFog = new Color()

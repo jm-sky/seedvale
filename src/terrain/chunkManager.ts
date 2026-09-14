@@ -538,7 +538,7 @@ export type ChunkManager = {
   tickWater: (dt: number) => void
   setWaterDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
   setWaterReflections: (enabled: boolean) => void
-  tickGrass: (dt: number) => void
+  tickGrass: (dt: number, windAmp?: number) => void
   setGrassDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void
   /** Updates the shared terrain material's weather-surface uniforms in
    *  place (plan 133) — a couple of `.value` writes, not a per-chunk update;
@@ -2570,8 +2570,8 @@ export function createChunkManager(
     setWaterReflections(enabled) {
       config.waterMirror.setEnabled(enabled)
     },
-    tickGrass(dt) {
-      grassSystem.update(dt)
+    tickGrass(dt, windAmp = 1) {
+      grassSystem.update(dt, windAmp)
     },
     setGrassDayNight(dayFactor, sunDirection) {
       grassSystem.setDayNight(dayFactor, sunDirection)

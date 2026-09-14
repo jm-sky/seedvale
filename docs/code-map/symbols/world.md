@@ -701,13 +701,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/clouds.ts`
 
-- `CloudAppearance` — type — line 131
-- `cloudAppearanceFor` — function — line 171
+- `CloudAppearance` — type — line 143
+- `cloudAppearanceFor` — function — line 184
 - `CloudCategory` — type — line 22
 - `CloudCategoryWeights` — type — line 86
 - `cloudCategoryWeightsFor` — function — line 93
-- `CloudSystem` — type — line 229
-- `createClouds` — function — line 261
+- `CloudSystem` — type — line 243
+- `createClouds` — function — line 275
 
 ## `world/collision.ts`
 
@@ -2071,16 +2071,22 @@ Generated from exported TypeScript symbols.
 
 ## `world/weatherVisuals.ts`
 
-- `applyLightningFlash` — function — line 73
+- `applyLightningFlash` — function — line 135
   - domain: world
-- `applyWeatherOverlay` — function — line 40
-- `CAVE_INTERIOR_FOG_COLOR` — const — line 91
-- `CAVE_INTERIOR_FOG_FAR` — const — line 93
-- `CAVE_INTERIOR_FOG_NEAR` — const — line 92
-- `fogColorLuminance` — function — line 117
-- `resolveSceneFog` — function — line 98
-- `SceneFogParams` — type — line 95
-- `WeatherVisualOverlay` — type — line 11
+- `applyWeatherOverlay` — function — line 39
+- `applyWeatherSkyOverlay` — function — line 92
+  - domain: world
+- `CAVE_INTERIOR_FOG_COLOR` — const — line 153
+- `CAVE_INTERIOR_FOG_FAR` — const — line 155
+- `CAVE_INTERIOR_FOG_NEAR` — const — line 154
+- `fogColorLuminance` — function — line 179
+- `GRASS_WIND_AMP_MAX` — const — line 106
+- `grassWindAmpFor` — function — line 121
+  - domain: world
+- `resolveSceneFog` — function — line 160
+- `SceneFogParams` — type — line 157
+- `WeatherSkyOverlay` — type — line 64
+- `WeatherVisualOverlay` — type — line 10
 
 ## `world/wellGroundwater.ts`
 

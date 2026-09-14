@@ -163,7 +163,7 @@ import { createLightningRuntime } from '../world/lightningEvents'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { resolveOffscreenTransportArrivals } from '../world/transportOffscreen'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
-import { applyLightningFlash, applyWeatherOverlay, resolveSceneFog } from '../world/weatherVisuals'
+import { applyLightningFlash, applyWeatherOverlay, applyWeatherSkyOverlay, grassWindAmpFor, resolveSceneFog } from '../world/weatherVisuals'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
 import { buildHuntableLivestock } from './faunaEncounterComposition'
 import { inspectionTargetRef } from './inspection/inspectionTarget'
@@ -270,19 +270,23 @@ function applyDayNight(
   flashAmount = 0,
 ): ReturnType<typeof skyParamsFromTime> {
   const p = skyParamsFromTime(timeOfDay)
+  const skyOverlay = applyWeatherSkyOverlay(
+    { turbidity: p.turbidity, rayleigh: p.rayleigh },
+    weather,
+  )
   sky.setParams(
     {
       inclination: p.inclination,
       azimuth: p.azimuth,
-      turbidity: p.turbidity,
-      rayleigh: p.rayleigh,
+      turbidity: skyOverlay.turbidity,
+      rayleigh: skyOverlay.rayleigh,
     },
     lights.sun,
   )
-  // Weather overlays fog/light on top of the day/night result — `dayFactor`/
-  // `elev` (returned below) and the sky dome itself stay weather-independent
-  // in Etap 1 (see `weatherVisuals.ts`'s header comment). Lightning flash is
-  // a short extra overlay and never writes day/night state.
+  // Weather overlays fog/light and Sky.js turbidity/rayleigh. `dayFactor`/
+  // `elev` (returned below) stay weather-independent so grass/water/ocean
+  // shading keeps one time-of-day signal. Lightning flash is a short extra
+  // overlay and never writes day/night state.
   const overlay = applyWeatherOverlay({ fogColor: p.fogColor, fogNear: p.fogNear, fogFar: p.fogFar }, weather)
   const presented = applyLightningFlash(overlay, inCaveInterior ? 0 : flashAmount)
   lights.sun.intensity = p.sunIntensity * presented.lightScale
@@ -2732,7 +2736,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       bundle.bloodTraces.tick(dt, player.mesh.position.x, player.mesh.position.z)
       playerTorch.update(dt)
       withCategory(monitor, 'WATER', () => { bundle.chunkManager.tickWater(dt) })
-      withCategory(monitor, 'GRASS', () => { bundle.chunkManager.tickGrass(dt) })
+      withCategory(monitor, 'GRASS', () => {
+        bundle.chunkManager.tickGrass(dt, grassWindAmpFor(climate.weather))
+      })
       updateFoliageWind(dt)
       withCategory(monitor, 'WATER', () => { bundle.ocean.update(dt) })
       worldAudio.update(dt)

@@ -128,6 +128,18 @@ const CLOUD_VISUAL_PROFILES: Record<WeatherType, CloudVisualProfile> = {
   fog: { coverage: 0.15, tint: 0xffffff },
 }
 
+/** After the intensity lerp, `storm`/`rain` must not drop back toward the
+ *  clear-sky baseline — a weak or debug-forced cycle still has to read as
+ *  overcast (force storm uses intensity 0.7). Other types keep the lerp. */
+const COVERAGE_FLOOR: Record<WeatherType, number> = {
+  clear: 0,
+  cloudy: 0,
+  fog: 0,
+  snow: 0,
+  rain: 0.72,
+  storm: 0.92,
+}
+
 export type CloudAppearance = {
   coverage: number
   tint: number
@@ -167,11 +179,13 @@ function cloudLightFromElev(elev: number): Color {
  *  blends the baseline toward the active weather type's profile by
  *  `weather.intensity`, then applies the day/night ambient multiplier so
  *  night clouds read as dark/cool rather than staying white (plan
- *  world-terrain-001). */
+ *  world-terrain-001). `storm`/`rain` then clamp coverage to a high floor
+ *  so a weak or debug-forced cycle still reads as overcast. */
 export function cloudAppearanceFor(weather: WeatherState, elev: number): CloudAppearance {
   const profile = CLOUD_VISUAL_PROFILES[weather.type]
   const t = weather.intensity
-  const coverage = BASE_COVERAGE + (profile.coverage - BASE_COVERAGE) * t
+  const blended = BASE_COVERAGE + (profile.coverage - BASE_COVERAGE) * t
+  const coverage = Math.max(COVERAGE_FLOOR[weather.type], blended)
   tmpBaseColor.setHex(BASE_TINT)
   tmpTargetColor.setHex(profile.tint)
   tmpBaseColor.lerp(tmpTargetColor, t)
