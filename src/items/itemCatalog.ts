@@ -1104,6 +1104,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: '/models/items/hunting_bow.glb',
     notes: 'Plan 162 — Kupiec stock. Balanced range/damage/draw speed.',
   },
+  signet_ring: {
+    kind: 'signet_ring',
+    label: 'sygnet rodowy',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan quests-progression-025 — identity-backed heirloom from the old-bones adventure-cave remains cache. Not merchant stock.',
+    physical: { resilient: true },
+  },
   long_bow: {
     kind: 'long_bow',
     label: 'długi łuk',

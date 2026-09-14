@@ -103,6 +103,15 @@ import {
 } from '../quests/lostHunterNaturalCave'
 import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
+import {
+  buildOldBonesAdventureCaveQuest,
+  isOldBonesRemainsLooted,
+  OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME,
+  OLD_BONES_KEEP_SIGNET_OUTCOME,
+  OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME,
+  OLD_BONES_SIGNET_KIND,
+} from '../quests/oldBonesAdventureCave'
+import { getActiveOldBonesAdventureCaveBinding } from '../quests/oldBonesAdventureCaveRuntime'
 import { buildGuardEveningDutyQuest, selectGuardQuestGiver } from '../quests/opportunities/guardProfessionQuests'
 import { buildHunterProfessionQuests } from '../quests/opportunities/hunterProfessionQuests'
 import {
@@ -1087,6 +1096,7 @@ export async function createApp(
   const homeNpcDescriptors = settlementNpcDescriptors(homeDef)
   const bearCaveBinding = getActiveTreasureMapBearCaveBinding()
   const lostHunterBinding = getActiveLostHunterNaturalCaveBinding()
+  const oldBonesBinding = getActiveOldBonesAdventureCaveBinding()
   const suspiciousTransportCaveCache = getActiveSuspiciousTransportCaveCacheBinding()
   const bearCaveQuestBinding = bearCaveBinding
     ? {
@@ -1204,6 +1214,13 @@ export async function createApp(
           def.name,
         ))
       }
+      if (oldBonesBinding) {
+        opportunityQuestDefs.push(buildOldBonesAdventureCaveQuest(
+          oldBonesBinding,
+          settlementOpportunityNpcsFromDef(def),
+          def.name,
+        ))
+      }
       const homeGuard = selectGuardQuestGiver(npcs)
       migrateLegacyGuardSwordGift(guardProgress, homeGuard?.id)
     }
@@ -1236,6 +1253,21 @@ export async function createApp(
           return inventory.getInstance(lostHunterBinding.bowInstanceId)?.kind === 'hunting_bow'
         }
         return false
+      }
+      if (oldBonesBinding && questId === oldBonesBinding.questId) {
+        const requiredId = context.requireItemInstanceId ?? oldBonesBinding.signetInstanceId
+        const signet = inventory.getInstance(requiredId)
+        if (signet?.kind !== OLD_BONES_SIGNET_KIND) return false
+        if (outcomeId === OLD_BONES_KEEP_SIGNET_OUTCOME) return true
+        const npcId = outcomeId === OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME
+          ? oldBonesBinding.claimantANpcId
+          : outcomeId === OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME
+            ? oldBonesBinding.claimantBNpcId
+            : undefined
+        if (!npcId) return false
+        const npcState = bundle.settlementsManager.getNpcState(npcId)
+        if (!npcState || npcState.health.dead) return false
+        return npcState.personalInventory.canAddInstance(signet)
       }
       if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
         const requiredId = context.requireItemInstanceId ?? suspiciousTransportCaveCache.evidenceInstanceId
@@ -1276,6 +1308,23 @@ export async function createApp(
         inventory.removeInstance(bow.id)
         const giverState = bundle.settlementsManager.getNpcState(lostHunterBinding.giverNpcId)
         giverState?.personalInventory.addInstance(bow)
+        return
+      }
+      if (oldBonesBinding && questId === oldBonesBinding.questId) {
+        if (outcomeId === OLD_BONES_KEEP_SIGNET_OUTCOME) return
+        const npcId = outcomeId === OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME
+          ? oldBonesBinding.claimantANpcId
+          : outcomeId === OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME
+            ? oldBonesBinding.claimantBNpcId
+            : undefined
+        if (!npcId) return
+        giveItemInstanceToNpc(
+          {
+            playerInventory: inventory,
+            getNpcState: (id) => bundle.settlementsManager.getNpcState(id),
+          },
+          { npcId, instanceId: oldBonesBinding.signetInstanceId },
+        )
         return
       }
       if (suspiciousTransportCaveCache && questId === suspiciousTransportCaveCache.questId) {
@@ -1385,6 +1434,13 @@ export async function createApp(
         if (lostHunterBinding && containerId === lostHunterBinding.packContainerId) {
           const instances = bundle.worldGeneratedContainers.containerInstances(containerId, 'hunting_bow')
           return isLostHunterPackLooted(instances, lostHunterBinding.bowInstanceId)
+        }
+        if (oldBonesBinding && containerId === oldBonesBinding.containerId) {
+          const instances = bundle.worldGeneratedContainers.containerInstances(
+            containerId,
+            OLD_BONES_SIGNET_KIND,
+          )
+          return isOldBonesRemainsLooted(instances, oldBonesBinding.signetInstanceId)
         }
         if (suspiciousTransportCaveCache && containerId === suspiciousTransportCaveCache.cacheContainerId) {
           const instances = bundle.worldGeneratedContainers.containerInstances(

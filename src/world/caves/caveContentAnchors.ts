@@ -18,8 +18,6 @@ import type { CaveArchetype } from './caveArchetype'
 import type { CaveHeightfieldRepresentation } from './caveHeightfieldRepresentation'
 import type { CaveTopology, CaveTopologyNode, CaveTopologySegment } from './caveTopology'
 import type { CaveUndergroundPool } from './caveUndergroundPool'
-import { dungeonChambersFromTopology, type DungeonChamber } from './dungeonChambers'
-import { undergroundPoolFootprintStrength } from './caveUndergroundPoolFootprint'
 import { distanceToSegment } from '../../math/segment'
 import {
   ADVENTURE_DEEP_CHAMBER_NODE_ID,
@@ -42,6 +40,8 @@ import {
 } from './caveHeightfieldPlacement'
 import { sampleHeightfieldAt } from './caveHeightfieldRepresentation'
 import { CAVE_RNG_SALT, createCaveRandom } from './caveRng'
+import { undergroundPoolFootprintStrength } from './caveUndergroundPoolFootprint'
+import { type DungeonChamber, dungeonChambersFromTopology } from './dungeonChambers'
 
 export const CAVE_CONTENT_ANCHOR_ROLES = [
   'sideTreasure',
@@ -606,10 +606,10 @@ export function resolveCaveContentAnchors(input: CaveContentAnchorInput): readon
   switch (input.archetype) {
     case 'adventure':
       return resolveAdventureCaveContentAnchors(input)
-    case 'natural':
-      return resolveNaturalCaveContentAnchors(input)
     case 'dungeon':
       return resolveDungeonCaveContentAnchors(input)
+    case 'natural':
+      return resolveNaturalCaveContentAnchors(input)
     default:
       return EMPTY_ANCHORS
   }

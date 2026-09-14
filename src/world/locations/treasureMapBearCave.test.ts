@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { CaveContentAnchor } from '../caves/caveContentAnchors'
-import { resolveCaveAdventureContentPolicy } from '../caves/caveAdventureContentPolicy'
 import { caveTreasureContainerSpecs } from '../../app/worldBundle'
+import { resolveCaveAdventureContentPolicy } from '../caves/caveAdventureContentPolicy'
 import {
   resolveTreasureMapBearCaveBinding,
+  TREASURE_MAP_BEAR_CAVE_COINS,
+  TREASURE_MAP_BEAR_CAVE_RESERVATION_KEY,
   treasureMapBearCaveProfileReservation,
   treasureMapBearCaveReturnPayout,
   treasureMapBearCaveSourceContainerSpec,
-  TREASURE_MAP_BEAR_CAVE_COINS,
-  TREASURE_MAP_BEAR_CAVE_RESERVATION_KEY,
 } from './treasureMapBearCave'
 
 function anchor(caveId: string, role: CaveContentAnchor['role'], id: string): CaveContentAnchor {

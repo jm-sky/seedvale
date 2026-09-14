@@ -56,6 +56,13 @@ import {
   resolveLostHunterNaturalCaveBinding,
 } from '../quests/lostHunterNaturalCave'
 import { setActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
+import {
+  OLD_BONES_RESERVATION_KEY,
+  oldBonesCaveReservationRequests,
+  oldBonesRemainsContainerSpec,
+  resolveOldBonesAdventureCaveBinding,
+} from '../quests/oldBonesAdventureCave'
+import { setActiveOldBonesAdventureCaveBinding } from '../quests/oldBonesAdventureCaveRuntime'
 import { settlementOpportunityNpcsFromDef } from '../quests/opportunities/settlementNpcMaterialization'
 import {
   resolveSuspiciousTransportCaveCacheBinding,
@@ -1313,16 +1320,55 @@ async function buildWorldSystems(
   })
   setActiveTreasureMapBearCaveBinding(treasureMapBearCaveBinding)
 
+  const homeOpportunityNpcs = settlementOpportunityNpcsFromDef(homeDef)
+  const reservedAdventureCaveIds = new Set<string>(
+    treasureMapBearCaveBinding ? [treasureMapBearCaveBinding.caveId] : [],
+  )
+  const oldBonesCandidate = resolveOldBonesAdventureCaveBinding({
+    worldSeed: config.seed,
+    settlementDef: homeDef,
+    adventureCaveIds: adventureCaveIdsFromCaves(caves),
+    contentAnchors: caves.contentAnchors(),
+    npcs: homeOpportunityNpcs,
+    reservedCaveIds: reservedAdventureCaveIds,
+  })
+
   const caveAdventureContentPolicy = resolveCaveAdventureContentPolicy(
     adventureCaveIdsFromCaves(caves),
     caves.contentAnchors(),
-    treasureMapBearCaveBinding
-      ? { profileReservations: [treasureMapBearCaveProfileReservation(treasureMapBearCaveBinding)] }
-      : {},
+    {
+      profileReservations: [
+        ...(treasureMapBearCaveBinding
+          ? [treasureMapBearCaveProfileReservation(treasureMapBearCaveBinding)]
+          : []),
+        ...(oldBonesCandidate
+          ? oldBonesCaveReservationRequests(oldBonesCandidate).profileReservations ?? []
+          : []),
+      ],
+      anchorClaims: [
+        ...(oldBonesCandidate
+          ? oldBonesCaveReservationRequests(oldBonesCandidate).anchorClaims ?? []
+          : []),
+      ],
+    },
   )
 
+  const oldBonesClaim = oldBonesCandidate
+    ? caveAdventureContentPolicy.claimOf(OLD_BONES_RESERVATION_KEY)
+    : undefined
+  const oldBonesBinding = oldBonesCandidate
+    && oldBonesClaim
+    && oldBonesClaim.anchorId === oldBonesCandidate.anchorId
+    && oldBonesClaim.caveId === oldBonesCandidate.caveId
+    && caveAdventureContentPolicy.profileOf(oldBonesCandidate.caveId) === 'EMPTY'
+    ? oldBonesCandidate
+    : null
+  setActiveOldBonesAdventureCaveBinding(oldBonesBinding)
+  const oldBonesAnchor = oldBonesBinding
+    ? caves.contentAnchors().find((anchor) => anchor.id === oldBonesBinding.anchorId)
+    : undefined
+
   const caveAuthoredClaims = new CaveAuthoredAnchorClaims()
-  const homeOpportunityNpcs = settlementOpportunityNpcsFromDef(homeDef)
   const lostHunterBinding = resolveLostHunterNaturalCaveBinding({
     worldSeed: config.seed,
     settlementDef: homeDef,
@@ -1381,6 +1427,9 @@ async function buildWorldSystems(
     ...caveTreasureContainerSpecs(caves.contentAnchors(), config.seed, caveAdventureContentPolicy),
     ...(treasureMapBearCaveBinding && bearCaveFinalAnchor && !bearCaveSourceExtracted
       ? [treasureMapBearCaveSourceContainerSpec(treasureMapBearCaveBinding, bearCaveFinalAnchor)]
+      : []),
+    ...(oldBonesBinding && oldBonesAnchor
+      ? [oldBonesRemainsContainerSpec(oldBonesBinding, oldBonesAnchor)]
       : []),
     ...(lostHunterBinding && lostHunterLootAnchor
       ? [lostHunterPackContainerSpec(lostHunterBinding, lostHunterLootAnchor)]

@@ -1,6 +1,7 @@
 import type { Inventory } from './Inventory'
 import { createArmorInstance, isArmorKind } from './armorItemInstances'
 import {
+  createItemInstanceId,
   createKeyInstance,
   createTentInstance,
   isInstanceBackedKind,
@@ -144,6 +145,7 @@ export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
   if (isLiquidContainerKind(kind)) return createLiquidContainerInstance(kind)
   if (kind === 'tent') return createTentInstance()
   if (kind === 'key') return createKeyInstance()
+  if (kind === 'signet_ring') return { id: createItemInstanceId(), kind: 'signet_ring' }
   if (isArmorKind(kind)) return createArmorInstance(kind)
   return null
 }

@@ -1,6 +1,6 @@
 import type { SettlementDef } from '../../settlement/settlementGenerator'
-import { settlementNpcId } from '../../settlement/npcIdentity'
 import type { OpportunityNpc } from './worldQuestOpportunityTypes'
+import { settlementNpcId } from '../../settlement/npcIdentity'
 
 /**
  * Settlement NPC row with stable household grouping for quest binding.

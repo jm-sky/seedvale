@@ -1,8 +1,10 @@
+import { Scene } from 'three'
 import { describe, expect, it } from 'vitest'
-import { Inventory } from '../items/Inventory'
-import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
+import { Inventory } from '../items/Inventory'
+import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
+import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
 import {
   buildLostHunterNaturalCaveQuest,
   createLostHunterBowInstance,
@@ -12,8 +14,6 @@ import {
   resolveLostHunterNaturalCaveBinding,
   selectLostHunterNpcs,
 } from './lostHunterNaturalCave'
-import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
-import { Scene } from 'three'
 
 function npc(
   id: string,

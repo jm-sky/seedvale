@@ -185,6 +185,7 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   diamond_large: 400,
   damascus_long_sword: 240,
   obsidian_sword: 320,
+  signet_ring: 40,
 }
 
 /** @domain settlements — neutral social standing for merchant sell pricing. */

@@ -3,11 +3,11 @@
 import { describe, expect, it } from 'vitest'
 import type { LargeCaveSite } from '../largeCaves'
 import { type CaveContentAnchor, resolveCaveContentAnchors } from './caveContentAnchors'
+import { sampleHeightfieldAt } from './caveHeightfieldRepresentation'
 import { buildDungeonHeightfieldWithPool } from './caveUndergroundPool'
 import { dungeonChambersFromTopology } from './dungeonChambers'
 import { buildDungeonCaveTopology } from './dungeonTopology'
 import { mouthCarveDepth } from './mouthCarve'
-import { sampleHeightfieldAt } from './caveHeightfieldRepresentation'
 
 function baseSite(): LargeCaveSite {
   return { x: 200, z: -140, yaw: 0.6, length: 12, variant: 0.4 }

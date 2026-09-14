@@ -4,9 +4,9 @@
  *  anchor-resolution coverage from Stage B). */
 
 import { describe, expect, it } from 'vitest'
+import type { CaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import type { CaveContentAnchor } from '../world/createCaves'
 import { generateTreasureLoot } from '../items/treasureGameplay'
-import type { CaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { caveTreasureContainerSpecs } from './worldBundle'
 
 function policyFor(...caveIds: string[]): CaveAdventureContentPolicy {

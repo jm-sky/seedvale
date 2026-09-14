@@ -95,6 +95,8 @@ export type ItemKind =
   | 'short_bow'
   | 'hunting_bow'
   | 'long_bow'
+  /** Plan quests-progression-025 — identity-backed family heirloom. */
+  | 'signet_ring'
   | 'arrow'
   | 'broadhead_arrow'
   | 'war_arrow'
@@ -1017,6 +1019,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0x6b4a2f,
     description: 'Uniwersalny łuk myśliwski. Dobry kompromis między zasięgiem, siłą i szybkością strzału.'
   },
+  signet_ring: {
+    kind: 'signet_ring',
+    label: 'sygnet rodowy',
+    categories: ['resource'],
+    weight: 0.05,
+    size: 'XS',
+    color: 0xc9a227,
+    description: 'Stary pierścień z herbem rodziny. Rozpoznawalny dla tych, którzy pamiętają zaginionego przodka.',
+  },
   long_bow: {
     kind: 'long_bow',
     label: 'długi łuk',
@@ -1908,6 +1919,20 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true, metalness: kind.startsWith('diamond') ? 0.45 : 0.2 }),
     )
     mesh.position.y = radius * 0.7
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'signet_ring') {
+    const mesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.055, 0.014, 5, 10),
+      new THREE.MeshStandardMaterial({
+        color: ITEM_DEFS.signet_ring.color,
+        flatShading: true,
+        metalness: 0.65,
+      }),
+    )
+    mesh.rotation.x = -Math.PI / 2
+    mesh.position.y = 0.03
     mesh.castShadow = true
     return mesh
   }
