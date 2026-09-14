@@ -49,6 +49,7 @@ Generated from TypeScript imports.
 - `economy/kinds.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.ts`
+- `economy/oreTransportDemand.ts`
 - `economy/production.ts`
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.ts`
@@ -160,6 +161,32 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `economy/npcWork.test.ts`
 
+## `economy/oreTransportDemand.test.ts`
+
+**Imports**
+
+- `economy/oreTransportDemand.ts`
+- `economy/production.ts`
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `world/createTransportOrders.ts`
+
+## `economy/oreTransportDemand.ts`
+
+**Imports**
+
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `items/items.ts`
+- `terrain/depositMining.ts`
+- `world/transportOrder.ts`
+
+**Imported by**
+
+- `economy/index.ts`
+- `economy/oreTransportDemand.test.ts`
+- `world/transportOffscreen.ts`
+
 ## `economy/production.test.ts`
 
 **Imports**
@@ -181,6 +208,7 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
+- `economy/oreTransportDemand.test.ts`
 - `economy/production.test.ts`
 - `economy/productionExecutor.test.ts`
 - `economy/productionExecutor.ts`
@@ -306,6 +334,8 @@ Generated from TypeScript imports.
 - `economy/localExchange.ts`
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
+- `economy/oreTransportDemand.test.ts`
+- `economy/oreTransportDemand.ts`
 - `economy/productionExecutor.test.ts`
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.test.ts`

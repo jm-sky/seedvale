@@ -2010,6 +2010,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `app/worldBundle.ts`
 - `economy/foodTransportDemand.test.ts`
+- `economy/oreTransportDemand.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `world/createTransportOrders.test.ts`
@@ -3325,6 +3326,30 @@ Generated from TypeScript imports.
 
 - `world/createResidentialBuildings.ts`
 
+## `world/resourceSiteInventory.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `world/resourceSiteInventory.ts`
+
+## `world/resourceSiteInventory.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `world/resourceSiteInventory.test.ts`
+
 ## `world/restCancel.test.ts`
 
 **Imports**
@@ -3628,6 +3653,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `economy/index.ts`
+- `items/Inventory.ts`
 - `settlement/household.ts`
 - `settlement/npcState.ts`
 - `world/createTransportOrders.ts`
@@ -3639,6 +3665,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `economy/index.ts`
+- `economy/oreTransportDemand.ts`
 - `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `settlement/household.ts`
@@ -3675,6 +3702,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `debug/npcDebugApi.ts`
 - `economy/foodTransportDemand.ts`
+- `economy/oreTransportDemand.ts`
 - `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `world/createTransportOrders.test.ts`

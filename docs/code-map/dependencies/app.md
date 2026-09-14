@@ -984,6 +984,7 @@ Generated from TypeScript imports.
 - `world/plantedTrees.ts`
 - `world/playerTrough.ts`
 - `world/playerWell.ts`
+- `world/resourceSiteInventory.ts`
 - `world/seedLibrary.ts`
 - `world/sleepingUtilities.ts`
 - `world/timeSkip.ts`
@@ -1578,6 +1579,7 @@ Generated from TypeScript imports.
 - `terrain/chunkGrid.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`
+- `terrain/naturalResources.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
@@ -1626,6 +1628,7 @@ Generated from TypeScript imports.
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/residentialBuilding.ts`
+- `world/resourceSiteInventory.ts`
 - `world/riverWaterQualityResolver.ts`
 - `world/settlementForestHooks.ts`
 - `world/siteInfrastructure.ts`

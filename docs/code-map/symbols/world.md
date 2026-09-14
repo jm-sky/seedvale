@@ -1630,6 +1630,13 @@ Generated from exported TypeScript symbols.
 - `createResidentialBuildingPlaceholder` — function — line 26
 - `disposeResidentialBuildingProp` — function — line 45
 
+## `world/resourceSiteInventory.ts`
+
+- `createResourceSiteInventories` — function — line 31
+  - domain: settlements-npcs
+- `ResourceSiteInventories` — type — line 18
+  - domain: settlements-npcs
+
 ## `world/riverGeometry.ts`
 
 - `buildRiverRibbonGeometry` — function — line 134
@@ -1802,27 +1809,27 @@ Generated from exported TypeScript symbols.
 
 ## `world/transportOffscreen.ts`
 
-- `estimateOffscreenTravelDays` — function — line 38
-- `OffscreenTransportLookup` — type — line 67
-- `resolveOffscreenTransportArrivals` — function — line 92
-- `resolveTransportEndpointInventory` — function — line 59
-- `TransportEndpointLookup` — type — line 50
+- `estimateOffscreenTravelDays` — function — line 41
+- `OffscreenTransportLookup` — type — line 72
+- `resolveOffscreenTransportArrivals` — function — line 97
+- `resolveTransportEndpointInventory` — function — line 63
+- `TransportEndpointLookup` — type — line 55
 
 ## `world/transportOrder.ts`
 
-- `assignTransportOrder` — function — line 121
-- `beginOffscreenTransportExecution` — function — line 184
-- `cancelTransportOrder` — function — line 173
-- `clearTransportExecution` — function — line 198
-- `completeTransportDelivery` — function — line 150
-- `completeTransportPickup` — function — line 133
-- `createTransportOrderRecord` — function — line 100
-- `failTransportOrder` — function — line 166
-- `isTransportOrderActive` — function — line 96
-- `isTransportOrderTerminal` — function — line 92
+- `assignTransportOrder` — function — line 125
+- `beginOffscreenTransportExecution` — function — line 188
+- `cancelTransportOrder` — function — line 177
+- `clearTransportExecution` — function — line 202
+- `completeTransportDelivery` — function — line 154
+- `completeTransportPickup` — function — line 137
+- `createTransportOrderRecord` — function — line 104
+- `failTransportOrder` — function — line 170
+- `isTransportOrderActive` — function — line 100
+- `isTransportOrderTerminal` — function — line 96
 - `TransportEndpointRef` — type — line 38
-- `TransportExecution` — type — line 55
-- `TransportOrder` — type — line 63
+- `TransportExecution` — type — line 59
+- `TransportOrder` — type — line 67
 - `TransportOrderState` — type — line 28
   - domain: settlements-npcs
 

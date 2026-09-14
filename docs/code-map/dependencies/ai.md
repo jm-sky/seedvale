@@ -155,6 +155,7 @@ Generated from TypeScript imports.
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/residentialBuilding.ts`
+- `world/resourceSiteInventory.ts`
 - `world/settlementForestHooks.ts`
 - `world/standingTorch.ts`
 - `world/timeConversion.ts`
@@ -789,6 +790,7 @@ Generated from TypeScript imports.
 - `terrain/depositMining.ts`
 - `world/createTransportOrders.ts`
 - `world/fishing.ts`
+- `world/resourceSiteInventory.ts`
 
 ## `ai/npcProfessionWork.ts`
 
@@ -821,6 +823,7 @@ Generated from TypeScript imports.
 - `world/foodSources.ts`
 - `world/herbalGathering.ts`
 - `world/plantedCrops.ts`
+- `world/resourceSiteInventory.ts`
 - `world/transportOrder.ts`
 - `world/transportTransactions.ts`
 

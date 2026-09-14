@@ -415,13 +415,15 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/naturalResources.ts`
 
-- `dominantResourceNear` — function — line 248
+- `dominantResourceNear` — function — line 272
 - `NaturalResource` — type — line 39
 - `RESOURCE_ROLE` — const — line 64
 - `RESOURCE_TYPES` — const — line 35
-- `resourceAttractionAt` — function — line 270
+- `resourceAttractionAt` — function — line 294
+- `resourceById` — function — line 241
+  - domain: settlements-npcs
 - `ResourceEnv` — type — line 104
-- `resourcesNear` — function — line 226
+- `resourcesNear` — function — line 250
 - `ResourceType` — type — line 23
 - `SIGNIFICANT_RICHNESS` — const — line 58
 

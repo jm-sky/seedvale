@@ -173,25 +173,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 722
-- `CurrentActivity` — type — line 532
-- `CurrentActivityKind` — type — line 525
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 838
-- `NPC_HEIGHT` — const — line 435
-- `NPC_MODEL_URLS` — const — line 499
-- `NPC_SHADOW_DISTANCE` — const — line 449
-- `NpcAgent` — class — line 1066
+- `classifyPendingActivity` — function — line 723
+- `CurrentActivity` — type — line 533
+- `CurrentActivityKind` — type — line 526
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 839
+- `NPC_HEIGHT` — const — line 436
+- `NPC_MODEL_URLS` — const — line 500
+- `NPC_SHADOW_DISTANCE` — const — line 450
+- `NpcAgent` — class — line 1070
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 971
-- `NpcInspectionSnapshot` — type — line 547
-- `NpcWhy` — type — line 697
-- `projectNpcWhy` — function — line 763
-- `promoteChainKind` — function — line 714
+- `NpcAgentDeps` — type — line 972
+- `NpcInspectionSnapshot` — type — line 548
+- `NpcWhy` — type — line 698
+- `projectNpcWhy` — function — line 764
+- `promoteChainKind` — function — line 715
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -367,11 +367,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 72
-- `findWeaponNeedingMaintenance` — function — line 88
-- `NpcWorkContext` — type — line 108
-- `planProfessionWork` — function — line 782
-- `selectTraderCollectionGoods` — function — line 373
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 77
+- `findWeaponNeedingMaintenance` — function — line 93
+- `NpcWorkContext` — type — line 113
+- `planProfessionWork` — function — line 901
+- `selectTraderCollectionGoods` — function — line 370
 
 ## `ai/npcStrategies.ts`
 

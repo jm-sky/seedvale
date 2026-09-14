@@ -48,6 +48,20 @@ Generated from exported TypeScript symbols.
   - domain: settlements-npcs
 - `tryAdvanceDevelopment` — function — line 109
 
+## `economy/oreTransportDemand.ts`
+
+- `committedIncomingOre` — function — line 40
+- `committedOutgoingOre` — function — line 60
+- `creditDeliveredOreToStock` — function — line 126
+  - domain: settlements-npcs
+- `isOreTransportKind` — function — line 25
+- `ORE_TRANSPORT_KINDS` — const — line 19
+  - domain: settlements-npcs
+- `ORE_TRANSPORT_MAX_TRANSFER` — const — line 23
+- `OreTransportKind` — type — line 20
+- `uncommittedResourceSiteOre` — function — line 96
+- `uncoveredOreProductionNeed` — function — line 80
+
 ## `economy/production.ts`
 
 - `ARROWS_FROM_BEAM_PRODUCTION` — const — line 75

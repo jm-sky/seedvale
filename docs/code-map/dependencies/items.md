@@ -114,6 +114,8 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/userActions.test.ts`
 - `app/userActions.ts`
+- `economy/oreTransportDemand.test.ts`
+- `economy/oreTransportDemand.ts`
 - `economy/production.test.ts`
 - `economy/production.ts`
 - `economy/productionExecutor.test.ts`
@@ -197,6 +199,9 @@ Generated from TypeScript imports.
 - `ui-vue/npcDialogueOpen.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/resourceSiteInventory.test.ts`
+- `world/resourceSiteInventory.ts`
+- `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 - `world/transportTransactions.test.ts`
 - `world/transportTransactions.ts`
@@ -1013,6 +1018,7 @@ Generated from TypeScript imports.
 - `debug/settlementHistory.ts`
 - `economy/foodTransportDemand.ts`
 - `economy/initial.ts`
+- `economy/oreTransportDemand.ts`
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`

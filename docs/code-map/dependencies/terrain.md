@@ -672,6 +672,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/saveState.ts`
 - `app/worldBundle.ts`
+- `economy/oreTransportDemand.ts`
 - `terrain/depositMining.test.ts`
 - `terrain/resourceDeposits.ts`
 
@@ -883,6 +884,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/dialogueTemplates.ts`
+- `app/worldBundle.ts`
 - `economy/initial.ts`
 - `settlement/createSettlement.ts`
 - `settlement/families.test.ts`

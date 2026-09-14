@@ -87,6 +87,7 @@ Generated from TypeScript imports.
 - `world/herbalGathering.ts`
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
+- `world/resourceSiteInventory.ts`
 - `world/settlementForestHooks.ts`
 - `world/transportOffscreen.ts`
 - `world/transportOrder.ts`
@@ -255,6 +256,7 @@ Generated from TypeScript imports.
 - `world/herbalGathering.ts`
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
+- `world/resourceSiteInventory.ts`
 - `world/settlementForestHooks.ts`
 - `world/treeVisuals.ts`
 - `world/weather.ts`
