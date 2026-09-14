@@ -73,6 +73,7 @@ Generated from TypeScript imports.
 - `world/repair.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
+- `world/timeConversion.ts`
 - `world/transportOrder.ts`
 - `world/treeLifecycle.ts`
 - `world/wellGroundwater.ts`

@@ -1,23 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { canHarvestMeatFrom, corpsePhaseFromElapsed, rotFxRelevant } from './animalCorpse'
+import {
+  canHarvestMeatFrom,
+  CORPSE_BONES_ONSET_DAYS,
+  CORPSE_ROT_ONSET_DAYS,
+  corpsePhaseFromElapsed,
+  rotFxRelevant,
+} from './animalCorpse'
 import { ANIMAL_DEFS } from './animalDefs'
 import { MAX_HP } from './faunaCombat'
 import { createHarvestedRemains, createNaturalRemains } from './harvestedRemains'
 
-describe('corpsePhaseFromElapsed (plan 188 — natural corpse decay)', () => {
+describe('corpsePhaseFromElapsed (plan fauna-029 — natural corpse decay in world-days)', () => {
   it('is fresh right after death', () => {
     expect(corpsePhaseFromElapsed(0)).toBe('fresh')
-    expect(corpsePhaseFromElapsed(19.9)).toBe('fresh')
+    expect(corpsePhaseFromElapsed(CORPSE_ROT_ONSET_DAYS - 1e-9)).toBe('fresh')
   })
 
   it('becomes rotting once the rot-onset threshold is reached', () => {
-    expect(corpsePhaseFromElapsed(20)).toBe('rotting')
-    expect(corpsePhaseFromElapsed(39.9)).toBe('rotting')
+    expect(corpsePhaseFromElapsed(CORPSE_ROT_ONSET_DAYS)).toBe('rotting')
+    expect(corpsePhaseFromElapsed(CORPSE_BONES_ONSET_DAYS - 1e-9)).toBe('rotting')
   })
 
   it('decomposes into bones once the bones-onset threshold is reached', () => {
-    expect(corpsePhaseFromElapsed(40)).toBe('bones')
-    expect(corpsePhaseFromElapsed(59.9)).toBe('bones')
+    expect(corpsePhaseFromElapsed(CORPSE_BONES_ONSET_DAYS)).toBe('bones')
+    expect(corpsePhaseFromElapsed(CORPSE_BONES_ONSET_DAYS + 1)).toBe('bones')
   })
 
   it('depends only on elapsed simulation time, not on any frame/FPS notion', () => {
@@ -82,8 +88,8 @@ describe('canHarvestMeatFrom (plan 188 follow-up — meat only from fresh corpse
 
   it('composes with corpsePhaseFromElapsed across the death → fresh → rotting timeline', () => {
     const justDied = corpsePhaseFromElapsed(0)
-    const stillFresh = corpsePhaseFromElapsed(19.9)
-    const rotted = corpsePhaseFromElapsed(20)
+    const stillFresh = corpsePhaseFromElapsed(CORPSE_ROT_ONSET_DAYS - 1e-9)
+    const rotted = corpsePhaseFromElapsed(CORPSE_ROT_ONSET_DAYS)
     expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: justDied })).toBe(true)
     expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: stillFresh })).toBe(true)
     expect(canHarvestMeatFrom({ ...alive, dead: true, corpsePhase: rotted })).toBe(false)

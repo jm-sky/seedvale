@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { corpseLingerSeconds, HARVESTED_REMAINS_LINGER_SECONDS } from './animalCorpse'
+import { CORPSE_REMOVE_DAYS, corpseLingerDays, HARVESTED_REMAINS_LINGER_DAYS } from './animalCorpse'
 import {
   createHarvestedRemains,
   largeBoneCount,
   meatScrapCount,
 } from './harvestedRemains'
 
-describe('corpseLingerSeconds (plan 137)', () => {
-  it('uses the harvested remains TTL after a knife harvest, not the leftover 60s corpse linger', () => {
-    expect(corpseLingerSeconds(false)).toBe(60)
-    expect(corpseLingerSeconds(true)).toBe(HARVESTED_REMAINS_LINGER_SECONDS)
-    expect(HARVESTED_REMAINS_LINGER_SECONDS).toBe(90)
+describe('corpseLingerDays (plan fauna-029)', () => {
+  it('uses a short harvested-remains linger distinct from the natural corpse clock', () => {
+    expect(corpseLingerDays(false)).toBe(CORPSE_REMOVE_DAYS)
+    expect(corpseLingerDays(true)).toBe(HARVESTED_REMAINS_LINGER_DAYS)
+    expect(HARVESTED_REMAINS_LINGER_DAYS).toBeLessThan(CORPSE_REMOVE_DAYS)
   })
 })
 

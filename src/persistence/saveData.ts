@@ -45,6 +45,7 @@ import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { PLAYER_TROUGH_CAPACITY_LITRES, PLAYER_TROUGH_REQUIRED_WORK } from '../world/playerTrough'
 import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
+import { realSecondsToGameDays } from '../world/timeConversion'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -672,7 +673,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 41
+export const CURRENT_SAVE_VERSION = 42
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -2113,11 +2114,17 @@ function isLivestockLife(value: unknown): value is { hunger: number, thirst: num
   return typeof l.hunger === 'number' && typeof l.thirst === 'number' && typeof l.stamina === 'number'
 }
 
-function isLivestockCorpse(value: unknown): value is { timeSinceDeath: number, meatHarvested: boolean } | null {
+function isLivestockCorpse(value: unknown): value is {
+  deathAtDays: number
+  meatHarvested: boolean
+  harvestedAtDays?: number
+} | null {
   if (value === null) return true
   if (!value || typeof value !== 'object') return false
   const c = value as Record<string, unknown>
-  return typeof c.timeSinceDeath === 'number' && typeof c.meatHarvested === 'boolean'
+  if (typeof c.deathAtDays !== 'number' || typeof c.meatHarvested !== 'boolean') return false
+  if (c.harvestedAtDays !== undefined && typeof c.harvestedAtDays !== 'number') return false
+  return true
 }
 
 function isAnimalOwnerField(value: unknown): boolean {
@@ -3389,6 +3396,52 @@ function migrateSaveV40ToV41(data: unknown): unknown {
   return { ...v, version: 41 }
 }
 
+/** Default `dayLengthSec` used to convert pre-v42 `timeSinceDeath` seconds
+ *  into world-days (plan fauna-029) — matches `dayNight.ts`'s default. */
+const FAUNA_CORPSE_MIGRATION_DAY_LENGTH_SEC = 480
+
+function migrateAnimalCorpseV41ToV42(corpse: unknown, elapsedDays: number): unknown {
+  if (corpse == null) return null
+  if (!corpse || typeof corpse !== 'object') return corpse
+  const c = corpse as Record<string, unknown>
+  const timeSinceDeath = typeof c.timeSinceDeath === 'number' ? c.timeSinceDeath : 0
+  const meatHarvested = c.meatHarvested === true
+  const deathAtDays = Math.max(0, elapsedDays - realSecondsToGameDays(timeSinceDeath, FAUNA_CORPSE_MIGRATION_DAY_LENGTH_SEC))
+  if (meatHarvested) return { deathAtDays, meatHarvested, harvestedAtDays: deathAtDays }
+  return { deathAtDays, meatHarvested }
+}
+
+function migrateAnimalRowCorpseV41ToV42(row: unknown, elapsedDays: number): unknown {
+  if (!row || typeof row !== 'object') return row
+  const r = row as Record<string, unknown>
+  return { ...r, corpse: migrateAnimalCorpseV41ToV42(r.corpse, elapsedDays) }
+}
+
+/** v41 → v42 (plan fauna-029): livestock/rat/habitat-occupant corpses store
+ *  `deathAtDays` (and optional `harvestedAtDays`) instead of real-time
+ *  `timeSinceDeath`. */
+function migrateSaveV41ToV42(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const elapsedDays = typeof v.elapsedDays === 'number' ? v.elapsedDays : 0
+  const livestock = Array.isArray(v.livestock)
+    ? v.livestock.map((row) => migrateAnimalRowCorpseV41ToV42(row, elapsedDays))
+    : v.livestock
+  const rats = Array.isArray(v.rats)
+    ? v.rats.map((row) => migrateAnimalRowCorpseV41ToV42(row, elapsedDays))
+    : v.rats
+  const persistentHabitatOccupants = Array.isArray(v.persistentHabitatOccupants)
+    ? v.persistentHabitatOccupants.map((row) => {
+      if (!row || typeof row !== 'object') return row
+      const r = row as Record<string, unknown>
+      const state = r.state
+      if (!state || typeof state !== 'object' || Array.isArray(state)) return row
+      const s = state as Record<string, unknown>
+      return { ...r, state: { ...s, corpse: migrateAnimalCorpseV41ToV42(s.corpse, elapsedDays) } }
+    })
+    : v.persistentHabitatOccupants
+  return { ...v, version: 42, livestock, rats, persistentHabitatOccupants }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3550,6 +3603,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   38: migrateSaveV38ToV39,
   39: migrateSaveV39ToV40,
   40: migrateSaveV40ToV41,
+  41: migrateSaveV41ToV42,
 }
 
 function detectStoredVersion(value: unknown): number | null {

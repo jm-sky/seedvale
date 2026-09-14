@@ -280,6 +280,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `shared/StaminaState.ts`
 - `shared/corpseLifecycle.ts`
+- `world/timeConversion.ts`
 
 **Imported by**
 

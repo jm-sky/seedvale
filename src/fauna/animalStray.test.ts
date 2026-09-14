@@ -17,7 +17,6 @@ import {
   shouldRetainStrayedCorpse,
   snapshotStrayState,
   STRAY_CLASSIFICATION_GRACE_SECONDS,
-  STRAY_CORPSE_RETENTION_SECONDS,
   STRAY_MIN_DISTANCE,
   STRAY_RETURN_RADIUS,
   straySurvivalFleeRangeBonus,
@@ -149,13 +148,12 @@ describe('survival assist and corpse retention (fauna-024)', () => {
     expect(straySurvivalFleeRangeBonus(undefined)).toBe(0)
   })
 
-  it('retains an uninspected stray corpse past the short TTL and releases after inspect', () => {
+  it('does not extend corpse TTL past natural world-time linger (plan fauna-029)', () => {
     const stray = beginStrayState(undefined, { x: 0, z: 0 }).state
-    expect(shouldRetainStrayedCorpse(stray, true, 60)).toBe(true)
-    expect(shouldRetainStrayedCorpse(stray, true, STRAY_CORPSE_RETENTION_SECONDS)).toBe(false)
+    expect(shouldRetainStrayedCorpse(stray, true)).toBe(false)
     const inspected = inspectStrayedCorpseState(stray, true)
     expect(inspected?.corpseInspected).toBe(true)
-    expect(shouldRetainStrayedCorpse(inspected, true, 60)).toBe(false)
+    expect(shouldRetainStrayedCorpse(inspected, true)).toBe(false)
     expect(inspectStrayedCorpseState(stray, false)?.corpseInspected).toBe(false)
   })
 

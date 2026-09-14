@@ -202,7 +202,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `029`
+- fauna: `030`
 - items-player: `032`
 - npc: `039`
 - persistence: `005`

@@ -52,6 +52,12 @@ export type NavigationQuery = {
   /** Same terrain height sampler the caller's own movement/slope code
    *  already uses — reused for slope-cost/limit checks, never duplicated. */
   sampleHeight: HeightSampler
+  /** Optional per-cell traversal multiplier (plan fauna-029) — 1 is ordinary
+   *  dry/preferred ground. Values `> 1` keep the cell passable but expensive,
+   *  so A* prefers a cheaper detour when one exists inside the bounded grid.
+   *  Omitted (NPC callers, flee/chase) means geometric cost only. Never used
+   *  to mark a cell impassable; that stays `isWalkable`. */
+  cellCost?: (x: number, z: number) => number
 }
 
 export type PathfindOptions = {
@@ -92,20 +98,26 @@ const NEIGHBORS: readonly (readonly [number, number])[] = [
   [1, 1], [1, -1], [-1, 1], [-1, -1],
 ]
 
+function cellCostAt(x: number, z: number, cellCost: ((x: number, z: number) => number) | undefined): number {
+  return cellCost ? Math.max(1, cellCost(x, z)) : 1
+}
+
 function segmentWalkable(
   a: PathPoint,
   b: PathPoint,
   step: number,
   walkable: (x: number, z: number) => boolean,
+  cellCost?: (x: number, z: number) => number,
 ): boolean {
   const dx = b.x - a.x
   const dz = b.z - a.z
   const dist = Math.hypot(dx, dz)
-  if (dist < 1e-6) return walkable(b.x, b.z)
+  const sample = (x: number, z: number): boolean => walkable(x, z) && cellCostAt(x, z, cellCost) <= 1
+  if (dist < 1e-6) return sample(b.x, b.z)
   const steps = Math.max(1, Math.ceil(dist / step))
   for (let i = 1; i <= steps; i++) {
     const t = i / steps
-    if (!walkable(a.x + dx * t, a.z + dz * t)) return false
+    if (!sample(a.x + dx * t, a.z + dz * t)) return false
   }
   return true
 }
@@ -119,13 +131,14 @@ function simplifyPath(
   points: readonly PathPoint[],
   sampleStep: number,
   walkable: (x: number, z: number) => boolean,
+  cellCost?: (x: number, z: number) => number,
 ): PathPoint[] {
   if (points.length <= 1) return []
   if (points.length === 2) return [points[1]!]
   const result: PathPoint[] = []
   let anchor = 0
   for (let i = 1; i < points.length - 1; i++) {
-    if (!segmentWalkable(points[anchor]!, points[i + 1]!, sampleStep, walkable)) {
+    if (!segmentWalkable(points[anchor]!, points[i + 1]!, sampleStep, walkable, cellCost)) {
       result.push(points[i]!)
       anchor = i
     }
@@ -164,7 +177,7 @@ export function findPath(
     return (slope.angleRad * 180) / Math.PI <= maxSlopeDeg
   }
 
-  if (segmentWalkable(start, goal, cellSize / 2, walkable)) {
+  if (segmentWalkable(start, goal, cellSize / 2, walkable, query.cellCost)) {
     return { waypoints: [{ x: goal.x, z: goal.z }], visitedNodes: 0 }
   }
 
@@ -215,7 +228,7 @@ export function findPath(
     visited++
     if (current.key === goalKey) {
       const nodePath = reconstructPath(cameFrom, nodeAt, goalKey, start, cellWorld)
-      const waypoints = simplifyPath(nodePath, cellSize / 2, walkable)
+      const waypoints = simplifyPath(nodePath, cellSize / 2, walkable, query.cellCost)
       return { waypoints, visitedNodes: visited }
     }
     if (visited >= maxNodes) return null
@@ -237,7 +250,8 @@ export function findPath(
       }
       const world = cellWorld(ncx, ncz)
       if (!walkable(world.x, world.z)) continue
-      const stepCost = isDiagonal ? cellSize * Math.SQRT2 : cellSize
+      const geometric = isDiagonal ? cellSize * Math.SQRT2 : cellSize
+      const stepCost = geometric * cellCostAt(world.x, world.z, query.cellCost)
       const tentativeG = curG + stepCost
       if (tentativeG >= (gScore.get(nKey) ?? Infinity)) continue
       gScore.set(nKey, tentativeG)

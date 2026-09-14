@@ -4,6 +4,7 @@ import type { AnimalKind } from './animalDefs'
 import { tintPropMaterials } from '../settlement/props'
 import { decayPhaseFromElapsed } from '../shared/corpseLifecycle'
 import { drainStamina, type StaminaState } from '../shared/StaminaState'
+import { gameHoursToGameDays } from '../world/timeConversion'
 import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { animateCorpseRotFx, createCorpseRotFx, disposeCorpseRotFx } from './corpseDecayFx'
 import {
@@ -24,26 +25,22 @@ import {
  *  agent call shape changes.
  */
 
-/** Natural (unharvested, unburied) corpse decay phase (plan 188) — both
- *  thresholds sit inside `CORPSE_LINGER_SECONDS`, so the existing 60 s total
- *  unharvested lifetime (`corpseLingerSeconds(false)`/`readyToRemove()`) is
- *  unchanged; this only subdivides it into a visibly distinct progression. */
+/** Natural (unharvested, unburied) corpse decay phase (plan 188 / fauna-029).
+ *  Thresholds are world-days from `deathAtDays`, not real-time seconds. */
 export type CorpsePhase = 'fresh' | 'rotting' | 'bones'
 
-/** Seconds a corpse stays in the scene (frozen pose) before it's disposed. */
-const CORPSE_LINGER_SECONDS = 60
-/** Seconds harvested remains stay after a knife harvest (plan 137) — own
- *  lifetime, not whatever was left of the unharvested 60 s linger. */
-export const HARVESTED_REMAINS_LINGER_SECONDS = 90
+/** Fresh duration: 4 world-hours. */
+export const CORPSE_ROT_ONSET_DAYS = gameHoursToGameDays(4)
+/** Rotting duration: 36 world-hours, so bones start 40 h after death. */
+export const CORPSE_BONES_ONSET_DAYS = gameHoursToGameDays(40)
+/** Bones linger 72 world-hours after onset → removal 112 h ≈ 4.667 days. */
+export const CORPSE_REMOVE_DAYS = gameHoursToGameDays(112)
+/** Knife-harvested remains linger 2 world-hours from harvest (own rule). */
+export const HARVESTED_REMAINS_LINGER_DAYS = gameHoursToGameDays(2)
 
-export function corpseLingerSeconds(meatHarvested: boolean): number {
-  return meatHarvested ? HARVESTED_REMAINS_LINGER_SECONDS : CORPSE_LINGER_SECONDS
+export function corpseLingerDays(meatHarvested: boolean): number {
+  return meatHarvested ? HARVESTED_REMAINS_LINGER_DAYS : CORPSE_REMOVE_DAYS
 }
-
-/** Seconds after death before a natural corpse starts visibly rotting. */
-const CORPSE_ROT_ONSET_SECONDS = 20
-/** Seconds after death a natural corpse decomposes into a bones pile. */
-const CORPSE_BONES_ONSET_SECONDS = 40
 /** Distance (world units) within which a rotting corpse gets its lightweight
  *  particle/fog FX — beyond this, only lifecycle timers/state keep advancing
  *  (plan 188 §6: simulation truth vs. presentation). */
@@ -65,11 +62,16 @@ export const RABIES_CORPSE_INFECTION_CHANCE = 0.5
  *  `markDangerous()`'s `tintPropMaterials` call, just a different hex. */
 const CORPSE_ROT_TINT_HEX = 0x3a4224
 
-/** Pure phase-from-elapsed-time lookup — unit-testable without instantiating
- *  `AnimalAgent`/Three.js (plan 188). Only meaningful for a dead, unharvested,
- *  unburied corpse; callers gate those cases separately. */
-export function corpsePhaseFromElapsed(elapsedSeconds: number): CorpsePhase {
-  return decayPhaseFromElapsed(elapsedSeconds, CORPSE_ROT_ONSET_SECONDS, CORPSE_BONES_ONSET_SECONDS)
+/** Pure phase-from-elapsed-world-days lookup (plan fauna-029) — unit-testable
+ *  without instantiating `AnimalAgent`/Three.js. Only meaningful for a dead,
+ *  unharvested, unburied corpse; callers gate those cases separately. */
+export function corpsePhaseFromElapsed(elapsedDays: number): CorpsePhase {
+  return decayPhaseFromElapsed(elapsedDays, CORPSE_ROT_ONSET_DAYS, CORPSE_BONES_ONSET_DAYS)
+}
+
+export function corpseElapsedDays(state: AnimalCorpseState, nowDays: number): number {
+  if (state.deathAtDays == null) return 0
+  return Math.max(0, nowDays - state.deathAtDays)
 }
 
 /** Whether a rotting corpse's lightweight FX should be presented — distance
@@ -119,9 +121,13 @@ export function isRabiesCorpseContact(opts: {
 /** Plain corpse/remains/decay/claim state for one `AnimalAgent` — created
  *  once at construction (mirrors `createAnimalLifeState()`), mutated in
  *  place by every function below. `snapshot()`/`hydrate()` stay on
- *  `AnimalAgent` and read/write `timeSinceDeath`/`meatHarvested` directly. */
+ *  `AnimalAgent` and read/write `deathAtDays`/`meatHarvested` directly. */
 export type AnimalCorpseState = {
-  timeSinceDeath: number
+  /** Absolute `elapsedDays` at the alive→dead edge. `null` until collapse
+   *  (or the first dead tick, if death landed before `nowDays` was cached). */
+  deathAtDays: number | null
+  /** Absolute `elapsedDays` at knife-harvest; `null` until harvested. */
+  harvestedAtDays: number | null
   /** Current natural-decay phase — stays `'fresh'` for the lifetime of a
    *  harvested or buried corpse, since `advanceAnimalCorpse` short-circuits
    *  for those. */
@@ -133,8 +139,8 @@ export type AnimalCorpseState = {
    *  106) — independent of `consumedPhase` (predator eating and player
    *  harvesting are different consumers), guards against harvesting twice. */
   meatHarvested: boolean
-  /** Pauses corpse linger while the player is mid-harvest (Esc-cancellable
-   *  busy channel) so the body can't despawn underneath the overlay. */
+  /** Blocks dispose while the player is mid-harvest (Esc-cancellable busy
+   *  channel). Does not pause world-time ageing (plan fauna-029). */
   held: boolean
   /** Set on a dead prey's corpse by the predator currently eating it —
    *  guards against two predators completing an eat action on the same
@@ -177,7 +183,8 @@ export type AnimalCorpseState = {
 
 export function createAnimalCorpseState(): AnimalCorpseState {
   return {
-    timeSinceDeath: 0,
+    deathAtDays: null,
+    harvestedAtDays: null,
     phase: 'fresh',
     buried: false,
     meatHarvested: false,
@@ -205,6 +212,9 @@ export type CorpseHost = {
   readonly isCapsule: boolean
   readonly def: { readonly kind: AnimalKind, readonly modelHeight: number }
   readonly sampleHeight: HeightSampler
+  /** Upright the corpse root and snap it to terrain/water bed before remains
+   *  attach (plan fauna-029) — caller-owned death pose stays on `collapse()`. */
+  settleRootForRemains: () => void
 }
 
 /** Structural view of a nearby live animal for rot-influence/rabies-exposure
@@ -227,13 +237,17 @@ export type CorpseNeighbour = {
 export function buryCorpse(state: AnimalCorpseState): void {
   state.buried = true
   disposeAnimalCorpseRotFx(state)
-  state.timeSinceDeath = HARVESTED_REMAINS_LINGER_SECONDS
 }
 
 /** True once a dead agent's corpse has lingered long enough to be disposed. */
-export function corpseReadyToRemove(state: AnimalCorpseState, dead: boolean): boolean {
-  const linger = corpseLingerSeconds(state.meatHarvested)
-  return dead && !state.held && state.timeSinceDeath >= linger
+export function corpseReadyToRemove(state: AnimalCorpseState, dead: boolean, nowDays: number): boolean {
+  if (!dead || state.held) return false
+  if (state.buried) return true
+  if (state.meatHarvested) {
+    const harvestedAt = state.harvestedAtDays ?? nowDays
+    return nowDays - harvestedAt >= HARVESTED_REMAINS_LINGER_DAYS
+  }
+  return corpseElapsedDays(state, nowDays) >= CORPSE_REMOVE_DAYS
 }
 
 /** Hide the living GLB/capsule without hiding the CSS2D label or the
@@ -272,6 +286,7 @@ export async function spawnHarvestedRemains(state: AnimalCorpseState, host: Corp
     disposeHarvestedRemains(remains)
     return
   }
+  host.settleRootForRemains()
   state.harvestedRemains = remains
   host.mesh.add(remains)
 }
@@ -280,11 +295,11 @@ export async function spawnHarvestedRemains(state: AnimalCorpseState, host: Corp
  *  living mesh for harvested remains (plan 137/138). State/TTL is
  *  synchronous; the GLB pile attaches asynchronously like the blood splat.
  *  Caller (`AnimalAgent.harvestMeat()`) still owns `canHarvestMeat()`'s
- *  final-invariant re-check, `mesh.rotation.z`/`snapY()` (movement) and
- *  hiding the label (presentation) — this only owns the corpse-state side. */
-export function harvestCorpseMeat(state: AnimalCorpseState, host: CorpseHost): void {
+ *  final-invariant re-check and hiding the label (presentation). Root
+ *  upright/bed-snap is `CorpseHost.settleRootForRemains` (plan fauna-029). */
+export function harvestCorpseMeat(state: AnimalCorpseState, host: CorpseHost, nowDays: number): void {
   state.meatHarvested = true
-  state.timeSinceDeath = 0
+  state.harvestedAtDays = nowDays
   // Leave the natural decay path (plan 188) — any rotting FX/bones already
   // produced no longer apply once the player claims the harvested-remains path.
   disposeAnimalCorpseRotFx(state)
@@ -294,6 +309,7 @@ export function harvestCorpseMeat(state: AnimalCorpseState, host: CorpseHost): v
     state.naturalRemains = null
   }
   state.phase = 'fresh'
+  host.settleRootForRemains()
   hideLivingVisual(host)
   void spawnHarvestedRemains(state, host)
 }
@@ -324,6 +340,7 @@ async function spawnNaturalRemains(state: AnimalCorpseState, host: CorpseHost): 
     disposeHarvestedRemains(remains)
     return
   }
+  host.settleRootForRemains()
   state.naturalRemains = remains
   host.mesh.add(remains)
 }
@@ -333,6 +350,7 @@ function onCorpsePhaseChanged(state: AnimalCorpseState, host: CorpseHost, phase:
     tintPropMaterials(host.mesh, CORPSE_ROT_TINT_HEX)
   } else if (phase === 'bones') {
     disposeAnimalCorpseRotFx(state)
+    host.settleRootForRemains()
     hideLivingVisual(host)
     void spawnNaturalRemains(state, host)
   }
@@ -409,9 +427,11 @@ export function advanceAnimalCorpse(
   rabid: boolean,
   nearby: readonly CorpseNeighbour[],
   observerPos: THREE.Vector3,
+  nowDays: number,
 ): void {
   if (state.meatHarvested || state.buried) return
-  const phase = corpsePhaseFromElapsed(state.timeSinceDeath)
+  if (state.deathAtDays == null) state.deathAtDays = nowDays
+  const phase = corpsePhaseFromElapsed(corpseElapsedDays(state, nowDays))
   if (phase !== state.phase) {
     state.phase = phase
     onCorpsePhaseChanged(state, host, phase)

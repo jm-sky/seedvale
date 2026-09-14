@@ -21,7 +21,7 @@ import {
 } from '../audio/animalSounds'
 import { isNpcCombatDebugMode } from '../debug/debugMode'
 import { logNpcThreatBranch } from '../debug/faunaInspector'
-import { findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
+import { DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { tintPropMaterials } from '../settlement/props'
@@ -171,7 +171,6 @@ import {
   type LostLivestockSourceStatus,
   selectStrayDisplacementTarget,
   shouldBeginNaturalStray,
-  shouldRetainStrayedCorpse,
   snapshotStrayState,
   strayEpisodeSeed,
   straySurvivalFleeRangeBonus,
@@ -254,9 +253,13 @@ import {
 } from './predatorIntentCommitment'
 import { PREY_ALERT_RANGE_BONUS, type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
 import {
+  autonomousDestinationAccepts,
   classifyWaterTraversal,
+  isDispreferredSwim,
   shouldApplyDrowningDamage,
   swimStaminaExertion,
+  type WaterRouteIntent,
+  waterTraversalCellCost,
   type WaterTraversalMode,
 } from './waterTraversal'
 
@@ -297,7 +300,7 @@ export type { AnimalVariant } from './animalVariants'
 
 /** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
  *  npc-006) — see `AnimalAgent.chaseNav`/`fleeNav`'s doc for why chase and
- *  flee each get their own instance instead of sharing one. */
+ *  flee/`moveNav` each get their own instance instead of sharing one. */
 type NavRescue = {
   watchdog: MovementWatchdog
   waypoints: readonly PathPoint[]
@@ -655,10 +658,10 @@ export type AnimalAgentDebugInfo = {
 /** Plain-data persistence contract for one livestock/mount individual (plan
  *  persistence-001) — authoritative fields only. Navigation/targets/
  *  animation/FX/corpse-decay-phase are deliberately excluded: `hydrate()`
- *  re-derives them (phase from `timeSinceDeath` on the next `update()` tick,
- *  presentation immediately in `hydrate()` itself). `x`/`z`/`yaw` are the
- *  meaningful world position; terrain-derived `y` is never persisted, always
- *  resolved fresh via `snapY()`. */
+ *  re-derives them (phase from `deathAtDays` vs `nowDays` on the next
+ *  `update()` tick, presentation immediately in `hydrate()` itself).
+ *  `x`/`z`/`yaw` are the meaningful world position; terrain-derived `y` is
+ *  never persisted, always resolved fresh via `snapY()`. */
 export type AnimalSaveState = {
   x: number
   z: number
@@ -669,10 +672,10 @@ export type AnimalSaveState = {
   eggPending: boolean
   /** Independent wool-growth anchor (plan fauna-004) — omitted on legacy saves. */
   woolReadyAtDays?: number | null
-  /** Set only while `health.dead` — `null` for a live animal. Lets a dead
-   *  individual's corpse lifecycle (linger threshold, harvested-remains vs.
-   *  natural-decay presentation) resume exactly where it left off. */
-  corpse: { timeSinceDeath: number, meatHarvested: boolean } | null
+  /** Set only while `health.dead` — `null` for a live animal. Absolute
+   *  `elapsedDays` death anchor (plan fauna-029); harvested linger uses
+   *  optional `harvestedAtDays`. */
+  corpse: { deathAtDays: number, meatHarvested: boolean, harvestedAtDays?: number } | null
   /** Authoritative ownership (plan fauna-020) — omitted on legacy saves. */
   owner?: AnimalOwner
   /** Player-owned Follow/Stay control (plan fauna-020). */
@@ -1198,9 +1201,10 @@ export class AnimalAgent {
   /** Bounds how long a dead animal's `update()` keeps ticking its own
    *  `anim` (plan npc-009) so the one-shot death clip actually plays out —
    *  `null` when there was no death clip to play (manual tip fallback, no
-   *  mixer work needed), compared against `timeSinceDeath` (already tracked
-   *  for corpse decay) rather than a second death-clock field. */
+   *  mixer work needed). Elapsed time is real-time (`deathAnimElapsedSec`),
+   *  not world-days — a death clip must not stretch across corpse decay. */
   private deathAnimDurationSec: number | null = null
+  private deathAnimElapsedSec = 0
   /** Name+stat-bars label owner (plan fauna-017 step 4c, review E6) —
    *  replaces 13 hand-rolled DOM/percent-cache fields with the shared
    *  controller `NpcAgent` already uses (`ui/agentStatusLabel.ts`). Bars are
@@ -1377,6 +1381,8 @@ export class AnimalAgent {
    *  pre-existing behaviour, never worse than before this plan. */
   private readonly chaseNav: NavRescue = createNavRescue()
   private readonly fleeNav: NavRescue = createNavRescue()
+  /** Wander / trip / needs / attraction (plan fauna-029) — preferDry cost. */
+  private readonly moveNav: NavRescue = createNavRescue()
   private readonly repathWaypointScratch = new THREE.Vector3()
   /** True while this predator's latest throttled human-response decision
    *  (player or, when frenzied, a noticed NPC) is `attack` — the small
@@ -1387,7 +1393,7 @@ export class AnimalAgent {
    *  step 5, review E3) — replaces 15 individual fields (bloodSplat+token,
    *  harvestedRemains+token, naturalRemains+token, rotFx, corpsePhaseValue/
    *  buried/meatHarvested/corpseHeld, rabiesExposedAnimalIds, foodClaimedBy/
-   *  foodConsumedPhase, timeSinceDeath) with the plain state object
+   *  foodConsumedPhase, deathAtDays) with the plain state object
    *  `animalCorpse.ts` owns — same "state + free functions over an explicit
    *  host" shape as `AnimalLife.ts`'s `AnimalLifeState`. `health.dead`
    *  stays authoritative on the agent; this only tracks what happens to the
@@ -2434,7 +2440,13 @@ export class AnimalAgent {
       eggPending: this.eggPending,
       woolReadyAtDays: this.woolReadyAtDays,
       corpse: this.health.dead
-        ? { timeSinceDeath: this.corpse.timeSinceDeath, meatHarvested: this.corpse.meatHarvested }
+        ? {
+            deathAtDays: this.corpse.deathAtDays ?? this.tickNowDays,
+            meatHarvested: this.corpse.meatHarvested,
+            ...(this.corpse.harvestedAtDays != null
+              ? { harvestedAtDays: this.corpse.harvestedAtDays }
+              : {}),
+          }
         : null,
       owner: this._owner,
       control: this.isPlayerOwned() ? snapshotOwnedAnimalControl(this._control) : undefined,
@@ -2453,7 +2465,7 @@ export class AnimalAgent {
    *  terrain (`snapY()`), never persisted. A dead individual's presentation
    *  (tipped pose, or hidden + harvested-remains mesh) is re-derived directly
    *  here; natural corpse-decay presentation (tint/bones) self-corrects on
-   *  the next `update()` tick from the restored `timeSinceDeath` — see
+   *  the next `update()` tick from the restored `deathAtDays` — see
    *  `advanceAnimalCorpse()`. Never reports `onDeath` — that already fired,
    *  before this save was taken. */
   hydrate(state: AnimalSaveState): void {
@@ -2473,8 +2485,10 @@ export class AnimalAgent {
     this.eggPending = state.eggPending
     this.woolReadyAtDays = state.woolReadyAtDays ?? null
     if (state.corpse) {
-      this.corpse.timeSinceDeath = state.corpse.timeSinceDeath
+      this.corpse.deathAtDays = state.corpse.deathAtDays
       this.corpse.meatHarvested = state.corpse.meatHarvested
+      this.corpse.harvestedAtDays = state.corpse.harvestedAtDays ?? null
+      this.tickNowDays = Math.max(this.tickNowDays, state.corpse.deathAtDays)
       this.anim.stopAll()
       if (this.corpse.meatHarvested) {
         hideLivingVisual(this)
@@ -2515,8 +2529,7 @@ export class AnimalAgent {
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */
   readyToRemove(): boolean {
-    if (shouldRetainStrayedCorpse(this._stray, this.health.dead, this.corpse.timeSinceDeath)) return false
-    return corpseReadyToRemove(this.corpse, this.health.dead)
+    return corpseReadyToRemove(this.corpse, this.health.dead, this.tickNowDays)
   }
 
   /** Minimal deterministic time-skip catch-up (plan 196) — called once by
@@ -2528,16 +2541,12 @@ export class AnimalAgent {
    *  once: a live agent's hunger/thirst/stamina (`tickAnimalLife` is pure
    *  math, safe to call once with a large `elapsedSeconds` instead of many
    *  small steps), a live juvenile's age (`advanceAge`, same transition
-   *  `update()` uses — plan fauna-017 D3), and a corpse's `timeSinceDeath`
-   *  — bumping that alone is enough, because the very next normal `update()`
-   *  call recomputes `corpsePhaseFromElapsed`/`readyToRemove()` fresh and
-   *  will apply the right tint/bones/removal itself, with no separate visual
-   *  catch-up needed here. */
+   *  `update()` uses — plan fauna-017 D3). A corpse ages from
+   *  `deathAtDays` vs live `elapsedDays`, so skip must not add seconds here
+   *  (plan fauna-029) — the next `update()` reads `nowDays` after the clock
+   *  has already jumped. */
   resolveTimeSkip(elapsedSeconds: number): void {
-    if (this.health.dead) {
-      if (!this.corpse.held) this.corpse.timeSinceDeath += elapsedSeconds
-      return
-    }
+    if (this.health.dead) return
     tickAnimalLife(this.life, elapsedSeconds, false, {}, this.def.metabolism)
     this.advanceAge(elapsedSeconds)
   }
@@ -2579,14 +2588,13 @@ export class AnimalAgent {
    *  multi-second harvest channel). */
   harvestMeat(): void {
     if (!this.canHarvestMeat()) return
-    harvestCorpseMeat(this.corpse, this)
-    this.mesh.rotation.z = 0
-    this.snapY()
+    harvestCorpseMeat(this.corpse, this, this.tickNowDays)
     this.labelController.el.style.display = 'none'
   }
 
-  /** Pin this corpse for the duration of a player harvest channel. Linger
-   *  does not advance and `readyToRemove()` stays false until `releaseCorpseHold`. */
+  /** Pin this corpse for the duration of a player harvest channel.
+   *  `readyToRemove()` stays false until `releaseCorpseHold`; world-time
+   *  ageing continues (plan fauna-029). */
   holdCorpse(): void {
     if (!this.health.dead) return
     this.corpse.held = true
@@ -2634,6 +2642,8 @@ export class AnimalAgent {
     this.cancelSourceTarget()
     this.setLeadAttached(false)
     this.onDeath?.(this.animalId)
+    this.corpse.deathAtDays = this.tickNowDays
+    this.deathAnimElapsedSec = 0
     if (this.anim.has('death')) {
       this.deathAnimDurationSec = this.anim.playOnce('death')
     } else {
@@ -2657,7 +2667,7 @@ export class AnimalAgent {
    *  FX presentation is distance-gated (plan 188 §6/§10). No-op once the
    *  corpse has left this path via `harvestMeat()`/`bury()`. */
   private advanceCorpseDecay(dt: number, others: readonly AnimalAgent[], observerPos: THREE.Vector3): void {
-    advanceAnimalCorpse(this.corpse, this, dt, this.rabid, others, observerPos)
+    advanceAnimalCorpse(this.corpse, this, dt, this.rabid, others, observerPos, this.tickNowDays)
   }
 
   /** Lazily seeds `productionReadyAtDays` on the very first real tick — a
@@ -2778,6 +2788,7 @@ export class AnimalAgent {
     this.onAttractedFoodConsumedHook = onAttractedFoodConsumed
     this.attractionClockSec += dt
     pruneAttractionIgnored(this.attractionIgnoreUntil, this.attractionClockSec)
+    this.tickNowDays = nowDays
     if (
       !this.health.dead
       && isStrayedAnimalReturned(this._stray, this.mesh.position, this.health.dead)
@@ -2788,16 +2799,15 @@ export class AnimalAgent {
       this.tickNaturalStrayClassification(dt)
     }
     if (this.health.dead) {
-      if (!this.corpse.held) {
-        this.corpse.timeSinceDeath += dt
-        this.advanceCorpseDecay(dt, others, observerPos)
-      }
+      if (this.corpse.deathAtDays == null) this.corpse.deathAtDays = nowDays
+      this.advanceCorpseDecay(dt, others, observerPos)
       // Keep the mixer advancing only long enough for the one-shot death
       // clip to actually play (plan npc-009) — `null` when there was no clip
       // to play (manual tip fallback, no mixer work needed), so a
       // permanently dead animal never costs a per-frame mixer update for the
-      // rest of the session.
-      if (this.deathAnimDurationSec != null && this.corpse.timeSinceDeath < this.deathAnimDurationSec) {
+      // rest of the session. Real-time elapsed, not world-days (fauna-029).
+      if (this.deathAnimDurationSec != null && this.deathAnimElapsedSec < this.deathAnimDurationSec) {
+        this.deathAnimElapsedSec += dt
         this.anim.update(dt)
       }
       this.lastFaunaDecisionInput = null
@@ -2853,7 +2863,6 @@ export class AnimalAgent {
     const debugPrevZ = this.mesh.position.z
     this.currentVillages = villages
     this.currentOthers = others
-    this.tickNowDays = nowDays
     this.tickGrassForage = grassForage
     this.tickWaterSourceProvider = waterSourceProvider
     const sensingT0 = diagOn ? performance.now() : 0
@@ -4123,7 +4132,7 @@ export class AnimalAgent {
     this.attractionPhase = 'approach'
     this.setIntent('attract', { x: target.x, z: target.z })
     this.sourceDest.set(target.x, 0, target.z)
-    this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+    this.stepNavRescue(this.moveNav, this.sourceDest, this.walkSpeedNow(), dt, 'preferDry')
     return true
   }
 
@@ -4445,12 +4454,12 @@ export class AnimalAgent {
       this.sourceCaveRouteIndex = progress.index
       if (progress.point) {
         this.sourceDest.set(progress.point.x, 0, progress.point.z)
-        this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+        this.stepNavRescue(this.moveNav, this.sourceDest, this.walkSpeedNow(), dt, 'preferDry')
         return true
       }
     }
     this.sourceDest.set(target.x, 0, target.z)
-    this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+    this.stepNavRescue(this.moveNav, this.sourceDest, this.walkSpeedNow(), dt, 'preferDry')
     return true
   }
 
@@ -4548,7 +4557,7 @@ export class AnimalAgent {
         this.pickWanderTarget()
       }
     }
-    this.steerToward(this.target, this.walkSpeedNow(), dt)
+    this.stepNavRescue(this.moveNav, this.target, this.walkSpeedNow(), dt, 'preferDry')
   }
 
   /** `wander()`'s single trip entry point (plan fauna-016 §4) — continues an
@@ -4660,11 +4669,11 @@ export class AnimalAgent {
       const waypoint = this.cave ? this.nextCaveJourneyWaypoint(this.cave.homeToEntrance) : null
       if (waypoint) {
         this.sourceDest.set(waypoint.x, 0, waypoint.z)
-        this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+        this.stepNavRescue(this.moveNav, this.sourceDest, this.walkSpeedNow(), dt, 'preferDry')
         return
       }
       this.sourceDest.copy(trip.destination)
-      this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+      this.stepNavRescue(this.moveNav, this.sourceDest, this.walkSpeedNow(), dt, 'preferDry')
       if (this.arrived(trip.destination, TRIP_ARRIVAL_RADIUS)) trip.phase = 'staying'
       return
     }
@@ -4688,11 +4697,11 @@ export class AnimalAgent {
     const waypoint = this.cave ? this.nextCaveJourneyWaypoint(this.cave.entranceToHome) : null
     if (waypoint) {
       this.sourceDest.set(waypoint.x, 0, waypoint.z)
-      this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+      this.stepNavRescue(this.moveNav, this.sourceDest, this.walkSpeedNow(), dt, 'preferDry')
       return
     }
     this.sourceDest.set(this.home.x, 0, this.home.z)
-    this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+    this.stepNavRescue(this.moveNav, this.sourceDest, this.walkSpeedNow(), dt, 'preferDry')
     if (this.arrived(this.sourceDest, TRIP_ARRIVAL_RADIUS)) this.trip = null
   }
 
@@ -4769,6 +4778,7 @@ export class AnimalAgent {
       if (
         this.isWalkable(x, z)
         && this.caveWanderAccept(x, z)
+        && this.autonomousWanderAccepts(x, z)
         && (this.def.sociability !== 'wild' || this.frenzied || !this.isNearVillage({ x, z }))
       ) {
         this.target.set(x, 0, z)
@@ -4778,12 +4788,13 @@ export class AnimalAgent {
     return false
   }
 
-  /** Physical ability, not route preference (plan fauna-015 §9) — a point
-   *  this species can wade or swim through is walkable exactly like dry
-   *  land; only water deeper than it can safely enter (or a collider) blocks
-   *  it. Autonomous steering/navigation and `driveMounted()` share this one
-   *  check, so a mounted animal's physical water traversability can never
-   *  diverge from its own autonomous behaviour (plan fauna-015 §8). */
+  /** Physical ability, not route preference (plan fauna-015 §9 / fauna-029) —
+   *  a point this species can wade or swim through is walkable exactly like
+   *  dry land; only water deeper than it can safely enter (or a collider)
+   *  blocks it. Autonomous steering/navigation and `driveMounted()` share
+   *  this one check, so a mounted animal's physical water traversability can
+   *  never diverge from its own autonomous behaviour (plan fauna-015 §8).
+   *  Casual wander/trip scoring lives in `autonomousWanderAccepts`. */
   private isWalkable(x: number, z: number): boolean {
     const water = this.sampleLocalWater(x, z)
     if (water.present && classifyWaterTraversal(water.depth, this.def.scale, this.def.water) === null) {
@@ -4795,6 +4806,47 @@ export class AnimalAgent {
       if (colliderContainsPoint(collider, x, z)) return false
     }
     return true
+  }
+
+  /** Current physical water mode at a candidate point — `dry` when no water
+   *  is present; `null` is deeper than this species can enter. */
+  private waterModeAt(x: number, z: number): WaterTraversalMode | null {
+    const water = this.sampleLocalWater(x, z)
+    if (!water.present) return 'dry'
+    return classifyWaterTraversal(water.depth, this.def.scale, this.def.water)
+  }
+
+  private waterRouteCellCostAt(x: number, z: number, intent: WaterRouteIntent): number {
+    const mode = this.waterModeAt(x, z)
+    if (mode === null) return 1
+    return waterTraversalCellCost(mode, this.def.water, intent)
+  }
+
+  /** `true` when a `preferDry` land animal's straight line to `(destX, destZ)`
+   *  crosses swimming it would rather walk around (plan fauna-029). */
+  private destLosHasDispreferredSwim(destX: number, destZ: number): boolean {
+    const ax = this.mesh.position.x
+    const az = this.mesh.position.z
+    const dx = destX - ax
+    const dz = destZ - az
+    const dist = Math.hypot(dx, dz)
+    const step = DEFAULT_CELL_SIZE / 2
+    const steps = Math.max(1, Math.ceil(dist / Math.max(step, 1e-6)))
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps
+      if (isDispreferredSwim(this.waterModeAt(ax + dx * t, az + dz * t), this.def.water, 'preferDry')) {
+        return true
+      }
+    }
+    return false
+  }
+
+  /** Autonomous wander/trip destination filter — ability is `isWalkable`;
+   *  this rejects swimming dests (unless `waterAdapted`) and dests whose
+   *  current-position LOS already crosses dispreferred swimming. */
+  private autonomousWanderAccepts(x: number, z: number): boolean {
+    if (!autonomousDestinationAccepts(this.waterModeAt(x, z), this.def.water)) return false
+    return !this.destLosHasDispreferredSwim(x, z)
   }
 
   /** Extra local-wander acceptance for a cave resident (plan fauna-019 §4):
@@ -4976,9 +5028,9 @@ export class AnimalAgent {
 
     // Steep terrain scales down (and, past the max walkable angle, removes)
     // the uphill component of the step — across-slope/downhill are
-    // untouched (plan 183). 3-tier collision fallback (avoid water: slide
-    // along the shore rather than wading/chasing into it) shared with
-    // `NpcAgent.steerTo` (plan 202).
+    // untouched (plan 183). 3-tier collision fallback shared with
+    // `NpcAgent.steerTo` (plan 202). Water preference is scoring/cost, not
+    // a hard wall here (plan fauna-029).
     const result = stepWithSlopeAndCollision({
       x: this.mesh.position.x,
       z: this.mesh.position.z,
@@ -5002,7 +5054,13 @@ export class AnimalAgent {
    *  directly — the pre-existing behaviour. `dest` itself is never touched
    *  here: the committed prey/flee target stays whatever the caller already
    *  decided (plan npc-005's target commitment is upstream of this). */
-  private stepNavRescue(nav: NavRescue, dest: THREE.Vector3, speed: number, dt: number): void {
+  private stepNavRescue(
+    nav: NavRescue,
+    dest: THREE.Vector3,
+    speed: number,
+    dt: number,
+    intent: WaterRouteIntent = 'allowSwim',
+  ): void {
     if (nav.active) {
       // A route computed toward a much earlier `dest` (e.g. a previous,
       // now-unrelated chase/flee session left it active) is worse than no
@@ -5015,7 +5073,13 @@ export class AnimalAgent {
       }
     }
     const stage = tickMovementWatchdog(nav.watchdog, dt, this.mesh.position.x, this.mesh.position.z)
-    if (stage !== 'none') this.attemptNavRepath(nav, dest)
+    // Swimming is progress, so the stuck watchdog never fires on a river
+    // crossing — `preferDry` must repath as soon as dest LOS is expensive,
+    // not after the animal is already in the water (plan fauna-029).
+    const needImmediateRepath = intent === 'preferDry'
+      && !nav.active
+      && this.destLosHasDispreferredSwim(dest.x, dest.z)
+    if (stage !== 'none' || needImmediateRepath) this.attemptNavRepath(nav, dest, intent)
 
     while (nav.active) {
       const waypoint = nav.waypoints[nav.index]
@@ -5041,10 +5105,17 @@ export class AnimalAgent {
    *  from `ColliderRegistry` itself (see `NavigationQuery`'s doc). A failed
    *  search leaves `nav` untouched, so `stepNavRescue` simply keeps steering
    *  straight at `dest` next frame instead of getting stuck waiting. */
-  private attemptNavRepath(nav: NavRescue, dest: THREE.Vector3): void {
+  private attemptNavRepath(
+    nav: NavRescue,
+    dest: THREE.Vector3,
+    intent: WaterRouteIntent = 'allowSwim',
+  ): void {
     const query: NavigationQuery = {
       isWalkable: (x, z) => this.isWalkable(x, z),
       sampleHeight: this.sampleHeight,
+    }
+    if (intent === 'preferDry') {
+      query.cellCost = (x, z) => this.waterRouteCellCostAt(x, z, intent)
     }
     const t0 = performance.now()
     const result = findPath(
@@ -5114,6 +5185,16 @@ export class AnimalAgent {
     const hit = this.cave.world.queryGroundIn(this.cave.caveId, x, this.mesh.position.y, z)
     this.caveInteriorNow = hit !== null
     return hit ? hit.floorY : this.sampleHeight(x, z)
+  }
+
+  /** Upright the corpse root and snap Y to terrain/cave floor / water bed
+   *  before remains attach (plan fauna-029). Not live `snapY()` — that
+   *  floats a swimming body to the surface. Fresh/rotting tip pose is left
+   *  to `collapse()` until bones/harvest call this. */
+  settleRootForRemains(): void {
+    this.mesh.rotation.z = 0
+    const y = this.groundHeightAt(this.mesh.position.x, this.mesh.position.z)
+    this.mesh.position.y = this.isCapsule ? y + 0.45 * this.def.scale : y
   }
 
   private snapY(): void {

@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1048
+- `AnimalAgent` — class — line 1051
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 543
-- `AnimalAgentDeps` — type — line 872
-- `AnimalSaveState` — type — line 662
-- `AnimalUpdateContext` — type — line 916
-- `BURY_DURATION_SEC` — const — line 355
-- `canPredatorPursueIntoVillage` — function — line 730
-- `FAUNA_SHADOW_DISTANCE` — const — line 324
-- `FaunaAiBranch` — type — line 480
-- `FaunaNavRescueDebugInfo` — type — line 527
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 415
-- `FrenzyWolfCandidate` — type — line 807
-- `HARVEST_MEAT_DURATION_SEC` — const — line 358
-- `isWithinVillageRadius` — function — line 711
-- `NearbyNpcCandidate` — type — line 802
-- `pickNearestEligibleWolf` — function — line 816
-- `pickRabidTarget` — function — line 841
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 342
-- `villageFleeBiasFalloff` — function — line 738
-- `VillageInfo` — type — line 705
+- `AnimalAgentDebugInfo` — type — line 546
+- `AnimalAgentDeps` — type — line 875
+- `AnimalSaveState` — type — line 665
+- `AnimalUpdateContext` — type — line 919
+- `BURY_DURATION_SEC` — const — line 358
+- `canPredatorPursueIntoVillage` — function — line 733
+- `FAUNA_SHADOW_DISTANCE` — const — line 327
+- `FaunaAiBranch` — type — line 483
+- `FaunaNavRescueDebugInfo` — type — line 530
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 418
+- `FrenzyWolfCandidate` — type — line 810
+- `HARVEST_MEAT_DURATION_SEC` — const — line 361
+- `isWithinVillageRadius` — function — line 714
+- `NearbyNpcCandidate` — type — line 805
+- `pickNearestEligibleWolf` — function — line 819
+- `pickRabidTarget` — function — line 844
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 345
+- `villageFleeBiasFalloff` — function — line 741
+- `VillageInfo` — type — line 708
 
 ## `fauna/animalAttraction.ts`
 
@@ -78,36 +78,40 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalCorpse.ts`
 
-- `advanceAnimalCorpse` — function — line 405
-- `AnimalCorpseState` — type — line 123
-- `buryCorpse` — function — line 227
-- `canHarvestMeatFrom` — function — line 88
-- `claimCorpseAsFood` — function — line 431
-- `claimCorpseForCleanup` — function — line 449
-- `CorpseHost` — type — line 202
-- `corpseLingerSeconds` — function — line 39
-- `CorpseNeighbour` — type — line 215
-- `CorpsePhase` — type — line 31
+- `advanceAnimalCorpse` — function — line 423
+- `AnimalCorpseState` — type — line 125
+- `buryCorpse` — function — line 237
+- `canHarvestMeatFrom` — function — line 90
+- `claimCorpseAsFood` — function — line 451
+- `claimCorpseForCleanup` — function — line 469
+- `CORPSE_BONES_ONSET_DAYS` — const — line 35
+- `CORPSE_REMOVE_DAYS` — const — line 37
+- `CORPSE_ROT_ONSET_DAYS` — const — line 33
+- `corpseElapsedDays` — function — line 72
+- `CorpseHost` — type — line 209
+- `corpseLingerDays` — function — line 41
+- `CorpseNeighbour` — type — line 225
+- `CorpsePhase` — type — line 30
   - domain: fauna
   - role: Corpse/remains/decay/rot-FX/rabies-exposure/food-claim state machine for one dead `AnimalAgent` (plan fauna-017 step 5, review E3) — plain state plus free functions over an explicit `CorpseHost`, mirroring how `AnimalLife.ts` owns `AnimalLifeState` without owning the animal. Not a second entity: `health.dead` stays authoritative on `AnimalAgent`, and every public method there (`bury`, `harvestMeat`, `corpsePhase`, `claimAsFood`, …) stays a thin delegate into this module, so no cross- agent call shape changes.
-- `corpsePhaseFromElapsed` — function — line 71
-- `corpseReadyToRemove` — function — line 234
-- `createAnimalCorpseState` — function — line 178
-- `disposeAnimalCorpse` — function — line 475
-- `disposeAnimalCorpseRotFx` — function — line 395
-- `harvestCorpseMeat` — function — line 285
-- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 37
-- `hideLivingVisual` — function — line 242
-- `isRabiesCorpseContact` — function — line 111
-- `markCorpseFoodConsumed` — function — line 466
-- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 60
-- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 63
-- `releaseCorpseClaim` — function — line 439
-- `releaseCorpseCleanupClaim` — function — line 458
-- `rollsRabiesInfection` — function — line 102
-- `rotFxRelevant` — function — line 78
-- `spawnDeathSplat` — function — line 302
-- `spawnHarvestedRemains` — function — line 268
+- `corpsePhaseFromElapsed` — function — line 68
+- `corpseReadyToRemove` — function — line 243
+- `createAnimalCorpseState` — function — line 184
+- `disposeAnimalCorpse` — function — line 495
+- `disposeAnimalCorpseRotFx` — function — line 413
+- `harvestCorpseMeat` — function — line 300
+- `HARVESTED_REMAINS_LINGER_DAYS` — const — line 39
+- `hideLivingVisual` — function — line 256
+- `isRabiesCorpseContact` — function — line 113
+- `markCorpseFoodConsumed` — function — line 486
+- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 57
+- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 60
+- `releaseCorpseClaim` — function — line 459
+- `releaseCorpseCleanupClaim` — function — line 478
+- `rollsRabiesInfection` — function — line 104
+- `rotFxRelevant` — function — line 80
+- `spawnDeathSplat` — function — line 318
+- `spawnHarvestedRemains` — function — line 282
 
 ## `fauna/animalDebugVisual.ts`
 
@@ -313,24 +317,24 @@ Generated from exported TypeScript symbols.
 
 - `AnimalStrayState` — type — line 12
   - domain: fauna
-- `beginStrayState` — function — line 257
+- `beginStrayState` — function — line 256
   - domain: fauna
   - role: Starts a stray episode record. Idempotent: an already-active or previously-ended episode is left untouched so restore/materialization cannot redisplace the same animal.
-- `classifyLostLivestock` — function — line 304
+- `classifyLostLivestock` — function — line 303
   - domain: fauna
   - role: Classifies one livestock individual for quest/world lookup.
-- `clearStrayEpisode` — function — line 279
+- `clearStrayEpisode` — function — line 278
   - domain: fauna
   - role: Ends the live episode, drops survival assist/lead-relevant flags, and keeps origin so a later start is refused.
 - `createEmptyStrayState` — function — line 92
   - domain: fauna
   - role: Creates the inactive stray sentinel used before an episode starts.
-- `hydrateStrayState` — function — line 332
-- `inspectStrayedCorpseState` — function — line 292
+- `hydrateStrayState` — function — line 331
+- `inspectStrayedCorpseState` — function — line 291
   - domain: fauna
   - role: Marks a dead strayed animal as inspected. Does not harvest or remove.
-- `isAnimalStraySave` — function — line 343
-- `isEligibleLostLivestock` — function — line 152
+- `isAnimalStraySave` — function — line 342
+- `isEligibleLostLivestock` — function — line 151
   - domain: fauna
   - role: Eligibility for starting a new stray episode on an existing individual.
 - `isStrayedAnimalReturned` — function — line 125
@@ -345,20 +349,20 @@ Generated from exported TypeScript symbols.
 - `LivestockStrayCandidate` — type — line 64
 - `LostLivestockSourceStatus` — type — line 26
   - domain: fauna
-- `predatorPressureAt` — function — line 204
-- `selectLostLivestock` — function — line 183
+- `predatorPressureAt` — function — line 203
+- `selectLostLivestock` — function — line 182
   - domain: fauna
   - role: Deterministic pick of an existing household livestock id. Never invents a new identity. Prefers sheep when any are eligible.
-- `selectStrayDisplacementTarget` — function — line 225
+- `selectStrayDisplacementTarget` — function — line 224
   - domain: fauna
   - role: Bounded one-shot destination probe. Invalid terrain is rejected; predator pressure is a score penalty, never a hard exclusion. Falls back to the best valid candidate when every probe still has nearby predators.
-- `shouldBeginNaturalStray` — function — line 382
+- `shouldBeginNaturalStray` — function — line 381
   - domain: fauna
   - role: True once sustained out-of-band displacement has cleared the grace window — the caller's cue to begin a natural (non-quest) stray episode.
-- `shouldRetainStrayedCorpse` — function — line 139
+- `shouldRetainStrayedCorpse` — function — line 140
   - domain: fauna
-  - role: Durable corpse-retention predicate for an unresolved stray death.
-- `snapshotStrayState` — function — line 319
+  - role: Extra stray-corpse TTL — always false since fauna-029; natural world-time linger is the dispose clock. Inspect stays a quest flag.
+- `snapshotStrayState` — function — line 318
 - `STRAY_CLASSIFICATION_GRACE_SECONDS` — const — line 62
 - `STRAY_CORPSE_RETENTION_SECONDS` — const — line 53
 - `STRAY_FLEE_RANGE_BONUS` — const — line 44
@@ -370,10 +374,10 @@ Generated from exported TypeScript symbols.
 - `STRAY_PROBE_ATTEMPTS` — const — line 39
 - `STRAY_RETURN_RADIUS` — const — line 34
 - `StrayDisplacementContext` — type — line 75
-- `strayEpisodeSeed` — function — line 356
+- `strayEpisodeSeed` — function — line 355
 - `straySurvivalFleeRangeBonus` — function — line 112
 - `straySurvivalFleeSpeedMultiplier` — function — line 116
-- `tickStrayClassificationGrace` — function — line 367
+- `tickStrayClassificationGrace` — function — line 366
   - domain: fauna
   - role: Natural-stray grace accumulator (plan fauna-025) — resets the instant the animal is back inside `minDistance` of its own home/wander anchor, so a short flee that ends back near home never latches, while a sustained displacement accumulates toward `shouldBeginNaturalStray`.
 
@@ -645,10 +649,15 @@ Generated from exported TypeScript symbols.
 ## `fauna/waterTraversal.ts`
 
 - `AnimalWaterCapability` — type — line 22
+- `autonomousDestinationAccepts` — function — line 103
 - `classifyWaterTraversal` — function — line 51
+- `isDispreferredSwim` — function — line 125
 - `shouldApplyDrowningDamage` — function — line 85
+- `SWIM_PREFER_DRY_CELL_COST` — const — line 99
 - `swimStaminaExertion` — function — line 75
 - `wadeDepthFor` — function — line 40
+- `WaterRouteIntent` — type — line 94
+- `waterTraversalCellCost` — function — line 114
 - `WaterTraversalMode` — type — line 13
   - domain: fauna
   - system: water-traversal

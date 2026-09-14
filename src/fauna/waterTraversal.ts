@@ -85,3 +85,48 @@ export function swimStaminaExertion(capability: AnimalWaterCapability | undefine
 export function shouldApplyDrowningDamage(mode: WaterTraversalMode, staminaExhausted: boolean): boolean {
   return mode === 'swimming' && staminaExhausted
 }
+
+/**
+ * Autonomous route preference vs emergency/physical crossing (plan fauna-029).
+ * Ability stays in `classifyWaterTraversal` / `isWalkable`; this only answers
+ * whether planning should treat swimming as ordinary locomotion.
+ */
+export type WaterRouteIntent = 'allowSwim' | 'preferDry'
+
+/** Finite A* multiplier for swimming cells under `preferDry` — high enough
+ *  that a dry/wading detour inside the local search wins, low enough that a
+ *  river with no dry alternative in bounds is still a legal last resort. */
+export const SWIM_PREFER_DRY_CELL_COST = 10
+
+/** `true` when an autonomous wander/trip destination may land on this mode.
+ *  Physical ability is a separate check (`null` is never a destination). */
+export function autonomousDestinationAccepts(
+  mode: WaterTraversalMode | null,
+  capability: AnimalWaterCapability | undefined,
+): boolean {
+  if (mode === null) return false
+  if (mode === 'swimming') return capability?.waterAdapted === true
+  return true
+}
+
+/** Per-cell A* multiplier for a classified water mode. `null` is not a cost
+ *  — callers reject those points in `isWalkable` instead. */
+export function waterTraversalCellCost(
+  mode: WaterTraversalMode,
+  capability: AnimalWaterCapability | undefined,
+  intent: WaterRouteIntent,
+): number {
+  if (mode !== 'swimming') return 1
+  if (capability?.waterAdapted || intent === 'allowSwim') return 1
+  return SWIM_PREFER_DRY_CELL_COST
+}
+
+/** `true` when a `preferDry` land animal should not casually walk this cell. */
+export function isDispreferredSwim(
+  mode: WaterTraversalMode | null,
+  capability: AnimalWaterCapability | undefined,
+  intent: WaterRouteIntent,
+): boolean {
+  if (mode !== 'swimming') return false
+  return waterTraversalCellCost(mode, capability, intent) > 1
+}

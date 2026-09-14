@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  autonomousDestinationAccepts,
   classifyWaterTraversal,
+  isDispreferredSwim,
   shouldApplyDrowningDamage,
+  SWIM_PREFER_DRY_CELL_COST,
   swimStaminaExertion,
   wadeDepthFor,
+  waterTraversalCellCost,
 } from './waterTraversal'
 
 describe('classifyWaterTraversal (plan fauna-015)', () => {
@@ -79,5 +83,33 @@ describe('shouldApplyDrowningDamage (plan fauna-015 §7)', () => {
   it('leaving swimming for wading/dry stops drowning immediately, even still exhausted', () => {
     expect(shouldApplyDrowningDamage('wading', true)).toBe(false)
     expect(shouldApplyDrowningDamage('dry', true)).toBe(false)
+  })
+})
+
+describe('autonomous water route preference (plan fauna-029)', () => {
+  it('lets a land animal pick dry and wading destinations, not swimming', () => {
+    expect(autonomousDestinationAccepts('dry', undefined)).toBe(true)
+    expect(autonomousDestinationAccepts('wading', undefined)).toBe(true)
+    expect(autonomousDestinationAccepts('swimming', undefined)).toBe(false)
+    expect(autonomousDestinationAccepts(null, undefined)).toBe(false)
+  })
+
+  it('still classifies deep water as physically swimmable for a default land animal', () => {
+    const deep = wadeDepthFor(1) + 0.5
+    expect(classifyWaterTraversal(deep, 1, undefined)).toBe('swimming')
+  })
+
+  it('charges swimming under preferDry but not under allowSwim', () => {
+    expect(waterTraversalCellCost('swimming', undefined, 'preferDry')).toBe(SWIM_PREFER_DRY_CELL_COST)
+    expect(waterTraversalCellCost('swimming', undefined, 'allowSwim')).toBe(1)
+    expect(waterTraversalCellCost('wading', undefined, 'preferDry')).toBe(1)
+    expect(isDispreferredSwim('swimming', undefined, 'preferDry')).toBe(true)
+    expect(isDispreferredSwim('swimming', undefined, 'allowSwim')).toBe(false)
+  })
+
+  it('treats waterAdapted swimming as ordinary locomotion for dest and cost', () => {
+    expect(autonomousDestinationAccepts('swimming', { waterAdapted: true })).toBe(true)
+    expect(waterTraversalCellCost('swimming', { waterAdapted: true }, 'preferDry')).toBe(1)
+    expect(isDispreferredSwim('swimming', { waterAdapted: true }, 'preferDry')).toBe(false)
   })
 })

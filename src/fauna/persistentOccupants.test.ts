@@ -153,7 +153,7 @@ describe('createPersistentOccupantRegistry', () => {
       yaw: 1.2,
       life: { hunger: 0.2, thirst: 0.7, stamina: 0.5 },
       health: { current: 12, max: 40, dead: true },
-      corpse: { timeSinceDeath: 40, meatHarvested: false },
+      corpse: { deathAtDays: 1.5, meatHarvested: false },
       rabid: true,
     })
 
@@ -167,7 +167,7 @@ describe('createPersistentOccupantRegistry', () => {
     expect(record.state.x).toBe(8)
     expect(record.state.z).toBe(3)
     expect(record.state.health.dead).toBe(true)
-    expect(record.state.corpse).toEqual({ timeSinceDeath: 40, meatHarvested: false })
+    expect(record.state.corpse).toEqual({ deathAtDays: 1.5, meatHarvested: false })
     expect(record.state.rabid).toBe(true)
     expect(record.state).not.toHaveProperty('sourceTarget')
     expect(record.state).not.toHaveProperty('trip')

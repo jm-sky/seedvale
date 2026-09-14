@@ -46,9 +46,9 @@ export const STRAY_FLEE_RANGE_BONUS = 4
 export const STRAY_FLEE_SPEED_MULT = 1.12
 
 /**
- * Uninspected stray-corpse retention cap in simulation seconds.
- * `timeSinceDeath` already includes time-skip catch-up, so this is two
- * default world days (`dayLengthSec = 480`) rather than wall-clock hours.
+ * Extra stray-corpse TTL beyond natural linger — unused since fauna-029's
+ * world-time linger (112 world-hours) already exceeds the old two-day
+ * real-time cap. Inspect remains a quest flag (`inspectStrayedCorpseState`).
  */
 export const STRAY_CORPSE_RETENTION_SECONDS = 960
 
@@ -134,15 +134,14 @@ export function isStrayedAnimalReturned(
 
 /**
  * @domain fauna
- * @role Durable corpse-retention predicate for an unresolved stray death.
+ * @role Extra stray-corpse TTL — always false since fauna-029; natural
+ *  world-time linger is the dispose clock. Inspect stays a quest flag.
  */
 export function shouldRetainStrayedCorpse(
-  stray: AnimalStrayState | undefined,
-  dead: boolean,
-  timeSinceDeath: number,
+  _stray: AnimalStrayState | undefined,
+  _dead: boolean,
 ): boolean {
-  if (!dead || !isStrayEpisodeActive(stray) || stray?.corpseInspected) return false
-  return timeSinceDeath < STRAY_CORPSE_RETENTION_SECONDS
+  return false
 }
 
 /**

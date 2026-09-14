@@ -140,4 +140,32 @@ describe('findPath', () => {
     const last = result!.waypoints[result!.waypoints.length - 1]!
     expect(last.z).toBeLessThan(well.z)
   })
+
+  it('skips the direct LOS hop when cellCost > 1 along the line, and routes around when a cheap path exists', () => {
+    const query: NavigationQuery = {
+      isWalkable: () => true,
+      sampleHeight: () => 0,
+      cellCost: (x, z) => (x >= 8 && x <= 12 && z >= -3 && z <= 3 ? 10 : 1),
+    }
+    const result = findPath(query, {}, { x: 0, z: 0 }, { x: 20, z: 0 }, { boundsPadding: 10 })
+    expect(result).not.toBeNull()
+    expect(result!.visitedNodes).toBeGreaterThan(0)
+    const full = [{ x: 0, z: 0 }, ...result!.waypoints]
+    for (let i = 0; i < full.length - 1; i++) {
+      expect(segmentBlockedByRect(full[i]!, full[i + 1]!, 8, 12, -3, 3)).toBe(false)
+    }
+  })
+
+  it('still uses a swimming-cost cell when that is the only passable route (allowSwim / last resort)', () => {
+    const query: NavigationQuery = {
+      isWalkable: (x, z) => !(z < -0.5 || z > 0.5) || (x >= 8 && x <= 12),
+      sampleHeight: () => 0,
+      cellCost: (x) => (x >= 8 && x <= 12 ? 10 : 1),
+    }
+    // Corridor along z=0 is the only way; the expensive band sits on it.
+    const result = findPath(query, {}, { x: 0, z: 0 }, { x: 20, z: 0 }, { boundsPadding: 10 })
+    expect(result).not.toBeNull()
+    const last = result!.waypoints[result!.waypoints.length - 1]!
+    expect(Math.hypot(last.x - 20, last.z)).toBeLessThan(2)
+  })
 })

@@ -3529,8 +3529,10 @@ Generated from TypeScript imports.
 - `ai/socialBehaviour.ts`
 - `fauna/AnimalLife.test.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalCorpse.ts`
 - `fauna/animalMetabolismGameplay.test.ts`
 - `fauna/createFauna.ts`
+- `persistence/saveData.ts`
 - `player/PlayerNeeds.ts`
 - `world/dayNight.ts`
 - `world/timeConversion.test.ts`

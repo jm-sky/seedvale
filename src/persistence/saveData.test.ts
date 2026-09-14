@@ -572,6 +572,72 @@ describe('loadSaveData v1 contract', () => {
     expect(result.data.settlementEconomies.home.productionShortages).toBeUndefined()
   })
 
+  it('migrates v41 livestock/rat/occupant corpse timeSinceDeath into deathAtDays (plan fauna-029)', () => {
+    const livestockRow = {
+      settlementId: 'home',
+      animalId: 'sheep-house0-0',
+      kind: 'sheep' as const,
+      ownerHouseId: 'home:home:0',
+      x: 1,
+      z: 2,
+      yaw: 0.5,
+      health: { current: 0, max: 10, dead: true },
+      life: { hunger: 0.2, thirst: 0.1, stamina: 0 },
+      productionReadyAtDays: null,
+      eggPending: false,
+    }
+    const occupant = {
+      habitatId: 'home:cave:bear',
+      occupantKey: 'resident',
+      animalId: 'persistent:home:cave:bear:resident',
+      kind: 'bear' as const,
+      state: {
+        x: 1, z: 2, yaw: 0,
+        health: { current: 0, max: 40, dead: true },
+        life: { hunger: 0.5, thirst: 0.5, stamina: 0 },
+        productionReadyAtDays: null,
+        eggPending: false,
+        corpse: { timeSinceDeath: 90, meatHarvested: false },
+        rabid: true,
+      },
+    }
+    const result = loadStoredSave({
+      ...validSave,
+      version: 41,
+      elapsedDays: 2,
+      livestock: [{ ...livestockRow, corpse: { timeSinceDeath: 90, meatHarvested: true } }],
+      rats: [{
+        settlementId: 'home',
+        animalId: 'rat-home-0',
+        x: 3,
+        z: 4,
+        yaw: 0,
+        health: { current: 0, max: 5, dead: true },
+        life: { hunger: 0, thirst: 0, stamina: 0 },
+        productionReadyAtDays: null,
+        eggPending: false,
+        corpse: { timeSinceDeath: 48, meatHarvested: false },
+      }],
+      persistentHabitatOccupants: [occupant],
+    })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.livestock?.[0]?.corpse).toEqual({
+      deathAtDays: 2 - 90 / 480,
+      meatHarvested: true,
+      harvestedAtDays: 2 - 90 / 480,
+    })
+    expect(result.data.rats?.[0]?.corpse).toEqual({
+      deathAtDays: 2 - 48 / 480,
+      meatHarvested: false,
+    })
+    expect(result.data.persistentHabitatOccupants?.[0]?.state.corpse).toEqual({
+      deathAtDays: 2 - 90 / 480,
+      meatHarvested: false,
+    })
+  })
+
   it('migrates a v39 save without socialNews to the current version (plan quests-progression-022)', () => {
     const result = loadStoredSave({ ...validSave, version: 39 })
     expect(result.status).toBe('ok')

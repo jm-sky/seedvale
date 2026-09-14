@@ -300,10 +300,14 @@ describe('AnimalAgent', () => {
       animal.hydrate({
         ...snap,
         health: { current: 0, max: snap.health.max, dead: true },
-        corpse: { timeSinceDeath: 90, meatHarvested: true },
+        corpse: { deathAtDays: 1.5, meatHarvested: true, harvestedAtDays: 1.6 },
       })
       expect(animal.isDead()).toBe(true)
-      expect(animal.snapshot().corpse).toEqual({ timeSinceDeath: 90, meatHarvested: true })
+      expect(animal.snapshot().corpse).toEqual({
+        deathAtDays: 1.5,
+        meatHarvested: true,
+        harvestedAtDays: 1.6,
+      })
       expect(animal.snapshot()).not.toHaveProperty('sourceTarget')
       expect(animal.snapshot()).not.toHaveProperty('trip')
     })
@@ -616,7 +620,7 @@ describe('AnimalAgent', () => {
       loaded.hydrate({
         ...loaded.snapshot(),
         health: { current: 0, max: live.health.max, dead: true },
-        corpse: { timeSinceDeath: 90, meatHarvested: false },
+        corpse: { deathAtDays: 1.5, meatHarvested: false },
       })
       expect(loaded.readyToRemove()).toBe(false)
       expect(loaded.inspectStrayedCorpse()).toBe(true)
@@ -951,15 +955,27 @@ describe('AnimalAgent', () => {
       expect(deer.getDebugInfo().updateImportance).toBe('immediate')
     })
 
-    it('keeps corpse/death lifecycle timing on real time', () => {
+    it('keeps a death clip on real time while corpse phase follows world days', () => {
       const deer = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'dead-deer', x: 0, z: 0 }))
       deer.takeDamage(9999)
       expect(deer.isDead()).toBe(true)
       tickFrames(deer, 60)
       expect(deer.getDebugInfo().position).toBeTruthy()
       expect(deer.corpsePhase()).toBe('fresh')
-      // 60 × 1/60 s of decay, unthrottled.
+      // 60 × 1/60 s of real time is far below 4 world-hours of fresh.
       expect(deer.getDebugInfo().dead).toBe(true)
+      deer.resolveTimeSkip(8 * 3600)
+      expect(deer.corpsePhase()).toBe('fresh')
+      deer.update({
+        dt: FRAME,
+        others: [deer],
+        observerPos: FAR,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        nowDays: 40 / 24,
+      })
+      expect(deer.corpsePhase()).toBe('bones')
     })
 
     it('never throttles a mounted, led or player-owned animal', () => {

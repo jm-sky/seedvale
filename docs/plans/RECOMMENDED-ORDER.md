@@ -238,6 +238,7 @@ graph TD
   fauna_026["fauna-026 — Predator ↔ livestock encounter set"]
   fauna_027["fauna-027 — Dungeon cave residents and pool foraging"]
   fauna_028["fauna-028 — AnimalAgent importance/cadence — ograniczenie częstotliwości drogiej pracy"]
+  fauna_029["fauna-029 — Animal water route preference, remains transform, and corpse world-time"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -538,6 +539,7 @@ graph TD
   fauna_014 --> fauna_007
   fauna_014 --> fauna_023
   fauna_015 --> fauna_016
+  fauna_015 --> fauna_029
   fauna_016 --> fauna_004
   fauna_016 --> fauna_018
   fauna_016 --> fauna_019

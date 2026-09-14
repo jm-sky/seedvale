@@ -78,7 +78,7 @@ ability = can this animal physically traverse this point?
 preference = should autonomous planning choose this route?
 ```
 
-The second problem may become a later plan.
+The second problem is fauna-029 (`docs/plans/fauna-029-animal-water-route-preference-and-corpse-world-time.md`): route preference / traversal cost, without turning water back into a hard wall.
 
 ## Water and terrain data
 
