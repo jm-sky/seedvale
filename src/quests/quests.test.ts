@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AuthoredQuestDef, QuestDef } from './quests'
+import type { AuthoredQuestDef, QuestDef, QuestOfferRankSignal } from './quests'
 import { materializeAuthoredQuestDefs } from './materializeAuthoredQuests'
 import {
   bindDarkForestTreasureQuest,
@@ -8,6 +8,7 @@ import {
   buildLandmarkQuests,
   QuestDefinitionValidationError,
   QUESTS,
+  rankQuestOfferCandidates,
   validateQuestDefinitions,
 } from './quests'
 
@@ -593,5 +594,51 @@ describe('validateQuestDefinitions nonlinear stages (plan quests-progression-032
         reminderLine: 'r',
       }],
     })])).toThrow(/not forward-only/)
+  })
+})
+
+describe('rankQuestOfferCandidates (plan quests-progression-033)', () => {
+  function candidate(
+    id: string,
+    overrides: Partial<Omit<QuestOfferRankSignal, 'def'>> = {},
+  ): QuestOfferRankSignal {
+    return {
+      def: { id } as QuestDef,
+      urgency: 'normal',
+      isStoryContinuation: false,
+      relation: 0,
+      priority: 0,
+      ...overrides,
+    }
+  }
+
+  it('ranks urgent above normal regardless of other signals', () => {
+    const normal = candidate('normal', { priority: 100 })
+    const urgent = candidate('urgent', { urgency: 'urgent', priority: -100 })
+    expect(rankQuestOfferCandidates([normal, urgent]).map((d) => d.id)).toEqual(['urgent', 'normal'])
+  })
+
+  it('ranks a story continuation above a fresh candidate of equal urgency', () => {
+    const fresh = candidate('fresh')
+    const continuation = candidate('continuation', { isStoryContinuation: true })
+    expect(rankQuestOfferCandidates([fresh, continuation]).map((d) => d.id)).toEqual(['continuation', 'fresh'])
+  })
+
+  it('breaks a relation tie by authored priority, then by a stable id tie-break', () => {
+    const low = candidate('low-priority', { priority: 1 })
+    const high = candidate('high-priority', { priority: 5 })
+    expect(rankQuestOfferCandidates([low, high]).map((d) => d.id)).toEqual(['high-priority', 'low-priority'])
+
+    const b = candidate('b')
+    const a = candidate('a')
+    expect(rankQuestOfferCandidates([b, a]).map((d) => d.id)).toEqual(['a', 'b'])
+  })
+
+  it('is deterministic — never reorders equal candidates randomly across repeated calls', () => {
+    const candidates = [candidate('x'), candidate('y'), candidate('z')]
+    const first = rankQuestOfferCandidates(candidates).map((d) => d.id)
+    const second = rankQuestOfferCandidates(candidates).map((d) => d.id)
+    expect(first).toEqual(second)
+    expect(first).toEqual(['x', 'y', 'z'])
   })
 })

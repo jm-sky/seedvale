@@ -444,5 +444,9 @@ export function buildOldBonesAdventureCaveQuest(
     stages,
     reportLine: 'Ta stara sprawa wreszcie ma koniec.',
     outcomes,
+    // The carried signet's own return/give/keep choice IS the resolution
+    // (plan quests-progression-033) — a generic opt-out here would strand
+    // that carried instance outside any quest tracking.
+    abandonment: { allowed: false },
   }
 }

@@ -28,6 +28,7 @@ import {
   type QuestConsequences,
   type QuestDef,
   type QuestObjective,
+  type QuestOfferRankSignal,
   type QuestOutcome,
   type QuestOutcomeId,
   type QuestPrerequisite,
@@ -39,6 +40,7 @@ import {
   questStageObjectiveSlots,
   type QuestStageSlotProgress,
   type QuestState,
+  rankQuestOfferCandidates,
   RELATION_LEVEL_THRESHOLDS,
   type RelationLevel,
   relationLevelMeetsMinimum,
@@ -97,10 +99,14 @@ export type QuestDialogTopic = {
  */
 export type QuestDialogOverride = {
   line: string
-  /** Present only when the dialog should present an accept/decline choice. */
+  /** Present only when the dialog should present an accept/decline choice.
+   *  `onDecline` is absent for a `QuestOfferPolicy.exposure: 'story'` offer
+   *  (plan quests-progression-033) — the dialog then shows accept only, and
+   *  closing/backing out of it leaves the offer standing rather than
+   *  suppressing it. */
   offer?: {
     onAccept: () => void
-    onDecline: () => void
+    onDecline?: () => void
   }
   /** Conscious player speech for report / talk_to_npc / talk_to_npc_choice /
    *  stage dialogue actions / gather hand-in. Always shown directly — never
@@ -154,6 +160,9 @@ type QuestRuntimeProgress = {
   stageCount?: number
   /** Per-slot progress for the current multi-objective stage (plan quests-progression-032). */
   stageSlotProgress?: Record<string, QuestStageSlotProgress>
+  /** Decline cooldown — see `QuestProgressEntry.offerSuppressedUntilDay`
+   *  (plan quests-progression-033). */
+  offerSuppressedUntilDay?: number
 }
 
 /** Player-only harvest report (plan quests-progression-020). */
@@ -328,6 +337,17 @@ const NO_SETTLEMENT_LIGHT: SettlementLightLookup = {
 const QUEST_COMPLETE_SOUND_VOLUME = 0.35
 /** Used when a failed stage has no `failLine` of its own. */
 const QUEST_FAILED_FALLBACK_LINE = 'To się już nie uda.'
+/** Shown for an `abandoned` entry in the quest log when no other result text applies. */
+const QUEST_ABANDONED_RESULT_TEXT = 'Zrezygnowałeś z tego zadania.'
+/** Generic player line offered on an abandonable `active` giver quest (plan
+ *  quests-progression-033) — see `QuestOfferPolicy`'s sibling,
+ *  `QuestAbandonment`. */
+const QUEST_ABANDON_PLAYER_LINE = 'Przykro mi, jednak nie dam rady ci pomóc.'
+const QUEST_ABANDON_NPC_REPLY = 'Szkoda, ale rozumiem. Może innym razem.'
+/** How long a declined offer stays suppressed before it can re-enter
+ *  candidate discovery (plan quests-progression-033) — reuses
+ *  `QuestWorldTimeLookup.getElapsedDays()` rather than a cooldown manager. */
+const OFFER_DECLINE_SUPPRESSION_DAYS = 1
 const DEFAULT_TALK_PLAYER_LINE = 'Chciałem ci coś powiedzieć.'
 const DEFAULT_REPORT_PLAYER_LINE = 'Zdaję relację z zadania.'
 const DEFAULT_REPORT_PROMPT = 'No i jak? Udało się?'
@@ -760,6 +780,112 @@ export class QuestManager {
     return this.meetsAvailability(def)
   }
 
+  private isStoryExposure(def: QuestDef): boolean {
+    return def.offer?.exposure === 'story'
+  }
+
+  private isUrgentOffer(def: QuestDef): boolean {
+    return def.offer?.urgency === 'urgent'
+  }
+
+  /** Whether a `story`-exposure offer may be generically declined — see
+   *  `QuestOfferPolicy.exposure`'s doc comment. */
+  private isDeclinable(def: QuestDef): boolean {
+    return !this.isStoryExposure(def)
+  }
+
+  private isOfferSuppressed(id: string): boolean {
+    const until = this.stateOf(id).offerSuppressedUntilDay
+    return until !== undefined && this.worldTime.getElapsedDays() < until
+  }
+
+  /** `not_offered` defs for `npcId` that meet authored availability and
+   *  aren't cooling down from a recent decline — candidate discovery is
+   *  read-only; callers decide what to do with the result (plan
+   *  quests-progression-033). */
+  private eligibleNotOfferedCandidates(npcId: NpcId): QuestDef[] {
+    return this.defs.filter((def) => (
+      def.giver.npcId === npcId
+      && this.stateOf(def.id).state === 'not_offered'
+      && this.meetsAvailability(def)
+      && !this.isOfferSuppressed(def.id)
+    ))
+  }
+
+  private offerRankSignal(def: QuestDef): QuestOfferRankSignal {
+    return {
+      def,
+      urgency: this.isUrgentOffer(def) ? 'urgent' : 'normal',
+      isStoryContinuation: def.availability?.prerequisites?.some((prereq) => prereq.type === 'quest_outcome') ?? false,
+      relation: this.getRelation(def.giver.npcId),
+      priority: def.offer?.priority ?? 0,
+    }
+  }
+
+  /**
+   * Which `not_offered` defs for `npcId` would enter the offer lifecycle
+   * right now: at most one `normal`-urgency candidate and one `urgent`
+   * candidate — each only when that slot isn't already occupied by an
+   * existing `offered` def for this giver — plus every eligible
+   * `story`-exposure candidate, which never competes for a slot. Pure/
+   * read-only; `admitOffersForGiver` is the only mutating caller (plan
+   * quests-progression-033).
+   *
+   * @domain quests-progression
+   */
+  private selectableOfferIds(npcId: NpcId): ReadonlySet<string> {
+    const giverDefs = this.defs.filter((def) => def.giver.npcId === npcId)
+    const normalSlotTaken = giverDefs.some((def) => (
+      this.stateOf(def.id).state === 'offered' && !this.isStoryExposure(def) && !this.isUrgentOffer(def)
+    ))
+    const urgentSlotTaken = giverDefs.some((def) => (
+      this.stateOf(def.id).state === 'offered' && !this.isStoryExposure(def) && this.isUrgentOffer(def)
+    ))
+
+    const eligible = this.eligibleNotOfferedCandidates(npcId)
+    const selected = new Set<string>()
+    for (const def of eligible) {
+      if (this.isStoryExposure(def)) selected.add(def.id)
+    }
+
+    const capped = eligible.filter((def) => !this.isStoryExposure(def))
+    const ranked = rankQuestOfferCandidates(capped.map((def) => this.offerRankSignal(def)))
+    if (!normalSlotTaken) {
+      const pick = ranked.find((def) => !this.isUrgentOffer(def))
+      if (pick) selected.add(pick.id)
+    }
+    if (!urgentSlotTaken) {
+      const pick = ranked.find((def) => this.isUrgentOffer(def))
+      if (pick) selected.add(pick.id)
+    }
+    return selected
+  }
+
+  /** Promotes this interaction's selected `not_offered` candidates to
+   *  `offered` for `npcId` — called once at the top of `onInteract`, before
+   *  any def's dialogue contribution is read, so candidate discovery and
+   *  ranking stay read-only and mutation only ever touches the selected
+   *  defs (plan quests-progression-033). */
+  private admitOffersForGiver(npcId: NpcId): void {
+    for (const id of this.selectableOfferIds(npcId)) {
+      if (this.stateOf(id).state !== 'not_offered') continue
+      this.setQuestState(id, { state: 'offered', stageIndex: 0 })
+    }
+  }
+
+  /** `not_offered` def ids that currently count as exposed for their giver
+   *  — used by `list()`/`labelMarker()` so the quest log and NPC markers
+   *  agree with what dialogue actually offers, instead of leaking every
+   *  eligible-but-capped candidate (plan quests-progression-033). */
+  private computeExposableNotOfferedIds(): ReadonlySet<string> {
+    const giverIds = new Set(this.defs.map((def) => def.giver.npcId))
+    const result = new Set<string>()
+    for (const npcId of giverIds) {
+      for (const id of this.selectableOfferIds(npcId)) result.add(id)
+    }
+    return result
+  }
+
   private objectiveDescription(stage: QuestStage, questId: string): string {
     const s = this.stateOf(questId)
     const unfinished = questStageObjectiveSlots(stage).filter((slot) => !this.isSlotComplete(s, stage, slot))
@@ -778,18 +904,21 @@ export class QuestManager {
     return stage.description
   }
 
-  /** Omits `not_offered` quests whose availability gate isn't met yet — an
-   *  unmet-availability quest stays fully hidden rather than shown as locked
+  /** Omits `not_offered` quests whose availability gate isn't met yet, and
+   *  (plan quests-progression-033) any eligible `not_offered` candidate the
+   *  offer cap doesn't currently expose — an unmet-availability or
+   *  currently-capped quest stays fully hidden rather than shown as locked
    *  (plan 093 Etap C's default; a future milestone may add an explicit
    *  "locked" surface for quests the design wants to hint at). */
   list(): QuestListEntry[] {
+    const exposable = this.computeExposableNotOfferedIds()
     return this.defs
-      .filter((def) => this.stateOf(def.id).state !== 'not_offered' || this.meetsAvailability(def))
+      .filter((def) => this.stateOf(def.id).state !== 'not_offered' || exposable.has(def.id))
       .map((def) => {
         const s = this.stateOf(def.id)
         const stage = this.currentStage(def, s.stageIndex)
         const resolved = resolvedOutcome(def, s)
-        const terminal = s.state === 'complete' || s.state === 'failed' || s.state === 'invalidated'
+        const terminal = s.state === 'abandoned' || s.state === 'complete' || s.state === 'failed' || s.state === 'invalidated'
         return {
           id: def.id,
           title: def.title,
@@ -1209,7 +1338,10 @@ export class QuestManager {
    *  the existing successful-turn-in thank-you clip. */
   private applyOutcome(def: QuestDef, outcomeId: QuestOutcomeId): QuestOutcome | null {
     const current = this.stateOf(def.id)
-    if (current.state === 'complete' || current.state === 'failed' || current.state === 'invalidated') return null
+    if (
+      current.state === 'abandoned' || current.state === 'complete'
+      || current.state === 'failed' || current.state === 'invalidated'
+    ) return null
     const outcome = def.outcomes.find((entry) => entry.id === outcomeId)
     if (!outcome) return null
 
@@ -1240,6 +1372,53 @@ export class QuestManager {
     }
     if (def.settlementId && consequences.social) {
       this.applySocialConsequence({ settlementId: def.settlementId, ...consequences.social })
+    }
+  }
+
+  /** Whether `def` currently allows the generic active-quest opt-out — see
+   *  `QuestAbandonment`. Absent policy = allowed. */
+  private canAbandon(def: QuestDef): boolean {
+    return def.abandonment?.allowed !== false
+  }
+
+  /** Conscious player opt-out on an `active` giver quest: `active →
+   *  abandoned`, exactly once, with the same cleanup a terminal outcome does
+   *  (runtime animal-target binding, feed dedupe) and the def's own optional
+   *  `QuestConsequences` — never a reward. Distinct from `failed`/
+   *  `invalidated`: the binding wasn't lost, the player chose to stop (plan
+   *  quests-progression-033). Re-reads `def`'s current state itself, so a
+   *  stale dialogue callback invoked twice cannot apply consequences twice. */
+  private applyAbandonment(def: QuestDef): boolean {
+    const current = this.stateOf(def.id)
+    if (current.state !== 'active' || !this.canAbandon(def)) return false
+    this.setQuestState(def.id, { state: 'abandoned', stageIndex: current.stageIndex })
+    this.clearAnimalTargetsForQuest(def.id)
+    this.clearFeedDedupe(def.id, current.stageIndex)
+    this.applyConsequences(def, def.abandonment?.consequences)
+    return true
+  }
+
+  /** Public opt-out entry point — see `applyAbandonment`. */
+  abandonQuest(questId: string): boolean {
+    const def = this.defs.find((d) => d.id === questId)
+    if (!def) return false
+    return this.applyAbandonment(def)
+  }
+
+  /** Generic "give up on this active quest" dialogue action for `def`'s
+   *  giver, or null when its policy disables it (plan quests-progression-033).
+   *  `onSelect` re-reads live state via `abandonQuest`, so an outdated
+   *  callback (e.g. a stale menu after the quest already resolved another
+   *  way) cannot replay consequences. */
+  private abandonDialogAction(def: QuestDef): QuestDialogAction | null {
+    if (!this.canAbandon(def)) return null
+    const questId = def.id
+    return {
+      label: QUEST_ABANDON_PLAYER_LINE,
+      onSelect: () => {
+        this.abandonQuest(questId)
+        return QUEST_ABANDON_NPC_REPLY
+      },
     }
   }
 
@@ -1281,12 +1460,11 @@ export class QuestManager {
     this.lifecycleHooks.onStageAdvanced?.(def.id, clearedIndex)
   }
 
+  /** Presents an already-`offered` def's offer dialogue. Promotion from
+   *  `not_offered` happens once per interaction, before any def's
+   *  contribution is read — see `admitOffersForGiver` (plan
+   *  quests-progression-033). */
   private handleGiverOffer(def: QuestDef): QuestDialogOverride | null {
-    const s = this.stateOf(def.id)
-    if (s.state === 'not_offered') {
-      if (!this.meetsAvailability(def)) return null
-      this.setQuestState(def.id, { state: 'offered', stageIndex: 0 })
-    }
     if (this.stateOf(def.id).state !== 'offered') return null
     return {
       line: def.offerLine,
@@ -1297,9 +1475,21 @@ export class QuestManager {
           this.bindAnimalTargetIfNeeded(def, 0)
           this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
         },
-        onDecline: () => this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 }),
+        ...(this.isDeclinable(def) ? { onDecline: () => this.declineOffer(def) } : {}),
       },
     }
+  }
+
+  /** Returns a declined offer to `not_offered` with a short suppression so
+   *  the very next conversation doesn't re-admit it (plan
+   *  quests-progression-033) — the world problem this offer represents is
+   *  unaffected; only the quest layer's offer bookkeeping changes. */
+  private declineOffer(def: QuestDef): void {
+    this.setQuestState(def.id, {
+      state: 'not_offered',
+      stageIndex: 0,
+      offerSuppressedUntilDay: this.worldTime.getElapsedDays() + OFFER_DECLINE_SUPPRESSION_DAYS,
+    })
   }
 
   private handleGiverReminder(def: QuestDef): QuestDialogOverride | null {
@@ -1313,36 +1503,43 @@ export class QuestManager {
     return { line: stage.reminderLine }
   }
 
+  /** Active giver contribution: report/gather-turn-in actions when ready,
+   *  plus (plan quests-progression-033) a generic opt-out action so an
+   *  `active` quest's reminder is never action-less just because its
+   *  objective isn't gather/report-driven — unless the def's own
+   *  `QuestAbandonment` disables it. */
   private collectGiverActions(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
     if (npcId !== def.giver.npcId) return null
     const s = this.stateOf(def.id)
     if (s.state === 'active') {
       const stage = this.currentStage(def, s.stageIndex)
       if (!stage) return null
+      const abandonAction = this.abandonDialogAction(def)
       if (this.unfinishedSlots(def, s).some((slot) => slot.objective.type === 'resolve_storage_rat_infestation')) {
         if (this.maybeAdvanceResolvedStorageRatInfestation(def, s)) {
           const updated = this.stateOf(def.id)
           if (updated.state === 'ready_to_report') return this.reportOverride(def)
         }
-        return null
+        return abandonAction ? { line: this.storageRatInfestationReminder(def, stage), actions: [abandonAction] } : null
       }
       const gatherSlot = this.unfinishedSlots(def, s).find((slot) => slot.objective.type === 'gather_item')
       if (gatherSlot && gatherSlot.objective.type === 'gather_item') {
         const { kind, count } = gatherSlot.objective
         const isFinalStage = s.stageIndex >= def.stages.length - 1 && this.unfinishedSlots(def, s).length === 1 && !stage.transitions
-        if (isFinalStage && !uniqueOutcomeForState(def, 'complete')) return null
-        if (!this.inventory.has(kind, count)) return null
+        const readyToTurnIn = !(isFinalStage && !uniqueOutcomeForState(def, 'complete')) && this.inventory.has(kind, count)
+        if (!readyToTurnIn) {
+          return abandonAction ? { line: stage.reminderLine, actions: [abandonAction] } : null
+        }
         const stageIndex = s.stageIndex
         const slotId = gatherSlot.id
-        return {
-          line: stage.reminderLine,
-          actions: [{
-            label: stage.playerLine ?? def.reportPlayerLine ?? DEFAULT_GATHER_PLAYER_LINE,
-            onSelect: () => this.selectGatherTurnIn(def, stageIndex, slotId),
-          }],
-        }
+        const actions: QuestDialogAction[] = [{
+          label: stage.playerLine ?? def.reportPlayerLine ?? DEFAULT_GATHER_PLAYER_LINE,
+          onSelect: () => this.selectGatherTurnIn(def, stageIndex, slotId),
+        }]
+        if (abandonAction) actions.push(abandonAction)
+        return { line: stage.reminderLine, actions }
       }
-      return null
+      return abandonAction ? { line: stage.reminderLine, actions: [abandonAction] } : null
     }
     if (s.state === 'ready_to_report') return this.reportOverride(def)
     return null
@@ -1594,8 +1791,14 @@ export class QuestManager {
    *  being silently dropped. With exactly one quest context total, the
    *  single-quest UX is unchanged (no `topics` wrapper). `completedFallback`
    *  (plan 153) — an already-turned-in quest's `reportLine`, used only when
-   *  no definition has any contribution at all. */
+   *  no definition has any contribution at all.
+   *
+   *  Selected `not_offered` candidates are admitted to `offered` once up
+   *  front — see `admitOffersForGiver` — so the per-def loop below only ever
+   *  reads state, never mutates it into existence (plan
+   *  quests-progression-033). */
   onInteract(npcId: NpcId): QuestDialogOverride | null {
+    this.admitOffersForGiver(npcId)
     const actionable: QuestDialogOverride[] = []
     const passive: { def: QuestDef, override: QuestDialogOverride }[] = []
     let completedFallback: QuestDialogOverride | null = null
@@ -1715,8 +1918,11 @@ export class QuestManager {
    *  several concurrent quests, and an earlier `active` one must not hide a
    *  later one that is `ready_to_report`. Priority — independent of `defs`
    *  order — is `?` (required dialogue target) > `✓` (any quest
-   *  `ready_to_report`) > `!` (any quest `offered`/available `not_offered`)
-   *  > `…` (any quest `active`) > `null`. */
+   *  `ready_to_report`) > `!` (any quest `offered`/exposable `not_offered`)
+   *  > `…` (any quest `active`) > `null`. `not_offered` counts only when the
+   *  offer cap would actually expose it right now — see `selectableOfferIds`
+   *  (plan quests-progression-033) — so a capped/suppressed candidate
+   *  doesn't flag an NPC with `!` for an offer dialogue won't actually show. */
   labelMarker(npcId: NpcId): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
@@ -1728,13 +1934,14 @@ export class QuestManager {
     let hasReady = false
     let hasAvailable = false
     let hasActive = false
+    const exposable = this.selectableOfferIds(npcId)
     for (const def of this.defs) {
       if (npcId !== def.giver.npcId) continue
       const s = this.stateOf(def.id)
       if (s.state === 'ready_to_report') hasReady = true
       else if (s.state === 'active') hasActive = true
       else if (s.state === 'offered') hasAvailable = true
-      else if (s.state === 'not_offered' && this.meetsAvailability(def)) hasAvailable = true
+      else if (s.state === 'not_offered' && exposable.has(def.id)) hasAvailable = true
     }
     if (hasReady) return QUEST_MARKER_READY
     if (hasAvailable) return QUEST_MARKER_AVAILABLE
@@ -1778,6 +1985,9 @@ export class QuestManager {
       if ((s.state === 'complete' || s.state === 'failed') && s.resolvedOutcomeId) {
         entry.resolvedOutcomeId = s.resolvedOutcomeId
       }
+      if (s.state === 'not_offered' && s.offerSuppressedUntilDay !== undefined) {
+        entry.offerSuppressedUntilDay = s.offerSuppressedUntilDay
+      }
       return entry
     })
   }
@@ -1794,6 +2004,9 @@ function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
   if ((entry.state === 'complete' || entry.state === 'failed') && entry.resolvedOutcomeId) {
     progress.resolvedOutcomeId = entry.resolvedOutcomeId
   }
+  if (entry.state === 'not_offered' && entry.offerSuppressedUntilDay !== undefined) {
+    progress.offerSuppressedUntilDay = entry.offerSuppressedUntilDay
+  }
   return progress
 }
 
@@ -1806,6 +2019,7 @@ function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): Qu
     stageIndex: entry.stageIndex,
     ...(entry.stageCount !== undefined ? { stageCount: entry.stageCount } : {}),
     ...(entry.stageSlotProgress !== undefined ? { stageSlotProgress: entry.stageSlotProgress } : {}),
+    ...(entry.offerSuppressedUntilDay !== undefined ? { offerSuppressedUntilDay: entry.offerSuppressedUntilDay } : {}),
   }
   if (entry.state !== 'complete' && entry.state !== 'failed') return base
   if (entry.resolvedOutcomeId) {
@@ -1830,6 +2044,7 @@ function resultPresentation(
   if (outcome?.resultText) return outcome.resultText
   if (progress.state === 'complete') return def.reportLine
   if (progress.state === 'failed') return stage?.failLine
+  if (progress.state === 'abandoned') return QUEST_ABANDONED_RESULT_TEXT
   return undefined
 }
 

@@ -84,6 +84,7 @@ function makeManager(
   spawnPointDestruction?: import('./QuestManager').SpawnPointDestructionLookup,
   worldQuestSource?: import('./QuestManager').WorldQuestSourceLookup,
   lostLivestockSource?: import('./opportunities/worldQuestOpportunityTypes').LostLivestockSourceLookup,
+  worldTime?: import('./QuestManager').QuestWorldTimeLookup,
 ): QuestManager {
   return new QuestManager(
     defs,
@@ -102,6 +103,7 @@ function makeManager(
     undefined,
     worldQuestSource,
     lostLivestockSource,
+    worldTime,
   )
 }
 
@@ -120,6 +122,30 @@ function acceptOffer(qm: QuestManager, npcName: string): void {
   const offer = qm.onInteract(npcName)
   offer?.offer?.onAccept()
 }
+
+/** Accepts whichever offer is currently exposed for `npcName` — top-level or
+ *  the first topic carrying one — without caring which specific quest wins
+ *  the offer-selection ranking (plan quests-progression-033). Two competing
+ *  `not_offered` quests for one giver need two calls: the first exposes and
+ *  accepts one, which frees the giver's normal-offer slot so the second call
+ *  exposes and accepts the other. */
+function acceptNextOffered(qm: QuestManager, npcName: string): void {
+  const dialog = qm.onInteract(npcName)
+  if (dialog?.offer) {
+    dialog.offer.onAccept()
+    return
+  }
+  for (const topic of dialog?.topics ?? []) {
+    const resolved = topic.resolve()
+    if (resolved.offer) {
+      resolved.offer.onAccept()
+      return
+    }
+  }
+}
+
+/** Generic active-quest opt-out action label (plan quests-progression-033). */
+const ABANDON_LABEL = 'Przykro mi, jednak nie dam rady ci pomóc.'
 
 function selectAction(dialog: QuestDialogOverride | null, index = 0): string | undefined {
   return dialog?.actions?.[index]?.onSelect()
@@ -1024,6 +1050,11 @@ describe('QuestManager promised reward preview', () => {
     const hidden = quest({
       ...simpleQuest,
       id: 'hidden',
+      // A different giver so this doesn't compete with `simple`/`mixed` for
+      // one giver's single normal offer slot (plan quests-progression-033) —
+      // this test is about `promisedReward` computation, not ranking.
+      giverName: 'Piotr',
+      giver: { npcId: 'Piotr' },
       outcomes: [{
         id: 'complete',
         state: 'complete',
@@ -1033,6 +1064,8 @@ describe('QuestManager promised reward preview', () => {
     const mixed = quest({
       ...simpleQuest,
       id: 'mixed',
+      giverName: 'Marek',
+      giver: { npcId: 'Marek' },
       outcomes: [
         { id: 'a', state: 'complete', reward: { visibility: 'shown', items: [{ kind: 'coin', count: 5 }] } },
         { id: 'b', state: 'complete', reward: { visibility: 'shown', items: [{ kind: 'shell', count: 1 }] } },
@@ -2032,7 +2065,12 @@ describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective(CAVE_REF)
     const dialog = qm.onInteract('Kasia')
-    expect(dialog?.actions).toHaveLength(1)
+    // The talk-choice action plus the generic active-quest opt-out (plan
+    // quests-progression-033) — neither resolves the quest on its own.
+    expect(dialog?.actions?.map((a) => a.label)).toEqual([
+      'Znalazłem przesyłkę. Proszę, jest twoja.',
+      ABANDON_LABEL,
+    ])
     expect(qm.getState('zaginiona-przesylka')).toBe('active')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBeUndefined()
   })
@@ -2490,7 +2528,8 @@ describe('QuestManager playtest reachability (plan quests-progression-018)', () 
     startScoutAtStag(qm)
     const dialog = qm.onInteract('Piotr')
     expect(dialog?.line).toBe('Widziałeś już jelenia?')
-    expect(labels(dialog)).toEqual([STAG_LIE, STAG_HONEST])
+    // Plus the generic active-quest opt-out action (plan quests-progression-033).
+    expect(labels(dialog)).toEqual([STAG_LIE, STAG_HONEST, ABANDON_LABEL])
     expect(qm.getState('zwiadowca')).toBe('active')
     expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
   })
@@ -2557,7 +2596,9 @@ describe('QuestManager playtest reachability (plan quests-progression-018)', () 
     acceptOffer(qm, 'Marek')
     expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(0)
     const dialog = qm.onInteract('Piotr')
-    expect(labels(dialog)).toEqual([BOAR_TALK])
+    // `zwiadowca`'s own giver reminder now also carries the generic opt-out
+    // action (plan quests-progression-033) — it still doesn't hide dzik's talk target.
+    expect(labels(dialog)).toEqual([ABANDON_LABEL, BOAR_TALK])
     expect(selectLabel(dialog, BOAR_TALK)).toContain('Przy szlaku w lesie')
     expect(qm.exportProgress().find((entry) => entry.id === 'dzik-przy-szlaku')?.stageIndex).toBe(1)
     expect(qm.getState('zwiadowca')).toBe('active')
@@ -2579,7 +2620,9 @@ describe('QuestManager playtest reachability (plan quests-progression-018)', () 
     startScoutAtStag(qm)
     acceptOffer(qm, 'Marek')
     const dialog = qm.onInteract('Piotr')
-    expect(labels(dialog)).toEqual([STAG_LIE, STAG_HONEST, BOAR_TALK])
+    // Plus the generic active-quest opt-out action from `zwiadowca` itself
+    // (plan quests-progression-033).
+    expect(labels(dialog)).toEqual([STAG_LIE, STAG_HONEST, ABANDON_LABEL, BOAR_TALK])
     expect(selectLabel(dialog, BOAR_TALK)).toContain('Przy szlaku w lesie')
     expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(1)
     expect(qm.exportProgress().find((entry) => entry.id === 'dzik-przy-szlaku')?.stageIndex).toBe(1)
@@ -2689,14 +2732,15 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
     expect(qm.getState('reminderB')).toBe('active')
 
     const dialog = qm.onInteract('Anna')
-    expect(dialog?.actions).toBeUndefined()
     expect(dialog?.offer).toBeUndefined()
-    expect(dialog?.topics?.map((t) => t.label)).toEqual(['reminderA', 'reminderB'])
-    expect(dialog?.topics?.[0]?.resolve()).toEqual({ line: 'remindA' })
-    expect(dialog?.topics?.[1]?.resolve()).toEqual({ line: 'remindB' })
+    // Both active reminders now carry the generic opt-out action (plan
+    // quests-progression-033), so neither is purely passive/topic-only
+    // anymore — both are reachable as flat actions instead.
+    expect(dialog?.topics).toBeUndefined()
+    expect(dialog?.actions?.map((a) => a.label)).toEqual([ABANDON_LABEL, ABANDON_LABEL])
   })
 
-  it('reaches both of two available offers from the same giver; accepting the first does not mutate the second', () => {
+  it('exposes only one normal offer per giver; accepting it exposes the next (plan quests-progression-033)', () => {
     const offerQuestA = quest({
       id: 'offerA',
       giverName: 'Anna',
@@ -2715,16 +2759,20 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
 
     const dialog = qm.onInteract('Anna')
     expect(qm.getState('offerA')).toBe('offered')
-    expect(qm.getState('offerB')).toBe('offered')
-    expect(dialog?.topics?.map((t) => t.label)).toEqual(['offerA', 'offerB'])
+    expect(qm.getState('offerB')).toBe('not_offered')
+    expect(dialog?.offer).toBeDefined()
+    expect(dialog?.topics).toBeUndefined()
 
-    acceptSpecific(qm, 'Anna', 'offerA')
+    // Repeated interaction without accepting doesn't rotate in a second offer.
+    qm.onInteract('Anna')
+    expect(qm.getState('offerB')).toBe('not_offered')
+
+    dialog?.offer?.onAccept()
     expect(qm.getState('offerA')).toBe('active')
-    expect(qm.getState('offerB')).toBe('offered')
 
-    const stillReachable = qm.onInteract('Anna')
-    expect(stillReachable?.topics?.map((t) => t.label)).toEqual(['offerA', 'offerB'])
-    expect(stillReachable?.topics?.find((t) => t.label === 'offerB')?.resolve().offer).toBeDefined()
+    const next = qm.onInteract('Anna')
+    expect(qm.getState('offerB')).toBe('offered')
+    expect(next?.topics?.find((t) => t.label === 'offerB')?.resolve().offer).toBeDefined()
   })
 
   it('does not hide ready_to_report behind an unrelated active reminder', () => {
@@ -2738,19 +2786,25 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
       reportPlayerLine: 'Tak, zrobione.',
     })
     const qm = makeManager([reminderQuestA, readyQuest])
-    acceptSpecific(qm, 'Anna', 'reminderA')
-    acceptSpecific(qm, 'Anna', 'readyQ')
+    // Order-agnostic: both compete for Anna's single normal offer slot (plan
+    // quests-progression-033), so accept whichever is exposed each round —
+    // `interact_tree` below only ever matches `readyQ`'s own objective.
+    acceptNextOffered(qm, 'Anna')
+    acceptNextOffered(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_tree' })
     expect(qm.getState('readyQ')).toBe('ready_to_report')
     expect(qm.getState('reminderA')).toBe('active')
 
     const dialog = qm.onInteract('Anna')
-    expect(dialog?.line).toBe('Zrobione?')
-    expect(dialog?.actions?.[0]?.label).toBe('Tak, zrobione.')
-    expect(dialog?.topics?.map((t) => t.label)).toEqual(['reminderA'])
-    expect(dialog?.topics?.[0]?.resolve()).toEqual({ line: 'remindA' })
+    // Both `readyQ`'s report action and `reminderA`'s generic opt-out action
+    // (plan quests-progression-033) are flat `actions` now — `readyQ`'s
+    // report isn't hidden behind the unrelated active reminder.
+    expect(dialog?.topics).toBeUndefined()
+    const labels = dialog?.actions?.map((a) => a.label) ?? []
+    expect(labels).toContain('Tak, zrobione.')
+    expect(labels).toContain(ABANDON_LABEL)
 
-    expect(selectAction(dialog)).toBe('reportReadyLine')
+    expect(selectAction(dialog, labels.indexOf('Tak, zrobione.'))).toBe('reportReadyLine')
     expect(qm.getState('readyQ')).toBe('complete')
     expect(qm.getState('reminderA')).toBe('active')
   })
@@ -2781,8 +2835,10 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
     acceptSpecific(qm, 'Piotr', 'piotrReminderQ')
 
     const dialog = qm.onInteract('Piotr')
-    expect(dialog?.actions?.map((a) => a.label)).toEqual(['Cześć Piotrze.'])
-    expect(dialog?.topics?.map((t) => t.label)).toEqual(['piotrReminderQ'])
+    // `piotrReminderQ` now also carries the generic opt-out action (plan
+    // quests-progression-033), so it's a flat action too, not a passive topic.
+    expect(dialog?.actions?.map((a) => a.label)).toEqual(['Cześć Piotrze.', ABANDON_LABEL])
+    expect(dialog?.topics).toBeUndefined()
 
     expect(selectAction(dialog)).toBe('progressed')
     expect(qm.getState('talkQ')).toBe('ready_to_report')
@@ -2834,8 +2890,10 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
       reportLine: 'done',
     })
     const forward = makeManager([reminderQuestA, readyQuest])
-    acceptSpecific(forward, 'Anna', 'reminderA')
-    acceptSpecific(forward, 'Anna', 'readyQ')
+    // Order-agnostic accept (plan quests-progression-033's offer cap means
+    // only one of the two competing offers is exposed per interaction).
+    acceptNextOffered(forward, 'Anna')
+    acceptNextOffered(forward, 'Anna')
     forward.onInteractObjective({ type: 'interact_tree' })
     expect(forward.getState('readyQ')).toBe('ready_to_report')
     expect(forward.getState('reminderA')).toBe('active')
@@ -2843,8 +2901,8 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
 
     // Same scenario with `defs` reversed must produce the identical marker (plan quests-progression-020).
     const reversed = makeManager([readyQuest, reminderQuestA])
-    acceptSpecific(reversed, 'Anna', 'reminderA')
-    acceptSpecific(reversed, 'Anna', 'readyQ')
+    acceptNextOffered(reversed, 'Anna')
+    acceptNextOffered(reversed, 'Anna')
     reversed.onInteractObjective({ type: 'interact_tree' })
     expect(reversed.labelMarker('Anna')).toBe(QUEST_MARKER_READY)
   })
@@ -2857,14 +2915,22 @@ describe('QuestManager multiple quest contexts per NPC (plan quests-progression-
       stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'r' }],
       reportLine: 'done',
     })
+    // Only one of the two competing offers is exposed/accepted per
+    // interaction (plan quests-progression-033's offer cap) — which one
+    // doesn't matter for marker reduction, only that exactly one is active
+    // and the marker still reads "available", not "in progress".
     const forward = makeManager([reminderQuestA, availableQuest])
-    acceptSpecific(forward, 'Anna', 'reminderA')
-    expect(forward.getState('reminderA')).toBe('active')
-    expect(['not_offered', 'offered']).toContain(forward.getState('availableQ'))
+    acceptNextOffered(forward, 'Anna')
+    const forwardActive = [forward.getState('reminderA'), forward.getState('availableQ')]
+      .filter((s) => s === 'active').length
+    expect(forwardActive).toBe(1)
     expect(forward.labelMarker('Anna')).toBe(QUEST_MARKER_AVAILABLE)
 
     const reversed = makeManager([availableQuest, reminderQuestA])
-    acceptSpecific(reversed, 'Anna', 'reminderA')
+    acceptNextOffered(reversed, 'Anna')
+    const reversedActive = [reversed.getState('reminderA'), reversed.getState('availableQ')]
+      .filter((s) => s === 'active').length
+    expect(reversedActive).toBe(1)
     expect(reversed.labelMarker('Anna')).toBe(QUEST_MARKER_AVAILABLE)
   })
 
@@ -3179,5 +3245,142 @@ describe('nonlinear stage objectives and transitions (plan quests-progression-03
     expect(qm.exportProgress().find((e) => e.id === 'all-q-2')?.stageSlotProgress).toEqual({
       well: { completed: true },
     })
+  })
+})
+
+describe('QuestManager offer selection, decline suppression and abandonment (plan quests-progression-033)', () => {
+  function normalQuest(id: string, giverName: string): QuestDef {
+    return quest({
+      id,
+      giverName,
+      offerLine: `offer ${id}`,
+      stages: [{ objective: { type: 'interact_well' }, description: 'w', reminderLine: 'r' }],
+      reportLine: 'done',
+    })
+  }
+
+  it('exposes only one normal offer per giver among four eligible not_offered quests', () => {
+    const quests = ['cap-a', 'cap-b', 'cap-c', 'cap-d'].map((id) => normalQuest(id, 'Anna'))
+    const qm = makeManager(quests)
+    qm.onInteract('Anna')
+    const states = quests.map((def) => qm.getState(def.id))
+    expect(states.filter((s) => s === 'offered')).toHaveLength(1)
+    expect(states.filter((s) => s === 'not_offered')).toHaveLength(3)
+    // Repeated interaction doesn't accumulate more normal offers.
+    qm.onInteract('Anna')
+    expect(quests.map((def) => qm.getState(def.id)).filter((s) => s === 'offered')).toHaveLength(1)
+  })
+
+  it('allows exactly one urgent offer to bypass the normal cap, each independently', () => {
+    const n1 = normalQuest('n1', 'Anna')
+    const n2 = normalQuest('n2', 'Anna')
+    const u1 = quest({ ...normalQuest('u1', 'Anna'), offer: { urgency: 'urgent' } })
+    const u2 = quest({ ...normalQuest('u2', 'Anna'), offer: { urgency: 'urgent' } })
+    const qm = makeManager([n1, n2, u1, u2])
+    qm.onInteract('Anna')
+    expect(qm.getState('n1')).toBe('offered')
+    expect(qm.getState('n2')).toBe('not_offered')
+    expect(qm.getState('u1')).toBe('offered')
+    expect(qm.getState('u2')).toBe('not_offered')
+  })
+
+  it('decline suppresses the current offer and admits the next candidate instead of returning it immediately', () => {
+    const first = quest({ ...normalQuest('declineA', 'Anna') })
+    const second = quest({
+      ...normalQuest('declineB', 'Anna'),
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'r' }],
+    })
+    const qm = makeManager([first, second])
+    const dialog = qm.onInteract('Anna')
+    expect(qm.getState('declineA')).toBe('offered')
+
+    dialog?.offer?.onDecline?.()
+    expect(qm.getState('declineA')).toBe('not_offered')
+
+    const next = qm.onInteract('Anna')
+    expect(qm.getState('declineA')).toBe('not_offered')
+    expect(qm.getState('declineB')).toBe('offered')
+    expect(next?.offer).toBeDefined()
+  })
+
+  it('persists decline suppression through export/restore and expires once world time passes', () => {
+    let elapsedDays = 0
+    const worldTime: import('./QuestManager').QuestWorldTimeLookup = {
+      getWorldSeed: () => 0,
+      getTimeOfDay: () => 0,
+      getElapsedDays: () => elapsedDays,
+    }
+    const def = normalQuest('cooldownQ', 'Anna')
+    const qm = makeManager(
+      [def], undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, worldTime,
+    )
+    qm.onInteract('Anna')?.offer?.onDecline?.()
+    const exported = qm.exportProgress()
+    expect(exported[0]?.offerSuppressedUntilDay).toBe(1)
+
+    const restored = makeManager(
+      [def], undefined, undefined, { progress: exported, relations: {} },
+      undefined, undefined, undefined, undefined, undefined, worldTime,
+    )
+    expect(restored.getState('cooldownQ')).toBe('not_offered')
+    restored.onInteract('Anna')
+    expect(restored.getState('cooldownQ')).toBe('not_offered')
+
+    elapsedDays = 1
+    restored.onInteract('Anna')
+    expect(restored.getState('cooldownQ')).toBe('offered')
+  })
+
+  it('abandons an active quest exactly once, applies consequences once, and never re-enters ranking', () => {
+    const def = quest({
+      id: 'abandonableQ',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      stages: [{ objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill', reminderLine: 'remind' }],
+      reportLine: 'done',
+      abandonment: { allowed: true, consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: -1 }] } },
+    })
+    const qm = new QuestManager([def], undefined, new Inventory(), undefined, undefined, () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('abandonableQ')).toBe('active')
+    expect(qm.getRelation('Anna')).toBe(0)
+
+    const dialog = qm.onInteract('Anna')
+    const abandonAction = dialog?.actions?.find((a) => a.label === ABANDON_LABEL)
+    expect(abandonAction).toBeDefined()
+
+    abandonAction!.onSelect()
+    expect(qm.getState('abandonableQ')).toBe('abandoned')
+    expect(qm.getRelation('Anna')).toBe(-1)
+
+    // An outdated callback (e.g. a stale menu) cannot replay effects.
+    abandonAction!.onSelect()
+    expect(qm.getRelation('Anna')).toBe(-1)
+    expect(qm.abandonQuest('abandonableQ')).toBe(false)
+
+    // Terminal opt-out entry never returns to ranking/offer/list exposure.
+    expect(qm.onInteract('Anna')?.offer).toBeUndefined()
+    expect(qm.list().find((e) => e.id === 'abandonableQ')?.state).toBe('abandoned')
+  })
+
+  it('does not show the generic opt-out action, and rejects direct abandon, when the def disables it', () => {
+    const def = quest({ ...normalQuest('storyLockedQ', 'Anna'), abandonment: { allowed: false } })
+    const qm = makeManager([def])
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteract('Anna')?.actions).toBeUndefined()
+    expect(qm.abandonQuest('storyLockedQ')).toBe(false)
+    expect(qm.getState('storyLockedQ')).toBe('active')
+  })
+
+  it('does not leak a capped not_offered candidate through list()/labelMarker()', () => {
+    const exposed = normalQuest('exposedQ', 'Anna')
+    const hidden = quest({
+      ...normalQuest('hiddenQ', 'Anna'),
+      stages: [{ objective: { type: 'interact_tree' }, description: 't', reminderLine: 'r' }],
+    })
+    const qm = makeManager([exposed, hidden])
+    expect(qm.list().map((e) => e.id)).toEqual(['exposedQ'])
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_AVAILABLE)
+    expect(qm.getState('hiddenQ')).toBe('not_offered')
   })
 })

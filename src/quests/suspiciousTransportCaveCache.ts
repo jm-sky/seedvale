@@ -280,5 +280,9 @@ export function buildSuspiciousTransportCaveCacheQuest(
         },
       },
     ],
+    // The carried evidence instance's own keep/report/stay-quiet choice IS
+    // the resolution (plan quests-progression-033) — a generic opt-out here
+    // would strand that carried instance outside any quest tracking.
+    abandonment: { allowed: false },
   }
 }

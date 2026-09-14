@@ -1,13 +1,21 @@
 # Plan: Quest offer selection, prioritization and abandonment
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Model:** Sonnet, Composer
 **Depends on:** ~~quests-progression-020~~, ~~quests-progression-028~~
 **Domain:** `quests-progression`  
 **Type:** `feature`  
 **Roadmap:** `quests-and-reputation.md`  
+
+## Implementation status
+
+Implemented 2026-09-14. `QuestManager.onInteract()` now admits selected `not_offered` candidates to `offered` once up front (`admitOffersForGiver`/`selectableOfferIds`), read-only before any def's dialogue is resolved; `rankQuestOfferCandidates` (pure, `quests.ts`) ranks by urgency, story continuation, relation, authored priority, then a stable id tie-break. `QuestOfferPolicy.exposure: 'story'` bypasses the cap and disables generic decline for authored linear-history offers. Decline sets `not_offered` plus `offerSuppressedUntilDay` (one world-clock day via the existing `QuestWorldTimeLookup`), persisted on `QuestProgressEntry`. `abandoned` is a new terminal `QuestState`; the generic opt-out dialogue action appears on an `active` giver quest whenever `QuestAbandonment.allowed` isn't `false` (default allowed), re-reads live state so a stale callback can't replay consequences, and reuses `QuestConsequences`/existing cleanup (`clearAnimalTargetsForQuest`, `clearFeedDedupe`). `list()`/`labelMarker()` now only surface `not_offered` candidates the cap would actually expose. No save-version bump — all new fields are additive/optional, matching the plan-032 precedent.
+
+Existing physical-carry story quests (`skarb-jaskini-niedzwiedzia`, lost-hunter, `suspiciousTransportCaveCache`, old-bones adventure cave) set `abandonment: { allowed: false }` since their `await_quest_outcome` stage's carried-item choice *is* the resolution. Other authored/generated quests keep the default (abandonable, no automatic penalty) — no further content changes were made; `QuestOfferPolicy` is available for future urgent/priority content but no existing opportunity source was wired to set it yet.
+
+Automated tests cover the offer cap (including four competing candidates and one urgent bypass), decline suppression across export/restore and its world-time expiry, exact-once abandonment with outdated-callback safety, disabled-abandonment defs, list/marker exposure hiding, and `rankQuestOfferCandidates`'s ordering as a pure unit. Browser/gameplay verification remains user-owned.
 
 ## Goal
 

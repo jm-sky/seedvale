@@ -16,6 +16,7 @@ const STATE_LABEL: Record<QuestState, string> = {
   complete: 'zakończony',
   failed: 'nieudany',
   invalidated: 'nieaktualny',
+  abandoned: 'porzucony',
 }
 
 const filter = ref<Filter>('all')
@@ -23,12 +24,14 @@ const panel = ref<HTMLElement | null>(null)
 useOverlayScreen('quest-log', isQuestLogOpen, closeQuestLog)
 useTouchScroll(panel)
 
-// `failed`/`invalidated` are terminal like `complete` — nothing actionable
-// remains, so they're grouped into the "Zakończone" filter rather than
-// appearing under "W trakcie".
+// `failed`/`invalidated`/`abandoned` are terminal like `complete` — nothing
+// actionable remains, so they're grouped into the "Zakończone" filter rather
+// than appearing under "W trakcie".
 function matchesFilter(state: QuestState): boolean {
   if (filter.value === 'all') return true
-  if (filter.value === 'complete') return state === 'complete' || state === 'failed' || state === 'invalidated'
+  if (filter.value === 'complete') {
+    return state === 'complete' || state === 'failed' || state === 'invalidated' || state === 'abandoned'
+  }
   return state === 'active' || state === 'offered' || state === 'ready_to_report'
 }
 

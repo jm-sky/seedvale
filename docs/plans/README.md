@@ -84,8 +84,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `ui-input-017-quest-log-information-architecture.md`                        | -       | 🟡 | M      | quests-progression-031 |
 | ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | -       | 🟡 | M      | -      |
 | ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | -       | 🟡 | M      | settlements-npcs-033 |
-| 💡 `quests-progression-033-quest-offer-selection-prioritization-and-abandonment.md` | -       | 🔴 | M      | ~~quests-progression-020~~, ~~quests-progression-028~~ |
 | ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | -       | 🟡 | M      | settlements-012 |
+| ◼️ `settlements-npcs-035-household-wells-and-population-scaling.md`            | -       | 🔴 | M      | -      |
 
 ---
 
@@ -97,6 +97,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `quests-progression-033-quest-offer-selection-prioritization-and-abandonment.md` | NPC z wieloma questami nie oferuje wszystkiego naraz (tylko 1 normalna nowa oferta); po ukończeniu/decline/abandon pojawia się kolejna sensowna oferta; declined quest nie wraca od razu (suppression); opcjonalna kara relation/reputation przy abandon działa tylko tam, gdzie zdefiniowana; story quest (np. jaskinia niedźwiedzia, zaginiony myśliwy, podejrzany transport, stare kości) respektuje authored wyjątki i nie pokazuje generic decline/abandon; nagły problem świata może przebić normalną ofertę (urgent), ale nie tworzy lawiny urgentów; problem świata trwa dalej po decline/abandon |
 | `world-terrain-026-cave-distant-mouth-occlusion.md` | Z kilku odległości i kątów: daleki otwór jaskini nie pokazuje jasnego nieba; wejście w pełną prezentację bez „gołej” dziury; wyjście przywraca proxy; blisko wejścia bez zmian; wnętrze/dungeon normalnie; wielokrotne przejścia przez 55/80 m bez leaków i bez thrashu terenu |
 | `quests-progression-022-lazy-social-news-propagation-and-reputation-catch-up.md` | Na cold world/cache zabij wilka/niedźwiedzia i potwierdź brak freeze; zabicie przy aktywnej osadzie od razu podnosi lokalne competence/courage/renown; zabicie z dala od aktywnych osad nie daje natychmiastowej reputacji, ale odwiedzenie pobliskiej osady w ciągu 7 dni (TTL) daje catch-up; kolejna pobliska osada może dostać słabszy relayed renown bez sztucznego pełnego local reputation; save/load z pending eventem → późniejszy catch-up działa dokładnie raz; po >7 dniach nowo odwiedzona osada nie dostaje starego animal-deed news |
 | `settlements-npcs-034-household-wood-authority-and-repair-correctness.md` | Household wood jako konkretne `branch`/`beam` w `Household.items` (nie scalar stock); hunter arrow production i structure repair konsumują te same realne itemy, które trafiły do household; `repairStructure` dostaje dodatni pressure tylko gdy naprawa jest realnie możliwa albo epizod już trwa; brak decision livelock przy race scoring/`beginRepairStructure()`; save v39 migruje legacy `stock.wood` do `items.branch` |

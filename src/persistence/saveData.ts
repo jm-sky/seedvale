@@ -2284,6 +2284,7 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
       }
     }
   }
+  if (e.offerSuppressedUntilDay !== undefined && typeof e.offerSuppressedUntilDay !== 'number') return false
   return true
 }
 
