@@ -1,7 +1,7 @@
 # Plan: Player Trading with Any NPC
 
 **Created:** 2026-09-12  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
 **Depends on:** ~~settlements-npcs-014~~  

@@ -36,7 +36,6 @@ const helpTopics = computed(() => state.helpResult?.topics ?? [])
  *  override rather than the top-level (possibly multi-topic) payload — drives
  *  what "Wróć" does inside "help" (plan quests-progression-020). */
 const helpDrilled = ref(false)
-const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
 const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settlement?.isHome === true)
 const guardRewardLine = ref('')
 const foodLine = ref('')
@@ -237,7 +236,7 @@ watch(() => state.open, (open) => {
         class="flex flex-col gap-2"
       >
         <button
-          v-if="isHomeTrader"
+          v-if="state.canTrade"
           type="button"
           class="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium hover:bg-white/20"
           @click="openTrade"

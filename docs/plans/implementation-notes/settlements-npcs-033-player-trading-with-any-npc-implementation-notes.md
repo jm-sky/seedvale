@@ -2,7 +2,7 @@
 
 **Plan:** `docs/plans/settlements-npcs-033-player-trading-with-any-npc.md`  
 **Reviewed:** 2026-09-12  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Source of truth:** current `main` code + docs.
 
 ## Current architecture to reuse

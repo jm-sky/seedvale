@@ -50,6 +50,12 @@ const horseOffer = computed(() => ui.merchant.horseOffer)
 const horseNetCoins = computed(() => horseOffer.value?.previewNetCoins(transaction.offer) ?? 0)
 const canBuyHorse = computed(() => horseOffer.value?.status === 'available')
 
+/** Ordinary NPC household-goods session (plan settlements-npcs-033) — no
+ *  OFFER/barter column and no `MERCHANT_STOCK` catalog; BUY rows come from
+ *  the live, quantity-limited `ui.merchant.npcStock` instead. */
+const isNpcGoodsMode = computed(() => ui.merchant.mode === 'npcGoods')
+const screenTitle = computed(() => (isNpcGoodsMode.value ? (ui.merchant.npc?.displayName ?? 'Handel') : 'Kupiec'))
+
 const BUY_SORT_OPTIONS = [
   { id: 'name' as const, label: 'Nazwa' },
   { id: 'price-asc' as const, label: 'Cena ↑' },
@@ -63,7 +69,8 @@ const OFFER_SORT_OPTIONS = [
 
 const buyCapabilities = computed<ItemCapability[]>(() => {
   const set = new Set<ItemCapability>()
-  for (const kind of MERCHANT_STOCK) {
+  const kinds = isNpcGoodsMode.value ? ui.merchant.npcStock.map((row) => row.kind) : MERCHANT_STOCK
+  for (const kind of kinds) {
     for (const cap of ITEM_CATALOG[kind].capabilities ?? []) set.add(cap)
   }
   return [...set]
@@ -91,6 +98,24 @@ function conditionForOffer(kind: ItemKind): number | null {
 }
 
 const buyRows = computed(() => {
+  if (isNpcGoodsMode.value) {
+    const rows = ui.merchant.npcStock.flatMap((stock) => {
+      if (!matchesCategory(stock.kind, buyFilters, hasItemKindCategory)) return []
+      if (!matchesCapability(ITEM_CATALOG[stock.kind].capabilities, buyFilters)) return []
+      if (!matchesPrice(stock.unitPrice, buyFilters)) return []
+      const label = itemDisplayName(stock.kind)
+      if (!matchesSearch(label, buyFilters)) return []
+      return [{
+        kind: stock.kind,
+        label,
+        price: stock.unitPrice,
+        weight: ITEM_DEFS[stock.kind].weight,
+        conditionPercent: null as number | null,
+        maxCount: stock.quantity as number | null,
+      }]
+    })
+    return sortRows(rows, buyFilters.sort)
+  }
   const rows = MERCHANT_STOCK.flatMap((kind) => {
     const price = merchantPrice(kind) ?? 0
     if (!matchesCategory(kind, buyFilters, hasItemKindCategory)) return []
@@ -98,7 +123,7 @@ const buyRows = computed(() => {
     if (!matchesPrice(price, buyFilters)) return []
     const label = itemDisplayName(kind)
     if (!matchesSearch(label, buyFilters)) return []
-    return [{ kind, label, price, weight: ITEM_DEFS[kind].weight, conditionPercent: null as number | null }]
+    return [{ kind, label, price, weight: ITEM_DEFS[kind].weight, conditionPercent: null as number | null, maxCount: null as number | null }]
   })
   return sortRows(rows, buyFilters.sort)
 })
@@ -128,7 +153,8 @@ function ownedCount(kind: ItemKind): number {
 }
 
 function onCommitPurchase(kind: ItemKind, quantity: number): void {
-  setPurchaseCount(kind, quantity)
+  const max = buyRows.value.find((row) => row.kind === kind)?.maxCount ?? undefined
+  setPurchaseCount(kind, quantity, max)
 }
 function onClearPurchase(kind: ItemKind): void {
   setPurchaseCount(kind, 0)
@@ -140,9 +166,14 @@ function onClearOffer(kind: ItemKind): void {
   setOfferCount(kind, 0)
 }
 
+function purchaseUnitPrice(kind: ItemKind): number {
+  if (isNpcGoodsMode.value) return ui.merchant.npcStock.find((row) => row.kind === kind)?.unitPrice ?? 0
+  return merchantPrice(kind) ?? 0
+}
+
 const purchaseLines = computed<TransactionLine[]>(() => (Object.entries(transaction.purchases) as [ItemKind, number][])
   .filter(([, count]) => count > 0)
-  .map(([kind, count]) => ({ kind, label: itemDisplayName(kind), count, totalValue: (merchantPrice(kind) ?? 0) * count })))
+  .map(([kind, count]) => ({ kind, label: itemDisplayName(kind), count, totalValue: purchaseUnitPrice(kind) * count })))
 
 const offerLines = computed<TransactionLine[]>(() => {
   const offerLineTotal = ui.merchant.pricing?.offerLineTotal
@@ -156,13 +187,41 @@ const offerLines = computed<TransactionLine[]>(() => {
     }))
 })
 
-const netCoins = computed(() =>
-  ui.merchant.pricing?.previewNetCoins(transaction.purchases, transaction.offer) ?? 0,
-)
+const netCoins = computed(() => {
+  if (isNpcGoodsMode.value) {
+    return (Object.entries(transaction.purchases) as [ItemKind, number][])
+      .reduce((sum, [kind, count]) => (count > 0 ? sum + purchaseUnitPrice(kind) * count : sum), 0)
+  }
+  return ui.merchant.pricing?.previewNetCoins(transaction.purchases, transaction.offer) ?? 0
+})
 const canTrade = computed(() => purchaseLines.value.length > 0 || offerLines.value.length > 0)
 const trading = ref(false)
 
+/** Ordinary NPC household stock can shrink while the screen sits open (a
+ *  household production tick, or a prior purchase this session) — clamp the
+ *  basket to what's still actually available rather than letting a stale
+ *  quantity reach `onTrade`, mirroring the merchant catalog/owned-count
+ *  staleness guard below (plan settlements-npcs-033 §4). */
+function clampStaleNpcGoodsTransaction(): boolean {
+  let changed = false
+  const nextPurchases: Partial<Record<ItemKind, number>> = {}
+  for (const [kind, count] of Object.entries(transaction.purchases) as [ItemKind, number][]) {
+    const row = ui.merchant.npcStock.find((entry) => entry.kind === kind)
+    if (!row || row.quantity <= 0) { changed = true; continue }
+    const clamped = Math.min(row.quantity, count)
+    if (clamped !== count) changed = true
+    nextPurchases[kind] = clamped
+  }
+  if (Object.keys(transaction.offer).length > 0) changed = true
+  if (changed) {
+    transaction.purchases = nextPurchases
+    transaction.offer = {}
+  }
+  return changed
+}
+
 function clampStaleTransaction(): boolean {
+  if (isNpcGoodsMode.value) return clampStaleNpcGoodsTransaction()
   let changed = false
   const nextPurchases: Partial<Record<ItemKind, number>> = {}
   for (const [kind, count] of Object.entries(transaction.purchases) as [ItemKind, number][]) {
@@ -236,7 +295,7 @@ function openDetails(kind: ItemKind): void {
     >
       <div class="mb-2 flex shrink-0 flex-wrap items-baseline justify-between gap-2 max-md:mb-1.5">
         <h2 class="text-base font-semibold tracking-wide max-md:text-sm">
-          Kupiec
+          {{ screenTitle }}
         </h2>
         <div class="flex flex-row items-center gap-3 max-md:gap-2">
           <p class="text-[13px] opacity-75 max-md:text-xs">
@@ -261,7 +320,7 @@ function openDetails(kind: ItemKind): void {
       </div>
 
       <div
-        v-if="isCompact"
+        v-if="isCompact && !isNpcGoodsMode"
         class="mb-2 flex shrink-0 gap-1"
       >
         <MerchantTabButton
@@ -283,7 +342,7 @@ function openDetails(kind: ItemKind): void {
       >
         <div
           class="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:gap-4 md:overflow-hidden"
-          :class="isCompact ? '' : 'md:grid-cols-3'"
+          :class="isCompact ? '' : (isNpcGoodsMode ? 'md:grid-cols-2' : 'md:grid-cols-3')"
         >
           <section
             v-if="!isCompact || activeContext === 'buy'"
@@ -343,7 +402,7 @@ function openDetails(kind: ItemKind): void {
                 :price="row.price"
                 price-suffix="monet"
                 :committed-count="transaction.purchases[row.kind] ?? 0"
-                :max-count="null"
+                :max-count="row.maxCount"
                 @commit="onCommitPurchase"
                 @clear="onClearPurchase"
                 @open-details="openDetails"
@@ -352,7 +411,7 @@ function openDetails(kind: ItemKind): void {
           </section>
 
           <section
-            v-if="!isCompact || activeContext === 'offer'"
+            v-if="!isNpcGoodsMode && (!isCompact || activeContext === 'offer')"
             class="flex min-w-0 flex-col gap-2 md:min-h-0"
           >
             <h3 class="hidden lg:block shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">

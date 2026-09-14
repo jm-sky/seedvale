@@ -5,20 +5,27 @@ import { Inventory } from './Inventory'
 import { createKeyInstance, createTentInstance, isTentItemInstance } from './itemInstances'
 import {
   createAcquiredInstance,
+  type OwnedGoodsPurchaseLine,
   previewPricedPurchaseNetCoins,
   previewTransactionNetCoins,
   resolveOfferLineBuyback,
+  settleOwnedGoodsPurchase,
   settlePricedPurchase,
   settleTransaction,
 } from './trade'
 import {
+  BASE_BUY_FACTOR,
   BASE_SELL_FACTOR,
   BROKEN_SELL_MULTIPLIER,
+  fullConditionBuyFactor,
   fullConditionSellFactor,
+  MAX_BUY_FACTOR,
   MAX_SELL_FACTOR,
   MERCHANT_STOCK,
   merchantPrice,
+  MIN_BUY_FACTOR,
   NEUTRAL_SELL_PRICE_CONTEXT,
+  npcSalePrice,
   relationshipEffect,
   reputationEffect,
   resolveInstanceSellPrice,
@@ -222,6 +229,151 @@ describe('merchant sell pricing (plan settlements-006)', () => {
     const neutral = NEUTRAL_SELL_PRICE_CONTEXT
     expect(resolveInstanceSellPrice(full, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR))
     expect(resolveInstanceSellPrice(half, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR * 0.5))
+  })
+})
+
+describe('NPC buy pricing (plan settlements-npcs-033)', () => {
+  it('produces a deterministic baseline price at neutral standing', () => {
+    expect(fullConditionBuyFactor(NEUTRAL_SELL_PRICE_CONTEXT)).toBeCloseTo(BASE_BUY_FACTOR, 5)
+    expect(npcSalePrice('iron_rod')).toBe(roundSellPrice(tradeValue('iron_rod') * BASE_BUY_FACTOR))
+  })
+
+  it('never raises the player price for better relation/reputation', () => {
+    const good = makeContext({
+      relation: 10,
+      relationLevel: 'trusted',
+      reputation: { trust: 100, integrity: 100, competence: 100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    expect(fullConditionBuyFactor(good)).toBeCloseTo(MIN_BUY_FACTOR, 5)
+    expect(npcSalePrice('iron_rod', good)).toBeLessThanOrEqual(npcSalePrice('iron_rod', NEUTRAL_SELL_PRICE_CONTEXT))
+  })
+
+  it('never lowers the player price for worse relation/reputation', () => {
+    const bad = makeContext({
+      relation: -10,
+      relationLevel: 'stranger',
+      reputation: { trust: -100, integrity: -100, competence: -100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    expect(fullConditionBuyFactor(bad)).toBeCloseTo(MAX_BUY_FACTOR, 5)
+    expect(npcSalePrice('iron_rod', bad)).toBeGreaterThanOrEqual(npcSalePrice('iron_rod', NEUTRAL_SELL_PRICE_CONTEXT))
+  })
+
+  it('never creates a buy(best standing)->sell(merchant) arbitrage loop for the same context', () => {
+    const best = makeContext({
+      relation: 10,
+      relationLevel: 'trusted',
+      reputation: { trust: 100, integrity: 100, competence: 100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    for (const kind of ['arrow', 'iron_rod', 'long_sword'] as const) {
+      expect(npcSalePrice(kind, best)).toBeGreaterThanOrEqual(sellPrice(kind, best) ?? 0)
+    }
+  })
+
+  it('falls back to tradeValue for a good the merchant catalog does not stock', () => {
+    expect(merchantPrice('iron')).toBeNull()
+    expect(npcSalePrice('iron')).toBe(roundSellPrice(tradeValue('iron') * BASE_BUY_FACTOR))
+  })
+})
+
+describe('settleOwnedGoodsPurchase (plan settlements-npcs-033)', () => {
+  it('transfers exact stack quantity and pays the real owner, not a mint', () => {
+    const buyer = new Inventory({ coin: 10 })
+    const source = new Inventory({ arrow: 31 })
+    const payee = new Inventory()
+    const lines: OwnedGoodsPurchaseLine[] = [{ kind: 'arrow', count: 5, unitPrice: 1 }]
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, lines)).toBe('ok')
+    expect(buyer.count('arrow')).toBe(5)
+    expect(source.count('arrow')).toBe(26)
+    expect(buyer.count('coin')).toBe(5)
+    expect(payee.count('coin')).toBe(5)
+  })
+
+  it('refuses without mutating anything when the source no longer has enough stock', () => {
+    const buyer = new Inventory({ coin: 10 })
+    const source = new Inventory({ arrow: 3 })
+    const payee = new Inventory()
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('not_sold')
+    expect(source.count('arrow')).toBe(3)
+    expect(buyer.count('coin')).toBe(10)
+    expect(payee.count('coin')).toBe(0)
+  })
+
+  it('refuses without mutating anything when the buyer cannot afford it', () => {
+    const buyer = new Inventory({ coin: 2 })
+    const source = new Inventory({ arrow: 10 })
+    const payee = new Inventory()
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('cannot_afford')
+    expect(source.count('arrow')).toBe(10)
+    expect(buyer.count('coin')).toBe(2)
+  })
+
+  it('refuses without mutating anything when the payment destination is full', () => {
+    const buyer = new Inventory({ coin: 10 })
+    const source = new Inventory({ arrow: 10 })
+    const payee = new Inventory({ coin: 0 }, 0)
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('full')
+    expect(source.count('arrow')).toBe(10)
+    expect(buyer.count('coin')).toBe(10)
+    expect(payee.count('coin')).toBe(0)
+  })
+
+  it('refuses without mutating anything when the buyer cannot carry the goods', () => {
+    const buyer = new Inventory({ coin: 10 }, 0)
+    const source = new Inventory({ arrow: 10 })
+    const payee = new Inventory()
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('full')
+    expect(source.count('arrow')).toBe(10)
+    expect(buyer.count('coin')).toBe(10)
+  })
+
+  it('transfers real existing instances instead of minting replacements', () => {
+    const worn = createWeaponInstance('knife')
+    worn.durability = 0.2
+    worn.sharpness = 0.2
+    const fresh = createWeaponInstance('knife')
+    const buyer = new Inventory({ coin: 50 })
+    const source = new Inventory(undefined, undefined, [worn, fresh])
+    const payee = new Inventory()
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'knife', count: 1, unitPrice: 12 }])).toBe('ok')
+    expect(source.getInstance(worn.id)).toBeNull()
+    expect(buyer.getInstance(worn.id)).not.toBeNull()
+    expect(source.getInstance(fresh.id)).not.toBeNull()
+    expect(buyer.count('coin')).toBe(38)
+  })
+
+  it('settles a multi-kind basket atomically', () => {
+    const buyer = new Inventory({ coin: 20 })
+    const source = new Inventory({ arrow: 10, iron_rod: 2 })
+    const payee = new Inventory()
+    const lines: OwnedGoodsPurchaseLine[] = [
+      { kind: 'arrow', count: 4, unitPrice: 1 },
+      { kind: 'iron_rod', count: 2, unitPrice: 8 },
+    ]
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, lines)).toBe('ok')
+    expect(buyer.count('arrow')).toBe(4)
+    expect(buyer.count('iron_rod')).toBe(2)
+    expect(source.count('arrow')).toBe(6)
+    expect(source.count('iron_rod')).toBe(0)
+    expect(payee.count('coin')).toBe(4 + 16)
+  })
+
+  it('rejects an empty basket', () => {
+    const buyer = new Inventory({ coin: 10 })
+    const source = new Inventory({ arrow: 10 })
+    const payee = new Inventory()
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [])).toBe('invalid_offer')
+  })
+
+  it('cannot duplicate goods across repeated commits beyond real stock', () => {
+    const buyer = new Inventory({ coin: 100 })
+    const source = new Inventory({ arrow: 5 })
+    const payee = new Inventory()
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('ok')
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('not_sold')
+    expect(buyer.count('arrow')).toBe(5)
   })
 })
 
