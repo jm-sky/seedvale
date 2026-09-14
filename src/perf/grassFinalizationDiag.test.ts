@@ -81,7 +81,7 @@ describe('grassFinalizationDiag', () => {
     const text = formatGrassFinalizationReport(report!)
     expect(text).toContain('[Seedvale Grass Finalization]')
     expect(text).toContain('buildGrassChunkMeshes')
-    expect(text).toContain('computeBoundingSphere')
+    expect(text).toContain('apply worker bounds')
     expect(text).toContain('scene.add')
     expect(text).toContain('tri:')
     setActiveMonitor(null)

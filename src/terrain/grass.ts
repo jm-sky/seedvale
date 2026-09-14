@@ -31,7 +31,9 @@ export type WorldGrassChunk = {
    *  `InstancedMesh.geometry` to a cheaper fin-cluster variant (fewer fins/
    *  segments) as the chunk gets farther away — orthogonal to `setLodFraction`,
    *  which only changes how many instances of the *current* geometry draw.
-   *  No-op on the filler bucket, which stays a single cheap near-only shape. */
+   *  No-op on the filler bucket, which stays a single cheap near-only shape.
+   *  Does not recompute `boundingSphere`: worker bounds are sized for the
+   *  largest (near) template, so a mid/far swap cannot make the sphere too small. */
   setGeometryLod: (tier: GrassGeometryLodTier) => void
   /** Number of `BufferGeometry`s currently cached on this chunk (near plus
    *  any lazily built mid/far tiers). Used by grass-finalization diagnostics. */
@@ -331,6 +333,20 @@ function buildFinCluster(fins: FinSpec[]): {
   }
 }
 
+/**
+ * Local-space vertex positions of a species' blade template. Used by bounds
+ * tests to prove worker-side extents cover every geometry LOD (near/mid/far).
+ * Filler ignores `tier`.
+ * @domain world-terrain
+ */
+export function grassBladeLocalPositions(
+  id: GrassSpeciesId,
+  tier: GrassGeometryLodTier = 'near',
+): Float32Array {
+  const fins = id === 'filler' ? FILLER_FINS : GEOMETRY_LOD_FINS[id][tier]
+  return (buildFinCluster(fins).position.array as Float32Array).slice()
+}
+
 const VERTEX_SHADER = /* glsl */ `
   attribute float aPhase;
   attribute vec3 aBaseColor;
@@ -484,6 +500,16 @@ export function createGrassSystem(): GrassSystem {
     const timed = diag.isEnabled()
     const tBuild0 = timed ? performance.now() : 0
 
+    let totalCount = 0
+    for (const id of GRASS_SPECIES_ORDER) {
+      const bucket = data[id]
+      if (bucket) totalCount += bucket.count
+    }
+    if (totalCount === 0) {
+      if (timed) diag.recordEmptyBuild()
+      return null
+    }
+
     const group = new THREE.Group()
     group.position.set(chunkOriginX, 0, chunkOriginZ)
     group.name = 'chunk-grass'
@@ -500,7 +526,6 @@ export function createGrassSystem(): GrassSystem {
       geometryCache: Partial<Record<GrassGeometryLodTier, THREE.BufferGeometry>>
     }
     const subMeshes: SubMesh[] = []
-    let totalCount = 0
     let allocationSetupMs = 0
     let instanceMatrixBindMs = 0
     let boundsMs = 0
@@ -513,7 +538,6 @@ export function createGrassSystem(): GrassSystem {
     for (const id of GRASS_SPECIES_ORDER) {
       const bucket = data[id]
       if (!bucket) continue
-      totalCount += bucket.count
       const isFiller = id === 'filler'
       buckets += 1
       if (isFiller) instancesFiller += bucket.count
@@ -580,11 +604,15 @@ export function createGrassSystem(): GrassSystem {
       const tBind1 = timed ? performance.now() : 0
 
       const tBounds0 = timed ? performance.now() : 0
-      mesh.computeBoundingSphere() // instance matrices spread well beyond the unit template's own bounds
+      const { bounds } = bucket
+      mesh.boundingSphere = new THREE.Sphere(
+        new THREE.Vector3(bounds.centerX, bounds.centerY, bounds.centerZ),
+        bounds.radius,
+      )
       const tBounds1 = timed ? performance.now() : 0
       // Filler starts hidden; chunkManager enables it only in the near field.
-      // Applied after bounds so `computeBoundingSphere` still walks every
-      // instance instead of an empty `count`.
+      // Bounds already cover every instance (same as the old
+      // `computeBoundingSphere` which ran before `count` was zeroed).
       if (isFiller) mesh.count = 0
 
       group.add(mesh)
@@ -612,11 +640,6 @@ export function createGrassSystem(): GrassSystem {
           boundsMs: bucketBoundsMs,
         })
       }
-    }
-
-    if (totalCount === 0) {
-      if (timed) diag.recordEmptyBuild()
-      return null
     }
 
     if (timed) {

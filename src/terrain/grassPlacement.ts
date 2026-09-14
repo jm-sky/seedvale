@@ -5,7 +5,16 @@ import { ROCK_SLOPE_FULL, sandBandAt } from './biomeColors'
 import { biomeWeightsAt } from './biomeRegions'
 import { apronOriginWorld, type RegionParams, type RiverChannelSegment, sampleApronGrid } from './chunkHeightmap'
 import { fbm01, type FbmParams } from './fbm'
+import {
+  createGrassBoundsAccumulator,
+  expandGrassInstanceBounds,
+  finalizeGrassBounds,
+  type GrassBoundsAccumulator,
+  type GrassBucketBounds,
+} from './grassBounds'
 import { isInsideRiverChannel } from './riverNetwork'
+
+export type { GrassBucketBounds }
 
 /**
  * Pure, worker-safe grass placement generation — split out of `grass.ts`
@@ -62,6 +71,10 @@ export type GrassBucketData = {
   baseColors: Float32Array // count * 3
   tipColors: Float32Array // count * 3
   windFactors: Float32Array // count
+  /** Conservative chunk-local bounding sphere covering every instance of
+   *  this bucket, including all geometry LOD variants and shader wind sway.
+   *  Computed during placement — not a second pass over `matrices`. */
+  bounds: GrassBucketBounds
 }
 
 export type GrassChunkData = Partial<Record<GrassSpeciesId, GrassBucketData>>
@@ -180,6 +193,7 @@ type InstanceBucket = {
   baseColors: number[]
   tipColors: number[]
   windFactors: number[]
+  bounds: GrassBoundsAccumulator
 }
 
 /** Most chunks survive only a fraction of `candidatesPerChunk` per bucket
@@ -200,6 +214,7 @@ function createBucket(candidatesPerChunk: number): InstanceBucket {
     baseColors: [],
     tipColors: [],
     windFactors: [],
+    bounds: createGrassBoundsAccumulator(),
   }
 }
 
@@ -232,6 +247,7 @@ const matrix = new THREE.Matrix4()
 
 function pushInstance(
   bucket: InstanceBucket,
+  species: GrassSpeciesId,
   localX: number,
   localZ: number,
   h: number,
@@ -253,6 +269,16 @@ function pushInstance(
   matrix.compose(pos, quat, scale)
   ensureBucketCapacity(bucket, bucket.count + 1)
   matrix.toArray(bucket.matrixData, bucket.count * 16)
+  expandGrassInstanceBounds(
+    bucket.bounds,
+    species,
+    pos.x,
+    pos.y,
+    pos.z,
+    scale.x,
+    scale.y,
+    windFactor,
+  )
   bucket.count++
 
   bucket.phases.push(random() * Math.PI * 2)
@@ -435,12 +461,12 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
       const bladeHeight = HERB_HEIGHT_MIN + random() * (HERB_HEIGHT_MAX - HERB_HEIGHT_MIN)
       const bladeWidth = HERB_WIDTH_MIN + random() * (HERB_WIDTH_MAX - HERB_WIDTH_MIN)
       tmpColor.multiplyScalar(HERB_DARKEN)
-      pushInstance(buckets.herb, localX, localZ, h, rotationY, bladeHeight, bladeWidth, tmpColor, jitter, HERB_WIND_FACTOR, random)
+      pushInstance(buckets.herb, 'herb', localX, localZ, h, rotationY, bladeHeight, bladeWidth, tmpColor, jitter, HERB_WIND_FACTOR, random)
     } else {
       const bladeHeight = BLADE_HEIGHT_MIN + random() * (BLADE_HEIGHT_MAX - BLADE_HEIGHT_MIN)
       const bladeWidth = BLADE_WIDTH_MIN + random() * (BLADE_WIDTH_MAX - BLADE_WIDTH_MIN)
       const subtype: GrassSpeciesId = random() < GRAIN_RATIO ? 'grain' : 'tri'
-      pushInstance(buckets[subtype], localX, localZ, h, rotationY, bladeHeight, bladeWidth, tmpColor, jitter, GRASS_WIND_FACTOR, random)
+      pushInstance(buckets[subtype], subtype, localX, localZ, h, rotationY, bladeHeight, bladeWidth, tmpColor, jitter, GRASS_WIND_FACTOR, random)
     }
   }
 
@@ -498,6 +524,7 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
 
     pushInstance(
       buckets.filler,
+      'filler',
       localX,
       localZ,
       h,
@@ -515,6 +542,8 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
   for (const id of GRASS_SPECIES_ORDER) {
     const bucket = buckets[id]
     if (bucket.count === 0) continue
+    const bounds = finalizeGrassBounds(bucket.bounds)
+    if (!bounds) continue
     result[id] = {
       count: bucket.count,
       matrices: bucket.matrixData.slice(0, bucket.count * 16),
@@ -522,6 +551,7 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
       baseColors: new Float32Array(bucket.baseColors),
       tipColors: new Float32Array(bucket.tipColors),
       windFactors: new Float32Array(bucket.windFactors),
+      bounds,
     }
   }
   return result

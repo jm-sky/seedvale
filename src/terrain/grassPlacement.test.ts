@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import type { GrassGeometryLodTier } from './distanceLod'
 import {
   type ChunkTileParams,
   computeChunkTile,
   type RawSampleParams,
   type RiverChannelSegment,
 } from './chunkHeightmap'
+import { grassBladeLocalPositions } from './grass'
+import { grassBoundsContainsPoint, transformGrassLocalPoint } from './grassBounds'
 import {
   computeChunkGrass,
   GRASS_SPECIES_ORDER,
@@ -195,6 +198,7 @@ describe('computeChunkGrass', () => {
         expect(Array.from(a[id]!.matrices)).toEqual(Array.from(b[id]!.matrices))
         expect(Array.from(a[id]!.baseColors)).toEqual(Array.from(b[id]!.baseColors))
         expect(Array.from(a[id]!.phases)).toEqual(Array.from(b[id]!.phases))
+        expect(a[id]!.bounds).toEqual(b[id]!.bounds)
       }
     }
   })
@@ -229,8 +233,65 @@ describe('computeChunkGrass', () => {
     // Every bucket's matrices length matches its declared count (16 floats/instance).
     for (const id of GRASS_SPECIES_ORDER) {
       const bucket = data[id]
-      if (bucket) expect(bucket.matrices.length).toBe(bucket.count * 16)
+      if (!bucket) continue
+      expect(bucket.matrices.length).toBe(bucket.count * 16)
+      expect(bucket.bounds.radius).toBeGreaterThan(0)
+      expect(Number.isFinite(bucket.bounds.centerX)).toBe(true)
+      expect(Number.isFinite(bucket.bounds.centerY)).toBe(true)
+      expect(Number.isFinite(bucket.bounds.centerZ)).toBe(true)
     }
+  })
+
+  it('bucket bounds contain every instance vertex for all geometry LOD tiers, including filler', () => {
+    const params = tileParams({ cx: 0, cz: 0 })
+    const tile = computeChunkTile(params)
+    const data = computeChunkGrass(
+      {
+        cx: 0,
+        cz: 0,
+        chunkSize: params.chunkSize,
+        resolution: params.resolution,
+        waterLevel: params.waterLevel,
+        heightScale: params.heightScale,
+        seed: params.seed,
+        candidatesPerChunk: 4000,
+        macroVariationEnabled: false,
+        region: params.region,
+        riverSegments: params.riverSegments,
+      },
+      {
+        heights: tile.heights,
+        biomes: tile.biomes,
+        roadTint: tile.roadTint,
+        mountainRidge: tile.mountainRidge,
+        moistureRegion: tile.moistureRegion,
+      },
+    )
+    const lodTiers: readonly GrassGeometryLodTier[] = ['near', 'mid', 'far']
+    let buckets = 0
+    for (const id of GRASS_SPECIES_ORDER) {
+      const bucket = data[id]
+      if (!bucket) continue
+      buckets += 1
+      const tiers: readonly GrassGeometryLodTier[] = id === 'filler' ? ['near'] : lodTiers
+      for (const tier of tiers) {
+        const local = grassBladeLocalPositions(id, tier)
+        for (let i = 0; i < bucket.count; i++) {
+          for (let v = 0; v < local.length; v += 3) {
+            const p = transformGrassLocalPoint(
+              bucket.matrices,
+              i,
+              local[v]!,
+              local[v + 1]!,
+              local[v + 2]!,
+            )
+            expect(grassBoundsContainsPoint(bucket.bounds, p.x, p.y, p.z)).toBe(true)
+          }
+        }
+      }
+    }
+    expect(buckets).toBe(GRASS_SPECIES_ORDER.length)
+    expect(data.filler).toBeDefined()
   })
 
   it('never places a blade inside a river channel, even where the carved bed stays above waterLevel (world-terrain-006)', () => {

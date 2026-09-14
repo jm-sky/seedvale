@@ -11,7 +11,7 @@ import { getMonitor } from './active'
  *   allocation/setup     Group + InstancedBufferAttributes + BufferGeometry
  *                        + InstancedMesh + flags/layers (`buildGrassChunkMeshes`)
  *   instanceMatrix bind  wrap transferred `bucket.matrices` (no JS write loop)
- *   bounds/finalize      `InstancedMesh.computeBoundingSphere()`
+ *   bounds/finalize      assign worker-computed `bucket.bounds` onto the mesh
  *   lod apply            `setLodFraction` + `setGeometryLod` + debug visibility
  *   scene attach         `scene.add(grass.mesh)`
  */
@@ -418,7 +418,7 @@ export function formatGrassFinalizationReport(report: GrassFinalizationReport): 
     '',
     'Grass finalization:',
     `  chunks: ${report.chunks}`,
-    `  empty builds: ${report.chunksEmpty}`,
+    `  empty builds (no instances): ${report.chunksEmpty}`,
     `  discarded unloaded/out-of-range: ${report.discardedUnloaded}/${report.discardedOutOfRange}`,
     '',
     '  build total (`buildGrassChunkMeshes`):',
@@ -431,7 +431,7 @@ export function formatGrassFinalizationReport(report: GrassFinalizationReport): 
     '  instanceMatrix bind:',
     `    avg ${report.instanceMatrixBind.avgMs.toFixed(2)} ms`,
     `    max ${report.instanceMatrixBind.maxMs.toFixed(2)} ms`,
-    '  bounds/finalize (`computeBoundingSphere`):',
+    '  bounds/finalize (apply worker bounds):',
     `    avg ${report.boundsFinalize.avgMs.toFixed(2)} ms`,
     `    max ${report.boundsFinalize.maxMs.toFixed(2)} ms`,
     '  lod apply (`setLodFraction` / `setGeometryLod`):',

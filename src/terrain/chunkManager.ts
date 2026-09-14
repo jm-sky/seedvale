@@ -1441,11 +1441,11 @@ export function createChunkManager(
           const tAttach0 = timed ? performance.now() : 0
           if (isSystemEnabled('grass')) scene.add(grass.mesh)
           if (timed) diag.recordSceneAttach(performance.now() - tAttach0)
-        }
-        if (timed) {
-          const heap1 = readJsHeapUsedBytes()
-          const heapDelta = heap0 != null && heap1 != null ? heap1 - heap0 : null
-          diag.recordCallback(performance.now() - tCallback0, heapDelta)
+          if (timed) {
+            const heap1 = readJsHeapUsedBytes()
+            const heapDelta = heap0 != null && heap1 != null ? heap1 - heap0 : null
+            diag.recordCallback(performance.now() - tCallback0, heapDelta)
+          }
         }
       })
       .catch((err: unknown) => {

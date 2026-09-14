@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](../assets/README.md)), stanem implementacji ([STATE.md](../STATE.md)), domeną wody ([WATER.md](../state/water.md)), ani planem ([plans/](../plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-09-12
+**Last updated:** 2026-09-14
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](../state/water.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -64,6 +64,12 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-09-14 — Grass instance bounds from worker placement, not `computeBoundingSphere` 🔧
+
+- Grass placement (already in the existing chunk worker) now accumulates a conservative chunk-local bounding sphere per species bucket during the instance loop — data-only `GrassBucketBounds` on `GrassBucketData`.
+- Main thread assigns `InstancedMesh.boundingSphere` from that payload instead of `computeBoundingSphere()`, which was scanning every instance (filler was the hotspot). G17: worker stays data-only; `THREE.Sphere` / scene attach stay on the main thread.
+- Sphere is sized for the largest geometry LOD (`near`) plus rest-curve, non-uniform scale, tilt, and shader wind sway, so `setGeometryLod` mid/far swaps cannot shrink it below the rendered blades. Frustum culling stays enabled.
 
 ### 2026-09-12 — Storm lightning flash + snow flake mask (plan world-026) 🔧
 
