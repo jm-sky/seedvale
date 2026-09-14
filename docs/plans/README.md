@@ -85,7 +85,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-011-plaza-layout-paving-and-core-protection.md`                | -       | 🟡 | M      | -      |
 | ◼️ `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | -       | 🟡 | M      | settlements-npcs-033 |
 | ◼️ `settlements-013-horse-training-progression-vendor-and-paddock.md`          | -       | 🟡 | M      | settlements-012 |
-| ◼️ `settlements-npcs-035-household-wells-and-population-scaling.md`            | -       | 🔴 | M      | -      |
 
 ---
 
