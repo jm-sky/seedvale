@@ -30,16 +30,16 @@ Generated from exported TypeScript symbols.
 
 - `commitBlacksmithProduction` — function — line 56
   - domain: settlements-npcs
-- `commitDressingProduction` — function — line 99
+- `commitDressingProduction` — function — line 101
   - domain: settlements-npcs
 - `commitHunterArrowProduction` — function — line 46
 - `commitRoleWork` — function — line 32
-- `commitTextileWorkProduction` — function — line 90
+- `commitTextileWorkProduction` — function — line 92
   - domain: settlements-npcs
 - `commitWoodcutterDeposit` — function — line 21
-- `commitWoolMaterialProduction` — function — line 77
+- `commitWoolMaterialProduction` — function — line 79
   - domain: settlements-npcs
-- `tryAdvanceDevelopment` — function — line 107
+- `tryAdvanceDevelopment` — function — line 109
 
 ## `economy/production.ts`
 
@@ -56,6 +56,7 @@ Generated from exported TypeScript symbols.
 - `MINING_PRODUCTION` — const — line 50
 - `produceFirstAvailableItemRecipe` — function — line 166
 - `ProductionDef` — type — line 10
+- `productionDefById` — function — line 205
 - `productionForRole` — function — line 184
 - `TEXTILE_WORKER_PRODUCTIONS` — const — line 129
 - `WOODCUTTING_PRODUCTION` — const — line 25
@@ -64,7 +65,9 @@ Generated from exported TypeScript symbols.
 
 ## `economy/productionExecutor.ts`
 
-- `executeProduction` — function — line 64
+- `executeProduction` — function — line 122
+  - domain: settlements-npcs
+- `preflightProductionInputs` — function — line 62
   - domain: settlements-npcs
 - `ProductionBlockedCategory` — type — line 23
 - `ProductionContext` — type — line 14
@@ -73,6 +76,24 @@ Generated from exported TypeScript symbols.
 - `ProductionResult` — type — line 37
   - domain: settlements-npcs
 
+## `economy/productionShortage.ts`
+
+- `applyProductionOutcome` — function — line 91
+  - domain: settlements-npcs
+- `clearProductionShortageByRecipe` — function — line 73
+- `isProductionShortagePersistent` — function — line 41
+- `loadProductionShortages` — function — line 182
+- `observeProductionShortage` — function — line 53
+  - domain: settlements-npcs
+- `PRODUCTION_SHORTAGE_PERSISTENCE_SEC` — const — line 30
+- `productionShortageKey` — function — line 32
+- `ProductionShortageRecord` — type — line 19
+  - domain: settlements-npcs
+- `ProductionShortageRevalidateContext` — type — line 111
+- `revalidateProductionShortages` — function — line 124
+  - domain: settlements-npcs
+- `snapshotProductionShortages` — function — line 176
+
 ## `economy/registry.ts`
 
 - `createEconomyRegistry` — function — line 19
@@ -80,14 +101,14 @@ Generated from exported TypeScript symbols.
 
 ## `economy/settlementEconomy.ts`
 
-- `createSettlementEconomy` — function — line 92
-- `SettlementDemand` — type — line 14
-- `SettlementEconomy` — type — line 47
+- `createSettlementEconomy` — function — line 104
+- `SettlementDemand` — type — line 21
+- `SettlementEconomy` — type — line 56
   - domain: settlements
   - system: settlement-economy
   - role: Owns a settlement's bulk stock, demand-driven shortage/surplus and reservations. Not player `Inventory`.
   - owns: SettlementEconomy
-- `SettlementEconomySnapshot` — type — line 32
+- `SettlementEconomySnapshot` — type — line 39
 
 ## `economy/stock.ts`
 

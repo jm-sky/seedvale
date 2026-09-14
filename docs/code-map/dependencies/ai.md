@@ -23,6 +23,8 @@ Generated from TypeScript imports.
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
 - `ai/dialogueTemplates.ts`
+- `ai/economicPressure.test.ts`
+- `ai/economicPressure.ts`
 - `ai/healingPressure.test.ts`
 - `ai/npcDecision.ts`
 - `ai/npcLogistics.test.ts`
@@ -49,6 +51,7 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
+- `ai/economicPressure.ts`
 - `ai/graveVisitPressure.ts`
 - `ai/healingPressure.ts`
 - `ai/helperAssignment.ts`
@@ -358,6 +361,28 @@ Generated from TypeScript imports.
 
 - `ai/dialogueTemplates.test.ts`
 - `app/inventoryWiring.ts`
+
+## `ai/economicPressure.test.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/economicPressure.ts`
+- `ai/weatherPressure.ts`
+- `economy/productionShortage.ts`
+- `simulation/index.ts`
+
+## `ai/economicPressure.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `economy/productionShortage.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/economicPressure.test.ts`
 
 ## `ai/graveVisitPressure.test.ts`
 
@@ -1019,6 +1044,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/animalCorpseCleanupPressure.test.ts`
 - `ai/burialPressure.test.ts`
+- `ai/economicPressure.test.ts`
 - `ai/graveVisitPressure.test.ts`
 - `ai/healingPressure.test.ts`
 - `ai/npcDecision.test.ts`

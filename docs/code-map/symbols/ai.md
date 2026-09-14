@@ -66,6 +66,13 @@ Generated from exported TypeScript symbols.
 - `requestAssistanceLine` — function — line 223
 - `voluntaryJoinResponseLine` — function — line 242
 
+## `ai/economicPressure.ts`
+
+- `productionShortagePressure` — function — line 15
+  - domain: settlements-npcs
+- `productionShortagePressures` — function — line 29
+  - domain: settlements-npcs
+
 ## `ai/graveVisitPressure.ts`
 
 - `getLastGraveVisitAtDays` — function — line 65
@@ -166,24 +173,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 720
-- `CurrentActivity` — type — line 530
-- `CurrentActivityKind` — type — line 523
-- `NPC_HEIGHT` — const — line 433
-- `NPC_MODEL_URLS` — const — line 497
-- `NPC_SHADOW_DISTANCE` — const — line 447
-- `NpcAgent` — class — line 1061
+- `classifyPendingActivity` — function — line 721
+- `CurrentActivity` — type — line 531
+- `CurrentActivityKind` — type — line 524
+- `NPC_HEIGHT` — const — line 434
+- `NPC_MODEL_URLS` — const — line 498
+- `NPC_SHADOW_DISTANCE` — const — line 448
+- `NpcAgent` — class — line 1062
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 966
-- `NpcInspectionSnapshot` — type — line 545
-- `NpcWhy` — type — line 695
-- `projectNpcWhy` — function — line 761
-- `promoteChainKind` — function — line 712
+- `NpcAgentDeps` — type — line 967
+- `NpcInspectionSnapshot` — type — line 546
+- `NpcWhy` — type — line 696
+- `projectNpcWhy` — function — line 762
+- `promoteChainKind` — function — line 713
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -356,11 +363,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 66
-- `findWeaponNeedingMaintenance` — function — line 88
-- `NpcWorkContext` — type — line 108
-- `planProfessionWork` — function — line 746
-- `selectTraderCollectionGoods` — function — line 355
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 69
+- `findWeaponNeedingMaintenance` — function — line 91
+- `NpcWorkContext` — type — line 111
+- `planProfessionWork` — function — line 777
+- `selectTraderCollectionGoods` — function — line 373
 
 ## `ai/npcStrategies.ts`
 

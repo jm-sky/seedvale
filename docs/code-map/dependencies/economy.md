@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `economy/npcWork.ts`
 - `economy/production.ts`
 - `economy/productionExecutor.ts`
+- `economy/productionShortage.ts`
 - `economy/registry.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
@@ -78,8 +79,10 @@ Generated from TypeScript imports.
 - `economy/initial.ts`
 - `economy/localExchange.ts`
 - `economy/productionExecutor.ts`
+- `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
+- `persistence/saveData.ts`
 - `terrain/depositMining.test.ts`
 - `terrain/depositMining.ts`
 
@@ -156,6 +159,8 @@ Generated from TypeScript imports.
 - `economy/production.test.ts`
 - `economy/productionExecutor.test.ts`
 - `economy/productionExecutor.ts`
+- `economy/productionShortage.test.ts`
+- `economy/productionShortage.ts`
 - `economy/settlementEconomy.test.ts`
 - `economy/settlementEconomy.ts`
 
@@ -186,7 +191,37 @@ Generated from TypeScript imports.
 - `economy/npcWork.ts`
 - `economy/production.ts`
 - `economy/productionExecutor.test.ts`
+- `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
+
+## `economy/productionShortage.test.ts`
+
+**Imports**
+
+- `economy/production.ts`
+- `economy/productionShortage.ts`
+- `economy/settlementEconomy.ts`
+- `settlement/household.ts`
+
+## `economy/productionShortage.ts`
+
+**Imports**
+
+- `economy/kinds.ts`
+- `economy/production.ts`
+- `economy/productionExecutor.ts`
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `ai/economicPressure.test.ts`
+- `ai/economicPressure.ts`
+- `economy/index.ts`
+- `economy/productionShortage.test.ts`
+- `economy/settlementEconomy.ts`
+- `persistence/saveData.ts`
 
 ## `economy/registry.test.ts`
 
@@ -226,6 +261,7 @@ Generated from TypeScript imports.
 - `economy/kinds.ts`
 - `economy/production.ts`
 - `economy/productionExecutor.ts`
+- `economy/productionShortage.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
 - `items/foodFreshness.ts`
@@ -245,6 +281,8 @@ Generated from TypeScript imports.
 - `economy/npcWork.ts`
 - `economy/productionExecutor.test.ts`
 - `economy/productionExecutor.ts`
+- `economy/productionShortage.test.ts`
+- `economy/productionShortage.ts`
 - `economy/registry.ts`
 - `economy/settlementEconomy.test.ts`
 - `interaction/Interactable.ts`

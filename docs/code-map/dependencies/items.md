@@ -117,6 +117,7 @@ Generated from TypeScript imports.
 - `economy/production.ts`
 - `economy/productionExecutor.test.ts`
 - `economy/productionExecutor.ts`
+- `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
@@ -1007,6 +1008,7 @@ Generated from TypeScript imports.
 - `debug/settlementHistory.ts`
 - `economy/initial.ts`
 - `economy/productionExecutor.ts`
+- `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalAttraction.ts`

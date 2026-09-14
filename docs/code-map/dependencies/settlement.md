@@ -580,6 +580,7 @@ Generated from TypeScript imports.
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
 - `economy/productionExecutor.test.ts`
+- `economy/productionShortage.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`

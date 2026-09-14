@@ -33,6 +33,8 @@ Generated from TypeScript imports.
 
 - `badges/badges.ts`
 - `config/worldConfig.ts`
+- `economy/kinds.ts`
+- `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
