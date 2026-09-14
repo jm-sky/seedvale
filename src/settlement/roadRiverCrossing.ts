@@ -11,15 +11,13 @@ import { projectOntoSegment, yawToward } from '../math/segment'
  *   crossing is (`ford` / `bridge`) or that it is not supported at all. Pure
  *   and allocation-light so `roadNetwork.ts`'s A* can price every candidate
  *   edge through it.
- * @integration `roadNetwork.ts` is the only caller: it prices edges with
- *   {@link riverHitsOnEdge}/{@link evaluateRoadRiverCrossing} during the
+ * @integration `roadNetwork.ts` is the only caller: it prices edges
+ *   with {@link riverHitsOnEdge}/{@link evaluateRoadRiverCrossing} during the
  *   search and then derives the route's canonical {@link RoadRiverCrossing}
  *   records from the *final* polyline with {@link crossingsForPolyline}. No
  *   terrain, renderer or runtime stage may reclassify a crossing: terrain only
- *   projects a declared `ford` (`terrain/riverFord.ts`) and
- *   `world-terrain-033` only projects a declared `bridge`.
+ *   projects a declared `ford` (`terrain/riverFord.ts`) and `world-terrain-033` only projects a declared `bridge`.
  */
-
 export type RoadRiverCrossingKind = 'ford' | 'bridge'
 
 /** Canonical, presentation-free facts about one road × river intersection,

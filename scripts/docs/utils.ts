@@ -246,9 +246,70 @@ export function isExported(
 function jsDocTagText(tag: ts.JSDocTag): string {
   const comment = typeof tag.comment === 'string'
     ? tag.comment
-    : ts.getTextOfJSDocComment(tag.comment)
+    : stringifyJsDocComment(tag.comment)
 
   return (comment ?? '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Flatten a parsed JSDoc comment (plain text + `{@link}` parts) without
+ * calling `ts.getTextOfJSDocComment`.
+ *
+ * That helper pretty-prints link names via `getTextOfNode`, which walks
+ * parents to the `SourceFile`. Program parse trees leave `{@link}`
+ * identifiers detached, so `getTextOfJSDocComment` throws
+ * `Cannot read properties of undefined (reading 'text')`.
+ */
+function stringifyJsDocComment(
+  comment: ts.NodeArray<ts.JSDocComment> | undefined,
+): string {
+  if (!comment) {
+    return ''
+  }
+
+  return comment.map(part => {
+    if (part.kind === ts.SyntaxKind.JSDocText) {
+      return part.text
+    }
+
+    const link = part as ts.JSDocLink | ts.JSDocLinkCode | ts.JSDocLinkPlain
+    const name = jsDocLinkNameToString(link.name)
+    const text = link.text ?? ''
+
+    if (!name) {
+      return text
+    }
+
+    if (
+      !text
+      || text.startsWith('://')
+      || text.startsWith('|')
+      || text.startsWith(' ')
+    ) {
+      return `${name}${text}`
+    }
+
+    return `${name} ${text}`
+  }).join('')
+}
+
+function jsDocLinkNameToString(
+  name: ts.EntityName | ts.JSDocMemberName | undefined,
+): string {
+  if (!name) {
+    return ''
+  }
+
+  switch (name.kind) {
+    case ts.SyntaxKind.Identifier:
+      return name.text
+    case ts.SyntaxKind.JSDocMemberName:
+      return `${jsDocLinkNameToString(name.left)}#${jsDocLinkNameToString(name.right)}`
+    case ts.SyntaxKind.QualifiedName:
+      return `${jsDocLinkNameToString(name.left)}.${name.right.text}`
+    default:
+      return ''
+  }
 }
 
 /**
