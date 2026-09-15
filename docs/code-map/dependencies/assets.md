@@ -76,6 +76,7 @@ Generated from TypeScript imports.
 - `items/heldToolVisual.ts`
 - `settlement/houseLighting.ts`
 - `settlement/wellInteractionQueue.ts`
+- `tools/assetBrowser/gripEdit.test.ts`
 
 ## `assets/assetAnchors.test.ts`
 

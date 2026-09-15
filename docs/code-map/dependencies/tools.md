@@ -2,6 +2,13 @@
 
 Generated from TypeScript imports.
 
+## `tools/assetBrowser/gripEdit.test.ts`
+
+**Imports**
+
+- `assets/assetAnchorData.ts`
+- `tools/assetBrowser/gripEdit.ts`
+
 ## `tools/assetBrowser/gripEdit.ts`
 
 **Imports**
@@ -12,6 +19,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `tools/assetBrowser/gripEdit.test.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 

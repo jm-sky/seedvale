@@ -5,17 +5,17 @@ Generated from exported TypeScript symbols.
 ## `tools/assetBrowser/gripEdit.ts`
 
 - `BROWSER_PROVISIONAL_ATTACH` — const — line 11
-- `bumpGripEdit` — function — line 107
+- `bumpGripEdit` — function — line 110
 - `defaultAttachForHeldId` — function — line 63
-- `formatHeldAttachSnippet` — function — line 111
+- `formatHeldAttachSnippet` — function — line 114
 - `gripEdit` — const — line 29
 - `GripEditState` — type — line 20
 - `gripEditToAttach` — function — line 88
 - `GripEditValues` — type — line 13
-- `gripOverrideForTarget` — function — line 102
-- `installGripApi` — function — line 161
+- `gripOverrideForTarget` — function — line 105
+- `installGripApi` — function — line 164
 - `loadGripEditor` — function — line 71
-- `SeedvaleGripApi` — type — line 153
+- `SeedvaleGripApi` — type — line 156
 
 ## `tools/assetBrowser/modelManifest.ts`
 
