@@ -29,15 +29,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/campfireProps.ts`
 
-- `CampfireBodyKind` — type — line 11
-- `CampfireFlame` — type — line 196
-- `createCampfire` — function — line 180
-- `createCampfireBody` — function — line 172
-- `createCampfireFlame` — function — line 211
-- `createGrateVisual` — function — line 271
-- `createLitCampfireVisual` — function — line 255
-- `createSimpleFireBase` — function — line 187
-- `preloadCampfireTemplates` — function — line 51
+- `CampfireBodyKind` — type — line 13
+- `CampfireFlame` — type — line 253
+- `createCampfire` — function — line 237
+- `createCampfireBody` — function — line 228
+- `createCampfireFlame` — function — line 268
+- `createGrateVisual` — function — line 328
+- `createLitCampfireVisual` — function — line 312
+- `createSimpleFireBase` — function — line 244
+- `preloadCampfireTemplates` — function — line 53
 
 ## `settlement/createSettlement.ts`
 
@@ -485,12 +485,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/places.ts`
 
-- `homeIndexFromPlaceId` — function — line 48
-- `homePlaceId` — function — line 38
-- `Place` — type — line 20
-- `PlaceType` — type — line 18
-- `socialPlaceFor` — function — line 71
-- `workplaceFor` — function — line 117
+- `homeIndexFromPlaceId` — function — line 49
+- `homePlaceId` — function — line 39
+- `Place` — type — line 21
+- `PlaceType` — type — line 19
+- `socialPlaceFor` — function — line 72
+- `workEligibleSettlementTrees` — function — line 90
+- `workplaceFor` — function — line 131
 
 ## `settlement/playerOwnedHorseDebug.ts`
 
@@ -508,6 +509,19 @@ Generated from exported TypeScript symbols.
   - domain: fauna
   - role: Debug teleport of an existing live player-owned horse through the agent's ground-snap seam. Preserves identity/owner/name/control.
 
+## `settlement/plazaPaving.ts`
+
+- `centralPlazaReservedFootprints` — function — line 53
+- `fullPlazaSurfaceHoles` — function — line 111
+- `generateFullPlazaCobbles` — function — line 129
+- `generateSparsePlazaCobbles` — function — line 79
+- `PlazaExclusion` — type — line 15
+- `plazaPavingMode` — function — line 34
+- `PlazaPavingMode` — type — line 13
+  - domain: settlements
+- `PlazaPavingPlacement` — type — line 21
+- `PlazaSurfaceHole` — type — line 28
+
 ## `settlement/professionStaffing.ts`
 
 - `adultProfessionCoverage` — function — line 309
@@ -523,16 +537,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 308
-- `buildSettlementProps` — function — line 720
-- `disposeSettlementGroup` — function — line 2023
-- `SettlementHouseBed` — type — line 151
-- `SettlementHouseLandmark` — type — line 117
-- `SettlementLandmarks` — type — line 167
-- `SettlementLandPlot` — type — line 297
-- `SettlementStorageVisuals` — type — line 289
-- `SettlementTreeLandmark` — type — line 318
-- `SettlementWellLandmark` — type — line 158
+- `BlacksmithWorkplace` — type — line 323
+- `buildSettlementProps` — function — line 733
+- `disposeSettlementGroup` — function — line 2045
+- `SettlementHouseBed` — type — line 162
+- `SettlementHouseLandmark` — type — line 128
+- `SettlementLandmarks` — type — line 178
+- `SettlementLandPlot` — type — line 312
+- `SettlementStorageVisuals` — type — line 304
+- `SettlementTreeLandmark` — type — line 333
+- `SettlementWellLandmark` — type — line 169
 
 ## `settlement/propSpecs.ts`
 
@@ -540,11 +554,11 @@ Generated from exported TypeScript symbols.
 - `ANIMAL_TROUGH_URL` — const — line 135
 - `BUSH_SPECS` — const — line 33
 - `CACTUS_SPECS` — const — line 50
-- `CAMPFIRE_FIT_MAX` — const — line 156
-- `CAMPFIRE_UNLIT_URL` — const — line 154
+- `CAMPFIRE_FIT_MAX` — const — line 158
+- `CAMPFIRE_UNLIT_URL` — const — line 156
 - `CEMETERY_SPECS` — const — line 106
-- `COBBLE_FIT_MAX` — const — line 173
-- `COBBLE_URL` — const — line 170
+- `COBBLE_FIT_MAX` — const — line 175
+- `COBBLE_URL` — const — line 172
 - `CROPS_FIT_MAX` — const — line 129
 - `CROPS_URL` — const — line 127
 - `DOCK_SPECS` — const — line 83
@@ -552,21 +566,21 @@ Generated from exported TypeScript symbols.
 - `FARM_HEIGHT` — const — line 125
 - `FARM_URL` — const — line 122
 - `FERN_SPECS` — const — line 46
-- `FIRE_FX_URL` — const — line 183
+- `FIRE_FX_URL` — const — line 185
 - `GRAVE_SPECS` — const — line 110
-- `LANDMARK_BOAT_FIT_MAX` — const — line 160
-- `LANDMARK_BOAT_URL` — const — line 159
-- `LANDMARK_OLD_TREE_FIT_MAX` — const — line 166
-- `LANDMARK_OLD_TREE_URL` — const — line 165
-- `LANDMARK_SHIPWRECK_FIT_MAX` — const — line 162
-- `LANDMARK_SHIPWRECK_URL` — const — line 161
-- `LANDMARK_TOWER_FIT_MAX` — const — line 164
-- `LANDMARK_TOWER_URL` — const — line 163
-- `LANDMARK_WAGON_FIT_MAX` — const — line 168
-- `LANDMARK_WAGON_URL` — const — line 167
-- `LANTERN_FLOOR_MAX` — const — line 184
-- `LANTERN_URL` — const — line 181
-- `LANTERN_WALL_MAX` — const — line 187
+- `LANDMARK_BOAT_FIT_MAX` — const — line 162
+- `LANDMARK_BOAT_URL` — const — line 161
+- `LANDMARK_OLD_TREE_FIT_MAX` — const — line 168
+- `LANDMARK_OLD_TREE_URL` — const — line 167
+- `LANDMARK_SHIPWRECK_FIT_MAX` — const — line 164
+- `LANDMARK_SHIPWRECK_URL` — const — line 163
+- `LANDMARK_TOWER_FIT_MAX` — const — line 166
+- `LANDMARK_TOWER_URL` — const — line 165
+- `LANDMARK_WAGON_FIT_MAX` — const — line 170
+- `LANDMARK_WAGON_URL` — const — line 169
+- `LANTERN_FLOOR_MAX` — const — line 186
+- `LANTERN_URL` — const — line 183
+- `LANTERN_WALL_MAX` — const — line 189
 - `LILY_SPECS` — const — line 70
 - `REED_SPECS` — const — line 61
 - `RESOURCE_GOLD_SPECS` — const — line 114
@@ -574,18 +588,19 @@ Generated from exported TypeScript symbols.
 - `ROCK_CLUSTER_SPECS` — const — line 95
 - `ROCK_SPECS` — const — line 87
 - `SEAWEED_SPECS` — const — line 79
-- `TABLE_LAMP_FIT_MAX` — const — line 196
-- `TABLE_LAMP_URL` — const — line 195
+- `TABLE_LAMP_FIT_MAX` — const — line 198
+- `TABLE_LAMP_URL` — const — line 197
 - `THICKET_TREE_SPECS` — const — line 26
 - `TRAP_GOOD_FIT_MAX` — const — line 141
 - `TRAP_GOOD_URL` — const — line 140
 - `TREE_SPECS` — const — line 6
-- `TREE_STUMP_HEIGHT` — const — line 178
-- `TREE_STUMP_URL` — const — line 175
+- `TREE_STUMP_HEIGHT` — const — line 180
+- `TREE_STUMP_URL` — const — line 177
 - `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 152
-- `VILLAGE_TORCH_HEIGHT` — const — line 188
-- `VILLAGE_TORCH_URL` — const — line 182
-- `WALL_URL` — const — line 180
+- `VILLAGE_MASONRY_FIREPIT_COLLISION_RADIUS` — const — line 154
+- `VILLAGE_TORCH_HEIGHT` — const — line 190
+- `VILLAGE_TORCH_URL` — const — line 184
+- `WALL_URL` — const — line 182
 - `WELL_HEIGHT` — const — line 133
 - `WELL_URL` — const — line 131
 - `WOOD_PILE_COLLISION_RADIUS` — const — line 150
@@ -760,14 +775,14 @@ Generated from exported TypeScript symbols.
 - `cellKey` — function — line 124
 - `cellSeed` — function — line 167
 - `cellsWithinRadius` — function — line 151
-- `generateSettlementDef` — function — line 754
-- `generateVillagePlan` — function — line 688
-- `probeSettlementSite` — function — line 494
+- `generateSettlementDef` — function — line 755
+- `generateVillagePlan` — function — line 689
+- `probeSettlementSite` — function — line 495
   - domain: settlements
 - `SETTLEMENT_GRID_STEP` — const — line 66
 - `SettlementCell` — type — line 72
 - `SettlementDef` — type — line 74
-- `SettlementSiteProbe` — type — line 479
+- `SettlementSiteProbe` — type — line 480
 - `worldToCell` — function — line 128
 
 ## `settlement/settlementNameUniqueness.ts`
@@ -840,8 +855,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPropColliders.ts`
 
-- `SettlementPropColliderLandmarks` — type — line 18
-- `settlementPropColliders` — function — line 25
+- `SettlementPropColliderLandmarks` — type — line 19
+- `settlementPropColliders` — function — line 26
 
 ## `settlement/settlementProximity.ts`
 
@@ -1013,11 +1028,11 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villageClearing.ts`
 
-- `ClearingArea` — type — line 10
-- `ClearingLayout` — type — line 20
-- `layoutClearings` — function — line 145
-- `layoutClearingsFromPlan` — function — line 73
-- `plazaCoreRadius` — function — line 56
+- `ClearingArea` — type — line 11
+- `ClearingLayout` — type — line 21
+- `layoutClearings` — function — line 137
+- `layoutClearingsFromPlan` — function — line 65
+- `plazaCoreRadius` — function — line 57
 
 ## `settlement/VillageFire.ts`
 
@@ -1039,34 +1054,46 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlan.ts`
 
+- `DEFAULT_PLAZA_RADIUS` — const — line 53
 - `FoodSourceType` — type — line 10
-- `householdWellLandmarkId` — function — line 127
-- `householdWellPlotId` — function — line 113
-- `parseHouseholdWellFamilyIndex` — function — line 119
-- `PASTURE_ID` — const — line 165
-- `pasturePathId` — function — line 174
-- `pastureWellLandmarkId` — function — line 169
-- `residentialStructureId` — function — line 107
+- `householdWellLandmarkId` — function — line 195
+- `householdWellPlotId` — function — line 181
+- `isTreeWorkEligible` — function — line 99
+- `noticeBoardPlotId` — function — line 211
+- `parseHouseholdWellFamilyIndex` — function — line 187
+- `PASTURE_ID` — const — line 239
+- `pasturePathId` — function — line 248
+- `pastureWellLandmarkId` — function — line 243
+- `plannedCampfireBodyKind` — function — line 91
+- `plannedCampfireFootprint` — function — line 87
+- `PLAZA_CAMPFIRE_FOOTPRINT` — const — line 79
+- `PLAZA_MASONRY_FIREPIT_FOOTPRINT` — const — line 81
+- `PLAZA_TREE_WORK_MARGIN` — const — line 97
+- `plazaRadiusForSize` — function — line 57
+- `plazaUsesMasonryFirepit` — function — line 83
+- `residentialStructureId` — function — line 175
 - `VillageBoundary` — type — line 27
-- `VillageBuildingPlan` — type — line 86
-- `VillageBuildingRole` — type — line 78
+- `VillageBuildingPlan` — type — line 154
+- `VillageBuildingRole` — type — line 146
 - `VillageCenter` — type — line 35
-- `VillageEntrance` — type — line 224
+- `VillageEntrance` — type — line 298
 - `VillageIdentity` — type — line 14
-- `VillageLandmarkKind` — type — line 131
-- `VillageLandmarkPlan` — type — line 141
-- `VillageLayoutPattern` — type — line 236
-- `VillagePastureAnchor` — type — line 193
-- `VillagePastureFenceSegment` — type — line 184
+- `VillageLandmarkKind` — type — line 199
+- `VillageLandmarkPlan` — type — line 215
+- `VillageLayoutPattern` — type — line 310
+- `VillagePastureAnchor` — type — line 267
+- `VillagePastureFenceSegment` — type — line 258
   - domain: settlements
-- `VillagePasturePlan` — type — line 208
+- `VillagePasturePlan` — type — line 282
   - domain: settlements
-- `VillagePathPlan` — type — line 155
-- `VillagePlan` — type — line 252
-- `VillagePlot` — type — line 59
-- `VillagePlotRole` — type — line 57
-- `VillageZone` — type — line 49
-- `VillageZoneKind` — type — line 41
+- `VillagePathPlan` — type — line 229
+- `VillagePlan` — type — line 326
+- `VillagePlaza` — type — line 46
+- `villagePlazaAt` — function — line 70
+- `VillagePlot` — type — line 127
+- `VillagePlotRole` — type — line 125
+- `VillageZone` — type — line 117
+- `VillageZoneKind` — type — line 109
 
 ## `settlement/villagePlanDebug.ts`
 
@@ -1074,16 +1101,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1242
-- `chooseLayoutPattern` — function — line 150
-- `HOUSE_PLOT_RADIUS` — const — line 71
-- `householdWellLocalBand` — function — line 81
+- `buildingsAndLandmarksFromPlots` — function — line 1278
+- `chooseLayoutPattern` — function — line 156
+- `HOUSE_PLOT_RADIUS` — const — line 74
+- `householdWellLocalBand` — function — line 86
   - domain: settlements-npcs
-- `pathPlansToCorridorData` — function — line 1613
-- `planLocalPathsAndEntrances` — function — line 1494
-- `planVillageLayout` — function — line 840
-- `PLOT_SCORE_WEIGHTS` — const — line 45
-- `VillageLayoutDraft` — type — line 116
+- `pathPlansToCorridorData` — function — line 1653
+- `planLocalPathsAndEntrances` — function — line 1534
+- `planVillageLayout` — function — line 846
+- `PLOT_SCORE_WEIGHTS` — const — line 48
+- `VillageLayoutDraft` — type — line 121
 
 ## `settlement/wellInteractionQueue.ts`
 

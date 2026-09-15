@@ -342,6 +342,8 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/npcIdentity.test.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/plazaPaving.test.ts`
+- `settlement/plazaPaving.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
 - `settlement/props.ts`
@@ -1090,6 +1092,7 @@ Generated from TypeScript imports.
 
 - `ai/characters.ts`
 - `settlement/props.ts`
+- `settlement/villagePlan.ts`
 
 **Imported by**
 
@@ -1120,6 +1123,28 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/playerOwnedHorseDebug.test.ts`
+
+## `settlement/plazaPaving.test.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/plazaPaving.ts`
+- `settlement/villagePlan.ts`
+- `settlement/villagePlanner.ts`
+
+## `settlement/plazaPaving.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/villagePlan.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/plazaPaving.test.ts`
+- `settlement/props.ts`
 
 ## `settlement/professionStaffing.test.ts`
 
@@ -1228,6 +1253,7 @@ Generated from TypeScript imports.
 - `settlement/houseLighting.ts`
 - `settlement/householdYard.ts`
 - `settlement/merchantWagon.ts`
+- `settlement/plazaPaving.ts`
 - `settlement/propSpecs.ts`
 - `settlement/propUtils.ts`
 - `settlement/ratNestPlacement.ts`
@@ -1998,7 +2024,6 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villagePlanner.test.ts`
-- `settlement/villagePlanner.ts`
 
 ## `settlement/villagePasture.test.ts`
 
@@ -2043,8 +2068,12 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `debug/npcDebugApi.ts`
 - `economy/initial.ts`
+- `settlement/places.ts`
+- `settlement/plazaPaving.test.ts`
+- `settlement/plazaPaving.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
 - `settlement/props.ts`
@@ -2098,7 +2127,6 @@ Generated from TypeScript imports.
 - `settlement/householdWells.ts`
 - `settlement/householdYard.ts`
 - `settlement/pathDryness.ts`
-- `settlement/villageClearing.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
 - `terrain/chunkHeightmap.ts`
@@ -2109,6 +2137,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `settlement/householdYard.test.ts`
+- `settlement/plazaPaving.test.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`

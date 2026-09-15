@@ -1977,7 +1977,7 @@ Generated from exported TypeScript symbols.
 - `CHOP_YIELDS` — const — line 152
 - `clamp01` — function — line 274
 - `coastalFactor` — function — line 362
-- `createTreeLifecycle` — function — line 565
+- `createTreeLifecycle` — function — line 569
 - `envGrowthFactor` — function — line 372
 - `FELLING_BEAM_YIELD` — const — line 169
 - `HARVEST_YIELD` — const — line 160
@@ -1987,11 +1987,11 @@ Generated from exported TypeScript symbols.
 - `isChoppableStage` — function — line 196
 - `lerp` — function — line 278
 - `livingHeightM` — function — line 288
-- `makeTreeId` — function — line 554
+- `makeTreeId` — function — line 558
 - `OLD_SPAWN_CHANCE` — const — line 123
-- `parseTreeOverrides` — function — line 971
+- `parseTreeOverrides` — function — line 976
 - `PINE_SPECIES_INDICES` — const — line 135
-- `quantizeTreeCoord` — function — line 546
+- `quantizeTreeCoord` — function — line 550
 - `ResolvedTreeState` — type — line 265
 - `rollLivingAge` — function — line 335
 - `rollSizeClass` — function — line 324

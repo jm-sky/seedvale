@@ -173,24 +173,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 707
-- `CurrentActivity` — type — line 517
-- `CurrentActivityKind` — type — line 510
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 824
-- `NPC_HEIGHT` — const — line 440
-- `NPC_SHADOW_DISTANCE` — const — line 454
-- `NpcAgent` — class — line 1057
+- `classifyPendingActivity` — function — line 708
+- `CurrentActivity` — type — line 518
+- `CurrentActivityKind` — type — line 511
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 825
+- `NPC_HEIGHT` — const — line 441
+- `NPC_SHADOW_DISTANCE` — const — line 455
+- `NpcAgent` — class — line 1058
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 958
-- `NpcInspectionSnapshot` — type — line 532
-- `NpcWhy` — type — line 682
-- `projectNpcWhy` — function — line 749
-- `promoteChainKind` — function — line 699
+- `NpcAgentDeps` — type — line 959
+- `NpcInspectionSnapshot` — type — line 533
+- `NpcWhy` — type — line 683
+- `projectNpcWhy` — function — line 750
+- `promoteChainKind` — function — line 700
 
 ## `ai/npcAnimalThreat.ts`
 

@@ -127,6 +127,7 @@ Generated from TypeScript imports.
 - `settlement/storageDestinations.ts`
 - `settlement/structureCondition.ts`
 - `settlement/structureRepairCandidates.ts`
+- `settlement/villagePlan.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
