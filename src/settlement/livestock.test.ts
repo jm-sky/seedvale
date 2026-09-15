@@ -10,6 +10,7 @@ import {
   type LivestockSaveRecord,
   resolveLivePersistentAnimal,
   setOwnedAnimalControl,
+  shouldSpawnDeterministicLivestockSlot,
   tickSettlementLivestock,
   transferAnimalOwnership,
 } from './livestock'
@@ -19,6 +20,7 @@ function fakeAnimal(
   kind: 'chicken' | 'horse',
   ownerHouseId?: string,
   owner = ownerFromHouseId(ownerHouseId),
+  control?: AnimalSaveState['control'],
 ): AnimalAgent {
   const state: AnimalSaveState = {
     x: 1, z: 2, yaw: 0.3,
@@ -28,6 +30,7 @@ function fakeAnimal(
     eggPending: false,
     corpse: null,
     owner,
+    ...(control ? { control } : {}),
   }
   return {
     animalId,
@@ -179,6 +182,50 @@ describe('persistent livestock operations', () => {
     }
     expect(setOwnedAnimalControl(ctx, 'horse-house0-0', 'stay')).toBe(true)
     expect(animal.setOwnedControlMode).toHaveBeenCalledWith('stay')
+  })
+
+  it('upsert serializes Stay control on a transferred player-owned horse', () => {
+    const registry = createLivestockRegistry()
+    const animal = fakeAnimal(
+      'merchant-horse-home',
+      'horse',
+      undefined,
+      { kind: 'player' },
+      { mode: 'stay', stayAnchor: { x: 12, z: -3 } },
+    )
+    registry.upsert('home', animal)
+    const entries = registry.serialize().entries
+    expect(entries).toHaveLength(1)
+    expect(entries[0]!.animalId).toBe('merchant-horse-home')
+    expect(entries[0]!.control).toEqual({ mode: 'stay', stayAnchor: { x: 12, z: -3 } })
+    expect(isPlayerOwnedLivestockRecord(entries[0]!)).toBe(true)
+
+    const restored = createLivestockRegistry({
+      entries,
+      removedIds: registry.serialize().removedIds,
+    })
+    expect(restored.getSaved('home')?.get('merchant-horse-home')?.animalId).toBe('merchant-horse-home')
+    expect(restored.serialize().entries).toHaveLength(1)
+  })
+
+  it('tombstone and player-owned records skip deterministic merchant-horse respawn', () => {
+    const animalId = 'merchant-horse-home'
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, undefined)).toBe(true)
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, new Set([animalId]), undefined)).toBe(false)
+    const playerOwned: LivestockSaveRecord = {
+      settlementId: 'home',
+      animalId,
+      kind: 'horse',
+      owner: { kind: 'player' },
+      x: 1, z: 2, yaw: 0,
+      health: { current: 5, max: 10, dead: false },
+      life: { hunger: 0, thirst: 0, stamina: 1 },
+      productionReadyAtDays: 0,
+      eggPending: false,
+      corpse: null,
+      control: { mode: 'stay', stayAnchor: { x: 1, z: 2 } },
+    }
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, playerOwned)).toBe(false)
   })
 })
 

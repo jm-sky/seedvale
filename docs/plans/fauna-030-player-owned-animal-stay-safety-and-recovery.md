@@ -1,7 +1,7 @@
 # Plan: Player-owned animal Stay safety and recovery
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser checks are User-owned)
 **Type:** bug
 **Priority:** high · **Effort:** M
 **Depends on:** ~~fauna-020~~, ~~fauna-015~~, ~~fauna-029~~

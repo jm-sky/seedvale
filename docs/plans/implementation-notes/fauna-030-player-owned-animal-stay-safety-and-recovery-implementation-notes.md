@@ -47,3 +47,7 @@
 - death/removal nie powoduje duplicate deterministic respawn.
 
 Browser verification wykonuje User.
+
+## Implementation (2026-09-15)
+
+Stay no longer returns a consuming `{ kind: 'stay' }`. `resolveOwnedControlMovement` reuses `resolveFollowHysteresis` against `stayAnchor` (`STAY_RETURN_START` 12 / `STAY_RETURN_STOP` 6) and emits `{ kind: 'returnToAnchor' }` or `{ kind: 'none' }`. `pursueOwnedControl` walks on return and otherwise falls through to local wander. `wander()` skips `tickTrip()` while Stay; `maybeStartWaterTrip` also refuses via `isOwnedStayBlockingRoutineTrips`. Food selection (`findForageTarget` / `findGrassPatchTarget` / grassPatch validation) now honours `withinNeedLeash`. Persistence unchanged (no save-version bump). Deterministic slot skip is `shouldSpawnDeterministicLivestockSlot`.

@@ -3,8 +3,13 @@ import {
   createDefaultOwnedAnimalControlState,
   FOLLOW_START_DISTANCE,
   FOLLOW_STOP_DISTANCE,
+  hydrateOwnedAnimalControl,
+  isOwnedStayBlockingRoutineTrips,
   resolveOwnedControlMovement,
   setOwnedAnimalControlMode,
+  snapshotOwnedAnimalControl,
+  STAY_RETURN_START,
+  STAY_RETURN_STOP,
 } from './ownedAnimalControl'
 
 describe('ownedAnimalControl', () => {
@@ -37,12 +42,58 @@ describe('ownedAnimalControl', () => {
       .toBe('follow')
   })
 
-  it('stay mode returns stay semantics and mounted suppresses movement', () => {
+  it('stay returns to the anchor outside the start band and stops inside the stop band', () => {
     const state = createDefaultOwnedAnimalControlState()
-    setOwnedAnimalControlMode(state, 'stay', { x: 3, z: 4 })
-    expect(resolveOwnedControlMovement(state, true, { x: 0, z: 0 }, { x: 100, z: 0 }, false, false).kind)
-      .toBe('stay')
-    expect(resolveOwnedControlMovement(state, true, { x: 0, z: 0 }, { x: 100, z: 0 }, true, false).kind)
-      .toBe('none')
+    const anchor = { x: 0, z: 0 }
+    setOwnedAnimalControlMode(state, 'stay', anchor)
+
+    const far = resolveOwnedControlMovement(
+      state, true, { x: STAY_RETURN_START + 1, z: 0 }, { x: 100, z: 0 }, false, false,
+    )
+    expect(far).toEqual({ kind: 'returnToAnchor', x: 0, z: 0 })
+    expect(state.following).toBe(true)
+
+    const mid = resolveOwnedControlMovement(
+      state, true,
+      { x: (STAY_RETURN_START + STAY_RETURN_STOP) / 2, z: 0 },
+      { x: 100, z: 0 }, false, false,
+    )
+    expect(mid.kind).toBe('returnToAnchor')
+
+    const near = resolveOwnedControlMovement(
+      state, true, { x: STAY_RETURN_STOP - 0.5, z: 0 }, { x: 100, z: 0 }, false, false,
+    )
+    expect(near.kind).toBe('none')
+    expect(state.following).toBe(false)
+  })
+
+  it('mounted suppresses Stay return movement', () => {
+    const state = createDefaultOwnedAnimalControlState()
+    setOwnedAnimalControlMode(state, 'stay', { x: 0, z: 0 })
+    expect(resolveOwnedControlMovement(
+      state, true, { x: STAY_RETURN_START + 4, z: 0 }, { x: 100, z: 0 }, true, false,
+    ).kind).toBe('none')
+  })
+
+  it('blocks routine trips only for live player-owned Stay', () => {
+    const stay = createDefaultOwnedAnimalControlState()
+    setOwnedAnimalControlMode(stay, 'stay', { x: 1, z: 2 })
+    expect(isOwnedStayBlockingRoutineTrips(stay, true)).toBe(true)
+    expect(isOwnedStayBlockingRoutineTrips(stay, false)).toBe(false)
+    const follow = createDefaultOwnedAnimalControlState()
+    expect(isOwnedStayBlockingRoutineTrips(follow, true)).toBe(false)
+  })
+
+  it('snapshot/hydrate keeps Stay mode and anchor, not hysteresis', () => {
+    const state = createDefaultOwnedAnimalControlState()
+    setOwnedAnimalControlMode(state, 'stay', { x: 7, z: 9 })
+    state.following = true
+    const snap = snapshotOwnedAnimalControl(state)
+    expect(snap).toEqual({ mode: 'stay', stayAnchor: { x: 7, z: 9 } })
+    const restored = createDefaultOwnedAnimalControlState()
+    hydrateOwnedAnimalControl(restored, snap)
+    expect(restored.mode).toBe('stay')
+    expect(restored.stayAnchor).toEqual({ x: 7, z: 9 })
+    expect(restored.following).toBe(false)
   })
 })

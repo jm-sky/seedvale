@@ -313,8 +313,24 @@ describe('AnimalAgent', () => {
     })
   })
 
-  describe('player-owned follow (plan fauna-020)', () => {
+  describe('player-owned follow/stay (plan fauna-020 / fauna-030)', () => {
     const farObserver = new THREE.Vector3(1000, 0, 1000)
+
+    function tickOwned(
+      animal: AnimalAgent,
+      extras: Partial<Parameters<AnimalAgent['update']>[0]> = {},
+    ): void {
+      animal.update({
+        dt: 1,
+        others: extras.others ?? [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        playerControlPos: extras.playerControlPos ?? { x: 100, z: 100 },
+        ...extras,
+      })
+    }
 
     it('defaults to follow and moves toward the player instead of roaming away', () => {
       const horse = new AnimalAgent(makeDeps({ animalId: 'owned-follow' }))
@@ -335,23 +351,118 @@ describe('AnimalAgent', () => {
       expect(horse.mesh.position.x).toBeGreaterThan(1)
     })
 
-    it('stay mode does not wander away from the anchor', () => {
+    it('stay mode stays near the anchor instead of roaming off with the player', () => {
       const horse = new AnimalAgent(makeDeps({ animalId: 'owned-stay', x: 5, z: 5 }))
       horse.transferOwnershipToPlayer()
       horse.setOwnedControlMode('stay')
+      horse.life.thirst = 0
+      horse.life.hunger = 0
       const anchorX = horse.mesh.position.x
-      for (let i = 0; i < 8; i++) {
-        horse.update({
-          dt: 1,
-          others: [],
-          observerPos: farObserver,
-          dayFactor: 1,
-          forestFactor: 0,
-          litFires: [],
-          playerControlPos: { x: 100, z: 100 },
-        })
+      const anchorZ = horse.mesh.position.z
+      for (let i = 0; i < 8; i++) tickOwned(horse)
+      expect(Math.hypot(horse.mesh.position.x - anchorX, horse.mesh.position.z - anchorZ))
+        .toBeLessThan(16)
+    })
+
+    it('snapshot/hydrate keeps Stay mode and stayAnchor', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'owned-stay-snap', x: 4, z: 7 }))
+      horse.transferOwnershipToPlayer()
+      horse.setOwnedControlMode('stay')
+      const snap = horse.snapshot()
+      expect(snap.control).toEqual({
+        mode: 'stay',
+        stayAnchor: { x: 4, z: 7 },
+      })
+      const loaded = new AnimalAgent(makeDeps({ animalId: 'owned-stay-snap', x: 0, z: 0 }))
+      loaded.hydrate(snap)
+      expect(loaded.getOwnedControlMode()).toBe('stay')
+      expect(loaded.snapshot().control?.stayAnchor).toEqual({ x: 4, z: 7 })
+    })
+
+    it('a Stay animal displaced past the return band walks back toward the anchor', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'owned-stay-return', x: 0, z: 0 }))
+      horse.transferOwnershipToPlayer()
+      horse.setOwnedControlMode('stay')
+      horse.life.thirst = 0
+      horse.life.hunger = 0
+      horse.mesh.position.set(20, 0, 0)
+      tickOwned(horse)
+      expect(horse.mesh.position.x).toBeLessThan(20)
+    })
+
+    it('Stay hunger can walk to a local grass patch, then return after relief', () => {
+      const patchX = 8
+      const grassForage: GrassForageService = {
+        queryNear: () => [{ id: 'patch:stay', x: patchX, z: 0 }],
+        isAvailable: () => true,
+        consume: () => true,
+        tickVisuals: () => {},
+        serialize: () => ({}),
+        dispose: () => {},
       }
-      expect(Math.hypot(horse.mesh.position.x - anchorX, horse.mesh.position.z - 5)).toBeLessThan(4)
+      const horse = new AnimalAgent(makeDeps({ animalId: 'owned-stay-need', x: 0, z: 0 }))
+      horse.transferOwnershipToPlayer()
+      horse.setOwnedControlMode('stay')
+      horse.life.hunger = NEED_ELEVATED_THRESHOLD + 0.2
+      horse.life.thirst = 0
+      tickOwned(horse, { grassForage })
+      expect(horse.mesh.position.x).toBeGreaterThan(0.4)
+
+      horse.life.hunger = 0
+      horse.mesh.position.set(20, 0, 0)
+      tickOwned(horse, { grassForage })
+      expect(horse.mesh.position.x).toBeLessThan(20)
+    })
+
+    it('Stay flee can leave the leash; after the threat ends the horse returns', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'owned-stay-threat', x: 0, z: 0 }))
+      horse.transferOwnershipToPlayer()
+      horse.setOwnedControlMode('stay')
+      horse.life.hunger = 0
+      horse.life.thirst = 0
+      const wolf = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.wolf,
+        animalId: 'stay-threat-wolf',
+        x: 2,
+        z: 0,
+      }))
+      for (let i = 0; i < 6; i++) tickOwned(horse, { others: [horse, wolf] })
+      expect(Math.hypot(horse.mesh.position.x, horse.mesh.position.z)).toBeGreaterThan(4)
+
+      horse.mesh.position.set(22, 0, 0)
+      tickOwned(horse, { others: [horse] })
+      expect(horse.mesh.position.x).toBeLessThan(22)
+    })
+
+    it('player-owned Stay does not start a routine water trip when a wild deer would', () => {
+      const sampleHeight = (x: number) => (Math.abs(x) >= 6 ? -1 : 2)
+      const stay = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.deer,
+        animalId: 'owned-stay-trip',
+        x: 0,
+        z: 0,
+        sampleHeight,
+        waterLevel: 0,
+      }))
+      stay.transferOwnershipToPlayer()
+      stay.setOwnedControlMode('stay')
+      stay.life.hunger = 0
+      stay.life.thirst = 0
+      tickOwned(stay, { nowDays: 20 })
+      expect(stay.hasActiveTrip()).toBe(false)
+
+      const wild = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.deer,
+        animalId: 'wild-water-trip',
+        x: 0,
+        z: 0,
+        sampleHeight,
+        waterLevel: 0,
+      }))
+      wild.life.hunger = 0
+      wild.life.thirst = 0
+      tickOwned(wild, { nowDays: 20, playerControlPos: undefined })
+      expect(wild.hasActiveTrip()).toBe(true)
     })
   })
 

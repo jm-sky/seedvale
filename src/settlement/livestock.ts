@@ -100,6 +100,19 @@ export function isPlayerOwnedLivestockRecord(record: LivestockSaveRecord): boole
   return isPlayerOwnedOwner(parseAnimalOwnerFromRecord(record))
 }
 
+/**
+ * @domain fauna
+ * @role Household rolls and merchant-horse slots skip tombstones and
+ *  player-owned records restored on the detached path (fauna-020 / fauna-030).
+ */
+export function shouldSpawnDeterministicLivestockSlot(
+  animalId: string,
+  removed: ReadonlySet<string> | undefined,
+  record: LivestockSaveRecord | undefined,
+): boolean {
+  return !removed?.has(animalId) && !(record && isPlayerOwnedLivestockRecord(record))
+}
+
 export function livestockRecordMatchesHouseholdSlot(
   record: LivestockSaveRecord,
   kind: AnimalKind,
@@ -263,10 +276,8 @@ function createGuaranteedSheep(
   )
 
   const animalId = `sheep-home${homeIndex}-guaranteed`
-
-  if (removed?.has(animalId)) return null
   const savedRecord = saved?.get(animalId)
-  if (savedRecord && isPlayerOwnedLivestockRecord(savedRecord)) return null
+  if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, savedRecord)) return null
 
   const { visual, animations } = visualFor('sheep', animalId)
 
@@ -622,9 +633,8 @@ export async function spawnLivestock(
       // at this same house (plan persistence-001 §7).
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
       const animalId = `${kind}-house${i}-${houseAnimalIndex++}`
-      if (removed?.has(animalId)) continue
       const record = saved?.get(animalId)
-      if (record && isPlayerOwnedLivestockRecord(record)) continue
+      if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, record)) continue
       const { visual, animations } = visualFor(kind, animalId)
       const agent = new AnimalAgent({
         def: ANIMAL_DEFS[kind],
@@ -676,7 +686,7 @@ export async function spawnLivestock(
   if (merchantHorseSpawn) {
     const animalId = `merchant-horse-${settlementId}`
     const record = saved?.get(animalId)
-    if (!removed?.has(animalId) && !(record && isPlayerOwnedLivestockRecord(record))) {
+    if (shouldSpawnDeterministicLivestockSlot(animalId, removed, record)) {
       const { visual, animations } = visualFor('horse', animalId)
       const agent = new AnimalAgent({
         def: ANIMAL_DEFS.horse,

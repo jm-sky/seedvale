@@ -4,7 +4,7 @@
 
 **Not:** NPC decision-consumption logic ([npc.md](./npc.md) owns how a hunter/farmer *consumes* what this doc exposes), settlement economy internals ([settlements.md](./settlements.md)), combat resolver internals ([combat.md](./combat.md) owns the damage pipeline; this doc covers only fauna's own outgoing-damage asymmetry), water-traversal ownership ([water.md](./water.md) owns the physical water answer; this doc covers only how fauna consumes it), or a plan/changelog.
 
-**Last verified:** 2026-09-14
+**Last verified:** 2026-09-15
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -73,6 +73,8 @@ Death (`takeDamage()` → collapse, `onDeath` fires once regardless of cause) st
 ## Settlement/ecosystem interactions
 
 **Livestock** (7 kinds, spawned by a per-house deterministic roll) is the identical `AnimalAgent` class wild fauna uses, with an owning household set. Ownership changes concrete behaviour at real call sites: water-seeking tries the owner's trough/household water before a natural shoreline; diet-seeking prefers the owner's own stored food before a shared forage patch. Grass forage itself is shared identically by wild fauna and livestock through one atomic service — depletion is a sparse per-patch override, not per-patch object state; patch placement stays deterministic and unpersisted.
+
+**Player-owned Follow/Stay** (`ownedAnimalControl.ts`, fauna-020 / fauna-030) is the same `AnimalAgent` after transfer into the detached livestock collection. Follow uses hysteresis bands 12/6 toward the player. Stay is a local hysteretic anchor (`stayAnchor`, same 12/6 return bands), not a freeze and not a teleport: threat and elevated needs may leave first, forage/water targets must stay inside `STAY_NEED_LEASH_RADIUS` (18), and when those overrides end the animal walks back. Routine `AnimalTrip` start/continue is refused while Stay. `mode` + `stayAnchor` already round-trip on `AnimalSaveState.control` (no extra save version). Follow does not inherit Stay's leash; mounted movement stays on the mount pipeline.
 
 A household livestock individual can enter a durable stray/displacement episode (`animalStray.ts`, plan fauna-024) without changing `animalId` or `AnimalOwner`. Origin/home is stored on the animal; a one-shot domain reposition picks a walkable point outside the yard (predator pressure is a score penalty, not immunity). Survival assist is a gated flee-range/speed modifier on that episode only. Return is a world predicate (alive + inside the stored origin radius). Dead strayed livestock stays the same corpse `AnimalAgent`; natural world-time linger is the dispose clock (inspect is a quest flag, not an extra TTL). Temporary lead reuses `animalLead.ts` without transferring ownership.
 

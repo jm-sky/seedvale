@@ -9,6 +9,7 @@ import {
   type CarcassCandidate,
   dietItemReliefScale,
   findFoodTarget,
+  findGrassPatchTarget,
   findTroughTarget,
   findWaterTarget,
   type ForagingContext,
@@ -275,6 +276,27 @@ describe('applySourceRelief / findGrassPatchTarget — grass patch race (plan fa
     const ctx = makeCtx({ grassForage, def: ANIMAL_DEFS.deer })
     const target: SourceTarget = { kind: 'grassPatch', x: 1, z: 0, patchId: 'patch-1' }
     expect(isSourceTargetValid(ctx, {}, target)).toBe(false)
+  })
+
+  it('Stay need leash rejects a grass patch outside the excursion radius (fauna-030)', () => {
+    const grassForage: GrassForageService = {
+      queryNear: () => [{ id: 'patch-far', x: 40, z: 0 }],
+      isAvailable: () => true,
+      consume: () => true,
+      serialize: () => ({}),
+      tickVisuals: () => {},
+      dispose: () => {},
+    }
+    const ctx = makeCtx({
+      grassForage,
+      def: ANIMAL_DEFS.horse,
+      needAnchor: { x: 0, z: 0 },
+      needLeashRadius: 18,
+    })
+    expect(findGrassPatchTarget(ctx, grassForage)).toBeNull()
+    expect(isSourceTargetValid(ctx, {}, {
+      kind: 'grassPatch', x: 40, z: 0, patchId: 'patch-far',
+    })).toBe(false)
   })
 })
 

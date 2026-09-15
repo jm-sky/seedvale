@@ -230,6 +230,7 @@ import {
 import {
   createFollowOwnedAnimalControlState,
   hydrateOwnedAnimalControl,
+  isOwnedStayBlockingRoutineTrips,
   type OwnedAnimalControlMode,
   type OwnedAnimalControlState,
   resolveOwnedControlMovement,
@@ -3936,12 +3937,11 @@ export class AnimalAgent {
       this.steerToward(this.sourceDest, this.sprintSpeedNow(), dt)
       return true
     }
-    if (movement.kind === 'stay') {
-      const anchor = this._control.stayAnchor ?? { x: this.home.x, z: this.home.z }
-      if (!this.arrived(this.sourceDest.set(anchor.x, 0, anchor.z), 1.8)) {
-        this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
-      }
-      this.setIntent('wander', { x: anchor.x, z: anchor.z })
+    if (movement.kind === 'returnToAnchor') {
+      this.cancelSourceTarget()
+      this.setIntent('wander', { x: movement.x, z: movement.z })
+      this.sourceDest.set(movement.x, 0, movement.z)
+      this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
       return true
     }
     return false
@@ -4557,12 +4557,15 @@ export class AnimalAgent {
   }
 
   private wander(dt: number): void {
-    if (this.isPlayerOwned() && this._control.mode === 'stay') return
-    // Trip continuation/opportunity (plan fauna-016 §4/§5) — the same
-    // low-priority tail every predator/prey/dog branch already falls back to
-    // (implementation notes §2.1), so a trip is transparently below any real
-    // threat/combat/fire/guarding response without a new priority tier.
-    if (this.tickTrip(dt)) return
+    // Stay allows local yard wander but never routine long-range trips
+    // (plan fauna-030). Threat/needs already ran above this fallback.
+    if (!isOwnedStayBlockingRoutineTrips(this._control, this.isPlayerOwned())) {
+      // Trip continuation/opportunity (plan fauna-016 §4/§5) — the same
+      // low-priority tail every predator/prey/dog branch already falls back to
+      // (implementation notes §2.1), so a trip is transparently below any real
+      // threat/combat/fire/guarding response without a new priority tier.
+      if (this.tickTrip(dt)) return
+    }
     this.wanderTimer -= dt
     const timerExpired = this.wanderTimer <= 0
     if (timerExpired || this.arrived(this.target, 1.2)) {
@@ -4634,6 +4637,7 @@ export class AnimalAgent {
    *  actual destination probe only runs once a trip is actually starting
    *  (plan fauna-016 §10). */
   private maybeStartWaterTrip(): boolean {
+    if (isOwnedStayBlockingRoutineTrips(this._control, this.isPlayerOwned())) return false
     const config = this.def.trips?.water
     if (!config) return false
     const bucket = tripDayBucket(this.animalId, this.tickNowDays, config.cooldownDays)

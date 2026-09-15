@@ -443,7 +443,8 @@ export function findForageTarget(ctx: ForagingContext): SourceTarget | null {
     (x, z) => {
       if (!ctx.isWalkable(x, z)) return false
       if (ctx.def.sociability === 'wild' && ctx.isNearVillage({ x, z })) return false
-      return Math.hypot(x - ctx.home.x, z - ctx.home.z) <= ctx.roamRadius
+      if (Math.hypot(x - ctx.home.x, z - ctx.home.z) > ctx.roamRadius) return false
+      return withinNeedLeash(ctx, x, z)
     },
     (x, z) => {
       const suitability = ctx.sampleForestFactor ? forageEdgeScore(ctx.sampleForestFactor(x, z)) : 0.5
@@ -469,6 +470,7 @@ export function findGrassPatchTarget(ctx: ForagingContext, grassForage: GrassFor
     if (!ctx.isWalkable(candidate.x, candidate.z)) continue
     if (ctx.def.sociability === 'wild' && ctx.isNearVillage(candidate)) continue
     if (Math.hypot(candidate.x - ctx.home.x, candidate.z - ctx.home.z) > ctx.roamRadius) continue
+    if (!withinNeedLeash(ctx, candidate.x, candidate.z)) continue
     const d = Math.hypot(candidate.x - ctx.x, candidate.z - ctx.z)
     const score = -d
     if (score > bestScore) {
@@ -600,7 +602,8 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
   if (target.kind === 'grassPatch') {
     if (!target.patchId || !ctx.grassForage?.isAvailable(target.patchId, ctx.nowDays)) return false
     if (!ctx.isWalkable(target.x, target.z)) return false
-    return Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) <= ctx.roamRadius
+    if (Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) > ctx.roamRadius) return false
+    return withinNeedLeash(ctx, target.x, target.z)
   }
   if (target.kind === 'environmentalFood') {
     const fish = ctx.caveEnvironmental?.poolFish
