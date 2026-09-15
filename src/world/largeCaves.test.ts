@@ -38,11 +38,10 @@ describe('pickLargeCaveSites (plan 090)', () => {
     }
   })
 
-  it('places nothing on a flat coastal plain', () => {
+  it('still rejects strong mountain ridges for the generic home-ring population', () => {
     const none = pickLargeCaveSites({
       ...input,
-      sampleHeight: () => 1.2,
-      sampleContinentalness: () => 0.2,
+      sampleMountainRidge: () => 0.8,
     })
     expect(none).toEqual([])
   })

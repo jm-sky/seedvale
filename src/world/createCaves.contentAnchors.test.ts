@@ -16,6 +16,7 @@ import {
   sampleHeightAt,
   sampleMountainRidgeAt,
 } from '../terrain/chunkHeightmap'
+import { landmarkRequiredMineCaveId } from './caves/abandonedMineLandmark'
 import { orderHomeAdventureCandidates } from './caves/caveArchetype'
 import { CAVE_CONTENT_PLACEMENT } from './caves/caveContentAnchors'
 import { buildCaveHeightfieldRepresentation, sampleHeightfieldAt } from './caves/caveHeightfieldRepresentation'
@@ -141,6 +142,7 @@ describe('createCaves content anchors (plan world-terrain-020 Stage B)', () => {
     })
     const order = orderHomeAdventureCandidates(SEED, sites)
     for (const def of caves.definitions()) {
+      if (def.caveId === landmarkRequiredMineCaveId(caves.abandonedMine())) continue
       if (caves.archetypeOf(def.caveId) !== 'adventure') continue
       const candidate = order.find((c) => c.caveId === def.caveId)!
       const topology = buildProductionCaveTopology({

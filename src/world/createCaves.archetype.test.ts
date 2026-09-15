@@ -16,6 +16,7 @@ import {
   sampleHeightAt,
   sampleMountainRidgeAt,
 } from '../terrain/chunkHeightmap'
+import { landmarkRequiredMineCaveId } from './caves/abandonedMineLandmark'
 import {
   ADVENTURE_FINAL_CHAMBER_NODE_ID,
   ADVENTURE_JUNCTION_NODE_ID,
@@ -105,6 +106,11 @@ function archetypes(): { caveId: string, archetype: string | null }[] {
   return caves.definitions().map((d) => ({ caveId: d.caveId, archetype: caves.archetypeOf(d.caveId) }))
 }
 
+function genericArchetypes(): { caveId: string, archetype: string | null }[] {
+  const skip = landmarkRequiredMineCaveId(caves.abandonedMine())
+  return archetypes().filter((entry) => entry.caveId !== skip)
+}
+
 describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', () => {
   it('every accepted cave has a known archetype, and an unknown id has none', () => {
     expect(caves.definitions().length).toBeGreaterThan(0)
@@ -128,22 +134,24 @@ describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', ()
     expect(firstAccepted, 'no existing site on this seed can carry an adventure cave').toBeDefined()
     expect(caves.archetypeOf(firstAccepted!.caveId)).toBe('adventure')
 
-    const homeArea = archetypes().filter(({ caveId }) => {
-      const site = order.find((c) => c.caveId === caveId)!
+    const homeArea = genericArchetypes().filter(({ caveId }) => {
+      const site = order.find((c) => c.caveId === caveId)
+      if (!site) return false
       return site.homeDistance <= ADVENTURE_HOME_BAND_MAX
     })
     expect(homeArea.filter((a) => a.archetype === 'adventure')).toHaveLength(1)
   })
 
-  it('creates no cave outside the existing site set — the guarantee never synthesizes a site', () => {
+  it('creates no generic cave outside the existing site set — adventure/dungeon guarantees never synthesize a site', () => {
     const sites = productionSites()
     const siteKeys = new Set(sites.map((s) => `${s.x.toFixed(4)},${s.z.toFixed(4)}`))
-    const defs = caves.definitions()
+    const skip = landmarkRequiredMineCaveId(caves.abandonedMine())
+    const defs = caves.definitions().filter((def) => def.caveId !== skip)
     expect(defs.length).toBeLessThanOrEqual(sites.length)
     for (const def of defs) {
       expect(siteKeys.has(`${def.entrance.x.toFixed(4)},${def.entrance.z.toFixed(4)}`)).toBe(true)
     }
-    expect(new Set(defs.map((d) => d.caveId)).size).toBe(defs.length)
+    expect(new Set(caves.definitions().map((d) => d.caveId)).size).toBe(caves.definitions().length)
   })
 
   it('is deterministic: a second world on the same seed assigns exactly the same archetypes', () => {
@@ -157,7 +165,7 @@ describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', ()
   })
 
   it('gives the guaranteed adventure cave its junction, side chamber and final chamber on real terrain', () => {
-    const adventureIds = archetypes().filter((a) => a.archetype === 'adventure').map((a) => a.caveId)
+    const adventureIds = genericArchetypes().filter((a) => a.archetype === 'adventure').map((a) => a.caveId)
     expect(adventureIds.length).toBeGreaterThanOrEqual(1)
     const chunkManager = fakeChunkManager()
     const sites = productionSites()
@@ -183,7 +191,7 @@ describe('createCaves archetype assignment (plan world-terrain-020 Stage A)', ()
     const sites = productionSites()
     const chunkManager = fakeChunkManager()
     const order = orderHomeAdventureCandidates(SEED, sites)
-    for (const { caveId, archetype } of archetypes()) {
+    for (const { caveId, archetype } of genericArchetypes()) {
       if (archetype !== 'natural') continue
       const candidate = order.find((c) => c.caveId === caveId)!
       const topology = buildProductionCaveTopology({

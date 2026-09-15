@@ -12,7 +12,7 @@ When this file and the code disagree, the code wins — update this file.
 
 ## Ownership
 
-A **location** (lake, mountain peak, cemetery, and similar coarse world features) is classified from deterministic terrain sampling, not authored data — the same continental/floor/height/mountain-ridge sampling surface terrain generation and settlement siting already use. Location *identity, position, name, and weight* are always a pure function of `(world seed, location id)` and are never persisted — only a player's *knowledge of* a location is.
+A **location** (lake, mountain peak, cemetery, abandoned mine, and similar coarse world features) is classified from deterministic terrain sampling, not authored data — the same continental/floor/height/mountain-ridge sampling surface terrain generation and settlement siting already use. Location *identity, position, name, and weight* are always a pure function of `(world seed, location id)` and are never persisted — only a player's *knowledge of* a location is. The abandoned mountain mine (`abandonedMine:…`) is reconstructed from the world seed plus `Caves.abandonedMine()`; it is not a `SaveData` field.
 
 Two layers exist, deliberately separate:
 

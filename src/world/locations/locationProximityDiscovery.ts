@@ -182,6 +182,16 @@ export function createLocationProximityDiscovery(deps: {
           }
         }
       }
+      const mine = catalog.abandonedMine()
+      if (mine) {
+        const dx = playerX - mine.x
+        const dz = playerZ - mine.z
+        if (dx * dx + dz * dz <= CAVE_ENTRANCE_DISCOVERY_RADIUS * CAVE_ENTRANCE_DISCOVERY_RADIUS) {
+          if (knowledge.reveal(mine.id, 'confirmed', 'exploration')) {
+            revealed.push({ id: mine.id, name: mine.name })
+          }
+        }
+      }
       return revealed
     },
   }

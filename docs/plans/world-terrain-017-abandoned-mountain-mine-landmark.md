@@ -1,7 +1,7 @@
 # Plan: Abandoned mountain mine landmark
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (focused Vitest on massif classification, mine identity/ranking, cave siting, `createCaves` generic-archetype isolation, catalog thunk rebuild). Browser/manual worldgen/gameplay checks are User-owned.
 **Priority:** high · **Effort:** M
 **Depends on:** ~~world-terrain-019~~
 **Domain:** `world-terrain`  
@@ -10,6 +10,17 @@
 **Subdomains:** `terrain` `landmarks`
 **Tags:** `caves` `mountains` `worldgen` `landmark`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+
+## Implementation status (2026-09-15)
+
+Implemented as a catalog-owned semantic landmark, not a new cave archetype or `MineRegistry`.
+
+- Massif suitability is a bounded analytic neighbourhood classifier (`src/world/caves/mountainMassif.ts`).
+- Generic `pickLargeCaveSites()` is unchanged, including `MOUNTAIN_RIDGE_MAX`. Shared safety is exported for the dedicated mountain-site query (`src/world/caves/mountainCaveSites.ts`).
+- `createCaves()` still runs `assignCaveArchetypes()` only on generic sites, then a post-pass (`src/world/caves/abandonedMineLandmark.ts`) binds `mineId → caveId`. A landmark-required extra cave is merged into the ordinary Cave V2 runtime and kept out of the generic cave worldgen cache payload.
+- `dungeon` caves are never selected. Landmark-required extra caves are excluded from existing cave-quest hash-picks so adding the mine cannot retarget bear-cave / old-bones / lost-hunter / suspicious-transport bindings.
+- `WorldLocationKind` includes `abandonedMine`. Lookup is `WorldLocationCatalog.getById` / `abandonedMine()` via a live thunk.
+- True macro-terrain massif injection was not required: bounded envelopes plus a degraded existing-terrain neighbourhood cover the guarantee without widening `RawSampleParams` / worker / cache contracts.
 
 ## Goal
 

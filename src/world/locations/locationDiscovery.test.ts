@@ -99,6 +99,7 @@ describe('landmarksInBand / settlementsInBand', () => {
       landmarksWithin: (x, z, maxKm) => all.filter((l) => kmOf(x, z, l) <= maxKm),
       landmarksInRange: (x, z, minKm, maxKm) => all.filter((l) => kmOf(x, z, l) > minKm && kmOf(x, z, l) <= maxKm),
       landmarksInRangeAsync: async (x, z, minKm, maxKm) => all.filter((l) => kmOf(x, z, l) > minKm && kmOf(x, z, l) <= maxKm),
+      abandonedMine: () => null,
       invalidateScanCache: () => {},
       getScanDiagnostics: () => emptyLocationScanDiagnostics(),
     }

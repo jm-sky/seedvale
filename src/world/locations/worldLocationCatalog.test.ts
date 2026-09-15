@@ -200,6 +200,45 @@ describe('createWorldLocationCatalog', () => {
     expect(location?.name.length).toBeGreaterThan(0)
   })
 
+  it('resolves the abandoned mine through a live thunk after the caves owner is swapped', () => {
+    const first = {
+      mineId: 'abandonedMine:aaaa1111',
+      caveId: 'cave:one',
+      x: 400,
+      z: -20,
+      caveSource: 'existing-cave' as const,
+    }
+    const rebuilt = {
+      mineId: 'abandonedMine:aaaa1111',
+      caveId: 'cave:two',
+      x: 880,
+      z: 40,
+      caveSource: 'guaranteed-site' as const,
+    }
+    let current: typeof first | typeof rebuilt = first
+    const catalog = createWorldLocationCatalog({
+      getSeed: () => 1,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(),
+      lookupSettlement: () => null,
+      getSampleParams: () => rawParams(),
+      getChunkSize: () => 64,
+      getAbandonedMine: () => current,
+    })
+    expect(catalog.getById(first.mineId)).toMatchObject({
+      id: first.mineId,
+      kind: 'abandonedMine',
+      x: 400,
+      z: -20,
+    })
+    current = rebuilt
+    const resolved = catalog.getById(first.mineId)
+    expect(resolved?.x).toBe(880)
+    expect(resolved?.z).toBe(40)
+    expect(resolved?.id).toBe(first.mineId)
+    expect(catalog.abandonedMine()?.x).toBe(880)
+  })
+
   it('cave name/weight are a stable function of (seed, id)', () => {
     const caves = fakeCaves([{ caveId: 'cave-1', entrance: { x: 0, z: 0, yaw: 0, y: 0, width: 3, height: 3 } }])
     const build = (seed: number) => createWorldLocationCatalog({

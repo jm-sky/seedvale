@@ -1,6 +1,7 @@
 import type { SettlementCell, SettlementDef } from '../../settlement/settlementGenerator'
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import type { ChunkManager } from '../../terrain/chunkManager'
+import type { AbandonedMineLandmark } from '../caves/abandonedMineLandmark'
 import type { Caves } from '../createCaves'
 import type { AbandonedCemeteryCache, CachedAbandonedCemeteryResult } from './abandonedCemeteryCache'
 import type { WorldLocation, WorldLocationKind } from './worldLocationTypes'
@@ -67,6 +68,11 @@ export type WorldLocationCatalogDeps = {
   abandonedCemeteryCache?: Pick<AbandonedCemeteryCache, 'lookup' | 'remember' | 'ready'>
   /** Authored expedition ruins site (plan quests-progression-009). */
   getDarkForestTreasureSite?: () => { locationId: string, x: number, z: number } | null
+  /**
+   * Abandoned mountain-mine landmark (plan world-terrain-017). Live thunk —
+   * must not capture a `Caves` instance at catalog construction.
+   */
+  getAbandonedMine?: () => AbandonedMineLandmark | null
 }
 
 /** Cheap running totals for the coarse terrain scan (plan world-013 §1) — no
@@ -143,10 +149,15 @@ export type WorldLocationCatalog = {
    *  position/name — works for any valid id, even one discovered in a
    *  previous session, without needing a prior search this session. */
   getById(id: string): WorldLocation | null
+  /**
+   * Semantic abandoned-mine location (plan world-terrain-017). `null` when
+   * the current world has no bound mine landmark.
+   */
+  abandonedMine(): WorldLocation | null
   /** Settlements within `maxKm` of `(x, z)`, nearest first (plan §8 — no
    *  `discoveryWeight`, always distance-ordered). */
   nearestSettlements(x: number, z: number, maxKm: number): WorldLocation[]
-  /** cave + cemetery + lake + mountainPeak candidates within `maxKm` of
+  /** cave + cemetery + lake + mountainPeak + abandonedMine candidates within `maxKm` of
    *  `(x, z)` — unsorted; callers apply the distance-filter → weighted-pick
    *  pipeline themselves (`locationDiscovery.ts`). Equivalent to
    *  `landmarksInRange(x, z, 0, maxKm)`. */
@@ -286,6 +297,20 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     return { id, kind: 'cave', x: def.entrance.x, z: def.entrance.z, name: landmarkName(seed, 'cave', id), discoveryWeight: weightOf(seed, id) }
   }
 
+  function abandonedMineLocation(): WorldLocation | null {
+    const mine = deps.getAbandonedMine?.()
+    if (!mine) return null
+    const seed = getSeed()
+    return {
+      id: mine.mineId,
+      kind: 'abandonedMine',
+      x: mine.x,
+      z: mine.z,
+      name: landmarkName(seed, 'abandonedMine', mine.mineId),
+      discoveryWeight: weightOf(seed, mine.mineId),
+    }
+  }
+
   function cemeteryLocationFromResolved(
     found: { id: string, x: number, z: number },
   ): WorldLocation {
@@ -342,6 +367,10 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
         name: landmarkName(seed, 'ruins', site.locationId),
         discoveryWeight: weightOf(seed, site.locationId),
       }
+    }
+    if (kind === 'abandonedMine') {
+      const loc = abandonedMineLocation()
+      return loc && loc.id === id ? loc : null
     }
     return null
   }
@@ -761,6 +790,14 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     return [...lakes, ...peaks]
   }
 
+  function abandonedMineCandidate(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
+    const loc = abandonedMineLocation()
+    if (!loc) return []
+    const km = distanceKm(x, z, loc.x, loc.z)
+    if (km > maxKm || km <= minKm) return []
+    return [loc]
+  }
+
   function landmarksInRange(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
     const cemeteryStart = performance.now()
     const cemeteries = cemeteryCandidates(x, z, minKm, maxKm)
@@ -769,6 +806,7 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       ...caveCandidates(x, z, minKm, maxKm),
       ...cemeteries,
       ...scanLakesAndPeaks(x, z, minKm, maxKm),
+      ...abandonedMineCandidate(x, z, minKm, maxKm),
     ]
   }
 
@@ -795,6 +833,7 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       ...caveCandidates(x, z, minKm, maxKm),
       ...out,
       ...scanLakesAndPeaks(x, z, minKm, maxKm),
+      ...abandonedMineCandidate(x, z, minKm, maxKm),
     ]
   }
 
@@ -804,6 +843,7 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
 
   return {
     getById,
+    abandonedMine: abandonedMineLocation,
     nearestSettlements,
     landmarksWithin,
     landmarksInRange,

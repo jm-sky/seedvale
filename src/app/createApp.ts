@@ -817,6 +817,7 @@ export async function createApp(
       const site = getActiveDarkForestTreasureSite()
       return site ? { locationId: site.locationId, x: site.x, z: site.z } : null
     },
+    getAbandonedMine: () => bundle.caves.abandonedMine(),
   })
   const bindReadyExpeditionDispatch = (): void => {
     const dispatch = bundle.dispatchReadyExpedition.bind(bundle)

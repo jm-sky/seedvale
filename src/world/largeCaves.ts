@@ -47,6 +47,11 @@ const ROAD_CLEARANCE = 4
 const ROAD_QUERY = 24
 const MOUNTAIN_RIDGE_MAX = 0.55
 
+/** Generic cave siting rejects strong ridges so the home-ring population
+ *  stays in foothills/lowland slopes. Dedicated mountain-site queries must
+ *  not inherit this cap. */
+export const GENERIC_CAVE_MOUNTAIN_RIDGE_MAX = MOUNTAIN_RIDGE_MAX
+
 function onRoad(
   x: number,
   z: number,
@@ -74,11 +79,29 @@ function farFromCaves(x: number, z: number, placed: readonly LargeCaveSite[]): b
   return true
 }
 
-function siteOk(
+export type CaveSiteSafetyOptions = {
+  /**
+   * Skip the generic `MOUNTAIN_RIDGE_MAX` rejection so a dedicated mountain
+   * site can sit on a massif. Shared settlement/coast/road/slope/separation
+   * rules still apply.
+   *
+   * @domain world-terrain
+   */
+  allowMountainRidge?: boolean
+}
+
+/**
+ * Shared cave-site safety used by generic home-ring siting and by the
+ * abandoned-mine mountain-site guarantee. Does not own candidate sampling.
+ *
+ * @domain world-terrain
+ */
+export function caveSiteSafetyOk(
   x: number,
   z: number,
   input: LargeCavePlacementInput,
   placed: readonly LargeCaveSite[],
+  options?: CaveSiteSafetyOptions,
 ): boolean {
   if (Math.hypot(x, z) < LARGE_CAVE_MIN_HOME_DIST) return false
   if (!farFromVillages(x, z, input.villages)) return false
@@ -89,9 +112,18 @@ function siteOk(
     sampleContinentalness: input.sampleContinentalness,
     coastThreshold: input.coastThreshold,
   })) return false
-  if (input.sampleMountainRidge(x, z) > MOUNTAIN_RIDGE_MAX) return false
+  if (!options?.allowMountainRidge && input.sampleMountainRidge(x, z) > MOUNTAIN_RIDGE_MAX) return false
   if (onRoad(x, z, input.roadsNear(x, z, ROAD_QUERY))) return false
   return measureSlope(x, z, SLOPE_SAMPLE_RADIUS, input.sampleHeight).drop >= MIN_SLOPE_DROP
+}
+
+function siteOk(
+  x: number,
+  z: number,
+  input: LargeCavePlacementInput,
+  placed: readonly LargeCaveSite[],
+): boolean {
+  return caveSiteSafetyOk(x, z, input, placed)
 }
 
 /**

@@ -18,12 +18,15 @@ import { resolveCameraBoom } from '../player/cameraBoom'
 import { MOVE_SPEED, SPRINT_MULTIPLIER } from '../player/PlayerController'
 import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT } from '../player/playerDimensions'
 import { villageSizeConfig } from '../settlement/families'
+import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import {
   type RawSampleParams,
   sampleContinentalnessAt,
   sampleHeightAt,
   sampleMountainRidgeAt,
 } from '../terrain/chunkHeightmap'
+import { landmarkRequiredMineCaveId } from './caves/abandonedMineLandmark'
+import { assignCaveArchetypes } from './caves/caveArchetype'
 import { CAVE_FLOOR_GRACE, CAVE_UNDERGROUND_MISS } from './caves/caveGroundQuery'
 import * as caveHeightfieldPresentation from './caves/caveHeightfieldPresentation'
 import * as caveHeightfieldQuery from './caves/caveHeightfieldQuery'
@@ -32,7 +35,7 @@ import { CAVE_ACTIVATE_DISTANCE, CAVE_DEACTIVATE_DISTANCE } from './caves/cavePr
 import { MOUTH_INTERIOR_ALONG, mouthAlong, mouthCarveDepth } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
 import { type Caves, createCaves } from './createCaves'
-import { openingDirection } from './largeCaves'
+import { openingDirection, pickLargeCaveSites } from './largeCaves'
 
 vi.mock('./caves/caveHeightfieldQuery', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./caves/caveHeightfieldQuery')>()
@@ -651,6 +654,57 @@ describe('createCaves (world-terrain-019 B)', () => {
       expect(typeof caves.queryInterior(x, y, z)).toBe('boolean')
       caves.dispose()
     })
+  })
+
+  it('binds a deterministic abandoned mine without perturbing generic cave ids or archetypes', () => {
+    const mine = caves.abandonedMine()
+    expect(mine).not.toBeNull()
+    expect(mine!.mineId.startsWith('abandonedMine:')).toBe(true)
+    expect(mine!.caveId).not.toBe(mine!.mineId)
+    expect(caves.archetypeOf(mine!.caveId)).not.toBe('dungeon')
+    expect(caves.definitions().some((def) => def.caveId === mine!.caveId)).toBe(true)
+
+    const afterStream = (() => {
+      caves.update(mine!.x, mine!.z)
+      caves.update(0, 0)
+      return caves.abandonedMine()
+    })()
+    expect(afterStream).toEqual(mine)
+
+    const homeFootprint = villageSizeConfig('MD').footprintRadius
+    const villages = cellsWithinRadius({ gx: 0, gz: 0 }, 3).map((cell) => ({
+      x: cell.gx * SETTLEMENT_GRID_STEP,
+      z: cell.gz * SETTLEMENT_GRID_STEP,
+      radius: cell.gx === 0 && cell.gz === 0 ? homeFootprint : villageSizeConfig('MD').footprintRadius,
+    }))
+    const sites = pickLargeCaveSites({
+      seed: SEED,
+      sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
+      sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
+      sampleMountainRidge: (x, z) => chunkManager.sampleMountainRidge(x, z),
+      waterLevel: chunkManager.waterLevel,
+      coastThreshold: 0.45,
+      roadsNear: () => [],
+      villages,
+    })
+    const assigned = assignCaveArchetypes(SEED, sites, (site, archetype) =>
+      buildProductionCaveTopology({
+        seed: SEED,
+        site,
+        archetype,
+        sampleHeight: chunkManager.sampleHeight,
+        sampleBaseHeight: chunkManager.sampleBaseHeight,
+      }),
+    )
+    const skip = landmarkRequiredMineCaveId(mine)
+    const liveGenericIds = caves.definitions()
+      .map((def) => def.caveId)
+      .filter((id) => id !== skip)
+      .sort()
+    expect(liveGenericIds).toEqual(assigned.map((entry) => entry.caveId).sort())
+    for (const entry of assigned) {
+      expect(caves.archetypeOf(entry.caveId)).toBe(entry.archetype)
+    }
   })
 
   it('dispose clears presentation, mouth proxies, and the terrain cutout registration', () => {

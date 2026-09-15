@@ -54,6 +54,12 @@ const RUINS_ADJECTIVES = [
 ]
 const RUINS_NOUNS = ['Ruiny', 'Warownia', 'Opactwo']
 
+const MINE_ADJECTIVES = [
+  'Opuszczona', 'Zapomniana', 'Górska', 'Stara', 'Milcząca',
+  'Żelazna', 'Ukryta', 'Wietrzna', 'Kamienna', 'Porzucona',
+]
+const MINE_NOUNS = ['Kopalnia', 'Sztolnia', 'Szyb']
+
 const POOLS: Record<Exclude<WorldLocationKind, 'settlement'>, {
   adjectives: readonly string[]
   nouns: readonly string[]
@@ -63,6 +69,7 @@ const POOLS: Record<Exclude<WorldLocationKind, 'settlement'>, {
   lake: { adjectives: LAKE_ADJECTIVES, nouns: LAKE_NOUNS },
   mountainPeak: { adjectives: PEAK_ADJECTIVES, nouns: PEAK_NOUNS },
   ruins: { adjectives: RUINS_ADJECTIVES, nouns: RUINS_NOUNS },
+  abandonedMine: { adjectives: MINE_ADJECTIVES, nouns: MINE_NOUNS },
 }
 
 /** Larger cemeteries lean toward the more solemn/grand noun pool. */

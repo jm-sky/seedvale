@@ -11,6 +11,10 @@ import { getMonitor } from '../perf/active'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { useBootMark } from '../shared/bootMark'
+import {
+  type AbandonedMineLandmark,
+  resolveAbandonedMineLandmark,
+} from './caves/abandonedMineLandmark'
 import { assignCaveArchetypes } from './caves/caveArchetype'
 import {
   type CaveContentAnchor,
@@ -27,6 +31,7 @@ import {
 import { dungeonChambersFromTopology } from './caves/dungeonChambers'
 import { createWaterMaterial } from './waterMaterial'
 
+export type { AbandonedMineLandmark } from './caves/abandonedMineLandmark'
 export type { CaveContentAnchor }
 export type { CaveTraversalDescriptor, CaveTraversalPoint } from './caves/caveHabitat'
 export type { CaveUndergroundPool } from './caves/caveUndergroundPool'
@@ -100,7 +105,7 @@ import {
 import { buildProductionCaveTopology } from './caves/productionTopology'
 import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition } from './caveVolume'
-import { type LargeCaveSite, pickLargeCaveSites } from './largeCaves'
+import { type LargeCavePlacementInput, type LargeCaveSite, pickLargeCaveSites } from './largeCaves'
 import { createNullPointLightBudget, type PointLightBudget } from './pointLightBudget'
 import {
   caveSpatialContext,
@@ -258,6 +263,12 @@ export type Caves = {
     radius: number,
     entityHeight: number,
   ) => { x: number, z: number }
+  /**
+   * Semantic abandoned-mountain-mine landmark (plan world-terrain-017).
+   * Reconstructed from seed + accepted caves + analytic terrain; never
+   * persisted. `null` only if every bounded search/guarantee attempt failed.
+   */
+  abandonedMine: () => AbandonedMineLandmark | null
   dispose: () => void
 }
 
@@ -344,7 +355,10 @@ export type CreateCavesOptions = {
  * recess still shapes the walk surface / approach.
  *
  * Placement reuses `pickLargeCaveSites()` unchanged; topology generation and
- * terrain acceptance are owned by `productionTopology.ts`. All spatial
+ * terrain acceptance are owned by `productionTopology.ts`. The abandoned
+ * mountain-mine landmark (plan world-terrain-017) is a later post-pass that
+ * may bind an existing eligible cave or add one dedicated mountain site
+ * without feeding it through `assignCaveArchetypes()`. All spatial
  * queries go through `caveHeightfieldQuery.ts`; per-entity continuity
  * (ground underground-miss hysteresis, two-sample interior confirmation)
  * is `caveGroundQuery.ts` and is player-stateful here. `CaveVolume` is not
@@ -402,17 +416,14 @@ export function createCaves(
       sampleBaseHeight: analyticSurfaceHeight,
     })
 
-  /** The full fresh siting + archetype/topology pass. Deliberately lazy: a
-   *  persistent-cache manifest hit skips it entirely, and skipping
-   *  `pickLargeCaveSites()`'s terrain sampling is most of the win. */
-  const generateAccepted = (): readonly CaveManifestEntry[] => {
+  const cavePlacementInput = (): LargeCavePlacementInput => {
     const homeFootprint = Math.max(homeRadius, villageSizeConfig('MD').footprintRadius)
     const villages = cellsWithinRadius({ gx: 0, gz: 0 }, 3).map((cell) => ({
       x: cell.gx * SETTLEMENT_GRID_STEP,
       z: cell.gz * SETTLEMENT_GRID_STEP,
       radius: cell.gx === 0 && cell.gz === 0 ? homeFootprint : villageSizeConfig('MD').footprintRadius,
     }))
-    const sites = pickLargeCaveSites({
+    return {
       seed,
       sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
       sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
@@ -421,12 +432,20 @@ export function createCaves(
       coastThreshold,
       roadsNear: (x, z, querySize) => chunkManager.roadCorridorsNear(x, z, querySize),
       villages,
-    })
+    }
+  }
+
+  /** The full fresh siting + archetype/topology pass. Deliberately lazy: a
+   *  persistent-cache manifest hit skips it entirely, and skipping
+   *  `pickLargeCaveSites()`'s terrain sampling is most of the win. */
+  const generateAccepted = (): readonly CaveManifestEntry[] => {
+    const sites = pickLargeCaveSites(cavePlacementInput())
     // Home-area adventure guarantee, then the further dungeon guarantee, plus
     // per-site dungeon/adventure rolls (plans world-terrain-020 / 024) —
     // ordering and rolls are pure and deterministic in `caveArchetype.ts`;
     // acceptance stays here, owned by the topology builders. No second siting
-    // pass, no synthesized site.
+    // pass, no synthesized site. The abandoned-mine landmark is a later
+    // post-pass so it cannot reorder this assignment.
     return assignCaveArchetypes(seed, sites, buildTopology)
   }
 
@@ -517,7 +536,40 @@ export function createCaves(
   }
   bootMarkEnd('cave.heightfield')
 
-  options?.onWorldgenBuilt?.({ manifestHydrated, accepted, freshlyBuilt })
+  options?.onWorldgenBuilt?.({
+    manifestHydrated,
+    accepted,
+    freshlyBuilt: freshlyBuilt.slice(),
+  })
+
+  bootMark('cave.abandonedMine')
+  const placement = cavePlacementInput()
+  const mineResult = resolveAbandonedMineLandmark({
+    seed,
+    placement,
+    samples: {
+      sampleHeight: placement.sampleHeight,
+      sampleMountainRidge: placement.sampleMountainRidge,
+      waterLevel: placement.waterLevel,
+    },
+    acceptedCaves: [...v2ByCaveId.values()].map((runtime) => ({
+      caveId: runtime.topology.caveId,
+      archetype: runtime.archetype,
+      x: runtime.topology.entrance.x,
+      z: runtime.topology.entrance.z,
+      topology: runtime.topology,
+      contentAnchorIds: runtime.contentAnchors.map((anchor) => anchor.id),
+    })),
+    buildTopology,
+  })
+  if (mineResult?.extraAssignment) {
+    populateRuntimes(
+      [{ archetype: mineResult.extraAssignment.archetype, topology: mineResult.extraAssignment.topology }],
+      null,
+    )
+  }
+  const abandonedMineLandmark = mineResult?.landmark ?? null
+  bootMarkEnd('cave.abandonedMine')
 
   const runtimes: readonly CaveRuntime[] = [...v2ByCaveId.values()]
   const definitions: CaveDefinition[] = runtimes.map((v) => v.definition)
@@ -975,6 +1027,7 @@ export function createCaves(
       const minGap = heightfieldStandingClearance(entityHeight)
       return resolveHeightfieldHorizontal(runtime.heightfield, x, z, y, radius, minGap)
     },
+    abandonedMine: () => abandonedMineLandmark,
     dispose() {
       lastGroundHit = null
       lastHitRuntime = null

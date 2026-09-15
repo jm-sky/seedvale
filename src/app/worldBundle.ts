@@ -111,6 +111,7 @@ import {
 import { terrainVisualHorizon, type TerrainVisualHorizon } from '../terrain/terrainVisualHorizon'
 import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '../world/bloodTraces'
 import { preloadCartProp } from '../world/cartProp'
+import { landmarkRequiredMineCaveId } from '../world/caves/abandonedMineLandmark'
 import {
   type CaveAdventureContentPolicy,
   resolveCaveAdventureContentPolicy,
@@ -235,6 +236,18 @@ function adventureCaveIdsFromCaves(caves: Caves): string[] {
   return caves.definitions()
     .filter((def) => caves.archetypeOf(def.caveId) === 'adventure')
     .map((def) => def.caveId)
+}
+
+function caveIdsForQuestBinding(caves: Caves): string[] {
+  const skip = landmarkRequiredMineCaveId(caves.abandonedMine())
+  return caves.definitions()
+    .map((def) => def.caveId)
+    .filter((caveId) => caveId !== skip)
+}
+
+function adventureCaveIdsForQuestBinding(caves: Caves): string[] {
+  const skip = landmarkRequiredMineCaveId(caves.abandonedMine())
+  return adventureCaveIdsFromCaves(caves).filter((caveId) => caveId !== skip)
 }
 
 export function caveTreasureContainerSpecs(
@@ -1425,8 +1438,10 @@ async function buildWorldSystems(
         cemeterySize: homeCemeteryDetail.cemeterySize ?? 'SM',
       }
     : null
+  const questAdventureCaveIds = adventureCaveIdsForQuestBinding(caves)
+  const questCaveIds = caveIdsForQuestBinding(caves)
   const adventureCaveInputs = caves.definitions()
-    .filter((def) => caves.archetypeOf(def.caveId) === 'adventure')
+    .filter((def) => questAdventureCaveIds.includes(def.caveId))
     .map((def) => ({
       caveId: def.caveId,
       entranceX: def.entrance.x,
@@ -1453,7 +1468,7 @@ async function buildWorldSystems(
   const oldBonesCandidate = resolveOldBonesAdventureCaveBinding({
     worldSeed: config.seed,
     settlementDef: homeDef,
-    adventureCaveIds: adventureCaveIdsFromCaves(caves),
+    adventureCaveIds: questAdventureCaveIds,
     contentAnchors: caves.contentAnchors(),
     npcs: homeOpportunityNpcs,
     reservedCaveIds: reservedAdventureCaveIds,
@@ -1541,7 +1556,7 @@ async function buildWorldSystems(
   const lostHunterBinding = resolveLostHunterNaturalCaveBinding({
     worldSeed: config.seed,
     settlementDef: homeDef,
-    caveIds: caves.definitions().map((def) => def.caveId),
+    caveIds: questCaveIds,
     archetypeOf: (caveId) => caves.archetypeOf(caveId) ?? null,
     contentAnchors: caves.contentAnchors(),
     claims: caveAuthoredClaims,
@@ -1556,7 +1571,7 @@ async function buildWorldSystems(
     worldSeed: config.seed,
     settlementId: homeDef.id,
     npcs: homeOpportunityNpcs,
-    caveIds: caves.definitions().map((def) => def.caveId),
+    caveIds: questCaveIds,
     archetypeOf: (caveId) => caves.archetypeOf(caveId) ?? null,
     contentAnchors: caves.contentAnchors(),
     claims: caveAuthoredClaims,

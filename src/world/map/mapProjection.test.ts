@@ -197,6 +197,7 @@ describe('map data filtering', () => {
       landmarksWithin: () => [],
       landmarksInRange: () => [],
       landmarksInRangeAsync: async () => [],
+      abandonedMine: () => null,
       invalidateScanCache: () => {},
       getScanDiagnostics: () => emptyLocationScanDiagnostics(),
     }

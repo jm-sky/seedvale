@@ -8,6 +8,8 @@ describe('worldLocationKindFromId', () => {
     expect(worldLocationKindFromId('cemetery:1:2:0:x7f')).toBe('cemetery')
     expect(worldLocationKindFromId('lake:3,4')).toBe('lake')
     expect(worldLocationKindFromId('mountainPeak:5,6')).toBe('mountainPeak')
+    expect(worldLocationKindFromId('ruins:dark-forest-treasure')).toBe('ruins')
+    expect(worldLocationKindFromId('abandonedMine:00aabbcc')).toBe('abandonedMine')
   })
 
   it('returns null for an id with no kind prefix or an unknown kind', () => {
