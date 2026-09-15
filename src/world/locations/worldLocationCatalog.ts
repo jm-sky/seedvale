@@ -68,6 +68,8 @@ export type WorldLocationCatalogDeps = {
   abandonedCemeteryCache?: Pick<AbandonedCemeteryCache, 'lookup' | 'remember' | 'ready'>
   /** Authored expedition ruins site (plan quests-progression-009). */
   getDarkForestTreasureSite?: () => { locationId: string, x: number, z: number } | null
+  /** Chronicle-search expedition ruins (plan quests-progression-038). */
+  getChronicleSearchRuinsSite?: () => { locationId: string, x: number, z: number } | null
   /**
    * Abandoned mountain-mine landmark (plan world-terrain-017). Live thunk —
    * must not capture a `Caves` instance at catalog construction.
@@ -356,8 +358,12 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       return scanGridLocation(kind, cx, cz)
     }
     if (kind === 'ruins') {
-      const site = deps.getDarkForestTreasureSite?.()
-      if (!site || site.locationId !== id) return null
+      const sites = [
+        deps.getDarkForestTreasureSite?.(),
+        deps.getChronicleSearchRuinsSite?.(),
+      ]
+      const site = sites.find((entry) => entry?.locationId === id)
+      if (!site) return null
       const seed = getSeed()
       return {
         id: site.locationId,

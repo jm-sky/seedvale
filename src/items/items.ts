@@ -106,6 +106,9 @@ export type ItemKind =
   | 'marked_valuable'
   /** Plan quests-progression-027 — lost expedition's physical journal. */
   | 'expedition_journal'
+  /** Plan quests-progression-038 — encoded chronicle and false-site evidence. */
+  | 'encoded_chronicle'
+  | 'chronicle_search_evidence'
   | 'arrow'
   | 'broadhead_arrow'
   | 'war_arrow'
@@ -1098,6 +1101,24 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0x4a3624,
     description: 'Dziennik dowódcy zaginionej wyprawy. Opisuje ostatnie dni podróży po legendarny skarb.',
   },
+  encoded_chronicle: {
+    kind: 'encoded_chronicle',
+    label: 'zakodowana kronika',
+    categories: ['story'],
+    weight: 0.3,
+    size: 'SM',
+    color: 0x3d2b1f,
+    description: 'Osobista kronika dawnego badacza. Zapiski są zaszyfrowane i na razie nieczytelne.',
+  },
+  chronicle_search_evidence: {
+    kind: 'chronicle_search_evidence',
+    label: 'ślad wyprawy',
+    categories: ['story'],
+    weight: 0.12,
+    size: 'XS',
+    color: 0x6a5a48,
+    description: 'Fizyczny ślad po wyprawie badacza: notatka albo osobisty przedmiot wskazujący, że kroniki tu nie ma.',
+  },
   long_bow: {
     kind: 'long_bow',
     label: 'długi łuk',
@@ -2065,11 +2086,12 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'expedition_journal') {
+  if (kind === 'expedition_journal' || kind === 'encoded_chronicle' || kind === 'chronicle_search_evidence') {
+    const def = ITEM_DEFS[kind]
     const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.03, 0.19),
+      new THREE.BoxGeometry(kind === 'chronicle_search_evidence' ? 0.1 : 0.14, 0.03, kind === 'chronicle_search_evidence' ? 0.14 : 0.19),
       new THREE.MeshStandardMaterial({
-        color: ITEM_DEFS.expedition_journal.color,
+        color: def.color,
         flatShading: true,
         roughness: 0.85,
       }),

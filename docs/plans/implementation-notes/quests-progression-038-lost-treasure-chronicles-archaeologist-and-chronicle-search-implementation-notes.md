@@ -1,6 +1,6 @@
 # Implementation Notes: quests-progression-038 — Lost Treasure Chronicles archaeologist and chronicle search
 
-Recon baseline: current `main` on 2026-09-15. `quests-progression-037` is still `planned`; its implementation notes exist but its authored-resident/story binding does not yet exist in code. Treat 037 as a real dependency and consume its landed exports rather than duplicating its elder/story-selection logic.
+Recon baseline: current `main` on 2026-09-15 after `quests-progression-037` landed. Consume 037's `appendAuthoredResidentFamily` / `authoredResidentFor` seam and its exported elder binding / winter+dispute quest ids. Do not duplicate elder selection or story-family injection.
 
 ## 1. Build on the 037 authored-resident seam, do not pre-empt it
 

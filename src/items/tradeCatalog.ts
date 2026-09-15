@@ -193,6 +193,8 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   bandit_ledger: 15,
   marked_valuable: 55,
   expedition_journal: 20,
+  encoded_chronicle: 25,
+  chronicle_search_evidence: 8,
   // Plan settlements-npcs-036 — household production outputs the Kupiec
   // does not stock. `dressing` is bandage+herb processed (relief 50 vs
   // bandage 35); `linen_material` sits between flax input and bandage 10.

@@ -668,6 +668,8 @@ export type QuestObjective =
   | { type: 'loot_world_container', containerId: string }
   /** One-shot Hidden Find / authored grave spot resolved (plan quests-progression-008). */
   | { type: 'recover_hidden_find', spotId: string }
+  /** Player inventory currently holds this exact item instance. */
+  | { type: 'own_item_instance', instanceId: string }
   /** Player picked up the exact portable container (plan quests-progression-008). */
   | { type: 'acquire_portable_container', containerId: string }
   /** Terminal stage — only `resolveQuest` / physical hooks may finish the quest. */
@@ -836,6 +838,7 @@ export function objectiveNeedsPersistedSlotProgress(objective: QuestObjective): 
     case 'discover_location':
     case 'light_settlement_fires':
     case 'loot_world_container':
+    case 'own_item_instance':
     case 'read_item':
     case 'recover_hidden_find':
     case 'recover_lost_livestock':
@@ -903,6 +906,18 @@ export type QuestDef = {
   /** Offer-selection policy (plan quests-progression-033). Absent = normal
    *  urgency/exposure, no authored priority. */
   offer?: QuestOfferPolicy
+  /**
+   * Live offer text derived from current relation/reputation/outcomes.
+   * When set, presentation uses this instead of the static `offerLine`.
+   * The result is never persisted.
+   *
+   * @domain quests-progression
+   */
+  resolveOfferLine?: (input: {
+    getNpcRelation: (npcId: NpcId) => number
+    resolvedOutcomeId: (questId: string) => QuestOutcomeId | undefined
+    getReputationDimension: (dimension: ReputationDimension) => number
+  }) => string
   /** Active-quest opt-out policy (plan quests-progression-033). Absent =
    *  abandonable with no automatic consequence. */
   abandonment?: QuestAbandonment

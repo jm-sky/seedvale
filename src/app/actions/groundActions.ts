@@ -95,6 +95,10 @@ export type GroundActionsDeps = {
   /** App-owned reputation seam (plan quests-progression-011) — applied only
    *  after a cemetery grave's first social-exposure roll succeeds. */
   applySocialConsequence: (consequence: SocialConsequence) => void
+  /** Extra authored buried placements (plan quests-progression-038). */
+  extraBuriedPlacements?: () => readonly import('../../world/hiddenFinds').ExplicitBuriedPlacement[]
+  /** Spot-level grave authorization — never story/quest ids. */
+  isGraveDisturbanceAuthorized?: (cemeteryId: string, graveSpotId: string) => boolean
   treasureMapBearCave?: {
     binding: import('../../world/locations/treasureMapBearCave').TreasureMapBearCaveBinding
     cemetery: import('../../world/locations/treasureMapBearCave').TreasureMapBearCaveCemeteryInput
@@ -113,7 +117,7 @@ function hashString(value: string): number {
 
 export function createGroundActions(ctx: PlayerActionContext, deps: GroundActionsDeps): GroundActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
-  const { worldFlags, badges, resolvedHiddenFindSpotIds, applySocialConsequence, treasureMapBearCave } = deps
+  const { worldFlags, badges, resolvedHiddenFindSpotIds, applySocialConsequence, extraBuriedPlacements, isGraveDisturbanceAuthorized, treasureMapBearCave } = deps
 
   /** Strength-adjusted duration for genuine physical effort. Stamina/Vigor
    *  per-second rates stay on `physicalEffortBusyOptions()` unchanged. */
@@ -201,6 +205,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
   /** Cemetery grave disturbance (plan quests-progression-011) — reused by
    *  generic Hidden Finds and grave-hosted systemic treasure keys. */
   const applyGraveDisturbanceIfExposed = (cemeteryId: string, eventSpotId: string): void => {
+    if (isGraveDisturbanceAuthorized?.(cemeteryId, eventSpotId)) return
     const servedSettlementIds = servedSettlementIdsForCemeteryId(cemeteryId)
     const consequenceSettlementId = servedSettlementIds[0]
     if (!consequenceSettlementId) return
@@ -220,12 +225,25 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     }
   }
 
-  /** Systemic buried keys (plan world-024) — ordinary shovel completion, exact
-   *  instance id, namespaced Hidden Find spot. Returns true when this dig
-   *  resolved a key so generic Hidden Find loot must not also fire. */
-  const checkBuriedTreasureKeyDig = (x: number, z: number): boolean => {
+  const explicitBuriedPlacements = (): import('../../world/hiddenFinds').ExplicitBuriedPlacement[] => [
+    ...buriedTreasureKeyPlacements(bundle.treasureSites ?? []).map((placement) => ({
+      spotId: placement.spotId,
+      landmarkId: placement.landmarkId,
+      landmarkKind: placement.landmarkKind,
+      x: placement.x,
+      z: placement.z,
+      graveIndex: placement.graveIndex,
+      instance: createKeyInstance(placement.keyInstanceId),
+    })),
+    ...(extraBuriedPlacements?.() ?? []),
+  ]
+
+  /** Authored/systemic buried placements — ordinary shovel completion, exact
+   *  instance, namespaced Hidden Find spot. Returns true when this dig
+   *  resolved a placement so generic Hidden Find loot must not also fire. */
+  const checkExplicitBuriedDig = (x: number, z: number): boolean => {
     const match = findExplicitBuriedSpot(
-      buriedTreasureKeyPlacements(bundle.treasureSites ?? []),
+      explicitBuriedPlacements(),
       x,
       z,
       (spotId) => resolvedHiddenFindSpotIds.has(spotId),
@@ -239,11 +257,11 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     } else if (match.landmarkKind !== 'cemetery') {
       resolvedHiddenFindSpotIds.add(match.landmarkId)
     }
-    const instance = createKeyInstance(match.keyInstanceId)
+    const instance = match.instance
     if (!inventory.addInstance(instance)) {
-      bundle.droppedItems.drop('key', x, z, toSaveItemInstance(instance))
+      bundle.droppedItems.drop(instance.kind, x, z, toSaveItemInstance(instance))
     }
-    toast.show(`Znaleziono: ${ITEM_DEFS.key.label}!`, 'pickup')
+    toast.show(`Znaleziono: ${ITEM_DEFS[instance.kind].label}!`, 'pickup')
     ctx.onInventoryChanged()
     return true
   }
@@ -321,7 +339,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
         ctx.syncQuickActionAvailability()
         return
       }
-      if (!checkBuriedTreasureKeyDig(x, z)) checkHiddenFindDig(x, z)
+      if (!checkExplicitBuriedDig(x, z)) checkHiddenFindDig(x, z)
       ctx.syncQuickActionAvailability()
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }

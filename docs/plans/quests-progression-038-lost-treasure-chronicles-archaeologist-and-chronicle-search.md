@@ -1,7 +1,7 @@
 # Plan: Lost Treasure Chronicles — archaeologist and chronicle search
 
 **Created:** 2026-09-15  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 
 **Priority:** high · **Effort:** L  
 **Depends on:** quests-progression-037, ~~quests-progression-008~~, ~~quests-progression-009~~, ~~quests-progression-011~~, ~~quests-progression-032~~  
 **Domain:** `quests-progression`  
