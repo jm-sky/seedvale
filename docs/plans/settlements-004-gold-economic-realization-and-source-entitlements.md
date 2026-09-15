@@ -1,308 +1,313 @@
 # Plan: Gold Economic Realization & Source Entitlements
 
 **Created:** 2026-09-08
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** none
+**Depends on:** world-018
 **Domain:** `settlements`
 **Subdomains:** `economy`
 **Tags:** `gold` `economy` `entitlements` `source-attribution`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
 
-> **Draft:** ten plan jest wstępnym szkicem do sprawdzenia, uzupełnienia i poprawy przed oznaczeniem jako `planned`.
+## Goal
 
-## Cel
+Dodać najmniejsze reusable rozszerzenie ekonomii potrzebne do przeprowadzenia commodity od rzeczywistej, source-attributed produkcji do ekonomicznej realizacji i naliczania udziałów w przychodach.
 
-Dodać najmniejsze reusable rozszerzenie ekonomii potrzebne do przeprowadzenia złota od rzeczywistej produkcji do ekonomicznej realizacji oraz do naliczania source-aware udziałów w przychodach.
+Pierwszym consumerem jest złoto z opuszczonej kopalni, ale mechanizm nie może być nazwany ani zaprojektowany jako quest-specific `GoldMineRevenue`.
 
-Mechanizm ma umożliwić późniejszemu questline'owi opuszczonej kopalni zaoferowanie Playerowi 20% udziału w przyszłych przychodach z konkretnej kopalni/kolonii, bez questowego licznika i bez wyliczania udziału z aktualnego stocku, inventory albo niewydobytej rezerwy.
-
-Docelowy kontrakt:
+Docelowy flow:
 
 ```text
-actual attributable production
-→ settlement economic stock
-→ economic realization
-→ source-aware realized value
+real production from economic source
+→ SettlementEconomy aggregate stock
++ source-attribution ledger
+→ explicit economic realization
+→ realized source value
 → entitlement accrual exactly once
 ```
 
-## Stan obecny
+## Recon baseline — current `main`
 
-Aktualny flow minera kończy się na:
+Zweryfikowane kontrakty:
 
-```text
-ResourceDeposit(gold)
-→ miner mines real deposit
-→ carried NPC Inventory: gold
-→ successful deposit at settlement stockpile
-→ SettlementEconomy.add('gold', amount)
-→ persisted settlement gold stock
-```
+- `src/economy/settlementEconomy.ts::SettlementEconomy` jest authoritative ownerem aggregated settlement stock.
+- `SettlementEconomySnapshot` persistuje `stock`, concrete food oraz production shortages; nie ma obecnie source ledger ani realized proceeds.
+- `SettlementEconomy.history()` jest bounded diagnostyką i nie może być ledgerem księgowym.
+- `EconomyRegistry` żyje na `SettlementsManager`; economy state przeżywa stream-out/in i WorldBundle rebuild.
+- obecny miner flow (`planOreGathering`) po successful stockpile deposit wywołuje `SettlementEconomy.add(oreEconomicKind(...))`; gold trafia więc do zwykłego aggregated stock.
+- obecny codebase nie ma settlement treasury/P&L ani settlement-side cash-sale flow.
+- `src/items/tradeCatalog.ts` jest obecnym pricing precedentem dla item trade; finalna implementacja ma odczytać aktualny authoritative gold value zamiast duplikować stałą w queście.
+- `world-018` ma dostarczyć rich finite mine deposits oraz stabilne powiązanie depositów z jednym mine/site economic source; dlatego jest implementation prerequisite tego planu.
 
-`SettlementEconomy` jest authoritative właścicielem bulk economic stock osady i jest persistowany przez `SaveData.settlementEconomies`.
+## Core ownership decision
 
-Obecnie nie istnieje pełny settlement-side flow:
+Source accounting ma należeć do settlement economy domain i być persistowany razem z economy, ale nie ma zastępować aggregated `EconomicStock`.
 
-```text
-SettlementEconomy.gold
-→ sale/export
-→ settlement coins/revenue
-```
-
-Merchant trade jest Player-centric. Coins są zwykłym `ItemKind = 'coin'`; nie istnieje settlement treasury ani generic settlement P&L.
-
-## Gold value baseline
-
-Nie tworzyć niezależnego questowego kursu złota.
-
-Aktualny `src/items/tradeCatalog.ts` definiuje dla gold:
+Model:
 
 ```text
-tradeValue = 20
-sellPrice  = 10
+SettlementEconomy
+├─ aggregate stock: gold = 120
+└─ source ledger:
+   ├─ mine:A → gold unrealized 80
+   └─ mine:B → gold unrealized 25
 ```
 
-Dla pierwszej ekonomicznej realizacji settlement gold przyjąć jako bazowy kierunek istniejący cash realization precedent `sellPrice = 10 coins / gold`, chyba że recon przed implementacją wykaże zmianę katalogu lub nowy authoritative pricing mechanism.
-
-Przy rezerwie kopalni z roadmapy:
+Pozostałe 15 gold może być unattributed/legacy/innym flow. Invariant:
 
 ```text
-500 gold  → ~5,000 coins gross realized value
-750 gold  → ~7,500 coins gross realized value
-1000 gold → ~10,000 coins gross realized value
+sum(unrealized source quantities for kind) <= aggregate stock(kind)
 ```
 
-20% odpowiada orientacyjnie `1,000 / 1,500 / 2,000 coins`.
+## Economic source identity
 
-Nie kodować wartości całej kopalni ani oczekiwanej wypłaty jako runtime state — są to wartości wynikające z rzeczywistej realizacji wydobytego złota.
+Wprowadzić w economy layer prosty stable identifier, np.:
 
-## Authoritative accounting boundaries
-
-Rozdzielić dwie operacje:
-
-### Production attribution
-
-Source attribution powstaje dopiero, gdy wydobyte złoto rzeczywiście dociera do ekonomii osady.
-
-Preferowana granica to istniejący successful miner deposit:
-
-```text
-carried gold
-→ successful stockpile deposit
-→ SettlementEconomy
+```ts
+type EconomicSourceId = string
 ```
 
-Nie przypisywać produkcji na podstawie samego zmniejszenia `ResourceDeposit`, rozpoczęcia pracy minera ani późniejszego skanowania stocku.
+Nie używać quest ID ani `ResourceDeposit.id` jako entitlement identity.
 
-### Economic realization
+`world-018` powinien mapować kilka fizycznych depositów opuszczonej kopalni do jednego stable mine/site source ID. Deposit ID może pozostać provenance detail poza entitlement contractem.
 
-Entitlement nie nalicza się podczas production deposit.
+## Production attribution seam
 
-Powinien naliczyć się dopiero na jawnej operacji ekonomicznej, która realizuje określoną ilość source-attributed gold do coin-equivalent value.
+Nie zmieniać generic `SettlementEconomy.add(...)` tak, aby każde dodanie wymagało source.
 
-Ta operacja jest authoritative accounting boundary dla revenue/proceeds.
+Dodać jawny attributed mutation path, konceptualnie:
 
-## Source attribution
-
-Rozszerzyć gospodarkę tak, aby ilość gold wchodząca przez production deposit mogła zachować stabilną informację o ekonomicznym źródle.
-
-Source identity musi być world/economy identity, nie quest ID.
-
-Dla abandoned gold mine kilka fizycznych `ResourceDeposit` powinno móc należeć do jednego stabilnego economic source/site reprezentującego kopalnię. Entitlement odnosi się do tego source, a nie do pojedynczego depositu.
-
-Nie zmieniać całego `SettlementEconomy` w per-source inventory. Zwykły aggregated stock nadal pozostaje podstawowym stockiem osady; source accounting ma być najmniejszą dodatkową strukturą potrzebną do poprawnego przypisania realizowanej ilości.
-
-Production attribution musi zachować conservation:
-
-```text
-sum source-attributed gold <= corresponding economic gold entering/remaining in accounting flow
+```ts
+economy.addAttributed(kind, amount, sourceId, simTime)
 ```
+
+który atomowo:
+
+1. zwiększa istniejący aggregate stock;
+2. zwiększa source-unrealized quantity dla `(sourceId, kind)`;
+3. zapisuje zwykłą diagnostykę/history, jeżeli obecny history model tego wymaga.
+
+Unattributed `add(...)` nadal działa bez zmian dla pozostałej ekonomii.
+
+Miner deposit flow używa `addAttributed(...)` tylko wtedy, gdy mined resource hook niesie stable economic source z `world-018`; w przeciwnym razie zachowuje zwykły `add(...)`.
+
+Attribution powstaje dopiero przy successful deposit do settlement stockpile, nie przy samym `ResourceDeposits.mine()`.
+
+## Source ledger representation
+
+Rozszerzyć `SettlementEconomySnapshot` o opcjonalny, backward-compatible plain-data ledger, np. semantycznie:
+
+```ts
+sourceAccounting?: {
+  unrealized: Record<EconomicSourceId, Partial<Record<EconomicKind, number>>>
+}
+```
+
+Finalny kształt może być array/map-friendly dla serializacji, ale musi być:
+
+- deterministic,
+- sparse,
+- łatwy do migracji,
+- bez quest-specific pól,
+- bez kopiowania całego stocku per source.
+
+Zero entries usuwać z persisted shape.
 
 ## Economic realization
 
-Dodać mały reusable settlement-economy mechanism realizacji commodity do economic value.
+Dodać explicit reusable operation na `SettlementEconomy`, konceptualnie:
 
-Pierwszym consumerem jest gold, ale API/model nie powinien być nazwany `GoldMineRevenue` ani związany z questem.
-
-Operacja powinna semantycznie przyjmować:
-
-```text
-settlement
-commodity kind
-amount
-source attribution
-unit realization value / authoritative pricing lookup
+```ts
+realizeAttributed(input: {
+  kind: EconomicKind
+  sourceId: EconomicSourceId
+  amount: number
+  unitValue: number
+  eventId: string
+  simTime?: number
+}): RealizationResult
 ```
 
-oraz atomowo:
+`eventId`/stable operation key służy exact-once semantics. Operacja:
 
-1. zweryfikować dostępną source-attributed ilość,
-2. zużyć ją z unrealized accounting state dokładnie raz,
-3. wyliczyć realized coin-equivalent value,
-4. naliczyć wszystkie pasujące entitlementy,
-5. zapisać wynik w persistent state.
+1. odrzuca non-positive amount/value;
+2. sprawdza unrealized source quantity;
+3. sprawdza aggregate stock;
+4. atomowo usuwa `amount` z aggregate stock i source ledger;
+5. liczy `grossValue = amount * unitValue`;
+6. tworzy persistent realization record/idempotency marker;
+7. nalicza pasujące entitlementy;
+8. zwraca plain result.
 
-Nie wymaga to na tym etapie fizycznych caravan, merchant treasury ani pełnego settlement walletu.
+Nie udawać settlement treasury: realized value jest accounting proceeds, dopóki osobny system nie doda fizycznego treasury.
 
-Jeżeli realized value nie jest faktycznie dodawane do settlement coin treasury, nazewnictwo i dokumentacja nie mogą udawać, że taki treasury istnieje. Model może reprezentować economic realization/proceeds bez wprowadzania fikcyjnego cash inventory osady.
+## Realization trigger
+
+Ten plan dostarcza domain operation, ale nie wymusza pełnego regional trade/caravan systemu.
+
+V1 może mieć mały deterministic economy-side realization policy dla gold surplus, wywoływany przez istniejący settlement/off-screen economy tick lub explicit integration seam. Musi jednak przechodzić przez `realizeAttributed(...)` i nie może zależeć od renderowanego NPC lub Playera.
+
+Jeżeli current main przy implementacji ma już generic inter-settlement goods trade/transport consumer, podłączyć realization tam zamiast tworzyć drugi timer.
+
+## Pricing
+
+Nie zapisywać kursu na entitlement.
+
+Realization event otrzymuje/resolve'uje unit value w chwili realizacji z aktualnego authoritative pricing mechanism. Dla obecnego baseline gold `sellPrice` w trade catalog wynosi 10 coins, ale implementacja ma importować lookup/helper zamiast kopiować `10`.
+
+Dzięki temu późniejsza zmiana ceny wpływa na przyszłą realizację, nie retroaktywnie na już naliczone proceeds.
 
 ## Entitlements
 
-Dodać persistent source-aware entitlement reprezentujący prawo beneficjenta do części przyszłych realized proceeds.
+Wprowadzić persistent economy-owned definition, semantycznie:
 
-Minimalny model powinien umożliwiać co najmniej:
-
-```text
-beneficiary = player
-sourceId = stable mine/site economic source
-share = 20%
-accrued/claimable coin value
+```ts
+type SourceEntitlement = {
+  id: string
+  sourceId: EconomicSourceId
+  beneficiary: { kind: 'player' }
+  shareBps: number
+  accruedWholeCoins: number
+  remainderNumerator: number
+}
 ```
 
-Entitlement jest własnością systemu ekonomicznego, nie `QuestManager`.
+Dla 20% użyć `shareBps = 2000` lub równoważnej integer representation. Nie używać runtime float accumulator.
 
-Questline w przyszłości jedynie ustanawia entitlement jako konsekwencję wybranego outcome.
+Entitlement ID powinno być deterministic/idempotentne dla agreement identity; repeated establishment tego samego agreement zwraca existing, nie tworzy duplikatu.
 
-Naliczanie:
+## Fractional accounting
 
-```text
-realized attributable value
-× entitlement share
-→ claimable Player proceeds
-```
+Accrual musi zachowywać remainder pomiędzy realization events.
 
-Musi być exact-once. Późniejszy transfer, zużycie albo brak gold w `SettlementEconomy` nie może zmienić już naliczonej kwoty.
-
-Obsłużyć fractional remainder deterministycznie, jeżeli integer coins i procent udziału powodują ułamki. Nie tracić systematycznie wartości przez `floor()` każdego małego eventu.
-
-## Player payout
-
-Rozdzielić accrual od claim/payout.
-
-Economic realization może zachodzić off-screen i zwiększać persistent claimable amount bez bezpośredniego modyfikowania Player inventory.
-
-Późniejszy claim powinien korzystać ze wspólnego Player item/coin grant path zamiast walletu lub bezpośredniego bypassu inventory/overflow semantics.
-
-Szczegółowy UI/dialogue sposób odbioru może pozostać poza tym planem, jeżeli nie jest potrzebny do zweryfikowania ekonomicznego contractu.
-
-## Buyout baseline dla questline'u
-
-Ten plan nie implementuje questowego wyboru buyout vs share, ale ustala ekonomiczny baseline dla późniejszej integracji.
-
-Dla representative mine ~750 gold:
+Przykład dla basis points:
 
 ```text
-expected gross realized value ≈ 7,500 coins
-expected nominal 20% proceeds ≈ 1,500 coins
+numerator = grossCoins * shareBps + previousRemainder
+whole = floor(numerator / 10_000)
+remainder = numerator % 10_000
 ```
 
-Wstępny authored buyout: **~1,000 coins**.
+Dzięki temu wiele małych realizacji nie traci systematycznie wartości.
 
-Jest to około 67% nominalnego udziału dla typowej kopalni i daje sensowny trade-off między natychmiastową płynnością a ryzykiem/czasem przyszłego wydobycia.
+## Claim / payout boundary
 
-Finalną wartość buyoutu zweryfikować przy planowaniu questline integration po wdrożeniu aktualnych quest reward/outcome plans i ewentualnych zmianach economy balance.
+Accrual i claim są oddzielne.
+
+Dodać economy operation:
+
+```ts
+claimEntitlement(entitlementId): number
+```
+
+która atomowo przenosi `accruedWholeCoins` do `0` i zwraca kwotę do wypłaty przez caller.
+
+Quest/dialogue/UI ma następnie użyć istniejącego Player inventory coin grant path. Economy nie importuje Player inventory i nie wypłaca bezpośrednio.
+
+Jeżeli grant po claim może failować z powodu inventory semantics, caller musi użyć istniejącego atomic/overflow-safe reward path; nie zerować accrual przed zapewnieniem delivery. Finalny API może więc preferować `peekClaimable + commitClaim(id, operationId)` jeśli obecny reward contract tego wymaga.
+
+## Persistence and idempotency
+
+`SettlementEconomySnapshot` lub sąsiedni economy registry snapshot ma persistować:
+
+- unrealized source quantities;
+- entitlement definitions;
+- accrued whole coins;
+- fractional remainder;
+- bounded/exact-once realization operation identity potrzebną do retry safety.
+
+Nie rekonstruować z `history()`, inventory, current stock ani deposit reserve.
+
+Wykorzystać aktualny `SaveData` migration/version pipeline; pola mają być optional dla legacy saves.
 
 ## Off-screen simulation
 
-Mechanizm nie może zależeć od Playera, kamery ani załadowania renderowanych NPC.
+Attributed production i realization są domain operations, więc detailed i off-screen consumers muszą używać tych samych seams.
 
-Source-aware production i realization muszą działać przez authoritative simulation/economy operations używane również przez adaptive/off-screen simulation.
+Nie dodawać `MiningColonyOffscreenRevenue` ani okresowego skanowania stocku.
 
-Jeżeli aktualny off-screen miner flow nie przechodzi przez ten sam deposit/economy contract, implementacja ma rozszerzyć wspólną domenową operację zamiast dodawać drugi licznik tylko dla off-screen simulation.
-
-## Persistence
-
-Persistować co najmniej stan potrzebny do kontynuowania bez rekonstrukcji z inventory/history:
-
-- source-aware unrealized accounting quantity,
-- entitlement definitions,
-- accrued/claimable proceeds,
-- fractional remainder, jeżeli wymagany przez model udziałów.
-
-Nie rekonstruować entitlementów ani accrual z:
-
-- `SettlementEconomy.query('gold')`,
-- NPC/Player inventories,
-- `SettlementEconomy.history()`,
-- pozostałej rezerwy depositów.
-
-`SettlementEconomy.history()` pozostaje diagnostyką, nie authoritative ledgerem.
-
-Zmiana persisted representation musi użyć aktualnego w chwili implementacji `SaveData` migration pipeline i podbić wersję zgodnie z jego rzeczywistym stanem.
+Jeżeli off-screen mining produkuje yield bez przejścia przez zwykły stockpile action, jego shared result musi nadal wywołać tę samą `addAttributed(...)` operation dokładnie raz.
 
 ## Quest integration boundary
 
-`quests-progression-002` i `quests-progression-003` są obecnie planami, a aktualny codebase jest jeszcze przed ich docelowym outcome/reward modelem.
+`quests-progression-010` może:
 
-Ten plan nie powinien czekać z core economy model na quest-specific state.
+- utworzyć deterministic 20% entitlement dla mine source po wyborze share;
+- odczytać claimable proceeds;
+- uruchomić normalny Player coin payout path.
 
-Późniejszy abandoned-mine questline ma użyć normalnego outcome/consequence integration do wyboru:
+Quest nie posiada:
+
+- source ledger,
+- production cursor,
+- realized amount,
+- fractional remainder,
+- accrued proceeds.
+
+Buyout pozostaje authored quest reward; nie jest entitlementem.
+
+## Balance baseline
+
+Przy aktualnym baseline `10 coins / gold`:
 
 ```text
-immediate authored buyout
-OR
-persistent 20% economic entitlement
+500 gold  → ~5,000 gross → ~1,000 at 20%
+750 gold  → ~7,500 gross → ~1,500 at 20%
+1000 gold → ~10,000 gross → ~2,000 at 20%
 ```
 
-Nie dodawać do `QuestProgressEntry` pól typu `goldMined`, `revenue`, `shareEarned` ani `mineRemainingValue`.
+Te liczby są planning sanity check, nie runtime constants. Wstępny quest buyout ~1,000 coins należy ponownie ocenić w `quests-progression-010` względem aktualnego reward balance.
+
+## Scope
+
+In scope:
+
+- `EconomicSourceId` contract;
+- attributed economy deposit seam;
+- sparse persistent source-unrealized ledger;
+- explicit exact-once realization operation;
+- persistent source entitlements;
+- integer fractional remainder accounting;
+- claimable proceeds API;
+- SaveData/rebuild integration;
+- miner deposit integration dla sourced deposits;
+- shared detailed/off-screen accounting seam.
 
 ## Non-goals
 
-Nie implementować w tym planie:
-
-- pełnego settlement wallet/treasury,
-- business/P&L systemu,
-- wages/payroll,
-- taxes,
-- merchant treasury,
-- regional dynamic gold pricing,
-- supply/demand commodity market,
-- physical trade caravans tylko po to, aby zrealizować gold,
-- generic company ownership,
-- quest-specific mine revenue counter,
-- naliczania udziału z undepleted reserve,
-- inventory/stock scanning dla entitlementów,
-- pełnego abandoned-gold-mine questline,
-- permanent houses/colony expansion ani innych późniejszych etapów roadmapy.
-
-## Testy
-
-Pokryć co najmniej:
-
-- successful miner deposit przypisuje właściwą ilość do właściwego economic source;
-- kilka depositów jednej kopalni agreguje się pod jednym source;
-- gold z innego source nie zasila mine entitlement;
-- samo wydobycie bez dostarczenia nie tworzy source-attributed settlement production;
-- samo production deposit nie nalicza entitlementu przed realization;
-- partial realization nalicza udział tylko od faktycznie realizowanej ilości;
-- repeated processing tego samego state nie powoduje double accounting;
-- transfer/consumption po realization nie zmienia accrued proceeds;
-- 20% działa deterministycznie dla małych eventów bez utraty fractional remainder;
-- save/load zachowuje source accounting, entitlement i accrued value;
-- off-screen path korzysta z tego samego accounting contractu;
-- gold z osady niezwiązany z source nie jest błędnie przypisywany do kopalni;
-- existing aggregated `SettlementEconomy` stock pozostaje poprawny.
-
-## Implementation guidance
-
-Przed implementacją ponownie sprawdzić aktualny codebase, szczególnie `SettlementEconomy`, miner deposit flow, off-screen work/economy paths, resource source identity, persistence oraz aktualny stan planów zależnych.
-
-Preferować rozszerzenie istniejących economy operations i ownership boundaries zamiast równoległego managera.
-
-Dla nowych ważnych publicznych/architektonicznych funkcji i klas dodać przydatny JSDoc, w tym `@domain settlements` tam, gdzie poprawi to preflight discovery.
+- settlement treasury/wallet;
+- full P&L;
+- wages/taxes;
+- merchant treasury;
+- dynamic commodity market;
+- physical caravans solely for realization;
+- company ownership;
+- quest-owned counters;
+- entitlement from undepleted reserves;
+- inventory/stock scans;
+- full abandoned-mine questline.
 
 ## Verification
 
-### Automated
+Automated tests:
 
-Uruchomić focused economy/NPC logistics/persistence tests, następnie typecheck i build.
+- sourced successful deposit increments aggregate + matching source ledger;
+- failed/mined-but-not-delivered yield creates no attribution;
+- several deposits under one source aggregate correctly;
+- unrelated source never accrues mine entitlement;
+- unattributed `SettlementEconomy.add` remains unchanged;
+- partial realization removes exactly the realized attributed quantity;
+- realization operation ID cannot double-process;
+- entitlement accrues exactly once;
+- 20% remainder across many small events equals 20% aggregate within integer coin semantics;
+- save/load and WorldBundle rebuild preserve ledger, entitlements and remainder;
+- claim is idempotent/atomic according to final API;
+- legacy economy snapshots restore with empty source accounting;
+- detailed/off-screen callers produce identical accounting results.
 
-Nie uruchamiać `pnpm docs:sync` ręcznie — synchronizacja dokumentacji odbywa się przez GitHub workflow.
+Run focused economy/mining/persistence tests, typecheck and build. Player performs browser/gameplay verification; AI does not run browser verification.
 
-### Manual — User
-
-User wykonuje browser verification po implementacji. Minimalny debug/UI sposób obserwacji powinien pozwolić potwierdzić, że wydobycie i realizacja konkretnego source naliczają właściwy entitlement również po save/load i podczas nieobecności Playera.
+Before implementation create/update focused implementation notes. Add useful JSDoc with `@domain settlements` to new public economy/source contracts.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
