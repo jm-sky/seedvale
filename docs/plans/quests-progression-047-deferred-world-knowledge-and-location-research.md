@@ -4,452 +4,507 @@
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** L
 **Model:** Opus, Sonnet
-**Depends on:** ~~world-028~~
+**Depends on:** ~~world-028~~, ~~world-022~~
 **Domain:** `quests-progression`
 **Type:** `feature`
 **Subdomains:** `quests` `progression`
-**Tags:** `world-knowledge` `landmarks` `dialogue` `lazy-binding` `world-time`
+**Tags:** `world-knowledge` `landmarks` `dialogue` `lazy-binding` `world-time` `worker`
 **Roadmap:** -
 
 ## Problem
 
-Quest definitions that need a procedural world place currently bind that place eagerly before `QuestManager` construction. `buildLandmarkQuests()` is the clearest example: `createApp` performs bounded `ChunkManager.findLandmarkNear()` searches during app/world setup and passes concrete `landmarkId`s into `QuestDef`.
+Seedvale already has several systems that need knowledge about places before they can tell the Player where to go:
 
-That architecture has two drawbacks:
+- authored landmark quests (`buildLandmarkQuests()`),
+- generated RPG quests such as `old-place-secret`,
+- Lost Treasure Chronicles,
+- the home guard dialogue topic **„Opowiedz mi coś o okolicy”** from `world-012`.
 
-1. world lookup work happens even when the Player never asks the relevant NPC about the place;
-2. the quest cannot naturally model an NPC who **does not yet know the exact place**, but can research it and later give the Player a useful geographic clue.
+Today these flows usually resolve their world locations eagerly or synchronously before the Player actually asks for the information. Even after `world-028` made classic landmark lookup much cheaper, this has two architectural problems:
 
-`world-028` removed the catastrophic full-chunk fallback for `monolith`, `stoneCircle` and `smallRuins`, so this plan is **not** a replacement performance fix. It establishes a reusable quest/world-knowledge mechanism and removes unnecessary eager binding where narrative state does not require it yet.
+1. world knowledge is computed before any NPC/player interaction requires it;
+2. dialogue cannot naturally represent an NPC who has a lead but needs time to check notes, reports, maps or local knowledge before giving a concrete direction.
 
-The target gameplay flow is:
+The desired gameplay flow is:
 
 ```text
-NPC has a lead/problem
-→ Player accepts / asks about it
-→ NPC says they need to check notes / ask around / reconstruct the route
-→ world lookup starts lazily and does not block the dialogue
-→ world time passes
-→ NPC has the result
-→ next conversation gives a concrete geographic clue
-→ quest objective uses the exact resolved world identity
+NPC has a lead / Player asks for local knowledge
+→ NPC starts research
+→ world lookup is dispatched lazily to background worker work
+→ dialogue returns immediately
+→ authored world-time delay runs independently
+→ background result becomes stable world knowledge
+→ later dialogue gives a concrete direction/location clue
+→ quest/objective uses the exact resolved world identity
 ```
 
-The research delay is a story/world-time rule, not a loading spinner. A lookup completing immediately must not make an authored one-hour research delay disappear.
+The wait is part of world fiction, not a loading spinner. Resolver speed and authored research time are independent.
 
 ## Goal
 
-Add one generic, reusable mechanism for **deferred static-world knowledge** that future quests can opt into without inventing bespoke timers, Promise state, pre-quest systems or mutable quest definitions.
+Create one reusable architecture for **deferred static-world knowledge research** that can be used by quests and ordinary NPC dialogue without bespoke Promise state, timers or duplicated location lookup logic.
 
 The mechanism must:
 
-- preserve `QuestManager` ownership of quest progress;
-- keep terrain/place resolution in the world layer through an injected seam;
-- persist meaningful research/binding progress across save/load;
-- allow authored world-time delays;
-- return a real stable world identity, never an approximate quest-only coordinate;
-- let dialogue describe where the Player should go;
-- support immediate-binding quests unchanged;
-- avoid blocking NPC dialogue while world resolution runs;
-- be discoverable and straightforward for later AI implementation sessions.
+- keep physical world truth owned by world/terrain systems;
+- run lookup work off the main thread through the existing worker infrastructure;
+- expose one shared world-level research service rather than a quest-specific worker;
+- let `QuestManager` persist quest-specific knowledge progress without importing terrain systems;
+- let non-quest dialogue such as the guard's local-knowledge topic use the same service;
+- preserve deterministic/stable world identities;
+- support authored world-time research delays;
+- produce useful player-facing geographic clues;
+- survive save/load, New Game and same-session world rebuilds;
+- keep immediate knowledge as a valid first-class path where an NPC logically already knows the place.
 
 ## Architectural decision
 
-Do **not** solve this by:
+Introduce a world-owned **WorldKnowledgeResearchService** (exact name may adapt) with a narrow async contract.
 
-- mutating a `QuestDef` after `QuestManager` construction;
-- creating a second "pre-quest" lifecycle outside `QuestManager`;
-- storing an unresolved Promise in quest state;
-- making UI/dialogue code understand landmark lookup;
-- delaying every location quest whether or not the NPC should already know the location;
-- moving generic quest logic into `ChunkManager`;
-- duplicating world-place coordinates as a new authoritative quest world state.
+Conceptually:
 
-Introduce a small **deferred world-knowledge binding** concept owned by quest progress.
+```text
+WorldKnowledgeResearchService
+  ├─ receives deterministic data-only research queries
+  ├─ deduplicates in-flight equivalent requests
+  ├─ dispatches worker-safe lookup jobs
+  ├─ returns stable world refs / unavailable
+  └─ does not know quests, dialogue or UI
+
+QuestManager
+  ├─ owns persisted quest knowledge progress
+  ├─ requests research through injected service adapter
+  ├─ gates clue reveal by world time
+  └─ matches knowledge-bound objectives against stable refs
+
+Guard/local dialogue
+  ├─ requests local world knowledge through same service
+  └─ owns only dialogue-specific pending/reveal state where needed
+```
+
+Do not solve this by:
+
+- mutating `QuestDef` after construction;
+- adding a quest-only Worker;
+- calling synchronous heavy lookup inside `Promise.resolve()` / microtasks;
+- making Vue/UI understand world research states;
+- storing worker handles or Promises in SaveData;
+- introducing a second authoritative location registry;
+- forcing every location quest to wait.
+
+## 1. Worker-backed world research service
+
+Reuse the existing persistent terrain worker pool / `chunkHeightmap.worker.ts` infrastructure rather than spawning one Worker per conversation.
+
+Add a dedicated low-priority worker job kind for bounded static-world research.
+
+The worker job must be data-only and deterministic. It must not receive `ChunkManager`, Three.js objects, closures or UI state.
+
+V1 query scope must support at least:
+
+```text
+nearest landmark of requested kind(s)
+from origin x/z
+within bounded chunk radius
+using current deterministic terrain/worldgen inputs
+```
+
+The result must carry a stable world ref with enough data for later matching/presentation, conceptually:
+
+```ts
+type WorldKnowledgeRef =
+  | {
+      type: 'landmark'
+      id: string
+      kind: LandmarkKind
+      x: number
+      z: number
+    }
+```
+
+Coordinates are result/presentation data; stable id remains authoritative identity.
+
+### Worker priority
+
+World-knowledge research is background work.
+
+It must not starve:
+
+1. terrain tile generation,
+2. chunk mesh generation,
+3. player-critical streaming.
+
+Extend the current worker-pool priority queues deliberately. Knowledge jobs should run below tile/mesh jobs. Compare priority with grass based on actual cost; preserve at least one worker capacity for player-critical terrain work.
+
+Do not create unbounded parallel research scans.
+
+### Determinism/parity
+
+Worker lookup must reuse the same worker-safe placement primitives as streamed world generation (`resolveClassicLandmarkPlacement` after `world-028`, cemetery resolver where applicable, authored ruins resolver where applicable).
+
+Do not duplicate landmark placement algorithms.
+
+Same seed/config/origin/query must resolve the same stable target regardless of:
+
+- main-thread vs worker execution,
+- request order,
+- reload,
+- conversation order.
+
+## 2. Shared research lifecycle
+
+The service should expose request lifecycle semantics independent of quests:
+
+```text
+idle
+→ in flight
+→ resolved(ref)
+OR unavailable
+OR failed/retryable
+```
+
+Equivalent concurrent requests should be deduplicated by a deterministic key containing all inputs that affect the result (seed/fingerprint/query/origin/radius etc.).
+
+Runtime in-flight state is not persisted globally.
+
+Cancellation/stale completion must be handled when:
+
+- New Game changes seed/world,
+- current `WorldBundle` is rebuilt,
+- service is disposed.
+
+Use an epoch/fingerprint/generation token or equivalent; stale results must never bind into a new world.
+
+## 3. Quest-owned persisted knowledge progress
+
+`QuestManager` remains owner of quest progress.
+
+Add optional persisted knowledge slots to `QuestProgressEntry` / runtime progress.
 
 Conceptually:
 
 ```ts
-QuestDef
-  └─ optional knowledge definitions / references
-
-QuestProgressEntry
-  └─ persisted knowledge progress
-       requestedAtDays
-       revealAtDays
-       resolution state
-       resolved stable world ref, when available
-
-QuestManager
-  ├─ starts requests from authored quest actions/effects
-  ├─ gates "come back later" vs "I found it" dialogue by world time
-  ├─ persists the selected stable ref
-  └─ matches later objectives against that ref
-
-World layer
-  └─ injected async resolver
-       questId + knowledgeId
-       → stable world ref or unavailable
+type QuestWorldKnowledgeProgress =
+  | {
+      status: 'requested'
+      requestedAtDays: number
+      revealAtDays: number
+    }
+  | {
+      status: 'resolved'
+      requestedAtDays: number
+      revealAtDays: number
+      ref: WorldKnowledgeRef
+    }
+  | {
+      status: 'unavailable'
+      requestedAtDays: number
+      revealAtDays: number
+    }
 ```
 
-Exact type names may adapt to current code, but ownership must remain as above.
-
-## 1. Generic knowledge lifecycle
-
-Support at least these logical states per knowledge slot:
-
-```text
-unrequested
-→ requested
-→ resolved
-or unavailable
-```
-
-`resolving` may exist as runtime-only state, but must not be the only representation of a request because save/load can happen while work is in flight.
-
-Persist enough information to preserve gameplay semantics:
-
-- request/start world time;
-- authored earliest reveal time (`revealAtDays` or equivalent);
-- resolved stable world ref when one was selected;
-- terminal `unavailable` when bounded deterministic lookup proves no target exists.
-
-Do not persist Promises or worker/task handles.
+`resolving` may exist only as runtime task bookkeeping.
 
 On restore:
 
-- `requested` without a result must restart resolution safely;
-- `resolved` must keep the same bound identity;
-- elapsed world time may make the information immediately tellable after load;
-- no duplicate stage effects or duplicate journal entries may occur.
+- unresolved `requested` research restarts safely;
+- resolved ref is preserved exactly;
+- elapsed world time may already satisfy the research delay;
+- no duplicate request effects/journal events occur.
 
-## 2. Static world-ref scope
+Do not create a separate quest-knowledge save registry.
 
-V1 is for static/deterministic world knowledge, especially places.
-
-At minimum support a landmark ref carrying the authoritative stable landmark id and enough kind metadata to validate/present it.
-
-The quest-layer ref is **knowledge about** a world object, not ownership of the object. The world remains authoritative for placement/existence.
-
-Do not generalize V1 to dynamic fauna/NPC targets; those already have separate binding/lifecycle semantics.
-
-Design the public types so later extensions to settlement/cave/location refs are possible without replacing the mechanism.
-
-## 3. Async injected resolver
-
-Add a narrow injected resolver seam; `QuestManager` must not import `ChunkManager` or terrain generation.
-
-Conceptually:
-
-```ts
-resolveQuestWorldKnowledge(questId, knowledgeId)
-  → Promise<ResolvedQuestWorldKnowledge | null>
-```
-
-The contract is asynchronous even when the current classic-landmark resolver is cheap after `world-028`.
-
-Requirements:
-
-- starting research returns dialogue immediately;
-- resolution completion dirties quest presentation/state but does not auto-skip authored world-time delay;
-- failures are contained and become retryable or `unavailable` according to an explicit policy, never an unhandled rejection;
-- reset/new game cannot let an old in-flight request write into the new quest state;
-- same-session world rebuild must use the current world/bundle, not a stale captured `ChunkManager`;
-- do not introduce a Worker mechanically. If current resolution is cheap, a Promise-based injected seam is enough; expensive future resolvers can implement slicing/worker behavior behind the same contract.
-
-## 4. Research delay is world simulation time
+## 4. Research delay uses world simulation time
 
 Reuse `QuestWorldTimeLookup.getElapsedDays()`.
 
-Authoring expresses a duration in world time (for example 1 hour = `1 / 24` day). Do not add a real-time timer manager.
+Authoring declares a duration, e.g. one hour = `1 / 24` day.
 
-The two independent conditions are:
+Reveal requires both:
 
 ```text
-world binding resolved
+background world lookup resolved
 AND
 current world time >= revealAtDays
 ```
 
-Only when both are true can the NPC give the concrete clue.
+If worker finishes immediately, authored delay still applies.
 
-Examples of authored fiction:
+If world time passes before the worker result arrives, NPC still waits for the result.
 
-- "Muszę zajrzeć do starych papierów. Wróć za godzinę."
-- "Popytam ludzi, którzy pamiętają tamtą drogę. Daj mi trochę czasu."
-- "Muszę odtworzyć trasę z notatek zwiadowcy."
+## 5. Quest authoring primitives
 
-The exact delay belongs to quest content, not resolver speed.
+Extend existing quest machinery, not a parallel dialogue state machine.
 
-## 5. Quest flow primitives
+Preferred concepts:
 
-Extend existing quest primitives rather than creating a parallel dialogue state machine.
+- knowledge declarations on `QuestDef`;
+- a one-shot effect/acceptance action that starts research;
+- a typed stage/objective for returning to an NPC to receive researched knowledge;
+- a typed objective that refers to a resolved knowledge slot instead of requiring concrete `landmarkId` at definition construction.
 
-Preferred shape:
-
-- reuse `QuestStageEffect` for the one-shot action that starts a knowledge request, or add the smallest sibling effect/accept-effect seam if current acceptance flow cannot apply an effect exactly once;
-- add one explicit quest objective/stage primitive for returning to the relevant NPC to receive resolved knowledge after the delay;
-- add one explicit way for a later world objective to refer to the resolved knowledge slot instead of requiring a concrete `landmarkId` at definition construction.
-
-Example conceptual flow:
+Conceptually:
 
 ```text
-accept quest
-  → request knowledge slot "target"
+accept
+→ request_world_knowledge("target")
 
-stage 0: receive_knowledge(target, giver)
-  before ready: informational "still looking" dialogue
-  after resolved + revealAt: conscious player dialogue action
-  → NPC gives geographic clue
-  → advance
+stage 0: receive_world_knowledge("target", giver)
+  pending → "Jeszcze sprawdzam."
+  ready → NPC gives concrete clue
 
-stage 1: interact_bound_landmark(target)
-  → matches the landmark id persisted in knowledge slot "target"
+stage 1: interact_bound_landmark("target")
 ```
 
-Do not overload `interact_landmark` with magic placeholder strings. Prefer a typed distinction between a concrete landmark target and a knowledge-bound target.
+Do not encode knowledge ids as fake landmark ids.
 
-## 6. Dialogue and geographic clue presentation
+## 6. Geographic clue presentation
 
-The purpose of this mechanism is not merely to postpone a lookup. The NPC must eventually tell the Player **where to go**.
+The mechanism exists to let NPCs tell the Player **where to go**.
 
-Reuse existing direction/location presentation helpers where practical, especially `cardinalDirectionPhrase` and existing cave/location description patterns.
+Reuse existing direction/location presentation helpers (`cardinalDirectionPhrase`, cave/location description patterns, settlement names).
 
-Provide a narrow world/presentation seam that can describe a resolved world ref relative to a meaningful origin (normally giver settlement / quest settlement), e.g. conceptually:
+A resolved landmark should be describable relative to a meaningful origin, e.g.:
 
 ```text
 "ruiny na północny zachód od Lipowa"
-"monolit na wschód od osady, za wzgórzami"
+"monolit na wschód od osady, około kilkuset metrów stąd"
 ```
 
-V1 does not need procedural prose generation. Deterministic authored template + direction/distance/location phrase is sufficient.
+Do not persist rendered Polish prose when it can be regenerated from stable ref + deterministic context.
 
-Do not persist a rendered Polish sentence as authoritative state if it can be reproduced from stable world identity plus current deterministic presentation data.
+Do not reveal exact hidden-item coordinates when fiction warrants only a place/area clue.
 
-Do not reveal the exact hidden-item coordinate when the quest fiction only warrants an area/place clue.
+## 7. Guard local-knowledge pilot
 
-## 7. Journal and quest-log behavior
+Use the existing home guard topic **„Opowiedz mi coś o okolicy”** as a non-quest pilot of the same service.
 
-Reuse the existing journal event mechanism.
+Current behavior from `world-012`:
 
-The first NPC line ("wróć później") and the later concrete clue are meaningful heard information and should be represented coherently in quest history without duplicate stamps after reload/repeated conversation.
+- guard selects/reveals 1–3 locations from a top-5 nearby/medium pool;
+- location discovery has historically had cold-scan hitch work (`world-022`).
 
-`QuestManager.list()` remains the only player-facing quest DTO. Vue must not interpret knowledge slot internals.
-
-While research is pending, the quest log should describe the current action in world terms, for example:
+New behavior:
 
 ```text
-Wróć do Anny, gdy sprawdzi stare zapiski.
+Player asks guard about surroundings
+→ if suitable local-knowledge result already exists: reveal normally
+→ otherwise guard starts background research and responds immediately
+→ e.g. "Muszę przejrzeć meldunki i przypomnieć sobie szlaki. Wróć za godzinę."
+→ after worker result + authored delay, next conversation reveals 1–3 concrete locations
 ```
 
-After the clue is received, it should describe the actual destination rather than an unresolved placeholder.
+Do not route this through `QuestManager`.
 
-## 8. Persistence
+Reuse normal `LocationKnowledge` / `revealLocationKnowledge` for actual discovery. The research service only resolves candidate world refs.
 
-Extend `QuestProgressEntry` rather than adding a separate save registry.
+Persist only gameplay-meaningful guard research state if required to preserve the authored wait across save/load; do not persist worker tasks/results that can be deterministically reconstructed unless the selected reveal set itself must remain stable.
 
-Update:
+The selected 1–3 locations must not reroll merely because the Player saved/reloaded while the guard was researching.
 
-- runtime normalization/copying in `QuestManager`;
-- `src/persistence/saveData.ts` validation/defaulting;
-- save serialization path if required by the current generic quest-progress save;
-- reset/new-game behavior.
-
-Older saves with no knowledge field must remain valid and behave as `unrequested` unless the migrated quest is already past the new research stage; see migration rules below.
-
-Do not bump save schema unless the repository's existing optional-field compatibility rules require it; verify against current `SaveData` implementation rather than assuming.
-
-## 9. Migration / compatibility for existing quests
-
-This plan changes quest flow for already-existing quest ids. Existing saves must not become impossible.
-
-For each migrated quest define deterministic compatibility behavior:
-
-- `not_offered` / `offered`: start using the new research flow normally;
-- `active` at the old landmark objective: preserve or reconstruct the old concrete binding and place the quest directly after the research stage;
-- `ready_to_report` / terminal: leave unchanged;
-- older journal history must not be rewritten or duplicated.
-
-Use current quest id + stage state; do not create replacement quest ids solely to avoid migration.
-
-## 10. Pilot migrations
-
-Use this plan to establish precedent in several real quests, not only tests.
+## 8. Quest pilots
 
 ### A. `slad-przy-monolicie`
 
-Current state: `buildLandmarkQuests()` eagerly resolves `monolith` during app setup.
+Replace eager monolith binding with:
 
-New narrative:
+```text
+Anna gives lead
+→ starts worker-backed monolith research
+→ ~1 world-hour authored wait
+→ Anna gives direction/location clue
+→ interact with exact resolved monolith
+→ existing report/outcome
+```
 
-- Anna knows the missing person was last seen near an old monolith, but does not have the exact route at hand;
-- accepting/asking starts the knowledge request;
-- she asks for a short authored research delay (about one world hour);
-- on return she gives the monolith's direction/location clue;
-- only then does the active world objective become investigate that exact monolith.
+Preserve quest id and outcome semantics.
 
-This demonstrates authored static quest + classic procedural landmark.
+### B. generated `old-place-secret`
 
-### B. generated RPG `old-place-secret`
+Use the same generic mechanism without matrix-specific pending state.
 
-Current state: candidate collection is already bound to `opportunity.sourceId` before materialization.
+Generated quest identity must remain deterministic/stable. Do not make candidate identity depend on async completion order.
 
-Adapt the matrix so the NPC can expose the **lead** without eagerly requiring the final player-facing place knowledge. Reuse the same deferred knowledge lifecycle rather than adding matrix-specific pending state.
+If current `sourceId` is required to preserve persisted quest id, keep stable candidate identity selection deterministic while deferring the actual player-facing research/reveal through the common service.
 
-The generated quest id/source identity must remain stable across save/load.
+### C. Lost Treasure Chronicles
 
-This demonstrates generated/world-driven quest materialization using the same mechanism.
+Use the archaeologist/papers fiction as a story pilot.
 
-### C. Lost Treasure Chronicles chronicle-search ruins
+Preserve deterministic grave-vs-ruins truth and physical content placement. The research service delays NPC/player knowledge, not world existence.
 
-The archaeologist already has an investigation/papers premise. Move the expedition-ruins clue onto the generic research mechanism where compatible with current chapter semantics:
+Do not redesign the whole chapter.
 
-- archaeologist can explain the hypothesis immediately;
-- exact ruins identity/direction is researched lazily;
-- after the authored delay he gives a bounded, concrete clue to the real ruins;
-- deterministic grave-vs-ruins truth and physical chronicle/evidence placement must not reroll or depend on visit order.
+## 9. Immediate knowledge remains supported
 
-Do not redesign the whole chapter. Preserve the deterministic world truth and existing cemetery branch.
+Do not migrate every landmark quest.
 
-This demonstrates a story quest using the same generic mechanism.
+Keep immediate knowledge where fiction supports it, e.g.:
 
-### Explicit immediate controls
+- local cemetery known by residents;
+- clearly visible landmark;
+- place explicitly already known by giver.
 
-Do **not** automatically migrate every landmark quest.
+The architecture must make both policies explicit:
 
-Keep immediate binding/knowledge where the fiction says the NPC plainly knows the place, unless recon during implementation proves otherwise. In particular, local cemetery/visible landmark cases can remain immediate.
+```text
+immediate knowledge
+researched knowledge
+```
 
-The architecture must make `immediate` and `researched` knowledge both first-class choices.
+## 10. Persistence and migration
 
-## 11. Eager world setup cleanup
+Update quest progress validation/normalization for optional knowledge fields.
 
-After pilot migration, remove only the eager landmark lookups that are no longer needed for those quests.
+Older saves remain valid.
 
-Do not remove lookup needed by:
+For migrated existing quest ids:
+
+- `not_offered` / `offered` → new flow;
+- old `active` concrete landmark objective → reconstruct/preserve its target and place it directly after research stage;
+- `ready_to_report` / terminal → unchanged.
+
+For guard research:
+
+- save/load must not reset an already-started authored wait or reroll selected reveal results;
+- New Game must clear it.
+
+Do not bump SaveData version unless current compatibility rules require it.
+
+## 11. Eager lookup cleanup
+
+After pilots migrate, remove only now-unused eager lookup work.
+
+Do not remove lookups required for:
 
 - systemic treasure-site generation;
-- key-host placement;
-- other immediate landmark quests;
-- deterministic story truth that must exist independently of player conversation.
+- key host placement;
+- deterministic physical story truth;
+- immediate-knowledge quests;
+- unrelated world-location catalog behavior.
 
-Measure responsibility by call-site, not by deleting `findLandmarkNear()` usage wholesale.
+## 12. Validation and JSDoc
 
-## 12. Validation and authoring guardrails
-
-Extend `validateQuestDefinitions()` so invalid deferred-knowledge definitions fail early.
+Extend `validateQuestDefinitions()` for deferred knowledge declarations/references.
 
 Validate at least:
 
-- knowledge ids unique within a quest;
-- referenced knowledge id exists;
-- world-bound objective expects compatible ref kind;
-- research duration is finite and non-negative;
-- receive-knowledge stage has a valid NPC target;
-- no stage can consume an unresolved binding without the declared flow allowing it.
+- unique knowledge ids;
+- referenced slot exists;
+- compatible ref/objective kind;
+- non-negative finite research delay;
+- valid receive-knowledge NPC target;
+- no unresolved slot is consumed without a valid research flow.
 
-Add concise JSDoc to the important public types/functions and `@domain quests-progression` where useful for AI preflight discovery.
+Add concise JSDoc to important architectural/public functions/classes with useful `@domain` tags so future AI preflight can discover this mechanism.
 
 ## 13. Tests
 
-Add tests for architecture contracts, not wall-clock timings.
+### Worker/service
 
-### QuestManager / generic lifecycle
+1. deterministic landmark query returns same result as existing main-thread resolver for representative seeds/chunks;
+2. request runs through worker job path, not synchronous `findLandmarkNear` on dialogue call stack;
+3. equivalent concurrent queries deduplicate;
+4. tile/mesh priority is preserved while research is queued;
+5. stale world/reset completion is ignored;
+6. unavailable and worker error paths are explicit/retry-safe;
+7. service disposal clears/rejects pending work safely.
 
-1. accepting/requesting starts one knowledge request exactly once;
-2. repeated NPC interaction while pending does not start duplicates;
-3. resolver may finish before `revealAtDays`, but clue stays unavailable until world time passes;
-4. world time may pass before resolver finishes, but clue stays unavailable until resolution finishes;
-5. resolved + delay elapsed enables the conscious receive-knowledge dialogue action;
-6. selecting it advances exactly once;
-7. later bound-landmark objective matches only the resolved landmark id;
-8. unavailable result follows explicit authored fallback and never leaves a permanently broken objective;
-9. reset/new game ignores stale async completion;
-10. save/load of requested unresolved research restarts safely;
-11. save/load of resolved research preserves target identity and does not re-roll;
-12. journal entries are not duplicated.
+### Quest lifecycle
 
-### Persistence
+8. request starts exactly once;
+9. repeated pending interaction does not duplicate work;
+10. result before delay does not reveal early;
+11. delay before result does not reveal early;
+12. resolved + elapsed enables clue dialogue;
+13. knowledge-bound landmark matches only resolved id;
+14. save/load requested state restarts worker resolution safely;
+15. save/load resolved state preserves exact ref;
+16. New Game ignores stale completion;
+17. journal entries are not duplicated;
+18. old save without knowledge fields remains valid.
 
-13. older quest progress without knowledge fields validates and restores;
-14. malformed knowledge entries are rejected/defaulted according to current save policy;
-15. quest progress JSON round-trip preserves requested/resolved state.
+### Guard pilot
 
-### Pilot quests
+19. first cold "Opowiedz mi coś o okolicy" returns immediately with research dialogue;
+20. repeated conversation while pending does not start duplicate scan;
+21. after delay/result guard reveals stable 1–3 locations through normal `LocationKnowledge`;
+22. save/reload does not reroll selected reveal set;
+23. already-known/cached local knowledge may be revealed without artificial new research.
 
-16. `slad-przy-monolicie` does not need eager monolith binding at app setup and eventually targets the resolved monolith;
-17. `old-place-secret` uses the generic lifecycle and keeps stable generated quest identity;
-18. chronicle-search ruins research preserves deterministic chapter truth;
-19. existing active saves for migrated quest ids are normalized into a reachable stage;
-20. immediate landmark quests remain unchanged.
+### Quest pilots
 
-## 14. Performance / responsiveness verification
+24. `slad-przy-monolicie` has no eager monolith quest lookup during app setup;
+25. `old-place-secret` keeps stable generated quest identity;
+26. chronicle-search keeps deterministic world truth;
+27. at least one immediate landmark quest remains unchanged.
 
-Automated tests must not use wall-clock thresholds.
+Do not use wall-clock timing assertions.
 
-Manual verification by User:
+## 14. Manual verification
+
+User verifies in browser:
 
 1. new game;
-2. confirm migrated quests no longer resolve their destination before first relevant conversation;
-3. accept `slad-przy-monolicie`;
-4. NPC gives the research line immediately, without a visible freeze;
-5. return before the authored hour: NPC still says research is in progress;
-6. advance world time past the delay;
-7. return: NPC gives a concrete directional clue;
-8. visit only the indicated monolith and confirm objective completion;
-9. save while research is pending, reload, advance time and confirm continuation;
-10. repeat equivalent checks for generated `old-place-secret` and chronicle-search ruins;
-11. confirm immediate location quests still provide their location normally.
+2. ask guard "Opowiedz mi coś o okolicy" on a cold world — no visible freeze;
+3. guard asks Player to return later;
+4. return too early — still pending;
+5. advance world time past delay — guard gives concrete nearby locations;
+6. save while guard/quest research is pending, reload and continue;
+7. run `slad-przy-monolicie` and confirm Anna later gives an actual direction;
+8. reach only the indicated monolith and complete objective;
+9. repeat representative generated/story pilot;
+10. confirm immediate location quests still work normally.
 
-Browser verification is User-owned; AI implementation agent must not perform it.
+AI does not perform browser verification.
 
 ## Relevant systems
 
-Expected implementation/recon areas:
+Expected implementation areas:
 
 ```text
+src/terrain/chunkWorkerPool.ts
+src/terrain/chunkHeightmap.worker.ts
+src/terrain/chunkHeightmapProtocol.ts
+src/terrain/chunkEnvironment.ts
+src/terrain/chunkManager.ts
+src/world/locations/worldLocationCatalog.ts
+src/world/locations/locationConfig.ts
+src/world/locations/locationKnowledge.ts
+src/world/locations/revealLocationKnowledge.ts
+src/app/inventoryWiring.ts
+src/app/createApp.ts
 src/quests/quests.ts
 src/quests/QuestManager.ts
-src/quests/QuestManager.test.ts
-src/quests/quests.test.ts
 src/quests/opportunities/rpgQuestMatrices.ts
 src/quests/opportunities/rpgQuestMaterialization.ts
 src/quests/lostTreasureChronicleSearch.ts
-src/quests/lostTreasureChronicleSearchRuntime.ts
-src/app/createApp.ts
-src/app/worldBundle.ts
 src/persistence/saveData.ts
 src/quests/cardinalDirection.ts
 src/quests/caveLocationDescription.ts
 ```
 
-Exact call-sites must follow current code and implementation notes.
+Exact files/call-sites should follow current code and implementation notes.
 
 ## Non-goals
 
 - LLM-generated dialogue;
-- generic NPC memory system;
+- generic asynchronous job framework unrelated to world knowledge;
+- moving all world generation to workers;
 - dynamic fauna/NPC target research;
-- replacing `QuestManager`;
-- replacing `LocationKnowledge`;
-- making every quest delayed;
-- changing landmark generation/rates;
-- changing `world-028` placement semantics;
-- workerizing all quest/world lookup;
-- redesigning Lost Treasure Chronicles beyond the pilot integration;
-- UI-specific knowledge-state logic.
+- redesigning LocationKnowledge ownership;
+- redesigning Lost Treasure Chronicles;
+- making every NPC research every location;
+- changing landmark rarity/search semantics.
 
-## Acceptance criteria
+## Verification
 
-- Deferred world knowledge is a generic documented quest primitive, not a one-off Lost Treasure implementation.
-- `QuestManager` owns persisted knowledge progress; world layer owns place lookup.
-- NPC dialogue can start research and immediately return without waiting on lookup.
-- Authored world-time delay is independent of resolver completion time.
-- After research the NPC provides a deterministic useful location clue.
-- The later world objective targets the exact stable resolved landmark identity.
-- Save/load/new game/rebuild do not duplicate, reroll or leak async results.
-- At least `slad-przy-monolicie`, generated `old-place-secret`, and chronicle-search ruins use the generic mechanism.
-- Immediate-known-place quests remain supported without artificial delay.
-- Eager setup lookup is removed only where migrated quests no longer need it.
-- Automated tests/typecheck/lint/build pass.
+Run targeted Vitest suites plus repository-standard:
+
+- type-check,
+- lint,
+- build.
+
+Do not run `pnpm docs:sync`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
