@@ -37,14 +37,20 @@ Generated from TypeScript imports.
 
 - `assets/assetIndex.ts`
 - `tools/assetBrowser/urlParams.ts`
+- `tools/assetBrowser/viewer/layoutPersist.ts`
+- `tools/assetBrowser/viewer/viewportLayout.ts`
 
 **Imported by**
 
 - `tools/assetBrowser/urlParams.test.ts`
 - `tools/assetBrowser/urlParams.ts`
+- `tools/assetBrowser/viewer/createMultiView.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`
 - `tools/assetBrowser/viewer/createViewerScene.ts`
+- `tools/assetBrowser/viewer/layoutPersist.test.ts`
+- `tools/assetBrowser/viewer/layoutPersist.ts`
 - `tools/assetBrowser/viewer/reportFromScene.ts`
+- `tools/assetBrowser/viewer/viewportLayout.ts`
 
 ## `tools/assetBrowser/urlParams.test.ts`
 
@@ -120,7 +126,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `tools/assetBrowser/state.ts`
 - `tools/assetBrowser/viewer/cameraPersist.ts`
+- `tools/assetBrowser/viewer/viewportLayout.ts`
 
 **Imported by**
 
@@ -165,6 +173,25 @@ Generated from TypeScript imports.
 
 - `tools/assetBrowser/viewer/createViewer.ts`
 
+## `tools/assetBrowser/viewer/layoutPersist.test.ts`
+
+**Imports**
+
+- `tools/assetBrowser/state.ts`
+- `tools/assetBrowser/viewer/layoutPersist.ts`
+
+## `tools/assetBrowser/viewer/layoutPersist.ts`
+
+**Imports**
+
+- `tools/assetBrowser/state.ts`
+- `tools/assetBrowser/viewer/viewportLayout.ts`
+
+**Imported by**
+
+- `tools/assetBrowser/state.ts`
+- `tools/assetBrowser/viewer/layoutPersist.test.ts`
+
 ## `tools/assetBrowser/viewer/mountHeldPreview.test.ts`
 
 **Imports**
@@ -205,5 +232,24 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `tools/assetBrowser/viewer/createViewer.ts`
+
+## `tools/assetBrowser/viewer/viewportLayout.test.ts`
+
+**Imports**
+
+- `tools/assetBrowser/viewer/viewportLayout.ts`
+
+## `tools/assetBrowser/viewer/viewportLayout.ts`
+
+**Imports**
+
+- `tools/assetBrowser/state.ts`
+
+**Imported by**
+
+- `tools/assetBrowser/state.ts`
+- `tools/assetBrowser/viewer/createMultiView.ts`
+- `tools/assetBrowser/viewer/layoutPersist.ts`
+- `tools/assetBrowser/viewer/viewportLayout.test.ts`
 
 ## `tools/toolRegistry.ts`

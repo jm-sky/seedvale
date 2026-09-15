@@ -303,6 +303,10 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     transportOrders: bundle.transportOrders.list()
       .filter((o) => isTransportOrderActive(o.state))
       .map((o) => ({ ...o })),
+    expeditionAssignments: (() => {
+      const list = bundle.expeditionAssignments.list().map((a) => ({ ...a, memberNpcIds: [...a.memberNpcIds] as [string, string, string] }))
+      return list.length > 0 ? list : undefined
+    })(),
       npcStates: bundle.settlementsManager.snapshotNpcStates(),
       households: bundle.settlementsManager.snapshotHouseholds(),
       npcRelationships: bundle.settlementsManager.snapshotRelationships(),

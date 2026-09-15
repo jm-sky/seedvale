@@ -789,6 +789,13 @@ Generated from exported TypeScript symbols.
 - `DryingRackEntry` — type — line 9
 - `DryingRacks` — type — line 11
 
+## `world/createExpeditionAssignments.ts`
+
+- `CreateExpeditionAssignmentParams` — type — line 13
+- `createExpeditionAssignments` — function — line 44
+- `ExpeditionAssignments` — type — line 27
+  - domain: settlements-npcs
+
 ## `world/createGrassForagePatches.ts`
 
 - `createGrassForagePatches` — function — line 62
@@ -977,6 +984,38 @@ Generated from exported TypeScript symbols.
   - domain: npc
 - `ExpeditionTerms` — type — line 36
 - `isValidExpeditionTerms` — function — line 47
+
+## `world/expeditionAssignment.ts`
+
+- `createExpeditionAssignmentRecord` — function — line 66
+- `EXPEDITION_PARTY_SIZE` — const — line 12
+  - domain: settlements-npcs
+- `ExpeditionAssignment` — type — line 24
+- `ExpeditionAssignmentFailure` — type — line 16
+- `expeditionAssignmentIncludesNpc` — function — line 59
+- `ExpeditionAssignmentResult` — type — line 35
+- `ExpeditionAssignmentState` — type — line 14
+- `expeditionDestinationsEqual` — function — line 49
+- `isExpeditionAssignmentActive` — function — line 45
+- `markExpeditionAssignmentProvisioned` — function — line 83
+- `markExpeditionAssignmentReady` — function — line 92
+
+## `world/expeditionParty.ts`
+
+- `canDispatchParty` — function — line 94
+- `commitExpeditionParty` — function — line 142
+- `expeditionCandidateTier` — function — line 38
+- `ExpeditionPartyLookups` — type — line 20
+  - domain: settlements-npcs
+- `isNpcMutablyEligibleForExpedition` — function — line 52
+- `listExpeditionCandidates` — function — line 70
+- `RankedExpeditionCandidate` — type — line 26
+
+## `world/expeditionProvisioning.ts`
+
+- `provisionExpeditionAssignment` — function — line 170
+  - domain: settlements-npcs
+- `readyExpeditionAssignment` — function — line 234
 
 ## `world/fishing.ts`
 

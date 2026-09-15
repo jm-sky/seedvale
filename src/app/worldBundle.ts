@@ -12,7 +12,6 @@ import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
-import type { SettlementDef } from '../settlement/settlementGenerator'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceDepletionState } from '../terrain/depositMining'
@@ -22,6 +21,8 @@ import type { BeehiveRecord } from '../world/beehives'
 import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { DryingRackRecord } from '../world/dryingRacks'
+import type { ExpeditionDestinationRef } from '../world/expedition'
+import type { ExpeditionAssignment, ExpeditionAssignmentResult } from '../world/expeditionAssignment'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { GrassForageOverrides } from '../world/grassForage'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -88,6 +89,7 @@ import { setActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspicio
 import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
+import { cellFromId, type SettlementDef } from '../settlement/settlementGenerator'
 import { settlementDefFor } from '../settlement/settlementPlanCache'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
@@ -122,6 +124,7 @@ import { type Beehives, createBeehives } from '../world/createBeehives'
 import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
 import { type CaveContentAnchor, type Caves, createCaves } from '../world/createCaves'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
+import { createExpeditionAssignments, type ExpeditionAssignments } from '../world/createExpeditionAssignments'
 import { createGrassForagePatches, type GrassForageService } from '../world/createGrassForagePatches'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createPalisades, type Palisades } from '../world/createPalisades'
@@ -141,6 +144,11 @@ import { createStandingTorches, type StandingTorches } from '../world/createStan
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
 import { createTransportOrders, type TransportOrders } from '../world/createTransportOrders'
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
+import { commitExpeditionParty } from '../world/expeditionParty'
+import {
+  readyExpeditionAssignment,
+  provisionExpeditionAssignment as transferExpeditionProvisions,
+} from '../world/expeditionProvisioning'
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import { createHerbalGatherHooks } from '../world/herbalGathering'
@@ -319,6 +327,16 @@ export type WorldBundle = {
    *  across an in-session rebuild; carrier cargo persists separately on
    *  `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019). */
   transportOrders: TransportOrders
+  /** Expedition party assignment + provisioning (plan settlements-npcs-027).
+   *  Persists as `SaveData.expeditionAssignments` and carries across rebuild;
+   *  personal inventories stay on `NpcAuthoritativeState`. */
+  expeditionAssignments: ExpeditionAssignments
+  formExpeditionAssignment: (
+    sponsorSettlementId: string,
+    destination: ExpeditionDestinationRef,
+  ) => ExpeditionAssignmentResult
+  provisionExpeditionAssignment: (assignmentId: string) => ExpeditionAssignmentResult
+  markExpeditionAssignmentReady: (assignmentId: string) => ExpeditionAssignmentResult
   /** Extracted goods waiting at remote resource sites (plan settlements-npcs-021).
    *  World-owned, independent of streamed deposit instances; persists as
    *  `SaveData.resourceSiteInventories` and survives an in-session rebuild. */
@@ -827,6 +845,9 @@ type WorldSystemsSeed = {
    *  sourced from `SaveData` on a fresh boot" contract as `workContracts`
    *  above. Only active/non-terminal orders are ever supplied here. */
   transportOrders?: readonly TransportOrder[]
+  /** World-owned expedition assignments (plan settlements-npcs-027) — same
+   *  carry/restore contract as `transportOrders`. */
+  expeditionAssignments?: readonly ExpeditionAssignment[]
   /** Extracted goods waiting at remote resource sites (plan settlements-npcs-021).
    *  Same long-lived, createApp-owned object as `resourceDepletion` — mutated
    *  in place, carried across rebuild, reset only on a genuinely new world. */
@@ -994,6 +1015,7 @@ async function buildWorldSystems(
     hives: initialHives,
     workContracts: initialWorkContracts,
     transportOrders: initialTransportOrders,
+    expeditionAssignments: initialExpeditionAssignments,
     resourceSiteInventories: initialResourceSiteInventories,
     economies: initialEconomies,
     households: initialHouseholds,
@@ -1244,6 +1266,7 @@ async function buildWorldSystems(
   // `carriedTransportOrders` below, same "seeded from initial, carried on
   // rebuild" idiom as `workContracts`.
   const transportOrders = createTransportOrders(initialTransportOrders ?? [])
+  const expeditionAssignments = createExpeditionAssignments(initialExpeditionAssignments ?? [])
   const terrainPreparations = createTerrainPreparations(
     scene,
     chunkManager,
@@ -1621,6 +1644,38 @@ async function buildWorldSystems(
     hives: createEmptyBeehives(),
     workContracts,
     transportOrders,
+    expeditionAssignments,
+    formExpeditionAssignment(sponsorSettlementId, destination) {
+      const cell = cellFromId(sponsorSettlementId)
+      const def = cell ? settlementsManager.peekDef(cell) : null
+      if (!def) return { ok: false, reason: 'not-enough-candidates' }
+      return commitExpeditionParty({
+        assignments: expeditionAssignments,
+        def,
+        destination,
+        nowDays: getWorldDays(),
+        lookups: {
+          getNpcState: (id) => settlementsManager.getNpcState(id),
+          findActiveWorkByNpc: (id) => workContracts.findActiveWorkByNpc(id),
+          findByCarrier: (id) => transportOrders.findByCarrier(id),
+        },
+      })
+    },
+    provisionExpeditionAssignment(assignmentId) {
+      const assignment = expeditionAssignments.find(assignmentId)
+      return transferExpeditionProvisions({
+        assignments: expeditionAssignments,
+        assignmentId,
+        source: assignment
+          ? settlementsManager.getEconomy(assignment.sponsorSettlementId)?.items
+          : undefined,
+        personalInventory: (npcId) => settlementsManager.getNpcState(npcId)?.personalInventory,
+        nowDays: getWorldDays(),
+      })
+    },
+    markExpeditionAssignmentReady(assignmentId) {
+      return readyExpeditionAssignment(expeditionAssignments, assignmentId, getWorldDays())
+    },
     resourceSiteInventories,
     grassForage,
     riverWaterQuality,
@@ -1881,6 +1936,10 @@ export async function createWorldBundle(
    *  sourced from `SaveData.transportOrders` — same carry/restore contract
    *  as `initialWorkContracts`. */
   initialTransportOrders: readonly TransportOrder[] = [],
+  /** Expedition assignments (plan settlements-npcs-027), sourced from
+   *  `SaveData.expeditionAssignments` — same carry/restore contract as
+   *  `initialTransportOrders`. */
+  initialExpeditionAssignments: readonly ExpeditionAssignment[] = [],
   treasureMapBearCaveSourceExtracted: boolean = false,
   treasureMapBearCaveCasketConsumed: boolean = false,
   /** Settlement-lifecycle "actually built" callback (plan
@@ -1923,6 +1982,7 @@ export async function createWorldBundle(
     hives: initialHives,
     workContracts: initialWorkContracts,
     transportOrders: initialTransportOrders,
+    expeditionAssignments: initialExpeditionAssignments,
     resourceSiteInventories: initialResourceSiteInventories,
     economies: initialEconomies,
     households: initialHouseholds,
@@ -2105,6 +2165,8 @@ export async function rebuildWorldBundle(
   // `workContracts` above.
   const carriedTransportOrders = resetCollectedItems ? [] : [...bundle.transportOrders.list()]
   bundle.transportOrders.dispose()
+  const carriedExpeditionAssignments = resetCollectedItems ? [] : [...bundle.expeditionAssignments.list()]
+  bundle.expeditionAssignments.dispose()
   const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
   // Households (plan 197 §8) and NPC authoritative state (plan 197 §7) get
   // the same same-seed-only carry contract as `carriedEconomies` above —
@@ -2161,6 +2223,7 @@ export async function rebuildWorldBundle(
     hives: carriedHives,
     workContracts: carriedWorkContracts,
     transportOrders: carriedTransportOrders,
+    expeditionAssignments: carriedExpeditionAssignments,
     resourceSiteInventories: resourceSiteInventories ?? bundle.resourceSiteInventories,
     economies: carriedEconomies,
     households: carriedHouseholds,
@@ -2220,6 +2283,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.hives.dispose()
   bundle.workContracts.dispose()
   bundle.transportOrders.dispose()
+  bundle.expeditionAssignments.dispose()
   bundle.resourceDeposits.dispose()
   bundle.grassForage.dispose()
   bundle.settlementsManager.dispose()

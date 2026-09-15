@@ -1564,6 +1564,34 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(loadStoredSave({ ...validSave, consumedWorldPickupIds: 'taken' })).toEqual({ status: 'invalid' })
   })
 
+  it('migrates a v44 save with no expeditionAssignments to the current version (plan settlements-npcs-027)', () => {
+    const { expeditionAssignments: _assignments, ...v44Fields } = validSave
+    const result = loadStoredSave({ ...v44Fields, version: 44 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.expeditionAssignments).toBeUndefined()
+  })
+
+  it('round-trips expeditionAssignments and rejects a malformed one (plan settlements-npcs-027)', () => {
+    const assignment = {
+      id: 'expeditionAssignment:1',
+      sponsorSettlementId: '0_0',
+      destination: { kind: 'location' as const, locationId: 'abandoned-mine' },
+      memberNpcIds: ['0_0:npc:4', '0_0:npc:5', '0_0:npc:6'] as [string, string, string],
+      state: 'ready' as const,
+      createdAtDays: 3,
+      provisionedAtDays: 3.2,
+      readyAtDays: 3.4,
+    }
+    const withAssignments = loadStoredSave({ ...validSave, expeditionAssignments: [assignment] })
+    expect(withAssignments.status).toBe('ok')
+    if (withAssignments.status === 'ok') {
+      expect(withAssignments.data.expeditionAssignments).toEqual([assignment])
+    }
+    expect(loadStoredSave({ ...validSave, expeditionAssignments: [{ id: 'bad' }] })).toEqual({ status: 'invalid' })
+  })
+
   it('migrates a v29 save with no unlockedTreasureContainerIds to the current version (plan world-024)', () => {
     const { unlockedTreasureContainerIds: _ids, ...v29Fields } = validSave
     const result = loadStoredSave({ ...v29Fields, version: 29 })

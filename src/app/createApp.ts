@@ -725,6 +725,7 @@ export async function createApp(
         }
       : undefined,
     initialSave?.transportOrders ?? [],
+    initialSave?.expeditionAssignments ?? [],
     initialSave?.worldFlags?.treasureMapBearCaveSourceExtracted ?? false,
     initialSave?.worldFlags?.treasureMapBearCaveCasketConsumed ?? false,
     onSettlementAvailable,

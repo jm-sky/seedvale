@@ -366,6 +366,8 @@ Generated from TypeScript imports.
 - `world/createCaves.contentAnchors.test.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
+- `world/expeditionParty.test.ts`
+- `world/expeditionParty.ts`
 - `world/hiddenFinds.ts`
 
 ## `settlement/findSettlementSite.test.ts`
@@ -903,6 +905,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcIdentity.test.ts`
+- `world/expeditionParty.test.ts`
+- `world/expeditionParty.ts`
 
 ## `settlement/npcPhysicalProfile.test.ts`
 
@@ -1042,6 +1046,12 @@ Generated from TypeScript imports.
 - `settlement/npcIdentity.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expeditionAssignment.ts`
+- `world/expeditionParty.test.ts`
+- `world/expeditionParty.ts`
+- `world/expeditionProvisioning.test.ts`
+- `world/expeditionProvisioning.ts`
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 
@@ -1134,6 +1144,7 @@ Generated from TypeScript imports.
 - `settlement/professionStaffing.test.ts`
 - `settlement/settlementAgriculture.ts`
 - `settlement/settlementGenerator.ts`
+- `world/expeditionParty.ts`
 
 ## `settlement/propSpecs.ts`
 
@@ -1523,6 +1534,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `ui-vue/store.ts`
 - `world/createCaves.ts`
+- `world/expeditionParty.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/worldLocationCatalog.test.ts`

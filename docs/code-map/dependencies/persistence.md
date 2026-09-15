@@ -65,6 +65,7 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/condition.ts`
 - `world/cropLifecycle.ts`
+- `world/expeditionAssignment.ts`
 - `world/map/mapTypes.ts`
 - `world/npcGraves.ts`
 - `world/palisade.ts`

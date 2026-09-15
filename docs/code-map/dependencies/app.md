@@ -1622,6 +1622,7 @@ Generated from TypeScript imports.
 - `world/createCarts.ts`
 - `world/createCaves.ts`
 - `world/createDryingRacks.ts`
+- `world/createExpeditionAssignments.ts`
 - `world/createGrassForagePatches.ts`
 - `world/createOcean.ts`
 - `world/createPalisades.ts`
@@ -1639,6 +1640,10 @@ Generated from TypeScript imports.
 - `world/cropLifecycle.ts`
 - `world/dayNight.ts`
 - `world/dryingRacks.ts`
+- `world/expedition.ts`
+- `world/expeditionAssignment.ts`
+- `world/expeditionParty.ts`
+- `world/expeditionProvisioning.ts`
 - `world/foodSources.ts`
 - `world/grassForage.ts`
 - `world/helperDeliveryHooks.ts`

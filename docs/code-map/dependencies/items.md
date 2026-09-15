@@ -198,6 +198,8 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `world/createPlacedContainers.ts`
+- `world/expeditionProvisioning.test.ts`
+- `world/expeditionProvisioning.ts`
 - `world/helperDeliveryHooks.ts`
 - `world/resourceSiteInventory.test.ts`
 - `world/resourceSiteInventory.ts`
@@ -745,6 +747,7 @@ Generated from TypeScript imports.
 - `app/actions/workContractPayment.ts`
 - `items/inventoryTransfer.test.ts`
 - `settlement/npcPostDeath.ts`
+- `world/expeditionProvisioning.ts`
 
 ## `items/inventoryView.test.ts`
 
@@ -985,6 +988,8 @@ Generated from TypeScript imports.
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.test.ts`
 - `world/createPlacedTraps.ts`
+- `world/expeditionProvisioning.test.ts`
+- `world/expeditionProvisioning.ts`
 - `world/worldGeneratedContainers.ts`
 
 ## `items/itemModels.ts`
@@ -1171,6 +1176,7 @@ Generated from TypeScript imports.
 - `world/cropLifecycle.ts`
 - `world/cropVisuals.ts`
 - `world/dryingRacks.ts`
+- `world/expeditionProvisioning.ts`
 - `world/fishing.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
@@ -1218,6 +1224,8 @@ Generated from TypeScript imports.
 - `items/trade.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
+- `world/expeditionProvisioning.test.ts`
+- `world/expeditionProvisioning.ts`
 
 ## `items/primaryWeapons.test.ts`
 
@@ -1525,3 +1533,4 @@ Generated from TypeScript imports.
 - `settlement/npcState.test.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
+- `world/expeditionProvisioning.test.ts`

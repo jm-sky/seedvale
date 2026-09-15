@@ -108,6 +108,8 @@ Ognisko osady (`landmarks.campfire`) jest wystawione jako `Place` typu `social` 
 
 ---
 
+`SettlementsManager` hostuje rejestry ekonomii/gospodarstw/stanu NPC; world-owned `ExpeditionAssignments` (plan settlements-npcs-027) żyje na `WorldBundle` i przy provisioningu czyta wyłącznie `SettlementEconomy.items` sponsora — nie `Household.items`. Dispatch nie zmienia membership/home/profesji.
+
 ## Powiązane
 
 - [npc.md](./npc.md) — architektura decyzji/potrzeb/harmonogramu/dialogu/relacji NPC, evaluation strony work contracts; ten dokument opisuje tylko, gdzie ich stan jest hostowany i jak dociera do gospodarstwa/ekonomii.
@@ -137,6 +139,8 @@ src/ai/npcColliderRim.ts
 src/settlement/npcRelationships.ts
 src/settlement/npcState.ts
 src/settlement/npcPostDeath.ts
+src/world/expeditionAssignment.ts
+src/world/createExpeditionAssignments.ts
 src/shared/VigorState.ts
 src/shared/StaminaState.ts
 ```

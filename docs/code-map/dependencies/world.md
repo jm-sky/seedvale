@@ -1698,6 +1698,30 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `world/createExpeditionAssignments.test.ts`
+
+**Imports**
+
+- `world/createExpeditionAssignments.ts`
+- `world/expeditionAssignment.ts`
+
+## `world/createExpeditionAssignments.ts`
+
+**Imports**
+
+- `settlement/npcState.ts`
+- `world/expedition.ts`
+- `world/expeditionAssignment.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/createExpeditionAssignments.test.ts`
+- `world/expeditionParty.test.ts`
+- `world/expeditionParty.ts`
+- `world/expeditionProvisioning.test.ts`
+- `world/expeditionProvisioning.ts`
+
 ## `world/createGrassForagePatches.ts`
 
 **Imports**
@@ -2217,7 +2241,87 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/voluntaryExpeditionJoin.ts`
+- `app/worldBundle.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expeditionAssignment.ts`
+- `world/expeditionParty.ts`
 - `world/workContract.ts`
+
+## `world/expeditionAssignment.ts`
+
+**Imports**
+
+- `settlement/npcState.ts`
+- `world/expedition.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `persistence/saveData.ts`
+- `world/createExpeditionAssignments.test.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expeditionParty.ts`
+- `world/expeditionProvisioning.ts`
+
+## `world/expeditionParty.test.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/dialogue.ts`
+- `settlement/families.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/npcState.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expeditionParty.ts`
+
+## `world/expeditionParty.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/npcState.ts`
+- `settlement/professionStaffing.ts`
+- `settlement/settlementGenerator.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expedition.ts`
+- `world/expeditionAssignment.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/expeditionParty.test.ts`
+
+## `world/expeditionProvisioning.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/liquidContainer.ts`
+- `items/weaponMaintenance.ts`
+- `settlement/npcState.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expeditionProvisioning.ts`
+
+## `world/expeditionProvisioning.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/inventoryTransfer.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/liquidContainer.ts`
+- `settlement/npcState.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expeditionAssignment.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/expeditionProvisioning.test.ts`
 
 ## `world/fishing.test.ts`
 

@@ -20,6 +20,7 @@ import type { SettlementStructureState } from '../settlement/structureCondition'
 import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
+import type { ExpeditionAssignment } from '../world/expeditionAssignment'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
 import type { SaveGrave } from '../world/npcGraves'
 import type { WellStage } from '../world/playerWell'
@@ -673,7 +674,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 44
+export const CURRENT_SAVE_VERSION = 45
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -830,6 +831,10 @@ export type SaveData = {
    *  here. Terminal orders (`completed`/`failed`/`cancelled`) are never
    *  written — they carry no continuity requirement. */
   transportOrders?: TransportOrder[]
+  /** World-owned expedition party assignments (plan settlements-npcs-027) —
+   *  forming/provisioned/ready records only; member inventories stay on
+   *  `npcStates`. Sparse/optional — absent restores an empty registry. */
+  expeditionAssignments?: ExpeditionAssignment[]
   /** Household authoritative state (stock/water/items), keyed by stable
    *  household id (plan persistence-001) — see `settlement/household.ts`'s
    *  `HouseholdSnapshot`. Same sparse/fallback/optional contract as `npcStates`. */
@@ -2081,6 +2086,37 @@ function isTransportOrdersField(value: unknown): value is TransportOrder[] {
   return Array.isArray(value) && value.every(isTransportOrder)
 }
 
+const EXPEDITION_ASSIGNMENT_STATES: ReadonlySet<string> = new Set(['forming', 'provisioned', 'ready'])
+
+function isExpeditionDestinationRefField(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  const ref = value as Record<string, unknown>
+  return (
+    typeof ref.kind === 'string' && ESCORT_DESTINATION_KINDS.has(ref.kind) &&
+    (ref.kind !== 'settlement' || typeof ref.settlementId === 'string') &&
+    (ref.kind !== 'location' || typeof ref.locationId === 'string')
+  )
+}
+
+function isExpeditionAssignment(value: unknown): value is ExpeditionAssignment {
+  if (!value || typeof value !== 'object') return false
+  const a = value as Record<string, unknown>
+  if (typeof a.id !== 'string' || typeof a.sponsorSettlementId !== 'string') return false
+  if (!isExpeditionDestinationRefField(a.destination)) return false
+  if (!Array.isArray(a.memberNpcIds) || a.memberNpcIds.length !== 3) return false
+  if (!a.memberNpcIds.every((id) => typeof id === 'string')) return false
+  if (new Set(a.memberNpcIds as string[]).size !== 3) return false
+  if (typeof a.state !== 'string' || !EXPEDITION_ASSIGNMENT_STATES.has(a.state)) return false
+  if (typeof a.createdAtDays !== 'number') return false
+  if (a.provisionedAtDays !== undefined && typeof a.provisionedAtDays !== 'number') return false
+  if (a.readyAtDays !== undefined && typeof a.readyAtDays !== 'number') return false
+  return true
+}
+
+function isExpeditionAssignmentsField(value: unknown): value is ExpeditionAssignment[] {
+  return Array.isArray(value) && value.every(isExpeditionAssignment)
+}
+
 /** Validates one `HouseholdSnapshot` (plan persistence-001) — `stock`/`items
  *  .counts` reuse the same loose "object of numbers" check `stock` already
  *  uses elsewhere in this file (`isSettlementEconomySnapshot`); `items` is
@@ -2426,6 +2462,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isWorkContractsField(v.workContracts)) return false
   if (v.npcStates !== undefined && !isNpcStatesField(v.npcStates)) return false
   if (v.transportOrders !== undefined && !isTransportOrdersField(v.transportOrders)) return false
+  if (v.expeditionAssignments !== undefined && !isExpeditionAssignmentsField(v.expeditionAssignments)) return false
   if (v.households !== undefined && !isHouseholdsField(v.households)) return false
   if (v.npcRelationships !== undefined && !isNpcRelationshipsField(v.npcRelationships)) return false
   if (v.livestock !== undefined && !isLivestockField(v.livestock)) return false
@@ -3512,6 +3549,14 @@ function migrateSaveV43ToV44(data: unknown): unknown {
   return { ...v, version: 44 }
 }
 
+/** v44 → v45 (plan settlements-npcs-027): sparse expedition assignments.
+ *  A pre-plan save has never formed one, so restore already defaults a
+ *  missing field to empty. */
+function migrateSaveV44ToV45(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 45 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3676,6 +3721,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   41: migrateSaveV41ToV42,
   42: migrateSaveV42ToV43,
   43: migrateSaveV43ToV44,
+  44: migrateSaveV44ToV45,
 }
 
 function detectStoredVersion(value: unknown): number | null {

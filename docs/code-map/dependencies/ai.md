@@ -295,6 +295,7 @@ Generated from TypeScript imports.
 - `settlement/professionStaffing.ts`
 - `settlement/settlementAgriculture.test.ts`
 - `terrain/naturalResources.ts`
+- `world/expeditionParty.test.ts`
 
 ## `ai/decisionModifiers.test.ts`
 
@@ -345,6 +346,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `ai/socialBehaviour.ts`
 - `ai/voluntaryExpeditionJoin.ts`
+- `world/expeditionParty.test.ts`
 
 ## `ai/dialogueTemplates.test.ts`
 

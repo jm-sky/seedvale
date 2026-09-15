@@ -23,17 +23,17 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/state.ts`
 
-- `BackgroundPreset` — type — line 8
-- `browserState` — const — line 46
-- `BrowserState` — type — line 13
-- `FocusMode` — type — line 11
-- `LightingPreset` — type — line 7
-- `PoseMode` — type — line 9
-- `RenderMode` — type — line 6
-- `resetSlotDiagnostics` — function — line 149
-- `slotDiagnostics` — const — line 112
-- `SlotDiagnostics` — type — line 88
-- `ViewLayout` — type — line 5
+- `BackgroundPreset` — type — line 10
+- `browserState` — const — line 52
+- `BrowserState` — type — line 15
+- `FocusMode` — type — line 13
+- `LightingPreset` — type — line 9
+- `PoseMode` — type — line 11
+- `RenderMode` — type — line 8
+- `resetSlotDiagnostics` — function — line 158
+- `slotDiagnostics` — const — line 121
+- `SlotDiagnostics` — type — line 97
+- `ViewLayout` — type — line 7
 
 ## `tools/assetBrowser/urlParams.ts`
 
@@ -45,14 +45,14 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/viewer/cameraPersist.ts`
 
-- `applyCameraSnapshot` — function — line 73
-- `CameraPersistPayload` — type — line 14
+- `applyCameraSnapshot` — function — line 92
+- `CameraPersistPayload` — type — line 15
 - `CameraSnapshot` — type — line 7
-- `clearCameraPersist` — function — line 64
-- `createCameraPersistScheduler` — function — line 104
-- `loadCameraPersist` — function — line 27
-- `restoreCamerasFromPersist` — function — line 89
-- `saveCameraPersist` — function — line 46
+- `clearCameraPersist` — function — line 83
+- `createCameraPersistScheduler` — function — line 124
+- `loadCameraPersist` — function — line 43
+- `restoreCamerasFromPersist` — function — line 109
+- `saveCameraPersist` — function — line 64
 
 ## `tools/assetBrowser/viewer/createAnchorGizmos.ts`
 
@@ -74,10 +74,11 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/viewer/createMultiView.ts`
 
-- `createConnectionLine` — function — line 239
-- `createMultiView` — function — line 81
-- `ViewId` — type — line 16
-- `ViewportDef` — type — line 18
+- `createConnectionLine` — function — line 363
+- `createMultiView` — function — line 92
+- `MultiViewResizeOpts` — type — line 32
+- `ViewId` — type — line 18
+- `ViewportDef` — type — line 20
 
 ## `tools/assetBrowser/viewer/createSnapshot.ts`
 
@@ -88,13 +89,22 @@ Generated from exported TypeScript symbols.
 
 - `AssetViewer` — type — line 31
 - `createViewer` — function — line 59
-- `syncDiagnostics` — function — line 392
+- `syncDiagnostics` — function — line 403
 
 ## `tools/assetBrowser/viewer/createViewerScene.ts`
 
 - `applySceneBackground` — function — line 148
 - `createViewerScene` — function — line 46
 - `PreviewLighting` — type — line 26
+
+## `tools/assetBrowser/viewer/layoutPersist.ts`
+
+- `applyLayoutPersist` — function — line 68
+- `clearLayoutPersist` — function — line 58
+- `createLayoutPersistScheduler` — function — line 78
+- `LayoutPersistPayload` — type — line 6
+- `loadLayoutPersist` — function — line 18
+- `saveLayoutPersist` — function — line 42
 
 ## `tools/assetBrowser/viewer/mountHeldPreview.ts`
 
@@ -112,6 +122,15 @@ Generated from exported TypeScript symbols.
 
 - `buildReportFromScene` — function — line 89
 - `findAnchorByName` — function — line 181
+
+## `tools/assetBrowser/viewer/viewportLayout.ts`
+
+- `clampSplit` — function — line 15
+- `computeViewRects` — function — line 24
+- `DEFAULT_SPLIT` — const — line 5
+- `SPLIT_MAX` — const — line 4
+- `SPLIT_MIN` — const — line 3
+- `ViewRect` — type — line 7
 
 ## `tools/toolRegistry.ts`
 
