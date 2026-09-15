@@ -231,7 +231,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `039`
 - tools: `015`
 - ui-input: `022`
-- world: `028`
+- world: `029`
 - world-terrain: `036`
 
 This ids section is maintained automatically from the plan files.
