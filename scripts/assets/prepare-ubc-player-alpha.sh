@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Compose UBC Fantasy outfits + UAL1 subset into public/models/characters/ubc/.
-# Male player meshes, female Peasant/Wizard for profession NPCs, sidecar tints.
+# Male player meshes, female Peasant/Wizard/Ranger, npc-040 hair/beard variants
+# under ubc/npc/, hair_1/2.webp. Female hair is Long / Buns (not BuzzedFemale).
 # Sources stay in _temp/. Re-run after changing the compose/extract scripts.
 set -euo pipefail
 
@@ -17,11 +18,13 @@ OUTFITS=(
   male_wizard
   female_peasant
   female_wizard
+  female_ranger
 )
 NPC_TINTS=(
   npc_peasant
   npc_woodcutter
   npc_wizard
+  npc_ranger
 )
 
 cleanup() { rm -rf "$WORK"; }
@@ -59,6 +62,12 @@ optimize() {
 for name in "${OUTFITS[@]}"; do
   optimize "$WORK/outfits/${name}.gltf" "$OUT/${name}.glb"
 done
+mkdir -p "$OUT/npc"
+shopt -s nullglob
+for gltf in "$WORK/outfits/npc"/*.gltf; do
+  name="$(basename "$gltf" .gltf)"
+  optimize "$gltf" "$OUT/npc/${name}.glb"
+done
 optimize "$WORK/anims/ual1_player.glb" "$OUT/ual1_player.glb" "-ac"
 
 # Brown albedo variants are swapped at runtime onto MI_* outfit materials.
@@ -73,6 +82,9 @@ for name in "${OUTFITS[@]}"; do
   fi
 done
 for name in "${NPC_TINTS[@]}"; do
+  SHARP_ARGS+=("$WORK/outfits/${name}.png" "$OUT/${name}.webp")
+done
+for name in hair_1 hair_2; do
   SHARP_ARGS+=("$WORK/outfits/${name}.png" "$OUT/${name}.webp")
 done
 (

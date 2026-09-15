@@ -1,53 +1,270 @@
+import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { PLAYER_UBC_ANIMATION_URL, PLAYER_UBC_PEASANT_URL, PLAYER_UBC_WIZARD_URL } from '../player/playerVisualPreset'
+import { PLAYER_UBC_ANIMATION_URL, PLAYER_UBC_PEASANT_URL, PLAYER_UBC_RANGER_URL, PLAYER_UBC_WIZARD_URL } from '../player/playerVisualPreset'
 import {
+  NPC_CLOTHING_HUE,
   NPC_MODEL_URLS,
   NPC_UBC_FEMALE_PEASANT_URL,
+  NPC_UBC_FEMALE_RANGER_URL,
   NPC_UBC_FEMALE_WIZARD_URL,
+  NPC_UBC_HAIR_1_URL,
+  NPC_UBC_HAIR_2_URL,
   NPC_UBC_PEASANT_TINT_URL,
+  NPC_UBC_RANGER_TINT_URL,
   NPC_UBC_WIZARD_TINT_URL,
   NPC_UBC_WOODCUTTER_TINT_URL,
   resolveNpcAppearance,
+  ubcVariantModelUrl,
 } from './npcAppearance'
+
+const ANNA = 'home:npc:0'
+const PIOTR = 'home:npc:1'
+const KASIA = 'home:npc:2'
 
 describe('resolveNpcAppearance', () => {
   it('maps adult farmer/woodcutter to Peasant UBC with distinct sidecars', () => {
-    const anna = resolveNpcAppearance({ age: 34, gender: 'female', role: 'farmer', treeIndex: 0 })
+    const anna = resolveNpcAppearance({
+      age: 34,
+      gender: 'female',
+      npcId: ANNA,
+      role: 'farmer',
+      treeIndex: 0,
+    })
     expect(anna.outfit).toBe('peasant')
-    expect(anna.modelUrl).toBe(NPC_UBC_FEMALE_PEASANT_URL)
+    expect(anna.modelUrl).toMatch(/female_peasant/)
     expect(anna.animationUrl).toBe(PLAYER_UBC_ANIMATION_URL)
     expect(anna.tintUrl).toBe(NPC_UBC_PEASANT_TINT_URL)
+    expect(anna.hairTintUrl === NPC_UBC_HAIR_1_URL || anna.hairTintUrl === NPC_UBC_HAIR_2_URL).toBe(true)
+    expect(Object.values(NPC_CLOTHING_HUE)).toContain(anna.clothingHue)
 
-    const piotr = resolveNpcAppearance({ age: 36, gender: 'male', role: 'woodcutter', treeIndex: 1 })
+    const piotr = resolveNpcAppearance({
+      age: 36,
+      gender: 'male',
+      npcId: PIOTR,
+      role: 'woodcutter',
+      treeIndex: 1,
+    })
     expect(piotr.outfit).toBe('peasant')
-    expect(piotr.modelUrl).toBe(PLAYER_UBC_PEASANT_URL)
+    expect(piotr.modelUrl).toMatch(/male_peasant/)
     expect(piotr.tintUrl).toBe(NPC_UBC_WOODCUTTER_TINT_URL)
     expect(piotr.tintUrl).not.toBe(anna.tintUrl)
   })
 
+  it('maps adult hunter to Ranger UBC with a tint the player does not use', () => {
+    const hunter = resolveNpcAppearance({
+      age: 30,
+      gender: 'male',
+      npcId: 'home:npc:4',
+      role: 'hunter',
+      treeIndex: 4,
+    })
+    expect(hunter.outfit).toBe('ranger')
+    expect(hunter.modelUrl).toMatch(/male_ranger/)
+    expect(hunter.animationUrl).toBe(PLAYER_UBC_ANIMATION_URL)
+    expect(hunter.tintUrl).toBe(NPC_UBC_RANGER_TINT_URL)
+    expect(hunter.hairTintUrl === NPC_UBC_HAIR_1_URL || hunter.hairTintUrl === NPC_UBC_HAIR_2_URL).toBe(true)
+
+    const huntress = resolveNpcAppearance({
+      age: 28,
+      gender: 'female',
+      npcId: 'woods:npc:5',
+      role: 'hunter',
+      treeIndex: 5,
+    })
+    expect(huntress.outfit).toBe('ranger')
+    expect(huntress.modelUrl).not.toMatch(/_simple|_buzzed/)
+    expect(huntress.modelUrl).not.toBe(NPC_UBC_FEMALE_RANGER_URL)
+    expect(huntress.modelUrl).toMatch(/female_ranger_(long|buns)/)
+    expect(huntress.tintUrl).toBe(NPC_UBC_RANGER_TINT_URL)
+  })
+
   it('maps adult trader to Wizard UBC', () => {
-    const kasia = resolveNpcAppearance({ age: 28, gender: 'female', role: 'trader', treeIndex: 2 })
+    const kasia = resolveNpcAppearance({
+      age: 28,
+      gender: 'female',
+      npcId: KASIA,
+      role: 'trader',
+      treeIndex: 2,
+    })
     expect(kasia.outfit).toBe('wizard')
-    expect(kasia.modelUrl).toBe(NPC_UBC_FEMALE_WIZARD_URL)
+    expect(
+      kasia.modelUrl === '/models/characters/ubc/npc/female_wizard_long.glb'
+      || kasia.modelUrl === '/models/characters/ubc/npc/female_wizard_buns.glb',
+    ).toBe(true)
     expect(kasia.animationUrl).toBe(PLAYER_UBC_ANIMATION_URL)
     expect(kasia.tintUrl).toBe(NPC_UBC_WIZARD_TINT_URL)
 
-    const maleTrader = resolveNpcAppearance({ age: 40, gender: 'male', role: 'trader', treeIndex: 3 })
-    expect(maleTrader.modelUrl).toBe(PLAYER_UBC_WIZARD_URL)
+    for (let i = 0; i < 16; i++) {
+      const trader = resolveNpcAppearance({
+        age: 28,
+        gender: 'female',
+        npcId: `market:npc:${i}`,
+        role: 'trader',
+        treeIndex: i,
+      })
+      expect(trader.modelUrl).not.toMatch(/_simple|_buzzed/)
+      expect(trader.modelUrl).not.toBe(NPC_UBC_FEMALE_WIZARD_URL)
+      expect(
+        trader.modelUrl.endsWith('female_wizard_long.glb')
+        || trader.modelUrl.endsWith('female_wizard_buns.glb'),
+      ).toBe(true)
+    }
+
+    const maleTrader = resolveNpcAppearance({
+      age: 40,
+      gender: 'male',
+      npcId: 'home:npc:3',
+      role: 'trader',
+      treeIndex: 3,
+    })
+    expect(maleTrader.modelUrl).toMatch(/male_wizard/)
+  })
+
+  it('keeps hair/beard/hue stable for the same npcId across farmer vs woodcutter', () => {
+    const shared = {
+      age: 34,
+      gender: 'male' as const,
+      npcId: 'field:npc:4',
+      treeIndex: 4,
+    }
+    const farmer = resolveNpcAppearance({ ...shared, role: 'farmer' })
+    const woodcutter = resolveNpcAppearance({ ...shared, role: 'woodcutter' })
+    expect(farmer.modelUrl).toBe(woodcutter.modelUrl)
+    expect(farmer.hairTintUrl).toBe(woodcutter.hairTintUrl)
+    expect(farmer.clothingHue).toBe(woodcutter.clothingHue)
+    expect(farmer.tintUrl).toBe(NPC_UBC_PEASANT_TINT_URL)
+    expect(woodcutter.tintUrl).toBe(NPC_UBC_WOODCUTTER_TINT_URL)
+  })
+
+  it('is deterministic for a given npcId', () => {
+    const opts = {
+      age: 30,
+      gender: 'male' as const,
+      npcId: 'stable:npc:7',
+      role: 'farmer' as const,
+      treeIndex: 7,
+    }
+    expect(resolveNpcAppearance(opts)).toEqual(resolveNpcAppearance(opts))
+  })
+
+  it('spreads male farmer looks across more than one mesh', () => {
+    const urls = new Set<string>()
+    let sawBeard = false
+    let sawBare = false
+    for (let i = 0; i < 32; i++) {
+      const look = resolveNpcAppearance({
+        age: 30,
+        gender: 'male',
+        npcId: `spread:npc:${i}`,
+        role: 'farmer',
+        treeIndex: i,
+      })
+      urls.add(look.modelUrl)
+      if (look.modelUrl.includes('_beard')) sawBeard = true
+      else sawBare = true
+    }
+    expect(urls.size).toBeGreaterThan(1)
+    expect(sawBeard).toBe(true)
+    expect(sawBare).toBe(true)
+  })
+
+  it('never assigns a beard variant or short hair to women', () => {
+    for (let i = 0; i < 40; i++) {
+      const look = resolveNpcAppearance({
+        age: 28,
+        gender: 'female',
+        npcId: `village:npc:${i}`,
+        role: i % 2 === 0 ? 'farmer' : 'trader',
+        treeIndex: i,
+      })
+      expect(look.modelUrl).not.toMatch(/_beard|_simple|_buzzed/)
+    }
+  })
+
+  it('reuses player default GLBs for the baked npc-039 / hunter combos', () => {
+    expect(ubcVariantModelUrl('male', 'peasant', 'simple', false)).toBe(PLAYER_UBC_PEASANT_URL)
+    expect(ubcVariantModelUrl('female', 'peasant', 'long', false)).toBe(NPC_UBC_FEMALE_PEASANT_URL)
+    expect(ubcVariantModelUrl('male', 'wizard', 'simple', false)).toBe(PLAYER_UBC_WIZARD_URL)
+    expect(ubcVariantModelUrl('male', 'ranger', 'simple', false)).toBe(PLAYER_UBC_RANGER_URL)
+    expect(ubcVariantModelUrl('female', 'wizard', 'long', false)).toBe(
+      '/models/characters/ubc/npc/female_wizard_long.glb',
+    )
+    expect(ubcVariantModelUrl('female', 'ranger', 'long', false)).toBe(
+      '/models/characters/ubc/npc/female_ranger_long.glb',
+    )
+    expect(ubcVariantModelUrl('male', 'peasant', 'simple', true)).toBe(
+      '/models/characters/ubc/npc/male_peasant_simple_beard.glb',
+    )
+    expect(ubcVariantModelUrl('female', 'wizard', 'buns', false)).toBe(
+      '/models/characters/ubc/npc/female_wizard_buns.glb',
+    )
+    expect(ubcVariantModelUrl('male', 'ranger', 'long', true)).toBe(
+      '/models/characters/ubc/npc/male_ranger_long_beard.glb',
+    )
+  })
+
+  it('ships every baked variant GLB and hair sidecar', () => {
+    const maleHairs = ['simple', 'long', 'buzzed', 'buns'] as const
+    const femaleHairs = ['long', 'buns'] as const
+    for (const outfit of ['peasant', 'wizard', 'ranger'] as const) {
+      for (const hair of maleHairs) {
+        for (const beard of [false, true]) {
+          const url = ubcVariantModelUrl('male', outfit, hair, beard)
+          expect(existsSync(`public${url}`), url).toBe(true)
+        }
+      }
+      for (const hair of femaleHairs) {
+        const url = ubcVariantModelUrl('female', outfit, hair, false)
+        expect(existsSync(`public${url}`), url).toBe(true)
+      }
+    }
+    expect(existsSync('public/models/characters/ubc/hair_1.webp')).toBe(true)
+    expect(existsSync('public/models/characters/ubc/hair_2.webp')).toBe(true)
+    expect(existsSync('public/models/characters/ubc/npc_ranger.webp')).toBe(true)
   })
 
   it('keeps children and other roles on the Modular pool', () => {
-    const childFarmer = resolveNpcAppearance({ age: 12, gender: 'female', role: 'farmer', treeIndex: 0 })
+    const childFarmer = resolveNpcAppearance({
+      age: 12,
+      gender: 'female',
+      npcId: ANNA,
+      role: 'farmer',
+      treeIndex: 0,
+    })
     expect(childFarmer.outfit).toBe('modular')
     expect(childFarmer.modelUrl).toBe(NPC_MODEL_URLS.female[0])
     expect(childFarmer.animationUrl).toBeNull()
     expect(childFarmer.tintUrl).toBeNull()
+    expect(childFarmer.hairTintUrl).toBeNull()
+    expect(childFarmer.clothingHue).toBe(NPC_CLOTHING_HUE.identity)
 
-    const marek = resolveNpcAppearance({ age: 32, gender: 'male', role: 'guard', treeIndex: 3 })
+    const marek = resolveNpcAppearance({
+      age: 32,
+      gender: 'male',
+      npcId: 'home:npc:3',
+      role: 'guard',
+      treeIndex: 3,
+    })
     expect(marek.outfit).toBe('modular')
     expect(marek.modelUrl).toBe(NPC_MODEL_URLS.male[3 % NPC_MODEL_URLS.male.length])
 
-    const hunter = resolveNpcAppearance({ age: 30, gender: 'male', role: 'hunter', treeIndex: 4 })
-    expect(hunter.outfit).toBe('modular')
+    const blacksmith = resolveNpcAppearance({
+      age: 32,
+      gender: 'male',
+      npcId: 'home:npc:3',
+      role: 'blacksmith',
+      treeIndex: 3,
+    })
+    expect(blacksmith.outfit).toBe('modular')
+    expect(blacksmith.modelUrl).toBe(NPC_MODEL_URLS.male[3 % NPC_MODEL_URLS.male.length])
+
+    const childHunter = resolveNpcAppearance({
+      age: 12,
+      gender: 'male',
+      npcId: 'home:npc:4',
+      role: 'hunter',
+      treeIndex: 4,
+    })
+    expect(childHunter.outfit).toBe('modular')
   })
 })

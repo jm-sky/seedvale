@@ -208,17 +208,29 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcAppearance.ts`
 
-- `modelUrlFor` — function — line 51
-- `NPC_MODEL_URLS` — const — line 21
-- `NPC_UBC_FEMALE_PEASANT_URL` — const — line 11
-- `NPC_UBC_FEMALE_WIZARD_URL` — const — line 12
-- `NPC_UBC_PEASANT_TINT_URL` — const — line 14
-- `NPC_UBC_WIZARD_TINT_URL` — const — line 18
-- `NPC_UBC_WOODCUTTER_TINT_URL` — const — line 16
-- `NpcAppearance` — type — line 44
+- `modelUrlFor` — function — line 84
+- `NPC_CLOTHING_HUE` — const — line 53
+- `NPC_MODEL_URLS` — const — line 32
+- `NPC_UBC_FEMALE_KNIGHT_URL` — const — line 17
+- `NPC_UBC_FEMALE_PEASANT_URL` — const — line 14
+- `NPC_UBC_FEMALE_RANGER_URL` — const — line 16
+- `NPC_UBC_FEMALE_WIZARD_URL` — const — line 15
+- `NPC_UBC_HAIR_1_URL` — const — line 28
+- `NPC_UBC_HAIR_2_URL` — const — line 29
+- `NPC_UBC_KNIGHT_TINT_URL` — const — line 27
+- `NPC_UBC_PEASANT_TINT_URL` — const — line 19
+- `NPC_UBC_RANGER_TINT_URL` — const — line 25
+- `NPC_UBC_WIZARD_TINT_URL` — const — line 23
+- `NPC_UBC_WOODCUTTER_TINT_URL` — const — line 21
+- `NpcAppearance` — type — line 75
   - domain: npc
-- `NpcOutfitId` — type — line 36
-- `resolveNpcAppearance` — function — line 84
+- `NpcClothingHueId` — type — line 50
+- `NpcHairKind` — type — line 49
+- `NpcOutfitId` — type — line 47
+- `NpcUbcOutfitId` — type — line 48
+- `resolveNpcAppearance` — function — line 204
+  - domain: npc
+- `ubcVariantModelUrl` — function — line 156
   - domain: npc
 
 ## `ai/npcAssistance.ts`

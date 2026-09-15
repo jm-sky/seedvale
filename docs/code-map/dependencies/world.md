@@ -3244,6 +3244,7 @@ Generated from TypeScript imports.
 
 - `ai/characters.ts`
 - `ai/nameCultures.ts`
+- `ai/npcAppearance.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`

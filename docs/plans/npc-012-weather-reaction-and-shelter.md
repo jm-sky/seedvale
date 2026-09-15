@@ -3,7 +3,7 @@
 **Created:** 2026-09-01
 **Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~040~~
+**Depends on:** ~~npc-040~~
 **Domain:** `npc`
 
 ## Cel

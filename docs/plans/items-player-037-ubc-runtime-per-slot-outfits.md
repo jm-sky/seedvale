@@ -41,6 +41,8 @@ Wariant powinien być deterministyczny i należeć do stanu NPC / świata, nie d
 
 Tint jest kluczowym mnożnikiem różnorodności. Jeden Peasant / Ranger powinien móc występować w kilku kontrolowanych paletach bez duplikowania geometrii i tekstur, o ile materiały assetu na to pozwalają.
 
+**Implementacja V1:** bake wariantów fryzury/brody + hue ubrania na istniejącym sidecarze roli — plan `npc-040-ubc-profession-appearance-variants.md`. Świadomie **nie** `CharacterAppearanceDefinition` i nie runtime attach części; to zostaje w Etapie 2 / w tym drafcie.
+
 ### Etap 2 — modularność części modelu gracza
 
 Drugim celem jest przejście z podmiany całego outfitu gracza na składanie wyglądu z części, przy zachowaniu istniejącego equipment jako źródła prawdy.

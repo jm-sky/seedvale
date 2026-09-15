@@ -17,31 +17,38 @@ Generated from exported TypeScript symbols.
 - `loadGripEditor` — function — line 71
 - `SeedvaleGripApi` — type — line 156
 
+## `tools/assetBrowser/hairTint.ts`
+
+- `DEFAULT_HAIR_TINT` — const — line 6
+- `HairTintId` — type — line 4
+- `hairTintUrlFor` — function — line 9
+- `parseHairTint` — function — line 15
+
 ## `tools/assetBrowser/modelManifest.ts`
 
 - `ASSET_BROWSER_MODEL_MANIFEST` — const — line 2
 
 ## `tools/assetBrowser/state.ts`
 
-- `BackgroundPreset` — type — line 10
-- `browserState` — const — line 52
-- `BrowserState` — type — line 15
-- `FocusMode` — type — line 13
-- `LightingPreset` — type — line 9
-- `PoseMode` — type — line 11
-- `RenderMode` — type — line 8
-- `resetSlotDiagnostics` — function — line 158
-- `slotDiagnostics` — const — line 121
-- `SlotDiagnostics` — type — line 97
-- `ViewLayout` — type — line 7
+- `BackgroundPreset` — type — line 13
+- `browserState` — const — line 57
+- `BrowserState` — type — line 18
+- `FocusMode` — type — line 16
+- `LightingPreset` — type — line 12
+- `PoseMode` — type — line 14
+- `RenderMode` — type — line 11
+- `resetSlotDiagnostics` — function — line 164
+- `slotDiagnostics` — const — line 127
+- `SlotDiagnostics` — type — line 103
+- `ViewLayout` — type — line 10
 
 ## `tools/assetBrowser/urlParams.ts`
 
-- `applyAssetBrowserUrlParams` — function — line 200
-- `AssetBrowserUrlParams` — type — line 18
-- `hasAssetBrowserUrlParams` — function — line 195
-- `parseAssetBrowserUrlParams` — function — line 130
-- `syncAssetBrowserUrlParams` — function — line 251
+- `applyAssetBrowserUrlParams` — function — line 205
+- `AssetBrowserUrlParams` — type — line 19
+- `hasAssetBrowserUrlParams` — function — line 200
+- `parseAssetBrowserUrlParams` — function — line 132
+- `syncAssetBrowserUrlParams` — function — line 257
 
 ## `tools/assetBrowser/viewer/cameraPersist.ts`
 
@@ -61,16 +68,16 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/viewer/createAssetSlot.ts`
 
-- `AssetSlot` — type — line 32
-- `boundsData` — function — line 319
-- `boxFromModel` — function — line 71
-- `collectMeshStats` — function — line 76
-- `createAssetSlot` — function — line 128
-- `MeshStats` — type — line 27
-- `reconcilePoseClip` — function — line 116
-- `resolveAppliedClipName` — function — line 103
-- `setWireframe` — function — line 337
-- `sortedClipNames` — function — line 98
+- `AssetSlot` — type — line 35
+- `boundsData` — function — line 333
+- `boxFromModel` — function — line 76
+- `collectMeshStats` — function — line 81
+- `createAssetSlot` — function — line 133
+- `MeshStats` — type — line 30
+- `reconcilePoseClip` — function — line 121
+- `resolveAppliedClipName` — function — line 108
+- `setWireframe` — function — line 351
+- `sortedClipNames` — function — line 103
 
 ## `tools/assetBrowser/viewer/createMultiView.ts`
 
@@ -88,8 +95,8 @@ Generated from exported TypeScript symbols.
 ## `tools/assetBrowser/viewer/createViewer.ts`
 
 - `AssetViewer` — type — line 31
-- `createViewer` — function — line 59
-- `syncDiagnostics` — function — line 403
+- `createViewer` — function — line 60
+- `syncDiagnostics` — function — line 408
 
 ## `tools/assetBrowser/viewer/createViewerScene.ts`
 

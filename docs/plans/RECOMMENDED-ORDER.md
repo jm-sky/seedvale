@@ -4,31 +4,31 @@
 
 ### Overall
 
-1. `quests-progression-037` — **Lost Treasure Chronicles — elder trust foundation**  
-   🔴 `M` · ✅ ready · unlocks 2/5
-2. `quests-progression-038` — **Lost Treasure Chronicles — archaeologist and chronicle search**  
-   🔴 `L` · 🔒 blocked · unlocks 1/4
-3. `items-player-028` — **NPC player-storage access policies**  
-   🔴 `M` · ✅ ready · unlocks 3/5
-4. `quests-progression-039` — **Lost Treasure Chronicles — chronicle deciphering and specialist**  
-   🔴 `M` · 🔒 blocked · unlocks 1/3
-5. `settlements-npcs-028` — **Long-distance NPC travel and expedition movement**  
-   🔴 `L` · ✅ ready · unlocks 2/2
+1. `quests-progression-038` — **Lost Treasure Chronicles — archaeologist and chronicle search**  
+   🔴 `L` · ✅ ready · unlocks 2/8
+2. `quests-progression-039` — **Lost Treasure Chronicles — chronicle deciphering and specialist**  
+   🔴 `M` · 🔒 blocked · unlocks 2/7
+3. `quests-progression-040` — **Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map**  
+   🔴 `L` · 🔒 blocked · unlocks 2/6
+4. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
+   🔴 `L` · 🔒 blocked · unlocks 3/5
+5. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
+   🔴 `L` · 🔒 blocked · unlocks 3/4
 
 ---
 
 ### Roadmap Focus
 
-1. `quests-progression-037` — **Lost Treasure Chronicles — elder trust foundation**  
-   🔴 `M` · ✅ ready · unlocks 2/5 · roadmap: `quests-lost-something-chronicles`
-2. `quests-progression-038` — **Lost Treasure Chronicles — archaeologist and chronicle search**  
-   🔴 `L` · 🔒 blocked · unlocks 1/4 · roadmap: `quests-lost-something-chronicles`
-3. `items-player-028` — **NPC player-storage access policies**  
-   🔴 `M` · ✅ ready · unlocks 3/5 · roadmap: `companions`
-4. `quests-progression-039` — **Lost Treasure Chronicles — chronicle deciphering and specialist**  
-   🔴 `M` · 🔒 blocked · unlocks 1/3 · roadmap: `quests-lost-something-chronicles`
-5. `settlements-npcs-028` — **Long-distance NPC travel and expedition movement**  
-   🔴 `L` · ✅ ready · unlocks 2/2 · roadmap: `quests-abandoned-gold-mine-colony`
+1. `quests-progression-038` — **Lost Treasure Chronicles — archaeologist and chronicle search**  
+   🔴 `L` · ✅ ready · unlocks 2/8 · roadmap: `quests-lost-something-chronicles`
+2. `quests-progression-039` — **Lost Treasure Chronicles — chronicle deciphering and specialist**  
+   🔴 `M` · 🔒 blocked · unlocks 2/7 · roadmap: `quests-lost-something-chronicles`
+3. `quests-progression-040` — **Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map**  
+   🔴 `L` · 🔒 blocked · unlocks 2/6 · roadmap: `quests-lost-something-chronicles`
+4. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
+   🔴 `L` · 🔒 blocked · unlocks 3/5 · roadmap: `quests-lost-something-chronicles`
+5. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
+   🔴 `L` · 🔒 blocked · unlocks 3/4 · roadmap: `quests-lost-something-chronicles`
 
 ---
 
@@ -41,22 +41,23 @@
 
 ### Polish
 
-_No qualifying plans._
+1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+   🔴 `L` · 🔒 blocked · unlocks 0/0
 
 ---
 
 ### Ready Now
 
-1. `quests-progression-037` — **Lost Treasure Chronicles — elder trust foundation**  
-   🔴 `M` · ✅ ready · unlocks 2/5
+1. `quests-progression-038` — **Lost Treasure Chronicles — archaeologist and chronicle search**  
+   🔴 `L` · ✅ ready · unlocks 2/8
 2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `M` · ✅ ready · unlocks 3/5
-3. `settlements-npcs-028` — **Long-distance NPC travel and expedition movement**  
-   🔴 `L` · ✅ ready · unlocks 2/2
+3. `settlements-npcs-037` — **Inter-settlement goods transport**  
+   🔴 `M` · ✅ ready · unlocks 1/1
 4. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2
-5. `world-terrain-017` — **Abandoned mountain mine landmark**  
-   🔴 `M` · ✅ ready · unlocks 2/2
+5. `settlements-003` — **Colony settlement bootstrap**  
+   🔴 `L` · ✅ ready · unlocks 1/1
 
 ---
 
@@ -74,99 +75,111 @@ Only planned plans are ranked.
 done / verification needed satisfy dependencies.  
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
-1. `quests-progression-037` — **Lost Treasure Chronicles — elder trust foundation**  
-  🔴 `M` · **Score:** 109  
-   → **unlocks:** 2/5
+1. `quests-progression-038` — **Lost Treasure Chronicles — archaeologist and chronicle search**  
+  🔴 `L` · **Score:** 138  
+   → **unlocks:** 2/8
 
-2. `quests-progression-038` — **Lost Treasure Chronicles — archaeologist and chronicle search**  
-  🔴 `L` · **Score:**  94  
-   → **unlocks:** 1/4
+2. `quests-progression-039` — **Lost Treasure Chronicles — chronicle deciphering and specialist**  
+  🔴 `M` · **Score:** 133  
+   → **unlocks:** 2/7
 
-3. `items-player-028` — **NPC player-storage access policies**  
+3. `quests-progression-040` — **Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map**  
+  🔴 `L` · **Score:** 122  
+   → **unlocks:** 2/6
+
+4. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
+  🔴 `L` · **Score:** 118  
+   → **unlocks:** 3/5
+
+5. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
+  🔴 `L` · **Score:** 110  
+   → **unlocks:** 3/4
+
+6. `quests-progression-043` — **Lost Treasure Chronicles — survivor site, missing key and final dungeon access**  
+  🔴 `L` · **Score:**  98  
+   → **unlocks:** 2/3
+
+7. `items-player-028` — **NPC player-storage access policies**  
   🔴 `M` · **Score:**  93  
    → **unlocks:** 3/5
 
-4. `quests-progression-039` — **Lost Treasure Chronicles — chronicle deciphering and specialist**  
-  🔴 `M` · **Score:**  89  
-   → **unlocks:** 1/3
-
-5. `settlements-npcs-028` — **Long-distance NPC travel and expedition movement**  
-  🔴 `L` · **Score:**  82  
+8. `quests-progression-044` — **Lost Treasure Chronicles — final treasure claims and resolution**  
+  🔴 `L` · **Score:**  90  
    → **unlocks:** 2/2
 
-6. `quests-progression-040` — **Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map**  
-  🔴 `L` · **Score:**  78  
-   → **unlocks:** 1/2
+9. `settlements-npcs-037` — **Inter-settlement goods transport**  
+  🔴 `M` · **Score:**  79  
+   → **unlocks:** 1/1
 
-7. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+10. `quests-progression-045` — **Lost Treasure Chronicles — property grant deed and persistent land reward**  
+  🔴 `L` · **Score:**  78  
+   → **unlocks:** 1/1
+
+11. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
   🟡 `M` · **Score:**  73  
    → **unlocks:** 2/2
 
-8. `quests-progression-041` — **Lost Treasure Chronicles — dungeon binding and persistent collapsed access**  
+12. `settlements-003` — **Colony settlement bootstrap**  
   🔴 `L` · **Score:**  70  
    → **unlocks:** 1/1
 
-9. `world-terrain-017` — **Abandoned mountain mine landmark**  
-  🔴 `M` · **Score:**  59  
-   → **unlocks:** 2/2
-
-10. `quests-progression-042` — **Lost Treasure Chronicles — expedition remains, journal and missing-key trail**  
-  🔴 `L` · **Score:**  58  
+13. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+  🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
-  🔴 `M` · **Score:**  55  
+14. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
+  🔴 `L` · **Score:**  64  
    → **unlocks:** 0/0
 
-12. `world-018` — **Cave-aware rich finite resource deposits**  
-  🔴 `M` · **Score:**  47  
-   → **unlocks:** 1/1
-
-13. `settlements-009` — **Settlement outskirts and pasture**  
-  🟡 `M` · **Score:**  45  
-   → **unlocks:** 2/2
-
-14. `settlements-013` — **Horse training progression, vendor and paddock**  
+15. `settlements-013` — **Horse training progression, vendor and paddock**  
   🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-15. `settlements-npcs-022` — **Household help and age-based work participation**  
-  🔴 `M` · **Score:**  43  
-   → **unlocks:** 0/0
+16. `world-018` — **Cave-aware rich finite resource deposits**  
+  🔴 `M` · **Score:**  61  
+   → **unlocks:** 2/2
 
-16. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
-  🔴 `M` · **Score:**  35  
-   → **unlocks:** 0/0
-
-17. `settlements-011` — **Plaza layout, paving and core protection**  
-  🟡 `M` · **Score:**  31  
-   → **unlocks:** 1/1
-
-18. `settlements-014` — **Persistent settlement definition worldgen cache**  
+17. `settlements-014` — **Persistent settlement definition worldgen cache**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-19. `world-terrain-029` — **Persistent road route worldgen cache**  
-  🔴 `M` · **Score:**  31  
+18. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+  🔴 `M` · **Score:**  49  
+   → **unlocks:** 1/1
+
+19. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+  🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-20. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+20. `settlements-npcs-022` — **Household help and age-based work participation**  
+  🔴 `M` · **Score:**  43  
+   → **unlocks:** 0/0
+
+21. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+  🔴 `M` · **Score:**  35  
+   → **unlocks:** 0/0
+
+22. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-21. `items-player-014` — **Rope-pullable resource transport**  
+23. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `tools-005` — **Seedvale Character Preparation Panel**  
+24. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `items-player-032` — **NPC player-storage resource and context rules**  
+25. `fauna-031` — **Wildlife habitat pressure assessment**  
+  🟡 `S` · **Score:**  21  
+   → **unlocks:** 0/0
+
+26. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-24. `settlements-010` — **Closed and cautious settlement character**  
+27. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -177,13 +190,14 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
-- [`quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md`](quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md)  
+- [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
-  - [`quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md`](quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md)
+  - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)
+  - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
+  - [`settlements-004-gold-economic-realization-and-source-entitlements.md`](settlements-004-gold-economic-realization-and-source-entitlements.md)
 - [`quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md`](quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md)  
   is blocked by:
   - [`quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md`](quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md)
-  - [`quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md`](quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md)
 - [`quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`](quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md)  
   is blocked by:
   - [`quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md`](quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md)
@@ -193,19 +207,40 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md`](quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md)  
   is blocked by:
   - [`quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`](quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md)
+- [`quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md`](quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md)  
+  is blocked by:
+  - [`quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md`](quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md)
+  - [`quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`](quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md)
+- [`quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md`](quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md)  
+  is blocked by:
+  - [`quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md`](quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md)
+  - [`quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md`](quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md)
+- [`quests-progression-045-lost-treasure-chronicles-property-grant-deed-and-persistent-land-reward.md`](quests-progression-045-lost-treasure-chronicles-property-grant-deed-and-persistent-land-reward.md)  
+  is blocked by:
+  - [`quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md`](quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md)
+- [`quests-progression-046-lost-treasure-chronicles-integration-legacy-catch-up-and-superseded-quest-cleanup.md`](quests-progression-046-lost-treasure-chronicles-integration-legacy-catch-up-and-superseded-quest-cleanup.md)  
+  is blocked by:
+  - [`quests-progression-045-lost-treasure-chronicles-property-grant-deed-and-persistent-land-reward.md`](quests-progression-045-lost-treasure-chronicles-property-grant-deed-and-persistent-land-reward.md)
+  - [`quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md`](quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md)
+  - [`quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md`](quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md)
+  - [`quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md`](quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md)
+  - [`quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`](quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md)
+  - [`quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`](quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md)
+  - [`quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md`](quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md)
+  - [`quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md`](quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md)
+- [`settlements-004-gold-economic-realization-and-source-entitlements.md`](settlements-004-gold-economic-realization-and-source-entitlements.md)  
+  is blocked by:
+  - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)
 - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)  
   is blocked by:
-  - [`settlements-009-settlement-outskirts-and-pasture.md`](settlements-009-settlement-outskirts-and-pasture.md)
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
 - [`settlements-014-persistent-settlement-definition-worldgen-cache.md`](settlements-014-persistent-settlement-definition-worldgen-cache.md)  
   is blocked by:
-  - [`settlements-009-settlement-outskirts-and-pasture.md`](settlements-009-settlement-outskirts-and-pasture.md)
-  - [`settlements-011-plaza-layout-paving-and-core-protection.md`](settlements-011-plaza-layout-paving-and-core-protection.md)
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
   - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)
-- [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
+- [`settlements-npcs-038-travelling-merchant-inter-settlement-role.md`](settlements-npcs-038-travelling-merchant-inter-settlement-role.md)  
   is blocked by:
-  - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
+  - [`settlements-npcs-037-inter-settlement-goods-transport.md`](settlements-npcs-037-inter-settlement-goods-transport.md)
 
 ---
 
@@ -216,7 +251,6 @@ Planned plans and their dependencies.
 ```mermaid
 graph TD
   008["008 — Trawa (instanced ground cover)"]
-  040["040 — Pory roku i pogoda"]
   069["069 — 2026-08-11--069--npc-household-resources.md"]
   097["097 — Fizyka — opadanie przedmiotów, kolizje, skok"]
   106["106 — 2026-08-14--106--player-needs-food-and-cooking.md"]
@@ -275,6 +309,7 @@ graph TD
   fauna_028["fauna-028 — AnimalAgent importance/cadence — ograniczenie częstotliwości drogiej pracy"]
   fauna_029["fauna-029 — Animal water route preference, remains transform, and corpse world-time"]
   fauna_030["fauna-030 — Player-owned animal Stay safety and recovery"]
+  fauna_031["fauna-031 — Wildlife habitat pressure assessment"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -345,6 +380,8 @@ graph TD
   npc_036["npc-036 — Lossless NPC inventory → corpse loot handoff"]
   npc_037["npc-037 — Work Contracts — Stale Target Discovery and Notice Cleanup"]
   npc_038["npc-038 — Work Contract actor capability gating"]
+  npc_039["npc-039 — UBC profession outfits for NPCs"]
+  npc_040["npc-040 — UBC profession appearance variants for NPCs"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -391,6 +428,10 @@ graph TD
   quests_progression_040["quests-progression-040 — Lost Treasure Chronicles — dark-forest estate, alpha bear and treasure map"]
   quests_progression_041["quests-progression-041 — Lost Treasure Chronicles — dungeon binding and persistent collapsed access"]
   quests_progression_042["quests-progression-042 — Lost Treasure Chronicles — expedition remains, journal and missing-key trail"]
+  quests_progression_043["quests-progression-043 — Lost Treasure Chronicles — survivor site, missing key and final dungeon access"]
+  quests_progression_044["quests-progression-044 — Lost Treasure Chronicles — final treasure claims and resolution"]
+  quests_progression_045["quests-progression-045 — Lost Treasure Chronicles — property grant deed and persistent land reward"]
+  quests_progression_046["quests-progression-046 — Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -444,6 +485,8 @@ graph TD
   settlements_npcs_034["settlements-npcs-034 — Household wood authority and repair correctness"]
   settlements_npcs_035["settlements-npcs-035 — Household wells and population scaling"]
   settlements_npcs_036["settlements-npcs-036 — Generic NPC-Owned Goods Trading"]
+  settlements_npcs_037["settlements-npcs-037 — Inter-settlement goods transport"]
+  settlements_npcs_038["settlements-npcs-038 — Travelling Merchant inter-settlement role"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -541,7 +584,6 @@ graph TD
   world_terrain_034["world-terrain-034 — Bidirectional cave traversal safety"]
   world_terrain_035["world-terrain-035 — Streaming visual horizon and distant occlusion"]
   008 --> items_player_010
-  040 --> npc_012
   069 --> settlements_npcs_008
   097 --> world_terrain_007
   106 --> items_player_012
@@ -601,6 +643,7 @@ graph TD
   fauna_010 --> fauna_013
   fauna_010 --> fauna_014
   fauna_010 --> fauna_015
+  fauna_010 --> fauna_031
   fauna_011 --> fauna_012
   fauna_011 --> fauna_013
   fauna_012 --> fauna_004
@@ -636,6 +679,7 @@ graph TD
   fauna_024 --> fauna_025
   fauna_027 --> quests_progression_026
   fauna_027 --> quests_progression_027
+  fauna_028 --> fauna_031
   fauna_029 --> fauna_030
   items_player_001 --> fauna_002
   items_player_002 --> items_player_025
@@ -668,10 +712,13 @@ graph TD
   items_player_033 --> items_player_034
   items_player_033 --> items_player_035
   items_player_033 --> items_player_036
+  items_player_033 --> npc_039
   items_player_034 --> items_player_035
   items_player_034 --> items_player_036
+  items_player_034 --> npc_039
   items_player_035 --> items_player_038
   items_player_036 --> items_player_037
+  items_player_036 --> npc_039
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004
@@ -716,6 +763,8 @@ graph TD
   npc_032 --> npc_035
   npc_033 --> npc_035
   npc_034 --> npc_035
+  npc_039 --> npc_040
+  npc_040 --> npc_012
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
   persistence_003 --> persistence_004
@@ -742,6 +791,7 @@ graph TD
   quests_progression_009 --> quests_progression_036
   quests_progression_009 --> quests_progression_038
   quests_progression_009 --> quests_progression_040
+  quests_progression_009 --> quests_progression_046
   quests_progression_011 --> quests_progression_008
   quests_progression_011 --> quests_progression_038
   quests_progression_013 --> fauna_021
@@ -759,6 +809,8 @@ graph TD
   quests_progression_026 --> quests_progression_042
   quests_progression_027 --> quests_progression_041
   quests_progression_027 --> quests_progression_042
+  quests_progression_027 --> quests_progression_044
+  quests_progression_027 --> quests_progression_046
   quests_progression_028 --> quests_progression_030
   quests_progression_028 --> quests_progression_033
   quests_progression_029 --> quests_progression_030
@@ -773,10 +825,24 @@ graph TD
   quests_progression_036 --> quests_progression_040
   quests_progression_037 --> quests_progression_038
   quests_progression_037 --> quests_progression_039
+  quests_progression_037 --> quests_progression_046
   quests_progression_038 --> quests_progression_039
+  quests_progression_038 --> quests_progression_046
   quests_progression_039 --> quests_progression_040
+  quests_progression_039 --> quests_progression_046
   quests_progression_040 --> quests_progression_041
+  quests_progression_040 --> quests_progression_046
   quests_progression_041 --> quests_progression_042
+  quests_progression_041 --> quests_progression_043
+  quests_progression_041 --> quests_progression_046
+  quests_progression_042 --> quests_progression_043
+  quests_progression_042 --> quests_progression_044
+  quests_progression_042 --> quests_progression_046
+  quests_progression_043 --> quests_progression_044
+  quests_progression_043 --> quests_progression_046
+  quests_progression_044 --> quests_progression_045
+  quests_progression_044 --> quests_progression_046
+  quests_progression_045 --> quests_progression_046
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022
@@ -826,6 +892,7 @@ graph TD
   settlements_npcs_019 --> settlements_npcs_021
   settlements_npcs_019 --> settlements_npcs_028
   settlements_npcs_020 --> settlements_npcs_021
+  settlements_npcs_021 --> settlements_npcs_037
   settlements_npcs_023 --> fauna_004
   settlements_npcs_026 --> items_player_027
   settlements_npcs_026 --> npc_016
@@ -838,13 +905,17 @@ graph TD
   settlements_npcs_027 --> settlements_npcs_028
   settlements_npcs_028 --> quests_progression_010
   settlements_npcs_028 --> settlements_003
+  settlements_npcs_028 --> settlements_npcs_037
+  settlements_npcs_028 --> settlements_npcs_038
   settlements_npcs_030 --> settlements_npcs_031
   settlements_npcs_030 --> world_023
   settlements_npcs_032 --> settlements_npcs_034
   settlements_npcs_033 --> settlements_012
   settlements_npcs_033 --> settlements_npcs_036
+  settlements_npcs_033 --> settlements_npcs_038
   settlements_npcs_034 --> settlements_npcs_016
   settlements_npcs_034 --> settlements_npcs_017
+  settlements_npcs_037 --> settlements_npcs_038
   tools_010 --> tools_011
   tools_011 --> tools_012
   ui_input_001 --> ui_input_008
@@ -875,6 +946,7 @@ graph TD
   world_015 --> world_025
   world_017 --> npc_024
   world_018 --> quests_progression_010
+  world_018 --> settlements_004
   world_019 --> quests_progression_010
   world_019 --> settlements_003
   world_020 --> settlements_007
@@ -887,6 +959,7 @@ graph TD
   world_024 --> items_player_026
   world_024 --> quests_progression_041
   world_024 --> quests_progression_042
+  world_024 --> quests_progression_043
   world_024 --> world_terrain_020
   world_024 --> world_terrain_027
   world_terrain_001 --> world_terrain_014

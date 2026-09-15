@@ -23,6 +23,26 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/viewer/createViewer.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 
+## `tools/assetBrowser/hairTint.test.ts`
+
+**Imports**
+
+- `ai/npcAppearance.ts`
+- `tools/assetBrowser/hairTint.ts`
+
+## `tools/assetBrowser/hairTint.ts`
+
+**Imports**
+
+- `ai/npcAppearance.ts`
+
+**Imported by**
+
+- `tools/assetBrowser/hairTint.test.ts`
+- `tools/assetBrowser/state.ts`
+- `tools/assetBrowser/urlParams.ts`
+- `tools/assetBrowser/viewer/createAssetSlot.ts`
+
 ## `tools/assetBrowser/main.ts`
 
 **Imports**
@@ -36,6 +56,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/assetIndex.ts`
+- `tools/assetBrowser/hairTint.ts`
 - `tools/assetBrowser/urlParams.ts`
 - `tools/assetBrowser/viewer/layoutPersist.ts`
 - `tools/assetBrowser/viewer/viewportLayout.ts`
@@ -44,6 +65,7 @@ Generated from TypeScript imports.
 
 - `tools/assetBrowser/urlParams.test.ts`
 - `tools/assetBrowser/urlParams.ts`
+- `tools/assetBrowser/viewer/createAssetSlot.ts`
 - `tools/assetBrowser/viewer/createMultiView.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`
 - `tools/assetBrowser/viewer/createViewerScene.ts`
@@ -63,6 +85,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `tools/assetBrowser/hairTint.ts`
 - `tools/assetBrowser/state.ts`
 
 **Imported by**
@@ -112,8 +135,11 @@ Generated from TypeScript imports.
 - `assets/assetAnchors.ts`
 - `assets/assetIndex.ts`
 - `assets/loadGltf.ts`
+- `assets/ubcOutfitMaterials.ts`
 - `items/items.ts`
 - `player/playerVisualPreset.ts`
+- `tools/assetBrowser/hairTint.ts`
+- `tools/assetBrowser/state.ts`
 - `tools/assetBrowser/viewer/createAnchorGizmos.ts`
 
 **Imported by**

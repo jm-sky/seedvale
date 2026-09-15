@@ -4,10 +4,18 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-npcs-036-generic-npc-owned-goods-trading`                 | 2026-09-15 16:57:35 | —                   | `settlements-npcs` | —          |
+| `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation` | 2026-09-15 16:49:30 | —                   | `quests-progression` | —          |
+| `world-terrain-017-abandoned-mountain-mine-landmark`                   | 2026-09-15 16:30:58 | —                   | `world-terrain`  | —          |
+| `npc-039-ubc-profession-outfits`                                       | 2026-09-15 16:13:32 | —                   | `npc`            | —          |
+| `settlements-011-plaza-layout-paving-and-core-protection`              | 2026-09-15 15:47:06 | —                   | `settlements`    | —          |
+| `settlements-009-settlement-outskirts-and-pasture`                     | 2026-09-15 15:08:19 | —                   | `settlements`    | —          |
 | `settlements-npcs-027-npc-expedition-assignment-and-provisioning`      | 2026-09-15 14:20:54 | —                   | `settlements-npcs` | —          |
 | `items-player-038-ubc-jump-land-move-lock`                             | 2026-09-15 13:54:43 | —                   | `items-player`   | —          |
+| `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement` | 2026-09-15 13:50:28 | —                   | `settlements-npcs` | —          |
 | `items-player-036-ubc-fantasy-source-outfits`                          | 2026-09-15 13:11:05 | —                   | `items-player`   | —          |
 | `items-player-035-ubc-ual-player-animation-coverage`                   | 2026-09-15 13:03:35 | —                   | `items-player`   | —          |
+| `world-terrain-029-persistent-road-route-worldgen-cache`               | 2026-09-15 12:43:24 | —                   | `world-terrain`  | —          |
 | `items-player-033-ubc-player-model-alpha`                              | 2026-09-15 12:16:51 | —                   | `items-player`   | —          |
 | `items-player-034-equipment-driven-player-outfit`                      | 2026-09-15 12:16:51 | —                   | `items-player`   | —          |
 | `settlements-015-settlement-palisade-collision`                        | 2026-09-15 10:59:26 | —                   | `settlements`    | —          |
@@ -98,6 +106,7 @@
 | `world-024-systemic-treasure-sites-and-keys`                           | 2026-09-11 12:30:03 | —                   | `world`          | —          |
 | `world-terrain-007-underground-caves`                                  | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
 | `world-terrain-008-underground-caves-v2`                               | —                   | 2026-09-11 10:47:55 | `world-terrain`  | —          |
+| `world-terrain-018-cave-heightfield-representation-spike`              | 2026-09-10 18:49:20 | 2026-09-11 10:47:55 | `world-terrain`  | world-terrain-019-cave-heightfield-production-migration |
 | `2026-08-13--093--quests-v3-world-problems-reputation`                 | —                   | 2026-09-11 09:46:23 | `—`              | —          |
 | `fauna-021-player-combat-settlement-rats`                              | 2026-09-11 09:05:29 | —                   | `fauna`          | —          |
 | `items-player-025-world-food-freshness-prompt-and-decay`               | 2026-09-11 09:05:29 | —                   | `items-player`   | —          |
@@ -108,7 +117,6 @@
 | `items-player-023-systemic-item-utility-and-food-safety`               | 2026-09-10 20:05:38 | —                   | `items-player`   | —          |
 | `items-player-024-inventory-item-use-ux-coherence`                     | 2026-09-10 19:27:53 | —                   | `items-player`   | —          |
 | `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards`     | 2026-09-10 19:15:43 | —                   | `world-terrain`  | —          |
-| `world-terrain-018-cave-heightfield-representation-spike`              | 2026-09-10 18:49:20 | —                   | `world-terrain`  | —          |
 | `items-player-022-gameplay-interaction-usability-polish`               | 2026-09-10 16:01:15 | —                   | `items-player`   | —          |
 | `quests-progression-015-stable-npc-identity-for-quests`                | 2026-09-10 15:35:27 | —                   | `quests-progression` | —          |
 | `quests-progression-016-world-driven-settlement-quest-opportunities`   | 2026-09-10 15:22:48 | —                   | `quests-progression` | —          |

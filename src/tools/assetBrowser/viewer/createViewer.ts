@@ -51,6 +51,7 @@ export type AssetViewer = {
   dispose: () => void
   getCanvas: () => HTMLCanvasElement
   updateReport: () => void
+  applyUbcHairTint: () => Promise<void>
 }
 
 const _handCenter = new Vector3()
@@ -384,6 +385,10 @@ export function createViewer(container: HTMLElement): AssetViewer {
     },
     getCanvas: () => canvas,
     updateReport,
+    async applyUbcHairTint() {
+      await Promise.all([reference.applyUbcHairTint(), target.applyUbcHairTint()])
+      markDirty()
+    },
   }
 
   function validateSelections(prevRef: string | null, prevTgt: string | null) {

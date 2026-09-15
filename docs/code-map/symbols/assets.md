@@ -75,7 +75,7 @@ Generated from exported TypeScript symbols.
 ## `assets/assetIndex.ts`
 
 - `assetEntryMatchesQuery` — function — line 171
-- `assetIndexById` — function — line 547
+- `assetIndexById` — function — line 565
 - `AssetIndexEntry` — type — line 75
 - `AssetIndexGroup` — type — line 61
 - `AssetIndexStatus` — type — line 73
@@ -83,9 +83,9 @@ Generated from exported TypeScript symbols.
 - `basenameFromUrl` — function — line 118
 - `buildAssetIndex` — function — line 338
 - `customUrlEntry` — function — line 193
-- `entryFromUrl` — function — line 561
+- `entryFromUrl` — function — line 579
 - `filterAssetIndex` — function — line 184
-- `findAssetEntry` — function — line 553
+- `findAssetEntry` — function — line 571
 - `formatAssetLabel` — function — line 166
 - `groupFromModelUrl` — function — line 140
 - `kindFromBasename` — function — line 132
@@ -227,6 +227,8 @@ Generated from exported TypeScript symbols.
 
 ## `assets/ubcOutfitMaterials.ts`
 
-- `applyOutfitTint` — function — line 64
-- `cloneOutfitMaterials` — function — line 17
-- `disposeOutfitMaterialClones` — function — line 34
+- `applyClothingHue` — function — line 111
+- `applyHairTint` — function — line 129
+- `applyOutfitTint` — function — line 97
+- `cloneOutfitMaterials` — function — line 41
+- `disposeOutfitMaterialClones` — function — line 46

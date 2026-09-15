@@ -40,7 +40,7 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
-import { applyOutfitTint, cloneOutfitMaterials } from '../assets/ubcOutfitMaterials'
+import { applyClothingHue, applyHairTint, applyOutfitTint, cloneOutfitMaterials } from '../assets/ubcOutfitMaterials'
 import {
   playActionBowRelease,
   playActionChop,
@@ -1719,12 +1719,16 @@ export class NpcAgent {
     const appearance = resolveNpcAppearance({
       age: deps.member.age,
       gender: deps.member.character.gender,
+      npcId: deps.npcId ?? `anon:${deps.treeIndex}`,
       role: deps.member.character.role,
       treeIndex: deps.treeIndex,
     })
     const modelUrl = deps.modelUrl ?? appearance.modelUrl
     const animationUrl = companionAnimationUrl(modelUrl)
-    const tintUrl = deps.modelUrl != null ? null : appearance.tintUrl
+    const autoLook = deps.modelUrl == null
+    const tintUrl = autoLook ? appearance.tintUrl : null
+    const hairTintUrl = autoLook ? appearance.hairTintUrl : null
+    const clothingHue = autoLook ? appearance.clothingHue : 0xffffff
     try {
       const { scene, animations: modelAnimations } = await loadGltfAnimated(modelUrl)
       let animations = modelAnimations
@@ -1737,6 +1741,8 @@ export class NpcAgent {
         }
         cloneOutfitMaterials(scene)
         if (tintUrl) await applyOutfitTint(scene, tintUrl)
+        applyClothingHue(scene, clothingHue)
+        if (hairTintUrl) await applyHairTint(scene, hairTintUrl)
       }
       return new NpcAgent(scene, animations, deps)
     } catch (err) {

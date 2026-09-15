@@ -565,12 +565,15 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `player/playerVisualPreset.ts`
 - `settlement/professionStaffing.ts`
+- `world/parseSeed.ts`
 
 **Imported by**
 
 - `ai/NpcAgent.ts`
 - `ai/npcAppearance.test.ts`
 - `assets/assetIndex.ts`
+- `tools/assetBrowser/hairTint.test.ts`
+- `tools/assetBrowser/hairTint.ts`
 
 ## `ai/npcAssistance.test.ts`
 

@@ -20,8 +20,11 @@ import {
   prepareProp,
   preparePropFitMax,
 } from '../../../assets/loadGltf'
+import { applyHairTint, cloneOutfitMaterials, disposeOutfitMaterialClones } from '../../../assets/ubcOutfitMaterials'
 import { tintBucketGlb } from '../../../items/items'
 import { companionAnimationUrl } from '../../../player/playerVisualPreset'
+import { hairTintUrlFor } from '../hairTint'
+import { browserState } from '../state'
 import { type AnchorGizmoGroup, createAnchorGizmos } from './createAnchorGizmos'
 
 export type MeshStats = {
@@ -55,6 +58,8 @@ export type AssetSlot = {
   getNativeBounds: () => Box3 | null
   getPreparedBounds: () => Box3 | null
   refreshAnchors: () => void
+  /** Re-apply the current hair sidecar without reloading the GLB. */
+  applyUbcHairTint: () => Promise<void>
   dispose: () => void
 }
 
@@ -229,6 +234,10 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       }
       nativeBox = boxFromModel(model)
       applyPrepare(model, nextEntry.prepare)
+      if (companionUrl) {
+        cloneOutfitMaterials(model)
+        await applyHairTint(model, hairTintUrlFor(browserState.hairTint))
+      }
       if (nextEntry.id === 'item:wooden_bucket') tintBucketGlb(model, 'wooden_bucket')
       else if (nextEntry.id === 'item:copper_bucket') tintBucketGlb(model, 'copper_bucket')
       if (nextEntry.id === 'held:wooden_torch') model.rotation.x = Math.PI / 2
@@ -264,6 +273,7 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       }
       if (model) {
         group.remove(model)
+        disposeOutfitMaterialClones(model)
         disposeObject3D(model)
         model = null
       }
@@ -306,6 +316,10 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       model.updateMatrixWorld(true)
       refreshResolvedAnchors(model, anchors)
       gizmos?.update(anchors)
+    },
+    async applyUbcHairTint() {
+      if (!model || !url || !companionAnimationUrl(url)) return
+      await applyHairTint(model, hairTintUrlFor(browserState.hairTint))
     },
     dispose() {
       slot.unload()

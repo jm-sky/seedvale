@@ -34,6 +34,7 @@ function baseState(overrides: Partial<BrowserState> = {}): BrowserState {
     torchFuelRatio: 1,
     pose: 'rest',
     clip: null,
+    hairTint: 'hair_1',
     resetTransformOnReload: false,
     reportText: '',
     statusMessage: 'Ready',
@@ -109,6 +110,12 @@ describe('parseAssetBrowserUrlParams', () => {
       clip: null,
     })
   })
+
+  it('reads hairTint=', () => {
+    expect(parseAssetBrowserUrlParams('?hairTint=hair_2')).toEqual({ hairTint: 'hair_2' })
+    expect(parseAssetBrowserUrlParams('?hair=baked')).toEqual({ hairTint: 'baked' })
+    expect(parseAssetBrowserUrlParams('?hairTint=unknown')).toEqual({})
+  })
 })
 
 describe('applyAssetBrowserUrlParams', () => {
@@ -156,6 +163,12 @@ describe('applyAssetBrowserUrlParams', () => {
     expect(state.clip).toBe('Walk_Loop')
     expect(state.pose).toBe('rest')
   })
+
+  it('applies hairTint onto state', () => {
+    const state = baseState()
+    applyAssetBrowserUrlParams(state, { hairTint: 'hair_2' })
+    expect(state.hairTint).toBe('hair_2')
+  })
 })
 
 describe('syncAssetBrowserUrlParams', () => {
@@ -184,5 +197,28 @@ describe('syncAssetBrowserUrlParams', () => {
     }))
     expect(history.at(-1)).toContain('layout=single')
     expect(history.at(-1)).toContain('view=front')
+    expect(history.at(-1)).not.toContain('hairTint=')
+  })
+
+  it('writes non-default hairTint', () => {
+    const history: string[] = []
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {
+        location: { href: 'http://localhost/asset-browser.html', pathname: '/asset-browser.html', search: '', hash: '' },
+        history: {
+          replaceState(_s: unknown, _t: string, next: string) {
+            history.push(next)
+            const url = new URL(next, 'http://localhost')
+            window.location.pathname = url.pathname
+            window.location.search = url.search
+            window.location.hash = url.hash
+            window.location.href = url.href
+          },
+        },
+      },
+    })
+    syncAssetBrowserUrlParams(baseState({ hairTint: 'hair_2' }))
+    expect(history.at(-1)).toContain('hairTint=hair_2')
   })
 })

@@ -95,6 +95,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `settlements-009-settlement-outskirts-and-pasture.md` | MD ma małe pastwisko poza zabudową; LG/XL wyraźniejsza strefa; pasture nie przecina budynków/rzeki/głównej drogi; przy palisadzie za skrzydłami wejścia; czytelny płot (preferencyjnie dwa odcinki z przerwą); shepherd w dzień idzie na pasture; stado z nim; trough/studnia dostępne; drapieżnik może zagrozić stadu poza ochroną core; NPC/zwierzęta wracają wieczorem do household |
 | `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md` | Brak UI: `formExpeditionAssignment` / `provisionExpeditionAssignment` / `markExpeditionAssignmentReady` na `WorldBundle`; save v45 `expeditionAssignments`; testy jednostkowe już pokrywają resolver/provisioning |
 | `items-player-038-ubc-jump-land-move-lock.md` | UBC: skok z WASD — krótki recover, potem chód/sprint bez slajdu w pozie stania; skok w miejscu — pełny Jump_Land |
+| `npc-040-ubc-profession-appearance-variants.md` | Home: dorośli farmerzy nie są klonami (fryzura/broda/hue); woodcutterzy ziemisty brąz, farmerzy szafir; hunter = Ranger fiolet (`T_Ranger_2`), nie zielony/brązowy gracza; część mężczyzn z brodą, kobiety bez; Kasia/trader = Wizard (Long/Buns vs kapelusz — oględziny); Ranger hood vs Long/Buns — oględziny; reload/rebuild ten sam look; gracz Peasant oliwkowy / leather Ranger zielony; `?playerTint=brown` nie recoloruje NPC |
 | `items-player-035-ubc-ual-player-animation-coverage.md` | `?modelTest&model=ubc/male_ranger&anims=ubc/ual1_player` >4 clipów; Peasant/Ranger: locomotion, slash, łuk, sneak crouch, pływanie, skok bez tiltu, HP 0 = Death01; Adventurer bez regresji; `ual1_player.glb` setki KB |
 | `items-player-034-equipment-driven-player-outfit.md` | Default Peasant; załóż leather/chainmail → Ranger bez reloadu; zdejmij → Peasant; Continue z założoną skórą; `?player=adventurer` ignoruje zbroję; `?playerTint=brown` |
 | `items-player-033-ubc-player-model-alpha.md` | `?player=peasant` / `?player=ranger` / default Peasant: idle/chód/sprint/cios, trzymane narzędzie, cienie. Opcjonalnie `?modelTest&model=ubc/male_peasant&anims=ubc/ual1_player` |
@@ -224,7 +225,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `032`
 - items-player: `039`
-- npc: `040`
+- npc: `041`
 - persistence: `005`
 - quests-progression: `047`
 - settlements: `018`

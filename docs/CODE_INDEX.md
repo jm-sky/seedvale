@@ -146,7 +146,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 `NpcAgent.ts` is the coordination core (FSM, action pipeline, `choose()` sequencing) and stays the entry point for NPC behaviour; the modules below own the domain logic it delegates to (`docs/reviews/2026-09-03--NpcAgent-refactor-review.md`).
 
 - [NpcAgent](../src/ai/NpcAgent.ts) — per-NPC FSM/action pipeline, `choose()` decision sequencing, movement execution, combat entry seams, public API.
-- [NPC appearance](../src/ai/npcAppearance.ts) — profession → UBC outfit/tint resolver (`resolveNpcAppearance`); Modular pool lives here too.
+- [NPC appearance](../src/ai/npcAppearance.ts) — profession → UBC outfit/tint resolver (`resolveNpcAppearance`) plus `npcId`-seeded hair/beard/hue variants; Modular pool lives here too.
 - [NPC action types](../src/ai/npcAction.ts) — `Phase`/`ActionId`/`NpcPlannedAction`, re-exported from `NpcAgent.ts`.
 - [Approach player](../src/ai/approachPlayer.ts) — locality/arrival helpers for a nearby-player interaction intent (work-contract payment is the first consumer).
 - [NPC accompany commitment](../src/ai/npcAccompanyCommitment.ts) — source-neutral persistent follow/stay commitment and lifecycle helpers (plan npc-029).

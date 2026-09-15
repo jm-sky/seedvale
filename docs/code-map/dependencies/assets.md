@@ -345,3 +345,4 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `player/PlayerController.ts`
+- `tools/assetBrowser/viewer/createAssetSlot.ts`
