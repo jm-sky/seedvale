@@ -9,6 +9,7 @@
 **Subdomains:** `interaction` `feedback` `input`
 **Tags:** `targeting` `corpse` `well` `tab-cycle` `pickup-feedback`
 **Roadmap:** -
+**Model:** `Sonnet`, `Composer`
 
 ## Cel
 
