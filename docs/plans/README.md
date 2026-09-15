@@ -76,6 +76,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`  | 🔴 | L      | ~~settlements-npcs-026~~, settlements-npcs-027, ~~settlements-npcs-019~~                                                                                                        | quests-abandoned-gold-mine-colony       |
 | ◼️ `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md` | 🔴 | L      | quests-progression-037, ~~quests-progression-008~~, ~~quests-progression-009~~, ~~quests-progression-011~~, ~~quests-progression-032~~                                          | quests-lost-something-chronicles        |
 | ◼️ `quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md` | 🔴 | M      | quests-progression-038, quests-progression-037                                                                                                                                  | quests-lost-something-chronicles        |
+| ◼️ `quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md` | 🔴 | L      | quests-progression-039, ~~quests-progression-009~~, ~~quests-progression-036~~, ~~fauna-022~~                                                                                   | quests-lost-something-chronicles        |
 
 ---
 
@@ -214,7 +215,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `033`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `040`
+- quests-progression: `041`
 - settlements: `018`
 - settlements-npcs: `037`
 - tools: `015`
