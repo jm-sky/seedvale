@@ -23,6 +23,7 @@ function id(size: VillageIdentity['size']): VillageIdentity {
     foodSourceType: 'garden',
     name: 'Testowo',
     nameCulture: 'polish',
+    character: 'default',
     size,
   }
 }

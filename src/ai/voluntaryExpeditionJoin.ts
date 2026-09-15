@@ -1,9 +1,11 @@
 import type { RelationLevel } from '../quests/quests'
+import type { SettlementCharacter } from '../settlement/villagePlan'
 import type { ExpeditionTerms } from '../world/expedition'
 import type { Role } from './characters'
 import type { BigFivePersonality } from './dialogue'
 import type { ScheduleActivity } from './schedule'
 import { idleIntentFor } from './schedule'
+import { closedCautionScore } from './settlementCaution'
 
 /**
  * Pure voluntary-expedition-joining willingness evaluator (plan npc-031).
@@ -43,6 +45,7 @@ export type VoluntaryJoinModifierKey =
   | 'awayTime'
   | 'danger'
   | 'provisioning'
+  | 'caution'
 
 export type VoluntaryJoinModifier = { key: VoluntaryJoinModifierKey, value: number }
 
@@ -109,6 +112,10 @@ export type VoluntaryJoinContext = {
    *  thirst handling stays owned by existing NPC need interruption/resume —
    *  this is only the up-front feasibility check. */
   provisionPenalty: number
+
+  /** Contextual settlement archetype (plan settlements-010). Omitted/`default`
+   *  is a no-op; never mutates personality or traits. */
+  settlementCharacter?: SettlementCharacter
 }
 
 /** Conservative neutral default for a caller with no better expedition
@@ -249,6 +256,7 @@ export function evaluateVoluntaryJoin(ctx: VoluntaryJoinContext): VoluntaryJoinE
 
   const dangerRelief = clamp01(1 - COMPETENCE_DANGER_RELIEF * normalizeReputation(ctx.competence))
   const danger = ctx.danger * DANGER_WEIGHT * (1 + ctx.personality.neuroticism * NEUROTICISM_DANGER_MULT) * dangerRelief
+  const caution = closedCautionScore(ctx.settlementCharacter)
 
   const modifiers: VoluntaryJoinModifier[] = [
     { key: 'exploration', value: exploration },
@@ -259,6 +267,7 @@ export function evaluateVoluntaryJoin(ctx: VoluntaryJoinContext): VoluntaryJoinE
     { key: 'awayTime', value: -awayTime },
     { key: 'danger', value: -danger },
     { key: 'provisioning', value: -ctx.provisionPenalty },
+    { key: 'caution', value: -caution },
   ]
   const score = modifiers.reduce((sum, m) => sum + m.value, 0)
 

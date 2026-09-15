@@ -103,6 +103,21 @@ describe('computeReactionChance', () => {
     const trustedUnknown = computeReactionChance({ ...base, relationLevel: 'trusted', renown: 0 })
     expect(strangerFamous).toBeLessThan(trustedUnknown)
   })
+
+  it('closed settlement character lowers stranger reaction without mutating personality', () => {
+    const base = { personality: CLOSED, traits: [] as const, relationLevel: 'stranger' as const }
+    const ordinary = computeReactionChance(base)
+    const cautious = computeReactionChance({ ...base, settlementCharacter: 'closed' })
+    expect(cautious).toBeLessThan(ordinary)
+    expect(cautious).toBeGreaterThan(0)
+  })
+
+  it('trusted relation still outweighs closed caution', () => {
+    const base = { personality: CLOSED, traits: [] as const }
+    const closedTrusted = computeReactionChance({ ...base, relationLevel: 'trusted', settlementCharacter: 'closed' })
+    const defaultStranger = computeReactionChance({ ...base, relationLevel: 'stranger' })
+    expect(closedTrusted).toBeGreaterThan(defaultStranger)
+  })
 })
 
 describe('reactionTierForRelation', () => {

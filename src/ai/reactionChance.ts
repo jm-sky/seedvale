@@ -1,8 +1,10 @@
 import type { RelationLevel } from '../quests/quests'
 import type { Reputation } from '../reputation/ReputationManager'
+import type { SettlementCharacter } from '../settlement/villagePlan'
 import type { Trait } from './characters'
 import type { BigFivePersonality } from './dialogue'
 import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
+import { closedCautionChance } from './settlementCaution'
 
 /** Which flavor of reaction plays once `computeReactionChance`'s roll
  *  succeeds — see `reactionTierForRelation`. */
@@ -55,6 +57,9 @@ export type ReactionChanceInput = {
    *  five dimensions are deliberately not consulted here — only renown
    *  ("is the Hero recognized") drives spontaneous reaction chance. */
   renown?: number
+  /** Contextual settlement archetype (plan settlements-010). Omitted/`default`
+   *  is a no-op; never mutates personality or traits. */
+  settlementCharacter?: SettlementCharacter
 }
 
 function clamp01(x: number): number {
@@ -104,7 +109,8 @@ export function computeReactionChance(input: ReactionChanceInput): number {
   const traitBonus = input.traits.includes('curious') ? CURIOUS_TRAIT_BONUS : 0
   const relationshipBonus = RELATION_BONUS[input.relationLevel]
   const renownBonus = lerp(0, REPUTATION_BONUS_MAX, (input.renown ?? 0) / 100)
-  return clamp01(BASE_REACTION_CHANCE + personalityBonus + traitBonus + relationshipBonus + renownBonus)
+  const caution = closedCautionChance(input.settlementCharacter)
+  return clamp01(BASE_REACTION_CHANCE + personalityBonus + traitBonus + relationshipBonus + renownBonus - caution)
 }
 
 /** Reaction flavor is driven by the personal relationship only — reputation

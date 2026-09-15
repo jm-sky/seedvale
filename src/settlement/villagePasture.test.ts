@@ -21,6 +21,7 @@ function identity(partial: Partial<VillageIdentity> & Pick<VillageIdentity, 'siz
     foodSourceType: 'garden',
     name: 'Testowo',
     nameCulture: 'polish',
+    character: 'default',
     ...partial,
   }
 }

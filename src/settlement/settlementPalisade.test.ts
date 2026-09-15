@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { ObbCollider } from '../world/collision'
 import type { SettlementSite } from './findSettlementSite'
+import type { VillageEntrance, VillagePlan } from './villagePlan'
 import { colliderContainsPoint } from '../world/collision'
 import {
   PALISADE_GATE_HALF_ANGLE,
   PALISADE_WALL_HALF_DEPTH,
   resolveEntrancePalisadePlacements,
+  resolveEntranceTorchPlacements,
   settlementPalisadeColliders,
   type SettlementPalisadePlacement,
   WALL_HALF_LENGTH,
@@ -17,6 +19,49 @@ const site: SettlementSite = { x: 0, z: 0, y: 10 }
 
 function placement(overrides: Partial<SettlementPalisadePlacement> = {}): SettlementPalisadePlacement {
   return { speciesIndex: 0, x: 5, z: 0, groundY: 10, rotationY: 0, scale: 1, ...overrides }
+}
+
+function entrance(overrides: Partial<VillageEntrance> & Pick<VillageEntrance, 'id' | 'kind'>): VillageEntrance {
+  const angle = overrides.angle ?? 0
+  const radius = 20
+  return {
+    x: Math.cos(angle) * radius,
+    z: Math.sin(angle) * radius,
+    y: 10,
+    angle,
+    ...overrides,
+  }
+}
+
+function planWith(
+  character: VillagePlan['identity']['character'],
+  entrances: readonly VillageEntrance[],
+): VillagePlan {
+  return {
+    identity: {
+      id: '1_0',
+      cell: { gx: 1, gz: 0 },
+      isHome: false,
+      size: 'MD',
+      terrain: 'forest',
+      dominantResource: null,
+      foodSourceType: 'garden',
+      name: 'Testowo',
+      nameCulture: 'polish',
+      character,
+    },
+    site: { x: 0, z: 0, y: 10, radius: 22 },
+    boundary: { kind: 'circle', x: 0, z: 0, radius: 22 },
+    center: { x: 0, z: 0, y: 10 },
+    plaza: { x: 0, z: 0, radius: 9 },
+    pattern: 'central',
+    zones: [],
+    plots: [],
+    buildings: [],
+    landmarks: [],
+    paths: [],
+    entrances,
+  }
 }
 
 describe('settlementPalisadeColliders', () => {
@@ -131,5 +176,101 @@ describe('resolveEntrancePalisadePlacements', () => {
     const a = resolveEntrancePalisadePlacements(site, 'MD', flatSampleHeight, waterLevel, undefined)
     const b = resolveEntrancePalisadePlacements(site, 'MD', flatSampleHeight, waterLevel, undefined)
     expect(a).toEqual(b)
+  })
+})
+
+describe('closed palisade / entrance torches (plan settlements-010)', () => {
+  const roadA = entrance({ id: 'entrance-0', kind: 'road', angle: 0 })
+  const roadB = entrance({ id: 'entrance-1', kind: 'road', angle: Math.PI })
+  const path = entrance({ id: 'entrance-2', kind: 'path', angle: Math.PI / 2 })
+  const inlandCoast = { sampleHeight: flatSampleHeight, waterLevel }
+
+  it('gives closed settlements higher perimeter coverage than the matching default village', () => {
+    const defaultPlan = planWith('default', [roadA, roadB])
+    const closedPlan = planWith('closed', [roadA, roadB])
+    const baseline = resolveEntrancePalisadePlacements(
+      site, 'MD', flatSampleHeight, waterLevel, defaultPlan,
+    )
+    const closed = resolveEntrancePalisadePlacements(
+      site, 'MD', flatSampleHeight, waterLevel, closedPlan,
+    )
+    expect(closed.length).toBeGreaterThan(baseline.length)
+  })
+
+  it('leaves a gate gap at every inland road and path entrance', () => {
+    const closedPlan = planWith('closed', [roadA, roadB, path])
+    const placements = resolveEntrancePalisadePlacements(
+      site, 'MD', flatSampleHeight, waterLevel, closedPlan,
+    )
+    expect(placements.length).toBeGreaterThan(0)
+    for (const gate of [roadA, roadB, path]) {
+      const outward = Math.atan2(gate.z - site.z, gate.x - site.x)
+      for (const p of placements) {
+        const ang = Math.atan2(p.z - site.z, p.x - site.x)
+        let delta = Math.abs(ang - outward)
+        if (delta > Math.PI) delta = Math.PI * 2 - delta
+        expect(delta).toBeGreaterThan(PALISADE_GATE_HALF_ANGLE)
+      }
+    }
+  })
+
+  it('still rejects a corridor that crosses the closed ring', () => {
+    const closedPlan = planWith('closed', [roadA])
+    const baseline = resolveEntrancePalisadePlacements(
+      site, 'MD', flatSampleHeight, waterLevel, closedPlan,
+    )
+    const target = baseline[0]!
+    const corridors = [{
+      ax: target.x, az: target.z, ah: 10, bx: target.x, bz: target.z, bh: 10,
+      halfWidth: 0.1, heightStrength: 0, tintStrength: 0,
+    }]
+    const filtered = resolveEntrancePalisadePlacements(
+      site, 'MD', flatSampleHeight, waterLevel, closedPlan, undefined, corridors,
+    )
+    expect(filtered.some((p) => p.x === target.x && p.z === target.z)).toBe(false)
+    expect(filtered.length).toBe(baseline.length - 1)
+  })
+
+  it('places exactly one torch pair per inland road entrance on a closed village', () => {
+    const closedPlan = planWith('closed', [roadA, roadB, path])
+    const torches = resolveEntranceTorchPlacements(site, 'MD', closedPlan, inlandCoast)
+    expect(torches).toHaveLength(4)
+    const slots = torches.map((torch) => torch.slot).sort()
+    expect(slots).toEqual(['gate:entrance-1:left', 'gate:entrance-1:right', 'gate:left', 'gate:right'])
+  })
+
+  it('keeps a single default gate pair and does not torch path-only extra entrances', () => {
+    const defaultPlan = planWith('default', [roadA, roadB, path])
+    const torches = resolveEntranceTorchPlacements(site, 'MD', defaultPlan, inlandCoast)
+    expect(torches).toHaveLength(2)
+    expect(torches.map((torch) => torch.slot).sort()).toEqual(['gate:left', 'gate:right'])
+  })
+
+  it('keeps torches outside the angular gate gap', () => {
+    const closedPlan = planWith('closed', [roadA, roadB])
+    const torches = resolveEntranceTorchPlacements(site, 'MD', closedPlan, inlandCoast)
+    expect(torches.length).toBeGreaterThan(0)
+    for (const torch of torches) {
+      const ang = Math.atan2(torch.z - site.z, torch.x - site.x)
+      const nearestGate = [roadA, roadB].reduce((best, gate) => {
+        const outward = Math.atan2(gate.z - site.z, gate.x - site.x)
+        let delta = Math.abs(ang - outward)
+        if (delta > Math.PI) delta = Math.PI * 2 - delta
+        return delta < best ? delta : best
+      }, Infinity)
+      expect(nearestGate).toBeGreaterThan(PALISADE_GATE_HALF_ANGLE)
+    }
+  })
+
+  it('is deterministic for closed palisade and torch placement', () => {
+    const closedPlan = planWith('closed', [roadA, roadB])
+    expect(
+      resolveEntrancePalisadePlacements(site, 'MD', flatSampleHeight, waterLevel, closedPlan),
+    ).toEqual(
+      resolveEntrancePalisadePlacements(site, 'MD', flatSampleHeight, waterLevel, closedPlan),
+    )
+    expect(resolveEntranceTorchPlacements(site, 'MD', closedPlan, inlandCoast)).toEqual(
+      resolveEntranceTorchPlacements(site, 'MD', closedPlan, inlandCoast),
+    )
   })
 })

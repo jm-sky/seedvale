@@ -123,6 +123,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Lost Treasure Chronicles elder](../src/quests/lostTreasureChroniclesElder.ts) — nearby authored elder binding and the winter/dispute contextual quests (plan quests-progression-037).
 - [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.
 - [Profession staffing](../src/settlement/professionStaffing.ts) — generation-time adult profession composition from settlement identity; does not change family structure.
+- [Settlement character](../src/settlement/settlementCharacter.ts) — deterministic `default`/`closed` archetype on `VillageIdentity`; consumers read it, none own it.
 - [ReputationManager](../src/reputation/ReputationManager.ts) — per-settlement reputation dimensions and renown; callers apply an already-resolved `SocialConsequence`.
 - [Social exposure](../src/reputation/socialExposure.ts) — pure day/night + Sneak exposure roll used when a cemetery grave first resolves.
 - [Animal-deed reputation](../src/reputation/animalDeeds.ts) — pure dangerous-animal-kill social-news signal resolver (plan quests-progression-019, refactored by quests-progression-022): species baseline × fauna-owned `dangerSignificance`, suppressed when `QuestManager.hasSocialOutcomeClaim` says a quest already owns the kill's social outcome; also hosts the canonical `reputationFactor`/`renownFactor` distance-attenuation functions.

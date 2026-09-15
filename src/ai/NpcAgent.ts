@@ -97,7 +97,7 @@ import { type Place, workEligibleSettlementTrees } from '../settlement/places'
 import { isAdultAge } from '../settlement/professionStaffing'
 import { householdStorageDestination, resolveHouseholdWoodStorage } from '../settlement/storageDestinations'
 import { STRUCTURE_REPAIR_WORK_SESSION_HOURS, STRUCTURE_REPAIR_WORK_SESSION_SEC } from '../settlement/structureCondition'
-import { isTreeWorkEligible } from '../settlement/villagePlan'
+import { isTreeWorkEligible, type SettlementCharacter } from '../settlement/villagePlan'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
 import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
@@ -1005,6 +1005,9 @@ export type NpcAgentDeps = {
    *  quests-progression-001). See `reactionChance.ts`'s `PlayerSocialLookup`
    *  for the settlement-aware contract this closes over. */
   getPlayerSocial?: (npcId: string) => PlayerSocialState
+  /** Static settlement archetype (plan settlements-010) — generation-time
+   *  identity from `VillagePlan.identity.character`, never live world state. */
+  settlementCharacter?: SettlementCharacter
   mining?: SettlementMiningHooks | null
   getNearbyPlayerWell?: NearbyPlayerWellLookup
   foodSources?: SettlementFoodSourceHooks
@@ -1467,6 +1470,7 @@ export class NpcAgent {
    *  `NpcAgent` quest/reputation-agnostic (injected from `createApp.ts` via
    *  `createSettlement.ts`, plan 117 / quests-progression-001). */
   private readonly getPlayerSocial: (npcId: string) => PlayerSocialState
+  private readonly settlementCharacter: SettlementCharacter
   /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
    *  — an alternative water-fetch destination to `landmarks.well` when
    *  closer to this NPC's household home. See `resolveWaterWellTarget`. */
@@ -1592,6 +1596,7 @@ export class NpcAgent {
     this.corpseCleanupHooks = corpseCleanupHooks ?? null
     this.structureRepairHooks = structureRepairHooks ?? null
     this.getPlayerSocial = getPlayerSocial
+    this.settlementCharacter = deps.settlementCharacter ?? 'default'
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
     this.herbalGather = herbalGather ?? null
@@ -2052,6 +2057,7 @@ export class NpcAgent {
       personality: this.personality,
       relationLevel: social.relationLevel,
       standing: social.standing,
+      settlementCharacter: this.settlementCharacter,
     })
   }
 
@@ -2801,6 +2807,7 @@ export class NpcAgent {
           traits: this.traits,
           relationLevel: social.relationLevel,
           renown: social.renown,
+          settlementCharacter: this.settlementCharacter,
         })
         // A lone NPC (nearbyNpcCount 0) keeps its full chance. In a group it
         // drops with how many others are close by — scaled by (1 - openness)
@@ -4876,6 +4883,7 @@ export class NpcAgent {
       awayHours,
       danger: DEFAULT_VOLUNTARY_JOIN_DANGER,
       provisionPenalty: contractProvisionFeasibilityPenalty(provisionEstimate, provisionAvailability),
+      settlementCharacter: this.settlementCharacter,
     }
   }
 

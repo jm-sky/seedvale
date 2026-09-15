@@ -1,8 +1,10 @@
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { RelationLevel } from '../quests/quests'
+import type { SettlementCharacter } from '../settlement/villagePlan'
 import type { BigFivePersonality } from './dialogue'
 import { type ConsumableNeed, ITEM_CATALOG } from '../items/itemCatalog'
+import { closedCautionWillingness } from './settlementCaution'
 
 /**
  * Plan 152 — NPC social-decision resolver for a player's "request food/drink"
@@ -33,6 +35,8 @@ export type AssistanceSocialInput = {
   personality: BigFivePersonality
   relationLevel: RelationLevel
   standing: number
+  /** Contextual settlement archetype (plan settlements-010). */
+  settlementCharacter?: SettlementCharacter
 }
 
 function clamp01(x: number): number {
@@ -69,7 +73,8 @@ export function computeAssistanceWillingness(input: AssistanceSocialInput): numb
   const agreeablenessBonus = lerp(AGREEABLENESS_BONUS_MIN, AGREEABLENESS_BONUS_MAX, input.personality.agreeableness)
   const relationBonus = RELATION_BONUS[input.relationLevel]
   const standingBonus = lerp(0, STANDING_BONUS_MAX, input.standing)
-  return clamp01(BASE_WILLINGNESS + agreeablenessBonus + relationBonus + standingBonus)
+  const caution = closedCautionWillingness(input.settlementCharacter)
+  return clamp01(BASE_WILLINGNESS + agreeablenessBonus + relationBonus + standingBonus - caution)
 }
 
 /** Conservative own-needs guard (plan 152 "NPC own-needs guard") — no new

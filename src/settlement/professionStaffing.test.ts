@@ -72,6 +72,7 @@ function staff(
     dominantResource: overrides.dominantResource === undefined ? null : overrides.dominantResource,
     isHome: overrides.isHome ?? false,
     seed: overrides.seed ?? 1,
+    character: overrides.character,
   }
   return resolveInitialProfessionStaffing(families, context)
 }
@@ -527,6 +528,49 @@ describe('resolveInitialProfessionStaffing', () => {
       ]
       expect(shepherdHouseholdIndex(families)).toBe(1)
       expect(shepherdHouseholdIndex(staff(adults(2), { size: 'SM' }))).toBeNull()
+    })
+  })
+
+  describe('closed settlement character (plan settlements-010)', () => {
+    const shared = {
+      size: 'MD' as VillageSize,
+      terrain: 'forest' as SettlementTerrain,
+      foodSourceType: 'garden' as FoodSourceType,
+      dominantResource: null,
+      isHome: false,
+    }
+
+    it('increases guard coverage versus default at the same workforce and seed', () => {
+      const families = adults(5)
+      let closedGuards = 0
+      let baselineGuards = 0
+      for (let seed = 0; seed < 60; seed++) {
+        const baseline = adultProfessionCoverage(staff(families, { ...shared, seed, character: 'default' }))
+        const closed = adultProfessionCoverage(staff(families, { ...shared, seed, character: 'closed' }))
+        expect(closed.farmer).toBeGreaterThanOrEqual(1)
+        closedGuards += closed.guard
+        baselineGuards += baseline.guard
+      }
+      expect(closedGuards).toBeGreaterThan(baselineGuards)
+    })
+
+    it('can staff a second guard below adult capacity 6 when closed', () => {
+      const families = adults(5)
+      let extraGuard = 0
+      for (let seed = 0; seed < 80; seed++) {
+        const closed = adultProfessionCoverage(staff(families, { ...shared, seed, character: 'closed' }))
+        const baseline = adultProfessionCoverage(staff(families, { ...shared, seed, character: 'default' }))
+        expect(baseline.guard).toBeLessThanOrEqual(1)
+        if (closed.guard >= 2) extraGuard++
+      }
+      expect(extraGuard).toBeGreaterThan(0)
+    })
+
+    it('does not change family count, names, traits or personality', () => {
+      const families = adults(5)
+      const closed = staff(families, { ...shared, seed: 11, character: 'closed' })
+      expect(closed).toHaveLength(families.length)
+      expect(identityFingerprint(closed)).toEqual(identityFingerprint(families))
     })
   })
 })

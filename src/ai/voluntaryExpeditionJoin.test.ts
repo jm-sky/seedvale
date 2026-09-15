@@ -212,6 +212,21 @@ describe('evaluateVoluntaryJoin', () => {
       const high = evaluateVoluntaryJoin(baseContext({ provisionPenalty: 5 }))
       expect(high.score).toBeLessThan(low.score)
     })
+
+    it('closed settlement character applies a moderate caution penalty that trust can overcome', () => {
+      const stranger = evaluateVoluntaryJoin(baseContext({ relationLevel: 'stranger' }))
+      const closedStranger = evaluateVoluntaryJoin(baseContext({
+        relationLevel: 'stranger',
+        settlementCharacter: 'closed',
+      }))
+      const closedTrusted = evaluateVoluntaryJoin(baseContext({
+        relationLevel: 'trusted',
+        settlementCharacter: 'closed',
+      }))
+      expect(closedStranger.score).toBeLessThan(stranger.score)
+      expect(closedTrusted.score).toBeGreaterThan(stranger.score)
+      expect(closedStranger.modifiers.some((m) => m.key === 'caution' && m.value < 0)).toBe(true)
+    })
   })
 })
 

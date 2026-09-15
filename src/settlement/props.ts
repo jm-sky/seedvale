@@ -12,7 +12,7 @@ import { isDebugMode } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { pastureWellQueueId, settlementWellQueueId } from '../simulation'
-import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
+import { type CoastalSamplers } from '../terrain/coastPlacement'
 import { createPlacedContainerProp } from '../world/containerProp'
 import { type CultivationAnchor, cultivationAnchorFromSettlementField, cultivationAnchorFromSettlementGarden } from '../world/cultivationAnchor'
 import { createSeededRandom } from '../world/parseSeed'
@@ -81,12 +81,11 @@ import {
 import { cloneProp, clonePropWithYaw, loadPropOrFallback, loadPropTemplates, placeOnGround } from './propUtils'
 import { placeRatNest } from './ratNestPlacement'
 import {
-  PALISADE_GATE_HALF_ANGLE,
   plantEntrancePalisade,
   pointHitsCorridor,
   resolveEntrancePalisadePlacements,
+  resolveEntranceTorchPlacements,
   type SettlementPalisadePlacement,
-  WALL_HALF_LENGTH,
 } from './settlementPalisade'
 import {
   createAnvil,
@@ -1703,43 +1702,12 @@ export async function buildSettlementProps(
       }
     }
 
-    // Gate flanks — same entrance math as palisade, but place on the *first
-    // wall segment* angle (outside the road gap), not inside it.
-    {
-      const coastEnv: CoastalSamplers = coast ?? { sampleHeight, waterLevel }
-      const radius = plan?.boundary.radius ?? villageSizeConfig(size).footprintRadius * 0.72
-      const entrances = plan?.entrances ?? []
-      const inlandEntrances = entrances.filter((e) => !isCoastalPlacement(e.x, e.z, coastEnv))
-      const entrance = inlandEntrances.find((e) => e.kind === 'road') ?? inlandEntrances[0]
-      if (entrance || entrances.length === 0) {
-        const outward = entrance
-          ? Math.atan2(entrance.z - site.z, entrance.x - site.x)
-          : 0
-        const gateX = site.x + Math.cos(outward) * radius
-        const gateZ = site.z + Math.sin(outward) * radius
-        if (!isCoastalPlacement(gateX, gateZ, coastEnv)) {
-          let maxCorridorHalf = 5
-          for (const seg of pathCorridors) {
-            if (seg.halfWidth > maxCorridorHalf) maxCorridorHalf = seg.halfWidth
-          }
-          const gateHalf = Math.max(
-            PALISADE_GATE_HALF_ANGLE,
-            Math.atan2(maxCorridorHalf + WALL_HALF_LENGTH, Math.max(radius, 1)),
-          )
-          const wallStep = (WALL_HALF_LENGTH * 2) / Math.max(radius, 1)
-          // First palisade stake sits at gateHalf + 0.5*step — put torch there
-          // (slightly further out along the ring so it clears the dirt strip).
-          const flank = gateHalf + wallStep * 0.55
-          for (const side of [-1, 1] as const) {
-            const ang = outward + side * flank
-            const tx = site.x + Math.cos(ang) * radius
-            const tz = site.z + Math.sin(ang) * radius
-            if (isCoastalPlacement(tx, tz, coastEnv)) continue
-            placeTorchAt(side < 0 ? 'gate:left' : 'gate:right', tx, tz, ang + Math.PI)
-            await yieldProp()
-          }
-        }
-      }
+    // Gate flanks — planned entrance-road torch pairs (plan settlements-010).
+    // Closed settlements get one pair per inland road entrance; default keeps
+    // a single pair at the primary inland entrance.
+    for (const torch of resolveEntranceTorchPlacements(site, size, plan, coast, pathCorridors)) {
+      placeTorchAt(torch.slot, torch.x, torch.z, torch.rotationY)
+      await yieldProp()
     }
   }
 

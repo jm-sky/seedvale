@@ -28,6 +28,7 @@ import { DEFAULT_SITE_SEARCH_MARGIN, findSettlementSite } from './findSettlement
 import { appendAuthoredResidentFamily } from './lostTreasureChroniclesElderResident'
 import { findDockLocation } from './minorLocations'
 import { resolveInitialProfessionStaffing } from './professionStaffing'
+import { resolveSettlementCharacter } from './settlementCharacter'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
 import { type ClearingLayout, layoutClearingsFromPlan } from './villageClearing'
 import { type FoodSourceType, type VillageIdentity, type VillagePlan } from './villagePlan'
@@ -416,6 +417,12 @@ function resolveVillageIdentity(
   const size = isOutpost ? 'OUTPOST' : ctx.provisionalSize
   const name = generateSettlementName(ctx.seedForCell, terrain, dominantResource)
   const foodSourceType = foodSourceTypeFor(terrain, dominantResource)
+  const character = resolveSettlementCharacter({
+    seedForCell: ctx.seedForCell,
+    isHome: ctx.isHome,
+    size,
+    terrain,
+  })
 
   return {
     id: cellKey(ctx.cell),
@@ -427,6 +434,7 @@ function resolveVillageIdentity(
     foodSourceType,
     name,
     nameCulture,
+    character,
   }
 }
 
@@ -608,6 +616,7 @@ function generateSettlementCore(
       dominantResource: identity.dominantResource,
       isHome: identity.isHome,
       seed: ctx.seedForCell,
+      character: identity.character,
     },
   )
   const plan = attachPlannedDock(

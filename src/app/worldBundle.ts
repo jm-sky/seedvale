@@ -102,8 +102,9 @@ import { isLostTreasureElderFamily, LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { activateRoadRouteWorldgenCache, clearRoadNetworkCaches } from '../settlement/roadNetwork'
 import { roadRouteFingerprint } from '../settlement/roadRouteWorldgenCache'
-import { cellFromId, cellsWithinRadius, type SettlementDef } from '../settlement/settlementGenerator'
-import { cachedLostTreasureArchaeologistHostCell, settlementDefFor } from '../settlement/settlementPlanCache'
+import { resolveSettlementCharacter } from '../settlement/settlementCharacter'
+import { cellFromId, cellKey, cellSeed, cellsWithinRadius, probeSettlementSite, type SettlementDef } from '../settlement/settlementGenerator'
+import { cachedLostTreasureArchaeologistHostCell, settlementDefFor, worldRiverQuery } from '../settlement/settlementPlanCache'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
 import { useBootMark } from '../shared/bootMark'
@@ -646,6 +647,51 @@ function dungeonFaunaOccupancy(caves?: Caves): {
   return { decls: plan.decls, bindings: plan.bindings }
 }
 
+function collectNearbyClosedSettlements(
+  seed: number,
+  chunkManager: ChunkManager,
+  config: WorldConfig,
+): { id: string, x: number, z: number, footprintRadius: number }[] {
+  const out: { id: string, x: number, z: number, footprintRadius: number }[] = []
+  const riverQuery = worldRiverQuery() ?? undefined
+  for (const cell of cellsWithinRadius({ gx: 0, gz: 0 }, 1)) {
+    if (cell.gx === 0 && cell.gz === 0) continue
+    const probe = probeSettlementSite(
+      cell,
+      seed,
+      chunkManager.sampleHeight,
+      config.terrain.waterLevel,
+      HOME_RADIUS,
+      {
+        sampleContinentalness: chunkManager.sampleContinentalness,
+        sampleMountainRidge: chunkManager.sampleMountainRidge,
+        sampleMoistureRegion: chunkManager.sampleMoistureRegion,
+      },
+      config.terrain.heightScale,
+      config.terrain.region,
+      config.settlements.homeSize,
+      riverQuery,
+    )
+    if (!probe.site || !probe.terrain) continue
+    const size = probe.wouldBeOutpost ? 'OUTPOST' : probe.provisionalSize
+    const character = resolveSettlementCharacter({
+      seedForCell: cellSeed(seed, cell),
+      isHome: false,
+      size,
+      terrain: probe.terrain,
+    })
+    if (character !== 'closed') continue
+    out.push({
+      id: cellKey(cell),
+      x: probe.site.x,
+      z: probe.site.z,
+      footprintRadius: villageSizeConfig(size).footprintRadius,
+    })
+  }
+  out.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  return out
+}
+
 function buildFauna(
   scene: Scene,
   chunkManager: ChunkManager,
@@ -675,6 +721,12 @@ function buildFauna(
    *  itself never imports `createCaves.ts`. */
   caves?: Caves,
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
+  closedSettlements?: readonly {
+    id: string
+    x: number
+    z: number
+    footprintRadius: number
+  }[],
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
 
@@ -758,6 +810,7 @@ function buildFauna(
     occupantBindings,
     chunkManager.sampleBridgeDeck,
     onAnimalDeathSound,
+    closedSettlements,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
@@ -1931,6 +1984,7 @@ async function buildWorldSystems(
               initialPersistentOccupants,
               caves,
               onAnimalDeathSound,
+              collectNearbyClosedSettlements(config.seed, chunkManager, config),
             )
           } finally {
             bootMarkEnd('background:buildFauna')

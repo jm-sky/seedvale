@@ -2,7 +2,7 @@ import type { Role } from '../ai/characters'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { FamilyDef, FamilyMember, VillageSize } from './families'
-import type { FoodSourceType } from './villagePlan'
+import type { FoodSourceType, SettlementCharacter } from './villagePlan'
 import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
 import { createSeededRandom } from '../world/parseSeed'
 
@@ -26,6 +26,8 @@ export type ProfessionStaffingContext = {
   dominantResource: NaturalResource | null
   isHome: boolean
   seed: number
+  /** Settlement archetype — only `guard` policy reads this in v1. */
+  character?: SettlementCharacter
 }
 
 type StaffingSignals = {
@@ -36,6 +38,7 @@ type StaffingSignals = {
   mappedResourceRole: Role | undefined
   adultCapacity: number
   isHome: boolean
+  character: SettlementCharacter
 }
 
 type RoleStaffingPolicy = {
@@ -128,13 +131,18 @@ const ROLE_STAFFING_POLICY: Record<Role, RoleStaffingPolicy> = {
   },
   guard: {
     basePriority: (s) => {
+      if (s.character === 'closed') {
+        if (s.adultCapacity >= 3) return 'strong'
+        return 'normal'
+      }
       if (s.adultCapacity >= 6) return 'strong'
       if (s.adultCapacity >= 3) return 'normal'
       return 'weak'
     },
     afterDuplicate: (copies, base, s) => {
       if (copies <= 0) return base
-      if (s.adultCapacity < 6) return 'excluded'
+      const extraGuardFloor = s.character === 'closed' ? 3 : 6
+      if (s.adultCapacity < extraGuardFloor) return 'excluded'
       return demoteEachCopy(base, copies, 'weak')
     },
   },
@@ -423,6 +431,7 @@ export function resolveInitialProfessionStaffing(
     mappedResourceRole: mappedResourceRole(context.dominantResource),
     adultCapacity,
     isHome: context.isHome,
+    character: context.character ?? 'default',
   }
 
   const assigned = new Map<string, Role>()

@@ -9,6 +9,15 @@ import type { VillageSize } from './families'
  *  `settlementGenerator.ts` (which re-exports the type for existing callers). */
 export type FoodSourceType = 'field' | 'fishing' | 'foraging' | 'garden'
 
+/**
+ * Static settlement archetype (plan settlements-010). Resolved once at
+ * generation from world seed + cell + terrain; never persisted and never
+ * mutated at runtime. V1 only adds `closed`.
+ *
+ * @domain settlements
+ */
+export type SettlementCharacter = 'default' | 'closed'
+
 /** Stable generation context for one settlement — why this cell is this
  *  village. Plain data only; no Three.js / runtime agents (plan 047). */
 export type VillageIdentity = {
@@ -21,6 +30,9 @@ export type VillageIdentity = {
   foodSourceType: FoodSourceType
   name: string
   nameCulture: NameCulture
+  /** Generation-time archetype — layout/staffing/social/fauna read this;
+   *  none of those consumers owns or mutates it (plan settlements-010). */
+  character: SettlementCharacter
 }
 
 /** Circular footprint for v1 — radius comes from centralized size config. */

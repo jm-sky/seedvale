@@ -25,6 +25,7 @@ function planWith(buildings: VillageBuildingPlan[]): VillagePlan {
       foodSourceType: 'garden',
       name: 'Test',
       nameCulture: 'polish',
+      character: 'default',
     },
     site: { x: 0, z: 0, y: 0, radius: 20 },
     boundary: { kind: 'circle', x: 0, z: 0, radius: 20 },

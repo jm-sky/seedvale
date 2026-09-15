@@ -1,7 +1,7 @@
 # Plan: Closed and cautious settlement character
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser checks are User-owned)
 **Priority:** medium · **Effort:** M
 **Model:** Opus, Sonnet
 **Depends on:** none

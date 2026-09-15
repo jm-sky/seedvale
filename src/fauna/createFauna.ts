@@ -62,6 +62,12 @@ import {
   wolfDenInitialFillVariant,
 } from './animalVariants'
 import {
+  canBumpClosedPressureSpawner,
+  closedPressurePlacementSeed,
+  type ClosedSettlementSite,
+  resolveClosedPredatorPressure,
+} from './closedPredatorPressure'
+import {
   HERD_CLUSTER_RADIUS,
   HERD_SPECIES,
   JUVENILE_SPAWN_CHANCE,
@@ -663,6 +669,11 @@ export async function createFauna(
   /** Death vocal at `collapse()` (S26) — forwarded into every `AnimalAgent`
    *  this factory spawns, same optional convention as `onAnimalDeath`. */
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
+  /** Nearby closed settlements whose configured predator pressure this
+   *  home-centric fauna build may fill (plan settlements-010). Optional so
+   *  existing callers/tests keep compiling. Placement uses a dedicated RNG,
+   *  never the fauna `0xfa11` stream. */
+  closedSettlements?: readonly ClosedSettlementSite[],
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
 
@@ -754,11 +765,12 @@ export async function createFauna(
     maxDist: number,
     filter?: (x: number, z: number) => boolean,
     maxAttempts = 24,
+    rng: () => number = random,
   ): { x: number, z: number } | null => {
     const clampRadius = Math.max(homeRadius - 4, maxDist)
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const angle = random() * Math.PI * 2
-      const dist = minDist + random() * (maxDist - minDist)
+      const angle = rng() * Math.PI * 2
+      const dist = minDist + rng() * (maxDist - minDist)
       const x = cx + Math.cos(angle) * dist
       const z = cz + Math.sin(angle) * dist
       if (Math.abs(x - cx) > clampRadius || Math.abs(z - cz) > clampRadius) continue
@@ -1144,6 +1156,87 @@ export async function createFauna(
     label.position.set(extra.x, groundY + CAVE_LABEL_HEIGHT, extra.z)
     scene.add(label)
     spawnerLabels.push({ id: extra.id, type: extra.type, object: label, el, marker: null, lastOpacity: -1 })
+  }
+
+  if (isSystemEnabled('animals') && (closedSettlements?.length ?? 0) > 0) {
+    const pressure = resolveClosedPredatorPressure(
+      spawners.map((spawner) => ({
+        id: spawner.id,
+        x: spawner.x,
+        z: spawner.z,
+        type: spawner.type,
+        kind: spawner.kind,
+        maxPreyCount: spawner.maxPreyCount,
+      })),
+      closedSettlements ?? [],
+    )
+    for (const bump of pressure.capacityBumps) {
+      const spawner = spawnerById.get(bump.id)
+      if (!spawner || !canBumpClosedPressureSpawner(spawner)) continue
+      spawner.maxPreyCount = bump.maxPreyCount
+    }
+    for (const extra of pressure.extraSpawners) {
+      const rng = createSeededRandom(closedPressurePlacementSeed(seed, extra.id))
+      const minDist = extra.footprintRadius + spawnerMinOffset
+      const maxDist = extra.footprintRadius + spawnerMaxOffset
+      const filter = (x: number, z: number) => spawnerSiteOk(x, z) && farFromOtherSpawns(x, z)
+      const slopedFilter = (x: number, z: number) =>
+        filter(x, z) && measureSlope(x, z, CAVE_SLOPE_SAMPLE_RADIUS, sampleHeight).drop >= CAVE_MIN_SLOPE_DROP
+      const pos = findWalkableNear(extra.x, extra.z, minDist, maxDist, slopedFilter, 72, rng)
+        ?? findWalkableNear(extra.x, extra.z, minDist, maxDist, filter, 72, rng)
+      if (!pos) continue
+      placedSpawnPoints.push(pos)
+      const spawner: PreySpawner = {
+        ...pos,
+        type: extra.type,
+        kind: extra.kind,
+        respawnIntervalDays: extra.respawnIntervalDays,
+        maxPreyCount: extra.maxPreyCount,
+        id: extra.id,
+        daysSinceLastRespawn: 0,
+        state: 'active',
+        deathsThisCycle: 0,
+        disabledAtDay: null,
+        ...defaultSpawnPointScenarioFields(extra.type),
+      }
+      restoreSpawnPointState(spawner, initialSpawnerState?.get(spawner.id))
+      spawners.push(spawner)
+      spawnerById.set(spawner.id, spawner)
+
+      const groundY = sampleHeight(pos.x, pos.z)
+      const slope = measureSlope(pos.x, pos.z, CAVE_SLOPE_SAMPLE_RADIUS, sampleHeight)
+      const facingVillage = Math.atan2(pos.x - extra.x, pos.z - extra.z)
+      if (
+        extra.type === 'rockDen'
+        && terrainCarving
+        && terrainCarving.sampleMountainRidge(pos.x, pos.z) <= CAVE_ROCK_MOUNTAIN_RIDGE_THRESHOLD
+      ) {
+        terrainCarving.modifyTerrain(pos.x, pos.z, CAVE_DEPRESSION_RADIUS, CAVE_DEPRESSION_DEPTH, 'system')
+      }
+      const mouth = createCaveMouth(1, rng())
+      mouth.position.set(pos.x, groundY, pos.z)
+      mouth.rotation.y = slope.drop >= CAVE_MIN_SLOPE_DROP ? slope.yaw : facingVillage
+      scene.add(mouth)
+      spawnerMeshes.push(mouth)
+      spawnerMeshById.set(spawner.id, mouth)
+
+      if (spawner.state === 'disabled' || spawner.state === 'recovering') {
+        tintPropMaterials(mouth, BURNED_SPAWNER_TINT_HEX)
+        if (terrainCarving?.scorchTerrain) {
+          terrainCarving.scorchTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH, 'system')
+        } else {
+          terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH, 'system')
+        }
+      }
+
+      const el = document.createElement('div')
+      el.className = 'npc-label'
+      el.textContent = SPAWNER_LABELS[extra.type]
+      const label = new CSS2DObject(el)
+      label.position.set(pos.x, groundY + CAVE_LABEL_HEIGHT, pos.z)
+      scene.add(label)
+      spawnerLabels.push({ id: extra.id, type: extra.type, object: label, el, marker: null, lastOpacity: -1 })
+    }
   }
 
   // Persistent occupants first (plan fauna-018) — tombstone skips, hydrate

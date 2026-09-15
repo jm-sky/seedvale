@@ -978,6 +978,7 @@ export async function createSettlement(
         household,
         npcState,
         getPlayerSocial: npcGetPlayerSocial,
+        settlementCharacter: def.plan.identity.character,
         mining,
         getNearbyPlayerWell,
         foodSources,

@@ -59,6 +59,14 @@ describe('computeAssistanceWillingness', () => {
     expect(computeAssistanceWillingness(social('trusted', 1))).toBeLessThanOrEqual(1)
     expect(computeAssistanceWillingness(social('stranger', 0))).toBeGreaterThanOrEqual(0)
   })
+
+  it('closed settlement character lowers willingness; trusted relation still outweighs it', () => {
+    const stranger = computeAssistanceWillingness(social('stranger'))
+    const closedStranger = computeAssistanceWillingness({ ...social('stranger'), settlementCharacter: 'closed' })
+    const closedTrusted = computeAssistanceWillingness({ ...social('trusted'), settlementCharacter: 'closed' })
+    expect(closedStranger).toBeLessThan(stranger)
+    expect(closedTrusted).toBeGreaterThan(stranger)
+  })
 })
 
 describe('violatesOwnNeedsGuard', () => {
