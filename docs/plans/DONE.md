@@ -5,6 +5,9 @@
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
 | `npc-040-ubc-profession-appearance-variants`                           | 2026-09-15 20:40:47 | —                   | `npc`            | —          |
+| `world-018-cave-aware-rich-finite-resource-deposits`                   | 2026-09-15 19:15:38 | —                   | `world`          | —          |
+| `settlements-010-closed-and-cautious-settlement-character`             | 2026-09-15 19:13:33 | —                   | `settlements`    | —          |
+| `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search` | 2026-09-15 17:56:53 | —                   | `quests-progression` | —          |
 | `settlements-npcs-036-generic-npc-owned-goods-trading`                 | 2026-09-15 16:57:35 | —                   | `settlements-npcs` | —          |
 | `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation` | 2026-09-15 16:49:30 | —                   | `quests-progression` | —          |
 | `world-terrain-017-abandoned-mountain-mine-landmark`                   | 2026-09-15 16:30:58 | —                   | `world-terrain`  | —          |

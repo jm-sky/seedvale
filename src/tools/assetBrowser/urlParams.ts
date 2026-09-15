@@ -1,4 +1,3 @@
-import { DEFAULT_HAIR_COLOR, parseHairColor, type HairColorId } from './hairTint'
 import type {
   BrowserState,
   FocusMode,
@@ -6,6 +5,7 @@ import type {
   PoseMode,
   ViewLayout,
 } from './state'
+import { DEFAULT_HAIR_COLOR, type HairColorId, parseHairColor } from './hairTint'
 
 /**
  * Deep-link / test helpers for the asset alignment browser.

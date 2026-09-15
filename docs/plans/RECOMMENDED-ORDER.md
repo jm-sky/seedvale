@@ -131,52 +131,44 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-15. `world-018` — **Cave-aware rich finite resource deposits**  
-  🔴 `M` · **Score:**  61  
-   → **unlocks:** 2/2
-
-16. `settlements-014` — **Persistent settlement definition worldgen cache**  
+15. `settlements-014` — **Persistent settlement definition worldgen cache**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-17. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+16. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-18. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+17. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-19. `settlements-npcs-022` — **Household help and age-based work participation**  
+18. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-20. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-21. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+20. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-22. `items-player-014` — **Rope-pullable resource transport**  
+21. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `tools-005` — **Seedvale Character Preparation Panel**  
+22. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `fauna-031` — **Wildlife habitat pressure assessment**  
+23. `fauna-031` — **Wildlife habitat pressure assessment**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-25. `items-player-032` — **NPC player-storage resource and context rules**  
+24. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
-   → **unlocks:** 0/0
-
-26. `settlements-010` — **Closed and cautious settlement character**  
-  🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
 ---
@@ -188,7 +180,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
-  - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
   - [`settlements-004-gold-economic-realization-and-source-entitlements.md`](settlements-004-gold-economic-realization-and-source-entitlements.md)
 - [`quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`](quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md)  
@@ -220,9 +211,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`](quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md)
   - [`quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`](quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md)
   - [`quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md`](quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md)
-- [`settlements-004-gold-economic-realization-and-source-entitlements.md`](settlements-004-gold-economic-realization-and-source-entitlements.md)  
-  is blocked by:
-  - [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)
 - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)  
   is blocked by:
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
