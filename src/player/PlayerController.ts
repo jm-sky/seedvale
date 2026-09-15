@@ -82,6 +82,8 @@ export const SPRINT_MULTIPLIER = 1.8
 /** Airborne lean (radians) when the bound rig has no jump clips. */
 const JUMP_TILT_MAX = 0.25
 const JUMP_TILT_FACTOR = 0.05
+/** Cap on XZ lock while `Jump_Land` plays and WASD is held (items-player-038). */
+const JUMP_LAND_MOVE_LOCK_SEC = 0.5
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
@@ -370,6 +372,7 @@ export class PlayerController {
   private aimDrawAction: THREE.AnimationAction | null = null
   private rangedReleaseAction: THREE.AnimationAction | null = null
   private jumpPhase: 'none' | 'start' | 'loop' | 'land' = 'none'
+  private jumpLandLockRemaining = 0
   private animations: THREE.AnimationClip[] = []
   private currentModelUrl = PLAYER_MODEL_URL
   private currentAnimationUrl: string | null = null
@@ -1015,7 +1018,7 @@ export class PlayerController {
     // transition that makes the mode meaningless, so this is the one place
     // it auto-deactivates.
     this.skills.sneak.active = false
-    this.jumpPhase = 'none'
+    this.endJumpPhase()
     if (this.crouchIdleAction) {
       this.playAction(this.crouchIdleAction)
       return
@@ -1063,7 +1066,7 @@ export class PlayerController {
     this.downedTimer = durationSec
     this.meleeAttacking = false
     this.rangedDrawing = false
-    this.jumpPhase = 'none'
+    this.endJumpPhase()
     this.skills.sneak.active = false
     if (this.deathAction) {
       this.playOnce(this.deathAction)
@@ -1106,7 +1109,7 @@ export class PlayerController {
     this.sprinting = false
     this.meleeAttacking = false
     this.rangedDrawing = false
-    this.jumpPhase = 'none'
+    this.endJumpPhase()
     // No riding animation clip exists on this rig (plan fauna-003 §7) — the
     // accepted fallback is a static seated pose, i.e. just Idle, correctly
     // positioned and moving with the mount, instead of the walk/run cycle
@@ -1215,7 +1218,14 @@ export class PlayerController {
     tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed, endurance, this.equipmentSprintStaminaMultiplier)
     if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting, dayLengthSec)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
-    if (this.moving) {
+    if (this.jumpPhase === 'land') {
+      this.jumpLandLockRemaining -= dt
+      if (this.jumpLandLockRemaining <= 0) {
+        this.endJumpPhase()
+        this.syncAnimation()
+      }
+    }
+    if (this.moving && this.jumpPhase !== 'land') {
       const baseSpeed = (this.sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED) * this.encumbranceSpeedMultiplier * this.equipmentSpeedMultiplier
       const speed = applySneakSpeedModifier(baseSpeed, this.skills.sneak.active)
       this.wish.normalize().multiplyScalar(speed * dt)
@@ -1318,6 +1328,8 @@ export class PlayerController {
       if (this.wish.lengthSq() > 0) {
         this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
       }
+    } else if (this.moving && this.jumpPhase === 'land' && this.wish.lengthSq() > 0) {
+      this.mesh.rotation.y = Math.atan2(this.wish.x, this.wish.z)
     }
 
     this.updateVerticalMotion(dt)
@@ -1405,7 +1417,7 @@ export class PlayerController {
     this.deathAction = null
     this.aimDrawAction = null
     this.rangedReleaseAction = null
-    this.jumpPhase = 'none'
+    this.endJumpPhase()
   }
 
   private readonly onMixerFinished = (event: { action: THREE.AnimationAction }): void => {
@@ -1415,14 +1427,19 @@ export class PlayerController {
         this.playAction(this.jumpLoopAction)
         return
       }
-      this.jumpPhase = 'none'
+      this.endJumpPhase()
       this.syncAnimation()
       return
     }
     if (event.action === this.jumpLandAction && this.jumpPhase === 'land') {
-      this.jumpPhase = 'none'
+      this.endJumpPhase()
       this.syncAnimation()
     }
+  }
+
+  private endJumpPhase(): void {
+    this.jumpPhase = 'none'
+    this.jumpLandLockRemaining = 0
   }
 
   private findAction(
@@ -1480,10 +1497,14 @@ export class PlayerController {
     if (landed) {
       if (this.jumpLandAction) {
         this.jumpPhase = 'land'
+        const duration = this.jumpLandAction.getClip().duration
+        this.jumpLandLockRemaining = this.moving
+          ? Math.min(JUMP_LAND_MOVE_LOCK_SEC, duration)
+          : duration
         this.playOnce(this.jumpLandAction)
         return
       }
-      this.jumpPhase = 'none'
+      this.endJumpPhase()
     }
     if (!grounded && this.jumpPhase === 'none' && this.jumpLoopAction) {
       this.jumpPhase = 'loop'
@@ -1627,7 +1648,7 @@ export class PlayerController {
     this.verticalVelocity = 0
     this.grounded = true
     this.jumpRequested = false
-    this.jumpPhase = 'none'
+    this.endJumpPhase()
     this.wasInWater = inWorldWater
     this.footstepAccum = 0
     this.modelRoot.rotation.x = 0
@@ -1652,7 +1673,7 @@ export class PlayerController {
       this.verticalVelocity = 0
       this.grounded = true
       this.jumpRequested = false
-      this.jumpPhase = 'none'
+      this.endJumpPhase()
       this.modelRoot.rotation.x = 0
       this.emitGroundTrace('swim', x, yBefore, z, groundedBefore, vyBefore, groundY)
       return
