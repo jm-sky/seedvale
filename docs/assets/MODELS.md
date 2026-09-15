@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-09-14 (procedural landmark variety M83–M87 — boat/shipwreck/tower/oldTree/wagon, plan world-terrain-027; previously rabbit `fauna/rabbit.glb` as M82; bear M61; settlement rat M81; wild boar M80; wearable armor M79; draft cart fauna-007; see earlier notes)
+**Last updated:** 2026-09-15 (UBC player Peasant/Ranger opt-in M92, plan items-player-033; jewelry loot ring_gold/ring_turquoise/ring_amethyst M88–M90; chest_prop_closed/open/ingots M91 in repo, not yet wired — see catalog task; previously procedural landmark variety M83–M87 — boat/shipwreck/tower/oldTree/wagon, plan world-terrain-027; rabbit `fauna/rabbit.glb` as M82; bear M61; settlement rat M81; wild boar M80; wearable armor M79; draft cart fauna-007; see earlier notes)
 
 ## How to use
 
@@ -114,6 +114,11 @@ If the feature needs no new model, do nothing to this file.
 | M85 | Stone tower landmark | Rare coastal/mountain `tower` landmark; dedicated stone tower (not settlement `watchtower.glb`) | `wired` | plan world-terrain-027 (`world/tower_stone.glb`) |
 | M86 | Old tree landmark | Rare natural `oldTree` landmark with local vegetation clearance; dedicated model (not scaled normal tree); not in `TreeLifecycle` | `wired` | plan world-terrain-027 (`nature/old_tree.glb`) |
 | M87 | Abandoned wagon landmark | Road-adjacent `wagon` landmark; reuses MegaKit merchant wagon mesh as a static prop (distinct from player draft `parked/cart.glb`, M78) | `wired` | plan world-terrain-027 (`settlement/megakit/wagon.glb`) |
+| M88 | Złoty pierścień (`ring_gold`) | Sprzedawalna biżuteria (Kupiec stock), bez mechaniki noszenia — `EquipmentSlot` nie ma slotu `finger`. Quaternius Ultimate RPG Pack `Ring1`, FBX2glTF → gltfpack -cc | `wired` | catalog task 2026-09-15 (`items/ring_gold.glb`) |
+| M89 | Pierścień z turkusem (`ring_turquoise`) | j.w., `Ring4` (oczko `Cyan`) | `wired` | catalog task 2026-09-15 (`items/ring_turquoise.glb`) |
+| M90 | Pierścień z ametystem (`ring_amethyst`) | j.w., `Ring5` (oczko `Lilac`) | `wired` | catalog task 2026-09-15 (`items/ring_amethyst.glb`) |
+| M91 | Kufer — closed/open/ingots prop | Quaternius Ultimate RPG Pack `Chest_Closed`/`Chest_Open`/`Chest_Ingots`, FBX2glTF → gltfpack -cc. Kandydat na zamiennik proceduralnego `createPlacedContainerProp()` (`world/containerProp.ts`) używanego przez magazyn gracza, meble domu i skrzynie-skarby w świecie — dałby realny stan zamknięta/otwarta, którego dziś brak. **Nie wpięty** — wymaga osobnego planu (dotyka `containerProp.ts`, `worldGeneratedContainers.ts`, `createPlacedContainers.ts`, `settlement/props.ts`) | `in repo` | catalog task 2026-09-15; zob. `docs/plans/LOOSE-ENDS.md` (`items/chest_prop_closed.glb`, `chest_prop_open.glb`, `chest_prop_ingots.glb`) |
+| M92 | UBC player Peasant/Ranger (opt-in) | Quaternius Universal Base Characters + Fantasy outfits + UAL1 subset. Male peasant/ranger composed (outfit + sliced Superhero head + Hair_SimpleParted) and UAL1 in-place clips `Idle_Loop`/`Walk_Loop`/`Sprint_Loop`/`Sword_Attack`. Wired only via `?player=peasant` / `?player=ranger`; default remains Adventurer | `wired` (opt-in URL) | plan items-player-033 (`characters/ubc/male_peasant.glb`, `male_ranger.glb`, `ual1_player.glb`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -121,12 +126,12 @@ Keep this section short. Prefer CREDITS for the full credited set.
 
 | Area | Examples |
 |------|----------|
-| Characters | Modular men/women NPCs, Adventurer player |
+| Characters | Modular men/women NPCs, Adventurer player; UBC Peasant/Ranger via `?player=` (M92) |
 | Fauna | wolf, fox, deer, stag, bear (M61), rabbit (M82), boar (`wild_boar.glb`, M80; `?boarGlb=0` reverts to procedural); livestock chicken/sheep/cow/horse/donkey/dog (Husky+Shiba, see M73); rooster (procedural placeholder, see M72); duck (procedural); settlement rats (`rat.glb`, M81) |
 | Nature (active) | trees/bushes/pines, fauna thicket/zagajnik (`tree_a`/`tree_b`/`tree_c`/`birch_1`), fern undergrowth, cactus/reed (+reed cluster, see M76), lily pad (shallow water, see M74), seaweed (shallow coastal ocean, see M76), rock/log, ore piles, cemetery / gravestones, old tree landmark (M86) |
 | World landmarks (active) | shoreline boat (M83), shipwreck (M84), stone tower (M85), abandoned wagon (M87); interact via `interact_landmark` |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169), blacksmith anvil + grind workbench (plan settlements-npcs-002) |
-| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork); backpack, saddlebags, pan, rope, chest, coin, tomato, roasted_meat/beef, fish (2026-09-04 asset drop); 18 skill books sharing 3 closed-book GLBs (plan items-player-016); wearable body armor leather_armor/chainmail, ground/inventory only (plan items-player-029, see M79) |
+| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork); backpack, saddlebags, pan, rope, chest, coin, tomato, roasted_meat/beef, fish (2026-09-04 asset drop); 18 skill books sharing 3 closed-book GLBs (plan items-player-016); wearable body armor leather_armor/chainmail, ground/inventory only (plan items-player-029, see M79); ring_gold/ring_turquoise/ring_amethyst loot jewelry (M88–M90) |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death); harvested remains (pile / large bone / hide) |
 

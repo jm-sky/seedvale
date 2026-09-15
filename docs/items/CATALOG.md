@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-09-15 (plan quests-progression-035 — story/other item categories)
+**Last updated:** 2026-09-15 (ring_gold/ring_turquoise/ring_amethyst loot jewelry added, M88–M90; previously plan quests-progression-035 — story/other item categories)
 
 ## Quick rules
 
@@ -133,6 +133,9 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | broadhead_arrow | strzała łowiecka | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +4 damage over `arrow` |
 | war_arrow | strzała bojowa | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +8 damage over `arrow`, heaviest |
 | chest | skrzynia | — | — | none (Kupiec) | `items/chest.glb` (M53) | plan 164; generic player storage container — place with Inventory „Postaw”, `[E]` open transfer screen / `[R]` pick up (with contents) on the world prop, Quick Actions → „Odłóż skrzynię” while carrying |
+| ring_gold | złoty pierścień | — | — | none (Kupiec) | `items/ring_gold.glb` (M88) | catalog task 2026-09-15; Quaternius Ultimate RPG Pack `Ring1`; sprzedawalna biżuteria, bez mechaniki noszenia (`EquipmentSlot` nie ma slotu `finger`) |
+| ring_turquoise | pierścień z turkusem | — | — | none (Kupiec) | `items/ring_turquoise.glb` (M89) | catalog task 2026-09-15; Quaternius Ultimate RPG Pack `Ring4`; j.w. |
+| ring_amethyst | pierścień z ametystem | — | — | none (Kupiec) | `items/ring_amethyst.glb` (M90) | catalog task 2026-09-15; Quaternius Ultimate RPG Pack `Ring5`; j.w. |
 | key | klucz | — | — | world (systemic treasure) | procedural | plan world-024; generic instance-backed key — identity is `ItemInstance.id`, not a per-site kind; unlocks one matching systemic chest |
 | backpack | plecak | — | — | none (Kupiec) | `items/backpack.glb` (M55) | plan 186; ordinary carried item — simply holding it in `Inventory` raises `Inventory.maxWeight` by `ITEM_CATALOG.backpack.carryCapacityBonus` (+15 kg, stacks); must fit under the pre-bonus capacity to buy/pick up; no equip/backpack-slot system |
 | tree_seed | nasiono drzewa | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź drzewo" — species picked from local habitat suitability, not a per-species item |

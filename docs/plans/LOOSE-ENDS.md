@@ -33,6 +33,14 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 - [ ] 2026-09-15 — Village one-time spawners (`shovel`/`axe`/`pitchfork`/`sickle` in `createItemSpawners.ts`) use `respawnTime = Infinity` with generated `spawner:${index}` ids, so a `WorldBundle` rebuild rematerializes them the same way the authored treasure map used to. `consumedWorldPickupIds` (quests-progression-036) only gates `extraOneTimePickups` with stable authored ids; village tools need their own stable ids before they can reuse that set.
 - [ ] 2026-08-25 — `buildHouseWallCollidersLocal()` nadal iteruje tylko `def.walls`; `def.corners` nie mają własnego collidera. Zwykle maskują to sąsiednie ściany, ale corner przy otworze/door module nie ma takiego invariant — przy najbliższym dotykaniu house collision dodać jawne pokrycie/test.
+- [ ] 2026-09-15 — `world/containerProp.ts`'s `createPlacedContainerProp()` renderuje identycznym proceduralnym box+lid meshem magazyn gracza, meble domu **i** wszystkie skrzynie-skarby w świecie (dark forest, systemic treasure sites, dungeon/cave loot) — bez rozróżnienia stanu zamknięta/otwarta/złupiona. `public/models/items/chest_prop_closed.glb` / `chest_prop_open.glb` / `chest_prop_ingots.glb` (Quaternius Ultimate RPG Pack, `docs/assets/MODELS.md` M91, catalog task 2026-09-15) są gotowe jako realny zamiennik z prawdziwym przełączaniem stanu (np. wg `isWorldContainerLooted`/emptiness). Dotyka `containerProp.ts`, `worldGeneratedContainers.ts`, `createPlacedContainers.ts`, `settlement/props.ts` — osobny plan, świadomie nie zrobiony przy okazji dodawania assetów do katalogu.
+
+## Characters / presentation
+
+- [ ] 2026-09-15 — UBC player ALFA (`items-player-033`) jest tylko męski Peasant/Ranger przez `?player=`. Żeńskie outfity (`Female_Peasant` / `Female_Ranger`) i fryzury są w `_temp/` na tym samym rigu — nie robić osobnego pipeline, reuse `compose_ubc_player.py`.
+- [ ] 2026-09-15 — UAL2 (combat/work: `TreeChopping_Loop`, `Walk_Carry_Loop`, `Farm_*`) jest na tym samym UBC rigu co UAL1; dodać subset analogicznie do `ual1_player.glb`, bez retargetu. Jump/crouch/swim clipy z UAL1 czekają aż `PlayerController` zacznie je napędzać.
+- [ ] 2026-09-15 — NPC nadal na Ultimate Modular Men/Women (inny szkielet). Retarget UAL→Modular albo migracja NPC na UBC to osobna praca; nie mieszać clipów między rygami.
+- [ ] 2026-09-15 — `HELD_ATTACH` jest strojone pod Adventurer `WristR` (+Y ≈ palce). UBC `hand_r` może trzymać narzędzie krzywo; korekta dopiero po weryfikacji w przeglądarce, bez drugiego zestawu offsetów „na zapas”.
 
 ## Off-screen simulation
 

@@ -97,6 +97,10 @@ export type ItemKind =
   | 'long_bow'
   /** Plan quests-progression-025 — identity-backed family heirloom. */
   | 'signet_ring'
+  /** Sellable jewelry loot (Quaternius Ultimate RPG Pack) — no wear mechanics; `EquipmentSlot` has no `finger` slot. */
+  | 'ring_gold'
+  | 'ring_turquoise'
+  | 'ring_amethyst'
   /** Plan quests-progression-026 — bandit-cache ledger and marked stolen property. */
   | 'bandit_ledger'
   | 'marked_valuable'
@@ -1039,6 +1043,33 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XS',
     color: 0xc9a227,
     description: 'Stary pierścień z herbem rodziny. Rozpoznawalny dla tych, którzy pamiętają zaginionego przodka.',
+  },
+  ring_gold: {
+    kind: 'ring_gold',
+    label: 'złoty pierścień',
+    categories: ['resource'],
+    weight: 0.03,
+    size: 'XXS',
+    color: 0xd4af37,
+    description: 'Prosta złota obrączka bez kamienia. Niewielka, ale zawsze coś warta.',
+  },
+  ring_turquoise: {
+    kind: 'ring_turquoise',
+    label: 'pierścień z turkusem',
+    categories: ['resource'],
+    weight: 0.03,
+    size: 'XXS',
+    color: 0x40e0d0,
+    description: 'Złoty pierścień z błyszczącym turkusowym kamieniem.',
+  },
+  ring_amethyst: {
+    kind: 'ring_amethyst',
+    label: 'pierścień z ametystem',
+    categories: ['resource'],
+    weight: 0.03,
+    size: 'XXS',
+    color: 0x9966cc,
+    description: 'Złoty pierścień z fioletowym kamieniem, oszlifowanym jak ametyst.',
   },
   bandit_ledger: {
     kind: 'bandit_ledger',
