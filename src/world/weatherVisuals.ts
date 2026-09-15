@@ -1,4 +1,5 @@
 import { Color } from 'three'
+import type { TerrainVisualHorizon } from '../terrain/terrainVisualHorizon'
 import type { WeatherState, WeatherType } from './weather'
 
 /** Weather → fog/light/sky-dome overlay applied on top of `skyParamsFromTime`'s
@@ -59,6 +60,24 @@ export function applyWeatherOverlay(
     fogFar: Math.max(clampedNear + 6, fogFar),
     lightScale,
   }
+}
+
+/** Caps outdoor fog distances by the terrain visual horizon (plan
+ *  world-terrain-035) so terrain-dependent meshes fade out before
+ *  unsupported streamed terrain can be exposed. Never weakens weather fog —
+ *  only pulls `fogNear`/`fogFar` nearer, matching `horizon`'s own
+ *  `fadeStart`/`opaqueAt` clamp style so near stays below far. Fog color is
+ *  untouched, keeping day/night/weather as the only atmospheric-color source.
+ *
+ * @domain world-terrain
+ */
+export function capOutdoorFogToTerrainHorizon(
+  overlay: WeatherVisualOverlay,
+  horizon: TerrainVisualHorizon,
+): WeatherVisualOverlay {
+  const fogFar = Math.min(overlay.fogFar, horizon.opaqueAt)
+  const fogNear = Math.min(overlay.fogNear, horizon.fadeStart, Math.max(8, fogFar - 6))
+  return { ...overlay, fogNear, fogFar }
 }
 
 export type WeatherSkyOverlay = {

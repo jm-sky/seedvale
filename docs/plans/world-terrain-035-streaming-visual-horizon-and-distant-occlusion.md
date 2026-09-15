@@ -1,7 +1,7 @@
 # Plan: Streaming visual horizon and distant occlusion
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented, `tsc`/`test` all green. Browser/manual verification (mountain fade, floating-house check, cave-mouth sightlines, weather-fog-not-weakened, cave-interior-fog-unaffected) not performed — belongs to the User.
 **Priority:** high · **Effort:** M
 **Depends on:** world-terrain-026
 **Domain:** `world-terrain`

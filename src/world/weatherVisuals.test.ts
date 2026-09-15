@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import type { TerrainVisualHorizon } from '../terrain/terrainVisualHorizon'
 import type { WeatherState } from './weather'
 import {
   applyLightningFlash,
   applyWeatherOverlay,
   applyWeatherSkyOverlay,
+  capOutdoorFogToTerrainHorizon,
   fogColorLuminance,
   GRASS_WIND_AMP_MAX,
   grassWindAmpFor,
@@ -92,6 +94,62 @@ describe('resolveSceneFog (cave interior)', () => {
     expect(afterExit.fogColor).toBe(rainy.fogColor)
     expect(afterExit.fogNear).toBe(rainy.fogNear)
     expect(afterExit.fogFar).toBe(rainy.fogFar)
+  })
+})
+
+const horizon: TerrainVisualHorizon = { fadeStart: 120, opaqueAt: 160 }
+
+describe('capOutdoorFogToTerrainHorizon', () => {
+  it('caps clear/day outdoor far distance to opaqueAt', () => {
+    const clear = applyWeatherOverlay(baseFog, weather({ type: 'clear', intensity: 0 }))
+    const capped = capOutdoorFogToTerrainHorizon(clear, horizon)
+    expect(clear.fogFar).toBeGreaterThan(horizon.opaqueAt)
+    expect(capped.fogFar).toBe(horizon.opaqueAt)
+  })
+
+  it('caps outdoor near distance to fadeStart without crossing far', () => {
+    const clear = applyWeatherOverlay(baseFog, weather({ type: 'clear', intensity: 0 }))
+    const capped = capOutdoorFogToTerrainHorizon(clear, horizon)
+    expect(capped.fogNear).toBeLessThanOrEqual(horizon.fadeStart)
+    expect(capped.fogNear).toBeLessThan(capped.fogFar)
+  })
+
+  it('never pushes fog farther away than the horizon allows', () => {
+    const clear = applyWeatherOverlay(baseFog, weather({ type: 'clear', intensity: 0 }))
+    const capped = capOutdoorFogToTerrainHorizon(clear, horizon)
+    expect(capped.fogFar).toBeLessThanOrEqual(clear.fogFar)
+    expect(capped.fogNear).toBeLessThanOrEqual(clear.fogNear)
+  })
+
+  it('leaves already-nearer weather fog (storm) unchanged', () => {
+    const storm = applyWeatherOverlay(baseFog, weather({ type: 'storm', intensity: 1 }))
+    const capped = capOutdoorFogToTerrainHorizon(storm, horizon)
+    expect(storm.fogFar).toBeLessThan(horizon.opaqueAt)
+    expect(capped.fogFar).toBe(storm.fogFar)
+    expect(capped.fogNear).toBe(storm.fogNear)
+  })
+
+  it('does not touch fog color', () => {
+    const clear = applyWeatherOverlay(baseFog, weather({ type: 'clear', intensity: 0 }))
+    const capped = capOutdoorFogToTerrainHorizon(clear, horizon)
+    expect(capped.fogColor).toBe(clear.fogColor)
+  })
+
+  it('cave interior fog remains exact CAVE_INTERIOR_FOG_* regardless of the horizon', () => {
+    const clear = applyWeatherOverlay(baseFog, weather({ type: 'clear', intensity: 0 }))
+    const capped = capOutdoorFogToTerrainHorizon(clear, horizon)
+    const cave = resolveSceneFog(capped, true)
+    const caveUncapped = resolveSceneFog(clear, true)
+    expect(cave).toEqual(caveUncapped)
+  })
+
+  it('lightning flash still boosts light after the horizon cap without moving fog beyond it', () => {
+    const storm = applyWeatherOverlay(baseFog, weather({ type: 'storm', intensity: 1 }))
+    const capped = capOutdoorFogToTerrainHorizon(storm, horizon)
+    const flashed = applyLightningFlash(capped, 0.8)
+    expect(flashed.lightScale).toBeGreaterThan(capped.lightScale)
+    expect(flashed.fogFar).toBe(capped.fogFar)
+    expect(flashed.fogFar).toBeLessThanOrEqual(horizon.opaqueAt)
   })
 })
 

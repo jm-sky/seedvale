@@ -11,6 +11,8 @@ import { applyWeatherOverlay, resolveSceneFog } from '../weatherVisuals'
 import {
   createCaveHeightfieldMaterial,
   createCaveHeightfieldPresentation,
+  createCaveMouthProxy,
+  createCaveMouthProxyMaterial,
   createMouthUndersideMaskMaterial,
   exemptCavePresentationFromSceneFog,
 } from './caveHeightfieldPresentation'
@@ -102,5 +104,47 @@ describe('cave presentation scene fog opt-out', () => {
       fogNear: outdoor.fogNear,
       fogFar: outdoor.fogFar,
     })
+  })
+})
+
+describe('distant mouth proxy fog participation (plan world-terrain-035)', () => {
+  it('createCaveMouthProxyMaterial is fog-enabled and distinct from the fog-exempt mask material', () => {
+    const proxyMaterial = createCaveMouthProxyMaterial()
+    const maskMaterial = createMouthUndersideMaskMaterial()
+    expect(proxyMaterial.fog).toBe(true)
+    expect(maskMaterial.fog).toBe(false)
+    expect(proxyMaterial).not.toBe(maskMaterial)
+  })
+
+  it('a proxy built with createCaveMouthProxyMaterial keeps fog enabled on its mesh', () => {
+    const field = buildCaveHeightfieldRepresentation(
+      buildCaveHeightfieldFixture('basic'),
+      walk,
+      TEST_CONFIG,
+    ).heightfield
+    const proxy = createCaveMouthProxy({
+      field,
+      walkSurfaceAt: walk,
+      material: createCaveMouthProxyMaterial(),
+    })
+    expect(proxy).not.toBeNull()
+    expect(meshMaterialsFogDisabled(proxy!)).toBe(false)
+  })
+
+  it('does not mutate the shared full-presentation mask material', () => {
+    const maskMaterial = createMouthUndersideMaskMaterial()
+    maskMaterial.userData.sharedGpu = true
+    const field = buildCaveHeightfieldRepresentation(
+      buildCaveHeightfieldFixture('basic'),
+      walk,
+      TEST_CONFIG,
+    ).heightfield
+    createCaveMouthProxy({
+      field,
+      walkSurfaceAt: walk,
+      material: createCaveMouthProxyMaterial(),
+    })
+    expect(maskMaterial.fog).toBe(false)
+    expect(maskMaterial.userData.sharedGpu).toBe(true)
   })
 })

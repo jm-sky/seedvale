@@ -162,14 +162,20 @@ function createParticlePool(
   }
 
   const material = new THREE.ShaderMaterial({
-    uniforms: {
-      map: { value: fireAtlas },
-      pointSize: { value: tuning.size * scale },
-      intensity: { value: 1 },
-    },
+    uniforms: THREE.UniformsUtils.merge([
+      THREE.UniformsLib.fog,
+      {
+        map: { value: fireAtlas },
+        pointSize: { value: tuning.size * scale },
+        intensity: { value: 1 },
+      },
+    ]),
+    fog: true,
 
     vertexShader: options.textured
       ? `
+        #include <fog_pars_vertex>
+
         attribute float atlasIndex;
         attribute float sizeMul;
         attribute float rotation;
@@ -192,9 +198,13 @@ function createParticlePool(
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
           gl_PointSize = pointSize * sizeMul * (300.0 / -mvPosition.z);
           gl_Position = projectionMatrix * mvPosition;
+
+          #include <fog_vertex>
         }
       `
       : `
+        #include <fog_pars_vertex>
+
         attribute vec3 color;
         varying vec3 vColor;
 
@@ -205,11 +215,15 @@ function createParticlePool(
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
           gl_PointSize = pointSize * (300.0 / -mvPosition.z);
           gl_Position = projectionMatrix * mvPosition;
+
+          #include <fog_vertex>
         }
       `,
 
     fragmentShader: options.textured
       ? `
+        #include <fog_pars_fragment>
+
         uniform sampler2D map;
         uniform float intensity;
 
@@ -247,9 +261,13 @@ function createParticlePool(
           float alphaFade = 1.0 - vAge * vAge;
 
           gl_FragColor = vec4(texel.rgb * flameColor * intensity, texel.a * alphaFade * intensity);
+
+          #include <fog_fragment>
         }
       `
       : `
+        #include <fog_pars_fragment>
+
         uniform float intensity;
         varying vec3 vColor;
 
@@ -258,6 +276,8 @@ function createParticlePool(
           float falloff = smoothstep(0.5, 0.05, length(pc));
           if (falloff <= 0.001) discard;
           gl_FragColor = vec4(vColor * intensity, falloff * intensity);
+
+          #include <fog_fragment>
         }
       `,
 

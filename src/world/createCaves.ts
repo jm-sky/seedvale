@@ -57,6 +57,7 @@ import {
 import {
   createCaveHeightfieldPresentation,
   createCaveMouthProxy,
+  createCaveMouthProxyMaterial,
   createMouthUndersideMaskMaterial,
 } from './caves/caveHeightfieldPresentation'
 import {
@@ -567,6 +568,10 @@ export function createCaves(
   caveMaterial.userData.sharedGpu = true
   const maskMaterial = createMouthUndersideMaskMaterial()
   maskMaterial.userData.sharedGpu = true
+  // Distant mouth proxy uses its own fog-enabled material (plan
+  // world-terrain-035) so it honors the outdoor terrain-visual-horizon fog
+  // without touching full cave presentation's fog-exempt `maskMaterial`.
+  const mouthProxyMaterial = createCaveMouthProxyMaterial()
   const poolWaterMaterial = createWaterMaterial({ ocean: 0, waterLevel: 0 })
   poolWaterMaterial.userData.sharedGpu = true
   const poolPresentationsByCave = new Map<string, CaveUndergroundPoolPresentation>()
@@ -642,7 +647,7 @@ export function createCaves(
       const created = createCaveMouthProxy({
         field: v2.heightfield,
         walkSurfaceAt: v2.walkSurfaceAt,
-        material: maskMaterial,
+        material: mouthProxyMaterial,
       })
       if (!created) return
       mouthProxies.set(caveId, created)
@@ -987,6 +992,7 @@ export function createCaves(
       chunkManager.clearTerrainCutouts(TERRAIN_CUTOUT_OWNER_KEY)
       disposeCaveHeightfieldMaterialGpu(caveMaterial)
       maskMaterial.dispose()
+      mouthProxyMaterial.dispose()
       poolWaterMaterial.dispose()
     },
   }

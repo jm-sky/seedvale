@@ -163,7 +163,7 @@ import { createLightningRuntime } from '../world/lightningEvents'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { resolveOffscreenTransportArrivals } from '../world/transportOffscreen'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
-import { applyLightningFlash, applyWeatherOverlay, applyWeatherSkyOverlay, grassWindAmpFor, resolveSceneFog } from '../world/weatherVisuals'
+import { applyLightningFlash, applyWeatherOverlay, applyWeatherSkyOverlay, capOutdoorFogToTerrainHorizon, grassWindAmpFor, resolveSceneFog } from '../world/weatherVisuals'
 import { showCountAcquisitionToast } from './actions/acquisitionFeedback'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
 import { buildHuntableLivestock } from './faunaEncounterComposition'
@@ -268,6 +268,7 @@ function applyDayNight(
   chunkManager: WorldBundle['chunkManager'],
   ocean: WorldBundle['ocean'],
   inCaveInterior: boolean,
+  horizon: WorldBundle['terrainVisualHorizon'],
   flashAmount = 0,
 ): ReturnType<typeof skyParamsFromTime> {
   const p = skyParamsFromTime(timeOfDay)
@@ -289,7 +290,8 @@ function applyDayNight(
   // shading keeps one time-of-day signal. Lightning flash is a short extra
   // overlay and never writes day/night state.
   const overlay = applyWeatherOverlay({ fogColor: p.fogColor, fogNear: p.fogNear, fogFar: p.fogFar }, weather)
-  const presented = applyLightningFlash(overlay, inCaveInterior ? 0 : flashAmount)
+  const cappedOverlay = capOutdoorFogToTerrainHorizon(overlay, horizon)
+  const presented = applyLightningFlash(cappedOverlay, inCaveInterior ? 0 : flashAmount)
   lights.sun.intensity = p.sunIntensity * presented.lightScale
   lights.ambient.intensity = p.ambientIntensity * presented.lightScale
   lights.hemi.intensity = p.hemiIntensity * presented.lightScale
@@ -882,6 +884,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       bundle.chunkManager,
       bundle.ocean,
       lastAppliedInCaveInterior,
+      bundle.terrainVisualHorizon,
       lightningFlashAmount,
     )
     bundle.settlementsManager.setDayNight(1 - cachedSky.dayFactor)

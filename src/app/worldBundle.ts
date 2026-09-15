@@ -104,6 +104,7 @@ import {
   type ResourceDeposits,
   type SettlementMiningHooks,
 } from '../terrain/resourceDeposits'
+import { terrainVisualHorizon, type TerrainVisualHorizon } from '../terrain/terrainVisualHorizon'
 import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '../world/bloodTraces'
 import { preloadCartProp } from '../world/cartProp'
 import {
@@ -273,6 +274,10 @@ export function homeChunks(): ChunkCoord[] {
  */
 export type WorldBundle = {
   chunkManager: ChunkManager
+  /** Presentation-only outdoor fog cap derived from `chunkManager`'s streaming
+   *  config (plan world-terrain-035) — recomputed on every rebuild alongside
+   *  the rest of this bundle. See `terrain/terrainVisualHorizon.ts`. */
+  terrainVisualHorizon: TerrainVisualHorizon
   bloodTraces: BloodTraceSystem
   ocean: WorldOcean
   settlementsManager: SettlementsManager
@@ -1578,6 +1583,10 @@ async function buildWorldSystems(
 
   const bundle: WorldBundle = {
     chunkManager,
+    terrainVisualHorizon: terrainVisualHorizon({
+      chunkSize: config.terrain.chunkSize,
+      loadRadius: config.terrain.loadRadius,
+    }),
     bloodTraces,
     ocean,
     settlementsManager,

@@ -109,8 +109,10 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
   const ambientIntensity = 0.12 + dayFactor * 0.25
   const hemiIntensity = 0.15 + dayFactor * 0.38
 
-  // Start fog further out so mid-ground hills stay readable; `fogFar` still
-  // covers the chunk stream-in edge (~unloadRadius × chunkSize).
+  // Start fog further out so mid-ground hills stay readable. These are
+  // atmospheric-only inputs — the terrain-streaming-safe cap is applied
+  // downstream by `weatherVisuals.ts::capOutdoorFogToTerrainHorizon`, never
+  // here (plan world-terrain-035).
   const fogNear = 50 + dayFactor * 80
   const fogFar = 150 + dayFactor * 100
   const fogColor = fogColorFromElev(elev)

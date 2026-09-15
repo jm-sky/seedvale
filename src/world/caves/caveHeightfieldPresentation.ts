@@ -53,6 +53,26 @@ export function createMouthUndersideMaskMaterial(): THREE.MeshStandardMaterial {
   })
 }
 
+/** Same look as `createMouthUndersideMaskMaterial()`, but for the distant
+ *  mouth proxy specifically: fog stays enabled so the shared outdoor
+ *  terrain-visual-horizon fog (plan world-terrain-035) can hide the proxy
+ *  before unsupported terrain streams out, without touching full cave
+ *  presentation's fog-exempt mask material. Shared across every currently
+ *  visible mouth proxy — flagged `sharedGpu` and disposed once by the
+ *  `Caves` owner, same contract as `createMouthUndersideMaskMaterial()`. */
+export function createCaveMouthProxyMaterial(): THREE.MeshStandardMaterial {
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x2a2420,
+    roughness: 0.9,
+    metalness: 0,
+    flatShading: true,
+    side: THREE.DoubleSide,
+    fog: true,
+  })
+  material.userData.sharedGpu = true
+  return material
+}
+
 /** Streamed cave presentation opts out of global `scene.fog` (see `createSky`). */
 export function exemptCavePresentationFromSceneFog(root: THREE.Object3D): void {
   root.traverse((obj) => {
@@ -133,6 +153,12 @@ export function createMouthUndersideMask(
  * `mouthOpeningAt` contour as the terrain cutout. No collision or gameplay
  * authority.
  *
+ * Unlike full cave presentation, the proxy intentionally does NOT opt out of
+ * `scene.fog` — its role is exterior distant occlusion, so it must honor the
+ * shared outdoor terrain-visual-horizon fog (plan world-terrain-035). Pass
+ * `material` from `createCaveMouthProxyMaterial()`, not the fog-exempt
+ * `createMouthUndersideMaskMaterial()` full cave presentation uses.
+ *
  * @domain world-terrain
  */
 export function createCaveMouthProxy(input: {
@@ -157,7 +183,6 @@ export function createCaveMouthProxy(input: {
   const group = new THREE.Group()
   group.name = `cave-mouth-proxy:${field.caveId}`
   group.add(mesh)
-  exemptCavePresentationFromSceneFog(group)
   return group
 }
 
