@@ -1,112 +1,146 @@
 # Plan: Long-distance NPC travel and expedition movement
 
 **Created:** 2026-09-08
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** L
-**Depends on:** settlements-npcs-026, settlements-npcs-027, settlements-npcs-019
+**Depends on:** ~~settlements-npcs-026~~, settlements-npcs-027, settlements-npcs-019
 **Domain:** `settlements-npcs`
 **Subdomains:** `logistics` `schedules`
 **Tags:** `travel` `expedition` `off-screen` `persistence`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
-
-> **Draft note:** ten plan jest wstępnym szkicem fundamentu pod ekspedycję NPC. Przed zmianą statusu na `planned` wymaga osobnego review aktualnego kodu oraz szczególnie uzgodnienia wspólnego contractu z `settlements-npcs-019`, aby nie powstał drugi system off-screen travel. Plan należy poprawić po tym review; nie implementować go w obecnej formie.
+**Model:** `Sonnet`, `Composer`
 
 ## Goal
 
-Umożliwić realnym NPC z persistent expedition assignment fizyczne opuszczenie mother settlement, długą podróż do odległej world location w adaptive fidelity oraz realne osiągnięcie destination bez questowych proxy i bez teleportowania tylko dlatego, że gracz nie obserwuje trasy.
+Umożliwić realnym NPC z `ready` expedition assignment fizyczne opuszczenie sponsoring settlement, długą podróż do odległej world location w adaptive fidelity oraz osiągnięcie destination bez questowych proxy, bez utrzymywania live `NpcAgent` przez całą trasę i bez teleportowania tylko dlatego, że gracz nie obserwuje podróży.
 
-Mechanizm ma być reusable poza questem kopalni.
+Mechanizm ma rozszerzać istniejący generic NPC travel continuity i być reusable poza questem kopalni.
+
+## Current architecture confirmed by review
+
+Plan opiera się na wdrożonych mechanizmach:
+
+- `settlements-npcs-027` definiuje world-owned `ExpeditionAssignment`; `028` konsumuje wyłącznie assignment w stanie `ready`,
+- `027` pozostawia member IDs, provisioning, settlement/home membership i assignment lifecycle bez travel states,
+- `NpcAuthoritativeState.travel` już przechowuje persistent generic `NpcTravelContinuity`,
+- `src/ai/npcTravel.ts` już implementuje detailed ↔ off-screen spatial continuity, deterministic `arrivesAtDays`, progress interpolation, reification i checkpoint,
+- `settlements-npcs-019` dostarcza bazowy off-screen duration model i execution-ownership pattern,
+- `NpcAgent` już używa `beginOffscreenNpcTravel()` dla istniejących travel/accompany flows,
+- `personalInventory` jest authoritative ownerem expedition belongings/provisions.
+
+**028 nie tworzy drugiego travel registry ani expedition-only off-screen engine.**
 
 ## Core simulation contract
 
 ```text
-real NPC identity
-+ real world destination
-+ detailed movement while relevant
+ready ExpeditionAssignment
++ 3 real NPC identities
++ real destination
+↓
+per-member NpcAuthoritativeState.travel
+↓
+detailed movement while relevant
 ↓
 detailed → off-screen handoff
 ↓
-deterministic elapsed-world-time travel
+deterministic elapsed-world-time progression
 ↓
-off-screen → detailed handoff when relevant
+off-screen → detailed reification when relevant
 ↓
-same NPC identity arrives
+same NPC identities arrive
 ```
 
-Adaptive simulation oznacza zmianę fidelity, nie zmianę tożsamości ani udawanie podróży markerem.
+Adaptive simulation zmienia fidelity, nie identity ani ownership stanu.
 
-## Existing movement baseline
+## Ownership boundaries
 
-Aktualny `NpcAgent` owns locomotion/action flow. Shared navigation ma bounded local-grid A* i waypoint simplification; nie jest globalnym world navmesh/routerem.
+### ExpeditionAssignment owns
 
-Nie próbować wykonywać local A* przez setki/metraż całej odległej trasy ani utrzymywać `NpcAgent` aktywnego tylko dlatego, że podróżuje.
+- sponsor settlement,
+- ordered member NPC IDs,
+- expedition destination reference,
+- provisioning/ready state.
 
-## Critical relationship with settlements-npcs-019
+### NpcAuthoritativeState owns per member
 
-`settlements-npcs-019-persistent-and-off-screen-transport` już projektuje:
+- generic travel continuity,
+- health/needs/vigor/injury state,
+- `personalInventory`,
+- real provisions and belongings.
 
-- persistent carrier/cargo continuity,
-- detailed ↔ off-screen execution handoff,
-- remaining travel commitment / `arrivesAt`,
-- save/load,
-- time skip,
-- idempotent arrival/delivery semantics.
+### NpcAgent owns only detailed execution
 
-**028 nie może implementować równoległego expedition-only off-screen engine.**
+- local movement/action execution,
+- current live position,
+- detailed arbitration.
 
-Przed implementacją wykonać review aktualnego stanu 019:
-
-1. jeśli 019 jest zaimplementowany z reusable travel primitive — użyć go bezpośrednio;
-2. jeśli jest nadal planowany/transport-specific — uzgodnić i wydzielić najmniejszy shared travel-commitment contract używany przez transport i expedition;
-3. nie kopiować lifecycle/timing registries pod innymi nazwami.
+Nie kopiować assignment ani inventory do travel state.
 
 ## Travel commitment
 
-Expedition member powinien mieć world-owned travel commitment związany z istniejącym assignment/member ID.
+Użyć i rozszerzyć istniejący `NpcTravelContinuity` zamiast tworzyć `ExpeditionTravel`, `ExpeditionJourneyRegistry` albo drugi timing store.
 
-Minimalne informacje do rozważenia:
+Aktualny contract posiada:
 
-- traveller NPC ID,
-- assignment ID,
-- source/departure context,
-- destination world/location ref,
-- execution mode (`detailed` / `off-screen`) jeśli 019 używa takiego metadata,
-- timing/progression metadata,
-- lifecycle state tylko jeśli nie jest już owned przez assignment/shared travel primitive.
+```text
+destination
+lastPosition
+execution?: {
+  mode: off-screen
+  departedAtDays
+  arrivesAtDays
+}
+```
 
-Nie persistować runtime object refs, movement closures ani pełnego pathfinding state.
+`028` może dodać najmniejsze plain-data metadata potrzebne do rozróżnienia celu podróży i poprawnego arrival handling, np. generic travel purpose/context odwołujący się do expedition assignment. Nie dodawać quest object refs ani runtime closures.
+
+Wymagany invariant:
+
+```text
+detailed NPC travel
+XOR
+off-screen NPC travel
+```
+
+## Dispatch from `ready` assignment
+
+Start podróży jest osobnym idempotentnym krokiem po `027`.
+
+Dla assignment w stanie `ready`:
+
+1. resolve te same ordered member NPC IDs,
+2. ponownie sprawdź, że członek żyje i nie ma incompatible active travel/commitment,
+3. resolve destination do world-space target,
+4. utwórz/ustaw per-member generic travel commitment,
+5. rozpocznij detailed movement dla aktualnie materializowanych NPC,
+6. nie zmieniaj provisioning ani settlement/home membership.
+
+Nie reselectować party i nie provisionować ponownie.
+
+Repeated dispatch nie może restartować już rozpoczętej podróży ani nadpisywać jej startu.
 
 ## Detailed departure
 
-NPC musi faktycznie rozpocząć ruch z bieżącej pozycji w mother settlement.
+NPC musi faktycznie rozpocząć ruch z bieżącej pozycji.
 
 W detailed mode:
 
-- użyć istniejącego NPC action/movement arbitration,
-- użyć shared local navigation do lokalnego opuszczenia obszaru/osiągania kolejnych odpowiednich targets,
-- normalne critical interrupts mają zachować priorytet tam, gdzie aktualny NPC system tego wymaga,
-- off-screen executor nie może równolegle przesuwać tego samego traveller.
+- użyć istniejącego `NpcAgent` action/movement flow,
+- używać istniejącej bounded local navigation tylko do lokalnego ruchu,
+- destination pozostaje długodystansowym world targetem, nie globalnym A* path,
+- normalne critical interrupts zachowują istniejące priorytety,
+- persistent travel commitment nie znika przez tymczasowy interrupt.
 
-Nie dodawać questowego `setPosition(destination)` jako departure.
+Nie dodawać questowego `setPosition(destination)` ani globalnego pathfindingu przez całą mapę.
 
 ## Detailed → off-screen handoff
 
-Gdy NPC przestaje wymagać detailed simulation — np. settlement/world streaming usuwa live agent — travel commitment pozostaje authoritative.
+Reuse `beginOffscreenNpcTravel()` / istniejącego handoff pattern.
 
-W momencie handoff, gdy live position jest jeszcze dostępna, capture najmniejszy potrzebny remaining commitment zgodny z 019, preferencyjnie:
+Handoff następuje, gdy live agent przestaje być potrzebny. Musi użyć ostatniej znanej live pozycji **przed** dispose i zapisać remaining commitment jako `arrivesAtDays`.
 
-```text
-remainingTravelDuration
-```
-
-lub:
-
-```text
-arrivesAt = currentWorldTime + remainingTravelDuration
-```
-
-Nie próbować po dispose rekonstruować dokładnej przebytej ścieżki z niczego.
+Nie rekonstruować trasy po dispose i nie utrzymywać `NpcAgent` tylko dlatego, że traveller jest w podróży.
 
 ## Off-screen progression
 
@@ -116,257 +150,244 @@ Off-screen travel ma być:
 - world-time based,
 - bounded kosztowo,
 - bez per-frame pathfinding,
-- bez utrzymywania renderowanego NPC,
-- spójny z time skip.
+- spójny z save/load i time skip,
+- oparty na istniejącym `NpcTravelContinuity`.
 
-Pierwsza wersja może używać prostego deterministycznego travel-duration estimate zgodnego z shared contract z 019.
+V1 zachowuje obecny prosty duration model z `estimateOffscreenTravelDays()`; nie dodaje:
 
-Nie implementować w tym planie bez osobnego uzasadnienia:
-
-- global road graph routing,
+- road graph routing,
 - terrain-cost route planner,
-- weather travel penalties,
-- detailed sleep/rest itinerary,
+- weather penalties,
+- camp/rest itinerary,
 - random encounters,
-- caravan formation,
-- per-segment detailed food/water actions.
+- caravan formation.
 
-Jednocześnie off-screen travel nie może zamrażać authoritative NPC survival state. Shared generic travel/off-screen contract musi rozliczać continuity dla normalnego NPC state w coarse/lazy formie, bez companion/expedition-specific systemu.
+## Generic off-screen survival continuity
 
-Minimalny wymagany invariant:
+Spatial continuity już istnieje, ale `028` musi domknąć survival continuity dla generic travelling NPC bez drugiego AI loop.
 
-```text
-detailed NPC simulation
-XOR
-off-screen NPC travel simulation
-```
-
-obie ścieżki używają tego samego authoritative:
-
-- hunger/thirst,
-- stamina/vigor,
-- `physicalInjury` + lazy natural recovery,
-- `personalInventory`,
-- realnych personal provisions.
-
-### Generic off-screen survival continuity
-
-028 nie powinien implementować drugiego decision loop ani symulować każdej czynności NPC poza ekranem. Powinien jednak konsumować shared travel primitive z 019, który umożliwia deterministyczne rozliczenie elapsed travel consequences.
-
-Preferowany contract:
+Preferowany reusable contract:
 
 ```text
-off-screen interval
-+ authoritative NPC state
-+ journey context/duration
-→ bounded coarse/lazy survival progression
-→ same authoritative NPC state
+elapsed off-screen travel interval
++ same NpcAuthoritativeState
++ same personalInventory
+→ bounded deterministic survival checkpoint
+→ same authoritative state
 ```
 
-W szczególności:
+Co najmniej:
 
-- hunger/thirst pogarszają się zgodnie z elapsed world time zamiast zatrzymywać się przy stream-out;
-- stamina/vigor nie mogą zostać magicznie zresetowane przy reification; coarse travel może stosować wspólną travel/rest policy bez utrzymywania dokładnego per-frame stamina tick;
-- injury natural recovery korzysta z istniejącego lazy elapsed-time ownera, nie travel-specific kopii;
-- personal food/water są konsumowane z `personalInventory` przez shared survival/provision semantics, bez `ExpeditionRations`;
-- depletion pozostawia realną konsekwencję zamiast magicznego refill;
-- save/load/time-skip muszą być równoważne z tym samym elapsed interval.
+- hunger/thirst postępują wraz z elapsed world time,
+- personal food/water są konsumowane z istniejącego `personalInventory`,
+- stamina/vigor nie resetują się magicznie przy reification,
+- `physicalInjury` korzysta z istniejącego lazy recovery ownera,
+- depletion ma realną konsekwencję,
+- repeated checkpoint/save/load/time skip nie stosuje tego samego elapsed interval drugi raz.
 
-Jeżeli pełne hunger/thirst consumption nie da się bezpiecznie wdrożyć w pierwszym slice 019/028 bez powielenia AI, shared contract może użyć bounded deterministic checkpoints zamiast detailed actions, ale nie może ignorować survival continuity całkowicie.
+Nie implementować pełnego `NpcAgent.choose()` poza ekranem ani per-frame needs loop.
 
 Nie tworzyć:
 
-- `CompanionOffscreenSimulation`,
 - `ExpeditionNeedsState`,
-- expedition-only hunger/thirst meters,
-- osobnej kopii `personalInventory`,
-- per-frame off-screen NPC update loop.
+- `CompanionOffscreenSimulation`,
+- osobnego expedition inventory,
+- drugiej kopii hunger/thirst/injury.
 
-Te same generic semantics mają obsłużyć później accompany/return travel z `npc-029` oraz `npc-032`.
+Ten sam hook ma pozostać generic dla innych travel flows.
 
-## Position/fidelity semantics
+## Position and reification semantics
 
-Plan musi jawnie rozstrzygnąć podczas review, co oznacza spatial state off-screen traveller.
-
-Nie wymagać persistence dokładnej pozycji co metr tylko po to, aby udowodnić, że NPC podróżuje.
-
-Wystarczający v1 contract może być:
+Reuse istniejące semantics `NpcTravelContinuity`:
 
 ```text
-detailed: exact live world position authoritative
+detailed:
+  exact live position authoritative
 
-off-screen: source/destination + elapsed/remaining commitment authoritative
+off-screen:
+  lastPosition + destination + departedAtDays/arrivesAtDays authoritative
 
-reification: derive a safe world position consistent with current progress
+reification:
+  deterministic interpolated position consistent with progress
 ```
 
-Jeśli reification przed arrival jest potrzebne, nie teleportować traveller z powrotem do source. Wyznaczyć deterministyczną przybliżoną pozycję zgodną z postępem lub innym shared 019 contractem.
+Reuse `interpolateNpcTravelPosition()` / `reifyNpcTravel()`.
 
-## Off-screen → detailed handoff
+Nie persistować per-meter path ani exact off-screen movement samples.
 
-Gdy traveller znów staje się istotny dla detailed simulation:
+Reification przed arrival nie może cofać NPC do source.
 
-1. zatrzymać off-screen execution ownership,
-2. rozwiązać ten sam NPC authoritative state,
-3. rozliczyć shared off-screen survival/recovery interval dokładnie raz,
-4. odtworzyć jego persistent personal inventory po tym samym authoritative ownerze,
-5. ustalić safe world position zgodną z travel progress,
-6. wznowić movement do tego samego destination,
-7. nie rozpoczynać expedition od nowa.
+## Arrival semantics
 
-## Arrival
+Obecny generic `resolveOffscreenNpcTravel()` może wyczyścić zakończony travel dla zwykłego return flow. `028` potrzebuje jawnego generic arrival result/context, aby expedition arrival nie zniknęło bez poinformowania caller-owned lifecycle.
 
-`arrivesAt`/equivalent oznacza logiczne osiągnięcie destination.
+Wymagany contract:
 
-Po arrival:
+```text
+travel reaches destination
+→ generic travel marks/resolves logical arrival exactly once
+→ expedition caller observes member arrival
+→ travel execution becomes terminal/cleared safely
+```
 
-- ten sam NPC ID pozostaje członkiem assignment,
-- jego belongings pozostają jego własnością,
-- travel commitment staje się terminalny,
-- repeated tick/load/time-skip nie może wykonać arrival drugi raz,
-- destination może zażądać detailed materialization, gdy obszar jest aktywny.
+Arrival nie może:
 
-Arrival nie tworzy jeszcze colony inhabitant ani nie zmienia formalnego settlement membership/home.
+- tworzyć nowego NPC,
+- zmieniać member ID,
+- provisionować ponownie,
+- zmieniać jeszcze settlement/home membership,
+- tworzyć colony inhabitant.
+
+Nie dodawać `arrived` tylko jako UI flag, jeśli idempotent caller handoff można osiągnąć mniejszym generic contractem.
 
 ## Multi-member expedition
 
-Trzech NPC należy do jednego assignment, ale nie tworzyć ciężkiego formation/path synchronization systemu.
+Jedno assignment ma trzech realnych members, ale **travel jest per-member**, wykorzystując istniejący `NpcAuthoritativeState.travel`.
 
-Pierwsza wersja może mieć:
+Nie tworzyć jednego wspólnego spatial/timing recordu dla całej grupy.
 
-- wspólny destination,
-- wspólny departure commitment,
-- per-member travel execution/progress,
-- bounded tolerance arrival window.
+Powody:
 
-Podczas review rozstrzygnąć, czy shared travel primitive z 019 lepiej reprezentuje group journey jednym timing commitment czy trzema member commitments. W obu przypadkach każdy członek pozostaje realną identity i może później mieć własne konsekwencje (np. death/interruption).
+- każdy NPC ma własną identity i authoritative state,
+- każdy może zostać zraniony, zatrzymany lub umrzeć niezależnie,
+- istniejący generic travel primitive jest per-NPC,
+- reification i streaming są per-agent.
 
-Nie teleportować dwóch NPC do leadera co tick.
+V1 może używać tego samego destination i tego samego dispatch momentu, ale każdy member posiada własny `lastPosition`, timing i survival checkpoint.
+
+Nie synchronizować pozycji przez teleport do leadera i nie implementować formation systemu.
 
 ## Interruption and failure semantics
 
 ### NPC death
 
-Death nie oznacza arrival ani replacement. Assignment zachowuje konsekwencję śmierci. Nie spawnować zastępcy po dispatch.
+Death zatrzymuje dalszy progress tego membera. Nie oznacza arrival ani replacement. Assignment zachowuje tę samą member identity.
 
 ### Temporary detailed interruption
 
-Normalna potrzeba/combat/action może przerwać local detailed movement zgodnie z istniejącym arbitration. Nie może jednak skasować persistent travel commitment bez jawnego cancellation semantics.
+Combat/critical needs mogą przerwać detailed movement zgodnie z istniejącą arbitration, ale nie kasują persistent travel commitment bez jawnego cancellation/failure contractu.
 
-### Off-screen survival interruption
+### Off-screen cannot-progress
 
-Coarse off-screen progression może wykryć, że travel nie może logicznie kontynuować bez naruszenia normalnych survival invariants, np. skrajne wyczerpanie zasobów/stan zdrowia zgodnie z finalnym shared contractem.
+Generic survival checkpoint może zwrócić neutralny rezultat `cannot-progress`/equivalent, jeżeli authoritative state nie pozwala logicznie kontynuować podróży.
 
-Nie kończyć assignmentu automatycznie w tym planie. Zamiast tego shared travel execution powinien zatrzymać/oznaczyć brak możliwości dalszego progressu w neutralny sposób, który caller może później rozstrzygnąć.
-
-Nie tworzyć expedition-specific abandonment policy.
+Nie kończyć całego assignment automatycznie i nie tworzyć expedition-specific abandonment AI.
 
 ### Destination unavailable
 
-Travel pozostaje unresolved/arrival-ready zgodnie ze shared contract; nie kasować traveller ani belongings.
-
-### World reload/save-load
-
-Odtworzyć commitment, survival checkpoint i jego execution ownership dokładnie raz.
+Zachować travel/arrival-ready state bez usuwania NPC lub belongings. Resolution ma być idempotentne po ponownym pojawieniu się destination context.
 
 ## Persistence and idempotency
 
-Travel state musi przeżyć:
+Nie tworzyć nowego persistence store dla travel.
+
+Rozszerzyć istniejący `NpcStateSnapshot.travel` / generic travel serialization tylko o metadata rzeczywiście potrzebne przez nowy generic contract.
+
+Travel musi przeżyć:
 
 - settlement stream-out/in,
 - `NpcAgent` dispose/reconstruction,
-- WorldBundle rebuild, jeśli ten boundary nadal istnieje,
+- WorldBundle rebuild,
 - save/load,
 - time skip.
 
-Repeated restoration nie może:
+Repeated restoration/checkpoint nie może:
 
-- restartować zegara od source,
-- wykonywać arrival ponownie,
-- podwójnie rozliczać hunger/thirst/vigor/injury recovery interval,
-- ponownie provisionować inventory,
-- zmieniać member identity,
+- restartować podróży,
+- zmieniać destination,
+- podwójnie rozliczać survival interval,
+- wykonywać arrival drugi raz,
+- ponownie provisionować,
+- zmieniać member IDs,
 - uruchamiać detailed i off-screen execution równocześnie.
-
-Nie persistować derived pressure scores ani second-copy survival state. Potrzebne checkpoint/timestamp metadata ma należeć do generic travel execution lub istniejącego authoritative ownera danej domeny.
 
 ## Performance
 
-Nie dodawać globalnego per-frame loop przez wszystkich historycznych travellerów.
+Nie dodawać globalnej per-frame pętli przez historycznych travellers.
 
 Preferować:
 
-- registry tylko aktywnych commitments,
+- istniejące active NPC authoritative states,
 - world-time timestamp comparisons,
-- processing przy istniejących simulation/streaming/time-skip checkpoints,
-- bounded work proportional to active journeys,
-- lazy/coarse survival resolution per active traveller,
-- detailed pathfinding tylko dla aktywnie materializowanych NPC.
+- bounded processing przy streaming/time-skip/restore checkpoints,
+- work proporcjonalny do aktywnych travellers,
+- detailed pathfinding tylko dla live NPC.
 
 ## Relationship with settlement membership and future colony
 
-Podczas całej podróży NPC zachowuje istniejącą identity i mother-settlement membership/home.
+Podczas podróży NPC zachowuje:
 
-Formalny transfer:
+- stable NPC ID,
+- sponsor-settlement membership,
+- household/home,
+- profession/role,
+- personal belongings.
 
-```text
-mother settlement inhabitant
-→ colony inhabitant
-```
-
-jest osobnym późniejszym planem związanym z colony bootstrap/relocation. Nie zmieniać settlement-scoped NPC IDs ad hoc w 028.
+Formalny transfer do przyszłej colony należy do późniejszego planu. `028` kończy się na poprawnym osiągnięciu destination przez istniejące identities.
 
 ## Non-goals
 
-- quest logic/dialogue/rewards,
+- quest stages/dialogue/rewards,
 - abandoned mine implementation,
 - colony creation,
 - migration/membership transfer,
-- expedition candidate selection,
+- candidate selection,
 - provisioning policy,
-- personal inventory ownership redesign,
+- personal inventory redesign,
 - random encounters,
-- full road/world route graph,
-- high-fidelity simulation całej trasy,
-- detailed per-action off-screen AI replay,
+- global road/world route graph,
+- terrain/weather travel modifiers,
+- high-fidelity off-screen AI replay,
+- formation/caravan movement,
 - multiplayer networking.
 
-## Likely integration points to verify during review
+## Implementation boundaries
 
+Najważniejsze integration points:
+
+- `src/ai/npcTravel.ts`,
 - `src/ai/NpcAgent.ts`,
-- `src/navigation/navigation.ts`,
-- settlement streaming/manager lifecycle,
-- NPC authoritative state registry,
-- world time/time skip integration,
-- SaveData schema/migrations,
-- `settlements-npcs-019` implementation/plan,
-- `settlements-npcs-027` assignment representation,
-- `src/ai/Needs.ts` / authoritative NPC need state,
+- `src/settlement/npcState.ts`,
+- `src/settlement/SettlementsManager.ts`,
+- `src/ai/Needs.ts`,
 - `src/ai/npcPersonalProvisions.ts`,
-- injury lazy-recovery owner from `npc-025`.
+- injury lazy-recovery path,
+- world time/time skip checkpoints,
+- `src/app/worldBundle.ts`,
+- `src/app/saveState.ts`,
+- `src/persistence/saveData.ts`,
+- expedition assignment registry/API introduced by `settlements-npcs-027`.
+
+Szczegółowy verified recon jest w:
+
+`docs/plans/implementation-notes/settlements-npcs-028-long-distance-npc-travel-and-expedition-movement-implementation-notes.md`.
 
 ## Verification
 
 Automated tests powinny objąć:
 
+- only `ready` assignment can dispatch,
+- repeated dispatch is idempotent,
+- three members use independent generic travel continuity,
 - detailed → off-screen single ownership,
 - off-screen elapsed-time progression,
-- hunger/thirst continuity across off-screen interval,
-- personal provision consumption uses the same `personalInventory`,
-- vigor/stamina semantics do not reset on reification,
-- injury lazy recovery is not skipped or double-applied,
-- save/load continuity,
+- deterministic reification position before arrival,
+- hunger/thirst continuity,
+- personal provision consumption from the same `personalInventory`,
+- vigor/stamina not reset on reification,
+- injury recovery not skipped/double-applied,
+- save/load + WorldBundle rebuild continuity,
 - time-skip equivalence,
-- off-screen → detailed before arrival,
-- arrival idempotency,
-- three-member assignment continuity,
+- member arrival observed exactly once,
 - death does not imply replacement/arrival,
-- belongings remain attached to same NPC identities.
+- belongings remain attached to the same NPC identities.
 
-Manual browser verification trasy, departure i arrival wykonuje użytkownik; AI nie wykonuje browser verification.
+Manual browser verification departure/travel/arrival wykonuje użytkownik; AI nie wykonuje browser verification.
 
 ## Documentation
 
-Dla ważnych nowych public/architectural functions/classes dodać JSDoc, gdy pomaga preflight discovery; użyć `@domain settlements-npcs` tam, gdzie pasuje.
+Dla ważnych nowych public/architectural functions/classes dodać JSDoc, gdy pomaga preflight discovery; użyć `@domain settlements-npcs` lub istniejącego właściwego domain tagu dla generic NPC travel.
+
+Jeżeli generic travel/survival contract zmieni authoritative state boundary, zaktualizować odpowiedni `docs/state/*`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
