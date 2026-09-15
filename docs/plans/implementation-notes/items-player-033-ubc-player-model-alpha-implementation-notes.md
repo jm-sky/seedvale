@@ -22,7 +22,7 @@ bash scripts/assets/prepare-ubc-player-alpha.sh
 
 `?player=peasant|ranger|adventurer` is a whitelist in `playerVisualPreset.ts`. Unknown values warn and keep Adventurer. Extra clips load from `ual1_player.glb` only for UBC presets.
 
-`RIGHT_HAND_BONE_NAMES` gained `hand_r`. `HELD_ATTACH` stays Adventurer `WristR` space; UBC applies one shared `hand_r` map (`UBC_HAND_FROM_WRIST_R`) in `mountAttachOnSocket`. In-game Euler trim is that constant only (sign / extra axis) — do not duplicate per-item offsets.
+`RIGHT_HAND_BONE_NAMES` gained `hand_r`. `HELD_ATTACH` stays Adventurer `WristR` space; UBC applies one shared `hand_r` map (`UBC_HAND_FROM_WRIST_R` + `UBC_HAND_OFFSET`) in `mountAttachOnSocket`. In-game trim is those two constants only — do not duplicate per-item offsets.
 
 Runtime outfit swap on equipment lives in plan items-player-034.
 

@@ -15,8 +15,18 @@ export const RIGHT_HAND_BONE_NAMES = [
   'mixamorigRightHand',
 ] as const
 
+export type HandAttachSpace = {
+  /** Extra translation in the hand bone's local meters (after rotation). */
+  position: readonly [number, number, number]
+  /** Euler XYZ mapping `HELD_ATTACH` WristR axes onto this bone. */
+  rotation: readonly [number, number, number]
+}
+
 /** Identity — Quaternius Adventurer `WristR` already matches `HELD_ATTACH`. */
-export const ADVENTURER_HAND_SPACE: readonly [number, number, number] = [0, 0, 0]
+export const ADVENTURER_HAND_SPACE: HandAttachSpace = {
+  position: [0, 0, 0],
+  rotation: [0, 0, 0],
+}
 
 /**
  * Maps Adventurer `WristR` (+Y ≈ fingertips) onto Unreal/UBC `hand_r` (+X along
@@ -25,6 +35,15 @@ export const ADVENTURER_HAND_SPACE: readonly [number, number, number] = [0, 0, 0
  * so the blade follows the hand like Adventurer, not a second per-item table.
  */
 export const UBC_HAND_FROM_WRIST_R: readonly [number, number, number] = [0, 0, -Math.PI / 2]
+
+/** Extra UBC `hand_r` translation (bone-local meters). Tune in-game; leave
+ *  zeros until the grip origin needs a nudge after the Euler is right. */
+export const UBC_HAND_OFFSET: readonly [number, number, number] = [0, 0, 0]
+
+export const UBC_HAND_SPACE: HandAttachSpace = {
+  position: UBC_HAND_OFFSET,
+  rotation: UBC_HAND_FROM_WRIST_R,
+}
 
 const UBC_HAND_BONE_NAMES = new Set(['hand_l', 'hand_r'])
 const ADVENTURER_HAND_BONE_NAMES = new Set([
@@ -41,14 +60,14 @@ type NamedParentNode = {
 }
 
 /**
- * WristR-space Euler for `HELD_ATTACH`, or the UBC remap when `hand_r` is an
+ * WristR-space TRS for `HELD_ATTACH`, or the UBC remap when `hand_r` is an
  * ancestor of `socket` (held tools parent a nameless pivot under the bone).
  * Unknown names stay Adventurer/identity so Modular NPCs do not shift.
  */
-export function handAttachSpaceFromSocket(socket: NamedParentNode): readonly [number, number, number] {
+export function handAttachSpaceFromSocket(socket: NamedParentNode): HandAttachSpace {
   let node: NamedParentNode | null = socket
   while (node) {
-    if (UBC_HAND_BONE_NAMES.has(node.name)) return UBC_HAND_FROM_WRIST_R
+    if (UBC_HAND_BONE_NAMES.has(node.name)) return UBC_HAND_SPACE
     if (ADVENTURER_HAND_BONE_NAMES.has(node.name)) return ADVENTURER_HAND_SPACE
     node = node.parent
   }
@@ -62,7 +81,8 @@ export const CHARACTER_ANCHORS: readonly AssetAnchorDef[] = [
     node: RIGHT_HAND_BONE_NAMES,
     // Adventurer `WristR` already matches `HELD_ATTACH` (+Y ≈ fingertips,
     // −Z ≈ body centre).
-    rotation: ADVENTURER_HAND_SPACE,
+    position: ADVENTURER_HAND_SPACE.position,
+    rotation: ADVENTURER_HAND_SPACE.rotation,
   },
 ]
 
@@ -71,6 +91,7 @@ export const CHARACTER_ANCHORS_UBC: readonly AssetAnchorDef[] = [
     name: 'hand.right',
     type: 'attachment',
     node: RIGHT_HAND_BONE_NAMES,
+    position: UBC_HAND_OFFSET,
     rotation: UBC_HAND_FROM_WRIST_R,
   },
 ]

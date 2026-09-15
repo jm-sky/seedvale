@@ -379,7 +379,7 @@ export function mountAttachOnSocket(
   const sz = Math.max(_socketWorldScale.z, 1e-6)
 
   const space = handAttachSpaceFromSocket(socket)
-  _spaceEuler.set(space[0], space[1], space[2], 'XYZ')
+  _spaceEuler.set(space.rotation[0], space.rotation[1], space.rotation[2], 'XYZ')
   _spaceQuat.setFromEuler(_spaceEuler)
   _attachEuler.set(attach.rotation[0], attach.rotation[1], attach.rotation[2], 'XYZ')
   _attachQuat.setFromEuler(_attachEuler)
@@ -390,6 +390,9 @@ export function mountAttachOnSocket(
     attach.position[2] / sz,
   )
   mount.position.applyQuaternion(_spaceQuat)
+  mount.position.x += space.position[0] / sx
+  mount.position.y += space.position[1] / sy
+  mount.position.z += space.position[2] / sz
   mount.quaternion.copy(_spaceQuat).multiply(_attachQuat)
   mount.scale.multiplyScalar(attach.scale)
   mount.scale.x /= sx

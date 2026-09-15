@@ -5,6 +5,8 @@ import {
   handAttachSpaceFromSocket,
   heldToolHasGripAnchor,
   UBC_HAND_FROM_WRIST_R,
+  UBC_HAND_OFFSET,
+  UBC_HAND_SPACE,
 } from './assetAnchorData'
 
 describe('assetAnchorData Phase 6', () => {
@@ -31,13 +33,15 @@ describe('assetAnchorData Phase 6', () => {
     expect(heldToolHasGripAnchor('held:knife')).toBe(false)
   })
 
-  it('UBC character anchors share the hand_r space Euler', () => {
+  it('UBC character anchors share the hand_r space Euler and offset', () => {
     for (const id of ['character:ubc-peasant', 'character:ubc-ranger'] as const) {
       const hand = anchorsForAsset(id).find((a) => a.name === 'hand.right')
       expect(hand?.rotation).toEqual(UBC_HAND_FROM_WRIST_R)
+      expect(hand?.position).toEqual(UBC_HAND_OFFSET)
     }
-    expect(anchorsForAsset('character:player').find((a) => a.name === 'hand.right')?.rotation)
-      .toEqual(ADVENTURER_HAND_SPACE)
+    const adventurer = anchorsForAsset('character:player').find((a) => a.name === 'hand.right')
+    expect(adventurer?.rotation).toEqual(ADVENTURER_HAND_SPACE.rotation)
+    expect(adventurer?.position).toEqual(ADVENTURER_HAND_SPACE.position)
   })
 })
 
@@ -53,7 +57,7 @@ describe('handAttachSpaceFromSocket', () => {
   it('returns the UBC remap for hand_r, including a nameless child pivot', () => {
     const bone = { name: 'hand_r', parent: null }
     const pivot = { name: '', parent: bone }
-    expect(handAttachSpaceFromSocket(bone)).toEqual(UBC_HAND_FROM_WRIST_R)
-    expect(handAttachSpaceFromSocket(pivot)).toEqual(UBC_HAND_FROM_WRIST_R)
+    expect(handAttachSpaceFromSocket(bone)).toEqual(UBC_HAND_SPACE)
+    expect(handAttachSpaceFromSocket(pivot)).toEqual(UBC_HAND_SPACE)
   })
 })

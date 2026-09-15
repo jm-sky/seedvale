@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-035-ubc-ual-player-animation-coverage`                   | 2026-09-15 13:03:35 | —                   | `items-player`   | —          |
 | `items-player-033-ubc-player-model-alpha`                              | 2026-09-15 12:16:51 | —                   | `items-player`   | —          |
 | `items-player-034-equipment-driven-player-outfit`                      | 2026-09-15 12:16:51 | —                   | `items-player`   | —          |
 | `settlements-015-settlement-palisade-collision`                        | 2026-09-15 10:59:26 | —                   | `settlements`    | —          |

@@ -1,6 +1,6 @@
 import { Euler, Group, Object3D, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { UBC_HAND_FROM_WRIST_R } from '../assets/assetAnchorData'
+import { UBC_HAND_FROM_WRIST_R, UBC_HAND_OFFSET } from '../assets/assetAnchorData'
 import { HELD_ATTACH, mountAttachOnSocket } from './heldToolVisual'
 
 function expectQuatClose(actual: Quaternion, expected: Quaternion): void {
@@ -46,6 +46,9 @@ describe('mountAttachOnSocket hand space', () => {
       new Euler(UBC_HAND_FROM_WRIST_R[0], UBC_HAND_FROM_WRIST_R[1], UBC_HAND_FROM_WRIST_R[2], 'XYZ'),
     )
     const expectedPos = new Vector3(a.position[0], a.position[1], a.position[2]).applyQuaternion(space)
+    expectedPos.x += UBC_HAND_OFFSET[0]
+    expectedPos.y += UBC_HAND_OFFSET[1]
+    expectedPos.z += UBC_HAND_OFFSET[2]
     const expectedQ = space.clone().multiply(authoredLongSwordQuat())
 
     for (const socket of [named('hand_r'), pivotUnder('hand_r')]) {
