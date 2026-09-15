@@ -100,7 +100,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `app/gameLoop.ts`
+- `app/actions/acquisitionFeedback.ts`
 
 ## `ui-vue/lib/mapColors.ts`
 

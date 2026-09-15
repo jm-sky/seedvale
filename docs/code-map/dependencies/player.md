@@ -352,6 +352,7 @@ Generated from TypeScript imports.
 - `player/playerCombat.ts`
 - `player/playerMelee.ts`
 - `shared/HealthState.ts`
+- `world/WaterSource.ts`
 - `world/spatialContext.ts`
 
 ## `player/playerCombat.ts`

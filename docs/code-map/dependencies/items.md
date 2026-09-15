@@ -907,6 +907,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.ts`
+- `app/actions/acquisitionFeedback.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/groundActions.test.ts`
@@ -1010,6 +1011,7 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcTradeAvailability.ts`
+- `app/actions/acquisitionFeedback.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/actionContracts.ts`
 - `app/actions/containerActions.ts`
@@ -1121,6 +1123,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/chunkWorldItems.ts`
 - `terrain/depositMining.ts`
+- `terrain/digAction.ts`
 - `tools/assetBrowser/gripEdit.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `ui-vue/composables/useItemCategoryLabels.ts`

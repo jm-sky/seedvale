@@ -716,6 +716,7 @@ Generated from TypeScript imports.
 - `audio/inventorySounds.ts`
 - `items/Inventory.ts`
 - `items/createDroppedItems.ts`
+- `items/items.ts`
 - `terrain/chunkManager.ts`
 - `terrain/dig.ts`
 - `terrain/terrainPreparation.ts`

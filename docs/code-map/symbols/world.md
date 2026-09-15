@@ -1559,7 +1559,7 @@ Generated from exported TypeScript symbols.
 - `WELL_WORK_SESSION_SEC` — const — line 575
 - `WellMaterialCost` — type — line 106
 - `WellPlacementReason` — type — line 551
-- `wellPromptLabel` — function — line 623
+- `wellPromptLabel` — function — line 624
 - `wellRemainingWork` — function — line 356
 - `wellRoofProtectionFactor` — function — line 469
 - `WellRoofRepairQuote` — type — line 166

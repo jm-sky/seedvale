@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `fauna/animalNaturalWater.ts`
 - `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
+- `player/playerCombat.test.ts`
 - `shared/waterPoisoningExposure.test.ts`
 - `shared/waterPoisoningExposure.ts`
 - `terrain/waterBodyKind.ts`

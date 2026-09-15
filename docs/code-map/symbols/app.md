@@ -2,6 +2,13 @@
 
 Generated from exported TypeScript symbols.
 
+## `app/actions/acquisitionFeedback.ts`
+
+- `formatCountAcquisitionToast` — function — line 13
+  - domain: ui-input
+- `showCountAcquisitionToast` — function — line 23
+  - domain: ui-input
+
 ## `app/actions/actionContext.ts`
 
 - `isActionBlocked` — function — line 88
@@ -56,9 +63,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/groundActions.ts`
 
-- `createGroundActions` — function — line 113
-- `GroundActions` — type — line 56
-- `GroundActionsDeps` — type — line 80
+- `createGroundActions` — function — line 114
+- `GroundActions` — type — line 57
+- `GroundActionsDeps` — type — line 81
 
 ## `app/actions/householdResourceTransferActions.ts`
 
@@ -272,9 +279,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 677
-- `GameLoop` — type — line 636
-- `GameLoopDeps` — type — line 308
+- `createGameLoop` — function — line 678
+- `GameLoop` — type — line 637
+- `GameLoopDeps` — type — line 309
 
 ## `app/graphicsSettings.ts`
 
@@ -318,25 +325,25 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1284
-- `buildDigTarget` — function — line 1228
-- `buildInteractables` — function — line 514
-- `collectItem` — function — line 1340
+- `buildCombatTarget` — function — line 1285
+- `buildDigTarget` — function — line 1229
+- `buildInteractables` — function — line 515
+- `collectItem` — function — line 1341
 - `COMBAT_TARGET_CONE_DOT` — const — line 104
 - `COMBAT_TARGET_RANGE` — const — line 89
 - `CombatAimMode` — type — line 94
 - `DIG_REACH` — const — line 83
-- `DROPPED_ITEM_GROUP_RADIUS` — const — line 309
-- `filterInteractablesSameSpatialContext` — function — line 498
+- `DROPPED_ITEM_GROUP_RADIUS` — const — line 310
+- `filterInteractablesSameSpatialContext` — function — line 499
 - `GAZE_RANGE` — const — line 79
-- `grindstoneInteractPosition` — function — line 390
-- `groupDroppedItemCandidates` — function — line 319
+- `grindstoneInteractPosition` — function — line 391
+- `groupDroppedItemCandidates` — function — line 320
   - domain: items-player
 - `INTERACT_MIN_DOT` — const — line 76
 - `INTERACT_RANGE` — const — line 73
-- `itemPromptLabel` — function — line 298
-- `resolveHaySpot` — function — line 404
-- `worldItemAllowsAltInteract` — function — line 283
+- `itemPromptLabel` — function — line 299
+- `resolveHaySpot` — function — line 405
+- `worldItemAllowsAltInteract` — function — line 284
   - domain: ui-input
 
 ## `app/inventoryWiring.ts`

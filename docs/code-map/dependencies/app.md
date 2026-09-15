@@ -2,6 +2,27 @@
 
 Generated from TypeScript imports.
 
+## `app/actions/acquisitionFeedback.test.ts`
+
+**Imports**
+
+- `app/actions/acquisitionFeedback.ts`
+
+## `app/actions/acquisitionFeedback.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `ui-vue/lib/firstUpperCase.ts`
+- `ui/createToast.ts`
+
+**Imported by**
+
+- `app/actions/acquisitionFeedback.test.ts`
+- `app/actions/groundActions.ts`
+- `app/gameLoop.ts`
+
 ## `app/actions/actionContext.ts`
 
 **Imports**
@@ -262,6 +283,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `app/actions/acquisitionFeedback.ts`
 - `app/actions/actionContext.ts`
 - `app/interactables.ts`
 - `audio/actionSounds.ts`
@@ -1036,6 +1058,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/NpcAgent.ts`
+- `app/actions/acquisitionFeedback.ts`
 - `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
@@ -1117,7 +1140,6 @@ Generated from TypeScript imports.
 - `shared/ThirstState.ts`
 - `shared/VigorState.ts`
 - `simulation/observation.ts`
-- `ui-vue/lib/firstUpperCase.ts`
 - `ui-vue/mount.ts`
 - `ui/createBusyOverlay.ts`
 - `ui/createHud.ts`

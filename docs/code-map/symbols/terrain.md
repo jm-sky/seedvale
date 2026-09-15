@@ -324,10 +324,10 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/digAction.ts`
 
-- `applyDigAt` — function — line 23
-- `applyLevelAt` — function — line 69
-- `applyMoundAt` — function — line 94
-- `DigFeedback` — type — line 14
+- `applyDigAt` — function — line 26
+- `applyLevelAt` — function — line 72
+- `applyMoundAt` — function — line 97
+- `DigFeedback` — type — line 15
 
 ## `terrain/distanceLod.ts`
 

@@ -66,10 +66,10 @@ Generated from exported TypeScript symbols.
 - `collectLivingCombatTargets` — function — line 79
 - `collectRangedAnimalCandidates` — function — line 168
 - `COMBAT_MODE_TIMEOUT_SEC` — const — line 13
-- `createPlayerCombat` — function — line 255
+- `createPlayerCombat` — function — line 267
 - `filterRangedCandidatesBySpatialContext` — function — line 191
 - `filterWorldCycleTargets` — function — line 224
-- `findLivingTargetById` — function — line 228
+- `findLivingTargetById` — function — line 240
 - `forEachLivingCombatAnimal` — function — line 59
   - domain: fauna
 - `LivingCombatTarget` — type — line 15
@@ -77,9 +77,11 @@ Generated from exported TypeScript symbols.
 - `livingTargetIdForNpc` — function — line 48
 - `PlayerCombat` — type — line 23
 - `RangedAnimalCandidate` — type — line 159
-- `resolveLivingInteractable` — function — line 239
+- `resolveLivingInteractable` — function — line 251
 - `resolveRangedAimYaw` — function — line 211
 - `SpatialContextAt` — type — line 77
+- `tabCyclesLivingCombatTargets` — function — line 236
+  - domain: ui-input
 
 ## `player/playerCombatMode.ts`
 
