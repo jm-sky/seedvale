@@ -14,6 +14,68 @@ Draft — możliwości, braki i rekomendacje. **Nie implementować** z tego plik
 
 Powiązane: `items-player-030` (sloty + katalog docelowy), `033`/`034`/`036` (UBC, cały mesh ze slotu `body`). Luźny koniec: `docs/plans/LOOSE-ENDS.md` (Characters / presentation).
 
+## Etapy
+
+### Etap 1 — różnorodność NPC w ramach profesji
+
+Pierwszym celem jest zwiększenie różnorodności wizualnej NPC bez mnożenia pełnych modeli GLB. Bazowy outfit nadal wynika z profesji / roli NPC (np. Peasant, Ranger), ale wariant jest składany przede wszystkim z elementów o największym wpływie wizualnym:
+
+- `head`,
+- `hair`,
+- `eyes` / eyebrows,
+- facial hair / beard,
+- `accessories`,
+- tint / wariant kolorystyczny ubrania.
+
+Docelowy przepływ:
+
+```text
+profession / role + deterministic appearance seed
+  → base outfit
+  → head / hair / eyes / facial hair / accessories
+  → clothing tint
+  → CharacterAppearanceDefinition
+```
+
+Wariant powinien być deterministyczny i należeć do stanu NPC / świata, nie do kamery ani aktualnego renderowania. Nie tworzyć osobnego systemu equipment tylko do wizualnej różnorodności NPC.
+
+Tint jest kluczowym mnożnikiem różnorodności. Jeden Peasant / Ranger powinien móc występować w kilku kontrolowanych paletach bez duplikowania geometrii i tekstur, o ile materiały assetu na to pozwalają.
+
+### Etap 2 — modularność części modelu gracza
+
+Drugim celem jest przejście z podmiany całego outfitu gracza na składanie wyglądu z części, przy zachowaniu istniejącego equipment jako źródła prawdy.
+
+Docelowy przepływ:
+
+```text
+equipment + player appearance
+  → resolvePlayerAppearance
+  → modular visual parts + per-part tint
+  → CharacterAppearanceDefinition
+```
+
+Priorytetowe części:
+
+- `head`,
+- `body`,
+- `arms`,
+- `legs`,
+- `feet`,
+- `hair`,
+- `eyes`,
+- `accessories`.
+
+Tint gracza nie powinien docelowo pozostać jednym globalnym `playerTint`. Przy modularnym modelu potrzebna jest możliwość przypisania koloru / wariantu materiału do konkretnej części, np. `body.tint`, `arms.tint`, `legs.tint`.
+
+NPC i gracz powinny korzystać ze wspólnej warstwy składania / renderowania modelu, ale z różnymi resolverami:
+
+```text
+NPC:    profession + seed      → CharacterAppearanceDefinition
+Player: equipment + appearance → CharacterAppearanceDefinition
+```
+
+Nie tworzyć dwóch niezależnych modular-character rendererów.
+
 ## Problem
 
 Wygląd gracza to jeden złożony GLB (`male_peasant` / `male_ranger` / `male_knight`, plus URL-only `knight_cloth` / `noble` / `wizard`). Paczka Quaternius Fantasy `[Source]` dostarcza te same outfity jako **osobne części** na wspólnym rigu UBC. Ekwipunek ma już sześć slotów, ale tylko `body` ma itemy i meshe.
