@@ -9,6 +9,7 @@
 **Subdomains:** `terrain` `chunks` `rendering` `landmarks`
 **Tags:** `streaming` `fog` `lod` `settlements` `caves` `horizon`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## 1. Problem
 
