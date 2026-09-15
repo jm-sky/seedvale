@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `progression`  
 **Tags:** `lost-treasure-chronicles` `dungeon` `expedition` `journal` `key-trail` `story-items`  
 **Roadmap:** `quests-lost-something-chronicles.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
