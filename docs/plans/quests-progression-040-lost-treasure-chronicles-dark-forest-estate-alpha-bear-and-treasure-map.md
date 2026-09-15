@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `progression`  
 **Tags:** `lost-treasure-chronicles` `dark-forest` `estate` `alpha-bear` `treasure-map` `world-location`  
 **Roadmap:** `quests-lost-something-chronicles.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
