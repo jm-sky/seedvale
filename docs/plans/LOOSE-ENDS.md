@@ -40,7 +40,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 - [ ] 2026-09-15 — UBC player (`items-player-033` / `034`) jest tylko męski Peasant/Ranger. Żeńskie outfity (`Female_Peasant` / `Female_Ranger`) i fryzury są w `_temp/` na tym samym rigu — nie robić osobnego pipeline, reuse `compose_ubc_player.py`.
 - [ ] 2026-09-15 — Runtime outfit jest całym Peasant vs Ranger od slotu `body`, nie modularnymi Arms/Body/Legs. Osobny mesh kolczugi / gambesonu i sloty head/arms/legs czekają na konkretne assety.
 - [ ] 2026-09-15 — `?playerTint=brown` nie jest persystowany; character appearance (wybór koloru bez query) to osobna praca.
-- [ ] 2026-09-15 — UAL2 (combat/work: `TreeChopping_Loop`, `Walk_Carry_Loop`, `Farm_*`) jest na tym samym UBC rigu co UAL1; dodać subset analogicznie do `ual1_player.glb`, bez retargetu. Jump/crouch/swim clipy z UAL1 czekają aż `PlayerController` zacznie je napędzać.
+- [ ] 2026-09-15 — UAL2 (combat/work: `TreeChopping_Loop`, `Consume`, `Walk_Carry_Loop`, `Farm_*`, `LayToIdle`) is on the same UBC rig as UAL1; extract a second subset after `items-player-035` locomotion/combat clips. No retarget.
 - [ ] 2026-09-15 — NPC nadal na Ultimate Modular Men/Women (inny szkielet). Retarget UAL→Modular albo migracja NPC na UBC to osobna praca; nie mieszać clipów między rygami.
 
 ## Off-screen simulation

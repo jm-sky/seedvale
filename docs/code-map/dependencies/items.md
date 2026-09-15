@@ -662,6 +662,13 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `items/foodSafety.test.ts`
 
+## `items/heldToolVisual.test.ts`
+
+**Imports**
+
+- `assets/assetAnchorData.ts`
+- `items/heldToolVisual.ts`
+
 ## `items/heldToolVisual.ts`
 
 **Imports**
@@ -677,6 +684,7 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `assets/assetIndex.ts`
+- `items/heldToolVisual.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `player/PlayerController.ts`
 - `player/PlayerTorch.ts`
@@ -848,6 +856,7 @@ Generated from TypeScript imports.
 - `items/treasureGameplay.test.ts`
 - `items/treasureGameplay.ts`
 - `persistence/saveData.ts`
+- `player/PlayerController.ts`
 - `player/playerCombat.test.ts`
 - `player/playerDamage.ts`
 - `player/playerMelee.test.ts`

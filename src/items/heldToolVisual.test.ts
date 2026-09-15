@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import { Euler, Group, Object3D, Quaternion, Vector3 } from 'three'
+import { describe, expect, it } from 'vitest'
 import { UBC_HAND_FROM_WRIST_R } from '../assets/assetAnchorData'
 import { HELD_ATTACH, mountAttachOnSocket } from './heldToolVisual'
 

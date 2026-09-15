@@ -88,6 +88,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `items-player-035-ubc-ual-player-animation-coverage.md` | `?modelTest&model=ubc/male_ranger&anims=ubc/ual1_player` >4 clipów; Peasant/Ranger: locomotion, slash, łuk, sneak crouch, pływanie, skok bez tiltu, HP 0 = Death01; Adventurer bez regresji; `ual1_player.glb` setki KB |
 | `items-player-034-equipment-driven-player-outfit.md` | Default Peasant; załóż leather/chainmail → Ranger bez reloadu; zdejmij → Peasant; Continue z założoną skórą; `?player=adventurer` ignoruje zbroję; `?playerTint=brown` |
 | `items-player-033-ubc-player-model-alpha.md` | `?player=peasant` / `?player=ranger` / default Peasant: idle/chód/sprint/cios, trzymane narzędzie, cienie. Opcjonalnie `?modelTest&model=ubc/male_peasant&anims=ubc/ual1_player` |
 | `settlements-017-deterministically-unique-settlement-names.md` | Nowy świat, kilka pobliskich osad: brak dwóch identycznych nazw na drogowskazach/UI; ten sam seed po reloadzie te same nazwy; daleka osada nie zmienia nazw już odwiedzonych |
@@ -214,7 +215,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `031`
-- items-player: `035`
+- items-player: `036`
 - npc: `039`
 - persistence: `005`
 - quests-progression: `041`

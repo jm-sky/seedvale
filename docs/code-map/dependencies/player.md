@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`
 - `items/heldToolVisual.ts`
+- `items/itemCatalog.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/cameraBoom.ts`

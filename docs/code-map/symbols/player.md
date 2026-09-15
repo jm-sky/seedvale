@@ -97,22 +97,22 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveFloorSampler` — type — line 208
-- `CaveGroundQuery` — type — line 203
-- `CaveHorizontalResolver` — type — line 224
-- `CaveOccupancyQuery` — type — line 213
-- `ColliderSource` — type — line 196
-- `HeightSampler` — type — line 193
-- `MOVE_SPEED` — const — line 74
-- `PLAYER_MODEL_URL` — const — line 191
+- `CaveFloorSampler` — type — line 209
+- `CaveGroundQuery` — type — line 204
+- `CaveHorizontalResolver` — type — line 225
+- `CaveOccupancyQuery` — type — line 214
+- `ColliderSource` — type — line 197
+- `HeightSampler` — type — line 194
+- `MOVE_SPEED` — const — line 75
+- `PLAYER_MODEL_URL` — const — line 192
 - `PLAYER_STARTING_ATTRIBUTES` — const — line 95
-- `PlayerController` — class — line 238
+- `PlayerController` — class — line 239
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
-- `PlayerMovementState` — type — line 69
-- `SPRINT_MULTIPLIER` — const — line 79
+- `PlayerMovementState` — type — line 70
+- `SPRINT_MULTIPLIER` — const — line 80
 
 ## `player/playerDamage.ts`
 

@@ -9,6 +9,7 @@ import type {
 } from '../debug/playerMovementTrace'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { FootstepSurface } from '../terrain/footstepSurface'
 import { disposeObject3D, loadGltfAnimated, loadGltfAsset, prepareProp } from '../assets/loadGltf'
@@ -77,8 +78,7 @@ export const MOVE_SPEED = 8
 // keep one entry point.
 export { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT, rockCeilingMaxY }
 export const SPRINT_MULTIPLIER = 1.8
-/** Airborne lean (radians) — no jump clip on the rig (plan 097 §4 pyt. 5), so
- *  this reuses the `crouch()`/`lieDown()` trick of rotating `modelRoot` only. */
+/** Airborne lean (radians) when the bound rig has no jump clips. */
 const JUMP_TILT_MAX = 0.25
 const JUMP_TILT_FACTOR = 0.05
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
@@ -175,8 +175,9 @@ type PlayerPose = 'stand' | 'crouch' | 'lie'
   - `Walk`
   - `Wave`
 
-  Opt-in UBC (`?player=peasant|ranger`) uses a separate UAL1 clip GLB:
-  `Idle_Loop`, `Walk_Loop`, `Sprint_Loop`, `Sword_Attack`.
+  UBC Peasant/Ranger loads clips from `ual1_player.glb` (UAL1 subset). Mixer
+  aliases those names onto the same slots as Adventurer (`Idle_Loop` → idle,
+  `Sprint_Loop` → run, `Sword_Attack` → melee, pistol clips → bow stand-in).
 
   Current Hero animations:
   - `Idle`
@@ -347,14 +348,21 @@ export class PlayerController {
   private walkAction: THREE.AnimationAction | null = null
   private runAction: THREE.AnimationAction | null = null
   private attackAction: THREE.AnimationAction | null = null
-  /** Adventurer ships no dedicated bow clip — `Idle_Gun_Pointing`/`Gun_Shoot`
-   *  are the closest same-rig stand-ins for draw-hold/release (plan 162
-   *  follow-up, see the plan's implementation summary). `Universal Animation
-   *  Library`/Mixamo `Pro Longbow Pack` clips were checked and are not
-   *  usable: different skeletons (UE mannequin / `mixamorig:*`) than
-   *  Adventurer's own rig, and UAL doesn't ship bow-specific content anyway. */
+  private swordIdleAction: THREE.AnimationAction | null = null
+  private torchIdleAction: THREE.AnimationAction | null = null
+  private crouchIdleAction: THREE.AnimationAction | null = null
+  private crouchWalkAction: THREE.AnimationAction | null = null
+  private swimIdleAction: THREE.AnimationAction | null = null
+  private swimWalkAction: THREE.AnimationAction | null = null
+  private jumpStartAction: THREE.AnimationAction | null = null
+  private jumpLoopAction: THREE.AnimationAction | null = null
+  private jumpLandAction: THREE.AnimationAction | null = null
+  private deathAction: THREE.AnimationAction | null = null
+  /** Adventurer: `Idle_Gun_Pointing`/`Gun_Shoot`. UBC: UAL pistol clips as
+   *  the same-rig bow stand-in (`items-player-035`). */
   private aimDrawAction: THREE.AnimationAction | null = null
   private rangedReleaseAction: THREE.AnimationAction | null = null
+  private jumpPhase: 'none' | 'start' | 'loop' | 'land' = 'none'
   private animations: THREE.AnimationClip[] = []
   private currentModelUrl = PLAYER_MODEL_URL
   private currentAnimationUrl: string | null = null
@@ -985,7 +993,7 @@ export class PlayerController {
     this.syncCamera()
   }
 
-  /** Procedural squat — camp-rest setup/teardown between stand and lie. */
+  /** Camp-rest squat between stand and lie. Uses a crouch clip when bound. */
   crouch(): void {
     if (this.pose === 'crouch') return
     this.clearPoseVisual()
@@ -994,6 +1002,11 @@ export class PlayerController {
     // transition that makes the mode meaningless, so this is the one place
     // it auto-deactivates.
     this.skills.sneak.active = false
+    this.jumpPhase = 'none'
+    if (this.crouchIdleAction) {
+      this.playAction(this.crouchIdleAction)
+      return
+    }
     this.currentAction?.fadeOut(0.15)
     this.currentAction = null
     this.modelRoot.rotation.x = CROUCH_ROTATION_X
@@ -1030,13 +1043,19 @@ export class PlayerController {
     return this.downed
   }
 
-  /** HP reached 0 — lie down for `durationSec`, then `tickDowned` stands up. */
+  /** HP reached 0 — death clip when bound, otherwise lie down for `durationSec`. */
   enterDowned(durationSec: number): void {
     if (this.downed) return
     this.downed = true
     this.downedTimer = durationSec
     this.meleeAttacking = false
     this.rangedDrawing = false
+    this.jumpPhase = 'none'
+    this.skills.sneak.active = false
+    if (this.deathAction) {
+      this.playOnce(this.deathAction)
+      return
+    }
     this.lieDown()
   }
 
@@ -1047,7 +1066,8 @@ export class PlayerController {
     if (this.downedTimer > 0) return false
     this.downed = false
     this.downedTimer = 0
-    this.standUp()
+    if (this.pose !== 'stand') this.standUp()
+    else this.playAction(this.idleAction)
     return true
   }
 
@@ -1073,6 +1093,7 @@ export class PlayerController {
     this.sprinting = false
     this.meleeAttacking = false
     this.rangedDrawing = false
+    this.jumpPhase = 'none'
     // No riding animation clip exists on this rig (plan fauna-003 §7) — the
     // accepted fallback is a static seated pose, i.e. just Idle, correctly
     // positioned and moving with the mount, instead of the walk/run cycle
@@ -1313,6 +1334,7 @@ export class PlayerController {
     this.setHeldTool(null)
     this.label.removeFromParent()
     this.labelEl.remove()
+    this.mixer?.removeEventListener('finished', this.onMixerFinished)
     this.mixer?.stopAllAction()
     if (!this.isCapsule) disposeOutfitMaterialClones(this.modelRoot)
     // GLB clones share GPU resources with the loader cache — only free the capsule fallback.
@@ -1321,23 +1343,72 @@ export class PlayerController {
 
   private bindMixer(root: THREE.Object3D, animations: THREE.AnimationClip[]): void {
     this.animations = animations
+    this.mixer?.removeEventListener('finished', this.onMixerFinished)
+    this.clearMixerActions()
     if (animations.length > 0) {
       this.mixer = new THREE.AnimationMixer(root)
+      this.mixer.addEventListener('finished', this.onMixerFinished)
       this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral', 'Idle_Loop'])
       this.walkAction = this.findAction(animations, ['Walk', 'Walk_Loop', 'Run'])
       this.runAction = this.findAction(animations, ['Run', 'Sprint_Loop', 'Jog_Fwd_Loop'])
       this.attackAction = this.findAction(animations, ['Sword_Slash', 'Sword_Attack', 'Punch_Right', 'Punch_Left'])
-      this.aimDrawAction = this.findAction(animations, ['Idle_Gun_Pointing', 'Idle_Gun', 'Sword_Idle'])
-      this.rangedReleaseAction = this.findAction(animations, ['Gun_Shoot', 'Idle_Gun_Shoot'])
+      this.swordIdleAction = this.findAction(animations, ['Idle_Sword', 'Sword_Idle'])
+      this.torchIdleAction = this.findAction(animations, ['Idle_Torch_Loop'])
+      this.crouchIdleAction = this.findAction(animations, ['Crouch_Idle_Loop'])
+      this.crouchWalkAction = this.findAction(animations, ['Crouch_Fwd_Loop'])
+      this.swimIdleAction = this.findAction(animations, ['Swim_Idle_Loop'])
+      this.swimWalkAction = this.findAction(animations, ['Swim_Fwd_Loop'])
+      this.jumpStartAction = this.findAction(animations, ['Jump_Start'])
+      this.jumpLoopAction = this.findAction(animations, ['Jump_Loop'])
+      this.jumpLandAction = this.findAction(animations, ['Jump_Land'])
+      this.deathAction = this.findAction(animations, ['Death', 'Death01'])
+      this.aimDrawAction = this.findAction(animations, [
+        'Idle_Gun_Pointing',
+        'Idle_Gun',
+        'Pistol_Aim_Neutral',
+        'Pistol_Idle_Loop',
+      ])
+      this.rangedReleaseAction = this.findAction(animations, ['Gun_Shoot', 'Idle_Gun_Shoot', 'Pistol_Shoot'])
       this.playAction(this.idleAction)
     } else {
       this.mixer = null
-      this.idleAction = null
-      this.walkAction = null
-      this.runAction = null
-      this.attackAction = null
-      this.aimDrawAction = null
-      this.rangedReleaseAction = null
+    }
+  }
+
+  private clearMixerActions(): void {
+    this.idleAction = null
+    this.walkAction = null
+    this.runAction = null
+    this.attackAction = null
+    this.swordIdleAction = null
+    this.torchIdleAction = null
+    this.crouchIdleAction = null
+    this.crouchWalkAction = null
+    this.swimIdleAction = null
+    this.swimWalkAction = null
+    this.jumpStartAction = null
+    this.jumpLoopAction = null
+    this.jumpLandAction = null
+    this.deathAction = null
+    this.aimDrawAction = null
+    this.rangedReleaseAction = null
+    this.jumpPhase = 'none'
+  }
+
+  private readonly onMixerFinished = (event: { action: THREE.AnimationAction }): void => {
+    if (event.action === this.jumpStartAction && this.jumpPhase === 'start') {
+      if (!this.grounded && this.jumpLoopAction) {
+        this.jumpPhase = 'loop'
+        this.playAction(this.jumpLoopAction)
+        return
+      }
+      this.jumpPhase = 'none'
+      this.syncAnimation()
+      return
+    }
+    if (event.action === this.jumpLandAction && this.jumpPhase === 'land') {
+      this.jumpPhase = 'none'
+      this.syncAnimation()
     }
   }
 
@@ -1356,14 +1427,86 @@ export class PlayerController {
   private playAction(action: THREE.AnimationAction | null): void {
     if (!action || action === this.currentAction) return
     this.currentAction?.fadeOut(0.2)
-    action.reset().setEffectiveWeight(1).fadeIn(0.2).play()
+    action.reset()
+    action.setLoop(THREE.LoopRepeat, Infinity)
+    action.clampWhenFinished = false
+    action.setEffectiveTimeScale(1)
+    action.setEffectiveWeight(1).fadeIn(0.2).play()
     this.currentAction = action
+  }
+
+  private playOnce(action: THREE.AnimationAction | null): void {
+    if (!action) return
+    this.currentAction?.fadeOut(0.08)
+    action.reset()
+    action.setLoop(THREE.LoopOnce, 1)
+    action.clampWhenFinished = true
+    action.setEffectiveTimeScale(1)
+    action.setEffectiveWeight(1)
+    action.fadeIn(0.08).play()
+    this.currentAction = action
+  }
+
+  private heldMelee(): boolean {
+    return this.heldToolKind != null && ITEM_CATALOG[this.heldToolKind].melee != null
+  }
+
+  private syncJumpAnimation(tookOff: boolean, landed: boolean, grounded: boolean): void {
+    if (tookOff) {
+      if (this.jumpStartAction) {
+        this.jumpPhase = 'start'
+        this.playOnce(this.jumpStartAction)
+        return
+      }
+      if (this.jumpLoopAction) {
+        this.jumpPhase = 'loop'
+        this.playAction(this.jumpLoopAction)
+        return
+      }
+    }
+    if (landed) {
+      if (this.jumpLandAction) {
+        this.jumpPhase = 'land'
+        this.playOnce(this.jumpLandAction)
+        return
+      }
+      this.jumpPhase = 'none'
+    }
+    if (!grounded && this.jumpPhase === 'none' && this.jumpLoopAction) {
+      this.jumpPhase = 'loop'
+      this.playAction(this.jumpLoopAction)
+    }
   }
 
   private syncAnimation(): void {
     if (this.meleeAttacking && this.attackAction) return
     if (this.rangedDrawing && this.aimDrawAction) return
+    if (this.jumpPhase !== 'none') return
+    if (this.wasInWater && (this.swimIdleAction || this.swimWalkAction)) {
+      if (!this.moving) {
+        this.playAction(this.swimIdleAction ?? this.swimWalkAction)
+        return
+      }
+      this.playAction(this.swimWalkAction ?? this.swimIdleAction)
+      return
+    }
+    if (this.skills.sneak.active && (this.crouchIdleAction || this.crouchWalkAction)) {
+      if (!this.moving) {
+        this.playAction(this.crouchIdleAction ?? this.crouchWalkAction)
+        return
+      }
+      this.playAction(this.crouchWalkAction ?? this.crouchIdleAction)
+      return
+    }
     if (!this.moving) {
+      if (this.heldToolKind === 'wooden_torch' && this.torchIdleAction) {
+        this.playAction(this.torchIdleAction)
+        return
+      }
+      if (this.heldMelee() && this.swordIdleAction) {
+        this.playAction(this.swordIdleAction)
+        return
+      }
       this.playAction(this.idleAction)
       return
     }
@@ -1471,6 +1614,7 @@ export class PlayerController {
     this.verticalVelocity = 0
     this.grounded = true
     this.jumpRequested = false
+    this.jumpPhase = 'none'
     this.wasInWater = inWorldWater
     this.footstepAccum = 0
     this.modelRoot.rotation.x = 0
@@ -1495,6 +1639,7 @@ export class PlayerController {
       this.verticalVelocity = 0
       this.grounded = true
       this.jumpRequested = false
+      this.jumpPhase = 'none'
       this.modelRoot.rotation.x = 0
       this.emitGroundTrace('swim', x, yBefore, z, groundedBefore, vyBefore, groundY)
       return
@@ -1530,7 +1675,10 @@ export class PlayerController {
       this.footstepAccum = 0
     }
 
-    this.modelRoot.rotation.x = this.grounded
+    this.syncJumpAnimation(next.tookOff, next.landed, next.grounded)
+
+    const hasJumpClip = this.jumpStartAction != null || this.jumpLoopAction != null || this.jumpLandAction != null
+    this.modelRoot.rotation.x = (this.grounded || hasJumpClip)
       ? 0
       : THREE.MathUtils.clamp(
           -this.verticalVelocity * JUMP_TILT_FACTOR,

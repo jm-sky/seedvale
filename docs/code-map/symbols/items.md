@@ -240,16 +240,16 @@ Generated from exported TypeScript symbols.
 
 ## `items/heldToolVisual.ts`
 
-- `BRANCH_HELD_ATTACH` — const — line 192
-- `createHeldToolObject` — function — line 287
-- `findRightHandSocket` — function — line 264
-- `HELD_ATTACH` — const — line 32
-- `HELD_GLB` — const — line 201
-- `HeldAttach` — type — line 10
-- `HeldMountContext` — type — line 254
-- `mountAttachOnSocket` — function — line 357
-- `mountHeldToolOnSocket` — function — line 315
-- `preloadHeldToolModels` — function — line 268
+- `BRANCH_HELD_ATTACH` — const — line 197
+- `createHeldToolObject` — function — line 296
+- `findRightHandSocket` — function — line 273
+- `HELD_ATTACH` — const — line 37
+- `HELD_GLB` — const — line 206
+- `HeldAttach` — type — line 15
+- `HeldMountContext` — type — line 259
+- `mountAttachOnSocket` — function — line 370
+- `mountHeldToolOnSocket` — function — line 324
+- `preloadHeldToolModels` — function — line 277
 
 ## `items/Inventory.ts`
 

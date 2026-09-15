@@ -72,6 +72,7 @@ Generated from TypeScript imports.
 - `assets/assetAnchorData.test.ts`
 - `assets/assetIndex.ts`
 - `assets/houseDefinitionExample.ts`
+- `items/heldToolVisual.test.ts`
 - `items/heldToolVisual.ts`
 - `settlement/houseLighting.ts`
 - `settlement/wellInteractionQueue.ts`

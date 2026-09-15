@@ -26,13 +26,13 @@ export const ADVENTURER_HAND_SPACE: readonly [number, number, number] = [0, 0, 0
  */
 export const UBC_HAND_FROM_WRIST_R: readonly [number, number, number] = [0, 0, -Math.PI / 2]
 
-const UBC_HAND_BONE_NAMES = new Set(['hand_r', 'hand_l'])
+const UBC_HAND_BONE_NAMES = new Set(['hand_l', 'hand_r'])
 const ADVENTURER_HAND_BONE_NAMES = new Set([
-  'WristR',
-  'HandR',
-  'Wrist.R',
   'Hand.R',
+  'HandR',
   'mixamorigRightHand',
+  'Wrist.R',
+  'WristR',
 ])
 
 type NamedParentNode = {

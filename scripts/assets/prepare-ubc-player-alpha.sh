@@ -22,7 +22,7 @@ python3 "$ROOT/scripts/assets/compose_ubc_player.py" --root "$ROOT" --out-dir "$
 python3 "$ROOT/scripts/assets/extract_glb_clips.py" \
   --in "$UAL1" \
   --out "$WORK/anims/ual1_player.glb" \
-  --keep Idle_Loop,Walk_Loop,Sprint_Loop,Sword_Attack
+  --keep Idle_Loop,Walk_Loop,Sprint_Loop,Sword_Attack,Sword_Idle,Interact,Death01,Hit_Chest,Punch_Jab,Punch_Cross,Roll,Pistol_Idle_Loop,Pistol_Aim_Neutral,Pistol_Shoot,Crouch_Idle_Loop,Crouch_Fwd_Loop,Jump_Start,Jump_Loop,Jump_Land,Swim_Idle_Loop,Swim_Fwd_Loop,Idle_Torch_Loop
 
 optimize() {
   local src="$1"
