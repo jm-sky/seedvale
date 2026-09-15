@@ -90,10 +90,10 @@ const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
 /** Outfit clothes materials in composed UBC GLBs (gltfpack drops mesh names). */
 const UBC_OUTFIT_MATERIAL_NAMES = new Set([
-  'MI_Peasant',
-  'MI_Ranger',
   'MI_Knight',
   'MI_Noble',
+  'MI_Peasant',
+  'MI_Ranger',
   'MI_Wizard',
 ])
 /** Player starting SPEA (plan npc-019 §6) — slightly above the shared `0.5`

@@ -97,22 +97,22 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveFloorSampler` — type — line 215
-- `CaveGroundQuery` — type — line 210
-- `CaveHorizontalResolver` — type — line 231
-- `CaveOccupancyQuery` — type — line 220
-- `ColliderSource` — type — line 203
-- `HeightSampler` — type — line 200
-- `MOVE_SPEED` — const — line 75
-- `PLAYER_MODEL_URL` — const — line 198
-- `PLAYER_STARTING_ATTRIBUTES` — const — line 101
-- `PlayerController` — class — line 245
+- `CaveFloorSampler` — type — line 216
+- `CaveGroundQuery` — type — line 211
+- `CaveHorizontalResolver` — type — line 232
+- `CaveOccupancyQuery` — type — line 221
+- `ColliderSource` — type — line 204
+- `HeightSampler` — type — line 201
+- `MOVE_SPEED` — const — line 76
+- `PLAYER_MODEL_URL` — const — line 199
+- `PLAYER_STARTING_ATTRIBUTES` — const — line 102
+- `PlayerController` — class — line 246
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
-- `PlayerMovementState` — type — line 70
-- `SPRINT_MULTIPLIER` — const — line 80
+- `PlayerMovementState` — type — line 71
+- `SPRINT_MULTIPLIER` — const — line 81
 
 ## `player/playerDamage.ts`
 
@@ -244,30 +244,31 @@ Generated from exported TypeScript symbols.
 
 ## `player/playerVisualPreset.ts`
 
+- `companionAnimationUrl` — function — line 20
 - `PLAYER_UBC_ANIMATION_URL` — const — line 14
-- `PLAYER_UBC_KNIGHT_BROWN_URL` — const — line 18
-- `PLAYER_UBC_KNIGHT_CLOTH_BROWN_URL` — const — line 19
+- `PLAYER_UBC_KNIGHT_BROWN_URL` — const — line 30
+- `PLAYER_UBC_KNIGHT_CLOTH_BROWN_URL` — const — line 31
 - `PLAYER_UBC_KNIGHT_CLOTH_URL` — const — line 10
 - `PLAYER_UBC_KNIGHT_URL` — const — line 9
-- `PLAYER_UBC_NOBLE_BROWN_URL` — const — line 20
+- `PLAYER_UBC_NOBLE_BROWN_URL` — const — line 32
 - `PLAYER_UBC_NOBLE_URL` — const — line 11
-- `PLAYER_UBC_PEASANT_BROWN_URL` — const — line 16
+- `PLAYER_UBC_PEASANT_BROWN_URL` — const — line 28
 - `PLAYER_UBC_PEASANT_URL` — const — line 7
-- `PLAYER_UBC_RANGER_BROWN_URL` — const — line 17
+- `PLAYER_UBC_RANGER_BROWN_URL` — const — line 29
 - `PLAYER_UBC_RANGER_URL` — const — line 8
-- `PLAYER_UBC_WIZARD_BROWN_URL` — const — line 21
+- `PLAYER_UBC_WIZARD_BROWN_URL` — const — line 33
 - `PLAYER_UBC_WIZARD_URL` — const — line 12
-- `PlayerAppearance` — type — line 41
-- `PlayerEquipmentOutfitId` — type — line 32
-- `PlayerOutfitTint` — type — line 31
-- `PlayerVisualId` — type — line 23
-- `PlayerVisualPreset` — type — line 34
-- `resolveEquipmentOutfit` — function — line 154
-- `resolvePlayerAppearance` — function — line 185
-- `resolvePlayerTint` — function — line 160
-- `resolvePlayerUrlOverride` — function — line 139
-- `resolvePlayerVisualPreset` — function — line 204
-- `ubcPreloadUrls` — function — line 212
+- `PlayerAppearance` — type — line 53
+- `PlayerEquipmentOutfitId` — type — line 44
+- `PlayerOutfitTint` — type — line 43
+- `PlayerVisualId` — type — line 35
+- `PlayerVisualPreset` — type — line 46
+- `resolveEquipmentOutfit` — function — line 166
+- `resolvePlayerAppearance` — function — line 197
+- `resolvePlayerTint` — function — line 172
+- `resolvePlayerUrlOverride` — function — line 151
+- `resolvePlayerVisualPreset` — function — line 216
+- `ubcPreloadUrls` — function — line 224
 
 ## `player/ridingStability.ts`
 

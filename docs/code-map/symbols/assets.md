@@ -40,18 +40,20 @@ Generated from exported TypeScript symbols.
 ## `assets/assetAnchorData.ts`
 
 - `ADVENTURER_HAND_SPACE` — const — line 26
-- `anchorsForAsset` — function — line 175
-- `ASSET_ANCHORS` — const — line 151
-- `CHARACTER_ANCHORS` — const — line 77
-- `CHARACTER_ANCHORS_UBC` — const — line 89
+- `anchorsForAsset` — function — line 185
+- `ASSET_ANCHORS` — const — line 161
+- `CHARACTER_ANCHORS` — const — line 87
+- `CHARACTER_ANCHORS_UBC` — const — line 99
 - `HandAttachSpace` — type — line 18
-- `handAttachSpaceFromSocket` — function — line 67
-- `HELD_TOOL_GRIP_ANCHORS` — const — line 146
-- `heldToolHasGripAnchor` — function — line 182
+- `handAttachSpaceFromSocket` — function — line 77
+- `HELD_TOOL_GRIP_ANCHORS` — const — line 156
+- `heldToolHasGripAnchor` — function — line 192
 - `RIGHT_HAND_BONE_NAMES` — const — line 9
 - `UBC_HAND_FROM_WRIST_R` — const — line 37
 - `UBC_HAND_OFFSET` — const — line 41
-- `UBC_HAND_SPACE` — const — line 43
+- `UBC_HAND_SPACE` — const — line 53
+- `UBC_LEFT_HAND_BONE_NAMES` — const — line 51
+- `UBC_TORCH_HAND_OFFSET` — const — line 48
 
 ## `assets/assetAnchors.ts`
 

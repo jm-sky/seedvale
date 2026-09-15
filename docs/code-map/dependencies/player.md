@@ -537,6 +537,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `assets/assetIndex.ts`
 - `player/playerVisualPreset.test.ts`
+- `tools/assetBrowser/viewer/createAssetSlot.ts`
 
 ## `player/ridingStability.ts`
 

@@ -306,6 +306,7 @@ graph TD
   items_player_034["items-player-034 — equipment-driven UBC outfit"]
   items_player_035["items-player-035 — UBC — szerszy subset UAL i mixer gracza"]
   items_player_036["items-player-036 — UBC Fantasy Source outfits"]
+  items_player_037["items-player-037 — UBC runtime per-slot outfits"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -660,12 +661,14 @@ graph TD
   items_player_028 --> npc_034
   items_player_029 --> items_player_030
   items_player_030 --> items_player_031
+  items_player_030 --> items_player_037
   items_player_031 --> quests_progression_035
   items_player_033 --> items_player_034
   items_player_033 --> items_player_035
   items_player_033 --> items_player_036
   items_player_034 --> items_player_035
   items_player_034 --> items_player_036
+  items_player_036 --> items_player_037
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004

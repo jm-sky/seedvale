@@ -109,17 +109,19 @@ export function resolveAppliedClipName(
   return names.find((n) => /idle/i.test(n)) ?? names[0] ?? null
 }
 
-/** Drop a missing clip after a model swap: idle if present, else rest. */
+/** Drop a missing clip after a model swap: idle if present, else first clip.
+ *  Empty `names` means the clip list is not ready yet — keep the current
+ *  selection so a deep-link `clip=` survives a parallel target load. */
 export function reconcilePoseClip(
   pose: 'rest' | 'idle',
   clip: string | null,
   names: readonly string[],
 ): { pose: 'rest' | 'idle', clip: string | null } {
   if (pose === 'rest' && !clip) return { pose: 'rest', clip: null }
+  if (names.length === 0) return { pose, clip }
   if (clip && names.includes(clip)) return { pose: 'idle', clip }
   if (names.some((n) => /idle/i.test(n))) return { pose: 'idle', clip: null }
-  if (names.length > 0) return { pose: 'idle', clip: names[0]! }
-  return { pose: 'rest', clip: null }
+  return { pose: 'idle', clip: names[0]! }
 }
 
 export function createAssetSlot(role: 'reference' | 'target', scene: Group): AssetSlot {

@@ -21,6 +21,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Pri | Effort | Depends                                                                                                                                                                         | Roadmap                                 |
 | ------------------------------------------------------------------------------ | --- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `items-player-037-ubc-runtime-per-slot-outfits.md`                             | 🟡 | XL     | ~~items-player-030~~, ~~items-player-036~~                                                                                                                                      | -                                       |
 | `npc-004-npc-genealogy-lineages.md`                                            | ⚪ | S      | -                                                                                                                                                                               | npc-professions-households-and-age      |
 | `npc-032-expedition-needs-and-survival.md`                                     | 🔴 | L      | ~~npc-029~~, ~~npc-017~~, ~~npc-025~~, items-player-028                                                                                                                         | companions                              |
 | `npc-033-companion-combat-cooperation.md`                                      | 🔴 | L      | ~~npc-029~~, npc-032, ~~items-player-027~~, ~~npc-025~~                                                                                                                         | companions                              |
@@ -216,7 +217,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `031`
-- items-player: `037`
+- items-player: `038`
 - npc: `039`
 - persistence: `005`
 - quests-progression: `042`

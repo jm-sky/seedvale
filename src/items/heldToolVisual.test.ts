@@ -1,7 +1,7 @@
 import { Euler, Group, Object3D, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { UBC_HAND_FROM_WRIST_R, UBC_HAND_OFFSET, UBC_TORCH_HAND_OFFSET } from '../assets/assetAnchorData'
-import { HELD_ATTACH, findUbcLeftHandSocket, mountAttachOnSocket } from './heldToolVisual'
+import { findUbcLeftHandSocket, HELD_ATTACH, mountAttachOnSocket } from './heldToolVisual'
 
 function expectQuatClose(actual: Quaternion, expected: Quaternion): void {
   expect(actual.x).toBeCloseTo(expected.x, 5)

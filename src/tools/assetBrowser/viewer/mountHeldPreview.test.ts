@@ -1,6 +1,7 @@
+import { Object3D } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { AssetIndexEntry } from '../../../assets/assetIndex'
-import { heldPreviewKind, provisionalHeldAttach } from './mountHeldPreview'
+import { heldPreviewKind, heldPreviewSocket, provisionalHeldAttach } from './mountHeldPreview'
 
 function heldEntry(id: string): AssetIndexEntry {
   return {
@@ -39,6 +40,31 @@ describe('heldPreviewKind', () => {
       group: 'item',
     })).toBeNull()
     expect(heldPreviewKind(null)).toBeNull()
+  })
+})
+
+describe('heldPreviewSocket', () => {
+  it('parents wooden_torch to UBC hand_l when present', () => {
+    const root = new Object3D()
+    const left = new Object3D()
+    left.name = 'hand_l'
+    const right = new Object3D()
+    right.name = 'hand_r'
+    root.add(left)
+    root.add(right)
+    expect(heldPreviewSocket(root, 'wooden_torch')).toBe(left)
+    expect(heldPreviewSocket(root, 'axe')).toBe(right)
+  })
+
+  it('falls back to the right hand when there is no UBC hand_l', () => {
+    const root = new Object3D()
+    const wristL = new Object3D()
+    wristL.name = 'WristL'
+    const wristR = new Object3D()
+    wristR.name = 'WristR'
+    root.add(wristL)
+    root.add(wristR)
+    expect(heldPreviewSocket(root, 'wooden_torch')).toBe(wristR)
   })
 })
 

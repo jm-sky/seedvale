@@ -61,7 +61,7 @@ describe('resolveAppliedClipName', () => {
 })
 
 describe('reconcilePoseClip', () => {
-  it('keeps rest, drops a missing clip to idle, and rest when there are no clips', () => {
+  it('keeps rest, drops a missing clip to idle, and keeps a named clip while names are empty', () => {
     expect(reconcilePoseClip('rest', null, ['Idle_Loop'])).toEqual({ pose: 'rest', clip: null })
     expect(reconcilePoseClip('idle', 'Walk_Loop', ['Idle_Loop', 'Walk_Loop'])).toEqual({
       pose: 'idle',
@@ -71,6 +71,13 @@ describe('reconcilePoseClip', () => {
       pose: 'idle',
       clip: null,
     })
-    expect(reconcilePoseClip('idle', 'Walk_Loop', [])).toEqual({ pose: 'rest', clip: null })
+    expect(reconcilePoseClip('idle', 'Idle_Torch_Loop', [])).toEqual({
+      pose: 'idle',
+      clip: 'Idle_Torch_Loop',
+    })
+    expect(reconcilePoseClip('rest', 'Idle_Torch_Loop', [])).toEqual({
+      pose: 'rest',
+      clip: 'Idle_Torch_Loop',
+    })
   })
 })

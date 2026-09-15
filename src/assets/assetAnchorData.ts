@@ -34,7 +34,7 @@ export const ADVENTURER_HAND_SPACE: HandAttachSpace = {
  * `HELD_ATTACH` numbers. `Rz(-π/2)` sends WristR +Y (fingertips) onto UBC +X
  * so the blade follows the hand like Adventurer, not a second per-item table.
  */
-export const UBC_HAND_FROM_WRIST_R: readonly [number, number, number] = [0, 0, -Math.PI / 2]
+export const UBC_HAND_FROM_WRIST_R: readonly [number, number, number] = [0, Math.PI / 2, 0]
 
 /** Extra UBC `hand_r` translation (bone-local meters). Tune in-game; leave
  *  zeros until the grip origin needs a nudge after the Euler is right. */
@@ -45,7 +45,7 @@ export const UBC_HAND_OFFSET: readonly [number, number, number] = [-0.15, 0, 0]
  * on top of {@link UBC_HAND_OFFSET}. Idle_Torch_Loop is left-handed; other
  * tools stay on `hand_r`. Tune in-game.
  */
-export const UBC_TORCH_HAND_OFFSET: readonly [number, number, number] = [0, 0, 0]
+export const UBC_TORCH_HAND_OFFSET: readonly [number, number, number] = [0.22, 0, 0]
 
 /** UBC only — do not include Adventurer `WristL`. */
 export const UBC_LEFT_HAND_BONE_NAMES = ['hand_l'] as const

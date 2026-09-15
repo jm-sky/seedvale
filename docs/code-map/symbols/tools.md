@@ -24,24 +24,24 @@ Generated from exported TypeScript symbols.
 ## `tools/assetBrowser/state.ts`
 
 - `BackgroundPreset` — type — line 8
-- `browserState` — const — line 44
+- `browserState` — const — line 46
 - `BrowserState` — type — line 13
 - `FocusMode` — type — line 11
 - `LightingPreset` — type — line 7
 - `PoseMode` — type — line 9
 - `RenderMode` — type — line 6
-- `resetSlotDiagnostics` — function — line 144
-- `slotDiagnostics` — const — line 108
-- `SlotDiagnostics` — type — line 85
+- `resetSlotDiagnostics` — function — line 149
+- `slotDiagnostics` — const — line 112
+- `SlotDiagnostics` — type — line 88
 - `ViewLayout` — type — line 5
 
 ## `tools/assetBrowser/urlParams.ts`
 
-- `applyAssetBrowserUrlParams` — function — line 195
+- `applyAssetBrowserUrlParams` — function — line 200
 - `AssetBrowserUrlParams` — type — line 18
-- `hasAssetBrowserUrlParams` — function — line 190
-- `parseAssetBrowserUrlParams` — function — line 128
-- `syncAssetBrowserUrlParams` — function — line 245
+- `hasAssetBrowserUrlParams` — function — line 195
+- `parseAssetBrowserUrlParams` — function — line 130
+- `syncAssetBrowserUrlParams` — function — line 251
 
 ## `tools/assetBrowser/viewer/cameraPersist.ts`
 
@@ -61,13 +61,16 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/viewer/createAssetSlot.ts`
 
-- `AssetSlot` — type — line 30
-- `boundsData` — function — line 267
-- `boxFromModel` — function — line 66
-- `collectMeshStats` — function — line 71
-- `createAssetSlot` — function — line 93
-- `MeshStats` — type — line 25
-- `setWireframe` — function — line 285
+- `AssetSlot` — type — line 31
+- `boundsData` — function — line 316
+- `boxFromModel` — function — line 70
+- `collectMeshStats` — function — line 75
+- `createAssetSlot` — function — line 127
+- `MeshStats` — type — line 26
+- `reconcilePoseClip` — function — line 115
+- `resolveAppliedClipName` — function — line 102
+- `setWireframe` — function — line 334
+- `sortedClipNames` — function — line 97
 
 ## `tools/assetBrowser/viewer/createMultiView.ts`
 
@@ -83,9 +86,9 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/viewer/createViewer.ts`
 
-- `AssetViewer` — type — line 24
-- `createViewer` — function — line 52
-- `syncDiagnostics` — function — line 359
+- `AssetViewer` — type — line 31
+- `createViewer` — function — line 59
+- `syncDiagnostics` — function — line 392
 
 ## `tools/assetBrowser/viewer/createViewerScene.ts`
 
@@ -95,19 +98,20 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/viewer/mountHeldPreview.ts`
 
-- `applyHeldPreview` — function — line 120
-- `clearHeldPreviewMount` — function — line 82
-- `computeHeldPreviewState` — function — line 42
-- `HELD_SIDE_OFFSET` — const — line 16
-- `heldPreviewKind` — function — line 30
-- `HeldPreviewMode` — type — line 18
-- `HeldPreviewState` — type — line 20
-- `provisionalHeldAttach` — function — line 37
+- `applyHeldPreview` — function — line 134
+- `clearHeldPreviewMount` — function — line 83
+- `computeHeldPreviewState` — function — line 43
+- `HELD_SIDE_OFFSET` — const — line 17
+- `heldPreviewKind` — function — line 31
+- `HeldPreviewMode` — type — line 19
+- `heldPreviewSocket` — function — line 118
+- `HeldPreviewState` — type — line 21
+- `provisionalHeldAttach` — function — line 38
 
 ## `tools/assetBrowser/viewer/reportFromScene.ts`
 
 - `buildReportFromScene` — function — line 89
-- `findAnchorByName` — function — line 177
+- `findAnchorByName` — function — line 181
 
 ## `tools/toolRegistry.ts`
 

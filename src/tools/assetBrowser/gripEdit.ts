@@ -86,6 +86,7 @@ export function loadGripEditor(targetId: string | null): void {
 }
 
 export function gripEditToAttach(): HeldAttach {
+  const source = defaultAttachForHeldId(gripEdit.sourceId)
   return {
     position: [...gripEdit.position] as [number, number, number],
     rotation: [
@@ -95,6 +96,8 @@ export function gripEditToAttach(): HeldAttach {
     ],
     scale: gripEdit.scale,
     gripLocalOffset: [...gripEdit.gripLocalOffset] as [number, number, number],
+    // Live from game attach — grip sliders do not edit UBC torch extra.
+    ...(source?.ubcPosition ? { ubcPosition: source.ubcPosition } : {}),
   }
 }
 

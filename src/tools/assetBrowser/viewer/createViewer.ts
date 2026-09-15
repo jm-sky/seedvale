@@ -76,7 +76,15 @@ export function createViewer(container: HTMLElement): AssetViewer {
     reference.clipNames.length > 0 ? reference.clipNames : target.clipNames
   )
 
+  const clipOwnerLoaded = () => {
+    const referenceOwnsClips = Boolean(
+      browserState.referenceId || browserState.referenceFreeUrl.trim(),
+    )
+    return referenceOwnsClips ? reference.model != null : target.model != null
+  }
+
   const reconcileClipSelection = () => {
+    if (!clipOwnerLoaded()) return
     const next = reconcilePoseClip(browserState.pose, browserState.clip, poseClipNames())
     browserState.pose = next.pose
     browserState.clip = next.clip

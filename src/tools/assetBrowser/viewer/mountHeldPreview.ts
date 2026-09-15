@@ -7,6 +7,7 @@ import { isToolKind, type ToolKind } from '../../../items/HeldTool'
 import {
   BRANCH_HELD_ATTACH,
   findRightHandSocket,
+  findUbcLeftHandSocket,
   type HeldAttach,
   mountAttachOnSocket,
   mountHeldToolOnSocket,
@@ -112,8 +113,21 @@ function resetToolLocal(tool: Object3D): void {
 }
 
 /**
+ * Same hand as in-game: UBC `wooden_torch` → `hand_l`; otherwise right wrist.
+ */
+export function heldPreviewSocket(
+  root: Object3D,
+  kind: ToolKind | 'branch' | null,
+): Object3D | null {
+  if (kind === 'wooden_torch') {
+    return findUbcLeftHandSocket(root) ?? findRightHandSocket(root)
+  }
+  return findRightHandSocket(root)
+}
+
+/**
  * When reference is a skinned character and target is a held tool with game
- * attach data, parent the tool on `hand.right` via `mountHeldToolOnSocket`.
+ * attach data, parent via `mountHeldToolOnSocket` (UBC torch → left hand).
  *
  * Optional `attachOverride` replaces game / provisional numbers (browser grip editor).
  */
@@ -137,17 +151,16 @@ export function applyHeldPreview(
 
   target.group.position.set(0, 0, 0)
 
-  const socket = findRightHandSocket(reference.model!)
+  const entry = target.entry!
+  const kind = heldPreviewKind(entry)
+  const socket = heldPreviewSocket(reference.model!, kind)
   if (!socket) {
     target.group.position.set(HELD_SIDE_OFFSET, 0, 0)
     return {
       mode: 'side-by-side',
-      reason: 'Right hand socket not found on character',
+      reason: 'Hand socket not found on character',
     }
   }
-
-  const entry = target.entry!
-  const kind = heldPreviewKind(entry)
   const provisional = provisionalHeldAttach(entry)
   const tool = target.model!
   applyHeldModelPrep(tool, entry)

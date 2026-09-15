@@ -3,6 +3,7 @@ import {
   PLAYER_MODEL_URL,
 } from './PlayerController'
 import {
+  companionAnimationUrl,
   PLAYER_UBC_ANIMATION_URL,
   PLAYER_UBC_KNIGHT_URL,
   PLAYER_UBC_PEASANT_BROWN_URL,
@@ -10,7 +11,6 @@ import {
   PLAYER_UBC_RANGER_BROWN_URL,
   PLAYER_UBC_RANGER_URL,
   PLAYER_UBC_WIZARD_URL,
-  companionAnimationUrl,
   resolveEquipmentOutfit,
   resolvePlayerAppearance,
   resolvePlayerUrlOverride,
