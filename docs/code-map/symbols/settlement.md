@@ -666,31 +666,42 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/roadNetwork.ts`
 
-- `bridgesNear` — function — line 1057
+- `activateRoadRouteWorldgenCache` — function — line 116
   - domain: world-terrain
-- `bridgeSpecOf` — function — line 1016
-- `clearRoadNetworkCaches` — function — line 103
-- `entranceToward` — function — line 130
-- `findRoute` — function — line 250
+  - system: worldgen-cache
+- `bridgesNear` — function — line 1116
   - domain: world-terrain
-- `fordsNear` — function — line 946
+- `bridgeSpecOf` — function — line 1075
+- `clearRoadNetworkCaches` — function — line 163
+- `entranceToward` — function — line 191
+- `findRoute` — function — line 311
   - domain: world-terrain
-- `meanderRoute` — function — line 513
-- `MidpointSignpost` — type — line 778
-- `midpointSignpostsFor` — function — line 792
-- `neighborsFor` — function — line 161
-- `RoadNetworkContext` — type — line 62
-- `RoadRoute` — type — line 88
-- `RoadSegment` — type — line 52
-- `RoadSegmentKind` — type — line 50
-- `RoutePoint` — type — line 40
-- `RouteSearchOptions` — type — line 215
-- `routeToMinorLocation` — function — line 843
-- `segmentsNear` — function — line 868
-- `SettlementSignpost` — type — line 743
-- `signpostsForSettlement` — function — line 755
-- `VillageSegments` — type — line 1089
-- `villageSegmentsNear` — function — line 1113
+- `fordsNear` — function — line 1005
+  - domain: world-terrain
+- `meanderRoute` — function — line 574
+- `MidpointSignpost` — type — line 837
+- `midpointSignpostsFor` — function — line 851
+- `neighborsFor` — function — line 222
+- `peekRoadRouteCache` — function — line 126
+- `RoadNetworkContext` — type — line 63
+- `RoadRoute` — type — line 89
+- `roadRouteLocationKey` — function — line 148
+  - domain: world-terrain
+  - system: worldgen-cache
+- `roadRoutePairKey` — function — line 137
+  - domain: world-terrain
+  - system: worldgen-cache
+- `roadRouteWorldgenCacheReady` — function — line 121
+- `RoadSegment` — type — line 53
+- `RoadSegmentKind` — type — line 51
+- `RoutePoint` — type — line 41
+- `RouteSearchOptions` — type — line 276
+- `routeToMinorLocation` — function — line 902
+- `segmentsNear` — function — line 927
+- `SettlementSignpost` — type — line 802
+- `signpostsForSettlement` — function — line 814
+- `VillageSegments` — type — line 1148
+- `villageSegmentsNear` — function — line 1172
 
 ## `settlement/roadRiverCrossing.ts`
 
@@ -709,6 +720,26 @@ Generated from exported TypeScript symbols.
   - system: roads
   - role: The single canonical road × river crossing authority (plan world-terrain-023). Decides *whether* a road polyline meets canonical river water, *where* exactly, and *what kind* of infrastructure that crossing is (`ford` / `bridge`) or that it is not supported at all. Pure and allocation-light so `roadNetwork.ts`'s A* can price every candidate edge through it.
   - integration: `roadNetwork.ts` is the only caller: it prices edges with riverHitsOnEdge/evaluateRoadRiverCrossing during the search and then derives the route's canonical RoadRiverCrossing records from the *final* polyline with crossingsForPolyline. No terrain, renderer or runtime stage may reclassify a crossing: terrain only projects a declared `ford` (`terrain/riverFord.ts`) and `world-terrain-033` only projects a declared `bridge`.
+
+## `settlement/roadRouteWorldgenCache.ts`
+
+- `createRoadRouteWorldgenCache` — function — line 186
+  - domain: world-terrain
+  - system: worldgen-cache
+- `isValidRoadRoutePayload` — function — line 135
+  - domain: world-terrain
+  - system: worldgen-cache
+- `ROAD_ROUTE_CACHE_NAMESPACE` — const — line 28
+  - domain: world-terrain
+  - system: worldgen-cache
+  - role: Persistent-cache adapter for inter-settlement / settlement↔minor-location `RoadRoute` results (plan world-terrain-029). IndexedDB only hydrates and extends the module-level `routeCache` in `roadNetwork.ts` — that map stays the synchronous authority. Cached `null` is a real hit (a deterministic failed route), never a miss.
+  - integration: Disposable derived data only. Route consumers stay synchronous; a miss, malformed payload or IndexedDB failure always falls back to the canonical `findRoute()` path. Never `SaveData`, never a second crossing classifier, never signposts / per-chunk corridors / bridge specs.
+- `ROAD_ROUTE_CACHE_VERSION` — const — line 41
+- `RoadRouteCachePayload` — type — line 48
+- `roadRouteFingerprint` — function — line 63
+  - domain: world-terrain
+  - system: worldgen-cache
+- `RoadRouteWorldgenCache` — type — line 161
 
 ## `settlement/settlementAgriculture.ts`
 

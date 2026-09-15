@@ -282,6 +282,8 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/roadRiverCrossing.test.ts`
 - `settlement/roadRiverCrossing.ts`
+- `settlement/roadRouteWorldgenCache.test.ts`
+- `settlement/roadRouteWorldgenCache.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNameUniqueness.test.ts`

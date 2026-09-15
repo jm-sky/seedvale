@@ -1380,8 +1380,10 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `persistence/worldgenCacheDb.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/roadRiverCrossing.ts`
+- `settlement/roadRouteWorldgenCache.ts`
 - `terrain/chunkHeightmap.ts`
 
 ## `settlement/roadNetwork.ts`
@@ -1394,6 +1396,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/minorLocations.ts`
 - `settlement/roadRiverCrossing.ts`
+- `settlement/roadRouteWorldgenCache.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementTerrain.ts`
@@ -1412,6 +1415,8 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/roadNetwork.test.ts`
 - `settlement/roadRiverCrossing.ts`
+- `settlement/roadRouteWorldgenCache.test.ts`
+- `settlement/roadRouteWorldgenCache.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementSignposts.ts`
 - `terrain/chunkManager.ts`
@@ -1436,6 +1441,36 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.test.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/roadRiverCrossing.test.ts`
+- `settlement/roadRouteWorldgenCache.test.ts`
+- `settlement/roadRouteWorldgenCache.ts`
+
+## `settlement/roadRouteWorldgenCache.test.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `settlement/roadNetwork.ts`
+- `settlement/roadRiverCrossing.ts`
+- `settlement/roadRouteWorldgenCache.ts`
+- `terrain/chunkHeightmap.ts`
+
+## `settlement/roadRouteWorldgenCache.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `persistence/worldgenCacheDb.ts`
+- `persistence/worldgenFingerprint.ts`
+- `settlement/roadNetwork.ts`
+- `settlement/roadRiverCrossing.ts`
+- `terrain/chunkHeightmap.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `settlement/roadNetwork.test.ts`
+- `settlement/roadNetwork.ts`
+- `settlement/roadRouteWorldgenCache.test.ts`
 
 ## `settlement/settlementAgriculture.test.ts`
 

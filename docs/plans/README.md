@@ -70,7 +70,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-012-regional-specialist-trade-and-settlement-scale-quality.md` | 🟡 | M      | ~~settlements-npcs-033~~                                                                                                                                                            | economy-goods-flow                      |
 | 💡 `settlements-013-horse-training-progression-vendor-and-paddock.md`          | 🟡 | M      | settlements-009, settlements-012                                                                                                                                                    | -                                       |
 | ◼️ `settlements-014-persistent-settlement-definition-worldgen-cache.md`        | 🔴 | M      | settlements-009, settlements-011, settlements-012, settlements-013                                                                                                                  | -                                       |
-| 💡 `world-terrain-029-persistent-road-route-worldgen-cache.md`                 | 🔴 | M      | ~~world-terrain-023~~, ~~world-terrain-033~~                                                                                                                                        | -                                       |
 | 💡 `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`  | 🔴 | L      | ~~settlements-npcs-026~~, ~~settlements-npcs-027~~, ~~settlements-npcs-019~~                                                                                                        | quests-abandoned-gold-mine-colony       |
 | ◼️ `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md` | 🔴 | M      | ~~quests-progression-032~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                                  | quests-lost-something-chronicles        |
 | ◼️ `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md` | 🔴 | L      | quests-progression-037, ~~quests-progression-008~~, ~~quests-progression-009~~, ~~quests-progression-011~~, ~~quests-progression-032~~                                              | quests-lost-something-chronicles        |
@@ -79,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md` | 🔴 | L      | quests-progression-040, ~~quests-progression-026~~, ~~quests-progression-027~~, ~~world-024~~                                                                                       | quests-lost-something-chronicles        |
 | ◼️ `quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md` | 🔴 | L      | quests-progression-041, ~~quests-progression-027~~, ~~quests-progression-026~~, ~~world-024~~                                                                                       | quests-lost-something-chronicles        |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                   | -                                       |
+| ◼️ `quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md` | 🔴 | L      | quests-progression-042, quests-progression-041, ~~world-024~~                                                                                                                       | quests-lost-something-chronicles        |
 
 ---
 
@@ -222,7 +222,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `039`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `043`
+- quests-progression: `044`
 - settlements: `018`
 - settlements-npcs: `037`
 - tools: `015`

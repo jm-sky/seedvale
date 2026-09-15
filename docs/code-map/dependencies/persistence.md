@@ -185,6 +185,9 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `persistence/worldgenCacheDb.test.ts`
+- `settlement/roadNetwork.test.ts`
+- `settlement/roadRouteWorldgenCache.test.ts`
+- `settlement/roadRouteWorldgenCache.ts`
 - `terrain/chunkTileWorldgenCache.test.ts`
 - `terrain/chunkTileWorldgenCache.ts`
 - `world/caves/caveWorldgenCache.test.ts`
@@ -200,6 +203,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `settlement/roadRouteWorldgenCache.ts`
 - `terrain/chunkTileWorldgenCache.ts`
 - `world/caves/caveWorldgenCache.ts`
 - `world/locations/abandonedCemeteryCache.ts`
