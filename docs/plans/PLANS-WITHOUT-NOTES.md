@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-15 14:16:36  
+> Date: 2026-09-15 14:20:53  
 
 ## PLANS
 
-- `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md`
 - `quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md`
 - `quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`
 - `quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`
@@ -20,43 +19,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md`
-
-Prompt:
-
-```
-Zrób review planu `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
 
 ### `quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md`
 
