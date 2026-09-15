@@ -84,7 +84,7 @@ import {
   resolveCemeteryTopologyForSettlement,
 } from './cemeteryAssignment'
 import { resolveAbandonedCemeteryAfterRoll, resolvePlacementForTopology } from './cemeteryPlacement'
-import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind, resolveCemeteryPlacement } from './chunkEnvironment'
+import { computeChunkEnvironment, type EnvironmentKind, isClassicLandmarkKind, type LandmarkKind, resolveCemeteryPlacement, resolveClassicLandmarkPlacement } from './chunkEnvironment'
 import {
   chebyshevDistance,
   chunkCenter,
@@ -293,31 +293,42 @@ export function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[
   return offsets
 }
 
-/** `findLandmarkNear`'s unloaded-chunk resolver (plan world-014) — pure given
- *  `(kind, coord, params)`, factored out of the `ChunkManager` closure so it
- *  is directly unit-testable without constructing a full Three.js
- *  `ChunkManager`.
+/** Loaded-tile landmark pick used by `findLandmarkNear` — reads an already
+ *  generated `tile.environment` and never recomputes placement. Extracted so
+ *  the loaded-path contract is unit-testable without a Three.js ChunkManager.
+ * @domain world-terrain
+ */
+export function landmarkFromEnvironment(
+  environment: readonly { kind: string, id?: string, x: number, z: number }[],
+  kind: LandmarkKind,
+): { id: string, x: number, z: number } | undefined {
+  const found = environment.find((p) => p.kind === kind && p.id)
+  return found?.id ? { id: found.id, x: found.x, z: found.z } : undefined
+}
+
+function isLightweightUnloadedLandmark(kind: LandmarkKind): boolean {
+  return kind === 'cemetery' || kind === 'ruins' || isClassicLandmarkKind(kind)
+}
+
+/** `findLandmarkNear`'s unloaded-chunk resolver (plans world-014 / world-028)
+ *  — pure given `(kind, coord, params)`, factored out of the `ChunkManager`
+ *  closure so it is directly unit-testable without constructing a full
+ *  Three.js `ChunkManager`.
  *
- *  Cemetery gets the lightweight path: `createLocalTerrainSampler` +
- *  `resolveCemeteryPlacement` resolve just the local height/road-tint
- *  samples cemetery placement needs, instead of materializing a whole
- *  apron-inclusive `ChunkTileData` plus vegetation/environment for every
- *  other placement family. This is what removes the multi-second Near Map
- *  purchase freeze (recon: `WorldLocationCatalog.cemeteryForSettlement()` is
- *  the only production caller that walks many unloaded chunks per query).
+ *  Lightweight kinds (`cemetery`, authored `ruins`, `monolith` /
+ *  `stoneCircle` / `smallRuins`) resolve without `computeChunkTile()` /
+ *  full `computeChunkEnvironment()`. Cemetery and classic landmarks share
+ *  their streamed placement resolvers plus `createLocalTerrainSampler`;
+ *  authored `ruins` is a containment check against `params.authoredExpeditionRuins`.
  *
- *  Every other landmark kind (monolith/stoneCircle/smallRuins) keeps the
- *  original full-generation fallback — they are not on that cold path today,
- *  and plan world-014 deliberately scopes the fix to cemetery only rather
- *  than extracting all environment generation.
+ *  Remaining landmark kinds still use the original full-generation fallback.
  *
  *  No river segments are passed to `paramsFor` for either path here (both
- *  call sites pass `[]`) — a pre-existing discrepancy from before this plan,
- *  not something this change introduces or hides: a cemetery whose candidate
+ *  call sites pass `[]`) — a pre-existing discrepancy from before world-014,
+ *  not something this change introduces or hides: a landmark whose candidate
  *  point sits under a river may accept/reject slightly differently than the
  *  eventual streamed tile. Resolving that would need real hydrology work on
- *  the query path, which is exactly the synchronous cost this plan removes;
- *  see the plan's "river discrepancy" note.
+ *  the query path, which is exactly the synchronous cost this plan removes.
  * @domain world-terrain
  */
 export function resolveUnloadedLandmark(
@@ -336,9 +347,17 @@ export function resolveUnloadedLandmark(
     }
     return undefined
   }
+  if (isClassicLandmarkKind(kind)) {
+    const placement = resolveClassicLandmarkPlacement(
+      kind,
+      coord,
+      params,
+      createLocalTerrainSampler(coord, params),
+    )
+    return placement?.id ? { id: placement.id, x: placement.x, z: placement.z } : undefined
+  }
   const environment = computeChunkEnvironment(coord, computeChunkTile(params), params, [])
-  const found = environment.find((p) => p.kind === kind && p.id)
-  return found?.id ? { id: found.id, x: found.x, z: found.z } : undefined
+  return landmarkFromEnvironment(environment, kind)
 }
 
 /** Decorative prop for landmark kinds that stay individual Object3Ds.
@@ -693,10 +712,10 @@ export type ChunkManager = {
    *  `maxChunkRadius` and stopping at the first hit (plan 132) — a bounded,
    *  one-off resolver for binding a landmark quest to a real placement, not a
    *  per-frame query. Prefers already-loaded chunks' cached tiles; falls back
-   *  to synchronously recomputing a candidate chunk's tile + environment
-   *  (same pure pipeline the worker pool uses) so it also works for chunks
-   *  outside the streaming radius. `undefined` if nothing matches within the
-   *  search bound. */
+   *  to a lightweight shared placement resolver for cemetery / classic
+   *  landmarks / authored ruins (plans world-014 / world-028), or full
+   *  tile+environment generation for remaining kinds. `undefined` if nothing
+   *  matches within the search bound. */
   findLandmarkNear: (
     kind: LandmarkKind,
     worldX: number,
@@ -2787,10 +2806,10 @@ export function createChunkManager(
         const coord: ChunkCoord = { cx: center.cx + dx, cz: center.cz + dz }
         const rec = chunks.get(chunkKey(coord))
         if (rec?.tile) {
-          const found = rec.tile.environment.find((p) => p.kind === kind && p.id)
-          if (found?.id) {
+          const found = landmarkFromEnvironment(rec.tile.environment, kind)
+          if (found) {
             getMonitor().recordHitch('PROPS', performance.now() - t0, `findLandmarkNear:${kind} (loaded)`)
-            return { id: found.id, x: found.x, z: found.z }
+            return found
           }
           continue
         }
@@ -2805,7 +2824,9 @@ export function createChunkManager(
           getMonitor().recordHitch(
             'PROPS',
             performance.now() - t0,
-            kind === 'cemetery' ? 'findLandmarkNear:cemetery (unloaded, lightweight)' : `findLandmarkNear:${kind} (unloaded, full)`,
+            isLightweightUnloadedLandmark(kind)
+              ? `findLandmarkNear:${kind} (unloaded, lightweight)`
+              : `findLandmarkNear:${kind} (unloaded, full)`,
           )
           return found
         }

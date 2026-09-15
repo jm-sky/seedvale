@@ -11,9 +11,11 @@ import {
   deriveLandmarkId,
   LANDMARK_BIAS_MAX,
   LANDMARK_BIAS_MIN,
+  type LandmarkBiasKind,
   landmarkChanceBias,
   OLD_TREE_CLEARANCE_RADIUS,
   resolveCemeteryPlacement,
+  resolveClassicLandmarkPlacement,
   rollCemeterySize,
 } from './chunkEnvironment'
 import {
@@ -503,5 +505,224 @@ describe('resolveCemeteryPlacement (plan world-014)', () => {
 
       expect(viaResolver).toEqual(viaFullGeneration)
     }
+  })
+})
+
+/** world-028 — shared classic-landmark resolver both `computeChunkEnvironment`
+ *  and unloaded `findLandmarkNear` must agree with. */
+describe('resolveClassicLandmarkPlacement (plan world-028)', () => {
+  const CHUNK_SIZE = 64
+  const RESOLUTION = 17
+  const CLASSIC_KINDS: readonly LandmarkBiasKind[] = ['monolith', 'stoneCircle', 'smallRuins']
+
+  function tileParams(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
+    return {
+      cx: 0,
+      cz: 0,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      seed: 1,
+      heightScale: 18,
+      waterLevel: 0.45,
+      noiseScale: 120,
+      detailAmplitude: 0.55,
+      hillsScale: 420,
+      hillsAmplitude: 0.28,
+      hillsFbm: { octaves: 3, persistence: 0.55, lacunarity: 2.0, exponentiation: 1.15 },
+      fbm: { octaves: 4, persistence: 0.65, lacunarity: 2.0, exponentiation: 1.35 },
+      biome: {
+        noiseScale: 96,
+        fbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+      },
+      region: {
+        continentScale: 2200,
+        continentFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        mountainScale: 1800,
+        mountainFbm: { octaves: 2, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.2 },
+        mountainThreshold: 0.62,
+        mountainThresholdWidth: 0.14,
+        worleyCellSize: 260,
+        ridgeSharpness: 2.0,
+        mountainGain: 0.8,
+        oceanThreshold: 0.32,
+        coastThreshold: 0.45,
+        oceanDetailWeight: 0.25,
+        moistureRegionScale: 2000,
+        moistureRegionFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        desertThreshold: 0.35,
+        desertThresholdWidth: 0.12,
+        swampThreshold: 0.72,
+        swampThresholdWidth: 0.15,
+        roadNetwork: {
+          roadHalfWidth: 5,
+          roadHeightStrength: 0.85,
+          roadTintStrength: 0.8,
+          pathHalfWidth: 1.5,
+          pathHeightStrength: 0.2,
+          pathTintStrength: 0.4,
+          smoothingWindow: 10,
+          maxNeighborRoads: 3,
+          dockSearchRadius: 140,
+          edgeWobbleAmplitude: 0.15,
+          edgeWobbleScale: 0.06,
+          potholeDepth: 0.12,
+          potholeThreshold: 0.72,
+          meanderAmplitude: 2,
+          meanderScale: 0.04,
+          surfaceDetailEnabled: true,
+          rutDepth: 0.05,
+          rutOffsetFraction: 0.42,
+          rutWidthFraction: 0.16,
+          microBumpStrength: 0.025,
+          microBumpScale: 0.6,
+        },
+        village: {
+          coreRadius: 9,
+          houseRadius: 4.5,
+          heightStrength: 0.8,
+          tintStrength: 0.75,
+          regionalHeightStrengthFlat: 0.3,
+          regionalHeightStrengthMountain: 0.15,
+        },
+      },
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments: [],
+      clearings: [],
+      regional: [],
+      riverSegments: [],
+      cemeterySettlements: [],
+      ...overrides,
+    }
+  }
+
+  function fullTileSampler(params: ChunkTileParams) {
+    const tile = computeChunkTile(params)
+    const o = apronOriginWorld(params.cx, params.cz, params.chunkSize, params.resolution)
+    const sample = (grid: Float32Array, x: number, z: number) =>
+      sampleApronGridWeighted(grid, o.apronRes, apronGridWeights(o.apronRes, o.x, o.z, o.step, x, z))
+    return {
+      tile,
+      sampler: {
+        heightAt: (x: number, z: number) => sample(tile.heights, x, z),
+        roadTintAt: (x: number, z: number) => sample(tile.roadTint, x, z),
+        mountainRidgeAt: (x: number, z: number) => sample(tile.mountainRidge, x, z),
+        moistureRegionAt: (x: number, z: number) => sample(tile.moistureRegion, x, z),
+      },
+    }
+  }
+
+  function placementFields(p: { id?: string, x: number, z: number, scale: number, rotationY: number, variant: number, kind: string } | null) {
+    if (!p) return null
+    return { id: p.id, x: p.x, z: p.z, scale: p.scale, rotationY: p.rotationY, variant: p.variant, kind: p.kind }
+  }
+
+  function scanKind(kind: LandmarkBiasKind): {
+    hit: { seed: number, cx: number, cz: number }
+    miss: { seed: number, cx: number, cz: number }
+  } {
+    let hit: { seed: number, cx: number, cz: number } | undefined
+    let miss: { seed: number, cx: number, cz: number } | undefined
+    for (let seed = 1; seed <= 40 && !(hit && miss); seed++) {
+      for (let cx = -10; cx <= 10 && !(hit && miss); cx++) {
+        for (let cz = -10; cz <= 10 && !(hit && miss); cz++) {
+          const params = tileParams({ seed, cx, cz })
+          const placed = resolveClassicLandmarkPlacement(
+            kind,
+            { cx, cz },
+            params,
+            createLocalTerrainSampler({ cx, cz }, params),
+          )
+          if (placed && !hit) hit = { seed, cx, cz }
+          if (!placed && !miss) miss = { seed, cx, cz }
+        }
+      }
+    }
+    if (!hit) throw new Error(`expected at least one ${kind} hit in the scan`)
+    if (!miss) throw new Error(`expected at least one ${kind} miss in the scan`)
+    return { hit, miss }
+  }
+
+  for (const kind of CLASSIC_KINDS) {
+    it(`${kind}: lightweight and full-tile samplers match on a real hit and a real miss`, () => {
+      const { hit, miss } = scanKind(kind)
+
+      for (const sample of [hit, miss]) {
+        const params = tileParams({ seed: sample.seed, cx: sample.cx, cz: sample.cz })
+        const coord = { cx: sample.cx, cz: sample.cz }
+        const viaLightweight = resolveClassicLandmarkPlacement(
+          kind,
+          coord,
+          params,
+          createLocalTerrainSampler(coord, params),
+        )
+        const { tile, sampler } = fullTileSampler(params)
+        const viaFullTile = resolveClassicLandmarkPlacement(kind, coord, params, sampler)
+        const viaEnvironment = computeChunkEnvironment(coord, tile, params, []).find((p) => p.kind === kind) ?? null
+
+        expect(placementFields(viaLightweight)).toEqual(placementFields(viaFullTile))
+        expect(placementFields(viaLightweight)).toEqual(placementFields(viaEnvironment))
+      }
+
+      const hitParams = tileParams({ seed: hit.seed, cx: hit.cx, cz: hit.cz })
+      const hitPlacement = resolveClassicLandmarkPlacement(
+        kind,
+        { cx: hit.cx, cz: hit.cz },
+        hitParams,
+        createLocalTerrainSampler({ cx: hit.cx, cz: hit.cz }, hitParams),
+      )
+      expect(hitPlacement).not.toBeNull()
+      expect(hitPlacement?.id?.startsWith(`${kind}:`)).toBe(true)
+      expect(hitPlacement?.kind).toBe(kind)
+
+      const missParams = tileParams({ seed: miss.seed, cx: miss.cx, cz: miss.cz })
+      expect(
+        resolveClassicLandmarkPlacement(
+          kind,
+          { cx: miss.cx, cz: miss.cz },
+          missParams,
+          createLocalTerrainSampler({ cx: miss.cx, cz: miss.cz }, missParams),
+        ),
+      ).toBeNull()
+    })
+  }
+
+  it('is independent of query order across chunks', () => {
+    const a = tileParams({ seed: 11, cx: 2, cz: -4 })
+    const b = tileParams({ seed: 11, cx: -3, cz: 5 })
+    const first = [
+      resolveClassicLandmarkPlacement('monolith', { cx: a.cx, cz: a.cz }, a, createLocalTerrainSampler({ cx: a.cx, cz: a.cz }, a)),
+      resolveClassicLandmarkPlacement('stoneCircle', { cx: b.cx, cz: b.cz }, b, createLocalTerrainSampler({ cx: b.cx, cz: b.cz }, b)),
+    ]
+    const second = [
+      resolveClassicLandmarkPlacement('stoneCircle', { cx: b.cx, cz: b.cz }, b, createLocalTerrainSampler({ cx: b.cx, cz: b.cz }, b)),
+      resolveClassicLandmarkPlacement('monolith', { cx: a.cx, cz: a.cz }, a, createLocalTerrainSampler({ cx: a.cx, cz: a.cz }, a)),
+    ]
+    expect(placementFields(first[0]!)).toEqual(placementFields(second[1]!))
+    expect(placementFields(first[1]!)).toEqual(placementFields(second[0]!))
+  })
+
+  it('does not treat authored ruins as procedural smallRuins', () => {
+    const params = tileParams({
+      seed: 3,
+      authoredExpeditionRuins: {
+        id: 'ruins:authored',
+        x: 2,
+        z: -3,
+        rotationY: 0.4,
+        variant: 0.2,
+        scale: 1.1,
+      },
+    })
+    const small = resolveClassicLandmarkPlacement(
+      'smallRuins',
+      { cx: 0, cz: 0 },
+      params,
+      createLocalTerrainSampler({ cx: 0, cz: 0 }, params),
+    )
+    expect(small?.id).not.toBe('ruins:authored')
+    const env = computeChunkEnvironment({ cx: 0, cz: 0 }, computeChunkTile(params), params, [])
+    const authored = env.find((p) => p.kind === 'ruins')
+    expect(authored?.id).toBe('ruins:authored')
   })
 })

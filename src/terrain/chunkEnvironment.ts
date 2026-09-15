@@ -355,7 +355,130 @@ export type CemeteryTerrainSampler = {
   roadTintAt: (wx: number, wz: number) => number
 }
 
+/** Terrain view classic landmark placement actually reads (`monolith` /
+ *  `stoneCircle` / `smallRuins`). Cemetery's two accessors plus ridge and
+ *  moisture at the candidate point for `landmarkChanceBias`. No vegetation,
+ *  continentalness, or earlier environment placements.
+ * @domain world-terrain
+ */
+export type LandmarkTerrainSampler = CemeteryTerrainSampler & {
+  mountainRidgeAt: (wx: number, wz: number) => number
+  moistureRegionAt: (wx: number, wz: number) => number
+}
+
 export { resolveCemeteriesForChunk, resolveCemeteryPlacement } from './cemeteryPlacement'
+
+type ClassicLandmarkSpec = {
+  chunkSalt: number
+  xorSalt: number
+  chance: number
+  margin: number
+  scaleMin: number
+  scaleRange: number
+}
+
+const CLASSIC_LANDMARK_SPECS: Record<LandmarkBiasKind, ClassicLandmarkSpec> = {
+  monolith: {
+    chunkSalt: 4,
+    xorSalt: 0x1d4b7,
+    chance: MONOLITH_CHANCE,
+    margin: MONOLITH_MARGIN,
+    scaleMin: 0.85,
+    scaleRange: 0.5,
+  },
+  stoneCircle: {
+    chunkSalt: 5,
+    xorSalt: 0x3ea92,
+    chance: STONE_CIRCLE_CHANCE,
+    margin: STONE_CIRCLE_MARGIN,
+    scaleMin: 0.9,
+    scaleRange: 0.4,
+  },
+  smallRuins: {
+    chunkSalt: 6,
+    xorSalt: 0x57c31,
+    chance: SMALL_RUINS_CHANCE,
+    margin: SMALL_RUINS_MARGIN,
+    scaleMin: 0.85,
+    scaleRange: 0.4,
+  },
+}
+
+function landmarkSlopeAt(terrain: CemeteryTerrainSampler, wx: number, wz: number): number {
+  const d = SLOPE_SAMPLE_STEP
+  return (
+    (Math.abs(terrain.heightAt(wx + d, wz) - terrain.heightAt(wx - d, wz)) +
+      Math.abs(terrain.heightAt(wx, wz + d) - terrain.heightAt(wx, wz - d))) /
+    (2 * d)
+  )
+}
+
+/**
+ * Shared classic-landmark resolver used by both streamed
+ * `computeChunkEnvironment()` and unloaded `findLandmarkNear()`. Owns
+ * candidate RNG, acceptance RNG, coordinates, terrain gates, chance bias,
+ * stable id, scale, rotation and variant for `monolith` / `stoneCircle` /
+ * `smallRuins`.
+ *
+ * Unloaded lookup and normal streamed generation consume these same rules
+ * and the same apron-texel terrain semantics without materializing a full
+ * chunk tile on the main thread (plan world-028). Salts, chances, margins
+ * and RNG call order are the original `computeChunkEnvironment` contract —
+ * do not change them as a performance lever.
+ *
+ * River input follows the caller. Unloaded lookup still passes
+ * `paramsFor(coord, [])` (no river carving), the pre-existing discrepancy
+ * versus a later streamed tile; this resolver does not hide or widen it.
+ * @domain world-terrain
+ */
+export function resolveClassicLandmarkPlacement(
+  kind: LandmarkBiasKind,
+  coord: ChunkCoord,
+  params: ChunkTileParams,
+  terrain: LandmarkTerrainSampler,
+): EnvironmentPlacement | null {
+  const spec = CLASSIC_LANDMARK_SPECS[kind]
+  const { chunkSize, waterLevel, heightScale, region } = params
+  const half = chunkSize / 2
+  const random = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, spec.chunkSalt) ^ spec.xorSalt)
+  const wx = coord.cx * chunkSize + (random() * 2 - 1) * (half - spec.margin)
+  const wz = coord.cz * chunkSize + (random() * 2 - 1) * (half - spec.margin)
+  const h = terrain.heightAt(wx, wz)
+  const slope = landmarkSlopeAt(terrain, wx, wz)
+  if (
+    !(
+      h > waterLevel + 0.3 &&
+      terrain.roadTintAt(wx, wz) <= ROAD_TINT_REJECT &&
+      slope <= SLOPE_REJECT_LANDMARK
+    )
+  ) {
+    return null
+  }
+  const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
+  const biome = biomeWeightsAt(terrain.moistureRegionAt(wx, wz), altitude01, region)
+  const bias = landmarkChanceBias(kind, {
+    mountainRidge: terrain.mountainRidgeAt(wx, wz),
+    altitude01,
+    slope,
+    desert: biome.desert,
+    swamp: biome.swamp,
+    forest: biome.forest,
+  })
+  if (random() > spec.chance * bias) return null
+  return {
+    x: wx,
+    z: wz,
+    kind,
+    scale: spec.scaleMin + random() * spec.scaleRange,
+    rotationY: random() * Math.PI * 2,
+    variant: random(),
+    id: deriveLandmarkId(params.seed, coord.cx, coord.cz, kind, 0),
+  }
+}
+
+export function isClassicLandmarkKind(kind: LandmarkKind): kind is LandmarkBiasKind {
+  return kind === 'monolith' || kind === 'stoneCircle' || kind === 'smallRuins'
+}
 
 /**
  * Deterministic, worker-safe per-chunk decorative object placement — pure
@@ -386,19 +509,6 @@ export function computeChunkEnvironment(
         Math.abs(sample(tile.heights, wx, wz + d) - sample(tile.heights, wx, wz - d))) /
       (2 * d)
     )
-  }
-
-  const chanceBiasAt = (kind: LandmarkBiasKind, wx: number, wz: number, h: number, slope: number): number => {
-    const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
-    const biome = biomeWeightsAt(sample(tile.moistureRegion, wx, wz), altitude01, region)
-    return landmarkChanceBias(kind, {
-      mountainRidge: sample(tile.mountainRidge, wx, wz),
-      altitude01,
-      slope,
-      desert: biome.desert,
-      swamp: biome.swamp,
-      forest: biome.forest,
-    })
   }
 
   // Home chunks skip rocks/logs/campfires (settlement plants its own forest)
@@ -491,79 +601,20 @@ export function computeChunkEnvironment(
   }
   }
 
-  // --- Monolith: single standing stone, "częste" landmark tier ---
-  const monolithRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 4) ^ 0x1d4b7)
-  {
-    const wx = coord.cx * chunkSize + (monolithRandom() * 2 - 1) * (half - MONOLITH_MARGIN)
-    const wz = coord.cz * chunkSize + (monolithRandom() * 2 - 1) * (half - MONOLITH_MARGIN)
-    const h = sample(tile.heights, wx, wz)
-    const slope = slopeAt(wx, wz)
-    if (
-      h > waterLevel + 0.3 &&
-      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
-      slope <= SLOPE_REJECT_LANDMARK &&
-      monolithRandom() <= MONOLITH_CHANCE * chanceBiasAt('monolith', wx, wz, h, slope)
-    ) {
-      placements.push({
-        x: wx,
-        z: wz,
-        kind: 'monolith',
-        scale: 0.85 + monolithRandom() * 0.5,
-        rotationY: monolithRandom() * Math.PI * 2,
-        variant: monolithRandom(),
-        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'monolith', 0),
-      })
-    }
+  // --- Classic landmarks: shared resolver (plan world-028) ---
+  const landmarkTerrain: LandmarkTerrainSampler = {
+    heightAt: (wx, wz) => sample(tile.heights, wx, wz),
+    roadTintAt: (wx, wz) => sample(tile.roadTint, wx, wz),
+    mountainRidgeAt: (wx, wz) => sample(tile.mountainRidge, wx, wz),
+    moistureRegionAt: (wx, wz) => sample(tile.moistureRegion, wx, wz),
   }
-
-  // --- Stone circle: small "rzadkie" landmark tier ---
-  const stoneCircleRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 5) ^ 0x3ea92)
   {
-    const wx = coord.cx * chunkSize + (stoneCircleRandom() * 2 - 1) * (half - STONE_CIRCLE_MARGIN)
-    const wz = coord.cz * chunkSize + (stoneCircleRandom() * 2 - 1) * (half - STONE_CIRCLE_MARGIN)
-    const h = sample(tile.heights, wx, wz)
-    const slope = slopeAt(wx, wz)
-    if (
-      h > waterLevel + 0.3 &&
-      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
-      slope <= SLOPE_REJECT_LANDMARK &&
-      stoneCircleRandom() <= STONE_CIRCLE_CHANCE * chanceBiasAt('stoneCircle', wx, wz, h, slope)
-    ) {
-      placements.push({
-        x: wx,
-        z: wz,
-        kind: 'stoneCircle',
-        scale: 0.9 + stoneCircleRandom() * 0.4,
-        rotationY: stoneCircleRandom() * Math.PI * 2,
-        variant: stoneCircleRandom(),
-        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'stoneCircle', 0),
-      })
-    }
-  }
-
-  // --- Small ruins: low wall/foundation fragment, "rzadkie" landmark tier ---
-  const ruinsRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 6) ^ 0x57c31)
-  {
-    const wx = coord.cx * chunkSize + (ruinsRandom() * 2 - 1) * (half - SMALL_RUINS_MARGIN)
-    const wz = coord.cz * chunkSize + (ruinsRandom() * 2 - 1) * (half - SMALL_RUINS_MARGIN)
-    const h = sample(tile.heights, wx, wz)
-    const slope = slopeAt(wx, wz)
-    if (
-      h > waterLevel + 0.3 &&
-      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
-      slope <= SLOPE_REJECT_LANDMARK &&
-      ruinsRandom() <= SMALL_RUINS_CHANCE * chanceBiasAt('smallRuins', wx, wz, h, slope)
-    ) {
-      placements.push({
-        x: wx,
-        z: wz,
-        kind: 'smallRuins',
-        scale: 0.85 + ruinsRandom() * 0.4,
-        rotationY: ruinsRandom() * Math.PI * 2,
-        variant: ruinsRandom(),
-        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'smallRuins', 0),
-      })
-    }
+    const monolith = resolveClassicLandmarkPlacement('monolith', coord, params, landmarkTerrain)
+    if (monolith) placements.push(monolith)
+    const stoneCircle = resolveClassicLandmarkPlacement('stoneCircle', coord, params, landmarkTerrain)
+    if (stoneCircle) placements.push(stoneCircle)
+    const smallRuins = resolveClassicLandmarkPlacement('smallRuins', coord, params, landmarkTerrain)
+    if (smallRuins) placements.push(smallRuins)
   }
 
   // --- Cemetery: assignment-driven active cemeteries + rare abandoned (plan world-terrain-016) ---

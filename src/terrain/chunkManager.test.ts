@@ -10,6 +10,7 @@ import {
   applyChunkWaterDayNight,
   applyModificationToTile,
   drainByBudget,
+  landmarkFromEnvironment,
   pickNearestQueuedKey,
   pickNextFinalizeKey,
   resolveUnloadedLandmark,
@@ -448,11 +449,98 @@ describe('resolveUnloadedLandmark (plan world-014)', () => {
     }
   })
 
-  it('still uses full generation for the other landmark kinds (out of world-014 scope)', () => {
+  it('still uses full generation for remaining landmark kinds (out of world-028 scope)', () => {
     const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
     try {
-      resolveUnloadedLandmark('monolith', { cx: 0, cz: 0 }, tileParams())
+      resolveUnloadedLandmark('tower', { cx: 0, cz: 0 }, tileParams())
       expect(spy).toHaveBeenCalledTimes(1)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('resolves classic landmarks without calling full computeChunkTile()', () => {
+    const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
+    try {
+      for (const kind of ['monolith', 'stoneCircle', 'smallRuins'] as const) {
+        spy.mockClear()
+        resolveUnloadedLandmark(kind, { cx: 0, cz: 0 }, tileParams())
+        expect(spy).not.toHaveBeenCalled()
+      }
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('resolves authored ruins without calling full computeChunkTile()', () => {
+    const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
+    try {
+      const found = resolveUnloadedLandmark(
+        'ruins',
+        { cx: 0, cz: 0 },
+        tileParams({
+          authoredExpeditionRuins: {
+            id: 'ruins:authored',
+            x: 2,
+            z: -3,
+            rotationY: 0.1,
+            variant: 0.4,
+            scale: 1,
+          },
+        }),
+      )
+      expect(found).toEqual({ id: 'ruins:authored', x: 2, z: -3 })
+      expect(spy).not.toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('does not treat authored ruins as a smallRuins hit', () => {
+    const params = tileParams({
+      authoredExpeditionRuins: {
+        id: 'ruins:authored',
+        x: 2,
+        z: -3,
+        rotationY: 0.1,
+        variant: 0.4,
+        scale: 1,
+      },
+    })
+    const ruins = resolveUnloadedLandmark('ruins', { cx: 0, cz: 0 }, params)
+    const small = resolveUnloadedLandmark('smallRuins', { cx: 0, cz: 0 }, params)
+    expect(ruins?.id).toBe('ruins:authored')
+    expect(small?.id).not.toBe('ruins:authored')
+  })
+
+  it('classic landmark result is deterministic and independent of call order across chunks', () => {
+    const a = tileParams({ seed: 7, cx: 2, cz: -1 })
+    const b = tileParams({ seed: 7, cx: 5, cz: 3 })
+    const firstOrder = [
+      resolveUnloadedLandmark('monolith', { cx: a.cx, cz: a.cz }, a),
+      resolveUnloadedLandmark('stoneCircle', { cx: b.cx, cz: b.cz }, b),
+    ]
+    const secondOrder = [
+      resolveUnloadedLandmark('stoneCircle', { cx: b.cx, cz: b.cz }, b),
+      resolveUnloadedLandmark('monolith', { cx: a.cx, cz: a.cz }, a),
+    ]
+    expect(firstOrder[0]).toEqual(secondOrder[1])
+    expect(firstOrder[1]).toEqual(secondOrder[0])
+  })
+
+  it('loaded-path helper reads tile.environment and does not generate terrain', () => {
+    const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
+    try {
+      const found = landmarkFromEnvironment(
+        [{ kind: 'monolith', id: 'monolith:0:0:0:1', x: 4, z: -2 }],
+        'monolith',
+      )
+      expect(found).toEqual({ id: 'monolith:0:0:0:1', x: 4, z: -2 })
+      expect(landmarkFromEnvironment(
+        [{ kind: 'monolith', id: 'monolith:0:0:0:1', x: 4, z: -2 }],
+        'stoneCircle',
+      )).toBeUndefined()
+      expect(spy).not.toHaveBeenCalled()
     } finally {
       spy.mockRestore()
     }

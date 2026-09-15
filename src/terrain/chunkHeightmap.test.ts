@@ -847,6 +847,8 @@ describe('createLocalTerrainSampler (plan world-014)', () => {
     return {
       heightAt: (x: number, z: number) => sample(tile.heights, x, z),
       roadTintAt: (x: number, z: number) => sample(tile.roadTint, x, z),
+      mountainRidgeAt: (x: number, z: number) => sample(tile.mountainRidge, x, z),
+      moistureRegionAt: (x: number, z: number) => sample(tile.moistureRegion, x, z),
     }
   }
 
@@ -865,6 +867,8 @@ describe('createLocalTerrainSampler (plan world-014)', () => {
     for (const [x, z] of probePoints) {
       expect(lightweight.heightAt(x, z)).toBeCloseTo(reference.heightAt(x, z), 6)
       expect(lightweight.roadTintAt(x, z)).toBeCloseTo(reference.roadTintAt(x, z), 6)
+      expect(lightweight.mountainRidgeAt(x, z)).toBeCloseTo(reference.mountainRidgeAt(x, z), 6)
+      expect(lightweight.moistureRegionAt(x, z)).toBeCloseTo(reference.moistureRegionAt(x, z), 6)
     }
   })
 
@@ -879,6 +883,8 @@ describe('createLocalTerrainSampler (plan world-014)', () => {
     for (const [x, z] of probePoints) {
       expect(lightweight.heightAt(x, z)).toBeCloseTo(reference.heightAt(x, z), 6)
       expect(lightweight.roadTintAt(x, z)).toBeCloseTo(reference.roadTintAt(x, z), 6)
+      expect(lightweight.mountainRidgeAt(x, z)).toBeCloseTo(reference.mountainRidgeAt(x, z), 6)
+      expect(lightweight.moistureRegionAt(x, z)).toBeCloseTo(reference.moistureRegionAt(x, z), 6)
     }
   })
 
@@ -892,6 +898,8 @@ describe('createLocalTerrainSampler (plan world-014)', () => {
     for (const [x, z] of probePoints) {
       expect(lightweight.heightAt(x, z)).toBeCloseTo(reference.heightAt(x, z), 6)
       expect(lightweight.roadTintAt(x, z)).toBeCloseTo(reference.roadTintAt(x, z), 6)
+      expect(lightweight.mountainRidgeAt(x, z)).toBeCloseTo(reference.mountainRidgeAt(x, z), 6)
+      expect(lightweight.moistureRegionAt(x, z)).toBeCloseTo(reference.moistureRegionAt(x, z), 6)
     }
   })
 

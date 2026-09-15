@@ -1189,31 +1189,41 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
   }
 }
 
-/** Point-only terrain reader for landmark lookup on an unloaded chunk (plan
- *  world-014) — resolves `heights`/`roadTint` at a handful of arbitrary
- *  world points through the exact same per-texel math and apron-grid bilinear
- *  interpolation `computeChunkTile` + `sampleApronGrid` use, without
- *  allocating a full `(resolution + 2)²` grid or the vegetation/environment
- *  data a real chunk load also produces. Every underlying texel is computed
- *  at most once (`texelCache`), so a handful of nearby queries (e.g. a
- *  landmark's center point plus its four slope-sample offsets) costs a
- *  handful of `computeChunkTexel` calls, not a whole chunk's worth.
+/** Point-sampled apron-grid fields a lightweight landmark lookup actually
+ *  reads. Cemetery uses `heightAt`/`roadTintAt`; classic landmarks
+ *  (`monolith`/`stoneCircle`/`smallRuins`) also read ridge and moisture at
+ *  the candidate point. Do not add fields here unless a resolver reads them.
+ * @domain world-terrain
+ */
+export type LocalTerrainSampler = {
+  heightAt: (wx: number, wz: number) => number
+  roadTintAt: (wx: number, wz: number) => number
+  mountainRidgeAt: (wx: number, wz: number) => number
+  moistureRegionAt: (wx: number, wz: number) => number
+}
+
+/** Point-only terrain reader for landmark lookup on an unloaded chunk (plans
+ *  world-014 / world-028) — resolves the fields `LocalTerrainSampler` exposes
+ *  at a handful of arbitrary world points through the exact same per-texel
+ *  math and apron-grid bilinear interpolation `computeChunkTile` +
+ *  `sampleApronGrid` use, without allocating a full apron grid or the
+ *  vegetation/environment data a real chunk load also produces. Every
+ *  underlying texel is computed at most once (`texelCache`), so a handful of
+ *  nearby queries (e.g. a landmark's center point plus its four slope-sample
+ *  offsets) costs a handful of `computeChunkTexel` calls, not a whole chunk's
+ *  worth.
  *
- *  Determinism contract: for the same `(coord, params)`, `heightAt`/
- *  `roadTintAt` return exactly what `sampleApronGrid(tile.heights, ...)` /
- *  `sampleApronGrid(tile.roadTint, ...)` would return against a real
- *  `computeChunkTile(params)` tile — this is what lets an unloaded landmark
- *  query agree with the landmark the normal streamed pipeline later
- *  generates for the same chunk. Only exposes the two fields cemetery
- *  placement needs (`chunkEnvironment.ts`'s `resolveCemeteryPlacement`); add
- *  more accessors here rather than falling back to full tile generation if a
- *  future lightweight lookup needs another field.
+ *  Determinism contract: for the same `(coord, params)`, each accessor
+ *  returns exactly what `sampleApronGrid(tile.<field>, ...)` would return
+ *  against a real `computeChunkTile(params)` tile — this is what lets an
+ *  unloaded landmark query agree with the landmark the normal streamed
+ *  pipeline later generates for the same chunk.
  * @domain world-terrain
  */
 export function createLocalTerrainSampler(
   coord: ChunkCoord,
   params: ChunkTileParams,
-): { heightAt: (wx: number, wz: number) => number, roadTintAt: (wx: number, wz: number) => number } {
+): LocalTerrainSampler {
   const noise = noiseHandlesFor(params.seed)
   const o = apronOriginWorld(coord.cx, coord.cz, params.chunkSize, params.resolution)
   const texelCache = new Map<number, ChunkTexel>()
@@ -1242,6 +1252,8 @@ export function createLocalTerrainSampler(
   return {
     heightAt: (x, z) => sampleField(x, z, (t) => t.h),
     roadTintAt: (x, z) => sampleField(x, z, (t) => t.roadTint),
+    mountainRidgeAt: (x, z) => sampleField(x, z, (t) => t.mountainRidge),
+    moistureRegionAt: (x, z) => sampleField(x, z, (t) => t.moistureRegion),
   }
 }
 
