@@ -76,6 +76,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-015-settlement-palisade-collision.md`                          | 🔴 | S      | -                                                                                                                                                                               | -                                       |
 | 💡 `settlements-017-deterministically-unique-settlement-names.md`              | 🟡 | S      | -                                                                                                                                                                               | -                                       |
 | 💡 `tools-014-player-owned-horse-debug-controls.md`                            | 🟡 | S      | ~~fauna-020~~                                                                                                                                                                   | -                                       |
+| ◼️ `world-terrain-035-streaming-visual-horizon-and-distant-occlusion.md`       | 🔴 | M      | ~~world-terrain-026~~                                                                                                                                                           | -                                       |
 
 ---
 
@@ -219,7 +220,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `015`
 - ui-input: `021`
 - world: `028`
-- world-terrain: `035`
+- world-terrain: `036`
 
 This ids section is maintained automatically from the plan files.
 
