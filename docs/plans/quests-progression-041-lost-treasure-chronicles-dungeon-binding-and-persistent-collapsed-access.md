@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `progression`  
 **Tags:** `lost-treasure-chronicles` `dungeon` `cave` `blockage` `persistent-world-state` `tools`  
 **Roadmap:** `quests-lost-something-chronicles.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
