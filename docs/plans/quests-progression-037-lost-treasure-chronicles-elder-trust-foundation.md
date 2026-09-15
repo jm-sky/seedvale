@@ -8,7 +8,8 @@
 **Domain:** `quests-progression`  
 **Subdomains:** `quests` `relationships` `progression`  
 **Tags:** `lost-treasure-chronicles` `elder` `authored-npc` `relationship` `reputation` `multi-solution`  
-**Roadmap:** `quests-lost-something-chronicles.md`
+**Roadmap:** `quests-lost-something-chronicles.md`  
+**Model:** Sonnet, Composer
 
 ## Goal
 
