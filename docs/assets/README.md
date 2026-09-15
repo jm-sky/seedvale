@@ -4,6 +4,7 @@ Living project asset lists and credits for Seedvale.
 
 | File | Role |
 |------|------|
+| [ASSET-GAPS.md](./ASSET-GAPS.md) | **Cross-category asset gaps recon** — current missing/unwired/coverage gaps across sounds, NPCs, items, fauna, nature and textures |
 | [MODELS.md](./MODELS.md) | **Required models** — backlog of models still needed or not yet wired |
 | [SOUNDS.md](./SOUNDS.md) | **Required sounds** — backlog of SFX still needed or not yet wired |
 | [CREDITS.md](./CREDITS.md) | Attribution for models already in the repo |
