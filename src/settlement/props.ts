@@ -78,6 +78,8 @@ import {
   PALISADE_GATE_HALF_ANGLE,
   plantEntrancePalisade,
   pointHitsCorridor,
+  resolveEntrancePalisadePlacements,
+  type SettlementPalisadePlacement,
   WALL_HALF_LENGTH,
 } from './settlementPalisade'
 import {
@@ -757,6 +759,11 @@ export async function buildSettlementProps(
   villageTorches: SettlementVillageTorch[]
   houseAssemblies: HouseAssembly[]
   storageVisual: SettlementStorageVisuals
+  /** Final entrance palisade segment placements (plan settlements-015) — the
+   *  same plain data just rendered above, shared with `createSettlement.ts`
+   *  so it can project the identical geometry to collision without
+   *  recomputing gate/coastal/corridor rejection. */
+  palisadePlacements: SettlementPalisadePlacement[]
 }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -1548,7 +1555,10 @@ export async function buildSettlementProps(
     landmarks.merchantHorseSpawn = { x: pose.horseX, z: pose.horseZ, yaw: pose.yaw }
   }
 
-  await plantEntrancePalisade(group, site, size, sampleHeight, waterLevel, plan, coast, pathCorridors)
+  const palisadePlacements = resolveEntrancePalisadePlacements(
+    site, size, sampleHeight, waterLevel, plan, coast, pathCorridors,
+  )
+  await plantEntrancePalisade(group, palisadePlacements)
 
   // Village torch posts — plaza ring (MD+) + gate flanks (plan 085).
   // Never sit in the road: gate posts belong on the palisade wing, not in the
@@ -1936,6 +1946,7 @@ export async function buildSettlementProps(
       settlementFood: settlementFoodVisual,
       householdFood: householdFoodVisuals,
     },
+    palisadePlacements,
   }
 }
 

@@ -1,7 +1,7 @@
 # Plan: Settlement palisade collision
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** S
 **Model:** Sonnet, Composer
 **Depends on:** none
