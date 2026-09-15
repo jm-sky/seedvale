@@ -43,6 +43,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                      | Summary                                                               | Pri | Effort | Depends         |
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
+| `settlements-npcs-025-resource-storage-visualization.md`  | Stage 2 implemented?                                                  | ⚪  | M      | -      |
 | `world-terrain-010-waterways-and-vegetation.md`           | Phases 2/8/9 deferred — see plan's "Implementation status"            | 🟡  | M      | -      |
 
 ---
@@ -69,14 +70,13 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-013-horse-training-progression-vendor-and-paddock.md`          | 🟡 | M      | settlements-009, settlements-012                                                                                                                                                | -                                       |
 | ◼️ `settlements-014-persistent-settlement-definition-worldgen-cache.md`        | 🔴 | M      | settlements-009, settlements-011, settlements-012, settlements-013                                                                                                              | -                                       |
 | 💡 `world-terrain-029-persistent-road-route-worldgen-cache.md`                 | 🔴 | M      | ~~world-terrain-023~~, ~~world-terrain-033~~                                                                                                                                    | -                                       |
-| 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | ⚪ | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~                                                                                                                              | -                                       |
-| ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
-| ◼️ `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md` | 🔴 | M      | ~~quests-progression-032~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                              | quests-lost-something-chronicles        |
 | 💡 `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md`        | 🔴 | M      | ~~settlements-npcs-026~~                                                                                                                                                        | quests-abandoned-gold-mine-colony       |
 | 💡 `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`  | 🔴 | L      | ~~settlements-npcs-026~~, settlements-npcs-027, ~~settlements-npcs-019~~                                                                                                        | quests-abandoned-gold-mine-colony       |
+| ◼️ `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md` | 🔴 | M      | ~~quests-progression-032~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                              | quests-lost-something-chronicles        |
 | ◼️ `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search.md` | 🔴 | L      | quests-progression-037, ~~quests-progression-008~~, ~~quests-progression-009~~, ~~quests-progression-011~~, ~~quests-progression-032~~                                          | quests-lost-something-chronicles        |
 | ◼️ `quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md` | 🔴 | M      | quests-progression-038, quests-progression-037                                                                                                                                  | quests-lost-something-chronicles        |
 | ◼️ `quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md` | 🔴 | L      | quests-progression-039, ~~quests-progression-009~~, ~~quests-progression-036~~, ~~fauna-022~~                                                                                   | quests-lost-something-chronicles        |
+| ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
 
 ---
 
@@ -88,6 +88,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `items-player-033-ubc-player-model-alpha.md` | Default Adventurer bez zmian; `?player=peasant` i `?player=ranger`: idle/chód/sprint/cios, trzymane narzędzie, cienie. Opcjonalnie `?modelTest&model=ubc/male_peasant&anims=ubc/ual1_player` |
 | `settlements-017-deterministically-unique-settlement-names.md` | Nowy świat, kilka pobliskich osad: brak dwóch identycznych nazw na drogowskazach/UI; ten sam seed po reloadzie te same nazwy; daleka osada nie zmienia nazw już odwiedzonych |
 | `settlements-016-legacy-ruby-trade-valuation.md` | Sprzedać authored `ruby` (bear-cave / dark-forest chest) kupcowi — buyback wyraźnie powyżej 1 coina, w okolicy `ruby_medium` (neutralnie 63); `ruby_small/medium/large` bez zmian |
 | `quests-progression-036-one-shot-authored-treasure-map-pickup.md` | Podnieść authored treasure map; rebuild/powrót w miejsce źródłowe — pickup nie wraca; save/load — nie wraca; wyrzucenie mapy z inventory — źródło nadal puste; New Game — pickup znowu leży |
@@ -212,7 +213,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `031`
-- items-player: `033`
+- items-player: `034`
 - npc: `039`
 - persistence: `005`
 - quests-progression: `041`
