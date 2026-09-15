@@ -4,6 +4,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalHabitatBinding } from '../fauna/animalCaveHabitat'
+import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { PersistentOccupantSnapshot } from '../fauna/persistentOccupants'
 import type { PersistentOccupantDecl } from '../fauna/persistentOccupants'
@@ -513,6 +514,7 @@ function buildSettlementsManager(
    *  `createSettlementsManager`, which fires it once per settlement build
    *  (home and every streamed-in neighbor), not per `SettlementDef`. */
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -572,6 +574,7 @@ function buildSettlementsManager(
     getNowDays,
     onSettlementAvailable,
     chunkManager.sampleBridgeDeck,
+    onAnimalDeathSound,
   )
 }
 
@@ -627,6 +630,7 @@ function buildFauna(
    *  `AnimalCaveWorldContract` `createFauna()` actually needs, so fauna
    *  itself never imports `createCaves.ts`. */
   caves?: Caves,
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
 
@@ -709,6 +713,7 @@ function buildFauna(
     },
     occupantBindings,
     chunkManager.sampleBridgeDeck,
+    onAnimalDeathSound,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
@@ -876,6 +881,7 @@ type WorldSystemsSeed = {
   persistentOccupants?: PersistentOccupantSnapshot
   resourceDepletion: ResourceDepletionState
   onAnimalDeath?: (animalId: string) => void
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void
   getPlayerSocial?: PlayerSocialLookup
   /** Settlement-lifecycle "actually built" callback (plan
    *  quests-progression-022 §8) — forwarded into `buildSettlementsManager`
@@ -1032,7 +1038,7 @@ async function buildWorldSystems(
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
-    onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    onAnimalDeath, onAnimalDeathSound, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: initialBloodTraces,
     treasureMapBearCaveSourceExtracted,
@@ -1302,7 +1308,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, onAnimalDeathSound)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -1718,6 +1724,7 @@ async function buildWorldSystems(
               })),
               initialPersistentOccupants,
               caves,
+              onAnimalDeathSound,
             )
           } finally {
             bootMarkEnd('background:buildFauna')
@@ -1953,6 +1960,7 @@ export async function createWorldBundle(
   initialResourceSiteInventories?: ResourceSiteInventories,
   /** Plan quests-progression-036 — app-owned consumed authored pickup ids. */
   consumedWorldPickupIds: ReadonlySet<string> = new Set(),
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1999,7 +2007,7 @@ export async function createWorldBundle(
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
-    onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    onAnimalDeath, onAnimalDeathSound, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
   }, isStale)
 }
@@ -2079,6 +2087,7 @@ export async function rebuildWorldBundle(
   resourceSiteInventories?: ResourceSiteInventories,
   /** Plan quests-progression-036 — same mutated-in-place Set `createApp` owns. */
   consumedWorldPickupIds: ReadonlySet<string> = new Set(),
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -2240,7 +2249,7 @@ export async function rebuildWorldBundle(
     persistentOccupants: carriedPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
-    onAnimalDeath, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
+    onAnimalDeath, onAnimalDeathSound, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: carriedBloodTraces,
     treasureMapBearCaveSourceExtracted,

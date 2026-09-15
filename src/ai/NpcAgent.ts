@@ -46,7 +46,6 @@ import {
   playActionChop,
   playActionTreeFall,
   playActionWell,
-  playAnimalCombatDeath,
   playCombatBowDraw,
   playCombatHit,
   playNpcCombatDeath,
@@ -3396,17 +3395,15 @@ export class NpcAgent {
   /** Impact-or-death sound at the exact moment an attack of this NPC's own
    *  actually lands (plan npc-009) — mirrors `gameLoop.ts`'s existing
    *  `killed ? playActionMeleeKill : playActionMeleeHit` idiom for the
-   *  player. Branches on the target's own `ref.kind` so an animal death never
-   *  gets the human moan+fall clip (see `playAnimalCombatDeath`'s doc). The
-   *  target's own hurt *animation* is a separate, target-owned concern
-   *  (`takeDamage()`/`AnimalAgent.takeDamage()`) — this only ever plays the
-   *  attacker-side hit/death sound once per resolved hit. */
+   *  player. Animal death vocals play from `AnimalAgent.collapse()`
+   *  (`onDeathSound`); this only plays the attacker-side impact while the
+   *  target is still alive, and the human moan+fall clip for an NPC kill.
+   *  The target's own hurt *animation* is a separate, target-owned concern
+   *  (`takeDamage()`/`AnimalAgent.takeDamage()`). */
   private playCombatImpactSound(target: CombatIntent['target'], targetPos: { x: number, z: number }): void {
     if (target.isAlive()) {
       playCombatHit(this.playAt, targetPos)
-    } else if (target.ref.kind === 'animal') {
-      playAnimalCombatDeath(this.playAt, targetPos)
-    } else {
+    } else if (target.ref.kind !== 'animal') {
       playNpcCombatDeath(this.playAt, targetPos)
     }
   }

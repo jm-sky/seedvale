@@ -3,6 +3,67 @@
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { PlayAt, WorldSoundPosition } from './createWorldAudio'
 
+/** Vocal-free melee impact — last-resort death fallback when no death clip
+ *  exists yet (docs/assets/SOUNDS.md S26). Duplicated as a path string so
+ *  this module does not import `actionSounds.ts` (that file calls us). */
+const ANIMAL_DEATH_IMPACT_FALLBACK_URL = '/sounds/action-melee-hit-01.ogg'
+
+/** Future species-specific death vocals. Empty until dedicated clips land. */
+export const ANIMAL_DEATH_SOUND_URLS: Partial<Record<AnimalKind, string[]>> = {}
+
+export type AnimalDeathGroup =
+  | 'canid'
+  | 'cervid'
+  | 'suid'
+  | 'ursid'
+  | 'rodent'
+  | 'livestock'
+  | 'avian'
+
+export const ANIMAL_DEATH_GROUP_BY_KIND: Record<AnimalKind, AnimalDeathGroup> = {
+  wolf: 'canid',
+  fox: 'canid',
+  dog: 'canid',
+  deer: 'cervid',
+  stag: 'cervid',
+  boar: 'suid',
+  bear: 'ursid',
+  rat: 'rodent',
+  rabbit: 'rodent',
+  cow: 'livestock',
+  sheep: 'livestock',
+  horse: 'livestock',
+  donkey: 'livestock',
+  chicken: 'avian',
+  rooster: 'avian',
+  duck: 'avian',
+}
+
+/** Future group death vocals (e.g. deer+stag). Empty until dedicated clips land. */
+export const ANIMAL_DEATH_GROUP_SOUND_URLS: Partial<Record<AnimalDeathGroup, string[]>> = {}
+
+/** Kenney 80 CC0 Creature Sounds `hurt_01`–`hurt_05` — species-agnostic death. */
+export const ANIMAL_DEATH_GENERIC_SOUND_URLS = [
+  '/sounds/animal-death-generic-01.ogg',
+  '/sounds/animal-death-generic-02.ogg',
+  '/sounds/animal-death-generic-03.ogg',
+  '/sounds/animal-death-generic-04.ogg',
+  '/sounds/animal-death-generic-05.ogg',
+] as const
+
+function pickDeathUrl(urls: readonly string[] | undefined, rng: () => number): string | undefined {
+  if (!urls || urls.length === 0) return undefined
+  return urls[Math.floor(rng() * urls.length)]
+}
+
+/** Species → group → generic Kenney hurt pool → impact clip. */
+export function resolveAnimalDeathSoundUrl(kind: AnimalKind, rng: () => number = Math.random): string {
+  return pickDeathUrl(ANIMAL_DEATH_SOUND_URLS[kind], rng)
+    ?? pickDeathUrl(ANIMAL_DEATH_GROUP_SOUND_URLS[ANIMAL_DEATH_GROUP_BY_KIND[kind]], rng)
+    ?? pickDeathUrl(ANIMAL_DEATH_GENERIC_SOUND_URLS, rng)
+    ?? ANIMAL_DEATH_IMPACT_FALLBACK_URL
+}
+
 export const ANIMAL_SOUND_URLS: Partial<Record<AnimalKind, string[]>> = {
   chicken: ['/sounds/animal-chicken-01.ogg', '/sounds/animal-chicken-02.ogg'],
   cow: ['/sounds/animal-cow-01.ogg', '/sounds/animal-cow-02.ogg'],

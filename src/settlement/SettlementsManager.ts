@@ -472,6 +472,7 @@ export async function createSettlementsManager(
    *  routing/prop placement. Defaults to "no bridges" for callers/tests that
    *  don't pass one. */
   sampleBridgeDeck: (x: number, z: number) => number | null = () => null,
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<SettlementsManager> {
   const surfaceSampleHeight: HeightSampler = (x, z) => sampleBridgeDeck(x, z) ?? sampleHeight(x, z)
   const surfaceSampleLocalWater = (x: number, z: number): LocalWaterSample =>
@@ -585,6 +586,7 @@ export async function createSettlementsManager(
     naturalWaterKindAt,
     collidersNear,
     onAnimalDeath,
+    onAnimalDeathSound,
   }
   await restoreDetachedPlayerOwnedLivestock(
     spawnAnimalDeps,
@@ -650,6 +652,7 @@ export async function createSettlementsManager(
     getNowDays: currentNowDays,
     isLandPlotOwned,
     onAnimalDeath,
+    onAnimalDeathSound,
     workContracts,
     transportOrders,
     resourceSiteInventories,

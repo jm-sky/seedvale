@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
+  ANIMAL_DEATH_GENERIC_SOUND_URLS,
+  ANIMAL_DEATH_GROUP_SOUND_URLS,
+  ANIMAL_DEATH_SOUND_URLS,
   initialSpontaneousVocalizeCooldownSec,
   playSpontaneousAnimalSound,
+  resolveAnimalDeathSoundUrl,
   roosterCrowWeight,
   spontaneousVocalizeTimeWeight,
   tickSpontaneousVocalizeCooldown,
@@ -126,5 +130,34 @@ describe('playSpontaneousAnimalSound concurrency cap', () => {
     const cappedCalls = calls
     playSpontaneousAnimalSound('cow', playAt, { x: 0, z: 0 }, 300)
     expect(calls).toBe(cappedCalls + 1)
+  })
+})
+
+describe('resolveAnimalDeathSoundUrl', () => {
+  afterEach(() => {
+    delete ANIMAL_DEATH_SOUND_URLS.wolf
+    delete ANIMAL_DEATH_GROUP_SOUND_URLS.cervid
+  })
+
+  it('uses the generic Kenney hurt pool when species and group maps are empty', () => {
+    const url = resolveAnimalDeathSoundUrl('wolf', () => 0)
+    expect(ANIMAL_DEATH_GENERIC_SOUND_URLS).toContain(url)
+    expect(resolveAnimalDeathSoundUrl('deer', () => 0)).toBe(url)
+    expect(resolveAnimalDeathSoundUrl('boar', () => 0)).toBe(url)
+    expect(resolveAnimalDeathSoundUrl('rat', () => 0)).toBe(url)
+    expect(resolveAnimalDeathSoundUrl('bear', () => 0)).toBe(url)
+  })
+
+  it('prefers a species clip over generic', () => {
+    ANIMAL_DEATH_SOUND_URLS.wolf = ['/sounds/animal-death-wolf-01.ogg']
+    expect(resolveAnimalDeathSoundUrl('wolf', () => 0)).toBe('/sounds/animal-death-wolf-01.ogg')
+    expect(ANIMAL_DEATH_GENERIC_SOUND_URLS).toContain(resolveAnimalDeathSoundUrl('fox', () => 0))
+  })
+
+  it('uses a group clip when the species has none (deer and stag share cervid)', () => {
+    ANIMAL_DEATH_GROUP_SOUND_URLS.cervid = ['/sounds/animal-death-cervid-01.ogg']
+    expect(resolveAnimalDeathSoundUrl('deer', () => 0)).toBe('/sounds/animal-death-cervid-01.ogg')
+    expect(resolveAnimalDeathSoundUrl('stag', () => 0)).toBe('/sounds/animal-death-cervid-01.ogg')
+    expect(ANIMAL_DEATH_GENERIC_SOUND_URLS).toContain(resolveAnimalDeathSoundUrl('wolf', () => 0))
   })
 })

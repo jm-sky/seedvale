@@ -60,6 +60,7 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 | animal-dog-01.ogg | ANMLDog_Dog Barks, Multiple, Indoors…_344 Audio_Dog Vocalisations_02.wav | Sonniss GDC 2026 — 344 Audio Dog Vocalisations | **not wired**; village dog; not deer/fox (S10 still open) |
 | fauna-wolf-howl-1.ogg | fauna-wolf-howl-1.wav | not recorded (staged directly as WAV, no upstream link kept) | Plan fauna-009 spontaneous howl, distinct from `animal-wolf-01.ogg`'s growl; source WAV was a ~55 s multi-take recording, manually trimmed to one ~8 s take before conversion |
 | fauna-rooster-crow-1.ogg | fauna-rooster-crow-1.wav | not recorded (staged directly as WAV, no upstream link kept) | Plan fauna-009 spontaneous rooster crow |
+| animal-death-generic-01…05.ogg | hurt_01.ogg … hurt_05.ogg | https://opengameart.org/content/80-cc0-creature-sfx | Kenney 80 CC0 Creature SFX; generic death pool (S26b), wired from `AnimalAgent.collapse()` |
 
 ## Ambient / background
 
@@ -189,6 +190,7 @@ falls back to grass. See `docs/assets/SOUNDS.md` S01.
 | Kenney RPG sounds | **CC0** (see `_temp/Sounds/RPGsounds_Kenney/license.txt`) |
 | RPG Sound Pack (`ui-click-03`) | Typically CC0 on OpenGameArt (artisticdude) — **verify before commercial ship** |
 | Sonniss.com GDC 2026 Game Audio Bundle samples | Promo/eval samples — **confirm Sonniss GDC license terms before shipping** the fire/wind/rain/meadow/waves/dog/crowd/UI clips |
+| Kenney 80 CC0 Creature Sounds (`animal-death-generic-01…05`) | **CC0** — [OpenGameArt](https://opengameart.org/content/80-cc0-creature-sfx) / [kenney.nl](https://kenney.nl); staged `_temp/Sounds/80-CC0-creature-SFX/` |
 
 ## License notes (2026-08-14 batch)
 

@@ -660,6 +660,9 @@ export async function createFauna(
    *  stay pure terrain for spawn-site/habitat placement, where a bridge deck
    *  is not terrain). Optional so existing callers/tests keep compiling. */
   sampleBridgeDeck?: (x: number, z: number) => number | null,
+  /** Death vocal at `collapse()` (S26) — forwarded into every `AnimalAgent`
+   *  this factory spawns, same optional convention as `onAnimalDeath`. */
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
 
@@ -862,6 +865,7 @@ export async function createFauna(
       animations,
       sampleForestFactor,
       onDeath: handleAnimalDeath,
+      onDeathSound: onAnimalDeathSound,
       herdId,
       lifeStage,
       motherId,

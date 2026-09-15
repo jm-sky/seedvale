@@ -209,6 +209,7 @@ export type SpawnAnimalFromRecordDeps = {
   naturalWaterKindAt?: (x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null
   collidersNear: ColliderSource
   onAnimalDeath?: (animalId: string) => void
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void
 }
 
 /** Spawns one persistent livestock individual from a saved record (plan fauna-020). */
@@ -234,6 +235,7 @@ export async function spawnAnimalFromRecord(
     wanderRadius: LIVESTOCK_WANDER_RADIUS,
     ownerHouseId: deriveOwnerHouseId(parseAnimalOwnerFromRecord(record)),
     onDeath: deps.onAnimalDeath,
+    onDeathSound: deps.onAnimalDeathSound,
   })
   agent.hydrate({
     ...record,
@@ -261,6 +263,7 @@ function createGuaranteedSheep(
   naturalWaterKindAt: ((x: number, z: number) => import('../world/WaterSource').WaterBodyKind | null) | undefined,
   collidersNear: ColliderSource,
   onAnimalDeath: ((animalId: string) => void) | undefined,
+  onAnimalDeathSound: ((kind: AnimalKind, x: number, z: number) => void) | undefined,
   removed: ReadonlySet<string> | undefined,
   saved: ReadonlyMap<string, LivestockSaveRecord> | undefined,
 ): AnimalAgent | null {
@@ -302,6 +305,7 @@ function createGuaranteedSheep(
     wanderRadius: LIVESTOCK_WANDER_RADIUS,
     ownerHouseId,
     onDeath: onAnimalDeath,
+    onDeathSound: onAnimalDeathSound,
     household,
   })
 
@@ -626,6 +630,8 @@ export async function spawnLivestock(
   ensureSheep = false,
   /** Family index of the generated shepherd household, or `null`. */
   shepherdHouseIndex: number | null = null,
+  /** Death vocal at `collapse()` (S26). */
+  onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
@@ -678,6 +684,7 @@ export async function spawnLivestock(
         wanderRadius: LIVESTOCK_WANDER_RADIUS,
         ownerHouseId,
         onDeath: onAnimalDeath,
+        onDeathSound: onAnimalDeathSound,
         household,
       })
       // Persisted household-owned state is authoritative for an existing
@@ -701,6 +708,7 @@ export async function spawnLivestock(
       naturalWaterKindAt,
       collidersNear,
       onAnimalDeath,
+      onAnimalDeathSound,
       removed,
       saved
     )
@@ -728,6 +736,8 @@ export async function spawnLivestock(
         visual,
         animations,
         wanderRadius: LIVESTOCK_WANDER_RADIUS,
+        onDeath: onAnimalDeath,
+        onDeathSound: onAnimalDeathSound,
       })
       agent.mesh.rotation.y = merchantHorseSpawn.yaw
       if (record && record.kind === 'horse') {

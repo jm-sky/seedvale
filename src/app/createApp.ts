@@ -9,6 +9,7 @@ import type { GrassForageOverrides } from '../world/grassForage'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
+import { playAnimalCombatDeath } from '../audio/actionSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
@@ -648,6 +649,14 @@ export async function createApp(
   let worldGeneration = 0
   const initialWorldGeneration = worldGeneration
 
+  const onAnimalDeathSound = (
+    kind: import('../fauna/AnimalAgent').AnimalKind,
+    x: number,
+    z: number,
+  ): void => {
+    playAnimalCombatDeath(worldAudio.playAt, { x, z }, kind)
+  }
+
   bootMark('createWorldBundle')
   const { bundle, backgroundReady: worldBundleBackgroundReady } = await createWorldBundle(
     scene,
@@ -731,6 +740,7 @@ export async function createApp(
     onSettlementAvailable,
     resourceSiteInventories,
     consumedWorldPickupIds,
+    onAnimalDeathSound,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -2269,6 +2279,7 @@ export async function createApp(
         worldFlags.treasureMapBearCaveCasketConsumed,
         resourceSiteInventories,
         consumedWorldPickupIds,
+        onAnimalDeathSound,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()

@@ -1,5 +1,7 @@
 /** Action one-shots (shovel dig, axe chop, melee, well, etc.). Sources/licenses: public/sounds/README.md. */
 
+import type { AnimalKind } from '../fauna/AnimalAgent'
+import { resolveAnimalDeathSoundUrl } from './animalSounds'
 import type { ActiveSound, PlayAt, PlayAtCancelable, WorldSoundPosition } from './createWorldAudio'
 
 export const ACTION_DIG_SOUND_URLS = [
@@ -154,10 +156,13 @@ export function playNpcCombatDeath(playAt: PlayAt, position: WorldSoundPosition)
   playAt(ACTION_MELEE_KILL_SOUND_URL, position, ACTION_MELEE_KILL_SFX_VOLUME)
 }
 
-/** Animal death (plan npc-009) — no dedicated species-agnostic death/whimper
- *  clip exists yet (asset gap, see docs/assets/SOUNDS.md S26); reuses the
- *  vocal-free impact clip instead of the human moan+fall kill clip, which
- *  would be the wrong content for a non-human death. */
-export function playAnimalCombatDeath(playAt: PlayAt, position: WorldSoundPosition): void {
-  playAt(ACTION_MELEE_HIT_SOUND_URL, position, ACTION_MELEE_HIT_SFX_VOLUME)
+/** Animal death vocal (S26) — species → group → generic Kenney hurt pool →
+ *  vocal-free impact. Never the human moan+fall kill clip. Owned by
+ *  `AnimalAgent.collapse()` via `onDeathSound`, not the attacker. */
+export function playAnimalCombatDeath(
+  playAt: PlayAt,
+  position: WorldSoundPosition,
+  kind: AnimalKind,
+): void {
+  playAt(resolveAnimalDeathSoundUrl(kind), position, ACTION_MELEE_HIT_SFX_VOLUME)
 }

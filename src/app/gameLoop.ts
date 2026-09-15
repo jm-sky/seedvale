@@ -63,7 +63,6 @@ import {
   playActionBowDraw,
   playActionBowRelease,
   playActionMeleeHit,
-  playActionMeleeKill,
   playCombatHit,
   playNpcCombatDeath,
 } from '../audio/actionSounds'
@@ -1269,8 +1268,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             ))
           }
           const killed = animal.isDead()
-          if (killed) playActionMeleeKill(worldAudio.playAt, animal.mesh.position)
-          else playActionMeleeHit(worldAudio.playAt, animal.mesh.position)
+          if (!killed) playActionMeleeHit(worldAudio.playAt, animal.mesh.position)
           const label = ANIMAL_LABELS[animal.def.kind]
           if (killed) {
             toast.show(animalDeathToastLine(animal))
@@ -1433,8 +1431,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             playerCombat.noteActivity()
             playerCombat.setSoftLock(livingTargetIdForAnimal(animal.animalId))
             const killed = animal.isDead()
-            if (killed) playActionMeleeKill(worldAudio.playAt, animal.mesh.position)
-            else playActionMeleeHit(worldAudio.playAt, animal.mesh.position)
+            if (!killed) playActionMeleeHit(worldAudio.playAt, animal.mesh.position)
             const label = ANIMAL_LABELS[animal.def.kind]
             toast.show(killed
               ? animalDeathToastLine(animal)

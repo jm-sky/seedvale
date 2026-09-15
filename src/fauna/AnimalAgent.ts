@@ -901,6 +901,9 @@ export type AnimalAgentDeps = {
   sampleForestFactor?: (x: number, z: number) => number
   ownerHouseId?: string
   onDeath?: (animalId: string) => void
+  /** Death vocal at collapse (S26) — species/group/generic resolver, not the
+   *  human moan clip. Optional so tests and spawn sites without audio stay silent. */
+  onDeathSound?: (kind: AnimalKind, x: number, z: number) => void
   herdId?: string
   lifeStage?: AnimalLifeStage
   motherId?: string
@@ -1104,6 +1107,7 @@ export class AnimalAgent {
    *  (plan 110); injected the same way as `ownerHouseId`'s callers thread
    *  cross-cutting concerns in from the spawn site. */
   private readonly onDeath?: (animalId: string) => void
+  private readonly onDeathSound?: (kind: AnimalKind, x: number, z: number) => void
   /** Not `private`: `CorpseHost`'s structural contract (`animalCorpse.ts`,
    *  plan fauna-017 step 5) needs it public so `this` satisfies that type
    *  without a wrapper allocation — same reasoning as `isCapsule`/`def`. */
@@ -1509,6 +1513,7 @@ export class AnimalAgent {
       sampleForestFactor,
       ownerHouseId,
       onDeath,
+      onDeathSound,
       herdId,
       lifeStage = 'adult',
       motherId,
@@ -1530,6 +1535,7 @@ export class AnimalAgent {
     this.variant = variant
     this.effective = resolveAnimalVariantStats(variant)
     this.onDeath = onDeath
+    this.onDeathSound = onDeathSound
     this.cave = cave
     this.caveInteriorNow = cave != null
     this.sampleHeight = sampleHeight
@@ -2699,6 +2705,7 @@ export class AnimalAgent {
     // would lock that carcass unclaimed-but-inedible for its entire linger.
     this.cancelSourceTarget()
     this.setLeadAttached(false)
+    this.onDeathSound?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
     this.onDeath?.(this.animalId)
     this.corpse.deathAtDays = this.tickNowDays
     this.deathAnimElapsedSec = 0

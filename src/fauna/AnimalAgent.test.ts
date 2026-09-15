@@ -527,6 +527,19 @@ describe('AnimalAgent', () => {
       expect(dying.isLeadAttached()).toBe(false)
     })
 
+    it('fires onDeathSound from collapse with kind and position', () => {
+      const heard: string[] = []
+      const dying = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.wolf,
+        animalId: 'sfx-wolf',
+        x: 3,
+        z: 4,
+        onDeathSound: (kind, x, z) => { heard.push(`${kind}:${x}:${z}`) },
+      }))
+      dying.takeDamage(9999)
+      expect(heard).toEqual(['wolf:3:4'])
+    })
+
     it('follows the player while attached and defers ordinary elevated needs', () => {
       const horse = new AnimalAgent(makeDeps({ animalId: 'lead-follow' }))
       horse.life.hunger = 0

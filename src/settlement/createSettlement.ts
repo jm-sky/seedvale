@@ -374,6 +374,7 @@ export type CreateSettlementDeps = {
   /** Reports any of this settlement's livestock deaths (any cause) by
    *  `animalId` — forwarded into `spawnLivestock` (plan 110). */
   onAnimalDeath?: (animalId: string) => void
+  onAnimalDeathSound?: (kind: import('../fauna/AnimalAgent').AnimalKind, x: number, z: number) => void
   /** Authoritative Work Contract lifecycle (plan npc-015) — forwarded into
    *  every `NpcAgent.create` call the same way `mining`/`foodSources` are
    *  above. World-global (not settlement-scoped): an NPC resolves its own
@@ -443,6 +444,7 @@ export async function createSettlement(
     roadCtx,
     forest,
     onAnimalDeath,
+    onAnimalDeathSound,
     getPlayerSocial,
     mining,
     isLandPlotOwned,
@@ -703,6 +705,7 @@ export async function createSettlement(
       livestockPersistence,
       def.isHome,
       shepherdHouseIndex,
+      onAnimalDeathSound,
     )
   } finally {
     bootMarkEnd('spawnLivestock')
@@ -729,6 +732,7 @@ export async function createSettlement(
     settlementId: def.id,
     settlementSeed,
     onAnimalDeath,
+    onAnimalDeathSound,
     storageDamaged: () => infestationState(def.id).storageDamaged,
     nestDestroyed: () => infestationState(def.id).nestDestroyed,
     ratPersistence,
