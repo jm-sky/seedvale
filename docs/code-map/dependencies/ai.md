@@ -734,6 +734,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcLoadout.test.ts`
+- `ai/npcTradeAvailability.ts`
 
 ## `ai/npcLogistics.test.ts`
 
@@ -962,6 +963,10 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcTradeAvailability.ts`
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/weaponMaintenance.ts`
 - `settlement/household.ts`
 
 ## `ai/npcTradeAvailability.ts`
@@ -970,6 +975,9 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/characters.ts`
+- `ai/npcLoadout.ts`
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
 - `settlement/household.ts`
 

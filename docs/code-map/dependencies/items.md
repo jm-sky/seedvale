@@ -86,6 +86,8 @@ Generated from TypeScript imports.
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcTradeAvailability.test.ts`
+- `ai/npcTradeAvailability.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/cookMealIntent.test.ts`
@@ -949,6 +951,8 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcTradeAvailability.test.ts`
+- `ai/npcTradeAvailability.ts`
 - `app/actions/acquisitionFeedback.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/fullCampIntent.test.ts`
@@ -1055,6 +1059,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcTradeAvailability.test.ts`
 - `ai/npcTradeAvailability.ts`
 - `app/actions/acquisitionFeedback.ts`
 - `app/actions/actionContext.ts`
@@ -1525,6 +1530,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
+- `ai/npcTradeAvailability.test.ts`
 - `app/actions/npcItemTransfer.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`

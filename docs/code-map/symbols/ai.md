@@ -423,13 +423,19 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcTradeAvailability.ts`
 
-- `NpcTradeOffer` — type — line 13
+- `NpcTradeCounterparty` — type — line 48
   - domain: settlements-npcs
-- `npcTradeQuantityAvailable` — function — line 64
+- `NpcTradeOffer` — type — line 24
   - domain: settlements-npcs
-- `resolveNpcTradeOffers` — function — line 81
+- `NpcTradeOwnerSource` — type — line 15
   - domain: settlements-npcs
-- `TradeReserveNpc` — type — line 23
+- `npcTradeQuantityAvailable` — function — line 141
+  - domain: settlements-npcs
+- `npcTradeSourceInventory` — function — line 159
+  - domain: settlements-npcs
+- `resolveNpcTradeOffers` — function — line 175
+  - domain: settlements-npcs
+- `TradeReserveNpc` — type — line 34
 
 ## `ai/npcTravel.ts`
 
