@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Flag, Hammer, HandHelping, Handshake, Scale, Star } from 'lucide-vue-next'
 import { computed } from 'vue'
 import UiPanel from '@/components/UiPanel.vue'
 import type { ModifierCategory } from '../../shared/effectivePhysicalAttributes'
@@ -95,16 +96,18 @@ function formatEquippedSlot(itemLabel: string | null, qualityLabel: string | nul
 
 /** Five reputation dimensions (plan quests-progression-001 §14) — each is
  *  its own `-100..100` value, deliberately never averaged into one score. */
+const REPUTATION_ROWS = [
+  { key: 'trust', label: 'Zaufanie', icon: Handshake },
+  { key: 'competence', label: 'Kompetencja', icon: Hammer },
+  { key: 'benevolence', label: 'Życzliwość', icon: HandHelping },
+  { key: 'courage', label: 'Odwaga', icon: Flag },
+  { key: 'integrity', label: 'Uczciwość', icon: Scale },
+] as const
+
 const reputationRows = computed(() => {
   const rep = ui.characterScreen.reputation.selected?.reputation
   if (!rep) return []
-  return [
-    { key: 'trust', label: 'Zaufanie', value: rep.trust },
-    { key: 'competence', label: 'Kompetencja', value: rep.competence },
-    { key: 'benevolence', label: 'Życzliwość', value: rep.benevolence },
-    { key: 'courage', label: 'Odwaga', value: rep.courage },
-    { key: 'integrity', label: 'Uczciwość', value: rep.integrity },
-  ]
+  return REPUTATION_ROWS.map((row) => ({ ...row, value: rep[row.key] }))
 })
 
 function onSelectSettlement(settlementId: string): void {
@@ -278,13 +281,26 @@ function onSelectSettlement(settlementId: string): void {
               <div
                 v-for="row in reputationRows"
                 :key="row.key"
-                class="flex items-baseline justify-between text-xs"
+                class="flex items-center justify-between text-xs"
               >
-                <span class="opacity-80">{{ row.label }}</span>
+                <span class="inline-flex items-center gap-1.5 opacity-80">
+                  <component
+                    :is="row.icon"
+                    class="size-3.5 shrink-0 opacity-70"
+                    aria-hidden="true"
+                  />
+                  {{ row.label }}
+                </span>
                 <span class="opacity-70">{{ row.value }}</span>
               </div>
-              <div class="mt-1 flex items-baseline justify-between text-xs">
-                <span class="opacity-80">Rozpoznawalność</span>
+              <div class="mt-1 flex items-center justify-between text-xs">
+                <span class="inline-flex items-center gap-1.5 opacity-80">
+                  <Star
+                    class="size-3.5 shrink-0 opacity-70"
+                    aria-hidden="true"
+                  />
+                  Rozpoznawalność
+                </span>
                 <span class="opacity-70">{{ ui.characterScreen.reputation.selected.renown }}</span>
               </div>
             </template>
