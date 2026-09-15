@@ -1,15 +1,16 @@
 # Plan: Generic NPC-Owned Goods Trading
 
 **Created:** 2026-09-14  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
-**Depends on:** settlements-npcs-033  
+**Depends on:** ~~settlements-npcs-033~~  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `household` `social`  
 **Tags:** `trade` `npc` `inventory` `ownership` `surplus`  
 **Roadmap:** `economy-goods-flow.md`  
-**Model:** Sonnet, Grok
+**Model:** Sonnet, Grok  
+**Implemented at:** 2026-09-15 16:56
 
 ## Goal
 

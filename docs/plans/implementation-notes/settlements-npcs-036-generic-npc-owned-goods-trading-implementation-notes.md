@@ -2,7 +2,7 @@
 
 **Plan:** `docs/plans/settlements-npcs-036-generic-npc-owned-goods-trading.md`  
 **Reviewed:** 2026-09-14  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Source of truth:** current `main` code + docs.
 
 ## Dependency contract with settlements-npcs-033

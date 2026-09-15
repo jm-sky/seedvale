@@ -25,7 +25,7 @@ import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldBundle } from './worldBundle'
 import { aboutAreaLine, requestAssistanceLine, voluntaryJoinResponseLine } from '../ai/dialogueTemplates'
-import { npcTradeQuantityAvailable, resolveNpcTradeOffers } from '../ai/npcTradeAvailability'
+import { npcTradeSourceInventory, resolveNpcTradeOffers } from '../ai/npcTradeAvailability'
 import { isVoluntaryJoinAccepted, type VoluntaryExpeditionTerms } from '../ai/voluntaryExpeditionJoin'
 import { playActionGrindstoneSharpen, playActionWhetstoneSharpen } from '../audio/actionSounds'
 import { playInventoryDrop } from '../audio/inventorySounds'
@@ -263,46 +263,53 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   }
 
   /** Live BUY-column rows for an ordinary NPC trade session (plan
-   *  settlements-npcs-033 §2/§5) — household surplus goods priced with the
-   *  same social context as merchant sell pricing, direction-flipped via
-   *  `npcSalePrice`. Recomputed on open and after every commit; never cached. */
+   *  settlements-npcs-033 §2/§5, extended by settlements-npcs-036) —
+   *  owner-aware surplus goods priced with the same social context as
+   *  merchant sell pricing, direction-flipped via `npcSalePrice`.
+   *  Recomputed on open and after every commit; never cached. */
   const buildNpcTradeStock = (npc: NpcAgent | null): NpcTradeStockRow[] => {
-    if (!npc?.household) return []
+    if (!npc) return []
     const settlementNpcs = findSettlementForNpc(npc)?.npcs ?? []
     const context = buildSellPriceContext(npc)
-    return resolveNpcTradeOffers(npc.household, settlementNpcs).map((offer) => ({
+    return resolveNpcTradeOffers(npc, settlementNpcs).map((offer) => ({
       kind: offer.kind,
       quantity: offer.quantity,
       unitPrice: npcSalePrice(offer.kind, context),
+      owner: offer.owner,
     }))
   }
 
-  /** Ordinary NPC trade commit (plan settlements-npcs-033 §4) — re-resolves
-   *  live sellable quantity and live social price for every requested kind
-   *  right before mutating anything (the plan's live revalidation contract),
-   *  then hands the revalidated basket to `settleOwnedGoodsPurchase`. Coin-
-   *  only V1 (§8): any non-empty `offer` is rejected rather than silently
-   *  dropped, since ordinary NPCs have no established barter-goods owner. */
+  /** Ordinary NPC trade commit (plan settlements-npcs-033 §4 /
+   *  settlements-npcs-036) — re-resolves live owner, sellable quantity and
+   *  live social price for every requested kind right before mutating
+   *  anything (the plan's live revalidation contract), then hands the
+   *  revalidated basket to `settleOwnedGoodsPurchase`. Coin-only V1 (§8):
+   *  any non-empty `offer` is rejected rather than silently dropped, since
+   *  ordinary NPCs have no established barter-goods owner. */
   const settleNpcGoodsTransaction = (
     purchases: Partial<Record<ItemKind, number>>,
     offer: Partial<Record<ItemKind, number>>,
   ): TradeResult => {
     if ((Object.values(offer) as number[]).some((count) => count > 0)) return 'invalid_offer'
     const npc = ui.merchant.npc as NpcAgent | null
-    if (!npc || npc.health.dead || !npc.household) return 'not_sold'
-    const household = npc.household
+    if (!npc || npc.health.dead) return 'not_sold'
     const settlementNpcs = findSettlementForNpc(npc)?.npcs ?? []
     const context = buildSellPriceContext(npc)
+    const liveOffers = resolveNpcTradeOffers(npc, settlementNpcs)
     const lines: OwnedGoodsPurchaseLine[] = []
     for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
       if (count <= 0) continue
-      if (count > npcTradeQuantityAvailable(kind, household, settlementNpcs)) return 'not_sold'
-      lines.push({ kind, count, unitPrice: npcSalePrice(kind, context) })
+      const live = liveOffers.find((row) => row.kind === kind)
+      if (!live || count > live.quantity) return 'not_sold'
+      const source = npcTradeSourceInventory(live.owner, npc)
+      if (!source) return 'not_sold'
+      lines.push({ kind, count, unitPrice: npcSalePrice(kind, context), source })
     }
     if (lines.length === 0) return 'invalid_offer'
     const npcState = bundle.settlementsManager.getNpcState(npc.id)
     if (!npcState) return 'not_sold'
-    const result = settleOwnedGoodsPurchase(inventory, household.items, npcState.personalInventory, lines)
+    const defaultSource = npc.household?.items ?? npcState.personalInventory
+    const result = settleOwnedGoodsPurchase(inventory, defaultSource, npcState.personalInventory, lines)
     if (result === 'ok') {
       afterTrade()
       const totalPrice = lines.reduce((sum, line) => sum + line.unitPrice * line.count, 0)

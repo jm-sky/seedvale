@@ -365,11 +365,14 @@ export function settleTransaction(
 }
 
 /** One resolved purchase line for `settleOwnedGoodsPurchase` — `unitPrice`
- *  is caller-resolved (live `npcSalePrice`), not looked up here. */
+ *  is caller-resolved (live `npcSalePrice`), not looked up here. `source`
+ *  overrides the shared owner when a basket spans household + personal
+ *  inventories (plan settlements-npcs-036). */
 export type OwnedGoodsPurchaseLine = {
   kind: ItemKind
   count: number
   unitPrice: number
+  source?: Inventory
 }
 
 /**
@@ -396,29 +399,38 @@ export function settleOwnedGoodsPurchase(
   if (active.length === 0) return 'invalid_offer'
   let totalPrice = 0
   const purchases: Partial<Record<ItemKind, number>> = {}
-  for (const { kind, count, unitPrice } of active) {
+  const reserved = new Map<Inventory, Partial<Record<ItemKind, number>>>()
+  const resolved: { kind: ItemKind, count: number, unitPrice: number, source: Inventory }[] = []
+  for (const line of active) {
+    const { kind, count, unitPrice } = line
     if (!Number.isInteger(count) || count <= 0) return 'invalid_offer'
     if (!Number.isInteger(unitPrice) || unitPrice < 0) return 'invalid_offer'
-    const ownedEnough = isInstanceBackedKind(kind)
-      ? source.countInstances(kind) >= count
-      : source.has(kind, count)
-    if (!ownedEnough) return 'not_sold'
+    const lineSource = line.source ?? source
+    const already = reserved.get(lineSource)?.[kind] ?? 0
+    const owned = isInstanceBackedKind(kind)
+      ? lineSource.countInstances(kind)
+      : lineSource.count(kind)
+    if (owned < already + count) return 'not_sold'
+    const byKind = reserved.get(lineSource) ?? {}
+    byKind[kind] = already + count
+    reserved.set(lineSource, byKind)
+    resolved.push({ kind, count, unitPrice, source: lineSource })
     purchases[kind] = (purchases[kind] ?? 0) + count
     totalPrice += unitPrice * count
   }
   if (totalPrice > 0 && !buyer.has('coin', totalPrice)) return 'cannot_afford'
   if (!wouldFitAfterTransaction(buyer, {}, purchases, totalPrice)) return 'full'
   if (totalPrice > 0 && !wouldFitAfterTransaction(paymentDestination, {}, {}, -totalPrice)) return 'full'
-  for (const { kind, count } of active) {
+  for (const { kind, count, source: lineSource } of resolved) {
     if (isInstanceBackedKind(kind)) {
-      for (const id of selectInstancesToSell(source.getInstances(kind), count)) {
-        const instance = source.getInstance(id)
+      for (const id of selectInstancesToSell(lineSource.getInstances(kind), count)) {
+        const instance = lineSource.getInstance(id)
         if (!instance) continue
-        source.removeInstance(id)
+        lineSource.removeInstance(id)
         buyer.addInstance(instance)
       }
     } else {
-      source.remove(kind, count)
+      lineSource.remove(kind, count)
       buyer.add(kind, count)
     }
   }

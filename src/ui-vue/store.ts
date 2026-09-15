@@ -359,12 +359,15 @@ export type NpcTradeStockRow = {
   kind: ItemKind
   quantity: number
   unitPrice: number
+  /** Authoritative owner of this row's remaining stock. Vue does not need
+   *  the inventory itself — commit re-resolves the live owner. */
+  owner?: 'household' | 'personal'
 }
 
 /** Which stock the open trade screen renders the BUY column from (plan
  *  settlements-npcs-033 §1/§10) — `'merchant'` keeps the exact existing
  *  `MERCHANT_STOCK` catalog + OFFER/barter + horse special; `'npcGoods'` is
- *  an ordinary NPC's real, quantity-limited household surplus with no
+ *  an ordinary NPC's real, quantity-limited household/personal surplus with no
  *  barter/OFFER column (coin-only V1, see the plan's §8 barter caution). */
 export type MerchantMode = 'merchant' | 'npcGoods'
 

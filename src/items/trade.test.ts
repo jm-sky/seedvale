@@ -289,6 +289,16 @@ describe('NPC buy pricing (plan settlements-npcs-033)', () => {
     expect(merchantPrice('iron')).toBeNull()
     expect(npcSalePrice('iron')).toBe(roundSellPrice(tradeValue('iron') * BASE_BUY_FACTOR))
   })
+
+  it('prices newly traded household outputs from the shared valuation layer (plan settlements-npcs-036)', () => {
+    expect(merchantPrice('wool_material')).toBeNull()
+    expect(tradeValue('wool_material')).toBe(2)
+    expect(tradeValue('linen_material')).toBe(6)
+    expect(tradeValue('dressing')).toBe(16)
+    expect(tradeValue('dressing')).toBeGreaterThan(tradeValue('bandage'))
+    expect(npcSalePrice('wool_material')).toBe(roundSellPrice(tradeValue('wool_material') * BASE_BUY_FACTOR))
+    expect(npcSalePrice('dressing')).toBe(roundSellPrice(tradeValue('dressing') * BASE_BUY_FACTOR))
+  })
 })
 
 describe('settleOwnedGoodsPurchase (plan settlements-npcs-033)', () => {
@@ -387,6 +397,57 @@ describe('settleOwnedGoodsPurchase (plan settlements-npcs-033)', () => {
     expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('ok')
     expect(settleOwnedGoodsPurchase(buyer, source, payee, [{ kind: 'arrow', count: 5, unitPrice: 1 }])).toBe('not_sold')
     expect(buyer.count('arrow')).toBe(5)
+  })
+
+  it('settles mixed household and personal sources atomically (plan settlements-npcs-036)', () => {
+    const buyer = new Inventory({ coin: 40 })
+    const household = new Inventory({ wool_material: 12 })
+    const personal = new Inventory({ iron_rod: 2 })
+    const payee = personal
+    const lines: OwnedGoodsPurchaseLine[] = [
+      { kind: 'wool_material', count: 4, unitPrice: 2, source: household },
+      { kind: 'iron_rod', count: 1, unitPrice: 8, source: personal },
+    ]
+    expect(settleOwnedGoodsPurchase(buyer, household, payee, lines)).toBe('ok')
+    expect(buyer.count('wool_material')).toBe(4)
+    expect(buyer.count('iron_rod')).toBe(1)
+    expect(household.count('wool_material')).toBe(8)
+    expect(personal.count('iron_rod')).toBe(1)
+    expect(buyer.count('coin')).toBe(40 - 8 - 8)
+    expect(payee.count('coin')).toBe(16)
+  })
+
+  it('refuses a mixed basket without mutating either owner when one source is short', () => {
+    const buyer = new Inventory({ coin: 40 })
+    const household = new Inventory({ wool_material: 1 })
+    const personal = new Inventory({ iron_rod: 2 })
+    const lines: OwnedGoodsPurchaseLine[] = [
+      { kind: 'wool_material', count: 4, unitPrice: 2, source: household },
+      { kind: 'iron_rod', count: 1, unitPrice: 8, source: personal },
+    ]
+    expect(settleOwnedGoodsPurchase(buyer, household, personal, lines)).toBe('not_sold')
+    expect(household.count('wool_material')).toBe(1)
+    expect(personal.count('iron_rod')).toBe(2)
+    expect(buyer.count('coin')).toBe(40)
+    expect(buyer.count('wool_material')).toBe(0)
+  })
+
+  it('transfers an existing instance from a named personal source without reminting', () => {
+    const worn = createWeaponInstance('knife')
+    worn.durability = 0.4
+    worn.sharpness = 0.3
+    const buyer = new Inventory({ coin: 20 })
+    const personal = new Inventory(undefined, undefined, [worn])
+    const household = new Inventory({ arrow: 10 })
+    expect(settleOwnedGoodsPurchase(
+      buyer,
+      household,
+      personal,
+      [{ kind: 'knife', count: 1, unitPrice: 12, source: personal }],
+    )).toBe('ok')
+    expect(personal.getInstance(worn.id)).toBeNull()
+    expect(buyer.getInstance(worn.id)).toMatchObject({ id: worn.id, durability: 0.4, sharpness: 0.3 })
+    expect(household.count('arrow')).toBe(10)
   })
 })
 
