@@ -23,6 +23,7 @@ import {
   evaluateRoadRiverCrossing,
   riverHitsOnEdge,
 } from './roadRiverCrossing'
+import { createRoadRouteWorldgenCache } from './roadRouteWorldgenCache'
 import {
   cellsWithinRadius,
   type SettlementCell,
@@ -96,14 +97,74 @@ export type RoadRoute = {
 // §9.14–15) — do not keep a second authoritative layout/def cache here.
 const routeCache = new Map<string, RoadRoute | null>()
 
+/** Persistent worldgen-cache adapter (plan world-terrain-029). Hydrates into
+ *  `routeCache` and never overwrites a key the runtime already computed. */
+const persistentRoutes = createRoadRouteWorldgenCache({
+  hydrateInto(key, route) {
+    if (routeCache.has(key)) return
+    routeCache.set(key, route)
+  },
+})
+
+/**
+ * Activate best-effort IndexedDB hydrate for this world identity. Route
+ * consumers stay synchronous — a miss or in-flight hydrate just runs A*.
+ *
+ * @domain world-terrain
+ * @system worldgen-cache
+ */
+export function activateRoadRouteWorldgenCache(seed: number, fingerprint: string): void {
+  persistentRoutes.activate(seed, fingerprint)
+}
+
+/** Test/lifecycle seam: resolves when the current activation's hydrate finishes. */
+export function roadRouteWorldgenCacheReady(): Promise<void> {
+  return persistentRoutes.ready()
+}
+
+/** Session lookup: `undefined` is a miss; `null` is a cached failed route. */
+export function peekRoadRouteCache(key: string): RoadRoute | null | undefined {
+  return routeCache.get(key)
+}
+
+/**
+ * Order-independent settlement↔settlement route identity — the persistent
+ * subkey and the runtime `routeCache` key.
+ *
+ * @domain world-terrain
+ * @system worldgen-cache
+ */
+export function roadRoutePairKey(idA: string, idB: string): string {
+  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`
+}
+
+/**
+ * Settlement↔minor-location route identity. V1 has a single location per
+ * supported kind, so this matches the current runtime cache key.
+ *
+ * @domain world-terrain
+ * @system worldgen-cache
+ */
+export function roadRouteLocationKey(settlementId: string, locationKind: string): string {
+  return `${settlementId}:${locationKind}`
+}
+
+function storeRoute(key: string, route: RoadRoute | null): RoadRoute | null {
+  routeCache.set(key, route)
+  persistentRoutes.remember(key, route)
+  return route
+}
+
 /** Both module-level caches below are keyed by cell/id, not by seed — a new
  *  world (new seed, or GUI-driven terrain param change) must call this before
  *  any chunk generation, or stale roads/settlement defs from the previous
- *  world leak into the new one. */
+ *  world leak into the new one. Also invalidates any in-flight persistent
+ *  hydrate/flush so a previous seed cannot repopulate this map. */
 export function clearRoadNetworkCaches(): void {
   clearSettlementDefCache()
   clearMinorLocationCaches()
   routeCache.clear()
+  persistentRoutes.invalidate()
   clearCemeteryCaches()
   clearCemeteryPlacementCaches()
 }
@@ -577,7 +638,7 @@ function toSegments(points: RoutePoint[], kind: RoadSegment['kind']): RoadSegmen
  *  settlement resolves an edge first, the other reuses the same result.
  *  Declared near the top of this module with `clearRoadNetworkCaches`. */
 function pairKey(idA: string, idB: string): string {
-  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`
+  return roadRoutePairKey(idA, idB)
 }
 
 function routingOptionsFrom(ctx: RoadNetworkContext): RoutingOptions {
@@ -662,8 +723,7 @@ function routeBetween(
   const from = entranceToward(first, second)
   const to = entranceToward(second, first)
   const route = findRoute(from, to, searchOptionsFor(from, to, ctx, 'road', key))
-  routeCache.set(key, route)
-  return route
+  return storeRoute(key, route)
 }
 
 /** The settlement→minor-location path, resolved once and shared by path
@@ -675,14 +735,13 @@ function routeToLocation(
   loc: { x: number, z: number, kind: string },
   ctx: RoadNetworkContext,
 ): RoadRoute | null {
-  const key = `${def.id}:${loc.kind}`
+  const key = roadRouteLocationKey(def.id, loc.kind)
   const cached = routeCache.get(key)
   if (cached !== undefined) return cached
 
   const from = entranceToward(def, loc)
   const route = findRoute(from, loc, searchOptionsFor(from, loc, ctx, 'path', key))
-  routeCache.set(key, route)
-  return route
+  return storeRoute(key, route)
 }
 
 /** Waypoints of a cached route oriented to start near `def` — `routeCache` is

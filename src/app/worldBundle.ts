@@ -89,7 +89,8 @@ import {
 import { setActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspiciousTransportCaveCacheRuntime'
 import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
-import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
+import { activateRoadRouteWorldgenCache, clearRoadNetworkCaches } from '../settlement/roadNetwork'
+import { roadRouteFingerprint } from '../settlement/roadRouteWorldgenCache'
 import { cellFromId, type SettlementDef } from '../settlement/settlementGenerator'
 import { settlementDefFor } from '../settlement/settlementPlanCache'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
@@ -1046,6 +1047,19 @@ async function buildWorldSystems(
   } = seed
 
   const resourceSiteInventories = initialResourceSiteInventories ?? createResourceSiteInventories()
+
+  // Plan world-terrain-029 — hydrate persisted road routes into the module-level
+  // `routeCache` before the first streamed chunk can call `segmentsNear()`.
+  // Never awaited: a miss or in-flight hydrate just computes A* as today, and
+  // a route computed while hydrate is in flight wins the merge.
+  activateRoadRouteWorldgenCache(
+    config.seed,
+    roadRouteFingerprint({
+      params: rawSampleParamsFromWorld(config),
+      localSearchRadius: HOME_RADIUS,
+      homeSize: config.settlements.homeSize,
+    }),
+  )
 
   bootMark('createWaterMirror')
   const waterMirror = createWaterMirror({

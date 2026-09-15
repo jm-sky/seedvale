@@ -1,7 +1,7 @@
 # Plan: Persistent road route worldgen cache
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** ~~world-terrain-023~~, ~~world-terrain-033~~  
@@ -10,6 +10,7 @@
 **Tags:** `worldgen` `cache` `roads` `routing` `performance`
 **Roadmap:** -
 **Model:** Opus, Sonnet
+**Implemented at:** 2026-09-15 12:33
 
 ## Goal
 
@@ -144,6 +145,8 @@ pnpm build
 ```
 
 Browser verification is done by the user. Compare the same multi-settlement region cold/warm and verify roads, signposts, fords and bridges are identical.
+
+Technically verified 2026-09-15: focused Vitest on the cache seam, `pnpm test`, `pnpm type-check`, `pnpm build`. Browser/gameplay verification is User.
 
 After implementation update `docs/state/persistence.md` and `docs/state/terrain-and-world-generation.md` (and `water.md` only if its current crossing/cache description becomes stale). Add useful `@domain world-terrain` / `@system worldgen-cache` JSDoc tags.
 

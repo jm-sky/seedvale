@@ -1,7 +1,22 @@
-import { describe, expect, it } from 'vitest'
+import { IDBFactory } from 'fake-indexeddb'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RiverChannelSegment, RoadNetworkParams } from '../terrain/chunkHeightmap'
-import { bridgeSpecOf, findRoute, meanderRoute, type RouteSearchOptions, yawToward } from './roadNetwork'
+import { cacheKey, putCacheRecords } from '../persistence/worldgenCacheDb'
+import {
+  activateRoadRouteWorldgenCache,
+  bridgeSpecOf,
+  clearRoadNetworkCaches,
+  findRoute,
+  meanderRoute,
+  peekRoadRouteCache,
+  roadRouteLocationKey,
+  roadRoutePairKey,
+  roadRouteWorldgenCacheReady,
+  type RouteSearchOptions,
+  yawToward,
+} from './roadNetwork'
 import { crossingsForPolyline } from './roadRiverCrossing'
+import { ROAD_ROUTE_CACHE_NAMESPACE, ROAD_ROUTE_CACHE_VERSION } from './roadRouteWorldgenCache'
 
 describe('yawToward', () => {
   it('maps local +X toward +X world (no Z flip)', () => {
@@ -269,5 +284,61 @@ describe('bridgeSpecOf', () => {
     expect(bridgeSpecOf(crossing, route, roadNetworkParams)).toEqual(
       bridgeSpecOf(crossing, route, roadNetworkParams),
     )
+  })
+})
+
+describe('persistent road route identity (plan world-terrain-029)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('indexedDB', new IDBFactory())
+    clearRoadNetworkCaches()
+  })
+
+  afterEach(() => {
+    clearRoadNetworkCaches()
+    vi.unstubAllGlobals()
+  })
+
+  it('uses one order-independent pair key for A→B and B→A', () => {
+    expect(roadRoutePairKey('s-b', 's-a')).toBe(roadRoutePairKey('s-a', 's-b'))
+    expect(roadRoutePairKey('s-a', 's-b')).toBe('s-a|s-b')
+    expect(roadRouteLocationKey('home', 'dock')).toBe('home:dock')
+  })
+
+  it('hydrates a persisted route into the runtime routeCache', async () => {
+    const key = roadRoutePairKey('s-a', 's-b')
+    const payload = {
+      points: [
+        { x: 0, z: 0, h: 10, hs: 10 },
+        { x: 20, z: 0, h: 10, hs: 10 },
+      ],
+      kind: 'road' as const,
+      segments: [
+        {
+          a: { x: 0, z: 0, h: 10, hs: 10 },
+          b: { x: 20, z: 0, h: 10, hs: 10 },
+          kind: 'road' as const,
+        },
+      ],
+      crossings: [{
+        id: `${key}:0`,
+        kind: 'bridge' as const,
+        x: 10, z: 0, angle: 0,
+        waterWidth: 12, channelWidth: 18,
+        waterH: 9.6, naturalBedH: 9.2,
+        crossSin: 1, span: 18,
+      }],
+    }
+    await putCacheRecords([{
+      key: cacheKey(7, ROAD_ROUTE_CACHE_NAMESPACE, ROAD_ROUTE_CACHE_VERSION, key),
+      seed: 7,
+      namespace: ROAD_ROUTE_CACHE_NAMESPACE,
+      version: ROAD_ROUTE_CACHE_VERSION,
+      fingerprint: 'fp',
+      payload,
+      lastAccessedAt: 1,
+    }])
+    activateRoadRouteWorldgenCache(7, 'fp')
+    await roadRouteWorldgenCacheReady()
+    expect(peekRoadRouteCache(key)).toEqual(payload)
   })
 })
