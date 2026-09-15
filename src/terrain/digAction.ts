@@ -1,5 +1,6 @@
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { Inventory } from '../items/Inventory'
+import type { ItemKind } from '../items/items'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { ChunkManager } from './chunkManager'
@@ -17,6 +18,8 @@ export type DigFeedback = {
   toast: Toast
   hud: Hud
   playOnce: (url: string, volume?: number) => void
+  /** Application-owned count-backed acquisition toast (plan ui-input-020). */
+  showCountAcquisition: (kind: ItemKind, delta: number, total: number) => void
 }
 
 /** Applies one dig depression + stone outcome at `(x, z)`. */
@@ -42,7 +45,7 @@ export function applyDigAt(
     feedback.inventory.add('stone')
     playInventoryPickUp(feedback.playOnce)
     feedback.hud.setInventoryWeight(feedback.inventory.totalWeight(), feedback.inventory.maxWeight)
-    feedback.toast.show('+1 Kamień', 'pickup')
+    feedback.showCountAcquisition('stone', 1, feedback.inventory.count('stone'))
     return
   }
   // Full inventory or unnoticed — never silently lose the stone.

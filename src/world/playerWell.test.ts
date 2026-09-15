@@ -243,26 +243,31 @@ describe('wellWaterSource (plan world-004 §4/§6)', () => {
 
 describe('playerWell prompt label', () => {
   it('prompts the fresh-start verb at zero progress', () => {
-    expect(wellPromptLabel(record({ stage: 'pit', workProgress: 0 }))).toBe('[E] Wykop dół · [R] wymagania')
+    expect(wellPromptLabel(record({ stage: 'pit', workProgress: 0 }))).toBe('[E] Wykop dół')
   })
 
   it('appends the progress fraction while resuming an in-progress stage', () => {
     const label = wellPromptLabel(record({ stage: 'pit', workProgress: 0.5 }))
     expect(label).toContain('[E] Wykop dół')
     expect(label).toContain(`0.5/${PIT_HOURS}`)
-    expect(label).toContain('[R] wymagania')
+    expect(label).not.toContain('[R] wymagania')
   })
 
   it('prompts the next stage verb immediately once the current stage is done, without a fraction', () => {
     const doneDigging = record({ stage: 'pit', workProgress: PIT_HOURS })
-    expect(wellPromptLabel(doneDigging)).toBe('[E] Buduj studnię · [R] wymagania')
+    expect(wellPromptLabel(doneDigging)).toBe('[E] Buduj studnię')
     const doneBuilding = record({ stage: 'well', workProgress: WELL_STAGE_WORK_HOURS.well })
-    expect(wellPromptLabel(doneBuilding)).toBe('[E] Zbuduj daszek · woda dostępna w [R] · [R] wymagania')
+    expect(wellPromptLabel(doneBuilding)).toBe('[E] Zbuduj daszek')
   })
 
   it('shows no water hint before the body is finished', () => {
     expect(wellPromptLabel(record({ stage: 'pit', workProgress: 0 }))).not.toContain('woda dostępna')
     expect(wellPromptLabel(record({ stage: 'well', workProgress: 0 }))).not.toContain('woda dostępna')
+  })
+
+  it('does not advertise a stale [R] requirements action on unfinished wells', () => {
+    expect(wellPromptLabel(record({ stage: 'pit', workProgress: 0 }))).not.toContain('[R]')
+    expect(wellPromptLabel(record({ stage: 'well', workProgress: WELL_STAGE_WORK_HOURS.well }))).not.toContain('[R]')
   })
 })
 

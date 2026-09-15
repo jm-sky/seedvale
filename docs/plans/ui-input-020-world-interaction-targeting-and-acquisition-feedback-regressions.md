@@ -1,7 +1,7 @@
 # Plan: World interaction targeting and acquisition feedback regressions
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser checks are User-owned)
 **Type:** bug
 **Priority:** high · **Effort:** M
 **Depends on:** ~~ui-input-014~~, ~~ui-input-015~~, ~~items-player-024~~

@@ -238,11 +238,12 @@ function corpseCandidate(
   shovelHeld: boolean,
   knifeAvailable: boolean,
 ): InteractablePayload | null {
+  const position = animal.interactionPosition()
   const label = ANIMAL_LABELS[animal.def.kind]
   if (animal.canInspectStrayedCorpse()) {
     return {
       kind: 'corpse',
-      position: animal.mesh.position,
+      position,
       promptLabel: `Zbadaj zwłoki: ${label}`,
       animal,
       action: 'inspect',
@@ -251,7 +252,7 @@ function corpseCandidate(
   if (shovelHeld && !animal.readyToRemove()) {
     return {
       kind: 'corpse',
-      position: animal.mesh.position,
+      position,
       promptLabel: `Zakop zwłoki: ${label}`,
       animal,
       action: 'bury',
@@ -260,7 +261,7 @@ function corpseCandidate(
   if (knifeAvailable && animal.canHarvestMeat()) {
     return {
       kind: 'corpse',
-      position: animal.mesh.position,
+      position,
       promptLabel: `Wytnij mięso: ${label}`,
       animal,
       action: 'harvest',

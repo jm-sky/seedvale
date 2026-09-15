@@ -63,3 +63,7 @@ Existing actions harvest/bury/inspect mają nadal konsumować tę samą `AnimalA
 Automated tests should cover: real committed acquisition delta; stable cycling across mixed NPC+well targets; dead animal remains selectable after death pose; stale `[R] wymagania` absent while inspection still exposes requirements.
 
 Browser verification wykonuje User.
+
+## Implementation (2026-09-15)
+
+Shared `showCountAcquisitionToast` in `src/app/actions/acquisitionFeedback.ts` is used by world pickup, dig stone, gatherBranch, tree chop and deposit mining. Toast reports committed inventory delta only (overflow to ground is silent). Non-combat Tab no longer auto-enters combat when living targets are nearby; `tabCyclesLivingCombatTargets` locks living-cycle to combat-active Tab. Tipped GLB corpses expose `AnimalAgent.interactionPosition()` (visual mid-height) for `corpseCandidate`. Unfinished `wellPromptLabel` dropped `[R] wymagania` and the unfinished water-in-R hint; completed-well R is unchanged.

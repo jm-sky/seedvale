@@ -143,7 +143,8 @@ function setupFelledTreeChop(maxWeight: number) {
   return { lifecycle, treeId, inventory, dropped, toast, grantItem, chop }
 }
 
-const expectedMessage = `+3 ${ITEM_DEFS.branch.label}, +4 ${ITEM_DEFS.beam.label}`
+const expectedBranchToast = `Gałąź +3 · Masz: 3`
+const expectedBeamToast = `Belka +4 · Masz: 4`
 
 describe('startTreeChop reward delivery (tree harvest reward delivery fix)', () => {
   it('delivers both branch and beam into inventory when there is enough room', () => {
@@ -156,7 +157,8 @@ describe('startTreeChop reward delivery (tree harvest reward delivery fix)', () 
     expect(inventory.count('branch')).toBe(3)
     expect(inventory.count('beam')).toBe(4)
     expect(dropped).toEqual([])
-    expect(toast.show).toHaveBeenCalledWith(expectedMessage, 'pickup')
+    expect(toast.show).toHaveBeenCalledWith(expectedBranchToast, 'pickup')
+    expect(toast.show).toHaveBeenCalledWith(expectedBeamToast, 'pickup')
     expect(lifecycle.getOverride(treeId)?.stage).toBe('harvested')
   })
 
@@ -175,9 +177,7 @@ describe('startTreeChop reward delivery (tree harvest reward delivery fix)', () 
     expect(inventory.count('beam') + dropped.filter((d) => d.kind === 'beam').length).toBe(4)
     // Harvest still fully resolves — a full inventory never blocks it.
     expect(lifecycle.getOverride(treeId)?.stage).toBe('harvested')
-    // Toast still reports the true total reward, since grantItem delivered
-    // all of it (to the ground, not the pocket) rather than losing any of it.
-    expect(toast.show).toHaveBeenCalledWith(expectedMessage, 'pickup')
+    expect(toast.show).not.toHaveBeenCalled()
   })
 
   it('keeps branch in inventory and drops only the beam when branch fills the remaining room', () => {
@@ -191,7 +191,8 @@ describe('startTreeChop reward delivery (tree harvest reward delivery fix)', () 
     expect(inventory.count('beam')).toBe(0)
     expect(dropped.filter((d) => d.kind === 'beam')).toHaveLength(4)
     expect(lifecycle.getOverride(treeId)?.stage).toBe('harvested')
-    expect(toast.show).toHaveBeenCalledWith(expectedMessage, 'pickup')
+    expect(toast.show).toHaveBeenCalledWith(expectedBranchToast, 'pickup')
+    expect(toast.show).not.toHaveBeenCalledWith(expectedBeamToast, 'pickup')
   })
 })
 

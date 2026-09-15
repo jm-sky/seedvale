@@ -8,6 +8,7 @@ import { surfaceInteractable } from '../interaction/Interactable'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { createHealthState, damageHealth } from '../shared/HealthState'
 import { caveSpatialContext, WORLD_SPATIAL_CONTEXT_SURFACE } from '../world/spatialContext'
+import { createWaterSource } from '../world/WaterSource'
 import {
   collectLivingCombatTargets,
   collectRangedAnimalCandidates,
@@ -18,6 +19,7 @@ import {
   livingTargetIdForNpc,
   type RangedAnimalCandidate,
   resolveRangedAimYaw,
+  tabCyclesLivingCombatTargets,
 } from './playerCombat'
 import { type MeleeHitCandidate, rankCombatTargets } from './playerMelee'
 import { createPlayerMelee } from './playerMelee'
@@ -76,6 +78,32 @@ describe('filterWorldCycleTargets', () => {
     ])
     expect(list).toHaveLength(1)
     expect(list[0]?.kind).toBe('tree')
+  })
+
+  it('keeps wells and palisades among NPCs for Shift+Tab world cycle', () => {
+    const list = filterWorldCycleTargets([
+      surfaceInteractable({ kind: 'npc', position: { x: 0, z: 0 }, promptLabel: '', npc: {} as never, settlement: {} as never }),
+      surfaceInteractable({
+        kind: 'well',
+        position: { x: 1, z: 0 },
+        promptLabel: '',
+        source: createWaterSource('well'),
+      }),
+      surfaceInteractable({ kind: 'palisade', position: { x: 2, z: 0 }, promptLabel: '', id: 'p1', complete: true }),
+    ])
+    expect(list.map((c) => c.kind)).toEqual(['well', 'palisade'])
+  })
+})
+
+describe('tabCyclesLivingCombatTargets (plan ui-input-020)', () => {
+  it('uses mixed gaze cycling when combat is inactive', () => {
+    expect(tabCyclesLivingCombatTargets(false, false)).toBe(false)
+    expect(tabCyclesLivingCombatTargets(false, true)).toBe(false)
+  })
+
+  it('uses living combat cycling only when combat is already active and Shift is up', () => {
+    expect(tabCyclesLivingCombatTargets(true, false)).toBe(true)
+    expect(tabCyclesLivingCombatTargets(true, true)).toBe(false)
   })
 })
 

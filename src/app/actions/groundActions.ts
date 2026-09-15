@@ -35,6 +35,7 @@ import { buriedTreasureKeyPlacements } from '../../world/treasureSites'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
 import { isChoppableStage } from '../../world/treeLifecycle'
 import { DIG_REACH } from '../interactables'
+import { showCountAcquisitionToast } from './acquisitionFeedback'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
 
 /** Hidden-treasure reward (quick task) — ground drop is the buried loot's
@@ -137,6 +138,9 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     toast,
     hud,
     playOnce: worldAudio.playOnce,
+    showCountAcquisition: (kind: ItemKind, delta: number, total: number) => {
+      showCountAcquisitionToast(toast, kind, delta, total)
+    },
   })
 
   const aimGroundPoint = (): { x: number, z: number } => ({
@@ -422,14 +426,28 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       // draws from the tree's shared branch pool and can be 0 (already spent
       // by a prior `[E]`/axe pick this cycle), so only grant/report it when
       // there's actually something to collect.
-      let message = ''
+      let granted = false
       if (result.yield.count > 0) {
+        const before = inventory.count(result.yield.kind)
         ctx.grantItem(result.yield.kind, result.yield.count)
-        message = `+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`
+        showCountAcquisitionToast(
+          toast,
+          result.yield.kind,
+          inventory.count(result.yield.kind) - before,
+          inventory.count(result.yield.kind),
+        )
+        granted = true
       }
       if (result.bonusYield) {
+        const before = inventory.count(result.bonusYield.kind)
         ctx.grantItem(result.bonusYield.kind, result.bonusYield.count)
-        message += `${message ? ', ' : ''}+${result.bonusYield.count} ${ITEM_DEFS[result.bonusYield.kind].label}`
+        showCountAcquisitionToast(
+          toast,
+          result.bonusYield.kind,
+          inventory.count(result.bonusYield.kind) - before,
+          inventory.count(result.bonusYield.kind),
+        )
+        granted = true
       }
       // `target.stage` is the pre-chop stage captured above — identifies
       // which transition this completed step is, for the two stage-specific
@@ -439,9 +457,8 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       } else if (target.stage === 'limbed') {
         playActionTreeFall(worldAudio.playAt, { x, z })
       }
-      if (message) {
+      if (granted) {
         playInventoryPickUp(worldAudio.playOnce)
-        toast.show(message, 'pickup')
       }
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
@@ -460,9 +477,15 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       bundle.chunkManager.sampleTreeEnv(x, z),
     )
     if (!result.ok) return
+    const before = inventory.count(result.yield.kind)
     ctx.grantItem(result.yield.kind, result.yield.count)
     playInventoryPickUp(worldAudio.playOnce)
-    toast.show(`+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`, 'pickup')
+    showCountAcquisitionToast(
+      toast,
+      result.yield.kind,
+      inventory.count(result.yield.kind) - before,
+      inventory.count(result.yield.kind),
+    )
   }
 
   const startDepositMine = (depositId: string, x: number, z: number): void => {
@@ -488,12 +511,18 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
         toast.show('Tu nie ma już czego wydobywać.', 'error')
         return
       }
+      const before = inventory.count(result.yield.kind)
       inventory.add(result.yield.kind, result.yield.count)
       playInventoryPickUp(worldAudio.playOnce)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       heldTool.syncWithInventory()
       ctx.syncHeldHud()
-      toast.show(`+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`, 'pickup')
+      showCountAcquisitionToast(
+        toast,
+        result.yield.kind,
+        inventory.count(result.yield.kind) - before,
+        inventory.count(result.yield.kind),
+      )
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 

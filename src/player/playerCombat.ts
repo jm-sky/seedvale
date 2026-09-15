@@ -225,6 +225,18 @@ export function filterWorldCycleTargets(interactables: readonly Interactable[]):
   return interactables.filter((c) => c.kind !== 'animal' && c.kind !== 'npc')
 }
 
+/**
+ * Whether Tab cycles living combat targets instead of the mixed gaze set.
+ * Combat-active Tab is living-only; non-combat Tab stays on world
+ * interactables (NPCs, wells, palisades, corpses, …). Shift+Tab stays on
+ * `filterWorldCycleTargets`.
+ *
+ * @domain ui-input
+ */
+export function tabCyclesLivingCombatTargets(combatActive: boolean, shiftHeld: boolean): boolean {
+  return combatActive && !shiftHeld
+}
+
 export function findLivingTargetById(
   targets: readonly LivingCombatTarget[],
   id: string | null,

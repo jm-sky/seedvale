@@ -115,6 +115,25 @@ describe('pickInGaze ranking (plan ui-input-015)', () => {
     })).toBe(inRange)
   })
 
+  it('includes npc, well and palisade in the same cone for mixed Tab cycling', () => {
+    const npc = { position: { x: -0.4, z: -2 }, id: 'npc' }
+    const well = { position: { x: 0.2, z: -1.6 }, id: 'well' }
+    const palisade = { position: { x: 0.5, z: -2.1 }, id: 'palisade' }
+    const ranked = rankInGaze([npc, well, palisade], playerPos, facingNorth, 2.5, 0.5, {
+      stableKey: (c) => c.id,
+    })
+    expect(ranked.map((entry) => entry.stableKey).sort()).toEqual(['npc', 'palisade', 'well'])
+  })
+
+  it('selects a corpse visual proxy that is centered while the root is outside the cone', () => {
+    const player = { x: 0.75, z: 0 }
+    const body = { position: { x: 0.75, z: -2 }, id: 'body' }
+    const root = { position: { x: 0, z: -2 }, id: 'root' }
+    const minDot = 0.97
+    expect(rankInGaze([root], player, facingNorth, 2.5, minDot)).toHaveLength(0)
+    expect(rankInGaze([body], player, facingNorth, 2.5, minDot)[0]?.candidate).toBe(body)
+  })
+
   it('documents tie and hysteresis constants', () => {
     expect(GAZE_CENTEREDNESS_TIE_EPSILON).toBeGreaterThan(0)
     expect(GAZE_HYSTERESIS_MARGIN).toBeGreaterThan(GAZE_CENTEREDNESS_TIE_EPSILON)

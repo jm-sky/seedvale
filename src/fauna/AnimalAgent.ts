@@ -1143,6 +1143,7 @@ export class AnimalAgent {
   private readonly fleeTarget = new THREE.Vector3()
   private wanderTimer = 0
   private readonly tmp = new THREE.Vector3()
+  private readonly interactionScratch = new THREE.Vector3()
   private readonly home = new THREE.Vector3()
   private readonly wanderRadius: readonly [number, number]
   /** Resolved cave habitat (plan fauna-019) — `undefined` for every ordinary
@@ -2670,6 +2671,22 @@ export class AnimalAgent {
     this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
     this.corpseTipped = true
     this.deathAnimDurationSec = null
+  }
+
+  /**
+   * Semantic XZ for world interaction (gaze / Tab), not combat.
+   * Tipped GLB corpses use the visual mid-height so aiming at the carcass
+   * still hits the interactable; capsule fallbacks already sit at body center.
+   *
+   * @domain ui-input
+   */
+  interactionPosition(): { x: number, z: number } {
+    if (!this.health.dead || !this.corpseTipped || this.isCapsule) {
+      return { x: this.mesh.position.x, z: this.mesh.position.z }
+    }
+    this.interactionScratch.set(0, this.def.modelHeight * 0.5, 0)
+    this.mesh.localToWorld(this.interactionScratch)
+    return { x: this.interactionScratch.x, z: this.interactionScratch.z }
   }
 
   /** Current natural-decay phase (plan 188) — `'fresh'` for the lifetime of

@@ -120,6 +120,7 @@ import {
   livingTargetIdForAnimal,
   resolveLivingInteractable,
   resolveRangedAimYaw,
+  tabCyclesLivingCombatTargets,
 } from '../player/playerCombat'
 import {
   applyDownedRecovery,
@@ -156,7 +157,6 @@ import { getHungerRatio } from '../shared/HungerState'
 import { drainStamina, getStaminaRatio } from '../shared/StaminaState'
 import { getThirstRatio } from '../shared/ThirstState'
 import { getVigorRatio } from '../shared/VigorState'
-import { firstUpperCase } from '../ui-vue/lib/firstUpperCase'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { createLightningRuntime } from '../world/lightningEvents'
@@ -164,6 +164,7 @@ import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { resolveOffscreenTransportArrivals } from '../world/transportOffscreen'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyLightningFlash, applyWeatherOverlay, applyWeatherSkyOverlay, grassWindAmpFor, resolveSceneFog } from '../world/weatherVisuals'
+import { showCountAcquisitionToast } from './actions/acquisitionFeedback'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
 import { buildHuntableLivestock } from './faunaEncounterComposition'
 import { inspectionTargetRef } from './inspection/inspectionTarget'
@@ -845,14 +846,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   let highlightedTarget: Highlightable | null = null
   /** Dedupes `?debug=1` house console spam while gazing at the same building. */
   let lastDebugHouseId: string | null = null
-  /** Interaction-cycling state (plan 153) — `Tab` steps through
-   *  `cycleCandidates` (every interactable within `INTERACT_RANGE`, not just
-   *  the gaze winner) so a crowded spot (NPCs stacked in front of the well)
-   *  can still target something other than whichever candidate the facing
-   *  cone happens to prefer. `cycleActive` clears itself once the candidate
-   *  list shrinks back to trivial (moved away / crowd thinned) so gaze
-   *  picking silently resumes — no separate targeting system, just an
-   *  alternate source for the same `target` variable. */
+  /** Interaction-cycling state (plan 153 / ui-input-020) — non-combat `Tab`
+   *  steps through `cycleCandidates` (gaze-ranked interactables within
+   *  `INTERACT_RANGE`) so a crowded spot (NPCs stacked in front of a well)
+   *  can still target a world object. Combat-active Tab stays on living
+   *  targets; Shift+Tab stays on non-living world cycle. `cycleActive`
+   *  clears itself once the candidate list shrinks back to trivial so gaze
+   *  picking silently resumes. */
   let cycleActive = false
   let cycleIndex = 0
   /** Runtime-only gaze stability key (plan ui-input-015) — not persisted. */
@@ -1489,7 +1489,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const shiftHeld = keyboard.state.sprint
 
       if (playerCombat.isActive()) {
-        if (cycleTargetPressed && !shiftHeld && livingTargets.length > 0) {
+        if (cycleTargetPressed && tabCyclesLivingCombatTargets(true, shiftHeld) && livingTargets.length > 0) {
           let next: number
           const lockId = playerCombat.softLockId()
           if (lockId) {
@@ -1520,14 +1520,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           playerCombat.enter()
           playerCombat.noteActivity()
         }
-      } else if (cycleTargetPressed && !shiftHeld && livingTargets.length > 0) {
-        playerCombat.setLivingCycleIndex(0)
-        playerCombat.setSoftLock(livingTargets[0]!.id)
-        playerCombat.setWorldCycleActive(false)
-        playerCombat.enter()
-        playerCombat.noteActivity()
-        cycleActive = false
-        cycleIndex = 0
       } else if (cycleTargetPressed && shiftHeld && worldCycleCandidates.length > 0) {
         playerCombat.setWorldCycleIndex(0)
         playerCombat.setWorldCycleActive(true)
@@ -1828,10 +1820,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (!forceOpenContainer?.(target.id)) pickUpContainer?.(target.id)
         }
       } else if (target?.kind === 'playerWell') {
-        // Unfinished: `[E]` construction bout, `[R]` requirements panel.
-        // Completed: `[E]` drinks (or continues repair), `[R]` fills when
-        // healthy and opens the repair dialog when the roof is damaged or
-        // a repair episode is already active (plan world-021).
+        // Unfinished: `[E]` construction bout; requirements live on `[V]`
+        // inspection (`ui-input-014` / `ui-input-020`). Completed: `[E]`
+        // drinks (or continues repair), `[R]` fills when healthy and opens
+        // the repair dialog when the roof is damaged or a repair episode is
+        // already active (plan world-021).
         const wellId = target.id
         const source = target.waterSource
         const openRepairDialog = (): void => {
@@ -2035,7 +2028,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             onInventoryChanged()
             if (lastKind && !isInstanceBackedKind(lastKind)) {
-              toast.show(`${firstUpperCase(ITEM_DEFS[lastKind].label)} +${picked} · Masz: ${inventory.count(lastKind)}`, 'pickup')
+              showCountAcquisitionToast(toast, lastKind, picked, inventory.count(lastKind))
             }
           }
         }

@@ -618,8 +618,9 @@ export function formatWorkDuration(hours: number): string {
 }
 
 /** Prompt for a player-built well. Completed wells stay `playerWell`
- *  interactables (plan world-021) so inspect/repair can relookup by id;
- *  unfinished wells keep the construction `[E]`/`[R]` copy. */
+ *  interactables (plan world-021) so inspect/repair can relookup by id.
+ *  Unfinished wells keep construction `[E]`; requirements live on `[V]`
+ *  inspection (plan ui-input-014 / ui-input-020). */
 export function wellPromptLabel(record: PlayerWellRecord, resolvedRoofCondition: number | null = null): string {
   if (isWellCompleted(record)) {
     if (hasActiveWellRoofRepair(record)) return '[E] Kontynuuj naprawę · [R] Szczegóły'
@@ -629,13 +630,12 @@ export function wellPromptLabel(record: PlayerWellRecord, resolvedRoofCondition:
     return '[E] Napij się · [R] Napełnij pojemnik'
   }
   const stage = activeWellStage(record)
-  const waterHint = isWellWaterAvailable(record) ? ' · woda dostępna w [R]' : ''
-  if (!stage) return `${WELL_STAGE_START_PROMPT.roof}${waterHint} · [R] wymagania`
+  if (!stage) return WELL_STAGE_START_PROMPT.roof
   const base = WELL_STAGE_START_PROMPT[stage]
   if (stage === record.stage && record.workProgress > 0) {
-    return `${base} (${formatHours(record.workProgress)}/${formatHours(wellStageWorkHours(stage, record.waterDepth))} h)${waterHint} · [R] wymagania`
+    return `${base} (${formatHours(record.workProgress)}/${formatHours(wellStageWorkHours(stage, record.waterDepth))} h)`
   }
-  return `${base}${waterHint} · [R] wymagania`
+  return base
 }
 
 /** Bounded lookup for a nearby player-built well that's already usable as a

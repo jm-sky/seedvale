@@ -1424,5 +1424,35 @@ describe('AnimalAgent', () => {
       expect(sheep.mesh.rotation.z).toBe(0)
       expect(sheep.mesh.position.y).toBe(y)
     })
+
+    it('offsets GLB corpse interaction XZ to the tipped visual mid-height for both sides', () => {
+      const visual = new THREE.Object3D()
+      const sheep = new AnimalAgent(makeDeps({
+        def: ANIMAL_DEFS.sheep,
+        animalId: 'sheep-interact',
+        visual,
+        x: 4,
+        z: -3,
+      }))
+      sheep.takeDamage(9999)
+      sheep.mesh.rotation.y = 0
+      const half = ANIMAL_DEFS.sheep.modelHeight * 0.5
+      sheep.mesh.rotation.z = Math.PI / 2
+      sheep.mesh.updateMatrixWorld(true)
+      expect(sheep.interactionPosition().x).toBeCloseTo(4 - half)
+      expect(sheep.interactionPosition().z).toBeCloseTo(-3)
+      sheep.mesh.rotation.z = -Math.PI / 2
+      sheep.mesh.updateMatrixWorld(true)
+      expect(sheep.interactionPosition().x).toBeCloseTo(4 + half)
+      expect(sheep.interactionPosition().z).toBeCloseTo(-3)
+    })
+
+    it('keeps capsule corpses on the root XZ', () => {
+      const sheep = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.sheep, animalId: 'sheep-capsule' }))
+      const x = sheep.mesh.position.x
+      const z = sheep.mesh.position.z
+      sheep.takeDamage(9999)
+      expect(sheep.interactionPosition()).toEqual({ x, z })
+    })
   })
 })
