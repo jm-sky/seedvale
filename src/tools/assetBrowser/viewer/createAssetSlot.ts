@@ -20,6 +20,7 @@ import {
   prepareProp,
   preparePropFitMax,
 } from '../../../assets/loadGltf'
+import { tintBucketGlb } from '../../../items/items'
 import { companionAnimationUrl } from '../../../player/playerVisualPreset'
 import { type AnchorGizmoGroup, createAnchorGizmos } from './createAnchorGizmos'
 
@@ -228,6 +229,8 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       }
       nativeBox = boxFromModel(model)
       applyPrepare(model, nextEntry.prepare)
+      if (nextEntry.id === 'item:wooden_bucket') tintBucketGlb(model, 'wooden_bucket')
+      else if (nextEntry.id === 'item:copper_bucket') tintBucketGlb(model, 'copper_bucket')
       if (nextEntry.id === 'held:wooden_torch') model.rotation.x = Math.PI / 2
       preparedBox = boxFromModel(model)
       meshStat = collectMeshStats(model)

@@ -112,6 +112,7 @@ Generated from TypeScript imports.
 - `assets/assetAnchors.ts`
 - `assets/assetIndex.ts`
 - `assets/loadGltf.ts`
+- `items/items.ts`
 - `player/playerVisualPreset.ts`
 - `tools/assetBrowser/viewer/createAnchorGizmos.ts`
 

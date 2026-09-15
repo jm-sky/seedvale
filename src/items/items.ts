@@ -1482,7 +1482,7 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
  * yellow/metallic. First-pass tint from `ITEM_DEFS`; textures still TODO
  * (`docs/plans/LOOSE-ENDS.md`).
  */
-function tintBucketGlb(root: THREE.Object3D, kind: 'wooden_bucket' | 'copper_bucket'): void {
+export function tintBucketGlb(root: THREE.Object3D, kind: 'wooden_bucket' | 'copper_bucket'): void {
   const color = ITEM_DEFS[kind].color
   const metalness = kind === 'copper_bucket' ? 0.55 : 0
   const roughness = kind === 'wooden_bucket' ? 0.85 : undefined
@@ -1490,13 +1490,20 @@ function tintBucketGlb(root: THREE.Object3D, kind: 'wooden_bucket' | 'copper_buc
     const mesh = obj as THREE.Mesh
     if (!mesh.isMesh) return
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    const next: THREE.Material[] = []
     for (const mat of materials) {
       const std = mat as THREE.MeshStandardMaterial
-      if (!std.color) continue
-      std.color.setHex(color)
-      std.metalness = metalness
-      if (roughness !== undefined) std.roughness = roughness
+      if (!std.color) {
+        next.push(mat)
+        continue
+      }
+      const copy = std.clone()
+      copy.color.setHex(color)
+      copy.metalness = metalness
+      if (roughness !== undefined) copy.roughness = roughness
+      next.push(copy)
     }
+    mesh.material = Array.isArray(mesh.material) ? next : next[0]!
   })
 }
 

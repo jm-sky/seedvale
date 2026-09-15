@@ -410,6 +410,7 @@ Generated from exported TypeScript symbols.
 - `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 217
 - `REST_CANCEL_VIGOR_THRESHOLD` — const — line 229
 - `restCancelAllowedByStartVigor` — function — line 236
+- `tintBucketGlb` — function — line 1485
 
 ## `items/ItemSpawner.ts`
 

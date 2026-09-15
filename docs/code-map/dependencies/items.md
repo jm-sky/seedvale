@@ -1168,6 +1168,7 @@ Generated from TypeScript imports.
 - `terrain/depositMining.ts`
 - `terrain/digAction.ts`
 - `tools/assetBrowser/gripEdit.ts`
+- `tools/assetBrowser/viewer/createAssetSlot.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `ui-vue/composables/useItemCategoryLabels.ts`
 - `ui-vue/composables/useMerchantTradeState.ts`

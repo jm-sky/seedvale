@@ -37,7 +37,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 ## Items / assets
 
-- [ ] 2026-09-15 — `wooden_bucket` / `copper_bucket` GLBs (Fantasy Props MegaKit) were converted from FBX **without albedo textures**, so the mesh reads gold/metallic. Runtime first-pass tint in `items/items.ts`'s `tintBucketGlb` (`ITEM_DEFS` brown / copper). Verify in-game, then either keep the tint or reconvert with MegaKit glTF textures (the pack glTF shares a huge bin — isolate materials, don't copy the whole kit). Pocket `whetstone` is unrelated: MegaKit `Whetstone` is a workshop grindstone and must not be wired to the item.
+- [ ] 2026-09-15 — `wooden_bucket` / `copper_bucket` GLBs (Fantasy Props MegaKit) were converted from FBX **without albedo textures**, so the mesh reads gold/metallic. First-pass tint in `items/items.ts`'s `tintBucketGlb` (`ITEM_DEFS` brown / copper) — applied by `createItemMesh` and the asset browser (`item:wooden_bucket` / `item:copper_bucket`). Verify visually, then either keep the tint or reconvert with MegaKit glTF textures (the pack glTF shares a huge bin — isolate materials, don't copy the whole kit). Pocket `whetstone` is unrelated: MegaKit `Whetstone` is a workshop grindstone and must not be wired to the item.
 
 ## Characters / presentation
 
