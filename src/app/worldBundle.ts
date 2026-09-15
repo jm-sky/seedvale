@@ -1,4 +1,5 @@
 import { type Scene, Vector3 } from 'three'
+import type { DispatchReadyExpeditionResult } from '../ai/npcExpeditionTravel'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
@@ -22,7 +23,6 @@ import type { BeehiveRecord } from '../world/beehives'
 import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { DryingRackRecord } from '../world/dryingRacks'
-import type { ExpeditionDestinationRef } from '../world/expedition'
 import type { ExpeditionAssignment, ExpeditionAssignmentResult } from '../world/expeditionAssignment'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { GrassForageOverrides } from '../world/grassForage'
@@ -146,6 +146,10 @@ import { createStandingTorches, type StandingTorches } from '../world/createStan
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
 import { createTransportOrders, type TransportOrders } from '../world/createTransportOrders'
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
+import {
+  type ExpeditionDestinationRef,
+  resolveExpeditionDestinationPoint,
+} from '../world/expedition'
 import { commitExpeditionParty } from '../world/expeditionParty'
 import {
   readyExpeditionAssignment,
@@ -329,9 +333,11 @@ export type WorldBundle = {
    *  across an in-session rebuild; carrier cargo persists separately on
    *  `NpcAuthoritativeState.transportCargo` (plan settlements-npcs-019). */
   transportOrders: TransportOrders
-  /** Expedition party assignment + provisioning (plan settlements-npcs-027).
+  /** Expedition party assignment + provisioning (plan settlements-npcs-027)
+   *  and ready-assignment travel dispatch (plan settlements-npcs-028).
    *  Persists as `SaveData.expeditionAssignments` and carries across rebuild;
-   *  personal inventories stay on `NpcAuthoritativeState`. */
+   *  personal inventories stay on `NpcAuthoritativeState`; travel stays on
+   *  per-member `NpcAuthoritativeState.travel`. */
   expeditionAssignments: ExpeditionAssignments
   formExpeditionAssignment: (
     sponsorSettlementId: string,
@@ -339,6 +345,18 @@ export type WorldBundle = {
   ) => ExpeditionAssignmentResult
   provisionExpeditionAssignment: (assignmentId: string) => ExpeditionAssignmentResult
   markExpeditionAssignmentReady: (assignmentId: string) => ExpeditionAssignmentResult
+  /**
+   * Dispatch a `ready` expedition onto per-member generic travel (plan
+   * settlements-npcs-028). Looks up the 027 registry, resolves the
+   * destination ref, and does not reselect or re-provision. A missing
+   * destination leaves the assignment `ready`. `locationAt` is the
+   * composition-root location catalog lookup; settlement refs resolve via
+   * `peekDef`.
+   */
+  dispatchReadyExpedition: (
+    assignmentId: string,
+    locationAt?: (locationId: string) => { x: number, z: number } | null,
+  ) => DispatchReadyExpeditionResult
   /** Extracted goods waiting at remote resource sites (plan settlements-npcs-021).
    *  World-owned, independent of streamed deposit instances; persists as
    *  `SaveData.resourceSiteInventories` and survives an in-session rebuild. */
@@ -1695,6 +1713,29 @@ async function buildWorldSystems(
     },
     markExpeditionAssignmentReady(assignmentId) {
       return readyExpeditionAssignment(expeditionAssignments, assignmentId, getWorldDays())
+    },
+    dispatchReadyExpedition(assignmentId, locationAt) {
+      const assignment = expeditionAssignments.find(assignmentId)
+      if (!assignment) {
+        return { ok: false, reason: 'missing-assignment', dispatchedNpcIds: [], skippedNpcIds: [] }
+      }
+      const destination = resolveExpeditionDestinationPoint(assignment.destination, {
+        settlementAt: (settlementId) => {
+          const cell = cellFromId(settlementId)
+          const def = cell ? settlementsManager.peekDef(cell) : null
+          return def ? { x: def.x, z: def.z } : null
+        },
+        locationAt: locationAt ?? (() => null),
+      })
+      if (!destination) {
+        return {
+          ok: false,
+          reason: 'destination-unavailable',
+          dispatchedNpcIds: [],
+          skippedNpcIds: [...assignment.memberNpcIds],
+        }
+      }
+      return settlementsManager.dispatchReadyExpedition(assignment, destination, getWorldDays())
     },
     resourceSiteInventories,
     grassForage,

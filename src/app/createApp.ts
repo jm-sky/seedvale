@@ -818,6 +818,17 @@ export async function createApp(
       return site ? { locationId: site.locationId, x: site.x, z: site.z } : null
     },
   })
+  const bindReadyExpeditionDispatch = (): void => {
+    const dispatch = bundle.dispatchReadyExpedition.bind(bundle)
+    bundle.dispatchReadyExpedition = (assignmentId, locationAt) => dispatch(
+      assignmentId,
+      locationAt ?? ((locationId) => {
+        const loc = worldLocationCatalog.getById(locationId)
+        return loc ? { x: loc.x, z: loc.z } : null
+      }),
+    )
+  }
+  bindReadyExpeditionDispatch()
   coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
   abandonedCemeteryCache.activate(
     config.seed,
@@ -2283,6 +2294,7 @@ export async function createApp(
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()
+      bindReadyExpeditionDispatch()
       // New seed and/or terrain params — re-activate the persistence
       // controller so a late-arriving hydrate from the *old* identity never
       // gets applied to the rebuilt catalog (plan world-015 §9).

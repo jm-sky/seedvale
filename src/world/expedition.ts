@@ -53,3 +53,28 @@ export function isValidExpeditionTerms(terms: ExpeditionTerms): boolean {
   }
   return typeof terms.durationDays === 'number' && terms.durationDays > 0 && terms.destination != null
 }
+
+function isFiniteWorldPoint(point: { x: number, z: number } | null | undefined): point is { x: number, z: number } {
+  return point != null && Number.isFinite(point.x) && Number.isFinite(point.z)
+}
+
+/**
+ * Resolve an assignment destination ref to a plain world-space point at the
+ * app/world integration seam (plan settlements-npcs-028). Lookups stay
+ * injected so this module never owns settlement/location registries.
+ * Missing or non-finite results stay unresolved — callers must not dispatch.
+ *
+ * @domain settlements-npcs
+ */
+export function resolveExpeditionDestinationPoint(
+  ref: ExpeditionDestinationRef,
+  lookups: {
+    settlementAt: (settlementId: string) => { x: number, z: number } | null | undefined
+    locationAt: (locationId: string) => { x: number, z: number } | null | undefined
+  },
+): { x: number, z: number } | null {
+  const point = ref.kind === 'settlement'
+    ? lookups.settlementAt(ref.settlementId)
+    : lookups.locationAt(ref.locationId)
+  return isFiniteWorldPoint(point) ? { x: point.x, z: point.z } : null
+}

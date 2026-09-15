@@ -4,7 +4,7 @@
 **Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser/gameplay checks are User-owned)
 **Type:** feature
 **Priority:** high · **Effort:** L
-**Depends on:** ~~settlements-npcs-026~~, settlements-npcs-027, settlements-npcs-019
+**Depends on:** ~~settlements-npcs-026~~, ~~settlements-npcs-027~~, ~~settlements-npcs-019~~
 **Domain:** `settlements-npcs`
 **Subdomains:** `logistics` `schedules`
 **Tags:** `travel` `expedition` `off-screen` `persistence`

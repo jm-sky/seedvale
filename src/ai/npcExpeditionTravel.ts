@@ -1,4 +1,7 @@
 import type { NpcAuthoritativeState } from '../settlement/npcState'
+import type { ExpeditionAssignments } from '../world/createExpeditionAssignments'
+import type { ExpeditionDestinationRef } from '../world/expedition'
+import type { ExpeditionAssignment } from '../world/expeditionAssignment'
 import {
   beginOffscreenNpcTravel,
   type NpcTravelPoint,
@@ -9,17 +12,14 @@ import {
  * generic travel continuity (plan settlements-npcs-028). Does not reselect
  * members, provision inventories, or change settlement/home membership.
  *
- * Assignment ownership stays with the 027 registry; this module only consumes
- * the ready slice plus an already-resolved world-space destination.
+ * Assignment ownership stays with the 027 registry; this module consumes a
+ * ready assignment (or looks one up) plus an already-resolved world-space
+ * destination.
  *
  * @domain settlements-npcs
  */
 
-export type ReadyExpeditionAssignmentSlice = {
-  id: string
-  state: string
-  memberNpcIds: readonly string[]
-}
+export type ReadyExpeditionAssignmentSlice = Pick<ExpeditionAssignment, 'id' | 'state' | 'memberNpcIds'>
 
 export type DispatchReadyExpeditionInput = {
   assignment: ReadyExpeditionAssignmentSlice
@@ -31,9 +31,20 @@ export type DispatchReadyExpeditionInput = {
   isLive?: (id: string) => boolean
 }
 
+export type DispatchReadyExpeditionAssignmentInput = {
+  assignments: Pick<ExpeditionAssignments, 'find'>
+  assignmentId: string
+  destinationOf: (ref: ExpeditionDestinationRef) => NpcTravelPoint | null
+  nowDays: number
+  dayLengthSec: number
+  getNpcState: (id: string) => NpcAuthoritativeState | undefined
+  originOf: (id: string) => NpcTravelPoint | undefined
+  isLive?: (id: string) => boolean
+}
+
 export type DispatchReadyExpeditionResult = {
   ok: boolean
-  reason?: 'not-ready' | 'invalid-destination'
+  reason?: 'not-ready' | 'invalid-destination' | 'missing-assignment' | 'destination-unavailable'
   dispatchedNpcIds: string[]
   skippedNpcIds: string[]
 }
@@ -107,5 +118,39 @@ export function dispatchReadyExpedition(input: DispatchReadyExpeditionInput): Di
   }
 
   return { ok: true, dispatchedNpcIds, skippedNpcIds }
+}
+
+/**
+ * Look up a world-owned 027 assignment and dispatch only when it is `ready`
+ * and its destination resolves. A missing destination leaves the assignment
+ * ready and does not start travel.
+ *
+ * @domain settlements-npcs
+ */
+export function dispatchReadyExpeditionAssignment(
+  input: DispatchReadyExpeditionAssignmentInput,
+): DispatchReadyExpeditionResult {
+  const assignment = input.assignments.find(input.assignmentId)
+  if (!assignment) {
+    return { ok: false, reason: 'missing-assignment', dispatchedNpcIds: [], skippedNpcIds: [] }
+  }
+  const destination = input.destinationOf(assignment.destination)
+  if (!destination) {
+    return {
+      ok: false,
+      reason: 'destination-unavailable',
+      dispatchedNpcIds: [],
+      skippedNpcIds: [...assignment.memberNpcIds],
+    }
+  }
+  return dispatchReadyExpedition({
+    assignment,
+    destination,
+    nowDays: input.nowDays,
+    dayLengthSec: input.dayLengthSec,
+    getNpcState: input.getNpcState,
+    originOf: input.originOf,
+    isLive: input.isLive,
+  })
 }
 

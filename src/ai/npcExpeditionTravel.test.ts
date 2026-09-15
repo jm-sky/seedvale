@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createNpcStateRegistry } from '../settlement/npcState'
+import { createExpeditionAssignments } from '../world/createExpeditionAssignments'
 import { startNpcAccompanyCommitment } from './npcAccompanyCommitment'
-import { dispatchReadyExpedition } from './npcExpeditionTravel'
+import { dispatchReadyExpedition, dispatchReadyExpeditionAssignment } from './npcExpeditionTravel'
 
 const destination = { x: 400, z: -20 }
 const members = ['npc:a', 'npc:b', 'npc:c'] as const
@@ -106,5 +107,83 @@ describe('dispatchReadyExpedition', () => {
     expect(a.travel?.purpose?.assignmentId).toBe('exp:1')
     expect(b.travel).toBeNull()
     expect(c.travel).toBeNull()
+  })
+})
+
+describe('dispatchReadyExpeditionAssignment', () => {
+  const members = ['s:npc:0', 's:npc:1', 's:npc:2'] as const
+
+  function readyRegistry() {
+    const assignments = createExpeditionAssignments()
+    const formed = assignments.createForming({
+      sponsorSettlementId: '0_0',
+      destination: { kind: 'location', locationId: 'abandoned-mine' },
+      memberNpcIds: members,
+      createdAtDays: 3,
+    })!
+    assignments.markProvisioned(formed.id, 4)
+    const ready = assignments.markReady(formed.id, 5)!
+    const npcStates = createNpcStateRegistry()
+    for (const id of members) npcStates.getOrCreate(id, 0)
+    const originMap = {
+      's:npc:0': { x: 0, z: 0 },
+      's:npc:1': { x: 2, z: 1 },
+      's:npc:2': { x: -1, z: 3 },
+    } as const
+    return { assignments, ready, npcStates, originMap }
+  }
+
+  it('does not dispatch a missing assignment or an unresolved destination', () => {
+    const { assignments, ready, npcStates, originMap } = readyRegistry()
+    expect(dispatchReadyExpeditionAssignment({
+      assignments,
+      assignmentId: 'missing',
+      destinationOf: () => ({ x: 400, z: -20 }),
+      nowDays: 6,
+      dayLengthSec: 600,
+      getNpcState: (id) => npcStates.get(id),
+      originOf: (id) => originMap[id as keyof typeof originMap],
+    })).toEqual({ ok: false, reason: 'missing-assignment', dispatchedNpcIds: [], skippedNpcIds: [] })
+
+    const unresolved = dispatchReadyExpeditionAssignment({
+      assignments,
+      assignmentId: ready.id,
+      destinationOf: () => null,
+      nowDays: 6,
+      dayLengthSec: 600,
+      getNpcState: (id) => npcStates.get(id),
+      originOf: (id) => originMap[id as keyof typeof originMap],
+    })
+    expect(unresolved).toEqual({
+      ok: false,
+      reason: 'destination-unavailable',
+      dispatchedNpcIds: [],
+      skippedNpcIds: [...members],
+    })
+    expect(npcStates.get('s:npc:0')?.travel).toBeNull()
+    expect(assignments.find(ready.id)?.state).toBe('ready')
+  })
+
+  it('dispatches from the 027 ready registry without reselecting members', () => {
+    const { assignments, ready, npcStates, originMap } = readyRegistry()
+    const result = dispatchReadyExpeditionAssignment({
+      assignments,
+      assignmentId: ready.id,
+      destinationOf: (ref) => ref.kind === 'location' && ref.locationId === 'abandoned-mine'
+        ? { x: 400, z: -20 }
+        : null,
+      nowDays: 6,
+      dayLengthSec: 600,
+      getNpcState: (id) => npcStates.get(id),
+      originOf: (id) => originMap[id as keyof typeof originMap],
+      isLive: () => false,
+    })
+    expect(result.ok).toBe(true)
+    expect(result.dispatchedNpcIds).toEqual([...members])
+    expect(assignments.find(ready.id)?.memberNpcIds).toEqual(members)
+    expect(npcStates.get('s:npc:0')?.travel?.purpose).toEqual({
+      kind: 'expedition',
+      assignmentId: ready.id,
+    })
   })
 })
