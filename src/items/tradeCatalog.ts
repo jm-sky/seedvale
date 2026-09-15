@@ -177,6 +177,7 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   coal: 4,
   iron: 6,
   gold: 20,
+  ruby: 70,
   ruby_small: 30,
   ruby_medium: 70,
   ruby_large: 150,

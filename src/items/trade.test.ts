@@ -87,6 +87,19 @@ describe('tradeCatalog (plan 090)', () => {
   it('gives shells a barter value of 1', () => {
     expect(tradeValue('shell')).toBe(1)
   })
+
+  it('values legacy authored ruby at ruby_medium parity (plan settlements-016)', () => {
+    expect(tradeValue('ruby')).toBe(70)
+    expect(tradeValue('ruby_small')).toBe(30)
+    expect(tradeValue('ruby_medium')).toBe(70)
+    expect(tradeValue('ruby_large')).toBe(150)
+    const rubySell = sellPrice('ruby', NEUTRAL_SELL_PRICE_CONTEXT)
+    expect(rubySell).toBe(
+      roundSellPrice(tradeValue('ruby') * fullConditionSellFactor(NEUTRAL_SELL_PRICE_CONTEXT)),
+    )
+    expect(rubySell).toBeGreaterThan(1)
+    expect(tradeValue('hide')).toBe(Math.max(1, Math.round(0.6 * 4)))
+  })
 })
 
 describe('merchant sell pricing (plan settlements-006)', () => {

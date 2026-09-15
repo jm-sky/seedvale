@@ -1,7 +1,7 @@
 # Plan: Legacy ruby trade valuation
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser checks are User-owned)
 **Type:** bug
 **Priority:** medium · **Effort:** XS
 **Depends on:** ~~settlements-006~~
@@ -10,6 +10,7 @@
 **Tags:** `trade` `ruby` `pricing`
 **Roadmap:** -
 **Model:** `Sonnet`, `Composer`
+**Implemented at:** 2026-09-15 09:42
 
 ## Cel
 
