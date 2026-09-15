@@ -75,7 +75,9 @@ const TRANSPORT_CARGO_MAX_WEIGHT = 5
  * `carried` (transient per-profession work payload). The accompany
  * commitment (plan npc-029) is semantic intent, not execution internals;
  * `travel` is the generic spatial continuity checkpoint shared with
- * off-screen handoff, not a companion-specific engine.
+ * off-screen handoff, not a companion-specific engine. Optional purpose /
+ * survival / arrival fields (plan settlements-npcs-028) are caller context
+ * on that same record, never a second travel registry.
  *
  * @domain settlements-npcs
  */
@@ -142,10 +144,12 @@ export type NpcAuthoritativeState = {
    *  this NPC is not accompanying anyone. Mutable in place like `activePlan`.
    *  One NPC, one commitment. Round-trips via `NpcStateSnapshot`. */
   accompanyCommitment: NpcAccompanyCommitment | null
-  /** Generic spatial continuity (plan npc-029, reusing settlements-npcs-019
-   *  off-screen duration math). `null` when there is nothing to preserve
-   *  across reconstruction. Absent `execution` means detailed simulation
-   *  owns progress. */
+  /** Generic spatial continuity (plan npc-029 / settlements-npcs-028,
+   *  reusing settlements-npcs-019 off-screen duration math). `null` when
+   *  there is nothing to preserve across reconstruction. Absent `execution`
+   *  means detailed simulation owns progress. Optional `purpose` is caller
+   *  arrival context; optional `survivalResolvedAtDays` is the last settled
+   *  off-screen survival checkpoint. */
   travel: NpcTravelContinuity | null
 }
 

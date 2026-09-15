@@ -356,9 +356,13 @@ import {
 } from './npcStrategies'
 import {
   beginOffscreenNpcTravel,
+  hasCommittedNpcTravel,
+  keepsNpcTravelAfterReify,
+  markNpcTravelReached,
   reifyNpcTravel,
   stampNpcTravelCheckpoint,
 } from './npcTravel'
+import { resolveNpcTravelCheckpoint } from './npcTravelCheckpoint'
 import {
   applyDamageVigor,
   applySleepVigor,
@@ -750,6 +754,7 @@ export function classifyPendingActivity(
   if (pending.kind === 'visitGrave' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'approachPlayer' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'accompany' && activeNeed === 'idle') return 'idle'
+  if (pending.kind === 'travel' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
 
@@ -1719,7 +1724,9 @@ export class NpcAgent {
         sampleHeight(reified.lastPosition.x, reified.lastPosition.z),
         reified.lastPosition.z,
       )
-      this.npcState.travel = this.npcState.accompanyCommitment ? reified : null
+      this.npcState.travel = this.npcState.accompanyCommitment || keepsNpcTravelAfterReify(reified)
+        ? reified
+        : null
     }
   }
 
@@ -2629,6 +2636,14 @@ export class NpcAgent {
     if (endNpcAccompanyCommitment(this.npcState, 'death')) {
       this.npcState.travel = null
       this.trace.record({ simTime: this.simClock, type: 'accompany.ended', reason: 'death' })
+    } else if (hasCommittedNpcTravel(this.npcState.travel)) {
+      this.npcState.travel = {
+        destination: { ...this.npcState.travel!.destination },
+        lastPosition: { x: this.mesh.position.x, z: this.mesh.position.z },
+        purpose: this.npcState.travel!.purpose,
+        survivalResolvedAtDays: this.npcState.travel!.survivalResolvedAtDays,
+        blocked: true,
+      }
     }
     this.combatIntent = null
     this.combatMeleeWeapon = null
@@ -3296,6 +3311,11 @@ export class NpcAgent {
    *  See `docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`. */
   resolveTimeSkip(startTimeOfDay: number, hours: number, dayLengthSec: number): void {
     if (this.health.dead) return
+    this.dayLengthSec = dayLengthSec
+    if (hasCommittedNpcTravel(this.npcState.travel) && this.npcState.travel?.arrival !== 'reached') {
+      this.catchUpCommittedTravel(hours, dayLengthSec)
+      return
+    }
     resolveInjuryRecovery(this.npcState, this.nowDays())
     let finalActivity: ScheduleActivity | null = null
     let elapsed = 0
@@ -3363,6 +3383,51 @@ export class NpcAgent {
     this.previousPhase = null
     resetMovementWatchdog(this.watchdog)
     this.phase = napping ? 'sleep' : 'choose'
+  }
+
+  /**
+   * Time-skip catch-up for a purpose-backed travel commitment — temporarily
+   * uses the same off-screen duration/survival seam as stream-out, then
+   * reifies if the NPC is still live and mid-journey.
+   */
+  private catchUpCommittedTravel(hours: number, dayLengthSec: number): void {
+    const fromDays = this.nowDays()
+    const toDays = fromDays + hours / 24
+    this.worldNowDays = toDays
+    this.syncAccompanyTravelCheckpoint()
+    const travel = this.npcState.travel
+    if (!travel || travel.blocked || travel.arrival === 'reached') return
+    if (!travel.execution) {
+      this.npcState.travel = beginOffscreenNpcTravel(
+        { x: this.mesh.position.x, z: this.mesh.position.z },
+        travel.destination,
+        fromDays,
+        dayLengthSec,
+        travel,
+      )
+    }
+    resolveNpcTravelCheckpoint(this.npcState, toDays, dayLengthSec)
+    const after = this.npcState.travel
+    if (after && after.arrival !== 'reached' && !after.blocked) {
+      const reified = reifyNpcTravel(after, toDays)
+      this.npcState.travel = reified
+      this.mesh.position.set(
+        reified.lastPosition.x,
+        this.sampleHeight(reified.lastPosition.x, reified.lastPosition.z),
+        reified.lastPosition.z,
+      )
+    } else if (after?.arrival === 'reached' || after?.blocked) {
+      const at = after.lastPosition
+      this.mesh.position.set(at.x, this.sampleHeight(at.x, at.z), at.z)
+    }
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.wait = 0
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.previousPhase = null
+    resetMovementWatchdog(this.watchdog)
+    this.phase = 'choose'
   }
 
   dispose(): void {
@@ -3562,12 +3627,28 @@ export class NpcAgent {
       const dest = commitment.mode === 'stay' && commitment.stayAnchor
         ? { x: commitment.stayAnchor.x, z: commitment.stayAnchor.z }
         : { x: playerX, z: playerZ }
-      this.npcState.travel = beginOffscreenNpcTravel(from, dest, nowDays, dayLengthSec)
+      this.npcState.travel = beginOffscreenNpcTravel(from, dest, nowDays, dayLengthSec, this.npcState.travel)
       return
     }
     if (this.npcState.travel && !this.npcState.travel.execution) {
-      this.npcState.travel = beginOffscreenNpcTravel(from, this.npcState.travel.destination, nowDays, dayLengthSec)
+      this.npcState.travel = beginOffscreenNpcTravel(
+        from,
+        this.npcState.travel.destination,
+        nowDays,
+        dayLengthSec,
+        this.npcState.travel,
+      )
     }
+  }
+
+  /**
+   * Wake an idle NPC so a freshly dispatched travel commitment can start
+   * detailed movement on the next choose tick (plan settlements-npcs-028).
+   *
+   * @domain npc
+   */
+  notifyCommittedTravel(): void {
+    this.interruptIdleDutyForAccompany()
   }
 
   private interruptIdleDutyForAccompany(): void {
@@ -4663,6 +4744,7 @@ export class NpcAgent {
   private tryPursueIdleDuty(scheduledActivity: ScheduleActivity): boolean {
     if (this.tryResolveEscortService()) return true
     if (this.tryPursueAccompany()) return true
+    if (this.tryPursueCommittedTravel()) return true
     if (this.tryPursueWorkContract(scheduledActivity)) return true
     return this.tryProposeVoluntaryJoin(scheduledActivity)
   }
@@ -4851,6 +4933,7 @@ export class NpcAgent {
    */
   private tryProposeVoluntaryJoin(scheduledActivity: ScheduleActivity): boolean {
     if (this.health.dead) return false
+    if (hasCommittedNpcTravel(this.npcState.travel)) return false
     if (this.pendingJoinProposal) {
       if (!isPlayerLocallyEligible(
         this.mesh.position.x,
@@ -4927,6 +5010,37 @@ export class NpcAgent {
   }
 
   /**
+   * Idle-duty executor for purpose-backed long-distance travel (plan
+   * settlements-npcs-028). Uses local goTo movement toward the persistent
+   * world destination; does not build a global path. Critical interrupts
+   * cancel the action, not the commitment.
+   */
+  private tryPursueCommittedTravel(): boolean {
+    const travel = this.npcState.travel
+    if (!hasCommittedNpcTravel(travel) || this.health.dead || this.npcState.accompanyCommitment) return false
+    if (travel!.blocked || travel!.arrival === 'reached' || travel!.execution) return false
+    const dest = travel!.destination
+    const dist = Math.hypot(this.mesh.position.x - dest.x, this.mesh.position.z - dest.z)
+    if (dist <= 4) {
+      this.npcState.travel = markNpcTravelReached(travel!)
+      return false
+    }
+    this.startAction({
+      kind: 'travel',
+      destination: { x: dest.x, y: this.sampleHeight(dest.x, dest.z), z: dest.z },
+      durationSec: 0.4 * this.waitMultiplier,
+      onComplete: () => {
+        if (!this.npcState.travel) return
+        this.npcState.travel = stampNpcTravelCheckpoint(
+          this.npcState.travel,
+          { x: this.mesh.position.x, z: this.mesh.position.z },
+        )
+      },
+    })
+    return true
+  }
+
+  /**
    * Work Contract commitment entry point (plan npc-015 §5-§11), called only
    * from `beginIdle()` — resumes an already-accepted contract, or otherwise
    * looks for a new one to accept from this NPC's own settlement notice
@@ -4945,6 +5059,7 @@ export class NpcAgent {
    */
   private tryPursueWorkContract(scheduledActivity: ScheduleActivity): boolean {
     if (this.npcState.accompanyCommitment) return false
+    if (hasCommittedNpcTravel(this.npcState.travel)) return false
     const contracts = this.workContracts
     if (!contracts) return false
     const mine = contracts.findActiveWorkByNpc(this.id)

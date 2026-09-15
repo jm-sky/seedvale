@@ -33,7 +33,8 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { TransportEndpointRef } from '../world/transportOrder'
 import type { WeatherState } from '../world/weather'
 import type { TerrainSamplers } from './settlementTerrain'
-import { resolveOffscreenNpcTravel } from '../ai/npcTravel'
+import { dispatchReadyExpedition, type DispatchReadyExpeditionInput, type DispatchReadyExpeditionResult } from '../ai/npcExpeditionTravel'
+import { resolveNpcTravelCheckpoint } from '../ai/npcTravelCheckpoint'
 import { createEconomyRegistry } from '../economy/registry'
 import { createNaturalWaterKindAt } from '../fauna/animalNaturalWater'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
@@ -217,6 +218,15 @@ export type SettlementsManager = {
    *  is currently streamed in. Narrow wrapper over `NpcStateRegistry.get`,
    *  not a snapshot. */
   getNpcState: (id: NpcId) => NpcAuthoritativeState | undefined
+  /**
+   * Dispatch a `ready` expedition assignment onto per-member generic travel
+   * (plan settlements-npcs-028). Does not reselect or re-provision.
+   */
+  dispatchReadyExpedition: (
+    assignment: DispatchReadyExpeditionInput['assignment'],
+    destination: DispatchReadyExpeditionInput['destination'],
+    nowDays: number,
+  ) => DispatchReadyExpeditionResult
   /** Plain-data snapshot of every non-zero NPC↔NPC relation pair so far —
    *  see `NpcRelationships.snapshot` (plan persistence-001). */
   snapshotRelationships: () => NpcRelationshipEntry[]
@@ -616,6 +626,7 @@ export async function createSettlementsManager(
   // verbatim at both call sites below; `def`/`economy` stay per-call since
   // they differ between the home settlement and every streamed-in neighbor.
   let lastNowDays = 0
+  let lastDayLengthSec = 480
   function currentNowDays(): number {
     return getNowDays?.() ?? lastNowDays
   }
@@ -919,7 +930,7 @@ export async function createSettlementsManager(
     // catch-up right after boot/restore, since `recheck` always fires once
     // immediately (`lastCheckX`/`lastCheckZ` start at `Infinity`).
     if (transportOrders) resolveOffscreenTransportArrivals(transportOrders, offscreenTransportLookup, nowDays)
-    npcStates.forEach((state) => resolveOffscreenNpcTravel(state, nowDays))
+    npcStates.forEach((state) => resolveNpcTravelCheckpoint(state, nowDays, dayLengthSec))
   }
 
   return {
@@ -932,16 +943,18 @@ export async function createSettlementsManager(
       for (const entry of entries.values()) entry.settlement?.setDayNight(t)
     },
     resolveTimeSkip(startTimeOfDay, hours, dayLengthSec) {
+      lastDayLengthSec = dayLengthSec
       const nowDays = currentNowDays()
       for (const entry of entries.values()) {
         if (!entry.settlement) continue
         stampSettlementAgriculture(entry.settlement, nowDays)
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
-      npcStates.forEach((state) => resolveOffscreenNpcTravel(state, nowDays))
+      npcStates.forEach((state) => resolveNpcTravelCheckpoint(state, nowDays, dayLengthSec))
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
       if (nowDays !== undefined) lastNowDays = nowDays
+      lastDayLengthSec = dayLengthSec
       const agentCpu = getAgentCpuDiag()
       agentCpu.beginLivestockFrame()
       agentCpu.recordLivestockDetachedCount(detachedLivestock.length)
@@ -1041,6 +1054,33 @@ export async function createSettlementsManager(
       return npcStates.serialize()
     },
     getNpcState: (id) => npcStates.get(id),
+    dispatchReadyExpedition(assignment, destination, nowDays) {
+      const liveById = new Map<string, { x: number, z: number }>()
+      for (const entry of entries.values()) {
+        if (!entry.settlement) continue
+        for (const npc of entry.settlement.npcs) {
+          liveById.set(npc.id, { x: npc.mesh.position.x, z: npc.mesh.position.z })
+        }
+      }
+      const result = dispatchReadyExpedition({
+        assignment,
+        destination,
+        nowDays,
+        dayLengthSec: lastDayLengthSec,
+        getNpcState: (id) => npcStates.get(id),
+        originOf: (id) => liveById.get(id) ?? npcStates.get(id)?.travel?.lastPosition,
+        isLive: (id) => liveById.has(id),
+      })
+      if (result.ok) {
+        for (const entry of entries.values()) {
+          if (!entry.settlement) continue
+          for (const npc of entry.settlement.npcs) {
+            if (result.dispatchedNpcIds.includes(npc.id)) npc.notifyCommittedTravel()
+          }
+        }
+      }
+      return result
+    },
     snapshotRelationships: () => npcRelationships.snapshot(),
     snapshotLivestock: () => {
       for (const entry of entries.values()) {

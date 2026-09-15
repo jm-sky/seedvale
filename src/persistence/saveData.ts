@@ -1994,10 +1994,22 @@ function isNpcTravelContinuity(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const t = value as Record<string, unknown>
   if (!isNpcTravelPoint(t.destination) || !isNpcTravelPoint(t.lastPosition)) return false
-  if (t.execution === undefined) return true
-  if (!t.execution || typeof t.execution !== 'object' || Array.isArray(t.execution)) return false
-  const e = t.execution as Record<string, unknown>
-  return e.mode === 'off-screen' && typeof e.departedAtDays === 'number' && typeof e.arrivesAtDays === 'number'
+  if (t.execution !== undefined) {
+    if (!t.execution || typeof t.execution !== 'object' || Array.isArray(t.execution)) return false
+    const e = t.execution as Record<string, unknown>
+    if (e.mode !== 'off-screen' || typeof e.departedAtDays !== 'number' || typeof e.arrivesAtDays !== 'number') {
+      return false
+    }
+  }
+  if (t.purpose !== undefined) {
+    if (!t.purpose || typeof t.purpose !== 'object' || Array.isArray(t.purpose)) return false
+    const p = t.purpose as Record<string, unknown>
+    if (p.kind !== 'expedition' || typeof p.assignmentId !== 'string') return false
+  }
+  if (t.survivalResolvedAtDays !== undefined && typeof t.survivalResolvedAtDays !== 'number') return false
+  if (t.arrival !== undefined && t.arrival !== 'reached') return false
+  if (t.blocked !== undefined && typeof t.blocked !== 'boolean') return false
+  return true
 }
 
 function isTemporaryConditionsSnapshotField(value: unknown): value is SaveTemporaryConditionsSnapshot {

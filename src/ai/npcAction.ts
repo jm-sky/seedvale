@@ -75,6 +75,10 @@ export type ActionId =
    *  follow or stay-at-anchor through ordinary `goTo`/`execute`. Reads as
    *  `idle` to `classifyPendingActivity` (idle-tier duty, not a NeedId). */
   | 'accompany'
+  /** Long-distance committed travel (plan settlements-npcs-028) — ordinary
+   *  `goTo`/`execute` toward the persistent travel destination. Idle-tier,
+   *  not a NeedId; critical interrupts cancel the action, not the commitment. */
+  | 'travel'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and

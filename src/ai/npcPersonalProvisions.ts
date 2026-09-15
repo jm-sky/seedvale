@@ -1,13 +1,14 @@
 import type { Inventory } from '../items/Inventory'
 import type { Household } from '../settlement/household'
 import type { NeedState } from './Needs'
-import { claimFoodItems, depositFoodItems, foodItemCount } from '../items/foodItems'
+import { claimFoodItems, depositFoodItems, foodItemCount, takeOneFoodItem } from '../items/foodItems'
 import {
   isLiquidContainerInstance,
   type LiquidContainerItemInstance,
 } from '../items/itemInstances'
 import {
   canDrinkFromLiquidContainer,
+  drinkFromLiquidContainer,
   fillLiquidContainer,
   LIQUID_DRINK_PORTION_LITRES,
 } from '../items/liquidContainer'
@@ -86,6 +87,20 @@ export function findFillablePersonalWaterskin(inventory: Inventory): LiquidConta
 
 export function hasFillablePersonalWaterskin(inventory: Inventory): boolean {
   return findFillablePersonalWaterskin(inventory) != null
+}
+
+/** One eat from the same `personalInventory` live agents use. */
+export function consumeOnePersonalFood(inventory: Inventory, nowDays: number): boolean {
+  return takeOneFoodItem(inventory, nowDays) != null
+}
+
+/** One drink portion from a personal waterskin. Empty skins stay held. */
+export function consumeOnePersonalDrink(inventory: Inventory): boolean {
+  const container = findDrinkablePersonalWaterContainer(inventory)
+  if (!container) return false
+  const drunk = drinkFromLiquidContainer(container)
+  if (!drunk) return false
+  return inventory.updateInstance(container.id, () => drunk)
 }
 
 export type ContractProvisionEstimate = {

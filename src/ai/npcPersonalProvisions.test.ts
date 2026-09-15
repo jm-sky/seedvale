@@ -7,6 +7,8 @@ import {
 } from '../items/liquidContainer'
 import { createHousehold } from '../settlement/household'
 import {
+  consumeOnePersonalDrink,
+  consumeOnePersonalFood,
   contractProvisionFeasibilityPenalty,
   countPersonalDrinkPortions,
   countPersonalFood,
@@ -25,6 +27,17 @@ describe('npcPersonalProvisions helpers', () => {
     expect(countPersonalFood(inventory)).toBe(2)
     expect(countPersonalDrinkPortions(inventory)).toBe(2)
     expect(findDrinkablePersonalWaterContainer(inventory)?.id).toBe(filled.id)
+  })
+
+  it('consumes one personal food unit and one drink portion from the same inventory', () => {
+    const inventory = new Inventory()
+    inventory.add('bread', 2)
+    const filled = fillLiquidContainer(createLiquidContainerInstance('waterskin_small'), 'water')!
+    inventory.addInstance(filled)
+    expect(consumeOnePersonalFood(inventory, 1)).toBe(true)
+    expect(inventory.count('bread')).toBe(1)
+    expect(consumeOnePersonalDrink(inventory)).toBe(true)
+    expect(countPersonalDrinkPortions(inventory)).toBe(1)
   })
 
   it('skips provisioning estimates for short local contracts', () => {

@@ -149,7 +149,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Approach player](../src/ai/approachPlayer.ts) — locality/arrival helpers for a nearby-player interaction intent (work-contract payment is the first consumer).
 - [NPC accompany commitment](../src/ai/npcAccompanyCommitment.ts) — source-neutral persistent follow/stay commitment and lifecycle helpers (plan npc-029).
 - [NPC accompany execution](../src/ai/npcAccompanyExecution.ts) — hysteresis follow/stay movement over the accompany commitment.
-- [NPC travel continuity](../src/ai/npcTravel.ts) — generic detailed↔off-screen spatial checkpoint (019 duration math, consumed by accompany/return).
+- [NPC travel continuity](../src/ai/npcTravel.ts) — generic detailed↔off-screen spatial + survival/arrival checkpoint (019 duration math, 028 expedition dispatch).
 - [NPC logistics](../src/ai/npcLogistics.ts) — the claim→carry→deposit two-leg transfer builder and the economy-withdraw/household-exchange/player-storage-delivery flows built on it.
 - [NPC profession work](../src/ai/npcProfessionWork.ts) — profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith/shepherd/textile_worker) as pure functions.
 - [NPC strategies](../src/ai/npcStrategies.ts) — per-need candidate strategy lists + `selectStrategy()`, the authoritative source `beginNeed()` switches on.

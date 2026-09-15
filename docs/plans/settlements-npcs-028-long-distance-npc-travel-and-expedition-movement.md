@@ -1,7 +1,7 @@
 # Plan: Long-distance NPC travel and expedition movement
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser/gameplay checks are User-owned)
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** ~~settlements-npcs-026~~, settlements-npcs-027, settlements-npcs-019

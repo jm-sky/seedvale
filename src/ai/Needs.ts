@@ -33,6 +33,8 @@ const NEED_FULL_HOURS = {
   waterDuty: 12,
 }
 
+export { NEED_FULL_HOURS }
+
 export type TickNeedsOptions = {
   /** Multiplier on hunger/thirst rise only — wood/water duties are unchanged. */
   hungerThirstRate?: number

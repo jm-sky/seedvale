@@ -373,6 +373,22 @@ describe('NpcAuthoritativeState accompanyCommitment / travel (plan npc-029)', ()
     expect(hydrated.travel).not.toBe(state.travel)
   })
 
+  it('round-trips expedition purpose/survival/arrival travel metadata (plan settlements-npcs-028)', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.travel = {
+      destination: { x: 40, z: 5 },
+      lastPosition: { x: 12, z: 3 },
+      execution: { mode: 'off-screen', departedAtDays: 8, arrivesAtDays: 9 },
+      purpose: { kind: 'expedition', assignmentId: 'exp:1' },
+      survivalResolvedAtDays: 8.25,
+      arrival: 'reached',
+      blocked: false,
+    }
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.travel).toEqual(state.travel)
+  })
+
   it('legacy snapshots without accompanyCommitment/travel restore as null', () => {
     const registry = createNpcStateRegistry({
       '0_0:npc:0': {
