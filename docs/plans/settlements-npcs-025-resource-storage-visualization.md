@@ -1,7 +1,7 @@
 # Plan: Resource storage visualization
 
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄
 **Type:** feature
 **Priority:** low · **Effort:** M
 **Depends on:** ~~settlements-npcs-009~~, ~~settlements-npcs-010~~
