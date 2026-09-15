@@ -2565,6 +2565,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/itemInstances.ts`
 - `items/items.ts`
 - `settlement/families.ts`
 - `settlement/propUtils.ts`
@@ -2577,6 +2578,7 @@ Generated from TypeScript imports.
 
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `world/hiddenFinds.test.ts`
 - `world/locations/treasureMapBearCave.ts`
 
@@ -2839,6 +2841,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `quests/lostTreasureChronicleSearchRuntime.ts`
 - `settlement/settlementGenerator.ts`
 - `world/caveVolume.ts`
 - `world/locations/darkForestTreasureSite.ts`
@@ -4319,6 +4322,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChronicleSearch.test.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureExpedition.test.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.test.ts`

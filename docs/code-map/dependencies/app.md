@@ -934,6 +934,8 @@ Generated from TypeScript imports.
 - `quests/guardPersistence.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/lostTreasureChronicleSearch.ts`
+- `quests/lostTreasureChronicleSearchRuntime.ts`
 - `quests/lostTreasureChroniclesElder.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/lostTreasureExpeditionRuntime.ts`
@@ -1587,6 +1589,9 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasureRuntime.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/lostTreasureChronicleSearch.ts`
+- `quests/lostTreasureChronicleSearchRuntime.ts`
+- `quests/lostTreasureChroniclesElder.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/lostTreasureExpeditionRuntime.ts`
 - `quests/oldBonesAdventureCave.ts`
@@ -1601,6 +1606,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `settlement/livestock.ts`
+- `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/roadNetwork.ts`

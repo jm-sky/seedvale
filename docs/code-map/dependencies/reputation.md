@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.test.ts`
 - `reputation/SocialNewsLedger.ts`

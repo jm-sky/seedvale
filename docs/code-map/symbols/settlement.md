@@ -359,6 +359,26 @@ Generated from exported TypeScript symbols.
 - `selectLodgingFromCandidates` — function — line 310
 - `settlementLodgingInput` — function — line 68
 
+## `settlement/lostTreasureChroniclesArchaeologistResident.ts`
+
+- `createLostTreasureArchaeologistFamily` — function — line 54
+  - domain: settlements-npcs
+- `findLostTreasureArchaeologistResident` — function — line 127
+  - domain: settlements-npcs
+- `findLostTreasureChroniclesArchaeologistSettlement` — function — line 150
+  - domain: settlements-npcs
+- `isLostTreasureArchaeologistFamily` — function — line 44
+  - domain: settlements-npcs
+- `LOST_TREASURE_ARCHAEOLOGIST_AGE` — const — line 16
+- `LOST_TREASURE_ARCHAEOLOGIST_FAMILY_ID` — const — line 12
+- `LOST_TREASURE_ARCHAEOLOGIST_GIVEN_NAME` — const — line 14
+- `LOST_TREASURE_ARCHAEOLOGIST_LAST_NAME` — const — line 15
+- `LOST_TREASURE_ARCHAEOLOGIST_SETTLEMENT_SEARCH_RADIUS` — const — line 20
+- `LostTreasureArchaeologistSettlementCandidate` — type — line 30
+  - domain: settlements-npcs
+- `selectLostTreasureChroniclesArchaeologistSettlement` — function — line 90
+  - domain: settlements-npcs
+
 ## `settlement/lostTreasureChroniclesElderResident.ts`
 
 - `appendAuthoredResidentFamily` — function — line 52
@@ -845,13 +865,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedSettlementDefCount` — function — line 206
-- `cachedSettlementProgressionPolicy` — function — line 211
-- `clearSettlementDefCache` — function — line 89
-- `setSettlementRiverQuery` — function — line 63
-- `settlementDefFor` — function — line 193
-- `SettlementResolveContext` — type — line 37
-- `worldRiverQuery` — function — line 76
+- `cachedLostTreasureArchaeologistHostCell` — function — line 242
+- `cachedSettlementDefCount` — function — line 263
+- `cachedSettlementProgressionPolicy` — function — line 268
+- `clearSettlementDefCache` — function — line 97
+- `setSettlementRiverQuery` — function — line 69
+- `settlementDefFor` — function — line 250
+- `SettlementResolveContext` — type — line 43
+- `worldRiverQuery` — function — line 82
 
 ## `settlement/settlementProgression.ts`
 

@@ -1156,15 +1156,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/hiddenFinds.ts`
 
-- `ExplicitBuriedPlacement` — type — line 169
-- `findExplicitBuriedSpot` — function — line 210
-- `findHiddenFindSpot` — function — line 185
-- `HIDDEN_FIND_DIG_TOLERANCE` — const — line 41
-- `HIDDEN_FIND_SEARCH_RADIUS` — const — line 49
-- `HiddenFindLandmark` — type — line 51
-- `HiddenFindLoot` — type — line 61
-- `HiddenFindMatch` — type — line 161
-- `resolveHiddenFindLoot` — function — line 233
+- `ExplicitBuriedPlacement` — type — line 170
+- `findExplicitBuriedSpot` — function — line 211
+- `findHiddenFindSpot` — function — line 186
+- `HIDDEN_FIND_DIG_TOLERANCE` — const — line 42
+- `HIDDEN_FIND_SEARCH_RADIUS` — const — line 50
+- `HiddenFindLandmark` — type — line 52
+- `HiddenFindLoot` — type — line 62
+- `HiddenFindMatch` — type — line 162
+- `resolveHiddenFindLoot` — function — line 234
 
 ## `world/largeCaves.ts`
 
@@ -1308,16 +1308,16 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/locationProximityDiscovery.ts`
 
-- `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 12
-- `confirmHomeSettlement` — function — line 52
-- `createLocationProximityDiscovery` — function — line 140
-- `findSettlementContainingPlayer` — function — line 119
+- `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 13
+- `confirmHomeSettlement` — function — line 53
+- `createLocationProximityDiscovery` — function — line 141
+- `findSettlementContainingPlayer` — function — line 120
   - domain: ui-input
-- `LocationProximityDiscovery` — type — line 133
-- `revealCaveEntrancesInRange` — function — line 62
-- `revealSettlementsInRange` — function — line 91
-- `SETTLEMENT_PROXIMITY_CELL_RADIUS` — const — line 21
-- `SettlementProximityDef` — type — line 27
+- `LocationProximityDiscovery` — type — line 134
+- `revealCaveEntrancesInRange` — function — line 63
+- `revealSettlementsInRange` — function — line 92
+- `SETTLEMENT_PROXIMITY_CELL_RADIUS` — const — line 22
+- `SettlementProximityDef` — type — line 28
 
 ## `world/locations/locationsCoarseCache.ts`
 
@@ -1386,15 +1386,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldLocationCatalog.ts`
 
-- `abandonedCemeteryChunkIntersectsKmBand` — function — line 207
+- `abandonedCemeteryChunkIntersectsKmBand` — function — line 209
   - domain: world
-- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 145
-- `createWorldLocationCatalog` — function — line 273
-- `emptyLocationScanDiagnostics` — function — line 110
-- `LandmarkQueryOptions` — type — line 134
-- `LocationScanDiagnostics` — type — line 83
-- `settlementLocationId` — function — line 864
-- `WorldLocationCatalog` — type — line 147
+- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 147
+- `createWorldLocationCatalog` — function — line 275
+- `emptyLocationScanDiagnostics` — function — line 112
+- `LandmarkQueryOptions` — type — line 136
+- `LocationScanDiagnostics` — type — line 85
+- `settlementLocationId` — function — line 870
+- `WorldLocationCatalog` — type — line 149
 - `WorldLocationCatalogDeps` — type — line 29
 
 ## `world/locations/worldLocationNames.ts`

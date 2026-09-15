@@ -333,6 +333,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
 - `economy/initial.ts`
+- `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `settlement/createSettlement.ts`
@@ -340,6 +341,8 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.test.ts`
 - `settlement/houseCatalog.ts`
 - `settlement/livestock.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/npcIdentity.test.ts`
@@ -356,6 +359,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/settlementPlanCache.ts`
 - `settlement/settlementProgression.test.ts`
 - `settlement/settlementProgression.ts`
 - `settlement/villageClearing.test.ts`
@@ -858,6 +862,39 @@ Generated from TypeScript imports.
 - `app/actions/restActions.ts`
 - `settlement/lodgingResolver.test.ts`
 
+## `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
+
+**Imports**
+
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `settlement/families.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
+- `settlement/lostTreasureChroniclesElderResident.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/professionStaffing.ts`
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementPlanCache.ts`
+- `settlement/settlementTerrain.ts`
+- `terrain/chunkHeightmap.ts`
+
+## `settlement/lostTreasureChroniclesArchaeologistResident.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/nameCultures.ts`
+- `settlement/families.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/npcState.ts`
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `quests/lostTreasureChronicleSearch.test.ts`
+- `quests/lostTreasureChronicleSearch.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
+- `settlement/settlementPlanCache.ts`
+
 ## `settlement/lostTreasureChroniclesElderResident.test.ts`
 
 **Imports**
@@ -884,8 +921,12 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/lostTreasureChronicleSearch.test.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChroniclesElder.test.ts`
 - `quests/lostTreasureChroniclesElder.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
@@ -944,6 +985,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `settlement/createSettlement.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/npcIdentity.test.ts`
 - `world/expeditionParty.test.ts`
@@ -1079,6 +1122,7 @@ Generated from TypeScript imports.
 - `quests/guardPersistence.ts`
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChroniclesElder.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/materializeAuthoredQuests.ts`
@@ -1089,6 +1133,7 @@ Generated from TypeScript imports.
 - `quests/suspiciousTransportCaveCache.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/npcIdentity.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
@@ -1212,6 +1257,7 @@ Generated from TypeScript imports.
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `settlement/createSettlement.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/settlementAgriculture.ts`
@@ -1247,6 +1293,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/groundActions.test.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `settlement/decorProps.ts`
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
@@ -1324,6 +1371,8 @@ Generated from TypeScript imports.
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/createPlacedTents.ts`
+- `quests/lostTreasureChronicleSearch.test.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `render/instancedProps.test.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
@@ -1618,6 +1667,8 @@ Generated from TypeScript imports.
 - `debug/villageInspector.test.ts`
 - `debug/villageInspector.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChronicleSearch.test.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChroniclesElder.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
@@ -1626,6 +1677,8 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/minorLocations.ts`
@@ -1737,6 +1790,8 @@ Generated from TypeScript imports.
 - `ai/nameCultures.ts`
 - `config/worldConfig.ts`
 - `player/PlayerController.ts`
+- `settlement/families.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNameUniqueness.ts`
@@ -1750,6 +1805,7 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementNameUniqueness.test.ts`
@@ -1878,6 +1934,7 @@ Generated from TypeScript imports.
 
 - `debug/locationQueries.ts`
 - `settlement/SettlementsManager.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`

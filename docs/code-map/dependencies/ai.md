@@ -296,6 +296,7 @@ Generated from TypeScript imports.
 - `quests/caveLocationDescription.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/families.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/places.ts`
@@ -475,6 +476,7 @@ Generated from TypeScript imports.
 
 - `ai/nameCultures.test.ts`
 - `settlement/families.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`

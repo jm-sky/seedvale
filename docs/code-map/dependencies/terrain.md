@@ -200,6 +200,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
+- `quests/lostTreasureChronicleSearch.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/quests.ts`
@@ -276,6 +277,7 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/findSettlementSite.test.ts`
 - `settlement/findSettlementSite.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/minorLocations.ts`
 - `settlement/props.ts`
