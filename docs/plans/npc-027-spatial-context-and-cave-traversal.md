@@ -9,70 +9,128 @@
 **Subdomains:** `behavior` `work`
 **Tags:** `movement` `navigation` `caves` `spatial-context` `off-screen`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+**Model:** Sonnet, Composer
 
 ## Goal
 
-Extend generic NPC movement so an NPC can physically move between the surface and Cave V2, navigate inside the cave, reach an authoritative target, and return to the surface.
+Extend generic NPC movement so an NPC can physically move between the surface and production Cave V2/heightfield caves, navigate inside them, reach an authoritative target, and return to the surface.
 
-The mechanism must be generic:
-
-```text
-surface
-→ cave entrance
-→ cave interior
-```
-
-and:
+The movement contract must work for every production cave archetype:
 
 ```text
-cave interior
-→ cave entrance
-→ surface
+natural
+adventure
+dungeon
 ```
 
-It must not depend on the abandoned gold mine, mining, a particular quest, a particular cave topology, Player position/camera, or teleportation between navigation spaces.
+without archetype-specific NPC movement branches.
 
-The intended architectural flow is:
+The intended flow is:
 
 ```text
-NPC current spatial context
-+ authoritative movement target
-→ resolve navigation-domain route
-→ move locally inside current domain
-→ physically cross a valid transition
-→ continue inside next domain
-→ reach final target
+NPC actual XYZ
+→ Caves.spatialContextAt(...)
++ committed movement target { authoritative XYZ + WorldSpatialContext }
+→ compose surface/cave route
+→ use existing Cave V2 traversal semantics where the route is underground
+→ execute through the normal NPC locomotion pipeline
+→ physically cross the cave mouth when changing context
+→ reach the committed target
 ```
 
-This plan is a prerequisite for `world-018-cave-aware-rich-finite-resource-deposits.md` when NPC cave mining is enabled there.
+This plan is a prerequisite for cave-aware NPC work such as `world-018-cave-aware-rich-finite-resource-deposits.md` when NPC cave mining is enabled there.
 
-## Core invariants
+## Current production baseline
 
-> **An NPC target inside a cave must never derive its authoritative Y from surface `sampleHeight(x, z)`.**
+`world-terrain-019` is implemented. Production caves no longer have an SDF runtime/collider authority.
 
-> **Surface and cave locations with overlapping X/Z must remain semantically distinct.**
+Current ownership is:
 
-> **NPCs enter and leave caves through ordinary Cave V2 entrances/transitions. No cave teleport is allowed.**
+```text
+CaveTopology
+= stable cave identity + semantic layout/connectivity
 
-> **Cave V2 remains the owner of cave identity, topology, containment, floor semantics and entrance connectivity. NPC movement consumes those semantics rather than duplicating them.**
+CaveHeightfieldRepresentation
+= the one production spatial authority
 
-> **Cave topology is coarse connectivity/route intent; Cave V2 spatial representation remains authoritative for local floor, containment, clearance and walkability.**
+createCaves() / Caves
+= world-owned semantic facade and lifecycle
+```
 
-> **NPC navigation state must not become a second authority for cave membership. Transition progress may be transient, but actual world position plus Cave V2 spatial semantics remain authoritative.**
+The retained heightfield is authoritative for:
 
-> **Do not introduce mine-specific movement classes, target types or routing logic.**
+- floor/ceiling;
+- strict occupancy;
+- cave spatial identity;
+- horizontal rock containment;
+- presentation geometry;
+- terrain-mouth compatibility;
+- cave-local traversal grounding.
 
-> **Do not turn the existing bounded local A* into a global world navmesh.**
+Presentation streaming is separate from gameplay truth. NPC navigation must never require active cave meshes, Player/camera proximity or streamed cave presentation.
 
-> **Navigation validity must not depend on cave render-mesh activation or Player/camera proximity.**
+## Existing mechanisms this plan must reuse
 
-> **Detailed locomotion and simplified/off-screen simulation must describe the same logical route through the same spatial domains.**
+### Shared spatial context
 
-## Current architecture to preserve
+Do not introduce a new NPC-specific cave context.
 
-### NPC actions and destinations
+Reuse `src/world/spatialContext.ts`:
 
-NPC movement is currently driven through:
+```ts
+WorldSpatialContext =
+  | { kind: 'surface' }
+  | { kind: 'cave'; caveId: string }
+```
+
+Canonical current-context resolution is:
+
+```text
+actual world XYZ
+→ Caves.spatialContextAt(x, y, z)
+→ WorldSpatialContext
+```
+
+Use `spatialContextsEqual()` for semantic comparison. Do not compare context objects by reference.
+
+NPC route/portal progress may be transient execution state, but must never become a second persisted authority for cave membership.
+
+### Cave-scoped spatial queries
+
+Reuse the existing stateless `Caves` API:
+
+```text
+spatialContextAt(x, y, z)
+queryGroundIn(caveId, x, y, z)
+resolveHorizontalIn(caveId, x, z, y, radius, entityHeight)
+```
+
+Do not use player-stateful `queryGround()` / `queryInterior()` as multi-NPC membership or grounding state.
+
+### Existing cave traversal
+
+Reuse `src/world/caves/caveHabitat.ts` and the public `Caves` facade rather than recreating topology graph routing under `ai/`.
+
+Existing mechanisms include:
+
+```text
+Caves.resolveHabitat(...)
+Caves.resolveRouteBetween(...)
+
+shortestNodePath(...)
+buildRoutePoints(...)
+snapRouteFloor(...)
+resolveCaveRouteBetweenNodes(...)
+resolveCaveTraversal(...)
+```
+
+These already use `CaveTopology` connectivity and floor-snap waypoints to the retained heightfield.
+
+NPC-027 may add only the smallest missing generic seam required to route an arbitrary NPC position/target to these semantics. Do not duplicate BFS, topology flattening, floor snapping, cave lookup or raw heightfield access in NPC code.
+
+### NPC movement pipeline
+
+NPC movement is currently centred on:
 
 ```text
 NpcPlannedAction.destination
@@ -81,629 +139,426 @@ NpcPlannedAction.destination
 → steerTo()
 ```
 
-`NpcPlannedAction.destination` is currently a plain `Vec3`. Movement execution lives primarily in `src/ai/NpcAgent.ts` and `src/ai/npcAction.ts`.
+`NpcPlannedAction.destination` remains a plain `Vec3` snapshot today. The narrowest current NPC-specific movement seam is `NpcPlannedAction` / `NpcAgent.startAction()`.
 
-Do not redesign the NPC decision/Goal/Plan/Strategy architecture.
+Do not redesign Goals, Plans, Strategies, decisions or action effects.
 
-Do not assume `NpcPlannedAction` itself must own the new spatial target contract. During implementation, identify the narrowest shared movement-target boundary; promote spatial context into `PlannedAction` only if current consumers prove that is the coherent ownership point.
+### Surface navigation
 
-### Local navigation
+Keep the existing surface path unchanged where possible:
 
-Reuse `src/navigation/navigation.ts`.
+- `src/navigation/navigation.ts` bounded local-grid A*;
+- `src/terrain/slopeConstraint.ts`;
+- `src/ai/npcColliderRim.ts`;
+- `src/ai/npcMovementWatchdog.ts`;
+- existing water avoidance, separation, collider avoidance and final approach.
 
-The current `findPath()` is a bounded local-grid A* used as a stuck/blocked fallback. Keep its existing role:
+The bounded A* remains a local obstruction fallback. Do not turn it into a global navmesh or run it for every ordinary movement step.
 
-```text
-normal movement
-→ straight/local steering
+## Core invariants
 
-genuine obstruction
-→ bounded local route
-```
+> **A cave target's Y is authoritative and must never be replaced with surface `sampleHeight(x, z)`.**
 
-Do not make full A* routing mandatory for every ordinary surface movement step.
+> **Surface and cave locations at the same X/Z remain distinct through `WorldSpatialContext`.**
 
-### Movement constraints
+> **Current NPC context comes from actual XYZ + `Caves.spatialContextAt()`, not action kind, target context, entrance proximity or render state.**
 
-Reuse the existing shared locomotion primitives where their assumptions still apply:
+> **NPCs physically enter and leave through the production cave mouth. No cave teleport.**
 
-- `src/terrain/slopeConstraint.ts`
-- `src/ai/npcColliderRim.ts`
-- `src/ai/npcMovementWatchdog.ts`
+> **Heightfield semantics, not cave render meshes or colliders, are authoritative underground.**
 
-Surface movement must retain current water avoidance, slope limits, collider avoidance, final destination approach and stuck/repath behaviour.
+> **NPC code must reuse the existing world-owned cave traversal contract rather than implement a second graph/spatial system.**
 
-Cave movement requires domain-correct ground/slope/walkability semantics rather than forcing surface `sampleHeight()` assumptions into caves.
+> **`natural`, `adventure` and `dungeon` use one NPC movement pipeline. Cave archetype may influence topology/content, never locomotion architecture.**
 
-### Cave V2
-
-This plan depends on the production result of `docs/plans/world-terrain-019-cave-heightfield-production-migration.md`.
-
-Consume the final Cave V2 contracts rather than transitional spike/V1 compatibility APIs.
-
-Cave V2 owns:
-
-```text
-caveId
-entrance
-topology
-segments / connectivity
-interior spatial representation
-containment
-floor / ceiling semantics
-collision / traversal validity
-```
-
-The current `CaveTopology` direction already provides useful semantic data: stable cave identity, entrance, authoritative XYZ nodes, connected segments and XYZ centerlines. After `world-terrain-019`, reconfirm exact production APIs and names before implementation.
-
-## Spatial-context contract
-
-Introduce or extend the smallest shared representation capable of distinguishing at least:
-
-```text
-surface
-cave:<caveId>
-```
-
-Conceptually:
-
-```text
-SpatialContext
-  surface
-  cave(caveId)
-```
-
-The exact TypeScript representation should follow final production cave/world ownership after `world-terrain-019`.
-
-Do not create `NpcCaveContext`, `MinerSpatialContext` or `ResourceSpatialContext` if a general world/Cave V2 spatial identity can own the concept.
-
-The context describes where a world position belongs, not what an NPC is doing. World/Cave V2 owns spatial-domain identity; NPC movement consumes it.
-
-Avoid storing duplicate cave ownership/state in `NpcAgent`.
+> **Detailed locomotion and future aggregated/off-screen travel must refer to the same cave identity, topology and transition semantics.**
 
 ## Generic movement target
 
-Extend the narrowest existing movement/action destination boundary so movement execution can receive:
+Extend the narrowest coherent NPC movement boundary so execution receives:
 
 ```text
 authoritative world-space XYZ
 +
-spatial context
+WorldSpatialContext
 ```
 
 Conceptually:
 
-```text
+```ts
 MovementTarget {
-  position: { x, y, z }
-  context
+  position: Vec3
+  context: WorldSpatialContext
 }
 ```
 
-Do not mechanically widen every `PlannedAction` consumer if a narrower compatible movement-target abstraction is sufficient.
+Prefer an NPC-specific normalization seam rather than widening shared `PlannedAction` unless current call-sites prove shared ownership is necessary.
 
-### Authoritative position
+Existing surface action producers should require minimal churn. Normalize legacy surface destinations once at the movement boundary instead of requiring every existing action producer to construct boilerplate.
 
-For a surface target, Y may originate from the normal surface placement/terrain owner.
+Do not leave two permanent destination systems with conflicting authority.
 
-For `cave:<caveId>`, Y must originate from Cave V2 spatial semantics. `NpcAgent` must not overwrite a cave target's Y using `sampleHeight(x, z)`.
+## Route composition
 
-The target does not imply free 3D straight-line movement. Y identifies the correct destination; each navigation domain still owns the walkable floor used while traversing it.
-
-### Backward compatibility
-
-Existing surface actions should require minimal call-site churn. If practical, normalize ordinary surface destinations to `position + surface context` at one ownership boundary rather than requiring every existing action producer to construct new boilerplate.
-
-Do not maintain two permanently parallel destination systems.
-
-## Current spatial context and transition continuity
-
-NPC movement needs to determine whether the NPC currently occupies `surface` or `cave:<caveId>` using canonical world/Cave V2 spatial semantics.
-
-Do not infer cave membership from X/Z alone, proximity to an entrance, render mesh presence, current action kind or target context.
-
-Because surface and cave spaces may overlap in X/Z, context resolution must be Y-aware.
-
-During entrance crossing, avoid naïve per-frame context flapping at the mouth boundary. The intended rule is:
+Route composition belongs below NPC decision-making.
 
 ```text
-actual XYZ
-+ canonical Cave V2 containment/transition semantics
-+ transient transition-aware continuity where the portal boundary is ambiguous
-→ current movement context
+currentContext + targetContext
+→ movement route
 ```
 
-Any transient transition state exists only to execute a physical crossing; it must not replace world position/Cave V2 semantics as the authority for where the NPC is.
-
-### Persistence
-
-Do not add a second persisted NPC location state solely for this feature unless implementation proves it is required.
-
-Current runtime movement execution, pending action and path state are transient. Prefer authoritative actual position plus canonical world spatial queries, with only transient navigation-route/transition state where needed.
-
-## Navigation-domain routing
-
-Add a generic route-composition layer between the committed movement target and local locomotion:
-
-```text
-current context
-+ target context
-→ domain route
-```
-
-If both contexts match, route locally inside that domain:
+Required cases:
 
 ```text
 surface → surface
 cave:A → cave:A
-```
-
-If contexts differ, resolve valid transitions. L1 production support must cover:
-
-```text
 surface → cave:A
 cave:A → surface
 ```
 
-The route may conceptually contain:
-
-```text
-surface-local
-→ transition
-→ cave-local
-```
-
-Do not model domain routing as an NPC AI decision. It is movement execution for an already committed target.
-
-## Cave entrance transition
-
-Cave V2 remains authoritative for valid entrances. Consume its final entrance/transition representation rather than inventing NPC-specific entrance points.
-
-The transition must expose enough semantics to distinguish the surface approach, physical crossing, cave interior side and associated `caveId`; the literal API is implementation-defined by the final Cave V2 contract.
+The committed final target must remain unchanged while temporary route legs lead through an entrance or topology waypoints.
 
 ### Surface → cave
 
 ```text
-NPC on surface
-+ target in cave:A
-→ resolve valid entrance for cave:A
-→ move across surface to entrance approach
-→ follow physical mouth/transition path
-→ cross into Cave V2 containment
-→ confirm cave:A context
-→ begin cave-local route
+surface NPC
+→ route normally to requested cave's entrance approach
+→ physically traverse the mouth
+→ `spatialContextAt()` confirms cave:<id>
+→ follow cave-local route
+→ final target
 ```
 
-Context must not switch merely because the NPC is near the entrance.
+Do not switch to cave context merely because the NPC is near the mouth.
 
 ### Cave → surface
 
 ```text
-NPC inside cave:A
-+ target on surface
-→ route through cave topology toward a valid exit
-→ reach interior side of entrance
-→ physically cross mouth/transition
-→ leave cave:A containment
-→ continue normal surface movement
+cave NPC
+→ existing topology traversal toward this cave's entrance
+→ physically traverse mouth outward
+→ `spatialContextAt()` confirms surface
+→ continue normal surface locomotion
 ```
 
-## Cave coarse routing
+### Cave → cave in the same cave
 
-Use Cave V2 topology as the first production coarse routing mechanism. Do not introduce a complete navmesh unless implementation proves topology plus local steering cannot represent required movement.
+Use the existing cave topology/traversal contract. NPC code must not infer geometric adjacency between disconnected topology components.
 
-The expected source is the production equivalent of `CaveTopology.nodes`, `CaveTopology.segments` and segment XYZ `centerline` data.
+Cross-cave travel (`cave:A → cave:B`) is not a special primitive: it composes as `cave:A → surface → cave:B` if a future caller requires it. It does not need a dedicated implementation path in this plan unless an existing consumer needs it.
 
-For a cave-local route:
+## Entrance transition
+
+Reuse production `CaveTopology.entrance` / mouth geometry semantics owned by Cave V2. Do not introduce NPC-only entrance offsets.
+
+The transition execution must distinguish:
 
 ```text
-current interior position
-→ resolve relevant topology node/segment
-→ resolve target node/segment
-→ graph path through connected segments
-→ produce semantic/local waypoints
-→ local cave steering
+surface approach
+→ physical mouth crossing
+→ confirmed underground side
 ```
 
-Route planning must use deterministic semantic Cave V2 data and must not require active render geometry, triangle raycasts, camera position or Player presence.
+and the reverse.
 
-Segment centerlines are suitable coarse route guidance because they preserve XYZ bends/descent/ascent, but they are not a walkability authority.
+If a small transient portal phase is needed to prevent frame-to-frame ambiguity at the open-sky mouth, keep it execution-only. Actual XYZ plus `Caves.spatialContextAt()` remains authoritative.
 
-Disconnected cave sections must never be considered reachable merely because their XYZ positions are close. Use topology connectivity.
+## Cave-local locomotion
 
-Future loops, branches and multiple entrances should be representable by the same mechanism even if L1 caves remain simple.
+NPC locomotion remains ground-constrained rather than free-flying 3D movement.
 
-## Local cave locomotion
-
-Extend movement execution so local steering is navigation-domain-aware. Do not create a separate `MineNpcMovement`.
-
-Keep the ownership split explicit:
+For a cave leg:
 
 ```text
-CaveTopology
-= coarse connectivity / route intent
-
-Cave V2 spatial representation
-= local floor / containment / clearance / walkability authority
+route waypoint
+→ horizontal candidate movement
+→ Caves.resolveHorizontalIn(caveId, ...)
+→ Caves.queryGroundIn(caveId, ...)
+→ authoritative cave XYZ
 ```
 
-Conceptually:
+Use the heightfield for floor/clearance/rock containment. Do not use surface water or surface terrain height as underground ground authority.
+
+Cave-local steering should reuse the normal `NpcAgent` execution pipeline where possible. Do not add `MineNpcMovement`, `DungeonNpcMovement` or another cave-specific agent/mover.
+
+If bounded local A* is reused underground, generalize only the narrow query boundary needed for domain-correct walkability. `navigation.ts` must remain domain-neutral and must not import `Caves` or raw heightfields.
+
+## Natural / adventure / dungeon coverage
+
+The three production archetypes differ in topology/content, not in NPC movement ownership.
+
+Tests and implementation must cover:
+
+- `natural`: simple entrance/chamber traversal;
+- `adventure`: longer routes and branches/junctions;
+- `dungeon`: multiple chambers, branch/deeper routing and underground-pool coexistence.
+
+Dungeon pools/content anchors are not navigation authorities. NPC movement follows topology + heightfield and must not special-case content role names or chamber array positions.
+
+## Surface assumptions to remove from generic NPC movement
+
+Audit all places where generic movement or recovery assumes that every NPC stands on surface terrain.
+
+Known critical areas include:
+
+- constructor/home placement where appropriate;
+- per-tick final Y grounding;
+- `resolveTimeSkip()` / catch-up placement;
+- local repath and escape;
+- emergency recovery;
+- destination normalization;
+- arrival checks that assume surface Y;
+- collider/slope queries whose inputs are surface-only.
+
+A cave NPC must never be recovered by projecting the same X/Z to surface height.
+
+If a catch-up/time-skip path cannot safely execute a cave route in the first implementation, use an explicit safe policy at a valid semantic endpoint rather than silently surface-projecting the NPC.
+
+## Rescue and watchdog
+
+Preserve the existing watchdog/repath lifecycle.
+
+For cave movement, recovery order should remain within the active cave context:
 
 ```text
-local movement request
-+ current navigation domain
-→ domain ground/traversal provider
-→ domain collision/containment provider
-→ physical movement
+retry current leg
+→ rebuild/reselect valid cave waypoints
+→ local valid escape within same cave
+→ normal action failure/abandon
 ```
 
-### Surface provider
+Do not cross a spatial domain as a generic stuck-recovery shortcut.
 
-Preserve existing `sampleHeight`, water rules, surface slope, ordinary colliders and bounded local A* fallback.
+Surface emergency recovery may remain unchanged when the NPC is actually in `surface` context.
 
-### Cave provider
+## Persistence and off-screen boundary
 
-Cave movement must use Cave V2 semantics for floor, walkable interior, local slope/elevation, walls, containment, clearance and vertical collision filtering. It must not use surface water or surface height as authoritative ground.
+Do not persist:
 
-### XYZ movement
+- topology waypoint indexes;
+- route legs;
+- mouth-transition phase;
+- duplicated `currentCaveId` solely for movement.
 
-NPC locomotion does not need to become a free-flying generic 3D pathfinder. NPCs remain ground-constrained walkers:
+On runtime reconstruction, derive current spatial context from authoritative world position and rebuild route execution state as needed.
+
+This plan does not implement a new remote/off-screen NPC movement executor. The resulting semantic route components must nevertheless be presentation-independent so a future aggregated executor can reuse them.
+
+## Implementation stages
+
+### Stage A — Reuse current world/cave contracts
+
+Do not build new spatial or traversal infrastructure.
+
+Wire implementation around the already-existing:
+
+- `WorldSpatialContext` / `spatialContextsEqual()`;
+- `Caves.spatialContextAt()`;
+- `Caves.queryGroundIn()`;
+- `Caves.resolveHorizontalIn()`;
+- `Caves.resolveRouteBetween()` / `resolveHabitat()`;
+- production `CaveTopology` + retained heightfield semantics.
+
+If one narrowly scoped cave query is genuinely missing for arbitrary NPC target attachment, extend the current `Caves` semantic facade or `caveHabitat.ts`; do not expose raw `CaveRuntime`/heightfield maps to `ai/`.
+
+### Stage B — Spatially explicit NPC movement target
+
+Introduce the smallest NPC movement-target contract containing authoritative XYZ + `WorldSpatialContext`.
+
+Normalize existing surface `NpcPlannedAction.destination` producers at one boundary. Avoid broad `PlannedAction` churn unless proven necessary.
+
+Add focused tests that cave target Y and cave identity survive action start/promotion/chaining.
+
+### Stage C — Current-context resolution and route composition
+
+Resolve current context from actual XYZ through `Caves.spatialContextAt()` and compose same-domain vs cross-domain movement legs.
+
+Keep final target identity stable while intermediate entrance/topology waypoints execute.
+
+### Stage D — Physical entrance crossing
+
+Implement surface→cave and cave→surface mouth traversal using production cave entrance/mouth semantics.
+
+Context transition must require actual crossing, not proximity.
+
+### Stage E — Cave-local locomotion
+
+Make the common NPC mover domain-aware:
+
+- surface keeps current terrain/water/collider/slope behaviour;
+- cave uses `resolveHorizontalIn()` + `queryGroundIn()`;
+- existing cave route waypoints guide movement;
+- no surface Y snap occurs underground.
+
+### Stage F — Context-safe recovery and time skip
+
+Audit watchdog, local repath/escape, emergency recovery and catch-up/time-skip paths so they cannot destroy cave identity or bypass the mouth transition.
+
+### Stage G — Archetype and regression coverage
+
+Add targeted automated coverage for natural, adventure and dungeon topology shapes plus existing surface movement regression coverage.
+
+Document the browser checklist for the Player; AI does not perform browser verification.
+
+## Expected primary files
+
+Current likely implementation points:
 
 ```text
-horizontal/local route progress
-+
-domain-owned walkable floor/elevation
-→ resulting XYZ
+src/ai/NpcAgent.ts
+src/ai/npcAction.ts
+src/navigation/navigation.ts                 # only if narrow query generalization is needed
+src/world/spatialContext.ts                  # reuse; change only if a proven generic helper is missing
+src/world/createCaves.ts                     # semantic facade only if a narrow query is missing
+src/world/caves/caveHabitat.ts               # reuse/extend existing traversal seam
+src/world/caves/caveTopology.ts              # semantic topology types, not NPC ownership
+src/ai/npcMovementWatchdog.ts
+src/ai/npcColliderRim.ts
+src/terrain/slopeConstraint.ts
 ```
 
-Cave topology supplies route intent; Cave V2 spatial queries validate and ground the actual local movement.
+Settlement/app composition will need to thread the `Caves` semantic dependency into NPC construction through the existing ownership path. `NpcAgent` must not import/own `WorldBundle`.
 
-Do not allow direct interpolation through cave ceilings, walls, solid rock or overlapping surface terrain.
+Do not revive `CaveVolume`, SDF runtime modules or cave-wall collider ownership for NPC navigation.
 
-## Collision
+For important architectural/public functions introduced by implementation, add concise JSDoc and useful `@domain` tags for preflight discovery.
 
-Reuse shared collider infrastructure where Cave V2 continues to expose collision through it.
+## Tests
 
-NPC cave collision must respect vertical collider extent the same way Player cave movement does. A cave wall below the surface must not block an NPC walking on the hillside above it; a surface collider must not become a cave obstacle merely due to overlapping X/Z unless its vertical extent makes that valid.
+Add focused automated coverage for at least:
 
-If `world-terrain-019` changes cave collision ownership, follow its final production contract. Do not create a second cave collision world for NPCs.
+### Spatial identity
 
-## Local cave obstacle recovery
+- surface and cave at overlapping X/Z resolve differently by Y;
+- `surface != cave:A` and `cave:A != cave:B`;
+- multiple NPC context queries do not share mutable hysteresis;
+- mouth crossing changes context only after physical crossing.
 
-Preserve the existing movement watchdog/rescue concept, but make surface assumptions context-safe.
+### Target semantics
 
-A cave-stuck NPC must never recover through teleport to a surface-grounded point or `mesh.position.y = sampleHeight(...)`.
+- cave target preserves authoritative Y;
+- cave target preserves requested `caveId`;
+- existing surface targets keep current behaviour;
+- chained/promoted actions do not lose spatial target semantics.
 
-Prefer:
+### Route composition
 
-```text
-re-evaluate current cave leg
-→ local cave repath / topology waypoint correction
-→ nearby valid point in same cave context
-→ abandon current action if genuinely unreachable
-```
+- surface→surface;
+- surface→cave;
+- cave→surface;
+- cave→same cave;
+- requested cave entrance is used, never globally nearest entrance.
 
-Do not cross navigation domains as a generic stuck-rescue shortcut.
+### Cave traversal
 
-Any existing emergency teleport fallback retained for surface NPCs must be explicitly prevented from moving cave NPCs through rock or onto the surface.
+Reuse/extend existing traversal tests rather than duplicate them under NPC where possible:
 
-## Integration with existing bounded A*
+- topology connectivity controls reachability;
+- floor-snapped route follows the retained heightfield;
+- natural route works;
+- adventure branch/junction route works;
+- dungeon deeper/branch chamber route works;
+- presentation inactive does not invalidate route.
 
-Do not replace `navigation.findPath()`.
+### Cave-local movement
 
-For surface movement it remains the existing bounded obstacle fallback. For caves, first prefer:
+- descending/ascending floor is followed;
+- rock containment prevents wall traversal;
+- underground NPC never snaps to surface at overlapping X/Z;
+- dungeon pool/content metadata does not become a movement authority.
 
-```text
-Cave V2 topology
-→ coarse route
-→ local steering
-```
+### Recovery/time skip
 
-A local bounded search may be reused inside a cave only if the final Cave V2 spatial API can provide domain-correct walkability and floor/slope queries without projecting everything back onto surface terrain.
+- repath/local escape stays in the current cave;
+- emergency surface teleport is not used underground;
+- unreachable cave target reaches the normal failure lifecycle;
+- catch-up/time-skip never surface-projects a cave position.
 
-If the cleanest implementation is to generalize the narrow navigation query from surface `sampleHeight` to a domain-specific ground sampler, do so without turning `navigation.ts` into a world/Cave V2 owner.
+### Surface regression
 
-## Action integration
+Existing surface NPC behaviour retains:
 
-The generic movement system should work for any NPC action whose target is spatially valid, including future mine, work, carry, inspect, visit, deliver or combat-pursuit actions.
+- ordinary straight steering;
+- water avoidance;
+- slope limits;
+- NPC separation;
+- collider avoidance;
+- bounded A* fallback;
+- interaction final approach;
+- action completion.
 
-No action-specific cave routing branch should exist.
+## Performance
 
-The action producer commits to what the target is and where it is. Movement owns how to physically reach it.
+Cave route resolution must be request-driven, not per-frame.
 
-Do not teach `npcProfessionWork.ts` how cave entrances work.
+Cache transient route execution for the current movement commitment and invalidate it only when necessary: target/context changes, route becomes invalid, watchdog requests repath or world rebuild invalidates cave references.
 
-## Player semantic reuse
+Do not inspect render meshes, raycast cave presentation or generate/activate all cave meshes for NPC navigation.
 
-Player and NPC do not need to share one locomotion implementation.
-
-They should share Cave V2/world semantics for cave containment, cave identity, entrance transition, floor resolution and collision validity.
-
-Current Player behaviour already establishes the useful general rule that actual XYZ resolves cave ground when inside a cave and surface ground otherwise. Extract/reuse semantic queries where appropriate rather than making NPC depend on a Player-specific query type.
-
-Do not create an NPC-only interpretation of Cave V2 space.
-
-## Hybrid and off-screen compatibility
-
-This plan does not implement a full remote NPC movement executor.
-
-Its semantic routing inputs and route legs must nevertheless be Three.js/presentation-independent and usable without active cave render geometry. Detailed movement and future aggregated movement must be able to refer to the same spatial domains, transitions and topology.
-
-Do not add speculative remote-route APIs, persisted route length or exact off-screen interpolation unless an existing consumer requires them during implementation.
-
-## Cave streaming and lifecycle
-
-Movement validity must use Cave V2 semantic data independent of presentation streaming.
-
-Current cave presentation/collider activation may be Player-observer-driven. After `world-terrain-019`, reconfirm the production lifecycle.
-
-Required invariant:
-
-```text
-cave semantic topology / transitions / traversal data
-≠
-cave render activation
-```
-
-An NPC must not conclude that a cave does not exist or has no valid route merely because its mesh is not active.
-
-If detailed cave locomotion requires active collision proxies, integrate their activation with the existing Cave V2 lifecycle rather than creating an NPC-owned cave activation manager. Do not generate all cave meshes globally merely to support NPC navigation.
-
-## Stage A — Reconfirm final Cave V2 contracts
-
-After `world-terrain-019` reaches its production architecture, identify:
-
-- canonical `caveId` and cave lookup;
-- entrance representation and transition semantics;
-- Y-aware containment;
-- floor/ceiling query;
-- topology nodes/segments/centerlines and connectivity;
-- collision/traversal query;
-- lifecycle/streaming separation;
-- multi-level-safe spatial API.
-
-Do not implement against `buildSpikeTestTopology`, `topologyToCaveDefinition` or transitional `CaveVolume` assumptions unless they remain intentionally part of the final Cave V2 contract.
-
-If Cave V2 lacks a narrow semantic query required by generic movement, extend Cave V2 at its existing ownership boundary rather than reimplementing that knowledge under `ai/`.
-
-## Stage B — Introduce shared spatial context
-
-Add the smallest reusable representation for `surface` and `cave:<caveId>` at the appropriate world/navigation boundary.
-
-Add focused helpers for context resolution/comparison and cave identity where needed. Include transition-aware continuity at an entrance without making transient navigation state authoritative.
-
-Do not change NPC AI behaviour in this stage.
-
-## Stage C — Make movement targets spatially explicit
-
-Extend the narrowest movement target boundary so NPC movement receives authoritative XYZ plus spatial context.
-
-Migrate existing surface destinations through one coherent compatibility path.
-
-Do not leave permanent mixed semantics where some destinations have authoritative XYZ while others silently let the mover invent Y without an explicit surface resolver.
-
-## Stage D — Domain-route composition
-
-Introduce generic route composition:
-
-```text
-same context
-→ one local route
-
-different contexts
-→ local route
-→ transition
-→ local route
-```
-
-For this plan, production support must cover `surface ↔ cave`.
-
-Use Cave V2 entrance identity rather than nearest-point heuristics. Keep committed target identity unchanged while traversing intermediate transition legs.
-
-## Stage E — Cave topology routing
-
-Implement bounded deterministic graph routing over Cave V2 semantic topology.
-
-Support entrance-to-interior, interior-to-entrance and interior-to-interior routes, plus branches where topology provides them. Use deterministic tie-breaking where several equal routes exist.
-
-Produce local XYZ route guidance from topology/centerlines, while leaving local validity to Cave V2 spatial queries.
-
-Do not add a general-purpose graph framework unless the current topology cannot be handled cleanly with a small pure helper.
-
-## Stage F — Domain-aware local locomotion
-
-Refactor the smallest part of NPC movement necessary so locomotion can consume a surface traversal provider or cave traversal provider.
-
-Preserve speed, health movement modifiers, movement watchdog, action arrival semantics, final approach behaviour and NPC separation where valid.
-
-Make Y updates domain-correct. Do not redesign animations, combat or decisions.
-
-## Stage G — Context-safe repath and rescue
-
-Audit `steerWithRescue`, `attemptNavRepath`, `attemptLocalEscape`, emergency recovery and `applySeparation` for surface assumptions.
-
-Ensure a cave NPC remains within the current cave during local recovery, cannot be grounded to the surface, cannot bypass a domain transition and cleanly abandons an unreachable action rather than escaping through rock.
-
-Surface behaviour should remain unchanged.
-
-## Stage H — Off-screen compatibility boundary
-
-Ensure the resulting domain route, transition identity and topology route are semantic and presentation-independent so a later aggregated executor can consume the same concepts.
-
-Do not implement a new off-screen movement executor or speculative API solely for that future consumer.
-
-Document the ownership boundary so later remote mining/logistics plans do not recreate cave-route logic.
-
-## Integration with world-018
-
-Update `world-018-cave-aware-rich-finite-resource-deposits` to depend on this plan for NPC cave mining.
-
-`world-018` remains responsible for cave-aware resource target position/context, resource selection and mining mutation/depletion.
-
-This plan remains responsible for:
-
-```text
-NPC movement from current location
-→ target spatial context
-→ physical arrival
-```
-
-Do not move resource-query logic into navigation.
+Do not move navigation to a Worker without profiling evidence.
 
 ## Non-goals
 
 Do not implement:
 
-- abandoned-mine-specific movement;
-- the abandoned mine quest;
-- gold deposits or new mining behaviour;
-- settlement remote mining strategy;
-- generic world-wide navmesh;
-- procedural navmesh generation;
+- mine-specific or quest-specific cave movement;
+- new cave generation/topology recipes;
+- a fourth cave archetype;
+- abandoned-mine quest logic;
+- resource selection/depletion;
+- settlement remote-mining strategy;
+- generic world navmesh;
 - free-flight 3D pathfinding;
 - a new physics engine;
 - full NPC AI redesign;
-- AnimalAgent cave support or cave fauna;
-- full remote/off-screen NPC executor;
-- persistence of path waypoints or transient movement phase;
-- a Worker-based navigation rewrite;
-- automatic activation of every cave in the world.
-
-Animal cave traversal may later reuse the same spatial context, transition and Cave V2 routing concepts without being implemented here.
-
-## Expected primary files
-
-Reconfirm exact ownership after `world-terrain-019`, but current likely integration points are:
-
-```text
-src/ai/NpcAgent.ts
-src/ai/npcAction.ts
-src/navigation/navigation.ts
-src/terrain/slopeConstraint.ts
-src/ai/npcMovementWatchdog.ts
-src/ai/npcColliderRim.ts
-src/world/createCaves.ts
-src/world/caves/caveTopology.ts
-```
-
-Final Cave V2 production modules may replace current transitional `src/world/caveVolume.ts` / `src/world/caves/topologyAdapter.ts` integration points.
-
-A shared target change may additionally touch `src/simulation/types.ts`, but only if current ownership proves it is the correct generic boundary.
-
-For important architectural/public functions and classes introduced by implementation, add concise JSDoc where it improves preflight discovery; use the appropriate `@domain` tag where useful.
-
-## Tests
-
-Add focused unit/integration coverage for at least:
-
-### Spatial contexts
-
-- `surface != cave:A`;
-- `cave:A != cave:B`;
-- overlapping X/Z can resolve differently according to Y;
-- entrance crossing does not flap context at the portal boundary.
-
-### Target semantics
-
-- cave target retains authoritative Y;
-- surface target retains current behaviour;
-- no cave target is re-grounded through surface `sampleHeight`.
-
-### Domain routing
-
-Cover `surface → surface`, `surface → cave`, `cave → surface` and `cave → same cave`. Invalid/disconnected transitions must fail explicitly.
-
-### Cave topology
-
-- deterministic graph route;
-- entrance → chamber;
-- chamber → entrance;
-- branch routing;
-- disconnected topology rejected;
-- centerline XYZ preserved.
-
-### Physical transition
-
-Verify state progression requires crossing the entrance rather than proximity-based context switching.
-
-### Cave local movement
-
-- descent/ascent follows Cave V2 floor;
-- NPC does not pass through cave wall;
-- NPC does not snap to surface at overlapping X/Z;
-- surface/cave colliders do not incorrectly block based only on X/Z.
-
-### Rescue
-
-- cave repath stays in the same cave;
-- local escape stays inside valid interior;
-- emergency surface teleport is not used inside a cave;
-- unreachable cave target eventually follows normal failure/abandon lifecycle.
-
-### Regression
-
-Existing surface NPC behaviour must retain obstacle avoidance, water avoidance, slope limits, interaction final approach, stuck A* fallback and normal action completion.
-
-## Performance
-
-Keep routing request-driven. Do not run cave graph searches every frame.
-
-Cache the current logical route for the active movement commitment and invalidate it only when materially necessary, for example when the committed target changes, selected transition becomes invalid, route becomes blocked, watchdog requests repath or topology/lifecycle rebuild invalidates the world reference.
-
-Cave topology routes should be cheap compared with local A*. Avoid render-mesh analysis and mesh raycasts as the normal navigation data source.
-
-Do not move navigation to a Worker without profiling evidence.
+- new AnimalAgent cave traversal mechanisms;
+- a full remote/off-screen movement executor;
+- persistence of transient route state;
+- cave presentation activation for navigation;
+- Worker navigation rewrite.
 
 ## Verification
 
-Technical verification should include the smallest relevant set:
+Technical verification should use focused tests first, then repo-standard checks for the touched scope:
 
 ```text
-npx tsc --noEmit
+pnpm exec vue-tsc --noEmit
 pnpm run lint:fix
 pnpm run test
 pnpm run build
 ```
 
-Add focused automated tests before relying on the full suite.
-
-Browser verification is performed by the Player.
+Do not run browser verification as AI. Browser verification is performed by the Player.
 
 ### Manual browser checklist
 
-Verify at least:
-
 1. Existing surface NPC movement remains unchanged.
-2. NPC on the surface walks to a Cave V2 entrance and physically enters it.
-3. NPC follows the cave rather than cutting through hillside, ceiling or walls.
-4. NPC reaches a target in a deeper chamber with correct Y.
-5. NPC can return from the chamber to the surface.
-6. Surface and cave targets at similar X/Z are not confused.
-7. NPC does not snap vertically to terrain while underground.
-8. NPC stuck inside a cave does not emergency-teleport onto the surface.
-9. Player/camera distance does not alter the semantic route or world state.
-10. Cave deactivate/reactivate or `WorldBundle` rebuild does not change stable cave identity/topology.
-11. Existing settlement NPC movement, wells, buildings and work-contract movement still behave normally.
+2. NPC walks from surface through a natural cave mouth and reaches an interior target.
+3. NPC returns physically through the mouth to the surface.
+4. Adventure-cave branch/deeper traversal follows the cave rather than cutting through rock.
+5. Dungeon-cave traversal reaches the requested chamber without confusing other branches or pool/content metadata.
+6. NPC follows cave floor on descent/ascent and never snaps vertically to terrain.
+7. Surface and cave targets at overlapping X/Z remain distinct.
+8. Cave stuck recovery never teleports the NPC onto the surface.
+9. Camera/Player distance and cave presentation streaming do not change semantic route validity.
+10. Existing settlement movement/work interactions still behave normally.
 
 ## Completion criteria
 
 The plan is complete when:
 
-- a generic movement target carries authoritative position plus spatial context at the narrowest coherent ownership boundary;
-- surface and Cave V2 spaces are distinguishable even when X/Z overlap;
-- NPCs can physically enter and leave ordinary Cave V2 caves;
-- transition routing uses canonical Cave V2 entrances;
-- cave topology provides coarse routing while Cave V2 spatial representation remains authoritative for local traversal;
-- cave movement uses cave-owned floor/containment/collision rather than surface `sampleHeight`;
-- no full navmesh is required for the current Cave V2 topology;
-- existing surface bounded A*/steering semantics remain intact;
-- stuck recovery cannot move a cave NPC through rock or onto the surface;
-- NPC navigation state is not a second authority for cave membership;
-- semantic navigation does not depend on render activation, Player or camera;
-- the route model remains compatible with later aggregated/off-screen travel without implementing that executor now;
-- no mine-specific movement mechanism exists;
-- `world-018` can consume the resulting generic movement contract for NPC cave mining;
-- automated verification passes;
-- Player receives a concrete browser verification checklist.
+- NPC movement has one coherent target contract carrying authoritative XYZ + `WorldSpatialContext`;
+- current context is resolved through `Caves.spatialContextAt()`;
+- no parallel NPC cave-membership authority exists;
+- NPCs physically traverse production cave mouths in both directions;
+- existing world-owned topology/heightfield traversal is reused rather than duplicated;
+- cave-local movement uses `queryGroundIn()` / `resolveHorizontalIn()` semantics and never surface-projects underground movement;
+- natural, adventure and dungeon use the same movement architecture;
+- branches/deeper dungeon routes respect topology connectivity;
+- rescue/time-skip paths are context-safe;
+- navigation remains independent of cave presentation streaming and Player/camera proximity;
+- existing surface steering/A* behaviour remains intact;
+- future cave-aware work actions can consume the generic movement contract without knowing how cave traversal works;
+- automated verification passes and the Player has a concrete browser checklist.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
