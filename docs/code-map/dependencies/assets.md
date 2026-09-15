@@ -109,6 +109,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/NpcAgent.ts`
+- `ai/npcAppearance.ts`
 - `assets/assetAnchorData.ts`
 - `assets/assetAnchors.ts`
 - `assets/assetUrlUtils.ts`
@@ -272,7 +273,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `assets/sharedSurfaceDiffuseTextures.ts`
-- `player/PlayerController.ts`
+- `assets/ubcOutfitMaterials.ts`
 - `world/clouds.ts`
 - `world/groundFog.ts`
 
@@ -333,3 +334,14 @@ Generated from TypeScript imports.
 - `terrain/buildChunkGeometryMaterial.test.ts`
 - `world/caves/caveHeightfieldMaterial.test.ts`
 - `world/caves/caveHeightfieldMaterial.ts`
+
+## `assets/ubcOutfitMaterials.ts`
+
+**Imports**
+
+- `assets/loadTexture.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `player/PlayerController.ts`

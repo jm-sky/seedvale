@@ -14,7 +14,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
-- `assets/loadTexture.ts`
+- `assets/ubcOutfitMaterials.ts`
 - `audio/createWorldAudio.ts`
 - `audio/playerMoveSounds.ts`
 - `debug/playerGroundTrace.ts`
@@ -534,6 +534,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
+- `ai/npcAppearance.test.ts`
+- `ai/npcAppearance.ts`
 - `app/createApp.ts`
 - `assets/assetIndex.ts`
 - `player/playerVisualPreset.test.ts`

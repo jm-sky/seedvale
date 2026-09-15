@@ -173,25 +173,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 724
-- `CurrentActivity` — type — line 534
-- `CurrentActivityKind` — type — line 527
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 841
-- `NPC_HEIGHT` — const — line 437
-- `NPC_MODEL_URLS` — const — line 501
-- `NPC_SHADOW_DISTANCE` — const — line 451
-- `NpcAgent` — class — line 1072
+- `classifyPendingActivity` — function — line 707
+- `CurrentActivity` — type — line 517
+- `CurrentActivityKind` — type — line 510
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 824
+- `NPC_HEIGHT` — const — line 440
+- `NPC_SHADOW_DISTANCE` — const — line 454
+- `NpcAgent` — class — line 1057
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 974
-- `NpcInspectionSnapshot` — type — line 549
-- `NpcWhy` — type — line 699
-- `projectNpcWhy` — function — line 766
-- `promoteChainKind` — function — line 716
+- `NpcAgentDeps` — type — line 958
+- `NpcInspectionSnapshot` — type — line 532
+- `NpcWhy` — type — line 682
+- `projectNpcWhy` — function — line 749
+- `promoteChainKind` — function — line 699
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -206,6 +205,21 @@ Generated from exported TypeScript symbols.
 - `senseImmediateAnimalThreat` — function — line 54
 - `serializableDefendScore` — function — line 141
 - `ThreateningAnimalCandidate` — type — line 16
+
+## `ai/npcAppearance.ts`
+
+- `modelUrlFor` — function — line 51
+- `NPC_MODEL_URLS` — const — line 21
+- `NPC_UBC_FEMALE_PEASANT_URL` — const — line 11
+- `NPC_UBC_FEMALE_WIZARD_URL` — const — line 12
+- `NPC_UBC_PEASANT_TINT_URL` — const — line 14
+- `NPC_UBC_WIZARD_TINT_URL` — const — line 18
+- `NPC_UBC_WOODCUTTER_TINT_URL` — const — line 16
+- `NpcAppearance` — type — line 44
+  - domain: npc
+- `NpcOutfitId` — type — line 36
+- `resolveNpcAppearance` — function — line 84
+  - domain: npc
 
 ## `ai/npcAssistance.ts`
 

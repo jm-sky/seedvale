@@ -74,25 +74,25 @@ Generated from exported TypeScript symbols.
 
 ## `assets/assetIndex.ts`
 
-- `assetEntryMatchesQuery` — function — line 170
-- `assetIndexById` — function — line 528
-- `AssetIndexEntry` — type — line 74
-- `AssetIndexGroup` — type — line 60
-- `AssetIndexStatus` — type — line 72
-- `AssetPrepare` — type — line 55
-- `basenameFromUrl` — function — line 117
-- `buildAssetIndex` — function — line 337
-- `customUrlEntry` — function — line 192
-- `entryFromUrl` — function — line 542
-- `filterAssetIndex` — function — line 183
-- `findAssetEntry` — function — line 534
-- `formatAssetLabel` — function — line 165
-- `groupFromModelUrl` — function — line 139
-- `kindFromBasename` — function — line 131
-- `makeParkedEntry` — function — line 221
-- `mergeParkedManifest` — function — line 239
-- `packFromUrl` — function — line 123
-- `resolveLoadEntry` — function — line 210
+- `assetEntryMatchesQuery` — function — line 171
+- `assetIndexById` — function — line 547
+- `AssetIndexEntry` — type — line 75
+- `AssetIndexGroup` — type — line 61
+- `AssetIndexStatus` — type — line 73
+- `AssetPrepare` — type — line 56
+- `basenameFromUrl` — function — line 118
+- `buildAssetIndex` — function — line 338
+- `customUrlEntry` — function — line 193
+- `entryFromUrl` — function — line 561
+- `filterAssetIndex` — function — line 184
+- `findAssetEntry` — function — line 553
+- `formatAssetLabel` — function — line 166
+- `groupFromModelUrl` — function — line 140
+- `kindFromBasename` — function — line 132
+- `makeParkedEntry` — function — line 222
+- `mergeParkedManifest` — function — line 240
+- `packFromUrl` — function — line 124
+- `resolveLoadEntry` — function — line 211
 
 ## `assets/assetUrlUtils.ts`
 
@@ -224,3 +224,9 @@ Generated from exported TypeScript symbols.
 - `TERRAIN_DIRT_DIFFUSE_DEFAULT_INFLUENCE` — const — line 21
 - `TERRAIN_DIRT_DIFFUSE_LINEAR_NEUTRAL` — const — line 14
 - `TERRAIN_DIRT_DIFFUSE_URL` — const — line 17
+
+## `assets/ubcOutfitMaterials.ts`
+
+- `applyOutfitTint` — function — line 64
+- `cloneOutfitMaterials` — function — line 17
+- `disposeOutfitMaterialClones` — function — line 34

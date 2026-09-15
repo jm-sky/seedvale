@@ -61,6 +61,7 @@ Generated from TypeScript imports.
 - `ai/npcAccompanyExecution.ts`
 - `ai/npcAction.ts`
 - `ai/npcAnimalThreat.ts`
+- `ai/npcAppearance.ts`
 - `ai/npcAssistance.ts`
 - `ai/npcColliderRim.ts`
 - `ai/npcCombat.ts`
@@ -83,6 +84,7 @@ Generated from TypeScript imports.
 - `ai/voluntaryExpeditionJoin.ts`
 - `ai/weatherPressure.ts`
 - `assets/loadGltf.ts`
+- `assets/ubcOutfitMaterials.ts`
 - `audio/actionSounds.ts`
 - `audio/createWorldAudio.ts`
 - `combat/combatIntent.ts`
@@ -110,6 +112,7 @@ Generated from TypeScript imports.
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
+- `player/playerVisualPreset.ts`
 - `settlement/animalCorpseSanitation.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
@@ -276,6 +279,7 @@ Generated from TypeScript imports.
 - `ai/dialogueTemplates.ts`
 - `ai/nameCultures.test.ts`
 - `ai/nameCultures.ts`
+- `ai/npcAppearance.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcTradeAvailability.ts`
@@ -542,6 +546,27 @@ Generated from TypeScript imports.
 - `ai/npcAnimalThreat.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+
+## `ai/npcAppearance.test.ts`
+
+**Imports**
+
+- `ai/npcAppearance.ts`
+- `player/playerVisualPreset.ts`
+
+## `ai/npcAppearance.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `player/playerVisualPreset.ts`
+- `settlement/professionStaffing.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcAppearance.test.ts`
+- `assets/assetIndex.ts`
 
 ## `ai/npcAssistance.test.ts`
 
