@@ -198,8 +198,9 @@ export function computeChunkItems(
     const poisonousHerbWeight = (biome.swamp * 0.35 + biome.forest * 0.12) * (treeClose ? 1 : 0.75)
     // Natural food (plan 159) — berries favor forest undergrowth/swamp edges
     // like mushroom; nuts favor drier forest floor near trees (a pine bonus
-    // like mushroom's, since both read as "forest floor" finds).
-    const berriesWeight = (biome.forest * 0.4 + biome.swamp * 0.3) * (treeClose ? 1.1 : 0.7)
+    // like mushroom's, since both read as "forest floor" finds). Berries are
+    // intentionally common enough to be a discoverable early-game forage.
+    const berriesWeight = (biome.forest * 0.6 + biome.swamp * 0.45) * (treeClose ? 1.15 : 0.7)
     const nutsWeight = biome.forest * 0.3 * (treeClose ? 1.2 : 0.5) * (pineClose ? 1.1 : 1)
     // Fallen beam-sized deadwood (plan items-player-015) — rarer than a
     // branch and only found right next to a tree, reflecting that it's a
