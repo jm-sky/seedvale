@@ -1,7 +1,7 @@
 # Plan: Bidirectional cave traversal safety
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (focused Vitest on floor-continuity + cave heightfield/query/topology). Browser/manual cave enter/exit is User.
 **Type:** bug
 **Priority:** high · **Effort:** M
 **Depends on:** ~~world-terrain-019~~, ~~world-terrain-020~~

@@ -69,6 +69,56 @@ function gameplayFloorProfile(
   return { maxGrade, maxStep }
 }
 
+function reversed(centerline: readonly CaveTopologyPoint[]): CaveTopologyPoint[] {
+  return centerline.slice().reverse()
+}
+
+/** Entrance interior → chamber along `from` links. Skips the portal lip
+ *  (`seg.from === 'entrance'` samples sit on the carve, not cave ground). */
+function mainRouteFromMouthInterior(topology: {
+  segments: readonly { from: string, to: string, centerline: readonly CaveTopologyPoint[] }[]
+}): CaveTopologyPoint[] {
+  const byFrom = new Map(topology.segments.map((s) => [s.from, s]))
+  const pts: CaveTopologyPoint[] = []
+  let id = 'entrance'
+  const seen = new Set<string>()
+  while (byFrom.has(id) && !seen.has(id)) {
+    seen.add(id)
+    const seg = byFrom.get(id)!
+    if (seg.from === 'entrance') {
+      pts.push(seg.centerline[seg.centerline.length - 1]!)
+    } else if (pts.length === 0) {
+      pts.push(...seg.centerline)
+    } else {
+      pts.push(...seg.centerline.slice(1))
+    }
+    if (seg.to === 'chamber') break
+    id = seg.to
+  }
+  return pts
+}
+
+function expectInteriorSegmentsWalkable(
+  topology: { segments: readonly { id: string, from: string, centerline: readonly CaveTopologyPoint[] }[] },
+  field: CaveHeightfieldRepresentation,
+  surfaceHeightAt: (x: number, z: number) => number,
+  label: string,
+): void {
+  for (const seg of topology.segments) {
+    expect(maxCenterlineFloorGrade(seg.centerline), `${label} ${seg.id} topology`).toBeLessThanOrEqual(
+      MAX_TRAVERSABLE_FLOOR_GRADE + 1e-6,
+    )
+    // Mouth lip is portal/carve, not the tunnel↔chamber ramp this invariant covers.
+    if (seg.from === 'entrance') continue
+    const { maxGrade, maxStep } = gameplayFloorProfile(field, surfaceHeightAt, seg.centerline)
+    expect(maxGrade, `${label} ${seg.id} gameplay grade ${maxGrade.toFixed(3)}`).toBeLessThanOrEqual(FLOOR_GRADE_LIMIT)
+    expect(maxStep, `${label} ${seg.id} step`).toBeLessThan(1.0)
+    const back = gameplayFloorProfile(field, surfaceHeightAt, reversed(seg.centerline))
+    expect(back.maxGrade, `${label} ${seg.id} reverse grade ${back.maxGrade.toFixed(3)}`).toBeLessThanOrEqual(FLOOR_GRADE_LIMIT)
+    expect(back.maxStep, `${label} ${seg.id} reverse step`).toBeLessThan(1.0)
+  }
+}
+
 describe('traversable floor continuity (production topology)', () => {
   it('caps consecutive centerline grade at MAX_TRAVERSABLE_FLOOR_GRADE', () => {
     expect(MAX_TRAVERSABLE_FLOOR_GRADE).toBeLessThan(Math.tan((SLOPE_MAX_WALKABLE_DEG * Math.PI) / 180))
@@ -130,18 +180,11 @@ describe('seed 1136726869 chamber ramp is walkable both ways', () => {
     if (!topology) throw new Error('topology rejected')
     const walkSurfaceAt = (x: number, z: number): number => sampleHeight(x, z) - mouthCarveDepth(x, z, topology.entrance)
     const field = buildCaveHeightfieldRepresentation(topology, walkSurfaceAt).heightfield
-    return { topology, field, sampleHeight }
+    return { topology, field, walkSurfaceAt }
   }
 
-  // KNOWN REPRESENTATION ISSUE (world-terrain-019, see
-  // `docs/plans/LOOSE-ENDS.md` "Heightfield chamber-lobe floor cliff"): the
-  // topology ramp is fine, but the heightfield concentrates the
-  // widening→chamber descent at the chamber lobe boundary (~2.5 m over
-  // ~1.3 m on this seed). The player still gets up it (grounded snap-up is
-  // unbounded), so it is a shape/quality issue, not a traversal blocker.
-  // Pinned with `it.fails` so the fix flips these back to `it` deliberately.
-  it.fails('spreads widening→chamber floor drop instead of a single cliff (heightfield floor)', () => {
-    const { topology, field, sampleHeight } = build()
+  it('spreads widening→chamber floor drop instead of a single cliff (heightfield floor)', () => {
+    const { topology, field, walkSurfaceAt } = build()
     const chamber = topology.nodes.find((n) => n.id === 'chamber')!
     const bend = topology.nodes.find((n) => n.id === 'widening-bend')!
     expect(bend.position.y - chamber.position.y).toBeGreaterThan(2)
@@ -149,22 +192,50 @@ describe('seed 1136726869 chamber ramp is walkable both ways', () => {
     expect(seg.centerline.length).toBeGreaterThan(2)
     expect(maxCenterlineFloorGrade(seg.centerline)).toBeLessThanOrEqual(MAX_TRAVERSABLE_FLOOR_GRADE + 1e-6)
 
-    const { maxGrade, maxStep } = gameplayFloorProfile(field, sampleHeight, seg.centerline)
+    const { maxGrade, maxStep } = gameplayFloorProfile(field, walkSurfaceAt, seg.centerline)
     expect(maxGrade, `gameplay floor grade ${maxGrade.toFixed(3)}`).toBeLessThanOrEqual(FLOOR_GRADE_LIMIT)
     expect(maxStep).toBeLessThan(1.0)
   })
 
-  it.fails('keeps every main-route and branch segment under walk-max gameplay grade (heightfield floor)', () => {
-    const { topology, field, sampleHeight } = build()
-    for (const seg of topology.segments) {
-      expect(maxCenterlineFloorGrade(seg.centerline), `${seg.id} topology`).toBeLessThanOrEqual(
-        MAX_TRAVERSABLE_FLOOR_GRADE + 1e-6,
-      )
-      // Mouth lip is portal/carve, not the tunnel↔chamber ramp this invariant covers.
-      if (seg.from === 'entrance') continue
-      const { maxGrade, maxStep } = gameplayFloorProfile(field, sampleHeight, seg.centerline)
-      expect(maxGrade, `${seg.id} gameplay grade ${maxGrade.toFixed(3)}`).toBeLessThanOrEqual(FLOOR_GRADE_LIMIT)
-      expect(maxStep, `${seg.id} step`).toBeLessThan(1.0)
+  it('keeps every main-route and branch segment under walk-max gameplay grade (heightfield floor)', () => {
+    const { topology, field, walkSurfaceAt } = build()
+    expectInteriorSegmentsWalkable(topology, field, walkSurfaceAt, 'seed 1136726869')
+  })
+
+  it('walks interior → entrance on the same heightfield query path', () => {
+    const { topology, field, walkSurfaceAt } = build()
+    const chamber = topology.segments.find((s) => s.id === 'seg-chamber')!
+    const backChamber = gameplayFloorProfile(field, walkSurfaceAt, reversed(chamber.centerline))
+    expect(backChamber.maxGrade, `reverse chamber grade ${backChamber.maxGrade.toFixed(3)}`).toBeLessThanOrEqual(FLOOR_GRADE_LIMIT)
+    expect(backChamber.maxStep).toBeLessThan(1.0)
+
+    const route = mainRouteFromMouthInterior(topology)
+    expect(route.length).toBeGreaterThan(4)
+    // Query must stay on cave ground from the chamber back to the mouth interior.
+    gameplayFloorProfile(field, walkSurfaceAt, reversed(route))
+  })
+})
+
+describe('heightfield floor grade on representative production seeds', () => {
+  const site: LargeCaveSite = { x: 200, z: -140, yaw: 0.6, length: 12, variant: 0.4 }
+  const intoDx = -Math.sin(site.yaw)
+  const intoDz = -Math.cos(site.yaw)
+  const hill = (x: number, z: number) => 130 + 0.5 * ((x - site.x) * intoDx + (z - site.z) * intoDz)
+
+  it('keeps interior segments walkable both ways', () => {
+    for (const seed of [42, 99, 7, 1]) {
+      const topology = buildProductionCaveTopology({
+        seed,
+        site,
+        sampleHeight: hill,
+        sampleBaseHeight: hill,
+      })
+      expect(topology, `seed ${seed}`).not.toBeNull()
+      const walkSurfaceAt = (x: number, z: number): number =>
+        hill(x, z) - mouthCarveDepth(x, z, topology!.entrance)
+      const field = buildCaveHeightfieldRepresentation(topology!, walkSurfaceAt).heightfield
+      expectInteriorSegmentsWalkable(topology!, field, walkSurfaceAt, `seed ${seed}`)
+      gameplayFloorProfile(field, walkSurfaceAt, reversed(mainRouteFromMouthInterior(topology!)))
     }
   })
 })

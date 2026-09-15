@@ -240,12 +240,18 @@ type SegmentInfluence = {
 }
 
 /** One deterministic chamber lobe: an ellipse in XZ with its own floor
- *  offset and clearance. */
+ *  offset and clearance. Floor axis follows incident centerlines so a
+ *  widening→chamber drop is spread along the topology ramp instead of
+ *  the lobe rim band. */
 type LobeInfluence = {
   kind: 'lobe'
   cx: number
   cz: number
   cy: number
+  /** Parent node floor; `cy - nodeY` is the local lobe offset `dy`. */
+  nodeY: number
+  /** Resampled incident-segment stations; nearest Y drives the floor. */
+  guideRuns: readonly (readonly HeightfieldStation[])[]
   /** Semi-axes of the *usable* ellipse; the rim band is added outside. */
   ax: number
   az: number
@@ -381,20 +387,44 @@ export function buildEntranceInfluence(
   return runInfluence([a, b])!
 }
 
+function incidentGuideRuns(
+  topology: CaveTopology,
+  nodeId: string,
+  spacing: number,
+): readonly (readonly HeightfieldStation[])[] {
+  const runs: HeightfieldStation[][] = []
+  for (const seg of topology.segments) {
+    if (seg.from !== nodeId && seg.to !== nodeId) continue
+    const stations = resampleSegmentStations(topology, seg, spacing)
+    if (stations.length > 0) runs.push(stations)
+  }
+  return runs
+}
+
 /**
  * Deterministic chamber lobes. A chamber is the smooth union of 3–5
  * overlapping ellipses rather than one disc, which changes the *silhouette*
  * (bays, pinches, an asymmetric long axis) instead of merely wobbling a
  * circle's boundary.
  *
+ * Floor axis follows incident topology centerlines (plus local `dy`) so
+ * gameplay grade matches the planned ramp instead of concentrating at the
+ * lobe rim.
+ *
  * @domain world-terrain
  */
-export function buildChamberLobes(topology: CaveTopology): LobeInfluence[] {
+export function buildChamberLobes(
+  topology: CaveTopology,
+  spacing: number = DEFAULT_HEIGHTFIELD_CONFIG.centerlineSpacing,
+): LobeInfluence[] {
   const rng = createCaveRandom(topology.caveId, CAVE_RNG_SALT.lobes)
   const lobes: LobeInfluence[] = []
+  const guidesByNode = new Map<string, readonly (readonly HeightfieldStation[])[]>()
   for (const node of topology.nodes) {
     if (node.kind !== 'chamber' && node.kind !== 'widening') continue
     const rc = node.targetWidth / 2
+    const guideRuns = guidesByNode.get(node.id) ?? incidentGuideRuns(topology, node.id, spacing)
+    if (!guidesByNode.has(node.id)) guidesByNode.set(node.id, guideRuns)
     const count = 3 + Math.floor(rng() * 3)
     for (let j = 0; j < count; j++) {
       const theta = (j / count) * Math.PI * 2 + (rng() - 0.5) * 0.9
@@ -421,6 +451,8 @@ export function buildChamberLobes(topology: CaveTopology): LobeInfluence[] {
         cx,
         cz,
         cy: node.position.y + dy,
+        nodeY: node.position.y,
+        guideRuns,
         ax,
         az,
         cos: Math.cos(phi),
@@ -450,6 +482,67 @@ function distPointToSegmentXZ(
   if (lenSq <= 1e-12) return { dist: Math.hypot(x - ax, z - az), t: 0 }
   const t = Math.max(0, Math.min(1, ((x - ax) * abx + (z - az) * abz) / lenSq))
   return { dist: Math.hypot(x - (ax + abx * t), z - (az + abz * t)), t }
+}
+
+type NearestStationSample = {
+  dist: number
+  axisY: number
+  coreRadius: number
+  height: number
+}
+
+/** Nearest interpolated station on a resampled centerline, in XZ. */
+function nearestStationSample(
+  stations: readonly HeightfieldStation[],
+  x: number,
+  z: number,
+): NearestStationSample | null {
+  if (stations.length === 0) return null
+  if (stations.length === 1) {
+    const only = stations[0]!
+    return {
+      dist: Math.hypot(x - only.x, z - only.z),
+      axisY: only.y,
+      coreRadius: only.coreRadius,
+      height: only.height,
+    }
+  }
+  let bestDist = Infinity
+  let bestI = 0
+  let bestT = 0
+  for (let i = 0; i + 1 < stations.length; i++) {
+    const a = stations[i]!
+    const b = stations[i + 1]!
+    const hit = distPointToSegmentXZ(x, z, a.x, a.z, b.x, b.z)
+    if (hit.dist < bestDist) {
+      bestDist = hit.dist
+      bestI = i
+      bestT = hit.t
+    }
+  }
+  const a = stations[bestI]!
+  const b = stations[bestI + 1]!
+  return {
+    dist: bestDist,
+    axisY: a.y + (b.y - a.y) * bestT,
+    coreRadius: a.coreRadius + (b.coreRadius - a.coreRadius) * bestT,
+    height: a.height + (b.height - a.height) * bestT,
+  }
+}
+
+function nearestGuideAxisY(
+  runs: readonly (readonly HeightfieldStation[])[],
+  x: number,
+  z: number,
+  fallbackY: number,
+): number {
+  let best: NearestStationSample | null = null
+  for (const run of runs) {
+    const hit = nearestStationSample(run, x, z)
+    if (!hit) continue
+    if (!best || hit.dist < best.dist) best = hit
+  }
+  return best ? best.axisY : fallbackY
 }
 
 /**
@@ -508,34 +601,10 @@ function influenceCrossSection(
 ): CrossSection | null {
   if (x < inf.minX || x > inf.maxX || z < inf.minZ || z > inf.maxZ) return null
   if (inf.kind === 'run') {
-    const st = inf.stations
-    if (st.length === 1) {
-      const only = st[0]!
-      const radius = Math.max(R_MIN, Math.max(0.7 * only.coreRadius, only.coreRadius + macroOffset))
-      return crossSectionAt(Math.hypot(x - only.x, z - only.z), radius, only.y, only.height)
-    }
-    // Nearest point over the whole polyline, then interpolate the profile
-    // there — one continuous influence, no per-span union.
-    let bestDist = Infinity
-    let bestI = 0
-    let bestT = 0
-    for (let i = 0; i + 1 < st.length; i++) {
-      const a = st[i]!
-      const b = st[i + 1]!
-      const hit = distPointToSegmentXZ(x, z, a.x, a.z, b.x, b.z)
-      if (hit.dist < bestDist) {
-        bestDist = hit.dist
-        bestI = i
-        bestT = hit.t
-      }
-    }
-    const a = st[bestI]!
-    const b = st[bestI + 1]!
-    const coreRadius = a.coreRadius + (b.coreRadius - a.coreRadius) * bestT
-    const axisY = a.y + (b.y - a.y) * bestT
-    const height = a.height + (b.height - a.height) * bestT
-    const radius = Math.max(R_MIN, Math.max(0.7 * coreRadius, coreRadius + macroOffset))
-    return crossSectionAt(bestDist, radius, axisY, height)
+    const hit = nearestStationSample(inf.stations, x, z)
+    if (!hit) return null
+    const radius = Math.max(R_MIN, Math.max(0.7 * hit.coreRadius, hit.coreRadius + macroOffset))
+    return crossSectionAt(hit.dist, radius, hit.axisY, hit.height)
   }
   const px = x - inf.cx
   const pz = z - inf.cz
@@ -546,7 +615,9 @@ function influenceCrossSection(
   // Metric lateral distance for an ellipse, same normalise-then-rescale
   // convention `ellipsoidSDF` uses in the production SDF field.
   const coreRadius = Math.max(R_MIN, Math.max(0.7 * rEff, rEff + macroOffset))
-  return crossSectionAt(uNorm * rEff, coreRadius, inf.cy, inf.height)
+  const guideY = nearestGuideAxisY(inf.guideRuns, x, z, inf.cy)
+  const axisY = guideY + (inf.cy - inf.nodeY)
+  return crossSectionAt(uNorm * rEff, coreRadius, axisY, inf.height)
 }
 
 // ── Features ────────────────────────────────────────────────────────────────
@@ -680,7 +751,7 @@ export function buildCaveHeightfieldRepresentation(
     const run = runInfluence(resampleSegmentStations(topology, seg, config.centerlineSpacing))
     if (run) influences.push(run)
   }
-  for (const lobe of buildChamberLobes(topology)) influences.push(lobe)
+  for (const lobe of buildChamberLobes(topology, config.centerlineSpacing)) influences.push(lobe)
   const features = featureFootprints(topology.features)
 
   const macroNoise = createValueNoise2D(seed ^ CAVE_RNG_SALT.macro, config.macro.cellSize)

@@ -78,7 +78,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-016-legacy-ruby-trade-valuation.md`                            | 🟡 | XS     | ~~settlements-006~~                                                                                                                                                             | -                                       |
 | 💡 `settlements-017-deterministically-unique-settlement-names.md`              | 🟡 | S      | -                                                                                                                                                                               | -                                       |
 | 💡 `tools-014-player-owned-horse-debug-controls.md`                            | 🟡 | S      | ~~fauna-020~~                                                                                                                                                                   | -                                       |
-| 💡 `world-terrain-034-bidirectional-cave-traversal-safety.md`                  | 🔴 | M      | ~~world-terrain-019~~, ~~world-terrain-020~~                                                                                                                                    | -                                       |
 
 ---
 
@@ -90,6 +89,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `world-terrain-034-bidirectional-cave-traversal-safety.md` | Wejść do kilku jaskiń i wyjść tą samą drogą; szczególnie komora z dużą różnicą wysokości; brak cliffów/stepów blokujących ruch w obie strony |
 | `ui-input-020-world-interaction-targeting-and-acquisition-feedback-regressions.md` | Zebrać stone/branch ręcznie i przez kopanie/drzewo — toast `+N · Masz: total`; zabić zwierzęta pod różnymi kątami i oprawić bez walki o cel; przy studni z NPC Tab aż studnia; `[V]` inspection studni; niedokończona studnia bez `[R] wymagania` |
 | `fauna-030-player-owned-animal-stay-safety-and-recovery.md` | Kupić konia, Stay w home settlement, odejść daleko i wrócić — koń w okolicy anchora; save/load i ponowny powrót do osady; spragniony koń pije z naturalnej wody/trough lokalnie i wraca; nie znika przy streamingu osady; śmierć nie odtwarza duplikatu merchant-horse |
 | `quests-progression-035-story-item-inventory-and-cave-location-clarity.md` | Mapa skarbu: `Odczytaj` na liście ekwipunku; filtry `Fabularne`/`Inne`; quest jaskini natural/adventure/dungeon podaje archetyp + kierunek (i nazwę tylko przy guard/hunter/miner/trader); `skalna grota` dla authored `rockDen`; kierunek zgadza się z realnym położeniem |
