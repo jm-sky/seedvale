@@ -235,6 +235,27 @@ Generated from TypeScript imports.
 - `items/trade.ts`
 - `player/characterPresentation.test.ts`
 
+## `items/authoredWorldPickups.test.ts`
+
+**Imports**
+
+- `items/authoredWorldPickups.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/treasureSites.ts`
+
+## `items/authoredWorldPickups.ts`
+
+**Imports**
+
+- `items/createItemSpawners.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/treasureSites.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `items/authoredWorldPickups.test.ts`
+
 ## `items/books.test.ts`
 
 **Imports**
@@ -461,6 +482,7 @@ Generated from TypeScript imports.
 
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `items/authoredWorldPickups.ts`
 
 ## `items/createPlacedTents.test.ts`
 

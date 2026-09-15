@@ -2501,6 +2501,8 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `items/authoredWorldPickups.test.ts`
+- `items/authoredWorldPickups.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostTreasureExpedition.ts`
@@ -3813,6 +3815,8 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/worldBundle.ts`
+- `items/authoredWorldPickups.test.ts`
+- `items/authoredWorldPickups.ts`
 - `items/treasureGameplay.test.ts`
 - `items/treasureGameplay.ts`
 - `world/treasureSites.test.ts`

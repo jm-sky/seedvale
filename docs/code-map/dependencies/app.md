@@ -1569,6 +1569,7 @@ Generated from TypeScript imports.
 - `fauna/dungeonResidents.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/persistentOccupants.ts`
+- `items/authoredWorldPickups.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/createPlacedTents.ts`

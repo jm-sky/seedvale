@@ -15,6 +15,11 @@ Generated from exported TypeScript symbols.
 - `resolveEffectiveArmorPiece` — function — line 81
   - domain: items-player
 
+## `items/authoredWorldPickups.ts`
+
+- `buildAuthoredOneTimePickups` — function — line 12
+  - domain: quests-progression
+
 ## `items/books.ts`
 
 - `BookReadOutcome` — type — line 15
@@ -110,9 +115,10 @@ Generated from exported TypeScript symbols.
 
 ## `items/createItemSpawners.ts`
 
-- `createItemSpawners` — function — line 133
-- `ItemSpawners` — type — line 12
-- `OneTimeWorldItemPickup` — type — line 118
+- `CollectedSpawnerItem` — type — line 12
+- `createItemSpawners` — function — line 141
+- `ItemSpawners` — type — line 20
+- `OneTimeWorldItemPickup` — type — line 126
 
 ## `items/createPlacedTents.ts`
 
@@ -407,7 +413,7 @@ Generated from exported TypeScript symbols.
 ## `items/ItemSpawner.ts`
 
 - `ItemSpawnPoint` — type — line 3
-- `updateItemSpawnPoints` — function — line 17
+- `updateItemSpawnPoints` — function — line 19
 
 ## `items/itemUseView.ts`
 

@@ -279,8 +279,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 678
-- `GameLoop` — type — line 637
+- `createGameLoop` — function — line 680
+- `GameLoop` — type — line 639
 - `GameLoopDeps` — type — line 309
 
 ## `app/graphicsSettings.ts`
@@ -378,7 +378,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 143
+- `createSaveState` — function — line 145
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
@@ -403,13 +403,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 949
+- `BuiltWorldSystems` — type — line 935
 - `caveTreasureContainerSpecs` — function — line 225
-- `createWorldBundle` — function — line 1730
-- `disposeWorldBundle` — function — line 2199
+- `createWorldBundle` — function — line 1716
+- `disposeWorldBundle` — function — line 2189
 - `HOME_RADIUS` — const — line 200
 - `homeChunks` — function — line 251
-- `rebuildWorldBundle` — function — line 1962
+- `rebuildWorldBundle` — function — line 1950
 - `WorldBundle` — type — line 274
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
