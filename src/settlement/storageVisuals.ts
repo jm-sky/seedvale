@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 import type { Inventory } from '../items/Inventory'
 import { disposeObject3D } from '../assets/loadGltf'
-import { FOOD_ITEM_KINDS } from '../items/foodItems'
+import { FOOD_ITEM_KINDS, foodItemCount } from '../items/foodItems'
 import { createItemMesh, type ItemKind } from '../items/items'
-import { placeOnGround, type TerrainSampler } from './propUtils'
+import { placeOnGround, rotateOffsetY, type TerrainSampler } from './propUtils'
 
 /**
  * Shared physical-storage visual mechanism (plan settlements-npcs-010) — the
@@ -133,104 +133,213 @@ export function createWoodPileVisual(mainPile: THREE.Object3D, extraPiles: reado
   }
 }
 
-/** At most this many distinct food kinds are represented simultaneously at
- *  one storage location — bounded aggregation (plan §6), never one mesh per
- *  stored item. */
-export const FOOD_STORAGE_MAX_SLOTS = 4
+/** At most this many distinct food kinds are represented at one storage location. */
+export const FOOD_STORAGE_MAX_KINDS = 4
 
-const FOOD_UNIT_BANDS: readonly { max: number, scale: number }[] = [
-  { max: 2, scale: 0.7 },
-  { max: 5, scale: 0.95 },
-  { max: Infinity, scale: 1.2 },
-]
+/** Global visible-mesh cap per storage location (not per kind). */
+export const FOOD_STORAGE_MAX_REPRESENTATIVES = 8
 
-function foodUnitScale(count: number): number {
-  return (FOOD_UNIT_BANDS.find((b) => count <= b.max) ?? FOOD_UNIT_BANDS[FOOD_UNIT_BANDS.length - 1]!).scale
+export type FoodRepresentativeAllocation = { kind: ItemKind, count: number }
+
+/**
+ * Maps total stored food units to a bounded visible representative count.
+ * Pure — no Three.js (plan settlements-npcs-025 Stage 2).
+ *
+ * @domain settlements-npcs
+ */
+export function foodRepresentativeCount(totalQuantity: number): number {
+  if (totalQuantity <= 0) return 0
+  if (totalQuantity === 1) return 1
+  if (totalQuantity === 2) return 2
+  if (totalQuantity <= 4) return 3
+  if (totalQuantity <= 7) return 4
+  if (totalQuantity <= 12) return 5
+  if (totalQuantity <= 20) return 6
+  return FOOD_STORAGE_MAX_REPRESENTATIVES
 }
 
-export type FoodStorageSlot = { kind: ItemKind, count: number, scale: number }
+/**
+ * Deterministic visible-representative counts per food kind from inventory
+ * contents. `count` is visible mesh count, not stored quantity.
+ *
+ * @domain settlements-npcs
+ */
+export function allocateFoodRepresentatives(items: Inventory): FoodRepresentativeAllocation[] {
+  let budget = foodRepresentativeCount(foodItemCount(items))
+  if (budget <= 0) return []
 
-/** Selects up to `FOOD_STORAGE_MAX_SLOTS` food kinds to visually represent,
- *  in `FOOD_ITEM_KINDS`' deterministic catalog order (plan settlements-npcs-008)
- *  — the same order every other food-kind selection in the codebase already
- *  uses, so a repeated sync of the same contents always picks the same
- *  kinds (plan §10). Reads `items` only; never mutates it. */
-export function selectFoodStorageSlots(items: Inventory): FoodStorageSlot[] {
-  const slots: FoodStorageSlot[] = []
+  const selectedKinds: ItemKind[] = []
   for (const kind of FOOD_ITEM_KINDS) {
-    if (slots.length >= FOOD_STORAGE_MAX_SLOTS) break
-    const count = items.count(kind)
-    if (count <= 0) continue
-    slots.push({ kind, count, scale: foodUnitScale(count) })
+    if (selectedKinds.length >= FOOD_STORAGE_MAX_KINDS) break
+    if (items.count(kind) > 0) selectedKinds.push(kind)
   }
-  return slots
+  if (selectedKinds.length === 0) return []
+
+  const visibleByKind = new Map<ItemKind, number>()
+  for (const kind of selectedKinds) visibleByKind.set(kind, 0)
+
+  for (const kind of selectedKinds) {
+    if (budget <= 0) break
+    visibleByKind.set(kind, 1)
+    budget -= 1
+  }
+
+  while (budget > 0) {
+    let allocatedThisPass = false
+    for (const kind of selectedKinds) {
+      if (budget <= 0) break
+      const current = visibleByKind.get(kind) ?? 0
+      const stored = items.count(kind)
+      if (current < stored) {
+        visibleByKind.set(kind, current + 1)
+        budget -= 1
+        allocatedThisPass = true
+      }
+    }
+    if (!allocatedThisPass) break
+  }
+
+  const result: FoodRepresentativeAllocation[] = []
+  for (const kind of FOOD_ITEM_KINDS) {
+    const count = visibleByKind.get(kind) ?? 0
+    if (count > 0) result.push({ kind, count })
+  }
+  return result
 }
 
-/** Deterministic slot offsets around a food-storage anchor (household crate
- *  / settlement crate) — fixed, not seeded, since there are always exactly
- *  `FOOD_STORAGE_MAX_SLOTS` of them. */
-const FOOD_SLOT_OFFSETS: readonly { dx: number, dz: number }[] = [
-  { dx: 0.4, dz: 0.4 },
-  { dx: -0.4, dz: 0.4 },
-  { dx: 0.4, dz: -0.4 },
-  { dx: -0.4, dz: -0.4 },
+/** Stable slot order: expand allocation in catalog order for local slot indices. */
+export function flattenFoodRepresentatives(allocation: readonly FoodRepresentativeAllocation[]): ItemKind[] {
+  const flat: ItemKind[] = []
+  for (const { kind, count } of allocation) {
+    for (let i = 0; i < count; i++) flat.push(kind)
+  }
+  return flat
+}
+
+export function foodStorageAllocationSignature(allocation: readonly FoodRepresentativeAllocation[]): string {
+  return allocation.map((e) => `${e.kind}:${e.count}`).join('|')
+}
+
+export type FoodStorageLocalSlot = {
+  x: number
+  y: number
+  z: number
+  yaw: number
+}
+
+/**
+ * Eight deterministic local slots (one per possible representative). Stage 3B may
+ * replace transforms only — allocation and pooling stay unchanged.
+ *
+ * @domain settlements-npcs
+ */
+export const FOOD_STORAGE_LOCAL_SLOTS: readonly FoodStorageLocalSlot[] = [
+  { x: 0.35, y: 0.05, z: 0.35, yaw: 0.1 },
+  { x: -0.35, y: 0.05, z: 0.35, yaw: -0.15 },
+  { x: 0.35, y: 0.05, z: -0.35, yaw: 0.25 },
+  { x: -0.35, y: 0.05, z: -0.35, yaw: -0.05 },
+  { x: 0.2, y: 0.18, z: 0.2, yaw: 0.4 },
+  { x: -0.2, y: 0.18, z: 0.2, yaw: -0.3 },
+  { x: 0.2, y: 0.18, z: -0.2, yaw: 0.55 },
+  { x: -0.2, y: 0.18, z: -0.2, yaw: -0.45 },
 ]
+
+function applyFoodRepresentativeTransform(
+  mesh: THREE.Object3D,
+  slot: FoodStorageLocalSlot,
+  center: { x: number, z: number },
+  sampleHeight: TerrainSampler,
+): void {
+  const offset = rotateOffsetY(slot.x, slot.z, 0)
+  const worldX = center.x + offset.x
+  const worldZ = center.z + offset.z
+  mesh.rotation.set(0, slot.yaw, 0)
+  mesh.quaternion.setFromEuler(mesh.rotation)
+  placeOnGround(mesh, worldX, worldZ, sampleHeight, slot.y)
+}
 
 export type FoodStorageVisual = {
-  /** Re-derives the visible food-kind meshes from `items`' current contents.
-   *  A cheap no-op when the selected kinds/scale haven't changed since the
-   *  last call (plan §8). Swaps (dispose + recreate), never mutates, the
-   *  underlying `Household`/`SettlementEconomy` inventory. */
+  /** Re-derives visible representatives from `items`. No-op when allocation
+   *  unchanged. Toggles visibility and transforms; does not dispose meshes on
+   *  ordinary quantity changes. Never mutates inventory. */
   sync: (items: Inventory) => void
+  /** Disposes every materialized representative, including hidden pool members. */
   dispose: () => void
 }
 
 /**
- * One food-storage visual location (a household's pantry crate, or a
- * settlement's storage crate) — reuses `items/items.ts`'s existing
- * `createItemMesh(kind)` pickup-mesh factory for every food `ItemKind`
- * (plan §5/§6), so a newly food-classified item works without any renderer
- * change and a missing GLB asset only loses its decorative mesh (the
- * existing procedural fallback in `createItemMesh`), never the stored item.
+ * One food-storage visual location (household pantry or settlement crate).
+ * Owns a lazy per-kind mesh pool (max eight total). `createItemMesh(kind)` is
+ * the only mesh factory. Do not share pool meshes across controllers.
+ *
+ * @domain settlements-npcs
  */
 export function createFoodStorageVisual(
   group: THREE.Group,
   center: { x: number, z: number },
   sampleHeight: TerrainSampler,
 ): FoodStorageVisual {
-  const slotMeshes: (THREE.Object3D | null)[] = new Array(FOOD_STORAGE_MAX_SLOTS).fill(null)
+  const pools = new Map<ItemKind, THREE.Object3D[]>()
   let lastSignature = ''
+
+  const getPool = (kind: ItemKind): THREE.Object3D[] => {
+    let pool = pools.get(kind)
+    if (!pool) {
+      pool = []
+      pools.set(kind, pool)
+    }
+    return pool
+  }
+
+  const materialize = (kind: ItemKind): THREE.Object3D => {
+    const mesh = createItemMesh(kind)
+    group.add(mesh)
+    getPool(kind).push(mesh)
+    return mesh
+  }
+
   return {
     sync(items) {
-      const slots = selectFoodStorageSlots(items)
-      const signature = slots.map((s) => `${s.kind}:${s.scale}`).join('|')
+      const allocation = allocateFoodRepresentatives(items)
+      const signature = foodStorageAllocationSignature(allocation)
       if (signature === lastSignature) return
       lastSignature = signature
-      for (let i = 0; i < FOOD_STORAGE_MAX_SLOTS; i++) {
-        const existing = slotMeshes[i]
-        if (existing) {
-          existing.removeFromParent()
-          disposeObject3D(existing)
-          slotMeshes[i] = null
+
+      const visibleKinds = flattenFoodRepresentatives(allocation)
+      const usageByKind = new Map<ItemKind, number>()
+      const activeMeshes = new Set<THREE.Object3D>()
+
+      for (let i = 0; i < visibleKinds.length; i++) {
+        const kind = visibleKinds[i]!
+        const usageIndex = usageByKind.get(kind) ?? 0
+        usageByKind.set(kind, usageIndex + 1)
+
+        const pool = getPool(kind)
+        let mesh = pool[usageIndex]
+        if (!mesh) {
+          mesh = materialize(kind)
         }
-        const slot = slots[i]
-        if (!slot) continue
-        const mesh = createItemMesh(slot.kind)
-        mesh.scale.multiplyScalar(slot.scale)
-        const offset = FOOD_SLOT_OFFSETS[i]!
-        placeOnGround(mesh, center.x + offset.dx, center.z + offset.dz, sampleHeight)
-        group.add(mesh)
-        slotMeshes[i] = mesh
+
+        applyFoodRepresentativeTransform(mesh, FOOD_STORAGE_LOCAL_SLOTS[i]!, center, sampleHeight)
+        mesh.visible = true
+        activeMeshes.add(mesh)
+      }
+
+      for (const pool of pools.values()) {
+        for (const mesh of pool) {
+          if (!activeMeshes.has(mesh)) mesh.visible = false
+        }
       }
     },
     dispose() {
-      for (let i = 0; i < slotMeshes.length; i++) {
-        const mesh = slotMeshes[i]
-        if (!mesh) continue
-        mesh.removeFromParent()
-        disposeObject3D(mesh)
-        slotMeshes[i] = null
+      for (const pool of pools.values()) {
+        for (const mesh of pool) {
+          mesh.removeFromParent()
+          disposeObject3D(mesh)
+        }
       }
+      pools.clear()
+      lastSignature = ''
     },
   }
 }
