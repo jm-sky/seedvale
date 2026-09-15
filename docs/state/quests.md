@@ -1,25 +1,23 @@
 # Quests / progression — current state
 
 **Last verified:** 2026-09-15  
-**Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic quest definitions, objectives, dialogue actions, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
+**Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic definitions, offer selection, active giver capacity, objectives, dialogue actions, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
 
-Architecture recon (gaps, overlapping content, recommended stages, what not to build): [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Follow-up plans: `quests-progression-029` … `031`. Nonlinear stage objectives/transitions: plan `quests-progression-032`.
+Architecture recon: [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Relevant follow-up work includes `quests-progression-029` … `034`.
 
 This is a **current-state document**, not a roadmap or implementation history. When this file and code disagree, **the code wins**. Planned quest work remains in `docs/plans/`; design direction remains in `docs/vision/quests.md`.
 
 ## Read this before quest work
 
-For most quest plans, start here instead of reconstructing the whole system from prior implementation notes.
-
 Primary code:
 
-- `src/quests/quests.ts` — quest contracts, validation, authored quest definitions and contextual quest builders/binders.
-- `src/quests/QuestManager.ts` — authoritative quest progress, lifecycle, objective evaluation, dialogue overrides, rewards/consequences and quest-owned player↔NPC relation values.
+- `src/quests/quests.ts` — quest contracts, validation, authored definitions, offer policy/ranking and contextual builders/binders.
+- `src/quests/QuestManager.ts` — authoritative quest progress, lifecycle, offer admission, active giver capacity, objective evaluation, dialogue overrides, rewards/consequences and quest-owned player↔NPC relation values.
 - `src/quests/materializeAuthoredQuests.ts` — authored NPC display names → stable `NpcId` binding.
 - `src/quests/opportunities/` — world-driven settlement opportunities and RPG quest matrices.
-- `src/quests/settlementRatInfestation.ts` — pure completion/reminder helpers for the rat-infestation quest.
-- `src/app/createApp.ts` — composition root: gathers/materializes quest definitions and injects world/system lookups into `QuestManager`.
-- `docs/code-map/symbols/quests.md` — generated symbol-level navigation; useful for finding exact call sites, but not a replacement for this state document.
+- `src/quests/settlementRatInfestation.ts` — pure completion/reminder helpers for rat infestation.
+- `src/app/createApp.ts` — composition root: gathers/materializes definitions and injects world/system lookups into `QuestManager`.
+- `docs/code-map/symbols/quests.md` — generated symbol-level navigation.
 
 Tests are concentrated in `src/quests/*.test.ts` and `src/quests/opportunities/*.test.ts`, especially `QuestManager.test.ts`.
 
@@ -29,76 +27,59 @@ Tests are concentrated in `src/quests/*.test.ts` and `src/quests/opportunities/*
 
 - `QuestProgressEntry` state for every materialized `QuestDef`,
 - current stage index and terminal outcome id,
-- quest-owned player↔NPC relation values used by quest availability/consequences,
-- temporary runtime binding from an active animal-target objective to one concrete animal id,
+- offer exposure / decline suppression metadata,
+- quest-owned player↔NPC relation values used by availability/consequences,
+- temporary runtime binding from active animal-target objectives to concrete animal ids,
 - quest lifecycle transitions and exact-once terminal resolution.
 
 It does **not** own the world problems or entities referenced by quests.
 
-Fauna, settlements, world locations, inventory, reputation/renown, spawn-point destruction, rat infestation, location discovery, world containers and animal ownership stay authoritative in their existing systems. `QuestManager` reads/mutates those through injected callbacks/lookups rather than becoming a second simulation owner.
+Fauna, settlements, world locations, inventory, reputation/renown, spawn-point destruction, rat infestation, location discovery, world containers and animal ownership stay authoritative in their existing systems. `QuestManager` reads/mutates them through injected callbacks/lookups rather than becoming a second simulation owner.
 
-World-driven quest opportunities follow the same rule: the world owns the problem; the quest layer only detects a lightweight candidate, selects/materializes a normal `QuestDef`, and tracks player progress after that.
+World-driven opportunities follow the same rule: the world owns the problem; the quest layer detects a lightweight candidate, selects/materializes a normal `QuestDef`, and tracks player progress after that.
 
 ## Definition pipeline
 
-There are several sources of quest definitions, but they converge on the same `QuestDef` + `QuestManager` lifecycle.
+All quest sources converge on the same `QuestDef` + `QuestManager` lifecycle.
 
 ### Authored quests
 
 `QUESTS` in `src/quests/quests.ts` is the main authored content catalog. It uses `AuthoredQuestDef`, where human-friendly NPC names may appear in authored content.
 
-At composition root, `materializeAuthoredQuestDefs()` resolves every identity-bearing NPC name to one stable `NpcId` / `QuestNpcRef`. Missing or ambiguous names throw `AuthoredNpcResolutionError`; runtime matching never falls back to display name.
-
-`giverName` remains presentation-only.
+At composition root, `materializeAuthoredQuestDefs()` resolves identity-bearing NPC names to stable `NpcId` / `QuestNpcRef`. Missing or ambiguous names throw `AuthoredNpcResolutionError`; runtime matching never falls back to display name. `giverName` remains presentation-only.
 
 ### Contextual authored quests
 
-`src/quests/quests.ts` also builds/binds quests from real generated world context rather than hardcoding coordinates or runtime entity references. Current seams include:
+`src/quests/quests.ts` also builds/binds quests from generated world context rather than hardcoded runtime entity references. Current seams include:
 
-- `buildLandmarkQuests()` — deterministic landmark lookup → contextual landmark quests;
-- `buildDarkForestTreasureQuest()` / `bindDarkForestTreasureQuest()` — treasure-map/world-container chain;
-- `buildHorseAcquisitionQuest()` — persistent horse reward target;
-- `bindExactCaveQuests()` — binds authored `rockDen` quests (`sprawdz-szlak`, `zaginiona-przesylka`) to the exact fauna den plus a cheap `{cavePlace}` direction token; player-facing copy calls that den a *skalna grota*, not a walk-in Cave V2.
+- `buildLandmarkQuests()`;
+- `buildDarkForestTreasureQuest()` / `bindDarkForestTreasureQuest()`;
+- `buildHorseAcquisitionQuest()`;
+- `bindExactCaveQuests()` for exact `rockDen` quests.
 
-Physical walk-in cave stories (lost hunter, old bones, dungeon bandit stash, lost expedition, suspicious-transport cave cache) interpolate a player-facing location phrase at materialization from already-resolved `CaveArchetype`, settlement-relative `cardinalDirectionPhrase()`, optional canonical `WorldLocation.name`, and the speaking NPC's `Role`. `src/quests/caveLocationDescription.ts` is presentation-only: it does not look up the world, reveal locations, or persist wording. Guard/hunter/miner/trader may speak the canonical name; other roles use archetype + direction.
-
-These still become ordinary `QuestDef`s before `QuestManager` is constructed.
+Physical walk-in cave stories materialize player-facing location phrases from already-resolved cave/world context. Presentation helpers do not become world owners and do not reveal/persist location state by themselves.
 
 ### World-driven settlement opportunities
 
-`src/quests/opportunities/` is a separate **candidate/materialization layer**, not a second quest runtime.
-
-Flow:
+`src/quests/opportunities/` is a **candidate/materialization layer**, not a second quest runtime.
 
 ```text
 world/settlement state
 → lightweight SettlementQuestOpportunity
-→ deterministic selection
-→ materialization
+→ deterministic selection/materialization
 → normal QuestDef
 → QuestManager
 ```
 
-Implemented opportunity sources/types:
+Implemented sources/types include:
 
-- `wolf-den-pressure` — a real settlement-owned wolf-den/spawner problem;
-- `lost-livestock` — an existing household livestock individual in a fauna-owned stray episode;
-- RPG matrices:
-  - `old-place-secret`,
-  - `suspicious-transport` (dialogue-only, or a natural-cave cache variant of the same matrix id when a free `loot` anchor exists),
-  - `settlement-agreement`.
+- `wolf-den-pressure`;
+- `lost-livestock`;
+- RPG matrices: `old-place-secret`, `suspicious-transport`, `settlement-agreement`.
 
-Important symbols:
+Definitions are assembled once at composition root (`QuestManager` takes `readonly QuestDef[]`; there is no runtime `registerDef`). World-driven visibility is then gated by authoritative source lookups.
 
-- `collectSettlementQuestOpportunities()` / `collectWolfDenPressureOpportunities()` / `collectLostLivestockOpportunities()`;
-- `collectRpgQuestOpportunities()`;
-- `selectSettlementQuestOpportunities()`;
-- `materializeSettlementQuestOpportunity()` / `materializeRpgQuestOpportunity()`;
-- `buildWorldDrivenSettlementQuests()`.
-
-The opportunity record is data-only and is neither quest progress nor authoritative world state.
-
-Definitions are assembled once at composition root (`QuestManager` takes `readonly QuestDef[]` and has no `registerDef`). Wolf-den pressure still appears mid-session because its def is always materialized and `WorldQuestSourceLookup` gates offering. Lost-livestock materializes one generated def per household livestock `animalId` at composition root (plan quests-progression-031) and is offerable only while fauna already reports `lost-alive` / `corpse-uninspected` — calm/`returned`/`unavailable` snapshots stay `not_offered` and hidden from the quest log; generated sync never calls `startLivestockStray` (plan quests-progression-030). Authored `zagubiona-owca` may start a real fauna stray for its bound sheep via `onAnimalTargetBound`. When authored or generated already claims an animal (`offered`/`active`/`ready_to_report`), the other flow is suppressed for that same individual.
+Lost-livestock materializes stable per-animal defs and becomes offerable only when fauna reports a real lost/corpse episode. Generated sync does not create the incident. Authored and generated flows suppress duplicate claims on the same animal individual.
 
 ## Core lifecycle
 
@@ -111,25 +92,85 @@ not_offered
 → ready_to_report
 → complete | failed
 
-active → invalidated   (when a required binding can no longer be trusted)
+active → abandoned
+active → invalidated
 ```
 
 Meaning:
 
-- `not_offered` — definition exists, but has not been offered; unavailable quests are hidden.
-- `offered` — offer is currently exposed to the player.
+- `not_offered` — definition exists but is not currently exposed; unavailable, suppressed or non-selected candidates remain hidden.
+- `offered` — this offer is actually exposed to the player.
 - `active` — accepted and working through stages.
-- `ready_to_report` — all stages cleared; terminal outcome still waits for report/choice.
-- `complete` / `failed` — terminal outcome with `resolvedOutcomeId` when resolved through an authored outcome.
-- `invalidated` — terminal no-reward state for a stale/untrustworthy binding; it is deliberately not an authored outcome.
+- `ready_to_report` — objectives are cleared but authored resolution/report still remains.
+- `complete` / `failed` — terminal authored outcome.
+- `abandoned` — terminal conscious player opt-out; distinct from failure/invalidation.
+- `invalidated` — terminal no-reward state for a stale/untrustworthy binding.
 
-Objective completion and quest resolution are distinct. Clearing the last objective does not itself imply reward/consequences unless the normal resolution path is reached.
+Objective completion and quest resolution remain distinct. Clearing the last objective does not imply reward/consequences unless normal resolution is reached.
+
+## Offer exposure, ranking and giver capacity
+
+Availability is no longer equivalent to immediate visibility.
+
+For a giver, `QuestManager` first derives eligible `not_offered` candidates, then ranks/selects them, and only selected candidates move to `offered`. There is no persistent quest queue or scheduler.
+
+`QuestOfferPolicy` provides optional metadata:
+
+- `priority?: number`,
+- `urgency?: 'normal' | 'urgent'`,
+- `exposure?: 'normal' | 'story'`.
+
+`rankQuestOfferCandidates()` is deterministic. Ranking uses urgency, story continuation, relation signal, authored/source priority and stable id tie-breaking. `story` exposure is a deliberate authored exception to normal offer capping and generic decline.
+
+Normal exposure rule:
+
+```text
+max 1 normal new offer per giver
++ max 1 urgent offer bypass
++ explicit story exposure bypass
+```
+
+A declined normal offer returns to `not_offered` with `offerSuppressedUntilDay` for one world-clock day. Decline is not `failed` or `abandoned`, does not resolve the world problem and does not carry a global penalty.
+
+### Active giver capacity
+
+Separate from offer exposure, ordinary giver quests have a derived active capacity:
+
+```text
+max 2 ordinary active/ready_to_report giver quests
+```
+
+The capacity is derived from current quest progress and is not persisted separately. `urgency: 'urgent'` and `exposure: 'story'` bypass it explicitly.
+
+The cap applies only to a giver's own ordinary quests. It must never hide a required talk/choice/hand-in/report interaction where that NPC is merely a target of a quest given by someone else.
+
+Admission and the final `onAccept` callback both re-check capacity, so a stale dialogue callback cannot exceed the cap.
+
+## Availability and prerequisites
+
+`QuestAvailability` gates whether a `not_offered` quest can become an eligible offer candidate.
+
+Implemented prerequisite types:
+
+- player↔NPC relation level (`stranger`, `acquainted`, `friendly`, `trusted`),
+- prior quest outcome id,
+- settlement reputation dimension minimum,
+- settlement renown minimum,
+- `evening_offer_window` for deterministic time-window offering.
+
+All prerequisites on a quest are ANDed. `quest_outcome.outcomeIds` is the local OR membership check.
+
+Definitions are validated once after composition/materialization. Invalid references, malformed nonlinear flow, broken dialogue choices/actions and invalid thresholds throw `QuestDefinitionValidationError`.
+
+Once a quest is already offered/active, ordinary later social-state drops do not retroactively revoke progress.
 
 ## Stages and objective vocabulary
 
-Each `QuestDef` contains ordered `QuestStage`s. A stage may keep a single `objective` (legacy sugar, slot id `primary`) or declare `objectives` with `mode: 'all' | 'any'`. Optional `id` identifies a stage as a forward transition target. Optional `transitions` map a result id to another stage id or an authored `QuestOutcome`; missing transitions keep linear `stageIndex + 1` / `ready_to_report`. `talk_to_npc_choice` and `await_quest_outcome` remain single-objective only. Existing one-objective quests are unchanged (plan quests-progression-032).
+Each `QuestDef` contains ordered `QuestStage`s. A stage may use legacy single `objective` sugar (`primary`) or `objectives` with `mode: 'all' | 'any'`.
 
-Implemented `QuestObjective` types:
+Optional stage ids and `transitions` support forward nonlinear flow. A transition may target another stage id or authored `QuestOutcome`; missing transition preserves linear `stageIndex + 1` / `ready_to_report`. `talk_to_npc_choice` and `await_quest_outcome` remain single-objective only.
+
+Implemented objective families:
 
 ### NPC/dialogue
 
@@ -147,8 +188,8 @@ Implemented `QuestObjective` types:
 
 - `spot_animal`
 - `kill_target_animal`
-- `harvest_animals` — player knife-harvest count per species (`QuestProgressEntry.stageCount`; player-only `QuestManager.onAnimalHarvested`)
-- `feed_habitat_animals` — successful loose-food consumption at a bound `spawnerId` (`QuestManager.onHabitatAnimalFed`; runtime per-`animalId` dedupe only, count persisted)
+- `harvest_animals`
+- `feed_habitat_animals`
 - `clear_wolf_den`
 - `find_animal`
 - `recover_lost_livestock`
@@ -167,83 +208,80 @@ Implemented `QuestObjective` types:
 - `resolve_storage_rat_infestation`
 - `destroy_spawn_point`
 - `light_settlement_fires`
-- `await_quest_outcome` — never auto-clears; terminal choice / physical resolver
+- `await_quest_outcome`
 
-Prefer extending/reusing these objective contracts before adding a parallel quest-specific mechanic.
+Prefer extending/reusing these contracts before adding quest-specific parallel mechanics.
 
-Event ingress: counted/read/poll helpers and `onInteractObjective` (`interact_*`, `spot_animal`, `animal_died`, `animal_found`, `wolf_den_cleared`) each visit **every** matching active quest, then **every unfinished objective slot** of the current stage; `onInteractObjective` returns one presentation line (first non-empty in `defs` order) while all matches advance (plans `quests-progression-028`, `quests-progression-032`).
+Event ingress helpers visit **every** matching active quest and every unfinished objective slot in the current stage. `onInteractObjective` returns one presentation line while all matching quest state advances.
 
 ## Animal/world bindings
 
-Some objectives are authored by kind but bind to concrete world identity at runtime.
+`kill_target_animal` and `find_animal` bind to one concrete `animalId` through injected seams. `clear_wolf_den` binds the den/spawner identity. `interact_landmark` uses a resolved stable landmark id rather than coordinates.
 
-`kill_target_animal` and `find_animal` are bound by `QuestManager` to one concrete `AnimalAgent.animalId` through an injected resolver. `dangerous: true` can mark the selected target through another injected seam.
+For `animal_died`, an already-bound objective matches only the exact animal id. If a matching kill objective is still unbound, the death event can bind to the exact dying `animalId` using the event's reported `kind`; it does **not** ask the live-target resolver after death and accidentally retarget another animal.
 
-`clear_wolf_den` binds the den/spawner identity, not an arbitrary wolf individual.
+World-driven quests additionally use `WorldQuestSourceLookup` states:
 
-`interact_landmark` uses a deterministic resolved `landmarkId`; it does not store a hardcoded coordinate.
+- `untracked`,
+- `present`,
+- `resolved`,
+- `absent`.
 
-World-driven quests additionally have a read-only `WorldQuestSourceLookup` with states:
-
-- `untracked` — ordinary authored quest;
-- `present` — source problem still exists;
-- `resolved` — source was resolved externally;
-- `absent` — expected source binding disappeared.
-
-Unaccepted world-driven offers may disappear when their source disappears. Accepted quests may fail or invalidate depending on source status rather than pretending the player completed the world problem.
-
-## Availability and prerequisites
-
-`QuestAvailability` gates whether a `not_offered` quest may enter the offer lifecycle.
-
-Implemented prerequisite types:
-
-- player↔NPC relation level (`stranger`, `acquainted`, `friendly`, `trusted`),
-- prior quest outcome id,
-- settlement reputation dimension minimum,
-- settlement renown minimum.
-
-All prerequisites on a quest are ANDed. `quest_outcome.outcomeIds` is the local OR membership check.
-
-Definitions are validated once after composition/materialization. Invalid quest/outcome references, invalid reputation/renown ranges, broken dialogue choices and malformed authored dialogue actions throw `QuestDefinitionValidationError` rather than being silently corrected.
-
-Once a quest is already offered/active, later social-state drops do not retroactively revoke ordinary progress.
+Unaccepted world-driven offers may disappear when their source disappears. Accepted quests may fail/invalidate depending on source state rather than pretending the player solved the problem.
 
 ## Dialogue integration
 
-Quest dialogue is an override layer on top of normal NPC dialogue, not a separate dialogue-tree engine.
+Quest dialogue is an override layer on normal NPC dialogue, not a second dialogue-tree engine.
 
-One NPC can be the giver of, or a required talk target for, several concurrent quest contexts at once (e.g. a giver with two independently active quests, or two simultaneous not-yet-accepted offers) — `QuestManager` does not restrict an NPC to a single active quest and never picks an arbitrary "primary" one.
+One NPC may participate in many concurrent quest contexts. `QuestManager.onInteract(npcId)` arbitrates all relevant definitions globally, not first-match.
 
-`QuestManager.onInteract(npcId)` arbitrates every definition's contribution for `npcId` globally, not first-match (plan quests-progression-020). Explicit actionable contributions (required `talk_to_npc` / `talk_to_npc_choice` / stage `dialogueActions` / gather hand-in / report) from every relevant definition are always merged into one flat `actions` list (the aggregation from plan quests-progression-018), so they're never hidden behind a picker. Any other definition that still has something to say — a second offer, a second active quest with only an informational reminder — is exposed instead as a `QuestDialogTopic` (`{ label, resolve() }`) on `QuestDialogOverride.topics`: `label` is always the quest's player-facing `QuestDef.title`, never a questId, and `resolve()` re-reads live quest state rather than a value frozen when the topic list was built. With exactly one quest context for that NPC, `onInteract` returns it directly — no `topics` wrapper, so the single-quest UX is unchanged. The UI only renders `label` and invokes `resolve()`; it never interprets a quest id, stage index, objective type or outcome. Selecting one topic does not accept/complete/advance any quest by itself — only the same explicit player actions above do that.
+Required actionable contributions (`talk_to_npc`, choices, authored stage actions, gather hand-in, report) are never hidden by unrelated offer ranking/capacity. Other contexts are exposed through `QuestDialogTopic` with player-facing `QuestDef.title` and a live `resolve()` callback.
 
-Explicit player action is required for authored speech that changes quest state:
+Opening dialogue or selecting a topic does not itself mutate quest progress. Explicit player action is required for:
 
-- accepting/declining an offer,
+- accept/decline,
 - `talk_to_npc`,
 - `talk_to_npc_choice`,
-- final report/hand-in,
-- stage `dialogueActions`.
+- report/hand-in,
+- stage `dialogueActions`,
+- generic abandon where allowed.
 
-Opening the dialogue UI by itself is not completion, and neither is opening the topic picker or viewing another quest's topic.
+Generic abandon is available for ordinary active giver quests unless `QuestAbandonment.allowed === false`. It moves the quest to terminal `abandoned`, applies optional existing `QuestConsequences` exactly once and clears quest-local runtime bindings. Story quests can disable generic abandon and resolve withdrawal through authored outcomes instead.
 
-`QuestStage.dialogueActions` are deliberately small and non-terminal: selecting one advances the current stage and may apply normal `QuestConsequences`; it does not introduce a generic branching-dialogue scripting system.
+In multi-quest dialogue, generic abandon actions are `topicScoped` so the player sees the quest title/context instead of several indistinguishable flat "Przykro mi…" actions.
 
-`QuestManager.labelMarker(npcId)` is a global reduction over every definition touching `npcId`, independent of `defs` order: `?` (required dialogue target) outranks `✓` (any quest `ready_to_report`), which outranks `!` (any quest `offered`/available `not_offered`), which outranks `…` (any quest merely `active`). One NPC's marker is never decided by which of several relevant quests happens to appear first in `defs`.
+## Quest markers
+
+`QuestManager.labelMarker(npcId)` is derived/read-only and represents the most important interaction available **now**, not just raw lifecycle state.
+
+Priority:
+
+```text
+?  required talk/action target
+✓  actionable hand-in/report/completion
+!  exposed/selectable new offer
+…  active reminder
+```
+
+A gather quest can therefore show `✓` while still formally `active` when the required items are currently available. `✓` outranks a simultaneous `!`.
+
+`list()` and marker exposure respect offer selection/capping rather than surfacing every available `not_offered` candidate.
+
+Inventory changes mark quest presentation dirty only when an active gather stage makes that relevant.
 
 ## Outcomes, rewards and consequences
 
-Every quest has explicit authored `outcomes`.
+Every authored quest has explicit `outcomes`.
 
 `QuestOutcome` contains:
 
 - stable outcome id,
-- terminal state: `complete` or `failed`,
+- terminal state `complete` or `failed`,
 - optional result text,
 - optional direct reward,
 - optional cross-system consequences.
 
-`QuestReward` currently represents direct item compensation and has `shown` / `hidden` presentation visibility.
+`QuestReward` represents direct item compensation with `shown` / `hidden` presentation visibility.
 
 `QuestConsequences` currently supports:
 
@@ -251,60 +289,63 @@ Every quest has explicit authored `outcomes`.
 - settlement reputation-dimension deltas,
 - settlement renown delta.
 
-There is no implicit generic relation bump for giver/target and no global quest EXP reward. Consequences happen only through the authored consequence path.
+There is no implicit generic relation bump and no global quest EXP reward. Consequences happen only through authored outcome/dialogue/abandonment paths.
 
-A successful quest may additionally transfer a specifically bound persistent horse to player ownership (`horseRewardAnimalId`) through injected ownership/reservation seams.
+A successful quest may additionally transfer a specifically bound persistent horse to player ownership through injected reservation/ownership seams.
 
 ## Persistence and rebuild behaviour
 
-Persisted quest progress is represented by `QuestProgressEntry`:
+Persisted `QuestProgressEntry` currently includes:
 
 - quest id,
 - lifecycle state,
 - stage index,
 - optional `resolvedOutcomeId`,
-- optional `stageCount` for a legacy single counted objective,
-- optional `stageSlotProgress` (plan quests-progression-032) — per-slot completion/count for the current multi-objective stage, keyed by stable slot id. Absent on old saves means empty current-stage progress. Event-based slots persist a completion bit; world-state slots are reconstructed from authoritative lookups after restore.
+- optional legacy `stageCount`,
+- optional `stageSlotProgress` for multi-objective stages,
+- optional `offerSuppressedUntilDay` for declined offers.
 
-Quest-owned player↔NPC relation values are also restored into `QuestManager`; legacy name-keyed relation entries are normalized to stable NPC ids where unambiguous.
+No save-version bump was required for plans `032`–`034`; new progress fields are additive/optional. Active giver capacity and offer ranking are derived and are not stored as queues/slots.
 
-Definitions themselves are rebuilt from deterministic/authored world state on boot; progress is then restored by quest id.
+Quest-owned player↔NPC relation values are also restored into `QuestManager`; legacy name-keyed relation entries are normalized where unambiguous.
 
-Important boundary: `QuestManager.animalTargets` is runtime-only and is not persisted. On restore/rebuild:
+Definitions are rebuilt from deterministic/authored world state on boot; progress is restored by quest id.
 
-- deterministic livestock targets can be rebound;
-- an active wild-fauna individual target cannot be assumed to be the same animal, because ordinary wild individual identity/death state is not persisted;
-- such an untrustworthy active binding becomes `invalidated` rather than silently retargeting a different individual.
+`QuestManager.animalTargets` is runtime-only and is not persisted. On rebuild/restore:
 
-World/progression objectives (`discover_location`, `loot_world_container`, destroyed spawn points, rat infestation, lost-livestock stray snapshots, etc.) use live injected authoritative state and may catch up after restore.
+- deterministic livestock targets can be rebound,
+- active wild-fauna individual identity cannot be assumed stable,
+- untrustworthy active bindings become `invalidated` instead of silently retargeting.
 
-For the full save classification and schema ownership, see `docs/state/persistence.md` and `docs/architecture/ARCHITECTURE.md`.
+World/progression objectives use authoritative live state and may catch up after restore.
+
+See `docs/state/persistence.md` and `docs/architecture/ARCHITECTURE.md` for full save ownership.
 
 ## Important integrations
 
 ### NPCs
 
 - stable `NpcId` is quest identity;
-- normal dialogue can be overridden by quest actions;
-- quest relations are one input into broader social behaviour/player standing, but NPC behaviour itself remains owned outside the quest system.
+- quest dialogue overrides normal dialogue actions when relevant;
+- quest relations are one input into broader social behaviour, while NPC behaviour remains owned outside quests.
 
 See `docs/state/npc.md`.
 
 ### Settlements / reputation
 
-Settlement identity is attached at composition root where required. Reputation/renown remain owned by the reputation/social systems; quests only read prerequisites and apply authored deltas through injected seams.
+Settlement identity is attached where required at composition root. Reputation/renown remain owned by their systems; quests only read prerequisites and apply authored deltas.
 
 See `docs/state/settlements.md`.
 
 ### Fauna
 
-QuestManager does not scan fauna ownership internally. Target resolution, death/found events, wolf-den state, lost-livestock stray snapshots, dangerous marking and ownership transfer are injected or reported from the fauna/world side.
+`QuestManager` does not own fauna scans/lifecycle. Target resolution, death/found events, wolf-den state, lost-livestock snapshots, dangerous marking and ownership transfer enter through injected/reporting seams.
 
 See `docs/state/fauna.md`.
 
 ### Items / world containers / knowledge
 
-Gathering reads player inventory; rewards grant through the existing item seam. Treasure/discovery objectives consume existing inventory actions, `LocationKnowledge` and world-generated-container state rather than quest-owned copies.
+Gathering reads player inventory; rewards grant through existing item seams. Treasure/discovery objectives consume inventory actions, `LocationKnowledge` and world-generated-container state rather than quest-owned copies.
 
 See `docs/state/player-systems.md` and `docs/state/world-locations.md`.
 
@@ -314,34 +355,33 @@ Do not treat old plans as the quest catalog.
 
 Use these sources:
 
-1. **Authored definitions:** `QUESTS` in `src/quests/quests.ts`.
-2. **Contextual generated definitions:** `buildLandmarkQuests()`, `buildDarkForestTreasureQuest()`, `buildHorseAcquisitionQuest()`, `bindExactCaveQuests()` in the same file.
-3. **World-driven definitions:** `src/quests/opportunities/` (includes Hunter profession chain and home-guard evening lighting duty when settlement torches + campfire exist).
-4. **Cave/world contextual definitions assembled at composition root:** lost-hunter natural cave, old-bones adventure cave, dungeon bandit treasure (`src/quests/dungeonBanditTreasure.ts`), suspicious-transport cave-cache variant.
-5. **Runtime truth:** the final materialized `QuestDef[]` assembled in `src/app/createApp.ts` before `new QuestManager(...)`.
+1. `QUESTS` in `src/quests/quests.ts`.
+2. Contextual builders/binders in the same module.
+3. `src/quests/opportunities/` for world-driven definitions.
+4. Cave/world contextual quest modules assembled at composition root.
+5. The final materialized `QuestDef[]` in `src/app/createApp.ts` before `new QuestManager(...)`.
 
-Home-guard recognition rewards (`src/quests/guardRewards.ts`) are dialogue-claimed per stable guard `NpcId`, with persisted `worldFlags.alphaWolfDeedEarned` and `worldFlags.guardClaims`; legacy `guardSwordGifted` only blocks a second physical sword.
-
-Representative authored content includes simple delivery/world interaction quests (`relay-anna-piotr`, `shells-dla-kasi`, `woda-dla-marka`), scouting/gathering chains such as `zwiadowca`, animal/world-problem quests, and the authored RPG pack. The exact current list belongs to `QUESTS`/builders rather than being duplicated as a manually maintained second registry here.
+Home-guard recognition rewards remain dialogue-claimed and separately persisted through world flags; they are not a parallel generic quest runtime.
 
 ## Planning guardrails
 
 Before adding quest functionality:
 
-1. Check whether an existing objective already expresses the world action.
+1. Check whether an existing objective/action already expresses the world event.
 2. Keep authoritative world state in the owning domain; quests observe/bind it.
-3. Prefer a new lightweight opportunity/materializer over generating quest progress directly from simulation systems.
-4. Materialize all quest forms into the existing `QuestDef` / `QuestManager` pipeline.
-5. Use stable world/NPC/entity ids; display names and coordinates are not identity.
-6. Use explicit outcomes/consequences rather than side-channel rewards or relation mutations.
-7. Preserve deterministic reconstruction where the world already provides it.
-8. Treat `invalidated` as the safe answer when identity continuity cannot be proven; never silently retarget persistent progress.
-9. Extend existing dialogue actions/objective semantics before introducing a parallel dialogue/quest scripting engine.
-10. Update this document when the implemented quest contract materially changes.
+3. Prefer lightweight opportunity/materialization over generating progress directly from simulation systems.
+4. Materialize all quest forms into `QuestDef` / `QuestManager`.
+5. Use stable ids; display names and coordinates are not identity.
+6. Reuse explicit outcomes/consequences rather than side-channel rewards.
+7. Keep offer ranking/capacity derived and deterministic; do not add a persistent queue/scheduler.
+8. Keep ordinary active giver capacity derived; explicit urgent/story metadata is the bypass.
+9. Treat `invalidated` as the safe result when identity continuity cannot be proven.
+10. Extend existing dialogue/objective semantics before adding a parallel scripting engine.
+11. Update this document when the implemented quest contract materially changes.
 
 ## Related documentation
 
-- `docs/STATE.md` — short project-wide snapshot; its Quests / progression section should stay concise.
+- `docs/STATE.md` — short project-wide snapshot.
 - `docs/vision/quests.md` — desired direction, not implemented truth.
 - `docs/plans/README.md` — plan status/index.
 - `docs/code-map/symbols/quests.md` — generated symbol map.
