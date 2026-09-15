@@ -75,6 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
 | 💡 `settlements-015-settlement-palisade-collision.md`                          | 🔴 | S      | -                                                                                                                                                                               | -                                       |
 | 💡 `settlements-017-deterministically-unique-settlement-names.md`              | 🟡 | S      | -                                                                                                                                                                               | -                                       |
+| ◼️ `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md` | 🔴 | M      | ~~quests-progression-032~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                              | quests-lost-something-chronicles        |
 
 ---
 
@@ -212,7 +213,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `033`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `037`
+- quests-progression: `038`
 - settlements: `018`
 - settlements-npcs: `037`
 - tools: `015`
