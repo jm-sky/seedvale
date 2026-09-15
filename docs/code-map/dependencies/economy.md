@@ -15,6 +15,7 @@ Generated from TypeScript imports.
 - `economy/npcWork.ts`
 - `economy/settlementEconomy.test.ts`
 - `economy/settlementEconomy.ts`
+- `settlement/createSettlement.ts`
 
 ## `economy/foodTransportDemand.test.ts`
 
@@ -36,6 +37,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.ts`
+- `debug/npcDebugApi.ts`
 - `economy/foodTransportDemand.test.ts`
 - `economy/index.ts`
 
@@ -56,21 +59,6 @@ Generated from TypeScript imports.
 - `economy/registry.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
-
-**Imported by**
-
-- `ai/NpcAgent.ts`
-- `ai/npcLogistics.test.ts`
-- `ai/npcLogistics.ts`
-- `ai/npcProfessionWork.test.ts`
-- `ai/npcProfessionWork.ts`
-- `debug/npcDebugApi.ts`
-- `settlement/SettlementsManager.ts`
-- `settlement/createSettlement.ts`
-- `settlement/rats.ts`
-- `settlements-npcs-007.test.ts`
-- `world/transportOffscreen.test.ts`
-- `world/transportOffscreen.ts`
 
 ## `economy/initial.test.ts`
 
@@ -132,6 +120,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `economy/index.ts`
 - `economy/localExchange.test.ts`
 
@@ -158,8 +148,13 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `economy/index.ts`
 - `economy/npcWork.test.ts`
+- `settlements-npcs-007.test.ts`
+- `world/transportOffscreen.ts`
 
 ## `economy/oreTransportDemand.test.ts`
 
@@ -183,6 +178,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.ts`
 - `economy/index.ts`
 - `economy/oreTransportDemand.test.ts`
 - `world/transportOffscreen.ts`
@@ -205,6 +201,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
 - `economy/index.ts`
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
@@ -216,6 +214,7 @@ Generated from TypeScript imports.
 - `economy/productionShortage.ts`
 - `economy/settlementEconomy.test.ts`
 - `economy/settlementEconomy.ts`
+- `settlements-npcs-007.test.ts`
 
 ## `economy/productionExecutor.test.ts`
 
@@ -240,12 +239,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.ts`
 - `economy/index.ts`
 - `economy/npcWork.ts`
 - `economy/production.ts`
 - `economy/productionExecutor.test.ts`
 - `economy/productionShortage.ts`
 - `economy/settlementEconomy.ts`
+- `settlements-npcs-007.test.ts`
 
 ## `economy/productionShortage.test.ts`
 
@@ -294,6 +295,7 @@ Generated from TypeScript imports.
 
 - `economy/index.ts`
 - `economy/registry.test.ts`
+- `settlement/SettlementsManager.ts`
 
 ## `economy/settlementEconomy.test.ts`
 
@@ -323,6 +325,11 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
+- `ai/npcLogistics.test.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/householdResourceTransferActions.test.ts`
 - `app/actions/householdResourceTransferActions.ts`
 - `app/worldBundle.ts`
@@ -346,13 +353,16 @@ Generated from TypeScript imports.
 - `interaction/resolveInteraction.ts`
 - `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
 - `settlement/household.test.ts`
 - `settlement/household.ts`
 - `settlement/householdResourceTransfer.test.ts`
 - `settlement/householdResourceTransfer.ts`
+- `settlement/rats.ts`
 - `settlement/settlementAgriculture.test.ts`
 - `settlement/settlementAgriculture.ts`
 - `settlement/storageVisuals.test.ts`
+- `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 
 ## `economy/stock.ts`

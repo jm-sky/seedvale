@@ -54,15 +54,9 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
-- `ai/animalCorpseCleanupPressure.test.ts`
-- `ai/burialPressure.test.ts`
-- `ai/economicPressure.test.ts`
-- `ai/graveVisitPressure.test.ts`
-- `ai/healingPressure.test.ts`
 - `ai/npcAction.ts`
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
-- `ai/weatherPressure.test.ts`
 - `combat/combatIntent.ts`
 - `fauna/AnimalAgent.ts`
 - `settlement/createSettlement.ts`
@@ -123,8 +117,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/animalCorpseCleanupPressure.test.ts`
+- `ai/burialPressure.test.ts`
+- `ai/economicPressure.test.ts`
+- `ai/graveVisitPressure.test.ts`
+- `ai/healingPressure.test.ts`
 - `ai/npcAnimalThreat.ts`
 - `ai/npcDecision.ts`
+- `ai/weatherPressure.test.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/predatorHumanDecision.ts`
 - `simulation/index.ts`

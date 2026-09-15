@@ -3698,7 +3698,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `economy/index.ts`
+- `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `settlement/household.ts`
 - `settlement/npcState.ts`
@@ -3710,7 +3710,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `economy/index.ts`
+- `economy/npcWork.ts`
 - `economy/oreTransportDemand.ts`
 - `economy/settlementEconomy.ts`
 - `items/Inventory.ts`

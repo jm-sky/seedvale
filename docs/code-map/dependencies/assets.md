@@ -236,6 +236,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/rats.ts`
 - `settlement/settlementSignposts.ts`
+- `settlement/storageVisuals.test.ts`
 - `settlement/storageVisuals.ts`
 - `terrain/chunkManager.ts`
 - `terrain/resourceDeposits.ts`

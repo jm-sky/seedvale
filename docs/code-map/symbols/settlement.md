@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 422
-- `CreateSettlementDeps` — type — line 269
-- `Settlement` — type — line 143
-- `settlementSpawnPoint` — function — line 257
+- `createSettlement` — function — line 423
+- `CreateSettlementDeps` — type — line 270
+- `Settlement` — type — line 144
+- `settlementSpawnPoint` — function — line 258
 
 ## `settlement/decorProps.ts`
 
@@ -899,13 +899,23 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/storageVisuals.ts`
 
-- `createFoodStorageVisual` — function — line 196
+- `allocateFoodRepresentatives` — function — line 167
+  - domain: settlements-npcs
+- `createFoodStorageVisual` — function — line 277
+  - domain: settlements-npcs
 - `createWoodPileVisual` — function — line 105
 - `findWoodPileStageNodes` — function — line 76
-- `FOOD_STORAGE_MAX_SLOTS` — const — line 139
-- `FoodStorageSlot` — type — line 151
-- `FoodStorageVisual` — type — line 179
-- `selectFoodStorageSlots` — function — line 158
+- `flattenFoodRepresentatives` — function — line 211
+- `FOOD_STORAGE_LOCAL_SLOTS` — const — line 236
+  - domain: settlements-npcs
+- `FOOD_STORAGE_MAX_KINDS` — const — line 137
+- `FOOD_STORAGE_MAX_REPRESENTATIVES` — const — line 140
+- `FoodRepresentativeAllocation` — type — line 142
+- `foodRepresentativeCount` — function — line 150
+  - domain: settlements-npcs
+- `foodStorageAllocationSignature` — function — line 219
+- `FoodStorageLocalSlot` — type — line 223
+- `FoodStorageVisual` — type — line 261
 - `WOOD_PILE_EXTRA_OFFSETS` — const — line 37
 - `WOOD_PILE_MAX_EXTRA` — const — line 29
 - `WOOD_PILE_OVERFLOW_START` — const — line 27

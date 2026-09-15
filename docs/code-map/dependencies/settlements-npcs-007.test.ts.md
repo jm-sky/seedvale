@@ -7,7 +7,9 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/npcProfessionWork.ts`
-- `economy/index.ts`
+- `economy/npcWork.ts`
+- `economy/production.ts`
+- `economy/productionExecutor.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `settlement/household.ts`

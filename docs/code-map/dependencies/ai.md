@@ -93,7 +93,8 @@ Generated from TypeScript imports.
 - `combat/rangedLifecycle.ts`
 - `debug/debugMode.ts`
 - `debug/npcTrace.ts`
-- `economy/index.ts`
+- `economy/npcWork.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
@@ -197,7 +198,7 @@ Generated from TypeScript imports.
 - `ai/animalCorpseCleanupPressure.ts`
 - `ai/weatherPressure.ts`
 - `settlement/animalCorpseSanitation.ts`
-- `simulation/index.ts`
+- `simulation/scoreActions.ts`
 
 ## `ai/animalCorpseCleanupPressure.ts`
 
@@ -235,7 +236,7 @@ Generated from TypeScript imports.
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `shared/HealthState.ts`
-- `simulation/index.ts`
+- `simulation/scoreActions.ts`
 
 ## `ai/burialPressure.ts`
 
@@ -378,7 +379,7 @@ Generated from TypeScript imports.
 - `ai/economicPressure.ts`
 - `ai/weatherPressure.ts`
 - `economy/productionShortage.ts`
-- `simulation/index.ts`
+- `simulation/scoreActions.ts`
 
 ## `ai/economicPressure.ts`
 
@@ -401,7 +402,7 @@ Generated from TypeScript imports.
 - `ai/weatherPressure.ts`
 - `settlement/npcState.ts`
 - `shared/HealthState.ts`
-- `simulation/index.ts`
+- `simulation/scoreActions.ts`
 - `world/npcGraves.ts`
 
 ## `ai/graveVisitPressure.ts`
@@ -425,7 +426,7 @@ Generated from TypeScript imports.
 - `ai/weatherPressure.ts`
 - `items/Inventory.ts`
 - `shared/injurySeverity.ts`
-- `simulation/index.ts`
+- `simulation/scoreActions.ts`
 
 ## `ai/healingPressure.ts`
 
@@ -681,7 +682,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/npcLogistics.ts`
-- `economy/index.ts`
+- `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `settlement/household.ts`
 
@@ -692,7 +693,9 @@ Generated from TypeScript imports.
 - `ai/Needs.ts`
 - `ai/helperAssignment.ts`
 - `ai/npcAction.ts`
-- `economy/index.ts`
+- `economy/localExchange.ts`
+- `economy/npcWork.ts`
+- `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
@@ -781,7 +784,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/npcProfessionWork.ts`
-- `economy/index.ts`
+- `economy/production.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
@@ -801,7 +805,13 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `ai/npcAction.ts`
 - `ai/npcLogistics.ts`
-- `economy/index.ts`
+- `economy/foodTransportDemand.ts`
+- `economy/localExchange.ts`
+- `economy/npcWork.ts`
+- `economy/oreTransportDemand.ts`
+- `economy/production.ts`
+- `economy/productionExecutor.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
@@ -1063,7 +1073,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/weatherPressure.ts`
-- `simulation/index.ts`
+- `simulation/scoreActions.ts`
 - `world/weather.ts`
 
 ## `ai/weatherPressure.ts`

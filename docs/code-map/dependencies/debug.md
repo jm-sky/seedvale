@@ -376,7 +376,7 @@ Generated from TypeScript imports.
 - `debug/playerGroundTrace.ts`
 - `debug/playerMovementTrace.ts`
 - `debug/villageInspector.ts`
-- `economy/index.ts`
+- `economy/foodTransportDemand.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/wolfDenScenario.ts`

@@ -40,7 +40,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
-- `economy/index.ts`
+- `economy/registry.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalNaturalWater.ts`
@@ -200,7 +200,8 @@ Generated from TypeScript imports.
 - `audio/createWorldAudio.ts`
 - `audio/fireSounds.ts`
 - `debug/debugMode.ts`
-- `economy/index.ts`
+- `economy/development.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
@@ -1350,7 +1351,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
-- `economy/index.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/proceduralAnimals.ts`
 - `player/PlayerController.ts`
@@ -1814,6 +1815,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `assets/loadGltf.ts`
 - `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
