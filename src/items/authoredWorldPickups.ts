@@ -1,6 +1,6 @@
 import type { TreasureMapSourcePlace } from '../world/locations/darkForestTreasureSite'
-import { abandonedTreasureKeyPickups, type TreasureSiteDefinition } from '../world/treasureSites'
 import type { OneTimeWorldItemPickup } from './createItemSpawners'
+import { abandonedTreasureKeyPickups, type TreasureSiteDefinition } from '../world/treasureSites'
 
 /**
  * Authored one-shot world pickups that `WorldBundle` materializes through

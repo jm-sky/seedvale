@@ -143,8 +143,8 @@ function setupFelledTreeChop(maxWeight: number) {
   return { lifecycle, treeId, inventory, dropped, toast, grantItem, chop }
 }
 
-const expectedBranchToast = `Gałąź +3 · Masz: 3`
-const expectedBeamToast = `Belka +4 · Masz: 4`
+const expectedBranchToast = 'Gałąź +3 · Masz: 3'
+const expectedBeamToast = 'Belka +4 · Masz: 4'
 
 describe('startTreeChop reward delivery (tree harvest reward delivery fix)', () => {
   it('delivers both branch and beam into inventory when there is enough room', () => {

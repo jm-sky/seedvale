@@ -12,6 +12,7 @@ import type {
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
+import { formatWorldDayClock } from '../world/dayNight'
 import { isWithinEveningOfferWindow } from './guardEveningOfferWindow'
 import {
   LOST_LIVESTOCK_DEAD_OUTCOME,
@@ -19,7 +20,6 @@ import {
   LOST_LIVESTOCK_UNAVAILABLE_OUTCOME,
   parseLostLivestockQuestId,
 } from './opportunities/settlementQuestOpportunities'
-import { formatWorldDayClock } from '../world/dayNight'
 import {
   externalResolutionOutcome,
   hasSocialConsequence,

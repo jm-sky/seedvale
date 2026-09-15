@@ -2,8 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import type { QuestListEntry } from '../../quests/QuestManager'
 import type { QuestState } from '../../quests/quests'
-import { ITEM_DEFS, type ItemKind } from '../../items/items'
 import { isTouchDevice } from '../../input/isTouchDevice'
+import { ITEM_DEFS, type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import {
@@ -183,7 +183,9 @@ function formatReward(items: ReadonlyArray<{ kind: ItemKind, count: number }>): 
             class="rounded-md bg-white/5 p-3"
           >
             <div class="text-xs opacity-70">
-              <template v-if="note.dateLabel">{{ note.dateLabel }} · </template>{{ note.speakerName }}
+              <template v-if="note.dateLabel">
+                {{ note.dateLabel }} ·
+              </template>{{ note.speakerName }}
             </div>
             <div class="mt-1 text-sm">
               {{ note.text }}

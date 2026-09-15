@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { darkForestTreasureMapPickupId } from '../world/locations/darkForestTreasureSite'
 import type { TreasureMapSourcePlace } from '../world/locations/darkForestTreasureSite'
 import type { TreasureSiteDefinition } from '../world/treasureSites'
+import { darkForestTreasureMapPickupId } from '../world/locations/darkForestTreasureSite'
 import { buildAuthoredOneTimePickups } from './authoredWorldPickups'
 
 const MAP_SOURCE: TreasureMapSourcePlace = {
