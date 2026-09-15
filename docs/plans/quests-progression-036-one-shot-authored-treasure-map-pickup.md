@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `rewards`
 **Tags:** `treasure-map` `pickup` `persistence` `duplicate`
 **Roadmap:** -
+**Model:** `Sonnet`, `Composer`
 
 ## Cel
 
