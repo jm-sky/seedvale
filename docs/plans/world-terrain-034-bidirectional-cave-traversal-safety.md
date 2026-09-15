@@ -9,6 +9,7 @@
 **Subdomains:** `terrain` `landmarks`
 **Tags:** `caves` `heightfield` `traversal` `soft-lock`
 **Roadmap:** -
+**Model:** `Opus`, `Sonnet`
 
 ## Cel
 
