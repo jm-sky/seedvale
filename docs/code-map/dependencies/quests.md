@@ -48,6 +48,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `interaction/resolveInteraction.ts`
 - `quests/QuestManager.test.ts`
+- `quests/lostTreasureChroniclesElder.test.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
@@ -236,6 +237,32 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+
+## `quests/lostTreasureChroniclesElder.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `quests/QuestManager.ts`
+- `quests/lostTreasureChroniclesElder.ts`
+- `quests/quests.ts`
+- `settlement/lostTreasureChroniclesElderResident.ts`
+
+## `quests/lostTreasureChroniclesElder.ts`
+
+**Imports**
+
+- `quests/opportunities/settlementNpcMaterialization.ts`
+- `quests/quests.ts`
+- `settlement/lostTreasureChroniclesElderResident.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/npcState.ts`
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/lostTreasureChroniclesElder.test.ts`
 
 ## `quests/lostTreasureExpedition.test.ts`
 
@@ -463,10 +490,12 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChroniclesElder.ts`
 - `quests/lostTreasureExpedition.test.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/oldBonesAdventureCave.ts`
+- `settlement/lostTreasureChroniclesElderResident.test.ts`
 
 ## `quests/opportunities/settlementQuestOpportunities.test.ts`
 
@@ -590,6 +619,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChroniclesElder.test.ts`
+- `quests/lostTreasureChroniclesElder.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`

@@ -934,6 +934,7 @@ Generated from TypeScript imports.
 - `quests/guardPersistence.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/lostTreasureChroniclesElder.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/lostTreasureExpeditionRuntime.ts`
 - `quests/materializeAuthoredQuests.ts`
@@ -956,7 +957,9 @@ Generated from TypeScript imports.
 - `settlement/horseAcquisition.ts`
 - `settlement/landOwnership.ts`
 - `settlement/livestock.ts`
+- `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/npcIdentity.ts`
+- `settlement/settlementGenerator.ts`
 - `settlement/villagePlanDebug.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`

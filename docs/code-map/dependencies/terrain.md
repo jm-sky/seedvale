@@ -276,6 +276,7 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/findSettlementSite.test.ts`
 - `settlement/findSettlementSite.ts`
+- `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/minorLocations.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.test.ts`

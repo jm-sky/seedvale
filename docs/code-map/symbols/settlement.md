@@ -359,6 +359,24 @@ Generated from exported TypeScript symbols.
 - `selectLodgingFromCandidates` — function — line 310
 - `settlementLodgingInput` — function — line 68
 
+## `settlement/lostTreasureChroniclesElderResident.ts`
+
+- `appendAuthoredResidentFamily` — function — line 52
+  - domain: settlements-npcs
+- `createLostTreasureElderFamily` — function — line 66
+  - domain: settlements-npcs
+- `isLostTreasureElderFamily` — function — line 42
+  - domain: settlements-npcs
+- `LOST_TREASURE_ELDER_AGE` — const — line 14
+- `LOST_TREASURE_ELDER_FAMILY_ID` — const — line 10
+- `LOST_TREASURE_ELDER_GIVEN_NAME` — const — line 12
+- `LOST_TREASURE_ELDER_LAST_NAME` — const — line 13
+- `LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS` — const — line 17
+- `LostTreasureElderSettlementCandidate` — type — line 27
+  - domain: settlements-npcs
+- `selectLostTreasureChroniclesElderSettlement` — function — line 97
+  - domain: settlements-npcs
+
 ## `settlement/merchantWagon.ts`
 
 - `MERCHANT_HORSE_RADIUS` — const — line 21
@@ -771,19 +789,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 139
-- `cellKey` — function — line 124
-- `cellSeed` — function — line 167
-- `cellsWithinRadius` — function — line 151
-- `generateSettlementDef` — function — line 755
-- `generateVillagePlan` — function — line 689
-- `probeSettlementSite` — function — line 495
+- `cellFromId` — function — line 140
+- `cellKey` — function — line 125
+- `cellSeed` — function — line 168
+- `cellsWithinRadius` — function — line 152
+- `generateSettlementDef` — function — line 765
+- `generateVillagePlan` — function — line 695
+- `probeSettlementSite` — function — line 496
   - domain: settlements
-- `SETTLEMENT_GRID_STEP` — const — line 66
-- `SettlementCell` — type — line 72
-- `SettlementDef` — type — line 74
-- `SettlementSiteProbe` — type — line 480
-- `worldToCell` — function — line 128
+- `SETTLEMENT_GRID_STEP` — const — line 67
+- `SettlementCell` — type — line 73
+- `SettlementDef` — type — line 75
+- `SettlementSiteProbe` — type — line 481
+- `worldToCell` — function — line 129
 
 ## `settlement/settlementNameUniqueness.ts`
 
@@ -827,13 +845,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedSettlementDefCount` — function — line 167
-- `cachedSettlementProgressionPolicy` — function — line 172
-- `clearSettlementDefCache` — function — line 79
-- `setSettlementRiverQuery` — function — line 55
-- `settlementDefFor` — function — line 154
-- `SettlementResolveContext` — type — line 29
-- `worldRiverQuery` — function — line 68
+- `cachedSettlementDefCount` — function — line 206
+- `cachedSettlementProgressionPolicy` — function — line 211
+- `clearSettlementDefCache` — function — line 89
+- `setSettlementRiverQuery` — function — line 63
+- `settlementDefFor` — function — line 193
+- `SettlementResolveContext` — type — line 37
+- `worldRiverQuery` — function — line 76
 
 ## `settlement/settlementProgression.ts`
 

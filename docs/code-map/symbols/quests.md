@@ -116,6 +116,24 @@ Generated from exported TypeScript symbols.
 - `getActiveLostHunterNaturalCaveBinding` — function — line 10
 - `setActiveLostHunterNaturalCaveBinding` — function — line 6
 
+## `quests/lostTreasureChroniclesElder.ts`
+
+- `buildLostTreasureChroniclesElderQuests` — function — line 108
+  - domain: quests-progression
+- `findLostTreasureChroniclesElderSettlement` — function — line 97
+  - domain: quests-progression
+- `LOST_TREASURE_CHRONICLES_DISPUTE_RECONCILE_OUTCOME` — const — line 15
+- `LOST_TREASURE_CHRONICLES_DISPUTE_SUPPORT_ELDER_OUTCOME` — const — line 14
+- `LOST_TREASURE_CHRONICLES_ELDER_DISPUTE_QUEST_ID` — const — line 10
+- `LOST_TREASURE_CHRONICLES_ELDER_WINTER_QUEST_ID` — const — line 9
+- `LOST_TREASURE_CHRONICLES_WINTER_BRANCH_COUNT` — const — line 17
+- `LOST_TREASURE_CHRONICLES_WINTER_MATERIAL_OUTCOME` — const — line 12
+- `LOST_TREASURE_CHRONICLES_WINTER_NEIGHBOR_OUTCOME` — const — line 13
+- `LostTreasureChroniclesElderBinding` — type — line 25
+  - domain: quests-progression
+- `resolveLostTreasureChroniclesElderBinding` — function — line 60
+  - domain: quests-progression
+
 ## `quests/lostTreasureExpedition.ts`
 
 - `buildLostTreasureExpeditionQuest` — function — line 385

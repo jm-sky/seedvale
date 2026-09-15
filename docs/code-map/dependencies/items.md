@@ -177,6 +177,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostTreasureChroniclesElder.test.ts`
 - `quests/lostTreasureExpedition.test.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
