@@ -4,7 +4,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1059
+- `AnimalAgent` — class — line 1062
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
@@ -13,7 +13,7 @@ Generated from exported TypeScript symbols.
 - `AnimalAgentDebugInfo` — type — line 554
 - `AnimalAgentDeps` — type — line 883
 - `AnimalSaveState` — type — line 673
-- `AnimalUpdateContext` — type — line 927
+- `AnimalUpdateContext` — type — line 930
 - `BURY_DURATION_SEC` — const — line 366
 - `canPredatorPursueIntoVillage` — function — line 741
 - `FAUNA_SHADOW_DISTANCE` — const — line 335

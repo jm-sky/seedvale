@@ -91,7 +91,9 @@ Generated from TypeScript imports.
 - `app/faunaEncounterComposition.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
+- `app/worldBundle.ts`
 - `assets/assetIndex.ts`
+- `audio/actionSounds.ts`
 - `audio/animalSounds.ts`
 - `debug/faunaInspector.ts`
 - `debug/npcDebugApi.ts`

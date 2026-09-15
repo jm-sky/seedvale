@@ -877,6 +877,7 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/userActions.ts`
 - `app/worldBundle.ts`
+- `audio/actionSounds.ts`
 - `audio/createAmbientAudio.ts`
 - `audio/createWorldAudio.ts`
 - `audio/doorSounds.ts`
@@ -1563,6 +1564,7 @@ Generated from TypeScript imports.
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalCaveHabitat.ts`
 - `fauna/animalNaturalWater.ts`

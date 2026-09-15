@@ -6,7 +6,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `audio/animalSounds.ts`
 - `audio/createWorldAudio.ts`
+- `fauna/AnimalAgent.ts`
 
 **Imported by**
 
@@ -15,6 +17,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
+- `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`
 
@@ -63,6 +66,7 @@ Generated from TypeScript imports.
 
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
+- `audio/actionSounds.ts`
 - `audio/animalSounds.test.ts`
 - `fauna/AnimalAgent.ts`
 

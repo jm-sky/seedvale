@@ -4,41 +4,41 @@ Generated from exported TypeScript symbols.
 
 ## `audio/actionSounds.ts`
 
-- `ACTION_BOW_DRAW_SOUND_URL` — const — line 25
-- `ACTION_BOW_RELEASE_SOUND_URL` — const — line 26
-- `ACTION_BRANCH_BREAK_SOUND_URL` — const — line 16
-- `ACTION_CHOP_SOUND_URLS` — const — line 12
-- `ACTION_COOK_SOUND_URL` — const — line 24
-- `ACTION_DIG_SOUND_URLS` — const — line 5
-- `ACTION_DRINK_SOUND_URL` — const — line 23
-- `ACTION_FISHING_CAST_SOUND_URL` — const — line 19
-- `ACTION_GRINDSTONE_SHARPEN_SOUND_URL` — const — line 28
-- `ACTION_MELEE_HIT_SOUND_URL` — const — line 20
-- `ACTION_MELEE_KILL_SOUND_URL` — const — line 21
-- `ACTION_TREE_FALL_SOUND_URL` — const — line 17
-- `ACTION_WELL_CONSTRUCTION_SOUND_URL` — const — line 18
-- `ACTION_WELL_SOUND_URL` — const — line 22
-- `ACTION_WHETSTONE_SHARPEN_SOUND_URL` — const — line 27
-- `playActionBowDraw` — function — line 127
-- `playActionBowRelease` — function — line 132
-- `playActionBranchBreak` — function — line 64
-- `playActionChop` — function — line 57
-- `playActionCook` — function — line 110
-- `playActionDig` — function — line 50
-- `playActionDrink` — function — line 105
-- `playActionFishingCast` — function — line 79
-- `playActionGrindstoneSharpen` — function — line 120
-- `playActionMeleeHit` — function — line 90
-- `playActionMeleeKill` — function — line 95
-- `playActionMine` — function — line 84
-- `playActionTreeFall` — function — line 69
-- `playActionWell` — function — line 100
-- `playActionWellConstruction` — function — line 74
-- `playActionWhetstoneSharpen` — function — line 115
-- `playAnimalCombatDeath` — function — line 161
-- `playCombatBowDraw` — function — line 139
-- `playCombatHit` — function — line 146
-- `playNpcCombatDeath` — function — line 153
+- `ACTION_BOW_DRAW_SOUND_URL` — const — line 27
+- `ACTION_BOW_RELEASE_SOUND_URL` — const — line 28
+- `ACTION_BRANCH_BREAK_SOUND_URL` — const — line 18
+- `ACTION_CHOP_SOUND_URLS` — const — line 14
+- `ACTION_COOK_SOUND_URL` — const — line 26
+- `ACTION_DIG_SOUND_URLS` — const — line 7
+- `ACTION_DRINK_SOUND_URL` — const — line 25
+- `ACTION_FISHING_CAST_SOUND_URL` — const — line 21
+- `ACTION_GRINDSTONE_SHARPEN_SOUND_URL` — const — line 30
+- `ACTION_MELEE_HIT_SOUND_URL` — const — line 22
+- `ACTION_MELEE_KILL_SOUND_URL` — const — line 23
+- `ACTION_TREE_FALL_SOUND_URL` — const — line 19
+- `ACTION_WELL_CONSTRUCTION_SOUND_URL` — const — line 20
+- `ACTION_WELL_SOUND_URL` — const — line 24
+- `ACTION_WHETSTONE_SHARPEN_SOUND_URL` — const — line 29
+- `playActionBowDraw` — function — line 129
+- `playActionBowRelease` — function — line 134
+- `playActionBranchBreak` — function — line 66
+- `playActionChop` — function — line 59
+- `playActionCook` — function — line 112
+- `playActionDig` — function — line 52
+- `playActionDrink` — function — line 107
+- `playActionFishingCast` — function — line 81
+- `playActionGrindstoneSharpen` — function — line 122
+- `playActionMeleeHit` — function — line 92
+- `playActionMeleeKill` — function — line 97
+- `playActionMine` — function — line 86
+- `playActionTreeFall` — function — line 71
+- `playActionWell` — function — line 102
+- `playActionWellConstruction` — function — line 76
+- `playActionWhetstoneSharpen` — function — line 117
+- `playAnimalCombatDeath` — function — line 162
+- `playCombatBowDraw` — function — line 141
+- `playCombatHit` — function — line 148
+- `playNpcCombatDeath` — function — line 155
 
 ## `audio/ambientEvents.ts`
 
@@ -58,16 +58,22 @@ Generated from exported TypeScript symbols.
 
 ## `audio/animalSounds.ts`
 
-- `ANIMAL_AGGRO_SOUND_URLS` — const — line 46
-- `ANIMAL_SOUND_URLS` — const — line 6
-- `initialSpontaneousVocalizeCooldownSec` — function — line 176
-- `playAnimalAggroSound` — function — line 56
-- `playAnimalSound` — function — line 30
-- `playSpontaneousAnimalSound` — function — line 255
-- `roosterCrowWeight` — function — line 142
-- `spontaneousVocalizeTimeWeight` — function — line 161
-- `tickSpontaneousVocalizeCooldown` — function — line 190
-- `wolfHowlWeight` — function — line 120
+- `ANIMAL_AGGRO_SOUND_URLS` — const — line 107
+- `ANIMAL_DEATH_GENERIC_SOUND_URLS` — const — line 46
+- `ANIMAL_DEATH_GROUP_BY_KIND` — const — line 23
+- `ANIMAL_DEATH_GROUP_SOUND_URLS` — const — line 43
+- `ANIMAL_DEATH_SOUND_URLS` — const — line 12
+- `ANIMAL_SOUND_URLS` — const — line 67
+- `AnimalDeathGroup` — type — line 14
+- `initialSpontaneousVocalizeCooldownSec` — function — line 237
+- `playAnimalAggroSound` — function — line 117
+- `playAnimalSound` — function — line 91
+- `playSpontaneousAnimalSound` — function — line 316
+- `resolveAnimalDeathSoundUrl` — function — line 60
+- `roosterCrowWeight` — function — line 203
+- `spontaneousVocalizeTimeWeight` — function — line 222
+- `tickSpontaneousVocalizeCooldown` — function — line 251
+- `wolfHowlWeight` — function — line 181
 
 ## `audio/audioSettings.ts`
 

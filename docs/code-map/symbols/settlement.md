@@ -41,7 +41,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 423
+- `createSettlement` — function — line 424
 - `CreateSettlementDeps` — type — line 270
 - `Settlement` — type — line 144
 - `settlementSpawnPoint` — function — line 258
@@ -306,8 +306,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 317
-- `disposeLivestock` — function — line 836
+- `createLivestockRegistry` — function — line 321
+- `disposeLivestock` — function — line 846
 - `fillShepherdFlockKinds` — function — line 43
 - `isPlayerOwnedLivestockRecord` — function — line 99
 - `LIVESTOCK_KINDS` — const — line 76
@@ -317,18 +317,18 @@ Generated from exported TypeScript symbols.
 - `LivestockRegistry` — type — line 171
 - `LivestockSaveRecord` — type — line 89
 - `livestockStrayCandidateFromAgent` — function — line 129
-- `PersistentLivestockContext` — type — line 746
-- `resolveLivePersistentAnimal` — function — line 754
-- `restoreDetachedPlayerOwnedLivestock` — function — line 818
-- `setOwnedAnimalControl` — function — line 806
+- `PersistentLivestockContext` — type — line 756
+- `resolveLivePersistentAnimal` — function — line 764
+- `restoreDetachedPlayerOwnedLivestock` — function — line 828
+- `setOwnedAnimalControl` — function — line 816
 - `shouldSpawnDeterministicLivestockSlot` — function — line 108
   - domain: fauna
   - role: Household rolls and merchant-horse slots skip tombstones and player-owned records restored on the detached path (fauna-020 / fauna-030).
-- `spawnAnimalFromRecord` — function — line 215
+- `spawnAnimalFromRecord` — function — line 216
 - `SpawnAnimalFromRecordDeps` — type — line 204
-- `spawnLivestock` — function — line 593
-- `tickSettlementLivestock` — function — line 853
-- `transferAnimalOwnership` — function — line 781
+- `spawnLivestock` — function — line 597
+- `tickSettlementLivestock` — function — line 863
+- `transferAnimalOwnership` — function — line 791
 
 ## `settlement/lodging.ts`
 
@@ -640,9 +640,9 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/rats.ts`
 
-- `createSettlementRats` — function — line 256
+- `createSettlementRats` — function — line 257
 - `infestationReplenishmentRoll` — function — line 102
-- `normalizeRatClipName` — function — line 204
+- `normalizeRatClipName` — function — line 205
 - `RAT_DOG_REPRODUCTION_PRESSURE` — const — line 41
 - `RAT_INFESTATION_FLOOR` — const — line 38
 - `RAT_INFESTATION_PRESSURE_BONUS` — const — line 36
@@ -652,7 +652,7 @@ Generated from exported TypeScript symbols.
   - system: settlement-rats
   - role: Settlement-local rat population pressure/reconciliation (plan fauna-016 §7/§8/§9, quests-progression-006, quests-progression-013) — deliberately not a `RatManager`: rats are plain `AnimalAgent('rat')` instances this module spawns toward a small, food-driven target population. Infestation replenishment is a separate nest-gated roll; excess live rats are never deleted just because the target falls.
 - `RAT_RECONCILE_INTERVAL_DAYS` — const — line 45
-- `RAT_URL` — const — line 195
+- `RAT_URL` — const — line 196
 - `ratDogReproductionMultiplier` — function — line 92
 - `RatFoodSite` — type — line 144
 - `ratNormalPopulationTarget` — function — line 77
@@ -660,7 +660,7 @@ Generated from exported TypeScript symbols.
 - `RatPressureInputs` — type — line 51
 - `ratReconcileAction` — function — line 127
 - `RatReconcileAction` — type — line 56
-- `SettlementRats` — type — line 167
+- `SettlementRats` — type — line 168
 - `SettlementRatsDeps` — type — line 146
 - `shouldInfestationReplenish` — function — line 113
 
