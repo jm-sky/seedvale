@@ -9,6 +9,7 @@
 **Subdomains:** `debug` `diagnostics`
 **Tags:** `seedvale.debug` `horse` `ownership` `recovery`
 **Roadmap:** -
+**Model:** `Sonnet`, `Composer`
 
 ## Cel
 
