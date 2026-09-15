@@ -9,6 +9,7 @@
 **Subdomains:** `economy`
 **Tags:** `trade` `ruby` `pricing`
 **Roadmap:** -
+**Model:** `Sonnet`, `Composer`
 
 ## Cel
 
