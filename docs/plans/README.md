@@ -93,7 +93,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
-| `npc-039-ubc-profession-outfits.md` | Anna/Piotr = Peasant (szafirowy vs ziemisty brąz); Kasia = Wizard karmazyn; Marek = Modular. Gracz bez zbroi = oliwkowy Peasant, nie ten sam tint. Idle/walk UBC (UAL) i Modular bez T-pose. `?playerTint=brown` nie recoloruje NPC. Dziecko farmera = Modular. Hunter w V1 = Modular |
+| `settlements-009-settlement-outskirts-and-pasture.md` | MD ma małe pastwisko poza zabudową; LG/XL wyraźniejsza strefa; pasture nie przecina budynków/rzeki/głównej drogi; przy palisadzie za skrzydłami wejścia; czytelny płot (preferencyjnie dwa odcinki z przerwą); shepherd w dzień idzie na pasture; stado z nim; trough/studnia dostępne; drapieżnik może zagrozić stadu poza ochroną core; NPC/zwierzęta wracają wieczorem do household |
 | `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md` | Brak UI: `formExpeditionAssignment` / `provisionExpeditionAssignment` / `markExpeditionAssignmentReady` na `WorldBundle`; save v45 `expeditionAssignments`; testy jednostkowe już pokrywają resolver/provisioning |
 | `items-player-038-ubc-jump-land-move-lock.md` | UBC: skok z WASD — krótki recover, potem chód/sprint bez slajdu w pozie stania; skok w miejscu — pełny Jump_Land |
 | `items-player-035-ubc-ual-player-animation-coverage.md` | `?modelTest&model=ubc/male_ranger&anims=ubc/ual1_player` >4 clipów; Peasant/Ranger: locomotion, slash, łuk, sneak crouch, pływanie, skok bez tiltu, HP 0 = Death01; Adventurer bez regresji; `ual1_player.glb` setki KB |

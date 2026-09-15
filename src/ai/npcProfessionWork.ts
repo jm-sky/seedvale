@@ -171,6 +171,11 @@ export type NpcWorkContext = {
   hasShearingTool?: () => boolean
   /** Wild herb/flax gather hooks (plan settlements-npcs-007). */
   herbalGather?: SettlementHerbalGatherHooks | null
+  /**
+   * Settlement-owned pasture work area (plan settlements-009). Read-only
+   * satellite anchor from `VillagePlan.pasture`; absent on SM/OUTPOST.
+   */
+  pasture?: { x: number, z: number, radius: number } | null
 }
 
 /**
@@ -749,14 +754,14 @@ function planWoolDeposit(ctx: NpcWorkContext): NpcPlannedAction | null {
 }
 
 function planShepherdWork(ctx: NpcWorkContext): NpcPlannedAction | null {
-  const flock = ctx.shepherdFlock
   const household = ctx.household
-  if (!flock || !household) return null
+  if (!household) return null
+  const flock = ctx.shepherdFlock
   const ownerHouseId = household.homeId
-  const sheep = flock.listOwned(ownerHouseId)
-  const ready = selectReadyOwnedSheep(sheep, ownerHouseId)
+  const sheep = flock?.listOwned(ownerHouseId) ?? []
+  const ready = flock ? selectReadyOwnedSheep(sheep, ownerHouseId) : null
   const canShear = ctx.hasShearingTool?.() === true
-  if (ready && canShear && ctx.carried.canAdd('wool', WOOL_YIELD)) {
+  if (ready && canShear && ctx.carried.canAdd('wool', WOOL_YIELD) && flock) {
     const sheepId = ready.animalId
     return {
       kind: 'shear',
@@ -781,7 +786,9 @@ function planShepherdWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   }
   const deposit = planWoolDeposit(ctx)
   if (deposit) return deposit
-  const separated = selectSeparatedOwnedSheep(sheep, ownerHouseId, ctx.home.x, ctx.home.z)
+  const separated = flock
+    ? selectSeparatedOwnedSheep(sheep, ownerHouseId, ctx.home.x, ctx.home.z)
+    : null
   if (separated) {
     return {
       kind: 'work',
@@ -795,6 +802,20 @@ function planShepherdWork(ctx: NpcWorkContext): NpcPlannedAction | null {
       onComplete: () => {},
     }
   }
+  const pasture = ctx.pasture
+  if (pasture) {
+    return {
+      kind: 'work',
+      destination: copyVec3({
+        x: pasture.x,
+        y: ctx.sampleHeight(pasture.x, pasture.z),
+        z: pasture.z,
+      }),
+      durationSec: ctx.rollWorkDurationSec(),
+      onComplete: () => {},
+    }
+  }
+  if (!flock) return null
   const centroid = ownedFlockCentroid(sheep, ownerHouseId)
   const stay = centroid ?? { x: ctx.home.x, z: ctx.home.z }
   return {

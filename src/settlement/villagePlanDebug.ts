@@ -12,7 +12,10 @@ export function summarizeVillagePlan(plan: VillagePlan): string {
     `  boundary r=${boundary.radius} center=(${center.x.toFixed(1)},${center.z.toFixed(1)})`,
     `  zones=${zones.map((z) => z.kind).join(',') || '—'}`,
     `  plots=${plots.length} buildings=${buildings.length} landmarks=${landmarks.map((l) => l.kind).join(',')}`,
-    `  entrances=${entrances.length} paths=${paths.length}`,
+    `  entrances=${entrances.length} paths=${paths.length}` +
+    (plan.pasture
+      ? ` pasture=(${plan.pasture.x.toFixed(1)},${plan.pasture.z.toFixed(1)}) r=${plan.pasture.radius.toFixed(1)} fence=${plan.pasture.fenceSegments.length}`
+      : ' pasture=—'),
   ]
   for (const e of entrances) {
     lines.push(`    entrance ${e.id} (${e.x.toFixed(1)},${e.z.toFixed(1)}) kind=${e.kind}`)

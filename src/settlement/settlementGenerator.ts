@@ -463,6 +463,7 @@ function createVillagePlan(
     landmarks: layout.landmarks,
     paths: layout.paths,
     entrances: layout.entrances,
+    pasture: layout.pasture,
   }
 }
 

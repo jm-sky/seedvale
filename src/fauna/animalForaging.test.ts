@@ -124,9 +124,63 @@ describe('findTroughTarget / findWaterTarget (plan 122 — trough preferred over
     expect(findTroughTarget(ctx)).toBeNull()
   })
 
+  it('prefers the closer of home trough and a settlement pasture trough, still household water', () => {
+    const household = fakeHousehold({ waterAmount: 5 })
+    const atPasture = makeCtx({
+      household,
+      def: ANIMAL_DEFS.cow,
+      x: 80,
+      z: 0,
+      home: { x: 0, z: 0 },
+      householdWaterAnchors: [{ x: 80, z: 0 }],
+      roamRadius: 50,
+    })
+    const pastureTarget = findWaterTarget(atPasture)
+    expect(pastureTarget?.waterSource).toEqual({ kind: 'household' })
+    expect(pastureTarget?.x).toBe(80)
+    expect(isSourceTargetValid(atPasture, {}, pastureTarget!)).toBe(true)
+
+    const atHome = makeCtx({
+      household,
+      def: ANIMAL_DEFS.cow,
+      x: 1,
+      z: 0,
+      home: { x: 0, z: 0 },
+      householdWaterAnchors: [{ x: 80, z: 0 }],
+    })
+    const homeTarget = findWaterTarget(atHome)
+    expect(homeTarget?.waterSource).toEqual({ kind: 'household' })
+    expect(homeTarget?.x).toBe(0)
+  })
+
+  it('pasture trough relief still mutates the same household water reserve', () => {
+    let current = 5
+    const household = {
+      water: {
+        current,
+        capacity: 10,
+        has: (amount: number) => current >= amount,
+        remove: (amount: number) => { current -= amount },
+      },
+      items: new Inventory({}, Infinity),
+      resolveHayForage: () => {},
+    } as unknown as Household
+    const ctx = makeCtx({
+      household,
+      def: ANIMAL_DEFS.sheep,
+      x: 70,
+      z: 4,
+      home: { x: 0, z: 0 },
+      householdWaterAnchors: [{ x: 70, z: 4 }],
+    })
+    const target = findTroughTarget(ctx)!
+    expect(target.x).toBe(70)
+    applySourceRelief(ctx, target)
+    expect(current).toBe(4)
+    expect(ctx.life.thirst).toBeLessThan(NEED_ELEVATED_THRESHOLD)
+  })
+
   it('falls back to a shoreline search when there is no household at all (wild fauna)', () => {
-    // Never walkable/shore -> no candidate found, but must not throw and
-    // must not synthesize a trough target out of thin air.
     const ctx = makeCtx({ household: undefined, isWalkable: () => false })
     expect(findWaterTarget(ctx)).toBeNull()
   })
@@ -137,9 +191,7 @@ describe('isSourceTargetValid / applySourceRelief — trough (plan 122)', () => 
     const household = fakeHousehold({ waterAmount: 0 })
     const ctx = makeCtx({ household, def: ANIMAL_DEFS.cow })
     const target: SourceTarget = { kind: 'water', x: 0, z: 0, waterSource: { kind: 'household' } }
-    // Trough targets don't fail isSourceTargetValid's generic checks (no
-    // live re-check there — the atomic water draw itself is the gate), but
-    // applySourceRelief must not relieve thirst from an empty reserve.
+    expect(isSourceTargetValid(ctx, {}, target)).toBe(false)
     const before = ctx.life.thirst
     applySourceRelief(ctx, target)
     expect(ctx.life.thirst).toBe(before)

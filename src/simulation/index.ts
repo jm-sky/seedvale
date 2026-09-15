@@ -19,6 +19,7 @@ export {
   householdWellQueueId,
   type InteractionQueue,
   type InteractionQueueConfig,
+  pastureWellQueueId,
   settlementWellQueueId,
   wellQueueId,
 } from './interactionQueue'

@@ -161,6 +161,66 @@ export type VillagePathPlan = {
   kind: 'path' | 'road'
 }
 
+/** Stable id for the settlement-owned satellite pasture (plan settlements-009). */
+export const PASTURE_ID = 'pasture'
+
+/** Pasture well landmark id — distinct from plaza `landmark-well-0` and
+ *  household `landmark-well-household-*` (plan settlements-009). */
+export function pastureWellLandmarkId(): string {
+  return 'landmark-well-pasture'
+}
+
+/** Local path id from the existing village network onto the pasture gap. */
+export function pasturePathId(): string {
+  return 'path-pasture'
+}
+
+/**
+ * One planned pasture fence run (plan settlements-009). Endpoints are world
+ * XZ; the renderer samples terrain at materialization. Visual marker only —
+ * no collider / containment in V1.
+ * @domain settlements
+ */
+export type VillagePastureFenceSegment = {
+  id: string
+  ax: number
+  az: number
+  bx: number
+  bz: number
+}
+
+/** Planned well / trough / path-gap anchor on a pasture. */
+export type VillagePastureAnchor = {
+  x: number
+  z: number
+  y: number
+}
+
+/**
+ * Settlement-owned outskirts pasture (plan settlements-009). Satellite area
+ * outside `VillageBoundary` / the core building ring — not a `VillagePlot`
+ * and not the core `zone-livestock` / `plot-livestock-0`. Optional: SM and
+ * OUTPOST omit it; MD/LG/XL plan one when a dry, unobstructed candidate
+ * exists. Runtime reads this from `VillagePlan` rather than reconstructing
+ * a second pasture authority.
+ * @domain settlements
+ */
+export type VillagePasturePlan = {
+  id: string
+  /** Semantic satellite flag — pasture is owned by the settlement but sits
+   *  outside the core built footprint / entrance palisade wings. */
+  outsideCore: true
+  x: number
+  z: number
+  y: number
+  radius: number
+  well: VillagePastureAnchor
+  trough: VillagePastureAnchor
+  fenceSegments: readonly VillagePastureFenceSegment[]
+  /** Village-facing gap / path connection onto the pasture. */
+  connection: VillagePastureAnchor
+}
+
 export type VillageEntrance = {
   id: string
   x: number
@@ -201,4 +261,7 @@ export type VillagePlan = {
   landmarks: readonly VillageLandmarkPlan[]
   paths: readonly VillagePathPlan[]
   entrances: readonly VillageEntrance[]
+  /** Satellite livestock pasture (plan settlements-009). Absent on SM/OUTPOST
+   *  and when every candidate failed river/spacing/terrain gates. */
+  pasture?: VillagePasturePlan
 }

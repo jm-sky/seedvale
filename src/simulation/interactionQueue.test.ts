@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createInteractionQueue,
   householdWellQueueId,
+  pastureWellQueueId,
   settlementWellQueueId,
   wellQueueId,
 } from './interactionQueue'
@@ -28,6 +29,12 @@ describe('interactionQueue', () => {
     expect(householdWellQueueId('3_5', 2)).toBe('3_5:well:household:2')
     expect(settlementWellQueueId('3_5', null)).toBe('3_5:well')
     expect(settlementWellQueueId('3_5', 2)).toBe('3_5:well:household:2')
+  })
+
+  it('pastureWellQueueId is stable and distinct from central/household wells', () => {
+    expect(pastureWellQueueId('3_5')).toBe('3_5:well:pasture')
+    expect(pastureWellQueueId('3_5')).not.toBe(wellQueueId('3_5'))
+    expect(pastureWellQueueId('3_5')).not.toBe(householdWellQueueId('3_5', 0))
   })
 
   it('join is FIFO and idempotent', () => {

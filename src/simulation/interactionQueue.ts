@@ -159,6 +159,11 @@ export function householdWellQueueId(settlementId: string, familyIndex: number):
   return `${settlementId}:well:household:${familyIndex}`
 }
 
+/** Drink queue for the settlement pasture well (plan settlements-009). */
+export function pastureWellQueueId(settlementId: string): string {
+  return `${settlementId}:well:pasture`
+}
+
 /** Central (`familyIndex === null`) or household well queue id. */
 export function settlementWellQueueId(settlementId: string, familyIndex: number | null): string {
   return familyIndex == null ? wellQueueId(settlementId) : householdWellQueueId(settlementId, familyIndex)

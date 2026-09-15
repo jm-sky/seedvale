@@ -11,7 +11,7 @@ import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../as
 import { isDebugMode } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
-import { settlementWellQueueId } from '../simulation'
+import { pastureWellQueueId, settlementWellQueueId } from '../simulation'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { createPlacedContainerProp } from '../world/containerProp'
 import { type CultivationAnchor, cultivationAnchorFromSettlementField, cultivationAnchorFromSettlementGarden } from '../world/cultivationAnchor'
@@ -110,7 +110,8 @@ import {
   WOOD_PILE_EXTRA_OFFSETS,
   type WoodPileVisual,
 } from './storageVisuals'
-import { parseHouseholdWellFamilyIndex, residentialStructureId } from './villagePlan'
+import { pastureFencePlacements } from './villagePasture'
+import { parseHouseholdWellFamilyIndex, pastureWellLandmarkId, residentialStructureId } from './villagePlan'
 import { pathPlansToCorridorData } from './villagePlanner'
 
 export type SettlementHouseLandmark = {
@@ -173,6 +174,16 @@ export type SettlementLandmarks = {
    * from fixtures that only construct the plaza well.
    */
   wells?: SettlementWellLandmark[]
+  /**
+   * Settlement-owned outskirts pasture (plan settlements-009). Present when
+   * `VillagePlan.pasture` was placed; shepherd work and livestock water/roam
+   * read this instead of reconstructing a second authority.
+   */
+  pasture?: {
+    position: THREE.Vector3
+    radius: number
+    trough: THREE.Vector3
+  }
   stockpile: THREE.Vector3
   /** Second wood pile when `infrastructure.stockpiles > 1` (LG/XL). */
   stockpileSecondary?: THREE.Vector3
@@ -842,7 +853,39 @@ export async function buildSettlementProps(
       queueId: settlementWellQueueId(settlementId, familyIndex),
     })
   }
-  if (householdWellLandmarks.length > 0) await yieldProp()
+  const pasturePlan = plan?.pasture
+  if (pasturePlan) {
+    const pw = wellTemplate.clone(true)
+    placeOnGround(pw, pasturePlan.well.x, pasturePlan.well.z, sampleHeight)
+    group.add(pw)
+    const position = new THREE.Vector3(
+      pasturePlan.well.x,
+      sampleHeight(pasturePlan.well.x, pasturePlan.well.z),
+      pasturePlan.well.z,
+    )
+    wells.push({
+      id: pastureWellLandmarkId(),
+      position,
+      prop: pw,
+      familyIndex: null,
+      isCentral: false,
+      queueId: pastureWellQueueId(settlementId),
+    })
+    landmarks.pasture = {
+      position: new THREE.Vector3(
+        pasturePlan.x,
+        sampleHeight(pasturePlan.x, pasturePlan.z),
+        pasturePlan.z,
+      ),
+      radius: pasturePlan.radius,
+      trough: new THREE.Vector3(
+        pasturePlan.trough.x,
+        sampleHeight(pasturePlan.trough.x, pasturePlan.trough.z),
+        pasturePlan.trough.z,
+      ),
+    }
+  }
+  if (householdWellLandmarks.length > 0 || pasturePlan) await yieldProp()
   landmarks.wells = wells
 
   const { x: stockX, z: stockZ } = placeFromLandmark(
@@ -1321,6 +1364,26 @@ export async function buildSettlementProps(
   )
   if (troughInstances) group.add(troughInstances.group)
 
+  if (pasturePlan) {
+    const pastureTroughPlacements: PropPlacement[] = [{
+      speciesIndex: 0,
+      x: pasturePlan.trough.x,
+      z: pasturePlan.trough.z,
+      groundY: sampleHeight(pasturePlan.trough.x, pasturePlan.trough.z),
+      rotationY: Math.atan2(
+        pasturePlan.x - pasturePlan.trough.x,
+        pasturePlan.z - pasturePlan.trough.z,
+      ),
+      scale: 1,
+    }]
+    const pastureTroughInstances = buildInstancedProps(
+      troughTemplates,
+      pastureTroughPlacements,
+      'settlement-pasture-troughs',
+    )
+    if (pastureTroughInstances) group.add(pastureTroughInstances.group)
+  }
+
   // Household storage container (plan 156) — physical representation of
   // `Household.stock`/`.water`, one per house yard. Presentation only; the
   // authoritative quantity stays on `Household` (`settlement/household.ts`).
@@ -1559,6 +1622,13 @@ export async function buildSettlementProps(
     site, size, sampleHeight, waterLevel, plan, coast, pathCorridors,
   )
   await plantEntrancePalisade(group, palisadePlacements)
+  if (pasturePlan) {
+    await plantEntrancePalisade(
+      group,
+      pastureFencePlacements(pasturePlan, sampleHeight),
+      'settlement-pasture-fence',
+    )
+  }
 
   // Village torch posts — plaza ring (MD+) + gate flanks (plan 085).
   // Never sit in the road: gate posts belong on the palisade wing, not in the

@@ -1,13 +1,17 @@
 # Plan: Settlement outskirts and pasture
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** -
 **Model:** Sonnet, Composer
+
+## Implementation status
+
+Implemented 2026-09-15. `VillagePlan.pasture` is the owner: MD/LG/XL get a satellite area outside `VillageBoundary` (well, trough, fence marker, local path); SM/OUTPOST do not. Shepherd daytime work falls back to that anchor after shear/deposit/separated-sheep. Livestock keep household ownership; the pasture trough consumes the same `Household.water` reserve. Automated tests cover planner determinism, scale, clearance, fence/well/trough stability, shepherd priority and trough reuse. Browser/gameplay verification is user-owned.
 
 ## Cel
 

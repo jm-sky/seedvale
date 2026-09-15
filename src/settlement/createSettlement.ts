@@ -706,6 +706,14 @@ export async function createSettlement(
       def.isHome,
       shepherdHouseIndex,
       onAnimalDeathSound,
+      landmarks.pasture
+        ? {
+          x: landmarks.pasture.position.x,
+          z: landmarks.pasture.position.z,
+          radius: landmarks.pasture.radius,
+          trough: { x: landmarks.pasture.trough.x, z: landmarks.pasture.trough.z },
+        }
+        : undefined,
     )
   } finally {
     bootMarkEnd('spawnLivestock')

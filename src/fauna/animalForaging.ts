@@ -299,6 +299,12 @@ export type ForagingContext = {
   /** Optional finite player-built trough provider (plan items-player-020 §4)
    *  — queried only during an active water search, never per frame. */
   waterSourceProvider?: AnimalWaterSourceProvider
+  /**
+   * Extra household-backed stored-water positions (plan settlements-009
+   * pasture trough). Same `Household.water` reserve as the yard trough;
+   * `findHouseholdTroughTarget` picks the closest of home + these anchors.
+   */
+  householdWaterAnchors?: readonly { readonly x: number, readonly z: number }[]
   /** Physical water at a point — same sample `AnimalAgent.isWalkable()` uses. */
   sampleLocalWater?: (x: number, z: number) => LocalWaterSample
   /** Lake/river/ocean classifier (player drink seam) — when absent, ocean
@@ -341,10 +347,23 @@ function withinNeedLeash(ctx: ForagingContext, x: number, z: number): boolean {
  *  shoreline search when the owning household has stored water, the same
  *  "prefer local stored water" hierarchy `NpcAgent`'s personal thirst
  *  uses. Only livestock have a `household` (wild fauna: always `undefined`,
- *  falls straight through to the shoreline search below). */
+ *  falls straight through to the shoreline search below). Extra
+ *  `householdWaterAnchors` (settlement pasture trough) still consume this
+ *  same reserve — they are alternate positions, not a second inventory. */
 export function findHouseholdTroughTarget(ctx: ForagingContext): SourceTarget | null {
   if (!ctx.household?.water.has(TROUGH_DRINK_AMOUNT)) return null
-  return { kind: 'water', x: ctx.home.x, z: ctx.home.z, waterSource: { kind: 'household' } }
+  let bestX = ctx.home.x
+  let bestZ = ctx.home.z
+  let bestD = Math.hypot(bestX - ctx.x, bestZ - ctx.z)
+  for (const anchor of ctx.householdWaterAnchors ?? []) {
+    const d = Math.hypot(anchor.x - ctx.x, anchor.z - ctx.z)
+    if (d < bestD) {
+      bestX = anchor.x
+      bestZ = anchor.z
+      bestD = d
+    }
+  }
+  return { kind: 'water', x: bestX, z: bestZ, waterSource: { kind: 'household' } }
 }
 
 /** @deprecated Use `findHouseholdTroughTarget` — kept as a thin alias for
@@ -618,6 +637,11 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
     const pool = ctx.caveEnvironmental?.poolWater
     if (!pool || pool.id !== target.waterSource.id) return false
     return ctx.isWalkable(target.x, target.z)
+  }
+  if (target.kind === 'water' && target.waterSource?.kind === 'household') {
+    if (!ctx.household?.water.has(TROUGH_DRINK_AMOUNT)) return false
+    if (!ctx.isWalkable(target.x, target.z)) return false
+    return withinNeedLeash(ctx, target.x, target.z)
   }
   if (!ctx.isWalkable(target.x, target.z)) return false
   if (target.waterSource?.kind !== 'environmental' && Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) > ctx.roamRadius) return false

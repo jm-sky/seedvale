@@ -920,6 +920,17 @@ export type AnimalAgentDeps = {
   /** Per-individual variant (plan fauna-022). Omitted/`undefined` is `normal`
    *  so existing call sites keep prior stats and presentation. */
   variant?: AnimalVariant
+  /**
+   * Extra household-backed water position (plan settlements-009 pasture
+   * trough). Presentation/target only — consumption still mutates
+   * `Household.water`.
+   */
+  pastureTrough?: { x: number, z: number }
+  /**
+   * Daytime roam/work area for shepherd-household livestock (plan
+   * settlements-009). Does not replace `home` or ownership.
+   */
+  pastureRoam?: { x: number, z: number, radius: number }
 }
 
 /** Per-tick inputs for `AnimalAgent.update()` (plan fauna-017 step 2) — same
@@ -1175,6 +1186,10 @@ export class AnimalAgent {
   private caveRouteIndex = 0
   /** Cursor for `sourceTarget.caveRoute` during pool water/food pursuit (plan fauna-027). */
   private sourceCaveRouteIndex = 0
+  /** Pasture trough world XZ (plan settlements-009) — household water only. */
+  private readonly _pastureTrough?: { x: number, z: number }
+  /** Daytime satellite roam for shepherd-owned livestock (plan settlements-009). */
+  private readonly _pastureRoam?: { x: number, z: number, radius: number }
   /** Committed water/other trip (plan fauna-016 §4) — `null` when not on
    *  one. Only ever read/written by `wander()`'s trip helpers. */
   private trip: AnimalTrip | null = null
@@ -1522,6 +1537,8 @@ export class AnimalAgent {
       humanTaste = false,
       cave,
       variant = 'normal',
+      pastureTrough,
+      pastureRoam,
     } = deps
     this.def = def
     this.animalId = animalId
@@ -1534,6 +1551,8 @@ export class AnimalAgent {
     this.humanTaste = humanTaste
     this.variant = variant
     this.effective = resolveAnimalVariantStats(variant)
+    this._pastureTrough = pastureTrough
+    this._pastureRoam = pastureRoam
     this.onDeath = onDeath
     this.onDeathSound = onDeathSound
     this.cave = cave
@@ -4473,6 +4492,9 @@ export class AnimalAgent {
       sampleLocalWater: (x, z) => this.sampleLocalWater(x, z),
       naturalWaterKindAt: this.naturalWaterKindAt,
     }
+    if (this._pastureTrough) {
+      ctx.householdWaterAnchors = [this._pastureTrough]
+    }
     if (this.isPlayerOwned() || this._leadAttached) {
       const anchor = this._control.mode === 'stay' && this._control.stayAnchor
         ? this._control.stayAnchor
@@ -4836,13 +4858,40 @@ export class AnimalAgent {
       this.wanderTimer = (1.5 + Math.random() * 2) / bias
       return
     }
-    const [minR, maxR] = this.wanderRadius
-    if (this.pickPointNear(this.home.x, this.home.z, minR * bias, maxR * bias)) {
+    const [minR, maxR] = this.currentWanderBand()
+    const roam = this.currentRoamHome()
+    if (this.pickPointNear(roam.x, roam.z, minR * bias, maxR * bias)) {
       this.wanderTimer = (3 + Math.random() * 4) / bias
       return
     }
-    this.target.copy(this.home)
+    this.target.set(roam.x, 0, roam.z)
     this.wanderTimer = (3 + Math.random() * 4) / bias
+  }
+
+  /** Daytime satellite roam for shepherd-household livestock (plan
+   *  settlements-009). `home` / ownership stay on the household; this only
+   *  redirects wander while the shepherd's work window is open. */
+  private shouldUsePastureRoam(): boolean {
+    if (!this._pastureRoam || !this.ownerHouseId || this.isPlayerOwned()) return false
+    if (isStrayEpisodeActive(this._stray)) return false
+    const frac = this.tickNowDays - Math.floor(this.tickNowDays)
+    const hour = ((frac % 1) + 1) % 1 * 24
+    return hour >= 7 && hour < 18
+  }
+
+  private currentRoamHome(): { x: number, z: number } {
+    if (this.shouldUsePastureRoam() && this._pastureRoam) {
+      return { x: this._pastureRoam.x, z: this._pastureRoam.z }
+    }
+    return { x: this.home.x, z: this.home.z }
+  }
+
+  private currentWanderBand(): readonly [number, number] {
+    if (this.shouldUsePastureRoam() && this._pastureRoam) {
+      const r = this._pastureRoam.radius
+      return [Math.min(4, r * 0.3), Math.max(6, r * 0.8)]
+    }
+    return this.wanderRadius
   }
 
   /** Mother/herd wander bias (plan 118), tried before the home-anchored
@@ -5273,6 +5322,11 @@ export class AnimalAgent {
     // Thunder scare is a short committed flee impulse (plan world-026):
     // clamp would cancel the displacement the impulse is meant to cause.
     if (this.scareRemainingSec > 0) return
+    if (this.shouldUsePastureRoam()) return
+    if (this._pastureRoam && this.ownerHouseId && !this.isPlayerOwned()) {
+      const dist = Math.hypot(this.mesh.position.x - this.home.x, this.mesh.position.z - this.home.z)
+      if (dist > ROAM_RADIUS) return
+    }
     this.mesh.position.x = THREE.MathUtils.clamp(
       this.mesh.position.x,
       this.home.x - ROAM_RADIUS,

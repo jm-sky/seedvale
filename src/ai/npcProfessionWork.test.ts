@@ -1287,11 +1287,56 @@ describe('planProfessionWork', () => {
         shepherdFlock: flock,
         hasShearingTool: () => true,
         nowDays: () => 10,
+        pasture: { x: 80, z: 0, radius: 12 },
       }))
       expect(work?.kind).toBe('deposit')
+      expect(work?.destination.x).toBe(0)
       work?.onComplete()
       expect(carried.count('wool')).toBe(0)
       expect(household.items.count('wool')).toBe(4)
+    })
+
+    it('uses the settlement pasture as the daytime work fallback', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const { flock } = flockHooks({ woolReady: false, x: 2, z: 2 })
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        shepherdFlock: flock,
+        hasShearingTool: () => true,
+        pasture: { x: 80, z: 12, radius: 14 },
+      }))
+      expect(work?.kind).toBe('work')
+      expect(work?.destination.x).toBe(80)
+      expect(work?.destination.z).toBe(12)
+      expect(work && 'followAnimalId' in work ? work.followAnimalId : undefined).toBeUndefined()
+    })
+
+    it('still follows a separated sheep before going to pasture', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const { flock } = flockHooks({ woolReady: false, x: 40, z: 0 })
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        shepherdFlock: flock,
+        hasShearingTool: () => true,
+        pasture: { x: 80, z: 12, radius: 14 },
+      }))
+      expect(work?.kind).toBe('work')
+      expect(work && 'followAnimalId' in work ? work.followAnimalId : undefined).toBe('sheep-house0-0')
+      expect(work?.destination.x).toBe(40)
+    })
+
+    it('goes to pasture even when the settlement currently has no flock', () => {
+      const household = createHousehold('h', 's', ownerHouseId)
+      const work = planProfessionWork(baseCtx({
+        role: 'shepherd',
+        household,
+        pasture: { x: 64, z: -8, radius: 11 },
+      }))
+      expect(work?.kind).toBe('work')
+      expect(work?.destination.x).toBe(64)
+      expect(work?.destination.z).toBe(-8)
     })
   })
 

@@ -4617,6 +4617,13 @@ export class NpcAgent {
       nowDays: () => this.worldNowDays,
       shepherdFlock: this.shepherdFlock,
       hasShearingTool: () => this.personalInventory.hasCapability('shearing'),
+      pasture: this.landmarks.pasture
+        ? {
+          x: this.landmarks.pasture.position.x,
+          z: this.landmarks.pasture.position.z,
+          radius: this.landmarks.pasture.radius,
+        }
+        : null,
     }
   }
 

@@ -632,6 +632,9 @@ export async function spawnLivestock(
   shepherdHouseIndex: number | null = null,
   /** Death vocal at `collapse()` (S26). */
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
+  /** Settlement pasture (plan settlements-009) — trough is a water target
+   *  for every household animal; roam is only for the shepherd house. */
+  pasture?: { x: number, z: number, radius: number, trough: { x: number, z: number } },
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
@@ -686,6 +689,10 @@ export async function spawnLivestock(
         onDeath: onAnimalDeath,
         onDeathSound: onAnimalDeathSound,
         household,
+        pastureTrough: pasture?.trough,
+        pastureRoam: shepherdHouseIndex === i && pasture
+          ? { x: pasture.x, z: pasture.z, radius: pasture.radius }
+          : undefined,
       })
       // Persisted household-owned state is authoritative for an existing
       // individual — player-owned records restore via the detached path.

@@ -11,6 +11,7 @@ import type {
   VillageLandmarkKind,
   VillageLandmarkPlan,
   VillageLayoutPattern,
+  VillagePasturePlan,
   VillagePathPlan,
   VillagePlot,
   VillagePlotRole,
@@ -33,6 +34,7 @@ import { selectHouseholdWellFamilyIndices } from './householdWells'
 import { householdYardRadius } from './householdYard'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 import { plazaCoreRadius } from './villageClearing'
+import { appendPasturePath, planSettlementPasture } from './villagePasture'
 import { householdWellPlotId, parseHouseholdWellFamilyIndex, residentialStructureId } from './villagePlan'
 
 /** Matches `worldConfig.settlement.clearing.coreRadius` — used to size
@@ -121,6 +123,9 @@ export type VillageLayoutDraft = {
   landmarks: readonly VillageLandmarkPlan[]
   paths: readonly VillagePathPlan[]
   entrances: readonly VillageEntrance[]
+  /** Satellite outskirts pasture (plan settlements-009). Absent on SM/OUTPOST
+   *  and when every dry candidate failed. */
+  pasture?: VillagePasturePlan
 }
 
 /** Local path half-widths (plan 047 §9) — numeric corridor hints, not the
@@ -1198,6 +1203,19 @@ export function planVillageLayout(
     plots.push({ ...plot, price: salePrice })
   }
 
+  const pasture = planSettlementPasture({
+    identity,
+    center,
+    boundary,
+    plots,
+    families,
+    entrances: predictedEntrances,
+    seedForCell,
+    sampleHeight,
+    waterLevel,
+    riverSegments,
+  })
+
   const { buildings, landmarks } = buildingsAndLandmarksFromPlots(plots, identity)
   const { paths, entrances } = planLocalPathsAndEntrances({
     identity,
@@ -1211,7 +1229,8 @@ export function planVillageLayout(
     sampleHeight,
     waterLevel,
   })
-  return { boundary, center, pattern, zones, plots, buildings, landmarks, paths, entrances }
+  if (pasture) appendPasturePath(paths, pasture, sampleHeight, waterLevel)
+  return { boundary, center, pattern, zones, plots, buildings, landmarks, paths, entrances, pasture }
 }
 
 /**
