@@ -3,12 +3,13 @@
 **Created:** 2026-09-15
 **Status:** `planned` 📋
 **Type:** feature
-**Priority:** high · **Effort:** M/L
+**Priority:** high · **Effort:** L
 **Depends on:** settlements-npcs-037, ~~settlements-npcs-028~~, ~~settlements-npcs-033~~
 **Domain:** `settlements-npcs`
 **Subdomains:** `economy` `logistics` `schedules`
 **Tags:** `merchant` `travel` `inter-settlement` `transport` `trade`
 **Roadmap:** `physical-goods-transport`
+**Model:** Opus, Sonnet
 
 ## Goal
 
@@ -47,8 +48,7 @@ Current code already provides the necessary pieces:
 - existing `CharacterDef.role === 'trader'` and `planTraderWork()` in `src/ai/npcProfessionWork.ts`,
 - player-facing merchant trade through the existing generalized trade UI/transactions (`settlements-npcs-033`),
 - world-owned `TransportOrder` and carrier cargo ownership,
-- remote/off-screen transport execution from 019/021,
-- inter-settlement economic/transport matching introduced by `settlements-npcs-037`,
+- inter-settlement economic/transport matching and transport-purpose travel from `settlements-npcs-037`,
 - persistent `NpcAuthoritativeState` including personal inventory and generic travel,
 - `src/ai/npcTravel.ts` from plan 028:
   - `NpcTravelContinuity`,
@@ -59,7 +59,12 @@ Current code already provides the necessary pieces:
   - idempotent arrival observation,
 - persistent settlement membership/home identity remains unchanged while NPC travels.
 
-`NpcTravelPurpose` currently has an expedition variant and was explicitly designed as semantic caller context for later generic travel flows. Travelling Merchant should extend that shared union rather than create a `MerchantTravelEngine`.
+Important current gaps verified during review:
+
+- `createSettlement()` materializes only the settlement's own generated family members; there is no generic foreign-NPC visitor materialization seam yet,
+- `inventoryWiring.ts::isMerchantNpc()` currently grants full merchant specialization only to a Trader physically found in the home settlement.
+
+`NpcTravelPurpose` is already semantic caller context for generic travel and should be extended rather than replaced with a merchant-specific travel engine.
 
 ## Architectural decision: no new profession enum in V1
 
@@ -92,6 +97,7 @@ A dedicated specialist role may be justified later if settlements need separate 
 6. One merchant cannot execute local work, an outbound transport and a return journey simultaneously.
 7. No replacement Trader is spawned while the real Trader is away.
 8. A merchant journey is caused by real economic state, not by a scripted patrol route.
+9. At most one live `NpcAgent` exists for the travelling merchant's stable `NpcId`.
 
 ## 1. Journey trigger
 
@@ -115,51 +121,45 @@ Do not add global merchant assignment auctions or search all NPCs for a carrier.
 
 The outbound leg is **not** a new merchant journey transport implementation.
 
-Reuse 037 exactly:
+Reuse the final 037 contract exactly:
 
 ```text
 TransportOrder
-source settlement-storage
-→ pickup
-→ NpcAuthoritativeState.transportCargo
-→ physical/off-screen transport
-→ destination settlement-storage
-→ completion
+  owns economic commitment + cargo lifecycle
+
+NpcAuthoritativeState.transportCargo
+  owns committed goods after pickup
+
+NpcAuthoritativeState.travel
+  purpose = transport(orderId)
+  owns A→B spatial continuity
 ```
 
 During this leg:
 
-- `TransportOrder.execution` owns cargo-trip timing/progress,
-- `transportCargo` owns the goods,
-- local Trader work is suspended by the existing active-order guard,
-- do not also run an independent `NpcTravelContinuity` clock for the same outbound cargo leg.
+- `TransportOrder` remains the authority for source/destination/item/quantities/carrier/lifecycle,
+- generic `NpcTravelContinuity` is the authority for cross-settlement detailed↔off-screen position/timing,
+- local Trader work is suspended by the active journey/order guards,
+- do not also run an independent merchant travel clock,
+- do not reintroduce `TransportOrder.execution` as a second A→B clock if 037 has moved cross-settlement spatial continuity onto generic travel.
 
-If shared survival/reification helpers from `npcTravel.ts` are reused, they must not create a second authoritative arrival time.
+Implementation must consume the actual public seams produced by 037 rather than recreate them.
 
 ## 3. Destination arrival and merchant visit
 
 After successful cross-settlement delivery, the Trader becomes a visiting merchant at the destination for a bounded deterministic period.
 
-This is role lifecycle, not transport state.
+This is NPC-owned lifecycle state, not transport state.
 
-Implementation notes must identify the smallest persistent representation needed to distinguish:
-
-```text
-outbound transport
-→ visiting destination
-→ returning home
-```
-
-Prefer a compact NPC-owned merchant journey/visit record or semantic generic-travel context over a world-global merchant registry.
-
-Do not persist derived economy scores or copied settlement inventories.
-
-The visit record, if needed, should contain only stable semantic data such as:
+Use a compact sparse merchant-journey record on `NpcAuthoritativeState` (exact type/name in implementation notes), containing only stable semantic fields such as:
 
 - home settlement id,
-- current visit settlement id,
-- visit start/end world time,
-- phase required for idempotent continuation.
+- destination settlement id,
+- phase (`outbound` / `visiting` / `returning`),
+- matching transport order id while outbound,
+- visit start/end world time while visiting.
+
+Do not persist derived economy scores or copied settlement inventories.
 
 Do not store runtime `Settlement`, `NpcAgent`, scene object or inventory references.
 
@@ -167,16 +167,27 @@ Do not store runtime `Settlement`, `NpcAgent`, scene object or inventory referen
 
 When destination is relevant/loaded, the visiting merchant should materialize as the same NPC at a safe position near the destination settlement's existing merchant/trade/public area.
 
-Reuse the generic 028 reification/position semantics rather than spawning a destination-local clone.
+Current code cannot do this automatically: `createSettlement()` only builds that settlement's own authored family members.
+
+Add the smallest reusable **travelling-NPC visitor materialization seam**, owned by `SettlementsManager` or a focused helper it owns, so the same stable NPC identity may be presented in another loaded settlement without becoming a member of it.
+
+Requirements:
+
+- reuse the same `NpcStateRegistry` object,
+- resolve immutable character/family identity from canonical deterministic home settlement data,
+- never create a destination-local clone/proxy,
+- never materialize the same `NpcId` both at home and destination,
+- dispose only presentation on stream-out; keep authoritative state,
+- reuse this seam later for Courier/other travelling NPCs where practical.
 
 The merchant remains a member of its home settlement while visiting.
 
 Do not:
 
-- create a second NPC in the destination population,
-- change stable NPC id,
+- create a second NPC identity,
 - change family/household membership,
-- permanently restaff destination professions.
+- permanently restaff destination professions,
+- force-load the source settlement merely to rebuild immutable identity.
 
 If destination is unloaded, the visit may remain coarse/off-screen until reification or until the visit window expires.
 
@@ -184,7 +195,9 @@ If destination is unloaded, the visit may remain coarse/off-screen until reifica
 
 Reuse the existing player↔NPC trade system from `settlements-npcs-033`.
 
-The travelling merchant may expose the same merchant interaction it already has when the NPC is materialized at the destination.
+The travelling merchant should expose the same portable/catalog merchant interaction it already has when materialized at destination.
+
+Current `inventoryWiring.ts::isMerchantNpc()` is home-location-gated and therefore must be replaced with a stable merchant-specialization predicate. Do **not** broaden it naively to every `role === 'trader'` unless that is explicitly intended by existing design.
 
 Critical ownership separation:
 
@@ -198,22 +211,25 @@ Do not make committed `transportCargo` purchasable by the player.
 
 Do not copy destination settlement stock into a merchant inventory merely to make a shop UI work.
 
-If current `MERCHANT_STOCK` remains catalog-driven rather than a fully physical persistent shop inventory, preserve that existing behavior in this plan; converting merchant merchandise to a fully world-owned physical inventory is separate work.
+If current `MERCHANT_STOCK` remains catalog-driven rather than a fully physical persistent shop inventory, preserve that behavior.
+
+Home-bound physical/special offers, especially the merchant horse, must not be duplicated or teleported to the destination merely because the merchant NPC is visiting there.
 
 ## 6. Visit duration and work behavior
 
-Use one deterministic configured visit duration, expressed in world time.
+Use one deterministic configured visit duration expressed in world days.
 
 During the visit the merchant:
 
 - does not perform home-settlement local Trader collection,
-- may be available for normal player trade/dialogue when live,
+- does not execute destination settlement's normal Trader profession work,
+- may be available for player trade/dialogue when live,
 - does not automatically start another outbound delivery from the destination in V1,
 - waits for visit expiry unless interrupted by existing critical NPC state.
 
 Do not implement a multi-stop route scheduler yet.
 
-The duration constant and exact destination idle target should be chosen during implementation notes from current schedule/action conventions rather than invented in parallel.
+The visit duration must advance without player presence and must not restart after save/load.
 
 ## 7. Return-home travel
 
@@ -225,7 +241,8 @@ Conceptually:
 
 ```text
 visit expires
-→ generic travel destination = home settlement position
+→ journey phase = returning
+→ generic travel destination = home settlement target
 → detailed XOR off-screen travel
 → survival continuity
 → arrival observed exactly once
@@ -247,6 +264,8 @@ While the Trader is away:
 - local Trader economic work may temporarily be unavailable,
 - no replacement Trader should be created automatically,
 - settlement economy continues through its other systems.
+
+Current authored-NPC materialization must therefore gain an "away" predicate: rebuilding home settlement A while the Trader is outbound/visiting/returning must **not** instantiate a home copy.
 
 This is an intended systemic consequence, not a bug to hide with a proxy worker.
 
@@ -302,7 +321,11 @@ Generic NPC authoritative health/travel state wins. Do not mark home arrival.
 
 ### Destination unload/reload
 
-Visit state must remain persistent/coherent; same NPC reifies if needed.
+Visit state remains persistent/coherent; same NPC reifies through the visitor materialization seam when needed.
+
+### Home settlement loads while merchant is away
+
+Do not instantiate a home clone. Formal family/population membership remains, but presentation is suppressed while authoritative journey state says the NPC is away.
 
 ### Save/load
 
@@ -316,13 +339,14 @@ Restore the same phase without:
 
 ## 12. Persistence
 
-Prefer reusing existing persistent owners:
+Reuse existing persistent owners:
 
-- `TransportOrder` for outbound delivery,
-- `NpcAuthoritativeState.travel` for return travel,
-- existing NPC state persistence for merchant-owned lifecycle metadata if one small field is required.
+- `TransportOrder` for outbound delivery commitment,
+- `NpcAuthoritativeState.transportCargo` for committed goods,
+- `NpcAuthoritativeState.travel` for spatial continuity,
+- one small `NpcAuthoritativeState` merchant-journey field for lifecycle phase/timestamps.
 
-Do not create a global `TravellingMerchants` registry unless implementation recon proves the lifecycle cannot be represented coherently on the authoritative NPC state.
+Do not create a global `TravellingMerchants` registry.
 
 Any new merchant journey metadata must be plain-data, sparse and save-compatible with absent = no active journey.
 
@@ -333,10 +357,10 @@ No per-frame world merchant manager.
 Use:
 
 - existing Trader work cadence to accept a journey,
-- existing TransportOrder off-screen execution for outbound cargo,
+- 037 transport completion seam for outbound→visit transition,
 - timestamp-based visit expiry,
 - generic NPC travel checkpoints for return,
-- normal settlement/NPC streaming for materialization.
+- normal settlement/NPC streaming plus the narrow visitor materialization seam.
 
 Cost should scale with active travelling merchants, not total historical settlements/routes.
 
@@ -348,10 +372,10 @@ Existing NPC/transport debug surfaces should make it possible to identify:
 - home settlement,
 - active outbound order if any,
 - destination settlement,
-- current phase (`outbound` / `visiting` / `returning` or equivalent),
+- current phase (`outbound` / `visiting` / `returning`),
 - visit expiry,
 - generic return-travel state,
-- whether NPC is currently materialized.
+- whether NPC is currently materialized and in which settlement context.
 
 Do not add an unrelated merchant analytics subsystem.
 
@@ -374,19 +398,25 @@ no cross-settlement uncovered demand
 
 ### No duplicate identity
 
-Destination materialization contains the travelling Trader identity, not a spawned copy; home settlement does not create a replacement.
+- home settlement loads while Trader is away → no home clone,
+- destination materialization contains the original stable `NpcId`,
+- stream-out/reload never creates two live agents.
 
 ### Delivery gates visit
 
-Visit phase begins only after real `TransportOrder` completion.
+Visit phase begins only after real `TransportOrder` completion, not merely spatial arrival.
 
 ### Cargo isolation
 
 Committed `transportCargo` is not exposed to player merchant purchase flow.
 
+### Merchant specialization
+
+Visiting merchant retains normal portable/catalog merchant UI; ordinary unrelated Trader behavior is not broadened accidentally; home-bound world-entity offers are not duplicated.
+
 ### Visit expiry
 
-Visit duration expires deterministically from world time and creates exactly one return commitment.
+Visit duration expires deterministically from world time and creates exactly one return commitment, including while destination is off-screen.
 
 ### Return continuity
 
@@ -417,16 +447,17 @@ Dead/blocked merchant does not magically complete the journey or respawn at home
 - converting `MERCHANT_STOCK` into a fully physical shop inventory,
 - selling committed transport cargo to the player,
 - settlement membership migration,
-- spawning destination-local merchant proxies.
+- spawning destination-local merchant proxies,
+- teleporting the merchant's home horse with the NPC.
 
 ## 17. Extension path
 
 After this plan the same architecture can grow without replacement:
 
 ```text
-single Trader + one delivery + return
+single Trader + one delivery + visit + return
 → specialist travelling merchant staffing
-→ Courier/carrier role using same travel/transport contracts
+→ Courier/carrier role using same visitor/travel/transport contracts
 → pack animal/cart capacity
 → merchant + guard escort
 → caravan group travel
@@ -434,21 +465,24 @@ single Trader + one delivery + return
 → multi-stop regional routes
 ```
 
-Courier should reuse the same generic travel and commitment mechanisms; it should not introduce another delivery engine.
+Courier should reuse the same generic visitor, travel and commitment mechanisms; it should not introduce another delivery engine.
 
 ## Implementation guidance
 
-Before implementation create implementation notes against the then-current codebase. Verify especially:
+Read the implementation notes before coding. Re-read the actual final implementation of 037 because this plan consumes its transport-arrival and transport-purpose travel contracts.
 
-- exact `planTraderWork()` and 037 creation seam,
-- how transport completion exposes carrier destination/position,
-- whether the carrier's authoritative position is sufficient to start destination visit/return after off-screen delivery,
-- current `NpcTravelPurpose` persistence/clone/arrival call sites before extending its union,
-- destination merchant interaction targeting for an NPC whose formal membership remains in another settlement,
-- how schedule/work dispatch behaves for a home-settlement NPC physically visiting another settlement,
-- existing `MERCHANT_STOCK` ownership so transport cargo cannot leak into player trade.
+Verify especially:
 
-If current code shows that one small reusable generic visitor/travel-purpose seam is better than merchant-specific metadata, prefer that shared mechanism.
+- final 037 creation/delivery/arrival seam,
+- exact `NpcAuthoritativeState` snapshot/save validation path,
+- authored local NPC creation in `createSettlement.ts` so away-NPC suppression does not alter family/population state,
+- generic foreign visitor materialization ownership in `SettlementsManager`,
+- immutable NPC identity reconstruction from canonical settlement definition data,
+- `NpcTravelPurpose` clone/persistence/arrival call sites,
+- `inventoryWiring.ts::isMerchantNpc()` and home-only special offers,
+- schedule/work dispatch so a visitor never executes destination-local Trader work.
+
+Prefer a reusable visitor/materialization mechanism over merchant-specific clone logic.
 
 Add concise JSDoc to important new public/architectural helpers and use `@domain settlements-npcs` / `@domain npc` where appropriate.
 
@@ -457,9 +491,10 @@ Add concise JSDoc to important new public/architectural helpers and use `@domain
 ### Automated
 
 - merchant lifecycle state tests,
+- single-live-identity/materialization tests,
 - transport completion integration tests,
 - generic travel purpose/arrival persistence tests,
-- player-trade cargo isolation regression,
+- player-trade cargo isolation/specialization regressions,
 - save/load/time-skip tests,
 - typecheck,
 - lint,
@@ -471,11 +506,12 @@ User-owned browser verification:
 
 1. create a real inter-settlement food imbalance,
 2. observe the home Trader accept the delivery and leave,
-3. visit destination and confirm the same named NPC appears there,
-4. confirm delivered cargo changed destination stock,
-5. trade/talk with the visiting merchant without consuming committed cargo,
-6. let the visit expire,
-7. observe or later confirm return to the home settlement,
-8. repeat after save/load and after leaving both settlements off-screen.
+3. revisit the home settlement while the Trader is away and confirm no duplicate NPC appears,
+4. visit destination and confirm the same named/stable NPC appears there,
+5. confirm delivered cargo changed destination stock,
+6. trade/talk with the visiting merchant without consuming committed cargo or duplicating home-only horse offers,
+7. let the visit expire,
+8. observe or later confirm return to the home settlement,
+9. repeat after save/load and after leaving both settlements off-screen.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
