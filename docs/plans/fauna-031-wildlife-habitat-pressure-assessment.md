@@ -4,6 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** S
+**Model:** Composer, Sonnet
 **Depends on:** ~~fauna-010~~, ~~fauna-028~~
 **Domain:** `fauna`
 **Subdomains:** `habitat` `population` `predation`
