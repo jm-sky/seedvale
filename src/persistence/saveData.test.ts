@@ -1542,6 +1542,28 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(loadStoredSave({ ...validSave, unsafeFoodEventCount: 'seven' })).toEqual({ status: 'invalid' })
   })
 
+  it('migrates a v43 save with no consumedWorldPickupIds to the current version (plan quests-progression-036)', () => {
+    const { consumedWorldPickupIds: _ids, ...v43Fields } = validSave
+    const result = loadStoredSave({ ...v43Fields, version: 43 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.consumedWorldPickupIds).toBeUndefined()
+  })
+
+  it('round-trips consumedWorldPickupIds and rejects a malformed one (plan quests-progression-036)', () => {
+    const withConsumed = loadStoredSave({
+      ...validSave,
+      consumedWorldPickupIds: ['treasure-map-pickup:dark-forest-treasure'],
+    })
+    expect(withConsumed.status).toBe('ok')
+    if (withConsumed.status === 'ok') {
+      expect(withConsumed.data.consumedWorldPickupIds).toEqual(['treasure-map-pickup:dark-forest-treasure'])
+    }
+
+    expect(loadStoredSave({ ...validSave, consumedWorldPickupIds: 'taken' })).toEqual({ status: 'invalid' })
+  })
+
   it('migrates a v29 save with no unlockedTreasureContainerIds to the current version (plan world-024)', () => {
     const { unlockedTreasureContainerIds: _ids, ...v29Fields } = validSave
     const result = loadStoredSave({ ...v29Fields, version: 29 })

@@ -3,6 +3,13 @@
 **Plan:** `quests-progression-036-one-shot-authored-treasure-map-pickup.md`  
 **Reviewed against:** `main`, 2026-09-15
 
+## Implemented
+
+- `SaveData.consumedWorldPickupIds` (optional sparse string array, save v44 bump-only migration).
+- App-owned `Set` in `createApp.ts`: load, New Game `.clear()`, serialize in `saveState.ts`.
+- `buildAuthoredOneTimePickups()` gates map + abandoned-key extras; `worldBundle` threads the Set through `WorldSystemsSeed`.
+- Extra spawn points carry runtime `authoredOneShot`; `tryCollectWorldItem` adds the id **after** a successful inventory commit. Full inventory still `canAdd`-fails before `collect`.
+
 ## Recon conclusion
 
 Stable identity już istnieje: `darkForestTreasureMapPickupId()` zwraca deterministyczny id, a `worldBundle.ts` przekazuje go do `extraOneTimePickups`. `createItemSpawners()` mapuje taki pickup na zwykły `ItemSpawnPoint` z `respawnTime = Infinity`, ale `collected` jest runtime-only i startuje od `false` po rebuildzie. Fix ma persystować fakt konsumpcji stable authored pickup id, nie runtime spawn point.

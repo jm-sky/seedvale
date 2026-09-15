@@ -1,7 +1,7 @@
 # Plan: One-shot authored treasure-map pickup
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** bug
 **Priority:** high · **Effort:** S
 **Depends on:** ~~quests-progression-008~~, ~~quests-progression-009~~

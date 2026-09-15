@@ -76,6 +76,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Player combat mode](../src/player/playerCombatMode.ts) — runtime drawn-primary state for HUD/keyboard sheathe-toggle (plan ui-input-018); does not own `HeldTool` or combat damage.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).
 - [Treasure gameplay](../src/items/treasureGameplay.ts) — deterministic systemic loot, force-entry resolution and trap consequences (plan items-player-026); lock identity stays in `treasureSites.ts`.
+- [Authored world pickups](../src/items/authoredWorldPickups.ts) — one-shot extra pickup list for `WorldBundle` (`consumedWorldPickupIds` gate, plan quests-progression-036).
 
 ## World simulation
 

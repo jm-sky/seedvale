@@ -345,7 +345,7 @@ See `docs/state/fauna.md`.
 
 ### Items / world containers / knowledge
 
-Gathering reads player inventory; rewards grant through existing item seams. Treasure/discovery objectives consume inventory actions, `LocationKnowledge` and world-generated-container state rather than quest-owned copies.
+Gathering reads player inventory; rewards grant through existing item seams. Treasure/discovery objectives consume inventory actions, `LocationKnowledge` and world-generated-container state rather than quest-owned copies. The dark-forest treasure-map **source** is consumed via app-owned `consumedWorldPickupIds`; `worldFlags.treasureMapDarkForestRead` only records that the map was read.
 
 See `docs/state/player-systems.md` and `docs/state/world-locations.md`.
 

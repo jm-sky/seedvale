@@ -46,6 +46,7 @@ import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFau
 import { buildDungeonResidentsPlan } from '../fauna/dungeonResidents'
 import { createHuntingHooks } from '../fauna/huntingHooks'
 import { createDroppedItems, type DroppedItem, type DroppedItems } from '../items/createDroppedItems'
+import { buildAuthoredOneTimePickups } from '../items/authoredWorldPickups'
 import { createItemSpawners, type ItemSpawners } from '../items/createItemSpawners'
 import { createPlacedTents, type PlacedTent, type PlacedTents } from '../items/createPlacedTents'
 import { preloadHeldToolModels } from '../items/heldToolVisual'
@@ -172,7 +173,6 @@ import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from 
 import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
 import { preloadTrapProps } from '../world/trapProp'
 import {
-  abandonedTreasureKeyPickups,
   authoredTreasureReservedIds,
   completeTreasureSites,
   KEY_HOST_KINDS,
@@ -728,33 +728,17 @@ function buildItemSpawners(
   settlement: Settlement,
   seed: number,
   treasureSites: readonly TreasureSiteDefinition[],
+  consumedWorldPickupIds: ReadonlySet<string>,
 ): ItemSpawners {
   const gardens =
     settlement.landmarks.gardens.length > 0
       ? settlement.landmarks.gardens
       : [settlement.landmarks.garden]
-  const treasureSite = getActiveDarkForestTreasureSite()
-  const mapSource = treasureSite?.treasureMap
-  const extraOneTimePickups = [
-    ...(mapSource
-      ? [{
-          id: mapSource.pickupId,
-          kind: 'treasure_map_dark_forest' as const,
-          x: mapSource.pickupX,
-          z: mapSource.pickupZ,
-          /** Owned by an existing cave/cemetery place — always materialize. */
-          anchoredToWorldPlace: true,
-        }]
-      : []),
-    ...abandonedTreasureKeyPickups(treasureSites).map((key) => ({
-      id: key.pickupId,
-      kind: 'key' as const,
-      x: key.x,
-      z: key.z,
-      anchoredToWorldPlace: true,
-      instanceId: key.keyInstanceId,
-    })),
-  ]
+  const extraOneTimePickups = buildAuthoredOneTimePickups(
+    getActiveDarkForestTreasureSite()?.treasureMap,
+    treasureSites,
+    consumedWorldPickupIds,
+  )
   return createItemSpawners(
     scene,
     chunkManager.sampleHeight,
@@ -795,6 +779,8 @@ type WorldSystemsSeed = {
   scene: Scene
   config: WorldConfig
   collectedItemIds: Set<string>
+  /** Plan quests-progression-036 — consumed authored extraOneTimePickup ids. */
+  consumedWorldPickupIds: ReadonlySet<string>
   removedCropIds: Set<string>
   plantedTrees: PlantedTreeRecord[]
   plantedCrops: CropPlacement[]
@@ -978,7 +964,7 @@ async function buildWorldSystems(
   const { bootMark, bootMarkEnd } = useBootMark('buildWorldSystems')
 
   const {
-    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications,
+    scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications,
     playAt, treeLifecycle, getWorldDays, dayNight,
     droppedItems: initialDroppedItems,
     placedFires: initialPlacedFires,
@@ -1697,7 +1683,7 @@ async function buildWorldSystems(
       bootMarkEnd('background:homeReady')
 
       bootMark('background:itemSpawners+dryingRacks+hives')
-      itemSpawners = buildItemSpawners(scene, chunkManager, home, config.seed, treasureSites)
+      itemSpawners = buildItemSpawners(scene, chunkManager, home, config.seed, treasureSites, consumedWorldPickupIds)
       dryingRacks = createDryingRacks(scene, chunkManager.sampleHeight, home.landmarks.stockpile, initialDryingRacks)
       hives = createBeehives(scene, chunkManager.sampleHeight, home.landmarks.trees.map((t) => t.position), config.seed, initialHives)
       bootMarkEnd('background:itemSpawners+dryingRacks+hives')
@@ -1897,9 +1883,11 @@ export async function createWorldBundle(
    *  `createWorldBundle` and `rebuildWorldBundle`" contract as
    *  `resourceDepletion` above. */
   initialResourceSiteInventories?: ResourceSiteInventories,
+  /** Plan quests-progression-036 — app-owned consumed authored pickup ids. */
+  consumedWorldPickupIds: ReadonlySet<string> = new Set(),
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
-    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
+    scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
     droppedItems: initialDroppedItems,
     placedFires: initialPlacedFires,
@@ -2020,6 +2008,8 @@ export async function rebuildWorldBundle(
    *  owns and threads through both. Falls back to the live bundle field so an
    *  in-session rebuild never drops extracted ore. */
   resourceSiteInventories?: ResourceSiteInventories,
+  /** Plan quests-progression-036 — same mutated-in-place Set `createApp` owns. */
+  consumedWorldPickupIds: ReadonlySet<string> = new Set(),
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -2137,7 +2127,7 @@ export async function rebuildWorldBundle(
   if (resetCollectedItems) treeLifecycle.clearOverrides()
 
   const { bundle: fresh, backgroundReady } = await buildWorldSystems({
-    scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
+    scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
     droppedItems: carriedDrops,
     placedFires: carriedFires,

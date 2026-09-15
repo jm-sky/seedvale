@@ -531,6 +531,7 @@ export async function createApp(
   // place contract as `resolvedHiddenFindSpotIds` (container actions capture
   // this reference once).
   const unlockedTreasureContainerIds = new Set<string>(initialSave?.unlockedTreasureContainerIds ?? [])
+  const consumedWorldPickupIds = new Set<string>(initialSave?.consumedWorldPickupIds ?? [])
   const treasureChestMutations = new Map<string, TreasureChestMutation>()
   for (const row of initialSave?.treasureChestMutations ?? []) {
     treasureChestMutations.set(row.containerId, {
@@ -724,6 +725,7 @@ export async function createApp(
     initialSave?.worldFlags?.treasureMapBearCaveCasketConsumed ?? false,
     onSettlementAvailable,
     resourceSiteInventories,
+    consumedWorldPickupIds,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -2158,6 +2160,7 @@ export async function createApp(
     worldFlags,
     resolvedHiddenFindSpotIds,
     unlockedTreasureContainerIds,
+    consumedWorldPickupIds,
     treasureChestMutations,
     badges,
     reputation,
@@ -2237,6 +2240,7 @@ export async function createApp(
         worldFlags.treasureMapBearCaveSourceExtracted,
         worldFlags.treasureMapBearCaveCasketConsumed,
         resourceSiteInventories,
+        consumedWorldPickupIds,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()
@@ -2279,6 +2283,7 @@ export async function createApp(
         ground.resetTreasureProgress()
         resolvedHiddenFindSpotIds.clear()
         unlockedTreasureContainerIds.clear()
+        consumedWorldPickupIds.clear()
         treasureChestMutations.clear()
         badges.reset()
         reputation.reset()
@@ -3081,6 +3086,7 @@ export async function createApp(
     canCancelRest: rest.canCancelRest,
     interruptLongActivityOnDamage: () => rest.interruptRestForDamage() || terrainPrep.interruptForDamage() || rest.abortBusy(),
     onInventoryChanged,
+    consumedWorldPickupIds,
     setFrameTiming: gui.setFrameTiming,
     syncPointLightBudget: () => { pointLightBudget.sync(camera) },
     getPlayerObservation: () => ({

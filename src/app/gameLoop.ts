@@ -623,6 +623,8 @@ export type GameLoopDeps = {
    *  (plan 186 §3 — "obrażenia" is one of the interrupting conditions). */
   interruptLongActivityOnDamage: () => boolean
   onInventoryChanged: () => void
+  /** Plan quests-progression-036 — app-owned consumed authored pickup ids. */
+  consumedWorldPickupIds: Set<string>
   /** Reports this frame's simulate/render split (ms) to the debug GUI's
    *  Performance folder (perf review M1). */
   setFrameTiming: (simulateMs: number, renderMs: number) => void
@@ -693,7 +695,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
     openWorldInspection, syncWorldInspection,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
-    onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
+    onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, consumedWorldPickupIds, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -2008,6 +2010,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             if (acquiredInstance) inventory.addInstance(acquiredInstance)
             else if (collected.foodBatch) inventory.addWithFreshness(collected.kind, 1, [collected.foodBatch], dayNight.elapsedDays)
             else inventory.add(collected.kind, 1, dayNight.elapsedDays)
+            if (collected.authoredOneShot) consumedWorldPickupIds.add(ref.id)
             picked += 1
             lastKind = collected.kind
           }

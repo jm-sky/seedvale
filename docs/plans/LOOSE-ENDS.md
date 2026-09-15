@@ -31,6 +31,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 ## Settlement / world correctness
 
+- [ ] 2026-09-15 — Village one-time spawners (`shovel`/`axe`/`pitchfork`/`sickle` in `createItemSpawners.ts`) use `respawnTime = Infinity` with generated `spawner:${index}` ids, so a `WorldBundle` rebuild rematerializes them the same way the authored treasure map used to. `consumedWorldPickupIds` (quests-progression-036) only gates `extraOneTimePickups` with stable authored ids; village tools need their own stable ids before they can reuse that set.
 - [ ] 2026-08-25 — `buildHouseWallCollidersLocal()` nadal iteruje tylko `def.walls`; `def.corners` nie mają własnego collidera. Zwykle maskują to sąsiednie ściany, ale corner przy otworze/door module nie ma takiego invariant — przy najbliższym dotykaniu house collision dodać jawne pokrycie/test.
 
 ## Off-screen simulation

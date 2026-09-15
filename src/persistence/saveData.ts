@@ -673,7 +673,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 43
+export const CURRENT_SAVE_VERSION = 44
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -774,6 +774,15 @@ export type SaveData = {
   /** Plan world-024 — sparse unlocked systemic treasure chests, keyed by
    *  stable container id. Missing means none unlocked. */
   unlockedTreasureContainerIds?: string[]
+  /**
+   * Plan quests-progression-036 — sparse consumed authored world pickup ids
+   * (`extraOneTimePickups` / stable `OneTimeWorldItemPickup.id`). Missing
+   * means none consumed. Not chunk `collectedItemIds`, not inventory presence,
+   * and not `worldFlags.treasureMapDarkForestRead`.
+   *
+   * @domain quests-progression
+   */
+  consumedWorldPickupIds?: string[]
   /** Plan items-player-026 — sparse forced-entry/trap mutation state keyed by
    *  stable container id. Missing means unattempted. */
   treasureChestMutations?: SaveTreasureChestMutation[]
@@ -2376,6 +2385,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlacedContainersField(v.placedContainers)) return false
   if (v.worldGeneratedContainers !== undefined && !isWorldGeneratedContainersField(v.worldGeneratedContainers)) return false
   if (v.unlockedTreasureContainerIds !== undefined && !isResolvedHiddenFindSpotIdsField(v.unlockedTreasureContainerIds)) return false
+  if (v.consumedWorldPickupIds !== undefined && !isResolvedHiddenFindSpotIdsField(v.consumedWorldPickupIds)) return false
   if (v.treasureChestMutations !== undefined && !isTreasureChestMutationsField(v.treasureChestMutations)) return false
   if (!isCarriedContainerField(v.carriedContainer)) return false
   if (!isPlayerWellsField(v.playerWells)) return false
@@ -3474,6 +3484,14 @@ function migrateSaveV42ToV43(data: unknown): unknown {
   return { ...v, version: 43, plantedCrops }
 }
 
+/** v43 → v44 (plan quests-progression-036): sparse consumed authored world
+ *  pickup ids. A pre-plan save has never consumed one, so restore already
+ *  defaults a missing field to empty. */
+function migrateSaveV43ToV44(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 44 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3637,6 +3655,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   40: migrateSaveV40ToV41,
   41: migrateSaveV41ToV42,
   42: migrateSaveV42ToV43,
+  43: migrateSaveV43ToV44,
 }
 
 function detectStoredVersion(value: unknown): number | null {

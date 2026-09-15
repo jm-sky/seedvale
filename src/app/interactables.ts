@@ -1343,7 +1343,7 @@ export function collectItem(
   chunkManager: ChunkManager,
   itemSpawners: ItemSpawners,
   droppedItems: DroppedItems,
-): { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: FoodBatch } | null {
+): { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: FoodBatch, authoredOneShot?: boolean } | null {
   switch (ref.source) {
     case 'dropped':
       return droppedItems.collect(ref.id)

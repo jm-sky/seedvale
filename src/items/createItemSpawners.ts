@@ -9,11 +9,19 @@ import { createSeededRandom } from '../world/parseSeed'
 import { createItemMesh, ITEM_DEFS, type ItemKind } from './items'
 import { type ItemSpawnPoint, updateItemSpawnPoints } from './ItemSpawner'
 
+export type CollectedSpawnerItem = {
+  kind: ItemKind
+  x: number
+  z: number
+  instance?: SaveItemInstance
+  authoredOneShot?: boolean
+}
+
 export type ItemSpawners = {
   nodes: () => readonly ItemSpawnPoint[]
   /** Removes the pickup mesh and marks the point collected; null if already
    *  collected or `id` doesn't match a known point. */
-  collect: (id: string) => { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance } | null
+  collect: (id: string) => CollectedSpawnerItem | null
   /** `dayFactor` (0 night .. 1 day) fades labels out in the dark, on top of
    *  the distance fade — see `ITEM_LABEL_FADE_NEAR`/`_FAR` (issue 011). */
   update: (dt: number, observerPos: Vector3, dayFactor: number) => void
@@ -186,6 +194,7 @@ export function createItemSpawners(
     pos: { x: number, z: number },
     id?: string,
     instanceId?: string,
+    authoredOneShot?: boolean,
   ): void => {
     const index = points.length
     points.push({
@@ -197,6 +206,7 @@ export function createItemSpawners(
       timeSinceCollected: 0,
       collected: false,
       instanceId,
+      authoredOneShot,
     })
     meshes.push(null)
     spawnMeshAt(index)
@@ -212,7 +222,7 @@ export function createItemSpawners(
 
   for (const extra of extraOneTimePickups) {
     if (!extra.anchoredToWorldPlace && sampleHeight(extra.x, extra.z) <= waterLevel + 0.6) continue
-    addSpawnPoint(extra.kind, Infinity, { x: extra.x, z: extra.z }, extra.id, extra.instanceId)
+    addSpawnPoint(extra.kind, Infinity, { x: extra.x, z: extra.z }, extra.id, extra.instanceId, true)
   }
 
   for (const spec of SPAWN_SPECS) {
@@ -357,7 +367,7 @@ export function createItemSpawners(
         meshes[index] = null
       }
       const instance = p.instanceId ? { id: p.instanceId, kind: p.kind } : undefined
-      return { kind: p.kind, x: p.x, z: p.z, instance }
+      return { kind: p.kind, x: p.x, z: p.z, instance, authoredOneShot: p.authoredOneShot }
     },
     update(dt, observerPos, dayFactor) {
       const wasCollected = points.map((p) => p.collected)

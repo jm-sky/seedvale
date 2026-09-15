@@ -9,6 +9,8 @@ export type ItemSpawnPoint = {
   timeSinceCollected: number
   collected: boolean
   instanceId?: string
+  /** Runtime-only: authored extra one-time pickup, not a village renewable. */
+  authoredOneShot?: boolean
 }
 
 /** Pure timer bookkeeping — ticks `timeSinceCollected` for collected points and
