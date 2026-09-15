@@ -19,7 +19,7 @@ export const LOST_TREASURE_ARCHAEOLOGIST_AGE = 54
  *  Wider than the elder's radius-1 neighbourhood so a larger town can exist. */
 export const LOST_TREASURE_ARCHAEOLOGIST_SETTLEMENT_SEARCH_RADIUS = 5
 
-const PREFERRED_ARCHAEOLOGIST_SETTLEMENT_SIZES: ReadonlySet<VillageSize> = new Set(['MD', 'LG', 'XL'])
+const PREFERRED_ARCHAEOLOGIST_SETTLEMENT_SIZES: ReadonlySet<VillageSize> = new Set(['LG', 'MD', 'XL'])
 
 /**
  * Nearby settlement row used to pick the guaranteed archaeologist host.
@@ -102,10 +102,11 @@ export function selectLostTreasureChroniclesArchaeologistSettlement(
   const elder = elderSettlementId
     ? candidates.find((candidate) => candidate.id === elderSettlementId)
     : undefined
-  const larger = elder && isRolledSize(elder.size)
+  const elderSize = elder?.size
+  const larger = elderSize && isRolledSize(elderSize)
     ? townPool.filter((candidate) => (
       isRolledSize(candidate.size)
-      && rolledVillageSizeRank(candidate.size) > rolledVillageSizeRank(elder.size)
+      && rolledVillageSizeRank(candidate.size) > rolledVillageSizeRank(elderSize)
     ))
     : townPool
   const pool = (larger.length > 0 ? larger : townPool.length > 0 ? townPool : eligible)

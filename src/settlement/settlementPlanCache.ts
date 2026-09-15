@@ -2,6 +2,7 @@ import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { RiverQuery } from '../terrain/riverQuery'
+import type { VillageSize } from './families'
 import type { TerrainSamplers } from './settlementTerrain'
 import { pickNameCulture } from '../ai/nameCultures'
 import { generateSettlementName } from '../shared/SettlementName'
@@ -15,7 +16,6 @@ import {
   LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS,
   selectLostTreasureChroniclesElderSettlement,
 } from './lostTreasureChroniclesElderResident'
-import type { VillageSize } from './families'
 import {
   cellFromId,
   cellKey,

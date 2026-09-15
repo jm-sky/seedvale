@@ -5,21 +5,21 @@ import type { TerrainSamplers } from './settlementTerrain'
 import { settlementOpportunityNpcsFromDef } from '../quests/opportunities/settlementNpcMaterialization'
 import { generateFamilies } from './families'
 import {
-  appendAuthoredResidentFamily,
-  createLostTreasureElderFamily,
-  isLostTreasureElderFamily,
-  LOST_TREASURE_ELDER_FAMILY_ID,
-} from './lostTreasureChroniclesElderResident'
-import {
   createLostTreasureArchaeologistFamily,
   findLostTreasureArchaeologistResident,
   isLostTreasureArchaeologistFamily,
   LOST_TREASURE_ARCHAEOLOGIST_AGE,
   LOST_TREASURE_ARCHAEOLOGIST_FAMILY_ID,
   LOST_TREASURE_ARCHAEOLOGIST_GIVEN_NAME,
-  selectLostTreasureChroniclesArchaeologistSettlement,
   type LostTreasureArchaeologistSettlementCandidate,
+  selectLostTreasureChroniclesArchaeologistSettlement,
 } from './lostTreasureChroniclesArchaeologistResident'
+import {
+  appendAuthoredResidentFamily,
+  createLostTreasureElderFamily,
+  isLostTreasureElderFamily,
+  LOST_TREASURE_ELDER_FAMILY_ID,
+} from './lostTreasureChroniclesElderResident'
 import { flattenedSettlementMembers, settlementNpcId } from './npcIdentity'
 import { resolveInitialProfessionStaffing } from './professionStaffing'
 import { generateSettlementDef } from './settlementGenerator'
