@@ -81,6 +81,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md` | 🔴 | L      | quests-progression-043, quests-progression-042, ~~quests-progression-027~~                                                                                                              | quests-lost-something-chronicles        |
 | ◼️ `quests-progression-045-lost-treasure-chronicles-property-grant-deed-and-persistent-land-reward.md` | 🔴 | L      | quests-progression-044                                                                                                                                                                  | quests-lost-something-chronicles        |
 | ◼️ `settlements-npcs-037-inter-settlement-goods-transport.md`                  | 🔴 | M      | ~~settlements-npcs-021~~, ~~settlements-npcs-028~~                                                                                                                                      | physical-goods-transport                |
+| ◼️ `settlements-npcs-038-travelling-merchant-inter-settlement-role.md`         | 🔴 | M      | settlements-npcs-037, ~~settlements-npcs-028~~, ~~settlements-npcs-033~~                                                                                                                | physical-goods-transport                |
 
 ---
 
@@ -227,7 +228,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `005`
 - quests-progression: `046`
 - settlements: `018`
-- settlements-npcs: `038`
+- settlements-npcs: `039`
 - tools: `015`
 - ui-input: `022`
 - world: `028`
