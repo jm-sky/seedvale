@@ -306,26 +306,29 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 300
-- `disposeLivestock` — function — line 798
+- `createLivestockRegistry` — function — line 311
+- `disposeLivestock` — function — line 808
 - `fillShepherdFlockKinds` — function — line 43
 - `isPlayerOwnedLivestockRecord` — function — line 99
 - `LIVESTOCK_KINDS` — const — line 76
 - `LIVESTOCK_URLS` — const — line 60
-- `LivestockPersistence` — type — line 136
-- `livestockRecordMatchesHouseholdSlot` — function — line 103
-- `LivestockRegistry` — type — line 158
+- `LivestockPersistence` — type — line 149
+- `livestockRecordMatchesHouseholdSlot` — function — line 116
+- `LivestockRegistry` — type — line 171
 - `LivestockSaveRecord` — type — line 89
-- `livestockStrayCandidateFromAgent` — function — line 116
-- `PersistentLivestockContext` — type — line 709
-- `resolveLivePersistentAnimal` — function — line 717
-- `restoreDetachedPlayerOwnedLivestock` — function — line 781
-- `setOwnedAnimalControl` — function — line 769
-- `spawnAnimalFromRecord` — function — line 196
-- `SpawnAnimalFromRecordDeps` — type — line 185
-- `spawnLivestock` — function — line 555
-- `tickSettlementLivestock` — function — line 815
-- `transferAnimalOwnership` — function — line 744
+- `livestockStrayCandidateFromAgent` — function — line 129
+- `PersistentLivestockContext` — type — line 719
+- `resolveLivePersistentAnimal` — function — line 727
+- `restoreDetachedPlayerOwnedLivestock` — function — line 791
+- `setOwnedAnimalControl` — function — line 779
+- `shouldSpawnDeterministicLivestockSlot` — function — line 108
+  - domain: fauna
+  - role: Household rolls and merchant-horse slots skip tombstones and player-owned records restored on the detached path (fauna-020 / fauna-030).
+- `spawnAnimalFromRecord` — function — line 209
+- `SpawnAnimalFromRecordDeps` — type — line 198
+- `spawnLivestock` — function — line 566
+- `tickSettlementLivestock` — function — line 825
+- `transferAnimalOwnership` — function — line 754
 
 ## `settlement/lodging.ts`
 

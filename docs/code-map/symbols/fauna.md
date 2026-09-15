@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1051
+- `AnimalAgent` — class — line 1052
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 546
-- `AnimalAgentDeps` — type — line 875
-- `AnimalSaveState` — type — line 665
-- `AnimalUpdateContext` — type — line 919
-- `BURY_DURATION_SEC` — const — line 358
-- `canPredatorPursueIntoVillage` — function — line 733
-- `FAUNA_SHADOW_DISTANCE` — const — line 327
-- `FaunaAiBranch` — type — line 483
-- `FaunaNavRescueDebugInfo` — type — line 530
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 418
-- `FrenzyWolfCandidate` — type — line 810
-- `HARVEST_MEAT_DURATION_SEC` — const — line 361
-- `isWithinVillageRadius` — function — line 714
-- `NearbyNpcCandidate` — type — line 805
-- `pickNearestEligibleWolf` — function — line 819
-- `pickRabidTarget` — function — line 844
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 345
-- `villageFleeBiasFalloff` — function — line 741
-- `VillageInfo` — type — line 708
+- `AnimalAgentDebugInfo` — type — line 547
+- `AnimalAgentDeps` — type — line 876
+- `AnimalSaveState` — type — line 666
+- `AnimalUpdateContext` — type — line 920
+- `BURY_DURATION_SEC` — const — line 359
+- `canPredatorPursueIntoVillage` — function — line 734
+- `FAUNA_SHADOW_DISTANCE` — const — line 328
+- `FaunaAiBranch` — type — line 484
+- `FaunaNavRescueDebugInfo` — type — line 531
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 419
+- `FrenzyWolfCandidate` — type — line 811
+- `HARVEST_MEAT_DURATION_SEC` — const — line 362
+- `isWithinVillageRadius` — function — line 715
+- `NearbyNpcCandidate` — type — line 806
+- `pickNearestEligibleWolf` — function — line 820
+- `pickRabidTarget` — function — line 845
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 346
+- `villageFleeBiasFalloff` — function — line 742
+- `VillageInfo` — type — line 709
 
 ## `fauna/animalAttraction.ts`
 
@@ -148,7 +148,7 @@ Generated from exported TypeScript symbols.
 ## `fauna/animalForaging.ts`
 
 - `AnimalWaterSourceProvider` — type — line 95
-- `applySourceRelief` — function — line 635
+- `applySourceRelief` — function — line 638
 - `canAcceptHandFeed` — function — line 142
 - `CarcassCandidate` — type — line 227
 - `carcassCandidateScore` — function — line 218
@@ -156,9 +156,9 @@ Generated from exported TypeScript symbols.
 - `dietItemReliefScale` — function — line 132
 - `DRINK_DURATION_SEC` — const — line 69
 - `EAT_DURATION_SEC` — const — line 66
-- `findFoodTarget` — function — line 559
+- `findFoodTarget` — function — line 561
 - `findForageTarget` — function — line 438
-- `findGrassPatchTarget` — function — line 465
+- `findGrassPatchTarget` — function — line 466
 - `findHouseholdTroughTarget` — function — line 345
 - `findTroughTarget` — const — line 352
 - `findWaterTarget` — function — line 408
@@ -167,7 +167,7 @@ Generated from exported TypeScript symbols.
 - `ForagingContext` — type — line 281
 - `isCarcassEdible` — function — line 169
 - `isDrinkableNaturalShorePoint` — function — line 321
-- `isSourceTargetValid` — function — line 574
+- `isSourceTargetValid` — function — line 576
 - `selectDietFeedKind` — function — line 120
 - `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 73
 - `SOURCE_TARGET_TIMEOUT_SEC` — const — line 78
@@ -536,17 +536,24 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/ownedAnimalControl.ts`
 
-- `createDefaultOwnedAnimalControlState` — function — line 16
-- `createFollowOwnedAnimalControlState` — function — line 20
-- `FOLLOW_START_DISTANCE` — const — line 13
-- `FOLLOW_STOP_DISTANCE` — const — line 14
-- `hydrateOwnedAnimalControl` — function — line 69
+- `createDefaultOwnedAnimalControlState` — function — line 22
+- `createFollowOwnedAnimalControlState` — function — line 26
+- `FOLLOW_START_DISTANCE` — const — line 14
+- `FOLLOW_STOP_DISTANCE` — const — line 15
+- `hydrateOwnedAnimalControl` — function — line 101
+- `isOwnedStayBlockingRoutineTrips` — function — line 75
+  - domain: fauna
+  - role: True when player-owned Stay must refuse routine AnimalTrip start/continue.
 - `OwnedAnimalControlMode` — type — line 4
 - `OwnedAnimalControlState` — type — line 6
-- `OwnedControlMovement` — type — line 24
-- `resolveOwnedControlMovement` — function — line 29
-- `setOwnedAnimalControlMode` — function — line 50
-- `snapshotOwnedAnimalControl` — function — line 60
+- `OwnedControlMovement` — type — line 30
+- `resolveOwnedControlMovement` — function — line 40
+  - domain: fauna
+  - role: Follow/Stay movement policy for player-owned livestock (fauna-020 / fauna-030). Stay uses the same hysteresis primitive as Follow, targeting `stayAnchor`.
+- `setOwnedAnimalControlMode` — function — line 82
+- `snapshotOwnedAnimalControl` — function — line 92
+- `STAY_RETURN_START` — const — line 18
+- `STAY_RETURN_STOP` — const — line 20
 
 ## `fauna/persistentOccupants.ts`
 
