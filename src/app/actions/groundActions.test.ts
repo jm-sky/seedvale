@@ -273,6 +273,8 @@ function setupHiddenFindDig(options: {
   resolved?: Set<string>
   village?: typeof NEAREST_VILLAGE | null
   treasureSites?: readonly TreasureSiteDefinition[]
+  extraBuriedPlacements?: GroundActionsDeps['extraBuriedPlacements']
+  isGraveDisturbanceAuthorized?: GroundActionsDeps['isGraveDisturbanceAuthorized']
   inventoryMaxWeight?: number
 }) {
   const inventory = new Inventory({ shovel: 1 }, options.inventoryMaxWeight ?? 100)
@@ -320,6 +322,8 @@ function setupHiddenFindDig(options: {
     badges,
     resolvedHiddenFindSpotIds,
     applySocialConsequence: applySocial,
+    extraBuriedPlacements: options.extraBuriedPlacements,
+    isGraveDisturbanceAuthorized: options.isGraveDisturbanceAuthorized,
   }
 
   const digAt = (x: number, z: number) => {
@@ -554,6 +558,107 @@ describe('buried treasure keys (world-024)', () => {
 
     expect(inventory.getInstance(keyInstanceId)?.kind).toBe('key')
     expect(applySocial).not.toHaveBeenCalled()
+  })
+})
+
+describe('authored buried placements and grave authorization (quests-progression-038)', () => {
+  beforeEach(() => {
+    vi.mocked(villageNearest).mockReset()
+    vi.mocked(villageNearest).mockReturnValue(null)
+  })
+
+  it('grants the exact story instance, suppresses generic grave loot, and skips exposure when authorized', () => {
+    const { landmark, dig, spotId } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const chronicleId = 'story:lost-treasure-chronicles:chronicle'
+    const buriedSpotId = 'quests-progression-038:grave:test'
+    const { applySocial, resolvedHiddenFindSpotIds, digAt, grantItem, inventory } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+      extraBuriedPlacements: () => [{
+        spotId: buriedSpotId,
+        landmarkId: landmark.id,
+        landmarkKind: 'cemetery',
+        x: dig.x,
+        z: dig.z,
+        graveIndex: 0,
+        instance: { id: chronicleId, kind: 'encoded_chronicle' },
+      }],
+      isGraveDisturbanceAuthorized: (_cemeteryId, graveSpotId) => graveSpotId === spotId,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(inventory.getInstance(chronicleId)?.kind).toBe('encoded_chronicle')
+    expect(grantItem).not.toHaveBeenCalled()
+    expect(applySocial).not.toHaveBeenCalled()
+    expect(resolvedHiddenFindSpotIds.has(buriedSpotId)).toBe(true)
+    expect(resolvedHiddenFindSpotIds.has(spotId)).toBe(true)
+  })
+
+  it('still applies exposure on an unauthorized target grave', () => {
+    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const { applySocial, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+      extraBuriedPlacements: () => [{
+        spotId: 'quests-progression-038:grave:unauthorized',
+        landmarkId: landmark.id,
+        landmarkKind: 'cemetery',
+        x: dig.x,
+        z: dig.z,
+        graveIndex: 0,
+        instance: { id: 'story:lost-treasure-chronicles:chronicle', kind: 'encoded_chronicle' },
+      }],
+      isGraveDisturbanceAuthorized: () => false,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(applySocial).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not authorize a different grave in the same cemetery', () => {
+    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const { applySocial, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+      isGraveDisturbanceAuthorized: (_cemeteryId, graveSpotId) => graveSpotId === `${landmark.id}:99`,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(applySocial).toHaveBeenCalledTimes(1)
+  })
+
+  it('drops the exact chronicle instance when inventory cannot hold it', () => {
+    const { landmark, dig, spotId } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const chronicleId = 'story:lost-treasure-chronicles:chronicle'
+    const buriedSpotId = 'quests-progression-038:grave:full'
+    const { inventory, drop, resolvedHiddenFindSpotIds, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+      inventoryMaxWeight: 2.05,
+      extraBuriedPlacements: () => [{
+        spotId: buriedSpotId,
+        landmarkId: landmark.id,
+        landmarkKind: 'cemetery',
+        x: dig.x,
+        z: dig.z,
+        graveIndex: 0,
+        instance: { id: chronicleId, kind: 'encoded_chronicle' },
+      }],
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(inventory.getInstance(chronicleId)).toBeNull()
+    expect(drop).toHaveBeenCalledWith(
+      'encoded_chronicle',
+      dig.x,
+      dig.z,
+      expect.objectContaining({ id: chronicleId, kind: 'encoded_chronicle' }),
+    )
+    expect(resolvedHiddenFindSpotIds.has(spotId)).toBe(true)
   })
 })
 

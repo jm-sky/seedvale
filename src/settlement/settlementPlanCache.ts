@@ -6,10 +6,16 @@ import type { TerrainSamplers } from './settlementTerrain'
 import { pickNameCulture } from '../ai/nameCultures'
 import { generateSettlementName } from '../shared/SettlementName'
 import {
+  createLostTreasureArchaeologistFamily,
+  LOST_TREASURE_ARCHAEOLOGIST_SETTLEMENT_SEARCH_RADIUS,
+  selectLostTreasureChroniclesArchaeologistSettlement,
+} from './lostTreasureChroniclesArchaeologistResident'
+import {
   createLostTreasureElderFamily,
   LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS,
   selectLostTreasureChroniclesElderSettlement,
 } from './lostTreasureChroniclesElderResident'
+import type { VillageSize } from './families'
 import {
   cellFromId,
   cellKey,
@@ -85,6 +91,8 @@ const uniqueNameCache = new Map<string, string | null>()
 let progressionPolicy: SettlementProgressionPolicy | null | undefined
 /** Memoized host cell key for the Lost Treasure Chronicles elder, or `null` when none. */
 let elderHostCellKey: string | null | undefined
+/** Memoized host cell key for the Lost Treasure Chronicles archaeologist, or `null` when none. */
+let archaeologistHostCellKey: string | null | undefined
 
 export function clearSettlementDefCache(): void {
   defCache.clear()
@@ -93,6 +101,7 @@ export function clearSettlementDefCache(): void {
   activeRiverQuery = null
   progressionPolicy = undefined
   elderHostCellKey = undefined
+  archaeologistHostCellKey = undefined
 }
 
 function progressionPolicyFor(ctx: SettlementResolveContext): SettlementProgressionPolicy | null {
@@ -165,8 +174,27 @@ function applyResolvedSettlementName(def: SettlementDef, name: string): void {
 function elderHostCellFor(ctx: SettlementResolveContext): SettlementCell | null {
   if (elderHostCellKey !== undefined) return elderHostCellKey ? cellFromId(elderHostCellKey) : null
   const origin: SettlementCell = { gx: 0, gz: 0 }
+  const selected = selectLostTreasureChroniclesElderSettlement(
+    probeCandidatesWithin(ctx, origin, LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS),
+  )
+  elderHostCellKey = selected ? cellKey(selected.cell) : null
+  return selected?.cell ?? null
+}
+
+function probeCandidatesWithin(
+  ctx: SettlementResolveContext,
+  origin: SettlementCell,
+  radius: number,
+): Array<{
+  cell: SettlementCell
+  id: string
+  size: VillageSize
+  x: number
+  z: number
+  isHome: boolean
+}> {
   const candidates = []
-  for (const cell of cellsWithinRadius(origin, LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS)) {
+  for (const cell of cellsWithinRadius(origin, radius)) {
     if (cell.gx === origin.gx && cell.gz === origin.gz) continue
     const probe = namingInputsFor(cell, ctx)
     if (!probe.site) continue
@@ -179,15 +207,44 @@ function elderHostCellFor(ctx: SettlementResolveContext): SettlementCell | null 
       isHome: false,
     })
   }
-  const selected = selectLostTreasureChroniclesElderSettlement(candidates)
-  elderHostCellKey = selected ? cellKey(selected.cell) : null
+  return candidates
+}
+
+function archaeologistHostCellFor(ctx: SettlementResolveContext): SettlementCell | null {
+  if (archaeologistHostCellKey !== undefined) {
+    return archaeologistHostCellKey ? cellFromId(archaeologistHostCellKey) : null
+  }
+  const origin: SettlementCell = { gx: 0, gz: 0 }
+  const elderHost = elderHostCellFor(ctx)
+  const selected = selectLostTreasureChroniclesArchaeologistSettlement(
+    probeCandidatesWithin(ctx, origin, LOST_TREASURE_ARCHAEOLOGIST_SETTLEMENT_SEARCH_RADIUS),
+    elderHost ? cellKey(elderHost) : null,
+  )
+  archaeologistHostCellKey = selected ? cellKey(selected.cell) : null
   return selected?.cell ?? null
 }
 
 function authoredResidentFor(cell: SettlementCell, ctx: SettlementResolveContext) {
-  const host = elderHostCellFor(ctx)
-  if (!host || host.gx !== cell.gx || host.gz !== cell.gz) return undefined
-  return createLostTreasureElderFamily(cellSeed(ctx.seed, cell), pickNameCulture(cellSeed(ctx.seed, cell)))
+  const seedForCell = cellSeed(ctx.seed, cell)
+  const nameCulture = pickNameCulture(seedForCell)
+  const elderHost = elderHostCellFor(ctx)
+  if (elderHost && elderHost.gx === cell.gx && elderHost.gz === cell.gz) {
+    return createLostTreasureElderFamily(seedForCell, nameCulture)
+  }
+  const archaeologistHost = archaeologistHostCellFor(ctx)
+  if (archaeologistHost && archaeologistHost.gx === cell.gx && archaeologistHost.gz === cell.gz) {
+    return createLostTreasureArchaeologistFamily(seedForCell, nameCulture)
+  }
+  return undefined
+}
+
+/** Test/debug seam: `undefined` before first resolve, then the memoized archaeologist host (or `null`). */
+export function cachedLostTreasureArchaeologistHostCell(): SettlementCell | null | undefined {
+  return archaeologistHostCellKey === undefined
+    ? undefined
+    : archaeologistHostCellKey
+      ? cellFromId(archaeologistHostCellKey)
+      : null
 }
 
 export function settlementDefFor(

@@ -288,6 +288,32 @@ describe('createWorldLocationCatalog', () => {
     expect(location?.kind).toBe('cemetery')
   })
 
+  it('resolves chronicle-search ruins independently of the dark-forest site', () => {
+    const catalog = createWorldLocationCatalog({
+      getSeed: () => 1,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(),
+      lookupSettlement: () => null,
+      getSampleParams: () => rawParams(),
+      getChunkSize: () => 64,
+      getDarkForestTreasureSite: () => ({ locationId: 'ruins:dark-forest-treasure', x: 10, z: 20 }),
+      getChronicleSearchRuinsSite: () => ({ locationId: 'ruins:chronicle-search:smallRuins:1', x: 400, z: -80 }),
+    })
+    expect(catalog.getById('ruins:chronicle-search:smallRuins:1')).toMatchObject({
+      id: 'ruins:chronicle-search:smallRuins:1',
+      kind: 'ruins',
+      x: 400,
+      z: -80,
+    })
+    expect(catalog.getById('ruins:dark-forest-treasure')).toMatchObject({
+      id: 'ruins:dark-forest-treasure',
+      kind: 'ruins',
+      x: 10,
+      z: 20,
+    })
+    expect(catalog.getById('ruins:missing')).toBeNull()
+  })
+
   it('nearestSettlements is bounded by maxKm and sorted nearest-first', () => {
     const defs = new Map<string, SettlementDef>([
       ['0_0', makeSettlementDef(0, 0, 'Home')],

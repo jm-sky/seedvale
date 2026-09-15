@@ -67,6 +67,15 @@ import {
 } from '../quests/lostHunterNaturalCave'
 import { setActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import {
+  type ChronicleSearchRuinsLandmark,
+  lostTreasureChronicleRuinsContainerSpec,
+  resolveLostTreasureChronicleSearchBinding,
+} from '../quests/lostTreasureChronicleSearch'
+import { setActiveLostTreasureChronicleSearchBinding } from '../quests/lostTreasureChronicleSearchRuntime'
+import {
+  resolveLostTreasureChroniclesElderBinding,
+} from '../quests/lostTreasureChroniclesElder'
+import {
   lostTreasureExpeditionCaveReservationRequests,
   lostTreasureExpeditionClaimsMatch,
   lostTreasureExpeditionContainerSpecs,
@@ -88,11 +97,12 @@ import {
 } from '../quests/suspiciousTransportCaveCache'
 import { setActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspiciousTransportCaveCacheRuntime'
 import { villageSizeConfig } from '../settlement/families'
+import { isLostTreasureElderFamily, LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS } from '../settlement/lostTreasureChroniclesElderResident'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { activateRoadRouteWorldgenCache, clearRoadNetworkCaches } from '../settlement/roadNetwork'
 import { roadRouteFingerprint } from '../settlement/roadRouteWorldgenCache'
-import { cellFromId, type SettlementDef } from '../settlement/settlementGenerator'
-import { settlementDefFor } from '../settlement/settlementPlanCache'
+import { cellFromId, cellsWithinRadius, type SettlementDef } from '../settlement/settlementGenerator'
+import { cachedLostTreasureArchaeologistHostCell, settlementDefFor } from '../settlement/settlementPlanCache'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
 import { useBootMark } from '../shared/bootMark'
@@ -780,6 +790,37 @@ function collectLandmarksNear(
     out.push(landmarkFromFind(kind, found, cemetery?.cemeterySize))
   }
   return out
+}
+
+function findNearbySettlement(
+  peekDef: (cell: { gx: number, gz: number }) => SettlementDef | null,
+  radius: number,
+  match: (def: SettlementDef) => boolean,
+): SettlementDef | null {
+  for (const cell of cellsWithinRadius({ gx: 0, gz: 0 }, radius)) {
+    const def = peekDef(cell)
+    if (def && match(def)) return def
+  }
+  return null
+}
+
+function pickChronicleSearchRuins(
+  candidates: readonly TreasureLandmarkCandidate[],
+  reservedIds: ReadonlySet<string>,
+): ChronicleSearchRuinsLandmark | null {
+  const eligible = candidates
+    .filter((candidate) => !reservedIds.has(candidate.id))
+    .sort((a, b) => a.id.localeCompare(b.id))
+  const hit = eligible[0]
+  if (!hit) return null
+  return {
+    id: hit.id,
+    kind: hit.kind,
+    x: hit.x,
+    z: hit.z,
+    rotationY: hit.rotationY,
+    scale: hit.scale,
+  }
 }
 
 function buildItemSpawners(
@@ -1581,6 +1622,69 @@ async function buildWorldSystems(
     ? caves.contentAnchors().find((anchor) => anchor.id === suspiciousTransportCaveCacheBinding.lootAnchorId)
     : undefined
 
+  const elderStoryDef = findNearbySettlement(
+    (cell) => settlementsManager.peekDef(cell),
+    LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS,
+    (def) => def.families.some(isLostTreasureElderFamily),
+  )
+  const archaeologistHost = cachedLostTreasureArchaeologistHostCell()
+  const archaeologistStoryDef = archaeologistHost
+    ? settlementsManager.peekDef(archaeologistHost)
+    : null
+  const elderStoryBinding = elderStoryDef
+    ? resolveLostTreasureChroniclesElderBinding(elderStoryDef)
+    : null
+  const reservedChronicleRuins = new Set<string>([
+    darkForestTreasureSite.landmarkId,
+    ...treasureSites.map((site) => site.placeId),
+  ])
+  const chronicleRuinsOrigins = [
+    archaeologistStoryDef,
+    elderStoryDef,
+    homeDef,
+  ].filter((def): def is SettlementDef => Boolean(def))
+  let chronicleRuins: ChronicleSearchRuinsLandmark | null = null
+  for (const origin of chronicleRuinsOrigins) {
+    chronicleRuins = pickChronicleSearchRuins(
+      collectLandmarksNear(
+        chunkManager,
+        origin.x,
+        origin.z,
+        TREASURE_SITE_SEARCH_CHUNK_RADIUS,
+        RUINS_CHEST_KINDS,
+      ),
+      reservedChronicleRuins,
+    )
+    if (chronicleRuins) break
+  }
+  const archaeologistCemetery = archaeologistStoryDef
+    ? chunkManager.resolveCemeteryForSettlement(archaeologistStoryDef.id)
+    : undefined
+  const archaeologistCemeteryDetail = archaeologistCemetery
+    ? chunkManager.resolveCemeteryById(archaeologistCemetery.id)
+    : undefined
+  const chronicleSearchBinding = elderStoryBinding
+    && archaeologistStoryDef
+    && archaeologistCemeteryDetail
+    && chronicleRuins
+    ? resolveLostTreasureChronicleSearchBinding({
+      worldSeed: config.seed,
+      elderDef: elderStoryDef!,
+      archaeologistDef: archaeologistStoryDef,
+      elderBinding: elderStoryBinding,
+      cemetery: {
+        id: archaeologistCemeteryDetail.id,
+        x: archaeologistCemeteryDetail.x,
+        z: archaeologistCemeteryDetail.z,
+        rotationY: 0,
+        scale: 1,
+        cemeterySize: archaeologistCemeteryDetail.cemeterySize ?? 'SM',
+      },
+      ruins: chronicleRuins,
+    })
+    : null
+  setActiveLostTreasureChronicleSearchBinding(chronicleSearchBinding)
+
   const bearCaveFinalAnchor = treasureMapBearCaveBinding
     ? caves.contentAnchors().find((a) => a.id === treasureMapBearCaveBinding.finalTreasureAnchorId)
     : undefined
@@ -1629,6 +1733,9 @@ async function buildWorldSystems(
         suspiciousTransportCaveCacheBinding,
         suspiciousTransportLootAnchor,
       )]
+      : []),
+    ...(chronicleSearchBinding
+      ? [lostTreasureChronicleRuinsContainerSpec(chronicleSearchBinding)]
       : []),
   ]
   const worldGeneratedContainers = createWorldGeneratedContainers(

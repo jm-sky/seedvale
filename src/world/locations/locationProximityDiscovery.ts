@@ -2,6 +2,7 @@ import type { SettlementCell } from '../../settlement/settlementGenerator'
 import type { CaveDefinition } from '../caveVolume'
 import type { LocationKnowledge } from './locationKnowledge'
 import type { WorldLocationCatalog } from './worldLocationCatalog'
+import { getActiveLostTreasureChronicleSearchBinding } from '../../quests/lostTreasureChronicleSearchRuntime'
 import { cellsWithinRadius, worldToCell } from '../../settlement/settlementGenerator'
 import { ruinsDiscoveryRadius } from './darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from './darkForestTreasureSiteRuntime'
@@ -178,6 +179,18 @@ export function createLocationProximityDiscovery(deps: {
         if (dx * dx + dz * dz <= radius * radius) {
           if (knowledge.reveal(site.locationId, 'discovered', 'exploration')) {
             const location = catalog.getById(site.locationId)
+            if (location) revealed.push({ id: location.id, name: location.name })
+          }
+        }
+      }
+      const chronicleRuins = getActiveLostTreasureChronicleSearchBinding()
+      if (chronicleRuins) {
+        const radius = ruinsDiscoveryRadius()
+        const dx = playerX - chronicleRuins.ruinsX
+        const dz = playerZ - chronicleRuins.ruinsZ
+        if (dx * dx + dz * dz <= radius * radius) {
+          if (knowledge.reveal(chronicleRuins.ruinsLocationId, 'discovered', 'exploration')) {
+            const location = catalog.getById(chronicleRuins.ruinsLocationId)
             if (location) revealed.push({ id: location.id, name: location.name })
           }
         }

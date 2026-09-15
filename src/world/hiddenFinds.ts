@@ -1,3 +1,4 @@
+import type { ItemInstance } from '../items/itemInstances'
 import type { ItemKind } from '../items/items'
 import type { VillageSize } from '../settlement/families'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
@@ -175,7 +176,7 @@ export type ExplicitBuriedPlacement = {
   /** Present only when the burial is a real cemetery grave. */
   graveIndex?: number
   /** Exact instance granted on a successful dig — never minted later. */
-  keyInstanceId: string
+  instance: ItemInstance
 }
 
 /** Finds the nearest not-yet-resolved Hidden Find spot within dig tolerance

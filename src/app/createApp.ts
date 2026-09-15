@@ -119,6 +119,15 @@ import {
 } from '../quests/lostHunterNaturalCave'
 import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import {
+  buildLostTreasureChronicleSearchQuests,
+  CHRONICLE_SEARCH_EVIDENCE_KIND,
+  ENCODED_CHRONICLE_KIND,
+  isChronicleSearchSourceLooted,
+  isLostTreasureGraveAccessGranted,
+  lostTreasureChronicleGravePlacement,
+} from '../quests/lostTreasureChronicleSearch'
+import { getActiveLostTreasureChronicleSearchBinding } from '../quests/lostTreasureChronicleSearchRuntime'
+import {
   buildLostTreasureChroniclesElderQuests,
   findLostTreasureChroniclesElderSettlement,
   resolveLostTreasureChroniclesElderBinding,
@@ -824,6 +833,12 @@ export async function createApp(
       const site = getActiveDarkForestTreasureSite()
       return site ? { locationId: site.locationId, x: site.x, z: site.z } : null
     },
+    getChronicleSearchRuinsSite: () => {
+      const binding = getActiveLostTreasureChronicleSearchBinding()
+      return binding
+        ? { locationId: binding.ruinsLocationId, x: binding.ruinsX, z: binding.ruinsZ }
+        : null
+    },
     getAbandonedMine: () => bundle.caves.abandonedMine(),
   })
   const bindReadyExpeditionDispatch = (): void => {
@@ -1456,6 +1471,10 @@ export async function createApp(
     const elderBinding = resolveLostTreasureChroniclesElderBinding(elderSettlement)
     if (elderBinding) opportunityQuestDefs.push(...buildLostTreasureChroniclesElderQuests(elderBinding))
   }
+  const chronicleSearchBinding = getActiveLostTreasureChronicleSearchBinding()
+  if (chronicleSearchBinding) {
+    opportunityQuestDefs.push(...buildLostTreasureChronicleSearchQuests(chronicleSearchBinding))
+  }
   const homeGuardNpcId = selectGuardQuestGiver(npcsBySettlement.get(homeSettlementId) ?? [])?.id
   const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]
   const initialQuestState = initialSave?.quests
@@ -1778,6 +1797,17 @@ export async function createApp(
         if (lostTreasureExpeditionBinding && containerId === lostTreasureExpeditionBinding.finalTreasureContainerId) {
           return isLostTreasureExpeditionFinalTreasureLooted(
             bundle.worldGeneratedContainers.containerCounts(containerId),
+          )
+        }
+        const chronicleSearch = getActiveLostTreasureChronicleSearchBinding()
+        if (chronicleSearch && containerId === chronicleSearch.ruinsContainerId) {
+          const kind = chronicleSearch.truth === 'ruins' ? ENCODED_CHRONICLE_KIND : CHRONICLE_SEARCH_EVIDENCE_KIND
+          const instanceId = chronicleSearch.truth === 'ruins'
+            ? chronicleSearch.chronicleInstanceId
+            : chronicleSearch.evidenceInstanceId
+          return isChronicleSearchSourceLooted(
+            bundle.worldGeneratedContainers.containerInstances(containerId, kind),
+            instanceId,
           )
         }
         return isDarkForestTreasureChestLooted(
@@ -2109,6 +2139,16 @@ export async function createApp(
     applySocialConsequence: (consequence) => {
       applySocialConsequence(reputation, consequence)
       refreshCharacterReputation()
+    },
+    extraBuriedPlacements: () => {
+      const binding = getActiveLostTreasureChronicleSearchBinding()
+      return binding ? [lostTreasureChronicleGravePlacement(binding)] : []
+    },
+    isGraveDisturbanceAuthorized: (cemeteryId, graveSpotId) => {
+      const binding = getActiveLostTreasureChronicleSearchBinding()
+      if (!binding) return false
+      if (cemeteryId !== binding.cemeteryLandmarkId || graveSpotId !== binding.graveSpotId) return false
+      return isLostTreasureGraveAccessGranted((questId) => questManager.getResolvedOutcomeId(questId))
     },
     treasureMapBearCave: bearCaveBinding ? (() => {
       const cemeteryRef = bundle.chunkManager.resolveCemeteryForSettlement(homeSettlementId)

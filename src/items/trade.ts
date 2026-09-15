@@ -149,6 +149,8 @@ export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
   if (kind === 'bandit_ledger') return { id: createItemInstanceId(), kind: 'bandit_ledger' }
   if (kind === 'marked_valuable') return { id: createItemInstanceId(), kind: 'marked_valuable' }
   if (kind === 'expedition_journal') return { id: createItemInstanceId(), kind: 'expedition_journal' }
+  if (kind === 'encoded_chronicle') return { id: createItemInstanceId(), kind: 'encoded_chronicle' }
+  if (kind === 'chronicle_search_evidence') return { id: createItemInstanceId(), kind: 'chronicle_search_evidence' }
   if (isArmorKind(kind)) return createArmorInstance(kind)
   return null
 }

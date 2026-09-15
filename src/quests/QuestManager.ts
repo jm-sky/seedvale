@@ -639,8 +639,21 @@ export class QuestManager {
     return undefined
   }
 
+  private offerText(def: QuestDef): string {
+    if (!def.resolveOfferLine) return def.offerLine
+    return def.resolveOfferLine({
+      getNpcRelation: (npcId) => this.getRelation(npcId),
+      resolvedOutcomeId: (questId) => this.stateOf(questId).resolvedOutcomeId,
+      getReputationDimension: (dimension) => (
+        def.settlementId
+          ? this.socialAvailability.getReputationDimension(def.settlementId, dimension)
+          : 0
+      ),
+    })
+  }
+
   private journalText(def: QuestDef, event: QuestJournalEvent, progress: QuestRuntimeProgress): string | null {
-    if (event.kind === 'offer') return def.offerLine
+    if (event.kind === 'offer') return this.offerText(def)
     if (event.kind === 'result') {
       const resolved = resolvedOutcome(def, progress)
       const stage = this.currentStage(def, progress.stageIndex)
@@ -666,7 +679,7 @@ export class QuestManager {
       notes.push({
         dateLabel: null,
         speakerName: def.giverName,
-        text: def.offerLine,
+        text: this.offerText(def),
       })
     }
     for (const event of recorded) {
@@ -710,14 +723,18 @@ export class QuestManager {
    * @domain quests-progression
    */
   notifyInventoryChanged(): void {
+    let dirty = false
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
-      if (this.unfinishedSlots(def, s).some((slot) => slot.objective.type === 'gather_item')) {
-        this.dirty = true
-        return
+      const slots = this.unfinishedSlots(def, s)
+      if (slots.some((slot) => slot.objective.type === 'gather_item')) dirty = true
+      if (slots.some((slot) => slot.objective.type === 'own_item_instance')) {
+        dirty = true
+        this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
       }
     }
+    if (dirty) this.dirty = true
   }
 
   private currentStage(def: QuestDef, stageIndex: number): QuestStage | undefined {
@@ -843,6 +860,11 @@ export class QuestManager {
 
   getState(id: string): QuestState {
     return this.stateOf(id).state
+  }
+
+  /** Terminal outcome id when the quest has resolved; never a derived lead tier. */
+  getResolvedOutcomeId(id: string): QuestOutcomeId | undefined {
+    return this.stateOf(id).resolvedOutcomeId
   }
 
   /** Sympathy score for an NPC by stable id, bumped on quest completion. Defaults to 0. */
@@ -1415,6 +1437,8 @@ export class QuestManager {
         )
       case 'loot_world_container':
         return this.worldProgress.isWorldContainerLooted(objective.containerId)
+      case 'own_item_instance':
+        return Boolean(this.inventory.getInstance(objective.instanceId))
       case 'read_item':
         return this.worldProgress.hasReadItem(objective.itemKind)
       case 'recover_hidden_find':
@@ -1767,7 +1791,7 @@ export class QuestManager {
     if (this.stateOf(def.id).state !== 'offered') return null
     if (!this.canAcceptOrdinaryGiverQuest(def)) return null
     return {
-      line: def.offerLine,
+      line: this.offerText(def),
       offer: {
         onAccept: () => {
           if (!this.canAcceptOrdinaryGiverQuest(def)) return

@@ -106,11 +106,11 @@ describe('findExplicitBuriedSpot (world-024)', () => {
       x: 12,
       z: -8,
       graveIndex: 2,
-      keyInstanceId: 'item:treasure-key:site-a',
+      instance: { id: 'item:treasure-key:site-a', kind: 'key' as const },
     }
     const first = findExplicitBuriedSpot([placement], 12.2, -8.1, NEVER_RESOLVED)
     expect(first?.spotId).toBe(placement.spotId)
-    expect(first?.keyInstanceId).toBe(placement.keyInstanceId)
+    expect(first?.instance.id).toBe(placement.instance.id)
     const second = findExplicitBuriedSpot([placement], 12.2, -8.1, (id) => id === placement.spotId)
     expect(second).toBeNull()
   })
@@ -122,7 +122,7 @@ describe('findExplicitBuriedSpot (world-024)', () => {
       landmarkKind: 'monolith' as const,
       x: 0,
       z: 0,
-      keyInstanceId: 'item:treasure-key:site-b',
+      instance: { id: 'item:treasure-key:site-b', kind: 'key' as const },
     }
     expect(findExplicitBuriedSpot([placement], 80, 80, NEVER_RESOLVED)).toBeNull()
   })
