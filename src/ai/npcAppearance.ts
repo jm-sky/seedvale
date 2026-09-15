@@ -73,8 +73,14 @@ const MALE_HAIR_KINDS: readonly NpcHairKind[] = ['simple', 'long', 'buzzed', 'bu
 /** Women use Hair_Long / Hair_Buns only — not SimpleParted or Hair_BuzzedFemale. */
 const FEMALE_HAIR_KINDS: readonly NpcHairKind[] = ['long', 'buns']
 const CLOTHING_HUE_IDS: readonly NpcClothingHueId[] = ['identity', 'warm', 'cool', 'darker']
-const HAIR_COLOR_IDS: readonly NpcHairColorId[] = ['black', 'brown', 'redhead', 'blond', 'grey']
+const NON_GREY_HAIR_COLOR_IDS: readonly NpcHairColorId[] = ['black', 'brown', 'redhead', 'blond']
 const BEARD_CHANCE = 0.35
+/** Below this age grey hair never rolls. */
+const GREY_HAIR_MIN_AGE = 50
+/** At/after this age the grey chance jumps from `GREY_HAIR_CHANCE_MIDDLE` to `GREY_HAIR_CHANCE_SENIOR`. */
+const GREY_HAIR_SENIOR_AGE = 60
+const GREY_HAIR_CHANCE_MIDDLE = 0.15
+const GREY_HAIR_CHANCE_SENIOR = 0.75
 /** Distinct from physical-profile salts (`PHYS` / SPEA streams). */
 const APPEARANCE_SEED_SALT = 0x41505045
 
@@ -180,7 +186,19 @@ export function ubcVariantModelUrl(
   return `${NPC_VARIANT_DIR}/${gender}_${outfit}_${hair}${beardSuffix}.glb`
 }
 
-function rollUbcVariant(npcId: string, gender: NpcGender, outfit: NpcUbcOutfitId): {
+function greyHairChanceForAge(age: number): number {
+  if (age >= GREY_HAIR_SENIOR_AGE) return GREY_HAIR_CHANCE_SENIOR
+  if (age >= GREY_HAIR_MIN_AGE) return GREY_HAIR_CHANCE_MIDDLE
+  return 0
+}
+
+/** Grey only ever rolls at 50+ (~15%), rising to ~75% at 60+; never below 50. */
+function rollHairColor(random: () => number, age: number): NpcHairColorId {
+  if (random() < greyHairChanceForAge(age)) return 'grey'
+  return NON_GREY_HAIR_COLOR_IDS[pickIndex(random, NON_GREY_HAIR_COLOR_IDS.length)]!
+}
+
+function rollUbcVariant(npcId: string, gender: NpcGender, outfit: NpcUbcOutfitId, age: number): {
   clothingHue: number
   hairColor: number
   modelUrl: string
@@ -189,7 +207,7 @@ function rollUbcVariant(npcId: string, gender: NpcGender, outfit: NpcUbcOutfitId
   const hairs = hairKindsFor(gender)
   const hair = hairs[pickIndex(random, hairs.length)]!
   const beard = gender === 'male' && random() < BEARD_CHANCE
-  const hairColorId = HAIR_COLOR_IDS[pickIndex(random, HAIR_COLOR_IDS.length)]!
+  const hairColorId = rollHairColor(random, age)
   const hueId = CLOTHING_HUE_IDS[pickIndex(random, CLOTHING_HUE_IDS.length)]!
   return {
     clothingHue: NPC_CLOTHING_HUE[hueId],
@@ -211,7 +229,8 @@ const UBC_ROLE_LOOK: Partial<Record<Role, { outfit: NpcUbcOutfitId, tintUrl: str
  * hunter → Ranger UBC, adult male guard → unhelmeted Knight singleton;
  * everyone else (including children and female guards) stays on the
  * Modular pool. Role, not reserved name, selects the outfit. Hair/beard/hue
- * come from `npcId`, not role. Women only roll Hair_Long / Hair_Buns.
+ * come from `npcId`, not role; hair color also greys with `age`
+ * (`rollHairColor`). Women only roll Hair_Long / Hair_Buns.
  *
  * @domain npc
  */
@@ -231,7 +250,7 @@ export function resolveNpcAppearance(opts: {
       if (opts.gender !== 'male') {
         return appearanceFor(modelUrlFor(opts.gender, opts.treeIndex), 'modular', null)
       }
-      const style = rollUbcVariant(opts.npcId, opts.gender, look.outfit)
+      const style = rollUbcVariant(opts.npcId, opts.gender, look.outfit, opts.age)
       return appearanceFor(
         NPC_UBC_MALE_KNIGHT_UNHELMETED_URL,
         look.outfit,
@@ -240,7 +259,7 @@ export function resolveNpcAppearance(opts: {
         style.clothingHue,
       )
     }
-    const variant = rollUbcVariant(opts.npcId, opts.gender, look.outfit)
+    const variant = rollUbcVariant(opts.npcId, opts.gender, look.outfit, opts.age)
     return appearanceFor(
       variant.modelUrl,
       look.outfit,
