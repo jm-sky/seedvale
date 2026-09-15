@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Apple, BookOpen, Package, Shield, Sword, Wheat } from 'lucide-vue-next'
+import { Apple, BookOpen, Package, ScrollText, Shield, Sword, Wheat } from 'lucide-vue-next'
 import { type Component, computed, ref } from 'vue'
 import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
@@ -38,6 +38,8 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
   utility: Package,
   food: Apple,
   knowledge: BookOpen,
+  story: ScrollText,
+  other: Package,
 }
 
 const item = computed(() => props.kind ? ITEM_DEFS[props.kind] : null)

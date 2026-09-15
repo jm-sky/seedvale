@@ -171,6 +171,7 @@ export function buildSuspiciousTransportCaveCacheQuest(
   giver: OpportunityNpc,
   counterpart: OpportunityNpc,
   settlementName: string,
+  caveDescription: string,
 ): QuestDef {
   const keepGoodsLines = {
     physicalOutcomeId: SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
@@ -194,7 +195,7 @@ export function buildSuspiciousTransportCaveCacheQuest(
         reminderLine: `${giver.name} wie, gdzie leży schowek.`,
         playerLine: 'Gdzie jest ten schowek?',
         progressLine:
-          'Schowek jest w konkretnej jaskini. Weź przesyłkę stamtąd i wróć, zanim ktoś inny to znajdzie.',
+          `Schowek jest tutaj: ${caveDescription}. Weź przesyłkę stamtąd i wróć, zanim ktoś inny to znajdzie.`,
         effects: [{
           type: 'reveal_location',
           locationId: binding.caveLocationId,
@@ -203,8 +204,8 @@ export function buildSuspiciousTransportCaveCacheQuest(
       },
       {
         objective: { type: 'loot_world_container', containerId: binding.cacheContainerId },
-        description: 'Odnajdź schowek w wskazanej jaskini i zabierz przesyłkę.',
-        reminderLine: 'Schowek jest w tej jaskini — zabierz przesyłkę, zanim ktoś inny to zrobi.',
+        description: 'Odnajdź schowek we wskazanej jaskini i zabierz przesyłkę.',
+        reminderLine: 'Schowek jest we wskazanej jaskini — zabierz przesyłkę, zanim ktoś inny to zrobi.',
         progressLine: 'Przesyłka jest u ciebie. Teraz musisz zdecydować, co z nią zrobisz.',
       },
       {

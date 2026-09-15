@@ -147,8 +147,13 @@ export type ItemKind =
 /** `knowledge` (plan items-player-016) covers both books (→ `PlayerSkills`)
  *  and `map_near`/`map_far` (→ `LocationKnowledge`) — a shared item
  *  *category*, not a shared gameplay system; each knowledge item still
- *  drives its own domain. */
-export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon' | 'armor' | 'knowledge'
+ *  drives its own domain.
+ *
+ *  `story` (plan quests-progression-035) is presentation-only for
+ *  quest/history items. It does not imply unsellable, undroppable, or
+ *  quest-owned lifecycle. `other` is an explicit leftover bucket, never a
+ *  runtime fallback for a missing `categories` list. */
+export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon' | 'armor' | 'knowledge' | 'story' | 'other'
 
 /** Item gabarite (plan 164) — deliberately independent of `weight`. Governs
  *  container/inventory *size* capacity only; a small heavy item and a large
@@ -192,7 +197,9 @@ export function hasItemKindCategory(kind: ItemKind, category: ItemCategory): boo
   return hasItemCategory(ITEM_DEFS[kind], category)
 }
 
-const CATEGORY_SORT_ORDER: readonly ItemCategory[] = ['weapon', 'armor', 'tool', 'knowledge', 'food', 'utility', 'resource']
+const CATEGORY_SORT_ORDER: readonly ItemCategory[] = [
+  'weapon', 'armor', 'tool', 'story', 'knowledge', 'food', 'utility', 'resource', 'other',
+]
 
 /** Deterministic primary category for sorting — first match in CATEGORY_SORT_ORDER. */
 export function primaryItemCategory(def: Pick<ItemDef, 'categories'>): ItemCategory {
@@ -793,7 +800,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   treasure_map_dark_forest: {
     kind: 'treasure_map_dark_forest',
     label: 'mapa do skarbu',
-    categories: ['utility'],
+    categories: ['story'],
     weight: 0.05,
     size: 'XS',
     color: 0xc4a574,
@@ -1027,7 +1034,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   signet_ring: {
     kind: 'signet_ring',
     label: 'sygnet rodowy',
-    categories: ['resource'],
+    categories: ['story'],
     weight: 0.05,
     size: 'XS',
     color: 0xc9a227,
@@ -1036,7 +1043,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   bandit_ledger: {
     kind: 'bandit_ledger',
     label: 'bandycki rejestr',
-    categories: ['resource'],
+    categories: ['story'],
     weight: 0.2,
     size: 'SM',
     color: 0x6b5344,
@@ -1045,7 +1052,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   marked_valuable: {
     kind: 'marked_valuable',
     label: 'oznaczony klejnot',
-    categories: ['resource'],
+    categories: ['story'],
     weight: 0.08,
     size: 'XS',
     color: 0xb8860b,
@@ -1054,7 +1061,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   expedition_journal: {
     kind: 'expedition_journal',
     label: 'dziennik wyprawy',
-    categories: ['resource'],
+    categories: ['story'],
     weight: 0.25,
     size: 'SM',
     color: 0x4a3624,

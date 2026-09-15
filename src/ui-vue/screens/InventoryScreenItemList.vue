@@ -3,8 +3,9 @@ import { computed, ref } from 'vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { isToolKind } from '../../items/HeldTool'
+import { inventoryItemReadAction } from '../../items/inventoryItemReadAction'
 import { type InventoryInstanceRow, ITEM_METER_LABEL } from '../../items/inventoryView'
-import { isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../../items/itemCatalog'
+import { isMeleeToolKind, isRangedTool } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
 import { isWeaponMaintenanceKind } from '../../items/itemInstances'
 import { hasItemCategory, ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
@@ -20,7 +21,9 @@ const { categoryLabel } = useItemCategoryLabels()
 type CategoryFilter = 'all' | ItemCategory
 type SortMode = 'category' | 'name' | 'qty'
 
-const CATEGORY_ORDER: readonly ItemCategory[] = ['weapon', 'armor', 'tool', 'knowledge', 'food', 'utility', 'resource']
+const CATEGORY_ORDER: readonly ItemCategory[] = [
+  'weapon', 'armor', 'tool', 'story', 'knowledge', 'food', 'utility', 'resource', 'other',
+]
 const SORT_LABEL: Record<SortMode, string> = { category: 'Kategoria', name: 'Nazwa', qty: 'Ilość' }
 
 const filter = ref<CategoryFilter>('all')
@@ -36,7 +39,7 @@ const allItems = computed(() => ui.inventory.groups.map((group) => ({
   meterKind: group.meterKind,
   instances: group.instances,
   consumeUse: group.consumeUse,
-  book: ITEM_CATALOG[group.kind].book ?? null,
+  readAction: inventoryItemReadAction(group.kind),
 })))
 
 const availableCategories = computed(() => CATEGORY_ORDER.filter((cat) => allItems.value.some((item) => hasItemCategory(item.def, cat))))
@@ -235,9 +238,9 @@ function setPrimaryRanged(kind: ItemKind, instances: readonly InventoryInstanceR
               @click="onConsume(item.kind)"
             />
             <ItemsScreenItemButton
-              v-if="item.book"
+              v-if="item.readAction"
               class="min-h-0 py-1"
-              label="Czytaj"
+              :label="item.readAction.label"
               @click="onRead(item.kind)"
             />
             <ItemsScreenItemButton

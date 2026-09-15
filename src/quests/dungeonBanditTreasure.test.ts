@@ -202,7 +202,9 @@ describe('dungeon bandit treasure (plan quests-progression-026)', () => {
     const def = buildDungeonBanditTreasureQuest(binding, [
       npc('home:npc:0', 'guard'),
       npc('home:npc:1', 'trader'),
-    ], 'Osada')
+    ], 'Osada', 'stary loch na wschód od osady')
+    expect(def.offerLine).toContain('stary loch na wschód od osady')
+    expect(`${def.offerLine} ${def.stages[0]?.progressLine}`).not.toMatch(/konkretn|dokładny loch/)
     expect(def.outcomes.map((outcome) => outcome.id)).toEqual([
       DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME,
       DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME,

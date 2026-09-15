@@ -197,6 +197,7 @@ export function buildLostHunterNaturalCaveQuest(
   binding: LostHunterNaturalCaveBinding,
   npcs: readonly SettlementOpportunityNpc[],
   settlementName: string,
+  caveDescription: string,
 ): QuestDef {
   const giver = npcs.find((npc) => npc.id === binding.giverNpcId)
   const witness = npcs.find((npc) => npc.id === binding.witnessNpcId)
@@ -218,7 +219,7 @@ export function buildLostHunterNaturalCaveQuest(
         description: `Porozmawiaj z ${witnessName} — może widział zaginionego myśliwego.`,
         reminderLine: `${witnessName} może coś wiedzieć o jego ostatniej drodze.`,
         playerLine: 'Słyszałem, że zaginął myśliwy. Widziałeś go ostatnio?',
-        progressLine: 'Wiem już, gdzie szukać — trzeba zajrzeć do tej jaskini.',
+        progressLine: `Widziałem, dokąd poszedł. To ${caveDescription}.`,
         effects: [{
           type: 'reveal_location',
           locationId: binding.caveLocationId,
@@ -227,15 +228,15 @@ export function buildLostHunterNaturalCaveQuest(
       },
       {
         objective: { type: 'loot_world_container', containerId: binding.packContainerId },
-        description: 'Znajdź w jaskini jego plecak i zabierz to, co zostawił.',
-        reminderLine: 'W jaskini powinien być jego plecak — tam będzie dowód.',
+        description: 'Znajdź we wskazanej jaskini jego plecak i zabierz to, co zostawił.',
+        reminderLine: 'We wskazanej jaskini powinien być jego plecak — tam będzie dowód.',
         progressLine: 'To jego rzeczy. Trzeba wrócić z wieścią do rodziny.',
       },
       {
         objective: { type: 'talk_to_npc', npc: { npcId: binding.giverNpcId } },
         description: `Wróć do ${giverName} i opowiedz, co znalazłeś.`,
         reminderLine: `${giverName} czeka na wieści o myśliwym.`,
-        playerLine: 'Byłem w jaskini. Znalazłem jego plecak i łuk.',
+        playerLine: 'Byłem we wskazanej jaskini. Znalazłem jego plecak i łuk.',
         progressLine: 'Dziękuję, że to sprawdziłeś. Powiedz, co zrobisz z jego łukiem.',
       },
       {

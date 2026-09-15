@@ -1660,7 +1660,7 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
       (c) => consequences.push(c),
     )
     acceptOffer(qm, 'Kasia')
-    expect(qm.onInteract('Kasia')?.line).toBe('Jaskinia jest poza osadą. Szukaj przesyłki przy wejściu.')
+    expect(qm.onInteract('Kasia')?.line).toBe('Skalna grota jest poza osadą. Szukaj przesyłki przy wejściu.')
     expect(qm.onInteract('Marek')).toBeNull()
     qm.onInteractObjective(CAVE_REF)
     expect(granted).toEqual([])
@@ -3980,6 +3980,7 @@ describe('QuestManager generic resolution effects (plan quests-progression-029)'
         hunterNpc(WITNESS_ID, 'hunter', 'f1'),
       ],
       'Osada',
+      'mała jaskinia na północ od osady',
     )
   }
 

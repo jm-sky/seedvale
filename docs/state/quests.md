@@ -1,6 +1,6 @@
 # Quests / progression — current state
 
-**Last verified:** 2026-09-13  
+**Last verified:** 2026-09-15  
 **Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic quest definitions, objectives, dialogue actions, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
 
 Architecture recon (gaps, overlapping content, recommended stages, what not to build): [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Follow-up plans: `quests-progression-029` … `031`. Nonlinear stage objectives/transitions: plan `quests-progression-032`.
@@ -58,7 +58,9 @@ At composition root, `materializeAuthoredQuestDefs()` resolves every identity-be
 - `buildLandmarkQuests()` — deterministic landmark lookup → contextual landmark quests;
 - `buildDarkForestTreasureQuest()` / `bindDarkForestTreasureQuest()` — treasure-map/world-container chain;
 - `buildHorseAcquisitionQuest()` — persistent horse reward target;
-- `bindExactCaveQuests()` — binds authored cave-related content to exact generated cave/world context.
+- `bindExactCaveQuests()` — binds authored `rockDen` quests (`sprawdz-szlak`, `zaginiona-przesylka`) to the exact fauna den plus a cheap `{cavePlace}` direction token; player-facing copy calls that den a *skalna grota*, not a walk-in Cave V2.
+
+Physical walk-in cave stories (lost hunter, old bones, dungeon bandit stash, lost expedition, suspicious-transport cave cache) interpolate a player-facing location phrase at materialization from already-resolved `CaveArchetype`, settlement-relative `cardinalDirectionPhrase()`, optional canonical `WorldLocation.name`, and the speaking NPC's `Role`. `src/quests/caveLocationDescription.ts` is presentation-only: it does not look up the world, reveal locations, or persist wording. Guard/hunter/miner/trader may speak the canonical name; other roles use archetype + direction.
 
 These still become ordinary `QuestDef`s before `QuestManager` is constructed.
 

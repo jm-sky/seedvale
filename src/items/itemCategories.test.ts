@@ -37,4 +37,13 @@ describe('item categories', () => {
     expect(hasItemKindCategory('chainmail', 'weapon')).toBe(false)
     expect(primaryItemCategory(ITEM_DEFS.chainmail)).toBe('armor')
   })
+
+  it('story items use the story category (plan quests-progression-035)', () => {
+    expect(hasItemKindCategory('treasure_map_dark_forest', 'story')).toBe(true)
+    expect(hasItemKindCategory('signet_ring', 'story')).toBe(true)
+    expect(hasItemKindCategory('bandit_ledger', 'story')).toBe(true)
+    expect(hasItemKindCategory('marked_valuable', 'story')).toBe(true)
+    expect(hasItemKindCategory('expedition_journal', 'story')).toBe(true)
+    expect(hasItemKindCategory('treasure_map_dark_forest', 'utility')).toBe(false)
+  })
 })

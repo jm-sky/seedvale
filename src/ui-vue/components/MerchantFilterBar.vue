@@ -20,11 +20,13 @@ const categoryChips: { id: CategoryFilter, label: string }[] = [
   { id: 'all', label: 'Wszystkie' },
   { id: 'weapon', label: categoryLabel.weapon },
   { id: 'armor', label: categoryLabel.armor },
-  { id: 'resource', label: categoryLabel.resource },
   { id: 'tool', label: categoryLabel.tool },
-  { id: 'utility', label: categoryLabel.utility },
-  { id: 'food', label: categoryLabel.food },
+  { id: 'story', label: categoryLabel.story },
   { id: 'knowledge', label: categoryLabel.knowledge },
+  { id: 'food', label: categoryLabel.food },
+  { id: 'utility', label: categoryLabel.utility },
+  { id: 'resource', label: categoryLabel.resource },
+  { id: 'other', label: categoryLabel.other },
 ]
 
 const capabilityChips = computed(() => [

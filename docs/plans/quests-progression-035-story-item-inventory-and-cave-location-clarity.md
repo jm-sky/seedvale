@@ -1,7 +1,7 @@
 # Plan: Story Item Inventory & Cave Location Clarity
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** high · **Effort:** M
 **Model:** Sonnet, Composer

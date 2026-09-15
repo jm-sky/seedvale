@@ -214,7 +214,9 @@ describe('lost treasure expedition (plan quests-progression-027)', () => {
     const def = buildLostTreasureExpeditionQuest(binding, [
       npc('home:npc:0', 'trader', 'house-a'),
       npc('home:npc:1', 'farmer', 'house-b'),
-    ], 'Osada')
+    ], 'Osada', 'stary loch na wschód od osady')
+    expect(def.offerLine).toContain('stary loch na wschód od osady')
+    expect(`${def.offerLine} ${def.description} ${def.stages[0]?.progressLine}`).not.toMatch(/konkretn|dokładny loch/)
     expect(def.outcomes.map((outcome) => outcome.id)).toEqual([
       LOST_TREASURE_EXPEDITION_JOURNAL_TO_FAMILY_OUTCOME,
       LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME,
@@ -243,7 +245,7 @@ describe('lost treasure expedition (plan quests-progression-027)', () => {
       contentAnchors: anchors,
     })!
     expect(binding.stakeholderNpcId).toBeUndefined()
-    const def = buildLostTreasureExpeditionQuest(binding, [npc('home:npc:0', 'trader', 'house-a')], 'Osada')
+    const def = buildLostTreasureExpeditionQuest(binding, [npc('home:npc:0', 'trader', 'house-a')], 'Osada', 'stary loch poza osadą')
     expect(def.outcomes.map((outcome) => outcome.id)).toEqual([
       LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME,
       LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME,

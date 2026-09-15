@@ -384,8 +384,10 @@ describe('quest dialogue lines and cave binding (plan quests-progression-014)', 
     })
     expect(scout.stages[0]?.objective).toEqual({ type: 'interact_spawner', spawnerType: 'rockDen' })
     expect(check.offerLine).toContain('na północny wschód od osady')
+    expect(check.offerLine).toContain('skalnej grocie')
     expect(check.offerLine).not.toContain('{cavePlace}')
     expect(lost.stages[0]?.reminderLine).toContain('na północny wschód od osady')
+    expect(lost.stages[0]?.reminderLine).toContain('Skalna grota')
   })
 
   it('binds mapa-do-skarbu prose to the concrete map source place', () => {

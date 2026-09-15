@@ -131,12 +131,14 @@ describe('lost hunter natural cave (plan quests-progression-023)', () => {
       npc('home:npc:0', 'farmer', false, 'f0'),
       npc('home:npc:1', 'farmer', false, 'f0'),
       npc('home:npc:2', 'hunter', false, 'f1'),
-    ], 'Osada')
+    ], 'Osada', 'mała jaskinia na północ od osady')
     expect(quest.stages[0]?.effects).toEqual([{
       type: 'reveal_location',
       locationId: 'cave:cave-a',
       setNavigation: true,
     }])
+    expect(quest.stages[0]?.progressLine).toContain('mała jaskinia na północ od osady')
+    expect(quest.stages[0]?.progressLine).not.toMatch(/konkretn|dokładny loch|natural cave|adventure cave/)
     expect(quest.stages[3]?.dialogueActions?.[1]?.requireItemInstanceId).toBe(binding!.bowInstanceId)
     expect(quest.outcomes.find((outcome) => outcome.id === 'return_bow_to_family')?.effects).toEqual([{
       type: 'transfer_item_instance',

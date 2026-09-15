@@ -296,6 +296,7 @@ export function buildOldBonesAdventureCaveQuest(
   binding: OldBonesAdventureCaveBinding,
   npcs: readonly SettlementOpportunityNpc[],
   settlementName: string,
+  caveDescription: string,
 ): QuestDef {
   const giver = npcs.find((npc) => npc.id === binding.giverNpcId)
   const claimantA = npcs.find((npc) => npc.id === binding.claimantANpcId)
@@ -310,10 +311,10 @@ export function buildOldBonesAdventureCaveQuest(
     {
       objective: { type: 'talk_to_npc', npc: { npcId: binding.giverNpcId } },
       description: `Wysłuchaj ${giverName} — wie o starych śladach w jaskini.`,
-      reminderLine: `${giverName} wspominał o ludzkich śladach w konkretnej jaskini.`,
+      reminderLine: `${giverName} wspominał o ludzkich śladach we wskazanej jaskini.`,
       playerLine: 'Słyszałem, że w okolicy są stare ślady w jaskini.',
       progressLine:
-        'W jednej z jaskiń leżą stare ludzkie szczątki. Nie wiem, czyje — ale ktoś z osady powinien pamiętać takie historie.',
+        `Stare ludzkie szczątki znajdziesz tutaj: ${caveDescription}. Nie wiem, czyje — ale ktoś z osady powinien pamiętać takie historie.`,
       effects: [{
         type: 'reveal_location',
         locationId: binding.caveLocationId,
@@ -330,8 +331,8 @@ export function buildOldBonesAdventureCaveQuest(
     },
     {
       objective: { type: 'loot_world_container', containerId: binding.containerId },
-      description: 'Odnajdź szczątki w wskazanej jaskini i zabierz rodowy sygnet.',
-      reminderLine: 'W jaskini powinny leżeć stare szczątki z sygnetem.',
+      description: 'Odnajdź szczątki we wskazanej jaskini i zabierz rodowy sygnet.',
+      reminderLine: 'We wskazanej jaskini powinny leżeć stare szczątki z sygnetem.',
       progressLine: 'Sygnet jest u ciebie. Teraz trzeba zdecydować, komu go oddać.',
     },
   ]
@@ -440,7 +441,7 @@ export function buildOldBonesAdventureCaveQuest(
     giver: { npcId: binding.giverNpcId },
     settlementId: binding.settlementId,
     offerLine:
-      'W jednej jaskini leżą stare ludzkie szczątki. Nie wiem, czyje — ale ktoś w osadzie pamięta takie historie lepiej niż ja.',
+      `Szczątki leżą tutaj: ${caveDescription}. Nie wiem, czyje — ale ktoś w osadzie pamięta takie historie lepiej niż ja.`,
     stages,
     reportLine: 'Ta stara sprawa wreszcie ma koniec.',
     outcomes,

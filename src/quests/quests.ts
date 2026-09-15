@@ -1264,24 +1264,24 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
   },
   {
     id: 'sprawdz-szlak',
-    title: 'Sprawdzenie jaskini',
+    title: 'Sprawdzenie skalnej groty',
     description:
-      'Kasia prosi o sprawdzenie jaskini znajdującej się {cavePlace}. Ostatnio zauważono tam świeże ślady zwierząt.',
+      'Kasia prosi o sprawdzenie skalnej groty znajdującej się {cavePlace}. Ostatnio zauważono tam świeże ślady zwierząt.',
     giverName: 'Kasia',
     offerLine:
-      'Ostatnio ktoś widział świeże ślady przy jaskini {cavePlace}. Możesz tam zajrzeć i sprawdzić, czy nie kręci się tam coś niebezpiecznego? Zapłacę ci za fatygę.',
+      'Ostatnio ktoś widział świeże ślady przy skalnej grocie {cavePlace}. Możesz tam zajrzeć i sprawdzić, czy nie kręci się tam coś niebezpiecznego? Zapłacę ci za fatygę.',
     stages: [
       {
         objective: { type: 'interact_spawner', spawnerType: 'rockDen' },
-        description: 'Sprawdź jaskinię wskazaną przez Kasię.',
-        reminderLine: 'Jaskinia jest {cavePlace}. Sprawdź tylko, co się tam dzieje, i wróć do mnie.',
+        description: 'Sprawdź skalną grotę wskazaną przez Kasię.',
+        reminderLine: 'Skalna grota jest {cavePlace}. Sprawdź tylko, co się tam dzieje, i wróć do mnie.',
         progressLine:
           'Wokół wejścia widać świeże ślady zwierząt. To miejsce zdecydowanie nie jest opuszczone.',
       },
     ],
-    reportPromptLine: 'I jak? Udało ci się sprawdzić jaskinię?',
+    reportPromptLine: 'I jak? Udało ci się sprawdzić skalną grotę?',
     reportPlayerLine:
-      'Tak. Są tam świeże ślady. Wygląda na to, że coś regularnie korzysta z tej jaskini.',
+      'Tak. Są tam świeże ślady. Wygląda na to, że coś regularnie korzysta z tej groty.',
     reportLine:
       'Dobrze, że to sprawdziłeś. Przynajmniej wiemy, że trzeba tam uważać. Dzięki — proszę, to za pomoc.',
     outcomes: [
@@ -1429,15 +1429,15 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
     id: 'zaginiona-przesylka',
     title: 'Zaginiona przesyłka',
     description:
-      'Kasia zgubiła handlową przesyłkę przy jaskini {cavePlace}. Sprawdź jaskinię i zdecyduj, komu ją oddać.',
+      'Kasia zgubiła handlową przesyłkę przy skalnej grocie {cavePlace}. Sprawdź grotę i zdecyduj, komu ją oddać.',
     giverName: 'Kasia',
     offerLine:
-      'Zgubiłam przesyłkę przy jaskini {cavePlace}. To prywatne listy i rachunki — bez nich nie ogarnę dostawy. Marek już o tym słyszał i chętnie by to przejął „dla porządku”. Dasz radę tam zajrzeć?',
+      'Zgubiłam przesyłkę przy skalnej grocie {cavePlace}. To prywatne listy i rachunki — bez nich nie ogarnę dostawy. Marek już o tym słyszał i chętnie by to przejął „dla porządku”. Dasz radę tam zajrzeć?',
     stages: [
       {
         objective: { type: 'interact_spawner', spawnerType: 'rockDen' },
-        description: 'Sprawdź jaskinię wskazaną przez Kasię.',
-        reminderLine: 'Jaskinia jest {cavePlace}. Szukaj przesyłki przy wejściu.',
+        description: 'Sprawdź skalną grotę wskazaną przez Kasię.',
+        reminderLine: 'Skalna grota jest {cavePlace}. Szukaj przesyłki przy wejściu.',
         progressLine: 'Przy wejściu leży zawinięta przesyłka. Kasia jej szuka — Marek też o niej wie.',
       },
       {
@@ -2009,9 +2009,10 @@ function bindCaveObjective<T extends { type: string, spawnerId?: string }>(objec
   return objective
 }
 
-/** Binds exact home-cave identity and cheap direction prose onto the
+/** Binds exact home `rockDen` identity and cheap direction prose onto the
  *  authored cave quests. Direction is already-resolved presentation data
- *  — never persisted. */
+ *  — never persisted. Player-facing copy treats that den as a skalna grota,
+ *  not a walk-in Cave V2. */
 export function bindExactCaveQuests(
   defs: readonly AuthoredQuestDef[],
   cave: { id: string, directionPhrase: string | null } | undefined,

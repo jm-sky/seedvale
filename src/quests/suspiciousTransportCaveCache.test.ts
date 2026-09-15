@@ -233,9 +233,12 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
       npcsBySettlement: new Map(),
       settlementNameById: new Map(),
       suspiciousTransportCaveCache: binding,
+      suspiciousTransportCaveDescription: 'mała jaskinia na północny zachód od osady',
     })!
     expect(() => validateQuestDefinitions([caveDef])).not.toThrow()
     expect(caveDef.id).toBe(candidate.id)
+    expect(caveDef.stages[0]?.progressLine).toContain('mała jaskinia na północny zachód od osady')
+    expect(caveDef.stages[0]?.progressLine).not.toMatch(/konkretn/)
     expect(caveDef.stages[0]?.effects).toEqual([{
       type: 'reveal_location',
       locationId: 'cave:cave-a',
@@ -281,7 +284,7 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
       contentAnchors: anchors,
       claims: new CaveAuthoredAnchorClaims(),
     })!
-    const def = buildSuspiciousTransportCaveCacheQuest(binding, trader, guard, 'Dolina')
+    const def = buildSuspiciousTransportCaveCacheQuest(binding, trader, guard, 'Dolina', 'mała jaskinia na północny zachód od osady')
     const revealed: string[] = []
     const inventory = new Inventory()
     const qm = new QuestManager(
@@ -335,7 +338,7 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
       contentAnchors: anchors,
       claims: new CaveAuthoredAnchorClaims(),
     })!
-    const def = buildSuspiciousTransportCaveCacheQuest(binding, trader, guard, 'Dolina')
+    const def = buildSuspiciousTransportCaveCacheQuest(binding, trader, guard, 'Dolina', 'mała jaskinia na północny zachód od osady')
     const inventory = new Inventory()
     const transferred: string[] = []
     const qm = new QuestManager(
@@ -399,7 +402,7 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
       contentAnchors: anchors,
       claims: new CaveAuthoredAnchorClaims(),
     })!
-    const def = buildSuspiciousTransportCaveCacheQuest(binding, trader, guard, 'Dolina')
+    const def = buildSuspiciousTransportCaveCacheQuest(binding, trader, guard, 'Dolina', 'mała jaskinia na północny zachód od osady')
     const evidence = createSuspiciousTransportEvidenceInstance(binding.caveId)
     const inventory = new Inventory({}, Infinity, [evidence])
     const granted: Array<{ kind: string, count: number }> = []

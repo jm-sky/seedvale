@@ -252,7 +252,9 @@ describe('old bones adventure cave (plan quests-progression-025)', () => {
       npc('home:npc:0', 'farmer', false, 'f0', 0),
       npc('home:npc:1', 'farmer', false, 'f0', 0),
       npc('home:npc:2', 'hunter', false, 'f1', 1),
-    ], 'Osada')
+    ], 'Osada', 'głęboka jaskinia na północ od osady')
+    expect(withB.offerLine).toContain('głęboka jaskinia na północ od osady')
+    expect(`${withB.offerLine} ${withB.stages[0]?.reminderLine} ${withB.stages[0]?.progressLine}`).not.toMatch(/konkretn/)
     expect(withB.outcomes.map((outcome) => outcome.id)).toEqual([
       OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME,
       OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME,
@@ -276,7 +278,7 @@ describe('old bones adventure cave (plan quests-progression-025)', () => {
     }, [
       npc('home:npc:0', 'farmer', false, 'f0', 0),
       npc('home:npc:1', 'hunter', false, 'f1', 1),
-    ], 'Osada')
+    ], 'Osada', 'głęboka jaskinia na północ od osady')
     expect(withoutB.outcomes.map((outcome) => outcome.id)).toEqual([
       OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME,
       OLD_BONES_KEEP_SIGNET_OUTCOME,

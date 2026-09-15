@@ -376,6 +376,7 @@ export function buildDungeonBanditTreasureQuest(
   binding: DungeonBanditTreasureBinding,
   npcs: readonly OpportunityNpc[],
   settlementName: string,
+  caveDescription: string,
 ): QuestDef {
   const giver = npcs.find((npc) => npc.id === binding.giverNpcId)
   const claimant = npcs.find((npc) => npc.id === binding.claimantNpcId)
@@ -392,15 +393,15 @@ export function buildDungeonBanditTreasureQuest(
     giver: { npcId: binding.giverNpcId },
     settlementId: binding.settlementId,
     offerLine:
-      'Znam starą bandycką kryjówkę w konkretnym lochu. Jeśli ktoś kiedyś ukradł coś oznaczonego — rejestr wskaże właściciela.',
+      `Znam starą bandycką kryjówkę. To ${caveDescription}. Jeśli ktoś kiedyś ukradł coś oznaczonego — rejestr wskaże właściciela.`,
     stages: [
       {
         objective: { type: 'talk_to_npc', npc: { npcId: binding.giverNpcId } },
         description: `Wysłuchaj ${giverName} — wie o historycznej bandyckiej kryjówce.`,
-        reminderLine: `${giverName} wskazał konkretny loch ze starą skrytką.`,
+        reminderLine: `${giverName} wskazał loch ze starą skrytką.`,
         playerLine: 'Słyszałem, że znasz starą bandycką kryjówkę.',
         progressLine:
-          'W lochu jest stara skrytka bandytów. Weź rejestr i oznaczony łup — potem zdecyduj, co z nimi zrobić.',
+          `Bandycka kryjówka znajduje się tutaj: ${caveDescription}. Weź rejestr i oznaczony łup — potem zdecyduj, co z nimi zrobić.`,
         effects: [{
           type: 'reveal_location',
           locationId: binding.caveLocationId,

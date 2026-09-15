@@ -386,6 +386,7 @@ export function buildLostTreasureExpeditionQuest(
   binding: LostTreasureExpeditionBinding,
   npcs: readonly OpportunityNpc[],
   settlementName: string,
+  caveDescription: string,
 ): QuestDef {
   const sponsor = npcs.find((npc) => npc.id === binding.sponsorNpcId)
   const stakeholder = binding.stakeholderNpcId
@@ -423,10 +424,10 @@ export function buildLostTreasureExpeditionQuest(
     {
       objective: { type: 'talk_to_npc', npc: { npcId: binding.sponsorNpcId } },
       description: `Wysłuchaj ${sponsorName} — sfinansował wyprawę po legendarny skarb, która nie wróciła.`,
-      reminderLine: `${sponsorName} wskazał dokładny loch, do którego wyruszyła zaginiona wyprawa.`,
+      reminderLine: `${sponsorName} wskazał loch, do którego wyruszyła zaginiona wyprawa.`,
       playerLine: 'Słyszałem, że finansowałeś wyprawę po legendarny skarb.',
       progressLine:
-        'Wyprawa nie wróciła. Ostatni raz widziano ją przy wejściu do konkretnego lochu.',
+        `Wyprawa nie wróciła. Ostatni raz widziano ją przy wejściu tutaj: ${caveDescription}.`,
       effects: [{
         type: 'reveal_location',
         locationId: binding.caveLocationId,
@@ -519,12 +520,12 @@ export function buildLostTreasureExpeditionQuest(
     title: 'Zaginiona wyprawa po skarb',
     description:
       `${sponsorName} z osady ${settlementName} sfinansował wyprawę po legendarny skarb, `
-      + 'która wyruszyła do konkretnego lochu i nigdy nie wróciła.',
+      + `która wyruszyła tutaj: ${caveDescription} — i nigdy nie wróciła.`,
     giverName: sponsorName,
     giver: { npcId: binding.sponsorNpcId },
     settlementId: binding.settlementId,
     offerLine:
-      'Wysłałem ludzi po legendarny skarb do konkretnego lochu na wschodzie. Nie wrócili, '
+      `Wysłałem ludzi po legendarny skarb. To ${caveDescription}. Nie wrócili, `
       + 'a ja wciąż nie wiem, co się z nimi stało.',
     stages,
     reportLine: 'Sprawa zaginionej wyprawy ma wreszcie zakończenie.',

@@ -1,3 +1,4 @@
+import type { Role } from '../ai/characters'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
@@ -92,6 +93,7 @@ import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
+import { resolveCaveQuestPresentation } from '../quests/caveLocationDescription'
 import {
   buildDungeonBanditTreasureQuest,
   DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME,
@@ -1209,10 +1211,40 @@ export async function createApp(
     z: def.z,
     npcs: npcsBySettlement.get(def.id) ?? [],
   }))
+  const boundCaveDescription = (
+    caveId: string,
+    caveLocationId: string,
+    settlementX: number,
+    settlementZ: number,
+    speakerRole: Role | null,
+  ): string => resolveCaveQuestPresentation({
+    archetype: bundle.caves.archetypeOf(caveId),
+    location: worldLocationCatalog.getById(caveLocationId),
+    settlementX,
+    settlementZ,
+    speakerRole,
+  })
+  const suspiciousTransportGiver = suspiciousTransportCaveCache
+    ? (npcsBySettlement.get(suspiciousTransportCaveCache.settlementId) ?? [])
+      .find((npc) => npc.id === suspiciousTransportCaveCache.giverNpcId)
+    : undefined
+  const suspiciousTransportSettlement = suspiciousTransportCaveCache
+    ? opportunitySettlements.find((entry) => entry.id === suspiciousTransportCaveCache.settlementId)
+    : undefined
+  const suspiciousTransportCaveDescription = suspiciousTransportCaveCache && suspiciousTransportSettlement
+    ? boundCaveDescription(
+      suspiciousTransportCaveCache.caveId,
+      suspiciousTransportCaveCache.caveLocationId,
+      suspiciousTransportSettlement.x,
+      suspiciousTransportSettlement.z,
+      suspiciousTransportGiver?.role ?? null,
+    )
+    : null
   const rpgContext = {
     npcsBySettlement,
     settlementNameById,
     suspiciousTransportCaveCache,
+    suspiciousTransportCaveDescription,
   }
   const persistedQuestIds = initialSave?.quests.progress.map((entry) => entry.id)
   const opportunityQuestDefs: ReturnType<typeof buildWorldDrivenSettlementQuests> = []
@@ -1278,17 +1310,35 @@ export async function createApp(
       })
       if (eveningQuest) opportunityQuestDefs.push(eveningQuest)
       if (lostHunterBinding) {
+        const homeNpcs = settlementOpportunityNpcsFromDef(def)
+        const witness = homeNpcs.find((npc) => npc.id === lostHunterBinding.witnessNpcId)
         opportunityQuestDefs.push(buildLostHunterNaturalCaveQuest(
           lostHunterBinding,
-          settlementOpportunityNpcsFromDef(def),
+          homeNpcs,
           def.name,
+          boundCaveDescription(
+            lostHunterBinding.caveId,
+            lostHunterBinding.caveLocationId,
+            def.x,
+            def.z,
+            witness?.role ?? null,
+          ),
         ))
       }
       if (oldBonesBinding) {
+        const homeNpcs = settlementOpportunityNpcsFromDef(def)
+        const giver = homeNpcs.find((npc) => npc.id === oldBonesBinding.giverNpcId)
         opportunityQuestDefs.push(buildOldBonesAdventureCaveQuest(
           oldBonesBinding,
-          settlementOpportunityNpcsFromDef(def),
+          homeNpcs,
           def.name,
+          boundCaveDescription(
+            oldBonesBinding.caveId,
+            oldBonesBinding.caveLocationId,
+            def.x,
+            def.z,
+            giver?.role ?? null,
+          ),
         ))
       }
       if (dungeonBanditBinding) {
@@ -1296,10 +1346,19 @@ export async function createApp(
         const neighborNpcs = neighborDefs.flatMap((neighbor) => (
           settlementOpportunityNpcsFromDef(neighbor)
         ))
+        const allNpcs = [...homeNpcs, ...neighborNpcs]
+        const giver = allNpcs.find((npc) => npc.id === dungeonBanditBinding.giverNpcId)
         opportunityQuestDefs.push(buildDungeonBanditTreasureQuest(
           dungeonBanditBinding,
-          [...homeNpcs, ...neighborNpcs],
+          allNpcs,
           def.name,
+          boundCaveDescription(
+            dungeonBanditBinding.caveId,
+            dungeonBanditBinding.caveLocationId,
+            def.x,
+            def.z,
+            giver?.role ?? null,
+          ),
         ))
       }
       if (lostTreasureExpeditionBinding) {
@@ -1307,10 +1366,19 @@ export async function createApp(
         const neighborNpcs = neighborDefs.flatMap((neighbor) => (
           settlementOpportunityNpcsFromDef(neighbor)
         ))
+        const allNpcs = [...homeNpcs, ...neighborNpcs]
+        const sponsor = allNpcs.find((npc) => npc.id === lostTreasureExpeditionBinding.sponsorNpcId)
         opportunityQuestDefs.push(buildLostTreasureExpeditionQuest(
           lostTreasureExpeditionBinding,
-          [...homeNpcs, ...neighborNpcs],
+          allNpcs,
           def.name,
+          boundCaveDescription(
+            lostTreasureExpeditionBinding.caveId,
+            lostTreasureExpeditionBinding.caveLocationId,
+            def.x,
+            def.z,
+            sponsor?.role ?? null,
+          ),
         ))
       }
       const homeGuard = selectGuardQuestGiver(npcs)
