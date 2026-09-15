@@ -106,7 +106,15 @@ describe('planProfessionWork', () => {
 
   describe('miner', () => {
     const mining = {
-      queryNearest: () => ({ id: 'd1', type: 'iron' as const, x: 1, z: 1, remaining: 5 }),
+      queryNearest: () => ({
+        id: 'd1',
+        type: 'iron' as const,
+        x: 1,
+        y: 4,
+        z: 1,
+        spatialContext: { kind: 'surface' as const },
+        remaining: 5,
+      }),
       mine: () => ({ ok: true as const, yield: { kind: 'iron' as const, count: 1 }, remaining: 4 }),
     }
 
@@ -132,6 +140,19 @@ describe('planProfessionWork', () => {
       expect(work?.kind).toBe('mine')
       expect(work?.durationSec).toBe(MINE_DURATION_SEC * 2)
       expect(work?.next).toBeUndefined()
+    })
+
+    it('uses the mining target\'s authoritative Y instead of surface sampleHeight (plan world-018)', () => {
+      const ctx = baseCtx({
+        role: 'miner',
+        mining,
+        economy: createSettlementEconomy('s', {}, []),
+        resourceSiteInventories: createResourceSiteInventories(),
+        sampleHeight: () => 99,
+      })
+      const work = planProfessionWork(ctx)
+      expect(work?.kind).toBe('mine')
+      expect(work?.destination).toEqual({ x: 1, y: 4, z: 1 })
     })
 
     it('applies the shared physical-work Strength rule to mining only', () => {

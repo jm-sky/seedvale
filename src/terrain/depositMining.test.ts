@@ -102,4 +102,19 @@ describe('ResourceDepletionState (plan 198)', () => {
     recordMined(state, id, remaining)
     expect(resolveRemaining(state, id, 0)).toBe(1)
   })
+
+  it('explicit initial reserve is used when no persisted override exists (plan world-018)', () => {
+    const state: ResourceDepletionState = new Map()
+    expect(resolveRemaining(state, 'mine:gold:deep', 0.2, 180)).toBe(180)
+    expect(resolveRemaining(state, 'surface_gold', 1)).toBe(hitsForRichness(1))
+  })
+
+  it('persisted remaining including 0 wins over a later explicit reserve (plan world-018)', () => {
+    const state: ResourceDepletionState = new Map()
+    recordMined(state, 'mine:gold:deep', 2)
+    expect(resolveRemaining(state, 'mine:gold:deep', 0.9, 180)).toBe(2)
+    recordMined(state, 'mine:gold:shallow', 0)
+    expect(resolveRemaining(state, 'mine:gold:shallow', 0.9, 180)).toBe(0)
+    expect(isDepleted(state, 'mine:gold:shallow')).toBe(true)
+  })
 })

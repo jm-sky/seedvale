@@ -474,6 +474,8 @@ function spatialContextForPayload(
       const authored = worldGeneratedContextById.get(payload.id)
       return authored ?? WORLD_SPATIAL_CONTEXT_SURFACE
     }
+    case 'deposit':
+      return payload.depositContext
     case 'npc':
     case 'npcCorpse': {
       const pos = payload.npc.mesh.position
@@ -1178,7 +1180,11 @@ export function buildInteractables(
   }
 
   if (pickaxeHeld) {
-    const deposit = resourceDeposits.queryNearest(playerPos.x, playerPos.z, GAZE_RANGE)
+    const playerContext = resolveSpatialContextAt(playerPos.x, playerPos.y, playerPos.z)
+    const deposit = resourceDeposits.queryNearest(playerPos.x, playerPos.z, GAZE_RANGE, {
+      y: playerPos.y,
+      spatialContext: playerContext,
+    })
     if (deposit) {
       list.push({
         kind: 'deposit',
@@ -1186,6 +1192,7 @@ export function buildInteractables(
         promptLabel: `Wydobądź: ${ORE_YIELD_LABEL[deposit.type]}`,
         id: deposit.id,
         oreType: deposit.type,
+        depositContext: deposit.spatialContext,
       })
     }
   }

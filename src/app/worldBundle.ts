@@ -17,6 +17,7 @@ import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceDepletionState } from '../terrain/depositMining'
+import type { MineableDepositDefinition } from '../terrain/mineableDeposit'
 import type { CompletedTerrainPreparation, TerrainPreparationRecord } from '../terrain/terrainPreparation'
 import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { BeehiveRecord } from '../world/beehives'
@@ -106,6 +107,7 @@ import { cachedLostTreasureArchaeologistHostCell, settlementDefFor } from '../se
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
 import { useBootMark } from '../shared/bootMark'
+import { generateAbandonedMineGoldDeposits } from '../terrain/abandonedMineDeposits'
 import {
   type ChunkManager,
   type ChunkManagerConfig,
@@ -866,8 +868,12 @@ function buildResourceDeposits(
   worldContext: WorldContext,
   seed: number,
   resourceDepletion: ResourceDepletionState,
+  sources: {
+    extraDefinitions: () => readonly MineableDepositDefinition[]
+    caveFloorY: (caveId: string, x: number, y: number, z: number) => number | null
+  },
 ): ResourceDeposits {
-  return createResourceDeposits(scene, worldContext, seed, resourceDepletion)
+  return createResourceDeposits(scene, worldContext, seed, resourceDepletion, sources)
 }
 
 /** Every already-resolved input `buildWorldSystems` needs to construct all 15
@@ -1190,9 +1196,13 @@ async function buildWorldSystems(
   bootMark('createWorldContext')
   const worldContext = createWorldContext(() => chunkManager, config, dayNight)
   bootMarkEnd('createWorldContext')
+  const landmarkMineDeposits: MineableDepositDefinition[] = []
+  let cavesRef: Caves | null = null
   const resolveResourceSitePosition = (resourceId: string): { x: number, z: number } | null => {
     const resource = resourceById(resourceId, config.seed, worldContext)
-    return resource ? { x: resource.x, z: resource.z } : null
+    if (resource) return { x: resource.x, z: resource.z }
+    const mineDeposit = landmarkMineDeposits.find((definition) => definition.id === resourceId)
+    return mineDeposit ? { x: mineDeposit.x, z: mineDeposit.z } : null
   }
   const forest: SettlementForestHooks = {
     lifecycle: treeLifecycle,
@@ -1223,7 +1233,10 @@ async function buildWorldSystems(
   bootMarkEnd('createGrassForagePatches')
 
   bootMark('buildResourceDeposits')
-  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
+  const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion, {
+    extraDefinitions: () => landmarkMineDeposits,
+    caveFloorY: (caveId, x, y, z) => cavesRef?.queryGroundIn(caveId, x, y, z)?.floorY ?? null,
+  })
   bootMarkEnd('buildResourceDeposits')
   const mining: SettlementMiningHooks = { queryNearest: resourceDeposits.queryNearest, mine: resourceDeposits.mine }
 
@@ -1464,6 +1477,22 @@ async function buildWorldSystems(
     },
   )
   bootMarkEnd('createCaves')
+  cavesRef = caves
+  const abandonedMine = caves.abandonedMine()
+  if (abandonedMine) {
+    const placement = caves.interiorPlacementView(abandonedMine.caveId)
+    if (placement) {
+      landmarkMineDeposits.push(...generateAbandonedMineGoldDeposits({
+        worldSeed: config.seed,
+        landmark: abandonedMine,
+        placement,
+        sampleHeight: worldContext.sampleHeight,
+        waterLevel: worldContext.waterLevel,
+        spatialContextAt: (x, y, z) => caves.spatialContextAt(x, y, z),
+        contentAnchors: caves.contentAnchorsOf(abandonedMine.caveId),
+      }))
+    }
+  }
 
   const homeCemeteryRef = chunkManager.resolveCemeteryForSettlement(homeDef.id)
   const homeCemeteryDetail = homeCemeteryRef

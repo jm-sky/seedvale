@@ -202,7 +202,7 @@ function planOreGathering(ctx: NpcWorkContext): NpcPlannedAction | null {
 
   return {
     kind: 'mine',
-    destination: copyVec3({ x: target.x, y: ctx.sampleHeight(target.x, target.z), z: target.z }),
+    destination: copyVec3({ x: target.x, y: target.y, z: target.z }),
     durationSec: physicalWorkDuration(MINE_DURATION_SEC * ctx.waitMultiplier, ctx.strength),
     onComplete: () => {
       const result = mining.mine(target.id)

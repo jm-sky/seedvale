@@ -1,14 +1,24 @@
 # Plan: Cave-aware rich finite resource deposits
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (focused Vitest on reserve fallback/persistence precedence, semantic-slot IDs, total/distribution, cave interior placement, spatial-context filtering; `tsc` / lint / build / full test suite). Browser/manual gameplay verification is User-owned.
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** ~~world-terrain-019~~, world-terrain-017
+**Depends on:** ~~world-terrain-019~~, ~~world-terrain-017~~
 **Domain:** `world`
 **Subdomains:** `resources` `places` `simulation`
 **Tags:** `caves` `mining` `gold` `depletion`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+
+## Implementation status (2026-09-15)
+
+Implemented as an extension of ordinary `ResourceDeposits` / `depositMining`, not a mine-specific mining system.
+
+- Canonical `MineableDepositDefinition` (`src/terrain/mineableDeposit.ts`) sits between surface `NaturalResource` and runtime piles. `NaturalResource` is unchanged as a settlement environmental descriptor.
+- Optional explicit `initialReserve` is reconstructed; persisted `SaveData.resourceDeposits` remaining (including 0) still wins exactly.
+- Abandoned-mine gold is generated from `Caves.abandonedMine()` + `Caves.interiorPlacementView()` (`src/terrain/abandonedMineDeposits.ts`, `src/world/caves/caveInteriorPlacement.ts`). IDs are `mineId + semantic slot`. Target five nodes (1–2 exterior / 2–3 interior); four is the documented fallback and keeps the same total reserve (500–1000, ~750).
+- `DepositTarget` carries authoritative XYZ + `WorldSpatialContext`. Queries default to surface, so NPC miners do not receive cave deposits until `npc-027`. Player mining uses the shared `mine()` path.
+- NPC cave traversal is **not** implemented here.
 
 ## Goal
 

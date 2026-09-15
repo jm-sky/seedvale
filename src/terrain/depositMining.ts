@@ -43,13 +43,17 @@ export function hitsForRichness(richness: number): number {
 export type ResourceDepletionState = Map<string, number>
 
 /** Hits remaining for `id` — an existing override (including `0`, meaning
- *  depleted) wins over the deterministic initial value from `richness`. */
+ *  depleted) wins over an explicit initial reserve, which wins over the
+ *  richness-derived 3–7 hit count. Do not rescale persisted remaining. */
 export function resolveRemaining(
   state: ResourceDepletionState,
   id: string,
   richness: number,
+  initialReserve?: number,
 ): number {
-  return state.get(id) ?? hitsForRichness(richness)
+  if (state.has(id)) return state.get(id)!
+  if (initialReserve != null) return initialReserve
+  return hitsForRichness(richness)
 }
 
 export function isDepleted(state: ResourceDepletionState, id: string): boolean {

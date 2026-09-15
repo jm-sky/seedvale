@@ -508,7 +508,12 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
 
   const startDepositMine = (depositId: string, x: number, z: number): void => {
     if (!hasItemCapability(heldTool.held(), 'rock_mining') || isActionBlocked(ctx)) return
-    const target = bundle.resourceDeposits.queryNearest(x, z, 0.75)
+    const playerPos = player.mesh.position
+    const spatialContext = bundle.caves.spatialContextAt(playerPos.x, playerPos.y, playerPos.z)
+    const target = bundle.resourceDeposits.queryNearest(x, z, 0.75, {
+      y: playerPos.y,
+      spatialContext,
+    })
     if (!target || target.id !== depositId || target.remaining <= 0) {
       toast.show('Tu nie ma już czego wydobywać.', 'error')
       return

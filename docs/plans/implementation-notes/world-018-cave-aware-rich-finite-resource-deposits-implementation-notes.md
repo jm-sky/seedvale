@@ -2,20 +2,17 @@
 
 ## Current-main findings that matter
 
-- `world-terrain-019` is the remaining production cave spatial dependency (`world-terrain-008` is `done`); `world-terrain-017` and `npc-027` are still `planned`. Full mine content is therefore blocked on the final production cave spatial API and the abandoned-mine landmark contract. Generic reserve/deposit refactoring can be prepared earlier, but do not implement against transitional spike/V1 details.
+- `world-terrain-019` and `world-terrain-017` are implemented. Production contracts used here: `Caves.abandonedMine()`, `Caves.interiorPlacementView()` / `queryGroundIn` / `spatialContextAt`, `WorldSpatialContext`, and existing `ResourceDepletionState` / `SaveData.resourceDeposits`. `npc-027` is still planned — NPC miners keep the default surface query filter and do not traverse caves.
+- `NaturalResource` remains a surface environmental descriptor. Mining uses `MineableDepositDefinition` (`src/terrain/mineableDeposit.ts`).
+- `ResourceDeposits` consumes surface adapters plus landmark-owned extra definitions. `DepositTarget` carries XYZ + spatial context. Rendering grounds cave piles via `queryGroundIn`, not `sampleHeight`.
+- `resolveRemaining(..., initialReserve?)` preserves persisted remaining including 0. No new save field.
+- NPC `planOreGathering` uses `target.y` instead of `sampleHeight`. Interior NPC mining stays blocked on `npc-027`.
 - `src/terrain/naturalResources.ts` is still a **surface environmental descriptor**: `NaturalResource` has `id/type/x/z/radius/richness`, is generated from the surface resource grid, and is also consumed by settlement-site/resource-significance logic. Do not turn it into a general cave/world-object state bag.
-- `src/terrain/resourceDeposits.ts` is currently surface-only in several separate places, not just in `queryNearest()`:
-  - runtime instances retain a `NaturalResource`;
-  - `recheck()` discovers candidates only through `resourcesNear()`;
-  - pile scatter calls `env.sampleHeight(px, pz)` / `placeOnGround(...)`;
-  - label Y calls `env.sampleHeight(resource.x, resource.z)`;
-  - `DepositTarget` exposes only `x/z`;
-  - distance/query filtering is XZ-only.
-  Cave support must remove these assumptions at the canonical mineable-deposit boundary rather than patching only NPC/player consumers.
-- `src/terrain/depositMining.ts` already has the correct authoritative depletion model: one caller-owned `ResourceDepletionState = Map<string, number>`, `0` is distinct from absence, and player/NPC both mutate through `ResourceDeposits.mine()`. Preserve this ownership.
+- `src/terrain/resourceDeposits.ts` now streams `MineableDepositDefinition` instances (surface adapter + landmark extras). `DepositTarget` is XYZ + spatial context; cave pile/label Y uses the definition / `queryGroundIn`.
+- `src/terrain/depositMining.ts` already has the correct authoritative depletion model: one caller-owned `ResourceDepletionState = Map<string, number>`, `0` is distinct from absence, and player/NPC both mutate through `ResourceDeposits.mine()`. Preserve this ownership. Optional `initialReserve` is the fourth `resolveRemaining` argument.
 - Cross-session persistence now exists: `SaveData.resourceDeposits` is a required sparse `Record<string, number>` and `createApp.ts` restores it into the shared depletion map. No new save field/store is needed for reserve capacity.
-- `src/ai/npcProfessionWork.ts` currently reconstructs miner destination Y using `ctx.sampleHeight(target.x, target.z)`. This must disappear for cave-capable targets; the mining target must carry authoritative position/spatial context. Do not let NPC code independently infer cave floor.
-- Current `src/world/createCaves.ts` exposes global `contains(x,y,z)`, `sampleFloor(x,z)` and `sampleCeiling(x,z)` plus `definitions()`. These queries do **not** identify which `caveId` owns a point and do not expose connectivity. `world-018` should consume the final cave-specific production contract from `world-terrain-019`, not build resource-specific cave identity/connectivity on top of these transitional queries.
+- `src/ai/npcProfessionWork.ts` uses the mining target's authoritative Y. Query default remains surface, so interior cave deposits are not NPC targets until `npc-027`.
+- Cave-specific floor/identity/connectivity for placement is `Caves.interiorPlacementView` / `queryGroundIn` / `spatialContextAt`, not global `sampleFloor(x,z)`.
 
 ## Recommended deposit model
 

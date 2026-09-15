@@ -32,8 +32,9 @@ import { dungeonChambersFromTopology } from './caves/dungeonChambers'
 import { createWaterMaterial } from './waterMaterial'
 
 export type { AbandonedMineLandmark } from './caves/abandonedMineLandmark'
-export type { CaveContentAnchor }
 export type { CaveTraversalDescriptor, CaveTraversalPoint } from './caves/caveHabitat'
+export type { CaveContentAnchor }
+export type { CaveInteriorPlacementView } from './caves/caveInteriorPlacement'
 export type { CaveUndergroundPool } from './caves/caveUndergroundPool'
 export type { DungeonChamber, DungeonChamberClass } from './caves/dungeonChambers'
 import {
@@ -79,6 +80,10 @@ import {
   sampleHeightfieldAt,
   type SurfaceSampler,
 } from './caves/caveHeightfieldRepresentation'
+import {
+  type CaveInteriorPlacementView,
+  resolveCaveInteriorPlacementView,
+} from './caves/caveInteriorPlacement'
 import {
   type CaveInteriorRockPlacement,
   resolveCaveInteriorRocks,
@@ -269,6 +274,11 @@ export type Caves = {
    * persisted. `null` only if every bounded search/guarantee attempt failed.
    */
   abandonedMine: () => AbandonedMineLandmark | null
+  /**
+   * Standable chamber/widening candidates with heightfield floor Y
+   * (plan world-018). Independent of presentation. `null` for unknown ids.
+   */
+  interiorPlacementView: (caveId: string) => CaveInteriorPlacementView | null
   dispose: () => void
 }
 
@@ -1028,6 +1038,11 @@ export function createCaves(
       return resolveHeightfieldHorizontal(runtime.heightfield, x, z, y, radius, minGap)
     },
     abandonedMine: () => abandonedMineLandmark,
+    interiorPlacementView(caveId) {
+      const runtime = v2ByCaveId.get(caveId)
+      if (!runtime) return null
+      return resolveCaveInteriorPlacementView(runtime.topology, runtime.heightfield, analyticSurfaceHeight)
+    },
     dispose() {
       lastGroundHit = null
       lastHitRuntime = null

@@ -17,18 +17,25 @@ import {
   type MineableOre,
   ORE_YIELD_LABEL,
   recordMined,
-  resolveRemaining,
   type ResourceDepletionState,
   yieldForOre,
 } from './depositMining'
-import { type NaturalResource, type ResourceEnv, resourcesNear } from './naturalResources'
+import {
+  depositMatchesQueryContext,
+  type DepositQueryOptions,
+  type MineableDepositDefinition,
+  mineableDepositFromNaturalResource,
+  querySpatialContext,
+  resolveDepositRemaining,
+} from './mineableDeposit'
+import { type ResourceEnv, resourcesNear } from './naturalResources'
 
 /** Ore-bearing types that get a visible pile in the world — the rest of
  *  `naturalResources.ts`'s pool (fish/fertile_soil/clay/salt/resin/herbs)
  *  stays a data-only signal for settlement generation, same as before this
  *  module existed. Deliberately small, matching the "surface just a few
  *  resources visually, not everything" ask. */
-type VisibleOreType = 'coal' | 'copper_ore' | 'gold' | 'iron'
+type VisibleOreType = MineableOre
 
 const ORE_COLOR: Record<VisibleOreType, number> = {
   // Rust/hematite red-brown — reads as "iron ore", not generic gray rock.
@@ -37,10 +44,6 @@ const ORE_COLOR: Record<VisibleOreType, number> = {
   gold: 0xd4af37,
   // Oxidized copper-orange, distinct from iron's darker rust-brown.
   copper_ore: 0xb5651d,
-}
-
-function isVisibleOre(type: NaturalResource['type']): type is VisibleOreType {
-  return type === 'iron' || type === 'coal' || type === 'gold' || type === 'copper_ore'
 }
 
 /** How far from the player deposits get instantiated/kept — deliberately
@@ -65,9 +68,8 @@ const PILES_MAX = 2
 const PILE_SCATTER_RADIUS_FRACTION = 0.5
 const PILE_SCATTER_MIN_FRACTION = 0.25
 
-/** Simple string hash (FNV-1a) — `NaturalResource.id` is a string
- *  (`resource_{rx}_{rz}`), but pile placement wants a numeric seed for
- *  `createSeededRandom`, same as every other seeded RNG in this codebase. */
+/** Simple string hash (FNV-1a) — deposit ids are strings, but pile placement
+ *  wants a numeric seed for `createSeededRandom`. */
 function hashId(id: string): number {
   let h = 0x811c9dc5
   for (let i = 0; i < id.length; i++) {
@@ -83,7 +85,7 @@ type OreTemplates = {
 }
 
 type DepositInstance = {
-  resource: NaturalResource
+  definition: MineableDepositDefinition
   group: Object3D
   label: CSS2DObject
   labelEl: HTMLDivElement
@@ -94,7 +96,9 @@ export type DepositTarget = {
   id: string
   type: MineableOre
   x: number
+  y: number
   z: number
+  spatialContext: MineableDepositDefinition['spatialContext']
   remaining: number
 }
 
@@ -110,13 +114,31 @@ export type MineResult =
  *  player, just unioned in. */
 export type InterestPoint = { x: number, z: number }
 
+/**
+ * Landmark-owned (and other non-scatter) definitions plus cave-floor
+ * sampling. Getters so `createCaves()` can land after this runtime in
+ * `worldBundle.ts` without a second deposit manager.
+ *
+ * @domain world
+ */
+export type ResourceDepositSources = {
+  extraDefinitions?: () => readonly MineableDepositDefinition[]
+  caveFloorY?: (caveId: string, x: number, y: number, z: number) => number | null
+}
+
 export type ResourceDeposits = {
   /** `interestPoints` — extra anchors (settlement centers) that keep nearby
    *  deposits loaded even while the player is far away; label fade still
    *  follows the player only. */
   update: (playerX: number, playerZ: number, interestPoints?: readonly InterestPoint[]) => void
-  /** Nearest loaded ore pile the player (or an NPC, plan 131) can mine. */
-  queryNearest: (x: number, z: number, range: number) => DepositTarget | null
+  /** Nearest spatially valid ore deposit the player (or an NPC) can mine.
+   *  `options.spatialContext` defaults to surface. */
+  queryNearest: (
+    x: number,
+    z: number,
+    range: number,
+    options?: DepositQueryOptions,
+  ) => DepositTarget | null
   mine: (id: string) => MineResult
   dispose: () => void
 }
@@ -129,26 +151,37 @@ export type SettlementMiningHooks = {
   mine: ResourceDeposits['mine']
 }
 
+function targetFromDefinition(
+  definition: MineableDepositDefinition,
+  remaining: number,
+): DepositTarget {
+  return {
+    id: definition.id,
+    type: definition.type,
+    x: definition.x,
+    y: definition.y,
+    z: definition.z,
+    spatialContext: definition.spatialContext,
+    remaining,
+  }
+}
+
 /**
  * Streams ore piles (GLB resource nodes + a name label) into the world near
- * the player, one per significant iron/coal/gold `NaturalResource`
- * (plan 032 / 065). Pickaxe mining (plan 090) consumes remaining hits on the
- * loaded instance. Main-thread, radius-based streaming — mirrors
- * `SettlementsManager`'s load/unload-by-distance shape, not the chunk-worker
- * pipeline.
+ * the player, one per mineable deposit definition — ordinary surface ores
+ * plus landmark-owned cave/surface nodes (plan world-018). Pickaxe mining
+ * consumes remaining hits through caller-owned `depletionState`.
  *
- * `depletionState` is the authoritative hits-remaining record (plan 198) —
- * owned by the caller, surviving this function's own dispose/recreate
- * (streaming despawn/respawn and `rebuildWorldBundle`). This module never
- * treats a live `DepositInstance.remaining` as the source of truth; it's
- * always hydrated from — and written back to — `depletionState`.
+ * @domain world
  */
 export function createResourceDeposits(
   scene: Scene,
   env: ResourceEnv,
   seed: number,
   depletionState: ResourceDepletionState,
+  sources: ResourceDepositSources = {},
 ): ResourceDeposits {
+  const extraDefinitions = sources.extraDefinitions ?? (() => [])
   const instances = new Map<string, DepositInstance>()
   let lastCheckX = Number.POSITIVE_INFINITY
   let lastCheckZ = Number.POSITIVE_INFINITY
@@ -162,10 +195,23 @@ export function createResourceDeposits(
   /** Spawns deferred until GLB templates finish loading (first nearby ore). */
   const pendingIds = new Set<string>()
 
+  function groundY(definition: MineableDepositDefinition, px: number, pz: number): number | null {
+    if (definition.spatialContext.kind === 'cave') {
+      return sources.caveFloorY?.(definition.spatialContext.caveId, px, definition.y, pz) ?? definition.y
+    }
+    const h = env.sampleHeight(px, pz)
+    if (h <= env.waterLevel + 0.4) return null
+    return h
+  }
+
+  function lookupDefinition(id: string): MineableDepositDefinition | null {
+    const instance = instances.get(id)
+    if (instance) return instance.definition
+    return extraDefinitions().find((definition) => definition.id === id) ?? null
+  }
+
   function setLabel(instance: DepositInstance): void {
-    const type = instance.resource.type
-    if (!isVisibleOre(type)) return
-    instance.labelEl.textContent = `${ORE_YIELD_LABEL[type]} (${instance.remaining})`
+    instance.labelEl.textContent = `${ORE_YIELD_LABEL[instance.definition.type]} (${instance.remaining})`
   }
 
   function getTemplates(): Promise<OreTemplates> {
@@ -194,59 +240,57 @@ export function createResourceDeposits(
     return pile
   }
 
-  function spawnSync(resource: NaturalResource, oreTemplates: OreTemplates): void {
-    if (disposed || !isVisibleOre(resource.type)) return
-    if (isDepleted(depletionState, resource.id) || instances.has(resource.id)) return
-    const random = createSeededRandom(hashId(resource.id))
+  function spawnSync(definition: MineableDepositDefinition, oreTemplates: OreTemplates): void {
+    if (disposed) return
+    if (isDepleted(depletionState, definition.id) || instances.has(definition.id)) return
+    const random = createSeededRandom(hashId(definition.id))
     const group = new Group()
-    group.name = `resourceDeposit:${resource.id}`
+    group.name = `resourceDeposit:${definition.id}`
 
     const pileCount = PILES_MIN + Math.floor(random() * (PILES_MAX - PILES_MIN + 1))
-    const scatterMax = resource.radius * PILE_SCATTER_RADIUS_FRACTION
+    const scatterMax = definition.radius * PILE_SCATTER_RADIUS_FRACTION
     const scatterMin = scatterMax * PILE_SCATTER_MIN_FRACTION
     for (let i = 0; i < pileCount; i++) {
       const angle = random() * Math.PI * 2
       const dist = scatterMin + random() * (scatterMax - scatterMin)
-      const px = resource.x + Math.cos(angle) * dist
-      const pz = resource.z + Math.sin(angle) * dist
-      const h = env.sampleHeight(px, pz)
-      if (h <= env.waterLevel + 0.4) continue
+      const px = definition.x + Math.cos(angle) * dist
+      const pz = definition.z + Math.sin(angle) * dist
+      const h = groundY(definition, px, pz)
+      if (h == null) continue
       const scale = 0.85 + random() * 0.35
       const yaw = random() * Math.PI * 2
-      const pile = createPile(resource.type, scale, yaw, oreTemplates)
-      placeOnGround(pile, px, pz, env.sampleHeight)
+      const pile = createPile(definition.type, scale, yaw, oreTemplates)
+      placeOnGround(pile, px, pz, () => h)
       group.add(pile)
     }
     scene.add(group)
 
-    const remaining = resolveRemaining(depletionState, resource.id, resource.richness)
+    const remaining = resolveDepositRemaining(depletionState, definition)
     const labelEl = document.createElement('div')
     labelEl.className = 'npc-label'
     const label = new CSS2DObject(labelEl)
-    const labelY = env.sampleHeight(resource.x, resource.z) + 0.6
-    label.position.set(resource.x, labelY, resource.z)
+    label.position.set(definition.x, definition.y + 0.6, definition.z)
     scene.add(label)
 
-    const instance: DepositInstance = { resource, group, label, labelEl, remaining }
+    const instance: DepositInstance = { definition, group, label, labelEl, remaining }
     setLabel(instance)
-    instances.set(resource.id, instance)
+    instances.set(definition.id, instance)
   }
 
-  function spawn(resource: NaturalResource): void {
-    if (disposed || !isVisibleOre(resource.type) || isDepleted(depletionState, resource.id)) return
-    if (instances.has(resource.id) || pendingIds.has(resource.id)) return
+  function spawn(definition: MineableDepositDefinition): void {
+    if (disposed || isDepleted(depletionState, definition.id)) return
+    if (instances.has(definition.id) || pendingIds.has(definition.id)) return
     if (templates) {
-      spawnSync(resource, templates)
+      spawnSync(definition, templates)
       return
     }
-    pendingIds.add(resource.id)
+    pendingIds.add(definition.id)
     void getTemplates().then((oreTemplates) => {
-      pendingIds.delete(resource.id)
+      pendingIds.delete(definition.id)
       if (disposed) return
-      // Player may have walked away while templates loaded.
-      const dist = Math.hypot(resource.x - lastCheckX, resource.z - lastCheckZ)
+      const dist = Math.hypot(definition.x - lastCheckX, definition.z - lastCheckZ)
       if (dist > UNLOAD_RADIUS) return
-      spawnSync(resource, oreTemplates)
+      spawnSync(definition, oreTemplates)
     })
   }
 
@@ -261,6 +305,12 @@ export function createResourceDeposits(
     instances.delete(id)
   }
 
+  function consider(definition: MineableDepositDefinition | null, wanted: Set<string>): void {
+    if (!definition || isDepleted(depletionState, definition.id)) return
+    wanted.add(definition.id)
+    if (!instances.has(definition.id)) spawn(definition)
+  }
+
   function recheck(playerX: number, playerZ: number, interestPoints: readonly InterestPoint[]): void {
     lastCheckX = playerX
     lastCheckZ = playerZ
@@ -270,15 +320,19 @@ export function createResourceDeposits(
     for (const anchor of anchors) {
       const nearby = resourcesNear(anchor.x, anchor.z, LOAD_RADIUS, seed, env)
       for (const resource of nearby) {
-        if (!isVisibleOre(resource.type) || isDepleted(depletionState, resource.id)) continue
-        wanted.add(resource.id)
-        if (!instances.has(resource.id)) spawn(resource)
+        consider(mineableDepositFromNaturalResource(resource, env.sampleHeight), wanted)
       }
+    }
+    for (const definition of extraDefinitions()) {
+      const nearAnyAnchor = anchors.some(
+        (anchor) => Math.hypot(definition.x - anchor.x, definition.z - anchor.z) <= LOAD_RADIUS,
+      )
+      if (nearAnyAnchor) consider(definition, wanted)
     }
     for (const [id, instance] of instances) {
       if (wanted.has(id)) continue
       const nearAnyAnchor = anchors.some(
-        (anchor) => Math.hypot(instance.resource.x - anchor.x, instance.resource.z - anchor.z) <= UNLOAD_RADIUS,
+        (anchor) => Math.hypot(instance.definition.x - anchor.x, instance.definition.z - anchor.z) <= UNLOAD_RADIUS,
       )
       if (!nearAnyAnchor) despawn(id)
     }
@@ -293,45 +347,48 @@ export function createResourceDeposits(
         recheck(playerX, playerZ, interestPoints)
       }
       for (const instance of instances.values()) {
-        const dist = Math.hypot(instance.resource.x - playerX, instance.resource.z - playerZ)
+        const dist = Math.hypot(instance.definition.x - playerX, instance.definition.z - playerZ)
         instance.labelEl.style.opacity = String(labelOpacityForDistance(dist))
       }
     },
-    queryNearest(x, z, range) {
+    queryNearest(x, z, range, options) {
+      const queryContext = querySpatialContext(options)
       let best: DepositTarget | null = null
       let bestDist = range
-      for (const instance of instances.values()) {
-        const type = instance.resource.type
-        if (!isVisibleOre(type) || instance.remaining <= 0) continue
-        const dist = Math.hypot(instance.resource.x - x, instance.resource.z - z)
-        if (dist > bestDist) continue
+      const seen = new Set<string>()
+
+      const considerTarget = (definition: MineableDepositDefinition, remaining: number): void => {
+        if (seen.has(definition.id) || remaining <= 0) return
+        seen.add(definition.id)
+        if (!depositMatchesQueryContext(definition, queryContext)) return
+        const dist = Math.hypot(definition.x - x, definition.z - z)
+        if (dist > bestDist) return
         bestDist = dist
-        best = {
-          id: instance.resource.id,
-          type,
-          x: instance.resource.x,
-          z: instance.resource.z,
-          remaining: instance.remaining,
-        }
+        best = targetFromDefinition(definition, remaining)
+      }
+
+      for (const instance of instances.values()) {
+        considerTarget(instance.definition, instance.remaining)
+      }
+      for (const definition of extraDefinitions()) {
+        considerTarget(definition, resolveDepositRemaining(depletionState, definition))
       }
       return best
     },
     mine(id) {
       const instance = instances.get(id)
-      if (!instance) return { ok: false, reason: 'missing' }
-      const type = instance.resource.type
-      if (!isVisibleOre(type) || instance.remaining <= 0) {
-        return { ok: false, reason: 'depleted' }
+      const definition = lookupDefinition(id)
+      if (!definition) return { ok: false, reason: 'missing' }
+      const remaining = instance?.remaining ?? resolveDepositRemaining(depletionState, definition)
+      if (remaining <= 0) return { ok: false, reason: 'depleted' }
+      const next = remaining - 1
+      recordMined(depletionState, id, next)
+      if (instance) {
+        instance.remaining = next
+        if (next <= 0) despawn(id)
+        else setLabel(instance)
       }
-      instance.remaining -= 1
-      const mined = yieldForOre(type)
-      recordMined(depletionState, id, instance.remaining)
-      if (instance.remaining <= 0) {
-        despawn(id)
-      } else {
-        setLabel(instance)
-      }
-      return { ok: true, yield: mined, remaining: instance.remaining }
+      return { ok: true, yield: yieldForOre(definition.type), remaining: next }
     },
     dispose() {
       disposed = true
