@@ -443,6 +443,7 @@ Generated from TypeScript imports.
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`
 - `world/caves/caveHeightfieldQuery.test.ts`
+- `world/caves/caveInteriorPlacement.ts`
 - `world/createCaves.test.ts`
 
 ## `player/playerDownedRecovery.test.ts`

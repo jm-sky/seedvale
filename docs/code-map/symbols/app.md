@@ -325,16 +325,16 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 1285
-- `buildDigTarget` — function — line 1229
-- `buildInteractables` — function — line 515
-- `collectItem` — function — line 1341
+- `buildCombatTarget` — function — line 1292
+- `buildDigTarget` — function — line 1236
+- `buildInteractables` — function — line 517
+- `collectItem` — function — line 1348
 - `COMBAT_TARGET_CONE_DOT` — const — line 104
 - `COMBAT_TARGET_RANGE` — const — line 89
 - `CombatAimMode` — type — line 94
 - `DIG_REACH` — const — line 83
 - `DROPPED_ITEM_GROUP_RADIUS` — const — line 310
-- `filterInteractablesSameSpatialContext` — function — line 499
+- `filterInteractablesSameSpatialContext` — function — line 501
 - `GAZE_RANGE` — const — line 79
 - `grindstoneInteractPosition` — function — line 391
 - `groupDroppedItemCandidates` — function — line 320
@@ -403,14 +403,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 1040
-- `caveTreasureContainerSpecs` — function — line 263
-- `createWorldBundle` — function — line 1964
-- `disposeWorldBundle` — function — line 2447
-- `HOME_RADIUS` — const — line 226
-- `homeChunks` — function — line 289
-- `rebuildWorldBundle` — function — line 2204
-- `WorldBundle` — type — line 312
+- `BuiltWorldSystems` — type — line 1046
+- `caveTreasureContainerSpecs` — function — line 265
+- `createWorldBundle` — function — line 1993
+- `disposeWorldBundle` — function — line 2476
+- `HOME_RADIUS` — const — line 228
+- `homeChunks` — function — line 291
+- `rebuildWorldBundle` — function — line 2233
+- `WorldBundle` — type — line 314
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

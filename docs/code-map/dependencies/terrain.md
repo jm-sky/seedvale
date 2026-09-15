@@ -2,6 +2,32 @@
 
 Generated from TypeScript imports.
 
+## `terrain/abandonedMineDeposits.test.ts`
+
+**Imports**
+
+- `terrain/abandonedMineDeposits.ts`
+- `world/caves/abandonedMineLandmark.ts`
+- `world/caves/caveInteriorPlacement.ts`
+- `world/parseSeed.ts`
+- `world/spatialContext.ts`
+
+## `terrain/abandonedMineDeposits.ts`
+
+**Imports**
+
+- `terrain/mineableDeposit.ts`
+- `world/caves/abandonedMineLandmark.ts`
+- `world/caves/caveInteriorPlacement.ts`
+- `world/caves/caveOrientation.ts`
+- `world/parseSeed.ts`
+- `world/spatialContext.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `terrain/abandonedMineDeposits.test.ts`
+
 ## `terrain/biomeColors.test.ts`
 
 **Imports**
@@ -687,6 +713,8 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `economy/oreTransportDemand.ts`
 - `terrain/depositMining.test.ts`
+- `terrain/mineableDeposit.test.ts`
+- `terrain/mineableDeposit.ts`
 - `terrain/resourceDeposits.ts`
 
 ## `terrain/dig.test.ts`
@@ -878,6 +906,30 @@ Generated from TypeScript imports.
 - `terrain/hydrology.test.ts`
 - `terrain/riverNetwork.ts`
 
+## `terrain/mineableDeposit.test.ts`
+
+**Imports**
+
+- `terrain/depositMining.ts`
+- `terrain/mineableDeposit.ts`
+- `terrain/naturalResources.ts`
+- `world/spatialContext.ts`
+
+## `terrain/mineableDeposit.ts`
+
+**Imports**
+
+- `terrain/depositMining.ts`
+- `terrain/naturalResources.ts`
+- `world/spatialContext.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `terrain/abandonedMineDeposits.ts`
+- `terrain/mineableDeposit.test.ts`
+- `terrain/resourceDeposits.ts`
+
 ## `terrain/naturalResources.test.ts`
 
 **Imports**
@@ -910,6 +962,8 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
 - `shared/SettlementName.ts`
+- `terrain/mineableDeposit.test.ts`
+- `terrain/mineableDeposit.ts`
 - `terrain/naturalResources.test.ts`
 - `terrain/resourceDeposits.ts`
 
@@ -920,6 +974,7 @@ Generated from TypeScript imports.
 - `assets/loadGltf.ts`
 - `settlement/props.ts`
 - `terrain/depositMining.ts`
+- `terrain/mineableDeposit.ts`
 - `terrain/naturalResources.ts`
 - `ui/labelDistance.ts`
 - `world/parseSeed.ts`

@@ -2,6 +2,19 @@
 
 Generated from exported TypeScript symbols.
 
+## `terrain/abandonedMineDeposits.ts`
+
+- `AbandonedMineDepositInput` — type — line 76
+- `allocateIntegerReserves` — function — line 131
+  - domain: world
+- `generateAbandonedMineGoldDeposits` — function — line 332
+  - domain: world
+- `MINE_GOLD_SLOTS` — const — line 20
+- `mineGoldDepositId` — function — line 110
+- `MineGoldSlot` — type — line 28
+- `pickMineGoldTotalReserve` — function — line 119
+  - domain: world
+
 ## `terrain/biomeColors.ts`
 
 - `applyMicroTint` — function — line 275
@@ -289,17 +302,17 @@ Generated from exported TypeScript symbols.
 ## `terrain/depositMining.ts`
 
 - `hitsForRichness` — function — line 30
-- `isDepleted` — function — line 55
+- `isDepleted` — function — line 59
 - `isMineableOre` — function — line 25
 - `MINE_DURATION_SEC` — const — line 23
 - `MineableOre` — type — line 6
 - `ORE_ITEM` — const — line 8
 - `ORE_YIELD_LABEL` — const — line 15
-- `oreEconomicKind` — function — line 72
-- `recordMined` — function — line 61
-- `resolveRemaining` — function — line 47
+- `oreEconomicKind` — function — line 76
+- `recordMined` — function — line 65
+- `resolveRemaining` — function — line 48
 - `ResourceDepletionState` — type — line 43
-- `yieldForOre` — function — line 65
+- `yieldForOre` — function — line 69
 
 ## `terrain/dig.ts`
 
@@ -413,6 +426,17 @@ Generated from exported TypeScript symbols.
 - `StreamThresholds` — type — line 84
 - `traceDownstreamPath` — function — line 795
 
+## `terrain/mineableDeposit.ts`
+
+- `depositMatchesQueryContext` — function — line 92
+- `DepositQueryOptions` — type — line 47
+- `MineableDepositDefinition` — type — line 34
+  - domain: world
+- `mineableDepositFromNaturalResource` — function — line 55
+- `querySpatialContext` — function — line 85
+- `resolveDepositRemaining` — function — line 78
+  - domain: world
+
 ## `terrain/naturalResources.ts`
 
 - `dominantResourceNear` — function — line 272
@@ -429,12 +453,15 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/resourceDeposits.ts`
 
-- `createResourceDeposits` — function — line 146
-- `DepositTarget` — type — line 93
-- `InterestPoint` — type — line 111
-- `MineResult` — type — line 101
-- `ResourceDeposits` — type — line 113
-- `SettlementMiningHooks` — type — line 127
+- `createResourceDeposits` — function — line 177
+  - domain: world
+- `DepositTarget` — type — line 95
+- `InterestPoint` — type — line 115
+- `MineResult` — type — line 105
+- `ResourceDeposits` — type — line 129
+- `ResourceDepositSources` — type — line 124
+  - domain: world
+- `SettlementMiningHooks` — type — line 149
 
 ## `terrain/riverFord.ts`
 

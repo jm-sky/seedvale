@@ -1615,10 +1615,12 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementStructures.ts`
 - `shared/bootMark.ts`
+- `terrain/abandonedMineDeposits.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`
+- `terrain/mineableDeposit.ts`
 - `terrain/naturalResources.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/terrainPreparation.ts`

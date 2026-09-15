@@ -429,6 +429,14 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `makeCaveId` — function — line 15
 
+## `world/caves/caveInteriorPlacement.ts`
+
+- `CaveInteriorPlacementCandidate` — type — line 30
+- `CaveInteriorPlacementView` — type — line 47
+  - domain: world
+- `resolveCaveInteriorPlacementView` — function — line 87
+  - domain: world
+
 ## `world/caves/caveInteriorRocks.ts`
 
 - `CAVE_INTERIOR_ROCK_TEMPLATE_SLOTS` — const — line 81
@@ -830,14 +838,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 128
-- `Caves` — type — line 130
-- `createCaves` — function — line 388
+- `CaveInteriorQueryChannel` — type — line 133
+- `Caves` — type — line 135
+- `createCaves` — function — line 398
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
   - lifecycle: rebuild
-- `CreateCavesOptions` — type — line 332
+- `CreateCavesOptions` — type — line 342
   - domain: world-terrain
   - system: worldgen-cache
 
