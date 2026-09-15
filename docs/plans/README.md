@@ -74,7 +74,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | ⚪ | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~                                                                                                                              | -                                       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
 | 💡 `settlements-015-settlement-palisade-collision.md`                          | 🔴 | S      | -                                                                                                                                                                               | -                                       |
-| 💡 `settlements-017-deterministically-unique-settlement-names.md`              | 🟡 | S      | -                                                                                                                                                                               | -                                       |
 | ◼️ `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md` | 🔴 | M      | ~~quests-progression-032~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                              | quests-lost-something-chronicles        |
 
 ---
@@ -87,6 +86,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-017-deterministically-unique-settlement-names.md` | Nowy świat, kilka pobliskich osad: brak dwóch identycznych nazw na drogowskazach/UI; ten sam seed po reloadzie te same nazwy; daleka osada nie zmienia nazw już odwiedzonych |
 | `settlements-016-legacy-ruby-trade-valuation.md` | Sprzedać authored `ruby` (bear-cave / dark-forest chest) kupcowi — buyback wyraźnie powyżej 1 coina, w okolicy `ruby_medium` (neutralnie 63); `ruby_small/medium/large` bez zmian |
 | `quests-progression-036-one-shot-authored-treasure-map-pickup.md` | Podnieść authored treasure map; rebuild/powrót w miejsce źródłowe — pickup nie wraca; save/load — nie wraca; wyrzucenie mapy z inventory — źródło nadal puste; New Game — pickup znowu leży |
 | `world-terrain-034-bidirectional-cave-traversal-safety.md` | Wejść do kilku jaskiń i wyjść tą samą drogą; szczególnie komora z dużą różnicą wysokości; brak cliffów/stepów blokujących ruch w obie strony |

@@ -206,8 +206,13 @@ describe('settlement progression around home', () => {
     const ordinary = generateSettlementDef(
       outsider, seed, flatHeight, 0, 56, samplers, 1, region,
     )
-    expect(fromCache).toEqual(ordinary)
-    expect(ordinary?.size).toBe(rollVillageSize('forest', cellSeed(seed, outsider)))
+    expect(fromCache).not.toBeNull()
+    expect(ordinary).not.toBeNull()
+    expect(fromCache!.size).toBe(ordinary!.size)
+    expect(fromCache!.x).toBe(ordinary!.x)
+    expect(fromCache!.z).toBe(ordinary!.z)
+    expect(fromCache!.families).toEqual(ordinary!.families)
+    expect(ordinary!.size).toBe(rollVillageSize('forest', cellSeed(seed, outsider)))
   })
 
   it('clears progression-policy memoization with the settlement cache', () => {

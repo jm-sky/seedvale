@@ -1,7 +1,7 @@
 # Plan: Deterministically unique settlement names
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser checks are User-owned)
 **Type:** bug
 **Priority:** medium · **Effort:** S
 **Depends on:** none

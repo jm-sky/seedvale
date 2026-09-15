@@ -479,6 +479,9 @@ export type SettlementSiteProbe = {
   provisionalSize: RolledVillageSize
   site: { x: number, z: number, y: number } | null
   wouldBeOutpost: boolean
+  /** Present when `site` is non-null — enough for unique naming without a full def. */
+  terrain?: SettlementTerrain
+  dominantResource?: NaturalResource | null
 }
 
 /**
@@ -515,7 +518,11 @@ export function probeSettlementSite(
   )
   const site = chooseSettlementSite(ctx)
   if (!site) {
-    return { provisionalSize: ctx.provisionalSize, site: null, wouldBeOutpost: false }
+    return {
+      provisionalSize: ctx.provisionalSize,
+      site: null,
+      wouldBeOutpost: false,
+    }
   }
   const terrain = classifySettlementTerrain(
     site.x,
@@ -542,6 +549,8 @@ export function probeSettlementSite(
       dominantResource,
       ctx.seedForCell,
     ),
+    terrain,
+    dominantResource,
   }
 }
 

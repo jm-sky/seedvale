@@ -3,12 +3,21 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { RiverQuery } from '../terrain/riverQuery'
 import type { TerrainSamplers } from './settlementTerrain'
+import { generateSettlementName } from '../shared/SettlementName'
 import {
   cellKey,
+  cellSeed,
   generateSettlementDef,
+  probeSettlementSite,
   type SettlementCell,
   type SettlementDef,
+  type SettlementSiteProbe,
 } from './settlementGenerator'
+import {
+  fallbackSettlementName,
+  pickUniqueSettlementName,
+  predecessorSettlementCells,
+} from './settlementNameUniqueness'
 import {
   resolveSettlementProgressionPolicy,
   type SettlementProgressionPolicy,
@@ -61,12 +70,16 @@ export function worldRiverQuery(): RiverQuery | null {
 }
 
 const defCache = new Map<string, SettlementDef | null>()
+const namingInputCache = new Map<string, SettlementSiteProbe>()
+const uniqueNameCache = new Map<string, string | null>()
 
 /** Derived near/far size policy for the current world. Cleared with defs. */
 let progressionPolicy: SettlementProgressionPolicy | null | undefined
 
 export function clearSettlementDefCache(): void {
   defCache.clear()
+  namingInputCache.clear()
+  uniqueNameCache.clear()
   activeRiverQuery = null
   progressionPolicy = undefined
 }
@@ -77,14 +90,8 @@ function progressionPolicyFor(ctx: SettlementResolveContext): SettlementProgress
   return progressionPolicy
 }
 
-export function settlementDefFor(
-  cell: SettlementCell,
-  ctx: SettlementResolveContext,
-): SettlementDef | null {
-  const key = cellKey(cell)
-  if (defCache.has(key)) return defCache.get(key)!
-  const minimumSize = progressionPolicyFor(ctx)?.minimumFor(cell) ?? undefined
-  const def = generateSettlementDef(
+function probeArgs(cell: SettlementCell, ctx: SettlementResolveContext) {
+  return [
     cell,
     ctx.seed,
     ctx.sampleHeight,
@@ -95,8 +102,64 @@ export function settlementDefFor(
     ctx.region,
     ctx.homeSize ?? 'auto',
     activeRiverQuery ?? undefined,
-    minimumSize,
-  )
+    progressionPolicyFor(ctx)?.minimumFor(cell) ?? undefined,
+  ] as const
+}
+
+function namingInputsFor(cell: SettlementCell, ctx: SettlementResolveContext): SettlementSiteProbe {
+  const key = cellKey(cell)
+  const cached = namingInputCache.get(key)
+  if (cached) return cached
+  const probe = probeSettlementSite(...probeArgs(cell, ctx))
+  namingInputCache.set(key, probe)
+  return probe
+}
+
+/**
+ * Unique display name for `cell` from a stable predecessor order — not stream order.
+ * Memoized per world; naming inputs only (no village layout) for predecessors.
+ *
+ * @domain settlements
+ */
+function uniqueNameFor(cell: SettlementCell, ctx: SettlementResolveContext): string | null {
+  const key = cellKey(cell)
+  if (uniqueNameCache.has(key)) return uniqueNameCache.get(key)!
+  const inputs = namingInputsFor(cell, ctx)
+  if (!inputs.site || inputs.terrain === undefined) {
+    uniqueNameCache.set(key, null)
+    return null
+  }
+  const takenNames = new Set<string>()
+  for (const predecessor of predecessorSettlementCells(cell)) {
+    const name = uniqueNameFor(predecessor, ctx)
+    if (name) takenNames.add(name)
+  }
+  const seedForCell = cellSeed(ctx.seed, cell)
+  const { terrain, dominantResource = null } = inputs
+  const attempt0 = generateSettlementName(seedForCell, terrain, dominantResource, 0)
+  const name = pickUniqueSettlementName({
+    takenNames,
+    candidate: (attempt) => generateSettlementName(seedForCell, terrain, dominantResource, attempt),
+    fallback: fallbackSettlementName(attempt0, cell),
+  })
+  uniqueNameCache.set(key, name)
+  return name
+}
+
+function applyResolvedSettlementName(def: SettlementDef, name: string): void {
+  def.name = name
+  def.plan.identity.name = name
+}
+
+export function settlementDefFor(
+  cell: SettlementCell,
+  ctx: SettlementResolveContext,
+): SettlementDef | null {
+  const key = cellKey(cell)
+  if (defCache.has(key)) return defCache.get(key)!
+  const resolvedName = uniqueNameFor(cell, ctx)
+  const def = generateSettlementDef(...probeArgs(cell, ctx))
+  if (def && resolvedName) applyResolvedSettlementName(def, resolvedName)
   defCache.set(key, def)
   return def
 }

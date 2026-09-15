@@ -68,18 +68,27 @@ const RESOURCE_WORDS: Partial<Record<ResourceType, { adjectives: readonly string
  *  `SIGNIFICANT_RICHNESS`, this is the additional "not every single time" roll. */
 const RESOURCE_NAME_CHANCE = 0.5
 
-/** Deterministic name for a settlement — same `(seed, terrain, dominantResource)`
+const SETTLEMENT_NAME_SEED_SALT = 0x5e77e17
+/** Mixes collision retries into the name RNG only — attempt 0 matches the
+ *  historical `(seed ^ SETTLEMENT_NAME_SEED_SALT)` stream. */
+const SETTLEMENT_NAME_ATTEMPT_SALT = 0x9e3779b9
+
+/** Deterministic name for a settlement — same `(seed, terrain, dominantResource, attempt)`
  *  always produces the same name, so it doesn't need its own save-data slot
  *  (the same guarantee `settlementGenerator.ts` already relies on for
  *  site/families). `dominantResource` is optional and terrain-only naming
  *  (no resource, or a resource type with no `RESOURCE_WORDS` entry, or a
- *  resource below `SIGNIFICANT_RICHNESS`) behaves exactly as before. */
+ *  resource below `SIGNIFICANT_RICHNESS`) behaves exactly as before.
+ *  `attempt` salts only the name seed; terrain/resource classification stays
+ *  with the caller. */
 export function generateSettlementName(
   seed: number,
   terrain: SettlementTerrain,
   dominantResource?: { type: ResourceType, richness: number } | null,
+  attempt = 0,
 ): string {
-  const random = createSeededRandom(seed ^ 0x5e77e17)
+  const nameSeed = seed ^ SETTLEMENT_NAME_SEED_SALT ^ Math.imul(attempt, SETTLEMENT_NAME_ATTEMPT_SALT)
+  const random = createSeededRandom(nameSeed)
   const terrainWords = WORDS[terrain]
   const resourceWords =
     dominantResource && dominantResource.richness >= SIGNIFICANT_RICHNESS

@@ -143,7 +143,7 @@ Generated from exported TypeScript symbols.
 
 ## `shared/SettlementName.ts`
 
-- `generateSettlementName` — function — line 77
+- `generateSettlementName` — function — line 84
 - `SettlementTerrain` — type — line 8
 
 ## `shared/StaminaState.ts`

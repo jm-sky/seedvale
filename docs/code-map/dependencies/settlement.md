@@ -1505,6 +1505,8 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
+- `settlement/settlementNameUniqueness.test.ts`
+- `settlement/settlementNameUniqueness.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementProgression.test.ts`
 - `settlement/settlementProgression.ts`
@@ -1524,6 +1526,29 @@ Generated from TypeScript imports.
 - `world/locations/worldLocationCatalog.ts`
 - `world/riverWaterQualityResolver.test.ts`
 - `world/riverWaterQualityResolver.ts`
+
+## `settlement/settlementNameUniqueness.test.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementNameUniqueness.ts`
+- `settlement/settlementPlanCache.ts`
+- `settlement/settlementProgression.ts`
+- `settlement/settlementTerrain.ts`
+- `shared/SettlementName.ts`
+- `terrain/chunkHeightmap.ts`
+
+## `settlement/settlementNameUniqueness.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `settlement/settlementNameUniqueness.test.ts`
+- `settlement/settlementPlanCache.ts`
 
 ## `settlement/settlementNightCycle.test.ts`
 
@@ -1571,8 +1596,10 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `player/PlayerController.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementNameUniqueness.ts`
 - `settlement/settlementProgression.ts`
 - `settlement/settlementTerrain.ts`
+- `shared/SettlementName.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverQuery.ts`
 
@@ -1581,6 +1608,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/settlementNameUniqueness.test.ts`
 - `settlement/settlementProgression.test.ts`
 - `terrain/chunkManager.ts`
 
@@ -1609,6 +1637,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `settlement/settlementNameUniqueness.test.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementProgression.test.ts`
 
@@ -1708,6 +1737,7 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementNameUniqueness.test.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementProgression.test.ts`
 - `settlement/settlementProgression.ts`

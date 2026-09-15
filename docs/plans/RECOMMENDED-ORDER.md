@@ -38,8 +38,6 @@
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 2. `settlements-015` — **Settlement palisade collision**  
    🔴 `S` · ✅ ready · unlocks 0/0 · type: fix
-3. `settlements-017` — **Deterministically unique settlement names**  
-   🟡 `S` · ✅ ready · unlocks 0/0 · type: bug
 
 ---
 
@@ -146,19 +144,11 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `tools-014` — **Player-owned horse debug controls**  
-  🟡 `S` · **Score:**  23  
-   → **unlocks:** 0/0
-
-19. `items-player-032` — **NPC player-storage resource and context rules**  
+18. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-20. `settlements-017` — **Deterministically unique settlement names**  
-  🟡 `S` · **Score:**  19  
-   → **unlocks:** 0/0
-
-21. `settlements-010` — **Closed and cautious settlement character**  
+19. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -503,6 +493,7 @@ graph TD
   world_terrain_032["world-terrain-032 — Grass InstancedMesh constructor allocation optimization"]
   world_terrain_033["world-terrain-033 — Road bridge projection and traversal"]
   world_terrain_034["world-terrain-034 — Bidirectional cave traversal safety"]
+  world_terrain_035["world-terrain-035 — Streaming visual horizon and distant occlusion"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -854,6 +845,7 @@ graph TD
   world_terrain_025 --> fauna_027
   world_terrain_025 --> quests_progression_008
   world_terrain_025 --> world_terrain_028
+  world_terrain_026 --> world_terrain_035
   world_terrain_028 --> quests_progression_008
   world_terrain_028 --> quests_progression_023
   world_terrain_028 --> quests_progression_024

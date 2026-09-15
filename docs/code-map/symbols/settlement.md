@@ -729,15 +729,27 @@ Generated from exported TypeScript symbols.
 - `cellKey` — function — line 124
 - `cellSeed` — function — line 167
 - `cellsWithinRadius` — function — line 151
-- `generateSettlementDef` — function — line 744
-- `generateVillagePlan` — function — line 678
-- `probeSettlementSite` — function — line 490
+- `generateSettlementDef` — function — line 753
+- `generateVillagePlan` — function — line 687
+- `probeSettlementSite` — function — line 493
   - domain: settlements
 - `SETTLEMENT_GRID_STEP` — const — line 66
 - `SettlementCell` — type — line 72
 - `SettlementDef` — type — line 74
 - `SettlementSiteProbe` — type — line 478
 - `worldToCell` — function — line 128
+
+## `settlement/settlementNameUniqueness.ts`
+
+- `compareSettlementNameOrder` — function — line 16
+  - domain: settlements
+- `fallbackSettlementName` — function — line 42
+  - domain: settlements
+- `pickUniqueSettlementName` — function — line 52
+  - domain: settlements
+- `predecessorSettlementCells` — function — line 30
+  - domain: settlements
+- `SETTLEMENT_NAME_ATTEMPT_LIMIT` — const — line 4
 
 ## `settlement/settlementNightCycle.ts`
 
@@ -760,13 +772,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedSettlementDefCount` — function — line 104
-- `cachedSettlementProgressionPolicy` — function — line 109
-- `clearSettlementDefCache` — function — line 68
-- `setSettlementRiverQuery` — function — line 46
-- `settlementDefFor` — function — line 80
-- `SettlementResolveContext` — type — line 20
-- `worldRiverQuery` — function — line 59
+- `cachedSettlementDefCount` — function — line 167
+- `cachedSettlementProgressionPolicy` — function — line 172
+- `clearSettlementDefCache` — function — line 79
+- `setSettlementRiverQuery` — function — line 55
+- `settlementDefFor` — function — line 154
+- `SettlementResolveContext` — type — line 29
+- `worldRiverQuery` — function — line 68
 
 ## `settlement/settlementProgression.ts`
 

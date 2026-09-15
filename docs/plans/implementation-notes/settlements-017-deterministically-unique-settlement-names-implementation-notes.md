@@ -31,9 +31,10 @@ Jeżeli `settlementPlanCache` nie posiada jednorazowo pełnego zestawu cells, ni
 
 ## Files / symbols
 
-- `src/shared/SettlementName.ts` — `generateSettlementName(...)` / ewentualny pure candidate helper.
-- `src/settlement/settlementGenerator.ts` — current name call-site; nie powinien sam prowadzić globalnego setu.
-- `src/settlement/settlementPlanCache.ts` — resolution/cache ownership.
+- `src/shared/SettlementName.ts` — `generateSettlementName(...)` / opcjonalny `attempt` (0 = historyczny name seed).
+- `src/settlement/settlementNameUniqueness.ts` — stable cell order, predecessors, `pickUniqueSettlementName`.
+- `src/settlement/settlementGenerator.ts` — current name call-site; nie prowadzi globalnego setu; probe zwraca terrain/resource dla naming inputs.
+- `src/settlement/settlementPlanCache.ts` — resolution/cache ownership (naming memo + unique names).
 - tests plan cache/generator/name generation.
 
 ## Tests to pin
