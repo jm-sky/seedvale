@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MERCHANT_WAGON_RADIUS } from './merchantWagon'
 import {
   VILLAGE_CAMPFIRE_COLLISION_RADIUS,
+  VILLAGE_MASONRY_FIREPIT_COLLISION_RADIUS,
   WOOD_PILE_COLLISION_RADIUS,
 } from './propSpecs'
 import { settlementPropColliders } from './settlementPropColliders'
@@ -44,6 +45,19 @@ describe('settlementPropColliders', () => {
       x: 1,
       z: 3,
       radius: VILLAGE_CAMPFIRE_COLLISION_RADIUS,
+    })
+  })
+
+  it('uses the larger masonry firepit radius when bodyKind is masonry', () => {
+    const colliders = settlementPropColliders({
+      stockpile: { x: 0, z: 0 },
+      campfire: { position: { x: 1, z: 3 }, bodyKind: 'masonry' },
+    })
+    expect(colliders).toContainEqual({
+      type: 'circle',
+      x: 1,
+      z: 3,
+      radius: VILLAGE_MASONRY_FIREPIT_COLLISION_RADIUS,
     })
   })
 })

@@ -7,8 +7,10 @@ import { CAMPFIRE_FIT_MAX, CAMPFIRE_UNLIT_URL } from './propSpecs'
  *  on the GLB, or a bare ash+branch pile on the procedural fallback). `'pile'`
  *  — a bigger criss-crossed stack of beams (plan items-player-015's
  *  player-built wood pile/bonfire), always procedural — no GLB variant
- *  exists for it. */
-export type CampfireBodyKind = 'pit' | 'simple' | 'pile'
+ *  exists for it. `'masonry'` — raised stone hearth for LG/XL settlement
+ *  fire landmarks (plan settlements-011); always procedural, distinct from
+ *  `'pit'` rather than a renamed stone ring. */
+export type CampfireBodyKind = 'pit' | 'simple' | 'pile' | 'masonry'
 
 type CampfireLayer = 'stone' | 'wood'
 
@@ -169,8 +171,63 @@ function createProceduralWoodPileBase(scale: number): THREE.Group {
   return fire
 }
 
+function createProceduralMasonryFirepit(scale: number): THREE.Group {
+  const fire = new THREE.Group()
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6a6760, flatShading: true, roughness: 0.92 })
+  const capMat = new THREE.MeshStandardMaterial({ color: 0x7a7670, flatShading: true, roughness: 0.88 })
+  const ashMat = new THREE.MeshStandardMaterial({ color: 0x2b2724, flatShading: true, roughness: 1 })
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a3524, flatShading: true })
+
+  const hearthR = 1.15 * scale
+  const wallH = 0.28 * scale
+  const wallT = 0.22 * scale
+  const sides = 8
+  for (let i = 0; i < sides; i++) {
+    const a = (i / sides) * Math.PI * 2
+    const block = new THREE.Mesh(
+      new THREE.BoxGeometry(wallT * 1.35, wallH, 0.95 * scale),
+      stoneMat,
+    )
+    block.position.set(Math.cos(a) * hearthR, wallH * 0.5, Math.sin(a) * hearthR)
+    block.rotation.y = -a
+    block.castShadow = true
+    block.receiveShadow = true
+    fire.add(block)
+  }
+
+  const rim = new THREE.Mesh(
+    new THREE.RingGeometry(hearthR - wallT * 0.15, hearthR + wallT * 0.45, 12),
+    capMat,
+  )
+  rim.rotation.x = -Math.PI / 2
+  rim.position.y = wallH + 0.02 * scale
+  rim.receiveShadow = true
+  fire.add(rim)
+
+  const ash = new THREE.Mesh(new THREE.CircleGeometry(0.72 * scale, 12), ashMat)
+  ash.rotation.x = -Math.PI / 2
+  ash.position.y = 0.06 * scale
+  ash.receiveShadow = true
+  fire.add(ash)
+
+  for (let i = 0; i < 4; i++) {
+    const a = i * 0.9
+    const branch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03 * scale, 0.038 * scale, 0.85 * scale, 5),
+      woodMat,
+    )
+    branch.rotation.set(Math.PI / 2 - 0.3, 0, a)
+    branch.position.y = 0.1 * scale
+    branch.castShadow = true
+    fire.add(branch)
+  }
+
+  return fire
+}
+
 export function createCampfireBody(kind: CampfireBodyKind, scale = 1): THREE.Group {
   if (kind === 'pile') return createProceduralWoodPileBase(scale)
+  if (kind === 'masonry') return createProceduralMasonryFirepit(scale)
   if (campfireBodyTemplate) return cloneCampfireBodyFromTemplate(scale, kind)
   return kind === 'simple' ? createProceduralSimpleFireBase(scale) : createProceduralCampfirePit(scale)
 }

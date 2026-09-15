@@ -9,7 +9,7 @@ import { gardenClearingRadius, gardenPlazaMinCenterDist, type GardenScale } from
 import { selectHouseholdWellFamilyIndices } from './householdWells'
 import { householdYardRadius } from './householdYard'
 import { plazaCoreRadius } from './villageClearing'
-import { householdWellPlotId } from './villagePlan'
+import { householdWellPlotId, noticeBoardPlotId, plannedCampfireFootprint, plazaRadiusForSize } from './villagePlan'
 import { chooseLayoutPattern, householdWellLocalBand, planVillageLayout, PLOT_SCORE_WEIGHTS } from './villagePlanner'
 
 const flatHeight = (): number => 12
@@ -94,7 +94,7 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     }
   })
 
-  it('OUTPOST stays minimal: public+residential(+utility), one house, no market/campfire plots', () => {
+  it('OUTPOST stays minimal: public+residential(+utility), one house, no campfire', () => {
     const iron: NaturalResource = { id: 'r', type: 'iron', x: 30, z: 0, radius: 8, richness: 0.9 }
     const id = identity({
       id: '3_0',
@@ -111,7 +111,7 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     expect(layout.zones.some((z) => z.kind === 'public')).toBe(true)
     expect(layout.zones.some((z) => z.kind === 'residential')).toBe(true)
     expect(layout.plots.some((p) => p.id.includes('campfire'))).toBe(false)
-    expect(layout.plots.some((p) => p.id.includes('market'))).toBe(false)
+    expect(layout.landmarks.some((l) => l.kind === 'noticeBoard')).toBe(true)
   })
 
   it('adds food/work zones from identity when size budget allows', () => {
@@ -333,6 +333,11 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
     expect(layout.landmarks.some((l) => l.kind === 'garden')).toBe(true)
     expect(layout.landmarks.some((l) => l.kind === 'campfire')).toBe(true)
     expect(layout.landmarks.some((l) => l.kind === 'market')).toBe(true)
+    expect(layout.landmarks.some((l) => l.kind === 'noticeBoard')).toBe(true)
+    const board = layout.landmarks.find((l) => l.kind === 'noticeBoard')
+    expect(board?.plotId).toBe(noticeBoardPlotId())
+    expect(board?.x).toBe(layout.plots.find((p) => p.id === noticeBoardPlotId())?.x)
+    expect(board?.z).toBe(layout.plots.find((p) => p.id === noticeBoardPlotId())?.z)
 
     const houseBuildings = layout.buildings.filter((b) => b.role === 'residential')
     expect(houseBuildings).toHaveLength(families.length)
@@ -342,6 +347,86 @@ describe('planVillageLayout (plan 047 steps 5–7)', () => {
       expect(building.x).toBe(plot!.x)
       expect(building.z).toBe(plot!.z)
     }
+  })
+
+  it('plans a plaza disk by size, independent of house-ring core (settlements-011)', () => {
+    const cases: Array<{ size: VillageIdentity['size'], radius: number, seed: number }> = [
+      { size: 'SM', radius: 9, seed: 3 },
+      { size: 'MD', radius: 10, seed: 21 },
+      { size: 'LG', radius: 12, seed: 15 },
+      { size: 'XL', radius: 14, seed: 11 },
+      { size: 'OUTPOST', radius: 9, seed: 5 },
+    ]
+    for (const c of cases) {
+      const id = identity({ id: `plaza_${c.size}`, size: c.size })
+      const families = generateFamilies(c.seed, c.size, false, 'polish')
+      const layout = planVillageLayout(id, { x: 4, z: -3, y: 12 }, families, c.seed, flatHeight, WATER)
+      expect(layout.plaza.x).toBe(layout.center.x)
+      expect(layout.plaza.z).toBe(layout.center.z)
+      expect(layout.plaza.radius).toBe(c.radius)
+      expect(layout.plaza.radius).toBe(plazaRadiusForSize(c.size))
+    }
+  })
+
+  it('keeps central planned footprints from overlapping (settlements-011)', () => {
+    const cases: Array<{ size: VillageIdentity['size'], seed: number }> = [
+      { size: 'SM', seed: 7 },
+      { size: 'MD', seed: 21 },
+      { size: 'LG', seed: 15 },
+      { size: 'XL', seed: 11 },
+    ]
+    const central = /^(plot-infra-well|plot-infra-stockpile-\d+|plot-infra-campfire-\d+|plot-infra-market-\d+|plot-infra-notice-board)$/
+    for (const c of cases) {
+      const id = identity({ id: `gap_${c.size}`, size: c.size })
+      const families = generateFamilies(c.seed, c.size, false, 'polish')
+      const layout = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, c.seed, flatHeight, WATER)
+      const plots = layout.plots.filter((p) => central.test(p.id))
+      expect(plots.length, c.size).toBeGreaterThan(1)
+      for (let i = 0; i < plots.length; i++) {
+        for (let j = i + 1; j < plots.length; j++) {
+          const a = plots[i]!
+          const b = plots[j]!
+          expect(
+            Math.hypot(a.x - b.x, a.z - b.z),
+            `${c.size} ${a.id} vs ${b.id}`,
+          ).toBeGreaterThanOrEqual(a.radius + b.radius - 0.05)
+        }
+      }
+    }
+  })
+
+  it('uses masonry firepit footprint only when a campfire landmark exists (settlements-011)', () => {
+    const md = planVillageLayout(
+      identity({ id: 'fire_md', size: 'MD' }),
+      { x: 0, z: 0, y: 12 },
+      generateFamilies(21, 'MD', false, 'polish'),
+      21,
+      flatHeight,
+      WATER,
+    )
+    const lg = planVillageLayout(
+      identity({ id: 'fire_lg', size: 'LG' }),
+      { x: 0, z: 0, y: 12 },
+      generateFamilies(15, 'LG', false, 'polish'),
+      15,
+      flatHeight,
+      WATER,
+    )
+    const sm = planVillageLayout(
+      identity({ id: 'fire_sm', size: 'SM' }),
+      { x: 0, z: 0, y: 12 },
+      generateFamilies(7, 'SM', false, 'polish'),
+      7,
+      flatHeight,
+      WATER,
+    )
+    const mdFire = md.plots.find((p) => p.id.startsWith('plot-infra-campfire-'))
+    const lgFire = lg.plots.find((p) => p.id.startsWith('plot-infra-campfire-'))
+    expect(mdFire?.radius).toBe(plannedCampfireFootprint('MD'))
+    expect(lgFire?.radius).toBe(plannedCampfireFootprint('LG'))
+    expect(lgFire!.radius).toBeGreaterThan(mdFire!.radius)
+    expect(sm.plots.some((p) => p.id.includes('campfire'))).toBe(false)
+    expect(sm.landmarks.some((l) => l.kind === 'campfire')).toBe(false)
   })
 
   it('adds a field landmark when foodSourceType is field', () => {

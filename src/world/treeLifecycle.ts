@@ -509,12 +509,16 @@ export type TreeLifecycle = {
    *  (without rolling or mutating anything) while the tree has no living
    *  crown or its cooldown hasn't elapsed. */
   harvestBranch: (id: TreeId, worldDays: number, env: TreeEnvSample) => BranchHarvestResult
+  /** Nearest choppable tree in radius. Optional `eligible` skips candidates
+   *  (plan settlements-011 plaza-protected trees) without changing default
+   *  nearest-tree semantics for other callers. */
   findHarvestableNear: (
     x: number,
     z: number,
     radius: number,
     worldDays: number,
     envAt: (x: number, z: number) => TreeEnvSample,
+    eligible?: (presence: TreePresence) => boolean,
   ) => TreePresence | null
   /** Loaded/registered trees within radius — uses spatial buckets (plan 057). */
   getNearbyPresence: (x: number, z: number, radius: number) => readonly TreePresence[]
@@ -893,12 +897,13 @@ export function createTreeLifecycle(
     harvestFully,
     harvest: harvestFully,
     harvestBranch,
-    findHarvestableNear(x, z, radius, worldDays, envAt) {
+    findHarvestableNear(x, z, radius, worldDays, envAt, eligible) {
       let best: TreePresence | null = null
       let bestDist = Infinity
       for (const id of nearbyIds(x, z, radius)) {
         const presence = byId.get(id)
         if (!presence) continue
+        if (eligible && !eligible(presence)) continue
         const dist = Math.hypot(presence.x - x, presence.z - z)
         if (dist > radius || dist >= bestDist) continue
         const resolved = resolvePresence(presence, envAt(presence.x, presence.z), worldDays)

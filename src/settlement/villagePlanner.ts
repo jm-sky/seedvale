@@ -13,6 +13,7 @@ import type {
   VillageLayoutPattern,
   VillagePasturePlan,
   VillagePathPlan,
+  VillagePlaza,
   VillagePlot,
   VillagePlotRole,
   VillageZone,
@@ -33,13 +34,15 @@ import {
 import { selectHouseholdWellFamilyIndices } from './householdWells'
 import { householdYardRadius } from './householdYard'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
-import { plazaCoreRadius } from './villageClearing'
 import { appendPasturePath, planSettlementPasture } from './villagePasture'
-import { householdWellPlotId, parseHouseholdWellFamilyIndex, residentialStructureId } from './villagePlan'
-
-/** Matches `worldConfig.settlement.clearing.coreRadius` — used to size
- *  plaza-relative infrastructure (campfire on packed dirt; gardens off it). */
-const DEFAULT_PLAZA_CORE_RADIUS = 9
+import {
+  householdWellPlotId,
+  noticeBoardPlotId,
+  parseHouseholdWellFamilyIndex,
+  plannedCampfireFootprint,
+  residentialStructureId,
+  villagePlazaAt,
+} from './villagePlan'
 
 /** Shared plot-placement weights (plan 047 §8) — one table for every role. */
 export const PLOT_SCORE_WEIGHTS = {
@@ -70,6 +73,8 @@ const PLOT_RIVER_MARGIN = 1
  *  as a separate "yard radius" field here. */
 export const HOUSE_PLOT_RADIUS = 4.5
 const INFRA_PLOT_RADIUS = 2.4
+const NOTICE_BOARD_PLOT_RADIUS = 2
+const MARKET_PLOT_RADIUS = INFRA_PLOT_RADIUS * 1.2
 
 /**
  * Hard local band for a household well around its assigned house
@@ -123,6 +128,7 @@ export type VillageLayoutDraft = {
   landmarks: readonly VillageLandmarkPlan[]
   paths: readonly VillagePathPlan[]
   entrances: readonly VillageEntrance[]
+  plaza: VillagePlaza
   /** Satellite outskirts pasture (plan settlements-009). Absent on SM/OUTPOST
    *  and when every dry candidate failed. */
   pasture?: VillagePasturePlan
@@ -855,6 +861,8 @@ export function planVillageLayout(
     radius: sizeCfg.footprintRadius,
   }
   const center: VillageCenter = { x: site.x, z: site.z, y: site.y }
+  const plaza = villagePlazaAt(center, identity.size)
+  const plazaR = plaza.radius
   const zones = generateZones(identity, center, boundary, pattern, seedForCell, sampleHeight)
 
   const plots: VillagePlot[] = []
@@ -1016,7 +1024,6 @@ export function planVillageLayout(
     )
   }
 
-  const plazaR = plazaCoreRadius(identity.size, DEFAULT_PLAZA_CORE_RADIUS)
   // Plan 077: garden clusters from house count (~1 unit / 3 houses → S/M/L).
   // Plan 095: keep centers outside the plaza disk (not a footprint fraction).
   const houseCount = families.length
@@ -1051,19 +1058,21 @@ export function planVillageLayout(
     )
   }
   for (let i = 0; i < infra.campfires; i++) {
+    const fireRadius = plannedCampfireFootprint(identity.size)
+    const preferred = plazaR * 0.55
     plots.push(
       pickPlot(
         {
           id: `plot-infra-campfire-${i}`,
           role: 'infrastructure',
           zone: publicZone,
-          radius: INFRA_PLOT_RADIUS * 0.85,
+          radius: fireRadius,
           familyIndex: null,
           familyId: null,
-          // On packed-dirt plaza: mid-ring, hard-capped inside core clearing
-          // (0.22×footprint sat on the grass rim after props jitter / well push).
-          preferredRing: plazaR * 0.55,
-          maxCenterDist: Math.max(plazaR * 0.55, plazaR - 1.5),
+          // On packed-dirt plaza: mid-ring, hard-capped so the hearth disk
+          // stays inside the planned plaza (masonry LG/XL is larger than pit).
+          preferredRing: preferred,
+          maxCenterDist: Math.max(preferred, plazaR - fireRadius - 0.25),
         },
         center,
         boundary,
@@ -1077,17 +1086,21 @@ export function planVillageLayout(
     )
   }
 
-  for (let i = 0; i < infra.markets; i++) {
+  // Market stall is always materialized (props.ts) — plan it for every size so
+  // it shares pickPlot spacing instead of a materializer offset (settlements-011).
+  const marketCount = Math.max(1, infra.markets)
+  for (let i = 0; i < marketCount; i++) {
     plots.push(
       pickPlot(
         {
           id: `plot-infra-market-${i}`,
           role: 'infrastructure',
           zone: publicZone,
-          radius: INFRA_PLOT_RADIUS * 1.2,
+          radius: MARKET_PLOT_RADIUS,
           familyIndex: null,
           familyId: null,
-          preferredRing: sizeCfg.footprintRadius * 0.1,
+          preferredRing: Math.max(sizeCfg.footprintRadius * 0.1, INFRA_PLOT_RADIUS + MARKET_PLOT_RADIUS + 1),
+          maxCenterDist: plazaR - 0.5,
         },
         center,
         boundary,
@@ -1100,6 +1113,29 @@ export function planVillageLayout(
       ),
     )
   }
+
+  plots.push(
+    pickPlot(
+      {
+        id: noticeBoardPlotId(),
+        role: 'infrastructure',
+        zone: publicZone,
+        radius: NOTICE_BOARD_PLOT_RADIUS,
+        familyIndex: null,
+        familyId: null,
+        preferredRing: Math.max(plazaR * 0.42, INFRA_PLOT_RADIUS + NOTICE_BOARD_PLOT_RADIUS + 1),
+        maxCenterDist: Math.max(NOTICE_BOARD_PLOT_RADIUS + 1, plazaR - NOTICE_BOARD_PLOT_RADIUS),
+      },
+      center,
+      boundary,
+      plots,
+      seedForCell,
+      sampleHeight,
+      waterLevel,
+      sizeCfg.houseSpacing,
+      riverSegments,
+    ),
+  )
 
   if (foodZone) {
     plots.push(
@@ -1230,7 +1266,7 @@ export function planVillageLayout(
     waterLevel,
   })
   if (pasture) appendPasturePath(paths, pasture, sampleHeight, waterLevel)
-  return { boundary, center, pattern, zones, plots, buildings, landmarks, paths, entrances, pasture }
+  return { boundary, center, pattern, zones, plots, buildings, landmarks, paths, entrances, plaza, pasture }
 }
 
 /**
@@ -1351,6 +1387,10 @@ export function buildingsAndLandmarksFromPlots(
     if (marketMatch) {
       pushBuilding('public', plot, `building-market-${marketMatch[1]}`)
       pushLandmark('market', plot, marketMatch[1])
+      continue
+    }
+    if (plot.id === noticeBoardPlotId()) {
+      pushLandmark('noticeBoard', plot, '0')
       continue
     }
 

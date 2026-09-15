@@ -378,6 +378,20 @@ describe('createTreeLifecycle', () => {
     expect(near?.id).toBe(a.id)
   })
 
+  it('findHarvestableNear optional eligible skips protected candidates (settlements-011)', () => {
+    const life = createTreeLifecycle(3)
+    const protectedTree = presence({ id: life.makeId(0, 0, 0), x: 0, z: 0, initialStage: 'mature' })
+    const outer = presence({ id: life.makeId(8, 0, 0), x: 8, z: 0, initialStage: 'mature' })
+    life.registerPresence(protectedTree)
+    life.registerPresence(outer)
+
+    expect(life.findHarvestableNear(0, 0, 20, 0, () => goodEnv)?.id).toBe(protectedTree.id)
+    expect(life.findHarvestableNear(0, 0, 20, 0, () => goodEnv, (p) => p.id !== protectedTree.id)?.id).toBe(outer.id)
+    expect(life.findHarvestableNear(0, 0, 20, 0, () => goodEnv)).toEqual(
+      life.findHarvestableNear(0, 0, 20, 0, () => goodEnv),
+    )
+  })
+
   it('lists nearby registered presence via spatial buckets', () => {
     const life = createTreeLifecycle(3)
     const a = presence({ id: life.makeId(0, 0, 0), x: 0, z: 0, initialStage: 'young' })

@@ -6,6 +6,7 @@ import type { VillagePlan } from './villagePlan'
 import { createSeededRandom } from '../world/parseSeed'
 import { gardenClearingRadius, type GardenScale } from './gardenScale'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
+import { plazaRadiusForSize } from './villagePlan'
 
 export type ClearingArea = {
   x: number
@@ -52,18 +53,9 @@ function dryClearingHeight(h: number, waterLevel: number): number {
   return Math.max(h, waterLevel + SETTLEMENT_WATER_MARGIN)
 }
 
-/** Size-scaled plaza disk (plan 076) — larger villages get a clearer packed-dirt center. */
+/** Size-scaled plaza disk — delegates to {@link plazaRadiusForSize} (plan settlements-011). */
 export function plazaCoreRadius(size: VillageSize, baseCoreRadius: number): number {
-  switch (size) {
-    case 'LG':
-      return Math.max(baseCoreRadius, 12)
-    case 'MD':
-      return Math.max(baseCoreRadius, 10)
-    case 'XL':
-      return Math.max(baseCoreRadius, 14)
-    default:
-      return baseCoreRadius
-  }
+  return plazaRadiusForSize(size, baseCoreRadius)
 }
 
 /**
@@ -76,14 +68,14 @@ export function layoutClearingsFromPlan(
   params: VillageClearingParams,
   waterLevel: number,
 ): ClearingLayout {
-  const coreRadius = plazaCoreRadius(plan.identity.size, params.coreRadius)
+  const coreRadius = plan.plaza.radius
   const houseRadius = params.houseRadius
   const core: ClearingArea = {
-    x: plan.center.x,
-    z: plan.center.z,
+    x: plan.plaza.x,
+    z: plan.plaza.z,
     radius: coreRadius,
     targetH: dryClearingHeight(
-      averageHeight(plan.center.x, plan.center.z, coreRadius, sampleHeight),
+      averageHeight(plan.plaza.x, plan.plaza.z, coreRadius, sampleHeight),
       waterLevel,
     ),
   }

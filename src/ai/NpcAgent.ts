@@ -13,7 +13,6 @@ import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlemen
 import type { Household, HouseholdResourceKind } from '../settlement/household'
 import type { HouseholdExchangeHooks } from '../settlement/householdExchange'
 import type { NpcAuthoritativeState } from '../settlement/npcState'
-import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { NpcStructureRepairHooks } from '../settlement/structureRepairCandidates'
 import type { FollowHysteresisState } from '../shared/followHysteresis'
@@ -94,9 +93,11 @@ import {
   resolveNpcCorpsePhase,
 } from '../settlement/npcPostDeath'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
+import { type Place, workEligibleSettlementTrees } from '../settlement/places'
 import { isAdultAge } from '../settlement/professionStaffing'
 import { householdStorageDestination, resolveHouseholdWoodStorage } from '../settlement/storageDestinations'
 import { STRUCTURE_REPAIR_WORK_SESSION_HOURS, STRUCTURE_REPAIR_WORK_SESSION_SEC } from '../settlement/structureCondition'
+import { isTreeWorkEligible } from '../settlement/villagePlan'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
 import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
@@ -4197,15 +4198,17 @@ export class NpcAgent {
     }
     if (need === 'wood') {
       const selected = this.selectAndTraceStrategy('wood', getWoodStrategyCandidates({
-        available: this.role !== 'trader' && this.landmarks.trees.length > 0,
+        available: this.role !== 'trader' && workEligibleSettlementTrees(this.landmarks).length > 0,
         economyWithdrawAvailable: this.computeEconomyWithdrawAvailable('wood'),
         householdExchangeAvailable: this.computeHouseholdExchangeAvailable('wood'),
       }))
       switch (selected) {
         case 'chopDeposit': {
           const forest = this.forest
-          let landmark = this.landmarks.trees[this.treeIndex]!
-          this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length
+          const eligibleTrees = workEligibleSettlementTrees(this.landmarks)
+          if (eligibleTrees.length === 0) break
+          let landmark = eligibleTrees[this.treeIndex % eligibleTrees.length]!
+          this.treeIndex = (this.treeIndex + 1) % eligibleTrees.length
 
           if (forest) {
             const found = forest.lifecycle.findHarvestableNear(
@@ -4214,6 +4217,7 @@ export class NpcAgent {
               80,
               forest.getWorldDays(),
               forest.sampleEnv,
+              (presence) => isTreeWorkEligible(presence.x, presence.z, this.landmarks.plaza),
             )
             if (found) {
               const match = this.landmarks.trees.find((t) => t.id === found.id)

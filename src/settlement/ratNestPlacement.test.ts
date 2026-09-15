@@ -29,6 +29,7 @@ function planWith(buildings: VillageBuildingPlan[]): VillagePlan {
     site: { x: 0, z: 0, y: 0, radius: 20 },
     boundary: { kind: 'circle', x: 0, z: 0, radius: 20 },
     center: { x: 0, z: 0, y: 0 },
+    plaza: { x: 0, z: 0, radius: 10 },
     pattern: 'central',
     zones: [],
     plots: [],

@@ -118,15 +118,15 @@ export function villageSizeConfig(size: VillageSize): VillageSizeConfig {
   return VILLAGE_SIZE_CONFIG[size]
 }
 
-/** Plaza cobble plate count range per size (plan 140) — OUTPOST/SM stay bare
- *  (no campfire/plaza focal point yet); MD-XL get a modest, size-scaled
- *  handful near the well, not a paved road. */
+/** Plaza cobble plate count range per size (plan 140 / settlements-011) —
+ *  OUTPOST/SM stay bare; MD keeps a modest handful; LG/XL use full plaza
+ *  paving instead of a denser plate scatter. */
 const COBBLE_COUNT_RANGE: Record<VillageSize, readonly [number, number]> = {
   OUTPOST: [0, 0],
   SM: [0, 0],
   MD: [2, 4],
-  LG: [4, 6],
-  XL: [6, 8],
+  LG: [0, 0],
+  XL: [0, 0],
 }
 
 export function cobbleCountForSize(size: VillageSize, seed: number): number {

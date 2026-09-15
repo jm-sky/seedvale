@@ -77,6 +77,22 @@ describe('workplaceFor', () => {
     expect(workplaceFor('s1', 'woodcutter', makeLandmarks(), 0, 0)).toBeNull()
   })
 
+  it('woodcutter skips plaza-protected trees and keeps them in landmarks (settlements-011)', () => {
+    const protectedTree = makeTree('plaza', 1, 0)
+    const outer = makeTree('outer', 40, 0)
+    const landmarks = makeLandmarks({
+      plaza: { x: 0, z: 0, radius: 10 },
+      trees: [protectedTree, outer],
+    })
+    expect(landmarks.trees).toHaveLength(2)
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 0, 0)?.position).toBe(outer.position)
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 1, 0)?.position).toBe(outer.position)
+    expect(workplaceFor('s1', 'woodcutter', makeLandmarks({
+      plaza: { x: 0, z: 0, radius: 10 },
+      trees: [protectedTree],
+    }), 0, 0)).toBeNull()
+  })
+
   it('ids are namespaced by settlement id', () => {
     const landmarks = makeLandmarks()
     expect(workplaceFor('village_a', 'guard', landmarks, 0, 0)?.id).toBe('village_a:workplace:well')

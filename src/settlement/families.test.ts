@@ -20,19 +20,13 @@ describe('cobbleCountForSize', () => {
     }
   })
 
-  it('stays within the documented per-size range for MD/LG/XL', () => {
-    const ranges: Record<'MD' | 'LG' | 'XL', [number, number]> = {
-      MD: [2, 4],
-      LG: [4, 6],
-      XL: [6, 8],
-    }
-    for (const size of ['MD', 'LG', 'XL'] as const) {
-      const [min, max] = ranges[size]
-      for (let seed = 0; seed < 40; seed++) {
-        const n = cobbleCountForSize(size, seed)
-        expect(n).toBeGreaterThanOrEqual(min)
-        expect(n).toBeLessThanOrEqual(max)
-      }
+  it('stays within the documented per-size range for MD; LG/XL use full paving instead', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const n = cobbleCountForSize('MD', seed)
+      expect(n).toBeGreaterThanOrEqual(2)
+      expect(n).toBeLessThanOrEqual(4)
+      expect(cobbleCountForSize('LG', seed)).toBe(0)
+      expect(cobbleCountForSize('XL', seed)).toBe(0)
     }
   })
 

@@ -4,7 +4,7 @@ import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import type { SettlementSite } from './findSettlementSite'
 import type { FoodSourceType } from './settlementGenerator'
 import type { ClearingLayout } from './villageClearing'
-import type { VillageLandmarkPlan, VillagePlan } from './villagePlan'
+import type { VillageLandmarkPlan, VillagePlan, VillagePlaza } from './villagePlan'
 import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import { pickHouseDefinition } from '../assets/houseDefinitionExample'
 import { disposeObject3D, loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
@@ -20,7 +20,7 @@ import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type Tree
 import { blacksmithYardGeometry } from './blacksmithYard'
 import { type CampfireFlame, createLitCampfireVisual, preloadCampfireTemplates } from './campfireProps'
 import { createBush, createCobblePlate, createTree } from './decorProps'
-import { cobbleCountForSize, type VillageSize, villageSizeConfig } from './families'
+import { type VillageSize, villageSizeConfig } from './families'
 import { createPropYieldGate } from './frameYield'
 import {
   gardenBedCount,
@@ -48,6 +48,12 @@ import {
   resolveHouseLampMount,
 } from './houseLighting'
 import { pickMerchantWagonPose } from './merchantWagon'
+import {
+  centralPlazaReservedFootprints,
+  fullPlazaSurfaceHoles,
+  generateSparsePlazaCobbles,
+  plazaPavingMode,
+} from './plazaPaving'
 import {
   ANIMAL_TROUGH_HEIGHT,
   ANIMAL_TROUGH_URL,
@@ -111,7 +117,12 @@ import {
   type WoodPileVisual,
 } from './storageVisuals'
 import { pastureFencePlacements } from './villagePasture'
-import { parseHouseholdWellFamilyIndex, pastureWellLandmarkId, residentialStructureId } from './villagePlan'
+import {
+  parseHouseholdWellFamilyIndex,
+  pastureWellLandmarkId,
+  plannedCampfireBodyKind,
+  residentialStructureId,
+} from './villagePlan'
 import { pathPlansToCorridorData } from './villagePlanner'
 
 export type SettlementHouseLandmark = {
@@ -238,12 +249,16 @@ export type SettlementLandmarks = {
    *  height-sampled — empty when there's no dock. NPCs walk these in order
    *  instead of a straight line (`NpcAgent.ts`'s `followPath` phase). */
   dockRoute: THREE.Vector3[]
-  /** The settlement's own lightable campfire (MD/LG only, see
+  /** The settlement's own lightable campfire (MD+ when planned, see
    *  `buildSettlementProps`) — `flame` is the toggleable fire visual
    *  (`createCampfireFlame`), added as a child of the campfire prop but
    *  hidden until `settlement/VillageFire.ts` lights it. Distinct from the
-   *  purely decorative world campfires in `terrain/chunkEnvironment.ts`. */
-  campfire?: { position: THREE.Vector3, flame: CampfireFlame }
+   *  purely decorative world campfires in `terrain/chunkEnvironment.ts`.
+   *  `bodyKind` is `'masonry'` only for LG/XL fire landmarks. */
+  campfire?: { position: THREE.Vector3, flame: CampfireFlame, bodyKind?: 'pit' | 'masonry' }
+  /** Planned plaza disk (plan settlements-011) — woodcutter eligibility and
+   *  paving consume this, copied from `VillagePlan.plaza`. */
+  plaza?: VillagePlaza
   /** Settlement sale plots (plan 129) — static price/position straight from
    *  `VillagePlan.plots` (`role === 'sale'`). Ownership is separate
    *  persistent world state, never stored here — see `landOwnership.ts`. */
@@ -638,7 +653,9 @@ function findFlatSpot(
 
 /** Prefer a planned landmark position; `findFlatSpot` only micro-corrects
  *  around that candidate (plan 047 §9.11) — it must not invent a new layout.
- *  Optional `avoid` keeps props (campfire) out of another landmark's disk. */
+ *  Optional `avoid` keeps props (campfire) out of another landmark's disk.
+ *  Central plaza props use {@link placeAtPlannedAnchor} instead so the
+ *  materializer cannot relocate a planner-owned X/Z. */
 function placeFromLandmark(
   site: { x: number, z: number },
   landmark: VillageLandmarkPlan | undefined,
@@ -681,20 +698,16 @@ function pushAwayFrom(
   return { x: ox + dx * s, z: oz + dz * s }
 }
 
-/** Pull a point onto/inside a disk (campfire stays on plaza dirt after jitter). */
-function pullIntoDisk(
-  x: number,
-  z: number,
-  cx: number,
-  cz: number,
-  maxRadius: number,
+/** Exact planned X/Z for central physical props (plan settlements-011).
+ *  Samples no terrain here — callers still sample Y via `placeOnGround`. */
+function placeAtPlannedAnchor(
+  site: { x: number, z: number },
+  landmark: VillageLandmarkPlan | undefined,
+  fallbackDx: number,
+  fallbackDz: number,
 ): { x: number, z: number } {
-  const dx = x - cx
-  const dz = z - cz
-  const d = Math.hypot(dx, dz)
-  if (d <= maxRadius || d < 1e-4) return { x, z }
-  const s = maxRadius / d
-  return { x: cx + dx * s, z: cz + dz * s }
+  if (landmark) return { x: landmark.x, z: landmark.z }
+  return { x: site.x + fallbackDx, z: site.z + fallbackDz }
 }
 
 function landmarkOf(plan: VillagePlan | undefined, kind: VillageLandmarkPlan['kind'], index = 0) {
@@ -809,6 +822,7 @@ export async function buildSettlementProps(
     householdWoodStorages: [],
     settlementStorage: new THREE.Vector3(),
     noticeBoard: new THREE.Vector3(),
+    plaza: plan?.plaza,
   }
 
   const coreRandom = createSeededRandom(seed ^ 0x5a17e)
@@ -888,8 +902,8 @@ export async function buildSettlementProps(
   if (householdWellLandmarks.length > 0 || pasturePlan) await yieldProp()
   landmarks.wells = wells
 
-  const { x: stockX, z: stockZ } = placeFromLandmark(
-    site, landmarkOf(plan, 'stockpile', 0), 4, 1.5, sampleHeight, waterLevel, coreRandom,
+  const { x: stockX, z: stockZ } = placeAtPlannedAnchor(
+    site, landmarkOf(plan, 'stockpile', 0), 4, 1.5,
   )
   const stockpile = await loadPrimaryWoodStockpile()
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
@@ -1028,8 +1042,8 @@ export async function buildSettlementProps(
   // Trader's market stall (`landmarks.market`, see `places.ts`'s `workplaceFor`)
   // — built unconditionally like well/garden/stockpile, whether or not this
   // settlement's families happen to roll a trader.
-  const { x: marketX, z: marketZ } = placeFromLandmark(
-    site, landmarkOf(plan, 'market', 0), 2, -5, sampleHeight, waterLevel, coreRandom,
+  const { x: marketX, z: marketZ } = placeAtPlannedAnchor(
+    site, landmarkOf(plan, 'market', 0), 2, -5,
   )
   const marketCrate = await loadPropOrFallback('/models/settlement/crate.glb', 0.6, () => createCrate(1))
   placeOnGround(marketCrate, marketX, marketZ, sampleHeight)
@@ -1042,9 +1056,8 @@ export async function buildSettlementProps(
   // Notice board (plan npc-014) — built unconditionally like well/market,
   // near the plaza. No dedicated notice-board asset exists yet; reuses the
   // existing procedural signpost prop as a stand-in.
-  const { x: boardX, z: boardZ } = placeFromLandmark(
-    site, undefined, 3.5, 3.5, sampleHeight, waterLevel, coreRandom,
-    { x: marketX, z: marketZ, minDist: 3 },
+  const { x: boardX, z: boardZ } = placeAtPlannedAnchor(
+    site, landmarkOf(plan, 'noticeBoard', 0), 3.5, 3.5,
   )
   const noticeBoardProp = createSignpost()
   noticeBoardProp.rotation.y = coreRandom() * Math.PI * 2
@@ -1517,48 +1530,28 @@ export async function buildSettlementProps(
   // get a second stockpile. Do not re-encode size thresholds here.
   const infra = villageSizeConfig(size).infrastructure
   if (infra.campfires > 0) {
-    const plazaPad = Math.max(2.5, clearings.core.radius - 1.2)
-    let { x: fireX, z: fireZ } = placeFromLandmark(
+    const { x: fireX, z: fireZ } = placeAtPlannedAnchor(
       site,
       landmarkOf(plan, 'campfire', 0),
       -4.5,
       -2,
-      sampleHeight,
-      waterLevel,
-      coreRandom,
-      { x: wellX, z: wellZ, minDist: 5.5 },
     )
-    // findFlatSpot jitter (±3.5) and well push can eject the fire onto grass
-    // beside the square — snap back onto packed-dirt plaza.
-    ;({ x: fireX, z: fireZ } = pullIntoDisk(
-      fireX,
-      fireZ,
-      clearings.core.x,
-      clearings.core.z,
-      plazaPad,
-    ))
-    ;({ x: fireX, z: fireZ } = pushAwayFrom(fireX, fireZ, wellX, wellZ, 5.5))
-    ;({ x: fireX, z: fireZ } = pullIntoDisk(
-      fireX,
-      fireZ,
-      clearings.core.x,
-      clearings.core.z,
-      plazaPad,
-    ))
     await preloadCampfireTemplates()
-    const { group: campfire, flame } = createLitCampfireVisual('pit')
+    const bodyKind = plannedCampfireBodyKind(size)
+    const { group: campfire, flame } = createLitCampfireVisual(bodyKind)
     placeOnGround(campfire, fireX, fireZ, sampleHeight)
     group.add(campfire)
     landmarks.campfire = {
       position: new THREE.Vector3(fireX, sampleHeight(fireX, fireZ), fireZ),
       flame,
+      bodyKind,
     }
   }
   let stock2X: number | null = null
   let stock2Z: number | null = null
   if (infra.stockpiles > 1) {
-    ;({ x: stock2X, z: stock2Z } = placeFromLandmark(
-      site, landmarkOf(plan, 'stockpile', 1), 5.5, -2.5, sampleHeight, waterLevel, coreRandom,
+    ;({ x: stock2X, z: stock2Z } = placeAtPlannedAnchor(
+      site, landmarkOf(plan, 'stockpile', 1), 5.5, -2.5,
     ))
     const stockpile2 = await loadPropOrFallback(
       WOOD_PILE_URL,
@@ -1750,12 +1743,20 @@ export async function buildSettlementProps(
     }
   }
 
-  // Sparse plaza cobble near the well (plan 140) — same MD+ gate as the
-  // campfire/torch ring above; OUTPOST/SM stay bare dirt. Decorative clutter
-  // only, not a second road system: never touches `pathCorridors`.
+  // Plaza paving (plan settlements-011) — SM/OUTPOST none; MD sparse plates;
+  // LG/XL one merged disc minus reserved footprints. Generated once here.
   {
-    const infra = villageSizeConfig(size).infrastructure
-    if (infra.campfires > 0) {
+    const mode = plazaPavingMode(size)
+    const plaza = plan?.plaza ?? { x: wellX, z: wellZ, radius: clearings.core.radius }
+    const exclusions = plan
+      ? centralPlazaReservedFootprints(plan)
+      : [
+          { x: wellX, z: wellZ, radius: 1.6 },
+          ...(landmarks.campfire
+            ? [{ x: landmarks.campfire.position.x, z: landmarks.campfire.position.z, radius: 1.6 }]
+            : []),
+        ]
+    if (mode === 'sparse') {
       let cobbleTemplate: THREE.Object3D | null = null
       try {
         const cobble = await loadGltf(COBBLE_URL)
@@ -1764,27 +1765,48 @@ export async function buildSettlementProps(
       } catch (err) {
         console.warn('[settlement] rock_path_round_wide.glb unavailable — procedural cobble', err)
       }
-      const cobbleCount = cobbleCountForSize(size, seed)
-      const cobbleR = Math.max(2.2, clearings.core.radius * 0.55)
-      for (let i = 0; i < cobbleCount; i++) {
-        const ang = coreRandom() * Math.PI * 2
-        const dist = cobbleR * (0.5 + coreRandom() * 0.6)
-        const cx = wellX + Math.cos(ang) * dist
-        const cz = wellZ + Math.sin(ang) * dist
-        if (Math.hypot(cx - wellX, cz - wellZ) < 1.6) continue
-        if (landmarks.campfire) {
-          const c = landmarks.campfire.position
-          if (Math.hypot(cx - c.x, cz - c.z) < 1.6) continue
-        }
-        if (pointHitsCorridor(cx, cz, pathCorridors, 0.6)) continue
-        if (sampleHeight(cx, cz) <= waterLevel + 0.4) continue
-        const plate = cobbleTemplate ? cobbleTemplate.clone(true) : createCobblePlate(1)
-        plate.scale.multiplyScalar(0.85 + coreRandom() * 0.3)
-        plate.rotation.y = coreRandom() * Math.PI * 2
-        placeOnGround(plate, cx, cz, sampleHeight)
-        group.add(plate)
-        await yieldProp()
+      const cobblePlacements = generateSparsePlazaCobbles(plaza, exclusions, seed)
+      const templates = [cobbleTemplate ?? createCobblePlate(1)]
+      const instances = buildInstancedProps(
+        templates,
+        cobblePlacements
+          .filter((p) => sampleHeight(p.x, p.z) > waterLevel + 0.4)
+          .map((p) => ({
+            speciesIndex: 0,
+            x: p.x,
+            z: p.z,
+            groundY: sampleHeight(p.x, p.z),
+            rotationY: p.rotationY,
+            scale: p.scale,
+          })),
+        'settlement-plaza-cobble',
+      )
+      if (instances) group.add(instances.group)
+    } else if (mode === 'full') {
+      const holes = fullPlazaSurfaceHoles(plaza, exclusions)
+      const shape = new THREE.Shape()
+      shape.absarc(0, 0, plaza.radius, 0, Math.PI * 2, false)
+      for (const hole of holes) {
+        const path = new THREE.Path()
+        path.absarc(hole.dx, hole.dz, hole.radius, 0, Math.PI * 2, true)
+        shape.holes.push(path)
       }
+      const geom = new THREE.ShapeGeometry(shape, 48)
+      geom.rotateX(-Math.PI / 2)
+      const paving = new THREE.Mesh(
+        geom,
+        new THREE.MeshStandardMaterial({
+          color: 0x8a8a86,
+          roughness: 0.92,
+          metalness: 0.04,
+          flatShading: true,
+        }),
+      )
+      paving.position.set(plaza.x, sampleHeight(plaza.x, plaza.z) + 0.025, plaza.z)
+      paving.receiveShadow = true
+      paving.castShadow = false
+      paving.name = 'settlement-plaza-paving'
+      group.add(paving)
     }
   }
 

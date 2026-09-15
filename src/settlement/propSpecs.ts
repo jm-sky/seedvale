@@ -150,6 +150,8 @@ export const WOOD_PILE_HEIGHT = 1.35
 export const WOOD_PILE_COLLISION_RADIUS = 1.2
 /** Village plaza pit (issue 036) — world remaining campfires use 0.5. */
 export const VILLAGE_CAMPFIRE_COLLISION_RADIUS = 0.6
+/** Raised masonry hearth (plan settlements-011) — matches the procedural ring ~1.15. */
+export const VILLAGE_MASONRY_FIREPIT_COLLISION_RADIUS = 1.15
 
 export const CAMPFIRE_UNLIT_URL = '/models/settlement/campfire_unlit.glb'
 /** Longest-axis fit ≈ procedural stone-ring diameter (`createCampfire` radius 0.6 × 2). */

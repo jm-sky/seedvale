@@ -1,13 +1,17 @@
 # Plan: Plaza layout, paving and core protection
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-15 — browser checks are User-owned)
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** -
 **Model:** Sonnet, Composer
+
+## Implementation status
+
+Implemented 2026-09-15. Automated layout/paving/eligibility tests pass. Browser/gameplay verification (SM/MD/LG/XL plaza difference, central-prop clearance, masonry firepit, protected trees, performance) remains User-owned.
 
 ## Cel
 

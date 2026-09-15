@@ -38,6 +38,74 @@ export type VillageCenter = {
   y: number
 }
 
+/**
+ * Planned public plaza disk (plan settlements-011). Paving, central-prop
+ * spacing and woodcutter tree-work protection read this — not `clearings.core`,
+ * which remains a terrain-adaptation radius and may be larger than the plaza.
+ */
+export type VillagePlaza = {
+  x: number
+  z: number
+  radius: number
+}
+
+/** Matches `worldConfig.settlement.clearing.coreRadius`. */
+export const DEFAULT_PLAZA_RADIUS = 9
+
+/** Single plaza-radius table (plan settlements-011). Planner, terrain
+ *  clearing and paving all consume this instead of duplicating size knobs. */
+export function plazaRadiusForSize(size: VillageSize, baseRadius = DEFAULT_PLAZA_RADIUS): number {
+  switch (size) {
+    case 'LG':
+      return Math.max(baseRadius, 12)
+    case 'MD':
+      return Math.max(baseRadius, 10)
+    case 'XL':
+      return Math.max(baseRadius, 14)
+    default:
+      return baseRadius
+  }
+}
+
+export function villagePlazaAt(
+  center: Pick<VillageCenter, 'x' | 'z'>,
+  size: VillageSize,
+  baseRadius = DEFAULT_PLAZA_RADIUS,
+): VillagePlaza {
+  return { x: center.x, z: center.z, radius: plazaRadiusForSize(size, baseRadius) }
+}
+
+/** Stone-ring campfire plot radius (`INFRA_PLOT_RADIUS * 0.85`). */
+export const PLAZA_CAMPFIRE_FOOTPRINT = 2.04
+/** Masonry hearth plot radius for LG/XL settlements that already have a fire landmark. */
+export const PLAZA_MASONRY_FIREPIT_FOOTPRINT = 3.2
+
+export function plazaUsesMasonryFirepit(size: VillageSize): boolean {
+  return size === 'LG' || size === 'XL'
+}
+
+export function plannedCampfireFootprint(size: VillageSize): number {
+  return plazaUsesMasonryFirepit(size) ? PLAZA_MASONRY_FIREPIT_FOOTPRINT : PLAZA_CAMPFIRE_FOOTPRINT
+}
+
+export function plannedCampfireBodyKind(size: VillageSize): 'pit' | 'masonry' {
+  return plazaUsesMasonryFirepit(size) ? 'masonry' : 'pit'
+}
+
+/** Extra radius beyond the plaza disk that still blocks woodcutter work.
+ *  Covers the ornamental plaza-band trees without reaching the woodlot. */
+export const PLAZA_TREE_WORK_MARGIN = 4
+
+export function isTreeWorkEligible(
+  x: number,
+  z: number,
+  plaza: VillagePlaza | null | undefined,
+  margin = PLAZA_TREE_WORK_MARGIN,
+): boolean {
+  if (!plaza) return true
+  return Math.hypot(x - plaza.x, z - plaza.z) > plaza.radius + margin
+}
+
 export type VillageZoneKind =
   | 'residential'
   | 'public'
@@ -134,9 +202,15 @@ export type VillageLandmarkKind =
   | 'garden'
   | 'market'
   | 'campfire'
+  | 'noticeBoard'
   | 'home'
   | 'dock'
   | 'field'
+
+/** Stable infrastructure plot id for the plaza notice board (plan settlements-011). */
+export function noticeBoardPlotId(): string {
+  return 'plot-infra-notice-board'
+}
 
 export type VillageLandmarkPlan = {
   id: string
@@ -254,6 +328,8 @@ export type VillagePlan = {
   site: { x: number, z: number, y: number, radius: number }
   boundary: VillageBoundary
   center: VillageCenter
+  /** Authoritative plaza footprint (plan settlements-011) — not a synonym of `clearings.core`. */
+  plaza: VillagePlaza
   pattern: VillageLayoutPattern
   zones: readonly VillageZone[]
   plots: readonly VillagePlot[]

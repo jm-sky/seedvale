@@ -12,6 +12,7 @@ import type { Collider } from '../world/collision'
 import { MERCHANT_WAGON_RADIUS } from './merchantWagon'
 import {
   VILLAGE_CAMPFIRE_COLLISION_RADIUS,
+  VILLAGE_MASONRY_FIREPIT_COLLISION_RADIUS,
   WOOD_PILE_COLLISION_RADIUS,
 } from './propSpecs'
 
@@ -19,7 +20,7 @@ export type SettlementPropColliderLandmarks = {
   stockpile: { x: number, z: number }
   stockpileSecondary?: { x: number, z: number }
   merchantWagon?: { x: number, z: number }
-  campfire?: { position: { x: number, z: number } }
+  campfire?: { position: { x: number, z: number }, bodyKind?: 'pit' | 'masonry' }
 }
 
 export function settlementPropColliders(
@@ -54,7 +55,9 @@ export function settlementPropColliders(
       type: 'circle',
       x: landmarks.campfire.position.x,
       z: landmarks.campfire.position.z,
-      radius: VILLAGE_CAMPFIRE_COLLISION_RADIUS,
+      radius: landmarks.campfire.bodyKind === 'masonry'
+        ? VILLAGE_MASONRY_FIREPIT_COLLISION_RADIUS
+        : VILLAGE_CAMPFIRE_COLLISION_RADIUS,
     })
   }
   return colliders

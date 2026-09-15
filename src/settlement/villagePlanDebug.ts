@@ -9,7 +9,7 @@ export function summarizeVillagePlan(plan: VillagePlan): string {
     `VillagePlan ${identity.id} "${identity.name}"`,
     `  size=${identity.size} terrain=${identity.terrain} food=${identity.foodSourceType} pattern=${pattern}`,
     `  site=(${plan.site.x.toFixed(1)},${plan.site.z.toFixed(1)}) y=${plan.site.y.toFixed(1)} r=${plan.site.radius}`,
-    `  boundary r=${boundary.radius} center=(${center.x.toFixed(1)},${center.z.toFixed(1)})`,
+    `  boundary r=${boundary.radius} center=(${center.x.toFixed(1)},${center.z.toFixed(1)}) plaza r=${plan.plaza.radius}`,
     `  zones=${zones.map((z) => z.kind).join(',') || '—'}`,
     `  plots=${plots.length} buildings=${buildings.length} landmarks=${landmarks.map((l) => l.kind).join(',')}`,
     `  entrances=${entrances.length} paths=${paths.length}` +

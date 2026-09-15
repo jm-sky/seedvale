@@ -1,5 +1,6 @@
 import type { Role } from '../ai/characters'
-import type { SettlementLandmarks } from './props'
+import type { SettlementLandmarks, SettlementTreeLandmark } from './props'
+import { isTreeWorkEligible } from './villagePlan'
 import type { Vector3 } from 'three'
 
 /**
@@ -83,14 +84,27 @@ export function socialPlaceFor(
 }
 
 /**
+ * Settlement trees a woodcutter may chop — plaza-protected trees keep their
+ * canonical identity in `landmarks.trees` but are not work-eligible.
+ */
+export function workEligibleSettlementTrees(
+  landmarks: Pick<SettlementLandmarks, 'trees' | 'plaza'>,
+): SettlementTreeLandmark[] {
+  return landmarks.trees.filter((tree) =>
+    isTreeWorkEligible(tree.position.x, tree.position.z, landmarks.plaza),
+  )
+}
+
+/**
  * Per-role workplace — hybrid per the 2026-08-09 decision: roles that
  * already have a matching communal landmark reuse it as-is (no new world
  * content); only `trader` gets a dedicated new prop (`landmarks.market`,
  * see `props.ts`'s `buildSettlementProps`).
  *
- * - `woodcutter` → one of `landmarks.trees` (round-robin via `treeIndex`,
- *   same index NPC already cycles through for its `wood` need). Successful
- *   chop → deposit commits wood into settlement economy stock (plan 071).
+ * - `woodcutter` → one of `landmarks.trees` (round-robin via `treeIndex` among
+ *   trees eligible for work — plaza-protected trees stay in the landmark list
+ *   but are skipped, plan settlements-011). Successful chop → deposit commits
+ *   wood into settlement economy stock (plan 071).
  * - `farmer` → `landmarks.garden`.
  * - `trader` → `landmarks.market`.
  * - `guard` → `landmarks.well` (central point, easiest to "patrol" from).
@@ -165,9 +179,10 @@ export function workplaceFor(
     case 'trader':
       return { id: `${settlementId}:workplace:market`, type: 'workplace', position: landmarks.market }
     case 'woodcutter': {
-      if (landmarks.trees.length === 0) return null
-      const index = treeIndex % landmarks.trees.length
-      const tree = landmarks.trees[index]!
+      const trees = workEligibleSettlementTrees(landmarks)
+      if (trees.length === 0) return null
+      const index = treeIndex % trees.length
+      const tree = trees[index]!
       return {
         id: `${settlementId}:workplace:tree:${tree.id}`,
         type: 'workplace',
