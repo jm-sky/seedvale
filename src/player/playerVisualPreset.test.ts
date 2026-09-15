@@ -4,10 +4,13 @@ import {
 } from './PlayerController'
 import {
   PLAYER_UBC_ANIMATION_URL,
+  PLAYER_UBC_KNIGHT_URL,
   PLAYER_UBC_PEASANT_BROWN_URL,
   PLAYER_UBC_PEASANT_URL,
   PLAYER_UBC_RANGER_BROWN_URL,
   PLAYER_UBC_RANGER_URL,
+  PLAYER_UBC_WIZARD_URL,
+  companionAnimationUrl,
   resolveEquipmentOutfit,
   resolvePlayerAppearance,
   resolvePlayerUrlOverride,
@@ -25,6 +28,10 @@ describe('resolvePlayerUrlOverride', () => {
     expect(resolvePlayerUrlOverride('?player=peasant')).toBe('peasant')
     expect(resolvePlayerUrlOverride('player=ranger')).toBe('ranger')
     expect(resolvePlayerUrlOverride('?player=adventurer')).toBe('adventurer')
+    expect(resolvePlayerUrlOverride('?player=knight')).toBe('knight')
+    expect(resolvePlayerUrlOverride('?player=knight_cloth')).toBe('knight_cloth')
+    expect(resolvePlayerUrlOverride('?player=noble')).toBe('noble')
+    expect(resolvePlayerUrlOverride('?player=wizard')).toBe('wizard')
   })
 
   it('returns null for unknown values', () => {
@@ -41,10 +48,10 @@ describe('resolveEquipmentOutfit', () => {
     expect(resolveEquipmentOutfit(undefined)).toBe('peasant')
   })
 
-  it('maps leather and chainmail (and any other body armor) to Ranger', () => {
+  it('maps leather to Ranger and other body armor to Knight', () => {
     expect(resolveEquipmentOutfit('leather_armor')).toBe('ranger')
-    expect(resolveEquipmentOutfit('chainmail')).toBe('ranger')
-    expect(resolveEquipmentOutfit('future_plate')).toBe('ranger')
+    expect(resolveEquipmentOutfit('chainmail')).toBe('knight')
+    expect(resolveEquipmentOutfit('future_plate')).toBe('knight')
   })
 })
 
@@ -58,10 +65,10 @@ describe('resolvePlayerAppearance', () => {
     expect(appearance.tintUrl).toBeNull()
   })
 
-  it('uses Ranger when body armor is worn and there is no URL override', () => {
+  it('uses Ranger for leather and Knight for chainmail when there is no URL override', () => {
     expect(resolvePlayerAppearance({ search: '', bodyKind: 'leather_armor' }).id).toBe('ranger')
     expect(resolvePlayerAppearance({ search: '', bodyKind: 'chainmail' }).modelUrl).toBe(
-      PLAYER_UBC_RANGER_URL,
+      PLAYER_UBC_KNIGHT_URL,
     )
   })
 
@@ -75,6 +82,9 @@ describe('resolvePlayerAppearance', () => {
     expect(
       resolvePlayerAppearance({ search: '?player=peasant', bodyKind: 'chainmail' }).id,
     ).toBe('peasant')
+    expect(
+      resolvePlayerAppearance({ search: '?player=wizard', bodyKind: 'leather_armor' }).modelUrl,
+    ).toBe(PLAYER_UBC_WIZARD_URL)
   })
 
   it('applies ?playerTint=brown only to UBC outfits', () => {
@@ -117,10 +127,30 @@ describe('resolvePlayerVisualPreset', () => {
   })
 })
 
+describe('companionAnimationUrl', () => {
+  it('returns ual1_player for UBC outfit meshes and skips the clip GLB itself', () => {
+    expect(companionAnimationUrl(PLAYER_UBC_PEASANT_URL)).toBe(PLAYER_UBC_ANIMATION_URL)
+    expect(companionAnimationUrl(`${PLAYER_UBC_RANGER_URL}?r=3`)).toBe(PLAYER_UBC_ANIMATION_URL)
+    expect(companionAnimationUrl(PLAYER_UBC_ANIMATION_URL)).toBeNull()
+    expect(companionAnimationUrl(PLAYER_MODEL_URL)).toBeNull()
+  })
+})
+
 describe('ubcPreloadUrls', () => {
-  it('warms the other UBC mesh and skips Adventurer', () => {
-    expect(ubcPreloadUrls(PLAYER_UBC_PEASANT_URL)).toEqual([PLAYER_UBC_RANGER_URL])
-    expect(ubcPreloadUrls(PLAYER_UBC_RANGER_URL)).toEqual([PLAYER_UBC_PEASANT_URL])
+  it('warms the other equipment-driven UBC meshes and skips Adventurer', () => {
+    expect(ubcPreloadUrls(PLAYER_UBC_PEASANT_URL)).toEqual([
+      PLAYER_UBC_RANGER_URL,
+      PLAYER_UBC_KNIGHT_URL,
+    ])
+    expect(ubcPreloadUrls(PLAYER_UBC_RANGER_URL)).toEqual([
+      PLAYER_UBC_PEASANT_URL,
+      PLAYER_UBC_KNIGHT_URL,
+    ])
+    expect(ubcPreloadUrls(PLAYER_UBC_KNIGHT_URL)).toEqual([
+      PLAYER_UBC_PEASANT_URL,
+      PLAYER_UBC_RANGER_URL,
+    ])
     expect(ubcPreloadUrls(PLAYER_MODEL_URL)).toEqual([])
+    expect(ubcPreloadUrls(PLAYER_UBC_WIZARD_URL)).toEqual([])
   })
 })

@@ -20,6 +20,7 @@ import {
   prepareProp,
   preparePropFitMax,
 } from '../../../assets/loadGltf'
+import { companionAnimationUrl } from '../../../player/playerVisualPreset'
 import { type AnchorGizmoGroup, createAnchorGizmos } from './createAnchorGizmos'
 
 export type MeshStats = {
@@ -40,11 +41,14 @@ export type AssetSlot = {
   bboxHelper: Box3Helper | null
   mixer: AnimationMixer | null
   clipCount: number
+  clipNames: string[]
   meshStats: MeshStats
   load: (entry: AssetIndexEntry | null, url?: string) => Promise<void>
   reload: () => Promise<void>
   unload: () => void
   setPose: (pose: 'rest' | 'idle') => void
+  /** `null` restores bind pose. Unknown names fall back to idle, then first clip. */
+  setClip: (name: string | null) => void
   /** World AABB of the model only — never the slot group (helpers inflate it). */
   getBounds: () => Box3 | null
   getNativeBounds: () => Box3 | null
@@ -89,6 +93,34 @@ export function collectMeshStats(root: Object3D | null): MeshStats {
 }
 
 const emptyMeshStats = (): MeshStats => ({ triangles: 0, materials: [] })
+
+export function sortedClipNames(clips: ReadonlyArray<{ name: string }>): string[] {
+  return [...clips.map((c) => c.name)].sort((a, b) => a.localeCompare(b))
+}
+
+/** Clip to sample at t=0: explicit name, else first `/idle/i`, else first clip. */
+export function resolveAppliedClipName(
+  pose: 'rest' | 'idle',
+  clip: string | null,
+  names: readonly string[],
+): string | null {
+  if (pose === 'rest' && (clip == null || clip === '')) return null
+  if (clip && names.includes(clip)) return clip
+  return names.find((n) => /idle/i.test(n)) ?? names[0] ?? null
+}
+
+/** Drop a missing clip after a model swap: idle if present, else rest. */
+export function reconcilePoseClip(
+  pose: 'rest' | 'idle',
+  clip: string | null,
+  names: readonly string[],
+): { pose: 'rest' | 'idle', clip: string | null } {
+  if (pose === 'rest' && !clip) return { pose: 'rest', clip: null }
+  if (clip && names.includes(clip)) return { pose: 'idle', clip }
+  if (names.some((n) => /idle/i.test(n))) return { pose: 'idle', clip: null }
+  if (names.length > 0) return { pose: 'idle', clip: names[0]! }
+  return { pose: 'rest', clip: null }
+}
 
 export function createAssetSlot(role: 'reference' | 'target', scene: Group): AssetSlot {
   const group = new Group()
@@ -168,6 +200,7 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
     get bboxHelper() { return bboxHelper },
     get mixer() { return mixer },
     get clipCount() { return clips.length },
+    get clipNames() { return sortedClipNames(clips) },
     get meshStats() { return meshStat },
     async load(nextEntry, customUrl) {
       slot.unload()
@@ -176,12 +209,21 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       if (!url || !nextEntry) return
 
       const fetchUrl = reloadCounter > 0 ? `${url}?r=${reloadCounter}` : url
-      const loaded = nextEntry.skinned
+      const companionUrl = companionAnimationUrl(url)
+      const loaded = nextEntry.skinned || companionUrl
         ? await loadGltfAnimated(fetchUrl)
         : { scene: await loadGltf(fetchUrl), animations: [] as import('three').AnimationClip[] }
 
       model = loaded.scene
       clips = loaded.animations
+      if (companionUrl) {
+        try {
+          const extra = await loadGltfAnimated(companionUrl)
+          clips = [...loaded.animations, ...extra.animations]
+        } catch (err) {
+          console.warn(`[asset-browser] failed to load animations ${companionUrl}`, err)
+        }
+      }
       nativeBox = boxFromModel(model)
       applyPrepare(model, nextEntry.prepare)
       if (nextEntry.id === 'held:wooden_torch') model.rotation.x = Math.PI / 2
@@ -228,12 +270,17 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       meshStat = emptyMeshStats()
     },
     setPose(pose) {
+      slot.setClip(pose === 'rest' ? null : resolveAppliedClipName('idle', null, slot.clipNames))
+    },
+    setClip(name) {
       if (!model || !mixer || !clips.length) return
       mixer.stopAllAction()
-      if (pose === 'rest') return
-      const idle = clips.find((c) => /idle/i.test(c.name)) ?? clips[0]
-      if (!idle) return
-      const action = mixer.clipAction(idle)
+      if (name == null) return
+      const clip = clips.find((c) => c.name === name)
+        ?? clips.find((c) => /idle/i.test(c.name))
+        ?? clips[0]
+      if (!clip) return
+      const action = mixer.clipAction(clip)
       action.play()
       mixer.setTime(0)
       mixer.update(0)

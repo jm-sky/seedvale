@@ -1,18 +1,47 @@
 import { urlParamValue } from '../debug/debugMode'
 import { PLAYER_MODEL_URL } from './PlayerController'
 
-/** UBC Peasant/Ranger player meshes (items-player-033 / 034). */
-export const PLAYER_UBC_PEASANT_URL = '/models/characters/ubc/male_peasant.glb'
-export const PLAYER_UBC_RANGER_URL = '/models/characters/ubc/male_ranger.glb'
-/** In-place UAL1 subset: Idle_Loop, Walk_Loop, Sprint_Loop, Sword_Attack. */
-export const PLAYER_UBC_ANIMATION_URL = '/models/characters/ubc/ual1_player.glb'
-/** Alt BaseColor for Peasant (`T_Peasant_2_BaseColor`) — brown, not cream. */
-export const PLAYER_UBC_PEASANT_BROWN_URL = '/models/characters/ubc/male_peasant_brown.webp'
-/** Alt BaseColor for Ranger (`T_Ranger_3_BaseColor`) — brown, not green. */
-export const PLAYER_UBC_RANGER_BROWN_URL = '/models/characters/ubc/male_ranger_brown.webp'
+const UBC_DIR = '/models/characters/ubc'
 
-export type PlayerVisualId = 'adventurer' | 'peasant' | 'ranger'
+/** UBC player meshes (items-player-033 / 034 / 036). */
+export const PLAYER_UBC_PEASANT_URL = `${UBC_DIR}/male_peasant.glb`
+export const PLAYER_UBC_RANGER_URL = `${UBC_DIR}/male_ranger.glb`
+export const PLAYER_UBC_KNIGHT_URL = `${UBC_DIR}/male_knight.glb`
+export const PLAYER_UBC_KNIGHT_CLOTH_URL = `${UBC_DIR}/male_knight_cloth.glb`
+export const PLAYER_UBC_NOBLE_URL = `${UBC_DIR}/male_noble.glb`
+export const PLAYER_UBC_WIZARD_URL = `${UBC_DIR}/male_wizard.glb`
+/** In-place UAL1 subset (locomotion/combat + coverage clips from items-player-035). */
+export const PLAYER_UBC_ANIMATION_URL = `${UBC_DIR}/ual1_player.glb`
+
+/**
+ * Extra clip GLB for UBC outfit meshes (they ship with none). `ual1_player.glb`
+ * itself and non-UBC URLs return `null`. Query strings on the model URL are ignored.
+ */
+export function companionAnimationUrl(modelUrl: string): string | null {
+  const path = modelUrl.split('?')[0] ?? modelUrl
+  if (!path.endsWith('.glb')) return null
+  if (!path.startsWith(`${UBC_DIR}/`)) return null
+  if (path === PLAYER_UBC_ANIMATION_URL) return null
+  return PLAYER_UBC_ANIMATION_URL
+}
+
+export const PLAYER_UBC_PEASANT_BROWN_URL = `${UBC_DIR}/male_peasant_brown.webp`
+export const PLAYER_UBC_RANGER_BROWN_URL = `${UBC_DIR}/male_ranger_brown.webp`
+export const PLAYER_UBC_KNIGHT_BROWN_URL = `${UBC_DIR}/male_knight_brown.webp`
+export const PLAYER_UBC_KNIGHT_CLOTH_BROWN_URL = `${UBC_DIR}/male_knight_cloth_brown.webp`
+export const PLAYER_UBC_NOBLE_BROWN_URL = `${UBC_DIR}/male_noble_brown.webp`
+export const PLAYER_UBC_WIZARD_BROWN_URL = `${UBC_DIR}/male_wizard_brown.webp`
+
+export type PlayerVisualId =
+  | 'adventurer'
+  | 'peasant'
+  | 'ranger'
+  | 'knight'
+  | 'knight_cloth'
+  | 'noble'
+  | 'wizard'
 export type PlayerOutfitTint = 'default' | 'brown'
+export type PlayerEquipmentOutfitId = 'peasant' | 'ranger' | 'knight'
 
 export type PlayerVisualPreset = {
   animationUrl: string | null
@@ -20,11 +49,21 @@ export type PlayerVisualPreset = {
   modelUrl: string
 }
 
-/** Resolved player look: URL override, else body-slot equipment (plan 034). */
+/** Resolved player look: URL override, else body-slot equipment (plan 034 / 036). */
 export type PlayerAppearance = PlayerVisualPreset & {
   tint: PlayerOutfitTint
   tintUrl: string | null
 }
+
+const PLAYER_VISUAL_IDS: readonly PlayerVisualId[] = [
+  'adventurer',
+  'peasant',
+  'ranger',
+  'knight',
+  'knight_cloth',
+  'noble',
+  'wizard',
+]
 
 const PRESETS: Record<PlayerVisualId, PlayerVisualPreset> = {
   adventurer: {
@@ -42,6 +81,45 @@ const PRESETS: Record<PlayerVisualId, PlayerVisualPreset> = {
     modelUrl: PLAYER_UBC_RANGER_URL,
     animationUrl: PLAYER_UBC_ANIMATION_URL,
   },
+  knight: {
+    id: 'knight',
+    modelUrl: PLAYER_UBC_KNIGHT_URL,
+    animationUrl: PLAYER_UBC_ANIMATION_URL,
+  },
+  knight_cloth: {
+    id: 'knight_cloth',
+    modelUrl: PLAYER_UBC_KNIGHT_CLOTH_URL,
+    animationUrl: PLAYER_UBC_ANIMATION_URL,
+  },
+  noble: {
+    id: 'noble',
+    modelUrl: PLAYER_UBC_NOBLE_URL,
+    animationUrl: PLAYER_UBC_ANIMATION_URL,
+  },
+  wizard: {
+    id: 'wizard',
+    modelUrl: PLAYER_UBC_WIZARD_URL,
+    animationUrl: PLAYER_UBC_ANIMATION_URL,
+  },
+}
+
+const TINT_URL: Partial<Record<PlayerVisualId, string>> = {
+  peasant: PLAYER_UBC_PEASANT_BROWN_URL,
+  ranger: PLAYER_UBC_RANGER_BROWN_URL,
+  knight: PLAYER_UBC_KNIGHT_BROWN_URL,
+  knight_cloth: PLAYER_UBC_KNIGHT_CLOTH_BROWN_URL,
+  noble: PLAYER_UBC_NOBLE_BROWN_URL,
+  wizard: PLAYER_UBC_WIZARD_BROWN_URL,
+}
+
+const EQUIPMENT_MODEL_URLS: readonly string[] = [
+  PLAYER_UBC_PEASANT_URL,
+  PLAYER_UBC_RANGER_URL,
+  PLAYER_UBC_KNIGHT_URL,
+]
+
+function isPlayerVisualId(value: string): value is PlayerVisualId {
+  return (PLAYER_VISUAL_IDS as readonly string[]).includes(value)
 }
 
 function readSearchParams(search: string | null | undefined): URLSearchParams | null {
@@ -76,17 +154,19 @@ export function resolvePlayerUrlOverride(
   const raw = readNamedParam('player', search)
   if (raw === null) return null
   const id = raw.toLowerCase()
-  if (id === 'adventurer' || id === 'peasant' || id === 'ranger') return id
+  if (isPlayerVisualId(id)) return id
   console.warn(`[player] unknown ?player=${raw}; using equipment/default Peasant`)
   return null
 }
 
 /**
- * Body-slot armor → UBC outfit. Empty slot is Peasant; any worn body armor
- * (leather, chainmail, future kinds) is Ranger until a distinct mesh exists.
+ * Body-slot armor → UBC outfit. Empty slot is Peasant; leather is Ranger;
+ * chainmail (and any other body armor) is Knight.
  */
-export function resolveEquipmentOutfit(bodyKind: string | null | undefined): 'peasant' | 'ranger' {
-  return bodyKind == null ? 'peasant' : 'ranger'
+export function resolveEquipmentOutfit(bodyKind: string | null | undefined): PlayerEquipmentOutfitId {
+  if (bodyKind == null) return 'peasant'
+  if (bodyKind === 'leather_armor') return 'ranger'
+  return 'knight'
 }
 
 export function resolvePlayerTint(
@@ -107,13 +187,11 @@ export function resolvePlayerTint(
 
 function tintUrlFor(id: PlayerVisualId, tint: PlayerOutfitTint): string | null {
   if (tint !== 'brown') return null
-  if (id === 'peasant') return PLAYER_UBC_PEASANT_BROWN_URL
-  if (id === 'ranger') return PLAYER_UBC_RANGER_BROWN_URL
-  return null
+  return TINT_URL[id] ?? null
 }
 
 /**
- * URL override wins; otherwise body armor selects Peasant vs Ranger.
+ * URL override wins; otherwise body armor selects Peasant / Ranger / Knight.
  * Adventurer is only reachable through `?player=adventurer`.
  */
 export function resolvePlayerAppearance(opts?: {
@@ -142,9 +220,8 @@ export function resolvePlayerVisualPreset(
   return { id: appearance.id, modelUrl: appearance.modelUrl, animationUrl: appearance.animationUrl }
 }
 
-/** Other UBC mesh to warm in the GLB cache so the first armor swap does not hitch. */
+/** Other equipment-driven UBC meshes to warm so the first armor swap does not hitch. */
 export function ubcPreloadUrls(currentModelUrl: string): readonly string[] {
-  if (currentModelUrl === PLAYER_UBC_PEASANT_URL) return [PLAYER_UBC_RANGER_URL]
-  if (currentModelUrl === PLAYER_UBC_RANGER_URL) return [PLAYER_UBC_PEASANT_URL]
-  return []
+  if (!EQUIPMENT_MODEL_URLS.includes(currentModelUrl)) return []
+  return EQUIPMENT_MODEL_URLS.filter((url) => url !== currentModelUrl)
 }

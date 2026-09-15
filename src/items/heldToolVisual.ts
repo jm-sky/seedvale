@@ -7,6 +7,9 @@ import {
   handAttachSpaceFromSocket,
   heldToolHasGripAnchor,
   RIGHT_HAND_BONE_NAMES,
+  UBC_HAND_SPACE,
+  UBC_LEFT_HAND_BONE_NAMES,
+  UBC_TORCH_HAND_OFFSET,
 } from '../assets/assetAnchorData'
 import { loadGltf, preparePropFitMax } from '../assets/loadGltf'
 import { mountByAnchorPair } from '../assets/mountByAnchorPair'
@@ -27,6 +30,11 @@ export type HeldAttach = {
    * holds a different point — e.g. shovel handle end vs mid-shaft / blade.
    */
   gripLocalOffset?: readonly [number, number, number]
+  /**
+   * Extra translation in UBC hand-bone local meters, after {@link UBC_HAND_SPACE}.
+   * Ignored on Adventurer/`WristR`. Used by `wooden_torch` (`UBC_TORCH_HAND_OFFSET`).
+   */
+  ubcPosition?: readonly [number, number, number]
 }
 
 /**
@@ -73,6 +81,7 @@ export const HELD_ATTACH: Record<ToolKind, HeldAttach> = {
     rotation: [Math.PI / 2, -Math.PI / 2, 0],
     scale: 1.1,
     gripLocalOffset: [0, 0, -0.2],
+    ubcPosition: UBC_TORCH_HAND_OFFSET,
   },
   // Verified in-hand after user manual adjustment (2026-08-12)
   long_sword: {
@@ -274,6 +283,11 @@ export function findRightHandSocket(root: Object3D): Object3D | null {
   return findAnchorNode(root, RIGHT_HAND_BONE_NAMES).node
 }
 
+/** UBC `hand_l` only — Adventurer `WristL` is intentionally not matched. */
+export function findUbcLeftHandSocket(root: Object3D): Object3D | null {
+  return findAnchorNode(root, UBC_LEFT_HAND_BONE_NAMES).node
+}
+
 export async function preloadHeldToolModels(): Promise<void> {
   await Promise.all((Object.keys(HELD_GLB) as ToolKind[]).map(async (kind) => {
     if (heldTemplates.has(kind)) return
@@ -393,6 +407,12 @@ export function mountAttachOnSocket(
   mount.position.x += space.position[0] / sx
   mount.position.y += space.position[1] / sy
   mount.position.z += space.position[2] / sz
+  const ubcExtra = space === UBC_HAND_SPACE ? attach.ubcPosition : undefined
+  if (ubcExtra) {
+    mount.position.x += ubcExtra[0] / sx
+    mount.position.y += ubcExtra[1] / sy
+    mount.position.z += ubcExtra[2] / sz
+  }
   mount.quaternion.copy(_spaceQuat).multiply(_attachQuat)
   mount.scale.multiplyScalar(attach.scale)
   mount.scale.x /= sx

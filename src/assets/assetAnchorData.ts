@@ -38,7 +38,17 @@ export const UBC_HAND_FROM_WRIST_R: readonly [number, number, number] = [0, 0, -
 
 /** Extra UBC `hand_r` translation (bone-local meters). Tune in-game; leave
  *  zeros until the grip origin needs a nudge after the Euler is right. */
-export const UBC_HAND_OFFSET: readonly [number, number, number] = [0, 0, 0]
+export const UBC_HAND_OFFSET: readonly [number, number, number] = [-0.15, 0, 0]
+
+/**
+ * Extra UBC `hand_l` translation for `wooden_torch` only (bone-local meters),
+ * on top of {@link UBC_HAND_OFFSET}. Idle_Torch_Loop is left-handed; other
+ * tools stay on `hand_r`. Tune in-game.
+ */
+export const UBC_TORCH_HAND_OFFSET: readonly [number, number, number] = [0, 0, 0]
+
+/** UBC only — do not include Adventurer `WristL`. */
+export const UBC_LEFT_HAND_BONE_NAMES = ['hand_l'] as const
 
 export const UBC_HAND_SPACE: HandAttachSpace = {
   position: UBC_HAND_OFFSET,
@@ -153,6 +163,10 @@ export const ASSET_ANCHORS: Record<string, readonly AssetAnchorDef[]> = {
   'character:player': CHARACTER_ANCHORS,
   'character:ubc-peasant': CHARACTER_ANCHORS_UBC,
   'character:ubc-ranger': CHARACTER_ANCHORS_UBC,
+  'character:ubc-knight': CHARACTER_ANCHORS_UBC,
+  'character:ubc-knight-cloth': CHARACTER_ANCHORS_UBC,
+  'character:ubc-noble': CHARACTER_ANCHORS_UBC,
+  'character:ubc-wizard': CHARACTER_ANCHORS_UBC,
   'npc:Farmer': CHARACTER_ANCHORS,
   'npc:Worker': CHARACTER_ANCHORS,
   'npc:Casual_Hoodie': CHARACTER_ANCHORS,

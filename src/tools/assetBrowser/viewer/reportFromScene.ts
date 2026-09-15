@@ -18,7 +18,7 @@ import {
   type ReportAnchor,
   type ReportSlotBounds,
 } from '../../../assets/alignmentReport'
-import { boundsData } from './createAssetSlot'
+import { boundsData, resolveAppliedClipName } from './createAssetSlot'
 import { computeHeldPreviewState } from './mountHeldPreview'
 
 function formatPrepare(entry: AssetIndexEntry | null): string {
@@ -148,7 +148,11 @@ export function buildReportFromScene(input: {
     targetUrl: target.url,
     referenceAnchor: state.referenceAnchor,
     targetAnchor: state.targetAnchor,
-    pose: state.pose === 'idle' ? 'clip:Idle@t=0' : 'rest',
+    pose: (() => {
+      const names = reference.clipNames.length > 0 ? reference.clipNames : target.clipNames
+      const applied = resolveAppliedClipName(state.pose, state.clip, names)
+      return applied ? `clip:${applied}@t=0` : 'rest'
+    })(),
     rendering: {
       mode: state.renderMode,
       preset: state.lightingPreset,

@@ -1210,15 +1210,16 @@ export class AnimalAgent {
   /** Bounds how long a dead animal's `update()` keeps ticking its own
    *  `anim` (plan npc-009) so the one-shot death clip actually plays out —
    *  `null` when there is no clip in flight (no Death clip, clip already
-   *  finished and tipped, or hydrate/skip). Elapsed time is real-time
+   *  settled, or hydrate/skip). Elapsed time is real-time
    *  (`deathAnimElapsedSec`), not world-days — a death clip must not stretch
-   *  across corpse decay. Linger pose is always `tipCorpse()`, never the
-   *  clip's last frame. */
+   *  across corpse decay. Linger pose is the clip's last frame when one
+   *  exists; otherwise `tipCorpse()`. */
   private deathAnimDurationSec: number | null = null
   private deathAnimElapsedSec = 0
-  /** Fresh/rotting linger tip already applied — `tipCorpse()` is otherwise
-   *  not idempotent (Y offset stacks). Bones/harvest `settleRootForRemains`
-   *  clears `rotation.z` but must not re-tip. */
+  /** Fresh/rotting linger already applied — `tipCorpse()` / `settleDeathPose()`
+   *  are otherwise not idempotent (Y offset stacks on the tip path).
+   *  Bones/harvest `settleRootForRemains` clears `rotation.z` but must not
+   *  re-tip. Also set after a Death clip settles, without a root tip. */
   private corpseTipped = false
   /** Name+stat-bars label owner (plan fauna-017 step 4c, review E6) —
    *  replaces 13 hand-rolled DOM/percent-cache fields with the shared
@@ -2557,10 +2558,7 @@ export class AnimalAgent {
         void spawnHarvestedRemains(this.corpse, this)
         this.labelController.el.style.display = 'none'
       } else {
-        // Linger pose is the same root tip for every species — Death clip
-        // is live-FX only and is not restored on hydrate (clip + tip would
-        // double-rotate).
-        this.tipCorpse()
+        this.settleDeathPose()
       }
       this.labelController.settleAtZeroHp()
     }
@@ -2602,10 +2600,10 @@ export class AnimalAgent {
    *  `deathAtDays` vs live `elapsedDays`, so skip must not add seconds here
    *  (plan fauna-029) — the next `update()` reads `nowDays` after the clock
    *  has already jumped. Death-clip FX is not replayed after a skip: linger
-   *  pose is `tipCorpse()` immediately. */
+   *  is the Death end pose when the species has one, else `tipCorpse()`. */
   resolveTimeSkip(elapsedSeconds: number): void {
     if (this.health.dead) {
-      this.tipCorpse()
+      this.settleDeathPose()
       return
     }
     tickAnimalLife(this.life, elapsedSeconds, false, {}, this.def.metabolism)
@@ -2689,11 +2687,10 @@ export class AnimalAgent {
     }
   }
 
-  /** Death presentation: plays the GLB's own `Death` clip as a short FX
-   *  when the species has one (plan npc-009), then tips the corpse onto its
-   *  side. Species/packs with no clip (sheep, chicken, bear, capsule
-   *  fallback) tip immediately instead of freezing standing up. Linger pose
-   *  is always the root tip — never the clip's last frame. */
+  /** Death presentation: plays the GLB's own `Death` clip when the species
+   *  has one (plan npc-009) and lingers on its last frame — same as
+   *  `NpcAgent.die()`. Species/packs with no clip (sheep, chicken, bear,
+   *  capsule fallback) tip immediately instead of freezing standing up. */
   private collapse(): void {
     // D1 (plan fauna-017 step 6b): a predator that dies while holding a
     // carcass claim (its own `sourceTarget.corpse`) must release it here —
@@ -2707,7 +2704,7 @@ export class AnimalAgent {
     this.deathAnimElapsedSec = 0
     if (this.anim.has('death')) {
       this.deathAnimDurationSec = this.anim.playOnce('death')
-      if (this.deathAnimDurationSec <= 0) this.tipCorpse()
+      if (this.deathAnimDurationSec <= 0) this.settleDeathPose()
     } else {
       this.tipCorpse()
     }
@@ -2715,9 +2712,23 @@ export class AnimalAgent {
     void spawnDeathSplat(this.corpse, this)
   }
 
-  /** Shared fresh/rotting linger pose: stop any Death/idle clip (bind pose)
-   *  then roll the root onto its side. Idempotent — Y offset must not stack.
-   *  Bones/harvest still call `settleRootForRemains()` to upright. */
+  /** Linger pose for a species with a Death clip: last frame, no root tip.
+   *  Falls back to `tipCorpse()` when there is no clip. Idempotent. */
+  private settleDeathPose(): void {
+    if (this.corpseTipped) return
+    if (this.anim.has('death')) {
+      this.anim.settleAtEnd('death')
+      this.corpseTipped = true
+      this.deathAnimDurationSec = null
+      return
+    }
+    this.tipCorpse()
+  }
+
+  /** Shared fresh/rotting linger pose when there is no Death clip: stop
+   *  any idle clip (bind pose) then roll the root onto its side. Idempotent
+   *  — Y offset must not stack. Bones/harvest still call
+   *  `settleRootForRemains()` to upright. */
   private tipCorpse(): void {
     if (this.corpseTipped) return
     this.anim.stopAll()
@@ -2893,13 +2904,13 @@ export class AnimalAgent {
       // clip to actually play (plan npc-009) — `null` when there is no clip
       // in flight, so a permanently dead animal never costs a per-frame
       // mixer update. Real-time elapsed, not world-days (fauna-029). When
-      // the clip finishes, linger pose is the root tip, not the last frame.
+      // the clip finishes, linger on the clamped last frame (NPC-aligned).
       if (this.deathAnimDurationSec != null) {
         if (this.deathAnimElapsedSec < this.deathAnimDurationSec) {
           this.deathAnimElapsedSec += dt
           this.anim.update(dt)
         }
-        if (this.deathAnimElapsedSec >= this.deathAnimDurationSec) this.tipCorpse()
+        if (this.deathAnimElapsedSec >= this.deathAnimDurationSec) this.settleDeathPose()
       }
       this.lastFaunaDecisionInput = null
       return
@@ -5283,8 +5294,8 @@ export class AnimalAgent {
 
   /** Upright the corpse root and snap Y to terrain/cave floor / water bed
    *  before remains attach (plan fauna-029). Not live `snapY()` — that
-   *  floats a swimming body to the surface. Fresh/rotting tip pose is left
-   *  to `tipCorpse()` until bones/harvest call this. */
+   *  floats a swimming body to the surface. Fresh/rotting linger is left
+   *  to `settleDeathPose()` / `tipCorpse()` until bones/harvest call this. */
   settleRootForRemains(): void {
     this.mesh.rotation.z = 0
     const y = this.groundHeightAt(this.mesh.position.x, this.mesh.position.z)

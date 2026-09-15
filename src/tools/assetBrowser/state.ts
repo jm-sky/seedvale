@@ -35,6 +35,8 @@ export type BrowserState = {
   timeOfDay: number
   torchFuelRatio: number
   pose: PoseMode
+  /** Named clip @ t=0. `null` with pose idle → first `/idle/i` clip. */
+  clip: string | null
   resetTransformOnReload: boolean
   reportText: string
   statusMessage: string
@@ -64,6 +66,7 @@ export const browserState = reactive<BrowserState>({
   timeOfDay: 0.5,
   torchFuelRatio: 1,
   pose: 'rest',
+  clip: null,
   resetTransformOnReload: false,
   reportText: '',
   statusMessage: 'Ready',
@@ -103,6 +106,7 @@ export type SlotDiagnostics = {
     rotationDeg: [number, number, number]
     scale: [number, number, number]
   }
+  clipNames: string[]
 }
 
 export const slotDiagnostics = reactive<{
@@ -138,6 +142,7 @@ function emptySlotDiagnostics(): SlotDiagnostics {
       rotationDeg: [0, 0, 0],
       scale: [1, 1, 1],
     },
+    clipNames: [],
   }
 }
 

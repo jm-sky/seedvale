@@ -30,6 +30,7 @@ function baseState(overrides: Partial<BrowserState> = {}): BrowserState {
     timeOfDay: 0.5,
     torchFuelRatio: 1,
     pose: 'rest',
+    clip: null,
     resetTransformOnReload: false,
     reportText: '',
     statusMessage: 'Ready',
@@ -96,6 +97,15 @@ describe('parseAssetBrowserUrlParams', () => {
       lightingPreset: 'torch',
     })
   })
+
+  it('reads clip= as a named pose clip', () => {
+    expect(parseAssetBrowserUrlParams('?clip=Walk_Loop')).toEqual({
+      clip: 'Walk_Loop',
+    })
+    expect(parseAssetBrowserUrlParams('?clip=')).toEqual({
+      clip: null,
+    })
+  })
 })
 
 describe('applyAssetBrowserUrlParams', () => {
@@ -135,5 +145,12 @@ describe('applyAssetBrowserUrlParams', () => {
     })
     expect(state.targetId).toBe('held:axe')
     expect(state.freeUrl).toBe('/models/items/axe.glb')
+  })
+
+  it('applies clip onto state', () => {
+    const state = baseState()
+    applyAssetBrowserUrlParams(state, { clip: 'Walk_Loop' })
+    expect(state.clip).toBe('Walk_Loop')
+    expect(state.pose).toBe('rest')
   })
 })

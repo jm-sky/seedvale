@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compose UBC male Peasant/Ranger + UAL1 subset into public/models/characters/ubc/.
+# Compose UBC male Fantasy outfits + UAL1 subset into public/models/characters/ubc/.
 # Sources stay in _temp/. Re-run after changing the compose/extract scripts.
 set -euo pipefail
 
@@ -7,6 +7,14 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/seedvale-ubc-player.XXXXXX")"
 OUT="$ROOT/public/models/characters/ubc"
 UAL1="$ROOT/_temp/Models/packs/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb"
+OUTFITS=(
+  male_peasant
+  male_ranger
+  male_knight
+  male_knight_cloth
+  male_noble
+  male_wizard
+)
 
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
@@ -40,26 +48,30 @@ optimize() {
   echo "wrote $dest ($(du -h "$dest" | cut -f1))"
 }
 
-optimize "$WORK/outfits/male_peasant.gltf" "$OUT/male_peasant.glb"
-optimize "$WORK/outfits/male_ranger.gltf" "$OUT/male_ranger.glb"
+for name in "${OUTFITS[@]}"; do
+  optimize "$WORK/outfits/${name}.gltf" "$OUT/${name}.glb"
+done
 optimize "$WORK/anims/ual1_player.glb" "$OUT/ual1_player.glb" "-ac"
 
-# Brown albedo variants are swapped at runtime onto MI_Peasant / MI_Ranger (plan items-player-034).
+# Brown albedo variants are swapped at runtime onto MI_* outfit materials.
 # Install sharp in a temp dir — project node_modules may not have it, and
 # `npx --package=sharp node -e` does not resolve the package from the repo root.
 SHARP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/seedvale-sharp.XXXXXX")"
+SHARP_ARGS=()
+for name in "${OUTFITS[@]}"; do
+  SHARP_ARGS+=("$WORK/outfits/${name}_brown.png" "$OUT/${name}_brown.webp")
+done
 (
   cd "$SHARP_DIR"
   npm install --silent sharp@0.33.5
   node -e '
 const sharp = require("sharp");
 const fs = require("fs");
-const jobs = [
-  [process.argv[1], process.argv[3]],
-  [process.argv[2], process.argv[4]],
-];
+const args = process.argv.slice(1);
 (async () => {
-  for (const [src, dest] of jobs) {
+  for (let i = 0; i < args.length; i += 2) {
+    const src = args[i];
+    const dest = args[i + 1];
     if (!fs.existsSync(src)) {
       console.error("missing alt albedo", src);
       process.exit(1);
@@ -69,9 +81,6 @@ const jobs = [
   }
 })().catch((err) => { console.error(err); process.exit(1); });
 ' \
-    "$WORK/outfits/male_peasant_brown.png" \
-    "$WORK/outfits/male_ranger_brown.png" \
-    "$OUT/male_peasant_brown.webp" \
-    "$OUT/male_ranger_brown.webp"
+    "${SHARP_ARGS[@]}"
 )
 rm -rf "$SHARP_DIR"

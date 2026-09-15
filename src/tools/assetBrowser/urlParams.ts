@@ -29,6 +29,8 @@ export type AssetBrowserUrlParams = {
   /** View id or index: front|side|top|perspective | 0..3 */
   activeView?: number
   pose?: PoseMode
+  /** Named animation clip @ t=0. Empty / absent with pose=idle → idle clip. */
+  clip?: string | null
   lightingPreset?: LightingPreset
   showBbox?: boolean
   showGrid?: boolean
@@ -166,6 +168,9 @@ export function parseAssetBrowserUrlParams(
   const pose = parsePose(firstPresent(params, ['pose']))
   if (pose !== undefined) out.pose = pose
 
+  const clip = normalizeOptionalString(firstPresent(params, ['clip']))
+  if (clip !== undefined) out.clip = clip
+
   const lighting = parseLighting(firstPresent(params, ['lighting', 'light', 'preset']))
   if (lighting !== undefined) out.lightingPreset = lighting
 
@@ -219,6 +224,7 @@ export function applyAssetBrowserUrlParams(
   if (parsed.layout !== undefined) state.layout = parsed.layout
   if (parsed.activeView !== undefined) state.activeView = parsed.activeView
   if (parsed.pose !== undefined) state.pose = parsed.pose
+  if (parsed.clip !== undefined) state.clip = parsed.clip
   if (parsed.lightingPreset !== undefined) state.lightingPreset = parsed.lightingPreset
   if (parsed.showBbox !== undefined) state.showBbox = parsed.showBbox
   if (parsed.showGrid !== undefined) state.showGrid = parsed.showGrid
@@ -273,8 +279,14 @@ export function syncAssetBrowserUrlParams(state: BrowserState): void {
   if (state.activeView === 0) url.searchParams.delete('view')
   else url.searchParams.set('view', VIEW_NAMES[state.activeView] ?? String(state.activeView))
 
-  if (state.pose === 'rest') url.searchParams.delete('pose')
-  else url.searchParams.set('pose', state.pose)
+  if (state.clip) {
+    url.searchParams.set('clip', state.clip)
+    url.searchParams.delete('pose')
+  } else {
+    url.searchParams.delete('clip')
+    if (state.pose === 'rest') url.searchParams.delete('pose')
+    else url.searchParams.set('pose', state.pose)
+  }
 
   if (state.lightingPreset === 'alignment') url.searchParams.delete('lighting')
   else url.searchParams.set('lighting', state.lightingPreset)

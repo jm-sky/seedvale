@@ -9,7 +9,6 @@ import type {
 } from '../debug/playerMovementTrace'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
-import { ITEM_CATALOG } from '../items/itemCatalog'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { FootstepSurface } from '../terrain/footstepSurface'
 import { disposeObject3D, loadGltfAnimated, loadGltfAsset, prepareProp } from '../assets/loadGltf'
@@ -29,8 +28,10 @@ import {
 import {
   createHeldToolObject,
   findRightHandSocket,
+  findUbcLeftHandSocket,
   mountHeldToolOnSocket,
 } from '../items/heldToolVisual'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import {
   type EffectivePhysicalAttributesResult,
   resolvePlayerEffectivePhysicalAttributes,
@@ -88,7 +89,13 @@ const LOOK_AT_OFFSET_NEAR = 1.6
 const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
 /** Outfit clothes materials in composed UBC GLBs (gltfpack drops mesh names). */
-const UBC_OUTFIT_MATERIAL_NAMES = new Set(['MI_Peasant', 'MI_Ranger'])
+const UBC_OUTFIT_MATERIAL_NAMES = new Set([
+  'MI_Peasant',
+  'MI_Ranger',
+  'MI_Knight',
+  'MI_Noble',
+  'MI_Wizard',
+])
 /** Player starting SPEA (plan npc-019 §6) — slightly above the shared `0.5`
  *  typical-healthy-adult reference. Fixed constants, not persisted/rolled;
  *  see `attributes`'s own doc comment. */
@@ -412,6 +419,8 @@ export class PlayerController {
   private lastHpPercent = -1
   /** Quaternius `WristR` / UBC `hand_r` (or null on capsule fallback / missing bone). */
   private rightWrist: THREE.Object3D | null
+  /** UBC `hand_l` for wooden_torch (`Idle_Torch_Loop`); null on Adventurer / capsule. */
+  private leftWrist: THREE.Object3D | null
   private heldToolObject: THREE.Object3D | null = null
   private heldToolKind: ToolKind | null = null
   /** Bumps on each `setHeldTool` so stale async GLB loads are ignored. */
@@ -469,6 +478,7 @@ export class PlayerController {
     this.modelRoot = root
     if (!isCapsule) cloneOutfitMaterials(root)
     this.rightWrist = isCapsule ? null : findRightHandSocket(root)
+    this.leftWrist = isCapsule ? null : findUbcLeftHandSocket(root)
     if (!isCapsule && !this.rightWrist) {
       console.warn('[player] right-hand bone not found; held tools parent to model root (feet)')
     }
@@ -664,8 +674,10 @@ export class PlayerController {
    * the item; this is visual only). Capsule / missing-bone fallback parents
    * to the body root (looks wrong — prefer fixing the socket).
    */
-  /** Right-hand bone (or model root fallback) for held tools / lit lights. */
+  /** Hand bone (or model root fallback) for held tools / lit lights.
+   *  UBC `wooden_torch` uses `hand_l`; everything else uses the right wrist. */
   handSocket(): THREE.Object3D {
+    if (this.heldToolKind === 'wooden_torch' && this.leftWrist) return this.leftWrist
     return this.rightWrist ?? this.modelRoot
   }
 
@@ -708,8 +720,8 @@ export class PlayerController {
   }
 
   /**
-   * Live-swap UBC Peasant/Ranger (and optional brown albedo) without rebuilding
-   * the world. Adventurer override and the capsule fallback are locked for the
+   * Live-swap UBC outfits (and optional brown albedo) without rebuilding the
+   * world. Adventurer override and the capsule fallback are locked for the
    * session — changing those requires a reload with `?player=`.
    */
   async applyAppearance(opts: {
@@ -772,6 +784,7 @@ export class PlayerController {
     this.modelRoot.rotation.copy(poseRot)
     this.modelRoot.position.copy(posePos)
     this.rightWrist = findRightHandSocket(next)
+    this.leftWrist = findUbcLeftHandSocket(next)
     if (!this.rightWrist) {
       console.warn('[player] right-hand bone not found; held tools parent to model root (feet)')
     }

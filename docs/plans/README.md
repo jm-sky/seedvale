@@ -216,7 +216,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `031`
-- items-player: `036`
+- items-player: `037`
 - npc: `039`
 - persistence: `005`
 - quests-progression: `042`

@@ -1,6 +1,6 @@
 import { Box3, Box3Helper, BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { boundsData, boxFromModel, collectMeshStats } from './createAssetSlot'
+import { boundsData, boxFromModel, collectMeshStats, reconcilePoseClip, resolveAppliedClipName } from './createAssetSlot'
 
 describe('boxFromModel', () => {
   it('measures the mesh, ignoring a sibling Box3Helper on the parent group', () => {
@@ -43,5 +43,34 @@ describe('boundsData', () => {
     expect(boundsData(box).size[0]).toBeCloseTo(2)
     expect(boundsData(box).size[1]).toBeCloseTo(3.12)
     expect(boundsData(box).minY).toBe(0)
+  })
+})
+
+describe('resolveAppliedClipName', () => {
+  const names = ['Walk_Loop', 'Idle_Loop', 'Sword_Attack']
+
+  it('returns null for rest without an explicit clip', () => {
+    expect(resolveAppliedClipName('rest', null, names)).toBeNull()
+  })
+
+  it('prefers a named clip, then idle, then the first clip', () => {
+    expect(resolveAppliedClipName('idle', 'Sword_Attack', names)).toBe('Sword_Attack')
+    expect(resolveAppliedClipName('idle', null, names)).toBe('Idle_Loop')
+    expect(resolveAppliedClipName('idle', 'missing', ['Walk_Loop'])).toBe('Walk_Loop')
+  })
+})
+
+describe('reconcilePoseClip', () => {
+  it('keeps rest, drops a missing clip to idle, and rest when there are no clips', () => {
+    expect(reconcilePoseClip('rest', null, ['Idle_Loop'])).toEqual({ pose: 'rest', clip: null })
+    expect(reconcilePoseClip('idle', 'Walk_Loop', ['Idle_Loop', 'Walk_Loop'])).toEqual({
+      pose: 'idle',
+      clip: 'Walk_Loop',
+    })
+    expect(reconcilePoseClip('idle', 'Walk_Loop', ['Idle_Loop'])).toEqual({
+      pose: 'idle',
+      clip: null,
+    })
+    expect(reconcilePoseClip('idle', 'Walk_Loop', [])).toEqual({ pose: 'rest', clip: null })
   })
 })

@@ -123,7 +123,7 @@ Before adding a new abstraction, check whether one of these already owns the res
 
 ## Developer tooling
 
-- **Asset alignment browser** — `/asset-browser.html` (`src/tools/assetBrowser/`), included in production `vite build`. Wired registries plus parked files from `/asset-browser-models.json`.
+- **Asset alignment browser** — `/asset-browser.html` (`src/tools/assetBrowser/`), included in production `vite build`. Wired registries plus parked files from `/asset-browser-models.json`. UBC outfit meshes load clips from `ual1_player.glb` the same way the player does.
 - **Construction Catalog** — `src/assets/constructionCatalog.ts`. Layers construction semantics over the asset index for the parked MegaKit GLB set.
 - **House Builder** (`src/settlement/houseBuilder.ts`) assembles MegaKit cottages/farmsteads from that catalog; wired into `buildSettlementProps()`. `?perf=1` verification is still open (known bug from a 2026-08-18 playtest — see `docs/plans/README.md`'s "Verification needed").
 - **House Browser** (plan tools-003) — `/house-browser.html` (`src/house-browser/`), a standalone Vue + Tailwind + Three.js app for iterating on house definitions outside the main game loop, built through the real `ConstructionCatalog` → `HouseBuilder` pipeline — no parallel house/collider system.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compose UBC male Peasant/Ranger runtime glTFs (outfit + sliced head + hair).
+"""Compose UBC male Fantasy runtime glTFs (outfit + sliced head + optional hair).
 
 Does not touch `_temp/` sources. Writes a work directory of glTF + textures
 for a later gltf-transform / gltfpack pass.
@@ -350,12 +350,33 @@ def write_doc(doc: GltfDoc, out_gltf: str) -> None:
         f.write('\n')
 
 
+# Helmeted outfits already cover the skull; Hair_SimpleParted would poke through.
+OUTFITS: tuple[tuple[str, str, bool], ...] = (
+    ('Male_Peasant', 'male_peasant', True),
+    ('Male_Ranger', 'male_ranger', True),
+    ('Male_Knight', 'male_knight', False),
+    ('Male_Knight_Cloth', 'male_knight_cloth', False),
+    ('Male_Noble', 'male_noble', True),
+    ('Male_Wizard', 'male_wizard', True),
+)
+
+ALT_ALBEDOS: tuple[tuple[str, str], ...] = (
+    ('Textures/Peasant/T_Peasant_2_BaseColor.png', 'male_peasant_brown.png'),
+    ('Textures/Ranger/T_Ranger_3_BaseColor.png', 'male_ranger_brown.png'),
+    ('Textures/Knight/T_Knight_2_BaseColor.png', 'male_knight_brown.png'),
+    ('Textures/Knight/T_Knight_2_BaseColor.png', 'male_knight_cloth_brown.png'),
+    ('Textures/Noble/T_Noble_2_BaseColor.png', 'male_noble_brown.png'),
+    ('Textures/Wizard/T_Wizard_2_BaseColor.png', 'male_wizard_brown.png'),
+)
+
+
 def compose_outfit(
     outfit_gltf: str,
     base_gltf: str,
     hair_gltf: str,
     out_gltf: str,
     label: str,
+    attach_hair: bool,
 ) -> None:
     out_dir = os.path.dirname(out_gltf)
     os.makedirs(out_dir, exist_ok=True)
@@ -368,7 +389,6 @@ def compose_outfit(
             image['uri'] = os.path.basename(uri)
 
     base = GltfDoc(base_gltf)
-    hair = GltfDoc(hair_gltf)
     mat_map: dict[int, int] = {}
     tex_map: dict[int, int] = {}
 
@@ -377,18 +397,16 @@ def compose_outfit(
     add_skinned_mesh(dest, base, 0, 'Eyebrows', out_dir, mat_map, tex_map)
     add_skinned_mesh(dest, base, 1, 'Eyes', out_dir, mat_map, tex_map)
     add_skinned_mesh(dest, base, 2, 'HeadSkin', out_dir, mat_map, tex_map, slice_head=True)
-    add_skinned_mesh(dest, hair, 0, 'Hair_SimpleParted', out_dir, {}, {})
+    if attach_hair:
+        hair = GltfDoc(hair_gltf)
+        add_skinned_mesh(dest, hair, 0, 'Hair_SimpleParted', out_dir, {}, {})
     write_doc(dest, out_gltf)
     print(f'  wrote {out_gltf}')
 
 
 def copy_alt_albedos(outfits_root: str, out_dir: str) -> None:
     """Copy brown BaseColor variants next to composed glTFs (runtime loads them separately)."""
-    pairs = (
-        ('Textures/Peasant/T_Peasant_2_BaseColor.png', 'male_peasant_brown.png'),
-        ('Textures/Ranger/T_Ranger_3_BaseColor.png', 'male_ranger_brown.png'),
-    )
-    for rel, dest_name in pairs:
+    for rel, dest_name in ALT_ALBEDOS:
         src = os.path.join(outfits_root, rel)
         if not os.path.isfile(src):
             raise SystemExit(f'missing alt albedo {src}')
@@ -405,19 +423,28 @@ def main() -> None:
 
     people = os.path.join(args.root, '_temp/Models/people')
     ubc = os.path.join(people, 'Universal Base Characters[Standard]')
-    outfits = os.path.join(people, 'Modular Character Outfits - Fantasy[Standard]')
+    outfits = os.path.join(people, 'Modular Character Outfits - Fantasy[Source]')
     base = os.path.join(ubc, 'Base Characters/Godot - UE/Superhero_Male_FullBody.gltf')
     hair = os.path.join(ubc, 'Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_SimpleParted.gltf')
-    peasant = os.path.join(outfits, 'Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf')
-    ranger = os.path.join(outfits, 'Exports/glTF (Godot-Unreal)/Outfits/Male_Ranger.gltf')
+    outfit_dir = os.path.join(outfits, 'Exports/glTF (Godot-Unreal)/Outfits')
 
-    for path in (base, hair, peasant, ranger):
+    for path in (base, hair):
         if not os.path.isfile(path):
             raise SystemExit(f'missing source {path}')
 
     os.makedirs(args.out_dir, exist_ok=True)
-    compose_outfit(peasant, base, hair, os.path.join(args.out_dir, 'male_peasant.gltf'), 'male_peasant')
-    compose_outfit(ranger, base, hair, os.path.join(args.out_dir, 'male_ranger.gltf'), 'male_ranger')
+    for src_stem, dest_stem, attach_hair in OUTFITS:
+        src = os.path.join(outfit_dir, f'{src_stem}.gltf')
+        if not os.path.isfile(src):
+            raise SystemExit(f'missing source {src}')
+        compose_outfit(
+            src,
+            base,
+            hair,
+            os.path.join(args.out_dir, f'{dest_stem}.gltf'),
+            dest_stem,
+            attach_hair,
+        )
     copy_alt_albedos(outfits, args.out_dir)
 
 

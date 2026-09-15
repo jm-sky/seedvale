@@ -10,7 +10,14 @@ import { createPostProcessing } from '../../../render/createPostProcessing'
 import { createRenderer } from '../../../render/createRenderer'
 import { gripOverrideForTarget } from '../gripEdit'
 import { browserState } from '../state'
-import { type AssetSlot, boundsData, createAssetSlot, setWireframe } from './createAssetSlot'
+import {
+  type AssetSlot,
+  boundsData,
+  createAssetSlot,
+  reconcilePoseClip,
+  resolveAppliedClipName,
+  setWireframe,
+} from './createAssetSlot'
 import { createConnectionLine, createMultiView } from './createMultiView'
 import { applySceneBackground, createViewerScene } from './createViewerScene'
 import {
@@ -65,8 +72,22 @@ export function createViewer(container: HTMLElement): AssetViewer {
 
   const usesAuthoredScale = (slot: AssetSlot) => slot.entry?.prepare.mode === 'none'
 
+  const poseClipNames = () => (
+    reference.clipNames.length > 0 ? reference.clipNames : target.clipNames
+  )
+
+  const reconcileClipSelection = () => {
+    const next = reconcilePoseClip(browserState.pose, browserState.clip, poseClipNames())
+    browserState.pose = next.pose
+    browserState.clip = next.clip
+  }
+
+  const applySlotPose = (slot: AssetSlot) => {
+    slot.setClip(resolveAppliedClipName(browserState.pose, browserState.clip, slot.clipNames))
+  }
+
   const refreshHeldPreview = () => {
-    reference.setPose(browserState.pose === 'idle' ? 'idle' : 'rest')
+    applySlotPose(reference)
     const override = gripOverrideForTarget(target.entry?.id ?? null)
     const state = applyHeldPreview(reference, target, override)
     if (state.mode === 'in-hand') {
@@ -142,8 +163,8 @@ export function createViewer(container: HTMLElement): AssetViewer {
     layout = browserState.layout
     activeView = browserState.activeView
     applyEnvironment()
-    reference.setPose(browserState.pose === 'idle' ? 'idle' : 'rest')
-    target.setPose(browserState.pose === 'idle' ? 'idle' : 'rest')
+    applySlotPose(reference)
+    applySlotPose(target)
     reference.refreshAnchors()
     target.refreshAnchors()
     refreshConnection()
@@ -248,6 +269,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
     async loadReference(entry, url) {
       clearHeldPreviewMount(target)
       await reference.load(entry, url)
+      reconcileClipSelection()
       refreshHeldPreview()
       tryRestoreOrFrame()
       markDirty()
@@ -255,6 +277,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
     async loadTarget(entry, url) {
       clearHeldPreviewMount(target)
       await target.load(entry, url)
+      reconcileClipSelection()
       refreshHeldPreview()
       tryRestoreOrFrame()
       markDirty()
@@ -265,6 +288,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
       clearHeldPreviewMount(target)
       await reference.reload()
       validateSelections(prevRef, prevTgt)
+      reconcileClipSelection()
       refreshHeldPreview()
       if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
         target.group.position.set(defaultTargetOffset(), 0, 0)
@@ -277,6 +301,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
       clearHeldPreviewMount(target)
       await target.reload()
       validateSelections(prevRef, prevTgt)
+      reconcileClipSelection()
       refreshHeldPreview()
       if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
         target.group.position.set(defaultTargetOffset(), 0, 0)

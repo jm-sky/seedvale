@@ -9,8 +9,12 @@ import { HELD_GLB } from '../items/heldToolVisual'
 import { ITEM_GLB_SPECS } from '../items/itemModels'
 import { PLAYER_HEIGHT, PLAYER_MODEL_URL } from '../player/PlayerController'
 import {
+  PLAYER_UBC_KNIGHT_CLOTH_URL,
+  PLAYER_UBC_KNIGHT_URL,
+  PLAYER_UBC_NOBLE_URL,
   PLAYER_UBC_PEASANT_URL,
   PLAYER_UBC_RANGER_URL,
+  PLAYER_UBC_WIZARD_URL,
 } from '../player/playerVisualPreset'
 import { BRANCH_HELD_MAX, BRANCH_URL } from '../player/torchLightPresets'
 import { HOUSE_CATALOG } from '../settlement/houseCatalog'
@@ -359,6 +363,42 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     prepare: { mode: 'height', value: PLAYER_HEIGHT },
     skinned: true,
     anchors: anchorsForAsset('character:ubc-ranger'),
+  })
+  out.push({
+    id: 'character:ubc-knight',
+    url: PLAYER_UBC_KNIGHT_URL,
+    label: 'Player (UBC Knight)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-knight'),
+  })
+  out.push({
+    id: 'character:ubc-knight-cloth',
+    url: PLAYER_UBC_KNIGHT_CLOTH_URL,
+    label: 'Player (UBC Knight Cloth)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-knight-cloth'),
+  })
+  out.push({
+    id: 'character:ubc-noble',
+    url: PLAYER_UBC_NOBLE_URL,
+    label: 'Player (UBC Noble)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-noble'),
+  })
+  out.push({
+    id: 'character:ubc-wizard',
+    url: PLAYER_UBC_WIZARD_URL,
+    label: 'Player (UBC Wizard)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-wizard'),
   })
 
   for (const [gender, urls] of Object.entries(NPC_MODEL_URLS)) {

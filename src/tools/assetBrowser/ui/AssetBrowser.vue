@@ -19,7 +19,7 @@ import {
 import { ASSET_BROWSER_MODEL_MANIFEST } from '../modelManifest'
 import { browserState, slotDiagnostics } from '../state'
 import { syncAssetBrowserUrlParams } from '../urlParams'
-import { boundsData } from '../viewer/createAssetSlot'
+import { boundsData, resolveAppliedClipName } from '../viewer/createAssetSlot'
 import { captureSnapshot, copyText } from '../viewer/createSnapshot'
 
 const props = defineProps<{ viewerRef: Ref<AssetViewer | null> }>()
@@ -65,6 +65,29 @@ const grouped = computed(() => {
   return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
 })
 
+const poseClipOptions = computed(() => {
+  const ref = slotDiagnostics.reference.clipNames
+  const tgt = slotDiagnostics.target.clipNames
+  return ref.length > 0 ? ref : tgt
+})
+
+const poseSelect = computed({
+  get() {
+    if (browserState.pose === 'rest' && !browserState.clip) return 'rest'
+    return resolveAppliedClipName('idle', browserState.clip, poseClipOptions.value) ?? 'rest'
+  },
+  set(value: string) {
+    if (value === 'rest') {
+      browserState.pose = 'rest'
+      browserState.clip = null
+      return
+    }
+    browserState.pose = 'idle'
+    const idle = poseClipOptions.value.find((n) => /idle/i.test(n))
+    browserState.clip = idle != null && value === idle ? null : value
+  },
+})
+
 function syncSlot(which: 'reference' | 'target') {
   if (!viewer.value) return
   const slot = which === 'reference' ? viewer.value.reference : viewer.value.target
@@ -89,6 +112,7 @@ function syncSlot(which: 'reference' | 'target') {
     ],
     scale: [g.scale.x, g.scale.y, g.scale.z],
   }
+  diag.clipNames = slot.clipNames
 }
 
 async function loadReference() {
@@ -165,6 +189,7 @@ watch(
     browserState.layout,
     browserState.activeView,
     browserState.pose,
+    browserState.clip,
     browserState.lightingPreset,
     browserState.showBbox,
     browserState.showGrid,
@@ -544,14 +569,18 @@ function lampMountSnippet() {
         > Wireframe</label>
         <label class="mt-1 block text-xs text-slate-400">Pose</label>
         <select
-          v-model="browserState.pose"
+          v-model="poseSelect"
           class="w-full rounded bg-slate-800 px-2 py-1"
         >
           <option value="rest">
             Rest / bind
           </option>
-          <option value="idle">
-            Idle@t=0
+          <option
+            v-for="name in poseClipOptions"
+            :key="name"
+            :value="name"
+          >
+            {{ name }}@t=0
           </option>
         </select>
         <label class="mt-1 block text-xs text-slate-400">Focus</label>

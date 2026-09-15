@@ -1364,7 +1364,7 @@ describe('AnimalAgent', () => {
     })
   })
 
-  describe('corpse linger pose (root tip; Death clip is FX only)', () => {
+  describe('corpse linger pose (Death last frame; tip only without a clip)', () => {
     const deadTick = (
       agent: AnimalAgent,
       dt = 1,
@@ -1386,7 +1386,7 @@ describe('AnimalAgent', () => {
       expect(Math.abs(sheep.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
     })
 
-    it('plays Death as FX then tips rather than leaving the mesh standing', () => {
+    it('keeps the Death last frame after the clip ends, without a root tip', () => {
       const stag = new AnimalAgent(makeDeps({
         def: ANIMAL_DEFS.stag,
         animalId: 'stag-corpse',
@@ -1396,10 +1396,10 @@ describe('AnimalAgent', () => {
       expect(stag.isDead()).toBe(true)
       expect(stag.mesh.rotation.z).toBe(0)
       deadTick(stag, 0.5)
-      expect(Math.abs(stag.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+      expect(stag.mesh.rotation.z).toBe(0)
     })
 
-    it('tips immediately on time-skip and does not stack the Y offset', () => {
+    it('settles Death immediately on time-skip without tipping', () => {
       const stag = new AnimalAgent(makeDeps({
         def: ANIMAL_DEFS.stag,
         animalId: 'stag-skip',
@@ -1409,17 +1409,26 @@ describe('AnimalAgent', () => {
       stag.takeDamage(9999)
       expect(stag.mesh.rotation.z).toBe(0)
       stag.resolveTimeSkip(8 * 3600)
-      expect(Math.abs(stag.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
-      const y1 = stag.mesh.position.y
-      expect(y1).toBeGreaterThan(y0)
+      expect(stag.mesh.rotation.z).toBe(0)
+      expect(stag.mesh.position.y).toBe(y0)
       stag.resolveTimeSkip(8 * 3600)
-      expect(stag.mesh.position.y).toBe(y1)
+      expect(stag.mesh.position.y).toBe(y0)
       deadTick(stag, 1)
-      expect(stag.mesh.position.y).toBe(y1)
-      expect(Math.abs(stag.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+      expect(stag.mesh.rotation.z).toBe(0)
     })
 
-    it('hydrates an unharvested corpse with the root tip even when a Death clip exists', () => {
+    it('does not stack the tip Y offset on a later time-skip', () => {
+      const sheep = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.sheep, animalId: 'sheep-skip' }))
+      const y0 = sheep.mesh.position.y
+      sheep.takeDamage(9999)
+      const y1 = sheep.mesh.position.y
+      expect(y1).toBeGreaterThan(y0)
+      sheep.resolveTimeSkip(8 * 3600)
+      expect(sheep.mesh.position.y).toBe(y1)
+      expect(Math.abs(sheep.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+    })
+
+    it('hydrates an unharvested corpse to the Death end pose when a clip exists', () => {
       const live = new AnimalAgent(makeDeps({
         def: ANIMAL_DEFS.stag,
         animalId: 'stag-save',
@@ -1434,7 +1443,7 @@ describe('AnimalAgent', () => {
         animations: [new THREE.AnimationClip('Death', 1, [])],
       }))
       restored.hydrate(saved)
-      expect(Math.abs(restored.mesh.rotation.z)).toBeCloseTo(Math.PI / 2)
+      expect(restored.mesh.rotation.z).toBe(0)
     })
 
     it('settleRootForRemains uprights a tipped corpse without re-tipping on later ticks', () => {

@@ -112,7 +112,8 @@ Credits and runtime model documentation:
 | Directory                                               | Source / contents                                       |
 | ------------------------------------------------------- | ------------------------------------------------------- |
 | `people/Free Medieval 3D People Low Poly Pack/`         | Low-poly NPC models                                     |
-| `people/Modular Character Outfits - Fantasy[Standard]/` | Quaternius — peasant/ranger, male/female, modular parts |
+| `people/Modular Character Outfits - Fantasy[Standard]/` | Quaternius — peasant/ranger, male/female, modular parts (free subset) |
+| `people/Modular Character Outfits - Fantasy[Source]/` | Quaternius — Peasant/Ranger/Knight/Noble/Wizard + Knight_Cloth, male/female, modular parts, Blender masters |
 | `people/Universal Base Characters[Standard]/`           | Quaternius — base characters and hairstyles             |
 
 Character animations are kept separately in the animation packs.
