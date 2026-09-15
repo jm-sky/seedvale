@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `relationships` `progression`  
 **Tags:** `lost-treasure-chronicles` `archaeologist` `chronicle` `grave` `ruins` `investigation` `multi-solution`  
 **Roadmap:** `quests-lost-something-chronicles.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
