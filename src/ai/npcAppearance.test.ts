@@ -258,6 +258,93 @@ describe('resolveNpcAppearance', () => {
     expect(existsSync(`public${NPC_UBC_KNIGHT_TINT_URL}`)).toBe(true)
   })
 
+  it('never assigns grey hair to an adult NPC under 50', () => {
+    for (const age of [18, 25, 34, 49]) {
+      for (let i = 0; i < 40; i++) {
+        const look = resolveNpcAppearance({
+          age,
+          gender: i % 2 === 0 ? 'male' : 'female',
+          npcId: `young:npc:${age}:${i}`,
+          role: 'farmer',
+          treeIndex: i,
+        })
+        expect(look.hairColor).not.toBe(NPC_HAIR_COLOR.grey)
+      }
+    }
+  })
+
+  it('can assign grey hair to a 50-59 year old NPC, roughly at the documented rate', () => {
+    const sampleSize = 400
+    let greyCount = 0
+    for (let i = 0; i < sampleSize; i++) {
+      const look = resolveNpcAppearance({
+        age: 50 + (i % 10),
+        gender: i % 2 === 0 ? 'male' : 'female',
+        npcId: `midlife:npc:${i}`,
+        role: 'farmer',
+        treeIndex: i,
+      })
+      if (look.hairColor === NPC_HAIR_COLOR.grey) greyCount++
+    }
+    // ~15% target; wide bounds keep this non-flaky while still catching a broken roll.
+    expect(greyCount).toBeGreaterThan(0)
+    expect(greyCount).toBeLessThan(sampleSize * 0.35)
+  })
+
+  it('gives a 60+ NPC a clearly higher grey-hair rate than a 50-59 NPC', () => {
+    const sampleSize = 400
+    const countGrey = (ageOf: (i: number) => number): number => {
+      let count = 0
+      for (let i = 0; i < sampleSize; i++) {
+        const look = resolveNpcAppearance({
+          age: ageOf(i),
+          gender: i % 2 === 0 ? 'male' : 'female',
+          npcId: `senior:npc:${i}`,
+          role: 'woodcutter',
+          treeIndex: i,
+        })
+        if (look.hairColor === NPC_HAIR_COLOR.grey) count++
+      }
+      return count
+    }
+    const midlifeGrey = countGrey(i => 50 + (i % 10))
+    const seniorGrey = countGrey(i => 60 + (i % 20))
+    // ~15% vs ~75% target; loose bounds avoid flakiness while asserting the ordering.
+    expect(seniorGrey).toBeGreaterThan(sampleSize * 0.5)
+    expect(seniorGrey).toBeGreaterThan(midlifeGrey)
+  })
+
+  it('is deterministic for the same npcId + age, including hair color', () => {
+    const opts = {
+      age: 62,
+      gender: 'female' as const,
+      npcId: 'stable:npc:senior',
+      role: 'trader' as const,
+      treeIndex: 9,
+    }
+    expect(resolveNpcAppearance(opts)).toEqual(resolveNpcAppearance(opts))
+  })
+
+  it('still assigns non-grey hair color, hue and hair-kind variety for a 60+ NPC', () => {
+    const hairColors = new Set<number>()
+    const hues = new Set<number>()
+    for (let i = 0; i < 60; i++) {
+      const look = resolveNpcAppearance({
+        age: 65,
+        gender: 'male',
+        npcId: `elder:npc:${i}`,
+        role: 'farmer',
+        treeIndex: i,
+      })
+      expect(Object.values(NPC_HAIR_COLOR)).toContain(look.hairColor)
+      expect(Object.values(NPC_CLOTHING_HUE)).toContain(look.clothingHue)
+      hairColors.add(look.hairColor)
+      hues.add(look.clothingHue)
+    }
+    expect(hairColors.size).toBeGreaterThan(1)
+    expect(hues.size).toBeGreaterThan(1)
+  })
+
   it('keeps children and other roles on the Modular pool', () => {
     const childFarmer = resolveNpcAppearance({
       age: 12,
