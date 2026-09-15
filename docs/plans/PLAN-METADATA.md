@@ -365,6 +365,8 @@ Roadmap is not another priority system.
 - `player-construction`
 - `quests-abandoned-gold-mine-colony`
 - `quests-and-reputation`
+- `quests-hunters-brotherhood`
+- `quests-iron-trail`
 - `textiles-and-herbal-medicine`
 - `workforce-for-hire`
 
