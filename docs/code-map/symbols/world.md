@@ -350,11 +350,11 @@ Generated from exported TypeScript symbols.
 
 - `APERTURE_LIFT` — const — line 84
 - `BETA` — const — line 47
-- `buildCaveHeightfieldRepresentation` — function — line 668
+- `buildCaveHeightfieldRepresentation` — function — line 739
   - domain: world-terrain
-- `buildChamberLobes` — function — line 392
+- `buildChamberLobes` — function — line 416
   - domain: world-terrain
-- `buildEntranceInfluence` — function — line 351
+- `buildEntranceInfluence` — function — line 357
   - domain: world-terrain
 - `CaveHeightfieldBounds` — type — line 126
 - `CaveHeightfieldBuildResult` — type — line 189
@@ -363,36 +363,36 @@ Generated from exported TypeScript symbols.
   - domain: world-terrain
 - `closure` — function — line 215
   - domain: world-terrain
-- `crossSectionAt` — function — line 476
+- `crossSectionAt` — function — line 569
   - domain: world-terrain
 - `DEFAULT_HEIGHTFIELD_CONFIG` — const — line 112
 - `ENTRANCE_INWARD` — const — line 88
 - `ENTRANCE_OUTWARD` — const — line 86
-- `estimateHeightfieldGrid` — function — line 641
+- `estimateHeightfieldGrid` — function — line 712
   - domain: world-terrain
 - `FAR_GAP` — const — line 80
-- `heightfieldGapGradient` — function — line 909
-- `heightfieldNodeGap` — function — line 822
-- `heightfieldNodeIndex` — function — line 809
-- `heightfieldNodeOpenSky` — function — line 827
-- `heightfieldNodePosition` — function — line 813
+- `heightfieldGapGradient` — function — line 980
+- `heightfieldNodeGap` — function — line 893
+- `heightfieldNodeIndex` — function — line 880
+- `heightfieldNodeOpenSky` — function — line 898
+- `heightfieldNodePosition` — function — line 884
 - `HeightfieldSample` — type — line 175
 - `HeightfieldStation` — type — line 166
 - `KAPPA` — const — line 56
-- `mouthOpeningAt` — function — line 898
+- `mouthOpeningAt` — function — line 969
   - domain: world-terrain
 - `NC` — const — line 52
 - `NF` — const — line 49
 - `NoiseOctave2D` — type — line 101
 - `OUTSIDE_REACH` — const — line 76
 - `R_MIN` — const — line 72
-- `resampleSegmentStations` — function — line 272
+- `resampleSegmentStations` — function — line 278
   - domain: world-terrain
 - `RIM_ASPECT` — const — line 61
 - `RIM_BAND_MAX` — const — line 65
 - `RIM_BAND_MIN` — const — line 62
 - `rimBand` — function — line 222
-- `sampleHeightfieldAt` — function — line 862
+- `sampleHeightfieldAt` — function — line 933
   - domain: world-terrain
 - `SMOOTH_K` — const — line 58
 - `SurfaceSampler` — type — line 196
