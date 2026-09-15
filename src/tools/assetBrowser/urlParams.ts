@@ -276,8 +276,13 @@ export function syncAssetBrowserUrlParams(state: BrowserState): void {
   if (state.layout === 'quad') url.searchParams.delete('layout')
   else url.searchParams.set('layout', state.layout)
 
-  if (state.activeView === 0) url.searchParams.delete('view')
-  else url.searchParams.set('view', VIEW_NAMES[state.activeView] ?? String(state.activeView))
+  if (state.layout === 'single') {
+    url.searchParams.set('view', VIEW_NAMES[state.activeView] ?? String(state.activeView))
+  } else if (state.activeView === 0) {
+    url.searchParams.delete('view')
+  } else {
+    url.searchParams.set('view', VIEW_NAMES[state.activeView] ?? String(state.activeView))
+  }
 
   if (state.clip) {
     url.searchParams.set('clip', state.clip)

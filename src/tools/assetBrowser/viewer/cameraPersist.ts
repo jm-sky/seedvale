@@ -9,10 +9,11 @@ export type CameraSnapshot = {
   position: [number, number, number]
   target: [number, number, number]
   zoom: number
+  up?: [number, number, number]
 }
 
 export type CameraPersistPayload = {
-  version: 1
+  version: 1 | 2
   views: CameraSnapshot[]
 }
 
@@ -24,20 +25,37 @@ function isFiniteVec3(v: unknown): v is [number, number, number] {
   )
 }
 
+function parseSnapshot(view: unknown): CameraSnapshot | null {
+  if (!view || typeof view !== 'object') return null
+  const v = view as CameraSnapshot
+  if (!v.id || !isFiniteVec3(v.position) || !isFiniteVec3(v.target)) return null
+  if (typeof v.zoom !== 'number' || !Number.isFinite(v.zoom)) return null
+  if (v.up !== undefined && !isFiniteVec3(v.up)) return null
+  return {
+    id: v.id,
+    position: v.position,
+    target: v.target,
+    zoom: v.zoom,
+    ...(v.up ? { up: v.up } : {}),
+  }
+}
+
 export function loadCameraPersist(): CameraPersistPayload | null {
   if (typeof localStorage === 'undefined') return null
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as CameraPersistPayload
-    if (parsed?.version !== 1 || !Array.isArray(parsed.views) || parsed.views.length === 0) {
+    if ((parsed?.version !== 1 && parsed?.version !== 2) || !Array.isArray(parsed.views) || parsed.views.length === 0) {
       return null
     }
+    const views: CameraSnapshot[] = []
     for (const view of parsed.views) {
-      if (!view?.id || !isFiniteVec3(view.position) || !isFiniteVec3(view.target)) return null
-      if (typeof view.zoom !== 'number' || !Number.isFinite(view.zoom)) return null
+      const snap = parseSnapshot(view)
+      if (!snap) return null
+      views.push(snap)
     }
-    return parsed
+    return { version: parsed.version, views }
   } catch {
     return null
   }
@@ -46,12 +64,13 @@ export function loadCameraPersist(): CameraPersistPayload | null {
 export function saveCameraPersist(views: readonly ViewportDef[]): void {
   if (typeof localStorage === 'undefined') return
   const payload: CameraPersistPayload = {
-    version: 1,
+    version: 2,
     views: views.map((view) => ({
       id: view.id,
       position: [view.camera.position.x, view.camera.position.y, view.camera.position.z],
       target: [view.controls.target.x, view.controls.target.y, view.controls.target.z],
       zoom: view.camera.zoom,
+      up: [view.camera.up.x, view.camera.up.y, view.camera.up.z],
     })),
   }
   try {
@@ -79,6 +98,7 @@ export function applyCameraSnapshot(
   cam.position.set(snap.position[0], snap.position[1], snap.position[2])
   controls.target.set(snap.target[0], snap.target[1], snap.target[2])
   cam.zoom = snap.zoom
+  if (snap.up) cam.up.set(snap.up[0], snap.up[1], snap.up[2])
   cam.updateProjectionMatrix()
   const damping = controls.enableDamping
   controls.enableDamping = false

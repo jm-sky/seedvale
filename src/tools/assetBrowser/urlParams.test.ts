@@ -4,6 +4,7 @@ import {
   applyAssetBrowserUrlParams,
   hasAssetBrowserUrlParams,
   parseAssetBrowserUrlParams,
+  syncAssetBrowserUrlParams,
 } from './urlParams'
 
 function baseState(overrides: Partial<BrowserState> = {}): BrowserState {
@@ -16,6 +17,8 @@ function baseState(overrides: Partial<BrowserState> = {}): BrowserState {
     targetAnchor: null,
     layout: 'quad',
     activeView: 0,
+    splitX: 0.5,
+    splitY: 0.5,
     renderMode: 'diagnostic',
     lightingPreset: 'alignment',
     background: 'dark',
@@ -152,5 +155,34 @@ describe('applyAssetBrowserUrlParams', () => {
     applyAssetBrowserUrlParams(state, { clip: 'Walk_Loop' })
     expect(state.clip).toBe('Walk_Loop')
     expect(state.pose).toBe('rest')
+  })
+})
+
+describe('syncAssetBrowserUrlParams', () => {
+  it('keeps view= when layout is single, including front', () => {
+    const history: string[] = []
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {
+        location: { href: 'http://localhost/asset-browser.html', pathname: '/asset-browser.html', search: '', hash: '' },
+        history: {
+          replaceState(_s: unknown, _t: string, next: string) {
+            history.push(next)
+            const url = new URL(next, 'http://localhost')
+            window.location.pathname = url.pathname
+            window.location.search = url.search
+            window.location.hash = url.hash
+            window.location.href = url.href
+          },
+        },
+      },
+    })
+    syncAssetBrowserUrlParams(baseState({
+      layout: 'single',
+      activeView: 0,
+      referenceId: 'character:player',
+    }))
+    expect(history.at(-1)).toContain('layout=single')
+    expect(history.at(-1)).toContain('view=front')
   })
 })

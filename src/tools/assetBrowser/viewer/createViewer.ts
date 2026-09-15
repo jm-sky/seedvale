@@ -70,8 +70,6 @@ export function createViewer(container: HTMLElement): AssetViewer {
     computeHeldPreviewState(reference, target).mode === 'off' ? 0 : HELD_SIDE_OFFSET
   )
 
-  const usesAuthoredScale = (slot: AssetSlot) => slot.entry?.prepare.mode === 'none'
-
   const poseClipNames = () => (
     reference.clipNames.length > 0 ? reference.clipNames : target.clipNames
   )
@@ -107,7 +105,20 @@ export function createViewer(container: HTMLElement): AssetViewer {
     }
   }
 
-  const multi = createMultiView(container, renderer, 1)
+  const multi = createMultiView(container, renderer, 1, {
+    onSplitChange(splitX, splitY) {
+      browserState.splitX = splitX
+      browserState.splitY = splitY
+    },
+    onToggleMaximize(viewIndex) {
+      if (browserState.layout === 'single') {
+        browserState.layout = 'quad'
+        return
+      }
+      browserState.activeView = viewIndex
+      browserState.layout = 'single'
+    },
+  })
   let layout: 'quad' | 'single' = 'quad'
   let activeView = 0
   let dirty = true
@@ -181,7 +192,12 @@ export function createViewer(container: HTMLElement): AssetViewer {
     const w = container.clientWidth
     const h = container.clientHeight
     renderer.setSize(w, h, false)
-    multi.resize(w, h)
+    multi.resize(w, h, {
+      layout,
+      activeView,
+      splitX: browserState.splitX,
+      splitY: browserState.splitY,
+    })
 
     const views = layout === 'single'
       ? [multi.views[activeView]!]
@@ -259,12 +275,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
   }
 
   const tryRestoreOrFrame = () => {
-    // Grip camera persist is global; parked/URL kit must not inherit the axe view.
-    if (
-      !usesAuthoredScale(reference)
-      && !usesAuthoredScale(target)
-      && multi.restorePersistedCameras()
-    ) {
+    if (multi.restorePersistedCameras()) {
       markDirty()
       return
     }

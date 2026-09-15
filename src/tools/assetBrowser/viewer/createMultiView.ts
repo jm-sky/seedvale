@@ -10,7 +10,9 @@ import {
   Vector3,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import type { ViewLayout } from '../state'
 import { createCameraPersistScheduler, restoreCamerasFromPersist, saveCameraPersist } from './cameraPersist'
+import { clampSplit, computeViewRects } from './viewportLayout'
 import type { WebGLRenderer } from 'three'
 
 export type ViewId = 'front' | 'side' | 'top' | 'perspective'
@@ -27,6 +29,13 @@ export type ViewportDef = {
   h: number
 }
 
+export type MultiViewResizeOpts = {
+  layout: ViewLayout
+  activeView: number
+  splitX: number
+  splitY: number
+}
+
 const _target = new Vector3()
 const _scratchPos = new Vector3()
 const _defaultTarget = new Vector3(0, 0.8, 0)
@@ -35,6 +44,8 @@ const _upTop = new Vector3(0, 0, -1)
 const _frontPos = new Vector3(0, 2, -5)
 const _sidePos = new Vector3(5, 2, 0)
 const _topPos = new Vector3(0, 5, 0)
+
+const SPLITTER_HIT = 8
 
 function setOrthoViewCamera(
   camera: OrthographicCamera,
@@ -82,9 +93,13 @@ export function createMultiView(
   container: HTMLElement,
   _renderer: WebGLRenderer,
   aspect: number,
+  hooks: {
+    onSplitChange: (splitX: number, splitY: number) => void
+    onToggleMaximize: (viewIndex: number) => void
+  },
 ): {
   views: ViewportDef[]
-  resize: (w: number, h: number) => void
+  resize: (w: number, h: number, opts: MultiViewResizeOpts) => void
   frameTargets: (bounds: { center: Vector3, radius: number } | null) => void
   /** Restore cameras from localStorage. Returns false when nothing saved. */
   restorePersistedCameras: () => boolean
@@ -99,8 +114,18 @@ export function createMultiView(
   ]
 
   const persist = createCameraPersistScheduler(() => views)
+  const splitters = makeSplitters(container)
 
-  for (const view of views) {
+  let lastOpts: MultiViewResizeOpts = {
+    layout: 'quad',
+    activeView: 0,
+    splitX: 0.5,
+    splitY: 0.5,
+  }
+  let drag: 'x' | 'y' | 'xy' | null = null
+
+  for (let i = 0; i < views.length; i++) {
+    const view = views[i]!
     if (view.camera instanceof OrthographicCamera) {
       view.controls.enableRotate = false
     }
@@ -108,17 +133,64 @@ export function createMultiView(
       container.dispatchEvent(new CustomEvent('viewer-dirty'))
       persist.schedule()
     })
+    view.overlay.addEventListener('dblclick', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      hooks.onToggleMaximize(i)
+    })
   }
 
-  const resize = (w: number, h: number) => {
-    const halfW = Math.floor(w / 2)
-    const halfH = Math.floor(h / 2)
-    views[0]!.x = 0; views[0]!.y = halfH; views[0]!.w = halfW; views[0]!.h = halfH
-    views[1]!.x = halfW; views[1]!.y = halfH; views[1]!.w = halfW; views[1]!.h = halfH
-    views[2]!.x = 0; views[2]!.y = 0; views[2]!.w = halfW; views[2]!.h = halfH
-    views[3]!.x = halfW; views[3]!.y = 0; views[3]!.w = halfW; views[3]!.h = halfH
+  const applySplitFromPointer = (event: PointerEvent, mode: 'x' | 'y' | 'xy') => {
+    const rect = container.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) return
+    let splitX = lastOpts.splitX
+    let splitY = lastOpts.splitY
+    if (mode === 'x' || mode === 'xy') {
+      splitX = clampSplit((event.clientX - rect.left) / rect.width)
+    }
+    if (mode === 'y' || mode === 'xy') {
+      splitY = clampSplit((rect.bottom - event.clientY) / rect.height)
+    }
+    lastOpts = { ...lastOpts, splitX, splitY }
+    hooks.onSplitChange(splitX, splitY)
+  }
 
-    for (const view of views) {
+  const onPointerMove = (event: PointerEvent) => {
+    if (!drag) return
+    applySplitFromPointer(event, drag)
+  }
+  const onPointerUp = () => {
+    drag = null
+    window.removeEventListener('pointermove', onPointerMove)
+    window.removeEventListener('pointerup', onPointerUp)
+  }
+  const beginDrag = (mode: 'x' | 'y' | 'xy') => (event: PointerEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    drag = mode
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    applySplitFromPointer(event, mode)
+  }
+
+  splitters.vertical.addEventListener('pointerdown', beginDrag('x'))
+  splitters.horizontal.addEventListener('pointerdown', beginDrag('y'))
+  splitters.center.addEventListener('pointerdown', beginDrag('xy'))
+
+  const resize = (w: number, h: number, opts: MultiViewResizeOpts) => {
+    lastOpts = opts
+    const rects = computeViewRects(w, h, opts.layout, opts.activeView, opts.splitX, opts.splitY)
+    for (let i = 0; i < views.length; i++) {
+      const view = views[i]!
+      const rect = rects[i]!
+      view.x = rect.x
+      view.y = rect.y
+      view.w = rect.w
+      view.h = rect.h
+      const visible = rect.w > 0 && rect.h > 0
+      view.overlay.style.display = visible ? 'block' : 'none'
+      view.overlay.style.pointerEvents = visible ? 'auto' : 'none'
+      if (!visible) continue
       view.overlay.style.left = `${view.x}px`
       view.overlay.style.top = `${(h - view.y - view.h)}px`
       view.overlay.style.width = `${view.w}px`
@@ -136,6 +208,28 @@ export function createMultiView(
         cam.updateProjectionMatrix()
       }
       view.controls.update()
+    }
+
+    const showSplit = opts.layout === 'quad'
+    splitters.vertical.style.display = showSplit ? 'block' : 'none'
+    splitters.horizontal.style.display = showSplit ? 'block' : 'none'
+    splitters.center.style.display = showSplit ? 'block' : 'none'
+    if (showSplit) {
+      const leftW = Math.floor(w * clampSplit(opts.splitX))
+      const bottomH = Math.floor(h * clampSplit(opts.splitY))
+      const cssTop = h - bottomH
+      splitters.vertical.style.left = `${leftW - SPLITTER_HIT / 2}px`
+      splitters.vertical.style.top = '0'
+      splitters.vertical.style.width = `${SPLITTER_HIT}px`
+      splitters.vertical.style.height = `${h}px`
+      splitters.horizontal.style.left = '0'
+      splitters.horizontal.style.top = `${cssTop - SPLITTER_HIT / 2}px`
+      splitters.horizontal.style.width = `${w}px`
+      splitters.horizontal.style.height = `${SPLITTER_HIT}px`
+      splitters.center.style.left = `${leftW - SPLITTER_HIT}px`
+      splitters.center.style.top = `${cssTop - SPLITTER_HIT}px`
+      splitters.center.style.width = `${SPLITTER_HIT * 2}px`
+      splitters.center.style.height = `${SPLITTER_HIT * 2}px`
     }
   }
 
@@ -187,6 +281,11 @@ export function createMultiView(
     },
     dispose() {
       persist.dispose()
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      splitters.vertical.remove()
+      splitters.horizontal.remove()
+      splitters.center.remove()
       for (const view of views) {
         view.controls.dispose()
         view.overlay.remove()
@@ -195,12 +294,37 @@ export function createMultiView(
   }
 }
 
+function makeSplitters(container: HTMLElement): {
+  vertical: HTMLDivElement
+  horizontal: HTMLDivElement
+  center: HTMLDivElement
+} {
+  const vertical = document.createElement('div')
+  const horizontal = document.createElement('div')
+  const center = document.createElement('div')
+  for (const el of [vertical, horizontal, center]) {
+    el.style.position = 'absolute'
+    el.style.zIndex = '4'
+    el.style.background = 'rgba(148, 163, 184, 0.35)'
+    el.style.touchAction = 'none'
+    container.appendChild(el)
+  }
+  vertical.style.cursor = 'col-resize'
+  horizontal.style.cursor = 'row-resize'
+  center.style.cursor = 'move'
+  vertical.title = 'Resize views'
+  horizontal.title = 'Resize views'
+  center.title = 'Resize views'
+  return { vertical, horizontal, center }
+}
+
 function makeOverlay(container: HTMLElement, label: string): HTMLDivElement {
   const overlay = document.createElement('div')
   overlay.style.position = 'absolute'
   overlay.style.touchAction = 'none'
   overlay.style.zIndex = '2'
-  overlay.title = label
+  overlay.title = `${label} — double-click to maximize`
+  overlay.dataset.viewLabel = label
   container.appendChild(overlay)
   return overlay
 }

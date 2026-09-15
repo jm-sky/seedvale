@@ -21,6 +21,7 @@ import { browserState, slotDiagnostics } from '../state'
 import { syncAssetBrowserUrlParams } from '../urlParams'
 import { boundsData, resolveAppliedClipName } from '../viewer/createAssetSlot'
 import { captureSnapshot, copyText } from '../viewer/createSnapshot'
+import { createLayoutPersistScheduler } from '../viewer/layoutPersist'
 
 const props = defineProps<{ viewerRef: Ref<AssetViewer | null> }>()
 const viewer = computed(() => props.viewerRef.value)
@@ -200,6 +201,18 @@ watch(
   () => syncAssetBrowserUrlParams(browserState),
 )
 
+const layoutPersist = createLayoutPersistScheduler(() => browserState)
+watch(
+  () => [
+    browserState.layout,
+    browserState.activeView,
+    browserState.splitX,
+    browserState.splitY,
+  ] as const,
+  () => layoutPersist.schedule(),
+)
+
+let viewportResizeObserver: ResizeObserver | null = null
 onMounted(() => {
   void (async () => {
     await fetchModelFiles()
@@ -211,10 +224,14 @@ onMounted(() => {
       onModelHmr('asset-browser:model-changed', data)
     })
   }
-  const ro = new ResizeObserver(() => viewer.value?.resize())
+  viewportResizeObserver = new ResizeObserver(() => viewer.value?.resize())
   const el = document.getElementById('asset-browser-viewport')
-  if (el) ro.observe(el)
-  onUnmounted(() => ro.disconnect())
+  if (el) viewportResizeObserver.observe(el)
+})
+onUnmounted(() => {
+  viewportResizeObserver?.disconnect()
+  layoutPersist.flush()
+  layoutPersist.dispose()
 })
 
 async function copyReport() {
@@ -607,6 +624,24 @@ function lampMountSnippet() {
             Single
           </option>
         </select>
+        <select
+          v-if="browserState.layout === 'single'"
+          v-model.number="browserState.activeView"
+          class="mt-1 w-full rounded bg-slate-800 px-2 py-1"
+        >
+          <option :value="0">
+            Front
+          </option>
+          <option :value="1">
+            Side
+          </option>
+          <option :value="2">
+            Top
+          </option>
+          <option :value="3">
+            Perspective
+          </option>
+        </select>
         <button
           class="mt-1 w-full rounded bg-slate-700 px-2 py-1 hover:bg-slate-600"
           @click="viewer?.frame()"
@@ -614,7 +649,8 @@ function lampMountSnippet() {
           Reframe camera
         </button>
         <p class="mt-1 text-[10px] leading-snug text-slate-500">
-          Orbit/zoom is kept across grip edits and reloads (localStorage). Reframe overwrites the saved view.
+          Drag the crosshair to resize panes. Double-click a view to fill the canvas.
+          Orbit/zoom and layout are kept in localStorage across refresh. Reframe overwrites the saved camera.
         </p>
         <label
           v-if="browserState.lightingPreset === 'torch'"

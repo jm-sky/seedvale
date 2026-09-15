@@ -1,6 +1,8 @@
 import { reactive } from 'vue'
 import type { AssetIndexEntry } from '../../assets/assetIndex'
 import { applyAssetBrowserUrlParams } from './urlParams'
+import { applyLayoutPersist } from './viewer/layoutPersist'
+import { DEFAULT_SPLIT } from './viewer/viewportLayout'
 
 export type ViewLayout = 'quad' | 'single'
 export type RenderMode = 'diagnostic' | 'game-like'
@@ -19,6 +21,10 @@ export type BrowserState = {
   targetAnchor: string | null
   layout: ViewLayout
   activeView: number
+  /** Left-column width fraction in quad layout (WebGL X). */
+  splitX: number
+  /** Bottom-row height fraction in quad layout (WebGL Y). */
+  splitY: number
   renderMode: RenderMode
   lightingPreset: LightingPreset
   background: BackgroundPreset
@@ -52,6 +58,8 @@ export const browserState = reactive<BrowserState>({
   targetAnchor: null,
   layout: 'quad',
   activeView: 0,
+  splitX: DEFAULT_SPLIT,
+  splitY: DEFAULT_SPLIT,
   renderMode: 'diagnostic',
   lightingPreset: 'alignment',
   background: 'dark',
@@ -73,6 +81,7 @@ export const browserState = reactive<BrowserState>({
   invalidSelection: null,
 })
 
+applyLayoutPersist(browserState)
 if (applyAssetBrowserUrlParams(browserState)) {
   const parts = [
     browserState.referenceId ? `ref=${browserState.referenceId}` : null,
