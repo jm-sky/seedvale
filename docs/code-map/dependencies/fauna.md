@@ -107,6 +107,7 @@ Generated from TypeScript imports.
 - `fauna/animalMeat.ts`
 - `fauna/animalTrophyLoot.ts`
 - `fauna/animalVariants.test.ts`
+- `fauna/closedPredatorPressure.ts`
 - `fauna/createFauna.ts`
 - `fauna/dungeonResidents.ts`
 - `fauna/faunaCombat.test.ts`
@@ -196,6 +197,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `fauna/AnimalSpawner.test.ts`
+- `fauna/closedPredatorPressure.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/wolfDenScenario.test.ts`
@@ -328,6 +330,7 @@ Generated from TypeScript imports.
 - `fauna/animalRoamingTrips.test.ts`
 - `fauna/animalStray.ts`
 - `fauna/animalVariants.test.ts`
+- `fauna/closedPredatorPressure.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/dungeonResidents.test.ts`
 - `fauna/dungeonResidents.ts`
@@ -654,6 +657,26 @@ Generated from TypeScript imports.
 
 - `fauna/animalCorpse.ts`
 
+## `fauna/closedPredatorPressure.test.ts`
+
+**Imports**
+
+- `fauna/closedPredatorPressure.ts`
+
+## `fauna/closedPredatorPressure.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/AnimalSpawner.ts`
+- `fauna/animalDefs.ts`
+- `settlement/settlementCharacter.ts`
+
+**Imported by**
+
+- `fauna/closedPredatorPressure.test.ts`
+- `fauna/createFauna.ts`
+
 ## `fauna/corpseDecay.test.ts`
 
 **Imports**
@@ -688,6 +711,7 @@ Generated from TypeScript imports.
 - `fauna/animalCaveHabitat.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/animalVariants.ts`
+- `fauna/closedPredatorPressure.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/persistentOccupants.ts`
 - `fauna/playerAwareness.ts`

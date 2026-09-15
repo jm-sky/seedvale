@@ -1611,6 +1611,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/roadRouteWorldgenCache.ts`
+- `settlement/settlementCharacter.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementStructures.ts`

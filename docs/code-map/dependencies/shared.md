@@ -76,6 +76,8 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
+- `settlement/settlementCharacter.test.ts`
+- `settlement/settlementCharacter.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNameUniqueness.test.ts`
 - `settlement/settlementPlanCache.ts`

@@ -590,10 +590,12 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/dialogue.ts`
+- `ai/settlementCaution.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
 - `quests/quests.ts`
+- `settlement/villagePlan.ts`
 
 **Imported by**
 
@@ -1103,8 +1105,10 @@ Generated from TypeScript imports.
 
 - `ai/characters.ts`
 - `ai/dialogue.ts`
+- `ai/settlementCaution.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.ts`
+- `settlement/villagePlan.ts`
 
 **Imported by**
 
@@ -1137,6 +1141,25 @@ Generated from TypeScript imports.
 - `ai/npcDecision.ts`
 - `ai/npcWorkContract.ts`
 - `ai/schedule.test.ts`
+- `ai/voluntaryExpeditionJoin.ts`
+
+## `ai/settlementCaution.test.ts`
+
+**Imports**
+
+- `ai/settlementCaution.ts`
+
+## `ai/settlementCaution.ts`
+
+**Imports**
+
+- `settlement/villagePlan.ts`
+
+**Imported by**
+
+- `ai/npcAssistance.ts`
+- `ai/reactionChance.ts`
+- `ai/settlementCaution.test.ts`
 - `ai/voluntaryExpeditionJoin.ts`
 
 ## `ai/socialBehaviour.test.ts`
@@ -1173,7 +1196,9 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `ai/dialogue.ts`
 - `ai/schedule.ts`
+- `ai/settlementCaution.ts`
 - `quests/quests.ts`
+- `settlement/villagePlan.ts`
 - `world/expedition.ts`
 
 **Imported by**

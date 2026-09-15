@@ -424,6 +424,24 @@ Generated from exported TypeScript symbols.
 - `createBloodSplat` — function — line 33
 - `disposeBloodSplat` — function — line 42
 
+## `fauna/closedPredatorPressure.ts`
+
+- `canBumpClosedPressureSpawner` — function — line 215
+- `CLOSED_PREDATOR_PRESSURE_RADIUS` — const — line 13
+  - domain: fauna
+- `ClosedPredatorPressurePlan` — type — line 69
+- `ClosedPressureCapacityBump` — type — line 53
+- `ClosedPressureExtraSpawner` — type — line 58
+- `closedPressurePlacementSeed` — function — line 118
+  - domain: fauna
+- `closedPressureSpawnerId` — function — line 99
+  - domain: fauna
+- `ClosedSettlementSite` — type — line 36
+  - domain: fauna
+- `ConfiguredPredatorSpawner` — type — line 44
+- `resolveClosedPredatorPressure` — function — line 138
+  - domain: fauna
+
 ## `fauna/corpseDecayFx.ts`
 
 - `animateCorpseRotFx` — function — line 61
@@ -432,25 +450,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `clearsRiverChannel` — function — line 280
-- `createFauna` — function — line 577
-- `Fauna` — type — line 97
-- `FAUNA_URLS` — const — line 487
-- `faunaGltfUrls` — function — line 502
-- `findHomeCaveSpawner` — function — line 446
-- `isDeerEdgeHabitat` — function — line 334
-- `isNearRoadCorridor` — function — line 315
-- `isValidWildFaunaSpawnSite` — function — line 290
-- `measureSlope` — function — line 373
-- `resolveWildFaunaSpawnPosition` — function — line 301
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 463
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 471
-- `SPAWNER_LABELS` — const — line 455
-- `SPAWNER_RING_OFFSET` — const — line 252
-- `SPAWNER_SPECS` — const — line 409
-- `spawnerDestroyBusyLabel` — function — line 482
-- `spawnerDestroyPromptLabel` — function — line 478
-- `spawnerId` — function — line 439
+- `clearsRiverChannel` — function — line 286
+- `createFauna` — function — line 583
+- `Fauna` — type — line 103
+- `FAUNA_URLS` — const — line 493
+- `faunaGltfUrls` — function — line 508
+- `findHomeCaveSpawner` — function — line 452
+- `isDeerEdgeHabitat` — function — line 340
+- `isNearRoadCorridor` — function — line 321
+- `isValidWildFaunaSpawnSite` — function — line 296
+- `measureSlope` — function — line 379
+- `resolveWildFaunaSpawnPosition` — function — line 307
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 469
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 477
+- `SPAWNER_LABELS` — const — line 461
+- `SPAWNER_RING_OFFSET` — const — line 258
+- `SPAWNER_SPECS` — const — line 415
+- `spawnerDestroyBusyLabel` — function — line 488
+- `spawnerDestroyPromptLabel` — function — line 484
+- `spawnerId` — function — line 445
 
 ## `fauna/dogGuard.ts`
 

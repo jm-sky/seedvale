@@ -355,6 +355,8 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementAgriculture.test.ts`
 - `settlement/settlementAgriculture.ts`
+- `settlement/settlementCharacter.test.ts`
+- `settlement/settlementCharacter.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
@@ -1622,6 +1624,30 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/settlementAgriculture.test.ts`
 
+## `settlement/settlementCharacter.test.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/settlementCharacter.ts`
+- `shared/SettlementName.ts`
+
+## `settlement/settlementCharacter.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/villagePlan.ts`
+- `shared/SettlementName.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `fauna/closedPredatorPressure.ts`
+- `settlement/settlementCharacter.test.ts`
+- `settlement/settlementGenerator.ts`
+
 ## `settlement/settlementGenerator.test.ts`
 
 **Imports**
@@ -1644,6 +1670,7 @@ Generated from TypeScript imports.
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/minorLocations.ts`
 - `settlement/professionStaffing.ts`
+- `settlement/settlementCharacter.ts`
 - `settlement/settlementTerrain.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
@@ -1759,6 +1786,7 @@ Generated from TypeScript imports.
 
 - `settlement/findSettlementSite.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/villagePlan.ts`
 - `world/collision.ts`
 
 ## `settlement/settlementPalisade.ts`
@@ -2174,6 +2202,10 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcAssistance.ts`
+- `ai/reactionChance.ts`
+- `ai/settlementCaution.ts`
+- `ai/voluntaryExpeditionJoin.ts`
 - `debug/npcDebugApi.ts`
 - `economy/initial.ts`
 - `settlement/places.ts`
@@ -2184,8 +2216,10 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/ratNestPlacement.test.ts`
 - `settlement/ratNestPlacement.ts`
+- `settlement/settlementCharacter.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementPalisade.test.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/structureCondition.ts`
 - `settlement/structureRepairCandidates.ts`

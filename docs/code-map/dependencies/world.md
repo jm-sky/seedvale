@@ -3319,6 +3319,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/rats.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/settlementCharacter.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
 - `settlement/villageClearing.ts`

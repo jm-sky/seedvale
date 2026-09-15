@@ -179,7 +179,7 @@ Generated from exported TypeScript symbols.
 - `HUNT_RESUPPLY_ARROW_TARGET` — const — line 825
 - `NPC_HEIGHT` — const — line 441
 - `NPC_SHADOW_DISTANCE` — const — line 455
-- `NpcAgent` — class — line 1058
+- `NpcAgent` — class — line 1061
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
@@ -236,14 +236,14 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcAssistance.ts`
 
-- `AssistanceOutcome` — type — line 15
-- `AssistanceRequestKind` — type — line 14
-- `AssistanceResult` — type — line 16
-- `AssistanceSocialInput` — type — line 32
-- `computeAssistanceWillingness` — function — line 68
-- `findCarriedConsumableKind` — function — line 25
-- `resolveNpcAssistance` — function — line 92
-- `violatesOwnNeedsGuard` — function — line 81
+- `AssistanceOutcome` — type — line 17
+- `AssistanceRequestKind` — type — line 16
+- `AssistanceResult` — type — line 18
+- `AssistanceSocialInput` — type — line 34
+- `computeAssistanceWillingness` — function — line 72
+- `findCarriedConsumableKind` — function — line 27
+- `resolveNpcAssistance` — function — line 97
+- `violatesOwnNeedsGuard` — function — line 86
 
 ## `ai/npcColliderRim.ts`
 
@@ -537,14 +537,14 @@ Generated from exported TypeScript symbols.
 
 ## `ai/reactionChance.ts`
 
-- `computeReactionChance` — function — line 101
-- `NEUTRAL_PLAYER_SOCIAL_STATE` — const — line 41
-- `PlayerSocialContext` — type — line 14
-- `PlayerSocialLookup` — type — line 36
-- `PlayerSocialState` — type — line 16
-- `ReactionChanceInput` — type — line 48
-- `ReactionTier` — type — line 9
-- `reactionTierForRelation` — function — line 114
+- `computeReactionChance` — function — line 106
+- `NEUTRAL_PLAYER_SOCIAL_STATE` — const — line 43
+- `PlayerSocialContext` — type — line 16
+- `PlayerSocialLookup` — type — line 38
+- `PlayerSocialState` — type — line 18
+- `ReactionChanceInput` — type — line 50
+- `ReactionTier` — type — line 11
+- `reactionTierForRelation` — function — line 120
 
 ## `ai/schedule.ts`
 
@@ -567,6 +567,16 @@ Generated from exported TypeScript symbols.
 - `ScheduleTemplate` — type — line 26
 - `SOCIABLE_SOCIAL_HOURS` — const — line 73
 
+## `ai/settlementCaution.ts`
+
+- `CLOSED_CAUTION_CHANCE` — const — line 11
+- `CLOSED_CAUTION_SCORE` — const — line 10
+  - domain: npc
+- `CLOSED_CAUTION_WILLINGNESS` — const — line 12
+- `closedCautionChance` — function — line 18
+- `closedCautionScore` — function — line 14
+- `closedCautionWillingness` — function — line 22
+
 ## `ai/socialBehaviour.ts`
 
 - `advanceSocialPairing` — function — line 149
@@ -580,21 +590,21 @@ Generated from exported TypeScript symbols.
 
 ## `ai/voluntaryExpeditionJoin.ts`
 
-- `DEFAULT_VOLUNTARY_JOIN_DANGER` — const — line 116
-- `evaluateVoluntaryJoin` — function — line 222
+- `DEFAULT_VOLUNTARY_JOIN_DANGER` — const — line 123
+- `evaluateVoluntaryJoin` — function — line 229
   - domain: npc
-- `isVoluntaryInitiativeEligible` — function — line 294
+- `isVoluntaryInitiativeEligible` — function — line 303
   - domain: npc
-- `isVoluntaryJoinAccepted` — function — line 276
-- `VOLUNTARY_JOIN_THRESHOLD` — const — line 121
-- `VoluntaryExpeditionTerms` — type — line 27
+- `isVoluntaryJoinAccepted` — function — line 285
+- `VOLUNTARY_JOIN_THRESHOLD` — const — line 128
+- `VoluntaryExpeditionTerms` — type — line 29
   - domain: npc
-- `VoluntaryJoinAwareness` — type — line 280
-- `VoluntaryJoinBlocker` — type — line 29
-- `VoluntaryJoinContext` — type — line 60
-- `VoluntaryJoinEvaluation` — type — line 49
-- `VoluntaryJoinModifier` — type — line 47
-- `VoluntaryJoinModifierKey` — type — line 37
+- `VoluntaryJoinAwareness` — type — line 289
+- `VoluntaryJoinBlocker` — type — line 31
+- `VoluntaryJoinContext` — type — line 63
+- `VoluntaryJoinEvaluation` — type — line 52
+- `VoluntaryJoinModifier` — type — line 50
+- `VoluntaryJoinModifierKey` — type — line 39
 
 ## `ai/weatherPressure.ts`
 
