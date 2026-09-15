@@ -23,6 +23,7 @@
 - [Cave heightfield spike](../src/debug/createCaveHeightfieldTestScene.ts) — `?caveHeightfieldTest` Walk/Inspect harness comparing a 2.5D heightfield representation to production SDF on the same `CaveTopology`.
 - [Model test](../src/debug/createModelTestScene.ts) — `?modelTest` renderer/camera/one-model preview, bypassing world bootstrap.
 - [Debug flags](../src/debug/debugMode.ts) — URL-driven debug switches including the isolated-scene flags above.
+- [DevTools API](../src/debug/npcDebugApi.ts) — `window.seedvale.debug` (`?debug`), including `horse.list` / `teleportToPlayer` / `resurrect`.
 
 ## Rendering / presentation
 

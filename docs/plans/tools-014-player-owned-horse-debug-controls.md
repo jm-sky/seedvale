@@ -1,7 +1,7 @@
 # Plan: Player-owned horse debug controls
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~fauna-020~~

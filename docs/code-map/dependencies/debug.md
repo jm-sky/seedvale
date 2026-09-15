@@ -387,6 +387,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `settlement/playerOwnedHorseDebug.ts`
 - `settlement/villagePlan.ts`
 - `shared/HealthState.ts`
 - `shared/PhysicalAttributes.ts`

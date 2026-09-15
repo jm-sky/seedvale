@@ -85,6 +85,26 @@ describe('createLivestockRegistry', () => {
     expect(registry.serialize().removedIds).toEqual(['home:chicken-house0-0'])
   })
 
+  it('restoreRemoved drops the tombstone and restores exactly one saved record', () => {
+    const registry = createLivestockRegistry()
+    const animal = fakeAnimal('horse-house0-0', 'horse', undefined, { kind: 'player' })
+    registry.upsert('home', animal)
+    registry.markRemoved('home', 'horse-house0-0')
+    const snapshot = registry.getRemovedSnapshot('home', 'horse-house0-0')
+    expect(snapshot?.animalId).toBe('horse-house0-0')
+    expect(registry.serialize().removedIds).toEqual(['home:horse-house0-0'])
+
+    registry.restoreRemoved({
+      ...snapshot!,
+      health: { ...snapshot!.health, dead: false, current: snapshot!.health.max },
+      corpse: null,
+    })
+    expect(registry.getRemoved('home')?.has('horse-house0-0')).toBeFalsy()
+    expect(registry.getSaved('home')?.get('horse-house0-0')?.animalId).toBe('horse-house0-0')
+    expect(registry.serialize().removedIds).toEqual([])
+    expect(registry.serialize().entries).toHaveLength(1)
+  })
+
   it('keeps the same animalId independent across two different settlements', () => {
     const registry = createLivestockRegistry()
     registry.capture('village-a', [fakeAnimal('merchant-horse-village-a', 'horse')])

@@ -42,6 +42,29 @@ describe('AnimalAgent', () => {
     expect(agent.def.kind).toBe('horse')
   })
 
+  it('relocateOnGround snaps through sampleHeight and keeps the same identity', () => {
+    const agent = new AnimalAgent(makeDeps({ animalId: 'owned-horse', x: 100, z: -40 }))
+    agent.relocateOnGround(8, 12)
+    expect(agent.animalId).toBe('owned-horse')
+    expect(agent.mesh.position.x).toBe(8)
+    expect(agent.mesh.position.z).toBe(12)
+    expect(agent.mesh.position.y).toBeCloseTo(0.45 * agent.def.scale)
+  })
+
+  it('reviveForDebug restores the same dead agent without changing ownership', () => {
+    const agent = new AnimalAgent(makeDeps({ animalId: 'owned-horse', ownerHouseId: 'home:home:0' }))
+    agent.transferOwnershipToPlayer()
+    const name = agent.getName()
+    agent.takeDamage(9999)
+    expect(agent.isDead()).toBe(true)
+    expect(agent.reviveForDebug()).toBe(true)
+    expect(agent.isDead()).toBe(false)
+    expect(agent.health.currentHp).toBe(agent.health.maxHp)
+    expect(agent.isPlayerOwned()).toBe(true)
+    expect(agent.getName()).toBe(name)
+    expect(agent.reviveForDebug()).toBe(false)
+  })
+
   it('update() advances needs from a minimal AnimalUpdateContext and does not throw', () => {
     const agent = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'test-deer' }))
     agent.life.hunger = 0.5

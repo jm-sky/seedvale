@@ -57,6 +57,7 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
+- `settlement/playerOwnedHorseDebug.ts`
 - `settlement/props.ts`
 - `settlement/ratInfestation.ts`
 - `settlement/ratPersistence.ts`
@@ -800,6 +801,8 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/livestock.test.ts`
+- `settlement/playerOwnedHorseDebug.test.ts`
+- `settlement/playerOwnedHorseDebug.ts`
 
 ## `settlement/lodging.test.ts`
 
@@ -1075,6 +1078,27 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/lodgingResolver.ts`
 - `settlement/places.test.ts`
+
+## `settlement/playerOwnedHorseDebug.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `settlement/livestock.ts`
+- `settlement/playerOwnedHorseDebug.ts`
+
+## `settlement/playerOwnedHorseDebug.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `settlement/livestock.ts`
+
+**Imported by**
+
+- `debug/npcDebugApi.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/playerOwnedHorseDebug.test.ts`
 
 ## `settlement/professionStaffing.test.ts`
 

@@ -178,6 +178,12 @@ export type LivestockRegistry = LivestockPersistence & {
   capture: (settlementId: string, animals: readonly AnimalAgent[]) => void
   /** Upserts one live individual under its origin namespace (plan fauna-020). */
   upsert: (settlementId: string, animal: AnimalAgent) => void
+  /** Last saved record at tombstone time, if one existed — in-session only,
+   *  not part of `serialize()`. Debug resurrection reads this instead of
+   *  reconstructing a new identity. */
+  getRemovedSnapshot: (settlementId: string, animalId: string) => LivestockSaveRecord | undefined
+  /** Atomically drops one tombstone and restores exactly one saved record. */
+  restoreRemoved: (record: LivestockSaveRecord) => void
   /** Flat `SaveData`-shaped snapshot of everything captured so far. */
   serialize: () => { entries: LivestockSaveRecord[], removedIds: string[] }
   clear: () => void
@@ -314,12 +320,22 @@ export function createLivestockRegistry(initial?: {
 }): LivestockRegistry {
   const bySettlement = new Map<string, Map<string, LivestockSaveRecord>>()
   const removedBySettlement = new Map<string, Set<string>>()
+  const removedSnapshots = new Map<string, Map<string, LivestockSaveRecord>>()
 
   function savedFor(settlementId: string): Map<string, LivestockSaveRecord> {
     let m = bySettlement.get(settlementId)
     if (!m) {
       m = new Map()
       bySettlement.set(settlementId, m)
+    }
+    return m
+  }
+
+  function snapshotsFor(settlementId: string): Map<string, LivestockSaveRecord> {
+    let m = removedSnapshots.get(settlementId)
+    if (!m) {
+      m = new Map()
+      removedSnapshots.set(settlementId, m)
     }
     return m
   }
@@ -347,6 +363,8 @@ export function createLivestockRegistry(initial?: {
       savedFor(settlementId).set(animal.animalId, livestockToSaveRecord(settlementId, animal))
     },
     markRemoved(settlementId, animalId) {
+      const existing = bySettlement.get(settlementId)?.get(animalId)
+      if (existing) snapshotsFor(settlementId).set(animalId, { ...existing })
       bySettlement.get(settlementId)?.delete(animalId)
       let s = removedBySettlement.get(settlementId)
       if (!s) {
@@ -354,6 +372,14 @@ export function createLivestockRegistry(initial?: {
         removedBySettlement.set(settlementId, s)
       }
       s.add(animalId)
+    },
+    getRemovedSnapshot: (settlementId, animalId) => removedSnapshots.get(settlementId)?.get(animalId),
+    restoreRemoved(record) {
+      const removed = removedBySettlement.get(record.settlementId)
+      removed?.delete(record.animalId)
+      if (removed && removed.size === 0) removedBySettlement.delete(record.settlementId)
+      removedSnapshots.get(record.settlementId)?.delete(record.animalId)
+      savedFor(record.settlementId).set(record.animalId, record)
     },
     getSaved: (settlementId) => bySettlement.get(settlementId),
     getRemoved: (settlementId) => removedBySettlement.get(settlementId),
@@ -369,6 +395,7 @@ export function createLivestockRegistry(initial?: {
     clear() {
       bySettlement.clear()
       removedBySettlement.clear()
+      removedSnapshots.clear()
     },
   }
 }
@@ -797,6 +824,7 @@ export async function restoreDetachedPlayerOwnedLivestock(
 ): Promise<void> {
   for (const record of registry.serialize().entries) {
     if (!isPlayerOwnedLivestockRecord(record)) continue
+    if (registry.getRemoved(record.settlementId)?.has(record.animalId)) continue
     if (detachedById.has(record.animalId)) continue
     const agent = await spawnAnimalFromRecord(deps, record)
     detached.push(agent)

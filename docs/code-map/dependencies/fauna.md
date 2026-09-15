@@ -135,6 +135,8 @@ Generated from TypeScript imports.
 - `settlement/horseAcquisition.ts`
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
+- `settlement/playerOwnedHorseDebug.test.ts`
+- `settlement/playerOwnedHorseDebug.ts`
 - `settlement/ratPersistence.ts`
 - `settlement/rats.ts`
 - `world/createPlacedTraps.ts`

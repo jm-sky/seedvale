@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1052
+- `AnimalAgent` — class — line 1059
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 547
-- `AnimalAgentDeps` — type — line 876
-- `AnimalSaveState` — type — line 666
-- `AnimalUpdateContext` — type — line 920
-- `BURY_DURATION_SEC` — const — line 359
-- `canPredatorPursueIntoVillage` — function — line 734
-- `FAUNA_SHADOW_DISTANCE` — const — line 328
-- `FaunaAiBranch` — type — line 484
-- `FaunaNavRescueDebugInfo` — type — line 531
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 419
-- `FrenzyWolfCandidate` — type — line 811
-- `HARVEST_MEAT_DURATION_SEC` — const — line 362
-- `isWithinVillageRadius` — function — line 715
-- `NearbyNpcCandidate` — type — line 806
-- `pickNearestEligibleWolf` — function — line 820
-- `pickRabidTarget` — function — line 845
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 346
-- `villageFleeBiasFalloff` — function — line 742
-- `VillageInfo` — type — line 709
+- `AnimalAgentDebugInfo` — type — line 554
+- `AnimalAgentDeps` — type — line 883
+- `AnimalSaveState` — type — line 673
+- `AnimalUpdateContext` — type — line 927
+- `BURY_DURATION_SEC` — const — line 366
+- `canPredatorPursueIntoVillage` — function — line 741
+- `FAUNA_SHADOW_DISTANCE` — const — line 335
+- `FaunaAiBranch` — type — line 491
+- `FaunaNavRescueDebugInfo` — type — line 538
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 426
+- `FrenzyWolfCandidate` — type — line 818
+- `HARVEST_MEAT_DURATION_SEC` — const — line 369
+- `isWithinVillageRadius` — function — line 722
+- `NearbyNpcCandidate` — type — line 813
+- `pickNearestEligibleWolf` — function — line 827
+- `pickRabidTarget` — function — line 852
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 353
+- `villageFleeBiasFalloff` — function — line 749
+- `VillageInfo` — type — line 716
 
 ## `fauna/animalAttraction.ts`
 
@@ -78,12 +78,12 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalCorpse.ts`
 
-- `advanceAnimalCorpse` — function — line 423
+- `advanceAnimalCorpse` — function — line 432
 - `AnimalCorpseState` — type — line 125
 - `buryCorpse` — function — line 237
 - `canHarvestMeatFrom` — function — line 90
-- `claimCorpseAsFood` — function — line 451
-- `claimCorpseForCleanup` — function — line 469
+- `claimCorpseAsFood` — function — line 460
+- `claimCorpseForCleanup` — function — line 478
 - `CORPSE_BONES_ONSET_DAYS` — const — line 35
 - `CORPSE_REMOVE_DAYS` — const — line 37
 - `CORPSE_ROT_ONSET_DAYS` — const — line 33
@@ -97,21 +97,22 @@ Generated from exported TypeScript symbols.
 - `corpsePhaseFromElapsed` — function — line 68
 - `corpseReadyToRemove` — function — line 243
 - `createAnimalCorpseState` — function — line 184
-- `disposeAnimalCorpse` — function — line 495
-- `disposeAnimalCorpseRotFx` — function — line 413
-- `harvestCorpseMeat` — function — line 300
+- `disposeAnimalCorpse` — function — line 504
+- `disposeAnimalCorpseRotFx` — function — line 422
+- `harvestCorpseMeat` — function — line 309
 - `HARVESTED_REMAINS_LINGER_DAYS` — const — line 39
 - `hideLivingVisual` — function — line 256
 - `isRabiesCorpseContact` — function — line 113
-- `markCorpseFoodConsumed` — function — line 486
+- `markCorpseFoodConsumed` — function — line 495
 - `RABIES_CORPSE_CONTACT_RADIUS` — const — line 57
 - `RABIES_CORPSE_INFECTION_CHANCE` — const — line 60
-- `releaseCorpseClaim` — function — line 459
-- `releaseCorpseCleanupClaim` — function — line 478
+- `releaseCorpseClaim` — function — line 468
+- `releaseCorpseCleanupClaim` — function — line 487
 - `rollsRabiesInfection` — function — line 104
 - `rotFxRelevant` — function — line 80
-- `spawnDeathSplat` — function — line 318
-- `spawnHarvestedRemains` — function — line 282
+- `showLivingVisual` — function — line 261
+- `spawnDeathSplat` — function — line 327
+- `spawnHarvestedRemains` — function — line 291
 
 ## `fauna/animalDebugVisual.ts`
 

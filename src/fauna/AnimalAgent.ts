@@ -81,6 +81,7 @@ import {
   releaseCorpseClaim,
   releaseCorpseCleanupClaim,
   rollsRabiesInfection,
+  showLivingVisual,
   spawnDeathSplat,
   spawnHarvestedRemains,
 } from './animalCorpse'
@@ -311,6 +312,12 @@ type NavRescue = {
 
 function createNavRescue(): NavRescue {
   return { watchdog: createMovementWatchdog(), waypoints: [], index: 0, active: false }
+}
+
+function clearNavRescue(nav: NavRescue): void {
+  nav.active = false
+  nav.waypoints = []
+  nav.index = 0
 }
 
 /** `AnimalAgent.stepNavRescue`'s "this route no longer matches `dest`"
@@ -1727,6 +1734,54 @@ export class AnimalAgent {
     } else {
       setOwnedAnimalControlMode(this._control, 'follow')
     }
+  }
+
+  /**
+   * @domain fauna
+   * @role Debug/dev relocation through the agent's own ground-snap seam
+   *  (`snapY`), clearing only transient trip/nav commitments so the animal
+   *  does not immediately walk back to a stale target. Does not change
+   *  owner, name, Follow/Stay, or Stay anchor.
+   */
+  relocateOnGround(x: number, z: number): void {
+    this.mesh.position.x = x
+    this.mesh.position.z = z
+    this.trip = null
+    this.strayReturnRetryCooldown = 0
+    clearNavRescue(this.chaseNav)
+    clearNavRescue(this.fleeNav)
+    clearNavRescue(this.moveNav)
+    this.snapY()
+  }
+
+  /**
+   * @domain fauna
+   * @role Debug-only revival of this same `AnimalAgent` identity after death.
+   *  Restores a live lifecycle with minimum valid HP/stamina, clears corpse
+   *  terminal state, and keeps owner/name/control. No-op when already alive.
+   */
+  reviveForDebug(): boolean {
+    if (!this.health.dead) return false
+    this.cancelSourceTarget()
+    disposeAnimalCorpse(this.corpse)
+    Object.assign(this.corpse, createAnimalCorpseState())
+    this.health.dead = false
+    this.health.currentHp = Math.max(1, this.health.maxHp)
+    this.life.stamina.current = this.life.stamina.max
+    this.corpseTipped = false
+    this.deathAnimDurationSec = null
+    this.deathAnimElapsedSec = 0
+    this.mesh.rotation.z = 0
+    showLivingVisual(this)
+    this.labelController.el.style.display = ''
+    this.trip = null
+    clearNavRescue(this.chaseNav)
+    clearNavRescue(this.fleeNav)
+    clearNavRescue(this.moveNav)
+    this.behaviourAccumSec = CADENCE_PRIME_SEC
+    this.presentationAccumSec = CADENCE_PRIME_SEC
+    this.snapY()
+    return true
   }
 
   /** Presence of `def.lead` (plan fauna-007) or an active household stray

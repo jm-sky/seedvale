@@ -8,6 +8,10 @@ import type { PlayerNeeds } from '../player/PlayerNeeds'
 import type { QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { VillageSize } from '../settlement/families'
 import type { HouseholdId } from '../settlement/household'
+import type {
+  HorseDebugCommandResult,
+  PlayerOwnedHorseDebugSnapshot,
+} from '../settlement/playerOwnedHorseDebug'
 import type { HealthState } from '../shared/HealthState'
 import type { TreatableInjurySeverity } from '../shared/injurySeverity'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
@@ -309,6 +313,13 @@ export type QuestsDebugApi = {
   teleportToTarget: (targetId: string) => Promise<boolean>
 }
 
+/** Player-owned horse diagnostics (plan tools-014) — plain JSON-safe data. */
+export type HorseDebugApi = {
+  list: () => PlayerOwnedHorseDebugSnapshot[]
+  teleportToPlayer: (animalId?: string) => HorseDebugCommandResult
+  resurrect: (animalId?: string) => Promise<HorseDebugCommandResult>
+}
+
 export type PlayerDebugApi = {
   position: () => { x: number, y: number, z: number }
   health: () => HealthState
@@ -465,6 +476,8 @@ export type SeedvaleDebugApi = {
   /** Quest log + spawn-point world-target lookup/teleport. Resolves stable
    *  aliases such as `wolf-den` through `matchesQuestSpawnPointId`. */
   quests: QuestsDebugApi
+  /** Player-owned horse persistence/streaming diagnostics (plan tools-014). */
+  horse: HorseDebugApi
   spotAnimal: (kind: AnimalKind) => void
   help: () => string
   /** Alias of `player.groundTrace()` — rolling ticks, latched after a snap. */
@@ -527,6 +540,9 @@ const HELP_TEXT = [
   'quests.list() — quest log/debug snapshot',
   'quests.target(id) — resolve quest world target; e.g. quests.target(\'wolf-den\')',
   'quests.teleportToTarget(id) — teleport to resolved quest target; e.g. quests.teleportToTarget(\'wolf-den\')',
+  'horse.list() — player-owned horses (live / saved-only / tombstoned), plain data',
+  'horse.teleportToPlayer(animalId?) — move a live player-owned horse next to the player',
+  'horse.resurrect(animalId?) — debug-only revive of the same horse identity (live corpse or tombstone)',
 ].join('\n')
 
 /** Installs `window.seedvale.debug` when `?debug` is enabled; a no-op
@@ -871,6 +887,13 @@ export function installNpcDebugApi(
         await teleport(spawner.x, spawner.z)
         return true
       },
+    },
+    horse: {
+      list: () => bundle.settlementsManager.listPlayerOwnedHorses(),
+      teleportToPlayer: (animalId) =>
+        bundle.settlementsManager.teleportPlayerOwnedHorseToPlayer(getPlayerPosition(), animalId),
+      resurrect: (animalId) =>
+        bundle.settlementsManager.resurrectPlayerOwnedHorse(getPlayerPosition(), animalId),
     },
     transport: (id) => {
       const order = bundle.transportOrders.find(id)

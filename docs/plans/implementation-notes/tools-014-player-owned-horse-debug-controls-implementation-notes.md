@@ -90,3 +90,11 @@ If the current registry API cannot undo one tombstone, add the narrow operation 
 - non-player-owned horse cannot be teleported/resurrected by this namespace.
 
 Browser/DevTools verification wykonuje User.
+
+## Implementation (2026-09-15)
+
+- `LivestockRegistry.restoreRemoved` / `getRemovedSnapshot` — in-session last record at tombstone time; not serialized.
+- `AnimalAgent.relocateOnGround` / `reviveForDebug` — ground-snap + trip/nav clear; same identity revive.
+- `src/settlement/playerOwnedHorseDebug.ts` — list / select / teleport / resurrect over `PersistentLivestockContext`.
+- `SettlementsManager` thin wrappers; `seedvale.debug.horse` on existing `npcDebugApi`.
+- Tombstone after save/load without in-session snapshot returns `tombstone-record-unavailable` rather than spawning a new merchant/house slot.

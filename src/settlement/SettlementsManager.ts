@@ -54,12 +54,20 @@ import {
   resolveLivePersistentAnimal,
   restoreDetachedPlayerOwnedLivestock,
   setOwnedAnimalControl,
+  spawnAnimalFromRecord,
   type SpawnAnimalFromRecordDeps,
   tickSettlementLivestock,
   transferAnimalOwnership,
 } from './livestock'
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcAuthoritativeState, type NpcId, type NpcStateSnapshot } from './npcState'
+import {
+  type HorseDebugCommandResult,
+  listPlayerOwnedHorses,
+  type PlayerOwnedHorseDebugSnapshot,
+  resurrectPlayerOwnedHorse as resurrectPlayerOwnedHorseOp,
+  teleportPlayerOwnedHorseToPlayer as teleportPlayerOwnedHorseToPlayerOp,
+} from './playerOwnedHorseDebug'
 import { createSignpost } from './props'
 import { createRatInfestationRegistry, type RatInfestationState } from './ratInfestation'
 import { createRatRegistry, type RatSaveRecord } from './ratPersistence'
@@ -231,6 +239,10 @@ export type SettlementsManager = {
   transferAnimalOwnership: (animalId: string, owner: AnimalOwner) => boolean
   setOwnedAnimalControl: (animalId: string, mode: OwnedAnimalControlMode) => boolean
   getDetachedLivestock: () => AnimalAgent[]
+  /** Player-owned horse diagnostics (plan tools-014) — plain data only. */
+  listPlayerOwnedHorses: () => PlayerOwnedHorseDebugSnapshot[]
+  teleportPlayerOwnedHorseToPlayer: (playerPos: { x: number, z: number }, animalId?: string) => HorseDebugCommandResult
+  resurrectPlayerOwnedHorse: (playerPos: { x: number, z: number }, animalId?: string) => Promise<HorseDebugCommandResult>
   /** Fresh-resolving settlement-structure condition/repair lookup (plan
    *  settlements-007) — works whether or not `settlementId` is currently
    *  loaded, same "long-lived registry owner" contract as `getHousehold`/
@@ -1061,6 +1073,15 @@ export async function createSettlementsManager(
     transferAnimalOwnership: (animalId, owner) => transferAnimalOwnership(persistentLivestockCtx, animalId, owner),
     setOwnedAnimalControl: (animalId, mode) => setOwnedAnimalControl(persistentLivestockCtx, animalId, mode),
     getDetachedLivestock: () => detachedLivestock,
+    listPlayerOwnedHorses: () => listPlayerOwnedHorses(persistentLivestockCtx),
+    teleportPlayerOwnedHorseToPlayer: (playerPos, animalId) =>
+      teleportPlayerOwnedHorseToPlayerOp(persistentLivestockCtx, playerPos, animalId),
+    resurrectPlayerOwnedHorse: (playerPos, animalId) => resurrectPlayerOwnedHorseOp(
+      persistentLivestockCtx,
+      (record) => spawnAnimalFromRecord(spawnAnimalDeps, record),
+      playerPos,
+      animalId,
+    ),
     getStructureSnapshot: (settlementId, structureId, nowDays) => structureStates.resolve(settlementId, structureId, nowDays),
     listRepairProblems: (settlementId, nowDays) => {
       const out: { structureId: string, condition: number }[] = []

@@ -98,6 +98,9 @@ function fakeSettlementsManager(opts: FakeManagerOpts): { manager: SettlementsMa
     peekDef: (cell: SettlementCell) => defs[`${cell.gx}_${cell.gz}`] ?? null,
     getHousehold: (id: string) => households[id],
     getEconomy: (settlementId: string) => economies[settlementId],
+    listPlayerOwnedHorses: () => [],
+    teleportPlayerOwnedHorseToPlayer: () => ({ ok: false, reason: 'not-found' }),
+    resurrectPlayerOwnedHorse: async () => ({ ok: false, reason: 'not-found' }),
   } as unknown as SettlementsManager
   return { manager, setLoaded: (l) => { loaded = l } }
 }
@@ -240,7 +243,27 @@ describe('SeedvaleDebugApi shape', () => {
     expect(typeof api!.quests.list).toBe('function')
     expect(typeof api!.quests.target).toBe('function')
     expect(typeof api!.quests.teleportToTarget).toBe('function')
+    expect(typeof api!.horse.list).toBe('function')
+    expect(typeof api!.horse.teleportToPlayer).toBe('function')
+    expect(typeof api!.horse.resurrect).toBe('function')
     expect(typeof api!.help).toBe('function')
+  })
+
+  it('horse.list() returns plain data from settlementsManager', () => {
+    stubWindow('?debug=1')
+    const listed = [{
+      animalId: 'horse-house0-0',
+      originSettlementId: 'home',
+      live: true,
+      dead: false,
+      owner: { kind: 'player' as const },
+      status: 'live' as const,
+    }]
+    const manager = fakeSettlementsManager({}).manager
+    ;(manager as { listPlayerOwnedHorses: () => unknown }).listPlayerOwnedHorses = () => listed
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    expect(api!.horse.list()).toEqual(listed)
   })
 
   it('help() returns a non-empty string mentioning each surface', () => {
@@ -250,7 +273,7 @@ describe('SeedvaleDebugApi shape', () => {
     const help = api!.help()
     expect(typeof help).toBe('string')
     expect(help.length).toBeGreaterThan(0)
-    for (const word of ['npc', 'village', 'locations', 'teleportTo', 'injury', 'quests', 'darkForestTreasure', 'teleportToNearestCave']) {
+    for (const word of ['npc', 'village', 'locations', 'teleportTo', 'injury', 'quests', 'horse', 'darkForestTreasure', 'teleportToNearestCave']) {
       expect(help).toContain(word)
     }
   })

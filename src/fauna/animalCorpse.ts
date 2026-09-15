@@ -254,12 +254,21 @@ export function corpseReadyToRemove(state: AnimalCorpseState, dead: boolean, now
  *  remains we'll parent onto the same root. Capsule geometry lives on
  *  `host.mesh` itself, so `mesh.visible = false` would also hide children. */
 export function hideLivingVisual(host: CorpseHost): void {
+  setLivingVisualVisible(host, false)
+}
+
+/** Inverse of `hideLivingVisual` — used by debug resurrection of a live corpse. */
+export function showLivingVisual(host: CorpseHost): void {
+  setLivingVisualVisible(host, true)
+}
+
+function setLivingVisualVisible(host: CorpseHost, visible: boolean): void {
   if (host.isCapsule) {
     const mat = (host.mesh as THREE.Mesh).material
     if (Array.isArray(mat)) {
-      for (const m of mat) m.visible = false
+      for (const m of mat) m.visible = visible
     } else {
-      mat.visible = false
+      mat.visible = visible
     }
     return
   }
@@ -271,7 +280,7 @@ export function hideLivingVisual(host: CorpseHost): void {
       if (walk.name === 'harvested-remains' || walk.name === 'natural-remains') return
       walk = walk.parent
     }
-    if ((child as THREE.Mesh).isMesh) child.visible = false
+    if ((child as THREE.Mesh).isMesh) child.visible = visible
   })
 }
 

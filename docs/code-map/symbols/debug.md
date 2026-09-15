@@ -157,28 +157,29 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `ConditionsDebugApi` — type — line 245
-- `HiddenTreasureDebugApi` — type — line 217
-- `HouseholdDebugHandle` — type — line 122
-- `HouseholdFoodSupplyDebugSnapshot` — type — line 104
-- `InjuryDebugApi` — type — line 253
-- `installNpcDebugApi` — function — line 542
-- `LocationsDebugApi` — type — line 162
-- `NpcDebugHandle` — type — line 90
-- `PlayerDebugApi` — type — line 312
-- `QuestsDebugApi` — type — line 302
-- `QuestSpawnPointDebugSnapshot` — type — line 275
-- `QuestTargetDebugSnapshot` — type — line 290
-- `SeedvaleDebugApi` — type — line 397
-- `SettlementFoodTransportDebugSnapshot` — type — line 110
-- `SettlementHistoryDebugHandle` — type — line 133
-- `SkillsDebugApi` — type — line 235
-- `StructureDebugApi` — type — line 265
-- `TeleportToDebugApi` — type — line 174
-- `TransportOrderDebugSnapshot` — type — line 330
-- `VillageDebugHandle` — type — line 145
-- `WorldLocationDebugEntry` — type — line 198
-- `WorldLocationsDebugApi` — type — line 199
+- `ConditionsDebugApi` — type — line 249
+- `HiddenTreasureDebugApi` — type — line 221
+- `HorseDebugApi` — type — line 317
+- `HouseholdDebugHandle` — type — line 126
+- `HouseholdFoodSupplyDebugSnapshot` — type — line 108
+- `InjuryDebugApi` — type — line 257
+- `installNpcDebugApi` — function — line 558
+- `LocationsDebugApi` — type — line 166
+- `NpcDebugHandle` — type — line 94
+- `PlayerDebugApi` — type — line 323
+- `QuestsDebugApi` — type — line 306
+- `QuestSpawnPointDebugSnapshot` — type — line 279
+- `QuestTargetDebugSnapshot` — type — line 294
+- `SeedvaleDebugApi` — type — line 408
+- `SettlementFoodTransportDebugSnapshot` — type — line 114
+- `SettlementHistoryDebugHandle` — type — line 137
+- `SkillsDebugApi` — type — line 239
+- `StructureDebugApi` — type — line 269
+- `TeleportToDebugApi` — type — line 178
+- `TransportOrderDebugSnapshot` — type — line 341
+- `VillageDebugHandle` — type — line 149
+- `WorldLocationDebugEntry` — type — line 202
+- `WorldLocationsDebugApi` — type — line 203
 
 ## `debug/npcDecisionReport.ts`
 
