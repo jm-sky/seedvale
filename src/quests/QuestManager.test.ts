@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SocialConsequence } from '../reputation/ReputationManager'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
-import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup } from './QuestManager'
+import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup, QuestWorldTimeLookup } from './QuestManager'
 import type { AuthoredQuestDef, QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
@@ -4226,4 +4226,259 @@ describe('QuestManager generic resolution effects (plan quests-progression-029)'
     expect(qm.getState('animal-effect')).toBe('complete')
   })
 })
+
+describe('QuestManager quest-log journal notes (plan ui-input-021)', () => {
+  const journalQuest = quest({
+    id: 'journal',
+    giverName: 'Anna',
+    offerLine: 'offer journal',
+    stages: [
+      {
+        objective: { type: 'interact_well' },
+        description: 'well',
+        reminderLine: 'remind journal',
+        progressLine: 'well is done',
+      },
+    ],
+    reportLine: 'report journal',
+  })
+
+  function worldClock(elapsedDays: number, timeOfDay: number): QuestWorldTimeLookup {
+    return {
+      getWorldSeed: () => 0,
+      getElapsedDays: () => elapsedDays,
+      getTimeOfDay: () => timeOfDay,
+    }
+  }
+
+  function notesOf(qm: QuestManager, id = 'journal') {
+    return qm.list().find((entry) => entry.id === id)?.notes ?? []
+  }
+
+  it('stamps the offer once when the giver admits it', () => {
+    const qm = makeManager(
+      [journalQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      worldClock(0, 0.5),
+    )
+    qm.onInteract('Anna')
+    qm.onInteract('Anna')
+    const notes = notesOf(qm)
+    expect(qm.getState('journal')).toBe('offered')
+    expect(notes).toEqual([{
+      dateLabel: 'Dzień 1 · 12:00',
+      speakerName: 'Anna',
+      text: 'offer journal',
+    }])
+    expect(Object.keys(notes[0]!).sort()).toEqual(['dateLabel', 'speakerName', 'text'])
+    expect(qm.exportProgress()[0]?.journal).toEqual([{
+      kind: 'offer',
+      speakerNpcId: 'Anna',
+      atDays: 0,
+      timeOfDay: 0.5,
+    }])
+  })
+
+  it('adds a progress note only after the stage is heard, not from a reminder', () => {
+    const clock = { elapsedDays: 1.2, timeOfDay: 0.25 }
+    const qm = makeManager(
+      [journalQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getWorldSeed: () => 0,
+        getElapsedDays: () => clock.elapsedDays,
+        getTimeOfDay: () => clock.timeOfDay,
+      },
+    )
+    acceptOffer(qm, 'Anna')
+    expect(notesOf(qm).map((note) => note.text)).toEqual(['offer journal'])
+    expect(qm.onInteract('Anna')?.line).toBe('remind journal')
+    expect(notesOf(qm).map((note) => note.text)).toEqual(['offer journal'])
+
+    clock.elapsedDays = 2
+    clock.timeOfDay = 0
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(notesOf(qm)).toEqual([
+      { dateLabel: 'Dzień 2 · 06:00', speakerName: 'Anna', text: 'offer journal' },
+      { dateLabel: 'Dzień 3 · 00:00', speakerName: 'Obserwacja', text: 'well is done' },
+    ])
+  })
+
+  it('clears the journal when the offer is declined', () => {
+    const qm = makeManager([journalQuest])
+    const dialog = qm.onInteract('Anna')
+    expect(notesOf(qm)).toHaveLength(1)
+    dialog?.offer?.onDecline?.()
+    expect(qm.getState('journal')).toBe('not_offered')
+    expect(qm.list().some((entry) => entry.id === 'journal')).toBe(false)
+    expect(qm.exportProgress()[0]?.journal).toBeUndefined()
+  })
+
+  it('keeps notes and appends a result when the quest is abandoned', () => {
+    const qm = makeManager([journalQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.abandonQuest('journal')).toBe(true)
+    expect(notesOf(qm).map((note) => note.text)).toEqual([
+      'offer journal',
+      'Zrezygnowałeś z tego zadania.',
+    ])
+    expect(qm.exportProgress()[0]?.journal?.map((entry) => entry.kind)).toEqual(['offer', 'result'])
+  })
+
+  it('round-trips journal timestamps through export/restore and projects live def text', () => {
+    const qm = makeManager(
+      [journalQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      worldClock(4, 0.75),
+    )
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    const exported = qm.exportProgress()
+    expect(exported[0]?.journal?.[0]).toMatchObject({ kind: 'offer', atDays: 4, timeOfDay: 0.75 })
+
+    const rewritten = quest({
+      ...journalQuest,
+      offerLine: 'updated offer',
+      stages: journalQuest.stages.map((stage) => ({ ...stage, progressLine: 'updated well' })),
+    })
+    const restored = makeManager(
+      [rewritten],
+      undefined,
+      undefined,
+      { progress: exported, relations: {} },
+    )
+    expect(notesOf(restored)).toEqual([
+      { dateLabel: 'Dzień 5 · 18:00', speakerName: 'Anna', text: 'updated offer' },
+      { dateLabel: 'Dzień 5 · 18:00', speakerName: 'Obserwacja', text: 'updated well' },
+    ])
+  })
+
+  it('reconstructs only offer (and result if terminal) without a date for old saves', () => {
+    const active = makeManager(
+      [journalQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: 'journal', state: 'active', stageIndex: 0 }], relations: {} },
+    )
+    expect(notesOf(active)).toEqual([{
+      dateLabel: null,
+      speakerName: 'Anna',
+      text: 'offer journal',
+    }])
+    expect(qmExportHasNoJournal(active)).toBe(true)
+
+    const complete = makeManager(
+      [journalQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: 'journal', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'complete' }], relations: {} },
+    )
+    expect(notesOf(complete)).toEqual([
+      { dateLabel: null, speakerName: 'Anna', text: 'offer journal' },
+      { dateLabel: null, speakerName: 'Anna', text: 'report journal' },
+    ])
+    expect(qmExportHasNoJournal(complete)).toBe(true)
+  })
+
+  it('keeps a dateless reconstructed offer when a later stage is heard after an old save', () => {
+    const clock = { elapsedDays: 3, timeOfDay: 0.5 }
+    const qm = makeManager(
+      [journalQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: 'journal', state: 'active', stageIndex: 0 }], relations: {} },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getWorldSeed: () => 0,
+        getElapsedDays: () => clock.elapsedDays,
+        getTimeOfDay: () => clock.timeOfDay,
+      },
+    )
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(notesOf(qm)).toEqual([
+      { dateLabel: null, speakerName: 'Anna', text: 'offer journal' },
+      { dateLabel: 'Dzień 4 · 12:00', speakerName: 'Obserwacja', text: 'well is done' },
+    ])
+    expect(qm.exportProgress()[0]?.journal?.map((entry) => entry.kind)).toEqual(['progress'])
+  })
+
+  it('keeps Piotr offer and heard cave progress on zwiadowca stone stage, without inventing the stag line', () => {
+    const live = makeManager(
+      [homeQuest('zwiadowca')],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      worldClock(0.1, 0.32),
+    )
+    acceptOffer(live, 'Piotr')
+    live.onInteractObjective(CAVE_REF)
+    expect(live.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(1)
+    const liveNotes = notesOf(live, 'zwiadowca')
+    expect(liveNotes.map((note) => note.text)).toEqual([
+      'Chcę wiedzieć, co się dzieje za osadą. Zajrzyj do jaskini, wypatrz jelenia po drodze i przynieś dwa kamienie z gór — wtedy będę pewien, że naprawdę tam byłeś.',
+      'Przy wejściu widać świeże tropy. To miejsce nie jest puste. Teraz wypatrz jelenia.',
+    ])
+    expect(liveNotes[1]?.speakerName).toBe('Obserwacja')
+
+    const lie = new QuestManager([homeQuest('zwiadowca')], undefined, new Inventory())
+    acceptOffer(lie, 'Piotr')
+    lie.onInteractObjective(CAVE_REF)
+    const dialog = lie.onInteract('Piotr')
+    dialog?.actions?.find((action) => action.label === 'Tak, widziałem jelenia.')?.onSelect()
+    const lieNotes = notesOf(lie, 'zwiadowca')
+    expect(lieNotes.map((note) => note.text)).toEqual([
+      'Chcę wiedzieć, co się dzieje za osadą. Zajrzyj do jaskini, wypatrz jelenia po drodze i przynieś dwa kamienie z gór — wtedy będę pewien, że naprawdę tam byłeś.',
+      'Przy wejściu widać świeże tropy. To miejsce nie jest puste. Teraz wypatrz jelenia.',
+      'Skoro tak. Zostały kamienie z gór — przynieś dwa.',
+    ])
+    expect(lieNotes.some((note) => note.text.includes('Jeleń zerwał się'))).toBe(false)
+    expect(lie.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(2)
+
+    const oldSave = new QuestManager(
+      [homeQuest('zwiadowca')],
+      undefined,
+      new Inventory(),
+      { progress: [{ id: 'zwiadowca', state: 'active', stageIndex: 2 }], relations: {} },
+    )
+    expect(notesOf(oldSave, 'zwiadowca')).toEqual([{
+      dateLabel: null,
+      speakerName: 'Piotr',
+      text: 'Chcę wiedzieć, co się dzieje za osadą. Zajrzyj do jaskini, wypatrz jelenia po drodze i przynieś dwa kamienie z gór — wtedy będę pewien, że naprawdę tam byłeś.',
+    }])
+  })
+})
+
+function qmExportHasNoJournal(qm: QuestManager): boolean {
+  return qm.exportProgress().every((entry) => entry.journal === undefined)
+}
 

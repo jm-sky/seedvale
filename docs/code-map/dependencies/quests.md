@@ -34,6 +34,7 @@ Generated from TypeScript imports.
 - `reputation/ReputationManager.ts`
 - `settlement/livestock.ts`
 - `settlement/npcState.ts`
+- `world/dayNight.ts`
 
 **Imported by**
 

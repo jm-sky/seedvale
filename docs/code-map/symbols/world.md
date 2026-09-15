@@ -951,8 +951,9 @@ Generated from exported TypeScript symbols.
 - `DayNightState` — type — line 29
 - `DEFAULT_TIME_OF_DAY` — const — line 27
 - `formatClock` — function — line 200
+- `formatWorldDayClock` — function — line 209
 - `parseTimeOfDayFromUrl` — function — line 184
-- `phaseName` — function — line 207
+- `phaseName` — function — line 214
 - `resetDayNightForNewGame` — function — line 57
 - `skyParamsFromTime` — function — line 72
 - `tickDayNight` — function — line 62

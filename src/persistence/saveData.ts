@@ -2332,6 +2332,26 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
     }
   }
   if (e.offerSuppressedUntilDay !== undefined && typeof e.offerSuppressedUntilDay !== 'number') return false
+  if (e.journal !== undefined) {
+    if (!Array.isArray(e.journal)) return false
+    for (const raw of e.journal) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false
+      const note = raw as Record<string, unknown>
+      if (note.kind !== 'offer' && note.kind !== 'progress' && note.kind !== 'result') return false
+      if (typeof note.atDays !== 'number' || !Number.isFinite(note.atDays)) return false
+      if (typeof note.timeOfDay !== 'number' || !Number.isFinite(note.timeOfDay)) return false
+      if (note.stageIndex !== undefined && (typeof note.stageIndex !== 'number' || !Number.isInteger(note.stageIndex) || note.stageIndex < 0)) {
+        return false
+      }
+      if (
+        note.dialogueActionIndex !== undefined
+        && (typeof note.dialogueActionIndex !== 'number' || !Number.isInteger(note.dialogueActionIndex) || note.dialogueActionIndex < 0)
+      ) {
+        return false
+      }
+      if (note.speakerNpcId !== undefined && typeof note.speakerNpcId !== 'string') return false
+    }
+  }
   return true
 }
 

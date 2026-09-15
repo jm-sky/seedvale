@@ -104,7 +104,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Inventory / trade wiring](../src/app/inventoryWiring.ts) — inventory-screen handlers plus every home-trader buy/sell path.
 - [Vue UI mount](../src/ui-vue/mount.ts) — the `VueUi` facade the app layer talks to.
 - [World inspection screen](../src/ui-vue/screens/WorldInspectionScreen.vue) — construction/details overlay opened by `[V]` / the mobile inspect button.
-- [Quest log screen](../src/ui-vue/screens/QuestLogScreen.vue) — overlay for `QuestManager.list()`; presentation buckets in [questLogBuckets](../src/ui-vue/lib/questLogBuckets.ts).
+- [Quest log screen](../src/ui-vue/screens/QuestLogScreen.vue) — overlay for `QuestManager.list()` (compact list + heard-note details); presentation buckets in [questLogBuckets](../src/ui-vue/lib/questLogBuckets.ts).
 - [Vanilla UI facades](../src/ui/) — `create*` modules; most are now thin wrappers over Vue screens.
 
 ## Reputation / progression

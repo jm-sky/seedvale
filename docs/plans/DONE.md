@@ -4,6 +4,14 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-016-legacy-ruby-trade-valuation`                          | 2026-09-15 09:43:11 | —                   | `settlements`    | —          |
+| `quests-progression-036-one-shot-authored-treasure-map-pickup`         | 2026-09-15 09:39:39 | —                   | `quests-progression` | —          |
+| `world-terrain-034-bidirectional-cave-traversal-safety`                | 2026-09-15 09:21:20 | —                   | `world-terrain`  | —          |
+| `ui-input-020-world-interaction-targeting-and-acquisition-feedback-regressions` | 2026-09-15 09:15:51 | —                   | `ui-input`       | —          |
+| `fauna-030-player-owned-animal-stay-safety-and-recovery`               | 2026-09-15 09:01:06 | —                   | `fauna`          | —          |
+| `quests-progression-035-story-item-inventory-and-cave-location-clarity` | 2026-09-15 01:20:50 | —                   | `quests-progression` | —          |
+| `ui-input-019-character-screen-settlement-reputation-and-quest-choice-clarity` | 2026-09-14 23:28:19 | —                   | `ui-input`       | —          |
+| `quests-progression-034-quest-giver-cap-markers-dialogue-and-target-lifecycle` | 2026-09-14 22:50:22 | —                   | `quests-progression` | —          |
 | `world-terrain-033-road-bridge-projection-and-traversal`               | 2026-09-14 21:55:41 | —                   | `world-terrain`  | —          |
 | `settlements-npcs-021-remote-production-site-logistics`                | 2026-09-14 21:43:01 | —                   | `settlements-npcs` | —          |
 | `world-terrain-023-river-aware-road-routing-and-crossings`             | 2026-09-14 18:26:49 | —                   | `world-terrain`  | —          |

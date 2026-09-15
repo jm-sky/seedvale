@@ -345,121 +345,124 @@ Generated from exported TypeScript symbols.
 
 ## `quests/QuestManager.ts`
 
-- `AnimalTargetResolver` — type — line 234
-- `ApplySocialConsequence` — type — line 246
-- `DangerousTraitApplier` — type — line 239
-- `HabitatAnimalFeedContext` — type — line 187
-- `HorseRewardAvailability` — type — line 210
-- `ObjectiveRef` — type — line 215
-- `PlayerAnimalHarvestContext` — type — line 180
-- `QUEST_MARKER_AVAILABLE` — const — line 69
-- `QUEST_MARKER_IN_PROGRESS` — const — line 70
-- `QUEST_MARKER_READY` — const — line 71
-- `QUEST_MARKER_TALK_TARGET` — const — line 72
-- `QuestAnimalOwnershipTransfer` — type — line 206
-- `QuestDialogAction` — type — line 74
-- `QuestDialogOverride` — type — line 111
+- `AnimalTargetResolver` — type — line 249
+- `ApplySocialConsequence` — type — line 261
+- `DangerousTraitApplier` — type — line 254
+- `HabitatAnimalFeedContext` — type — line 202
+- `HorseRewardAvailability` — type — line 225
+- `ObjectiveRef` — type — line 230
+- `PlayerAnimalHarvestContext` — type — line 195
+- `QUEST_MARKER_AVAILABLE` — const — line 71
+- `QUEST_MARKER_IN_PROGRESS` — const — line 72
+- `QUEST_MARKER_READY` — const — line 73
+- `QUEST_MARKER_TALK_TARGET` — const — line 74
+- `QuestAnimalOwnershipTransfer` — type — line 221
+- `QuestDialogAction` — type — line 76
+- `QuestDialogOverride` — type — line 113
   - domain: quests-progression
-- `QuestDialogTopic` — type — line 99
-- `QuestItemGrant` — type — line 202
-- `QuestLifecycleHooks` — type — line 317
-- `QuestListEntry` — type — line 140
-- `QuestManager` — class — line 443
+- `QuestDialogTopic` — type — line 101
+- `QuestItemGrant` — type — line 217
+- `QuestJournalNote` — type — line 144
+- `QuestLifecycleHooks` — type — line 332
+- `QuestListEntry` — type — line 151
+- `QuestManager` — class — line 460
   - domain: quests-progression
   - system: quest-manager
   - role: Owns quest progress, objective/stage evaluation and NPC relation levels.
   - owns: QuestProgressEntry
   - integration: Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly. World-driven opportunities use a read-only source lookup; QuestManager owns quest progress only.
-- `QuestManagerInitial` — type — line 161
-- `QuestPhysicalOutcomeContext` — type — line 301
-- `QuestPhysicalOutcomeResolver` — type — line 307
-- `QuestPromisedReward` — type — line 136
-- `QuestSocialAvailabilityLookup` — type — line 251
-- `QuestWorldProgressLookup` — type — line 285
-- `QuestWorldTimeLookup` — type — line 257
-- `SettlementRatInfestationLookup` — type — line 265
-- `SpawnPointDestructionLookup` — type — line 275
+- `QuestManagerInitial` — type — line 174
+- `QuestPhysicalOutcomeContext` — type — line 316
+- `QuestPhysicalOutcomeResolver` — type — line 322
+- `QuestPromisedReward` — type — line 138
+- `QuestSocialAvailabilityLookup` — type — line 266
+- `QuestWorldProgressLookup` — type — line 300
+- `QuestWorldTimeLookup` — type — line 272
+- `SettlementRatInfestationLookup` — type — line 280
+- `SpawnPointDestructionLookup` — type — line 290
 
 ## `quests/quests.ts`
 
-- `AuthoredQuestAbandonment` — type — line 992
-- `AuthoredQuestConsequences` — type — line 954
-- `AuthoredQuestDef` — type — line 1001
+- `AuthoredQuestAbandonment` — type — line 1009
+- `AuthoredQuestConsequences` — type — line 971
+- `AuthoredQuestDef` — type — line 1018
   - domain: quests-progression
-- `AuthoredQuestObjective` — type — line 937
-- `AuthoredQuestOutcome` — type — line 988
-- `AuthoredQuestPrerequisite` — type — line 950
-- `AuthoredQuestStage` — type — line 982
-- `AuthoredQuestStageDialogueAction` — type — line 964
+- `AuthoredQuestObjective` — type — line 954
+- `AuthoredQuestOutcome` — type — line 1005
+- `AuthoredQuestPrerequisite` — type — line 967
+- `AuthoredQuestStage` — type — line 999
+- `AuthoredQuestStageDialogueAction` — type — line 981
   - domain: quests-progression
-- `AuthoredQuestStageObjectiveSlot` — type — line 976
-- `bindDarkForestTreasureQuest` — function — line 2043
-- `bindExactCaveQuests` — function — line 2016
-- `bindTreasureMapBearCaveQuest` — function — line 2150
-- `buildDarkForestTreasureQuest` — function — line 1885
-- `buildHorseAcquisitionQuest` — function — line 1932
-- `buildLandmarkQuests` — function — line 1718
-- `buildTreasureMapBearCaveQuest` — function — line 2069
-- `CAVE_PLACE_TOKEN` — const — line 1975
-- `cavePlacePhrase` — function — line 1979
-- `externalResolutionOutcome` — function — line 530
+- `AuthoredQuestStageObjectiveSlot` — type — line 993
+- `bindDarkForestTreasureQuest` — function — line 2060
+- `bindExactCaveQuests` — function — line 2033
+- `bindTreasureMapBearCaveQuest` — function — line 2167
+- `buildDarkForestTreasureQuest` — function — line 1902
+- `buildHorseAcquisitionQuest` — function — line 1949
+- `buildLandmarkQuests` — function — line 1735
+- `buildTreasureMapBearCaveQuest` — function — line 2086
+- `CAVE_PLACE_TOKEN` — const — line 1992
+- `cavePlacePhrase` — function — line 1996
+- `externalResolutionOutcome` — function — line 547
   - domain: quests-progression
-- `hasSocialConsequence` — function — line 541
-- `isLegacySingleObjectiveStage` — function — line 805
-- `LandmarkResolver` — type — line 1707
-- `LEGACY_QUEST_OBJECTIVE_SLOT_ID` — const — line 707
-- `MAP_SOURCE_PLACE_TOKEN` — const — line 1882
-- `matchStageTransition` — function — line 832
-- `objectiveNeedsPersistedSlotProgress` — function — line 815
+- `hasSocialConsequence` — function — line 558
+- `isLegacySingleObjectiveStage` — function — line 822
+- `LandmarkResolver` — type — line 1724
+- `LEGACY_QUEST_OBJECTIVE_SLOT_ID` — const — line 724
+- `MAP_SOURCE_PLACE_TOKEN` — const — line 1899
+- `matchStageTransition` — function — line 849
+- `objectiveNeedsPersistedSlotProgress` — function — line 832
   - domain: quests-progression
-- `QUEST_STATES` — const — line 493
+- `QUEST_STATES` — const — line 510
 - `QuestAbandonment` — type — line 125
   - domain: quests-progression
 - `QuestAvailability` — type — line 84
 - `QuestConsequences` — type — line 443
-- `QuestDef` — type — line 845
+- `QuestDef` — type — line 862
 - `QuestDefinitionValidationError` — class — line 142
-- `QuestLocationReveal` — type — line 701
+- `QuestJournalEvent` — type — line 474
+- `QuestJournalKind` — type — line 472
+- `QuestLocationReveal` — type — line 718
 - `QuestNpcRef` — type — line 66
   - domain: quests-progression
-- `QuestObjective` — type — line 548
-- `QuestObjectiveSlotId` — type — line 709
+- `QuestObjective` — type — line 565
+- `QuestObjectiveSlotId` — type — line 726
 - `QuestOfferPolicy` — type — line 108
   - domain: quests-progression
-- `QuestOfferRankSignal` — type — line 902
+- `QuestOfferRankSignal` — type — line 919
   - domain: quests-progression
 - `QuestOutcome` — type — line 451
 - `QuestOutcomeId` — type — line 431
 - `QuestPrerequisite` — type — line 73
-- `QuestProgressEntry` — type — line 472
+- `QuestProgressEntry` — type — line 487
 - `QuestReward` — type — line 435
-- `QUESTS` — const — line 1008
-- `QuestStage` — type — line 739
-- `QuestStageDialogueAction` — type — line 687
-- `QuestStageEffect` — type — line 681
+- `QUESTS` — const — line 1025
+- `QuestStage` — type — line 756
+- `QuestStageDialogueAction` — type — line 704
+- `QuestStageEffect` — type — line 698
   - domain: quests-progression
-- `questStageMode` — function — line 801
-- `QuestStageMode` — type — line 711
-- `QuestStageObjectiveSlot` — type — line 719
+- `questStageMode` — function — line 818
+- `QuestStageMode` — type — line 728
+- `QuestStageObjectiveSlot` — type — line 736
   - domain: quests-progression
-- `questStageObjectiveSlots` — function — line 787
+- `questStageObjectiveSlots` — function — line 804
   - domain: quests-progression
 - `QuestStageSlotProgress` — type — line 465
   - domain: quests-progression
-- `QuestStageTransition` — type — line 733
+- `QuestStageTransition` — type — line 750
   - domain: quests-progression
 - `QuestState` — type — line 14
-- `rankQuestOfferCandidates` — function — line 923
+- `rankQuestOfferCandidates` — function — line 940
   - domain: quests-progression
 - `RELATION_LEVEL_THRESHOLDS` — const — line 42
 - `RelationLevel` — type — line 38
 - `relationLevelMeetsMinimum` — function — line 133
 - `relationToLevel` — function — line 52
-- `RESOLVED_WITHOUT_PLAYER_OUTCOME` — const — line 521
+- `RESOLVED_WITHOUT_PLAYER_OUTCOME` — const — line 538
   - domain: quests-progression
-- `TreasureMapBearCaveQuestBinding` — type — line 2060
-- `treasureMapSourcePlacePhrase` — function — line 1995
-- `uniqueOutcomeForState` — function — line 506
+- `TreasureMapBearCaveQuestBinding` — type — line 2077
+- `treasureMapSourcePlacePhrase` — function — line 2012
+- `uniqueOutcomeForState` — function — line 523
 - `validateQuestDefinitions` — function — line 149
 
 ## `quests/settlementLightLookup.ts`

@@ -269,6 +269,20 @@ A gather quest can therefore show `✓` while still formally `active` when the r
 
 Inventory changes mark quest presentation dirty only when an active gather stage makes that relevant.
 
+## Quest log notes
+
+`QuestManager.list()` is still the only player-facing quest DTO. Vue renders it; it does not read `QuestDef` or interpret `kind` / `stageIndex` / `resolvedOutcomeId`.
+
+Each visible entry includes `notes`: already-heard lines, oldest first, each `{ dateLabel, speakerName, text }`.
+
+- `dateLabel` is `Dzień N · HH:MM` from the world clock at the moment the line was heard (`formatWorldDayClock`). It is `null` when reconstructed from an older save that has no journal.
+- `speakerName` is the giver / NPC display name, or `Obserwacja` when a `progressLine` came from a world object rather than an NPC.
+- `text` is always projected from the live `QuestDef` (`offerLine`, stage `progressLine`, selected `dialogueActions.npcLine`, or result / report / abandon line). Authored wording changes after load show the current line at the saved timestamp.
+
+Stamps live on optional `QuestProgressEntry.journal`. `QuestManager` writes them on offer admission, heard stage progress, selected stage dialogue-action NPC lines, and terminal `complete` / `failed` / `abandoned`. It does not stamp reminders, unchosen branches, or `not_offered`. Decline back to `not_offered` clears the journal; abandon keeps notes and adds a result. Older saves without `journal` reconstruct only the offer (and a result when already terminal), never guessed historical `progressLine`s.
+
+The Quest Log list is compact (title, giver, state, current objective). Details shows description, notes, objective, promised reward and relation. Esc returns to the list before closing the overlay.
+
 ## Outcomes, rewards and consequences
 
 Every authored quest has explicit `outcomes`.
@@ -303,9 +317,10 @@ Persisted `QuestProgressEntry` currently includes:
 - optional `resolvedOutcomeId`,
 - optional legacy `stageCount`,
 - optional `stageSlotProgress` for multi-objective stages,
-- optional `offerSuppressedUntilDay` for declined offers.
+- optional `offerSuppressedUntilDay` for declined offers,
+- optional `journal` heard-line stamps (kind, optional stage/dialogue-action/speaker, world clock). Quote text is not stored.
 
-No save-version bump was required for plans `032`–`034`; new progress fields are additive/optional. Active giver capacity and offer ranking are derived and are not stored as queues/slots.
+No save-version bump was required for plans `032`–`034` or `ui-input-021`; new progress fields are additive/optional. Active giver capacity and offer ranking are derived and are not stored as queues/slots.
 
 Quest-owned player↔NPC relation values are also restored into `QuestManager`; legacy name-keyed relation entries are normalized where unambiguous.
 

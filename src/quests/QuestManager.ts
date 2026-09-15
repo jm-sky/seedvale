@@ -19,6 +19,7 @@ import {
   LOST_LIVESTOCK_UNAVAILABLE_OUTCOME,
   parseLostLivestockQuestId,
 } from './opportunities/settlementQuestOpportunities'
+import { formatWorldDayClock } from '../world/dayNight'
 import {
   externalResolutionOutcome,
   hasSocialConsequence,
@@ -28,6 +29,7 @@ import {
   objectiveNeedsPersistedSlotProgress,
   type QuestConsequences,
   type QuestDef,
+  type QuestJournalEvent,
   type QuestObjective,
   type QuestOfferRankSignal,
   type QuestOutcome,
@@ -137,6 +139,15 @@ export type QuestPromisedReward = {
   items: ReadonlyArray<{ kind: ItemKind, count: number }>
 }
 
+/** One heard-line card in the Quest Log details (plan ui-input-021).
+ *  Vue renders these fields only — it does not interpret quest ids. */
+export type QuestJournalNote = {
+  /** `Dzień N · HH:MM`, or null when reconstructed from an older save. */
+  dateLabel: string | null
+  speakerName: string
+  text: string
+}
+
 export type QuestListEntry = {
   id: string
   title: string
@@ -156,6 +167,8 @@ export type QuestListEntry = {
   /** Unambiguous shown reward among complete outcomes; null when hidden,
    *  mixed, or already resolved. */
   promisedReward: QuestPromisedReward | null
+  /** Heard briefing/progress/result notes, oldest first. */
+  notes: readonly QuestJournalNote[]
 }
 
 export type QuestManagerInitial = {
@@ -174,6 +187,8 @@ type QuestRuntimeProgress = {
   /** Decline cooldown — see `QuestProgressEntry.offerSuppressedUntilDay`
    *  (plan quests-progression-033). */
   offerSuppressedUntilDay?: number
+  /** Heard-line stamps (plan ui-input-021). */
+  journal?: readonly QuestJournalEvent[]
 }
 
 /** Player-only harvest report (plan quests-progression-020). */
@@ -360,6 +375,8 @@ const QUEST_COMPLETE_SOUND_VOLUME = 0.35
 const QUEST_FAILED_FALLBACK_LINE = 'To się już nie uda.'
 /** Shown for an `abandoned` entry in the quest log when no other result text applies. */
 const QUEST_ABANDONED_RESULT_TEXT = 'Zrezygnowałeś z tego zadania.'
+/** Speaker label when a `progressLine` is world-object discovery, not NPC speech. */
+const QUEST_JOURNAL_OBSERVATION_SPEAKER = 'Obserwacja'
 /** Generic player line offered on an abandonable `active` giver quest (plan
  *  quests-progression-033) — see `QuestOfferPolicy`'s sibling,
  *  `QuestAbandonment`. */
@@ -562,7 +579,7 @@ export class QuestManager {
    *  "New Game" so a new save doesn't inherit the previous playthrough's quest
    *  state (the instance itself is kept, since callers hold a `const` ref). */
   reset(): void {
-    for (const def of this.defs) this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
+    for (const def of this.defs) this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0, journal: [] })
     this.relations.clear()
     this.animalTargets.clear()
     this.feedContributionIds.clear()
@@ -573,8 +590,106 @@ export class QuestManager {
   }
 
   private setQuestState(id: string, value: QuestRuntimeProgress): void {
-    this.states.set(id, value)
+    const prev = this.states.get(id)
+    let next = value
+    if (value.journal === undefined && prev?.journal && prev.journal.length > 0) {
+      next = { ...value, journal: prev.journal }
+    } else if (value.journal !== undefined && value.journal.length === 0) {
+      const { journal: _cleared, ...rest } = value
+      next = rest
+    }
+    this.states.set(id, next)
     this.dirty = true
+  }
+
+  private appendJournal(
+    id: string,
+    event: Omit<QuestJournalEvent, 'atDays' | 'timeOfDay'> & Partial<Pick<QuestJournalEvent, 'atDays' | 'timeOfDay'>>,
+  ): void {
+    const current = this.stateOf(id)
+    const existing = current.journal ?? []
+    if (event.kind === 'offer' && existing.some((entry) => entry.kind === 'offer')) return
+    if (
+      event.kind === 'progress'
+      && existing.some((entry) => entry.kind === 'progress' && entry.stageIndex === event.stageIndex)
+    ) return
+    if (event.kind === 'result' && existing.some((entry) => entry.kind === 'result')) return
+    const stamped: QuestJournalEvent = {
+      kind: event.kind,
+      atDays: event.atDays ?? this.worldTime.getElapsedDays(),
+      timeOfDay: event.timeOfDay ?? this.worldTime.getTimeOfDay(),
+      ...(event.stageIndex !== undefined ? { stageIndex: event.stageIndex } : {}),
+      ...(event.dialogueActionIndex !== undefined ? { dialogueActionIndex: event.dialogueActionIndex } : {}),
+      ...(event.speakerNpcId !== undefined ? { speakerNpcId: event.speakerNpcId } : {}),
+    }
+    this.setQuestState(id, { ...current, journal: [...existing, stamped] })
+  }
+
+  private npcDisplayName(npcId: NpcId, fallbackGiver: QuestDef): string {
+    if (fallbackGiver.giver.npcId === npcId) return fallbackGiver.giverName
+    for (const def of this.defs) {
+      if (def.giver.npcId === npcId) return def.giverName
+    }
+    return QUEST_JOURNAL_OBSERVATION_SPEAKER
+  }
+
+  private progressSpeakerNpcId(slot: QuestStageObjectiveSlot | undefined): NpcId | undefined {
+    if (!slot) return undefined
+    if (slot.objective.type === 'talk_to_npc') return slot.objective.npc.npcId
+    return undefined
+  }
+
+  private journalText(def: QuestDef, event: QuestJournalEvent, progress: QuestRuntimeProgress): string | null {
+    if (event.kind === 'offer') return def.offerLine
+    if (event.kind === 'result') {
+      const resolved = resolvedOutcome(def, progress)
+      const stage = this.currentStage(def, progress.stageIndex)
+      return resultPresentation(def, progress, resolved, stage) ?? null
+    }
+    const stageIndex = event.stageIndex ?? 0
+    const stage = def.stages[stageIndex]
+    if (!stage) return null
+    if (event.dialogueActionIndex !== undefined) {
+      return stage.dialogueActions?.[event.dialogueActionIndex]?.npcLine ?? null
+    }
+    return stage.progressLine ?? null
+  }
+
+  private projectNotes(def: QuestDef, progress: QuestRuntimeProgress): QuestJournalNote[] {
+    const terminal = progress.state === 'abandoned' || progress.state === 'complete'
+      || progress.state === 'failed' || progress.state === 'invalidated'
+    const recorded = progress.journal ?? []
+    const notes: QuestJournalNote[] = []
+    const hasOffer = recorded.some((event) => event.kind === 'offer')
+    const hasResult = recorded.some((event) => event.kind === 'result')
+    if (!hasOffer && progress.state !== 'not_offered') {
+      notes.push({
+        dateLabel: null,
+        speakerName: def.giverName,
+        text: def.offerLine,
+      })
+    }
+    for (const event of recorded) {
+      const text = this.journalText(def, event, progress)
+      if (!text) continue
+      const speakerName = event.speakerNpcId
+        ? this.npcDisplayName(event.speakerNpcId, def)
+        : QUEST_JOURNAL_OBSERVATION_SPEAKER
+      notes.push({
+        dateLabel: formatWorldDayClock(event.atDays, event.timeOfDay),
+        speakerName,
+        text,
+      })
+    }
+    if (terminal && !hasResult) {
+      const resolved = resolvedOutcome(def, progress)
+      const stage = this.currentStage(def, progress.stageIndex)
+      const result = resultPresentation(def, progress, resolved, stage)
+      if (result) {
+        notes.push({ dateLabel: null, speakerName: def.giverName, text: result })
+      }
+    }
+    return notes
   }
 
   /** True when quest state changed since the last `clearDirty()` — callers
@@ -677,7 +792,7 @@ export class QuestManager {
 
     const mode = questStageMode(stage)
     if (mode === 'any' || questStageObjectiveSlots(stage).length <= 1) {
-      this.advanceStage(def, s, slot.resultId)
+      this.advanceStage(def, s, slot.resultId, { speakerNpcId: this.progressSpeakerNpcId(slot) })
       return
     }
 
@@ -688,7 +803,9 @@ export class QuestManager {
         : {}),
     })
     const remaining = this.unfinishedSlots(def, updated)
-    if (remaining.length === 0) this.advanceStage(def, updated, stage.resultId)
+    if (remaining.length === 0) {
+      this.advanceStage(def, updated, stage.resultId, { speakerNpcId: this.progressSpeakerNpcId(slot) })
+    }
   }
 
   private clearFeedDedupe(questId: string, stageIndex: number): void {
@@ -1000,6 +1117,8 @@ export class QuestManager {
     for (const id of this.selectableOfferIds(npcId)) {
       if (this.stateOf(id).state !== 'not_offered') continue
       this.setQuestState(id, { state: 'offered', stageIndex: 0 })
+      const def = this.defs.find((entry) => entry.id === id)
+      if (def) this.appendJournal(id, { kind: 'offer', speakerNpcId: def.giver.npcId })
     }
   }
 
@@ -1062,6 +1181,7 @@ export class QuestManager {
           resolvedOutcomeId: s.resolvedOutcomeId,
           resultText: resultPresentation(def, s, resolved, stage),
           promisedReward: terminal ? null : promisedShownReward(def),
+          notes: this.projectNotes(def, s),
         }
       })
   }
@@ -1517,6 +1637,7 @@ export class QuestManager {
 
     const stageIndex = outcome.state === 'complete' ? def.stages.length : current.stageIndex
     this.setQuestState(def.id, { state: outcome.state, stageIndex, resolvedOutcomeId: outcome.id })
+    this.appendJournal(def.id, { kind: 'result', speakerNpcId: def.giver.npcId })
     this.clearAnimalTargetsForQuest(def.id)
 
     this.applyEffects(outcome.effects, { skipAnimalOwnership: true })
@@ -1556,6 +1677,7 @@ export class QuestManager {
     const current = this.stateOf(def.id)
     if (current.state !== 'active' || !this.canAbandon(def)) return false
     this.setQuestState(def.id, { state: 'abandoned', stageIndex: current.stageIndex })
+    this.appendJournal(def.id, { kind: 'result', speakerNpcId: def.giver.npcId })
     this.clearAnimalTargetsForQuest(def.id)
     this.clearFeedDedupe(def.id, current.stageIndex)
     this.applyConsequences(def, def.abandonment?.consequences)
@@ -1604,10 +1726,22 @@ export class QuestManager {
   /** Advances past the current stage — to the next stage if any remain, a
    *  declared transition target, or `ready_to_report` once the last one
    *  clears. Does not resolve the quest unless a transition names an outcome. */
-  private advanceStage(def: QuestDef, s: QuestRuntimeProgress, resultId?: string): void {
+  private advanceStage(
+    def: QuestDef,
+    s: QuestRuntimeProgress,
+    resultId?: string,
+    options?: { speakerNpcId?: NpcId, skipProgressJournal?: boolean },
+  ): void {
     this.clearFeedDedupe(def.id, s.stageIndex)
     const stage = this.currentStage(def, s.stageIndex)
     const clearedIndex = s.stageIndex
+    if (!options?.skipProgressJournal && stage?.progressLine) {
+      this.appendJournal(def.id, {
+        kind: 'progress',
+        stageIndex: clearedIndex,
+        speakerNpcId: options?.speakerNpcId,
+      })
+    }
     const transition = matchStageTransition(stage, resultId)
     if (transition?.toOutcomeId) {
       this.applyOutcome(def, transition.toOutcomeId)
@@ -1656,6 +1790,7 @@ export class QuestManager {
       state: 'not_offered',
       stageIndex: 0,
       offerSuppressedUntilDay: this.worldTime.getElapsedDays() + OFFER_DECLINE_SUPPRESSION_DAYS,
+      journal: [],
     })
   }
 
@@ -1848,14 +1983,26 @@ export class QuestManager {
         requireItemInstanceId: action.requireItemInstanceId,
       }
       if (!this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, ctx)) return fallback
+      this.appendJournal(def.id, {
+        kind: 'progress',
+        stageIndex,
+        dialogueActionIndex: actionIndex,
+        speakerNpcId: npcId,
+      })
       this.applyEffects(action.effects)
       this.physicalOutcome.onResolve(def.id, action.physicalOutcomeId)
       if (!this.resolveQuest(def.id, action.physicalOutcomeId)) return fallback
       return action.npcLine ?? def.reportLine ?? fallback
     }
+    this.appendJournal(def.id, {
+      kind: 'progress',
+      stageIndex,
+      dialogueActionIndex: actionIndex,
+      speakerNpcId: npcId,
+    })
     this.applyEffects(action.effects)
     this.applyConsequences(def, action.consequences)
-    this.advanceStage(def, current)
+    this.advanceStage(def, current, undefined, { skipProgressJournal: true })
     return action.npcLine
       ?? this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine
       ?? fallback
@@ -2219,6 +2366,7 @@ export class QuestManager {
       if (s.state === 'not_offered' && s.offerSuppressedUntilDay !== undefined) {
         entry.offerSuppressedUntilDay = s.offerSuppressedUntilDay
       }
+      if (s.journal && s.journal.length > 0) entry.journal = s.journal
       return entry
     })
   }
@@ -2238,6 +2386,7 @@ function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
   if (entry.state === 'not_offered' && entry.offerSuppressedUntilDay !== undefined) {
     progress.offerSuppressedUntilDay = entry.offerSuppressedUntilDay
   }
+  if (entry.journal && entry.journal.length > 0) progress.journal = entry.journal
   return progress
 }
 
@@ -2251,6 +2400,7 @@ function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): Qu
     ...(entry.stageCount !== undefined ? { stageCount: entry.stageCount } : {}),
     ...(entry.stageSlotProgress !== undefined ? { stageSlotProgress: entry.stageSlotProgress } : {}),
     ...(entry.offerSuppressedUntilDay !== undefined ? { offerSuppressedUntilDay: entry.offerSuppressedUntilDay } : {}),
+    ...(entry.journal && entry.journal.length > 0 ? { journal: entry.journal } : {}),
   }
   if (entry.state !== 'complete' && entry.state !== 'failed') return base
   if (entry.resolvedOutcomeId) {

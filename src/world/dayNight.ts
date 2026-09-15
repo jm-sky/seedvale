@@ -204,6 +204,13 @@ export function formatClock(timeOfDay: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
+/** Player-facing world date for quest journal notes (plan ui-input-021).
+ *  Day 1 is the first world day (`elapsedDays` in `[0, 1)`). */
+export function formatWorldDayClock(elapsedDays: number, timeOfDay: number): string {
+  const day = Math.max(1, Math.floor(elapsedDays) + 1)
+  return `Dzień ${day} · ${formatClock(timeOfDay)}`
+}
+
 export function phaseName(timeOfDay: number): string {
   if (timeOfDay < 0.2 || timeOfDay >= 0.85) return 'noc'
   if (timeOfDay < 0.3) return 'świt'

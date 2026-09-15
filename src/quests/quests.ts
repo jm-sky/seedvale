@@ -467,6 +467,21 @@ export type QuestStageSlotProgress = {
   count?: number
 }
 
+/** One heard-line stamp (plan ui-input-021). Content is never persisted —
+ *  `list()` projects it from the live `QuestDef`. */
+export type QuestJournalKind = 'offer' | 'progress' | 'result'
+
+export type QuestJournalEvent = {
+  kind: QuestJournalKind
+  /** Completing stage for `progress`. */
+  stageIndex?: number
+  /** Selected `dialogueActions` index when the stamp is that NPC line, not `progressLine`. */
+  dialogueActionIndex?: number
+  speakerNpcId?: NpcId
+  atDays: number
+  timeOfDay: number
+}
+
 /** Persisted/runtime quest progress. `resolvedOutcomeId` is set only for
  *  `complete`/`failed`; `invalidated` and in-progress states omit it. */
 export type QuestProgressEntry = {
@@ -488,6 +503,8 @@ export type QuestProgressEntry = {
    *  `not_offered` entry; cleared implicitly once the offer is re-admitted.
    *  Absent on older saves = unsuppressed. */
   offerSuppressedUntilDay?: number
+  /** Heard-line timestamps (plan ui-input-021). Absent on older saves = none. */
+  journal?: readonly QuestJournalEvent[]
 }
 
 export const QUEST_STATES: ReadonlySet<QuestState> = new Set([

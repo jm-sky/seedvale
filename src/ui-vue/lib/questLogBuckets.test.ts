@@ -15,6 +15,7 @@ function entry(id: string, state: QuestState): QuestListEntry {
     totalStages: 1,
     currentObjective: null,
     promisedReward: null,
+    notes: [],
   }
 }
 

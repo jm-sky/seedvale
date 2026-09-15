@@ -2177,6 +2177,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `fauna/createFauna.ts`
 - `perf/benchmark.ts`
+- `quests/QuestManager.ts`
 - `tools/assetBrowser/viewer/createViewerScene.ts`
 - `ui-vue/store.ts`
 - `ui/createDebugGui.ts`
