@@ -3,7 +3,7 @@ import { parkedIdFromUrl } from './assetUrlUtils'
 
 export { parkedIdFromUrl } from './assetUrlUtils'
 import { NPC_HEIGHT, NPC_MODEL_URLS } from '../ai/NpcAgent'
-import { NPC_UBC_FEMALE_KNIGHT_URL, NPC_UBC_FEMALE_PEASANT_URL, NPC_UBC_FEMALE_RANGER_URL, NPC_UBC_FEMALE_WIZARD_URL } from '../ai/npcAppearance'
+import { NPC_UBC_FEMALE_KNIGHT_URL, NPC_UBC_FEMALE_PEASANT_URL, NPC_UBC_FEMALE_RANGER_URL, NPC_UBC_FEMALE_WIZARD_URL, NPC_UBC_MALE_KNIGHT_UNHELMETED_URL } from '../ai/npcAppearance'
 import { ANIMAL_DEFS } from '../fauna/AnimalAgent'
 import { FAUNA_URLS } from '../fauna/createFauna'
 import { HELD_GLB } from '../items/heldToolVisual'
@@ -436,6 +436,15 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     prepare: { mode: 'height', value: NPC_HEIGHT },
     skinned: true,
     anchors: anchorsForAsset('character:ubc-female-knight'),
+  })
+  out.push({
+    id: 'character:ubc-male-knight-unhelmeted',
+    url: NPC_UBC_MALE_KNIGHT_UNHELMETED_URL,
+    label: 'NPC (UBC Male Knight, unhelmeted)',
+    group: 'character',
+    prepare: { mode: 'height', value: NPC_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-male-knight-unhelmeted'),
   })
 
   for (const [gender, urls] of Object.entries(NPC_MODEL_URLS)) {

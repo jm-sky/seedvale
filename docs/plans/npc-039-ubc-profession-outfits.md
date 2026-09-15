@@ -13,6 +13,8 @@
 
 Implemented V1 with a scoped table: adult `farmer`/`woodcutter` → Peasant (distinct sidecars), adult `trader` → Wizard, both sexes, UAL1 companion clips. Hunter and other roles stay Modular.
 
+2026-09-15 increment: adult male `guard` → unhelmeted Knight singleton (`male_knight_unhelmeted.glb` + `npc_knight.webp` ← `T_Knight_3`). Not an npc-040 hair/beard matrix. Female guards stay Modular.
+
 Powiązane: `items-player-033` / `034` / `036` (UBC gracz, cały mesh, UAL1), draft `items-player-037` (per-slot — NPC poza zakresem tamtego planu). Luźny koniec: `docs/plans/LOOSE-ENDS.md` (Characters / presentation — remaining NPC roles still Modular).
 
 ## Problem
@@ -154,3 +156,8 @@ Ten sam wzorzec nadaje się na później dla innych klas (np. Knight dla `guard`
 
 - `hunter` dorosły = Ranger `T_Ranger_2`, nie zielony default gracza i nie oliwkowy `T_Ranger_3`.
 - Gracz w `leather_armor` nadal zielony Ranger.
+
+## Weryfikacja po Guard increment (osobno)
+
+- Marek / dorosły męski `guard` = Knight bez hełmu (`male_knight_unhelmeted.glb`) + `T_Knight_3`, nie default gracza i nie brown `T_Knight_2`.
+- Żeński `guard` i dzieci = Modular. Jeden GLB dla wszystkich męskich strażników — bez macierzy fryzur.

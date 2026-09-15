@@ -10,6 +10,8 @@ import {
   NPC_UBC_FEMALE_WIZARD_URL,
   NPC_UBC_HAIR_1_URL,
   NPC_UBC_HAIR_2_URL,
+  NPC_UBC_KNIGHT_TINT_URL,
+  NPC_UBC_MALE_KNIGHT_UNHELMETED_URL,
   NPC_UBC_PEASANT_TINT_URL,
   NPC_UBC_RANGER_TINT_URL,
   NPC_UBC_WIZARD_TINT_URL,
@@ -77,6 +79,32 @@ describe('resolveNpcAppearance', () => {
     expect(huntress.modelUrl).not.toBe(NPC_UBC_FEMALE_RANGER_URL)
     expect(huntress.modelUrl).toMatch(/female_ranger_(long|buns)/)
     expect(huntress.tintUrl).toBe(NPC_UBC_RANGER_TINT_URL)
+  })
+
+  it('maps adult male guard to a single unhelmeted Knight UBC', () => {
+    const marek = resolveNpcAppearance({
+      age: 32,
+      gender: 'male',
+      npcId: 'home:npc:3',
+      role: 'guard',
+      treeIndex: 3,
+    })
+    expect(marek.outfit).toBe('knight')
+    expect(marek.modelUrl).toBe(NPC_UBC_MALE_KNIGHT_UNHELMETED_URL)
+    expect(marek.animationUrl).toBe(PLAYER_UBC_ANIMATION_URL)
+    expect(marek.tintUrl).toBe(NPC_UBC_KNIGHT_TINT_URL)
+    expect(Object.values(NPC_HAIR_COLOR)).toContain(marek.hairColor)
+    expect(Object.values(NPC_CLOTHING_HUE)).toContain(marek.clothingHue)
+
+    const otherGuard = resolveNpcAppearance({
+      age: 40,
+      gender: 'male',
+      npcId: 'closed:npc:8',
+      role: 'guard',
+      treeIndex: 8,
+    })
+    expect(otherGuard.outfit).toBe('knight')
+    expect(otherGuard.modelUrl).toBe(NPC_UBC_MALE_KNIGHT_UNHELMETED_URL)
   })
 
   it('maps adult trader to Wizard UBC', () => {
@@ -202,6 +230,10 @@ describe('resolveNpcAppearance', () => {
     expect(ubcVariantModelUrl('male', 'ranger', 'long', true)).toBe(
       '/models/characters/ubc/npc/male_ranger_long_beard.glb',
     )
+    expect(ubcVariantModelUrl('male', 'knight', 'simple', false)).not.toMatch(/male_knight\.glb$/)
+    expect(ubcVariantModelUrl('male', 'knight', 'simple', false)).not.toBe(
+      NPC_UBC_MALE_KNIGHT_UNHELMETED_URL,
+    )
   })
 
   it('ships every baked variant GLB and hair sidecar', () => {
@@ -222,6 +254,8 @@ describe('resolveNpcAppearance', () => {
     expect(existsSync(`public${NPC_UBC_HAIR_1_URL}`)).toBe(true)
     expect(existsSync(`public${NPC_UBC_HAIR_2_URL}`)).toBe(true)
     expect(existsSync('public/models/characters/ubc/npc_ranger.webp')).toBe(true)
+    expect(existsSync(`public${NPC_UBC_MALE_KNIGHT_UNHELMETED_URL}`)).toBe(true)
+    expect(existsSync(`public${NPC_UBC_KNIGHT_TINT_URL}`)).toBe(true)
   })
 
   it('keeps children and other roles on the Modular pool', () => {
@@ -239,15 +273,15 @@ describe('resolveNpcAppearance', () => {
     expect(childFarmer.hairColor).toBe(0xffffff)
     expect(childFarmer.clothingHue).toBe(NPC_CLOTHING_HUE.identity)
 
-    const marek = resolveNpcAppearance({
-      age: 32,
-      gender: 'male',
-      npcId: 'home:npc:3',
+    const femaleGuard = resolveNpcAppearance({
+      age: 30,
+      gender: 'female',
+      npcId: 'watch:npc:2',
       role: 'guard',
-      treeIndex: 3,
+      treeIndex: 2,
     })
-    expect(marek.outfit).toBe('modular')
-    expect(marek.modelUrl).toBe(NPC_MODEL_URLS.male[3 % NPC_MODEL_URLS.male.length])
+    expect(femaleGuard.outfit).toBe('modular')
+    expect(femaleGuard.modelUrl).toBe(NPC_MODEL_URLS.female[2 % NPC_MODEL_URLS.female.length])
 
     const blacksmith = resolveNpcAppearance({
       age: 32,

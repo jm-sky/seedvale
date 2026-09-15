@@ -167,6 +167,7 @@ export const ASSET_ANCHORS: Record<string, readonly AssetAnchorDef[]> = {
   'character:ubc-knight-cloth': CHARACTER_ANCHORS_UBC,
   'character:ubc-noble': CHARACTER_ANCHORS_UBC,
   'character:ubc-wizard': CHARACTER_ANCHORS_UBC,
+  'character:ubc-male-knight-unhelmeted': CHARACTER_ANCHORS_UBC,
   'npc:Farmer': CHARACTER_ANCHORS,
   'npc:Worker': CHARACTER_ANCHORS,
   'npc:Casual_Hoodie': CHARACTER_ANCHORS,

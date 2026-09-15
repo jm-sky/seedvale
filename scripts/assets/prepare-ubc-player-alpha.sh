@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Compose UBC Fantasy outfits + UAL1 subset into public/models/characters/ubc/.
-# Male player meshes, female Peasant/Wizard/Ranger, npc-040 hair/beard variants
-# under ubc/npc/, hair_1/2.webp. Female hair is Long / Buns (not BuzzedFemale).
-# Sources stay in _temp/. Re-run after changing the compose/extract scripts.
+# Male player meshes, female Peasant/Wizard/Ranger, unhelmeted male Knight
+# singleton for guards, npc-040 hair/beard variants under ubc/npc/, hair_1/2.webp.
+# Female hair is Long / Buns (not BuzzedFemale). Sources stay in _temp/.
+# Re-run after changing the compose/extract scripts.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -13,6 +14,7 @@ OUTFITS=(
   male_peasant
   male_ranger
   male_knight
+  male_knight_unhelmeted
   male_knight_cloth
   male_noble
   male_wizard
@@ -25,6 +27,7 @@ NPC_TINTS=(
   npc_woodcutter
   npc_wizard
   npc_ranger
+  npc_knight
 )
 
 cleanup() { rm -rf "$WORK"; }
@@ -71,7 +74,7 @@ done
 optimize "$WORK/anims/ual1_player.glb" "$OUT/ual1_player.glb" "-ac"
 
 # Brown albedo variants are swapped at runtime onto MI_* outfit materials.
-# NPC profession tints (T_Peasant_3 / T_Peasant_2 / T_Wizard_3) live beside them.
+# NPC profession tints (T_Peasant_3 / T_Peasant_2 / T_Wizard_3 / T_Ranger_2 / T_Knight_3) live beside them.
 # Install sharp in a temp dir — project node_modules may not have it, and
 # `npx --package=sharp node -e` does not resolve the package from the repo root.
 SHARP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/seedvale-sharp.XXXXXX")"

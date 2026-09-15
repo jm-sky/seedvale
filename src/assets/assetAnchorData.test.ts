@@ -41,6 +41,7 @@ describe('assetAnchorData Phase 6', () => {
       'character:ubc-knight-cloth',
       'character:ubc-noble',
       'character:ubc-wizard',
+      'character:ubc-male-knight-unhelmeted',
     ] as const) {
       const hand = anchorsForAsset(id).find((a) => a.name === 'hand.right')
       expect(hand?.rotation).toEqual(UBC_HAND_FROM_WRIST_R)

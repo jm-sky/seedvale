@@ -46,7 +46,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 - [ ] 2026-09-15 — `?playerTint=brown` nie jest persystowany; character appearance (wybór koloru bez query) to osobna praca.
 - [ ] 2026-09-15 — UAL2 (combat/work: `TreeChopping_Loop`, `Consume`, `Walk_Carry_Loop`, `Farm_*`, `LayToIdle`) is on the same UBC rig as UAL1; extract a second subset after `items-player-035` locomotion/combat clips. No retarget.
-- [ ] 2026-09-15 — Remaining NPC roles (guard, blacksmith, …) and children still use Ultimate Modular Men/Women (different skeleton from UBC). Adult farmer/woodcutter/trader/hunter are UBC + UAL1 with seeded hair/beard/clothing-hue variants (`npc-039` / `npc-040`). Do not mix UAL clips onto Modular rigs. Female traders always use `Hair_Long` (`Female_Wizard` has no hat). Male Wizard-hat vs Long/Buns and Ranger-hood vs Long/Buns clipping is a browser check, not a resolver filter.
+- [ ] 2026-09-15 — Remaining NPC roles (blacksmith, …) and children still use Ultimate Modular Men/Women (different skeleton from UBC). Adult farmer/woodcutter/trader/hunter are UBC + UAL1 with seeded hair/beard/clothing-hue variants (`npc-039` / `npc-040`). Adult male `guard` is a single unhelmeted Knight GLB (`male_knight_unhelmeted.glb` + `T_Knight_3`), not an npc-040 matrix; female guards stay Modular. Do not mix UAL clips onto Modular rigs. Female traders always use `Hair_Long` (`Female_Wizard` has no hat). Male Wizard-hat vs Long/Buns and Ranger-hood vs Long/Buns clipping is a browser check, not a resolver filter.
 
 ## Off-screen simulation
 

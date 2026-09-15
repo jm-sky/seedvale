@@ -15,6 +15,8 @@ export const NPC_UBC_FEMALE_PEASANT_URL = `${UBC_DIR}/female_peasant.glb`
 export const NPC_UBC_FEMALE_WIZARD_URL = `${UBC_DIR}/female_wizard.glb`
 export const NPC_UBC_FEMALE_RANGER_URL = `${UBC_DIR}/female_ranger.glb`
 export const NPC_UBC_FEMALE_KNIGHT_URL = `${UBC_DIR}/female_knight.glb`
+/** Adult male guard singleton — Knight with Armet stripped + Hair_SimpleParted. */
+export const NPC_UBC_MALE_KNIGHT_UNHELMETED_URL = `${UBC_DIR}/male_knight_unhelmeted.glb`
 /** Farmer sidecar — `T_Peasant_3` (sapphire vest), not the player's olive default. */
 export const NPC_UBC_PEASANT_TINT_URL = `${UBC_DIR}/npc_peasant.webp`
 /** Woodcutter sidecar — `T_Peasant_2` (earth brown), distinct from farmer sapphire. */
@@ -23,6 +25,8 @@ export const NPC_UBC_WOODCUTTER_TINT_URL = `${UBC_DIR}/npc_woodcutter.webp`
 export const NPC_UBC_WIZARD_TINT_URL = `${UBC_DIR}/npc_wizard.webp`
 /** Hunter sidecar — `T_Ranger_2` (dark violet), not the player's green default or brown tint. */
 export const NPC_UBC_RANGER_TINT_URL = `${UBC_DIR}/npc_ranger.webp`
+/** Guard sidecar — `T_Knight_3`, not the player's default Knight or brown `T_Knight_2`. */
+export const NPC_UBC_KNIGHT_TINT_URL = `${UBC_DIR}/npc_knight.webp`
 export const NPC_UBC_HAIR_1_URL = `${UBC_DIR}/hair_1.webp`
 export const NPC_UBC_HAIR_2_URL = `${UBC_DIR}/hair_2.webp`
 
@@ -42,7 +46,7 @@ export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
   ],
 }
 
-export type NpcOutfitId = 'modular' | 'peasant' | 'wizard' | 'ranger'
+export type NpcOutfitId = 'modular' | 'peasant' | 'wizard' | 'ranger' | 'knight'
 export type NpcUbcOutfitId = Exclude<NpcOutfitId, 'modular'>
 export type NpcHairKind = 'simple' | 'long' | 'buzzed' | 'buns'
 export type NpcClothingHueId = 'identity' | 'warm' | 'cool' | 'darker'
@@ -135,6 +139,9 @@ function defaultUbcUrl(gender: NpcGender, outfit: NpcUbcOutfitId): string {
   if (outfit === 'ranger') {
     return gender === 'female' ? NPC_UBC_FEMALE_RANGER_URL : PLAYER_UBC_RANGER_URL
   }
+  if (outfit === 'knight') {
+    return NPC_UBC_MALE_KNIGHT_UNHELMETED_URL
+  }
   return gender === 'female' ? NPC_UBC_FEMALE_WIZARD_URL : PLAYER_UBC_WIZARD_URL
 }
 
@@ -145,6 +152,8 @@ function isPlayerDefaultCombo(
   beard: boolean,
 ): boolean {
   if (beard) return false
+  // Helmeted player Knight must not be reused; guard pins the unhelmeted stem.
+  if (outfit === 'knight') return false
   if (gender === 'male' && hair === 'simple') return true
   // Female Peasant stem is Hair_Long. Wizard/Ranger stems were SimpleParted —
   // long hair lives in npc/female_*_long.glb.
@@ -194,11 +203,13 @@ const UBC_ROLE_LOOK: Partial<Record<Role, { outfit: NpcUbcOutfitId, tintUrl: str
   woodcutter: { outfit: 'peasant', tintUrl: NPC_UBC_WOODCUTTER_TINT_URL },
   trader: { outfit: 'wizard', tintUrl: NPC_UBC_WIZARD_TINT_URL },
   hunter: { outfit: 'ranger', tintUrl: NPC_UBC_RANGER_TINT_URL },
+  guard: { outfit: 'knight', tintUrl: NPC_UBC_KNIGHT_TINT_URL },
 }
 
 /**
  * Adult farmer/woodcutter → Peasant UBC, adult trader → Wizard UBC, adult
- * hunter → Ranger UBC; everyone else (including children) stays on the
+ * hunter → Ranger UBC, adult male guard → unhelmeted Knight singleton;
+ * everyone else (including children and female guards) stays on the
  * Modular pool. Role, not reserved name, selects the outfit. Hair/beard/hue
  * come from `npcId`, not role. Women only roll Hair_Long / Hair_Buns.
  *
@@ -216,6 +227,19 @@ export function resolveNpcAppearance(opts: {
   }
   const look = UBC_ROLE_LOOK[opts.role]
   if (look) {
+    if (look.outfit === 'knight') {
+      if (opts.gender !== 'male') {
+        return appearanceFor(modelUrlFor(opts.gender, opts.treeIndex), 'modular', null)
+      }
+      const style = rollUbcVariant(opts.npcId, opts.gender, look.outfit)
+      return appearanceFor(
+        NPC_UBC_MALE_KNIGHT_UNHELMETED_URL,
+        look.outfit,
+        look.tintUrl,
+        style.hairColor,
+        style.clothingHue,
+      )
+    }
     const variant = rollUbcVariant(opts.npcId, opts.gender, look.outfit)
     return appearanceFor(
       variant.modelUrl,

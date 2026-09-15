@@ -378,12 +378,14 @@ def write_doc(doc: GltfDoc, out_gltf: str) -> None:
         f.write('\n')
 
 
-# Helmeted player Knight keeps Armet (hair=None). NPC Female_Knight strips it.
+# Helmeted player Knight keeps Armet (hair=None). Guard NPCs use the
+# unhelmeted singleton (Armet stripped + Hair_SimpleParted) — not the npc/ matrix.
 # hair: None | 'simple' | 'long'. sex: 'male' | 'female'. drop_headgear: bool.
 OUTFITS: tuple[tuple[str, str, str | None, str, bool], ...] = (
     ('Male_Peasant', 'male_peasant', 'simple', 'male', False),
     ('Male_Ranger', 'male_ranger', 'simple', 'male', False),
     ('Male_Knight', 'male_knight', None, 'male', False),
+    ('Male_Knight', 'male_knight_unhelmeted', 'simple', 'male', True),
     ('Male_Knight_Cloth', 'male_knight_cloth', None, 'male', False),
     ('Male_Noble', 'male_noble', 'simple', 'male', False),
     ('Male_Wizard', 'male_wizard', 'simple', 'male', False),
@@ -393,7 +395,7 @@ OUTFITS: tuple[tuple[str, str, str | None, str, bool], ...] = (
 )
 
 # Player defaults reused by NPC resolver — do not emit duplicate NPC GLBs.
-# Male Knight stays helmeted on the player mesh; unhelmeted simple is npc/.
+# Male Knight stays helmeted on the player mesh; guard uses male_knight_unhelmeted.
 # Female outfits always bake Hair_Long as the stem; Hair_Buns is the only extra.
 PLAYER_DEFAULT_NPC_COMBOS: frozenset[tuple[str, str, str, bool]] = frozenset({
     ('male', 'peasant', 'simple', False),
@@ -416,6 +418,7 @@ ALT_ALBEDOS: tuple[tuple[str, str], ...] = (
     ('Textures/Peasant/T_Peasant_2_BaseColor.png', 'npc_woodcutter.png'),
     ('Textures/Wizard/T_Wizard_3_BaseColor.png', 'npc_wizard.png'),
     ('Textures/Ranger/T_Ranger_2_BaseColor.png', 'npc_ranger.png'),
+    ('Textures/Knight/T_Knight_3_BaseColor.png', 'npc_knight.png'),
 )
 
 HAIR_NODE_NAMES = {
