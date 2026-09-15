@@ -68,6 +68,27 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `quests/cardinalDirection.test.ts`
+- `quests/caveLocationDescription.ts`
+
+## `quests/caveLocationDescription.test.ts`
+
+**Imports**
+
+- `quests/caveLocationDescription.ts`
+
+## `quests/caveLocationDescription.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `quests/cardinalDirection.ts`
+- `world/caves/caveArchetype.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/caveLocationDescription.test.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
 
 ## `quests/dungeonBanditTreasure.test.ts`
 
@@ -377,6 +398,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `quests/caveLocationDescription.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`

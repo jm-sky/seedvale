@@ -675,6 +675,24 @@ Generated from TypeScript imports.
 - `items/tradeCatalog.ts`
 - `items/weaponMaintenance.ts`
 
+## `items/inventoryItemReadAction.test.ts`
+
+**Imports**
+
+- `items/inventoryItemReadAction.ts`
+- `items/items.ts`
+
+## `items/inventoryItemReadAction.ts`
+
+**Imports**
+
+- `items/itemCatalog.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `items/inventoryItemReadAction.test.ts`
+
 ## `items/inventoryTransfer.test.ts`
 
 **Imports**
@@ -795,6 +813,7 @@ Generated from TypeScript imports.
 - `items/equipment.ts`
 - `items/foodFreshness.ts`
 - `items/highQualityWeapons.test.ts`
+- `items/inventoryItemReadAction.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
@@ -1055,6 +1074,8 @@ Generated from TypeScript imports.
 - `items/foodSafety.ts`
 - `items/heldToolVisual.ts`
 - `items/highQualityWeapons.test.ts`
+- `items/inventoryItemReadAction.test.ts`
+- `items/inventoryItemReadAction.ts`
 - `items/inventoryTransfer.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
@@ -1102,6 +1123,7 @@ Generated from TypeScript imports.
 - `terrain/depositMining.ts`
 - `tools/assetBrowser/gripEdit.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
+- `ui-vue/composables/useItemCategoryLabels.ts`
 - `ui-vue/composables/useMerchantTradeState.ts`
 - `ui-vue/playerQuickActions.ts`
 - `ui-vue/store.ts`

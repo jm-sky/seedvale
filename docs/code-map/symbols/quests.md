@@ -10,6 +10,15 @@ Generated from exported TypeScript symbols.
   - domain: quests-progression
 - `CardinalSector` — type — line 4
 
+## `quests/caveLocationDescription.ts`
+
+- `CaveLocationDescriptionInput` — type — line 16
+- `CaveQuestPresentationInput` — type — line 43
+- `describeCaveLocation` — function — line 32
+  - domain: quests-progression
+- `resolveCaveQuestPresentation` — function — line 57
+  - domain: quests-progression
+
 ## `quests/dungeonBanditTreasure.ts`
 
 - `buildDungeonBanditTreasureQuest` — function — line 375
@@ -214,11 +223,11 @@ Generated from exported TypeScript symbols.
 
 ## `quests/opportunities/rpgQuestMaterialization.ts`
 
-- `materializeRpgQuestOpportunity` — function — line 259
+- `materializeRpgQuestOpportunity` — function — line 262
   - domain: quests-progression
   - system: settlement-quest-opportunities
   - role: Materializes a selected RPG matrix candidate into a normal QuestDef.
-- `RpgMaterializationContext` — type — line 15
+- `RpgMaterializationContext` — type — line 16
 
 ## `quests/opportunities/rpgQuestMatrices.ts`
 
@@ -384,13 +393,13 @@ Generated from exported TypeScript symbols.
 - `AuthoredQuestStageDialogueAction` — type — line 964
   - domain: quests-progression
 - `AuthoredQuestStageObjectiveSlot` — type — line 976
-- `bindDarkForestTreasureQuest` — function — line 2042
-- `bindExactCaveQuests` — function — line 2015
-- `bindTreasureMapBearCaveQuest` — function — line 2149
+- `bindDarkForestTreasureQuest` — function — line 2043
+- `bindExactCaveQuests` — function — line 2016
+- `bindTreasureMapBearCaveQuest` — function — line 2150
 - `buildDarkForestTreasureQuest` — function — line 1885
 - `buildHorseAcquisitionQuest` — function — line 1932
 - `buildLandmarkQuests` — function — line 1718
-- `buildTreasureMapBearCaveQuest` — function — line 2068
+- `buildTreasureMapBearCaveQuest` — function — line 2069
 - `CAVE_PLACE_TOKEN` — const — line 1975
 - `cavePlacePhrase` — function — line 1979
 - `externalResolutionOutcome` — function — line 530
@@ -448,7 +457,7 @@ Generated from exported TypeScript symbols.
 - `relationToLevel` — function — line 52
 - `RESOLVED_WITHOUT_PLAYER_OUTCOME` — const — line 521
   - domain: quests-progression
-- `TreasureMapBearCaveQuestBinding` — type — line 2059
+- `TreasureMapBearCaveQuestBinding` — type — line 2060
 - `treasureMapSourcePlacePhrase` — function — line 1995
 - `uniqueOutcomeForState` — function — line 506
 - `validateQuestDefinitions` — function — line 149

@@ -393,6 +393,7 @@ Generated from TypeScript imports.
 
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `quests/caveLocationDescription.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostTreasureExpedition.ts`

@@ -823,6 +823,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/characters.ts`
 - `ai/reactionChance.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
@@ -903,6 +904,7 @@ Generated from TypeScript imports.
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
 - `quests/cardinalDirection.ts`
+- `quests/caveLocationDescription.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/dungeonBanditTreasureRuntime.ts`
 - `quests/guardPersistence.ts`

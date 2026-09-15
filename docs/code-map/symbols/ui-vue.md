@@ -8,7 +8,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui-vue/composables/useItemCategoryLabels.ts`
 
-- `useItemCategoryLabels` — const — line 1
+- `ITEM_CATEGORY_LABELS` — const — line 3
+- `useItemCategoryLabels` — const — line 15
 
 ## `ui-vue/composables/useMerchantTradeState.ts`
 

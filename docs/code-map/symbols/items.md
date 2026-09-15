@@ -263,6 +263,12 @@ Generated from exported TypeScript symbols.
 - `snapshotInventoryContents` — function — line 702
 - `toSaveItemInstance` — function — line 103
 
+## `items/inventoryItemReadAction.ts`
+
+- `inventoryItemReadAction` — function — line 15
+  - domain: items-player
+- `InventoryItemReadAction` — type — line 4
+
 ## `items/inventoryTransfer.ts`
 
 - `transferAllInventoryContents` — function — line 69
@@ -381,22 +387,22 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 237
-- `canCancelRestProgress` — function — line 208
-- `createItemMesh` — function — line 1423
-- `hasItemCategory` — function — line 187
-- `hasItemKindCategory` — function — line 191
-- `ITEM_DEFS` — const — line 241
-- `ITEM_SIZE_UNITS` — const — line 160
-- `ItemCategory` — type — line 151
-- `ItemDef` — type — line 173
+- `canCancelRestNow` — function — line 244
+- `canCancelRestProgress` — function — line 215
+- `createItemMesh` — function — line 1430
+- `hasItemCategory` — function — line 192
+- `hasItemKindCategory` — function — line 196
+- `ITEM_DEFS` — const — line 248
+- `ITEM_SIZE_UNITS` — const — line 165
+- `ItemCategory` — type — line 156
+- `ItemDef` — type — line 178
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 156
-- `itemSizeUnits` — function — line 169
-- `primaryItemCategory` — function — line 198
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 206
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 218
-- `restCancelAllowedByStartVigor` — function — line 225
+- `ItemSize` — type — line 161
+- `itemSizeUnits` — function — line 174
+- `primaryItemCategory` — function — line 205
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 213
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 225
+- `restCancelAllowedByStartVigor` — function — line 232
 
 ## `items/ItemSpawner.ts`
 

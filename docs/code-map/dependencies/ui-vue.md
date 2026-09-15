@@ -8,7 +8,21 @@ Generated from TypeScript imports.
 
 - `input/isTouchDevice.ts`
 
+## `ui-vue/composables/useItemCategoryLabels.test.ts`
+
+**Imports**
+
+- `ui-vue/composables/useItemCategoryLabels.ts`
+
 ## `ui-vue/composables/useItemCategoryLabels.ts`
+
+**Imports**
+
+- `items/items.ts`
+
+**Imported by**
+
+- `ui-vue/composables/useItemCategoryLabels.test.ts`
 
 ## `ui-vue/composables/useMerchantTradeState.ts`
 

@@ -282,8 +282,10 @@ Generated from TypeScript imports.
 - `ai/schedule.test.ts`
 - `ai/schedule.ts`
 - `ai/voluntaryExpeditionJoin.ts`
+- `app/createApp.ts`
 - `economy/npcWork.ts`
 - `economy/production.ts`
+- `quests/caveLocationDescription.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/families.ts`
 - `settlement/npcPhysicalProfile.ts`
