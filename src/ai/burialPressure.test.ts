@@ -8,7 +8,7 @@ import {
 import { createNpcRelationships } from '../settlement/npcRelationships'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { damageHealth } from '../shared/HealthState'
-import { pickActionKind } from '../simulation'
+import { pickActionKind } from '../simulation/scoreActions'
 import { resolveBurialPressure } from './burialPressure'
 import { createBurialPlan } from './npcPlan'
 

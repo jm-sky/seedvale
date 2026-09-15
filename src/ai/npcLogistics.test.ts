@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { NpcLogisticsCtx } from './npcLogistics'
-import { createSettlementEconomy } from '../economy'
+import { createSettlementEconomy } from '../economy/settlementEconomy'
 import { Inventory } from '../items/Inventory'
 import { createHousehold } from '../settlement/household'
 import { createNeedState } from './Needs'

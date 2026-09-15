@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { NpcDecisionTarget } from './weatherPressure'
 import { Inventory } from '../items/Inventory'
 import { resolveInjurySeverity } from '../shared/injurySeverity'
-import { pickActionKind } from '../simulation'
+import { pickActionKind } from '../simulation/scoreActions'
 import {
   decreaseInjuryFromHeal,
   healingPressure,

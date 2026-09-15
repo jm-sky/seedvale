@@ -10,7 +10,7 @@ import {
   loadGltfAsset,
   prepareProp,
 } from '../assets/loadGltf'
-import { type SettlementEconomy } from '../economy'
+import { type SettlementEconomy } from '../economy/settlementEconomy'
 import { ANIMAL_DEFS, AnimalAgent, type VillageInfo } from '../fauna/AnimalAgent'
 import { createRatModel } from '../fauna/proceduralAnimals'
 import { createSeededRandom } from '../world/parseSeed'

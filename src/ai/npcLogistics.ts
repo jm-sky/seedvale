@@ -7,12 +7,9 @@ import type { SettlementLandmarks } from '../settlement/props'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { HelperAssignment } from './helperAssignment'
 import type { ActionId, NpcPlannedAction } from './npcAction'
-import {
-  claimEconomySurplus,
-  commitWoodcutterDeposit,
-  type SettlementEconomy,
-  tryAdvanceDevelopment,
-} from '../economy'
+import { claimEconomySurplus } from '../economy/localExchange'
+import { commitWoodcutterDeposit, tryAdvanceDevelopment } from '../economy/npcWork'
+import { type SettlementEconomy } from '../economy/settlementEconomy'
 import { carryFoodClaim, claimFoodItems, deliverCarriedFoodClaim, type FoodItemClaim } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { settlementStorageDestination } from '../settlement/storageDestinations'

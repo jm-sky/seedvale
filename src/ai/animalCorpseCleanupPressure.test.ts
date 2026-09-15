@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AnimalCorpseCleanupCandidate } from '../settlement/animalCorpseSanitation'
 import type { NpcDecisionTarget } from './weatherPressure'
-import { pickActionKind } from '../simulation'
+import { pickActionKind } from '../simulation/scoreActions'
 import { resolveAnimalCorpseCleanupPressure } from './animalCorpseCleanupPressure'
 
 function candidate(overrides: Partial<AnimalCorpseCleanupCandidate> = {}): AnimalCorpseCleanupCandidate {

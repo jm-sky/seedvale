@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createNpcStateRegistry } from '../settlement/npcState'
 import { damageHealth } from '../shared/HealthState'
-import { pickActionKind } from '../simulation'
+import { pickActionKind } from '../simulation/scoreActions'
 import { graveIdForDeceased, type NpcGraves } from '../world/npcGraves'
 import {
   getLastGraveVisitAtDays,

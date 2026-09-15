@@ -13,27 +13,33 @@ import type { TransportOrder } from '../world/transportOrder'
 import type { Role } from './characters'
 import type { NpcPlannedAction } from './npcAction'
 import {
-  BLACKSMITH_IRON_ROD_PRODUCTION,
-  claimHouseholdSurplus,
+  committedOutgoingFood,
+  uncommittedHouseholdFoodSurplus,
+  uncoveredSettlementFoodShortage,
+} from '../economy/foodTransportDemand'
+import { claimHouseholdSurplus } from '../economy/localExchange'
+import {
   commitBlacksmithProduction,
   commitDressingProduction,
   commitHunterArrowProduction,
-  committedOutgoingFood,
   commitTextileWorkProduction,
-  creditDeliveredOreToStock,
-  DRESSING_PRODUCTION,
-  HUNTER_ARROW_PRODUCTIONS,
-  ORE_TRANSPORT_MAX_TRANSFER,
-  preflightProductionInputs,
-  type ProductionDef,
-  type SettlementEconomy,
-  TEXTILE_WORKER_PRODUCTIONS,
   tryAdvanceDevelopment,
-  uncommittedHouseholdFoodSurplus,
+} from '../economy/npcWork'
+import {
+  creditDeliveredOreToStock,
+  ORE_TRANSPORT_MAX_TRANSFER,
   uncommittedResourceSiteOre,
   uncoveredOreProductionNeed,
-  uncoveredSettlementFoodShortage,
-} from '../economy'
+} from '../economy/oreTransportDemand'
+import {
+  BLACKSMITH_IRON_ROD_PRODUCTION,
+  DRESSING_PRODUCTION,
+  HUNTER_ARROW_PRODUCTIONS,
+  type ProductionDef,
+  TEXTILE_WORKER_PRODUCTIONS,
+} from '../economy/production'
+import { preflightProductionInputs } from '../economy/productionExecutor'
+import { type SettlementEconomy } from '../economy/settlementEconomy'
 import { WOOL_YIELD } from '../fauna/livestockProduction'
 import {
   ownedFlockCentroid,

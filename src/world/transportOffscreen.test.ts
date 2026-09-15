@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createSettlementEconomy } from '../economy'
+import { createSettlementEconomy } from '../economy/settlementEconomy'
 import { Inventory } from '../items/Inventory'
 import { createHousehold } from '../settlement/household'
 import { createNpcAuthoritativeState } from '../settlement/npcState'

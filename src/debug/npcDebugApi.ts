@@ -30,7 +30,7 @@ import {
   committedOutgoingFood,
   uncommittedHouseholdFoodSurplus,
   uncoveredSettlementFoodShortage,
-} from '../economy'
+} from '../economy/foodTransportDemand'
 import { matchesQuestSpawnPointId } from '../fauna/wolfDenScenario'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { awardSkillXp, type PlayerSkills, setSkillValueForDebug, type SkillId } from '../player/PlayerSkills'

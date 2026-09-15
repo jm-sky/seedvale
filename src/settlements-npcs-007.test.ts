@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { type NpcWorkContext, planProfessionWork } from './ai/npcProfessionWork'
+import { commitDressingProduction, commitTextileWorkProduction } from './economy/npcWork'
 import {
-  commitDressingProduction,
-  commitTextileWorkProduction,
   DRESSING_PRODUCTION,
-  executeProduction,
   FLAX_LINEN_PRODUCTION,
   LINEN_BANDAGE_PRODUCTION,
   TEXTILE_WORKER_PRODUCTIONS,
-} from './economy'
+} from './economy/production'
+import { executeProduction } from './economy/productionExecutor'
 import { Inventory } from './items/Inventory'
 import { CONSUMABLE_KINDS_BY_NEED, ITEM_CATALOG } from './items/itemCatalog'
 import { createHousehold } from './settlement/household'

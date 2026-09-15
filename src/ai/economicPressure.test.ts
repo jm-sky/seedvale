@@ -5,7 +5,7 @@ import {
   PRODUCTION_SHORTAGE_PERSISTENCE_SEC,
   type ProductionShortageRecord,
 } from '../economy/productionShortage'
-import { pickActionKind } from '../simulation'
+import { pickActionKind } from '../simulation/scoreActions'
 import { productionShortagePressures } from './economicPressure'
 import { createNeedState, generateNeedPressures } from './Needs'
 

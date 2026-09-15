@@ -64,10 +64,8 @@ import { rangedAccuracy, rangedDeviationRoll, resolveRangedDirection } from '../
 import { createRangedAttackLifecycle } from '../combat/rangedLifecycle'
 import { isDebugMode, isNpcCombatDebugMode } from '../debug/debugMode'
 import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
-import {
-  commitRoleWork,
-  type SettlementEconomy,
-} from '../economy'
+import { commitRoleWork } from '../economy/npcWork'
+import { type SettlementEconomy } from '../economy/settlementEconomy'
 import { FLOCK_THREAT_RADIUS, senseOwnedFlockThreat, type ShepherdFlockHooks } from '../fauna/shepherdFlock'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial } from '../items/constructionMaterials'
 import { foodItemCount, takeOneFoodItem } from '../items/foodItems'

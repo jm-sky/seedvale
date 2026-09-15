@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WeatherState } from '../world/weather'
-import { pickActionKind } from '../simulation'
+import { pickActionKind } from '../simulation/scoreActions'
 import { createNeedState, generateNeedPressures, type NeedState } from './Needs'
 import {
   type NpcDecisionTarget,
