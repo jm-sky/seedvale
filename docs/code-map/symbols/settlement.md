@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 421
-- `CreateSettlementDeps` — type — line 268
-- `Settlement` — type — line 142
-- `settlementSpawnPoint` — function — line 256
+- `createSettlement` — function — line 422
+- `CreateSettlementDeps` — type — line 269
+- `Settlement` — type — line 143
+- `settlementSpawnPoint` — function — line 257
 
 ## `settlement/decorProps.ts`
 
@@ -523,16 +523,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 295
-- `buildSettlementProps` — function — line 707
-- `disposeSettlementGroup` — function — line 1942
-- `SettlementHouseBed` — type — line 148
-- `SettlementHouseLandmark` — type — line 114
-- `SettlementLandmarks` — type — line 164
-- `SettlementLandPlot` — type — line 284
-- `SettlementStorageVisuals` — type — line 276
-- `SettlementTreeLandmark` — type — line 305
-- `SettlementWellLandmark` — type — line 155
+- `BlacksmithWorkplace` — type — line 297
+- `buildSettlementProps` — function — line 709
+- `disposeSettlementGroup` — function — line 1953
+- `SettlementHouseBed` — type — line 150
+- `SettlementHouseLandmark` — type — line 116
+- `SettlementLandmarks` — type — line 166
+- `SettlementLandPlot` — type — line 286
+- `SettlementStorageVisuals` — type — line 278
+- `SettlementTreeLandmark` — type — line 307
+- `SettlementWellLandmark` — type — line 157
 
 ## `settlement/propSpecs.ts`
 
@@ -766,9 +766,18 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPalisade.ts`
 
-- `PALISADE_GATE_HALF_ANGLE` — const — line 19
-- `plantEntrancePalisade` — function — line 48
-- `WALL_HALF_LENGTH` — const — line 17
+- `PALISADE_GATE_HALF_ANGLE` — const — line 20
+- `PALISADE_WALL_HALF_DEPTH` — const — line 27
+  - domain: settlements
+- `plantEntrancePalisade` — function — line 145
+  - domain: settlements
+- `resolveEntrancePalisadePlacements` — function — line 69
+  - domain: settlements
+- `settlementPalisadeColliders` — function — line 166
+  - domain: settlements
+- `SettlementPalisadePlacement` — type — line 54
+  - domain: settlements
+- `WALL_HALF_LENGTH` — const — line 18
 
 ## `settlement/settlementPlanCache.ts`
 

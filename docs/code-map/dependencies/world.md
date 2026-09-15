@@ -1455,6 +1455,8 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
+- `settlement/settlementPalisade.test.ts`
+- `settlement/settlementPalisade.ts`
 - `settlement/settlementPropColliders.ts`
 - `terrain/chunkManager.ts`
 - `world/caveColliders.test.ts`

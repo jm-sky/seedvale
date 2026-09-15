@@ -230,6 +230,7 @@ Generated from TypeScript imports.
 - `settlement/settlementAgriculture.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
+- `settlement/settlementPalisade.ts`
 - `settlement/settlementPropColliders.ts`
 - `settlement/settlementSignposts.ts`
 - `settlement/settlementVillageTorch.ts`
@@ -390,6 +391,7 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.test.ts`
 - `settlement/props.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementPalisade.test.ts`
 - `settlement/settlementPalisade.ts`
 
 ## `settlement/frameYield.ts`
@@ -1570,6 +1572,14 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/settlementNightCycle.test.ts`
 
+## `settlement/settlementPalisade.test.ts`
+
+**Imports**
+
+- `settlement/findSettlementSite.ts`
+- `settlement/settlementPalisade.ts`
+- `world/collision.ts`
+
 ## `settlement/settlementPalisade.ts`
 
 **Imports**
@@ -1584,10 +1594,13 @@ Generated from TypeScript imports.
 - `settlement/villagePlan.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/coastPlacement.ts`
+- `world/collision.ts`
 
 **Imported by**
 
+- `settlement/createSettlement.ts`
 - `settlement/props.ts`
+- `settlement/settlementPalisade.test.ts`
 
 ## `settlement/settlementPlanCache.ts`
 
