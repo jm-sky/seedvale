@@ -46,7 +46,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 - [ ] 2026-09-15 — `?playerTint=brown` nie jest persystowany; character appearance (wybór koloru bez query) to osobna praca.
 - [ ] 2026-09-15 — UAL2 (combat/work: `TreeChopping_Loop`, `Consume`, `Walk_Carry_Loop`, `Farm_*`, `LayToIdle`) is on the same UBC rig as UAL1; extract a second subset after `items-player-035` locomotion/combat clips. No retarget.
-- [ ] 2026-09-15 — NPC nadal na Ultimate Modular Men/Women (inny szkielet). Retarget UAL→Modular albo migracja NPC na UBC to osobna praca; nie mieszać clipów między rygami.
+- [ ] 2026-09-15 — Remaining NPC roles (guard, hunter, blacksmith, …) and children still use Ultimate Modular Men/Women (different skeleton from UBC). Adult farmer/woodcutter/trader are UBC + UAL1 (`npc-039`). Do not mix UAL clips onto Modular rigs. Hunter → Ranger is the next row on the same resolver table.
 
 ## Off-screen simulation
 

@@ -41,6 +41,7 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
+import { applyOutfitTint, cloneOutfitMaterials } from '../assets/ubcOutfitMaterials'
 import {
   playActionBowRelease,
   playActionChop,
@@ -74,6 +75,7 @@ import { isLiquidContainerInstance } from '../items/itemInstances'
 import { drinkFromLiquidContainer } from '../items/liquidContainer'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
+import { companionAnimationUrl } from '../player/playerVisualPreset'
 import { resolveNearestWaterWellTarget } from '../settlement/householdWells'
 import {
   generatePhysicalProfile,
@@ -266,6 +268,7 @@ import {
   serializableDefendScore,
   type ThreateningAnimalCandidate,
 } from './npcAnimalThreat'
+import { resolveNpcAppearance } from './npcAppearance'
 import { type AssistanceRequestKind, type AssistanceResult, resolveNpcAssistance } from './npcAssistance'
 import {
   bypassPointForSegment,
@@ -496,29 +499,9 @@ const NPC_FLEE_DISTANCE = 8
 
 export type { NpcGender }
 export { genderForName }
-
-/** Quaternius Modular Men/Women — village-flavoured variants, one pool per gender. */
-export const NPC_MODEL_URLS: Record<NpcGender, readonly string[]> = {
-  male: [
-    '/models/characters/Farmer.glb',
-    '/models/characters/Worker.glb',
-    '/models/characters/Casual_Hoodie.glb',
-    '/models/characters/Casual_2.glb',
-  ],
-  female: [
-    '/models/characters/Female_Worker.glb',
-    '/models/characters/Female_Casual.glb',
-    '/models/characters/Female_Medieval.glb',
-    '/models/characters/Female_Formal.glb',
-  ],
-}
-
-function modelUrlFor(gender: NpcGender, treeIndex: number): string {
-  const pool = NPC_MODEL_URLS[gender]
-  return pool[treeIndex % pool.length]!
-}
-
 export type { ActionId, NpcPlannedAction, Phase } from './npcAction'
+
+export { NPC_MODEL_URLS } from './npcAppearance'
 
 /** Public, dialogue-facing summary of what an NPC is doing right now — a
  *  narrower, stable view over the private `phase`/`pendingAction` FSM state
@@ -964,10 +947,11 @@ function applySociableBoost(
  * input (review 2026-09-03 §5 P4 / §8 step 11) — collapses three 30-
  * positional-parameter lists (one per method, all forwarding the same
  * values in the same order) into one deps object, mirroring
- * `createSettlement.ts`'s `CreateSettlementDeps`. `create()` resolves only
- * `modelUrl` before constructing (the one field the constructor itself
- * never reads — it exists purely to pick which GLB `loadGltfAnimated`
- * fetches); every other default is applied inside the constructor exactly
+ * `createSettlement.ts`'s `CreateSettlementDeps`. `create()` resolves
+ * appearance (`resolveNpcAppearance`) then `modelUrl` before constructing
+ * (those fields the constructor itself never reads — they exist purely to
+ * pick which GLB `loadGltfAnimated` fetches and which UAL sidecar to merge);
+ * every other default is applied inside the constructor exactly
  * as it was before this refactor, just read from `deps.x` instead of a
  * positional parameter.
  */
@@ -986,9 +970,10 @@ export type NpcAgentDeps = {
   member: FamilyMember
   familyMembers: readonly FamilyMemberRef[]
   playAt?: PlayAt
-  /** Which GLB to load — defaults to `modelUrlFor(member.character.gender,
-   *  treeIndex)`. The one field only `create()` reads; the constructor
-   *  itself already has `root`/`animations` loaded from it by then. */
+  /** Which GLB to load — defaults to `resolveNpcAppearance(...)`. The one
+   *  field only `create()` reads; the constructor itself already has
+   *  `root`/`animations` loaded from it by then. When set, skips the
+   *  profession tint sidecar (tests/debug overrides). */
   modelUrl?: string
   forest?: SettlementForestHooks
   npcId?: string
@@ -1665,17 +1650,16 @@ export class NpcAgent {
     this.mesh.position.y = sampleHeight(home.position.x, home.position.z)
 
     this.anim = createAgentAnimationSet<NpcAnimClip>(root, animations)
-    // Quaternius Modular Men/Women (`NPC_MODEL_URLS`) export `Sword_Slash`/
-    // `Gun_Shoot`/`HitRecieve`/`Death` today; `resolve()`'s name-list already
-    // falls back to `null` for any future pool entry without them.
+    // Modular pool clips first; UAL aliases last so exact Modular names still
+    // win when both a UBC companion clip file and a Modular GLB are in play.
     this.anim.resolve({
-      idle: ['Idle', 'Idle_Neutral'],
-      walk: ['Walk', 'Run'],
+      idle: ['Idle', 'Idle_Neutral', 'Idle_Loop'],
+      walk: ['Walk', 'Run', 'Walk_Loop'],
       interact: ['Interact', 'Wave'],
-      attackMelee: ['Sword_Slash'],
-      attackRanged: ['Gun_Shoot', 'Idle_Gun_Shoot'],
-      hurt: ['HitRecieve', 'HitRecieve_2'],
-      death: ['Death'],
+      attackMelee: ['Sword_Slash', 'Sword_Attack'],
+      attackRanged: ['Gun_Shoot', 'Idle_Gun_Shoot', 'Pistol_Shoot'],
+      hurt: ['HitRecieve', 'HitRecieve_2', 'Hit_Chest'],
+      death: ['Death', 'Death01'],
     })
     this.anim.playImmediate('idle')
 
@@ -1731,9 +1715,28 @@ export class NpcAgent {
   }
 
   static async create(deps: NpcAgentDeps): Promise<NpcAgent> {
-    const modelUrl = deps.modelUrl ?? modelUrlFor(deps.member.character.gender, deps.treeIndex)
+    const appearance = resolveNpcAppearance({
+      age: deps.member.age,
+      gender: deps.member.character.gender,
+      role: deps.member.character.role,
+      treeIndex: deps.treeIndex,
+    })
+    const modelUrl = deps.modelUrl ?? appearance.modelUrl
+    const animationUrl = companionAnimationUrl(modelUrl)
+    const tintUrl = deps.modelUrl != null ? null : appearance.tintUrl
     try {
-      const { scene, animations } = await loadGltfAnimated(modelUrl)
+      const { scene, animations: modelAnimations } = await loadGltfAnimated(modelUrl)
+      let animations = modelAnimations
+      if (animationUrl) {
+        try {
+          const extra = await loadGltfAnimated(animationUrl)
+          animations = [...modelAnimations, ...extra.animations]
+        } catch (err) {
+          console.warn(`[npc] failed to load animations ${animationUrl}`, err)
+        }
+        cloneOutfitMaterials(scene)
+        if (tintUrl) await applyOutfitTint(scene, tintUrl)
+      }
       return new NpcAgent(scene, animations, deps)
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)

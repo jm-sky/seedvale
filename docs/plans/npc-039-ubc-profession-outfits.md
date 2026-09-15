@@ -1,7 +1,7 @@
 # Plan: UBC profession outfits for NPCs
 
 **Created:** 2026-09-15
-**Status:** `draft` 📝
+**Status:** `verification needed` 🔍 — implemented 2026-09-15 (`tsc`/lint/tests). Browser/manual verification not performed — belongs to the User.
 **Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** ~~items-player-033~~ ~~items-player-034~~ ~~items-player-036~~
@@ -9,10 +9,11 @@
 **Subdomains:** `presentation` `lifecycle`
 **Tags:** `characters` `assets` `animation` `professions`
 **Roadmap:** -
+**Implemented at:** 2026-09-15 16:12
 
-Draft — V1 Peasant/Wizard jest wstępnie uzgodniony, ale pipeline żeński, tinty NPC i mapa ról poza farmer/woodcutter/trader mają jeszcze otwarte decyzje. **Nie implementować** z tego pliku, dopóki status nie zejdzie do `planned`.
+Implemented V1 with a scoped table: adult `farmer`/`woodcutter` → Peasant (distinct sidecars), adult `trader` → Wizard, both sexes, UAL1 companion clips. Hunter and other roles stay Modular.
 
-Powiązane: `items-player-033` / `034` / `036` (UBC gracz, cały mesh, UAL1), draft `items-player-037` (per-slot — NPC poza zakresem tamtego planu). Luźny koniec: `docs/plans/LOOSE-ENDS.md` (Characters / presentation — NPC nadal Modular, inny szkielet).
+Powiązane: `items-player-033` / `034` / `036` (UBC gracz, cały mesh, UAL1), draft `items-player-037` (per-slot — NPC poza zakresem tamtego planu). Luźny koniec: `docs/plans/LOOSE-ENDS.md` (Characters / presentation — remaining NPC roles still Modular).
 
 ## Problem
 
@@ -44,8 +45,9 @@ Dorośli (`isAdultAge`):
 
 | Role | Outfit UBC | Płeć | Albedo NPC (nie gracza) |
 | --- | --- | --- | --- |
-| `farmer`, `woodcutter` | Peasant | obie | `T_Peasant_3` (szafirowy kaftan, kremowa kamizelka, rdzawy spód) |
-| `trader` | Wizard | obie | `T_Wizard_3` (karmazyn + srebro) |
+| `farmer` | Peasant | obie | `T_Peasant_3` (`npc_peasant.webp` — szafirowy kaftan, kremowa kamizelka, rdzawy spód) |
+| `woodcutter` | Peasant | obie | `T_Peasant_2` (`npc_woodcutter.webp` — ziemisty brąz; ten sam atlas co `?playerTint=brown`, ale osobny sidecar) |
+| `trader` | Wizard | obie | `T_Wizard_3` (`npc_wizard.webp` — karmazyn + srebro) |
 
 To pokrywa Annę, Piotra, Kasię i wszystkich wygenerowanych farmer/woodcutter/trader **bez mapowania po imieniu** — wystarczy `Role`.
 

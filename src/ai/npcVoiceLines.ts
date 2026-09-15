@@ -12,7 +12,7 @@ import type { NpcGender } from './characters'
  */
 
 /** One of the 5 recorded voice actors — assigned deterministically per NPC
- *  (`voiceActorForIndex`), the same way `NpcAgent`'s `modelUrlFor` picks a
+ *  (`voiceActorForIndex`), the same way `npcAppearance`'s `modelUrlFor` picks a
  *  body model, so each NPC keeps one consistent voice all session instead
  *  of a random one per line. */
 export type NpcVoiceActor = 'alex' | 'ian' | 'sean' | 'karen' | 'meghan'

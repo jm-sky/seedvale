@@ -12,7 +12,11 @@ import type { ToolKind } from '../items/HeldTool'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { FootstepSurface } from '../terrain/footstepSurface'
 import { disposeObject3D, loadGltfAnimated, loadGltfAsset, prepareProp } from '../assets/loadGltf'
-import { loadTexture } from '../assets/loadTexture'
+import {
+  applyOutfitTint,
+  cloneOutfitMaterials,
+  disposeOutfitMaterialClones,
+} from '../assets/ubcOutfitMaterials'
 import {
   playFootstep,
   playJumpLand,
@@ -90,14 +94,6 @@ const LOOK_AT_OFFSET_NEAR = 1.6
 
 const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
-/** Outfit clothes materials in composed UBC GLBs (gltfpack drops mesh names). */
-const UBC_OUTFIT_MATERIAL_NAMES = new Set([
-  'MI_Knight',
-  'MI_Noble',
-  'MI_Peasant',
-  'MI_Ranger',
-  'MI_Wizard',
-])
 /** Player starting SPEA (plan npc-019 §6) — slightly above the shared `0.5`
  *  typical-healthy-adult reference. Fixed constants, not persisted/rolled;
  *  see `attributes`'s own doc comment. */
@@ -769,7 +765,7 @@ export class PlayerController {
     }
 
     if (token !== this.appearanceLoadToken) return
-    const tintApplied = await this.applyOutfitTint(opts.tintUrl)
+    const tintApplied = await applyOutfitTint(this.modelRoot, opts.tintUrl)
     if (token !== this.appearanceLoadToken) return
     if (tintApplied) this.currentTintUrl = opts.tintUrl
   }
@@ -809,36 +805,6 @@ export class PlayerController {
     if (!this.heldToolSwingPivot) return
     this.heldToolSwingPivot.removeFromParent()
     this.handSocket().add(this.heldToolSwingPivot)
-  }
-
-  private async applyOutfitTint(tintUrl: string | null): Promise<boolean> {
-    let tintMap: THREE.Texture | null = null
-    if (tintUrl) {
-      try {
-        tintMap = await loadTexture(tintUrl)
-        tintMap.flipY = false
-        tintMap.wrapS = THREE.RepeatWrapping
-        tintMap.wrapT = THREE.RepeatWrapping
-        tintMap.colorSpace = THREE.SRGBColorSpace
-        tintMap.needsUpdate = true
-      } catch (err) {
-        console.warn(`[player] failed to load outfit tint ${tintUrl}`, err)
-        return false
-      }
-    }
-    this.modelRoot.traverse((obj) => {
-      const mesh = obj as THREE.Mesh
-      if (!mesh.isMesh) return
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      for (const material of materials) {
-        if (!material.userData.playerOutfitMaterial) continue
-        const std = material as THREE.MeshStandardMaterial
-        const fallback = (material.userData.defaultMap as THREE.Texture | null | undefined) ?? null
-        std.map = tintMap ?? fallback
-        std.needsUpdate = true
-      }
-    })
-    return true
   }
 
   /** Additive rotation (radians) on the held-tool socket during a melee
@@ -1874,31 +1840,4 @@ export class PlayerController {
     this.camera.position.set(resolved.x, resolved.y, resolved.z)
     this.camera.lookAt(originX, targetY, originZ)
   }
-}
-
-function cloneOutfitMaterials(root: THREE.Object3D): void {
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh
-    if (!mesh.isMesh) return
-    const source = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    const cloned = source.map((material) => {
-      if (!UBC_OUTFIT_MATERIAL_NAMES.has(material.name)) return material
-      const copy = material.clone()
-      copy.userData.playerOutfitMaterial = true
-      copy.userData.defaultMap = (copy as THREE.MeshStandardMaterial).map ?? null
-      return copy
-    })
-    mesh.material = Array.isArray(mesh.material) ? cloned : cloned[0]!
-  })
-}
-
-function disposeOutfitMaterialClones(root: THREE.Object3D): void {
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh
-    if (!mesh.isMesh) return
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    for (const material of materials) {
-      if (material.userData.playerOutfitMaterial) material.dispose()
-    }
-  })
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Compose UBC male Fantasy outfits + UAL1 subset into public/models/characters/ubc/.
+# Compose UBC Fantasy outfits + UAL1 subset into public/models/characters/ubc/.
+# Male player meshes, female Peasant/Wizard for profession NPCs, sidecar tints.
 # Sources stay in _temp/. Re-run after changing the compose/extract scripts.
 set -euo pipefail
 
@@ -14,6 +15,13 @@ OUTFITS=(
   male_knight_cloth
   male_noble
   male_wizard
+  female_peasant
+  female_wizard
+)
+NPC_TINTS=(
+  npc_peasant
+  npc_woodcutter
+  npc_wizard
 )
 
 cleanup() { rm -rf "$WORK"; }
@@ -54,12 +62,18 @@ done
 optimize "$WORK/anims/ual1_player.glb" "$OUT/ual1_player.glb" "-ac"
 
 # Brown albedo variants are swapped at runtime onto MI_* outfit materials.
+# NPC profession tints (T_Peasant_3 / T_Peasant_2 / T_Wizard_3) live beside them.
 # Install sharp in a temp dir — project node_modules may not have it, and
 # `npx --package=sharp node -e` does not resolve the package from the repo root.
 SHARP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/seedvale-sharp.XXXXXX")"
 SHARP_ARGS=()
 for name in "${OUTFITS[@]}"; do
-  SHARP_ARGS+=("$WORK/outfits/${name}_brown.png" "$OUT/${name}_brown.webp")
+  if [[ -f "$WORK/outfits/${name}_brown.png" ]]; then
+    SHARP_ARGS+=("$WORK/outfits/${name}_brown.png" "$OUT/${name}_brown.webp")
+  fi
+done
+for name in "${NPC_TINTS[@]}"; do
+  SHARP_ARGS+=("$WORK/outfits/${name}.png" "$OUT/${name}.webp")
 done
 (
   cd "$SHARP_DIR"
