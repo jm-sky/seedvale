@@ -76,6 +76,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-004-gold-economic-realization-and-source-entitlements.md`      | 🔴 | M      | ~~world-018~~                                                                                                                                                                                                                                                                          | quests-abandoned-gold-mine-colony       |
 | 💡 `fauna-031-wildlife-habitat-pressure-assessment.md`                         | 🟡 | S      | ~~fauna-010~~, ~~fauna-028~~                                                                                                                                                                                                                                                           | quests-hunters-brotherhood              |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
+| ◼️ `quests-progression-047-deferred-world-knowledge-and-location-research.md`  | 🔴 | L      | ~~world-028~~                                                                                                                                                                                                                                                                          | -                                       |
 
 ---
 
@@ -226,7 +227,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `039`
 - npc: `041`
 - persistence: `005`
-- quests-progression: `047`
+- quests-progression: `048`
 - settlements: `018`
 - settlements-npcs: `039`
 - tools: `015`
