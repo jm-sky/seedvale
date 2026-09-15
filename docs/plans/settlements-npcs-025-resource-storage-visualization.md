@@ -8,6 +8,7 @@
 **Domain:** `settlements-npcs`
 **Subdomains:** `economy` `logistics`
 **Tags:** `storage` `visualization` `assets`
+**Model:** Sonnet, Composer
 
 ## Goal
 
@@ -19,9 +20,9 @@ The work is staged:
 
 1. **Stage 1 — progressive wood pile**: implemented authored discrete wood pile variants;
 2. **Stage 1 follow-up — split settlement vs household wood storage**: implemented — settlement wood and each household's wood have separate physical destinations and separate progressive piles;
-3. **Stage 2 — pooled food representatives**: replace scale-only food quantity cues with bounded discrete representatives and stable cached pools;
-4. **Stage 3A — container-ready food layout foundation**: deterministic local/container-relative layout;
-5. **Stage 3B — actual container fill visualization**: only after a suitable open container asset is checked in and verified;
+3. **Stage 2 — pooled food representatives**: **next implementation stage** — replace scale-only food quantity cues with bounded discrete representatives and stable cached pools;
+4. **Stage 3A — container-ready food layout foundation**: implement together with Stage 2 as neutral local/container-relative slot layout, without depending on an open-container asset;
+5. **Stage 3B — actual container fill visualization**: separate later stage, only after a suitable open container asset is checked in and verified;
 6. audit remaining `EconomicKind`s and defer those without real storage semantics/assets.
 
 ## Current verified state
@@ -64,11 +65,15 @@ Household B.stock.wood
     → Household B progressive wood pile
 ```
 
-The same `wood_pile_progressive.glb` and `createWoodPileVisual()` mechanism should be reused for all instances.
+The same `wood_pile_progressive.glb` and `createWoodPileVisual()` mechanism is reused for all instances.
 
-`landmarks.householdStorages` already provides deterministic, household-index-aligned yard storage anchors. Do not create a parallel household-place system. A separate nearby deterministic yard slot for household wood should extend the existing yard placement mechanism rather than overlap the household crate.
+`landmarks.householdStorages` already provides deterministic, household-index-aligned yard storage anchors. Household wood extends the same yard-placement mechanism through `landmarks.householdWoodStorages` rather than creating a parallel place system.
 
-Food continues to use `FOOD_ITEM_KINDS` + `createItemMesh(kind)`. The current crate is closed; a low-poly Fruit Crate candidate from Poly Pizza (`https://poly.pizza/m/aXulVWHOeV`) is promising for Stage 3B but remains unapproved until checked in and inspected.
+Food currently uses `FOOD_ITEM_KINDS` + `createItemMesh(kind)`. `src/settlement/storageVisuals.ts` still represents at most four food kinds by scaling one mesh per selected kind and recreates/disposes meshes when the signature changes. Stage 2 replaces that behaviour.
+
+Current food item GLBs are not a blocker. `createItemMesh(kind)` remains the visual factory and already provides a usable fallback when a dedicated food model is absent. Dedicated carrot/cabbage/potato/tomato/fish models may improve presentation later but are not required for Stage 2/3A.
+
+The current `crate.glb` is closed/merged and unsuitable for truthful internal fill. A low-poly Fruit Crate candidate from Poly Pizza (`https://poly.pizza/m/aXulVWHOeV`) is promising for Stage 3B but remains unapproved until checked in and inspected.
 
 Nature assets `resource_rock_1.glb` and `resource_gold_1.glb` are terrain deposits and must not be used as stored-resource visuals.
 
@@ -102,89 +107,40 @@ Stage nodes remain cached by stable authored names. Hidden stages do not render.
 
 ### 1F. Stage 1 follow-up — separate settlement and household wood storage — implemented
 
-#### Ownership and visual source
+Settlement pile quantity is `SettlementEconomy.query('wood')` only. Household pile quantity is that household's `Household.stock.query('wood')` only. Household wood delivery uses the dedicated deterministic `SettlementLandmarks.householdWoodStorages` yard point; settlement wood continues to use `landmarks.stockpile`.
 
-- settlement pile quantity = `SettlementEconomy.query('wood')` only;
-- household pile quantity = that household's `Household.stock.query('wood')` only;
-- do not aggregate household and settlement wood into one visible pile.
-
-#### Physical destinations
-
-Change wood delivery semantics so:
-
-- settlement-scope wood → settlement `landmarks.stockpile`;
-- household-scope wood → that household's own wood storage point in its yard.
-
-Do not alter authoritative stock ownership: household deposits still credit `Household.stock.wood`; settlement deposits still credit `SettlementEconomy.wood`.
-
-#### Household yard placement
-
-Reuse existing deterministic yard geometry and house/home indexing.
-
-Add a dedicated household wood slot/offset rather than placing the pile directly on the existing household crate anchor. Prefer extending `HOUSEHOLD_YARD_PROP_OFFSETS` / `houseYardPlacements()` or an equivalent existing yard helper.
-
-Requirements:
-
-- deterministic position per household;
-- same ordering as `homes`, `houses`, `householdStorages`, and `households`;
-- no overlap with crate/barrel/trough/blacksmith yard equipment;
-- update household yard clearance if the new slot extends the required radius;
-- do not invent a new general landmark system.
-
-Implemented as `SettlementLandmarks.householdWoodStorages` (index-aligned with `homes` / `householdStorages`), placed via `HOUSEHOLD_YARD_PROP_OFFSETS.wood` and `houseYardPlacements()` in `props.ts`. Delivery resolves through `resolveHouseholdWoodStorage()` + `householdStorageDestination('wood', home, woodPoint)`.
-
-#### Visual controllers
-
-Evolve `SettlementStorageVisuals` conceptually from one shared wood controller to:
+The shared controller shape is:
 
 ```ts
-settlementWood: WoodPileVisual
-householdWood: WoodPileVisual[]
-settlementFood: FoodStorageVisual
-householdFood: FoodStorageVisual[]
+type SettlementStorageVisuals = {
+  settlementWood: WoodPileVisual
+  householdWood: WoodPileVisual[]
+  settlementFood: FoodStorageVisual
+  householdFood: FoodStorageVisual[]
+}
 ```
 
-Reuse the same progressive asset/controller. Do not duplicate wood stage logic.
+Do not reintroduce aggregate physical wood state or duplicate progressive-pile logic.
 
-`createSettlement.ts::update()` should conceptually drive:
+### 2. Stage 2 — pooled food representatives — next implementation stage
 
-```text
-settlementWood.sync(economy.query('wood'))
-householdWood[i].sync(households[i].stock.query('wood'))
-```
-
-#### Inspection/interactions
-
-The settlement wood pile must report only settlement-owned wood.
-
-Household storage inspection should continue reporting that household's own stock and therefore naturally include its own wood. If a dedicated household wood-pile interactable is useful, reuse the household reference and do not introduce duplicate quantity state.
-
-`physicalWoodStockpileQuantity()` was removed. Settlement wood inspection (`woodStorage` interactable) reads `economy.query('wood')` only.
-
-#### Performance
-
-This adds one progressive pile per household, so keep it bounded and cheap:
-
-- clone/load through the existing template path;
-- resolve stage nodes once per controller;
-- normal sync only toggles cached visibility;
-- no per-sync traversal/creation/disposal;
-- overflow must remain bounded per pile;
-- no worker.
-
-### 2. Stage 2 — pooled food representatives
+Implement Stage 2 without waiting for new models/assets.
 
 Keep one shared food visualization mechanism for household and settlement storage.
 
-Keep:
+Reuse:
 
 - `FOOD_ITEM_KINDS` as deterministic source ordering;
-- `createItemMesh(kind)` as authoritative item visual factory/fallback;
-- current bounded kind selection.
+- `createItemMesh(kind)` as the authoritative item visual factory/fallback;
+- `createFoodStorageVisual()` as the shared controller for household and settlement storage.
 
-Starting representative policy:
+Replace the current one-mesh-per-kind + quantity scaling behaviour with discrete representatives.
 
-| Stored quantity | Visible representatives |
+#### 2.1 Representative count
+
+Use one pure total-quantity mapping:
+
+| Total stored food quantity | Visible representatives |
 |---:|---:|
 | 0 | 0 |
 | 1 | 1 |
@@ -193,28 +149,97 @@ Starting representative policy:
 | 5–7 | 4 |
 | 8–12 | 5 |
 | 13–20 | 6 |
-| 21+ | 8 max |
+| 21+ | 8 |
 
-**8 is the global visible-mesh cap per storage location, not per kind.** Allocate it deterministically among selected kinds.
+The implementation should expose an equivalent pure helper such as:
+
+```ts
+foodRepresentativeCount(totalQuantity: number): number // 0..8
+```
+
+**8 is the global visible-mesh cap per storage location, not per kind.**
+
+#### 2.2 Kind selection and deterministic allocation
+
+Use at most four distinct food kinds per storage location. Rename the current ambiguous slot limit if useful so the two limits remain explicit conceptually:
+
+```ts
+FOOD_STORAGE_MAX_KINDS = 4
+FOOD_STORAGE_MAX_REPRESENTATIVES = 8
+```
+
+Selection/allocation contract:
+
+1. iterate positive-count kinds in stable `FOOD_ITEM_KINDS` order;
+2. select at most the first four positive kinds;
+3. compute the global representative budget from total stored food quantity;
+4. allocate one representative to each selected kind while budget remains, preserving kind diversity;
+5. distribute the remaining budget deterministically in stable selected-kind order, never allocating more representatives of a kind than its real stored count;
+6. repeat stable passes until the budget is exhausted or every selected kind has reached its stored count.
+
+Expose this as pure logic equivalent to:
+
+```ts
+allocateFoodRepresentatives(
+  items: Inventory,
+): Array<{ kind: ItemKind; count: number }>
+```
+
+The returned `count` is visible representative count for that kind, not stored quantity.
+
+#### 2.3 Cached representative pools
+
+Replace normal `sync()` dispose/recreate churn with stable cached/lazy pools.
 
 Requirements:
 
-- low quantities remain close to one visible rep per unit;
-- growth becomes sub-linear at higher quantities;
-- scale is not the primary quantity signal;
-- cached/lazy representative pools replace normal recreate/dispose churn;
-- stable identities and deterministic layout;
-- no separate household vs settlement food renderer.
+- representatives are created lazily through `createItemMesh(kind)`;
+- once materialized for a kind/location, normal quantity changes reuse object identity;
+- `sync()` primarily toggles visibility and updates deterministic transforms;
+- one-time bounded creation when a location first needs an additional representative is allowed;
+- `dispose()` still releases every representative owned by that controller;
+- no model loading, scene traversal, random layout, geometry/material recreation or disposal during ordinary unchanged sync;
+- no worker.
 
-### 3. Stage 3A — container-ready food layout foundation
+Do not share actual `Object3D` instances between storage locations. Pool ownership remains per `FoodStorageVisual` controller.
+
+### 3. Stage 3A — container-ready food layout foundation — implement with Stage 2
 
 Keep separation:
 
-`Inventory → selected kinds/counts → representative allocation → deterministic local slots → visibility/transforms`
+```text
+Inventory
+→ representative budget
+→ selected kinds/allocation
+→ deterministic local slots
+→ visibility/transforms
+```
 
-Use local/container-relative slot data such as `{ x, y, z, yaw }`. Do not bake guessed current-crate interior bounds into quantity logic.
+Define exactly eight deterministic local/container-relative slots, one for each possible visible representative:
 
-### 4. Stage 3B — actual open-container fill
+```ts
+type FoodStorageLocalSlot = {
+  x: number
+  y: number
+  z: number
+  yaw: number
+}
+```
+
+Requirements:
+
+- slot identity/order is stable;
+- placement is deterministic and contains no randomness;
+- slots are local to the food-storage anchor/controller, not world-layout policy;
+- do not bake guessed interior bounds of the current closed crate into quantity/allocation logic;
+- for the current closed crate, place representatives in a compact readable arrangement around/above the existing storage anchor as today, using the neutral slot transforms;
+- Stage 3B must be able to replace only the slot geometry/anchor transform without changing representative-count/allocation/pooling logic.
+
+Stage 2 + Stage 3A are one coherent implementation pass.
+
+### 4. Stage 3B — actual open-container fill — separate later stage
+
+Do **not** implement Stage 3B as part of the next implementation pass.
 
 Current `crate.glb` is closed/merged and unsuitable for truthful internal fill.
 
@@ -224,79 +249,92 @@ Candidate:
 - `https://poly.pizza/m/aXulVWHOeV`
 - low-poly, GLTF/FBX, CC0/public-domain listing
 
-Treat as candidate until checked in and verify hierarchy, dimensions, origin/orientation, usable interior/rim bounds, camera readability and clipping behavior.
+Before Stage 3B begins, the chosen asset must be checked into the repository and verified for:
+
+- runtime file path;
+- hierarchy/root node names where relevant;
+- actual openness;
+- origin/orientation;
+- bounding box and intended world scale;
+- usable interior/rim bounds;
+- camera readability;
+- clipping behaviour with up to eight representatives.
+
+Only then adapt Stage 3A local slots to truthful inside-container placement. Do not make Stage 2 depend on this asset.
 
 ### 5. Remaining `EconomicKind`s
 
 - `wood`: Stage 1 + Stage 1 follow-up — implemented;
-- `food`: Stage 2 + 3A + 3B;
+- `food`: Stage 2 + 3A next; 3B after asset verification;
 - `iron`, `coal`, `gold`, `copper_ore`: defer until real destinations and semantically correct stored-material visuals exist;
 - `water`: defer until stored-water container/destination exists.
 
 Do not reuse terrain deposits as storage and do not map stored water onto the well.
 
+## Non-goals for the next implementation pass
+
+- no new GLB assets;
+- no Stage 3B/open-container integration;
+- no ore/mineral/water storage visuals;
+- no changes to authoritative `Household` / `SettlementEconomy` ownership;
+- no new generic storage-place framework;
+- no persistence changes;
+- no NPC decision/economy refactor;
+- no unrelated rendering refactor.
+
 ## Tests
 
-### Stage 1 follow-up
+### Existing Stage 1 / follow-up behaviour
 
-Cover at minimum:
-
-- settlement pile reads only `SettlementEconomy.wood`;
-- each household pile reads only its own `Household.stock.wood`;
-- changing Household A wood does not affect Household B or settlement pile;
-- changing settlement wood does not affect household piles;
-- household wood destination resolves to that household's dedicated yard wood point;
-- settlement wood destination remains `landmarks.stockpile`;
-- NPC chop/deposit path uses household wood destination;
-- household wood positions remain deterministic and index-aligned;
-- yard clearance/spacing tests cover the new slot;
-- one positive quantity selects exactly one `Pile_*` per controller;
-- repeated sync preserves object identity;
-- old aggregate shared-pile test expectations are removed/replaced.
+Keep existing coverage ensuring settlement and household wood remain independent, destinations remain owner-correct, positions remain deterministic/index-aligned and positive quantity selects exactly one primary `Pile_*` stage.
 
 ### Stage 2 / 3A
 
-- threshold boundaries;
-- global visible food cap ≤ 8 per storage location;
-- deterministic multi-kind budget allocation;
-- stable pooled identities;
-- no normal sync dispose/recreate;
-- deterministic local layout;
-- shared controller mechanism for household and settlement food.
+Cover at minimum:
 
-## Focused files
+- every representative-count threshold boundary;
+- quantity 0 → no visible representatives;
+- low quantities 1 and 2 remain one visible representative per stored unit;
+- global visible food cap is ≤ 8 per storage location;
+- at most four distinct kinds are represented;
+- deterministic kind selection follows `FOOD_ITEM_KINDS` order;
+- initial allocation preserves kind diversity while budget permits;
+- remaining budget distribution is deterministic;
+- no kind receives more visible representatives than its stored count;
+- repeated `sync()` with same effective representation preserves object identity;
+- increasing/decreasing quantities reuses already-materialized representatives;
+- normal sync does not dispose/recreate cached representatives;
+- deterministic local slot assignment and transforms;
+- household and settlement food use the same controller mechanism;
+- `dispose()` cleans every object owned by the controller.
 
-Stage 1 follow-up is expected to touch mainly:
+## Focused files for the next implementation stage
 
-- `src/settlement/storageDestinations.ts`
-- `src/settlement/storageDestinations.test.ts`
+Expected primary files:
+
 - `src/settlement/storageVisuals.ts`
 - `src/settlement/storageVisuals.test.ts`
-- `src/settlement/props.ts`
-- `src/settlement/householdYard.ts`
-- `src/settlement/householdYard.test.ts`
-- `src/settlement/createSettlement.ts`
-- `src/ai/NpcAgent.ts` and focused tests/callers that resolve household wood delivery
-- interaction types/resolution only where the old aggregate settlement wood inspection must be corrected.
 
-Avoid unrelated economy, persistence, NPC decision-system or rendering refactors.
+Touch callers only if the existing `createFoodStorageVisual()` API needs a small compatible adjustment for local-slot placement. Avoid broad changes: current household and settlement callers should continue using one shared food visual mechanism.
+
+Add/update JSDoc for important pure allocation/layout helpers and `FoodStorageVisual` ownership/lifecycle where it improves preflight discovery; use `@domain settlements-npcs` on important architectural/public symbols where appropriate.
 
 ## Verification
 
-Automated verification:
+Automated verification for the next stage:
 
-- focused storage destination/visual/yard tests;
-- relevant NPC delivery tests;
-- repository TypeScript/test/build checks.
+- focused `storageVisuals` tests;
+- TypeScript check;
+- relevant repository test/build checks according to `CLAUDE.md`.
 
 Manual browser verification is performed by the User, not the AI agent.
 
-Verify manually:
+Verify manually after Stage 2/3A:
 
-- settlement has its own progressive wood pile reflecting only settlement stock;
-- each household has its own progressive wood pile reflecting only that household stock;
-- household NPC wood delivery visibly ends at its own yard pile;
-- piles do not overlap crate/barrel/trough/house/blacksmith equipment;
-- progressive stages and bounded overflow still behave correctly.
+- food quantity grows through discrete representative count rather than inflated mesh scale;
+- household and settlement food both behave consistently;
+- up to eight representatives remain readable and bounded;
+- repeated stock changes do not visibly recreate/flicker the whole representation;
+- current closed crate remains visually acceptable without pretending items are truthfully inside it.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
