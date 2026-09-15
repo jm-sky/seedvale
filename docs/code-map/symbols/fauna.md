@@ -4,7 +4,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1062
+- `AnimalAgent` — class — line 1073
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
@@ -13,7 +13,7 @@ Generated from exported TypeScript symbols.
 - `AnimalAgentDebugInfo` — type — line 554
 - `AnimalAgentDeps` — type — line 883
 - `AnimalSaveState` — type — line 673
-- `AnimalUpdateContext` — type — line 930
+- `AnimalUpdateContext` — type — line 941
 - `BURY_DURATION_SEC` — const — line 366
 - `canPredatorPursueIntoVillage` — function — line 741
 - `FAUNA_SHADOW_DISTANCE` — const — line 335
@@ -149,7 +149,7 @@ Generated from exported TypeScript symbols.
 ## `fauna/animalForaging.ts`
 
 - `AnimalWaterSourceProvider` — type — line 95
-- `applySourceRelief` — function — line 638
+- `applySourceRelief` — function — line 662
 - `canAcceptHandFeed` — function — line 142
 - `CarcassCandidate` — type — line 227
 - `carcassCandidateScore` — function — line 218
@@ -157,18 +157,18 @@ Generated from exported TypeScript symbols.
 - `dietItemReliefScale` — function — line 132
 - `DRINK_DURATION_SEC` — const — line 69
 - `EAT_DURATION_SEC` — const — line 66
-- `findFoodTarget` — function — line 561
-- `findForageTarget` — function — line 438
-- `findGrassPatchTarget` — function — line 466
-- `findHouseholdTroughTarget` — function — line 345
-- `findTroughTarget` — const — line 352
-- `findWaterTarget` — function — line 408
+- `findFoodTarget` — function — line 580
+- `findForageTarget` — function — line 457
+- `findGrassPatchTarget` — function — line 485
+- `findHouseholdTroughTarget` — function — line 353
+- `findTroughTarget` — const — line 371
+- `findWaterTarget` — function — line 427
 - `FOOD_INTERACTION_RANGE` — const — line 60
 - `forageEdgeScore` — function — line 109
 - `ForagingContext` — type — line 281
 - `isCarcassEdible` — function — line 169
-- `isDrinkableNaturalShorePoint` — function — line 321
-- `isSourceTargetValid` — function — line 576
+- `isDrinkableNaturalShorePoint` — function — line 327
+- `isSourceTargetValid` — function — line 595
 - `selectDietFeedKind` — function — line 120
 - `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 73
 - `SOURCE_TARGET_TIMEOUT_SEC` — const — line 78

@@ -101,6 +101,7 @@ Generated from TypeScript imports.
 - `settlement/settlementProgression.ts`
 - `settlement/settlementSignposts.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlanner.ts`
 - `shared/effectivePhysicalAttributes.test.ts`
 - `shared/injurySeverity.test.ts`

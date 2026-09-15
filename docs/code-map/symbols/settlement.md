@@ -307,7 +307,7 @@ Generated from exported TypeScript symbols.
 ## `settlement/livestock.ts`
 
 - `createLivestockRegistry` — function — line 321
-- `disposeLivestock` — function — line 846
+- `disposeLivestock` — function — line 853
 - `fillShepherdFlockKinds` — function — line 43
 - `isPlayerOwnedLivestockRecord` — function — line 99
 - `LIVESTOCK_KINDS` — const — line 76
@@ -317,18 +317,18 @@ Generated from exported TypeScript symbols.
 - `LivestockRegistry` — type — line 171
 - `LivestockSaveRecord` — type — line 89
 - `livestockStrayCandidateFromAgent` — function — line 129
-- `PersistentLivestockContext` — type — line 756
-- `resolveLivePersistentAnimal` — function — line 764
-- `restoreDetachedPlayerOwnedLivestock` — function — line 828
-- `setOwnedAnimalControl` — function — line 816
+- `PersistentLivestockContext` — type — line 763
+- `resolveLivePersistentAnimal` — function — line 771
+- `restoreDetachedPlayerOwnedLivestock` — function — line 835
+- `setOwnedAnimalControl` — function — line 823
 - `shouldSpawnDeterministicLivestockSlot` — function — line 108
   - domain: fauna
   - role: Household rolls and merchant-horse slots skip tombstones and player-owned records restored on the detached path (fauna-020 / fauna-030).
 - `spawnAnimalFromRecord` — function — line 216
 - `SpawnAnimalFromRecordDeps` — type — line 204
 - `spawnLivestock` — function — line 597
-- `tickSettlementLivestock` — function — line 863
-- `transferAnimalOwnership` — function — line 791
+- `tickSettlementLivestock` — function — line 870
+- `transferAnimalOwnership` — function — line 798
 
 ## `settlement/lodging.ts`
 
@@ -523,16 +523,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 297
-- `buildSettlementProps` — function — line 709
-- `disposeSettlementGroup` — function — line 1953
-- `SettlementHouseBed` — type — line 150
-- `SettlementHouseLandmark` — type — line 116
-- `SettlementLandmarks` — type — line 166
-- `SettlementLandPlot` — type — line 286
-- `SettlementStorageVisuals` — type — line 278
-- `SettlementTreeLandmark` — type — line 307
-- `SettlementWellLandmark` — type — line 157
+- `BlacksmithWorkplace` — type — line 308
+- `buildSettlementProps` — function — line 720
+- `disposeSettlementGroup` — function — line 2023
+- `SettlementHouseBed` — type — line 151
+- `SettlementHouseLandmark` — type — line 117
+- `SettlementLandmarks` — type — line 167
+- `SettlementLandPlot` — type — line 297
+- `SettlementStorageVisuals` — type — line 289
+- `SettlementTreeLandmark` — type — line 318
+- `SettlementWellLandmark` — type — line 158
 
 ## `settlement/propSpecs.ts`
 
@@ -760,14 +760,14 @@ Generated from exported TypeScript symbols.
 - `cellKey` — function — line 124
 - `cellSeed` — function — line 167
 - `cellsWithinRadius` — function — line 151
-- `generateSettlementDef` — function — line 753
-- `generateVillagePlan` — function — line 687
-- `probeSettlementSite` — function — line 493
+- `generateSettlementDef` — function — line 754
+- `generateVillagePlan` — function — line 688
+- `probeSettlementSite` — function — line 494
   - domain: settlements
 - `SETTLEMENT_GRID_STEP` — const — line 66
 - `SettlementCell` — type — line 72
 - `SettlementDef` — type — line 74
-- `SettlementSiteProbe` — type — line 478
+- `SettlementSiteProbe` — type — line 479
 - `worldToCell` — function — line 128
 
 ## `settlement/settlementNameUniqueness.ts`
@@ -804,7 +804,7 @@ Generated from exported TypeScript symbols.
   - domain: settlements
 - `resolveEntrancePalisadePlacements` — function — line 69
   - domain: settlements
-- `settlementPalisadeColliders` — function — line 166
+- `settlementPalisadeColliders` — function — line 167
   - domain: settlements
 - `SettlementPalisadePlacement` — type — line 54
   - domain: settlements
@@ -1028,24 +1028,41 @@ Generated from exported TypeScript symbols.
 - `VillageFire` — type — line 43
 - `VillageFireHooks` — type — line 38
 
+## `settlement/villagePasture.ts`
+
+- `appendPasturePath` — function — line 421
+- `pastureFencePlacements` — function — line 463
+- `PasturePlanArgs` — type — line 72
+- `pastureRadiusFor` — function — line 65
+- `planSettlementPasture` — function — line 334
+- `settlementWantsPasture` — function — line 56
+
 ## `settlement/villagePlan.ts`
 
 - `FoodSourceType` — type — line 10
 - `householdWellLandmarkId` — function — line 127
 - `householdWellPlotId` — function — line 113
 - `parseHouseholdWellFamilyIndex` — function — line 119
+- `PASTURE_ID` — const — line 165
+- `pasturePathId` — function — line 174
+- `pastureWellLandmarkId` — function — line 169
 - `residentialStructureId` — function — line 107
 - `VillageBoundary` — type — line 27
 - `VillageBuildingPlan` — type — line 86
 - `VillageBuildingRole` — type — line 78
 - `VillageCenter` — type — line 35
-- `VillageEntrance` — type — line 164
+- `VillageEntrance` — type — line 224
 - `VillageIdentity` — type — line 14
 - `VillageLandmarkKind` — type — line 131
 - `VillageLandmarkPlan` — type — line 141
-- `VillageLayoutPattern` — type — line 176
+- `VillageLayoutPattern` — type — line 236
+- `VillagePastureAnchor` — type — line 193
+- `VillagePastureFenceSegment` — type — line 184
+  - domain: settlements
+- `VillagePasturePlan` — type — line 208
+  - domain: settlements
 - `VillagePathPlan` — type — line 155
-- `VillagePlan` — type — line 192
+- `VillagePlan` — type — line 252
 - `VillagePlot` — type — line 59
 - `VillagePlotRole` — type — line 57
 - `VillageZone` — type — line 49
@@ -1057,16 +1074,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1223
-- `chooseLayoutPattern` — function — line 145
-- `HOUSE_PLOT_RADIUS` — const — line 69
-- `householdWellLocalBand` — function — line 79
+- `buildingsAndLandmarksFromPlots` — function — line 1242
+- `chooseLayoutPattern` — function — line 150
+- `HOUSE_PLOT_RADIUS` — const — line 71
+- `householdWellLocalBand` — function — line 81
   - domain: settlements-npcs
-- `pathPlansToCorridorData` — function — line 1594
-- `planLocalPathsAndEntrances` — function — line 1475
-- `planVillageLayout` — function — line 835
-- `PLOT_SCORE_WEIGHTS` — const — line 43
-- `VillageLayoutDraft` — type — line 114
+- `pathPlansToCorridorData` — function — line 1613
+- `planLocalPathsAndEntrances` — function — line 1494
+- `planVillageLayout` — function — line 840
+- `PLOT_SCORE_WEIGHTS` — const — line 45
+- `VillageLayoutDraft` — type — line 116
 
 ## `settlement/wellInteractionQueue.ts`
 

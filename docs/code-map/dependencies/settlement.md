@@ -356,6 +356,8 @@ Generated from TypeScript imports.
 - `settlement/settlementProgression.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePasture.test.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
@@ -1071,6 +1073,7 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.test.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlanner.ts`
 
 ## `settlement/places.test.ts`
@@ -1234,6 +1237,7 @@ Generated from TypeScript imports.
 - `settlement/settlementVillageTorch.ts`
 - `settlement/storageVisuals.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
 - `simulation/index.ts`
@@ -1996,6 +2000,38 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
 
+## `settlement/villagePasture.test.ts`
+
+**Imports**
+
+- `math/segment.ts`
+- `settlement/families.ts`
+- `settlement/villagePasture.ts`
+- `settlement/villagePlan.ts`
+- `settlement/villagePlanner.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
+
+## `settlement/villagePasture.ts`
+
+**Imports**
+
+- `math/segment.ts`
+- `player/PlayerController.ts`
+- `render/instancedProps.ts`
+- `settlement/families.ts`
+- `settlement/pathDryness.ts`
+- `settlement/villagePlan.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/props.ts`
+- `settlement/villagePasture.test.ts`
+- `settlement/villagePlanner.ts`
+
 ## `settlement/villagePlan.ts`
 
 **Imports**
@@ -2020,6 +2056,8 @@ Generated from TypeScript imports.
 - `settlement/structureCondition.ts`
 - `settlement/structureRepairCandidates.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePasture.test.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlanDebug.ts`
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
@@ -2061,6 +2099,7 @@ Generated from TypeScript imports.
 - `settlement/householdYard.ts`
 - `settlement/pathDryness.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/naturalResources.ts`
@@ -2073,6 +2112,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/villagePasture.test.ts`
 - `settlement/villagePlanner.test.ts`
 
 ## `settlement/wellInteractionQueue.test.ts`

@@ -294,6 +294,8 @@ Generated from TypeScript imports.
 - `settlement/settlementTerrain.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePasture.test.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
 - `terrain/biomeRegions.test.ts`
@@ -967,6 +969,8 @@ Generated from TypeScript imports.
 - `debug/locationQueries.ts`
 - `debug/npcDebugApi.test.ts`
 - `settlement/findSettlementSite.ts`
+- `settlement/villagePasture.test.ts`
+- `settlement/villagePasture.ts`
 - `settlement/villagePlanner.ts`
 - `terrain/chunkManager.ts`
 - `terrain/chunkVegetation.test.ts`

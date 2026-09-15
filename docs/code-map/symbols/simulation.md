@@ -26,7 +26,8 @@ Generated from exported TypeScript symbols.
 - `householdWellQueueId` — function — line 158
 - `InteractionQueue` — type — line 28
 - `InteractionQueueConfig` — type — line 10
-- `settlementWellQueueId` — function — line 163
+- `pastureWellQueueId` — function — line 163
+- `settlementWellQueueId` — function — line 168
 - `wellQueueId` — function — line 153
 
 ## `simulation/observation.ts`
