@@ -6,13 +6,13 @@
 
 `src/quests/QuestManager.ts` owns runtime quest progress in `states: Map<string, QuestRuntimeProgress>` and persists through `QuestProgressEntry` from `src/quests/quests.ts`.
 
-Current persisted fields include state/stage/outcome, stage-local progress, offer cooldown and journal stamps. This is the correct place for deferred-knowledge progress; do not introduce a separate save registry.
+Current persisted fields include state/stage/outcome, stage-local progress, offer cooldown and journal stamps. Deferred quest knowledge belongs here; do not create a second quest save registry.
 
-`QuestManager.reset()` keeps the manager instance alive across New Game, so any async knowledge request implementation needs an epoch/token or equivalent stale-completion guard.
+`QuestManager.reset()` keeps the same manager instance across New Game, so async completions need an epoch/generation guard.
 
 ### World time already exists
 
-`QuestManager` already receives `QuestWorldTimeLookup` with:
+`QuestManager` already receives `QuestWorldTimeLookup`:
 
 ```ts
 getWorldSeed()
@@ -20,33 +20,234 @@ getTimeOfDay()
 getElapsedDays()
 ```
 
-Use `getElapsedDays()` for authored research deadlines. No timer manager is needed.
+Use `getElapsedDays()` for authored research deadlines. No real-time timer manager is needed.
 
 ### World seams are injected
 
-`QuestManager` already follows the desired ownership boundary for fauna, world progress, reputation, lights and physical outcomes: narrow interfaces are injected; the manager does not import world managers.
+`QuestManager` already follows the correct boundary for fauna, world progress, reputation, settlement lights and physical outcomes: narrow interfaces are injected instead of importing world systems.
 
-Add deferred world resolution the same way. Do not import `ChunkManager`, settlements or `WorldLocationCatalog` into `QuestManager`.
+Deferred world knowledge must follow the same pattern. `QuestManager` must not import `ChunkManager`, `WorldLocationCatalog`, workers or terrain modules.
 
-### Existing effects seam
+## Existing worker infrastructure to reuse
 
-`QuestStageEffect` currently handles one-shot world mutations (`reveal_location`, exact item transfer, animal ownership, carried-container discard) via `QuestLifecycleHooks`.
+### `src/terrain/chunkWorkerPool.ts`
 
-A research-request effect can reuse this dispatch style if acceptance/stage flow can invoke it exactly once. If the current offer-accept path has no effect seam, add the smallest general acceptance-effect hook rather than a landmark-specific callback.
+The repository already has a persistent worker pool backed by `chunkHeightmap.worker.ts`.
 
-### Existing dialogue stage machinery
+Current job kinds:
 
-`QuestManager` already owns `QuestDialogOverride`, stage `dialogueActions`, `talk_to_npc`, `talk_to_npc_choice`, topic arbitration and journal stamps. Vue only renders the DTO/callbacks.
+```text
+tile
+mesh
+grass
+```
 
-The deferred-knowledge waiting/ready interaction belongs inside this machinery. Do not add UI interpretation of knowledge states.
+Important current behavior:
 
-## Current eager landmark path
+- workers live for the pool lifetime;
+- cancellation removes/discards job results rather than killing workers;
+- same-key requests replace older work;
+- tile and mesh have priority over grass;
+- grass concurrency is capped so at least one worker remains available for player-critical terrain work;
+- `disposeChunkWorkerPool()` terminates the pool on teardown.
 
-### `buildLandmarkQuests`
+This is the correct execution boundary for world-knowledge research. Do not create one-off Workers from NPC dialogue or a separate quest Worker pool.
 
-`src/quests/quests.ts::buildLandmarkQuests(resolve)` currently requires a synchronous `LandmarkResolver = (kind) => string | undefined` and omits a quest if lookup misses.
+### Required worker extension
 
-It eagerly resolves five quests before `QuestManager` construction:
+Add a data-only job kind for world knowledge, e.g. conceptually:
+
+```text
+kind: 'worldKnowledge'
+```
+
+Update consistently:
+
+- `ChunkWorkerRequest` / `ChunkWorkerResponse` in `chunkHeightmapProtocol.ts`;
+- worker dispatch in `chunkHeightmap.worker.ts`;
+- pool job union / queue / request / cancellation in `chunkWorkerPool.ts`.
+
+The exact naming may adapt, but keep it explicit and typed.
+
+### Priority decision
+
+Research is background work, not chunk-streaming work.
+
+Required priority order:
+
+```text
+tile / mesh
+> world knowledge
+>= or > grass only if recon shows grass jobs can otherwise delay research excessively
+```
+
+The key invariant is that research must never consume all worker capacity while terrain/mesh work is waiting.
+
+Prefer the same headroom approach already used for grass rather than introducing another scheduler abstraction.
+
+Do not enqueue one job per scanned chunk. Prefer one bounded research request that performs its ring scan inside a worker so queue overhead and main-thread Promise churn stay bounded.
+
+## Worker-safe landmark resolution primitives
+
+`world-028` added `resolveClassicLandmarkPlacement()` in `src/terrain/chunkEnvironment.ts` for:
+
+- `monolith`,
+- `stoneCircle`,
+- `smallRuins`.
+
+It is already shared by streamed `computeChunkEnvironment()` and unloaded lookup. This is exactly the primitive the worker research job should reuse.
+
+Do not duplicate RNG, terrain gates or landmark chance logic in the worker.
+
+For each query chunk, the worker can build the minimal terrain sampler from deterministic `ChunkTileParams` and call the same resolver.
+
+`cemetery` already has a lightweight resolver path from `world-014`/later cemetery work. Authored `ruins` have a separate authored-site path. Only support kinds that have a correct worker-safe deterministic resolver; do not silently fall back to full `computeChunkEnvironment()` in the background job.
+
+If `tower` / `shipwreck` still require full environment generation, leave them out of V1 worker knowledge until their primitive is extracted correctly.
+
+## New world-level service ownership
+
+The updated plan requires a shared world service rather than QuestManager owning async lookup mechanics.
+
+Suggested location:
+
+```text
+src/world/locations/worldKnowledgeResearch.ts
+```
+
+or another existing `world/locations` module if a stronger seam already exists during implementation.
+
+Responsibilities:
+
+- normalize deterministic query inputs;
+- create stable request/dedupe keys;
+- dispatch worker requests;
+- deduplicate equivalent in-flight work;
+- ignore stale completions across world epoch/seed changes;
+- return stable world refs;
+- contain worker errors/cancellation;
+- no quest/dialogue knowledge.
+
+Conceptual API:
+
+```ts
+type WorldKnowledgeQuery = {
+  kind: 'nearest-landmark'
+  landmarkKinds: readonly LandmarkKind[]
+  originX: number
+  originZ: number
+  maxChunkRadius: number
+  // deterministic world inputs/fingerprint as needed
+}
+
+type WorldKnowledgeRef = {
+  type: 'landmark'
+  id: string
+  kind: LandmarkKind
+  x: number
+  z: number
+}
+
+type WorldKnowledgeResearch = {
+  resolve(query: WorldKnowledgeQuery): Promise<WorldKnowledgeRef | null>
+  dispose(): void
+}
+```
+
+Do not freeze exact names prematurely; preserve the ownership and data-only contract.
+
+## Request identity and stale-result protection
+
+A dedupe key must include every input that changes result identity, at minimum conceptually:
+
+```text
+world seed / terrain fingerprint
+query kind(s)
+origin
+radius
+```
+
+Do not key only by quest id or NPC id.
+
+The service must have a current world generation/epoch token. On New Game or `WorldBundle` rebuild:
+
+- old in-flight result may finish;
+- it must be discarded if epoch/fingerprint no longer matches;
+- no old-world landmark ref may enter current quest/dialogue state.
+
+This protection is separate from QuestManager's own reset epoch; both boundaries matter.
+
+## Guard local-knowledge flow is an important pilot
+
+The remembered NPC is the **home guard**.
+
+Existing seam is documented in `world-012` and current code comments as:
+
+```text
+"Opowiedz mi coś o okolicy"
+```
+
+Current behavior:
+
+- builds a nearby/medium candidate pool;
+- top `GUARD_LANDMARK_POOL_SIZE = 5` by discovery weight;
+- reveals a deterministic/randomized 1–3 subset through normal LocationKnowledge flow.
+
+Relevant code areas found in recon:
+
+```text
+src/app/inventoryWiring.ts
+src/ui-vue/store.ts
+src/world/locations/locationConfig.ts
+src/world/locations/worldLocationCatalog.ts
+src/world/locations/locationKnowledge.ts
+src/world/locations/revealLocationKnowledge.ts
+```
+
+`inventoryWiring.ts` explicitly owns the guard topic integration and merchant map purchase integration with World Locations.
+
+`world-022` exists because cold location discovery previously caused hitches, including this guard topic. This makes it a strong non-quest validation case for the new service.
+
+### Guard state ownership
+
+Do not push guard research into `QuestManager`.
+
+Use a small world/dialogue-owned state for:
+
+```text
+not_started
+requested(requestedAtDays, revealAtDays)
+resolved(selected refs)
+```
+
+Persist only what affects gameplay continuity:
+
+- research start/deadline if the authored wait must survive reload;
+- selected stable refs if reveal selection must not reroll after reload.
+
+Do not persist Promise/worker ids.
+
+If existing LocationKnowledge already gives enough stable persistence for revealed results, reuse it after reveal rather than duplicating discovery state.
+
+### Guard reveal selection
+
+The worker/service should resolve candidate world refs. The existing guard-specific top-5 / reveal-1–3 policy should remain guard/dialogue policy unless current code already centralizes it elsewhere.
+
+Do not move discoveryWeight/UI wording into the generic research service.
+
+## Quest eager path today
+
+### `buildLandmarkQuests()`
+
+`src/quests/quests.ts::buildLandmarkQuests(resolve)` currently takes:
+
+```ts
+LandmarkResolver = (kind: LandmarkKind) => string | undefined
+```
+
+and eagerly materializes concrete ids before constructing `QuestManager`.
+
+Current five quests:
 
 - `stare-ruiny` → `smallRuins`
 - `slad-przy-monolicie` → `monolith`
@@ -54,111 +255,63 @@ It eagerly resolves five quests before `QuestManager` construction:
 - `zaginiony-ladunek` → `shipwreck`
 - `samotna-wieza` → `tower`
 
-`src/app/createApp.ts` owns `LANDMARK_QUEST_SEARCH_CHUNK_RADIUS = 10` and supplies `ChunkManager.findLandmarkNear` around the home settlement.
+`src/app/createApp.ts` owns `LANDMARK_QUEST_SEARCH_CHUNK_RADIUS = 10` and passes `ChunkManager.findLandmarkNear()` around home.
 
-Do not migrate all five automatically. This plan specifically pilots `slad-przy-monolicie`; local/visually obvious places should remain able to use immediate binding.
+Only migrate explicitly selected pilots. Immediate knowledge must remain supported.
 
-### world-028
+## Quest knowledge lifecycle
 
-`world-028` added shared lightweight unloaded placement for `monolith`, `stoneCircle`, `smallRuins`. These are suitable pilot targets because their lookup no longer materializes full chunk environments.
+### Authored declaration
 
-`shipwreck` and `tower` still use the broader full fallback. Do not use this plan as an excuse to hide those costs behind `Promise.resolve().then(...)`; that would still block the main thread when the synchronous resolver runs. Keep them immediate for this plan or address their primitive separately.
-
-## Generated RPG old-place-secret
-
-`src/quests/opportunities/rpgQuestMatrices.ts` currently collects `old-place-secret` from an already supplied `RpgLandmarkRef[]`, chooses the first eligible landmark and encodes `chosen.id` into `RpgQuestOpportunity.sourceId`.
-
-`src/quests/opportunities/rpgQuestMaterialization.ts::materializeOldPlaceSecret()` then puts `opportunity.sourceId` directly into `interact_landmark`.
-
-Important compatibility property: generated quest id is:
-
-```text
-rpg:old-place-secret:<settlementId>:<sourceId>
-```
-
-Changing when the Player learns the location must not destabilize this id for persisted generated quests.
-
-Recommended integration boundary:
-
-- keep world/opportunity identity deterministic;
-- defer **player/NPC knowledge exposure** and objective binding through the generic knowledge slot;
-- do not make candidate selection depend on conversation order or resolver completion order.
-
-If removing eager candidate collection would destabilize the quest id, keep deterministic candidate identity selection but defer the expensive/player-facing place resolution. The plan's goal is deferred knowledge, not mandatory deferred candidate identity at any architectural cost.
-
-## Lost Treasure Chronicles
-
-`quests-progression-038` currently establishes deterministic chronicle truth before visit order and binds a real cemetery plus reserved expedition ruins. `src/app/worldBundle.ts` searches chronicle ruins during world build; the binding is exposed through `lostTreasureChronicleSearchRuntime` and `WorldLocationCatalog`.
-
-Do not make grave-vs-ruins truth lazy or conversation-dependent.
-
-The safe pilot is narrower:
-
-- preserve deterministic chapter truth and physical item placement;
-- defer the **archaeologist's learned/revealed ruins clue** through the generic research state;
-- if physical content generation currently requires the ruins binding before the quest exists, keep that world truth eager and treat the quest knowledge slot as delayed knowledge of the existing stable ref.
-
-This distinction is important: world existence/truth may be eager while NPC/player knowledge is lazy.
-
-## Recommended types / ownership
-
-Names may adapt, but keep the separation.
-
-### Authored definition
-
-A small quest-level declaration should identify stable knowledge slots and authored delay, e.g. conceptually:
+Add a stable per-quest knowledge id and research policy, conceptually:
 
 ```ts
 type QuestWorldKnowledgeDef = {
   id: string
+  query: ...
   revealDelayDays: number
-  unavailablePolicy: ...
 }
 ```
 
-Do not put terrain-specific resolver functions into `QuestDef`.
+Avoid storing resolver functions in `QuestDef`.
+
+The query can reference an authored origin policy (e.g. giver/home settlement) which composition resolves into data for the injected world adapter; do not make quest definitions carry mutable world manager references.
 
 ### Persisted progress
 
-Add optional knowledge progress to `QuestProgressEntry` / `QuestRuntimeProgress`, keyed by stable authored knowledge id.
+Add optional knowledge progress to `QuestProgressEntry` and runtime progress.
 
-Conceptually:
-
-```ts
-type QuestWorldKnowledgeProgress = {
-  requestedAtDays: number
-  revealAtDays: number
-  status: 'requested' | 'resolved' | 'unavailable'
-  ref?: QuestWorldKnowledgeRef
-}
-```
-
-Prefer a discriminated union for `ref`; V1 needs landmark identity. Keep it small and serializable.
-
-The persisted ref is the Player/NPC's selected knowledge binding, not a second owner of physical world placement.
-
-### Resolver seam
-
-Inject an async resolver into `QuestManager`, conceptually:
+Prefer a discriminated union:
 
 ```ts
-type QuestWorldKnowledgeResolver = {
-  resolve(questId: string, knowledgeId: string): Promise<QuestWorldKnowledgeRef | null>
-  describe(ref: QuestWorldKnowledgeRef, context: ...): string | null
-}
+type QuestWorldKnowledgeProgress =
+  | {
+      status: 'requested'
+      requestedAtDays: number
+      revealAtDays: number
+    }
+  | {
+      status: 'resolved'
+      requestedAtDays: number
+      revealAtDays: number
+      ref: WorldKnowledgeRef
+    }
+  | {
+      status: 'unavailable'
+      requestedAtDays: number
+      revealAtDays: number
+    }
 ```
 
-If description ownership is cleaner as a separate injected formatter, split it. Avoid making `QuestManager` know settlement coordinates or `cardinalDirectionPhrase` geometry.
+Knowledge state is player/NPC knowledge about a world ref, not ownership of the physical landmark.
 
-The resolver used from `createApp` should access the current bundle through a getter/current variable so a same-session bundle rebuild cannot leave an in-flight request permanently tied to an old `ChunkManager`.
+### Runtime task bookkeeping
 
-### Async stale-write guard
+Keep Promise/task handles outside persisted state.
 
-Because `QuestManager.reset()` reuses the object, capture an epoch when launching a request and increment it on reset. Ignore completions from an older epoch. Apply equivalent protection if manager teardown/recreation exists elsewhere.
+QuestManager can maintain an internal in-flight map keyed by quest/knowledge id or delegate dedupe completely to the shared service. It still needs a manager reset epoch so an old completion cannot mutate reused QuestManager state after New Game.
 
-Do not persist runtime task handles.
-
-## Objective shape
+## Quest flow primitives
 
 Current `interact_landmark` is concrete:
 
@@ -166,159 +319,308 @@ Current `interact_landmark` is concrete:
 { type: 'interact_landmark', landmarkId: string }
 ```
 
-Do not use fake ids/placeholders in this field.
+Keep it unchanged for immediate quests.
 
-Prefer a typed new objective for deferred binding, e.g.:
+Add a typed knowledge-bound sibling, e.g. conceptually:
 
 ```ts
 { type: 'interact_bound_landmark', knowledgeId: string }
 ```
 
-`objectiveMatchesRef()` can resolve the persisted knowledge ref and compare its landmark id to the reported `ObjectiveRef.interact_landmark.landmarkId`.
+`objectiveMatchesRef()` should resolve the persisted knowledge ref and compare exact landmark id.
 
-For the return-to-NPC step, add an explicit typed primitive (for example `receive_world_knowledge`) rather than encoding readiness into arbitrary reminder strings. It should use normal dialogue arbitration and a conscious player action once both conditions are met:
+For receiving the researched clue, add a typed dialogue/stage primitive rather than checking magic strings.
+
+Required conditions:
 
 ```text
-binding resolved
+knowledge status == resolved
 AND
-world time >= revealAtDays
+getElapsedDays() >= revealAtDays
 ```
 
-Before then, interaction returns informational pending dialogue and does not advance.
+Pending interaction must return authored informational dialogue without advancing.
 
-## Text / clue formatting
+## Existing effects/dialogue seams to reuse
 
-`src/quests/cardinalDirection.ts::cardinalDirectionPhrase` already produces direction phrases. `src/quests/caveLocationDescription.ts` demonstrates composition of world geometry into player-facing location text.
+`QuestStageEffect` already dispatches one-shot effects through `QuestLifecycleHooks`.
 
-Add one pure/narrow place-description helper rather than embedding coordinate math in quest definitions.
+If research should start on acceptance but acceptance currently has no exact-once effect seam, add the smallest general acceptance-effect mechanism. Do not trigger background lookup merely because a menu rendered.
 
-The helper should be able to describe a landmark relative to a settlement origin. Keep V1 deterministic and bounded; direction + coarse distance/settlement context is sufficient.
+`QuestManager` already owns:
 
-Do not persist rendered text when it can be regenerated from stable ref + world presentation lookup.
+- `QuestDialogOverride`,
+- `dialogueActions`,
+- `talk_to_npc`,
+- `talk_to_npc_choice`,
+- topic arbitration,
+- journal events.
 
-The Quest Log still goes through `QuestManager.list()`; expansion/resolution of any authored clue token or dynamic objective text must occur before producing the DTO.
+Use these; Vue must remain presentation-only.
 
-## Journal implications
+## World-time delay
 
-Journal stores stamps, not quote text. That is useful here.
+Use `QuestWorldTimeLookup.getElapsedDays()`.
 
-Ensure there are distinct idempotent stamps for:
+One hour = `1 / 24` day.
 
-- initial/pending research information if it is intended to appear in notes;
-- the later revealed clue.
+Resolver completion and story readiness are independent.
 
-Current dedupe treats progress events by stage index, so if both pending and reveal use the same stage and both need journal entries, the existing event identity may need a narrow extension. Do not silently overwrite or duplicate entries.
+No `setTimeout`, wall-clock duration or polling loop is needed. Read readiness whenever dialogue/list state is requested, using current world time.
 
-## Persistence implementation points
+## Geographic presentation
+
+Existing useful helpers:
+
+```text
+src/quests/cardinalDirection.ts::cardinalDirectionPhrase
+src/quests/caveLocationDescription.ts
+```
+
+Build one narrow deterministic landmark-description helper from:
+
+- resolved x/z,
+- origin settlement x/z/name,
+- landmark kind/label.
+
+Keep rendered prose derived; do not persist it as world truth.
+
+The clue should provide actionable gameplay guidance, not an exact debug coordinate.
+
+## Pilot-specific implementation notes
+
+### 1. Guard — `Opowiedz mi coś o okolicy`
+
+Best architecture pilot because it proves the service is not quest-specific.
+
+Desired flow:
+
+```text
+cold ask
+→ enqueue worker research
+→ immediate "wróć później" reply
+→ wait authored world time
+→ reveal stable 1–3 normal locations
+```
+
+If relevant candidate data is already cached/known cheaply, do not force an artificial new worker scan. The authored policy may reveal immediately when guard logically already has usable knowledge.
+
+Keep reveal through `LocationKnowledge`; worker result itself must not mark the map discovered.
+
+### 2. `slad-przy-monolicie`
+
+Clean quest pilot because `monolith` has worker-safe lightweight resolver after `world-028`.
+
+Flow:
+
+```text
+Anna's lead
+→ request target knowledge
+→ ~1h wait
+→ Anna gives concrete direction
+→ interact_bound_landmark(target)
+→ existing report/outcome
+```
+
+Preserve quest id and outcome.
+
+Old active saves that were already on concrete monolith objective must skip research fiction and preserve/reconstruct the same deterministic target.
+
+### 3. `old-place-secret`
+
+`src/quests/opportunities/rpgQuestMatrices.ts` currently picks an existing `RpgLandmarkRef` and puts `chosen.id` into `opportunity.sourceId`.
+
+Generated quest id is:
+
+```text
+rpg:old-place-secret:<settlementId>:<sourceId>
+```
+
+Do not destabilize it.
+
+If `sourceId` must remain concrete to rematerialize persisted generated quests, keep identity selection deterministic but use shared research for the NPC/player reveal phase. Do not add an RPG-only async state.
+
+### 4. Lost Treasure Chronicles
+
+`quests-progression-038` already creates deterministic chapter truth: cemetery + expedition ruins and deterministic real chronicle location.
+
+Do not defer/reroll physical truth.
+
+Use generic research only for the archaeologist's knowledge/reveal of the ruins clue where current story flow allows it.
+
+## Immediate controls / explicit non-migrations
+
+Keep at least one concrete landmark quest unchanged to prove opt-in behavior.
+
+Good candidates:
+
+- `zapomniany-cmentarz` — local cemetery logically known;
+- `samotna-wieza` — premise says tower is visible.
+
+`zaginiony-ladunek` is narratively suitable but `shipwreck` still has a heavier/full unloaded resolver. Do not migrate it until the new worker job supports its exact placement semantics or its primitive is extracted.
+
+## Persistence touchpoints
 
 Inspect/update:
 
-- `src/quests/quests.ts::QuestProgressEntry`
-- `src/quests/QuestManager.ts::QuestRuntimeProgress`
-- normalization/copy helpers in `QuestManager.ts`
-- `QuestManager.reset()`
-- quest save/export method(s) in `QuestManager.ts`
-- `src/persistence/saveData.ts::isQuestProgressEntry`
-
-Older saves must accept missing knowledge fields.
-
-Do not assume a save-version bump is needed; current quest-progress fields are optional and validator-based. Follow current save compatibility rules.
-
-## Pilot-specific notes
-
-### `slad-przy-monolicie`
-
-Best clean static pilot.
-
-Change from eager concrete objective to:
-
 ```text
-offer/accept
-→ request "target" knowledge
-→ Anna: needs to reconstruct/check the route
-→ authored ~1 world-hour wait
-→ receive clue from Anna
-→ interact_bound_landmark("target")
-→ report as today
+src/quests/quests.ts::QuestProgressEntry
+src/quests/QuestManager.ts::QuestRuntimeProgress
+QuestManager progress export/normalization/reset
+src/persistence/saveData.ts::isQuestProgressEntry
 ```
 
-Existing quest id and final outcome stay unchanged.
+Guard research persistence should reuse the nearest existing world/location save owner; inspect current `SaveData.map` / location knowledge state before adding a new top-level save field.
 
-For an older save already `active` on the old single landmark stage, migration must place it directly in the post-research investigation stage and reconstruct/bind the same deterministic monolith target rather than forcing the Player to repeat the research fiction.
+Missing new optional fields in older saves must remain valid.
 
-### `old-place-secret`
+Do not bump save version unless required by existing validator/migration rules.
 
-Use the same lifecycle, but keep generated quest identity stable.
+## Journal behavior
 
-The giver's current offer says the place is already known exactly enough to go there. Rewrite to a lead such as hearing about an old place, followed by a short research/asking-around step. After reveal, use `LANDMARK_LABELS` + generic location phrase.
+Journal stores stamps, not quote text.
 
-Do not add an RPG-matrix-only timer/state field.
+If both:
 
-### chronicle-search ruins
+- initial research line,
+- final revealed clue
 
-Do not reroll or defer physical chronicle truth. Only defer knowledge exposure where possible.
+need separate journal notes in the same stage, current dedupe-by-stage may be insufficient. Extend event identity narrowly rather than storing rendered sentences.
 
-The archaeologist is a natural research actor: papers/previous expedition notes can gate the concrete ruins clue. Use the same knowledge state and world-time delay.
-
-If both grave and ruins are currently exposed simultaneously by one QuestDef, preserve chapter branching; only the ruins clue can be delayed in V1 if that avoids redesigning multi-location truth.
-
-## Immediate controls / non-migrations
-
-Keep at least one existing landmark quest on the old immediate concrete path and test it. Good candidates are:
-
-- `zapomniany-cmentarz` — local settlement cemetery;
-- `samotna-wieza` — premise says the tower is visible from afar.
-
-This makes the architecture demonstrate that deferred research is opt-in, not a new mandatory quest lifecycle.
-
-`zaginiony-ladunek` is narratively attractive for research, but `shipwreck` unloaded lookup still uses full fallback after world-028. Do not migrate it until its world lookup is non-blocking/cheap or a genuinely sliced/worker resolver exists.
+Do not duplicate entries after reload/repeated conversations.
 
 ## Validation
 
-Extend `validateQuestDefinitions()` for knowledge ids and new objective/effect references. Keep validation in `quests.ts` with the rest of authored definition checks.
+Extend `validateQuestDefinitions()` for deferred knowledge authoring:
 
-The validator should catch duplicate/missing ids, negative/non-finite delays and incompatible binding/objective kinds.
+- unique knowledge ids;
+- referenced id exists;
+- non-negative finite delay;
+- objective/ref type compatibility;
+- valid receive-knowledge NPC;
+- no bound objective without declared knowledge source.
 
-## Test locations
+Keep validation centralized with existing quest definition checks.
 
-Likely files:
+## Tests and useful fakes
+
+### Worker pool tests
+
+Use fake Worker / controllable pool patterns already present if available. Test scheduling semantics without real timing.
+
+Cover:
+
+- research job serializes through protocol;
+- tile/mesh jobs outrank queued research;
+- cancellation/disposal rejects correctly;
+- stale/cancelled result is discarded;
+- one bounded research job performs the scan rather than N per-chunk jobs.
+
+### Parity tests
+
+For representative seeds/query origins:
 
 ```text
-src/quests/QuestManager.test.ts
-src/quests/quests.test.ts
-src/quests/opportunities/rpgQuestMatrices.test.ts
-src/quests/opportunities/rpgQuestMaterialization.test.ts
-src/quests/lostTreasureChronicleSearch.test.ts
-src/persistence/saveData.test.ts
+worker research result
+== existing deterministic main-thread landmark search result
 ```
 
-Prefer fake/manual world clock and controllable deferred Promise in `QuestManager` tests. Do not use real timers or wall-clock sleeps.
+Compare stable id/kind/x/z.
+
+Do not use wall-clock thresholds.
+
+### Service tests
+
+Use controllable worker promises:
+
+- dedupe equivalent request;
+- distinct query inputs do not collide;
+- reset/world epoch invalidates old result;
+- unavailable and retry/error behavior explicit.
+
+### QuestManager tests
+
+Use fake world clock + controlled research resolver:
+
+- request exactly once;
+- result-before-delay;
+- delay-before-result;
+- resolved + delay → clue action;
+- bound objective exact id matching;
+- save/load requested restart;
+- save/load resolved no reroll;
+- reset ignores completion;
+- journal idempotence.
+
+### Guard tests
+
+Cover:
+
+- cold ask queues one research request and replies immediately;
+- repeated ask while pending does not duplicate;
+- result + delay reveals 1–3 through existing LocationKnowledge path;
+- persisted pending state survives reload;
+- selected reveal refs do not reroll after reload;
+- already-known/cached case can remain immediate.
+
+## Expected implementation files
+
+Focused list from current recon:
+
+```text
+src/terrain/chunkWorkerPool.ts
+src/terrain/chunkHeightmapProtocol.ts
+src/terrain/chunkHeightmap.worker.ts
+src/terrain/chunkEnvironment.ts
+src/world/locations/worldKnowledgeResearch.ts        # likely new
+src/world/locations/worldLocationCatalog.ts
+src/world/locations/locationConfig.ts
+src/world/locations/locationKnowledge.ts
+src/world/locations/revealLocationKnowledge.ts
+src/app/inventoryWiring.ts
+src/app/createApp.ts
+src/quests/quests.ts
+src/quests/QuestManager.ts
+src/quests/opportunities/rpgQuestMatrices.ts
+src/quests/opportunities/rpgQuestMaterialization.ts
+src/quests/lostTreasureChronicleSearch.ts
+src/persistence/saveData.ts
+src/quests/cardinalDirection.ts
+src/quests/caveLocationDescription.ts
+```
+
+Add/adjust tests alongside touched modules rather than creating one broad integration test file.
 
 ## Implementation order
 
-1. Add knowledge definition/progress/ref types + validation.
-2. Add persisted runtime state and save validation.
-3. Add injected async resolver + stale completion protection.
-4. Add request effect/acceptance seam and receive-knowledge objective.
-5. Add bound-landmark objective matching.
-6. Add generic location description seam.
-7. Unit-test generic lifecycle thoroughly.
-8. Migrate `slad-przy-monolicie`.
-9. Migrate generated `old-place-secret` without changing stable ids.
-10. Integrate chronicle-search ruins as delayed knowledge only, preserving existing deterministic story truth.
-11. Remove only now-unused eager quest lookups.
-12. Update state/docs and run targeted tests, typecheck, lint, build.
+1. Extend worker protocol/pool with low-priority bounded world-knowledge job.
+2. Implement worker-safe nearest-landmark scan reusing existing deterministic resolvers.
+3. Add world-level research service with dedupe + world epoch protection.
+4. Integrate guard local-knowledge flow as first non-quest consumer.
+5. Add quest knowledge definition/progress/ref types + validation.
+6. Add persisted runtime state and save validation.
+7. Inject research service adapter into `QuestManager`; add reset epoch protection.
+8. Add request/receive/bound-landmark quest primitives.
+9. Add deterministic clue formatter.
+10. Migrate `slad-przy-monolicie`.
+11. Migrate `old-place-secret` without changing stable generated ids.
+12. Integrate Lost Treasure Chronicles knowledge reveal without moving physical truth.
+13. Remove only now-unused eager lookup call-sites.
+14. Update state/docs if architecture ownership changes materially.
+15. Run targeted tests, type-check, lint and build.
 
 ## Guardrails
 
-- `QuestManager` owns quest/knowledge progress, not terrain truth.
-- World resolver owns place lookup, not quest lifecycle.
-- No mutable QuestDef after manager construction.
-- No Promise/task handle in SaveData.
-- No UI knowledge-state logic.
-- No conversation-order world rerolls.
-- No artificial delay for NPCs who already logically know the destination.
-- No `Promise.resolve(syncHeavyLookup())` masquerading as background work.
-- No worker unless profiling/primitive cost justifies it.
-- Preserve exact stable world ids for objectives.
+- World worker/service owns lookup execution, not quest lifecycle.
+- QuestManager owns persisted quest knowledge, not terrain truth.
+- Guard dialogue is a peer consumer of the service, not a fake quest.
+- No mutable `QuestDef` after manager construction.
+- No Promise/Worker/task handle in SaveData.
+- No `Promise.resolve(syncHeavyLookup())` pretending to be background work.
+- No per-conversation Worker creation.
+- No per-chunk worker-job fan-out for one bounded scan.
+- Preserve worker headroom for terrain/mesh streaming.
+- No duplicate landmark placement algorithm.
+- No conversation-order rerolls.
+- Keep immediate knowledge supported.
 - Browser verification belongs to User.
