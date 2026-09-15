@@ -86,7 +86,7 @@ Generated from exported TypeScript symbols.
 
 ## `debug/createModelTestScene.ts`
 
-- `createModelTestScene` — function — line 44
+- `createModelTestScene` — function — line 40
 
 ## `debug/debugMode.ts`
 

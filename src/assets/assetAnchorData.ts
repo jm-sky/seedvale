@@ -11,6 +11,7 @@ export const RIGHT_HAND_BONE_NAMES = [
   'HandR',
   'Wrist.R',
   'Hand.R',
+  'hand_r',
   'mixamorigRightHand',
 ] as const
 

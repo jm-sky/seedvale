@@ -8,6 +8,10 @@ import { FAUNA_URLS } from '../fauna/createFauna'
 import { HELD_GLB } from '../items/heldToolVisual'
 import { ITEM_GLB_SPECS } from '../items/itemModels'
 import { PLAYER_HEIGHT, PLAYER_MODEL_URL } from '../player/PlayerController'
+import {
+  PLAYER_UBC_PEASANT_URL,
+  PLAYER_UBC_RANGER_URL,
+} from '../player/playerVisualPreset'
 import { BRANCH_HELD_MAX, BRANCH_URL } from '../player/torchLightPresets'
 import { HOUSE_CATALOG } from '../settlement/houseCatalog'
 import { LIVESTOCK_URLS } from '../settlement/livestock'
@@ -333,6 +337,24 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     id: 'character:player',
     url: PLAYER_MODEL_URL,
     label: 'Player (Adventurer)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:player'),
+  })
+  out.push({
+    id: 'character:ubc-peasant',
+    url: PLAYER_UBC_PEASANT_URL,
+    label: 'Player (UBC Peasant)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:player'),
+  })
+  out.push({
+    id: 'character:ubc-ranger',
+    url: PLAYER_UBC_RANGER_URL,
+    label: 'Player (UBC Ranger)',
     group: 'character',
     prepare: { mode: 'height', value: PLAYER_HEIGHT },
     skinned: true,

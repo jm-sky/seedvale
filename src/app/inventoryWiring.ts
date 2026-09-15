@@ -196,6 +196,8 @@ export type InventoryWiringDeps = {
   syncHeldHud: () => void
   syncQuickActionAvailability: () => void
   refreshInventoryScreen: () => void
+  /** Body-armor → UBC Peasant/Ranger (plan items-player-034). */
+  syncPlayerAppearance: () => void
   /** World Locations catalog/knowledge (plan world-012) — the guard's
    *  "Opowiedz mi coś o okolicy" topic and the merchant's Near/Far map
    *  purchases both reveal into the same player-wide `LocationKnowledge`. */
@@ -330,6 +332,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       heldTool.syncWithInventory()
       deps.syncHeldHud()
       deps.syncQuickActionAvailability()
+      deps.syncPlayerAppearance()
       syncMerchantIfOpen()
       deps.refreshInventoryScreen()
       toast.show(`+${result.totalCoins} monet`, 'pickup')
@@ -482,6 +485,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     deps.syncHeldHud()
     deps.syncQuickActionAvailability()
+    deps.syncPlayerAppearance()
     deps.refreshInventoryScreen()
   }
 
@@ -505,11 +509,13 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
    *  interaction and isn't a light source. */
   const equipArmor = (instanceId: string): void => {
     if (!equipment.equip(instanceId, inventory)) return
+    deps.syncPlayerAppearance()
     deps.refreshInventoryScreen()
   }
 
   const unequipArmor = (slot: EquipmentSlot = 'body'): void => {
     equipment.unequip(slot)
+    deps.syncPlayerAppearance()
     deps.refreshInventoryScreen()
   }
 
@@ -616,6 +622,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     heldTool.syncWithInventory()
     deps.syncHeldHud()
     deps.syncQuickActionAvailability()
+    deps.syncPlayerAppearance()
     const view = merchantInventoryView()
     const npc = ui.merchant.npc as NpcAgent | null
     if (ui.merchant.mode === 'npcGoods') {

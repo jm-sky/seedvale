@@ -11,7 +11,8 @@ import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { FootstepSurface } from '../terrain/footstepSurface'
-import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
+import { disposeObject3D, loadGltfAnimated, loadGltfAsset, prepareProp } from '../assets/loadGltf'
+import { loadTexture } from '../assets/loadTexture'
 import {
   playFootstep,
   playJumpLand,
@@ -86,6 +87,8 @@ const LOOK_AT_OFFSET_NEAR = 1.6
 
 const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
+/** Outfit clothes materials in composed UBC GLBs (gltfpack drops mesh names). */
+const UBC_OUTFIT_MATERIAL_NAMES = new Set(['MI_Peasant', 'MI_Ranger'])
 /** Player starting SPEA (plan npc-019 §6) — slightly above the shared `0.5`
  *  typical-healthy-adult reference. Fixed constants, not persisted/rolled;
  *  see `attributes`'s own doc comment. */
@@ -171,6 +174,9 @@ type PlayerPose = 'stand' | 'crouch' | 'lie'
   - `Sword_Slash`
   - `Walk`
   - `Wave`
+
+  Opt-in UBC (`?player=peasant|ranger`) uses a separate UAL1 clip GLB:
+  `Idle_Loop`, `Walk_Loop`, `Sprint_Loop`, `Sword_Attack`.
 
   Current Hero animations:
   - `Idle`
@@ -314,11 +320,16 @@ export class PlayerController {
     groundSource: PlayerMovementTraceTick['groundSource']
   } | null = null
   private readonly isCapsule: boolean
+  /**
+   * Adventurer / capsule cannot live-swap to UBC (no shared rig).
+   * Set when `create()` loaded Adventurer (`animationUrl` null).
+   */
+  private readonly appearanceLocked: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
    *  (the wrapper, which also carries the label at a fixed height) for
    *  `lieDown()` / `crouch()`, so the nameplate stays floating above the
    *  character instead of tipping over with the body. */
-  private readonly modelRoot: THREE.Object3D
+  private modelRoot: THREE.Object3D
   private pose: PlayerPose = 'stand'
   /** Plan 150 — temporary incapacitation at 0 HP; distinct from `health.dead`. */
   private downed = false
@@ -331,19 +342,24 @@ export class PlayerController {
   private grounded = true
   /** Set by `jump()`, consumed (and cleared) on the next `updateVerticalMotion`. */
   private jumpRequested = false
-  private readonly mixer: THREE.AnimationMixer | null
-  private readonly idleAction: THREE.AnimationAction | null
-  private readonly walkAction: THREE.AnimationAction | null
-  private readonly runAction: THREE.AnimationAction | null
-  private readonly attackAction: THREE.AnimationAction | null
+  private mixer: THREE.AnimationMixer | null
+  private idleAction: THREE.AnimationAction | null
+  private walkAction: THREE.AnimationAction | null
+  private runAction: THREE.AnimationAction | null
+  private attackAction: THREE.AnimationAction | null
   /** Adventurer ships no dedicated bow clip — `Idle_Gun_Pointing`/`Gun_Shoot`
    *  are the closest same-rig stand-ins for draw-hold/release (plan 162
    *  follow-up, see the plan's implementation summary). `Universal Animation
    *  Library`/Mixamo `Pro Longbow Pack` clips were checked and are not
    *  usable: different skeletons (UE mannequin / `mixamorig:*`) than
    *  Adventurer's own rig, and UAL doesn't ship bow-specific content anyway. */
-  private readonly aimDrawAction: THREE.AnimationAction | null
-  private readonly rangedReleaseAction: THREE.AnimationAction | null
+  private aimDrawAction: THREE.AnimationAction | null
+  private rangedReleaseAction: THREE.AnimationAction | null
+  private animations: THREE.AnimationClip[] = []
+  private currentModelUrl = PLAYER_MODEL_URL
+  private currentAnimationUrl: string | null = null
+  private currentTintUrl: string | null = null
+  private appearanceLoadToken = 0
   private currentAction: THREE.AnimationAction | null = null
   /** True while `playerMelee` is in-flight — `syncAnimation` must not
    *  overwrite `Sword_Slash` with Idle/Walk until recovery ends. */
@@ -386,8 +402,8 @@ export class PlayerController {
   private readonly labelNameEl: HTMLDivElement
   private readonly hpFillEl: HTMLDivElement
   private lastHpPercent = -1
-  /** Quaternius `WristR` (or null on capsule fallback / missing bone). */
-  private readonly rightWrist: THREE.Object3D | null
+  /** Quaternius `WristR` / UBC `hand_r` (or null on capsule fallback / missing bone). */
+  private rightWrist: THREE.Object3D | null
   private heldToolObject: THREE.Object3D | null = null
   private heldToolKind: ToolKind | null = null
   /** Bumps on each `setHeldTool` so stale async GLB loads are ignored. */
@@ -414,6 +430,8 @@ export class PlayerController {
     caveOccupancy: CaveOccupancyQuery,
     caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
+    modelUrl: string,
+    animationUrl: string | null,
   ) {
     this.camera = camera
     this.keys = keys
@@ -428,6 +446,9 @@ export class PlayerController {
     this.caveHorizontal = caveHorizontal
     this.sampleFootstepSurface = sampleFootstepSurface
     this.isCapsule = isCapsule
+    this.appearanceLocked = !isCapsule && animationUrl == null
+    this.currentModelUrl = modelUrl
+    this.currentAnimationUrl = animationUrl
     this.health = createHealthState(PLAYER_MAX_HP)
     this.attributes = PLAYER_STARTING_ATTRIBUTES
     this.needs = createPlayerNeeds(this.attributes.endurance)
@@ -438,29 +459,13 @@ export class PlayerController {
     this.mesh.add(root)
     this.mesh.position.set(0, 0, 0)
     this.modelRoot = root
+    if (!isCapsule) cloneOutfitMaterials(root)
     this.rightWrist = isCapsule ? null : findRightHandSocket(root)
     if (!isCapsule && !this.rightWrist) {
       console.warn('[player] right-hand bone not found; held tools parent to model root (feet)')
     }
 
-    if (animations.length > 0) {
-      this.mixer = new THREE.AnimationMixer(root)
-      this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
-      this.walkAction = this.findAction(animations, ['Walk', 'Run'])
-      this.runAction = this.findAction(animations, ['Run'])
-      this.attackAction = this.findAction(animations, ['Sword_Slash', 'Punch_Right', 'Punch_Left'])
-      this.aimDrawAction = this.findAction(animations, ['Idle_Gun_Pointing', 'Idle_Gun'])
-      this.rangedReleaseAction = this.findAction(animations, ['Gun_Shoot', 'Idle_Gun_Shoot'])
-      this.playAction(this.idleAction)
-    } else {
-      this.mixer = null
-      this.idleAction = null
-      this.walkAction = null
-      this.runAction = null
-      this.attackAction = null
-      this.aimDrawAction = null
-      this.rangedReleaseAction = null
-    }
+    this.bindMixer(root, animations)
 
     const hpBar = createLabelBar('hp')
     this.hpFillEl = hpBar.fill
@@ -493,9 +498,25 @@ export class PlayerController {
     caveHorizontal: CaveHorizontalResolver,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
     modelUrl = PLAYER_MODEL_URL,
+    animationUrl: string | null = null,
+    preloadUrls: readonly string[] = [],
   ): Promise<PlayerController> {
     try {
-      const { scene, animations } = await loadGltfAnimated(modelUrl)
+      if (preloadUrls.length > 0) {
+        await Promise.all(preloadUrls.map((url) => loadGltfAsset(url).catch((err) => {
+          console.warn(`[player] failed to preload ${url}`, err)
+        })))
+      }
+      const { scene, animations: modelAnimations } = await loadGltfAnimated(modelUrl)
+      let animations = modelAnimations
+      if (animationUrl) {
+        try {
+          const extra = await loadGltfAnimated(animationUrl)
+          animations = [...modelAnimations, ...extra.animations]
+        } catch (err) {
+          console.warn(`[player] failed to load animations ${animationUrl}`, err)
+        }
+      }
       prepareProp(scene, PLAYER_HEIGHT)
       return new PlayerController(
         scene,
@@ -513,6 +534,8 @@ export class PlayerController {
         caveOccupancy,
         caveHorizontal,
         sampleFootstepSurface,
+        modelUrl,
+        animationUrl,
       )
     } catch (err) {
       console.warn(`[player] failed to load ${modelUrl}, using capsule`, err)
@@ -572,6 +595,8 @@ export class PlayerController {
       caveOccupancy,
       caveHorizontal,
       sampleFootstepSurface,
+      PLAYER_MODEL_URL,
+      null,
     )
   }
 
@@ -672,6 +697,124 @@ export class PlayerController {
       })
       this.heldToolSwingPivot = pivot
     })
+  }
+
+  /**
+   * Live-swap UBC Peasant/Ranger (and optional brown albedo) without rebuilding
+   * the world. Adventurer override and the capsule fallback are locked for the
+   * session — changing those requires a reload with `?player=`.
+   */
+  async applyAppearance(opts: {
+    animationUrl: string | null
+    modelUrl: string
+    tintUrl: string | null
+  }): Promise<void> {
+    if (this.isCapsule) return
+    if (this.appearanceLocked) return
+    if (
+      opts.modelUrl === this.currentModelUrl
+      && opts.animationUrl === this.currentAnimationUrl
+      && opts.tintUrl === this.currentTintUrl
+    ) {
+      return
+    }
+
+    const token = ++this.appearanceLoadToken
+    if (opts.modelUrl !== this.currentModelUrl) {
+      try {
+        const { scene, animations: modelAnimations } = await loadGltfAnimated(opts.modelUrl)
+        if (token !== this.appearanceLoadToken) return
+        let animations = this.animations
+        if (opts.animationUrl && opts.animationUrl !== this.currentAnimationUrl) {
+          try {
+            const extra = await loadGltfAnimated(opts.animationUrl)
+            if (token !== this.appearanceLoadToken) return
+            animations = [...modelAnimations, ...extra.animations]
+          } catch (err) {
+            console.warn(`[player] failed to load animations ${opts.animationUrl}`, err)
+          }
+        }
+        prepareProp(scene, PLAYER_HEIGHT)
+        cloneOutfitMaterials(scene)
+        this.replaceModelRoot(scene, animations)
+        this.currentModelUrl = opts.modelUrl
+        this.currentAnimationUrl = opts.animationUrl
+      } catch (err) {
+        console.warn(`[player] failed to swap appearance ${opts.modelUrl}`, err)
+        return
+      }
+    }
+
+    if (token !== this.appearanceLoadToken) return
+    const tintApplied = await this.applyOutfitTint(opts.tintUrl)
+    if (token !== this.appearanceLoadToken) return
+    if (tintApplied) this.currentTintUrl = opts.tintUrl
+  }
+
+  private replaceModelRoot(next: THREE.Object3D, animations: THREE.AnimationClip[]): void {
+    const poseRot = this.modelRoot.rotation.clone()
+    const posePos = this.modelRoot.position.clone()
+    const resumeMelee = this.meleeAttacking
+    const resumeRanged = this.rangedDrawing
+    this.mixer?.stopAllAction()
+    disposeOutfitMaterialClones(this.modelRoot)
+    this.modelRoot.removeFromParent()
+    this.mesh.add(next)
+    this.modelRoot = next
+    this.modelRoot.rotation.copy(poseRot)
+    this.modelRoot.position.copy(posePos)
+    this.rightWrist = findRightHandSocket(next)
+    if (!this.rightWrist) {
+      console.warn('[player] right-hand bone not found; held tools parent to model root (feet)')
+    }
+    this.remountHeldTool()
+    this.currentAction = null
+    this.bindMixer(next, animations)
+    if (resumeMelee && this.attackAction) {
+      this.attackAction.play()
+      this.currentAction = this.attackAction
+    } else if (resumeRanged && this.aimDrawAction) {
+      this.aimDrawAction.play()
+      this.currentAction = this.aimDrawAction
+    } else {
+      this.syncAnimation()
+    }
+  }
+
+  private remountHeldTool(): void {
+    if (!this.heldToolSwingPivot) return
+    this.heldToolSwingPivot.removeFromParent()
+    this.handSocket().add(this.heldToolSwingPivot)
+  }
+
+  private async applyOutfitTint(tintUrl: string | null): Promise<boolean> {
+    let tintMap: THREE.Texture | null = null
+    if (tintUrl) {
+      try {
+        tintMap = await loadTexture(tintUrl)
+        tintMap.flipY = false
+        tintMap.wrapS = THREE.RepeatWrapping
+        tintMap.wrapT = THREE.RepeatWrapping
+        tintMap.colorSpace = THREE.SRGBColorSpace
+        tintMap.needsUpdate = true
+      } catch (err) {
+        console.warn(`[player] failed to load outfit tint ${tintUrl}`, err)
+        return false
+      }
+    }
+    this.modelRoot.traverse((obj) => {
+      const mesh = obj as THREE.Mesh
+      if (!mesh.isMesh) return
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const material of materials) {
+        if (!material.userData.playerOutfitMaterial) continue
+        const std = material as THREE.MeshStandardMaterial
+        const fallback = (material.userData.defaultMap as THREE.Texture | null | undefined) ?? null
+        std.map = tintMap ?? fallback
+        std.needsUpdate = true
+      }
+    })
+    return true
   }
 
   /** Additive rotation (radians) on the held-tool socket during a melee
@@ -1171,8 +1314,31 @@ export class PlayerController {
     this.label.removeFromParent()
     this.labelEl.remove()
     this.mixer?.stopAllAction()
+    if (!this.isCapsule) disposeOutfitMaterialClones(this.modelRoot)
     // GLB clones share GPU resources with the loader cache — only free the capsule fallback.
     if (this.isCapsule) disposeObject3D(this.mesh)
+  }
+
+  private bindMixer(root: THREE.Object3D, animations: THREE.AnimationClip[]): void {
+    this.animations = animations
+    if (animations.length > 0) {
+      this.mixer = new THREE.AnimationMixer(root)
+      this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral', 'Idle_Loop'])
+      this.walkAction = this.findAction(animations, ['Walk', 'Walk_Loop', 'Run'])
+      this.runAction = this.findAction(animations, ['Run', 'Sprint_Loop', 'Jog_Fwd_Loop'])
+      this.attackAction = this.findAction(animations, ['Sword_Slash', 'Sword_Attack', 'Punch_Right', 'Punch_Left'])
+      this.aimDrawAction = this.findAction(animations, ['Idle_Gun_Pointing', 'Idle_Gun', 'Sword_Idle'])
+      this.rangedReleaseAction = this.findAction(animations, ['Gun_Shoot', 'Idle_Gun_Shoot'])
+      this.playAction(this.idleAction)
+    } else {
+      this.mixer = null
+      this.idleAction = null
+      this.walkAction = null
+      this.runAction = null
+      this.attackAction = null
+      this.aimDrawAction = null
+      this.rangedReleaseAction = null
+    }
   }
 
   private findAction(
@@ -1526,4 +1692,31 @@ export class PlayerController {
     this.camera.position.set(resolved.x, resolved.y, resolved.z)
     this.camera.lookAt(originX, targetY, originZ)
   }
+}
+
+function cloneOutfitMaterials(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const source = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    const cloned = source.map((material) => {
+      if (!UBC_OUTFIT_MATERIAL_NAMES.has(material.name)) return material
+      const copy = material.clone()
+      copy.userData.playerOutfitMaterial = true
+      copy.userData.defaultMap = (copy as THREE.MeshStandardMaterial).map ?? null
+      return copy
+    })
+    mesh.material = Array.isArray(mesh.material) ? cloned : cloned[0]!
+  })
+}
+
+function disposeOutfitMaterialClones(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const material of materials) {
+      if (material.userData.playerOutfitMaterial) material.dispose()
+    }
+  })
 }

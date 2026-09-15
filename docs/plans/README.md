@@ -88,7 +88,8 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
-| `items-player-033-ubc-player-model-alpha.md` | Default Adventurer bez zmian; `?player=peasant` i `?player=ranger`: idle/chód/sprint/cios, trzymane narzędzie, cienie. Opcjonalnie `?modelTest&model=ubc/male_peasant&anims=ubc/ual1_player` |
+| `items-player-034-equipment-driven-player-outfit.md` | Default Peasant; załóż leather/chainmail → Ranger bez reloadu; zdejmij → Peasant; Continue z założoną skórą; `?player=adventurer` ignoruje zbroję; `?playerTint=brown` |
+| `items-player-033-ubc-player-model-alpha.md` | `?player=peasant` / `?player=ranger` / default Peasant: idle/chód/sprint/cios, trzymane narzędzie, cienie. Opcjonalnie `?modelTest&model=ubc/male_peasant&anims=ubc/ual1_player` |
 | `settlements-017-deterministically-unique-settlement-names.md` | Nowy świat, kilka pobliskich osad: brak dwóch identycznych nazw na drogowskazach/UI; ten sam seed po reloadzie te same nazwy; daleka osada nie zmienia nazw już odwiedzonych |
 | `settlements-016-legacy-ruby-trade-valuation.md` | Sprzedać authored `ruby` (bear-cave / dark-forest chest) kupcowi — buyback wyraźnie powyżej 1 coina, w okolicy `ruby_medium` (neutralnie 63); `ruby_small/medium/large` bez zmian |
 | `quests-progression-036-one-shot-authored-treasure-map-pickup.md` | Podnieść authored treasure map; rebuild/powrót w miejsce źródłowe — pickup nie wraca; save/load — nie wraca; wyrzucenie mapy z inventory — źródło nadal puste; New Game — pickup znowu leży |
@@ -213,7 +214,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `031`
-- items-player: `034`
+- items-player: `035`
 - npc: `039`
 - persistence: `005`
 - quests-progression: `041`

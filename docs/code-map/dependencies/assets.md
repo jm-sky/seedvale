@@ -115,6 +115,7 @@ Generated from TypeScript imports.
 - `items/heldToolVisual.ts`
 - `items/itemModels.ts`
 - `player/PlayerController.ts`
+- `player/playerVisualPreset.ts`
 - `player/torchLightPresets.ts`
 - `settlement/houseCatalog.ts`
 - `settlement/livestock.ts`
@@ -269,6 +270,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `assets/sharedSurfaceDiffuseTextures.ts`
+- `player/PlayerController.ts`
 - `world/clouds.ts`
 - `world/groundFog.ts`
 

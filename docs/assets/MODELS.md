@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-09-15 (UBC player Peasant/Ranger opt-in M92, plan items-player-033; jewelry loot ring_gold/ring_turquoise/ring_amethyst M88–M90; chest_prop_closed/open/ingots M91 in repo, not yet wired — see catalog task; previously procedural landmark variety M83–M87 — boat/shipwreck/tower/oldTree/wagon, plan world-terrain-027; rabbit `fauna/rabbit.glb` as M82; bear M61; settlement rat M81; wild boar M80; wearable armor M79; draft cart fauna-007; see earlier notes)
+**Last updated:** 2026-09-15 (UBC player default Peasant/Ranger from body armor M92, plan items-player-034; jewelry loot ring_gold/ring_turquoise/ring_amethyst M88–M90; chest_prop_closed/open/ingots M91 in repo, not yet wired — see catalog task; previously procedural landmark variety M83–M87 — boat/shipwreck/tower/oldTree/wagon, plan world-terrain-027; rabbit `fauna/rabbit.glb` as M82; bear M61; settlement rat M81; wild boar M80; wearable armor M79; draft cart fauna-007; see earlier notes)
 
 ## How to use
 
@@ -118,7 +118,7 @@ If the feature needs no new model, do nothing to this file.
 | M89 | Pierścień z turkusem (`ring_turquoise`) | j.w., `Ring4` (oczko `Cyan`) | `wired` | catalog task 2026-09-15 (`items/ring_turquoise.glb`) |
 | M90 | Pierścień z ametystem (`ring_amethyst`) | j.w., `Ring5` (oczko `Lilac`) | `wired` | catalog task 2026-09-15 (`items/ring_amethyst.glb`) |
 | M91 | Kufer — closed/open/ingots prop | Quaternius Ultimate RPG Pack `Chest_Closed`/`Chest_Open`/`Chest_Ingots`, FBX2glTF → gltfpack -cc. Kandydat na zamiennik proceduralnego `createPlacedContainerProp()` (`world/containerProp.ts`) używanego przez magazyn gracza, meble domu i skrzynie-skarby w świecie — dałby realny stan zamknięta/otwarta, którego dziś brak. **Nie wpięty** — wymaga osobnego planu (dotyka `containerProp.ts`, `worldGeneratedContainers.ts`, `createPlacedContainers.ts`, `settlement/props.ts`) | `in repo` | catalog task 2026-09-15; zob. `docs/plans/LOOSE-ENDS.md` (`items/chest_prop_closed.glb`, `chest_prop_open.glb`, `chest_prop_ingots.glb`) |
-| M92 | UBC player Peasant/Ranger (opt-in) | Quaternius Universal Base Characters + Fantasy outfits + UAL1 subset. Male peasant/ranger composed (outfit + sliced Superhero head + Hair_SimpleParted) and UAL1 in-place clips `Idle_Loop`/`Walk_Loop`/`Sprint_Loop`/`Sword_Attack`. Wired only via `?player=peasant` / `?player=ranger`; default remains Adventurer | `wired` (opt-in URL) | plan items-player-033 (`characters/ubc/male_peasant.glb`, `male_ranger.glb`, `ual1_player.glb`) |
+| M92 | UBC player Peasant/Ranger | Quaternius Universal Base Characters + Fantasy outfits + UAL1 subset. Male peasant/ranger composed (outfit + sliced Superhero head + Hair_SimpleParted) and UAL1 in-place clips `Idle_Loop`/`Walk_Loop`/`Sprint_Loop`/`Sword_Attack`. Default player visual (empty body slot = Peasant; leather/chainmail = Ranger). `?player=adventurer\|peasant\|ranger` overrides; `?playerTint=brown` swaps alt albedo (`male_peasant_brown.webp` / `male_ranger_brown.webp`) | `wired` | plan items-player-033 / 034 (`characters/ubc/male_peasant.glb`, `male_ranger.glb`, `ual1_player.glb`, `male_peasant_brown.webp`, `male_ranger_brown.webp`) |
 
 ## Wired (reference — do not treat as open work)
 
@@ -126,7 +126,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 
 | Area | Examples |
 |------|----------|
-| Characters | Modular men/women NPCs, Adventurer player; UBC Peasant/Ranger via `?player=` (M92) |
+| Characters | Modular men/women NPCs; UBC Peasant/Ranger player (M92, equipment-driven); Adventurer via `?player=adventurer` |
 | Fauna | wolf, fox, deer, stag, bear (M61), rabbit (M82), boar (`wild_boar.glb`, M80; `?boarGlb=0` reverts to procedural); livestock chicken/sheep/cow/horse/donkey/dog (Husky+Shiba, see M73); rooster (procedural placeholder, see M72); duck (procedural); settlement rats (`rat.glb`, M81) |
 | Nature (active) | trees/bushes/pines, fauna thicket/zagajnik (`tree_a`/`tree_b`/`tree_c`/`birch_1`), fern undergrowth, cactus/reed (+reed cluster, see M76), lily pad (shallow water, see M74), seaweed (shallow coastal ocean, see M76), rock/log, ore piles, cemetery / gravestones, old tree landmark (M86) |
 | World landmarks (active) | shoreline boat (M83), shipwreck (M84), stone tower (M85), abandoned wagon (M87); interact via `interact_landmark` |

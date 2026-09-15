@@ -190,6 +190,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `debug/debugMode.ts`
 - `render/createRenderer.ts`
 
 **Imported by**
@@ -213,6 +214,7 @@ Generated from TypeScript imports.
 - `app/renderStack.ts`
 - `config/worldConfig.ts`
 - `debug/createCaveHeightfieldTestScene.ts`
+- `debug/createModelTestScene.ts`
 - `debug/debugMode.test.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspectTrigger.ts`
@@ -221,6 +223,7 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `interaction/resolveInteraction.ts`
 - `main.ts`
+- `player/playerVisualPreset.ts`
 - `render/createPostProcessing.ts`
 - `settlement/createSettlement.ts`
 - `settlement/livestock.ts`

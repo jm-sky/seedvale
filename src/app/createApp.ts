@@ -40,7 +40,7 @@ import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import { CONTAINER_DEFS } from '../items/container'
-import { createEquipmentState, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
+import { createEquipmentState, equippedBodyArmor, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
@@ -91,6 +91,10 @@ import {
 } from '../player/PlayerNeeds'
 import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
+import {
+  resolvePlayerAppearance,
+  ubcPreloadUrls,
+} from '../player/playerVisualPreset'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
 import { resolveCaveQuestPresentation } from '../quests/caveLocationDescription'
@@ -937,6 +941,9 @@ export async function createApp(
     bundle.caves.resolveHorizontal(x, z, y, radius, entityHeight)
 
   bootMark('PlayerController.create')
+  const playerAppearance = resolvePlayerAppearance({
+    bodyKind: equippedBodyArmor(equipment, inventory),
+  })
   const player = await PlayerController.create(
     camera,
     keyboard.state,
@@ -950,7 +957,25 @@ export async function createApp(
     caveOccupancyQuery,
     caveHorizontalResolver,
     (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
+    playerAppearance.modelUrl,
+    playerAppearance.animationUrl,
+    ubcPreloadUrls(playerAppearance.modelUrl),
   )
+  const syncPlayerAppearance = (): void => {
+    const appearance = resolvePlayerAppearance({
+      bodyKind: equippedBodyArmor(equipment, inventory),
+    })
+    void player.applyAppearance({
+      modelUrl: appearance.modelUrl,
+      animationUrl: appearance.animationUrl,
+      tintUrl: appearance.tintUrl,
+    })
+  }
+  await player.applyAppearance({
+    modelUrl: playerAppearance.modelUrl,
+    animationUrl: playerAppearance.animationUrl,
+    tintUrl: playerAppearance.tintUrl,
+  })
   bootMarkEnd('PlayerController.create')
 
   if (initialSave) {
@@ -1860,6 +1885,7 @@ export async function createApp(
     syncHeldHud: () => syncHeldHud(),
     syncQuickActionAvailability,
     refreshInventoryScreen: () => refreshInventoryScreen(),
+    syncPlayerAppearance,
     locationCatalog: worldLocationCatalog,
     locationKnowledge,
     navigationTargets,
@@ -1892,6 +1918,7 @@ export async function createApp(
     syncQuickActionAvailability()
     inventoryWiring.syncMerchantIfOpen()
     questManager.notifyInventoryChanged()
+    syncPlayerAppearance()
   }
 
   const actionCtx: PlayerActionContext = {
@@ -2263,6 +2290,7 @@ export async function createApp(
         inventory.clear()
         grantStartingLoadout(inventory)
         heldTool.unequip()
+        syncPlayerAppearance()
         questManager.reset()
         mapDiscovery.clear()
         locationKnowledge.clear()

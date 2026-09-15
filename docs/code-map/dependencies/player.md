@@ -14,6 +14,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `assets/loadTexture.ts`
 - `audio/createWorldAudio.ts`
 - `audio/playerMoveSounds.ts`
 - `debug/playerGroundTrace.ts`
@@ -83,6 +84,8 @@ Generated from TypeScript imports.
 - `player/physicalWorkStrength.test.ts`
 - `player/playerDamage.test.ts`
 - `player/playerDamage.ts`
+- `player/playerVisualPreset.test.ts`
+- `player/playerVisualPreset.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -513,6 +516,26 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `player/playerRanged.test.ts`
+
+## `player/playerVisualPreset.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `player/playerVisualPreset.ts`
+
+## `player/playerVisualPreset.ts`
+
+**Imports**
+
+- `debug/debugMode.ts`
+- `player/PlayerController.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `assets/assetIndex.ts`
+- `player/playerVisualPreset.test.ts`
 
 ## `player/ridingStability.ts`
 

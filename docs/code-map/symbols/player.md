@@ -97,22 +97,22 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveFloorSampler` — type — line 202
-- `CaveGroundQuery` — type — line 197
-- `CaveHorizontalResolver` — type — line 218
-- `CaveOccupancyQuery` — type — line 207
-- `ColliderSource` — type — line 190
-- `HeightSampler` — type — line 187
-- `MOVE_SPEED` — const — line 73
-- `PLAYER_MODEL_URL` — const — line 185
-- `PLAYER_STARTING_ATTRIBUTES` — const — line 92
-- `PlayerController` — class — line 232
+- `CaveFloorSampler` — type — line 208
+- `CaveGroundQuery` — type — line 203
+- `CaveHorizontalResolver` — type — line 224
+- `CaveOccupancyQuery` — type — line 213
+- `ColliderSource` — type — line 196
+- `HeightSampler` — type — line 193
+- `MOVE_SPEED` — const — line 74
+- `PLAYER_MODEL_URL` — const — line 191
+- `PLAYER_STARTING_ATTRIBUTES` — const — line 95
+- `PlayerController` — class — line 238
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
-- `PlayerMovementState` — type — line 68
-- `SPRINT_MULTIPLIER` — const — line 78
+- `PlayerMovementState` — type — line 69
+- `SPRINT_MULTIPLIER` — const — line 79
 
 ## `player/playerDamage.ts`
 
@@ -241,6 +241,24 @@ Generated from exported TypeScript symbols.
 - `TORCH_FUEL_BRANCH` — const — line 22
 - `TORCH_FUEL_WOODEN` — const — line 24
 - `TorchSource` — type — line 26
+
+## `player/playerVisualPreset.ts`
+
+- `PLAYER_UBC_ANIMATION_URL` — const — line 8
+- `PLAYER_UBC_PEASANT_BROWN_URL` — const — line 10
+- `PLAYER_UBC_PEASANT_URL` — const — line 5
+- `PLAYER_UBC_RANGER_BROWN_URL` — const — line 12
+- `PLAYER_UBC_RANGER_URL` — const — line 6
+- `PlayerAppearance` — type — line 24
+- `PlayerOutfitTint` — type — line 15
+- `PlayerVisualId` — type — line 14
+- `PlayerVisualPreset` — type — line 17
+- `resolveEquipmentOutfit` — function — line 88
+- `resolvePlayerAppearance` — function — line 119
+- `resolvePlayerTint` — function — line 92
+- `resolvePlayerUrlOverride` — function — line 73
+- `resolvePlayerVisualPreset` — function — line 138
+- `ubcPreloadUrls` — function — line 146
 
 ## `player/ridingStability.ts`
 

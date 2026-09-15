@@ -39,11 +39,11 @@ Generated from exported TypeScript symbols.
 
 ## `assets/assetAnchorData.ts`
 
-- `anchorsForAsset` — function — line 98
-- `ASSET_ANCHORS` — const — line 80
-- `CHARACTER_ANCHORS` — const — line 17
-- `HELD_TOOL_GRIP_ANCHORS` — const — line 75
-- `heldToolHasGripAnchor` — function — line 105
+- `anchorsForAsset` — function — line 99
+- `ASSET_ANCHORS` — const — line 81
+- `CHARACTER_ANCHORS` — const — line 18
+- `HELD_TOOL_GRIP_ANCHORS` — const — line 76
+- `heldToolHasGripAnchor` — function — line 106
 - `RIGHT_HAND_BONE_NAMES` — const — line 9
 
 ## `assets/assetAnchors.ts`
@@ -65,25 +65,25 @@ Generated from exported TypeScript symbols.
 
 ## `assets/assetIndex.ts`
 
-- `assetEntryMatchesQuery` — function — line 162
-- `assetIndexById` — function — line 466
-- `AssetIndexEntry` — type — line 66
-- `AssetIndexGroup` — type — line 52
-- `AssetIndexStatus` — type — line 64
-- `AssetPrepare` — type — line 47
-- `basenameFromUrl` — function — line 109
-- `buildAssetIndex` — function — line 329
-- `customUrlEntry` — function — line 184
-- `entryFromUrl` — function — line 480
-- `filterAssetIndex` — function — line 175
-- `findAssetEntry` — function — line 472
-- `formatAssetLabel` — function — line 157
-- `groupFromModelUrl` — function — line 131
-- `kindFromBasename` — function — line 123
-- `makeParkedEntry` — function — line 213
-- `mergeParkedManifest` — function — line 231
-- `packFromUrl` — function — line 115
-- `resolveLoadEntry` — function — line 202
+- `assetEntryMatchesQuery` — function — line 166
+- `assetIndexById` — function — line 488
+- `AssetIndexEntry` — type — line 70
+- `AssetIndexGroup` — type — line 56
+- `AssetIndexStatus` — type — line 68
+- `AssetPrepare` — type — line 51
+- `basenameFromUrl` — function — line 113
+- `buildAssetIndex` — function — line 333
+- `customUrlEntry` — function — line 188
+- `entryFromUrl` — function — line 502
+- `filterAssetIndex` — function — line 179
+- `findAssetEntry` — function — line 494
+- `formatAssetLabel` — function — line 161
+- `groupFromModelUrl` — function — line 135
+- `kindFromBasename` — function — line 127
+- `makeParkedEntry` — function — line 217
+- `mergeParkedManifest` — function — line 235
+- `packFromUrl` — function — line 119
+- `resolveLoadEntry` — function — line 206
 
 ## `assets/assetUrlUtils.ts`
 
