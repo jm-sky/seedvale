@@ -75,6 +75,13 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
 | 💡 `settlements-015-settlement-palisade-collision.md`                          | 🔴 | S      | -                                                                                                                                                                               | -                                       |
 | 💡 `quests-progression-035-story-item-inventory-and-cave-location-clarity.md`  | 🔴 | M      | ~~quests-progression-009~~, ~~quests-progression-014~~, ~~items-player-031~~                                                                                                    | quests-and-reputation                   |
+| ◼️ `fauna-030-player-owned-animal-stay-safety-and-recovery.md`                 | 🔴 | M      | ~~fauna-020~~, ~~fauna-015~~, ~~fauna-029~~                                                                                                                                     | horse-and-riding                        |
+| ◼️ `quests-progression-036-one-shot-authored-treasure-map-pickup.md`           | 🔴 | S      | ~~quests-progression-008~~, ~~quests-progression-009~~                                                                                                                          | -                                       |
+| ◼️ `settlements-016-legacy-ruby-trade-valuation.md`                            | 🟡 | XS     | ~~settlements-006~~                                                                                                                                                             | -                                       |
+| ◼️ `settlements-017-deterministically-unique-settlement-names.md`              | 🟡 | S      | -                                                                                                                                                                               | -                                       |
+| ◼️ `tools-014-player-owned-horse-debug-controls.md`                            | 🟡 | S      | ~~fauna-020~~                                                                                                                                                                   | -                                       |
+| ◼️ `ui-input-020-world-interaction-targeting-and-acquisition-feedback-regressions.md` | 🔴 | M      | ~~ui-input-014~~, ~~ui-input-015~~, ~~items-player-024~~                                                                                                                        | -                                       |
+| ◼️ `world-terrain-034-bidirectional-cave-traversal-safety.md`                  | 🔴 | M      | ~~world-terrain-019~~, ~~world-terrain-020~~                                                                                                                                    | -                                       |
 
 ---
 
@@ -202,17 +209,17 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `030`
+- fauna: `031`
 - items-player: `033`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `036`
-- settlements: `016`
+- quests-progression: `037`
+- settlements: `018`
 - settlements-npcs: `037`
-- tools: `014`
-- ui-input: `020`
+- tools: `015`
+- ui-input: `021`
 - world: `028`
-- world-terrain: `034`
+- world-terrain: `035`
 
 This ids section is maintained automatically from the plan files.
 
