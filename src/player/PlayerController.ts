@@ -342,19 +342,19 @@ export class PlayerController {
   private grounded = true
   /** Set by `jump()`, consumed (and cleared) on the next `updateVerticalMotion`. */
   private jumpRequested = false
-  private mixer: THREE.AnimationMixer | null
-  private idleAction: THREE.AnimationAction | null
-  private walkAction: THREE.AnimationAction | null
-  private runAction: THREE.AnimationAction | null
-  private attackAction: THREE.AnimationAction | null
+  private mixer: THREE.AnimationMixer | null = null
+  private idleAction: THREE.AnimationAction | null = null
+  private walkAction: THREE.AnimationAction | null = null
+  private runAction: THREE.AnimationAction | null = null
+  private attackAction: THREE.AnimationAction | null = null
   /** Adventurer ships no dedicated bow clip — `Idle_Gun_Pointing`/`Gun_Shoot`
    *  are the closest same-rig stand-ins for draw-hold/release (plan 162
    *  follow-up, see the plan's implementation summary). `Universal Animation
    *  Library`/Mixamo `Pro Longbow Pack` clips were checked and are not
    *  usable: different skeletons (UE mannequin / `mixamorig:*`) than
    *  Adventurer's own rig, and UAL doesn't ship bow-specific content anyway. */
-  private aimDrawAction: THREE.AnimationAction | null
-  private rangedReleaseAction: THREE.AnimationAction | null
+  private aimDrawAction: THREE.AnimationAction | null = null
+  private rangedReleaseAction: THREE.AnimationAction | null = null
   private animations: THREE.AnimationClip[] = []
   private currentModelUrl = PLAYER_MODEL_URL
   private currentAnimationUrl: string | null = null
