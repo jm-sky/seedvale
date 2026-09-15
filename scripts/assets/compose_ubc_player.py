@@ -402,7 +402,7 @@ PLAYER_DEFAULT_NPC_COMBOS: frozenset[tuple[str, str, str, bool]] = frozenset({
     ('male', 'ranger', 'simple', False),
 })
 
-MALE_HAIR_KINDS: tuple[str, ...] = ('simple', 'long', 'buzzed', 'buns')
+MALE_HAIR_KINDS: tuple[str, ...] = ('simple', 'long', 'buzzed')
 FEMALE_HAIR_KINDS: tuple[str, ...] = ('long', 'buns')
 
 ALT_ALBEDOS: tuple[tuple[str, str], ...] = (
