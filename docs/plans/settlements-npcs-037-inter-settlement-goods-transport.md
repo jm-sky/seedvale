@@ -9,6 +9,7 @@
 **Subdomains:** `economy` `logistics`
 **Tags:** `transport` `inter-settlement` `food` `shortage` `surplus`
 **Roadmap:** `physical-goods-transport`
+**Model:** `Opus`, `Sonnet`
 
 ## Goal
 
@@ -56,7 +57,7 @@ The current code already provides the transport primitives needed for this plan:
 - `NpcAuthoritativeState.transportCargo`
   - authoritative owner of goods after pickup.
 - `src/world/transportOffscreen.ts`
-  - detailed → off-screen handoff for in-transit cargo,
+  - detailed → off-screen handoff for existing transport flows,
   - deterministic arrival timing,
   - settlement-storage endpoint lookup already resolves through `getEconomy(settlementId)`.
 - `src/economy/foodTransportDemand.ts`
@@ -68,9 +69,9 @@ The current code already provides the transport primitives needed for this plan:
   - `planTransportOrderExecution()` was generalized beyond household-only source handling,
   - Trader work already resumes an active `TransportOrder` before looking for new work.
 - `settlements-npcs-028`
-  - generic long-distance NPC continuity exists in `src/ai/npcTravel.ts`, including deterministic off-screen travel/reification/survival semantics for non-transport journeys.
+  - generic long-distance NPC continuity exists in `src/ai/npcTravel.ts`, including deterministic off-screen travel/reification/survival semantics.
 
-The new work is therefore not a new transport engine. The missing boundary is **inter-settlement economic matching and settlement-storage as a transport source**.
+The new work is therefore not a new transport engine. The missing boundary is **inter-settlement economic matching, settlement-storage as a transport source, and correct carrier continuity across settlement streaming**.
 
 ## Core invariants
 
@@ -87,6 +88,7 @@ after unload   → destination SettlementEconomy.items
 4. A destination shortage already covered by incoming active orders must not create duplicate transport.
 5. Settlement A and settlement B remain independent economies; goods are unavailable in B until delivery completes.
 6. No player/camera presence is required for the economic consequence to occur.
+7. The carrier must preserve spatial continuity across detailed/off-screen transitions; reloading its home settlement must not restart an A→B trip from home.
 
 ## 1. First supported goods: concrete food only
 
@@ -140,7 +142,7 @@ Add the smallest settlement-storage source accounting needed for this plan:
 
 - pre-pickup outgoing food commitments whose source is `settlement-storage`,
 - optional `itemKind` narrowing when selecting a concrete stack,
-- `excludeOrderId` for live pickup revalidation if required by the shared executor.
+- `excludeOrderId` for live pickup revalidation.
 
 Rules remain:
 
@@ -162,7 +164,7 @@ Once pickup succeeds, source inventory already lost the goods; do not subtract `
 
 Select a concrete food kind deterministically from the source settlement's real `SettlementEconomy.items`.
 
-Reuse the existing deterministic food ordering used by `claimFoodItems()` / food-item helpers. If that order is currently private, factor the minimum pure shared selector rather than introducing a second ordering table.
+Reuse the existing `FOOD_ITEM_KINDS` ordering / current Trader selector logic rather than introducing a second ordering table.
 
 Selection must consider:
 
@@ -178,15 +180,15 @@ The planner must not remove goods. Mutation remains exclusively in `executeTrans
 
 Do not generate or scan arbitrary cold settlement definitions merely to search for trade.
 
-The first slice should operate on settlements whose economy/state already exists in the current world lifetime, including previously streamed-out settlements retained by `SettlementsManager`/`EconomyRegistry`.
+The first slice should operate on settlements whose economy/state has already been materialized in the current world lifetime. `EconomyRegistry` owns the mutable economies; candidate discovery only needs a bounded read-only projection of stable settlement id + world position.
 
 Current relevant seams:
 
 - `SettlementsManager.getEconomy(settlementId)` gives the live authoritative economy,
-- `SettlementsManager.snapshotEconomies()` can enumerate economies created so far but is snapshot data, not a mutation owner,
-- loaded settlements expose stable ids and world centers.
+- `SettlementsManager.snapshotEconomies()` is snapshot data, not a mutation owner,
+- loaded/currently known `SettlementDef`s provide stable ids and world centers.
 
-During implementation recon, add the smallest read-only projection needed to enumerate eligible known settlements with stable identity and world position. Do not expose registry internals or use serialized snapshots as authoritative mutable economy objects.
+Add the smallest manager-lifetime projection needed to enumerate known materialized settlements. Do not expose registry internals, parse settlement ids as spatial authority or use serialized snapshots as mutable economy objects.
 
 If a candidate settlement has no resolvable stable world position without forcing cold worldgen, skip it in V1.
 
@@ -207,7 +209,7 @@ Do not use `Math.random()`.
 
 Do not search `all settlements × all goods × all carriers` every frame.
 
-The evaluation belongs to an existing low-frequency work/economy decision point, not the render loop.
+The evaluation belongs to the existing Trader work decision point, not the render loop.
 
 ## 7. Carrier and creation point
 
@@ -221,77 +223,109 @@ resume active TransportOrder first
 
 Only when the Trader has no active order may it evaluate a new inter-settlement opportunity.
 
-Recommended priority remains conservative:
+Priority:
 
 ```text
 resume active order
-→ urgent/local settlement food collection
+→ local settlement food collection
 → remote resource-site ore transport
 → inter-settlement food opportunity
 → existing lower-priority fallback work
 ```
 
-The exact insertion point must be checked against current `npcProfessionWork.ts` during implementation notes, but inter-settlement export must not starve an unresolved local shortage.
+Inter-settlement export must not starve an unresolved local shortage.
 
 Do not introduce global carrier bidding, idle-NPC scans or a carrier marketplace.
 
 ## 8. Settlement-storage source execution
 
-Destination `settlement-storage` already works. The new execution seam is using `settlement-storage` as **source**.
+Destination `settlement-storage` already works as an inventory endpoint. The new pickup seam is using `settlement-storage` as **source**.
 
-Extend the existing shared `planTransportOrderExecution()` source resolver rather than adding a second inter-settlement executor.
+Extend the existing shared `planTransportOrderExecution()` / pickup resolver rather than adding a second inter-settlement executor.
 
-For an assigned order with source settlement storage:
+For V1, the source settlement's own Trader creates and executes the order. Revalidate that `order.source.settlementId === ctx.economy.settlementId` before pickup.
 
-```text
-resolve source SettlementEconomy
-→ resolve physical source position / stockpile target
-→ resolve source economy.items
-→ compute current live transferable food
-→ executeTransportPickup()
-→ same in-transit lifecycle
-→ same destination resolution
-→ executeTransportUnload()
-```
+Source inventory is `ctx.economy.items`; source physical target is the current settlement's real storage landmark. Live transferable quantity must subtract other pre-pickup commitments while excluding the current order.
 
 Do not put positions onto `TransportOrder`.
 
-Use existing settlement landmarks/stockpile resolution for detailed pickup and destination movement. Stable endpoint identity remains settlement id only.
+## 9. Cross-settlement travel ownership
 
-## 9. Long-distance execution ownership
+Review of current code shows that the legacy `TransportOrder.execution` handoff from plan `019` assumes the carrier is reconstructed with its owning settlement and is therefore safe for the existing same-settlement/resource-site→local flows, but not for A→B travel.
 
-Do not create a second long-distance timing system.
-
-For cargo already picked up, `TransportOrder.execution` / `transportOffscreen.ts` remains authoritative for transport progress and cargo arrival.
-
-`NpcTravelContinuity` from plan 028 is a reusable NPC-travel foundation, but the same carrier must not simultaneously have two authoritative clocks describing the same cargo trip.
-
-Implementation notes must verify the exact current handoff seam and choose one owner for the inter-settlement cargo leg. Preferred rule:
+For the inter-settlement leg:
 
 ```text
-active cargo TransportOrder
-→ TransportOrder execution owns trip progress
+TransportOrder
+→ owns economic commitment + cargo lifecycle
+
+NpcAuthoritativeState.travel / NpcTravelContinuity
+→ owns carrier spatial continuity + detailed/off-screen timing
 ```
 
-Generic `NpcTravelContinuity` may be reused only for shared survival/reification helpers where it does not duplicate transport timing/lifecycle.
+Extend the existing generic travel purpose/context with a transport variant keyed by `orderId`. Do not create an `InterSettlementJourney` registry.
 
-## 10. Off-screen and unloaded settlements
+The same A→B leg must not have both `TransportOrder.execution` and `NpcTravelContinuity.execution` acting as independent clocks.
+
+Existing legacy transport flows may continue using `TransportOrder.execution`; migrating all transport to generic NPC travel is outside this plan.
+
+## 10. Detailed destination execution
+
+Current `planTransportOrderExecution()` assumes local `ctx.economy` and local landmarks for unload. Refactor it to resolve the destination from the order.
+
+For an in-transit cross-settlement order:
+
+```text
+resolve destination settlement id
+→ resolve live destination SettlementEconomy
+→ resolve destination world target
+→ travel there
+→ executeTransportUnload(destinationEconomy.items)
+```
+
+For same-settlement orders preserve the current exact storage target.
+
+For another known settlement, prefer its real loaded storage target when cheaply available; otherwise the stable settlement center is an acceptable lower-fidelity V1 target. Do not force-load presentation merely to obtain a stockpile coordinate.
+
+Food delivery lands only in the destination's authoritative `items` inventory.
+
+## 11. Off-screen and streaming continuity
 
 Inter-settlement transport must remain valid when:
 
 - source streams out after pickup,
+- source later streams back in before arrival,
 - destination is not loaded,
 - carrier is not materialized,
 - time skip crosses arrival,
 - save/load occurs while cargo is in transit.
 
-Reuse the 019 endpoint lookup and persistent carrier cargo.
+At stream-out, a transport-purpose `NpcTravelContinuity` must hand off using the current live carrier position and destination target. On reconstruction, existing `reifyNpcTravel()` semantics must place the carrier at the journey's current position instead of home spawn.
 
-Delivery to an unloaded destination must mutate that destination's authoritative `SettlementEconomy.items` through the retained economy registry; it must not require a rendered settlement object.
+`SettlementsManager.beginOffscreenTransportHandoff()` must skip legacy `TransportOrder.execution` for an inter-settlement leg already owned by transport-purpose NPC travel.
 
-## 11. Failure semantics
+Also correct the current endpoint-position assumption: a `settlement-storage` target must honor `ref.settlementId`. An unresolved target must not become zero-duration/immediate arrival.
 
-Reuse existing transport failure rules.
+## 12. Arrival and unload
+
+Generic travel checkpoint resolution may mark a transport-purpose journey as reached, but cargo completion still belongs to the `TransportOrder` transaction.
+
+At bounded checkpoint/arrival:
+
+```text
+transport-purpose travel reached
+→ resolve order by orderId
+→ verify same carrier + in-transit
+→ resolve destination inventory/economy
+→ executeTransportUnload()
+→ on success complete order and clear/observe travel arrival
+```
+
+If destination cannot resolve or rejects delivery, preserve cargo and order and keep the reached travel state for retry. Do not clear travel before a successful cargo handoff.
+
+No per-frame global traveller scan.
+
+## 13. Failure semantics
 
 Before pickup:
 
@@ -306,24 +340,27 @@ After pickup:
 
 - cargo remains with the carrier even if destination shortage disappears,
 - destination rejection/capacity failure keeps cargo in `transportCargo`,
-- do not silently retarget or delete cargo.
+- dead/blocked carrier travel is not arrival,
+- do not silently retarget, replace carrier or delete cargo.
 
 No automatic economic rerouting in V1.
 
-## 12. Persistence
+## 14. Persistence
 
-No new persistent demand state is required.
+No new top-level persistent demand state is required.
 
-Existing persisted/carry state should be sufficient:
+Existing persisted/carry state is sufficient:
 
 - settlement economies,
 - active `TransportOrder`s,
 - `NpcAuthoritativeState.transportCargo`,
-- transport execution metadata.
+- `NpcAuthoritativeState.travel`.
 
-After reload, inter-settlement opportunities are recomputed from live economy + active orders.
+Extend `NpcTravelPurpose` persistence/validation for the transport `orderId` variant. Do not reconstruct travel from the order after load.
 
-## 13. Observability
+After reload, new inter-settlement opportunities are recomputed from live economy + active orders.
+
+## 15. Observability
 
 Reuse existing transport/economy debug surfaces where possible.
 
@@ -338,11 +375,12 @@ For one inter-settlement movement it should be possible to inspect:
 - chosen concrete food kind,
 - requested / claimed / delivered quantity,
 - carrier id,
-- order state/execution mode.
+- order state,
+- carrier travel execution/reached/blocked state.
 
 Do not create a separate trade-history subsystem in this plan.
 
-## 14. Focused tests
+## 16. Focused tests
 
 At minimum cover:
 
@@ -390,17 +428,17 @@ A owns actual food item stack
 
 Two eligible destination settlements at equal economic priority resolve by distance then stable id.
 
-### Stream-out / save-load
+### Streaming / save-load
 
-Cross-settlement in-transit order survives stream-out and save/load and completes exactly once.
+Cross-settlement in-transit order and transport-purpose NPC travel survive stream-out, source stream-in and save/load without restarting from A and complete exactly once.
 
 ### Destination demand changes after pickup
 
 Cargo is still preserved and delivered/recovered through existing transport semantics; no deletion or duplicate replanning.
 
-## 15. Explicit non-goals
+## 17. Explicit non-goals
 
-- Travelling Merchant lifecycle/itinerary,
+- Travelling Merchant visit/linger/return lifecycle,
 - dedicated Courier profession,
 - caravan formation,
 - carts/wagons/pack animals,
@@ -416,19 +454,19 @@ Cargo is still preserved and delivered/recovered through existing transport sema
 - arbitrary cold-world settlement generation/scanning,
 - player-created shipping contracts.
 
-## 16. Extension path
+## 18. Extension path
 
 After this plan, Seedvale has the physical foundation for:
 
 ```text
 settlement surplus
 → cross-settlement TransportOrder
-→ real long-distance carrier
+→ real long-distance carrier continuity
 → other settlement inventory
 → shortage changes
 ```
 
-The next plan should add a **Travelling Merchant** as a world actor that repeatedly consumes this shared mechanism, rather than embedding merchant lifecycle into 037.
+The next plan, `settlements-npcs-038`, adds a **Travelling Merchant** as a world actor that consumes this shared mechanism, remains meaningful at the destination and returns home, rather than embedding merchant lifecycle into 037.
 
 Later plans may add:
 
@@ -441,21 +479,20 @@ Later plans may add:
 
 ## Implementation guidance
 
-Before implementation, create implementation notes from the then-current codebase. In particular verify:
+Detailed verified recon is in:
 
-- current `planTraderWork()` priority order,
-- current source resolver inside `planTransportOrderExecution()`,
-- how settlement stockpile world positions are resolved without storing them in endpoint refs,
-- bounded known-settlement enumeration without cold world generation,
-- exact interaction between transport off-screen execution and generic `NpcTravelContinuity` from 028.
+`docs/plans/implementation-notes/settlements-npcs-037-inter-settlement-goods-transport-implementation-notes.md`.
 
-Add concise JSDoc to important new public/architectural helpers and use `@domain settlements-npcs` where useful for preflight discovery.
+Use it before implementation. In particular preserve the reviewed split between `TransportOrder` economic ownership and generic `NpcTravelContinuity` spatial ownership for the cross-settlement leg.
+
+Add concise JSDoc to important new public/architectural helpers and use `@domain settlements-npcs` / `@domain npc` where appropriate.
 
 ## Verification
 
 ### Automated
 
 - focused economy/transport matching tests,
+- generic travel regressions,
 - transport transaction regressions,
 - persistence/off-screen regressions,
 - typecheck,
@@ -471,7 +508,8 @@ User-owned browser verification:
 3. observe physical pickup from source storage,
 4. move away / allow stream-out,
 5. confirm transport continues off-screen,
-6. visit destination and confirm delivered stock + reduced shortage,
-7. confirm no duplicate incoming order when active commitment already covers demand.
+6. reload/revisit source before arrival and confirm carrier does not restart from home,
+7. visit destination and confirm delivered stock + reduced shortage,
+8. confirm no duplicate incoming order when active commitment already covers demand.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
