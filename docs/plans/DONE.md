@@ -4,6 +4,10 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-017-deterministically-unique-settlement-names`            | 2026-09-15 10:48:43 | —                   | `settlements`    | —          |
+| `world-terrain-035-streaming-visual-horizon-and-distant-occlusion`     | 2026-09-15 10:40:27 | —                   | `world-terrain`  | —          |
+| `tools-014-player-owned-horse-debug-controls`                          | 2026-09-15 10:31:36 | —                   | `tools`          | —          |
+| `ui-input-021-quest-log-details-and-heard-notes`                       | 2026-09-15 10:04:41 | —                   | `ui-input`       | —          |
 | `settlements-016-legacy-ruby-trade-valuation`                          | 2026-09-15 09:43:11 | —                   | `settlements`    | —          |
 | `quests-progression-036-one-shot-authored-treasure-map-pickup`         | 2026-09-15 09:39:39 | —                   | `quests-progression` | —          |
 | `world-terrain-034-bidirectional-cave-traversal-safety`                | 2026-09-15 09:21:20 | —                   | `world-terrain`  | —          |

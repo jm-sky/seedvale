@@ -57,8 +57,8 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 2/2
 4. `settlements-npcs-036` — **Generic NPC-Owned Goods Trading**  
    🔴 `M` · ✅ ready · unlocks 0/0
-5. `settlements-009` — **Settlement outskirts and pasture**  
-   🟡 `M` · ✅ ready · unlocks 2/2
+5. `quests-progression-037` — **Lost Treasure Chronicles — elder trust foundation**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -92,63 +92,67 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  55  
    → **unlocks:** 0/0
 
-5. `world-018` — **Cave-aware rich finite resource deposits**  
+5. `quests-progression-037` — **Lost Treasure Chronicles — elder trust foundation**  
+  🔴 `M` · **Score:**  51  
+   → **unlocks:** 0/0
+
+6. `world-018` — **Cave-aware rich finite resource deposits**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-6. `settlements-009` — **Settlement outskirts and pasture**  
+7. `settlements-009` — **Settlement outskirts and pasture**  
   🟡 `M` · **Score:**  45  
    → **unlocks:** 2/2
 
-7. `settlements-013` — **Horse training progression, vendor and paddock**  
+8. `settlements-013` — **Horse training progression, vendor and paddock**  
   🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-8. `settlements-npcs-022` — **Household help and age-based work participation**  
+9. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-9. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+10. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-10. `settlements-011` — **Plaza layout, paving and core protection**  
+11. `settlements-011` — **Plaza layout, paving and core protection**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-11. `settlements-014` — **Persistent settlement definition worldgen cache**  
+12. `settlements-014` — **Persistent settlement definition worldgen cache**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-025` — **Resource storage visualization**  
+13. `settlements-npcs-025` — **Resource storage visualization**  
   ⚪ `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-13. `world-terrain-029` — **Persistent road route worldgen cache**  
+14. `world-terrain-029` — **Persistent road route worldgen cache**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-14. `settlements-015` — **Settlement palisade collision**  
+15. `settlements-015` — **Settlement palisade collision**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-15. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+16. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-16. `items-player-014` — **Rope-pullable resource transport**  
+17. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `tools-005` — **Seedvale Character Preparation Panel**  
+18. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `items-player-032` — **NPC player-storage resource and context rules**  
+19. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-19. `settlements-010` — **Closed and cautious settlement character**  
+20. `settlements-010` — **Closed and cautious settlement character**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
@@ -345,6 +349,7 @@ graph TD
   quests_progression_034["quests-progression-034 — Quest giver cap, markers, dialogue and target lifecycle"]
   quests_progression_035["quests-progression-035 — Story Item Inventory & Cave Location Clarity"]
   quests_progression_036["quests-progression-036 — One-shot authored treasure-map pickup"]
+  quests_progression_037["quests-progression-037 — Lost Treasure Chronicles — elder trust foundation"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -701,8 +706,11 @@ graph TD
   quests_progression_029 --> quests_progression_030
   quests_progression_030 --> quests_progression_031
   quests_progression_031 --> ui_input_017
+  quests_progression_032 --> quests_progression_037
   quests_progression_033 --> quests_progression_034
+  quests_progression_033 --> quests_progression_037
   quests_progression_033 --> ui_input_021
+  quests_progression_034 --> quests_progression_037
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022
