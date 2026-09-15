@@ -373,7 +373,7 @@ Use these sources:
 1. `QUESTS` in `src/quests/quests.ts`.
 2. Contextual builders/binders in the same module.
 3. `src/quests/opportunities/` for world-driven definitions.
-4. Cave/world contextual quest modules assembled at composition root.
+4. Cave/world contextual quest modules assembled at composition root, including `src/quests/lostTreasureChroniclesElder.ts` (plan quests-progression-037).
 5. The final materialized `QuestDef[]` in `src/app/createApp.ts` before `new QuestManager(...)`.
 
 Home-guard recognition rewards remain dialogue-claimed and separately persisted through world flags; they are not a parallel generic quest runtime.

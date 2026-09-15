@@ -119,6 +119,11 @@ import {
 } from '../quests/lostHunterNaturalCave'
 import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import {
+  buildLostTreasureChroniclesElderQuests,
+  findLostTreasureChroniclesElderSettlement,
+  resolveLostTreasureChroniclesElderBinding,
+} from '../quests/lostTreasureChroniclesElder'
+import {
   buildLostTreasureExpeditionQuest,
   isLostTreasureExpeditionCampLooted,
   isLostTreasureExpeditionEvidenceLooted,
@@ -181,7 +186,9 @@ import { settlementSpawnPoint } from '../settlement/createSettlement'
 import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { livestockStrayCandidateFromAgent } from '../settlement/livestock'
+import { LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS } from '../settlement/lostTreasureChroniclesElderResident'
 import { settlementNpcDescriptors } from '../settlement/npcIdentity'
+import { cellsWithinRadius } from '../settlement/settlementGenerator'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
 import { drainStamina } from '../shared/StaminaState'
@@ -1434,6 +1441,20 @@ export async function createApp(
       const homeGuard = selectGuardQuestGiver(npcs)
       migrateLegacyGuardSwordGift(guardProgress, homeGuard?.id)
     }
+  }
+  const elderCandidateDefs = []
+  for (const cell of cellsWithinRadius(
+    { gx: homeDef.gx, gz: homeDef.gz },
+    LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS,
+  )) {
+    if (cell.gx === homeDef.gx && cell.gz === homeDef.gz) continue
+    const def = bundle.settlementsManager.peekDef(cell)
+    if (def) elderCandidateDefs.push(def)
+  }
+  const elderSettlement = findLostTreasureChroniclesElderSettlement(elderCandidateDefs)
+  if (elderSettlement) {
+    const elderBinding = resolveLostTreasureChroniclesElderBinding(elderSettlement)
+    if (elderBinding) opportunityQuestDefs.push(...buildLostTreasureChroniclesElderQuests(elderBinding))
   }
   const homeGuardNpcId = selectGuardQuestGiver(npcsBySettlement.get(homeSettlementId) ?? [])?.id
   const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]

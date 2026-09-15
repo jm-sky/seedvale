@@ -1,5 +1,7 @@
 # Implementation Notes: quests-progression-037 — Lost Treasure Chronicles elder trust foundation
 
+Implemented 2026-09-15 on current `main`. Selection is probe-based in `settlementPlanCache` (home-neighbour Chebyshev radius 1, actual generated size, SM/MD preferred, then nearest ordinary settlement). The elder family is appended before staffing so he remains eligible for normal systems. Quest composition is `lostTreasureChroniclesElder.ts` → `createApp.ts`. Optional work-help / self-funded settlement were not added.
+
 Recon baseline: current `main` on 2026-09-15. Dependencies `quests-progression-032`, `033` and `034` are already implemented. These notes record only implementation-relevant findings; the source plan owns scope/content intent.
 
 ## 1. Authored elder: extend settlement generation narrowly

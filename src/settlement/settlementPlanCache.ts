@@ -3,10 +3,18 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { RiverQuery } from '../terrain/riverQuery'
 import type { TerrainSamplers } from './settlementTerrain'
+import { pickNameCulture } from '../ai/nameCultures'
 import { generateSettlementName } from '../shared/SettlementName'
 import {
+  createLostTreasureElderFamily,
+  LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS,
+  selectLostTreasureChroniclesElderSettlement,
+} from './lostTreasureChroniclesElderResident'
+import {
+  cellFromId,
   cellKey,
   cellSeed,
+  cellsWithinRadius,
   generateSettlementDef,
   probeSettlementSite,
   type SettlementCell,
@@ -75,6 +83,8 @@ const uniqueNameCache = new Map<string, string | null>()
 
 /** Derived near/far size policy for the current world. Cleared with defs. */
 let progressionPolicy: SettlementProgressionPolicy | null | undefined
+/** Memoized host cell key for the Lost Treasure Chronicles elder, or `null` when none. */
+let elderHostCellKey: string | null | undefined
 
 export function clearSettlementDefCache(): void {
   defCache.clear()
@@ -82,6 +92,7 @@ export function clearSettlementDefCache(): void {
   uniqueNameCache.clear()
   activeRiverQuery = null
   progressionPolicy = undefined
+  elderHostCellKey = undefined
 }
 
 function progressionPolicyFor(ctx: SettlementResolveContext): SettlementProgressionPolicy | null {
@@ -151,6 +162,34 @@ function applyResolvedSettlementName(def: SettlementDef, name: string): void {
   def.plan.identity.name = name
 }
 
+function elderHostCellFor(ctx: SettlementResolveContext): SettlementCell | null {
+  if (elderHostCellKey !== undefined) return elderHostCellKey ? cellFromId(elderHostCellKey) : null
+  const origin: SettlementCell = { gx: 0, gz: 0 }
+  const candidates = []
+  for (const cell of cellsWithinRadius(origin, LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS)) {
+    if (cell.gx === origin.gx && cell.gz === origin.gz) continue
+    const probe = namingInputsFor(cell, ctx)
+    if (!probe.site) continue
+    candidates.push({
+      cell,
+      id: cellKey(cell),
+      size: probe.wouldBeOutpost ? 'OUTPOST' as const : probe.provisionalSize,
+      x: probe.site.x,
+      z: probe.site.z,
+      isHome: false,
+    })
+  }
+  const selected = selectLostTreasureChroniclesElderSettlement(candidates)
+  elderHostCellKey = selected ? cellKey(selected.cell) : null
+  return selected?.cell ?? null
+}
+
+function authoredResidentFor(cell: SettlementCell, ctx: SettlementResolveContext) {
+  const host = elderHostCellFor(ctx)
+  if (!host || host.gx !== cell.gx || host.gz !== cell.gz) return undefined
+  return createLostTreasureElderFamily(cellSeed(ctx.seed, cell), pickNameCulture(cellSeed(ctx.seed, cell)))
+}
+
 export function settlementDefFor(
   cell: SettlementCell,
   ctx: SettlementResolveContext,
@@ -158,7 +197,7 @@ export function settlementDefFor(
   const key = cellKey(cell)
   if (defCache.has(key)) return defCache.get(key)!
   const resolvedName = uniqueNameFor(cell, ctx)
-  const def = generateSettlementDef(...probeArgs(cell, ctx))
+  const def = generateSettlementDef(...probeArgs(cell, ctx), authoredResidentFor(cell, ctx))
   if (def && resolvedName) applyResolvedSettlementName(def, resolvedName)
   defCache.set(key, def)
   return def

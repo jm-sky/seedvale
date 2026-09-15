@@ -25,6 +25,7 @@ import {
   villageSizeConfig,
 } from './families'
 import { DEFAULT_SITE_SEARCH_MARGIN, findSettlementSite } from './findSettlementSite'
+import { appendAuthoredResidentFamily } from './lostTreasureChroniclesElderResident'
 import { findDockLocation } from './minorLocations'
 import { resolveInitialProfessionStaffing } from './professionStaffing'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
@@ -570,6 +571,7 @@ function generateSettlementCore(
   homeSize: HomeVillageSize = 'auto',
   riverQuery?: RiverQuery,
   minimumSize?: RolledVillageSize,
+  authoredResident?: FamilyDef,
 ): SettlementCore | null {
   const ctx = resolveSettlementContext(
     cell,
@@ -587,14 +589,18 @@ function generateSettlementCore(
   const site = chooseSettlementSite(ctx)
   if (!site) return null
   const identity = resolveVillageIdentity(ctx, site)
+  const generatedFamilies = generateFamilies(
+    ctx.seedForCell,
+    identity.size,
+    identity.isHome,
+    identity.nameCulture,
+    identity.dominantResource,
+  )
+  const withAuthoredResident = identity.size !== 'OUTPOST' && authoredResident
+    ? appendAuthoredResidentFamily(generatedFamilies, authoredResident)
+    : generatedFamilies
   const families = resolveInitialProfessionStaffing(
-    generateFamilies(
-      ctx.seedForCell,
-      identity.size,
-      identity.isHome,
-      identity.nameCulture,
-      identity.dominantResource,
-    ),
+    withAuthoredResident,
     {
       size: identity.size,
       terrain: identity.terrain,
@@ -698,6 +704,7 @@ export function generateVillagePlan(
   homeSize: HomeVillageSize = 'auto',
   riverQuery?: RiverQuery,
   minimumSize?: RolledVillageSize,
+  authoredResident?: FamilyDef,
 ): VillagePlan | null {
   return generateSettlementCore(
     cell,
@@ -711,6 +718,7 @@ export function generateVillagePlan(
     homeSize,
     riverQuery,
     minimumSize,
+    authoredResident,
   )?.plan ?? null
 }
 
@@ -751,6 +759,8 @@ function settlementDefFromPlan(
  *  Order still follows plan 032 §1's "teren → środowisko → zasoby → wioski".
  *  `minimumSize` is an optional progression floor for a normal (non-home)
  *  cell; omitted cells keep the ordinary `rollVillageSize()` path.
+ *  `authoredResident` appends one extra household before staffing/plan (used
+ *  for the Lost Treasure Chronicles elder). Outposts ignore it.
  */
 export function generateSettlementDef(
   cell: SettlementCell,
@@ -764,6 +774,7 @@ export function generateSettlementDef(
   homeSize: HomeVillageSize = 'auto',
   riverQuery?: RiverQuery,
   minimumSize?: RolledVillageSize,
+  authoredResident?: FamilyDef,
 ): SettlementDef | null {
   const core = generateSettlementCore(
     cell,
@@ -777,6 +788,7 @@ export function generateSettlementDef(
     homeSize,
     riverQuery,
     minimumSize,
+    authoredResident,
   )
   if (!core) return null
   const { plan, families, sampleHeight: height, waterLevel: water, region: reg } = core

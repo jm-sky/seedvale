@@ -1,7 +1,7 @@
 # Plan: Lost Treasure Chronicles — elder trust foundation
 
 **Created:** 2026-09-15  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~quests-progression-032~~, ~~quests-progression-033~~, ~~quests-progression-034~~  
@@ -10,6 +10,10 @@
 **Tags:** `lost-treasure-chronicles` `elder` `authored-npc` `relationship` `reputation` `multi-solution`  
 **Roadmap:** `quests-lost-something-chronicles.md`  
 **Model:** Sonnet, Composer
+
+## Implementation status
+
+Implemented 2026-09-15. One guaranteed authored elder (`Kazimierz Nowak`, age 74) is injected as an ordinary single-adult household (`family-story-lost-treasure-elder`, not `family-reserved-*`) into the nearest eligible nearby SM/MD settlement by `settlementPlanCache` before `VillagePlan`/staffing. Story binding and the two contextual `QuestDef`s live in `src/quests/lostTreasureChroniclesElder.ts` and are composed in `createApp.ts`. Quest A is a nonlinear `any` stage: `branch` hand-in vs `talk_to_npc` to a generated neighbour. Quest B is staged dialogue plus `talk_to_npc_choice` (`support_elder` / `reconcile`). No work-help or self-funded route (no existing seam). No story trust meter or save-schema bump. Automated tests cover identity, injection isolation, both winter outcomes, dispute unlock/resolutions, relations/reputation once, and save/restore. Browser/gameplay verification remains user-owned.
 
 ## Goal
 
