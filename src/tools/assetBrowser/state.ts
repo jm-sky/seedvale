@@ -1,11 +1,11 @@
 import { reactive } from 'vue'
 import type { AssetIndexEntry } from '../../assets/assetIndex'
-import { DEFAULT_HAIR_TINT, type HairTintId } from './hairTint'
+import { DEFAULT_HAIR_COLOR, type HairColorId } from './hairTint'
 import { applyAssetBrowserUrlParams } from './urlParams'
 import { applyLayoutPersist } from './viewer/layoutPersist'
 import { DEFAULT_SPLIT } from './viewer/viewportLayout'
 
-export type { HairTintId } from './hairTint'
+export type { HairColorId } from './hairTint'
 
 export type ViewLayout = 'quad' | 'single'
 export type RenderMode = 'diagnostic' | 'game-like'
@@ -46,8 +46,8 @@ export type BrowserState = {
   pose: PoseMode
   /** Named clip @ t=0. `null` with pose idle → first `/idle/i` clip. */
   clip: string | null
-  /** UBC `MI_Hair_*` sidecar; no-op on non-UBC meshes. */
-  hairTint: HairTintId
+  /** UBC `MI_Hair_*` color multiply; no-op on non-UBC meshes. */
+  hairColor: HairColorId
   resetTransformOnReload: boolean
   reportText: string
   statusMessage: string
@@ -80,7 +80,7 @@ export const browserState = reactive<BrowserState>({
   torchFuelRatio: 1,
   pose: 'rest',
   clip: null,
-  hairTint: DEFAULT_HAIR_TINT,
+  hairColor: DEFAULT_HAIR_COLOR,
   resetTransformOnReload: false,
   reportText: '',
   statusMessage: 'Ready',

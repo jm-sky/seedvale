@@ -1,20 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { NPC_UBC_HAIR_1_URL, NPC_UBC_HAIR_2_URL } from '../../ai/npcAppearance'
-import { hairTintUrlFor, parseHairTint } from './hairTint'
+import { NPC_HAIR_COLOR } from '../../ai/npcAppearance'
+import { hairColorHexFor, parseHairColor } from './hairTint'
 
-describe('hairTintUrlFor', () => {
-  it('maps sidecar ids to npc-040 URLs and baked to null', () => {
-    expect(hairTintUrlFor('hair_1')).toBe(NPC_UBC_HAIR_1_URL)
-    expect(hairTintUrlFor('hair_2')).toBe(NPC_UBC_HAIR_2_URL)
-    expect(hairTintUrlFor('baked')).toBeNull()
+describe('hairColorHexFor', () => {
+  it('maps ids to the NPC multiply palette', () => {
+    expect(hairColorHexFor('black')).toBe(NPC_HAIR_COLOR.black)
+    expect(hairColorHexFor('brown')).toBe(NPC_HAIR_COLOR.brown)
+    expect(hairColorHexFor('redhead')).toBe(NPC_HAIR_COLOR.redhead)
+    expect(hairColorHexFor('blond')).toBe(NPC_HAIR_COLOR.blond)
+    expect(hairColorHexFor('grey')).toBe(NPC_HAIR_COLOR.grey)
   })
 })
 
-describe('parseHairTint', () => {
+describe('parseHairColor', () => {
   it('accepts canonical ids and aliases', () => {
-    expect(parseHairTint('hair_1')).toBe('hair_1')
-    expect(parseHairTint('2')).toBe('hair_2')
-    expect(parseHairTint('glb')).toBe('baked')
-    expect(parseHairTint('nope')).toBeUndefined()
+    expect(parseHairColor('black')).toBe('black')
+    expect(parseHairColor('redhead')).toBe('redhead')
+    expect(parseHairColor('red')).toBe('redhead')
+    expect(parseHairColor('gray')).toBe('grey')
+    expect(parseHairColor('nope')).toBeUndefined()
   })
 })

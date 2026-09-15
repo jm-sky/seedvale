@@ -20,10 +20,10 @@ import {
   prepareProp,
   preparePropFitMax,
 } from '../../../assets/loadGltf'
-import { applyHairTint, cloneOutfitMaterials, disposeOutfitMaterialClones } from '../../../assets/ubcOutfitMaterials'
+import { applyHairColor, cloneOutfitMaterials, disposeOutfitMaterialClones } from '../../../assets/ubcOutfitMaterials'
 import { tintBucketGlb } from '../../../items/items'
 import { companionAnimationUrl } from '../../../player/playerVisualPreset'
-import { hairTintUrlFor } from '../hairTint'
+import { hairColorHexFor } from '../hairTint'
 import { browserState } from '../state'
 import { type AnchorGizmoGroup, createAnchorGizmos } from './createAnchorGizmos'
 
@@ -58,8 +58,8 @@ export type AssetSlot = {
   getNativeBounds: () => Box3 | null
   getPreparedBounds: () => Box3 | null
   refreshAnchors: () => void
-  /** Re-apply the current hair sidecar without reloading the GLB. */
-  applyUbcHairTint: () => Promise<void>
+  /** Re-apply the current hair color without reloading the GLB. */
+  applyUbcHairColor: () => void
   dispose: () => void
 }
 
@@ -236,7 +236,7 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       applyPrepare(model, nextEntry.prepare)
       if (companionUrl) {
         cloneOutfitMaterials(model)
-        await applyHairTint(model, hairTintUrlFor(browserState.hairTint))
+        applyHairColor(model, hairColorHexFor(browserState.hairColor))
       }
       if (nextEntry.id === 'item:wooden_bucket') tintBucketGlb(model, 'wooden_bucket')
       else if (nextEntry.id === 'item:copper_bucket') tintBucketGlb(model, 'copper_bucket')
@@ -317,9 +317,9 @@ export function createAssetSlot(role: 'reference' | 'target', scene: Group): Ass
       refreshResolvedAnchors(model, anchors)
       gizmos?.update(anchors)
     },
-    async applyUbcHairTint() {
+    applyUbcHairColor() {
       if (!model || !url || !companionAnimationUrl(url)) return
-      await applyHairTint(model, hairTintUrlFor(browserState.hairTint))
+      applyHairColor(model, hairColorHexFor(browserState.hairColor))
     },
     dispose() {
       slot.unload()

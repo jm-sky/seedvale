@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { PLAYER_UBC_ANIMATION_URL, PLAYER_UBC_PEASANT_URL, PLAYER_UBC_RANGER_URL, PLAYER_UBC_WIZARD_URL } from '../player/playerVisualPreset'
 import {
   NPC_CLOTHING_HUE,
+  NPC_HAIR_COLOR,
   NPC_MODEL_URLS,
   NPC_UBC_FEMALE_PEASANT_URL,
   NPC_UBC_FEMALE_RANGER_URL,
@@ -34,7 +35,7 @@ describe('resolveNpcAppearance', () => {
     expect(anna.modelUrl).toMatch(/female_peasant/)
     expect(anna.animationUrl).toBe(PLAYER_UBC_ANIMATION_URL)
     expect(anna.tintUrl).toBe(NPC_UBC_PEASANT_TINT_URL)
-    expect(anna.hairTintUrl === NPC_UBC_HAIR_1_URL || anna.hairTintUrl === NPC_UBC_HAIR_2_URL).toBe(true)
+    expect(Object.values(NPC_HAIR_COLOR)).toContain(anna.hairColor)
     expect(Object.values(NPC_CLOTHING_HUE)).toContain(anna.clothingHue)
 
     const piotr = resolveNpcAppearance({
@@ -62,7 +63,7 @@ describe('resolveNpcAppearance', () => {
     expect(hunter.modelUrl).toMatch(/male_ranger/)
     expect(hunter.animationUrl).toBe(PLAYER_UBC_ANIMATION_URL)
     expect(hunter.tintUrl).toBe(NPC_UBC_RANGER_TINT_URL)
-    expect(hunter.hairTintUrl === NPC_UBC_HAIR_1_URL || hunter.hairTintUrl === NPC_UBC_HAIR_2_URL).toBe(true)
+    expect(Object.values(NPC_HAIR_COLOR)).toContain(hunter.hairColor)
 
     const huntress = resolveNpcAppearance({
       age: 28,
@@ -130,7 +131,7 @@ describe('resolveNpcAppearance', () => {
     const farmer = resolveNpcAppearance({ ...shared, role: 'farmer' })
     const woodcutter = resolveNpcAppearance({ ...shared, role: 'woodcutter' })
     expect(farmer.modelUrl).toBe(woodcutter.modelUrl)
-    expect(farmer.hairTintUrl).toBe(woodcutter.hairTintUrl)
+    expect(farmer.hairColor).toBe(woodcutter.hairColor)
     expect(farmer.clothingHue).toBe(woodcutter.clothingHue)
     expect(farmer.tintUrl).toBe(NPC_UBC_PEASANT_TINT_URL)
     expect(woodcutter.tintUrl).toBe(NPC_UBC_WOODCUTTER_TINT_URL)
@@ -218,8 +219,8 @@ describe('resolveNpcAppearance', () => {
         expect(existsSync(`public${url}`), url).toBe(true)
       }
     }
-    expect(existsSync('public/models/characters/ubc/hair_1.webp')).toBe(true)
-    expect(existsSync('public/models/characters/ubc/hair_2.webp')).toBe(true)
+    expect(existsSync(`public${NPC_UBC_HAIR_1_URL}`)).toBe(true)
+    expect(existsSync(`public${NPC_UBC_HAIR_2_URL}`)).toBe(true)
     expect(existsSync('public/models/characters/ubc/npc_ranger.webp')).toBe(true)
   })
 
@@ -235,7 +236,7 @@ describe('resolveNpcAppearance', () => {
     expect(childFarmer.modelUrl).toBe(NPC_MODEL_URLS.female[0])
     expect(childFarmer.animationUrl).toBeNull()
     expect(childFarmer.tintUrl).toBeNull()
-    expect(childFarmer.hairTintUrl).toBeNull()
+    expect(childFarmer.hairColor).toBe(0xffffff)
     expect(childFarmer.clothingHue).toBe(NPC_CLOTHING_HUE.identity)
 
     const marek = resolveNpcAppearance({

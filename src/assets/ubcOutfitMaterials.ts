@@ -122,6 +122,21 @@ export function applyClothingHue(root: THREE.Object3D, hue: number): void {
   })
 }
 
+/** Multiply cloned `MI_Hair_*` albedo (npc-040 hair color). */
+export function applyHairColor(root: THREE.Object3D, color: number): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const material of materials) {
+      if (!material.userData.ubcHairMaterial) continue
+      const std = material as THREE.MeshStandardMaterial
+      std.color.setHex(color)
+      std.needsUpdate = true
+    }
+  })
+}
+
 /**
  * Swap cloned `MI_Hair_*` albedo maps. Beard uses `MI_Hair_1`, so it follows
  * the same sidecar. Returns false if the sidecar failed to load.

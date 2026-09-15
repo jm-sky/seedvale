@@ -40,7 +40,7 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
-import { applyClothingHue, applyHairTint, applyOutfitTint, cloneOutfitMaterials } from '../assets/ubcOutfitMaterials'
+import { applyClothingHue, applyHairColor, applyOutfitTint, cloneOutfitMaterials } from '../assets/ubcOutfitMaterials'
 import {
   playActionBowRelease,
   playActionChop,
@@ -1727,7 +1727,7 @@ export class NpcAgent {
     const animationUrl = companionAnimationUrl(modelUrl)
     const autoLook = deps.modelUrl == null
     const tintUrl = autoLook ? appearance.tintUrl : null
-    const hairTintUrl = autoLook ? appearance.hairTintUrl : null
+    const hairColor = autoLook ? appearance.hairColor : 0xffffff
     const clothingHue = autoLook ? appearance.clothingHue : 0xffffff
     try {
       const { scene, animations: modelAnimations } = await loadGltfAnimated(modelUrl)
@@ -1742,7 +1742,7 @@ export class NpcAgent {
         cloneOutfitMaterials(scene)
         if (tintUrl) await applyOutfitTint(scene, tintUrl)
         applyClothingHue(scene, clothingHue)
-        if (hairTintUrl) await applyHairTint(scene, hairTintUrl)
+        applyHairColor(scene, hairColor)
       }
       return new NpcAgent(scene, animations, deps)
     } catch (err) {

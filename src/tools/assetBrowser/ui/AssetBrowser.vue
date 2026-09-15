@@ -173,8 +173,8 @@ watch(() => browserState.referenceFreeUrl, () => { void loadReference() })
 watch(browserState, () => viewer.value?.refresh(), { deep: true })
 
 watch(
-  () => browserState.hairTint,
-  () => { void viewer.value?.applyUbcHairTint() },
+  () => browserState.hairColor,
+  () => viewer.value?.applyUbcHairColor(),
 )
 
 watch(
@@ -202,7 +202,7 @@ watch(
     browserState.showAxes,
     browserState.showGround,
     browserState.showOverlay,
-    browserState.hairTint,
+    browserState.hairColor,
   ] as const,
   () => syncAssetBrowserUrlParams(browserState),
 )
@@ -592,17 +592,23 @@ function lampMountSnippet() {
         > Wireframe</label>
         <label class="mt-1 block text-xs text-slate-400">Hair color</label>
         <select
-          v-model="browserState.hairTint"
+          v-model="browserState.hairColor"
           class="w-full rounded bg-slate-800 px-2 py-1"
         >
-          <option value="hair_1">
-            Hair 1
+          <option value="black">
+            Czarny
           </option>
-          <option value="hair_2">
-            Hair 2
+          <option value="brown">
+            Brąz
           </option>
-          <option value="baked">
-            GLB default
+          <option value="redhead">
+            Rudy
+          </option>
+          <option value="blond">
+            Blond
+          </option>
+          <option value="grey">
+            Siwy
           </option>
         </select>
         <label class="mt-1 block text-xs text-slate-400">Pose</label>

@@ -1,22 +1,21 @@
-import { NPC_UBC_HAIR_1_URL, NPC_UBC_HAIR_2_URL } from '../../ai/npcAppearance'
+import { NPC_HAIR_COLOR, type NpcHairColorId } from '../../ai/npcAppearance'
 
-/** UBC hair albedo sidecar in the asset browser (npc-040 runtime palettes). */
-export type HairTintId = 'hair_1' | 'hair_2' | 'baked'
+/** UBC hair color multiply in the asset browser (same palette as NPC runtime). */
+export type HairColorId = NpcHairColorId
 
-export const DEFAULT_HAIR_TINT: HairTintId = 'hair_1'
+export const DEFAULT_HAIR_COLOR: HairColorId = 'brown'
 
-/** Sidecar URL, or `null` to restore the map baked into the GLB. */
-export function hairTintUrlFor(id: HairTintId): string | null {
-  if (id === 'baked') return null
-  if (id === 'hair_2') return NPC_UBC_HAIR_2_URL
-  return NPC_UBC_HAIR_1_URL
+export function hairColorHexFor(id: HairColorId): number {
+  return NPC_HAIR_COLOR[id]
 }
 
-export function parseHairTint(raw: string | undefined): HairTintId | undefined {
+export function parseHairColor(raw: string | undefined): HairColorId | undefined {
   if (raw === undefined) return undefined
   const v = raw.trim().toLowerCase()
-  if (v === 'hair_1' || v === 'hair1' || v === '1') return 'hair_1'
-  if (v === 'hair_2' || v === 'hair2' || v === '2') return 'hair_2'
-  if (v === 'baked' || v === 'default' || v === 'glb') return 'baked'
+  if (v === 'black') return 'black'
+  if (v === 'brown') return 'brown'
+  if (v === 'redhead' || v === 'red') return 'redhead'
+  if (v === 'blond') return 'blond'
+  if (v === 'grey' || v === 'gray') return 'grey'
   return undefined
 }

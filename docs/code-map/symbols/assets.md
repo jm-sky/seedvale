@@ -228,7 +228,8 @@ Generated from exported TypeScript symbols.
 ## `assets/ubcOutfitMaterials.ts`
 
 - `applyClothingHue` — function — line 111
-- `applyHairTint` — function — line 129
+- `applyHairColor` — function — line 126
+- `applyHairTint` — function — line 144
 - `applyOutfitTint` — function — line 97
 - `cloneOutfitMaterials` — function — line 41
 - `disposeOutfitMaterialClones` — function — line 46

@@ -1,4 +1,4 @@
-import { DEFAULT_HAIR_TINT, parseHairTint, type HairTintId } from './hairTint'
+import { DEFAULT_HAIR_COLOR, parseHairColor, type HairColorId } from './hairTint'
 import type {
   BrowserState,
   FocusMode,
@@ -33,7 +33,7 @@ export type AssetBrowserUrlParams = {
   /** Named animation clip @ t=0. Empty / absent with pose=idle → idle clip. */
   clip?: string | null
   lightingPreset?: LightingPreset
-  hairTint?: HairTintId
+  hairColor?: HairColorId
   showBbox?: boolean
   showGrid?: boolean
   showAxes?: boolean
@@ -176,8 +176,8 @@ export function parseAssetBrowserUrlParams(
   const lighting = parseLighting(firstPresent(params, ['lighting', 'light', 'preset']))
   if (lighting !== undefined) out.lightingPreset = lighting
 
-  const hairTint = parseHairTint(firstPresent(params, ['hairTint', 'hair']))
-  if (hairTint !== undefined) out.hairTint = hairTint
+  const hairColor = parseHairColor(firstPresent(params, ['hairColor']))
+  if (hairColor !== undefined) out.hairColor = hairColor
 
   const bbox = parseBool(firstPresent(params, ['bbox', 'showBbox']))
   if (bbox !== undefined) out.showBbox = bbox
@@ -231,7 +231,7 @@ export function applyAssetBrowserUrlParams(
   if (parsed.pose !== undefined) state.pose = parsed.pose
   if (parsed.clip !== undefined) state.clip = parsed.clip
   if (parsed.lightingPreset !== undefined) state.lightingPreset = parsed.lightingPreset
-  if (parsed.hairTint !== undefined) state.hairTint = parsed.hairTint
+  if (parsed.hairColor !== undefined) state.hairColor = parsed.hairColor
   if (parsed.showBbox !== undefined) state.showBbox = parsed.showBbox
   if (parsed.showGrid !== undefined) state.showGrid = parsed.showGrid
   if (parsed.showAxes !== undefined) state.showAxes = parsed.showAxes
@@ -261,7 +261,7 @@ export function syncAssetBrowserUrlParams(state: BrowserState): void {
   // Canonical names only (drop aliases so the bar stays short).
   for (const alias of [
     'ref', 'targetUrl', 'freeUrl', 'refUrl', 'refAnchor', 'radius', 'zoom', 'activeView',
-    'light', 'preset', 'hair', 'showBbox', 'showGrid', 'showAxes', 'showGround', 'report',
+    'light', 'preset', 'hair', 'hairTint', 'showBbox', 'showGrid', 'showAxes', 'showGround', 'report',
   ] as const) {
     url.searchParams.delete(alias)
   }
@@ -302,8 +302,8 @@ export function syncAssetBrowserUrlParams(state: BrowserState): void {
   if (state.lightingPreset === 'alignment') url.searchParams.delete('lighting')
   else url.searchParams.set('lighting', state.lightingPreset)
 
-  if (state.hairTint === DEFAULT_HAIR_TINT) url.searchParams.delete('hairTint')
-  else url.searchParams.set('hairTint', state.hairTint)
+  if (state.hairColor === DEFAULT_HAIR_COLOR) url.searchParams.delete('hairColor')
+  else url.searchParams.set('hairColor', state.hairColor)
 
   setBoolFlag(url, 'bbox', state.showBbox, true)
   setBoolFlag(url, 'grid', state.showGrid, true)

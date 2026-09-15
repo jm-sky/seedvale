@@ -25,7 +25,7 @@ Adult UBC NPCs (same role table as npc-039):
 
 - Hair style from `{simple, long, buzzed, buns}` (female buzzed → `Hair_BuzzedFemale`).
 - Beard (`Hair_Beard`) on ~35% of adult males, never on females.
-- Hair albedo sidecar `hair_1.webp` / `hair_2.webp`.
+- Hair `material.color` multiply on grey `MI_Hair_*` albedo: black / brown / redhead / blond / grey.
 - Clothing `material.color` multiply on the **role** sidecar (farmer stays sapphire-family, woodcutter earth-brown, trader crimson, hunter dark-violet `T_Ranger_2`) using four swatches: identity / warm / cool / darker.
 
 Player GLBs unchanged. Default combos reuse them:

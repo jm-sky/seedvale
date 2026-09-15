@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `npc-040-ubc-profession-appearance-variants`                           | 2026-09-15 20:40:47 | —                   | `npc`            | —          |
 | `settlements-npcs-036-generic-npc-owned-goods-trading`                 | 2026-09-15 16:57:35 | —                   | `settlements-npcs` | —          |
 | `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation` | 2026-09-15 16:49:30 | —                   | `quests-progression` | —          |
 | `world-terrain-017-abandoned-mountain-mine-landmark`                   | 2026-09-15 16:30:58 | —                   | `world-terrain`  | —          |

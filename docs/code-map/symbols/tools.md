@@ -19,10 +19,10 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/hairTint.ts`
 
-- `DEFAULT_HAIR_TINT` — const — line 6
-- `HairTintId` — type — line 4
-- `hairTintUrlFor` — function — line 9
-- `parseHairTint` — function — line 15
+- `DEFAULT_HAIR_COLOR` — const — line 6
+- `hairColorHexFor` — function — line 8
+- `HairColorId` — type — line 4
+- `parseHairColor` — function — line 12
 
 ## `tools/assetBrowser/modelManifest.ts`
 
@@ -96,7 +96,7 @@ Generated from exported TypeScript symbols.
 
 - `AssetViewer` — type — line 31
 - `createViewer` — function — line 60
-- `syncDiagnostics` — function — line 408
+- `syncDiagnostics` — function — line 409
 
 ## `tools/assetBrowser/viewer/createViewerScene.ts`
 

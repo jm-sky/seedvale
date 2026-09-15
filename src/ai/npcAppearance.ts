@@ -46,6 +46,7 @@ export type NpcOutfitId = 'modular' | 'peasant' | 'wizard' | 'ranger'
 export type NpcUbcOutfitId = Exclude<NpcOutfitId, 'modular'>
 export type NpcHairKind = 'simple' | 'long' | 'buzzed' | 'buns'
 export type NpcClothingHueId = 'identity' | 'warm' | 'cool' | 'darker'
+export type NpcHairColorId = 'black' | 'brown' | 'redhead' | 'blond' | 'grey'
 
 /** Multiply on cloned `MI_Peasant` / `MI_Wizard` / `MI_Ranger` / `MI_Knight` after the role sidecar. */
 export const NPC_CLOTHING_HUE: Record<NpcClothingHueId, number> = {
@@ -55,11 +56,20 @@ export const NPC_CLOTHING_HUE: Record<NpcClothingHueId, number> = {
   darker: 0xc8c0b4,
 }
 
+/** Multiply on cloned `MI_Hair_*` (grey albedo). Not `#000000` — that kills shading. */
+export const NPC_HAIR_COLOR: Record<NpcHairColorId, number> = {
+  black: 0x1c1614,
+  brown: 0x6b3d22,
+  redhead: 0xb44a28,
+  blond: 0xd8b56a,
+  grey: 0xc5c0b8,
+}
+
 const MALE_HAIR_KINDS: readonly NpcHairKind[] = ['simple', 'long', 'buzzed', 'buns']
 /** Women use Hair_Long / Hair_Buns only — not SimpleParted or Hair_BuzzedFemale. */
 const FEMALE_HAIR_KINDS: readonly NpcHairKind[] = ['long', 'buns']
 const CLOTHING_HUE_IDS: readonly NpcClothingHueId[] = ['identity', 'warm', 'cool', 'darker']
-const HAIR_TINT_URLS: readonly string[] = [NPC_UBC_HAIR_1_URL, NPC_UBC_HAIR_2_URL]
+const HAIR_COLOR_IDS: readonly NpcHairColorId[] = ['black', 'brown', 'redhead', 'blond', 'grey']
 const BEARD_CHANCE = 0.35
 /** Distinct from physical-profile salts (`PHYS` / SPEA streams). */
 const APPEARANCE_SEED_SALT = 0x41505045
@@ -73,7 +83,7 @@ const APPEARANCE_SEED_SALT = 0x41505045
 export type NpcAppearance = {
   animationUrl: string | null
   clothingHue: number
-  hairTintUrl: string | null
+  hairColor: number
   modelUrl: string
   outfit: NpcOutfitId
   tintUrl: string | null
@@ -88,13 +98,13 @@ function appearanceFor(
   modelUrl: string,
   outfit: NpcOutfitId,
   tintUrl: string | null,
-  hairTintUrl: string | null = null,
+  hairColor: number = 0xffffff,
   clothingHue: number = NPC_CLOTHING_HUE.identity,
 ): NpcAppearance {
   return {
     animationUrl: companionAnimationUrl(modelUrl),
     clothingHue,
-    hairTintUrl,
+    hairColor,
     modelUrl,
     outfit,
     tintUrl,
@@ -163,18 +173,18 @@ export function ubcVariantModelUrl(
 
 function rollUbcVariant(npcId: string, gender: NpcGender, outfit: NpcUbcOutfitId): {
   clothingHue: number
-  hairTintUrl: string
+  hairColor: number
   modelUrl: string
 } {
   const random = createSeededRandom(hashNpcId(npcId) ^ APPEARANCE_SEED_SALT)
   const hairs = hairKindsFor(gender)
   const hair = hairs[pickIndex(random, hairs.length)]!
   const beard = gender === 'male' && random() < BEARD_CHANCE
-  const hairTintUrl = HAIR_TINT_URLS[pickIndex(random, HAIR_TINT_URLS.length)]!
+  const hairColorId = HAIR_COLOR_IDS[pickIndex(random, HAIR_COLOR_IDS.length)]!
   const hueId = CLOTHING_HUE_IDS[pickIndex(random, CLOTHING_HUE_IDS.length)]!
   return {
     clothingHue: NPC_CLOTHING_HUE[hueId],
-    hairTintUrl,
+    hairColor: NPC_HAIR_COLOR[hairColorId],
     modelUrl: ubcVariantModelUrl(gender, outfit, hair, beard),
   }
 }
@@ -211,7 +221,7 @@ export function resolveNpcAppearance(opts: {
       variant.modelUrl,
       look.outfit,
       look.tintUrl,
-      variant.hairTintUrl,
+      variant.hairColor,
       variant.clothingHue,
     )
   }
