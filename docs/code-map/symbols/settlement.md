@@ -453,17 +453,17 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 234
-- `createNpcStateRegistry` — function — line 280
+- `createNpcAuthoritativeState` — function — line 238
+- `createNpcStateRegistry` — function — line 284
 - `MAX_HP` — const — line 49
 - `MAX_STAMINA` — const — line 50
-- `NpcAuthoritativeState` — type — line 82
+- `NpcAuthoritativeState` — type — line 84
   - domain: settlements-npcs
 - `NpcGraveVisitRecord` — type — line 41
 - `NpcId` — type — line 37
-- `NpcPhysicalMaxima` — type — line 220
-- `NpcStateRegistry` — type — line 266
-- `NpcStateSnapshot` — type — line 156
+- `NpcPhysicalMaxima` — type — line 224
+- `NpcStateRegistry` — type — line 270
+- `NpcStateSnapshot` — type — line 160
 
 ## `settlement/pathDryness.ts`
 
@@ -866,13 +866,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 306
+- `createSettlementsManager` — function — line 316
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 121
+- `SettlementsManager` — type — line 122
 
 ## `settlement/settlementStructures.ts`
 

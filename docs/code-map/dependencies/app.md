@@ -1560,6 +1560,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/npcExpeditionTravel.ts`
 - `ai/reactionChance.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`

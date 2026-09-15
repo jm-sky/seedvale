@@ -29,6 +29,7 @@ Generated from TypeScript imports.
 - `ai/npcDecision.ts`
 - `ai/npcLogistics.test.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcOffscreenSurvival.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcPlan.ts`
 - `ai/npcVigor.test.ts`
@@ -72,6 +73,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `ai/npcStrategies.ts`
 - `ai/npcTravel.ts`
+- `ai/npcTravelCheckpoint.ts`
 - `ai/npcVigor.ts`
 - `ai/npcVoiceLines.ts`
 - `ai/npcWorkContract.ts`
@@ -485,6 +487,7 @@ Generated from TypeScript imports.
 - `ai/npcAccompanyCommitment.test.ts`
 - `ai/npcAccompanyExecution.test.ts`
 - `ai/npcAccompanyExecution.ts`
+- `ai/npcExpeditionTravel.test.ts`
 - `ai/npcTravel.test.ts`
 - `settlement/npcState.ts`
 
@@ -655,6 +658,31 @@ Generated from TypeScript imports.
 - `ai/graveVisitPressure.test.ts`
 - `ai/npcDecision.test.ts`
 
+## `ai/npcExpeditionTravel.test.ts`
+
+**Imports**
+
+- `ai/npcAccompanyCommitment.ts`
+- `ai/npcExpeditionTravel.ts`
+- `settlement/npcState.ts`
+- `world/createExpeditionAssignments.ts`
+
+## `ai/npcExpeditionTravel.ts`
+
+**Imports**
+
+- `ai/npcTravel.ts`
+- `settlement/npcState.ts`
+- `world/createExpeditionAssignments.ts`
+- `world/expedition.ts`
+- `world/expeditionAssignment.ts`
+
+**Imported by**
+
+- `ai/npcExpeditionTravel.test.ts`
+- `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+
 ## `ai/npcLoadout.test.ts`
 
 **Imports**
@@ -730,6 +758,33 @@ Generated from TypeScript imports.
 - `ai/npcMovementWatchdog.test.ts`
 - `fauna/AnimalAgent.ts`
 
+## `ai/npcOffscreenSurvival.test.ts`
+
+**Imports**
+
+- `ai/npcOffscreenSurvival.ts`
+- `ai/npcTravel.ts`
+- `ai/npcTravelCheckpoint.ts`
+- `items/liquidContainer.ts`
+- `settlement/npcState.ts`
+- `shared/injuryRecovery.ts`
+
+## `ai/npcOffscreenSurvival.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/npcPersonalProvisions.ts`
+- `items/Inventory.ts`
+- `shared/HealthState.ts`
+- `shared/injuryRecovery.ts`
+- `world/timeConversion.ts`
+
+**Imported by**
+
+- `ai/npcOffscreenSurvival.test.ts`
+- `ai/npcTravelCheckpoint.ts`
+
 ## `ai/npcPersonalProvisions.test.ts`
 
 **Imports**
@@ -756,6 +811,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcOffscreenSurvival.ts`
 - `ai/npcPersonalProvisions.test.ts`
 - `ai/npcWorkContract.ts`
 
@@ -910,9 +966,25 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcExpeditionTravel.ts`
+- `ai/npcOffscreenSurvival.test.ts`
 - `ai/npcTravel.test.ts`
-- `settlement/SettlementsManager.ts`
+- `ai/npcTravelCheckpoint.ts`
 - `settlement/npcState.ts`
+
+## `ai/npcTravelCheckpoint.ts`
+
+**Imports**
+
+- `ai/npcOffscreenSurvival.ts`
+- `ai/npcTravel.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcOffscreenSurvival.test.ts`
+- `settlement/SettlementsManager.ts`
 
 ## `ai/npcVigor.test.ts`
 

@@ -15,6 +15,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/burialPressure.test.ts`
 - `ai/graveVisitPressure.test.ts`
+- `ai/npcOffscreenSurvival.ts`
 - `ai/npcStamina.test.ts`
 - `ai/npcVigor.test.ts`
 - `app/actions/gatheringActions.ts`
@@ -311,6 +312,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcOffscreenSurvival.test.ts`
+- `ai/npcOffscreenSurvival.ts`
 - `shared/injuryRecovery.test.ts`
 
 ## `shared/injurySeverity.test.ts`

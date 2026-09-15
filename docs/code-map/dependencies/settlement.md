@@ -36,7 +36,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/npcAnimalThreat.ts`
-- `ai/npcTravel.ts`
+- `ai/npcExpeditionTravel.ts`
+- `ai/npcTravelCheckpoint.ts`
 - `ai/reactionChance.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
@@ -1021,7 +1022,11 @@ Generated from TypeScript imports.
 - `ai/graveVisitPressure.test.ts`
 - `ai/graveVisitPressure.ts`
 - `ai/npcAccompanyCommitment.test.ts`
+- `ai/npcExpeditionTravel.test.ts`
+- `ai/npcExpeditionTravel.ts`
+- `ai/npcOffscreenSurvival.test.ts`
 - `ai/npcTravel.test.ts`
+- `ai/npcTravelCheckpoint.ts`
 - `app/actions/npcItemTransfer.test.ts`
 - `app/actions/npcItemTransfer.ts`
 - `app/actions/workContractPayment.test.ts`

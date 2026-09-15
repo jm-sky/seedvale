@@ -113,22 +113,22 @@ Generated from exported TypeScript symbols.
 ## `ai/Needs.ts`
 
 - `createNeedState` — function — line 16
-- `FOOD_THRESHOLD_NORMAL` — const — line 95
-- `generateNeedPressures` — function — line 120
-- `NEED_SATISFY_AMOUNT` — const — line 165
-- `needColor` — function — line 205
+- `FOOD_THRESHOLD_NORMAL` — const — line 97
+- `generateNeedPressures` — function — line 122
+- `NEED_SATISFY_AMOUNT` — const — line 167
+- `needColor` — function — line 207
 - `NeedId` — type — line 4
-- `needLabel` — function — line 220
+- `needLabel` — function — line 222
 - `NeedState` — type — line 6
-- `needValue` — function — line 195
-- `NpcPressure` — type — line 103
-- `pickFromPressures` — function — line 150
-- `pickNeed` — function — line 157
-- `PickNeedOptions` — type — line 52
-- `relieveNeed` — function — line 174
+- `needValue` — function — line 197
+- `NpcPressure` — type — line 105
+- `pickFromPressures` — function — line 152
+- `pickNeed` — function — line 159
+- `PickNeedOptions` — type — line 54
+- `relieveNeed` — function — line 176
 - `SLEEP_HUNGER_THIRST_RATE` — const — line 27
-- `tickNeeds` — function — line 42
-- `TickNeedsOptions` — type — line 36
+- `tickNeeds` — function — line 44
+- `TickNeedsOptions` — type — line 38
 
 ## `ai/npcAccompanyCommitment.ts`
 
@@ -168,30 +168,30 @@ Generated from exported TypeScript symbols.
 ## `ai/npcAction.ts`
 
 - `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 86
+- `NpcPlannedAction` — type — line 90
 - `Phase` — type — line 10
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 720
-- `CurrentActivity` — type — line 530
-- `CurrentActivityKind` — type — line 523
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 836
-- `NPC_HEIGHT` — const — line 433
-- `NPC_MODEL_URLS` — const — line 497
-- `NPC_SHADOW_DISTANCE` — const — line 447
-- `NpcAgent` — class — line 1067
+- `classifyPendingActivity` — function — line 724
+- `CurrentActivity` — type — line 534
+- `CurrentActivityKind` — type — line 527
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 841
+- `NPC_HEIGHT` — const — line 437
+- `NPC_MODEL_URLS` — const — line 501
+- `NPC_SHADOW_DISTANCE` — const — line 451
+- `NpcAgent` — class — line 1072
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 969
-- `NpcInspectionSnapshot` — type — line 545
-- `NpcWhy` — type — line 695
-- `projectNpcWhy` — function — line 761
-- `promoteChainKind` — function — line 712
+- `NpcAgentDeps` — type — line 974
+- `NpcInspectionSnapshot` — type — line 549
+- `NpcWhy` — type — line 699
+- `projectNpcWhy` — function — line 766
+- `promoteChainKind` — function — line 716
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -270,6 +270,18 @@ Generated from exported TypeScript symbols.
 - `scoreNpcDecisions` — function — line 105
 - `shouldInterruptAction` — function — line 135
 
+## `ai/npcExpeditionTravel.ts`
+
+- `dispatchReadyExpedition` — function — line 75
+  - domain: settlements-npcs
+- `dispatchReadyExpeditionAssignment` — function — line 130
+  - domain: settlements-npcs
+- `DispatchReadyExpeditionAssignmentInput` — type — line 34
+- `DispatchReadyExpeditionInput` — type — line 24
+- `DispatchReadyExpeditionResult` — type — line 45
+- `ReadyExpeditionAssignmentSlice` — type — line 22
+  - domain: settlements-npcs
+
 ## `ai/npcLoadout.ts`
 
 - `defaultWeaponForRole` — function — line 22
@@ -319,29 +331,38 @@ Generated from exported TypeScript symbols.
 - `STUCK_STRIKES_FOR_REPATH` — const — line 35
 - `tickMovementWatchdog` — function — line 80
 
+## `ai/npcOffscreenSurvival.ts`
+
+- `NpcOffscreenSurvivalHost` — type — line 32
+- `NpcOffscreenSurvivalResult` — type — line 38
+- `resolveNpcOffscreenTravelInterval` — function — line 61
+  - domain: npc
+
 ## `ai/npcPersonalProvisions.ts`
 
-- `buildContractProvisionContext` — function — line 297
-- `buildEscortProvisionContext` — function — line 343
-- `CONTRACT_MISSING_DRINK_PENALTY` — const — line 47
-- `CONTRACT_MISSING_FOOD_UNIT_PENALTY` — const — line 45
-- `ContractProvisionAvailability` — type — line 168
-- `ContractProvisionEstimate` — type — line 91
-- `contractProvisionFeasibilityPenalty` — function — line 196
-- `ContractProvisionResult` — type — line 211
-- `contractTravelHours` — function — line 159
-- `countPersonalDrinkPortions` — function — line 55
-- `countPersonalFood` — function — line 50
-- `escortAwayHours` — function — line 329
-- `estimateContractProvisionNeed` — function — line 126
-- `estimateEscortProvisionNeed` — function — line 146
-- `findDrinkablePersonalWaterContainer` — function — line 68
-- `findFillablePersonalWaterskin` — function — line 78
-- `hasFillablePersonalWaterskin` — function — line 87
-- `LOCAL_CONTRACT_TRAVEL_HOURS` — const — line 34
+- `buildContractProvisionContext` — function — line 312
+- `buildEscortProvisionContext` — function — line 358
+- `consumeOnePersonalDrink` — function — line 98
+- `consumeOnePersonalFood` — function — line 93
+- `CONTRACT_MISSING_DRINK_PENALTY` — const — line 48
+- `CONTRACT_MISSING_FOOD_UNIT_PENALTY` — const — line 46
+- `ContractProvisionAvailability` — type — line 183
+- `ContractProvisionEstimate` — type — line 106
+- `contractProvisionFeasibilityPenalty` — function — line 211
+- `ContractProvisionResult` — type — line 226
+- `contractTravelHours` — function — line 174
+- `countPersonalDrinkPortions` — function — line 56
+- `countPersonalFood` — function — line 51
+- `escortAwayHours` — function — line 344
+- `estimateContractProvisionNeed` — function — line 141
+- `estimateEscortProvisionNeed` — function — line 161
+- `findDrinkablePersonalWaterContainer` — function — line 69
+- `findFillablePersonalWaterskin` — function — line 79
+- `hasFillablePersonalWaterskin` — function — line 88
+- `LOCAL_CONTRACT_TRAVEL_HOURS` — const — line 35
   - domain: npc
-- `provisionContractSupplies` — function — line 254
-- `readContractProvisionAvailability` — function — line 177
+- `provisionContractSupplies` — function — line 269
+- `readContractProvisionAvailability` — function — line 192
 
 ## `ai/npcPlan.ts`
 
@@ -398,23 +419,37 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcTravel.ts`
 
-- `beginOffscreenNpcTravel` — function — line 89
+- `beginOffscreenNpcTravel` — function — line 145
   - domain: npc
-- `cloneNpcTravel` — function — line 35
-- `interpolateNpcTravelPosition` — function — line 64
-- `isNpcTravelArrived` — function — line 77
-- `NpcTravelContinuity` — type — line 23
-- `NpcTravelExecution` — type — line 17
-- `NpcTravelHost` — type — line 30
-- `NpcTravelPoint` — type — line 15
+- `blockNpcTravel` — function — line 235
+- `cloneNpcTravel` — function — line 64
+- `cloneNpcTravelPurpose` — function — line 57
+- `hasCommittedNpcTravel` — function — line 129
+- `interpolateNpcTravelPosition` — function — line 109
+- `isNpcTravelArrived` — function — line 122
+- `keepsNpcTravelAfterReify` — function — line 133
+- `markNpcTravelReached` — function — line 223
+- `NpcTravelContinuity` — type — line 31
+- `NpcTravelExecution` — type — line 19
+- `NpcTravelHost` — type — line 51
+- `NpcTravelPoint` — type — line 17
   - domain: npc
-- `reifyNpcTravel` — function — line 118
+- `NpcTravelPurpose` — type — line 26
+- `NpcTravelResolveResult` — type — line 44
+- `observeNpcTravelArrival` — function — line 299
   - domain: npc
-- `resolveOffscreenNpcTravel` — function — line 151
+- `reifyNpcTravel` — function — line 191
   - domain: npc
-- `stampNpcTravelCheckpoint` — function — line 132
+- `resolveOffscreenNpcTravel` — function — line 260
   - domain: npc
-- `travelProgress01` — function — line 56
+- `stampNpcTravelCheckpoint` — function — line 209
+  - domain: npc
+- `travelProgress01` — function — line 101
+
+## `ai/npcTravelCheckpoint.ts`
+
+- `resolveNpcTravelCheckpoint` — function — line 35
+  - domain: npc
 
 ## `ai/npcVigor.ts`
 

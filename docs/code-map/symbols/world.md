@@ -984,6 +984,8 @@ Generated from exported TypeScript symbols.
   - domain: npc
 - `ExpeditionTerms` — type — line 36
 - `isValidExpeditionTerms` — function — line 47
+- `resolveExpeditionDestinationPoint` — function — line 69
+  - domain: settlements-npcs
 
 ## `world/expeditionAssignment.ts`
 

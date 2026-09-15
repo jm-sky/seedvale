@@ -1715,6 +1715,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcExpeditionTravel.test.ts`
+- `ai/npcExpeditionTravel.ts`
 - `app/worldBundle.ts`
 - `world/createExpeditionAssignments.test.ts`
 - `world/expeditionParty.test.ts`
@@ -2236,13 +2238,21 @@ Generated from TypeScript imports.
 - `world/createDryingRacks.ts`
 - `world/dryingRacks.test.ts`
 
+## `world/expedition.test.ts`
+
+**Imports**
+
+- `world/expedition.ts`
+
 ## `world/expedition.ts`
 
 **Imported by**
 
+- `ai/npcExpeditionTravel.ts`
 - `ai/voluntaryExpeditionJoin.ts`
 - `app/worldBundle.ts`
 - `world/createExpeditionAssignments.ts`
+- `world/expedition.test.ts`
 - `world/expeditionAssignment.ts`
 - `world/expeditionParty.ts`
 - `world/workContract.ts`
@@ -2256,6 +2266,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcExpeditionTravel.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
 - `world/createExpeditionAssignments.test.ts`
@@ -3770,6 +3781,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
+- `ai/npcOffscreenSurvival.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/socialBehaviour.ts`
 - `fauna/AnimalLife.test.ts`
