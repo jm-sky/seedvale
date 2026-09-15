@@ -124,6 +124,29 @@ Generated from exported TypeScript symbols.
 
 - `createCaveInteriorMesh` — function — line 117
 
+## `world/caves/abandonedMineLandmark.ts`
+
+- `ABANDONED_MINE_SLOT` — const — line 27
+- `AbandonedMineAuthoredExclusions` — type — line 55
+- `AbandonedMineCaveSource` — type — line 39
+- `AbandonedMineEligibleCave` — type — line 62
+- `AbandonedMineExtraAssignment` — type — line 71
+- `AbandonedMineLandmark` — type — line 47
+  - domain: world-terrain
+- `AbandonedMineResolveInput` — type — line 78
+- `AbandonedMineResolveResult` — type — line 87
+- `caveHasMineCapacity` — function — line 127
+  - domain: world-terrain
+- `caveIsMineEligible` — function — line 138
+  - domain: world-terrain
+- `landmarkRequiredMineCaveId` — function — line 116
+  - domain: world-terrain
+- `makeMineId` — function — line 101
+  - domain: world-terrain
+- `MINE_SEARCH_ENVELOPES` — const — line 31
+- `resolveAbandonedMineLandmark` — function — line 228
+  - domain: world-terrain
+
 ## `world/caves/adventureTopology.ts`
 
 - `ADVENTURE_DEEP_CHAMBER_NODE_ID` — const — line 72
@@ -601,6 +624,41 @@ Generated from exported TypeScript symbols.
 - `meetsDungeonSemanticContract` — function — line 266
   - domain: world-terrain
 
+## `world/caves/mountainCaveSites.ts`
+
+- `MOUNTAIN_CAVE_RIDGE_MIN` — const — line 21
+- `pickMountainCaveSite` — function — line 44
+  - domain: world-terrain
+
+## `world/caves/mountainMassif.ts`
+
+- `bestMassifNeighbourhood` — function — line 244
+  - domain: world-terrain
+- `collectSuitableMassifs` — function — line 220
+  - domain: world-terrain
+- `evaluateMassifSuitability` — function — line 86
+  - domain: world-terrain
+- `MASSIF_CONTEXT_RADIUS` — const — line 24
+- `MASSIF_MAX_WET_FRACTION` — const — line 32
+- `MASSIF_MIN_MEAN_RIDGE` — const — line 29
+- `MASSIF_MIN_MOUNTAIN_FRACTION` — const — line 28
+- `MASSIF_MIN_MOUNTAIN_RINGS` — const — line 35
+- `MASSIF_MIN_RELATIVE_ELEVATION` — const — line 31
+- `MASSIF_MIN_RELIEF` — const — line 30
+- `MASSIF_RING_COUNT` — const — line 25
+- `MASSIF_SAMPLE_RADIUS` — const — line 22
+- `MASSIF_SAMPLES_PER_RING` — const — line 26
+- `MASSIF_SEARCH_ANGULAR_STEPS` — const — line 193
+- `MASSIF_SEARCH_RADIAL_STEPS` — const — line 194
+- `MassifEvaluation` — type — line 44
+- `MassifHit` — type — line 56
+- `MassifSampleFns` — type — line 37
+- `massifSamplesFromParams` — function — line 68
+  - domain: world-terrain
+- `massifSearchCentres` — function — line 201
+  - domain: world-terrain
+- `MassifSearchEnvelope` — type — line 187
+
 ## `world/caves/mouthCarve.ts`
 
 - `CAVE_APPROACH_DEPTH` — const — line 24
@@ -772,14 +830,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 123
-- `Caves` — type — line 125
-- `createCaves` — function — line 374
+- `CaveInteriorQueryChannel` — type — line 128
+- `Caves` — type — line 130
+- `createCaves` — function — line 388
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
   - lifecycle: rebuild
-- `CreateCavesOptions` — type — line 321
+- `CreateCavesOptions` — type — line 332
   - domain: world-terrain
   - system: worldgen-cache
 
@@ -1110,6 +1168,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/largeCaves.ts`
 
+- `caveSiteSafetyOk` — function — line 99
+  - domain: world-terrain
+- `CaveSiteSafetyOptions` — type — line 82
+- `GENERIC_CAVE_MOUNTAIN_RIDGE_MAX` — const — line 53
 - `LARGE_CAVE_MAX_LENGTH` — const — line 36
 - `LARGE_CAVE_MIN_HOME_DIST` — const — line 38
 - `LARGE_CAVE_MIN_LENGTH` — const — line 35
@@ -1117,7 +1179,7 @@ Generated from exported TypeScript symbols.
 - `LARGE_CAVE_MOUTH_WIDTH` — const — line 34
 - `LargeCavePlacementInput` — type — line 22
 - `LargeCaveSite` — type — line 10
-- `pickLargeCaveSites` — function — line 101
+- `pickLargeCaveSites` — function — line 133
 - `VillageFootprint` — type — line 20
 
 ## `world/largeCaveVisual.ts`
@@ -1324,20 +1386,20 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldLocationCatalog.ts`
 
-- `abandonedCemeteryChunkIntersectsKmBand` — function — line 196
+- `abandonedCemeteryChunkIntersectsKmBand` — function — line 207
   - domain: world
-- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 139
-- `createWorldLocationCatalog` — function — line 262
-- `emptyLocationScanDiagnostics` — function — line 104
-- `LandmarkQueryOptions` — type — line 128
-- `LocationScanDiagnostics` — type — line 77
-- `settlementLocationId` — function — line 824
-- `WorldLocationCatalog` — type — line 141
-- `WorldLocationCatalogDeps` — type — line 28
+- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 145
+- `createWorldLocationCatalog` — function — line 273
+- `emptyLocationScanDiagnostics` — function — line 110
+- `LandmarkQueryOptions` — type — line 134
+- `LocationScanDiagnostics` — type — line 83
+- `settlementLocationId` — function — line 864
+- `WorldLocationCatalog` — type — line 147
+- `WorldLocationCatalogDeps` — type — line 29
 
 ## `world/locations/worldLocationNames.ts`
 
-- `landmarkName` — function — line 74
+- `landmarkName` — function — line 81
 
 ## `world/locations/worldLocationTypes.ts`
 

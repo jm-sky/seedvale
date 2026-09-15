@@ -341,6 +341,7 @@ Generated from TypeScript imports.
 - `world/caves/caveTerrainCutout.test.ts`
 - `world/caves/caveWorldgenCache.test.ts`
 - `world/caves/caveWorldgenCache.ts`
+- `world/caves/mountainMassif.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.adventureProps.test.ts`
 - `world/createCaves.archetype.test.ts`
@@ -1081,6 +1082,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/mountainMassif.ts`
 - `world/locations/seedProfile.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`

@@ -1604,6 +1604,7 @@ Generated from TypeScript imports.
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkManager.ts`
 - `ui-vue/store.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 - `world/expeditionParty.ts`
 - `world/locations/locationProximityDiscovery.test.ts`

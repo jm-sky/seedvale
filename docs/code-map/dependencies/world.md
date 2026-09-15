@@ -268,6 +268,38 @@ Generated from TypeScript imports.
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 
+## `world/caves/abandonedMineLandmark.test.ts`
+
+**Imports**
+
+- `world/caves/abandonedMineLandmark.ts`
+- `world/caves/caveArchetype.ts`
+- `world/caves/caveIdentity.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mountainMassif.ts`
+- `world/largeCaves.ts`
+
+## `world/caves/abandonedMineLandmark.ts`
+
+**Imports**
+
+- `world/caves/caveArchetype.ts`
+- `world/caves/caveIdentity.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mountainCaveSites.ts`
+- `world/caves/mountainMassif.ts`
+- `world/largeCaves.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/caves/abandonedMineLandmark.test.ts`
+- `world/createCaves.archetype.test.ts`
+- `world/createCaves.contentAnchors.test.ts`
+- `world/createCaves.test.ts`
+- `world/createCaves.ts`
+- `world/locations/worldLocationCatalog.ts`
+
 ## `world/caves/adventureTopology.test.ts`
 
 **Imports**
@@ -399,6 +431,8 @@ Generated from TypeScript imports.
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/suspiciousTransportCaveCache.ts`
+- `world/caves/abandonedMineLandmark.test.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveInteriorRocks.test.ts`
@@ -407,6 +441,7 @@ Generated from TypeScript imports.
 - `world/caves/productionTopology.ts`
 - `world/createCaves.archetype.test.ts`
 - `world/createCaves.contentAnchors.test.ts`
+- `world/createCaves.test.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/caveAuthoredAnchorClaims.test.ts`
@@ -758,6 +793,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caveGenerator.ts`
+- `world/caves/abandonedMineLandmark.test.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveArchetype.test.ts`
 - `world/caves/caveArchetype.ts`
@@ -983,6 +1020,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `debug/caves/caveHeightfieldFixtures.ts`
+- `world/caves/abandonedMineLandmark.test.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveAdventureProps.test.ts`
@@ -1202,6 +1241,45 @@ Generated from TypeScript imports.
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/productionTopology.ts`
 - `world/createCaves.archetype.test.ts`
+
+## `world/caves/mountainCaveSites.test.ts`
+
+**Imports**
+
+- `world/caves/mountainCaveSites.ts`
+- `world/largeCaves.ts`
+
+## `world/caves/mountainCaveSites.ts`
+
+**Imports**
+
+- `fauna/createFauna.ts`
+- `world/largeCaves.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `world/caves/abandonedMineLandmark.ts`
+- `world/caves/mountainCaveSites.test.ts`
+
+## `world/caves/mountainMassif.test.ts`
+
+**Imports**
+
+- `world/caves/mountainMassif.ts`
+
+## `world/caves/mountainMassif.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/terrainClassification.ts`
+
+**Imported by**
+
+- `world/caves/abandonedMineLandmark.test.ts`
+- `world/caves/abandonedMineLandmark.ts`
+- `world/caves/mountainMassif.test.ts`
 
 ## `world/caves/mouthCarve.ts`
 
@@ -1580,6 +1658,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainCutout.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
@@ -1598,6 +1677,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainCutout.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/caveHeightfieldRepresentation.ts`
@@ -1617,10 +1697,13 @@ Generated from TypeScript imports.
 - `player/cameraBoom.ts`
 - `player/playerDimensions.ts`
 - `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainCutout.ts`
 - `world/caveVolume.ts`
+- `world/caves/abandonedMineLandmark.ts`
+- `world/caves/caveArchetype.ts`
 - `world/caves/caveGroundQuery.ts`
 - `world/caves/caveHeightfieldPresentation.ts`
 - `world/caves/caveHeightfieldQuery.ts`
@@ -1646,6 +1729,7 @@ Generated from TypeScript imports.
 - `shared/bootMark.ts`
 - `terrain/chunkManager.ts`
 - `world/caveVolume.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/caves/caveArchetype.ts`
 - `world/caves/caveContentAnchors.ts`
@@ -2525,6 +2609,8 @@ Generated from TypeScript imports.
 - `fauna/dungeonResidents.test.ts`
 - `player/worldWaterEligibility.test.ts`
 - `world/caveGenerator.ts`
+- `world/caves/abandonedMineLandmark.test.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/adventureTopology.ts`
 - `world/caves/caveAdventureProps.test.ts`
@@ -2542,6 +2628,8 @@ Generated from TypeScript imports.
 - `world/caves/dungeonChambers.test.ts`
 - `world/caves/dungeonTopology.test.ts`
 - `world/caves/dungeonTopology.ts`
+- `world/caves/mountainCaveSites.test.ts`
+- `world/caves/mountainCaveSites.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/caves/productionTopology.test.ts`
 - `world/caves/productionTopology.ts`
@@ -2909,6 +2997,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainClassification.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/createCaves.ts`
 - `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/locationConfig.ts`
@@ -3205,6 +3294,7 @@ Generated from TypeScript imports.
 - `terrain/terrainDetailNormalMap.ts`
 - `world/caveGenerator.ts`
 - `world/caves/caveRng.ts`
+- `world/caves/mountainCaveSites.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/createBeehives.ts`
 - `world/cropVisuals.ts`

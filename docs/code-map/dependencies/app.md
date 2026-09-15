@@ -1618,6 +1618,7 @@ Generated from TypeScript imports.
 - `world/beehives.ts`
 - `world/bloodTraces.ts`
 - `world/cartProp.ts`
+- `world/caves/abandonedMineLandmark.ts`
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveAdventureProps.ts`
 - `world/caves/caveAuthoredAnchorClaims.ts`

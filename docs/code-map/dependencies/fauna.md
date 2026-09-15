@@ -725,6 +725,7 @@ Generated from TypeScript imports.
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
+- `world/caves/mountainCaveSites.ts`
 - `world/caves/productionTopology.floor-continuity.test.ts`
 - `world/createCaves.test.ts`
 - `world/largeCaves.ts`
