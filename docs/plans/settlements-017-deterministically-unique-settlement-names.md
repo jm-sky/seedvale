@@ -9,6 +9,7 @@
 **Subdomains:** `development`
 **Tags:** `names` `worldgen` `determinism`
 **Roadmap:** -
+**Model:** `Sonnet`, `Composer`
 
 ## Cel
 
