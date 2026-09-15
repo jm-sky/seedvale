@@ -79,6 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md` | 🔴 | L      | quests-progression-041, ~~quests-progression-027~~, ~~quests-progression-026~~, ~~world-024~~                                                                                       | quests-lost-something-chronicles        |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                   | -                                       |
 | ◼️ `quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md` | 🔴 | L      | quests-progression-042, quests-progression-041, ~~world-024~~                                                                                                                       | quests-lost-something-chronicles        |
+| ◼️ `quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md` | 🔴 | L      | quests-progression-043, quests-progression-042, ~~quests-progression-027~~                                                                                                          | quests-lost-something-chronicles        |
 
 ---
 
@@ -222,7 +223,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `039`
 - npc: `039`
 - persistence: `005`
-- quests-progression: `044`
+- quests-progression: `045`
 - settlements: `018`
 - settlements-npcs: `037`
 - tools: `015`
