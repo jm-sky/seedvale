@@ -36,6 +36,7 @@ Plans and current code take precedence over roadmap documents when they disagree
 | `quests-and-reputation.md` |
 | `quests-hunters-brotherhood.md` |
 | `quests-iron-trail.md` |
+| `quests-lost-something-chronicles.md` |
 | `textiles-and-herbal-medicine.md` |
 | `workforce-for-hire.md` |
 <!-- AUTO-GENERATED:END -->

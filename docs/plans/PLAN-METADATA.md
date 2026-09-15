@@ -367,6 +367,7 @@ Roadmap is not another priority system.
 - `quests-and-reputation`
 - `quests-hunters-brotherhood`
 - `quests-iron-trail`
+- `quests-lost-something-chronicles`
 - `textiles-and-herbal-medicine`
 - `workforce-for-hire`
 
