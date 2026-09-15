@@ -261,10 +261,9 @@ export const SPAWNER_RING_OFFSET: [number, number] = [25, 45]
 const MIN_SPAWN_SEPARATION = 10
 
 /** Clearance (world units) from a river's water edge for any wild spawn
- *  position. `sampleHeight <= waterLevel` cannot see a river channel at all
- *  when the channel's bed sits above the global water level (any stream above
- *  sea level), so a spawn point could land in flowing water and read as dry
- *  ground. Applies to every wild spawn, prey and predator alike. */
+ *  position — extra bank distance on top of canonical `LocalWaterSample.present`,
+ *  not a substitute for detecting water. Applies to every wild spawn, prey
+ *  and predator alike. */
 const SPAWN_RIVER_CLEARANCE = 1.5
 /** Wider berth for a habitat spawn *point* — a cave mouth / thicket / den is a
  *  physical prop with a footprint plus the pack that lives around it, so
@@ -283,6 +282,29 @@ export function clearsRiverChannel(
   clearance: number,
 ): boolean {
   return distanceToWaterEdge == null || distanceToWaterEdge >= clearance
+}
+
+/** Ordinary wild-fauna spawn/respawn site: physically dry (ocean, lake, or
+ *  river — `LocalWaterSample.present`) plus optional river-bank clearance.
+ *  Species habitat filters sit on top of this; they never replace it. */
+export function isValidWildFaunaSpawnSite(
+  water: LocalWaterSample,
+  riverDistanceToEdge: number | null | undefined,
+  riverClearance: number,
+): boolean {
+  return !water.present && clearsRiverChannel(riverDistanceToEdge, riverClearance)
+}
+
+/** Probe result wins when `findWalkableNear` found a site; otherwise the
+ *  fallback is used only when it is itself a valid dry site. `null` means
+ *  skip spawn — never place an animal on an unvalidated wet fallback. */
+export function resolveWildFaunaSpawnPosition(
+  probed: { x: number, z: number } | null,
+  fallback: { x: number, z: number },
+  fallbackOk: boolean,
+): { x: number, z: number } | null {
+  if (probed) return probed
+  return fallbackOk ? fallback : null
 }
 
 /** True when `(x, z)` sits within `clearance` of any road corridor's own
@@ -708,14 +730,11 @@ export async function createFauna(
     onAnimalDeath?.(animalId)
   }
 
-  /** True when `(x, z)` keeps at least `clearance` between itself and the
-   *  nearest river's water edge. Always true without a `riverShoreDistance`
-   *  or where no river is near. */
-  const clearOfRiver = (x: number, z: number, clearance: number): boolean =>
-    clearsRiverChannel(riverShoreDistance?.(x, z), clearance)
-
   const onRoad = (x: number, z: number): boolean =>
     isNearRoadCorridor(x, z, roadSegments, SPAWNER_ROAD_CLEARANCE)
+
+  const drySpawnSite = (x: number, z: number, riverClearance: number): boolean =>
+    isValidWildFaunaSpawnSite(sampleLocalWater(x, z), riverShoreDistance?.(x, z), riverClearance)
 
   /** Random point within [minDist, maxDist] of (cx, cz), clear of water and
    *  a safety bound around (cx, cz) — `filter` adds a habitat preference
@@ -740,8 +759,7 @@ export async function createFauna(
       const x = cx + Math.cos(angle) * dist
       const z = cz + Math.sin(angle) * dist
       if (Math.abs(x - cx) > clampRadius || Math.abs(z - cz) > clampRadius) continue
-      if (sampleHeight(x, z) <= waterLevel + 0.6) continue
-      if (!clearOfRiver(x, z, SPAWN_RIVER_CLEARANCE)) continue
+      if (!drySpawnSite(x, z, SPAWN_RIVER_CLEARANCE)) continue
       if (filter && !filter(x, z)) continue
       return { x, z }
     }
@@ -757,12 +775,12 @@ export async function createFauna(
 
   /** True if any point a few meters out from (x, z) dips into water — used to
    *  bias duck spawns toward the shoreline without requiring the duck's own
-   *  spot to be wet. */
+   *  spot to be wet. The duck's own candidate is still a dry spawn site. */
   const nearWater = (x: number, z: number): boolean => {
     const offsets: Array<[number, number]> = [
       [5, 0], [-5, 0], [0, 5], [0, -5], [3.5, 3.5], [-3.5, -3.5], [3.5, -3.5], [-3.5, 3.5],
     ]
-    return offsets.some(([dx, dz]) => sampleHeight(x + dx, z + dz) <= waterLevel + 0.2)
+    return offsets.some(([dx, dz]) => sampleLocalWater(x + dx, z + dz).present)
   }
 
   const habitatFilterFor = (profile: SpawnProfile): ((x: number, z: number) => boolean) | undefined => {
@@ -945,8 +963,8 @@ export async function createFauna(
   /** Habitat spawners (esp. thicket) stay inland — not on beach / coastal
    *  band, and not on top of a river channel (`SPAWNER_RIVER_CLEARANCE`). */
   const spawnerSiteOk = (x: number, z: number): boolean => {
+    if (!drySpawnSite(x, z, SPAWNER_RIVER_CLEARANCE)) return false
     if (!offRoad(x, z)) return false
-    if (!clearOfRiver(x, z, SPAWNER_RIVER_CLEARANCE)) return false
     return !isCoastalPlacement(x, z, {
       sampleHeight,
       waterLevel,
@@ -1316,7 +1334,12 @@ export async function createFauna(
           .filter((a) => !a.isDead() && !occupantRegistry.hasPersistentAnimalId(a.animalId))
           .map((a) => ({ kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z })),
         (spawner) => {
-          const pos = findWalkableNear(spawner.x, spawner.z, 0, 4) ?? spawner
+          const pos = resolveWildFaunaSpawnPosition(
+            findWalkableNear(spawner.x, spawner.z, 0, 4),
+            spawner,
+            drySpawnSite(spawner.x, spawner.z, SPAWN_RIVER_CLEARANCE),
+          )
+          if (!pos) return
           const agent = spawnAgent(spawner.kind, pos.x, pos.z, undefined, undefined, undefined, spawner.id)
           scene.add(agent.mesh)
           agents.push(agent)
@@ -1343,7 +1366,12 @@ export async function createFauna(
                 nearby++
               }
               while (nearby < targetCap && spawner.state === 'active') {
-                const spot = findWalkableNear(spawner.x, spawner.z, 0, 4) ?? spawner
+                const spot = resolveWildFaunaSpawnPosition(
+                  findWalkableNear(spawner.x, spawner.z, 0, 4),
+                  spawner,
+                  drySpawnSite(spawner.x, spawner.z, SPAWN_RIVER_CLEARANCE),
+                )
+                if (!spot) break
                 const agent = spawnAgent(spawner.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
                 scene.add(agent.mesh)
                 agents.push(agent)

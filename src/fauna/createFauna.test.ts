@@ -7,6 +7,8 @@ import {
   faunaGltfUrls,
   isDeerEdgeHabitat,
   isNearRoadCorridor,
+  isValidWildFaunaSpawnSite,
+  resolveWildFaunaSpawnPosition,
   SPAWNER_SPECS,
   spawnerId,
 } from './createFauna'
@@ -80,6 +82,60 @@ describe('spawnerId (plan 188 — multiple habitat instances of the same type)',
     const second = spawnerId('home', 'rockDen', 'bear', 1)
     expect(second).not.toBe(first)
     expect(second).toBe('home:cave:bear')
+  })
+})
+
+describe('isValidWildFaunaSpawnSite (canonical LocalWaterSample spawn gate)', () => {
+  const SPAWN_RIVER_CLEARANCE = 1.5
+  const dry = { present: false } as const
+  const ocean = {
+    present: true as const,
+    waterSurfaceHeight: 0.45,
+    floorHeight: -2,
+    depth: 2.45,
+  }
+  const elevatedRiver = {
+    present: true as const,
+    waterSurfaceHeight: 19,
+    floorHeight: 18,
+    depth: 1,
+  }
+
+  it('rejects an ocean/lake candidate', () => {
+    expect(isValidWildFaunaSpawnSite(ocean, 20, SPAWN_RIVER_CLEARANCE)).toBe(false)
+  })
+
+  it('rejects a river candidate even when height would sit above global waterLevel', () => {
+    // sampleHeight > waterLevel would have passed the old lid check; present wins.
+    expect(isValidWildFaunaSpawnSite(elevatedRiver, undefined, SPAWN_RIVER_CLEARANCE)).toBe(false)
+  })
+
+  it('accepts a dry candidate with enough river-bank clearance', () => {
+    expect(isValidWildFaunaSpawnSite(dry, 20, SPAWN_RIVER_CLEARANCE)).toBe(true)
+    expect(isValidWildFaunaSpawnSite(dry, undefined, SPAWN_RIVER_CLEARANCE)).toBe(true)
+  })
+
+  it('still requires river-bank clearance on dry land next to a channel', () => {
+    expect(isValidWildFaunaSpawnSite(dry, 1, SPAWN_RIVER_CLEARANCE)).toBe(false)
+  })
+
+  it('keeps a duck spawn point dry (water profile is shoreline, not in-water)', () => {
+    expect(isValidWildFaunaSpawnSite(dry, 20, SPAWN_RIVER_CLEARANCE)).toBe(true)
+    expect(isValidWildFaunaSpawnSite(ocean, 20, SPAWN_RIVER_CLEARANCE)).toBe(false)
+  })
+})
+
+describe('resolveWildFaunaSpawnPosition (respawn must not land on water)', () => {
+  it('uses the probed dry site when findWalkableNear succeeded', () => {
+    expect(resolveWildFaunaSpawnPosition({ x: 1, z: 2 }, { x: 9, z: 9 }, true)).toEqual({ x: 1, z: 2 })
+  })
+
+  it('falls back to the spawner only when that fallback is itself dry', () => {
+    expect(resolveWildFaunaSpawnPosition(null, { x: 4, z: 5 }, true)).toEqual({ x: 4, z: 5 })
+  })
+
+  it('does not create a PreySpawner respawn on a wet fallback', () => {
+    expect(resolveWildFaunaSpawnPosition(null, { x: 4, z: 5 }, false)).toBeNull()
   })
 })
 

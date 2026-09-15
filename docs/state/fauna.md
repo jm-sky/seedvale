@@ -66,7 +66,7 @@ Death (`takeDamage()` → collapse, `onDeath` fires once regardless of cause) st
 ## Environment integration
 
 - **Terrain/hydrology:** species habitat siting (forest density, biome) and spawn-clearance checks reuse the same continuous sampling surface settlements and terrain generation use — never a second geometry representation.
-- **River/water queries:** the same terrain-owned river-shore-distance query gates both ordinary wild spawn placement and the wider habitat-spawner placement radius (a `rockDen`/thicket/den is a physical prop plus the pack living around it, so it needs more clearance).
+- **River/water queries:** wild spawn/respawn rejects a candidate when terrain-owned `LocalWaterSample.present` is true (ocean, lake, or river — one answer, no per-species fork). River-shore distance is extra bank clearance on top of that (`SPAWN_RIVER_CLEARANCE` for animals, a wider berth for a `rockDen`/thicket/den prop plus its pack). Duck `'water'` habitat still places a **dry** point next to water, not in it.
 - **Road corridors:** a fauna-owned road-corridor check keeps ordinary wild spawns off road corridors, reusing the same corridor geometry settlements produce for their own road network — not a second road representation.
 - **Physical water traversal:** see [Water traversal](#behaviour) above; the single terrain-owned "what water is here" answer is shared by autonomous movement, pathfinding, and mounted movement alike.
 
