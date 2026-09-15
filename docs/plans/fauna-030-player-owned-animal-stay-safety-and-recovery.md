@@ -9,6 +9,7 @@
 **Subdomains:** `domestication` `behavior` `lifecycle`
 **Tags:** `ownership` `horse` `stay` `water` `persistence`
 **Roadmap:** `horse-and-riding.md`
+**Model:** `Opus`, `Sonnet`
 
 ## Cel
 
