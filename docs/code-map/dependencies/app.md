@@ -1608,6 +1608,7 @@ Generated from TypeScript imports.
 - `terrain/naturalResources.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/terrainPreparation.ts`
+- `terrain/terrainVisualHorizon.ts`
 - `world/animalTraps.ts`
 - `world/beehives.ts`
 - `world/bloodTraces.ts`

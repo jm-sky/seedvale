@@ -575,6 +575,13 @@ Generated from exported TypeScript symbols.
 - `toolSpeedMultiplier` — function — line 224
 - `validatePreparationSamples` — function — line 261
 
+## `terrain/terrainVisualHorizon.ts`
+
+- `terrainVisualHorizon` — function — line 33
+  - domain: world-terrain
+- `TerrainVisualHorizon` — type — line 14
+  - domain: world-terrain
+
 ## `terrain/vegetationRegionBatcher.ts`
 
 - `createVegetationRegionBatcher` — function — line 125

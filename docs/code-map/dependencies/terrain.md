@@ -1150,6 +1150,21 @@ Generated from TypeScript imports.
 - `world/siteInfrastructure.test.ts`
 - `world/siteInfrastructure.ts`
 
+## `terrain/terrainVisualHorizon.test.ts`
+
+**Imports**
+
+- `terrain/terrainVisualHorizon.ts`
+
+## `terrain/terrainVisualHorizon.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `terrain/terrainVisualHorizon.test.ts`
+- `world/weatherVisuals.test.ts`
+- `world/weatherVisuals.ts`
+
 ## `terrain/vegetationRegionBatcher.test.ts`
 
 **Imports**

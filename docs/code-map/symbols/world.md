@@ -313,19 +313,20 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveHeightfieldPresentation.ts`
 
-- `CaveHeightfieldPresentation` — type — line 288
-- `createCaveHeightfieldGeometry` — function — line 91
+- `CaveHeightfieldPresentation` — type — line 313
+- `createCaveHeightfieldGeometry` — function — line 111
   - domain: world-terrain
-- `createCaveHeightfieldPresentation` — function — line 318
+- `createCaveHeightfieldPresentation` — function — line 343
   - domain: world-terrain
-- `createCaveMouthProxy` — function — line 138
+- `createCaveMouthProxy` — function — line 164
   - domain: world-terrain
-- `createMouthRocks` — function — line 221
+- `createCaveMouthProxyMaterial` — function — line 63
+- `createMouthRocks` — function — line 246
   - domain: world-terrain
-- `createMouthUndersideMask` — function — line 109
+- `createMouthUndersideMask` — function — line 129
   - domain: world-terrain
 - `createMouthUndersideMaskMaterial` — function — line 45
-- `exemptCavePresentationFromSceneFog` — function — line 57
+- `exemptCavePresentationFromSceneFog` — function — line 77
 
 ## `world/caves/caveHeightfieldQuery.ts`
 
@@ -771,14 +772,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 122
-- `Caves` — type — line 124
-- `createCaves` — function — line 373
+- `CaveInteriorQueryChannel` — type — line 123
+- `Caves` — type — line 125
+- `createCaves` — function — line 374
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
   - lifecycle: rebuild
-- `CreateCavesOptions` — type — line 320
+- `CreateCavesOptions` — type — line 321
   - domain: world-terrain
   - system: worldgen-cache
 
@@ -950,10 +951,10 @@ Generated from exported TypeScript symbols.
 - `createDayNightState` — function — line 43
 - `DayNightState` — type — line 29
 - `DEFAULT_TIME_OF_DAY` — const — line 27
-- `formatClock` — function — line 200
-- `formatWorldDayClock` — function — line 209
-- `parseTimeOfDayFromUrl` — function — line 184
-- `phaseName` — function — line 214
+- `formatClock` — function — line 202
+- `formatWorldDayClock` — function — line 211
+- `parseTimeOfDayFromUrl` — function — line 186
+- `phaseName` — function — line 216
 - `resetDayNightForNewGame` — function — line 57
 - `skyParamsFromTime` — function — line 72
 - `tickDayNight` — function — line 62
@@ -2085,22 +2086,24 @@ Generated from exported TypeScript symbols.
 
 ## `world/weatherVisuals.ts`
 
-- `applyLightningFlash` — function — line 135
+- `applyLightningFlash` — function — line 154
   - domain: world
-- `applyWeatherOverlay` — function — line 39
-- `applyWeatherSkyOverlay` — function — line 92
+- `applyWeatherOverlay` — function — line 40
+- `applyWeatherSkyOverlay` — function — line 111
   - domain: world
-- `CAVE_INTERIOR_FOG_COLOR` — const — line 153
-- `CAVE_INTERIOR_FOG_FAR` — const — line 155
-- `CAVE_INTERIOR_FOG_NEAR` — const — line 154
-- `fogColorLuminance` — function — line 179
-- `GRASS_WIND_AMP_MAX` — const — line 106
-- `grassWindAmpFor` — function — line 121
+- `capOutdoorFogToTerrainHorizon` — function — line 74
+  - domain: world-terrain
+- `CAVE_INTERIOR_FOG_COLOR` — const — line 172
+- `CAVE_INTERIOR_FOG_FAR` — const — line 174
+- `CAVE_INTERIOR_FOG_NEAR` — const — line 173
+- `fogColorLuminance` — function — line 198
+- `GRASS_WIND_AMP_MAX` — const — line 125
+- `grassWindAmpFor` — function — line 140
   - domain: world
-- `resolveSceneFog` — function — line 160
-- `SceneFogParams` — type — line 157
-- `WeatherSkyOverlay` — type — line 64
-- `WeatherVisualOverlay` — type — line 10
+- `resolveSceneFog` — function — line 179
+- `SceneFogParams` — type — line 176
+- `WeatherSkyOverlay` — type — line 83
+- `WeatherVisualOverlay` — type — line 11
 
 ## `world/wellGroundwater.ts`
 

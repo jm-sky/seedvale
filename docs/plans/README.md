@@ -75,7 +75,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                               | -                                       |
 | 💡 `settlements-015-settlement-palisade-collision.md`                          | 🔴 | S      | -                                                                                                                                                                               | -                                       |
 | 💡 `settlements-017-deterministically-unique-settlement-names.md`              | 🟡 | S      | -                                                                                                                                                                               | -                                       |
-| 💡 `world-terrain-035-streaming-visual-horizon-and-distant-occlusion.md`       | 🔴 | M      | ~~world-terrain-026~~                                                                                                                                                           | -                                       |
 
 ---
 

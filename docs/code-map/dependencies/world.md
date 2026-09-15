@@ -3988,6 +3988,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `terrain/terrainVisualHorizon.ts`
 - `world/weather.ts`
 - `world/weatherVisuals.ts`
 
@@ -3995,6 +3996,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `terrain/terrainVisualHorizon.ts`
 - `world/weather.ts`
 
 **Imported by**
