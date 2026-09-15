@@ -349,7 +349,7 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     group: 'character',
     prepare: { mode: 'height', value: PLAYER_HEIGHT },
     skinned: true,
-    anchors: anchorsForAsset('character:player'),
+    anchors: anchorsForAsset('character:ubc-peasant'),
   })
   out.push({
     id: 'character:ubc-ranger',
@@ -358,7 +358,7 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     group: 'character',
     prepare: { mode: 'height', value: PLAYER_HEIGHT },
     skinned: true,
-    anchors: anchorsForAsset('character:player'),
+    anchors: anchorsForAsset('character:ubc-ranger'),
   })
 
   for (const [gender, urls] of Object.entries(NPC_MODEL_URLS)) {

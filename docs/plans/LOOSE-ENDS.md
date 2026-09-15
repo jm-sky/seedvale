@@ -42,7 +42,6 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 - [ ] 2026-09-15 — `?playerTint=brown` nie jest persystowany; character appearance (wybór koloru bez query) to osobna praca.
 - [ ] 2026-09-15 — UAL2 (combat/work: `TreeChopping_Loop`, `Walk_Carry_Loop`, `Farm_*`) jest na tym samym UBC rigu co UAL1; dodać subset analogicznie do `ual1_player.glb`, bez retargetu. Jump/crouch/swim clipy z UAL1 czekają aż `PlayerController` zacznie je napędzać.
 - [ ] 2026-09-15 — NPC nadal na Ultimate Modular Men/Women (inny szkielet). Retarget UAL→Modular albo migracja NPC na UBC to osobna praca; nie mieszać clipów między rygami.
-- [ ] 2026-09-15 — `HELD_ATTACH` jest strojone pod Adventurer `WristR` (+Y ≈ palce). UBC `hand_r` może trzymać narzędzie krzywo; korekta dopiero po weryfikacji w przeglądarce, bez drugiego zestawu offsetów „na zapas”.
 
 ## Off-screen simulation
 

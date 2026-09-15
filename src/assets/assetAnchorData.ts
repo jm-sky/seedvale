@@ -15,14 +15,63 @@ export const RIGHT_HAND_BONE_NAMES = [
   'mixamorigRightHand',
 ] as const
 
+/** Identity — Quaternius Adventurer `WristR` already matches `HELD_ATTACH`. */
+export const ADVENTURER_HAND_SPACE: readonly [number, number, number] = [0, 0, 0]
+
+/**
+ * Maps Adventurer `WristR` (+Y ≈ fingertips) onto Unreal/UBC `hand_r` (+X along
+ * the bone). Applied in `mountAttachOnSocket` so every held item keeps the same
+ * `HELD_ATTACH` numbers. `Rz(-π/2)` sends WristR +Y (fingertips) onto UBC +X
+ * so the blade follows the hand like Adventurer, not a second per-item table.
+ */
+export const UBC_HAND_FROM_WRIST_R: readonly [number, number, number] = [0, 0, -Math.PI / 2]
+
+const UBC_HAND_BONE_NAMES = new Set(['hand_r', 'hand_l'])
+const ADVENTURER_HAND_BONE_NAMES = new Set([
+  'WristR',
+  'HandR',
+  'Wrist.R',
+  'Hand.R',
+  'mixamorigRightHand',
+])
+
+type NamedParentNode = {
+  name: string
+  parent: NamedParentNode | null
+}
+
+/**
+ * WristR-space Euler for `HELD_ATTACH`, or the UBC remap when `hand_r` is an
+ * ancestor of `socket` (held tools parent a nameless pivot under the bone).
+ * Unknown names stay Adventurer/identity so Modular NPCs do not shift.
+ */
+export function handAttachSpaceFromSocket(socket: NamedParentNode): readonly [number, number, number] {
+  let node: NamedParentNode | null = socket
+  while (node) {
+    if (UBC_HAND_BONE_NAMES.has(node.name)) return UBC_HAND_FROM_WRIST_R
+    if (ADVENTURER_HAND_BONE_NAMES.has(node.name)) return ADVENTURER_HAND_SPACE
+    node = node.parent
+  }
+  return ADVENTURER_HAND_SPACE
+}
+
 export const CHARACTER_ANCHORS: readonly AssetAnchorDef[] = [
   {
     name: 'hand.right',
     type: 'attachment',
     node: RIGHT_HAND_BONE_NAMES,
-    // Bone frame is not the Seedvale anchor convention (+Y ≈ fingertips,
-    // −Z ≈ body centre); rotation brings it into +Z-forward / +Y-up.
-    rotation: [0, 0, 0],
+    // Adventurer `WristR` already matches `HELD_ATTACH` (+Y ≈ fingertips,
+    // −Z ≈ body centre).
+    rotation: ADVENTURER_HAND_SPACE,
+  },
+]
+
+export const CHARACTER_ANCHORS_UBC: readonly AssetAnchorDef[] = [
+  {
+    name: 'hand.right',
+    type: 'attachment',
+    node: RIGHT_HAND_BONE_NAMES,
+    rotation: UBC_HAND_FROM_WRIST_R,
   },
 ]
 
@@ -81,6 +130,8 @@ export const HELD_TOOL_GRIP_ANCHORS: Partial<Record<string, readonly AssetAnchor
 export const ASSET_ANCHORS: Record<string, readonly AssetAnchorDef[]> = {
   'settlement:well': [WELL_INTERACTION],
   'character:player': CHARACTER_ANCHORS,
+  'character:ubc-peasant': CHARACTER_ANCHORS_UBC,
+  'character:ubc-ranger': CHARACTER_ANCHORS_UBC,
   'npc:Farmer': CHARACTER_ANCHORS,
   'npc:Worker': CHARACTER_ANCHORS,
   'npc:Casual_Hoodie': CHARACTER_ANCHORS,

@@ -1,8 +1,13 @@
-import { Group, type Object3D, Vector3 } from 'three'
+import { Euler, Group, type Object3D, Quaternion, Vector3 } from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { ToolKind } from './HeldTool'
 import { findAnchorNode } from '../assets/anchorResolve'
-import { anchorsForAsset, heldToolHasGripAnchor, RIGHT_HAND_BONE_NAMES } from '../assets/assetAnchorData'
+import {
+  anchorsForAsset,
+  handAttachSpaceFromSocket,
+  heldToolHasGripAnchor,
+  RIGHT_HAND_BONE_NAMES,
+} from '../assets/assetAnchorData'
 import { loadGltf, preparePropFitMax } from '../assets/loadGltf'
 import { mountByAnchorPair } from '../assets/mountByAnchorPair'
 import { createItemMesh } from './items'
@@ -260,6 +265,10 @@ export type HeldMountContext = {
 
 const heldTemplates = new Map<ToolKind, Group>()
 const _socketWorldScale = new Vector3()
+const _spaceEuler = new Euler()
+const _attachEuler = new Euler()
+const _spaceQuat = new Quaternion()
+const _attachQuat = new Quaternion()
 
 export function findRightHandSocket(root: Object3D): Object3D | null {
   return findAnchorNode(root, RIGHT_HAND_BONE_NAMES).node
@@ -353,7 +362,11 @@ export function mountHeldToolOnSocket(
   return mount
 }
 
-/** Parent `mount` under `socket` with meter-sized attach and armature scale compensation. */
+/**
+ * Parent `mount` under `socket` with meter-sized attach and armature scale
+ * compensation. `HELD_ATTACH` stays WristR-authored; UBC `hand_r` gets
+ * {@link handAttachSpaceFromSocket} composed onto position and quaternion.
+ */
 export function mountAttachOnSocket(
   mount: Object3D,
   socket: Object3D,
@@ -365,12 +378,19 @@ export function mountAttachOnSocket(
   const sy = Math.max(_socketWorldScale.y, 1e-6)
   const sz = Math.max(_socketWorldScale.z, 1e-6)
 
+  const space = handAttachSpaceFromSocket(socket)
+  _spaceEuler.set(space[0], space[1], space[2], 'XYZ')
+  _spaceQuat.setFromEuler(_spaceEuler)
+  _attachEuler.set(attach.rotation[0], attach.rotation[1], attach.rotation[2], 'XYZ')
+  _attachQuat.setFromEuler(_attachEuler)
+
   mount.position.set(
     attach.position[0] / sx,
     attach.position[1] / sy,
     attach.position[2] / sz,
   )
-  mount.rotation.set(attach.rotation[0], attach.rotation[1], attach.rotation[2])
+  mount.position.applyQuaternion(_spaceQuat)
+  mount.quaternion.copy(_spaceQuat).multiply(_attachQuat)
   mount.scale.multiplyScalar(attach.scale)
   mount.scale.x /= sx
   mount.scale.y /= sy

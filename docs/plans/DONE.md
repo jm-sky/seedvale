@@ -4,6 +4,9 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-033-ubc-player-model-alpha`                              | 2026-09-15 12:16:51 | —                   | `items-player`   | —          |
+| `items-player-034-equipment-driven-player-outfit`                      | 2026-09-15 12:16:51 | —                   | `items-player`   | —          |
+| `settlements-015-settlement-palisade-collision`                        | 2026-09-15 10:59:26 | —                   | `settlements`    | —          |
 | `settlements-017-deterministically-unique-settlement-names`            | 2026-09-15 10:48:43 | —                   | `settlements`    | —          |
 | `world-terrain-035-streaming-visual-horizon-and-distant-occlusion`     | 2026-09-15 10:40:27 | —                   | `world-terrain`  | —          |
 | `tools-014-player-owned-horse-debug-controls`                          | 2026-09-15 10:31:36 | —                   | `tools`          | —          |
