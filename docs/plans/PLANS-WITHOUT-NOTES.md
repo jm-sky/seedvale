@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-15 14:48:40  
+> Date: 2026-09-15 15:14:27  
 
 ## PLANS
 
-- `quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`
 - `quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md`
 - `quests-progression-043-lost-treasure-chronicles-survivor-site-missing-key-and-final-dungeon-access.md`
 - `quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md`
@@ -15,43 +14,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`
-
-Prompt:
-
-```
-Zrób review planu `quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
 
 ### `quests-progression-042-lost-treasure-chronicles-expedition-remains-journal-and-missing-key-trail.md`
 
