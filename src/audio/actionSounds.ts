@@ -1,8 +1,8 @@
 /** Action one-shots (shovel dig, axe chop, melee, well, etc.). Sources/licenses: public/sounds/README.md. */
 
 import type { AnimalKind } from '../fauna/AnimalAgent'
-import { resolveAnimalDeathSoundUrl } from './animalSounds'
 import type { ActiveSound, PlayAt, PlayAtCancelable, WorldSoundPosition } from './createWorldAudio'
+import { resolveAnimalDeathSoundUrl } from './animalSounds'
 
 export const ACTION_DIG_SOUND_URLS = [
   '/sounds/action-dig-01.ogg',

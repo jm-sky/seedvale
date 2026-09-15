@@ -104,19 +104,15 @@ Many gameplay items exist mechanically but still fall back to simple procedural 
 
 Known gaps from current model backlog/code include:
 
-- whetstone,
-- seed pouches (`tree_seed`, carrot, potato, cabbage),
+- whetstone (pocket stone — MegaKit `Whetstone` is a workshop grindstone, not usable here),
 - structural beam,
 - cooking grate,
 - iron rod,
 - waterskins (small / medium / large),
-- wooden bucket,
-- copper bucket,
 - copper ore / refined copper,
 - simple-tier animal trap,
 - food models still represented procedurally or with generic shapes, including some of:
   - raw meat,
-  - bread,
   - species meats beyond current shared assets,
   - cheese,
   - dried meat,
@@ -191,7 +187,6 @@ The active nature baseline is already broad: trees, bushes, pines, fern, cactus,
 ### Concrete gaps
 
 - **missing:** textured willow. Existing vertex-color candidate was intentionally rejected for style mismatch.
-- **in repo / unwired:** additional rock variant (`rock_b`).
 - **in repo / unwired/parked:** pine clump candidate.
 - **in repo / unwired:** grass-clump GLB candidate.
 
@@ -199,11 +194,9 @@ The active nature baseline is already broad: trees, bushes, pines, fern, cactus,
 
 Rather than adding many isolated plant species, the world would benefit more from reusable environment variation sets:
 
-- 2–4 rock formations / boulders,
-- fallen trees and dead logs,
-- dead/snag tree variants,
-- forest-floor shrubs and ground-cover variants,
-- marsh/wetland vegetation,
+- forest-floor twigs / leaf piles / roots (nothing suitable in `_temp/Models`),
+- dedicated pocket whetstone (not the MegaKit workshop grindstone),
+- marsh/wetland vegetation beyond reeds/cattail (`reed_a` is already the Poly cattail) and moss logs,
 - larger natural landmarks usable by worldgen.
 
 These should extend the existing vegetation/worldgen mechanisms, not create decorative one-off placement systems.

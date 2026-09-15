@@ -553,6 +553,12 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
 
+## `items/everydayItemGlbs.test.ts`
+
+**Imports**
+
+- `items/itemModels.ts`
+
 ## `items/foodFreshness.test.ts`
 
 **Imports**
@@ -1003,6 +1009,7 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `assets/assetIndex.ts`
+- `items/everydayItemGlbs.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/items.ts`
 

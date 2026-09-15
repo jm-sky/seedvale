@@ -126,7 +126,9 @@ export const OLD_SPAWN_CHANCE = 0.5
  * Template heights after `prepareProp` — must stay aligned with `TREE_SPECS`
  * index order in `settlement/props.ts`.
  */
-export const TREE_TEMPLATE_HEIGHT_M: readonly number[] = [4.2, 3.8, 4.6, 4.4, 4.8, 3.6, 4.6, 5.2, 4.0]
+export const TREE_TEMPLATE_HEIGHT_M: readonly number[] = [
+  4.2, 3.8, 4.6, 4.4, 4.8, 3.6, 4.6, 5.2, 4.0, 3.5, 3.8, 3.4, 3.7,
+]
 
 /** Indices into `TREE_SPECS`/`TREE_SPECIES_PREFS` for the pine variants (plan
  *  140) — used by fern/mushroom placement's "conifer nearby" bonus. */
@@ -225,12 +227,13 @@ export function treeVisualKind(stage: TreeGrowthStage): TreeVisualKind {
   return 'living'
 }
 
-/** Default prefs per `TREE_SPECS` index (9 entries — indices 6-8 are the pine
- *  variants, `PINE_SPECIES_INDICES`). Broadleaf entries keep a modest, mostly
+/** Default prefs per `TREE_SPECS` index (13 entries — 6-8 pines,
+ *  9-12 extra dead trees). Broadleaf entries keep a modest, mostly
  *  uniform `coast` value (generalists, not coastal specialists); pines get a
  *  real bias per plan 140's implementation notes: high mountain/highland,
  *  medium-high forest, medium coast (drier/sandier ground behind the direct
- *  beach zone — not "coast = pine"), low swamp. */
+ *  beach zone — not "coast = pine"), low swamp. Dead-tree extras match
+ *  `deadtree_1` (index 5): slightly more open/ridge, less swamp. */
 export const TREE_SPECIES_PREFS: readonly TreeSpeciesPrefs[] = [
   { desert: 0.25, swamp: 0.55, forest: 1.0, mountain: 0.35, coast: 0.25 },
   { desert: 0.2, swamp: 0.5, forest: 1.0, mountain: 0.3, coast: 0.25 },
@@ -241,6 +244,10 @@ export const TREE_SPECIES_PREFS: readonly TreeSpeciesPrefs[] = [
   { desert: 0.2, swamp: 0.15, forest: 0.75, mountain: 0.95, coast: 0.55 },
   { desert: 0.2, swamp: 0.15, forest: 0.8, mountain: 0.9, coast: 0.5 },
   { desert: 0.15, swamp: 0.1, forest: 0.7, mountain: 1.0, coast: 0.45 },
+  { desert: 0.35, swamp: 0.3, forest: 0.65, mountain: 0.45, coast: 0.3 },
+  { desert: 0.35, swamp: 0.3, forest: 0.65, mountain: 0.45, coast: 0.3 },
+  { desert: 0.35, swamp: 0.3, forest: 0.65, mountain: 0.45, coast: 0.3 },
+  { desert: 0.35, swamp: 0.3, forest: 0.65, mountain: 0.45, coast: 0.3 },
 ]
 
 export type TreePresence = {

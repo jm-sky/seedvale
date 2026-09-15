@@ -1964,43 +1964,43 @@ Generated from exported TypeScript symbols.
 
 ## `world/treeLifecycle.ts`
 
-- `advanceStage` — function — line 416
-- `bonusYieldForChopStage` — function — line 217
-- `BRANCH_REGENERATION_DAYS` — const — line 172
-- `BRANCH_YIELD_BY_SIZE` — const — line 177
-- `BranchHarvestResult` — type — line 183
-- `canopyGrowthFactor` — function — line 397
-- `canReachOld` — function — line 202
-- `CHOP_SCALE_MULT` — const — line 136
-- `CHOP_YIELDS` — const — line 150
-- `clamp01` — function — line 267
-- `coastalFactor` — function — line 355
-- `createTreeLifecycle` — function — line 558
-- `envGrowthFactor` — function — line 365
-- `FELLING_BEAM_YIELD` — const — line 167
-- `HARVEST_YIELD` — const — line 158
-- `HarvestYield` — type — line 145
+- `advanceStage` — function — line 423
+- `bonusYieldForChopStage` — function — line 219
+- `BRANCH_REGENERATION_DAYS` — const — line 174
+- `BRANCH_YIELD_BY_SIZE` — const — line 179
+- `BranchHarvestResult` — type — line 185
+- `canopyGrowthFactor` — function — line 404
+- `canReachOld` — function — line 204
+- `CHOP_SCALE_MULT` — const — line 138
+- `CHOP_YIELDS` — const — line 152
+- `clamp01` — function — line 274
+- `coastalFactor` — function — line 362
+- `createTreeLifecycle` — function — line 565
+- `envGrowthFactor` — function — line 372
+- `FELLING_BEAM_YIELD` — const — line 169
+- `HARVEST_YIELD` — const — line 160
+- `HarvestYield` — type — line 147
 - `HEIGHT_RANGE_M` — const — line 98
-- `isCanopyStage` — function — line 198
-- `isChoppableStage` — function — line 194
-- `lerp` — function — line 271
-- `livingHeightM` — function — line 281
-- `makeTreeId` — function — line 547
+- `isCanopyStage` — function — line 200
+- `isChoppableStage` — function — line 196
+- `lerp` — function — line 278
+- `livingHeightM` — function — line 288
+- `makeTreeId` — function — line 554
 - `OLD_SPAWN_CHANCE` — const — line 123
-- `parseTreeOverrides` — function — line 964
-- `PINE_SPECIES_INDICES` — const — line 133
-- `quantizeTreeCoord` — function — line 539
-- `ResolvedTreeState` — type — line 258
-- `rollLivingAge` — function — line 328
-- `rollSizeClass` — function — line 317
+- `parseTreeOverrides` — function — line 971
+- `PINE_SPECIES_INDICES` — const — line 135
+- `quantizeTreeCoord` — function — line 546
+- `ResolvedTreeState` — type — line 265
+- `rollLivingAge` — function — line 335
+- `rollSizeClass` — function — line 324
 - `SIZE_CLASS_T` — const — line 106
 - `SIZE_CLASS_WEIGHTS` — const — line 113
 - `SIZE_JITTER_HALF` — const — line 120
-- `sizeT` — function — line 276
-- `speciesPrefs` — function — line 343
+- `sizeT` — function — line 283
+- `speciesPrefs` — function — line 350
 - `STAGE_DURATION_DAYS` — const — line 88
-- `templateHeightM` — function — line 290
-- `TREE_SPECIES_PREFS` — const — line 234
+- `templateHeightM` — function — line 297
+- `TREE_SPECIES_PREFS` — const — line 237
 - `TREE_TEMPLATE_HEIGHT_M` — const — line 129
 - `TreeEnvSample` — type — line 54
 - `TreeGrowthStage` — type — line 14
@@ -2009,18 +2009,18 @@ Generated from exported TypeScript symbols.
   - role: Owns tree growth stage progression and multi-stage chop state.
   - simulation: tick
   - lifecycle: growth
-- `TreeHarvestStepResult` — type — line 459
+- `TreeHarvestStepResult` — type — line 466
 - `TreeId` — type — line 32
-- `TreeLifecycle` — type — line 463
+- `TreeLifecycle` — type — line 470
 - `TreeLivingAge` — type — line 24
-- `TreePresence` — type — line 246
+- `TreePresence` — type — line 253
 - `TreeSizeClass` — type — line 27
 - `TreeSpeciesPrefs` — type — line 74
 - `TreeStateOverride` — type — line 36
-- `treeVisualKind` — function — line 221
+- `treeVisualKind` — function — line 223
 - `TreeVisualKind` — type — line 30
-- `visualScaleForTree` — function — line 298
-- `yieldForChopStage` — function — line 206
+- `visualScaleForTree` — function — line 305
+- `yieldForChopStage` — function — line 208
 
 ## `world/treeVisuals.ts`
 

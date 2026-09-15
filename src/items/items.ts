@@ -1460,7 +1460,10 @@ const _itemShadowSize = new THREE.Vector3()
  *  reasoning as `SMALL_MESH_SHADOW_THRESHOLD`/`createReed`/`createRockCluster`). */
 export function createItemMesh(kind: ItemKind): THREE.Object3D {
   const glb = cloneItemGlb(kind)
-  if (glb) return glb
+  if (glb) {
+    if (kind === 'wooden_bucket' || kind === 'copper_bucket') tintBucketGlb(glb, kind)
+    return glb
+  }
 
   const root = buildProceduralItemMesh(kind)
   root.updateMatrixWorld(true)
@@ -1472,6 +1475,29 @@ export function createItemMesh(kind: ItemKind): THREE.Object3D {
     if (mesh.isMesh) mesh.castShadow = cast
   })
   return root
+}
+
+/**
+ * MegaKit bucket FBX converted without albedo textures — leftover PBR is
+ * yellow/metallic. First-pass tint from `ITEM_DEFS`; textures still TODO
+ * (`docs/plans/LOOSE-ENDS.md`).
+ */
+function tintBucketGlb(root: THREE.Object3D, kind: 'wooden_bucket' | 'copper_bucket'): void {
+  const color = ITEM_DEFS[kind].color
+  const metalness = kind === 'copper_bucket' ? 0.55 : 0
+  const roughness = kind === 'wooden_bucket' ? 0.85 : undefined
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const mat of materials) {
+      const std = mat as THREE.MeshStandardMaterial
+      if (!std.color) continue
+      std.color.setHex(color)
+      std.metalness = metalness
+      if (roughness !== undefined) std.roughness = roughness
+    }
+  })
 }
 
 function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {

@@ -218,6 +218,30 @@ function preloadPropTemplates(): void {
 
 const GLB_ENV_KINDS = new Set<EnvironmentKind>(['fallenLog', 'largeRock', 'rockCluster'])
 
+/** Pick a template in `ROCK_SPECS` / `FALLEN_LOG_SPECS`. Rocks use the 0..1
+ *  placement `variant`. Fallen logs hash xz for dry variants and reserve the
+ *  last spec (moss) for shoreline. */
+function envTemplateIndex(
+  kind: 'largeRock' | 'rockCluster' | 'fallenLog',
+  x: number,
+  z: number,
+  variant: number,
+  groundY: number,
+  waterLevel: number,
+  templateCount: number,
+): number {
+  if (templateCount <= 1) return 0
+  if (kind === 'fallenLog') {
+    const mossIndex = templateCount - 1
+    if (templateCount >= 3 && groundY - waterLevel < 1.2) return mossIndex
+    const dryCount = templateCount >= 3 ? templateCount - 1 : templateCount
+    let h = (Math.floor(x * 17) * 374761393 + Math.floor(z * 13) * 668265263) | 0
+    h = Math.imul(h ^ (h >>> 13), 1274126177)
+    return (h >>> 0) % dryCount
+  }
+  return Math.min(templateCount - 1, Math.floor(variant * templateCount))
+}
+
 /** Base collision radius (world meters, before `* placement.scale`) per
  *  environment kind — plan 097 §2.2. `stoneCircle`/`smallRuins`/`cemetery`
  *  are left at 0 (no collider): walkable interiors / grave rows that a
@@ -2127,14 +2151,25 @@ export function createChunkManager(
       if (!templates) continue
       const placements = tile.environment.filter((p) => p.kind === kind)
       if (placements.length === 0) continue
-      const propPlacements: PropPlacement[] = placements.map((p) => ({
-        speciesIndex: 0,
-        x: p.x,
-        z: p.z,
-        groundY: sampleTileHeight(p.x, p.z),
-        rotationY: p.rotationY,
-        scale: p.scale,
-      }))
+      const propPlacements: PropPlacement[] = placements.map((p) => {
+        const groundY = sampleTileHeight(p.x, p.z)
+        return {
+          speciesIndex: envTemplateIndex(
+            kind,
+            p.x,
+            p.z,
+            p.variant,
+            groundY,
+            config.waterLevel,
+            templates.length,
+          ),
+          x: p.x,
+          z: p.z,
+          groundY,
+          rotationY: p.rotationY,
+          scale: p.scale,
+        }
+      })
       vegetationRegionBatcher.setChunkPlacements(coord, kind, templates, propPlacements)
     }
     syncInstancedLodForRecord(rec, lastPlayerChunk)

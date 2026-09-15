@@ -1,7 +1,8 @@
 /** Leaf URL/size constants shared by settlement props and the asset index. */
 
 /** Indices 6-8 are the pine variants (`PINE_SPECIES_INDICES`, `chunkVegetation.ts`)
- *  — appended, not interleaved, so existing `speciesIndex` values stay stable. */
+ *  — appended, not interleaved, so existing `speciesIndex` values stay stable.
+ *  Indices 9-12 are extra dead-tree silhouettes. */
 export const TREE_SPECS = [
   { url: '/models/nature/tree_a.glb', height: 4.2 },
   { url: '/models/nature/tree_b.glb', height: 3.8 },
@@ -12,6 +13,12 @@ export const TREE_SPECS = [
   { url: '/models/nature/pine_1.glb', height: 4.6 },
   { url: '/models/nature/pine_3.glb', height: 5.2 },
   { url: '/models/nature/pine_5.glb', height: 4.0 },
+  /** Appended dead-tree silhouettes (USN) — indices stay after pines so
+   *  `PINE_SPECIES_INDICES` 6–8 remain stable. */
+  { url: '/models/nature/deadtree_3.glb', height: 3.5 },
+  { url: '/models/nature/deadtree_5.glb', height: 3.8 },
+  { url: '/models/nature/deadtree_8.glb', height: 3.4 },
+  { url: '/models/nature/deadtree_10.glb', height: 3.7 },
 ] as const
 
 /** Deciduous living trees for the fauna `thicket` (zagajnik) marker —
@@ -29,6 +36,9 @@ export const BUSH_SPECS = [
   { url: '/models/nature/flower_clump_1.glb', height: 0.4 },
   { url: '/models/nature/flower_clump_2.glb', height: 0.4 },
   { url: '/models/nature/bush_flowers_1.glb', height: 0.6 },
+  /** Extra shrub silhouettes — appended so meadow flower indices 2–4 stay put. */
+  { url: '/models/nature/bush_c.glb', height: 1.5 },
+  { url: '/models/nature/bush_berries_1.glb', height: 1.2 },
 ] as const
 
 /** Forest-floor undergrowth (plan 140) — its own `VegetationKind`, not folded
@@ -76,6 +86,10 @@ export const DOCK_SPECS = [
 
 export const ROCK_SPECS = [
   { url: '/models/nature/rock_a.glb', height: 1.2 },
+  { url: '/models/nature/rock_b.glb', height: 1.1 },
+  { url: '/models/nature/rock_c.glb', height: 1.0 },
+  { url: '/models/nature/rock_d.glb', height: 1.15 },
+  { url: '/models/nature/rock_e.glb', height: 1.05 },
 ] as const
 
 export const ROCK_CLUSTER_SPECS = [
@@ -84,6 +98,9 @@ export const ROCK_CLUSTER_SPECS = [
 
 export const FALLEN_LOG_SPECS = [
   { url: '/models/nature/fallen_log_a.glb', height: 0.55 },
+  { url: '/models/nature/fallen_log_b.glb', height: 0.5 },
+  /** Last index is the mossy/wet variant — `chunkManager` prefers it near water. */
+  { url: '/models/nature/fallen_log_moss.glb', height: 0.5 },
 ] as const
 
 export const CEMETERY_SPECS = [

@@ -28,6 +28,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `npc-034-expedition-shared-work-and-activities.md`                             | 🔴 | M      | ~~npc-029~~, npc-032, items-player-028                                                                                                                                              | companions                              |
 | `npc-035-shared-expedition-relationship-consequences.md`                       | 🔴 | L      | ~~npc-029~~, npc-032, npc-033, npc-034                                                                                                                                              | companions                              |
 | `npc-038-work-contract-actor-capability-gating.md`                             | 🔴 | M      | -                                                                                                                                                                                   | -                                       |
+| `npc-039-ubc-profession-outfits.md`                                            | 🟡 | L      | ~~items-player-033~~, ~~items-player-034~~, ~~items-player-036~~                                                                                                                    | -                                       |
 | `quests-progression-010-abandoned-gold-mine-colony.md`                         | 🔴 | M      | world-terrain-017, world-018, ~~world-019~~, ~~settlements-npcs-026~~, ~~settlements-npcs-027~~, settlements-npcs-028, settlements-003, settlements-004, ~~quests-progression-002~~ | quests-abandoned-gold-mine-colony       |
 | `settlements-003-colony-bootstrap.md`                                          | 🔴 | L      | ~~world-019~~, settlements-npcs-028                                                                                                                                                 | quests-abandoned-gold-mine-colony       |
 | `settlements-004-gold-economic-realization-and-source-entitlements.md`         | 🔴 | M      | -                                                                                                                                                                                   | quests-abandoned-gold-mine-colony       |
@@ -221,7 +222,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `031`
 - items-player: `039`
-- npc: `039`
+- npc: `040`
 - persistence: `005`
 - quests-progression: `045`
 - settlements: `018`

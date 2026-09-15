@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-npcs-027-npc-expedition-assignment-and-provisioning`      | 2026-09-15 14:20:54 | —                   | `settlements-npcs` | —          |
 | `items-player-038-ubc-jump-land-move-lock`                             | 2026-09-15 13:54:43 | —                   | `items-player`   | —          |
 | `items-player-036-ubc-fantasy-source-outfits`                          | 2026-09-15 13:11:05 | —                   | `items-player`   | —          |
 | `items-player-035-ubc-ual-player-animation-coverage`                   | 2026-09-15 13:03:35 | —                   | `items-player`   | —          |

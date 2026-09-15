@@ -35,6 +35,10 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 - [ ] 2026-08-25 — `buildHouseWallCollidersLocal()` nadal iteruje tylko `def.walls`; `def.corners` nie mają własnego collidera. Zwykle maskują to sąsiednie ściany, ale corner przy otworze/door module nie ma takiego invariant — przy najbliższym dotykaniu house collision dodać jawne pokrycie/test.
 - [ ] 2026-09-15 — `world/containerProp.ts`'s `createPlacedContainerProp()` renderuje identycznym proceduralnym box+lid meshem magazyn gracza, meble domu **i** wszystkie skrzynie-skarby w świecie (dark forest, systemic treasure sites, dungeon/cave loot) — bez rozróżnienia stanu zamknięta/otwarta/złupiona. `public/models/items/chest_prop_closed.glb` / `chest_prop_open.glb` / `chest_prop_ingots.glb` (Quaternius Ultimate RPG Pack, `docs/assets/MODELS.md` M91, catalog task 2026-09-15) są gotowe jako realny zamiennik z prawdziwym przełączaniem stanu (np. wg `isWorldContainerLooted`/emptiness). Dotyka `containerProp.ts`, `worldGeneratedContainers.ts`, `createPlacedContainers.ts`, `settlement/props.ts` — osobny plan, świadomie nie zrobiony przy okazji dodawania assetów do katalogu.
 
+## Items / assets
+
+- [ ] 2026-09-15 — `wooden_bucket` / `copper_bucket` GLBs (Fantasy Props MegaKit) were converted from FBX **without albedo textures**, so the mesh reads gold/metallic. Runtime first-pass tint in `items/items.ts`'s `tintBucketGlb` (`ITEM_DEFS` brown / copper). Verify in-game, then either keep the tint or reconvert with MegaKit glTF textures (the pack glTF shares a huge bin — isolate materials, don't copy the whole kit). Pocket `whetstone` is unrelated: MegaKit `Whetstone` is a workshop grindstone and must not be wired to the item.
+
 ## Characters / presentation
 
 - [ ] 2026-09-15 — UBC player (`items-player-033` / `034` / `036`) jest tylko męski. Żeńskie outfity (`Female_Peasant` / `Female_Ranger` / Knight / Noble / Wizard) i fryzury są w `_temp/` na tym samym rigu — nie robić osobnego pipeline, reuse `compose_ubc_player.py`.
