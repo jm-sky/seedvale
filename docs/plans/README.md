@@ -76,6 +76,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-031-wildlife-habitat-pressure-assessment.md`                         | 🟡 | S      | ~~fauna-010~~, ~~fauna-028~~                                                                                                                                                                                                                                                           | quests-hunters-brotherhood              |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
 | ◼️ `quests-progression-048-hunters-brotherhood-introduction-and-membership.md` | 🟡 | M      | ~~quests-progression-020~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                                                                                                                                     | quests-hunters-brotherhood              |
+| ◼️ `quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md` | 🟡 | M      | quests-progression-048, fauna-031                                                                                                                                                                                                                                                      | quests-hunters-brotherhood              |
+| 💡 `world-029-low-cost-lighting-and-film-grade-tuning.md`                      | 🟡 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
+| 💡 `world-terrain-036-low-cost-natural-material-response-tuning.md`            | 🟡 | S      | -                                                                                                                                                                                                                                                                                      | -                                       |
 
 ---
 
@@ -228,13 +231,13 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `039`
 - npc: `041`
 - persistence: `005`
-- quests-progression: `049`
+- quests-progression: `050`
 - settlements: `018`
 - settlements-npcs: `039`
 - tools: `015`
 - ui-input: `022`
-- world: `029`
-- world-terrain: `036`
+- world: `030`
+- world-terrain: `037`
 
 This ids section is maintained automatically from the plan files.
 
