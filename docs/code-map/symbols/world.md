@@ -1110,6 +1110,7 @@ Generated from exported TypeScript symbols.
 
 - `FOLIAGE_ALPHA_CUTOFF` — const — line 49
 - `hardenFoliageAlpha` — function — line 58
+- `isFoliageMaterial` — function — line 43
 - `patchFoliageWindMaterial` — function — line 80
 - `patchFoliageWindOnObject` — function — line 106
 - `patchProceduralFoliageMaterial` — function — line 124
@@ -1490,6 +1491,20 @@ Generated from exported TypeScript symbols.
 - `MapSource` — type — line 25
 - `MapTerrainKind` — type — line 4
 - `MapViewport` — type — line 43
+
+## `world/naturalMaterialResponse.ts`
+
+- `applyNaturalMaterialResponseForUrl` — function — line 109
+  - domain: world-terrain
+- `applyNaturalMaterialResponseOnObject` — function — line 96
+- `NATURAL_MATERIAL_METALNESS_MAX` — const — line 14
+- `NATURAL_MATERIAL_ROUGHNESS_MIN_ROCK` — const — line 17
+- `NATURAL_MATERIAL_ROUGHNESS_MIN_WOOD` — const — line 20
+- `NaturalMaterialProfile` — type — line 11
+- `naturalMaterialProfileForUrl` — function — line 38
+  - domain: world-terrain
+- `tuneNaturalMaterial` — function — line 59
+  - domain: world-terrain
 
 ## `world/npcGraves.ts`
 

@@ -210,6 +210,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `world/foliageWind.ts`
+- `world/naturalMaterialResponse.ts`
 
 **Imported by**
 

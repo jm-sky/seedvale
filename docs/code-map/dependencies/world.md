@@ -2503,6 +2503,7 @@ Generated from TypeScript imports.
 - `assets/loadGltf.ts`
 - `settlement/decorProps.ts`
 - `world/foliageWind.test.ts`
+- `world/naturalMaterialResponse.ts`
 
 ## `world/foodSources.test.ts`
 
@@ -3279,6 +3280,25 @@ Generated from TypeScript imports.
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.ts`
+
+## `world/naturalMaterialResponse.test.ts`
+
+**Imports**
+
+- `settlement/propSpecs.ts`
+- `world/naturalMaterialResponse.ts`
+
+## `world/naturalMaterialResponse.ts`
+
+**Imports**
+
+- `settlement/propSpecs.ts`
+- `world/foliageWind.ts`
+
+**Imported by**
+
+- `assets/loadGltf.ts`
+- `world/naturalMaterialResponse.test.ts`
 
 ## `world/npcGraves.test.ts`
 

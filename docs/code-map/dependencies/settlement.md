@@ -1288,6 +1288,8 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveAdventureProps.ts`
+- `world/naturalMaterialResponse.test.ts`
+- `world/naturalMaterialResponse.ts`
 - `world/standingTorchProp.ts`
 - `world/trapProp.ts`
 - `world/treeLifecycle.test.ts`

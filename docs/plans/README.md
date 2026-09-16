@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-048-hunters-brotherhood-introduction-and-membership.md` | 🟡 | M      | ~~quests-progression-020~~, ~~quests-progression-033~~, ~~quests-progression-034~~                                                                                                                                                                                                     | quests-hunters-brotherhood              |
 | ◼️ `quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md` | 🟡 | M      | quests-progression-048, fauna-031                                                                                                                                                                                                                                                      | quests-hunters-brotherhood              |
 | 💡 `world-029-low-cost-lighting-and-film-grade-tuning.md`                      | 🟡 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
+| ◼️ `quests-progression-050-socially-consequential-quest-dialogue.md`           | 🔴 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
 
 ---
 
@@ -231,7 +232,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `039`
 - npc: `041`
 - persistence: `005`
-- quests-progression: `050`
+- quests-progression: `051`
 - settlements: `018`
 - settlements-npcs: `039`
 - tools: `015`
