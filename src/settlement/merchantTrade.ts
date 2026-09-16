@@ -43,6 +43,8 @@ export type MerchantAssortmentContext = {
   terrain: SettlementTerrain
   seed: number
   dominantResource?: NaturalResource | null
+  /** Home/start settlement (`SettlementDef.isHome`) — first merchant gets a starter overlay. */
+  isHome?: boolean
 }
 
 /**
@@ -59,7 +61,6 @@ export const PREMIUM_MERCHANT_KINDS: readonly ItemKind[] = [
   'long_bow',
   'war_arrow',
   'trap_good',
-  'backpack',
   'map_far',
   'book_riding_advanced',
   'book_archery_advanced',
@@ -70,6 +71,22 @@ export const PREMIUM_MERCHANT_KINDS: readonly ItemKind[] = [
 ]
 
 const PREMIUM_KIND_SET = new Set<ItemKind>(PREMIUM_MERCHANT_KINDS)
+
+/**
+ * Guaranteed survival/travel stock on the first home-settlement merchant
+ * (`stallIndex === 0`). Overlay after regional assortment — does not replace it.
+ */
+export const HOME_STARTER_MERCHANT_KINDS: readonly ItemKind[] = [
+  'backpack',
+  'tent',
+  'firestarter',
+  'blanket',
+  'waterskin_small',
+  'knife',
+  'axe',
+  'pickaxe',
+  'bandage',
+]
 
 const METAL_KINDS = new Set<ItemKind>([
   'axe',
@@ -389,6 +406,17 @@ export function generateMerchantAssortment(
     }
 
     byNpc.set(profile.npcId, stock)
+  }
+
+  if (context.isHome) {
+    const first = profiles.find((profile) => profile.stallIndex === 0)
+    if (first) {
+      const stock = byNpc.get(first.npcId) ?? {}
+      for (const kind of HOME_STARTER_MERCHANT_KINDS) {
+        if ((stock[kind] ?? 0) <= 0) stock[kind] = 1
+      }
+      byNpc.set(first.npcId, stock)
+    }
   }
 
   return byNpc

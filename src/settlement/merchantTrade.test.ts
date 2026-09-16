@@ -5,6 +5,7 @@ import { settleMerchantStockTransaction } from '../items/trade'
 import { MERCHANT_STOCK, merchantPrice } from '../items/tradeCatalog'
 import {
   generateMerchantAssortment,
+  HOME_STARTER_MERCHANT_KINDS,
   isPremiumMerchantGood,
   type MerchantAssortmentContext,
   merchantStockQuantity,
@@ -196,6 +197,103 @@ describe('settleMerchantStockTransaction', () => {
     const stock = new Inventory({ bread: 1 }, Infinity, undefined, undefined, Infinity)
     expect(settleMerchantStockTransaction(buyer, stock, { bread: 1 }, {})).toBe('ok')
     expect(settleMerchantStockTransaction(buyer, stock, { bread: 1 }, {})).toBe('not_sold')
+  })
+})
+
+describe('home starter overlay', () => {
+  const samples = 80
+
+  it('always stocks every baseline kind on the first home merchant across seeds', () => {
+    for (let seed = 0; seed < samples; seed++) {
+      const profiles = resolveMerchantProfiles(['m0'], 'forest')
+      expect(profiles[0]!.specialization).toBe('food-materials')
+      expect(profiles[0]!.stallIndex).toBe(0)
+      const byNpc = generateMerchantAssortment(ctx({ size: 'SM', terrain: 'forest', seed, isHome: true }), profiles)
+      const stock = byNpc.get('m0')!
+      for (const kind of HOME_STARTER_MERCHANT_KINDS) {
+        expect(stock[kind] ?? 0).toBeGreaterThanOrEqual(1)
+      }
+    }
+  })
+
+  it('does not treat backpack as premium', () => {
+    expect(isPremiumMerchantGood('backpack')).toBe(false)
+    expect(PREMIUM_MERCHANT_KINDS).not.toContain('backpack')
+  })
+
+  it('does not guarantee the baseline outside the home settlement', () => {
+    let missing = 0
+    for (let seed = 0; seed < samples; seed++) {
+      const profiles = resolveMerchantProfiles(['m0'], 'forest')
+      const byNpc = generateMerchantAssortment(ctx({ size: 'SM', terrain: 'forest', seed, isHome: false }), profiles)
+      const stock = byNpc.get('m0')!
+      const hasAll = HOME_STARTER_MERCHANT_KINDS.every((kind) => (stock[kind] ?? 0) > 0)
+      if (!hasAll) missing++
+    }
+    expect(missing).toBeGreaterThan(0)
+  })
+
+  it('keeps regional assortment diversity without the home overlay', () => {
+    const forest = resolveMerchantProfiles(['m0', 'm1', 'm2'], 'forest')
+    const mountain = resolveMerchantProfiles(['m0', 'm1', 'm2'], 'mountain')
+    const forestKinds = new Set<string>()
+    const mountainKinds = new Set<string>()
+    for (let seed = 0; seed < 24; seed++) {
+      for (const stock of generateMerchantAssortment(ctx({ size: 'LG', terrain: 'forest', seed }), forest).values()) {
+        for (const kind of assortmentKinds(stock)) forestKinds.add(kind)
+      }
+      for (const stock of generateMerchantAssortment(ctx({ size: 'LG', terrain: 'mountain', seed }), mountain).values()) {
+        for (const kind of assortmentKinds(stock)) mountainKinds.add(kind)
+      }
+    }
+    expect(forestKinds.has('short_bow') || forestKinds.has('leather_armor')).toBe(true)
+    expect(mountainKinds.has('pickaxe') || mountainKinds.has('iron_rod')).toBe(true)
+    expect([...forestKinds].sort().join(',')).not.toBe([...mountainKinds].sort().join(','))
+  })
+
+  it('still grants remaining premium goods from the settlement roll', () => {
+    const xl = ctx({ size: 'XL', terrain: 'mountain' })
+    let hits = 0
+    const samplesXl = 200
+    for (let seed = 0; seed < samplesXl; seed++) {
+      const context = { ...xl, seed }
+      const granted = settlementHasPremiumOffer(context)
+      const byNpc = generateMerchantAssortment(context, resolveMerchantProfiles(['t0'], 'mountain'))
+      const premiumIn = [...byNpc.values()].some((stock) =>
+        assortmentKinds(stock).some((kind) => isPremiumMerchantGood(kind as never)))
+      if (granted) {
+        expect(premiumIn).toBe(true)
+        expect(PREMIUM_MERCHANT_KINDS.some((kind) => (byNpc.get('t0')![kind] ?? 0) > 0)).toBe(true)
+      } else {
+        expect(premiumIn).toBe(false)
+      }
+      if (premiumIn) hits++
+    }
+    expect(hits / samplesXl).toBeGreaterThan(0.72)
+    expect(hits / samplesXl).toBeLessThan(0.88)
+  })
+
+  it('does not overwrite quantity when a baseline kind was already assorted', () => {
+    let found = false
+    for (let seed = 0; seed < 200; seed++) {
+      const profiles = resolveMerchantProfiles(['m0'], 'mountain')
+      expect(profiles[0]!.specialization).toBe('weapons-tools')
+      const regional = generateMerchantAssortment(ctx({ size: 'MD', terrain: 'mountain', seed }), profiles).get('m0')!
+      const home = generateMerchantAssortment(ctx({ size: 'MD', terrain: 'mountain', seed, isHome: true }), profiles).get('m0')!
+      const already = HOME_STARTER_MERCHANT_KINDS.find((kind) => (regional[kind] ?? 0) > 1)
+      if (!already) continue
+      found = true
+      expect(home[already]).toBe(regional[already])
+    }
+    expect(found).toBe(true)
+  })
+
+  it('is deterministic for the same seed and context', () => {
+    const profiles = resolveMerchantProfiles(['m1', 'm0'], 'forest')
+    const context = ctx({ size: 'SM', terrain: 'forest', seed: 42, isHome: true })
+    const a = generateMerchantAssortment(context, profiles)
+    const b = generateMerchantAssortment(context, profiles)
+    expect([...a.entries()]).toEqual([...b.entries()])
   })
 })
 

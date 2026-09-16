@@ -852,6 +852,7 @@ export async function createSettlement(
       terrain: def.plan.identity.terrain,
       seed: settlementSeed,
       dominantResource: def.plan.identity.dominantResource,
+      isHome: def.isHome,
     },
     merchantProfiles,
   )
