@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** polish
 **Priority:** high · **Effort:** M
-**Depends on:** ~~quests-progression-014~~, quests-progression-035
+**Depends on:** ~~quests-progression-014~~, quests-progression-035, quests-progression-050
 **Domain:** `quests-progression`
 **Subdomains:** `quests`
 **Tags:** `dialogue` `narrative` `authored-quests` `polish`
