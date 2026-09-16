@@ -1439,6 +1439,45 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })).toBe(false)
   })
 
+  it('accepts older quest progress without worldKnowledge and rejects malformed slots (plan quests-progression-047)', () => {
+    expect(isSaveData({
+      ...validSave,
+      quests: { progress: [{ id: 'slad-przy-monolicie', state: 'active', stageIndex: 0 }], relations: {} },
+    })).toBe(true)
+    expect(isSaveData({
+      ...validSave,
+      quests: {
+        progress: [{
+          id: 'research',
+          state: 'active',
+          stageIndex: 0,
+          worldKnowledge: {
+            target: {
+              requestedAtDays: 1,
+              revealAtDays: 1 + 1 / 24,
+              status: 'resolved',
+              revealed: true,
+              ref: { kind: 'landmark', landmarkId: 'monolith:4:-7:0:3f', landmarkKind: 'monolith' },
+            },
+          },
+        }],
+        relations: {},
+      },
+    })).toBe(true)
+    expect(isSaveData({
+      ...validSave,
+      quests: {
+        progress: [{
+          id: 'research',
+          state: 'active',
+          stageIndex: 0,
+          worldKnowledge: { target: { status: 'requested' } },
+        }],
+        relations: {},
+      },
+    })).toBe(false)
+  })
+
   it('migrates a real v21 save (plan items-player-020) into current, defaulting missing playerTroughs to []', () => {
     const { playerTroughs: _pt, ...v21Body } = validSave
     const v21Save = { ...v21Body, version: 21 }

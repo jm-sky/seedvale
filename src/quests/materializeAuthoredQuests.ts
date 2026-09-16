@@ -46,6 +46,13 @@ function materializeObjective(
   if (objective.type === 'talk_to_npc') {
     return { type: 'talk_to_npc', npc: questNpcRef(resolve(objective.npcName)) }
   }
+  if (objective.type === 'receive_world_knowledge') {
+    return {
+      type: 'receive_world_knowledge',
+      knowledgeId: objective.knowledgeId,
+      npc: questNpcRef(resolve(objective.npcName)),
+    }
+  }
   if (objective.type === 'talk_to_npc_choice') {
     return {
       type: 'talk_to_npc_choice',
@@ -84,6 +91,8 @@ function materializeDialogueActions(
     requireCarriedContainerId: action.requireCarriedContainerId,
     requireCarriedUnopened: action.requireCarriedUnopened,
     requireItemInstanceId: action.requireItemInstanceId,
+    skipAdvance: action.skipAdvance,
+    requireWorldKnowledgeReady: action.requireWorldKnowledgeReady,
     effects: action.effects,
     consequences: action.consequences
       ? {

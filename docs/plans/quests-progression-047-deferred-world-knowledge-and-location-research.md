@@ -1,7 +1,7 @@
 # Plan: Deferred world knowledge and location research
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** L
 **Model:** Opus, Sonnet
 **Depends on:** ~~world-028~~, ~~world-022~~

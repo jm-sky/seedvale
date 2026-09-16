@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SocialConsequence } from '../reputation/ReputationManager'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
-import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup, QuestWorldTimeLookup } from './QuestManager'
+import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup, QuestWorldKnowledgeResolver, QuestWorldTimeLookup } from './QuestManager'
 import type { AuthoredQuestDef, QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
@@ -4481,4 +4481,310 @@ describe('QuestManager quest-log journal notes (plan ui-input-021)', () => {
 function qmExportHasNoJournal(qm: QuestManager): boolean {
   return qm.exportProgress().every((entry) => entry.journal === undefined)
 }
+
+describe('QuestManager deferred world knowledge (plan quests-progression-047)', () => {
+  const landmarkRef = {
+    kind: 'landmark' as const,
+    landmarkId: 'monolith:4:-7:0:3f',
+    landmarkKind: 'monolith' as const,
+  }
+
+  function researchQuest(): QuestDef {
+    return quest({
+      id: 'research',
+      giverName: 'Anna',
+      offerLine: 'offer research',
+      worldKnowledge: [{
+        id: 'target',
+        revealDelayDays: 1 / 24,
+        bind: { type: 'landmark', kind: 'monolith' },
+        pendingPhrase: 'Muszę zajrzeć do starych papierów. Wróć za godzinę.',
+        unavailablePhrase: 'Nie odtworzyłam trasy.',
+        unavailablePolicy: 'fail',
+        unavailableOutcomeId: 'lost',
+      }],
+      acceptEffects: [{ type: 'request_world_knowledge', knowledgeId: 'target' }],
+      stages: [
+        {
+          objective: { type: 'receive_world_knowledge', knowledgeId: 'target', npc: { npcId: 'Anna' } },
+          description: 'Wróć do Anny, gdy sprawdzi stare zapiski.',
+          reminderLine: 'Muszę zajrzeć do starych papierów. Wróć za godzinę.',
+          playerLine: 'Udało ci się odtworzyć trasę?',
+          progressLine: 'Szukaj {worldKnowledgeClue:target}.',
+        },
+        {
+          objective: { type: 'interact_bound_landmark', knowledgeId: 'target' },
+          description: 'Zbadaj {worldKnowledgeClue:target}.',
+          reminderLine: 'Byłeś już przy monolicie?',
+          progressLine: 'Ślady obozowiska.',
+        },
+      ],
+      reportLine: 'report research',
+      outcomes: [
+        { id: 'complete', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 1 }] } },
+        { id: 'lost', state: 'failed', resultText: 'Trop się urwał.' },
+      ],
+    })
+  }
+
+  function clock(elapsedDays: number): { lookup: QuestWorldTimeLookup, setDays: (value: number) => void } {
+    let days = elapsedDays
+    return {
+      lookup: {
+        getWorldSeed: () => 1,
+        getTimeOfDay: () => 0,
+        getElapsedDays: () => days,
+      },
+      setDays: (value) => { days = value },
+    }
+  }
+
+  function deferredResolver(): {
+    resolver: QuestWorldKnowledgeResolver
+    finish: (ref: typeof landmarkRef | null) => void
+  } {
+    let settle: ((ref: typeof landmarkRef | null) => void) | undefined
+    return {
+      resolver: {
+        resolve: () => new Promise((resolve) => { settle = resolve }),
+        describe: (ref) => `clue:${ref.landmarkId}`,
+      },
+      finish: (ref) => settle?.(ref),
+    }
+  }
+
+  function knowledgeManager(
+    resolver: QuestWorldKnowledgeResolver,
+    worldTime: QuestWorldTimeLookup,
+    initial?: QuestManagerInitial,
+    defs: readonly QuestDef[] = [researchQuest()],
+  ): QuestManager {
+    return new QuestManager(
+      defs,
+      undefined,
+      new Inventory(),
+      initial,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      worldTime,
+      undefined,
+      undefined,
+      undefined,
+      resolver,
+    )
+  }
+
+  it('starts one knowledge request exactly once on accept', async () => {
+    let resolves = 0
+    const { lookup } = clock(0)
+    const qm = knowledgeManager({
+      resolve: async () => {
+        resolves += 1
+        return landmarkRef
+      },
+      describe: (ref) => `clue:${ref.landmarkId}`,
+    }, lookup)
+    acceptOffer(qm, 'Anna')
+    await Promise.resolve()
+    qm.onInteract('Anna')
+    qm.onInteract('Anna')
+    await Promise.resolve()
+    expect(resolves).toBe(1)
+    expect(qm.exportProgress()[0]?.worldKnowledge?.target?.status).toBe('resolved')
+  })
+
+  it('keeps the clue unavailable until both delay and resolution finish', async () => {
+    const { lookup, setDays } = clock(0)
+    const deferred = deferredResolver()
+    const qm = knowledgeManager(deferred.resolver, lookup)
+    acceptOffer(qm, 'Anna')
+    deferred.finish(landmarkRef)
+    await Promise.resolve()
+    expect(qm.onInteract('Anna')?.actions).toBeUndefined()
+    expect(qm.onInteract('Anna')?.line).toContain('starych papierów')
+    setDays(1 / 24)
+    const ready = qm.onInteract('Anna')
+    expect(ready?.actions?.[0]?.label).toContain('odtworzyć')
+    const reply = ready?.actions?.[0]?.onSelect()
+    expect(reply).toContain('clue:monolith:4:-7:0:3f')
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
+    expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:9:9:0:3f' })).toBeNull()
+    const found = qm.onInteractObjective({ type: 'interact_landmark', landmarkId: landmarkRef.landmarkId })
+    expect(found?.line).toContain('obozowiska')
+    expect(qm.getState('research')).toBe('ready_to_report')
+  })
+
+  it('does not reveal the clue when world time elapses before the resolver finishes', async () => {
+    const { lookup, setDays } = clock(0)
+    const deferred = deferredResolver()
+    const qm = knowledgeManager(deferred.resolver, lookup)
+    acceptOffer(qm, 'Anna')
+    setDays(2)
+    expect(qm.onInteract('Anna')?.actions).toBeUndefined()
+    deferred.finish(landmarkRef)
+    await Promise.resolve()
+    expect(qm.onInteract('Anna')?.actions?.[0]?.label).toContain('odtworzyć')
+  })
+
+  it('selecting the ready receive action advances exactly once', async () => {
+    const { lookup } = clock(1)
+    const qm = knowledgeManager({
+      resolve: async () => landmarkRef,
+      describe: (ref) => `clue:${ref.landmarkId}`,
+    }, lookup)
+    acceptOffer(qm, 'Anna')
+    await Promise.resolve()
+    const first = qm.onInteract('Anna')
+    first?.actions?.[0]?.onSelect()
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
+    expect(qm.onInteract('Anna')?.actions?.some((action) => action.label.includes('odtworzyć'))).toBeFalsy()
+  })
+
+  it('fails with the authored unavailable outcome after delay', async () => {
+    const { lookup } = clock(1)
+    const qm = knowledgeManager({
+      resolve: async () => null,
+      describe: () => null,
+    }, lookup)
+    acceptOffer(qm, 'Anna')
+    await Promise.resolve()
+    const dialog = qm.onInteract('Anna')
+    expect(qm.getState('research')).toBe('failed')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('lost')
+    expect(dialog?.line).toContain('urwał')
+  })
+
+  it('ignores a stale async completion after reset', async () => {
+    const { lookup } = clock(0)
+    const deferred = deferredResolver()
+    const qm = knowledgeManager(deferred.resolver, lookup)
+    acceptOffer(qm, 'Anna')
+    qm.reset()
+    deferred.finish(landmarkRef)
+    await Promise.resolve()
+    expect(qm.exportProgress()[0]?.worldKnowledge).toBeUndefined()
+    expect(qm.getState('research')).toBe('not_offered')
+  })
+
+  it('restarts unresolved research after save/load without duplicating journal stamps', async () => {
+    const { lookup, setDays } = clock(0)
+    const deferred = deferredResolver()
+    const first = knowledgeManager(deferred.resolver, lookup)
+    acceptOffer(first, 'Anna')
+    first.onInteract('Anna')
+    const saved = first.exportProgress()
+    expect(saved[0]?.worldKnowledge?.target?.status).toBe('requested')
+    const restoredDeferred = deferredResolver()
+    const restored = knowledgeManager(restoredDeferred.resolver, lookup, {
+      progress: saved,
+      relations: {},
+    })
+    restoredDeferred.finish(landmarkRef)
+    await Promise.resolve()
+    setDays(1 / 24)
+    restored.onInteract('Anna')
+    restored.onInteract('Anna')
+    const ready = restored.onInteract('Anna')
+    ready?.actions?.[0]?.onSelect()
+    const journal = restored.exportProgress()[0]?.journal?.filter((event) => event.kind === 'progress')
+    expect(journal).toHaveLength(2)
+    expect(journal?.filter((event) => event.stampId === 'world-knowledge-pending')).toHaveLength(1)
+    expect(journal?.filter((event) => event.stampId === 'world-knowledge-reveal')).toHaveLength(1)
+  })
+
+  it('does not leak the location clue until the NPC reveals it', async () => {
+    const { lookup, setDays } = clock(0)
+    const qm = knowledgeManager({
+      resolve: async () => landmarkRef,
+      describe: (ref) => `clue:${ref.landmarkId}`,
+    }, lookup)
+    acceptOffer(qm, 'Anna')
+    await Promise.resolve()
+    qm.onInteract('Anna')
+    const pending = qm.list().find((entry) => entry.id === 'research')
+    expect(pending?.currentObjective).toBe('Wróć do Anny, gdy sprawdzi stare zapiski.')
+    expect(pending?.notes.some((note) => note.text.includes('clue:'))).toBe(false)
+    setDays(1 / 24)
+    qm.onInteract('Anna')?.actions?.[0]?.onSelect()
+    const revealed = qm.list().find((entry) => entry.id === 'research')
+    expect(revealed?.currentObjective).toContain('clue:monolith:4:-7:0:3f')
+    expect(revealed?.notes.some((note) => note.text.includes('clue:monolith:4:-7:0:3f'))).toBe(true)
+  })
+
+  it('preserves a resolved landmark identity across save/load', async () => {
+    const { lookup } = clock(1)
+    const first = knowledgeManager({
+      resolve: async () => landmarkRef,
+      describe: (ref) => `clue:${ref.landmarkId}`,
+    }, lookup)
+    acceptOffer(first, 'Anna')
+    await Promise.resolve()
+    first.onInteract('Anna')?.actions?.[0]?.onSelect()
+    const saved = first.exportProgress()
+    expect(saved[0]?.worldKnowledge?.target?.ref?.landmarkId).toBe(landmarkRef.landmarkId)
+    let resolves = 0
+    const restored = knowledgeManager({
+      resolve: async () => {
+        resolves += 1
+        return { ...landmarkRef, landmarkId: 'monolith:reroll' }
+      },
+      describe: (ref) => `clue:${ref.landmarkId}`,
+    }, lookup, { progress: saved, relations: {} })
+    await Promise.resolve()
+    expect(resolves).toBe(0)
+    expect(restored.exportProgress()[0]?.worldKnowledge?.target?.ref?.landmarkId).toBe(landmarkRef.landmarkId)
+    const found = restored.onInteractObjective({
+      type: 'interact_landmark',
+      landmarkId: landmarkRef.landmarkId,
+    })
+    expect(found?.line).toContain('obozowiska')
+  })
+
+  it('migrates an older active landmark save past the research stage', async () => {
+    const { lookup } = clock(0)
+    const qm = knowledgeManager({
+      resolve: async () => landmarkRef,
+      describe: (ref) => `clue:${ref.landmarkId}`,
+    }, lookup, {
+      progress: [{ id: 'research', state: 'active', stageIndex: 0 }],
+      relations: {},
+    })
+    await Promise.resolve()
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
+    expect(qm.onInteractObjective({
+      type: 'interact_landmark',
+      landmarkId: landmarkRef.landmarkId,
+    })?.line).toContain('obozowiska')
+  })
+
+  it('leaves immediate landmark quests on the concrete interact_landmark path', () => {
+    const immediate = quest({
+      id: 'zapomniany-cmentarz',
+      giverName: 'Kasia',
+      offerLine: 'offer cemetery',
+      stages: [{
+        objective: { type: 'interact_landmark', landmarkId: 'cemetery:0:0:0:1' },
+        description: 'cemetery',
+        reminderLine: 'remind cemetery',
+        progressLine: 'groby stoją',
+      }],
+      reportLine: 'report cemetery',
+    })
+    const qm = makeManager([immediate])
+    acceptOffer(qm, 'Kasia')
+    expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'cemetery:0:0:0:1' })?.line)
+      .toContain('groby')
+    expect(qm.getState('zapomniany-cmentarz')).toBe('ready_to_report')
+  })
+})
 

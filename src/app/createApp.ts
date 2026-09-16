@@ -176,6 +176,7 @@ import {
 } from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
 import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS, questStageObjectiveSlots } from '../quests/quests'
+import { createQuestWorldKnowledgeResolver } from '../quests/worldKnowledgeResolver'
 import {
   isSuspiciousTransportCacheLooted,
   SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
@@ -1189,9 +1190,11 @@ export async function createApp(
   const minimap = createMinimap(container)
   bootMarkEnd('createMinimap')
 
-  // Resolved once here (not injected into `QuestManager`, which stays
-  // chunk/terrain-agnostic) — landmarks never change once generated, so
-  // there's nothing to re-resolve at runtime, unlike `kill_target_animal`/
+  // Immediate landmark quests still resolve once here (not injected into
+  // `QuestManager`, which stays chunk/terrain-agnostic). `slad-przy-monolicie`
+  // opts out and binds later through the deferred world-knowledge resolver
+  // (plan quests-progression-047). Landmarks never change once generated, so
+  // immediate ids stay stable across boot unlike `kill_target_animal`/
   // `find_animal`'s live `AnimalTargetResolver` below (plan 132).
   const landmarkQuests = buildLandmarkQuests((kind) => {
     // `getHomeDef()` (not `.home.center`) — always available, independent of
@@ -1263,13 +1266,20 @@ export async function createApp(
     homeNpcDescriptors,
   )
   const occupiedLandmarkIds = new Set<string>()
-  for (const quest of landmarkQuests) {
+  const occupyQuestLandmarks = (quest: {
+    worldKnowledge?: readonly { bind: { landmarkId?: string } }[]
+    stages: readonly Parameters<typeof questStageObjectiveSlots>[0][]
+  }): void => {
+    for (const slot of quest.worldKnowledge ?? []) {
+      if (slot.bind.landmarkId) occupiedLandmarkIds.add(slot.bind.landmarkId)
+    }
     for (const stage of quest.stages) {
-      for (const slot of questStageObjectiveSlots(stage)) {
-        if (slot.objective.type === 'interact_landmark') occupiedLandmarkIds.add(slot.objective.landmarkId)
+      for (const entry of questStageObjectiveSlots(stage)) {
+        if (entry.objective.type === 'interact_landmark') occupiedLandmarkIds.add(entry.objective.landmarkId)
       }
     }
   }
+  for (const quest of landmarkQuests) occupyQuestLandmarks(quest)
   const neighborDefs = nearbyRpgSettlementDefs(homeDef, (cell) => bundle.settlementsManager.peekDef(cell))
   const opportunitySettlements = [homeDef, ...neighborDefs]
   const npcsBySettlement = new Map(
@@ -1357,11 +1367,7 @@ export async function createApp(
     })
     for (const quest of generated) {
       opportunityQuestDefs.push(quest)
-      for (const stage of quest.stages) {
-        for (const slot of questStageObjectiveSlots(stage)) {
-          if (slot.objective.type === 'interact_landmark') occupiedLandmarkIds.add(slot.objective.landmarkId)
-        }
-      }
+      occupyQuestLandmarks(quest)
     }
     if (def.isHome) {
       opportunityQuestDefs.push(...buildHunterProfessionQuests({
@@ -1850,6 +1856,13 @@ export async function createApp(
     createSettlementLightLookup(() => bundle.settlementsManager.getLoaded()),
     physicalOutcomeResolver,
     questLifecycleHooks,
+    createQuestWorldKnowledgeResolver({
+      getHost: () => bundle,
+      getDefs: () => questDefs,
+      searchRadius: LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
+      chunkSize: config.terrain.chunkSize,
+      getChronicleSearch: () => getActiveLostTreasureChronicleSearchBinding(),
+    }),
   )
 
   const refreshGuardEveningPolicies = (): void => {

@@ -2398,8 +2398,38 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
         return false
       }
       if (note.speakerNpcId !== undefined && typeof note.speakerNpcId !== 'string') return false
+      if (note.stampId !== undefined && typeof note.stampId !== 'string') return false
     }
   }
+  if (e.worldKnowledge !== undefined) {
+    if (!e.worldKnowledge || typeof e.worldKnowledge !== 'object' || Array.isArray(e.worldKnowledge)) return false
+    for (const [knowledgeId, raw] of Object.entries(e.worldKnowledge as Record<string, unknown>)) {
+      if (knowledgeId.length === 0) return false
+      if (!isQuestWorldKnowledgeProgress(raw)) return false
+    }
+  }
+  return true
+}
+
+function isQuestWorldKnowledgeRef(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const ref = value as Record<string, unknown>
+  return ref.kind === 'landmark'
+    && typeof ref.landmarkId === 'string'
+    && ref.landmarkId.length > 0
+    && typeof ref.landmarkKind === 'string'
+    && ref.landmarkKind.length > 0
+}
+
+function isQuestWorldKnowledgeProgress(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const entry = value as Record<string, unknown>
+  if (typeof entry.requestedAtDays !== 'number' || !Number.isFinite(entry.requestedAtDays)) return false
+  if (typeof entry.revealAtDays !== 'number' || !Number.isFinite(entry.revealAtDays)) return false
+  if (entry.status !== 'requested' && entry.status !== 'resolved' && entry.status !== 'unavailable') return false
+  if (entry.revealed !== undefined && typeof entry.revealed !== 'boolean') return false
+  if (entry.ref !== undefined && !isQuestWorldKnowledgeRef(entry.ref)) return false
+  if (entry.status === 'resolved' && !isQuestWorldKnowledgeRef(entry.ref)) return false
   return true
 }
 
