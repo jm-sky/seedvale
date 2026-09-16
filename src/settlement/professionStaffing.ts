@@ -164,10 +164,15 @@ const ROLE_STAFFING_POLICY: Record<Role, RoleStaffingPolicy> = {
   trader: {
     basePriority: (s) => {
       if (s.size === 'SM' || s.adultCapacity < 6) return 'excluded'
+      if (s.size === 'XL' && s.adultCapacity >= 10) return 'strong'
       if (s.adultCapacity >= 8) return 'normal'
       return 'weak'
     },
-    afterDuplicate: (copies, base) => (copies >= 1 ? 'excluded' : base),
+    afterDuplicate: (copies, base, s) => {
+      if (copies <= 0) return base
+      if (copies >= maxTraderCount(s)) return 'excluded'
+      return 'weak'
+    },
   },
   shepherd: {
     basePriority: (s) => {
@@ -235,6 +240,16 @@ function environmentSignal(signals: StaffingSignals, role: Role): boolean {
     return signals.foodSourceType === 'foraging' || signals.terrain === 'forest'
   }
   return false
+}
+
+/** Workforce-derived merchant cap (plan settlements-012) — size suggests
+ *  capacity, adult count is the hard limit. SM stays 0; MD at most 1; LG up
+ *  to 2; XL up to 3 when the roster can actually staff them. */
+function maxTraderCount(signals: StaffingSignals): number {
+  if (signals.size === 'SM' || signals.adultCapacity < 6) return 0
+  if (signals.size === 'XL' && signals.adultCapacity >= 14) return 3
+  if ((signals.size === 'XL' || signals.size === 'LG') && signals.adultCapacity >= 10) return 2
+  return 1
 }
 
 /** One level down unless the matching environment/resource signal is strong. */

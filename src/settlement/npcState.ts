@@ -56,6 +56,9 @@ export const MAX_STAMINA = 100
  *  construction/restore in this file needs it. */
 const TRANSPORT_CARGO_MAX_WEIGHT = 5
 
+/** Merchant shop goods are not carried on a person — no weight/gabarite cap. */
+const MERCHANT_STOCK_MAX_WEIGHT = Infinity
+
 /**
  * Authoritative NPC entity state (plan 197 / persistence-001 /
  * settlements-npcs-026) — everything an `NpcAgent` mutates during simulation
@@ -140,6 +143,17 @@ export type NpcAuthoritativeState = {
    *  (personal belongings) and `carried` (transient per-profession work
    *  payload) — never mixed. */
   readonly transportCargo: Inventory
+  /**
+   * Finite Merchant shop stock (plan settlements-012) — catalog-backed kinds
+   * owned by this Trader, generated once and depleted by real purchases.
+   * Distinct from `personalInventory`. Non-traders keep an empty container.
+   */
+  readonly merchantStock: Inventory
+  /**
+   * Persisted latch so a sold-out shop is not reseeded on stream/reload.
+   * Absent/false on legacy snapshots; true after generation-time seeding.
+   */
+  merchantStockInitialized: boolean
   /** Source-neutral accompany/follow commitment (plan npc-029) — `null` when
    *  this NPC is not accompanying anyone. Mutable in place like `activePlan`.
    *  One NPC, one commitment. Round-trips via `NpcStateSnapshot`. */
@@ -185,6 +199,10 @@ export type NpcStateSnapshot = {
    *  cargo) restores as an empty inventory — never reconstructed from a
    *  `TransportOrder`'s `claimedQuantity`. */
   transportCargo?: InventoryContentsSnapshot
+  /** Finite Merchant shop stock (plan settlements-012). Absent restores empty
+   *  and uninitialized, then generation-time seeding may fill it once. */
+  merchantStock?: InventoryContentsSnapshot
+  merchantStockInitialized?: boolean
   /** Optional accompany commitment (plan npc-029). Absent means `null`. */
   accompanyCommitment?: NpcAccompanyCommitment | null
   /** Optional generic travel checkpoint (plan npc-029). Absent means `null`. */
@@ -209,6 +227,8 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     graveVisits: snapshot.graveVisits?.map((entry) => ({ ...entry })) ?? [],
     personalInventory: inventoryFromContents(snapshot.personalInventory),
     transportCargo: inventoryFromContents(snapshot.transportCargo, TRANSPORT_CARGO_MAX_WEIGHT),
+    merchantStock: inventoryFromContents(snapshot.merchantStock, MERCHANT_STOCK_MAX_WEIGHT, Infinity),
+    merchantStockInitialized: snapshot.merchantStockInitialized === true,
     accompanyCommitment: cloneNpcAccompanyCommitment(snapshot.accompanyCommitment),
     travel: cloneNpcTravel(snapshot.travel),
     needsInitialPersonalLoadout: false,
@@ -254,6 +274,8 @@ export function createNpcAuthoritativeState(
     graveVisits: [],
     personalInventory: new Inventory(),
     transportCargo: new Inventory(undefined, TRANSPORT_CARGO_MAX_WEIGHT),
+    merchantStock: new Inventory(undefined, MERCHANT_STOCK_MAX_WEIGHT, undefined, undefined, Infinity),
+    merchantStockInitialized: false,
     accompanyCommitment: null,
     travel: null,
     needsInitialPersonalLoadout: true,
@@ -319,6 +341,8 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
             : undefined,
           personalInventory: snapshotInventoryContents(state.personalInventory),
           transportCargo: snapshotInventoryContents(state.transportCargo),
+          merchantStock: snapshotInventoryContents(state.merchantStock),
+          merchantStockInitialized: state.merchantStockInitialized || undefined,
           accompanyCommitment: cloneNpcAccompanyCommitment(state.accompanyCommitment) ?? undefined,
           travel: cloneNpcTravel(state.travel) ?? undefined,
         }

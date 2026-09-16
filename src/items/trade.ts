@@ -366,6 +366,60 @@ export function settleTransaction(
   return 'ok'
 }
 
+function merchantStockHas(stock: Inventory, kind: ItemKind, count: number): boolean {
+  const owned = isInstanceBackedKind(kind) ? stock.countInstances(kind) : stock.count(kind)
+  return owned >= count
+}
+
+/**
+ * Merchant catalog purchase against finite owned stock (plan settlements-012).
+ * Pricing stays `merchantPrice` / existing social buyback — no regional
+ * multiplier. Purchases move real stock from `merchantStock` instead of minting
+ * a replacement from the global catalog.
+ */
+export function settleMerchantStockTransaction(
+  inventory: Inventory,
+  merchantStock: Inventory,
+  purchases: Partial<Record<ItemKind, number>>,
+  offer: Partial<Record<ItemKind, number>>,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+): TradeResult {
+  const purchaseEntries = (Object.entries(purchases) as [ItemKind, number][]).filter(([, count]) => count > 0)
+  for (const [kind, count] of purchaseEntries) {
+    if (!Number.isInteger(count) || !merchantStockHas(merchantStock, kind, count)) return 'not_sold'
+    if (merchantPrice(kind) == null) return 'not_sold'
+  }
+  const offerHasEntries = (Object.entries(offer) as [ItemKind, number][]).some(([, count]) => count > 0)
+  if (purchaseEntries.length === 0 && !offerHasEntries) return 'invalid_offer'
+  let totalBuyCost = 0
+  for (const [kind, count] of purchaseEntries) {
+    totalBuyCost += (merchantPrice(kind) ?? 0) * count
+  }
+  if (offerHasEntries && !isValidOffer(inventory, offer)) return 'invalid_offer'
+  const offerResolution = resolveOfferBuyback(inventory, offer, context)
+  const netCoins = computeNetCoins(totalBuyCost, offerResolution)
+  if (purchaseEntries.length === 0 && netCoins === 0) return 'not_sold'
+  if (netCoins > 0 && !inventory.has('coin', netCoins)) return 'cannot_afford'
+  if (!wouldFitAfterTransaction(inventory, offer, purchases, netCoins)) return 'full'
+  removeOffer(inventory, offer, offerResolution.instanceIdsByKind)
+  for (const [kind, count] of purchaseEntries) {
+    if (isInstanceBackedKind(kind)) {
+      for (const id of selectInstancesToSell(merchantStock.getInstances(kind), count)) {
+        const instance = merchantStock.getInstance(id)
+        if (!instance) return 'not_sold'
+        merchantStock.removeInstance(id)
+        inventory.addInstance(instance)
+      }
+    } else {
+      merchantStock.remove(kind, count)
+      inventory.add(kind, count)
+    }
+  }
+  if (netCoins > 0) inventory.remove('coin', netCoins)
+  else if (netCoins < 0) inventory.add('coin', -netCoins)
+  return 'ok'
+}
+
 /** One resolved purchase line for `settleOwnedGoodsPurchase` — `unitPrice`
  *  is caller-resolved (live `npcSalePrice`), not looked up here. `source`
  *  overrides the shared owner when a basket spans household + personal

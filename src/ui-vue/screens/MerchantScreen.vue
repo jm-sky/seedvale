@@ -6,7 +6,7 @@ import { ITEM_CATALOG, type ItemCapability } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
 import { isInstanceBackedKind } from '../../items/itemInstances'
 import { hasItemKindCategory, ITEM_DEFS, type ItemKind } from '../../items/items'
-import { MERCHANT_STOCK, merchantPrice } from '../../items/tradeCatalog'
+import { merchantPrice } from '../../items/tradeCatalog'
 import MerchantFilterBar from '../components/MerchantFilterBar.vue'
 import MerchantItemDetailsModal from '../components/MerchantItemDetailsModal.vue'
 import MerchantItemRow from '../components/MerchantItemRow.vue'
@@ -69,9 +69,8 @@ const OFFER_SORT_OPTIONS = [
 
 const buyCapabilities = computed<ItemCapability[]>(() => {
   const set = new Set<ItemCapability>()
-  const kinds = isNpcGoodsMode.value ? ui.merchant.npcStock.map((row) => row.kind) : MERCHANT_STOCK
-  for (const kind of kinds) {
-    for (const cap of ITEM_CATALOG[kind].capabilities ?? []) set.add(cap)
+  for (const row of ui.merchant.npcStock) {
+    for (const cap of ITEM_CATALOG[row.kind].capabilities ?? []) set.add(cap)
   }
   return [...set]
 })
@@ -98,32 +97,20 @@ function conditionForOffer(kind: ItemKind): number | null {
 }
 
 const buyRows = computed(() => {
-  if (isNpcGoodsMode.value) {
-    const rows = ui.merchant.npcStock.flatMap((stock) => {
-      if (!matchesCategory(stock.kind, buyFilters, hasItemKindCategory)) return []
-      if (!matchesCapability(ITEM_CATALOG[stock.kind].capabilities, buyFilters)) return []
-      if (!matchesPrice(stock.unitPrice, buyFilters)) return []
-      const label = itemDisplayName(stock.kind)
-      if (!matchesSearch(label, buyFilters)) return []
-      return [{
-        kind: stock.kind,
-        label,
-        price: stock.unitPrice,
-        weight: ITEM_DEFS[stock.kind].weight,
-        conditionPercent: null as number | null,
-        maxCount: stock.quantity as number | null,
-      }]
-    })
-    return sortRows(rows, buyFilters.sort)
-  }
-  const rows = MERCHANT_STOCK.flatMap((kind) => {
-    const price = merchantPrice(kind) ?? 0
-    if (!matchesCategory(kind, buyFilters, hasItemKindCategory)) return []
-    if (!matchesCapability(ITEM_CATALOG[kind].capabilities, buyFilters)) return []
-    if (!matchesPrice(price, buyFilters)) return []
-    const label = itemDisplayName(kind)
+  const rows = ui.merchant.npcStock.flatMap((stock) => {
+    if (!matchesCategory(stock.kind, buyFilters, hasItemKindCategory)) return []
+    if (!matchesCapability(ITEM_CATALOG[stock.kind].capabilities, buyFilters)) return []
+    if (!matchesPrice(stock.unitPrice, buyFilters)) return []
+    const label = itemDisplayName(stock.kind)
     if (!matchesSearch(label, buyFilters)) return []
-    return [{ kind, label, price, weight: ITEM_DEFS[kind].weight, conditionPercent: null as number | null, maxCount: null as number | null }]
+    return [{
+      kind: stock.kind,
+      label,
+      price: stock.unitPrice,
+      weight: ITEM_DEFS[stock.kind].weight,
+      conditionPercent: null as number | null,
+      maxCount: stock.quantity as number | null,
+    }]
   })
   return sortRows(rows, buyFilters.sort)
 })
@@ -167,8 +154,8 @@ function onClearOffer(kind: ItemKind): void {
 }
 
 function purchaseUnitPrice(kind: ItemKind): number {
-  if (isNpcGoodsMode.value) return ui.merchant.npcStock.find((row) => row.kind === kind)?.unitPrice ?? 0
-  return merchantPrice(kind) ?? 0
+  return ui.merchant.npcStock.find((row) => row.kind === kind)?.unitPrice
+    ?? (isNpcGoodsMode.value ? 0 : merchantPrice(kind) ?? 0)
 }
 
 const purchaseLines = computed<TransactionLine[]>(() => (Object.entries(transaction.purchases) as [ItemKind, number][])
@@ -225,8 +212,11 @@ function clampStaleTransaction(): boolean {
   let changed = false
   const nextPurchases: Partial<Record<ItemKind, number>> = {}
   for (const [kind, count] of Object.entries(transaction.purchases) as [ItemKind, number][]) {
-    if (merchantPrice(kind) == null) { changed = true; continue }
-    nextPurchases[kind] = count
+    const row = ui.merchant.npcStock.find((entry) => entry.kind === kind)
+    if (!row || row.quantity <= 0 || merchantPrice(kind) == null) { changed = true; continue }
+    const clamped = Math.min(row.quantity, count)
+    if (clamped !== count) changed = true
+    nextPurchases[kind] = clamped
   }
   const nextOffer: Partial<Record<ItemKind, number>> = {}
   for (const [kind, count] of Object.entries(transaction.offer) as [ItemKind, number][]) {

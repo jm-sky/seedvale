@@ -71,6 +71,11 @@ import { createHouseDoorController } from './houseDoors'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
 import { disposeLivestock, type LivestockPersistence, spawnLivestock, tickSettlementLivestock } from './livestock'
+import {
+  generateMerchantAssortment,
+  resolveMerchantProfiles,
+  seedMerchantStockIfNeeded,
+} from './merchantTrade'
 import { settlementNpcId } from './npcIdentity'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
 import {
@@ -836,6 +841,20 @@ export async function createSettlement(
     const state = npcStateRegistry.get(npcId)
     if (state) settlementNpcStates.push([npcId, state])
   })
+  const traderNpcIds = flatMembers.flatMap(({ member }, i) => (
+    member.character.role === 'trader' ? [settlementNpcId(def.id, i)] : []
+  ))
+  const merchantProfiles = resolveMerchantProfiles(traderNpcIds, def.plan.identity.terrain)
+  const merchantStallByNpc = new Map(merchantProfiles.map((profile) => [profile.npcId, profile.stallIndex]))
+  const merchantAssortment = generateMerchantAssortment(
+    {
+      size: def.size,
+      terrain: def.plan.identity.terrain,
+      seed: settlementSeed,
+      dominantResource: def.plan.identity.dominantResource,
+    },
+    merchantProfiles,
+  )
   const familyNpcIdsByVisitor = new Map<string, readonly string[]>()
   for (let i = 0; i < flatMembers.length; i++) {
     const familyIndex = flatMembers[i]!.familyIndex
@@ -941,8 +960,9 @@ export async function createSettlement(
   const nowDays = currentNowDays
   agents = (await Promise.all(
     flatMembers.map(async ({ home, household, member, familyIndex, familyMembers }, i) => {
-      const workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex)
       const npcId = settlementNpcId(def.id, i)
+      const stallIndex = merchantStallByNpc.get(npcId) ?? 0
+      const workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex, stallIndex)
       const needOffset = i / Math.max(1, flatMembers.length - 1)
       // Deterministic max HP/stamina/vigor + base SPEA from sex + age (plan
       // npc-001/npc-019) — own seed stream (settlement seed + flat member
@@ -961,6 +981,13 @@ export async function createSettlement(
       // unload/reload) — a genuinely new id gets the usual fresh state
       // (plan 197), seeded with this NPC's generated maxima.
       const npcState = npcStateRegistry.getOrCreate(npcId, needOffset, physicalProfile)
+      if (member.character.role === 'trader') {
+        seedMerchantStockIfNeeded(
+          npcState.merchantStock,
+          npcState,
+          merchantAssortment.get(npcId) ?? {},
+        )
+      }
       if (npcState.postDeath) finalizeExpiredNpcCorpse(npcState.postDeath, nowDays, droppedItems)
       if (shouldSkipNpcCorpsePresentation(npcState, nowDays)) return null
       const agent = await NpcAgent.create({

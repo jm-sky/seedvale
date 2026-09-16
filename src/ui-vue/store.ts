@@ -365,10 +365,10 @@ export type NpcTradeStockRow = {
 }
 
 /** Which stock the open trade screen renders the BUY column from (plan
- *  settlements-npcs-033 §1/§10) — `'merchant'` keeps the exact existing
- *  `MERCHANT_STOCK` catalog + OFFER/barter + horse special; `'npcGoods'` is
- *  an ordinary NPC's real, quantity-limited household/personal surplus with no
- *  barter/OFFER column (coin-only V1, see the plan's §8 barter caution). */
+ *  settlements-npcs-033 §1/§10, settlements-012) — `'merchant'` is a Trader's
+ *  finite owned catalog stock + OFFER/barter + optional home horse special;
+ *  `'npcGoods'` is an ordinary NPC's real household/personal surplus with no
+ *  barter/OFFER column. */
 export type MerchantMode = 'merchant' | 'npcGoods'
 
 type MerchantState = {

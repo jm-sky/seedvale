@@ -127,6 +127,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Deferred world knowledge](../src/world/locations/worldKnowledgeResearch.ts) — world-owned worker-backed research service; quest adapter in [worldKnowledgeResolver.ts](../src/quests/worldKnowledgeResolver.ts) + [location phrase](../src/quests/landmarkLocationDescription.ts); home-guard pilot in [guardLocalKnowledge.ts](../src/world/locations/guardLocalKnowledge.ts) (plan quests-progression-047).
 - [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.
 - [Profession staffing](../src/settlement/professionStaffing.ts) — generation-time adult profession composition from settlement identity; does not change family structure.
+- [Merchant trade](../src/settlement/merchantTrade.ts) — Trader specialization, stall index and finite regional assortment (plan settlements-012).
 - [Settlement character](../src/settlement/settlementCharacter.ts) — deterministic `default`/`closed` archetype on `VillageIdentity`; consumers read it, none own it.
 - [ReputationManager](../src/reputation/ReputationManager.ts) — per-settlement reputation dimensions and renown; callers apply an already-resolved `SocialConsequence`.
 - [Social exposure](../src/reputation/socialExposure.ts) — pure day/night + Sneak exposure roll used when a cemetery grave first resolves.

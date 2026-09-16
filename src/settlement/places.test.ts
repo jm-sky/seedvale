@@ -24,6 +24,7 @@ function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): Settlement
     garden,
     gardens: [garden],
     market: new Vector3(4, 0, 4),
+    markets: [],
     blacksmithWorkplaces: [],
     homes: [],
     houses: [],
@@ -47,6 +48,15 @@ describe('workplaceFor', () => {
   it('trader -> market', () => {
     const landmarks = makeLandmarks()
     expect(workplaceFor('s1', 'trader', landmarks, 0, 0)?.position).toBe(landmarks.market)
+  })
+
+  it('trader uses a stable indexed stall when multiple markets exist (settlements-012)', () => {
+    const stall0 = new Vector3(4, 0, 4)
+    const stall1 = new Vector3(9, 0, 2)
+    const landmarks = makeLandmarks({ market: stall0, markets: [stall0, stall1] })
+    expect(workplaceFor('s1', 'trader', landmarks, 0, 0, 0)?.position).toBe(stall0)
+    expect(workplaceFor('s1', 'trader', landmarks, 0, 0, 1)?.position).toBe(stall1)
+    expect(workplaceFor('s1', 'trader', landmarks, 0, 0, 1)?.id).toBe('s1:workplace:market:1')
   })
 
   it('guard -> well', () => {

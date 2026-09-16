@@ -43,11 +43,11 @@ import {
   previewTransactionNetCoins,
   resolveOfferLineBuyback,
   sellInstancesForCoins,
+  settleMerchantStockTransaction,
   settleOwnedGoodsPurchase,
   settlePricedPurchase,
-  settleTransaction,
 } from '../items/trade'
-import { NEUTRAL_SELL_PRICE_CONTEXT, npcSalePrice, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
+import { MERCHANT_STOCK, merchantPrice, NEUTRAL_SELL_PRICE_CONTEXT, npcSalePrice, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { listOwnedWeaponMaintenance, type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
 import {
@@ -248,19 +248,13 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       : NEUTRAL_SELL_PRICE_CONTEXT
   )
 
-  /** Home trader only (plan settlements-npcs-033 §10) — merchant stays a
-   *  specialization of the same trade session, never a role check alone
-   *  (an ordinary hunter/farmer/etc. NPC never gets `MERCHANT_STOCK`). */
+  /** Any live Trader is a Merchant (plan settlements-012). Home-only extras
+   *  (wagon horse) stay gated separately. Ordinary non-trader NPCs never
+   *  receive catalog merchant stock. */
   const isMerchantNpc = (npc: NpcAgent | null): boolean => {
-    if (!npc || npc.role !== 'trader') return false
-    return findSettlementForNpc(npc)?.isHome === true
+    return !!npc && npc.role === 'trader'
   }
 
-  /** Live BUY-column rows for an ordinary NPC trade session (plan
-   *  settlements-npcs-033 §2/§5, extended by settlements-npcs-036) —
-   *  owner-aware surplus goods priced with the same social context as
-   *  merchant sell pricing, direction-flipped via `npcSalePrice`.
-   *  Recomputed on open and after every commit; never cached. */
   const buildNpcTradeStock = (npc: NpcAgent | null): NpcTradeStockRow[] => {
     if (!npc) return []
     const settlementNpcs = findSettlementForNpc(npc)?.npcs ?? []
@@ -271,6 +265,25 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       unitPrice: npcSalePrice(offer.kind, context),
       owner: offer.owner,
     }))
+  }
+
+  /** Live BUY rows from finite Merchant stock — catalog order and
+   *  `merchantPrice`, never minted at open time (plan settlements-012). */
+  const buildMerchantTradeStock = (npc: NpcAgent | null): NpcTradeStockRow[] => {
+    if (!npc) return []
+    const merchantStock = bundle.settlementsManager.getNpcState(npc.id)?.merchantStock
+    if (!merchantStock) return []
+    const rows: NpcTradeStockRow[] = []
+    for (const kind of MERCHANT_STOCK) {
+      const quantity = isInstanceBackedKind(kind)
+        ? merchantStock.countInstances(kind)
+        : merchantStock.count(kind)
+      if (quantity <= 0) continue
+      const unitPrice = merchantPrice(kind)
+      if (unitPrice == null) continue
+      rows.push({ kind, quantity, unitPrice })
+    }
+    return rows
   }
 
   /** Ordinary NPC trade commit (plan settlements-npcs-033 §4 /
@@ -591,7 +604,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   }
 
   const buildMerchantHorseOffer = (settlement: Settlement | null): MerchantHorseOffer | null => {
-    if (!settlement) return null
+    if (!settlement?.isHome) return null
     const animalId = merchantHorseAnimalId(settlement.id)
     const status = horseAcquisitionStatus(settlement)
     return {
@@ -631,7 +644,12 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       return
     }
     const settlement = findSettlementForNpc(npc)
-    vueUi.refreshMerchant(view.counts, view.groups, horseOffer ?? buildMerchantHorseOffer(settlement))
+    vueUi.refreshMerchant(
+      view.counts,
+      view.groups,
+      horseOffer ?? buildMerchantHorseOffer(settlement),
+      buildMerchantTradeStock(npc),
+    )
   }
 
   /** Applies a purchased Near/Far map's knowledge immediately (plan §9/§10)
@@ -660,7 +678,10 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   vueUi.configureMerchant({
     onSettleTransaction: async (purchases, offer) => {
       if (ui.merchant.mode === 'npcGoods') return settleNpcGoodsTransaction(purchases, offer)
-      const result = settleTransaction(inventory, purchases, offer, merchantSellContext())
+      const npc = ui.merchant.npc as NpcAgent | null
+      const merchantStock = npc ? bundle.settlementsManager.getNpcState(npc.id)?.merchantStock : undefined
+      if (!npc || npc.health.dead || !merchantStock) return 'not_sold'
+      const result = settleMerchantStockTransaction(inventory, merchantStock, purchases, offer, merchantSellContext())
       if (result === 'ok') {
         afterTrade()
         const needsNear = (purchases.map_near ?? 0) > 0
@@ -753,7 +774,14 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
         const pricing = createMerchantPricing(npc)
         activeMerchantPricing = pricing
         const settlement = findSettlementForNpc(npc)
-        vueUi.openMerchantFromDialogue(view.counts, view.groups, 'merchant', pricing, buildMerchantHorseOffer(settlement))
+        vueUi.openMerchantFromDialogue(
+          view.counts,
+          view.groups,
+          'merchant',
+          pricing,
+          buildMerchantHorseOffer(settlement),
+          buildMerchantTradeStock(npc),
+        )
         return
       }
       activeMerchantPricing = null

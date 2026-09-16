@@ -1,13 +1,17 @@
 # Plan: Regional specialist trade and settlement-scale quality
 
 **Created:** 2026-09-13
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~settlements-npcs-033~~
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** `economy-goods-flow.md`
 **Model:** Opus, Sonnet
+
+## Implementation status
+
+Implemented 2026-09-16. Automated staffing/profile/assortment/stock/persistence/layout tests pass. Browser/gameplay verification (SM–XL merchant counts, stall diversity, regional assortments, premium frequency, sold-item persistence, pricing) remains User-owned. Coastal dock visual extension was left out of V1 (not required for correct regional assortment).
 
 ## Cel
 

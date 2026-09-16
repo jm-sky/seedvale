@@ -94,7 +94,7 @@ Interaction: `[E]` na settlement house (kind `house`) zostaje examine flavor (te
 
 Autorytatywny stan NPC (`health`/`stamina`/`vigor`/`needs`/`physicalInjury`/`helperAssignment`/`activePlan`/`postDeath`) jest fizycznie hostowany w `src/settlement/` — `NpcStateRegistry` (`npcState.ts`) żyje na `SettlementsManager`, keyed po stabilnym `npc.id`, tym samym wzorcem co `HouseholdRegistry`/`EconomyRegistry`: stream-out/in i `WorldBundle` rebuild (`snapshotNpcStates()`/`initialNpcStates`) hydratują `NpcAgent` z tego samego stanu zamiast tworzyć świeży, więc śmierć (`health.dead`) i corpse (`postDeath`) przetrwają reload w tej samej sesji. Persystowane w `SaveData.npcStates` od planu persistence-001 (zob. S7 wyżej). To jedyne miejsce, gdzie osada "hostuje" NPC-a fizycznie — cała reszta architektury (needs/pressure/decyzje, harmonogram, movement watchdog, walka, dialog, death/corpse lifecycle) jest kanonicznie opisana w [npc.md](./npc.md), nie tutaj.
 
-Kupiec przy straganie: dialog v2 (ekran Vue) w osadzie domowej wystawia handel (dwie kolumny, kupno/sprzedaż/barter); strażnik może oddać miecz — to settlement-specific treść menu dialogu, nie zmiana architektury dialogu opisanej w [npc.md](./npc.md#relationships-social-and-dialogue).
+Kupiec przy straganie: każdy NPC z rolą `trader` (nie tylko home) otwiera sesję Merchant z skończonym, persystowanym stockiem (`merchantStock`) i ewentualnym barterem; koń przy wozie zostaje extra home-only. Strażnik może oddać miecz — to settlement-specific treść menu dialogu, nie zmiana architektury dialogu opisanej w [npc.md](./npc.md#relationships-social-and-dialogue).
 
 ### Social
 

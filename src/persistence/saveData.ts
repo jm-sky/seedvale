@@ -679,7 +679,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 45
+export const CURRENT_SAVE_VERSION = 46
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1962,6 +1962,8 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   }
   if (!isInventoryContentsSnapshot(s.personalInventory)) return false
   if (s.transportCargo !== undefined && !isInventoryContentsSnapshot(s.transportCargo)) return false
+  if (s.merchantStock !== undefined && !isInventoryContentsSnapshot(s.merchantStock)) return false
+  if (s.merchantStockInitialized !== undefined && typeof s.merchantStockInitialized !== 'boolean') return false
   if (s.accompanyCommitment !== undefined && s.accompanyCommitment !== null && !isNpcAccompanyCommitment(s.accompanyCommitment)) return false
   if (s.travel !== undefined && s.travel !== null && !isNpcTravelContinuity(s.travel)) return false
   return true
@@ -3637,6 +3639,15 @@ function migrateSaveV44ToV45(data: unknown): unknown {
   return { ...v, version: 45 }
 }
 
+/** v45 → v46 (plan settlements-012): optional `npcStates[id].merchantStock`
+ *  and `merchantStockInitialized`. A pre-plan save has never seeded finite
+ *  Merchant stock; restore already defaults missing fields to empty /
+ *  uninitialized so generation-time seeding can fill them once. */
+function migrateSaveV45ToV46(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 46 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3802,6 +3813,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   42: migrateSaveV42ToV43,
   43: migrateSaveV43ToV44,
   44: migrateSaveV44ToV45,
+  45: migrateSaveV45ToV46,
 }
 
 function detectStoredVersion(value: unknown): number | null {

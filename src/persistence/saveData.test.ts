@@ -1643,6 +1643,13 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.expeditionAssignments).toBeUndefined()
   })
 
+  it('migrates a v45 save without merchantStock to the current version (plan settlements-012)', () => {
+    const result = loadStoredSave({ ...validSave, version: 45 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+  })
+
   it('round-trips expeditionAssignments and rejects a malformed one (plan settlements-npcs-027)', () => {
     const assignment = {
       id: 'expeditionAssignment:1',

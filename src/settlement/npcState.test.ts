@@ -417,5 +417,22 @@ describe('NpcAuthoritativeState accompanyCommitment / travel (plan npc-029)', ()
     const state = registry.getOrCreate('0_0:npc:0', 0)
     expect(state.accompanyCommitment).toBeNull()
     expect(state.travel).toBeNull()
+    expect(state.merchantStockInitialized).toBe(false)
+    expect(state.merchantStock.isEmpty()).toBe(true)
+  })
+})
+
+describe('NpcAuthoritativeState merchantStock (plan settlements-012)', () => {
+  it('round-trips finite stock and the initialized latch, including sold-out', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.merchantStock.add('bread', 2)
+    state.merchantStockInitialized = true
+    state.merchantStock.remove('bread', 2)
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.merchantStockInitialized).toBe(true)
+    expect(hydrated.merchantStock.count('bread')).toBe(0)
+    expect(hydrated.merchantStock).not.toBe(state.merchantStock)
   })
 })

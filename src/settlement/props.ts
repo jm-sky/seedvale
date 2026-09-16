@@ -225,8 +225,12 @@ export type SettlementLandmarks = {
    *  market stall, the one role in the workplace hybrid that gets a
    *  dedicated new prop instead of reusing an existing landmark (2026-08-09
    *  decision). Built unconditionally, like well/garden/stockpile, whether
-   *  or not this settlement's families happen to roll a trader. */
+   *  or not this settlement's families happen to roll a trader.
+   *  Compatibility alias of `markets[0]`. */
   market: THREE.Vector3
+  /** All planned market/stall anchors (plan settlements-012). Index 0 is
+   *  `market`. LG/XL may have several. */
+  markets: THREE.Vector3[]
   /** Household-owned blacksmith workplaces (plan settlements-npcs-024 Stage
    *  1) — zero, one or many, one per family index whose family contains a
    *  blacksmith member (`places.ts`'s `workplaceFor` resolves each NPC's own
@@ -806,6 +810,7 @@ export async function buildSettlementProps(
     cultivationAnchors: [],
     haySpots: [],
     market: new THREE.Vector3(),
+    markets: [],
     blacksmithWorkplaces: [],
     homes: [],
     houses: [],
@@ -1038,19 +1043,28 @@ export async function buildSettlementProps(
     landmarks.cultivationAnchors = [fieldAnchor, ...(landmarks.cultivationAnchors ?? [])]
   }
 
-  // Trader's market stall (`landmarks.market`, see `places.ts`'s `workplaceFor`)
-  // — built unconditionally like well/garden/stockpile, whether or not this
-  // settlement's families happen to roll a trader.
-  const { x: marketX, z: marketZ } = placeAtPlannedAnchor(
-    site, landmarkOf(plan, 'market', 0), 2, -5,
-  )
-  const marketCrate = await loadPropOrFallback('/models/settlement/crate.glb', 0.6, () => createCrate(1))
-  placeOnGround(marketCrate, marketX, marketZ, sampleHeight)
-  group.add(marketCrate)
-  const marketBarrel = await loadPropOrFallback('/models/settlement/barrel.glb', 0.65, () => createBarrel(1))
-  placeOnGround(marketBarrel, marketX + 0.7, marketZ + 0.3, sampleHeight)
-  group.add(marketBarrel)
-  landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
+  // Trader market stalls (`landmarks.markets`, see `places.ts`'s `workplaceFor`)
+  // — one per planned market landmark (settlements-012). Index 0 remains the
+  // compatibility `landmarks.market` alias. Built even when no Trader rolled.
+  const plannedMarkets = (plan?.landmarks ?? []).filter((lm) => lm.kind === 'market')
+  const marketCount = Math.max(1, plannedMarkets.length)
+  const markets: THREE.Vector3[] = []
+  for (let i = 0; i < marketCount; i++) {
+    const { x: stallX, z: stallZ } = placeAtPlannedAnchor(
+      site, landmarkOf(plan, 'market', i), 2 + i * 1.6, -5,
+    )
+    const marketCrate = await loadPropOrFallback('/models/settlement/crate.glb', 0.6, () => createCrate(1))
+    placeOnGround(marketCrate, stallX, stallZ, sampleHeight)
+    group.add(marketCrate)
+    const marketBarrel = await loadPropOrFallback('/models/settlement/barrel.glb', 0.65, () => createBarrel(1))
+    placeOnGround(marketBarrel, stallX + 0.7, stallZ + 0.3, sampleHeight)
+    group.add(marketBarrel)
+    const stall = new THREE.Vector3(stallX, sampleHeight(stallX, stallZ), stallZ)
+    markets.push(stall)
+    if (i === 0) landmarks.market.copy(stall)
+  }
+  landmarks.markets = markets
+  if (markets[0]) landmarks.market.copy(markets[0])
 
   // Notice board (plan npc-014) — built unconditionally like well/market,
   // near the plaza. No dedicated notice-board asset exists yet; reuses the
@@ -1589,7 +1603,7 @@ export async function buildSettlementProps(
         r: 1.5,
       })
     }
-    const pose = pickMerchantWagonPose(marketX, marketZ, wagonObstacles)
+    const pose = pickMerchantWagonPose(landmarks.market.x, landmarks.market.z, wagonObstacles)
     try {
       const wagon = await loadGltf('/models/settlement/megakit/wagon.glb')
       preparePropFitMax(wagon, 3.8)

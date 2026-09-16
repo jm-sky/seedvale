@@ -106,7 +106,8 @@ export function workEligibleSettlementTrees(
  *   but are skipped, plan settlements-011). Successful chop → deposit commits
  *   wood into settlement economy stock (plan 071).
  * - `farmer` → `landmarks.garden`.
- * - `trader` → `landmarks.market`.
+ * - `trader` → `landmarks.markets[stallIndex]` (plan settlements-012),
+ *   falling back to the compatibility `landmarks.market` alias (index 0).
  * - `guard` → `landmarks.well` (central point, easiest to "patrol" from).
  * - `miner` → `landmarks.stockpile` (existing shared storage point — no ore-
  *   deposit query API exists yet, see `naturalResources.ts`/plan 032).
@@ -139,6 +140,9 @@ export function workplaceFor(
    *  Communal/world role mappings ignore it, same as they already ignore
    *  `treeIndex` unless they're `woodcutter`. */
   homeIndex: number,
+  /** Stable stall index from `resolveMerchantProfiles` — only consulted for
+   *  `trader`. Other roles ignore it. */
+  stallIndex = 0,
 ): Place | null {
   switch (role) {
     case 'blacksmith': {
@@ -176,8 +180,13 @@ export function workplaceFor(
         ? { id: `${settlementId}:workplace:textile:${homeIndex}`, type: 'workplace', position: home }
         : { id: `${settlementId}:workplace:well`, type: 'workplace', position: landmarks.well }
     }
-    case 'trader':
-      return { id: `${settlementId}:workplace:market`, type: 'workplace', position: landmarks.market }
+    case 'trader': {
+      const stalls = landmarks.markets && landmarks.markets.length > 0
+        ? landmarks.markets
+        : [landmarks.market]
+      const stall = stalls[stallIndex % stalls.length] ?? landmarks.market
+      return { id: `${settlementId}:workplace:market:${stallIndex % stalls.length}`, type: 'workplace', position: stall }
+    }
     case 'woodcutter': {
       const trees = workEligibleSettlementTrees(landmarks)
       if (trees.length === 0) return null

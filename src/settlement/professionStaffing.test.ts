@@ -268,13 +268,13 @@ describe('resolveInitialProfessionStaffing', () => {
       dominantResource: null,
     }
 
-    it('covers Farmer, never a second Trader, and does not require Miner/Fisher', () => {
+    it('covers Farmer, may staff extra Traders in XL, and does not require Miner/Fisher', () => {
       const rosters = new Set<string>()
       for (let seed = 0; seed < 50; seed++) {
         const staffed = staff(adults(11), { ...context, seed })
         const coverage = adultProfessionCoverage(staffed)
         expect(coverage.farmer).toBeGreaterThanOrEqual(1)
-        expect(coverage.trader).toBeLessThanOrEqual(1)
+        expect(coverage.trader).toBeLessThanOrEqual(2)
         rosters.add(adultRoles(staffed).join(','))
       }
       expect(rosters.size).toBeGreaterThan(1)
@@ -355,6 +355,35 @@ describe('resolveInitialProfessionStaffing', () => {
         expect(adultProfessionCoverage(staff(adults(5), { size: 'MD', seed })).trader).toBe(0)
         expect(adultProfessionCoverage(staff(adults(6), { size: 'SM', seed })).trader).toBe(0)
       }
+    })
+
+    it('does not add extra Traders on MD, and insufficient LG workforce stays at one', () => {
+      for (let seed = 0; seed < 40; seed++) {
+        expect(adultProfessionCoverage(staff(adults(8), { size: 'MD', seed })).trader).toBeLessThanOrEqual(1)
+        expect(adultProfessionCoverage(staff(adults(8), { size: 'LG', seed })).trader).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('can staff a second Trader in LG and two-to-three in XL when workforce allows', () => {
+      let lgTwo = 0
+      let xlTwo = 0
+      let xlThree = 0
+      for (let seed = 0; seed < 80; seed++) {
+        if (adultProfessionCoverage(staff(adults(12), { size: 'LG', seed })).trader >= 2) lgTwo++
+        const xl = adultProfessionCoverage(staff(adults(16), { size: 'XL', seed })).trader
+        if (xl >= 2) xlTwo++
+        if (xl >= 3) xlThree++
+        expect(adultProfessionCoverage(staff(adults(16), { size: 'XL', seed })).trader).toBeLessThanOrEqual(3)
+      }
+      expect(lgTwo).toBeGreaterThan(0)
+      expect(xlTwo).toBeGreaterThan(0)
+      expect(xlThree).toBeGreaterThan(0)
+    })
+
+    it('never creates extra families to fill merchant capacity', () => {
+      const before = adults(11)
+      const after = staff(before, { size: 'XL', seed: 4 })
+      expect(after).toHaveLength(before.length)
     })
 
     it('never assigns Blacksmith at 1–3 adults', () => {
