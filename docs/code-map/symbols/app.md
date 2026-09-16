@@ -263,13 +263,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 392
+- `createApp` — function — line 395
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 361
+- `NewAppOptions` — type — line 364
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -348,10 +348,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 212
-- `InventoryWiring` — type — line 128
-- `InventoryWiringDeps` — type — line 167
-- `MerchantInventoryView` — type — line 114
+- `createInventoryWiring` — function — line 205
+- `InventoryWiring` — type — line 119
+- `InventoryWiringDeps` — type — line 158
+- `MerchantInventoryView` — type — line 105
 
 ## `app/modalState.ts`
 
@@ -378,14 +378,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 145
+- `createSaveState` — function — line 147
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 39
-- `SaveStateDeps` — type — line 60
+- `SaveState` — type — line 40
+- `SaveStateDeps` — type — line 61
 
 ## `app/userActions.ts`
 

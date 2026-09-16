@@ -2769,7 +2769,7 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `terrain/chunkEnvironment.ts`
-- `terrain/chunkManager.ts`
+- `terrain/unloadedLandmarkLookup.ts`
 - `world/locations/darkForestTreasureSite.test.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/locations/locationProximityDiscovery.ts`
@@ -2788,6 +2788,36 @@ Generated from TypeScript imports.
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
 - `world/locations/locationProximityDiscovery.ts`
+
+## `world/locations/guardLocalKnowledge.test.ts`
+
+**Imports**
+
+- `ai/dialogueTemplates.ts`
+- `world/locations/guardLocalKnowledge.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldKnowledgeResearch.ts`
+- `world/locations/worldLocationTypes.ts`
+
+## `world/locations/guardLocalKnowledge.ts`
+
+**Imports**
+
+- `ai/dialogueTemplates.ts`
+- `quests/quests.ts`
+- `world/locations/locationConfig.ts`
+- `world/locations/locationDiscovery.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldKnowledgeResearch.ts`
+- `world/locations/worldLocationTypes.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/saveState.ts`
+- `persistence/saveData.ts`
+- `world/locations/guardLocalKnowledge.test.ts`
 
 ## `world/locations/knownSettlementReputation.test.ts`
 
@@ -2817,6 +2847,7 @@ Generated from TypeScript imports.
 
 - `app/inventoryWiring.ts`
 - `debug/npcDebugApi.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/seedProfile.ts`
@@ -2843,6 +2874,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/inventoryWiring.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/locationDiscovery.test.ts`
 
 ## `world/locations/locationKnowledge.test.ts`
@@ -2864,6 +2896,8 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `world/locations/guardLocalKnowledge.test.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/knownSettlementReputation.test.ts`
 - `world/locations/knownSettlementReputation.ts`
 - `world/locations/locationKnowledge.test.ts`
@@ -3023,6 +3057,31 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/worldBundle.ts`
 
+## `world/locations/worldKnowledgeResearch.test.ts`
+
+**Imports**
+
+- `terrain/chunkWorkerPool.ts`
+- `terrain/worldKnowledgeScan.ts`
+- `world/locations/worldKnowledgeResearch.ts`
+
+## `world/locations/worldKnowledgeResearch.ts`
+
+**Imports**
+
+- `terrain/chunkEnvironment.ts`
+- `terrain/chunkWorkerPool.ts`
+- `terrain/unloadedLandmarkLookup.ts`
+- `terrain/worldKnowledgeScan.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/worldKnowledgeResolver.ts`
+- `world/locations/guardLocalKnowledge.test.ts`
+- `world/locations/guardLocalKnowledge.ts`
+- `world/locations/worldKnowledgeResearch.test.ts`
+
 ## `world/locations/worldLocationCatalog.test.ts`
 
 **Imports**
@@ -3109,6 +3168,8 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/lib/mapColors.ts`
 - `ui-vue/lib/worldLocationDisplay.ts`
+- `world/locations/guardLocalKnowledge.test.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/knownSettlementReputation.test.ts`
 - `world/locations/knownSettlementReputation.ts`
 - `world/locations/locationDiscovery.test.ts`
@@ -3360,6 +3421,7 @@ Generated from TypeScript imports.
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
 - `world/locations/darkForestTreasureSite.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/seedProfile.ts`
 - `world/parseSeed.test.ts`
 - `world/seedLibrary.ts`

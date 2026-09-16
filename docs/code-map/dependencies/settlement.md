@@ -1708,6 +1708,7 @@ Generated from TypeScript imports.
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
+- `quests/worldKnowledgeResolver.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
@@ -1732,6 +1733,7 @@ Generated from TypeScript imports.
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkManager.ts`
+- `terrain/worldKnowledgeScan.ts`
 - `ui-vue/store.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`

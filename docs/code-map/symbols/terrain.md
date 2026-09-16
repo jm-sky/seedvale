@@ -190,10 +190,10 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmapProtocol.ts`
 
-- `ChunkTileResult` — type — line 12
-- `ChunkWorkerRequest` — type — line 29
-- `ChunkWorkerResponse` — type — line 34
-- `GrassRequestParams` — type — line 25
+- `ChunkTileResult` — type — line 13
+- `ChunkWorkerRequest` — type — line 30
+- `ChunkWorkerResponse` — type — line 36
+- `GrassRequestParams` — type — line 26
 
 ## `terrain/chunkItems.ts`
 
@@ -202,28 +202,23 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 1029
-- `applyModificationToTile` — function — line 886
-- `ChunkManager` — type — line 578
-- `ChunkManagerConfig` — type — line 399
-- `createChunkManager` — function — line 1054
+- `applyChunkWaterDayNight` — function — line 969
+- `applyModificationToTile` — function — line 826
+- `ChunkManager` — type — line 505
+- `ChunkManagerConfig` — type — line 326
+- `createChunkManager` — function — line 994
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 1043
-- `drainByBudget` — function — line 1004
-- `FinalizeStage` — type — line 500
-- `landmarkFromEnvironment` — function — line 301
-  - domain: world-terrain
-- `pickNearestQueuedKey` — function — line 964
-- `pickNextFinalizeKey` — function — line 982
-- `resolveUnloadedLandmark` — function — line 334
-  - domain: world-terrain
-- `ringChunkOffsets` — function — line 283
-- `TerrainModification` — type — line 843
-- `tickChunkWaterSurfaces` — function — line 1017
+- `CropHarvestOutcome` — type — line 983
+- `drainByBudget` — function — line 944
+- `FinalizeStage` — type — line 427
+- `pickNearestQueuedKey` — function — line 904
+- `pickNextFinalizeKey` — function — line 922
+- `TerrainModification` — type — line 783
+- `tickChunkWaterSurfaces` — function — line 957
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -281,17 +276,22 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkWorkerPool.ts`
 
-- `cancelChunkGrass` — function — line 334
-- `cancelChunkMesh` — function — line 345
-- `cancelChunkTile` — function — line 323
-- `ChunkWorkerPool` — type — line 23
-- `createChunkWorkerPool` — function — line 87
-- `defaultChunkWorkerCount` — function — line 76
-- `disposeChunkWorkerPool` — function — line 349
-- `HeightmapGenerationCancelledError` — class — line 11
-- `requestChunkGrass` — function — line 327
-- `requestChunkMesh` — function — line 338
-- `requestChunkTile` — function — line 316
+- `cancelChunkGrass` — function — line 406
+- `cancelChunkMesh` — function — line 417
+- `cancelChunkTile` — function — line 395
+- `cancelChunkWorldKnowledge` — function — line 428
+- `ChunkWorkerLike` — type — line 24
+- `ChunkWorkerPool` — type — line 40
+- `ChunkWorkerPoolOptions` — type — line 31
+- `createChunkWorkerPool` — function — line 126
+- `defaultChunkWorkerCount` — function — line 110
+- `disposeChunkWorkerPool` — function — line 432
+- `HeightmapGenerationCancelledError` — class — line 12
+- `isChunkWorkerCancelledError` — function — line 19
+- `requestChunkGrass` — function — line 399
+- `requestChunkMesh` — function — line 410
+- `requestChunkTile` — function — line 388
+- `requestChunkWorldKnowledge` — function — line 421
 
 ## `terrain/chunkWorldItems.ts`
 
@@ -618,6 +618,17 @@ Generated from exported TypeScript symbols.
 - `TerrainVisualHorizon` — type — line 14
   - domain: world-terrain
 
+## `terrain/unloadedLandmarkLookup.ts`
+
+- `isLightweightUnloadedLandmark` — function — line 49
+  - domain: world-terrain
+- `landmarkFromEnvironment` — function — line 35
+  - domain: world-terrain
+- `resolveUnloadedLandmark` — function — line 64
+  - domain: world-terrain
+- `ringChunkOffsets` — function — line 18
+  - domain: world-terrain
+
 ## `terrain/vegetationRegionBatcher.ts`
 
 - `createVegetationRegionBatcher` — function — line 125
@@ -653,6 +664,20 @@ Generated from exported TypeScript symbols.
   - system: water
   - role: Single physical "what water, if any, is at this point" answer (plan fauna-015) — the one thing world/terrain owns so fauna (and, later, any other gameplay consumer) never re-derives lake/ocean vs. river depth logic itself. Pure/allocation-light so it's safe to call from a hot per-agent movement path; `ChunkManager.sampleLocalWater` is the only wiring that turns real chunk/river data into these inputs.
 - `sampleLocalWater` — function — line 48
+
+## `terrain/worldKnowledgeScan.ts`
+
+- `chunkParamsForWorldKnowledgeScan` — function — line 87
+  - domain: world-terrain
+- `scanWorldKnowledge` — function — line 137
+  - domain: world-terrain
+- `WORLD_KNOWLEDGE_MAX_NEARBY_HITS` — const — line 22
+- `WorldKnowledgeQueryKind` — type — line 24
+- `WorldKnowledgeScanHit` — type — line 67
+- `WorldKnowledgeScanResult` — type — line 75
+- `WorldKnowledgeTerrainSnapshot` — type — line 30
+  - domain: world-terrain
+- `WorldKnowledgeWorkerParams` — type — line 58
 
 ## `terrain/worleyNoise.ts`
 

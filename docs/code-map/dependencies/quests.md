@@ -53,6 +53,7 @@ Generated from TypeScript imports.
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
+- `quests/worldKnowledgeResolver.ts`
 - `ui-vue/lib/questLogBuckets.test.ts`
 - `ui-vue/lib/questLogBuckets.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
@@ -72,6 +73,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `quests/cardinalDirection.test.ts`
 - `quests/caveLocationDescription.ts`
+- `quests/landmarkLocationDescription.ts`
 
 ## `quests/caveLocationDescription.test.ts`
 
@@ -192,6 +194,24 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `quests/guardPersistence.ts`
 - `quests/guardRewards.test.ts`
+
+## `quests/landmarkLocationDescription.test.ts`
+
+**Imports**
+
+- `quests/landmarkLocationDescription.ts`
+
+## `quests/landmarkLocationDescription.ts`
+
+**Imports**
+
+- `quests/cardinalDirection.ts`
+- `terrain/chunkEnvironment.ts`
+
+**Imported by**
+
+- `quests/landmarkLocationDescription.test.ts`
+- `quests/worldKnowledgeResolver.ts`
 
 ## `quests/lostHunterNaturalCave.test.ts`
 
@@ -694,11 +714,14 @@ Generated from TypeScript imports.
 - `quests/quests.test.ts`
 - `quests/suspiciousTransportCaveCache.test.ts`
 - `quests/suspiciousTransportCaveCache.ts`
+- `quests/worldKnowledgeResolver.test.ts`
+- `quests/worldKnowledgeResolver.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
 - `ui-vue/lib/questLogBuckets.test.ts`
 - `ui-vue/lib/questLogBuckets.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
+- `world/locations/guardLocalKnowledge.ts`
 
 ## `quests/settlementLightLookup.ts`
 
@@ -769,3 +792,26 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+
+## `quests/worldKnowledgeResolver.test.ts`
+
+**Imports**
+
+- `quests/quests.ts`
+- `quests/worldKnowledgeResolver.ts`
+
+## `quests/worldKnowledgeResolver.ts`
+
+**Imports**
+
+- `quests/QuestManager.ts`
+- `quests/landmarkLocationDescription.ts`
+- `quests/quests.ts`
+- `settlement/settlementGenerator.ts`
+- `terrain/chunkEnvironment.ts`
+- `world/locations/worldKnowledgeResearch.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/worldKnowledgeResolver.test.ts`

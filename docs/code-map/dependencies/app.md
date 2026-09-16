@@ -951,6 +951,7 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `quests/suspiciousTransportCaveCacheRuntime.ts`
+- `quests/worldKnowledgeResolver.ts`
 - `render/programPrewarm.ts`
 - `reputation/ReputationManager.ts`
 - `reputation/SocialNewsLedger.ts`
@@ -998,6 +999,7 @@ Generated from TypeScript imports.
 - `world/locations/abandonedCemeteryCache.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/knownSettlementReputation.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/locationProximityDiscovery.ts`
@@ -1006,6 +1008,7 @@ Generated from TypeScript imports.
 - `world/locations/revealLocationKnowledge.ts`
 - `world/locations/treasureMapBearCave.ts`
 - `world/locations/treasureMapBearCaveRuntime.ts`
+- `world/locations/worldKnowledgeResearch.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
@@ -1505,6 +1508,7 @@ Generated from TypeScript imports.
 - `world/cropLifecycle.ts`
 - `world/dayNight.ts`
 - `world/fishing.ts`
+- `world/locations/guardLocalKnowledge.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/navigationTargets.ts`
 - `world/map/mapDiscovery.ts`

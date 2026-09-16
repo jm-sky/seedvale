@@ -145,6 +145,8 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.test.ts`
 - `terrain/chunkManager.ts`
+- `terrain/worldKnowledgeScan.test.ts`
+- `terrain/worldKnowledgeScan.ts`
 - `world/locations/worldLocationCatalog.ts`
 
 ## `terrain/cemeteryPlacement.test.ts`
@@ -178,6 +180,8 @@ Generated from TypeScript imports.
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.test.ts`
 - `terrain/chunkManager.ts`
+- `terrain/unloadedLandmarkLookup.ts`
+- `terrain/worldKnowledgeScan.test.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 
@@ -226,10 +230,12 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
+- `quests/landmarkLocationDescription.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/opportunities/rpgQuestMaterialization.ts`
 - `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/quests.ts`
+- `quests/worldKnowledgeResolver.ts`
 - `settlement/landmarkProps.ts`
 - `terrain/cemeteryPlacement.test.ts`
 - `terrain/cemeteryPlacement.ts`
@@ -237,7 +243,10 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.worker.ts`
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkManager.ts`
+- `terrain/unloadedLandmarkLookup.ts`
+- `terrain/worldKnowledgeScan.ts`
 - `world/hiddenFinds.ts`
+- `world/locations/worldKnowledgeResearch.ts`
 - `world/treasureSites.ts`
 
 ## `terrain/chunkGrid.test.ts`
@@ -265,7 +274,9 @@ Generated from TypeScript imports.
 - `terrain/chunkVegetation.ts`
 - `terrain/chunkWorldItems.ts`
 - `terrain/grass.ts`
+- `terrain/unloadedLandmarkLookup.ts`
 - `terrain/vegetationRegionBatcher.ts`
+- `terrain/worldKnowledgeScan.ts`
 - `world/locations/darkForestTreasureSite.ts`
 
 ## `terrain/chunkHeightmap.test.ts`
@@ -347,6 +358,7 @@ Generated from TypeScript imports.
 - `terrain/chunkTileWorldgenCache.ts`
 - `terrain/chunkVegetation.test.ts`
 - `terrain/chunkVegetation.ts`
+- `terrain/chunkWorkerPool.test.ts`
 - `terrain/chunkWorkerPool.ts`
 - `terrain/chunkWorldItems.ts`
 - `terrain/footstepSurface.ts`
@@ -363,8 +375,11 @@ Generated from TypeScript imports.
 - `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
 - `terrain/terrainPreparation.ts`
+- `terrain/unloadedLandmarkLookup.ts`
 - `terrain/waterSample.test.ts`
 - `terrain/waterSample.ts`
+- `terrain/worldKnowledgeScan.test.ts`
+- `terrain/worldKnowledgeScan.ts`
 - `world/caves/caveMouthGeometry.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTerrainCutout.test.ts`
@@ -405,6 +420,7 @@ Generated from TypeScript imports.
 - `terrain/chunkMeshData.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/grassPlacement.ts`
+- `terrain/worldKnowledgeScan.ts`
 
 ## `terrain/chunkHeightmapProtocol.ts`
 
@@ -416,6 +432,7 @@ Generated from TypeScript imports.
 - `terrain/chunkMeshData.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/grassPlacement.ts`
+- `terrain/worldKnowledgeScan.ts`
 - `world/cropLifecycle.ts`
 
 **Imported by**
@@ -425,6 +442,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/chunkTileWorldgenCache.test.ts`
 - `terrain/chunkTileWorldgenCache.ts`
+- `terrain/chunkWorkerPool.test.ts`
 - `terrain/chunkWorkerPool.ts`
 
 ## `terrain/chunkItems.test.ts`
@@ -503,15 +521,16 @@ Generated from TypeScript imports.
 - `terrain/riverTileCache.ts`
 - `terrain/roadBridge.ts`
 - `terrain/terrainCutout.ts`
+- `terrain/unloadedLandmarkLookup.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `terrain/waterSample.ts`
+- `terrain/worldKnowledgeScan.ts`
 - `world/collision.ts`
 - `world/createBridge.ts`
 - `world/createRiverWater.ts`
 - `world/createWater.ts`
 - `world/cropLifecycle.ts`
 - `world/cropVisuals.ts`
-- `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/plantedCrops.ts`
 - `world/plantedTrees.ts`
@@ -586,6 +605,7 @@ Generated from TypeScript imports.
 - `terrain/chunkMeshCache.test.ts`
 - `terrain/chunkMeshCache.ts`
 - `terrain/chunkMeshData.test.ts`
+- `terrain/chunkWorkerPool.test.ts`
 - `terrain/chunkWorkerPool.ts`
 - `terrain/terrainCutout.test.ts`
 - `terrain/terrainCutout.ts`
@@ -644,6 +664,16 @@ Generated from TypeScript imports.
 - `terrain/chunkVegetation.test.ts`
 - `terrain/chunkWorldItems.ts`
 
+## `terrain/chunkWorkerPool.test.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkHeightmapProtocol.ts`
+- `terrain/chunkMeshData.ts`
+- `terrain/chunkWorkerPool.ts`
+- `terrain/worldKnowledgeScan.ts`
+
 ## `terrain/chunkWorkerPool.ts`
 
 **Imports**
@@ -652,11 +682,15 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkMeshData.ts`
 - `terrain/grassPlacement.ts`
+- `terrain/worldKnowledgeScan.ts`
 
 **Imported by**
 
 - `app/createApp.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkWorkerPool.test.ts`
+- `world/locations/worldKnowledgeResearch.test.ts`
+- `world/locations/worldKnowledgeResearch.ts`
 
 ## `terrain/chunkWorldItems.ts`
 
@@ -789,6 +823,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/grassPlacement.ts`
+- `terrain/worldKnowledgeScan.ts`
 
 ## `terrain/footstepSurface.test.ts`
 
@@ -1232,6 +1267,23 @@ Generated from TypeScript imports.
 - `world/weatherVisuals.test.ts`
 - `world/weatherVisuals.ts`
 
+## `terrain/unloadedLandmarkLookup.ts`
+
+**Imports**
+
+- `terrain/cemeteryPlacement.ts`
+- `terrain/chunkEnvironment.ts`
+- `terrain/chunkGrid.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/locations/darkForestTreasureSite.ts`
+
+**Imported by**
+
+- `terrain/chunkManager.ts`
+- `terrain/worldKnowledgeScan.test.ts`
+- `terrain/worldKnowledgeScan.ts`
+- `world/locations/worldKnowledgeResearch.ts`
+
 ## `terrain/vegetationRegionBatcher.test.ts`
 
 **Imports**
@@ -1326,6 +1378,39 @@ Generated from TypeScript imports.
 - `settlement/rats.ts`
 - `terrain/chunkManager.ts`
 - `terrain/waterSample.test.ts`
+
+## `terrain/worldKnowledgeScan.test.ts`
+
+**Imports**
+
+- `terrain/cemeteryAssignment.ts`
+- `terrain/cemeteryPlacement.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/unloadedLandmarkLookup.ts`
+- `terrain/worldKnowledgeScan.ts`
+
+## `terrain/worldKnowledgeScan.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+- `terrain/cemeteryAssignment.ts`
+- `terrain/chunkEnvironment.ts`
+- `terrain/chunkGrid.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/fbm.ts`
+- `terrain/unloadedLandmarkLookup.ts`
+
+**Imported by**
+
+- `terrain/chunkHeightmap.worker.ts`
+- `terrain/chunkHeightmapProtocol.ts`
+- `terrain/chunkManager.ts`
+- `terrain/chunkWorkerPool.test.ts`
+- `terrain/chunkWorkerPool.ts`
+- `terrain/worldKnowledgeScan.test.ts`
+- `world/locations/worldKnowledgeResearch.test.ts`
+- `world/locations/worldKnowledgeResearch.ts`
 
 ## `terrain/worleyNoise.ts`
 

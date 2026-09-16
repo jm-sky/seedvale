@@ -386,6 +386,8 @@ Generated from TypeScript imports.
 
 - `ai/dialogueTemplates.test.ts`
 - `app/inventoryWiring.ts`
+- `world/locations/guardLocalKnowledge.test.ts`
+- `world/locations/guardLocalKnowledge.ts`
 
 ## `ai/economicPressure.test.ts`
 

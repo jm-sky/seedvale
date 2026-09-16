@@ -1263,6 +1263,19 @@ Generated from exported TypeScript symbols.
 - `getActiveDarkForestTreasureSite` — function — line 11
 - `setActiveDarkForestTreasureSite` — function — line 7
 
+## `world/locations/guardLocalKnowledge.ts`
+
+- `createGuardLocalKnowledge` — function — line 87
+  - domain: world-locations
+- `GUARD_AREA_RESEARCH_PENDING` — const — line 18
+- `GUARD_AREA_RESEARCH_STARTED` — const — line 16
+- `GUARD_LOCAL_KNOWLEDGE_CHUNK_RADIUS` — const — line 23
+- `GUARD_LOCAL_KNOWLEDGE_DELAY_DAYS` — const — line 22
+- `GuardLocalKnowledge` — type — line 46
+- `GuardLocalKnowledgeDeps` — type — line 54
+- `isSaveGuardLocalKnowledge` — function — line 223
+- `SaveGuardLocalKnowledge` — type — line 25
+
 ## `world/locations/knownSettlementReputation.ts`
 
 - `KnownSettlementOption` — type — line 12
@@ -1396,16 +1409,25 @@ Generated from exported TypeScript symbols.
 - `getActiveTreasureMapBearCaveBinding` — function — line 9
 - `setActiveTreasureMapBearCaveBinding` — function — line 5
 
+## `world/locations/worldKnowledgeResearch.ts`
+
+- `createWorldKnowledgeResearch` — function — line 64
+  - domain: world-locations
+- `WorldKnowledgeQuery` — type — line 10
+- `WorldKnowledgeRef` — type — line 18
+- `WorldKnowledgeResearch` — type — line 26
+- `WorldKnowledgeResearchHost` — type — line 34
+
 ## `world/locations/worldLocationCatalog.ts`
 
-- `abandonedCemeteryChunkIntersectsKmBand` — function — line 209
+- `abandonedCemeteryChunkIntersectsKmBand` — function — line 215
   - domain: world
 - `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 147
-- `createWorldLocationCatalog` — function — line 275
+- `createWorldLocationCatalog` — function — line 281
 - `emptyLocationScanDiagnostics` — function — line 112
 - `LandmarkQueryOptions` — type — line 136
 - `LocationScanDiagnostics` — type — line 85
-- `settlementLocationId` — function — line 870
+- `settlementLocationId` — function — line 911
 - `WorldLocationCatalog` — type — line 149
 - `WorldLocationCatalogDeps` — type — line 29
 
