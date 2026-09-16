@@ -21,6 +21,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Pri | Effort | Depends                                                                                                                                                                                                                                                                                | Roadmap                                 |
 | ------------------------------------------------------------------------------ | --- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `fauna-032-exceptional-animal-appearance-morphs.md`                            | 🟡 | M      | ~~fauna-018~~, ~~fauna-022~~                                                                                                                                                                                                                                                           | quests-hunters-brotherhood              |
 | `items-player-037-ubc-runtime-per-slot-outfits.md`                             | 🟡 | XL     | ~~items-player-030~~, ~~items-player-036~~                                                                                                                                                                                                                                             | -                                       |
 | `npc-004-npc-genealogy-lineages.md`                                            | ⚪ | S      | -                                                                                                                                                                                                                                                                                      | npc-professions-households-and-age      |
 | `npc-032-expedition-needs-and-survival.md`                                     | 🔴 | L      | ~~npc-029~~, ~~npc-017~~, ~~npc-025~~, items-player-028                                                                                                                                                                                                                                | companions                              |
@@ -230,7 +231,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `032`
+- fauna: `033`
 - items-player: `039`
 - npc: `041`
 - persistence: `005`
