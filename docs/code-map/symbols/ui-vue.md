@@ -130,6 +130,16 @@ Generated from exported TypeScript symbols.
 - `VisibleFireAction` — type — line 29
 - `visibleFireActions` — function — line 152
 
+## `ui-vue/reputationPresentation.ts`
+
+- `classifyReputationLevel` — function — line 46
+  - domain: ui-input
+- `ReputationGrammar` — type — line 8
+- `reputationPresentation` — function — line 59
+  - domain: ui-input
+- `ReputationPresentation` — type — line 10
+- `ReputationTone` — type — line 1
+
 ## `ui-vue/store.ts`
 
 - `abortBusy` — function — line 1545
