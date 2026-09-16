@@ -3,6 +3,7 @@
 **Created:** 2026-09-16
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
+**Model:** Sonnet, Composer
 **Depends on:** ~~items-player-030~~, ~~items-player-036~~
 **Domain:** `items-player`
 **Type:** `feature`
@@ -258,7 +259,7 @@ src/items/tradeCatalog.ts
 
 Każdy ma `armor.slot: 'arms'`. `EquipmentState.equip()` powinien obsłużyć je bez specjalnych `kind === ...` warunków.
 
-Cena ma wynikać z istniejącego systemu trade + jakości armorów. Nie przechowywać ceny w visual registry.
+Cena ma wynikać z istniejącego systemu trade na poziomie `ItemKind`. Obecny `common/good/masterwork` skaluje statystyki i efektywną wagę armorów, ale nie cenę; nie dodawać quality-sensitive pricing w tym planie. Nie przechowywać ceny w visual registry.
 
 Runtime worn visual i fizyczny ground/inventory representation są różnymi presentation contexts. Nie używać automatycznie skinned pauldron GLB jako ground prop. Jeśli potrzebny jest world model, użyć istniejącego `itemModels.ts` lub świadomie pozostawić brak ground modelu w V1, jeśli obecne flow handlu/inventory na to pozwala.
 
