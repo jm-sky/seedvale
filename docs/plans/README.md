@@ -91,7 +91,6 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
-| `quests-progression-052-second-wave-socially-consequential-authored-dialogue.md` | Ten sam końcowy wybór przy niskiej vs wysokiej relacji/reputacji daje inną kwestię NPC; canonical outcome i exact item instance bez zmian; delty społeczne czytelne, nie nadmierne; unrelated dialogue/trade nie zablokowane |
 | `world-029-low-cost-lighting-and-film-grade-tuning.md` | Clear: `?time=06:00`, południe, 18:00, północ; powtórzyć deszcz/burzę; skały/drzewa/NPC/budynki w słońcu i cieniu; brak whiteoutu horyzontu, przepaleń bloom, agresywnie niebieskich cieni, zbyt ciemnej nocy; pogoda nadal wyraźnie przyciemnia światło; film grade wspiera materiały, nie maskuje lighting |
 | `world-terrain-036-low-cost-natural-material-response-tuning.md` | Skały w słońcu/cieniu bez plastikowego połysku; żywe i martwe drzewo oraz fallen log z bliska — kora czytelna, korona bez regresji alpha/wind; brak hitch przy streamingu; brak nowych draw calls |
 | `quests-progression-047-deferred-world-knowledge-and-location-research.md` | New game; guard „Opowiedz mi coś o okolicy” na zimnym świecie bez freeze, prosi o powrót; za wcześnie — nadal pending; po godzinie świata — 1–3 konkretne miejsca; save w trakcie research i continue; `slad-przy-monolicie` — Anna później daje kierunek, tylko wskazany monolit kończy objective; immediate location quests bez zmian |
