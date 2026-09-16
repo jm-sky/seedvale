@@ -36,6 +36,8 @@ Generated from TypeScript imports.
 - `interaction/resolveInteraction.ts`
 - `interaction/targetedSkillAction.test.ts`
 - `interaction/targetedSkillAction.ts`
+- `items/foreignProperty.test.ts`
+- `items/foreignProperty.ts`
 - `player/playerCombat.test.ts`
 - `player/playerCombat.ts`
 
@@ -70,6 +72,7 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `interaction/interactionView.test.ts`
+- `items/foreignProperty.ts`
 - `ui-vue/store.ts`
 
 ## `interaction/resolveInteraction.ts`

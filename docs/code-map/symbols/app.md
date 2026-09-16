@@ -88,9 +88,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/mountActions.ts`
 
-- `createMountActions` — function — line 45
-- `DismountReason` — type — line 19
-- `MountActions` — type — line 21
+- `createMountActions` — function — line 54
+- `DismountReason` — type — line 20
+- `ForeignPropertyMountHooks` — type — line 48
+- `MountActions` — type — line 22
 
 ## `app/actions/npcItemTransfer.ts`
 
@@ -263,13 +264,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 401
+- `createApp` — function — line 407
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 370
+- `NewAppOptions` — type — line 376
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -279,9 +280,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 681
-- `GameLoop` — type — line 640
-- `GameLoopDeps` — type — line 310
+- `createGameLoop` — function — line 685
+- `GameLoop` — type — line 644
+- `GameLoopDeps` — type — line 312
 
 ## `app/graphicsSettings.ts`
 
@@ -348,11 +349,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 221
-- `InventoryWiring` — type — line 125
-- `InventoryWiringDeps` — type — line 164
-- `MerchantInventoryView` — type — line 111
-- `npcDialogueCanTrade` — function — line 217
+- `createInventoryWiring` — function — line 224
+- `InventoryWiring` — type — line 126
+- `InventoryWiringDeps` — type — line 165
+- `MerchantInventoryView` — type — line 112
+- `npcDialogueCanTrade` — function — line 220
   - domain: settlements-npcs
 
 ## `app/modalState.ts`
@@ -380,14 +381,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 147
+- `createSaveState` — function — line 150
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 40
-- `SaveStateDeps` — type — line 61
+- `SaveState` — type — line 41
+- `SaveStateDeps` — type — line 62
 
 ## `app/userActions.ts`
 

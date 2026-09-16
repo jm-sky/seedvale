@@ -127,6 +127,8 @@ Generated from TypeScript imports.
 - `fauna/villageAvoidance.test.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
+- `items/foreignProperty.test.ts`
+- `items/foreignProperty.ts`
 - `persistence/saveData.ts`
 - `player/playerCombat.ts`
 - `quests/QuestManager.ts`

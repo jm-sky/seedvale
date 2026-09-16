@@ -49,6 +49,7 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/primaryWeapons.ts`
+- `items/tradeGrievance.ts`
 - `player/PlayerSkills.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.ts`

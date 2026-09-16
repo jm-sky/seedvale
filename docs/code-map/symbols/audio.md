@@ -86,6 +86,13 @@ Generated from exported TypeScript symbols.
 - `normalizeAudioVolumes` — function — line 22
 - `saveAudioVolumes` — function — line 41
 
+## `audio/consequenceSounds.ts`
+
+- `NEGATIVE_CONSEQUENCE_SOUND_URL` — const — line 4
+- `playNegativeConsequence` — function — line 15
+  - domain: items-player
+  - role: Plays the shared negative-consequence feedback one-shot. Call only after a social/trade penalty actually commits.
+
 ## `audio/createAmbientAudio.ts`
 
 - `AmbientAudio` — type — line 155

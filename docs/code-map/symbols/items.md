@@ -229,6 +229,39 @@ Generated from exported TypeScript symbols.
 - `resolveRawMeatSafetyRisk` — function — line 70
   - domain: items-player
 
+## `items/foreignProperty.ts`
+
+- `ActionConsequencePreview` — type — line 26
+- `beginMountedForeignUse` — function — line 132
+- `createForeignPropertyUse` — function — line 205
+  - domain: items-player
+  - role: Shared foreign-property preview/incident evaluator for merchant-horse use. Mount code reports threshold crossings; this owns social/trade commit.
+- `evaluateMountedForeignUse` — function — line 157
+- `FOREIGN_MERCHANT_HORSE_REMOVAL_DISTANCE` — const — line 16
+- `FOREIGN_PROPERTY_MOUNT_REASON` — const — line 9
+- `ForeignPropertyMountAction` — type — line 48
+- `ForeignPropertyUse` — type — line 179
+- `ForeignPropertyUseDeps` — type — line 190
+- `isForeignPropertyBorrowingPermitted` — function — line 89
+- `MerchantHorseForeignUse` — type — line 34
+- `MountedForeignUseEvaluation` — type — line 147
+- `MountedPropertyIncident` — type — line 39
+- `previewForeignPropertyAction` — function — line 122
+- `previewMerchantHorseMount` — function — line 113
+  - domain: items-player
+  - role: Derives action-level foreign-property consequence preview; does not own entity ownership.
+- `resolveMerchantHorseForeignUse` — function — line 72
+  - domain: items-player
+  - role: Derives whether `animal` is the live unresolved merchant horse via `resolveMerchantHorseAnimal`; does not parse `merchant-horse-*` ids.
+- `settlementMerchantNpc` — function — line 60
+  - domain: items-player
+  - role: Picks the settlement trader used for merchant-horse social/trade consequences; does not invent a second owner id on the animal.
+- `UNAUTHORIZED_PROPERTY_MARKUP_MILD` — const — line 22
+- `UNAUTHORIZED_PROPERTY_MARKUP_NEUTRAL` — const — line 23
+- `UNAUTHORIZED_PROPERTY_MARKUP_POOR` — const — line 24
+- `UNAUTHORIZED_PROPERTY_RELATION_DELTA` — const — line 20
+- `unauthorizedPropertyMarkup` — function — line 97
+
 ## `items/HeldTool.ts`
 
 - `createHeldTool` — function — line 69
@@ -497,25 +530,25 @@ Generated from exported TypeScript symbols.
 
 ## `items/trade.ts`
 
-- `createAcquiredInstance` — function — line 196
-- `InstanceSellResult` — type — line 36
-- `OfferBuybackResolution` — type — line 40
-- `OwnedGoodsPurchaseLine` — type — line 538
-- `previewPricedPurchaseNetCoins` — function — line 358
-- `previewTransactionNetCoins` — function — line 342
-- `resolveOfferBuyback` — function — line 291
+- `createAcquiredInstance` — function — line 197
+- `InstanceSellResult` — type — line 37
+- `OfferBuybackResolution` — type — line 41
+- `OwnedGoodsPurchaseLine` — type — line 545
+- `previewPricedPurchaseNetCoins` — function — line 360
+- `previewTransactionNetCoins` — function — line 343
+- `resolveOfferBuyback` — function — line 292
   - domain: settlements — merchant buyback for an entire offer basket plus the concrete instance ids settlement should remove for instance-backed kinds.
-- `resolveOfferLineBuyback` — function — line 268
+- `resolveOfferLineBuyback` — function — line 269
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
-- `selectInstancesToSell` — function — line 226
-- `selectInstanceToPlace` — function — line 241
-- `sellInstancesForCoins` — function — line 641
-- `settleMerchantStockTransaction` — function — line 485
-- `settleOwnedGoodsPurchase` — function — line 562
+- `selectInstancesToSell` — function — line 227
+- `selectInstanceToPlace` — function — line 242
+- `sellInstancesForCoins` — function — line 648
+- `settleMerchantStockTransaction` — function — line 489
+- `settleOwnedGoodsPurchase` — function — line 569
   - domain: settlements-npcs
-- `settlePricedPurchase` — function — line 371
-- `settleTransaction` — function — line 399
-- `TradeResult` — type — line 34
+- `settlePricedPurchase` — function — line 373
+- `settleTransaction` — function — line 401
+- `TradeResult` — type — line 35
 
 ## `items/tradeCatalog.ts`
 
@@ -562,6 +595,21 @@ Generated from exported TypeScript symbols.
   - domain: settlements — merchant buyback for a stackable kind at full condition.
 - `SellPriceContext` — type — line 245
 - `tradeValue` — function — line 322
+
+## `items/tradeGrievance.ts`
+
+- `applyPurchaseMarkup` — function — line 24
+  - domain: items-player
+  - role: Integer coin price after a temporary purchase markup. `markup` 0 is identity so display and commit can share one helper.
+- `createTradeGrievanceStore` — function — line 67
+  - domain: items-player
+  - role: Owns temporary merchant grievances only — not relation, reputation, or `MERCHANT_PRICES`.
+- `isTradeGrievance` — function — line 29
+- `isTradeGrievanceList` — function — line 40
+- `TradeGrievance` — type — line 10
+- `TradeGrievanceReason` — type — line 8
+- `TradeGrievanceStore` — type — line 53
+- `UNAUTHORIZED_PROPERTY_USE_DURATION_DAYS` — const — line 4
 
 ## `items/trapItemInstances.ts`
 

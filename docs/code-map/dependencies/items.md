@@ -689,6 +689,31 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `items/foodSafety.test.ts`
 
+## `items/foreignProperty.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `interaction/Interactable.ts`
+- `items/foreignProperty.ts`
+
+## `items/foreignProperty.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `interaction/Interactable.ts`
+- `interaction/interactionView.ts`
+- `quests/quests.ts`
+- `settlement/horseAcquisition.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `app/actions/mountActions.ts`
+- `app/createApp.ts`
+- `items/foreignProperty.test.ts`
+
 ## `items/heldToolVisual.test.ts`
 
 **Imports**
@@ -1416,6 +1441,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
+- `items/tradeGrievance.ts`
 - `items/trapItemInstances.ts`
 - `items/weaponMaintenance.ts`
 - `quests/quests.ts`
@@ -1432,6 +1458,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/liquidContainer.ts`
 - `items/tradeCatalog.ts`
+- `items/tradeGrievance.ts`
 - `items/trapItemInstances.ts`
 - `items/weaponMaintenance.ts`
 
@@ -1467,6 +1494,8 @@ Generated from TypeScript imports.
 - `items/inventoryView.ts`
 - `items/trade.test.ts`
 - `items/trade.ts`
+- `items/tradeGrievance.test.ts`
+- `items/tradeGrievance.ts`
 - `items/trapInstanceTrade.test.ts`
 - `items/treasureGameplay.test.ts`
 - `quests/guardRewards.test.ts`
@@ -1474,6 +1503,29 @@ Generated from TypeScript imports.
 - `settlement/merchantTrade.test.ts`
 - `settlement/merchantTrade.ts`
 - `ui-vue/store.ts`
+
+## `items/tradeGrievance.test.ts`
+
+**Imports**
+
+- `items/tradeCatalog.ts`
+- `items/tradeGrievance.ts`
+
+## `items/tradeGrievance.ts`
+
+**Imports**
+
+- `items/tradeCatalog.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/inventoryWiring.ts`
+- `app/saveState.ts`
+- `items/trade.test.ts`
+- `items/trade.ts`
+- `items/tradeGrievance.test.ts`
+- `persistence/saveData.ts`
 
 ## `items/trapInstanceLifecycle.test.ts`
 

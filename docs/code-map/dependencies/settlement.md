@@ -476,6 +476,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/inventoryWiring.ts`
+- `items/foreignProperty.ts`
 - `settlement/horseAcquisition.test.ts`
 
 ## `settlement/houseBuilder.test.ts`
@@ -1203,6 +1204,7 @@ Generated from TypeScript imports.
 - `app/actions/workContractPayment.test.ts`
 - `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`
+- `items/foreignProperty.ts`
 - `persistence/saveData.ts`
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.ts`

@@ -387,6 +387,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `fauna/AnimalAgent.ts`
 - `items/equipment.ts`
+- `items/foreignProperty.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/playerDamage.ts`
@@ -878,6 +879,7 @@ Generated from TypeScript imports.
 - `app/userActions.ts`
 - `app/worldBundle.ts`
 - `audio/actionSounds.ts`
+- `audio/consequenceSounds.ts`
 - `audio/createAmbientAudio.ts`
 - `audio/createWorldAudio.ts`
 - `audio/doorSounds.ts`
@@ -905,6 +907,7 @@ Generated from TypeScript imports.
 - `items/armorItemInstances.ts`
 - `items/container.ts`
 - `items/equipment.ts`
+- `items/foreignProperty.ts`
 - `items/inventoryView.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`
@@ -912,6 +915,7 @@ Generated from TypeScript imports.
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
 - `items/trade.ts`
+- `items/tradeGrievance.ts`
 - `items/treasureGameplay.ts`
 - `items/weaponMaintenance.ts`
 - `perf/index.ts`
@@ -1393,6 +1397,7 @@ Generated from TypeScript imports.
 - `items/primaryWeapons.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
+- `items/tradeGrievance.ts`
 - `items/weaponMaintenance.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.ts`
@@ -1498,6 +1503,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/equipment.ts`
 - `items/primaryWeapons.ts`
+- `items/tradeGrievance.ts`
 - `items/treasureGameplay.ts`
 - `persistence/saveData.ts`
 - `persistence/saveDb.ts`
