@@ -76,6 +76,7 @@ import { isLiquidContainerInstance } from '../items/itemInstances'
 import { drinkFromLiquidContainer } from '../items/liquidContainer'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
+import { PLAYER_COLLISION_RADIUS } from '../player/playerDimensions'
 import { companionAnimationUrl } from '../player/playerVisualPreset'
 import { resolveNearestWaterWellTarget } from '../settlement/householdWells'
 import {
@@ -273,6 +274,13 @@ import {
 } from './npcAnimalThreat'
 import { resolveNpcAppearance } from './npcAppearance'
 import { type AssistanceRequestKind, type AssistanceResult, resolveNpcAssistance } from './npcAssistance'
+import {
+  acceptNpcCaveHorizontalCandidate,
+  npcActiveCaveId,
+  npcCaveGroundY,
+  shouldUseNpcCaveLocomotion,
+  stepNpcCaveHorizontal,
+} from './npcCaveLocomotion'
 import {
   bypassPointForSegment,
   destinationOnColliderRim,
@@ -3883,10 +3891,21 @@ export class NpcAgent {
 
   /** Surface terrain height is not ground authority in a cave or during mouth crossing. */
   private applyMovementGroundY(): void {
-    const crossing = this.routeExecution.mouthPhase === 'crossing'
-    const inCave = this.resolveCurrentSpatialContext().kind === 'cave'
-    if (crossing || inCave) {
-      if (this.composedRoute) {
+    const current = this.resolveCurrentSpatialContext()
+    const caveId = npcActiveCaveId(current, this.composedRoute, this.routeExecution)
+    if (caveId) {
+      const floorY = npcCaveGroundY({
+        caveId,
+        x: this.mesh.position.x,
+        y: this.mesh.position.y,
+        z: this.mesh.position.z,
+        queries: this.worldMovement,
+      })
+      if (floorY != null) {
+        this.mesh.position.y = floorY
+        return
+      }
+      if (this.routeExecution.mouthPhase === 'crossing' && this.composedRoute) {
         const y = npcRouteGroundY(this.composedRoute, this.routeExecution)
         if (y != null) this.mesh.position.y = y
       }
@@ -6368,6 +6387,11 @@ export class NpcAgent {
 
   private isWalkable(x: number, z: number): boolean {
     if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
+    return this.isWalkableCaveColliders(x, z)
+  }
+
+  /** World colliders with current-Y overlap — not cave rock (heightfield). */
+  private isWalkableCaveColliders(x: number, z: number): boolean {
     return isPointWalkableForNpc(
       x,
       z,
@@ -6455,6 +6479,27 @@ export class NpcAgent {
     this.tmp.multiplyScalar(1 / dist)
     const speed = WALK_SPEED * this.healthSpeedMultiplier()
     this.mesh.rotation.y = Math.atan2(this.tmp.x, this.tmp.z)
+    const current = this.resolveCurrentSpatialContext()
+    const caveId = npcActiveCaveId(current, this.composedRoute, this.routeExecution)
+    if (caveId && shouldUseNpcCaveLocomotion(current, this.routeExecution.mouthPhase)) {
+      const wish = speed * dt
+      const result = stepNpcCaveHorizontal({
+        caveId,
+        x: this.mesh.position.x,
+        z: this.mesh.position.z,
+        y: this.mesh.position.y,
+        wishX: this.tmp.x * wish,
+        wishZ: this.tmp.z * wish,
+        radius: PLAYER_COLLISION_RADIUS,
+        entityHeight: NPC_HEIGHT,
+        queries: this.worldMovement,
+        isWalkable: (x, z) => this.isWalkableCaveColliders(x, z),
+      })
+      this.mesh.position.x = result.x
+      this.mesh.position.z = result.z
+      this.moving = result.moved
+      return false
+    }
     // Steep terrain scales down (and, past the max walkable angle, removes)
     // the uphill component of the step — across-slope/downhill are
     // untouched (plan 183). 3-tier collision fallback shared with
@@ -6486,6 +6531,37 @@ export class NpcAgent {
     if (this.health.dead) return
     const x = this.mesh.position.x
     const z = this.mesh.position.z
+    const current = this.resolveCurrentSpatialContext()
+    const caveId = npcActiveCaveId(current, this.composedRoute, this.routeExecution)
+    if (caveId && shouldUseNpcCaveLocomotion(current, this.routeExecution.mouthPhase)) {
+      const accept = (nx: number, nz: number) => acceptNpcCaveHorizontalCandidate({
+        caveId,
+        x: nx,
+        z: nz,
+        y: this.mesh.position.y,
+        radius: PLAYER_COLLISION_RADIUS,
+        entityHeight: NPC_HEIGHT,
+        queries: this.worldMovement,
+      })
+      const full = accept(x + dx, z + dz)
+      if (full) {
+        this.mesh.position.x = full.x
+        this.mesh.position.z = full.z
+        return
+      }
+      const onlyX = accept(x + dx, z)
+      if (onlyX) {
+        this.mesh.position.x = onlyX.x
+        this.mesh.position.z = onlyX.z
+        return
+      }
+      const onlyZ = accept(x, z + dz)
+      if (onlyZ) {
+        this.mesh.position.x = onlyZ.x
+        this.mesh.position.z = onlyZ.z
+      }
+      return
+    }
     if (this.isWalkableExterior(x + dx, z + dz)) {
       this.mesh.position.x += dx
       this.mesh.position.z += dz

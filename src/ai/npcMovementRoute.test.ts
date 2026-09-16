@@ -46,6 +46,8 @@ function fakeQueries(overrides: Partial<NpcWorldMovementQueries> = {}): NpcWorld
       if (caveId === 'disconnected') return null
       return [from, to]
     },
+    queryGroundIn: () => null,
+    resolveHorizontalIn: (_caveId, x, z) => ({ x, z }),
     ...overrides,
   }
 }

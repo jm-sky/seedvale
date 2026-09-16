@@ -1462,6 +1462,9 @@ async function buildWorldSystems(
     spatialContextAt: (x, y, z) => cavesRef?.spatialContextAt(x, y, z) ?? WORLD_SPATIAL_CONTEXT_SURFACE,
     resolveHabitat: (caveId, entityHeight) => cavesRef?.resolveHabitat(caveId, entityHeight) ?? null,
     resolveRouteBetweenPoints: (caveId, from, to) => cavesRef?.resolveRouteBetweenPoints(caveId, from, to) ?? null,
+    queryGroundIn: (caveId, x, y, z) => cavesRef?.queryGroundIn(caveId, x, y, z) ?? null,
+    resolveHorizontalIn: (caveId, x, z, y, radius, entityHeight) =>
+      cavesRef?.resolveHorizontalIn(caveId, x, z, y, radius, entityHeight) ?? { x, z },
   }
 
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size

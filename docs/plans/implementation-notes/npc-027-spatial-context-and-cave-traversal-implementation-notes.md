@@ -3,6 +3,36 @@
 **Plan:** `npc-027-spatial-context-and-cave-traversal.md`  
 **Recon:** 2026-09-15, current `main` (`326b3af984a7fa8c4307dc557fd0b14e570e07ad` baseline before the plan/notes refresh)
 
+## Stage 3 complete (2026-09-16)
+
+**Scope:** cave-local locomotion on the shared NPC pipeline. No watchdog/time-skip hardening, no underground A*, no `navigation.ts` change.
+
+**Delivered:**
+
+- `NpcWorldMovementQueries` now includes `queryGroundIn` / `resolveHorizontalIn`; late-bound in `worldBundle.ts` through `cavesRef`; `NPC_WORLD_MOVEMENT_SURFACE_ONLY` stubs identity/null.
+- [`src/ai/npcCaveLocomotion.ts`](../../src/ai/npcCaveLocomotion.ts) — `shouldUseNpcCaveLocomotion`, `npcActiveCaveId`, `stepNpcCaveHorizontal`, `npcCaveGroundY`, `acceptNpcCaveHorizontalCandidate`.
+- `NpcAgent.steerTo` / `applyMovementGroundY` / `applySeparation` pick surface vs cave by `spatialContextAt` (+ mouth `crossing` caveId from the route leg). Zero archetype branches.
+- Cave XZ: wish step → `resolveHorizontalIn` → optional world-collider `isWalkableCaveColliders` (no water-from-`sampleHeight`, no terrain slope).
+- Cave Y: `queryGroundIn().floorY`. Mouth crossing with no heightfield hit still uses waypoint Y from stage 2 — never `sampleHeight`.
+- Tests: [`src/ai/npcCaveLocomotion.test.ts`](../../src/ai/npcCaveLocomotion.test.ts) natural descent/ascent, rock containment, overlapping X/Z vs surface, adventure junction→side, dungeon side→final with pool metadata not used as waypoints.
+
+**Surface assumptions removed or context-gated in generic movement:**
+
+- Per-tick `applyMovementGroundY` no longer uses traversal waypoint Y as cave floor authority (heightfield `queryGroundIn` does).
+- `steerTo` no longer calls `stepWithSlopeAndCollision` / terrain `sampleHeight` / water-from-`sampleHeight` while `spatialContextAt` is cave or mouth phase is `crossing`.
+- `applySeparation` no longer uses `isWalkableExterior` (surface water) for cave/crossing candidates; heightfield containment + floor hit required.
+- `isWalkableCaveColliders` is the collider half of `isWalkable` without water — cave rock is not reconstructed from X/Z collider disks.
+
+**Left intentionally for stage 4:**
+
+- `attemptNavRepath` still injects surface `sampleHeight` into `navigation.ts`.
+- `attemptBlindRepath` / `attemptLocalEscape` / `emergencyTeleport` still use `isWalkableExterior` + `sampleHeight` Y snaps (well/plaza).
+- `resolveTimeSkip` / `catchUpCommittedTravel` still surface-project placement.
+- Constructor home / corpse / travel reify / accompany dest Y remain surface-only producers (not generic cave locomotion).
+- Cross-cave A→B as surface composition (no consumer yet).
+
+**`navigation.ts`:** unchanged. Topology route + local steering covered the cases; no domain-neutral A* generalization.
+
 ## Stage 2 complete (2026-09-16)
 
 **Scope:** route composition + physical mouth transition. No cave-local `queryGroundIn` / `resolveHorizontalIn` locomotion, no watchdog/time-skip hardening, no underground A*.
@@ -23,7 +53,6 @@ The seam lives beside cave traversal (`caveHabitat.ts` / `Caves`), **not** in `N
 
 **Follow-ups for later stages (not implemented now):**
 
-- Cave-local steering via `queryGroundIn` / `resolveHorizontalIn`.
 - Context-safe watchdog / local escape / time-skip.
 - Cross-cave A→B as surface composition (not needed by a current consumer).
 

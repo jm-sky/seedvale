@@ -1,3 +1,4 @@
+import type { CaveGroundHit } from '../world/caves/caveGroundQuery'
 import type { CaveTraversalDescriptor, CaveTraversalPoint } from '../world/caves/caveHabitat'
 import type { NpcPlannedAction } from './npcAction'
 import { copyVec3, type Vec3 } from '../simulation'
@@ -22,7 +23,8 @@ export type NpcMovementTarget = {
 /**
  * Narrow world/cave semantic queries for NPC movement — no `WorldBundle` or
  * raw heightfield maps. Route composition uses habitat + point-to-point
- * traversal; current membership is always `spatialContextAt`.
+ * traversal; current membership is always `spatialContextAt`. Cave-local
+ * locomotion uses the same cave-scoped ground/containment facade as fauna.
  *
  * @domain npc
  */
@@ -37,6 +39,15 @@ export type NpcWorldMovementQueries = {
     from: { x: number, y: number, z: number },
     to: { x: number, y: number, z: number },
   ) => readonly CaveTraversalPoint[] | null
+  queryGroundIn: (caveId: string, x: number, y: number, z: number) => CaveGroundHit | null
+  resolveHorizontalIn: (
+    caveId: string,
+    x: number,
+    z: number,
+    y: number,
+    radius: number,
+    entityHeight: number,
+  ) => { x: number, z: number }
 }
 
 export type NpcMovementTargetSource = Pick<NpcPlannedAction, 'destination' | 'destinationContext'>
@@ -93,4 +104,6 @@ export const NPC_WORLD_MOVEMENT_SURFACE_ONLY: NpcWorldMovementQueries = {
   spatialContextAt: () => WORLD_SPATIAL_CONTEXT_SURFACE,
   resolveHabitat: () => null,
   resolveRouteBetweenPoints: () => null,
+  queryGroundIn: () => null,
+  resolveHorizontalIn: (_caveId, x, z) => ({ x, z }),
 }
