@@ -77,6 +77,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-042-npc-voice-dialogue-catalog-infrastructure.md`                      | 🔴 | M      | npc-041                                                                                                                                                                                                                                                                                    | -                                       |
 | ◼️ `npc-043-dialogue-language-migration-to-english.md`                         | 🔴 | L      | npc-042                                                                                                                                                                                                                                                                                    | -                                       |
 | ◼️ `tools-015-chatterbox-local-voice-generation-pipeline.md`                   | 🔴 | M      | npc-041, npc-042                                                                                                                                                                                                                                                                           | -                                       |
+| ◼️ `items-player-043-renewable-medicinal-herbs-and-skill-aware-foraging.md`    | 🟡 | M      | ~~items-player-021~~, ~~npc-025~~                                                                                                                                                                                                                                                          | -                                       |
 
 ---
 
@@ -234,7 +235,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `034`
-- items-player: `043`
+- items-player: `044`
 - npc: `044`
 - persistence: `006`
 - quests-progression: `056`
