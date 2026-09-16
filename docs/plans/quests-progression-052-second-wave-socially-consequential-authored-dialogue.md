@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `relationships`
 **Tags:** `dialogue` `narrative` `relation` `reputation` `consequences`
 **Roadmap:** `quests-and-reputation.md`
+**Model:** Sonnet, Composer
 
 ## Goal
 
