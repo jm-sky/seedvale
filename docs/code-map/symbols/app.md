@@ -280,9 +280,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 685
-- `GameLoop` — type — line 644
-- `GameLoopDeps` — type — line 312
+- `createGameLoop` — function — line 686
+- `GameLoop` — type — line 645
+- `GameLoopDeps` — type — line 313
 
 ## `app/graphicsSettings.ts`
 
@@ -367,6 +367,13 @@ Generated from exported TypeScript symbols.
 - `isEngagedNpc` — function — line 19
 - `isNpcEngagementOpen` — function — line 9
 - `NpcEngagementState` — type — line 2
+
+## `app/npcQuestMarkerSync.ts`
+
+- `QuestMarkerSink` — type — line 13
+  - domain: quests-progression
+- `syncNpcQuestMarkers` — function — line 28
+  - domain: quests-progression
 
 ## `app/renderStack.ts`
 

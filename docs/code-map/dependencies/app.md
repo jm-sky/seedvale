@@ -1086,6 +1086,7 @@ Generated from TypeScript imports.
 - `app/inspection/inspectionTarget.ts`
 - `app/interactables.ts`
 - `app/modalState.ts`
+- `app/npcQuestMarkerSync.ts`
 - `app/restCampSequence.ts`
 - `app/worldBundle.ts`
 - `audio/actionSounds.ts`
@@ -1455,6 +1456,19 @@ Generated from TypeScript imports.
 
 - `app/dialogueTimeControl.ts`
 - `app/npcEngagement.test.ts`
+
+## `app/npcQuestMarkerSync.test.ts`
+
+**Imports**
+
+- `app/npcQuestMarkerSync.ts`
+
+## `app/npcQuestMarkerSync.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `app/npcQuestMarkerSync.test.ts`
 
 ## `app/renderStack.ts`
 
