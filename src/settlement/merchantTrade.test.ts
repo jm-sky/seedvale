@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
-import { isInstanceBackedKind } from '../items/itemInstances'
+import { isArmorItemInstance, isInstanceBackedKind } from '../items/itemInstances'
 import { settleMerchantStockTransaction } from '../items/trade'
 import { MERCHANT_STOCK, merchantPrice } from '../items/tradeCatalog'
 import {
@@ -11,7 +11,9 @@ import {
   merchantStockQuantity,
   PREMIUM_MERCHANT_KINDS,
   premiumAvailabilityChance,
+  resolveMerchantArmorQuality,
   resolveMerchantProfiles,
+  resolvePremiumMerchantAssignment,
   seedMerchantStockIfNeeded,
   settlementHasPremiumOffer,
   specializationAffinity,
@@ -309,5 +311,127 @@ describe('premium kinds stay catalog members', () => {
     seedMerchantStockIfNeeded(stock, { merchantStockInitialized: false }, { masterwork_sword: 1 })
     expect(isInstanceBackedKind('masterwork_sword')).toBe(true)
     expect(stock.countInstances('masterwork_sword')).toBe(1)
+  })
+})
+
+describe('merchant armor quality generation (plan items-player-040)', () => {
+  it('is deterministic for the same seed, merchant, kind and unit index', () => {
+    const a = resolveMerchantArmorQuality({
+      size: 'MD',
+      specialization: 'general',
+      seed: 42,
+      npcId: 'm0',
+      kind: 'chainmail',
+      unitIndex: 0,
+      premiumAssigned: false,
+    })
+    const b = resolveMerchantArmorQuality({
+      size: 'MD',
+      specialization: 'general',
+      seed: 42,
+      npcId: 'm0',
+      kind: 'chainmail',
+      unitIndex: 0,
+      premiumAssigned: false,
+    })
+    expect(a).toBe(b)
+  })
+
+  it('does not hard-lock any quality by settlement size', () => {
+    const seen = { SM: new Set<string>(), XL: new Set<string>() }
+    for (let seed = 0; seed < 400; seed++) {
+      seen.SM.add(resolveMerchantArmorQuality({
+        size: 'SM', specialization: 'general', seed, npcId: 'm0', kind: 'leather_armor', unitIndex: 0, premiumAssigned: false,
+      }))
+      seen.XL.add(resolveMerchantArmorQuality({
+        size: 'XL', specialization: 'general', seed, npcId: 'm0', kind: 'leather_armor', unitIndex: 0, premiumAssigned: false,
+      }))
+    }
+    expect(seen.SM).toEqual(new Set(['common', 'good', 'masterwork', 'poor']))
+    expect(seen.XL).toEqual(new Set(['common', 'good', 'masterwork', 'poor']))
+  })
+
+  it('SM yields more poor/common than XL, and XL yields more good/masterwork', () => {
+    const tally = (size: 'SM' | 'XL') => {
+      let low = 0
+      let high = 0
+      for (let seed = 0; seed < 400; seed++) {
+        const quality = resolveMerchantArmorQuality({
+          size, specialization: 'general', seed, npcId: 'm0', kind: 'leather_armor', unitIndex: seed % 3, premiumAssigned: false,
+        })
+        if (quality === 'poor' || quality === 'common') low++
+        else high++
+      }
+      return { low, high }
+    }
+    const sm = tally('SM')
+    const xl = tally('XL')
+    expect(sm.low).toBeGreaterThan(xl.low)
+    expect(xl.high).toBeGreaterThan(sm.high)
+  })
+
+  it('weapons-tools bias shifts mass toward higher quality without a second system', () => {
+    let generalHigh = 0
+    let weaponsHigh = 0
+    for (let seed = 0; seed < 400; seed++) {
+      const general = resolveMerchantArmorQuality({
+        size: 'MD', specialization: 'general', seed, npcId: 'm0', kind: 'leather_armor', unitIndex: 0, premiumAssigned: false,
+      })
+      const weapons = resolveMerchantArmorQuality({
+        size: 'MD', specialization: 'weapons-tools', seed, npcId: 'm0', kind: 'leather_armor', unitIndex: 0, premiumAssigned: false,
+      })
+      if (general === 'good' || general === 'masterwork') generalHigh++
+      if (weapons === 'good' || weapons === 'masterwork') weaponsHigh++
+    }
+    expect(weaponsHigh).toBeGreaterThan(generalHigh)
+  })
+
+  it('premium-assigned armor is never poor or common', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const quality = resolveMerchantArmorQuality({
+        size: 'SM',
+        specialization: 'general',
+        seed,
+        npcId: 'm0',
+        kind: 'chainmail',
+        unitIndex: 0,
+        premiumAssigned: true,
+      })
+      expect(quality === 'good' || quality === 'masterwork').toBe(true)
+    }
+  })
+
+  it('reuses the settlement premium assignment instead of a second roll', () => {
+    const context = ctx({ size: 'XL', terrain: 'mountain', seed: 11 })
+    const profiles = resolveMerchantProfiles(['t0'], 'mountain')
+    const first = resolvePremiumMerchantAssignment(context, profiles)
+    const second = resolvePremiumMerchantAssignment(context, profiles)
+    expect(first).toEqual(second)
+    const assortment = generateMerchantAssortment(context, profiles)
+    if (first) expect(assortment.get(first.npcId)?.[first.kind]).toBe(1)
+  })
+
+  it('seeds armor quality once and keeps it across a reopen-equivalent reseed', () => {
+    const stock = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
+    const latch = { merchantStockInitialized: false }
+    const qualityContext = {
+      size: 'MD' as const,
+      seed: 17,
+      npcId: 'm0',
+      specialization: 'weapons-tools' as const,
+      premiumAssignedKind: null,
+    }
+    seedMerchantStockIfNeeded(stock, latch, { leather_armor: 3 }, qualityContext)
+    const first = stock.getInstances('leather_armor').map((instance) => (
+      isArmorItemInstance(instance) ? { id: instance.id, quality: instance.quality } : null
+    ))
+    expect(first).toHaveLength(3)
+    seedMerchantStockIfNeeded(stock, latch, { leather_armor: 3 }, qualityContext)
+    const second = stock.getInstances('leather_armor').map((instance) => (
+      isArmorItemInstance(instance) ? { id: instance.id, quality: instance.quality } : null
+    ))
+    expect(second).toEqual(first)
+    expect(Inventory.instancesFromJSON(stock.instancesToJSON()).filter((instance) => instance.kind === 'leather_armor'))
+      .toEqual(stock.getInstances('leather_armor'))
   })
 })

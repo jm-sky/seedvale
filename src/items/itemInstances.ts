@@ -35,14 +35,23 @@ export const ARMOR_KIND_LIST: readonly ArmorKind[] = [
 
 export const ARMOR_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>(ARMOR_KIND_LIST)
 
-export type ArmorQuality = 'common' | 'good' | 'masterwork'
+export type ArmorQuality = 'poor' | 'common' | 'good' | 'masterwork'
 
-export const ARMOR_QUALITIES: readonly ArmorQuality[] = ['common', 'good', 'masterwork']
+export const ARMOR_QUALITIES: readonly ArmorQuality[] = ['poor', 'common', 'good', 'masterwork']
 
 export const ARMOR_QUALITY_LABELS: Record<ArmorQuality, string> = {
+  poor: 'Kiepska',
   common: 'Zwykła',
   good: 'Dobra',
   masterwork: 'Mistrzowska',
+}
+
+/** Lower rank sells first in kind/count offer baskets (plan items-player-040). */
+export const ARMOR_QUALITY_RANK: Record<ArmorQuality, number> = {
+  poor: 0,
+  common: 1,
+  good: 2,
+  masterwork: 3,
 }
 
 export type ArmorItemInstance = ItemInstance & {
@@ -55,7 +64,7 @@ export function isArmorKind(kind: ItemKind): kind is ArmorKind {
 }
 
 export function isArmorQuality(value: unknown): value is ArmorQuality {
-  return value === 'common' || value === 'good' || value === 'masterwork'
+  return value === 'poor' || value === 'common' || value === 'good' || value === 'masterwork'
 }
 
 export function normalizeArmorQuality(value: unknown): ArmorQuality {

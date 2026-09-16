@@ -29,12 +29,18 @@ import { npcTradeSourceInventory, resolveNpcTradeOffers } from '../ai/npcTradeAv
 import { isVoluntaryJoinAccepted, type VoluntaryExpeditionTerms } from '../ai/voluntaryExpeditionJoin'
 import { playActionGrindstoneSharpen, playActionWhetstoneSharpen } from '../audio/actionSounds'
 import { playInventoryDrop } from '../audio/inventorySounds'
+import { resolveEffectiveArmorPiece } from '../items/armorItemInstances'
 import { readBook } from '../items/books'
 import { expandFoodBatchesToUnits } from '../items/foodItems'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
 import { isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
-import { isInstanceBackedKind } from '../items/itemInstances'
+import {
+  ARMOR_QUALITY_LABELS,
+  isArmorItemInstance,
+  isArmorKind,
+  isInstanceBackedKind,
+} from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
 import { inventoryOwnsPrimaryWeaponChoice } from '../items/primaryWeapons'
 import {
@@ -47,7 +53,7 @@ import {
   settleOwnedGoodsPurchase,
   settlePricedPurchase,
 } from '../items/trade'
-import { MERCHANT_STOCK, merchantPrice, NEUTRAL_SELL_PRICE_CONTEXT, npcSalePrice, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
+import { MERCHANT_STOCK, merchantInstancePrice, merchantPrice, NEUTRAL_SELL_PRICE_CONTEXT, npcSalePrice, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { listOwnedWeaponMaintenance, type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
 import {
@@ -248,7 +254,9 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       context,
       unitOfferPrice: (kind) => sellPrice(kind, context),
       offerLineTotal: (kind, count) => resolveOfferLineBuyback(inventory, kind, count, context).value,
-      previewNetCoins: (purchases, offer) => previewTransactionNetCoins(inventory, purchases, offer, context),
+      previewNetCoins: (purchases, offer, instanceBuyCost = 0) => (
+        previewTransactionNetCoins(inventory, purchases, offer, context, instanceBuyCost)
+      ),
     }
   }
 
@@ -277,21 +285,54 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     }))
   }
 
+  const armorPenaltyLabel = (value: number): string => {
+    const delta = Math.round((value - 1) * 100)
+    return delta === 0 ? '±0%' : `${delta > 0 ? '+' : ''}${delta}%`
+  }
+
   /** Live BUY rows from finite Merchant stock — catalog order and
-   *  `merchantPrice`, never minted at open time (plan settlements-012). */
+   *  instance-aware prices, never minted at open time (plan settlements-012 /
+   *  items-player-040). Armor is one row per physical instance. */
   const buildMerchantTradeStock = (npc: NpcAgent | null): NpcTradeStockRow[] => {
     if (!npc) return []
     const merchantStock = bundle.settlementsManager.getNpcState(npc.id)?.merchantStock
     if (!merchantStock) return []
     const rows: NpcTradeStockRow[] = []
     for (const kind of MERCHANT_STOCK) {
+      if (isArmorKind(kind)) {
+        const instances = merchantStock.getInstances(kind)
+          .filter(isArmorItemInstance)
+          .sort((a, b) => a.id.localeCompare(b.id))
+        for (const instance of instances) {
+          const unitPrice = merchantInstancePrice(instance)
+          if (unitPrice == null) continue
+          const armor = ITEM_CATALOG[instance.kind].armor
+          const effective = armor
+            ? resolveEffectiveArmorPiece(armor, instance.quality, ITEM_DEFS[instance.kind].weight)
+            : null
+          rows.push({
+            kind,
+            quantity: 1,
+            unitPrice,
+            instanceId: instance.id,
+            quality: instance.quality,
+            qualityLabel: ARMOR_QUALITY_LABELS[instance.quality],
+            weightKg: effective?.weightKg ?? ITEM_DEFS[kind].weight,
+            protectionPercent: effective ? Math.round(effective.damageReduction * 100) : undefined,
+            staminaPenaltyLabel: effective ? armorPenaltyLabel(effective.staminaCostMultiplier) : undefined,
+            movementPenaltyLabel: effective ? armorPenaltyLabel(effective.movementSpeedMultiplier) : undefined,
+            recoveryPenaltyLabel: effective ? armorPenaltyLabel(effective.meleeRecoveryMultiplier) : undefined,
+          })
+        }
+        continue
+      }
       const quantity = isInstanceBackedKind(kind)
         ? merchantStock.countInstances(kind)
         : merchantStock.count(kind)
       if (quantity <= 0) continue
       const unitPrice = merchantPrice(kind)
       if (unitPrice == null) continue
-      rows.push({ kind, quantity, unitPrice })
+      rows.push({ kind, quantity, unitPrice, weightKg: ITEM_DEFS[kind].weight })
     }
     return rows
   }
@@ -686,12 +727,19 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   }
 
   vueUi.configureMerchant({
-    onSettleTransaction: async (purchases, offer) => {
+    onSettleTransaction: async (purchases, offer, instanceIds = []) => {
       if (ui.merchant.mode === 'npcGoods') return settleNpcGoodsTransaction(purchases, offer)
       const npc = ui.merchant.npc as NpcAgent | null
       const merchantStock = npc ? bundle.settlementsManager.getNpcState(npc.id)?.merchantStock : undefined
       if (!npc || npc.health.dead || !merchantStock) return 'not_sold'
-      const result = settleMerchantStockTransaction(inventory, merchantStock, purchases, offer, merchantSellContext())
+      const result = settleMerchantStockTransaction(
+        inventory,
+        merchantStock,
+        purchases,
+        offer,
+        merchantSellContext(),
+        instanceIds,
+      )
       if (result === 'ok') {
         afterTrade()
         const needsNear = (purchases.map_near ?? 0) > 0

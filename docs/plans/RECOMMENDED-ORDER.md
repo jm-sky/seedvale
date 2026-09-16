@@ -43,6 +43,8 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
+2. `settlements-npcs-041` — **Profession-linked family surnames and NPC need-marker cleanup**  
+   🟡 `S` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -127,28 +129,28 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-14. `fauna-031` — **Wildlife habitat pressure assessment**  
+14. `settlements-npcs-040` — **Profession Trade Stock and Hunter Crafting**  
+  🔴 `M` · **Score:**  57  
+   → **unlocks:** 0/0
+
+15. `fauna-031` — **Wildlife habitat pressure assessment**  
   🟡 `S` · **Score:**  55  
    → **unlocks:** 1/3
 
-15. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+16. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
   🟡 `M` · **Score:**  67  
    → **unlocks:** 1/2
 
-16. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+17. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
   🟡 `L` · **Score:**  56  
    → **unlocks:** 1/1
 
-17. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+18. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-18. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+19. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
-   → **unlocks:** 0/0
-
-19. `items-player-040` — **Armor quality pricing and world availability**  
-  🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
 20. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
@@ -173,6 +175,10 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 25. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
+   → **unlocks:** 0/0
+
+26. `settlements-npcs-041` — **Profession-linked family surnames and NPC need-marker cleanup**  
+  🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
 ---
@@ -485,6 +491,8 @@ graph TD
   settlements_npcs_037["settlements-npcs-037 — Inter-settlement goods transport"]
   settlements_npcs_038["settlements-npcs-038 — Travelling Merchant inter-settlement role"]
   settlements_npcs_039["settlements-npcs-039 — Social and Paid Settlement Lodging"]
+  settlements_npcs_040["settlements-npcs-040 — Profession Trade Stock and Hunter Crafting"]
+  settlements_npcs_041["settlements-npcs-041 — Profession-linked family surnames and NPC need-marker cleanup"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -880,6 +888,7 @@ graph TD
   settlements_012 --> items_player_040
   settlements_012 --> settlements_013
   settlements_012 --> settlements_014
+  settlements_012 --> settlements_npcs_040
   settlements_013 --> settlements_014
   settlements_npcs_002 --> settlements_npcs_005
   settlements_npcs_002 --> settlements_npcs_022
@@ -937,8 +946,10 @@ graph TD
   settlements_npcs_033 --> settlements_012
   settlements_npcs_033 --> settlements_npcs_036
   settlements_npcs_033 --> settlements_npcs_038
+  settlements_npcs_033 --> settlements_npcs_040
   settlements_npcs_034 --> settlements_npcs_016
   settlements_npcs_034 --> settlements_npcs_017
+  settlements_npcs_036 --> settlements_npcs_040
   settlements_npcs_037 --> settlements_npcs_038
   tools_010 --> tools_011
   tools_011 --> tools_012

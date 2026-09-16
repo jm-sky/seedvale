@@ -1,6 +1,13 @@
 import type { RelationLevel } from '../quests/quests'
 import { NEUTRAL_REPUTATION, type Reputation } from '../reputation/ReputationManager'
-import { isTentItemInstance, isTrapItemInstance, type ItemInstance } from './itemInstances'
+import {
+  type ArmorQuality,
+  isArmorItemInstance,
+  isTentItemInstance,
+  isTrapItemInstance,
+  type ItemInstance,
+  normalizeArmorQuality,
+} from './itemInstances'
 import { ITEM_DEFS, type ItemKind } from './items'
 import { trapConditionRatio } from './trapItemInstances'
 
@@ -246,6 +253,67 @@ export function merchantPrice(kind: ItemKind): number | null {
   return MERCHANT_PRICES[kind] ?? null
 }
 
+/**
+ * Armor quality multiplier on catalog `tradeValue` / `MERCHANT_PRICES`.
+ * `common` is identity — list prices stay the `common` baseline.
+ *
+ * @domain items-player
+ */
+export function armorQualityValueMultiplier(quality: ArmorQuality): number {
+  switch (normalizeArmorQuality(quality)) {
+    case 'common':
+      return 1
+    case 'good':
+      return 1.30
+    case 'masterwork':
+      return 1.85
+    case 'poor':
+      return 0.55
+  }
+}
+
+/**
+ * Catalog nominal value of a concrete instance before social factors.
+ * Armor quality scales `tradeValue(kind)`; other kinds stay kind-level.
+ *
+ * @domain items-player
+ */
+export function instanceNominalValue(instance: ItemInstance): number {
+  const base = tradeValue(instance.kind)
+  if (!isArmorItemInstance(instance)) return base
+  return base * armorQualityValueMultiplier(instance.quality)
+}
+
+/**
+ * Merchant catalog unit price for a concrete instance. Social factors do
+ * not apply — same rule as `merchantPrice(kind)`.
+ *
+ * @domain items-player
+ */
+export function merchantInstancePrice(instance: ItemInstance): number | null {
+  const listed = merchantPrice(instance.kind)
+  if (listed == null) return null
+  if (!isArmorItemInstance(instance)) return listed
+  return roundSellPrice(listed * armorQualityValueMultiplier(instance.quality))
+}
+
+/**
+ * Ordinary NPC → player unit price for a concrete instance. Reuses
+ * `fullConditionBuyFactor`; armor quality scales the nominal value.
+ *
+ * @domain items-player
+ */
+export function npcInstanceSalePrice(
+  instance: ItemInstance,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+): number {
+  const listed = merchantPrice(instance.kind) ?? tradeValue(instance.kind)
+  const nominal = isArmorItemInstance(instance)
+    ? listed * armorQualityValueMultiplier(instance.quality)
+    : listed
+  return roundSellPrice(nominal * fullConditionBuyFactor(context))
+}
+
 export function isMerchantStock(kind: ItemKind): boolean {
   return merchantPrice(kind) != null
 }
@@ -313,6 +381,11 @@ function capStockedBuyback(kind: ItemKind, price: number): number {
   return stockPrice != null ? Math.min(price, stockPrice) : price
 }
 
+function capInstanceBuyback(instance: ItemInstance, price: number): number {
+  const stockPrice = merchantInstancePrice(instance) ?? merchantPrice(instance.kind)
+  return stockPrice != null ? Math.min(price, stockPrice) : price
+}
+
 /** @domain settlements — merchant buyback for a stackable kind at full condition. */
 export function sellPrice(
   kind: ItemKind,
@@ -367,6 +440,10 @@ export function resolveInstanceSellPrice(
   context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
 ): number | null {
   if (!canSell(instance.kind)) return null
+  if (isArmorItemInstance(instance)) {
+    const raw = instanceNominalValue(instance) * fullConditionSellFactor(context)
+    return roundSellPrice(capInstanceBuyback(instance, raw))
+  }
   const nominal = tradeValue(instance.kind)
   if (isTrapItemInstance(instance)) {
     if (instance.durability <= 0) {

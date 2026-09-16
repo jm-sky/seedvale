@@ -20,6 +20,7 @@ const BOOK_TIER_LABEL: Record<BookTier, string> = {
 
 const props = defineProps<{
   kind: ItemKind | null
+  instanceId?: string
 }>()
 
 const emit = defineEmits<{
@@ -43,7 +44,20 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
 }
 
 const item = computed(() => props.kind ? ITEM_DEFS[props.kind] : null)
-const displayName = computed(() => props.kind ? itemDisplayName(props.kind) : '')
+const stockRow = computed(() => {
+  if (!props.kind) return null
+  if (props.instanceId) {
+    return ui.merchant.npcStock.find((entry) => entry.instanceId === props.instanceId) ?? null
+  }
+  return ui.merchant.npcStock.find((entry) => entry.kind === props.kind && !entry.instanceId)
+    ?? ui.merchant.npcStock.find((entry) => entry.kind === props.kind)
+    ?? null
+})
+const displayName = computed(() => {
+  if (!props.kind) return ''
+  const base = itemDisplayName(props.kind)
+  return stockRow.value?.qualityLabel ? `${base} — ${stockRow.value.qualityLabel}` : base
+})
 const catalogEntry = computed(() => props.kind ? ITEM_CATALOG[props.kind] : null)
 const group = computed(() => props.kind ? ui.merchant.groups.find((entry) => entry.kind === props.kind) ?? null : null)
 
@@ -56,12 +70,12 @@ const bookSkillValue = computed<number | null>(() => book.value ? getSkillValue(
 function percent(value: number): string { return `${Math.round(value * 100)}%` }
 const buyPrice = computed<number | null>(() => {
   if (!props.kind) return null
-  if (ui.merchant.mode === 'npcGoods') {
-    return ui.merchant.npcStock.find((entry) => entry.kind === props.kind)?.unitPrice ?? null
-  }
+  if (stockRow.value) return stockRow.value.unitPrice
+  if (ui.merchant.mode === 'npcGoods') return null
   return merchantPrice(props.kind)
 })
 const barterValue = computed<number>(() => props.kind ? tradeValue(props.kind) : 0)
+const displayWeight = computed(() => stockRow.value?.weightKg ?? item.value?.weight ?? 0)
 const itemCategoryText = computed(() => item.value ? item.value.categories.map((cat) => categoryLabel[cat]).join(' · ') : '')
 const itemCategoryIcon = computed(() => item.value ? CATEGORY_ICON[primaryItemCategory(item.value)] : Sword)
 
@@ -118,12 +132,37 @@ function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
         />
         <InventoryScreenSection
           label="Waga"
-          :value="formatWeight(item.weight)"
+          :value="formatWeight(displayWeight)"
         />
         <InventoryScreenSection
           v-if="buyPrice != null"
           label="Cena kupna"
           :value="`${buyPrice} monet`"
+        />
+        <InventoryScreenSection
+          v-if="stockRow?.qualityLabel"
+          label="Jakość"
+          :value="stockRow.qualityLabel"
+        />
+        <InventoryScreenSection
+          v-if="stockRow?.protectionPercent != null"
+          label="Ochrona"
+          :value="`${stockRow.protectionPercent}%`"
+        />
+        <InventoryScreenSection
+          v-if="stockRow?.staminaPenaltyLabel"
+          label="Wysiłek"
+          :value="stockRow.staminaPenaltyLabel"
+        />
+        <InventoryScreenSection
+          v-if="stockRow?.movementPenaltyLabel"
+          label="Ruch"
+          :value="stockRow.movementPenaltyLabel"
+        />
+        <InventoryScreenSection
+          v-if="stockRow?.recoveryPenaltyLabel"
+          label="Odzyskiwanie"
+          :value="stockRow.recoveryPenaltyLabel"
         />
         <InventoryScreenSection
           label="Wartość wymiany"

@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 435
-- `CreateSettlementDeps` — type — line 277
-- `Settlement` — type — line 151
-- `settlementSpawnPoint` — function — line 265
+- `createSettlement` — function — line 436
+- `CreateSettlementDeps` — type — line 278
+- `Settlement` — type — line 152
+- `settlementSpawnPoint` — function — line 266
 
 ## `settlement/decorProps.ts`
 
@@ -422,23 +422,29 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/merchantTrade.ts`
 
-- `generateMerchantAssortment` — function — line 336
-- `HOME_STARTER_MERCHANT_KINDS` — const — line 79
-- `isPremiumMerchantGood` — function — line 154
-- `MERCHANT_SPECIALIZATIONS` — const — line 28
-- `MerchantAssortmentContext` — type — line 41
-- `MerchantProfile` — type — line 35
-- `merchantProfileFor` — function — line 206
-- `MerchantSpecialization` — type — line 22
+- `generateMerchantAssortment` — function — line 389
+- `HOME_STARTER_MERCHANT_KINDS` — const — line 87
+- `isPremiumMerchantGood` — function — line 162
+- `MERCHANT_ARMOR_QUALITY_WEIGHTS` — const — line 448
+- `MERCHANT_SPECIALIZATIONS` — const — line 36
+- `MerchantArmorQualityContext` — type — line 464
+- `MerchantAssortmentContext` — type — line 49
+- `MerchantProfile` — type — line 43
+- `merchantProfileFor` — function — line 214
+- `MerchantSpecialization` — type — line 30
   - domain: settlements
-- `merchantStockQuantity` — function — line 425
-- `PREMIUM_MERCHANT_KINDS` — const — line 54
-- `premiumAvailabilityChance` — function — line 159
-- `resolveMerchantProfiles` — function — line 193
+- `merchantStockQuantity` — function — line 443
+- `PREMIUM_MERCHANT_KINDS` — const — line 62
+- `premiumAvailabilityChance` — function — line 167
+- `resolveMerchantArmorQuality` — function — line 507
   - domain: settlements
-- `seedMerchantStockIfNeeded` — function — line 429
-- `settlementHasPremiumOffer` — function — line 330
-- `specializationAffinity` — function — line 239
+- `resolveMerchantProfiles` — function — line 201
+  - domain: settlements
+- `resolvePremiumMerchantAssignment` — function — line 350
+  - domain: settlements
+- `seedMerchantStockIfNeeded` — function — line 531
+- `settlementHasPremiumOffer` — function — line 338
+- `specializationAffinity` — function — line 247
 
 ## `settlement/merchantWagon.ts`
 

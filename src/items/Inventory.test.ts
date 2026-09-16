@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
 import { PLAYER_STARTING_ATTRIBUTES } from '../player/PlayerController'
+import { createArmorInstance } from './armorItemInstances'
 import { createFoodBatch } from './foodFreshness'
 import { DEFAULT_MAX_SIZE, Inventory } from './Inventory'
 import { createTentInstance, isWeaponItemInstance } from './itemInstances'
@@ -187,6 +188,21 @@ describe('Inventory weapon instances (plan 161)', () => {
     const json = inv.instancesToJSON()
     expect(json).toEqual([{ id: 'tent:kept', kind: 'tent', condition: 37 }])
     expect(Inventory.instancesFromJSON(json)).toEqual([{ id: 'tent:kept', kind: 'tent', condition: 37 }])
+  })
+
+  it('round-trips armor quality including poor, and falls back to common', () => {
+    const inv = new Inventory()
+    const poor = createArmorInstance('chainmail', 'poor', 'armor:poor')
+    expect(inv.addInstance(poor)).toBe(true)
+    const json = inv.instancesToJSON()
+    expect(json).toEqual([{ id: 'armor:poor', kind: 'chainmail', quality: 'poor' }])
+    expect(Inventory.instancesFromJSON(json)).toEqual([{ id: 'armor:poor', kind: 'chainmail', quality: 'poor' }])
+    expect(Inventory.instancesFromJSON([{ id: 'armor:legacy', kind: 'leather_armor' }])).toEqual([
+      { id: 'armor:legacy', kind: 'leather_armor', quality: 'common' },
+    ])
+    expect(Inventory.instancesFromJSON([{ id: 'armor:bad', kind: 'leather_armor', quality: 'legendary' as never }])).toEqual([
+      { id: 'armor:bad', kind: 'leather_armor', quality: 'common' },
+    ])
   })
 })
 

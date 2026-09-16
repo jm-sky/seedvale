@@ -12,6 +12,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { InteractionGazePrompt } from '../interaction/interactionView'
 import type { EquipmentSlot } from '../items/equipment'
 import type { InventoryGroupView } from '../items/inventoryView'
+import type { ArmorQuality } from '../items/itemInstances'
 import type { ItemKind } from '../items/items'
 import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
 import type { TradeResult } from '../items/trade'
@@ -336,6 +337,7 @@ export type MerchantPricing = {
   previewNetCoins: (
     purchases: Partial<Record<ItemKind, number>>,
     offer: Partial<Record<ItemKind, number>>,
+    instanceBuyCost?: number,
   ) => number
 }
 
@@ -362,6 +364,15 @@ export type NpcTradeStockRow = {
   /** Authoritative owner of this row's remaining stock. Vue does not need
    *  the inventory itself — commit re-resolves the live owner. */
   owner?: 'household' | 'personal'
+  /** Concrete physical instance when identity (armor quality) matters. */
+  instanceId?: string
+  quality?: ArmorQuality
+  qualityLabel?: string
+  weightKg?: number
+  protectionPercent?: number
+  staminaPenaltyLabel?: string
+  movementPenaltyLabel?: string
+  recoveryPenaltyLabel?: string
 }
 
 /** Which stock the open trade screen renders the BUY column from (plan
@@ -386,6 +397,7 @@ type MerchantState = {
   onSettleTransaction: ((
     purchases: Partial<Record<ItemKind, number>>,
     offer: Partial<Record<ItemKind, number>>,
+    instanceIds?: readonly string[],
   ) => TradeResult | Promise<TradeResult>) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }

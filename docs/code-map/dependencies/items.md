@@ -48,6 +48,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/foodFreshness.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
@@ -241,12 +242,17 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/inventoryWiring.ts`
+- `items/Inventory.test.ts`
 - `items/Inventory.ts`
 - `items/equipment.test.ts`
 - `items/equipment.ts`
+- `items/inventoryView.test.ts`
 - `items/inventoryView.ts`
+- `items/trade.test.ts`
 - `items/trade.ts`
 - `player/characterPresentation.test.ts`
+- `settlement/merchantTrade.ts`
 
 ## `items/authoredWorldPickups.test.ts`
 
@@ -774,6 +780,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/inventoryView.ts`
 - `items/itemInstances.ts`
 - `items/trapItemInstances.ts`
@@ -1012,6 +1019,7 @@ Generated from TypeScript imports.
 - `quests/suspiciousTransportCaveCache.ts`
 - `settlement/merchantTrade.test.ts`
 - `settlement/merchantTrade.ts`
+- `ui-vue/store.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.test.ts`
 - `world/createPlacedTraps.ts`
@@ -1161,6 +1169,7 @@ Generated from TypeScript imports.
 - `items/sensibleFood.ts`
 - `items/tentProp.ts`
 - `items/timedProcess.ts`
+- `items/trade.test.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
 - `items/treasureGameplay.test.ts`
@@ -1402,13 +1411,16 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/itemInstances.ts`
+- `items/items.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
 - `items/trapItemInstances.ts`
 - `items/weaponMaintenance.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.ts`
+- `settlement/merchantTrade.ts`
 
 ## `items/trade.ts`
 

@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { RelationLevel } from '../quests/quests'
 import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
+import { seedMerchantStockIfNeeded } from '../settlement/merchantTrade'
+import { createArmorInstance, effectiveInstanceWeight } from './armorItemInstances'
 import { Inventory } from './Inventory'
 import { createKeyInstance, createTentInstance, isTentItemInstance } from './itemInstances'
+import { ITEM_DEFS } from './items'
 import {
   createAcquiredInstance,
   type OwnedGoodsPurchaseLine,
   previewPricedPurchaseNetCoins,
   previewTransactionNetCoins,
   resolveOfferLineBuyback,
+  settleMerchantStockTransaction,
   settleOwnedGoodsPurchase,
   settlePricedPurchase,
   settleTransaction,
@@ -22,9 +26,11 @@ import {
   MAX_BUY_FACTOR,
   MAX_SELL_FACTOR,
   MERCHANT_STOCK,
+  merchantInstancePrice,
   merchantPrice,
   MIN_BUY_FACTOR,
   NEUTRAL_SELL_PRICE_CONTEXT,
+  npcInstanceSalePrice,
   npcSalePrice,
   relationshipEffect,
   reputationEffect,
@@ -700,5 +706,98 @@ describe('createAcquiredInstance key (world-024)', () => {
       id: 'item:treasure-key:site',
       kind: 'key',
     })
+  })
+})
+
+describe('armor quality pricing and merchant instance trade (plan items-player-040)', () => {
+  it('keeps ordinary armor acquisition at common and does not randomize quality', () => {
+    const minted = createAcquiredInstance('chainmail')
+    expect(minted && 'quality' in minted ? minted.quality : null).toBe('common')
+  })
+
+  it('orders instance buy and sell prices poor < common < good < masterwork', () => {
+    const qualities = ['poor', 'common', 'good', 'masterwork'] as const
+    const buy = qualities.map((quality) => merchantInstancePrice(createArmorInstance('chainmail', quality))!)
+    const sell = qualities.map((quality) => resolveInstanceSellPrice(createArmorInstance('chainmail', quality), NEUTRAL_SELL_PRICE_CONTEXT)!)
+    const socialSell = qualities.map((quality) => resolveInstanceSellPrice(
+      createArmorInstance('chainmail', quality),
+      makeContext({ relation: 80, relationLevel: 'trusted' }),
+    )!)
+    for (let i = 0; i < qualities.length - 1; i++) {
+      expect(buy[i]).toBeLessThan(buy[i + 1]!)
+      expect(sell[i]).toBeLessThan(sell[i + 1]!)
+      expect(socialSell[i]).toBeLessThan(socialSell[i + 1]!)
+    }
+    expect(buy[1]).toBe(merchantPrice('chainmail'))
+    expect(npcInstanceSalePrice(createArmorInstance('chainmail', 'poor'))).toBeLessThan(
+      npcInstanceSalePrice(createArmorInstance('chainmail', 'masterwork')),
+    )
+  })
+
+  it('sells lower-quality armor first in kind/count baskets', () => {
+    const poor = createArmorInstance('chainmail', 'poor', 'armor:poor')
+    const masterwork = createArmorInstance('chainmail', 'masterwork', 'armor:mw')
+    const inventory = new Inventory({}, Infinity, [masterwork, poor], undefined, Infinity)
+    const line = resolveOfferLineBuyback(inventory, 'chainmail', 1)
+    expect(line.instanceIds).toEqual(['armor:poor'])
+    expect(line.value).toBe(resolveInstanceSellPrice(poor))
+  })
+
+  it('transfers the selected merchant armor instance without recreating common', () => {
+    const poor = createArmorInstance('chainmail', 'poor', 'armor:poor')
+    const good = createArmorInstance('chainmail', 'good', 'armor:good')
+    const stock = new Inventory(undefined, Infinity, [poor, good], undefined, Infinity)
+    const buyer = new Inventory({ coin: 1000 }, Infinity, undefined, undefined, Infinity)
+    const listedGood = merchantInstancePrice(good)!
+    const listedPoor = merchantInstancePrice(poor)!
+    expect(listedGood).not.toBe(listedPoor)
+
+    const result = settleMerchantStockTransaction(buyer, stock, {}, {}, NEUTRAL_SELL_PRICE_CONTEXT, ['armor:good'])
+    expect(result).toBe('ok')
+    const bought = buyer.getInstance('armor:good')
+    expect(bought).toEqual(good)
+    expect(stock.getInstance('armor:good')).toBeNull()
+    expect(stock.getInstance('armor:poor')).toEqual(poor)
+    expect(buyer.count('coin')).toBe(1000 - listedGood)
+    expect(buyer.getInstances('chainmail')).toHaveLength(1)
+
+    seedMerchantStockIfNeeded(stock, { merchantStockInitialized: true }, { chainmail: 4 })
+    expect(stock.getInstances('chainmail')).toHaveLength(1)
+    expect(stock.getInstance('armor:poor')).toEqual(poor)
+  })
+
+  it('uses effective armor weight for merchant purchase capacity preflight', () => {
+    const poor = createArmorInstance('chainmail', 'poor', 'armor:poor')
+    const masterwork = createArmorInstance('chainmail', 'masterwork', 'armor:mw')
+    const poorWeight = effectiveInstanceWeight(poor)
+    const mwWeight = effectiveInstanceWeight(masterwork)
+    expect(poorWeight).toBeGreaterThan(ITEM_DEFS.chainmail.weight)
+    expect(mwWeight).toBeLessThan(ITEM_DEFS.chainmail.weight)
+
+    const coinWeight = 1000 * ITEM_DEFS.coin.weight
+    const tightBuyer = new Inventory({ coin: 1000 }, coinWeight + mwWeight + 0.01, undefined, undefined, Infinity)
+    const poorStock = new Inventory(undefined, Infinity, [poor], undefined, Infinity)
+    const mwStock = new Inventory(undefined, Infinity, [masterwork], undefined, Infinity)
+    expect(settleMerchantStockTransaction(tightBuyer, poorStock, {}, {}, NEUTRAL_SELL_PRICE_CONTEXT, ['armor:poor'])).toBe('full')
+    expect(settleMerchantStockTransaction(tightBuyer, mwStock, {}, {}, NEUTRAL_SELL_PRICE_CONTEXT, ['armor:mw'])).toBe('ok')
+    expect(tightBuyer.getInstance('armor:mw')).toEqual(masterwork)
+  })
+
+  it('generic NPC instance purchase can transfer an exact armor quality', () => {
+    const good = createArmorInstance('leather_armor', 'good', 'armor:npc-good')
+    const source = new Inventory(undefined, Infinity, [good], undefined, Infinity)
+    const buyer = new Inventory({ coin: 200 }, Infinity, undefined, undefined, Infinity)
+    const pay = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
+    const unitPrice = npcInstanceSalePrice(good)
+    const result = settleOwnedGoodsPurchase(buyer, source, pay, [{
+      kind: 'leather_armor',
+      count: 1,
+      unitPrice,
+      instanceIds: ['armor:npc-good'],
+    }])
+    expect(result).toBe('ok')
+    expect(buyer.getInstance('armor:npc-good')).toEqual(good)
+    expect(source.getInstances('leather_armor')).toHaveLength(0)
+    expect(pay.count('coin')).toBe(unitPrice)
   })
 })

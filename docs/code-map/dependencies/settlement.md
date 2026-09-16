@@ -1000,6 +1000,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/trade.ts`
@@ -1012,6 +1013,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `items/trade.test.ts`
 - `settlement/createSettlement.ts`
 - `settlement/merchantTrade.test.ts`
 

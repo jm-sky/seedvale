@@ -1,7 +1,7 @@
 # Plan: Armor quality pricing and world availability
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~items-player-030~~, ~~settlements-012~~
 **Domain:** `items-player`

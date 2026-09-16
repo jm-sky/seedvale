@@ -1382,6 +1382,7 @@ Generated from TypeScript imports.
 - `audio/inventorySounds.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/books.ts`
 - `items/equipment.ts`
 - `items/foodItems.ts`

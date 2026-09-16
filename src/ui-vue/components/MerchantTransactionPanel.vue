@@ -6,7 +6,13 @@ import UiButton from '@/components/UiButton.vue'
 import type { ItemKind } from '../../items/items'
 import { useTouchScroll } from '../composables/useTouchScroll'
 
-export type TransactionLine = { kind: ItemKind, label: string, count: number, totalValue: number }
+export type TransactionLine = {
+  kind: ItemKind
+  label: string
+  count: number
+  totalValue: number
+  instanceId?: string
+}
 
 const props = defineProps<{
   purchases: readonly TransactionLine[]
@@ -19,7 +25,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   trade: []
-  'remove-purchase': [kind: ItemKind]
+  'remove-purchase': [kind: ItemKind, instanceId?: string]
   'remove-offer': [kind: ItemKind]
 }>()
 
@@ -53,7 +59,7 @@ function afterTrade(): number {
         </div>
         <div
           v-for="line in purchases"
-          :key="`buy-${line.kind}`"
+          :key="`buy-${line.instanceId ?? line.kind}`"
           class="flex items-center justify-between gap-2 rounded bg-white/5 px-2 py-1 text-sm"
         >
           <span class="min-w-0 truncate capitalize">{{ line.label }} ×{{ line.count }}</span>
@@ -62,7 +68,7 @@ function afterTrade(): number {
             <button
               type="button"
               class="cursor-pointer text-[11px] opacity-60 hover:opacity-100"
-              @click="emit('remove-purchase', line.kind)"
+              @click="emit('remove-purchase', line.kind, line.instanceId)"
             >
               ✕
             </button>

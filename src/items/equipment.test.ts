@@ -13,7 +13,14 @@ import {
 } from './equipment'
 import { Inventory } from './Inventory'
 import { ITEM_CATALOG } from './itemCatalog'
-import { ARMOR_KIND_LIST, type ArmorKind } from './itemInstances'
+import {
+  ARMOR_KIND_LIST,
+  ARMOR_QUALITY_LABELS,
+  type ArmorKind,
+  type ArmorQuality,
+  isArmorQuality,
+  normalizeArmorQuality,
+} from './itemInstances'
 import { ITEM_DEFS } from './items'
 
 const PAULDRON_KINDS = [
@@ -24,7 +31,7 @@ const PAULDRON_KINDS = [
 ] as const satisfies readonly ArmorKind[]
 
 function inventoryWithArmor(
-  ...pieces: { kind: ArmorKind, quality?: 'common' | 'good' | 'masterwork' }[]
+  ...pieces: { kind: ArmorKind, quality?: ArmorQuality }[]
 ): { inventory: Inventory, ids: string[] } {
   const inventory = new Inventory({})
   const ids: string[] = []
@@ -228,6 +235,14 @@ describe('resolveEquipmentModifiers', () => {
     expect(chainmailMods.meleeStaminaMultiplier).toBeGreaterThan(leatherMods.meleeStaminaMultiplier)
   })
 
+  it('accepts poor as a quality and keeps legacy fallback at common', () => {
+    expect(isArmorQuality('poor')).toBe(true)
+    expect(ARMOR_QUALITY_LABELS.poor).toBe('Kiepska')
+    expect(normalizeArmorQuality(undefined)).toBe('common')
+    expect(normalizeArmorQuality('legendary')).toBe('common')
+    expect(createArmorInstance('leather_armor').quality).toBe('common')
+  })
+
   it('higher quality improves protection and reduces penalties vs common', () => {
     const common = inventoryWithArmor({ kind: 'chainmail', quality: 'common' })
     const masterwork = inventoryWithArmor({ kind: 'chainmail', quality: 'masterwork' })
@@ -241,6 +256,46 @@ describe('resolveEquipmentModifiers', () => {
     expect(m.meleeStaminaMultiplier).toBeLessThan(c.meleeStaminaMultiplier)
     expect(m.movementSpeedMultiplier).toBeGreaterThan(c.movementSpeedMultiplier)
     expect(masterwork.inventory.totalWeight()).toBeLessThan(common.inventory.totalWeight())
+  })
+
+  it('poor quality is worse than common for protection, weight and restrictions', () => {
+    const qualities: ArmorQuality[] = ['poor', 'common', 'good', 'masterwork']
+    const pieces = qualities.map((quality) => {
+      const equipped = inventoryWithArmor({ kind: 'chainmail', quality })
+      const state = createEquipmentState(equipped.inventory)
+      state.equip(equipped.ids[0]!, equipped.inventory)
+      return {
+        quality,
+        mods: resolveEquipmentModifiers(state, equipped.inventory),
+        weight: equipped.inventory.totalWeight(),
+        piece: resolveEffectiveArmorPiece(
+          ITEM_CATALOG.chainmail.armor!,
+          quality,
+          ITEM_DEFS.chainmail.weight,
+        ),
+      }
+    })
+    for (let i = 0; i < pieces.length - 1; i++) {
+      const lower = pieces[i]!
+      const higher = pieces[i + 1]!
+      expect(lower.mods.incomingDamageMultiplier).toBeGreaterThan(higher.mods.incomingDamageMultiplier)
+      expect(lower.weight).toBeGreaterThan(higher.weight)
+      expect(lower.piece.staminaCostMultiplier).toBeGreaterThan(higher.piece.staminaCostMultiplier)
+      expect(lower.piece.movementSpeedMultiplier).toBeLessThan(higher.piece.movementSpeedMultiplier)
+    }
+  })
+
+  it('quality penalty transform moves >1 and <1 multipliers symmetrically around 1', () => {
+    const base = ITEM_CATALOG.chainmail.armor!
+    const common = resolveEffectiveArmorPiece(base, 'common', ITEM_DEFS.chainmail.weight)
+    const poor = resolveEffectiveArmorPiece(base, 'poor', ITEM_DEFS.chainmail.weight)
+    const good = resolveEffectiveArmorPiece(base, 'good', ITEM_DEFS.chainmail.weight)
+    expect(common.staminaCostMultiplier).toBe(base.staminaCostMultiplier)
+    expect(common.movementSpeedMultiplier).toBe(base.movementSpeedMultiplier)
+    expect(poor.staminaCostMultiplier).toBeGreaterThan(common.staminaCostMultiplier)
+    expect(good.staminaCostMultiplier).toBeLessThan(common.staminaCostMultiplier)
+    expect(poor.movementSpeedMultiplier).toBeLessThan(common.movementSpeedMultiplier)
+    expect(good.movementSpeedMultiplier).toBeGreaterThan(common.movementSpeedMultiplier)
   })
 
   it('multi-piece protection multiplies remaining damage and stays bounded', () => {

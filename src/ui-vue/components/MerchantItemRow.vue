@@ -14,12 +14,13 @@ const props = defineProps<{
   /** Upper bound for the stepper (owned count for OFFER); `null` = unbounded (BUY, capped only by coins). */
   maxCount: number | null
   ownedCount?: number
+  instanceId?: string
 }>()
 
 const emit = defineEmits<{
-  commit: [kind: ItemKind, quantity: number]
-  clear: [kind: ItemKind]
-  'open-details': [kind: ItemKind]
+  commit: [kind: ItemKind, quantity: number, instanceId?: string]
+  clear: [kind: ItemKind, instanceId?: string]
+  'open-details': [kind: ItemKind, instanceId?: string]
 }>()
 
 const expanded = ref(false)
@@ -36,12 +37,12 @@ function toggleExpanded(): void {
 }
 
 function add(): void {
-  emit('commit', props.kind, pendingQty.value)
+  emit('commit', props.kind, pendingQty.value, props.instanceId)
   expanded.value = false
 }
 
 function clear(): void {
-  emit('clear', props.kind)
+  emit('clear', props.kind, props.instanceId)
   expanded.value = false
 }
 </script>
@@ -80,7 +81,7 @@ function clear(): void {
         type="button"
         class="shrink-0 cursor-pointer rounded-full border border-white/20 px-1.5 text-[11px] opacity-70 hover:opacity-100"
         title="Szczegóły"
-        @click="emit('open-details', kind)"
+        @click="emit('open-details', kind, instanceId)"
       >
         i
       </button>

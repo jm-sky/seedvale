@@ -283,6 +283,7 @@ Generated from TypeScript imports.
 - `interaction/interactionView.ts`
 - `items/equipment.ts`
 - `items/inventoryView.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
 - `items/primaryWeapons.ts`
 - `items/trade.ts`

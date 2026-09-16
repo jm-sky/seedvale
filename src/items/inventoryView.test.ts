@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { createArmorInstance } from './armorItemInstances'
 import { Inventory } from './Inventory'
 import { buildInventoryGroups, ITEM_METER_LABEL } from './inventoryView'
-import { createTentInstance, type LiquidContainerItemInstance, type TrapItemInstance } from './itemInstances'
+import { ARMOR_QUALITY_LABELS, createTentInstance, type LiquidContainerItemInstance, type TrapItemInstance } from './itemInstances'
 import { createTrapInstance } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
 
@@ -71,6 +72,23 @@ describe('buildInventoryGroups — instance-backed coverage (plan items-player-0
     const groups = buildInventoryGroups(inventory)
     const kinds = groups.map((g) => g.kind)
     expect(kinds).toEqual(expect.arrayContaining(['trap_good', 'long_sword', 'wooden_bucket', 'tent']))
+  })
+})
+
+describe('buildInventoryGroups — armor quality (plan items-player-040)', () => {
+  it('exposes poor as a distinct quality label with resolver-backed stats', () => {
+    const inventory = new Inventory({})
+    inventory.addInstance(createArmorInstance('chainmail', 'poor', 'armor:poor'))
+    inventory.addInstance(createArmorInstance('chainmail', 'masterwork', 'armor:mw'))
+    const group = buildInventoryGroups(inventory).find((g) => g.kind === 'chainmail')!
+    expect(group.condition).toBe('mixed')
+    const labels = group.instances.map((row) => row.qualityLabel)
+    expect(labels).toEqual(expect.arrayContaining([ARMOR_QUALITY_LABELS.poor, ARMOR_QUALITY_LABELS.masterwork]))
+    const poor = group.instances.find((row) => row.quality === 'poor')!
+    const masterwork = group.instances.find((row) => row.quality === 'masterwork')!
+    expect(poor.sellPrice).toBeLessThan(masterwork.sellPrice)
+    expect(poor.effectiveWeightKg!).toBeGreaterThan(masterwork.effectiveWeightKg!)
+    expect(poor.protectionPercent!).toBeLessThan(masterwork.protectionPercent!)
   })
 })
 

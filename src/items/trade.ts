@@ -1,9 +1,11 @@
 import type { Inventory } from './Inventory'
-import { createArmorInstance, isArmorKind } from './armorItemInstances'
+import { createArmorInstance, effectiveInstanceWeight, isArmorKind } from './armorItemInstances'
 import {
+  ARMOR_QUALITY_RANK,
   createItemInstanceId,
   createKeyInstance,
   createTentInstance,
+  isArmorItemInstance,
   isInstanceBackedKind,
   isLiquidContainerKind,
   isTentItemInstance,
@@ -18,6 +20,7 @@ import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
 import { createLiquidContainerInstance } from './liquidContainer'
 import {
   canSell,
+  merchantInstancePrice,
   merchantPrice,
   NEUTRAL_SELL_PRICE_CONTEXT,
   resolveInstanceSellPrice,
@@ -40,6 +43,18 @@ export type OfferBuybackResolution = {
   instanceIdsByKind: Partial<Record<ItemKind, readonly string[]>>
 }
 
+function wouldFitCapacity(
+  inventory: Inventory,
+  removeWeight: number,
+  removeSize: number,
+  addWeight: number,
+  addSize: number,
+): boolean {
+  const nextWeight = inventory.totalWeight() - removeWeight + addWeight
+  const nextSize = inventory.totalSize() - removeSize + addSize
+  return nextWeight <= inventory.maxWeight + 1e-9 && nextSize <= inventory.maxSize + 1e-9
+}
+
 /** Weight and gabarite are independent caps (plan 164 §10) — a trade must
  *  clear both after removing payment/offer and adding the purchased kind, or
  *  `Inventory.add`/`addInstance` silently no-ops post-payment (coins/offer
@@ -51,13 +66,16 @@ function wouldFitAfter(
   addKind: ItemKind,
   addCount = 1,
 ): boolean {
-  const nextWeight = inventory.totalWeight() - removeWeight + ITEM_DEFS[addKind].weight * addCount
-  const nextSize = inventory.totalSize() - removeSize + itemSizeUnits(addKind) * addCount
-  return nextWeight <= inventory.maxWeight + 1e-9 && nextSize <= inventory.maxSize + 1e-9
+  return wouldFitCapacity(
+    inventory,
+    removeWeight,
+    removeSize,
+    ITEM_DEFS[addKind].weight * addCount,
+    itemSizeUnits(addKind) * addCount,
+  )
 }
 
-/** Total weight/size carried by a kind→count record (an offer or a purchase
- *  list) — shared by `wouldFitAfterTransaction` for both directions. */
+/** Total weight/size carried by a kind→count record of stackable goods. */
 function recordWeight(record: Partial<Record<ItemKind, number>>): number {
   let total = 0
   for (const [kind, count] of Object.entries(record) as [ItemKind, number][]) {
@@ -74,24 +92,60 @@ function recordSize(record: Partial<Record<ItemKind, number>>): number {
   return total
 }
 
-/** Generalized `wouldFitAfter` for `settleTransaction` — nets weight/size
- *  deltas across every offer removal, every purchase addition and the coin
- *  settlement in one pass, instead of one remove-kind/one-add-kind. */
+function instancesWeight(instances: readonly ItemInstance[]): number {
+  let total = 0
+  for (const instance of instances) total += effectiveInstanceWeight(instance)
+  return total
+}
+
+function instancesSize(instances: readonly ItemInstance[]): number {
+  let total = 0
+  for (const instance of instances) total += itemSizeUnits(instance.kind)
+  return total
+}
+
+function offerRemovalDelta(
+  inventory: Inventory,
+  offer: Partial<Record<ItemKind, number>>,
+  instanceIdsByKind: Partial<Record<ItemKind, readonly string[]>>,
+): { weight: number, size: number } {
+  let weight = 0
+  let size = 0
+  for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
+    if (count <= 0) continue
+    if (isInstanceBackedKind(kind)) {
+      const ids = instanceIdsByKind[kind] ?? selectInstancesToSell(inventory.getInstances(kind), count)
+      for (const id of ids) {
+        const instance = inventory.getInstance(id)
+        if (!instance) continue
+        weight += effectiveInstanceWeight(instance)
+        size += itemSizeUnits(instance.kind)
+      }
+    } else {
+      weight += ITEM_DEFS[kind].weight * count
+      size += itemSizeUnits(kind) * count
+    }
+  }
+  return { weight, size }
+}
+
+/** Generalized capacity check for mixed stack + instance transactions. */
 function wouldFitAfterTransaction(
   inventory: Inventory,
   offer: Partial<Record<ItemKind, number>>,
-  purchases: Partial<Record<ItemKind, number>>,
+  stackPurchases: Partial<Record<ItemKind, number>>,
   netCoins: number,
+  offerInstanceIdsByKind: Partial<Record<ItemKind, readonly string[]>> = {},
+  incomingInstances: readonly ItemInstance[] = [],
 ): boolean {
   const coinRecord: Partial<Record<ItemKind, number>> = netCoins > 0 ? { coin: netCoins } : {}
   const receivedCoinRecord: Partial<Record<ItemKind, number>> = netCoins < 0 ? { coin: -netCoins } : {}
-  const removeWeight = recordWeight(offer) + recordWeight(coinRecord)
-  const removeSize = recordSize(offer) + recordSize(coinRecord)
-  const addWeight = recordWeight(purchases) + recordWeight(receivedCoinRecord)
-  const addSize = recordSize(purchases) + recordSize(receivedCoinRecord)
-  const nextWeight = inventory.totalWeight() - removeWeight + addWeight
-  const nextSize = inventory.totalSize() - removeSize + addSize
-  return nextWeight <= inventory.maxWeight + 1e-9 && nextSize <= inventory.maxSize + 1e-9
+  const offerDelta = offerRemovalDelta(inventory, offer, offerInstanceIdsByKind)
+  const removeWeight = offerDelta.weight + recordWeight(coinRecord)
+  const removeSize = offerDelta.size + recordSize(coinRecord)
+  const addWeight = recordWeight(stackPurchases) + instancesWeight(incomingInstances) + recordWeight(receivedCoinRecord)
+  const addSize = recordSize(stackPurchases) + instancesSize(incomingInstances) + recordSize(receivedCoinRecord)
+  return wouldFitCapacity(inventory, removeWeight, removeSize, addWeight, addSize)
 }
 
 /** `inventory.has()`'s stack-count check misses instance-backed kinds (knives,
@@ -157,11 +211,14 @@ export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
 }
 
 /** Overall `[0,1]` condition used only to order which instance sells/drops
- *  first — not a price input (`resolveInstanceSellPrice` decides that). */
+ *  first — not a price input (`resolveInstanceSellPrice` decides that).
+ *  Armor uses quality rank so kind/count baskets sell `poor` before
+ *  `masterwork`, with stable id as the final tie-break. */
 function conditionRatio(instance: ItemInstance): number {
   if (isTrapItemInstance(instance)) return trapConditionRatio(instance)
   if (isWeaponItemInstance(instance)) return (instance.durability + instance.sharpness) / 2
   if (isTentItemInstance(instance)) return instance.condition / 100
+  if (isArmorItemInstance(instance)) return ARMOR_QUALITY_RANK[instance.quality]
   return 1
 }
 
@@ -287,8 +344,9 @@ export function previewTransactionNetCoins(
   purchases: Partial<Record<ItemKind, number>>,
   offer: Partial<Record<ItemKind, number>>,
   context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+  instanceBuyCost = 0,
 ): number {
-  let totalBuyCost = 0
+  let totalBuyCost = instanceBuyCost
   for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
     if (count > 0) totalBuyCost += (merchantPrice(kind) ?? 0) * count
   }
@@ -359,7 +417,7 @@ export function settleTransaction(
   const netCoins = computeNetCoins(totalBuyCost, offerResolution)
   if (purchaseEntries.length === 0 && netCoins === 0) return 'not_sold'
   if (netCoins > 0 && !inventory.has('coin', netCoins)) return 'cannot_afford'
-  if (!wouldFitAfterTransaction(inventory, offer, purchases, netCoins)) return 'full'
+  if (!wouldFitAfterTransaction(inventory, offer, purchases, netCoins, offerResolution.instanceIdsByKind)) return 'full'
   removeOffer(inventory, offer, offerResolution.instanceIdsByKind)
   for (const [kind, count] of purchaseEntries) addPurchased(inventory, kind, count)
   if (netCoins > 0) inventory.remove('coin', netCoins)
@@ -372,11 +430,57 @@ function merchantStockHas(stock: Inventory, kind: ItemKind, count: number): bool
   return owned >= count
 }
 
+function stackPurchasesOnly(purchases: Partial<Record<ItemKind, number>>): Partial<Record<ItemKind, number>> {
+  const stacks: Partial<Record<ItemKind, number>> = {}
+  for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
+    if (count > 0 && !isInstanceBackedKind(kind)) stacks[kind] = count
+  }
+  return stacks
+}
+
+function resolveMerchantPurchaseInstances(
+  merchantStock: Inventory,
+  purchases: Partial<Record<ItemKind, number>>,
+  instanceIds: readonly string[],
+): { instances: ItemInstance[], cost: number } | null {
+  const reserved = new Set<string>()
+  const instances: ItemInstance[] = []
+  let cost = 0
+  for (const id of instanceIds) {
+    if (reserved.has(id)) return null
+    const instance = merchantStock.getInstance(id)
+    if (!instance) return null
+    const unitPrice = merchantInstancePrice(instance)
+    if (unitPrice == null) return null
+    reserved.add(id)
+    instances.push(instance)
+    cost += unitPrice
+  }
+  for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
+    if (count <= 0) continue
+    if (!isInstanceBackedKind(kind)) continue
+    const available = merchantStock.getInstances(kind).filter((instance) => !reserved.has(instance.id))
+    const ids = selectInstancesToSell(available, count)
+    if (ids.length < count) return null
+    for (const id of ids) {
+      const instance = merchantStock.getInstance(id)
+      if (!instance) return null
+      const unitPrice = merchantInstancePrice(instance)
+      if (unitPrice == null) return null
+      reserved.add(id)
+      instances.push(instance)
+      cost += unitPrice
+    }
+  }
+  return { instances, cost }
+}
+
 /**
  * Merchant catalog purchase against finite owned stock (plan settlements-012).
- * Pricing stays `merchantPrice` / existing social buyback — no regional
- * multiplier. Purchases move real stock from `merchantStock` instead of minting
- * a replacement from the global catalog.
+ * Pricing stays `merchantPrice` / instance quality value / existing social
+ * buyback — no regional multiplier. Purchases move real stock from
+ * `merchantStock` instead of minting a replacement from the global catalog.
+ * `instanceIds` transfers those exact physical instances (armor quality).
  */
 export function settleMerchantStockTransaction(
   inventory: Inventory,
@@ -384,37 +488,43 @@ export function settleMerchantStockTransaction(
   purchases: Partial<Record<ItemKind, number>>,
   offer: Partial<Record<ItemKind, number>>,
   context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+  instanceIds: readonly string[] = [],
 ): TradeResult {
   const purchaseEntries = (Object.entries(purchases) as [ItemKind, number][]).filter(([, count]) => count > 0)
   for (const [kind, count] of purchaseEntries) {
     if (!Number.isInteger(count) || !merchantStockHas(merchantStock, kind, count)) return 'not_sold'
     if (merchantPrice(kind) == null) return 'not_sold'
   }
+  const resolved = resolveMerchantPurchaseInstances(merchantStock, purchases, instanceIds)
+  if (!resolved) return 'not_sold'
   const offerHasEntries = (Object.entries(offer) as [ItemKind, number][]).some(([, count]) => count > 0)
-  if (purchaseEntries.length === 0 && !offerHasEntries) return 'invalid_offer'
-  let totalBuyCost = 0
+  if (purchaseEntries.length === 0 && instanceIds.length === 0 && !offerHasEntries) return 'invalid_offer'
+  let totalBuyCost = resolved.cost
   for (const [kind, count] of purchaseEntries) {
-    totalBuyCost += (merchantPrice(kind) ?? 0) * count
+    if (!isInstanceBackedKind(kind)) totalBuyCost += (merchantPrice(kind) ?? 0) * count
   }
   if (offerHasEntries && !isValidOffer(inventory, offer)) return 'invalid_offer'
   const offerResolution = resolveOfferBuyback(inventory, offer, context)
   const netCoins = computeNetCoins(totalBuyCost, offerResolution)
-  if (purchaseEntries.length === 0 && netCoins === 0) return 'not_sold'
+  if (purchaseEntries.length === 0 && instanceIds.length === 0 && netCoins === 0) return 'not_sold'
   if (netCoins > 0 && !inventory.has('coin', netCoins)) return 'cannot_afford'
-  if (!wouldFitAfterTransaction(inventory, offer, purchases, netCoins)) return 'full'
+  if (!wouldFitAfterTransaction(
+    inventory,
+    offer,
+    stackPurchasesOnly(purchases),
+    netCoins,
+    offerResolution.instanceIdsByKind,
+    resolved.instances,
+  )) return 'full'
   removeOffer(inventory, offer, offerResolution.instanceIdsByKind)
+  for (const instance of resolved.instances) {
+    if (!merchantStock.removeInstance(instance.id)) return 'not_sold'
+    inventory.addInstance(instance)
+  }
   for (const [kind, count] of purchaseEntries) {
-    if (isInstanceBackedKind(kind)) {
-      for (const id of selectInstancesToSell(merchantStock.getInstances(kind), count)) {
-        const instance = merchantStock.getInstance(id)
-        if (!instance) return 'not_sold'
-        merchantStock.removeInstance(id)
-        inventory.addInstance(instance)
-      }
-    } else {
-      merchantStock.remove(kind, count)
-      inventory.add(kind, count)
-    }
+    if (isInstanceBackedKind(kind)) continue
+    merchantStock.remove(kind, count)
+    inventory.add(kind, count)
   }
   if (netCoins > 0) inventory.remove('coin', netCoins)
   else if (netCoins < 0) inventory.add('coin', -netCoins)
@@ -430,6 +540,9 @@ export type OwnedGoodsPurchaseLine = {
   count: number
   unitPrice: number
   source?: Inventory
+  /** Exact physical instances to transfer. When omitted, instance-backed
+   *  kinds use `selectInstancesToSell` (worst condition / lowest armor quality). */
+  instanceIds?: readonly string[]
 }
 
 /**
@@ -455,35 +568,61 @@ export function settleOwnedGoodsPurchase(
   const active = lines.filter((line) => line.count > 0)
   if (active.length === 0) return 'invalid_offer'
   let totalPrice = 0
-  const purchases: Partial<Record<ItemKind, number>> = {}
-  const reserved = new Map<Inventory, Partial<Record<ItemKind, number>>>()
-  const resolved: { kind: ItemKind, count: number, unitPrice: number, source: Inventory }[] = []
+  const stackPurchases: Partial<Record<ItemKind, number>> = {}
+  const reserved = new Map<Inventory, Set<string>>()
+  const reservedCounts = new Map<Inventory, Partial<Record<ItemKind, number>>>()
+  const incomingInstances: ItemInstance[] = []
+  const resolved: {
+    kind: ItemKind
+    count: number
+    unitPrice: number
+    source: Inventory
+    instances: ItemInstance[]
+  }[] = []
   for (const line of active) {
     const { kind, count, unitPrice } = line
     if (!Number.isInteger(count) || count <= 0) return 'invalid_offer'
     if (!Number.isInteger(unitPrice) || unitPrice < 0) return 'invalid_offer'
     const lineSource = line.source ?? source
-    const already = reserved.get(lineSource)?.[kind] ?? 0
-    const owned = isInstanceBackedKind(kind)
-      ? lineSource.countInstances(kind)
-      : lineSource.count(kind)
-    if (owned < already + count) return 'not_sold'
-    const byKind = reserved.get(lineSource) ?? {}
-    byKind[kind] = already + count
-    reserved.set(lineSource, byKind)
-    resolved.push({ kind, count, unitPrice, source: lineSource })
-    purchases[kind] = (purchases[kind] ?? 0) + count
+    const takenIds = reserved.get(lineSource) ?? new Set<string>()
+    const already = reservedCounts.get(lineSource)?.[kind] ?? 0
+    const instances: ItemInstance[] = []
+    if (isInstanceBackedKind(kind)) {
+      const explicit = line.instanceIds
+      const ids = explicit && explicit.length > 0
+        ? [...explicit]
+        : selectInstancesToSell(
+          lineSource.getInstances(kind).filter((instance) => !takenIds.has(instance.id)),
+          count,
+        )
+      if (ids.length !== count) return 'not_sold'
+      for (const id of ids) {
+        if (takenIds.has(id)) return 'not_sold'
+        const instance = lineSource.getInstance(id)
+        if (!instance || instance.kind !== kind) return 'not_sold'
+        takenIds.add(id)
+        instances.push(instance)
+        incomingInstances.push(instance)
+      }
+      reserved.set(lineSource, takenIds)
+    } else {
+      const owned = lineSource.count(kind)
+      if (owned < already + count) return 'not_sold'
+      const byKind = reservedCounts.get(lineSource) ?? {}
+      byKind[kind] = already + count
+      reservedCounts.set(lineSource, byKind)
+      stackPurchases[kind] = (stackPurchases[kind] ?? 0) + count
+    }
+    resolved.push({ kind, count, unitPrice, source: lineSource, instances })
     totalPrice += unitPrice * count
   }
   if (totalPrice > 0 && !buyer.has('coin', totalPrice)) return 'cannot_afford'
-  if (!wouldFitAfterTransaction(buyer, {}, purchases, totalPrice)) return 'full'
+  if (!wouldFitAfterTransaction(buyer, {}, stackPurchases, totalPrice, {}, incomingInstances)) return 'full'
   if (totalPrice > 0 && !wouldFitAfterTransaction(paymentDestination, {}, {}, -totalPrice)) return 'full'
-  for (const { kind, count, source: lineSource } of resolved) {
+  for (const { kind, count, source: lineSource, instances } of resolved) {
     if (isInstanceBackedKind(kind)) {
-      for (const id of selectInstancesToSell(lineSource.getInstances(kind), count)) {
-        const instance = lineSource.getInstance(id)
-        if (!instance) continue
-        lineSource.removeInstance(id)
+      for (const instance of instances) {
+        if (!lineSource.removeInstance(instance.id)) return 'not_sold'
         buyer.addInstance(instance)
       }
     } else {
@@ -517,7 +656,7 @@ export function sellInstancesForCoins(
     if (price == null) return { result: 'not_sold' }
     instances.push(instance)
     totalCoins += price
-    removeWeight += ITEM_DEFS[instance.kind].weight
+    removeWeight += effectiveInstanceWeight(instance)
     removeSize += itemSizeUnits(instance.kind)
   }
   if (!wouldFitAfter(inventory, removeWeight, removeSize, 'coin', totalCoins)) {

@@ -24,11 +24,15 @@ const drawerOpen = ref(false)
 useOverlayScreen('merchant-drawer', () => drawerOpen.value, () => { drawerOpen.value = false })
 
 const detailsKind = ref<ItemKind | null>(null)
-useOverlayScreen('merchant-item-details', () => detailsKind.value !== null, () => { detailsKind.value = null })
+const detailsInstanceId = ref<string | undefined>(undefined)
+useOverlayScreen('merchant-item-details', () => detailsKind.value !== null, () => {
+  detailsKind.value = null
+  detailsInstanceId.value = undefined
+})
 
 const {
   buyFilters, offerFilters, transaction, resetAll,
-  setPurchaseCount, setOfferCount,
+  setPurchaseCount, setPurchaseInstance, setOfferCount,
   matchesCategory, matchesCapability, matchesPrice, matchesSearch, sortRows,
 } = useMerchantTradeState()
 const { isCompact } = useCompactMerchantLayout()
@@ -44,6 +48,7 @@ watch(() => ui.merchant.open, (open) => {
   activeContext.value = 'buy'
   drawerOpen.value = false
   detailsKind.value = null
+  detailsInstanceId.value = undefined
 })
 
 const coins = computed(() => ui.merchant.counts.coin ?? 0)
@@ -103,13 +108,16 @@ const buyRows = computed(() => {
     if (!matchesCategory(stock.kind, buyFilters, hasItemKindCategory)) return []
     if (!matchesCapability(ITEM_CATALOG[stock.kind].capabilities, buyFilters)) return []
     if (!matchesPrice(stock.unitPrice, buyFilters)) return []
-    const label = itemDisplayName(stock.kind)
-    if (!matchesSearch(label, buyFilters)) return []
+    const label = stock.qualityLabel
+      ? `${itemDisplayName(stock.kind)} — ${stock.qualityLabel}`
+      : itemDisplayName(stock.kind)
+    if (!matchesSearch(label, buyFilters) && !matchesSearch(itemDisplayName(stock.kind), buyFilters)) return []
     return [{
       kind: stock.kind,
+      instanceId: stock.instanceId,
       label,
       price: stock.unitPrice,
-      weight: ITEM_DEFS[stock.kind].weight,
+      weight: stock.weightKg ?? ITEM_DEFS[stock.kind].weight,
       conditionPercent: null as number | null,
       maxCount: stock.quantity as number | null,
     }]
@@ -145,11 +153,19 @@ function ownedCount(kind: ItemKind): number {
   return ui.merchant.counts[kind] ?? 0
 }
 
-function onCommitPurchase(kind: ItemKind, quantity: number): void {
-  const max = buyRows.value.find((row) => row.kind === kind)?.maxCount ?? undefined
+function onCommitPurchase(kind: ItemKind, quantity: number, instanceId?: string): void {
+  if (instanceId) {
+    setPurchaseInstance(instanceId, quantity > 0)
+    return
+  }
+  const max = buyRows.value.find((row) => row.kind === kind && !row.instanceId)?.maxCount ?? undefined
   setPurchaseCount(kind, quantity, max)
 }
-function onClearPurchase(kind: ItemKind): void {
+function onClearPurchase(kind: ItemKind, instanceId?: string): void {
+  if (instanceId) {
+    setPurchaseInstance(instanceId, false)
+    return
+  }
   setPurchaseCount(kind, 0)
 }
 function onCommitOffer(kind: ItemKind, quantity: number): void {
@@ -159,14 +175,39 @@ function onClearOffer(kind: ItemKind): void {
   setOfferCount(kind, 0)
 }
 
-function purchaseUnitPrice(kind: ItemKind): number {
-  return ui.merchant.npcStock.find((row) => row.kind === kind)?.unitPrice
-    ?? (isNpcGoodsMode.value ? 0 : merchantPrice(kind) ?? 0)
+function purchaseUnitPrice(kind: ItemKind, instanceId?: string): number {
+  const row = instanceId
+    ? ui.merchant.npcStock.find((entry) => entry.instanceId === instanceId)
+    : ui.merchant.npcStock.find((entry) => entry.kind === kind && !entry.instanceId)
+  if (row) return row.unitPrice
+  return isNpcGoodsMode.value ? 0 : merchantPrice(kind) ?? 0
 }
 
-const purchaseLines = computed<TransactionLine[]>(() => (Object.entries(transaction.purchases) as [ItemKind, number][])
-  .filter(([, count]) => count > 0)
-  .map(([kind, count]) => ({ kind, label: itemDisplayName(kind), count, totalValue: purchaseUnitPrice(kind) * count })))
+const purchaseLines = computed<TransactionLine[]>(() => {
+  const stackLines = (Object.entries(transaction.purchases) as [ItemKind, number][])
+    .filter(([, count]) => count > 0)
+    .map(([kind, count]) => ({
+      kind,
+      label: itemDisplayName(kind),
+      count,
+      totalValue: purchaseUnitPrice(kind) * count,
+    }))
+  const instanceLines = transaction.purchaseInstanceIds.flatMap((instanceId) => {
+    const stock = ui.merchant.npcStock.find((entry) => entry.instanceId === instanceId)
+    if (!stock) return []
+    const label = stock.qualityLabel
+      ? `${itemDisplayName(stock.kind)} — ${stock.qualityLabel}`
+      : itemDisplayName(stock.kind)
+    return [{
+      kind: stock.kind,
+      instanceId,
+      label,
+      count: 1,
+      totalValue: stock.unitPrice,
+    }]
+  })
+  return [...stackLines, ...instanceLines]
+})
 
 const offerLines = computed<TransactionLine[]>(() => {
   const offerLineTotal = ui.merchant.pricing?.offerLineTotal
@@ -181,11 +222,16 @@ const offerLines = computed<TransactionLine[]>(() => {
 })
 
 const netCoins = computed(() => {
+  const instanceBuyCost = transaction.purchaseInstanceIds.reduce((sum, instanceId) => {
+    const stock = ui.merchant.npcStock.find((entry) => entry.instanceId === instanceId)
+    return sum + (stock?.unitPrice ?? 0)
+  }, 0)
   if (isNpcGoodsMode.value) {
-    return (Object.entries(transaction.purchases) as [ItemKind, number][])
+    const stackCost = (Object.entries(transaction.purchases) as [ItemKind, number][])
       .reduce((sum, [kind, count]) => (count > 0 ? sum + purchaseUnitPrice(kind) * count : sum), 0)
+    return stackCost + instanceBuyCost
   }
-  return ui.merchant.pricing?.previewNetCoins(transaction.purchases, transaction.offer) ?? 0
+  return ui.merchant.pricing?.previewNetCoins(transaction.purchases, transaction.offer, instanceBuyCost) ?? 0
 })
 const canTrade = computed(() => purchaseLines.value.length > 0 || offerLines.value.length > 0)
 const trading = ref(false)
@@ -205,9 +251,11 @@ function clampStaleNpcGoodsTransaction(): boolean {
     if (clamped !== count) changed = true
     nextPurchases[kind] = clamped
   }
+  if (transaction.purchaseInstanceIds.length > 0) changed = true
   if (Object.keys(transaction.offer).length > 0) changed = true
   if (changed) {
     transaction.purchases = nextPurchases
+    transaction.purchaseInstanceIds = []
     transaction.offer = {}
   }
   return changed
@@ -218,12 +266,17 @@ function clampStaleTransaction(): boolean {
   let changed = false
   const nextPurchases: Partial<Record<ItemKind, number>> = {}
   for (const [kind, count] of Object.entries(transaction.purchases) as [ItemKind, number][]) {
-    const row = ui.merchant.npcStock.find((entry) => entry.kind === kind)
+    const row = ui.merchant.npcStock.find((entry) => entry.kind === kind && !entry.instanceId)
     if (!row || row.quantity <= 0 || merchantPrice(kind) == null) { changed = true; continue }
     const clamped = Math.min(row.quantity, count)
     if (clamped !== count) changed = true
     nextPurchases[kind] = clamped
   }
+  const liveInstanceIds = new Set(
+    ui.merchant.npcStock.flatMap((entry) => (entry.instanceId ? [entry.instanceId] : [])),
+  )
+  const nextInstanceIds = transaction.purchaseInstanceIds.filter((id) => liveInstanceIds.has(id))
+  if (nextInstanceIds.length !== transaction.purchaseInstanceIds.length) changed = true
   const nextOffer: Partial<Record<ItemKind, number>> = {}
   for (const [kind, count] of Object.entries(transaction.offer) as [ItemKind, number][]) {
     const owned = ownedCount(kind)
@@ -234,6 +287,7 @@ function clampStaleTransaction(): boolean {
   }
   if (changed) {
     transaction.purchases = nextPurchases
+    transaction.purchaseInstanceIds = nextInstanceIds
     transaction.offer = nextOffer
   }
   return changed
@@ -247,9 +301,14 @@ async function onTrade(): Promise<void> {
   }
   trading.value = true
   try {
-    const result = await ui.merchant.onSettleTransaction?.(transaction.purchases, transaction.offer) ?? 'not_sold'
+    const result = await ui.merchant.onSettleTransaction?.(
+      transaction.purchases,
+      transaction.offer,
+      transaction.purchaseInstanceIds,
+    ) ?? 'not_sold'
     if (result === 'ok') {
       transaction.purchases = {}
+      transaction.purchaseInstanceIds = []
       transaction.offer = {}
       if (isCompact.value) drawerOpen.value = false
       return
@@ -275,8 +334,9 @@ function onBuyHorse(): void {
   else showToast('Nie da się kupić tego konia.', 'error')
 }
 
-function openDetails(kind: ItemKind): void {
+function openDetails(kind: ItemKind, instanceId?: string): void {
   detailsKind.value = kind
+  detailsInstanceId.value = instanceId
 }
 </script>
 
@@ -393,12 +453,15 @@ function openDetails(kind: ItemKind): void {
               </div>
               <MerchantItemRow
                 v-for="row in buyRows"
-                :key="row.kind"
+                :key="row.instanceId ?? row.kind"
                 :kind="row.kind"
+                :instance-id="row.instanceId"
                 :label="row.label"
                 :price="row.price"
                 price-suffix="monet"
-                :committed-count="transaction.purchases[row.kind] ?? 0"
+                :committed-count="row.instanceId
+                  ? (transaction.purchaseInstanceIds.includes(row.instanceId) ? 1 : 0)
+                  : (transaction.purchases[row.kind] ?? 0)"
                 :max-count="row.maxCount"
                 @commit="onCommitPurchase"
                 @clear="onClearPurchase"
@@ -500,7 +563,8 @@ function openDetails(kind: ItemKind): void {
 
     <MerchantItemDetailsModal
       :kind="detailsKind"
-      @close="detailsKind = null"
+      :instance-id="detailsInstanceId"
+      @close="detailsKind = null; detailsInstanceId = undefined"
     />
   </div>
 </template>

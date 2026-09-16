@@ -74,6 +74,7 @@ import { disposeLivestock, type LivestockPersistence, spawnLivestock, tickSettle
 import {
   generateMerchantAssortment,
   resolveMerchantProfiles,
+  resolvePremiumMerchantAssignment,
   seedMerchantStockIfNeeded,
 } from './merchantTrade'
 import { settlementNpcId } from './npcIdentity'
@@ -856,6 +857,16 @@ export async function createSettlement(
     },
     merchantProfiles,
   )
+  const premiumAssignment = resolvePremiumMerchantAssignment(
+    {
+      size: def.size,
+      terrain: def.plan.identity.terrain,
+      seed: settlementSeed,
+      dominantResource: def.plan.identity.dominantResource,
+      isHome: def.isHome,
+    },
+    merchantProfiles,
+  )
   const familyNpcIdsByVisitor = new Map<string, readonly string[]>()
   for (let i = 0; i < flatMembers.length; i++) {
     const familyIndex = flatMembers[i]!.familyIndex
@@ -983,10 +994,20 @@ export async function createSettlement(
       // (plan 197), seeded with this NPC's generated maxima.
       const npcState = npcStateRegistry.getOrCreate(npcId, needOffset, physicalProfile)
       if (member.character.role === 'trader') {
+        const profile = merchantProfiles.find((entry) => entry.npcId === npcId)
         seedMerchantStockIfNeeded(
           npcState.merchantStock,
           npcState,
           merchantAssortment.get(npcId) ?? {},
+          profile
+            ? {
+              size: def.size,
+              seed: settlementSeed,
+              npcId,
+              specialization: profile.specialization,
+              premiumAssignedKind: premiumAssignment?.npcId === npcId ? premiumAssignment.kind : null,
+            }
+            : undefined,
         )
       }
       if (npcState.postDeath) finalizeExpiredNpcCorpse(npcState.postDeath, nowDays, droppedItems)

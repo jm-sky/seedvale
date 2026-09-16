@@ -24,6 +24,7 @@ import {
 } from './itemCatalog'
 import {
   type ArmorItemInstance,
+  type ArmorQuality,
   clamp01,
   clampCampCondition,
   cloneItemInstance,
@@ -93,7 +94,7 @@ export type SaveItemInstance = {
   /** Plan items-player-019 — tent instances only; `0..100`, absent → `100`. */
   condition?: number
   /** Plan items-player-030 — armor instances only; absent/invalid → `common`. */
-  quality?: 'common' | 'good' | 'masterwork'
+  quality?: ArmorQuality
 }
 
 /** `ItemInstance` → its persisted-row shape — the single conversion used by

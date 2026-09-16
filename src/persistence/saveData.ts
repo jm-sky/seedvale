@@ -37,7 +37,7 @@ import { EQUIPMENT_SLOTS, isEquipmentSlot, type SavePlayerEquipment } from '../i
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
 import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
-import { ARMOR_KIND_LIST, isArmorKind, isTrapKind } from '../items/itemInstances'
+import { ARMOR_KIND_LIST, isArmorKind, isArmorQuality, isTrapKind } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
@@ -1324,7 +1324,7 @@ function isSaveItemInstancesField(value: unknown): value is SaveItemInstance[] {
     if (row.liquid !== undefined && row.liquid !== 'water' && row.liquid !== 'milk') return false
     if (row.amountLitres !== undefined && (typeof row.amountLitres !== 'number' || !Number.isFinite(row.amountLitres) || row.amountLitres < 0)) return false
     if (row.condition !== undefined && (typeof row.condition !== 'number' || !Number.isFinite(row.condition))) return false
-    if (row.quality !== undefined && row.quality !== 'common' && row.quality !== 'good' && row.quality !== 'masterwork') return false
+    if (row.quality !== undefined && !isArmorQuality(row.quality)) return false
     return true
   })
 }

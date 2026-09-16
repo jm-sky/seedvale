@@ -22,6 +22,7 @@ export type TradeRow = {
   price: number
   weight: number
   conditionPercent: number | null
+  instanceId?: string
 }
 
 function emptyFilters(): TradeFilters {
@@ -36,13 +37,15 @@ export function useMerchantTradeState() {
   const offerFilters = reactive<TradeFilters>(emptyFilters())
   const transaction = reactive<{
     purchases: Partial<Record<ItemKind, number>>
+    purchaseInstanceIds: string[]
     offer: Partial<Record<ItemKind, number>>
-  }>({ purchases: {}, offer: {} })
+  }>({ purchases: {}, purchaseInstanceIds: [], offer: {} })
 
   function resetAll(): void {
     Object.assign(buyFilters, emptyFilters())
     Object.assign(offerFilters, emptyFilters())
     transaction.purchases = {}
+    transaction.purchaseInstanceIds = []
     transaction.offer = {}
   }
 
@@ -55,6 +58,12 @@ export function useMerchantTradeState() {
 
   function setPurchaseCount(kind: ItemKind, next: number, max?: number): void {
     setCount(transaction.purchases, kind, next, max)
+  }
+
+  function setPurchaseInstance(instanceId: string, selected: boolean): void {
+    const has = transaction.purchaseInstanceIds.includes(instanceId)
+    if (selected && !has) transaction.purchaseInstanceIds = [...transaction.purchaseInstanceIds, instanceId]
+    if (!selected && has) transaction.purchaseInstanceIds = transaction.purchaseInstanceIds.filter((id) => id !== instanceId)
   }
 
   function setOfferCount(kind: ItemKind, next: number, max?: number): void {
@@ -100,6 +109,7 @@ export function useMerchantTradeState() {
     transaction,
     resetAll,
     setPurchaseCount,
+    setPurchaseInstance,
     setOfferCount,
     matchesCategory,
     matchesCapability,
