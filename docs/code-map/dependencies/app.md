@@ -924,6 +924,7 @@ Generated from TypeScript imports.
 - `player/characterPresentation.ts`
 - `player/humanCarryCapacity.ts`
 - `player/playerCombatMode.ts`
+- `player/playerEquipmentVisual.ts`
 - `player/playerVisualPreset.ts`
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`

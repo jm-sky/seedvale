@@ -532,6 +532,7 @@ Generated from TypeScript imports.
 - `items/armorItemInstances.ts`
 - `items/equipment.ts`
 - `items/itemCatalog.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
 
 ## `items/equipment.ts`
@@ -556,6 +557,7 @@ Generated from TypeScript imports.
 - `items/equipment.test.ts`
 - `items/inventoryView.ts`
 - `persistence/saveData.ts`
+- `player/PlayerController.ts`
 - `player/characterPresentation.test.ts`
 - `player/characterPresentation.ts`
 - `player/playerDamage.test.ts`
@@ -980,6 +982,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/armorItemInstances.ts`
 - `items/createDroppedItems.test.ts`
+- `items/equipment.test.ts`
 - `items/equipment.ts`
 - `items/inventoryView.test.ts`
 - `items/inventoryView.ts`
@@ -1165,6 +1168,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/PlayerTorch.ts`
 - `player/playerCombatMode.ts`
+- `player/playerEquipmentVisual.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.ts`

@@ -97,22 +97,22 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveFloorSampler` — type — line 214
-- `CaveGroundQuery` — type — line 209
-- `CaveHorizontalResolver` — type — line 230
-- `CaveOccupancyQuery` — type — line 219
-- `ColliderSource` — type — line 202
-- `HeightSampler` — type — line 199
-- `MOVE_SPEED` — const — line 80
-- `PLAYER_MODEL_URL` — const — line 197
-- `PLAYER_STARTING_ATTRIBUTES` — const — line 100
-- `PlayerController` — class — line 244
+- `CaveFloorSampler` — type — line 223
+- `CaveGroundQuery` — type — line 218
+- `CaveHorizontalResolver` — type — line 239
+- `CaveOccupancyQuery` — type — line 228
+- `ColliderSource` — type — line 211
+- `HeightSampler` — type — line 208
+- `MOVE_SPEED` — const — line 89
+- `PLAYER_MODEL_URL` — const — line 206
+- `PLAYER_STARTING_ATTRIBUTES` — const — line 109
+- `PlayerController` — class — line 253
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
-- `PlayerMovementState` — type — line 75
-- `SPRINT_MULTIPLIER` — const — line 85
+- `PlayerMovementState` — type — line 84
+- `SPRINT_MULTIPLIER` — const — line 94
 
 ## `player/playerDamage.ts`
 
@@ -137,6 +137,19 @@ Generated from exported TypeScript symbols.
 
 - `computeEncumbrance` — function — line 32
 - `Encumbrance` — type — line 8
+
+## `player/playerEquipmentVisual.ts`
+
+- `PLAYER_UBC_KNIGHT_PAULDRON_ROUND_URL` — const — line 9
+- `PLAYER_UBC_KNIGHT_PAULDRON_SPIKE_URL` — const — line 8
+- `PLAYER_UBC_LEATHER_PAULDRON_URL` — const — line 6
+- `PLAYER_UBC_RANGER_PAULDRON_URL` — const — line 7
+- `PlayerEquipmentVisual` — type — line 21
+- `PlayerEquipmentVisualAlignment` — type — line 15
+- `PlayerEquipmentVisualTint` — type — line 13
+- `resolvePlayerEquipmentVisual` — function — line 49
+  - domain: items-player
+- `resolvePlayerEquipmentVisualTintUrl` — function — line 54
 
 ## `player/playerMelee.ts`
 
@@ -308,6 +321,15 @@ Generated from exported TypeScript symbols.
 - `TORCH_LIGHT_WOODEN` — const — line 2
 - `TORCH_TIP_OFFSET_BRANCH` — const — line 30
 - `TORCH_TIP_OFFSET_WOODEN` — const — line 31
+
+## `player/ubcAccessoryBind.ts`
+
+- `bindAccessoryToPlayerSkeleton` — function — line 54
+  - domain: items-player
+- `collectBoneNames` — function — line 23
+- `mapBonesByName` — function — line 11
+  - domain: items-player
+- `NamedBone` — type — line 3
 
 ## `player/verticalMotion.ts`
 

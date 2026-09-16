@@ -74,25 +74,25 @@ Generated from exported TypeScript symbols.
 
 ## `assets/assetIndex.ts`
 
-- `assetEntryMatchesQuery` — function — line 171
-- `assetIndexById` — function — line 574
-- `AssetIndexEntry` — type — line 75
-- `AssetIndexGroup` — type — line 61
-- `AssetIndexStatus` — type — line 73
-- `AssetPrepare` — type — line 56
-- `basenameFromUrl` — function — line 118
-- `buildAssetIndex` — function — line 338
-- `customUrlEntry` — function — line 193
-- `entryFromUrl` — function — line 588
-- `filterAssetIndex` — function — line 184
-- `findAssetEntry` — function — line 580
-- `formatAssetLabel` — function — line 166
-- `groupFromModelUrl` — function — line 140
-- `kindFromBasename` — function — line 132
-- `makeParkedEntry` — function — line 222
-- `mergeParkedManifest` — function — line 240
-- `packFromUrl` — function — line 124
-- `resolveLoadEntry` — function — line 211
+- `assetEntryMatchesQuery` — function — line 177
+- `assetIndexById` — function — line 616
+- `AssetIndexEntry` — type — line 81
+- `AssetIndexGroup` — type — line 67
+- `AssetIndexStatus` — type — line 79
+- `AssetPrepare` — type — line 62
+- `basenameFromUrl` — function — line 124
+- `buildAssetIndex` — function — line 344
+- `customUrlEntry` — function — line 199
+- `entryFromUrl` — function — line 630
+- `filterAssetIndex` — function — line 190
+- `findAssetEntry` — function — line 622
+- `formatAssetLabel` — function — line 172
+- `groupFromModelUrl` — function — line 146
+- `kindFromBasename` — function — line 138
+- `makeParkedEntry` — function — line 228
+- `mergeParkedManifest` — function — line 246
+- `packFromUrl` — function — line 130
+- `resolveLoadEntry` — function — line 217
 
 ## `assets/assetUrlUtils.ts`
 
@@ -227,9 +227,12 @@ Generated from exported TypeScript symbols.
 
 ## `assets/ubcOutfitMaterials.ts`
 
-- `applyClothingHue` — function — line 111
-- `applyHairColor` — function — line 126
-- `applyHairTint` — function — line 144
-- `applyOutfitTint` — function — line 97
+- `applyAccessoryTint` — function — line 134
+- `applyClothingHue` — function — line 148
+- `applyHairColor` — function — line 163
+- `applyHairTint` — function — line 181
+- `applyOutfitTint` — function — line 120
+- `cloneAccessoryMaterials` — function — line 50
 - `cloneOutfitMaterials` — function — line 41
-- `disposeOutfitMaterialClones` — function — line 46
+- `disposeAccessoryMaterialClones` — function — line 71
+- `disposeOutfitMaterialClones` — function — line 54

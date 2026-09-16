@@ -118,6 +118,7 @@ Generated from TypeScript imports.
 - `items/heldToolVisual.ts`
 - `items/itemModels.ts`
 - `player/PlayerController.ts`
+- `player/playerEquipmentVisual.ts`
 - `player/playerVisualPreset.ts`
 - `player/torchLightPresets.ts`
 - `settlement/houseCatalog.ts`

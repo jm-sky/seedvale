@@ -296,36 +296,36 @@ Generated from exported TypeScript symbols.
 ## `items/itemCatalog.ts`
 
 - `ArmorConfig` — type — line 56
-- `ARROW_DAMAGE_BONUS` — const — line 1670
+- `ARROW_DAMAGE_BONUS` — const — line 1733
 - `BookTier` — type — line 179
-- `CAPABILITY_KINDS` — const — line 1713
+- `CAPABILITY_KINDS` — const — line 1776
 - `CAPABILITY_LABEL` — const — line 155
 - `CAPABILITY_NEED_LABEL` — const — line 139
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1753
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1816
 - `ConsumableNeed` — type — line 170
 - `consumeNeedNoun` — function — line 288
 - `consumeVerbLabel` — function — line 279
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1738
-- `HOLDABLE_KINDS` — const — line 1704
-- `INJURY_TREATMENT_KINDS` — const — line 1775
-- `isArmorCatalogKind` — function — line 1691
-- `isBodyArmorKind` — function — line 1697
-- `isMeleeToolKind` — function — line 1685
-- `isRangedTool` — function — line 1677
+- `hasItemCapability` — function — line 1801
+- `HOLDABLE_KINDS` — const — line 1767
+- `INJURY_TREATMENT_KINDS` — const — line 1838
+- `isArmorCatalogKind` — function — line 1754
+- `isBodyArmorKind` — function — line 1760
+- `isMeleeToolKind` — function — line 1748
+- `isRangedTool` — function — line 1740
 - `ITEM_CATALOG` — const — line 302
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1796
+- `ITEM_SYSTEM_ROADMAP` — const — line 1859
 - `ItemCapability` — type — line 112
 - `ItemCatalogEntry` — type — line 181
-- `itemIsResilient` — function — line 1743
+- `itemIsResilient` — function — line 1806
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1788
+- `itemTreatsPhysicalInjury` — function — line 1851
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1802
+- `NON_ITEM_PROPS` — const — line 1865
 - `RangedConfig` — type — line 76
 
 ## `items/itemDisplay.ts`
@@ -345,46 +345,46 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemInstances.ts`
 
-- `ARMOR_KIND_LIST` — const — line 21
-- `ARMOR_KINDS` — const — line 23
-- `ARMOR_QUALITIES` — const — line 27
-- `ARMOR_QUALITY_LABELS` — const — line 29
-- `ArmorItemInstance` — type — line 35
+- `ARMOR_KIND_LIST` — const — line 27
+- `ARMOR_KINDS` — const — line 36
+- `ARMOR_QUALITIES` — const — line 40
+- `ARMOR_QUALITY_LABELS` — const — line 42
+- `ArmorItemInstance` — type — line 48
 - `ArmorKind` — type — line 19
-- `ArmorQuality` — type — line 25
-- `clamp01` — function — line 229
-- `clampCampCondition` — function — line 166
-- `cloneItemInstance` — function — line 234
-- `createItemInstanceId` — function — line 182
-- `createKeyInstance` — function — line 213
-- `createTentInstance` — function — line 171
-- `IDENTITY_ONLY_ITEM_KINDS` — const — line 189
-- `INSTANCE_BACKED_KINDS` — const — line 200
-- `isArmorItemInstance` — function — line 52
-- `isArmorKind` — function — line 40
-- `isArmorQuality` — function — line 44
-- `isInstanceBackedKind` — function — line 217
-- `isLiquidContainerInstance` — function — line 150
-- `isLiquidContainerKind` — function — line 124
-- `isTentItemInstance` — function — line 161
-- `isTrapItemInstance` — function — line 225
-- `isTrapKind` — function — line 221
-- `isWeaponItemInstance` — function — line 137
-- `isWeaponMaintenanceKind` — function — line 97
+- `ArmorQuality` — type — line 38
+- `clamp01` — function — line 242
+- `clampCampCondition` — function — line 179
+- `cloneItemInstance` — function — line 247
+- `createItemInstanceId` — function — line 195
+- `createKeyInstance` — function — line 226
+- `createTentInstance` — function — line 184
+- `IDENTITY_ONLY_ITEM_KINDS` — const — line 202
+- `INSTANCE_BACKED_KINDS` — const — line 213
+- `isArmorItemInstance` — function — line 65
+- `isArmorKind` — function — line 53
+- `isArmorQuality` — function — line 57
+- `isInstanceBackedKind` — function — line 230
+- `isLiquidContainerInstance` — function — line 163
+- `isLiquidContainerKind` — function — line 137
+- `isTentItemInstance` — function — line 174
+- `isTrapItemInstance` — function — line 238
+- `isTrapKind` — function — line 234
+- `isWeaponItemInstance` — function — line 150
+- `isWeaponMaintenanceKind` — function — line 110
 - `ItemInstance` — type — line 4
-- `LIQUID_CONTAINER_KIND_LIST` — const — line 114
-- `LIQUID_CONTAINER_KINDS` — const — line 122
-- `LiquidContainerItemInstance` — type — line 144
-- `LiquidContainerKind` — type — line 107
-- `LiquidContent` — type — line 102
-- `normalizeArmorQuality` — function — line 48
-- `TentItemInstance` — type — line 156
+- `LIQUID_CONTAINER_KIND_LIST` — const — line 127
+- `LIQUID_CONTAINER_KINDS` — const — line 135
+- `LiquidContainerItemInstance` — type — line 157
+- `LiquidContainerKind` — type — line 120
+- `LiquidContent` — type — line 115
+- `normalizeArmorQuality` — function — line 61
+- `TentItemInstance` — type — line 169
 - `TrapItemInstance` — type — line 11
 - `TrapKind` — type — line 9
-- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 79
-- `WEAPON_MAINTENANCE_KINDS` — const — line 95
-- `WeaponItemInstance` — type — line 131
-- `WeaponMaintenanceKind` — type — line 61
+- `WEAPON_MAINTENANCE_KIND_LIST` — const — line 92
+- `WEAPON_MAINTENANCE_KINDS` — const — line 108
+- `WeaponItemInstance` — type — line 144
+- `WeaponMaintenanceKind` — type — line 74
 
 ## `items/itemModels.ts`
 
@@ -394,23 +394,23 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 252
-- `canCancelRestProgress` — function — line 223
-- `createItemMesh` — function — line 1492
-- `hasItemCategory` — function — line 200
-- `hasItemKindCategory` — function — line 204
-- `ITEM_DEFS` — const — line 256
-- `ITEM_SIZE_UNITS` — const — line 173
-- `ItemCategory` — type — line 164
-- `ItemDef` — type — line 186
+- `canCancelRestNow` — function — line 257
+- `canCancelRestProgress` — function — line 228
+- `createItemMesh` — function — line 1533
+- `hasItemCategory` — function — line 205
+- `hasItemKindCategory` — function — line 209
+- `ITEM_DEFS` — const — line 261
+- `ITEM_SIZE_UNITS` — const — line 178
+- `ItemCategory` — type — line 169
+- `ItemDef` — type — line 191
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 169
-- `itemSizeUnits` — function — line 182
-- `primaryItemCategory` — function — line 213
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 221
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 233
-- `restCancelAllowedByStartVigor` — function — line 240
-- `tintBucketGlb` — function — line 1516
+- `ItemSize` — type — line 174
+- `itemSizeUnits` — function — line 187
+- `primaryItemCategory` — function — line 218
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 226
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 238
+- `restCancelAllowedByStartVigor` — function — line 245
+- `tintBucketGlb` — function — line 1557
 
 ## `items/ItemSpawner.ts`
 
@@ -516,41 +516,41 @@ Generated from exported TypeScript symbols.
 
 ## `items/tradeCatalog.ts`
 
-- `BASE_BUY_FACTOR` — const — line 226
+- `BASE_BUY_FACTOR` — const — line 234
   - domain: settlements — full-condition buy-from-NPC factor bounds (plan settlements-npcs-033) — a markup over `tradeValue` the player pays an ordinary NPC. `MIN_BUY_FACTOR` intentionally equals `MAX_SELL_FACTOR` so the best possible buy price never undercuts the best possible merchant buyback for the same nominal value — no standing can create a buy→sell(merchant) arbitrage loop.
-- `BASE_SELL_FACTOR` — const — line 216
+- `BASE_SELL_FACTOR` — const — line 224
   - domain: settlements — full-condition sell factor bounds (plan settlements-006).
-- `BROKEN_SELL_MULTIPLIER` — const — line 354
-- `canSell` — function — line 257
-- `fullConditionBuyFactor` — function — line 324
+- `BROKEN_SELL_MULTIPLIER` — const — line 362
+- `canSell` — function — line 265
+- `fullConditionBuyFactor` — function — line 332
   - domain: settlements — social buy factor for player purchases from an ordinary NPC (plan settlements-npcs-033) — reuses the exact same `relationshipEffect`/`reputationEffect` inputs as merchant sell pricing, but *subtracted* rather than added: better relation/reputation must never raise what the player pays, worse standing must never lower it.
-- `fullConditionSellFactor` — function — line 290
+- `fullConditionSellFactor` — function — line 298
   - domain: settlements — sell factor for a full-condition item before durability scaling.
-- `isMerchantStock` — function — line 241
-- `MAX_BUY_FACTOR` — const — line 228
-- `MAX_SELL_FACTOR` — const — line 218
+- `isMerchantStock` — function — line 249
+- `MAX_BUY_FACTOR` — const — line 236
+- `MAX_SELL_FACTOR` — const — line 226
 - `MERCHANT_PRICES` — const — line 14
-- `MERCHANT_STOCK` — const — line 97
-- `merchantPrice` — function — line 237
-- `MIN_BUY_FACTOR` — const — line 227
-- `MIN_SELL_FACTOR` — const — line 217
-- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 208
+- `MERCHANT_STOCK` — const — line 101
+- `merchantPrice` — function — line 245
+- `MIN_BUY_FACTOR` — const — line 235
+- `MIN_SELL_FACTOR` — const — line 225
+- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 216
   - domain: settlements — neutral social standing for merchant sell pricing.
-- `npcSalePrice` — function — line 337
+- `npcSalePrice` — function — line 345
   - domain: settlements — player-buys-from-NPC unit price in coins for one ordinary trade-eligible good (plan settlements-npcs-033 §5/§6). Base value reuses the same catalog as merchant stock (`merchantPrice`, falling back to `tradeValue` for kinds the merchant doesn't stock) so no profession/dialogue code hardcodes its own price.
-- `offerValue` — function — line 345
-- `relationshipEffect` — function — line 266
+- `offerValue` — function — line 353
+- `relationshipEffect` — function — line 274
   - domain: settlements — relation tier bonus in percentage points (0.01 = 1 pp).
-- `reputationEffect` — function — line 279
+- `reputationEffect` — function — line 287
   - domain: settlements — weighted reputation × renown amplification (percentage points).
-- `resolveInstanceSellPrice` — function — line 357
+- `resolveInstanceSellPrice` — function — line 365
   - domain: settlements — merchant buyback for a concrete item instance — price is derived, never stored.
-- `roundSellPrice` — function — line 299
+- `roundSellPrice` — function — line 307
   - domain: settlements — deterministic integer coin rounding shared by stack and instance pricing.
-- `sellPrice` — function — line 309
+- `sellPrice` — function — line 317
   - domain: settlements — merchant buyback for a stackable kind at full condition.
-- `SellPriceContext` — type — line 230
-- `tradeValue` — function — line 246
+- `SellPriceContext` — type — line 238
+- `tradeValue` — function — line 254
 
 ## `items/trapItemInstances.ts`
 

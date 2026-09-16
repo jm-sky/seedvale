@@ -21,9 +21,9 @@ Generated from exported TypeScript symbols.
 
 ## `perf/benchmark.ts`
 
-- `BenchmarkHost` — type — line 48
-- `BenchmarkRunner` — type — line 36
-- `createBenchmarkRunner` — function — line 123
+- `BenchmarkHost` — type — line 49
+- `BenchmarkRunner` — type — line 37
+- `createBenchmarkRunner` — function — line 124
 
 ## `perf/benchmarkFixture.ts`
 
@@ -85,13 +85,19 @@ Generated from exported TypeScript symbols.
 - `createPerfLog` — function — line 29
 - `PerfLog` — type — line 7
 
+## `perf/longFrameFormat.ts`
+
+- `formatLongFrameAttribution` — function — line 42
+- `formatLongFrameRecord` — function — line 13
+
 ## `perf/monitor.ts`
 
-- `createPerfMonitor` — function — line 110
-- `FrameEndInput` — type — line 30
-- `PerfMonitor` — type — line 63
-- `SessionTotals` — type — line 41
-- `withCategory` — function — line 376
+- `createPerfMonitor` — function — line 169
+- `FrameEndInput` — type — line 35
+- `PerfMonitor` — type — line 77
+- `SessionTotals` — type — line 53
+- `withCategory` — function — line 501
+- `withStage` — function — line 515
 
 ## `perf/percentile.ts`
 
@@ -122,7 +128,7 @@ Generated from exported TypeScript symbols.
 ## `perf/report.ts`
 
 - `buildReport` — function — line 18
-- `formatReport` — function — line 140
+- `formatReport` — function — line 141
 
 ## `perf/sceneCensus.ts`
 
@@ -140,23 +146,27 @@ Generated from exported TypeScript symbols.
 
 ## `perf/types.ts`
 
-- `BudgetKind` — type — line 154
+- `BudgetKind` — type — line 183
 - `HitchEvent` — type — line 57
-- `HitchReportRow` — type — line 104
-- `IsolationProbeRow` — type — line 112
+- `HitchReportRow` — type — line 133
+- `IsolationProbeRow` — type — line 141
+- `LONG_FRAME_MS` — const — line 69
+- `LongFrameAttribution` — type — line 87
+- `LongFrameRecord` — type — line 77
+- `LongFrameStage` — type — line 71
 - `PERF_CATEGORIES` — const — line 9
 - `PERF_CATEGORY_COUNT` — const — line 26
 - `PERF_CATEGORY_INDEX` — const — line 28
 - `PERF_SEVERITY_RANK` — const — line 45
-- `PerfAttribution` — type — line 184
+- `PerfAttribution` — type — line 213
 - `PerfCategory` — type — line 24
-- `PerfContext` — type — line 74
-- `PerfDetection` — type — line 162
+- `PerfContext` — type — line 103
+- `PerfDetection` — type — line 191
 - `PerfFilter` — type — line 52
-- `PerfLiveStats` — type — line 133
-- `PerfLogEvent` — type — line 171
-- `PerfReportJson` — type — line 190
+- `PerfLiveStats` — type — line 162
+- `PerfLogEvent` — type — line 200
+- `PerfReportJson` — type — line 219
 - `PerfSeverity` — type — line 43
-- `PerfSuspect` — type — line 156
-- `ScenarioAnchor` — type — line 64
-- `ScenarioRoute` — type — line 66
+- `PerfSuspect` — type — line 185
+- `ScenarioAnchor` — type — line 93
+- `ScenarioRoute` — type — line 95

@@ -60,6 +60,7 @@ Generated from TypeScript imports.
 - `perf/benchmarkScenarios.ts`
 - `perf/grassFinalizationDiag.ts`
 - `perf/isolationProbe.ts`
+- `perf/longFrameFormat.ts`
 - `perf/monitor.ts`
 - `perf/programCensus.ts`
 - `perf/report.ts`
@@ -177,6 +178,7 @@ Generated from TypeScript imports.
 - `perf/gpuTimer.ts`
 - `perf/grassFinalizationDiag.ts`
 - `perf/isolationProbe.ts`
+- `perf/longFrameFormat.ts`
 - `perf/monitor.ts`
 - `perf/programCensus.ts`
 - `perf/sceneCensus.ts`
@@ -221,12 +223,26 @@ Generated from TypeScript imports.
 
 - `perf/monitor.ts`
 
+## `perf/longFrameFormat.ts`
+
+**Imports**
+
+- `perf/types.ts`
+
+**Imported by**
+
+- `perf/benchmark.ts`
+- `perf/index.ts`
+- `perf/monitor.ts`
+- `perf/report.test.ts`
+
 ## `perf/monitor.ts`
 
 **Imports**
 
 - `perf/detector.ts`
 - `perf/log.ts`
+- `perf/longFrameFormat.ts`
 - `perf/percentile.ts`
 - `perf/types.ts`
 
@@ -240,6 +256,7 @@ Generated from TypeScript imports.
 - `perf/isolationProbe.ts`
 - `perf/report.test.ts`
 - `perf/report.ts`
+- `terrain/chunkManager.ts`
 
 ## `perf/percentile.test.ts`
 
@@ -281,6 +298,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `perf/agentCpuDiag.ts`
+- `perf/longFrameFormat.ts`
 - `perf/monitor.ts`
 - `perf/report.ts`
 - `perf/types.ts`
@@ -338,6 +356,7 @@ Generated from TypeScript imports.
 - `perf/isolationProbe.test.ts`
 - `perf/isolationProbe.ts`
 - `perf/log.ts`
+- `perf/longFrameFormat.ts`
 - `perf/monitor.ts`
 - `perf/report.test.ts`
 - `perf/report.ts`

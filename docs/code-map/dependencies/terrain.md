@@ -495,6 +495,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `perf/active.ts`
 - `perf/grassFinalizationDiag.ts`
+- `perf/monitor.ts`
 - `perf/programCensus.ts`
 - `player/PlayerController.ts`
 - `render/instancedProps.ts`

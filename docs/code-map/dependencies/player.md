@@ -22,6 +22,7 @@ Generated from TypeScript imports.
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`
+- `items/equipment.ts`
 - `items/heldToolVisual.ts`
 - `items/itemCatalog.ts`
 - `player/PlayerNeeds.ts`
@@ -30,6 +31,8 @@ Generated from TypeScript imports.
 - `player/humanCarryCapacity.ts`
 - `player/playerDimensions.ts`
 - `player/playerEncumbrance.ts`
+- `player/playerEquipmentVisual.ts`
+- `player/ubcAccessoryBind.ts`
 - `player/verticalMotion.ts`
 - `player/worldWaterEligibility.ts`
 - `shared/HealthState.ts`
@@ -471,6 +474,25 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `player/playerEncumbrance.test.ts`
 
+## `player/playerEquipmentVisual.test.ts`
+
+**Imports**
+
+- `player/playerEquipmentVisual.ts`
+
+## `player/playerEquipmentVisual.ts`
+
+**Imports**
+
+- `items/items.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `assets/assetIndex.ts`
+- `player/PlayerController.ts`
+- `player/playerEquipmentVisual.test.ts`
+
 ## `player/playerMelee.test.ts`
 
 **Imports**
@@ -606,6 +628,19 @@ Generated from TypeScript imports.
 - `player/PlayerTorch.ts`
 - `player/torchLightPresets.test.ts`
 - `tools/assetBrowser/viewer/createViewerScene.ts`
+
+## `player/ubcAccessoryBind.test.ts`
+
+**Imports**
+
+- `player/ubcAccessoryBind.ts`
+
+## `player/ubcAccessoryBind.ts`
+
+**Imported by**
+
+- `player/PlayerController.ts`
+- `player/ubcAccessoryBind.test.ts`
 
 ## `player/verticalMotion.test.ts`
 
