@@ -28,6 +28,7 @@ import type { DryingRackRecord } from '../world/dryingRacks'
 import type { ExpeditionAssignment, ExpeditionAssignmentResult } from '../world/expeditionAssignment'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { GrassForageOverrides } from '../world/grassForage'
+import type { RenewableWorldItemOverrides } from '../terrain/renewableWorldItems'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { NpcGraves, SaveGrave } from '../world/npcGraves'
@@ -431,6 +432,7 @@ function buildChunkManager(
   scene: Scene,
   config: WorldConfig,
   collectedItemIds: Set<string>,
+  renewableWorldItems: RenewableWorldItemOverrides,
   removedCropIds: Set<string>,
   /** Player-planted trees/crops (plan 126) — same "caller-owned, mutated in
    *  place, carried across rebuild" contract as `collectedItemIds`/
@@ -465,6 +467,7 @@ function buildChunkManager(
     settlementSearchRadius: HOME_RADIUS,
     flatShading: config.terrain.flatShading,
     collectedItemIds,
+    renewableWorldItems,
     removedCropIds,
     plantedTrees,
     plantedCrops,
@@ -976,6 +979,8 @@ type WorldSystemsSeed = {
   scene: Scene
   config: WorldConfig
   collectedItemIds: Set<string>
+  /** Plan items-player-043 — sparse renewable medicinal flora overrides. */
+  renewableWorldItems: RenewableWorldItemOverrides
   /** Plan quests-progression-036 — consumed authored extraOneTimePickup ids. */
   consumedWorldPickupIds: ReadonlySet<string>
   removedCropIds: Set<string>
@@ -1168,7 +1173,7 @@ async function buildWorldSystems(
   const { bootMark, bootMarkEnd } = useBootMark('buildWorldSystems')
 
   const {
-    scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications,
+    scene, config, collectedItemIds, renewableWorldItems, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications,
     playAt, treeLifecycle, getWorldDays, dayNight,
     droppedItems: initialDroppedItems,
     placedFires: initialPlacedFires,
@@ -1241,7 +1246,7 @@ async function buildWorldSystems(
   bootMarkEnd('createWaterMirror')
 
   bootMark('buildChunkManager')
-  const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
+  const chunkManager = buildChunkManager(scene, config, collectedItemIds, renewableWorldItems, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
   bootMarkEnd('buildChunkManager')
 
   // Plan settlements-014 — river identity is registered during ChunkManager
@@ -2130,6 +2135,8 @@ export async function createWorldBundle(
   scene: Scene,
   config: WorldConfig,
   collectedItemIds: Set<string>,
+  /** Plan items-player-043 — sparse renewable medicinal flora overrides. */
+  renewableWorldItems: RenewableWorldItemOverrides,
   /** Ids of naturally-generated crops already harvested (plan 172) — same
    *  "carried across rebuild, reset only on a genuinely new world" contract
    *  as `collectedItemIds`. */
@@ -2306,7 +2313,7 @@ export async function createWorldBundle(
   onStartupLoadingStage?: WorldStartupLoadingStageListener,
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
-    scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
+    scene, config, collectedItemIds, renewableWorldItems, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
     droppedItems: initialDroppedItems,
     placedFires: initialPlacedFires,
@@ -2374,6 +2381,8 @@ export async function rebuildWorldBundle(
   config: WorldConfig,
   resetCollectedItems: boolean,
   collectedItemIds: Set<string>,
+  /** Plan items-player-043 — same reset contract as `collectedItemIds`. */
+  renewableWorldItems: RenewableWorldItemOverrides,
   /** Same reset contract as `collectedItemIds` — `resetCollectedItems`
    *  governs both. */
   removedCropIds: Set<string>,
@@ -2551,7 +2560,7 @@ export async function rebuildWorldBundle(
   if (resetCollectedItems) treeLifecycle.clearOverrides()
 
   const { bundle: fresh, backgroundReady } = await buildWorldSystems({
-    scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
+    scene, config, collectedItemIds, renewableWorldItems, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
     treeLifecycle, getWorldDays, dayNight,
     droppedItems: carriedDrops,
     placedFires: carriedFires,

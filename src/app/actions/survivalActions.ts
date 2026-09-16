@@ -47,6 +47,7 @@ import {
   survivalDurationMultiplier,
   survivalFoodMultiplier,
 } from '../../player/PlayerSkills'
+import { scaleMedicinalTreatmentAmount } from '../../player/medicinalTreatmentEffectiveness'
 import { IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
 import {
   foodPoisoningExposureEventRoll,
@@ -677,7 +678,19 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     else healHealth(player.health, relief)
     const treatment = ITEM_CATALOG[kind].conditionTreatment
     if (treatment) {
-      applyConditionTreatment(player.temporaryConditions, treatment.kind, treatment.severityReduction, nowDays)
+      const severityReduction = scaleMedicinalTreatmentAmount(
+        treatment.severityReduction,
+        player.skills,
+      )
+      const result = applyConditionTreatment(
+        player.temporaryConditions,
+        treatment.kind,
+        severityReduction,
+        nowDays,
+      )
+      if (result.appliedReduction > 0) {
+        awardSkillXp(player.skills, 'medicine', SKILL_XP_AWARD.medicinalTreatment)
+      }
       player.syncDerivedPhysicalCapabilities(nowDays, (kg) => inventory.setBaseMaxWeight(kg))
     }
     // Plan items-player-023 — raw-meat poisoning is a consequence of having

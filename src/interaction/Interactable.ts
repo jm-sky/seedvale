@@ -90,7 +90,7 @@ export type InteractablePayload =
   }
   | { kind: 'campfire', position: { x: number, z: number }, promptLabel: string, fire: VillageFire }
   | { kind: 'spawner', position: { x: number, z: number }, promptLabel: string, spawner: PreySpawner }
-  | { kind: 'item', position: { x: number, z: number }, promptLabel: string, item: WorldItemRef }
+  | { kind: 'item', position: { x: number, z: number }, promptLabel: string, item: WorldItemRef, interactRange?: number }
   /** Ore deposit — pickaxe `[E] Wydobądź` (plan 090). */
   | { kind: 'deposit', position: { x: number, z: number }, promptLabel: string, id: string, oreType: 'coal' | 'copper_ore' | 'gold' | 'iron', depositContext: WorldSpatialContext }
   /** Synthetic target for shovel (soil/sand) or pickaxe (mountain rock)

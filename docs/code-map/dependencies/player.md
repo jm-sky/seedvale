@@ -225,6 +225,8 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.test.ts`
 - `player/characterPresentation.test.ts`
 - `player/characterPresentation.ts`
+- `player/medicinalTreatmentEffectiveness.test.ts`
+- `player/medicinalTreatmentEffectiveness.ts`
 - `player/playerDamage.ts`
 - `player/skillEvaluation.test.ts`
 - `player/skillEvaluation.ts`
@@ -329,6 +331,25 @@ Generated from TypeScript imports.
 - `items/Inventory.test.ts`
 - `player/PlayerController.ts`
 - `player/humanCarryCapacity.test.ts`
+
+## `player/medicinalTreatmentEffectiveness.test.ts`
+
+**Imports**
+
+- `player/PlayerSkills.ts`
+- `player/medicinalTreatmentEffectiveness.ts`
+
+## `player/medicinalTreatmentEffectiveness.ts`
+
+**Imports**
+
+- `player/PlayerSkills.ts`
+- `player/skillEvaluation.ts`
+
+**Imported by**
+
+- `app/actions/survivalActions.ts`
+- `player/medicinalTreatmentEffectiveness.test.ts`
 
 ## `player/physicalWorkStrength.test.ts`
 
@@ -598,6 +619,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/restActions.ts`
+- `player/medicinalTreatmentEffectiveness.ts`
 - `player/skillEvaluation.test.ts`
 
 ## `player/targetedSkillSelection.test.ts`

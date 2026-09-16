@@ -2,7 +2,13 @@ import type { ItemKind } from '../items/items'
 import type { ChunkManager } from '../terrain/chunkManager'
 
 /** World resources an `herbalist` may gather (plan settlements-npcs-007). */
-export const HERBALIST_GATHER_KINDS: readonly ItemKind[] = ['herb', 'flax', 'poisonous_herb']
+export const HERBALIST_GATHER_KINDS: readonly ItemKind[] = [
+  'herb',
+  'mint',
+  'yarrow',
+  'flax',
+  'poisonous_herb',
+]
 
 const HERBALIST_GATHER_KIND_SET = new Set<ItemKind>(HERBALIST_GATHER_KINDS)
 

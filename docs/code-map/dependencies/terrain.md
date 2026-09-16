@@ -524,6 +524,7 @@ Generated from TypeScript imports.
 - `terrain/distanceLod.ts`
 - `terrain/fbm.ts`
 - `terrain/grass.ts`
+- `terrain/renewableWorldItems.ts`
 - `terrain/riverFord.ts`
 - `terrain/riverNetwork.ts`
 - `terrain/riverQuery.ts`
@@ -711,6 +712,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkVegetation.ts`
+- `terrain/renewableWorldItems.ts`
 
 **Imported by**
 
@@ -1013,6 +1015,29 @@ Generated from TypeScript imports.
 - `terrain/mineableDeposit.ts`
 - `terrain/naturalResources.test.ts`
 - `terrain/resourceDeposits.ts`
+
+## `terrain/renewableWorldItems.test.ts`
+
+**Imports**
+
+- `terrain/renewableWorldItems.ts`
+
+## `terrain/renewableWorldItems.ts`
+
+**Imports**
+
+- `items/items.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
+- `app/interactables.ts`
+- `app/saveState.ts`
+- `app/worldBundle.ts`
+- `terrain/chunkManager.ts`
+- `terrain/chunkWorldItems.ts`
+- `terrain/renewableWorldItems.test.ts`
 
 ## `terrain/resourceDeposits.ts`
 

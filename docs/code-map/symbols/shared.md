@@ -162,10 +162,10 @@ Generated from exported TypeScript symbols.
 ## `shared/temporaryConditions.ts`
 
 - `applyConditionModifiersToAttributes` — function — line 152
-- `applyConditionTreatment` — function — line 219
+- `applyConditionTreatment` — function — line 227
 - `applyPoisoningExposure` — function — line 178
-- `applyPoisoningTreatment` — function — line 198
-- `clearCondition` — function — line 214
+- `applyPoisoningTreatment` — function — line 202
+- `clearCondition` — function — line 222
 - `cloneTemporaryConditions` — function — line 42
 - `ConditionEntry` — type — line 13
 - `ConditionKind` — type — line 11
@@ -173,6 +173,7 @@ Generated from exported TypeScript symbols.
   - system: temporary-conditions
   - role: Shared authoritative temporary physical-condition state (plan npc-024). Lazy elapsed-game-time progression — no global manager, no per-frame tick.
   - owns: ConditionKind, TemporaryConditionsState
+- `ConditionTreatmentResult` — type — line 198
 - `createEmptyTemporaryConditions` — function — line 38
 - `getResolvedPoisoningSeverity` — function — line 106
 - `hasActivePoisoning` — function — line 111

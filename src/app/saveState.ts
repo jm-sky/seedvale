@@ -14,6 +14,8 @@ import type { SocialNewsLedger } from '../reputation/SocialNewsLedger'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
+import type { RenewableWorldItemOverrides } from '../terrain/renewableWorldItems'
+import { pruneRenewableWorldItems } from '../terrain/renewableWorldItems'
 import type { VueUi } from '../ui-vue/mount'
 import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
@@ -111,6 +113,8 @@ export type SaveStateDeps = {
   /** Live accessors — `createApp` replaces these three on a New Game, so they
    *  must not be captured by value. */
   getCollectedItemIds: () => ReadonlySet<string>
+  /** Plan items-player-043 — sparse renewable medicinal flora overrides. */
+  getRenewableWorldItems: () => RenewableWorldItemOverrides
   getRemovedCropIds: () => ReadonlySet<string>
   /** Plan 126 — player-planted trees/crops, same "live accessor, replaced on
    *  a New Game" contract as the two above. */
@@ -186,6 +190,11 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     inventory: inventory.toJSON(),
     inventoryInstances: inventory.instancesToJSON(),
     collectedItemIds: [...deps.getCollectedItemIds()],
+    renewableWorldItems: (() => {
+      const overrides = { ...deps.getRenewableWorldItems() }
+      pruneRenewableWorldItems(overrides, dayNight.elapsedDays)
+      return Object.keys(overrides).length > 0 ? overrides : undefined
+    })(),
     droppedItems: bundle.droppedItems.nodes().map((item) => ({ ...item })),
     placedFires: bundle.placedFires.nodes().map((fire) => ({ ...fire })),
     timeOfDay: dayNight.timeOfDay,

@@ -182,6 +182,7 @@ import {
   INTERACT_RANGE,
   worldItemAllowsAltInteract,
 } from './interactables'
+import { medicinalHerbInteractRange, isMedicinalForageKind } from '../terrain/renewableWorldItems'
 import { activeModal } from './modalState'
 import { syncNpcQuestMarkers } from './npcQuestMarkerSync'
 import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
@@ -1190,6 +1191,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         inventory.hasCapability('shearing'),
         (settlementId, structureId, nowDays) => bundle.settlementsManager.getStructureSnapshot(settlementId, structureId, nowDays),
         resolveSpatialContextAt,
+        player.skills.survival.value,
       ),
         playerSpatialContext,
       )
@@ -1487,11 +1489,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         isActionable: isInteractableActionable,
         stableKey: interactableStableKey,
       }
+      const herbDiscoveryRange = medicinalHerbInteractRange(player.skills.survival.value, INTERACT_RANGE)
       const gazeRanked = rankInGaze(
         interactables,
         player.mesh.position,
         mouseLook.state.yaw,
-        INTERACT_RANGE,
+        herbDiscoveryRange,
         INTERACT_MIN_DOT,
         gazeRankOptions,
       )
@@ -1589,7 +1592,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           interactables,
           player.mesh.position,
           mouseLook.state.yaw,
-          INTERACT_RANGE,
+          herbDiscoveryRange,
           INTERACT_MIN_DOT,
           {
             ...gazeRankOptions,
@@ -2025,6 +2028,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             if (collected.authoredOneShot) consumedWorldPickupIds.add(ref.id)
             picked += 1
             lastKind = collected.kind
+            if (isMedicinalForageKind(collected.kind)) {
+              awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.forageMedicinalHerb)
+            }
           }
           return { picked, lastKind }
         }

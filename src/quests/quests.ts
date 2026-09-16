@@ -1772,20 +1772,20 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
   {
     id: 'ziola-dla-anny',
     title: 'Zioła dla Anny',
-    description: 'Anna potrzebuje trzech ziół do domowych zapasów.',
+    description: 'Anna potrzebuje trzech rzadkich ziół leczniczych do domowych zapasów.',
     giverName: 'Anna',
     offerLine:
-      'Zbierasz zioła w okolicy? Przydałyby mi się trzy sztuki — zapłacę osiem monet.',
+      'Zbierasz rzadkie zioła w okolicy? Przydałyby mi się trzy sztuki — zapłacę osiem monet.',
     stages: [
       {
         objective: { type: 'gather_item', kind: 'herb', count: 3 },
-        description: 'Zbierz 3 zioła.',
-        reminderLine: 'Masz już trzy zioła?',
-        playerLine: 'Tak. Zebrałem trzy zioła — proszę.',
+        description: 'Zbierz 3 rzadkie zioła lecznicze.',
+        reminderLine: 'Masz już trzy rzadkie zioła?',
+        playerLine: 'Tak. Zebrałem trzy rzadkie zioła — proszę.',
       },
     ],
     reportPromptLine: 'Masz już te zioła?',
-    reportPlayerLine: 'Tak. Zebrałem trzy zioła — proszę.',
+    reportPlayerLine: 'Tak. Zebrałem trzy rzadkie zioła — proszę.',
     reportLine: 'Dziękuję, dokładnie tyle mi trzeba.',
     outcomes: [
       {

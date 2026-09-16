@@ -52,6 +52,16 @@ Generated from exported TypeScript symbols.
   - role: Maps resolved human Strength onto body carry capacity in kilograms.
 - `humanBodyCarryCapacityKg` — function — line 32
 
+## `player/medicinalTreatmentEffectiveness.ts`
+
+- `MEDICINE_EFFECT_MULTIPLIER_MAX` — const — line 13
+- `MEDICINE_EFFECT_MULTIPLIER_MIN` — const — line 12
+  - domain: items-player
+  - system: player-skills
+- `resolveMedicinalTreatmentMultiplier` — function — line 21
+- `scaleMedicinalTreatmentAmount` — function — line 41
+- `SURVIVAL_SUPPORT_MULTIPLIER_MAX` — const — line 14
+
 ## `player/physicalWorkStrength.ts`
 
 - `PHYSICAL_WORK_STRENGTH_NEUTRAL` — const — line 27
@@ -212,9 +222,9 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerSkills.ts`
 
-- `accumulateRidingUse` — function — line 256
-- `accumulateSneakUse` — function — line 234
-- `applySneakSpeedModifier` — function — line 275
+- `accumulateRidingUse` — function — line 262
+- `accumulateSneakUse` — function — line 240
+- `applySneakSpeedModifier` — function — line 281
 - `awardSkillXp` — function — line 137
 - `createPlayerSkills` — function — line 119
 - `isTargetedSkill` — function — line 44
@@ -222,9 +232,9 @@ Generated from exported TypeScript symbols.
 - `RaiseSkillResult` — type — line 144
 - `raiseSkillToValue` — function — line 156
 - `restorePersistedSkills` — function — line 184
-- `RIDING_XP_DISTANCE_M` — const — line 250
-- `ridingSpeedMultiplier` — function — line 316
-- `ridingStaminaDrainMultiplier` — function — line 330
+- `RIDING_XP_DISTANCE_M` — const — line 256
+- `ridingSpeedMultiplier` — function — line 322
+- `ridingStaminaDrainMultiplier` — function — line 336
 - `setSkillValueForDebug` — function — line 174
 - `SKILL_IDS` — const — line 42
 - `SKILL_LABEL` — const — line 52
@@ -241,10 +251,10 @@ Generated from exported TypeScript symbols.
 - `SkillUseKind` — type — line 29
 - `SNEAK_LEGACY_VALUE` — const — line 112
 - `SNEAK_LEGACY_XP` — const — line 113
-- `SNEAK_SPEED_MULTIPLIER` — const — line 273
-- `SNEAK_XP_DISTANCE_M` — const — line 226
-- `survivalDurationMultiplier` — function — line 289
-- `survivalFoodMultiplier` — function — line 339
+- `SNEAK_SPEED_MULTIPLIER` — const — line 279
+- `SNEAK_XP_DISTANCE_M` — const — line 232
+- `survivalDurationMultiplier` — function — line 295
+- `survivalFoodMultiplier` — function — line 345
 - `toggleSneak` — function — line 197
 - `xpForSkillValue` — function — line 102
 - `xpToSkillValue` — function — line 89

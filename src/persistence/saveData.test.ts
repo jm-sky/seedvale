@@ -1683,6 +1683,29 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.tradeGrievances).toBeUndefined()
   })
 
+  it('migrates a v47 save without renewableWorldItems to the current version (plan items-player-043)', () => {
+    const result = loadStoredSave({ ...validSave, version: 47 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.renewableWorldItems).toBeUndefined()
+  })
+
+  it('round-trips renewableWorldItems and rejects a malformed one (plan items-player-043)', () => {
+    const withOverrides = loadStoredSave({
+      ...validSave,
+      renewableWorldItems: { '0:0:f1': 12.5 },
+    })
+    expect(withOverrides.status).toBe('ok')
+    if (withOverrides.status === 'ok') {
+      expect(withOverrides.data.renewableWorldItems).toEqual({ '0:0:f1': 12.5 })
+    }
+    expect(loadStoredSave({
+      ...validSave,
+      renewableWorldItems: { '0:0:f1': 'soon' },
+    })).toEqual({ status: 'invalid' })
+  })
+
   it('round-trips expeditionAssignments and rejects a malformed one (plan settlements-npcs-027)', () => {
     const assignment = {
       id: 'expeditionAssignment:1',

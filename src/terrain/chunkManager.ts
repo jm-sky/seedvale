@@ -131,6 +131,13 @@ import {
   nearestWorldChunkItem,
   proceduralChunkItems,
 } from './chunkWorldItems'
+import {
+  depleteRenewableWorldItem,
+  isRenewableWorldItem,
+  isRenewableWorldItemAvailable,
+  isWorldItemPlacementAvailable,
+  type RenewableWorldItemOverrides,
+} from './renewableWorldItems'
 import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
 import {
@@ -354,8 +361,13 @@ export type ChunkManagerConfig = {
   /** Ids of world-generated items (`terrain/chunkItems.ts`) already collected —
    *  shared/mutated in place so a chunk regenerated after unload/reload skips
    *  placements the player already picked up. Reset only on a genuinely new
-   *  world (new seed), not on unrelated terrain-param rebuilds. */
+   *  world (new seed), not on unrelated terrain-param rebuilds. Finite kinds
+   *  only — medicinal mint/yarrow/herb use `renewableWorldItems`. */
   collectedItemIds: Set<string>
+  /** Plan items-player-043 — sparse `placementId → availableAtDays` for
+   *  renewable medicinal flora. Same ownership/reset contract as
+   *  `collectedItemIds` / grass forage overrides. */
+  renewableWorldItems: RenewableWorldItemOverrides
   /** Ids of naturally-generated crops (`terrain/chunkCrops.ts`) already
    *  harvested/removed (plan 172) — same "shared/mutated in place, survives
    *  chunk unload/reload" contract as `collectedItemIds`, kept as a separate
@@ -2039,7 +2051,12 @@ export function createChunkManager(
 
     const itemsT0 = performance.now()
     rec.items = buildPlacementGroup('chunk-items', tile.items, (placement) => {
-      if (config.collectedItemIds.has(placement.id)) return null
+      if (!isWorldItemPlacementAvailable(
+        placement,
+        config.collectedItemIds,
+        config.renewableWorldItems,
+        config.getWorldDays(),
+      )) return null
       const itemMesh = createItemMesh(placement.kind)
       itemMesh.userData.itemId = placement.id
       itemMesh.userData.itemKind = placement.kind
@@ -2709,8 +2726,28 @@ export function createChunkManager(
     },
     getNearbyItems(pos, radius) {
       const out: { id: string, kind: ItemKind, x: number, z: number }[] = []
+      const nowDays = config.getWorldDays()
       for (const rec of chunks.values()) {
-        if (!rec.items) continue
+        if (!rec.items || !rec.tile) continue
+        // Lazy rematerialize expired renewable flora without a chunk unload
+        // (plan items-player-043) — only when a nearby query touches the chunk.
+        const meshedIds = new Set(rec.items.children.map((c) => c.userData.itemId as string))
+        for (const placement of rec.tile.items) {
+          if (meshedIds.has(placement.id)) continue
+          if (!isRenewableWorldItem(placement.kind)) continue
+          if (!isWorldItemPlacementAvailable(
+            placement,
+            config.collectedItemIds,
+            config.renewableWorldItems,
+            nowDays,
+          )) continue
+          const itemMesh = createItemMesh(placement.kind)
+          itemMesh.userData.itemId = placement.id
+          itemMesh.userData.itemKind = placement.kind
+          placeOnGround(itemMesh, placement.x, placement.z, (sx, sz) => readField('heights', sx, sz))
+          rec.items.add(itemMesh)
+          meshedIds.add(placement.id)
+        }
         for (const child of rec.items.children) {
           const dx = child.position.x - pos.x
           const dz = child.position.z - pos.z
@@ -2869,6 +2906,14 @@ export function createChunkManager(
     resolveCemeteryById,
     probeAbandonedCemeteryAtChunk,
     collectItem(id) {
+      const nowDays = config.getWorldDays()
+      const markCollected = (kind: ItemKind): void => {
+        if (isRenewableWorldItem(kind)) {
+          depleteRenewableWorldItem(config.renewableWorldItems, id, kind, nowDays)
+          return
+        }
+        config.collectedItemIds.add(id)
+      }
       for (const rec of chunks.values()) {
         if (!rec.items) continue
         const mesh = rec.items.children.find((c) => c.userData.itemId === id)
@@ -2880,20 +2925,27 @@ export function createChunkManager(
         }
         mesh.removeFromParent()
         disposeObject3D(mesh)
-        config.collectedItemIds.add(id)
+        markCollected(result.kind)
         return result
       }
       if (config.collectedItemIds.has(id)) return null
+      if (!isRenewableWorldItemAvailable(config.renewableWorldItems, id, nowDays)) return null
       const coord = chunkCoordFromWorldItemId(id)
       if (!coord) return null
-      const placement = proceduralChunkItems(coord, paramsFor(coord, []), config.collectedItemIds)
-        .find((p) => p.id === id)
+      const placement = proceduralChunkItems(
+        coord,
+        paramsFor(coord, []),
+        config.collectedItemIds,
+        config.renewableWorldItems,
+        nowDays,
+      ).find((p) => p.id === id)
       if (!placement) return null
-      config.collectedItemIds.add(id)
+      markCollected(placement.kind)
       return { kind: placement.kind, x: placement.x, z: placement.z }
     },
     findNearestWorldItem(pos, radius, kinds, maxChunkRadius) {
       const kindSet = new Set(kinds)
+      const nowDays = config.getWorldDays()
       const loaded = this.getNearbyItems(pos, radius).filter((item) => kindSet.has(item.kind))
       return nearestWorldChunkItem(
         pos.x,
@@ -2905,9 +2957,21 @@ export function createChunkManager(
         (coord) => {
           const rec = chunks.get(chunkKey(coord))
           const placements = rec?.tile?.items
-            ?? proceduralChunkItems(coord, paramsFor(coord, []), config.collectedItemIds)
+            ?? proceduralChunkItems(
+              coord,
+              paramsFor(coord, []),
+              config.collectedItemIds,
+              config.renewableWorldItems,
+              nowDays,
+            )
           return placements
-            .filter((p) => !config.collectedItemIds.has(p.id) && kindSet.has(p.kind))
+            .filter((p) => kindSet.has(p.kind)
+              && isWorldItemPlacementAvailable(
+                p,
+                config.collectedItemIds,
+                config.renewableWorldItems,
+                nowDays,
+              ))
             .map((p) => ({ id: p.id, kind: p.kind, x: p.x, z: p.z }))
         },
         maxChunkRadius,

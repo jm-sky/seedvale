@@ -195,20 +195,28 @@ export function applyPoisoningExposure(
   }
 }
 
+export type ConditionTreatmentResult = {
+  appliedReduction: number
+}
+
 export function applyPoisoningTreatment(
   state: TemporaryConditionsState,
   nowDays: number,
   severityReduction: number,
-): void {
+): ConditionTreatmentResult {
   resolveTemporaryConditionsProgress(state, nowDays)
   const entry = state.conditions.poisoning
-  if (!entry || entry.severity <= 0) return
+  if (!entry || entry.severity <= 0 || severityReduction <= 0) {
+    return { appliedReduction: 0 }
+  }
+  const before = entry.severity
   const next = clampSeverity(entry.severity - severityReduction)
   if (next <= 0) {
     delete state.conditions.poisoning
-    return
+    return { appliedReduction: before }
   }
   state.conditions.poisoning = { severity: next, lastUpdatedAtDays: nowDays }
+  return { appliedReduction: before - next }
 }
 
 export function clearCondition(state: TemporaryConditionsState, kind: ConditionKind, nowDays: number): void {
@@ -221,6 +229,7 @@ export function applyConditionTreatment(
   kind: ConditionKind,
   severityReduction: number,
   nowDays: number,
-): void {
-  if (kind === 'poisoning') applyPoisoningTreatment(state, nowDays, severityReduction)
+): ConditionTreatmentResult {
+  if (kind === 'poisoning') return applyPoisoningTreatment(state, nowDays, severityReduction)
+  return { appliedReduction: 0 }
 }

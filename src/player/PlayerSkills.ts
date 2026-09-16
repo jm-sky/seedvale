@@ -219,6 +219,12 @@ export const SKILL_XP_AWARD = {
   /** Per `RIDING_XP_DISTANCE_M` actually covered while mounted (plan
    *  fauna-003 §12), same "use → XP" shape as `sneakDistance`. */
   ridingDistance: 3,
+  /** Plan items-player-043 — awarded once per successful medicinal herb
+   *  world pickup (mint/yarrow/rare herb), never for targeting alone. */
+  forageMedicinalHerb: 5,
+  /** Plan items-player-043 — awarded once when a medicinal treatment
+   *  actually reduces poisoning severity. */
+  medicinalTreatment: 8,
 } as const
 
 /** Metres of real sneaking movement per XP award — the "significant completed

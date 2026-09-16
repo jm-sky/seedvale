@@ -14,7 +14,7 @@ import {
  *  `ITEM_CATALOG[kind].consumable.need`. */
 describe('CONSUMABLE_KINDS_BY_NEED', () => {
   it('derives every need bucket from the catalog, best (highest relief) first', () => {
-    expect(CONSUMABLE_KINDS_BY_NEED.health).toEqual(['dressing', 'bandage', 'herb'])
+    expect(CONSUMABLE_KINDS_BY_NEED.health).toEqual(['dressing', 'bandage', 'herb', 'yarrow', 'mint'])
   })
 
   it('keeps every bucket in sync with the per-entry declarations', () => {
@@ -45,15 +45,18 @@ describe('Inventory.findConsumableForNeed', () => {
 
 describe('INJURY_TREATMENT_KINDS / findInjuryTreatment (plan npc-025)', () => {
   it('recognizes catalog-declared physical treatment and ignores generic health consumables', () => {
-    expect(INJURY_TREATMENT_KINDS).toEqual(['bandage'])
+    expect(INJURY_TREATMENT_KINDS).toEqual(['bandage', 'yarrow'])
     expect(itemTreatsPhysicalInjury('bandage', 'critical')).toBe(true)
+    expect(itemTreatsPhysicalInjury('yarrow', 'minor')).toBe(true)
+    expect(itemTreatsPhysicalInjury('yarrow', 'serious')).toBe(false)
     expect(itemTreatsPhysicalInjury('herb', 'minor')).toBe(false)
     expect(itemTreatsPhysicalInjury('bandage', 'none')).toBe(false)
   })
 
-  it('finds a bandage for current severity and never returns herb', () => {
+  it('finds a bandage for current severity and prefers it over weaker yarrow', () => {
     const both = new Inventory({ herb: 1, bandage: 1 })
     expect(both.findInjuryTreatment('serious')).toBe('bandage')
+    expect(new Inventory({ yarrow: 1 }).findInjuryTreatment('minor')).toBe('yarrow')
     expect(new Inventory({ herb: 1 }).findInjuryTreatment('minor')).toBeNull()
     expect(new Inventory({ bread: 1 }).findInjuryTreatment('critical')).toBeNull()
   })

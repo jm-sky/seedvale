@@ -41,6 +41,10 @@ import {
 import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { getDigProfileAt, getRockDigProfileAt } from '../terrain/dig'
+import {
+  isMedicinalForageKind,
+  medicinalHerbInteractRange,
+} from '../terrain/renewableWorldItems'
 import { oceanMixAt } from '../terrain/waterBodies'
 import { nearestShoreProbePoint, resolveWaterBodyKind } from '../terrain/waterBodyKind'
 import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
@@ -604,6 +608,9 @@ export function buildInteractables(
   /** Resolves live entity XYZ to gameplay spatial identity (plan world-027).
    *  Defaults to surface for callers/tests that do not model caves. */
   resolveSpatialContextAt: SpatialContextResolver = () => WORLD_SPATIAL_CONTEXT_SURFACE,
+  /** Plan items-player-043 — Survival skill value (0..1) for medicinal herb
+   *  discovery radius. Defaults to 0 (novice / base interact range). */
+  survivalSkillValue = 0,
 ): Interactable[] {
   const list: InteractablePayload[] = []
   const worldGeneratedContextById = new Map(
@@ -1142,12 +1149,20 @@ export function buildInteractables(
     })
   }
 
-  for (const item of chunkManager.getNearbyItems(playerPos, INTERACT_RANGE)) {
+  for (const item of chunkManager.getNearbyItems(
+    playerPos,
+    medicinalHerbInteractRange(survivalSkillValue, INTERACT_RANGE),
+  )) {
+    const herbRange = isMedicinalForageKind(item.kind)
+      ? medicinalHerbInteractRange(survivalSkillValue, INTERACT_RANGE)
+      : INTERACT_RANGE
+    if (!withinRange(item.x, item.z, playerPos, herbRange)) continue
     list.push({
       kind: 'item',
       position: { x: item.x, z: item.z },
       promptLabel: itemPromptLabel(item.kind),
       item: { id: item.id, kind: item.kind, source: 'world' },
+      interactRange: isMedicinalForageKind(item.kind) ? herbRange : undefined,
     })
   }
 

@@ -680,7 +680,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 47
+export const CURRENT_SAVE_VERSION = 48
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -705,8 +705,12 @@ export type SaveData = {
    *  instance-backed kind (`items/Inventory.ts`'s `SaveItemInstance`). */
   inventoryInstances: SaveItemInstance[]
   /** Ids of world-generated items (`terrain/chunkItems.ts`) already picked up —
-   *  see `ChunkManagerConfig.collectedItemIds`. */
+   *  see `ChunkManagerConfig.collectedItemIds`. Finite kinds only. */
   collectedItemIds: string[]
+  /** Plan items-player-043 — sparse `placementId → availableAtDays` for
+   *  renewable medicinal world flora (mint/yarrow/herb). Absent/empty means
+   *  none cooling down. Same shape as `grassForagePatches`. */
+  renewableWorldItems?: Record<string, number>
   /** Player-dropped item instances — unlike `collectedItemIds`, these aren't
    *  derivable from the seed, so the full position+kind record round-trips. */
   droppedItems: SaveDroppedItem[]
@@ -2530,6 +2534,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!v.inventory || typeof v.inventory !== 'object') return false
   if (!isSaveItemInstancesField(v.inventoryInstances)) return false
   if (!Array.isArray(v.collectedItemIds)) return false
+  if (v.renewableWorldItems !== undefined && !isResourceDepositsField(v.renewableWorldItems)) return false
   if (!isDroppedItemsField(v.droppedItems)) return false
   if (!Array.isArray(v.placedFires)) return false
   if (typeof v.timeOfDay !== 'number') return false
@@ -3694,6 +3699,14 @@ function migrateSaveV46ToV47(data: unknown): unknown {
   return { ...v, version: 47 }
 }
 
+/** v47 → v48 (plan items-player-043): optional `renewableWorldItems`. Pre-plan
+ *  saves have no medicinal flora cooldown state; absent restores none. Do not
+ *  convert historical `collectedItemIds` herb entries (unknown collect time). */
+function migrateSaveV47ToV48(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 48 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3861,6 +3874,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   44: migrateSaveV44ToV45,
   45: migrateSaveV45ToV46,
   46: migrateSaveV46ToV47,
+  47: migrateSaveV47ToV48,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -1,6 +1,13 @@
 import type { ItemKind } from '../items/items'
 import type { ChunkCoord } from './chunkGrid'
 import { worldToChunk } from './chunkGrid'
+import { type ChunkTileParams, computeChunkTile } from './chunkHeightmap'
+import { computeChunkItems, type ItemPlacement } from './chunkItems'
+import { computeChunkVegetation } from './chunkVegetation'
+import {
+  isWorldItemPlacementAvailable,
+  type RenewableWorldItemOverrides,
+} from './renewableWorldItems'
 
 function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[] {
   const offsets: { dx: number, dz: number }[] = [{ dx: 0, dz: 0 }]
@@ -14,9 +21,6 @@ function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[] {
   }
   return offsets
 }
-import { type ChunkTileParams, computeChunkTile } from './chunkHeightmap'
-import { computeChunkItems, type ItemPlacement } from './chunkItems'
-import { computeChunkVegetation } from './chunkVegetation'
 
 export type WorldChunkItemRef = {
   id: string
@@ -38,7 +42,8 @@ export function chunkCoordFromWorldItemId(id: string): ChunkCoord | null {
 /**
  * Recomputes procedural chunk items for one coord — same pipeline as chunk
  * load (`chunkHeightmap.worker.ts`), minus mesh instantiation. Used for bounded
- * off-screen gather queries that must respect `collectedItemIds`.
+ * off-screen gather queries that must respect permanent `collectedItemIds` and
+ * the medicinal renewable overlay (plan items-player-043).
  *
  * @domain settlements-npcs
  */
@@ -46,10 +51,14 @@ export function proceduralChunkItems(
   coord: ChunkCoord,
   params: ChunkTileParams,
   collectedItemIds: ReadonlySet<string>,
+  renewableWorldItems: RenewableWorldItemOverrides = {},
+  nowDays = 0,
 ): readonly ItemPlacement[] {
   const tile = computeChunkTile(params)
   const vegetation = computeChunkVegetation(coord, tile, params)
-  return computeChunkItems(coord, tile, params, vegetation).filter((p) => !collectedItemIds.has(p.id))
+  return computeChunkItems(coord, tile, params, vegetation).filter((p) =>
+    isWorldItemPlacementAvailable(p, collectedItemIds, renewableWorldItems, nowDays),
+  )
 }
 
 /**

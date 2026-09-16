@@ -85,10 +85,15 @@ describe('tradeCatalog (plan 090)', () => {
     expect(merchantPrice('shell')).toBeNull()
   })
 
-  it('stocks herb at 5 coins as a quest reachability fallback', () => {
-    expect(merchantPrice('herb')).toBe(5)
-    expect(tradeValue('herb')).toBe(5)
+  it('stocks rare herb at 12 coins as a quest reachability fallback', () => {
+    expect(merchantPrice('herb')).toBe(12)
+    expect(tradeValue('herb')).toBe(12)
     expect(MERCHANT_STOCK).toContain('herb')
+    expect(merchantPrice('mint')).toBeNull()
+    expect(merchantPrice('yarrow')).toBeNull()
+    expect(tradeValue('mint')).toBe(2)
+    expect(tradeValue('yarrow')).toBe(3)
+    expect(tradeValue('dressing')).toBe(26)
   })
 
   it('gives shells a barter value of 1', () => {
@@ -301,7 +306,7 @@ describe('NPC buy pricing (plan settlements-npcs-033)', () => {
     expect(merchantPrice('wool_material')).toBeNull()
     expect(tradeValue('wool_material')).toBe(2)
     expect(tradeValue('linen_material')).toBe(6)
-    expect(tradeValue('dressing')).toBe(16)
+    expect(tradeValue('dressing')).toBe(26)
     expect(tradeValue('dressing')).toBeGreaterThan(tradeValue('bandage'))
     expect(npcSalePrice('wool_material')).toBe(roundSellPrice(tradeValue('wool_material') * BASE_BUY_FACTOR))
     expect(npcSalePrice('dressing')).toBe(roundSellPrice(tradeValue('dressing') * BASE_BUY_FACTOR))

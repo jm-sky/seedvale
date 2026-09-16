@@ -91,14 +91,16 @@ function hashChunk(cx: number, cz: number): number {
  * by `chunkManager.ts`). Shells land in the coastal band (continentalness
  * between `oceanThreshold`/`coastThreshold` *and* close to `waterLevel` in
  * local height, where waves would actually wash them up); stones land on
- * strong mountain-ridge terrain; branch/mushroom/flower/cone/herb/beam land per
- * `biomeWeightsAt`/tree-proximity preference (see `FLORA_*` constants above);
- * coins (issue 035) are a third independent pool — rare dry-land finds with
- * their own salt and `c<i>` id prefix so they never collide with existing
- * collected ids. Finite — no respawn — the caller filters out ids already
- * recorded as collected. `vegetation` is this chunk's own
- * `computeChunkVegetation` result (worker.ts computes it first), used only
- * for the flora tree-proximity check.
+ * strong mountain-ridge terrain; branch/mushroom/flower/cone/mint/yarrow/herb/
+ * beam land per `biomeWeightsAt`/tree-proximity preference (see `FLORA_*`
+ * constants above); coins (issue 035) are a third independent pool — rare
+ * dry-land finds with their own salt and `c<i>` id prefix so they never
+ * collide with existing collected ids. Placement is deterministic and
+ * stable; finite kinds are filtered by `collectedItemIds`, while medicinal
+ * mint/yarrow/herb use a separate renewable overlay
+ * (`terrain/renewableWorldItems.ts`, plan items-player-043). `vegetation` is
+ * this chunk's own `computeChunkVegetation` result (worker.ts computes it
+ * first), used only for the flora tree-proximity check.
  */
 export function computeChunkItems(
   coord: ChunkCoord,
@@ -187,10 +189,19 @@ export function computeChunkItems(
     const flowerWeight = (1 - biome.desert) * (1 - biome.swamp) * (1 - ridge) * (altitude < 0.45 ? 1 : 0.3)
     const branchWeight = treeClose ? 0.9 : biome.forest * 0.25
     const coneWeight = treeClose ? biome.forest * 0.85 : 0
-    // Herb (plan 153) — forest-floor medicinal plant, deliberately scarcer
-    // than mushroom (half its weight) so it stays a "found" healing source
-    // rather than a reliable food-equivalent supply.
-    const herbWeight = (biome.forest * 0.4 + biome.swamp * 0.2) * (treeClose ? 1.1 : 0.7)
+    // Medicinal herbs (plan items-player-043) — mint common on moist low/med
+    // ground; yarrow on open meadow; rare `herb` stays forest/shady/moist and
+    // materially scarcer than both common species.
+    const mintWeight =
+      (moistureRegion * 0.5 + biome.swamp * 0.28 + biome.forest * 0.18) *
+      (1 - biome.desert) *
+      (altitude < 0.5 ? 1 : 0.35) *
+      (treeClose ? 0.85 : 1.05)
+    const yarrowWeight =
+      (1 - biome.desert) * (1 - biome.swamp) * (1 - ridge) * (altitude < 0.5 ? 1 : 0.3) * 0.55
+    const herbWeight =
+      (biome.forest * 0.16 + biome.swamp * 0.06 + moistureRegion * 0.04) *
+      (treeClose ? 1.15 : 0.5)
     // Flax (plan settlements-npcs-007) — open meadow / forest-edge fibre, not
     // dense undergrowth.
     const flaxWeight = (biome.forest * 0.22 + (1 - biome.desert) * 0.12) * (treeClose ? 0.65 : 1)
@@ -207,24 +218,26 @@ export function computeChunkItems(
     // whole fallen limb, not a twig. No open-ground weight, unlike branch.
     const beamWeight = treeClose ? 0.18 : 0
 
-    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight
+    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight
+      + mintWeight + yarrowWeight + herbWeight + flaxWeight
       + poisonousHerbWeight + berriesWeight + nutsWeight + beamWeight
     if (total <= 0) continue
     if (floraRandom() > Math.min(1, total) * FLORA_KEEP_SCALE) continue
 
     const roll = floraRandom() * total
     let kind: ItemKind
-    if (roll < mushroomWeight) kind = 'mushroom'
-    else if (roll < mushroomWeight + flowerWeight) kind = 'flower'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight) kind = 'branch'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight) kind = 'cone'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight) kind = 'herb'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight) kind = 'flax'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight + poisonousHerbWeight) {
-      kind = 'poisonous_herb'
-    }
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight + poisonousHerbWeight + berriesWeight) kind = 'berries'
-    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + flaxWeight + poisonousHerbWeight + berriesWeight + nutsWeight) kind = 'nuts'
+    let threshold = mushroomWeight
+    if (roll < threshold) kind = 'mushroom'
+    else if (roll < (threshold += flowerWeight)) kind = 'flower'
+    else if (roll < (threshold += branchWeight)) kind = 'branch'
+    else if (roll < (threshold += coneWeight)) kind = 'cone'
+    else if (roll < (threshold += mintWeight)) kind = 'mint'
+    else if (roll < (threshold += yarrowWeight)) kind = 'yarrow'
+    else if (roll < (threshold += herbWeight)) kind = 'herb'
+    else if (roll < (threshold += flaxWeight)) kind = 'flax'
+    else if (roll < (threshold += poisonousHerbWeight)) kind = 'poisonous_herb'
+    else if (roll < (threshold += berriesWeight)) kind = 'berries'
+    else if (roll < (threshold += nutsWeight)) kind = 'nuts'
     else kind = 'beam'
 
     placements.push({ id: `${coord.cx}:${coord.cz}:f${i}`, x: wx, z: wz, kind })

@@ -1,7 +1,7 @@
 # Plan: Renewable medicinal herbs and skill-aware foraging
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** items-player-021, npc-025
@@ -10,6 +10,7 @@
 **Tags:** `herbs` `medicine` `survival` `foraging` `respawn`
 **Roadmap:** -
 **Model:** Opus, Sonnet
+**Implemented:** 2026-09-16
 
 ## Goal
 

@@ -670,6 +670,7 @@ Generated from TypeScript imports.
 - `items/liquidContainer.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
+- `player/medicinalTreatmentEffectiveness.ts`
 - `settlement/VillageFire.ts`
 - `shared/HealthState.ts`
 - `shared/VigorState.ts`
@@ -980,6 +981,7 @@ Generated from TypeScript imports.
 - `terrain/chunkWorkerPool.ts`
 - `terrain/depositMining.ts`
 - `terrain/footstepSurface.ts`
+- `terrain/renewableWorldItems.ts`
 - `ui-vue/mount.ts`
 - `ui-vue/store.ts`
 - `ui/createBusyOverlay.ts`
@@ -1160,6 +1162,7 @@ Generated from TypeScript imports.
 - `shared/ThirstState.ts`
 - `shared/VigorState.ts`
 - `simulation/observation.ts`
+- `terrain/renewableWorldItems.ts`
 - `ui-vue/mount.ts`
 - `ui/createBusyOverlay.ts`
 - `ui/createHud.ts`
@@ -1332,6 +1335,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`
 - `terrain/dig.ts`
+- `terrain/renewableWorldItems.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/waterBodies.ts`
 - `terrain/waterBodyKind.ts`
@@ -1532,6 +1536,7 @@ Generated from TypeScript imports.
 - `settlement/landOwnership.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`
+- `terrain/renewableWorldItems.ts`
 - `ui-vue/mount.ts`
 - `world/cropLifecycle.ts`
 - `world/dayNight.ts`
@@ -1659,6 +1664,7 @@ Generated from TypeScript imports.
 - `terrain/depositMining.ts`
 - `terrain/mineableDeposit.ts`
 - `terrain/naturalResources.ts`
+- `terrain/renewableWorldItems.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/terrainPreparation.ts`
 - `terrain/terrainVisualHorizon.ts`

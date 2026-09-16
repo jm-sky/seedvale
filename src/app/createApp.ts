@@ -6,6 +6,7 @@ import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import type { GrassForageOverrides } from '../world/grassForage'
+import type { RenewableWorldItemOverrides } from '../terrain/renewableWorldItems'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
@@ -587,6 +588,12 @@ export async function createApp(
   const socialNews = createSocialNewsLedger(initialSave?.socialNews)
   const tradeGrievances = createTradeGrievanceStore(initialSave?.tradeGrievances)
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
+  // Plan items-player-043 — sparse renewable medicinal flora overrides, same
+  // "shared/mutated in place, reset only on a genuinely new world" contract
+  // as `collectedItemIds` / `grassForageOverrides`.
+  let renewableWorldItems: RenewableWorldItemOverrides = {
+    ...(initialSave?.renewableWorldItems ?? {}),
+  }
   // Plan 172 — natural crop lifecycle: harvested/removed wild crops, same
   // "shared/mutated in place, reset only on a genuinely new world" contract
   // as `collectedItemIds` above.
@@ -696,6 +703,7 @@ export async function createApp(
     scene,
     config,
     collectedItemIds,
+    renewableWorldItems,
     removedCropIds,
     plantedTrees,
     plantedCrops,
@@ -2399,6 +2407,7 @@ export async function createApp(
     tradeGrievances,
     fishingBait,
     getCollectedItemIds: () => collectedItemIds,
+    getRenewableWorldItems: () => renewableWorldItems,
     getRemovedCropIds: () => removedCropIds,
     getPlantedTrees: () => plantedTrees,
     getPlantedCrops: () => plantedCrops,
@@ -2427,6 +2436,7 @@ export async function createApp(
       gameLoop.forgetHighlight()
       if (resetCollectedItems) {
         collectedItemIds = new Set()
+        renewableWorldItems = {}
         removedCropIds = new Set()
         plantedTrees = []
         plantedCrops = []
@@ -2450,6 +2460,7 @@ export async function createApp(
         config,
         resetCollectedItems,
         collectedItemIds,
+        renewableWorldItems,
         removedCropIds,
         plantedTrees,
         plantedCrops,

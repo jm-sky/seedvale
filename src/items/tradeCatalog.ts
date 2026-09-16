@@ -15,7 +15,8 @@ import { trapConditionRatio } from './trapItemInstances'
  * Central merchant price list (plan 090, unit = `coin` since issue 035) —
  * coin cost to buy each stocked item. Also used as that item's `tradeValue`
  * for barter. Not sold: raw materials (stone, branches, ores, forage) except
- * `herb`, stocked as a reachability fallback (plan quests-progression-018).
+ * `herb` (rare medicinal), stocked as a reachability fallback (plan
+ * items-player-043 / quests-progression-018).
  * Shells stay barter-only (`canSell('shell')` is false).
  */
 export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
@@ -55,9 +56,9 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   cheese: 8,
   dried_meat: 10,
   bandage: 10,
-  // Plan quests-progression-018 — buyable fallback for `ziola-dla-anny`.
-  // Priced above the quest reward (3×5=15 > 8) so gathering stays better.
-  herb: 5,
+  // Plan items-player-043 — rare-herb reachability fallback for `ziola-dla-anny`.
+  // 3×12=36 ≫ quest reward 8 so gathering/respawn stays the sensible path.
+  herb: 12,
   fishing_rod: 18,
   whetstone: 6,
   sewing_kit: 18,
@@ -190,7 +191,8 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   cone: 1,
   mushroom: 2,
   flower: 2,
-  herb: 3,
+  mint: 2,
+  yarrow: 3,
   antler: 14,
   coal: 4,
   iron: 6,
@@ -212,11 +214,12 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   chronicle_search_evidence: 8,
   chronicle_reference: 12,
   // Plan settlements-npcs-036 — household production outputs the Kupiec
-  // does not stock. `dressing` is bandage+herb processed (relief 50 vs
-  // bandage 35); `linen_material` sits between flax input and bandage 10.
+  // does not stock. `dressing` is bandage+rare-herb processed (relief 50 vs
+  // bandage 35); value tracks inputs after items-player-043 herb=12.
+  // `linen_material` sits between flax input and bandage 10.
   wool_material: 2,
   linen_material: 6,
-  dressing: 16,
+  dressing: 26,
 }
 
 /** @domain settlements — neutral social standing for merchant sell pricing. */

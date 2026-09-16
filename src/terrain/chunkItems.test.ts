@@ -131,21 +131,22 @@ describe('computeChunkItems — coin pool (issue 035)', () => {
   })
 })
 
+function denseTreeGrid(coord: { cx: number, cz: number }) {
+  const trees: { kind: 'tree', x: number, z: number, speciesIndex: number, scale: number, rotationY: number }[] = []
+  for (let gx = -32; gx <= 32; gx += 8) {
+    for (let gz = -32; gz <= 32; gz += 8) {
+      trees.push({ kind: 'tree', x: coord.cx * 64 + gx, z: coord.cz * 64 + gz, speciesIndex: 0, scale: 1, rotationY: 0 })
+    }
+  }
+  return trees
+}
+
 describe('computeChunkItems — beam (loose wood, plan items-player-015)', () => {
   const tile = dryLandTile(19)
 
   /** A dense grid covering the whole chunk (`FLORA_TREE_PROXIMITY` is only 7
    *  world units) so every flora candidate in `coord`'s chunk counts as
    *  "near a tree", regardless of where the seeded RNG happens to place it. */
-  const denseTreeGrid = (coord: { cx: number, cz: number }) => {
-    const trees: { kind: 'tree', x: number, z: number, speciesIndex: number, scale: number, rotationY: number }[] = []
-    for (let gx = -32; gx <= 32; gx += 8) {
-      for (let gz = -32; gz <= 32; gz += 8) {
-        trees.push({ kind: 'tree', x: coord.cx * 64 + gx, z: coord.cz * 64 + gz, speciesIndex: 0, scale: 1, rotationY: 0 })
-      }
-    }
-    return trees
-  }
 
   it('only ever appears near a tree, never on open ground', () => {
     let sawBeam = false
@@ -174,5 +175,45 @@ describe('computeChunkItems — beam (loose wood, plan items-player-015)', () =>
       }
     }
     expect(sawBeam).toBe(true)
+  })
+})
+
+describe('computeChunkItems — medicinal herbs (plan items-player-043)', () => {
+  const moistTile = (): ReturnType<typeof dryLandTile> => {
+    const tile = dryLandTile(19)
+    tile.moistureRegion = new Float32Array(19 * 19).fill(0.75)
+    return tile
+  }
+
+  it('keeps stable flora ids across repeated generation', () => {
+    const coord = { cx: 4, cz: -2 }
+    const p = params({ cx: 4, cz: -2, seed: 404 })
+    const a = computeChunkItems(coord, moistTile(), p, denseTreeGrid(coord))
+    const b = computeChunkItems(coord, moistTile(), p, denseTreeGrid(coord))
+    expect(a).toEqual(b)
+    for (const item of a.filter((entry) => entry.kind === 'mint' || entry.kind === 'yarrow' || entry.kind === 'herb')) {
+      expect(item.id).toMatch(new RegExp(`^${coord.cx}:${coord.cz}:f\\d+$`))
+    }
+  })
+
+  it('makes mint materially more common than rare herb under moist forest conditions', () => {
+    let mint = 0
+    let herb = 0
+    let yarrow = 0
+    for (let i = 0; i < 120; i++) {
+      const coord = { cx: i, cz: i + 3 }
+      for (const item of computeChunkItems(
+        coord,
+        moistTile(),
+        params({ cx: coord.cx, cz: coord.cz, seed: 500 + i }),
+        denseTreeGrid(coord),
+      )) {
+        if (item.kind === 'mint') mint += 1
+        if (item.kind === 'herb') herb += 1
+        if (item.kind === 'yarrow') yarrow += 1
+      }
+    }
+    expect(mint).toBeGreaterThan(herb)
+    expect(mint + yarrow + herb).toBeGreaterThan(0)
   })
 })

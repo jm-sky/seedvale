@@ -69,6 +69,10 @@ export type ItemKind =
   | 'key'
   | 'treasure_map_dark_forest'
   | 'herb'
+  /** Plan items-player-043 — common medicinal forage (poisoning). */
+  | 'mint'
+  /** Plan items-player-043 — common/moderate wound herb. */
+  | 'yarrow'
   | 'bandage'
   | 'damascus_knife'
   | 'damascus_short_sword'
@@ -821,12 +825,30 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   },
   herb: {
     kind: 'herb',
-    label: 'zioło lecznicze',
+    label: 'rzadkie zioło lecznicze',
     categories: ['food'],
     weight: 0.05,
     size: 'XS',
-    color: 0x5a8a4a,
-    description: 'Pęczek leczniczych ziół znalezionych w lesie. Łagodzi rany, gdy się je zje.'
+    color: 0x3d6b3a,
+    description: 'Rzadkie leśne zioło o silnym działaniu. Cenne w medycynie i w zapasach leczniczych.',
+  },
+  mint: {
+    kind: 'mint',
+    label: 'mięta',
+    categories: ['food'],
+    weight: 0.04,
+    size: 'XS',
+    color: 0x6db86a,
+    description: 'Pospolita mięta z wilgotnych łąk. Łagodzi skutki zatruć.',
+  },
+  yarrow: {
+    kind: 'yarrow',
+    label: 'krwawnik',
+    categories: ['food'],
+    weight: 0.04,
+    size: 'XS',
+    color: 0xc4c478,
+    description: 'Krwawnik z otwartych łąk. Słabo wspiera opatrywanie ran; lepszy jako składnik opatrunku.',
   },
   bandage: {
     kind: 'bandage',
@@ -1656,14 +1678,17 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     group.add(bloom)
     return group
   }
-  if (kind === 'herb') {
+  if (kind === 'herb' || kind === 'mint' || kind === 'yarrow') {
     const group = new THREE.Group()
+    const color = ITEM_DEFS[kind].color
+    const height = kind === 'herb' ? 0.16 : 0.14
+    const radius = kind === 'herb' ? 0.015 : 0.013
     for (let i = -1; i <= 1; i++) {
       const blade = new THREE.Mesh(
-        new THREE.ConeGeometry(0.015, 0.16, 4),
-        new THREE.MeshStandardMaterial({ color: ITEM_DEFS.herb.color, flatShading: true }),
+        new THREE.ConeGeometry(radius, height, 4),
+        new THREE.MeshStandardMaterial({ color, flatShading: true }),
       )
-      blade.position.set(i * 0.035, 0.08, 0)
+      blade.position.set(i * 0.035, height * 0.5, 0)
       blade.rotation.z = i * 0.25
       blade.castShadow = true
       group.add(blade)
