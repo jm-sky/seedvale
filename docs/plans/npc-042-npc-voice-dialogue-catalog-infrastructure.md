@@ -26,6 +26,124 @@ This plan is documentation/data infrastructure first. It does not introduce runt
 
 The new catalog must describe and feed these mechanisms rather than replacing them.
 
+## Agreed first catalog baseline
+
+The first generated/reference-tested batch is intentionally small and Polish-first. English migration is not a prerequisite for validating the voice approach.
+
+### Dimension 1 — universal spoken intents
+
+Start with exactly 10 universal semantic intents:
+
+| Semantic id | Polish baseline text | Purpose |
+|---|---|---|
+| `greeting` | `Dzień dobry.` | neutral greeting |
+| `farewell` | `Do widzenia.` | neutral farewell |
+| `thanks` | `Dziękuję.` | gratitude |
+| `confirmation` | `Dobrze.` | agreement / confirmation |
+| `refusal` | `Nie, dziękuję.` | polite refusal |
+| `attention` | `Hej, ty!` | getting attention |
+| `warning` | `Uważaj.` | generic warning |
+| `acknowledgement` | `Rozumiem.` | acknowledgement |
+| `smalltalk` | `Jak mija dzień?` | generic small talk |
+| `well_wish` | `Powodzenia.` | generic positive farewell/wish |
+
+These are semantic slots, not final immutable wording. The catalog/generator data should keep semantic ids stable even if wording is later refined.
+
+### Dimension 2 — initial voice archetypes
+
+Use 7 initial voice archetypes:
+
+| Voice archetype | Presentation | Reference-search description |
+|---|---|---|
+| `guard` | male, middle-aged | Firm and authoritative, medium-deep voice, restrained emotion, slightly rough. |
+| `merchant` | female, middle-aged | Warm and expressive, clear speech, friendly, energetic, slightly persuasive. |
+| `hunter` | male, adult | Quiet and rough, lower voice, restrained, outdoorsman feel, slightly raspy. |
+| `male_young` | male, young adult | Clear natural voice, lighter tone, relaxed, friendly, not theatrical. |
+| `male_old` | male, older | Deep or worn voice, slower speech, calm, slightly rough, experienced. |
+| `female_young` | female, young adult | Clear natural voice, light-to-medium tone, warm, relaxed, not theatrical. |
+| `female_old` | female, older | Warm but worn voice, slower speech, calm, experienced, slightly husky. |
+
+Useful search phrases for finding legal reference material:
+
+```text
+middle-aged male deep rough authoritative
+middle-aged female warm expressive clear
+adult male quiet rough raspy outdoorsman
+young male natural relaxed
+aolder male calm raspy deep
+young female warm natural
+older female husky calm
+```
+
+The final voice archetype definition should store provenance for the selected reference sample and must not silently rely on an unidentified person/voice source.
+
+### Initial universal batch size
+
+Generate every universal intent for every initial voice archetype:
+
+```text
+10 universal intents × 7 voice archetypes = 70 samples
+```
+
+This is the minimum useful batch for judging voice consistency across different roles and demographic archetypes.
+
+### Campfire conversation baseline
+
+Campfire content is deliberately longer than universal barks. Start with 2 topics; each topic is one question and one answer.
+
+#### Weather
+
+```text
+weather.question
+"Zimno dziś wieczorem. Myślisz, że jutro będzie padać?"
+
+weather.answer
+"Możliwe. Wiatr zmienił się przed zmrokiem. Lepiej nie zostawiać niczego na zewnątrz."
+```
+
+#### Work
+
+```text
+work.question
+"Długo dziś pracowałeś? Wyglądasz, jakbyś ledwo trzymał się na nogach."
+
+work.answer
+"Od samego rana. Bywały gorsze dni, ale dobrze będzie wreszcie usiąść przy ogniu."
+```
+
+For the first batch, campfire lines are generated only as generic male/female variants rather than for all 7 role archetypes:
+
+```text
+2 topics × 2 turns × 2 voice presentations = 8 samples
+```
+
+Initial catalog total:
+
+```text
+70 universal + 8 campfire = 78 samples
+```
+
+### Optional contextual dimension — deferred
+
+Some semantic intents may later vary by world/NPC context, for example:
+
+- relationship: friendly / neutral / cold,
+- needs: hungry / thirsty / otherwise pressured,
+- vigor: energetic / tired / exhausted,
+- injury or other meaningful state.
+
+Do **not** generate the full Cartesian product. Add a contextual variant only where it materially changes delivery or wording. Example future shape:
+
+```text
+greeting.neutral
+greeting.friendly
+greeting.cold
+farewell.neutral
+farewell.friendly
+```
+
+The simulation remains authoritative for relationship/needs/vigor. Voice/dialogue data may select a presentation variant from those states but must not duplicate them.
+
 ## Required documentation structure
 
 Create a dedicated NPC dialogue/voice documentation area, for example:
@@ -51,27 +169,18 @@ The catalog must separate three content layers:
 
 ### A. Universal NPC dialogue
 
-Reusable by most NPCs regardless of profession:
+Reusable by most NPCs regardless of profession. Start with the 10 agreed semantic intents above.
 
-- greeting,
-- farewell,
-- thanks,
-- confirmation/agreement,
-- refusal/negative response,
-- attention/callout,
-- generic positive reaction,
-- generic negative/warning reaction.
-
-Each semantic slot may have several textual variants, but every variant needs a stable semantic identity independent from the final filename.
+Each semantic slot may later have several textual variants, but every variant needs a stable semantic identity independent from the final filename.
 
 ### B. Profession dialogue
 
 Reusable by any NPC of a profession, for example:
 
-- Blacksmith,
 - Hunter,
 - Merchant/Trader,
 - Guard,
+- Blacksmith,
 - Farmer,
 - Woodcutter,
 - Miner,
@@ -79,6 +188,8 @@ Reusable by any NPC of a profession, for example:
 - Shepherd,
 - Textile worker,
 - other implemented professions found during recon.
+
+The first three profession-focused voices are **Guard, Merchant and Hunter**. They are the initial important profession archetypes for voice/reference work.
 
 For each profession distinguish at least:
 
@@ -106,12 +217,6 @@ For each key NPC capture:
 
 Quest-specific dialogue must point to actual quest IDs/data rather than creating a second quest-state model in the voice documentation.
 
-## Key NPC baseline
-
-Start the catalog with at least the current important/authored NPCs discovered in code and active quest plans. Include Blacksmith and Hunter-oriented content as reference examples because they exercise both trade/profession and quest/world-state dialogue.
-
-Implementation recon must enumerate the actual authored/reserved NPCs and quest givers before finalizing the list; do not infer implementation from roadmap plans alone.
-
 ## Voice profile catalog
 
 Define reusable voice profiles separately from individual NPC text. A profile should capture only useful generation traits, for example:
@@ -119,13 +224,50 @@ Define reusable voice profiles separately from individual NPC text. A profile sh
 - perceived age band,
 - gender/voice presentation,
 - vocal weight/timbre,
-- accent/region style,
+- accent/region style when deliberately selected,
 - pace,
 - temperament/energy,
 - reference-audio provenance,
 - Chatterbox generation settings that materially affect consistency.
 
+Do not conflate a voice archetype with the simulation's personality/traits. `guard`, `merchant`, `hunter`, `male_young`, etc. are voice/reference archetypes, not replacements for NPC personality.
+
 Avoid one voice model per line. A key NPC should keep one stable voice profile; generic NPCs may draw deterministically from compatible profiles.
+
+## Generator data direction
+
+The catalog should be representable directly as JSON/data consumed by a local generator. Keep text definitions separate from voice archetype definitions so the generator combines them rather than duplicating strings.
+
+Conceptual shape:
+
+```json
+{
+  "universal": {
+    "greeting": "Dzień dobry.",
+    "farewell": "Do widzenia.",
+    "thanks": "Dziękuję.",
+    "confirmation": "Dobrze.",
+    "refusal": "Nie, dziękuję.",
+    "attention": "Hej, ty!",
+    "warning": "Uważaj.",
+    "acknowledgement": "Rozumiem.",
+    "smalltalk": "Jak mija dzień?",
+    "well_wish": "Powodzenia."
+  },
+  "campfire": {
+    "weather": {
+      "question": "Zimno dziś wieczorem. Myślisz, że jutro będzie padać?",
+      "answer": "Możliwe. Wiatr zmienił się przed zmrokiem. Lepiej nie zostawiać niczego na zewnątrz."
+    },
+    "work": {
+      "question": "Długo dziś pracowałeś? Wyglądasz, jakbyś ledwo trzymał się na nogach.",
+      "answer": "Od samego rana. Bywały gorsze dni, ale dobrze będzie wreszcie usiąść przy ogniu."
+    }
+  }
+}
+```
+
+Voice archetypes/reference paths/settings should live in a separate data object/file and be joined by the generator.
 
 ## Runtime asset directory and naming rules
 
@@ -163,7 +305,7 @@ Document a repeatable local Chatterbox workflow covering:
 8. recording source/reference attribution/provenance,
 9. updating the dialogue catalog and runtime pool mapping.
 
-The instructions should be usable manually first; generation automation is optional future work, not required here.
+The instructions should be usable manually first; generation automation may then consume the same catalog JSON/data rather than introducing a second list of phrases.
 
 ## Runtime integration direction
 
@@ -187,7 +329,8 @@ Do not encode quest progression inside the audio resolver. Quest/dialogue system
 - Lip sync.
 - Replacing the quest system.
 - Full localization framework.
-- Migrating all existing Polish text to English — owned by `npc-043`.
+- Requiring English before the Polish voice POC proves useful.
+- Generating every relationship/need/vigor combination up front.
 
 ## Verification
 
@@ -198,10 +341,12 @@ Automated:
 
 Manual browser verification by the user:
 
+- compare the 7 selected reference archetypes,
+- judge Polish pronunciation/naturalness before deciding whether English migration is necessary,
 - at least one generic NPC,
-- one Blacksmith-like profession path,
-- one Hunter-like profession/quest path,
-- stable voice for the same NPC across multiple lines.
+- one Guard/Merchant/Hunter profession path,
+- stable voice for the same NPC across multiple lines,
+- one male and one female campfire exchange.
 
 Add JSDoc to any new architectural/public resolver functions that materially help preflight discover ownership; use `@domain npc` where useful.
 
