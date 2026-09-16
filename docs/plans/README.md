@@ -79,6 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
 | ◼️ `quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md` | 🟡 | L      | quests-progression-049                                                                                                                                                                                                                                                                 | quests-hunters-brotherhood              |
 | ◼️ `quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`   | 🟡 | L      | quests-progression-053                                                                                                                                                                                                                                                                 | quests-hunters-brotherhood              |
+| ◼️ `items-player-039-ubc-runtime-pauldrons.md`                                 | 🟡 | M      | ~~items-player-030~~, ~~items-player-036~~                                                                                                                                                                                                                                             | -                                       |
 
 ---
 
@@ -230,7 +231,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `033`
-- items-player: `039`
+- items-player: `040`
 - npc: `041`
 - persistence: `005`
 - quests-progression: `055`
