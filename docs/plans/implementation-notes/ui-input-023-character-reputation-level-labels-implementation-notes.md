@@ -2,6 +2,8 @@
 
 Plan: `ui-input-023-character-reputation-level-labels.md`
 
+**Status:** `verification needed` 🔍
+
 ## Current code path
 
 Reputation rendering is already entirely derived in `src/ui-vue/screens/CharacterScreen.vue`:

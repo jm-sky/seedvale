@@ -1,7 +1,7 @@
 # Plan: Character reputation level labels
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/tests); browser/gameplay not yet verified. See [implementation notes](./implementation-notes/ui-input-023-character-reputation-level-labels-implementation-notes.md).
 **Type:** polish
 **Priority:** medium · **Effort:** S
 **Depends on:** ui-input-019
@@ -10,6 +10,11 @@
 **Subdomains:** `menus` `feedback`
 **Tags:** `character-screen` `reputation` `readability`
 **Roadmap:** -
+**Implemented at:** 2026-09-16 13:47
+
+## Implementation status
+
+Implemented. Character Screen reputation rows derive a qualitative label and semantic tone from the numeric dimension in `src/ui-vue/reputationPresentation.ts`. `ReputationManager`, store, and renown rendering are unchanged. Browser/manual verification is User-owned.
 
 ## Goal
 

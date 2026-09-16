@@ -10,6 +10,7 @@ import CharacterModifierBadge from '../components/CharacterModifierBadge.vue'
 import CharacterSection from '../components/CharacterSection.vue'
 import CharacterSettlementSelect from '../components/CharacterSettlementSelect.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
+import { reputationPresentation } from '../reputationPresentation'
 import { closeCharacterScreen, isCharacterScreenOpen, ui } from '../store'
 
 useOverlayScreen('character', isCharacterScreenOpen, closeCharacterScreen)
@@ -97,17 +98,26 @@ function formatEquippedSlot(itemLabel: string | null, qualityLabel: string | nul
 /** Five reputation dimensions (plan quests-progression-001 §14) — each is
  *  its own `-100..100` value, deliberately never averaged into one score. */
 const REPUTATION_ROWS = [
-  { key: 'trust', label: 'Zaufanie', icon: Handshake },
-  { key: 'competence', label: 'Kompetencja', icon: Hammer },
-  { key: 'benevolence', label: 'Życzliwość', icon: HandHelping },
-  { key: 'courage', label: 'Odwaga', icon: Flag },
-  { key: 'integrity', label: 'Uczciwość', icon: Scale },
+  { key: 'trust', label: 'Zaufanie', icon: Handshake, grammar: 'neuter' },
+  { key: 'competence', label: 'Kompetencja', icon: Hammer, grammar: 'feminine' },
+  { key: 'benevolence', label: 'Życzliwość', icon: HandHelping, grammar: 'feminine' },
+  { key: 'courage', label: 'Odwaga', icon: Flag, grammar: 'feminine' },
+  { key: 'integrity', label: 'Uczciwość', icon: Scale, grammar: 'feminine' },
 ] as const
 
 const reputationRows = computed(() => {
   const rep = ui.characterScreen.reputation.selected?.reputation
   if (!rep) return []
-  return REPUTATION_ROWS.map((row) => ({ ...row, value: rep[row.key] }))
+  return REPUTATION_ROWS.map((row) => {
+    const value = rep[row.key]
+    const presentation = reputationPresentation(value, row.grammar)
+    return {
+      ...row,
+      value,
+      levelLabel: presentation.label,
+      toneClass: presentation.toneClass,
+    }
+  })
 })
 
 function onSelectSettlement(settlementId: string): void {
@@ -281,9 +291,9 @@ function onSelectSettlement(settlementId: string): void {
               <div
                 v-for="row in reputationRows"
                 :key="row.key"
-                class="flex items-center justify-between text-xs"
+                class="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs"
               >
-                <span class="inline-flex items-center gap-1.5 opacity-80">
+                <span class="inline-flex min-w-0 items-center gap-1.5 opacity-80">
                   <component
                     :is="row.icon"
                     class="size-3.5 shrink-0 opacity-70"
@@ -291,7 +301,13 @@ function onSelectSettlement(settlementId: string): void {
                   />
                   {{ row.label }}
                 </span>
-                <span class="opacity-70">{{ row.value }}</span>
+                <span class="inline-flex shrink-0 items-center gap-2">
+                  <span
+                    :class="row.toneClass"
+                    class="shrink-0"
+                  >{{ row.levelLabel }}</span>
+                  <span class="shrink-0 opacity-70">{{ row.value }}</span>
+                </span>
               </div>
               <div class="mt-1 flex items-center justify-between text-xs">
                 <span class="inline-flex items-center gap-1.5 opacity-80">
