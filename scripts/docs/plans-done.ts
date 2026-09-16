@@ -508,6 +508,7 @@ const generateDone = (
 }
 
 const main = async (): Promise<void> => {
+  console.log('[Plans done] Parsing existing records...')
   const existing = await parseDone()
 
   const existingByPlan =
@@ -580,9 +581,7 @@ const main = async (): Promise<void> => {
     'utf8',
   )
 
-  console.log(
-    `Updated ${relativePath(PLANS_DONE_PATH)} (${records.length} records).`,
-  )
+  console.log(`[Plans done] Updated ${relativePath(PLANS_DONE_PATH)} (${records.length} records).`)
 }
 
 main().catch(error => {

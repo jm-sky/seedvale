@@ -43,6 +43,8 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
+2. `quests-progression-051` — **Authored quest dialogue narrative polish**  
+   🔴 `M` · 🔒 blocked · unlocks 1/1
 
 ---
 
@@ -131,43 +133,59 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-15. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+15. `quests-progression-048` — **Hunters Brotherhood introduction and membership**  
+  🟡 `M` · **Score:**  55  
+   → **unlocks:** 1/1
+
+16. `quests-progression-050` — **Socially consequential quest dialogue**  
+  🔴 `M` · **Score:**  51  
+   → **unlocks:** 1/2
+
+17. `quests-progression-051` — **Authored quest dialogue narrative polish**  
+  🔴 `M` · **Score:**  53  
+   → **unlocks:** 1/1
+
+18. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-16. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+19. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-17. `settlements-npcs-022` — **Household help and age-based work participation**  
+20. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-18. `quests-progression-048` — **Hunters Brotherhood introduction and membership**  
-  🟡 `M` · **Score:**  41  
+21. `quests-progression-052` — **Second-wave socially consequential authored dialogue**  
+  🔴 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+22. `fauna-031` — **Wildlife habitat pressure assessment**  
+  🟡 `S` · **Score:**  35  
+   → **unlocks:** 1/1
+
+23. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+  🟡 `M` · **Score:**  43  
+   → **unlocks:** 0/0
+
+24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-20. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
+25. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-21. `items-player-014` — **Rope-pullable resource transport**  
+26. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `tools-005` — **Seedvale Character Preparation Panel**  
+27. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `fauna-031` — **Wildlife habitat pressure assessment**  
-  🟡 `S` · **Score:**  21  
-   → **unlocks:** 0/0
-
-24. `items-player-032` — **NPC player-storage resource and context rules**  
+28. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
@@ -211,6 +229,16 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md`](quests-progression-041-lost-treasure-chronicles-dungeon-binding-and-persistent-collapsed-access.md)
   - [`quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md`](quests-progression-040-lost-treasure-chronicles-dark-forest-estate-alpha-bear-and-treasure-map.md)
   - [`quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md`](quests-progression-039-lost-treasure-chronicles-chronicle-deciphering-and-specialist.md)
+- [`quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md`](quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md)  
+  is blocked by:
+  - [`quests-progression-048-hunters-brotherhood-introduction-and-membership.md`](quests-progression-048-hunters-brotherhood-introduction-and-membership.md)
+  - [`fauna-031-wildlife-habitat-pressure-assessment.md`](fauna-031-wildlife-habitat-pressure-assessment.md)
+- [`quests-progression-051-authored-quest-dialogue-narrative-polish.md`](quests-progression-051-authored-quest-dialogue-narrative-polish.md)  
+  is blocked by:
+  - [`quests-progression-050-socially-consequential-quest-dialogue.md`](quests-progression-050-socially-consequential-quest-dialogue.md)
+- [`quests-progression-052-second-wave-socially-consequential-authored-dialogue.md`](quests-progression-052-second-wave-socially-consequential-authored-dialogue.md)  
+  is blocked by:
+  - [`quests-progression-051-authored-quest-dialogue-narrative-polish.md`](quests-progression-051-authored-quest-dialogue-narrative-polish.md)
 - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)  
   is blocked by:
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
@@ -411,6 +439,10 @@ graph TD
   quests_progression_046["quests-progression-046 — Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup"]
   quests_progression_047["quests-progression-047 — Deferred world knowledge and location research"]
   quests_progression_048["quests-progression-048 — Hunters Brotherhood introduction and membership"]
+  quests_progression_049["quests-progression-049 — Hunters Brotherhood — hunting-ground investigation"]
+  quests_progression_050["quests-progression-050 — Socially consequential quest dialogue"]
+  quests_progression_051["quests-progression-051 — Authored quest dialogue narrative polish"]
+  quests_progression_052["quests-progression-052 — Second-wave socially consequential authored dialogue"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -528,6 +560,7 @@ graph TD
   world_026["world-026 — Storms, thunder, animal scare and snow visuals"]
   world_027["world-027 — Player Spatial Context and Cross-Space Target Isolation"]
   world_028["world-028 — Classic landmark unloaded lookup main-thread freeze"]
+  world_029["world-029 — Low-cost lighting and film-grade tuning"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -563,6 +596,7 @@ graph TD
   world_terrain_033["world-terrain-033 — Road bridge projection and traversal"]
   world_terrain_034["world-terrain-034 — Bidirectional cave traversal safety"]
   world_terrain_035["world-terrain-035 — Streaming visual horizon and distant occlusion"]
+  world_terrain_036["world-terrain-036 — Low-cost natural material response tuning"]
   008 --> items_player_010
   069 --> settlements_npcs_008
   097 --> world_terrain_007
@@ -661,6 +695,7 @@ graph TD
   fauna_027 --> quests_progression_027
   fauna_028 --> fauna_031
   fauna_029 --> fauna_030
+  fauna_031 --> quests_progression_049
   items_player_001 --> fauna_002
   items_player_002 --> items_player_025
   items_player_009 --> items_player_013
@@ -777,6 +812,7 @@ graph TD
   quests_progression_013 --> fauna_021
   quests_progression_014 --> quests_progression_018
   quests_progression_014 --> quests_progression_035
+  quests_progression_014 --> quests_progression_051
   quests_progression_015 --> quests_progression_016
   quests_progression_015 --> quests_progression_017
   quests_progression_016 --> fauna_024
@@ -805,6 +841,7 @@ graph TD
   quests_progression_033 --> ui_input_021
   quests_progression_034 --> quests_progression_037
   quests_progression_034 --> quests_progression_048
+  quests_progression_035 --> quests_progression_051
   quests_progression_036 --> quests_progression_040
   quests_progression_037 --> quests_progression_038
   quests_progression_037 --> quests_progression_039
@@ -826,6 +863,9 @@ graph TD
   quests_progression_044 --> quests_progression_045
   quests_progression_044 --> quests_progression_046
   quests_progression_045 --> quests_progression_046
+  quests_progression_048 --> quests_progression_049
+  quests_progression_050 --> quests_progression_051
+  quests_progression_051 --> quests_progression_052
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022

@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-029-low-cost-lighting-and-film-grade-tuning`                    | 2026-09-16 10:26:48 | —                   | `world`          | —          |
+| `world-terrain-036-low-cost-natural-material-response-tuning`          | 2026-09-16 09:42:40 | —                   | `world-terrain`  | —          |
 | `quests-progression-047-deferred-world-knowledge-and-location-research` | 2026-09-16 09:22:40 | —                   | `quests-progression` | —          |
 | `settlements-npcs-037-inter-settlement-goods-transport`                | 2026-09-16 07:11:03 | —                   | `settlements-npcs` | —          |
 | `npc-040-ubc-profession-appearance-variants`                           | 2026-09-15 20:40:47 | —                   | `npc`            | —          |

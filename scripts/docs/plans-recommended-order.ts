@@ -475,11 +475,16 @@ const renderDependencyGraph = (plans: Plan[], byId: Map<string, Plan>): string[]
 // --- Document assembly -------------------------------------------------------
 
 const main = async (): Promise<void> => {
+  console.log('[Plans recommended order] Loading plans...')
   const { plans, byId } = await loadPlans()
   validateDependencies(plans, byId)
 
   const dependents = buildDependents(byId)
+
+  console.log('[Plans recommended order] Building metrics...')
   const metrics = buildMetrics(plans, byId, dependents)
+
+  console.log('[Plans recommended order] Recommending...')
   const order = recommend(plans, byId, dependents)
   const output: string[] = []
 
@@ -559,6 +564,7 @@ const main = async (): Promise<void> => {
   output.push(...renderDependencyGraph(plans, byId))
 
   await writeFile(PLANS_RECOMMENDED_ORDER_PATH, output.join('\n') + '\n', 'utf8')
+  console.log(`[Plans recommended order] Saved to: ${PLANS_RECOMMENDED_ORDER_PATH}`)
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
