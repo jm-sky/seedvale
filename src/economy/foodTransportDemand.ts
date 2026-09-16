@@ -80,3 +80,44 @@ export function uncommittedHouseholdFoodSurplus(
 ): number {
   return Math.max(0, household.surplus('food') - committedOutgoingFood(orders, household.id, excludeOrderId))
 }
+
+/** Quantity still reserved for pickup from `settlementId` settlement storage.
+ *  Only `pending` / `assigned` food orders count — after pickup the goods
+ *  have left `SettlementEconomy.items`, so live `surplus()` already reflects
+ *  them. `excludeOrderId` skips the caller's own commitment (pickup
+ *  revalidation of that order). `itemKind` narrows to one concrete food kind
+ *  so two orders cannot double-promise the same stack.
+ *
+ *  @domain settlements-npcs */
+export function committedOutgoingSettlementFood(
+  orders: readonly TransportOrder[],
+  settlementId: string,
+  excludeOrderId?: string,
+  itemKind?: ItemKind,
+): number {
+  let total = 0
+  for (const order of orders) {
+    if (excludeOrderId && order.id === excludeOrderId) continue
+    if (order.state !== 'pending' && order.state !== 'assigned') continue
+    if (order.source.type !== 'settlement-storage') continue
+    if (order.source.settlementId !== settlementId) continue
+    if (!isFoodOrder(order)) continue
+    if (itemKind && order.itemKind !== itemKind) continue
+    total += order.requestedQuantity
+  }
+  return total
+}
+
+/** `max(0, currentSurplus - pre-pickup outgoing food from this settlement's storage)`.
+ *
+ *  @domain settlements-npcs */
+export function uncommittedSettlementFoodSurplus(
+  economy: SettlementEconomy,
+  orders: readonly TransportOrder[],
+  excludeOrderId?: string,
+): number {
+  return Math.max(
+    0,
+    economy.surplus('food') - committedOutgoingSettlementFood(orders, economy.settlementId, excludeOrderId),
+  )
+}

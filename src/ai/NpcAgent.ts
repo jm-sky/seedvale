@@ -4,6 +4,7 @@ import type { CombatIntent } from '../combat/combatIntent'
 import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { Projectile } from '../combat/projectile'
 import type { RangedAttackLifecycle } from '../combat/rangedLifecycle'
+import type { InterSettlementTransportHooks } from '../economy/interSettlementFoodTransport'
 import type { HuntTarget, SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemKind } from '../items/items'
@@ -1030,6 +1031,8 @@ export type NpcAgentDeps = {
   /** World-owned extracted goods at remote resource sites (plan settlements-npcs-021). */
   resourceSiteInventories?: ResourceSiteInventories | null
   resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null
+  /** Bounded inter-settlement food matching/execution (plan settlements-npcs-037). */
+  interSettlement?: InterSettlementTransportHooks | null
   playerWells?: PlayerWells | null
   /** Active terrain-preparation work sites (plan npc-018) — the second Work
    *  Contract target kind, alongside `playerWells`. */
@@ -1413,6 +1416,7 @@ export class NpcAgent {
   private readonly transportOrders: TransportOrders | null
   private readonly resourceSiteInventories: ResourceSiteInventories | null
   private readonly resolveResourceSitePosition: ((resourceId: string) => { x: number, z: number } | null) | null
+  private readonly interSettlement: InterSettlementTransportHooks | null
   /** Last player/observer XZ this tick — local reaction data only, never a
    *  global chase target (plan npc-016 §11). */
   private lastObserverX = 0
@@ -1549,6 +1553,7 @@ export class NpcAgent {
       transportOrders,
       resourceSiteInventories,
       resolveResourceSitePosition,
+      interSettlement,
       playerWells,
       terrainPreparations,
       palisades,
@@ -1598,6 +1603,7 @@ export class NpcAgent {
     this.transportOrders = transportOrders ?? null
     this.resourceSiteInventories = resourceSiteInventories ?? null
     this.resolveResourceSitePosition = resolveResourceSitePosition ?? null
+    this.interSettlement = interSettlement ?? null
     this.playerWells = playerWells ?? null
     this.terrainPreparations = terrainPreparations ?? null
     this.palisades = palisades ?? null
@@ -4670,6 +4676,22 @@ export class NpcAgent {
       transportOrders: this.transportOrders,
       resourceSiteInventories: this.resourceSiteInventories,
       resolveResourceSitePosition: this.resolveResourceSitePosition ?? undefined,
+      interSettlement: this.interSettlement,
+      bindTransportTravel: (orderId, destination) => {
+        const existing = this.npcState.travel
+        if (existing?.purpose?.kind === 'transport' && existing.purpose.orderId === orderId) return
+        this.npcState.travel = {
+          destination: { ...destination },
+          lastPosition: { x: this.mesh.position.x, z: this.mesh.position.z },
+          purpose: { kind: 'transport', orderId },
+        }
+      },
+      clearTransportTravel: (orderId) => {
+        const purpose = this.npcState.travel?.purpose
+        if (purpose?.kind === 'transport' && purpose.orderId === orderId) {
+          this.npcState.travel = null
+        }
+      },
       strength: this.effectiveMeleeStrength(),
       nowDays: () => this.worldNowDays,
       shepherdFlock: this.shepherdFlock,

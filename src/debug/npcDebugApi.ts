@@ -28,7 +28,9 @@ import type { NpcTraceEvent } from './npcTrace'
 import {
   committedIncomingFood,
   committedOutgoingFood,
+  committedOutgoingSettlementFood,
   uncommittedHouseholdFoodSurplus,
+  uncommittedSettlementFoodSurplus,
   uncoveredSettlementFoodShortage,
 } from '../economy/foodTransportDemand'
 import { matchesQuestSpawnPointId } from '../fauna/wolfDenScenario'
@@ -839,8 +841,11 @@ export function installNpcDebugApi(
           const orders = bundle.transportOrders.list()
           return {
             shortage: economy.shortage('food'),
+            surplus: economy.surplus('food'),
             incoming: committedIncomingFood(orders, id),
+            outgoing: committedOutgoingSettlementFood(orders, id),
             uncovered: uncoveredSettlementFoodShortage(economy, orders),
+            uncommittedSurplus: uncommittedSettlementFoodSurplus(economy, orders),
           }
         },
       }

@@ -2004,7 +2004,13 @@ function isNpcTravelContinuity(value: unknown): boolean {
   if (t.purpose !== undefined) {
     if (!t.purpose || typeof t.purpose !== 'object' || Array.isArray(t.purpose)) return false
     const p = t.purpose as Record<string, unknown>
-    if (p.kind !== 'expedition' || typeof p.assignmentId !== 'string') return false
+    if (p.kind === 'expedition') {
+      if (typeof p.assignmentId !== 'string') return false
+    } else if (p.kind === 'transport') {
+      if (typeof p.orderId !== 'string') return false
+    } else {
+      return false
+    }
   }
   if (t.survivalResolvedAtDays !== undefined && typeof t.survivalResolvedAtDays !== 'number') return false
   if (t.arrival !== undefined && t.arrival !== 'reached') return false

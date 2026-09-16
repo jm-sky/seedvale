@@ -2,10 +2,20 @@ export { type DevelopmentDef, type DevelopmentStatus, WOODSHED_DEVELOPMENT } fro
 export {
   committedIncomingFood,
   committedOutgoingFood,
+  committedOutgoingSettlementFood,
   uncommittedHouseholdFoodSurplus,
+  uncommittedSettlementFoodSurplus,
   uncoveredSettlementFoodShortage,
 } from './foodTransportDemand'
 export { demandsFor, initialFoodFor, initialStockFor, type SettlementEconomySeed } from './initial'
+export {
+  type InterSettlementFoodOpportunity,
+  type InterSettlementTransportHooks,
+  isCrossSettlementStorageOrder,
+  type KnownSettlementEconomyRef,
+  matchInterSettlementFoodOpportunity,
+  selectConcreteFoodGoods,
+} from './interSettlementFoodTransport'
 export { ECONOMIC_KINDS, type EconomicKind, isEconomicKind } from './kinds'
 export { claimEconomySurplus, claimHouseholdSurplus } from './localExchange'
 export {

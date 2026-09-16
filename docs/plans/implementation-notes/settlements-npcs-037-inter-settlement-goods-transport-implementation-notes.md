@@ -1,7 +1,7 @@
 # Implementation Notes: settlements-npcs-037 — Inter-settlement goods transport
 
 **Plan:** `settlements-npcs-037-inter-settlement-goods-transport.md`  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## 1. Review result
 

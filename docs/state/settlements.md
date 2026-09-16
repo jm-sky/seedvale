@@ -103,7 +103,7 @@ Ognisko osady (`landmarks.campfire`) jest wystawione jako `Place` typu `social` 
 ### Świadomie nie ma
 
 - Pełny snapshot **wykonania** NPC w save — `phase`/`pendingAction`/pathfinding/`combatIntent`/noszony `Inventory` resetują się przy każdej rekonstrukcji (nie tylko save/load, także w tej samej sesji). Autorytatywny stan NPC i `Household` **są** dziś w `SaveData` (zob. S7, [npc.md](./npc.md#persistence), [persistence.md](./persistence.md)).
-- Handel między osadami.
+- Travelling Merchant / wizyty kupca między osadami (plan settlements-npcs-038). Fizyczny transport żywności A→B przez istniejącego Tradera i `TransportOrder` jest zaimplementowany (plan settlements-npcs-037): surplus w `SettlementEconomy.items` źródła → `transportCargo` → items celu, z generic NPC travel na nodze między osadami.
 - Łańcuchy produkcyjne/rolnictwo, rezerwacje zasobów gospodarstwa, fizyczny budynek magazynu (069 §33, dalszy zakres to plan 071/przyszłe plany).
 
 ---

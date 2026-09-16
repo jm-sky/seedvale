@@ -14,9 +14,17 @@ import type { Role } from './characters'
 import type { NpcPlannedAction } from './npcAction'
 import {
   committedOutgoingFood,
+  committedOutgoingSettlementFood,
   uncommittedHouseholdFoodSurplus,
+  uncommittedSettlementFoodSurplus,
   uncoveredSettlementFoodShortage,
 } from '../economy/foodTransportDemand'
+import {
+  type InterSettlementTransportHooks,
+  isCrossSettlementStorageOrder,
+  matchInterSettlementFoodOpportunity,
+  selectConcreteFoodGoods,
+} from '../economy/interSettlementFoodTransport'
 import { claimHouseholdSurplus } from '../economy/localExchange'
 import {
   commitBlacksmithProduction,
@@ -47,7 +55,6 @@ import {
   selectSeparatedOwnedSheep,
   type ShepherdFlockHooks,
 } from '../fauna/shepherdFlock'
-import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
@@ -176,6 +183,15 @@ export type NpcWorkContext = {
    * satellite anchor from `VillagePlan.pasture`; absent on SM/OUTPOST.
    */
   pasture?: { x: number, z: number, radius: number } | null
+  /**
+   * Bounded inter-settlement food matching/execution (plan
+   * settlements-npcs-037). Absent in isolated fallbacks — export cannot run.
+   */
+  interSettlement?: InterSettlementTransportHooks | null
+  /** Bind generic NPC travel after a successful cross-settlement pickup. */
+  bindTransportTravel?: (orderId: string, destination: { x: number, z: number }) => void
+  /** Clear transport-purpose travel after a successful cargo handoff. */
+  clearTransportTravel?: (orderId: string) => void
 }
 
 /**
@@ -384,68 +400,96 @@ export function selectTraderCollectionGoods(
   maxTransfer = HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food,
   committedOfKind: (kind: ItemKind) => number = () => 0,
 ): { kind: ItemKind, quantity: number } | null {
-  const surplus = household.surplus('food')
-  if (surplus <= 0) return null
-  const cap = Math.min(surplus, maxTransfer)
-  for (const kind of FOOD_ITEM_KINDS) {
-    const available = household.items.count(kind) - Math.max(0, committedOfKind(kind))
-    if (available <= 0) continue
-    let quantity = Math.min(available, cap)
-    while (quantity > 0 && !carrier.canAdd(kind, quantity)) quantity -= 1
-    if (quantity > 0) return { kind, quantity }
-  }
-  return null
+  return selectConcreteFoodGoods(
+    household.items,
+    household.surplus('food'),
+    carrier,
+    maxTransfer,
+    committedOfKind,
+  )
 }
 
-function planTransportOrderExecution(
+function resolveDestinationEconomy(
   ctx: NpcWorkContext,
-  economy: SettlementEconomy,
-  order: TransportOrder,
-): NpcPlannedAction | null {
-  const orders = ctx.transportOrders
-  if (!orders || !ctx.npcId) return null
-  const unloadDestination = isMineableOre(order.itemKind)
+  settlementId: string,
+): SettlementEconomy | undefined {
+  if (ctx.economy?.settlementId === settlementId) return ctx.economy
+  return ctx.interSettlement?.getEconomy(settlementId)
+}
+
+function localStorageUnloadDestination(ctx: NpcWorkContext, order: TransportOrder) {
+  return isMineableOre(order.itemKind)
     ? copyVec3(ctx.landmarks.stockpile)
     : copyVec3(settlementStorageDestination(
       'food',
       ctx.landmarks.stockpile,
       ctx.landmarks.settlementStorage,
     ))
-  const unload: NpcPlannedAction = {
-    kind: 'deposit',
-    destination: unloadDestination,
-    durationSec: 0.8 * ctx.waitMultiplier,
-    onComplete: () => {
-      const current = orders.find(order.id)
-      if (!current || current.state !== 'in-transit') return
-      if (current.destination.type !== 'settlement-storage') return
-      if (economy.settlementId !== current.destination.settlementId) return
-      const result = executeTransportUnload({
-        orders,
-        orderId: order.id,
-        carrierNpcId: ctx.npcId,
-        carrier: ctx.transportCargo,
-        destination: economy.items,
-        nowDays: ctx.simTime(),
-      })
-      if (result.ok) {
-        creditDeliveredOreToStock(economy, current.itemKind, result.delivered, ctx.simTime())
-        tryAdvanceDevelopment(economy)
-      }
-    },
+}
+
+function resolveUnloadDestination(ctx: NpcWorkContext, order: TransportOrder) {
+  if (order.destination.type !== 'settlement-storage') return null
+  if (ctx.economy?.settlementId === order.destination.settlementId) {
+    return localStorageUnloadDestination(ctx, order)
   }
+  const xz = ctx.interSettlement?.resolveStorageTarget(order.destination.settlementId)
+  if (!xz) return null
+  return copyVec3({ x: xz.x, y: ctx.sampleHeight(xz.x, xz.z), z: xz.z })
+}
+
+function bindCrossSettlementTravel(ctx: NpcWorkContext, order: TransportOrder): void {
+  if (!isCrossSettlementStorageOrder(order) || order.destination.type !== 'settlement-storage') return
+  const target = ctx.interSettlement?.resolveStorageTarget(order.destination.settlementId)
+  if (!target) return
+  ctx.bindTransportTravel?.(order.id, target)
+}
+
+function planTransportOrderExecution(
+  ctx: NpcWorkContext,
+  _economy: SettlementEconomy,
+  order: TransportOrder,
+): NpcPlannedAction | null {
+  const orders = ctx.transportOrders
+  if (!orders || !ctx.npcId) return null
+  const unloadDestination = resolveUnloadDestination(ctx, order)
+  const unload: NpcPlannedAction | null = unloadDestination
+    ? {
+        kind: 'deposit',
+        destination: unloadDestination,
+        durationSec: 0.8 * ctx.waitMultiplier,
+        onComplete: () => {
+          const current = orders.find(order.id)
+          if (!current || current.state !== 'in-transit') return
+          if (current.destination.type !== 'settlement-storage') return
+          const destEconomy = resolveDestinationEconomy(ctx, current.destination.settlementId)
+          if (!destEconomy) return
+          const result = executeTransportUnload({
+            orders,
+            orderId: order.id,
+            carrierNpcId: ctx.npcId,
+            carrier: ctx.transportCargo,
+            destination: destEconomy.items,
+            nowDays: ctx.simTime(),
+          })
+          if (result.ok) {
+            creditDeliveredOreToStock(destEconomy, current.itemKind, result.delivered, ctx.simTime())
+            tryAdvanceDevelopment(destEconomy)
+            ctx.clearTransportTravel?.(current.id)
+          }
+        },
+      }
+    : null
   if (order.state === 'in-transit') return unload
   if (order.state !== 'assigned') return null
 
-  const pickup = planTransportPickup(ctx, order, orders, unload)
-  return pickup
+  return planTransportPickup(ctx, order, orders, unload)
 }
 
 function planTransportPickup(
   ctx: NpcWorkContext,
   order: TransportOrder,
   orders: NonNullable<NpcWorkContext['transportOrders']>,
-  unload: NpcPlannedAction,
+  unload: NpcPlannedAction | null,
 ): NpcPlannedAction | null {
   if (order.source.type === 'household') {
     const hooks = ctx.householdExchange
@@ -491,7 +535,59 @@ function planTransportPickup(
           nowDays: ctx.simTime(),
         })
       },
-      next: unload,
+      next: unload ?? undefined,
+    }
+  }
+
+  if (order.source.type === 'settlement-storage') {
+    const economy = ctx.economy
+    if (!economy || order.source.settlementId !== economy.settlementId) {
+      orders.fail(order.id)
+      return null
+    }
+    return {
+      kind: 'work',
+      destination: copyVec3(settlementStorageDestination(
+        'food',
+        ctx.landmarks.stockpile,
+        ctx.landmarks.settlementStorage,
+      )),
+      durationSec: 1.2 * ctx.waitMultiplier,
+      onComplete: () => {
+        const current = orders.find(order.id)
+        if (!current || current.state !== 'assigned') return
+        if (current.source.type !== 'settlement-storage') {
+          orders.fail(order.id)
+          return
+        }
+        if (!economy || current.source.settlementId !== economy.settlementId) {
+          orders.fail(order.id)
+          return
+        }
+        const result = executeTransportPickup({
+          orders,
+          orderId: order.id,
+          carrierNpcId: ctx.npcId,
+          carrier: ctx.transportCargo,
+          source: economy.items,
+          liveTransferableQuantity: Math.min(
+            Math.max(
+              0,
+              economy.items.count(current.itemKind)
+                - committedOutgoingSettlementFood(
+                  orders.list(),
+                  current.source.settlementId,
+                  current.id,
+                  current.itemKind,
+                ),
+            ),
+            uncommittedSettlementFoodSurplus(economy, orders.list(), current.id),
+          ),
+          nowDays: ctx.simTime(),
+        })
+        if (result.ok) bindCrossSettlementTravel(ctx, current)
+      },
+      next: unload ?? undefined,
     }
   }
 
@@ -539,7 +635,7 @@ function planTransportPickup(
         nowDays: ctx.simTime(),
       })
     },
-    next: unload,
+    next: unload ?? undefined,
   }
 }
 
@@ -645,9 +741,50 @@ function planTraderOreCollection(ctx: NpcWorkContext, economy: SettlementEconomy
 }
 
 /**
+ * Inter-settlement food export (plan settlements-npcs-037) — source
+ * settlement storage → destination settlement storage. Local uncovered
+ * shortage collection and remote ore outrank this so export cannot starve
+ * unresolved local needs.
+ */
+function planTraderInterSettlementExport(
+  ctx: NpcWorkContext,
+  economy: SettlementEconomy,
+): NpcPlannedAction | null {
+  const hooks = ctx.interSettlement
+  const orders = ctx.transportOrders
+  if (!hooks || !orders || !ctx.npcId) return null
+  const existing = orders.findByCarrier(ctx.npcId)
+  if (existing) return planTransportOrderExecution(ctx, economy, existing)
+  const known = hooks.listKnownSettlements()
+  const self = known.find((ref) => ref.settlementId === economy.settlementId)
+  const match = matchInterSettlementFoodOpportunity({
+    sourceSettlementId: economy.settlementId,
+    sourceX: self?.x ?? ctx.home.x,
+    sourceZ: self?.z ?? ctx.home.z,
+    sourceEconomy: economy,
+    carrier: ctx.transportCargo,
+    orders: orders.list(),
+    knownSettlements: known,
+    getEconomy: (id) => hooks.getEconomy(id),
+    maxTransfer: HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food,
+  })
+  if (!match) return null
+  const order = orders.create({
+    source: { type: 'settlement-storage', settlementId: economy.settlementId },
+    destination: { type: 'settlement-storage', settlementId: match.destinationSettlementId },
+    itemKind: match.itemKind,
+    requestedQuantity: match.quantity,
+    carrierNpcId: ctx.npcId,
+  })
+  if (!order) return null
+  return planTransportOrderExecution(ctx, economy, order)
+}
+
+/**
  * Trader's `work` schedule block (plan settlements-npcs-002 §7,
- * settlements-npcs-020/021) — resume any active `TransportOrder` first, then
- * evaluate uncovered settlement food demand, then remote ore, then wood.
+ * settlements-npcs-020/021/037) — resume any active `TransportOrder` first,
+ * then local uncovered food collection, remote ore, inter-settlement food
+ * export, then wood.
  */
 function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   const { household } = ctx
@@ -662,6 +799,8 @@ function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   if (food) return food
   const ore = planTraderOreCollection(ctx, economy)
   if (ore) return ore
+  const exported = planTraderInterSettlementExport(ctx, economy)
+  if (exported) return exported
   if (!(household.surplus('wood') > 0 && economy.hasShortage('wood'))) return null
   const workplace = ctx.workplace
   return {

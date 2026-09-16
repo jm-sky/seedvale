@@ -1,7 +1,7 @@
 # Plan: Inter-settlement goods transport
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-021~~, ~~settlements-npcs-028~~
@@ -10,6 +10,7 @@
 **Tags:** `transport` `inter-settlement` `food` `shortage` `surplus`
 **Roadmap:** `physical-goods-transport`
 **Model:** `Opus`, `Sonnet`
+**Implemented at:** 2026-09-16
 
 ## Goal
 
@@ -486,6 +487,10 @@ Detailed verified recon is in:
 Use it before implementation. In particular preserve the reviewed split between `TransportOrder` economic ownership and generic `NpcTravelContinuity` spatial ownership for the cross-settlement leg.
 
 Add concise JSDoc to important new public/architectural helpers and use `@domain settlements-npcs` / `@domain npc` where appropriate.
+
+## Implementation status
+
+Implemented 2026-09-16. Automated tests, typecheck, lint and build are the remaining technical checks; browser/gameplay verification is user-owned (see below).
 
 ## Verification
 
