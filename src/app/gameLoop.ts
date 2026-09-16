@@ -183,6 +183,7 @@ import {
   worldItemAllowsAltInteract,
 } from './interactables'
 import { activeModal } from './modalState'
+import { syncNpcQuestMarkers } from './npcQuestMarkerSync'
 import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 
 /** Candidate-gathering radius for ranged projectile collision (plan 162) —
@@ -705,6 +706,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   } = deps
 
   renderer.shadowMap.autoUpdate = false
+  /** Runtime NPC instances that already received a `labelMarker` projection.
+   *  Weak identity so settlement unload/reload re-syncs the new agent even
+   *  when `QuestManager` is not dirty (plan quests-progression-055). */
+  const syncedNpcQuestMarkerSinks = new WeakSet<NpcAgent>()
   const skillQueryContext: TargetedSkillQueryContext = {
     getTrap: (id: string) => bundle.placedTraps.get(id),
     campRepairAvailable: (kind, id) => deps.campRepairAvailable(kind, id),
@@ -2299,12 +2304,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       !vueUi.isWorldMapOpen()
     ) {
       const loaded = bundle.settlementsManager.getLoaded()
-      if (questManager.isDirty()) {
-        for (const s of loaded) {
-          for (const npc of s.npcs) {
-            npc.setQuestMarker(questManager.labelMarker(npc.id))
-          }
-        }
+      const questDirty = questManager.isDirty()
+      for (const settlement of loaded) {
+        syncNpcQuestMarkers({
+          npcs: settlement.npcs,
+          questDirty,
+          labelMarker: (npcId) => questManager.labelMarker(npcId),
+          synced: syncedNpcQuestMarkerSinks,
+        })
+      }
+      if (questDirty) {
         for (const spawner of bundle.fauna.getSpawners()) {
           bundle.fauna.setSpawnerMarker(spawner.id, questManager.spawnerMarker(spawner.type, spawner.id))
         }

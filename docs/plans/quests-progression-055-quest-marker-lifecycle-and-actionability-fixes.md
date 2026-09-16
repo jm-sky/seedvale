@@ -1,7 +1,7 @@
 # Plan: Quest marker lifecycle and actionability fixes
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** quests-progression-034, quests-progression-050
@@ -10,6 +10,10 @@
 **Tags:** `quest-marker` `npc-label` `dialogue` `streaming` `lifecycle`
 **Roadmap:** `quests-and-reputation.md`
 **Model:** Sonnet, Composer
+
+## Implementation status
+
+Implemented 2026-09-16. `labelMarker` now uses a shared read-only actionability predicate (`talk_to_npc` / `talk_to_npc_choice` / tellable `receive_world_knowledge` / gated stage `dialogueActions`) so `?` matches live dialogue; reminder plus generic abandon is `…`. Runtime NPC marker sync tracks `NpcAgent` identity via `WeakSet` in `gameLoop` (`src/app/npcQuestMarkerSync.ts`), so a late stream-in or settlement reload still receives the current glyph when `QuestManager` is clean. Automated tests cover actionability, order-independence, and runtime-sink lifecycle. Browser/gameplay verification is user-owned.
 
 ## Goal
 

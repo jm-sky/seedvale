@@ -70,10 +70,13 @@ import {
 
 /** `labelMarker`'s glyphs (plan 153) — distinct per state, not color-only,
  *  so a floating NPC label reads correctly even without the CSS color that
- *  usually accompanies it. `TALK_TARGET` is a required dialogue target: an
- *  active `talk_to_npc` / `talk_to_npc_choice` NPC, or an NPC named by an
- *  active stage `dialogueActions` entry. Matching is by stable NPC id, not
- *  display name. Required dialogue targets outrank giver in-progress. */
+ *  usually accompanies it. `TALK_TARGET` is a required dialogue action
+ *  available **now**: unfinished `talk_to_npc` / `talk_to_npc_choice`,
+ *  tellable `receive_world_knowledge`, or an authored stage
+ *  `dialogueActions` entry that `onInteract` would actually present.
+ *  Stage membership alone is not enough. Generic abandon is not a talk
+ *  target. Matching is by stable NPC id, not display name. Actionable
+ *  required talk outranks giver in-progress. */
 export const QUEST_MARKER_AVAILABLE = '!'
 export const QUEST_MARKER_IN_PROGRESS = '…'
 export const QUEST_MARKER_READY = '✓'
@@ -475,20 +478,6 @@ function matchingStageDialogueActions(
   npcId: NpcId,
 ): readonly NonNullable<QuestStage['dialogueActions']>[number][] {
   return stage?.dialogueActions?.filter((action) => action.npc.npcId === npcId) ?? []
-}
-
-function isRequiredDialogueTarget(
-  stage: QuestStage | undefined,
-  npcId: NpcId,
-  unfinishedSlots: readonly QuestStageObjectiveSlot[],
-): boolean {
-  if (!stage) return false
-  for (const slot of unfinishedSlots) {
-    if (matchingTalkChoice(slot.objective, npcId)) return true
-    if (slot.objective.type === 'talk_to_npc' && slot.objective.npc.npcId === npcId) return true
-    if (slot.objective.type === 'receive_world_knowledge' && slot.objective.npc.npcId === npcId) return true
-  }
-  return matchingStageDialogueActions(stage, npcId).length > 0
 }
 
 /** Drives multi-stage quests. Kept out of `NpcAgent`/world objects so they stay
@@ -2031,6 +2020,72 @@ export class QuestManager {
     return this.gatherHandInSlot(def) !== undefined
   }
 
+  /**
+   * Stage `dialogueActions` for `npcId` that current dialogue gating would
+   * actually present — world-knowledge, exact-instance and physical-outcome
+   * requirements included. Shared by `resolveStageDialogueActions` and
+   * `hasActionableRequiredTalkNow` so `?` cannot outrun live actions.
+   *
+   * @domain quests-progression
+   */
+  private availableStageDialogueActions(
+    def: QuestDef,
+    npcId: NpcId,
+  ): readonly NonNullable<QuestStage['dialogueActions']>[number][] {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return []
+    const stage = this.currentStage(def, s.stageIndex)
+    return matchingStageDialogueActions(stage, npcId).filter((action) => {
+      if (action.requireWorldKnowledgeReady) {
+        if (!this.isKnowledgeTellable(def, action.requireWorldKnowledgeReady)) return false
+        if (this.isKnowledgeRevealed(def, action.requireWorldKnowledgeReady)) return false
+      }
+      if (action.requireItemInstanceId && !this.inventory.getInstance(action.requireItemInstanceId)) {
+        return false
+      }
+      if (!action.physicalOutcomeId) return true
+      return this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, {
+        requireCarriedContainerId: action.requireCarriedContainerId,
+        requireCarriedUnopened: action.requireCarriedUnopened,
+        requireItemInstanceId: action.requireItemInstanceId,
+      })
+    })
+  }
+
+  /**
+   * Read-only: unfinished `receive_world_knowledge` targeting `npcId` is
+   * tellable right now. Does not launch research or fail unavailable
+   * knowledge — those mutations stay on the `onInteract` path.
+   *
+   * @domain quests-progression
+   */
+  private hasReceiveWorldKnowledgeActionNow(def: QuestDef, npcId: NpcId): boolean {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return false
+    const slot = this.unfinishedSlots(def, s).find((entry) => (
+      entry.objective.type === 'receive_world_knowledge' && entry.objective.npc.npcId === npcId
+    ))
+    if (!slot || slot.objective.type !== 'receive_world_knowledge') return false
+    return this.isKnowledgeTellable(def, slot.objective.knowledgeId)
+  }
+
+  /**
+   * Whether talking to `npcId` currently exposes a quest-progressing action
+   * for this definition — not a reminder, generic abandon, cooldown line, or
+   * gated stage action. Uses the same read-only resolvers as `onInteract`
+   * without admitting offers or mutating state.
+   *
+   * @domain quests-progression
+   */
+  private hasActionableRequiredTalkNow(def: QuestDef, npcId: NpcId): boolean {
+    if (this.stateOf(def.id).state !== 'active') return false
+    if (this.activeDialogueCooldown(def, npcId)) return false
+    if (this.resolveTalkToNpc(def, npcId)) return true
+    if (this.resolveTalkToNpcChoice(def, npcId)) return true
+    if (this.hasReceiveWorldKnowledgeActionNow(def, npcId)) return true
+    return this.availableStageDialogueActions(def, npcId).length > 0
+  }
+
   /** Active giver contribution: report/gather-turn-in actions when ready,
    *  plus (plan quests-progression-033) a generic opt-out action so an
    *  `active` quest's reminder is never action-less just because its
@@ -2198,21 +2253,7 @@ export class QuestManager {
     const s = this.stateOf(def.id)
     if (s.state !== 'active') return null
     const stage = this.currentStage(def, s.stageIndex)
-    const matching = matchingStageDialogueActions(stage, npcId).filter((action) => {
-      if (action.requireWorldKnowledgeReady) {
-        if (!this.isKnowledgeTellable(def, action.requireWorldKnowledgeReady)) return false
-        if (this.isKnowledgeRevealed(def, action.requireWorldKnowledgeReady)) return false
-      }
-      if (action.requireItemInstanceId && !this.inventory.getInstance(action.requireItemInstanceId)) {
-        return false
-      }
-      if (!action.physicalOutcomeId) return true
-      return this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, {
-        requireCarriedContainerId: action.requireCarriedContainerId,
-        requireCarriedUnopened: action.requireCarriedUnopened,
-        requireItemInstanceId: action.requireItemInstanceId,
-      })
-    })
+    const matching = this.availableStageDialogueActions(def, npcId)
     if (!stage || matching.length === 0) return null
     const stageIndex = s.stageIndex
     return {
@@ -2815,21 +2856,18 @@ export class QuestManager {
    *  quests-progression-020), not first-match: one NPC can be the giver of
    *  several concurrent quests, and an earlier `active` one must not hide a
    *  later one that is `ready_to_report`. Priority — independent of `defs`
-   *  order — is `?` (required dialogue target) > `✓` (completion / hand-in /
-   *  report available now, including an `active` gather turn-in) > `!` (any
-   *  quest `offered`/exposable `not_offered`) > `…` (any quest `active`) >
-   *  `null`. `not_offered` counts only when the offer cap would actually
-   *  expose it right now — see `selectableOfferIds` (plan
-   *  quests-progression-033) — so a capped/suppressed candidate doesn't flag
-   *  an NPC with `!` for an offer dialogue won't actually show. */
+   *  order — is `?` (required quest action available now) > `✓` (completion /
+   *  hand-in / report available now, including an `active` gather turn-in) >
+   *  `!` (any quest `offered`/exposable `not_offered`) > `…` (any quest
+   *  `active` reminder, including generic abandon) > `null`. `not_offered`
+   *  counts only when the offer cap would actually expose it right now —
+   *  see `selectableOfferIds` (plan quests-progression-033) — so a
+   *  capped/suppressed candidate doesn't flag an NPC with `!` for an offer
+   *  dialogue won't actually show. Generic abandon never yields `?`
+   *  (plan quests-progression-055). */
   labelMarker(npcId: NpcId): string | null {
     for (const def of this.defs) {
-      const s = this.stateOf(def.id)
-      if (s.state !== 'active') continue
-      if (this.activeDialogueCooldown(def, npcId)) continue
-      if (isRequiredDialogueTarget(this.currentStage(def, s.stageIndex), npcId, this.unfinishedSlots(def, s))) {
-        return QUEST_MARKER_TALK_TARGET
-      }
+      if (this.hasActionableRequiredTalkNow(def, npcId)) return QUEST_MARKER_TALK_TARGET
     }
     let hasReady = false
     let hasAvailable = false

@@ -261,18 +261,18 @@ In multi-quest dialogue, generic abandon actions are `topicScoped` so the player
 
 ## Quest markers
 
-`QuestManager.labelMarker(npcId)` is derived/read-only and represents the most important interaction available **now**, not just raw lifecycle state.
+`QuestManager.labelMarker(npcId)` is derived/read-only and represents the most important interaction available **now**, not just raw lifecycle state. `?` requires a quest-progressing dialogue action that `onInteract` would actually present for that NPC (unfinished `talk_to_npc` / `talk_to_npc_choice`, tellable `receive_world_knowledge`, or gated-in stage `dialogueActions`). Being named by the current stage is not enough; a reminder plus generic abandon is `…`, not `?`. Quest-topic cooldown suppresses `?` for that context until it expires.
 
 Priority:
 
 ```text
-?  required talk/action target
+?  required talk/action available now
 ✓  actionable hand-in/report/completion
 !  exposed/selectable new offer
-…  active reminder
+…  active reminder (including generic abandon)
 ```
 
-A gather quest can therefore show `✓` while still formally `active` when the required items are currently available. `✓` outranks a simultaneous `!`.
+A gather quest can therefore show `✓` while still formally `active` when the required items are currently available. `✓` outranks a simultaneous `!`. Runtime NPC labels are initialized per `NpcAgent` instance (not only when `QuestManager` is dirty), so stream-in / settlement reload still receive the current glyph.
 
 `list()` and marker exposure respect offer selection/capping rather than surfacing every available `not_offered` candidate.
 

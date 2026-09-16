@@ -3957,6 +3957,267 @@ describe('QuestManager giver cap, markers and abandon topics (plan quests-progre
   })
 })
 
+describe('QuestManager marker actionability (plan quests-progression-055)', () => {
+  const reminderQuest = quest({
+    id: 'reminderQ',
+    giverName: 'Anna',
+    offerLine: 'offer reminder',
+    stages: [{
+      objective: { type: 'interact_tree' },
+      description: 'tree',
+      reminderLine: 'remind tree',
+    }],
+    reportLine: 'done reminder',
+  })
+
+  const talkQuest = quest({
+    id: 'talkQ',
+    giverName: 'Anna',
+    offerLine: 'offer talk',
+    stages: [{
+      objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+      description: 'talk',
+      reminderLine: 'remind talk',
+      playerLine: 'Wiadomość dla Piotra.',
+      progressLine: 'przekazane',
+    }],
+    reportLine: 'done talk',
+  })
+
+  const choiceQuest = quest({
+    id: 'choiceQ',
+    giverName: 'Kasia',
+    offerLine: 'offer choice',
+    stages: [{
+      objective: {
+        type: 'talk_to_npc_choice',
+        choices: [
+          { npc: { npcId: 'Kasia' }, playerLine: 'Oddaję tobie.', outcomeId: 'to-kasia' },
+          { npc: { npcId: 'Marek' }, playerLine: 'Oddaję straży.', outcomeId: 'to-marek' },
+        ],
+      },
+      description: 'choose',
+      reminderLine: 'remind choice',
+    }],
+    reportLine: 'done choice',
+    outcomes: [
+      { id: 'to-kasia', state: 'complete' },
+      { id: 'to-marek', state: 'complete' },
+    ],
+  })
+
+  const stageActionQuest = quest({
+    id: 'stageActionQ',
+    giverName: 'Piotr',
+    offerLine: 'offer stage action',
+    stages: [{
+      objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+      description: 'spot',
+      reminderLine: 'Widziałeś jelenia?',
+      dialogueActions: [{
+        npc: { npcId: 'Piotr' },
+        playerLine: 'Tak, widziałem jelenia.',
+        npcLine: 'Skoro tak. Zostały kamienie.',
+      }],
+    }],
+    reportLine: 'done stage action',
+  })
+
+  const gatedActionQuest = quest({
+    id: 'gatedActionQ',
+    giverName: 'Anna',
+    offerLine: 'offer gated action',
+    stages: [{
+      objective: { type: 'interact_tree' },
+      description: 'tree',
+      reminderLine: 'remind gated',
+      dialogueActions: [{
+        npc: { npcId: 'Anna' },
+        playerLine: 'Oddaję przedmiot.',
+        npcLine: 'Dzięki.',
+        requireItemInstanceId: 'missing-token',
+      }],
+    }],
+    reportLine: 'done gated',
+  })
+
+  const cooldownQuest = quest({
+    id: 'cooldownMarkerQ',
+    giverName: 'Piotr',
+    offerLine: 'offer cooldown',
+    stages: [{
+      objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+      description: 'spot',
+      reminderLine: 'Widziałeś jelenia?',
+      dialogueActions: [{
+        npc: { npcId: 'Piotr' },
+        playerLine: 'Potrzebuję więcej szczegółów.',
+        npcLine: 'Notatki wystarczą.',
+        skipAdvance: true,
+        reactions: [{
+          when: [{ type: 'relation', npc: { npcId: 'Piotr' }, maximum: 'acquainted' }],
+          npcLine: 'Najpierw sprawdź trop, który już dostałeś.',
+          cooldown: {
+            hours: 6,
+            line: 'Przejrzyj to, co już masz.',
+          },
+        }],
+      }],
+    }],
+    reportLine: 'done cooldown',
+  })
+
+  const readyQuest = quest({
+    id: 'readyMarkerQ',
+    giverName: 'Anna',
+    offerLine: 'offer ready',
+    stages: [{ objective: { type: 'interact_well' }, description: 'well', reminderLine: 'remind well' }],
+    reportLine: 'done ready',
+  })
+
+  const offerQuest = quest({
+    id: 'offerMarkerQ',
+    giverName: 'Anna',
+    offerLine: 'offer extra',
+    stages: [{ objective: { type: 'interact_tree' }, description: 'tree', reminderLine: 'remind extra' }],
+    reportLine: 'done extra',
+  })
+
+  it('marks an unfinished talk_to_npc target with ?', () => {
+    const qm = makeManager([talkQuest])
+    acceptOffer(qm, 'Anna')
+    expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_TALK_TARGET)
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_IN_PROGRESS)
+    expect(qm.onInteract('Piotr')?.actions?.some((action) => action.label === 'Wiadomość dla Piotra.')).toBe(true)
+  })
+
+  it('marks a talk_to_npc_choice target with a visible choice as ?', () => {
+    const qm = makeManager([choiceQuest])
+    acceptOffer(qm, 'Kasia')
+    expect(qm.labelMarker('Kasia')).toBe(QUEST_MARKER_TALK_TARGET)
+    expect(qm.labelMarker('Marek')).toBe(QUEST_MARKER_TALK_TARGET)
+    expect(qm.onInteract('Kasia')?.actions?.some((action) => action.label === 'Oddaję tobie.')).toBe(true)
+    expect(qm.onInteract('Marek')?.actions?.some((action) => action.label === 'Oddaję straży.')).toBe(true)
+  })
+
+  it('marks available authored stage dialogue actions as ?', () => {
+    const qm = makeManager([stageActionQuest])
+    acceptOffer(qm, 'Piotr')
+    expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_TALK_TARGET)
+    expect(qm.onInteract('Piotr')?.actions?.some((action) => action.label === 'Tak, widziałem jelenia.')).toBe(true)
+  })
+
+  it('does not keep ? while the same quest dialogue is on cooldown', () => {
+    let elapsedDays = 1
+    const clock: QuestWorldTimeLookup = {
+      getWorldSeed: () => 0,
+      getTimeOfDay: () => 0,
+      getElapsedDays: () => elapsedDays,
+    }
+    const qm = makeManager(
+      [cooldownQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: 'cooldownMarkerQ', state: 'active', stageIndex: 0 }], relations: {} },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      clock,
+    )
+    expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_TALK_TARGET)
+    const reply = qm.onInteract('Piotr')?.actions?.find((action) => action.label === 'Potrzebuję więcej szczegółów.')?.onSelect()
+    expect(reply).toBe('Najpierw sprawdź trop, który już dostałeś.')
+    expect(qm.onInteract('Piotr')?.actions?.some((action) => action.label === 'Potrzebuję więcej szczegółów.')).toBeFalsy()
+    expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_IN_PROGRESS)
+
+    elapsedDays = 1 + 6 / 24
+    expect(qm.onInteract('Piotr')?.actions?.some((action) => action.label === 'Potrzebuję więcej szczegółów.')).toBe(true)
+    expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_TALK_TARGET)
+  })
+
+  it('uses … when the giver dialogue is only a reminder plus generic abandon', () => {
+    const qm = makeManager([reminderQuest])
+    acceptOffer(qm, 'Anna')
+    const dialog = qm.onInteract('Anna')
+    expect(dialog?.line).toBe('remind tree')
+    expect(dialog?.actions?.map((action) => action.label)).toEqual([ABANDON_LABEL])
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_IN_PROGRESS)
+  })
+
+  it('does not treat gated stage dialogueActions as a required talk target', () => {
+    const qm = makeManager([gatedActionQuest])
+    acceptOffer(qm, 'Anna')
+    const dialog = qm.onInteract('Anna')
+    expect(dialog?.actions?.some((action) => action.label === 'Oddaję przedmiot.')).toBe(false)
+    expect(dialog?.actions?.map((action) => action.label)).toEqual([ABANDON_LABEL])
+    expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_IN_PROGRESS)
+  })
+
+  it('lets a foreign actionable talk outrank the giver reminder, independent of defs order', () => {
+    const foreignTalk = quest({
+      id: 'foreignTalkQ',
+      giverName: 'Piotr',
+      offerLine: 'offer foreign',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: 'Anna' } },
+        description: 'talk',
+        reminderLine: 'remind foreign',
+        playerLine: 'Piotr prosi o rozmowę.',
+        progressLine: 'done foreign talk',
+      }],
+      reportLine: 'done foreign',
+    })
+
+    const assertMarkers = (defs: readonly QuestDef[]) => {
+      const qm = makeManager(defs, undefined, undefined, {
+        progress: [
+          { id: 'reminderQ', state: 'active', stageIndex: 0 },
+          { id: 'foreignTalkQ', state: 'active', stageIndex: 0 },
+        ],
+        relations: {},
+      })
+      expect(qm.labelMarker('Anna')).toBe(QUEST_MARKER_TALK_TARGET)
+      expect(qm.labelMarker('Piotr')).toBe(QUEST_MARKER_IN_PROGRESS)
+    }
+
+    assertMarkers([reminderQuest, foreignTalk])
+    assertMarkers([foreignTalk, reminderQuest])
+  })
+
+  it('does not let a non-actionable active quest hide ✓ or !', () => {
+    const readyProgress = {
+      progress: [
+        { id: 'gatedActionQ', state: 'active', stageIndex: 0 },
+        { id: 'readyMarkerQ', state: 'active', stageIndex: 0 },
+      ],
+      relations: {},
+    } as const
+    const forwardReady = makeManager([gatedActionQuest, readyQuest], undefined, undefined, readyProgress)
+    forwardReady.onInteractObjective({ type: 'interact_well' })
+    expect(forwardReady.getState('readyMarkerQ')).toBe('ready_to_report')
+    expect(forwardReady.labelMarker('Anna')).toBe(QUEST_MARKER_READY)
+
+    const reversedReady = makeManager([readyQuest, gatedActionQuest], undefined, undefined, readyProgress)
+    reversedReady.onInteractObjective({ type: 'interact_well' })
+    expect(reversedReady.labelMarker('Anna')).toBe(QUEST_MARKER_READY)
+
+    const offerProgress = {
+      progress: [
+        { id: 'gatedActionQ', state: 'active', stageIndex: 0 },
+        { id: 'offerMarkerQ', state: 'not_offered', stageIndex: 0 },
+      ],
+      relations: {},
+    } as const
+    const forwardOffer = makeManager([gatedActionQuest, offerQuest], undefined, undefined, offerProgress)
+    expect(forwardOffer.labelMarker('Anna')).toBe(QUEST_MARKER_AVAILABLE)
+
+    const reversedOffer = makeManager([offerQuest, gatedActionQuest], undefined, undefined, offerProgress)
+    expect(reversedOffer.labelMarker('Anna')).toBe(QUEST_MARKER_AVAILABLE)
+  })
+})
+
 describe('QuestManager generic resolution effects (plan quests-progression-029)', () => {
   const GIVER_ID = 'home:npc:0'
   const WITNESS_ID = 'home:npc:2'
