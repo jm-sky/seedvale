@@ -12,6 +12,7 @@ import {
   resolveNpcTradeOffers,
   type TradeReserveNpc,
 } from './npcTradeAvailability'
+import { resolveNpcVendorKind } from './npcVendor'
 
 function hunter(household: Household): TradeReserveNpc {
   return { household, role: 'hunter' }
@@ -149,6 +150,7 @@ describe('npcTradeAvailability household goods (plan settlements-npcs-033 / 036)
     expect(resolveNpcTradeOffers(npc, [])).toEqual([
       { kind: 'axe', quantity: 2, owner: 'household' },
     ])
+    expect(resolveNpcVendorKind('woodcutter')).toBeNull()
   })
 
   it('offers a household hunting_bow while the hunter personal bow stays hidden', () => {

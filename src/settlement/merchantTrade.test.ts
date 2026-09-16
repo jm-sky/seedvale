@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
 import { isArmorItemInstance, isInstanceBackedKind } from '../items/itemInstances'
+import { hasItemKindCategory, type ItemKind } from '../items/items'
 import { settleMerchantStockTransaction } from '../items/trade'
 import { MERCHANT_STOCK, merchantPrice } from '../items/tradeCatalog'
 import {
@@ -489,5 +490,109 @@ describe('specialization-first assortment (plan settlements-npcs-040)', () => {
   it('does not starve late catalog hunting goods just because MERCHANT_STOCK lists them last', () => {
     expect(MERCHANT_STOCK.indexOf('short_bow')).toBeGreaterThan(MERCHANT_STOCK.indexOf('knife'))
     expect(huntingHits('SM', 24)).toBeGreaterThan(18)
+  })
+})
+
+describe('general merchant coverage (plan settlements-npcs-042)', () => {
+  const general = [{ npcId: 'g0', specialization: 'general' as const, stallIndex: 0 }]
+  const weapons = [{ npcId: 'w0', specialization: 'weapons-tools' as const, stallIndex: 0 }]
+
+  it('keeps short_sword eligible on a general merchant without a second catalog', () => {
+    expect(specializationAffinity('short_sword', 'general')).toBeGreaterThan(0)
+    expect(specializationAffinity('axe', 'general')).toBeGreaterThan(0)
+    expect(specializationAffinity('leather_pauldron', 'general')).toBeGreaterThan(0)
+  })
+
+  it('can stock a basic weapon on a small general merchant without weapons-tools', () => {
+    let basicHits = 0
+    let shortSwordHits = 0
+    for (let seed = 0; seed < 48; seed++) {
+      const stock = generateMerchantAssortment(ctx({ size: 'SM', terrain: 'forest', seed }), general).get('g0')!
+      if ((stock.short_sword ?? 0) > 0 || (stock.knife ?? 0) > 0 || (stock.axe ?? 0) > 0) basicHits++
+      if ((stock.short_sword ?? 0) > 0) shortSwordHits++
+    }
+    expect(basicHits).toBeGreaterThan(24)
+    expect(shortSwordHits).toBeGreaterThan(20)
+  })
+
+  it('gives weapons-tools stronger category coverage than an equivalent general profile', () => {
+    function weaponToolArmorCount(stock: Partial<Record<string, number>>): number {
+      return assortmentKinds(stock).filter((kind) => (
+        kind === 'arrow'
+        || kind === 'broadhead_arrow'
+        || hasItemKindCategory(kind as ItemKind, 'weapon')
+        || hasItemKindCategory(kind as ItemKind, 'tool')
+        || hasItemKindCategory(kind as ItemKind, 'armor')
+      )).length
+    }
+    let generalTotal = 0
+    let weaponsTotal = 0
+    for (let seed = 0; seed < 24; seed++) {
+      const context = ctx({ size: 'SM', terrain: 'forest', seed })
+      generalTotal += weaponToolArmorCount(generateMerchantAssortment(context, general).get('g0')!)
+      weaponsTotal += weaponToolArmorCount(generateMerchantAssortment(context, weapons).get('w0')!)
+    }
+    expect(weaponsTotal).toBeGreaterThan(generalTotal)
+  })
+})
+
+describe('home starter leather pauldron quality (plan settlements-npcs-042)', () => {
+  it('guarantees leather_pauldron on the first home merchant even without specialists', () => {
+    for (let seed = 0; seed < 24; seed++) {
+      const stock = generateMerchantAssortment(
+        ctx({ size: 'SM', terrain: 'forest', seed, isHome: true }),
+        resolveMerchantProfiles(['m0'], 'forest'),
+      ).get('m0')!
+      expect(stock.leather_pauldron ?? 0).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  it('materializes the guaranteed home pauldron as poor without changing other SM armor rolls', () => {
+    const stock = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
+    const latch = { merchantStockInitialized: false }
+    seedMerchantStockIfNeeded(stock, latch, { leather_pauldron: 1, leather_armor: 1 }, {
+      size: 'SM',
+      seed: 21,
+      npcId: 'm0',
+      specialization: 'general',
+      premiumAssignedKind: null,
+      forcedArmorQuality: { leather_pauldron: 'poor' },
+    })
+    const pauldron = stock.getInstances('leather_pauldron')[0]
+    const armor = stock.getInstances('leather_armor')[0]
+    expect(pauldron && isArmorItemInstance(pauldron) && pauldron.quality).toBe('poor')
+    expect(armor && isArmorItemInstance(armor)).toBe(true)
+    if (armor && isArmorItemInstance(armor)) {
+      expect(['poor', 'common', 'good', 'masterwork']).toContain(armor.quality)
+    }
+
+    const rolled = resolveMerchantArmorQuality({
+      size: 'SM',
+      specialization: 'general',
+      seed: 21,
+      npcId: 'm0',
+      kind: 'leather_armor',
+      unitIndex: 0,
+      premiumAssigned: false,
+    })
+    if (armor && isArmorItemInstance(armor)) expect(armor.quality).toBe(rolled)
+  })
+
+  it('does not restore a sold home pauldron on a reopen-equivalent reseed', () => {
+    const stock = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
+    const latch = { merchantStockInitialized: false }
+    const qualityContext = {
+      size: 'SM' as const,
+      seed: 4,
+      npcId: 'm0',
+      specialization: 'general' as const,
+      premiumAssignedKind: null,
+      forcedArmorQuality: { leather_pauldron: 'poor' as const },
+    }
+    seedMerchantStockIfNeeded(stock, latch, { leather_pauldron: 1 }, qualityContext)
+    const instance = stock.getInstances('leather_pauldron')[0]!
+    stock.removeInstance(instance.id)
+    seedMerchantStockIfNeeded(stock, latch, { leather_pauldron: 1 }, qualityContext)
+    expect(stock.countInstances('leather_pauldron')).toBe(0)
   })
 })

@@ -397,6 +397,7 @@ import {
   stampNpcTravelCheckpoint,
 } from './npcTravel'
 import { resolveNpcTravelCheckpoint } from './npcTravelCheckpoint'
+import { npcVendorMarker } from './npcVendor'
 import {
   applyDamageVigor,
   applySleepVigor,
@@ -1381,6 +1382,8 @@ export class NpcAgent {
   private sleepReason: SleepReason | null = null
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
   private questMarker: string | null = null
+  /** Role-derived vendor marker token; observation gating lives on the label. */
+  private readonly vendorMarker: string | null
   private highlighted = false
   private readonly playAt: PlayAt
   private readonly forest: SettlementForestHooks | undefined
@@ -1648,6 +1651,7 @@ export class NpcAgent {
     this.gender = character.gender
     this.voiceActor = voiceActorForIndex(this.gender, treeIndex)
     this.role = character.role
+    this.vendorMarker = npcVendorMarker(this.role)
     this.personalInventory = npcState.personalInventory
     this.transportCargo = npcState.transportCargo
     if (!npcState.health.dead) {
@@ -3326,6 +3330,7 @@ export class NpcAgent {
         broadIdentity: NPC_BROAD_IDENTITY_LABEL,
         knownName: this.displayName,
         questMarker: this.questMarker,
+        vendorMarker: this.vendorMarker,
         healthRatio,
         staminaRatio: getStaminaRatio(this.stamina),
         qualitativeHealth: (() => {

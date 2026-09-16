@@ -668,7 +668,13 @@ export async function createSettlement(
       householdIdFor(def.id, familyIndex),
       def.id,
       home.id,
-      householdStartingContextFromFamily(family),
+      householdStartingContextFromFamily(family, {
+        size: def.size,
+        terrain: def.plan.identity.terrain,
+        dominantResource: def.plan.identity.dominantResource,
+        isHome: def.isHome,
+        seed: settlementSeed,
+      }),
     )
   })
   resolveSettlementAgricultureCatchUp({
@@ -1043,6 +1049,9 @@ export async function createSettlement(
               npcId,
               specialization: profile.specialization,
               premiumAssignedKind: premiumAssignment?.npcId === npcId ? premiumAssignment.kind : null,
+              forcedArmorQuality: def.isHome && profile.stallIndex === 0
+                ? { leather_pauldron: 'poor' as const }
+                : undefined,
             }
             : undefined,
         )

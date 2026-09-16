@@ -1,6 +1,9 @@
 import type { HouseholdHistoryEvent } from '../debug/householdHistory'
 import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { ItemKind } from '../items/items'
+import type { SettlementTerrain } from '../shared/SettlementName'
+import type { NaturalResource } from '../terrain/naturalResources'
+import type { VillageSize } from './families'
 import { createSequenceAllocator } from '../debug/domainHistory'
 import { createHouseholdHistoryBuffer } from '../debug/householdHistory'
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
@@ -223,6 +226,20 @@ export type HouseholdSnapshot = {
   agriculture?: HouseholdAgricultureState
 }
 
+/**
+ * Settlement-scale context for one-time specialist trade stock (plan
+ * settlements-npcs-042). First-construction only — not persisted.
+ *
+ * @domain settlements-npcs
+ */
+export type HouseholdTradeStockContext = {
+  size: VillageSize
+  terrain: SettlementTerrain
+  dominantResource?: NaturalResource | null
+  isHome?: boolean
+  seed: number
+}
+
 /** Profession-derived starting items (plan 178 hunter bandages, plan
  *  settlements-npcs-030 farmer seeds, plan settlements-npcs-040 specialist
  *  trade stock). Applied at first construction, and once more for a
@@ -239,6 +256,8 @@ export type HouseholdStartingContext = {
   /** Adult Blacksmith coverage — bounded sword/pauldron trade stock. */
   hasBlacksmith?: boolean
   adultFarmerCount?: number
+  /** Optional settlement-scale trade stock inputs. Absent → SM defaults. */
+  tradeStock?: HouseholdTradeStockContext
 }
 
 const HUNTER_STARTING_BANDAGES = 5
@@ -401,7 +420,7 @@ export function createHousehold(
     : { starterSeedsGranted: false }
 
   if (!initial && starting?.hasHunter) items.add('bandage', HUNTER_STARTING_BANDAGES)
-  if (!initial && starting) applyProfessionTradeStock(items, starting)
+  if (!initial && starting) applyProfessionTradeStock(items, starting, id)
   if (!agriculture.starterSeedsGranted && (!initial || starting)) {
     if ((starting?.adultFarmerCount ?? 0) > 0) {
       for (const kind of FARMER_STARTING_SEED_KINDS) items.add(kind, FARMER_STARTING_SEED_COUNT)

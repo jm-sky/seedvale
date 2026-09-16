@@ -35,6 +35,7 @@ export type AgentLabelDom = {
   el: HTMLDivElement
   nameEl: HTMLDivElement
   markerEl: HTMLDivElement
+  vendorMarkerEl: HTMLDivElement
   barsEl: HTMLDivElement
 }
 
@@ -70,6 +71,11 @@ export function createAgentLabel(
   applyQuestMarkerEl(firstRowMarkerEl, questMarker)
   firstRowEl.append(firstRowMarkerEl)
 
+  const firstRowVendorMarkerEl = document.createElement('div')
+  firstRowVendorMarkerEl.className = 'npc-label__vendor-marker'
+  applyQuestMarkerEl(firstRowVendorMarkerEl, null)
+  firstRowEl.append(firstRowVendorMarkerEl)
+
   const barsEl = document.createElement('div')
   barsEl.className = 'npc-label__bars'
   barsEl.append(...bars.map((b) => b.bar))
@@ -79,7 +85,7 @@ export function createAgentLabel(
   const label = new CSS2DObject(wrapperEl)
   label.position.set(0, height, 0)
 
-  return { label, el: wrapperEl, nameEl: firstRowNameEl, markerEl: firstRowMarkerEl, barsEl }
+  return { label, el: wrapperEl, nameEl: firstRowNameEl, markerEl: firstRowMarkerEl, vendorMarkerEl: firstRowVendorMarkerEl, barsEl }
 }
 
 /** `current/max` → rounded percent, `0` for a non-positive `max` — shared by
@@ -118,6 +124,8 @@ export type AgentLabelObservationPresentation = {
   knownName: string
   /** Quest marker for `detailed`. */
   questMarker: string | null
+  /** Vendor marker token; shown only at `detailed` / full-label bypass. */
+  vendorMarker?: string | null
   healthRatio: number
   staminaRatio: number
   /** When set (NPC injury observation, plan npc-025), qualitative health
@@ -203,6 +211,7 @@ export function createAgentStatusLabelController(
 
   let lastName = name
   let lastQuestMarker = questMarker
+  let lastVendorMarker: string | null = null
   let lastAssessmentText = ''
   let lastObservationLevel: ObservationLevel | null = null
   let lastDebugText = ''
@@ -245,12 +254,14 @@ export function createAgentStatusLabelController(
         distanceState = applyAgentLabelObservationPresentation(
           labelDom.nameEl,
           labelDom.markerEl,
+          labelDom.vendorMarkerEl,
           labelDom.barsEl,
           assessmentEl,
           presentation,
           {
             lastName,
             lastQuestMarker,
+            lastVendorMarker,
             lastAssessmentText,
             lastObservationLevel,
           },
@@ -258,6 +269,7 @@ export function createAgentStatusLabelController(
         )
         lastName = presentation.nameText
         lastQuestMarker = presentation.questMarker
+        lastVendorMarker = presentation.vendorMarker
         lastAssessmentText = presentation.assessmentText
         lastObservationLevel = presentation.level
         showBarsOverride = presentation.showBars
@@ -296,6 +308,7 @@ type ResolvedAgentLabelObservationPresentation = {
   level: ObservationLevel
   nameText: string
   questMarker: string | null
+  vendorMarker: string | null
   assessmentText: string
   showBars: boolean
   showName: boolean
@@ -309,12 +322,14 @@ function resolveAgentLabelObservationPresentation(
   const assessmentText = observation.qualitativeHealth
     ? formatPhysicalAssessmentFromQualitative(observation.qualitativeHealth, observation.staminaRatio)
     : formatPhysicalAssessment(observation.healthRatio, observation.staminaRatio)
+  const vendorMarker = level === 'detailed' ? (observation.vendorMarker ?? null) : null
   switch (level) {
     case 'assessed':
       return {
         level,
         nameText: observation.broadIdentity,
         questMarker: observation.questMarker,
+        vendorMarker,
         assessmentText,
         showBars: false,
         showName: true,
@@ -325,6 +340,7 @@ function resolveAgentLabelObservationPresentation(
         level,
         nameText: observation.broadIdentity,
         questMarker: observation.questMarker,
+        vendorMarker,
         assessmentText,
         showBars: false,
         showName: true,
@@ -335,6 +351,7 @@ function resolveAgentLabelObservationPresentation(
         level,
         nameText: observation.knownName,
         questMarker: observation.questMarker,
+        vendorMarker,
         assessmentText,
         showBars: true,
         showName: true,
@@ -346,6 +363,7 @@ function resolveAgentLabelObservationPresentation(
         nameText: '',
         assessmentText,
         questMarker: observation.questMarker,
+        vendorMarker,
         showBars: false,
         showName: false,
         showAssessment: false,
@@ -363,12 +381,14 @@ function applyQuestMarkerEl(markerEl: HTMLDivElement, text: string | null): void
 function applyAgentLabelObservationPresentation(
   nameEl: HTMLDivElement,
   markerEl: HTMLDivElement,
+  vendorMarkerEl: HTMLDivElement,
   barsEl: HTMLDivElement,
   assessmentEl: HTMLDivElement,
   presentation: ResolvedAgentLabelObservationPresentation,
   prev: {
     lastName: string
     lastQuestMarker: string | null
+    lastVendorMarker: string | null
     lastAssessmentText: string
     lastObservationLevel: ObservationLevel | null
   },
@@ -382,6 +402,9 @@ function applyAgentLabelObservationPresentation(
 
   if (presentation.questMarker !== prev.lastQuestMarker) {
     applyQuestMarkerEl(markerEl, presentation.questMarker)
+  }
+  if (presentation.vendorMarker !== prev.lastVendorMarker) {
+    applyQuestMarkerEl(vendorMarkerEl, presentation.vendorMarker)
   }
 
   const assessmentDisplay = presentation.showAssessment ? '' : 'none'

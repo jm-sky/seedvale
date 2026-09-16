@@ -5,7 +5,6 @@ import type { NpcId } from './npcState'
 import { createArmorInstance, isArmorKind } from '../items/armorItemInstances'
 import { Inventory } from '../items/Inventory'
 import {
-  ARMOR_QUALITIES,
   type ArmorKind,
   type ArmorQuality,
   isInstanceBackedKind,
@@ -14,6 +13,12 @@ import { hasItemKindCategory, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
 import { MERCHANT_STOCK } from '../items/tradeCatalog'
 import { createSeededRandom } from '../world/parseSeed'
+import {
+  hashArmorQualityOwner,
+  normalizeArmorQualityWeights,
+  pickWeightedArmorQuality,
+  SETTLEMENT_ARMOR_QUALITY_WEIGHTS,
+} from './settlementArmorQuality'
 
 /** Isolated from staffing / family / plaza seed streams (plan settlements-012). */
 const MERCHANT_PROFILE_SALT = 0x4d535043
@@ -96,7 +101,20 @@ export const HOME_STARTER_MERCHANT_KINDS: readonly ItemKind[] = [
   'axe',
   'pickaxe',
   'bandage',
+  'leather_pauldron',
 ]
+
+/** Basic weapon/tool/armor that must remain eligible even when regional class is import. */
+const BASIC_WEAPON_TOOL_ARMOR_KINDS = new Set<ItemKind>([
+  'arrow',
+  'axe',
+  'knife',
+  'leather_pauldron',
+  'pickaxe',
+  'short_bow',
+  'short_sword',
+  'shovel',
+])
 
 const METAL_KINDS = new Set<ItemKind>([
   'axe',
@@ -427,6 +445,13 @@ function kindChance(seed: number, npcId: string, kind: ItemKind): number {
   )()
 }
 
+function findLastIndex<T>(items: readonly T[], predicate: (item: T) => boolean): number {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (predicate(items[i]!)) return i
+  }
+  return -1
+}
+
 function shuffleEqualScoreGroups<T extends { score: number }>(items: T[], random: () => number): void {
   let i = 0
   while (i < items.length) {
@@ -476,9 +501,10 @@ export function generateMerchantAssortment(
       const roll = kindChance(context.seed, profile.npcId, kind)
       if (region === 'import' && roll >= importChance(context.size)) continue
       if (region === 'neutral' && affinity < 2 && roll < 0.35) continue
+      const generalBasic = profile.specialization === 'general' && BASIC_WEAPON_TOOL_ARMOR_KINDS.has(kind)
       scored.push({
         kind,
-        score: affinity * regionWeight(region),
+        score: affinity * regionWeight(region) + (generalBasic ? 2 : 0),
         region,
       })
     }
@@ -489,6 +515,29 @@ export function generateMerchantAssortment(
       if (picked.length >= budget) break
       stock[kind] = quantityFor(kind, region, context.size, false)
       picked.push(kind)
+    }
+
+    if (
+      profile.specialization === 'general'
+      && (context.size === 'SM' || context.size === 'MD' || context.size === 'OUTPOST')
+    ) {
+      const floor: readonly ItemKind[] = ['short_sword', 'axe', 'leather_pauldron']
+      for (const kind of floor) {
+        if ((stock[kind] ?? 0) > 0) continue
+        if (picked.length >= budget) {
+          const dropIndex = findLastIndex(picked, (candidate) => (
+            !BASIC_WEAPON_TOOL_ARMOR_KINDS.has(candidate)
+            && candidate !== assignedPremium?.kind
+          ))
+          if (dropIndex < 0) continue
+          const dropped = picked[dropIndex]!
+          delete stock[dropped]
+          picked.splice(dropIndex, 1)
+        }
+        const region = regionalClass(kind, context.terrain, resource)
+        stock[kind] = quantityFor(kind, region, context.size, false)
+        picked.push(kind)
+      }
     }
 
     byNpc.set(profile.npcId, stock)
@@ -513,13 +562,7 @@ export function merchantStockQuantity(stock: Inventory, kind: ItemKind): number 
 }
 
 /** Size-primary quality weights. Each row sums to 1; no quality is hard-locked. */
-export const MERCHANT_ARMOR_QUALITY_WEIGHTS: Record<VillageSize, Record<ArmorQuality, number>> = {
-  OUTPOST: { poor: 0.50, common: 0.45, good: 0.04, masterwork: 0.01 },
-  SM: { poor: 0.42, common: 0.48, good: 0.08, masterwork: 0.02 },
-  MD: { poor: 0.18, common: 0.62, good: 0.16, masterwork: 0.04 },
-  LG: { poor: 0.10, common: 0.45, good: 0.35, masterwork: 0.10 },
-  XL: { poor: 0.05, common: 0.35, good: 0.40, masterwork: 0.20 },
-}
+export const MERCHANT_ARMOR_QUALITY_WEIGHTS = SETTLEMENT_ARMOR_QUALITY_WEIGHTS
 
 /** Premium-assigned armor is a distinct specimen — minimum `good`, not a second roll. */
 const PREMIUM_ARMOR_QUALITY_WEIGHTS: Record<ArmorQuality, number> = {
@@ -535,14 +578,12 @@ export type MerchantArmorQualityContext = {
   npcId: NpcId
   specialization: MerchantSpecialization
   premiumAssignedKind?: ItemKind | null
+  /** Home-starter guaranteed specimen — unit 0 of these kinds only. */
+  forcedArmorQuality?: Partial<Record<ArmorKind, ArmorQuality>>
 }
 
 function normalizeQualityWeights(weights: Record<ArmorQuality, number>): Record<ArmorQuality, number> {
-  const total = ARMOR_QUALITIES.reduce((sum, quality) => sum + weights[quality], 0)
-  if (total <= 0) return { ...MERCHANT_ARMOR_QUALITY_WEIGHTS.MD }
-  const next: Record<ArmorQuality, number> = { poor: 0, common: 0, good: 0, masterwork: 0 }
-  for (const quality of ARMOR_QUALITIES) next[quality] = weights[quality] / total
-  return next
+  return normalizeArmorQualityWeights(weights)
 }
 
 /** Shift probability mass one step up the quality ladder — not a second roll. */
@@ -556,13 +597,7 @@ function applyWeaponsToolsQualityBias(weights: Record<ArmorQuality, number>): Re
 }
 
 function pickArmorQuality(random: () => number, weights: Record<ArmorQuality, number>): ArmorQuality {
-  const normalized = normalizeQualityWeights(weights)
-  let roll = random()
-  for (const quality of ARMOR_QUALITIES) {
-    roll -= normalized[quality]
-    if (roll < 0) return quality
-  }
-  return 'common'
+  return pickWeightedArmorQuality(random, weights)
 }
 
 /**
@@ -584,8 +619,8 @@ export function resolveMerchantArmorQuality(input: {
   const mixed = (
     input.seed
     ^ MERCHANT_ARMOR_QUALITY_SALT
-    ^ hashId(input.npcId)
-    ^ hashId(input.kind)
+    ^ hashArmorQualityOwner(input.npcId)
+    ^ hashArmorQualityOwner(input.kind)
     ^ Math.imul(input.unitIndex + 1, 0x9e3779b9)
   ) >>> 0
   const random = createSeededRandom(mixed)
@@ -607,7 +642,8 @@ export function seedMerchantStockIfNeeded(
     if (!count || count <= 0) continue
     if (isArmorKind(kind)) {
       for (let i = 0; i < count; i++) {
-        const quality = qualityContext
+        const forced = i === 0 ? qualityContext?.forcedArmorQuality?.[kind] : undefined
+        const quality = forced ?? (qualityContext
           ? resolveMerchantArmorQuality({
             size: qualityContext.size,
             specialization: qualityContext.specialization,
@@ -617,7 +653,7 @@ export function seedMerchantStockIfNeeded(
             unitIndex: i,
             premiumAssigned: qualityContext.premiumAssignedKind === kind,
           })
-          : 'common'
+          : 'common')
         stock.addInstance(createArmorInstance(kind, quality))
       }
       continue

@@ -133,7 +133,10 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.
 - [Profession staffing](../src/settlement/professionStaffing.ts) — generation-time adult profession composition from settlement identity; does not change family structure.
 - [Profession family surnames](../src/settlement/professionFamilySurnames.ts) — post-staffing worldgen household surnames from a representative adult profession; authored residents and reserved home identities keep their own names.
-- [Merchant trade](../src/settlement/merchantTrade.ts) — Trader specialization, stall index and finite regional assortment (plan settlements-012); optional `horses` specialization after a settlement-level paddock setup (plan settlements-013).
+- [Merchant trade](../src/settlement/merchantTrade.ts) — Trader specialization, stall index and finite regional assortment (plan settlements-012); optional `horses` specialization after a settlement-level paddock setup (plan settlements-013); home starter overlay including a guaranteed `poor` `leather_pauldron` (plan settlements-npcs-042).
+- [NPC vendor identity](../src/ai/npcVendor.ts) — semantic vendor kind from `Role` (`trader`/`blacksmith`/`hunter`); independent of live trade offers (plan settlements-npcs-042).
+- [Household profession stock](../src/settlement/householdProfessionStock.ts) — one-time specialist trade grants scaled by settlement size/terrain (plans settlements-npcs-040 / 042).
+- [Settlement armor quality](../src/settlement/settlementArmorQuality.ts) — size-primary armor quality weights shared by Merchant and specialist bootstrap.
 - [Horse acquisition](../src/settlement/horseAcquisition.ts) — derived live-horse purchase view for the wagon horse and vendor paddock slots.
 - [Village paddock](../src/settlement/villagePaddock.ts) — settlement-level horse-vendor setup roll and fenced `VillagePlan.paddock` placement.
 - [Settlement character](../src/settlement/settlementCharacter.ts) — deterministic `default`/`closed` archetype on `VillageIdentity`; consumers read it, none own it.
@@ -187,7 +190,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NPC post-death](../src/settlement/npcPostDeath.ts) — authoritative corpse lifecycle, full-`personalInventory` loot handoff/snapshot (no role/loadout filtering, plan npc-036), burial claim handoff.
 - [Animal-corpse sanitation](../src/settlement/animalCorpseSanitation.ts) — settlement influence + nearest-household responsibility for animal corpses.
 - [Agent animation set](../src/shared/agentAnimationSet.ts) — clip resolve/crossfade/one-shot/settle owner over an `AnimationMixer`.
-- [Agent status label](../src/ui/agentStatusLabel.ts) — the shared floating name/bars/debug-line CSS2D label and its controller.
+- [Agent status label](../src/ui/agentStatusLabel.ts) — the shared floating name/quest-marker/vendor-marker/bars/debug-line CSS2D label and its controller.
 
 ## Fauna internals
 
