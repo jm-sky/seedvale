@@ -173,24 +173,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 715
-- `CurrentActivity` — type — line 525
-- `CurrentActivityKind` — type — line 518
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 832
-- `NPC_HEIGHT` — const — line 448
-- `NPC_SHADOW_DISTANCE` — const — line 462
-- `NpcAgent` — class — line 1070
+- `classifyPendingActivity` — function — line 716
+- `CurrentActivity` — type — line 526
+- `CurrentActivityKind` — type — line 519
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 833
+- `NPC_HEIGHT` — const — line 449
+- `NPC_SHADOW_DISTANCE` — const — line 463
+- `NpcAgent` — class — line 1073
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 966
-- `NpcInspectionSnapshot` — type — line 540
-- `NpcWhy` — type — line 690
-- `projectNpcWhy` — function — line 757
-- `promoteChainKind` — function — line 707
+- `NpcAgentDeps` — type — line 967
+- `NpcInspectionSnapshot` — type — line 541
+- `NpcWhy` — type — line 691
+- `projectNpcWhy` — function — line 758
+- `promoteChainKind` — function — line 708
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -431,11 +431,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 83
-- `findWeaponNeedingMaintenance` — function — line 99
-- `NpcWorkContext` — type — line 119
-- `planProfessionWork` — function — line 928
-- `selectTraderCollectionGoods` — function — line 381
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 90
+- `findWeaponNeedingMaintenance` — function — line 106
+- `NpcWorkContext` — type — line 126
+- `planProfessionWork` — function — line 1067
+- `selectTraderCollectionGoods` — function — line 397
 
 ## `ai/npcStrategies.ts`
 
@@ -468,32 +468,32 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcTravel.ts`
 
-- `beginOffscreenNpcTravel` — function — line 145
+- `beginOffscreenNpcTravel` — function — line 146
   - domain: npc
-- `blockNpcTravel` — function — line 235
-- `cloneNpcTravel` — function — line 64
+- `blockNpcTravel` — function — line 236
+- `cloneNpcTravel` — function — line 65
 - `cloneNpcTravelPurpose` — function — line 57
-- `hasCommittedNpcTravel` — function — line 129
-- `interpolateNpcTravelPosition` — function — line 109
-- `isNpcTravelArrived` — function — line 122
-- `keepsNpcTravelAfterReify` — function — line 133
-- `markNpcTravelReached` — function — line 223
+- `hasCommittedNpcTravel` — function — line 130
+- `interpolateNpcTravelPosition` — function — line 110
+- `isNpcTravelArrived` — function — line 123
+- `keepsNpcTravelAfterReify` — function — line 134
+- `markNpcTravelReached` — function — line 224
 - `NpcTravelContinuity` — type — line 31
-- `NpcTravelExecution` — type — line 19
+- `NpcTravelExecution` — type — line 20
 - `NpcTravelHost` — type — line 51
-- `NpcTravelPoint` — type — line 17
+- `NpcTravelPoint` — type — line 18
   - domain: npc
-- `NpcTravelPurpose` — type — line 26
+- `NpcTravelPurpose` — type — line 27
 - `NpcTravelResolveResult` — type — line 44
-- `observeNpcTravelArrival` — function — line 299
+- `observeNpcTravelArrival` — function — line 300
   - domain: npc
-- `reifyNpcTravel` — function — line 191
+- `reifyNpcTravel` — function — line 192
   - domain: npc
-- `resolveOffscreenNpcTravel` — function — line 260
+- `resolveOffscreenNpcTravel` — function — line 261
   - domain: npc
-- `stampNpcTravelCheckpoint` — function — line 209
+- `stampNpcTravelCheckpoint` — function — line 210
   - domain: npc
-- `travelProgress01` — function — line 101
+- `travelProgress01` — function — line 102
 
 ## `ai/npcTravelCheckpoint.ts`
 

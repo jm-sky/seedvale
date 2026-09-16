@@ -98,6 +98,7 @@ Generated from TypeScript imports.
 - `combat/rangedLifecycle.ts`
 - `debug/debugMode.ts`
 - `debug/npcTrace.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/npcWork.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/huntingHooks.ts`
@@ -931,6 +932,7 @@ Generated from TypeScript imports.
 - `ai/npcAction.ts`
 - `ai/npcLogistics.ts`
 - `economy/foodTransportDemand.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.ts`
 - `economy/oreTransportDemand.ts`
@@ -940,7 +942,6 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.ts`
 - `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
-- `items/foodItems.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/weaponMaintenance.ts`
@@ -1045,6 +1046,8 @@ Generated from TypeScript imports.
 - `ai/npcTravel.test.ts`
 - `ai/npcTravelCheckpoint.ts`
 - `settlement/npcState.ts`
+- `world/transportTravelArrival.test.ts`
+- `world/transportTravelArrival.ts`
 
 ## `ai/npcTravelCheckpoint.ts`
 

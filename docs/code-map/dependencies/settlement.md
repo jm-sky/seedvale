@@ -41,6 +41,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/registry.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
@@ -93,6 +94,7 @@ Generated from TypeScript imports.
 - `world/settlementForestHooks.ts`
 - `world/transportOffscreen.ts`
 - `world/transportOrder.ts`
+- `world/transportTravelArrival.ts`
 - `world/weather.ts`
 
 **Imported by**
@@ -203,6 +205,7 @@ Generated from TypeScript imports.
 - `audio/fireSounds.ts`
 - `debug/debugMode.ts`
 - `economy/development.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
@@ -1148,6 +1151,8 @@ Generated from TypeScript imports.
 - `world/expeditionProvisioning.ts`
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
+- `world/transportTravelArrival.test.ts`
+- `world/transportTravelArrival.ts`
 
 ## `settlement/pathDryness.ts`
 

@@ -1942,8 +1942,12 @@ Generated from exported TypeScript symbols.
 
 - `estimateOffscreenTravelDays` — function — line 41
 - `OffscreenTransportLookup` — type — line 72
-- `resolveOffscreenTransportArrivals` — function — line 97
+- `resolveOffscreenTransportArrivals` — function — line 136
+- `resolveSettlementStorageHandoffPosition` — function — line 108
+  - domain: settlements-npcs
 - `resolveTransportEndpointInventory` — function — line 63
+- `shouldUseLegacyTransportExecutionHandoff` — function — line 87
+  - domain: settlements-npcs
 - `TransportEndpointLookup` — type — line 55
 
 ## `world/transportOrder.ts`
@@ -1971,6 +1975,11 @@ Generated from exported TypeScript symbols.
 - `transferInventoryItems` — function — line 19
 - `TransportPickupResult` — type — line 36
 - `TransportUnloadResult` — type — line 83
+
+## `world/transportTravelArrival.ts`
+
+- `resolveTransportTravelArrivals` — function — line 26
+  - domain: settlements-npcs
 
 ## `world/trapProp.ts`
 

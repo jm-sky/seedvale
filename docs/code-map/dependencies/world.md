@@ -2179,6 +2179,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `app/worldBundle.ts`
 - `economy/foodTransportDemand.test.ts`
+- `economy/interSettlementFoodTransport.test.ts`
 - `economy/oreTransportDemand.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -2187,6 +2188,8 @@ Generated from TypeScript imports.
 - `world/transportOffscreen.ts`
 - `world/transportTransactions.test.ts`
 - `world/transportTransactions.ts`
+- `world/transportTravelArrival.test.ts`
+- `world/transportTravelArrival.ts`
 
 ## `world/createWater.ts`
 
@@ -3996,6 +3999,7 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `settlement/SettlementsManager.ts`
 - `world/transportOffscreen.test.ts`
+- `world/transportTravelArrival.ts`
 
 ## `world/transportOrder.test.ts`
 
@@ -4017,6 +4021,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `debug/npcDebugApi.ts`
 - `economy/foodTransportDemand.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/oreTransportDemand.ts`
 - `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
@@ -4025,6 +4030,8 @@ Generated from TypeScript imports.
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 - `world/transportOrder.test.ts`
+- `world/transportTravelArrival.test.ts`
+- `world/transportTravelArrival.ts`
 
 ## `world/transportTransactions.test.ts`
 
@@ -4048,6 +4055,36 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `world/transportOffscreen.ts`
 - `world/transportTransactions.test.ts`
+- `world/transportTravelArrival.ts`
+
+## `world/transportTravelArrival.test.ts`
+
+**Imports**
+
+- `ai/npcTravel.ts`
+- `economy/settlementEconomy.ts`
+- `settlement/npcState.ts`
+- `world/createTransportOrders.ts`
+- `world/transportOrder.ts`
+- `world/transportTravelArrival.ts`
+
+## `world/transportTravelArrival.ts`
+
+**Imports**
+
+- `ai/npcTravel.ts`
+- `economy/npcWork.ts`
+- `economy/oreTransportDemand.ts`
+- `settlement/npcState.ts`
+- `world/createTransportOrders.ts`
+- `world/transportOffscreen.ts`
+- `world/transportOrder.ts`
+- `world/transportTransactions.ts`
+
+**Imported by**
+
+- `settlement/SettlementsManager.ts`
+- `world/transportTravelArrival.test.ts`
 
 ## `world/trapProp.ts`
 

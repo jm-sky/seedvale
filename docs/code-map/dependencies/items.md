@@ -117,6 +117,8 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/userActions.test.ts`
 - `app/userActions.ts`
+- `economy/interSettlementFoodTransport.test.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/oreTransportDemand.test.ts`
 - `economy/oreTransportDemand.ts`
 - `economy/production.test.ts`
@@ -633,9 +635,9 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcLogistics.ts`
 - `ai/npcPersonalProvisions.ts`
-- `ai/npcProfessionWork.ts`
 - `app/actions/containerActions.ts`
 - `app/inventoryWiring.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/localExchange.test.ts`
 - `economy/settlementEconomy.ts`
 - `items/foodItems.test.ts`
@@ -1092,6 +1094,7 @@ Generated from TypeScript imports.
 - `debug/settlementHistory.ts`
 - `economy/foodTransportDemand.ts`
 - `economy/initial.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/oreTransportDemand.ts`
 - `economy/productionExecutor.ts`
 - `economy/productionShortage.ts`
