@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RiverChannelSegment } from './chunkHeightmap'
 import { FORD_WATER_DEPTH, type FordProjection } from './riverFord'
+import { type RiverChain, riverChannelSegmentsNear, type RiverPoint } from './riverNetwork'
 import { sampleLocalWater } from './waterSample'
 
 const WATER_LEVEL = 10
@@ -99,5 +100,50 @@ describe('sampleLocalWater at a declared ford', () => {
       WATER_LEVEL + 20, WATER_LEVEL + 20, WATER_LEVEL, segments, 8, 0, [ford],
     )
     expect(sample).toEqual({ present: true, waterSurfaceHeight: 19, floorHeight: 18, depth: 1 })
+  })
+})
+
+/** Plan fauna-033 — `ChunkManager.sampleLocalWater()` now reads a per-chunk
+ *  `riverGameplaySegments` cache (built once, from the same whole-chunk-rect
+ *  `riverChannelSegmentsNear` query `ensureLoaded()` already ran for terrain
+ *  carving) instead of recomputing a narrower per-point query on every call.
+ *  This regression pins the assumption that makes reusing the wider,
+ *  once-per-chunk result safe: for any point actually inside this chunk, the
+ *  resulting `LocalWaterSample` is identical either way. */
+describe('sampleLocalWater with chunk-rect cached segments vs. the old per-query segments (plan fauna-033)', () => {
+  function riverPoint(x: number, z: number, elevation: number, accumulation: number): RiverPoint {
+    return { x, z, elevation, accumulation }
+  }
+
+  it('matches at dry, near-edge and mid-channel points inside the chunk', () => {
+    const chunkSize = 64
+    const chunkCenterX = 32
+    const chunkCenterZ = 32
+    const oldQuerySize = 32 // matches chunkManager.ts's RIVER_SHORE_QUERY_SIZE
+    const chain: RiverChain = {
+      points: [
+        riverPoint(-16, 32, 100, 2000),
+        riverPoint(16, 32, 96, 2000),
+        riverPoint(48, 32, 92, 2000),
+        riverPoint(80, 32, 88, 2000),
+      ],
+    }
+    // What `ensureLoaded()` now caches once into `ChunkRecord.riverGameplaySegments`.
+    const cached = riverChannelSegmentsNear([chain], chunkCenterX, chunkCenterZ, chunkSize)
+
+    const samplePoints = [
+      { x: 2, z: 32 }, // near the chunk's left edge, inside the channel
+      { x: 62, z: 32 }, // near the chunk's right edge, inside the channel
+      { x: 32, z: 32 }, // chunk center, inside the channel
+      { x: 4, z: 4 }, // corner, dry
+      { x: 60, z: 60 }, // opposite corner, dry
+    ]
+
+    for (const p of samplePoints) {
+      const perQuerySegments = riverChannelSegmentsNear([chain], p.x, p.z, oldQuerySize)
+      const cachedSample = sampleLocalWater(200, 200, WATER_LEVEL, cached, p.x, p.z)
+      const perQuerySample = sampleLocalWater(200, 200, WATER_LEVEL, perQuerySegments, p.x, p.z)
+      expect(cachedSample).toEqual(perQuerySample)
+    }
   })
 })

@@ -248,6 +248,56 @@ describe('agentCpuDiag', () => {
     setActiveMonitor(null)
   })
 
+  it('routes movement hot-path (water sample / collider query) deltas to the right channel and tracks the worst call (plan fauna-033)', () => {
+    const monitor = createPerfMonitor()
+    monitor.setSource('benchmark', true)
+    setActiveMonitor(monitor)
+    const diag = createAgentCpuDiag()
+
+    diag.beginFaunaAgentUpdates()
+    diag.addFaunaWaterSampleMs(1)
+    diag.addFaunaWaterSampleMs(3)
+    diag.addFaunaColliderQueryMs(0.5, 4)
+    diag.addFaunaColliderQueryMs(2, 9)
+    diag.endFaunaAgentUpdates()
+
+    diag.enterLivestockAgentUpdates()
+    diag.addFaunaWaterSampleMs(5)
+    diag.addFaunaColliderQueryMs(1, 6)
+    diag.leaveLivestockAgentUpdates()
+
+    // Outside any channel — must not leak into either counter (matches the
+    // existing "neither" rule for unscoped callers, e.g. settlement rats).
+    diag.addFaunaWaterSampleMs(99)
+    diag.addFaunaColliderQueryMs(99, 99)
+
+    const totals = diag.snapshot()
+    expect(totals.faunaWaterSampleCalls).toBe(2)
+    expect(totals.faunaWaterSampleMs).toBe(4)
+    expect(totals.faunaWaterSampleWorstMs).toBe(3)
+    expect(totals.faunaColliderQueryCalls).toBe(2)
+    expect(totals.faunaColliderQueryMs).toBe(2.5)
+    expect(totals.faunaColliderQueryWorstMs).toBe(2)
+    expect(totals.faunaColliderQueryReturned).toBe(13)
+    expect(totals.livestockWaterSampleCalls).toBe(1)
+    expect(totals.livestockWaterSampleMs).toBe(5)
+    expect(totals.livestockColliderQueryCalls).toBe(1)
+    expect(totals.livestockColliderQueryReturned).toBe(6)
+    setActiveMonitor(null)
+  })
+
+  it('is a no-op for movement hot-path counters while perf monitoring is disabled', () => {
+    const monitor = createPerfMonitor()
+    setActiveMonitor(monitor)
+    const diag = createAgentCpuDiag()
+    diag.addFaunaWaterSampleMs(5)
+    diag.addFaunaColliderQueryMs(5, 10)
+    const totals = diag.snapshot()
+    expect(totals.faunaWaterSampleCalls).toBe(0)
+    expect(totals.faunaColliderQueryCalls).toBe(0)
+    setActiveMonitor(null)
+  })
+
   it('keeps other update non-negative when section sums exceed the wall-clock', () => {
     const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
     categoryMsSum[PERF_CATEGORY_INDEX.NPC] = 50

@@ -61,6 +61,18 @@ export type AgentCpuDiagTotals = {
   livestockPestRatCandidates: number
   livestockNearestCalls: number
   livestockNearestCandidatesChecked: number
+  /** Movement hot-path (plan fauna-033) — `AnimalAgent.isWalkable()`'s
+   *  `sampleLocalWater()` / `collidersNear()` calls, measured separately
+   *  from the rest of `livestockBehaviourMs` since they were the primary
+   *  suspects for the movement hot-path cost. `WorstMs` is the single
+   *  slowest call this session, not an average. */
+  livestockWaterSampleCalls: number
+  livestockWaterSampleMs: number
+  livestockWaterSampleWorstMs: number
+  livestockColliderQueryCalls: number
+  livestockColliderQueryMs: number
+  livestockColliderQueryWorstMs: number
+  livestockColliderQueryReturned: number
   /** Cadence counters (plan fauna-028) — `AnimalAgent` classified as
    *  `immediate` vs. reduced-cadence, and how often each cadence-gated
    *  section actually executed. */
@@ -101,6 +113,14 @@ export type AgentCpuDiagTotals = {
   nearestCandidatesChecked: number
   herdLeaderCalls: number
   herdLeaderCandidatesChecked: number
+  /** Movement hot-path (plan fauna-033) — see the `livestock*` pair above. */
+  faunaWaterSampleCalls: number
+  faunaWaterSampleMs: number
+  faunaWaterSampleWorstMs: number
+  faunaColliderQueryCalls: number
+  faunaColliderQueryMs: number
+  faunaColliderQueryWorstMs: number
+  faunaColliderQueryReturned: number
   /** Adaptive-simulation candidates (fauna-cpu-diagnostics) — cheap
    *  per-frame counters, not a new telemetry system. */
   faunaUpdateCalls: number
@@ -165,6 +185,13 @@ export type AgentCpuReport = {
     livestockPestRatCandidatesPerFrame: number
     livestockNearestScansPerFrame: number
     livestockNearestCandidatesPerFrame: number
+    livestockWaterSampleCallsPerFrame: number
+    livestockWaterSampleMsPerFrame: number
+    livestockWaterSampleWorstMs: number
+    livestockColliderQueryCallsPerFrame: number
+    livestockColliderQueryMsPerFrame: number
+    livestockColliderQueryWorstMs: number
+    livestockColliderQueryReturnedPerFrame: number
     livestockFullRateAgentsPerFrame: number
     livestockReducedCadenceAgentsPerFrame: number
     livestockBehaviourExecutionsPerFrame: number
@@ -213,6 +240,13 @@ export type AgentCpuReport = {
     nearestCandidatesChecked: number
     herdLeaderCalls: number
     herdLeaderCandidatesChecked: number
+    waterSampleCallsPerFrame: number
+    waterSampleMsPerFrame: number
+    waterSampleWorstMs: number
+    colliderQueryCallsPerFrame: number
+    colliderQueryMsPerFrame: number
+    colliderQueryWorstMs: number
+    colliderQueryReturnedPerFrame: number
   }
 }
 
@@ -275,6 +309,15 @@ export type AgentCpuDiag = {
   recordPlayerPerceptionCheck: () => void
   recordNearestScan: (candidatesChecked: number) => void
   recordHerdLeaderScan: (candidatesChecked: number) => void
+  /** Movement hot-path (plan fauna-033) — routed to whichever channel owns
+   *  the current `AnimalAgent.update()` call, same owner rule as
+   *  `addFauna*Ms`. `ms` is one `sampleLocalWater()` call's own duration. */
+  addFaunaWaterSampleMs: (ms: number) => void
+  /** Movement hot-path (plan fauna-033) — one `collidersNear()`
+   *  (`ColliderRegistry.query()`) call's duration plus how many colliders it
+   *  returned (before the caller's own `colliderActiveAtY`/containment
+   *  filtering). */
+  addFaunaColliderQueryMs: (ms: number, returned: number) => void
   snapshot: () => AgentCpuDiagTotals
   reset: () => void
 }
@@ -309,6 +352,13 @@ function emptyTotals(): AgentCpuDiagTotals {
     livestockPestRatCandidates: 0,
     livestockNearestCalls: 0,
     livestockNearestCandidatesChecked: 0,
+    livestockWaterSampleCalls: 0,
+    livestockWaterSampleMs: 0,
+    livestockWaterSampleWorstMs: 0,
+    livestockColliderQueryCalls: 0,
+    livestockColliderQueryMs: 0,
+    livestockColliderQueryWorstMs: 0,
+    livestockColliderQueryReturned: 0,
     livestockFullRateAgents: 0,
     livestockReducedCadenceAgents: 0,
     livestockBehaviourExecutions: 0,
@@ -328,6 +378,13 @@ function emptyTotals(): AgentCpuDiagTotals {
     nearestCandidatesChecked: 0,
     herdLeaderCalls: 0,
     herdLeaderCandidatesChecked: 0,
+    faunaWaterSampleCalls: 0,
+    faunaWaterSampleMs: 0,
+    faunaWaterSampleWorstMs: 0,
+    faunaColliderQueryCalls: 0,
+    faunaColliderQueryMs: 0,
+    faunaColliderQueryWorstMs: 0,
+    faunaColliderQueryReturned: 0,
     faunaUpdateCalls: 0,
     faunaSensingPasses: 0,
     faunaDecisionPasses: 0,
@@ -626,6 +683,32 @@ export function createAgentCpuDiag(): AgentCpuDiag {
       totals.herdLeaderCalls++
       totals.herdLeaderCandidatesChecked += candidatesChecked
     },
+    addFaunaWaterSampleMs(ms) {
+      if (!this.isEnabled()) return
+      if (livestockAgentDepth > 0) {
+        totals.livestockWaterSampleCalls++
+        totals.livestockWaterSampleMs += ms
+        if (ms > totals.livestockWaterSampleWorstMs) totals.livestockWaterSampleWorstMs = ms
+      } else if (faunaAgentDepth > 0) {
+        totals.faunaWaterSampleCalls++
+        totals.faunaWaterSampleMs += ms
+        if (ms > totals.faunaWaterSampleWorstMs) totals.faunaWaterSampleWorstMs = ms
+      }
+    },
+    addFaunaColliderQueryMs(ms, returned) {
+      if (!this.isEnabled()) return
+      if (livestockAgentDepth > 0) {
+        totals.livestockColliderQueryCalls++
+        totals.livestockColliderQueryMs += ms
+        totals.livestockColliderQueryReturned += returned
+        if (ms > totals.livestockColliderQueryWorstMs) totals.livestockColliderQueryWorstMs = ms
+      } else if (faunaAgentDepth > 0) {
+        totals.faunaColliderQueryCalls++
+        totals.faunaColliderQueryMs += ms
+        totals.faunaColliderQueryReturned += returned
+        if (ms > totals.faunaColliderQueryWorstMs) totals.faunaColliderQueryWorstMs = ms
+      }
+    },
     snapshot: () => ({ ...totals }),
     reset() {
       Object.assign(totals, emptyTotals())
@@ -705,6 +788,8 @@ const NOOP: AgentCpuDiag = {
   recordPlayerPerceptionCheck: () => {},
   recordNearestScan: () => {},
   recordHerdLeaderScan: () => {},
+  addFaunaWaterSampleMs: () => {},
+  addFaunaColliderQueryMs: () => {},
   snapshot: () => emptyTotals(),
   reset: () => {},
 }
@@ -794,6 +879,13 @@ export function buildAgentCpuReport(input: {
       livestockPestRatCandidatesPerFrame: round1(input.totals.livestockPestRatCandidates / frames),
       livestockNearestScansPerFrame: round1(input.totals.livestockNearestCalls / frames),
       livestockNearestCandidatesPerFrame: round1(input.totals.livestockNearestCandidatesChecked / frames),
+      livestockWaterSampleCallsPerFrame: round1(input.totals.livestockWaterSampleCalls / frames),
+      livestockWaterSampleMsPerFrame: round1(input.totals.livestockWaterSampleMs / frames),
+      livestockWaterSampleWorstMs: round1(input.totals.livestockWaterSampleWorstMs),
+      livestockColliderQueryCallsPerFrame: round1(input.totals.livestockColliderQueryCalls / frames),
+      livestockColliderQueryMsPerFrame: round1(input.totals.livestockColliderQueryMs / frames),
+      livestockColliderQueryWorstMs: round1(input.totals.livestockColliderQueryWorstMs),
+      livestockColliderQueryReturnedPerFrame: round1(input.totals.livestockColliderQueryReturned / frames),
       livestockFullRateAgentsPerFrame: round1(input.totals.livestockFullRateAgents / frames),
       livestockReducedCadenceAgentsPerFrame: round1(input.totals.livestockReducedCadenceAgents / frames),
       livestockBehaviourExecutionsPerFrame: round1(input.totals.livestockBehaviourExecutions / frames),
@@ -858,6 +950,13 @@ export function buildAgentCpuReport(input: {
       nearestCandidatesChecked: input.totals.nearestCandidatesChecked,
       herdLeaderCalls: input.totals.herdLeaderCalls,
       herdLeaderCandidatesChecked: input.totals.herdLeaderCandidatesChecked,
+      waterSampleCallsPerFrame: round1(input.totals.faunaWaterSampleCalls / frames),
+      waterSampleMsPerFrame: round1(input.totals.faunaWaterSampleMs / frames),
+      waterSampleWorstMs: round1(input.totals.faunaWaterSampleWorstMs),
+      colliderQueryCallsPerFrame: round1(input.totals.faunaColliderQueryCalls / frames),
+      colliderQueryMsPerFrame: round1(input.totals.faunaColliderQueryMs / frames),
+      colliderQueryWorstMs: round1(input.totals.faunaColliderQueryWorstMs),
+      colliderQueryReturnedPerFrame: round1(input.totals.faunaColliderQueryReturned / frames),
     },
   }
 }
@@ -897,6 +996,8 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `    dog guard scans: ${npc.livestockDogGuardScansPerFrame.toFixed(1)}/frame (${npc.livestockGuardPredatorCandidatesPerFrame.toFixed(1)} predator candidates/frame)`,
     `    pest scans: ${npc.livestockPestScansPerFrame.toFixed(1)}/frame (${npc.livestockPestRatCandidatesPerFrame.toFixed(1)} rat candidates/frame)`,
     `    nearest scans: ${npc.livestockNearestScansPerFrame.toFixed(1)}/frame (${npc.livestockNearestCandidatesPerFrame.toFixed(1)} candidates/frame)`,
+    `    water samples: ${npc.livestockWaterSampleCallsPerFrame.toFixed(1)}/frame, ${npc.livestockWaterSampleMsPerFrame.toFixed(2)} ms/frame (worst call ${npc.livestockWaterSampleWorstMs.toFixed(2)} ms)`,
+    `    collider queries: ${npc.livestockColliderQueryCallsPerFrame.toFixed(1)}/frame, ${npc.livestockColliderQueryMsPerFrame.toFixed(2)} ms/frame (worst call ${npc.livestockColliderQueryWorstMs.toFixed(2)} ms, ${npc.livestockColliderQueryReturnedPerFrame.toFixed(1)} colliders/frame)`,
     `    full-rate agents/frame: ${npc.livestockFullRateAgentsPerFrame.toFixed(1)}`,
     `    reduced-cadence agents/frame: ${npc.livestockReducedCadenceAgentsPerFrame.toFixed(1)}`,
     `    behaviour executions/frame: ${npc.livestockBehaviourExecutionsPerFrame.toFixed(1)}`,
@@ -942,6 +1043,10 @@ export function formatAgentCpuReport(report: AgentCpuReport): string {
     `  nearest candidates checked: ${fauna.nearestCandidatesPerFrame.toFixed(1)}/frame (${fauna.nearestCandidatesChecked} total)`,
     `  herd leader scans: ${fauna.herdLeaderScansPerFrame.toFixed(1)}/frame (${fauna.herdLeaderCalls} calls)`,
     `  herd candidates checked: ${fauna.herdLeaderCandidatesPerFrame.toFixed(1)}/frame (${fauna.herdLeaderCandidatesChecked} total)`,
+    '',
+    '  movement hot-path (plan fauna-033):',
+    `    water samples: ${fauna.waterSampleCallsPerFrame.toFixed(1)}/frame, ${fauna.waterSampleMsPerFrame.toFixed(2)} ms/frame (worst call ${fauna.waterSampleWorstMs.toFixed(2)} ms)`,
+    `    collider queries: ${fauna.colliderQueryCallsPerFrame.toFixed(1)}/frame, ${fauna.colliderQueryMsPerFrame.toFixed(2)} ms/frame (worst call ${fauna.colliderQueryWorstMs.toFixed(2)} ms, ${fauna.colliderQueryReturnedPerFrame.toFixed(1)} colliders/frame)`,
   ].join('\n')
 }
 

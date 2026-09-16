@@ -1,7 +1,7 @@
 # Plan: Animal movement hot-path performance
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** ~~fauna-028~~
@@ -10,6 +10,15 @@
 **Tags:** `performance` `movement` `water` `collision`
 **Roadmap:** -
 **Model:** Sonnet, Composer
+
+## Implementation status (2026-09-16)
+
+**Implemented + technically verified:** Phase A (scoped down, see below), Phase B.
+
+- **Phase B (cache per-chunk river gameplay segments):** `ChunkManager`'s `ensureLoaded()` already computed a whole-chunk-rect `riverChannelSegmentsNear(riverChains, ...)` result once per chunk load for terrain carving — that same result is now stored on `ChunkRecord.riverGameplaySegments` and reused by `sampleLocalWater()`, which no longer calls `riverChannelSegmentsNear()` at query time at all (`riverChannelSegmentsNear calls from gameplay sample path = 0`, structurally, not just by measurement). `riverShoreDistance`/`riverShorePoint`/`riverWaterContext` (not on the movement hot path, not per-agent) are unchanged. Regression test (`waterSample.test.ts`) pins that the cached whole-chunk-rect segment set produces the identical `LocalWaterSample` the old narrower per-point query produced, at dry/near-edge/mid-channel points.
+- **Phase A (movement hot-path diagnostics), scoped down:** `AnimalAgent.isWalkable()` — the actual `sampleLocalWater()` + `collidersNear()` (`ColliderRegistry.query()`) call site, shared by every movement mode via `stepWithSlopeAndCollision()`'s `isWalkable` callback plus wander-point scoring — now times both calls separately through new `agentCpuDiag` counters (calls/frame, ms/frame, worst call, colliders returned/frame), routed to the existing fauna/livestock channels like every other `addFauna*Ms` counter. This covers the plan's two explicitly-named prime suspects (water sampling, collider query) end to end. **Not implemented:** the full `movement → slope / walkability` and sibling `movementTail` breakdown tree, and the "worst single `AnimalAgent.update()` call with animalId/kind/importance" tracker — `sampleSlope()` lives inside the shared, non-instrumented `stepWithSlopeAndCollision()`/`slopeConstraint.ts` and isn't named as a suspect anywhere in the plan's own problem statement; `tickMovementTail()` is deliberately still counted inside `faunaLifePresentationMs`/`livestockLifePresentationMs` (existing comment: kept there so the benchmark's behaviour/life-presentation split stays comparable across this change) and wasn't given a competing duplicate timer. Adding either was judged disproportionate to what Phase C's comparison table (`docs/plans/README.md` §Verification) actually needs to decide Phase D/E/F — revisit if the User's Phase C benchmark still can't attribute a cost.
+
+**Not implemented (conditional, per plan):** Phase D (`riverWaterSampleAt` spatial narrowing), Phase E (`ColliderRegistry.query()` allocation reduction), Phase F (slow-frame cadence change). All three are explicitly gated on the User's Phase C browser benchmark, which this implementation does not run.
 
 ## Problem
 

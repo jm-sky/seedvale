@@ -449,6 +449,20 @@ type ChunkRecord = {
    *  generation — plan 189) and reused by `attachChunkMesh` for the water
    *  ribbon, instead of retaining `riverTiles` a second time. */
   riverChains?: RiverChain[]
+  /** Derived from `riverChains` at the same point `ensureLoaded()` resolves
+   *  them (plan fauna-033) — the exact carving-time `riverChannelSegmentsNear`
+   *  result covering this chunk's own rect, reused by `sampleLocalWater()` so
+   *  a per-agent movement query never re-walks `riverChains` or allocates a
+   *  fresh `RiverChannelSegment[]`. Not a second source of truth: it is
+   *  nothing but `riverChannelSegmentsNear(riverChains, ...)`'s own output,
+   *  cached because that call is otherwise pure per `riverChains` (which
+   *  itself never changes after `ensureLoaded`). Any segment whose channel
+   *  could affect a point inside this chunk necessarily overlaps this rect
+   *  (the function's own reach-margin AABB test), so this superset yields the
+   *  same nearest-segment result as the narrower per-query box the old
+   *  on-demand call used. Empty/undefined for the common no-river chunk;
+   *  dropped with the record on unload. */
+  riverGameplaySegments?: RiverChannelSegment[]
   /** Declared road↔river ford crossings shaping this chunk — the exact
    *  `ChunkTileParams.fordProjections` its terrain was generated from, kept so
    *  `sampleLocalWater` reports the same shaped ford bed the ground actually
@@ -2238,6 +2252,10 @@ export function createChunkManager(
     const { x, z } = chunkCenter(coord, config.chunkSize)
     const riverSegments = withStage(getMonitor(), 'riverChannelSegmentsNear', () =>
       riverChannelSegmentsNear(riverChains, x, z, config.chunkSize))
+    // Same chunk-rect segments terrain carving is about to use — cached here
+    // (plan fauna-033) so `sampleLocalWater()`'s per-agent movement query
+    // never has to recompute them.
+    record.riverGameplaySegments = riverSegments
     const params = withStage(getMonitor(), 'terrainPrepare', () => paramsFor(coord, riverSegments))
     // Same declared fords the tile is shaped from, so `sampleLocalWater` and
     // the ground agree on the ford's depth.
@@ -2637,9 +2655,11 @@ export function createChunkManager(
     sampleLocalWater(worldX, worldZ) {
       const coord = worldToChunk(worldX, worldZ, config.chunkSize)
       const rec = chunks.get(chunkKey(coord))
-      const riverSegments = rec?.riverChains && rec.riverChains.length > 0
-        ? riverChannelSegmentsNear(rec.riverChains, worldX, worldZ, RIVER_SHORE_QUERY_SIZE)
-        : []
+      // Query-time work only (plan fauna-033): the owning chunk's own
+      // `riverGameplaySegments` was already resolved once in `ensureLoaded`
+      // from its canonical `riverChains` — no per-query
+      // `riverChannelSegmentsNear` recomputation/allocation on this hot path.
+      const riverSegments = rec?.riverGameplaySegments ?? []
       return sampleLocalWaterPure(
         readField('heights', worldX, worldZ),
         readField('floorHeights', worldX, worldZ),

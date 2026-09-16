@@ -4955,14 +4955,28 @@ export class AnimalAgent {
    *  blocks it. Autonomous steering/navigation and `driveMounted()` share
    *  this one check, so a mounted animal's physical water traversability can
    *  never diverge from its own autonomous behaviour (plan fauna-015 §8).
-   *  Casual wander/trip scoring lives in `autonomousWanderAccepts`. */
+   *  Casual wander/trip scoring lives in `autonomousWanderAccepts`.
+   *
+   *  Called up to 3x per `stepWithSlopeAndCollision()` movement step (plus
+   *  wander-point scoring), so its two real queries are timed separately
+   *  (plan fauna-033 movement hot-path diagnostics) — routed to whichever
+   *  channel (fauna vs. livestock) owns the current `update()`/
+   *  `driveMounted()` call, same as every other `addFauna*Ms` counter; a
+   *  no-op with no `performance.now()` calls while perf monitoring is off. */
   private isWalkable(x: number, z: number): boolean {
+    const agentCpuDiag = getAgentCpuDiag()
+    const diagOn = agentCpuDiag.isEnabled()
+    const waterT0 = diagOn ? performance.now() : 0
     const water = this.sampleLocalWater(x, z)
+    if (diagOn) agentCpuDiag.addFaunaWaterSampleMs(performance.now() - waterT0)
     if (water.present && classifyWaterTraversal(water.depth, this.def.scale, this.def.water) === null) {
       return false
     }
     const y = this.mesh.position.y
-    for (const collider of this.collidersNear(x, z)) {
+    const colliderT0 = diagOn ? performance.now() : 0
+    const colliders = this.collidersNear(x, z)
+    if (diagOn) agentCpuDiag.addFaunaColliderQueryMs(performance.now() - colliderT0, colliders.length)
+    for (const collider of colliders) {
       if (!colliderActiveAtY(collider, y)) continue
       if (colliderContainsPoint(collider, x, z)) return false
     }
