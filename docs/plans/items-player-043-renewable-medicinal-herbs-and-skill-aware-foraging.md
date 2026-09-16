@@ -9,6 +9,7 @@
 **Subdomains:** `items` `interaction` `player-needs`
 **Tags:** `herbs` `medicine` `survival` `foraging` `respawn`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
