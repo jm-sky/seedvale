@@ -9,6 +9,7 @@
 **Subdomains:** `economy` `household`
 **Tags:** `trade` `professions` `inventory` `production`
 **Roadmap:** `economy-goods-flow.md`
+**Model:** Sonnet, Grok
 
 ## Goal
 
@@ -320,55 +321,34 @@ Dodane lub istotnie uogólnione publiczne funkcje / typy powinny dostać JSDoc; 
 ### Merchant assortment
 
 - `weapons-tools` nie jest zależny od pozycji goods w `MERCHANT_STOCK`;
-- forest merchant może dostać bow/arrow/hunting goods przy odpowiednim deterministic seed;
-- zwiększony `skuBudget` daje szerszy stock bez pełnego katalogu u każdego Merchanta;
-- SM < MD < LG/XL nadal zachowuje rozsądny scale;
-- premium settlement-level probability i finite persisted merchant stock pozostają bez regresji.
+- forest merchant może dostać bow/arrow/hunting goods przy poprawnym seed/context;
+- zwiększenie `skuBudget` nie niszczy specialization diversity;
+- premium settlement-level probability i finite stock persistence pozostają bez regresji;
+- ten sam seed / settlement / Merchant daje ten sam assortment.
 
-### Persistence
+## 11. Manual verification by User
 
-- save/load po częściowej sprzedaży zachowuje dokładnie pozostałe starter goods;
-- sold instance nie wraca;
-- Hunter-produced bows/arrows persistują przez existing `HouseholdSnapshot.items`;
-- brak nowego cached trade-offer persistence.
+W browserze:
 
-## 11. Manual verification
-
-Browser verification wykonuje User.
-
-Sprawdzić co najmniej:
-
-1. Hunter / jego household ma strzały i hunting goods; po czasie może pojawić się nowy bow z produkcji.
-2. Kupiony bow/armor znika z oferty po zakupie i nie wraca po ponownym otwarciu ani reloadzie.
-3. Woodcutter może sprzedać maksymalnie 2 household axes, ale nadal zachowuje swoją osobistą siekierę.
-4. Farmer oferuje widły i sierp.
-5. Blacksmith oferuje podstawowy sword i metalowy pauldron.
-6. Merchant `weapons-tools` / forest ma sensowny hunting/weapons assortment, w tym realną szansę arrows/bow.
-7. Ceny nadal reagują na istniejącą relację / reputację i nie powstał drugi pricing system.
+1. znaleźć household Huntera i sprawdzić ofertę jego członków;
+2. kupić starter bow/leather good, zamknąć i ponownie otworzyć handel — item nie wraca;
+3. kupić część strzał, zostawiając protected Hunter reserve;
+4. odczekać / sprowokować normalną pracę Huntera — arrows i bow trade stock mogą zostać uzupełnione tylko przez realną produkcję;
+5. Woodcutter oferuje najwyżej 2 handlowe axes i nadal ma własną broń/narzędzie;
+6. Farmer oferuje pitchfork/sickle;
+7. Blacksmith ma bounded sword / metal pauldron;
+8. sprawdzić forest Merchant `weapons-tools` — bows/arrows realnie osiągalne;
+9. save/load po zakupach — sprzedany specialist stock nadal nie istnieje.
 
 ## Non-goals
 
-- nowa profesja `leatherworker`;
-- pełny hide → leather → armor crafting chain;
-- produkcja axes / farmer tools / swords / armor przez właściwe profesje;
-- dynamic supply/demand pricing;
-- global market simulation;
-- profession-specific shop UI;
-- barter dla ordinary NPC;
-- nowe `ItemKind` tylko dla tego planu;
-- regional pricing;
-- automatyczne wystawianie całego household inventory.
-
-## Acceptance Criteria
-
-- Hunter household jest praktycznym źródłem arrows i hunting goods, a Hunter może realnie produkować arrows i nowe bows na sprzedaż.
-- Woodcutter household może wystawić maksymalnie 2 trade axes bez naruszenia osobistego loadoutu Woodcuttera.
-- Farmer household może wystawić pitchfork i sickle.
-- Blacksmith household ma ograniczony startowy sword / metal-pauldron stock.
-- Hunter household ma jednorazowy leather-goods bootstrap bez tworzenia fikcyjnej profesji leatherworker.
-- Wszystkie specialist goods mają realnego ownera i po sprzedaży nie regenerują się magicznie.
-- Instance-backed goods zachowują identity/state przy ordinary-NPC purchase.
-- Merchant assortment nie jest przypadkowo ograniczony kolejnością `MERCHANT_STOCK`, a `skuBudget` jest zwiększony w kontrolowany sposób.
-- Shared NPC trade / pricing / persistence pozostają jednym mechanizmem.
+- pełna leatherworker profession;
+- pełny Blacksmith sword/armor crafting;
+- produkcja axes/pitchforks/sickles;
+- dynamic market / supply-demand pricing;
+- regenerujący shop stock;
+- nowe ItemKind / materiały tylko dla receptur;
+- profession-specific UI/shop screens;
+- regional price modifiers.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
