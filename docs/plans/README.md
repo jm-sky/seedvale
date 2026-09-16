@@ -80,6 +80,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-039-ubc-runtime-pauldrons.md`                                 | 🟡 | M      | ~~items-player-030~~, ~~items-player-036~~                                                                                                                                                                                                                                             | -                                       |
 | 💡 `items-player-040-armor-quality-pricing-and-world-availability.md`          | 🟡 | M      | ~~items-player-030~~, ~~settlements-012~~                                                                                                                                                                                                                                              | -                                       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
+| 💡 `ui-input-022-lightweight-startup-loading-stages.md`                        | 🟡 | S      | -                                                                                                                                                                                                                                                                                      | -                                       |
 
 ---
 
@@ -238,7 +239,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `018`
 - settlements-npcs: `039`
 - tools: `015`
-- ui-input: `022`
+- ui-input: `023`
 - world: `030`
 - world-terrain: `037`
 
