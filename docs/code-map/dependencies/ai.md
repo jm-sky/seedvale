@@ -308,6 +308,7 @@ Generated from TypeScript imports.
 - `economy/npcWork.ts`
 - `economy/production.ts`
 - `quests/caveLocationDescription.ts`
+- `quests/huntersBrotherhoodIntroduction.test.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/families.ts`
 - `settlement/lodgingResolver.test.ts`

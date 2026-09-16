@@ -937,6 +937,7 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/dungeonBanditTreasureRuntime.ts`
 - `quests/guardPersistence.ts`
+- `quests/huntersBrotherhoodIntroduction.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
 - `quests/lostTreasureChronicleDeciphering.ts`

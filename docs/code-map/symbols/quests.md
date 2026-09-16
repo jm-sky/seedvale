@@ -92,6 +92,20 @@ Generated from exported TypeScript symbols.
   - domain: quests-progression
 - `SaveGuardClaimState` — type — line 8
 
+## `quests/huntersBrotherhoodIntroduction.ts`
+
+- `buildHuntersBrotherhoodIntroductionQuest` — function — line 218
+  - domain: quests-progression
+- `HUNTERS_BROTHERHOOD_JOINED_OUTCOME` — const — line 14
+- `HuntersBrotherhoodBinding` — type — line 25
+  - domain: quests-progression
+- `HuntersBrotherhoodCastInput` — type — line 46
+  - domain: quests-progression
+- `huntersBrotherhoodIntroductionQuestId` — function — line 64
+  - domain: quests-progression
+- `resolveHuntersBrotherhoodBinding` — function — line 116
+  - domain: quests-progression
+
 ## `quests/landmarkLocationDescription.ts`
 
 - `describeLandmarkLocation` — function — line 23
@@ -309,12 +323,13 @@ Generated from exported TypeScript symbols.
 
 ## `quests/opportunities/hunterProfessionQuests.ts`
 
-- `buildHunterProfessionQuests` — function — line 214
+- `buildHunterProfessionQuests` — function — line 215
   - domain: quests-progression
-- `hunterProfessionQuestId` — function — line 29
+- `HUNTER_III_COMPLETE_OUTCOME` — const — line 12
+- `hunterProfessionQuestId` — function — line 30
   - domain: quests-progression
-- `parseHunterProfessionQuestId` — function — line 33
-- `selectHunterQuestGiver` — function — line 52
+- `parseHunterProfessionQuestId` — function — line 34
+- `selectHunterQuestGiver` — function — line 53
 
 ## `quests/opportunities/rpgQuestMaterialization.ts`
 

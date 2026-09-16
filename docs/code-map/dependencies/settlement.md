@@ -1263,6 +1263,7 @@ Generated from TypeScript imports.
 - `quests/guardEveningOfferWindow.ts`
 - `quests/guardPersistence.ts`
 - `quests/guardRewards.ts`
+- `quests/huntersBrotherhoodIntroduction.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostTreasureChronicleDeciphering.ts`
 - `quests/lostTreasureChronicleSearch.ts`
