@@ -51,18 +51,20 @@ Generated from exported TypeScript symbols.
 
 ## `economy/npcWork.ts`
 
-- `commitBlacksmithProduction` — function — line 56
+- `commitBlacksmithProduction` — function — line 71
   - domain: settlements-npcs
-- `commitDressingProduction` — function — line 101
+- `commitDressingProduction` — function — line 116
   - domain: settlements-npcs
-- `commitHunterArrowProduction` — function — line 46
-- `commitRoleWork` — function — line 32
-- `commitTextileWorkProduction` — function — line 92
+- `commitHunterArrowProduction` — function — line 49
+- `commitHunterBowProduction` — function — line 60
   - domain: settlements-npcs
-- `commitWoodcutterDeposit` — function — line 21
-- `commitWoolMaterialProduction` — function — line 79
+- `commitRoleWork` — function — line 35
+- `commitTextileWorkProduction` — function — line 107
   - domain: settlements-npcs
-- `tryAdvanceDevelopment` — function — line 109
+- `commitWoodcutterDeposit` — function — line 24
+- `commitWoolMaterialProduction` — function — line 94
+  - domain: settlements-npcs
+- `tryAdvanceDevelopment` — function — line 124
 
 ## `economy/oreTransportDemand.ts`
 
@@ -80,24 +82,31 @@ Generated from exported TypeScript symbols.
 
 ## `economy/production.ts`
 
-- `ARROWS_FROM_BEAM_PRODUCTION` — const — line 75
-- `ARROWS_FROM_BRANCH_PRODUCTION` — const — line 66
-- `BLACKSMITH_IRON_ROD_PRODUCTION` — const — line 143
+- `ARROWS_FROM_BEAM_PRODUCTION` — const — line 77
+- `ARROWS_FROM_BRANCH_PRODUCTION` — const — line 68
+- `BLACKSMITH_IRON_ROD_PRODUCTION` — const — line 197
   - domain: settlements-npcs
-- `DRESSING_PRODUCTION` — const — line 152
-- `FARMING_PRODUCTION` — const — line 36
-- `FISHING_PRODUCTION` — const — line 43
-- `FLAX_LINEN_PRODUCTION` — const — line 109
-- `HUNTER_ARROW_PRODUCTIONS` — const — line 85
-- `LINEN_BANDAGE_PRODUCTION` — const — line 119
-- `MINING_PRODUCTION` — const — line 50
-- `produceFirstAvailableItemRecipe` — function — line 166
-- `ProductionDef` — type — line 10
-- `productionDefById` — function — line 205
-- `productionForRole` — function — line 184
-- `TEXTILE_WORKER_PRODUCTIONS` — const — line 129
-- `WOODCUTTING_PRODUCTION` — const — line 25
-- `WOOL_MATERIAL_PRODUCTION` — const — line 99
+- `DRESSING_PRODUCTION` — const — line 206
+- `FARMING_PRODUCTION` — const — line 38
+- `FISHING_PRODUCTION` — const — line 45
+- `FLAX_LINEN_PRODUCTION` — const — line 163
+- `householdTradeBowCount` — function — line 136
+  - domain: settlements-npcs
+- `HUNTER_ARROW_PRODUCTIONS` — const — line 87
+- `HUNTER_BOW_PRODUCTIONS` — const — line 119
+- `HUNTER_BOW_STOCK_CAP` — const — line 125
+- `LINEN_BANDAGE_PRODUCTION` — const — line 173
+- `MINING_PRODUCTION` — const — line 52
+- `produceFirstAvailableItemRecipe` — function — line 220
+- `ProductionDef` — type — line 12
+- `productionDefById` — function — line 261
+- `productionForRole` — function — line 238
+- `SHORT_BOW_FROM_BEAM_PRODUCTION` — const — line 109
+- `SHORT_BOW_FROM_BRANCH_PRODUCTION` — const — line 100
+  - domain: settlements-npcs
+- `TEXTILE_WORKER_PRODUCTIONS` — const — line 183
+- `WOODCUTTING_PRODUCTION` — const — line 27
+- `WOOL_MATERIAL_PRODUCTION` — const — line 153
   - domain: settlements-npcs
 
 ## `economy/productionExecutor.ts`

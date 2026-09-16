@@ -480,11 +480,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 90
-- `findWeaponNeedingMaintenance` — function — line 106
-- `NpcWorkContext` — type — line 126
-- `planProfessionWork` — function — line 1067
-- `selectTraderCollectionGoods` — function — line 397
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 94
+- `findWeaponNeedingMaintenance` — function — line 110
+- `NpcWorkContext` — type — line 130
+- `planProfessionWork` — function — line 1122
+- `selectTraderCollectionGoods` — function — line 452
 
 ## `ai/npcStrategies.ts`
 
@@ -507,11 +507,11 @@ Generated from exported TypeScript symbols.
   - domain: settlements-npcs
 - `NpcTradeOwnerSource` — type — line 15
   - domain: settlements-npcs
-- `npcTradeQuantityAvailable` — function — line 141
+- `npcTradeQuantityAvailable` — function — line 157
   - domain: settlements-npcs
-- `npcTradeSourceInventory` — function — line 159
+- `npcTradeSourceInventory` — function — line 175
   - domain: settlements-npcs
-- `resolveNpcTradeOffers` — function — line 175
+- `resolveNpcTradeOffers` — function — line 191
   - domain: settlements-npcs
 - `TradeReserveNpc` — type — line 34
 

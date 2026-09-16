@@ -231,6 +231,8 @@ Generated from TypeScript imports.
 - `economy/productionExecutor.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
 
 **Imported by**
 

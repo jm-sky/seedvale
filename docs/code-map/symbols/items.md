@@ -533,21 +533,21 @@ Generated from exported TypeScript symbols.
 - `createAcquiredInstance` — function — line 197
 - `InstanceSellResult` — type — line 37
 - `OfferBuybackResolution` — type — line 41
-- `OwnedGoodsPurchaseLine` — type — line 545
-- `previewPricedPurchaseNetCoins` — function — line 360
-- `previewTransactionNetCoins` — function — line 343
-- `resolveOfferBuyback` — function — line 292
+- `OwnedGoodsPurchaseLine` — type — line 546
+- `previewPricedPurchaseNetCoins` — function — line 361
+- `previewTransactionNetCoins` — function — line 344
+- `resolveOfferBuyback` — function — line 293
   - domain: settlements — merchant buyback for an entire offer basket plus the concrete instance ids settlement should remove for instance-backed kinds.
-- `resolveOfferLineBuyback` — function — line 269
+- `resolveOfferLineBuyback` — function — line 270
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
-- `selectInstancesToSell` — function — line 227
-- `selectInstanceToPlace` — function — line 242
-- `sellInstancesForCoins` — function — line 648
-- `settleMerchantStockTransaction` — function — line 489
-- `settleOwnedGoodsPurchase` — function — line 569
+- `selectInstancesToSell` — function — line 228
+- `selectInstanceToPlace` — function — line 243
+- `sellInstancesForCoins` — function — line 649
+- `settleMerchantStockTransaction` — function — line 490
+- `settleOwnedGoodsPurchase` — function — line 570
   - domain: settlements-npcs
-- `settlePricedPurchase` — function — line 373
-- `settleTransaction` — function — line 401
+- `settlePricedPurchase` — function — line 374
+- `settleTransaction` — function — line 402
 - `TradeResult` — type — line 35
 
 ## `items/tradeCatalog.ts`

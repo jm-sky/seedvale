@@ -347,6 +347,7 @@ Generated from TypeScript imports.
 - `settlement/families.test.ts`
 - `settlement/findSettlementSite.test.ts`
 - `settlement/houseCatalog.ts`
+- `settlement/householdProfessionStock.ts`
 - `settlement/livestock.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
@@ -594,6 +595,7 @@ Generated from TypeScript imports.
 - `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
+- `settlement/householdProfessionStock.ts`
 - `settlement/householdWood.ts`
 
 **Imported by**
@@ -633,6 +635,7 @@ Generated from TypeScript imports.
 - `settlement/household.test.ts`
 - `settlement/householdExchange.test.ts`
 - `settlement/householdExchange.ts`
+- `settlement/householdProfessionStock.ts`
 - `settlement/householdResourceTransfer.test.ts`
 - `settlement/householdResourceTransfer.ts`
 - `settlement/livestock.ts`
@@ -668,6 +671,23 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `settlement/createSettlement.ts`
 - `settlement/householdExchange.test.ts`
+
+## `settlement/householdProfessionStock.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/trade.ts`
+- `settlement/families.ts`
+- `settlement/household.ts`
+- `settlement/professionStaffing.ts`
+
+**Imported by**
+
+- `settlement/household.ts`
+- `settlement/settlementAgriculture.ts`
 
 ## `settlement/householdResourceTransfer.test.ts`
 
@@ -1376,6 +1396,7 @@ Generated from TypeScript imports.
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `settlement/createSettlement.ts`
+- `settlement/householdProfessionStock.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/professionFamilySurnames.ts`
@@ -1737,6 +1758,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `settlement/householdProfessionStock.ts`
 - `settlement/professionStaffing.ts`
 - `world/cropLifecycle.ts`
 - `world/plantedCrops.ts`

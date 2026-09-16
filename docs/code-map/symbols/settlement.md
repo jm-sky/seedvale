@@ -209,27 +209,27 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 357
-- `createHouseholdRegistry` — function — line 574
-- `FARMER_STARTING_SEED_COUNT` — const — line 238
-- `HayForageState` — type — line 125
-- `Household` — type — line 241
-- `HOUSEHOLD_WOOD_RESERVE_TARGET` — const — line 95
-- `HouseholdAgricultureState` — type — line 192
-- `HouseholdDepositResult` — type — line 34
-- `HouseholdId` — type — line 29
+- `createHousehold` — function — line 364
+- `createHouseholdRegistry` — function — line 582
+- `FARMER_STARTING_SEED_COUNT` — const — line 245
+- `HayForageState` — type — line 126
+- `Household` — type — line 248
+- `HOUSEHOLD_WOOD_RESERVE_TARGET` — const — line 96
+- `HouseholdAgricultureState` — type — line 193
+- `HouseholdDepositResult` — type — line 35
+- `HouseholdId` — type — line 30
   - domain: settlements-npcs
   - system: household
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 323
-- `HouseholdRegistry` — type — line 565
-- `HouseholdResourceKind` — type — line 52
-- `HouseholdSnapshot` — type — line 204
-- `HouseholdStartingContext` — type — line 229
-- `resolveHayForage` — function — line 141
-- `WaterReserve` — type — line 156
+- `householdIdFor` — function — line 330
+- `HouseholdRegistry` — type — line 573
+- `HouseholdResourceKind` — type — line 53
+- `HouseholdSnapshot` — type — line 205
+- `HouseholdStartingContext` — type — line 231
+- `resolveHayForage` — function — line 142
+- `WaterReserve` — type — line 157
 
 ## `settlement/householdExchange.ts`
 
@@ -238,6 +238,23 @@ Generated from exported TypeScript symbols.
 - `HouseholdSurplusCandidate` — type — line 12
 - `HouseholdSurplusLookup` — type — line 24
 - `selectHouseholdSurplusSource` — function — line 36
+
+## `settlement/householdProfessionStock.ts`
+
+- `applyProfessionTradeStock` — function — line 91
+  - domain: settlements-npcs
+- `BLACKSMITH_TRADE_PAULDRON_COUNT` — const — line 26
+- `BLACKSMITH_TRADE_SWORD_COUNT` — const — line 25
+- `FARMER_TRADE_TOOL_COUNT` — const — line 24
+- `householdStartingContextFromFamily` — function — line 63
+  - domain: settlements-npcs
+- `HUNTER_STARTER_DRIED_MEAT` — const — line 22
+- `HUNTER_STARTER_HERB` — const — line 23
+- `HUNTER_STARTER_TRADE_ARROWS` — const — line 19
+- `HUNTER_STARTER_TRADE_HUNTING_BOWS` — const — line 21
+- `HUNTER_STARTER_TRADE_SHORT_BOWS` — const — line 20
+- `WOODCUTTER_TRADE_AXE_COUNT` — const — line 18
+  - domain: settlements-npcs
 
 ## `settlement/householdResourceTransfer.ts`
 
@@ -422,27 +439,27 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/merchantTrade.ts`
 
-- `generateMerchantAssortment` — function — line 389
+- `generateMerchantAssortment` — function — line 417
 - `HOME_STARTER_MERCHANT_KINDS` — const — line 87
 - `isPremiumMerchantGood` — function — line 162
-- `MERCHANT_ARMOR_QUALITY_WEIGHTS` — const — line 448
+- `MERCHANT_ARMOR_QUALITY_WEIGHTS` — const — line 488
 - `MERCHANT_SPECIALIZATIONS` — const — line 36
-- `MerchantArmorQualityContext` — type — line 464
+- `MerchantArmorQualityContext` — type — line 504
 - `MerchantAssortmentContext` — type — line 49
 - `MerchantProfile` — type — line 43
 - `merchantProfileFor` — function — line 214
 - `MerchantSpecialization` — type — line 30
   - domain: settlements
-- `merchantStockQuantity` — function — line 443
+- `merchantStockQuantity` — function — line 483
 - `PREMIUM_MERCHANT_KINDS` — const — line 62
 - `premiumAvailabilityChance` — function — line 167
-- `resolveMerchantArmorQuality` — function — line 507
+- `resolveMerchantArmorQuality` — function — line 547
   - domain: settlements
 - `resolveMerchantProfiles` — function — line 201
   - domain: settlements
 - `resolvePremiumMerchantAssignment` — function — line 350
   - domain: settlements
-- `seedMerchantStockIfNeeded` — function — line 531
+- `seedMerchantStockIfNeeded` — function — line 571
 - `settlementHasPremiumOffer` — function — line 338
 - `specializationAffinity` — function — line 247
 
@@ -857,16 +874,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementAgriculture.ts`
 
-- `completedAgricultureBatches` — function — line 57
-- `householdAgriculturalCapacity` — function — line 20
+- `completedAgricultureBatches` — function — line 52
+- `householdAgriculturalCapacity` — function — line 22
   - domain: settlements-npcs
   - system: household
-- `householdSeedReserveRequirement` — function — line 32
-- `householdSeedStockCount` — function — line 37
-- `householdSeedSurplusCount` — function — line 47
-- `householdStartingContextFromFamily` — function — line 24
-- `resolveSettlementAgricultureCatchUp` — function — line 123
-- `resolveUnloadedHouseholdAgriculture` — function — line 78
+- `householdSeedReserveRequirement` — function — line 27
+- `householdSeedStockCount` — function — line 32
+- `householdSeedSurplusCount` — function — line 42
+- `resolveSettlementAgricultureCatchUp` — function — line 118
+- `resolveUnloadedHouseholdAgriculture` — function — line 73
 
 ## `settlement/settlementCharacter.ts`
 
