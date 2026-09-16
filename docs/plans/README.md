@@ -80,6 +80,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
 | 💡 `settlements-npcs-040-profession-trade-stock-and-hunter-crafting.md`        | 🔴 | M      | ~~settlements-npcs-033~~, ~~settlements-npcs-036~~, ~~settlements-012~~                                                                                                                                                                                                                    | economy-goods-flow                      |
 | 💡 `settlements-npcs-041-profession-linked-family-surnames-and-npc-need-marker-cleanup.md` | 🟡 | S      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| 💡 `items-player-042-foreign-property-interaction-warning-and-consequences.md` | 🟡 | S      | ~~fauna-020~~, ~~quests-progression-012~~                                                                                                                                                                                                                                                  | -                                       |
+| ◼️ `ui-input-023-character-reputation-level-labels.md`                         | 🟡 | S      | ~~ui-input-019~~                                                                                                                                                                                                                                                                           | -                                       |
 
 ---
 
@@ -234,14 +236,14 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `034`
-- items-player: `042`
+- items-player: `043`
 - npc: `041`
 - persistence: `006`
 - quests-progression: `055`
 - settlements: `018`
 - settlements-npcs: `042`
 - tools: `015`
-- ui-input: `023`
+- ui-input: `024`
 - world: `031`
 - world-terrain: `037`
 
