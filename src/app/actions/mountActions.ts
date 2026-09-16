@@ -142,7 +142,14 @@ export function createMountActions(
     const conditionRatio = animal.health.maxHp > 0 ? animal.health.currentHp / animal.health.maxHp : 0
     const ridingSkill = player.skills.riding.value
     const fell = rollFall(
-      { staminaRatio, sprinting, slopeRatio, conditionRatio, ridingSkill },
+      {
+        staminaRatio,
+        sprinting,
+        slopeRatio,
+        conditionRatio,
+        ridingSkill,
+        fallRiskMultiplier: animal.trainingModifiers().fallRisk,
+      },
       STABILITY_CHECK_INTERVAL_SEC,
     )
     if (!fell) return

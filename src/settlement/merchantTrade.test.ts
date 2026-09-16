@@ -6,6 +6,7 @@ import { MERCHANT_STOCK, merchantPrice } from '../items/tradeCatalog'
 import {
   generateMerchantAssortment,
   HOME_STARTER_MERCHANT_KINDS,
+  horseVendorNpcId,
   isPremiumMerchantGood,
   type MerchantAssortmentContext,
   merchantStockQuantity,
@@ -57,6 +58,18 @@ describe('resolveMerchantProfiles', () => {
     expect(a).toEqual(b)
     expect(a[0]!.stallIndex).toBe(0)
     expect(a[0]!.npcId).toBe('a')
+  })
+
+  it('overrides exactly one existing trader as horses after paddock setup', () => {
+    const without = resolveMerchantProfiles(['c', 'a', 'b'], 'forest')
+    const withVendor = resolveMerchantProfiles(['c', 'a', 'b'], 'forest', { assignHorseVendor: true })
+    expect(without.some((profile) => profile.specialization === 'horses')).toBe(false)
+    expect(withVendor.filter((profile) => profile.specialization === 'horses')).toHaveLength(1)
+    expect(withVendor[withVendor.length - 1]!.specialization).toBe('horses')
+    expect(withVendor[withVendor.length - 1]!.npcId).toBe('c')
+    expect(withVendor.map((profile) => profile.npcId)).toEqual(without.map((profile) => profile.npcId))
+    expect(horseVendorNpcId(['c', 'a', 'b'], 'forest', true)).toBe('c')
+    expect(horseVendorNpcId(['c', 'a', 'b'], 'forest', false)).toBeNull()
   })
 })
 
@@ -144,6 +157,8 @@ describe('specialization assortment', () => {
   it('weapons-tools prefers weapons/tools and skips food', () => {
     expect(specializationAffinity('short_sword', 'weapons-tools')).toBeGreaterThan(specializationAffinity('bread', 'weapons-tools'))
     expect(specializationAffinity('bread', 'weapons-tools')).toBe(0)
+    expect(specializationAffinity('hay', 'horses')).toBe(2)
+    expect(specializationAffinity('book_riding_advanced', 'horses')).toBe(2)
   })
 
   it('does not mint kinds outside MERCHANT_STOCK', () => {

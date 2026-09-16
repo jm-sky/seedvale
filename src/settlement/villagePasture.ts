@@ -465,12 +465,12 @@ const FENCE_SCALE = 0.62
  * settlement palisade — `atan2(dx, dz)` would stand each post 90° off
  * the segment (the "comb" look).
  */
-export function pastureFencePlacements(
-  pasture: VillagePasturePlan,
+export function fenceSegmentPlacements(
+  segments: readonly VillagePastureFenceSegment[],
   sampleHeight: HeightSampler,
 ): PropPlacement[] {
   const out: PropPlacement[] = []
-  for (const seg of pasture.fenceSegments) {
+  for (const seg of segments) {
     const dx = seg.bx - seg.ax
     const dz = seg.bz - seg.az
     const len = Math.hypot(dx, dz)
@@ -492,4 +492,11 @@ export function pastureFencePlacements(
     }
   }
   return out
+}
+
+export function pastureFencePlacements(
+  pasture: VillagePasturePlan,
+  sampleHeight: HeightSampler,
+): PropPlacement[] {
+  return fenceSegmentPlacements(pasture.fenceSegments, sampleHeight)
 }

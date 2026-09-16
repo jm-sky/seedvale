@@ -115,6 +115,7 @@ import {
   WOOD_PILE_EXTRA_OFFSETS,
   type WoodPileVisual,
 } from './storageVisuals'
+import { paddockFencePlacements } from './villagePaddock'
 import { pastureFencePlacements } from './villagePasture'
 import {
   parseHouseholdWellFamilyIndex,
@@ -193,6 +194,21 @@ export type SettlementLandmarks = {
     position: THREE.Vector3
     radius: number
     trough: THREE.Vector3
+  }
+  /**
+   * Horse-vendor paddock (plan settlements-013). Present when
+   * `VillagePlan.paddock` was placed. Haystack is food-only — never added
+   * to `haySpots` (lodging).
+   */
+  paddock?: {
+    position: THREE.Vector3
+    radius: number
+    trough: THREE.Vector3
+    haystack: THREE.Vector3
+    work: THREE.Vector3
+    entrance: THREE.Vector3
+    entranceWidth: number
+    horseSlots: THREE.Vector3[]
   }
   stockpile: THREE.Vector3
   /** Second wood pile when `infrastructure.stockpiles > 1` (LG/XL). */
@@ -903,6 +919,41 @@ export async function buildSettlementProps(
       ),
     }
   }
+  const paddockPlan = plan?.paddock
+  if (paddockPlan) {
+    landmarks.paddock = {
+      position: new THREE.Vector3(
+        paddockPlan.x,
+        sampleHeight(paddockPlan.x, paddockPlan.z),
+        paddockPlan.z,
+      ),
+      radius: paddockPlan.radius,
+      trough: new THREE.Vector3(
+        paddockPlan.trough.x,
+        sampleHeight(paddockPlan.trough.x, paddockPlan.trough.z),
+        paddockPlan.trough.z,
+      ),
+      haystack: new THREE.Vector3(
+        paddockPlan.haystack.x,
+        sampleHeight(paddockPlan.haystack.x, paddockPlan.haystack.z),
+        paddockPlan.haystack.z,
+      ),
+      work: new THREE.Vector3(
+        paddockPlan.work.x,
+        sampleHeight(paddockPlan.work.x, paddockPlan.work.z),
+        paddockPlan.work.z,
+      ),
+      entrance: new THREE.Vector3(
+        paddockPlan.entrance.x,
+        sampleHeight(paddockPlan.entrance.x, paddockPlan.entrance.z),
+        paddockPlan.entrance.z,
+      ),
+      entranceWidth: paddockPlan.entranceWidth,
+      horseSlots: paddockPlan.horseSlots.map((slot) =>
+        new THREE.Vector3(slot.x, sampleHeight(slot.x, slot.z), slot.z),
+      ),
+    }
+  }
   if (householdWellLandmarks.length > 0 || pasturePlan) await yieldProp()
   landmarks.wells = wells
 
@@ -1410,6 +1461,26 @@ export async function buildSettlementProps(
     if (pastureTroughInstances) group.add(pastureTroughInstances.group)
   }
 
+  if (paddockPlan) {
+    const paddockTroughPlacements: PropPlacement[] = [{
+      speciesIndex: 0,
+      x: paddockPlan.trough.x,
+      z: paddockPlan.trough.z,
+      groundY: sampleHeight(paddockPlan.trough.x, paddockPlan.trough.z),
+      rotationY: Math.atan2(
+        paddockPlan.x - paddockPlan.trough.x,
+        paddockPlan.z - paddockPlan.trough.z,
+      ),
+      scale: 1,
+    }]
+    const paddockTroughInstances = buildInstancedProps(
+      troughTemplates,
+      paddockTroughPlacements,
+      'settlement-paddock-troughs',
+    )
+    if (paddockTroughInstances) group.add(paddockTroughInstances.group)
+  }
+
   // Household storage container (plan 156) — physical representation of
   // `Household.stock`/`.water`, one per house yard. Presentation only; the
   // authoritative quantity stays on `Household` (`settlement/household.ts`).
@@ -1538,6 +1609,23 @@ export async function buildSettlementProps(
   const hayInstances = buildInstancedProps(hayTemplates, hayPlacements, 'settlement-hay')
   if (hayInstances) group.add(hayInstances.group)
 
+  if (paddockPlan) {
+    const paddockHayPlacements: PropPlacement[] = [{
+      speciesIndex: 0,
+      x: paddockPlan.haystack.x,
+      z: paddockPlan.haystack.z,
+      groundY: sampleHeight(paddockPlan.haystack.x, paddockPlan.haystack.z),
+      rotationY: 0.35,
+      scale: 1.05,
+    }]
+    const paddockHayInstances = buildInstancedProps(
+      hayTemplates,
+      paddockHayPlacements,
+      'settlement-paddock-hay',
+    )
+    if (paddockHayInstances) group.add(paddockHayInstances.group)
+  }
+
   // Infrastructure counts come from centralized `VILLAGE_SIZE_CONFIG` (plan
   // 047) — OUTPOST/SM stay without a village campfire; MD+ get one; LG/XL
   // get a second stockpile. Do not re-encode size thresholds here.
@@ -1633,6 +1721,13 @@ export async function buildSettlementProps(
       group,
       pastureFencePlacements(pasturePlan, sampleHeight),
       'settlement-pasture-fence',
+    )
+  }
+  if (paddockPlan) {
+    await plantEntrancePalisade(
+      group,
+      paddockFencePlacements(paddockPlan, sampleHeight),
+      'settlement-paddock-fence',
     )
   }
 

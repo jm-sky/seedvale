@@ -52,9 +52,8 @@ watch(() => ui.merchant.open, (open) => {
 })
 
 const coins = computed(() => ui.merchant.counts.coin ?? 0)
-const horseOffer = computed(() => ui.merchant.horseOffer)
-const horseNetCoins = computed(() => horseOffer.value?.previewNetCoins(transaction.offer) ?? 0)
-const canBuyHorse = computed(() => horseOffer.value?.status === 'available')
+const horseOffers = computed(() => ui.merchant.horseOffers)
+const hasHorseOffers = computed(() => horseOffers.value.length > 0)
 
 /** Ordinary NPC household-goods session (plan settlements-npcs-033) — no
  *  OFFER/barter column and no `MERCHANT_STOCK` catalog; BUY rows come from
@@ -321,9 +320,9 @@ async function onTrade(): Promise<void> {
   }
 }
 
-function onBuyHorse(): void {
-  if (!horseOffer.value || !canBuyHorse.value) return
-  const result = horseOffer.value.onPurchase(transaction.offer)
+function onBuyHorse(offer: (typeof horseOffers.value)[number]): void {
+  if (offer.status !== 'available') return
+  const result = offer.onPurchase(transaction.offer)
   if (result === 'ok') {
     transaction.offer = {}
     if (isCompact.value) drawerOpen.value = false
@@ -416,37 +415,40 @@ function openDetails(kind: ItemKind, instanceId?: string): void {
             />
             <div class="flex flex-col gap-1.5 md:min-h-0 md:flex-1 md:overflow-y-auto">
               <div
-                v-if="horseOffer"
+                v-for="(offer, horseIndex) in horseOffers"
+                :key="`horse-${horseIndex}-${offer.label}`"
                 class="flex flex-col gap-1 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 max-md:px-2 max-md:py-1.5"
               >
                 <div class="flex items-center justify-between gap-2">
                   <div class="min-w-0">
                     <p class="text-sm font-medium capitalize max-md:text-[13px]">
-                      {{ horseOffer.label }}
+                      {{ offer.label }}
                     </p>
                     <p class="text-[12px] opacity-70 max-md:text-[11px]">
-                      {{ horseOffer.price }} monet
-                      <span v-if="canBuyHorse && horseNetCoins > 0"> · do zapłaty {{ horseNetCoins }}</span>
+                      {{ offer.price }} monet
+                      <span v-if="offer.status === 'available' && offer.previewNetCoins(transaction.offer) > 0">
+                        · do zapłaty {{ offer.previewNetCoins(transaction.offer) }}
+                      </span>
                     </p>
                     <p
-                      v-if="horseOffer.statusHint"
+                      v-if="offer.statusHint"
                       class="mt-1 text-[12px] opacity-80 max-md:text-[11px]"
                     >
-                      {{ horseOffer.statusHint }}
+                      {{ offer.statusHint }}
                     </p>
                   </div>
                   <button
-                    v-if="canBuyHorse"
+                    v-if="offer.status === 'available'"
                     type="button"
                     class="shrink-0 rounded-md border border-white/20 px-2 py-1 text-[12px] hover:bg-white/10 max-md:text-[11px]"
-                    @click="onBuyHorse"
+                    @click="onBuyHorse(offer)"
                   >
                     Kup
                   </button>
                 </div>
               </div>
               <div
-                v-if="isNpcGoodsMode ? npcGoodsEmptyCopy : (buyRows.length === 0 && !horseOffer)"
+                v-if="isNpcGoodsMode ? npcGoodsEmptyCopy : (buyRows.length === 0 && !hasHorseOffers)"
                 class="text-[12px] opacity-60"
               >
                 {{ isNpcGoodsMode ? npcGoodsEmptyCopy : 'Brak towarów w tej kategorii.' }}

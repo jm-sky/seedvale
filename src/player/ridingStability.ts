@@ -19,6 +19,8 @@ export type StabilityInput = {
   conditionRatio: number
   /** Player's `riding` skill value (`SKILL_MIN_VALUE`..1). */
   ridingSkill: number
+  /** Optional mount-training fall-risk multiplier. Ordinary / absent is 1. */
+  fallRiskMultiplier?: number
 }
 
 const BASE_RISK_PER_SEC = 0.004
@@ -47,6 +49,7 @@ export function fallRiskPerSecond(input: StabilityInput): number {
   // Riding skill sits in [SKILL_MIN_VALUE, 1] (see `PlayerSkills.ts`) —
   // reduces risk down to a 30% floor at mastery, never to zero.
   risk *= Math.max(0.3, 1 - (input.ridingSkill - 0.2) * 0.9)
+  risk *= input.fallRiskMultiplier ?? 1
   return Math.max(0, risk)
 }
 

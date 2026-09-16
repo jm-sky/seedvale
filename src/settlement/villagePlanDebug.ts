@@ -15,7 +15,10 @@ export function summarizeVillagePlan(plan: VillagePlan): string {
     `  entrances=${entrances.length} paths=${paths.length}` +
     (plan.pasture
       ? ` pasture=(${plan.pasture.x.toFixed(1)},${plan.pasture.z.toFixed(1)}) r=${plan.pasture.radius.toFixed(1)} fence=${plan.pasture.fenceSegments.length}`
-      : ' pasture=—'),
+      : ' pasture=—') +
+    (plan.paddock
+      ? ` paddock=(${plan.paddock.x.toFixed(1)},${plan.paddock.z.toFixed(1)}) r=${plan.paddock.radius.toFixed(1)} slots=${plan.paddock.horseSlots.length} fence=${plan.paddock.fenceSegments.length}`
+      : ' paddock=—'),
   ]
   for (const e of entrances) {
     lines.push(`    entrance ${e.id} (${e.x.toFixed(1)},${e.z.toFixed(1)}) kind=${e.kind}`)

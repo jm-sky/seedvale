@@ -2277,7 +2277,9 @@ function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
     isLivestockCorpse(r.corpse) &&
     isAnimalAffinityField(r.affinity) &&
     (r.rabid === undefined || typeof r.rabid === 'boolean') &&
-    (r.stray === undefined || isAnimalStraySave(r.stray))
+    (r.stray === undefined || isAnimalStraySave(r.stray)) &&
+    isOptionalHorseTrainingField(r.training) &&
+    isOptionalHorsePaddockStayField(r.paddockStay)
   )
 }
 
@@ -2315,6 +2317,31 @@ function isRemovedRatIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
+function isOptionalHorseTrainingField(value: unknown): boolean {
+  if (value === undefined) return true
+  if (!value || typeof value !== 'object') return false
+  const t = value as Record<string, unknown>
+  return typeof t.progress === 'number' && Number.isFinite(t.progress)
+}
+
+function isOptionalHorsePaddockStayField(value: unknown): boolean {
+  if (value === undefined) return true
+  if (!value || typeof value !== 'object') return false
+  const s = value as Record<string, unknown>
+  return (
+    typeof s.settlementId === 'string' &&
+    typeof s.slotIndex === 'number' &&
+    typeof s.x === 'number' &&
+    typeof s.z === 'number' &&
+    typeof s.radius === 'number' &&
+    typeof s.entranceX === 'number' &&
+    typeof s.entranceZ === 'number' &&
+    typeof s.entranceWidth === 'number' &&
+    typeof s.hayX === 'number' &&
+    typeof s.hayZ === 'number'
+  )
+}
+
 function isAnimalSaveState(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false
   const s = value as Record<string, unknown>
@@ -2333,7 +2360,9 @@ function isAnimalSaveState(value: unknown): boolean {
     isAnimalAffinityField(s.affinity) &&
     (s.name === undefined || typeof s.name === 'string') &&
     (s.rabid === undefined || typeof s.rabid === 'boolean') &&
-    (s.stray === undefined || isAnimalStraySave(s.stray))
+    (s.stray === undefined || isAnimalStraySave(s.stray)) &&
+    isOptionalHorseTrainingField(s.training) &&
+    isOptionalHorsePaddockStayField(s.paddockStay)
   )
 }
 

@@ -1,13 +1,17 @@
 # Plan: Horse training progression, vendor and paddock
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~settlements-009~~, settlements-012
+**Depends on:** ~~settlements-009~~, ~~settlements-012~~
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** -
 **Model:** Opus, Sonnet
+
+## Implementation status
+
+Implemented 2026-09-16. Horse training is optional `AnimalSaveState.training` (`progress` only); `ordinary` / `trained` / `warhorse` stay derived. Vendor setup is a settlement-level roll (SM/OUTPOST never, MD ~10%, LG ~50%, XL ~80%) that places `VillagePlan.paddock` and assigns `horses` onto one existing `trader`. Vendor horses are livestock individuals (`vendor-horse-${settlementId}-${slot}`); sold/dead slots stay empty. Purchase reuses `horseAcquisition.ts` + `settlePricedPurchase`. Paddock hay is food-only and infinite in v1 (see `LOOSE-ENDS.md`). Automated tests cover training, fenced roam, paddock planning, vendor eligibility, merchant override, and foraging hay. Browser/gameplay verification is user-owned.
 
 ## Cel
 

@@ -241,7 +241,7 @@ export type CarcassCandidate = {
 /** A real-world food/water destination an animal is pursuing (plan 094) —
  *  `corpse` is set only for `kind: 'carcass'`, so the eater can release its
  *  claim on cancel/completion. */
-export type SourceTargetKind = 'water' | 'forage' | 'carcass' | 'feed' | 'grassPatch' | 'environmentalFood'
+export type SourceTargetKind = 'water' | 'forage' | 'carcass' | 'feed' | 'grassPatch' | 'environmentalFood' | 'paddockHay'
 export type SourceTarget = {
   kind: SourceTargetKind
   x: number
@@ -320,6 +320,11 @@ export type ForagingContext = {
     poolFish: EnvironmentalAnimalFoodSource | null
     homeToPoolRoute: readonly { x: number, y: number, z: number }[] | null
   }
+  /**
+   * Food-only paddock haystack (plan settlements-013). Infinite V1 source;
+   * does not mint `hay` items or touch household/settlement stock.
+   */
+  paddockHay?: { readonly x: number, readonly z: number }
 }
 
 /** Natural shoreline drink point: dry or shallow wade at the edge, never deep
@@ -508,9 +513,20 @@ export function findGrassPatchTarget(ctx: ForagingContext, grassForage: GrassFor
  *  A species without `def.diet` (out of this plan's scope — duck/boar) or
  *  with no `grassForage` service wired in keeps the old abstract
  *  `findForageTarget()` behaviour unchanged. */
+function findPaddockHayTarget(ctx: ForagingContext): SourceTarget | null {
+  const hay = ctx.paddockHay
+  if (!hay) return null
+  if (!dietAcceptsItem(ctx.def.diet, 'hay')) return null
+  if (!ctx.isWalkable(hay.x, hay.z)) return null
+  if (!withinNeedLeash(ctx, hay.x, hay.z)) return null
+  return { kind: 'paddockHay', x: hay.x, z: hay.z }
+}
+
 function findDietTarget(ctx: ForagingContext): SourceTarget | null {
   const diet = ctx.def.diet
   if (!diet) return findForageTarget(ctx) ?? findEnvironmentalDietFoodTarget(ctx)
+  const paddockHay = findPaddockHayTarget(ctx)
+  if (paddockHay) return paddockHay
   if (ctx.household && diet.items) {
     // Lazy hay top-up (plan fauna-010 §6) — resolved right before reading
     // eligibility, not on a schedule; see `Household.resolveHayForage`'s doc.
@@ -612,6 +628,12 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
     if (carcassFoodValue(phase, ctx.def.scavenging, ctx.life.hunger) == null) return false
     return corpse.foodClaimedBy === eater
   }
+  if (target.kind === 'paddockHay') {
+    if (!ctx.paddockHay) return false
+    if (!dietAcceptsItem(ctx.def.diet, 'hay')) return false
+    if (!ctx.isWalkable(target.x, target.z)) return false
+    return withinNeedLeash(ctx, target.x, target.z)
+  }
   if (target.kind === 'feed') {
     // Re-checked live, not cached — another animal/NPC may have taken the
     // last unit while this one was approaching (plan fauna-010 §7, same
@@ -681,6 +703,9 @@ export function applySourceRelief(ctx: ForagingContext, target: SourceTarget): v
     }
   } else if (target.kind === 'environmentalFood' && target.environmentalFoodKind) {
     const relief = dietItemReliefScale(ctx.def.diet, target.environmentalFoodKind) ?? 1
+    consumeFood(ctx.life, relief)
+  } else if (target.kind === 'paddockHay') {
+    const relief = dietItemReliefScale(ctx.def.diet, 'hay') ?? 0.9
     consumeFood(ctx.life, relief)
   } else if (target.kind === 'carcass' && target.corpse) {
     // Re-read the live corpse rather than the value cached on `target` at

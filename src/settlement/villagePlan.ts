@@ -261,6 +261,13 @@ export function pasturePathId(): string {
   return 'path-pasture'
 }
 
+/** Stable id for the settlement-owned horse-vendor paddock (plan settlements-013). */
+export const PADDOCK_ID = 'paddock'
+
+export function paddockPathId(): string {
+  return 'path-paddock'
+}
+
 /**
  * One planned pasture fence run (plan settlements-009). Endpoints are world
  * XZ; the renderer samples terrain at materialization. Visual marker only —
@@ -305,6 +312,34 @@ export type VillagePasturePlan = {
   fenceSegments: readonly VillagePastureFenceSegment[]
   /** Village-facing gap / path connection onto the pasture. */
   connection: VillagePastureAnchor
+}
+
+/**
+ * Horse-vendor paddock (plan settlements-013). Semantically distinct from
+ * the open satellite pasture: a fenced footprint with an explicit entrance
+ * gap, trough, food-only haystack and deterministic horse slots. Optional —
+ * SM/OUTPOST never roll it; MD/LG/XL only when the settlement-level setup
+ * roll succeeds and a dry candidate exists.
+ *
+ * @domain settlements
+ */
+export type VillagePaddockPlan = {
+  id: string
+  outsideCore: true
+  x: number
+  z: number
+  y: number
+  radius: number
+  trough: VillagePastureAnchor
+  /** Food-only hay source — never a lodging/sleep hay bale. */
+  haystack: VillagePastureAnchor
+  /** Vendor/work stand just inside the entrance. */
+  work: VillagePastureAnchor
+  entrance: VillagePastureAnchor
+  entranceWidth: number
+  fenceSegments: readonly VillagePastureFenceSegment[]
+  /** Capacity == `horseSlots.length`; spawn count is bounded by these anchors. */
+  horseSlots: readonly VillagePastureAnchor[]
 }
 
 export type VillageEntrance = {
@@ -352,4 +387,7 @@ export type VillagePlan = {
   /** Satellite livestock pasture (plan settlements-009). Absent on SM/OUTPOST
    *  and when every candidate failed river/spacing/terrain gates. */
   pasture?: VillagePasturePlan
+  /** Horse-vendor paddock (plan settlements-013). Absent when the
+   *  settlement-level setup roll fails or every candidate is rejected. */
+  paddock?: VillagePaddockPlan
 }

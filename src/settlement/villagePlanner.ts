@@ -11,6 +11,7 @@ import type {
   VillageLandmarkKind,
   VillageLandmarkPlan,
   VillageLayoutPattern,
+  VillagePaddockPlan,
   VillagePasturePlan,
   VillagePathPlan,
   VillagePlaza,
@@ -34,6 +35,7 @@ import {
 import { selectHouseholdWellFamilyIndices } from './householdWells'
 import { householdYardRadius } from './householdYard'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
+import { appendPaddockPath, planSettlementPaddock } from './villagePaddock'
 import { appendPasturePath, planSettlementPasture } from './villagePasture'
 import {
   householdWellPlotId,
@@ -132,6 +134,8 @@ export type VillageLayoutDraft = {
   /** Satellite outskirts pasture (plan settlements-009). Absent on SM/OUTPOST
    *  and when every dry candidate failed. */
   pasture?: VillagePasturePlan
+  /** Horse-vendor paddock (plan settlements-013). */
+  paddock?: VillagePaddockPlan
 }
 
 /** Local path half-widths (plan 047 §9) — numeric corridor hints, not the
@@ -1325,6 +1329,18 @@ export function planVillageLayout(
     waterLevel,
     riverSegments,
   })
+  const paddock = planSettlementPaddock({
+    identity,
+    center,
+    boundary,
+    plots,
+    entrances: predictedEntrances,
+    seedForCell,
+    sampleHeight,
+    waterLevel,
+    riverSegments,
+    pasture,
+  })
 
   const { buildings, landmarks } = buildingsAndLandmarksFromPlots(plots, identity)
   const { paths, entrances } = planLocalPathsAndEntrances({
@@ -1340,7 +1356,8 @@ export function planVillageLayout(
     waterLevel,
   })
   if (pasture) appendPasturePath(paths, pasture, sampleHeight, waterLevel)
-  return { boundary, center, pattern, zones, plots, buildings, landmarks, paths, entrances, plaza, pasture }
+  if (paddock) appendPaddockPath(paths, paddock, sampleHeight, waterLevel)
+  return { boundary, center, pattern, zones, plots, buildings, landmarks, paths, entrances, plaza, pasture, paddock }
 }
 
 /**

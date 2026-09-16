@@ -498,3 +498,28 @@ describe('hand-feed diet contract (plan fauna-013)', () => {
     expect(life.hunger).toBeCloseTo(0.9 - FOOD_RELIEF * relief, 5)
   })
 })
+
+describe('paddock hay (plan settlements-013)', () => {
+  it('prefers diet-gated infinite paddock hay for horses and never mints items', () => {
+    const household = fakeHousehold({ items: new Inventory({ hay: 4 }, Infinity) })
+    const ctx = makeCtx({
+      def: ANIMAL_DEFS.horse,
+      household,
+      paddockHay: { x: 4, z: 0 },
+    })
+    const target = findFoodTarget(ctx, {}, [])
+    expect(target).toEqual({ kind: 'paddockHay', x: 4, z: 0 })
+    expect(isSourceTargetValid(ctx, {}, target!)).toBe(true)
+    applySourceRelief(ctx, target!)
+    expect(household.items.count('hay')).toBe(4)
+  })
+
+  it('does not offer paddock hay to species that reject hay', () => {
+    const ctx = makeCtx({
+      def: ANIMAL_DEFS.dog,
+      paddockHay: { x: 4, z: 0 },
+    })
+    expect(findFoodTarget(ctx, {}, [])?.kind).not.toBe('paddockHay')
+    expect(isSourceTargetValid(ctx, {}, { kind: 'paddockHay', x: 4, z: 0 })).toBe(false)
+  })
+})

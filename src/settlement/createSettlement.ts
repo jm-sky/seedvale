@@ -433,6 +433,20 @@ export type CreateSettlementDeps = {
   npcWorldMovement?: NpcWorldMovementQueries
 }
 
+function paddockWaterHousehold(
+  families: SettlementDef['families'],
+  householdByHomeId: ReadonlyMap<string, Household>,
+  settlementId: string,
+): Household | undefined {
+  for (let i = 0; i < families.length; i++) {
+    if (families[i]!.members.some((member) => member.character.role === 'trader')) {
+      const household = householdByHomeId.get(homePlaceId(settlementId, i))
+      if (household) return household
+    }
+  }
+  return householdByHomeId.values().next().value
+}
+
 export async function createSettlement(
   def: SettlementDef,
   economy: SettlementEconomy,
@@ -727,6 +741,19 @@ export async function createSettlement(
           trough: { x: landmarks.pasture.trough.x, z: landmarks.pasture.trough.z },
         }
         : undefined,
+      landmarks.paddock
+        ? {
+          x: landmarks.paddock.position.x,
+          z: landmarks.paddock.position.z,
+          radius: landmarks.paddock.radius,
+          trough: { x: landmarks.paddock.trough.x, z: landmarks.paddock.trough.z },
+          haystack: { x: landmarks.paddock.haystack.x, z: landmarks.paddock.haystack.z },
+          entrance: { x: landmarks.paddock.entrance.x, z: landmarks.paddock.entrance.z },
+          entranceWidth: landmarks.paddock.entranceWidth,
+          horseSlots: landmarks.paddock.horseSlots.map((slot) => ({ x: slot.x, z: slot.z })),
+          household: paddockWaterHousehold(def.families, householdByHomeId, def.id),
+        }
+        : undefined,
     )
   } finally {
     bootMarkEnd('spawnLivestock')
@@ -845,7 +872,9 @@ export async function createSettlement(
   const traderNpcIds = flatMembers.flatMap(({ member }, i) => (
     member.character.role === 'trader' ? [settlementNpcId(def.id, i)] : []
   ))
-  const merchantProfiles = resolveMerchantProfiles(traderNpcIds, def.plan.identity.terrain)
+  const merchantProfiles = resolveMerchantProfiles(traderNpcIds, def.plan.identity.terrain, {
+    assignHorseVendor: !!def.plan.paddock && traderNpcIds.length > 0,
+  })
   const merchantStallByNpc = new Map(merchantProfiles.map((profile) => [profile.npcId, profile.stallIndex]))
   const merchantAssortment = generateMerchantAssortment(
     {
@@ -974,7 +1003,15 @@ export async function createSettlement(
     flatMembers.map(async ({ home, household, member, familyIndex, familyMembers }, i) => {
       const npcId = settlementNpcId(def.id, i)
       const stallIndex = merchantStallByNpc.get(npcId) ?? 0
-      const workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex, stallIndex)
+      let workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex, stallIndex)
+      const profile = merchantProfiles.find((entry) => entry.npcId === npcId)
+      if (profile?.specialization === 'horses' && landmarks.paddock) {
+        workplace = {
+          id: `${def.id}:workplace:paddock`,
+          type: 'workplace',
+          position: landmarks.paddock.work,
+        }
+      }
       const needOffset = i / Math.max(1, flatMembers.length - 1)
       // Deterministic max HP/stamina/vigor + base SPEA from sex + age (plan
       // npc-001/npc-019) — own seed stream (settlement seed + flat member

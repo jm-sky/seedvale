@@ -2,8 +2,24 @@
 
 **Plan:** `docs/plans/settlements-013-horse-training-progression-vendor-and-paddock.md`  
 **Reviewed:** 2026-09-15  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Source of truth:** current `main` code + docs.
+
+## Implementation (2026-09-16)
+
+`settlements-009` and `settlements-012` have landed. This plan reuses `VillagePlan.pasture` satellite/fence helpers (`fenceSegmentPlacements`) and Merchant `resolveMerchantProfiles()` rather than a parallel planner or vendor inventory.
+
+Landed contracts:
+
+- `src/fauna/horseTraining.ts` — `HorseTrainingState`, derived tier/modifiers, `addHorseTrainingProgress`, vendor initial roll, paddock-stay payload.
+- `src/fauna/animalAreaBound.ts` — data-driven fenced roam/clamp/exit; vendor paddock is the first consumer.
+- Optional `training` / `paddockStay` on `AnimalSaveState` (no save-version bump).
+- `VillagePlan.paddock` + `villagePaddock.ts` settlement-level setup/placement/capacity.
+- Livestock origin slots `vendor-horse-${settlementId}-${slot}` via `shouldSpawnDeterministicLivestockSlot`.
+- Merchant specialization `'horses'` as a last-trader override after paddock setup.
+- Generalized `horseAcquisition.ts` / merchant UI list; wagon horse stays home-only.
+
+Browser/gameplay verification remains user-owned.
 
 ## Current code reality
 

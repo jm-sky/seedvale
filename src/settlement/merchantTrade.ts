@@ -32,12 +32,14 @@ export type MerchantSpecialization =
   | 'weapons-tools'
   | 'food-materials'
   | 'imports-luxury'
+  | 'horses'
 
 export const MERCHANT_SPECIALIZATIONS: readonly MerchantSpecialization[] = [
   'general',
   'weapons-tools',
   'food-materials',
   'imports-luxury',
+  'horses',
 ]
 
 export type MerchantProfile = {
@@ -194,29 +196,49 @@ function specializationOrder(terrain: SettlementTerrain): MerchantSpecialization
 
 /**
  * Deterministic unique-first specialization + stall index for ordered Traders.
- * Duplicate specializations only wrap after the four profiles are used.
+ * Duplicate specializations only wrap after the four item profiles are used.
+ * Optional horse-vendor assignment overrides exactly one existing Trader
+ * after the settlement-level paddock setup has already succeeded.
  *
  * @domain settlements
  */
 export function resolveMerchantProfiles(
   traderNpcIds: readonly NpcId[],
   terrain: SettlementTerrain,
+  options?: { assignHorseVendor?: boolean },
 ): MerchantProfile[] {
   const ordered = [...traderNpcIds].sort((a, b) => a.localeCompare(b))
   const order = specializationOrder(terrain)
-  return ordered.map((npcId, index) => ({
+  const profiles = ordered.map((npcId, index) => ({
     npcId,
     specialization: order[index % order.length]!,
     stallIndex: index,
   }))
+  if (options?.assignHorseVendor && profiles.length > 0) {
+    const operator = profiles[profiles.length - 1]!
+    operator.specialization = 'horses'
+  }
+  return profiles
 }
 
 export function merchantProfileFor(
   npcId: NpcId,
   traderNpcIds: readonly NpcId[],
   terrain: SettlementTerrain,
+  options?: { assignHorseVendor?: boolean },
 ): MerchantProfile | null {
-  return resolveMerchantProfiles(traderNpcIds, terrain).find((profile) => profile.npcId === npcId) ?? null
+  return resolveMerchantProfiles(traderNpcIds, terrain, options).find((profile) => profile.npcId === npcId) ?? null
+}
+
+export function horseVendorNpcId(
+  traderNpcIds: readonly NpcId[],
+  terrain: SettlementTerrain,
+  assignHorseVendor: boolean,
+): NpcId | null {
+  if (!assignHorseVendor) return null
+  return resolveMerchantProfiles(traderNpcIds, terrain, { assignHorseVendor }).find(
+    (profile) => profile.specialization === 'horses',
+  )?.npcId ?? null
 }
 
 type RegionalClass = 'local' | 'neutral' | 'import'
@@ -262,6 +284,12 @@ export function specializationAffinity(kind: ItemKind, spec: MerchantSpecializat
       if (kind === 'leather_armor' || kind === 'arrow') return 1
       return 0
     case 'general':
+      if (isPremiumMerchantGood(kind)) return 1
+      return 2
+    case 'horses':
+      if (kind === 'hay' || kind === 'rope' || kind === 'book_riding_basic' || kind === 'book_riding_intermediate' || kind === 'book_riding_advanced') {
+        return 2
+      }
       if (isPremiumMerchantGood(kind)) return 1
       return 2
     case 'imports-luxury':

@@ -247,6 +247,33 @@ describe('persistent livestock operations', () => {
     }
     expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, playerOwned)).toBe(false)
   })
+
+  it('tombstone and player-owned records skip deterministic vendor-paddock respawn', () => {
+    const animalId = 'vendor-horse-home-0'
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, undefined)).toBe(true)
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, new Set([animalId]), undefined)).toBe(false)
+    const playerOwned: LivestockSaveRecord = {
+      settlementId: 'home',
+      animalId,
+      kind: 'horse',
+      owner: { kind: 'player' },
+      x: 1, z: 2, yaw: 0,
+      health: { current: 5, max: 10, dead: false },
+      life: { hunger: 0, thirst: 0, stamina: 1 },
+      productionReadyAtDays: 0,
+      eggPending: false,
+      corpse: null,
+      training: { progress: 0.6 },
+      paddockStay: {
+        settlementId: 'home',
+        slotIndex: 0,
+        x: 0, z: 0, radius: 10,
+        entranceX: 10, entranceZ: 0, entranceWidth: 2.4,
+        hayX: -3, hayZ: 3,
+      },
+    }
+    expect(shouldSpawnDeterministicLivestockSlot(animalId, undefined, playerOwned)).toBe(false)
+  })
 })
 
 describe('tickSettlementLivestock', () => {

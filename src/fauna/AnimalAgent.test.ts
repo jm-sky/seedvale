@@ -296,6 +296,92 @@ describe('AnimalAgent', () => {
     })
   })
 
+  describe('horse training and paddock stay (plan settlements-013)', () => {
+    const paddockStay = {
+      settlementId: 'home',
+      slotIndex: 0,
+      x: 0,
+      z: 0,
+      radius: 10,
+      entranceX: 10,
+      entranceZ: 0,
+      entranceWidth: 2.4,
+      hayX: -3,
+      hayZ: 3,
+    }
+
+    it('round-trips training through snapshot and hydrate without persisting a tier', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'train-horse', training: { progress: 0.2 } }))
+      horse.addTrainingProgress(0.7)
+      expect(horse.trainingTier()).toBe('warhorse')
+      const snap = horse.snapshot()
+      expect(snap.training?.progress).toBeCloseTo(0.9)
+      expect(snap).not.toHaveProperty('trainingTier')
+
+      const loaded = new AnimalAgent(makeDeps({ animalId: 'train-horse', training: { progress: 0 } }))
+      loaded.hydrate(snap)
+      expect(loaded.trainingState()?.progress).toBeCloseTo(0.9)
+      expect(loaded.trainingTier()).toBe('warhorse')
+      expect(loaded.life.stamina.max).toBeCloseTo(horse.life.stamina.max)
+    })
+
+    it('keeps training across ownership transfer', () => {
+      const horse = new AnimalAgent(makeDeps({
+        animalId: 'vendor-horse-home-0',
+        training: { progress: 0.5 },
+      }))
+      horse.transferOwnershipToPlayer()
+      expect(horse.isPlayerOwned()).toBe(true)
+      expect(horse.trainingState()?.progress).toBeCloseTo(0.5)
+      expect(horse.trainingTier()).toBe('trained')
+    })
+
+    it('does not clear paddock stay on purchase, only after lead/ride exit', () => {
+      const horse = new AnimalAgent(makeDeps({
+        animalId: 'vendor-horse-home-0',
+        training: { progress: 0.1 },
+        paddockStay,
+      }))
+      horse.transferOwnershipToPlayer()
+      expect(horse.paddockStay()?.settlementId).toBe('home')
+      expect(horse.getOwnedControlMode()).toBe('stay')
+
+      horse.mesh.position.set(0, 0, 16)
+      horse.update({
+        dt: 1 / 60,
+        others: [],
+        observerPos: new THREE.Vector3(),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+      })
+      expect(horse.paddockStay()?.settlementId).toBe('home')
+      expect(Math.hypot(horse.mesh.position.x, horse.mesh.position.z)).toBeLessThanOrEqual(10.01)
+
+      horse.setLeadAttached(true)
+      horse.mesh.position.set(0, 0, 16)
+      horse.update({
+        dt: 1 / 60,
+        others: [],
+        observerPos: new THREE.Vector3(),
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        playerControlPos: { x: 0, z: 16 },
+      })
+      expect(horse.paddockStay()).toBeUndefined()
+    })
+
+    it('hydrates a legacy save without training as ordinary baseline', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'legacy-train' }))
+      const { training: _training, paddockStay: _stay, ...legacy } = horse.snapshot()
+      horse.hydrate(legacy)
+      expect(horse.trainingState()).toBeUndefined()
+      expect(horse.trainingTier()).toBe('ordinary')
+      expect(horse.trainingModifiers().speed).toBe(1)
+    })
+  })
+
   describe('durable snapshot fields (plan fauna-018)', () => {
     it('round-trips rabies through snapshot and hydrate', () => {
       const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-rabid' }))

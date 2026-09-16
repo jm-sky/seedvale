@@ -133,7 +133,9 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.
 - [Profession staffing](../src/settlement/professionStaffing.ts) — generation-time adult profession composition from settlement identity; does not change family structure.
 - [Profession family surnames](../src/settlement/professionFamilySurnames.ts) — post-staffing worldgen household surnames from a representative adult profession; authored residents and reserved home identities keep their own names.
-- [Merchant trade](../src/settlement/merchantTrade.ts) — Trader specialization, stall index and finite regional assortment (plan settlements-012).
+- [Merchant trade](../src/settlement/merchantTrade.ts) — Trader specialization, stall index and finite regional assortment (plan settlements-012); optional `horses` specialization after a settlement-level paddock setup (plan settlements-013).
+- [Horse acquisition](../src/settlement/horseAcquisition.ts) — derived live-horse purchase view for the wagon horse and vendor paddock slots.
+- [Village paddock](../src/settlement/villagePaddock.ts) — settlement-level horse-vendor setup roll and fenced `VillagePlan.paddock` placement.
 - [Settlement character](../src/settlement/settlementCharacter.ts) — deterministic `default`/`closed` archetype on `VillageIdentity`; consumers read it, none own it.
 - [ReputationManager](../src/reputation/ReputationManager.ts) — per-settlement reputation dimensions and renown; callers apply an already-resolved `SocialConsequence`.
 - [Social exposure](../src/reputation/socialExposure.ts) — pure day/night + Sneak exposure roll used when a cemetery grave first resolves.
@@ -201,6 +203,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Owned animal control](../src/fauna/ownedAnimalControl.ts) — persisted Follow/Stay for player-owned livestock.
 - [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim/sanitation-reservation state machine.
 - [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.
+- [Horse training](../src/fauna/horseTraining.ts) — per-horse progress, derived ordinary/trained/warhorse labels, and mount modifiers (plan settlements-013).
+- [Fenced area bound](../src/fauna/animalAreaBound.ts) — data-driven roam/need leash and entrance-gap exit for fenced footprints.
 - [Roaming](../src/fauna/animalRoaming.ts) — water/settlement/home-return trip state machine and shared radial probe.
 - [Persistent occupants](../src/fauna/persistentOccupants.ts) — sparse stable habitat-occupant identity and tombstone registry.
 - [Cave habitat binding](../src/fauna/animalCaveHabitat.ts) — `AnimalHabitatBinding`/`AnimalCaveContext` and the narrow world-cave contract fauna resolves against (plan fauna-019); the only fauna module that touches cave types.

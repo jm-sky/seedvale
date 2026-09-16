@@ -107,7 +107,7 @@ settlement food/storage
 Fauna has a genuine four-tier persistence picture plus one sparse exception — treat these as distinct shapes, not degrees of the same thing:
 
 ### Livestock
-**Persisted, per individual.** Full snapshot (position/yaw/health/hunger/thirst/stamina-as-a-ratio/production-readiness anchor/corpse state, plus optional stray/displacement episode) via a generic per-individual snapshot capability that exists on the `AnimalAgent` class itself. Because no live object survives a settlement unload, an explicit capture step must snapshot the currently-loaded animals immediately before save — unlike households/NPC state, which read an already-persistent state object. Tombstones for individuals removed since the last save prevent deterministic respawn logic from resurrecting a disposed corpse. An inactive stray record after return is kept so the same animal is not redisplaced.
+**Persisted, per individual.** Full snapshot (position/yaw/health/hunger/thirst/stamina-as-a-ratio/production-readiness anchor/corpse state, plus optional stray/displacement episode and optional horse `training`/`paddockStay`) via a generic per-individual snapshot capability that exists on the `AnimalAgent` class itself. Because no live object survives a settlement unload, an explicit capture step must snapshot the currently-loaded animals immediately before save — unlike households/NPC state, which read an already-persistent state object. Tombstones for individuals removed since the last save prevent deterministic respawn logic from resurrecting a disposed corpse. An inactive stray record after return is kept so the same animal is not redisplaced. Vendor paddock horses use the same livestock slots (`vendor-horse-${settlementId}-${slot}`); sold/dead slots stay empty.
 
 ### Spawner lifecycle
 **Persisted, thin.** Only the state-machine/clock fields (state, deaths-this-cycle, disabled-at-day) round-trip — position/type/kind are always deterministic and never persisted; a restored `active` spawner simply restarts its respawn timer from zero.
@@ -145,7 +145,7 @@ What fauna exposes for NPC/settlement consumption — the NPC side of consuming 
 
 ## Player / riding
 
-Any species whose `AnimalDef.mount` is set is ridable — today, horse and donkey. Mounting hands full movement control to player input; the mount's own AI decision branch is skipped in favour of driven movement while mounted. A persisted mount reference is the only player-side state; the mount itself (`AnimalAgent`) remains fauna-owned and authoritative for HP/stamina/position. Player-side riding cost/benefit (speed, stamina drain) is resolved from the player's own riding skill — see [player-systems.md](./player-systems.md).
+Any species whose `AnimalDef.mount` is set is ridable — today, horse and donkey. Mounting hands full movement control to player input; the mount's own AI decision branch is skipped in favour of driven movement while mounted. A persisted mount reference is the only player-side state; the mount itself (`AnimalAgent`) remains fauna-owned and authoritative for HP/stamina/position. Per-horse training (`HorseTrainingState.progress` on `AnimalSaveState`, plan settlements-013) is optional, never a persisted tier, and feeds existing riding/stability/HP/scare seams without mutating `ANIMAL_DEFS`. Player-side riding cost/benefit (speed, stamina drain) is resolved from the player's own riding skill — see [player-systems.md](./player-systems.md). The two inputs compose; neither overwrites the other.
 
 Temporary leading is a separate runtime relation (`AnimalDef.lead`, presence = capability). It reuses the same hysteresis follow primitive as owned Follow, with a tighter trailing band, and does not mutate `AnimalOwner` or persisted Follow/Stay. Household-owned livestock in an active stray episode is also leadable through that same seam, still without an ownership transfer. Draft hitch (`AnimalDef.draft`) is a one-way animal→cart transform constraint: the cart has no AI. Hitch is runtime-only and is not saved — settlement livestock can unload while carts persist, so a saved hitch would snap the cart across the map on reload.
 
@@ -165,6 +165,8 @@ src/fauna/animalDefs.ts
 src/fauna/animalVariants.ts
 src/fauna/animalCorpse.ts
 src/fauna/animalForaging.ts
+src/fauna/horseTraining.ts
+src/fauna/animalAreaBound.ts
 src/fauna/animalRoaming.ts
 src/fauna/AnimalLife.ts
 src/fauna/AnimalSpawner.ts

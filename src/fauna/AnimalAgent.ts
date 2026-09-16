@@ -50,6 +50,12 @@ import { colliderActiveAtY, colliderContainsPoint } from '../world/collision'
 import { createSeededRandom } from '../world/parseSeed'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
+  clampIntoFencedArea,
+  type FencedAreaBound,
+  fencedAreaWanderBand,
+  hasExitedFencedArea,
+} from './animalAreaBound'
+import {
   activeIgnoredAttractionIds,
   BLOOD_IGNORE_SEC,
   BLOOD_INVESTIGATE_SEC,
@@ -222,6 +228,17 @@ import {
   MOTHER_FOLLOW_RADIUS,
   pickHerdLeader,
 } from './herdCohesion'
+import {
+  addHorseTrainingProgress,
+  type HorsePaddockStay,
+  horseTrainingModifiers,
+  type HorseTrainingModifiers,
+  type HorseTrainingState,
+  horseTrainingTier,
+  type HorseTrainingTier,
+  normalizeHorseTrainingState,
+  paddockStayToBound,
+} from './horseTraining'
 import {
   initialLivestockProductionReadyAtDays,
   livestockProductionReady,
@@ -699,6 +716,12 @@ export type AnimalSaveState = {
   rabid?: boolean
   /** Durable stray/displacement episode (plan fauna-024) — omitted when never started. */
   stray?: AnimalStrayState
+  /** Per-horse training progress (plan settlements-013) — omitted on legacy
+   *  saves and non-horses. Tier is derived, never stored. */
+  training?: HorseTrainingState
+  /** Paddock origin association (plan settlements-013) — kept after purchase
+   *  until the player leads/rides the horse out of the footprint. */
+  paddockStay?: HorsePaddockStay
 }
 
 type EnvironmentSense = {
@@ -931,6 +954,12 @@ export type AnimalAgentDeps = {
    * settlements-009). Does not replace `home` or ownership.
    */
   pastureRoam?: { x: number, z: number, radius: number }
+  /** Optional persisted horse training (plan settlements-013). */
+  training?: HorseTrainingState
+  /** Vendor-paddock containment / origin (plan settlements-013). */
+  paddockStay?: HorsePaddockStay
+  /** Extra household-backed trough position for a vendor paddock. */
+  paddockTrough?: { x: number, z: number }
 }
 
 /** Per-tick inputs for `AnimalAgent.update()` (plan fauna-017 step 2) — same
@@ -1190,6 +1219,11 @@ export class AnimalAgent {
   private readonly _pastureTrough?: { x: number, z: number }
   /** Daytime satellite roam for shepherd-owned livestock (plan settlements-009). */
   private readonly _pastureRoam?: { x: number, z: number, radius: number }
+  private _training: HorseTrainingState | undefined
+  private _paddockStay: HorsePaddockStay | undefined
+  private _paddockBound: FencedAreaBound | undefined
+  private _paddockHay?: { x: number, z: number }
+  private readonly _paddockTrough?: { x: number, z: number }
   /** Committed water/other trip (plan fauna-016 §4) — `null` when not on
    *  one. Only ever read/written by `wander()`'s trip helpers. */
   private trip: AnimalTrip | null = null
@@ -1539,6 +1573,9 @@ export class AnimalAgent {
       variant = 'normal',
       pastureTrough,
       pastureRoam,
+      training,
+      paddockStay,
+      paddockTrough,
     } = deps
     this.def = def
     this.animalId = animalId
@@ -1553,6 +1590,9 @@ export class AnimalAgent {
     this.effective = resolveAnimalVariantStats(variant)
     this._pastureTrough = pastureTrough
     this._pastureRoam = pastureRoam
+    this._paddockTrough = paddockTrough
+    this.applyPaddockStay(paddockStay)
+    this._training = this.def.kind === 'horse' ? normalizeHorseTrainingState(training) : undefined
     this.onDeath = onDeath
     this.onDeathSound = onDeathSound
     this.cave = cave
@@ -1565,8 +1605,12 @@ export class AnimalAgent {
     this.sampleForestFactor = sampleForestFactor
     this.home.set(x, 0, z)
     this.wanderRadius = wanderRadius ?? def.roaming ?? DEFAULT_WANDER_RADIUS
-    this.health = createHealthState(MAX_HP[def.kind] * this.effective.healthMultiplier)
-    this.life = createAnimalLifeState(Math.random(), def.metabolism)
+    const trainingMods = this.trainingModifiers()
+    this.health = createHealthState(MAX_HP[def.kind] * this.effective.healthMultiplier * trainingMods.maxHp)
+    this.life = createAnimalLifeState(Math.random(), {
+      ...def.metabolism,
+      staminaCapacity: def.metabolism.staminaCapacity * trainingMods.staminaCapacity,
+    })
     this.spontaneousVocalizeCooldownSec = initialSpontaneousVocalizeCooldownSec(def.kind)
 
     if (visual) {
@@ -1743,9 +1787,16 @@ export class AnimalAgent {
     if (this.def.kind === 'horse' && !this.name) {
       this.name = horseNameForAnimal(this.animalId)
     }
-    this._household = null
-    this.home.set(this.mesh.position.x, 0, this.mesh.position.z)
-    Object.assign(this._control, createFollowOwnedAnimalControlState())
+    if (this._paddockStay) {
+      setOwnedAnimalControlMode(this._control, 'stay', {
+        x: this.mesh.position.x,
+        z: this.mesh.position.z,
+      })
+    } else {
+      this._household = null
+      Object.assign(this._control, createFollowOwnedAnimalControlState())
+      this.home.set(this.mesh.position.x, 0, this.mesh.position.z)
+    }
     this.labelController.setName(this.getDisplayName())
   }
 
@@ -1759,6 +1810,77 @@ export class AnimalAgent {
       this.home.set(this.mesh.position.x, 0, this.mesh.position.z)
     } else {
       setOwnedAnimalControlMode(this._control, 'follow')
+    }
+  }
+
+  trainingState(): HorseTrainingState | undefined {
+    return this._training
+  }
+
+  trainingTier(): HorseTrainingTier {
+    return horseTrainingTier(this._training?.progress ?? 0)
+  }
+
+  /** Effective training modifiers. Non-horses and ordinary horses are identity. */
+  trainingModifiers(): HorseTrainingModifiers {
+    if (this.def.kind !== 'horse') {
+      return horseTrainingModifiers(0)
+    }
+    return horseTrainingModifiers(this._training?.progress ?? 0)
+  }
+
+  /**
+   * Single mutation boundary for future training events (plan settlements-013).
+   * Scales this individual's max HP / stamina capacity without rewriting
+   * persisted current values as a full heal.
+   */
+  addTrainingProgress(amount: number): void {
+    if (this.def.kind !== 'horse') return
+    const prev = this.trainingModifiers()
+    this._training = addHorseTrainingProgress(this._training, amount)
+    const next = this.trainingModifiers()
+    if (this.health.maxHp > 0 && next.maxHp !== prev.maxHp) {
+      const ratio = this.health.currentHp / this.health.maxHp
+      this.health.maxHp = MAX_HP[this.def.kind] * this.effective.healthMultiplier * next.maxHp
+      this.health.currentHp = Math.min(this.health.maxHp, Math.max(0, this.health.maxHp * ratio))
+    }
+    if (this.life.stamina.max > 0 && next.staminaCapacity !== prev.staminaCapacity) {
+      const ratio = this.life.stamina.current / this.life.stamina.max
+      this.life.stamina.max = this.def.metabolism.staminaCapacity * next.staminaCapacity
+      this.life.stamina.current = Math.min(
+        this.life.stamina.max,
+        Math.max(0, this.life.stamina.max * ratio),
+      )
+    }
+  }
+
+  paddockStay(): HorsePaddockStay | undefined {
+    return this._paddockStay
+  }
+
+  private applyPaddockStay(stay: HorsePaddockStay | undefined): void {
+    this._paddockStay = stay
+    this._paddockBound = stay ? paddockStayToBound(stay) : undefined
+    this._paddockHay = stay ? { x: stay.hayX, z: stay.hayZ } : undefined
+  }
+
+  private clearPaddockStay(): void {
+    this._paddockStay = undefined
+    this._paddockBound = undefined
+    this._paddockHay = undefined
+    if (this.isPlayerOwned()) {
+      this._household = null
+      Object.assign(this._control, createFollowOwnedAnimalControlState())
+      this.home.set(this.mesh.position.x, 0, this.mesh.position.z)
+    }
+  }
+
+  private maybeClearPaddockStayOnExit(): void {
+    if (!this._paddockBound || !this._paddockStay) return
+    if (!this.isPlayerOwned()) return
+    if (!this.mounted && !this._leadAttached) return
+    if (hasExitedFencedArea(this.mesh.position.x, this.mesh.position.z, this._paddockBound)) {
+      this.clearPaddockStay()
     }
   }
 
@@ -2043,7 +2165,8 @@ export class AnimalAgent {
       const mount = this.def.mount
       if (!mount) return
 
-      const speed = (this.sprinting ? mount.sprintSpeed : mount.walkSpeed) * speedMultiplier
+      const trainingSpeed = this.trainingModifiers().speed
+      const speed = (this.sprinting ? mount.sprintSpeed : mount.walkSpeed) * speedMultiplier * trainingSpeed
 
       const result = stepWithSlopeAndCollision({
         x: this.mesh.position.x,
@@ -2068,6 +2191,7 @@ export class AnimalAgent {
     this.tickMovementTail()
     this.tickLife(dt, this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1)
     this.tickPresentation(dt, observerPos)
+    this.maybeClearPaddockStayOnExit()
   }
 
   /** Simulation-critical half of the per-tick tail every movement mode
@@ -2106,7 +2230,11 @@ export class AnimalAgent {
     this.tickProduction(nowDays)
     this.tickWoolProduction(nowDays)
     this.tickDrowning(dt)
-    tickAnimalLife(this.life, dt, this.sprinting, { hungerThirstRate }, this.def.metabolism, this.swimExertionNow())
+    const drainMul = this.trainingModifiers().staminaDrain
+    const metabolism = drainMul === 1
+      ? this.def.metabolism
+      : { ...this.def.metabolism, staminaDrainRate: this.def.metabolism.staminaDrainRate * drainMul }
+    tickAnimalLife(this.life, dt, this.sprinting, { hungerThirstRate }, metabolism, this.swimExertionNow())
   }
 
   /** Movement-critical tail (plan fauna-028) — the two position-derived
@@ -2543,6 +2671,8 @@ export class AnimalAgent {
       name: this.name,
       rabid: this.rabid,
       stray: snapshotStrayState(this._stray),
+      training: this._training,
+      paddockStay: this._paddockStay,
     }
   }
 
@@ -2566,6 +2696,12 @@ export class AnimalAgent {
     this.health.dead = state.health.dead
     this.life.hunger = state.life.hunger
     this.life.thirst = state.life.thirst
+    this._training = this.def.kind === 'horse' ? normalizeHorseTrainingState(state.training) : undefined
+    this.applyPaddockStay(state.paddockStay)
+    if (this.def.kind === 'horse') {
+      const mods = this.trainingModifiers()
+      this.life.stamina.max = this.def.metabolism.staminaCapacity * mods.staminaCapacity
+    }
     // `state.life.stamina` is a ratio (see `snapshot()`'s doc) — scale by
     // this individual's own species capacity, not assign as a raw scalar.
     this.life.stamina.current = state.life.stamina * this.life.stamina.max
@@ -3782,7 +3918,7 @@ export class AnimalAgent {
       x: this.mesh.position.x,
       z: this.mesh.position.z,
       home: { x: this.home.x, z: this.home.z },
-      fearBaseline: this.def.fearBaseline ?? DEFAULT_FEAR_BASELINE,
+      fearBaseline: (this.def.fearBaseline ?? DEFAULT_FEAR_BASELINE) * this.trainingModifiers().fear,
       ownerNearby: this.scareCaretakerNearby(observerPos, nearbySettlementNpcs),
       herdmatesNearby: this.scareHerdmatesNearby(others),
     })) return
@@ -4495,7 +4631,16 @@ export class AnimalAgent {
     if (this._pastureTrough) {
       ctx.householdWaterAnchors = [this._pastureTrough]
     }
-    if (this.isPlayerOwned() || this._leadAttached) {
+    if (this._paddockTrough) {
+      ctx.householdWaterAnchors = [...(ctx.householdWaterAnchors ?? []), this._paddockTrough]
+    }
+    if (this._paddockHay) {
+      ctx.paddockHay = this._paddockHay
+    }
+    if (this._paddockBound) {
+      ctx.needAnchor = { x: this._paddockBound.x, z: this._paddockBound.z }
+      ctx.needLeashRadius = this._paddockBound.radius
+    } else if (this.isPlayerOwned() || this._leadAttached) {
       const anchor = this._control.mode === 'stay' && this._control.stayAnchor
         ? this._control.stayAnchor
         : this._tickPlayerControlPos
@@ -4880,6 +5025,9 @@ export class AnimalAgent {
   }
 
   private currentRoamHome(): { x: number, z: number } {
+    if (this._paddockBound && this._paddockStay) {
+      return { x: this._paddockBound.x, z: this._paddockBound.z }
+    }
     if (this.shouldUsePastureRoam() && this._pastureRoam) {
       return { x: this._pastureRoam.x, z: this._pastureRoam.z }
     }
@@ -4887,6 +5035,9 @@ export class AnimalAgent {
   }
 
   private currentWanderBand(): readonly [number, number] {
+    if (this._paddockBound && this._paddockStay) {
+      return fencedAreaWanderBand(this._paddockBound.radius)
+    }
     if (this.shouldUsePastureRoam() && this._pastureRoam) {
       const r = this._pastureRoam.radius
       return [Math.min(4, r * 0.3), Math.max(6, r * 0.8)]
@@ -5325,6 +5476,18 @@ export class AnimalAgent {
   }
 
   private clampBounds(): void {
+    this.maybeClearPaddockStayOnExit()
+    if (this._paddockBound && this._paddockStay) {
+      if (this.isPlayerOwned() && (this.mounted || this._leadAttached)) return
+      const clamped = clampIntoFencedArea(
+        this.mesh.position.x,
+        this.mesh.position.z,
+        this._paddockBound,
+      )
+      this.mesh.position.x = clamped.x
+      this.mesh.position.z = clamped.z
+      return
+    }
     if (this.isPlayerOwned() || this._leadAttached || isStrayEpisodeActive(this._stray)) return
     // A committed trip (plan fauna-016 §4, fauna-019 §6) may legitimately
     // carry the animal past the local roam band — its own destination

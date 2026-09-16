@@ -66,10 +66,14 @@ import { guardRewardTopicAvailable, resolveNextGuardReward } from '../quests/gua
 import {
   getHorseAcquisitionState,
   horseOfferStatusHint,
+  listVendorHorseAnimals,
   MERCHANT_HORSE_PRICE,
   merchantHorseAnimalId,
   resolveMerchantHorseAnimal,
+  vendorHorseOfferLabel,
+  vendorHorseOfferPrice,
 } from '../settlement/horseAcquisition'
+import { horseVendorNpcId } from '../settlement/merchantTrade'
 import { hideBusy, showBusy, ui } from '../ui-vue/store'
 import {
   FAR_RANGE_KM,
@@ -694,7 +698,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
           () => bundle.settlementsManager.transferAnimalOwnership(animalId, { kind: 'player' }),
         )
         if (result === 'ok') {
-          afterTrade(buildMerchantHorseOffer(settlement, npc))
+          afterTrade(buildHorseOffers(settlement, npc))
           toast.show('Koń jest teraz twój.', 'pickup')
         }
         return result
@@ -702,7 +706,66 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     }
   }
 
-  const afterTrade = (horseOffer?: MerchantHorseOffer | null): void => {
+  const buildVendorPaddockHorseOffers = (settlement: Settlement, npc: NpcAgent | null): MerchantHorseOffer[] => {
+    const horses = listVendorHorseAnimals(
+      settlement.livestock,
+      settlement.id,
+      (animalId) => questManager.isHorseRewardReserving(animalId),
+    )
+    return horses.map((animal) => {
+      const animalId = animal.animalId
+      const basePrice = vendorHorseOfferPrice(animal)
+      const status = getHorseAcquisitionState({
+        animal,
+        isReservedByQuest: questManager.isHorseRewardReserving(animalId),
+      })
+      return {
+        label: vendorHorseOfferLabel(animal),
+        price: applyPurchaseMarkup(basePrice, merchantPurchaseMarkup(npc)),
+        status,
+        statusHint: horseOfferStatusHint(status),
+        previewNetCoins: (offer) => previewPricedPurchaseNetCoins(
+          inventory,
+          applyPurchaseMarkup(vendorHorseOfferPrice(
+            bundle.settlementsManager.resolvePersistentAnimal(animalId) ?? animal,
+          ), merchantPurchaseMarkup(npc)),
+          offer,
+          merchantSellContext(),
+        ),
+        onPurchase: (offer) => {
+          const live = bundle.settlementsManager.resolvePersistentAnimal(animalId)
+          if (!live || live.isDead() || live.isPlayerOwned()) return 'not_sold'
+          if (live.paddockStay()?.settlementId !== settlement.id) return 'not_sold'
+          const livePrice = applyPurchaseMarkup(vendorHorseOfferPrice(live), merchantPurchaseMarkup(npc))
+          const result = settlePricedPurchase(
+            inventory,
+            livePrice,
+            offer,
+            merchantSellContext(),
+            () => bundle.settlementsManager.transferAnimalOwnership(animalId, { kind: 'player' }),
+          )
+          if (result === 'ok') {
+            afterTrade(buildHorseOffers(settlement, npc))
+            toast.show('Koń jest teraz twój.', 'pickup')
+          }
+          return result
+        },
+      }
+    })
+  }
+
+  const buildHorseOffers = (settlement: Settlement | null, npc: NpcAgent | null = null): MerchantHorseOffer[] => {
+    if (!settlement) return []
+    const traderIds = settlement.npcs.filter((agent) => agent.role === 'trader').map((agent) => agent.id)
+    const vendorId = horseVendorNpcId(traderIds, settlement.terrain, !!settlement.landmarks.paddock)
+    if (npc && vendorId && npc.id === vendorId) {
+      return buildVendorPaddockHorseOffers(settlement, npc)
+    }
+    const wagon = buildMerchantHorseOffer(settlement, npc)
+    return wagon ? [wagon] : []
+  }
+
+  const afterTrade = (horseOffer?: MerchantHorseOffer | MerchantHorseOffer[] | null): void => {
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     heldTool.syncWithInventory()
     deps.syncHeldHud()
@@ -718,7 +781,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     vueUi.refreshMerchant(
       view.counts,
       view.groups,
-      horseOffer ?? buildMerchantHorseOffer(settlement, npc),
+      horseOffer ?? buildHorseOffers(settlement, npc),
       buildMerchantTradeStock(npc),
     )
   }
@@ -853,7 +916,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
           view.groups,
           'merchant',
           pricing,
-          buildMerchantHorseOffer(settlement, npc),
+          buildHorseOffers(settlement, npc),
           buildMerchantTradeStock(npc),
         )
         return

@@ -396,6 +396,7 @@ type MerchantState = {
   groups: readonly InventoryGroupView[]
   pricing: MerchantPricing | null
   horseOffer: MerchantHorseOffer | null
+  horseOffers: MerchantHorseOffer[]
   npcStock: readonly NpcTradeStockRow[]
   /** Settles one mixed BUY+OFFER basket atomically (plan ui-input-003) —
    *  supersedes the old single-target onBuyCoins/onBuyBarter/onSellCoins.
@@ -784,7 +785,7 @@ export const ui = reactive({
     visible: false, label: '', valid: false, state: 'invalid', canConfirm: false, confirmLabel: 'Zatwierdź [E]',
     reasonLabel: '', supportsRotation: false, requirements: [], supportsRepeat: false, repeatEnabled: false,
   } as PlacementPreviewState,
-  merchant: { open: false, npc: null, mode: 'merchant', counts: {}, groups: [], pricing: null, horseOffer: null, npcStock: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
+  merchant: { open: false, npc: null, mode: 'merchant', counts: {}, groups: [], pricing: null, horseOffer: null, horseOffers: [], npcStock: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', mode: 'container', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
@@ -1212,20 +1213,27 @@ export function isInventoryOpen(): boolean { return ui.inventory.open }
 export function configureMerchant(handlers: Pick<MerchantState, 'onSettleTransaction' | 'onSellInstances'>): void {
   Object.assign(ui.merchant, handlers)
 }
+function asHorseOffers(value: MerchantHorseOffer | MerchantHorseOffer[] | null | undefined): MerchantHorseOffer[] {
+  if (!value) return []
+  return Array.isArray(value) ? value : [value]
+}
+
 export function openMerchant(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
   mode: MerchantMode,
   pricing: MerchantPricing | null,
   npc: NpcAgent | null = null,
-  horseOffer: MerchantHorseOffer | null = null,
+  horseOffer: MerchantHorseOffer | MerchantHorseOffer[] | null = null,
   npcStock: readonly NpcTradeStockRow[] = [],
 ): void {
   ui.merchant.counts = { ...counts }
   ui.merchant.groups = groups
   ui.merchant.mode = mode
   ui.merchant.pricing = pricing
-  ui.merchant.horseOffer = horseOffer
+  const offers = asHorseOffers(horseOffer)
+  ui.merchant.horseOffers = offers
+  ui.merchant.horseOffer = offers[0] ?? null
   ui.merchant.npcStock = npcStock
   ui.merchant.npc = npc ? markRaw(npc) : null
   ui.merchant.open = true
@@ -1236,7 +1244,7 @@ export function openMerchantFromDialogue(
   groups: readonly InventoryGroupView[],
   mode: MerchantMode,
   pricing: MerchantPricing | null,
-  horseOffer: MerchantHorseOffer | null = null,
+  horseOffer: MerchantHorseOffer | MerchantHorseOffer[] | null = null,
   npcStock: readonly NpcTradeStockRow[] = [],
 ): void {
   const npc = ui.npcDialogueMenu.npc as NpcAgent | null
@@ -1246,12 +1254,16 @@ export function openMerchantFromDialogue(
 export function refreshMerchant(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
-  horseOffer?: MerchantHorseOffer | null,
+  horseOffer?: MerchantHorseOffer | MerchantHorseOffer[] | null,
   npcStock?: readonly NpcTradeStockRow[],
 ): void {
   ui.merchant.counts = { ...counts }
   ui.merchant.groups = groups
-  if (horseOffer !== undefined) ui.merchant.horseOffer = horseOffer
+  if (horseOffer !== undefined) {
+    const offers = asHorseOffers(horseOffer)
+    ui.merchant.horseOffers = offers
+    ui.merchant.horseOffer = offers[0] ?? null
+  }
   if (npcStock !== undefined) ui.merchant.npcStock = npcStock
 }
 export function closeMerchant(): void {
@@ -1259,6 +1271,7 @@ export function closeMerchant(): void {
   ui.merchant.npc = null
   ui.merchant.pricing = null
   ui.merchant.horseOffer = null
+  ui.merchant.horseOffers = []
   ui.merchant.npcStock = []
 }
 export function isMerchantOpen(): boolean { return ui.merchant.open }

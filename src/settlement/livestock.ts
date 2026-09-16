@@ -23,6 +23,10 @@ import {
   parseAnimalOwnerFromRecord,
 } from '../fauna/animalOwnership'
 import {
+  type HorsePaddockStay,
+  rollInitialHorseTrainingProgress,
+} from '../fauna/horseTraining'
+import {
   createChickenModel,
   createCowModel,
   createDogModel,
@@ -36,6 +40,7 @@ import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { createSeededRandom } from '../world/parseSeed'
 import { type VillageSize, villageSizeConfig } from './families'
 import { homePlaceId } from './places'
+import { vendorHorseAnimalId } from './villagePaddock'
 
 /** Append sheep onto a house's rolled kinds until the shepherd flock size is
  *  met. Extra sheep are appended so earlier house rolls keep their animal
@@ -79,6 +84,7 @@ export const LIVESTOCK_KINDS: ReadonlySet<AnimalKind> = new Set(Object.keys(LIVE
  * Seed salt for the guaranteed sheep.
  */
 const GUARANTEED_SHEEP_SEED_SALT = 0x53484545
+const HORSE_VENDOR_TRAINING_SALT = 0x4854524e
 
 /** One persisted livestock/merchant-horse individual (plan persistence-001) —
  *  `AnimalAgent.snapshot()`'s authoritative fields plus the identity needed
@@ -635,6 +641,19 @@ export async function spawnLivestock(
   /** Settlement pasture (plan settlements-009) — trough is a water target
    *  for every household animal; roam is only for the shepherd house. */
   pasture?: { x: number, z: number, radius: number, trough: { x: number, z: number } },
+  /** Vendor paddock (plan settlements-013) — origin slots are livestock
+   *  individuals; sold/dead slots stay empty. */
+  paddock?: {
+    x: number
+    z: number
+    radius: number
+    trough: { x: number, z: number }
+    haystack: { x: number, z: number }
+    entrance: { x: number, z: number }
+    entranceWidth: number
+    horseSlots: readonly { x: number, z: number }[]
+    household?: Household
+  },
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
@@ -747,6 +766,56 @@ export async function spawnLivestock(
         onDeathSound: onAnimalDeathSound,
       })
       agent.mesh.rotation.y = merchantHorseSpawn.yaw
+      if (record && record.kind === 'horse') {
+        agent.hydrate({ ...record, owner: parseAnimalOwnerFromRecord(record) })
+      }
+      scene.add(agent.mesh)
+      agents.push(agent)
+    }
+  }
+
+  if (paddock) {
+    for (let slotIndex = 0; slotIndex < paddock.horseSlots.length; slotIndex++) {
+      const slot = paddock.horseSlots[slotIndex]!
+      const animalId = vendorHorseAnimalId(settlementId, slotIndex)
+      const record = saved?.get(animalId)
+      if (!shouldSpawnDeterministicLivestockSlot(animalId, removed, record)) continue
+      const stay: HorsePaddockStay = {
+        settlementId,
+        slotIndex,
+        x: paddock.x,
+        z: paddock.z,
+        radius: paddock.radius,
+        entranceX: paddock.entrance.x,
+        entranceZ: paddock.entrance.z,
+        entranceWidth: paddock.entranceWidth,
+        hayX: paddock.haystack.x,
+        hayZ: paddock.haystack.z,
+      }
+      const trainingRandom = createSeededRandom(
+        settlementSeed ^ HORSE_VENDOR_TRAINING_SALT ^ Math.imul(slotIndex + 1, 0x9e3779b9),
+      )
+      const { visual, animations } = visualFor('horse', animalId)
+      const agent = new AnimalAgent({
+        def: ANIMAL_DEFS.horse,
+        animalId,
+        sampleHeight,
+        waterLevel,
+        sampleLocalWater,
+        naturalWaterKindAt,
+        collidersNear,
+        x: slot.x,
+        z: slot.z,
+        visual,
+        animations,
+        wanderRadius: LIVESTOCK_WANDER_RADIUS,
+        onDeath: onAnimalDeath,
+        onDeathSound: onAnimalDeathSound,
+        household: paddock.household,
+        training: { progress: rollInitialHorseTrainingProgress(trainingRandom, size) },
+        paddockStay: stay,
+        paddockTrough: paddock.trough,
+      })
       if (record && record.kind === 'horse') {
         agent.hydrate({ ...record, owner: parseAnimalOwnerFromRecord(record) })
       }
