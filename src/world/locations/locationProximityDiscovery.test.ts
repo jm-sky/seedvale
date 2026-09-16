@@ -40,6 +40,7 @@ function fakeCatalog(locations: readonly WorldLocation[]): WorldLocationCatalog 
     landmarksInRange: () => [],
     landmarksInRangeAsync: async () => [],
     abandonedMine: () => null,
+    stableLandmarksInRange: () => [],
     invalidateScanCache: () => {},
     getScanDiagnostics: () => emptyLocationScanDiagnostics(),
   }

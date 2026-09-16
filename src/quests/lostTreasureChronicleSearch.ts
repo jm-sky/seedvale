@@ -22,6 +22,7 @@ import {
   type LostTreasureChroniclesElderBinding,
 } from './lostTreasureChroniclesElder'
 import { type SettlementOpportunityNpc, settlementOpportunityNpcsFromDef } from './opportunities/settlementNpcMaterialization'
+import { WORLD_KNOWLEDGE_HOUR_DAYS } from './quests'
 
 export const LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID = 'story:lost-treasure-chronicles:chronicle-search'
 export const LOST_TREASURE_CEMETERY_FAVOUR_QUEST_ID = 'story:lost-treasure-chronicles:cemetery-favour'
@@ -368,6 +369,18 @@ export function buildLostTreasureChronicleSearchQuests(
     offerLine: chronicleSearchOfferLine(binding, 'basic'),
     resolveOfferLine: leadResolver(binding),
     offer: { exposure: 'story', priority: 22 },
+    worldKnowledge: [{
+      id: 'ruins',
+      revealDelayDays: WORLD_KNOWLEDGE_HOUR_DAYS,
+      bind: {
+        type: 'landmark',
+        kind: binding.ruinsLandmarkId.startsWith('ruins:') ? 'ruins' : 'smallRuins',
+        landmarkId: binding.ruinsLandmarkId,
+      },
+      pendingPhrase: `${binding.archaeologistName} jeszcze składa notatki z wyprawy. Wróć później po dokładniejszy kierunek do ruin.`,
+      unavailablePhrase: `${binding.archaeologistName} nie odtworzył trasy do ruin wyprawy.`,
+      unavailablePolicy: 'ignore',
+    }],
     availability: {
       prerequisites: [{
         type: 'quest_outcome',
@@ -402,10 +415,10 @@ export function buildLostTreasureChronicleSearchQuests(
         reminderLine: `${binding.archaeologistName} mieszka w ${binding.archaeologistSettlementName}. Nie wie, gdzie leży kronika, ale ma dwa tropy.`,
         playerLine: `${binding.elderName} powiedział, że szukasz zaginionej kroniki.`,
         progressLine:
-          `Dawny badacz — ${binding.researcherSurname} — spisał tropy skarbu szyfrem. Kroniki nikt nie odzyskał. Mogła pójść z nim do grobu albo zostać w ruinach obozu wyprawy. Sprawdź oba miejsca; dokładnego punktu nie znam.`,
+          `Dawny badacz — ${binding.researcherSurname} — spisał tropy skarbu szyfrem. Kroniki nikt nie odzyskał. Mogła pójść z nim do grobu; drugi trop to ruiny obozu, ale muszę jeszcze zestawić notatki z wyprawy, zanim wskażę dokładne miejsce.`,
         effects: [
           { type: 'reveal_location', locationId: binding.cemeteryLocationId },
-          { type: 'reveal_location', locationId: binding.ruinsLocationId },
+          { type: 'request_world_knowledge', knowledgeId: 'ruins' },
         ],
       },
       {
@@ -427,7 +440,15 @@ export function buildLostTreasureChronicleSearchQuests(
         transitions: [{ toStageId: 'acquire' }],
         description: 'Przeszukaj cmentarz albo ruiny wyprawy — w dowolnej kolejności.',
         reminderLine:
-          'Jeden trop to grób badacza, drugi to ruiny obozu. Kronika jest tylko w jednym miejscu; w drugim znajdziesz ślad.',
+          'Jeden trop to grób badacza. Co do ruin obozu: {worldKnowledgeClue:ruins}.',
+        dialogueActions: [{
+          npc: archaeologist,
+          playerLine: 'Udało ci się zestawić notatki z wyprawy?',
+          npcLine: 'Znalazłem to. Szukaj {worldKnowledgeClue:ruins}. Kronika jest tylko w jednym z dwóch miejsc.',
+          skipAdvance: true,
+          requireWorldKnowledgeReady: 'ruins',
+          effects: [{ type: 'reveal_location', locationId: binding.ruinsLocationId }],
+        }],
       },
       {
         id: 'acquire',

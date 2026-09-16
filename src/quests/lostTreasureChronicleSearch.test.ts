@@ -323,4 +323,119 @@ describe('lost treasure chronicle search (quests-progression-038)', () => {
     expect(favour?.outcomes.map((outcome) => outcome.id)).toEqual([LOST_TREASURE_GRAVE_ACCESS_OUTCOME])
     expect(binding?.questId).toBe(LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)
   })
+
+  it('defers the ruins clue through world knowledge without rerolling chapter truth (plan quests-progression-047)', async () => {
+    const { binding, elderBinding } = fixtures()
+    const search = buildLostTreasureChronicleSearchQuests(binding!).find(
+      (quest) => quest.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID,
+    )!
+    expect(search.worldKnowledge?.[0]).toMatchObject({
+      id: 'ruins',
+      bind: { type: 'landmark', landmarkId: binding!.ruinsLandmarkId },
+    })
+    let elapsedDays = 0
+    let resolves = 0
+    const quests = [
+      ...buildLostTreasureChroniclesElderQuests(elderBinding),
+      ...buildLostTreasureChronicleSearchQuests(binding!),
+    ]
+    const qm = new QuestManager(
+      quests,
+      undefined,
+      new Inventory(),
+      {
+        progress: [{
+          id: LOST_TREASURE_CHRONICLES_ELDER_WINTER_QUEST_ID,
+          state: 'complete',
+          stageIndex: 1,
+          resolvedOutcomeId: LOST_TREASURE_CHRONICLES_WINTER_MATERIAL_OUTCOME,
+        }, {
+          id: LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID,
+          state: 'active',
+          stageIndex: 0,
+        }],
+        relations: {},
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { getWorldSeed: () => 1, getTimeOfDay: () => 0, getElapsedDays: () => elapsedDays },
+      undefined,
+      undefined,
+      undefined,
+      {
+        resolve: async () => {
+          resolves += 1
+          return {
+            kind: 'landmark',
+            landmarkId: binding!.ruinsLandmarkId,
+            landmarkKind: 'smallRuins',
+          }
+        },
+        describe: (ref) => `clue:${ref.landmarkId}`,
+      },
+    )
+    const meet = qm.onInteract(binding!.archaeologistNpcId)
+    meet?.actions?.[0]?.onSelect()
+    await Promise.resolve()
+    expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.stageIndex).toBe(1)
+    expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.worldKnowledge?.ruins?.status)
+      .toBe('resolved')
+    expect(resolves).toBe(1)
+    const pending = qm.onInteract(binding!.archaeologistNpcId)
+    expect(pending?.actions?.some((action) => action.label.includes('notatki'))).toBeFalsy()
+    expect(pending?.line).toContain('notatki')
+    elapsedDays = 1 / 24
+    const ready = qm.onInteract(binding!.archaeologistNpcId)
+    expect(ready?.actions?.[0]?.label).toContain('notatki')
+    const reply = ready?.actions?.[0]?.onSelect()
+    expect(reply).toContain(`clue:${binding!.ruinsLandmarkId}`)
+    expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.stageIndex).toBe(1)
+    expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.worldKnowledge?.ruins?.revealed)
+      .toBe(true)
+    expect(binding!.truth === 'grave' || binding!.truth === 'ruins').toBe(true)
+    expect(binding!.ruinsContainerId).toBe(fixtures().binding?.ruinsContainerId)
+  })
+
+  it('migrates an older active chronicle-search save into revealed ruins knowledge', () => {
+    const { binding, elderBinding } = fixtures()
+    const quests = [
+      ...buildLostTreasureChroniclesElderQuests(elderBinding),
+      ...buildLostTreasureChronicleSearchQuests(binding!),
+    ]
+    const qm = new QuestManager(
+      quests,
+      undefined,
+      new Inventory(),
+      {
+        progress: [{
+          id: LOST_TREASURE_CHRONICLES_ELDER_WINTER_QUEST_ID,
+          state: 'complete',
+          stageIndex: 1,
+          resolvedOutcomeId: LOST_TREASURE_CHRONICLES_WINTER_MATERIAL_OUTCOME,
+        }, {
+          id: LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID,
+          state: 'active',
+          stageIndex: 1,
+        }],
+        relations: {},
+      },
+    )
+    const knowledge = qm.exportProgress()
+      .find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)
+      ?.worldKnowledge?.ruins
+    expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.stageIndex).toBe(1)
+    expect(knowledge?.status).toBe('resolved')
+    expect(knowledge?.revealed).toBe(true)
+    expect(knowledge?.ref?.landmarkId).toBe(binding!.ruinsLandmarkId)
+  })
 })

@@ -35,15 +35,20 @@ function runtimeQuest(
 }
 
 describe('buildLandmarkQuests', () => {
-  it('omits a landmark kind the resolver has no candidate for', () => {
+  it('still offers slad-przy-monolicie when eager landmark lookup misses', () => {
     const quests = buildLandmarkQuests(() => undefined)
-    expect(quests).toHaveLength(0)
+    expect(quests.map((quest) => quest.id)).toEqual(['slad-przy-monolicie'])
+    expect(quests[0]?.stages[0]?.objective.type).toBe('receive_world_knowledge')
+    expect(quests[0]?.stages[1]?.objective.type).toBe('interact_bound_landmark')
   })
 
-  it('builds one quest per resolved kind, binding its stage to the resolved landmarkId', () => {
+  it('builds immediate landmark quests with concrete ids and defers the monolith research quest', () => {
     const quests = buildLandmarkQuests((kind) => `${kind}:resolved`)
     expect(quests).toHaveLength(5)
-    for (const quest of quests) {
+    const slad = quests.find((quest) => quest.id === 'slad-przy-monolicie')
+    expect(slad?.stages[0]?.objective.type).toBe('receive_world_knowledge')
+    expect(slad?.worldKnowledge?.[0]?.bind).toEqual({ type: 'landmark', kind: 'monolith' })
+    for (const quest of quests.filter((entry) => entry.id !== 'slad-przy-monolicie')) {
       const objective = quest.stages[0]!.objective
       expect(objective.type).toBe('interact_landmark')
       if (objective.type === 'interact_landmark') {
@@ -52,13 +57,13 @@ describe('buildLandmarkQuests', () => {
     }
   })
 
-  it('resolves each expected landmark kind exactly once', () => {
+  it('does not eagerly resolve monolith for slad-przy-monolicie', () => {
     const requested: string[] = []
     buildLandmarkQuests((kind) => {
       requested.push(kind)
       return `${kind}:id`
     })
-    expect(requested.sort()).toEqual(['cemetery', 'monolith', 'shipwreck', 'smallRuins', 'tower'])
+    expect(requested.sort()).toEqual(['cemetery', 'shipwreck', 'smallRuins', 'tower'])
   })
 
   it('produces quest ids that are stable and distinct', () => {
@@ -599,6 +604,79 @@ describe('validateQuestDefinitions nonlinear stages (plan quests-progression-032
         reminderLine: 'r',
       }],
     })])).toThrow(/not forward-only/)
+  })
+})
+
+describe('validateQuestDefinitions deferred world knowledge (plan quests-progression-047)', () => {
+  const knowledgeQuest = (patch: Partial<QuestDef>): QuestDef => runtimeQuest({
+    id: 'research',
+    title: 'Research',
+    description: 'desc',
+    giverName: 'Anna',
+    offerLine: 'offer',
+    worldKnowledge: [{
+      id: 'target',
+      revealDelayDays: 1 / 24,
+      bind: { type: 'landmark', kind: 'monolith' },
+      pendingPhrase: 'pending',
+      unavailablePhrase: 'gone',
+      unavailablePolicy: 'fail',
+      unavailableOutcomeId: 'lost',
+    }],
+    acceptEffects: [{ type: 'request_world_knowledge', knowledgeId: 'target' }],
+    stages: [
+      {
+        objective: { type: 'receive_world_knowledge', knowledgeId: 'target', npc: { npcId: 'Anna' } },
+        description: 'wait',
+        reminderLine: 'pending',
+        playerLine: 'ready?',
+      },
+      {
+        objective: { type: 'interact_bound_landmark', knowledgeId: 'target' },
+        description: 'go',
+        reminderLine: 'go?',
+      },
+    ],
+    reportLine: 'done',
+    outcomes: [
+      { id: 'done', state: 'complete' },
+      { id: 'lost', state: 'failed' },
+    ],
+    ...patch,
+  })
+
+  it('accepts a well-formed research quest', () => {
+    expect(() => validateQuestDefinitions([knowledgeQuest({})])).not.toThrow()
+  })
+
+  it('rejects duplicate knowledge ids', () => {
+    const slot = knowledgeQuest({}).worldKnowledge![0]!
+    expect(() => validateQuestDefinitions([knowledgeQuest({
+      worldKnowledge: [slot, { ...slot }],
+    })])).toThrow(/duplicate world-knowledge/)
+  })
+
+  it('rejects a negative research delay', () => {
+    const slot = knowledgeQuest({}).worldKnowledge![0]!
+    expect(() => validateQuestDefinitions([knowledgeQuest({
+      worldKnowledge: [{ ...slot, revealDelayDays: -1 }],
+    })])).toThrow(/revealDelayDays/)
+  })
+
+  it('rejects a bound-landmark objective without a receive stage', () => {
+    expect(() => validateQuestDefinitions([knowledgeQuest({
+      stages: [{
+        objective: { type: 'interact_bound_landmark', knowledgeId: 'target' },
+        description: 'go',
+        reminderLine: 'go?',
+      }],
+    })])).toThrow(/no receive_world_knowledge/)
+  })
+
+  it('rejects an unknown knowledge id on request_world_knowledge', () => {
+    expect(() => validateQuestDefinitions([knowledgeQuest({
+      acceptEffects: [{ type: 'request_world_knowledge', knowledgeId: 'missing' }],
+    })])).toThrow(/unknown knowledge/)
   })
 })
 

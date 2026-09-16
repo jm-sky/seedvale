@@ -4,7 +4,7 @@
 
 **Not:** a second terrain-generation reference ([terrain-and-world-generation.md](./terrain-and-world-generation.md) owns the actual sampling/heightmap/biome machinery this domain consumes), UI implementation detail (the map screen's rendering is out of scope unless it changes ownership), or a plan/changelog.
 
-**Last verified:** 2026-09-12
+**Last verified:** 2026-09-16
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -45,9 +45,10 @@ The persistent worldgen cache currently has two namespaces owned by this catalog
 
 - **Terrain generation:** this domain is a *consumer* of terrain's sampling surface, never a second implementation of it. Terrain owns the heightmap/biome/river/mountain-ridge answers; this domain only classifies coarse world tiles from those answers for siting purposes (lake/mountain-peak/cemetery-type discovery). See [terrain-and-world-generation.md](./terrain-and-world-generation.md).
 - **Settlements:** settlements are generated and sited independently, through their own terrain-sampling consumption (see [settlements.md](./settlements.md)); this domain does not participate in settlement siting. Settlement *identity* still lives in the catalog (`settlement:<def.id>` from `SettlementDef`). Player knowledge of a settlement is `LocationKnowledge` only — Fog of War never auto-reveals a village. The home settlement is confirmed (`confirmed` / `exploration`) at New Game and, for older saves missing that entry, during restore. Physical arrival uses the existing settlement grid (`worldToCell` + `cellsWithinRadius`) and `VillagePlan.boundary`, the same circular footprint streaming/fauna already treat as the village area, via throttled `LocationProximityDiscovery`. Settlement cemeteries are still this domain's WorldLocation kind, but the catalog looks them up through terrain's canonical assignment (`cemeteryForSettlement` → `ChunkManager.resolveCemeteryForSettlement`) rather than nearest-landmark search. Abandoned wilderness cemeteries are enumerated by a bounded chunk probe, not by walking settlements.
+- **Deferred world knowledge:** `WorldKnowledgeResearch` (`src/world/locations/worldKnowledgeResearch.ts`) owns worker-backed static-world lookup (nearest/nearby lightweight landmarks). `QuestManager` persists quest knowledge slots; the home guard's „Opowiedz mi coś o okolicy” persists only wait + selected ids on `SaveData.map.guardLocalKnowledge`. Neither path stores worker handles. Discovery still goes through `LocationKnowledge`.
 - **Map/UI:** map rendering consumes this domain's discovery/knowledge state and the catalog's classification output, but owns no state of its own beyond presentation — UI implementation detail is out of this document's scope.
 - **Quests:** where a quest references a landmark, it does so through an injected resolver function (the same "quest never imports concrete domain classes" pattern quests use for fauna targets) rather than a direct dependency — see [npc.md](./npc.md)'s Relationships, social, and dialogue section for the resolver convention.
-- **Persistence:** discovery/knowledge/target state persists as part of `SaveData.map`; location geometry itself is never persisted, always re-derived from `(world seed, location id)`. See [persistence.md](./persistence.md).
+- **Persistence:** discovery/knowledge/target state persists as part of `SaveData.map` (optional `guardLocalKnowledge` wait/selection for the home-guard research pilot); location geometry itself is never persisted, always re-derived from `(world seed, location id)`. See [persistence.md](./persistence.md).
 
 ## Limitations
 

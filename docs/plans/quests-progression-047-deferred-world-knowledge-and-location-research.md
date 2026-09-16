@@ -1,7 +1,7 @@
 # Plan: Deferred world knowledge and location research
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** L
 **Model:** Opus, Sonnet
 **Depends on:** ~~world-028~~, ~~world-022~~
@@ -496,6 +496,15 @@ Exact files/call-sites should follow current code and implementation notes.
 - redesigning Lost Treasure Chronicles;
 - making every NPC research every location;
 - changing landmark rarity/search semantics.
+
+## Implementation status
+
+Implemented; browser/manual verification remains user-owned (AI does not perform it).
+
+- worker-backed `WorldKnowledgeResearch` on the existing `chunkHeightmap` pool (`worldKnowledge` job; tile/mesh > knowledge > grass; shared background headroom)
+- quest adapter looks up through `research.resolve()`, not `findLandmarkNear` on the dialogue path
+- home-guard „Opowiedz mi coś o okolicy” is a peer consumer (`guardLocalKnowledge`), not a fake quest
+- quest-layer primitives and pilots: `slad-przy-monolicie`, generated `old-place-secret`, chronicle-search ruins clue
 
 ## Verification
 

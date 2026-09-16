@@ -159,6 +159,12 @@ export type WorldLocationCatalog = {
   /** Settlements within `maxKm` of `(x, z)`, nearest first (plan §8 — no
    *  `discoveryWeight`, always distance-ordered). */
   nearestSettlements(x: number, z: number, maxKm: number): WorldLocation[]
+  /**
+   * Cave / settlement-cemetery / authored ruins / abandoned-mine candidates
+   * in `(minKm, maxKm]`. Skips lake/peak classification and abandoned-cemetery
+   * probes so it stays cheap on the main thread (plan quests-progression-047).
+   */
+  stableLandmarksInRange(x: number, z: number, minKm: number, maxKm: number): WorldLocation[]
   /** cave + cemetery + lake + mountainPeak + abandonedMine candidates within `maxKm` of
    *  `(x, z)` — unsorted; callers apply the distance-filter → weighted-pick
    *  pipeline themselves (`locationDiscovery.ts`). Equivalent to
@@ -379,6 +385,26 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       return loc && loc.id === id ? loc : null
     }
     return null
+  }
+
+  function authoredRuinsLocations(): WorldLocation[] {
+    const seed = getSeed()
+    const out: WorldLocation[] = []
+    for (const site of [
+      deps.getDarkForestTreasureSite?.(),
+      deps.getChronicleSearchRuinsSite?.(),
+    ]) {
+      if (!site) continue
+      out.push({
+        id: site.locationId,
+        kind: 'ruins',
+        x: site.x,
+        z: site.z,
+        name: landmarkName(seed, 'ruins', site.locationId),
+        discoveryWeight: weightOf(seed, site.locationId),
+      })
+    }
+    return out
   }
 
   function nearestSettlements(x: number, z: number, maxKm: number): WorldLocation[] {
@@ -843,6 +869,20 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     ]
   }
 
+  function stableLandmarksInRange(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
+    const { out } = settlementCemeteryCandidates(x, z, minKm, maxKm)
+    const ruins = authoredRuinsLocations().filter((loc) => {
+      const km = distanceKm(x, z, loc.x, loc.z)
+      return km <= maxKm && km > minKm
+    })
+    return [
+      ...caveCandidates(x, z, minKm, maxKm),
+      ...out,
+      ...ruins,
+      ...abandonedMineCandidate(x, z, minKm, maxKm),
+    ]
+  }
+
   function landmarksWithin(x: number, z: number, maxKm: number): WorldLocation[] {
     return landmarksInRange(x, z, 0, maxKm)
   }
@@ -851,6 +891,7 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     getById,
     abandonedMine: abandonedMineLocation,
     nearestSettlements,
+    stableLandmarksInRange,
     landmarksWithin,
     landmarksInRange,
     landmarksInRangeAsync,

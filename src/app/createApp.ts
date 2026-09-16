@@ -175,7 +175,7 @@ import {
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
-import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS, questStageObjectiveSlots } from '../quests/quests'
+import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS } from '../quests/quests'
 import {
   isSuspiciousTransportCacheLooted,
   SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
@@ -184,6 +184,7 @@ import {
   SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
 } from '../quests/suspiciousTransportCaveCache'
 import { getActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspiciousTransportCaveCacheRuntime'
+import { createQuestWorldKnowledgeResolver } from '../quests/worldKnowledgeResolver'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import {
   type PlayerAnimalKillContext,
@@ -233,6 +234,7 @@ import {
 } from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { createGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
 import { listKnownSettlementOptions, resolveCharacterReputationSettlementId } from '../world/locations/knownSettlementReputation'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
 import {
@@ -253,7 +255,8 @@ import {
 import {
   getActiveTreasureMapBearCaveBinding,
 } from '../world/locations/treasureMapBearCaveRuntime'
-import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
+import { createWorldKnowledgeResearch } from '../world/locations/worldKnowledgeResearch'
+import { createWorldLocationCatalog, settlementLocationId } from '../world/locations/worldLocationCatalog'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -841,6 +844,16 @@ export async function createApp(
     },
     getAbandonedMine: () => bundle.caves.abandonedMine(),
   })
+  const worldKnowledgeResearch = createWorldKnowledgeResearch({
+    buildParams: (query) => bundle.chunkManager.buildWorldKnowledgeWorkerParams({
+      queryKind: query.kind,
+      landmarkKinds: query.landmarkKinds,
+      originX: query.originX,
+      originZ: query.originZ,
+      maxChunkRadius: query.maxChunkRadius,
+    }),
+    fingerprint: () => `${config.seed}:${worldGeneration}`,
+  })
   const bindReadyExpeditionDispatch = (): void => {
     const dispatch = bundle.dispatchReadyExpedition.bind(bundle)
     bundle.dispatchReadyExpedition = (assignmentId, locationAt) => dispatch(
@@ -863,6 +876,18 @@ export async function createApp(
   // loop so the first proximity tick is a no-op (no boot toast). Missing
   // home entries in older saves are normalized the same way.
   confirmHomeSettlement(bundle.settlementsManager.getHomeDef(), locationKnowledge)
+  const guardLocalKnowledge = createGuardLocalKnowledge({
+    research: worldKnowledgeResearch,
+    getElapsedDays: () => dayNight.elapsedDays,
+    getWorldSeed: () => config.seed,
+    locationKnowledge,
+    getLocation: (id) => worldLocationCatalog.getById(id),
+    listStableLocations: (originX, originZ, maxKm) => worldLocationCatalog.stableLandmarksInRange(originX, originZ, 0, maxKm),
+    nearestSettlements: (originX, originZ, maxKm) => worldLocationCatalog.nearestSettlements(originX, originZ, maxKm),
+    homeLocationId: () => settlementLocationId(bundle.settlementsManager.getHomeDef()),
+    searchChunkRadius: LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
+  })
+  guardLocalKnowledge.restore(initialSave?.map.guardLocalKnowledge)
   const locationProximityDiscovery = createLocationProximityDiscovery({
     getCaveDefinitions: () => bundle.caves.definitions(),
     lookupSettlement: lookupSettlementCell,
@@ -1189,9 +1214,11 @@ export async function createApp(
   const minimap = createMinimap(container)
   bootMarkEnd('createMinimap')
 
-  // Resolved once here (not injected into `QuestManager`, which stays
-  // chunk/terrain-agnostic) — landmarks never change once generated, so
-  // there's nothing to re-resolve at runtime, unlike `kill_target_animal`/
+  // Immediate landmark quests still resolve once here (not injected into
+  // `QuestManager`, which stays chunk/terrain-agnostic). `slad-przy-monolicie`
+  // opts out and binds later through the deferred world-knowledge resolver
+  // (plan quests-progression-047). Landmarks never change once generated, so
+  // immediate ids stay stable across boot unlike `kill_target_animal`/
   // `find_animal`'s live `AnimalTargetResolver` below (plan 132).
   const landmarkQuests = buildLandmarkQuests((kind) => {
     // `getHomeDef()` (not `.home.center`) — always available, independent of
@@ -1263,13 +1290,29 @@ export async function createApp(
     homeNpcDescriptors,
   )
   const occupiedLandmarkIds = new Set<string>()
-  for (const quest of landmarkQuests) {
-    for (const stage of quest.stages) {
-      for (const slot of questStageObjectiveSlots(stage)) {
-        if (slot.objective.type === 'interact_landmark') occupiedLandmarkIds.add(slot.objective.landmarkId)
-      }
+  const occupyLandmarkObjective = (objective: { type: string, landmarkId?: string }): void => {
+    if (objective.type === 'interact_landmark' && objective.landmarkId) {
+      occupiedLandmarkIds.add(objective.landmarkId)
     }
   }
+  const occupyQuestLandmarks = (quest: {
+    worldKnowledge?: readonly { bind: { landmarkId?: string } }[]
+    stages: readonly {
+      objective: { type: string, landmarkId?: string }
+      objectives?: readonly { objective: { type: string, landmarkId?: string } }[]
+    }[]
+  }): void => {
+    for (const slot of quest.worldKnowledge ?? []) {
+      if (slot.bind.landmarkId) occupiedLandmarkIds.add(slot.bind.landmarkId)
+    }
+    for (const stage of quest.stages) {
+      const slots = stage.objectives && stage.objectives.length > 0
+        ? stage.objectives
+        : [{ objective: stage.objective }]
+      for (const entry of slots) occupyLandmarkObjective(entry.objective)
+    }
+  }
+  for (const quest of landmarkQuests) occupyQuestLandmarks(quest)
   const neighborDefs = nearbyRpgSettlementDefs(homeDef, (cell) => bundle.settlementsManager.peekDef(cell))
   const opportunitySettlements = [homeDef, ...neighborDefs]
   const npcsBySettlement = new Map(
@@ -1357,11 +1400,7 @@ export async function createApp(
     })
     for (const quest of generated) {
       opportunityQuestDefs.push(quest)
-      for (const stage of quest.stages) {
-        for (const slot of questStageObjectiveSlots(stage)) {
-          if (slot.objective.type === 'interact_landmark') occupiedLandmarkIds.add(slot.objective.landmarkId)
-        }
-      }
+      occupyQuestLandmarks(quest)
     }
     if (def.isHome) {
       opportunityQuestDefs.push(...buildHunterProfessionQuests({
@@ -1850,6 +1889,14 @@ export async function createApp(
     createSettlementLightLookup(() => bundle.settlementsManager.getLoaded()),
     physicalOutcomeResolver,
     questLifecycleHooks,
+    createQuestWorldKnowledgeResolver({
+      getHost: () => bundle,
+      getDefs: () => questDefs,
+      searchRadius: LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
+      chunkSize: config.terrain.chunkSize,
+      getChronicleSearch: () => getActiveLostTreasureChronicleSearchBinding(),
+      research: worldKnowledgeResearch,
+    }),
   )
 
   const refreshGuardEveningPolicies = (): void => {
@@ -1968,6 +2015,7 @@ export async function createApp(
     guardProgress,
     homeSettlementId,
     homeGuardNpcId,
+    guardLocalKnowledge,
   })
   vueUi.configurePrimaryWeaponShortcuts({
     equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
@@ -2266,6 +2314,7 @@ export async function createApp(
     mapDiscovery,
     locationKnowledge,
     navigationTargets,
+    getGuardLocalKnowledge: () => guardLocalKnowledge.serialize(),
     landOwnership,
     vueUi,
     worldFlags,
@@ -2356,6 +2405,8 @@ export async function createApp(
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()
+      worldKnowledgeResearch.invalidate()
+      guardLocalKnowledge.invalidate()
       bindReadyExpeditionDispatch()
       // New seed and/or terrain params — re-activate the persistence
       // controller so a late-arriving hydrate from the *old* identity never
@@ -2382,6 +2433,8 @@ export async function createApp(
         locationKnowledge.clear()
         confirmHomeSettlement(bundle.settlementsManager.getHomeDef(), locationKnowledge)
         navigationTargets.clear()
+        guardLocalKnowledge.reset()
+        worldKnowledgeResearch.invalidate()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
         worldFlags.alphaWolfDeedEarned = false
@@ -3330,6 +3383,7 @@ export async function createApp(
     if (typeof window !== 'undefined') window.__seedvalePointLightBudget = undefined
     if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = undefined
     player.dispose()
+    worldKnowledgeResearch.dispose()
     disposeChunkWorkerPool()
     postProcessing.dispose()
     lights.dispose()

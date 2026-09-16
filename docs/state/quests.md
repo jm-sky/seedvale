@@ -1,7 +1,7 @@
 # Quests / progression — current state
 
-**Last verified:** 2026-09-15  
-**Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic definitions, offer selection, active giver capacity, objectives, dialogue actions, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
+**Last verified:** 2026-09-16  
+**Canonical scope:** implemented quest architecture, lifecycle, authored/dynamic definitions, offer selection, active giver capacity, objectives, dialogue actions, deferred world knowledge, rewards/consequences, world-driven opportunities, persistence boundaries and integration seams.
 
 Architecture recon: [2026-09-13--quest-system-architecture-recon.md](../reviews/2026-09-13--quest-system-architecture-recon.md). Relevant follow-up work includes `quests-progression-029` … `034`.
 
@@ -14,6 +14,9 @@ Primary code:
 - `src/quests/quests.ts` — quest contracts, validation, authored definitions, offer policy/ranking and contextual builders/binders.
 - `src/quests/QuestManager.ts` — authoritative quest progress, lifecycle, offer admission, active giver capacity, objective evaluation, dialogue overrides, rewards/consequences and quest-owned player↔NPC relation values.
 - `src/quests/materializeAuthoredQuests.ts` — authored NPC display names → stable `NpcId` binding.
+- `src/quests/worldKnowledgeResolver.ts` — quest adapter onto world-owned `WorldKnowledgeResearch` (plan quests-progression-047).
+- `src/world/locations/worldKnowledgeResearch.ts` — worker-backed static-world lookup; not a quest system.
+- `src/quests/landmarkLocationDescription.ts` — deterministic landmark-relative place phrase.
 - `src/quests/opportunities/` — world-driven settlement opportunities and RPG quest matrices.
 - `src/quests/settlementRatInfestation.ts` — pure completion/reminder helpers for rat infestation.
 - `src/app/createApp.ts` — composition root: gathers/materializes definitions and injects world/system lookups into `QuestManager`.
@@ -183,6 +186,8 @@ Implemented objective families:
 - `interact_tree`
 - `interact_spawner`
 - `interact_landmark`
+- `receive_world_knowledge`
+- `interact_bound_landmark`
 
 ### Animals / fauna
 
@@ -216,7 +221,7 @@ Event ingress helpers visit **every** matching active quest and every unfinished
 
 ## Animal/world bindings
 
-`kill_target_animal` and `find_animal` bind to one concrete `animalId` through injected seams. `clear_wolf_den` binds the den/spawner identity. `interact_landmark` uses a resolved stable landmark id rather than coordinates.
+`kill_target_animal` and `find_animal` bind to one concrete `animalId` through injected seams. `clear_wolf_den` binds the den/spawner identity. `interact_landmark` uses a resolved stable landmark id rather than coordinates. Deferred world knowledge (plan quests-progression-047) is an opt-in `QuestDef.worldKnowledge` slot: `request_world_knowledge` starts lookup exactly once, `receive_world_knowledge` waits for both resolver completion and authored world time, and `interact_bound_landmark` matches the persisted landmark id. Immediate-known places stay on `interact_landmark`. `QuestManager` owns the persisted slot; lookup runs through injected `QuestWorldKnowledgeResolver` onto world-owned `WorldKnowledgeResearch` (worker pool `worldKnowledge` job). Rendered clue text is not saved — `{worldKnowledgeClue:id}` expands in `list()` only after `revealed`.
 
 For `animal_died`, an already-bound objective matches only the exact animal id. If a matching kill objective is still unbound, the death event can bind to the exact dying `animalId` using the event's reported `kind`; it does **not** ask the live-target resolver after death and accidentally retarget another animal.
 
@@ -279,7 +284,7 @@ Each visible entry includes `notes`: already-heard lines, oldest first, each `{ 
 - `speakerName` is the giver / NPC display name, or `Obserwacja` when a `progressLine` came from a world object rather than an NPC.
 - `text` is always projected from the live `QuestDef` (`offerLine`, stage `progressLine`, selected `dialogueActions.npcLine`, or result / report / abandon line). Authored wording changes after load show the current line at the saved timestamp.
 
-Stamps live on optional `QuestProgressEntry.journal`. `QuestManager` writes them on offer admission, heard stage progress, selected stage dialogue-action NPC lines, and terminal `complete` / `failed` / `abandoned`. It does not stamp reminders, unchosen branches, or `not_offered`. Decline back to `not_offered` clears the journal; abandon keeps notes and adds a result. Older saves without `journal` reconstruct only the offer (and a result when already terminal), never guessed historical `progressLine`s.
+Stamps live on optional `QuestProgressEntry.journal`. `QuestManager` writes them on offer admission, heard stage progress, selected stage dialogue-action NPC lines, and terminal `complete` / `failed` / `abandoned`. Pending vs revealed world-knowledge lines on the same stage use optional `stampId` so they do not collide. It does not stamp reminders, unchosen branches, or `not_offered`. Decline back to `not_offered` clears the journal; abandon keeps notes and adds a result. Older saves without `journal` reconstruct only the offer (and a result when already terminal), never guessed historical `progressLine`s.
 
 The Quest Log list is compact (title, giver, state, current objective). Details shows description, notes, objective, promised reward and relation. Esc returns to the list before closing the overlay.
 
@@ -318,9 +323,10 @@ Persisted `QuestProgressEntry` currently includes:
 - optional legacy `stageCount`,
 - optional `stageSlotProgress` for multi-objective stages,
 - optional `offerSuppressedUntilDay` for declined offers,
-- optional `journal` heard-line stamps (kind, optional stage/dialogue-action/speaker, world clock). Quote text is not stored.
+- optional `journal` heard-line stamps (kind, optional stage/dialogue-action/`stampId`/speaker, world clock). Quote text is not stored.
+- optional `worldKnowledge` research/binding slots keyed by authored knowledge id (requested/resolved/unavailable, reveal times, optional stable ref). Promises are never stored.
 
-No save-version bump was required for plans `032`–`034` or `ui-input-021`; new progress fields are additive/optional. Active giver capacity and offer ranking are derived and are not stored as queues/slots.
+No save-version bump was required for plans `032`–`034`, `ui-input-021`, or `quests-progression-047`; new progress fields are additive/optional. Active giver capacity and offer ranking are derived and are not stored as queues/slots. Older active saves for migrated research quests are normalized into a reachable post-research stage.
 
 Quest-owned player↔NPC relation values are also restored into `QuestManager`; legacy name-keyed relation entries are normalized where unambiguous.
 

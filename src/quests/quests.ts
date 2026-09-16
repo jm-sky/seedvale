@@ -153,6 +153,7 @@ export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
     validateTalkToNpcChoiceObjective(def)
     validateStageDialogueActions(def)
     validateNonlinearStageFlow(def)
+    validateWorldKnowledge(def)
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) continue
     for (const prereq of prerequisites) {
@@ -283,6 +284,134 @@ function validateStageDialogueActions(def: QuestDef): void {
           `Quest "${def.id}" stage dialogue action is missing an npc target`,
         )
       }
+    }
+  }
+}
+
+/**
+ * Validates deferred world-knowledge slots, references and delays
+ * (plan quests-progression-047).
+ *
+ * @domain quests-progression
+ */
+function validateWorldKnowledge(def: QuestDef): void {
+  const slots = def.worldKnowledge ?? []
+  const ids = new Set<string>()
+  for (const slot of slots) {
+    if (!slot.id || slot.id.trim().length === 0) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" has an empty world-knowledge id`)
+    }
+    if (ids.has(slot.id)) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" has duplicate world-knowledge id "${slot.id}"`)
+    }
+    ids.add(slot.id)
+    if (!Number.isFinite(slot.revealDelayDays) || slot.revealDelayDays < 0) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" world-knowledge "${slot.id}" revealDelayDays must be finite and non-negative`,
+      )
+    }
+    if (slot.bind.type !== 'landmark' || !slot.bind.kind) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" world-knowledge "${slot.id}" needs a landmark bind`,
+      )
+    }
+    if (!slot.pendingPhrase.trim() || !slot.unavailablePhrase.trim()) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" world-knowledge "${slot.id}" is missing pending/unavailable copy`,
+      )
+    }
+    if (slot.unavailablePolicy !== 'fail' && slot.unavailablePolicy !== 'ignore') {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" world-knowledge "${slot.id}" has an unknown unavailablePolicy`,
+      )
+    }
+    if (slot.unavailablePolicy === 'fail') {
+      const outcomeId = slot.unavailableOutcomeId
+      const outcome = outcomeId
+        ? def.outcomes.find((entry) => entry.id === outcomeId)
+        : uniqueOutcomeForState(def, 'failed')
+      if (!outcome || outcome.state !== 'failed') {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" world-knowledge "${slot.id}" fail policy needs a failed outcome`,
+        )
+      }
+    }
+  }
+
+  const referenced = new Set<string>()
+  const receiveIds = new Set<string>()
+  const boundIds = new Set<string>()
+
+  const noteEffect = (effect: QuestStageEffect): void => {
+    if (effect.type !== 'request_world_knowledge') return
+    referenced.add(effect.knowledgeId)
+    if (!ids.has(effect.knowledgeId)) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" request_world_knowledge references unknown knowledge "${effect.knowledgeId}"`,
+      )
+    }
+  }
+
+  for (const effect of def.acceptEffects ?? []) noteEffect(effect)
+
+  for (const [stageIndex, stage] of def.stages.entries()) {
+    for (const effect of stage.effects ?? []) noteEffect(effect)
+    for (const action of stage.dialogueActions ?? []) {
+      for (const effect of action.effects ?? []) noteEffect(effect)
+      const readyId = action.requireWorldKnowledgeReady
+      if (readyId) {
+        referenced.add(readyId)
+        if (!ids.has(readyId)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage ${stageIndex} dialogue action references unknown knowledge "${readyId}"`,
+          )
+        }
+      }
+    }
+    for (const slot of questStageObjectiveSlots(stage)) {
+      const objective = slot.objective
+      if (objective.type === 'receive_world_knowledge') {
+        referenced.add(objective.knowledgeId)
+        receiveIds.add(objective.knowledgeId)
+        if (!ids.has(objective.knowledgeId)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" receive_world_knowledge references unknown knowledge "${objective.knowledgeId}"`,
+          )
+        }
+        if (!objective.npc.npcId) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" receive_world_knowledge "${objective.knowledgeId}" is missing an npc target`,
+          )
+        }
+      }
+      if (objective.type === 'interact_bound_landmark') {
+        referenced.add(objective.knowledgeId)
+        boundIds.add(objective.knowledgeId)
+        if (!ids.has(objective.knowledgeId)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" interact_bound_landmark references unknown knowledge "${objective.knowledgeId}"`,
+          )
+        }
+      }
+    }
+  }
+
+  for (const outcome of def.outcomes) {
+    for (const effect of outcome.effects ?? []) noteEffect(effect)
+  }
+
+  for (const knowledgeId of boundIds) {
+    if (receiveIds.has(knowledgeId)) continue
+    throw new QuestDefinitionValidationError(
+      `Quest "${def.id}" interact_bound_landmark "${knowledgeId}" has no receive_world_knowledge stage`,
+    )
+  }
+
+  for (const slot of slots) {
+    if (!referenced.has(slot.id)) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" world-knowledge "${slot.id}" is never referenced`,
+      )
     }
   }
 }
@@ -477,9 +606,78 @@ export type QuestJournalEvent = {
   stageIndex?: number
   /** Selected `dialogueActions` index when the stamp is that NPC line, not `progressLine`. */
   dialogueActionIndex?: number
+  /**
+   * Distinguishes multiple progress stamps on the same stage (plan
+   * quests-progression-047) — pending research vs later reveal. Absent on
+   * older saves; `list()` projects text from the live def.
+   */
+  stampId?: string
   speakerNpcId?: NpcId
   atDays: number
   timeOfDay: number
+}
+
+/** One world-hour expressed in `QuestWorldTimeLookup.getElapsedDays()` units. */
+export const WORLD_KNOWLEDGE_HOUR_DAYS = 1 / 24
+
+/**
+ * Stable knowledge about a static world place. V1 is landmark-only; later
+ * settlement/cave refs can extend this union without replacing the mechanism.
+ *
+ * @domain quests-progression
+ */
+export type QuestWorldKnowledgeRef = {
+  kind: 'landmark'
+  landmarkId: string
+  landmarkKind: LandmarkKind
+  /** Presentation pose from the research result; omitted on older saves. */
+  x?: number
+  z?: number
+}
+
+/**
+ * How QuestManager binds a knowledge slot to the world. `landmarkId` is the
+ * already-chosen identity (generated quests / story truth); absent id means
+ * the injected resolver searches by `kind`.
+ *
+ * @domain quests-progression
+ */
+export type QuestWorldKnowledgeBind = {
+  type: 'landmark'
+  kind: LandmarkKind
+  landmarkId?: string
+}
+
+/**
+ * Authored deferred-knowledge slot. Terrain lookup stays in the injected
+ * world resolver — this is identity, delay and fallback copy only.
+ *
+ * @domain quests-progression
+ */
+export type QuestWorldKnowledgeDef = {
+  id: string
+  revealDelayDays: number
+  bind: QuestWorldKnowledgeBind
+  pendingPhrase: string
+  unavailablePhrase: string
+  /** `fail` applies `unavailableOutcomeId` or the unique failed outcome. */
+  unavailablePolicy: 'fail' | 'ignore'
+  unavailableOutcomeId?: QuestOutcomeId
+}
+
+/**
+ * Persisted research/binding progress for one knowledge slot. Promises and
+ * worker handles are never stored (plan quests-progression-047).
+ *
+ * @domain quests-progression
+ */
+export type QuestWorldKnowledgeProgress = {
+  requestedAtDays: number
+  revealAtDays: number
+  status: 'requested' | 'resolved' | 'unavailable'
+  /** Player has received the concrete clue. */
+  revealed?: boolean
+  ref?: QuestWorldKnowledgeRef
 }
 
 /** Persisted/runtime quest progress. `resolvedOutcomeId` is set only for
@@ -505,6 +703,11 @@ export type QuestProgressEntry = {
   offerSuppressedUntilDay?: number
   /** Heard-line timestamps (plan ui-input-021). Absent on older saves = none. */
   journal?: readonly QuestJournalEvent[]
+  /**
+   * Deferred world-knowledge slots keyed by authored knowledge id
+   * (plan quests-progression-047). Absent on older saves = unrequested.
+   */
+  worldKnowledge?: Record<string, QuestWorldKnowledgeProgress>
 }
 
 export const QUEST_STATES: ReadonlySet<QuestState> = new Set([
@@ -647,6 +850,20 @@ export type QuestObjective =
    *  so a persisted `active` quest matches its rebuilt `QuestDef` by `id`
    *  exactly like every other quest. */
   | { type: 'interact_landmark', landmarkId: string }
+  /**
+   * Return to `npc` to receive a deferred world-knowledge clue after both
+   * binding resolution and the authored world-time delay (plan
+   * quests-progression-047). Pending talk is informational; the conscious
+   * action appears only when both conditions are met.
+   */
+  | { type: 'receive_world_knowledge', knowledgeId: string, npc: QuestNpcRef }
+  /**
+   * Investigate the landmark persisted in knowledge slot `knowledgeId`.
+   * Distinct from `interact_landmark` so definitions never use placeholder ids.
+   *
+   * @domain quests-progression
+   */
+  | { type: 'interact_bound_landmark', knowledgeId: string }
   /** Settlement storage rat infestation resolved (plan quests-progression-006) —
    *  satisfied when the bound settlement's storage infestation is repaired and
    *  alive rat count is <= 1. `QuestManager` reads live world state through
@@ -702,6 +919,11 @@ export type QuestStageEffect =
   | { type: 'transfer_item_instance', instanceId: string, toNpc: QuestNpcRef }
   | { type: 'transfer_animal_ownership', animalId: string }
   | { type: 'discard_carried_container', containerId: string }
+  /**
+   * Start one deferred world-knowledge request exactly once
+   * (plan quests-progression-047).
+   */
+  | { type: 'request_world_knowledge', knowledgeId: string }
 
 export type QuestStageDialogueAction = {
   npc: QuestNpcRef
@@ -715,6 +937,17 @@ export type QuestStageDialogueAction = {
   /** Player must own this exact item instance (plan quests-progression-023). */
   requireItemInstanceId?: string
   effects?: readonly QuestStageEffect[]
+  /**
+   * Show this action only when knowledge `id` is resolved, the authored delay
+   * has elapsed, and the clue has not yet been received
+   * (plan quests-progression-047).
+   */
+  requireWorldKnowledgeReady?: string
+  /**
+   * Apply effects/journal without advancing the stage — used when a clue is
+   * optional alongside an already-active world investigation.
+   */
+  skipAdvance?: boolean
 }
 
 export type QuestLocationReveal = (
@@ -921,6 +1154,13 @@ export type QuestDef = {
   /** Active-quest opt-out policy (plan quests-progression-033). Absent =
    *  abandonable with no automatic consequence. */
   abandonment?: QuestAbandonment
+  /**
+   * Authored deferred world-knowledge slots (plan quests-progression-047).
+   * Immediate-known-place quests omit this entirely.
+   */
+  worldKnowledge?: readonly QuestWorldKnowledgeDef[]
+  /** Applied exactly once when the player accepts the offer. */
+  acceptEffects?: readonly QuestStageEffect[]
 }
 
 /** Small quest-facing facts `QuestManager` computes per `not_offered`
@@ -977,7 +1217,13 @@ export type AuthoredQuestObjective =
         npcLine?: string
       }[]
     }
-  | Exclude<QuestObjective, { type: 'talk_to_npc' } | { type: 'talk_to_npc_choice' }>
+  | { type: 'receive_world_knowledge', knowledgeId: string, npcName: string }
+  | Exclude<
+      QuestObjective,
+      | { type: 'talk_to_npc' }
+      | { type: 'talk_to_npc_choice' }
+      | { type: 'receive_world_knowledge' }
+    >
 
 export type AuthoredQuestPrerequisite =
   | { type: 'relation', npcName: string, minimum: RelationLevel }
@@ -1003,6 +1249,8 @@ export type AuthoredQuestStageDialogueAction = {
   requireCarriedUnopened?: boolean
   requireItemInstanceId?: string
   effects?: readonly QuestStageEffect[]
+  requireWorldKnowledgeReady?: string
+  skipAdvance?: boolean
 }
 
 export type AuthoredQuestStageObjectiveSlot = {
@@ -1740,11 +1988,11 @@ export type LandmarkResolver = (kind: LandmarkKind) => string | undefined
 
 /** World-driven landmark quests (plan 132) — each hooks an existing
  *  procedural landmark (`terrain/chunkEnvironment.ts`) to one of the four
- *  established NPCs' problems, resolved once at world setup via `resolve`
- *  rather than hardcoded, so the same lines bind to a different real
- *  placement per world seed (see `interact_landmark`'s doc comment). A kind
- *  `resolve` can't find within its search bound is simply omitted this
- *  session rather than offered broken — not every world is guaranteed to
+ *  established NPCs' problems. Immediate-known places still resolve once at
+ *  world setup via `resolve`; `slad-przy-monolicie` opts into deferred
+ *  world knowledge instead (plan quests-progression-047) and is always
+ *  offered. A kind `resolve` can't find within its search bound is omitted
+ *  this session rather than offered broken — not every world is guaranteed to
  *  roll every landmark kind near the home settlement. Callers append the
  *  result to `QUESTS` before constructing `QuestManager`. */
 export function buildLandmarkQuests(resolve: LandmarkResolver): AuthoredQuestDef[] {
@@ -1781,36 +2029,55 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): AuthoredQuestDef
     })
   }
 
-  const monolithId = resolve('monolith')
-  if (monolithId) {
-    quests.push({
-      id: 'slad-przy-monolicie',
-      title: 'Ślad przy monolicie',
-      description: 'Ktoś z osady nie wrócił — ostatni raz widziano go przy starym monolicie.',
-      giverName: 'Anna',
-      offerLine:
-        'Jeden z naszych wyruszył w stronę wzgórz kilka dni temu i wciąż nie wrócił. Podobno ostatni raz widziano go przy starym monolicie — sprawdzisz to miejsce?',
-      stages: [
-        {
-          objective: { type: 'interact_landmark', landmarkId: monolithId },
-          description: 'Zbadaj monolit, gdzie ostatnio go widziano.',
-          reminderLine: 'Byłeś już przy monolicie?',
-          progressLine:
-            'Przy kamieniu widać zdeptaną trawę i wygasłe palenisko. Ktoś tu nocował niedawno.',
-        },
-      ],
-      reportPromptLine: 'Byłeś już przy monolicie?',
-      reportPlayerLine: 'Przy monolicie było obozowisko. Ktoś tam nocował, zanim zniknął.',
-      reportLine: 'Ślady obozowiska... więc żył jeszcze, kiedy tam był. To już coś. Dziękuję, że sprawdziłeś.',
-      outcomes: [
-        {
-          id: 'reported',
-          state: 'complete',
-          consequences: { relations: [{ npcName: 'Anna', delta: 2 }] },
-        },
-      ],
-    })
-  }
+  quests.push({
+    id: 'slad-przy-monolicie',
+    title: 'Ślad przy monolicie',
+    description: 'Ktoś z osady nie wrócił — ostatni raz widziano go przy starym monolicie.',
+    giverName: 'Anna',
+    offerLine:
+      'Jeden z naszych wyruszył w stronę wzgórz kilka dni temu i wciąż nie wrócił. Podobno ostatni raz widziano go przy starym monolicie, ale muszę odtworzyć tamtą trasę z zapisków. Sprawdzisz to, jak będę pewna miejsca?',
+    worldKnowledge: [{
+      id: 'target',
+      revealDelayDays: WORLD_KNOWLEDGE_HOUR_DAYS,
+      bind: { type: 'landmark', kind: 'monolith' },
+      pendingPhrase: 'Muszę zajrzeć do starych papierów. Wróć za godzinę.',
+      unavailablePhrase: 'Nie udało mi się odtworzyć trasy do monolitu. Ślad urwał się.',
+      unavailablePolicy: 'fail',
+      unavailableOutcomeId: 'route_lost',
+    }],
+    acceptEffects: [{ type: 'request_world_knowledge', knowledgeId: 'target' }],
+    stages: [
+      {
+        objective: { type: 'receive_world_knowledge', knowledgeId: 'target', npcName: 'Anna' },
+        description: 'Wróć do Anny, gdy sprawdzi stare zapiski.',
+        reminderLine: 'Muszę zajrzeć do starych papierów. Wróć za godzinę.',
+        playerLine: 'Udało ci się odtworzyć trasę do monolitu?',
+        progressLine: 'Odtworzyłam trasę. Szukaj {worldKnowledgeClue:target}.',
+      },
+      {
+        objective: { type: 'interact_bound_landmark', knowledgeId: 'target' },
+        description: 'Zbadaj {worldKnowledgeClue:target}.',
+        reminderLine: 'Byłeś już przy monolicie?',
+        progressLine:
+          'Przy kamieniu widać zdeptaną trawę i wygasłe palenisko. Ktoś tu nocował niedawno.',
+      },
+    ],
+    reportPromptLine: 'Byłeś już przy monolicie?',
+    reportPlayerLine: 'Przy monolicie było obozowisko. Ktoś tam nocował, zanim zniknął.',
+    reportLine: 'Ślady obozowiska... więc żył jeszcze, kiedy tam był. To już coś. Dziękuję, że sprawdziłeś.',
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        consequences: { relations: [{ npcName: 'Anna', delta: 2 }] },
+      },
+      {
+        id: 'route_lost',
+        state: 'failed',
+        resultText: 'Anna nie odtworzyła trasy do monolitu. Ślad urwał się.',
+      },
+    ],
+  })
 
   const cemeteryId = resolve('cemetery')
   if (cemeteryId) {

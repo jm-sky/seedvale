@@ -5,6 +5,7 @@ import type { ItemPlacement } from './chunkItems'
 import type { ChunkMeshData, ChunkMeshDataParams } from './chunkMeshData'
 import type { VegetationPlacement } from './chunkVegetation'
 import type { GrassChunkData, GrassComputeParams, GrassTileGrids } from './grassPlacement'
+import type { WorldKnowledgeScanResult, WorldKnowledgeWorkerParams } from './worldKnowledgeScan'
 
 /** A resolved tile's terrain grids plus its vegetation/item/decorative
  *  placements — what the worker pool ultimately hands back to
@@ -30,9 +31,11 @@ export type ChunkWorkerRequest =
   | { kind: 'tile', id: number, params: ChunkTileParams }
   | { kind: 'grass', id: number, params: GrassRequestParams }
   | { kind: 'mesh', id: number, params: ChunkMeshDataParams }
+  | { kind: 'worldKnowledge', id: number, params: WorldKnowledgeWorkerParams }
 
 export type ChunkWorkerResponse =
   | (ChunkTileResult & { kind: 'tile', id: number, ok: true })
   | { kind: 'grass', id: number, ok: true, grass: GrassChunkData }
   | (ChunkMeshData & { kind: 'mesh', id: number, ok: true })
-  | { kind: 'tile' | 'grass' | 'mesh', id: number, ok: false, error: string }
+  | { kind: 'worldKnowledge', id: number, ok: true, result: WorldKnowledgeScanResult }
+  | { kind: 'tile' | 'grass' | 'mesh' | 'worldKnowledge', id: number, ok: false, error: string }

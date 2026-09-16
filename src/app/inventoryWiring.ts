@@ -24,7 +24,7 @@ import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldBundle } from './worldBundle'
-import { aboutAreaLine, requestAssistanceLine, voluntaryJoinResponseLine } from '../ai/dialogueTemplates'
+import { requestAssistanceLine, voluntaryJoinResponseLine } from '../ai/dialogueTemplates'
 import { npcTradeSourceInventory, resolveNpcTradeOffers } from '../ai/npcTradeAvailability'
 import { isVoluntaryJoinAccepted, type VoluntaryExpeditionTerms } from '../ai/voluntaryExpeditionJoin'
 import { playActionGrindstoneSharpen, playActionWhetstoneSharpen } from '../audio/actionSounds'
@@ -66,26 +66,17 @@ import {
 import { hideBusy, showBusy, ui } from '../ui-vue/store'
 import {
   FAR_RANGE_KM,
-  GUARD_LANDMARK_POOL_SIZE,
-  GUARD_REVEAL_MAX,
-  GUARD_REVEAL_MIN,
   MEDIUM_RANGE_KM,
   MERCHANT_MAP_LANDMARK_POOL_SIZE,
   NEAR_RANGE_KM,
 } from '../world/locations/locationConfig'
 import {
   landmarksInBandAsync,
-  pickRandomReveal,
   settlementsInBand,
   weightedTopN,
 } from '../world/locations/locationDiscovery'
 import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
-import { settlementLocationId } from '../world/locations/worldLocationCatalog'
 import { payWorkContractAssignment } from './actions/workContractPayment'
-
-/** Nearest settlements the home guard always mentions each conversation
- *  (plan §8 — no pool/scarcity mechanic, unlike landmarks). */
-const GUARD_SETTLEMENT_REVEAL_COUNT = 3
 
 /** Delay BusyOverlay so Near/NPC queries that finish immediately never flicker. */
 const LOCATION_DISCOVERY_BUSY_DELAY_MS = 80
@@ -205,6 +196,8 @@ export type InventoryWiringDeps = {
   locationKnowledge: LocationKnowledge
   navigationTargets: NavigationTargets
   dayNight: DayNightState
+  /** Home-guard deferred local-knowledge research (plan quests-progression-047). */
+  guardLocalKnowledge: { askAboutArea: (originX: number, originZ: number) => string }
   /** Opens the Player → NPC give sheet (plan items-player-027). */
   openNpcGiveItem: (npcId: string, displayName: string) => void
 }
@@ -214,6 +207,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     bundle, player, inventory, heldTool, equipment, primaryWeapons, playerCombatMode, playerTorch, hud, toast, vueUi,
     questManager, reputationManager, worldFlags, guardProgress, homeSettlementId, homeGuardNpcId, playOnce, grantItem,
     locationCatalog, locationKnowledge, navigationTargets, dayNight, openNpcGiveItem,
+    guardLocalKnowledge,
   } = deps
 
   let activeMerchantPricing: MerchantPricing | null = null
@@ -767,26 +761,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     },
     onRequestFood: (npc) => resolveAssistanceDialogue(npc, 'food'),
     onRequestWater: (npc) => resolveAssistanceDialogue(npc, 'water'),
-    onAskAboutArea: async () => {
-      const originX = player.mesh.position.x
-      const originZ = player.mesh.position.z
-      const homeId = bundle.settlementsManager.home ? settlementLocationId(bundle.settlementsManager.home) : null
-
-      const pool = weightedTopN(
-        await withLocationDiscoveryBusy((onProgress) =>
-          locationCatalog.landmarksInRangeAsync(originX, originZ, 0, MEDIUM_RANGE_KM, { onProgress }),
-        ),
-        GUARD_LANDMARK_POOL_SIZE,
-      )
-      const revealedLandmarks = pickRandomReveal(pool, GUARD_REVEAL_MIN, GUARD_REVEAL_MAX, Math.random)
-        .filter((location) => locationKnowledge.reveal(location.id, 'discovered', 'npc'))
-
-      const nearbySettlements = locationCatalog.nearestSettlements(originX, originZ, MEDIUM_RANGE_KM)
-        .filter((location) => location.id !== homeId)
-        .slice(0, GUARD_SETTLEMENT_REVEAL_COUNT)
-      const revealedSettlements = nearbySettlements.filter((location) => locationKnowledge.reveal(location.id, 'discovered', 'npc'))
-
-      return aboutAreaLine([...revealedLandmarks, ...revealedSettlements].map((location) => location.name))
+    onAskAboutArea: () => {
+      return guardLocalKnowledge.askAboutArea(player.mesh.position.x, player.mesh.position.z)
     },
     onPayWage: () => {
       const npc = ui.npcDialogueMenu.npc as NpcAgent | null
