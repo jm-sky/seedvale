@@ -4,7 +4,7 @@
 **Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** quests-progression-051
+**Depends on:** ~~quests-progression-051~~
 **Domain:** `quests-progression`
 **Subdomains:** `quests` `relationships`
 **Tags:** `dialogue` `narrative` `relation` `reputation` `consequences`
