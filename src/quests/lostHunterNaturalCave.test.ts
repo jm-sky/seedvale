@@ -5,8 +5,6 @@ import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMate
 import { Inventory } from '../items/Inventory'
 import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
-import { QuestManager } from './QuestManager'
-import { validateQuestDefinitions } from './quests'
 import {
   buildLostHunterNaturalCaveQuest,
   createLostHunterBowInstance,
@@ -18,6 +16,8 @@ import {
   resolveLostHunterNaturalCaveBinding,
   selectLostHunterNpcs,
 } from './lostHunterNaturalCave'
+import { QuestManager } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 
 function npc(
   id: string,

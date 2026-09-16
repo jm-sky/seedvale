@@ -2,6 +2,7 @@ import { Scene } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { OpportunityNpc } from './opportunities/worldQuestOpportunityTypes'
+import type { QuestSocialAvailabilityLookup } from './QuestManager'
 import { Inventory } from '../items/Inventory'
 import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
@@ -11,7 +12,6 @@ import {
   rpgQuestId,
 } from './opportunities/rpgQuestMatrices'
 import { QuestManager } from './QuestManager'
-import type { QuestSocialAvailabilityLookup } from './QuestManager'
 import { validateQuestDefinitions } from './quests'
 import {
   buildSuspiciousTransportCaveCacheQuest,

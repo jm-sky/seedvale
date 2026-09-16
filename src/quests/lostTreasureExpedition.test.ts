@@ -5,12 +5,10 @@ import { describe, expect, it } from 'vitest'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { DungeonChamber } from '../world/caves/dungeonChambers'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
+import type { QuestSocialAvailabilityLookup } from './QuestManager'
 import { Inventory } from '../items/Inventory'
 import { resolveCaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
-import { QuestManager } from './QuestManager'
-import type { QuestSocialAvailabilityLookup } from './QuestManager'
-import { validateQuestDefinitions } from './quests'
 import {
   DUNGEON_BANDIT_DEEP_RESERVATION_KEY,
   dungeonBanditCaveReservationRequests,
@@ -32,6 +30,8 @@ import {
   resolveLostTreasureExpeditionBinding,
   selectLostTreasureExpeditionNpcs,
 } from './lostTreasureExpedition'
+import { QuestManager } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 
 function npc(
   id: string,

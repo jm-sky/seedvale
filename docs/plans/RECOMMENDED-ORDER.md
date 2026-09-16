@@ -159,20 +159,20 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-22. `quests-progression-052` — **Second-wave socially consequential authored dialogue**  
-  🔴 `M` · **Score:**  41  
-   → **unlocks:** 0/0
-
-23. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+22. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-24. `items-player-014` — **Rope-pullable resource transport**  
+23. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `tools-005` — **Seedvale Character Preparation Panel**  
+24. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+25. `items-player-039` — **UBC runtime pauldrons**  
+  🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
 26. `items-player-032` — **NPC player-storage resource and context rules**  
@@ -335,6 +335,7 @@ graph TD
   items_player_036["items-player-036 — UBC Fantasy Source outfits"]
   items_player_037["items-player-037 — UBC runtime per-slot outfits"]
   items_player_038["items-player-038 — UBC jump land move lock"]
+  items_player_039["items-player-039 — UBC runtime pauldrons"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -714,6 +715,7 @@ graph TD
   items_player_029 --> items_player_030
   items_player_030 --> items_player_031
   items_player_030 --> items_player_037
+  items_player_030 --> items_player_039
   items_player_031 --> quests_progression_035
   items_player_033 --> items_player_034
   items_player_033 --> items_player_035
@@ -724,6 +726,7 @@ graph TD
   items_player_034 --> npc_039
   items_player_035 --> items_player_038
   items_player_036 --> items_player_037
+  items_player_036 --> items_player_039
   items_player_036 --> npc_039
   npc_001 --> npc_019
   npc_002 --> npc_025

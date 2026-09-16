@@ -4,13 +4,11 @@ import { Scene } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { OpportunityNpc } from './opportunities/worldQuestOpportunityTypes'
+import type { QuestSocialAvailabilityLookup } from './QuestManager'
 import { Inventory } from '../items/Inventory'
 import { resolveCaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { DUNGEON_DEEP_CHAMBER_NODE_ID } from '../world/caves/dungeonTopology'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
-import { QuestManager } from './QuestManager'
-import type { QuestSocialAvailabilityLookup } from './QuestManager'
-import { validateQuestDefinitions } from './quests'
 import {
   buildDungeonBanditTreasureQuest,
   createDungeonBanditLedgerInstance,
@@ -31,6 +29,8 @@ import {
   resolveDungeonBanditTreasureBinding,
   selectDungeonBanditNpcs,
 } from './dungeonBanditTreasure'
+import { QuestManager } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 
 function npc(
   id: string,

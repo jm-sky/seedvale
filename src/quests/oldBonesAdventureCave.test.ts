@@ -7,8 +7,6 @@ import { Inventory } from '../items/Inventory'
 import { settlementNpcId } from '../settlement/npcIdentity'
 import { resolveCaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
-import { QuestManager } from './QuestManager'
-import { validateQuestDefinitions } from './quests'
 import {
   buildOldBonesAdventureCaveQuest,
   createOldBonesSignetInstance,
@@ -25,6 +23,8 @@ import {
   resolveOldBonesAdventureCaveBinding,
   selectOldBonesNpcs,
 } from './oldBonesAdventureCave'
+import { QuestManager } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 
 function npc(
   id: string,
