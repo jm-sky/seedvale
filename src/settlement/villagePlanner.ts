@@ -787,17 +787,17 @@ function pickPlot(
   // Growing the ring outward a few steps (bounded, generation-time only)
   // gives a packed cluster (e.g. a dense LG residential ring) somewhere to
   // go instead of exhausting all 12 angles at the one original radius.
+  const fallbackBase =
+    zone != null
+      ? Math.atan2(zone.z - center.z, zone.x - center.x)
+      : baseAngle
   {
-    const base =
-      zone != null
-        ? Math.atan2(zone.z - center.z, zone.x - center.x)
-        : baseAngle
     const ringSteps = [1, 1.15, 1.3, 1.5, 1.75]
     for (const ringMul of ringSteps) {
       let ring = fallbackRing * ringMul
       if (req.maxCenterDist != null) ring = Math.min(ring, req.maxCenterDist)
       for (let i = 0; i < 12; i++) {
-        const angle = base + (i / 12) * Math.PI * 2
+        const angle = fallbackBase + (i / 12) * Math.PI * 2
         const fx = center.x + Math.cos(angle) * ring
         const fz = center.z + Math.sin(angle) * ring
         const score = scoreAt(fx, fz, fallbackRing)
@@ -807,6 +807,80 @@ function pickPlot(
       if (req.maxCenterDist != null && ring >= req.maxCenterDist) break
     }
   }
+
+  // Packed plaza (XL markets + notice board, settlements-011): scored spacing
+  // is radius*1.4 and maxCenterDist can exhaust the 12-angle search, then the
+  // old unconstrained fallback overlapped another central disk. Prefer any
+  // non-overlapping angle; grow past maxCenterDist only if the plaza is full.
+  const clearanceFallback = (allowBeyondMax: boolean): VillagePlot | null => {
+    const angleCount = 32
+    const growSteps = 8
+    const rings: number[] = []
+    const pushRing = (ring: number) => {
+      if (ring <= 0) return
+      if (req.minCenterDist != null && ring < req.minCenterDist) return
+      if (!allowBeyondMax && req.maxCenterDist != null && ring > req.maxCenterDist + 1e-6) return
+      if (!rings.some((existing) => Math.abs(existing - ring) < 1e-4)) rings.push(ring)
+    }
+    const inner = Math.max(fallbackRing, req.minCenterDist ?? 0)
+    const scoredOuter = req.maxCenterDist ?? inner * 1.75
+    for (const mul of [1, 1.15, 1.3, 1.5, 1.75]) pushRing(Math.min(inner * mul, scoredOuter))
+    pushRing(scoredOuter)
+    if (allowBeyondMax) {
+      const start = req.maxCenterDist ?? inner
+      for (let step = 1; step <= growSteps; step++) {
+        pushRing(start + req.radius * step)
+      }
+    }
+
+    let best: VillagePlot | null = null
+    let bestClearance = -Infinity
+    for (const ring of rings) {
+      for (let i = 0; i < angleCount; i++) {
+        const angle = fallbackBase + (i / angleCount) * Math.PI * 2
+        const rawFx = center.x + Math.cos(angle) * ring
+        const rawFz = center.z + Math.sin(angle) * ring
+        const { x: fx, z: fz } = pushOutOfRiver(rawFx, rawFz, center, req.radius, riverSegments)
+        const y = sampleHeight(fx, fz)
+        if (y <= waterLevel + SETTLEMENT_WATER_MARGIN) continue
+        if (
+          riverSegments.length > 0 &&
+          footprintOverlapsRiver(riverSegments, fx, fz, req.radius + PLOT_RIVER_MARGIN)
+        ) {
+          continue
+        }
+        if (req.minCenterDist != null || req.maxCenterDist != null) {
+          const distCenter = Math.hypot(fx - center.x, fz - center.z)
+          if (req.minCenterDist != null && distCenter < req.minCenterDist) continue
+          if (!allowBeyondMax && req.maxCenterDist != null && distCenter > req.maxCenterDist) continue
+        }
+        if (req.role === 'house') {
+          const houses = existing.filter((p) => p.role === 'house')
+          if (houses.length > 0 && blocksHouseSpoke(fx, fz, center, houses, HOUSE_SPOKE_CLEARANCE)) {
+            continue
+          }
+        }
+        if (req.avoidSpokes && req.avoidSpokes.length > 0) {
+          if (pointHitsCorridor(fx, fz, spokeCorridors(center, req.avoidSpokes), req.radius)) {
+            continue
+          }
+        }
+        const clearance = minDistToPlots(fx, fz, existing)
+        if (Number.isFinite(clearance) && clearance < req.radius) continue
+        const ranked = Number.isFinite(clearance) ? clearance : Infinity
+        if (ranked > bestClearance) {
+          bestClearance = ranked
+          best = makePlacedPlot(req, fx, fz, y, angle)
+        }
+      }
+    }
+    return best
+  }
+
+  const spaced = clearanceFallback(false)
+  if (spaced) return spaced
+  const grown = clearanceFallback(true)
+  if (grown) return grown
 
   const rawFx =
     req.role === 'house' && zone
