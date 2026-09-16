@@ -1,7 +1,7 @@
 # Plan: Deferred world knowledge and location research
 
 **Created:** 2026-09-15
-**Status:** `verification needed` 🔍
+**Status:** `in progress` 🔄
 **Priority:** high · **Effort:** L
 **Model:** Opus, Sonnet
 **Depends on:** ~~world-028~~, ~~world-022~~
@@ -496,6 +496,21 @@ Exact files/call-sites should follow current code and implementation notes.
 - redesigning Lost Treasure Chronicles;
 - making every NPC research every location;
 - changing landmark rarity/search semantics.
+
+## Implementation status
+
+Quest-layer primitives and the three quest pilots are in this branch:
+
+- `QuestDef.worldKnowledge` + `request_world_knowledge` / `receive_world_knowledge` / `interact_bound_landmark`
+- persisted `QuestProgressEntry.worldKnowledge`
+- injected `QuestWorldKnowledgeResolver` with reset-epoch stale-completion guard
+- pilots: `slad-przy-monolicie`, generated `old-place-secret`, chronicle-search ruins clue
+
+Still required by this plan before verification:
+
+- world-owned worker-backed research service on the existing `chunkHeightmap` pool
+- home-guard „Opowiedz mi coś o okolicy” using that service (not `QuestManager`)
+- switch quest lookup off the current Promise/`findLandmarkNear` adapter onto the shared service
 
 ## Verification
 
