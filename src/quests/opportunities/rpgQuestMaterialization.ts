@@ -7,6 +7,7 @@ import type {
 } from './worldQuestOpportunityTypes'
 import { LANDMARK_LABELS } from '../../terrain/chunkEnvironment'
 import { describeCaveLocation } from '../caveLocationDescription'
+import { WORLD_KNOWLEDGE_HOUR_DAYS } from '../quests'
 import { buildSuspiciousTransportCaveCacheQuest } from '../suspiciousTransportCaveCache'
 import {
   adultOpportunityNpcs,
@@ -26,11 +27,6 @@ function landmarkKindFromId(landmarkId: string): LandmarkKind | undefined {
   const prefix = landmarkId.split(':')[0]
   if (prefix && prefix in LANDMARK_LABELS) return prefix as LandmarkKind
   return undefined
-}
-
-function landmarkLabel(landmarkId: string): string {
-  const kind = landmarkKindFromId(landmarkId)
-  return kind ? LANDMARK_LABELS[kind].toLowerCase() : 'stare miejsce'
 }
 
 function pickGiver(
@@ -54,20 +50,41 @@ function materializeOldPlaceSecret(
   giver: OpportunityNpc,
   settlementName: string,
 ): QuestDef {
-  const place = landmarkLabel(opportunity.sourceId)
+  const kind = landmarkKindFromId(opportunity.sourceId)
   return {
     id: opportunity.id,
     title: 'Sekret starego miejsca',
     description:
-      `${giver.name} wspomina o miejscu w okolicy osady ${settlementName} — ${place}, którego nikt z osady nie zbadał.`,
+      `${giver.name} słyszał o starym miejscu w okolicy osady ${settlementName}, ale musi jeszcze dopytać, zanim wskaże drogę.`,
     giverName: giver.name,
     giver: { npcId: giver.id },
     offerLine:
-      `Niedaleko osady jest ${place}. Nikt z nas nie miał czasu tam zajrzeć. Sprawdzisz, co tam jest, i wrócisz z wieścią?`,
+      `Chodzą słuchy o jakimś starym miejscu za osadą. Nikt z nas nie miał czasu tego sprawdzić, a ja muszę jeszcze popytać ludzi, którzy pamiętają tamtą drogę. Wróć za godzinę — wtedy ci powiem, gdzie szukać.`,
+    worldKnowledge: [{
+      id: 'target',
+      revealDelayDays: WORLD_KNOWLEDGE_HOUR_DAYS,
+      bind: {
+        type: 'landmark',
+        kind: kind ?? 'smallRuins',
+        landmarkId: opportunity.sourceId,
+      },
+      pendingPhrase: 'Popytam ludzi, którzy pamiętają tamtą drogę. Daj mi trochę czasu.',
+      unavailablePhrase: 'Nie udało mi się odtworzyć, gdzie leży to stare miejsce.',
+      unavailablePolicy: 'fail',
+      unavailableOutcomeId: 'route_lost',
+    }],
+    acceptEffects: [{ type: 'request_world_knowledge', knowledgeId: 'target' }],
     stages: [
       {
-        objective: { type: 'interact_landmark', landmarkId: opportunity.sourceId },
-        description: `Zbadaj ${place} wskazane przez ${giver.name}.`,
+        objective: { type: 'receive_world_knowledge', knowledgeId: 'target', npc: { npcId: giver.id } },
+        description: `Wróć do ${giver.name}, gdy dopyta o stare miejsce.`,
+        reminderLine: 'Popytam ludzi, którzy pamiętają tamtą drogę. Daj mi trochę czasu.',
+        playerLine: 'Udało ci się ustalić, gdzie leży to miejsce?',
+        progressLine: `Słuchaj: szukaj {worldKnowledgeClue:target}. Nikt z osady tam nie zaglądał.`,
+      },
+      {
+        objective: { type: 'interact_bound_landmark', knowledgeId: 'target' },
+        description: `Zbadaj {worldKnowledgeClue:target}.`,
         reminderLine: `Byłeś już przy tym miejscu? ${giver.name} czeka na wieść.`,
         progressLine:
           'Miejsce jest stare, ale prawdziwe. Ślady nie są świeże — ktoś tu bywał dawniej, nie teraz.',
@@ -85,6 +102,11 @@ function materializeOldPlaceSecret(
           relations: [{ npc: { npcId: giver.id }, delta: 1 }],
           social: { reputation: { competence: 3, trust: 2 }, renown: 3 },
         },
+      },
+      {
+        id: 'route_lost',
+        state: 'failed',
+        resultText: 'Trop do starego miejsca się urwał.',
       },
     ],
   }

@@ -51,6 +51,9 @@ import {
   relationToLevel,
   uniqueOutcomeForState,
   validateQuestDefinitions,
+  type QuestWorldKnowledgeDef,
+  type QuestWorldKnowledgeProgress,
+  type QuestWorldKnowledgeRef,
 } from './quests'
 import {
   evaluateSettlementLightsObjective,
@@ -189,6 +192,8 @@ type QuestRuntimeProgress = {
   offerSuppressedUntilDay?: number
   /** Heard-line stamps (plan ui-input-021). */
   journal?: readonly QuestJournalEvent[]
+  /** Deferred world-knowledge progress (plan quests-progression-047). */
+  worldKnowledge?: Record<string, QuestWorldKnowledgeProgress>
 }
 
 /** Player-only harvest report (plan quests-progression-020). */
@@ -344,6 +349,30 @@ export type QuestLifecycleHooks = {
   discardCarriedContainer?: (containerId: string) => boolean
 }
 
+/**
+ * Injected async world-knowledge seam. `QuestManager` never imports
+ * `ChunkManager` or settlement coordinates (plan quests-progression-047).
+ *
+ * @domain quests-progression
+ */
+export type QuestWorldKnowledgeDescribeContext = {
+  settlementId?: string
+}
+
+export type QuestWorldKnowledgeResolver = {
+  resolve(questId: string, knowledgeId: string): Promise<QuestWorldKnowledgeRef | null>
+  describe(ref: QuestWorldKnowledgeRef, context: QuestWorldKnowledgeDescribeContext): string | null
+}
+
+const NO_WORLD_KNOWLEDGE: QuestWorldKnowledgeResolver = {
+  resolve: async () => null,
+  describe: () => null,
+}
+
+const WORLD_KNOWLEDGE_PENDING_STAMP = 'world-knowledge-pending'
+const WORLD_KNOWLEDGE_REVEAL_STAMP = 'world-knowledge-reveal'
+const WORLD_KNOWLEDGE_CLUE_TOKEN = /\{worldKnowledgeClue:([^}]+)\}/g
+
 const NO_WORLD_QUEST_SOURCE: WorldQuestSourceLookup = {
   getStatus: () => 'untracked',
 }
@@ -397,14 +426,20 @@ const DEFAULT_NPC_PROMPT = 'Tak?'
 /** `boundAnimalId` is the specific individual this quest's `kill_target_animal`
  *  stage was bound to (if any) — an `animal_died` ref only matches that one
  *  animal, never any animal of the right kind. */
-function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, boundAnimalId?: string): boolean {
+function objectiveMatchesRef(
+  objective: QuestObjective,
+  ref: ObjectiveRef,
+  boundAnimalId?: string,
+  boundLandmarkId?: string,
+): boolean {
   switch (ref.type) {
     case 'animal_died':
       return objective.type === 'kill_target_animal' && boundAnimalId === ref.animalId
     case 'animal_found':
       return objective.type === 'find_animal' && boundAnimalId === ref.animalId
     case 'interact_landmark':
-      return objective.type === 'interact_landmark' && objective.landmarkId === ref.landmarkId
+      if (objective.type === 'interact_landmark') return objective.landmarkId === ref.landmarkId
+      return objective.type === 'interact_bound_landmark' && boundLandmarkId === ref.landmarkId
     case 'interact_spawner':
       return objective.type === 'interact_spawner'
         && objective.spawnerType === ref.spawnerType
@@ -444,6 +479,7 @@ function isRequiredDialogueTarget(
   for (const slot of unfinishedSlots) {
     if (matchingTalkChoice(slot.objective, npcId)) return true
     if (slot.objective.type === 'talk_to_npc' && slot.objective.npc.npcId === npcId) return true
+    if (slot.objective.type === 'receive_world_knowledge' && slot.objective.npc.npcId === npcId) return true
   }
   return matchingStageDialogueActions(stage, npcId).length > 0
 }
@@ -486,6 +522,9 @@ export class QuestManager {
   private readonly settlementLight: SettlementLightLookup
   private readonly physicalOutcome: QuestPhysicalOutcomeResolver
   private readonly lifecycleHooks: QuestLifecycleHooks
+  private readonly worldKnowledgeResolver: QuestWorldKnowledgeResolver
+  /** Guard against stale async completions after New Game / reset. */
+  private knowledgeEpoch = 0
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -513,6 +552,7 @@ export class QuestManager {
     settlementLight: SettlementLightLookup = NO_SETTLEMENT_LIGHT,
     physicalOutcome: QuestPhysicalOutcomeResolver = NO_PHYSICAL_OUTCOME,
     lifecycleHooks: QuestLifecycleHooks = {},
+    worldKnowledgeResolver: QuestWorldKnowledgeResolver = NO_WORLD_KNOWLEDGE,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -534,6 +574,7 @@ export class QuestManager {
     this.settlementLight = settlementLight
     this.physicalOutcome = physicalOutcome
     this.lifecycleHooks = lifecycleHooks
+    this.worldKnowledgeResolver = worldKnowledgeResolver
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -573,13 +614,17 @@ export class QuestManager {
       }
       this.recheckSettlementLightObjectives()
     }
+    this.restartRequestedWorldKnowledge()
   }
 
   /** Drops all progress/relations back to a fresh-start state — used on
    *  "New Game" so a new save doesn't inherit the previous playthrough's quest
    *  state (the instance itself is kept, since callers hold a `const` ref). */
   reset(): void {
-    for (const def of this.defs) this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0, journal: [] })
+    this.knowledgeEpoch += 1
+    for (const def of this.defs) {
+      this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0, journal: [], worldKnowledge: {} })
+    }
     this.relations.clear()
     this.animalTargets.clear()
     this.feedContributionIds.clear()
@@ -593,9 +638,15 @@ export class QuestManager {
     const prev = this.states.get(id)
     let next = value
     if (value.journal === undefined && prev?.journal && prev.journal.length > 0) {
-      next = { ...value, journal: prev.journal }
+      next = { ...next, journal: prev.journal }
     } else if (value.journal !== undefined && value.journal.length === 0) {
-      const { journal: _cleared, ...rest } = value
+      const { journal: _cleared, ...rest } = next
+      next = rest
+    }
+    if (value.worldKnowledge === undefined && prev?.worldKnowledge && Object.keys(prev.worldKnowledge).length > 0) {
+      next = { ...next, worldKnowledge: prev.worldKnowledge }
+    } else if (value.worldKnowledge !== undefined && Object.keys(value.worldKnowledge).length === 0) {
+      const { worldKnowledge: _cleared, ...rest } = next
       next = rest
     }
     this.states.set(id, next)
@@ -611,7 +662,12 @@ export class QuestManager {
     if (event.kind === 'offer' && existing.some((entry) => entry.kind === 'offer')) return
     if (
       event.kind === 'progress'
-      && existing.some((entry) => entry.kind === 'progress' && entry.stageIndex === event.stageIndex)
+      && existing.some((entry) => (
+        entry.kind === 'progress'
+        && entry.stageIndex === event.stageIndex
+        && entry.dialogueActionIndex === event.dialogueActionIndex
+        && entry.stampId === event.stampId
+      ))
     ) return
     if (event.kind === 'result' && existing.some((entry) => entry.kind === 'result')) return
     const stamped: QuestJournalEvent = {
@@ -620,6 +676,7 @@ export class QuestManager {
       timeOfDay: event.timeOfDay ?? this.worldTime.getTimeOfDay(),
       ...(event.stageIndex !== undefined ? { stageIndex: event.stageIndex } : {}),
       ...(event.dialogueActionIndex !== undefined ? { dialogueActionIndex: event.dialogueActionIndex } : {}),
+      ...(event.stampId !== undefined ? { stampId: event.stampId } : {}),
       ...(event.speakerNpcId !== undefined ? { speakerNpcId: event.speakerNpcId } : {}),
     }
     this.setQuestState(id, { ...current, journal: [...existing, stamped] })
@@ -662,10 +719,20 @@ export class QuestManager {
     const stageIndex = event.stageIndex ?? 0
     const stage = def.stages[stageIndex]
     if (!stage) return null
-    if (event.dialogueActionIndex !== undefined) {
-      return stage.dialogueActions?.[event.dialogueActionIndex]?.npcLine ?? null
+    if (event.stampId === WORLD_KNOWLEDGE_PENDING_STAMP) {
+      return this.expandQuestText(def, progress, stage.reminderLine)
     }
-    return stage.progressLine ?? null
+    if (event.stampId === WORLD_KNOWLEDGE_REVEAL_STAMP) {
+      return this.expandQuestText(def, progress, stage.progressLine ?? stage.reminderLine)
+    }
+    if (event.dialogueActionIndex !== undefined) {
+      return this.expandQuestText(
+        def,
+        progress,
+        stage.dialogueActions?.[event.dialogueActionIndex]?.npcLine ?? null,
+      )
+    }
+    return this.expandQuestText(def, progress, stage.progressLine ?? null)
   }
 
   private projectNotes(def: QuestDef, progress: QuestRuntimeProgress): QuestJournalNote[] {
@@ -801,15 +868,20 @@ export class QuestManager {
     def: QuestDef,
     s: QuestRuntimeProgress,
     slot: QuestStageObjectiveSlot,
+    options?: { speakerNpcId?: NpcId, skipProgressJournal?: boolean },
   ): void {
     if (s.state !== 'active') return
     const stage = this.currentStage(def, s.stageIndex)
     if (!stage) return
     if (s.stageSlotProgress?.[slot.id]?.completed) return
 
+    const journalOpts = {
+      speakerNpcId: options?.speakerNpcId ?? this.progressSpeakerNpcId(slot),
+      ...(options?.skipProgressJournal ? { skipProgressJournal: true } : {}),
+    }
     const mode = questStageMode(stage)
     if (mode === 'any' || questStageObjectiveSlots(stage).length <= 1) {
-      this.advanceStage(def, s, slot.resultId, { speakerNpcId: this.progressSpeakerNpcId(slot) })
+      this.advanceStage(def, s, slot.resultId, journalOpts)
       return
     }
 
@@ -821,7 +893,7 @@ export class QuestManager {
     })
     const remaining = this.unfinishedSlots(def, updated)
     if (remaining.length === 0) {
-      this.advanceStage(def, updated, stage.resultId, { speakerNpcId: this.progressSpeakerNpcId(slot) })
+      this.advanceStage(def, updated, stage.resultId, journalOpts)
     }
   }
 
@@ -1199,7 +1271,9 @@ export class QuestManager {
           state: s.state,
           stageIndex: s.stageIndex,
           totalStages: def.stages.length,
-          currentObjective: s.state === 'active' && stage ? this.objectiveDescription(stage, def.id) : null,
+          currentObjective: s.state === 'active' && stage
+            ? this.expandQuestText(def, s, this.objectiveDescription(stage, def.id))
+            : null,
           resolvedOutcomeId: s.resolvedOutcomeId,
           resultText: resultPresentation(def, s, resolved, stage),
           promisedReward: terminal ? null : promisedShownReward(def),
@@ -1664,7 +1738,7 @@ export class QuestManager {
     this.appendJournal(def.id, { kind: 'result', speakerNpcId: def.giver.npcId })
     this.clearAnimalTargetsForQuest(def.id)
 
-    this.applyEffects(outcome.effects, { skipAnimalOwnership: true })
+    this.applyEffects(def.id, outcome.effects, { skipAnimalOwnership: true })
     if (outcome.reward?.items) {
       for (const item of outcome.reward.items) this.grantItem(item.kind, item.count)
     }
@@ -1798,6 +1872,7 @@ export class QuestManager {
           if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return
           this.setQuestState(def.id, { state: 'active', stageIndex: 0, stageCount: 0 })
           this.bindAnimalTargetIfNeeded(def, 0)
+          this.applyEffects(def.id, def.acceptEffects)
           this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
         },
         ...(this.isDeclinable(def) ? { onDecline: () => this.declineOffer(def) } : {}),
@@ -1826,7 +1901,8 @@ export class QuestManager {
     if (this.unfinishedSlots(def, s).some((slot) => slot.objective.type === 'resolve_storage_rat_infestation')) {
       return { line: this.storageRatInfestationReminder(def, stage) }
     }
-    return { line: stage.reminderLine }
+    this.maybeStampPendingWorldKnowledge(def, s, def.giver.npcId)
+    return { line: this.expandQuestText(def, s, stage.reminderLine) ?? stage.reminderLine }
   }
 
   /**
@@ -1888,7 +1964,7 @@ export class QuestManager {
       if (unfinishedGather && unfinishedGather.objective.type === 'gather_item') {
         const readySlot = this.gatherHandInSlot(def)
         if (!readySlot) {
-          return abandonAction ? { line: stage.reminderLine, actions: [abandonAction] } : null
+          return abandonAction ? { line: this.expandQuestText(def, s, stage.reminderLine) ?? stage.reminderLine, actions: [abandonAction] } : null
         }
         const stageIndex = s.stageIndex
         const slotId = readySlot.id
@@ -1897,9 +1973,11 @@ export class QuestManager {
           onSelect: () => this.selectGatherTurnIn(def, stageIndex, slotId),
         }]
         if (abandonAction) actions.push(abandonAction)
-        return { line: stage.reminderLine, actions }
+        return { line: this.expandQuestText(def, s, stage.reminderLine) ?? stage.reminderLine, actions }
       }
-      return abandonAction ? { line: stage.reminderLine, actions: [abandonAction] } : null
+      return abandonAction
+        ? { line: this.expandQuestText(def, s, stage.reminderLine) ?? stage.reminderLine, actions: [abandonAction] }
+        : null
     }
     if (s.state === 'ready_to_report') return this.reportOverride(def)
     return null
@@ -1927,6 +2005,72 @@ export class QuestManager {
         onSelect: () => this.selectTalkToNpcChoice(def, npcId, choice.outcomeId, stageIndex),
       }],
     }
+  }
+
+  private resolveReceiveWorldKnowledge(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return null
+    const stage = this.currentStage(def, s.stageIndex)
+    if (!stage) return null
+    const slot = this.unfinishedSlots(def, s).find((entry) => (
+      entry.objective.type === 'receive_world_knowledge' && entry.objective.npc.npcId === npcId
+    ))
+    if (!slot || slot.objective.type !== 'receive_world_knowledge') return null
+    this.maybeApplyUnavailableKnowledge(def, slot.objective.knowledgeId)
+    const updated = this.stateOf(def.id)
+    if (updated.state !== 'active') {
+      const failed = resolvedOutcome(def, updated)
+      return {
+        line: failed?.resultText
+          ?? this.knowledgeDef(def, slot.objective.knowledgeId)?.unavailablePhrase
+          ?? stage.reminderLine,
+      }
+    }
+    if (!this.isKnowledgeTellable(def, slot.objective.knowledgeId)) {
+      this.maybeStampPendingWorldKnowledge(def, updated, npcId)
+      return null
+    }
+    const stageIndex = updated.stageIndex
+    const slotId = slot.id
+    return {
+      line: this.expandQuestText(def, updated, stage.reminderLine) ?? DEFAULT_NPC_PROMPT,
+      actions: [{
+        label: stage.playerLine ?? DEFAULT_TALK_PLAYER_LINE,
+        onSelect: () => this.selectReceiveWorldKnowledge(def, npcId, stageIndex, slotId),
+      }],
+    }
+  }
+
+  private selectReceiveWorldKnowledge(
+    def: QuestDef,
+    npcId: NpcId,
+    stageIndex: number,
+    slotId: string,
+  ): string {
+    const current = this.stateOf(def.id)
+    const stage = this.currentStage(def, current.stageIndex)
+    const fallback = this.expandQuestText(def, current, stage?.progressLine ?? stage?.reminderLine) ?? def.reportLine
+    if (current.state !== 'active' || current.stageIndex !== stageIndex || !stage) return fallback
+    const slot = this.unfinishedSlots(def, current).find((entry) => entry.id === slotId)
+    if (!slot || slot.objective.type !== 'receive_world_knowledge' || slot.objective.npc.npcId !== npcId) {
+      return fallback
+    }
+    if (!this.isKnowledgeTellable(def, slot.objective.knowledgeId)) {
+      return this.expandQuestText(def, current, stage.reminderLine) ?? fallback
+    }
+    this.appendJournal(def.id, {
+      kind: 'progress',
+      stageIndex,
+      stampId: WORLD_KNOWLEDGE_REVEAL_STAMP,
+      speakerNpcId: npcId,
+    })
+    this.applyEffects(def.id, stage.effects)
+    this.markKnowledgeRevealed(def.id, slot.objective.knowledgeId)
+    this.completeObjectiveSlot(def, this.stateOf(def.id), slot, {
+      skipProgressJournal: true,
+      speakerNpcId: npcId,
+    })
+    return this.expandQuestText(def, this.stateOf(def.id), stage.progressLine ?? stage.reminderLine) ?? fallback
   }
 
   private reportOverride(def: QuestDef): QuestDialogOverride | null {
@@ -1965,6 +2109,10 @@ export class QuestManager {
     if (s.state !== 'active') return null
     const stage = this.currentStage(def, s.stageIndex)
     const matching = matchingStageDialogueActions(stage, npcId).filter((action) => {
+      if (action.requireWorldKnowledgeReady) {
+        if (!this.isKnowledgeTellable(def, action.requireWorldKnowledgeReady)) return false
+        if (this.isKnowledgeRevealed(def, action.requireWorldKnowledgeReady)) return false
+      }
       if (!action.physicalOutcomeId) return true
       return this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, {
         requireCarriedContainerId: action.requireCarriedContainerId,
@@ -1975,7 +2123,7 @@ export class QuestManager {
     if (!stage || matching.length === 0) return null
     const stageIndex = s.stageIndex
     return {
-      line: stage.reminderLine,
+      line: this.expandQuestText(def, s, stage.reminderLine) ?? stage.reminderLine,
       actions: matching.map((action) => ({
         label: action.playerLine,
         onSelect: () => this.selectStageDialogueAction(
@@ -2013,10 +2161,10 @@ export class QuestManager {
         dialogueActionIndex: actionIndex,
         speakerNpcId: npcId,
       })
-      this.applyEffects(action.effects)
+      this.applyEffects(def.id, action.effects)
       this.physicalOutcome.onResolve(def.id, action.physicalOutcomeId)
       if (!this.resolveQuest(def.id, action.physicalOutcomeId)) return fallback
-      return action.npcLine ?? def.reportLine ?? fallback
+      return this.expandQuestText(def, this.stateOf(def.id), action.npcLine ?? def.reportLine ?? fallback) ?? fallback
     }
     this.appendJournal(def.id, {
       kind: 'progress',
@@ -2024,10 +2172,15 @@ export class QuestManager {
       dialogueActionIndex: actionIndex,
       speakerNpcId: npcId,
     })
-    this.applyEffects(action.effects)
+    this.applyEffects(def.id, action.effects)
     this.applyConsequences(def, action.consequences)
+    if (action.requireWorldKnowledgeReady) {
+      this.markKnowledgeRevealed(def.id, action.requireWorldKnowledgeReady)
+    }
+    const reply = this.expandQuestText(def, this.stateOf(def.id), action.npcLine) ?? action.npcLine ?? fallback
+    if (action.skipAdvance) return reply
     this.advanceStage(def, current, undefined, { skipProgressJournal: true })
-    return action.npcLine
+    return reply
       ?? this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine
       ?? fallback
   }
@@ -2040,15 +2193,17 @@ export class QuestManager {
     const actions: QuestDialogAction[] = []
     let line: string | undefined
     const push = (override: QuestDialogOverride | null): void => {
-      if (!override?.actions?.length) return
+      if (!override) return
       line ??= override.line
+      if (!override.actions?.length) return
       actions.push(...override.actions)
     }
     push(this.resolveTalkToNpcChoice(def, npcId))
     push(this.resolveTalkToNpc(def, npcId))
+    push(this.resolveReceiveWorldKnowledge(def, npcId))
     push(this.resolveStageDialogueActions(def, npcId))
     push(this.collectGiverActions(def, npcId))
-    if (actions.length === 0) return null
+    if (actions.length === 0) return line ? { line } : null
     return { line: line ?? DEFAULT_NPC_PROMPT, actions }
   }
 
@@ -2074,7 +2229,7 @@ export class QuestManager {
     if (!stage || !slot || slot.objective.type !== 'talk_to_npc' || slot.objective.npc.npcId !== npcId) {
       return progressLine
     }
-    this.applyEffects(stage.effects)
+    this.applyEffects(def.id, stage.effects)
     this.completeObjectiveSlot(def, current, slot)
     return progressLine
   }
@@ -2085,7 +2240,196 @@ export class QuestManager {
     return def.horseRewardAnimalId
   }
 
+  private knowledgeDef(def: QuestDef, knowledgeId: string): QuestWorldKnowledgeDef | undefined {
+    return def.worldKnowledge?.find((slot) => slot.id === knowledgeId)
+  }
+
+  private knowledgeProgress(def: QuestDef, knowledgeId: string): QuestWorldKnowledgeProgress | undefined {
+    return this.stateOf(def.id).worldKnowledge?.[knowledgeId]
+  }
+
+  private boundLandmarkId(def: QuestDef, knowledgeId: string): string | undefined {
+    const progress = this.knowledgeProgress(def, knowledgeId)
+    if (progress?.status !== 'resolved' || progress.ref?.kind !== 'landmark') return undefined
+    return progress.ref.landmarkId
+  }
+
+  private isKnowledgeRevealed(def: QuestDef, knowledgeId: string): boolean {
+    return this.knowledgeProgress(def, knowledgeId)?.revealed === true
+  }
+
+  private isKnowledgeTellable(def: QuestDef, knowledgeId: string): boolean {
+    const progress = this.knowledgeProgress(def, knowledgeId)
+    if (!progress || progress.status !== 'resolved' || !progress.ref) return false
+    return this.worldTime.getElapsedDays() >= progress.revealAtDays
+  }
+
+  private writeKnowledgeProgress(
+    questId: string,
+    knowledgeId: string,
+    patch: QuestWorldKnowledgeProgress,
+  ): void {
+    const current = this.stateOf(questId)
+    this.setQuestState(questId, {
+      ...current,
+      worldKnowledge: { ...current.worldKnowledge, [knowledgeId]: patch },
+    })
+  }
+
+  private requestWorldKnowledge(questId: string, knowledgeId: string): void {
+    const def = this.defs.find((entry) => entry.id === questId)
+    const slot = def ? this.knowledgeDef(def, knowledgeId) : undefined
+    if (!def || !slot) return
+    const existing = this.knowledgeProgress(def, knowledgeId)
+    if (existing) return
+    const now = this.worldTime.getElapsedDays()
+    this.writeKnowledgeProgress(questId, knowledgeId, {
+      requestedAtDays: now,
+      revealAtDays: now + slot.revealDelayDays,
+      status: 'requested',
+    })
+    this.launchKnowledgeResolution(questId, knowledgeId)
+  }
+
+  private restartRequestedWorldKnowledge(): void {
+    for (const def of this.defs) {
+      const progress = this.stateOf(def.id).worldKnowledge
+      if (!progress) continue
+      for (const [knowledgeId, entry] of Object.entries(progress)) {
+        if (entry.status === 'requested') this.launchKnowledgeResolution(def.id, knowledgeId)
+      }
+    }
+  }
+
+  private launchKnowledgeResolution(questId: string, knowledgeId: string): void {
+    const epoch = this.knowledgeEpoch
+    void this.worldKnowledgeResolver.resolve(questId, knowledgeId).then(
+      (ref) => {
+        if (epoch !== this.knowledgeEpoch) return
+        this.completeKnowledgeResolution(questId, knowledgeId, ref)
+      },
+      () => {
+        if (epoch !== this.knowledgeEpoch) return
+      },
+    )
+  }
+
+  private completeKnowledgeResolution(
+    questId: string,
+    knowledgeId: string,
+    ref: QuestWorldKnowledgeRef | null,
+  ): void {
+    const def = this.defs.find((entry) => entry.id === questId)
+    if (!def) return
+    const current = this.knowledgeProgress(def, knowledgeId)
+    if (!current || current.status !== 'requested') return
+    if (ref) {
+      this.writeKnowledgeProgress(questId, knowledgeId, { ...current, status: 'resolved', ref })
+      this.dirty = true
+      return
+    }
+    this.writeKnowledgeProgress(questId, knowledgeId, { ...current, status: 'unavailable' })
+    this.maybeApplyUnavailableKnowledge(def, knowledgeId)
+  }
+
+  private maybeApplyUnavailableKnowledge(def: QuestDef, knowledgeId: string): void {
+    const slot = this.knowledgeDef(def, knowledgeId)
+    const progress = this.knowledgeProgress(def, knowledgeId)
+    if (!slot || !progress || progress.status !== 'unavailable') return
+    if (this.worldTime.getElapsedDays() < progress.revealAtDays) return
+    if (slot.unavailablePolicy !== 'fail') return
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active' && s.state !== 'offered') return
+    const outcomeId = slot.unavailableOutcomeId ?? uniqueOutcomeForState(def, 'failed')?.id
+    if (!outcomeId) return
+    this.applyOutcome(def, outcomeId)
+  }
+
+  private markKnowledgeRevealed(questId: string, knowledgeId: string): void {
+    const def = this.defs.find((entry) => entry.id === questId)
+    if (!def) return
+    const current = this.knowledgeProgress(def, knowledgeId)
+    if (!current) return
+    this.writeKnowledgeProgress(questId, knowledgeId, { ...current, revealed: true })
+  }
+
+  private knowledgeClue(def: QuestDef, progress: QuestRuntimeProgress, knowledgeId: string): string | null {
+    const slot = this.knowledgeDef(def, knowledgeId)
+    if (!slot) return null
+    const entry = progress.worldKnowledge?.[knowledgeId]
+    if (!entry) return slot.pendingPhrase
+    if (entry.status === 'unavailable') return slot.unavailablePhrase
+    if (entry.revealed && entry.ref) {
+      return this.worldKnowledgeResolver.describe(entry.ref, { settlementId: def.settlementId })
+        ?? slot.pendingPhrase
+    }
+    return slot.pendingPhrase
+  }
+
+  private expandQuestText(def: QuestDef, progress: QuestRuntimeProgress, text: string | null | undefined): string | null {
+    if (text == null) return null
+    return text.replace(WORLD_KNOWLEDGE_CLUE_TOKEN, (_match, knowledgeId: string) => (
+      this.knowledgeClue(def, progress, knowledgeId) ?? ''
+    ))
+  }
+
+  private maybeStampPendingWorldKnowledge(def: QuestDef, s: QuestRuntimeProgress, npcId: NpcId): void {
+    const stage = this.currentStage(def, s.stageIndex)
+    if (!stage || s.state !== 'active') return
+    const receive = this.unfinishedSlots(def, s).find((slot) => (
+      slot.objective.type === 'receive_world_knowledge' && slot.objective.npc.npcId === npcId
+    ))
+    if (!receive || receive.objective.type !== 'receive_world_knowledge') return
+    if (this.isKnowledgeTellable(def, receive.objective.knowledgeId)) return
+    this.appendJournal(def.id, {
+      kind: 'progress',
+      stageIndex: s.stageIndex,
+      stampId: WORLD_KNOWLEDGE_PENDING_STAMP,
+      speakerNpcId: npcId,
+    })
+  }
+
+  private worldKnowledgeTalk(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return null
+    const stage = this.currentStage(def, s.stageIndex)
+    if (!stage) return null
+    const receive = this.unfinishedSlots(def, s).find((slot) => (
+      slot.objective.type === 'receive_world_knowledge' && slot.objective.npc.npcId === npcId
+    ))
+    if (receive && receive.objective.type === 'receive_world_knowledge') {
+      this.maybeApplyUnavailableKnowledge(def, receive.objective.knowledgeId)
+      const updated = this.stateOf(def.id)
+      if (updated.state !== 'active') {
+        const failed = resolvedOutcome(def, updated)
+        return { line: failed?.resultText ?? this.knowledgeDef(def, receive.objective.knowledgeId)?.unavailablePhrase ?? stage.reminderLine }
+      }
+      if (!this.isKnowledgeTellable(def, receive.objective.knowledgeId)) {
+        this.maybeStampPendingWorldKnowledge(def, updated, npcId)
+        return { line: this.expandQuestText(def, updated, stage.reminderLine) ?? stage.reminderLine }
+      }
+      return null
+    }
+    const pendingAction = stage.dialogueActions?.find((action) => (
+      action.npc.npcId === npcId && action.requireWorldKnowledgeReady
+    ))
+    if (!pendingAction?.requireWorldKnowledgeReady) return null
+    const knowledgeId = pendingAction.requireWorldKnowledgeReady
+    this.maybeApplyUnavailableKnowledge(def, knowledgeId)
+    if (this.stateOf(def.id).state !== 'active') return null
+    if (this.isKnowledgeRevealed(def, knowledgeId) || this.isKnowledgeTellable(def, knowledgeId)) return null
+    this.appendJournal(def.id, {
+      kind: 'progress',
+      stageIndex: s.stageIndex,
+      stampId: WORLD_KNOWLEDGE_PENDING_STAMP,
+      speakerNpcId: npcId,
+    })
+    const slot = this.knowledgeDef(def, knowledgeId)
+    return { line: this.expandQuestText(def, s, slot?.pendingPhrase ?? stage.reminderLine) ?? stage.reminderLine }
+  }
+
   private applyEffects(
+    questId: string,
     effects: readonly QuestStageEffect[] | undefined,
     options?: { skipAnimalOwnership?: boolean },
   ): void {
@@ -2097,6 +2441,9 @@ export class QuestManager {
           break
         case 'reveal_location':
           this.lifecycleHooks.revealLocation?.(effect.locationId, { setNavigation: effect.setNavigation })
+          break
+        case 'request_world_knowledge':
+          this.requestWorldKnowledge(questId, effect.knowledgeId)
           break
         case 'transfer_animal_ownership':
           if (!options?.skipAnimalOwnership) this.transferAnimalOwnership(effect.animalId)
@@ -2164,6 +2511,8 @@ export class QuestManager {
   private resolveNpcQuestContribution(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
     const actionable = this.collectQuestActionsForNpc(def, npcId)
     if (actionable) return actionable
+    const knowledgeTalk = this.worldKnowledgeTalk(def, npcId)
+    if (knowledgeTalk) return knowledgeTalk
     if (npcId !== def.giver.npcId) return null
     return this.handleGiverOffer(def) ?? this.handleGiverReminder(def)
   }
@@ -2256,16 +2605,19 @@ export class QuestManager {
       let matched = false
       for (const slot of this.unfinishedSlots(def, this.stateOf(def.id))) {
         const boundAnimalId = this.animalTargets.get(animalTargetKey(def.id, s.stageIndex, slot.id))
+        const boundLandmarkId = slot.objective.type === 'interact_bound_landmark'
+          ? this.boundLandmarkId(def, slot.objective.knowledgeId)
+          : undefined
         if (ref.type === 'animal_died' && slot.objective.type === 'find_animal' && boundAnimalId === ref.animalId) {
           const line = this.resolveFailedFind(def, stage)
           if (line && presentation === null) presentation = { line }
           matched = true
           break
         }
-        if (!objectiveMatchesRef(slot.objective, ref, boundAnimalId)) continue
+        if (!objectiveMatchesRef(slot.objective, ref, boundAnimalId, boundLandmarkId)) continue
         this.completeObjectiveSlot(def, this.stateOf(def.id), slot)
         if (presentation === null) {
-          presentation = { line: stage.progressLine ?? stage.description }
+          presentation = { line: this.expandQuestText(def, this.stateOf(def.id), stage.progressLine ?? stage.description) ?? stage.description }
         }
         matched = true
         break
@@ -2391,6 +2743,9 @@ export class QuestManager {
         entry.offerSuppressedUntilDay = s.offerSuppressedUntilDay
       }
       if (s.journal && s.journal.length > 0) entry.journal = s.journal
+      if (s.worldKnowledge && Object.keys(s.worldKnowledge).length > 0) {
+        entry.worldKnowledge = s.worldKnowledge
+      }
       return entry
     })
   }
@@ -2411,26 +2766,88 @@ function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
     progress.offerSuppressedUntilDay = entry.offerSuppressedUntilDay
   }
   if (entry.journal && entry.journal.length > 0) progress.journal = entry.journal
+  if (entry.worldKnowledge && Object.keys(entry.worldKnowledge).length > 0) {
+    progress.worldKnowledge = entry.worldKnowledge
+  }
   return progress
 }
 
 /** Legacy terminal entries without an outcome id take the unique matching
  *  authored outcome; 0 or >1 matches are left unresolved. */
+function knowledgeStageIndex(
+  def: QuestDef,
+  match: (objective: QuestObjective) => boolean,
+): number {
+  return def.stages.findIndex((stage) => questStageObjectiveSlots(stage).some((slot) => match(slot.objective)))
+}
+
+function seedLegacyKnowledge(
+  def: QuestDef,
+  revealed: boolean,
+): Record<string, QuestWorldKnowledgeProgress> | undefined {
+  if (!def.worldKnowledge?.length) return undefined
+  const out: Record<string, QuestWorldKnowledgeProgress> = {}
+  for (const slot of def.worldKnowledge) {
+    if (slot.bind.landmarkId) {
+      out[slot.id] = {
+        requestedAtDays: 0,
+        revealAtDays: 0,
+        status: 'resolved',
+        revealed,
+        ref: { kind: 'landmark', landmarkId: slot.bind.landmarkId, landmarkKind: slot.bind.kind },
+      }
+    } else {
+      out[slot.id] = { requestedAtDays: 0, revealAtDays: 0, status: 'requested', revealed }
+    }
+  }
+  return out
+}
+
+function migrateRestoredWorldKnowledge(def: QuestDef, entry: QuestProgressEntry): QuestProgressEntry {
+  if (!def.worldKnowledge?.length) {
+    if (!entry.worldKnowledge) return entry
+    const { worldKnowledge: _dropped, ...rest } = entry
+    return rest
+  }
+  if (entry.worldKnowledge && Object.keys(entry.worldKnowledge).length > 0) {
+    return entry
+  }
+  if (entry.state !== 'active') return entry
+  const receiveIndex = knowledgeStageIndex(def, (objective) => objective.type === 'receive_world_knowledge')
+  const boundIndex = knowledgeStageIndex(def, (objective) => objective.type === 'interact_bound_landmark')
+  let stageIndex = entry.stageIndex
+  let worldKnowledge: Record<string, QuestWorldKnowledgeProgress> | undefined
+  if (receiveIndex === 0 && boundIndex === 1 && stageIndex === 0) {
+    stageIndex = 1
+    worldKnowledge = seedLegacyKnowledge(def, true)
+  } else if (receiveIndex >= 0 && stageIndex > receiveIndex) {
+    worldKnowledge = seedLegacyKnowledge(def, true)
+  } else if (receiveIndex < 0 && stageIndex >= 1) {
+    worldKnowledge = seedLegacyKnowledge(def, true)
+  }
+  if (!worldKnowledge && stageIndex === entry.stageIndex) return entry
+  return { ...entry, stageIndex, ...(worldKnowledge ? { worldKnowledge } : {}) }
+}
+
 function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): QuestProgressEntry {
+  const migrated = migrateRestoredWorldKnowledge(def, entry)
   const base: QuestProgressEntry = {
-    id: entry.id,
-    state: entry.state,
-    stageIndex: entry.stageIndex,
-    ...(entry.stageCount !== undefined ? { stageCount: entry.stageCount } : {}),
-    ...(entry.stageSlotProgress !== undefined ? { stageSlotProgress: entry.stageSlotProgress } : {}),
-    ...(entry.offerSuppressedUntilDay !== undefined ? { offerSuppressedUntilDay: entry.offerSuppressedUntilDay } : {}),
-    ...(entry.journal && entry.journal.length > 0 ? { journal: entry.journal } : {}),
+    id: migrated.id,
+    state: migrated.state,
+    stageIndex: migrated.stageIndex,
+    ...(migrated.stageCount !== undefined ? { stageCount: migrated.stageCount } : {}),
+    ...(migrated.stageSlotProgress !== undefined ? { stageSlotProgress: migrated.stageSlotProgress } : {}),
+    ...(migrated.offerSuppressedUntilDay !== undefined ? { offerSuppressedUntilDay: migrated.offerSuppressedUntilDay } : {}),
+    ...(migrated.journal && migrated.journal.length > 0 ? { journal: migrated.journal } : {}),
+    ...(migrated.worldKnowledge && Object.keys(migrated.worldKnowledge).length > 0
+      ? { worldKnowledge: migrated.worldKnowledge }
+      : {}),
   }
-  if (entry.state !== 'complete' && entry.state !== 'failed') return base
-  if (entry.resolvedOutcomeId) {
-    return { ...base, resolvedOutcomeId: entry.resolvedOutcomeId }
+  if (migrated.state !== 'complete' && migrated.state !== 'failed') return base
+  if (migrated.resolvedOutcomeId) {
+    return { ...base, resolvedOutcomeId: migrated.resolvedOutcomeId }
   }
-  const outcome = uniqueOutcomeForState(def, entry.state)
+  const outcome = uniqueOutcomeForState(def, migrated.state)
   if (!outcome) return base
   return { ...base, resolvedOutcomeId: outcome.id }
 }

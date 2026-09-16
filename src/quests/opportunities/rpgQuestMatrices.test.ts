@@ -342,22 +342,66 @@ describe('shared opportunity selection', () => {
       },
     })
     expect(defs[0]?.id).toBe(persistedId)
-    expect(defs[0]?.stages[0]?.objective).toEqual({
-      type: 'interact_landmark',
+    expect(defs[0]?.worldKnowledge?.[0]?.bind).toEqual({
+      type: 'landmark',
+      kind: 'stoneCircle',
       landmarkId: 'stoneCircle:8:8:0:1',
+    })
+    expect(defs[0]?.stages[0]?.objective).toEqual({
+      type: 'receive_world_knowledge',
+      knowledgeId: 'target',
+      npc: { npcId: neighborHunter.id },
+    })
+    expect(defs[0]?.stages[1]?.objective).toEqual({
+      type: 'interact_bound_landmark',
+      knowledgeId: 'target',
     })
   })
 })
 
 describe('QuestManager path for Sekret starego miejsca', () => {
-  it('completes through the existing interact_landmark objective', () => {
+  it('uses deferred knowledge then matches the resolved landmark id', async () => {
     const candidate = collectOldPlaceSecretCandidate({
       settlementId: '1_0',
       landmarks: [{ id: 'monolith:4:-7:0:3f', kind: 'monolith' }],
     })!
     const def = materializeSettlementQuestOpportunity(candidate, neighborNpcs, 'Lasowa')!
-    const qm = new QuestManager([def], undefined, new Inventory())
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { getWorldSeed: () => 1, getTimeOfDay: () => 0, getElapsedDays: () => 1 },
+      undefined,
+      undefined,
+      undefined,
+      {
+        resolve: async () => ({
+          kind: 'landmark',
+          landmarkId: 'monolith:4:-7:0:3f',
+          landmarkKind: 'monolith',
+        }),
+        describe: (ref) => `clue:${ref.landmarkId}`,
+      },
+    )
     accept(qm, neighborHunter.id)
+    await Promise.resolve()
+    expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:4:-7:0:3f' })).toBeNull()
+    const ready = qm.onInteract(neighborHunter.id)
+    expect(ready?.actions?.[0]?.label).toContain('ustalić')
+    ready?.actions?.[0]?.onSelect()
     expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:9:9:0:3f' })).toBeNull()
     const override = qm.onInteractObjective({
       type: 'interact_landmark',

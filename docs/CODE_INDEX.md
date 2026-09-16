@@ -122,6 +122,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Settlement quest opportunities](../src/quests/opportunities/settlementQuestOpportunities.ts) — world-driven and RPG matrix candidates selected at composition root into normal `QuestDef`s.
 - [Suspicious transport cave cache](../src/quests/suspiciousTransportCaveCache.ts) — natural-cave cache variant of the existing `suspicious-transport` RPG matrix (plan quests-progression-024).
 - [Lost Treasure Chronicles elder](../src/quests/lostTreasureChroniclesElder.ts) — nearby authored elder binding and the winter/dispute contextual quests (plan quests-progression-037).
+- [Deferred world knowledge](../src/quests/worldKnowledgeResolver.ts) — injected async landmark resolver + [location phrase](../src/quests/landmarkLocationDescription.ts) (plan quests-progression-047).
 - [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.
 - [Profession staffing](../src/settlement/professionStaffing.ts) — generation-time adult profession composition from settlement identity; does not change family structure.
 - [Settlement character](../src/settlement/settlementCharacter.ts) — deterministic `default`/`closed` archetype on `VillageIdentity`; consumers read it, none own it.
