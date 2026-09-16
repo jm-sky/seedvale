@@ -202,23 +202,23 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 970
-- `applyModificationToTile` — function — line 827
-- `ChunkManager` — type — line 506
+- `applyChunkWaterDayNight` — function — line 984
+- `applyModificationToTile` — function — line 841
+- `ChunkManager` — type — line 520
 - `ChunkManagerConfig` — type — line 327
-- `createChunkManager` — function — line 995
+- `createChunkManager` — function — line 1009
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 984
-- `drainByBudget` — function — line 945
+- `CropHarvestOutcome` — type — line 998
+- `drainByBudget` — function — line 959
 - `FinalizeStage` — type — line 428
-- `pickNearestQueuedKey` — function — line 905
-- `pickNextFinalizeKey` — function — line 923
-- `TerrainModification` — type — line 784
-- `tickChunkWaterSurfaces` — function — line 958
+- `pickNearestQueuedKey` — function — line 919
+- `pickNextFinalizeKey` — function — line 937
+- `TerrainModification` — type — line 798
+- `tickChunkWaterSurfaces` — function — line 972
 
 ## `terrain/chunkMeshCache.ts`
 

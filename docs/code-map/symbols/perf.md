@@ -9,15 +9,15 @@ Generated from exported TypeScript symbols.
 
 ## `perf/agentCpuDiag.ts`
 
-- `AgentCpuDiag` — type — line 219
+- `AgentCpuDiag` — type — line 253
 - `AgentCpuDiagTotals` — type — line 33
-- `AgentCpuReport` — type — line 126
-- `buildAgentCpuReport` — function — line 722
-- `createAgentCpuDiag` — function — line 347
-- `emptyAgentCpuDiagTotals` — function — line 282
-- `formatAgentCpuReport` — function — line 865
-- `getAgentCpuDiag` — function — line 718
-- `setActiveAgentCpuDiag` — function — line 714
+- `AgentCpuReport` — type — line 146
+- `buildAgentCpuReport` — function — line 807
+- `createAgentCpuDiag` — function — line 404
+- `emptyAgentCpuDiagTotals` — function — line 325
+- `formatAgentCpuReport` — function — line 964
+- `getAgentCpuDiag` — function — line 803
+- `setActiveAgentCpuDiag` — function — line 799
 
 ## `perf/benchmark.ts`
 

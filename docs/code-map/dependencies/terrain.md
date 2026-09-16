@@ -1082,6 +1082,7 @@ Generated from TypeScript imports.
 - `terrain/riverQuery.test.ts`
 - `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
+- `terrain/waterSample.test.ts`
 - `terrain/waterSample.ts`
 - `world/createRiverWater.ts`
 - `world/riverGeometry.test.ts`
@@ -1363,6 +1364,7 @@ Generated from TypeScript imports.
 
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverFord.ts`
+- `terrain/riverNetwork.ts`
 - `terrain/waterSample.ts`
 
 ## `terrain/waterSample.ts`
