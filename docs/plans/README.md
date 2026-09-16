@@ -80,6 +80,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-029-low-cost-lighting-and-film-grade-tuning.md`                      | 🟡 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
 | 💡 `quests-progression-050-socially-consequential-quest-dialogue.md`           | 🔴 | M      | -                                                                                                                                                                                                                                                                                      | -                                       |
 | ◼️ `quests-progression-051-authored-quest-dialogue-narrative-polish.md`        | 🔴 | M      | ~~quests-progression-014~~, ~~quests-progression-035~~, quests-progression-050                                                                                                                                                                                                         | quests-and-reputation                   |
+| ◼️ `quests-progression-052-second-wave-socially-consequential-authored-dialogue.md` | 🔴 | M      | quests-progression-051                                                                                                                                                                                                                                                                 | quests-and-reputation                   |
 
 ---
 
@@ -233,7 +234,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `039`
 - npc: `041`
 - persistence: `005`
-- quests-progression: `052`
+- quests-progression: `053`
 - settlements: `018`
 - settlements-npcs: `039`
 - tools: `015`
