@@ -126,6 +126,18 @@ export function drawWorldMapFrame(
       // `worldLocationKindFromId`).
       const kind = worldLocationKindFromId(location.id)
       ctx.fillStyle = targetSlot != null ? targetSlotColor(targetSlot) : locationKindColor(kind)
+      if (location.areaRadius && location.areaRadius > 0) {
+        const radiusPx = location.areaRadius * view.zoom
+        ctx.beginPath()
+        ctx.arc(x, y, radiusPx, 0, Math.PI * 2)
+        ctx.globalAlpha = 0.16
+        ctx.fill()
+        ctx.globalAlpha = 0.75
+        ctx.lineWidth = 1.5
+        ctx.strokeStyle = ctx.fillStyle
+        ctx.stroke()
+        ctx.globalAlpha = 1
+      }
       // `estimated`/`discovered`/`confirmed` read as outline / translucent /
       // solid (plan §16/§22 — visually distinguishable without extra UI).
       if (location.state === 'estimated') {

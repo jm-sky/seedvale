@@ -58,6 +58,20 @@ export function appendAuthoredResidentFamily(
 }
 
 /**
+ * Append several authored resident families in the given order.
+ *
+ * @domain settlements-npcs
+ */
+export function appendAuthoredResidentFamilies(
+  families: readonly FamilyDef[],
+  residents: readonly FamilyDef[],
+): FamilyDef[] {
+  let next = [...families]
+  for (const resident of residents) next = appendAuthoredResidentFamily(next, resident)
+  return next
+}
+
+/**
  * Authored elder household: ordinary single adult, farmer baseline, age 74.
  * Profession staffing may still reassign the role. Deterministic for the cell seed.
  *

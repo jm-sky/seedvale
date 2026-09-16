@@ -391,6 +391,23 @@ function validateStageDialogueActions(def: QuestDef): void {
           `Quest "${def.id}" stage dialogue action is missing an npc target`,
         )
       }
+      if (action.blockedLine !== undefined && action.blockedLine.trim().length === 0) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage dialogue action blockedLine is empty`,
+        )
+      }
+      if (action.transferItemCount) {
+        if (!action.transferItemCount.toNpc.npcId) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage dialogue action transferItemCount is missing an npc target`,
+          )
+        }
+        if (!Number.isFinite(action.transferItemCount.count) || action.transferItemCount.count <= 0) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" stage dialogue action transferItemCount count must be finite and > 0`,
+          )
+        }
+      }
       validateQuestDialogueReactions(def, action.reactions, `stage ${stageIndex} dialogue action`)
     }
   }
@@ -1155,6 +1172,14 @@ export type QuestStageDialogueAction = {
   requireCarriedUnopened?: boolean
   /** Player must own this exact item instance (plan quests-progression-023). */
   requireItemInstanceId?: string
+  /**
+   * Atomic Player → NPC stacked transfer before effects/outcome
+   * (plan quests-progression-039). Does not hide the action when the player
+   * cannot pay — selection fails with `blockedLine` and mutates nothing.
+   */
+  transferItemCount?: { kind: ItemKind, count: number, toNpc: QuestNpcRef }
+  /** Spoken when `transferItemCount` cannot complete. */
+  blockedLine?: string
   effects?: readonly QuestStageEffect[]
   /**
    * Show this action only when knowledge `id` is resolved, the authored delay

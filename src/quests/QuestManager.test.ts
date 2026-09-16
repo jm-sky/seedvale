@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { ItemKind } from '../items/items'
 import type { SocialConsequence } from '../reputation/ReputationManager'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
 import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup, QuestWorldKnowledgeResolver, QuestWorldTimeLookup } from './QuestManager'
@@ -4003,6 +4004,7 @@ describe('QuestManager generic resolution effects (plan quests-progression-029)'
     transferAnimalOwnership?: (animalId: string) => boolean
     carriedContainerId?: string | null
     transferItemInstance?: (instanceId: string, npcId: string) => boolean
+    transferItemCount?: (kind: ItemKind, count: number, npcId: string) => boolean
     discardCarriedContainer?: (containerId: string) => boolean
     revealLocation?: (locationId: string) => void
   }): QuestManager {
@@ -4041,6 +4043,7 @@ describe('QuestManager generic resolution effects (plan quests-progression-029)'
       {
         revealLocation: opts.revealLocation,
         transferItemInstance: opts.transferItemInstance,
+        transferItemCount: opts.transferItemCount,
         discardCarriedContainer: opts.discardCarriedContainer,
       },
     )
@@ -4133,6 +4136,81 @@ describe('QuestManager generic resolution effects (plan quests-progression-029)'
     expect(revealed).toEqual([CAVE_LOCATION])
     speak(qm, 'Marek')
     expect(revealed).toEqual([CAVE_LOCATION])
+  })
+
+  it('transfers stacked coins before a terminal outcome and mutates nothing when the transfer fails', () => {
+    const token = { id: 'story:token', kind: 'encoded_chronicle' as const }
+    const def = quest({
+      id: 'pay-service',
+      giverName: 'Marek',
+      offerLine: 'offer',
+      reportLine: 'done',
+      stages: [{
+        objective: { type: 'await_quest_outcome' },
+        description: 'pay',
+        reminderLine: 'pay me',
+        dialogueActions: [{
+          npc: { npcId: 'Marek' },
+          playerLine: 'Zapłacę',
+          npcLine: 'Przyjąłem',
+          blockedLine: 'Brak monet',
+          requireItemInstanceId: token.id,
+          physicalOutcomeId: 'complete',
+          transferItemCount: { kind: 'coin', count: 3, toNpc: { npcId: 'Marek' } },
+        }],
+      }],
+    })
+    const specialist = new Inventory()
+    const poor = new Inventory({}, 100, [token])
+    poor.add('coin', 2)
+    const transfers: string[] = []
+    const poorQm = makeEffectManager({
+      defs: [def],
+      inventory: poor,
+      initial: { progress: [{ id: def.id, state: 'active', stageIndex: 0 }], relations: {} },
+      transferItemCount: (kind, count, npcId) => {
+        transfers.push(`${npcId}:${kind}:${count}`)
+        if (!poor.has(kind, count)) return false
+        poor.remove(kind, count)
+        return specialist.add(kind, count)
+      },
+    })
+    expect(poorQm.onInteract('Marek')?.actions?.some((action) => action.label === 'Zapłacę')).toBe(true)
+    expect(speak(poorQm, 'Marek')).toBe('Brak monet')
+    expect(poorQm.getState(def.id)).toBe('active')
+    expect(poor.count('coin')).toBe(2)
+    expect(specialist.count('coin')).toBe(0)
+    expect(transfers).toEqual(['Marek:coin:3'])
+
+    const rich = new Inventory({}, 100, [token])
+    rich.add('coin', 3)
+    const richQm = makeEffectManager({
+      defs: [def],
+      inventory: rich,
+      initial: { progress: [{ id: def.id, state: 'active', stageIndex: 0 }], relations: {} },
+      transferItemCount: (kind, count, npcId) => {
+        transfers.push(`ok:${npcId}:${kind}:${count}`)
+        if (!rich.has(kind, count)) return false
+        rich.remove(kind, count)
+        return specialist.add(kind, count)
+      },
+    })
+    expect(speak(richQm, 'Marek')).toBe('Przyjąłem')
+    expect(richQm.getState(def.id)).toBe('complete')
+    expect(rich.count('coin')).toBe(0)
+    expect(specialist.count('coin')).toBe(3)
+
+    const restored = makeEffectManager({
+      defs: [def],
+      inventory: rich,
+      initial: { progress: richQm.exportProgress(), relations: {} },
+      transferItemCount: () => {
+        transfers.push('replay')
+        return true
+      },
+    })
+    expect(speak(restored, 'Marek')).toBeUndefined()
+    expect(transfers).toEqual(['Marek:coin:3', 'ok:Marek:coin:3'])
   })
 
   it('discards the returned bear-cave casket and grants the binding payout through QuestManager', () => {

@@ -119,6 +119,10 @@ import {
 } from '../quests/lostHunterNaturalCave'
 import { getActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import {
+  buildLostTreasureChronicleDecipheringQuest,
+} from '../quests/lostTreasureChronicleDeciphering'
+import { getActiveLostTreasureChronicleDecipheringBinding } from '../quests/lostTreasureChronicleDecipheringRuntime'
+import {
   buildLostTreasureChronicleSearchQuests,
   CHRONICLE_SEARCH_EVIDENCE_KIND,
   ENCODED_CHRONICLE_KIND,
@@ -244,6 +248,7 @@ import {
   revealSettlementsInRange,
 } from '../world/locations/locationProximityDiscovery'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
+import { getActiveLostTreasureEstateSearchArea } from '../world/locations/lostTreasureEstateSearchAreaRuntime'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
 import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
 import {
@@ -282,7 +287,7 @@ import { createHouseholdResourceTransferActions } from './actions/householdResou
 import { createInspectionActions } from './actions/inspectionActions'
 import { createLeadActions } from './actions/leadActions'
 import { createMountActions } from './actions/mountActions'
-import { giveItemInstanceToNpc } from './actions/npcItemTransfer'
+import { giveItemCountToNpc, giveItemInstanceToNpc } from './actions/npcItemTransfer'
 import { createNpcItemTransferActions } from './actions/npcItemTransferActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
@@ -842,6 +847,7 @@ export async function createApp(
         ? { locationId: binding.ruinsLocationId, x: binding.ruinsX, z: binding.ruinsZ }
         : null
     },
+    getEstateSearchArea: () => getActiveLostTreasureEstateSearchArea(),
     getAbandonedMine: () => bundle.caves.abandonedMine(),
   })
   const worldKnowledgeResearch = createWorldKnowledgeResearch({
@@ -1514,6 +1520,10 @@ export async function createApp(
   if (chronicleSearchBinding) {
     opportunityQuestDefs.push(...buildLostTreasureChronicleSearchQuests(chronicleSearchBinding))
   }
+  const chronicleDecipheringBinding = getActiveLostTreasureChronicleDecipheringBinding()
+  if (chronicleDecipheringBinding) {
+    opportunityQuestDefs.push(buildLostTreasureChronicleDecipheringQuest(chronicleDecipheringBinding))
+  }
   const homeGuardNpcId = selectGuardQuestGiver(npcsBySettlement.get(homeSettlementId) ?? [])?.id
   const questDefs = [...authoredQuestDefs, ...opportunityQuestDefs]
   const initialQuestState = initialSave?.quests
@@ -1705,6 +1715,15 @@ export async function createApp(
           getNpcState: (id) => bundle.settlementsManager.getNpcState(id),
         },
         { npcId, instanceId },
+      ).status === 'ok'
+    ),
+    transferItemCount: (kind: ItemKind, count: number, npcId: string) => (
+      giveItemCountToNpc(
+        {
+          playerInventory: inventory,
+          getNpcState: (id) => bundle.settlementsManager.getNpcState(id),
+        },
+        { npcId, kind, amount: count, nowDays: dayNight.elapsedDays },
       ).status === 'ok'
     ),
     discardCarriedContainer: (containerId: string) => {

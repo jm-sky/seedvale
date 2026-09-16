@@ -1,4 +1,11 @@
-export type WorldLocationKind = 'settlement' | 'cave' | 'cemetery' | 'lake' | 'mountainPeak' | 'ruins' | 'abandonedMine'
+export type WorldLocationKind = 'settlement' | 'cave' | 'cemetery' | 'lake' | 'mountainPeak' | 'ruins' | 'abandonedMine' | 'searchArea'
+
+/** Optional bounded search-area geometry. `WorldLocation.x/z` remain the
+ *  label/navigation center; this is not an exact waypoint. */
+export type WorldLocationArea = {
+  shape: 'circle'
+  radius: number
+}
 
 /**
  * A concrete, named place in the world (plan world-012) — pure world data,
@@ -22,11 +29,14 @@ export type WorldLocation = {
    *  `settlement` (plan §5 — settlements use nearest-distance, never this
    *  pool). */
   discoveryWeight: number
+  /** Approximate area when the location is a bounded search region rather
+   *  than a point landmark (plan quests-progression-039). */
+  area?: WorldLocationArea
 }
 
 export type DiscoveryRange = 'near' | 'medium' | 'far'
 
-const WORLD_LOCATION_KINDS: readonly WorldLocationKind[] = ['settlement', 'cave', 'cemetery', 'lake', 'mountainPeak', 'ruins', 'abandonedMine']
+const WORLD_LOCATION_KINDS: readonly WorldLocationKind[] = ['settlement', 'cave', 'cemetery', 'lake', 'mountainPeak', 'ruins', 'abandonedMine', 'searchArea']
 
 /**
  * Reads the `WorldLocationKind` encoded in a `WorldLocation.id`'s

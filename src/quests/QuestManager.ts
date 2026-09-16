@@ -350,6 +350,8 @@ export type QuestLifecycleHooks = {
   revealLocation?: import('./quests').QuestLocationReveal
   /** Player → NPC exact-instance hand-in (plan quests-progression-029). */
   transferItemInstance?: (instanceId: string, npcId: NpcId) => boolean
+  /** Player → NPC stacked-item transfer (plan quests-progression-039). */
+  transferItemCount?: (kind: ItemKind, count: number, npcId: NpcId) => boolean
   /** Consume the matching carried container (plan quests-progression-029). */
   discardCarriedContainer?: (containerId: string) => boolean
 }
@@ -2193,6 +2195,9 @@ export class QuestManager {
         if (!this.isKnowledgeTellable(def, action.requireWorldKnowledgeReady)) return false
         if (this.isKnowledgeRevealed(def, action.requireWorldKnowledgeReady)) return false
       }
+      if (action.requireItemInstanceId && !this.inventory.getInstance(action.requireItemInstanceId)) {
+        return false
+      }
       if (!action.physicalOutcomeId) return true
       return this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, {
         requireCarriedContainerId: action.requireCarriedContainerId,
@@ -2237,6 +2242,16 @@ export class QuestManager {
         requireItemInstanceId: action.requireItemInstanceId,
       }
       if (!this.physicalOutcome.canResolve(def.id, action.physicalOutcomeId, ctx)) return fallback
+    }
+    if (action.transferItemCount) {
+      const transferred = this.lifecycleHooks.transferItemCount?.(
+        action.transferItemCount.kind,
+        action.transferItemCount.count,
+        action.transferItemCount.toNpc.npcId,
+      )
+      if (!transferred) return action.blockedLine ?? fallback
+    }
+    if (action.physicalOutcomeId) {
       this.appendJournal(def.id, {
         kind: 'progress',
         stageIndex,

@@ -38,6 +38,8 @@ export type MapKnownLocation = {
   source: MapSource
   label?: string
   description?: string
+  /** World-unit radius of an approximate search area, when known. */
+  areaRadius?: number
 }
 
 export type MapViewport = {

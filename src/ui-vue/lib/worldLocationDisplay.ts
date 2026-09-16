@@ -1,4 +1,4 @@
-import { Building2, Castle, Cross, Gem, MapPin, Mountain, Pickaxe, Waves } from 'lucide-vue-next'
+import { Building2, Castle, Cross, Gem, MapPin, Mountain, Pickaxe, Trees, Waves } from 'lucide-vue-next'
 import type { WorldLocationKind } from '../../world/locations/worldLocationTypes'
 import type { Component } from 'vue'
 
@@ -17,6 +17,7 @@ export const LOCATION_KIND_LABEL: Record<WorldLocationKind, string> = {
   mountainPeak: 'Szczyt',
   ruins: 'Ruiny',
   abandonedMine: 'Kopalnia',
+  searchArea: 'Obszar',
 }
 
 export const LOCATION_KIND_LABEL_FALLBACK = 'Miejsce'
@@ -29,6 +30,7 @@ export const LOCATION_KIND_ICON: Record<WorldLocationKind, Component> = {
   mountainPeak: Mountain,
   ruins: Castle,
   abandonedMine: Pickaxe,
+  searchArea: Trees,
 }
 
 export const LOCATION_KIND_ICON_FALLBACK: Component = MapPin

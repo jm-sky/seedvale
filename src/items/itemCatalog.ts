@@ -1191,6 +1191,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: 'Plan quests-progression-038 — identity-backed false-site evidence. Not merchant stock.',
     physical: { resilient: true },
   },
+  chronicle_reference: {
+    kind: 'chronicle_reference',
+    label: 'glosariusz archaiczny',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan quests-progression-039 — identity-backed specialist reference document. Not merchant stock.',
+    physical: { resilient: true },
+  },
   long_bow: {
     kind: 'long_bow',
     label: 'długi łuk',

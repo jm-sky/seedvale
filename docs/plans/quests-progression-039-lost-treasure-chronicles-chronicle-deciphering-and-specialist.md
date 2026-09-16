@@ -1,7 +1,7 @@
 # Plan: Lost Treasure Chronicles — chronicle deciphering and specialist
 
 **Created:** 2026-09-15  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** M  
 **Depends on:** quests-progression-038, quests-progression-037  
 **Domain:** `quests-progression`  

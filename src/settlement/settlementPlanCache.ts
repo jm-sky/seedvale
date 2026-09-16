@@ -17,6 +17,11 @@ import {
   selectLostTreasureChroniclesElderSettlement,
 } from './lostTreasureChroniclesElderResident'
 import {
+  createLostTreasureSpecialistFamily,
+  LOST_TREASURE_SPECIALIST_SETTLEMENT_SEARCH_RADIUS,
+  selectLostTreasureChroniclesSpecialistSettlement,
+} from './lostTreasureChroniclesSpecialistResident'
+import {
   cellFromId,
   cellKey,
   cellSeed,
@@ -93,6 +98,8 @@ let progressionPolicy: SettlementProgressionPolicy | null | undefined
 let elderHostCellKey: string | null | undefined
 /** Memoized host cell key for the Lost Treasure Chronicles archaeologist, or `null` when none. */
 let archaeologistHostCellKey: string | null | undefined
+/** Memoized host cell key for the Lost Treasure Chronicles specialist, or `null` when none. */
+let specialistHostCellKey: string | null | undefined
 
 export function clearSettlementDefCache(): void {
   defCache.clear()
@@ -102,6 +109,7 @@ export function clearSettlementDefCache(): void {
   progressionPolicy = undefined
   elderHostCellKey = undefined
   archaeologistHostCellKey = undefined
+  specialistHostCellKey = undefined
 }
 
 function progressionPolicyFor(ctx: SettlementResolveContext): SettlementProgressionPolicy | null {
@@ -224,18 +232,39 @@ function archaeologistHostCellFor(ctx: SettlementResolveContext): SettlementCell
   return selected?.cell ?? null
 }
 
-function authoredResidentFor(cell: SettlementCell, ctx: SettlementResolveContext) {
+function specialistHostCellFor(ctx: SettlementResolveContext): SettlementCell | null {
+  if (specialistHostCellKey !== undefined) {
+    return specialistHostCellKey ? cellFromId(specialistHostCellKey) : null
+  }
+  const origin: SettlementCell = { gx: 0, gz: 0 }
+  const elderHost = elderHostCellFor(ctx)
+  const archaeologistHost = archaeologistHostCellFor(ctx)
+  const selected = selectLostTreasureChroniclesSpecialistSettlement(
+    probeCandidatesWithin(ctx, origin, LOST_TREASURE_SPECIALIST_SETTLEMENT_SEARCH_RADIUS),
+    elderHost ? cellKey(elderHost) : null,
+    archaeologistHost ? cellKey(archaeologistHost) : null,
+  )
+  specialistHostCellKey = selected ? cellKey(selected.cell) : null
+  return selected?.cell ?? null
+}
+
+function authoredResidentsFor(cell: SettlementCell, ctx: SettlementResolveContext) {
   const seedForCell = cellSeed(ctx.seed, cell)
   const nameCulture = pickNameCulture(seedForCell)
+  const residents = []
   const elderHost = elderHostCellFor(ctx)
   if (elderHost && elderHost.gx === cell.gx && elderHost.gz === cell.gz) {
-    return createLostTreasureElderFamily(seedForCell, nameCulture)
+    residents.push(createLostTreasureElderFamily(seedForCell, nameCulture))
   }
   const archaeologistHost = archaeologistHostCellFor(ctx)
   if (archaeologistHost && archaeologistHost.gx === cell.gx && archaeologistHost.gz === cell.gz) {
-    return createLostTreasureArchaeologistFamily(seedForCell, nameCulture)
+    residents.push(createLostTreasureArchaeologistFamily(seedForCell, nameCulture))
   }
-  return undefined
+  const specialistHost = specialistHostCellFor(ctx)
+  if (specialistHost && specialistHost.gx === cell.gx && specialistHost.gz === cell.gz) {
+    residents.push(createLostTreasureSpecialistFamily(seedForCell, nameCulture))
+  }
+  return residents
 }
 
 /** Test/debug seam: `undefined` before first resolve, then the memoized archaeologist host (or `null`). */
@@ -247,6 +276,15 @@ export function cachedLostTreasureArchaeologistHostCell(): SettlementCell | null
       : null
 }
 
+/** Test/debug seam: `undefined` before first resolve, then the memoized specialist host (or `null`). */
+export function cachedLostTreasureSpecialistHostCell(): SettlementCell | null | undefined {
+  return specialistHostCellKey === undefined
+    ? undefined
+    : specialistHostCellKey
+      ? cellFromId(specialistHostCellKey)
+      : null
+}
+
 export function settlementDefFor(
   cell: SettlementCell,
   ctx: SettlementResolveContext,
@@ -254,7 +292,7 @@ export function settlementDefFor(
   const key = cellKey(cell)
   if (defCache.has(key)) return defCache.get(key)!
   const resolvedName = uniqueNameFor(cell, ctx)
-  const def = generateSettlementDef(...probeArgs(cell, ctx), authoredResidentFor(cell, ctx))
+  const def = generateSettlementDef(...probeArgs(cell, ctx), authoredResidentsFor(cell, ctx))
   if (def && resolvedName) applyResolvedSettlementName(def, resolvedName)
   defCache.set(key, def)
   return def

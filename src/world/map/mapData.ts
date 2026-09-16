@@ -62,6 +62,7 @@ export function createMapData(opts: {
       state: entry.state,
       source: entry.source,
       label: location.name,
+      ...(location.area?.shape === 'circle' ? { areaRadius: location.area.radius } : {}),
     }
   }
 

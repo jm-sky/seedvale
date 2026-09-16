@@ -60,6 +60,12 @@ const MINE_ADJECTIVES = [
 ]
 const MINE_NOUNS = ['Kopalnia', 'Sztolnia', 'Szyb']
 
+const SEARCH_AREA_ADJECTIVES = [
+  'Ciemnego Lasu', 'Dawnego Majątku', 'Zapomnianego Dworu', 'Starego Traktu',
+  'Gęstwiny', 'Mglistej Polany', 'Ukrytej Doliny', 'Cichych Wierzb',
+]
+const SEARCH_AREA_NOUNS = ['Okolice', 'Obszar', 'Rejon']
+
 const POOLS: Record<Exclude<WorldLocationKind, 'settlement'>, {
   adjectives: readonly string[]
   nouns: readonly string[]
@@ -70,6 +76,7 @@ const POOLS: Record<Exclude<WorldLocationKind, 'settlement'>, {
   mountainPeak: { adjectives: PEAK_ADJECTIVES, nouns: PEAK_NOUNS },
   ruins: { adjectives: RUINS_ADJECTIVES, nouns: RUINS_NOUNS },
   abandonedMine: { adjectives: MINE_ADJECTIVES, nouns: MINE_NOUNS },
+  searchArea: { adjectives: SEARCH_AREA_ADJECTIVES, nouns: SEARCH_AREA_NOUNS },
 }
 
 /** Larger cemeteries lean toward the more solemn/grand noun pool. */

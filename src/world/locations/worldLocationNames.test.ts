@@ -15,7 +15,7 @@ describe('landmarkName', () => {
   })
 
   it('reads as "<Noun> <Adjective>" for each landmark kind', () => {
-    for (const kind of ['cave', 'cemetery', 'lake', 'mountainPeak', 'ruins', 'abandonedMine'] as const) {
+    for (const kind of ['cave', 'cemetery', 'lake', 'mountainPeak', 'ruins', 'abandonedMine', 'searchArea'] as const) {
       const name = landmarkName(5, kind, `${kind}:x`)
       expect(name.split(' ').length).toBeGreaterThanOrEqual(2)
     }

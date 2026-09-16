@@ -314,6 +314,33 @@ describe('createWorldLocationCatalog', () => {
     expect(catalog.getById('ruins:missing')).toBeNull()
   })
 
+  it('resolves a bounded search-area location by id without creating an estate point', () => {
+    const catalog = createWorldLocationCatalog({
+      getSeed: () => 1,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(),
+      lookupSettlement: () => null,
+      getSampleParams: () => rawParams(),
+      getChunkSize: () => 64,
+      getEstateSearchArea: () => ({
+        locationId: 'searchArea:lost-treasure-estate',
+        x: 320,
+        z: -140,
+        radius: 112,
+        name: 'Okolice dawnego majątku',
+      }),
+    })
+    expect(catalog.getById('searchArea:lost-treasure-estate')).toMatchObject({
+      id: 'searchArea:lost-treasure-estate',
+      kind: 'searchArea',
+      x: 320,
+      z: -140,
+      area: { shape: 'circle', radius: 112 },
+    })
+    expect(catalog.getById('searchArea:missing')).toBeNull()
+    expect(catalog.landmarksWithin(320, -140, 50).some((location) => location.kind === 'searchArea')).toBe(false)
+  })
+
   it('nearestSettlements is bounded by maxKm and sorted nearest-first', () => {
     const defs = new Map<string, SettlementDef>([
       ['0_0', makeSettlementDef(0, 0, 'Home')],

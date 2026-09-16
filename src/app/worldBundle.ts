@@ -69,6 +69,11 @@ import {
 } from '../quests/lostHunterNaturalCave'
 import { setActiveLostHunterNaturalCaveBinding } from '../quests/lostHunterNaturalCaveRuntime'
 import {
+  lostTreasureChronicleReferenceContainerSpec,
+  resolveLostTreasureChronicleDecipheringBinding,
+} from '../quests/lostTreasureChronicleDeciphering'
+import { setActiveLostTreasureChronicleDecipheringBinding } from '../quests/lostTreasureChronicleDecipheringRuntime'
+import {
   type ChronicleSearchRuinsLandmark,
   lostTreasureChronicleRuinsContainerSpec,
   resolveLostTreasureChronicleSearchBinding,
@@ -105,7 +110,7 @@ import { activateRoadRouteWorldgenCache, clearRoadNetworkCaches } from '../settl
 import { roadRouteFingerprint } from '../settlement/roadRouteWorldgenCache'
 import { resolveSettlementCharacter } from '../settlement/settlementCharacter'
 import { cellFromId, cellKey, cellSeed, cellsWithinRadius, probeSettlementSite, type SettlementDef } from '../settlement/settlementGenerator'
-import { cachedLostTreasureArchaeologistHostCell, settlementDefFor, worldRiverQuery } from '../settlement/settlementPlanCache'
+import { cachedLostTreasureArchaeologistHostCell, cachedLostTreasureSpecialistHostCell, settlementDefFor, worldRiverQuery } from '../settlement/settlementPlanCache'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
 import { useBootMark } from '../shared/bootMark'
@@ -182,6 +187,8 @@ import {
 } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { resolveLostTreasureEstateSearchArea } from '../world/locations/lostTreasureEstateSearchArea'
+import { setActiveLostTreasureEstateSearchArea } from '../world/locations/lostTreasureEstateSearchAreaRuntime'
 import {
   resolveTreasureMapBearCaveBinding,
   type TreasureMapBearCaveCemeteryInput,
@@ -1231,6 +1238,14 @@ async function buildWorldSystems(
     sampleParams: rawSampleParamsFromWorld(config),
   })
   setActiveDarkForestTreasureSite(darkForestTreasureSite)
+  const estateSearchArea = resolveLostTreasureEstateSearchArea({
+    seed: config.seed,
+    homeX: homeDefForSite.x,
+    homeZ: homeDefForSite.z,
+    sampleParams: rawSampleParamsFromWorld(config),
+    avoid: { x: darkForestTreasureSite.x, z: darkForestTreasureSite.z },
+  })
+  setActiveLostTreasureEstateSearchArea(estateSearchArea)
 
   // Plan world-009 — bounded to roughly the streamed terrain footprint
   // (chunkSize * loadRadius) rather than depending on ChunkManager's own
@@ -1779,6 +1794,19 @@ async function buildWorldSystems(
     })
     : null
   setActiveLostTreasureChronicleSearchBinding(chronicleSearchBinding)
+  const specialistHost = cachedLostTreasureSpecialistHostCell()
+  const specialistStoryDef = specialistHost
+    ? settlementsManager.peekDef(specialistHost)
+    : null
+  const chronicleDecipheringBinding = chronicleSearchBinding && specialistStoryDef
+    ? resolveLostTreasureChronicleDecipheringBinding({
+      worldSeed: config.seed,
+      search: chronicleSearchBinding,
+      specialistDef: specialistStoryDef,
+      searchArea: estateSearchArea,
+    })
+    : null
+  setActiveLostTreasureChronicleDecipheringBinding(chronicleDecipheringBinding)
 
   const bearCaveFinalAnchor = treasureMapBearCaveBinding
     ? caves.contentAnchors().find((a) => a.id === treasureMapBearCaveBinding.finalTreasureAnchorId)
@@ -1831,6 +1859,9 @@ async function buildWorldSystems(
       : []),
     ...(chronicleSearchBinding
       ? [lostTreasureChronicleRuinsContainerSpec(chronicleSearchBinding)]
+      : []),
+    ...(chronicleDecipheringBinding
+      ? [lostTreasureChronicleReferenceContainerSpec(chronicleDecipheringBinding)]
       : []),
   ]
   const worldGeneratedContainers = createWorldGeneratedContainers(

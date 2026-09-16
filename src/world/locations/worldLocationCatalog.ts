@@ -70,6 +70,14 @@ export type WorldLocationCatalogDeps = {
   getDarkForestTreasureSite?: () => { locationId: string, x: number, z: number } | null
   /** Chronicle-search expedition ruins (plan quests-progression-038). */
   getChronicleSearchRuinsSite?: () => { locationId: string, x: number, z: number } | null
+  /** Bounded estate search area (plan quests-progression-039). */
+  getEstateSearchArea?: () => {
+    locationId: string
+    x: number
+    z: number
+    radius: number
+    name: string
+  } | null
   /**
    * Abandoned mountain-mine landmark (plan world-terrain-017). Live thunk —
    * must not capture a `Caves` instance at catalog construction.
@@ -383,6 +391,19 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     if (kind === 'abandonedMine') {
       const loc = abandonedMineLocation()
       return loc && loc.id === id ? loc : null
+    }
+    if (kind === 'searchArea') {
+      const area = deps.getEstateSearchArea?.()
+      if (!area || area.locationId !== id) return null
+      return {
+        id: area.locationId,
+        kind: 'searchArea',
+        x: area.x,
+        z: area.z,
+        name: area.name,
+        discoveryWeight: 0,
+        area: { shape: 'circle', radius: area.radius },
+      }
     }
     return null
   }

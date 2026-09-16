@@ -124,6 +124,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Settlement quest opportunities](../src/quests/opportunities/settlementQuestOpportunities.ts) — world-driven and RPG matrix candidates selected at composition root into normal `QuestDef`s.
 - [Suspicious transport cave cache](../src/quests/suspiciousTransportCaveCache.ts) — natural-cave cache variant of the existing `suspicious-transport` RPG matrix (plan quests-progression-024).
 - [Lost Treasure Chronicles elder](../src/quests/lostTreasureChroniclesElder.ts) — nearby authored elder binding and the winter/dispute contextual quests (plan quests-progression-037).
+- [Lost Treasure Chronicles chronicle search](../src/quests/lostTreasureChronicleSearch.ts) — archaeologist, encoded chronicle, cemetery/ruins investigation (plan quests-progression-038).
+- [Lost Treasure Chronicles deciphering](../src/quests/lostTreasureChronicleDeciphering.ts) — specialist, pay-or-favour deciphering, bounded estate search area (plan quests-progression-039).
 - [Deferred world knowledge](../src/world/locations/worldKnowledgeResearch.ts) — world-owned worker-backed research service; quest adapter in [worldKnowledgeResolver.ts](../src/quests/worldKnowledgeResolver.ts) + [location phrase](../src/quests/landmarkLocationDescription.ts); home-guard pilot in [guardLocalKnowledge.ts](../src/world/locations/guardLocalKnowledge.ts) (plan quests-progression-047).
 - [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.
 - [Profession staffing](../src/settlement/professionStaffing.ts) — generation-time adult profession composition from settlement identity; does not change family structure.
