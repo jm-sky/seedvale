@@ -52,6 +52,22 @@ Small settlements can still produce important, unusual or multi-stage quests whe
 
 The first hand-authored RPG pack (`quests-progression-005`) is three stories / five `QuestDef`s: a branching lost-shipment choice (`zaginiona-przesylka`), a local material dispute with one outcome-dependent follow-up (`sporne-drewno` → `drewno-dla-anny` or `drewno-dla-piotra`), and a renown-gated boar hunt (`dzik-przy-szlaku`). Branching uses a narrow `talk_to_npc_choice` objective on the existing `onInteract` path — not a dialogue tree, quest-item inventory, or land grant.
 
+## Socially consequential dialogue
+
+Future authored quests should deliberately look for places where dialogue can participate in the same persistent social systems as the rest of the world instead of acting only as exposition or a neutral branch selector.
+
+When a conversation contains pressure, disagreement, deception, negotiation, accusation, loyalty or another socially meaningful choice, prefer reusing live player↔NPC relation, settlement reputation/renown and prior quest outcomes to shape the NPC response. The same player line may reasonably be tolerated by a trusted NPC but damage an already-poor relationship; a lie, threat or broken promise may apply an authored consequence, end the useful part of the conversation for a bounded world-time period, or influence later quest availability.
+
+Use these mechanisms selectively rather than adding penalties to every dialogue option. Consequences should be understandable from the situation and NPC interests, authored explicitly, deterministic, and persistent where they matter. They should reuse `QuestDef` / `QuestManager`, existing relation/reputation systems and normal quest history rather than creating a parallel dialogue reputation, morality meter or standalone dialogue-tree runtime.
+
+For new quest writing, consider at least:
+
+- whether a choice should read current relation or reputation before resolving;
+- whether different NPCs should react differently to the same social approach;
+- whether a hostile or disrespectful choice should have a bounded conversation cooldown instead of an arbitrary permanent lockout;
+- whether a promise, betrayal or important dispute should be reflected by later dialogue or quest availability;
+- whether no social consequence is the correct result for ordinary informational conversation.
+
 ## Future evolution
 
 1. Expand world-problem quest sources.
@@ -59,6 +75,7 @@ The first hand-authored RPG pack (`quests-progression-005`) is three stories / f
 3. Connect settlement and economic events to quest generation.
 4. Keep authored narrative/exploration content as a deliberate parallel source where simulation is not the right source.
 5. Improve discovery of opportunities without making the player the centre of simulation.
+6. Use socially consequential dialogue in suitable new quests so relationships and reputation affect conversations as well as quest availability.
 
 ## Boundaries
 
