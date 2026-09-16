@@ -63,6 +63,7 @@ Generated from TypeScript imports.
 - `ai/npcAnimalThreat.ts`
 - `ai/npcAppearance.ts`
 - `ai/npcAssistance.ts`
+- `ai/npcCaveLocomotion.ts`
 - `ai/npcColliderRim.ts`
 - `ai/npcCombat.ts`
 - `ai/npcDecision.ts`
@@ -115,6 +116,7 @@ Generated from TypeScript imports.
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
+- `player/playerDimensions.ts`
 - `player/playerVisualPreset.ts`
 - `settlement/animalCorpseSanitation.ts`
 - `settlement/families.ts`
@@ -178,6 +180,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/dialogueTemplates.ts`
+- `ai/npcCaveLocomotion.test.ts`
 - `ai/npcCurrentActivity.test.ts`
 - `ai/npcMovementTarget.test.ts`
 - `ai/npcTradeAvailability.test.ts`
@@ -612,6 +615,41 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcAssistance.test.ts`
 
+## `ai/npcCaveLocomotion.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `ai/npcCaveLocomotion.ts`
+- `ai/npcColliderRim.ts`
+- `ai/npcMovementRoute.ts`
+- `player/playerDimensions.ts`
+- `terrain/slopeConstraint.ts`
+- `world/caves/adventureTopology.ts`
+- `world/caves/caveHabitat.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
+- `world/largeCaves.ts`
+- `world/spatialContext.ts`
+
+## `ai/npcCaveLocomotion.ts`
+
+**Imports**
+
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
+- `world/spatialContext.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcCaveLocomotion.test.ts`
+
 ## `ai/npcColliderRim.test.ts`
 
 **Imports**
@@ -628,6 +666,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcCaveLocomotion.test.ts`
 - `ai/npcColliderRim.test.ts`
 - `navigation/navigation.test.ts`
 
@@ -812,6 +851,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcCaveLocomotion.test.ts`
+- `ai/npcCaveLocomotion.ts`
 - `ai/npcMovementRoute.test.ts`
 
 ## `ai/npcMovementTarget.test.ts`
@@ -829,12 +870,14 @@ Generated from TypeScript imports.
 
 - `ai/npcAction.ts`
 - `simulation/index.ts`
+- `world/caves/caveGroundQuery.ts`
 - `world/caves/caveHabitat.ts`
 - `world/spatialContext.ts`
 
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcCaveLocomotion.ts`
 - `ai/npcMovementRoute.test.ts`
 - `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.test.ts`

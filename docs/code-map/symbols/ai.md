@@ -173,24 +173,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 724
-- `CurrentActivity` — type — line 534
-- `CurrentActivityKind` — type — line 527
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 841
-- `NPC_HEIGHT` — const — line 457
-- `NPC_SHADOW_DISTANCE` — const — line 471
-- `NpcAgent` — class — line 1081
+- `classifyPendingActivity` — function — line 732
+- `CurrentActivity` — type — line 542
+- `CurrentActivityKind` — type — line 535
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 849
+- `NPC_HEIGHT` — const — line 465
+- `NPC_SHADOW_DISTANCE` — const — line 479
+- `NpcAgent` — class — line 1089
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 975
-- `NpcInspectionSnapshot` — type — line 549
-- `NpcWhy` — type — line 699
-- `projectNpcWhy` — function — line 766
-- `promoteChainKind` — function — line 716
+- `NpcAgentDeps` — type — line 983
+- `NpcInspectionSnapshot` — type — line 557
+- `NpcWhy` — type — line 707
+- `projectNpcWhy` — function — line 774
+- `promoteChainKind` — function — line 724
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -246,6 +246,21 @@ Generated from exported TypeScript symbols.
 - `findCarriedConsumableKind` — function — line 27
 - `resolveNpcAssistance` — function — line 97
 - `violatesOwnNeedsGuard` — function — line 86
+
+## `ai/npcCaveLocomotion.ts`
+
+- `acceptNpcCaveHorizontalCandidate` — function — line 112
+  - domain: npc
+- `npcActiveCaveId` — function — line 36
+  - domain: npc
+- `npcCaveGroundY` — function — line 96
+  - domain: npc
+- `NpcCaveLocomotionQueries` — type — line 15
+- `NpcCaveStepInput` — type — line 48
+- `shouldUseNpcCaveLocomotion` — function — line 23
+  - domain: npc
+- `stepNpcCaveHorizontal` — function — line 69
+  - domain: npc
 
 ## `ai/npcColliderRim.ts`
 
@@ -365,16 +380,16 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcMovementTarget.ts`
 
-- `commitNpcMovementTarget` — function — line 67
+- `commitNpcMovementTarget` — function — line 78
   - domain: npc
-- `movementTargetsEqual` — function — line 79
-- `normalizeNpcMovementTarget` — function — line 50
+- `movementTargetsEqual` — function — line 90
+- `normalizeNpcMovementTarget` — function — line 61
   - domain: npc
-- `NPC_WORLD_MOVEMENT_SURFACE_ONLY` — const — line 92
-- `NpcMovementTarget` — type — line 17
+- `NPC_WORLD_MOVEMENT_SURFACE_ONLY` — const — line 103
+- `NpcMovementTarget` — type — line 18
   - domain: npc
-- `NpcMovementTargetSource` — type — line 42
-- `NpcWorldMovementQueries` — type — line 29
+- `NpcMovementTargetSource` — type — line 53
+- `NpcWorldMovementQueries` — type — line 31
   - domain: npc
 
 ## `ai/npcMovementWatchdog.ts`
