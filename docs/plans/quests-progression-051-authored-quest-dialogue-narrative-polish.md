@@ -9,6 +9,7 @@
 **Subdomains:** `quests`
 **Tags:** `dialogue` `narrative` `authored-quests` `polish`
 **Roadmap:** `quests-and-reputation.md`
+**Model:** Sonnet, Composer
 
 ## Cel
 
