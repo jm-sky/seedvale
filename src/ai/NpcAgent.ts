@@ -30,6 +30,7 @@ import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { ResourceSiteInventories } from '../world/resourceSiteInventory'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { WorldSpatialContext } from '../world/spatialContext'
 import type { WeatherState } from '../world/weather'
 import type { NpcBurialHooks } from './burialPressure'
 import type { GraveVisitCandidate, NpcGraveVisitHooks } from './graveVisitPressure'
@@ -308,6 +309,12 @@ import {
   planPlayerStorageDelivery,
   type WoodHarvestDeposit,
 } from './npcLogistics'
+import {
+  commitNpcMovementTarget,
+  NPC_WORLD_MOVEMENT_SURFACE_ONLY,
+  type NpcMovementTarget,
+  type NpcWorldMovementQueries,
+} from './npcMovementTarget'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -1047,6 +1054,8 @@ export type NpcAgentDeps = {
    *  `null` when the settlement has no structure registry wired (test/
    *  isolated fallbacks) or no plan-building exists at this family index. */
   structureRepairHooks?: NpcStructureRepairHooks | null
+  /** Stateless cave/world spatial queries for movement (plan npc-027). */
+  npcWorldMovement?: NpcWorldMovementQueries
 }
 
 /**
@@ -1183,6 +1192,10 @@ export class NpcAgent {
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
   private pendingAction: NpcPlannedAction | null = null
+  /** Committed movement target for the in-flight `goTo` step (plan npc-027). */
+  private committedMovementTarget: NpcMovementTarget | null = null
+  /** Stateless world/cave spatial queries — current context from actual XYZ. */
+  private readonly worldMovement: NpcWorldMovementQueries
   /** After a one-shot scheduled action (eat) finishes, linger on that
    *  activity until the effective schedule moves on — avoids restarting the
    *  same meal every `choose` cycle. */
@@ -1604,6 +1617,7 @@ export class NpcAgent {
     this.shepherdFlock = shepherdFlock ?? null
     this.helperDelivery = helperDelivery ?? null
     this.householdExchange = householdExchange ?? null
+    this.worldMovement = deps.npcWorldMovement ?? NPC_WORLD_MOVEMENT_SURFACE_ONLY
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -3071,11 +3085,13 @@ export class NpcAgent {
         if (this.wait <= 0) {
           const action = this.pendingAction
           this.pendingAction = null
+          this.committedMovementTarget = null
           action?.onComplete()
           if (action?.next) {
             this.pendingAction = action.next
             this.pendingAction.chainKind = promoteChainKind(action)
             this.applyRimDestination(action.next.destination)
+            this.commitMovementTargetForPending(this.pendingAction)
             // Chained step stays `active` — do not complete between links.
             this.phase = 'goTo'
             this.trace.record({
@@ -3088,6 +3104,7 @@ export class NpcAgent {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
             if (action) this.trace.record({ simTime: this.simClock, type: 'action.completed', action: action.kind })
+            this.committedMovementTarget = null
             this.phase = 'choose'
           }
         }
@@ -3156,6 +3173,7 @@ export class NpcAgent {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
             this.pendingAction = null
+            this.committedMovementTarget = null
             this.phase = 'choose'
             break
           }
@@ -3388,6 +3406,7 @@ export class NpcAgent {
     this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
     this.leaveActiveQueue()
     this.pendingAction = null
+    this.committedMovementTarget = null
     // A conversation reservation can't survive a time-skip catch-up (the
     // partner NPC is independently reset the same way) — clear it here too
     // so `socialCandidate()` isn't left permanently blocked (plan 151).
@@ -3439,6 +3458,7 @@ export class NpcAgent {
     }
     this.leaveActiveQueue()
     this.pendingAction = null
+    this.committedMovementTarget = null
     this.wait = 0
     this.pathWaypoints = []
     this.pathIndex = 0
@@ -3747,6 +3767,24 @@ export class NpcAgent {
     return ` · accompany ${commitment.mode}/${source}/${execution}`
   }
 
+  /** Movement commitment for the in-flight `goTo` step (plan npc-027). */
+  getCommittedMovementTarget(): NpcMovementTarget | null {
+    return this.committedMovementTarget
+  }
+
+  /** Authoritative spatial identity from actual world XYZ (plan npc-027). */
+  resolveCurrentSpatialContext(): WorldSpatialContext {
+    const p = this.mesh.position
+    return this.worldMovement.spatialContextAt(p.x, p.y, p.z)
+  }
+
+  private commitMovementTargetForPending(action: NpcPlannedAction): void {
+    this.committedMovementTarget = commitNpcMovementTarget(
+      action,
+      this.worldMovement.spatialContextAt,
+    )
+  }
+
   /** Kicks off a `goTo` → `execute` step — the generic replacement for the
    *  old `this.phase = 'goWell'` etc. one-liners.
    *  Caller must `join` a queue (if any) *before* this when `action.queueId`
@@ -3774,6 +3812,7 @@ export class NpcAgent {
       this.trace.record({ simTime: this.simClock, type: 'queue.joined', queueId: action.queueId })
     }
     this.pendingAction = action
+    this.commitMovementTargetForPending(action)
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'goTo'
     resetMovementWatchdog(this.watchdog)
@@ -3967,6 +4006,7 @@ export class NpcAgent {
     this.leaveActiveQueue()
     if (this.pendingAction?.kind === 'approachPlayer') this.clearPaymentApproach('interrupted')
     this.pendingAction = null
+    this.committedMovementTarget = null
     this.pathWaypoints = []
     this.pathIndex = 0
     this.wait = 0

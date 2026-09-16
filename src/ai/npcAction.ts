@@ -1,4 +1,5 @@
 import type { PlannedAction } from '../simulation'
+import type { WorldSpatialContext } from '../world/spatialContext'
 
 /** v2 stage 2 (`docs/plans/archive/2026-08-07--020...`) collapses the old
  *  resource-specific `goGarden/goHomeDrink/goStock/goTree/goWell` +
@@ -84,11 +85,15 @@ export type ActionId =
  * NPC adapter over the shared `PlannedAction` contract: destination and
  * duration are required for `goTo` → `execute`, and `onComplete` applies
  * domain world effects (needs / harvest) without an event bus.
- * Destination is a plain `Vec3` snapshot of a landmark/home/workplace
- * position (landmarks are not reassigned after settlement build).
+ * `destination` is a plain `Vec3` snapshot (legacy surface-friendly producers
+ * need no extra fields). Optional `destinationContext` pins cave identity when
+ * the target Y/XZ could otherwise be ambiguous; movement execution normalizes
+ * both into `NpcMovementTarget` at `startAction` / chained `next` promotion.
  */
 export type NpcPlannedAction = PlannedAction<ActionId> & {
   destination: NonNullable<PlannedAction<ActionId>['destination']>
+  /** Explicit target spatial identity (plan npc-027) — omit for legacy surface steps. */
+  destinationContext?: WorldSpatialContext
   durationSec: number
   onComplete: () => void
   next?: NpcPlannedAction

@@ -3,6 +3,7 @@ import {
   Vector3,
 } from 'three'
 import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
+import type { NpcWorldMovementQueries } from '../ai/npcMovementTarget'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, AnimalKind, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
@@ -419,6 +420,8 @@ export type CreateSettlementDeps = {
   residentialBuildings?: ResidentialBuildings
   /** NPC burial graves (plan npc-011) — forwarded into every `NpcAgent.create`. */
   npcGraves?: import('../world/npcGraves').NpcGraves
+  /** Stateless cave/world spatial queries for NPC movement (plan npc-027). */
+  npcWorldMovement?: NpcWorldMovementQueries
 }
 
 export async function createSettlement(
@@ -1005,6 +1008,7 @@ export async function createSettlement(
         structureRepairHooks: deps.structureStates
           ? createNpcStructureRepairHooks(def.id, familyIndex, landmarks.houses[familyIndex]?.position, deps.structureStates)
           : null,
+        npcWorldMovement: deps.npcWorldMovement,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

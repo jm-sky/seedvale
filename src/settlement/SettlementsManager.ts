@@ -474,6 +474,8 @@ export async function createSettlementsManager(
    *  for the same id after an unload/reload. Deliberately narrow — this
    *  module never imports reputation/social-news itself. */
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
+  /** Stateless cave/world spatial queries for NPC movement (plan npc-027). */
+  npcWorldMovement?: import('../ai/npcMovementTarget').NpcWorldMovementQueries,
   /** Shared bridge-deck movement-ground query (plan world-terrain-033 §7) —
    *  composed locally into a bridge-aware `sampleHeight`/`sampleLocalWater`
    *  wherever an `NpcAgent`/livestock `AnimalAgent` is actually constructed
@@ -678,6 +680,7 @@ export async function createSettlementsManager(
     residentialBuildings,
     npcGraves,
     naturalWaterKindAt,
+    npcWorldMovement,
   }
 
   const entries = new Map<string, Entry>()

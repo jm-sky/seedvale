@@ -3,6 +3,29 @@
 **Plan:** `npc-027-spatial-context-and-cave-traversal.md`  
 **Recon:** 2026-09-15, current `main` (`326b3af984a7fa8c4307dc557fd0b14e570e07ad` baseline before the plan/notes refresh)
 
+## Stage 1 complete (2026-09-16)
+
+**Scope:** spatial movement target contract + dependency wiring only (no route composition, mouth crossing, cave locomotion, or `navigation.ts` changes).
+
+**Delivered:**
+
+- `src/ai/npcMovementTarget.ts` — `NpcMovementTarget`, `NpcWorldMovementQueries` (`spatialContextAt` only), `normalizeNpcMovementTarget`, `commitNpcMovementTarget`, `movementTargetsEqual`, `NPC_WORLD_MOVEMENT_SURFACE_ONLY`.
+- `NpcPlannedAction.destinationContext?: WorldSpatialContext` — explicit cave identity; legacy producers keep plain `destination` only.
+- Normalization/commit at movement boundary: `NpcAgent.startAction()` and chained `next` promotion in `execute`.
+- `NpcAgent.resolveCurrentSpatialContext()` from mesh XYZ + injected queries; `getCommittedMovementTarget()` for diagnostics/tests.
+- Composition: `CreateSettlementDeps` / `SettlementsManager` / `worldBundle.ts` late-bound `{ spatialContextAt: (x,y,z) => cavesRef?.spatialContextAt(...) ?? WORLD_SPATIAL_CONTEXT_SURFACE }` (NPC build may start before `createCaves()` finishes).
+
+**Decisions:**
+
+- Did **not** widen shared `PlannedAction`.
+- Did **not** add `currentCaveId` or import `WorldBundle` into `NpcAgent`.
+- `committedMovementTarget` is stored but not yet consumed by steering (stage 3+).
+
+**Follow-ups for later stages (not implemented now):**
+
+- Re-commit or refresh movement target when `goTo` mutates `action.destination` (queues, `followAnimalId`, `approachPlayer`, accompany follow) without a new `startAction`.
+- Extend `NpcWorldMovementQueries` with ground/horizontal/route helpers when cave locomotion and route composition land.
+
 ## Recon result
 
 The old 2026-09-10 notes are materially obsolete after the Cave V2 heightfield cutover and the later fauna/dungeon work.
