@@ -2074,18 +2074,19 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
   {
     id: 'sporne-drewno',
     title: 'Sporne drewno',
-    description: 'Anna i Piotr chcą pierwszeństwa do tej samej pomocy przy materiale. Porozmawiaj z obojgiem i zdecyduj, komu pomożesz.',
+    description:
+      'Anna potrzebuje drewna do pilnych napraw w gospodarstwie. Piotr chce wykorzystać ten sam zapas, żeby naprawić wóz potrzebny przy wyrębie. Wysłuchaj obojga i zdecyduj, komu pomożesz.',
     giverName: 'Anna',
     offerLine:
-      'Potrzebujemy materiału na gospodarstwo, ale Piotr też na niego liczy. Porozmawiaj z nim i zdecyduj, komu pomożesz.',
+      'Przy pastwisku ogrodzenie ledwo się trzyma, a przy stodole też jest co łatać. Potrzebuję drewna, zanim coś naprawdę się rozpadnie. Tylko że Piotr prosi o ten sam zapas. Porozmawiaj z nim, zanim zdecydujesz.',
     stages: [
       {
         objective: { type: 'talk_to_npc', npcName: 'Piotr' },
         description: 'Porozmawiaj z Piotrem.',
         reminderLine: 'Rozmawiałeś już z Piotrem?',
-        playerLine: 'Anna mówiła, że ty też chcesz to samo drewno.',
+        playerLine: 'Anna mówiła, że oboje potrzebujecie tego samego drewna. Do czego jest ci potrzebne?',
         progressLine:
-          'Potrzebuję go na naprawy, bez których stoję. Anna chce je na gospodarstwo. Zdecyduj, komu pomożesz — nie wystarczy dla obojga.',
+          'Wóz ledwo wytrzymuje drogę do lasu, a bez niego nie przewiozę większego ładunku. Jeśli teraz go nie naprawię, niedługo wszystkim zacznie brakować drewna. Anna ma swój problem, ja mam swój.',
       },
       {
         objective: {
@@ -2095,11 +2096,12 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
               npcName: 'Anna',
               outcomeId: 'support_anna',
               npcLine: 'No i jak? Piotr cię przekonał, czy zostajesz przy gospodarstwie?',
-              playerLine: 'Pomożę tobie. Gospodarstwo nie może czekać.',
+              playerLine: 'Drewno dostanie Anna. Gospodarstwo nie powinno dłużej czekać na naprawy.',
               reactions: [
                 {
                   when: [{ type: 'relation', npcName: 'Piotr', minimum: 'friendly' }],
-                  npcLine: 'Wezmę drewno. Piotrowi sam powiedz, że dach poczeka.',
+                  npcLine:
+                    'Dobrze. Piotr będzie musiał jeszcze trochę pojeździć starym wozem. Tutaj naprawy nie mogły już czekać.',
                   consequences: { relations: [{ npcName: 'Piotr', delta: -1 }] },
                 },
               ],
@@ -2108,15 +2110,17 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
               npcName: 'Piotr',
               outcomeId: 'support_piotr',
               npcLine: 'No? Pomagasz mi, czy Annie?',
-              playerLine: 'Pomożę tobie. Najpierw naprawy, potem reszta.',
+              playerLine: 'Drewno dostanie Piotr. Jeśli stanie jego praca, problem szybko odczuje cała osada.',
               reactions: [
                 {
                   when: [{ type: 'relation', npcName: 'Piotr', maximum: 'acquainted' }],
-                  npcLine: 'Dobrze. Drewno się przyda. Resztę zostawmy na później.',
+                  npcLine:
+                    'Dobrze. Naprawię wóz i wracam do pracy. Im szybciej będzie sprawny, tym szybciej przywiozę kolejne drewno.',
                 },
                 {
                   when: [{ type: 'relation', npcName: 'Anna', minimum: 'friendly' }],
-                  npcLine: 'Wezmę deski. Annie nie mów, że gospodarstwo mogło poczekać — sama to usłyszy.',
+                  npcLine:
+                    'Wezmę je. Wiem, że Anna się nie ucieszy, ale bez sprawnego wozu niedługo wszyscy będziemy mieli większy problem.',
                   consequences: { relations: [{ npcName: 'Anna', delta: -1 }] },
                 },
               ],
@@ -2132,7 +2136,7 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
       {
         id: 'support_anna',
         state: 'complete',
-        resultText: 'Dziękuję. Przyda nam się każda pomoc przy gospodarstwie.',
+        resultText: 'Dobrze. Przyda się każda deska. Dopilnuję, żeby nic się tu nie rozpadło.',
         consequences: {
           relations: [
             { npcName: 'Anna', delta: 2 },
@@ -2144,7 +2148,8 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
       {
         id: 'support_piotr',
         state: 'complete',
-        resultText: 'Dobra, skoro tak. Będę miał czym robić.',
+        resultText:
+          'Dobrze. Naprawię wóz i wracam do pracy. Im szybciej będzie sprawny, tym szybciej przywiozę kolejne drewno.',
         consequences: {
           relations: [
             { npcName: 'Piotr', delta: 2 },
@@ -2158,20 +2163,22 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
   {
     id: 'drewno-dla-anny',
     title: 'Drewno dla Anny',
-    description: 'Anna czeka na gałęzie na potrzeby gospodarstwa.',
+    description:
+      'Anna potrzebuje pięciu gałęzi na najpilniejsze naprawy w gospodarstwie, po tym jak drewno trafiło najpierw do niej.',
     giverName: 'Anna',
-    offerLine: 'Skoro zdecydowałeś — przyniesiesz pięć gałęzi? Przyda się na gospodarstwie.',
+    offerLine:
+      'Skoro zdecydowałeś, że najpierw zajmiemy się gospodarstwem, potrzebuję pięciu porządnych gałęzi. Z tego przygotujemy materiał do najpilniejszych napraw.',
     stages: [
       {
         objective: { type: 'gather_item', kind: 'branch', count: 5 },
         description: 'Zbierz 5 gałęzi.',
         reminderLine: 'Masz już pięć gałęzi?',
-        playerLine: 'Przyniosłem pięć gałęzi na gospodarstwo.',
+        playerLine: 'Przyniosłem pięć gałęzi na najpilniejsze naprawy w gospodarstwie.',
       },
     ],
     reportPromptLine: 'Masz już gałęzie?',
-    reportPlayerLine: 'Przyniosłem pięć gałęzi na gospodarstwo.',
-    reportLine: 'Dziękuję, to wystarczy.',
+    reportPlayerLine: 'Przyniosłem pięć gałęzi na najpilniejsze naprawy w gospodarstwie.',
+    reportLine: 'To wystarczy. Teraz można wreszcie zabrać się za naprawy. Dziękuję.',
     availability: {
       prerequisites: [
         { type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_anna'] },
@@ -2181,7 +2188,7 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
       {
         id: 'delivered_to_anna',
         state: 'complete',
-        resultText: 'Dziękuję, to wystarczy.',
+        resultText: 'To wystarczy. Teraz można wreszcie zabrać się za naprawy. Dziękuję.',
         reward: { visibility: 'hidden', items: [{ kind: 'seed_carrot', count: 3 }] },
         consequences: { relations: [{ npcName: 'Anna', delta: 1 }] },
       },
@@ -2190,20 +2197,22 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
   {
     id: 'drewno-dla-piotra',
     title: 'Drewno dla Piotra',
-    description: 'Piotr czeka na gałęzie do swoich prac.',
+    description:
+      'Piotr potrzebuje pięciu gałęzi do naprawy wozu, po tym jak drewno trafiło najpierw do niego.',
     giverName: 'Piotr',
-    offerLine: 'Skoro tak — zbierzesz pięć gałęzi? Zapłacę osiem monet.',
+    offerLine:
+      'Skoro drewno ma najpierw trafić do mnie, przynieś pięć porządnych gałęzi. Przygotuję z nich to, czego potrzebuję do naprawy wozu. Zapłacę osiem monet.',
     stages: [
       {
         objective: { type: 'gather_item', kind: 'branch', count: 5 },
         description: 'Zbierz 5 gałęzi.',
         reminderLine: 'Masz już pięć gałęzi?',
-        playerLine: 'Przyniosłem pięć gałęzi do twoich prac.',
+        playerLine: 'Przyniosłem pięć gałęzi do naprawy wozu.',
       },
     ],
     reportPromptLine: 'Masz już gałęzie?',
-    reportPlayerLine: 'Przyniosłem pięć gałęzi do twoich prac.',
-    reportLine: 'To starczy. Weź zapłatę.',
+    reportPlayerLine: 'Przyniosłem pięć gałęzi do naprawy wozu.',
+    reportLine: 'Tyle wystarczy. Naprawię, co trzeba, i będę mógł normalnie wrócić do pracy. Weź zapłatę.',
     availability: {
       prerequisites: [
         { type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_piotr'] },
@@ -2213,7 +2222,7 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
       {
         id: 'delivered_to_piotr',
         state: 'complete',
-        resultText: 'To starczy. Weź zapłatę.',
+        resultText: 'Tyle wystarczy. Naprawię, co trzeba, i będę mógł normalnie wrócić do pracy. Weź zapłatę.',
         reward: { visibility: 'shown', items: [{ kind: 'coin', count: 8 }] },
         consequences: { relations: [{ npcName: 'Piotr', delta: 1 }] },
       },

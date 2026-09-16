@@ -1770,17 +1770,19 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
     expect(qm.getState('sporne-drewno')).toBe('active')
     const piotr = qm.onInteract('Piotr')
     expect(piotr?.line).toBe('Tak?')
-    expect(selectAction(piotr)).toContain('nie wystarczy dla obojga')
+    expect(selectAction(piotr)).toContain('Wóz ledwo wytrzymuje drogę do lasu')
     const annaChoice = qm.onInteract('Anna')
     expect(qm.getState('sporne-drewno')).toBe('active')
-    expect(selectAction(annaChoice)).toBe('Dziękuję. Przyda nam się każda pomoc przy gospodarstwie.')
+    expect(selectAction(annaChoice)).toBe('Dobrze. Przyda się każda deska. Dopilnuję, żeby nic się tu nie rozpadło.')
     expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_anna')
     expect(qm.getRelation('Anna')).toBe(2)
     expect(qm.getRelation('Piotr')).toBe(-1)
     expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(true)
     expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(false)
     expect(qm.onInteract('Piotr')).toBeNull()
-    expect(qm.onInteract('Anna')?.line).toBe('Skoro zdecydowałeś — przyniesiesz pięć gałęzi? Przyda się na gospodarstwie.')
+    expect(qm.onInteract('Anna')?.line).toBe(
+      'Skoro zdecydowałeś, że najpierw zajmiemy się gospodarstwem, potrzebuję pięciu porządnych gałęzi. Z tego przygotujemy materiał do najpilniejszych napraw.',
+    )
     qm.onInteract('Anna')?.offer?.onAccept()
     speak(qm, 'Anna')
     expect(inventory.count('branch')).toBe(0)
@@ -1805,7 +1807,9 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
     )
     acceptOffer(qm, 'Anna')
     speak(qm, 'Piotr')
-    expect(selectAction(qm.onInteract('Piotr'))).toBe('Dobrze. Drewno się przyda. Resztę zostawmy na później.')
+    expect(selectAction(qm.onInteract('Piotr'))).toBe(
+      'Dobrze. Naprawię wóz i wracam do pracy. Im szybciej będzie sprawny, tym szybciej przywiozę kolejne drewno.',
+    )
     expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_piotr')
     expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(false)
     expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(true)
@@ -1829,7 +1833,9 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
     expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_anna')
     expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(true)
     expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(false)
-    expect(qm.onInteract('Anna')?.line).toBe('Skoro zdecydowałeś — przyniesiesz pięć gałęzi? Przyda się na gospodarstwie.')
+    expect(qm.onInteract('Anna')?.line).toBe(
+      'Skoro zdecydowałeś, że najpierw zajmiemy się gospodarstwem, potrzebuję pięciu porządnych gałęzi. Z tego przygotujemy materiał do najpilniejszych napraw.',
+    )
   })
 })
 
@@ -5062,7 +5068,7 @@ describe('QuestManager socially consequential dialogue (plan quests-progression-
     acceptOffer(wood, 'Anna')
     speak(wood, 'Piotr')
     expect(wood.onInteract('Anna')?.actions?.[0]?.onSelect())
-      .toBe('Wezmę drewno. Piotrowi sam powiedz, że dach poczeka.')
+      .toBe('Dobrze. Piotr będzie musiał jeszcze trochę pojeździć starym wozem. Tutaj naprawy nie mogły już czekać.')
     expect(wood.exportProgress().find((entry) => entry.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_anna')
   })
 
