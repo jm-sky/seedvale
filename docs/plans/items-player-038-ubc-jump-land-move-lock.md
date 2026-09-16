@@ -18,12 +18,12 @@
 
 ## Zachowanie
 
-`JUMP_LAND_MOVE_LOCK_SEC = 0.5` w `PlayerController`.
+`JUMP_LAND_MOVE_LOCK_SEC = 0.12` w `PlayerController`.
 
-Przy `landed` + `jumpLandAction`: grać `Jump_Land`; lock XZ `min(0.5, clip)` gdy jest wish, inaczej pełny `clip.duration`. Klawisze nadal ustawiają `moving`/`sprinting`/facing. Po locku `jumpPhase = none` i `syncAnimation()`.
+Przy `landed` + `jumpLandAction`: grać `Jump_Land`; lock XZ zawsze `min(0.12, clip)` — nigdy pełny klip. Klawisze nadal ustawiają `moving`/`sprinting`/facing. Timer zamyka `jumpPhase` i woła `syncAnimation()` tylko gdy jest wish; bez wish klip gra do `finished`.
 
 Adventurer bez jump clipów — bez zmian. Air control bez zmian.
 
 ## Weryfikacja
 
-UBC: skok z WASD — krótki recover, potem chód/sprint bez slajdu w pozie stania. Skok w miejscu — pełny `Jump_Land`.
+UBC: skok z WASD — recover ~0.12 s, potem chód/sprint bez slajdu w pozie stania. Skok w miejscu — pełny `Jump_Land`; WASD w recoverze rusza po ~0.12 s, nie po całym klipie.

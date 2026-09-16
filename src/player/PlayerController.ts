@@ -87,7 +87,7 @@ export const SPRINT_MULTIPLIER = 1.8
 const JUMP_TILT_MAX = 0.25
 const JUMP_TILT_FACTOR = 0.05
 /** Cap on XZ lock while `Jump_Land` plays and WASD is held (items-player-038). */
-const JUMP_LAND_MOVE_LOCK_SEC = 0.5
+const JUMP_LAND_MOVE_LOCK_SEC = 0.12
 /** Look-at height eases from chest-level (far/default zoom) up toward eye-level as the camera zooms in. */
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
@@ -1184,7 +1184,7 @@ export class PlayerController {
     tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed, endurance, this.equipmentSprintStaminaMultiplier)
     if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting, dayLengthSec)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
-    if (this.jumpPhase === 'land') {
+    if (this.jumpPhase === 'land' && this.moving) {
       this.jumpLandLockRemaining -= dt
       if (this.jumpLandLockRemaining <= 0) {
         this.endJumpPhase()
@@ -1464,9 +1464,7 @@ export class PlayerController {
       if (this.jumpLandAction) {
         this.jumpPhase = 'land'
         const duration = this.jumpLandAction.getClip().duration
-        this.jumpLandLockRemaining = this.moving
-          ? Math.min(JUMP_LAND_MOVE_LOCK_SEC, duration)
-          : duration
+        this.jumpLandLockRemaining = Math.min(JUMP_LAND_MOVE_LOCK_SEC, duration)
         this.playOnce(this.jumpLandAction)
         return
       }
