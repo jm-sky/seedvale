@@ -1,9 +1,11 @@
 import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { FamilyDef } from './families'
-import type { Household, HouseholdStartingContext } from './household'
+import type { Household } from './household'
 import { CROP_DEFS, resolveCultivatedSeedRecovery } from '../world/cropLifecycle'
 import { CROP_SEED_ITEM, FARM_SEED_PRIORITY } from '../world/plantedCrops'
 import { adultProfessionCoverage } from './professionStaffing'
+
+export { householdStartingContextFromFamily } from './householdProfessionStock'
 
 /**
  * Non-home settlement agriculture v1 (plan settlements-npcs-030) plus
@@ -19,13 +21,6 @@ import { adultProfessionCoverage } from './professionStaffing'
 
 export function householdAgriculturalCapacity(family: FamilyDef): number {
   return adultProfessionCoverage([family]).farmer
-}
-
-export function householdStartingContextFromFamily(family: FamilyDef): HouseholdStartingContext {
-  return {
-    hasHunter: family.members.some((member) => member.character.role === 'hunter'),
-    adultFarmerCount: householdAgriculturalCapacity(family),
-  }
 }
 
 /** Sowing units needed to fully plant the next production round. */

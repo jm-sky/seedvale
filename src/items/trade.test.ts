@@ -374,6 +374,27 @@ describe('settleOwnedGoodsPurchase (plan settlements-npcs-033)', () => {
     expect(buyer.count('coin')).toBe(38)
   })
 
+  it('preserves household specialist instance identity and does not remint after transfer', () => {
+    const pauldron = createArmorInstance('leather_pauldron', 'good')
+    const buyer = new Inventory({ coin: 80 })
+    const source = new Inventory(undefined, Infinity, [pauldron])
+    const payee = new Inventory()
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{
+      kind: 'leather_pauldron',
+      count: 1,
+      unitPrice: 25,
+      instanceIds: [pauldron.id],
+    }])).toBe('ok')
+    expect(source.getInstance(pauldron.id)).toBeNull()
+    expect(buyer.getInstance(pauldron.id)).toEqual(pauldron)
+    expect(settleOwnedGoodsPurchase(buyer, source, payee, [{
+      kind: 'leather_pauldron',
+      count: 1,
+      unitPrice: 25,
+    }])).toBe('not_sold')
+    expect(buyer.countInstances('leather_pauldron')).toBe(1)
+  })
+
   it('settles a multi-kind basket atomically', () => {
     const buyer = new Inventory({ coin: 20 })
     const source = new Inventory({ arrow: 10, iron_rod: 2 })

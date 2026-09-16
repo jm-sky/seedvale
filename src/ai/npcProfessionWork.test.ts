@@ -1729,4 +1729,59 @@ describe('planProfessionWork', () => {
       expect(household.items.count('wool_material')).toBe(12)
     })
   })
+
+  describe('hunter work (plan settlements-npcs-040)', () => {
+    const workplace = { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace']
+
+    function clearWood(household: ReturnType<typeof createHousehold>) {
+      household.items.remove('branch', household.items.count('branch'))
+      household.items.remove('beam', household.items.count('beam'))
+    }
+
+    it('still crafts arrows when stock is below the arrow cap', () => {
+      const household = createHousehold('h', 's', 'home')
+      clearWood(household)
+      household.items.add('branch', 1)
+      const work = planProfessionWork(baseCtx({ role: 'hunter', household, workplace }))
+      expect(work?.kind).toBe('work')
+      work?.onComplete()
+      expect(household.items.count('arrow')).toBe(1)
+      expect(household.items.count('short_bow')).toBe(0)
+    })
+
+    it('crafts a short_bow once arrows are at cap and bow stock is below cap', () => {
+      const household = createHousehold('h', 's', 'home')
+      clearWood(household)
+      household.items.add('arrow', 24)
+      household.items.add('branch', 2)
+      const work = planProfessionWork(baseCtx({ role: 'hunter', household, workplace }))
+      expect(work?.kind).toBe('work')
+      work?.onComplete()
+      expect(household.items.count('short_bow')).toBe(1)
+      expect(household.items.count('arrow')).toBe(24)
+    })
+
+    it('does not craft bows while household trade bows are already at cap', () => {
+      const household = createHousehold('h', 's', 'home')
+      clearWood(household)
+      household.items.add('arrow', 24)
+      household.items.add('short_bow', 2)
+      household.items.add('branch', 4)
+      expect(planProfessionWork(baseCtx({ role: 'hunter', household, workplace }))).toBeNull()
+      expect(household.items.count('short_bow')).toBe(2)
+    })
+
+    it('resumes bow crafting after a trade bow is sold', () => {
+      const household = createHousehold('h', 's', 'home')
+      clearWood(household)
+      household.items.add('arrow', 24)
+      household.items.add('short_bow', 2)
+      household.items.add('branch', 2)
+      expect(planProfessionWork(baseCtx({ role: 'hunter', household, workplace }))).toBeNull()
+      household.items.remove('short_bow', 1)
+      const work = planProfessionWork(baseCtx({ role: 'hunter', household, workplace }))
+      work?.onComplete()
+      expect(household.items.count('short_bow')).toBe(2)
+    })
+  })
 })

@@ -93,19 +93,20 @@ describe('npcTradeAvailability household goods (plan settlements-npcs-033 / 036)
     ])
   })
 
-  it('never exposes inputs, wood, seeds, food or an unrelated future item just because they are owned', () => {
+  it('never exposes inputs, wood, seeds, general food or an unrelated future item just because they are owned', () => {
     const household = householdWith({
       branch: 999,
       beam: 40,
       wool: 20,
       flax: 20,
-      herb: 20,
       seed_carrot: 8,
       tree_seed: 8,
       carrot: 30,
       bread: 10,
       // not a production output and not on the allowlist
       stone: 50,
+      knife: 2,
+      long_sword: 1,
     })
     const npc = counterparty(household)
     expect(resolveNpcTradeOffers(npc, [])).toEqual([])
@@ -113,10 +114,55 @@ describe('npcTradeAvailability household goods (plan settlements-npcs-033 / 036)
     expect(npcTradeQuantityAvailable('beam', 'household', npc, [])).toBe(0)
     expect(npcTradeQuantityAvailable('wool', 'household', npc, [])).toBe(0)
     expect(npcTradeQuantityAvailable('flax', 'household', npc, [])).toBe(0)
-    expect(npcTradeQuantityAvailable('herb', 'household', npc, [])).toBe(0)
     expect(npcTradeQuantityAvailable('seed_carrot', 'household', npc, [])).toBe(0)
     expect(npcTradeQuantityAvailable('carrot', 'household', npc, [])).toBe(0)
     expect(npcTradeQuantityAvailable('stone', 'household', npc, [])).toBe(0)
+    expect(npcTradeQuantityAvailable('knife', 'household', npc, [])).toBe(0)
+    expect(npcTradeQuantityAvailable('long_sword', 'household', npc, [])).toBe(0)
+  })
+
+  it('offers explicit specialist goods including dried_meat and herb', () => {
+    const household = householdWith({
+      short_bow: 1,
+      dried_meat: 3,
+      herb: 4,
+      backpack: 1,
+    })
+    const npc = counterparty(household, 'hunter')
+    expect(resolveNpcTradeOffers(npc, [])).toEqual([
+      { kind: 'short_bow', quantity: 1, owner: 'household' },
+      { kind: 'dried_meat', quantity: 3, owner: 'household' },
+      { kind: 'herb', quantity: 4, owner: 'household' },
+      { kind: 'backpack', quantity: 1, owner: 'household' },
+    ])
+  })
+
+  it('counts household instance-backed specialist goods by instance, not stack', () => {
+    const axeA = createWeaponInstance('axe')
+    const axeB = createWeaponInstance('axe')
+    const household = createHousehold('h-axes', 's1', 'home1', {
+      water: 0,
+      items: { counts: {}, instances: [axeA, axeB] },
+    })
+    const npc = counterparty(household, 'woodcutter')
+    expect(npcTradeQuantityAvailable('axe', 'household', npc, [])).toBe(2)
+    expect(resolveNpcTradeOffers(npc, [])).toEqual([
+      { kind: 'axe', quantity: 2, owner: 'household' },
+    ])
+  })
+
+  it('offers a household hunting_bow while the hunter personal bow stays hidden', () => {
+    const personalBow = { id: createItemInstanceId(), kind: 'hunting_bow' as const }
+    const tradeBow = { id: createItemInstanceId(), kind: 'hunting_bow' as const }
+    const household = createHousehold('h-bow', 's1', 'home1', {
+      water: 0,
+      items: { counts: {}, instances: [tradeBow] },
+    })
+    const npc = counterparty(household, 'hunter', new Inventory(undefined, undefined, [personalBow]))
+    expect(resolveNpcTradeOffers(npc, [hunter(household)])).toEqual([
+      { kind: 'hunting_bow', quantity: 1, owner: 'household' },
+    ])
+    expect(npcTradeQuantityAvailable('hunting_bow', 'personal', npc, [])).toBe(0)
   })
 
   it('returns no household offers when the NPC has no household', () => {

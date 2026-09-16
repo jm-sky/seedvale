@@ -2,7 +2,7 @@
 
 **Plan:** `docs/plans/settlements-npcs-040-profession-trade-stock-and-hunter-crafting.md`  
 **Reviewed:** 2026-09-16  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Source of truth:** current `main` code + docs.
 
 ## Key implementation seams

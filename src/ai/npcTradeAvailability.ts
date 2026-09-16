@@ -75,11 +75,12 @@ function hunterArrowReserve(household: Household, settlementNpcs: readonly Trade
  *  stay off the allowlist rather than getting a zero-reserve rule. */
 const noHouseholdReserve: ReserveResolver = () => 0
 
-/** Intentionally narrow positive allowlist (plans settlements-npcs-033 §2
- *  and settlements-npcs-036) — only kinds with an explicit, safe
- *  eligibility + reserve rule are ever offered from `Household.items`.
- *  Inventory presence alone never means sellable. Extending this to a
- *  future profession's output is meant to be exactly one new entry here. */
+/** Intentionally narrow positive allowlist (plans settlements-npcs-033 §2,
+ *  settlements-npcs-036 and settlements-npcs-040) — only kinds with an
+ *  explicit, safe eligibility + reserve rule are ever offered from
+ *  `Household.items`. Inventory presence alone never means sellable.
+ *  Extending this to a future profession's output is meant to be exactly
+ *  one new entry here. */
 const HOUSEHOLD_TRADE_RESERVES: Partial<Record<ItemKind, ReserveResolver>> = {
   arrow: hunterArrowReserve,
   wool_material: noHouseholdReserve,
@@ -87,6 +88,21 @@ const HOUSEHOLD_TRADE_RESERVES: Partial<Record<ItemKind, ReserveResolver>> = {
   bandage: noHouseholdReserve,
   dressing: noHouseholdReserve,
   iron_rod: noHouseholdReserve,
+  short_bow: noHouseholdReserve,
+  hunting_bow: noHouseholdReserve,
+  dried_meat: noHouseholdReserve,
+  herb: noHouseholdReserve,
+  waterskin_small: noHouseholdReserve,
+  backpack: noHouseholdReserve,
+  leather_pauldron: noHouseholdReserve,
+  leather_armor: noHouseholdReserve,
+  saddlebags: noHouseholdReserve,
+  axe: noHouseholdReserve,
+  pitchfork: noHouseholdReserve,
+  sickle: noHouseholdReserve,
+  short_sword: noHouseholdReserve,
+  knight_pauldron_round: noHouseholdReserve,
+  knight_pauldron_spike: noHouseholdReserve,
 }
 
 /** Personal-inventory allowlist (plan settlements-npcs-036). Loadout,
@@ -113,7 +129,7 @@ function householdQuantityAvailable(
 ): number {
   const reserveOf = HOUSEHOLD_TRADE_RESERVES[kind]
   if (!reserveOf) return 0
-  const owned = household.items.count(kind)
+  const owned = ownedCount(household.items, kind)
   if (owned <= 0) return 0
   return Math.max(0, owned - reserveOf(household, settlementNpcs))
 }

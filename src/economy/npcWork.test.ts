@@ -4,6 +4,7 @@ import { WOODSHED_DEVELOPMENT } from './development'
 import {
   commitBlacksmithProduction,
   commitHunterArrowProduction,
+  commitHunterBowProduction,
   commitRoleWork,
   commitWoodcutterDeposit,
   commitWoolMaterialProduction,
@@ -146,6 +147,43 @@ describe('commitHunterArrowProduction (settlements-npcs-003)', () => {
     expect(commitRoleWork(createSettlementEconomy('s', {}, []), 'farmer')).toBe(true)
     expect(household.items.count('branch')).toBe(2)
     expect(household.items.count('arrow')).toBe(0)
+  })
+})
+
+describe('commitHunterBowProduction (plan settlements-npcs-040)', () => {
+  function clearStartingWood(household: ReturnType<typeof createHousehold>) {
+    household.items.remove('branch', household.items.count('branch'))
+    household.items.remove('beam', household.items.count('beam'))
+  }
+
+  it('produces a short_bow into Household.items, not personal inventory', () => {
+    const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
+    household.items.add('branch', 2)
+    expect(commitHunterBowProduction(household)).toBe(true)
+    expect(household.items.count('branch')).toBe(0)
+    expect(household.items.count('short_bow')).toBe(1)
+  })
+
+  it('blocks once the household already holds the unsold bow cap', () => {
+    const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
+    household.items.add('short_bow', 2)
+    household.items.add('branch', 4)
+    expect(commitHunterBowProduction(household)).toBe(false)
+    expect(household.items.count('short_bow')).toBe(2)
+    expect(household.items.count('branch')).toBe(4)
+  })
+
+  it('can produce again after a bow is sold', () => {
+    const household = createHousehold('h', 's', 'home')
+    clearStartingWood(household)
+    household.items.add('short_bow', 2)
+    household.items.add('branch', 2)
+    expect(commitHunterBowProduction(household)).toBe(false)
+    household.items.remove('short_bow', 1)
+    expect(commitHunterBowProduction(household)).toBe(true)
+    expect(household.items.count('short_bow')).toBe(2)
   })
 })
 

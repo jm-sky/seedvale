@@ -1,6 +1,8 @@
 import type { Role } from '../ai/characters'
 import type { Inventory, ItemAmount } from '../items/Inventory'
+import type { ItemKind } from '../items/items'
 import type { StockAmount } from './stock'
+import { isInstanceBackedKind } from '../items/itemInstances'
 import { executeProduction } from './productionExecutor'
 
 /**
@@ -86,6 +88,58 @@ export const HUNTER_ARROW_PRODUCTIONS: readonly ProductionDef[] = [
   ARROWS_FROM_BRANCH_PRODUCTION,
   ARROWS_FROM_BEAM_PRODUCTION,
 ]
+
+/**
+ * Hunter bow production (plan settlements-npcs-040) — same item-for-item
+ * `Household.items` path as arrows. Outputs `short_bow` (count-backed) so
+ * `executeProduction` / `applyRecipe` can commit without synthesizing
+ * instances. Cap is unsold household trade stock, not lifetime production.
+ *
+ * @domain settlements-npcs
+ */
+export const SHORT_BOW_FROM_BRANCH_PRODUCTION: ProductionDef = {
+  id: 'hunter.short_bow.branch',
+  role: 'hunter',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'branch', amount: 2 }],
+  itemOutputs: [{ kind: 'short_bow', amount: 1 }],
+}
+
+export const SHORT_BOW_FROM_BEAM_PRODUCTION: ProductionDef = {
+  id: 'hunter.short_bow.beam',
+  role: 'hunter',
+  inputs: [],
+  outputs: [],
+  itemInputs: [{ kind: 'beam', amount: 1 }],
+  itemOutputs: [{ kind: 'short_bow', amount: 1 }],
+}
+
+/** Priority order (branch before beam) — same pattern as hunter arrows. */
+export const HUNTER_BOW_PRODUCTIONS: readonly ProductionDef[] = [
+  SHORT_BOW_FROM_BRANCH_PRODUCTION,
+  SHORT_BOW_FROM_BEAM_PRODUCTION,
+]
+
+/** Unsold household trade bows the Hunter will try to keep in stock. */
+export const HUNTER_BOW_STOCK_CAP = 2
+
+const HUNTER_TRADE_BOW_KINDS: readonly ItemKind[] = ['short_bow', 'hunting_bow']
+
+/**
+ * Live unsold Hunter trade-bow count in one inventory — stack `short_bow`
+ * plus instance-backed `hunting_bow`. Personal loadout is a different
+ * inventory and is never included.
+ *
+ * @domain settlements-npcs
+ */
+export function householdTradeBowCount(inventory: Inventory): number {
+  let n = 0
+  for (const kind of HUNTER_TRADE_BOW_KINDS) {
+    n += isInstanceBackedKind(kind) ? inventory.countInstances(kind) : inventory.count(kind)
+  }
+  return n
+}
 
 /**
  * Textile Worker wool processing (settlements-npcs-006) — item-for-item
@@ -193,6 +247,8 @@ const PRODUCTION_BY_ID: ReadonlyMap<string, ProductionDef> = new Map(
     MINING_PRODUCTION,
     ARROWS_FROM_BRANCH_PRODUCTION,
     ARROWS_FROM_BEAM_PRODUCTION,
+    SHORT_BOW_FROM_BRANCH_PRODUCTION,
+    SHORT_BOW_FROM_BEAM_PRODUCTION,
     WOOL_MATERIAL_PRODUCTION,
     FLAX_LINEN_PRODUCTION,
     LINEN_BANDAGE_PRODUCTION,

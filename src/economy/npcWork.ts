@@ -5,7 +5,10 @@ import { WOODSHED_DEVELOPMENT } from './development'
 import {
   BLACKSMITH_IRON_ROD_PRODUCTION,
   DRESSING_PRODUCTION,
+  householdTradeBowCount,
   HUNTER_ARROW_PRODUCTIONS,
+  HUNTER_BOW_PRODUCTIONS,
+  HUNTER_BOW_STOCK_CAP,
   produceFirstAvailableItemRecipe,
   productionForRole,
   TEXTILE_WORKER_PRODUCTIONS,
@@ -45,6 +48,18 @@ export function commitRoleWork(economy: SettlementEconomy, role: Role, simTime =
  */
 export function commitHunterArrowProduction(household: Household, simTime = 0): boolean {
   return produceFirstAvailableItemRecipe(household.items, HUNTER_ARROW_PRODUCTIONS, simTime) !== null
+}
+
+/**
+ * Hunter bow production completion (plan settlements-npcs-040) — thin
+ * adapter to the shared item-recipe mechanism. Cap is current unsold
+ * household trade bows; selling one frees a slot for later work.
+ *
+ * @domain settlements-npcs
+ */
+export function commitHunterBowProduction(household: Household, simTime = 0): boolean {
+  if (householdTradeBowCount(household.items) >= HUNTER_BOW_STOCK_CAP) return false
+  return produceFirstAvailableItemRecipe(household.items, HUNTER_BOW_PRODUCTIONS, simTime) !== null
 }
 
 /**

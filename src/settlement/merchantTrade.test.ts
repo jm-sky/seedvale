@@ -435,3 +435,44 @@ describe('merchant armor quality generation (plan items-player-040)', () => {
       .toEqual(stock.getInstances('leather_armor'))
   })
 })
+
+describe('specialization-first assortment (plan settlements-npcs-040)', () => {
+  function huntingHits(size: MerchantAssortmentContext['size'], samples = 40): number {
+    let hits = 0
+    for (let seed = 0; seed < samples; seed++) {
+      const profiles = resolveMerchantProfiles(['m0', 'm1'], 'forest')
+      expect(profiles[1]!.specialization).toBe('weapons-tools')
+      const stock = generateMerchantAssortment(ctx({ size, terrain: 'forest', seed }), profiles).get('m1')!
+      if ((stock.short_bow ?? 0) > 0 || (stock.hunting_bow ?? 0) > 0 || (stock.arrow ?? 0) > 0) hits++
+    }
+    return hits
+  }
+
+  it('lets a forest weapons-tools merchant stock bows or arrows on a small budget', () => {
+    expect(huntingHits('SM')).toBeGreaterThan(30)
+  })
+
+  it('is stable for the same seed, settlement and merchant', () => {
+    const profiles = resolveMerchantProfiles(['m0', 'm1'], 'forest')
+    const a = generateMerchantAssortment(ctx({ size: 'SM', seed: 42 }), profiles)
+    const b = generateMerchantAssortment(ctx({ size: 'SM', seed: 42 }), profiles)
+    expect(a).toEqual(b)
+  })
+
+  it('keeps weapons-tools distinct from food-materials after a larger budget', () => {
+    const profiles = resolveMerchantProfiles(['m0', 'm1'], 'forest')
+    const byNpc = generateMerchantAssortment(ctx({ size: 'MD', seed: 7 }), profiles)
+    const food = assortmentKinds(byNpc.get('m0')!)
+    const weapons = assortmentKinds(byNpc.get('m1')!)
+    expect(profiles[0]!.specialization).toBe('food-materials')
+    expect(profiles[1]!.specialization).toBe('weapons-tools')
+    expect(food.some((kind) => kind === 'bread' || kind === 'herb' || kind === 'dried_meat')).toBe(true)
+    expect(weapons.some((kind) => kind === 'short_sword' || kind === 'axe' || kind === 'short_bow')).toBe(true)
+    expect(weapons.includes('bread')).toBe(false)
+  })
+
+  it('does not starve late catalog hunting goods just because MERCHANT_STOCK lists them last', () => {
+    expect(MERCHANT_STOCK.indexOf('short_bow')).toBeGreaterThan(MERCHANT_STOCK.indexOf('knife'))
+    expect(huntingHits('SM', 24)).toBeGreaterThan(18)
+  })
+})

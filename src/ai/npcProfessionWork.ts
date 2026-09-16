@@ -30,6 +30,7 @@ import {
   commitBlacksmithProduction,
   commitDressingProduction,
   commitHunterArrowProduction,
+  commitHunterBowProduction,
   commitTextileWorkProduction,
   tryAdvanceDevelopment,
 } from '../economy/npcWork'
@@ -42,7 +43,10 @@ import {
 import {
   BLACKSMITH_IRON_ROD_PRODUCTION,
   DRESSING_PRODUCTION,
+  householdTradeBowCount,
   HUNTER_ARROW_PRODUCTIONS,
+  HUNTER_BOW_PRODUCTIONS,
+  HUNTER_BOW_STOCK_CAP,
   type ProductionDef,
   TEXTILE_WORKER_PRODUCTIONS,
 } from '../economy/production'
@@ -271,6 +275,57 @@ function planArrowCrafting(ctx: NpcWorkContext): NpcPlannedAction | null {
       }, ctx.simTime(), household.id)
     },
   }
+}
+
+function hasHunterBowInputs(household: { items: Inventory }): boolean {
+  return household.items.has('branch', 2) || household.items.has('beam', 1)
+}
+
+/**
+ * Bounded bow production (plan settlements-npcs-040) — only after arrow
+ * stock is already at cap, so arrow priority and reserve stay unchanged.
+ * Cap is current unsold household trade bows.
+ */
+function planBowCrafting(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const { household, workplace, economy } = ctx
+  if (!household || !workplace) return null
+  if (householdTradeBowCount(household.items) >= HUNTER_BOW_STOCK_CAP) return null
+  if (!hasHunterBowInputs(household)) {
+    observeIntendedRecipeBlocks(economy, HUNTER_BOW_PRODUCTIONS, {
+      inventory: household.items,
+    }, ctx.simTime(), household.id)
+    return null
+  }
+  return {
+    kind: 'work',
+    destination: copyVec3(workplace.position),
+    durationSec: ctx.rollWorkDurationSec(),
+    onComplete: () => {
+      const produced = commitHunterBowProduction(household, ctx.simTime())
+      if (!economy) return
+      if (produced) {
+        for (const def of HUNTER_BOW_PRODUCTIONS) {
+          economy.observeProductionOutcome({ ok: true, recipeId: def.id }, ctx.simTime(), household.id)
+        }
+        return
+      }
+      observeIntendedRecipeBlocks(economy, HUNTER_BOW_PRODUCTIONS, {
+        inventory: household.items,
+      }, ctx.simTime(), household.id)
+    },
+  }
+}
+
+/**
+ * Hunter `work` — arrows first, then a replacement trade bow if the
+ * household is below the unsold-bow cap.
+ */
+function planHunterWork(ctx: NpcWorkContext): NpcPlannedAction | null {
+  const arrows = planArrowCrafting(ctx)
+  if (arrows) return arrows
+  const { household } = ctx
+  if (household && household.items.count('arrow') < HUNTER_ARROW_STOCK_CAP) return null
+  return planBowCrafting(ctx)
 }
 
 /**
@@ -1071,7 +1126,7 @@ export function planProfessionWork(ctx: NpcWorkContext): NpcPlannedAction | null
     case 'fisher': return planFishingWork(ctx)
     case 'guard': return planGuardPatrol(ctx)
     case 'herbalist': return planHerbalistWork(ctx)
-    case 'hunter': return planArrowCrafting(ctx)
+    case 'hunter': return planHunterWork(ctx)
     case 'miner': return planOreGathering(ctx)
     case 'shepherd': return planShepherdWork(ctx)
     case 'textile_worker': return planTextileWork(ctx)

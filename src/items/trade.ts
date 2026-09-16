@@ -207,6 +207,7 @@ export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
   if (kind === 'encoded_chronicle') return { id: createItemInstanceId(), kind: 'encoded_chronicle' }
   if (kind === 'chronicle_search_evidence') return { id: createItemInstanceId(), kind: 'chronicle_search_evidence' }
   if (kind === 'chronicle_reference') return { id: createItemInstanceId(), kind: 'chronicle_reference' }
+  if (kind === 'hunting_bow') return { id: createItemInstanceId(), kind: 'hunting_bow' }
   if (isArmorKind(kind)) return createArmorInstance(kind)
   return null
 }

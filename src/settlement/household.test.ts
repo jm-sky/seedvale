@@ -268,10 +268,67 @@ describe('household.items (plan 178) — generic item storage, including concret
     const before = createHousehold('h', 's', 'home', undefined, { hasHunter: true })
     before.items.remove('bandage', 5)
     before.items.remove('bread', before.items.count('bread'))
+    before.items.remove('dried_meat', before.items.count('dried_meat'))
     const snapshot = before.snapshot()
     const after = createHousehold('h', 's', 'home', snapshot, { hasHunter: true })
     expect(after.items.count('bandage')).toBe(0)
-    expect(after.foodCount()).toBe(0)
+    expect(after.items.count('bread')).toBe(0)
+    expect(after.items.count('dried_meat')).toBe(0)
+  })
+})
+
+describe('household specialist trade stock (plan settlements-npcs-040)', () => {
+  it('seeds bounded hunter trade stock on genuine first construction', () => {
+    const household = createHousehold('h', 's', 'home', undefined, { hasHunter: true })
+    expect(household.items.count('arrow')).toBe(16)
+    expect(household.items.count('short_bow')).toBe(1)
+    expect(household.items.countInstances('hunting_bow')).toBe(1)
+    expect(household.items.count('dried_meat')).toBe(3)
+    expect(household.items.count('herb')).toBe(4)
+    expect(household.items.countInstances('waterskin_small')).toBe(1)
+    expect(household.items.count('backpack')).toBe(1)
+    expect(household.items.countInstances('leather_pauldron')).toBe(1)
+    expect(household.items.countInstances('leather_armor')).toBe(1)
+    expect(household.items.count('saddlebags')).toBe(1)
+  })
+
+  it('does not reseed sold specialist goods from a snapshot', () => {
+    const before = createHousehold('h', 's', 'home', undefined, { hasHunter: true })
+    const bow = before.items.getInstances('hunting_bow')[0]!
+    before.items.removeInstance(bow.id)
+    before.items.remove('short_bow', 1)
+    before.items.remove('arrow', before.items.count('arrow'))
+    const after = createHousehold('h', 's', 'home', before.snapshot(), { hasHunter: true })
+    expect(after.items.countInstances('hunting_bow')).toBe(0)
+    expect(after.items.getInstance(bow.id)).toBeNull()
+    expect(after.items.count('short_bow')).toBe(0)
+    expect(after.items.count('arrow')).toBe(0)
+  })
+
+  it('gives a woodcutter household exactly two trade axe instances', () => {
+    const household = createHousehold('h', 's', 'home', undefined, { hasWoodcutter: true })
+    expect(household.items.countInstances('axe')).toBe(2)
+  })
+
+  it('gives a farmer household pitchfork and sickle trade stock', () => {
+    const household = createHousehold('h', 's', 'home', undefined, { adultFarmerCount: 1 })
+    expect(household.items.countInstances('pitchfork')).toBe(1)
+    expect(household.items.countInstances('sickle')).toBe(1)
+  })
+
+  it('gives a blacksmith household a short sword and metal pauldron', () => {
+    const household = createHousehold('h', 's', 'home', undefined, { hasBlacksmith: true })
+    expect(household.items.countInstances('short_sword')).toBe(1)
+    expect(household.items.countInstances('knight_pauldron_round')).toBe(1)
+  })
+
+  it('does not give specialist stock to an unrelated household', () => {
+    const household = createHousehold('h', 's', 'home')
+    expect(household.items.count('arrow')).toBe(0)
+    expect(household.items.countInstances('axe')).toBe(0)
+    expect(household.items.countInstances('pitchfork')).toBe(0)
+    expect(household.items.countInstances('short_sword')).toBe(0)
+    expect(household.items.count('herb')).toBe(0)
   })
 })
 

@@ -1,7 +1,8 @@
 # Plan: Profession Trade Stock and Hunter Crafting
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+**Implemented at:** 2026-09-16
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-033~~, ~~settlements-npcs-036~~, ~~settlements-012~~

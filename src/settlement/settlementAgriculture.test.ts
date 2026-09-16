@@ -64,19 +64,54 @@ describe('settlementAgriculture (plan settlements-npcs-030)', () => {
       member({ name: 'Ada', role: 'farmer', age: 30 }),
       member({ name: 'Kid', role: 'farmer', age: 8 }),
       member({ name: 'Jan', role: 'hunter', age: 40 }),
-    ]))).toEqual({ hasHunter: true, adultFarmerCount: 1 })
+    ]))).toEqual({
+      hasHunter: true,
+      hasWoodcutter: false,
+      hasBlacksmith: false,
+      adultFarmerCount: 1,
+    })
   })
 
   it('does not count a child farmer toward agricultural capacity or starter seeds', () => {
     expect(householdStartingContextFromFamily(family([
       member({ name: 'Kid', role: 'farmer', age: 9 }),
-    ]))).toEqual({ hasHunter: false, adultFarmerCount: 0 })
+    ]))).toEqual({
+      hasHunter: false,
+      hasWoodcutter: false,
+      hasBlacksmith: false,
+      adultFarmerCount: 0,
+    })
   })
 
   it('keeps hunter bandages independent of age', () => {
     expect(householdStartingContextFromFamily(family([
       member({ name: 'Kid', role: 'hunter', age: 9 }),
-    ]))).toEqual({ hasHunter: true, adultFarmerCount: 0 })
+    ]))).toEqual({
+      hasHunter: true,
+      hasWoodcutter: false,
+      hasBlacksmith: false,
+      adultFarmerCount: 0,
+    })
+  })
+
+  it('marks adult woodcutter and blacksmith coverage for specialist trade stock', () => {
+    expect(householdStartingContextFromFamily(family([
+      member({ name: 'Olek', role: 'woodcutter', age: 32 }),
+      member({ name: 'Kuba', role: 'blacksmith', age: 41 }),
+    ]))).toEqual({
+      hasHunter: false,
+      hasWoodcutter: true,
+      hasBlacksmith: true,
+      adultFarmerCount: 0,
+    })
+    expect(householdStartingContextFromFamily(family([
+      member({ name: 'Kid', role: 'woodcutter', age: 10 }),
+    ]))).toEqual({
+      hasHunter: false,
+      hasWoodcutter: false,
+      hasBlacksmith: false,
+      adultFarmerCount: 0,
+    })
   })
 
   it('does not produce for a home settlement even with seeds and elapsed time', () => {

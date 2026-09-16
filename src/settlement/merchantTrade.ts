@@ -279,13 +279,13 @@ export function specializationAffinity(kind: ItemKind, spec: MerchantSpecializat
 function skuBudget(size: VillageSize): number {
   switch (size) {
     case 'LG':
-      return 22
+      return 26
     case 'MD':
-      return 16
+      return 20
     case 'SM':
-      return 10
+      return 14
     case 'XL':
-      return 28
+      return 32
     default:
       return 8
   }
@@ -386,6 +386,34 @@ export function resolvePremiumMerchantAssignment(
   return { npcId: owner.npcId, kind: chosen }
 }
 
+function regionWeight(region: RegionalClass): number {
+  if (region === 'local') return 4
+  if (region === 'neutral') return 2
+  return 1
+}
+
+/** Isolated per-kind roll so catalog position cannot steal later thematic goods. */
+function kindChance(seed: number, npcId: string, kind: ItemKind): number {
+  return createSeededRandom(
+    seed ^ MERCHANT_ASSORTMENT_SALT ^ hashId(npcId) ^ hashId(kind) ^ 0x6b696e64,
+  )()
+}
+
+function shuffleEqualScoreGroups<T extends { score: number }>(items: T[], random: () => number): void {
+  let i = 0
+  while (i < items.length) {
+    let j = i + 1
+    while (j < items.length && items[j]!.score === items[i]!.score) j++
+    for (let k = j - 1; k > i; k--) {
+      const r = i + Math.floor(random() * (k - i + 1))
+      const tmp = items[k]!
+      items[k] = items[r]!
+      items[r] = tmp
+    }
+    i = j
+  }
+}
+
 export function generateMerchantAssortment(
   context: MerchantAssortmentContext,
   profiles: readonly MerchantProfile[],
@@ -410,15 +438,27 @@ export function generateMerchantAssortment(
       picked.push(assignedPremium.kind)
     }
 
+    const scored: { kind: ItemKind, score: number, region: RegionalClass }[] = []
     for (const kind of MERCHANT_STOCK) {
-      if (picked.length >= budget) break
       if (stock[kind]) continue
       const affinity = specializationAffinity(kind, profile.specialization)
       if (affinity === 0) continue
       if (isPremiumMerchantGood(kind)) continue
       const region = regionalClass(kind, context.terrain, resource)
-      if (region === 'import' && rng() >= importChance(context.size)) continue
-      if (region === 'neutral' && affinity < 2 && rng() < 0.35) continue
+      const roll = kindChance(context.seed, profile.npcId, kind)
+      if (region === 'import' && roll >= importChance(context.size)) continue
+      if (region === 'neutral' && affinity < 2 && roll < 0.35) continue
+      scored.push({
+        kind,
+        score: affinity * regionWeight(region),
+        region,
+      })
+    }
+    scored.sort((a, b) => b.score - a.score || a.kind.localeCompare(b.kind))
+    shuffleEqualScoreGroups(scored, rng)
+
+    for (const { kind, region } of scored) {
+      if (picked.length >= budget) break
       stock[kind] = quantityFor(kind, region, context.size, false)
       picked.push(kind)
     }
