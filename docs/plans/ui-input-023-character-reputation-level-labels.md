@@ -6,6 +6,7 @@
 **Priority:** medium · **Effort:** S
 **Depends on:** ui-input-019
 **Domain:** `ui-input`
+**Model:** Composer, Sonnet
 **Subdomains:** `menus` `feedback`
 **Tags:** `character-screen` `reputation` `readability`
 **Roadmap:** -
