@@ -74,6 +74,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md` | 🟡 | L      | quests-progression-049                                                                                                                                                                                                                                                                     | quests-hunters-brotherhood              |
 | ◼️ `quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`   | 🟡 | L      | quests-progression-053                                                                                                                                                                                                                                                                     | quests-hunters-brotherhood              |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `npc-041-chatterbox-voice-poc.md`                                           | 🔴 | XS     | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `npc-042-npc-voice-dialogue-catalog-infrastructure.md`                      | 🔴 | M      | npc-041                                                                                                                                                                                                                                                                                    | -                                       |
+| ◼️ `npc-043-dialogue-language-migration-to-english.md`                         | 🔴 | L      | npc-042                                                                                                                                                                                                                                                                                    | -                                       |
 
 ---
 
@@ -232,7 +235,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `034`
 - items-player: `043`
-- npc: `041`
+- npc: `044`
 - persistence: `006`
 - quests-progression: `056`
 - settlements: `018`
