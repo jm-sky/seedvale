@@ -682,6 +682,7 @@ export async function createApp(
     playAnimalCombatDeath(worldAudio.playAt, { x, z }, kind)
   }
 
+  loadingScreen.setStage('terrain')
   bootMark('createWorldBundle')
   const { bundle, backgroundReady: worldBundleBackgroundReady } = await createWorldBundle(
     scene,
@@ -766,6 +767,7 @@ export async function createApp(
     resourceSiteInventories,
     consumedWorldPickupIds,
     onAnimalDeathSound,
+    loadingScreen.setStage,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -1017,6 +1019,7 @@ export async function createApp(
   const caveHorizontalResolver: CaveHorizontalResolver = (x, z, y, radius, entityHeight) =>
     bundle.caves.resolveHorizontal(x, z, y, radius, entityHeight)
 
+  loadingScreen.setStage('player')
   bootMark('PlayerController.create')
   const playerAppearance = resolvePlayerAppearance({
     bodyKind: equippedBodyArmor(equipment, inventory),
@@ -3298,6 +3301,7 @@ export async function createApp(
   // families before gameplay streaming starts. `tick()` has not run yet, so
   // this stays inside the loading overlay and never blocks chunk attach.
   pointLightBudget.sync(camera)
+  loadingScreen.setStage('render')
   const programPrewarm = await prewarmRenderPrograms(renderer, scene, camera)
   if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = programPrewarm
 
@@ -3315,6 +3319,7 @@ export async function createApp(
     },
   })
 
+  loadingScreen.setStage('ready')
   renderLoop.start()
   loadingScreen.hide()
   if (typeof window !== 'undefined') {

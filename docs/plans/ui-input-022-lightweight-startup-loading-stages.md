@@ -1,7 +1,7 @@
 # Plan: Lightweight Startup Loading Stages
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Priority:** medium · **Effort:** S
 **Depends on:** none
 **Domain:** `ui-input`
