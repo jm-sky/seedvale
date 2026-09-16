@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Compose UBC Fantasy runtime glTFs (outfit + sliced head + optional hair).
 
-Male player outfits plus female Peasant/Wizard for profession NPCs, and
-npc-040 hair/beard variant GLBs under `npc/`. Does not touch `_temp/`
-sources. Writes a work directory of glTF + textures for a later
-gltf-transform / gltfpack pass.
+Male player outfits plus female Peasant/Wizard for profession NPCs,
+npc-040 hair/beard variant GLBs under `npc/`, and V1 skinned pauldron
+accessories. Does not touch `_temp/` sources. Writes a work directory of
+glTF + textures for a later gltf-transform / gltfpack pass.
 """
 
 from __future__ import annotations
@@ -429,6 +429,32 @@ HAIR_NODE_NAMES = {
 }
 
 
+# Modular accessory parts (plan items-player-039). Lion stays source-only.
+ACCESSORIES: tuple[tuple[str, str], ...] = (
+    ('Male_Noble_Acc_Pauldron', 'male_leather_pauldron'),
+    ('Male_Ranger_Acc_Pauldron', 'male_ranger_pauldron'),
+    ('Male_Knight_Acc_Pauldron_Spike', 'male_knight_pauldron_spike'),
+    ('Male_Knight_Acc_Pauldron_Round', 'male_knight_pauldron_round'),
+)
+
+
+def compose_accessory(src_gltf: str, out_gltf: str, label: str) -> None:
+    """Pack a skinned modular part with collocated textures; no head/hair/clips."""
+    out_dir = os.path.dirname(out_gltf)
+    os.makedirs(out_dir, exist_ok=True)
+    dest = GltfDoc(src_gltf)
+    print(f'Composing accessory {label}')
+    for image in dest.j.get('images', []):
+        uri = image.get('uri')
+        if not uri:
+            continue
+        src_file = resolve_image_file(dest, image)
+        dest_name = os.path.basename(uri)
+        shutil.copy2(src_file, os.path.join(out_dir, dest_name))
+        image['uri'] = dest_name
+    write_doc(dest, out_gltf)
+
+
 def compose_outfit(
     outfit_gltf: str,
     base_gltf: str,
@@ -557,12 +583,23 @@ def main() -> None:
     }
     beard_gltf = os.path.join(ubc, 'Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf')
     outfit_dir = os.path.join(outfits, 'Exports/glTF (Godot-Unreal)/Outfits')
+    modular_dir = os.path.join(outfits, 'Exports/glTF (Godot-Unreal)/Modular Parts')
 
     for path in (*bases.values(), *hairs.values(), beard_gltf):
         if not os.path.isfile(path):
             raise SystemExit(f'missing source {path}')
 
     os.makedirs(args.out_dir, exist_ok=True)
+    accessory_dir = os.path.join(args.out_dir, 'accessories')
+    os.makedirs(accessory_dir, exist_ok=True)
+    for src_stem, dest_stem in ACCESSORIES:
+        if not wanted(dest_stem):
+            continue
+        src = os.path.join(modular_dir, f'{src_stem}.gltf')
+        if not os.path.isfile(src):
+            raise SystemExit(f'missing source {src}')
+        compose_accessory(src, os.path.join(accessory_dir, f'{dest_stem}.gltf'), dest_stem)
+
     for src_stem, dest_stem, hair_kind, sex, drop_headgear in OUTFITS:
         if not wanted(dest_stem):
             continue

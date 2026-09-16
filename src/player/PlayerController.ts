@@ -8,13 +8,17 @@ import type {
   PlayerMovementTraceTick,
 } from '../debug/playerMovementTrace'
 import type { KeyState } from '../input/Keyboard'
+import type { EquipmentSlot } from '../items/equipment'
 import type { ToolKind } from '../items/HeldTool'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { FootstepSurface } from '../terrain/footstepSurface'
-import { disposeObject3D, loadGltfAnimated, loadGltfAsset, prepareProp } from '../assets/loadGltf'
+import { disposeObject3D, loadGltf, loadGltfAnimated, loadGltfAsset, prepareProp } from '../assets/loadGltf'
 import {
+  applyAccessoryTint,
   applyOutfitTint,
+  cloneAccessoryMaterials,
   cloneOutfitMaterials,
+  disposeAccessoryMaterialClones,
   disposeOutfitMaterialClones,
 } from '../assets/ubcOutfitMaterials'
 import {
@@ -60,8 +64,13 @@ import { resolveCameraBoom, withCaveFloorFallback } from './cameraBoom'
 import { humanBodyCarryCapacityKg } from './humanCarryCapacity'
 import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT, rockCeilingMaxY } from './playerDimensions'
 import { computeEncumbrance } from './playerEncumbrance'
+import {
+  type PlayerEquipmentVisual,
+  resolvePlayerEquipmentVisualTintUrl,
+} from './playerEquipmentVisual'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
+import { bindAccessoryToPlayerSkeleton } from './ubcAccessoryBind'
 import { integrateVerticalMotion } from './verticalMotion'
 import {
   swimFeetY,
@@ -429,6 +438,10 @@ export class PlayerController {
    *  tool's normal `HELD_ATTACH` grip transform (set on `heldToolObject`
    *  itself) is never touched by the attack animation. */
   private heldToolSwingPivot: THREE.Object3D | null = null
+  /** Desired per-slot accessory visuals; remounted after `applyAppearance`. */
+  private readonly desiredEquipmentVisuals: Partial<Record<EquipmentSlot, PlayerEquipmentVisual | null>> = {}
+  private readonly attachedEquipmentVisuals: Partial<Record<EquipmentSlot, THREE.Object3D>> = {}
+  private readonly equipmentVisualLoadToken: Partial<Record<EquipmentSlot, number>> = {}
 
   private constructor(
     root: THREE.Object3D,
@@ -788,6 +801,7 @@ export class PlayerController {
       console.warn('[player] right-hand bone not found; held tools parent to model root (feet)')
     }
     this.remountHeldTool()
+    this.remountEquipmentVisuals()
     this.currentAction = null
     this.bindMixer(next, animations)
     if (resumeMelee && this.attackAction) {
@@ -805,6 +819,88 @@ export class PlayerController {
     if (!this.heldToolSwingPivot) return
     this.heldToolSwingPivot.removeFromParent()
     this.handSocket().add(this.heldToolSwingPivot)
+  }
+
+  /**
+   * Attach or replace a slot-aware UBC accessory visual on the current player
+   * skeleton. Adventurer / capsule sessions no-op presentation only.
+   *
+   * @domain items-player
+   */
+  async applyEquipmentVisuals(slot: EquipmentSlot, visual: PlayerEquipmentVisual | null): Promise<void> {
+    this.desiredEquipmentVisuals[slot] = visual
+    if (this.isCapsule || this.appearanceLocked) return
+    await this.mountEquipmentVisual(slot, visual)
+  }
+
+  private remountEquipmentVisuals(): void {
+    for (const slot of Object.keys(this.attachedEquipmentVisuals) as EquipmentSlot[]) {
+      delete this.attachedEquipmentVisuals[slot]
+    }
+    if (this.isCapsule || this.appearanceLocked) return
+    for (const slot of Object.keys(this.desiredEquipmentVisuals) as EquipmentSlot[]) {
+      const visual = this.desiredEquipmentVisuals[slot] ?? null
+      void this.mountEquipmentVisual(slot, visual)
+    }
+  }
+
+  private detachEquipmentVisual(slot: EquipmentSlot): void {
+    const attached = this.attachedEquipmentVisuals[slot]
+    if (!attached) return
+    disposeAccessoryMaterialClones(attached)
+    attached.removeFromParent()
+    delete this.attachedEquipmentVisuals[slot]
+  }
+
+  private applyEquipmentVisualAlignment(
+    root: THREE.Object3D,
+    visual: PlayerEquipmentVisual,
+  ): void {
+    const alignment = visual.alignment
+    if (!alignment) return
+    if (alignment.position) root.position.set(...alignment.position)
+    if (alignment.rotation) root.rotation.set(...alignment.rotation)
+    if (alignment.scale != null) root.scale.setScalar(alignment.scale)
+  }
+
+  private async mountEquipmentVisual(
+    slot: EquipmentSlot,
+    visual: PlayerEquipmentVisual | null,
+  ): Promise<void> {
+    const token = (this.equipmentVisualLoadToken[slot] ?? 0) + 1
+    this.equipmentVisualLoadToken[slot] = token
+    this.detachEquipmentVisual(slot)
+    if (!visual) return
+    let cloned: THREE.Object3D
+    try {
+      cloned = await loadGltf(visual.modelUrl)
+    } catch (err) {
+      console.warn(`[player] failed to load equipment visual ${visual.modelUrl}`, err)
+      return
+    }
+    if (token !== this.equipmentVisualLoadToken[slot]) {
+      disposeAccessoryMaterialClones(cloned)
+      return
+    }
+    cloneAccessoryMaterials(cloned)
+    const bound = bindAccessoryToPlayerSkeleton(cloned, this.modelRoot)
+    if (!bound) {
+      disposeAccessoryMaterialClones(cloned)
+      return
+    }
+    if (token !== this.equipmentVisualLoadToken[slot]) {
+      disposeAccessoryMaterialClones(bound)
+      return
+    }
+    this.applyEquipmentVisualAlignment(bound, visual)
+    const tintUrl = resolvePlayerEquipmentVisualTintUrl(visual)
+    if (tintUrl) await applyAccessoryTint(bound, tintUrl)
+    if (token !== this.equipmentVisualLoadToken[slot]) {
+      disposeAccessoryMaterialClones(bound)
+      return
+    }
+    this.modelRoot.add(bound)
+    this.attachedEquipmentVisuals[slot] = bound
   }
 
   /** Additive rotation (radians) on the held-tool socket during a melee

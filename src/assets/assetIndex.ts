@@ -10,6 +10,12 @@ import { HELD_GLB } from '../items/heldToolVisual'
 import { ITEM_GLB_SPECS } from '../items/itemModels'
 import { PLAYER_HEIGHT, PLAYER_MODEL_URL } from '../player/PlayerController'
 import {
+  PLAYER_UBC_KNIGHT_PAULDRON_ROUND_URL,
+  PLAYER_UBC_KNIGHT_PAULDRON_SPIKE_URL,
+  PLAYER_UBC_LEATHER_PAULDRON_URL,
+  PLAYER_UBC_RANGER_PAULDRON_URL,
+} from '../player/playerEquipmentVisual'
+import {
   PLAYER_UBC_KNIGHT_CLOTH_URL,
   PLAYER_UBC_KNIGHT_URL,
   PLAYER_UBC_NOBLE_URL,
@@ -400,6 +406,42 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     prepare: { mode: 'height', value: PLAYER_HEIGHT },
     skinned: true,
     anchors: anchorsForAsset('character:ubc-wizard'),
+  })
+  out.push({
+    id: 'character:ubc-leather-pauldron',
+    url: PLAYER_UBC_LEATHER_PAULDRON_URL,
+    label: 'Player pauldron (leather)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-leather-pauldron'),
+  })
+  out.push({
+    id: 'character:ubc-ranger-pauldron',
+    url: PLAYER_UBC_RANGER_PAULDRON_URL,
+    label: 'Player pauldron (ranger)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-ranger-pauldron'),
+  })
+  out.push({
+    id: 'character:ubc-knight-pauldron-spike',
+    url: PLAYER_UBC_KNIGHT_PAULDRON_SPIKE_URL,
+    label: 'Player pauldron (knight spike)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-knight-pauldron-spike'),
+  })
+  out.push({
+    id: 'character:ubc-knight-pauldron-round',
+    url: PLAYER_UBC_KNIGHT_PAULDRON_ROUND_URL,
+    label: 'Player pauldron (knight round)',
+    group: 'character',
+    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    skinned: true,
+    anchors: anchorsForAsset('character:ubc-knight-pauldron-round'),
   })
   out.push({
     id: 'character:ubc-female-peasant',

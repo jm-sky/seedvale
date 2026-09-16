@@ -29,6 +29,12 @@ NPC_TINTS=(
   npc_ranger
   npc_knight
 )
+ACCESSORIES=(
+  male_leather_pauldron
+  male_ranger_pauldron
+  male_knight_pauldron_spike
+  male_knight_pauldron_round
+)
 
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
@@ -64,6 +70,10 @@ optimize() {
 
 for name in "${OUTFITS[@]}"; do
   optimize "$WORK/outfits/${name}.gltf" "$OUT/${name}.glb"
+done
+mkdir -p "$OUT/accessories"
+for name in "${ACCESSORIES[@]}"; do
+  optimize "$WORK/outfits/accessories/${name}.gltf" "$OUT/accessories/${name}.glb"
 done
 mkdir -p "$OUT/npc"
 shopt -s nullglob

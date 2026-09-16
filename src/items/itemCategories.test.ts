@@ -33,9 +33,14 @@ describe('item categories', () => {
   it('wearable armor kinds use armor category, not weapon (plan items-player-031)', () => {
     expect(hasItemKindCategory('leather_armor', 'armor')).toBe(true)
     expect(hasItemKindCategory('chainmail', 'armor')).toBe(true)
+    expect(hasItemKindCategory('leather_pauldron', 'armor')).toBe(true)
+    expect(hasItemKindCategory('ranger_pauldron', 'armor')).toBe(true)
+    expect(hasItemKindCategory('knight_pauldron_spike', 'armor')).toBe(true)
+    expect(hasItemKindCategory('knight_pauldron_round', 'armor')).toBe(true)
     expect(hasItemKindCategory('leather_armor', 'weapon')).toBe(false)
     expect(hasItemKindCategory('chainmail', 'weapon')).toBe(false)
     expect(primaryItemCategory(ITEM_DEFS.chainmail)).toBe('armor')
+    expect(primaryItemCategory(ITEM_DEFS.leather_pauldron)).toBe('armor')
   })
 
   it('story items use the story category (plan quests-progression-035)', () => {

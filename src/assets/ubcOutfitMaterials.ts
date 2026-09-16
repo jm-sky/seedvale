@@ -15,7 +15,7 @@ const UBC_HAIR_MATERIAL_NAMES = new Set(['MI_Hair_1', 'MI_Hair_2'])
 function cloneNamedMaterials(
   root: THREE.Object3D,
   names: ReadonlySet<string>,
-  flag: 'ubcOutfitMaterial' | 'ubcHairMaterial',
+  flag: 'ubcOutfitMaterial' | 'ubcHairMaterial' | 'ubcAccessoryMaterial',
 ): void {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh
@@ -43,22 +43,45 @@ export function cloneOutfitMaterials(root: THREE.Object3D): void {
   cloneNamedMaterials(root, UBC_HAIR_MATERIAL_NAMES, 'ubcHairMaterial')
 }
 
+/**
+ * Clone `MI_*` materials on a runtime accessory so player `?playerTint=`
+ * cannot recolor them through {@link applyOutfitTint}.
+ */
+export function cloneAccessoryMaterials(root: THREE.Object3D): void {
+  cloneNamedMaterials(root, UBC_OUTFIT_MATERIAL_NAMES, 'ubcAccessoryMaterial')
+}
+
 export function disposeOutfitMaterialClones(root: THREE.Object3D): void {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh
     if (!mesh.isMesh) return
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     for (const material of materials) {
-      if (material.userData.ubcOutfitMaterial || material.userData.ubcHairMaterial) {
+      if (
+        material.userData.ubcOutfitMaterial
+        || material.userData.ubcHairMaterial
+        || material.userData.ubcAccessoryMaterial
+      ) {
         material.dispose()
       }
     }
   })
 }
 
+export function disposeAccessoryMaterialClones(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const material of materials) {
+      if (material.userData.ubcAccessoryMaterial) material.dispose()
+    }
+  })
+}
+
 function applyMapOnFlag(
   root: THREE.Object3D,
-  flag: 'ubcOutfitMaterial' | 'ubcHairMaterial',
+  flag: 'ubcOutfitMaterial' | 'ubcHairMaterial' | 'ubcAccessoryMaterial',
   tintMap: THREE.Texture | null,
 ): void {
   root.traverse((obj) => {
@@ -104,6 +127,20 @@ export async function applyOutfitTint(
     if (!tintMap) return false
   }
   applyMapOnFlag(root, 'ubcOutfitMaterial', tintMap)
+  return true
+}
+
+/** Swap cloned accessory `MI_*` albedo independently of player outfit tint. */
+export async function applyAccessoryTint(
+  root: THREE.Object3D,
+  tintUrl: string | null,
+): Promise<boolean> {
+  let tintMap: THREE.Texture | null = null
+  if (tintUrl) {
+    tintMap = await loadTintMap(tintUrl)
+    if (!tintMap) return false
+  }
+  applyMapOnFlag(root, 'ubcAccessoryMaterial', tintMap)
   return true
 }
 

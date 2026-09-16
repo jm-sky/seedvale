@@ -16,9 +16,22 @@ export type TrapItemInstance = ItemInstance & {
 /** Wearable armor kinds with per-instance quality (plan items-player-030).
  *  Explicit list — mirrors weapons; do not derive from catalog here (avoids
  *  import cycles with `itemCatalog`). */
-export type ArmorKind = 'leather_armor' | 'chainmail'
+export type ArmorKind =
+  | 'leather_armor'
+  | 'chainmail'
+  | 'leather_pauldron'
+  | 'ranger_pauldron'
+  | 'knight_pauldron_spike'
+  | 'knight_pauldron_round'
 
-export const ARMOR_KIND_LIST: readonly ArmorKind[] = ['leather_armor', 'chainmail']
+export const ARMOR_KIND_LIST: readonly ArmorKind[] = [
+  'leather_armor',
+  'chainmail',
+  'leather_pauldron',
+  'ranger_pauldron',
+  'knight_pauldron_spike',
+  'knight_pauldron_round',
+]
 
 export const ARMOR_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>(ARMOR_KIND_LIST)
 

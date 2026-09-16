@@ -41,7 +41,7 @@ import { createKeyboard } from '../input/Keyboard'
 import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '../input/MouseLook'
 import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import { CONTAINER_DEFS } from '../items/container'
-import { createEquipmentState, equippedBodyArmor, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
+import { createEquipmentState, equippedBodyArmor, equippedInstanceId, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
@@ -86,6 +86,7 @@ import {
   PLAYER_STARTING_ATTRIBUTES,
   PlayerController,
 } from '../player/PlayerController'
+import { resolvePlayerEquipmentVisual } from '../player/playerEquipmentVisual'
 import {
   resetPlayerNeeds,
   restorePersistedNeeds,
@@ -1037,6 +1038,14 @@ export async function createApp(
     playerAppearance.animationUrl,
     ubcPreloadUrls(playerAppearance.modelUrl),
   )
+  const syncArmsEquipmentVisual = (): Promise<void> => {
+    const armsId = equippedInstanceId(equipment, inventory, 'arms')
+    const armsKind = armsId ? inventory.getInstance(armsId)?.kind : null
+    return player.applyEquipmentVisuals(
+      'arms',
+      armsKind ? resolvePlayerEquipmentVisual(armsKind) : null,
+    )
+  }
   const syncPlayerAppearance = (): void => {
     const appearance = resolvePlayerAppearance({
       bodyKind: equippedBodyArmor(equipment, inventory),
@@ -1046,12 +1055,14 @@ export async function createApp(
       animationUrl: appearance.animationUrl,
       tintUrl: appearance.tintUrl,
     })
+    void syncArmsEquipmentVisual()
   }
   await player.applyAppearance({
     modelUrl: playerAppearance.modelUrl,
     animationUrl: playerAppearance.animationUrl,
     tintUrl: playerAppearance.tintUrl,
   })
+  await syncArmsEquipmentVisual()
   bootMarkEnd('PlayerController.create')
 
   if (initialSave) {

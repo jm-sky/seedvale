@@ -1,7 +1,7 @@
 # Plan: UBC runtime pauldrons
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Model:** Sonnet, Composer
 **Depends on:** ~~items-player-030~~, ~~items-player-036~~

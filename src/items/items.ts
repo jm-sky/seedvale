@@ -79,6 +79,11 @@ export type ItemKind =
   /** Plan items-player-029 — wearable body-armor kinds (`items/equipment.ts`). */
   | 'leather_armor'
   | 'chainmail'
+  /** Plan items-player-039 — wearable arms-slot pauldrons (`items/equipment.ts`). */
+  | 'leather_pauldron'
+  | 'ranger_pauldron'
+  | 'knight_pauldron_spike'
+  | 'knight_pauldron_round'
   | 'berries'
   | 'apple'
   | 'nuts'
@@ -903,6 +908,42 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'LG',
     color: 0x9aa0a8,
     description: 'Ciężka koszula z metalowych ogniw. Najlepsza ochrona, ale wyraźnie męczy i spowalnia.'
+  },
+  leather_pauldron: {
+    kind: 'leather_pauldron',
+    label: 'skórzany naramiennik',
+    categories: ['armor'],
+    weight: 0.7,
+    size: 'MD',
+    color: 0x6b4a2f,
+    description: 'Lekki naramiennik ze skóry. Niewielka ochrona ramion bez kosztu ruchliwości.'
+  },
+  ranger_pauldron: {
+    kind: 'ranger_pauldron',
+    label: 'naramienniki tropiciela',
+    categories: ['armor'],
+    weight: 1,
+    size: 'MD',
+    color: 0x4a5a3a,
+    description: 'Para naramienników tropiciela. Lepsza ochrona ramion przy niewielkim wysiłku.'
+  },
+  knight_pauldron_spike: {
+    kind: 'knight_pauldron_spike',
+    label: 'kolczaste naramienniki płytowe',
+    categories: ['armor'],
+    weight: 1.8,
+    size: 'MD',
+    color: 0x8a9098,
+    description: 'Płytowe naramienniki z kolcami. Solidna ochrona ramion, wyraźnie lżejsza niż pełna kolczuga.'
+  },
+  knight_pauldron_round: {
+    kind: 'knight_pauldron_round',
+    label: 'okrągłe naramienniki płytowe',
+    categories: ['armor'],
+    weight: 2.1,
+    size: 'MD',
+    color: 0x9aa0a8,
+    description: 'Cięższe okrągłe naramienniki płytowe. Najlepsza ochrona ramion w tym zestawie, nadal słabsza niż zbroja tułowia.'
   },
   berries: {
     kind: 'berries',

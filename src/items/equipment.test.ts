@@ -13,10 +13,18 @@ import {
 } from './equipment'
 import { Inventory } from './Inventory'
 import { ITEM_CATALOG } from './itemCatalog'
+import { ARMOR_KIND_LIST, type ArmorKind } from './itemInstances'
 import { ITEM_DEFS } from './items'
 
+const PAULDRON_KINDS = [
+  'leather_pauldron',
+  'ranger_pauldron',
+  'knight_pauldron_spike',
+  'knight_pauldron_round',
+] as const satisfies readonly ArmorKind[]
+
 function inventoryWithArmor(
-  ...pieces: { kind: 'leather_armor' | 'chainmail', quality?: 'common' | 'good' | 'masterwork' }[]
+  ...pieces: { kind: ArmorKind, quality?: 'common' | 'good' | 'masterwork' }[]
 ): { inventory: Inventory, ids: string[] } {
   const inventory = new Inventory({})
   const ids: string[] = []
@@ -101,6 +109,51 @@ describe('createEquipmentState', () => {
     const occupied = ['body', 'head'] as const
     const live = occupied.filter((slot) => equipment.getSlot(slot) === ids[0])
     expect(live.length).toBe(1)
+  })
+
+  it('maps every pauldron kind onto the arms slot (plan items-player-039)', () => {
+    for (const kind of PAULDRON_KINDS) {
+      expect(ITEM_CATALOG[kind].armor?.slot).toBe('arms')
+      const { inventory, ids } = inventoryWithArmor({ kind })
+      const equipment = createEquipmentState(inventory)
+      expect(equipment.equip(ids[0]!, inventory)).toBe(true)
+      expect(equipment.getSlot('arms')).toBe(ids[0])
+      expect(equipment.getSlot('body')).toBeNull()
+    }
+    expect(ARMOR_KIND_LIST).toEqual(expect.arrayContaining([...PAULDRON_KINDS]))
+  })
+
+  it('equipping a second arms item replaces the first and leaves body alone', () => {
+    const { inventory, ids } = inventoryWithArmor(
+      { kind: 'leather_armor' },
+      { kind: 'leather_pauldron' },
+      { kind: 'ranger_pauldron' },
+    )
+    const equipment = createEquipmentState(inventory)
+    expect(equipment.equip(ids[0]!, inventory)).toBe(true)
+    expect(equipment.equip(ids[1]!, inventory)).toBe(true)
+    expect(equipment.equip(ids[2]!, inventory)).toBe(true)
+    expect(equipment.getSlot('body')).toBe(ids[0])
+    expect(equipment.getSlot('arms')).toBe(ids[2])
+    expect(equippedBodyArmor(equipment, inventory)).toBe('leather_armor')
+    expect(equippedInstanceId(equipment, inventory, 'arms')).toBe(ids[2])
+  })
+
+  it('restores a saved arms instance id', () => {
+    const { inventory, ids } = inventoryWithArmor({ kind: 'knight_pauldron_round' })
+    const equipment = createEquipmentState(inventory, { arms: ids[0] })
+    expect(equipment.getSlot('arms')).toBe(ids[0])
+    expect(equippedInstanceId(equipment, inventory, 'arms')).toBe(ids[0])
+  })
+
+  it('syncWithInventory clears a stale arms reference', () => {
+    const { inventory, ids } = inventoryWithArmor({ kind: 'leather_pauldron' })
+    const equipment = createEquipmentState(inventory)
+    equipment.equip(ids[0]!, inventory)
+    inventory.removeInstance(ids[0]!)
+    equipment.syncWithInventory(inventory)
+    expect(equipment.getSlot('arms')).toBeNull()
+    expect(equippedInstanceId(equipment, inventory, 'arms')).toBeNull()
   })
 })
 
@@ -197,5 +250,19 @@ describe('resolveEquipmentModifiers', () => {
     expect(composed.incomingDamageMultiplier).toBeGreaterThan(0)
     expect(composed.incomingDamageMultiplier).toBeLessThan(1 - piece.damageReduction)
     expect(composed.incomingDamageMultiplier).toBeCloseTo((1 - piece.damageReduction) ** 6)
+  })
+
+  it('applies ordinary quality tuning to pauldron stats without special cases', () => {
+    const common = inventoryWithArmor({ kind: 'knight_pauldron_round', quality: 'common' })
+    const masterwork = inventoryWithArmor({ kind: 'knight_pauldron_round', quality: 'masterwork' })
+    const commonEq = createEquipmentState(common.inventory)
+    const mwEq = createEquipmentState(masterwork.inventory)
+    commonEq.equip(common.ids[0]!, common.inventory)
+    mwEq.equip(masterwork.ids[0]!, masterwork.inventory)
+    const c = resolveEquipmentModifiers(commonEq, common.inventory)
+    const m = resolveEquipmentModifiers(mwEq, masterwork.inventory)
+    expect(m.incomingDamageMultiplier).toBeLessThan(c.incomingDamageMultiplier)
+    expect(m.meleeStaminaMultiplier).toBeLessThan(c.meleeStaminaMultiplier)
+    expect(masterwork.inventory.totalWeight()).toBeLessThan(common.inventory.totalWeight())
   })
 })
