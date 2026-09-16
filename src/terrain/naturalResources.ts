@@ -1,9 +1,20 @@
-import { MathUtils } from 'three'
 import type { Role } from '../ai/characters'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from './chunkHeightmap'
 import { createSeededRandom } from '../world/parseSeed'
 import { biomeWeightsAt } from './biomeRegions'
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+/** Hermite smoothstep matching Three.js `MathUtils.smoothstep`. */
+function smoothstep(x: number, min: number, max: number): number {
+  if (x <= min) return 0
+  if (x >= max) return 1
+  const t = (x - min) / (max - min)
+  return t * t * (3 - 2 * t)
+}
 
 /**
  * Natural resources (plan 032) — generated independently of settlements, as a
@@ -155,15 +166,15 @@ function resourceWeights(
   // Peaks right around the coastline band (§3: "sól: wybrzeże") — fades both
   // out to open ocean and further inland.
   const coastal =
-    MathUtils.smoothstep(continentalness, region.oceanThreshold, region.coastThreshold) *
-    (1 - MathUtils.smoothstep(continentalness, region.coastThreshold, region.coastThreshold + 0.15))
+    smoothstep(continentalness, region.oceanThreshold, region.coastThreshold) *
+    (1 - smoothstep(continentalness, region.coastThreshold, region.coastThreshold + 0.15))
 
   return {
     iron: 0.15 + mountainRidge * 0.9 + altitude01 * 0.25,
     // Coal favors foothills/mid-altitude over bare high ridges (real coal
     // seams are sedimentary, not found on exposed rock crests) — same
     // mountain-adjacent niche as iron, biased lower.
-    coal: 0.15 + mountainRidge * 0.7 + (1 - MathUtils.smoothstep(altitude01, 0.35, 0.8)) * 0.3,
+    coal: 0.15 + mountainRidge * 0.7 + (1 - smoothstep(altitude01, 0.35, 0.8)) * 0.3,
     gold: 0.05 + mountainRidge * 0.65 + (nearWater ? 0.3 : 0),
     // Copper favors lower, more accessible foothills than iron — a milder
     // mountain-ridge dependence and a bias toward lower altitude, so it isn't
@@ -194,7 +205,7 @@ function resourceAtCell(cell: ResourceCell, seed: number, env: ResourceEnv): Nat
   const continentalness = env.sampleContinentalness(x, z)
   const mountainRidge = env.sampleMountainRidge(x, z)
   const moistureRegion = env.sampleMoistureRegion(x, z)
-  const altitude01 = MathUtils.clamp((h - env.waterLevel) / Math.max(env.heightScale, 0.001), 0, 1)
+  const altitude01 = clamp((h - env.waterLevel) / Math.max(env.heightScale, 0.001), 0, 1)
   const nearWater = isNearWater(x, z, env)
   const biome = biomeWeightsAt(moistureRegion, altitude01, env.region)
 
@@ -215,7 +226,7 @@ function resourceAtCell(cell: ResourceCell, seed: number, env: ResourceEnv): Nat
 
   const bestWeight = Math.max(...RESOURCE_TYPES.map((t) => weights[t]))
   const fit = bestWeight > 0 ? weights[picked] / bestWeight : 0
-  const richness = MathUtils.clamp(0.2 + fit * 0.5 + random() * 0.3, 0, 1)
+  const richness = clamp(0.2 + fit * 0.5 + random() * 0.3, 0, 1)
   const radius = MIN_RADIUS + random() * RADIUS_RANGE
 
   return { id: `resource_${cell.rx}_${cell.rz}`, type: picked, x, z, radius, richness }

@@ -276,22 +276,22 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkWorkerPool.ts`
 
-- `cancelChunkGrass` — function — line 406
-- `cancelChunkMesh` — function — line 417
-- `cancelChunkTile` — function — line 395
-- `cancelChunkWorldKnowledge` — function — line 428
-- `ChunkWorkerLike` — type — line 24
-- `ChunkWorkerPool` — type — line 40
-- `ChunkWorkerPoolOptions` — type — line 31
-- `createChunkWorkerPool` — function — line 126
-- `defaultChunkWorkerCount` — function — line 110
-- `disposeChunkWorkerPool` — function — line 432
-- `HeightmapGenerationCancelledError` — class — line 12
-- `isChunkWorkerCancelledError` — function — line 19
-- `requestChunkGrass` — function — line 399
-- `requestChunkMesh` — function — line 410
-- `requestChunkTile` — function — line 388
-- `requestChunkWorldKnowledge` — function — line 421
+- `cancelChunkGrass` — function — line 430
+- `cancelChunkMesh` — function — line 441
+- `cancelChunkTile` — function — line 419
+- `cancelChunkWorldKnowledge` — function — line 452
+- `ChunkWorkerLike` — type — line 25
+- `ChunkWorkerPool` — type — line 41
+- `ChunkWorkerPoolOptions` — type — line 32
+- `createChunkWorkerPool` — function — line 140
+- `defaultChunkWorkerCount` — function — line 113
+- `disposeChunkWorkerPool` — function — line 456
+- `HeightmapGenerationCancelledError` — class — line 13
+- `isChunkWorkerCancelledError` — function — line 20
+- `requestChunkGrass` — function — line 423
+- `requestChunkMesh` — function — line 434
+- `requestChunkTile` — function — line 412
+- `requestChunkWorldKnowledge` — function — line 445
 
 ## `terrain/chunkWorldItems.ts`
 
@@ -448,17 +448,17 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/naturalResources.ts`
 
-- `dominantResourceNear` — function — line 272
-- `NaturalResource` — type — line 39
-- `RESOURCE_ROLE` — const — line 64
-- `RESOURCE_TYPES` — const — line 35
-- `resourceAttractionAt` — function — line 294
-- `resourceById` — function — line 241
+- `dominantResourceNear` — function — line 283
+- `NaturalResource` — type — line 50
+- `RESOURCE_ROLE` — const — line 75
+- `RESOURCE_TYPES` — const — line 46
+- `resourceAttractionAt` — function — line 305
+- `resourceById` — function — line 252
   - domain: settlements-npcs
-- `ResourceEnv` — type — line 104
-- `resourcesNear` — function — line 250
-- `ResourceType` — type — line 23
-- `SIGNIFICANT_RICHNESS` — const — line 58
+- `ResourceEnv` — type — line 115
+- `resourcesNear` — function — line 261
+- `ResourceType` — type — line 34
+- `SIGNIFICANT_RICHNESS` — const — line 69
 
 ## `terrain/resourceDeposits.ts`
 
@@ -667,15 +667,21 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/worldKnowledgeScan.ts`
 
-- `chunkParamsForWorldKnowledgeScan` — function — line 87
+- `chunkParamsForWorldKnowledgeScan` — function — line 201
   - domain: world-terrain
-- `scanWorldKnowledge` — function — line 137
+- `prepareWorldKnowledgeScan` — function — line 136
   - domain: world-terrain
-- `WORLD_KNOWLEDGE_MAX_NEARBY_HITS` — const — line 22
-- `WorldKnowledgeQueryKind` — type — line 24
-- `WorldKnowledgeScanHit` — type — line 67
-- `WorldKnowledgeScanResult` — type — line 75
-- `WorldKnowledgeTerrainSnapshot` — type — line 30
+- `scanWorldKnowledge` — function — line 285
+  - domain: world-terrain
+- `WORLD_KNOWLEDGE_MAX_NEARBY_HITS` — const — line 28
+- `WorldKnowledgeChunkGather` — type — line 82
+- `worldKnowledgeGatherFor` — function — line 185
+- `WorldKnowledgeQueryKind` — type — line 30
+- `worldKnowledgeRoadContext` — function — line 114
+  - domain: world-terrain
+- `WorldKnowledgeScanHit` — type — line 69
+- `WorldKnowledgeScanResult` — type — line 77
+- `WorldKnowledgeTerrainSnapshot` — type — line 37
   - domain: world-terrain
 - `WorldKnowledgeWorkerParams` — type — line 58
 

@@ -106,8 +106,8 @@ import { setActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspicio
 import { villageSizeConfig } from '../settlement/families'
 import { isLostTreasureElderFamily, LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS } from '../settlement/lostTreasureChroniclesElderResident'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
-import { activateRoadRouteWorldgenCache, clearRoadNetworkCaches } from '../settlement/roadNetwork'
-import { roadRouteFingerprint } from '../settlement/roadRouteWorldgenCache'
+import { activateRoadRouteWorldgenCache, attachRoadRoutePersistence, clearRoadNetworkCaches, ingestHydratedRoadRoute } from '../settlement/roadNetwork'
+import { createRoadRouteWorldgenCache, roadRouteFingerprint } from '../settlement/roadRouteWorldgenCache'
 import { resolveSettlementCharacter } from '../settlement/settlementCharacter'
 import { cellFromId, cellKey, cellSeed, cellsWithinRadius, probeSettlementSite, type SettlementDef } from '../settlement/settlementGenerator'
 import { cachedLostTreasureArchaeologistHostCell, cachedLostTreasureSpecialistHostCell, settlementDefFor, worldRiverQuery } from '../settlement/settlementPlanCache'
@@ -236,6 +236,11 @@ import {
  *  animals behave identically whether the player is standing right there or has
  *  wandered many chunks away. */
 export const HOME_RADIUS = 56
+
+const persistentRoadRoutes = createRoadRouteWorldgenCache({
+  hydrateInto: ingestHydratedRoadRoute,
+})
+attachRoadRoutePersistence(persistentRoadRoutes)
 
 /** How far (world units) from the player a settlement streams in. Analogous to
  *  chunk load/unload radii — see multi-settlements plan. */

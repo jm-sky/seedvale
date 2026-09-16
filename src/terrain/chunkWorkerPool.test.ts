@@ -36,7 +36,7 @@ function createControllableWorker(posted: Posted[]): ControllableWorker {
       if (!request || !worker.onmessage) return
       const response = (
         request.kind === 'worldKnowledge'
-          ? { kind: 'worldKnowledge', id: request.id, ok: true, result: { hits: [] } }
+          ? { kind: 'worldKnowledge', id: request.id, ok: true, result: { hits: [], elapsedMs: 0 } }
           : request.kind === 'grass'
             ? { kind: 'grass', id: request.id, ok: true, grass: {} as never }
             : request.kind === 'mesh'
@@ -105,12 +105,7 @@ const dummyKnowledge = {
     region: {} as WorldKnowledgeWorkerParams['terrain']['region'],
     vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
     homeChunks: [],
-    cemeterySettlements: [],
-    cemeteryRoadSegments: [],
-    cemeteryClearings: [],
-    roadSegments: [],
-    clearings: [],
-    regional: [],
+    localSearchRadius: 56,
   },
 } satisfies WorldKnowledgeWorkerParams
 

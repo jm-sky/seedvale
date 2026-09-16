@@ -54,7 +54,7 @@ import {
   TREE_SPECS,
 } from '../settlement/props'
 import { bridgesNear, fordsNear, type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
-import { cellFromId, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
+import { cellFromId } from '../settlement/settlementGenerator'
 import { setSettlementRiverQuery, settlementDefFor } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { type BridgePresentation, createBridge } from '../world/createBridge'
@@ -651,9 +651,9 @@ export type ChunkManager = {
     maxChunkRadius: number,
   ) => { id: string, x: number, z: number } | undefined
   /**
-   * Cheap snapshot of deterministic worldgen inputs for one worker-backed
-   * knowledge scan (plan quests-progression-047). Does not walk the ring or
-   * resolve landmarks — that work belongs in the worker job.
+   * Cheap O(1) snapshot of deterministic worldgen inputs for one worker-backed
+   * knowledge scan (plan world-030). Does not gather roads, settlements, or
+   * walk the landmark ring — that work belongs in the worker job.
    * @domain world-terrain
    */
   buildWorldKnowledgeWorkerParams: (input: {
@@ -2790,34 +2790,21 @@ export function createChunkManager(
       return undefined
     },
     buildWorldKnowledgeWorkerParams(input) {
-      // `segmentsNear` / `villageSegmentsNear` treat the size as a box width
-      // (half-extent = size/2). Cover a Chebyshev ring of `maxChunkRadius`
-      // plus the per-chunk cemetery gather of `chunkSize * 8`.
-      const gatherWidth = config.chunkSize * (2 * input.maxChunkRadius + 8)
-      const radiusCells = Math.ceil(gatherWidth / SETTLEMENT_GRID_STEP) + CEMETERY_SETTLEMENT_GATHER_RADIUS
-      const cemeterySettlements = collectSettlementRefsNear(
-        input.originX,
-        input.originZ,
-        radiusCells,
-        (cell) => settlementDefFor(cell, settlementResolveCtx()),
-      )
-      const cemeteryVillage = villageSegmentsNear(input.originX, input.originZ, gatherWidth, roadCtx)
-      const roadSegments = [
-        ...segmentsNear(input.originX, input.originZ, gatherWidth, roadCtx),
-        ...cemeteryVillage.paths,
-      ]
-      const authored = config.authoredExpeditionRuins ?? (() => {
-        const site = getActiveDarkForestTreasureSite()
-        if (!site) return null
-        return {
-          id: site.landmarkId,
-          x: site.x,
-          z: site.z,
-          rotationY: site.rotationY,
-          variant: site.variant,
-          scale: site.scale,
-        }
-      })()
+      const includeRuins = input.landmarkKinds.includes('ruins')
+      const authored = includeRuins
+        ? config.authoredExpeditionRuins ?? (() => {
+          const site = getActiveDarkForestTreasureSite()
+          if (!site) return null
+          return {
+            id: site.landmarkId,
+            x: site.x,
+            z: site.z,
+            rotationY: site.rotationY,
+            variant: site.variant,
+            scale: site.scale,
+          }
+        })()
+        : null
       return {
         queryKind: input.queryKind,
         landmarkKinds: input.landmarkKinds,
@@ -2854,16 +2841,7 @@ export function createChunkManager(
           },
           authoredExpeditionRuins: authored,
           homeChunks: config.homeChunks.map((home) => ({ cx: home.cx, cz: home.cz })),
-          roadSegments,
-          clearings: cemeteryVillage.clearings,
-          regional: cemeteryVillage.regional,
-          cemeterySettlements,
-          cemeteryRoadSegments: roadSegments,
-          cemeteryClearings: cemeteryVillage.clearings.map((clearing) => ({
-            x: clearing.x,
-            z: clearing.z,
-            radius: clearing.radius,
-          })),
+          localSearchRadius: config.settlementSearchRadius,
         },
       }
     },

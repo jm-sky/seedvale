@@ -8,6 +8,7 @@ import type {
 import type { ChunkMeshData, ChunkMeshDataParams } from './chunkMeshData'
 import type { GrassChunkData } from './grassPlacement'
 import type { WorldKnowledgeScanResult, WorldKnowledgeWorkerParams } from './worldKnowledgeScan'
+import { getMonitor } from '../perf/active'
 
 export class HeightmapGenerationCancelledError extends Error {
   constructor() {
@@ -95,6 +96,8 @@ type WorldKnowledgeJob = {
   id: number
   key: string
   params: WorldKnowledgeWorkerParams
+  queuedAt: number
+  startedAt?: number
   resolve: (data: WorldKnowledgeScanResult) => void
   reject: (err: Error) => void
 }
@@ -110,6 +113,17 @@ function createChunkWorker(): ChunkWorkerLike {
 export function defaultChunkWorkerCount(): number {
   const hc = navigator.hardwareConcurrency
   return Math.min(6, Math.max(2, (hc ?? 4) - 1))
+}
+
+function recordWorldKnowledgeTimings(job: WorldKnowledgeJob, result: WorldKnowledgeScanResult): void {
+  if (!getMonitor().isEnabled()) return
+  const now = performance.now()
+  const startedAt = job.startedAt ?? now
+  const queueMs = startedAt - job.queuedAt
+  const totalMs = now - job.queuedAt
+  console.info(`[PERF:PROPS] debug: worldKnowledge:queue ${queueMs.toFixed(1)} ms`)
+  console.info(`[PERF:PROPS] debug: worldKnowledge:worker ${result.elapsedMs.toFixed(1)} ms`)
+  console.info(`[PERF:PROPS] debug: worldKnowledge:total ${totalMs.toFixed(1)} ms`)
 }
 
 function toRequest(job: ChunkJob): ChunkWorkerRequest {
@@ -169,6 +183,7 @@ export function createChunkWorkerPool(
       const worker = free.pop()!
       inflight.set(job.id, job)
       workerJob.set(worker, job.id)
+      if (job.kind === 'worldKnowledge') job.startedAt = performance.now()
       worker.postMessage(toRequest(job))
     }
   }
@@ -218,6 +233,7 @@ export function createChunkWorkerPool(
               bareGround: msg.bareGround,
             })
           } else if (job.kind === 'worldKnowledge' && msg.kind === 'worldKnowledge') {
+            recordWorldKnowledgeTimings(job, msg.result)
             job.resolve(msg.result)
           } else {
             job.reject(new Error(`chunk worker kind mismatch (${job.kind})`))
@@ -337,7 +353,15 @@ export function createChunkWorkerPool(
     const id = nextId++
     keyToId.set(`worldKnowledge:${key}`, id)
     return new Promise<WorldKnowledgeScanResult>((resolve, reject) => {
-      queueWorldKnowledge.push({ kind: 'worldKnowledge', id, key, params, resolve, reject })
+      queueWorldKnowledge.push({
+        kind: 'worldKnowledge',
+        id,
+        key,
+        params,
+        queuedAt: performance.now(),
+        resolve,
+        reject,
+      })
       pump()
     })
   }

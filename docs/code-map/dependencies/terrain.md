@@ -683,6 +683,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `perf/active.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkMeshData.ts`
@@ -1112,6 +1113,7 @@ Generated from TypeScript imports.
 - `settlement/settlementProgression.ts`
 - `terrain/chunkManager.ts`
 - `terrain/riverQuery.test.ts`
+- `terrain/worldKnowledgeScan.ts`
 
 ## `terrain/riverTileCache.ts`
 
@@ -1290,6 +1292,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `terrain/worldKnowledgeScan.test.ts`
 - `terrain/worldKnowledgeScan.ts`
+- `world/locations/worldKnowledgeResearch.test.ts`
 - `world/locations/worldKnowledgeResearch.ts`
 
 ## `terrain/vegetationRegionBatcher.test.ts`
@@ -1391,6 +1394,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `settlement/roadNetwork.ts`
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkHeightmap.ts`
@@ -1401,12 +1405,14 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `settlement/settlementGenerator.ts`
+- `settlement/roadNetwork.ts`
+- `settlement/settlementPlanCache.ts`
 - `terrain/cemeteryAssignment.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/fbm.ts`
+- `terrain/riverQuery.ts`
 - `terrain/unloadedLandmarkLookup.ts`
 
 **Imported by**

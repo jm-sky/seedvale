@@ -63,4 +63,33 @@ describe('createQuestWorldKnowledgeResolver (plan quests-progression-047)', () =
     expect(resolve).toHaveBeenCalledTimes(1)
     expect(findLandmarkNear).not.toHaveBeenCalled()
   })
+
+  it('describe never calls findLandmarkNear, even without stored x/z', () => {
+    const findLandmarkNear = vi.fn()
+    const resolver = createQuestWorldKnowledgeResolver({
+      getHost: () => ({
+        chunkManager: { findLandmarkNear },
+        settlementsManager: {
+          getHomeDef: () => ({ id: '0_0', x: 0, z: 0, name: 'Lipowa' }),
+          peekDef: () => null,
+        },
+      }),
+      getDefs: () => [def],
+      searchRadius: 10,
+      chunkSize: 64,
+      getChronicleSearch: () => null,
+      research: {
+        resolve: async () => null,
+        resolveMany: async () => [],
+        invalidate() {},
+        dispose() {},
+      },
+    })
+    const phrase = resolver.describe(
+      { kind: 'landmark', landmarkId: 'monolith:4:-7:0:3f', landmarkKind: 'monolith' },
+      { settlementId: '0_0' },
+    )
+    expect(phrase).toBeTruthy()
+    expect(findLandmarkNear).not.toHaveBeenCalled()
+  })
 })

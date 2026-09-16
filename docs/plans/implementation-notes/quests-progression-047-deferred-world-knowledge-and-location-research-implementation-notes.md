@@ -624,3 +624,7 @@ Add/adjust tests alongside touched modules rather than creating one broad integr
 - No conversation-order rerolls.
 - Keep immediate knowledge supported.
 - Browser verification belongs to User.
+
+## Follow-up discovered after implementation
+
+Accepting `slad-przy-monolicie` still froze the main thread (~30 s). `QuestManager` was already fire-and-forget; `buildWorldKnowledgeWorkerParams()` synchronously gathered cemetery/road context for the whole search ring before the worker job started. That is plan `world-030`, not a retroactive expansion of this plan.

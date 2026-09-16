@@ -16,8 +16,10 @@ Generated from TypeScript imports.
 - `perf/grassFinalizationDiag.ts`
 - `perf/index.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkWorkerPool.ts`
 - `ui/createDebugGui.ts`
 - `world/createCaves.ts`
+- `world/locations/worldKnowledgeResearch.ts`
 
 ## `perf/agentCpuDiag.test.ts`
 

@@ -1428,12 +1428,12 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldKnowledgeResearch.ts`
 
-- `createWorldKnowledgeResearch` — function — line 64
+- `createWorldKnowledgeResearch` — function — line 65
   - domain: world-locations
-- `WorldKnowledgeQuery` — type — line 10
-- `WorldKnowledgeRef` — type — line 18
-- `WorldKnowledgeResearch` — type — line 26
-- `WorldKnowledgeResearchHost` — type — line 34
+- `WorldKnowledgeQuery` — type — line 11
+- `WorldKnowledgeRef` — type — line 19
+- `WorldKnowledgeResearch` — type — line 27
+- `WorldKnowledgeResearchHost` — type — line 35
 
 ## `world/locations/worldLocationCatalog.ts`
 

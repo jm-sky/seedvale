@@ -4,9 +4,11 @@ import type { RiverChannelSegment, RoadNetworkParams } from '../terrain/chunkHei
 import { cacheKey, putCacheRecords } from '../persistence/worldgenCacheDb'
 import {
   activateRoadRouteWorldgenCache,
+  attachRoadRoutePersistence,
   bridgeSpecOf,
   clearRoadNetworkCaches,
   findRoute,
+  ingestHydratedRoadRoute,
   meanderRoute,
   peekRoadRouteCache,
   roadRouteLocationKey,
@@ -16,7 +18,7 @@ import {
   yawToward,
 } from './roadNetwork'
 import { crossingsForPolyline } from './roadRiverCrossing'
-import { ROAD_ROUTE_CACHE_NAMESPACE, ROAD_ROUTE_CACHE_VERSION } from './roadRouteWorldgenCache'
+import { createRoadRouteWorldgenCache, ROAD_ROUTE_CACHE_NAMESPACE, ROAD_ROUTE_CACHE_VERSION } from './roadRouteWorldgenCache'
 
 describe('yawToward', () => {
   it('maps local +X toward +X world (no Z flip)', () => {
@@ -290,6 +292,9 @@ describe('bridgeSpecOf', () => {
 describe('persistent road route identity (plan world-terrain-029)', () => {
   beforeEach(() => {
     vi.stubGlobal('indexedDB', new IDBFactory())
+    attachRoadRoutePersistence(createRoadRouteWorldgenCache({
+      hydrateInto: ingestHydratedRoadRoute,
+    }))
     clearRoadNetworkCaches()
   })
 

@@ -3128,6 +3128,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `terrain/chunkWorkerPool.ts`
+- `terrain/unloadedLandmarkLookup.ts`
 - `terrain/worldKnowledgeScan.ts`
 - `world/locations/worldKnowledgeResearch.ts`
 
@@ -3135,6 +3136,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `perf/active.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkWorkerPool.ts`
 - `terrain/unloadedLandmarkLookup.ts`

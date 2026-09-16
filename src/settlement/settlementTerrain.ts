@@ -1,7 +1,10 @@
-import { MathUtils } from 'three'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import { biomeWeightsAt } from '../terrain/biomeRegions'
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
 
 export type TerrainSamplers = {
   sampleContinentalness: (x: number, z: number) => number
@@ -57,7 +60,7 @@ export function classifySettlementTerrain(
   if (continentalness < region.coastThreshold) return 'ocean'
   if (mountainRidge > MOUNTAIN_RIDGE_THRESHOLD) return 'mountain'
 
-  const altitude01 = MathUtils.clamp((y - waterLevel) / Math.max(heightScale, 0.001), 0, 1)
+  const altitude01 = clamp((y - waterLevel) / Math.max(heightScale, 0.001), 0, 1)
   const weights = biomeWeightsAt(moistureRegion, altitude01, region)
   if (weights.swamp >= weights.desert && weights.swamp >= weights.forest) return 'swamp'
   if (weights.desert >= weights.forest) return 'desert'

@@ -11,6 +11,7 @@ import type {
 import type { FordProjection } from '../terrain/riverFord'
 import type { RoadBridgeSpec } from '../terrain/roadBridge'
 import type { RoadRiverCrossing } from './roadRiverCrossing'
+import type { RoadRouteWorldgenCache } from './roadRouteWorldgenCache'
 import type { TerrainSamplers } from './settlementTerrain'
 import { directionFromYaw, yawToward } from '../math/segment'
 import { clearCemeteryCaches } from '../terrain/cemeteryAssignment'
@@ -23,7 +24,6 @@ import {
   evaluateRoadRiverCrossing,
   riverHitsOnEdge,
 } from './roadRiverCrossing'
-import { createRoadRouteWorldgenCache } from './roadRouteWorldgenCache'
 import {
   cellsWithinRadius,
   type SettlementCell,
@@ -58,8 +58,8 @@ export type RoadSegment = {
 
 /** Everything `roadNetwork.ts` needs to resolve settlement defs / find routes,
  *  bundled so the many functions below don't each carry a dozen parameters.
- *  Main-thread only — pulls in `settlementGenerator.ts` (naming/character
- *  logic), never imported from `chunkHeightmap.worker.ts`. */
+ *  Corridor queries are data-only given this context; IndexedDB route
+ *  persistence stays main-thread via `attachRoadRoutePersistence` (plan world-030). */
 export type RoadNetworkContext = {
   seed: number
   sampleHeight: HeightSampler
@@ -97,14 +97,31 @@ export type RoadRoute = {
 // §9.14–15) — do not keep a second authoritative layout/def cache here.
 const routeCache = new Map<string, RoadRoute | null>()
 
-/** Persistent worldgen-cache adapter (plan world-terrain-029). Hydrates into
- *  `routeCache` and never overwrites a key the runtime already computed. */
-const persistentRoutes = createRoadRouteWorldgenCache({
-  hydrateInto(key, route) {
-    if (routeCache.has(key)) return
-    routeCache.set(key, route)
-  },
-})
+/**
+ * Optional IndexedDB adapter (plan world-terrain-029). Main thread attaches
+ * it; the heightmap worker must not — it only uses in-memory `routeCache`
+ * (plan world-030).
+ */
+let persistentRoutes: RoadRouteWorldgenCache | null = null
+
+/**
+ * Merge one hydrated persistent route into the runtime map without
+ * overwriting a key this realm already computed.
+ * @domain world-terrain
+ */
+export function ingestHydratedRoadRoute(key: string, route: RoadRoute | null): void {
+  if (routeCache.has(key)) return
+  routeCache.set(key, route)
+}
+
+/**
+ * Bind the main-thread IndexedDB adapter. No-op to skip when running inside
+ * the terrain worker.
+ * @domain world-terrain
+ */
+export function attachRoadRoutePersistence(cache: RoadRouteWorldgenCache | null): void {
+  persistentRoutes = cache
+}
 
 /**
  * Activate best-effort IndexedDB hydrate for this world identity. Route
@@ -114,12 +131,12 @@ const persistentRoutes = createRoadRouteWorldgenCache({
  * @system worldgen-cache
  */
 export function activateRoadRouteWorldgenCache(seed: number, fingerprint: string): void {
-  persistentRoutes.activate(seed, fingerprint)
+  persistentRoutes?.activate(seed, fingerprint)
 }
 
 /** Test/lifecycle seam: resolves when the current activation's hydrate finishes. */
 export function roadRouteWorldgenCacheReady(): Promise<void> {
-  return persistentRoutes.ready()
+  return persistentRoutes?.ready() ?? Promise.resolve()
 }
 
 /** Session lookup: `undefined` is a miss; `null` is a cached failed route. */
@@ -151,8 +168,20 @@ export function roadRouteLocationKey(settlementId: string, locationKind: string)
 
 function storeRoute(key: string, route: RoadRoute | null): RoadRoute | null {
   routeCache.set(key, route)
-  persistentRoutes.remember(key, route)
+  persistentRoutes?.remember(key, route)
   return route
+}
+
+/** In-memory settlement/road/cemetery caches for this JS realm. The terrain
+ *  worker calls this on world-knowledge epoch change without touching IndexedDB.
+ * @domain world-terrain
+ */
+export function clearRoadNetworkMemoryCaches(): void {
+  clearSettlementDefCache()
+  clearMinorLocationCaches()
+  routeCache.clear()
+  clearCemeteryCaches()
+  clearCemeteryPlacementCaches()
 }
 
 /** Both module-level caches below are keyed by cell/id, not by seed — a new
@@ -161,12 +190,8 @@ function storeRoute(key: string, route: RoadRoute | null): RoadRoute | null {
  *  world leak into the new one. Also invalidates any in-flight persistent
  *  hydrate/flush so a previous seed cannot repopulate this map. */
 export function clearRoadNetworkCaches(): void {
-  clearSettlementDefCache()
-  clearMinorLocationCaches()
-  routeCache.clear()
-  persistentRoutes.invalidate()
-  clearCemeteryCaches()
-  clearCemeteryPlacementCaches()
+  clearRoadNetworkMemoryCaches()
+  persistentRoutes?.invalidate()
 }
 
 function resolveCtx(ctx: RoadNetworkContext): SettlementResolveContext {

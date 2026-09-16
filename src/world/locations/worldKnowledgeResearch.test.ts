@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { WorldKnowledgeWorkerParams } from '../../terrain/worldKnowledgeScan'
 import { HeightmapGenerationCancelledError } from '../../terrain/chunkWorkerPool'
+import * as unloadedLandmarkLookup from '../../terrain/unloadedLandmarkLookup'
 import { createWorldKnowledgeResearch, type WorldKnowledgeQuery } from './worldKnowledgeResearch'
 
 const query: WorldKnowledgeQuery = {
@@ -34,12 +35,7 @@ function dummyParams(query: WorldKnowledgeQuery): WorldKnowledgeWorkerParams {
       region: {} as WorldKnowledgeWorkerParams['terrain']['region'],
       vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
       homeChunks: [],
-      cemeterySettlements: [],
-      cemeteryRoadSegments: [],
-      cemeteryClearings: [],
-      roadSegments: [],
-      clearings: [],
-      regional: [],
+      localSearchRadius: 56,
     },
   }
 }
@@ -156,5 +152,19 @@ describe('createWorldKnowledgeResearch (plan quests-progression-047)', () => {
     expect(cancelled.length).toBe(1)
     resolveJob!({ hits: [] })
     expect(await pending).toBeNull()
+  })
+
+  it('does not walk landmark rings while building the worker request', async () => {
+    const spy = vi.spyOn(unloadedLandmarkLookup, 'ringChunkOffsets')
+    const research = createWorldKnowledgeResearch({
+      buildParams: dummyParams,
+      fingerprint: () => 'seed-1',
+      request: async () => ({ hits: [] }),
+      cancel: () => {},
+    })
+    await research.resolve(query)
+    expect(spy).not.toHaveBeenCalled()
+    research.dispose()
+    spy.mockRestore()
   })
 })

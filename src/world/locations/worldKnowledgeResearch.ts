@@ -1,5 +1,6 @@
 import type { LandmarkKind } from '../../terrain/chunkEnvironment'
 import type { WorldKnowledgeScanHit, WorldKnowledgeWorkerParams } from '../../terrain/worldKnowledgeScan'
+import { getMonitor } from '../../perf/active'
 import {
   cancelChunkWorldKnowledge,
   isChunkWorkerCancelledError,
@@ -88,7 +89,12 @@ export function createWorldKnowledgeResearch(host: WorldKnowledgeResearchHost): 
     const existing = inflight.get(key)
     if (existing && existing.epoch === epoch) return existing.promise
     const startedEpoch = epoch
-    const params = host.buildParams({ ...query, landmarkKinds: kinds })
+    const prepareStarted = performance.now()
+    const params: WorldKnowledgeWorkerParams = {
+      ...host.buildParams({ ...query, landmarkKinds: kinds }),
+      epoch: fingerprint,
+    }
+    getMonitor().recordHitch('PROPS', performance.now() - prepareStarted, 'worldKnowledge:prepare')
     const promise = request(key, params).then(
       (result) => settleIfCurrent(key, startedEpoch, result.hits),
       (error: unknown) => {

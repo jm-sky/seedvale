@@ -59,13 +59,6 @@ export function createQuestWorldKnowledgeResolver(input: {
       return { x: chronicle.ruinsX, z: chronicle.ruinsZ }
     }
     const origin = settlementOrigin(settlementId)
-    const found = input.getHost().chunkManager.findLandmarkNear(
-      ref.landmarkKind,
-      origin.x,
-      origin.z,
-      input.searchRadius,
-    )
-    if (found?.id === ref.landmarkId) return { x: found.x, z: found.z }
     const approx = approxLandmarkChunkCenter(ref.landmarkId, input.chunkSize)
     return approx ?? origin
   }

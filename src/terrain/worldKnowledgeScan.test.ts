@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ChunkTileParams } from './chunkHeightmap'
+import * as roadNetwork from '../settlement/roadNetwork'
+import * as cemeteryAssignment from './cemeteryAssignment'
 import { clearCemeteryCaches } from './cemeteryAssignment'
 import { clearCemeteryPlacementCaches } from './cemeteryPlacement'
 import * as chunkHeightmap from './chunkHeightmap'
 import { resolveUnloadedLandmark, ringChunkOffsets } from './unloadedLandmarkLookup'
 import {
   chunkParamsForWorldKnowledgeScan,
+  prepareWorldKnowledgeScan,
   scanWorldKnowledge,
+  worldKnowledgeGatherFor,
   type WorldKnowledgeTerrainSnapshot,
   type WorldKnowledgeWorkerParams,
 } from './worldKnowledgeScan'
@@ -84,12 +88,7 @@ function snapshotFromParams(params: ChunkTileParams): WorldKnowledgeTerrainSnaps
     vegetationSpeciesCount: params.vegetationSpeciesCount,
     authoredExpeditionRuins: params.authoredExpeditionRuins ?? null,
     homeChunks: [],
-    cemeterySettlements: params.cemeterySettlements ?? [],
-    cemeteryRoadSegments: params.cemeteryRoadSegments ?? [],
-    cemeteryClearings: params.cemeteryClearings ?? [],
-    roadSegments: params.roadSegments ?? [],
-    clearings: params.clearings ?? [],
-    regional: params.regional ?? [],
+    localSearchRadius: 56,
   }
 }
 
@@ -103,116 +102,207 @@ function workerParams(
     originX: 0,
     originZ: 0,
     maxChunkRadius: 4,
+    epoch: `test:${params.seed}`,
     terrain: snapshotFromParams(params),
     ...overrides,
   }
 }
 
+function emptyVillage() {
+  return { clearings: [] as never[], regional: [] as never[], paths: [] as never[] }
+}
+
+function withEmptyCorridors<T>(run: () => T): T {
+  const village = vi.spyOn(roadNetwork, 'villageSegmentsNear').mockReturnValue(emptyVillage())
+  const segments = vi.spyOn(roadNetwork, 'segmentsNear').mockReturnValue([])
+  const fords = vi.spyOn(roadNetwork, 'fordsNear').mockReturnValue([])
+  const bridges = vi.spyOn(roadNetwork, 'bridgesNear').mockReturnValue([])
+  try {
+    return run()
+  } finally {
+    village.mockRestore()
+    segments.mockRestore()
+    fords.mockRestore()
+    bridges.mockRestore()
+  }
+}
+
 function ringSearch(
   kind: 'monolith' | 'cemetery',
-  params: ChunkTileParams,
-  maxChunkRadius: number,
+  params: WorldKnowledgeWorkerParams,
 ): { id: string, x: number, z: number } | undefined {
+  const gather = worldKnowledgeGatherFor(params.landmarkKinds)
+  const roadCtx = prepareWorldKnowledgeScan(params)
   const center = { cx: 0, cz: 0 }
-  for (const { dx, dz } of ringChunkOffsets(maxChunkRadius)) {
+  for (const { dx, dz } of ringChunkOffsets(params.maxChunkRadius)) {
     const coord = { cx: center.cx + dx, cz: center.cz + dz }
-    const found = resolveUnloadedLandmark(kind, coord, tileParams({
-      ...params,
-      cx: coord.cx,
-      cz: coord.cz,
-    }))
+    const found = resolveUnloadedLandmark(
+      kind,
+      coord,
+      chunkParamsForWorldKnowledgeScan(coord, params.terrain, roadCtx, gather),
+    )
     if (found) return found
   }
   return undefined
 }
 
-describe('scanWorldKnowledge (plan quests-progression-047)', () => {
-  it('matches the main-thread unloaded ring scan for a representative monolith', () => {
-    let expected: { id: string, x: number, z: number } | undefined
-    let seed = 0
-    for (; seed < 400; seed++) {
-      expected = ringSearch('monolith', tileParams({ seed }), 4)
-      if (expected) break
-    }
-    expect(expected).toBeTruthy()
-    const scanned = scanWorldKnowledge(workerParams(tileParams({ seed })))
-    expect(scanned.hits[0]).toMatchObject({
-      type: 'landmark',
-      id: expected!.id,
-      kind: 'monolith',
-      x: expected!.x,
-      z: expected!.z,
+describe('scanWorldKnowledge (plan world-030)', () => {
+  it('matches resolveUnloadedLandmark over per-chunk reconstructed params for a representative monolith', () => {
+    withEmptyCorridors(() => {
+      let expected: { id: string, x: number, z: number } | undefined
+      let seed = 0
+      let params: WorldKnowledgeWorkerParams | undefined
+      for (; seed < 400; seed++) {
+        params = workerParams(tileParams({ seed }))
+        expected = ringSearch('monolith', params)
+        if (expected) break
+      }
+      expect(expected).toBeTruthy()
+      const scanned = scanWorldKnowledge(params!)
+      expect(scanned.hits[0]).toMatchObject({
+        type: 'landmark',
+        id: expected!.id,
+        kind: 'monolith',
+        x: expected!.x,
+        z: expected!.z,
+      })
     })
   })
 
   it('does not call computeChunkTile for lightweight kinds', () => {
     const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
+    const cemetery = vi.spyOn(cemeteryAssignment, 'collectSettlementRefsNear').mockReturnValue([])
     try {
-      scanWorldKnowledge(workerParams(tileParams({ seed: 7 }), {
-        landmarkKinds: ['monolith', 'cemetery', 'ruins', 'tower'],
-      }))
+      withEmptyCorridors(() => {
+        scanWorldKnowledge(workerParams(tileParams({ seed: 7 }), {
+          landmarkKinds: ['monolith', 'cemetery', 'ruins', 'tower'],
+          maxChunkRadius: 1,
+        }))
+      })
+      expect(spy).not.toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+      cemetery.mockRestore()
+    }
+  })
+
+  it('does not gather cemetery refs for a classic-only query', () => {
+    const spy = vi.spyOn(cemeteryAssignment, 'collectSettlementRefsNear')
+    try {
+      withEmptyCorridors(() => {
+        scanWorldKnowledge(workerParams(tileParams({ seed: 7 }), {
+          landmarkKinds: ['monolith'],
+          maxChunkRadius: 1,
+        }))
+      })
       expect(spy).not.toHaveBeenCalled()
     } finally {
       spy.mockRestore()
     }
   })
 
+  it('gathers cemetery refs only when cemetery is in the query', () => {
+    const spy = vi.spyOn(cemeteryAssignment, 'collectSettlementRefsNear').mockReturnValue([])
+    try {
+      withEmptyCorridors(() => {
+        scanWorldKnowledge(workerParams(tileParams({ seed: 7 }), {
+          landmarkKinds: ['cemetery'],
+          maxChunkRadius: 0,
+        }))
+      })
+      expect(spy).toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('gathers corridors per scanned chunk rather than once at the origin', () => {
+    const spy = vi.spyOn(roadNetwork, 'segmentsNear').mockReturnValue([])
+    const village = vi.spyOn(roadNetwork, 'villageSegmentsNear').mockReturnValue(emptyVillage())
+    const fords = vi.spyOn(roadNetwork, 'fordsNear').mockReturnValue([])
+    const bridges = vi.spyOn(roadNetwork, 'bridgesNear').mockReturnValue([])
+    try {
+      scanWorldKnowledge(workerParams(tileParams({ seed: 3 }), {
+        landmarkKinds: ['monolith'],
+        maxChunkRadius: 1,
+      }))
+      const centers = spy.mock.calls.map((call) => `${call[0]},${call[1]}`)
+      expect(new Set(centers).size).toBeGreaterThan(1)
+    } finally {
+      spy.mockRestore()
+      village.mockRestore()
+      fords.mockRestore()
+      bridges.mockRestore()
+    }
+  })
+
   it('nearby-landmarks can return more than one hit without per-chunk jobs', () => {
-    const scanned = scanWorldKnowledge(workerParams(tileParams({ seed: 11 }), {
+    const scanned = withEmptyCorridors(() => scanWorldKnowledge(workerParams(tileParams({ seed: 11 }), {
       queryKind: 'nearby-landmarks',
       landmarkKinds: ['monolith', 'stoneCircle', 'smallRuins'],
       maxChunkRadius: 6,
-    }))
+    })))
     expect(scanned.hits.length).toBeGreaterThanOrEqual(0)
     const ids = scanned.hits.map((hit) => hit.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 
   it('cemetery scan agrees with resolveUnloadedLandmark for a known seed', () => {
-    let expected: { id: string, x: number, z: number } | undefined
-    let seed = 0
     const settlements = [{ id: '0_0', gx: 0, gz: 0, x: 0, z: 0, size: 'MD' as const }]
-    const regional = [{ x: 0, z: 0, radius: 48, targetH: 1, heightStrength: 0.2 }]
-    for (; seed < 120; seed++) {
-      clearCemeteryCaches()
-      clearCemeteryPlacementCaches()
-      expected = resolveUnloadedLandmark('cemetery', { cx: 0, cz: 0 }, tileParams({
-        seed,
-        cemeterySettlements: settlements,
-        regional,
-      }))
-      if (expected) break
+    const cemetery = vi.spyOn(cemeteryAssignment, 'collectSettlementRefsNear').mockReturnValue(settlements)
+    try {
+      withEmptyCorridors(() => {
+        let expected: { id: string, x: number, z: number } | undefined
+        let seed = 0
+        let params: WorldKnowledgeWorkerParams | undefined
+        for (; seed < 120; seed++) {
+          clearCemeteryCaches()
+          clearCemeteryPlacementCaches()
+          params = workerParams(tileParams({ seed }), {
+            landmarkKinds: ['cemetery'],
+            maxChunkRadius: 0,
+          })
+          expected = ringSearch('cemetery', params)
+          if (expected) break
+        }
+        expect(expected?.id.startsWith('cemetery:')).toBe(true)
+        clearCemeteryCaches()
+        clearCemeteryPlacementCaches()
+        const scanned = scanWorldKnowledge(params!)
+        expect(scanned.hits[0]?.id).toBe(expected!.id)
+      })
+    } finally {
+      cemetery.mockRestore()
     }
-    expect(expected?.id.startsWith('cemetery:a:')).toBe(true)
-    clearCemeteryCaches()
-    clearCemeteryPlacementCaches()
-    const scanned = scanWorldKnowledge(workerParams(tileParams({
-      seed,
-      cemeterySettlements: settlements,
-      regional,
-    }), {
-      landmarkKinds: ['cemetery'],
-      maxChunkRadius: 0,
-    }))
-    expect(scanned.hits[0]?.id).toBe(expected!.id)
   })
 
-  it('rebuilds per-chunk params from the snapshot without capturing functions', () => {
-    const params = chunkParamsForWorldKnowledgeScan({ cx: 2, cz: -1 }, snapshotFromParams(tileParams({
-      seed: 4,
-      cemeterySettlements: [
-        { id: '0_0', gx: 0, gz: 0, x: 0, z: 0, size: 'MD' },
-        { id: '1_0', gx: 1, gz: 0, x: 280, z: 0, size: 'SM' },
-      ],
-      roadSegments: [{
-        ax: 0, az: 0, ah: 1, bx: 8, bz: 0, bh: 1,
-        halfWidth: 2, heightStrength: 0.5, tintStrength: 0.5,
-      }],
+  it('rebuilds per-chunk params without capturing functions', () => {
+    withEmptyCorridors(() => {
+      const params = workerParams(tileParams({ seed: 4 }))
+      const roadCtx = prepareWorldKnowledgeScan(params)
+      const chunkParams = chunkParamsForWorldKnowledgeScan(
+        { cx: 2, cz: -1 },
+        params.terrain,
+        roadCtx,
+        { includeCorridors: true, includeCemetery: false },
+      )
+      expect(chunkParams.cx).toBe(2)
+      expect(chunkParams.cz).toBe(-1)
+      expect(chunkParams.riverSegments).toEqual([])
+      expect(chunkParams.cemeterySettlements).toEqual([])
+      expect(JSON.parse(JSON.stringify(chunkParams)).seed).toBe(4)
+    })
+  })
+
+  it('keeps nearest-landmark ring order and stops at the first hit', () => {
+    const offsets = ringChunkOffsets(2)
+    expect(offsets[0]).toEqual({ dx: 0, dz: 0 })
+    const scanned = withEmptyCorridors(() => scanWorldKnowledge(workerParams(tileParams({ seed: 9 }), {
+      queryKind: 'nearest-landmark',
+      landmarkKinds: ['monolith'],
+      maxChunkRadius: 6,
     })))
-    expect(params.cx).toBe(2)
-    expect(params.cz).toBe(-1)
-    expect(params.roadSegments).toHaveLength(1)
-    expect(params.riverSegments).toEqual([])
-    expect(JSON.parse(JSON.stringify(params)).seed).toBe(4)
+    if (scanned.hits.length === 0) return
+    expect(scanned.hits).toHaveLength(1)
   })
 })

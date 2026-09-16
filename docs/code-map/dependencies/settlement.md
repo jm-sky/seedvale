@@ -1630,6 +1630,8 @@ Generated from TypeScript imports.
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementSignposts.ts`
 - `terrain/chunkManager.ts`
+- `terrain/worldKnowledgeScan.test.ts`
+- `terrain/worldKnowledgeScan.ts`
 
 ## `settlement/roadRiverCrossing.test.ts`
 
@@ -1816,7 +1818,6 @@ Generated from TypeScript imports.
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
 - `terrain/chunkManager.ts`
-- `terrain/worldKnowledgeScan.ts`
 - `ui-vue/store.ts`
 - `world/createCaves.test.ts`
 - `world/createCaves.ts`
@@ -1932,6 +1933,7 @@ Generated from TypeScript imports.
 - `settlement/settlementNameUniqueness.test.ts`
 - `settlement/settlementProgression.test.ts`
 - `terrain/chunkManager.ts`
+- `terrain/worldKnowledgeScan.ts`
 
 ## `settlement/settlementProgression.test.ts`
 
