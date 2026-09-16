@@ -4,7 +4,10 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-047-deferred-world-knowledge-and-location-research` | 2026-09-16 09:22:40 | —                   | `quests-progression` | —          |
+| `settlements-npcs-037-inter-settlement-goods-transport`                | 2026-09-16 07:11:03 | —                   | `settlements-npcs` | —          |
 | `npc-040-ubc-profession-appearance-variants`                           | 2026-09-15 20:40:47 | —                   | `npc`            | —          |
+| `world-028-classic-landmark-unloaded-lookup-main-thread-freeze`        | 2026-09-15 20:30:01 | —                   | `world`          | —          |
 | `world-018-cave-aware-rich-finite-resource-deposits`                   | 2026-09-15 19:15:38 | —                   | `world`          | —          |
 | `settlements-010-closed-and-cautious-settlement-character`             | 2026-09-15 19:13:33 | —                   | `settlements`    | —          |
 | `quests-progression-038-lost-treasure-chronicles-archaeologist-and-chronicle-search` | 2026-09-15 17:56:53 | —                   | `quests-progression` | —          |

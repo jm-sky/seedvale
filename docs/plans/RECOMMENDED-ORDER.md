@@ -52,12 +52,12 @@
    🔴 `M` · ✅ ready · unlocks 2/7
 2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `M` · ✅ ready · unlocks 3/5
-3. `settlements-npcs-037` — **Inter-settlement goods transport**  
-   🔴 `M` · ✅ ready · unlocks 1/1
-4. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+3. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2
-5. `settlements-003` — **Colony settlement bootstrap**  
+4. `settlements-003` — **Colony settlement bootstrap**  
    🔴 `L` · ✅ ready · unlocks 1/1
+5. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
+   🔴 `L` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -103,48 +103,48 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  90  
    → **unlocks:** 2/2
 
-8. `settlements-npcs-037` — **Inter-settlement goods transport**  
-  🔴 `M` · **Score:**  79  
-   → **unlocks:** 1/1
-
-9. `quests-progression-045` — **Lost Treasure Chronicles — property grant deed and persistent land reward**  
+8. `quests-progression-045` — **Lost Treasure Chronicles — property grant deed and persistent land reward**  
   🔴 `L` · **Score:**  78  
    → **unlocks:** 1/1
 
-10. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+9. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
   🟡 `M` · **Score:**  73  
    → **unlocks:** 2/2
 
-11. `settlements-003` — **Colony settlement bootstrap**  
+10. `settlements-003` — **Colony settlement bootstrap**  
   🔴 `L` · **Score:**  70  
    → **unlocks:** 1/1
 
-12. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+11. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
+12. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
   🔴 `L` · **Score:**  64  
    → **unlocks:** 0/0
 
-14. `settlements-013` — **Horse training progression, vendor and paddock**  
+13. `settlements-013` — **Horse training progression, vendor and paddock**  
   🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-15. `settlements-014` — **Persistent settlement definition worldgen cache**  
+14. `settlements-014` — **Persistent settlement definition worldgen cache**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-16. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+15. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-17. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+16. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-18. `settlements-npcs-022` — **Household help and age-based work participation**  
+17. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
+   → **unlocks:** 0/0
+
+18. `quests-progression-048` — **Hunters Brotherhood introduction and membership**  
+  🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
 19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
@@ -218,9 +218,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   is blocked by:
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
   - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)
-- [`settlements-npcs-038-travelling-merchant-inter-settlement-role.md`](settlements-npcs-038-travelling-merchant-inter-settlement-role.md)  
-  is blocked by:
-  - [`settlements-npcs-037-inter-settlement-goods-transport.md`](settlements-npcs-037-inter-settlement-goods-transport.md)
 
 ---
 
@@ -412,6 +409,8 @@ graph TD
   quests_progression_044["quests-progression-044 — Lost Treasure Chronicles — final treasure claims and resolution"]
   quests_progression_045["quests-progression-045 — Lost Treasure Chronicles — property grant deed and persistent land reward"]
   quests_progression_046["quests-progression-046 — Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup"]
+  quests_progression_047["quests-progression-047 — Deferred world knowledge and location research"]
+  quests_progression_048["quests-progression-048 — Hunters Brotherhood introduction and membership"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -528,6 +527,7 @@ graph TD
   world_025["world-025 — Persistent abandoned cemetery worldgen cache"]
   world_026["world-026 — Storms, thunder, animal scare and snow visuals"]
   world_027["world-027 — Player Spatial Context and Cross-Space Target Isolation"]
+  world_028["world-028 — Classic landmark unloaded lookup main-thread freeze"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -785,6 +785,7 @@ graph TD
   quests_progression_019 --> quests_progression_021
   quests_progression_019 --> quests_progression_022
   quests_progression_020 --> quests_progression_033
+  quests_progression_020 --> quests_progression_048
   quests_progression_026 --> quests_progression_041
   quests_progression_026 --> quests_progression_042
   quests_progression_027 --> quests_progression_041
@@ -800,8 +801,10 @@ graph TD
   quests_progression_032 --> quests_progression_038
   quests_progression_033 --> quests_progression_034
   quests_progression_033 --> quests_progression_037
+  quests_progression_033 --> quests_progression_048
   quests_progression_033 --> ui_input_021
   quests_progression_034 --> quests_progression_037
+  quests_progression_034 --> quests_progression_048
   quests_progression_036 --> quests_progression_040
   quests_progression_037 --> quests_progression_038
   quests_progression_037 --> quests_progression_039
@@ -923,6 +926,7 @@ graph TD
   world_013 --> world_015
   world_013 --> world_022
   world_014 --> world_022
+  world_014 --> world_028
   world_015 --> world_025
   world_017 --> npc_024
   world_018 --> quests_progression_010
@@ -934,6 +938,7 @@ graph TD
   world_021 --> items_player_019
   world_021 --> settlements_007
   world_021 --> ui_input_014
+  world_022 --> quests_progression_047
   world_022 --> world_025
   world_023 --> settlements_npcs_031
   world_024 --> items_player_026
@@ -942,6 +947,7 @@ graph TD
   world_024 --> quests_progression_043
   world_024 --> world_terrain_020
   world_024 --> world_terrain_027
+  world_028 --> quests_progression_047
   world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
   world_terrain_010 --> world_terrain_011

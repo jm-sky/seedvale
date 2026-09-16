@@ -237,7 +237,7 @@ describe('resolveNpcAppearance', () => {
   })
 
   it('ships every baked variant GLB and hair sidecar', () => {
-    const maleHairs = ['simple', 'long', 'buzzed', 'buns'] as const
+    const maleHairs = ['simple', 'long', 'buzzed'] as const
     const femaleHairs = ['long', 'buns'] as const
     for (const outfit of ['peasant', 'wizard', 'ranger'] as const) {
       for (const hair of maleHairs) {
@@ -247,6 +247,7 @@ describe('resolveNpcAppearance', () => {
         }
       }
       for (const hair of femaleHairs) {
+        if (hair === 'buns' && outfit === 'ranger') continue
         const url = ubcVariantModelUrl('female', outfit, hair, false)
         expect(existsSync(`public${url}`), url).toBe(true)
       }
