@@ -381,9 +381,11 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/lostTreasureChroniclesElderResident.ts`
 
+- `appendAuthoredResidentFamilies` — function — line 65
+  - domain: settlements-npcs
 - `appendAuthoredResidentFamily` — function — line 52
   - domain: settlements-npcs
-- `createLostTreasureElderFamily` — function — line 66
+- `createLostTreasureElderFamily` — function — line 80
   - domain: settlements-npcs
 - `isLostTreasureElderFamily` — function — line 42
   - domain: settlements-npcs
@@ -394,7 +396,27 @@ Generated from exported TypeScript symbols.
 - `LOST_TREASURE_ELDER_SETTLEMENT_SEARCH_RADIUS` — const — line 17
 - `LostTreasureElderSettlementCandidate` — type — line 27
   - domain: settlements-npcs
-- `selectLostTreasureChroniclesElderSettlement` — function — line 97
+- `selectLostTreasureChroniclesElderSettlement` — function — line 111
+  - domain: settlements-npcs
+
+## `settlement/lostTreasureChroniclesSpecialistResident.ts`
+
+- `createLostTreasureSpecialistFamily` — function — line 52
+  - domain: settlements-npcs
+- `findLostTreasureChroniclesSpecialistSettlement` — function — line 148
+  - domain: settlements-npcs
+- `findLostTreasureSpecialistResident` — function — line 125
+  - domain: settlements-npcs
+- `isLostTreasureSpecialistFamily` — function — line 42
+  - domain: settlements-npcs
+- `LOST_TREASURE_SPECIALIST_AGE` — const — line 14
+- `LOST_TREASURE_SPECIALIST_FAMILY_ID` — const — line 10
+- `LOST_TREASURE_SPECIALIST_GIVEN_NAME` — const — line 12
+- `LOST_TREASURE_SPECIALIST_LAST_NAME` — const — line 13
+- `LOST_TREASURE_SPECIALIST_SETTLEMENT_SEARCH_RADIUS` — const — line 18
+- `LostTreasureSpecialistSettlementCandidate` — type — line 28
+  - domain: settlements-npcs
+- `selectLostTreasureChroniclesSpecialistSettlement` — function — line 95
   - domain: settlements-npcs
 
 ## `settlement/merchantTrade.ts`
@@ -841,8 +863,8 @@ Generated from exported TypeScript symbols.
 - `cellKey` — function — line 126
 - `cellSeed` — function — line 169
 - `cellsWithinRadius` — function — line 153
-- `generateSettlementDef` — function — line 774
-- `generateVillagePlan` — function — line 704
+- `generateSettlementDef` — function — line 779
+- `generateVillagePlan` — function — line 709
 - `probeSettlementSite` — function — line 504
   - domain: settlements
 - `SETTLEMENT_GRID_STEP` — const — line 68
@@ -897,14 +919,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedLostTreasureArchaeologistHostCell` — function — line 242
-- `cachedSettlementDefCount` — function — line 263
-- `cachedSettlementProgressionPolicy` — function — line 268
-- `clearSettlementDefCache` — function — line 97
-- `setSettlementRiverQuery` — function — line 69
-- `settlementDefFor` — function — line 250
-- `SettlementResolveContext` — type — line 43
-- `worldRiverQuery` — function — line 82
+- `cachedLostTreasureArchaeologistHostCell` — function — line 271
+- `cachedLostTreasureSpecialistHostCell` — function — line 280
+- `cachedSettlementDefCount` — function — line 301
+- `cachedSettlementProgressionPolicy` — function — line 306
+- `clearSettlementDefCache` — function — line 104
+- `setSettlementRiverQuery` — function — line 74
+- `settlementDefFor` — function — line 288
+- `SettlementResolveContext` — type — line 48
+- `worldRiverQuery` — function — line 87
 
 ## `settlement/settlementProgression.ts`
 

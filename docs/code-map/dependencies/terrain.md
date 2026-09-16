@@ -79,6 +79,7 @@ Generated from TypeScript imports.
 - `terrain/grassPlacement.ts`
 - `terrain/naturalResources.ts`
 - `world/locations/darkForestTreasureSite.ts`
+- `world/locations/lostTreasureEstateSearchArea.ts`
 - `world/map/mapProjection.ts`
 - `world/treasureSites.ts`
 - `world/treeLifecycle.ts`
@@ -316,6 +317,7 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
+- `settlement/lostTreasureChroniclesSpecialistResident.test.ts`
 - `settlement/minorLocations.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.test.ts`
@@ -397,6 +399,8 @@ Generated from TypeScript imports.
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/locationsCoarseCache.test.ts`
 - `world/locations/locationsCoarseCache.ts`
+- `world/locations/lostTreasureEstateSearchArea.test.ts`
+- `world/locations/lostTreasureEstateSearchArea.ts`
 - `world/locations/seedProfile.test.ts`
 - `world/locations/seedProfile.ts`
 - `world/locations/worldLocationCatalog.test.ts`

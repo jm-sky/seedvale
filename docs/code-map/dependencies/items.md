@@ -181,6 +181,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/lostTreasureChroniclesElder.test.ts`
 - `quests/lostTreasureExpedition.test.ts`
@@ -761,6 +762,7 @@ Generated from TypeScript imports.
 - `app/actions/npcItemTransfer.ts`
 - `app/actions/workContractPayment.ts`
 - `items/inventoryTransfer.test.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
 - `settlement/npcPostDeath.ts`
 - `world/expeditionProvisioning.ts`
 
@@ -999,6 +1001,7 @@ Generated from TypeScript imports.
 - `player/characterPresentation.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.ts`
@@ -1162,6 +1165,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/PlayerTorch.ts`
 - `player/playerCombatMode.ts`
+- `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/guardRewards.ts`

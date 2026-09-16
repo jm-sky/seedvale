@@ -8,6 +8,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalSpawner.ts`
 - `items/Inventory.ts`
+- `items/items.ts`
 - `quests/QuestManager.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/materializeAuthoredQuests.ts`
@@ -51,6 +52,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/lostHunterNaturalCave.test.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/lostTreasureChroniclesElder.test.ts`
 - `quests/lostTreasureExpedition.test.ts`
@@ -268,6 +270,55 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/worldBundle.ts`
 
+## `quests/lostTreasureChronicleDeciphering.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/inventoryTransfer.ts`
+- `quests/QuestManager.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
+- `quests/lostTreasureChronicleSearch.ts`
+- `quests/lostTreasureChroniclesElder.ts`
+- `settlement/families.ts`
+- `settlement/lostTreasureChroniclesArchaeologistResident.ts`
+- `settlement/lostTreasureChroniclesElderResident.ts`
+- `settlement/lostTreasureChroniclesSpecialistResident.ts`
+- `settlement/settlementGenerator.ts`
+- `world/locations/lostTreasureEstateSearchArea.ts`
+- `world/worldGeneratedContainers.ts`
+
+## `quests/lostTreasureChronicleDeciphering.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `quests/lostTreasureChronicleSearch.ts`
+- `quests/quests.ts`
+- `settlement/lostTreasureChroniclesSpecialistResident.ts`
+- `settlement/npcState.ts`
+- `settlement/settlementGenerator.ts`
+- `world/locations/lostTreasureEstateSearchArea.ts`
+- `world/worldGeneratedContainers.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
+- `quests/lostTreasureChronicleDecipheringRuntime.ts`
+
+## `quests/lostTreasureChronicleDecipheringRuntime.ts`
+
+**Imports**
+
+- `quests/lostTreasureChronicleDeciphering.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+
 ## `quests/lostTreasureChronicleSearch.test.ts`
 
 **Imports**
@@ -307,6 +358,8 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/lostTreasureChronicleSearchRuntime.ts`
 
@@ -347,6 +400,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChroniclesElder.test.ts`
@@ -589,6 +643,7 @@ Generated from TypeScript imports.
 - `quests/oldBonesAdventureCave.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
+- `settlement/lostTreasureChroniclesSpecialistResident.test.ts`
 
 ## `quests/opportunities/settlementQuestOpportunities.test.ts`
 
@@ -714,6 +769,7 @@ Generated from TypeScript imports.
 - `quests/guardRewards.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChroniclesElder.test.ts`
 - `quests/lostTreasureChroniclesElder.ts`

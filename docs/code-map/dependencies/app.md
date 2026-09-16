@@ -934,6 +934,8 @@ Generated from TypeScript imports.
 - `quests/guardPersistence.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
+- `quests/lostTreasureChronicleDecipheringRuntime.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChronicleSearchRuntime.ts`
 - `quests/lostTreasureChroniclesElder.ts`
@@ -1004,6 +1006,7 @@ Generated from TypeScript imports.
 - `world/locations/locationKnowledge.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/locationsCoarseCache.ts`
+- `world/locations/lostTreasureEstateSearchAreaRuntime.ts`
 - `world/locations/navigationTargets.ts`
 - `world/locations/revealLocationKnowledge.ts`
 - `world/locations/treasureMapBearCave.ts`
@@ -1594,6 +1597,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasureRuntime.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostHunterNaturalCaveRuntime.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
+- `quests/lostTreasureChronicleDecipheringRuntime.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChronicleSearchRuntime.ts`
 - `quests/lostTreasureChroniclesElder.ts`
@@ -1672,6 +1677,8 @@ Generated from TypeScript imports.
 - `world/herbalGathering.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
+- `world/locations/lostTreasureEstateSearchArea.ts`
+- `world/locations/lostTreasureEstateSearchAreaRuntime.ts`
 - `world/locations/treasureMapBearCave.ts`
 - `world/locations/treasureMapBearCaveRuntime.ts`
 - `world/map/mapProjection.ts`

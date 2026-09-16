@@ -42,7 +42,7 @@ Generated from exported TypeScript symbols.
 - `canvasToWorld` — function — line 44
 - `clampWorldMapZoom` — function — line 27
 - `drawWorldMapFrame` — function — line 89
-- `findLocationAtCanvasPoint` — function — line 178
+- `findLocationAtCanvasPoint` — function — line 190
 - `lodStepFor` — function — line 74
 - `viewportFor` — function — line 57
 - `WorldMapDrawContext` — type — line 21
@@ -71,12 +71,12 @@ Generated from exported TypeScript symbols.
 ## `ui-vue/lib/mapColors.ts`
 
 - `LOCATION_KIND_COLOR` — const — line 38
-- `LOCATION_KIND_COLOR_FALLBACK` — const — line 50
-- `LOCATION_KIND_EMOJI` — const — line 61
-- `locationKindColor` — function — line 52
+- `LOCATION_KIND_COLOR_FALLBACK` — const — line 51
+- `LOCATION_KIND_EMOJI` — const — line 62
+- `locationKindColor` — function — line 53
 - `MAP_FOG_FILL` — const — line 5
 - `MAP_UNAVAILABLE_FILL` — const — line 6
-- `mapCellFillStyle` — function — line 71
+- `mapCellFillStyle` — function — line 73
 - `TARGET_SLOT_COLORS` — const — line 27
 - `targetSlotColor` — function — line 29
 
@@ -103,12 +103,12 @@ Generated from exported TypeScript symbols.
 
 ## `ui-vue/lib/worldLocationDisplay.ts`
 
-- `LOCATION_KIND_ICON` — const — line 24
-- `LOCATION_KIND_ICON_FALLBACK` — const — line 34
+- `LOCATION_KIND_ICON` — const — line 25
+- `LOCATION_KIND_ICON_FALLBACK` — const — line 36
 - `LOCATION_KIND_LABEL` — const — line 12
-- `LOCATION_KIND_LABEL_FALLBACK` — const — line 22
-- `locationKindIcon` — function — line 40
-- `locationKindLabel` — function — line 36
+- `LOCATION_KIND_LABEL_FALLBACK` — const — line 23
+- `locationKindIcon` — function — line 42
+- `locationKindLabel` — function — line 38
 
 ## `ui-vue/mount.ts`
 

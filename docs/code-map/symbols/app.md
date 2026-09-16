@@ -263,13 +263,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 395
+- `createApp` — function — line 400
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 364
+- `NewAppOptions` — type — line 369
 
 ## `app/faunaEncounterComposition.ts`
 
@@ -403,14 +403,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 1103
-- `caveTreasureContainerSpecs` — function — line 268
-- `createWorldBundle` — function — line 2060
-- `disposeWorldBundle` — function — line 2543
-- `HOME_RADIUS` — const — line 231
-- `homeChunks` — function — line 294
-- `rebuildWorldBundle` — function — line 2300
-- `WorldBundle` — type — line 317
+- `BuiltWorldSystems` — type — line 1110
+- `caveTreasureContainerSpecs` — function — line 275
+- `createWorldBundle` — function — line 2091
+- `disposeWorldBundle` — function — line 2574
+- `HOME_RADIUS` — const — line 238
+- `homeChunks` — function — line 301
+- `rebuildWorldBundle` — function — line 2331
+- `WorldBundle` — type — line 324
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

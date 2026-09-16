@@ -1361,6 +1361,20 @@ Generated from exported TypeScript symbols.
 - `locationsCoarseFingerprint` — function — line 38
 - `tileSubKey` — function — line 29
 
+## `world/locations/lostTreasureEstateSearchArea.ts`
+
+- `LOST_TREASURE_ESTATE_SEARCH_AREA_LOCATION_ID` — const — line 13
+- `LOST_TREASURE_ESTATE_SEARCH_AREA_NAME` — const — line 15
+- `LostTreasureEstateSearchArea` — type — line 104
+- `resolveLostTreasureEstateSearchArea` — function — line 128
+  - domain: world
+- `ResolveLostTreasureEstateSearchAreaInput` — type — line 112
+
+## `world/locations/lostTreasureEstateSearchAreaRuntime.ts`
+
+- `getActiveLostTreasureEstateSearchArea` — function — line 12
+- `setActiveLostTreasureEstateSearchArea` — function — line 6
+
 ## `world/locations/navigationTargets.ts`
 
 - `createNavigationTargets` — function — line 35
@@ -1423,27 +1437,28 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldLocationCatalog.ts`
 
-- `abandonedCemeteryChunkIntersectsKmBand` — function — line 215
+- `abandonedCemeteryChunkIntersectsKmBand` — function — line 223
   - domain: world
-- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 147
-- `createWorldLocationCatalog` — function — line 281
-- `emptyLocationScanDiagnostics` — function — line 112
-- `LandmarkQueryOptions` — type — line 136
-- `LocationScanDiagnostics` — type — line 85
-- `settlementLocationId` — function — line 911
-- `WorldLocationCatalog` — type — line 149
+- `COOPERATIVE_ABANDONED_PROBE_THRESHOLD` — const — line 155
+- `createWorldLocationCatalog` — function — line 289
+- `emptyLocationScanDiagnostics` — function — line 120
+- `LandmarkQueryOptions` — type — line 144
+- `LocationScanDiagnostics` — type — line 93
+- `settlementLocationId` — function — line 932
+- `WorldLocationCatalog` — type — line 157
 - `WorldLocationCatalogDeps` — type — line 29
 
 ## `world/locations/worldLocationNames.ts`
 
-- `landmarkName` — function — line 81
+- `landmarkName` — function — line 88
 
 ## `world/locations/worldLocationTypes.ts`
 
-- `DiscoveryRange` — type — line 27
-- `WorldLocation` — type — line 14
+- `DiscoveryRange` — type — line 37
+- `WorldLocation` — type — line 21
+- `WorldLocationArea` — type — line 5
 - `WorldLocationKind` — type — line 1
-- `worldLocationKindFromId` — function — line 39
+- `worldLocationKindFromId` — function — line 49
 
 ## `world/map/mapConfig.ts`
 
@@ -1460,9 +1475,9 @@ Generated from exported TypeScript symbols.
 ## `world/map/mapData.ts`
 
 - `createMapData` — function — line 44
-- `getActiveMapData` — function — line 112
+- `getActiveMapData` — function — line 113
 - `MapData` — type — line 13
-- `setActiveMapData` — function — line 108
+- `setActiveMapData` — function — line 109
 
 ## `world/map/mapDiscovery.ts`
 
@@ -1492,7 +1507,7 @@ Generated from exported TypeScript symbols.
 - `MapLocationKind` — type — line 30
 - `MapSource` — type — line 25
 - `MapTerrainKind` — type — line 4
-- `MapViewport` — type — line 43
+- `MapViewport` — type — line 45
 
 ## `world/naturalMaterialResponse.ts`
 

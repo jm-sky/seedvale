@@ -2803,6 +2803,7 @@ Generated from TypeScript imports.
 - `world/locations/darkForestTreasureSite.test.ts`
 - `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/locations/locationProximityDiscovery.ts`
+- `world/locations/lostTreasureEstateSearchArea.test.ts`
 - `world/locations/treasureMapBearCave.ts`
 
 ## `world/locations/darkForestTreasureSiteRuntime.ts`
@@ -2990,6 +2991,41 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `world/locations/locationsCoarseCache.test.ts`
+
+## `world/locations/lostTreasureEstateSearchArea.test.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/locations/lostTreasureEstateSearchArea.ts`
+
+## `world/locations/lostTreasureEstateSearchArea.ts`
+
+**Imports**
+
+- `terrain/biomeRegions.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
+- `world/locations/lostTreasureEstateSearchArea.test.ts`
+- `world/locations/lostTreasureEstateSearchAreaRuntime.ts`
+
+## `world/locations/lostTreasureEstateSearchAreaRuntime.ts`
+
+**Imports**
+
+- `world/locations/lostTreasureEstateSearchArea.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
 
 ## `world/locations/navigationTargets.test.ts`
 
@@ -3472,6 +3508,7 @@ Generated from TypeScript imports.
 - `world/largeCaves.ts`
 - `world/locations/darkForestTreasureSite.ts`
 - `world/locations/guardLocalKnowledge.ts`
+- `world/locations/lostTreasureEstateSearchArea.ts`
 - `world/locations/seedProfile.ts`
 - `world/parseSeed.test.ts`
 - `world/seedLibrary.ts`
@@ -4541,6 +4578,8 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
+- `quests/lostTreasureChronicleDeciphering.test.ts`
+- `quests/lostTreasureChronicleDeciphering.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureExpedition.test.ts`

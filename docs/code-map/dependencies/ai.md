@@ -309,6 +309,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
+- `settlement/lostTreasureChroniclesSpecialistResident.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/places.ts`
 - `settlement/professionStaffing.test.ts`
@@ -491,6 +492,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
+- `settlement/lostTreasureChroniclesSpecialistResident.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/villagePlan.ts`
