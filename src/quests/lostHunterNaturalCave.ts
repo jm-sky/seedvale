@@ -207,19 +207,20 @@ export function buildLostHunterNaturalCaveQuest(
     id: binding.questId,
     title: 'Zaginiony myśliwy',
     description:
-      `${giverName} z osady ${settlementName} szuka wieści o myśliwym, który nie wrócił z wyprawy.`,
+      `${giverName} z osady ${settlementName} szuka wieści o myśliwym, który nie wrócił z polowania.`,
     giverName,
     giver: { npcId: binding.giverNpcId },
     settlementId: binding.settlementId,
     offerLine:
-      'Mój bliski wyruszył na polowanie i nie wrócił. Nie wiem, co się stało — może ktoś widział go ostatni.',
+      'Nie wrócił z polowania. Jeśli ktoś widział, dokąd poszedł, to raczej nie ja.',
     stages: [
       {
         objective: { type: 'talk_to_npc', npc: { npcId: binding.witnessNpcId } },
         description: `Porozmawiaj z ${witnessName} — może widział zaginionego myśliwego.`,
-        reminderLine: `${witnessName} może coś wiedzieć o jego ostatniej drodze.`,
-        playerLine: 'Słyszałem, że zaginął myśliwy. Widziałeś go ostatnio?',
-        progressLine: `Widziałem, dokąd poszedł. To ${caveDescription}.`,
+        reminderLine: `${witnessName} może wiedzieć, dokąd poszedł.`,
+        playerLine: 'Widziałeś, dokąd poszedł?',
+        progressLine:
+          `Widziałem go ostatniego. Szedł w stronę: ${caveDescription}. Potem już go nie spotkałem.`,
         effects: [{
           type: 'reveal_location',
           locationId: binding.caveLocationId,
@@ -229,39 +230,39 @@ export function buildLostHunterNaturalCaveQuest(
       {
         objective: { type: 'loot_world_container', containerId: binding.packContainerId },
         description: 'Znajdź we wskazanej jaskini jego plecak i zabierz to, co zostawił.',
-        reminderLine: 'We wskazanej jaskini powinien być jego plecak — tam będzie dowód.',
-        progressLine: 'To jego rzeczy. Trzeba wrócić z wieścią do rodziny.',
+        reminderLine: 'We wskazanej jaskini powinien być jego plecak.',
+        progressLine: 'To jego rzeczy. Trzeba wrócić z nimi do osady.',
       },
       {
         objective: { type: 'talk_to_npc', npc: { npcId: binding.giverNpcId } },
-        description: `Wróć do ${giverName} i opowiedz, co znalazłeś.`,
+        description: `Wróć do ${giverName} i oddaj wieści o znalezionych rzeczach.`,
         reminderLine: `${giverName} czeka na wieści o myśliwym.`,
-        playerLine: 'Byłem we wskazanej jaskini. Znalazłem jego plecak i łuk.',
-        progressLine: 'Dziękuję, że to sprawdziłeś. Powiedz, co zrobisz z jego łukiem.',
+        playerLine: 'Znalazłem jego plecak i łuk.',
+        progressLine: 'To jego rzeczy. Dobrze, że je przyniosłeś. Co zrobisz z łukiem?',
       },
       {
         objective: { type: 'await_quest_outcome' },
-        description: 'Zdecyduj, co zrobić z charakterystycznym łukiem myśliwego.',
-        reminderLine: 'Oddaj łuk rodzinie albo zostaw go sobie, ale powiedz prawdę o jego losie.',
+        description: 'Zdecyduj, czy oddasz łuk, czy zatrzymasz go przy sobie.',
+        reminderLine: 'Oddaj łuk albo zatrzymaj go — ale najpierw wróć z rzeczami.',
         dialogueActions: [
           {
             npc: { npcId: binding.giverNpcId },
-            playerLine: 'Zabieram wasz łuk z powrotem — niech zostanie w rodzinie.',
-            npcLine: 'Dziękuję. Przynajmniej coś wróciło do domu.',
+            playerLine: 'Łuk powinien zostać z wami.',
+            npcLine: 'Dziękuję. Chociaż tyle wróciło do domu.',
             physicalOutcomeId: LOST_HUNTER_RETURN_BOW_OUTCOME,
             requireItemInstanceId: binding.bowInstanceId,
           },
           {
             npc: { npcId: binding.giverNpcId },
-            playerLine: 'Znalazłem go martwego. Łuk zostaje przy mnie.',
-            npcLine: 'Rozumiem… Przynajmniej wiemy, co się stało.',
+            playerLine: 'Znalazłem jego rzeczy. Łuk zatrzymam.',
+            npcLine: 'Nie będę się z tobą o niego szarpać. Ale liczyłem, że go oddasz.',
             physicalOutcomeId: LOST_HUNTER_KEEP_BOW_OUTCOME,
             requireItemInstanceId: binding.bowInstanceId,
           },
         ],
       },
     ],
-    reportLine: 'Dziękuję za pomoc w tej trudnej sprawie.',
+    reportLine: 'Dziękuję, że to sprawdziłeś.',
     outcomes: [
       {
         id: LOST_HUNTER_RETURN_BOW_OUTCOME,

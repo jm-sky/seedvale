@@ -176,26 +176,26 @@ export function buildSuspiciousTransportCaveCacheQuest(
   const keepGoodsLines = {
     physicalOutcomeId: SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
     requireItemInstanceId: binding.evidenceInstanceId,
-    playerLine: 'Zostawiam tę rzecz sobie. Nikomu jej nie oddam.',
-    npcLine: 'Więc bierzesz to, co nie twoje. Zapamiętam.',
+    playerLine: 'Nie oddam tego. Zostaje u mnie.',
+    npcLine: 'Czyli po to po nią poszedłeś. Dobrze wiedzieć.',
   }
   return {
     id: binding.questId,
     title: 'Podejrzany transport',
     description:
-      `${giver.name} z osady ${settlementName} prosi o milczenie w sprawie przesyłki ukrytej poza osadą. ${counterpart.name} chce wiedzieć, skąd się wzięła.`,
+      `${giver.name} z osady ${settlementName} prosi, żeby przynieść paczkę zostawioną poza osadą. ${counterpart.name} chce ją zobaczyć.`,
     giverName: giver.name,
     giver: { npcId: giver.id },
     offerLine:
-      `Ktoś zostawił mi przesyłkę w schowku poza osadą i prosił, żebym nie zadawał pytań. Odbierz ją, zanim ktoś inny to znajdzie. ${counterpart.name} węszy przy tej sprawie — wolę, żebyś po prostu przyjął, że tak ma być.`,
+      'Potrzebuję drobnej przysługi. Czeka na mnie paczka poza osadą. Przynieś ją prosto do mnie.',
     stages: [
       {
         objective: { type: 'talk_to_npc', npc: { npcId: giver.id } },
         description: `Wysłuchaj ${giver.name} — wskaże dokładny schowek.`,
         reminderLine: `${giver.name} wie, gdzie leży schowek.`,
-        playerLine: 'Gdzie jest ten schowek?',
+        playerLine: 'Gdzie ją zostawiono?',
         progressLine:
-          `Schowek jest tutaj: ${caveDescription}. Weź przesyłkę stamtąd i wróć, zanim ktoś inny to znajdzie.`,
+          `Tutaj: ${caveDescription}. Weź paczkę i wróć z nią do mnie.`,
         effects: [{
           type: 'reveal_location',
           locationId: binding.caveLocationId,
@@ -206,28 +206,26 @@ export function buildSuspiciousTransportCaveCacheQuest(
         objective: { type: 'loot_world_container', containerId: binding.cacheContainerId },
         description: 'Odnajdź schowek we wskazanej jaskini i zabierz przesyłkę.',
         reminderLine: 'Schowek jest we wskazanej jaskini — zabierz przesyłkę, zanim ktoś inny to zrobi.',
-        progressLine: 'Przesyłka jest u ciebie. Teraz musisz zdecydować, co z nią zrobisz.',
+        progressLine: 'Paczka jest u ciebie. Teraz wróć z nią do osady.',
       },
       {
         objective: { type: 'await_quest_outcome' },
-        description: `Zdecyduj, czy oddajesz przesyłkę ${giver.name} i zatajasz ten układ, zgłaszasz ją ${counterpart.name}, czy zostawiasz charakterystyczny przedmiot sobie.`,
-        reminderLine: 'Zdecydowałeś już, czy zataić tę przesyłkę, ujawnić ją, czy zatrzymać rzecz sobie?',
+        description: `Zdecyduj, czy oddajesz przesyłkę ${giver.name}, zgłaszasz ją ${counterpart.name}, czy zostawiasz charakterystyczny przedmiot sobie.`,
+        reminderLine: 'Zdecydowałeś już, komu oddać tę przesyłkę, czy zatrzymać ją sobie?',
         dialogueActions: [
           {
             npc: { npcId: giver.id },
             physicalOutcomeId: SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME,
             requireItemInstanceId: binding.evidenceInstanceId,
-            playerLine: 'Oddaję ci przesyłkę i zataję ten układ. Nikomu nie powiem.',
-            npcLine:
-              `No? ${counterpart.name} cię namawiał, żebyś to rozdmuchiwał? Zostaw to. Nie każda przesyłka musi mieć świadków.`,
+            playerLine: 'Masz swoją paczkę. Zostawmy to między nami.',
+            npcLine: 'Dobrze. Im mniej osób o niej gada, tym lepiej.',
           },
           {
             npc: { npcId: counterpart.id },
             physicalOutcomeId: SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
             requireItemInstanceId: binding.evidenceInstanceId,
-            playerLine: `Znalazłem przesyłkę ${giver.name}. Oddaję ci dowód i zgłaszam ten układ.`,
-            npcLine:
-              'Jeśli ta przesyłka jest niejasna, powiedz wprost. Osada nie potrzebuje cichych układów za plecami.',
+            playerLine: 'Znalazłem przesyłkę. Wolę, żebyś ty ją zobaczył.',
+            npcLine: 'Połóż ją tutaj. Sprawdzimy, co właściwie trafiło do osady.',
           },
           {
             npc: { npcId: giver.id },
@@ -240,13 +238,13 @@ export function buildSuspiciousTransportCaveCacheQuest(
         ],
       },
     ],
-    reportLine: 'Ta przesyłka nie jest już tylko szeptem.',
+    reportLine: 'Ta przesyłka już nie leży w schowku.',
     settlementId: binding.settlementId,
     outcomes: [
       {
         id: SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME,
         state: 'complete',
-        resultText: 'Dobrze. Nie każdy układ musi wychodzić na drogę.',
+        resultText: 'Dobrze. Im mniej osób o niej gada, tym lepiej.',
         reward: { visibility: 'hidden', items: [{ kind: 'coin', count: 8 }] },
         consequences: {
           relations: [
@@ -259,7 +257,7 @@ export function buildSuspiciousTransportCaveCacheQuest(
       {
         id: SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
         state: 'complete',
-        resultText: 'Dziękuję, że powiedziałeś. Niech to nie zostanie w cieniu.',
+        resultText: 'Połóż ją tutaj. Sprawdzimy, co właściwie trafiło do osady.',
         consequences: {
           relations: [
             { npc: { npcId: counterpart.id }, delta: 2 },
@@ -271,7 +269,7 @@ export function buildSuspiciousTransportCaveCacheQuest(
       {
         id: SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
         state: 'complete',
-        resultText: 'Więc bierzesz to, co nie twoje. Obie strony to zapamiętają.',
+        resultText: 'Czyli po to po nią poszedłeś. Dobrze wiedzieć.',
         consequences: {
           relations: [
             { npc: { npcId: giver.id }, delta: -1 },

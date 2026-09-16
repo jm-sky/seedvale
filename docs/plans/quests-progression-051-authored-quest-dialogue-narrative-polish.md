@@ -1,7 +1,7 @@
 # Plan: Authored quest dialogue narrative polish
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** high · **Effort:** M
 **Depends on:** ~~quests-progression-014~~, quests-progression-035, quests-progression-050

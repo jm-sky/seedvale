@@ -147,6 +147,39 @@ describe('lost hunter natural cave (plan quests-progression-023)', () => {
     }])
   })
 
+  it('does not let authored player lines claim a confirmed death (plan quests-progression-051)', () => {
+    const binding = resolveLostHunterNaturalCaveBinding({
+      worldSeed: 1,
+      settlementDef: { id: 'home', families: [{ id: 'f0', members: [] }, { id: 'f1', members: [] }] },
+      caveIds: ['cave-a'],
+      archetypeOf: () => 'natural',
+      contentAnchors: anchors,
+      claims: new CaveAuthoredAnchorClaims(),
+      npcs: [
+        npc('home:npc:0', 'farmer', false, 'f0'),
+        npc('home:npc:1', 'farmer', false, 'f0'),
+        npc('home:npc:2', 'hunter', false, 'f1'),
+      ],
+    })
+    expect(binding).not.toBeNull()
+    const quest = buildLostHunterNaturalCaveQuest(binding!, [
+      npc('home:npc:0', 'farmer', false, 'f0'),
+      npc('home:npc:1', 'farmer', false, 'f0'),
+      npc('home:npc:2', 'hunter', false, 'f1'),
+    ], 'Osada', 'mała jaskinia na północ od osady')
+    const playerLines = [
+      quest.offerLine,
+      ...quest.stages.flatMap((stage) => [
+        stage.playerLine,
+        ...(stage.dialogueActions?.map((action) => action.playerLine) ?? []),
+      ]),
+      quest.reportPlayerLine,
+    ].filter((line): line is string => Boolean(line))
+    for (const line of playerLines) {
+      expect(line).not.toMatch(/martw|ciało|zginął|umarł/i)
+    }
+  })
+
   it('uses initialInstances only for a fresh world container', () => {
     const bow = createLostHunterBowInstance('cave-a')
     const scene = new Scene()

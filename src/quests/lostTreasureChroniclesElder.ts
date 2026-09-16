@@ -186,8 +186,7 @@ export function buildLostTreasureChroniclesElderQuests(
     giver: elder,
     settlementId: binding.settlementId,
     offerLine:
-      `Jest jeszcze jedna sprawa, nie na zimę. ${binding.counterpartName} pożyczył ode mnie narzędzie i nigdy go nie oddał. `
-      + 'Albo tak twierdzi, że oddał. Posłuchaj go, zanim osądzisz.',
+      `Mam jeszcze jedną sprawę. ${binding.counterpartName} pożyczył ode mnie siekierę. On mówi, że oddał. Ja jej nie widziałem. Posłuchaj go sam.`,
     availability: {
       prerequisites: [{
         type: 'quest_outcome',
@@ -203,19 +202,17 @@ export function buildLostTreasureChroniclesElderQuests(
         objective: { type: 'talk_to_npc', npc: elder },
         description: `Wysłuchaj, jak ${binding.elderName} opowiada o sporze.`,
         reminderLine: `Poszedł do ${binding.counterpartName}a? Niech sam powie, jak było.`,
-        playerLine: 'Opowiedz, o co między wami chodzi.',
+        playerLine: 'Powiedz, jak ty to pamiętasz.',
         progressLine:
-          'Pożyczył siekierę na jeden sezon. Minęły lata, a ja jej nie widziałem. '
-          + `${binding.counterpartName} mówi, że oddał. Posłuchaj go — niech sam się wytłumaczy.`,
+          'Dałem mu siekierę na jeden sezon. Potem już jej u siebie nie zobaczyłem. On mówi co innego.',
       },
       {
         objective: { type: 'talk_to_npc', npc: counterpart },
         description: `Wysłuchaj wersji ${binding.counterpartName}a.`,
         reminderLine: `${binding.elderName} już ci powiedział swoje. Posłuchaj też drugiej strony.`,
-        playerLine: `${binding.elderName} mówi, że narzędzie nigdy nie wróciło.`,
+        playerLine: `${binding.elderName} mówi, że siekiera nie wróciła.`,
         progressLine:
-          'Pożyczyłem, owszem. Potem oddałem — a on mówi, że nie. Nie będę płacił drugi raz za to samo. '
-          + 'Niech ktoś wreszcie powie, jak to zamknąć.',
+          'Wróciła. Jeśli jej potem nie znalazł, to nie znaczy, że mam płacić drugi raz.',
       },
       {
         objective: {
@@ -226,13 +223,13 @@ export function buildLostTreasureChroniclesElderQuests(
               outcomeId: LOST_TREASURE_CHRONICLES_DISPUTE_SUPPORT_ELDER_OUTCOME,
               npcLine:
                 `${binding.elderName} nadal o tym mówi. Jeśli stoisz po jego stronie, powiedz wprost.`,
-              playerLine: 'Wyrównaj tę sprawę. Starszy nie odpuści, dopóki tego nie zamkniecie.',
+              playerLine: 'Wyrównajcie to jakoś. On tej sprawy nie odpuści.',
             },
             {
               npc: elder,
               outcomeId: LOST_TREASURE_CHRONICLES_DISPUTE_RECONCILE_OUTCOME,
               npcLine: 'No i jak? On cię przekonał, czy zostajesz przy mojej wersji?',
-              playerLine: 'Zostaw to. Stara uraza nie warta kolejnej zimy.',
+              playerLine: 'Zostaw tę siekierę. Po tylu latach już niczego nie udowodnicie.',
               reactions: [
                 {
                   when: [{ type: 'relation', npc: elder, maximum: 'acquainted' }],

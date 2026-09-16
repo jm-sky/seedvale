@@ -312,9 +312,9 @@ export function buildOldBonesAdventureCaveQuest(
       objective: { type: 'talk_to_npc', npc: { npcId: binding.giverNpcId } },
       description: `Wysłuchaj ${giverName} — wie o starych śladach w jaskini.`,
       reminderLine: `${giverName} wspominał o ludzkich śladach we wskazanej jaskini.`,
-      playerLine: 'Słyszałem, że w okolicy są stare ślady w jaskini.',
+      playerLine: 'Słyszałem, że w okolicy są stare ślady.',
       progressLine:
-        `Stare ludzkie szczątki znajdziesz tutaj: ${caveDescription}. Nie wiem, czyje — ale ktoś z osady powinien pamiętać takie historie.`,
+        `Szczątki są tutaj: ${caveDescription}. Jeśli coś przy nich zostało, ktoś z osady może to rozpoznać.`,
       effects: [{
         type: 'reveal_location',
         locationId: binding.caveLocationId,
@@ -325,15 +325,15 @@ export function buildOldBonesAdventureCaveQuest(
       objective: { type: 'talk_to_npc', npc: { npcId: binding.claimantANpcId } },
       description: `Porozmawiaj z ${claimantAName} o rodzinnej historii.`,
       reminderLine: `${claimantAName} może połączyć te ślady z zaginięciem przodka.`,
-      playerLine: 'Znalazłem wieści o starych szczątkach. Czy ktoś z waszej rodziny zaginął lata temu?',
+      playerLine: 'Znalazłem stare szczątki. Ktoś z waszej rodziny zaginął w tamtej okolicy?',
       progressLine:
-        'Dawno temu nasz przodek zniknął, niosąc rodowy sygnet. Jeśli te szczątki są jego — sygnet powinien wrócić do rodziny.',
+        'Taką historię u nas opowiadano. Miał przy sobie sygnet. Jeśli go znajdziesz, przynieś go.',
     },
     {
       objective: { type: 'loot_world_container', containerId: binding.containerId },
       description: 'Odnajdź szczątki we wskazanej jaskini i zabierz rodowy sygnet.',
       reminderLine: 'We wskazanej jaskini powinny leżeć stare szczątki z sygnetem.',
-      progressLine: 'Sygnet jest u ciebie. Teraz trzeba zdecydować, komu go oddać.',
+      progressLine: 'Sygnet jest u ciebie. Teraz wróć z nim do osady.',
     },
   ]
 
@@ -342,17 +342,17 @@ export function buildOldBonesAdventureCaveQuest(
       objective: { type: 'talk_to_npc', npc: { npcId: binding.claimantBNpcId } },
       description: `Wysłuchaj ${claimantBName} — też zgłasza roszczenie do sygnetu.`,
       reminderLine: `${claimantBName} twierdzi, że sygnet powinien trafić do niego.`,
-      playerLine: 'Znalazłem sygnet. Twierdzisz, że należy się tobie?',
+      playerLine: 'Znalazłem sygnet. Mówisz, że powinien trafić do ciebie?',
       progressLine:
-        'To też nasza krew. Przodek obiecał ten sygnet mojej linii — nie oddawaj go bez namysłu.',
+        'Mówię, że nie tylko on ma do niego prawo. Zanim go oddasz, wysłuchaj obu stron.',
     })
   }
 
   const dialogueActions: NonNullable<QuestDef['stages'][number]['dialogueActions']>[number][] = [
     {
       npc: { npcId: binding.claimantANpcId },
-      playerLine: `Oddaję sygnet tobie, ${claimantAName}.`,
-      npcLine: 'Dziękuję. Przynajmniej coś z tamtej historii wraca do domu.',
+      playerLine: 'Sygnet wraca do ciebie.',
+      npcLine: 'Dziękuję. Chociaż tyle z tamtej historii wraca.',
       physicalOutcomeId: OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME,
       requireItemInstanceId: binding.signetInstanceId,
     },
@@ -360,16 +360,16 @@ export function buildOldBonesAdventureCaveQuest(
   if (binding.claimantBNpcId) {
     dialogueActions.push({
       npc: { npcId: binding.claimantBNpcId },
-      playerLine: `Oddaję sygnet tobie, ${claimantBName}.`,
-      npcLine: 'Wiedziałem, że sprawiedliwość jest po naszej stronie.',
+      playerLine: 'Sygnet wraca do ciebie.',
+      npcLine: 'Dobrze, że najpierw mnie wysłuchałeś.',
       physicalOutcomeId: OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME,
       requireItemInstanceId: binding.signetInstanceId,
     })
   }
   dialogueActions.push({
     npc: { npcId: binding.claimantANpcId },
-    playerLine: 'Znalazłem szczątki i sygnet, ale sygnet zostaje przy mnie.',
-    npcLine: 'Więc przynosisz prawdę, a dziedzictwo zabierasz sobie. Zapamiętam.',
+    playerLine: 'Sygnet zatrzymam.',
+    npcLine: 'Przynosisz nam historię, a pamiątkę bierzesz ze sobą. Rozumiem.',
     physicalOutcomeId: OLD_BONES_KEEP_SIGNET_OUTCOME,
     requireItemInstanceId: binding.signetInstanceId,
   })
@@ -441,7 +441,7 @@ export function buildOldBonesAdventureCaveQuest(
     giver: { npcId: binding.giverNpcId },
     settlementId: binding.settlementId,
     offerLine:
-      `Szczątki leżą tutaj: ${caveDescription}. Nie wiem, czyje — ale ktoś w osadzie pamięta takie historie lepiej niż ja.`,
+      `Szczątki są tutaj: ${caveDescription}. Nie wiem, czyje — ale ktoś w osadzie pamięta takie historie lepiej niż ja.`,
     stages,
     reportLine: 'Ta stara sprawa wreszcie ma koniec.',
     outcomes,

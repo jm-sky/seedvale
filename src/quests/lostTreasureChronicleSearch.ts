@@ -275,9 +275,9 @@ export function chronicleSearchOfferLine(
   lead: ChronicleSearchLead,
 ): string {
   const basic =
-    `Skoro już mi pomogłeś: w ${binding.archaeologistSettlementName} mieszka ${binding.archaeologistName} ${binding.archaeologistLastName}. Finansuje poszukiwania starej kroniki i przyjmie kogoś, kto umie szukać w terenie.`
+    `W ${binding.archaeologistSettlementName} mieszka ${binding.archaeologistName} ${binding.archaeologistLastName}. Szuka starej kroniki po zaginionej wyprawie. Przyda mu się ktoś, kto umie szukać w terenie.`
   if (lead === 'basic') return basic
-  return `${basic} Zapamiętaj nazwisko badacza — ${binding.researcherSurname}. To on prowadził tamtą wyprawę, zanim wszystko ucichło.`
+  return `${basic} Zapamiętaj też nazwisko ${binding.researcherSurname}. To on prowadził tamtą wyprawę.`
 }
 
 export function isChronicleSearchSourceLooted(
@@ -412,10 +412,10 @@ export function buildLostTreasureChronicleSearchQuests(
           { resultId: 'investigate', toStageId: 'investigate' },
         ],
         description: `Porozmawiaj z ${binding.archaeologistName} w ${binding.archaeologistSettlementName} albo oddaj już zdobytą kronikę do ewidencji wyprawy.`,
-        reminderLine: `${binding.archaeologistName} mieszka w ${binding.archaeologistSettlementName}. Nie wie, gdzie leży kronika, ale ma dwa tropy.`,
-        playerLine: `${binding.elderName} powiedział, że szukasz zaginionej kroniki.`,
+        reminderLine: `${binding.archaeologistName} mieszka w ${binding.archaeologistSettlementName}. Ma dwa tropy: grób i ruiny obozu.`,
+        playerLine: 'Słyszałem, że szukasz kroniki po dawnej wyprawie.',
         progressLine:
-          `Dawny badacz — ${binding.researcherSurname} — spisał tropy skarbu szyfrem. Kroniki nikt nie odzyskał. Mogła pójść z nim do grobu; drugi trop to ruiny obozu, ale muszę jeszcze zestawić notatki z wyprawy, zanim wskażę dokładne miejsce.`,
+          'Mam dwa tropy: grób badacza i ruiny obozu. Cmentarz mogę wskazać od razu; trasę do ruin muszę jeszcze odtworzyć z notatek.',
         effects: [
           { type: 'reveal_location', locationId: binding.cemeteryLocationId },
           { type: 'request_world_knowledge', knowledgeId: 'ruins' },
@@ -443,15 +443,15 @@ export function buildLostTreasureChronicleSearchQuests(
           'Jeden trop to grób badacza. Co do ruin obozu: {worldKnowledgeClue:ruins}.',
         dialogueActions: [{
           npc: archaeologist,
-          playerLine: 'Udało ci się zestawić notatki z wyprawy?',
-          npcLine: 'Znalazłem to. Szukaj {worldKnowledgeClue:ruins}. Kronika jest tylko w jednym z dwóch miejsc.',
+          playerLine: 'Masz już trasę do ruin?',
+          npcLine: 'Mam. Szukaj {worldKnowledgeClue:ruins}. Kronika jest tylko w jednym z tych dwóch miejsc.',
           skipAdvance: true,
           requireWorldKnowledgeReady: 'ruins',
           effects: [{ type: 'reveal_location', locationId: binding.ruinsLocationId }],
         }, {
           npc: archaeologist,
-          playerLine: 'Jeśli mam ryzykować w ruinach, potrzebuję wszystkiego, co masz.',
-          npcLine: 'Notatki, które już dostałeś, wystarczą, żeby ruszyć. Reszty nie będę zgadywał za ciebie.',
+          playerLine: 'Jeśli mam iść w ruiny, daj mi resztę notatek.',
+          npcLine: 'To, co już dostałeś, wystarczy, żeby ruszyć. Reszty nie będę zgadywał za ciebie.',
           skipAdvance: true,
           reactions: [
             {

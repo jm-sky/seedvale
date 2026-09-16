@@ -396,7 +396,7 @@ describe('lost treasure chronicle search (quests-progression-038)', () => {
     expect(pending?.line).toContain('notatki')
     elapsedDays = 1 / 24
     const ready = qm.onInteract(binding!.archaeologistNpcId)
-    expect(ready?.actions?.[0]?.label).toContain('notatki')
+    expect(ready?.actions?.[0]?.label).toContain('trasę')
     const reply = ready?.actions?.[0]?.onSelect()
     expect(reply).toContain(`clue:${binding!.ruinsLandmarkId}`)
     expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.stageIndex).toBe(1)
@@ -445,7 +445,7 @@ describe('lost treasure chronicle search (quests-progression-038)', () => {
       (quest) => quest.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID,
     )!
     const social = search.stages.find((stage) => stage.id === 'investigate')?.dialogueActions
-      ?.find((action) => action.playerLine.includes('ryzykować'))
+      ?.find((action) => action.playerLine.includes('resztę notatek'))
     expect(social?.skipAdvance).toBe(true)
     expect(social?.requireWorldKnowledgeReady).toBeUndefined()
     expect(social?.effects).toBeUndefined()
@@ -469,14 +469,14 @@ describe('lost treasure chronicle search (quests-progression-038)', () => {
       relations: {},
     })
     const reply = qm.onInteract(binding!.archaeologistNpcId)?.actions
-      ?.find((action) => action.label.includes('ryzykować'))
+      ?.find((action) => action.label.includes('resztę notatek'))
       ?.onSelect()
     expect(reply).toBe('Najpierw sprawdź to, co już dostałeś. Nie będę zgadywał za ciebie.')
     expect(qm.getState(LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)).toBe('active')
     expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.stageIndex).toBe(1)
     expect(qm.onInteract(binding!.archaeologistNpcId)?.line)
       .toBe('Przejrzyj notatki, które już masz. Potem wrócimy do ruin.')
-    expect(qm.onInteract(binding!.archaeologistNpcId)?.actions?.some((action) => action.label.includes('ryzykować')) ?? false)
+    expect(qm.onInteract(binding!.archaeologistNpcId)?.actions?.some((action) => action.label.includes('resztę notatek')) ?? false)
       .toBe(false)
   })
 })

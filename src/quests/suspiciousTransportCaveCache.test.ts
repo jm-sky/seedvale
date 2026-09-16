@@ -255,10 +255,10 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
     ])
     const terminal = caveDef.stages[2]
     expect(terminal?.dialogueActions?.[0]?.playerLine).toBe(
-      'Oddaję ci przesyłkę i zataję ten układ. Nikomu nie powiem.',
+      'Masz swoją paczkę. Zostawmy to między nami.',
     )
     expect(terminal?.dialogueActions?.[1]?.playerLine).toBe(
-      'Znalazłem przesyłkę Kasia. Oddaję ci dowód i zgłaszam ten układ.',
+      'Znalazłem przesyłkę. Wolę, żebyś ty ją zobaczył.',
     )
   })
 
@@ -382,8 +382,8 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
     inventory.addInstance(createSuspiciousTransportEvidenceInstance(binding.caveId))
     const traderActions = qm.onInteract(trader.id)
     expect(traderActions?.actions?.map((action) => action.label)).toEqual([
-      'Oddaję ci przesyłkę i zataję ten układ. Nikomu nie powiem.',
-      'Zostawiam tę rzecz sobie. Nikomu jej nie oddam.',
+      'Masz swoją paczkę. Zostawmy to między nami.',
+      'Nie oddam tego. Zostaje u mnie.',
     ])
     traderActions?.actions?.[0]?.onSelect()
     expect(qm.getState(def.id)).toBe('complete')
@@ -434,7 +434,7 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
       },
     )
     const keep = qm.onInteract(guard.id)?.actions?.find(
-      (action) => action.label === 'Zostawiam tę rzecz sobie. Nikomu jej nie oddam.',
+      (action) => action.label === 'Nie oddam tego. Zostaje u mnie.',
     )
     keep?.onSelect()
     expect(qm.getState(def.id)).toBe('complete')
