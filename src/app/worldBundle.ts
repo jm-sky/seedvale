@@ -110,9 +110,20 @@ import { activateRoadRouteWorldgenCache, attachRoadRoutePersistence, clearRoadNe
 import { createRoadRouteWorldgenCache, roadRouteFingerprint } from '../settlement/roadRouteWorldgenCache'
 import { resolveSettlementCharacter } from '../settlement/settlementCharacter'
 import { cellFromId, cellKey, cellSeed, cellsWithinRadius, probeSettlementSite, type SettlementDef } from '../settlement/settlementGenerator'
-import { cachedLostTreasureArchaeologistHostCell, cachedLostTreasureSpecialistHostCell, settlementDefFor, worldRiverQuery } from '../settlement/settlementPlanCache'
+import {
+  activateSettlementDefinitionCacheForWorld,
+  attachSettlementDefinitionPersistence,
+  cachedLostTreasureArchaeologistHostCell,
+  cachedLostTreasureSpecialistHostCell,
+  ingestHydratedSettlementDef,
+  settlementDefFor,
+  settlementDefinitionCacheReady,
+  type SettlementResolveContext,
+  worldRiverQuery,
+} from '../settlement/settlementPlanCache'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
+import { createSettlementWorldgenCache } from '../settlement/settlementWorldgenCache'
 import { useBootMark } from '../shared/bootMark'
 import { generateAbandonedMineGoldDeposits } from '../terrain/abandonedMineDeposits'
 import {
@@ -241,6 +252,11 @@ const persistentRoadRoutes = createRoadRouteWorldgenCache({
   hydrateInto: ingestHydratedRoadRoute,
 })
 attachRoadRoutePersistence(persistentRoadRoutes)
+
+const persistentSettlementDefs = createSettlementWorldgenCache({
+  hydrateInto: ingestHydratedSettlementDef,
+})
+attachSettlementDefinitionPersistence(persistentSettlementDefs)
 
 /** How far (world units) from the player a settlement streams in. Analogous to
  *  chunk load/unload radii — see multi-settlements plan. */
@@ -1228,7 +1244,11 @@ async function buildWorldSystems(
   const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
   bootMarkEnd('buildChunkManager')
 
-  const homeDefForSite = settlementDefFor({ gx: 0, gz: 0 }, {
+  // Plan settlements-014 — river identity is registered during ChunkManager
+  // construction. Resolve progression policy into the fingerprint, then await
+  // one best-effort hydrate before the first home lookup so a warm cache can
+  // skip `generateSettlementDef()`. A miss or storage failure regenerates.
+  const homeResolveCtx: SettlementResolveContext = {
     seed: config.seed,
     sampleHeight: chunkManager.sampleHeight,
     waterLevel: config.terrain.waterLevel,
@@ -1241,7 +1261,10 @@ async function buildWorldSystems(
     heightScale: config.terrain.heightScale,
     region: config.terrain.region,
     homeSize: config.settlements.homeSize,
-  })
+  }
+  activateSettlementDefinitionCacheForWorld(homeResolveCtx, rawSampleParamsFromWorld(config))
+  await settlementDefinitionCacheReady()
+  const homeDefForSite = settlementDefFor({ gx: 0, gz: 0 }, homeResolveCtx)
   if (!homeDefForSite) {
     throw new Error('[worldBundle] home settlement (0,0) failed to resolve for treasure site')
   }

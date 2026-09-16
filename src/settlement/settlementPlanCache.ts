@@ -1,6 +1,6 @@
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
-import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { RawSampleParams, RegionParams } from '../terrain/chunkHeightmap'
 import type { RiverQuery } from '../terrain/riverQuery'
 import type { VillageSize } from './families'
 import type { TerrainSamplers } from './settlementTerrain'
@@ -41,6 +41,13 @@ import {
   resolveSettlementProgressionPolicy,
   type SettlementProgressionPolicy,
 } from './settlementProgression'
+import {
+  parseSettlementCellSubKey,
+  settlementCellSubKey,
+  settlementDefinitionFingerprint,
+  type SettlementProgressionIdentity,
+  type SettlementWorldgenCache,
+} from './settlementWorldgenCache'
 
 /** Shared generation context for the single settlement-definition cache
  *  (plan 047 §9.14–15). Both `SettlementsManager` and `RoadNetwork` must
@@ -92,6 +99,12 @@ const defCache = new Map<string, SettlementDef | null>()
 const namingInputCache = new Map<string, SettlementSiteProbe>()
 const uniqueNameCache = new Map<string, string | null>()
 
+/**
+ * Optional IndexedDB adapter (plan settlements-014). Main thread attaches
+ * it; the heightmap worker must not — it only uses in-memory `defCache`.
+ */
+let persistentDefs: SettlementWorldgenCache | null = null
+
 /** Derived near/far size policy for the current world. Cleared with defs. */
 let progressionPolicy: SettlementProgressionPolicy | null | undefined
 /** Memoized host cell key for the Lost Treasure Chronicles elder, or `null` when none. */
@@ -110,6 +123,82 @@ export function clearSettlementDefCache(): void {
   elderHostCellKey = undefined
   archaeologistHostCellKey = undefined
   specialistHostCellKey = undefined
+  persistentDefs?.invalidate()
+}
+
+/**
+ * Merge one hydrated persistent def into the runtime map without overwriting
+ * a key this realm already computed.
+ *
+ * @domain settlements
+ * @system worldgen-cache
+ */
+export function ingestHydratedSettlementDef(subKey: string, def: SettlementDef | null): void {
+  const cell = parseSettlementCellSubKey(subKey)
+  if (!cell) return
+  const key = cellKey(cell)
+  if (defCache.has(key)) return
+  defCache.set(key, def)
+}
+
+/**
+ * Bind the main-thread IndexedDB adapter. No-op to skip when running inside
+ * the terrain worker.
+ *
+ * @domain settlements
+ * @system worldgen-cache
+ */
+export function attachSettlementDefinitionPersistence(cache: SettlementWorldgenCache | null): void {
+  persistentDefs = cache
+}
+
+function progressionIdentityOf(
+  policy: SettlementProgressionPolicy | null,
+): SettlementProgressionIdentity {
+  if (!policy) return null
+  return {
+    homeSize: policy.homeSize,
+    near: policy.near
+      ? { gx: policy.near.cell.gx, gz: policy.near.cell.gz, minimum: policy.near.minimum }
+      : null,
+    far: policy.far
+      ? { gx: policy.far.cell.gx, gz: policy.far.cell.gz, minimum: policy.far.minimum }
+      : null,
+  }
+}
+
+/**
+ * Resolve the deterministic progression policy, then activate best-effort
+ * IndexedDB hydrate for this world identity. Persistent hits must not skip
+ * policy resolution — its identity is part of the fingerprint.
+ *
+ * Call after `setSettlementRiverQuery()` so river-aware site probes match
+ * generation. Consumers stay synchronous; await
+ * {@link settlementDefinitionCacheReady} before the first home lookup when
+ * the caller can spare a small IndexedDB read.
+ *
+ * @domain settlements
+ * @system worldgen-cache
+ */
+export function activateSettlementDefinitionCacheForWorld(
+  ctx: SettlementResolveContext,
+  params: RawSampleParams,
+): void {
+  const policy = progressionPolicyFor(ctx)
+  persistentDefs?.activate(
+    ctx.seed,
+    settlementDefinitionFingerprint({
+      params,
+      localSearchRadius: ctx.localSearchRadius,
+      homeSize: ctx.homeSize,
+      progression: progressionIdentityOf(policy),
+    }),
+  )
+}
+
+/** Test/lifecycle seam: resolves when the current activation's hydrate finishes. */
+export function settlementDefinitionCacheReady(): Promise<void> {
+  return persistentDefs?.ready() ?? Promise.resolve()
 }
 
 function progressionPolicyFor(ctx: SettlementResolveContext): SettlementProgressionPolicy | null {
@@ -295,6 +384,7 @@ export function settlementDefFor(
   const def = generateSettlementDef(...probeArgs(cell, ctx), authoredResidentsFor(cell, ctx))
   if (def && resolvedName) applyResolvedSettlementName(def, resolvedName)
   defCache.set(key, def)
+  persistentDefs?.remember(settlementCellSubKey(cell.gx, cell.gz), def)
   return def
 }
 

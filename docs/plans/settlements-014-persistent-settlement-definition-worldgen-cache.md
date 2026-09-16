@@ -1,15 +1,16 @@
 # Plan: Persistent settlement definition worldgen cache
 
 **Created:** 2026-09-14
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-16 — browser checks are User-owned)
 **Type:** optimization
 **Priority:** high · **Effort:** M
-**Depends on:** ~~settlements-009~~, ~~settlements-011~~, settlements-012, settlements-013
+**Depends on:** ~~settlements-009~~, ~~settlements-011~~, ~~settlements-012~~, ~~settlements-013~~
 **Domain:** `settlements`
 **Subdomains:** `development` `resources`
 **Tags:** `worldgen` `cache` `settlement` `performance`
 **Roadmap:** -
 **Model:** Opus, Sonnet
+**Implemented at:** 2026-09-16 15:53
 
 ## Goal
 
