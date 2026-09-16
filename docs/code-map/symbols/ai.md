@@ -173,24 +173,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 716
-- `CurrentActivity` — type — line 526
-- `CurrentActivityKind` — type — line 519
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 833
-- `NPC_HEIGHT` — const — line 449
-- `NPC_SHADOW_DISTANCE` — const — line 463
-- `NpcAgent` — class — line 1073
+- `classifyPendingActivity` — function — line 724
+- `CurrentActivity` — type — line 534
+- `CurrentActivityKind` — type — line 527
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 841
+- `NPC_HEIGHT` — const — line 457
+- `NPC_SHADOW_DISTANCE` — const — line 471
+- `NpcAgent` — class — line 1081
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 967
-- `NpcInspectionSnapshot` — type — line 541
-- `NpcWhy` — type — line 691
-- `projectNpcWhy` — function — line 758
-- `promoteChainKind` — function — line 708
+- `NpcAgentDeps` — type — line 975
+- `NpcInspectionSnapshot` — type — line 549
+- `NpcWhy` — type — line 699
+- `projectNpcWhy` — function — line 766
+- `promoteChainKind` — function — line 716
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -344,18 +344,37 @@ Generated from exported TypeScript symbols.
 - `satisfyHouseholdResourceNeed` — function — line 154
 - `WoodHarvestDeposit` — type — line 90
 
+## `ai/npcMovementRoute.ts`
+
+- `composeNpcMovementRoute` — function — line 133
+  - domain: npc
+- `ComposeNpcMovementRouteInput` — type — line 46
+- `INITIAL_NPC_ROUTE_EXECUTION` — const — line 42
+- `isMouthTransitionConfirmed` — function — line 197
+  - domain: npc
+- `mouthTransitionDesiredContext` — function — line 185
+- `nextNpcRouteSteer` — function — line 217
+  - domain: npc
+- `NpcComposedRoute` — type — line 30
+  - domain: npc
+- `NpcMouthExecutionPhase` — type — line 35
+- `NpcRouteExecution` — type — line 37
+- `npcRouteGroundY` — function — line 274
+- `NpcRouteLeg` — type — line 19
+- `NpcRouteSteerResult` — type — line 204
+
 ## `ai/npcMovementTarget.ts`
 
-- `commitNpcMovementTarget` — function — line 57
+- `commitNpcMovementTarget` — function — line 67
   - domain: npc
-- `movementTargetsEqual` — function — line 69
-- `normalizeNpcMovementTarget` — function — line 40
+- `movementTargetsEqual` — function — line 79
+- `normalizeNpcMovementTarget` — function — line 50
   - domain: npc
-- `NPC_WORLD_MOVEMENT_SURFACE_ONLY` — const — line 82
-- `NpcMovementTarget` — type — line 16
+- `NPC_WORLD_MOVEMENT_SURFACE_ONLY` — const — line 92
+- `NpcMovementTarget` — type — line 17
   - domain: npc
-- `NpcMovementTargetSource` — type — line 32
-- `NpcWorldMovementQueries` — type — line 28
+- `NpcMovementTargetSource` — type — line 42
+- `NpcWorldMovementQueries` — type — line 29
   - domain: npc
 
 ## `ai/npcMovementWatchdog.ts`

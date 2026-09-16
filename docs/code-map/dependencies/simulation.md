@@ -56,6 +56,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcAction.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.ts`
 - `ai/npcProfessionWork.ts`
 - `combat/combatIntent.ts`

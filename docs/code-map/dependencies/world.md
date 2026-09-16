@@ -585,6 +585,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcMovementRoute.test.ts`
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCaveHabitat.ts`
 - `world/caves/caveHabitat.dungeon.test.ts`
@@ -3855,6 +3858,8 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcAction.ts`
+- `ai/npcMovementRoute.test.ts`
+- `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.test.ts`
 - `ai/npcMovementTarget.ts`
 - `app/gameLoop.ts`

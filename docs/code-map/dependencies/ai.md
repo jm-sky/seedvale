@@ -68,6 +68,7 @@ Generated from TypeScript imports.
 - `ai/npcDecision.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.ts`
 - `ai/npcMovementWatchdog.ts`
 - `ai/npcPersonalProvisions.ts`
@@ -788,6 +789,29 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.test.ts`
 - `ai/npcProfessionWork.ts`
 
+## `ai/npcMovementRoute.test.ts`
+
+**Imports**
+
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
+- `world/caves/caveHabitat.ts`
+- `world/spatialContext.ts`
+
+## `ai/npcMovementRoute.ts`
+
+**Imports**
+
+- `ai/npcMovementTarget.ts`
+- `simulation/index.ts`
+- `world/caves/caveHabitat.ts`
+- `world/spatialContext.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcMovementRoute.test.ts`
+
 ## `ai/npcMovementTarget.test.ts`
 
 **Imports**
@@ -803,11 +827,14 @@ Generated from TypeScript imports.
 
 - `ai/npcAction.ts`
 - `simulation/index.ts`
+- `world/caves/caveHabitat.ts`
 - `world/spatialContext.ts`
 
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcMovementRoute.test.ts`
+- `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.test.ts`
 - `app/worldBundle.ts`
 - `settlement/createSettlement.ts`
