@@ -3850,9 +3850,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
+- `ai/npcAction.ts`
+- `ai/npcMovementTarget.test.ts`
+- `ai/npcMovementTarget.ts`
 - `app/gameLoop.ts`
 - `app/interactables.test.ts`
 - `app/interactables.ts`
+- `app/worldBundle.ts`
 - `interaction/Interactable.ts`
 - `player/playerCombat.test.ts`
 - `player/playerCombat.ts`

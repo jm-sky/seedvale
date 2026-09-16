@@ -167,30 +167,30 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcAction.ts`
 
-- `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 90
-- `Phase` — type — line 10
+- `ActionId` — type — line 31
+- `NpcPlannedAction` — type — line 93
+- `Phase` — type — line 11
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 708
-- `CurrentActivity` — type — line 518
-- `CurrentActivityKind` — type — line 511
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 825
-- `NPC_HEIGHT` — const — line 441
-- `NPC_SHADOW_DISTANCE` — const — line 455
-- `NpcAgent` — class — line 1061
+- `classifyPendingActivity` — function — line 715
+- `CurrentActivity` — type — line 525
+- `CurrentActivityKind` — type — line 518
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 832
+- `NPC_HEIGHT` — const — line 448
+- `NPC_SHADOW_DISTANCE` — const — line 462
+- `NpcAgent` — class — line 1070
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 959
-- `NpcInspectionSnapshot` — type — line 533
-- `NpcWhy` — type — line 683
-- `projectNpcWhy` — function — line 750
-- `promoteChainKind` — function — line 700
+- `NpcAgentDeps` — type — line 966
+- `NpcInspectionSnapshot` — type — line 540
+- `NpcWhy` — type — line 690
+- `projectNpcWhy` — function — line 757
+- `promoteChainKind` — function — line 707
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -208,7 +208,7 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcAppearance.ts`
 
-- `modelUrlFor` — function — line 96
+- `modelUrlFor` — function — line 102
 - `NPC_CLOTHING_HUE` — const — line 56
 - `NPC_HAIR_COLOR` — const — line 64
 - `NPC_MODEL_URLS` — const — line 34
@@ -224,16 +224,16 @@ Generated from exported TypeScript symbols.
 - `NPC_UBC_RANGER_TINT_URL` — const — line 27
 - `NPC_UBC_WIZARD_TINT_URL` — const — line 25
 - `NPC_UBC_WOODCUTTER_TINT_URL` — const — line 23
-- `NpcAppearance` — type — line 87
+- `NpcAppearance` — type — line 93
   - domain: npc
 - `NpcClothingHueId` — type — line 52
 - `NpcHairColorId` — type — line 53
 - `NpcHairKind` — type — line 51
 - `NpcOutfitId` — type — line 49
 - `NpcUbcOutfitId` — type — line 50
-- `resolveNpcAppearance` — function — line 218
+- `resolveNpcAppearance` — function — line 237
   - domain: npc
-- `ubcVariantModelUrl` — function — line 170
+- `ubcVariantModelUrl` — function — line 176
   - domain: npc
 
 ## `ai/npcAssistance.ts`
@@ -343,6 +343,20 @@ Generated from exported TypeScript symbols.
 - `ResourceTransferPlan` — type — line 167
 - `satisfyHouseholdResourceNeed` — function — line 154
 - `WoodHarvestDeposit` — type — line 90
+
+## `ai/npcMovementTarget.ts`
+
+- `commitNpcMovementTarget` — function — line 57
+  - domain: npc
+- `movementTargetsEqual` — function — line 69
+- `normalizeNpcMovementTarget` — function — line 40
+  - domain: npc
+- `NPC_WORLD_MOVEMENT_SURFACE_ONLY` — const — line 82
+- `NpcMovementTarget` — type — line 16
+  - domain: npc
+- `NpcMovementTargetSource` — type — line 32
+- `NpcWorldMovementQueries` — type — line 28
+  - domain: npc
 
 ## `ai/npcMovementWatchdog.ts`
 

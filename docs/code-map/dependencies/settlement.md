@@ -195,6 +195,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcAnimalThreat.ts`
 - `ai/npcCrowd.ts`
+- `ai/npcMovementTarget.ts`
 - `ai/reactionChance.ts`
 - `ai/socialBehaviour.ts`
 - `assets/loadGltf.ts`

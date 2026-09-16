@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 424
-- `CreateSettlementDeps` — type — line 270
-- `Settlement` — type — line 144
-- `settlementSpawnPoint` — function — line 258
+- `createSettlement` — function — line 427
+- `CreateSettlementDeps` — type — line 271
+- `Settlement` — type — line 145
+- `settlementSpawnPoint` — function — line 259
 
 ## `settlement/decorProps.ts`
 
@@ -1098,7 +1098,7 @@ Generated from exported TypeScript symbols.
 ## `settlement/villagePasture.ts`
 
 - `appendPasturePath` — function — line 421
-- `pastureFencePlacements` — function — line 463
+- `pastureFencePlacements` — function — line 468
 - `PasturePlanArgs` — type — line 72
 - `pastureRadiusFor` — function — line 65
 - `planSettlementPasture` — function — line 334
