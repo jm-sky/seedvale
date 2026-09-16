@@ -142,4 +142,31 @@ describe('npcTravel continuity', () => {
     expect(reached.lastPosition).toEqual({ x: 9, z: 1 })
     expect(markNpcTravelReached(reached).arrival).toBe('reached')
   })
+
+  it('preserves transport purpose orderId across clone, reify and arrival (plan settlements-npcs-037)', () => {
+    const purpose = { kind: 'transport' as const, orderId: 'transportOrder:1' }
+    const started = beginOffscreenNpcTravel(
+      { x: 0, z: 0 },
+      { x: 80, z: 0 },
+      2,
+      600,
+      { destination: { x: 80, z: 0 }, lastPosition: { x: 0, z: 0 }, purpose },
+    )
+    expect(started.purpose).toEqual(purpose)
+    const reified = reifyNpcTravel(started, 2.1)
+    expect(reified.purpose).toEqual(purpose)
+    const cloned = cloneNpcTravel(started)
+    expect(cloned?.purpose).toEqual(purpose)
+    expect(cloned?.purpose).not.toBe(started.purpose)
+
+    const state = createNpcAuthoritativeState('npc:carrier', 0)
+    state.travel = started
+    const arrives = started.execution!.arrivesAtDays
+    expect(resolveOffscreenNpcTravel(state, arrives).kind).toBe('arrived')
+    expect(state.travel?.arrival).toBe('reached')
+    expect(state.travel?.purpose).toEqual(purpose)
+    expect(observeNpcTravelArrival(state)).toBe(true)
+    expect(state.travel).toBeNull()
+    expect(observeNpcTravelArrival(state)).toBe(false)
+  })
 })

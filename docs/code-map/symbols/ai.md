@@ -167,30 +167,30 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcAction.ts`
 
-- `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 90
-- `Phase` — type — line 10
+- `ActionId` — type — line 31
+- `NpcPlannedAction` — type — line 93
+- `Phase` — type — line 11
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 708
-- `CurrentActivity` — type — line 518
-- `CurrentActivityKind` — type — line 511
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 825
-- `NPC_HEIGHT` — const — line 441
-- `NPC_SHADOW_DISTANCE` — const — line 455
-- `NpcAgent` — class — line 1061
+- `classifyPendingActivity` — function — line 724
+- `CurrentActivity` — type — line 534
+- `CurrentActivityKind` — type — line 527
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 841
+- `NPC_HEIGHT` — const — line 457
+- `NPC_SHADOW_DISTANCE` — const — line 471
+- `NpcAgent` — class — line 1081
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 959
-- `NpcInspectionSnapshot` — type — line 533
-- `NpcWhy` — type — line 683
-- `projectNpcWhy` — function — line 750
-- `promoteChainKind` — function — line 700
+- `NpcAgentDeps` — type — line 975
+- `NpcInspectionSnapshot` — type — line 549
+- `NpcWhy` — type — line 699
+- `projectNpcWhy` — function — line 766
+- `promoteChainKind` — function — line 716
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -208,7 +208,7 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcAppearance.ts`
 
-- `modelUrlFor` — function — line 96
+- `modelUrlFor` — function — line 102
 - `NPC_CLOTHING_HUE` — const — line 56
 - `NPC_HAIR_COLOR` — const — line 64
 - `NPC_MODEL_URLS` — const — line 34
@@ -224,16 +224,16 @@ Generated from exported TypeScript symbols.
 - `NPC_UBC_RANGER_TINT_URL` — const — line 27
 - `NPC_UBC_WIZARD_TINT_URL` — const — line 25
 - `NPC_UBC_WOODCUTTER_TINT_URL` — const — line 23
-- `NpcAppearance` — type — line 87
+- `NpcAppearance` — type — line 93
   - domain: npc
 - `NpcClothingHueId` — type — line 52
 - `NpcHairColorId` — type — line 53
 - `NpcHairKind` — type — line 51
 - `NpcOutfitId` — type — line 49
 - `NpcUbcOutfitId` — type — line 50
-- `resolveNpcAppearance` — function — line 218
+- `resolveNpcAppearance` — function — line 237
   - domain: npc
-- `ubcVariantModelUrl` — function — line 170
+- `ubcVariantModelUrl` — function — line 176
   - domain: npc
 
 ## `ai/npcAssistance.ts`
@@ -344,6 +344,39 @@ Generated from exported TypeScript symbols.
 - `satisfyHouseholdResourceNeed` — function — line 154
 - `WoodHarvestDeposit` — type — line 90
 
+## `ai/npcMovementRoute.ts`
+
+- `composeNpcMovementRoute` — function — line 133
+  - domain: npc
+- `ComposeNpcMovementRouteInput` — type — line 46
+- `INITIAL_NPC_ROUTE_EXECUTION` — const — line 42
+- `isMouthTransitionConfirmed` — function — line 197
+  - domain: npc
+- `mouthTransitionDesiredContext` — function — line 185
+- `nextNpcRouteSteer` — function — line 217
+  - domain: npc
+- `NpcComposedRoute` — type — line 30
+  - domain: npc
+- `NpcMouthExecutionPhase` — type — line 35
+- `NpcRouteExecution` — type — line 37
+- `npcRouteGroundY` — function — line 274
+- `NpcRouteLeg` — type — line 19
+- `NpcRouteSteerResult` — type — line 204
+
+## `ai/npcMovementTarget.ts`
+
+- `commitNpcMovementTarget` — function — line 67
+  - domain: npc
+- `movementTargetsEqual` — function — line 79
+- `normalizeNpcMovementTarget` — function — line 50
+  - domain: npc
+- `NPC_WORLD_MOVEMENT_SURFACE_ONLY` — const — line 92
+- `NpcMovementTarget` — type — line 17
+  - domain: npc
+- `NpcMovementTargetSource` — type — line 42
+- `NpcWorldMovementQueries` — type — line 29
+  - domain: npc
+
 ## `ai/npcMovementWatchdog.ts`
 
 - `createMovementWatchdog` — function — line 45
@@ -417,11 +450,11 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 83
-- `findWeaponNeedingMaintenance` — function — line 99
-- `NpcWorkContext` — type — line 119
-- `planProfessionWork` — function — line 928
-- `selectTraderCollectionGoods` — function — line 381
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 90
+- `findWeaponNeedingMaintenance` — function — line 106
+- `NpcWorkContext` — type — line 126
+- `planProfessionWork` — function — line 1067
+- `selectTraderCollectionGoods` — function — line 397
 
 ## `ai/npcStrategies.ts`
 
@@ -454,32 +487,32 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcTravel.ts`
 
-- `beginOffscreenNpcTravel` — function — line 145
+- `beginOffscreenNpcTravel` — function — line 146
   - domain: npc
-- `blockNpcTravel` — function — line 235
-- `cloneNpcTravel` — function — line 64
+- `blockNpcTravel` — function — line 236
+- `cloneNpcTravel` — function — line 65
 - `cloneNpcTravelPurpose` — function — line 57
-- `hasCommittedNpcTravel` — function — line 129
-- `interpolateNpcTravelPosition` — function — line 109
-- `isNpcTravelArrived` — function — line 122
-- `keepsNpcTravelAfterReify` — function — line 133
-- `markNpcTravelReached` — function — line 223
+- `hasCommittedNpcTravel` — function — line 130
+- `interpolateNpcTravelPosition` — function — line 110
+- `isNpcTravelArrived` — function — line 123
+- `keepsNpcTravelAfterReify` — function — line 134
+- `markNpcTravelReached` — function — line 224
 - `NpcTravelContinuity` — type — line 31
-- `NpcTravelExecution` — type — line 19
+- `NpcTravelExecution` — type — line 20
 - `NpcTravelHost` — type — line 51
-- `NpcTravelPoint` — type — line 17
+- `NpcTravelPoint` — type — line 18
   - domain: npc
-- `NpcTravelPurpose` — type — line 26
+- `NpcTravelPurpose` — type — line 27
 - `NpcTravelResolveResult` — type — line 44
-- `observeNpcTravelArrival` — function — line 299
+- `observeNpcTravelArrival` — function — line 300
   - domain: npc
-- `reifyNpcTravel` — function — line 191
+- `reifyNpcTravel` — function — line 192
   - domain: npc
-- `resolveOffscreenNpcTravel` — function — line 260
+- `resolveOffscreenNpcTravel` — function — line 261
   - domain: npc
-- `stampNpcTravelCheckpoint` — function — line 209
+- `stampNpcTravelCheckpoint` — function — line 210
   - domain: npc
-- `travelProgress01` — function — line 101
+- `travelProgress01` — function — line 102
 
 ## `ai/npcTravelCheckpoint.ts`
 

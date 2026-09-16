@@ -41,6 +41,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `economy/foodTransportDemand.test.ts`
 - `economy/index.ts`
+- `economy/interSettlementFoodTransport.ts`
 
 ## `economy/index.ts`
 
@@ -49,6 +50,7 @@ Generated from TypeScript imports.
 - `economy/development.ts`
 - `economy/foodTransportDemand.ts`
 - `economy/initial.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/kinds.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.ts`
@@ -83,6 +85,35 @@ Generated from TypeScript imports.
 - `economy/initial.test.ts`
 - `economy/registry.test.ts`
 - `economy/registry.ts`
+
+## `economy/interSettlementFoodTransport.test.ts`
+
+**Imports**
+
+- `economy/interSettlementFoodTransport.ts`
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `world/createTransportOrders.ts`
+
+## `economy/interSettlementFoodTransport.ts`
+
+**Imports**
+
+- `economy/foodTransportDemand.ts`
+- `economy/settlementEconomy.ts`
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `items/items.ts`
+- `world/transportOrder.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
+- `economy/index.ts`
+- `economy/interSettlementFoodTransport.test.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
 
 ## `economy/kinds.ts`
 
@@ -155,6 +186,7 @@ Generated from TypeScript imports.
 - `economy/npcWork.test.ts`
 - `settlements-npcs-007.test.ts`
 - `world/transportOffscreen.ts`
+- `world/transportTravelArrival.ts`
 
 ## `economy/oreTransportDemand.test.ts`
 
@@ -182,6 +214,7 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `economy/oreTransportDemand.test.ts`
 - `world/transportOffscreen.ts`
+- `world/transportTravelArrival.ts`
 
 ## `economy/production.test.ts`
 
@@ -337,6 +370,8 @@ Generated from TypeScript imports.
 - `economy/foodTransportDemand.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
+- `economy/interSettlementFoodTransport.test.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/localExchange.test.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.test.ts`
@@ -364,6 +399,7 @@ Generated from TypeScript imports.
 - `settlement/storageVisuals.test.ts`
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
+- `world/transportTravelArrival.test.ts`
 
 ## `economy/stock.ts`
 

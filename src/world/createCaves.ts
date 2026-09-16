@@ -53,6 +53,7 @@ import {
   type CaveTraversalDescriptor,
   type CaveTraversalPoint,
   resolveCaveRouteBetweenNodes,
+  resolveCaveRouteBetweenPoints,
   resolveCaveTraversal,
   type ResolveCaveTraversalOptions,
 } from './caves/caveHabitat'
@@ -246,6 +247,17 @@ export type Caves = {
     caveId: string,
     fromNodeId: string,
     toNodeId: string,
+  ) => readonly CaveTraversalPoint[] | null
+  /**
+   * Floor-snapped route between two arbitrary cave XYZ points in one cave
+   * (plan npc-027). Attaches each point to the nearest topology node, then
+   * reuses `resolveRouteBetween`. `null` when the cave is unknown or the
+   * nodes are disconnected — never a geometric shortcut.
+   */
+  resolveRouteBetweenPoints: (
+    caveId: string,
+    from: { x: number, y: number, z: number },
+    to: { x: number, y: number, z: number },
   ) => readonly CaveTraversalPoint[] | null
   /**
    * Stateless, cave-scoped ground query for a known occupant of `caveId` —
@@ -1025,6 +1037,11 @@ export function createCaves(
       const runtime = v2ByCaveId.get(caveId)
       if (!runtime) return null
       return resolveCaveRouteBetweenNodes(runtime.topology, runtime.heightfield, analyticSurfaceHeight, fromNodeId, toNodeId)
+    },
+    resolveRouteBetweenPoints(caveId, from, to) {
+      const runtime = v2ByCaveId.get(caveId)
+      if (!runtime) return null
+      return resolveCaveRouteBetweenPoints(runtime.topology, runtime.heightfield, analyticSurfaceHeight, from, to)
     },
     queryGroundIn(caveId, x, y, z) {
       const runtime = v2ByCaveId.get(caveId)

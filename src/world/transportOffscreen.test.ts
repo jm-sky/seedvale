@@ -8,7 +8,9 @@ import {
   estimateOffscreenTravelDays,
   type OffscreenTransportLookup,
   resolveOffscreenTransportArrivals,
+  resolveSettlementStorageHandoffPosition,
   resolveTransportEndpointInventory,
+  shouldUseLegacyTransportExecutionHandoff,
 } from './transportOffscreen'
 import {
   assignTransportOrder,
@@ -209,5 +211,36 @@ describe('resolveOffscreenTransportArrivals', () => {
     expect(carrierState.transportCargo.count('iron')).toBe(0)
     expect(economy.items.count('iron')).toBe(0)
     expect(economy.query('iron')).toBe(2)
+  })
+})
+
+describe('legacy transport execution handoff (settlements-npcs-037)', () => {
+  it('skips TransportOrder.execution when the carrier already has transport-purpose travel', () => {
+    expect(shouldUseLegacyTransportExecutionHandoff(
+      { id: 'order:1', state: 'in-transit' },
+      { purpose: { kind: 'transport', orderId: 'order:1' } },
+    )).toBe(false)
+  })
+
+  it('still hands off same-settlement in-transit orders without transport-purpose travel', () => {
+    expect(shouldUseLegacyTransportExecutionHandoff(
+      { id: 'order:1', state: 'in-transit' },
+      { purpose: { kind: 'expedition' } },
+    )).toBe(true)
+    expect(shouldUseLegacyTransportExecutionHandoff(
+      { id: 'order:1', state: 'in-transit' },
+      null,
+    )).toBe(true)
+  })
+
+  it('honors the referenced destination settlement id', () => {
+    const current = { x: 1, z: 2 }
+    const other = { x: 40, z: 8 }
+    expect(resolveSettlementStorageHandoffPosition('a', 'a', current, () => other)).toEqual(current)
+    expect(resolveSettlementStorageHandoffPosition('b', 'a', current, (id) => (id === 'b' ? other : null))).toEqual(other)
+  })
+
+  it('does not invent a zero-duration target when the destination cannot resolve', () => {
+    expect(resolveSettlementStorageHandoffPosition('missing', 'a', { x: 1, z: 2 }, () => null)).toBeNull()
   })
 })

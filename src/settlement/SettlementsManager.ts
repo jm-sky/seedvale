@@ -3,6 +3,7 @@ import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
+import type { InterSettlementTransportHooks } from '../economy/interSettlementFoodTransport'
 import type { SettlementEconomy, SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalAgent, AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { AnimalOwner } from '../fauna/animalOwnership'
@@ -45,7 +46,10 @@ import {
   estimateOffscreenTravelDays,
   type OffscreenTransportLookup,
   resolveOffscreenTransportArrivals,
+  resolveSettlementStorageHandoffPosition,
+  shouldUseLegacyTransportExecutionHandoff,
 } from '../world/transportOffscreen'
+import { resolveTransportTravelArrivals } from '../world/transportTravelArrival'
 import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
 import {
@@ -474,6 +478,8 @@ export async function createSettlementsManager(
    *  for the same id after an unload/reload. Deliberately narrow — this
    *  module never imports reputation/social-news itself. */
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
+  /** Stateless cave/world spatial queries for NPC movement (plan npc-027). */
+  npcWorldMovement?: import('../ai/npcMovementTarget').NpcWorldMovementQueries,
   /** Shared bridge-deck movement-ground query (plan world-terrain-033 §7) —
    *  composed locally into a bridge-aware `sampleHeight`/`sampleLocalWater`
    *  wherever an `NpcAgent`/livestock `AnimalAgent` is actually constructed
@@ -522,7 +528,17 @@ export async function createSettlementsManager(
   }
 
   const economies = createEconomyRegistry(initialEconomies)
+  /** Settlements whose economy was materialized in this world lifetime
+   *  (plan settlements-npcs-037). Survives `unload()`; not a second economy
+   *  registry and not persisted. */
+  const knownSettlements = new Map<string, { settlementId: string, x: number, z: number }>()
+  function rememberKnownSettlement(def: SettlementDef): void {
+    if (!knownSettlements.has(def.id)) {
+      knownSettlements.set(def.id, { settlementId: def.id, x: def.x, z: def.z })
+    }
+  }
   function economyFor(def: SettlementDef) {
+    rememberKnownSettlement(def)
     return economies.getOrCreate({
       id: def.id,
       size: def.size,
@@ -631,6 +647,8 @@ export async function createSettlementsManager(
     return getNowDays?.() ?? lastNowDays
   }
 
+  const entries = new Map<string, Entry>()
+
   const settlementDeps: CreateSettlementDeps = {
     scene,
     sampleHeight,
@@ -678,9 +696,25 @@ export async function createSettlementsManager(
     residentialBuildings,
     npcGraves,
     naturalWaterKindAt,
+    npcWorldMovement,
+    interSettlement: {
+      listKnownSettlements: () => [...knownSettlements.values()],
+      getEconomy: (settlementId) => economies.get(settlementId),
+      resolveStorageTarget(settlementId) {
+        const loaded = entries.get(settlementId)?.settlement
+        if (loaded) {
+          const dest = settlementStorageDestination(
+            'food',
+            loaded.landmarks.stockpile,
+            loaded.landmarks.settlementStorage,
+          )
+          return { x: dest.x, z: dest.z }
+        }
+        const known = knownSettlements.get(settlementId)
+        return known ? { x: known.x, z: known.z } : null
+      },
+    } satisfies InterSettlementTransportHooks,
   }
-
-  const entries = new Map<string, Entry>()
 
   // Remembered so a settlement that streams in later (or finishes its async
   // build after `setDayNight` already ran for this tick) starts its house
@@ -865,8 +899,20 @@ export async function createSettlementsManager(
       const match = settlement.householdStorages.find((s) => s.household.id === ref.householdId)
       return match ? { x: match.position.x, z: match.position.z } : null
     }
-    const dest = settlementStorageDestination('food', settlement.landmarks.stockpile, settlement.landmarks.settlementStorage)
-    return { x: dest.x, z: dest.z }
+    if (ref.type === 'resource-site') {
+      return resolveResourceSitePosition?.(ref.resourceId) ?? null
+    }
+    const local = settlementStorageDestination(
+      'food',
+      settlement.landmarks.stockpile,
+      settlement.landmarks.settlementStorage,
+    )
+    return resolveSettlementStorageHandoffPosition(
+      ref.settlementId,
+      settlement.id,
+      { x: local.x, z: local.z },
+      (settlementId) => settlementDeps.interSettlement?.resolveStorageTarget(settlementId) ?? null,
+    )
   }
 
   /** Detailed → off-screen handoff (plan settlements-npcs-019) — called from
@@ -876,15 +922,19 @@ export async function createSettlementsManager(
    *  execution metadata (see `transportOrder.ts`'s `TransportExecution`
    *  doc) — it simply resumes ordinary pickup once a live carrier exists
    *  again, no timing capture needed. Idempotent via
-   *  `TransportOrders.beginOffscreenExecution`'s own guard. */
+   *  `TransportOrders.beginOffscreenExecution`'s own guard. Cross-settlement
+   *  legs already owned by transport-purpose NPC travel skip this clock. */
   function beginOffscreenTransportHandoff(settlement: Settlement, nowDays: number, dayLengthSec: number): void {
     if (!transportOrders) return
     for (const npc of settlement.npcs) {
       const order = transportOrders.findByCarrier(npc.id)
-      if (!order || order.state !== 'in-transit' || order.execution) continue
+      if (!order) continue
+      const travel = npcStates.get(npc.id)?.travel
+      if (!shouldUseLegacyTransportExecutionHandoff(order, travel)) continue
       const target = resolveOffscreenHandoffTargetPosition(order.destination, settlement)
+      if (!target) continue
       const from = { x: npc.mesh.position.x, z: npc.mesh.position.z }
-      const travelDays = target ? estimateOffscreenTravelDays(from, target, dayLengthSec) : 0
+      const travelDays = estimateOffscreenTravelDays(from, target, dayLengthSec)
       transportOrders.beginOffscreenExecution(order.id, nowDays + travelDays)
     }
   }
@@ -925,12 +975,25 @@ export async function createSettlementsManager(
       if (dist > unloadRadius) unload(id, entry, nowDays, dayLengthSec, playerX, playerZ)
     }
     // World-owned off-screen transport progression (plan
-    // settlements-npcs-019) — bounded to active orders, checked at this
-    // stream-transition checkpoint rather than per frame. Also covers
-    // catch-up right after boot/restore, since `recheck` always fires once
-    // immediately (`lastCheckX`/`lastCheckZ` start at `Infinity`).
+    // settlements-npcs-019 / settlements-npcs-037) — bounded to active
+    // orders, checked at this stream-transition checkpoint rather than per
+    // frame. Also covers catch-up right after boot/restore, since `recheck`
+    // always fires once immediately (`lastCheckX`/`lastCheckZ` start at
+    // `Infinity`).
+    resolveTravelAndTransportCheckpoints(nowDays, dayLengthSec)
+  }
+
+  function resolveTravelAndTransportCheckpoints(nowDays: number, dayLengthSec: number): void {
     if (transportOrders) resolveOffscreenTransportArrivals(transportOrders, offscreenTransportLookup, nowDays)
     npcStates.forEach((state) => resolveNpcTravelCheckpoint(state, nowDays, dayLengthSec))
+    if (transportOrders) {
+      resolveTransportTravelArrivals(
+        transportOrders,
+        offscreenTransportLookup,
+        nowDays,
+        (fn) => npcStates.forEach(fn),
+      )
+    }
   }
 
   return {
@@ -951,6 +1014,14 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
       npcStates.forEach((state) => resolveNpcTravelCheckpoint(state, nowDays, dayLengthSec))
+      if (transportOrders) {
+        resolveTransportTravelArrivals(
+          transportOrders,
+          offscreenTransportLookup,
+          nowDays,
+          (fn) => npcStates.forEach(fn),
+        )
+      }
     },
     update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses, scareStimulus) {
       if (nowDays !== undefined) lastNowDays = nowDays

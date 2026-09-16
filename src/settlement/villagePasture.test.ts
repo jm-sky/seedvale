@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { FamilyDef } from './families'
-import type { VillageIdentity } from './villagePlan'
-import { pointHitsCorridor } from '../math/segment'
+import type { VillageIdentity, VillagePasturePlan } from './villagePlan'
+import { directionFromYaw, pointHitsCorridor, yawToward } from '../math/segment'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { generateFamilies } from './families'
-import { pastureRadiusFor, settlementWantsPasture } from './villagePasture'
+import {
+  pastureFencePlacements,
+  pastureRadiusFor,
+  settlementWantsPasture,
+} from './villagePasture'
 import { PASTURE_ID, pasturePathId } from './villagePlan'
 import { planVillageLayout } from './villagePlanner'
 
@@ -172,5 +176,63 @@ describe('settlement pasture (plan settlements-009)', () => {
     expect(footprintOverlapsRiver([river], pasture.x, pasture.z, pasture.radius + 1)).toBe(false)
     expect(footprintOverlapsRiver([river], pasture.well.x, pasture.well.z, 2.4)).toBe(false)
     expect(footprintOverlapsRiver([river], pasture.trough.x, pasture.trough.z, 1.2)).toBe(false)
+  })
+})
+
+function pastureWithSegment(
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): VillagePasturePlan {
+  const origin = { x: 0, z: 0, y: 12 }
+  return {
+    id: PASTURE_ID,
+    outsideCore: true,
+    x: 0,
+    z: 0,
+    y: 12,
+    radius: 11,
+    well: origin,
+    trough: origin,
+    connection: origin,
+    fenceSegments: [{ id: 'pasture-fence-a', ax, az, bx, bz }],
+  }
+}
+
+/** `wall.glb` long axis is local +X — the same contract as settlement palisade. */
+function expectFenceYawAlong(dx: number, dz: number, rotationY: number): void {
+  const len = Math.hypot(dx, dz)
+  expect(rotationY).toBeCloseTo(yawToward(dx, dz), 6)
+  const dir = directionFromYaw(rotationY)
+  expect(dir.x).toBeCloseTo(dx / len, 6)
+  expect(dir.z).toBeCloseTo(dz / len, 6)
+  // Guard the 90° comb regression: character-facing `atan2(dx, dz)` is
+  // exactly a quarter-turn off the local-+X convention.
+  const quarterTurn = Math.abs(
+    Math.atan2(Math.sin(rotationY - Math.atan2(dx, dz)), Math.cos(rotationY - Math.atan2(dx, dz))),
+  )
+  expect(quarterTurn).toBeCloseTo(Math.PI / 2, 6)
+}
+
+describe('pastureFencePlacements yaw', () => {
+  const sampleHeight = (): number => 12
+
+  it('orients wall.glb local +X along a world-X segment', () => {
+    const placements = pastureFencePlacements(pastureWithSegment(0, 0, 10, 0), sampleHeight)
+    expect(placements.length).toBeGreaterThan(0)
+    for (const p of placements) expectFenceYawAlong(10, 0, p.rotationY)
+  })
+
+  it('orients wall.glb local +X along a world-Z segment', () => {
+    const placements = pastureFencePlacements(pastureWithSegment(0, 0, 0, 10), sampleHeight)
+    expect(placements.length).toBeGreaterThan(0)
+    for (const p of placements) expectFenceYawAlong(0, 10, p.rotationY)
+  })
+
+  it('orients wall.glb local +X along a diagonal A→B segment', () => {
+    const placements = pastureFencePlacements(pastureWithSegment(0, 0, 10, 10), sampleHeight)
+    expect(placements.length).toBeGreaterThan(0)
+    for (const p of placements) expectFenceYawAlong(10, 10, p.rotationY)
   })
 })

@@ -1927,6 +1927,62 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })).toEqual({ status: 'invalid' })
   })
 
+  it('round-trips transport-purpose travel with an in-transit order and cargo (plan settlements-npcs-037)', () => {
+    const order = {
+      id: 'transportOrder:1',
+      source: { type: 'settlement-storage' as const, settlementId: 'a' },
+      destination: { type: 'settlement-storage' as const, settlementId: 'b' },
+      itemKind: 'carrot' as const,
+      requestedQuantity: 3,
+      claimedQuantity: 3,
+      deliveredQuantity: 0,
+      carrierNpcId: 'npc:1',
+      state: 'in-transit' as const,
+    }
+    const travel = {
+      destination: { x: 80, z: 0 },
+      lastPosition: { x: 10, z: 0 },
+      execution: { mode: 'off-screen' as const, departedAtDays: 4, arrivesAtDays: 4.5 },
+      purpose: { kind: 'transport' as const, orderId: 'transportOrder:1' },
+    }
+    const result = loadStoredSave({
+      ...validSave,
+      transportOrders: [order],
+      npcStates: {
+        'npc:1': {
+          health: { current: 100, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: null,
+          personalInventory: { counts: {}, instances: [] },
+          transportCargo: { counts: { carrot: 3 }, instances: [] },
+          travel,
+        },
+      },
+    })
+    expect(result.status).toBe('ok')
+    if (result.status === 'ok') {
+      expect(result.data.transportOrders).toEqual([order])
+      expect(result.data.npcStates?.['npc:1']?.transportCargo).toEqual({ counts: { carrot: 3 }, instances: [] })
+      expect(result.data.npcStates?.['npc:1']?.travel).toEqual(travel)
+    }
+    expect(loadStoredSave({
+      ...validSave,
+      npcStates: {
+        'npc:1': {
+          health: { current: 100, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: null,
+          personalInventory: { counts: {}, instances: [] },
+          travel: { ...travel, purpose: { kind: 'transport' } },
+        },
+      },
+    })).toEqual({ status: 'invalid' })
+  })
+
   it('migrates a v35 save without accompanyCommitment/travel to the current version (plan npc-029)', () => {
     const result = loadStoredSave({ ...validSave, version: 35 })
     expect(result.status).toBe('ok')

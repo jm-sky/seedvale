@@ -8,8 +8,9 @@ import { estimateOffscreenTravelDays } from '../world/transportOffscreen'
  *
  * Absent `execution` means a live `NpcAgent` owns progress. `lastPosition` is
  * the handoff origin (or last detailed checkpoint), never a per-frame path.
- * Optional `purpose` is caller/arrival context so expedition (and later
- * generic) arrivals can be observed exactly once without a parallel registry.
+ * Optional `purpose` is caller/arrival context so expedition and
+ * inter-settlement transport arrivals can be observed exactly once without a
+ * parallel registry.
  *
  * @domain npc
  */
@@ -23,10 +24,9 @@ export type NpcTravelExecution = {
 }
 
 /** Semantic caller of a travel commitment — not a quest/object ref. */
-export type NpcTravelPurpose = {
-  kind: 'expedition'
-  assignmentId: string
-}
+export type NpcTravelPurpose =
+  | { kind: 'expedition', assignmentId: string }
+  | { kind: 'transport', orderId: string }
 
 export type NpcTravelContinuity = {
   destination: NpcTravelPoint
@@ -58,7 +58,8 @@ export function cloneNpcTravelPurpose(
   purpose: NpcTravelPurpose | null | undefined,
 ): NpcTravelPurpose | undefined {
   if (!purpose) return undefined
-  return { kind: purpose.kind, assignmentId: purpose.assignmentId }
+  if (purpose.kind === 'expedition') return { kind: 'expedition', assignmentId: purpose.assignmentId }
+  return { kind: 'transport', orderId: purpose.orderId }
 }
 
 export function cloneNpcTravel(

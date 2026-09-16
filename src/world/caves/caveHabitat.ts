@@ -264,6 +264,81 @@ export function resolveCaveRouteBetweenNodes(
   return snapRouteFloor(heightfield, surfaceHeightAt, rawRoute)
 }
 
+function distSq3(
+  a: { x: number, y: number, z: number },
+  b: { x: number, y: number, z: number },
+): number {
+  const dx = a.x - b.x
+  const dy = a.y - b.y
+  const dz = a.z - b.z
+  return dx * dx + dy * dy + dz * dz
+}
+
+/**
+ * Nearest topology node to an arbitrary cave XYZ. Attachment only — does
+ * not invent connectivity. `null` when the cave has no nodes.
+ *
+ * @domain world-terrain
+ */
+export function nearestCaveTopologyNodeId(
+  topology: CaveTopology,
+  point: { x: number, y: number, z: number },
+): string | null {
+  if (topology.nodes.length === 0) return null
+  let bestId = topology.nodes[0]!.id
+  let best = Infinity
+  for (const node of topology.nodes) {
+    const d = distSq3(node.position, point)
+    if (d < best) {
+      best = d
+      bestId = node.id
+    }
+  }
+  return bestId
+}
+
+const ROUTE_ENDPOINT_MERGE = 0.35
+
+/**
+ * Floor-snapped route between two arbitrary cave points, attached to the
+ * existing topology graph. `null` when either point cannot attach or the
+ * nodes are not connected — never a geometric shortcut through rock.
+ *
+ * @domain world-terrain
+ */
+export function resolveCaveRouteBetweenPoints(
+  topology: CaveTopology,
+  heightfield: CaveHeightfieldRepresentation,
+  surfaceHeightAt: SurfaceSampler,
+  from: { x: number, y: number, z: number },
+  to: { x: number, y: number, z: number },
+): readonly CaveTraversalPoint[] | null {
+  const fromNodeId = nearestCaveTopologyNodeId(topology, from)
+  const toNodeId = nearestCaveTopologyNodeId(topology, to)
+  if (!fromNodeId || !toNodeId) return null
+  const nodeRoute = resolveCaveRouteBetweenNodes(
+    topology,
+    heightfield,
+    surfaceHeightAt,
+    fromNodeId,
+    toNodeId,
+  )
+  if (!nodeRoute) return null
+  const points: CaveTraversalPoint[] = []
+  const fromPoint = { x: from.x, y: from.y, z: from.z }
+  const toPoint = { x: to.x, y: to.y, z: to.z }
+  const first = nodeRoute[0]
+  if (!first || distSq3(fromPoint, first) > ROUTE_ENDPOINT_MERGE * ROUTE_ENDPOINT_MERGE) {
+    points.push(fromPoint)
+  }
+  for (const p of nodeRoute) points.push(p)
+  const last = points[points.length - 1]
+  if (!last || distSq3(toPoint, last) > ROUTE_ENDPOINT_MERGE * ROUTE_ENDPOINT_MERGE) {
+    points.push(toPoint)
+  }
+  return points
+}
+
 /**
  * Resolves the traversal descriptor for one cave: a standable interior home
  * chamber and the deterministic route from it to the entrance, both snapped

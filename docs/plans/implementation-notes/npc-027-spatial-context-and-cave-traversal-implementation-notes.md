@@ -3,6 +3,53 @@
 **Plan:** `npc-027-spatial-context-and-cave-traversal.md`  
 **Recon:** 2026-09-15, current `main` (`326b3af984a7fa8c4307dc557fd0b14e570e07ad` baseline before the plan/notes refresh)
 
+## Stage 2 complete (2026-09-16)
+
+**Scope:** route composition + physical mouth transition. No cave-local `queryGroundIn` / `resolveHorizontalIn` locomotion, no watchdog/time-skip hardening, no underground A*.
+
+**Delivered:**
+
+- `src/world/caves/caveHabitat.ts` — `nearestCaveTopologyNodeId()`, `resolveCaveRouteBetweenPoints()` reusing existing BFS + floor snap.
+- `Caves.resolveRouteBetweenPoints(caveId, from, to)` facade.
+- `src/ai/npcMovementRoute.ts` — `composeNpcMovementRoute()`, mouth confirm policy, monotonic `nextNpcRouteSteer()`.
+- `NpcAgent.goTo` walks composed legs for cave-involved commitments; `action.destination` / committed final target stay intact.
+- Per-tick surface `sampleHeight` Y snap is skipped while `spatialContextAt` is cave or mouth phase is `crossing`; Y then comes from traversal waypoints.
+
+**Arbitrary-point attachment seam: WAS required.**
+
+Stage 1 `NpcMovementTarget` is `{ position, context }` with no topology `nodeId`. No current producer supplies node ids. `resolveRouteBetween` is node-id based, and stage 2 tests require cave→same cave plus “disconnected topology is not joined geometrically”. Habitat `routeToEntrance` only covers the home↔entrance spine.
+
+The seam lives beside cave traversal (`caveHabitat.ts` / `Caves`), **not** in `NpcAgent`. NPC code never implements BFS, the topology graph, or floor snapping.
+
+**Follow-ups for later stages (not implemented now):**
+
+- Cave-local steering via `queryGroundIn` / `resolveHorizontalIn`.
+- Context-safe watchdog / local escape / time-skip.
+- Cross-cave A→B as surface composition (not needed by a current consumer).
+
+## Stage 1 complete (2026-09-16)
+
+**Scope:** spatial movement target contract + dependency wiring only (no route composition, mouth crossing, cave locomotion, or `navigation.ts` changes).
+
+**Delivered:**
+
+- `src/ai/npcMovementTarget.ts` — `NpcMovementTarget`, `NpcWorldMovementQueries` (`spatialContextAt` only at this stage), `normalizeNpcMovementTarget`, `commitNpcMovementTarget`, `movementTargetsEqual`, `NPC_WORLD_MOVEMENT_SURFACE_ONLY`.
+- `NpcPlannedAction.destinationContext?: WorldSpatialContext` — explicit cave identity; legacy producers keep plain `destination` only.
+- Normalization/commit at movement boundary: `NpcAgent.startAction()` and chained `next` promotion in `execute`.
+- `NpcAgent.resolveCurrentSpatialContext()` from mesh XYZ + injected queries; `getCommittedMovementTarget()` for diagnostics/tests.
+- Composition: `CreateSettlementDeps` / `SettlementsManager` / `worldBundle.ts` late-bound `{ spatialContextAt: (x,y,z) => cavesRef?.spatialContextAt(...) ?? WORLD_SPATIAL_CONTEXT_SURFACE }` (NPC build may start before `createCaves()` finishes).
+
+**Decisions:**
+
+- Did **not** widen shared `PlannedAction`.
+- Did **not** add `currentCaveId` or import `WorldBundle` into `NpcAgent`.
+- `committedMovementTarget` is stored; stage 2 consumes it for cave-involved `goTo`.
+
+**Follow-ups for later stages (not implemented now):**
+
+- Re-commit or refresh movement target when `goTo` mutates `action.destination` (queues, `followAnimalId`, `approachPlayer`, accompany follow) without a new `startAction`.
+- Extend `NpcWorldMovementQueries` with `queryGroundIn` / `resolveHorizontalIn` when cave-local locomotion lands.
+
 ## Recon result
 
 The old 2026-09-10 notes are materially obsolete after the Cave V2 heightfield cutover and the later fauna/dungeon work.

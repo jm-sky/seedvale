@@ -1,5 +1,6 @@
 import { type Scene, Vector3 } from 'three'
 import type { DispatchReadyExpeditionResult } from '../ai/npcExpeditionTravel'
+import type { NpcWorldMovementQueries } from '../ai/npcMovementTarget'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
@@ -200,6 +201,7 @@ import {
 } from '../world/resourceSiteInventory'
 import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
 import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
+import { WORLD_SPATIAL_CONTEXT_SURFACE } from '../world/spatialContext'
 import { preloadTrapProps } from '../world/trapProp'
 import {
   authoredTreasureReservedIds,
@@ -559,6 +561,7 @@ function buildSettlementsManager(
    *  `createSettlementsManager`, which fires it once per settlement build
    *  (home and every streamed-in neighbor), not per `SettlementDef`. */
   onSettlementAvailable?: (settlement: { id: string, x: number, z: number }) => void,
+  npcWorldMovement?: import('../ai/npcMovementTarget').NpcWorldMovementQueries,
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
@@ -618,6 +621,7 @@ function buildSettlementsManager(
     initialStructureStates,
     getNowDays,
     onSettlementAvailable,
+    npcWorldMovement,
     chunkManager.sampleBridgeDeck,
     onAnimalDeathSound,
   )
@@ -1454,13 +1458,19 @@ async function buildWorldSystems(
   const npcGraves = createNpcGraves(scene, chunkManager.sampleHeight, initialGraves)
   bootMarkEnd('createNpcGraves')
 
+  const npcWorldMovement: NpcWorldMovementQueries = {
+    spatialContextAt: (x, y, z) => cavesRef?.spatialContextAt(x, y, z) ?? WORLD_SPATIAL_CONTEXT_SURFACE,
+    resolveHabitat: (caveId, entityHeight) => cavesRef?.resolveHabitat(caveId, entityHeight) ?? null,
+    resolveRouteBetweenPoints: (caveId, from, to) => cavesRef?.resolveRouteBetweenPoints(caveId, from, to) ?? null,
+  }
+
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size
   // — a pure function of seed+terrain) is resolved and the home settlement's
   // own full build (houses/NPCs/livestock) has been kicked off in the
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, onAnimalDeathSound)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, herbalGather, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, transportOrders, resourceSiteInventories, resolveResourceSitePosition, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves, initialStructureStates, getWorldDays, onSettlementAvailable, npcWorldMovement, onAnimalDeathSound)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)

@@ -1,7 +1,7 @@
 import type { HeightSampler } from '../player/PlayerController'
 import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { FamilyDef, VillageSize } from './families'
-import { pointHitsCorridor } from '../math/segment'
+import { pointHitsCorridor, yawToward } from '../math/segment'
 import { type PropPlacement } from '../render/instancedProps'
 import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
@@ -459,7 +459,12 @@ export function appendPasturePath(
 const FENCE_POST_SPACING = 2.2
 const FENCE_SCALE = 0.62
 
-/** Instanced wall-post placements along planned fence segments. */
+/**
+ * Instanced `wall.glb` placements along planned fence segments.
+ * `rotationY` uses the same local-+X `yawToward` convention as the
+ * settlement palisade — `atan2(dx, dz)` would stand each post 90° off
+ * the segment (the "comb" look).
+ */
 export function pastureFencePlacements(
   pasture: VillagePasturePlan,
   sampleHeight: HeightSampler,
@@ -470,7 +475,7 @@ export function pastureFencePlacements(
     const dz = seg.bz - seg.az
     const len = Math.hypot(dx, dz)
     if (len < 0.5) continue
-    const yaw = Math.atan2(dx, dz)
+    const yaw = yawToward(dx, dz)
     const count = Math.max(2, Math.round(len / FENCE_POST_SPACING))
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0 : i / (count - 1)

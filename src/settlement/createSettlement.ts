@@ -3,8 +3,11 @@ import {
   Vector3,
 } from 'three'
 import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
+import type { NpcWorldMovementQueries } from '../ai/npcMovementTarget'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
+import type { InterSettlementTransportHooks } from '../economy/interSettlementFoodTransport'
+import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { AnimalAgent, AnimalKind, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
@@ -43,7 +46,6 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { isSystemEnabled } from '../debug/debugMode'
 import { WOODSHED_DEVELOPMENT } from '../economy/development'
-import { type SettlementEconomy } from '../economy/settlementEconomy'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { useBootMark } from '../shared/bootMark'
 import {
@@ -388,6 +390,8 @@ export type CreateSettlementDeps = {
   /** World-owned extracted goods at remote resource sites (plan settlements-npcs-021). */
   resourceSiteInventories?: ResourceSiteInventories
   resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null
+  /** Bounded inter-settlement food matching/execution (plan settlements-npcs-037). */
+  interSettlement?: InterSettlementTransportHooks
   /** Player-built wells (plan 127/npc-015) — the construction target NPC
    *  Work Contract execution advances, forwarded the same way. */
   playerWells?: PlayerWells
@@ -419,6 +423,8 @@ export type CreateSettlementDeps = {
   residentialBuildings?: ResidentialBuildings
   /** NPC burial graves (plan npc-011) — forwarded into every `NpcAgent.create`. */
   npcGraves?: import('../world/npcGraves').NpcGraves
+  /** Stateless cave/world spatial queries for NPC movement (plan npc-027). */
+  npcWorldMovement?: NpcWorldMovementQueries
 }
 
 export async function createSettlement(
@@ -462,6 +468,7 @@ export async function createSettlement(
     transportOrders,
     resourceSiteInventories,
     resolveResourceSitePosition,
+    interSettlement,
     playerWells,
     droppedItems,
     grassForage,
@@ -990,6 +997,7 @@ export async function createSettlement(
         transportOrders,
         resourceSiteInventories,
         resolveResourceSitePosition,
+        interSettlement,
         playerWells,
         droppedItems,
         terrainPreparations,
@@ -1005,6 +1013,7 @@ export async function createSettlement(
         structureRepairHooks: deps.structureStates
           ? createNpcStructureRepairHooks(def.id, familyIndex, landmarks.houses[familyIndex]?.position, deps.structureStates)
           : null,
+        npcWorldMovement: deps.npcWorldMovement,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

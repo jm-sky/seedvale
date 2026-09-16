@@ -1073,6 +1073,283 @@ describe('planProfessionWork', () => {
         resourceId: 'resource_a',
       })
     })
+
+    function interSettlementHooks(
+      economies: Record<string, ReturnType<typeof createSettlementEconomy>>,
+      positions: Record<string, { x: number, z: number }>,
+    ): NonNullable<NpcWorkContext['interSettlement']> {
+      return {
+        listKnownSettlements: () => Object.entries(positions).map(([settlementId, pos]) => ({
+          settlementId,
+          x: pos.x,
+          z: pos.z,
+        })),
+        getEconomy: (id) => economies[id],
+        resolveStorageTarget: (id) => positions[id] ?? null,
+      }
+    }
+
+    it('creates one A-storage → B-storage food order from surplus and uncovered shortage', () => {
+      const household = createHousehold('h', 'a', 'home:h')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 8, 0)
+      const dest = createSettlementEconomy('b', {}, [{ kind: 'food', target: 6 }])
+      const transportOrders = createTransportOrders()
+      const work = planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        interSettlement: interSettlementHooks(
+          { a: source, b: dest },
+          { a: { x: 0, z: 0 }, b: { x: 40, z: 0 } },
+        ),
+      }))
+      expect(work?.kind).toBe('work')
+      const order = transportOrders.findByCarrier('npc:trader')
+      expect(order?.source).toEqual({ type: 'settlement-storage', settlementId: 'a' })
+      expect(order?.destination).toEqual({ type: 'settlement-storage', settlementId: 'b' })
+      expect(order?.itemKind).toBe('carrot')
+      expect(order?.state).toBe('assigned')
+    })
+
+    it('does not create an A→A export', () => {
+      const household = createHousehold('h', 'a', 'home:h')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 8, 0)
+      const transportOrders = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        interSettlement: interSettlementHooks({ a: source }, { a: { x: 0, z: 0 } }),
+      }))
+      expect(transportOrders.list()).toEqual([])
+    })
+
+    it('picks the nearer destination then the stable smaller id', () => {
+      const household = createHousehold('h', 'a', 'home:h')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 8, 0)
+      const near = createSettlementEconomy('c-near', {}, [{ kind: 'food', target: 4 }])
+      const far = createSettlementEconomy('b-far', {}, [{ kind: 'food', target: 4 }])
+      const equalA = createSettlementEconomy('dest-a', {}, [{ kind: 'food', target: 4 }])
+      const equalB = createSettlementEconomy('dest-b', {}, [{ kind: 'food', target: 4 }])
+      const nearerOrders = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders: nearerOrders,
+        interSettlement: interSettlementHooks(
+          { a: source, 'c-near': near, 'b-far': far },
+          { a: { x: 0, z: 0 }, 'c-near': { x: 10, z: 0 }, 'b-far': { x: 80, z: 0 } },
+        ),
+      }))
+      expect(nearerOrders.findByCarrier('npc:trader')?.destination).toEqual({
+        type: 'settlement-storage',
+        settlementId: 'c-near',
+      })
+
+      const tiedOrders = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders: tiedOrders,
+        interSettlement: interSettlementHooks(
+          { a: source, 'dest-a': equalA, 'dest-b': equalB },
+          { a: { x: 0, z: 0 }, 'dest-a': { x: 20, z: 0 }, 'dest-b': { x: 20, z: 0 } },
+        ),
+      }))
+      expect(tiedOrders.findByCarrier('npc:trader')?.destination).toEqual({
+        type: 'settlement-storage',
+        settlementId: 'dest-a',
+      })
+    })
+
+    it('keeps local food and remote ore above inter-settlement export', () => {
+      const household = createHousehold('h', 'a', 'home:h')
+      household.items.remove('bread', household.items.count('bread'))
+      const localShortage = createSettlementEconomy('a', { iron: 0, coal: 1 }, [{ kind: 'food', target: 8 }])
+      localShortage.observeProductionOutcome({
+        ok: false,
+        recipeId: BLACKSMITH_IRON_ROD_PRODUCTION.id,
+        reason: 'insufficient-input',
+        category: 'stock',
+        kind: 'iron',
+      }, 0)
+      const dest = createSettlementEconomy('b', {}, [{ kind: 'food', target: 6 }])
+      const sourceHousehold = createHousehold('source', 'a', 'home:source')
+      sourceHousehold.items.remove('bread', sourceHousehold.items.count('bread'))
+      sourceHousehold.depositFood('carrot', 10)
+      const sites = createResourceSiteInventories()
+      sites.getOrCreate('resource_1_2').add('iron', 5)
+      const foodFirst = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: localShortage,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        householdExchange: {
+          findSurplusSource: () => ({ household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }),
+          findById: (id: string) => id === sourceHousehold.id
+            ? { household: sourceHousehold, position: { x: 1, y: 0, z: 1 } }
+            : null,
+        } as unknown as NpcWorkContext['householdExchange'],
+        transportOrders: foodFirst,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+        interSettlement: interSettlementHooks(
+          { a: localShortage, b: dest },
+          { a: { x: 0, z: 0 }, b: { x: 40, z: 0 } },
+        ),
+      }))
+      expect(foodFirst.findByCarrier('npc:trader')?.source).toEqual({
+        type: 'household',
+        householdId: 'source',
+      })
+
+      const surplusWithOre = createSettlementEconomy('a', { iron: 0, coal: 1 }, [{ kind: 'food', target: 2 }])
+      surplusWithOre.depositFood('carrot', 8, 0)
+      surplusWithOre.observeProductionOutcome({
+        ok: false,
+        recipeId: BLACKSMITH_IRON_ROD_PRODUCTION.id,
+        reason: 'insufficient-input',
+        category: 'stock',
+        kind: 'iron',
+      }, 0)
+      const oreFirst = createTransportOrders()
+      planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: surplusWithOre,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders: oreFirst,
+        resourceSiteInventories: sites,
+        resolveResourceSitePosition: () => ({ x: 20, z: 0 }),
+        interSettlement: interSettlementHooks(
+          { a: surplusWithOre, b: dest },
+          { a: { x: 0, z: 0 }, b: { x: 40, z: 0 } },
+        ),
+      }))
+      expect(oreFirst.findByCarrier('npc:trader')?.source).toEqual({
+        type: 'resource-site',
+        resourceId: 'resource_1_2',
+      })
+    })
+
+    it('picks up from source settlement storage and unloads into destination B, not A', () => {
+      const household = createHousehold('h', 'a', 'home:h')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 8, 0)
+      const dest = createSettlementEconomy('b', {}, [{ kind: 'food', target: 6 }])
+      const transportOrders = createTransportOrders()
+      const transportCargo = new Inventory()
+      const bound: { orderId: string, x: number, z: number }[] = []
+      const work = planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        transportCargo,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        interSettlement: interSettlementHooks(
+          { a: source, b: dest },
+          { a: { x: 0, z: 0 }, b: { x: 40, z: 0 } },
+        ),
+        bindTransportTravel: (orderId, destination) => {
+          bound.push({ orderId, ...destination })
+        },
+      }))!
+      const before = source.items.count('carrot') + transportCargo.count('carrot') + dest.items.count('carrot')
+      work.onComplete?.()
+      const order = transportOrders.findByCarrier('npc:trader')!
+      expect(order.state).toBe('in-transit')
+      expect(source.items.count('carrot') + transportCargo.count('carrot')).toBe(before)
+      expect(dest.items.count('carrot')).toBe(0)
+      expect(bound).toEqual([{ orderId: order.id, x: 40, z: 0 }])
+      work.next?.onComplete?.()
+      expect(transportOrders.find(order.id)?.state).toBe('completed')
+      expect(transportCargo.count('carrot')).toBe(0)
+      expect(dest.items.count('carrot')).toBe(order.claimedQuantity)
+      expect(source.items.count('carrot') + dest.items.count('carrot')).toBe(before)
+    })
+
+    it('excludes competing pre-pickup commitments when revalidating settlement-storage pickup', () => {
+      const household = createHousehold('h', 'a', 'home:h')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 5, 0) // surplus 3
+      const dest = createSettlementEconomy('b', {}, [{ kind: 'food', target: 6 }])
+      const transportOrders = createTransportOrders()
+      transportOrders.create({
+        source: { type: 'settlement-storage', settlementId: 'a' },
+        destination: { type: 'settlement-storage', settlementId: 'b' },
+        itemKind: 'carrot',
+        requestedQuantity: 2,
+        carrierNpcId: 'npc:other',
+      })
+      const transportCargo = new Inventory()
+      const work = planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        transportCargo,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        interSettlement: interSettlementHooks(
+          { a: source, b: dest },
+          { a: { x: 0, z: 0 }, b: { x: 40, z: 0 } },
+        ),
+      }))!
+      expect(transportOrders.findByCarrier('npc:trader')?.requestedQuantity).toBe(1)
+      work.onComplete?.()
+      expect(transportOrders.findByCarrier('npc:trader')?.claimedQuantity).toBe(1)
+      expect(source.items.count('carrot')).toBe(4)
+      expect(transportCargo.count('carrot')).toBe(1)
+    })
+
+    it('still delivers cargo if destination shortage disappears after pickup', () => {
+      const household = createHousehold('h', 'a', 'home:h')
+      const source = createSettlementEconomy('a', {}, [{ kind: 'food', target: 2 }])
+      source.depositFood('carrot', 8, 0)
+      const dest = createSettlementEconomy('b', {}, [{ kind: 'food', target: 6 }])
+      const transportOrders = createTransportOrders()
+      const transportCargo = new Inventory()
+      const work = planProfessionWork(baseCtx({
+        role: 'trader',
+        npcId: 'npc:trader',
+        household,
+        economy: source,
+        transportCargo,
+        workplace: { position: { x: 4, y: 0, z: 4 } } as unknown as NpcWorkContext['workplace'],
+        transportOrders,
+        interSettlement: interSettlementHooks(
+          { a: source, b: dest },
+          { a: { x: 0, z: 0 }, b: { x: 40, z: 0 } },
+        ),
+      }))!
+      work.onComplete?.()
+      dest.depositFood('bread', 6, 0)
+      expect(dest.shortage('food')).toBe(0)
+      work.next?.onComplete?.()
+      expect(transportOrders.findByCarrier('npc:trader')).toBeUndefined()
+      expect(transportCargo.count('carrot')).toBe(0)
+      expect(dest.items.count('carrot')).toBeGreaterThan(0)
+    })
   })
 
   describe('blacksmith (plan settlements-npcs-016)', () => {

@@ -4,6 +4,7 @@ import type { CombatIntent } from '../combat/combatIntent'
 import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { Projectile } from '../combat/projectile'
 import type { RangedAttackLifecycle } from '../combat/rangedLifecycle'
+import type { InterSettlementTransportHooks } from '../economy/interSettlementFoodTransport'
 import type { HuntTarget, SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemKind } from '../items/items'
@@ -30,6 +31,7 @@ import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementHerbalGatherHooks } from '../world/herbalGathering'
 import type { ResourceSiteInventories } from '../world/resourceSiteInventory'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { WorldSpatialContext } from '../world/spatialContext'
 import type { WeatherState } from '../world/weather'
 import type { NpcBurialHooks } from './burialPressure'
 import type { GraveVisitCandidate, NpcGraveVisitHooks } from './graveVisitPressure'
@@ -308,6 +310,20 @@ import {
   planPlayerStorageDelivery,
   type WoodHarvestDeposit,
 } from './npcLogistics'
+import {
+  composeNpcMovementRoute,
+  INITIAL_NPC_ROUTE_EXECUTION,
+  nextNpcRouteSteer,
+  type NpcComposedRoute,
+  type NpcRouteExecution,
+  npcRouteGroundY,
+} from './npcMovementRoute'
+import {
+  commitNpcMovementTarget,
+  NPC_WORLD_MOVEMENT_SURFACE_ONLY,
+  type NpcMovementTarget,
+  type NpcWorldMovementQueries,
+} from './npcMovementTarget'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -1023,6 +1039,8 @@ export type NpcAgentDeps = {
   /** World-owned extracted goods at remote resource sites (plan settlements-npcs-021). */
   resourceSiteInventories?: ResourceSiteInventories | null
   resolveResourceSitePosition?: (resourceId: string) => { x: number, z: number } | null
+  /** Bounded inter-settlement food matching/execution (plan settlements-npcs-037). */
+  interSettlement?: InterSettlementTransportHooks | null
   playerWells?: PlayerWells | null
   /** Active terrain-preparation work sites (plan npc-018) — the second Work
    *  Contract target kind, alongside `playerWells`. */
@@ -1047,6 +1065,8 @@ export type NpcAgentDeps = {
    *  `null` when the settlement has no structure registry wired (test/
    *  isolated fallbacks) or no plan-building exists at this family index. */
   structureRepairHooks?: NpcStructureRepairHooks | null
+  /** Stateless cave/world spatial queries for movement (plan npc-027). */
+  npcWorldMovement?: NpcWorldMovementQueries
 }
 
 /**
@@ -1183,6 +1203,14 @@ export class NpcAgent {
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
   private pendingAction: NpcPlannedAction | null = null
+  /** Committed movement target for the in-flight `goTo` step (plan npc-027). */
+  private committedMovementTarget: NpcMovementTarget | null = null
+  /** Request-driven route for the current commitment — rebuilt on commit. */
+  private composedRoute: NpcComposedRoute | null = null
+  /** Transient mouth/leg cursor; never persisted (plan npc-027). */
+  private routeExecution: NpcRouteExecution = { ...INITIAL_NPC_ROUTE_EXECUTION }
+  /** Stateless world/cave spatial queries — current context from actual XYZ. */
+  private readonly worldMovement: NpcWorldMovementQueries
   /** After a one-shot scheduled action (eat) finishes, linger on that
    *  activity until the effective schedule moves on — avoids restarting the
    *  same meal every `choose` cycle. */
@@ -1400,6 +1428,7 @@ export class NpcAgent {
   private readonly transportOrders: TransportOrders | null
   private readonly resourceSiteInventories: ResourceSiteInventories | null
   private readonly resolveResourceSitePosition: ((resourceId: string) => { x: number, z: number } | null) | null
+  private readonly interSettlement: InterSettlementTransportHooks | null
   /** Last player/observer XZ this tick — local reaction data only, never a
    *  global chase target (plan npc-016 §11). */
   private lastObserverX = 0
@@ -1536,6 +1565,7 @@ export class NpcAgent {
       transportOrders,
       resourceSiteInventories,
       resolveResourceSitePosition,
+      interSettlement,
       playerWells,
       terrainPreparations,
       palisades,
@@ -1585,6 +1615,7 @@ export class NpcAgent {
     this.transportOrders = transportOrders ?? null
     this.resourceSiteInventories = resourceSiteInventories ?? null
     this.resolveResourceSitePosition = resolveResourceSitePosition ?? null
+    this.interSettlement = interSettlement ?? null
     this.playerWells = playerWells ?? null
     this.terrainPreparations = terrainPreparations ?? null
     this.palisades = palisades ?? null
@@ -1604,6 +1635,7 @@ export class NpcAgent {
     this.shepherdFlock = shepherdFlock ?? null
     this.helperDelivery = helperDelivery ?? null
     this.householdExchange = householdExchange ?? null
+    this.worldMovement = deps.npcWorldMovement ?? NPC_WORLD_MOVEMENT_SURFACE_ONLY
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
@@ -3071,11 +3103,13 @@ export class NpcAgent {
         if (this.wait <= 0) {
           const action = this.pendingAction
           this.pendingAction = null
+          this.clearMovementCommitment()
           action?.onComplete()
           if (action?.next) {
             this.pendingAction = action.next
             this.pendingAction.chainKind = promoteChainKind(action)
             this.applyRimDestination(action.next.destination)
+            this.commitMovementTargetForPending(this.pendingAction)
             // Chained step stays `active` — do not complete between links.
             this.phase = 'goTo'
             this.trace.record({
@@ -3088,6 +3122,7 @@ export class NpcAgent {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
             if (action) this.trace.record({ simTime: this.simClock, type: 'action.completed', action: action.kind })
+            this.clearMovementCommitment()
             this.phase = 'choose'
           }
         }
@@ -3156,6 +3191,7 @@ export class NpcAgent {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
             this.pendingAction = null
+            this.clearMovementCommitment()
             this.phase = 'choose'
             break
           }
@@ -3181,6 +3217,22 @@ export class NpcAgent {
             y: this.sampleHeight(live.x, live.z),
             z: live.z,
           }
+        }
+        if (this.shouldExecuteSpatialRoute(action)) {
+          const step = this.stepComposedRoute(dt)
+          if (step === 'failed') {
+            failActionLifecycle(this.actionLifecycle)
+            this.leaveActiveQueue()
+            this.pendingAction = null
+            this.clearMovementCommitment()
+            this.trace.record({ simTime: this.simClock, type: 'action.failed', action: action.kind, reason: 'invalid' })
+            this.phase = 'choose'
+            break
+          }
+          if (step !== 'arrived') break
+          this.phase = 'execute'
+          this.wait = action.durationSec
+          break
         }
         this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
         const steerTarget = this.resolveSteerTarget(this.tmp)
@@ -3257,10 +3309,7 @@ export class NpcAgent {
       this.trace.record({ simTime: this.simClock, type: 'phase.changed', from: prevPhase, to: this.phase })
     }
 
-    this.mesh.position.y = this.sampleHeight(
-      this.mesh.position.x,
-      this.mesh.position.z,
-    )
+    this.applyMovementGroundY()
     this.syncAnimation()
     // Guarded the same way the label text write beside it is (review 2026-
     // 09-03 §5 E6 / §8 step 7c) — `activeNeed` only actually changes on a
@@ -3388,6 +3437,7 @@ export class NpcAgent {
     this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
     this.leaveActiveQueue()
     this.pendingAction = null
+    this.clearMovementCommitment()
     // A conversation reservation can't survive a time-skip catch-up (the
     // partner NPC is independently reset the same way) — clear it here too
     // so `socialCandidate()` isn't left permanently blocked (plan 151).
@@ -3439,6 +3489,7 @@ export class NpcAgent {
     }
     this.leaveActiveQueue()
     this.pendingAction = null
+    this.clearMovementCommitment()
     this.wait = 0
     this.pathWaypoints = []
     this.pathIndex = 0
@@ -3747,6 +3798,106 @@ export class NpcAgent {
     return ` · accompany ${commitment.mode}/${source}/${execution}`
   }
 
+  /** Movement commitment for the in-flight `goTo` step (plan npc-027). */
+  getCommittedMovementTarget(): NpcMovementTarget | null {
+    return this.committedMovementTarget
+  }
+
+  /** Composed surface/cave legs for the current commitment (plan npc-027). */
+  getComposedMovementRoute(): NpcComposedRoute | null {
+    return this.composedRoute
+  }
+
+  /** Authoritative spatial identity from actual world XYZ (plan npc-027). */
+  resolveCurrentSpatialContext(): WorldSpatialContext {
+    const p = this.mesh.position
+    return this.worldMovement.spatialContextAt(p.x, p.y, p.z)
+  }
+
+  private clearMovementCommitment(): void {
+    this.committedMovementTarget = null
+    this.composedRoute = null
+    this.routeExecution = { ...INITIAL_NPC_ROUTE_EXECUTION }
+  }
+
+  private commitMovementTargetForPending(action: NpcPlannedAction): void {
+    this.committedMovementTarget = commitNpcMovementTarget(
+      action,
+      this.worldMovement.spatialContextAt,
+    )
+    this.rebuildComposedRoute()
+  }
+
+  private rebuildComposedRoute(): void {
+    this.composedRoute = null
+    this.routeExecution = { ...INITIAL_NPC_ROUTE_EXECUTION }
+    const target = this.committedMovementTarget
+    if (!target || !this.shouldExecuteSpatialRoute(this.pendingAction)) return
+    this.composedRoute = composeNpcMovementRoute({
+      currentPosition: {
+        x: this.mesh.position.x,
+        y: this.mesh.position.y,
+        z: this.mesh.position.z,
+      },
+      currentContext: this.resolveCurrentSpatialContext(),
+      target,
+      queries: this.worldMovement,
+      entityHeight: NPC_HEIGHT,
+    })
+  }
+
+  private shouldExecuteSpatialRoute(action: NpcPlannedAction | null): boolean {
+    if (!action) return false
+    if (action.queueId || action.followAnimalId) return false
+    if (action.kind === 'approachPlayer' || action.kind === 'accompany') return false
+    const target = this.committedMovementTarget
+    if (!target) return false
+    return target.context.kind === 'cave' || this.resolveCurrentSpatialContext().kind === 'cave'
+  }
+
+  /**
+   * Walk composed cave/surface legs. Arrival at an entrance is not action
+   * completion — only the committed final target (and matching context) is.
+   */
+  private stepComposedRoute(dt: number): 'continue' | 'arrived' | 'failed' {
+    if (!this.composedRoute) this.rebuildComposedRoute()
+    if (!this.composedRoute || !this.committedMovementTarget) return 'failed'
+    const position = {
+      x: this.mesh.position.x,
+      y: this.mesh.position.y,
+      z: this.mesh.position.z,
+    }
+    const next = nextNpcRouteSteer(
+      this.composedRoute,
+      this.routeExecution,
+      position,
+      this.resolveCurrentSpatialContext(),
+      ARRIVE,
+    )
+    this.routeExecution = next.execution
+    if (next.complete) return 'arrived'
+    this.tmp.set(next.steer.x, next.steer.y, next.steer.z)
+    this.steerWithRescue(this.resolveSteerTarget(this.tmp), dt)
+    return 'continue'
+  }
+
+  /** Surface terrain height is not ground authority in a cave or during mouth crossing. */
+  private applyMovementGroundY(): void {
+    const crossing = this.routeExecution.mouthPhase === 'crossing'
+    const inCave = this.resolveCurrentSpatialContext().kind === 'cave'
+    if (crossing || inCave) {
+      if (this.composedRoute) {
+        const y = npcRouteGroundY(this.composedRoute, this.routeExecution)
+        if (y != null) this.mesh.position.y = y
+      }
+      return
+    }
+    this.mesh.position.y = this.sampleHeight(
+      this.mesh.position.x,
+      this.mesh.position.z,
+    )
+  }
+
   /** Kicks off a `goTo` → `execute` step — the generic replacement for the
    *  old `this.phase = 'goWell'` etc. one-liners.
    *  Caller must `join` a queue (if any) *before* this when `action.queueId`
@@ -3774,6 +3925,7 @@ export class NpcAgent {
       this.trace.record({ simTime: this.simClock, type: 'queue.joined', queueId: action.queueId })
     }
     this.pendingAction = action
+    this.commitMovementTargetForPending(action)
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'goTo'
     resetMovementWatchdog(this.watchdog)
@@ -3967,6 +4119,7 @@ export class NpcAgent {
     this.leaveActiveQueue()
     if (this.pendingAction?.kind === 'approachPlayer') this.clearPaymentApproach('interrupted')
     this.pendingAction = null
+    this.clearMovementCommitment()
     this.pathWaypoints = []
     this.pathIndex = 0
     this.wait = 0
@@ -4630,6 +4783,22 @@ export class NpcAgent {
       transportOrders: this.transportOrders,
       resourceSiteInventories: this.resourceSiteInventories,
       resolveResourceSitePosition: this.resolveResourceSitePosition ?? undefined,
+      interSettlement: this.interSettlement,
+      bindTransportTravel: (orderId, destination) => {
+        const existing = this.npcState.travel
+        if (existing?.purpose?.kind === 'transport' && existing.purpose.orderId === orderId) return
+        this.npcState.travel = {
+          destination: { ...destination },
+          lastPosition: { x: this.mesh.position.x, z: this.mesh.position.z },
+          purpose: { kind: 'transport', orderId },
+        }
+      },
+      clearTransportTravel: (orderId) => {
+        const purpose = this.npcState.travel?.purpose
+        if (purpose?.kind === 'transport' && purpose.orderId === orderId) {
+          this.npcState.travel = null
+        }
+      },
       strength: this.effectiveMeleeStrength(),
       nowDays: () => this.worldNowDays,
       shepherdFlock: this.shepherdFlock,

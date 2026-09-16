@@ -278,9 +278,13 @@ Generated from exported TypeScript symbols.
 - `CaveTraversalDescriptor` — type — line 31
   - domain: world-terrain
 - `CaveTraversalPoint` — type — line 21
+- `nearestCaveTopologyNodeId` — function — line 283
+  - domain: world-terrain
 - `resolveCaveRouteBetweenNodes` — function — line 253
   - domain: world-terrain
-- `resolveCaveTraversal` — function — line 280
+- `resolveCaveRouteBetweenPoints` — function — line 309
+  - domain: world-terrain
+- `resolveCaveTraversal` — function — line 355
   - domain: world-terrain
 - `ResolveCaveTraversalOptions` — type — line 241
 - `resolveStandableHomePoint` — function — line 109
@@ -838,14 +842,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveInteriorQueryChannel` — type — line 133
-- `Caves` — type — line 135
-- `createCaves` — function — line 398
+- `CaveInteriorQueryChannel` — type — line 134
+- `Caves` — type — line 136
+- `createCaves` — function — line 410
   - system: caves
   - role: Owns cave topologies, retained heightfield representations (presentation mesh + terrain mouth cutout + every spatial query), streamed interior presentation, and deterministic adventure content anchors; `PlayerController` ground goes through `queryGround`, lateral containment through `resolveHorizontal`, camera and swim eligibility through `occupancyAt`. `queryInterior` is the hysteretic cave-interior signal: `player` (default, audio) and `camera` (scene fog) keep separate confirmation slots.
   - owns: Caves
   - lifecycle: rebuild
-- `CreateCavesOptions` — type — line 342
+- `CreateCavesOptions` — type — line 354
   - domain: world-terrain
   - system: worldgen-cache
 
@@ -1942,8 +1946,12 @@ Generated from exported TypeScript symbols.
 
 - `estimateOffscreenTravelDays` — function — line 41
 - `OffscreenTransportLookup` — type — line 72
-- `resolveOffscreenTransportArrivals` — function — line 97
+- `resolveOffscreenTransportArrivals` — function — line 136
+- `resolveSettlementStorageHandoffPosition` — function — line 108
+  - domain: settlements-npcs
 - `resolveTransportEndpointInventory` — function — line 63
+- `shouldUseLegacyTransportExecutionHandoff` — function — line 87
+  - domain: settlements-npcs
 - `TransportEndpointLookup` — type — line 55
 
 ## `world/transportOrder.ts`
@@ -1971,6 +1979,11 @@ Generated from exported TypeScript symbols.
 - `transferInventoryItems` — function — line 19
 - `TransportPickupResult` — type — line 36
 - `TransportUnloadResult` — type — line 83
+
+## `world/transportTravelArrival.ts`
+
+- `resolveTransportTravelArrivals` — function — line 26
+  - domain: settlements-npcs
 
 ## `world/trapProp.ts`
 

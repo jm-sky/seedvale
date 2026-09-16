@@ -1566,6 +1566,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/npcExpeditionTravel.ts`
+- `ai/npcMovementTarget.ts`
 - `ai/reactionChance.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
@@ -1683,6 +1684,7 @@ Generated from TypeScript imports.
 - `world/settlementForestHooks.ts`
 - `world/siteInfrastructure.ts`
 - `world/sleepingUtilities.ts`
+- `world/spatialContext.ts`
 - `world/standingTorch.ts`
 - `world/transportOrder.ts`
 - `world/trapProp.ts`

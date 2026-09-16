@@ -77,6 +77,45 @@ export type OffscreenTransportLookup = TransportEndpointLookup & {
 }
 
 /**
+ * Legacy `TransportOrder.execution` owns same-settlement / resource-site
+ * travel clocks (plan settlements-npcs-019). Cross-settlement legs whose
+ * carrier already has `travel.purpose.kind === 'transport'` for this order
+ * must not also receive that clock (plan settlements-npcs-037).
+ *
+ * @domain settlements-npcs
+ */
+export function shouldUseLegacyTransportExecutionHandoff(
+  order: { id: string, state: string, execution?: unknown },
+  carrierTravel: { purpose?: { kind: string, orderId?: string } } | null | undefined,
+): boolean {
+  if (order.state !== 'in-transit' || order.execution) return false
+  if (
+    carrierTravel?.purpose?.kind === 'transport'
+    && carrierTravel.purpose.orderId === order.id
+  ) {
+    return false
+  }
+  return true
+}
+
+/**
+ * Settlement-storage handoff target (plan settlements-npcs-037). Honors
+ * `ref.settlementId` instead of assuming the currently unloading settlement.
+ * Returns `null` when the referenced settlement cannot be resolved.
+ *
+ * @domain settlements-npcs
+ */
+export function resolveSettlementStorageHandoffPosition(
+  settlementId: string,
+  currentSettlementId: string,
+  currentStorage: { x: number, z: number },
+  resolveOther: (settlementId: string) => { x: number, z: number } | null,
+): { x: number, z: number } | null {
+  if (settlementId === currentSettlementId) return currentStorage
+  return resolveOther(settlementId)
+}
+
+/**
  * Resolves every off-screen, `in-transit` order whose captured travel
  * commitment has logically elapsed by `nowDays` — bounded to active orders
  * only, never a per-frame or per-settlement scan. Reuses

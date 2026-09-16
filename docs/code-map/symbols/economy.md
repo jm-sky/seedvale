@@ -12,7 +12,11 @@ Generated from exported TypeScript symbols.
 
 - `committedIncomingFood` — function — line 26
 - `committedOutgoingFood` — function — line 47
+- `committedOutgoingSettlementFood` — function — line 92
+  - domain: settlements-npcs
 - `uncommittedHouseholdFoodSurplus` — function — line 76
+- `uncommittedSettlementFoodSurplus` — function — line 114
+  - domain: settlements-npcs
 - `uncoveredSettlementFoodShortage` — function — line 68
 
 ## `economy/initial.ts`
@@ -21,6 +25,18 @@ Generated from exported TypeScript symbols.
 - `initialFoodFor` — function — line 68
 - `initialStockFor` — function — line 50
 - `SettlementEconomySeed` — type — line 8
+
+## `economy/interSettlementFoodTransport.ts`
+
+- `InterSettlementFoodOpportunity` — type — line 39
+- `InterSettlementTransportHooks` — type — line 33
+- `isCrossSettlementStorageOrder` — function — line 72
+- `KnownSettlementEconomyRef` — type — line 25
+  - domain: settlements-npcs
+- `matchInterSettlementFoodOpportunity` — function — line 86
+  - domain: settlements-npcs
+- `selectConcreteFoodGoods` — function — line 52
+  - domain: settlements-npcs
 
 ## `economy/kinds.ts`
 

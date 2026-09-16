@@ -68,6 +68,8 @@ Generated from TypeScript imports.
 - `ai/npcDecision.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
 - `ai/npcMovementWatchdog.ts`
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcPlan.ts`
@@ -97,6 +99,7 @@ Generated from TypeScript imports.
 - `combat/rangedLifecycle.ts`
 - `debug/debugMode.ts`
 - `debug/npcTrace.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/npcWork.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/huntingHooks.ts`
@@ -164,6 +167,7 @@ Generated from TypeScript imports.
 - `world/residentialBuilding.ts`
 - `world/resourceSiteInventory.ts`
 - `world/settlementForestHooks.ts`
+- `world/spatialContext.ts`
 - `world/standingTorch.ts`
 - `world/timeConversion.ts`
 - `world/treeHarvest.ts`
@@ -175,6 +179,7 @@ Generated from TypeScript imports.
 
 - `ai/dialogueTemplates.ts`
 - `ai/npcCurrentActivity.test.ts`
+- `ai/npcMovementTarget.test.ts`
 - `ai/npcTradeAvailability.test.ts`
 - `ai/npcTradeAvailability.ts`
 - `ai/npcWhy.test.ts`
@@ -525,11 +530,14 @@ Generated from TypeScript imports.
 **Imports**
 
 - `simulation/index.ts`
+- `world/spatialContext.ts`
 
 **Imported by**
 
 - `ai/NpcAgent.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcMovementTarget.test.ts`
+- `ai/npcMovementTarget.ts`
 - `ai/npcProfessionWork.ts`
 
 ## `ai/npcAnimalThreat.test.ts`
@@ -781,6 +789,56 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.test.ts`
 - `ai/npcProfessionWork.ts`
 
+## `ai/npcMovementRoute.test.ts`
+
+**Imports**
+
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
+- `world/caves/caveHabitat.ts`
+- `world/spatialContext.ts`
+
+## `ai/npcMovementRoute.ts`
+
+**Imports**
+
+- `ai/npcMovementTarget.ts`
+- `simulation/index.ts`
+- `world/caves/caveHabitat.ts`
+- `world/spatialContext.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcMovementRoute.test.ts`
+
+## `ai/npcMovementTarget.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `ai/npcAction.ts`
+- `ai/npcMovementTarget.ts`
+- `world/spatialContext.ts`
+
+## `ai/npcMovementTarget.ts`
+
+**Imports**
+
+- `ai/npcAction.ts`
+- `simulation/index.ts`
+- `world/caves/caveHabitat.ts`
+- `world/spatialContext.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcMovementRoute.test.ts`
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.test.ts`
+- `app/worldBundle.ts`
+- `settlement/createSettlement.ts`
+
 ## `ai/npcMovementWatchdog.test.ts`
 
 **Imports**
@@ -901,6 +959,7 @@ Generated from TypeScript imports.
 - `ai/npcAction.ts`
 - `ai/npcLogistics.ts`
 - `economy/foodTransportDemand.ts`
+- `economy/interSettlementFoodTransport.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.ts`
 - `economy/oreTransportDemand.ts`
@@ -910,7 +969,6 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.ts`
 - `fauna/shepherdFlock.ts`
 - `items/Inventory.ts`
-- `items/foodItems.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/weaponMaintenance.ts`
@@ -1015,6 +1073,8 @@ Generated from TypeScript imports.
 - `ai/npcTravel.test.ts`
 - `ai/npcTravelCheckpoint.ts`
 - `settlement/npcState.ts`
+- `world/transportTravelArrival.test.ts`
+- `world/transportTravelArrival.ts`
 
 ## `ai/npcTravelCheckpoint.ts`
 
