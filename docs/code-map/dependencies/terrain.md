@@ -334,6 +334,8 @@ Generated from TypeScript imports.
 - `settlement/settlementProgression.test.ts`
 - `settlement/settlementProgression.ts`
 - `settlement/settlementTerrain.ts`
+- `settlement/settlementWorldgenCache.test.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePaddock.test.ts`

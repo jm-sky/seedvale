@@ -83,6 +83,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementProgression.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `terrain/buildChunkGeometry.ts`
 - `terrain/chunkManager.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`

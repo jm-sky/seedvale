@@ -963,15 +963,25 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedLostTreasureArchaeologistHostCell` — function — line 271
-- `cachedLostTreasureSpecialistHostCell` — function — line 280
-- `cachedSettlementDefCount` — function — line 301
-- `cachedSettlementProgressionPolicy` — function — line 306
-- `clearSettlementDefCache` — function — line 104
-- `setSettlementRiverQuery` — function — line 74
-- `settlementDefFor` — function — line 288
-- `SettlementResolveContext` — type — line 48
-- `worldRiverQuery` — function — line 87
+- `activateSettlementDefinitionCacheForWorld` — function — line 183
+  - domain: settlements
+  - system: worldgen-cache
+- `attachSettlementDefinitionPersistence` — function — line 151
+  - domain: settlements
+  - system: worldgen-cache
+- `cachedLostTreasureArchaeologistHostCell` — function — line 360
+- `cachedLostTreasureSpecialistHostCell` — function — line 369
+- `cachedSettlementDefCount` — function — line 391
+- `cachedSettlementProgressionPolicy` — function — line 396
+- `clearSettlementDefCache` — function — line 117
+- `ingestHydratedSettlementDef` — function — line 136
+  - domain: settlements
+  - system: worldgen-cache
+- `setSettlementRiverQuery` — function — line 81
+- `settlementDefFor` — function — line 377
+- `settlementDefinitionCacheReady` — function — line 200
+- `SettlementResolveContext` — type — line 55
+- `worldRiverQuery` — function — line 94
 
 ## `settlement/settlementProgression.ts`
 
@@ -1062,6 +1072,31 @@ Generated from exported TypeScript symbols.
   - domain: settlements
   - system: settlement-lighting
 - `settlementVillageTorchId` — function — line 19
+
+## `settlement/settlementWorldgenCache.ts`
+
+- `createSettlementWorldgenCache` — function — line 562
+  - domain: settlements
+  - system: worldgen-cache
+- `isValidSettlementDefPayload` — function — line 500
+  - domain: settlements
+  - system: worldgen-cache
+- `parseSettlementCellSubKey` — function — line 88
+- `SETTLEMENT_DEFINITION_CACHE_NAMESPACE` — const — line 46
+  - domain: settlements
+  - system: worldgen-cache
+  - role: Persistent-cache adapter for `SettlementDef | null` results (plan settlements-014). IndexedDB only hydrates and extends the module-level `defCache` in `settlementPlanCache.ts` — that map stays the synchronous authority. Cached `null` is a real hit (a cell that deterministically has no settlement), never a miss.
+  - integration: Disposable derived data only. `settlementDefFor()` stays synchronous; a miss, malformed payload or IndexedDB failure always falls back to `generateSettlementDef()`. Never `SaveData`, never a second reduced `VillagePlan`, never economy / household / NPC runtime state.
+- `SETTLEMENT_DEFINITION_CACHE_VERSION` — const — line 59
+- `settlementCellSubKey` — function — line 83
+  - domain: settlements
+  - system: worldgen-cache
+- `SettlementDefinitionCachePayload` — type — line 66
+- `settlementDefinitionFingerprint` — function — line 110
+  - domain: settlements
+  - system: worldgen-cache
+- `SettlementProgressionIdentity` — type — line 70
+- `SettlementWorldgenCache` — type — line 536
 
 ## `settlement/storageDestinations.ts`
 

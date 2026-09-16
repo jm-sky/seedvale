@@ -377,6 +377,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementProgression.test.ts`
 - `settlement/settlementProgression.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePaddock.test.ts`
@@ -1884,6 +1885,8 @@ Generated from TypeScript imports.
 - `settlement/settlementProximity.ts`
 - `settlement/settlementSignposts.test.ts`
 - `settlement/settlementSignposts.ts`
+- `settlement/settlementWorldgenCache.test.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `terrain/cemeteryAssignment.test.ts`
 - `terrain/cemeteryAssignment.ts`
 - `terrain/cemeteryPlacement.ts`
@@ -1988,6 +1991,7 @@ Generated from TypeScript imports.
 - `settlement/settlementNameUniqueness.ts`
 - `settlement/settlementProgression.ts`
 - `settlement/settlementTerrain.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `shared/SettlementName.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverQuery.ts`
@@ -2002,6 +2006,7 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementNameUniqueness.test.ts`
 - `settlement/settlementProgression.test.ts`
+- `settlement/settlementWorldgenCache.test.ts`
 - `terrain/chunkManager.ts`
 - `terrain/worldKnowledgeScan.ts`
 
@@ -2137,6 +2142,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementProgression.test.ts`
 - `settlement/settlementProgression.ts`
+- `settlement/settlementWorldgenCache.test.ts`
 
 ## `settlement/settlementVillageTorch.ts`
 
@@ -2149,6 +2155,36 @@ Generated from TypeScript imports.
 - `quests/opportunities/guardProfessionQuests.ts`
 - `settlement/createSettlement.ts`
 - `settlement/props.ts`
+
+## `settlement/settlementWorldgenCache.test.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementPlanCache.ts`
+- `settlement/settlementTerrain.ts`
+- `settlement/settlementWorldgenCache.ts`
+- `terrain/chunkHeightmap.ts`
+
+## `settlement/settlementWorldgenCache.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `persistence/worldgenCacheDb.ts`
+- `persistence/worldgenFingerprint.ts`
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+- `settlement/villageClearing.ts`
+- `settlement/villagePlan.ts`
+- `terrain/chunkHeightmap.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `settlement/settlementPlanCache.ts`
+- `settlement/settlementWorldgenCache.test.ts`
 
 ## `settlement/storageDestinations.test.ts`
 
@@ -2321,6 +2357,7 @@ Generated from TypeScript imports.
 
 - `settlement/props.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villagePlanner.test.ts`
 
@@ -2422,6 +2459,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.test.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `settlement/structureCondition.ts`
 - `settlement/structureRepairCandidates.ts`
 - `settlement/villageClearing.ts`

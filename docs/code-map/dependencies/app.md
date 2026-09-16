@@ -1635,6 +1635,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementStructures.ts`
+- `settlement/settlementWorldgenCache.ts`
 - `shared/bootMark.ts`
 - `terrain/abandonedMineDeposits.ts`
 - `terrain/chunkEnvironment.ts`
