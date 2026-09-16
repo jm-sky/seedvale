@@ -9,6 +9,7 @@
 **Subdomains:** `economy` `household`
 **Tags:** `trade` `vendors` `inventory` `labels`
 **Roadmap:** `economy-goods-flow.md`
+**Model:** Sonnet, Grok
 
 ## Goal
 
