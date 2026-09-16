@@ -45,10 +45,10 @@ type ReservedSeed = Omit<CharacterDef, 'personality'>
  *  `settlement/families.ts`). Randomizing these would silently break the
  *  only quests the game has. */
 const RESERVED_SEEDS: readonly ReservedSeed[] = [
-  { name: 'Anna', lastName: 'Kowalska', gender: 'female', role: 'farmer', traits: ['fast_worker'] },
-  { name: 'Piotr', lastName: 'Kowalski', gender: 'male', role: 'woodcutter', traits: ['energetic'] },
-  { name: 'Kasia', lastName: 'Wiśniewska', gender: 'female', role: 'trader', traits: ['night_owl'] },
-  { name: 'Marek', lastName: 'Wiśniewski', gender: 'male', role: 'guard', traits: ['sociable'] },
+  { name: 'Anna', lastName: 'Leśniewska', gender: 'female', role: 'farmer', traits: ['fast_worker'] },
+  { name: 'Piotr', lastName: 'Leśniewski', gender: 'male', role: 'woodcutter', traits: ['energetic'] },
+  { name: 'Kasia', lastName: 'Hornblower', gender: 'female', role: 'trader', traits: ['night_owl'] },
+  { name: 'Marek', lastName: 'Hornblower', gender: 'male', role: 'guard', traits: ['sociable'] },
 ]
 
 export const RESERVED_CHARACTERS: readonly CharacterDef[] = RESERVED_SEEDS.map((seed, i) => ({

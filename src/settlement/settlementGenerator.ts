@@ -27,6 +27,7 @@ import {
 import { DEFAULT_SITE_SEARCH_MARGIN, findSettlementSite } from './findSettlementSite'
 import { appendAuthoredResidentFamilies } from './lostTreasureChroniclesElderResident'
 import { findDockLocation } from './minorLocations'
+import { applyProfessionFamilySurnames } from './professionFamilySurnames'
 import { resolveInitialProfessionStaffing } from './professionStaffing'
 import { resolveSettlementCharacter } from './settlementCharacter'
 import { classifySettlementTerrain, type TerrainSamplers } from './settlementTerrain'
@@ -612,17 +613,20 @@ function generateSettlementCore(
   const withAuthoredResident = identity.size !== 'OUTPOST' && authoredResidents.length > 0
     ? appendAuthoredResidentFamilies(generatedFamilies, authoredResidents)
     : generatedFamilies
-  const families = resolveInitialProfessionStaffing(
-    withAuthoredResident,
-    {
-      size: identity.size,
-      terrain: identity.terrain,
-      foodSourceType: identity.foodSourceType,
-      dominantResource: identity.dominantResource,
-      isHome: identity.isHome,
-      seed: ctx.seedForCell,
-      character: identity.character,
-    },
+  const families = applyProfessionFamilySurnames(
+    resolveInitialProfessionStaffing(
+      withAuthoredResident,
+      {
+        size: identity.size,
+        terrain: identity.terrain,
+        foodSourceType: identity.foodSourceType,
+        dominantResource: identity.dominantResource,
+        isHome: identity.isHome,
+        seed: ctx.seedForCell,
+        character: identity.character,
+      },
+    ),
+    ctx.seedForCell,
   )
   const plan = attachPlannedDock(
     createVillagePlan(

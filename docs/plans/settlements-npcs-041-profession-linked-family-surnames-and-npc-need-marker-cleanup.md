@@ -1,13 +1,18 @@
 # Plan: Profession-linked family surnames and NPC need-marker cleanup
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test); browser/gameplay not yet verified. See [implementation notes](./implementation-notes/settlements-npcs-041-profession-linked-family-surnames-and-npc-need-marker-cleanup-implementation-notes.md).
 **Priority:** medium · **Effort:** S
 **Depends on:** none
 **Domain:** `settlements-npcs`  
 **Type:** `polish`  
 **Roadmap:** -
 **Model:** Composer, Sonnet
+**Implemented at:** 2026-09-16 13:40
+
+## Implementation status
+
+Implemented. Colored NPC need-marker spheres are removed from `NpcAgent` (needs/decision logic unchanged). After profession staffing, worldgen `family-*` households get one profession-inspired surname from `professionFamilySurnames.ts`. Reserved home NPCs are Piotr Leśniewski / Anna Leśniewska and Marek / Kasia Hornblower. Authored `family-story-*` residents keep their own names. Browser/manual verification is User-owned.
 
 ## Cel
 

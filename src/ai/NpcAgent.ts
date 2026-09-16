@@ -469,15 +469,6 @@ const DEFAULT_VOLUNTARY_JOIN_PROPOSAL_TERMS: VoluntaryExpeditionTerms = { comple
  *  surfaced, accepted, refused, or the player wandered off mid-approach. */
 const VOLUNTARY_JOIN_PROPOSAL_COOLDOWN_DAYS = 1
 export const NPC_HEIGHT = 1.75
-/** Need-marker sphere geometry (review 2026-09-03 §5 E6 / §8 step 7c) —
- *  identical for every NPC, so it's shared at module scope instead of one
- *  allocation per NPC constructed; only the material (per-NPC color state)
- *  stays per-instance. `sharedGpu` tells `disposeObject3D` (called from
- *  every NPC's own `dispose()`) never to free it — same convention
- *  `loadGltf.ts`'s cache and `settlement/houseBuilder.ts`'s template cache
- *  already use for GPU resources shared across many instances. */
-const NEED_MARKER_GEOMETRY = new THREE.SphereGeometry(0.12, 8, 8)
-NEED_MARKER_GEOMETRY.userData.sharedGpu = true
 /** Skip the shadow pass for NPCs beyond this distance — they still draw, but
  *  ~9 skinned submeshes × shadow map was a large submit cost (plan 113 P2).
  *  Exported so `shadowBudget.ts` can reuse the same radius to decide whether
@@ -1181,10 +1172,6 @@ export class NpcAgent {
    *  `null` when there is no `death` clip to play (fallback tip-pose, no
    *  mixer ticking needed). */
   private deathAnimSettleAtSimClock: number | null = null
-  private readonly needMarker: THREE.Mesh
-  /** Guards the marker's `setHex` writes (review §8 step 7c) — `null` never
-   *  matches a real `NeedId`, so the first frame always writes once. */
-  private lastNeedMarkerNeed: NeedId | null = null
   private phase: Phase = 'choose'
   private activeNeed: NeedId = 'idle'
   /** Pressures generated for the last `choose()` arbitration (plan ai-001)
@@ -1714,16 +1701,6 @@ export class NpcAgent {
       death: ['Death', 'Death01'],
     })
     this.anim.playImmediate('idle')
-
-    const markerMat = new THREE.MeshStandardMaterial({
-      color: needColor('idle'),
-      emissive: needColor('idle'),
-      emissiveIntensity: 0.45,
-      flatShading: true,
-    })
-    this.needMarker = new THREE.Mesh(NEED_MARKER_GEOMETRY, markerMat)
-    this.needMarker.position.set(0, NPC_HEIGHT + 0.25, 0)
-    this.mesh.add(this.needMarker)
 
     this.labelController = createAgentStatusLabelController(
       this.displayName,
@@ -3320,16 +3297,6 @@ export class NpcAgent {
 
     this.applyMovementGroundY()
     this.syncAnimation()
-    // Guarded the same way the label text write beside it is (review 2026-
-    // 09-03 §5 E6 / §8 step 7c) — `activeNeed` only actually changes on a
-    // `choose()` tick, not every frame.
-    if (this.activeNeed !== this.lastNeedMarkerNeed) {
-      this.lastNeedMarkerNeed = this.activeNeed
-      const color = needColor(this.activeNeed)
-      const material = this.needMarker.material as THREE.MeshStandardMaterial
-      material.color.setHex(color)
-      material.emissive.setHex(color)
-    }
     const distance = this.mesh.position.distanceTo(observerPos)
     const observationLevel = resolveStableObservationLevel(
       { perception: playerObservation.perception, distance },

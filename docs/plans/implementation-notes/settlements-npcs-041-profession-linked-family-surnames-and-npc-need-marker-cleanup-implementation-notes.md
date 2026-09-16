@@ -1,5 +1,7 @@
 # Implementation Notes: settlements-npcs-041 — Profession-linked family surnames and NPC need-marker cleanup
 
+**Status:** `verification needed` 🔍
+
 ## Current ownership and execution order
 
 Settlement NPC identity is built in two phases:
@@ -250,5 +252,11 @@ Manual browser verification is for the user, not the implementation agent.
 6. Run focused tests and standard repo verification.
 
 Add JSDoc to the public family-surname application function because it is a generation pipeline boundary; include `@domain settlements-npcs` for preflight discovery.
+
+## Implementation record
+
+Reserved `family-reserved-*` households keep `RESERVED_CHARACTERS` surnames instead of a pool roll, so Piotr/Anna stay Leśniewski and Marek/Kasia stay Hornblower across seeds. They remain worldgen-owned (`isWorldgenFamilyId`); authored `family-story-*` residents are a separate skip. Procedural `family-*` households take the post-staffing profession pool.
+
+Need-marker presentation was removed from `NpcAgent`. `needColor` remains only as the capsule-fallback body color.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

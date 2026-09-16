@@ -76,13 +76,23 @@ const SURNAME_POOLS: Record<NameCulture, readonly string[]> = {
   ],
 }
 
+/** Polish `-ski/-ska` and `-cki/-cka` agreement, independent of `NameCulture`.
+ *  Culture-based generation still gates this behind `polish` via
+ *  `surnameForGender`; profession-linked family surnames reuse the same rule
+ *  so a form like `Kowalski` inflects even when the settlement's name culture
+ *  is not Polish. */
+export function formatPolishSurnameForGender(base: string, gender: NpcGender): string {
+  if (gender !== 'female') return base
+  if (base.endsWith('ski')) return `${base.slice(0, -3)}ska`
+  if (base.endsWith('cki')) return `${base.slice(0, -3)}cka`
+  return base
+}
+
 /** Polish surnames agree in grammatical gender with the bearer
  *  (`Kowalski`/`Kowalska`) — other cultures in `SURNAME_POOLS` don't inflect. */
 function formatSurname(base: string, culture: NameCulture, gender: NpcGender): string {
-  if (culture !== 'polish' || gender !== 'female') return base
-  if (base.endsWith('ski')) return `${base.slice(0, -2)}ska`
-  if (base.endsWith('cki')) return `${base.slice(0, -2)}cka`
-  return base
+  if (culture !== 'polish') return base
+  return formatPolishSurnameForGender(base, gender)
 }
 
 /** Deterministic per-family surname (base/masculine form) — shared by every

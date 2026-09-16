@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RESERVED_CHARACTERS } from './characters'
-import { generateNpcName, NAME_CULTURES } from './nameCultures'
+import { formatPolishSurnameForGender, generateNpcName, NAME_CULTURES, surnameForGender } from './nameCultures'
 
 // Plan 199 — the 4 quest-critical reserved names (`characters.ts`) must never
 // be drawn for an unrelated procedurally generated NPC, or `QuestManager`/
@@ -21,5 +21,23 @@ describe('generateNpcName reserved-name exclusion', () => {
         }
       }
     }
+  })
+})
+
+describe('formatPolishSurnameForGender', () => {
+  it('inflects recognized Polish endings independently of NameCulture', () => {
+    expect(formatPolishSurnameForGender('Leśniewski', 'female')).toBe('Leśniewska')
+    expect(formatPolishSurnameForGender('Kowalski', 'female')).toBe('Kowalska')
+    expect(formatPolishSurnameForGender('Górski', 'female')).toBe('Górska')
+    expect(formatPolishSurnameForGender('Nowicki', 'female')).toBe('Nowicka')
+    expect(formatPolishSurnameForGender('Zieliński', 'male')).toBe('Zieliński')
+    expect(formatPolishSurnameForGender('Hornblower', 'female')).toBe('Hornblower')
+    expect(formatPolishSurnameForGender('Nowak', 'female')).toBe('Nowak')
+  })
+
+  it('keeps surnameForGender culture-gated for generated culture pools', () => {
+    expect(surnameForGender('Kowalski', 'polish', 'female')).toBe('Kowalska')
+    expect(surnameForGender('Kowalski', 'english', 'female')).toBe('Kowalski')
+    expect(surnameForGender('Kowalski', 'spanish', 'female')).toBe('Kowalski')
   })
 })

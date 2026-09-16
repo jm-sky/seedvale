@@ -60,4 +60,13 @@ describe('RESERVED_CHARACTERS (plan 178 must not change these)', () => {
       { name: 'Marek', gender: 'male', role: 'guard' },
     ])
   })
+
+  it('uses profession-linked reserved surnames (plan settlements-npcs-041)', () => {
+    expect(RESERVED_CHARACTERS.map((c) => ({ name: c.name, lastName: c.lastName }))).toEqual([
+      { name: 'Anna', lastName: 'Leśniewska' },
+      { name: 'Piotr', lastName: 'Leśniewski' },
+      { name: 'Kasia', lastName: 'Hornblower' },
+      { name: 'Marek', lastName: 'Hornblower' },
+    ])
+  })
 })
