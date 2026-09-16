@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildAgentCpuReport, emptyAgentCpuDiagTotals } from './agentCpuDiag'
+import { formatLongFrameAttribution } from './longFrameFormat'
 import { createPerfMonitor } from './monitor'
 import { buildReport, formatReport } from './report'
-import { PERF_CATEGORY_COUNT, PERF_CATEGORY_INDEX } from './types'
+import { LONG_FRAME_MS, PERF_CATEGORY_COUNT, PERF_CATEGORY_INDEX } from './types'
 
 describe('createPerfMonitor', () => {
   it('begin/end is a no-op while disabled', () => {
@@ -27,6 +28,42 @@ describe('createPerfMonitor', () => {
     expect(mesh?.count).toBe(2)
     expect(mesh?.maxMs).toBe(20)
     expect(totals.hitchByLabel.get('GRASS:grass generation')?.count).toBe(1)
+  })
+
+  it('dumps a long-frame attribution with OTHER remainder and stages', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const mon = createPerfMonitor()
+    mon.setSource('gui', true)
+    mon.beginSession()
+    mon.recordStage('riverTileBuild', 90)
+    mon.recordStage('riverChannelSegmentsNear', 12)
+    mon.recordHitch('STREAMING', 90, 'chunk mesh')
+    mon.endFrame({ simulateMs: 110, renderMs: 8, drawCalls: 10, triangles: 100 })
+    const totals = mon.endSession()
+    expect(totals.longFrames).toHaveLength(1)
+    const frame = totals.longFrames[0]!
+    expect(frame.frameMs).toBeGreaterThanOrEqual(LONG_FRAME_MS)
+    expect(frame.otherMs).toBeGreaterThan(10)
+    expect(frame.stages.map((s) => s.label)).toEqual(['riverTileBuild', 'riverChannelSegmentsNear'])
+    expect(frame.hitches[0]?.label).toBe('chunk mesh')
+    const dump = warn.mock.calls.map((call) => String(call[0])).find((text) => text.includes('[LONG FRAME]'))
+    expect(dump).toContain('[LONG FRAME]')
+    expect(dump).toContain('OTHER')
+    expect(dump).toContain('riverTileBuild')
+    warn.mockRestore()
+  })
+
+  it('does not dump frames below the long-frame threshold', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const mon = createPerfMonitor()
+    mon.setSource('gui', true)
+    mon.beginSession()
+    mon.recordStage('chunkUpdate', 4)
+    mon.endFrame({ simulateMs: 10, renderMs: 6, drawCalls: 10, triangles: 100 })
+    const totals = mon.endSession()
+    expect(totals.longFrames).toHaveLength(0)
+    expect(warn.mock.calls.some((call) => String(call[0]).includes('[LONG FRAME]'))).toBe(false)
+    warn.mockRestore()
   })
 
   it('aggregates frame times once enabled', () => {
@@ -70,6 +107,8 @@ describe('buildReport', () => {
         spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
         hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
         hitchByLabel: new Map(),
+        longFrameCount: 0,
+        longFrames: [],
         mirrorDrawCallsSum: 0,
         geometriesLast: 0,
         texturesLast: 0,
@@ -115,6 +154,8 @@ describe('buildReport', () => {
         spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
         hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
         hitchByLabel: new Map(),
+        longFrameCount: 0,
+        longFrames: [],
         mirrorDrawCallsSum: 0,
         geometriesLast: 0,
         texturesLast: 0,
@@ -149,6 +190,8 @@ describe('buildReport', () => {
         hitchByLabel: new Map([
           ['STREAMING:chunk mesh', { category: 'STREAMING' as const, label: 'chunk mesh', count: 3, sumMs: 120, maxMs: 52 }],
         ]),
+        longFrameCount: 0,
+        longFrames: [],
         mirrorDrawCallsSum: 0,
         geometriesLast: 0,
         texturesLast: 0,
@@ -223,6 +266,8 @@ describe('buildReport', () => {
         spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
         hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
         hitchByLabel: new Map(),
+        longFrameCount: 0,
+        longFrames: [],
         mirrorDrawCallsSum: 0,
         geometriesLast: 0,
         texturesLast: 0,
@@ -234,5 +279,58 @@ describe('buildReport', () => {
     expect(text).toContain('livestock:')
     expect(text).toContain('unattributed:')
     expect(text).toContain('nearest scans:')
+  })
+
+  it('includes long-frame attribution in the JSON report and copy-friendly dump', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    categoryMsSum[PERF_CATEGORY_INDEX.STREAMING] = 2000
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'stream',
+      totals: {
+        frames: 2,
+        frameMsSum: 2130,
+        frameMsMin: 16,
+        frameMsMax: 2113,
+        frameMs: [16, 2113],
+        drawCallsSum: 200,
+        drawCallsMax: 120,
+        trianglesSum: 1_000_000,
+        renderCategoryMs: [],
+        categoryMsSum,
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        longFrameCount: 1,
+        longFrames: [{
+          frameMs: 2113,
+          simulateMs: 2080,
+          renderMs: 33,
+          categoryMs: { STREAMING: 2041, RENDER: 31, NPC: 18, FAUNA: 7, PHYSICS: 3 },
+          otherMs: 13,
+          stages: [
+            { label: 'chunkUpdate', ms: 2038 },
+            { label: 'riverTileBuild', ms: 1972 },
+            { label: 'riverChannelSegmentsNear', ms: 54 },
+            { label: 'terrainFinalize', ms: 41 },
+            { label: 'waterFinalize', ms: 12 },
+          ],
+          hitches: [{ category: 'STREAMING', durationMs: 41, atMs: 0, label: 'chunk mesh' }],
+        }],
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+    })
+    expect(report.longFrames?.count).toBe(1)
+    expect(report.longFrames?.thresholdMs).toBe(LONG_FRAME_MS)
+    expect(report.longFrames?.worst[0]?.stages[0]?.label).toBe('chunkUpdate')
+    expect(formatReport(report)).toContain('Long frames:')
+    expect(formatReport(report)).toContain('worst: 2113 ms')
+    const dump = formatLongFrameAttribution(report.longFrames)
+    expect(dump).toContain('[Seedvale Long Frame Attribution]')
+    expect(dump).toContain('[LONG FRAME] 2113ms')
+    expect(dump).toContain('riverTileBuild')
+    expect(dump).toContain('OTHER')
   })
 })

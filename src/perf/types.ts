@@ -61,6 +61,35 @@ export type HitchEvent = {
   label?: string
 }
 
+/**
+ * Wall-clock threshold for a per-frame attribution dump.
+ * Matches the 2026-09-14 main-thread spike audit (>80 ms) and sits well
+ * above the 8 ms hitch marker / ~16 ms frame budget so normal frames stay quiet.
+ */
+export const LONG_FRAME_MS = 80
+
+export type LongFrameStage = {
+  label: string
+  ms: number
+}
+
+/** One frame that crossed {@link LONG_FRAME_MS}, with category + stage splits. */
+export type LongFrameRecord = {
+  frameMs: number
+  simulateMs: number
+  renderMs: number
+  categoryMs: Partial<Record<PerfCategory, number>>
+  otherMs: number
+  stages: LongFrameStage[]
+  hitches: HitchEvent[]
+}
+
+export type LongFrameAttribution = {
+  thresholdMs: number
+  count: number
+  worst: LongFrameRecord[]
+}
+
 export type ScenarioAnchor = { x: number; z: number }
 
 export type ScenarioRoute = {
@@ -212,6 +241,8 @@ export type PerfReportJson = {
   bottlenecks: string[]
   spikes: { category: string; count: number }[]
   attribution: PerfAttribution
+  /** Long-frame category/stage dumps captured by PerfMonitor this session. */
+  longFrames?: LongFrameAttribution
   recommendation: string
   context: PerfContext
   /** NPC/fauna CPU breakdown — only present when perf monitoring was active

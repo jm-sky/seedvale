@@ -1,11 +1,11 @@
 import type { AgentCpuReport } from './agentCpuDiag'
 import type { GrassFinalizationReport } from './grassFinalizationDiag'
 import type { SessionTotals } from './monitor'
-import type { IsolationProbeRow, PerfContext, PerfReportJson } from './types'
+import type { IsolationProbeRow, LongFrameAttribution, PerfContext, PerfReportJson } from './types'
 import { formatAgentCpuReport } from './agentCpuDiag'
 import { percentile } from './percentile'
 import { SCENE_BUCKETS, type SceneCensus } from './sceneCensus'
-import { PERF_CATEGORIES, PERF_CATEGORY_COUNT } from './types'
+import { LONG_FRAME_MS, PERF_CATEGORIES, PERF_CATEGORY_COUNT } from './types'
 
 const EMPTY_CONTEXT: PerfContext = {
   loadedChunks: 0,
@@ -130,6 +130,7 @@ export function buildReport(input: {
       largestHitchMs: round1(largestHitchMs),
       unattributedMs: round1(unattributedMs),
     },
+    longFrames: buildLongFrameAttribution(totals),
     recommendation,
     context: ctx,
     agentCpu: input.agentCpu ?? undefined,
@@ -226,6 +227,11 @@ export function formatReport(report: PerfReportJson): string {
     `  largest labelled hitch: ${report.attribution.largestHitchMs} ms`,
     `  unattributed: ${report.attribution.unattributedMs} ms`,
     '',
+    'Long frames:',
+    `  threshold: ${report.longFrames?.thresholdMs ?? LONG_FRAME_MS} ms`,
+    `  count: ${report.longFrames?.count ?? 0}`,
+    `  worst: ${report.longFrames?.worst[0] ? `${report.longFrames.worst[0].frameMs} ms` : '(none)'}`,
+    '',
     'Recommendation:',
     report.recommendation,
     // Agent-CPU breakdown, appended as its own block after the main report
@@ -239,6 +245,32 @@ export function formatReport(report: PerfReportJson): string {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10
+}
+
+const WORST_LONG_FRAMES_IN_REPORT = 5
+
+function buildLongFrameAttribution(totals: SessionTotals): LongFrameAttribution {
+  const records = totals.longFrames ?? []
+  const count = totals.longFrameCount ?? records.length
+  const worst = [...records]
+    .sort((a, b) => b.frameMs - a.frameMs)
+    .slice(0, WORST_LONG_FRAMES_IN_REPORT)
+    .map((record) => ({
+      ...record,
+      frameMs: round1(record.frameMs),
+      simulateMs: round1(record.simulateMs),
+      renderMs: round1(record.renderMs),
+      otherMs: round1(record.otherMs),
+      categoryMs: Object.fromEntries(
+        Object.entries(record.categoryMs).map(([name, ms]) => [name, round1(ms ?? 0)]),
+      ),
+      stages: record.stages.map((stage) => ({ label: stage.label, ms: round1(stage.ms) })),
+    }))
+  return {
+    thresholdMs: LONG_FRAME_MS,
+    count,
+    worst,
+  }
 }
 
 function formatTriangles(n: number): string {

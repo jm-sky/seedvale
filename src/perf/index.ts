@@ -40,7 +40,8 @@ export {
   runIsolationProbes,
 } from './isolationProbe'
 export type { IsolationHost } from './isolationProbe'
-export { createPerfMonitor, withCategory } from './monitor'
+export { formatLongFrameAttribution, formatLongFrameRecord } from './longFrameFormat'
+export { createPerfMonitor, withCategory, withStage } from './monitor'
 export {
   createProgramCensus,
   formatProgramCensusReport,
@@ -56,9 +57,11 @@ export type {
   ProgramCensusSummary,
 } from './programCensus'
 export { censusScene } from './sceneCensus'
-export { PERF_CATEGORIES } from './types'
+export { LONG_FRAME_MS, PERF_CATEGORIES } from './types'
 export type {
   IsolationProbeRow,
+  LongFrameAttribution,
+  LongFrameRecord,
   PerfCategory,
   PerfContext,
   PerfFilter,

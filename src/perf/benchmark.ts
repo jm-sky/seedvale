@@ -13,6 +13,7 @@ import {
   getGrassFinalizationDiag,
 } from './grassFinalizationDiag'
 import { formatIsolationReport, runIsolationProbes } from './isolationProbe'
+import { formatLongFrameAttribution } from './longFrameFormat'
 import { formatProgramAttributionReport, formatProgramCensusReport, formatProgramCompileCostReport, getProgramCensus } from './programCensus'
 import { buildReport, formatReport } from './report'
 import { censusScene } from './sceneCensus'
@@ -248,6 +249,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         console.log(report)
         if (agentCpu) console.log(formatAgentCpuReport(agentCpu))
         if (grassFinalization) console.log(formatGrassFinalizationReport(grassFinalization))
+        console.log(formatLongFrameAttribution(report.longFrames))
         // Plan 149 Phase 0 program-census diagnostic (docs/performance/audits/
         // 2026-09-01--program-census.md) — the census (`?programCensus=1` or
         // `?benchmark=stream`, see `src/perf/flags.ts`) accumulates for the
@@ -277,6 +279,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
             'Seedvale Benchmark',
             agentCpu ? 'Seedvale Agent CPU' : undefined,
             grassFinalization ? 'Seedvale Grass Finalization' : undefined,
+            'Seedvale Long Frame Attribution',
             programCensus.enabled ? 'Seedvale Program Census' : undefined,
             programCensus.enabled ? 'Seedvale Program Attribution' : undefined,
             programCensus.enabled ? 'Seedvale Program Compile Cost' : undefined,
@@ -302,6 +305,9 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
             content.push(formatGrassFinalizationReport(grassFinalization))
             content.push('\n---\n')
           }
+
+          content.push(formatLongFrameAttribution(report.longFrames))
+          content.push('\n---\n')
 
           if (programCensus.enabled) {
             content.push(formatProgramCensusReport(programCensus))

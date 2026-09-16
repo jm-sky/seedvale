@@ -14,6 +14,7 @@ import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
 import { getMonitor } from '../perf/active'
 import { getGrassFinalizationDiag, readJsHeapUsedBytes } from '../perf/grassFinalizationDiag'
+import { withCategory, withStage } from '../perf/monitor'
 import { getProgramCensus } from '../perf/programCensus'
 import { createLandmarkProp, preloadLandmarkTemplates } from '../settlement/landmarkProps'
 import {
@@ -1160,10 +1161,12 @@ export function createChunkManager(
    *  after the fact. `record.riverTiles`/`riverChains` are then reused by
    *  `attachChunkMesh` — never retained a second time. */
   function retainRiverTilesFor(record: ChunkRecord): RiverChain[] {
-    const rect = chunkRectOf(record.coord)
-    record.riverTiles = overlappingRiverTiles(rect)
-    record.riverChains = record.riverTiles.flatMap((tile) => riverTileCache.retain(tile, fallbackParams))
-    return record.riverChains
+    return withStage(getMonitor(), 'riverTileBuild', () => {
+      const rect = chunkRectOf(record.coord)
+      record.riverTiles = overlappingRiverTiles(rect)
+      record.riverChains = record.riverTiles.flatMap((tile) => riverTileCache.retain(tile, fallbackParams))
+      return record.riverChains
+    })
   }
 
   function settlementResolveCtx() {
@@ -1600,24 +1603,28 @@ export function createChunkManager(
     // record) while awaiting, or a newer request for this same record may
     // have already superseded this one — never touch stale scene state.
     if (chunks.get(rec.key) !== rec || rec.meshRequestSeq !== seq) return
-    const streamT0 = performance.now()
-    rec.mesh?.removeFromParent()
-    rec.meshDispose?.()
-    const { x, z } = chunkCenter(rec.coord, config.chunkSize)
-    const { mesh, dispose } = buildChunkGeometry(
-      meshData,
-      config.resolution,
-      config.chunkSize,
-      x,
-      z,
-      terrainMaterial,
-      config.terrainCastsShadow,
-      cutoutsOverlappingChunk(allTerrainCutouts, x, z, config.chunkSize, config.chunkSize / (config.resolution - 1)),
-    )
-    scene.add(mesh)
-    rec.mesh = mesh
-    rec.meshDispose = dispose
-    getMonitor().recordHitch('STREAMING', performance.now() - streamT0, 'chunk mesh')
+    withCategory(getMonitor(), 'STREAMING', () => {
+      const streamT0 = performance.now()
+      rec.mesh?.removeFromParent()
+      rec.meshDispose?.()
+      const { x, z } = chunkCenter(rec.coord, config.chunkSize)
+      const { mesh, dispose } = buildChunkGeometry(
+        meshData,
+        config.resolution,
+        config.chunkSize,
+        x,
+        z,
+        terrainMaterial,
+        config.terrainCastsShadow,
+        cutoutsOverlappingChunk(allTerrainCutouts, x, z, config.chunkSize, config.chunkSize / (config.resolution - 1)),
+      )
+      scene.add(mesh)
+      rec.mesh = mesh
+      rec.meshDispose = dispose
+      const terrainFinalizeMs = performance.now() - streamT0
+      getMonitor().recordStage('terrainFinalize', terrainFinalizeMs)
+      getMonitor().recordHitch('STREAMING', terrainFinalizeMs, 'chunk mesh')
+    })
   }
 
   /** Re-meshes every loaded `ready` chunk that `cutouts` overlap — used when
@@ -1766,7 +1773,9 @@ export function createChunkManager(
         finishFinalize(rec)
         return
       }
-      attachChunkContent(rec, tile)
+      withStage(getMonitor(), 'contentFinalize', () => {
+        attachChunkContent(rec, tile)
+      })
       finishFinalize(rec)
     } catch (err) {
       finishFinalize(rec, err)
@@ -1776,15 +1785,17 @@ export function createChunkManager(
   /** Caps how many mesh *or* content stages run this visit. `update()` uses 1
    *  total (not 1+1). */
   function drainFinalizeQueue(limit: number): void {
-    let n = 0
-    while (n < limit) {
-      const key = takeNearestFinalizeKey()
-      if (!key) break
-      const rec = chunks.get(key)
-      if (!rec) continue
-      n++
-      runFinalize(rec)
-    }
+    withStage(getMonitor(), 'chunkFinalize', () => {
+      let n = 0
+      while (n < limit) {
+        const key = takeNearestFinalizeKey()
+        if (!key) break
+        const rec = chunks.get(key)
+        if (!rec) continue
+        n++
+        runFinalize(rec)
+      }
+    })
   }
 
   /** Same drain as above, capped by wall-clock time instead of job count
@@ -1824,44 +1835,45 @@ export function createChunkManager(
     const coreHeights = extractCoreGrid(tile.heights, apronRes, config.resolution)
     const coreFloorHeights = extractCoreGrid(tile.floorHeights, apronRes, config.resolution)
     const coreBodyScale = extractCoreGrid(tile.bodyScale, apronRes, config.resolution)
-    const waterT0 = performance.now()
-    rec.water = createChunkWater(
-      coreHeights,
-      coreFloorHeights,
-      coreBodyScale,
-      config.resolution,
-      x,
-      z,
-      config.chunkSize,
-      config.waterLevel,
-      config.waterMirror,
-    )
-    if (rec.water) scene.add(rec.water.mesh)
-    getMonitor().recordHitch('WATER', performance.now() - waterT0, 'chunk water')
+    withCategory(getMonitor(), 'STREAMING', () => {
+      const waterT0 = performance.now()
+      rec.water = createChunkWater(
+        coreHeights,
+        coreFloorHeights,
+        coreBodyScale,
+        config.resolution,
+        x,
+        z,
+        config.chunkSize,
+        config.waterLevel,
+        config.waterMirror,
+      )
+      if (rec.water) scene.add(rec.water.mesh)
+      const waterMs = performance.now() - waterT0
+      getMonitor().recordStage('waterFinalize', waterMs)
+      getMonitor().recordHitch('WATER', waterMs, 'chunk water')
 
-    const riverT0 = performance.now()
-    const chunkRect = {
-      minX: x - config.chunkSize / 2,
-      maxX: x + config.chunkSize / 2,
-      minZ: z - config.chunkSize / 2,
-      maxZ: z + config.chunkSize / 2,
-    }
-    // Retained once already, in `ensureLoaded` (before this tile was even
-    // requested — plan 189 needs the chains to build carving segments ahead
-    // of terrain generation), and released once in `unload`. Reused here
-    // rather than retained again to keep the ref count balanced 1:1.
-    const riverChains = rec.riverChains ?? []
-    // River Y now comes from each point's canonical `canonicalWaterHeight`
-    // (world-terrain-010) — a pure function of the chain's own hydrology
-    // data, not a sample of this chunk's rendered terrain — so it no longer
-    // needs `tile.floorHeights` here at all.
-    rec.river = createChunkRiver(riverChains, chunkRect, x, z)
-    if (rec.river) scene.add(rec.river.mesh)
-    getMonitor().recordHitch('WATER', performance.now() - riverT0, 'chunk river')
+      const riverT0 = performance.now()
+      const chunkRect = {
+        minX: x - config.chunkSize / 2,
+        maxX: x + config.chunkSize / 2,
+        minZ: z - config.chunkSize / 2,
+        maxZ: z + config.chunkSize / 2,
+      }
+      // Retained once already, in `ensureLoaded` (before this tile was even
+      // requested) and released once in `unload`. Reused here rather than
+      // retained again to keep the ref count balanced 1:1.
+      const riverChains = rec.riverChains ?? []
+      rec.river = createChunkRiver(riverChains, chunkRect, x, z)
+      if (rec.river) scene.add(rec.river.mesh)
+      const riverMs = performance.now() - riverT0
+      getMonitor().recordStage('riverFinalize', riverMs)
+      getMonitor().recordHitch('WATER', riverMs, 'chunk river')
 
-    rec.state = 'ready'
-    syncGrassForRecord(rec, lastPlayerChunk)
-    getProgramCensus().recordChunkAttach('chunk-mesh-attach', rec.key, [rec.mesh])
+      rec.state = 'ready'
+      syncGrassForRecord(rec, lastPlayerChunk)
+      getProgramCensus().recordChunkAttach('chunk-mesh-attach', rec.key, [rec.mesh])
+    })
   }
 
   /** Player-planted trees (plan 126) whose position falls inside `coord` —
@@ -2224,8 +2236,9 @@ export function createChunkManager(
 
     const riverChains = retainRiverTilesFor(record)
     const { x, z } = chunkCenter(coord, config.chunkSize)
-    const riverSegments = riverChannelSegmentsNear(riverChains, x, z, config.chunkSize)
-    const params = paramsFor(coord, riverSegments)
+    const riverSegments = withStage(getMonitor(), 'riverChannelSegmentsNear', () =>
+      riverChannelSegmentsNear(riverChains, x, z, config.chunkSize))
+    const params = withStage(getMonitor(), 'terrainPrepare', () => paramsFor(coord, riverSegments))
     // Same declared fords the tile is shaped from, so `sampleLocalWater` and
     // the ground agree on the ford's depth.
     record.fordProjections = params.fordProjections
@@ -2485,12 +2498,14 @@ export function createChunkManager(
   }
 
   function update(playerX: number, playerZ: number): void {
-    lastUpdateAt = performance.now()
-    if (Math.hypot(playerX - lastCheckX, playerZ - lastCheckZ) >= recheckDistance) {
-      recheck(playerX, playerZ)
-    }
-    drainLoadQueue()
-    drainFinalizeQueue(CHUNKS_FINALIZED_PER_FRAME)
+    withStage(getMonitor(), 'chunkUpdate', () => {
+      lastUpdateAt = performance.now()
+      if (Math.hypot(playerX - lastCheckX, playerZ - lastCheckZ) >= recheckDistance) {
+        recheck(playerX, playerZ)
+      }
+      drainLoadQueue()
+      drainFinalizeQueue(CHUNKS_FINALIZED_PER_FRAME)
+    })
   }
 
   /** Resolves once every listed chunk has finished generating (or failed /

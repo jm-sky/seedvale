@@ -2491,7 +2491,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         toast.show(`Odkryto: ${revealed.name}`)
       }
       questManager.pollWorldProgressionObjectives()
-      withCategory(monitor, 'TERRAIN', () => {
+      withCategory(monitor, 'STREAMING', () => {
         bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       })
       bundle.caves.update(player.mesh.position.x, player.mesh.position.z, dt)
@@ -2832,6 +2832,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     monitor.endFrame({
       simulateMs,
       renderMs,
+      frameStartedAt: frameStart,
       drawCalls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
       geometries: renderer.info.memory.geometries,
