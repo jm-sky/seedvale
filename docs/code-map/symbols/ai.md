@@ -102,13 +102,14 @@ Generated from exported TypeScript symbols.
 
 ## `ai/nameCultures.ts`
 
-- `generateFamilySurname` — function — line 93
-- `generateNpcName` — function — line 117
+- `formatPolishSurnameForGender` — function — line 84
+- `generateFamilySurname` — function — line 103
+- `generateNpcName` — function — line 127
 - `NAME_CULTURES` — const — line 18
 - `NameCulture` — type — line 16
-- `namesForCulture` — function — line 104
-- `pickNameCulture` — function — line 109
-- `surnameForGender` — function — line 100
+- `namesForCulture` — function — line 114
+- `pickNameCulture` — function — line 119
+- `surnameForGender` — function — line 110
 
 ## `ai/Needs.ts`
 
@@ -173,24 +174,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 738
-- `CurrentActivity` — type — line 548
-- `CurrentActivityKind` — type — line 541
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 855
+- `classifyPendingActivity` — function — line 729
+- `CurrentActivity` — type — line 539
+- `CurrentActivityKind` — type — line 532
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 846
 - `NPC_HEIGHT` — const — line 471
-- `NPC_SHADOW_DISTANCE` — const — line 485
-- `NpcAgent` — class — line 1095
+- `NPC_SHADOW_DISTANCE` — const — line 476
+- `NpcAgent` — class — line 1086
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 989
-- `NpcInspectionSnapshot` — type — line 563
-- `NpcWhy` — type — line 713
-- `projectNpcWhy` — function — line 780
-- `promoteChainKind` — function — line 730
+- `NpcAgentDeps` — type — line 980
+- `NpcInspectionSnapshot` — type — line 554
+- `NpcWhy` — type — line 704
+- `projectNpcWhy` — function — line 771
+- `promoteChainKind` — function — line 721
 
 ## `ai/npcAnimalThreat.ts`
 

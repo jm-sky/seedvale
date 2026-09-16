@@ -3470,6 +3470,7 @@ Generated from TypeScript imports.
 - `settlement/merchantTrade.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/plazaPaving.ts`
+- `settlement/professionFamilySurnames.ts`
 - `settlement/professionStaffing.ts`
 - `settlement/props.ts`
 - `settlement/rats.ts`

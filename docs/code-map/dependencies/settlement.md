@@ -359,6 +359,8 @@ Generated from TypeScript imports.
 - `settlement/npcIdentity.ts`
 - `settlement/plazaPaving.test.ts`
 - `settlement/plazaPaving.ts`
+- `settlement/professionFamilySurnames.test.ts`
+- `settlement/professionFamilySurnames.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
 - `settlement/props.ts`
@@ -1317,6 +1319,30 @@ Generated from TypeScript imports.
 - `settlement/plazaPaving.test.ts`
 - `settlement/props.ts`
 
+## `settlement/professionFamilySurnames.test.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/nameCultures.ts`
+- `settlement/families.ts`
+- `settlement/professionFamilySurnames.ts`
+
+## `settlement/professionFamilySurnames.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/nameCultures.ts`
+- `settlement/families.ts`
+- `settlement/professionStaffing.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/professionFamilySurnames.test.ts`
+- `settlement/settlementGenerator.ts`
+
 ## `settlement/professionStaffing.test.ts`
 
 **Imports**
@@ -1348,6 +1374,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
+- `settlement/professionFamilySurnames.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/settlementAgriculture.ts`
 - `settlement/settlementGenerator.ts`
@@ -1760,6 +1787,7 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/minorLocations.ts`
+- `settlement/professionFamilySurnames.ts`
 - `settlement/professionStaffing.ts`
 - `settlement/settlementCharacter.ts`
 - `settlement/settlementTerrain.ts`

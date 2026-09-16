@@ -603,6 +603,12 @@ Generated from exported TypeScript symbols.
 - `PlazaPavingPlacement` — type — line 21
 - `PlazaSurfaceHole` — type — line 28
 
+## `settlement/professionFamilySurnames.ts`
+
+- `applyProfessionFamilySurnames` — function — line 122
+  - domain: settlements-npcs
+- `isWorldgenFamilyId` — function — line 47
+
 ## `settlement/professionStaffing.ts`
 
 - `adultProfessionCoverage` — function — line 332
@@ -867,19 +873,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 141
-- `cellKey` — function — line 126
-- `cellSeed` — function — line 169
-- `cellsWithinRadius` — function — line 153
-- `generateSettlementDef` — function — line 779
-- `generateVillagePlan` — function — line 709
-- `probeSettlementSite` — function — line 504
+- `cellFromId` — function — line 142
+- `cellKey` — function — line 127
+- `cellSeed` — function — line 170
+- `cellsWithinRadius` — function — line 154
+- `generateSettlementDef` — function — line 783
+- `generateVillagePlan` — function — line 713
+- `probeSettlementSite` — function — line 505
   - domain: settlements
-- `SETTLEMENT_GRID_STEP` — const — line 68
-- `SettlementCell` — type — line 74
-- `SettlementDef` — type — line 76
-- `SettlementSiteProbe` — type — line 489
-- `worldToCell` — function — line 130
+- `SETTLEMENT_GRID_STEP` — const — line 69
+- `SettlementCell` — type — line 75
+- `SettlementDef` — type — line 77
+- `SettlementSiteProbe` — type — line 490
+- `worldToCell` — function — line 131
 
 ## `settlement/settlementNameUniqueness.ts`
 
