@@ -1,7 +1,7 @@
 # Plan: Low-cost natural material response tuning
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** medium · **Effort:** S
 **Model:** Composer, Grok

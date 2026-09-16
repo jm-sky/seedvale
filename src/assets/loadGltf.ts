@@ -12,6 +12,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { patchFoliageWindOnObject } from '../world/foliageWind'
+import { applyNaturalMaterialResponseForUrl } from '../world/naturalMaterialResponse'
 
 const loader = new GLTFLoader()
 loader.setMeshoptDecoder(MeshoptDecoder)
@@ -67,6 +68,7 @@ function loadCached(url: string): Promise<CachedGltf> {
       // shared across every clone of this URL, so patching the cache root once
       // covers chunk + settlement trees/bushes.
       patchFoliageWindOnObject(root)
+      applyNaturalMaterialResponseForUrl(url, root)
       return { root, animations: gltf.animations ?? [] }
     })
     cache.set(url, pending)

@@ -40,7 +40,7 @@ const BEGIN_VERTEX_WIND = /* glsl */ `
   #endif
 `
 
-function isFoliageMaterial(mat: Material): boolean {
+export function isFoliageMaterial(mat: Material): boolean {
   return FOLIAGE_NAME_RE.test(mat.name ?? '')
 }
 
