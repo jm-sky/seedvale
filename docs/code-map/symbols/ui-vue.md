@@ -90,6 +90,11 @@ Generated from exported TypeScript symbols.
 - `NavigationTargetMinimapPlacement` — type — line 47
 - `selectNearbyMinimapPois` — function — line 33
 
+## `ui-vue/lib/npcGoodsBuyEmptyCopy.ts`
+
+- `npcGoodsBuyEmptyCopy` — function — line 7
+  - domain: settlements-npcs
+
 ## `ui-vue/lib/questLogBuckets.ts`
 
 - `projectQuestLog` — function — line 41

@@ -15,6 +15,7 @@ import { useCompactMerchantLayout } from '../composables/useCompactMerchantLayou
 import { useMerchantTradeState } from '../composables/useMerchantTradeState'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
+import { npcGoodsBuyEmptyCopy } from '../lib/npcGoodsBuyEmptyCopy'
 import { closeMerchant, isMerchantOpen, showToast, ui } from '../store'
 
 useOverlayScreen('merchant', isMerchantOpen, closeMerchant)
@@ -54,6 +55,7 @@ const canBuyHorse = computed(() => horseOffer.value?.status === 'available')
  *  OFFER/barter column and no `MERCHANT_STOCK` catalog; BUY rows come from
  *  the live, quantity-limited `ui.merchant.npcStock` instead. */
 const isNpcGoodsMode = computed(() => ui.merchant.mode === 'npcGoods')
+const hasNpcGoodsStock = computed(() => ui.merchant.npcStock.length > 0)
 const screenTitle = computed(() => (isNpcGoodsMode.value ? (ui.merchant.npc?.displayName ?? 'Handel') : 'Kupiec'))
 
 const BUY_SORT_OPTIONS = [
@@ -114,6 +116,10 @@ const buyRows = computed(() => {
   })
   return sortRows(rows, buyFilters.sort)
 })
+
+const npcGoodsEmptyCopy = computed(() => (
+  isNpcGoodsMode.value ? npcGoodsBuyEmptyCopy(ui.merchant.npcStock.length, buyRows.value.length) : null
+))
 
 const offerRows = computed(() => {
   const unitOfferPrice = ui.merchant.pricing?.unitOfferPrice
@@ -342,6 +348,7 @@ function openDetails(kind: ItemKind): void {
               BUY
             </h3>
             <MerchantFilterBar
+              v-if="!isNpcGoodsMode || hasNpcGoodsStock"
               :model-value="buyFilters"
               :available-capabilities="buyCapabilities"
               :sort-options="BUY_SORT_OPTIONS"
@@ -379,10 +386,10 @@ function openDetails(kind: ItemKind): void {
                 </div>
               </div>
               <div
-                v-if="buyRows.length === 0 && !horseOffer"
+                v-if="isNpcGoodsMode ? npcGoodsEmptyCopy : (buyRows.length === 0 && !horseOffer)"
                 class="text-[12px] opacity-60"
               >
-                Brak towarów w tej kategorii.
+                {{ isNpcGoodsMode ? npcGoodsEmptyCopy : 'Brak towarów w tej kategorii.' }}
               </div>
               <MerchantItemRow
                 v-for="row in buyRows"

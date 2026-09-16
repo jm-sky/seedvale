@@ -207,6 +207,7 @@ Generated from TypeScript imports.
 - `settlements-npcs-007.test.ts`
 - `terrain/digAction.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/expeditionProvisioning.test.ts`
 - `world/expeditionProvisioning.ts`
@@ -1199,6 +1200,7 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `ui-vue/composables/useItemCategoryLabels.ts`
 - `ui-vue/composables/useMerchantTradeState.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 - `ui-vue/playerQuickActions.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`

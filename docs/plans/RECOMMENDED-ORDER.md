@@ -36,8 +36,6 @@
 
 1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
-2. `settlements-npcs-039` — **Social and Paid Settlement Lodging**  
-   🟡 `S` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
 
@@ -165,24 +163,16 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-23. `fauna-033` — **Animal movement hot-path performance**  
-  🔴 `M` · **Score:**  29  
-   → **unlocks:** 0/0
-
-24. `items-player-014` — **Rope-pullable resource transport**  
+23. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `tools-005` — **Seedvale Character Preparation Panel**  
+24. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `items-player-032` — **NPC player-storage resource and context rules**  
+25. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
-   → **unlocks:** 0/0
-
-27. `settlements-npcs-039` — **Social and Paid Settlement Lodging**  
-  🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
 ---

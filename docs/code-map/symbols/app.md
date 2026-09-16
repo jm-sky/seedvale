@@ -348,10 +348,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 205
+- `createInventoryWiring` — function — line 215
 - `InventoryWiring` — type — line 119
 - `InventoryWiringDeps` — type — line 158
 - `MerchantInventoryView` — type — line 105
+- `npcDialogueCanTrade` — function — line 211
+  - domain: settlements-npcs
 
 ## `app/modalState.ts`
 

@@ -133,6 +133,18 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/lib/minimapLocationMarkers.test.ts`
 
+## `ui-vue/lib/npcGoodsBuyEmptyCopy.test.ts`
+
+**Imports**
+
+- `ui-vue/lib/npcGoodsBuyEmptyCopy.ts`
+
+## `ui-vue/lib/npcGoodsBuyEmptyCopy.ts`
+
+**Imported by**
+
+- `ui-vue/lib/npcGoodsBuyEmptyCopy.test.ts`
+
 ## `ui-vue/lib/questLogBuckets.test.ts`
 
 **Imports**
@@ -200,6 +212,20 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `settlement/createSettlement.ts`
+- `ui-vue/store.ts`
+
+## `ui-vue/npcDialogueTrade.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `ai/npcTradeAvailability.ts`
+- `app/inventoryWiring.ts`
+- `items/Inventory.ts`
+- `items/items.ts`
+- `quests/QuestManager.ts`
+- `settlement/createSettlement.ts`
+- `settlement/household.ts`
 - `ui-vue/store.ts`
 
 ## `ui-vue/playerQuickActions.test.ts`
@@ -276,6 +302,7 @@ Generated from TypeScript imports.
 - `ui-vue/flavorDialogLifecycle.test.ts`
 - `ui-vue/mount.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 - `ui-vue/playerQuickActions.test.ts`
 - `ui-vue/playerQuickActions.ts`
 - `ui/createHud.ts`

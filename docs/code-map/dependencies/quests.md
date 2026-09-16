@@ -64,6 +64,7 @@ Generated from TypeScript imports.
 - `ui-vue/lib/questLogBuckets.test.ts`
 - `ui-vue/lib/questLogBuckets.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 - `ui-vue/store.ts`
 - `ui/createQuestLog.ts`
 

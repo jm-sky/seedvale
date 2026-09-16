@@ -202,6 +202,16 @@ export type InventoryWiringDeps = {
   openNpcGiveItem: (npcId: string, displayName: string) => void
 }
 
+/** Dialogue `Handel` is available for any living NPC in a normal dialogue
+ *  session. Live stock must not hide the trade surface; empty offers open
+ *  `npcGoods` with an empty-state screen instead.
+ *
+ * @domain settlements-npcs
+ */
+export function npcDialogueCanTrade(npc: NpcAgent | null): boolean {
+  return !!npc && !npc.health.dead
+}
+
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, equipment, primaryWeapons, playerCombatMode, playerTorch, hud, toast, vueUi,
@@ -760,12 +770,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       if (!input) return false
       return guardRewardTopicAvailable(input)
     },
-    getCanTrade: () => {
-      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
-      if (!npc || npc.health.dead) return false
-      if (isMerchantNpc(npc)) return true
-      return buildNpcTradeStock(npc).length > 0
-    },
+    getCanTrade: () => npcDialogueCanTrade(ui.npcDialogueMenu.npc as NpcAgent | null),
     onOpenTrade: () => {
       const view = merchantInventoryView()
       const npc = ui.npcDialogueMenu.npc as NpcAgent | null

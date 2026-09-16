@@ -1418,6 +1418,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 
 ## `app/modalState.ts`
 

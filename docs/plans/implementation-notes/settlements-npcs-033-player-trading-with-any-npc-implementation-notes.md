@@ -96,17 +96,9 @@ Rename types/functions only where necessary; avoid broad UI refactors unrelated 
 
 `src/ui-vue/NpcDialogueMenu.vue`
 
-Current trade gate is:
+Current trade gate is `canTrade` on the dialogue store, set once when `openNpcDialogueMenu` runs `getCanTrade()`.
 
-```ts
-const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
-```
-
-and the `Handel` button is rendered only for `isHomeTrader`.
-
-`src/app/inventoryWiring.ts` already wires `configureNpcDialogueMenu({ onOpenTrade })`.
-
-Replace the role gate with a live/cached dialogue capability such as `canTrade`, resolved when opening the NPC dialogue from actual trade availability. Keep merchant detection only for merchant special offers/catalog behavior.
+Implemented UX: `npcDialogueCanTrade(npc)` is true for any living NPC in dialogue. Empty live stock must not hide `Handel`; `onOpenTrade()` still opens `npcGoods` with `buildNpcTradeStock(npc)` (which may be `[]`), and `MerchantScreen` shows the empty-state copy. Merchant detection stays only in `onOpenTrade()` for catalog stock and specials.
 
 Do not let the Vue component inspect household inventory or production state directly.
 

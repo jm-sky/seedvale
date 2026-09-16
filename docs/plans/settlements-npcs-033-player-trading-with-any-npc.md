@@ -220,17 +220,18 @@ Nie wolno używać istniejącego merchant barteru tak, aby offered player items 
 
 ## 9. Dialogue integration
 
-Dla żywego NPC, który posiada co najmniej jedną live trade-eligible ofertę, zwykły dialog może pokazać akcję:
+Dla każdego żywego NPC, z którym można normalnie wejść w dialog, zwykły dialog pokazuje akcję:
 
 ```text
 Handel
 ```
 
-Nie uzależniać możliwości otwarcia handlu od profesji `trader`.
+Nie uzależniać możliwości otwarcia handlu od profesji `trader` ani od aktualnego live stocku.
 
-Jeżeli NPC chwilowo niczego nie może sprzedać:
+Jeżeli NPC chwilowo niczego nie może sprzedać (`resolveNpcTradeOffers() === []`):
 
-- preferowane: nie pokazywać `Handel`, albo pokazać disabled/empty-state zgodnie z aktualnym dialogue UX;
+- nadal pokazać `Handel` i otworzyć shared trade screen w trybie `npcGoods`;
+- ekran pokazuje empty state („Nie mam teraz nic na sprzedaż.”) zamiast ukrywać mechanizm;
 - nie generować fake stock.
 
 Merchant nadal otwiera ten sam trade surface z własnym merchant stock i special offers.
@@ -349,8 +350,8 @@ Nie zmieniać tych production chains w tym planie.
 
 ### Dialogue/UI
 
-- eligible ordinary NPC exposes `Handel`;
-- NPC without goods does not expose fake stock;
+- every living ordinary NPC in dialogue exposes `Handel`;
+- NPC without goods does not expose fake stock (empty `npcGoods` session + empty state);
 - merchant still exposes current merchant experience and specials;
 - closing/reopening rebuilds offer from live state;
 - social context is resolved for the actual NPC and owning settlement.
@@ -362,7 +363,7 @@ Nie zmieniać tych production chains w tym planie.
 
 ## Acceptance Criteria
 
-- Gracz może handlować z dowolnym żywym NPC, jeśli NPC ma realne trade-eligible goods.
+- Gracz może otworzyć handel z dowolnym żywym NPC w dialogu; realne trade-eligible goods są ofertą, a ich brak pokazuje empty state zamiast ukrywać `Handel`.
 - Handel używa jednego shared transaction/pricing mechanism, nie profession-specific shops.
 - Hunter może sprzedać realne, wyprodukowane strzały ze swojego `Household.items`.
 - Hunter zachowuje protected ammo reserve.
@@ -412,7 +413,7 @@ Runtime, performed manually by the player:
 5. Change relation/reputation and verify price direction changes.
 6. Consume Hunter arrows through normal hunting and verify trade stock disappears at reserve.
 7. Let Hunter produce again and verify offer returns.
-8. Verify another ordinary NPC with no eligible goods does not invent stock.
+8. Verify another ordinary NPC with no eligible goods still shows `Handel` and an empty-state screen, without inventing stock.
 9. Verify Kupiec still supports existing merchant trade and special offers.
 10. Save/load after a completed trade and verify all authoritative inventories.
 

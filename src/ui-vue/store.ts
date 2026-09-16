@@ -66,11 +66,11 @@ type NpcDialogueMenuState = {
   canClaimGuardReward: boolean
   getCanClaimGuardReward: (() => boolean) | null
   onClaimGuardReward: (() => string) | null
-  /** Whether the open NPC has anything live to trade right now (plan
-   *  settlements-npcs-033) — resolved from actual trade availability
-   *  (merchant catalog, or a household's real surplus goods), not from
-   *  `npc.role === 'trader'`. Same "resolved once at open time" convention
-   *  as `canClaimGuardReward`. */
+  /** Whether the open NPC can start a trade session (plan
+   *  settlements-npcs-033). True for any living NPC in dialogue — empty
+   *  live stock still opens `npcGoods` with an empty state rather than
+   *  hiding `Handel`. Same "resolved once at open time" convention as
+   *  `canClaimGuardReward`. */
   canTrade: boolean
   getCanTrade: (() => boolean) | null
   onOpenTrade: (() => void) | null

@@ -285,6 +285,7 @@ Generated from TypeScript imports.
 - `settlement/lodgingResolver.ts`
 - `settlement/structureRepairCandidates.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 - `ui-vue/store.ts`
 
 ## `settlement/decorProps.test.ts`
@@ -638,6 +639,7 @@ Generated from TypeScript imports.
 - `settlement/storageDestinations.ts`
 - `settlement/storageVisuals.test.ts`
 - `settlements-npcs-007.test.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 - `world/transportOffscreen.test.ts`
 - `world/transportOffscreen.ts`
 - `world/transportOrder.ts`

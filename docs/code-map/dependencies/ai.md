@@ -205,6 +205,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 - `ui-vue/store.ts`
 - `ui/createNpcInspector.ts`
 
@@ -1168,6 +1169,7 @@ Generated from TypeScript imports.
 
 - `ai/npcTradeAvailability.test.ts`
 - `app/inventoryWiring.ts`
+- `ui-vue/npcDialogueTrade.test.ts`
 
 ## `ai/npcTravel.test.ts`
 
