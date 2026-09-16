@@ -1,7 +1,7 @@
 # Plan: Wildlife habitat pressure assessment
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-16 — browser checks are User-owned)
 **Type:** feature
 **Priority:** medium · **Effort:** S
 **Model:** Composer, Sonnet

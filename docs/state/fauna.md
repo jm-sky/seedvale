@@ -4,7 +4,7 @@
 
 **Not:** NPC decision-consumption logic ([npc.md](./npc.md) owns how a hunter/farmer *consumes* what this doc exposes), settlement economy internals ([settlements.md](./settlements.md)), combat resolver internals ([combat.md](./combat.md) owns the damage pipeline; this doc covers only fauna's own outgoing-damage asymmetry), water-traversal ownership ([water.md](./water.md) owns the physical water answer; this doc covers only how fauna consumes it), or a plan/changelog.
 
-**Last verified:** 2026-09-15
+**Last verified:** 2026-09-16
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -136,6 +136,7 @@ Fauna uses the shared `HealthState`/death primitives every entity uses, and *inc
 What fauna exposes for NPC/settlement consumption — the NPC side of consuming these is documented in [npc.md](./npc.md):
 
 - **Three read-only threat accessors** on an animal: whether it's currently threatening a human, its current NPC attack target (if any), and whether it's committed to a live hunt (`huntingPrey()`, now real for a household/player livestock kill too, see the predator/livestock encounter set above — not only wild prey). Consumers (NPC threat response, a shepherd's flock-threat check, a household dog's wolf-defense resolution) build their own candidate lists from these; they never import fauna's decision logic directly.
+- **Habitat pressure snapshot** (plan fauna-031) — `Fauna.getHabitatPressure(spawnerId, nowDays)` returns a derived, immutable condition for one managed `PreySpawner` (live/capacity, deaths-this-cycle, nearby predators, grass forage). It is a lazy runtime cache, not authoritative state and not part of `SaveData`. Quests/NPC/settlements may read it; they do not write it.
 - **Per-individual danger significance** — `AnimalAgent.dangerSignificance` (and `variant`) for player-kill context. Reputation/quests consume the number; they do not own variant assignment.
 - **The hunting hooks contract** — a nearest-huntable-animal query (with the seeded population-protection roll) and a re-validated harvest operation, bound to the live fauna system through a late-bound accessor (since fauna is constructed after NPCs at boot).
 - **The combat-target adapter** that lets the shared combat resolvers treat an animal as an attackable target without those resolvers knowing anything about `AnimalAgent` internals.
@@ -170,6 +171,7 @@ src/fauna/AnimalSpawner.ts
 src/fauna/persistentOccupants.ts
 src/fauna/animalCaveHabitat.ts
 src/fauna/createFauna.ts
+src/fauna/habitatPressure.ts
 src/fauna/faunaDecision.ts
 src/fauna/faunaCombat.ts
 src/fauna/waterTraversal.ts

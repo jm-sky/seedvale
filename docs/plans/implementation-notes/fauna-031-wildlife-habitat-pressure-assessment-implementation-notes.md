@@ -1,5 +1,14 @@
 # Implementation notes: fauna-031 — Wildlife habitat pressure assessment
 
+**Implemented:** 2026-09-16 · plan: [fauna-031](../fauna-031-wildlife-habitat-pressure-assessment.md)
+
+Landed as a fauna-owned derived read model. `src/fauna/habitatPressure.ts` owns the snapshot contract, pure scoring, one-pass agent scan, TTL cache check and the lazy resolver. `createFauna()` holds a runtime-only `Map` and exposes `Fauna.getHabitatPressure`. The inert `WorldBundle` fauna stub returns `null`. Nothing is written to `SaveData`.
+
+## Deviations from the plan
+
+- Own-habitat predators (`spawnPointId === habitatId`) are excluded from the nearby-predator count. Without that, a wolf den would score its own pack as predator pressure on itself. External predators in the bounded radius still count.
+- Grass forage is queried only when the spawner species actually has `diet.grass` *and* a `GrassForageService` is injected. A wolf/fox/bear habitat never calls `queryNear()`; a missing service on deer/stag is scored as food-not-applicable, not famine.
+
 ## Verified current-code facts
 
 - `src/fauna/createFauna.ts` already owns the exact runtime ingredients this read model needs: `agents`, `spawners`, a stable `spawnerById: Map<string, PreySpawner>`, the persistent-occupant registry, and the injected `GrassForageService`. Keep pressure lookup inside this ownership boundary rather than introducing another manager.

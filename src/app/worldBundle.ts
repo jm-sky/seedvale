@@ -1087,6 +1087,7 @@ function createEmptyFauna(): Fauna {
     destroySpawner: () => false,
     isQuestSpawnPointPermanentlyDestroyed: () => false,
     snapshotPersistentOccupants: () => ({ entries: [], removedSlots: [] }),
+    getHabitatPressure: () => null,
   }
 }
 

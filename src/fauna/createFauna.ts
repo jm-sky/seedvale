@@ -68,6 +68,11 @@ import {
   resolveClosedPredatorPressure,
 } from './closedPredatorPressure'
 import {
+  type HabitatPressureCacheEntry,
+  type HabitatPressureSnapshot,
+  resolveHabitatPressure,
+} from './habitatPressure'
+import {
   HERD_CLUSTER_RADIUS,
   HERD_SPECIES,
   JUVENILE_SPAWN_CHANCE,
@@ -206,6 +211,14 @@ export type Fauna = {
   /** Sparse persistent habitat-occupant snapshot (plan fauna-018) — live
    *  capture plus tombstones, for save/load and in-session rebuild carry. */
   snapshotPersistentOccupants: () => PersistentOccupantSnapshot
+  /**
+   * Derived, read-only habitat condition for one managed spawner
+   * (plan fauna-031). Runtime cache only — never persisted. Unknown ids
+   * return `null` without scanning live agents or querying forage.
+   *
+   * @domain fauna
+   */
+  getHabitatPressure: (spawnerId: string, nowDays: number) => HabitatPressureSnapshot | null
 }
 
 /** Where a species prefers to spawn relative to the home settlement (plan
@@ -721,6 +734,12 @@ export async function createFauna(
   const animalToSpawner = new Map<string, string>()
   /** At most one settlement-directed trip per wolf den at a time (runtime). */
   const settlementTripAnimalBySpawner = new Map<string, string>()
+  /** Runtime-only habitat pressure snapshots (plan fauna-031) — never persisted. */
+  const habitatPressureCache = new Map<string, HabitatPressureCacheEntry>()
+  const queryHabitatForage = grassForage
+    ? (x: number, z: number, radius: number, days: number) =>
+      grassForage.queryNear(x, z, radius, days)
+    : undefined
 
   /** Wraps the injected `onAnimalDeath` (quest hook, plan 110) with local
    *  spawn-point death accounting (plan 125 §4) — every animal this factory
@@ -1578,6 +1597,17 @@ export async function createFauna(
     snapshotPersistentOccupants() {
       occupantRegistry.capture(agents.filter((a) => occupantRegistry.hasPersistentAnimalId(a.animalId)))
       return occupantRegistry.serialize()
+    },
+    getHabitatPressure(spawnerId, nowDays) {
+      return resolveHabitatPressure({
+        spawnerId,
+        nowDays,
+        cache: habitatPressureCache,
+        getSpawner: (id) => spawnerById.get(id),
+        agents,
+        slotCountFor: (habitatId) => occupantRegistry.slotCountFor(habitatId),
+        queryForage: queryHabitatForage,
+      })
     },
   }
 }
