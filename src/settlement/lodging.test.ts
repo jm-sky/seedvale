@@ -69,18 +69,18 @@ describe('lodgingRequiresPayment', () => {
 })
 
 describe('lodgingChoiceLabel', () => {
-  it('shows the price for a paid option', () => {
+  it('shows provider, price and quality for a paid option', () => {
     expect(lodgingChoiceLabel({
       id: 'x', type: 'paid', settlementId: 's', position: { x: 0, z: 0 }, approachPoint: { x: 0, z: 0 },
-      facing: null, quality: 'normal', price: 5,
-    })).toBe('Płatny nocleg — 5× moneta')
+      facing: null, quality: 'normal', price: 2, ownerName: 'Tomek',
+    })).toBe('Nocleg u strażnika: Tomek — 2 monety — Dość wygodnie')
   })
 
   it('shows the quality label for a free option', () => {
     expect(lodgingChoiceLabel({
       id: 'x', type: 'hay', settlementId: 's', position: { x: 0, z: 0 }, approachPoint: { x: 0, z: 0 },
       facing: null, quality: 'low',
-    })).toBe('Stóg siana — Niska jakość')
+    })).toBe('Stóg siana — Niewygodnie')
   })
 })
 

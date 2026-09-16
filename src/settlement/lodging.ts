@@ -1,12 +1,12 @@
 /**
- * Settlement lodging contract (plan 168) — a small, capability-oriented
- * description of "somewhere the player can go and sleep", independent of
- * which concrete source backs it (bed / friend / paid / hay). A
- * `LodgingOption` is a derived offer, resolved fresh each time "Nocuj w
- * mieście" is requested — never cached across frames and never persisted
- * (see the plan's implementation notes §4/§20). The authoritative owner of
- * *why* an option exists stays wherever it always lived (`Household`,
- * `SettlementLandmarks`, and — once plan 169 lands — the physical bed data).
+ * Settlement lodging contract (plan 168 / settlements-npcs-039) — a small,
+ * capability-oriented description of "somewhere the player can go and sleep",
+ * independent of which concrete source backs it (friend / paid / hay /
+ * owned_house). A `LodgingOption` is a derived offer, resolved fresh each
+ * time "Nocuj w mieście" is requested — never cached across frames and never
+ * persisted. The authoritative owner of *why* an option exists stays
+ * wherever it always lived (`Household`, settlement furniture, player-owned
+ * houses, `PlayerSocialLookup`).
  */
 
 export type LodgingType = 'bed' | 'friend' | 'paid' | 'hay' | 'owned_house'
@@ -21,15 +21,13 @@ export type LodgingOption = {
   type: LodgingType
   settlementId: string
   /** Identity of the *physical* place this option sleeps at — the existing
-   *  house index (`${settlementId}:house:${houseIndex}`), shared by `bed`
-   *  and `friend` when they resolve to the same house, so the resolver can
-   *  collapse duplicate internal representations of one real place into a
-   *  single panel entry (never set for `hay`/`paid`, which have no shared
-   *  physical-place collision today). */
+   *  house index (`${settlementId}:house:${houseIndex}`), shared by `friend`
+   *  and `paid` when they resolve to the same house so the resolver can
+   *  collapse colliding offers into a single panel entry. Never set for
+   *  `hay`, which has no house collision. */
   placeId?: string
-  /** World position of the lodging source itself (a house, the garden/hay
-   *  spot, ...). Plan 169's beds will be the first source where this differs
-   *  from `approachPoint`. */
+  /** World position of the lodging source itself (a physical bed, hay
+   *  spot, or owned-house footprint). */
   position: { x: number, z: number }
   /** Where the player actually walks to; arrival is checked against this. */
   approachPoint: { x: number, z: number }
@@ -37,10 +35,10 @@ export type LodgingOption = {
    *  `null` to keep whatever direction they arrived facing. */
   facing: number | null
   quality: LodgingQuality
-  /** Owning household, when this option is tied to one (`friend`, and later
-   *  `bed`) — the existing `Household.id`, never a duplicated id scheme. */
+  /** Owning household, when this option is tied to one (`friend`) — the
+   *  existing `Household.id`, never a duplicated id scheme. */
   householdId?: string
-  /** Display name of the NPC offering a `friend` stay. */
+  /** Display name of the NPC offering a `friend` or `paid` stay. */
   ownerName?: string
   /** Coin price — only set for `paid`. */
   price?: number
@@ -77,6 +75,10 @@ export const LODGING_STUCK_PROGRESS_EPSILON = 0.05
  *  across a settlement is never cut short (walk speed is 8 m/s), short
  *  enough that a player stuck on a house collider isn't stranded. */
 export const LODGING_STUCK_TIMEOUT_SEC = 12
+
+/** V1 paid settlement lodging price (plan settlements-npcs-039) — a guard
+ *  stands in for an innkeeper; the cost is a player charge, not inn income. */
+export const GUARD_PAID_LODGING_PRICE = 2
 
 /** Pure state `restActions.ts::tickLodging()` carries across frames for the
  *  active `lodgingWalkTarget` — the closest XZ distance to `approachPoint`
@@ -115,9 +117,9 @@ const LODGING_TYPE_LABEL: Record<LodgingType, string> = {
 }
 
 export function lodgingPlaceLabel(option: LodgingOption): string {
-  return option.ownerName
-    ? `${LODGING_TYPE_LABEL[option.type]} (${option.ownerName})`
-    : LODGING_TYPE_LABEL[option.type]
+  if (option.type === 'friend' && option.ownerName) return `U ${option.ownerName}`
+  if (option.type === 'paid' && option.ownerName) return `Nocleg u strażnika: ${option.ownerName}`
+  return LODGING_TYPE_LABEL[option.type]
 }
 
 /** True when a candidate needs the existing pay-then-arm-movement flow
@@ -128,18 +130,29 @@ export function lodgingRequiresPayment(option: LodgingOption): boolean {
 }
 
 const LODGING_QUALITY_LABEL: Record<LodgingQuality, string> = {
-  high: 'Wysoka jakość',
-  normal: 'Normalna jakość',
-  low: 'Niska jakość',
+  high: 'Komfortowo',
+  normal: 'Dość wygodnie',
+  low: 'Niewygodnie',
 }
 
-/** Button label for the "Nocuj w mieście" choice panel (plan 168 follow-up)
- *  — place name plus either its price (paid) or quality (everything else). */
+/** Polish coin-count wording for lodging labels only — not a localization framework. */
+function coinCountLabel(count: number): string {
+  const abs = Math.abs(count)
+  const mod100 = abs % 100
+  const mod10 = abs % 10
+  if (mod10 === 1 && mod100 !== 11) return `${count} moneta`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} monety`
+  return `${count} monet`
+}
+
+/** Button label for the "Nocuj w mieście" choice panel
+ *  (plan settlements-npcs-039) — provider/place plus quality, and price for paid. */
 export function lodgingChoiceLabel(option: LodgingOption): string {
   const place = lodgingPlaceLabel(option)
+  const quality = LODGING_QUALITY_LABEL[option.quality]
   return lodgingRequiresPayment(option)
-    ? `${place} — ${option.price}× moneta`
-    : `${place} — ${LODGING_QUALITY_LABEL[option.quality]}`
+    ? `${place} — ${coinCountLabel(option.price ?? 0)} — ${quality}`
+    : `${place} — ${quality}`
 }
 
 /** Stable id for a settlement's hay-fallback `LodgingOption` — shared by the

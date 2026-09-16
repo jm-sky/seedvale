@@ -1,38 +1,44 @@
+import type { Role } from '../ai/characters'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { RelationLevel } from '../quests/quests'
 import type { ResidentialBuildingRecord } from '../world/residentialBuilding'
 import type { Settlement } from './createSettlement'
-import type { LodgingOption } from './lodging'
+import type { LodgingOption, LodgingQuality } from './lodging'
 import type { SettlementHouseBed } from './props'
 import {
   residentialBuildingApproachPoint,
   residentialBuildingLodgingId,
   residentialHomePlaceId,
 } from '../world/residentialBuilding'
-import { hayLodgingId, lodgingRequiresPayment } from './lodging'
+import { GUARD_PAID_LODGING_PRICE, hayLodgingId, lodgingRequiresPayment } from './lodging'
 import { homeIndexFromPlaceId } from './places'
 
 /**
- * Lodging resolver (plan 168) — the one place that knows the preference
- * order between bed / friend / paid / hay. `resolveBestLodging` is pure (no
- * world/Three.js access) so the policy stays unit-testable on plain
- * `LodgingOption[]`; `settlementLodgingInput` is the only function here that
- * touches a real `Settlement` (implementation notes §7).
+ * Lodging resolver (plan 168 / settlements-npcs-039) — the one place that
+ * knows the preference order between owned_house / friend / paid / hay.
+ * `resolveBestLodging` is pure (no world/Three.js access) so the policy stays
+ * unit-testable on plain `LodgingOption[]`; `settlementLodgingInput` is the
+ * only function here that touches a real `Settlement`.
  */
+
+type LodgingNpcInput = {
+  id: string
+  name: string
+  role: Role
+  household: { id: string, homeId: string } | null
+}
 
 /** Narrow, three.js-free view of a settlement's lodging-relevant state. */
 export type LodgingSettlementInput = {
   id: string
-  npcs: readonly { id: string, name: string, household: { id: string, homeId: string } | null }[]
+  npcs: readonly LodgingNpcInput[]
   /** Index-aligned with the settlement's home `Place` index — same
    *  `landmarks.houses[i]` ↔ `homePlaceId(settlementId, i)` pairing
    *  `createSettlement.ts` already relies on. */
   houses: readonly {
     x: number
     z: number
-    /** Plan 169 — physical bed lodging source, `null` for houses with none
-     *  (every house except this session's furnished `COTTAGE_4X4_A`, and the
-     *  legacy catalog-GLB fallback house). */
+    /** Physical bed lodging resource, `null` for houses with none. */
     bed: SettlementHouseBed | null
   }[]
   /** A real settlement landmark to anchor the hay fallback on (the garden pad
@@ -74,6 +80,7 @@ export function settlementLodgingInput(
     npcs: settlement.npcs.map((npc) => ({
       id: npc.id,
       name: npc.name,
+      role: npc.role,
       household: npc.household ? { id: npc.household.id, homeId: npc.household.homeId } : null,
     })),
     houses: settlement.landmarks.houses.map((house) => ({
@@ -90,9 +97,20 @@ export function settlementLodgingInput(
   }
 }
 
-const FRIEND_RELATION_LEVELS: ReadonlySet<RelationLevel> = new Set(['friendly', 'trusted'])
+const RELATION_RANK: Record<RelationLevel, number> = {
+  stranger: 0,
+  acquainted: 0,
+  friendly: 1,
+  trusted: 2,
+}
 
-/** The existing physical-place identity a `bed`/`friend` option resolves to:
+function friendLodgingQuality(relation: RelationLevel): LodgingQuality | null {
+  if (relation === 'trusted') return 'high'
+  if (relation === 'friendly') return 'normal'
+  return null
+}
+
+/** The existing physical-place identity a lodging option resolves to:
  *  the settlement's own house index (index-aligned with `landmarks.houses`,
  *  same one `homeIndexFromPlaceId` already derives from a household's
  *  `homeId`) — not a second id scheme. */
@@ -100,59 +118,105 @@ function housePlaceId(settlementId: string, houseIndex: number): string {
   return `${settlementId}:house:${houseIndex}`
 }
 
-function collectBedCandidates(settlement: LodgingSettlementInput): LodgingOption[] {
-  const out: LodgingOption[] = []
-  settlement.houses.forEach((house, index) => {
-    if (!house.bed) return
-    out.push({
-      id: `${settlement.id}:bed:${index}`,
-      type: 'bed',
-      settlementId: settlement.id,
-      placeId: housePlaceId(settlement.id, index),
-      position: house.bed.position,
-      approachPoint: house.bed.approach,
-      facing: house.bed.facing,
-      quality: 'high',
-    })
-  })
-  return out
+type FriendContender = {
+  npc: LodgingNpcInput
+  household: { id: string, homeId: string }
+  houseIndex: number
+  relation: RelationLevel
+  quality: LodgingQuality
+}
+
+/**
+ * @domain settlements-npcs
+ * One free lodging provider per physical house: highest relation
+ * (`trusted` > `friendly`), then stable lowest `npc.id`.
+ */
+function pickFriendProvider(contenders: readonly FriendContender[]): FriendContender {
+  let best = contenders[0]!
+  for (const candidate of contenders.slice(1)) {
+    const relationDelta = RELATION_RANK[candidate.relation] - RELATION_RANK[best.relation]
+    if (relationDelta > 0 || (relationDelta === 0 && candidate.npc.id < best.npc.id)) {
+      best = candidate
+    }
+  }
+  return best
 }
 
 function collectFriendCandidates(
   settlement: LodgingSettlementInput,
   getPlayerSocial: PlayerSocialLookup,
 ): LodgingOption[] {
-  const out: LodgingOption[] = []
-  const seenHouseholds = new Set<string>()
+  const byPlace = new Map<string, FriendContender[]>()
   for (const npc of settlement.npcs) {
     const household = npc.household
-    if (!household || seenHouseholds.has(household.id)) continue
-    if (!FRIEND_RELATION_LEVELS.has(getPlayerSocial({ npcId: npc.id, settlementId: settlement.id }).relationLevel)) continue
+    if (!household) continue
     const houseIndex = homeIndexFromPlaceId(settlement.id, household.homeId)
-    const house = houseIndex != null ? settlement.houses[houseIndex] : undefined
-    if (!house) continue
-    seenHouseholds.add(household.id)
+    if (houseIndex == null) continue
+    const house = settlement.houses[houseIndex]
+    if (!house?.bed) continue
+    const relation = getPlayerSocial({ npcId: npc.id, settlementId: settlement.id }).relationLevel
+    const quality = friendLodgingQuality(relation)
+    if (!quality) continue
+    const placeId = housePlaceId(settlement.id, houseIndex)
+    const list = byPlace.get(placeId) ?? []
+    list.push({ npc, household, houseIndex, relation, quality })
+    byPlace.set(placeId, list)
+  }
+
+  const out: LodgingOption[] = []
+  for (const [placeId, contenders] of byPlace) {
+    const winner = pickFriendProvider(contenders)
+    const bed = settlement.houses[winner.houseIndex]!.bed!
     out.push({
-      id: `${settlement.id}:friend:${household.id}`,
+      id: `${settlement.id}:friend:${winner.household.id}`,
       type: 'friend',
       settlementId: settlement.id,
-      placeId: houseIndex != null ? housePlaceId(settlement.id, houseIndex) : undefined,
-      position: house,
-      approachPoint: house,
-      facing: null,
-      quality: 'normal',
-      householdId: household.id,
-      ownerName: npc.name,
+      placeId,
+      position: bed.position,
+      approachPoint: bed.approach,
+      facing: bed.facing,
+      quality: winner.quality,
+      householdId: winner.household.id,
+      ownerName: winner.npc.name,
     })
   }
   return out
 }
 
-function collectPaidCandidates(_settlement: LodgingSettlementInput): LodgingOption[] {
-  // No paid-lodging provider exists in the current settlement/economy code
-  // (implementation notes §10) — kept ready for the first one to register an
-  // offer through this same contract, not fabricated here.
-  return []
+/**
+ * @domain settlements-npcs
+ * V1 inn stand-in: one guard (lowest stable `npc.id`) offering one paid bed
+ * (lowest house index that has a physical bed). The guard need not own the bed.
+ */
+function collectPaidCandidates(settlement: LodgingSettlementInput): LodgingOption[] {
+  let chosenBed: { index: number, bed: SettlementHouseBed } | null = null
+  for (let index = 0; index < settlement.houses.length; index++) {
+    const bed = settlement.houses[index]?.bed
+    if (!bed) continue
+    if (!chosenBed || index < chosenBed.index) chosenBed = { index, bed }
+  }
+  if (!chosenBed) return []
+
+  let guard: LodgingNpcInput | null = null
+  for (const npc of settlement.npcs) {
+    if (npc.role !== 'guard') continue
+    if (!guard || npc.id < guard.id) guard = npc
+  }
+  if (!guard) return []
+
+  const placeId = housePlaceId(settlement.id, chosenBed.index)
+  return [{
+    id: `${settlement.id}:paid:${guard.id}`,
+    type: 'paid',
+    settlementId: settlement.id,
+    placeId,
+    position: chosenBed.bed.position,
+    approachPoint: chosenBed.bed.approach,
+    facing: chosenBed.bed.facing,
+    quality: 'normal',
+    ownerName: guard.name,
+    price: GUARD_PAID_LODGING_PRICE,
+  }]
 }
 
 function collectHayCandidate(settlement: LodgingSettlementInput): LodgingOption | null {
@@ -182,7 +246,6 @@ export function collectLodgingCandidates(
 ): LodgingOption[] {
   const out: LodgingOption[] = []
   for (const settlement of settlements) {
-    out.push(...collectBedCandidates(settlement))
     out.push(...collectFriendCandidates(settlement, ctx.getPlayerSocial))
     out.push(...collectPaidCandidates(settlement))
     const hay = collectHayCandidate(settlement)
@@ -215,15 +278,20 @@ export function collectOwnedHouseLodgingOptions(
   return out
 }
 
-const TYPE_PRIORITY: Record<LodgingOption['type'], number> = { owned_house: 5, bed: 4, friend: 3, paid: 2, hay: 1 }
+const TYPE_PRIORITY: Record<LodgingOption['type'], number> = {
+  owned_house: 5,
+  friend: 4,
+  bed: 3,
+  paid: 2,
+  hay: 1,
+}
 const QUALITY_RANK: Record<LodgingOption['quality'], number> = { high: 3, normal: 2, low: 1 }
 
-/** Two internal representations (`bed`/`friend` today) can point at the same
- *  real house — a player shouldn't see the same physical place twice in the
- *  "Nocuj w mieście" panel. Keeps the single best option per `placeId`
- *  (resolver's own bed > friend > paid > hay priority, same as
- *  `resolveBestLodging`), and passes through every option with no `placeId`
- *  (`hay`/`paid` — no known physical-place collision today) unchanged. */
+/** Two offers (`friend`/`paid`) can point at the same real house — a player
+ *  shouldn't see the same physical place twice in the "Nocuj w mieście"
+ *  panel. Keeps the single best option per `placeId` (owned_house > friend >
+ *  paid > hay, same as `resolveBestLodging`), and passes through every option
+ *  with no `placeId` (`hay`) unchanged. */
 function dedupeByPhysicalPlace(candidates: readonly LodgingOption[]): LodgingOption[] {
   const bestByPlace = new Map<string, LodgingOption>()
   const withoutPlace: LodgingOption[] = []
@@ -253,10 +321,10 @@ function distanceTo(option: LodgingOption, playerPosition: { x: number, z: numbe
 }
 
 /**
- * The one authoritative lodging preference policy (plan 168 "Zasady wyboru
- * noclegu"): bed > friend > paid > hay; within one class, quality desc, then
+ * The one authoritative lodging preference policy (plan settlements-npcs-039):
+ * owned_house > friend > paid > hay; within one class, quality desc, then
  * travel distance asc, then a stable id tie-break. Distance never overrides
- * the class ordering. Deliberately not randomized (implementation notes §7).
+ * the class ordering. Deliberately not randomized.
  */
 export function resolveBestLodging(
   candidates: readonly LodgingOption[],

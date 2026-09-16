@@ -1,7 +1,7 @@
 # Implementation Notes: settlements-npcs-039 — Social and Paid Settlement Lodging
 
 **Plan:** `settlements-npcs-039-social-and-paid-settlement-lodging.md`  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 
 ## 1. Current baseline
 

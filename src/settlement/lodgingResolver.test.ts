@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import type { Role } from '../ai/characters'
 import type { PlayerSocialState } from '../ai/reactionChance'
 import type { RelationLevel } from '../quests/quests'
 import type { LodgingOption } from './lodging'
 import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
-import { hayLodgingId } from './lodging'
+import { GUARD_PAID_LODGING_PRICE, hayLodgingId, lodgingChoiceLabel } from './lodging'
 import {
   collectLodgingCandidates,
   collectOwnedHouseLodgingOptions,
@@ -29,25 +30,27 @@ function option(overrides: Partial<LodgingOption> & Pick<LodgingOption, 'id' | '
   }
 }
 
+const BED = { position: { x: 5.2, z: 7.1 }, approach: { x: 5.5, z: 7.4 }, facing: 1.2 }
+
 describe('resolveBestLodging', () => {
   it('returns null with no candidates', () => {
     expect(resolveBestLodging([], { x: 0, z: 0 })).toBeNull()
   })
 
-  it('prefers bed over any other class regardless of quality/distance', () => {
-    const bed = option({ id: 'bed', type: 'bed', quality: 'high', approachPoint: { x: 100, z: 100 } })
+  it('prefers owned house over friend regardless of quality/distance', () => {
+    const owned = option({ id: 'owned', type: 'owned_house', quality: 'high', approachPoint: { x: 100, z: 100 } })
     const friend = option({ id: 'friend', type: 'friend', quality: 'normal', approachPoint: { x: 0, z: 0 } })
-    expect(resolveBestLodging([friend, bed], { x: 0, z: 0 })).toBe(bed)
+    expect(resolveBestLodging([friend, owned], { x: 0, z: 0 })).toBe(owned)
   })
 
   it('prefers friend over paid', () => {
     const friend = option({ id: 'friend', type: 'friend', quality: 'normal', approachPoint: { x: 50, z: 0 } })
-    const paid = option({ id: 'paid', type: 'paid', quality: 'normal', approachPoint: { x: 0, z: 0 }, price: 5 })
+    const paid = option({ id: 'paid', type: 'paid', quality: 'normal', approachPoint: { x: 0, z: 0 }, price: 2 })
     expect(resolveBestLodging([paid, friend], { x: 0, z: 0 })).toBe(friend)
   })
 
   it('prefers paid over hay', () => {
-    const paid = option({ id: 'paid', type: 'paid', quality: 'normal', price: 5 })
+    const paid = option({ id: 'paid', type: 'paid', quality: 'normal', price: 2 })
     const hay = option({ id: 'hay', type: 'hay', quality: 'low' })
     expect(resolveBestLodging([hay, paid], { x: 0, z: 0 })).toBe(paid)
   })
@@ -72,6 +75,15 @@ describe('resolveBestLodging', () => {
   })
 })
 
+function npc(overrides: {
+  id: string
+  name: string
+  role?: Role
+  household: LodgingSettlementInput['npcs'][number]['household']
+}): LodgingSettlementInput['npcs'][number] {
+  return { role: 'farmer', ...overrides }
+}
+
 function settlement(overrides: Partial<LodgingSettlementInput>): LodgingSettlementInput {
   return {
     id: 'settlement-1',
@@ -86,93 +98,249 @@ function house(overrides: { x: number, z: number, bed?: LodgingSettlementInput['
   return { bed: null, ...overrides }
 }
 
-describe('collectLodgingCandidates — friend lodging', () => {
-  it('produces a candidate for a friendly NPC with an available household home', () => {
+function relations(map: Record<string, RelationLevel>) {
+  return ({ npcId }: { npcId: string }) => socialState(map[npcId] ?? 'stranger')
+}
+
+describe('collectLodgingCandidates — anonymous beds', () => {
+  it('does not create a public option from a physical bed alone', () => {
     const s = settlement({
-      npcs: [{ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
-      houses: [house({ x: 5, z: 7 })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
     })
-    const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => socialState('friendly'),
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
+    expect(candidates).toEqual([])
+  })
+})
+
+describe('collectLodgingCandidates — friend lodging', () => {
+  it('produces no free lodging for a stranger with a household bed', () => {
+    const s = settlement({
+      npcs: [npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
     })
-    expect(candidates).toHaveLength(1)
-    expect(candidates[0]).toMatchObject({ type: 'friend', ownerName: 'Anna', approachPoint: { x: 5, z: 7 } })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
+    expect(candidates.filter((c) => c.type === 'friend')).toEqual([])
   })
 
-  it('produces no candidate for a stranger', () => {
+  it('produces no free lodging for an acquainted NPC with a household bed', () => {
     const s = settlement({
-      npcs: [{ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
+      npcs: [npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('acquainted') })
+    expect(candidates.filter((c) => c.type === 'friend')).toEqual([])
+  })
+
+  it('produces one normal free offer for a friendly NPC with a household bed', () => {
+    const s = settlement({
+      npcs: [npc({ id: 'kasia', name: 'Kasia', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('friendly') })
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({
+      type: 'friend',
+      ownerName: 'Kasia',
+      quality: 'normal',
+      position: BED.position,
+      approachPoint: BED.approach,
+      facing: BED.facing,
+      placeId: 'settlement-1:house:0',
+    })
+  })
+
+  it('produces one high free offer for a trusted NPC with a household bed', () => {
+    const s = settlement({
+      npcs: [npc({ id: 'marek', name: 'Marek', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('trusted') })
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({ type: 'friend', ownerName: 'Marek', quality: 'high' })
+  })
+
+  it('uses the physical bed position/approach/facing rather than the house center', () => {
+    const s = settlement({
+      npcs: [npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
+    })
+    const [friend] = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('friendly') })
+    expect(friend?.position).toEqual(BED.position)
+    expect(friend?.approachPoint).toEqual(BED.approach)
+    expect(friend?.facing).toBe(BED.facing)
+    expect(friend?.position).not.toEqual({ x: 5, z: 7 })
+  })
+
+  it('produces no candidate for a friendly NPC whose home has no physical bed', () => {
+    const s = settlement({
+      npcs: [npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } })],
       houses: [house({ x: 5, z: 7 })],
     })
-    const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => socialState('stranger'),
-    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('friendly') })
     expect(candidates).toHaveLength(0)
   })
 
   it('produces no candidate for an NPC without a household', () => {
-    const s = settlement({ npcs: [{ id: 'anna', name: 'Anna', household: null }], houses: [house({ x: 5, z: 7 })] })
-    const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => socialState('trusted'),
+    const s = settlement({
+      npcs: [npc({ id: 'anna', name: 'Anna', household: null })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
     })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('trusted') })
     expect(candidates).toHaveLength(0)
   })
 
-  it('does not duplicate a candidate for two family members sharing one household', () => {
+  it('emits one row when two eligible NPCs share one home', () => {
     const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
     const s = settlement({
-      npcs: [{ id: 'anna', name: 'Anna', household }, { id: 'piotr', name: 'Piotr', household }],
-      houses: [house({ x: 5, z: 7 })],
+      npcs: [
+        npc({ id: 'anna', name: 'Anna', household }),
+        npc({ id: 'piotr', name: 'Piotr', household }),
+      ],
+      houses: [house({ x: 5, z: 7, bed: BED })],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('trusted') })
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]?.type).toBe('friend')
+  })
+
+  it('picks the household member with the highest relation as the representative', () => {
+    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
+    const s = settlement({
+      npcs: [
+        npc({ id: 'anna', name: 'Anna', household }),
+        npc({ id: 'piotr', name: 'Piotr', household }),
+      ],
+      houses: [house({ x: 5, z: 7, bed: BED })],
     })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => socialState('trusted'),
+      getPlayerSocial: relations({ anna: 'friendly', piotr: 'trusted' }),
     })
     expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({ ownerName: 'Piotr', quality: 'high' })
+  })
+
+  it('breaks equal relation by stable lowest npc.id independent of source array order', () => {
+    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
+    const houses = [house({ x: 5, z: 7, bed: BED })]
+    const forward = settlement({
+      npcs: [
+        npc({ id: 'npc-b', name: 'Beata', household }),
+        npc({ id: 'npc-a', name: 'Adam', household }),
+      ],
+      houses,
+    })
+    const reversed = settlement({
+      npcs: [
+        npc({ id: 'npc-a', name: 'Adam', household }),
+        npc({ id: 'npc-b', name: 'Beata', household }),
+      ],
+      houses,
+    })
+    const ctx = { getPlayerSocial: () => socialState('friendly') }
+    expect(collectLodgingCandidates([forward], ctx)[0]?.ownerName).toBe('Adam')
+    expect(collectLodgingCandidates([reversed], ctx)[0]?.ownerName).toBe('Adam')
+  })
+
+  it('emits distinct free rows for different physical homes', () => {
+    const s = settlement({
+      npcs: [
+        npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }),
+        npc({ id: 'kasia', name: 'Kasia', household: { id: 'settlement-1:household:1', homeId: 'settlement-1:home:1' } }),
+      ],
+      houses: [
+        house({ x: 5, z: 7, bed: { position: { x: 5, z: 7 }, approach: { x: 5.1, z: 7.1 }, facing: 0 } }),
+        house({ x: 9, z: 9, bed: { position: { x: 9, z: 9 }, approach: { x: 9.1, z: 9.1 }, facing: 1 } }),
+      ],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('friendly') })
+    expect(candidates.map((c) => c.ownerName).sort()).toEqual(['Anna', 'Kasia'])
+    expect(new Set(candidates.map((c) => c.placeId)).size).toBe(2)
   })
 })
 
-describe('collectLodgingCandidates — bed lodging (plan 169 provider)', () => {
-  it('produces a high-quality bed candidate for a house with a bed', () => {
+describe('collectLodgingCandidates — paid guard lodging', () => {
+  it('offers one paid stay when a guard and any settlement bed exist', () => {
     const s = settlement({
-      houses: [house({
-        x: 5,
-        z: 7,
-        bed: { position: { x: 5.2, z: 7.1 }, approach: { x: 5.5, z: 7.4 }, facing: 1.2 },
-      })],
+      npcs: [npc({ id: 'tomek', name: 'Tomek', role: 'guard', household: null })],
+      houses: [house({ x: 5, z: 7, bed: BED })],
     })
     const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
     expect(candidates).toHaveLength(1)
     expect(candidates[0]).toMatchObject({
-      id: 'settlement-1:bed:0',
-      type: 'bed',
-      quality: 'high',
-      position: { x: 5.2, z: 7.1 },
-      approachPoint: { x: 5.5, z: 7.4 },
-      facing: 1.2,
+      type: 'paid',
+      ownerName: 'Tomek',
+      price: GUARD_PAID_LODGING_PRICE,
+      quality: 'normal',
+      placeId: 'settlement-1:house:0',
+      position: BED.position,
+      approachPoint: BED.approach,
+      facing: BED.facing,
     })
   })
 
-  it('produces no bed candidate for a house without one', () => {
-    const s = settlement({ houses: [house({ x: 5, z: 7 })] })
-    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
-    expect(candidates).toHaveLength(0)
-  })
-
-  it('a bed beats a friendly NPC in the same settlement (class priority)', () => {
-    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
+  it('does not require the guard to own the chosen bed', () => {
     const s = settlement({
-      npcs: [{ id: 'anna', name: 'Anna', household }],
-      houses: [house({
-        x: 5,
-        z: 7,
-        bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null },
-      })],
+      npcs: [
+        npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }),
+        npc({ id: 'tomek', name: 'Tomek', role: 'guard', household: null }),
+      ],
+      houses: [house({ x: 5, z: 7, bed: BED })],
     })
-    const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => socialState('friendly'),
+    const paid = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
+      .find((c) => c.type === 'paid')
+    expect(paid?.householdId).toBeUndefined()
+    expect(paid?.placeId).toBe('settlement-1:house:0')
+    expect(paid?.ownerName).toBe('Tomek')
+  })
+
+  it('selects one paid provider by lowest stable guard id independent of array order', () => {
+    const houses = [house({ x: 5, z: 7, bed: BED })]
+    const forward = settlement({
+      npcs: [
+        npc({ id: 'guard-b', name: 'Bartek', role: 'guard', household: null }),
+        npc({ id: 'guard-a', name: 'Adam', role: 'guard', household: null }),
+      ],
+      houses,
     })
-    const best = resolveBestLodging(candidates, { x: 0, z: 0 })
-    expect(best?.type).toBe('bed')
+    const reversed = settlement({
+      npcs: [
+        npc({ id: 'guard-a', name: 'Adam', role: 'guard', household: null }),
+        npc({ id: 'guard-b', name: 'Bartek', role: 'guard', household: null }),
+      ],
+      houses,
+    })
+    const ctx = { getPlayerSocial: () => socialState('stranger') }
+    const a = collectLodgingCandidates([forward], ctx).filter((c) => c.type === 'paid')
+    const b = collectLodgingCandidates([reversed], ctx).filter((c) => c.type === 'paid')
+    expect(a).toHaveLength(1)
+    expect(b).toHaveLength(1)
+    expect(a[0]?.ownerName).toBe('Adam')
+    expect(b[0]?.ownerName).toBe('Adam')
+    expect(a[0]?.id).toBe(b[0]?.id)
+  })
+
+  it('selects the lowest-index physical bed for the paid offer', () => {
+    const laterBed = { position: { x: 1, z: 1 }, approach: { x: 1.1, z: 1.1 }, facing: 0 }
+    const earlierBed = { position: { x: 9, z: 9 }, approach: { x: 9.1, z: 9.1 }, facing: 2 }
+    const s = settlement({
+      npcs: [npc({ id: 'tomek', name: 'Tomek', role: 'guard', household: null })],
+      houses: [
+        house({ x: 0, z: 0 }),
+        house({ x: 9, z: 9, bed: earlierBed }),
+        house({ x: 1, z: 1, bed: laterBed }),
+      ],
+    })
+    const paid = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })[0]
+    expect(paid).toMatchObject({ placeId: 'settlement-1:house:1', position: earlierBed.position })
+  })
+
+  it('does not fabricate a paid offer when the settlement has no physical bed', () => {
+    const s = settlement({
+      npcs: [npc({ id: 'tomek', name: 'Tomek', role: 'guard', household: null })],
+      houses: [house({ x: 5, z: 7 })],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
+    expect(candidates.filter((c) => c.type === 'paid')).toEqual([])
   })
 })
 
@@ -197,50 +365,44 @@ describe('collectLodgingCandidates — hay fallback', () => {
   })
 })
 
-describe('collectLodgingCandidates — multiple sources for the choice panel', () => {
-  it('returns every available option, not just the resolver\'s pick — bed, friend and hay all appear', () => {
-    // Anna's household lives in house 1 (no bed) so bed/friend anchor on two
-    // distinct physical places here — house 0's bed candidate is unrelated.
-    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:1' }
+describe('collectLodgingCandidates — colliding offers', () => {
+  it('keeps only the free offer when friend and paid share a placeId', () => {
     const s = settlement({
-      npcs: [{ id: 'anna', name: 'Anna', household }],
+      npcs: [
+        npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }),
+        npc({ id: 'tomek', name: 'Tomek', role: 'guard', household: null }),
+      ],
+      houses: [house({ x: 5, z: 7, bed: BED })],
+    })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('friendly') })
+    expect(candidates.map((c) => c.type)).toEqual(['friend'])
+    expect(candidates[0]?.ownerName).toBe('Anna')
+  })
+
+  it('returns friend, paid and hay when they occupy distinct places', () => {
+    const s = settlement({
+      npcs: [
+        npc({ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:1' } }),
+        npc({ id: 'tomek', name: 'Tomek', role: 'guard', household: null }),
+      ],
       houses: [
         house({ x: 5, z: 7, bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null } }),
-        house({ x: 9, z: 9 }),
+        house({ x: 9, z: 9, bed: { position: { x: 9, z: 9 }, approach: { x: 9, z: 9 }, facing: null } }),
       ],
       haySpot: { x: 1, z: 1 },
     })
-    const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => socialState('friendly'),
-    })
-    expect(candidates.map((c) => c.type).sort()).toEqual(['bed', 'friend', 'hay'])
-  })
-
-  it('collapses a house that is both a bed and a friendly NPC\'s home into one panel entry', () => {
-    // Anna's household lives in house 0, which also has a physical bed — the
-    // same real place backs both the `bed` and `friend` internal candidates.
-    const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
-    const s = settlement({
-      npcs: [{ id: 'anna', name: 'Anna', household }],
-      houses: [
-        house({ x: 5, z: 7, bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null } }),
-      ],
-    })
-    const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => socialState('friendly'),
-    })
-    expect(candidates).toHaveLength(1)
-    expect(candidates[0]).toMatchObject({ type: 'bed' })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('friendly') })
+    expect(candidates.map((c) => c.type).sort()).toEqual(['friend', 'hay', 'paid'])
   })
 })
 
 describe('selectLodgingFromCandidates', () => {
-  const bed = option({ id: 'bed', type: 'bed', quality: 'high' })
-  const paid = option({ id: 'paid', type: 'paid', quality: 'normal', price: 5 })
+  const friend = option({ id: 'friend', type: 'friend', quality: 'normal' })
+  const paid = option({ id: 'paid', type: 'paid', quality: 'normal', price: GUARD_PAID_LODGING_PRICE })
   const freePaid = option({ id: 'free-paid', type: 'paid', quality: 'normal', price: 0 })
 
   it('classifies a free option as an immediate walk', () => {
-    expect(selectLodgingFromCandidates([bed], 'bed')).toEqual({ kind: 'walk', option: bed })
+    expect(selectLodgingFromCandidates([friend], 'friend')).toEqual({ kind: 'walk', option: friend })
   })
 
   it('classifies a priced paid option as needing confirmation', () => {
@@ -252,11 +414,34 @@ describe('selectLodgingFromCandidates', () => {
   })
 
   it('reports unavailable for an id no longer among fresh candidates (stale panel/prompt)', () => {
-    expect(selectLodgingFromCandidates([bed], 'gone')).toEqual({ kind: 'unavailable' })
+    expect(selectLodgingFromCandidates([friend], 'gone')).toEqual({ kind: 'unavailable' })
   })
 
   it('reports unavailable against an empty candidate list', () => {
-    expect(selectLodgingFromCandidates([], 'bed')).toEqual({ kind: 'unavailable' })
+    expect(selectLodgingFromCandidates([], 'friend')).toEqual({ kind: 'unavailable' })
+  })
+})
+
+describe('lodgingChoiceLabel — settlement lodging (plan settlements-npcs-039)', () => {
+  it('labels friend/hay/owned-house quality as Komfortowo / Dość wygodnie / Niewygodnie', () => {
+    expect(lodgingChoiceLabel(option({ id: 't', type: 'friend', quality: 'high', ownerName: 'Marek' })))
+      .toBe('U Marek — Komfortowo')
+    expect(lodgingChoiceLabel(option({ id: 'f', type: 'friend', quality: 'normal', ownerName: 'Kasia' })))
+      .toBe('U Kasia — Dość wygodnie')
+    expect(lodgingChoiceLabel(option({ id: 'h', type: 'hay', quality: 'low' })))
+      .toBe('Stóg siana — Niewygodnie')
+    expect(lodgingChoiceLabel(option({ id: 'o', type: 'owned_house', quality: 'high' })))
+      .toBe('Własna chata — Komfortowo')
+  })
+
+  it('includes provider, price and comfort on the paid row', () => {
+    expect(lodgingChoiceLabel(option({
+      id: 'p',
+      type: 'paid',
+      quality: 'normal',
+      ownerName: 'Tomek',
+      price: GUARD_PAID_LODGING_PRICE,
+    }))).toBe('Nocleg u strażnika: Tomek — 2 monety — Dość wygodnie')
   })
 })
 

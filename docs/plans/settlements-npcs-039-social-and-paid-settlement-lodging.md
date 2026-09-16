@@ -1,7 +1,7 @@
 # Plan: Social and Paid Settlement Lodging
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** fix
 **Priority:** medium · **Effort:** S
 **Depends on:** none
@@ -9,7 +9,13 @@
 **Subdomains:** `household` `social` `economy`
 **Tags:** `gameplay` `ui` `economy` `lodging`
 **Roadmap:** -
-**Model:** Sonnet, Composer
+**Implemented at:** 2026-09-16 12:30
+
+## Implementation status
+
+Implemented. Automated checks (`pnpm test`, `pnpm type-check`, `pnpm lint`, `pnpm build`) passed. Browser/manual verification is User-owned.
+
+Anonymous physical beds are no longer public lodging offers. Free lodging is one `friend` row per furnished home from `friendly`/`trusted` relation; V1 paid lodging is one guard offer at 2 coins. Labels: `Komfortowo` / `Dość wygodnie` / `Niewygodnie`.
 
 ## Goal
 
