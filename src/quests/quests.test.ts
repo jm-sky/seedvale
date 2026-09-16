@@ -11,6 +11,7 @@ import {
   QUESTS,
   rankQuestOfferCandidates,
   RESOLVED_WITHOUT_PLAYER_OUTCOME,
+  selectMatchingQuestDialogueReaction,
   uniqueOutcomeForState,
   validateQuestDefinitions,
 } from './quests'
@@ -440,6 +441,17 @@ describe('quest stage dialogue actions (plan quests-progression-018)', () => {
         playerLine: 'Tak, widziałem jelenia.',
         npcLine: 'Skoro tak. Zostały kamienie z gór — przynieś dwa.',
         consequences: { social: { reputation: { integrity: -2 } } },
+        reactions: [
+          {
+            when: [{ type: 'relation', npcName: 'Piotr', maximum: 'acquainted' }],
+            npcLine: 'Nie widziałem cię na tej grani. Kamienie pokaż — wtedy pogadamy.',
+            consequences: { relations: [{ npcName: 'Piotr', delta: -1 }] },
+          },
+          {
+            when: [{ type: 'relation', npcName: 'Piotr', minimum: 'trusted' }],
+            npcLine: 'Dobra. Biorę cię za słowo. Nie każ mi żałować.',
+          },
+        ],
       },
       {
         npcName: 'Piotr',
@@ -481,6 +493,88 @@ describe('quest stage dialogue actions (plan quests-progression-018)', () => {
       }],
     })
     expect(() => validateQuestDefinitions([bad])).toThrow(/dialogueActions is empty/)
+  })
+
+  it('rejects malformed dialogue reactions (plan quests-progression-050)', () => {
+    const baseAction = {
+      npc: { npcId: 'Piotr' },
+      playerLine: 'Tak, widziałem jelenia.',
+      npcLine: 'Skoro tak.',
+    }
+    const stage = {
+      objective: { type: 'spot_animal' as const, kind: 'stag' as const, range: 16 },
+      description: 'spot',
+      reminderLine: 'remind',
+    }
+    const wrap = (reactions: NonNullable<QuestDef['stages'][number]['dialogueActions']>[number]['reactions']): QuestDef => (
+      runtimeQuest({
+        ...runtimeAuthored(QUESTS.find((q) => q.id === 'zwiadowca')!),
+        id: 'reaction-invalid',
+        stages: [{ ...stage, dialogueActions: [{ ...baseAction, reactions }] }],
+      })
+    )
+    expect(() => validateQuestDefinitions([wrap([{ when: [], npcLine: 'x' }])])).toThrow(/empty when/)
+    expect(() => validateQuestDefinitions([wrap([{
+      when: [{ type: 'relation', npc: { npcId: 'Piotr' } }],
+      npcLine: 'x',
+    }])])).toThrow(/needs a bound/)
+    expect(() => validateQuestDefinitions([wrap([{
+      when: [{ type: 'relation', npc: { npcId: 'Piotr' }, minimum: 'trusted', maximum: 'stranger' }],
+      npcLine: 'x',
+    }])])).toThrow(/minimum exceeds maximum/)
+    expect(() => validateQuestDefinitions([wrap([{
+      when: [{ type: 'reputation', dimension: 'integrity', minimum: 5, maximum: 1 }],
+      npcLine: 'x',
+    }])])).toThrow(/minimum exceeds maximum/)
+    expect(() => validateQuestDefinitions([wrap([{
+      when: [{ type: 'reputation', dimension: 'integrity', minimum: 200 }],
+      npcLine: 'x',
+    }])])).toThrow(/reputation minimum/)
+    expect(() => validateQuestDefinitions([wrap([{
+      when: [{ type: 'relation', npc: { npcId: 'Piotr' }, minimum: 'stranger' }],
+      cooldown: { hours: 0, line: 'Poczekaj.' },
+    }])])).toThrow(/cooldown hours/)
+    expect(() => validateQuestDefinitions([wrap([{
+      when: [{ type: 'relation', npc: { npcId: 'Piotr' }, minimum: 'stranger' }],
+      cooldown: { hours: 2, line: '   ' },
+    }])])).toThrow(/cooldown line/)
+  })
+})
+
+describe('selectMatchingQuestDialogueReaction (plan quests-progression-050)', () => {
+  const piotr = { npcId: 'Piotr' }
+  const reads = {
+    relationLevel: () => 'friendly' as const,
+    reputation: () => 4,
+  }
+
+  it('returns the first fully matching reaction and treats missing bounds as unbounded', () => {
+    const matched = selectMatchingQuestDialogueReaction([
+      {
+        when: [{ type: 'relation', npc: piotr, maximum: 'acquainted' }],
+        npcLine: 'low',
+      },
+      {
+        when: [
+          { type: 'relation', npc: piotr, minimum: 'friendly' },
+          { type: 'reputation', dimension: 'integrity', minimum: 3, maximum: 10 },
+        ],
+        npcLine: 'mid',
+      },
+      {
+        when: [{ type: 'relation', npc: piotr, minimum: 'trusted' }],
+        npcLine: 'high',
+      },
+    ], reads)
+    expect(matched?.index).toBe(1)
+    expect(matched?.reaction.npcLine).toBe('mid')
+  })
+
+  it('falls back to no match when no reaction fits', () => {
+    expect(selectMatchingQuestDialogueReaction([{
+      when: [{ type: 'relation', npc: piotr, minimum: 'trusted' }],
+      npcLine: 'high',
+    }], reads)).toBeUndefined()
   })
 })
 

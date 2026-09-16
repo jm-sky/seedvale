@@ -2411,6 +2411,12 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
       }
       if (note.speakerNpcId !== undefined && typeof note.speakerNpcId !== 'string') return false
       if (note.stampId !== undefined && typeof note.stampId !== 'string') return false
+      if (
+        note.dialogueReactionIndex !== undefined
+        && (typeof note.dialogueReactionIndex !== 'number' || !Number.isInteger(note.dialogueReactionIndex) || note.dialogueReactionIndex < 0)
+      ) {
+        return false
+      }
     }
   }
   if (e.worldKnowledge !== undefined) {
@@ -2418,6 +2424,26 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
     for (const [knowledgeId, raw] of Object.entries(e.worldKnowledge as Record<string, unknown>)) {
       if (knowledgeId.length === 0) return false
       if (!isQuestWorldKnowledgeProgress(raw)) return false
+    }
+  }
+  if (e.dialogueCooldowns !== undefined) {
+    if (!e.dialogueCooldowns || typeof e.dialogueCooldowns !== 'object' || Array.isArray(e.dialogueCooldowns)) {
+      return false
+    }
+    for (const [npcId, raw] of Object.entries(e.dialogueCooldowns as Record<string, unknown>)) {
+      if (npcId.length === 0) return false
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false
+      const cooldown = raw as Record<string, unknown>
+      if (typeof cooldown.untilDay !== 'number' || !Number.isFinite(cooldown.untilDay)) return false
+      if (typeof cooldown.stageIndex !== 'number' || !Number.isInteger(cooldown.stageIndex) || cooldown.stageIndex < 0) {
+        return false
+      }
+      if (typeof cooldown.actionIndex !== 'number' || !Number.isInteger(cooldown.actionIndex) || cooldown.actionIndex < 0) {
+        return false
+      }
+      if (typeof cooldown.reactionIndex !== 'number' || !Number.isInteger(cooldown.reactionIndex) || cooldown.reactionIndex < 0) {
+        return false
+      }
     }
   }
   return true

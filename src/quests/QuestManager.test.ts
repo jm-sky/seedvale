@@ -1671,7 +1671,7 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
     const dialog = qm.onInteract('Kasia')
     expect(qm.getState('zaginiona-przesylka')).toBe('active')
     expect(dialog?.actions?.[0]?.label).toBe('Znalazłem przesyłkę. Proszę, jest twoja.')
-    expect(selectAction(dialog)).toBe('Dziękuję, że przyniosłeś przesyłkę nietkniętą. To dla mnie dużo znaczy.')
+    expect(selectAction(dialog)).toBe('Oddajesz. Pieczęć cała — na razie tyle mi wystarczy.')
     expect(qm.getState('zaginiona-przesylka')).toBe('complete')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('returned_sealed')
     expect(granted).toEqual([{ kind: 'coin', count: 15 }])
@@ -1804,7 +1804,7 @@ describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', 
     )
     acceptOffer(qm, 'Anna')
     speak(qm, 'Piotr')
-    expect(selectAction(qm.onInteract('Piotr'))).toBe('Dobra, skoro tak. Będę miał czym robić.')
+    expect(selectAction(qm.onInteract('Piotr'))).toBe('Dobrze. Drewno się przyda. Resztę zostawmy na później.')
     expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_piotr')
     expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(false)
     expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(true)
@@ -2905,11 +2905,12 @@ describe('QuestManager playtest reachability (plan quests-progression-018)', () 
     )
     startScoutAtStag(qm)
     const dialog = qm.onInteract('Piotr')
-    expect(selectLabel(dialog, STAG_LIE)).toBe('Skoro tak. Zostały kamienie z gór — przynieś dwa.')
+    expect(selectLabel(dialog, STAG_LIE)).toBe('Nie widziałem cię na tej grani. Kamienie pokaż — wtedy pogadamy.')
     expect(qm.getState('zwiadowca')).toBe('active')
     expect(qm.exportProgress()[0]?.stageIndex).toBe(2)
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBeUndefined()
     expect(consequences).toEqual([{ settlementId: 'home', reputation: { integrity: -2 } }])
+    expect(qm.getRelation('Piotr')).toBe(-1)
     expect(selectLabel(dialog, STAG_HONEST)).toBe('Masz już kamienie z gór?')
     expect(consequences).toHaveLength(1)
     expect(qm.exportProgress()[0]?.stageIndex).toBe(2)
@@ -2985,7 +2986,7 @@ describe('QuestManager playtest reachability (plan quests-progression-018)', () 
     expect(selectLabel(dialog, BOAR_TALK)).toContain('Przy szlaku w lesie')
     expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(1)
     expect(qm.exportProgress().find((entry) => entry.id === 'dzik-przy-szlaku')?.stageIndex).toBe(1)
-    expect(selectLabel(dialog, STAG_LIE)).toBe('Skoro tak. Zostały kamienie z gór — przynieś dwa.')
+    expect(selectLabel(dialog, STAG_LIE)).toBe('Nie widziałem cię na tej grani. Kamienie pokaż — wtedy pogadamy.')
     expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(2)
     expect(qm.exportProgress().find((entry) => entry.id === 'dzik-przy-szlaku')?.stageIndex).toBe(1)
     expect(qm.getState('zwiadowca')).toBe('active')
@@ -4459,7 +4460,7 @@ describe('QuestManager quest-log journal notes (plan ui-input-021)', () => {
     expect(lieNotes.map((note) => note.text)).toEqual([
       'Chcę wiedzieć, co się dzieje za osadą. Zajrzyj do jaskini, wypatrz jelenia po drodze i przynieś dwa kamienie z gór — wtedy będę pewien, że naprawdę tam byłeś.',
       'Przy wejściu widać świeże tropy. To miejsce nie jest puste. Teraz wypatrz jelenia.',
-      'Skoro tak. Zostały kamienie z gór — przynieś dwa.',
+      'Nie widziałem cię na tej grani. Kamienie pokaż — wtedy pogadamy.',
     ])
     expect(lieNotes.some((note) => note.text.includes('Jeleń zerwał się'))).toBe(false)
     expect(lie.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(2)
@@ -4793,6 +4794,207 @@ describe('QuestManager deferred world knowledge (plan quests-progression-047)', 
     expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'cemetery:0:0:0:1' })?.line)
       .toContain('groby')
     expect(qm.getState('zapomniany-cmentarz')).toBe('ready_to_report')
+  })
+})
+
+describe('QuestManager socially consequential dialogue (plan quests-progression-050)', () => {
+  const cooldownQuest = quest({
+    id: 'cooldown-talk',
+    giverName: 'Piotr',
+    offerLine: 'offer cooldown',
+    stages: [{
+      objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+      description: 'spot',
+      reminderLine: 'Widziałeś jelenia?',
+      dialogueActions: [{
+        npc: { npcId: 'Piotr' },
+        playerLine: 'Potrzebuję więcej szczegółów.',
+        npcLine: 'Notatki, które masz, wystarczą.',
+        skipAdvance: true,
+        reactions: [{
+          when: [{ type: 'relation', npc: { npcId: 'Piotr' }, maximum: 'acquainted' }],
+          npcLine: 'Najpierw sprawdź trop, który już dostałeś.',
+          consequences: { relations: [{ npc: { npcId: 'Piotr' }, delta: -1 }] },
+          cooldown: {
+            hours: 6,
+            line: 'Przejrzyj to, co już masz. Potem wrócimy do jelenia.',
+          },
+        }],
+      }],
+    }],
+    reportLine: 'report cooldown',
+  })
+
+  const otherQuest = quest({
+    id: 'other-talk',
+    giverName: 'Piotr',
+    offerLine: 'offer other',
+    offer: { urgency: 'urgent' },
+    stages: [{
+      objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } },
+      description: 'talk',
+      reminderLine: 'remind other',
+      playerLine: 'Chciałem o czym innym.',
+      progressLine: 'other progress',
+    }],
+    reportLine: 'report other',
+  })
+
+  it('re-reads live social values on a stale callback and applies reaction consequences once', () => {
+    let integrity = 0
+    const social: QuestSocialAvailabilityLookup = {
+      getReputationDimension: () => integrity,
+      getRenown: () => 0,
+    }
+    const def = quest({
+      id: 'stale-reaction',
+      giverName: 'Piotr',
+      offerLine: 'offer stale',
+      settlementId: 'home',
+      stages: [{
+        objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+        description: 'spot',
+        reminderLine: 'Widziałeś jelenia?',
+        dialogueActions: [{
+          npc: { npcId: 'Piotr' },
+          playerLine: 'Tak, widziałem jelenia.',
+          npcLine: 'Skoro tak. Zostały kamienie z gór — przynieś dwa.',
+          reactions: [
+            {
+              when: [{ type: 'reputation', dimension: 'integrity', maximum: 0 }],
+              npcLine: 'Nie widziałem cię na tej grani. Kamienie pokaż — wtedy pogadamy.',
+              consequences: { relations: [{ npc: { npcId: 'Piotr' }, delta: -1 }] },
+            },
+            {
+              when: [{ type: 'reputation', dimension: 'integrity', minimum: 5 }],
+              npcLine: 'Dobra. Biorę cię za słowo. Nie każ mi żałować.',
+            },
+          ],
+        }],
+      }],
+      reportLine: 'report stale',
+    })
+    const qm = makeManager([def], undefined, undefined, undefined, social)
+    acceptOffer(qm, 'Piotr')
+    const stale = qm.onInteract('Piotr')!.actions![0]!.onSelect
+    integrity = 6
+    expect(stale()).toBe('Dobra. Biorę cię za słowo. Nie każ mi żałować.')
+    expect(qm.getRelation('Piotr')).toBe(0)
+    expect(stale()).toBe('report stale')
+    expect(qm.getRelation('Piotr')).toBe(0)
+    expect(qm.getState('stale-reaction')).toBe('ready_to_report')
+
+    const once = makeManager([def], undefined, undefined, undefined, social)
+    acceptOffer(once, 'Piotr')
+    integrity = 0
+    const select = once.onInteract('Piotr')!.actions![0]!.onSelect
+    expect(select()).toBe('Nie widziałem cię na tej grani. Kamienie pokaż — wtedy pogadamy.')
+    expect(once.getRelation('Piotr')).toBe(-1)
+    expect(select()).toBe('report stale')
+    expect(once.getRelation('Piotr')).toBe(-1)
+  })
+
+  it('suppresses only this quest context until the exact world-time boundary and restores from snapshot', () => {
+    let elapsedDays = 1
+    const clock: QuestWorldTimeLookup = {
+      getWorldSeed: () => 0,
+      getTimeOfDay: () => 0,
+      getElapsedDays: () => elapsedDays,
+    }
+    const qm = makeManager(
+      [cooldownQuest, otherQuest],
+      undefined,
+      undefined,
+      {
+        progress: [
+          { id: 'cooldown-talk', state: 'active', stageIndex: 0 },
+          { id: 'other-talk', state: 'active', stageIndex: 0 },
+        ],
+        relations: {},
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      clock,
+    )
+    expect(qm.getState('cooldown-talk')).toBe('active')
+    expect(qm.getState('other-talk')).toBe('active')
+    const reply = qm.onInteract('Piotr')?.actions?.find((action) => action.label === 'Potrzebuję więcej szczegółów.')?.onSelect()
+    expect(reply).toBe('Najpierw sprawdź trop, który już dostałeś.')
+    const cooled = qm.onInteract('Piotr')
+    expect(cooled?.actions?.some((action) => action.label === 'Potrzebuję więcej szczegółów.')).toBe(false)
+    expect(cooled?.line === 'Przejrzyj to, co już masz. Potem wrócimy do jelenia.'
+      || cooled?.topics?.some((topic) => topic.resolve().line.includes('Przejrzyj to'))).toBe(true)
+    expect(cooled?.actions?.some((action) => action.label === 'Chciałem o czym innym.')).toBe(true)
+    expect(qm.labelMarker('Piotr')).toBe('?')
+
+    const snapshot = { progress: qm.exportProgress(), relations: qm.exportRelations() }
+    expect(snapshot.progress.find((entry) => entry.id === 'cooldown-talk')?.dialogueCooldowns?.Piotr).toMatchObject({
+      stageIndex: 0,
+      actionIndex: 0,
+      reactionIndex: 0,
+    })
+    const restored = makeManager(
+      [cooldownQuest, otherQuest],
+      undefined,
+      undefined,
+      snapshot,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      clock,
+    )
+    expect(restored.onInteract('Piotr')?.actions?.some((action) => action.label === 'Potrzebuję więcej szczegółów.')).toBe(false)
+
+    elapsedDays = 1 + 6 / 24
+    expect(qm.onInteract('Piotr')?.actions?.some((action) => action.label === 'Potrzebuję więcej szczegółów.')).toBe(true)
+    expect(restored.onInteract('Piotr')?.actions?.some((action) => action.label === 'Potrzebuję więcej szczegółów.')).toBe(true)
+  })
+
+  it('keeps zwiadowca, przesyłka and sporne-drewno canonical outcomes reachable', () => {
+    const scout = new QuestManager([homeQuest('zwiadowca')], undefined, new Inventory(), {
+      progress: [],
+      relations: { Piotr: 6 },
+    })
+    acceptOffer(scout, 'Piotr')
+    scout.onInteractObjective(CAVE_REF)
+    expect(scout.onInteract('Piotr')?.actions?.find((action) => action.label === 'Tak, widziałem jelenia.')?.onSelect())
+      .toBe('Dobra. Biorę cię za słowo. Nie każ mi żałować.')
+    expect(scout.exportProgress()[0]?.stageIndex).toBe(2)
+
+    const parcel = new QuestManager([homeQuest('zaginiona-przesylka')], undefined, new Inventory(), {
+      progress: [],
+      relations: { Kasia: 4 },
+    })
+    acceptOffer(parcel, 'Kasia')
+    parcel.onInteractObjective(CAVE_REF)
+    expect(parcel.onInteract('Marek')?.actions?.[0]?.onSelect())
+      .toContain('Kasia będzie czekała przy grocie')
+    expect(parcel.exportProgress()[0]?.resolvedOutcomeId).toBe('turned_over_to_guard')
+    expect(parcel.getRelation('Kasia')).toBe(2)
+
+    const wood = new QuestManager(woodPack(), undefined, new Inventory(), {
+      progress: [],
+      relations: { Anna: 4, Piotr: 4 },
+    })
+    acceptOffer(wood, 'Anna')
+    speak(wood, 'Piotr')
+    expect(wood.onInteract('Anna')?.actions?.[0]?.onSelect())
+      .toBe('Wezmę drewno. Piotrowi sam powiedz, że dach poczeka.')
+    expect(wood.exportProgress().find((entry) => entry.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_anna')
+  })
+
+  it('journals the heard reaction line for a stage dialogue action', () => {
+    const qm = makeManager([cooldownQuest])
+    acceptOffer(qm, 'Piotr')
+    qm.onInteract('Piotr')?.actions?.[0]?.onSelect()
+    expect(qm.list().find((entry) => entry.id === 'cooldown-talk')?.notes.map((note) => note.text))
+      .toContain('Najpierw sprawdź trop, który już dostałeś.')
+    expect(qm.exportProgress()[0]?.journal?.some((event) => event.dialogueReactionIndex === 0)).toBe(true)
   })
 })
 

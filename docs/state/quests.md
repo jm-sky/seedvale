@@ -251,6 +251,10 @@ Opening dialogue or selecting a topic does not itself mutate quest progress. Exp
 - stage `dialogueActions`,
 - generic abandon where allowed.
 
+Stage `dialogueActions` and `talk_to_npc_choice` choices may author ordered `reactions`. `QuestManager` evaluates them from live relation/reputation **when the player selects the line**, not when the menu opens. The first fully matching reaction wins (conditions inside `when` are ANDed). A match may override the NPC reply, apply additional `QuestConsequences`, and start a quest-topic cooldown. No match keeps the base line and base consequences. Reaction consequences are additional to the action/outcome, not a replacement terminal branch.
+
+A quest-topic cooldown is scoped to that quest context for one NPC (`QuestProgressEntry.dialogueCooldowns`). While `getElapsedDays() < untilDay` and the cooldown's `stageIndex` is still current, that contribution exposes the authored cooldown line with no quest actions. Other quests, trade and generic dialogue stay available. Expiry is world-time, not a timer. Terminal talk-choices do not persist a cooldown.
+
 Generic abandon is available for ordinary active giver quests unless `QuestAbandonment.allowed === false`. It moves the quest to terminal `abandoned`, applies optional existing `QuestConsequences` exactly once and clears quest-local runtime bindings. Story quests can disable generic abandon and resolve withdrawal through authored outcomes instead.
 
 In multi-quest dialogue, generic abandon actions are `topicScoped` so the player sees the quest title/context instead of several indistinguishable flat "Przykro mi…" actions.
@@ -282,7 +286,7 @@ Each visible entry includes `notes`: already-heard lines, oldest first, each `{ 
 
 - `dateLabel` is `Dzień N · HH:MM` from the world clock at the moment the line was heard (`formatWorldDayClock`). It is `null` when reconstructed from an older save that has no journal.
 - `speakerName` is the giver / NPC display name, or `Obserwacja` when a `progressLine` came from a world object rather than an NPC.
-- `text` is always projected from the live `QuestDef` (`offerLine`, stage `progressLine`, selected `dialogueActions.npcLine`, or result / report / abandon line). Authored wording changes after load show the current line at the saved timestamp.
+- `text` is always projected from the live `QuestDef` (`offerLine`, stage `progressLine`, selected `dialogueActions.npcLine` or a matching reaction `npcLine` via optional `dialogueReactionIndex`, or result / report / abandon line). Authored wording changes after load show the current line at the saved timestamp.
 
 Stamps live on optional `QuestProgressEntry.journal`. `QuestManager` writes them on offer admission, heard stage progress, selected stage dialogue-action NPC lines, and terminal `complete` / `failed` / `abandoned`. Pending vs revealed world-knowledge lines on the same stage use optional `stampId` so they do not collide. It does not stamp reminders, unchosen branches, or `not_offered`. Decline back to `not_offered` clears the journal; abandon keeps notes and adds a result. Older saves without `journal` reconstruct only the offer (and a result when already terminal), never guessed historical `progressLine`s.
 
@@ -323,10 +327,11 @@ Persisted `QuestProgressEntry` currently includes:
 - optional legacy `stageCount`,
 - optional `stageSlotProgress` for multi-objective stages,
 - optional `offerSuppressedUntilDay` for declined offers,
-- optional `journal` heard-line stamps (kind, optional stage/dialogue-action/`stampId`/speaker, world clock). Quote text is not stored.
+- optional `journal` heard-line stamps (kind, optional stage/dialogue-action/`dialogueReactionIndex`/`stampId`/speaker, world clock). Quote text is not stored.
 - optional `worldKnowledge` research/binding slots keyed by authored knowledge id (requested/resolved/unavailable, reveal times, optional stable ref). Promises are never stored.
+- optional `dialogueCooldowns` keyed by NPC id (absolute `untilDay`, stage/action/reaction indexes). Absent on older saves = no cooldown.
 
-No save-version bump was required for plans `032`–`034`, `ui-input-021`, or `quests-progression-047`; new progress fields are additive/optional. Active giver capacity and offer ranking are derived and are not stored as queues/slots. Older active saves for migrated research quests are normalized into a reachable post-research stage.
+No save-version bump was required for plans `032`–`034`, `ui-input-021`, `quests-progression-047`, or `quests-progression-050`; new progress fields are additive/optional. Active giver capacity and offer ranking are derived and are not stored as queues/slots. Older active saves for migrated research quests are normalized into a reachable post-research stage.
 
 Quest-owned player↔NPC relation values are also restored into `QuestManager`; legacy name-keyed relation entries are normalized where unambiguous.
 

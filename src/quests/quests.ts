@@ -128,10 +128,112 @@ export type QuestAbandonment = {
 }
 
 const RELATION_LEVEL_ORDER: readonly RelationLevel[] = ['stranger', 'acquainted', 'friendly', 'trusted']
+const RELATION_LEVEL_SET: ReadonlySet<RelationLevel> = new Set(RELATION_LEVEL_ORDER)
+const REPUTATION_DIMENSIONS: ReadonlySet<ReputationDimension> = new Set([
+  'benevolence',
+  'competence',
+  'courage',
+  'integrity',
+  'trust',
+])
 
 /** Whether `current` meets or exceeds the authored `minimum` tier. */
 export function relationLevelMeetsMinimum(current: RelationLevel, minimum: RelationLevel): boolean {
   return RELATION_LEVEL_ORDER.indexOf(current) >= RELATION_LEVEL_ORDER.indexOf(minimum)
+}
+
+function relationLevelIndex(level: RelationLevel): number {
+  return RELATION_LEVEL_ORDER.indexOf(level)
+}
+
+/**
+ * Inclusive relation-tier window. Missing `minimum`/`maximum` is unbounded
+ * on that side (plan quests-progression-050).
+ *
+ * @domain quests-progression
+ */
+export function relationLevelInInclusiveRange(
+  current: RelationLevel,
+  minimum?: RelationLevel,
+  maximum?: RelationLevel,
+): boolean {
+  const idx = relationLevelIndex(current)
+  if (minimum !== undefined && idx < relationLevelIndex(minimum)) return false
+  if (maximum !== undefined && idx > relationLevelIndex(maximum)) return false
+  return true
+}
+
+/**
+ * Inclusive live-social gate on a quest dialogue reaction
+ * (plan quests-progression-050). Conditions inside one reaction are ANDed.
+ *
+ * @domain quests-progression
+ */
+export type QuestDialogueReactionCondition =
+  | { type: 'relation', npc: QuestNpcRef, minimum?: RelationLevel, maximum?: RelationLevel }
+  | { type: 'reputation', dimension: ReputationDimension, minimum?: number, maximum?: number }
+
+export type QuestDialogueCooldownSpec = {
+  hours: number
+  line: string
+}
+
+/**
+ * Authored overlay on a conscious quest dialogue action or talk choice.
+ * First matching `when` wins; no match keeps the base line/consequences.
+ *
+ * @domain quests-progression
+ */
+export type QuestDialogueReaction = {
+  when: readonly QuestDialogueReactionCondition[]
+  npcLine?: string
+  consequences?: QuestConsequences
+  cooldown?: QuestDialogueCooldownSpec
+}
+
+/**
+ * Live values used to match `QuestDialogueReaction.when` at selection time.
+ *
+ * @domain quests-progression
+ */
+export type QuestDialogueReactionReads = {
+  relationLevel: (npcId: NpcId) => RelationLevel
+  reputation: (dimension: ReputationDimension) => number
+}
+
+function reactionConditionMatches(
+  condition: QuestDialogueReactionCondition,
+  reads: QuestDialogueReactionReads,
+): boolean {
+  if (condition.type === 'relation') {
+    return relationLevelInInclusiveRange(
+      reads.relationLevel(condition.npc.npcId),
+      condition.minimum,
+      condition.maximum,
+    )
+  }
+  const value = reads.reputation(condition.dimension)
+  if (condition.minimum !== undefined && value < condition.minimum) return false
+  if (condition.maximum !== undefined && value > condition.maximum) return false
+  return true
+}
+
+/**
+ * First fully matching reaction, or `undefined` when none match.
+ *
+ * @domain quests-progression
+ */
+export function selectMatchingQuestDialogueReaction(
+  reactions: readonly QuestDialogueReaction[] | undefined,
+  reads: QuestDialogueReactionReads,
+): { reaction: QuestDialogueReaction, index: number } | undefined {
+  if (!reactions?.length) return undefined
+  for (const [index, reaction] of reactions.entries()) {
+    if (reaction.when.every((condition) => reactionConditionMatches(condition, reads))) {
+      return { reaction, index }
+    }
+  }
+  return undefined
 }
 
 const REPUTATION_MIN = -100
@@ -144,8 +246,8 @@ export class QuestDefinitionValidationError extends Error {}
 /** Validates final runtime quest definitions once, after composition-root
  *  settlement binding. Throws `QuestDefinitionValidationError` on invalid
  *  authored prerequisites, `talk_to_npc_choice` objectives, stage
- *  dialogue actions, or nonlinear stage flow — never clamps thresholds at
- *  runtime. */
+ *  dialogue actions, dialogue reactions, or nonlinear stage flow — never
+ *  clamps thresholds at runtime. */
 export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
   const byId = new Map(defs.map((def) => [def.id, def]))
   for (const def of defs) {
@@ -254,6 +356,11 @@ function validateTalkToNpcChoiceObjective(def: QuestDef): void {
             `Quest "${def.id}" talk_to_npc_choice references unknown outcome "${choice.outcomeId}"`,
           )
         }
+        validateQuestDialogueReactions(
+          def,
+          choice.reactions,
+          `talk_to_npc_choice "${choice.npc.npcId}"`,
+        )
       }
     }
   }
@@ -284,6 +391,88 @@ function validateStageDialogueActions(def: QuestDef): void {
           `Quest "${def.id}" stage dialogue action is missing an npc target`,
         )
       }
+      validateQuestDialogueReactions(def, action.reactions, `stage ${stageIndex} dialogue action`)
+    }
+  }
+}
+
+function numericBoundInReputationRange(value: number | undefined, label: string, defId: string): void {
+  if (value === undefined) return
+  if (!Number.isFinite(value) || value < REPUTATION_MIN || value > REPUTATION_MAX) {
+    throw new QuestDefinitionValidationError(
+      `Quest "${defId}" ${label} ${value} is outside ${REPUTATION_MIN}..${REPUTATION_MAX}`,
+    )
+  }
+}
+
+function validateQuestDialogueReactions(
+  def: QuestDef,
+  reactions: readonly QuestDialogueReaction[] | undefined,
+  context: string,
+): void {
+  if (!reactions) return
+  for (const [reactionIndex, reaction] of reactions.entries()) {
+    const where = `${context} reaction ${reactionIndex}`
+    if (reaction.when.length === 0) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" ${where} has empty when`)
+    }
+    for (const condition of reaction.when) {
+      if (condition.minimum === undefined && condition.maximum === undefined) {
+        throw new QuestDefinitionValidationError(`Quest "${def.id}" ${where} condition needs a bound`)
+      }
+      if (condition.type === 'relation') {
+        if (condition.minimum !== undefined && !RELATION_LEVEL_SET.has(condition.minimum)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" ${where} has unknown relation minimum "${String(condition.minimum)}"`,
+          )
+        }
+        if (condition.maximum !== undefined && !RELATION_LEVEL_SET.has(condition.maximum)) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" ${where} has unknown relation maximum "${String(condition.maximum)}"`,
+          )
+        }
+        if (
+          condition.minimum !== undefined
+          && condition.maximum !== undefined
+          && relationLevelIndex(condition.minimum) > relationLevelIndex(condition.maximum)
+        ) {
+          throw new QuestDefinitionValidationError(
+            `Quest "${def.id}" ${where} relation minimum exceeds maximum`,
+          )
+        }
+        if (!condition.npc.npcId) {
+          throw new QuestDefinitionValidationError(`Quest "${def.id}" ${where} relation condition is missing an npc`)
+        }
+        continue
+      }
+      if (!REPUTATION_DIMENSIONS.has(condition.dimension)) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" ${where} has unknown reputation dimension "${String(condition.dimension)}"`,
+        )
+      }
+      numericBoundInReputationRange(condition.minimum, `${where} reputation minimum`, def.id)
+      numericBoundInReputationRange(condition.maximum, `${where} reputation maximum`, def.id)
+      if (
+        condition.minimum !== undefined
+        && condition.maximum !== undefined
+        && condition.minimum > condition.maximum
+      ) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" ${where} reputation minimum exceeds maximum`,
+        )
+      }
+    }
+    if (reaction.npcLine !== undefined && reaction.npcLine.trim().length === 0) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" ${where} npcLine is empty`)
+    }
+    if (!reaction.cooldown) continue
+    if (!Number.isFinite(reaction.cooldown.hours) || reaction.cooldown.hours <= 0) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" ${where} cooldown hours must be finite and > 0`,
+      )
+    }
+    if (reaction.cooldown.line.trim().length === 0) {
+      throw new QuestDefinitionValidationError(`Quest "${def.id}" ${where} cooldown line is empty`)
     }
   }
 }
@@ -607,6 +796,12 @@ export type QuestJournalEvent = {
   /** Selected `dialogueActions` index when the stamp is that NPC line, not `progressLine`. */
   dialogueActionIndex?: number
   /**
+   * Selected reaction overlay on that dialogue action
+   * (plan quests-progression-050). Absent on older saves; `list()` then
+   * projects the base `npcLine`.
+   */
+  dialogueReactionIndex?: number
+  /**
    * Distinguishes multiple progress stamps on the same stage (plan
    * quests-progression-047) — pending research vs later reveal. Absent on
    * older saves; `list()` projects text from the live def.
@@ -708,6 +903,25 @@ export type QuestProgressEntry = {
    * (plan quests-progression-047). Absent on older saves = unrequested.
    */
   worldKnowledge?: Record<string, QuestWorldKnowledgeProgress>
+  /**
+   * Quest-topic dialogue cooldown keyed by NPC id
+   * (plan quests-progression-050). Absolute `untilDay` from
+   * `QuestWorldTimeLookup.getElapsedDays()`. Absent on older saves = none.
+   */
+  dialogueCooldowns?: Record<NpcId, QuestDialogueCooldown>
+}
+
+/**
+ * Persisted quest-topic cooldown coordinates. Copy is projected from the
+ * live def; quote text is not stored.
+ *
+ * @domain quests-progression
+ */
+export type QuestDialogueCooldown = {
+  untilDay: number
+  stageIndex: number
+  actionIndex: number
+  reactionIndex: number
 }
 
 export const QUEST_STATES: ReadonlySet<QuestState> = new Set([
@@ -782,6 +996,11 @@ export type QuestObjective =
         playerLine: string
         /** Optional NPC prompt shown before the player speaks. */
         npcLine?: string
+        /**
+         * Selection-time relation/reputation overlays
+         * (plan quests-progression-050). First match wins.
+         */
+        reactions?: readonly QuestDialogueReaction[]
       }[]
     }
   | { type: 'interact_well' }
@@ -948,6 +1167,11 @@ export type QuestStageDialogueAction = {
    * optional alongside an already-active world investigation.
    */
   skipAdvance?: boolean
+  /**
+   * Selection-time relation/reputation overlays
+   * (plan quests-progression-050). First match wins.
+   */
+  reactions?: readonly QuestDialogueReaction[]
 }
 
 export type QuestLocationReveal = (
@@ -1215,6 +1439,7 @@ export type AuthoredQuestObjective =
         outcomeId: QuestOutcomeId
         playerLine: string
         npcLine?: string
+        reactions?: readonly AuthoredQuestDialogueReaction[]
       }[]
     }
   | { type: 'receive_world_knowledge', knowledgeId: string, npcName: string }
@@ -1231,6 +1456,23 @@ export type AuthoredQuestPrerequisite =
 
 export type AuthoredQuestConsequences = Omit<QuestConsequences, 'relations'> & {
   relations?: ReadonlyArray<{ npcName: string, delta: number }>
+}
+
+export type AuthoredQuestDialogueReactionCondition =
+  | { type: 'relation', npcName: string, minimum?: RelationLevel, maximum?: RelationLevel }
+  | { type: 'reputation', dimension: ReputationDimension, minimum?: number, maximum?: number }
+
+/**
+ * Authored overlay on a dialogue action or talk choice. NPC names bind at
+ * composition-root materialization (plan quests-progression-050).
+ *
+ * @domain quests-progression
+ */
+export type AuthoredQuestDialogueReaction = {
+  when: readonly AuthoredQuestDialogueReactionCondition[]
+  npcLine?: string
+  consequences?: AuthoredQuestConsequences
+  cooldown?: QuestDialogueCooldownSpec
 }
 
 /**
@@ -1251,6 +1493,7 @@ export type AuthoredQuestStageDialogueAction = {
   effects?: readonly QuestStageEffect[]
   requireWorldKnowledgeReady?: string
   skipAdvance?: boolean
+  reactions?: readonly AuthoredQuestDialogueReaction[]
 }
 
 export type AuthoredQuestStageObjectiveSlot = {
@@ -1402,6 +1645,17 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
             playerLine: 'Tak, widziałem jelenia.',
             npcLine: 'Skoro tak. Zostały kamienie z gór — przynieś dwa.',
             consequences: { social: { reputation: { integrity: -2 } } },
+            reactions: [
+              {
+                when: [{ type: 'relation', npcName: 'Piotr', maximum: 'acquainted' }],
+                npcLine: 'Nie widziałem cię na tej grani. Kamienie pokaż — wtedy pogadamy.',
+                consequences: { relations: [{ npcName: 'Piotr', delta: -1 }] },
+              },
+              {
+                when: [{ type: 'relation', npcName: 'Piotr', minimum: 'trusted' }],
+                npcLine: 'Dobra. Biorę cię za słowo. Nie każ mi żałować.',
+              },
+            ],
           },
           {
             npcName: 'Piotr',
@@ -1730,6 +1984,16 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
               npcLine:
                 'Znalazłeś przesyłkę? Oddaj mi ją, zanim ktoś obcy zajrzy do środka. To moja korespondencja i bez niej stoję na szlaku z pustymi rękami.',
               playerLine: 'Znalazłem przesyłkę. Proszę, jest twoja.',
+              reactions: [
+                {
+                  when: [{ type: 'relation', npcName: 'Kasia', maximum: 'acquainted' }],
+                  npcLine: 'Oddajesz. Pieczęć cała — na razie tyle mi wystarczy.',
+                },
+                {
+                  when: [{ type: 'relation', npcName: 'Kasia', minimum: 'friendly' }],
+                  npcLine: 'Dziękuję. Gdybyś zajrzał do środka, szlak by o tym usłyszał szybciej niż ja.',
+                },
+              ],
             },
             {
               npcName: 'Marek',
@@ -1737,6 +2001,17 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
               npcLine:
                 'Kasia zgubiła przesyłkę na szlaku. Jeśli ją masz — oddaj mi ją. Straż powinna sprawdzić, skąd przyszła i czy na pewno jest tym, za co ją podaje.',
               playerLine: 'Znalazłem przesyłkę Kasi. Przekazuję ją straży.',
+              reactions: [
+                {
+                  when: [{ type: 'relation', npcName: 'Kasia', minimum: 'friendly' }],
+                  npcLine: 'Kasia będzie czekała przy grocie. Otworzymy to przy świadkach, zanim ktokolwiek zgadnie, co jest w środku.',
+                  consequences: { relations: [{ npcName: 'Kasia', delta: -1 }] },
+                },
+                {
+                  when: [{ type: 'reputation', dimension: 'integrity', minimum: 5 }],
+                  npcLine: 'Dobrze. Otworzymy ją przy świadkach i będzie jasne, co dalej.',
+                },
+              ],
             },
           ],
         },
@@ -1796,12 +2071,30 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
               outcomeId: 'support_anna',
               npcLine: 'No i jak? Piotr cię przekonał, czy zostajesz przy gospodarstwie?',
               playerLine: 'Pomożę tobie. Gospodarstwo nie może czekać.',
+              reactions: [
+                {
+                  when: [{ type: 'relation', npcName: 'Piotr', minimum: 'friendly' }],
+                  npcLine: 'Wezmę drewno. Piotrowi sam powiedz, że dach poczeka.',
+                  consequences: { relations: [{ npcName: 'Piotr', delta: -1 }] },
+                },
+              ],
             },
             {
               npcName: 'Piotr',
               outcomeId: 'support_piotr',
               npcLine: 'No? Pomagasz mi, czy Annie?',
               playerLine: 'Pomożę tobie. Najpierw naprawy, potem reszta.',
+              reactions: [
+                {
+                  when: [{ type: 'relation', npcName: 'Piotr', maximum: 'acquainted' }],
+                  npcLine: 'Dobrze. Drewno się przyda. Resztę zostawmy na później.',
+                },
+                {
+                  when: [{ type: 'relation', npcName: 'Anna', minimum: 'friendly' }],
+                  npcLine: 'Wezmę deski. Annie nie mów, że gospodarstwo mogło poczekać — sama to usłyszy.',
+                  consequences: { relations: [{ npcName: 'Anna', delta: -1 }] },
+                },
+              ],
             },
           ],
         },

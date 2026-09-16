@@ -2,10 +2,13 @@ import type { SettlementNpcDescriptor } from '../settlement/npcIdentity'
 import type { NpcId } from '../settlement/npcState'
 import type {
   AuthoredQuestDef,
+  AuthoredQuestDialogueReaction,
   AuthoredQuestObjective,
   AuthoredQuestStageDialogueAction,
   AuthoredQuestStageObjectiveSlot,
+  QuestConsequences,
   QuestDef,
+  QuestDialogueReaction,
   QuestNpcRef,
   QuestObjective,
   QuestStageDialogueAction,
@@ -39,6 +42,42 @@ export function resolveAuthoredNpcId(
   return matches[0]!.id
 }
 
+function materializeConsequences(
+  consequences: AuthoredQuestDialogueReaction['consequences'] | undefined,
+  resolve: (name: string) => NpcId,
+): QuestConsequences | undefined {
+  if (!consequences) return undefined
+  return {
+    ...consequences,
+    relations: consequences.relations?.map((rel) => ({
+      npc: questNpcRef(resolve(rel.npcName)),
+      delta: rel.delta,
+    })),
+  }
+}
+
+function materializeReactions(
+  reactions: readonly AuthoredQuestDialogueReaction[] | undefined,
+  resolve: (name: string) => NpcId,
+): readonly QuestDialogueReaction[] | undefined {
+  if (!reactions) return undefined
+  return reactions.map((reaction) => ({
+    when: reaction.when.map((condition) => (
+      condition.type === 'relation'
+        ? {
+            type: 'relation' as const,
+            npc: questNpcRef(resolve(condition.npcName)),
+            ...(condition.minimum !== undefined ? { minimum: condition.minimum } : {}),
+            ...(condition.maximum !== undefined ? { maximum: condition.maximum } : {}),
+          }
+        : condition
+    )),
+    ...(reaction.npcLine !== undefined ? { npcLine: reaction.npcLine } : {}),
+    ...(reaction.consequences ? { consequences: materializeConsequences(reaction.consequences, resolve) } : {}),
+    ...(reaction.cooldown ? { cooldown: reaction.cooldown } : {}),
+  }))
+}
+
 function materializeObjective(
   objective: AuthoredQuestObjective,
   resolve: (name: string) => NpcId,
@@ -61,6 +100,7 @@ function materializeObjective(
         outcomeId: choice.outcomeId,
         playerLine: choice.playerLine,
         npcLine: choice.npcLine,
+        ...(choice.reactions ? { reactions: materializeReactions(choice.reactions, resolve) } : {}),
       })),
     }
   }
@@ -83,27 +123,23 @@ function materializeDialogueActions(
   resolve: (name: string) => NpcId,
 ): readonly QuestStageDialogueAction[] | undefined {
   if (!actions) return undefined
-  return actions.map((action) => ({
-    npc: questNpcRef(resolve(action.npcName)),
-    playerLine: action.playerLine,
-    npcLine: action.npcLine,
-    physicalOutcomeId: action.physicalOutcomeId,
-    requireCarriedContainerId: action.requireCarriedContainerId,
-    requireCarriedUnopened: action.requireCarriedUnopened,
-    requireItemInstanceId: action.requireItemInstanceId,
-    skipAdvance: action.skipAdvance,
-    requireWorldKnowledgeReady: action.requireWorldKnowledgeReady,
-    effects: action.effects,
-    consequences: action.consequences
-      ? {
-          ...action.consequences,
-          relations: action.consequences.relations?.map((rel) => ({
-            npc: questNpcRef(resolve(rel.npcName)),
-            delta: rel.delta,
-          })),
-        }
-      : undefined,
-  }))
+  return actions.map((action) => {
+    const reactions = materializeReactions(action.reactions, resolve)
+    return {
+      npc: questNpcRef(resolve(action.npcName)),
+      playerLine: action.playerLine,
+      npcLine: action.npcLine,
+      physicalOutcomeId: action.physicalOutcomeId,
+      requireCarriedContainerId: action.requireCarriedContainerId,
+      requireCarriedUnopened: action.requireCarriedUnopened,
+      requireItemInstanceId: action.requireItemInstanceId,
+      skipAdvance: action.skipAdvance,
+      requireWorldKnowledgeReady: action.requireWorldKnowledgeReady,
+      effects: action.effects,
+      ...(reactions ? { reactions } : {}),
+      consequences: materializeConsequences(action.consequences, resolve),
+    }
+  })
 }
 
 /**

@@ -448,6 +448,26 @@ export function buildLostTreasureChronicleSearchQuests(
           skipAdvance: true,
           requireWorldKnowledgeReady: 'ruins',
           effects: [{ type: 'reveal_location', locationId: binding.ruinsLocationId }],
+        }, {
+          npc: archaeologist,
+          playerLine: 'Jeśli mam ryzykować w ruinach, potrzebuję wszystkiego, co masz.',
+          npcLine: 'Notatki, które już dostałeś, wystarczą, żeby ruszyć. Reszty nie będę zgadywał za ciebie.',
+          skipAdvance: true,
+          reactions: [
+            {
+              when: [{ type: 'relation', npc: archaeologist, maximum: 'acquainted' }],
+              npcLine: 'Najpierw sprawdź to, co już dostałeś. Nie będę zgadywał za ciebie.',
+              cooldown: {
+                hours: 6,
+                line: 'Przejrzyj notatki, które już masz. Potem wrócimy do ruin.',
+              },
+            },
+            {
+              when: [{ type: 'relation', npc: archaeologist, minimum: 'friendly' }],
+              npcLine: 'Dlatego cię tam wysyłam. Słuchaj uważnie — reszta jest w notatkach, które już masz.',
+              consequences: { relations: [{ npc: archaeologist, delta: 1 }] },
+            },
+          ],
         }],
       },
       {

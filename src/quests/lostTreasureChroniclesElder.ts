@@ -233,6 +233,16 @@ export function buildLostTreasureChroniclesElderQuests(
               outcomeId: LOST_TREASURE_CHRONICLES_DISPUTE_RECONCILE_OUTCOME,
               npcLine: 'No i jak? On cię przekonał, czy zostajesz przy mojej wersji?',
               playerLine: 'Zostaw to. Stara uraza nie warta kolejnej zimy.',
+              reactions: [
+                {
+                  when: [{ type: 'relation', npc: elder, maximum: 'acquainted' }],
+                  npcLine: 'Łatwo ci mówić. To nie twoja rzecz zniknęła.',
+                },
+                {
+                  when: [{ type: 'relation', npc: elder, minimum: 'trusted' }],
+                  npcLine: 'Od kogoś obcego bym tego nie słuchał. Od ciebie… jeszcze przemyślę.',
+                },
+              ],
             },
           ],
         },

@@ -438,4 +438,45 @@ describe('lost treasure chronicle search (quests-progression-038)', () => {
     expect(knowledge?.revealed).toBe(true)
     expect(knowledge?.ref?.landmarkId).toBe(binding!.ruinsLandmarkId)
   })
+
+  it('adds an optional archaeologist social action without changing chronicle acquisition (plan quests-progression-050)', () => {
+    const { binding, elderBinding } = fixtures()
+    const search = buildLostTreasureChronicleSearchQuests(binding!).find(
+      (quest) => quest.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID,
+    )!
+    const social = search.stages.find((stage) => stage.id === 'investigate')?.dialogueActions
+      ?.find((action) => action.playerLine.includes('ryzykować'))
+    expect(social?.skipAdvance).toBe(true)
+    expect(social?.requireWorldKnowledgeReady).toBeUndefined()
+    expect(social?.effects).toBeUndefined()
+    expect(search.outcomes.map((outcome) => outcome.id)).toEqual([LOST_TREASURE_CHRONICLE_ACQUIRED_OUTCOME])
+
+    const quests = [
+      ...buildLostTreasureChroniclesElderQuests(elderBinding),
+      ...buildLostTreasureChronicleSearchQuests(binding!),
+    ]
+    const qm = new QuestManager(quests, undefined, new Inventory(), {
+      progress: [{
+        id: LOST_TREASURE_CHRONICLES_ELDER_WINTER_QUEST_ID,
+        state: 'complete',
+        stageIndex: 1,
+        resolvedOutcomeId: LOST_TREASURE_CHRONICLES_WINTER_MATERIAL_OUTCOME,
+      }, {
+        id: LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID,
+        state: 'active',
+        stageIndex: 1,
+      }],
+      relations: {},
+    })
+    const reply = qm.onInteract(binding!.archaeologistNpcId)?.actions
+      ?.find((action) => action.label.includes('ryzykować'))
+      ?.onSelect()
+    expect(reply).toBe('Najpierw sprawdź to, co już dostałeś. Nie będę zgadywał za ciebie.')
+    expect(qm.getState(LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)).toBe('active')
+    expect(qm.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID)?.stageIndex).toBe(1)
+    expect(qm.onInteract(binding!.archaeologistNpcId)?.line)
+      .toBe('Przejrzyj notatki, które już masz. Potem wrócimy do ruin.')
+    expect(qm.onInteract(binding!.archaeologistNpcId)?.actions?.some((action) => action.label.includes('ryzykować')) ?? false)
+      .toBe(false)
+  })
 })

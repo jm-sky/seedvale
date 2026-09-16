@@ -130,6 +130,39 @@ describe('materializeAuthoredQuestDefs', () => {
     }])
   })
 
+  it('materializes reaction NPC refs and consequences (plan quests-progression-050)', () => {
+    const scout: AuthoredQuestDef = {
+      id: 'scout-reactions',
+      title: 'Scout',
+      description: 'desc',
+      giverName: 'Piotr',
+      offerLine: 'offer',
+      stages: [{
+        objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+        description: 'spot',
+        reminderLine: 'remind',
+        dialogueActions: [{
+          npcName: 'Piotr',
+          playerLine: 'Tak, widziałem jelenia.',
+          npcLine: 'Skoro tak.',
+          reactions: [{
+            when: [{ type: 'relation', npcName: 'Piotr', maximum: 'acquainted' }],
+            npcLine: 'Kamienie pokaż.',
+            consequences: { relations: [{ npcName: 'Piotr', delta: -1 }] },
+          }],
+        }],
+      }],
+      reportLine: 'report',
+      outcomes: [{ id: 'reported', state: 'complete' }],
+    }
+    const [def] = materializeAuthoredQuestDefs([scout], descriptors)
+    expect(def?.stages[0]?.dialogueActions?.[0]?.reactions).toEqual([{
+      when: [{ type: 'relation', npc: { npcId: 'home:npc:0' }, maximum: 'acquainted' }],
+      npcLine: 'Kamienie pokaż.',
+      consequences: { relations: [{ npc: { npcId: 'home:npc:0' }, delta: -1 }] },
+    }])
+  })
+
   it('materializes NPC-bearing objectives inside every multi-objective slot', () => {
     const branched: AuthoredQuestDef = {
       ...relay,

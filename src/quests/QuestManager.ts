@@ -13,6 +13,7 @@ import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
 import { formatWorldDayClock } from '../world/dayNight'
+import { gameHoursToGameDays } from '../world/timeConversion'
 import { isWithinEveningOfferWindow } from './guardEveningOfferWindow'
 import {
   LOST_LIVESTOCK_DEAD_OUTCOME,
@@ -29,6 +30,7 @@ import {
   objectiveNeedsPersistedSlotProgress,
   type QuestConsequences,
   type QuestDef,
+  type QuestDialogueCooldown,
   type QuestJournalEvent,
   type QuestObjective,
   type QuestOfferRankSignal,
@@ -52,6 +54,7 @@ import {
   type RelationLevel,
   relationLevelMeetsMinimum,
   relationToLevel,
+  selectMatchingQuestDialogueReaction,
   uniqueOutcomeForState,
   validateQuestDefinitions,
 } from './quests'
@@ -194,6 +197,8 @@ type QuestRuntimeProgress = {
   journal?: readonly QuestJournalEvent[]
   /** Deferred world-knowledge progress (plan quests-progression-047). */
   worldKnowledge?: Record<string, QuestWorldKnowledgeProgress>
+  /** Quest-topic dialogue cooldown (plan quests-progression-050). */
+  dialogueCooldowns?: Record<NpcId, QuestDialogueCooldown>
 }
 
 /** Player-only harvest report (plan quests-progression-020). */
@@ -458,7 +463,7 @@ function objectiveMatchesRef(
 function matchingTalkChoice(
   objective: QuestObjective | undefined,
   npcId: NpcId,
-): { npc: { npcId: NpcId }, outcomeId: QuestOutcomeId, playerLine: string, npcLine?: string } | undefined {
+) {
   if (objective?.type !== 'talk_to_npc_choice') return undefined
   return objective.choices.find((choice) => choice.npc.npcId === npcId)
 }
@@ -625,7 +630,13 @@ export class QuestManager {
     this.knowledgeEpoch += 1
     this.knowledgeLaunching.clear()
     for (const def of this.defs) {
-      this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0, journal: [], worldKnowledge: {} })
+      this.setQuestState(def.id, {
+        state: 'not_offered',
+        stageIndex: 0,
+        journal: [],
+        worldKnowledge: {},
+        dialogueCooldowns: {},
+      })
     }
     this.relations.clear()
     this.animalTargets.clear()
@@ -649,6 +660,12 @@ export class QuestManager {
       next = { ...next, worldKnowledge: prev.worldKnowledge }
     } else if (value.worldKnowledge !== undefined && Object.keys(value.worldKnowledge).length === 0) {
       const { worldKnowledge: _cleared, ...rest } = next
+      next = rest
+    }
+    if (value.dialogueCooldowns === undefined && prev?.dialogueCooldowns && Object.keys(prev.dialogueCooldowns).length > 0) {
+      next = { ...next, dialogueCooldowns: prev.dialogueCooldowns }
+    } else if (value.dialogueCooldowns !== undefined && Object.keys(value.dialogueCooldowns).length === 0) {
+      const { dialogueCooldowns: _cleared, ...rest } = next
       next = rest
     }
     this.states.set(id, next)
@@ -678,6 +695,7 @@ export class QuestManager {
       timeOfDay: event.timeOfDay ?? this.worldTime.getTimeOfDay(),
       ...(event.stageIndex !== undefined ? { stageIndex: event.stageIndex } : {}),
       ...(event.dialogueActionIndex !== undefined ? { dialogueActionIndex: event.dialogueActionIndex } : {}),
+      ...(event.dialogueReactionIndex !== undefined ? { dialogueReactionIndex: event.dialogueReactionIndex } : {}),
       ...(event.stampId !== undefined ? { stampId: event.stampId } : {}),
       ...(event.speakerNpcId !== undefined ? { speakerNpcId: event.speakerNpcId } : {}),
     }
@@ -728,11 +746,11 @@ export class QuestManager {
       return this.expandQuestText(def, progress, stage.progressLine ?? stage.reminderLine)
     }
     if (event.dialogueActionIndex !== undefined) {
-      return this.expandQuestText(
-        def,
-        progress,
-        stage.dialogueActions?.[event.dialogueActionIndex]?.npcLine ?? null,
-      )
+      const action = stage.dialogueActions?.[event.dialogueActionIndex]
+      const reactionLine = event.dialogueReactionIndex !== undefined
+        ? action?.reactions?.[event.dialogueReactionIndex]?.npcLine
+        : undefined
+      return this.expandQuestText(def, progress, reactionLine ?? action?.npcLine ?? null)
     }
     return this.expandQuestText(def, progress, stage.progressLine ?? null)
   }
@@ -1138,6 +1156,66 @@ export class QuestManager {
   private isOfferSuppressed(id: string): boolean {
     const until = this.stateOf(id).offerSuppressedUntilDay
     return until !== undefined && this.worldTime.getElapsedDays() < until
+  }
+
+  private dialogueReactionReads(def: QuestDef) {
+    return {
+      relationLevel: (npcId: NpcId) => this.getRelationLevel(npcId),
+      reputation: (dimension: ReputationDimension) => (
+        def.settlementId
+          ? this.socialAvailability.getReputationDimension(def.settlementId, dimension)
+          : 0
+      ),
+    }
+  }
+
+  private activeDialogueCooldown(def: QuestDef, npcId: NpcId): QuestDialogueCooldown | undefined {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return undefined
+    const cooldown = s.dialogueCooldowns?.[npcId]
+    if (!cooldown) return undefined
+    if (cooldown.stageIndex !== s.stageIndex) return undefined
+    if (this.worldTime.getElapsedDays() >= cooldown.untilDay) return undefined
+    return cooldown
+  }
+
+  private dialogueCooldownLine(def: QuestDef, npcId: NpcId, cooldown: QuestDialogueCooldown): string {
+    const stage = this.currentStage(def, cooldown.stageIndex)
+    const actionLine = stage?.dialogueActions?.[cooldown.actionIndex]?.reactions?.[cooldown.reactionIndex]?.cooldown?.line
+    if (actionLine) return actionLine
+    const slots = stage ? questStageObjectiveSlots(stage) : []
+    for (const slot of slots) {
+      if (slot.objective.type !== 'talk_to_npc_choice') continue
+      const choice = slot.objective.choices[cooldown.actionIndex]
+        ?? matchingTalkChoice(slot.objective, npcId)
+      const line = choice?.reactions?.[cooldown.reactionIndex]?.cooldown?.line
+      if (line) return line
+    }
+    return DEFAULT_NPC_PROMPT
+  }
+
+  private recordDialogueCooldown(
+    def: QuestDef,
+    npcId: NpcId,
+    stageIndex: number,
+    actionIndex: number,
+    reactionIndex: number,
+    hours: number,
+  ): void {
+    const current = this.stateOf(def.id)
+    if (current.state !== 'active' || current.stageIndex !== stageIndex) return
+    this.setQuestState(def.id, {
+      ...current,
+      dialogueCooldowns: {
+        ...current.dialogueCooldowns,
+        [npcId]: {
+          untilDay: this.worldTime.getElapsedDays() + gameHoursToGameDays(hours),
+          stageIndex,
+          actionIndex,
+          reactionIndex,
+        },
+      },
+    })
   }
 
   /** `not_offered` defs for `npcId` that meet authored availability and
@@ -2150,6 +2228,8 @@ export class QuestManager {
     const fallback = action?.npcLine ?? stage?.reminderLine ?? def.reportLine
     if (current.state !== 'active' || current.stageIndex !== stageIndex) return fallback
     if (!action || action.npc.npcId !== npcId) return fallback
+    const matched = selectMatchingQuestDialogueReaction(action.reactions, this.dialogueReactionReads(def))
+    const replySource = matched?.reaction.npcLine ?? action.npcLine
     if (action.physicalOutcomeId) {
       const ctx: QuestPhysicalOutcomeContext = {
         requireCarriedContainerId: action.requireCarriedContainerId,
@@ -2161,27 +2241,52 @@ export class QuestManager {
         kind: 'progress',
         stageIndex,
         dialogueActionIndex: actionIndex,
+        ...(matched?.reaction.npcLine !== undefined ? { dialogueReactionIndex: matched.index } : {}),
         speakerNpcId: npcId,
       })
       this.applyEffects(def.id, action.effects)
+      this.applyConsequences(def, matched?.reaction.consequences)
       this.physicalOutcome.onResolve(def.id, action.physicalOutcomeId)
       if (!this.resolveQuest(def.id, action.physicalOutcomeId)) return fallback
-      return this.expandQuestText(def, this.stateOf(def.id), action.npcLine ?? def.reportLine ?? fallback) ?? fallback
+      if (matched?.reaction.cooldown) {
+        this.recordDialogueCooldown(
+          def,
+          npcId,
+          stageIndex,
+          actionIndex,
+          matched.index,
+          matched.reaction.cooldown.hours,
+        )
+      }
+      return this.expandQuestText(def, this.stateOf(def.id), replySource ?? def.reportLine ?? fallback) ?? fallback
     }
     this.appendJournal(def.id, {
       kind: 'progress',
       stageIndex,
       dialogueActionIndex: actionIndex,
+      ...(matched?.reaction.npcLine !== undefined ? { dialogueReactionIndex: matched.index } : {}),
       speakerNpcId: npcId,
     })
     this.applyEffects(def.id, action.effects)
+    this.applyConsequences(def, matched?.reaction.consequences)
     this.applyConsequences(def, action.consequences)
     if (action.requireWorldKnowledgeReady) {
       this.markKnowledgeRevealed(def.id, action.requireWorldKnowledgeReady)
     }
-    const reply = this.expandQuestText(def, this.stateOf(def.id), action.npcLine) ?? action.npcLine ?? fallback
-    if (action.skipAdvance) return reply
-    this.advanceStage(def, current, undefined, { skipProgressJournal: true })
+    const reply = this.expandQuestText(def, this.stateOf(def.id), replySource) ?? replySource ?? fallback
+    if (!action.skipAdvance) {
+      this.advanceStage(def, current, undefined, { skipProgressJournal: true })
+    }
+    if (matched?.reaction.cooldown) {
+      this.recordDialogueCooldown(
+        def,
+        npcId,
+        stageIndex,
+        actionIndex,
+        matched.index,
+        matched.reaction.cooldown.hours,
+      )
+    }
     return reply
       ?? this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine
       ?? fallback
@@ -2482,8 +2587,11 @@ export class QuestManager {
       npcId,
     )
     if (!choice || choice.outcomeId !== outcomeId) return resolvedLine
+    const matched = selectMatchingQuestDialogueReaction(choice.reactions, this.dialogueReactionReads(def))
+    this.applyConsequences(def, matched?.reaction.consequences)
     const applied = this.applyOutcome(def, outcomeId)
-    return applied ? (applied.resultText ?? def.reportLine) : resolvedLine
+    if (!applied) return resolvedLine
+    return matched?.reaction.npcLine ?? applied.resultText ?? def.reportLine
   }
 
   private selectGatherTurnIn(def: QuestDef, stageIndex: number, slotId: string): string {
@@ -2521,6 +2629,8 @@ export class QuestManager {
    *  `QuestDialogTopic.resolve()` re-read live state through the exact same
    *  path (plan quests-progression-020). */
   private resolveNpcQuestContribution(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    const cooldown = this.activeDialogueCooldown(def, npcId)
+    if (cooldown) return { line: this.dialogueCooldownLine(def, npcId, cooldown) }
     const actionable = this.collectQuestActionsForNpc(def, npcId)
     if (actionable) return actionable
     const knowledgeTalk = this.worldKnowledgeTalk(def, npcId)
@@ -2693,6 +2803,7 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
+      if (this.activeDialogueCooldown(def, npcId)) continue
       if (isRequiredDialogueTarget(this.currentStage(def, s.stageIndex), npcId, this.unfinishedSlots(def, s))) {
         return QUEST_MARKER_TALK_TARGET
       }
@@ -2758,6 +2869,9 @@ export class QuestManager {
       if (s.worldKnowledge && Object.keys(s.worldKnowledge).length > 0) {
         entry.worldKnowledge = s.worldKnowledge
       }
+      if (s.dialogueCooldowns && Object.keys(s.dialogueCooldowns).length > 0) {
+        entry.dialogueCooldowns = s.dialogueCooldowns
+      }
       return entry
     })
   }
@@ -2780,6 +2894,9 @@ function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
   if (entry.journal && entry.journal.length > 0) progress.journal = entry.journal
   if (entry.worldKnowledge && Object.keys(entry.worldKnowledge).length > 0) {
     progress.worldKnowledge = entry.worldKnowledge
+  }
+  if (entry.dialogueCooldowns && Object.keys(entry.dialogueCooldowns).length > 0) {
+    progress.dialogueCooldowns = entry.dialogueCooldowns
   }
   return progress
 }
@@ -2853,6 +2970,9 @@ function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): Qu
     ...(migrated.journal && migrated.journal.length > 0 ? { journal: migrated.journal } : {}),
     ...(migrated.worldKnowledge && Object.keys(migrated.worldKnowledge).length > 0
       ? { worldKnowledge: migrated.worldKnowledge }
+      : {}),
+    ...(migrated.dialogueCooldowns && Object.keys(migrated.dialogueCooldowns).length > 0
+      ? { dialogueCooldowns: migrated.dialogueCooldowns }
       : {}),
   }
   if (migrated.state !== 'complete' && migrated.state !== 'failed') return base

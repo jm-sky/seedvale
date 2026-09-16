@@ -225,4 +225,43 @@ describe('lost treasure chronicles elder quests', () => {
     restored.onInteract('1_0:npc:2')
     restored.onInteract('1_0:npc:1')
   })
+
+  it('keeps reconcile/support_elder outcomes and varies elder reply by relation (plan quests-progression-050)', () => {
+    const defs = buildLostTreasureChroniclesElderQuests(testBinding())
+    const low = new QuestManager(defs, undefined, new Inventory(), {
+      progress: [{
+        id: LOST_TREASURE_CHRONICLES_ELDER_WINTER_QUEST_ID,
+        state: 'complete',
+        stageIndex: 1,
+        resolvedOutcomeId: LOST_TREASURE_CHRONICLES_WINTER_NEIGHBOR_OUTCOME,
+      }, {
+        id: LOST_TREASURE_CHRONICLES_ELDER_DISPUTE_QUEST_ID,
+        state: 'active',
+        stageIndex: 2,
+      }],
+      relations: { '1_0:npc:2': 0, '1_0:npc:1': 0 },
+    })
+    expect(low.onInteract('1_0:npc:2')?.actions?.[0]?.onSelect())
+      .toBe('Łatwo ci mówić. To nie twoja rzecz zniknęła.')
+    expect(low.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLES_ELDER_DISPUTE_QUEST_ID)?.resolvedOutcomeId)
+      .toBe(LOST_TREASURE_CHRONICLES_DISPUTE_RECONCILE_OUTCOME)
+
+    const high = new QuestManager(defs, undefined, new Inventory(), {
+      progress: [{
+        id: LOST_TREASURE_CHRONICLES_ELDER_WINTER_QUEST_ID,
+        state: 'complete',
+        stageIndex: 1,
+        resolvedOutcomeId: LOST_TREASURE_CHRONICLES_WINTER_NEIGHBOR_OUTCOME,
+      }, {
+        id: LOST_TREASURE_CHRONICLES_ELDER_DISPUTE_QUEST_ID,
+        state: 'active',
+        stageIndex: 2,
+      }],
+      relations: { '1_0:npc:2': 6, '1_0:npc:1': 0 },
+    })
+    expect(high.onInteract('1_0:npc:2')?.actions?.[0]?.onSelect())
+      .toBe('Od kogoś obcego bym tego nie słuchał. Od ciebie… jeszcze przemyślę.')
+    expect(high.exportProgress().find((entry) => entry.id === LOST_TREASURE_CHRONICLES_ELDER_DISPUTE_QUEST_ID)?.resolvedOutcomeId)
+      .toBe(LOST_TREASURE_CHRONICLES_DISPUTE_RECONCILE_OUTCOME)
+  })
 })
