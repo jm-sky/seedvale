@@ -421,22 +421,23 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/merchantTrade.ts`
 
-- `generateMerchantAssortment` — function — line 319
-- `isPremiumMerchantGood` — function — line 137
+- `generateMerchantAssortment` — function — line 336
+- `HOME_STARTER_MERCHANT_KINDS` — const — line 79
+- `isPremiumMerchantGood` — function — line 154
 - `MERCHANT_SPECIALIZATIONS` — const — line 28
 - `MerchantAssortmentContext` — type — line 41
 - `MerchantProfile` — type — line 35
-- `merchantProfileFor` — function — line 189
+- `merchantProfileFor` — function — line 206
 - `MerchantSpecialization` — type — line 22
   - domain: settlements
-- `merchantStockQuantity` — function — line 397
-- `PREMIUM_MERCHANT_KINDS` — const — line 52
-- `premiumAvailabilityChance` — function — line 142
-- `resolveMerchantProfiles` — function — line 176
+- `merchantStockQuantity` — function — line 425
+- `PREMIUM_MERCHANT_KINDS` — const — line 54
+- `premiumAvailabilityChance` — function — line 159
+- `resolveMerchantProfiles` — function — line 193
   - domain: settlements
-- `seedMerchantStockIfNeeded` — function — line 401
-- `settlementHasPremiumOffer` — function — line 313
-- `specializationAffinity` — function — line 222
+- `seedMerchantStockIfNeeded` — function — line 429
+- `settlementHasPremiumOffer` — function — line 330
+- `specializationAffinity` — function — line 239
 
 ## `settlement/merchantWagon.ts`
 
