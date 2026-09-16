@@ -11,6 +11,7 @@ import {
   rpgQuestId,
 } from './opportunities/rpgQuestMatrices'
 import { QuestManager } from './QuestManager'
+import type { QuestSocialAvailabilityLookup } from './QuestManager'
 import { validateQuestDefinitions } from './quests'
 import {
   buildSuspiciousTransportCaveCacheQuest,
@@ -441,5 +442,141 @@ describe('suspicious transport natural cave cache (plan quests-progression-024)'
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe(SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME)
     expect(inventory.getInstance(binding.evidenceInstanceId)).toEqual(evidence)
     expect(granted).toEqual([])
+  })
+})
+
+describe('suspicious transport socially consequential dialogue (plan quests-progression-052)', () => {
+  const binding = {
+    questId: 'world:suspicious-transport:home',
+    settlementId: 'home',
+    giverNpcId: trader.id,
+    counterpartNpcId: guard.id,
+    caveId: 'cave-a',
+    caveLocationId: 'cave:cave-a',
+    lootAnchorId: 'cave-a:loot:chamber',
+    cacheContainerId: suspiciousTransportCacheContainerId('cave-a:loot:chamber'),
+    evidenceInstanceId: suspiciousTransportEvidenceInstanceId('cave-a'),
+  }
+
+  function build() {
+    return buildSuspiciousTransportCaveCacheQuest(
+      binding,
+      trader,
+      guard,
+      'Dolina',
+      'mała jaskinia na północny zachód od osady',
+    )
+  }
+
+  function terminalManager(
+    relations: Record<string, number>,
+    social?: QuestSocialAvailabilityLookup,
+  ) {
+    const def = build()
+    const inventory = new Inventory({}, Infinity, [createSuspiciousTransportEvidenceInstance(binding.caveId)])
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      inventory,
+      { progress: [{ id: def.id, state: 'active', stageIndex: 2 }], relations },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      social,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        canResolve: () => true,
+        onResolve: () => {},
+      },
+    )
+    return { def, qm }
+  }
+
+  it('keeps canonical outcomes, item gates and post-051 player lines', () => {
+    const def = build()
+    expect(() => validateQuestDefinitions([def])).not.toThrow()
+    const actions = def.stages[2]?.dialogueActions ?? []
+    expect(actions.map((action) => action.physicalOutcomeId)).toEqual([
+      SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME,
+      SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
+      SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
+      SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
+    ])
+    expect(actions.every((action) => action.requireItemInstanceId === binding.evidenceInstanceId)).toBe(true)
+    expect(actions[0]?.playerLine).toBe('Masz swoją paczkę. Zostawmy to między nami.')
+    expect(actions[1]?.playerLine).toBe('Znalazłem przesyłkę. Wolę, żebyś ty ją zobaczył.')
+    expect(def.outcomes.map((outcome) => outcome.consequences)).toEqual([
+      {
+        relations: [
+          { npc: { npcId: trader.id }, delta: 2 },
+          { npc: { npcId: guard.id }, delta: -1 },
+        ],
+        social: { reputation: { trust: 1, integrity: -1 }, renown: 1 },
+      },
+      {
+        relations: [
+          { npc: { npcId: guard.id }, delta: 2 },
+          { npc: { npcId: trader.id }, delta: -1 },
+        ],
+        social: { reputation: { integrity: 4, courage: 2 }, renown: 2 },
+      },
+      {
+        relations: [
+          { npc: { npcId: trader.id }, delta: -1 },
+          { npc: { npcId: guard.id }, delta: -1 },
+        ],
+        social: { reputation: { trust: -2, integrity: -2 }, renown: 1 },
+      },
+    ])
+  })
+
+  it('selects keep-quiet warmth and report betrayal from live giver relation', () => {
+    const low = terminalManager({})
+    expect(low.qm.onInteract(trader.id)?.actions?.[0]?.onSelect())
+      .toBe('Dobrze. Im mniej osób o niej gada, tym lepiej.')
+    expect(low.qm.getRelation(trader.id)).toBe(2)
+    expect(low.qm.exportProgress()[0]?.resolvedOutcomeId).toBe(SUSPICIOUS_TRANSPORT_KEEP_QUIET_OUTCOME)
+
+    const warm = terminalManager({ [trader.id]: 3 })
+    expect(warm.qm.onInteract(trader.id)?.actions?.[0]?.onSelect())
+      .toBe('Dobrze. Oddaj ją i zostawmy tę sprawę tutaj.')
+    expect(warm.qm.getRelation(trader.id)).toBe(6)
+
+    const reported = terminalManager({})
+    expect(reported.qm.onInteract(guard.id)?.actions?.[0]?.onSelect())
+      .toBe('Połóż ją tutaj. Sprawdzimy, co właściwie trafiło do osady.')
+    expect(reported.qm.getRelation(trader.id)).toBe(-1)
+
+    const betrayed = terminalManager({ [trader.id]: 3 })
+    expect(betrayed.qm.onInteract(guard.id)?.actions?.[0]?.onSelect())
+      .toBe('Połóż ją tutaj. Sprawdzimy, co właściwie trafiło do osady.')
+    expect(betrayed.qm.getRelation(trader.id)).toBe(0)
+  })
+
+  it('sharpens keep-goods replies without changing the outcome or extra reputation', () => {
+    const fromGiver = terminalManager({ [trader.id]: 6 })
+    expect(fromGiver.qm.onInteract(trader.id)?.actions?.[1]?.onSelect())
+      .toBe('Tobie właśnie dałem tę robotę, bo nie chciałem świadków.')
+    expect(fromGiver.qm.getRelation(trader.id)).toBe(3)
+    expect(fromGiver.qm.exportProgress()[0]?.resolvedOutcomeId).toBe(SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME)
+
+    const social: QuestSocialAvailabilityLookup = {
+      getReputationDimension: (_settlementId, dimension) => (dimension === 'integrity' ? 5 : 0),
+      getRenown: () => 0,
+    }
+    const fromGuard = terminalManager({}, social)
+    expect(fromGuard.qm.onInteract(guard.id)?.actions?.[1]?.onSelect())
+      .toBe('Po to ją znalazłeś? Tego się po tobie nie spodziewałem.')
+    expect(fromGuard.qm.getRelation(trader.id)).toBe(-1)
+    expect(fromGuard.qm.getRelation(guard.id)).toBe(-1)
   })
 })

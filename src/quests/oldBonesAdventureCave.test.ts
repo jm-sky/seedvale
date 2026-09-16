@@ -7,6 +7,8 @@ import { Inventory } from '../items/Inventory'
 import { settlementNpcId } from '../settlement/npcIdentity'
 import { resolveCaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
+import { QuestManager } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 import {
   buildOldBonesAdventureCaveQuest,
   createOldBonesSignetInstance,
@@ -286,5 +288,131 @@ describe('old bones adventure cave (plan quests-progression-025)', () => {
     expect(withoutB.outcomes.some((outcome) => (
       outcome.id === OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME
     ))).toBe(false)
+  })
+})
+
+describe('old bones socially consequential dialogue (plan quests-progression-052)', () => {
+  const npcs = [
+    npc('home:npc:0', 'farmer', false, 'f0', 0),
+    npc('home:npc:1', 'farmer', false, 'f0', 0),
+    npc('home:npc:2', 'hunter', false, 'f1', 1),
+  ]
+  const withBBinding = {
+    questId: 'world:old-bones:home:cave-a',
+    settlementId: 'home',
+    giverNpcId: 'home:npc:2',
+    claimantANpcId: 'home:npc:0',
+    claimantBNpcId: 'home:npc:1',
+    caveId: 'cave-a',
+    caveLocationId: 'cave:cave-a',
+    anchorId: 'cave-a:sideTreasure',
+    containerId: 'world-container:quests-progression-025:cave-a:sideTreasure',
+    signetInstanceId: oldBonesSignetInstanceId('cave-a'),
+  }
+  const withoutBBinding = {
+    questId: 'world:old-bones:home:cave-a',
+    settlementId: 'home',
+    giverNpcId: 'home:npc:1',
+    claimantANpcId: 'home:npc:0',
+    caveId: 'cave-a',
+    caveLocationId: 'cave:cave-a',
+    anchorId: 'cave-a:sideTreasure',
+    containerId: 'world-container:quests-progression-025:cave-a:sideTreasure',
+    signetInstanceId: oldBonesSignetInstanceId('cave-a'),
+  }
+
+  function terminalManager(
+    binding: typeof withBBinding | typeof withoutBBinding,
+    relations: Record<string, number>,
+    npcList: SettlementOpportunityNpc[],
+  ) {
+    const def = buildOldBonesAdventureCaveQuest(binding, npcList, 'Osada', 'głęboka jaskinia na północ od osady')
+    const inventory = new Inventory({}, Infinity, [createOldBonesSignetInstance(binding.caveId)])
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      inventory,
+      {
+        progress: [{ id: def.id, state: 'active', stageIndex: def.stages.length - 1 }],
+        relations,
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { canResolve: () => true, onResolve: () => {} },
+    )
+    return { def, qm }
+  }
+
+  it('keeps A/B/keep outcomes, exact signet gate and claimant-B-absent materialization', () => {
+    const withB = buildOldBonesAdventureCaveQuest(withBBinding, npcs, 'Osada', 'jaskinia')
+    const withoutB = buildOldBonesAdventureCaveQuest(withoutBBinding, [
+      npc('home:npc:0', 'farmer', false, 'f0', 0),
+      npc('home:npc:1', 'hunter', false, 'f1', 1),
+    ], 'Osada', 'jaskinia')
+    expect(() => validateQuestDefinitions([withB, withoutB])).not.toThrow()
+    const withBActions = withB.stages[withB.stages.length - 1]?.dialogueActions ?? []
+    expect(withBActions.map((action) => action.physicalOutcomeId)).toEqual([
+      OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME,
+      OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME,
+      OLD_BONES_KEEP_SIGNET_OUTCOME,
+    ])
+    expect(withBActions.every((action) => action.requireItemInstanceId === withBBinding.signetInstanceId)).toBe(true)
+    const withoutBActions = withoutB.stages[withoutB.stages.length - 1]?.dialogueActions ?? []
+    expect(withoutBActions.map((action) => action.physicalOutcomeId)).toEqual([
+      OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME,
+      OLD_BONES_KEEP_SIGNET_OUTCOME,
+    ])
+    expect(withoutBActions[1]?.reactions?.[0]?.when).toEqual([
+      { type: 'relation', npc: { npcId: 'home:npc:0' }, minimum: 'trusted' },
+    ])
+  })
+
+  it('selects claimant replies from live relation without blocking outcomes', () => {
+    const giveA = terminalManager(withBBinding, {}, npcs)
+    expect(giveA.qm.onInteract('home:npc:0')?.actions?.[0]?.onSelect())
+      .toBe('Dziękuję. Chociaż tyle z tamtej historii wraca.')
+    expect(giveA.qm.getRelation('home:npc:0')).toBe(3)
+
+    const giveAWarm = terminalManager(withBBinding, { 'home:npc:0': 3 }, npcs)
+    expect(giveAWarm.qm.onInteract('home:npc:0')?.actions?.[0]?.onSelect())
+      .toBe('Wiedziałem, że go nie zatrzymasz. Dziękuję.')
+    expect(giveAWarm.qm.getRelation('home:npc:0')).toBe(7)
+
+    const giveB = terminalManager(withBBinding, { 'home:npc:0': 3 }, npcs)
+    expect(giveB.qm.onInteract('home:npc:1')?.actions?.[0]?.onSelect())
+      .toBe('Wiedziałem, że mógłbyś stanąć po jego stronie. Tym bardziej dziękuję, że sygnet trafił do mnie.')
+    expect(giveB.qm.getRelation('home:npc:0')).toBe(1)
+    expect(giveB.qm.exportProgress()[0]?.resolvedOutcomeId).toBe(OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME)
+
+    const keep = terminalManager(withoutBBinding, {}, [
+      npc('home:npc:0', 'farmer', false, 'f0', 0),
+      npc('home:npc:1', 'hunter', false, 'f1', 1),
+    ])
+    expect(keep.qm.onInteract('home:npc:0')?.actions?.[1]?.onSelect())
+      .toBe('Przynosisz nam historię, a pamiątkę bierzesz ze sobą. Rozumiem.')
+    expect(keep.qm.getRelation('home:npc:0')).toBe(-1)
+  })
+
+  it('journals the trusted keep-signet reaction line once', () => {
+    const { qm } = terminalManager(withBBinding, { 'home:npc:0': 6 }, npcs)
+    expect(qm.onInteract('home:npc:0')?.actions?.[1]?.onSelect())
+      .toBe('Tobie mówiłem o tym jak komuś swojemu. A sygnet zabierasz ze sobą.')
+    expect(qm.getRelation('home:npc:0')).toBe(3)
+    expect(qm.list().find((entry) => entry.id === withBBinding.questId)?.notes.map((note) => note.text))
+      .toContain('Tobie mówiłem o tym jak komuś swojemu. A sygnet zabierasz ze sobą.')
+    expect(qm.exportProgress()[0]?.journal?.some((event) => event.dialogueReactionIndex === 0)).toBe(true)
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe(OLD_BONES_KEEP_SIGNET_OUTCOME)
   })
 })

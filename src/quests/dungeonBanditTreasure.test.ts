@@ -8,6 +8,9 @@ import { Inventory } from '../items/Inventory'
 import { resolveCaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { DUNGEON_DEEP_CHAMBER_NODE_ID } from '../world/caves/dungeonTopology'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
+import { QuestManager } from './QuestManager'
+import type { QuestSocialAvailabilityLookup } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 import {
   buildDungeonBanditTreasureQuest,
   createDungeonBanditLedgerInstance,
@@ -240,5 +243,132 @@ describe('dungeon bandit treasure (plan quests-progression-026)', () => {
     expect(dungeonBanditClaimsMatch(binding, (key) => policy.claimOf(key))).toBe(true)
     expect(policy.claimOf('quests-progression-027:final')?.anchorId).toBe(finalId)
     expect(policy.unresolved).toEqual([])
+  })
+})
+
+describe('dungeon bandit socially consequential dialogue (plan quests-progression-052)', () => {
+  const binding = {
+    questId: 'world:dungeon-bandit:home:cave',
+    settlementId: 'home',
+    giverNpcId: 'home:npc:0',
+    claimantNpcId: 'home:npc:1',
+    caveId: 'cave:dungeon-a',
+    caveLocationId: 'cave:cave:dungeon-a',
+    deepLootAnchorId: 'deep',
+    sideTreasureAnchorIds: [] as readonly string[],
+    deepContainerId: 'deep-box',
+    sideContainerIds: [] as readonly string[],
+    ledgerInstanceId: dungeonBanditLedgerInstanceId('cave:dungeon-a'),
+    markedValuableInstanceId: dungeonBanditMarkedValuableInstanceId('cave:dungeon-a'),
+  }
+  const npcs = [npc('home:npc:0', 'guard'), npc('home:npc:1', 'trader')]
+
+  function build() {
+    return buildDungeonBanditTreasureQuest(binding, npcs, 'Osada', 'stary loch')
+  }
+
+  function terminalManager(
+    relations: Record<string, number>,
+    social?: QuestSocialAvailabilityLookup,
+  ) {
+    const def = build()
+    const inventory = new Inventory({}, Infinity, [
+      createDungeonBanditMarkedValuableInstance(binding.caveId),
+    ])
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      inventory,
+      { progress: [{ id: def.id, state: 'active', stageIndex: 2 }], relations },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      social,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { canResolve: () => true, onResolve: () => {} },
+    )
+    return { def, qm }
+  }
+
+  function standing(integrity: number, competence = 0): QuestSocialAvailabilityLookup {
+    return {
+      getReputationDimension: (_settlementId, dimension) => {
+        if (dimension === 'integrity') return integrity
+        if (dimension === 'competence') return competence
+        return 0
+      },
+      getRenown: () => 0,
+    }
+  }
+
+  it('keeps return/guard/keep outcomes and the marked-valuable gate', () => {
+    const def = build()
+    expect(() => validateQuestDefinitions([def])).not.toThrow()
+    const actions = def.stages[2]?.dialogueActions ?? []
+    expect(actions.map((action) => action.physicalOutcomeId)).toEqual([
+      DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME,
+      DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME,
+      DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME,
+    ])
+    expect(actions.every((action) => action.requireItemInstanceId === binding.markedValuableInstanceId)).toBe(true)
+    expect(def.outcomes.map((outcome) => outcome.consequences)).toEqual([
+      {
+        relations: [{ npc: { npcId: binding.claimantNpcId }, delta: 3 }],
+        social: { reputation: { trust: 4, integrity: 5, benevolence: 4 }, renown: 2 },
+      },
+      {
+        relations: [{ npc: { npcId: binding.claimantNpcId }, delta: 1 }],
+        social: { reputation: { competence: 5, integrity: 4 }, renown: 4 },
+      },
+      {
+        relations: [{ npc: { npcId: binding.claimantNpcId }, delta: -2 }],
+        social: { reputation: { trust: -2, integrity: -4 }, renown: 1 },
+      },
+    ])
+  })
+
+  it('varies claimant and guard replies at relation and reputation thresholds', () => {
+    const returnLow = terminalManager({})
+    expect(returnLow.qm.onInteract(binding.claimantNpcId)?.actions?.[0]?.onSelect())
+      .toBe('Dziękuję. Przynajmniej coś z tamtego napadu wraca do domu.')
+    expect(returnLow.qm.getRelation(binding.claimantNpcId)).toBe(3)
+
+    const returnWarm = terminalManager({ [binding.claimantNpcId]: 3 })
+    expect(returnWarm.qm.onInteract(binding.claimantNpcId)?.actions?.[0]?.onSelect())
+      .toBe('Poznałem go od razu. Dobrze, że trafił właśnie do ciebie.')
+    expect(returnWarm.qm.getRelation(binding.claimantNpcId)).toBe(7)
+
+    const evidenceNeutral = terminalManager({}, standing(0, 0))
+    expect(evidenceNeutral.qm.onInteract(binding.giverNpcId)?.actions?.[0]?.onSelect())
+      .toBe('Zostaw wszystko tutaj. Sprawdzę rejestr i właściciela.')
+    expect(evidenceNeutral.qm.exportProgress()[0]?.resolvedOutcomeId)
+      .toBe(DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME)
+
+    const evidenceCompetence = terminalManager({}, standing(0, 5))
+    expect(evidenceCompetence.qm.onInteract(binding.giverNpcId)?.actions?.[0]?.onSelect())
+      .toBe('Dobrze to rozegrałeś. Zostaw rejestr i klejnot — zajmę się resztą.')
+
+    const evidenceIntegrity = terminalManager({}, standing(5, 0))
+    expect(evidenceIntegrity.qm.onInteract(binding.giverNpcId)?.actions?.[0]?.onSelect())
+      .toBe('Dobrze to rozegrałeś. Zostaw rejestr i klejnot — zajmę się resztą.')
+
+    const keepHigh = terminalManager({}, standing(5))
+    expect(keepHigh.qm.onInteract(binding.giverNpcId)?.actions?.[1]?.onSelect())
+      .toBe('Naprawdę chcesz zatrzymać rzecz z cudzym znakiem?')
+    expect(keepHigh.qm.exportProgress()[0]?.resolvedOutcomeId)
+      .toBe(DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME)
+
+    const keepLow = terminalManager({}, standing(0))
+    expect(keepLow.qm.onInteract(binding.giverNpcId)?.actions?.[1]?.onSelect())
+      .toBe('No tak. Czyli jednak po klejnot tam poszedłeś.')
   })
 })

@@ -8,6 +8,9 @@ import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMate
 import { Inventory } from '../items/Inventory'
 import { resolveCaveAdventureContentPolicy } from '../world/caves/caveAdventureContentPolicy'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
+import { QuestManager } from './QuestManager'
+import type { QuestSocialAvailabilityLookup } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 import {
   DUNGEON_BANDIT_DEEP_RESERVATION_KEY,
   dungeonBanditCaveReservationRequests,
@@ -282,5 +285,126 @@ describe('lost treasure expedition (plan quests-progression-027)', () => {
       expeditionBinding.finalTreasureAnchorId,
     )
     expect(lostTreasureExpeditionClaimsMatch(expeditionBinding, (key) => policy.claimOf(key))).toBe(true)
+  })
+})
+
+describe('lost treasure expedition socially consequential dialogue (plan quests-progression-052)', () => {
+  const withStakeholder = {
+    questId: 'world:lost-treasure-expedition:home:cave:s:f',
+    settlementId: 'home',
+    sponsorNpcId: 'home:npc:0',
+    stakeholderNpcId: 'home:npc:1',
+    caveId: 'cave:dungeon-a',
+    caveLocationId: 'cave:cave:dungeon-a',
+    campAnchorId: 'camp',
+    journalAnchorId: 'journal',
+    evidenceAnchorId: 'evidence',
+    finalTreasureAnchorId: 'final',
+    campContainerId: 'camp-box',
+    journalContainerId: 'journal-box',
+    evidenceContainerId: 'evidence-box',
+    finalTreasureContainerId: 'final-box',
+    journalInstanceId: lostTreasureExpeditionJournalInstanceId('cave:dungeon-a'),
+  }
+  const withoutStakeholder = {
+    ...withStakeholder,
+    stakeholderNpcId: undefined,
+  }
+  const npcs = [
+    npc('home:npc:0', 'trader', 'house-a'),
+    npc('home:npc:1', 'farmer', 'house-b'),
+  ]
+
+  function terminalManager(
+    binding: typeof withStakeholder | typeof withoutStakeholder,
+    relations: Record<string, number>,
+    social?: QuestSocialAvailabilityLookup,
+  ) {
+    const def = buildLostTreasureExpeditionQuest(binding, npcs, 'Osada', 'stary loch')
+    const inventory = new Inventory({}, Infinity, [
+      createLostTreasureExpeditionJournalInstance(binding.caveId),
+    ])
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      inventory,
+      { progress: [{ id: def.id, state: 'active', stageIndex: def.stages.length - 1 }], relations },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      social,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { canResolve: () => true, onResolve: () => {} },
+    )
+    return { def, qm }
+  }
+
+  it('keeps journal outcomes, instance gate and stakeholder-absent materialization', () => {
+    const withFamily = buildLostTreasureExpeditionQuest(withStakeholder, npcs, 'Osada', 'loch')
+    const sponsorOnly = buildLostTreasureExpeditionQuest(withoutStakeholder, npcs, 'Osada', 'loch')
+    expect(() => validateQuestDefinitions([withFamily, sponsorOnly])).not.toThrow()
+    const familyActions = withFamily.stages[withFamily.stages.length - 1]?.dialogueActions ?? []
+    expect(familyActions.map((action) => action.physicalOutcomeId)).toEqual([
+      LOST_TREASURE_EXPEDITION_JOURNAL_TO_FAMILY_OUTCOME,
+      LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME,
+      LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME,
+    ])
+    expect(familyActions.every((action) => action.requireItemInstanceId === withStakeholder.journalInstanceId)).toBe(true)
+    expect(sponsorOnly.outcomes.map((outcome) => outcome.id)).toEqual([
+      LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME,
+      LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME,
+    ])
+    expect(withFamily.outcomes.find((outcome) => outcome.id === LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME)?.reward)
+      .toEqual({ visibility: 'shown', items: [{ kind: 'coin', count: 25 }] })
+  })
+
+  it('selects family, sponsor and keep-journal replies from live social context', () => {
+    const familyLow = terminalManager(withStakeholder, {})
+    expect(familyLow.qm.onInteract('home:npc:1')?.actions?.[0]?.onSelect())
+      .toBe('Dziękuję. Przynajmniej będziemy wiedzieć, co się z nimi naprawdę stało.')
+    expect(familyLow.qm.getRelation('home:npc:1')).toBe(3)
+
+    const familyWarm = terminalManager(withStakeholder, { 'home:npc:1': 3 })
+    expect(familyWarm.qm.onInteract('home:npc:1')?.actions?.[0]?.onSelect())
+      .toBe('Przyniosłeś go tutaj. Dobrze. Bałem się, że już nikt go nie zobaczy.')
+    expect(familyWarm.qm.getRelation('home:npc:1')).toBe(7)
+
+    const socialHigh: QuestSocialAvailabilityLookup = {
+      getReputationDimension: (_settlementId, dimension) => (dimension === 'competence' ? 5 : 3),
+      getRenown: () => 0,
+    }
+    const sponsorHigh = terminalManager(withoutStakeholder, {}, socialHigh)
+    expect(sponsorHigh.qm.onInteract('home:npc:0')?.actions?.[0]?.onSelect())
+      .toBe('Wiedziałem, że jeśli ktoś zamknie tę sprawę, to ty. Zostaw dziennik.')
+    expect(sponsorHigh.qm.exportProgress()[0]?.resolvedOutcomeId)
+      .toBe(LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME)
+
+    const sponsorNeutral = terminalManager(withoutStakeholder, {}, {
+      getReputationDimension: () => 3,
+      getRenown: () => 0,
+    })
+    expect(sponsorNeutral.qm.onInteract('home:npc:0')?.actions?.[0]?.onSelect())
+      .toBe('Dobrze. Ta historia zasługuje na formalne zamknięcie — i zapłatę dla ciebie.')
+
+    const keepHurt = terminalManager(withoutStakeholder, { 'home:npc:0': 3 })
+    expect(keepHurt.qm.onInteract('home:npc:0')?.actions?.[1]?.onSelect())
+      .toBe('Tobie powierzyłem tę wyprawę do końca. Dziennik też był częścią tej sprawy.')
+    expect(keepHurt.qm.getRelation('home:npc:0')).toBe(0)
+
+    const keepLowIntegrity = terminalManager(withoutStakeholder, {}, {
+      getReputationDimension: (_settlementId, dimension) => (dimension === 'integrity' ? 0 : 3),
+      getRenown: () => 0,
+    })
+    expect(keepLowIntegrity.qm.onInteract('home:npc:0')?.actions?.[1]?.onSelect())
+      .toBe('Czyli jednak coś miało zostać tylko dla ciebie.')
   })
 })

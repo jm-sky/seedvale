@@ -5,7 +5,7 @@ import type { CaveArchetype } from '../world/caves/caveArchetype'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { OpportunityNpc } from './opportunities/worldQuestOpportunityTypes'
-import type { QuestDef } from './quests'
+import type { QuestDef, QuestDialogueReaction } from './quests'
 import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
 import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
 import {
@@ -173,11 +173,29 @@ export function buildSuspiciousTransportCaveCacheQuest(
   settlementName: string,
   caveDescription: string,
 ): QuestDef {
-  const keepGoodsLines = {
+  const keepGoodsBase = {
     physicalOutcomeId: SUSPICIOUS_TRANSPORT_KEEP_GOODS_OUTCOME,
     requireItemInstanceId: binding.evidenceInstanceId,
     playerLine: 'Nie oddam tego. Zostaje u mnie.',
     npcLine: 'Czyli po to po nią poszedłeś. Dobrze wiedzieć.',
+  }
+  const keepQuietWarmth: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: giver.id }, minimum: 'friendly' }],
+    npcLine: 'Dobrze. Oddaj ją i zostawmy tę sprawę tutaj.',
+    consequences: { relations: [{ npc: { npcId: giver.id }, delta: 1 }] },
+  }
+  const reportBetrayal: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: giver.id }, minimum: 'friendly' }],
+    consequences: { relations: [{ npc: { npcId: giver.id }, delta: -2 }] },
+  }
+  const keepGoodsGiverBetrayal: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: giver.id }, minimum: 'trusted' }],
+    npcLine: 'Tobie właśnie dałem tę robotę, bo nie chciałem świadków.',
+    consequences: { relations: [{ npc: { npcId: giver.id }, delta: -2 }] },
+  }
+  const keepGoodsCounterpartSurprise: QuestDialogueReaction = {
+    when: [{ type: 'reputation', dimension: 'integrity', minimum: 5 }],
+    npcLine: 'Po to ją znalazłeś? Tego się po tobie nie spodziewałem.',
   }
   return {
     id: binding.questId,
@@ -219,6 +237,7 @@ export function buildSuspiciousTransportCaveCacheQuest(
             requireItemInstanceId: binding.evidenceInstanceId,
             playerLine: 'Masz swoją paczkę. Zostawmy to między nami.',
             npcLine: 'Dobrze. Im mniej osób o niej gada, tym lepiej.',
+            reactions: [keepQuietWarmth],
           },
           {
             npc: { npcId: counterpart.id },
@@ -226,14 +245,17 @@ export function buildSuspiciousTransportCaveCacheQuest(
             requireItemInstanceId: binding.evidenceInstanceId,
             playerLine: 'Znalazłem przesyłkę. Wolę, żebyś ty ją zobaczył.',
             npcLine: 'Połóż ją tutaj. Sprawdzimy, co właściwie trafiło do osady.',
+            reactions: [reportBetrayal],
           },
           {
             npc: { npcId: giver.id },
-            ...keepGoodsLines,
+            ...keepGoodsBase,
+            reactions: [keepGoodsGiverBetrayal],
           },
           {
             npc: { npcId: counterpart.id },
-            ...keepGoodsLines,
+            ...keepGoodsBase,
+            reactions: [keepGoodsCounterpartSurprise],
           },
         ],
       },

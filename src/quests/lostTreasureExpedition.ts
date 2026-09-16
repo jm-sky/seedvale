@@ -11,7 +11,7 @@ import type { DungeonChamber } from '../world/caves/dungeonChambers'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
 import type { OpportunityNpc } from './opportunities/worldQuestOpportunityTypes'
-import type { QuestDef } from './quests'
+import type { QuestDef, QuestDialogueReaction } from './quests'
 import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
 
 /** Stable reservation-key prefix for lost-treasure-expedition anchor arbitration. */
@@ -397,13 +397,23 @@ export function buildLostTreasureExpeditionQuest(
 
   const dialogueActions: NonNullable<QuestDef['stages'][number]['dialogueActions']>[number][] = []
   if (binding.stakeholderNpcId) {
+    const familyWarmth: QuestDialogueReaction = {
+      when: [{ type: 'relation', npc: { npcId: binding.stakeholderNpcId }, minimum: 'friendly' }],
+      npcLine: 'Przyniosłeś go tutaj. Dobrze. Bałem się, że już nikt go nie zobaczy.',
+      consequences: { relations: [{ npc: { npcId: binding.stakeholderNpcId }, delta: 1 }] },
+    }
     dialogueActions.push({
       npc: { npcId: binding.stakeholderNpcId },
       playerLine: `Znalazłem dziennik zaginionej wyprawy. Należy do was — oddaję go tobie, ${stakeholderName}.`,
       npcLine: 'Dziękuję. Przynajmniej będziemy wiedzieć, co się z nimi naprawdę stało.',
       physicalOutcomeId: LOST_TREASURE_EXPEDITION_JOURNAL_TO_FAMILY_OUTCOME,
       requireItemInstanceId: binding.journalInstanceId,
+      reactions: [familyWarmth],
     })
+  }
+  const sponsorRecognition: QuestDialogueReaction = {
+    when: [{ type: 'reputation', dimension: 'competence', minimum: 5 }],
+    npcLine: 'Wiedziałem, że jeśli ktoś zamknie tę sprawę, to ty. Zostaw dziennik.',
   }
   dialogueActions.push({
     npc: { npcId: binding.sponsorNpcId },
@@ -411,13 +421,26 @@ export function buildLostTreasureExpeditionQuest(
     npcLine: 'Dobrze. Ta historia zasługuje na formalne zamknięcie — i zapłatę dla ciebie.',
     physicalOutcomeId: LOST_TREASURE_EXPEDITION_JOURNAL_TO_SPONSOR_OUTCOME,
     requireItemInstanceId: binding.journalInstanceId,
+    reactions: [sponsorRecognition],
   })
+  const keepJournalReactions: readonly QuestDialogueReaction[] = [
+    {
+      when: [{ type: 'relation', npc: { npcId: binding.sponsorNpcId }, minimum: 'friendly' }],
+      npcLine: 'Tobie powierzyłem tę wyprawę do końca. Dziennik też był częścią tej sprawy.',
+      consequences: { relations: [{ npc: { npcId: binding.sponsorNpcId }, delta: -1 }] },
+    },
+    {
+      when: [{ type: 'reputation', dimension: 'integrity', maximum: 0 }],
+      npcLine: 'Czyli jednak coś miało zostać tylko dla ciebie.',
+    },
+  ]
   dialogueActions.push({
     npc: { npcId: binding.sponsorNpcId },
     playerLine: 'Skarb jest twój, ale dziennik wyprawy zostaje przy mnie.',
     npcLine: 'Skarb miał wrócić z nimi, ale przynajmniej trafił w czyjeś ręce. Resztę zachowaj dla siebie.',
     physicalOutcomeId: LOST_TREASURE_EXPEDITION_KEEP_JOURNAL_OUTCOME,
     requireItemInstanceId: binding.journalInstanceId,
+    reactions: [...keepJournalReactions],
   })
 
   const stages: QuestDef['stages'][number][] = [

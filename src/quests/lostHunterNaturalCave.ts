@@ -6,7 +6,7 @@ import type { CaveArchetype } from '../world/caves/caveArchetype'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
-import type { QuestDef } from './quests'
+import type { QuestDef, QuestDialogueReaction } from './quests'
 import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
 import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
 
@@ -203,6 +203,15 @@ export function buildLostHunterNaturalCaveQuest(
   const witness = npcs.find((npc) => npc.id === binding.witnessNpcId)
   const giverName = giver?.name ?? 'Rodzina'
   const witnessName = witness?.name ?? 'Świadek'
+  const returnBowWarmth: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: binding.giverNpcId }, minimum: 'friendly' }],
+    npcLine: 'Wiedziałem, że jeśli go znajdziesz, nie zostawisz go gdzieś po drodze.',
+  }
+  const keepBowHurt: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: binding.giverNpcId }, minimum: 'trusted' }],
+    npcLine: 'Prosiłem cię o wieści, nie o to, żebyś zabrał jego rzeczy.',
+    consequences: { relations: [{ npc: { npcId: binding.giverNpcId }, delta: -1 }] },
+  }
   return {
     id: binding.questId,
     title: 'Zaginiony myśliwy',
@@ -251,6 +260,7 @@ export function buildLostHunterNaturalCaveQuest(
             npcLine: 'Dziękuję. Chociaż tyle wróciło do domu.',
             physicalOutcomeId: LOST_HUNTER_RETURN_BOW_OUTCOME,
             requireItemInstanceId: binding.bowInstanceId,
+            reactions: [returnBowWarmth],
           },
           {
             npc: { npcId: binding.giverNpcId },
@@ -258,6 +268,7 @@ export function buildLostHunterNaturalCaveQuest(
             npcLine: 'Nie będę się z tobą o niego szarpać. Ale liczyłem, że go oddasz.',
             physicalOutcomeId: LOST_HUNTER_KEEP_BOW_OUTCOME,
             requireItemInstanceId: binding.bowInstanceId,
+            reactions: [keepBowHurt],
           },
         ],
       },

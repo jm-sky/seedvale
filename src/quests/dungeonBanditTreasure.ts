@@ -9,7 +9,7 @@ import type { CaveArchetype } from '../world/caves/caveArchetype'
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { OpportunityNpc } from './opportunities/worldQuestOpportunityTypes'
-import type { QuestDef } from './quests'
+import type { QuestDef, QuestDialogueReaction } from './quests'
 import { DUNGEON_DEEP_CHAMBER_NODE_ID } from '../world/caves/dungeonTopology'
 import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
 import { adultOpportunityNpcs } from './opportunities/rpgQuestMatrices'
@@ -382,6 +382,32 @@ export function buildDungeonBanditTreasureQuest(
   const claimant = npcs.find((npc) => npc.id === binding.claimantNpcId)
   const giverName = giver?.name ?? 'Strażnik'
   const claimantName = claimant?.name ?? 'Kupiec'
+  const returnWarmth: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: binding.claimantNpcId }, minimum: 'friendly' }],
+    npcLine: 'Poznałem go od razu. Dobrze, że trafił właśnie do ciebie.',
+    consequences: { relations: [{ npc: { npcId: binding.claimantNpcId }, delta: 1 }] },
+  }
+  const evidenceProfessionalLine = 'Dobrze to rozegrałeś. Zostaw rejestr i klejnot — zajmę się resztą.'
+  const giveEvidenceRecognition: readonly QuestDialogueReaction[] = [
+    {
+      when: [{ type: 'reputation', dimension: 'competence', minimum: 5 }],
+      npcLine: evidenceProfessionalLine,
+    },
+    {
+      when: [{ type: 'reputation', dimension: 'integrity', minimum: 5 }],
+      npcLine: evidenceProfessionalLine,
+    },
+  ]
+  const keepMarkedInterpretation: readonly QuestDialogueReaction[] = [
+    {
+      when: [{ type: 'reputation', dimension: 'integrity', minimum: 5 }],
+      npcLine: 'Naprawdę chcesz zatrzymać rzecz z cudzym znakiem?',
+    },
+    {
+      when: [{ type: 'reputation', dimension: 'integrity', maximum: 0 }],
+      npcLine: 'No tak. Czyli jednak po klejnot tam poszedłeś.',
+    },
+  ]
 
   return {
     id: binding.questId,
@@ -427,13 +453,15 @@ export function buildDungeonBanditTreasureQuest(
             npcLine: 'Dziękuję. Przynajmniej coś z tamtego napadu wraca do domu.',
             physicalOutcomeId: DUNGEON_BANDIT_RETURN_MARKED_PROPERTY_OUTCOME,
             requireItemInstanceId: binding.markedValuableInstanceId,
+            reactions: [returnWarmth],
           },
           {
             npc: { npcId: binding.giverNpcId },
             playerLine: `Przekazuję rejestr i oznaczony łup tobie, ${giverName}. Niech formalnie wrócą do właściciela.`,
-            npcLine: 'Dobrze. Zajmę się zwrotem — zapamiętam twoją uczciwość.',
+            npcLine: 'Zostaw wszystko tutaj. Sprawdzę rejestr i właściciela.',
             physicalOutcomeId: DUNGEON_BANDIT_GIVE_EVIDENCE_TO_GUARD_OUTCOME,
             requireItemInstanceId: binding.markedValuableInstanceId,
+            reactions: [...giveEvidenceRecognition],
           },
           {
             npc: { npcId: binding.giverNpcId },
@@ -441,6 +469,7 @@ export function buildDungeonBanditTreasureQuest(
             npcLine: 'Więc bierzesz cudzą rzecz i chowasz dowody. Zapamiętam.',
             physicalOutcomeId: DUNGEON_BANDIT_KEEP_MARKED_PROPERTY_OUTCOME,
             requireItemInstanceId: binding.markedValuableInstanceId,
+            reactions: [...keepMarkedInterpretation],
           },
         ],
       },

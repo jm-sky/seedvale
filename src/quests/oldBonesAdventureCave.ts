@@ -10,7 +10,7 @@ import type {
 import type { CaveContentAnchor } from '../world/caves/caveContentAnchors'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMaterialization'
-import type { QuestDef } from './quests'
+import type { QuestDef, QuestDialogueReaction } from './quests'
 import { caveWorldLocationId } from '../world/locations/darkForestTreasureSite'
 
 /** Stable reservation key for adventure-cave EMPTY + anchor arbitration. */
@@ -348,6 +348,16 @@ export function buildOldBonesAdventureCaveQuest(
     })
   }
 
+  const giveAWarmth: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: binding.claimantANpcId }, minimum: 'friendly' }],
+    npcLine: 'Wiedziałem, że go nie zatrzymasz. Dziękuję.',
+    consequences: { relations: [{ npc: { npcId: binding.claimantANpcId }, delta: 1 }] },
+  }
+  const keepSignetBetrayal: QuestDialogueReaction = {
+    when: [{ type: 'relation', npc: { npcId: binding.claimantANpcId }, minimum: 'trusted' }],
+    npcLine: 'Tobie mówiłem o tym jak komuś swojemu. A sygnet zabierasz ze sobą.',
+    consequences: { relations: [{ npc: { npcId: binding.claimantANpcId }, delta: -2 }] },
+  }
   const dialogueActions: NonNullable<QuestDef['stages'][number]['dialogueActions']>[number][] = [
     {
       npc: { npcId: binding.claimantANpcId },
@@ -355,15 +365,21 @@ export function buildOldBonesAdventureCaveQuest(
       npcLine: 'Dziękuję. Chociaż tyle z tamtej historii wraca.',
       physicalOutcomeId: OLD_BONES_RETURN_TO_FIRST_CLAIMANT_OUTCOME,
       requireItemInstanceId: binding.signetInstanceId,
+      reactions: [giveAWarmth],
     },
   ]
   if (binding.claimantBNpcId) {
+    const claimantAPassedOver: QuestDialogueReaction = {
+      when: [{ type: 'relation', npc: { npcId: binding.claimantANpcId }, minimum: 'friendly' }],
+      npcLine: 'Wiedziałem, że mógłbyś stanąć po jego stronie. Tym bardziej dziękuję, że sygnet trafił do mnie.',
+    }
     dialogueActions.push({
       npc: { npcId: binding.claimantBNpcId },
       playerLine: 'Sygnet wraca do ciebie.',
       npcLine: 'Dobrze, że najpierw mnie wysłuchałeś.',
       physicalOutcomeId: OLD_BONES_GIVE_TO_SECOND_CLAIMANT_OUTCOME,
       requireItemInstanceId: binding.signetInstanceId,
+      reactions: [claimantAPassedOver],
     })
   }
   dialogueActions.push({
@@ -372,6 +388,7 @@ export function buildOldBonesAdventureCaveQuest(
     npcLine: 'Przynosisz nam historię, a pamiątkę bierzesz ze sobą. Rozumiem.',
     physicalOutcomeId: OLD_BONES_KEEP_SIGNET_OUTCOME,
     requireItemInstanceId: binding.signetInstanceId,
+    reactions: [keepSignetBetrayal],
   })
 
   stages.push({

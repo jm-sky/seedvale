@@ -1,7 +1,7 @@
 # Plan: Second-wave socially consequential authored dialogue
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** quests-progression-051

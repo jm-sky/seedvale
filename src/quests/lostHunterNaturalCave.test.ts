@@ -5,10 +5,14 @@ import type { SettlementOpportunityNpc } from './opportunities/settlementNpcMate
 import { Inventory } from '../items/Inventory'
 import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
 import { createWorldGeneratedContainers } from '../world/worldGeneratedContainers'
+import { QuestManager } from './QuestManager'
+import { validateQuestDefinitions } from './quests'
 import {
   buildLostHunterNaturalCaveQuest,
   createLostHunterBowInstance,
   isLostHunterPackLooted,
+  LOST_HUNTER_KEEP_BOW_OUTCOME,
+  LOST_HUNTER_RETURN_BOW_OUTCOME,
   lostHunterBowInstanceId,
   lostHunterPackContainerId,
   resolveLostHunterNaturalCaveBinding,
@@ -233,5 +237,97 @@ describe('lost hunter natural cave (plan quests-progression-023)', () => {
     const json = inv.instancesToJSON()
     const restored = Inventory.instancesFromJSON(json)
     expect(restored).toEqual([bow])
+  })
+})
+
+describe('lost hunter socially consequential dialogue (plan quests-progression-052)', () => {
+  const binding = {
+    questId: 'world:lost-hunter:home:cave-a',
+    settlementId: 'home',
+    giverNpcId: 's:npc:0',
+    witnessNpcId: 's:npc:1',
+    caveId: 'cave-a',
+    caveLocationId: 'cave:cave-a',
+    storyAnchorId: 'cave-a:storyFind:chamber',
+    lootAnchorId: 'cave-a:loot:chamber',
+    packContainerId: lostHunterPackContainerId('cave-a:loot:chamber'),
+    bowInstanceId: lostHunterBowInstanceId('cave-a'),
+  }
+  const npcs = [
+    npc('s:npc:0', 'farmer', false, 'f0'),
+    npc('s:npc:1', 'hunter', false, 'f1'),
+  ]
+
+  function build() {
+    return buildLostHunterNaturalCaveQuest(binding, npcs, 'Osada', 'jaskinia na północ')
+  }
+
+  function terminalManager(relations: Record<string, number>) {
+    const def = build()
+    const inventory = new Inventory({}, Infinity, [createLostHunterBowInstance(binding.caveId)])
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      inventory,
+      { progress: [{ id: def.id, state: 'active', stageIndex: 3 }], relations },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { canResolve: () => true, onResolve: () => {} },
+    )
+    return { def, qm }
+  }
+
+  it('keeps return/keep outcomes, bow instance gate and does not claim confirmed death', () => {
+    const def = build()
+    expect(() => validateQuestDefinitions([def])).not.toThrow()
+    const copy = JSON.stringify(def)
+    expect(copy).not.toMatch(/martw/i)
+    expect(copy).not.toContain('znalazłem go martwego')
+    const actions = def.stages[3]?.dialogueActions ?? []
+    expect(actions.map((action) => action.physicalOutcomeId)).toEqual([
+      LOST_HUNTER_RETURN_BOW_OUTCOME,
+      LOST_HUNTER_KEEP_BOW_OUTCOME,
+    ])
+    expect(actions.every((action) => action.requireItemInstanceId === binding.bowInstanceId)).toBe(true)
+    expect(def.outcomes.find((outcome) => outcome.id === LOST_HUNTER_RETURN_BOW_OUTCOME)?.consequences)
+      .toEqual({
+        relations: [{ npc: { npcId: binding.giverNpcId }, delta: 3 }],
+        social: { reputation: { trust: 5, benevolence: 6, integrity: 3 }, renown: 4 },
+      })
+  })
+
+  it('selects bow-hand-in replies from live giver relation without extra return reward', () => {
+    const returnLow = terminalManager({})
+    expect(returnLow.qm.onInteract(binding.giverNpcId)?.actions?.[0]?.onSelect())
+      .toBe('Dziękuję. Chociaż tyle wróciło do domu.')
+    expect(returnLow.qm.getRelation(binding.giverNpcId)).toBe(3)
+
+    const returnWarm = terminalManager({ [binding.giverNpcId]: 3 })
+    expect(returnWarm.qm.onInteract(binding.giverNpcId)?.actions?.[0]?.onSelect())
+      .toBe('Wiedziałem, że jeśli go znajdziesz, nie zostawisz go gdzieś po drodze.')
+    expect(returnWarm.qm.getRelation(binding.giverNpcId)).toBe(6)
+
+    const keepLow = terminalManager({})
+    expect(keepLow.qm.onInteract(binding.giverNpcId)?.actions?.[1]?.onSelect())
+      .toBe('Nie będę się z tobą o niego szarpać. Ale liczyłem, że go oddasz.')
+    expect(keepLow.qm.getRelation(binding.giverNpcId)).toBe(1)
+
+    const keepTrusted = terminalManager({ [binding.giverNpcId]: 6 })
+    expect(keepTrusted.qm.onInteract(binding.giverNpcId)?.actions?.[1]?.onSelect())
+      .toBe('Prosiłem cię o wieści, nie o to, żebyś zabrał jego rzeczy.')
+    expect(keepTrusted.qm.getRelation(binding.giverNpcId)).toBe(6)
+    expect(keepTrusted.qm.exportProgress()[0]?.resolvedOutcomeId).toBe(LOST_HUNTER_KEEP_BOW_OUTCOME)
   })
 })
