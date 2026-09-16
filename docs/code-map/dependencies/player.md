@@ -492,6 +492,10 @@ Generated from TypeScript imports.
 - `assets/assetIndex.ts`
 - `player/PlayerController.ts`
 - `player/playerEquipmentVisual.test.ts`
+- `tools/assetBrowser/alignmentEdit.test.ts`
+- `tools/assetBrowser/alignmentEdit.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.test.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
 
 ## `player/playerMelee.test.ts`
 
@@ -641,6 +645,7 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `player/ubcAccessoryBind.test.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
 
 ## `player/verticalMotion.test.ts`
 

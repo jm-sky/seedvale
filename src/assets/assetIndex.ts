@@ -66,6 +66,7 @@ export type AssetPrepare =
 
 export type AssetIndexGroup =
   | 'character'
+  | 'accessory'
   | 'npc'
   | 'fauna'
   | 'item'
@@ -146,7 +147,8 @@ export function kindFromBasename(name: string): string | undefined {
 export function groupFromModelUrl(url: string): AssetIndexGroup {
   const folder = url.replace(/^\/models\//, '').split('/')[0]
   switch (folder) {
-    case 'characters': return 'character'
+    case 'characters':
+      return url.includes('/accessories/') ? 'accessory' : 'character'
     case 'fauna': return 'fauna'
     case 'fx': return 'fx'
     case 'items': return 'item'
@@ -411,8 +413,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     id: 'character:ubc-leather-pauldron',
     url: PLAYER_UBC_LEATHER_PAULDRON_URL,
     label: 'Player pauldron (leather)',
-    group: 'character',
-    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    group: 'accessory',
+    prepare: { mode: 'none' },
     skinned: true,
     anchors: anchorsForAsset('character:ubc-leather-pauldron'),
   })
@@ -420,8 +422,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     id: 'character:ubc-ranger-pauldron',
     url: PLAYER_UBC_RANGER_PAULDRON_URL,
     label: 'Player pauldron (ranger)',
-    group: 'character',
-    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    group: 'accessory',
+    prepare: { mode: 'none' },
     skinned: true,
     anchors: anchorsForAsset('character:ubc-ranger-pauldron'),
   })
@@ -429,8 +431,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     id: 'character:ubc-knight-pauldron-spike',
     url: PLAYER_UBC_KNIGHT_PAULDRON_SPIKE_URL,
     label: 'Player pauldron (knight spike)',
-    group: 'character',
-    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    group: 'accessory',
+    prepare: { mode: 'none' },
     skinned: true,
     anchors: anchorsForAsset('character:ubc-knight-pauldron-spike'),
   })
@@ -438,8 +440,8 @@ export function buildAssetIndex(): AssetIndexEntry[] {
     id: 'character:ubc-knight-pauldron-round',
     url: PLAYER_UBC_KNIGHT_PAULDRON_ROUND_URL,
     label: 'Player pauldron (knight round)',
-    group: 'character',
-    prepare: { mode: 'height', value: PLAYER_HEIGHT },
+    group: 'accessory',
+    prepare: { mode: 'none' },
     skinned: true,
     anchors: anchorsForAsset('character:ubc-knight-pauldron-round'),
   })

@@ -2,7 +2,7 @@
 
 **Created:** 2026-09-08
 **Status:** `verification needed` 🔍
-**Implemented at:** 2026-09-16
+**Implemented at:** 2026-09-16 10:47
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~

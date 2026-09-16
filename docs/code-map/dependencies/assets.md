@@ -130,9 +130,12 @@ Generated from TypeScript imports.
 - `assets/assetIndex.test.ts`
 - `assets/constructionCatalog.test.ts`
 - `assets/constructionCatalog.ts`
+- `tools/assetBrowser/alignmentEdit.ts`
 - `tools/assetBrowser/state.ts`
 - `tools/assetBrowser/viewer/createAssetSlot.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.test.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.test.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `tools/assetBrowser/viewer/reportFromScene.ts`
@@ -348,3 +351,4 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `player/PlayerController.ts`
 - `tools/assetBrowser/viewer/createAssetSlot.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`

@@ -1204,14 +1204,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1278
+- `buildingsAndLandmarksFromPlots` — function — line 1352
 - `chooseLayoutPattern` — function — line 156
 - `HOUSE_PLOT_RADIUS` — const — line 74
 - `householdWellLocalBand` — function — line 86
   - domain: settlements-npcs
-- `pathPlansToCorridorData` — function — line 1653
-- `planLocalPathsAndEntrances` — function — line 1534
-- `planVillageLayout` — function — line 846
+- `pathPlansToCorridorData` — function — line 1727
+- `planLocalPathsAndEntrances` — function — line 1608
+- `planVillageLayout` — function — line 920
 - `PLOT_SCORE_WEIGHTS` — const — line 48
 - `VillageLayoutDraft` — type — line 121
 

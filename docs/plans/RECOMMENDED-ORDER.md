@@ -36,6 +36,8 @@
 
 1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
+2. `settlements-npcs-039` — **Social and Paid Settlement Lodging**  
+   🟡 `S` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
 
@@ -43,8 +45,6 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
-2. `ui-input-022` — **Lightweight Startup Loading Stages**  
-   🟡 `S` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -165,19 +165,23 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-23. `items-player-014` — **Rope-pullable resource transport**  
+23. `fauna-033` — **Animal movement hot-path performance**  
+  🔴 `M` · **Score:**  29  
+   → **unlocks:** 0/0
+
+24. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `tools-005` — **Seedvale Character Preparation Panel**  
+25. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `items-player-032` — **NPC player-storage resource and context rules**  
+26. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-26. `ui-input-022` — **Lightweight Startup Loading Stages**  
+27. `settlements-npcs-039` — **Social and Paid Settlement Lodging**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
@@ -300,6 +304,7 @@ graph TD
   fauna_030["fauna-030 — Player-owned animal Stay safety and recovery"]
   fauna_031["fauna-031 — Wildlife habitat pressure assessment"]
   fauna_032["fauna-032 — Exceptional animal appearance morphs"]
+  fauna_033["fauna-033 — Animal movement hot-path performance"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -335,6 +340,7 @@ graph TD
   items_player_038["items-player-038 — UBC jump land move lock"]
   items_player_039["items-player-039 — UBC runtime pauldrons"]
   items_player_040["items-player-040 — Armor quality pricing and world availability"]
+  items_player_041["items-player-041 — Asset Browser UBC accessory overlay"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -488,6 +494,7 @@ graph TD
   settlements_npcs_036["settlements-npcs-036 — Generic NPC-Owned Goods Trading"]
   settlements_npcs_037["settlements-npcs-037 — Inter-settlement goods transport"]
   settlements_npcs_038["settlements-npcs-038 — Travelling Merchant inter-settlement role"]
+  settlements_npcs_039["settlements-npcs-039 — Social and Paid Settlement Lodging"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -688,6 +695,7 @@ graph TD
   fauna_027 --> quests_progression_026
   fauna_027 --> quests_progression_027
   fauna_028 --> fauna_031
+  fauna_028 --> fauna_033
   fauna_029 --> fauna_030
   fauna_031 --> quests_progression_049
   items_player_001 --> fauna_002
@@ -731,6 +739,7 @@ graph TD
   items_player_036 --> items_player_037
   items_player_036 --> items_player_039
   items_player_036 --> npc_039
+  items_player_039 --> items_player_041
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004

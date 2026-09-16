@@ -5,6 +5,7 @@ import {
   customUrlEntry,
   filterAssetIndex,
   formatAssetLabel,
+  groupFromModelUrl,
   kindFromBasename,
   mergeParkedManifest,
   parkedIdFromUrl,
@@ -93,6 +94,28 @@ describe('assetIndex', () => {
   it('labels the RTS palisade distinctly from MegaKit walls', () => {
     const wall = buildAssetIndex().find((e) => e.id === 'settlement:wall')
     expect(wall?.label).toMatch(/palisade/i)
+  })
+
+  it('groups UBC accessory URLs separately from character bodies', () => {
+    expect(groupFromModelUrl('/models/characters/ubc/male_peasant.glb')).toBe('character')
+    expect(groupFromModelUrl('/models/characters/ubc/accessories/male_leather_pauldron.glb')).toBe('accessory')
+  })
+
+  it('indexes UBC pauldrons as authored-scale accessories', () => {
+    const index = buildAssetIndex()
+    const ids = [
+      'character:ubc-leather-pauldron',
+      'character:ubc-ranger-pauldron',
+      'character:ubc-knight-pauldron-spike',
+      'character:ubc-knight-pauldron-round',
+    ]
+    for (const id of ids) {
+      const entry = index.find((e) => e.id === id)
+      expect(entry, id).toBeDefined()
+      expect(entry!.group).toBe('accessory')
+      expect(entry!.prepare).toEqual({ mode: 'none' })
+      expect(entry!.skinned).toBe(true)
+    }
   })
 })
 

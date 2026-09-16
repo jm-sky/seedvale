@@ -10,6 +10,12 @@ import {
   resolveLoadEntry,
 } from '../../../assets/assetIndex'
 import {
+  alignmentEdit,
+  bumpAlignmentEdit,
+  formatAlignmentSnippet,
+  loadAlignmentEditor,
+} from '../alignmentEdit'
+import {
   bumpGripEdit,
   formatHeldAttachSnippet,
   gripEdit,
@@ -134,6 +140,7 @@ async function loadTarget() {
   })
   await viewer.value.loadTarget(entry, entry?.url)
   loadGripEditor(browserState.freeUrl.trim() ? null : browserState.targetId)
+  loadAlignmentEditor(entry)
   syncSlot('target')
 }
 
@@ -143,9 +150,20 @@ function applyGripEdit() {
   syncSlot('target')
 }
 
+function applyAlignmentEdit() {
+  bumpAlignmentEdit()
+  viewer.value?.remountAccessory()
+  syncSlot('target')
+}
+
 async function copyGripSnippet() {
   await copyText(formatHeldAttachSnippet())
   browserState.statusMessage = 'HELD_ATTACH snippet copied'
+}
+
+async function copyAlignmentSnippet() {
+  await copyText(formatAlignmentSnippet())
+  browserState.statusMessage = 'alignment snippet copied'
 }
 
 watch(() => viewer.value, (v) => {
@@ -486,6 +504,65 @@ function lampMountSnippet() {
           <button
             class="rounded bg-slate-700 px-2 py-1"
             @click="() => { loadGripEditor(gripEdit.sourceId); applyGripEdit() }"
+          >
+            Reset
+          </button>
+        </div>
+      </section>
+
+      <section
+        v-if="alignmentEdit.active"
+        class="rounded border border-sky-800/60 bg-sky-950/20 p-2"
+      >
+        <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-300/90">
+          Accessory alignment
+        </h2>
+        <p class="mb-2 text-[10px] text-slate-400">
+          Overlay on the reference UBC skeleton. Paste into playerEquipmentVisual alignment.
+        </p>
+        <div class="grid grid-cols-4 gap-1 text-[10px]">
+          <span class="text-slate-500">pos</span>
+          <input
+            v-for="(_, i) in alignmentEdit.position"
+            :key="`ap${i}`"
+            v-model.number="alignmentEdit.position[i]"
+            type="number"
+            step="0.01"
+            class="rounded bg-slate-800 px-1"
+            @change="applyAlignmentEdit"
+          >
+          <span class="text-slate-500">rot°</span>
+          <input
+            v-for="(_, i) in alignmentEdit.rotationDeg"
+            :key="`ar${i}`"
+            v-model.number="alignmentEdit.rotationDeg[i]"
+            type="number"
+            step="5"
+            class="rounded bg-slate-800 px-1"
+            @change="applyAlignmentEdit"
+          >
+          <span class="text-slate-500">scale</span>
+          <input
+            v-model.number="alignmentEdit.scale"
+            type="number"
+            step="0.05"
+            class="col-span-3 rounded bg-slate-800 px-1"
+            @change="applyAlignmentEdit"
+          >
+        </div>
+        <div class="mt-2 flex gap-1">
+          <button
+            class="flex-1 rounded bg-sky-700 px-2 py-1 hover:bg-sky-600"
+            @click="copyAlignmentSnippet"
+          >
+            Copy alignment
+          </button>
+          <button
+            class="rounded bg-slate-700 px-2 py-1"
+            @click="() => {
+              loadAlignmentEditor(resolveLoadEntry(assetIndex, { id: alignmentEdit.sourceId }))
+              applyAlignmentEdit()
+            }"
           >
             Reset
           </button>

@@ -74,25 +74,25 @@ Generated from exported TypeScript symbols.
 
 ## `assets/assetIndex.ts`
 
-- `assetEntryMatchesQuery` — function — line 177
-- `assetIndexById` — function — line 616
-- `AssetIndexEntry` — type — line 81
+- `assetEntryMatchesQuery` — function — line 179
+- `assetIndexById` — function — line 618
+- `AssetIndexEntry` — type — line 82
 - `AssetIndexGroup` — type — line 67
-- `AssetIndexStatus` — type — line 79
+- `AssetIndexStatus` — type — line 80
 - `AssetPrepare` — type — line 62
-- `basenameFromUrl` — function — line 124
-- `buildAssetIndex` — function — line 344
-- `customUrlEntry` — function — line 199
-- `entryFromUrl` — function — line 630
-- `filterAssetIndex` — function — line 190
-- `findAssetEntry` — function — line 622
-- `formatAssetLabel` — function — line 172
-- `groupFromModelUrl` — function — line 146
-- `kindFromBasename` — function — line 138
-- `makeParkedEntry` — function — line 228
-- `mergeParkedManifest` — function — line 246
-- `packFromUrl` — function — line 130
-- `resolveLoadEntry` — function — line 217
+- `basenameFromUrl` — function — line 125
+- `buildAssetIndex` — function — line 346
+- `customUrlEntry` — function — line 201
+- `entryFromUrl` — function — line 632
+- `filterAssetIndex` — function — line 192
+- `findAssetEntry` — function — line 624
+- `formatAssetLabel` — function — line 174
+- `groupFromModelUrl` — function — line 147
+- `kindFromBasename` — function — line 139
+- `makeParkedEntry` — function — line 230
+- `mergeParkedManifest` — function — line 248
+- `packFromUrl` — function — line 131
+- `resolveLoadEntry` — function — line 219
 
 ## `assets/assetUrlUtils.ts`
 

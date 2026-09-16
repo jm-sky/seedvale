@@ -2,6 +2,26 @@
 
 Generated from TypeScript imports.
 
+## `tools/assetBrowser/alignmentEdit.test.ts`
+
+**Imports**
+
+- `player/playerEquipmentVisual.ts`
+- `tools/assetBrowser/alignmentEdit.ts`
+
+## `tools/assetBrowser/alignmentEdit.ts`
+
+**Imports**
+
+- `assets/assetIndex.ts`
+- `player/playerEquipmentVisual.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
+
+**Imported by**
+
+- `tools/assetBrowser/alignmentEdit.test.ts`
+- `tools/assetBrowser/viewer/createViewer.ts`
+
 ## `tools/assetBrowser/gripEdit.test.ts`
 
 **Imports**
@@ -146,6 +166,7 @@ Generated from TypeScript imports.
 
 - `tools/assetBrowser/viewer/createAssetSlot.test.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `tools/assetBrowser/viewer/reportFromScene.ts`
 
@@ -174,11 +195,13 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `render/createPostProcessing.ts`
 - `render/createRenderer.ts`
+- `tools/assetBrowser/alignmentEdit.ts`
 - `tools/assetBrowser/gripEdit.ts`
 - `tools/assetBrowser/state.ts`
 - `tools/assetBrowser/viewer/createAssetSlot.ts`
 - `tools/assetBrowser/viewer/createMultiView.ts`
 - `tools/assetBrowser/viewer/createViewerScene.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `tools/assetBrowser/viewer/reportFromScene.ts`
 
@@ -219,6 +242,31 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/state.ts`
 - `tools/assetBrowser/viewer/layoutPersist.test.ts`
 
+## `tools/assetBrowser/viewer/mountAccessoryPreview.test.ts`
+
+**Imports**
+
+- `assets/assetIndex.ts`
+- `player/playerEquipmentVisual.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
+
+## `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
+
+**Imports**
+
+- `assets/assetIndex.ts`
+- `assets/ubcOutfitMaterials.ts`
+- `player/playerEquipmentVisual.ts`
+- `player/ubcAccessoryBind.ts`
+- `tools/assetBrowser/viewer/createAssetSlot.ts`
+- `tools/assetBrowser/viewer/mountHeldPreview.ts`
+
+**Imported by**
+
+- `tools/assetBrowser/alignmentEdit.ts`
+- `tools/assetBrowser/viewer/createViewer.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.test.ts`
+
 ## `tools/assetBrowser/viewer/mountHeldPreview.test.ts`
 
 **Imports**
@@ -241,6 +289,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `tools/assetBrowser/viewer/createViewer.ts`
+- `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.test.ts`
 - `tools/assetBrowser/viewer/reportFromScene.ts`
 

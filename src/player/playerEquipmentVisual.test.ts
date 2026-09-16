@@ -5,6 +5,7 @@ import {
   PLAYER_UBC_LEATHER_PAULDRON_URL,
   PLAYER_UBC_RANGER_PAULDRON_URL,
   resolvePlayerEquipmentVisual,
+  resolvePlayerEquipmentVisualByUrl,
   resolvePlayerEquipmentVisualTintUrl,
 } from './playerEquipmentVisual'
 
@@ -38,6 +39,18 @@ describe('resolvePlayerEquipmentVisual', () => {
     expect(resolvePlayerEquipmentVisual('leather_armor')).toBeNull()
     expect(resolvePlayerEquipmentVisual('chainmail')).toBeNull()
     expect(resolvePlayerEquipmentVisual('knife')).toBeNull()
+  })
+
+  it('looks up visuals by accessory URL for the Asset Browser overlay', () => {
+    expect(resolvePlayerEquipmentVisualByUrl(PLAYER_UBC_LEATHER_PAULDRON_URL)).toEqual({
+      modelUrl: PLAYER_UBC_LEATHER_PAULDRON_URL,
+      tint: 'brown',
+    })
+    expect(resolvePlayerEquipmentVisualByUrl(`${PLAYER_UBC_RANGER_PAULDRON_URL}?r=3`)).toEqual({
+      modelUrl: PLAYER_UBC_RANGER_PAULDRON_URL,
+    })
+    expect(resolvePlayerEquipmentVisualByUrl('/models/characters/ubc/male_peasant.glb')).toBeNull()
+    expect(resolvePlayerEquipmentVisualByUrl(null)).toBeNull()
   })
 
   it('resolves leather brown to the Noble brown sidecar, independent of player tint', () => {

@@ -50,6 +50,20 @@ export function resolvePlayerEquipmentVisual(kind: ItemKind): PlayerEquipmentVis
   return EQUIPMENT_VISUALS[kind] ?? null
 }
 
+/**
+ * Lookup by accessory GLB URL (Asset Browser overlay). Cache-bust suffixes stripped.
+ *
+ * @domain items-player
+ */
+export function resolvePlayerEquipmentVisualByUrl(url: string | null | undefined): PlayerEquipmentVisual | null {
+  if (!url) return null
+  const clean = url.replace(/\?r=\d+$/, '')
+  for (const visual of Object.values(EQUIPMENT_VISUALS)) {
+    if (visual?.modelUrl === clean) return visual
+  }
+  return null
+}
+
 /** Accessory tint sidecar. Independent of `?playerTint=` on the body outfit. */
 export function resolvePlayerEquipmentVisualTintUrl(
   visual: PlayerEquipmentVisual,

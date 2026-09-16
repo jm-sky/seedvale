@@ -2,6 +2,17 @@
 
 Generated from exported TypeScript symbols.
 
+## `tools/assetBrowser/alignmentEdit.ts`
+
+- `alignmentEdit` — const — line 18
+- `AlignmentEditState` — type — line 12
+- `alignmentEditToOverride` — function — line 54
+- `AlignmentEditValues` — type — line 6
+- `alignmentOverrideForTarget` — function — line 66
+- `bumpAlignmentEdit` — function — line 71
+- `formatAlignmentSnippet` — function — line 75
+- `loadAlignmentEditor` — function — line 35
+
 ## `tools/assetBrowser/gripEdit.ts`
 
 - `BROWSER_PROVISIONAL_ATTACH` — const — line 11
@@ -94,9 +105,9 @@ Generated from exported TypeScript symbols.
 
 ## `tools/assetBrowser/viewer/createViewer.ts`
 
-- `AssetViewer` — type — line 31
-- `createViewer` — function — line 60
-- `syncDiagnostics` — function — line 409
+- `AssetViewer` — type — line 37
+- `createViewer` — function — line 68
+- `syncDiagnostics` — function — line 453
 
 ## `tools/assetBrowser/viewer/createViewerScene.ts`
 
@@ -112,6 +123,20 @@ Generated from exported TypeScript symbols.
 - `LayoutPersistPayload` — type — line 6
 - `loadLayoutPersist` — function — line 18
 - `saveLayoutPersist` — function — line 42
+
+## `tools/assetBrowser/viewer/mountAccessoryPreview.ts`
+
+- `AccessoryAlignmentOverride` — type — line 29
+- `accessoryOverlayActive` — function — line 187
+- `AccessoryPreviewMode` — type — line 21
+- `AccessoryPreviewSlot` — type — line 36
+- `AccessoryPreviewState` — type — line 23
+- `applyAccessoryAlignment` — function — line 82
+- `applyAccessoryPreview` — function — line 133
+- `clearAccessoryPreview` — function — line 108
+- `computeAccessoryPreviewState` — function — line 55
+  - domain: items-player
+- `equipmentVisualForEntry` — function — line 45
 
 ## `tools/assetBrowser/viewer/mountHeldPreview.ts`
 

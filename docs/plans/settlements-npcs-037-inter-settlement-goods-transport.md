@@ -10,7 +10,7 @@
 **Tags:** `transport` `inter-settlement` `food` `shortage` `surplus`
 **Roadmap:** `physical-goods-transport`
 **Model:** `Opus`, `Sonnet`
-**Implemented at:** 2026-09-16
+**Implemented at:** 2026-09-16 09:11
 
 ## Goal
 

@@ -149,7 +149,9 @@ Generated from exported TypeScript symbols.
 - `PlayerEquipmentVisualTint` — type — line 13
 - `resolvePlayerEquipmentVisual` — function — line 49
   - domain: items-player
-- `resolvePlayerEquipmentVisualTintUrl` — function — line 54
+- `resolvePlayerEquipmentVisualByUrl` — function — line 58
+  - domain: items-player
+- `resolvePlayerEquipmentVisualTintUrl` — function — line 68
 
 ## `player/playerMelee.ts`
 

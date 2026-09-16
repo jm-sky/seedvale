@@ -8,6 +8,7 @@ import { solveAnchorAlignment } from '../../../assets/alignAnchors'
 import { createWorldConfig } from '../../../config/worldConfig'
 import { createPostProcessing } from '../../../render/createPostProcessing'
 import { createRenderer } from '../../../render/createRenderer'
+import { alignmentOverrideForTarget } from '../alignmentEdit'
 import { gripOverrideForTarget } from '../gripEdit'
 import { browserState } from '../state'
 import {
@@ -20,6 +21,11 @@ import {
 } from './createAssetSlot'
 import { createConnectionLine, createMultiView } from './createMultiView'
 import { applySceneBackground, createViewerScene } from './createViewerScene'
+import {
+  accessoryOverlayActive,
+  applyAccessoryPreview,
+  clearAccessoryPreview,
+} from './mountAccessoryPreview'
 import {
   applyHeldPreview,
   clearHeldPreviewMount,
@@ -46,6 +52,8 @@ export type AssetViewer = {
   frame: () => void
   /** Remount in-hand preview (after grip editor changes). */
   remountHeld: () => void
+  /** Remount accessory overlay (after alignment editor changes). */
+  remountAccessory: () => void
   refresh: () => void
   resize: () => void
   dispose: () => void
@@ -93,10 +101,27 @@ export function createViewer(container: HTMLElement): AssetViewer {
     slot.setClip(resolveAppliedClipName(browserState.pose, browserState.clip, slot.clipNames))
   }
 
+  let previewSeq = 0
+
   const refreshHeldPreview = () => {
+    void refreshPreviews()
+  }
+
+  const refreshPreviews = async () => {
     applySlotPose(reference)
+    const seq = ++previewSeq
+    const accOverride = alignmentOverrideForTarget(target.entry?.id ?? null)
+    const acc = await applyAccessoryPreview(reference, target, accOverride)
+    if (seq !== previewSeq) return
+    if (acc.visual || acc.mode === 'overlay' || acc.mode === 'side-by-side') {
+      clearHeldPreviewMount(target)
+      if (acc.reason) browserState.statusMessage = acc.reason
+      markDirty()
+      return
+    }
     const override = gripOverrideForTarget(target.entry?.id ?? null)
     const state = applyHeldPreview(reference, target, override)
+    if (seq !== previewSeq) return
     if (state.mode === 'in-hand') {
       browserState.statusMessage = override
         ? 'In-hand preview (grip editor override)'
@@ -104,6 +129,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
     } else if (state.reason) {
       browserState.statusMessage = state.reason
     }
+    markDirty()
   }
 
   const multi = createMultiView(container, renderer, 1, {
@@ -152,7 +178,9 @@ export function createViewer(container: HTMLElement): AssetViewer {
     grid.visible = browserState.showGrid
     axes.visible = browserState.showAxes
     if (reference.bboxHelper) reference.bboxHelper.visible = browserState.showBbox
-    if (target.bboxHelper) target.bboxHelper.visible = browserState.showBbox
+    if (target.bboxHelper) {
+      target.bboxHelper.visible = browserState.showBbox && !accessoryOverlayActive()
+    }
     setWireframe(reference.model, browserState.wireframe)
     setWireframe(target.model, browserState.wireframe)
 
@@ -247,6 +275,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
     reference.refreshAnchors()
     target.refreshAnchors()
     const held = computeHeldPreviewState(reference, target)
+    const overlay = accessoryOverlayActive()
 
     if (browserState.focus === 'hand') {
       const hand = findAnchorByName(reference, 'hand.right')
@@ -262,7 +291,7 @@ export function createViewer(container: HTMLElement): AssetViewer {
       }
     }
 
-    const box = held.mode === 'in-hand'
+    const box = held.mode === 'in-hand' || overlay
       ? reference.getBounds()
       : (target.getBounds() ?? reference.getBounds())
     if (!box) return
@@ -288,17 +317,19 @@ export function createViewer(container: HTMLElement): AssetViewer {
     target,
     async loadReference(entry, url) {
       clearHeldPreviewMount(target)
+      clearAccessoryPreview(target)
       await reference.load(entry, url)
       reconcileClipSelection()
-      refreshHeldPreview()
+      await refreshPreviews()
       tryRestoreOrFrame()
       markDirty()
     },
     async loadTarget(entry, url) {
       clearHeldPreviewMount(target)
+      clearAccessoryPreview(target)
       await target.load(entry, url)
       reconcileClipSelection()
-      refreshHeldPreview()
+      await refreshPreviews()
       tryRestoreOrFrame()
       markDirty()
     },
@@ -306,11 +337,16 @@ export function createViewer(container: HTMLElement): AssetViewer {
       const prevRef = browserState.referenceAnchor
       const prevTgt = browserState.targetAnchor
       clearHeldPreviewMount(target)
+      clearAccessoryPreview(target)
       await reference.reload()
       validateSelections(prevRef, prevTgt)
       reconcileClipSelection()
-      refreshHeldPreview()
-      if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
+      await refreshPreviews()
+      if (
+        browserState.resetTransformOnReload
+        && !accessoryOverlayActive()
+        && computeHeldPreviewState(reference, target).mode !== 'in-hand'
+      ) {
         target.group.position.set(defaultTargetOffset(), 0, 0)
       }
       markDirty()
@@ -319,11 +355,16 @@ export function createViewer(container: HTMLElement): AssetViewer {
       const prevRef = browserState.referenceAnchor
       const prevTgt = browserState.targetAnchor
       clearHeldPreviewMount(target)
+      clearAccessoryPreview(target)
       await target.reload()
       validateSelections(prevRef, prevTgt)
       reconcileClipSelection()
-      refreshHeldPreview()
-      if (browserState.resetTransformOnReload && computeHeldPreviewState(reference, target).mode !== 'in-hand') {
+      await refreshPreviews()
+      if (
+        browserState.resetTransformOnReload
+        && !accessoryOverlayActive()
+        && computeHeldPreviewState(reference, target).mode !== 'in-hand'
+      ) {
         target.group.position.set(defaultTargetOffset(), 0, 0)
       }
       markDirty()
@@ -370,12 +411,15 @@ export function createViewer(container: HTMLElement): AssetViewer {
     remountHeld() {
       // Keep the user's camera — grip tweaks must not reframe.
       refreshHeldPreview()
-      markDirty()
+    },
+    remountAccessory() {
+      refreshHeldPreview()
     },
     refresh: markDirty,
     resize: () => { markDirty() },
     dispose() {
       clearHeldPreviewMount(target)
+      clearAccessoryPreview(target)
       reference.dispose()
       target.dispose()
       multi.dispose()
