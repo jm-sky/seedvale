@@ -105,9 +105,11 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
     rayleigh = 0.55
   }
 
-  const sunIntensity = 0.15 + dayFactor * 1.15
-  const ambientIntensity = 0.12 + dayFactor * 0.25
-  const hemiIntensity = 0.15 + dayFactor * 0.38
+  // Direct stays dominant at noon; trim indirect fill so shade keeps contrast
+  // (world-029) without raising night floors or dawn/dusk intensity spikes.
+  const sunIntensity = 0.15 + dayFactor * 1.2
+  const ambientIntensity = 0.12 + dayFactor * 0.2
+  const hemiIntensity = 0.15 + dayFactor * 0.3
 
   // Start fog further out so mid-ground hills stay readable. These are
   // atmospheric-only inputs — the terrain-streaming-safe cap is applied
@@ -131,6 +133,19 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
     dayFactor,
     elev,
   }
+}
+
+/** Directional sun RGB from sky `sunPosition.y` (0 horizon … 1 overhead).
+ *  Low elevation reads warmer; high elevation neutral-warm. Weather tint stays
+ *  out of this path (`gameLoop` overlay is intensity-only for lights).
+ *
+ * @domain world
+ */
+export function sunDirectionalColorFromSunY(sunY: number, out: Color): void {
+  const t = Math.max(0, Math.min(1, sunY * 1.15))
+  const g = 0.86 + t * 0.11
+  const b = 0.68 + t * 0.22
+  out.setRGB(1, g, b)
 }
 
 const TIME_PRESETS: Record<string, number> = {

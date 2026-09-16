@@ -80,12 +80,12 @@ const GRADED_OUTPUT_FRAGMENT_SHADER = /* glsl */`
 		{
 			vec3 c = gl_FragColor.rgb;
 			float luma = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
-			vec3 graded = mix( vec3( luma ), c, 1.04 );
-			graded = ( graded - 0.5 ) * 1.03 + 0.5;
+			vec3 graded = mix( vec3( luma ), c, 1.05 );
+			graded = ( graded - 0.5 ) * 1.035 + 0.5;
 			float peak = max( graded.r, max( graded.g, graded.b ) );
-			graded *= mix( 1.0, 0.9, smoothstep( 0.72, 1.0, peak ) );
-			graded.r += 0.006;
-			graded.b -= 0.004;
+			graded *= mix( 1.0, 0.88, smoothstep( 0.72, 1.0, peak ) );
+			graded.r += 0.007;
+			graded.b -= 0.005;
 			c = mix( c, clamp( graded, 0.0, 1.0 ), filmGradeIntensity );
 			float dither = bayer4( gl_FragCoord.xy ) * ( 1.0 / 255.0 ) * filmGradeIntensity;
 			c += dither;

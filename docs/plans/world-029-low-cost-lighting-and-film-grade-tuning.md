@@ -1,7 +1,7 @@
 # Plan: Low-cost lighting and film-grade tuning
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** medium · **Effort:** M
 **Model:** Composer, Grok

@@ -1,5 +1,6 @@
 import { type DirectionalLight, MathUtils, type Scene, Vector3 } from 'three'
 import { Sky } from 'three/addons/objects/Sky.js'
+import { sunDirectionalColorFromSunY } from './dayNight'
 
 export type SkyParams = {
   inclination: number
@@ -62,7 +63,7 @@ export function createSky(params: SkyParams): WorldSky {
       light.target.position.set(0, 0, 0)
       const elev = MathUtils.clamp(sunPosition.y * 1.2, 0.15, 1)
       light.intensity = 0.85 + elev * 0.9
-      light.color.setRGB(1, 0.95 + elev * 0.03, 0.85 + elev * 0.1)
+      sunDirectionalColorFromSunY(sunPosition.y, light.color)
     }
   }
 
