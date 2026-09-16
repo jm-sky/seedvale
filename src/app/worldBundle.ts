@@ -951,6 +951,11 @@ function buildResourceDeposits(
  *  (values sourced from a live snapshot of the bundle being replaced). See
  *  each exported function below for the semantic contract of each field —
  *  not restated here to avoid doc drift between the two. */
+/** Semantic startup-loader stages emitted from the world build path only. */
+export type WorldStartupLoadingStage = 'terrain' | 'world'
+
+export type WorldStartupLoadingStageListener = (stage: WorldStartupLoadingStage) => void
+
 type WorldSystemsSeed = {
   scene: Scene
   config: WorldConfig
@@ -1054,6 +1059,8 @@ type WorldSystemsSeed = {
    *  `resourceDepletion` above (patch *placement* is never persisted, only
    *  which ids are currently depleted — see `world/grassForage.ts`). */
   grassForageOverrides: GrassForageOverrides
+  /** Optional coarse startup feedback — initial boot only; rebuild callers omit. */
+  onStartupLoadingStage?: WorldStartupLoadingStageListener
 }
 
 /** Inert stand-ins for the `WorldBundle` members deferred off the critical
@@ -1186,6 +1193,7 @@ async function buildWorldSystems(
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
+    onStartupLoadingStage,
     onAnimalDeath, onAnimalDeathSound, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: initialBloodTraces,
@@ -1269,6 +1277,7 @@ async function buildWorldSystems(
   bootMark('waitForChunks')
   await chunkManager.waitForChunks(homeChunks())
   bootMarkEnd('waitForChunks')
+  onStartupLoadingStage?.('world')
 
   bootMark('createWorldContext')
   const worldContext = createWorldContext(() => chunkManager, config, dayNight)
@@ -2270,6 +2279,7 @@ export async function createWorldBundle(
   /** Plan quests-progression-036 — app-owned consumed authored pickup ids. */
   consumedWorldPickupIds: ReadonlySet<string> = new Set(),
   onAnimalDeathSound?: (kind: AnimalKind, x: number, z: number) => void,
+  onStartupLoadingStage?: WorldStartupLoadingStageListener,
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, consumedWorldPickupIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -2316,6 +2326,7 @@ export async function createWorldBundle(
     persistentOccupants: initialPersistentOccupants,
     resourceDepletion,
     grassForageOverrides,
+    onStartupLoadingStage,
     onAnimalDeath, onAnimalDeathSound, getPlayerSocial, onSettlementAvailable, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
   }, isStale)
