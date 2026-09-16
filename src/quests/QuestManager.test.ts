@@ -4584,6 +4584,10 @@ describe('QuestManager deferred world knowledge (plan quests-progression-047)', 
     )
   }
 
+  function spokenActions(dialog: QuestDialogOverride | null | undefined) {
+    return (dialog?.actions ?? []).filter((action) => !action.topicScoped)
+  }
+
   it('starts one knowledge request exactly once on accept', async () => {
     let resolves = 0
     const { lookup } = clock(0)
@@ -4610,12 +4614,13 @@ describe('QuestManager deferred world knowledge (plan quests-progression-047)', 
     acceptOffer(qm, 'Anna')
     deferred.finish(landmarkRef)
     await Promise.resolve()
-    expect(qm.onInteract('Anna')?.actions).toBeUndefined()
+    expect(spokenActions(qm.onInteract('Anna'))).toEqual([])
     expect(qm.onInteract('Anna')?.line).toContain('starych papierów')
     setDays(1 / 24)
     const ready = qm.onInteract('Anna')
-    expect(ready?.actions?.[0]?.label).toContain('odtworzyć')
-    const reply = ready?.actions?.[0]?.onSelect()
+    const receive = spokenActions(ready)[0]
+    expect(receive?.label).toContain('odtworzyć')
+    const reply = receive?.onSelect()
     expect(reply).toContain('clue:monolith:4:-7:0:3f')
     expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
     expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:9:9:0:3f' })).toBeNull()
@@ -4630,34 +4635,36 @@ describe('QuestManager deferred world knowledge (plan quests-progression-047)', 
     const qm = knowledgeManager(deferred.resolver, lookup)
     acceptOffer(qm, 'Anna')
     setDays(2)
-    expect(qm.onInteract('Anna')?.actions).toBeUndefined()
+    expect(spokenActions(qm.onInteract('Anna'))).toEqual([])
     deferred.finish(landmarkRef)
     await Promise.resolve()
-    expect(qm.onInteract('Anna')?.actions?.[0]?.label).toContain('odtworzyć')
+    expect(spokenActions(qm.onInteract('Anna'))[0]?.label).toContain('odtworzyć')
   })
 
   it('selecting the ready receive action advances exactly once', async () => {
-    const { lookup } = clock(1)
+    const { lookup, setDays } = clock(0)
     const qm = knowledgeManager({
       resolve: async () => landmarkRef,
       describe: (ref) => `clue:${ref.landmarkId}`,
     }, lookup)
     acceptOffer(qm, 'Anna')
     await Promise.resolve()
+    setDays(1)
     const first = qm.onInteract('Anna')
-    first?.actions?.[0]?.onSelect()
+    spokenActions(first)[0]?.onSelect()
     expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
-    expect(qm.onInteract('Anna')?.actions?.some((action) => action.label.includes('odtworzyć'))).toBeFalsy()
+    expect(spokenActions(qm.onInteract('Anna')).some((action) => action.label.includes('odtworzyć'))).toBeFalsy()
   })
 
   it('fails with the authored unavailable outcome after delay', async () => {
-    const { lookup } = clock(1)
+    const { lookup, setDays } = clock(0)
     const qm = knowledgeManager({
       resolve: async () => null,
       describe: () => null,
     }, lookup)
     acceptOffer(qm, 'Anna')
     await Promise.resolve()
+    setDays(1)
     const dialog = qm.onInteract('Anna')
     expect(qm.getState('research')).toBe('failed')
     expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('lost')
@@ -4695,7 +4702,7 @@ describe('QuestManager deferred world knowledge (plan quests-progression-047)', 
     restored.onInteract('Anna')
     restored.onInteract('Anna')
     const ready = restored.onInteract('Anna')
-    ready?.actions?.[0]?.onSelect()
+    spokenActions(ready)[0]?.onSelect()
     const journal = restored.exportProgress()[0]?.journal?.filter((event) => event.kind === 'progress')
     expect(journal).toHaveLength(2)
     expect(journal?.filter((event) => event.stampId === 'world-knowledge-pending')).toHaveLength(1)
@@ -4715,21 +4722,22 @@ describe('QuestManager deferred world knowledge (plan quests-progression-047)', 
     expect(pending?.currentObjective).toBe('Wróć do Anny, gdy sprawdzi stare zapiski.')
     expect(pending?.notes.some((note) => note.text.includes('clue:'))).toBe(false)
     setDays(1 / 24)
-    qm.onInteract('Anna')?.actions?.[0]?.onSelect()
+    spokenActions(qm.onInteract('Anna'))[0]?.onSelect()
     const revealed = qm.list().find((entry) => entry.id === 'research')
     expect(revealed?.currentObjective).toContain('clue:monolith:4:-7:0:3f')
     expect(revealed?.notes.some((note) => note.text.includes('clue:monolith:4:-7:0:3f'))).toBe(true)
   })
 
   it('preserves a resolved landmark identity across save/load', async () => {
-    const { lookup } = clock(1)
+    const { lookup, setDays } = clock(0)
     const first = knowledgeManager({
       resolve: async () => landmarkRef,
       describe: (ref) => `clue:${ref.landmarkId}`,
     }, lookup)
     acceptOffer(first, 'Anna')
     await Promise.resolve()
-    first.onInteract('Anna')?.actions?.[0]?.onSelect()
+    setDays(1)
+    spokenActions(first.onInteract('Anna'))[0]?.onSelect()
     const saved = first.exportProgress()
     expect(saved[0]?.worldKnowledge?.target?.ref?.landmarkId).toBe(landmarkRef.landmarkId)
     let resolves = 0

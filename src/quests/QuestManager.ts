@@ -44,6 +44,9 @@ import {
   questStageObjectiveSlots,
   type QuestStageSlotProgress,
   type QuestState,
+  type QuestWorldKnowledgeDef,
+  type QuestWorldKnowledgeProgress,
+  type QuestWorldKnowledgeRef,
   rankQuestOfferCandidates,
   RELATION_LEVEL_THRESHOLDS,
   type RelationLevel,
@@ -51,9 +54,6 @@ import {
   relationToLevel,
   uniqueOutcomeForState,
   validateQuestDefinitions,
-  type QuestWorldKnowledgeDef,
-  type QuestWorldKnowledgeProgress,
-  type QuestWorldKnowledgeRef,
 } from './quests'
 import {
   evaluateSettlementLightsObjective,
@@ -2439,11 +2439,11 @@ export class QuestManager {
         case 'discard_carried_container':
           this.lifecycleHooks.discardCarriedContainer?.(effect.containerId)
           break
-        case 'reveal_location':
-          this.lifecycleHooks.revealLocation?.(effect.locationId, { setNavigation: effect.setNavigation })
-          break
         case 'request_world_knowledge':
           this.requestWorldKnowledge(questId, effect.knowledgeId)
+          break
+        case 'reveal_location':
+          this.lifecycleHooks.revealLocation?.(effect.locationId, { setNavigation: effect.setNavigation })
           break
         case 'transfer_animal_ownership':
           if (!options?.skipAnimalOwnership) this.transferAnimalOwnership(effect.animalId)

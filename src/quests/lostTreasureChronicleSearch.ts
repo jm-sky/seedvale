@@ -8,7 +8,6 @@ import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import type { ExplicitBuriedPlacement } from '../world/hiddenFinds'
 import type { WorldGeneratedContainerSpec } from '../world/worldGeneratedContainers'
 import type { QuestDef, QuestOutcomeId } from './quests'
-import { WORLD_KNOWLEDGE_HOUR_DAYS } from './quests'
 import {
   findLostTreasureArchaeologistResident,
 } from '../settlement/lostTreasureChroniclesArchaeologistResident'
@@ -23,6 +22,7 @@ import {
   type LostTreasureChroniclesElderBinding,
 } from './lostTreasureChroniclesElder'
 import { type SettlementOpportunityNpc, settlementOpportunityNpcsFromDef } from './opportunities/settlementNpcMaterialization'
+import { WORLD_KNOWLEDGE_HOUR_DAYS } from './quests'
 
 export const LOST_TREASURE_CHRONICLE_SEARCH_QUEST_ID = 'story:lost-treasure-chronicles:chronicle-search'
 export const LOST_TREASURE_CEMETERY_FAVOUR_QUEST_ID = 'story:lost-treasure-chronicles:cemetery-favour'
@@ -440,11 +440,11 @@ export function buildLostTreasureChronicleSearchQuests(
         transitions: [{ toStageId: 'acquire' }],
         description: 'Przeszukaj cmentarz albo ruiny wyprawy — w dowolnej kolejności.',
         reminderLine:
-          `Jeden trop to grób badacza. Co do ruin obozu: {worldKnowledgeClue:ruins}.`,
+          'Jeden trop to grób badacza. Co do ruin obozu: {worldKnowledgeClue:ruins}.',
         dialogueActions: [{
           npc: archaeologist,
           playerLine: 'Udało ci się zestawić notatki z wyprawy?',
-          npcLine: `Znalazłem to. Szukaj {worldKnowledgeClue:ruins}. Kronika jest tylko w jednym z dwóch miejsc.`,
+          npcLine: 'Znalazłem to. Szukaj {worldKnowledgeClue:ruins}. Kronika jest tylko w jednym z dwóch miejsc.',
           skipAdvance: true,
           requireWorldKnowledgeReady: 'ruins',
           effects: [{ type: 'reveal_location', locationId: binding.ruinsLocationId }],

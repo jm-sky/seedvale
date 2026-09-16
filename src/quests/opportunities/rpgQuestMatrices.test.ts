@@ -227,8 +227,13 @@ describe('RPG materialization', () => {
     const second = materializeRpgQuestOpportunity(persisted!, neighborNpcs, 'Lasowa')
     expect(second).toEqual(first)
     expect(second?.stages[0]?.objective).toEqual({
-      type: 'interact_landmark',
-      landmarkId: 'stoneCircle:8:8:0:1',
+      type: 'receive_world_knowledge',
+      knowledgeId: 'target',
+      npc: { npcId: neighborHunter.id },
+    })
+    expect(second?.stages[1]?.objective).toEqual({
+      type: 'interact_bound_landmark',
+      knowledgeId: 'target',
     })
   })
 
@@ -366,6 +371,7 @@ describe('QuestManager path for Sekret starego miejsca', () => {
       landmarks: [{ id: 'monolith:4:-7:0:3f', kind: 'monolith' }],
     })!
     const def = materializeSettlementQuestOpportunity(candidate, neighborNpcs, 'Lasowa')!
+    let elapsedDays = 0
     const qm = new QuestManager(
       [def],
       undefined,
@@ -383,7 +389,7 @@ describe('QuestManager path for Sekret starego miejsca', () => {
       undefined,
       undefined,
       undefined,
-      { getWorldSeed: () => 1, getTimeOfDay: () => 0, getElapsedDays: () => 1 },
+      { getWorldSeed: () => 1, getTimeOfDay: () => 0, getElapsedDays: () => elapsedDays },
       undefined,
       undefined,
       undefined,
@@ -399,9 +405,11 @@ describe('QuestManager path for Sekret starego miejsca', () => {
     accept(qm, neighborHunter.id)
     await Promise.resolve()
     expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:4:-7:0:3f' })).toBeNull()
+    elapsedDays = 1
     const ready = qm.onInteract(neighborHunter.id)
-    expect(ready?.actions?.[0]?.label).toContain('ustalić')
-    ready?.actions?.[0]?.onSelect()
+    const receive = ready?.actions?.find((action) => !action.topicScoped)
+    expect(receive?.label).toContain('ustalić')
+    receive?.onSelect()
     expect(qm.onInteractObjective({ type: 'interact_landmark', landmarkId: 'monolith:9:9:0:3f' })).toBeNull()
     const override = qm.onInteractObjective({
       type: 'interact_landmark',
