@@ -4068,6 +4068,7 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `persistence/saveData.ts`
 - `player/PlayerNeeds.ts`
+- `quests/QuestManager.ts`
 - `world/dayNight.ts`
 - `world/timeConversion.test.ts`
 - `world/timeSkip.ts`

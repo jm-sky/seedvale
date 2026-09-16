@@ -35,6 +35,7 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/npcState.ts`
 - `world/dayNight.ts`
+- `world/timeConversion.ts`
 
 **Imported by**
 
