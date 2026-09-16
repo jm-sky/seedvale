@@ -222,6 +222,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
+- `settlement/merchantTrade.ts`
 - `settlement/npcIdentity.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcPostDeath.ts`
@@ -349,6 +350,7 @@ Generated from TypeScript imports.
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.test.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
+- `settlement/merchantTrade.ts`
 - `settlement/npcIdentity.test.ts`
 - `settlement/npcIdentity.ts`
 - `settlement/plazaPaving.test.ts`
@@ -937,6 +939,36 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 
+## `settlement/merchantTrade.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/trade.ts`
+- `items/tradeCatalog.ts`
+- `settlement/merchantTrade.ts`
+
+## `settlement/merchantTrade.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/trade.ts`
+- `items/tradeCatalog.ts`
+- `settlement/families.ts`
+- `settlement/npcState.ts`
+- `shared/SettlementName.ts`
+- `terrain/naturalResources.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/createSettlement.ts`
+- `settlement/merchantTrade.test.ts`
+
 ## `settlement/merchantWagon.test.ts`
 
 **Imports**
@@ -1140,6 +1172,7 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
+- `settlement/merchantTrade.ts`
 - `settlement/npcIdentity.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`

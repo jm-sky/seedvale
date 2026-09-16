@@ -497,7 +497,7 @@ Generated from exported TypeScript symbols.
 - `createAcquiredInstance` — function — line 142
 - `InstanceSellResult` — type — line 33
 - `OfferBuybackResolution` — type — line 37
-- `OwnedGoodsPurchaseLine` — type — line 373
+- `OwnedGoodsPurchaseLine` — type — line 427
 - `previewPricedPurchaseNetCoins` — function — line 299
 - `previewTransactionNetCoins` — function — line 284
 - `resolveOfferBuyback` — function — line 233
@@ -506,8 +506,9 @@ Generated from exported TypeScript symbols.
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
 - `selectInstancesToSell` — function — line 168
 - `selectInstanceToPlace` — function — line 183
-- `sellInstancesForCoins` — function — line 447
-- `settleOwnedGoodsPurchase` — function — line 394
+- `sellInstancesForCoins` — function — line 501
+- `settleMerchantStockTransaction` — function — line 380
+- `settleOwnedGoodsPurchase` — function — line 448
   - domain: settlements-npcs
 - `settlePricedPurchase` — function — line 312
 - `settleTransaction` — function — line 340

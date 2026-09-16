@@ -3429,6 +3429,7 @@ Generated from TypeScript imports.
 - `settlement/houseCatalog.ts`
 - `settlement/householdWells.ts`
 - `settlement/livestock.ts`
+- `settlement/merchantTrade.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/plazaPaving.ts`
 - `settlement/professionStaffing.ts`

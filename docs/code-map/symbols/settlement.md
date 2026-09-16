@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 430
-- `CreateSettlementDeps` — type — line 272
-- `Settlement` — type — line 146
-- `settlementSpawnPoint` — function — line 260
+- `createSettlement` — function — line 435
+- `CreateSettlementDeps` — type — line 277
+- `Settlement` — type — line 151
+- `settlementSpawnPoint` — function — line 265
 
 ## `settlement/decorProps.ts`
 
@@ -397,6 +397,25 @@ Generated from exported TypeScript symbols.
 - `selectLostTreasureChroniclesElderSettlement` — function — line 97
   - domain: settlements-npcs
 
+## `settlement/merchantTrade.ts`
+
+- `generateMerchantAssortment` — function — line 319
+- `isPremiumMerchantGood` — function — line 137
+- `MERCHANT_SPECIALIZATIONS` — const — line 28
+- `MerchantAssortmentContext` — type — line 41
+- `MerchantProfile` — type — line 35
+- `merchantProfileFor` — function — line 189
+- `MerchantSpecialization` — type — line 22
+  - domain: settlements
+- `merchantStockQuantity` — function — line 397
+- `PREMIUM_MERCHANT_KINDS` — const — line 52
+- `premiumAvailabilityChance` — function — line 142
+- `resolveMerchantProfiles` — function — line 176
+  - domain: settlements
+- `seedMerchantStockIfNeeded` — function — line 401
+- `settlementHasPremiumOffer` — function — line 313
+- `specializationAffinity` — function — line 222
+
 ## `settlement/merchantWagon.ts`
 
 - `MERCHANT_HORSE_RADIUS` — const — line 21
@@ -491,17 +510,17 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 238
-- `createNpcStateRegistry` — function — line 284
+- `createNpcAuthoritativeState` — function — line 258
+- `createNpcStateRegistry` — function — line 306
 - `MAX_HP` — const — line 49
 - `MAX_STAMINA` — const — line 50
-- `NpcAuthoritativeState` — type — line 84
+- `NpcAuthoritativeState` — type — line 87
   - domain: settlements-npcs
 - `NpcGraveVisitRecord` — type — line 41
 - `NpcId` — type — line 37
-- `NpcPhysicalMaxima` — type — line 224
-- `NpcStateRegistry` — type — line 270
-- `NpcStateSnapshot` — type — line 160
+- `NpcPhysicalMaxima` — type — line 244
+- `NpcStateRegistry` — type — line 292
+- `NpcStateSnapshot` — type — line 174
 
 ## `settlement/pathDryness.ts`
 
@@ -529,7 +548,7 @@ Generated from exported TypeScript symbols.
 - `PlaceType` — type — line 19
 - `socialPlaceFor` — function — line 72
 - `workEligibleSettlementTrees` — function — line 90
-- `workplaceFor` — function — line 131
+- `workplaceFor` — function — line 132
 
 ## `settlement/playerOwnedHorseDebug.ts`
 
@@ -562,28 +581,28 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/professionStaffing.ts`
 
-- `adultProfessionCoverage` — function — line 317
+- `adultProfessionCoverage` — function — line 332
   - domain: settlements-npcs
-- `isAdultAge` — function — line 285
-- `isProfessionAdult` — function — line 290
+- `isAdultAge` — function — line 300
+- `isProfessionAdult` — function — line 305
 - `ProfessionStaffingContext` — type — line 22
   - domain: settlements-npcs
-- `resolveInitialProfessionStaffing` — function — line 419
+- `resolveInitialProfessionStaffing` — function — line 434
   - domain: settlements-npcs
-- `shepherdHouseholdIndex` — function — line 295
+- `shepherdHouseholdIndex` — function — line 310
 - `StaffingPriority` — type — line 12
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 322
-- `buildSettlementProps` — function — line 732
-- `disposeSettlementGroup` — function — line 2013
+- `BlacksmithWorkplace` — type — line 326
+- `buildSettlementProps` — function — line 736
+- `disposeSettlementGroup` — function — line 2027
 - `SettlementHouseBed` — type — line 161
 - `SettlementHouseLandmark` — type — line 127
 - `SettlementLandmarks` — type — line 177
-- `SettlementLandPlot` — type — line 311
-- `SettlementStorageVisuals` — type — line 303
-- `SettlementTreeLandmark` — type — line 332
+- `SettlementLandPlot` — type — line 315
+- `SettlementStorageVisuals` — type — line 307
+- `SettlementTreeLandmark` — type — line 336
 - `SettlementWellLandmark` — type — line 168
 
 ## `settlement/propSpecs.ts`

@@ -194,6 +194,8 @@ Generated from TypeScript imports.
 - `settlement/householdWood.ts`
 - `settlement/landPurchase.test.ts`
 - `settlement/landPurchase.ts`
+- `settlement/merchantTrade.test.ts`
+- `settlement/merchantTrade.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/npcState.ts`
@@ -1001,6 +1003,8 @@ Generated from TypeScript imports.
 - `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.ts`
+- `settlement/merchantTrade.test.ts`
+- `settlement/merchantTrade.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.test.ts`
 - `world/createPlacedTraps.ts`
@@ -1171,6 +1175,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdResourceTransfer.ts`
 - `settlement/householdWood.ts`
+- `settlement/merchantTrade.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageRepair.ts`
@@ -1417,6 +1422,8 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `items/trade.test.ts`
 - `items/trapInstanceTrade.test.ts`
+- `settlement/merchantTrade.test.ts`
+- `settlement/merchantTrade.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
 
@@ -1442,6 +1449,8 @@ Generated from TypeScript imports.
 - `items/treasureGameplay.test.ts`
 - `quests/guardRewards.test.ts`
 - `quests/guardRewards.ts`
+- `settlement/merchantTrade.test.ts`
+- `settlement/merchantTrade.ts`
 - `ui-vue/store.ts`
 
 ## `items/trapInstanceLifecycle.test.ts`
