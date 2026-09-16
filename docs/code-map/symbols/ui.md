@@ -41,8 +41,9 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createLoadingScreen.ts`
 
-- `createLoadingScreen` — function — line 11
-- `LoadingScreen` — type — line 1
+- `createLoadingScreen` — function — line 23
+- `LoadingScreen` — type — line 11
+- `StartupLoadingStage` — type — line 1
 
 ## `ui/createMinimap.ts`
 
