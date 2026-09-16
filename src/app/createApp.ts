@@ -120,6 +120,7 @@ import {
   type GuardWorldProgress,
   migrateLegacyGuardSwordGift,
 } from '../quests/guardPersistence'
+import { buildHuntersBrotherhoodIntroductionQuest } from '../quests/huntersBrotherhoodIntroduction'
 import {
   buildLostHunterNaturalCaveQuest,
   isLostHunterPackLooted,
@@ -1437,6 +1438,15 @@ export async function createApp(
         spawners: bundle.fauna.getSpawners(),
         persistedQuestIds,
       }))
+      const huntersBrotherhoodQuest = buildHuntersBrotherhoodIntroductionQuest({
+        home: { id: def.id, name: def.name, npcs },
+        neighbors: neighborDefs.map((neighbor) => ({
+          id: neighbor.id,
+          name: neighbor.name,
+          npcs: npcsBySettlement.get(neighbor.id) ?? [],
+        })),
+      })
+      if (huntersBrotherhoodQuest) opportunityQuestDefs.push(huntersBrotherhoodQuest)
       const loadedHome = bundle.settlementsManager.getLoaded().find((settlement) => settlement.id === def.id)
       const eveningQuest = buildGuardEveningDutyQuest({
         settlementId: def.id,

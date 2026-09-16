@@ -1,7 +1,7 @@
 # Plan: Hunters Brotherhood introduction and membership
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Model:** Sonnet, Composer
@@ -10,6 +10,10 @@
 **Subdomains:** `quests` `relationships` `progression`
 **Tags:** `hunters-brotherhood` `story` `npc-binding`
 **Roadmap:** `quests-hunters-brotherhood.md`
+
+## Implementation status
+
+Implemented 2026-09-16. Dedicated quest module `src/quests/huntersBrotherhoodIntroduction.ts` resolves a deterministic two-settlement adult cast from the home Hunter I–III giver plus bounded nearby settlement NPC projections, then materializes one `exposure: 'story'` invitation gated on `hunter_iii_complete`. Meeting the circle is a single `mode: 'all'` stage (`master` / `trophy` / `ambitious` `talk_to_npc` slots); reporting back to the inviter records `hunters_brotherhood_joined`. No Brotherhood SaveData, faction record, profession rewrite, or QuestManager fork. Wired next to `buildHunterProfessionQuests()` in `createApp.ts`. Automated tests cover cast stability, profession independence, fallbacks, prerequisite gating, join-once completion, and save/load rematerialization. Browser/gameplay verification is user-owned.
 
 ## Goal
 

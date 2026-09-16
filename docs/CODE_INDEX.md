@@ -125,6 +125,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [QuestManager](../src/quests/QuestManager.ts) — quest progress, objective evaluation and player↔NPC relations keyed by stable `NpcId`. Architecture recon: [2026-09-13 quest system](./reviews/2026-09-13--quest-system-architecture-recon.md).
 - [Authored quests](../src/quests/quests.ts) — name-keyed authored definitions; composition root materializes them to `QuestNpcRef`.
 - [Settlement quest opportunities](../src/quests/opportunities/settlementQuestOpportunities.ts) — world-driven and RPG matrix candidates selected at composition root into normal `QuestDef`s.
+- [Hunters Brotherhood introduction](../src/quests/huntersBrotherhoodIntroduction.ts) — two-settlement story cast after Hunter III; membership is the `hunters_brotherhood_joined` outcome (plan quests-progression-048).
 - [Suspicious transport cave cache](../src/quests/suspiciousTransportCaveCache.ts) — natural-cave cache variant of the existing `suspicious-transport` RPG matrix (plan quests-progression-024).
 - [Lost Treasure Chronicles elder](../src/quests/lostTreasureChroniclesElder.ts) — nearby authored elder binding and the winter/dispute contextual quests (plan quests-progression-037).
 - [Lost Treasure Chronicles chronicle search](../src/quests/lostTreasureChronicleSearch.ts) — archaeologist, encoded chronicle, cemetery/ruins investigation (plan quests-progression-038).

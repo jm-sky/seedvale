@@ -8,7 +8,8 @@ import { adultOpportunityNpcs } from './rpgQuestMatrices'
 const HUNTER_QUEST_PREFIX = 'hunter-profession:'
 const HUNTER_I_OUTCOME = 'hunter_i_complete'
 const HUNTER_II_OUTCOME = 'hunter_ii_complete'
-const HUNTER_III_OUTCOME = 'hunter_iii_complete'
+/** Terminal Hunter III outcome that later story continuation can prerequisite. */
+export const HUNTER_III_COMPLETE_OUTCOME = 'hunter_iii_complete'
 
 const HABITAT_FEED_FOODS: readonly ItemKind[] = ['apple', 'carrot', 'berries']
 
@@ -193,7 +194,7 @@ function materializeHunterIII(
     reportLine: 'Dzięki — teraz ten kąt lasu ma chwilę oddechu. Dobrze, że pomogłeś.',
     outcomes: [
       {
-        id: HUNTER_III_OUTCOME,
+        id: HUNTER_III_COMPLETE_OUTCOME,
         state: 'complete',
         consequences: {
           relations: [{ npc: { npcId: giver.id }, delta: 2 }],
