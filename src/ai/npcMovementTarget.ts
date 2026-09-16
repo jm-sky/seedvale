@@ -1,3 +1,4 @@
+import type { CaveTraversalDescriptor, CaveTraversalPoint } from '../world/caves/caveHabitat'
 import type { NpcPlannedAction } from './npcAction'
 import { copyVec3, type Vec3 } from '../simulation'
 import {
@@ -20,13 +21,22 @@ export type NpcMovementTarget = {
 
 /**
  * Narrow world/cave semantic queries for NPC movement — no `WorldBundle` or
- * raw heightfield maps. Stage 1 wires `spatialContextAt` only; later stages
- * may extend with ground/horizontal/route helpers on this same seam.
+ * raw heightfield maps. Route composition uses habitat + point-to-point
+ * traversal; current membership is always `spatialContextAt`.
  *
  * @domain npc
  */
 export type NpcWorldMovementQueries = {
   spatialContextAt: (x: number, y: number, z: number) => WorldSpatialContext
+  resolveHabitat: (
+    caveId: string,
+    entityHeight: number,
+  ) => CaveTraversalDescriptor | null
+  resolveRouteBetweenPoints: (
+    caveId: string,
+    from: { x: number, y: number, z: number },
+    to: { x: number, y: number, z: number },
+  ) => readonly CaveTraversalPoint[] | null
 }
 
 export type NpcMovementTargetSource = Pick<NpcPlannedAction, 'destination' | 'destinationContext'>
@@ -81,4 +91,6 @@ function canonicalizeSpatialContext(context: WorldSpatialContext): WorldSpatialC
 /** Isolated fallbacks and tests — always resolves surface. */
 export const NPC_WORLD_MOVEMENT_SURFACE_ONLY: NpcWorldMovementQueries = {
   spatialContextAt: () => WORLD_SPATIAL_CONTEXT_SURFACE,
+  resolveHabitat: () => null,
+  resolveRouteBetweenPoints: () => null,
 }

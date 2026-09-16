@@ -1460,6 +1460,8 @@ async function buildWorldSystems(
 
   const npcWorldMovement: NpcWorldMovementQueries = {
     spatialContextAt: (x, y, z) => cavesRef?.spatialContextAt(x, y, z) ?? WORLD_SPATIAL_CONTEXT_SURFACE,
+    resolveHabitat: (caveId, entityHeight) => cavesRef?.resolveHabitat(caveId, entityHeight) ?? null,
+    resolveRouteBetweenPoints: (caveId, from, to) => cavesRef?.resolveRouteBetweenPoints(caveId, from, to) ?? null,
   }
 
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size

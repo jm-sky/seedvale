@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { LargeCaveSite } from '../largeCaves'
-import type { CaveTopology } from './caveTopology'
+import type { CaveTopology, CaveTopologyNode } from './caveTopology'
 import { buildAdventureCaveTopology } from './adventureTopology'
-import { resolveCaveTraversal } from './caveHabitat'
+import {
+  nearestCaveTopologyNodeId,
+  resolveCaveRouteBetweenPoints,
+  resolveCaveTraversal,
+} from './caveHabitat'
 import { heightfieldGroundColumn, heightfieldStandingClearance } from './caveHeightfieldQuery'
 import {
   buildCaveHeightfieldRepresentation,
@@ -121,5 +125,52 @@ describe('resolveCaveTraversal (plan fauna-019)', () => {
     const second = naturalFixture(7)
     expect(resolveCaveTraversal(first.topology, first.heightfield, first.surfaceHeightAt, BEAR_HEIGHT))
       .toEqual(resolveCaveTraversal(second.topology, second.heightfield, second.surfaceHeightAt, BEAR_HEIGHT))
+  })
+})
+
+function disconnectedTopology(): CaveTopology {
+  const node = (
+    id: string,
+    kind: CaveTopologyNode['kind'],
+    position: { x: number, y: number, z: number },
+  ): CaveTopologyNode => ({ id, kind, position, targetWidth: 2, targetHeight: 2 })
+  return {
+    caveId: 'disconnected-fixture',
+    seed: 1,
+    entrance: { x: 0, y: 10, z: 0, yaw: 0, width: 2, height: 3 },
+    nodes: [
+      node('entrance', 'entrance', { x: 0, y: 10, z: 0 }),
+      node('island', 'chamber', { x: 80, y: -4, z: 80 }),
+    ],
+    segments: [],
+    features: [],
+    minClearance: 1.5,
+  }
+}
+
+describe('resolveCaveRouteBetweenPoints (plan npc-027)', () => {
+  it('attaches arbitrary points to the nearest topology nodes and follows connectivity', () => {
+    const { topology, heightfield, surfaceHeightAt } = naturalFixture()
+    const entrance = topology.nodes.find((n) => n.id === 'entrance')!
+    const chamber = topology.nodes.find((n) => n.id === 'chamber')!
+    const from = { x: entrance.position.x + 0.2, y: entrance.position.y, z: entrance.position.z - 0.1 }
+    const to = { x: chamber.position.x - 0.3, y: chamber.position.y, z: chamber.position.z + 0.2 }
+    expect(nearestCaveTopologyNodeId(topology, from)).toBe('entrance')
+    expect(nearestCaveTopologyNodeId(topology, to)).toBe('chamber')
+    const route = resolveCaveRouteBetweenPoints(topology, heightfield, surfaceHeightAt, from, to)
+    expect(route).not.toBeNull()
+    expect(route!.length).toBeGreaterThan(1)
+    expect(route![0]).toEqual(from)
+    expect(route![route!.length - 1]).toEqual(to)
+  })
+
+  it('does not geometrically join disconnected topology components', () => {
+    const { heightfield, surfaceHeightAt } = naturalFixture()
+    const topology = disconnectedTopology()
+    const from = { x: 0, y: 10, z: 0 }
+    const to = { x: 80, y: -4, z: 80 }
+    expect(nearestCaveTopologyNodeId(topology, from)).toBe('entrance')
+    expect(nearestCaveTopologyNodeId(topology, to)).toBe('island')
+    expect(resolveCaveRouteBetweenPoints(topology, heightfield, surfaceHeightAt, from, to)).toBeNull()
   })
 })

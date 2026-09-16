@@ -311,6 +311,14 @@ import {
   type WoodHarvestDeposit,
 } from './npcLogistics'
 import {
+  composeNpcMovementRoute,
+  INITIAL_NPC_ROUTE_EXECUTION,
+  nextNpcRouteSteer,
+  type NpcComposedRoute,
+  type NpcRouteExecution,
+  npcRouteGroundY,
+} from './npcMovementRoute'
+import {
   commitNpcMovementTarget,
   NPC_WORLD_MOVEMENT_SURFACE_ONLY,
   type NpcMovementTarget,
@@ -1197,6 +1205,10 @@ export class NpcAgent {
   private pendingAction: NpcPlannedAction | null = null
   /** Committed movement target for the in-flight `goTo` step (plan npc-027). */
   private committedMovementTarget: NpcMovementTarget | null = null
+  /** Request-driven route for the current commitment — rebuilt on commit. */
+  private composedRoute: NpcComposedRoute | null = null
+  /** Transient mouth/leg cursor; never persisted (plan npc-027). */
+  private routeExecution: NpcRouteExecution = { ...INITIAL_NPC_ROUTE_EXECUTION }
   /** Stateless world/cave spatial queries — current context from actual XYZ. */
   private readonly worldMovement: NpcWorldMovementQueries
   /** After a one-shot scheduled action (eat) finishes, linger on that
@@ -3091,7 +3103,7 @@ export class NpcAgent {
         if (this.wait <= 0) {
           const action = this.pendingAction
           this.pendingAction = null
-          this.committedMovementTarget = null
+          this.clearMovementCommitment()
           action?.onComplete()
           if (action?.next) {
             this.pendingAction = action.next
@@ -3110,7 +3122,7 @@ export class NpcAgent {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
             if (action) this.trace.record({ simTime: this.simClock, type: 'action.completed', action: action.kind })
-            this.committedMovementTarget = null
+            this.clearMovementCommitment()
             this.phase = 'choose'
           }
         }
@@ -3179,7 +3191,7 @@ export class NpcAgent {
             completeActionLifecycle(this.actionLifecycle)
             this.leaveActiveQueue()
             this.pendingAction = null
-            this.committedMovementTarget = null
+            this.clearMovementCommitment()
             this.phase = 'choose'
             break
           }
@@ -3205,6 +3217,22 @@ export class NpcAgent {
             y: this.sampleHeight(live.x, live.z),
             z: live.z,
           }
+        }
+        if (this.shouldExecuteSpatialRoute(action)) {
+          const step = this.stepComposedRoute(dt)
+          if (step === 'failed') {
+            failActionLifecycle(this.actionLifecycle)
+            this.leaveActiveQueue()
+            this.pendingAction = null
+            this.clearMovementCommitment()
+            this.trace.record({ simTime: this.simClock, type: 'action.failed', action: action.kind, reason: 'invalid' })
+            this.phase = 'choose'
+            break
+          }
+          if (step !== 'arrived') break
+          this.phase = 'execute'
+          this.wait = action.durationSec
+          break
         }
         this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
         const steerTarget = this.resolveSteerTarget(this.tmp)
@@ -3281,10 +3309,7 @@ export class NpcAgent {
       this.trace.record({ simTime: this.simClock, type: 'phase.changed', from: prevPhase, to: this.phase })
     }
 
-    this.mesh.position.y = this.sampleHeight(
-      this.mesh.position.x,
-      this.mesh.position.z,
-    )
+    this.applyMovementGroundY()
     this.syncAnimation()
     // Guarded the same way the label text write beside it is (review 2026-
     // 09-03 §5 E6 / §8 step 7c) — `activeNeed` only actually changes on a
@@ -3412,7 +3437,7 @@ export class NpcAgent {
     this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
     this.leaveActiveQueue()
     this.pendingAction = null
-    this.committedMovementTarget = null
+    this.clearMovementCommitment()
     // A conversation reservation can't survive a time-skip catch-up (the
     // partner NPC is independently reset the same way) — clear it here too
     // so `socialCandidate()` isn't left permanently blocked (plan 151).
@@ -3464,7 +3489,7 @@ export class NpcAgent {
     }
     this.leaveActiveQueue()
     this.pendingAction = null
-    this.committedMovementTarget = null
+    this.clearMovementCommitment()
     this.wait = 0
     this.pathWaypoints = []
     this.pathIndex = 0
@@ -3778,16 +3803,98 @@ export class NpcAgent {
     return this.committedMovementTarget
   }
 
+  /** Composed surface/cave legs for the current commitment (plan npc-027). */
+  getComposedMovementRoute(): NpcComposedRoute | null {
+    return this.composedRoute
+  }
+
   /** Authoritative spatial identity from actual world XYZ (plan npc-027). */
   resolveCurrentSpatialContext(): WorldSpatialContext {
     const p = this.mesh.position
     return this.worldMovement.spatialContextAt(p.x, p.y, p.z)
   }
 
+  private clearMovementCommitment(): void {
+    this.committedMovementTarget = null
+    this.composedRoute = null
+    this.routeExecution = { ...INITIAL_NPC_ROUTE_EXECUTION }
+  }
+
   private commitMovementTargetForPending(action: NpcPlannedAction): void {
     this.committedMovementTarget = commitNpcMovementTarget(
       action,
       this.worldMovement.spatialContextAt,
+    )
+    this.rebuildComposedRoute()
+  }
+
+  private rebuildComposedRoute(): void {
+    this.composedRoute = null
+    this.routeExecution = { ...INITIAL_NPC_ROUTE_EXECUTION }
+    const target = this.committedMovementTarget
+    if (!target || !this.shouldExecuteSpatialRoute(this.pendingAction)) return
+    this.composedRoute = composeNpcMovementRoute({
+      currentPosition: {
+        x: this.mesh.position.x,
+        y: this.mesh.position.y,
+        z: this.mesh.position.z,
+      },
+      currentContext: this.resolveCurrentSpatialContext(),
+      target,
+      queries: this.worldMovement,
+      entityHeight: NPC_HEIGHT,
+    })
+  }
+
+  private shouldExecuteSpatialRoute(action: NpcPlannedAction | null): boolean {
+    if (!action) return false
+    if (action.queueId || action.followAnimalId) return false
+    if (action.kind === 'approachPlayer' || action.kind === 'accompany') return false
+    const target = this.committedMovementTarget
+    if (!target) return false
+    return target.context.kind === 'cave' || this.resolveCurrentSpatialContext().kind === 'cave'
+  }
+
+  /**
+   * Walk composed cave/surface legs. Arrival at an entrance is not action
+   * completion — only the committed final target (and matching context) is.
+   */
+  private stepComposedRoute(dt: number): 'continue' | 'arrived' | 'failed' {
+    if (!this.composedRoute) this.rebuildComposedRoute()
+    if (!this.composedRoute || !this.committedMovementTarget) return 'failed'
+    const position = {
+      x: this.mesh.position.x,
+      y: this.mesh.position.y,
+      z: this.mesh.position.z,
+    }
+    const next = nextNpcRouteSteer(
+      this.composedRoute,
+      this.routeExecution,
+      position,
+      this.resolveCurrentSpatialContext(),
+      ARRIVE,
+    )
+    this.routeExecution = next.execution
+    if (next.complete) return 'arrived'
+    this.tmp.set(next.steer.x, next.steer.y, next.steer.z)
+    this.steerWithRescue(this.resolveSteerTarget(this.tmp), dt)
+    return 'continue'
+  }
+
+  /** Surface terrain height is not ground authority in a cave or during mouth crossing. */
+  private applyMovementGroundY(): void {
+    const crossing = this.routeExecution.mouthPhase === 'crossing'
+    const inCave = this.resolveCurrentSpatialContext().kind === 'cave'
+    if (crossing || inCave) {
+      if (this.composedRoute) {
+        const y = npcRouteGroundY(this.composedRoute, this.routeExecution)
+        if (y != null) this.mesh.position.y = y
+      }
+      return
+    }
+    this.mesh.position.y = this.sampleHeight(
+      this.mesh.position.x,
+      this.mesh.position.z,
     )
   }
 
@@ -4012,7 +4119,7 @@ export class NpcAgent {
     this.leaveActiveQueue()
     if (this.pendingAction?.kind === 'approachPlayer') this.clearPaymentApproach('interrupted')
     this.pendingAction = null
-    this.committedMovementTarget = null
+    this.clearMovementCommitment()
     this.pathWaypoints = []
     this.pathIndex = 0
     this.wait = 0
