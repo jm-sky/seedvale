@@ -28,6 +28,7 @@ import {
   type SellPriceContext,
   tradeValue,
 } from './tradeCatalog'
+import { applyPurchaseMarkup } from './tradeGrievance'
 import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
 
@@ -345,10 +346,11 @@ export function previewTransactionNetCoins(
   offer: Partial<Record<ItemKind, number>>,
   context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
   instanceBuyCost = 0,
+  purchaseMarkup = 0,
 ): number {
   let totalBuyCost = instanceBuyCost
   for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
-    if (count > 0) totalBuyCost += (merchantPrice(kind) ?? 0) * count
+    if (count > 0) totalBuyCost += applyPurchaseMarkup(merchantPrice(kind) ?? 0, purchaseMarkup) * count
   }
   return computeNetCoins(totalBuyCost, resolveOfferBuyback(inventory, offer, context))
 }
@@ -401,6 +403,7 @@ export function settleTransaction(
   purchases: Partial<Record<ItemKind, number>>,
   offer: Partial<Record<ItemKind, number>>,
   context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+  purchaseMarkup = 0,
 ): TradeResult {
   const purchaseEntries = (Object.entries(purchases) as [ItemKind, number][]).filter(([, count]) => count > 0)
   const offerHasEntries = (Object.entries(offer) as [ItemKind, number][]).some(([, count]) => count > 0)
@@ -410,7 +413,7 @@ export function settleTransaction(
     if (!Number.isInteger(count)) return 'not_sold'
     const unitPrice = merchantPrice(kind)
     if (unitPrice == null) return 'not_sold'
-    totalBuyCost += unitPrice * count
+    totalBuyCost += applyPurchaseMarkup(unitPrice, purchaseMarkup) * count
   }
   if (offerHasEntries && !isValidOffer(inventory, offer)) return 'invalid_offer'
   const offerResolution = resolveOfferBuyback(inventory, offer, context)
@@ -442,6 +445,7 @@ function resolveMerchantPurchaseInstances(
   merchantStock: Inventory,
   purchases: Partial<Record<ItemKind, number>>,
   instanceIds: readonly string[],
+  purchaseMarkup = 0,
 ): { instances: ItemInstance[], cost: number } | null {
   const reserved = new Set<string>()
   const instances: ItemInstance[] = []
@@ -454,7 +458,7 @@ function resolveMerchantPurchaseInstances(
     if (unitPrice == null) return null
     reserved.add(id)
     instances.push(instance)
-    cost += unitPrice
+    cost += applyPurchaseMarkup(unitPrice, purchaseMarkup)
   }
   for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
     if (count <= 0) continue
@@ -469,7 +473,7 @@ function resolveMerchantPurchaseInstances(
       if (unitPrice == null) return null
       reserved.add(id)
       instances.push(instance)
-      cost += unitPrice
+      cost += applyPurchaseMarkup(unitPrice, purchaseMarkup)
     }
   }
   return { instances, cost }
@@ -489,19 +493,22 @@ export function settleMerchantStockTransaction(
   offer: Partial<Record<ItemKind, number>>,
   context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
   instanceIds: readonly string[] = [],
+  purchaseMarkup = 0,
 ): TradeResult {
   const purchaseEntries = (Object.entries(purchases) as [ItemKind, number][]).filter(([, count]) => count > 0)
   for (const [kind, count] of purchaseEntries) {
     if (!Number.isInteger(count) || !merchantStockHas(merchantStock, kind, count)) return 'not_sold'
     if (merchantPrice(kind) == null) return 'not_sold'
   }
-  const resolved = resolveMerchantPurchaseInstances(merchantStock, purchases, instanceIds)
+  const resolved = resolveMerchantPurchaseInstances(merchantStock, purchases, instanceIds, purchaseMarkup)
   if (!resolved) return 'not_sold'
   const offerHasEntries = (Object.entries(offer) as [ItemKind, number][]).some(([, count]) => count > 0)
   if (purchaseEntries.length === 0 && instanceIds.length === 0 && !offerHasEntries) return 'invalid_offer'
   let totalBuyCost = resolved.cost
   for (const [kind, count] of purchaseEntries) {
-    if (!isInstanceBackedKind(kind)) totalBuyCost += (merchantPrice(kind) ?? 0) * count
+    if (!isInstanceBackedKind(kind)) {
+      totalBuyCost += applyPurchaseMarkup(merchantPrice(kind) ?? 0, purchaseMarkup) * count
+    }
   }
   if (offerHasEntries && !isValidOffer(inventory, offer)) return 'invalid_offer'
   const offerResolution = resolveOfferBuyback(inventory, offer, context)

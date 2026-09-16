@@ -564,6 +564,31 @@ describe('loadSaveData v1 contract', () => {
     })).toBeNull()
   })
 
+  it('restores an older save with no tradeGrievances field (plan items-player-042)', () => {
+    expect(loadSaveData(validSave)?.tradeGrievances).toBeUndefined()
+  })
+
+  it('round-trips an active trade grievance', () => {
+    const withGrievance: SaveData = {
+      ...validSave,
+      tradeGrievances: [{
+        reason: 'unauthorized_property_use',
+        merchantKey: 'home:npc:1',
+        markup: 0.15,
+        expiresAtElapsedDays: 4,
+      }],
+    }
+    expect(loadSaveData(withGrievance)).toEqual(withGrievance)
+  })
+
+  it('rejects a malformed tradeGrievances record', () => {
+    expect(loadSaveData({ ...validSave, tradeGrievances: 'nope' })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      tradeGrievances: [{ reason: 'gossip', merchantKey: 'home:npc:1', markup: 0.15, expiresAtElapsedDays: 4 }],
+    })).toBeNull()
+  })
+
   it('migrates a v40 save (plan settlements-npcs-017) into v41 without fabricating shortages', () => {
     const result = loadStoredSave({ ...validSave, version: 40 })
     expect(result.status).toBe('ok')
@@ -1648,6 +1673,14 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.status).toBe('ok')
     if (result.status !== 'ok') return
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+  })
+
+  it('migrates a v46 save without tradeGrievances to the current version (plan items-player-042)', () => {
+    const result = loadStoredSave({ ...validSave, version: 46 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.tradeGrievances).toBeUndefined()
   })
 
   it('round-trips expeditionAssignments and rejects a malformed one (plan settlements-npcs-027)', () => {

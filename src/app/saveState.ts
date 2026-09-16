@@ -5,6 +5,7 @@ import type { EquipmentState } from '../items/equipment'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { PrimaryWeaponSelection } from '../items/primaryWeapons'
+import type { TradeGrievanceStore } from '../items/tradeGrievance'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
@@ -104,6 +105,8 @@ export type SaveStateDeps = {
   /** Lazy social-news ledger (plan quests-progression-022) — app/session
    *  owned the same way `reputation` is above, serialized alongside it. */
   socialNews: SocialNewsLedger
+  /** Temporary merchant purchase grievances (plan items-player-042). */
+  tradeGrievances: TradeGrievanceStore
   fishingBait: Map<string, FishingBaitState>
   /** Live accessors — `createApp` replaces these three on a New Game, so they
    *  must not be captured by value. */
@@ -148,7 +151,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
     config, bundle, player, mouseLook, inventory, heldTool, equipment, primaryWeapons, playerTorch,
     questManager, dayNight, mapDiscovery, locationKnowledge, navigationTargets, landOwnership, vueUi, worldFlags, fishingBait,
-    resolvedHiddenFindSpotIds, unlockedTreasureContainerIds, consumedWorldPickupIds, treasureChestMutations, badges, reputation, socialNews,
+    resolvedHiddenFindSpotIds, unlockedTreasureContainerIds, consumedWorldPickupIds, treasureChestMutations, badges, reputation, socialNews, tradeGrievances,
   } = deps
 
   const buildSaveData = (): SaveData => {
@@ -203,6 +206,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     badges: badges.exportState(),
     reputation: reputation.exportState(),
     socialNews: socialNews.serialize(),
+    tradeGrievances: tradeGrievances.serialize(),
     map: {
       discoveredCells: mapDiscovery.serialize(),
       discoveredLocations: locationKnowledge.serialize(),

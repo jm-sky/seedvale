@@ -157,7 +157,41 @@ describe('construction InteractionView (plan ui-input-016)', () => {
     })
     expect(view.actions.find((action) => action.slot === 'alternate')?.label).toBe('Usuń')
   })
+})
 
+describe('action consequence preview (plan items-player-042)', () => {
+  it('keeps ordinary interaction safe', () => {
+    const view = buildInteractionView(houseTarget('[E] Odpocznij'), { hasInspect: false })
+    expect(view.actions[0]?.consequenceTone).toBeUndefined()
+    expect(view.actions[0]?.reasonLabel).toBe('')
+  })
+
+  it('applies a negative mount warning without disabling the action', () => {
+    const horse = { animalId: 'merchant-horse-home' } as never
+    const view = buildInteractionView(surfaceInteractable({
+      kind: 'animal',
+      position: { x: 0, z: 0 },
+      promptLabel: '[E] Dosiądź: Koń',
+      animal: horse,
+    }), {
+      hasInspect: true,
+      previewActionConsequence: (_target, action) => (
+        action.slot === 'primary'
+          ? { tone: 'negative', reasonLabel: 'To cudzy koń' }
+          : null
+      ),
+    })
+    expect(view.actions.find((action) => action.slot === 'primary')).toMatchObject({
+      label: 'Dosiądź: Koń',
+      enabled: true,
+      reasonLabel: 'To cudzy koń',
+      consequenceTone: 'negative',
+    })
+    expect(view.actions.find((action) => action.slot === 'inspect')?.consequenceTone).toBeUndefined()
+  })
+})
+
+describe('construction InteractionView trough fill', () => {
   it('shows trough fill as disabled when water is missing', () => {
     const view = buildInteractionView(surfaceInteractable({
       kind: 'playerTrough',

@@ -971,6 +971,14 @@ export class QuestManager {
     return relationToLevel(this.getRelation(npcId))
   }
 
+  /**
+   * Applies a player↔NPC relation delta outside quest outcomes (plan
+   * items-player-042). Same authority as authored `QuestConsequences.relations`.
+   */
+  adjustRelation(npcId: NpcId, amount: number): void {
+    this.bumpRelation(npcId, amount)
+  }
+
   /** How well-known/liked the player is across every NPC met so far, derived
    *  from the existing per-NPC `relations` — not a separate reputation store
    *  (plan 117). `0..1`, normalized against `trusted`'s threshold; `0` before

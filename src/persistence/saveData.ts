@@ -40,6 +40,7 @@ import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { ARMOR_KIND_LIST, isArmorKind, isArmorQuality, isTrapKind } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
+import { isTradeGrievanceList, type TradeGrievance } from '../items/tradeGrievance'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { isPreparationSize, type PreparationSize } from '../terrain/terrainPreparation'
 import { CONDITION_MAX } from '../world/condition'
@@ -679,7 +680,7 @@ export type SaveWorkContract =
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 46
+export const CURRENT_SAVE_VERSION = 47
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -895,6 +896,14 @@ export type SaveData = {
    *  `SaveSocialNews`. Optional, same sparse/fallback contract as
    *  `reputation` above — an absent save restores an empty ledger. */
   socialNews?: SaveSocialNews
+  /**
+   * Temporary merchant purchase grievances (plan items-player-042). Sparse/
+   * optional — absent restores none. App-owned like `socialNews`, not part of
+   * `WorldBundle`. Owns only reason/markup/world-day expiry.
+   *
+   * @domain items-player
+   */
+  tradeGrievances?: TradeGrievance[]
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -2558,6 +2567,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.grassForagePatches !== undefined && !isResourceDepositsField(v.grassForagePatches)) return false
   if (v.reputation !== undefined && !isSaveReputation(v.reputation)) return false
   if (v.socialNews !== undefined && !isSaveSocialNews(v.socialNews)) return false
+  if (v.tradeGrievances !== undefined && !isTradeGrievanceList(v.tradeGrievances)) return false
   if (!isPlayerConditionsField(v.playerConditions)) return false
   if (v.waterDrinkEventCount !== undefined && typeof v.waterDrinkEventCount !== 'number') return false
   if (v.unsafeFoodEventCount !== undefined && typeof v.unsafeFoodEventCount !== 'number') return false
@@ -3648,6 +3658,13 @@ function migrateSaveV45ToV46(data: unknown): unknown {
   return { ...v, version: 46 }
 }
 
+/** v46 → v47 (plan items-player-042): optional `tradeGrievances`. A pre-plan
+ *  save has no merchant pricing grievance; absent restores none. */
+function migrateSaveV46ToV47(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 47 }
+}
+
 function migrateSaveV37ToV38(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const seq = { n: 0 }
@@ -3814,6 +3831,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   43: migrateSaveV43ToV44,
   44: migrateSaveV44ToV45,
   45: migrateSaveV45ToV46,
+  46: migrateSaveV46ToV47,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -10,6 +10,7 @@ import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
 import { playAnimalCombatDeath } from '../audio/actionSounds'
+import { playNegativeConsequence } from '../audio/consequenceSounds'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
@@ -42,6 +43,10 @@ import { createMouseLook, exitGamePointerLock, requestGamePointerLock } from '..
 import { migrateArmorCountsToInstances } from '../items/armorItemInstances'
 import { CONTAINER_DEFS } from '../items/container'
 import { createEquipmentState, equippedBodyArmor, equippedInstanceId, equippedInstanceIds, resolveEquipmentModifiers } from '../items/equipment'
+import {
+  createForeignPropertyUse,
+  resolveMerchantHorseForeignUse,
+} from '../items/foreignProperty'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
@@ -51,6 +56,7 @@ import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { migrateLegacyWaterskinsToInstances } from '../items/liquidContainer'
 import { createPrimaryWeaponSelection } from '../items/primaryWeapons'
 import { createAcquiredInstance } from '../items/trade'
+import { createTradeGrievanceStore } from '../items/tradeGrievance'
 import { type TreasureChestMutation } from '../items/treasureGameplay'
 import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/weaponMaintenance'
 import {
@@ -578,6 +584,7 @@ export async function createApp(
   // `rebuildWorldBundle()` of the same world must not clear pending news, so
   // this deliberately lives here rather than inside `WorldBundle`.
   const socialNews = createSocialNewsLedger(initialSave?.socialNews)
+  const tradeGrievances = createTradeGrievanceStore(initialSave?.tradeGrievances)
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
   // Plan 172 — natural crop lifecycle: harvested/removed wild crops, same
   // "shared/mutated in place, reset only on a genuinely new world" contract
@@ -2013,6 +2020,22 @@ export async function createApp(
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
   hud.setPlayerBadges(badges.listEarned())
 
+  const foreignPropertyUse = createForeignPropertyUse({
+    resolveContext: (animal) => resolveMerchantHorseForeignUse(
+      animal,
+      bundle.settlementsManager.getLoaded(),
+      (id) => bundle.settlementsManager.resolvePersistentAnimal(id),
+    ),
+    getRelation: (npcId) => questManager.getRelation(npcId),
+    getRelationLevel: (npcId) => questManager.getRelationLevel(npcId),
+    adjustRelation: (npcId, amount) => questManager.adjustRelation(npcId, amount),
+    applyGrievance: (merchantKey, markup, elapsedDays) => {
+      tradeGrievances.applyUnauthorizedUse(merchantKey, markup, elapsedDays)
+    },
+    nowDays: () => dayNight.elapsedDays,
+    playNegativeConsequence: () => playNegativeConsequence(worldAudio.playOnce),
+  })
+
   // Assigned once `inventoryScreen` exists further down; every caller runs
   // later, so the initial no-op is never the one that fires.
   let refreshInventoryScreen: () => void = () => {}
@@ -2033,6 +2056,7 @@ export async function createApp(
     vueUi,
     questManager,
     reputationManager: reputation,
+    tradeGrievances,
     worldFlags,
     playOnce: worldAudio.playOnce,
     grantItem,
@@ -2136,7 +2160,11 @@ export async function createApp(
     bundle.settlementsManager.resolvePersistentAnimal(animalId)
     ?? bundle.fauna.getAgents().find((a) => a.animalId === animalId)
     ?? null
-  const mount = createMountActions(actionCtx, resolveMountAnimal)
+  const mount = createMountActions(actionCtx, resolveMountAnimal, {
+    beginMountedUse: foreignPropertyUse.beginMountedUse,
+    updateMountedUse: foreignPropertyUse.updateMountedUse,
+    endMountedUse: foreignPropertyUse.endMountedUse,
+  })
   if (initialSave?.player.mountedAnimalId) {
     mount.restoreMountedAnimalId(initialSave.player.mountedAnimalId)
   }
@@ -2358,6 +2386,7 @@ export async function createApp(
     badges,
     reputation,
     socialNews,
+    tradeGrievances,
     fishingBait,
     getCollectedItemIds: () => collectedItemIds,
     getRemovedCropIds: () => removedCropIds,
@@ -2488,6 +2517,7 @@ export async function createApp(
         badges.reset()
         reputation.reset()
         socialNews.reset()
+        tradeGrievances.reset()
         selectedSettlementId = null
         lastVisitedSettlementId = bundle.settlementsManager.getHomeDef().id
         hud.setPlayerBadges(badges.listEarned())
@@ -3262,6 +3292,8 @@ export async function createApp(
     supplyResidentialBuildingMaterials: placement.supplyResidentialBuildingMaterials,
     workOnResidentialBuilding: placement.workOnResidentialBuilding,
     describeResidentialWork: placement.describeResidentialWork,
+    previewActionConsequence: (target, action) => foreignPropertyUse.previewInteractableAction(target, action),
+    previewForeignMount: (animal) => foreignPropertyUse.previewAnimalAction(animal, 'mount'),
     previewResidentialCancel: placement.previewResidentialCancel,
     cancelResidentialBuilding: placement.cancelResidentialBuilding,
     previewBedrollRemoval: placement.previewBedrollRemoval,

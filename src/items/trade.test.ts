@@ -40,6 +40,7 @@ import {
   type SellPriceContext,
   tradeValue,
 } from './tradeCatalog'
+import { applyPurchaseMarkup } from './tradeGrievance'
 import { createTrapInstance } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
 
@@ -641,6 +642,17 @@ describe('merchant transaction preview/commit parity', () => {
     expect(inv.count('coin')).toBe(5 - preview)
   })
 
+  it('applies the same purchase markup to preview and merchant settlement (plan items-player-042)', () => {
+    const inv = new Inventory({ coin: 20 })
+    const purchases = { bread: 1 }
+    const markup = 0.15
+    const listed = merchantPrice('bread')!
+    const preview = previewTransactionNetCoins(inv, purchases, {}, NEUTRAL_SELL_PRICE_CONTEXT, 0, markup)
+    expect(preview).toBe(Math.floor(listed * 1.15))
+    expect(settleTransaction(inv, purchases, {}, NEUTRAL_SELL_PRICE_CONTEXT, markup)).toBe('ok')
+    expect(inv.count('coin')).toBe(20 - preview)
+  })
+
   it('values mixed-condition instance groups using the same worst-condition selection as settlement', () => {
     const good = createWeaponInstance('knife')
     const bad = createWeaponInstance('knife')
@@ -764,6 +776,19 @@ describe('armor quality pricing and merchant instance trade (plan items-player-0
     seedMerchantStockIfNeeded(stock, { merchantStockInitialized: true }, { chainmail: 4 })
     expect(stock.getInstances('chainmail')).toHaveLength(1)
     expect(stock.getInstance('armor:poor')).toEqual(poor)
+  })
+
+  it('applies purchase markup per merchant armor instance, not on the summed cost (plan items-player-042)', () => {
+    const good = createArmorInstance('chainmail', 'good', 'armor:good')
+    const stock = new Inventory(undefined, Infinity, [good], undefined, Infinity)
+    const buyer = new Inventory({ coin: 1000 }, Infinity, undefined, undefined, Infinity)
+    const markup = 0.15
+    const listedGood = merchantInstancePrice(good)!
+    const marked = applyPurchaseMarkup(listedGood, markup)
+    expect(settleMerchantStockTransaction(
+      buyer, stock, {}, {}, NEUTRAL_SELL_PRICE_CONTEXT, ['armor:good'], markup,
+    )).toBe('ok')
+    expect(buyer.count('coin')).toBe(1000 - marked)
   })
 
   it('uses effective armor weight for merchant purchase capacity preflight', () => {

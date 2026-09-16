@@ -1,6 +1,7 @@
 # Implementation Notes: Foreign property interaction warning and consequences
 
 **Plan:** `items-player-042-foreign-property-interaction-warning-and-consequences.md`  
+**Status:** `verification needed` 🔍  
 **Reviewed against:** current `main`, 2026-09-16
 
 ## 1. Existing merchant-horse ownership must stay intact
@@ -224,5 +225,14 @@ If new public/architectural helpers are added, document the ownership boundary e
 ```
 
 and for trade state make clear that it owns only temporary grievance data, not relation or catalog prices.
+
+## 13. What was actually implemented
+
+- Action `consequenceTone` on `InteractionActionView`; gaze HUD, flavor dialog and touch `[E]` render orange/red. Warning copy: `To cudzy koń`.
+- Merchant-horse identity via `resolveMerchantHorseAnimal` + loaded settlements; no `merchant-horse-*` parsing in interaction/mount/gameLoop.
+- Per-ride incident origin is **mount-start position** (a wandered horse must not instantly trip the hitch spawn). Threshold: `FOREIGN_MERCHANT_HORSE_REMOVAL_DISTANCE = 16`. Restore-from-save mount does not start an incident.
+- `friendly`/`trusted` borrowing: no relation delta, no grievance, no SFX. Otherwise relation `-2` plus markup `0.10` / `0.15` / `0.25` (acquainted / stranger≥0 / stranger<0).
+- Trade grievance is a persisted app-owned collection (`SaveData.tradeGrievances`, save v47). Markup is applied to merchant BUY list price and horse offer through `applyPurchaseMarkup` on both preview and commit. Refresh uses `max(markup)` + `max(expiry)`.
+- Negative SFX: `playNegativeConsequence` → `/sounds/ui-click-03.ogg`, only after a committed penalty.
 
 No browser verification by the implementation agent; manual gameplay verification belongs to the user.

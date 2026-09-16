@@ -110,14 +110,20 @@ function onPanelKeyDown(event: KeyboardEvent): void {
           v-for="action in ui.flavorDialog.actions"
           :key="action.label"
           type="button"
-          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-left text-[13px] hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(255,196,92,0.9)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white/10"
+          class="cursor-pointer rounded-md border bg-white/10 px-3 py-1.5 text-left text-[13px] hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(255,196,92,0.9)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white/10"
+          :class="action.consequenceTone === 'negative'
+            ? 'border-red-400/50'
+            : action.consequenceTone === 'caution'
+              ? 'border-amber-300/50'
+              : 'border-white/20'"
           :disabled="!action.enabled"
           @click="runAction(action.run)"
         >
           {{ action.label }}
           <span
-            v-if="!action.enabled && action.reasonLabel"
-            class="block text-[11px] text-red-300"
+            v-if="action.reasonLabel"
+            class="block text-[11px]"
+            :class="action.enabled && action.consequenceTone === 'caution' ? 'text-amber-300' : 'text-red-300'"
           >
             {{ action.reasonLabel }}
           </span>
@@ -143,11 +149,17 @@ function onPanelKeyDown(event: KeyboardEvent): void {
         :key="`${action.slot}-${action.label}`"
       >
         <span v-if="index > 0 || ui.flavorDialog.interactionPrompt.targetLabel"> · </span>
-        <span :class="action.enabled ? '' : 'opacity-55'">
+        <span
+          :class="{
+            'opacity-55': !action.enabled,
+            'text-amber-300': action.enabled && action.consequenceTone === 'caution',
+            'text-red-300': action.enabled && action.consequenceTone === 'negative',
+          }"
+        >
           [{{ slotInputKey(action.slot) }}] {{ action.label }}
           <span
-            v-if="!action.enabled && action.reasonLabel"
-            class="text-red-300"
+            v-if="action.reasonLabel"
+            :class="action.enabled && action.consequenceTone === 'caution' ? 'text-amber-300' : 'text-red-300'"
           > — {{ action.reasonLabel }}</span>
         </span>
       </template>

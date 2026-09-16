@@ -9,7 +9,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { BadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
-import type { InteractionGazePrompt } from '../interaction/interactionView'
+import type { InteractionConsequenceTone, InteractionGazePrompt } from '../interaction/interactionView'
 import type { EquipmentSlot } from '../items/equipment'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ArmorQuality } from '../items/itemInstances'
@@ -167,7 +167,13 @@ type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; relati
  *  §2/§3) — `reasonLabel` explains a disabled action (e.g. missing
  *  materials/capability). `run` is the real domain callback (e.g.
  *  `workOnWell`); Vue never re-derives it from the interaction kind. */
-export type InteractionPanelAction = { label: string; enabled: boolean; reasonLabel: string; run: () => void }
+export type InteractionPanelAction = {
+  label: string
+  enabled: boolean
+  reasonLabel: string
+  consequenceTone?: InteractionConsequenceTone
+  run: () => void
+}
 /** Optional structured rows in the shared flavor/interaction dialog (plan
  *  items-player-022) — Vue only renders labels/values/tones. */
 export type FlavorDialogDetailRow = {

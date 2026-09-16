@@ -97,8 +97,13 @@ function weaponShortcutIcon(action: 'melee' | 'ranged' | 'sheathe'): Component {
         </button>
         <button
           type="button"
-          class="pointer-events-auto flex size-17 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(61,123,209,0.75)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
-          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled || !primaryEnabled }"
+          class="pointer-events-auto flex size-17 cursor-pointer items-center justify-center rounded-full border border-white/25 text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
+          :class="{
+            'pointer-events-none opacity-40': !ui.touch.inputEnabled || !primaryEnabled,
+            'bg-[rgba(180,60,60,0.75)]': primaryAction?.consequenceTone === 'negative',
+            'bg-[rgba(200,130,40,0.75)]': primaryAction?.consequenceTone === 'caution',
+            'bg-[rgba(61,123,209,0.75)]': primaryAction?.consequenceTone !== 'negative' && primaryAction?.consequenceTone !== 'caution',
+          }"
           aria-label="Interakcja"
           @pointerdown="ui.touch.onInteract?.()"
           @pointerup="ui.touch.onInteractUp?.()"

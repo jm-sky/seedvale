@@ -1,3 +1,4 @@
+import type { MountedPropertyIncident } from '../../items/foreignProperty'
 import { ANIMAL_LABELS, type AnimalAgent } from '../../fauna/AnimalAgent'
 import { resolveEquipmentModifiers } from '../../items/equipment'
 import { applyPlayerDamage } from '../../player/playerDamage'
@@ -42,12 +43,21 @@ export type MountActions = {
   restoreMountedAnimalId: (animalId: string | null) => void
 }
 
+/** Mount reports ride lifecycle; the injected evaluator owns social/trade
+ *  consequences (plan items-player-042). */
+export type ForeignPropertyMountHooks = {
+  beginMountedUse: (animal: AnimalAgent) => MountedPropertyIncident | null
+  updateMountedUse: (incident: MountedPropertyIncident, animal: AnimalAgent) => void
+  endMountedUse: (incident: MountedPropertyIncident) => void
+}
+
 export function createMountActions(
   ctx: PlayerActionContext,
   /** Looks up a live `AnimalAgent` by its stable `animalId` across every
    *  currently loaded settlement's livestock plus wild fauna — the mount
    *  system never scans the world itself beyond this one indirection. */
   resolveAnimal: (animalId: string) => AnimalAgent | null,
+  foreignProperty?: ForeignPropertyMountHooks,
 ): MountActions {
   const { player, toast, bundle, keyboard, mouseLook, dayNight } = ctx
 
@@ -57,14 +67,18 @@ export function createMountActions(
   let ridingUseDistance = 0
   let lastMountX = 0
   let lastMountZ = 0
+  let foreignIncident: MountedPropertyIncident | null = null
 
-  function enter(animal: AnimalAgent): void {
+  function enter(animal: AnimalAgent, source: 'player' | 'restore'): void {
     mount = animal
     animal.setMounted(true)
     stabilityTimer = 0
     ridingUseDistance = 0
     lastMountX = animal.mesh.position.x
     lastMountZ = animal.mesh.position.z
+    foreignIncident = source === 'player'
+      ? foreignProperty?.beginMountedUse(animal) ?? null
+      : null
     const seat = animal.mountSeatTransform()
     player.setMounted(true)
     if (seat) player.setMountedTransform(seat.x, seat.y, seat.z, seat.yaw)
@@ -73,6 +87,10 @@ export function createMountActions(
 
   function exit(reason: DismountReason): void {
     if (!mount) return
+    if (foreignIncident) {
+      foreignProperty?.endMountedUse(foreignIncident)
+      foreignIncident = null
+    }
     const last = mount
     last.setMounted(false)
     mount = null
@@ -92,7 +110,7 @@ export function createMountActions(
   function tryMount(animal: AnimalAgent): boolean {
     if (mount || isActionBlocked(ctx) || player.isDowned()) return false
     if (!animal.isMountable()) return false
-    enter(animal)
+    enter(animal, 'player')
     toast.show(`Dosiadasz: ${ANIMAL_LABELS[animal.def.kind]}`)
     return true
   }
@@ -153,7 +171,7 @@ export function createMountActions(
       // retrying next tick (livestock streams in asynchronously).
       if (resolved) {
         pendingRestoreId = null
-        if (resolved.isMountable()) enter(resolved)
+        if (resolved.isMountable()) enter(resolved, 'restore')
       }
     }
     if (!mount) return
@@ -185,6 +203,7 @@ export function createMountActions(
     lastMountZ = mount.mesh.position.z
     const moved = Math.hypot(dx, dz)
     if (moved > 0) ridingUseDistance = accumulateRidingUse(player.skills, ridingUseDistance, moved)
+    if (foreignIncident) foreignProperty?.updateMountedUse(foreignIncident, mount)
 
     const seat = mount.mountSeatTransform()
     if (seat) player.setMountedTransform(seat.x, seat.y, seat.z, seat.yaw)

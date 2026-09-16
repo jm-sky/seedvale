@@ -5,11 +5,16 @@ import type { Interactable } from './Interactable'
 
 export type InteractionActionSlot = 'primary' | 'alternate' | 'inspect'
 
+/** Action-level consequence presentation (plan items-player-042). UI only
+ *  renders this; gameplay commit revalidates live state independently. */
+export type InteractionConsequenceTone = 'safe' | 'caution' | 'negative'
+
 export type InteractionActionView = {
   slot: InteractionActionSlot
   label: string
   enabled: boolean
   reasonLabel: string
+  consequenceTone?: InteractionConsequenceTone
 }
 
 export type InteractionView = {
@@ -36,6 +41,12 @@ export type InteractionViewContext = {
   describePlayerTroughWork?: (id: string) => ConstructionActionView | null
   describePlayerTroughFill?: (id: string) => ConstructionActionView | null
   describeResidentialWork?: (id: string) => ResidentialWorkView | null
+  /** Action-level foreign-property / consequence preview. Inspect and other
+   *  harmless actions must return null so they stay `safe`. */
+  previewActionConsequence?: (
+    target: Interactable,
+    action: InteractionActionView,
+  ) => { tone: InteractionConsequenceTone, reasonLabel: string } | null
 }
 
 const STATUS_ONLY_RE = /…$|^\s*Suszy się|^\s*Spalony ul|^\s*Słona woda|Słona woda —|^\s*Prowadzisz:|^\s*Młoda roślina:|^\s*Przejrzała roślina:|^\s*Dziki ul\s*$/i
@@ -401,6 +412,18 @@ export function buildInteractionView(
 
   if (ctx.hasInspect) {
     actions = [...actions, { slot: 'inspect', label: 'Sprawdź', enabled: true, reasonLabel: '' }]
+  }
+
+  if (ctx.previewActionConsequence) {
+    actions = actions.map((action) => {
+      const preview = ctx.previewActionConsequence?.(target, action)
+      if (!preview) return action
+      return {
+        ...action,
+        consequenceTone: preview.tone,
+        reasonLabel: action.reasonLabel || preview.reasonLabel,
+      }
+    })
   }
 
   const targetLabel = actions.length === 1 && !actions[0]!.enabled

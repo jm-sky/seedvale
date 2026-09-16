@@ -54,6 +54,7 @@ import {
   settlePricedPurchase,
 } from '../items/trade'
 import { MERCHANT_STOCK, merchantInstancePrice, merchantPrice, NEUTRAL_SELL_PRICE_CONTEXT, npcSalePrice, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
+import { applyPurchaseMarkup, type TradeGrievanceStore } from '../items/tradeGrievance'
 import { listOwnedWeaponMaintenance, type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
 import {
@@ -175,6 +176,8 @@ export type InventoryWiringDeps = {
   vueUi: VueUi
   questManager: QuestManager
   reputationManager: ReputationManager
+  /** Temporary merchant purchase markup (plan items-player-042). */
+  tradeGrievances: TradeGrievanceStore
   /** Persisted world flags (`SaveData.worldFlags`) — mutated in place. */
   worldFlags: {
     guardSwordGifted: boolean
@@ -221,7 +224,7 @@ export function npcDialogueCanTrade(npc: NpcAgent | null): boolean {
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, equipment, primaryWeapons, playerCombatMode, playerTorch, hud, toast, vueUi,
-    questManager, reputationManager, worldFlags, guardProgress, homeSettlementId, homeGuardNpcId, playOnce, grantItem,
+    questManager, reputationManager, tradeGrievances, worldFlags, guardProgress, homeSettlementId, homeGuardNpcId, playOnce, grantItem,
     locationCatalog, locationKnowledge, navigationTargets, dayNight, openNpcGiveItem,
     guardLocalKnowledge,
   } = deps
@@ -248,14 +251,19 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     }
   }
 
+  const merchantPurchaseMarkup = (npc: NpcAgent | null): number => (
+    npc ? tradeGrievances.markupFor(npc.id, dayNight.elapsedDays) : 0
+  )
+
   const createMerchantPricing = (npc: NpcAgent | null): MerchantPricing => {
     const context = buildSellPriceContext(npc)
+    const purchaseMarkup = merchantPurchaseMarkup(npc)
     return {
       context,
       unitOfferPrice: (kind) => sellPrice(kind, context),
       offerLineTotal: (kind, count) => resolveOfferLineBuyback(inventory, kind, count, context).value,
       previewNetCoins: (purchases, offer, instanceBuyCost = 0) => (
-        previewTransactionNetCoins(inventory, purchases, offer, context, instanceBuyCost)
+        previewTransactionNetCoins(inventory, purchases, offer, context, instanceBuyCost, purchaseMarkup)
       ),
     }
   }
@@ -313,7 +321,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
           rows.push({
             kind,
             quantity: 1,
-            unitPrice,
+            unitPrice: applyPurchaseMarkup(unitPrice, merchantPurchaseMarkup(npc)),
             instanceId: instance.id,
             quality: instance.quality,
             qualityLabel: ARMOR_QUALITY_LABELS[instance.quality],
@@ -332,7 +340,12 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       if (quantity <= 0) continue
       const unitPrice = merchantPrice(kind)
       if (unitPrice == null) continue
-      rows.push({ kind, quantity, unitPrice, weightKg: ITEM_DEFS[kind].weight })
+      rows.push({
+        kind,
+        quantity,
+        unitPrice: applyPurchaseMarkup(unitPrice, merchantPurchaseMarkup(npc)),
+        weightKg: ITEM_DEFS[kind].weight,
+      })
     }
     return rows
   }
@@ -654,27 +667,34 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     })
   }
 
-  const buildMerchantHorseOffer = (settlement: Settlement | null): MerchantHorseOffer | null => {
+  const buildMerchantHorseOffer = (settlement: Settlement | null, npc: NpcAgent | null = null): MerchantHorseOffer | null => {
     if (!settlement?.isHome) return null
     const animalId = merchantHorseAnimalId(settlement.id)
     const status = horseAcquisitionStatus(settlement)
+    const price = applyPurchaseMarkup(MERCHANT_HORSE_PRICE, merchantPurchaseMarkup(npc))
     return {
       label: 'Koń przy wozie',
-      price: MERCHANT_HORSE_PRICE,
+      price,
       status,
       statusHint: horseOfferStatusHint(status),
-      previewNetCoins: (offer) => previewPricedPurchaseNetCoins(inventory, MERCHANT_HORSE_PRICE, offer, merchantSellContext()),
+      previewNetCoins: (offer) => previewPricedPurchaseNetCoins(
+        inventory,
+        applyPurchaseMarkup(MERCHANT_HORSE_PRICE, merchantPurchaseMarkup(npc)),
+        offer,
+        merchantSellContext(),
+      ),
       onPurchase: (offer) => {
         if (horseAcquisitionStatus(settlement) !== 'available') return 'not_sold'
+        const livePrice = applyPurchaseMarkup(MERCHANT_HORSE_PRICE, merchantPurchaseMarkup(npc))
         const result = settlePricedPurchase(
           inventory,
-          MERCHANT_HORSE_PRICE,
+          livePrice,
           offer,
           merchantSellContext(),
           () => bundle.settlementsManager.transferAnimalOwnership(animalId, { kind: 'player' }),
         )
         if (result === 'ok') {
-          afterTrade(buildMerchantHorseOffer(settlement))
+          afterTrade(buildMerchantHorseOffer(settlement, npc))
           toast.show('Koń jest teraz twój.', 'pickup')
         }
         return result
@@ -698,7 +718,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     vueUi.refreshMerchant(
       view.counts,
       view.groups,
-      horseOffer ?? buildMerchantHorseOffer(settlement),
+      horseOffer ?? buildMerchantHorseOffer(settlement, npc),
       buildMerchantTradeStock(npc),
     )
   }
@@ -739,6 +759,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
         offer,
         merchantSellContext(),
         instanceIds,
+        merchantPurchaseMarkup(npc),
       )
       if (result === 'ok') {
         afterTrade()
@@ -832,7 +853,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
           view.groups,
           'merchant',
           pricing,
-          buildMerchantHorseOffer(settlement),
+          buildMerchantHorseOffer(settlement, npc),
           buildMerchantTradeStock(npc),
         )
         return

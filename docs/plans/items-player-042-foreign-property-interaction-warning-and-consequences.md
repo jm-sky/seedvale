@@ -1,7 +1,7 @@
 # Plan: Foreign property interaction warning and consequences
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented 2026-09-16 (`tsc`/lint/tests). Browser/manual verification belongs to the User.
 **Type:** feature
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~fauna-020~~, ~~quests-progression-012~~

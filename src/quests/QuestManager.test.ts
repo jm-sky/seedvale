@@ -187,6 +187,16 @@ describe('relationToLevel', () => {
   })
 })
 
+describe('QuestManager.adjustRelation (plan items-player-042)', () => {
+  it('applies a relation delta through the same player↔NPC store', () => {
+    const qm = makeManager([simpleQuest])
+    expect(qm.getRelation('Anna')).toBe(0)
+    qm.adjustRelation('Anna', -2)
+    expect(qm.getRelation('Anna')).toBe(-2)
+    expect(qm.getRelationLevel('Anna')).toBe('stranger')
+  })
+})
+
 describe('QuestManager availability', () => {
   it('does not offer a quest whose relation gate is unmet', () => {
     const qm = makeManager([gatedQuest])

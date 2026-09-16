@@ -92,6 +92,8 @@ import {
   buildInteractionGazePrompt,
   interactableStableKey,
   interactionActionFromSkillPrompt,
+  type InteractionConsequenceTone,
+  type InteractionViewContext,
   isInteractableActionable,
 } from '../interaction/interactionView'
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
@@ -544,6 +546,8 @@ export type GameLoopDeps = {
     canSupply: boolean
     supplyReasonLabel: string
   } | null
+  previewActionConsequence?: InteractionViewContext['previewActionConsequence']
+  previewForeignMount?: (animal: AnimalAgent) => { tone: InteractionConsequenceTone, reasonLabel: string } | null
   previewPalisadeRemoval?: (id: string) => RemovalPreview | null
   previewStandingTorchRemoval?: (id: string) => RemovalPreview | null
   removeStandingTorch?: (id: string) => void
@@ -692,6 +696,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, openHouseholdResourceTransfer, pickUpContainer, forceOpenContainer, describeWorldGeneratedContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, describeStructureRepair, workOnStructureRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, destroyRatNest, openNoticeBoard, openGrindstoneSharpen,
     describePalisadeWork, describeStandingTorchWork, describePlayerTroughWork, describePlayerTroughFill, describeResidentialWork,
+    previewActionConsequence, previewForeignMount,
     previewPalisadeRemoval, previewStandingTorchRemoval, removeStandingTorch, igniteVillageTorch, previewPlayerTroughRemoval, removePlayerTrough,
     previewResidentialCancel, previewBedrollRemoval, removeBedroll, previewPlatformRemoval, removePlatform,
     openWorldInspection, syncWorldInspection,
@@ -1646,6 +1651,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               describePlayerTroughWork,
               describePlayerTroughFill,
               describeResidentialWork,
+              previewActionConsequence,
               primaryOverride: interactionActionFromSkillPrompt(skillAction.promptLabel),
             }, cycleHint)
           : { targetLabel: skillPrompt ?? '', actions: [], cycleHint })
@@ -1659,6 +1665,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               describePlayerTroughWork,
               describePlayerTroughFill,
               describeResidentialWork,
+              previewActionConsequence,
             }, cycleHint)
           : null)
       vueUi.setFlavorInteractionPrompt(interactionPrompt, promptHighlighted, rangedDrawProgress)
@@ -2173,10 +2180,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   })
             }
             if (target.animal.isMountable()) {
+              const mountPreview = previewForeignMount?.(target.animal)
               actions.push({
                 label: `Dosiądź: ${label}`,
                 enabled: true,
-                reasonLabel: '',
+                reasonLabel: mountPreview?.reasonLabel ?? '',
+                consequenceTone: mountPreview?.tone,
                 run: () => { mount.tryMount(target.animal) },
               })
             }
