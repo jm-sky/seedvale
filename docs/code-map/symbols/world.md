@@ -937,9 +937,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createSky.ts`
 
-- `createSky` — function — line 31
-- `SkyParams` — type — line 4
-- `WorldSky` — type — line 12
+- `createSky` — function — line 32
+- `SkyParams` — type — line 5
+- `WorldSky` — type — line 13
 
 ## `world/createSleepingUtilities.ts`
 
@@ -1028,12 +1028,14 @@ Generated from exported TypeScript symbols.
 - `createDayNightState` — function — line 43
 - `DayNightState` — type — line 29
 - `DEFAULT_TIME_OF_DAY` — const — line 27
-- `formatClock` — function — line 202
-- `formatWorldDayClock` — function — line 211
-- `parseTimeOfDayFromUrl` — function — line 186
-- `phaseName` — function — line 216
+- `formatClock` — function — line 217
+- `formatWorldDayClock` — function — line 226
+- `parseTimeOfDayFromUrl` — function — line 201
+- `phaseName` — function — line 231
 - `resetDayNightForNewGame` — function — line 57
 - `skyParamsFromTime` — function — line 72
+- `sunDirectionalColorFromSunY` — function — line 144
+  - domain: world
 - `tickDayNight` — function — line 62
 
 ## `world/dryingRacks.ts`

@@ -48,11 +48,18 @@ Generated from TypeScript imports.
 
 - `render/createPostProcessing.ts`
 
+## `render/gradedOutputPass.test.ts`
+
+**Imports**
+
+- `render/gradedOutputPass.ts`
+
 ## `render/gradedOutputPass.ts`
 
 **Imported by**
 
 - `render/createPostProcessing.ts`
+- `render/gradedOutputPass.test.ts`
 
 ## `render/instancedProps.test.ts`
 

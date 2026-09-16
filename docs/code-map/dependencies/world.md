@@ -2090,6 +2090,10 @@ Generated from TypeScript imports.
 
 ## `world/createSky.ts`
 
+**Imports**
+
+- `world/dayNight.ts`
+
 **Imported by**
 
 - `app/gameLoop.ts`
@@ -2325,6 +2329,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `world/dayNight.ts`
+- `world/weather.ts`
+- `world/weatherVisuals.ts`
 
 ## `world/dayNight.ts`
 
@@ -2354,6 +2360,7 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `ui/createDebugGui.ts`
 - `world/bloodTraces.ts`
+- `world/createSky.ts`
 - `world/dayNight.test.ts`
 - `world/timeSkip.ts`
 - `world/worldContext.ts`
@@ -4362,6 +4369,7 @@ Generated from TypeScript imports.
 - `world/caves/cavePresentationFog.test.ts`
 - `world/clouds.test.ts`
 - `world/clouds.ts`
+- `world/dayNight.test.ts`
 - `world/groundFog.ts`
 - `world/lightningEvents.test.ts`
 - `world/lightningEvents.ts`
@@ -4411,6 +4419,7 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `world/caves/cavePresentationFog.test.ts`
+- `world/dayNight.test.ts`
 - `world/weatherVisuals.test.ts`
 
 ## `world/wellGroundwater.test.ts`
