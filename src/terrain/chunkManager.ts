@@ -8,6 +8,7 @@ import type { ChunkMeshData, ChunkMeshTileGrids } from './chunkMeshData'
 import type { FbmParams } from './fbm'
 import type { FordProjection } from './riverFord'
 import type { RoadBridgeSpec } from './roadBridge'
+import type { WorldKnowledgeWorkerParams } from './worldKnowledgeScan'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { createItemMesh, type ItemKind } from '../items/items'
@@ -52,7 +53,7 @@ import {
   TREE_SPECS,
 } from '../settlement/props'
 import { bridgesNear, fordsNear, type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
-import { cellFromId } from '../settlement/settlementGenerator'
+import { cellFromId, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { setSettlementRiverQuery, settlementDefFor } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { type BridgePresentation, createBridge } from '../world/createBridge'
@@ -67,7 +68,6 @@ import {
   resolveCropStage,
 } from '../world/cropLifecycle'
 import { createCropPlacementVisual } from '../world/cropVisuals'
-import { siteChunkContainsPoint } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { makePlantedCropId } from '../world/plantedCrops'
 import { makePlantedTreeId, pickPlantedTreeSpecies, type PlantedTreeRecord } from '../world/plantedTrees'
@@ -84,7 +84,7 @@ import {
   resolveCemeteryTopologyForSettlement,
 } from './cemeteryAssignment'
 import { resolveAbandonedCemeteryAfterRoll, resolvePlacementForTopology } from './cemeteryPlacement'
-import { computeChunkEnvironment, type EnvironmentKind, isClassicLandmarkKind, type LandmarkKind, resolveCemeteryPlacement, resolveClassicLandmarkPlacement } from './chunkEnvironment'
+import { type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
 import {
   chebyshevDistance,
   chunkCenter,
@@ -95,7 +95,6 @@ import {
 import {
   apronOriginWorld,
   type ChunkTileParams,
-  computeChunkTile,
   createLocalTerrainSampler,
   extractCoreGrid,
   type RawSampleParams,
@@ -147,6 +146,12 @@ import { createRiverQuery } from './riverQuery'
 import { createRiverTileCache } from './riverTileCache'
 import { bridgeDeckYAt } from './roadBridge'
 import { cutoutsOverlappingChunk, type TerrainCutout } from './terrainCutout'
+import {
+  isLightweightUnloadedLandmark,
+  landmarkFromEnvironment,
+  resolveUnloadedLandmark,
+  ringChunkOffsets,
+} from './unloadedLandmarkLookup'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 import { type LocalWaterSample, sampleLocalWater as sampleLocalWaterPure } from './waterSample'
 
@@ -275,90 +280,12 @@ const TREE_COLLISION_RADIUS = 0.4
  *  a too-tight box. */
 const RIVER_SHORE_QUERY_SIZE = 32
 
-/** Chunk-coord offsets in expanding Chebyshev rings out to `maxRadius`,
- *  center first — the deterministic search order `findLandmarkNear` walks
- *  so it always returns the same landmark for the same `(kind, center)` and
- *  stops at the first hit instead of scanning a whole radius up front
- *  (plan 132). Pure/small enough to recompute per call rather than cache. */
-export function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[] {
-  const offsets: { dx: number, dz: number }[] = [{ dx: 0, dz: 0 }]
-  for (let r = 1; r <= maxRadius; r++) {
-    for (let dz = -r; dz <= r; dz++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue
-        offsets.push({ dx, dz })
-      }
-    }
-  }
-  return offsets
-}
-
-/** Loaded-tile landmark pick used by `findLandmarkNear` — reads an already
- *  generated `tile.environment` and never recomputes placement. Extracted so
- *  the loaded-path contract is unit-testable without a Three.js ChunkManager.
- * @domain world-terrain
- */
-export function landmarkFromEnvironment(
-  environment: readonly { kind: string, id?: string, x: number, z: number }[],
-  kind: LandmarkKind,
-): { id: string, x: number, z: number } | undefined {
-  const found = environment.find((p) => p.kind === kind && p.id)
-  return found?.id ? { id: found.id, x: found.x, z: found.z } : undefined
-}
-
-function isLightweightUnloadedLandmark(kind: LandmarkKind): boolean {
-  return kind === 'cemetery' || kind === 'ruins' || isClassicLandmarkKind(kind)
-}
-
-/** `findLandmarkNear`'s unloaded-chunk resolver (plans world-014 / world-028)
- *  — pure given `(kind, coord, params)`, factored out of the `ChunkManager`
- *  closure so it is directly unit-testable without constructing a full
- *  Three.js `ChunkManager`.
- *
- *  Lightweight kinds (`cemetery`, authored `ruins`, `monolith` /
- *  `stoneCircle` / `smallRuins`) resolve without `computeChunkTile()` /
- *  full `computeChunkEnvironment()`. Cemetery and classic landmarks share
- *  their streamed placement resolvers plus `createLocalTerrainSampler`;
- *  authored `ruins` is a containment check against `params.authoredExpeditionRuins`.
- *
- *  Remaining landmark kinds still use the original full-generation fallback.
- *
- *  No river segments are passed to `paramsFor` for either path here (both
- *  call sites pass `[]`) — a pre-existing discrepancy from before world-014,
- *  not something this change introduces or hides: a landmark whose candidate
- *  point sits under a river may accept/reject slightly differently than the
- *  eventual streamed tile. Resolving that would need real hydrology work on
- *  the query path, which is exactly the synchronous cost this plan removes.
- * @domain world-terrain
- */
-export function resolveUnloadedLandmark(
-  kind: LandmarkKind,
-  coord: ChunkCoord,
-  params: ChunkTileParams,
-): { id: string, x: number, z: number } | undefined {
-  if (kind === 'cemetery') {
-    const placement = resolveCemeteryPlacement(coord, params, createLocalTerrainSampler(coord, params))
-    return placement?.id ? { id: placement.id, x: placement.x, z: placement.z } : undefined
-  }
-  if (kind === 'ruins') {
-    const authored = params.authoredExpeditionRuins
-    if (authored && siteChunkContainsPoint(coord, params.chunkSize, authored.x, authored.z)) {
-      return { id: authored.id, x: authored.x, z: authored.z }
-    }
-    return undefined
-  }
-  if (isClassicLandmarkKind(kind)) {
-    const placement = resolveClassicLandmarkPlacement(
-      kind,
-      coord,
-      params,
-      createLocalTerrainSampler(coord, params),
-    )
-    return placement?.id ? { id: placement.id, x: placement.x, z: placement.z } : undefined
-  }
-  const environment = computeChunkEnvironment(coord, computeChunkTile(params), params, [])
-  return landmarkFromEnvironment(environment, kind)
-}
+export {
+  isLightweightUnloadedLandmark,
+  landmarkFromEnvironment,
+  resolveUnloadedLandmark,
+  ringChunkOffsets,
+} from './unloadedLandmarkLookup'
 
 /** Decorative prop for landmark kinds that stay individual Object3Ds.
  *  Campfire uses a preloaded GLB (`preloadCampfireTemplates`) with this
@@ -722,6 +649,19 @@ export type ChunkManager = {
     worldZ: number,
     maxChunkRadius: number,
   ) => { id: string, x: number, z: number } | undefined
+  /**
+   * Cheap snapshot of deterministic worldgen inputs for one worker-backed
+   * knowledge scan (plan quests-progression-047). Does not walk the ring or
+   * resolve landmarks — that work belongs in the worker job.
+   * @domain world-terrain
+   */
+  buildWorldKnowledgeWorkerParams: (input: {
+    queryKind: WorldKnowledgeWorkerParams['queryKind']
+    landmarkKinds: readonly LandmarkKind[]
+    originX: number
+    originZ: number
+    maxChunkRadius: number
+  }) => WorldKnowledgeWorkerParams
   /** Canonical assigned active cemetery for a settlement (plan world-terrain-016). */
   resolveCemeteryForSettlement: (
     settlementId: string,
@@ -2833,6 +2773,84 @@ export function createChunkManager(
       }
       getMonitor().recordHitch('PROPS', performance.now() - t0, `findLandmarkNear:${kind} (miss)`)
       return undefined
+    },
+    buildWorldKnowledgeWorkerParams(input) {
+      // `segmentsNear` / `villageSegmentsNear` treat the size as a box width
+      // (half-extent = size/2). Cover a Chebyshev ring of `maxChunkRadius`
+      // plus the per-chunk cemetery gather of `chunkSize * 8`.
+      const gatherWidth = config.chunkSize * (2 * input.maxChunkRadius + 8)
+      const radiusCells = Math.ceil(gatherWidth / SETTLEMENT_GRID_STEP) + CEMETERY_SETTLEMENT_GATHER_RADIUS
+      const cemeterySettlements = collectSettlementRefsNear(
+        input.originX,
+        input.originZ,
+        radiusCells,
+        (cell) => settlementDefFor(cell, settlementResolveCtx()),
+      )
+      const cemeteryVillage = villageSegmentsNear(input.originX, input.originZ, gatherWidth, roadCtx)
+      const roadSegments = [
+        ...segmentsNear(input.originX, input.originZ, gatherWidth, roadCtx),
+        ...cemeteryVillage.paths,
+      ]
+      const authored = config.authoredExpeditionRuins ?? (() => {
+        const site = getActiveDarkForestTreasureSite()
+        if (!site) return null
+        return {
+          id: site.landmarkId,
+          x: site.x,
+          z: site.z,
+          rotationY: site.rotationY,
+          variant: site.variant,
+          scale: site.scale,
+        }
+      })()
+      return {
+        queryKind: input.queryKind,
+        landmarkKinds: input.landmarkKinds,
+        originX: input.originX,
+        originZ: input.originZ,
+        maxChunkRadius: input.maxChunkRadius,
+        terrain: {
+          chunkSize: config.chunkSize,
+          resolution: config.resolution,
+          seed: config.seed,
+          heightScale: config.heightScale,
+          waterLevel: config.waterLevel,
+          noiseScale: config.noiseScale,
+          detailAmplitude: config.detailAmplitude,
+          hillsScale: config.hillsScale,
+          hillsAmplitude: config.hillsAmplitude,
+          hillsFbm: { ...config.hillsFbm },
+          fbm: { ...config.fbm },
+          biome: { noiseScale: config.biome.noiseScale, fbm: { ...config.biome.fbm } },
+          region: {
+            ...config.region,
+            continentFbm: { ...config.region.continentFbm },
+            mountainFbm: { ...config.region.mountainFbm },
+            moistureRegionFbm: { ...config.region.moistureRegionFbm },
+          },
+          vegetationSpeciesCount: {
+            tree: TREE_SPECS.length,
+            bush: BUSH_SPECS.length,
+            cactus: CACTUS_SPECS.length,
+            reed: REED_SPECS.length,
+            fern: FERN_SPECS.length,
+            lily: LILY_SPECS.length,
+            seaweed: SEAWEED_SPECS.length,
+          },
+          authoredExpeditionRuins: authored,
+          homeChunks: config.homeChunks.map((home) => ({ cx: home.cx, cz: home.cz })),
+          roadSegments,
+          clearings: cemeteryVillage.clearings,
+          regional: cemeteryVillage.regional,
+          cemeterySettlements,
+          cemeteryRoadSegments: roadSegments,
+          cemeteryClearings: cemeteryVillage.clearings.map((clearing) => ({
+            x: clearing.x,
+            z: clearing.z,
+            radius: clearing.radius,
+          })),
+        },
+      }
     },
     resolveCemeteryForSettlement,
     resolveCemeteryById,

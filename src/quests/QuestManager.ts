@@ -525,6 +525,7 @@ export class QuestManager {
   private readonly worldKnowledgeResolver: QuestWorldKnowledgeResolver
   /** Guard against stale async completions after New Game / reset. */
   private knowledgeEpoch = 0
+  private knowledgeLaunching = new Set<string>()
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -622,6 +623,7 @@ export class QuestManager {
    *  state (the instance itself is kept, since callers hold a `const` ref). */
   reset(): void {
     this.knowledgeEpoch += 1
+    this.knowledgeLaunching.clear()
     for (const def of this.defs) {
       this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0, journal: [], worldKnowledge: {} })
     }
@@ -2301,14 +2303,23 @@ export class QuestManager {
     }
   }
 
+  private knowledgeLaunchKey(questId: string, knowledgeId: string): string {
+    return `${questId}:${knowledgeId}`
+  }
+
   private launchKnowledgeResolution(questId: string, knowledgeId: string): void {
+    const key = this.knowledgeLaunchKey(questId, knowledgeId)
+    if (this.knowledgeLaunching.has(key)) return
     const epoch = this.knowledgeEpoch
+    this.knowledgeLaunching.add(key)
     void this.worldKnowledgeResolver.resolve(questId, knowledgeId).then(
       (ref) => {
+        this.knowledgeLaunching.delete(key)
         if (epoch !== this.knowledgeEpoch) return
         this.completeKnowledgeResolution(questId, knowledgeId, ref)
       },
       () => {
+        this.knowledgeLaunching.delete(key)
         if (epoch !== this.knowledgeEpoch) return
       },
     )
@@ -2405,6 +2416,7 @@ export class QuestManager {
         return { line: failed?.resultText ?? this.knowledgeDef(def, receive.objective.knowledgeId)?.unavailablePhrase ?? stage.reminderLine }
       }
       if (!this.isKnowledgeTellable(def, receive.objective.knowledgeId)) {
+        this.launchKnowledgeResolution(def.id, receive.objective.knowledgeId)
         this.maybeStampPendingWorldKnowledge(def, updated, npcId)
         return { line: this.expandQuestText(def, updated, stage.reminderLine) ?? stage.reminderLine }
       }

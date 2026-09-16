@@ -9,6 +9,7 @@ import { computeChunkItems } from './chunkItems'
 import { computeChunkMeshData } from './chunkMeshData'
 import { computeChunkVegetation } from './chunkVegetation'
 import { computeChunkGrass, GRASS_SPECIES_ORDER, type GrassChunkData } from './grassPlacement'
+import { scanWorldKnowledge } from './worldKnowledgeScan'
 
 // `self` is cast rather than adding the `webworker` TS lib, which can't coexist
 // with the main thread's `dom` lib in this project's single tsconfig.
@@ -91,6 +92,9 @@ ctx.onmessage = ({ data }) => {
       const { params } = data
       const grass = computeChunkGrass(params, params.grids)
       ctx.postMessage({ kind: 'grass', id, ok: true, grass }, grassTransferList(grass))
+    } else if (kind === 'worldKnowledge') {
+      const result = scanWorldKnowledge(data.params)
+      ctx.postMessage({ kind: 'worldKnowledge', id, ok: true, result }, [])
     } else {
       const { params } = data
       const meshData = computeChunkMeshData(params)

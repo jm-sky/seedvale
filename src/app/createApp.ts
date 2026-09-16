@@ -234,6 +234,7 @@ import {
 } from '../world/locations/abandonedCemeteryCache'
 import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { createGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
 import { listKnownSettlementOptions, resolveCharacterReputationSettlementId } from '../world/locations/knownSettlementReputation'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
 import {
@@ -254,7 +255,8 @@ import {
 import {
   getActiveTreasureMapBearCaveBinding,
 } from '../world/locations/treasureMapBearCaveRuntime'
-import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
+import { createWorldKnowledgeResearch } from '../world/locations/worldKnowledgeResearch'
+import { createWorldLocationCatalog, settlementLocationId } from '../world/locations/worldLocationCatalog'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -842,6 +844,16 @@ export async function createApp(
     },
     getAbandonedMine: () => bundle.caves.abandonedMine(),
   })
+  const worldKnowledgeResearch = createWorldKnowledgeResearch({
+    buildParams: (query) => bundle.chunkManager.buildWorldKnowledgeWorkerParams({
+      queryKind: query.kind,
+      landmarkKinds: query.landmarkKinds,
+      originX: query.originX,
+      originZ: query.originZ,
+      maxChunkRadius: query.maxChunkRadius,
+    }),
+    fingerprint: () => `${config.seed}:${worldGeneration}`,
+  })
   const bindReadyExpeditionDispatch = (): void => {
     const dispatch = bundle.dispatchReadyExpedition.bind(bundle)
     bundle.dispatchReadyExpedition = (assignmentId, locationAt) => dispatch(
@@ -864,6 +876,18 @@ export async function createApp(
   // loop so the first proximity tick is a no-op (no boot toast). Missing
   // home entries in older saves are normalized the same way.
   confirmHomeSettlement(bundle.settlementsManager.getHomeDef(), locationKnowledge)
+  const guardLocalKnowledge = createGuardLocalKnowledge({
+    research: worldKnowledgeResearch,
+    getElapsedDays: () => dayNight.elapsedDays,
+    getWorldSeed: () => config.seed,
+    locationKnowledge,
+    getLocation: (id) => worldLocationCatalog.getById(id),
+    listStableLocations: (originX, originZ, maxKm) => worldLocationCatalog.stableLandmarksInRange(originX, originZ, 0, maxKm),
+    nearestSettlements: (originX, originZ, maxKm) => worldLocationCatalog.nearestSettlements(originX, originZ, maxKm),
+    homeLocationId: () => settlementLocationId(bundle.settlementsManager.getHomeDef()),
+    searchChunkRadius: LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
+  })
+  guardLocalKnowledge.restore(initialSave?.map.guardLocalKnowledge)
   const locationProximityDiscovery = createLocationProximityDiscovery({
     getCaveDefinitions: () => bundle.caves.definitions(),
     lookupSettlement: lookupSettlementCell,
@@ -1871,6 +1895,7 @@ export async function createApp(
       searchRadius: LANDMARK_QUEST_SEARCH_CHUNK_RADIUS,
       chunkSize: config.terrain.chunkSize,
       getChronicleSearch: () => getActiveLostTreasureChronicleSearchBinding(),
+      research: worldKnowledgeResearch,
     }),
   )
 
@@ -1990,6 +2015,7 @@ export async function createApp(
     guardProgress,
     homeSettlementId,
     homeGuardNpcId,
+    guardLocalKnowledge,
   })
   vueUi.configurePrimaryWeaponShortcuts({
     equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
@@ -2288,6 +2314,7 @@ export async function createApp(
     mapDiscovery,
     locationKnowledge,
     navigationTargets,
+    getGuardLocalKnowledge: () => guardLocalKnowledge.serialize(),
     landOwnership,
     vueUi,
     worldFlags,
@@ -2378,6 +2405,8 @@ export async function createApp(
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()
+      worldKnowledgeResearch.invalidate()
+      guardLocalKnowledge.invalidate()
       bindReadyExpeditionDispatch()
       // New seed and/or terrain params — re-activate the persistence
       // controller so a late-arriving hydrate from the *old* identity never
@@ -2404,6 +2433,8 @@ export async function createApp(
         locationKnowledge.clear()
         confirmHomeSettlement(bundle.settlementsManager.getHomeDef(), locationKnowledge)
         navigationTargets.clear()
+        guardLocalKnowledge.reset()
+        worldKnowledgeResearch.invalidate()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
         worldFlags.alphaWolfDeedEarned = false
@@ -3352,6 +3383,7 @@ export async function createApp(
     if (typeof window !== 'undefined') window.__seedvalePointLightBudget = undefined
     if (typeof window !== 'undefined') window.__seedvaleProgramPrewarm = undefined
     player.dispose()
+    worldKnowledgeResearch.dispose()
     disposeChunkWorkerPool()
     postProcessing.dispose()
     lights.dispose()

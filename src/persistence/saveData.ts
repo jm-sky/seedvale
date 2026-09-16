@@ -21,6 +21,7 @@ import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditi
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { ExpeditionAssignment } from '../world/expeditionAssignment'
+import type { SaveGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
 import type { SaveGrave } from '../world/npcGraves'
 import type { WellStage } from '../world/playerWell'
@@ -42,6 +43,7 @@ import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { isPreparationSize, type PreparationSize } from '../terrain/terrainPreparation'
 import { CONDITION_MAX } from '../world/condition'
+import { isSaveGuardLocalKnowledge } from '../world/locations/guardLocalKnowledge'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { PLAYER_TROUGH_CAPACITY_LITRES, PLAYER_TROUGH_REQUIRED_WORK } from '../world/playerTrough'
 import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
@@ -175,6 +177,9 @@ export type SaveMap = {
    *  max 3 — re-validated against current knowledge on load, never trusted
    *  blindly (see `world/locations/navigationTargets.ts`'s `restore`). */
   targets: string[]
+  /** Home-guard local-knowledge research wait/selection (plan quests-progression-047).
+   *  Absent on older saves = idle. Worker handles are never stored. */
+  guardLocalKnowledge?: SaveGuardLocalKnowledge
 }
 
 /** Reputation Badges / Achievements (plan world-007 §10) — `hiddenFindsFound`
@@ -1060,6 +1065,7 @@ function isSaveMap(value: unknown): value is SaveMap {
   if (!map.discoveredCells.every((cell) => typeof cell === 'string')) return false
   if (!isSaveLocationKnowledgeField(map.discoveredLocations)) return false
   if (!Array.isArray(map.targets) || !map.targets.every((id) => typeof id === 'string')) return false
+  if (map.guardLocalKnowledge !== undefined && !isSaveGuardLocalKnowledge(map.guardLocalKnowledge)) return false
   return true
 }
 
@@ -2414,11 +2420,11 @@ function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
 function isQuestWorldKnowledgeRef(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const ref = value as Record<string, unknown>
-  return ref.kind === 'landmark'
-    && typeof ref.landmarkId === 'string'
-    && ref.landmarkId.length > 0
-    && typeof ref.landmarkKind === 'string'
-    && ref.landmarkKind.length > 0
+  if (ref.kind !== 'landmark' || typeof ref.landmarkId !== 'string' || ref.landmarkId.length === 0) return false
+  if (typeof ref.landmarkKind !== 'string' || ref.landmarkKind.length === 0) return false
+  if (ref.x !== undefined && (typeof ref.x !== 'number' || !Number.isFinite(ref.x))) return false
+  if (ref.z !== undefined && (typeof ref.z !== 'number' || !Number.isFinite(ref.z))) return false
+  return true
 }
 
 function isQuestWorldKnowledgeProgress(value: unknown): boolean {

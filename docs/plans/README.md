@@ -43,7 +43,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
 | `settlements-npcs-025-resource-storage-visualization.md`  | Stage 2 implemented?                                                  | ⚪  | M      | -      |
 | `world-terrain-010-waterways-and-vegetation.md`           | Phases 2/8/9 deferred — see plan's "Implementation status"            | 🟡  | M      | -      |
-| `quests-progression-047-deferred-world-knowledge-and-location-research.md` | Quest primitives + pilots landed; worker service + guard remain | 🔴 | L | ~~world-028~~, ~~world-022~~ |
 
 ---
 
@@ -89,6 +88,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `quests-progression-047-deferred-world-knowledge-and-location-research.md` | New game; guard „Opowiedz mi coś o okolicy” na zimnym świecie bez freeze, prosi o powrót; za wcześnie — nadal pending; po godzinie świata — 1–3 konkretne miejsca; save w trakcie research i continue; `slad-przy-monolicie` — Anna później daje kierunek, tylko wskazany monolit kończy objective; immediate location quests bez zmian |
 | `settlements-010-closed-and-cautious-settlement-character.md` | Część leśnych osad `closed`, home `default`; pełniejszy perimeter i para pochodni przy każdym inland road entrance; więcej guardów; ostrożniejsi NPC, ale zaufanie/reputacja nadal wygrywają; niska naturalna presja drapieżników dostaje tylko brakującą capacity, wysoka nie puchnie |
 | `quests-progression-037-lost-treasure-chronicles-elder-trust-foundation.md` | W pobliskiej osadzie SM/MD jest Kazimierz Nowak (~74 lat) jako zwykły mieszkaniec; home i outpost bez niego. Quest zima: gałęzie albo rozmowa z sąsiadem dają różne endingi; spór odblokowuje się po obu. W sporze obie strony wiarygodne; poparcie starszego vs zgoda zmienia relacje inaczej; `trusted` nie spada za darmo z samych tych dwóch questów. Save/load bez duplikatu NPC i bez ponownego zastosowania konsekwencji |
 | `world-terrain-017-abandoned-mountain-mine-landmark.md` | Nowy świat: `abandonedMine` istnieje niezależnie od questów; wejście w górach, nie na izolowanym pagórku; `mineId` stały po reload/rebuild; dungeon nie jest kopalnią; questy bear-cave / old-bones / lost-hunter / suspicious-transport / dungeon bandit / lost-treasure expedition bez zmiany targetu jaskini |

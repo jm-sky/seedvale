@@ -1,4 +1,5 @@
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
+import type { WorldKnowledgeResearch } from '../world/locations/worldKnowledgeResearch'
 import type { QuestWorldKnowledgeResolver } from './QuestManager'
 import type { QuestDef, QuestWorldKnowledgeRef } from './quests'
 import { cellFromId } from '../settlement/settlementGenerator'
@@ -28,9 +29,9 @@ export type ChronicleSearchKnowledgeSite = {
 }
 
 /**
- * Composition-root world-knowledge resolver. Reads the current bundle through
- * getters so a same-session rebuild cannot pin an in-flight request to a stale
- * `ChunkManager` (plan quests-progression-047).
+ * Composition-root world-knowledge resolver. Lookup goes through the shared
+ * worker-backed research service; this adapter only maps quest slots onto
+ * data-only queries and presentation (plan quests-progression-047).
  *
  * @domain quests-progression
  */
@@ -40,6 +41,7 @@ export function createQuestWorldKnowledgeResolver(input: {
   searchRadius: number
   chunkSize: number
   getChronicleSearch: () => ChronicleSearchKnowledgeSite | null
+  research: WorldKnowledgeResearch
 }): QuestWorldKnowledgeResolver {
   const settlementOrigin = (settlementId: string | undefined): { x: number, z: number, name: string } => {
     const host = input.getHost()
@@ -51,6 +53,7 @@ export function createQuestWorldKnowledgeResolver(input: {
   }
 
   const poseFor = (ref: QuestWorldKnowledgeRef, settlementId: string | undefined): { x: number, z: number } => {
+    if (typeof ref.x === 'number' && typeof ref.z === 'number') return { x: ref.x, z: ref.z }
     const chronicle = input.getChronicleSearch()
     if (chronicle && ref.landmarkId === chronicle.ruinsLandmarkId) {
       return { x: chronicle.ruinsX, z: chronicle.ruinsZ }
@@ -73,23 +76,34 @@ export function createQuestWorldKnowledgeResolver(input: {
       const slot = def?.worldKnowledge?.find((entry) => entry.id === knowledgeId)
       if (!def || !slot || slot.bind.type !== 'landmark') return Promise.resolve(null)
       if (slot.bind.landmarkId) {
+        const chronicle = input.getChronicleSearch()
+        const pose = chronicle && slot.bind.landmarkId === chronicle.ruinsLandmarkId
+          ? { x: chronicle.ruinsX, z: chronicle.ruinsZ }
+          : undefined
         return Promise.resolve({
           kind: 'landmark',
           landmarkId: slot.bind.landmarkId,
           landmarkKind: slot.bind.kind,
+          ...pose,
         })
       }
       const origin = settlementOrigin(def.settlementId)
       const kind = slot.bind.kind
-      return Promise.resolve().then(() => {
-        const found = input.getHost().chunkManager.findLandmarkNear(
-          kind,
-          origin.x,
-          origin.z,
-          input.searchRadius,
-        )
+      return input.research.resolve({
+        kind: 'nearest-landmark',
+        landmarkKinds: [kind],
+        originX: origin.x,
+        originZ: origin.z,
+        maxChunkRadius: input.searchRadius,
+      }).then((found) => {
         if (!found) return null
-        return { kind: 'landmark' as const, landmarkId: found.id, landmarkKind: kind }
+        return {
+          kind: 'landmark' as const,
+          landmarkId: found.id,
+          landmarkKind: found.kind,
+          x: found.x,
+          z: found.z,
+        }
       })
     },
     describe(ref, context) {

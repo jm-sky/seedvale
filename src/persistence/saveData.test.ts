@@ -1478,6 +1478,37 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })).toBe(false)
   })
 
+  it('accepts older maps without guardLocalKnowledge and rejects malformed guard research (plan quests-progression-047)', () => {
+    expect(isSaveData({
+      ...validSave,
+      map: { discoveredCells: [], discoveredLocations: [], targets: [] },
+    })).toBe(true)
+    expect(isSaveData({
+      ...validSave,
+      map: {
+        discoveredCells: [],
+        discoveredLocations: [],
+        targets: [],
+        guardLocalKnowledge: {
+          status: 'requested',
+          requestedAtDays: 1,
+          revealAtDays: 1 + 1 / 24,
+          originX: 0,
+          originZ: 0,
+        },
+      },
+    })).toBe(true)
+    expect(isSaveData({
+      ...validSave,
+      map: {
+        discoveredCells: [],
+        discoveredLocations: [],
+        targets: [],
+        guardLocalKnowledge: { status: 'requested' },
+      },
+    })).toBe(false)
+  })
+
   it('migrates a real v21 save (plan items-player-020) into current, defaulting missing playerTroughs to []', () => {
     const { playerTroughs: _pt, ...v21Body } = validSave
     const v21Save = { ...v21Body, version: 21 }

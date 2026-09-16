@@ -630,6 +630,9 @@ export type QuestWorldKnowledgeRef = {
   kind: 'landmark'
   landmarkId: string
   landmarkKind: LandmarkKind
+  /** Presentation pose from the research result; omitted on older saves. */
+  x?: number
+  z?: number
 }
 
 /**

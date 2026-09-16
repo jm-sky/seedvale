@@ -1,7 +1,7 @@
 # Plan: Deferred world knowledge and location research
 
 **Created:** 2026-09-15
-**Status:** `in progress` 🔄
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** L
 **Model:** Opus, Sonnet
 **Depends on:** ~~world-028~~, ~~world-022~~
@@ -499,18 +499,12 @@ Exact files/call-sites should follow current code and implementation notes.
 
 ## Implementation status
 
-Quest-layer primitives and the three quest pilots are in this branch:
+Implemented; browser/manual verification remains user-owned (AI does not perform it).
 
-- `QuestDef.worldKnowledge` + `request_world_knowledge` / `receive_world_knowledge` / `interact_bound_landmark`
-- persisted `QuestProgressEntry.worldKnowledge`
-- injected `QuestWorldKnowledgeResolver` with reset-epoch stale-completion guard
-- pilots: `slad-przy-monolicie`, generated `old-place-secret`, chronicle-search ruins clue
-
-Still required by this plan before verification:
-
-- world-owned worker-backed research service on the existing `chunkHeightmap` pool
-- home-guard „Opowiedz mi coś o okolicy” using that service (not `QuestManager`)
-- switch quest lookup off the current Promise/`findLandmarkNear` adapter onto the shared service
+- worker-backed `WorldKnowledgeResearch` on the existing `chunkHeightmap` pool (`worldKnowledge` job; tile/mesh > knowledge > grass; shared background headroom)
+- quest adapter looks up through `research.resolve()`, not `findLandmarkNear` on the dialogue path
+- home-guard „Opowiedz mi coś o okolicy” is a peer consumer (`guardLocalKnowledge`), not a fake quest
+- quest-layer primitives and pilots: `slad-przy-monolicie`, generated `old-place-secret`, chronicle-search ruins clue
 
 ## Verification
 

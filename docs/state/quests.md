@@ -14,7 +14,8 @@ Primary code:
 - `src/quests/quests.ts` — quest contracts, validation, authored definitions, offer policy/ranking and contextual builders/binders.
 - `src/quests/QuestManager.ts` — authoritative quest progress, lifecycle, offer admission, active giver capacity, objective evaluation, dialogue overrides, rewards/consequences and quest-owned player↔NPC relation values.
 - `src/quests/materializeAuthoredQuests.ts` — authored NPC display names → stable `NpcId` binding.
-- `src/quests/worldKnowledgeResolver.ts` — composition-root async landmark knowledge resolver (plan quests-progression-047).
+- `src/quests/worldKnowledgeResolver.ts` — quest adapter onto world-owned `WorldKnowledgeResearch` (plan quests-progression-047).
+- `src/world/locations/worldKnowledgeResearch.ts` — worker-backed static-world lookup; not a quest system.
 - `src/quests/landmarkLocationDescription.ts` — deterministic landmark-relative place phrase.
 - `src/quests/opportunities/` — world-driven settlement opportunities and RPG quest matrices.
 - `src/quests/settlementRatInfestation.ts` — pure completion/reminder helpers for rat infestation.
@@ -220,7 +221,7 @@ Event ingress helpers visit **every** matching active quest and every unfinished
 
 ## Animal/world bindings
 
-`kill_target_animal` and `find_animal` bind to one concrete `animalId` through injected seams. `clear_wolf_den` binds the den/spawner identity. `interact_landmark` uses a resolved stable landmark id rather than coordinates. Deferred world knowledge (plan quests-progression-047) is an opt-in `QuestDef.worldKnowledge` slot: `request_world_knowledge` starts lookup exactly once, `receive_world_knowledge` waits for both resolver completion and authored world time, and `interact_bound_landmark` matches the persisted landmark id. Immediate-known places stay on `interact_landmark`. `QuestManager` owns the persisted slot; the world layer is injected as `QuestWorldKnowledgeResolver`. Rendered clue text is not saved — `{worldKnowledgeClue:id}` expands in `list()` only after `revealed`.
+`kill_target_animal` and `find_animal` bind to one concrete `animalId` through injected seams. `clear_wolf_den` binds the den/spawner identity. `interact_landmark` uses a resolved stable landmark id rather than coordinates. Deferred world knowledge (plan quests-progression-047) is an opt-in `QuestDef.worldKnowledge` slot: `request_world_knowledge` starts lookup exactly once, `receive_world_knowledge` waits for both resolver completion and authored world time, and `interact_bound_landmark` matches the persisted landmark id. Immediate-known places stay on `interact_landmark`. `QuestManager` owns the persisted slot; lookup runs through injected `QuestWorldKnowledgeResolver` onto world-owned `WorldKnowledgeResearch` (worker pool `worldKnowledge` job). Rendered clue text is not saved — `{worldKnowledgeClue:id}` expands in `list()` only after `revealed`.
 
 For `animal_died`, an already-bound objective matches only the exact animal id. If a matching kill objective is still unbound, the death event can bind to the exact dying `animalId` using the event's reported `kind`; it does **not** ask the live-target resolver after death and accidentally retarget another animal.
 
