@@ -850,6 +850,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/characters.ts`
 - `ai/reactionChance.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.ts`
@@ -860,6 +861,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/characters.ts`
 - `ai/reactionChance.ts`
 - `quests/quests.ts`
 - `settlement/createSettlement.ts`

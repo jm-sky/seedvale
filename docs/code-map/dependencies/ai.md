@@ -307,6 +307,8 @@ Generated from TypeScript imports.
 - `quests/caveLocationDescription.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `settlement/families.ts`
+- `settlement/lodgingResolver.test.ts`
+- `settlement/lodgingResolver.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 - `settlement/lostTreasureChroniclesElderResident.ts`
 - `settlement/lostTreasureChroniclesSpecialistResident.ts`

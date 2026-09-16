@@ -332,32 +332,33 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/lodging.ts`
 
-- `advanceLodgingProgress` — function — line 97
+- `advanceLodgingProgress` — function — line 99
   - domain: ui-input Advances the lodging-walk stuck watchdog by one frame — a meaningful distance improvement resets the timer, otherwise `dt` accumulates until `LODGING_STUCK_TIMEOUT_SEC` is reached. Pure and frame-count-independent (driven by `dt`, not calls) so it can be unit-tested without a running game loop or a `PlayerActionContext` mock.
-- `hayLodgingId` — function — line 149
-- `initialLodgingProgress` — function — line 87
-- `LODGING_ARRIVE_TOLERANCE` — const — line 67
-- `LODGING_STUCK_PROGRESS_EPSILON` — const — line 73
-- `LODGING_STUCK_TIMEOUT_SEC` — const — line 79
-- `lodgingChoiceLabel` — function — line 138
+- `GUARD_PAID_LODGING_PRICE` — const — line 81
+- `hayLodgingId` — function — line 162
+- `initialLodgingProgress` — function — line 89
+- `LODGING_ARRIVE_TOLERANCE` — const — line 65
+- `LODGING_STUCK_PROGRESS_EPSILON` — const — line 71
+- `LODGING_STUCK_TIMEOUT_SEC` — const — line 77
+- `lodgingChoiceLabel` — function — line 150
 - `LodgingOption` — type — line 16
-- `lodgingPlaceLabel` — function — line 117
-- `LodgingProgress` — type — line 85
+- `lodgingPlaceLabel` — function — line 119
+- `LodgingProgress` — type — line 87
 - `LodgingQuality` — type — line 14
-- `lodgingRequiresPayment` — function — line 126
-- `lodgingRestQuality` — function — line 59
+- `lodgingRequiresPayment` — function — line 128
+- `lodgingRestQuality` — function — line 57
 - `LodgingType` — type — line 12
 
 ## `settlement/lodgingResolver.ts`
 
-- `collectLodgingCandidates` — function — line 179
-- `collectOwnedHouseLodgingOptions` — function — line 197
-- `LodgingCandidateContext` — type — line 171
-- `LodgingSelection` — type — line 296
-- `LodgingSettlementInput` — type — line 24
-- `resolveBestLodging` — function — line 261
-- `selectLodgingFromCandidates` — function — line 310
-- `settlementLodgingInput` — function — line 68
+- `collectLodgingCandidates` — function — line 243
+- `collectOwnedHouseLodgingOptions` — function — line 260
+- `LodgingCandidateContext` — type — line 235
+- `LodgingSelection` — type — line 364
+- `LodgingSettlementInput` — type — line 32
+- `resolveBestLodging` — function — line 329
+- `selectLodgingFromCandidates` — function — line 378
+- `settlementLodgingInput` — function — line 74
 
 ## `settlement/lostTreasureChroniclesArchaeologistResident.ts`
 
