@@ -1000,6 +1000,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/families.test.ts`
 - `settlement/families.ts`
+- `settlement/household.ts`
 - `settlement/merchantTrade.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`

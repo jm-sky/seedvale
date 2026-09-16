@@ -3465,6 +3465,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/houseCatalog.ts`
+- `settlement/householdProfessionStock.ts`
 - `settlement/householdWells.ts`
 - `settlement/livestock.ts`
 - `settlement/merchantTrade.ts`
@@ -3475,6 +3476,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/rats.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/settlementArmorQuality.ts`
 - `settlement/settlementCharacter.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`

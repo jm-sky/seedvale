@@ -347,6 +347,7 @@ Generated from TypeScript imports.
 - `settlement/families.test.ts`
 - `settlement/findSettlementSite.test.ts`
 - `settlement/houseCatalog.ts`
+- `settlement/household.ts`
 - `settlement/householdProfessionStock.ts`
 - `settlement/livestock.ts`
 - `settlement/lostTreasureChroniclesArchaeologistResident.test.ts`
@@ -368,6 +369,7 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementAgriculture.test.ts`
 - `settlement/settlementAgriculture.ts`
+- `settlement/settlementArmorQuality.ts`
 - `settlement/settlementCharacter.test.ts`
 - `settlement/settlementCharacter.ts`
 - `settlement/settlementGenerator.test.ts`
@@ -603,8 +605,11 @@ Generated from TypeScript imports.
 - `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
+- `settlement/families.ts`
 - `settlement/householdProfessionStock.ts`
 - `settlement/householdWood.ts`
+- `shared/SettlementName.ts`
+- `terrain/naturalResources.ts`
 
 **Imported by**
 
@@ -643,6 +648,7 @@ Generated from TypeScript imports.
 - `settlement/household.test.ts`
 - `settlement/householdExchange.test.ts`
 - `settlement/householdExchange.ts`
+- `settlement/householdProfessionStock.test.ts`
 - `settlement/householdProfessionStock.ts`
 - `settlement/householdResourceTransfer.test.ts`
 - `settlement/householdResourceTransfer.ts`
@@ -680,21 +686,34 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/householdExchange.test.ts`
 
+## `settlement/householdProfessionStock.test.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `settlement/household.ts`
+- `settlement/householdProfessionStock.ts`
+
 ## `settlement/householdProfessionStock.ts`
 
 **Imports**
 
 - `items/Inventory.ts`
+- `items/armorItemInstances.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/trade.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `settlement/professionStaffing.ts`
+- `settlement/settlementArmorQuality.ts`
+- `world/parseSeed.ts`
 
 **Imported by**
 
 - `settlement/household.ts`
+- `settlement/householdProfessionStock.test.ts`
 - `settlement/settlementAgriculture.ts`
 
 ## `settlement/householdResourceTransfer.test.ts`
@@ -1022,6 +1041,7 @@ Generated from TypeScript imports.
 
 - `items/Inventory.ts`
 - `items/itemInstances.ts`
+- `items/items.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
 - `settlement/merchantTrade.ts`
@@ -1038,6 +1058,7 @@ Generated from TypeScript imports.
 - `items/tradeCatalog.ts`
 - `settlement/families.ts`
 - `settlement/npcState.ts`
+- `settlement/settlementArmorQuality.ts`
 - `shared/SettlementName.ts`
 - `terrain/naturalResources.ts`
 - `world/parseSeed.ts`
@@ -1780,6 +1801,19 @@ Generated from TypeScript imports.
 
 - `settlement/createSettlement.ts`
 - `settlement/settlementAgriculture.test.ts`
+
+## `settlement/settlementArmorQuality.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `settlement/families.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/householdProfessionStock.ts`
+- `settlement/merchantTrade.ts`
 
 ## `settlement/settlementCharacter.test.ts`
 

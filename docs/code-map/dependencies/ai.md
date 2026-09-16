@@ -79,6 +79,7 @@ Generated from TypeScript imports.
 - `ai/npcStrategies.ts`
 - `ai/npcTravel.ts`
 - `ai/npcTravelCheckpoint.ts`
+- `ai/npcVendor.ts`
 - `ai/npcVigor.ts`
 - `ai/npcVoiceLines.ts`
 - `ai/npcWorkContract.ts`
@@ -296,6 +297,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcTradeAvailability.ts`
+- `ai/npcVendor.ts`
 - `ai/npcVoiceLines.ts`
 - `ai/npcWorkContract.ts`
 - `ai/reactionChance.ts`
@@ -1151,6 +1153,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcTradeAvailability.ts`
+- `ai/npcVendor.ts`
 - `items/Inventory.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
@@ -1213,6 +1216,24 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcOffscreenSurvival.test.ts`
 - `settlement/SettlementsManager.ts`
+
+## `ai/npcVendor.test.ts`
+
+**Imports**
+
+- `ai/npcVendor.ts`
+
+## `ai/npcVendor.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcTradeAvailability.test.ts`
+- `ai/npcVendor.test.ts`
 
 ## `ai/npcVigor.test.ts`
 

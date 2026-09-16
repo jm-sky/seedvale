@@ -253,6 +253,7 @@ Generated from TypeScript imports.
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `player/characterPresentation.test.ts`
+- `settlement/householdProfessionStock.ts`
 - `settlement/merchantTrade.ts`
 
 ## `items/authoredWorldPickups.test.ts`
@@ -1044,9 +1045,11 @@ Generated from TypeScript imports.
 - `quests/lostTreasureExpedition.ts`
 - `quests/oldBonesAdventureCave.ts`
 - `quests/suspiciousTransportCaveCache.ts`
+- `settlement/householdProfessionStock.test.ts`
 - `settlement/householdProfessionStock.ts`
 - `settlement/merchantTrade.test.ts`
 - `settlement/merchantTrade.ts`
+- `settlement/settlementArmorQuality.ts`
 - `ui-vue/store.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.test.ts`
@@ -1220,9 +1223,11 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `quests/suspiciousTransportCaveCache.ts`
 - `settlement/household.ts`
+- `settlement/householdProfessionStock.test.ts`
 - `settlement/householdProfessionStock.ts`
 - `settlement/householdResourceTransfer.ts`
 - `settlement/householdWood.ts`
+- `settlement/merchantTrade.test.ts`
 - `settlement/merchantTrade.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.ts`

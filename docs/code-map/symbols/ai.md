@@ -174,24 +174,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 729
-- `CurrentActivity` — type — line 539
-- `CurrentActivityKind` — type — line 532
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 846
-- `NPC_HEIGHT` — const — line 471
-- `NPC_SHADOW_DISTANCE` — const — line 476
-- `NpcAgent` — class — line 1086
+- `classifyPendingActivity` — function — line 730
+- `CurrentActivity` — type — line 540
+- `CurrentActivityKind` — type — line 533
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 847
+- `NPC_HEIGHT` — const — line 472
+- `NPC_SHADOW_DISTANCE` — const — line 477
+- `NpcAgent` — class — line 1087
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 980
-- `NpcInspectionSnapshot` — type — line 554
-- `NpcWhy` — type — line 704
-- `projectNpcWhy` — function — line 771
-- `promoteChainKind` — function — line 721
+- `NpcAgentDeps` — type — line 981
+- `NpcInspectionSnapshot` — type — line 555
+- `NpcWhy` — type — line 705
+- `projectNpcWhy` — function — line 772
+- `promoteChainKind` — function — line 722
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -507,11 +507,11 @@ Generated from exported TypeScript symbols.
   - domain: settlements-npcs
 - `NpcTradeOwnerSource` — type — line 15
   - domain: settlements-npcs
-- `npcTradeQuantityAvailable` — function — line 157
+- `npcTradeQuantityAvailable` — function — line 166
   - domain: settlements-npcs
-- `npcTradeSourceInventory` — function — line 175
+- `npcTradeSourceInventory` — function — line 184
   - domain: settlements-npcs
-- `resolveNpcTradeOffers` — function — line 191
+- `resolveNpcTradeOffers` — function — line 200
   - domain: settlements-npcs
 - `TradeReserveNpc` — type — line 34
 
@@ -548,6 +548,15 @@ Generated from exported TypeScript symbols.
 
 - `resolveNpcTravelCheckpoint` — function — line 35
   - domain: npc
+
+## `ai/npcVendor.ts`
+
+- `NPC_VENDOR_MARKER` — const — line 14
+- `NpcVendorKind` — type — line 11
+  - domain: settlements-npcs
+- `npcVendorMarker` — function — line 36
+- `resolveNpcVendorKind` — function — line 22
+  - domain: settlements-npcs
 
 ## `ai/npcVigor.ts`
 

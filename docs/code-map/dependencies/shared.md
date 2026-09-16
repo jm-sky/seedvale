@@ -74,6 +74,7 @@ Generated from TypeScript imports.
 - `ai/dialogueTemplates.ts`
 - `settlement/createSettlement.ts`
 - `settlement/families.ts`
+- `settlement/household.ts`
 - `settlement/merchantTrade.ts`
 - `settlement/professionStaffing.test.ts`
 - `settlement/professionStaffing.ts`
