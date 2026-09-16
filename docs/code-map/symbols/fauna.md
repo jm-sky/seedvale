@@ -450,25 +450,25 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `clearsRiverChannel` — function — line 286
-- `createFauna` — function — line 583
-- `Fauna` — type — line 103
-- `FAUNA_URLS` — const — line 493
-- `faunaGltfUrls` — function — line 508
-- `findHomeCaveSpawner` — function — line 452
-- `isDeerEdgeHabitat` — function — line 340
-- `isNearRoadCorridor` — function — line 321
-- `isValidWildFaunaSpawnSite` — function — line 296
-- `measureSlope` — function — line 379
-- `resolveWildFaunaSpawnPosition` — function — line 307
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 469
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 477
-- `SPAWNER_LABELS` — const — line 461
-- `SPAWNER_RING_OFFSET` — const — line 258
-- `SPAWNER_SPECS` — const — line 415
-- `spawnerDestroyBusyLabel` — function — line 488
-- `spawnerDestroyPromptLabel` — function — line 484
-- `spawnerId` — function — line 445
+- `clearsRiverChannel` — function — line 299
+- `createFauna` — function — line 596
+- `Fauna` — type — line 108
+- `FAUNA_URLS` — const — line 506
+- `faunaGltfUrls` — function — line 521
+- `findHomeCaveSpawner` — function — line 465
+- `isDeerEdgeHabitat` — function — line 353
+- `isNearRoadCorridor` — function — line 334
+- `isValidWildFaunaSpawnSite` — function — line 309
+- `measureSlope` — function — line 392
+- `resolveWildFaunaSpawnPosition` — function — line 320
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 482
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 490
+- `SPAWNER_LABELS` — const — line 474
+- `SPAWNER_RING_OFFSET` — const — line 271
+- `SPAWNER_SPECS` — const — line 428
+- `spawnerDestroyBusyLabel` — function — line 501
+- `spawnerDestroyPromptLabel` — function — line 497
+- `spawnerId` — function — line 458
 
 ## `fauna/dogGuard.ts`
 
@@ -514,6 +514,32 @@ Generated from exported TypeScript symbols.
 - `FaunaDecisionGate` — type — line 18
 - `FaunaDecisionInput` — type — line 39
 - `scoreFaunaBehaviours` — function — line 156
+
+## `fauna/habitatPressure.ts`
+
+- `HABITAT_FOOD_PRESSURE_RADIUS` — const — line 54
+- `HABITAT_FOOD_SUFFICIENT_COUNT` — const — line 63
+- `HABITAT_PREDATOR_PRESSURE_FULL_COUNT` — const — line 60
+- `HABITAT_PREDATOR_PRESSURE_RADIUS` — const — line 57
+- `HABITAT_PRESSURE_CRITICAL_AT` — const — line 66
+- `HABITAT_PRESSURE_STRAINED_AT` — const — line 65
+- `HABITAT_PRESSURE_TIE_ORDER` — const — line 72
+- `HABITAT_PRESSURE_TTL_DAYS` — const — line 51
+- `HabitatPressureCacheEntry` — type — line 79
+- `HabitatPressureCondition` — type — line 22
+- `HabitatPressureKind` — type — line 16
+  - domain: fauna Derived, read-only habitat condition for one managed `PreySpawner`. Not authoritative state, not persisted, and not a second ecosystem sim (plan fauna-031).
+- `HabitatPressureResolveArgs` — type — line 243
+- `HabitatPressureScanAgent` — type — line 85
+- `HabitatPressureScoreInput` — type — line 92
+- `HabitatPressureSnapshot` — type — line 24
+- `isHabitatPressureCacheFresh` — function — line 206
+- `resolveHabitatPressure` — function — line 260
+  - domain: fauna
+- `scanHabitatPressureAgents` — function — line 222
+  - domain: fauna
+- `scoreHabitatPressure` — function — line 138
+  - domain: fauna
 
 ## `fauna/harvestedRemains.ts`
 
