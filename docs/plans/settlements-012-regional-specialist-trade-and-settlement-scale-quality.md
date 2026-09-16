@@ -3,7 +3,7 @@
 **Created:** 2026-09-13
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
-**Depends on:** settlements-npcs-033
+**Depends on:** ~~settlements-npcs-033~~
 **Domain:** `settlements`
 **Type:** `feature`
 **Roadmap:** `economy-goods-flow.md`

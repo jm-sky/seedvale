@@ -44,7 +44,7 @@
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
 2. `quests-progression-051` — **Authored quest dialogue narrative polish**  
-   🔴 `M` · 🔒 blocked · unlocks 1/1
+   🔴 `M` · ✅ ready · unlocks 1/1
 
 ---
 
@@ -54,12 +54,12 @@
    🔴 `M` · ✅ ready · unlocks 2/7
 2. `items-player-028` — **NPC player-storage access policies**  
    🔴 `M` · ✅ ready · unlocks 3/5
-3. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+3. `quests-progression-048` — **Hunters Brotherhood introduction and membership**  
+   🟡 `M` · ✅ ready · unlocks 1/3
+4. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
    🟡 `M` · ✅ ready · unlocks 2/2
-4. `settlements-003` — **Colony settlement bootstrap**  
+5. `settlements-003` — **Colony settlement bootstrap**  
    🔴 `L` · ✅ ready · unlocks 1/1
-5. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
-   🔴 `L` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -109,72 +109,72 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  78  
    → **unlocks:** 1/1
 
-9. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
+9. `quests-progression-048` — **Hunters Brotherhood introduction and membership**  
+  🟡 `M` · **Score:**  75  
+   → **unlocks:** 1/3
+
+10. `settlements-012` — **Regional specialist trade and settlement-scale quality**  
   🟡 `M` · **Score:**  73  
    → **unlocks:** 2/2
 
-10. `settlements-003` — **Colony settlement bootstrap**  
+11. `settlements-003` — **Colony settlement bootstrap**  
   🔴 `L` · **Score:**  70  
    → **unlocks:** 1/1
 
-11. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
+12. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
   🔴 `L` · **Score:**  66  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
+13. `settlements-npcs-038` — **Travelling Merchant inter-settlement role**  
   🔴 `L` · **Score:**  64  
    → **unlocks:** 0/0
 
-13. `settlements-013` — **Horse training progression, vendor and paddock**  
+14. `settlements-013` — **Horse training progression, vendor and paddock**  
   🟡 `M` · **Score:**  61  
    → **unlocks:** 1/1
 
-14. `settlements-014` — **Persistent settlement definition worldgen cache**  
+15. `settlements-014` — **Persistent settlement definition worldgen cache**  
   🔴 `M` · **Score:**  59  
    → **unlocks:** 0/0
 
-15. `quests-progression-048` — **Hunters Brotherhood introduction and membership**  
-  🟡 `M` · **Score:**  55  
-   → **unlocks:** 1/1
+16. `fauna-031` — **Wildlife habitat pressure assessment**  
+  🟡 `S` · **Score:**  55  
+   → **unlocks:** 1/3
 
-16. `quests-progression-050` — **Socially consequential quest dialogue**  
-  🔴 `M` · **Score:**  51  
+17. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
+  🟡 `M` · **Score:**  67  
    → **unlocks:** 1/2
 
-17. `quests-progression-051` — **Authored quest dialogue narrative polish**  
+18. `quests-progression-053` — **Hunters Brotherhood — competing hunting strategies**  
+  🟡 `L` · **Score:**  56  
+   → **unlocks:** 1/1
+
+19. `quests-progression-051` — **Authored quest dialogue narrative polish**  
   🔴 `M` · **Score:**  53  
    → **unlocks:** 1/1
 
-18. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
+20. `settlements-004` — **Gold Economic Realization & Source Entitlements**  
   🔴 `M` · **Score:**  49  
    → **unlocks:** 1/1
 
-19. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
+21. `quests-progression-010` — **Abandoned gold mine → mining colony integration**  
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-20. `settlements-npcs-022` — **Household help and age-based work participation**  
+22. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+  🟡 `L` · **Score:**  44  
+   → **unlocks:** 0/0
+
+23. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-21. `quests-progression-052` — **Second-wave socially consequential authored dialogue**  
+24. `quests-progression-052` — **Second-wave socially consequential authored dialogue**  
   🔴 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-22. `fauna-031` — **Wildlife habitat pressure assessment**  
-  🟡 `S` · **Score:**  35  
-   → **unlocks:** 1/1
-
-23. `quests-progression-049` — **Hunters Brotherhood — hunting-ground investigation**  
-  🟡 `M` · **Score:**  43  
-   → **unlocks:** 0/0
-
-24. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+25. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
-   → **unlocks:** 0/0
-
-25. `npc-027` — **Spatial-context-aware NPC movement and cave traversal**  
-  🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
 26. `items-player-014` — **Rope-pullable resource transport**  
@@ -233,12 +233,15 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   is blocked by:
   - [`quests-progression-048-hunters-brotherhood-introduction-and-membership.md`](quests-progression-048-hunters-brotherhood-introduction-and-membership.md)
   - [`fauna-031-wildlife-habitat-pressure-assessment.md`](fauna-031-wildlife-habitat-pressure-assessment.md)
-- [`quests-progression-051-authored-quest-dialogue-narrative-polish.md`](quests-progression-051-authored-quest-dialogue-narrative-polish.md)  
-  is blocked by:
-  - [`quests-progression-050-socially-consequential-quest-dialogue.md`](quests-progression-050-socially-consequential-quest-dialogue.md)
 - [`quests-progression-052-second-wave-socially-consequential-authored-dialogue.md`](quests-progression-052-second-wave-socially-consequential-authored-dialogue.md)  
   is blocked by:
   - [`quests-progression-051-authored-quest-dialogue-narrative-polish.md`](quests-progression-051-authored-quest-dialogue-narrative-polish.md)
+- [`quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`](quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md)  
+  is blocked by:
+  - [`quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md`](quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md)
+- [`quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`](quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md)  
+  is blocked by:
+  - [`quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`](quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md)
 - [`settlements-013-horse-training-progression-vendor-and-paddock.md`](settlements-013-horse-training-progression-vendor-and-paddock.md)  
   is blocked by:
   - [`settlements-012-regional-specialist-trade-and-settlement-scale-quality.md`](settlements-012-regional-specialist-trade-and-settlement-scale-quality.md)
@@ -443,6 +446,8 @@ graph TD
   quests_progression_050["quests-progression-050 — Socially consequential quest dialogue"]
   quests_progression_051["quests-progression-051 — Authored quest dialogue narrative polish"]
   quests_progression_052["quests-progression-052 — Second-wave socially consequential authored dialogue"]
+  quests_progression_053["quests-progression-053 — Hunters Brotherhood — competing hunting strategies"]
+  quests_progression_054["quests-progression-054 — Hunters Brotherhood — exceptional animal finale"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -864,8 +869,10 @@ graph TD
   quests_progression_044 --> quests_progression_046
   quests_progression_045 --> quests_progression_046
   quests_progression_048 --> quests_progression_049
+  quests_progression_049 --> quests_progression_053
   quests_progression_050 --> quests_progression_051
   quests_progression_051 --> quests_progression_052
+  quests_progression_053 --> quests_progression_054
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> items_player_022
