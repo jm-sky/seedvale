@@ -75,9 +75,9 @@ describe('resolveNpcAppearance', () => {
       treeIndex: 5,
     })
     expect(huntress.outfit).toBe('ranger')
-    expect(huntress.modelUrl).not.toMatch(/_simple|_buzzed/)
+    expect(huntress.modelUrl).not.toMatch(/_simple|_buzzed|_buns/)
     expect(huntress.modelUrl).not.toBe(NPC_UBC_FEMALE_RANGER_URL)
-    expect(huntress.modelUrl).toMatch(/female_ranger_(long|buns)/)
+    expect(huntress.modelUrl).toBe('/models/characters/ubc/npc/female_ranger_long.glb')
     expect(huntress.tintUrl).toBe(NPC_UBC_RANGER_TINT_URL)
   })
 
@@ -207,6 +207,29 @@ describe('resolveNpcAppearance', () => {
         treeIndex: i,
       })
       expect(look.modelUrl).not.toMatch(/_beard|_simple|_buzzed/)
+    }
+  })
+
+  it('never requests male buns or female ranger buns GLBs', () => {
+    for (let i = 0; i < 48; i++) {
+      const male = resolveNpcAppearance({
+        age: 30,
+        gender: 'male',
+        npcId: `nobuns:male:${i}`,
+        role: i % 3 === 0 ? 'farmer' : i % 3 === 1 ? 'trader' : 'hunter',
+        treeIndex: i,
+      })
+      expect(male.modelUrl).not.toMatch(/_buns/)
+
+      const huntress = resolveNpcAppearance({
+        age: 28,
+        gender: 'female',
+        npcId: `nobuns:huntress:${i}`,
+        role: 'hunter',
+        treeIndex: i,
+      })
+      expect(huntress.modelUrl).not.toMatch(/female_ranger_buns/)
+      expect(huntress.modelUrl).toBe('/models/characters/ubc/npc/female_ranger_long.glb')
     }
   })
 

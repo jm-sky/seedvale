@@ -4,7 +4,7 @@
 
 ## Scope shipped
 
-Adult farmer/woodcutter/trader/hunter keep the profession outfit + role sidecar. Hair style, optional male beard, hair albedo (`hair_1` / `hair_2`) and a four-swatch clothing hue are rolled from `npcId` (not role, not `physicalSeed`). Women only roll `Hair_Long` / `Hair_Buns` — not SimpleParted or `Hair_BuzzedFemale`. Female Wizard long hair is `npc/female_wizard_long.glb` (the stem used to be SimpleParted). Children and other roles stay Modular. No save-schema change.
+Adult farmer/woodcutter/trader/hunter keep the profession outfit + role sidecar. Hair style, optional male beard, hair albedo (`hair_1` / `hair_2`) and a four-swatch clothing hue are rolled from `npcId` (not role, not `physicalSeed`). Men roll `simple` / `long` / `buzzed` (no Buns). Peasant/wizard women roll `Hair_Long` / `Hair_Buns`; ranger women only `Hair_Long`. Female Wizard long hair is `npc/female_wizard_long.glb` (the stem used to be SimpleParted). Children and other roles stay Modular. No save-schema change.
 
 Default meshes reused: `male_peasant` / `male_wizard` / `male_ranger` simple; `female_peasant` long. Remaining combos live in `public/models/characters/ubc/npc/`. Hunter uses `npc_ranger.webp` (`T_Ranger_2`).
 

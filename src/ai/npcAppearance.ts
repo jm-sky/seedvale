@@ -69,9 +69,12 @@ export const NPC_HAIR_COLOR: Record<NpcHairColorId, number> = {
   grey: 0xc5c0b8,
 }
 
-const MALE_HAIR_KINDS: readonly NpcHairKind[] = ['simple', 'long', 'buzzed', 'buns']
+/** No Hair_Buns on men — those GLBs are not shipped. */
+const MALE_HAIR_KINDS: readonly NpcHairKind[] = ['simple', 'long', 'buzzed']
 /** Women use Hair_Long / Hair_Buns only — not SimpleParted or Hair_BuzzedFemale. */
 const FEMALE_HAIR_KINDS: readonly NpcHairKind[] = ['long', 'buns']
+/** Ranger hood clips Hair_Buns; huntresses only roll Long. */
+const FEMALE_RANGER_HAIR_KINDS: readonly NpcHairKind[] = ['long']
 const CLOTHING_HUE_IDS: readonly NpcClothingHueId[] = ['identity', 'warm', 'cool', 'darker']
 const NON_GREY_HAIR_COLOR_IDS: readonly NpcHairColorId[] = ['black', 'brown', 'redhead', 'blond']
 const BEARD_CHANCE = 0.35
@@ -130,8 +133,10 @@ function hashNpcId(npcId: string): number {
   return h >>> 0
 }
 
-function hairKindsFor(gender: NpcGender): readonly NpcHairKind[] {
-  return gender === 'female' ? FEMALE_HAIR_KINDS : MALE_HAIR_KINDS
+function hairKindsFor(gender: NpcGender, outfit: NpcUbcOutfitId): readonly NpcHairKind[] {
+  if (gender === 'male') return MALE_HAIR_KINDS
+  if (outfit === 'ranger') return FEMALE_RANGER_HAIR_KINDS
+  return FEMALE_HAIR_KINDS
 }
 
 function pickIndex(random: () => number, length: number): number {
@@ -204,7 +209,7 @@ function rollUbcVariant(npcId: string, gender: NpcGender, outfit: NpcUbcOutfitId
   modelUrl: string
 } {
   const random = createSeededRandom(hashNpcId(npcId) ^ APPEARANCE_SEED_SALT)
-  const hairs = hairKindsFor(gender)
+  const hairs = hairKindsFor(gender, outfit)
   const hair = hairs[pickIndex(random, hairs.length)]!
   const beard = gender === 'male' && random() < BEARD_CHANCE
   const hairColorId = rollHairColor(random, age)
@@ -230,7 +235,8 @@ const UBC_ROLE_LOOK: Partial<Record<Role, { outfit: NpcUbcOutfitId, tintUrl: str
  * everyone else (including children and female guards) stays on the
  * Modular pool. Role, not reserved name, selects the outfit. Hair/beard/hue
  * come from `npcId`, not role; hair color also greys with `age`
- * (`rollHairColor`). Women only roll Hair_Long / Hair_Buns.
+ * (`rollHairColor`). Men never roll Hair_Buns. Peasant/Wizard women roll
+ * Hair_Long / Hair_Buns; Ranger women only Hair_Long.
  *
  * @domain npc
  */

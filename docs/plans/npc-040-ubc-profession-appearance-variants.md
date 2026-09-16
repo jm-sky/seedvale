@@ -23,7 +23,7 @@ After npc-039 every adult farmer shares one Peasant mesh + sapphire sidecar, eve
 
 Adult UBC NPCs (same role table as npc-039):
 
-- Hair style from `{simple, long, buzzed, buns}` (female buzzed → `Hair_BuzzedFemale`).
+- Hair style: men `{simple, long, buzzed}` (no Buns GLBs); peasant/wizard women `{long, buns}`; ranger women `{long}` only (hood clips Buns).
 - Beard (`Hair_Beard`) on ~35% of adult males, never on females.
 - Hair `material.color` multiply on grey `MI_Hair_*` albedo: black / brown / redhead / blond / grey.
 - Clothing `material.color` multiply on the **role** sidecar (farmer stays sapphire-family, woodcutter earth-brown, trader crimson, hunter dark-violet `T_Ranger_2`) using four swatches: identity / warm / cool / darker.
@@ -41,7 +41,7 @@ Other combos live under `public/models/characters/ubc/npc/`. `companionAnimation
 
 Appearance is derived from `npcId` (not role, not `physicalSeed`) + gender + adult UBC outfit. No save-schema change.
 
-Trader keeps every hair style; Wizard-hat clipping is a browser check, not a resolver filter. Ranger hood vs Long/Buns is the same kind of check.
+Trader women still roll Long/Buns; Wizard-hat clipping is a browser check, not a resolver filter. Ranger women are resolver-filtered to Long only.
 
 ## Out of scope
 
