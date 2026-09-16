@@ -9,6 +9,7 @@
 **Subdomains:** `habitat` `behavior`
 **Tags:** `day-night` `rest` `den-defense` `predators`
 **Roadmap:** -
+**Model:** Sonnet, Grok
 
 ## Goal
 
