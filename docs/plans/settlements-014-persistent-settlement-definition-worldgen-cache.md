@@ -9,6 +9,7 @@
 **Subdomains:** `development` `resources`
 **Tags:** `worldgen` `cache` `settlement` `performance`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Goal
 
