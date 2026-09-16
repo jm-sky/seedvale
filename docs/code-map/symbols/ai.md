@@ -173,24 +173,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 732
-- `CurrentActivity` — type — line 542
-- `CurrentActivityKind` — type — line 535
-- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 849
-- `NPC_HEIGHT` — const — line 465
-- `NPC_SHADOW_DISTANCE` — const — line 479
-- `NpcAgent` — class — line 1089
+- `classifyPendingActivity` — function — line 738
+- `CurrentActivity` — type — line 548
+- `CurrentActivityKind` — type — line 541
+- `HUNT_RESUPPLY_ARROW_TARGET` — const — line 855
+- `NPC_HEIGHT` — const — line 471
+- `NPC_SHADOW_DISTANCE` — const — line 485
+- `NpcAgent` — class — line 1095
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 983
-- `NpcInspectionSnapshot` — type — line 557
-- `NpcWhy` — type — line 707
-- `projectNpcWhy` — function — line 774
-- `promoteChainKind` — function — line 724
+- `NpcAgentDeps` — type — line 989
+- `NpcInspectionSnapshot` — type — line 563
+- `NpcWhy` — type — line 713
+- `projectNpcWhy` — function — line 780
+- `promoteChainKind` — function — line 730
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -358,6 +358,20 @@ Generated from exported TypeScript symbols.
 - `ResourceTransferPlan` — type — line 167
 - `satisfyHouseholdResourceNeed` — function — line 154
 - `WoodHarvestDeposit` — type — line 90
+
+## `ai/npcMovementRecovery.ts`
+
+- `allowsEmergencySurfaceReposition` — function — line 52
+  - domain: npc
+- `CAVE_RECOVERY_SEQUENCE` — const — line 26
+- `caveIdForRecovery` — function — line 59
+- `CaveRecoveryStep` — type — line 33
+- `NpcTimeSkipPlacementPolicy` — type — line 35
+- `placeNpcAfterTimeSkip` — function — line 119
+  - domain: npc
+- `sampleCaveLocalEscape` — function — line 73
+  - domain: npc
+- `usesCaveRecoveryDomain` — function — line 39
 
 ## `ai/npcMovementRoute.ts`
 

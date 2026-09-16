@@ -1157,6 +1157,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementSurfaceRegression.test.ts`
 - `app/actions/mountActions.ts`
 - `debug/caves/caveHeightfieldPlayer.ts`
 - `fauna/AnimalAgent.ts`

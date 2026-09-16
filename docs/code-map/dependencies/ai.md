@@ -69,6 +69,7 @@ Generated from TypeScript imports.
 - `ai/npcDecision.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcMovementRecovery.ts`
 - `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.ts`
 - `ai/npcMovementWatchdog.ts`
@@ -182,6 +183,8 @@ Generated from TypeScript imports.
 - `ai/dialogueTemplates.ts`
 - `ai/npcCaveLocomotion.test.ts`
 - `ai/npcCurrentActivity.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
+- `ai/npcMovementRecovery.test.ts`
 - `ai/npcMovementTarget.test.ts`
 - `ai/npcTradeAvailability.test.ts`
 - `ai/npcTradeAvailability.ts`
@@ -649,6 +652,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementRecovery.ts`
 
 ## `ai/npcColliderRim.test.ts`
 
@@ -668,6 +672,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcCaveLocomotion.test.ts`
 - `ai/npcColliderRim.test.ts`
+- `ai/npcMovementSurfaceRegression.test.ts`
 - `navigation/navigation.test.ts`
 
 ## `ai/npcCombat.test.ts`
@@ -830,6 +835,54 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.test.ts`
 - `ai/npcProfessionWork.ts`
 
+## `ai/npcMovementCaveIntegration.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `ai/npcMovementRecovery.ts`
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
+- `player/playerDimensions.ts`
+- `world/caves/adventureTopology.ts`
+- `world/caves/caveHabitat.ts`
+- `world/caves/caveHeightfieldQuery.ts`
+- `world/caves/caveHeightfieldRepresentation.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/caveUndergroundPool.ts`
+- `world/caves/dungeonTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
+- `world/largeCaves.ts`
+- `world/spatialContext.ts`
+
+## `ai/npcMovementRecovery.test.ts`
+
+**Imports**
+
+- `ai/NpcAgent.ts`
+- `ai/npcMovementRecovery.ts`
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
+- `player/playerDimensions.ts`
+- `world/spatialContext.ts`
+
+## `ai/npcMovementRecovery.ts`
+
+**Imports**
+
+- `ai/npcCaveLocomotion.ts`
+- `ai/npcMovementRoute.ts`
+- `ai/npcMovementTarget.ts`
+- `player/playerDimensions.ts`
+- `world/spatialContext.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
+- `ai/npcMovementRecovery.test.ts`
+
 ## `ai/npcMovementRoute.test.ts`
 
 **Imports**
@@ -853,7 +906,20 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcCaveLocomotion.test.ts`
 - `ai/npcCaveLocomotion.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
+- `ai/npcMovementRecovery.test.ts`
+- `ai/npcMovementRecovery.ts`
 - `ai/npcMovementRoute.test.ts`
+
+## `ai/npcMovementSurfaceRegression.test.ts`
+
+**Imports**
+
+- `ai/npcColliderRim.ts`
+- `navigation/navigation.ts`
+- `simulation/actionLifecycle.ts`
+- `terrain/slopeConstraint.ts`
+- `world/collision.ts`
 
 ## `ai/npcMovementTarget.test.ts`
 
@@ -878,6 +944,9 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcCaveLocomotion.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
+- `ai/npcMovementRecovery.test.ts`
+- `ai/npcMovementRecovery.ts`
 - `ai/npcMovementRoute.test.ts`
 - `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.test.ts`

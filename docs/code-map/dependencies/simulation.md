@@ -35,6 +35,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcMovementSurfaceRegression.test.ts`
 - `simulation/actionControl.test.ts`
 - `simulation/actionControl.ts`
 - `simulation/actionLifecycle.test.ts`

@@ -333,6 +333,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/caveAdventureProps.test.ts`
 - `world/caves/caveContentAnchors.test.ts`
@@ -588,6 +589,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `ai/npcMovementRoute.test.ts`
 - `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.ts`
@@ -716,6 +718,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/worldWaterEligibility.test.ts`
@@ -760,6 +763,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `debug/caves/caveHeightfieldRepresentation.ts`
 - `player/worldWaterEligibility.test.ts`
 - `world/caves/adventureTopology.test.ts`
@@ -1067,6 +1071,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `debug/caves/caveHeightfieldFixtures.ts`
 - `world/caves/abandonedMineLandmark.test.ts`
 - `world/caves/abandonedMineLandmark.ts`
@@ -1126,6 +1131,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `fauna/animalCaveHabitat.ts`
 - `world/caves/caveContentAnchors.dungeon.test.ts`
 - `world/caves/caveContentAnchors.ts`
@@ -1282,6 +1288,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `fauna/dungeonResidents.test.ts`
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/dungeonBanditTreasure.ts`
@@ -1343,6 +1350,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `debug/caves/caveHeightfieldFixtures.ts`
 - `debug/caves/caveHeightfieldTerrain.test.ts`
 - `debug/caves/caveHeightfieldTerrain.ts`
@@ -1432,6 +1440,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `player/worldWaterEligibility.test.ts`
 - `world/caves/adventureTopology.test.ts`
 - `world/caves/caveAdventureProps.test.ts`
@@ -1576,6 +1585,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcColliderRim.test.ts`
 - `ai/npcColliderRim.ts`
+- `ai/npcMovementSurfaceRegression.test.ts`
 - `debug/colliderDebugView.ts`
 - `debug/colliderInstancedVisual.ts`
 - `debug/playerMovementTrace.ts`
@@ -2677,6 +2687,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
 - `fauna/dungeonResidents.test.ts`
 - `player/worldWaterEligibility.test.ts`
 - `world/caveGenerator.ts`
@@ -3960,6 +3971,9 @@ Generated from TypeScript imports.
 - `ai/npcAction.ts`
 - `ai/npcCaveLocomotion.test.ts`
 - `ai/npcCaveLocomotion.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
+- `ai/npcMovementRecovery.test.ts`
+- `ai/npcMovementRecovery.ts`
 - `ai/npcMovementRoute.test.ts`
 - `ai/npcMovementRoute.ts`
 - `ai/npcMovementTarget.test.ts`

@@ -441,6 +441,9 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcCaveLocomotion.test.ts`
+- `ai/npcMovementCaveIntegration.test.ts`
+- `ai/npcMovementRecovery.test.ts`
+- `ai/npcMovementRecovery.ts`
 - `debug/caves/caveHeightfieldTraversal.test.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`

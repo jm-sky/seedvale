@@ -20,6 +20,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcMovementSurfaceRegression.test.ts`
 - `fauna/AnimalAgent.ts`
 - `navigation/navigation.test.ts`
 - `navigation/navigationStats.ts`
