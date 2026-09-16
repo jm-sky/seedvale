@@ -4,6 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
+**Model:** Sonnet, Grok
 **Depends on:** world-018
 **Domain:** `settlements`
 **Subdomains:** `economy`
