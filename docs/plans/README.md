@@ -77,7 +77,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-042-npc-voice-dialogue-catalog-infrastructure.md`                      | 🔴 | M      | npc-041                                                                                                                                                                                                                                                                                    | -                                       |
 | ◼️ `npc-043-dialogue-language-migration-to-english.md`                         | 🔴 | L      | npc-042                                                                                                                                                                                                                                                                                    | -                                       |
 | ◼️ `tools-015-chatterbox-local-voice-generation-pipeline.md`                   | 🔴 | M      | npc-041, npc-042                                                                                                                                                                                                                                                                           | -                                       |
-| ◼️ `items-player-043-renewable-medicinal-herbs-and-skill-aware-foraging.md`    | 🟡 | M      | ~~items-player-021~~, ~~npc-025~~                                                                                                                                                                                                                                                          | -                                       |
+| 💡 `items-player-043-renewable-medicinal-herbs-and-skill-aware-foraging.md`    | 🟡 | M      | ~~items-player-021~~, ~~npc-025~~                                                                                                                                                                                                                                                          | -                                       |
+| 💡 `world-terrain-037-functional-adventure-cave-crates.md`                     | 🟡 | S      | ~~world-terrain-020~~, ~~world-terrain-028~~                                                                                                                                                                                                                                               | -                                       |
 
 ---
 
@@ -244,7 +245,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `016`
 - ui-input: `024`
 - world: `031`
-- world-terrain: `037`
+- world-terrain: `038`
 
 This ids section is maintained automatically from the plan files.
 
