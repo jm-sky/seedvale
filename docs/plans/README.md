@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`   | 🟡 | L      | quests-progression-053                                                                                                                                                                                                                                                                     | quests-hunters-brotherhood              |
 | 💡 `items-player-040-armor-quality-pricing-and-world-availability.md`          | 🟡 | M      | ~~items-player-030~~, ~~settlements-012~~                                                                                                                                                                                                                                                  | -                                       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| ◼️ `settlements-npcs-040-profession-trade-stock-and-hunter-crafting.md`        | 🔴 | M      | ~~settlements-npcs-033~~, ~~settlements-npcs-036~~, ~~settlements-012~~                                                                                                                                                                                                                    | economy-goods-flow                      |
 
 ---
 
@@ -237,7 +238,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `006`
 - quests-progression: `055`
 - settlements: `018`
-- settlements-npcs: `040`
+- settlements-npcs: `041`
 - tools: `015`
 - ui-input: `023`
 - world: `031`
