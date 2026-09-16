@@ -175,8 +175,7 @@ import {
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
-import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS, questStageObjectiveSlots } from '../quests/quests'
-import { createQuestWorldKnowledgeResolver } from '../quests/worldKnowledgeResolver'
+import { bindDarkForestTreasureQuest, bindExactCaveQuests, bindTreasureMapBearCaveQuest, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, buildTreasureMapBearCaveQuest, QUESTS } from '../quests/quests'
 import {
   isSuspiciousTransportCacheLooted,
   SUSPICIOUS_TRANSPORT_EVIDENCE_KIND,
@@ -185,6 +184,7 @@ import {
   SUSPICIOUS_TRANSPORT_REPORT_IT_OUTCOME,
 } from '../quests/suspiciousTransportCaveCache'
 import { getActiveSuspiciousTransportCaveCacheBinding } from '../quests/suspiciousTransportCaveCacheRuntime'
+import { createQuestWorldKnowledgeResolver } from '../quests/worldKnowledgeResolver'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import {
   type PlayerAnimalKillContext,
@@ -1266,17 +1266,26 @@ export async function createApp(
     homeNpcDescriptors,
   )
   const occupiedLandmarkIds = new Set<string>()
+  const occupyLandmarkObjective = (objective: { type: string, landmarkId?: string }): void => {
+    if (objective.type === 'interact_landmark' && objective.landmarkId) {
+      occupiedLandmarkIds.add(objective.landmarkId)
+    }
+  }
   const occupyQuestLandmarks = (quest: {
     worldKnowledge?: readonly { bind: { landmarkId?: string } }[]
-    stages: readonly Parameters<typeof questStageObjectiveSlots>[0][]
+    stages: readonly {
+      objective: { type: string, landmarkId?: string }
+      objectives?: readonly { objective: { type: string, landmarkId?: string } }[]
+    }[]
   }): void => {
     for (const slot of quest.worldKnowledge ?? []) {
       if (slot.bind.landmarkId) occupiedLandmarkIds.add(slot.bind.landmarkId)
     }
     for (const stage of quest.stages) {
-      for (const entry of questStageObjectiveSlots(stage)) {
-        if (entry.objective.type === 'interact_landmark') occupiedLandmarkIds.add(entry.objective.landmarkId)
-      }
+      const slots = stage.objectives && stage.objectives.length > 0
+        ? stage.objectives
+        : [{ objective: stage.objective }]
+      for (const entry of slots) occupyLandmarkObjective(entry.objective)
     }
   }
   for (const quest of landmarkQuests) occupyQuestLandmarks(quest)

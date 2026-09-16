@@ -59,7 +59,7 @@ function materializeOldPlaceSecret(
     giverName: giver.name,
     giver: { npcId: giver.id },
     offerLine:
-      `Chodzą słuchy o jakimś starym miejscu za osadą. Nikt z nas nie miał czasu tego sprawdzić, a ja muszę jeszcze popytać ludzi, którzy pamiętają tamtą drogę. Wróć za godzinę — wtedy ci powiem, gdzie szukać.`,
+      'Chodzą słuchy o jakimś starym miejscu za osadą. Nikt z nas nie miał czasu tego sprawdzić, a ja muszę jeszcze popytać ludzi, którzy pamiętają tamtą drogę. Wróć za godzinę — wtedy ci powiem, gdzie szukać.',
     worldKnowledge: [{
       id: 'target',
       revealDelayDays: WORLD_KNOWLEDGE_HOUR_DAYS,
@@ -80,11 +80,11 @@ function materializeOldPlaceSecret(
         description: `Wróć do ${giver.name}, gdy dopyta o stare miejsce.`,
         reminderLine: 'Popytam ludzi, którzy pamiętają tamtą drogę. Daj mi trochę czasu.',
         playerLine: 'Udało ci się ustalić, gdzie leży to miejsce?',
-        progressLine: `Słuchaj: szukaj {worldKnowledgeClue:target}. Nikt z osady tam nie zaglądał.`,
+        progressLine: 'Słuchaj: szukaj {worldKnowledgeClue:target}. Nikt z osady tam nie zaglądał.',
       },
       {
         objective: { type: 'interact_bound_landmark', knowledgeId: 'target' },
-        description: `Zbadaj {worldKnowledgeClue:target}.`,
+        description: 'Zbadaj {worldKnowledgeClue:target}.',
         reminderLine: `Byłeś już przy tym miejscu? ${giver.name} czeka na wieść.`,
         progressLine:
           'Miejsce jest stare, ale prawdziwe. Ślady nie są świeże — ktoś tu bywał dawniej, nie teraz.',

@@ -1,8 +1,8 @@
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
+import type { QuestWorldKnowledgeResolver } from './QuestManager'
+import type { QuestDef, QuestWorldKnowledgeRef } from './quests'
 import { cellFromId } from '../settlement/settlementGenerator'
 import { describeLandmarkLocation } from './landmarkLocationDescription'
-import type { QuestDef, QuestWorldKnowledgeRef } from './quests'
-import type { QuestWorldKnowledgeResolver } from './QuestManager'
 
 export type QuestWorldKnowledgeResolverHost = {
   chunkManager: {
@@ -71,7 +71,7 @@ export function createQuestWorldKnowledgeResolver(input: {
     resolve(questId, knowledgeId) {
       const def = input.getDefs().find((entry) => entry.id === questId)
       const slot = def?.worldKnowledge?.find((entry) => entry.id === knowledgeId)
-      if (!slot || slot.bind.type !== 'landmark') return Promise.resolve(null)
+      if (!def || !slot || slot.bind.type !== 'landmark') return Promise.resolve(null)
       if (slot.bind.landmarkId) {
         return Promise.resolve({
           kind: 'landmark',
