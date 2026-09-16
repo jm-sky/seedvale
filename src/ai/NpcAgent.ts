@@ -319,6 +319,12 @@ import {
   type WoodHarvestDeposit,
 } from './npcLogistics'
 import {
+  allowsEmergencySurfaceReposition,
+  placeNpcAfterTimeSkip,
+  sampleCaveLocalEscape,
+  usesCaveRecoveryDomain,
+} from './npcMovementRecovery'
+import {
   composeNpcMovementRoute,
   INITIAL_NPC_ROUTE_EXECUTION,
   nextNpcRouteSteer,
@@ -3229,12 +3235,7 @@ export class NpcAgent {
         if (this.shouldExecuteSpatialRoute(action)) {
           const step = this.stepComposedRoute(dt)
           if (step === 'failed') {
-            failActionLifecycle(this.actionLifecycle)
-            this.leaveActiveQueue()
-            this.pendingAction = null
-            this.clearMovementCommitment()
-            this.trace.record({ simTime: this.simClock, type: 'action.failed', action: action.kind, reason: 'invalid' })
-            this.phase = 'choose'
+            this.failUnreachableCaveRoute()
             break
           }
           if (step !== 'arrived') break
@@ -3380,13 +3381,23 @@ export class NpcAgent {
    *  nap using the same restore rates as live `sleep`.
    *  Finishes by teleporting straight to wherever the last step's schedule
    *  activity says this NPC belongs — no `steerTo` walk, matching how a
-   *  time-lapse only shows someone where they linger. Called once per skip
-   *  by `SettlementsManager.resolveTimeSkip`, never per-frame.
+   *  time-lapse only shows someone where they linger — **except** when the
+   *  NPC is underground or mid mouth-crossing: time skip does not execute
+   *  cave routes, so placement holds the current cave-valid XYZ (plan
+   *  npc-027 stage 4). Called once per skip by
+   *  `SettlementsManager.resolveTimeSkip`, never per-frame.
    *  See `docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`. */
   resolveTimeSkip(startTimeOfDay: number, hours: number, dayLengthSec: number): void {
     if (this.health.dead) return
     this.dayLengthSec = dayLengthSec
     if (hasCommittedNpcTravel(this.npcState.travel) && this.npcState.travel?.arrival !== 'reached') {
+      if (this.inCaveRecoveryDomain()) {
+        this.holdCavePositionForTimeSkip()
+        this.finishTimeSkipMovementReset(
+          this.sleepReason === 'collapse' || shouldCollapseSleep(this.vigor),
+        )
+        return
+      }
       this.catchUpCommittedTravel(hours, dayLengthSec)
       return
     }
@@ -3442,22 +3453,8 @@ export class NpcAgent {
           : finalActivity === 'social' && this.socialPlace
             ? this.socialPlace.position
             : this.home
-    this.mesh.position.set(target.x, this.sampleHeight(target.x, target.z), target.z)
-    this.leaveActiveQueue()
-    this.pendingAction = null
-    this.clearMovementCommitment()
-    // A conversation reservation can't survive a time-skip catch-up (the
-    // partner NPC is independently reset the same way) — clear it here too
-    // so `socialCandidate()` isn't left permanently blocked (plan 151).
-    this.conversationPartnerId = null
-    this.onConversationEarlyExit = null
-    this.settledIdleActivity = null
-    this.wait = 0
-    this.pathWaypoints = []
-    this.pathIndex = 0
-    this.previousPhase = null
-    resetMovementWatchdog(this.watchdog)
-    this.phase = napping ? 'sleep' : 'choose'
+    this.applyTimeSkipPlacement({ x: target.x, z: target.z })
+    this.finishTimeSkipMovementReset(napping)
   }
 
   /**
@@ -3504,6 +3501,64 @@ export class NpcAgent {
     this.previousPhase = null
     resetMovementWatchdog(this.watchdog)
     this.phase = 'choose'
+  }
+
+  private inCaveRecoveryDomain(): boolean {
+    return usesCaveRecoveryDomain(this.resolveCurrentSpatialContext(), this.routeExecution.mouthPhase)
+  }
+
+  /**
+   * Time-skip does not walk cave routes. Underground / mouth-crossing NPCs
+   * stay at a valid cave endpoint (`queryGroundIn`); surface NPCs keep the
+   * existing schedule XZ + `sampleHeight` snap.
+   */
+  private applyTimeSkipPlacement(scheduleTarget: { x: number, z: number }): void {
+    const placed = placeNpcAfterTimeSkip({
+      current: {
+        x: this.mesh.position.x,
+        y: this.mesh.position.y,
+        z: this.mesh.position.z,
+      },
+      scheduleTarget,
+      currentContext: this.resolveCurrentSpatialContext(),
+      mouthPhase: this.routeExecution.mouthPhase,
+      route: this.composedRoute,
+      execution: this.routeExecution,
+      queries: this.worldMovement,
+      sampleHeight: this.sampleHeight,
+    })
+    this.mesh.position.set(placed.x, placed.y, placed.z)
+  }
+
+  private holdCavePositionForTimeSkip(): void {
+    this.applyTimeSkipPlacement({ x: this.mesh.position.x, z: this.mesh.position.z })
+  }
+
+  private finishTimeSkipMovementReset(napping: boolean): void {
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.clearMovementCommitment()
+    // A conversation reservation can't survive a time-skip catch-up (the
+    // partner NPC is independently reset the same way) — clear it here too
+    // so `socialCandidate()` isn't left permanently blocked (plan 151).
+    this.conversationPartnerId = null
+    this.onConversationEarlyExit = null
+    this.settledIdleActivity = null
+    this.wait = 0
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.previousPhase = null
+    resetMovementWatchdog(this.watchdog)
+    this.clearRepath()
+    this.phase = napping ? 'sleep' : 'choose'
+  }
+
+  /** Unreachable cave composition: same failure lifecycle as a dead `goTo`. */
+  private failUnreachableCaveRoute(): void {
+    const actionKind = this.pendingAction?.kind ?? null
+    this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: true, markPlanInterrupted: true })
+    this.phase = 'choose'
+    this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'invalid' })
   }
 
   dispose(): void {
@@ -6579,6 +6634,10 @@ export class NpcAgent {
    *  spent on the detour; the caller's normal arrival handling only ever
    *  sees `dest` itself. */
   private steerWithRescue(dest: THREE.Vector3, dt: number): boolean {
+    if (this.inCaveRecoveryDomain() && this.repathActive) {
+      this.clearRepath()
+      return this.steerTo(dest, dt)
+    }
     if (!this.repathActive) return this.steerTo(dest, dt)
     if (!this.repathIsNavRoute) {
       if (this.steerTo(this.repathTarget, dt)) this.clearRepath()
@@ -6675,9 +6734,25 @@ export class NpcAgent {
    *  or no route exists. Never changes the destination/action itself — a
    *  repath only ever changes *how* the NPC gets there. */
   private attemptRepath(): void {
+    if (this.inCaveRecoveryDomain()) {
+      this.attemptCaveRepath()
+      return
+    }
     const dest = this.currentMovementDestination()
     if (dest && this.attemptNavRepath(dest)) return
     this.attemptBlindRepath()
+  }
+
+  /**
+   * Cave watchdog Level 1: drop any surface detour (retry the current cave
+   * leg), then rebuild/re-attach the semantic route. Unreachable composition
+   * fails the action — it does not A* or surface-project.
+   */
+  private attemptCaveRepath(): void {
+    this.clearRepath()
+    if (!this.shouldExecuteSpatialRoute(this.pendingAction)) return
+    this.rebuildComposedRoute()
+    if (!this.composedRoute) this.failUnreachableCaveRoute()
   }
 
   /** Real repath: bounded A* from the current position toward `dest` via
@@ -6690,6 +6765,7 @@ export class NpcAgent {
    *  route (`repathWaypoints`) and returns `true` on success; `false` leaves
    *  the fallback to the caller. */
   private attemptNavRepath(dest: { x: number, z: number }): boolean {
+    if (this.inCaveRecoveryDomain()) return false
     const query: NavigationQuery = {
       isWalkable: (x, z) => this.isWalkableExterior(x, z),
       sampleHeight: this.sampleHeight,
@@ -6738,6 +6814,7 @@ export class NpcAgent {
    *  only when `attemptNavRepath` couldn't find a real route. Samples must
    *  be exterior (plan 108) so a hop inside the occupied house is rejected. */
   private attemptBlindRepath(): void {
+    if (this.inCaveRecoveryDomain()) return
     const occupied = this.collidersNearAtHeight(this.mesh.position.x, this.mesh.position.z)
     const radii = localEscapeRadii(this.mesh.position, occupied)
     const minR = radii[0] ?? 2
@@ -6762,6 +6839,29 @@ export class NpcAgent {
    *  the nearest walkable *exterior* point on a ring that exits any occupied
    *  disk, instead of a 1.5 m hop that stays in the house core. */
   private attemptLocalEscape(): void {
+    if (this.inCaveRecoveryDomain()) {
+      const caveId = npcActiveCaveId(
+        this.resolveCurrentSpatialContext(),
+        this.composedRoute,
+        this.routeExecution,
+      )
+      if (!caveId) return
+      const found = sampleCaveLocalEscape({
+        caveId,
+        x: this.mesh.position.x,
+        y: this.mesh.position.y,
+        z: this.mesh.position.z,
+        queries: this.worldMovement,
+        entityHeight: NPC_HEIGHT,
+        radius: PLAYER_COLLISION_RADIUS,
+      })
+      if (found) {
+        this.mesh.position.set(found.x, found.y, found.z)
+        this.clearRepath()
+        if (isDebugMode()) console.warn('[npc:rescue] cave local escape', this.name, found)
+      }
+      return
+    }
     const occupied = this.collidersNearAtHeight(this.mesh.position.x, this.mesh.position.z)
     const radii = localEscapeRadii(this.mesh.position, occupied)
     const found = sampleNearbyExteriorPoint(
@@ -6822,6 +6922,12 @@ export class NpcAgent {
    *  gated behind `isDebugMode()`) — this path should stay rare enough to
    *  never be console noise. */
   private emergencyTeleport(): void {
+    if (!allowsEmergencySurfaceReposition(
+      this.resolveCurrentSpatialContext(),
+      this.routeExecution.mouthPhase,
+    )) {
+      return
+    }
     const pos = this.mesh.position
     const colliders = [
       ...this.collidersNearAtHeight(pos.x, pos.z),

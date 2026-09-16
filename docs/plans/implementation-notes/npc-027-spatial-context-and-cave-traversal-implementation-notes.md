@@ -3,6 +3,37 @@
 **Plan:** `npc-027-spatial-context-and-cave-traversal.md`  
 **Recon:** 2026-09-15, current `main` (`326b3af984a7fa8c4307dc557fd0b14e570e07ad` baseline before the plan/notes refresh)
 
+## Stage 4 complete (2026-09-16) — final checkpoint
+
+**Scope:** context-safe watchdog / local escape / emergency recovery / time-skip + surface regression and remaining integration coverage. No aggregated/off-screen cave traveler. `navigation.ts` unchanged.
+
+**Ownership**
+
+| Concern | Owner |
+| --- | --- |
+| Current spatial identity | `Caves.spatialContextAt` via `NpcAgent.resolveCurrentSpatialContext()` |
+| Cave floor / rock | `queryGroundIn` / `resolveHorizontalIn` (`npcCaveLocomotion.ts`) |
+| Stuck *when* | `npcMovementWatchdog.ts` (unchanged escalation) |
+| Stuck *how* in a cave | `npcMovementRecovery.ts` + `NpcAgent.attemptCaveRepath` / `attemptLocalEscape` / `emergencyTeleport` gate |
+| Time-skip placement | `placeNpcAfterTimeSkip()` — cave holds current valid XYZ |
+
+**Cave recovery order (one watchdog cycle maps onto this):**
+
+1. `repath` → drop any surface A* detour (retry current leg) then `rebuildComposedRoute()` (re-attach).
+2. `escape` → `sampleCaveLocalEscape()` in the same `caveId`.
+3. `abandon` → normal `failActionLifecycle` / `choose`.
+4. Emergency plaza/`sampleHeight` teleport is **not** used while `spatialContextAt` is cave or mouth phase is `crossing`.
+
+Unreachable composition (`composeNpcMovementRoute` null) uses the same `action.failed` / `invalid` lifecycle as a dead `goTo`. Generic stuck recovery does not change spatial domain.
+
+**Time-skip limitation (explicit, tested):** `resolveTimeSkip` does not walk cave routes or mouths. An underground or mouth-crossing NPC is placed at the current cave-valid endpoint (`queryGroundIn`, else keep Y). Schedule workplace/home snaps remain surface-only when the NPC is actually on the surface. Committed travel catch-up is skipped while in the cave-recovery domain so XZ interpolation cannot surface-project the mesh.
+
+**Not in this plan (still true):** constructor home / corpse / travel-reify Y are surface producers; cross-cave A→B composition; underground bounded A*; remote aggregated cave traveler.
+
+**Verification:** focused vitest on recovery/locomotion/route/watchdog + repo `vue-tsc` / `lint:fix` / `test` / `build`. Browser checklist remains the Player's (plan §Manual browser checklist). No `pnpm docs:sync` in this change.
+
+**Delivered files:** `src/ai/npcMovementRecovery.ts`, `NpcAgent` recovery/time-skip gates, tests `npcMovementRecovery.test.ts`, `npcMovementSurfaceRegression.test.ts`, `npcMovementCaveIntegration.test.ts`.
+
 ## Stage 3 complete (2026-09-16)
 
 **Scope:** cave-local locomotion on the shared NPC pipeline. No watchdog/time-skip hardening, no underground A*, no `navigation.ts` change.
@@ -23,13 +54,9 @@
 - `applySeparation` no longer uses `isWalkableExterior` (surface water) for cave/crossing candidates; heightfield containment + floor hit required.
 - `isWalkableCaveColliders` is the collider half of `isWalkable` without water — cave rock is not reconstructed from X/Z collider disks.
 
-**Left intentionally for stage 4:**
+**Left intentionally for stage 4 (now done — see Stage 4 complete):**
 
-- `attemptNavRepath` still injects surface `sampleHeight` into `navigation.ts`.
-- `attemptBlindRepath` / `attemptLocalEscape` / `emergencyTeleport` still use `isWalkableExterior` + `sampleHeight` Y snaps (well/plaza).
-- `resolveTimeSkip` / `catchUpCommittedTravel` still surface-project placement.
-- Constructor home / corpse / travel reify / accompany dest Y remain surface-only producers (not generic cave locomotion).
-- Cross-cave A→B as surface composition (no consumer yet).
+- `attemptNavRepath` / `attemptBlindRepath` / `attemptLocalEscape` / `emergencyTeleport` / `resolveTimeSkip` / `catchUpCommittedTravel` context gates.
 
 **`navigation.ts`:** unchanged. Topology route + local steering covered the cases; no domain-neutral A* generalization.
 

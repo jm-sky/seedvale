@@ -1,7 +1,8 @@
 # Plan: Spatial-context-aware NPC movement and cave traversal
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+**Implemented at:** 2026-09-16
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** ~~world-terrain-019~~, ~~npc-006~~, ~~npc-007~~
