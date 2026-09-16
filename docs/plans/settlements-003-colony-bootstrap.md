@@ -9,6 +9,7 @@
 **Subdomains:** `population` `development` `economy`
 **Tags:** `colony` `camp` `founding` `persistence`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+**Model:** Opus, Sonnet
 
 ## Goal
 
@@ -29,13 +30,20 @@ Nie tworzyć `MiningColonyManager`, drugiego settlement runtime ani quest-owned 
 Zweryfikowane kontrakty:
 
 - `src/settlement/SettlementsManager.ts` jest długowiecznym ownerem registry dla `SettlementEconomy`, `Household` i `NpcAuthoritativeState`; stream-out/in nie może tworzyć drugiego state ownera.
-- `src/settlement/npcState.ts::NpcAuthoritativeState` posiada persistent `personalInventory` oraz generic `travel`; expedition travel zachowuje identity i stan NPC poza live `NpcAgent`.
+- `NpcAuthoritativeState` posiada persistent `personalInventory` oraz generic `travel`; expedition travel zachowuje identity i stan NPC poza live `NpcAgent`.
 - `SettlementsManager.dispatchReadyExpedition(...)` jest publicznym seam dla `settlements-npcs-028`.
+- `ExpeditionAssignment` kończy lifecycle na `ready`; authoritative arrival jest w `NpcAuthoritativeState.travel` jako expedition purpose + `arrival: 'reached'`, z `blocked` jako cannot-progress state.
 - `src/app/worldBundle.ts` wystawia expedition assignment/provisioning oraz `querySiteInfrastructure(site)` z `world-019`.
 - `src/world/siteInfrastructure.ts` zwraca authoritative `completedTerrainPreparations`, usable Player wells i live cultivation areas; bootstrap ma je czytać, nie kopiować.
-- `src/items/createPlacedTents.ts::PlacedTents` jest istniejącym persisted ownerem fizycznych namiotów. `place(...)` potrafi zachować przekazane `from.id`, ale zwykłe placement generuje timestamp ID i nie przechowuje ownership/home semantics.
+- `src/items/createPlacedTents.ts::PlacedTents` jest istniejącym persisted ownerem fizycznych namiotów. `place(...)` potrafi zachować przekazane `from.id` i condition.
 - `SettlementEconomy` jest per-settlement registry-owned state i już przeżywa settlement streaming/rebuild.
-- proceduralne `SettlementDef` nadal powstają z plan/cache/grid flow; nie istnieje obecnie persisted registry runtime-founded settlement definitions.
+- proceduralne `SettlementDef` nadal powstają z plan/cache/grid flow; nie istnieje persisted registry runtime-founded settlement definitions.
+- `createSettlement(...)` nadal jest mocno związane z `SettlementDef`: householdy powstają z `def.families` przez `householdIdFor(def.id, familyIndex)`, a NPC ids przez `settlementNpcId(def.id, flatMemberIndex)`.
+- `SettlementsManager` odkrywa/streamuje osady z proceduralnych grid cells; founded settlement bez grid cell wymaga osobnej manager-owned ścieżki load/unload.
+
+Szczegółowy verified recon i implementacyjny podział są w:
+
+`docs/plans/implementation-notes/settlements-003-colony-bootstrap-implementation-notes.md`.
 
 ## Ownership decision
 
@@ -65,12 +73,13 @@ type FoundedSettlementRecord = {
   z: number
   sponsorSettlementId: string
   residentNpcIds: string[]
-  householdIds: string[]
   foundedAtDays: number
 }
 ```
 
-Finalne nazwy dostosować do conventions kodu. Nie serializować w nim economy, needs, inventories, tents ani infrastruktury — te mają własnych ownerów.
+Household/tent IDs mają być deterministyczne z `settlementId + npcId`; nie duplikować ich w recordzie, jeśli implementacja może je bezpiecznie odtworzyć. Home-anchor binding persistować tylko wtedy, gdy nie jest derivable ze stable IDs.
+
+Nie serializować economy, needs, inventories, tents ani infrastruktury — te mają własnych ownerów.
 
 Settlement ID ma być deterministycznie wyprowadzony ze stable `siteId`/destination identity, np. namespaced `settlement:founded:<siteId>`, z kolizją traktowaną jako błąd kontraktu, nie powodem do losowania nowego ID.
 
@@ -90,24 +99,35 @@ Input powinien wskazywać:
 - stable destination/site ID i pozycję,
 - sponsor settlement ID,
 - expedition assignment/member IDs,
-- site infrastructure snapshot/query result lub resolver,
+- zwalidowany site-readiness result albo policy callback,
 - `nowDays`.
 
-Operacja nie może wybierać ekspedycji ani sterować travel. Warunkiem wejścia jest authoritative arrival wszystkich wymaganych członków wg finalnego `settlements-npcs-028` travel state.
+Operacja nie może wybierać ekspedycji ani sterować travel.
+
+Dla każdego founding NPC wymagane jest authoritative:
+
+- istniejący i żywy `NpcAuthoritativeState`,
+- `travel.purpose.kind === 'expedition'` z właściwym `assignmentId`,
+- `travel.arrival === 'reached'`,
+- brak `travel.blocked`.
+
+Nie rozszerzać `ExpeditionAssignmentState` o colony-specific `arrived`/`founded`.
 
 ## NPC residency and identity
 
 Nie generować nowych NPC i nie zmieniać `NpcId`.
 
-Current `NpcAuthoritativeState` nie posiada settlement residency. Dlatego ten plan dodaje najmniejszy persistent membership owner, najlepiej razem z founded-settlement registry, zamiast wciskać residency do health/needs/inventory state.
-
-Wymagany resolver:
+`NpcAuthoritativeState` nie posiada settlement residency. Dodać najmniejszy persistent membership owner:
 
 ```text
-NpcId → current settlement residency/membership
+NpcId → current settlement residency override
 ```
 
-Proceduralni NPC mogą zachować istniejący implicit/default mapping, ale founded residents muszą mieć explicit override. `createSettlement(...)`/NPC construction path dla founded settlement musi reuse istniejący `NpcAuthoritativeState` przez registry `getOrCreate`, nigdy seedować nowej osoby.
+Proceduralni NPC bez override zachowują existing source-settlement interpretation; founded residents dostają explicit override.
+
+Current `createSettlement(...)` nie potrafi przyjąć istniejących NPC identities, bo sam wyprowadza je z `def.families`. Dlatego przed founded materialization trzeba wydzielić najmniejszy shared resident/runtime seam przyjmujący explicit `NpcId` + household/home binding.
+
+Dla V1 founders pochodzą z jednego `sponsorSettlementId`. Ich name/role/family member data należy deterministycznie re-resolve z proceduralnego sponsor `SettlementDef` + existing `NpcId`; nie persistować zduplikowanych traitów/nazw/ról w founded recordzie.
 
 ## Households
 
@@ -118,10 +138,12 @@ Decyzja dla V1:
 - jeden household na jednego expedition membera;
 - stable ID wyprowadzony z founded settlement ID + `NpcId`;
 - household registry pozostaje authoritative ownerem household stock/state;
-- membership jest zapisane w founded settlement record/associated membership map;
+- residency mapping łączy NPC z founded settlement;
 - późniejsze family formation/migration jest poza zakresem.
 
-To usuwa niejednoznaczność starego draftu i pozwala bezpiecznie zastąpić tents normalnymi homes w przyszłości bez zmiany NPC identity.
+`Household.homeId` jest dziś `Place.id`. Nie wkładać tam niejawnie surowego `PlacedTent.id` bez świadomego rozszerzenia contractu. Preferować minimalny founded-home `Place`/anchor adapter wskazujący realny tent.
+
+Nowy colony household nie może przypadkiem dostać zwykłych losowych starting food/water/wood, jeśli expedition provisioning miało być źródłem zaopatrzenia. Wprowadzić explicit colony initialization semantics zamiast polegać na normalnym first-family seeding.
 
 ## Tents as provisional homes
 
@@ -130,12 +152,13 @@ Reuse `PlacedTents`.
 Bootstrap dla każdego founding household:
 
 1. sprawdza, czy stable colony tent już istnieje;
-2. jeśli nie — konsumuje dokładnie jeden realny `tent` z `NpcAuthoritativeState.personalInventory`;
-3. wywołuje `PlacedTents.place(...)` z deterministycznym `from.id` i zachowaną condition z item instance, jeśli current inventory API to umożliwia;
-4. zapisuje household → shelter anchor jako referencję do `PlacedTent.id` w minimalnym home-assignment state;
-5. repeated bootstrap nie konsumuje kolejnego itemu ani nie tworzy drugiego tent.
+2. jeśli nie — preflightuje realny `tent` instance w `NpcAuthoritativeState.personalInventory`;
+3. po przejściu wszystkich fallible preconditions usuwa dokładnie jeden instance;
+4. wywołuje `PlacedTents.place(...)` z deterministycznym `from.id` i zachowaną condition;
+5. tworzy/odtwarza household → home anchor binding;
+6. repeated bootstrap nie konsumuje kolejnego itemu ani nie tworzy drugiego tent.
 
-Nie rozszerzać `PlacedTent` o pełne household state. Fizyczny world object pozostaje ownerem geometrii/condition; settlement/home assignment trzyma tylko referencję.
+Nie rozszerzać `PlacedTent` o household state. Fizyczny world object pozostaje ownerem geometrii/condition; settlement/home assignment trzyma tylko referencję.
 
 ## Site infrastructure
 
@@ -147,17 +170,41 @@ Dla gold-colony consumera readiness policy wymaga co najmniej:
 - `>= 1` usable Player well,
 - `>= 1` cultivation area.
 
-Sam generic bootstrap API nie powinien hard-code'ować tych liczb. Przyjmuje już zwalidowany site albo policy callback; mine quest/consumer definiuje wymagania.
+Sam generic bootstrap API nie hard-code'uje tych liczb. Mine quest/consumer definiuje wymagania i przekazuje validated readiness.
 
 ## Settlement runtime integration
 
-Founded settlement musi udostępnić minimalny odpowiednik danych wymaganych przez `createSettlement(...)` bez kopiowania proceduralnego `VillagePlan` generatora.
+Nie tworzyć syntetycznego `SettlementDef`, `VillagePlan` ani fałszywych rodzin tylko po to, żeby przejść przez obecny `createSettlement(...)`.
 
-Implementacja ma zrobić focused extraction/adapter tylko dla pól rzeczywiście wymaganych przez runtime. Nie tworzyć fikcyjnego proceduralnego planu z losowymi rodzinami/budynkami.
+Wydzielić najmniejszy wspólny runtime seam używany przez:
 
-Jeżeli `createSettlement(...)` wymaga dziś zbyt szerokiego `SettlementDef`, wydzielić najmniejszy wspólny runtime input (`SettlementRuntimeDef` lub równoważny) używany przez proceduralny adapter i founded adapter.
+```text
+procedural SettlementDef
+→ procedural props/layout adapter
+→ resident descriptors
+                      \
+                       → shared live settlement/NPC runtime
+                      /
+FoundedSettlementRecord
+→ real site/tent/infrastructure anchors
+→ existing-Npc resident descriptors
+```
 
-To jest preferowany refactor; nie dodawać warunków `if (isColony)` przez cały settlement runtime.
+Finalne nazwy typów dopasować do conventions kodu (`SettlementRuntimeSpec`, `SettlementResidentSpec` lub równoważne). Ekstrakcja ma objąć tylko pola rzeczywiście wspólne; proceduralny path po refactorze musi pozostać behavior-identical.
+
+Nie dodawać `if (isColony)` przez cały settlement runtime.
+
+## Streaming
+
+Founded records nie należą do `settlementPlanCache` i nie mają fikcyjnych grid coordinates.
+
+`SettlementsManager` ma sprawdzać je osobno po world-space center:
+
+- within `loadRadius` → materialize przez ten sam manager lifecycle,
+- beyond `unloadRadius` → dispose live `Settlement`, zachowując founded/registry state,
+- home settlement special-case pozostaje proceduralną cell `(0,0)`.
+
+Przewidywana liczba founded settlements jest mała; bounded linear scan jest wystarczający w V1. Nie dodawać spatial index bez realnej potrzeby.
 
 ## Water, farming and work anchors
 
@@ -165,37 +212,37 @@ Founded runtime ma wskazywać istniejącą infrastrukturę site:
 
 - well/water resolver na realny Player well,
 - cultivation anchor na realny Player garden/cultivation area,
-- mine/resource work pozostaje przez normalne resource hooks.
+- mine/resource work przez normalne resource hooks.
 
 Nie kopiować well/garden do settlement-owned records.
 
 ## Economy
 
-`EconomyRegistry.getOrCreate(foundedSettlementId, ...)` pozostaje jedynym ownerem economy. Initial stock może być pusty/minimalny; equipment pozostaje u NPC.
+`EconomyRegistry.getOrCreate(foundedSettlementId, ...)` pozostaje jedynym ownerem economy.
 
-Bootstrap inicjalizuje economy dokładnie raz poprzez istniejący registry contract. Dalsze miner work ma trafiać do zwykłego `SettlementEconomy`.
+Initial stock ma być pusty/minimalny i nie może duplikować expedition equipment/provisions. Bootstrap inicjalizuje economy dokładnie raz poprzez istniejący registry contract. Dalsze miner work ma trafiać do zwykłego `SettlementEconomy`.
 
 Source-aware gold accounting należy do `settlements-004`, nie tutaj.
 
 ## Persistence
 
-Dodać do aktualnego `SaveData`/migration pipeline tylko founded-settlement state, którego nie da się odtworzyć:
+Dodać do aktualnego `SaveData` tylko founded-settlement state, którego nie da się odtworzyć:
 
 - founded records,
-- explicit resident membership overrides,
-- household/home-anchor references, jeśli nie są częścią founded record.
+- explicit resident residency overrides,
+- home-anchor references tylko jeśli nie są derivable.
 
 Existing owners nadal persistują:
 
-- `npcStates`,
+- `npcStates` wraz z travel/personalInventory,
 - `settlementEconomies`,
 - households,
 - `placedTents`,
-- expedition assignments/travel.
+- expedition assignments.
 
-Save/load i `WorldBundle` rebuild muszą carry-forward founded registry tak samo jak pozostałe manager-lifetime registries.
+`src/app/saveState.ts`, fresh load i `rebuildWorldBundle()` mają przenosić founded registry analogicznie do pozostałych manager-lifetime registries. Starszy save bez pola founded state → empty registry.
 
-## Idempotency
+## Idempotency / transaction boundary
 
 Stable keys są podstawowym zabezpieczeniem:
 
@@ -206,13 +253,63 @@ Stable keys są podstawowym zabezpieczeniem:
 
 Nie opierać correctness na jednym `bootstrapComplete` boolean.
 
-Repeated call ma odtworzyć/zweryfikować brakujące bezpieczne derived bindings, ale nigdy ponownie nie wykonać irreversible consumption.
+Przed pierwszą irreversible mutacją preflightować:
+
+- assignment/member travel arrival,
+- site readiness,
+- wszystkie required NPC states,
+- wszystkie required tent instances,
+- stable-id conflicts.
+
+Dopiero potem commitować founded record/residency/households/tent consumption/economy. Repeated call ma zweryfikować/odtworzyć safe derived bindings, ale nigdy ponownie nie konsumować itemów.
 
 ## Off-screen continuity
 
 Nie dodawać colony-specific off-screen loop.
 
 Founded settlement ma wejść do tych samych registries i generic travel/work/economy ownershipów. Jeżeli konkretna profession nadal wymaga live `Settlement`, jej off-screen rozszerzenie jest osobnym shared-system problemem; bootstrap nie może go zasymulować questowym timerem.
+
+## Proposed implementation stages
+
+### Stage 1 — founded state + persistence foundation
+
+- founded registry;
+- deterministic ids;
+- residency override resolver;
+- snapshot/save/load/rebuild plumbing;
+- pure idempotency/validation tests;
+- bez live colony materialization.
+
+### Stage 2 — resident materialization refactor
+
+- wydzielić minimalny shared resident/runtime seam z `createSettlement()`;
+- procedural adapter bez behavior changes;
+- explicit existing `NpcId`, household id i home anchor;
+- sponsor-def resident resolver.
+
+### Stage 3 — bootstrap transaction
+
+- arrival readiness;
+- colony household initialization bez free supplies;
+- real tent instance consumption + stable physical tents;
+- home bindings;
+- existing economy registry initialization;
+- repeated/failure-without-mutation tests.
+
+### Stage 4 — founded streaming/runtime
+
+- manager load/unload founded records po world position;
+- founded runtime adapter wskazuje real tents/well/cultivation anchors;
+- stream-out/in i save/load zachowują identities/state.
+
+### Stage 5 — gold-colony consumer
+
+Może zostać w `quests-progression-010`:
+
+- consumer robi `querySiteInfrastructure()`;
+- aplikuje mine-specific readiness policy;
+- woła generic bootstrap;
+- obserwuje `created | existing | not_ready` bez ownershipu settlement state.
 
 ## Scope
 
@@ -221,12 +318,14 @@ In scope:
 - founded settlement persistent registry/record;
 - founded settlement adapter do zwykłego `SettlementsManager` lifecycle;
 - explicit residency override dla istniejących NPC;
+- shared resident materialization seam wymagany do reuse istniejących `NpcId`;
 - deterministic one-person founding households;
 - deterministic real tent placement + home anchor;
 - sponsor provenance;
 - persistence/rebuild/idempotency;
 - normal economy registry initialization;
-- read-only integration z `querySiteInfrastructure`.
+- read-only integration z `querySiteInfrastructure`;
+- founded world-space streaming.
 
 ## Non-goals
 
@@ -238,24 +337,28 @@ In scope:
 - expedition formation/provisioning/travel;
 - permanent houses/upgrades;
 - population growth;
-- colony-specific mining/off-screen simulation.
+- colony-specific mining/off-screen simulation;
+- procedural roads/signposts/cemetery generation dla colony.
 
 ## Verification
 
 Automated tests:
 
 - deterministic settlement/household/tent IDs;
-- bootstrap twice → one founded record, households and tents;
-- existing `NpcId` and `NpcAuthoritativeState` object/state survive membership change;
-- tent item consumed once;
-- save/load + WorldBundle rebuild preserves founded record, residency, home anchors and sponsor;
-- stream-out/in resolves same economy and NPC state;
-- missing arrival or invalid site returns `not_ready` without mutation;
-- procedural settlements remain unchanged;
+- missing/dead/blocked/not-arrived member → `not_ready` bez mutacji;
+- invalid site → `not_ready` bez mutacji;
+- bootstrap twice → one founded record, residency bindings, households, tents and economy;
+- tent item instance/condition preserved and consumed once;
+- existing `NpcId` and registry-owned `NpcAuthoritativeState` survive residency change;
+- procedural settlement ids/households/NPC identities remain unchanged after refactor;
+- save/load + `WorldBundle` rebuild preserves founded record, residency and home anchors;
+- founded settlement loads by world distance despite no procedural grid cell;
+- stream-out/in resolves same economy, NPC and household state;
+- founded runtime resolves real well/cultivation/tent anchors, not cloned infrastructure;
 - normal miner/economy path can resolve founded settlement economy.
 
 Run focused tests, typecheck and build. Player performs browser/gameplay verification; AI does not run browser verification.
 
-Before implementation create/update focused implementation notes from current code. Add JSDoc with `@domain settlements` for new public founded-settlement lifecycle contracts.
+Add JSDoc with `@domain settlements` for new public founded-settlement lifecycle/residency contracts and any new shared runtime seam that should be discoverable by preflight.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
