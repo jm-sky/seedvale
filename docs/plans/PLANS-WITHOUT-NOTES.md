@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-16 09:44:04  
+> Date: 2026-09-16 09:47:37  
 
 ## PLANS
 
-- `items-player-040-armor-quality-pricing-and-world-availability.md`
 - `quests-progression-010-abandoned-gold-mine-colony.md`
 - `quests-progression-044-lost-treasure-chronicles-final-treasure-claims-and-resolution.md`
 - `quests-progression-045-lost-treasure-chronicles-property-grant-deed-and-persistent-land-reward.md`
@@ -14,49 +13,11 @@
 - `quests-progression-049-hunters-brotherhood-hunting-ground-investigation.md`
 - `quests-progression-053-hunters-brotherhood-competing-hunting-strategies.md`
 - `quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md`
-- `settlements-004-gold-economic-realization-and-source-entitlements.md`
 - `settlements-014-persistent-settlement-definition-worldgen-cache.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 
 --------------------------------
 ## PROMPTS
-
-### `items-player-040-armor-quality-pricing-and-world-availability.md`
-
-Prompt:
-
-```
-Zrób review planu `items-player-040-armor-quality-pricing-and-world-availability.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/items-player-040-armor-quality-pricing-and-world-availability.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/items-player-040-armor-quality-pricing-and-world-availability-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/items-player-040-armor-quality-pricing-and-world-availability.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
 
 ### `quests-progression-010-abandoned-gold-mine-colony.md`
 
@@ -346,43 +307,6 @@ Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną
 Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
 
 Po ukończeniu implementation notes zaktualizuj też `docs/plans/quests-progression-054-hunters-brotherhood-exceptional-animal-finale.md` i dodaj/ustaw metadata:
-`**Model:** <best>, <cheaper-safe-fallback>`
-Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
-Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
-Dobierz modele na podstawie wykonanego reconu i implementation notes, zgodnie z `docs/plans/PLANNING.md`.
-
-Pliki dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-004-gold-economic-realization-and-source-entitlements.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-004-gold-economic-realization-and-source-entitlements.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-004-gold-economic-realization-and-source-entitlements.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-004-gold-economic-realization-and-source-entitlements-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Po ukończeniu implementation notes zaktualizuj też `docs/plans/settlements-004-gold-economic-realization-and-source-entitlements.md` i dodaj/ustaw metadata:
 `**Model:** <best>, <cheaper-safe-fallback>`
 Wybierz dokładnie dwa modele spośród: Composer, Grok, Sonnet, Opus.
 Pierwszy ma być najlepszym wyborem do implementacji, drugi tańszym wariantem o minimalnym dodatkowym ryzyku.
