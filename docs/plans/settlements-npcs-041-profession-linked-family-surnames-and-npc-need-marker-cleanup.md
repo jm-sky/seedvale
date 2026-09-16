@@ -7,6 +7,7 @@
 **Domain:** `settlements-npcs`  
 **Type:** `polish`  
 **Roadmap:** -
+**Model:** Composer, Sonnet
 
 ## Cel
 
