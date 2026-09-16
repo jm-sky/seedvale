@@ -50,8 +50,10 @@ Generated from TypeScript imports.
 - `interaction/resolveInteraction.ts`
 - `quests/QuestManager.test.ts`
 - `quests/dungeonBanditTreasure.test.ts`
+- `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostTreasureChronicleSearch.test.ts`
 - `quests/lostTreasureChroniclesElder.test.ts`
+- `quests/lostTreasureExpedition.test.ts`
 - `quests/oldBonesAdventureCave.test.ts`
 - `quests/opportunities/hunterProfessionQuests.test.ts`
 - `quests/opportunities/rpgQuestMatrices.test.ts`
@@ -223,8 +225,10 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `quests/QuestManager.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
+- `quests/quests.ts`
 - `world/caves/caveAuthoredAnchorClaims.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/worldGeneratedContainers.ts`
@@ -352,9 +356,11 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `quests/QuestManager.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/opportunities/settlementNpcMaterialization.ts`
+- `quests/quests.ts`
 - `world/caves/caveAdventureContentPolicy.ts`
 - `world/caves/caveContentAnchors.ts`
 - `world/caves/dungeonChambers.ts`
@@ -706,10 +712,12 @@ Generated from TypeScript imports.
 - `quests/dungeonBanditTreasure.test.ts`
 - `quests/dungeonBanditTreasure.ts`
 - `quests/guardRewards.ts`
+- `quests/lostHunterNaturalCave.test.ts`
 - `quests/lostHunterNaturalCave.ts`
 - `quests/lostTreasureChronicleSearch.ts`
 - `quests/lostTreasureChroniclesElder.test.ts`
 - `quests/lostTreasureChroniclesElder.ts`
+- `quests/lostTreasureExpedition.test.ts`
 - `quests/lostTreasureExpedition.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
