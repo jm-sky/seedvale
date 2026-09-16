@@ -41,7 +41,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 436
+- `createSettlement` — function — line 450
 - `CreateSettlementDeps` — type — line 278
 - `Settlement` — type — line 152
 - `settlementSpawnPoint` — function — line 266
@@ -132,14 +132,21 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/horseAcquisition.ts`
 
-- `getHorseAcquisitionState` — function — line 30
+- `getHorseAcquisitionState` — function — line 61
   - domain: quests-progression Single derived view over live animal state + quest reservation.
-- `HorseAcquisitionState` — type — line 10
-- `horseOfferStatusHint` — function — line 48
-- `MERCHANT_HORSE_PRICE` — const — line 5
-- `merchantHorseAnimalId` — function — line 14
-- `resolveMerchantHorseAnimal` — function — line 21
+- `HorseAcquisitionState` — type — line 16
+- `horseOfferStatusHint` — function — line 79
+- `isVendorHorseAnimalId` — function — line 26
+- `isVendorHorseSaleEligible` — function — line 47
+  - domain: settlements
+- `listVendorHorseAnimals` — function — line 101
+  - domain: settlements
+- `MERCHANT_HORSE_PRICE` — const — line 11
+- `merchantHorseAnimalId` — function — line 20
+- `resolveMerchantHorseAnimal` — function — line 33
   - domain: fauna Resolves the merchant horse acquisition target for `settlementId`.
+- `vendorHorseOfferLabel` — function — line 84
+- `vendorHorseOfferPrice` — function — line 91
 
 ## `settlement/houseBuilder.ts`
 
@@ -323,29 +330,29 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 321
-- `disposeLivestock` — function — line 853
-- `fillShepherdFlockKinds` — function — line 43
-- `isPlayerOwnedLivestockRecord` — function — line 99
-- `LIVESTOCK_KINDS` — const — line 76
-- `LIVESTOCK_URLS` — const — line 60
-- `LivestockPersistence` — type — line 149
-- `livestockRecordMatchesHouseholdSlot` — function — line 116
-- `LivestockRegistry` — type — line 171
-- `LivestockSaveRecord` — type — line 89
-- `livestockStrayCandidateFromAgent` — function — line 129
-- `PersistentLivestockContext` — type — line 763
-- `resolveLivePersistentAnimal` — function — line 771
-- `restoreDetachedPlayerOwnedLivestock` — function — line 835
-- `setOwnedAnimalControl` — function — line 823
-- `shouldSpawnDeterministicLivestockSlot` — function — line 108
+- `createLivestockRegistry` — function — line 327
+- `disposeLivestock` — function — line 922
+- `fillShepherdFlockKinds` — function — line 48
+- `isPlayerOwnedLivestockRecord` — function — line 105
+- `LIVESTOCK_KINDS` — const — line 81
+- `LIVESTOCK_URLS` — const — line 65
+- `LivestockPersistence` — type — line 155
+- `livestockRecordMatchesHouseholdSlot` — function — line 122
+- `LivestockRegistry` — type — line 177
+- `LivestockSaveRecord` — type — line 95
+- `livestockStrayCandidateFromAgent` — function — line 135
+- `PersistentLivestockContext` — type — line 832
+- `resolveLivePersistentAnimal` — function — line 840
+- `restoreDetachedPlayerOwnedLivestock` — function — line 904
+- `setOwnedAnimalControl` — function — line 892
+- `shouldSpawnDeterministicLivestockSlot` — function — line 114
   - domain: fauna
   - role: Household rolls and merchant-horse slots skip tombstones and player-owned records restored on the detached path (fauna-020 / fauna-030).
-- `spawnAnimalFromRecord` — function — line 216
-- `SpawnAnimalFromRecordDeps` — type — line 204
-- `spawnLivestock` — function — line 597
-- `tickSettlementLivestock` — function — line 870
-- `transferAnimalOwnership` — function — line 798
+- `spawnAnimalFromRecord` — function — line 222
+- `SpawnAnimalFromRecordDeps` — type — line 210
+- `spawnLivestock` — function — line 603
+- `tickSettlementLivestock` — function — line 939
+- `transferAnimalOwnership` — function — line 867
 
 ## `settlement/lodging.ts`
 
@@ -439,29 +446,30 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/merchantTrade.ts`
 
-- `generateMerchantAssortment` — function — line 417
-- `HOME_STARTER_MERCHANT_KINDS` — const — line 87
-- `isPremiumMerchantGood` — function — line 162
-- `MERCHANT_ARMOR_QUALITY_WEIGHTS` — const — line 488
-- `MERCHANT_SPECIALIZATIONS` — const — line 36
-- `MerchantArmorQualityContext` — type — line 504
-- `MerchantAssortmentContext` — type — line 49
-- `MerchantProfile` — type — line 43
-- `merchantProfileFor` — function — line 214
+- `generateMerchantAssortment` — function — line 445
+- `HOME_STARTER_MERCHANT_KINDS` — const — line 89
+- `horseVendorNpcId` — function — line 233
+- `isPremiumMerchantGood` — function — line 164
+- `MERCHANT_ARMOR_QUALITY_WEIGHTS` — const — line 516
+- `MERCHANT_SPECIALIZATIONS` — const — line 37
+- `MerchantArmorQualityContext` — type — line 532
+- `MerchantAssortmentContext` — type — line 51
+- `MerchantProfile` — type — line 45
+- `merchantProfileFor` — function — line 224
 - `MerchantSpecialization` — type — line 30
   - domain: settlements
-- `merchantStockQuantity` — function — line 483
-- `PREMIUM_MERCHANT_KINDS` — const — line 62
-- `premiumAvailabilityChance` — function — line 167
-- `resolveMerchantArmorQuality` — function — line 547
+- `merchantStockQuantity` — function — line 511
+- `PREMIUM_MERCHANT_KINDS` — const — line 64
+- `premiumAvailabilityChance` — function — line 169
+- `resolveMerchantArmorQuality` — function — line 575
   - domain: settlements
-- `resolveMerchantProfiles` — function — line 201
+- `resolveMerchantProfiles` — function — line 205
   - domain: settlements
-- `resolvePremiumMerchantAssignment` — function — line 350
+- `resolvePremiumMerchantAssignment` — function — line 378
   - domain: settlements
-- `seedMerchantStockIfNeeded` — function — line 571
-- `settlementHasPremiumOffer` — function — line 338
-- `specializationAffinity` — function — line 247
+- `seedMerchantStockIfNeeded` — function — line 599
+- `settlementHasPremiumOffer` — function — line 366
+- `specializationAffinity` — function — line 269
 
 ## `settlement/merchantWagon.ts`
 
@@ -647,16 +655,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 326
-- `buildSettlementProps` — function — line 736
-- `disposeSettlementGroup` — function — line 2027
-- `SettlementHouseBed` — type — line 161
-- `SettlementHouseLandmark` — type — line 127
-- `SettlementLandmarks` — type — line 177
-- `SettlementLandPlot` — type — line 315
-- `SettlementStorageVisuals` — type — line 307
-- `SettlementTreeLandmark` — type — line 336
-- `SettlementWellLandmark` — type — line 168
+- `BlacksmithWorkplace` — type — line 342
+- `buildSettlementProps` — function — line 752
+- `disposeSettlementGroup` — function — line 2122
+- `SettlementHouseBed` — type — line 162
+- `SettlementHouseLandmark` — type — line 128
+- `SettlementLandmarks` — type — line 178
+- `SettlementLandPlot` — type — line 331
+- `SettlementStorageVisuals` — type — line 323
+- `SettlementTreeLandmark` — type — line 352
+- `SettlementWellLandmark` — type — line 169
 
 ## `settlement/propSpecs.ts`
 
@@ -899,14 +907,14 @@ Generated from exported TypeScript symbols.
 - `cellKey` — function — line 127
 - `cellSeed` — function — line 170
 - `cellsWithinRadius` — function — line 154
-- `generateSettlementDef` — function — line 783
-- `generateVillagePlan` — function — line 713
-- `probeSettlementSite` — function — line 505
+- `generateSettlementDef` — function — line 784
+- `generateVillagePlan` — function — line 714
+- `probeSettlementSite` — function — line 506
   - domain: settlements
 - `SETTLEMENT_GRID_STEP` — const — line 69
 - `SettlementCell` — type — line 75
 - `SettlementDef` — type — line 77
-- `SettlementSiteProbe` — type — line 490
+- `SettlementSiteProbe` — type — line 491
 - `worldToCell` — function — line 131
 
 ## `settlement/settlementNameUniqueness.ts`
@@ -1173,10 +1181,24 @@ Generated from exported TypeScript symbols.
 - `VillageFire` — type — line 43
 - `VillageFireHooks` — type — line 38
 
+## `settlement/villagePaddock.ts`
+
+- `appendPaddockPath` — function — line 381
+- `horseVendorSetupChance` — function — line 66
+- `paddockFencePlacements` — function — line 419
+- `PaddockPlanArgs` — type — line 93
+- `paddockRadiusFor` — function — line 80
+- `paddockSlotCountForRadius` — function — line 85
+- `planSettlementPaddock` — function — line 306
+  - domain: settlements
+- `settlementRollsHorseVendor` — function — line 74
+- `vendorHorseAnimalId` — function — line 89
+
 ## `settlement/villagePasture.ts`
 
 - `appendPasturePath` — function — line 421
-- `pastureFencePlacements` — function — line 468
+- `fenceSegmentPlacements` — function — line 468
+- `pastureFencePlacements` — function — line 497
 - `PasturePlanArgs` — type — line 72
 - `pastureRadiusFor` — function — line 65
 - `planSettlementPasture` — function — line 334
@@ -1190,6 +1212,8 @@ Generated from exported TypeScript symbols.
 - `householdWellPlotId` — function — line 193
 - `isTreeWorkEligible` — function — line 111
 - `noticeBoardPlotId` — function — line 223
+- `PADDOCK_ID` — const — line 265
+- `paddockPathId` — function — line 267
 - `parseHouseholdWellFamilyIndex` — function — line 199
 - `PASTURE_ID` — const — line 251
 - `pasturePathId` — function — line 260
@@ -1208,18 +1232,20 @@ Generated from exported TypeScript symbols.
 - `VillageBuildingPlan` — type — line 166
 - `VillageBuildingRole` — type — line 158
 - `VillageCenter` — type — line 47
-- `VillageEntrance` — type — line 310
+- `VillageEntrance` — type — line 345
 - `VillageIdentity` — type — line 23
 - `VillageLandmarkKind` — type — line 211
 - `VillageLandmarkPlan` — type — line 227
-- `VillageLayoutPattern` — type — line 322
-- `VillagePastureAnchor` — type — line 279
-- `VillagePastureFenceSegment` — type — line 270
+- `VillageLayoutPattern` — type — line 357
+- `VillagePaddockPlan` — type — line 326
   - domain: settlements
-- `VillagePasturePlan` — type — line 294
+- `VillagePastureAnchor` — type — line 286
+- `VillagePastureFenceSegment` — type — line 277
+  - domain: settlements
+- `VillagePasturePlan` — type — line 301
   - domain: settlements
 - `VillagePathPlan` — type — line 241
-- `VillagePlan` — type — line 338
+- `VillagePlan` — type — line 373
 - `VillagePlaza` — type — line 58
 - `villagePlazaAt` — function — line 82
 - `VillagePlot` — type — line 139
@@ -1233,16 +1259,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 1352
-- `chooseLayoutPattern` — function — line 156
-- `HOUSE_PLOT_RADIUS` — const — line 74
-- `householdWellLocalBand` — function — line 86
+- `buildingsAndLandmarksFromPlots` — function — line 1369
+- `chooseLayoutPattern` — function — line 160
+- `HOUSE_PLOT_RADIUS` — const — line 76
+- `householdWellLocalBand` — function — line 88
   - domain: settlements-npcs
-- `pathPlansToCorridorData` — function — line 1727
-- `planLocalPathsAndEntrances` — function — line 1608
-- `planVillageLayout` — function — line 920
-- `PLOT_SCORE_WEIGHTS` — const — line 48
-- `VillageLayoutDraft` — type — line 121
+- `pathPlansToCorridorData` — function — line 1744
+- `planLocalPathsAndEntrances` — function — line 1625
+- `planVillageLayout` — function — line 924
+- `PLOT_SCORE_WEIGHTS` — const — line 50
+- `VillageLayoutDraft` — type — line 123
 
 ## `settlement/wellInteractionQueue.ts`
 

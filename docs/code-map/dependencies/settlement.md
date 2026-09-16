@@ -379,6 +379,8 @@ Generated from TypeScript imports.
 - `settlement/settlementProgression.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePaddock.test.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.test.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
@@ -465,13 +467,18 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/horseTraining.ts`
 - `settlement/horseAcquisition.ts`
+- `settlement/villagePaddock.ts`
 
 ## `settlement/horseAcquisition.ts`
 
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/horseTraining.ts`
+- `settlement/villagePaddock.ts`
 
 **Imported by**
 
@@ -830,6 +837,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/animalStray.ts`
+- `fauna/horseTraining.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
 - `fauna/proceduralAnimals.ts`
@@ -839,6 +847,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `settlement/places.ts`
+- `settlement/villagePaddock.ts`
 - `terrain/waterSample.ts`
 - `world/createGrassForagePatches.ts`
 - `world/parseSeed.ts`
@@ -1034,6 +1043,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/inventoryWiring.ts`
 - `items/trade.test.ts`
 - `settlement/createSettlement.ts`
 - `settlement/merchantTrade.test.ts`
@@ -1272,6 +1282,7 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.test.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlanner.ts`
 
@@ -1491,6 +1502,7 @@ Generated from TypeScript imports.
 - `settlement/settlementVillageTorch.ts`
 - `settlement/storageVisuals.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
@@ -2312,6 +2324,40 @@ Generated from TypeScript imports.
 - `settlement/villageClearing.test.ts`
 - `settlement/villagePlanner.test.ts`
 
+## `settlement/villagePaddock.test.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/villagePaddock.ts`
+- `settlement/villagePlan.ts`
+- `settlement/villagePlanner.ts`
+- `terrain/chunkHeightmap.ts`
+
+## `settlement/villagePaddock.ts`
+
+**Imports**
+
+- `math/segment.ts`
+- `player/PlayerController.ts`
+- `render/instancedProps.ts`
+- `settlement/families.ts`
+- `settlement/pathDryness.ts`
+- `settlement/villagePasture.ts`
+- `settlement/villagePlan.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/horseAcquisition.test.ts`
+- `settlement/horseAcquisition.ts`
+- `settlement/livestock.ts`
+- `settlement/props.ts`
+- `settlement/villagePaddock.test.ts`
+- `settlement/villagePlanner.ts`
+
 ## `settlement/villagePasture.test.ts`
 
 **Imports**
@@ -2341,6 +2387,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `settlement/props.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.test.ts`
 - `settlement/villagePlanner.ts`
 
@@ -2378,6 +2425,8 @@ Generated from TypeScript imports.
 - `settlement/structureCondition.ts`
 - `settlement/structureRepairCandidates.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePaddock.test.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.test.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlanDebug.ts`
@@ -2420,6 +2469,7 @@ Generated from TypeScript imports.
 - `settlement/householdWells.ts`
 - `settlement/householdYard.ts`
 - `settlement/pathDryness.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlan.ts`
 - `terrain/chunkHeightmap.ts`
@@ -2434,6 +2484,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/villagePaddock.test.ts`
 - `settlement/villagePasture.test.ts`
 - `settlement/villagePlanner.test.ts`
 

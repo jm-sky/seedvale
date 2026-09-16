@@ -4,31 +4,41 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1073
+- `AnimalAgent` — class — line 1102
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 554
-- `AnimalAgentDeps` — type — line 883
-- `AnimalSaveState` — type — line 673
-- `AnimalUpdateContext` — type — line 941
-- `BURY_DURATION_SEC` — const — line 366
-- `canPredatorPursueIntoVillage` — function — line 741
-- `FAUNA_SHADOW_DISTANCE` — const — line 335
-- `FaunaAiBranch` — type — line 491
-- `FaunaNavRescueDebugInfo` — type — line 538
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 426
-- `FrenzyWolfCandidate` — type — line 818
-- `HARVEST_MEAT_DURATION_SEC` — const — line 369
-- `isWithinVillageRadius` — function — line 722
-- `NearbyNpcCandidate` — type — line 813
-- `pickNearestEligibleWolf` — function — line 827
-- `pickRabidTarget` — function — line 852
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 353
-- `villageFleeBiasFalloff` — function — line 749
-- `VillageInfo` — type — line 716
+- `AnimalAgentDebugInfo` — type — line 571
+- `AnimalAgentDeps` — type — line 906
+- `AnimalSaveState` — type — line 690
+- `AnimalUpdateContext` — type — line 970
+- `BURY_DURATION_SEC` — const — line 383
+- `canPredatorPursueIntoVillage` — function — line 764
+- `FAUNA_SHADOW_DISTANCE` — const — line 352
+- `FaunaAiBranch` — type — line 508
+- `FaunaNavRescueDebugInfo` — type — line 555
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 443
+- `FrenzyWolfCandidate` — type — line 841
+- `HARVEST_MEAT_DURATION_SEC` — const — line 386
+- `isWithinVillageRadius` — function — line 745
+- `NearbyNpcCandidate` — type — line 836
+- `pickNearestEligibleWolf` — function — line 850
+- `pickRabidTarget` — function — line 875
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 370
+- `villageFleeBiasFalloff` — function — line 772
+- `VillageInfo` — type — line 739
+
+## `fauna/animalAreaBound.ts`
+
+- `clampIntoFencedArea` — function — line 35
+- `FencedAreaBound` — type — line 9
+  - domain: settlements
+- `fencedAreaWanderBand` — function — line 54
+- `hasExitedFencedArea` — function — line 50
+- `isInEntranceCorridor` — function — line 27
+- `isInsideFencedArea` — function — line 18
 
 ## `fauna/animalAttraction.ts`
 
@@ -149,7 +159,7 @@ Generated from exported TypeScript symbols.
 ## `fauna/animalForaging.ts`
 
 - `AnimalWaterSourceProvider` — type — line 95
-- `applySourceRelief` — function — line 662
+- `applySourceRelief` — function — line 684
 - `canAcceptHandFeed` — function — line 142
 - `CarcassCandidate` — type — line 227
 - `carcassCandidateScore` — function — line 218
@@ -157,18 +167,18 @@ Generated from exported TypeScript symbols.
 - `dietItemReliefScale` — function — line 132
 - `DRINK_DURATION_SEC` — const — line 69
 - `EAT_DURATION_SEC` — const — line 66
-- `findFoodTarget` — function — line 580
-- `findForageTarget` — function — line 457
-- `findGrassPatchTarget` — function — line 485
-- `findHouseholdTroughTarget` — function — line 353
-- `findTroughTarget` — const — line 371
-- `findWaterTarget` — function — line 427
+- `findFoodTarget` — function — line 596
+- `findForageTarget` — function — line 462
+- `findGrassPatchTarget` — function — line 490
+- `findHouseholdTroughTarget` — function — line 358
+- `findTroughTarget` — const — line 376
+- `findWaterTarget` — function — line 432
 - `FOOD_INTERACTION_RANGE` — const — line 60
 - `forageEdgeScore` — function — line 109
 - `ForagingContext` — type — line 281
 - `isCarcassEdible` — function — line 169
-- `isDrinkableNaturalShorePoint` — function — line 327
-- `isSourceTargetValid` — function — line 595
+- `isDrinkableNaturalShorePoint` — function — line 332
+- `isSourceTargetValid` — function — line 611
 - `selectDietFeedKind` — function — line 120
 - `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 73
 - `SOURCE_TARGET_TIMEOUT_SEC` — const — line 78
@@ -563,6 +573,31 @@ Generated from exported TypeScript symbols.
 - `JUVENILE_SPAWN_CHANCE` — const — line 38
 - `MOTHER_FOLLOW_RADIUS` — const — line 63
 - `pickHerdLeader` — function — line 86
+
+## `fauna/horseTraining.ts`
+
+- `addHorseTrainingProgress` — function — line 194
+- `clampHorseTrainingProgress` — function — line 121
+- `HORSE_TRAINED_PROGRESS` — const — line 63
+- `HORSE_TRAINING_MAX` — const — line 61
+- `HORSE_TRAINING_MIN` — const — line 60
+- `HORSE_TRAINING_TIER_LABEL` — const — line 223
+- `HORSE_WARHORSE_PROGRESS` — const — line 65
+- `HorsePaddockStay` — type — line 19
+- `horseTrainingModifiers` — function — line 156
+- `HorseTrainingModifiers` — type — line 45
+- `horseTrainingModifiersOf` — function — line 184
+- `horseTrainingPrice` — function — line 212
+  - domain: settlements
+- `HorseTrainingState` — type — line 12
+- `horseTrainingTier` — function — line 141
+- `HorseTrainingTier` — type — line 43
+- `horseTrainingTierOf` — function — line 148
+- `normalizeHorseTrainingState` — function — line 130
+- `paddockStayToBound` — function — line 32
+- `rollInitialHorseTrainingProgress` — function — line 238
+  - domain: settlements
+- `VillageSizeForTraining` — type — line 229
 
 ## `fauna/huntingHooks.ts`
 

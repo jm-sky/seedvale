@@ -18,6 +18,7 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/roadRiverCrossing.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.test.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlanner.test.ts`

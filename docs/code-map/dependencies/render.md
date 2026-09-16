@@ -75,6 +75,7 @@ Generated from TypeScript imports.
 - `render/instancedProps.test.ts`
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.ts`
 - `terrain/chunkManager.ts`
 - `terrain/vegetationRegionBatcher.test.ts`

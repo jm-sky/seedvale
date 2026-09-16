@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `debug/faunaInspector.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalAreaBound.ts`
 - `fauna/animalAttraction.ts`
 - `fauna/animalCaveHabitat.ts`
 - `fauna/animalCorpse.ts`
@@ -47,6 +48,7 @@ Generated from TypeScript imports.
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/herdCohesion.ts`
+- `fauna/horseTraining.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
 - `fauna/playerAwareness.ts`
@@ -217,6 +219,20 @@ Generated from TypeScript imports.
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`
 
+## `fauna/animalAreaBound.test.ts`
+
+**Imports**
+
+- `fauna/animalAreaBound.ts`
+
+## `fauna/animalAreaBound.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalAreaBound.test.ts`
+- `fauna/horseTraining.ts`
+
 ## `fauna/animalAttraction.test.ts`
 
 **Imports**
@@ -341,9 +357,11 @@ Generated from TypeScript imports.
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/habitatPressure.test.ts`
 - `fauna/habitatPressure.ts`
+- `fauna/horseTraining.test.ts`
 - `fauna/persistentOccupants.test.ts`
 - `fauna/preyAlertPerception.ts`
 - `reputation/animalDeeds.ts`
+- `settlement/horseAcquisition.test.ts`
 - `world/animalTraps.ts`
 - `world/cart.test.ts`
 - `world/cart.ts`
@@ -926,6 +944,27 @@ Generated from TypeScript imports.
 - `fauna/animalVariants.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/herdCohesion.test.ts`
+
+## `fauna/horseTraining.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/horseTraining.ts`
+
+## `fauna/horseTraining.ts`
+
+**Imports**
+
+- `fauna/animalAreaBound.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/horseTraining.test.ts`
+- `settlement/horseAcquisition.test.ts`
+- `settlement/horseAcquisition.ts`
+- `settlement/livestock.ts`
 
 ## `fauna/huntingHooks.test.ts`
 

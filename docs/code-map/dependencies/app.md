@@ -1409,6 +1409,7 @@ Generated from TypeScript imports.
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/horseAcquisition.ts`
+- `settlement/merchantTrade.ts`
 - `ui-vue/mount.ts`
 - `ui-vue/store.ts`
 - `ui/createHud.ts`

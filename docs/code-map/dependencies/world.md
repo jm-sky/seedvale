@@ -3479,6 +3479,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePaddock.ts`
 - `settlement/villagePasture.ts`
 - `settlement/villagePlanner.ts`
 - `shared/SettlementName.ts`

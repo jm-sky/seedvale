@@ -287,9 +287,9 @@ Generated from exported TypeScript symbols.
 
 ## `player/ridingStability.ts`
 
-- `fallDamage` — function — line 65
-- `fallRiskPerSecond` — function — line 38
-- `rollFall` — function — line 55
+- `fallDamage` — function — line 68
+- `fallRiskPerSecond` — function — line 40
+- `rollFall` — function — line 58
 - `StabilityInput` — type — line 11
 
 ## `player/skillEvaluation.ts`
