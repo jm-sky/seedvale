@@ -3,14 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DB_NAME, DB_VERSION } from './db'
 import { CURRENT_SAVE_VERSION, type SaveConfig, type SaveData } from './saveData'
 import {
+  beginNewSave,
   createSave,
   deleteSave,
   getActiveSaveId,
+  getPendingNewSaveName,
   listSaveManagementEntries,
   listSaves,
   listSavesResult,
   readSave,
   renameSave,
+  setPendingNewSaveName,
   writeSave,
 } from './saveDb'
 import { MAX_SAVES } from './saveSlots'
@@ -108,6 +111,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  setPendingNewSaveName(null)
   vi.unstubAllGlobals()
 })
 
@@ -327,6 +331,29 @@ describe('writeSave/createSave — outgoing snapshot integrity (plan persistence
 
     expect(result).toEqual({ ok: false, error: 'invalid-outgoing-snapshot' })
     expect(await listSaves()).toHaveLength(0)
+  })
+})
+
+describe('beginNewSave — pending identity until first write (plan persistence-005)', () => {
+  it('clears activeSaveId, keeps pending name, then creates that slot on writeSave', async () => {
+    const previous = await createSave('Przygoda', makeSaveData({ savedAt: 50 }))
+    expect(previous.ok).toBe(true)
+    if (!previous.ok) return
+    expect(getActiveSaveId()).toBe(previous.id)
+
+    beginNewSave('Quest Adventure')
+    expect(getActiveSaveId()).toBeNull()
+    expect(getPendingNewSaveName()).toBe('Quest Adventure')
+
+    const written = await writeSave(makeSaveData({ savedAt: 200 }))
+    expect(written).toEqual({ ok: true })
+    expect(getPendingNewSaveName()).toBeNull()
+    expect(getActiveSaveId()).not.toBeNull()
+    expect(getActiveSaveId()).not.toBe(previous.id)
+
+    const slots = await listSaves()
+    expect(slots.find((s) => s.id === getActiveSaveId())?.name).toBe('Quest Adventure')
+    expect(slots.some((s) => s.name === 'Przygoda')).toBe(true)
   })
 })
 

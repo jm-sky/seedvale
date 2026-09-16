@@ -4,7 +4,7 @@
 
 **Not:** a field-by-field `SaveData` schema dump (that's [ARCHITECTURE.md](../architecture/ARCHITECTURE.md#save-schema)'s job), a per-migration changelog narrating why each version bump happened (that belongs in the migration plans themselves), or a domain's own detailed persistence status (each domain doc states its own facts and links here for the taxonomy).
 
-**Last verified:** 2026-09-15
+**Last verified:** 2026-09-16
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -51,6 +51,8 @@ domain runtime state (the one live owner of each field)
 **Restore has no separate hydration phase.** Every one of `SaveData`'s fields is read exactly once, at its one call site, feeding straight into the constructor of the one runtime system that owns it. No system anywhere is built empty and then walked/filled from a save afterward.
 
 **In-session `WorldBundle` rebuild reuses the exact same mechanism a save does.** A config change that rebuilds the world (not a save/load) carries forward live state through the same snapshot methods the save-assembly step itself calls, into the same constructor parameters the boot path accepts. This is the structural guarantee that "what survives a save" and "what survives a `WorldBundle` rebuild" cannot drift apart — they are produced by the same functions, not two independently-maintained code paths.
+
+Pause-menu save identity is not a `SaveData` field: after `beginNewSave()`, in-memory `pendingNewSaveName` is the slot name until the first `writeSave()` creates the row; `refreshActiveSaveName()` must present that pending name rather than falling back to an existing slot.
 
 ## Deterministic base + deltas
 

@@ -1,13 +1,14 @@
 # Plan: Pending New Save Identity in Pause Menu
 
 **Created:** 2026-09-16  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** bug  
 **Priority:** high · **Effort:** XS  
 **Depends on:** persistence-004  
 **Domain:** `persistence`  
 **Subdomains:** `storage`  
-**Tags:** `save-slots` `new-game` `pause-menu` `lifecycle`
+**Tags:** `save-slots` `new-game` `pause-menu` `lifecycle`  
+**Model:** Grok, Composer
 
 ## Problem
 

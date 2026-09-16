@@ -122,10 +122,10 @@ Generated from exported TypeScript symbols.
 ## `persistence/saveSlots.ts`
 
 - `ACTIVE_SAVE_ID_KEY` — const — line 6
-- `assertCanCreateSave` — function — line 157
+- `assertCanCreateSave` — function — line 174
 - `CreateSaveError` — type — line 24
 - `DEFAULT_SAVE_NAME_PREFIX` — const — line 8
-- `formatSaveDay` — function — line 166
+- `formatSaveDay` — function — line 183
 - `generateSaveId` — function — line 30
 - `InspectedSaveSlot` — type — line 56
 - `inspectStoredSave` — function — line 62
@@ -135,11 +135,15 @@ Generated from exported TypeScript symbols.
 - `legacyNameFromSave` — function — line 44
 - `MAX_SAVES` — const — line 3
 - `NameValidation` — type — line 26
-- `nextDefaultSaveName` — function — line 149
+- `nextDefaultSaveName` — function — line 166
 - `parseStoredSave` — function — line 102
 - `pickActiveSaveId` — function — line 122
+- `resolvePauseActiveSaveName` — function — line 134
+  - domain: persistence
+  - role: Pause-menu save identity from pending new-game name or an existing slot.
+  - integration: `pendingNewSaveName` is explicit New Game state (`beginNewSave`) and must win over `pickActiveSaveId()`'s fallback to the newest stored slot.
 - `SAVE_NAME_MAX_LENGTH` — const — line 4
-- `saveErrorMessage` — function — line 170
+- `saveErrorMessage` — function — line 187
 - `SaveManagementEntry` — type — line 79
 - `SaveSlotEnvelope` — type — line 10
 - `SaveSlotInfo` — type — line 15
@@ -149,7 +153,7 @@ Generated from exported TypeScript symbols.
 - `toSaveSlotInfo` — function — line 107
 - `UnhealthySaveStatus` — type — line 77
 - `unhealthySaveStatusLabel` — function — line 96
-- `validateSaveName` — function — line 132
+- `validateSaveName` — function — line 149
 - `wrapSave` — function — line 40
 
 ## `persistence/seedDb.ts`

@@ -34,9 +34,7 @@
 
 ### Bug Fixes
 
-1. `persistence-005` — **Pending New Save Identity in Pause Menu**  
-   🔴 `XS` · ✅ ready · unlocks 0/0 · type: bug
-2. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+1. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
@@ -163,27 +161,23 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-22. `persistence-005` — **Pending New Save Identity in Pause Menu**  
-  🔴 `XS` · **Score:**  36  
-   → **unlocks:** 0/0
-
-23. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+22. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-24. `items-player-014` — **Rope-pullable resource transport**  
+23. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `tools-005` — **Seedvale Character Preparation Panel**  
+24. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `items-player-032` — **NPC player-storage resource and context rules**  
+25. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-27. `ui-input-022` — **Lightweight Startup Loading Stages**  
+26. `ui-input-022` — **Lightweight Startup Loading Stages**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 

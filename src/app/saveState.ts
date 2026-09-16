@@ -28,8 +28,8 @@ import type { WorldBundle } from './worldBundle'
 import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { serializeTreasureMutations, type TreasureChestMutation } from '../items/treasureGameplay'
 import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification, type SaveWorkContract } from '../persistence/saveData'
-import { getActiveSaveId, listSavesResult, type SaveReason, writeSave, type WriteSaveResult } from '../persistence/saveDb'
-import { pickActiveSaveId } from '../persistence/saveSlots'
+import { getActiveSaveId, getPendingNewSaveName, listSavesResult, type SaveReason, writeSave, type WriteSaveResult } from '../persistence/saveDb'
+import { resolvePauseActiveSaveName } from '../persistence/saveSlots'
 import { isTransportOrderActive } from '../world/transportOrder'
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
@@ -361,9 +361,9 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     // alone rather than treating the failure as "no active save".
     const result = await listSavesResult()
     if (!result.ok) return
-    const id = pickActiveSaveId(getActiveSaveId(), result.slots)
-    const active = result.slots.find((slot) => slot.id === id)
-    vueUi.setPauseActiveSaveName(active?.name ?? '')
+    vueUi.setPauseActiveSaveName(
+      resolvePauseActiveSaveName(getPendingNewSaveName(), getActiveSaveId(), result.slots),
+    )
   }
 
   // `beforeunload` alone isn't enough on mobile: Android (and iOS) routinely

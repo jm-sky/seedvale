@@ -125,6 +125,23 @@ export function pickActiveSaveId(storedId: string | null, slots: readonly SaveSl
   return sortSavesByRecency(slots)[0]?.id ?? null
 }
 
+/**
+ * @domain persistence
+ * @role Pause-menu save identity from pending new-game name or an existing slot.
+ * @integration `pendingNewSaveName` is explicit New Game state (`beginNewSave`)
+ *  and must win over `pickActiveSaveId()`'s fallback to the newest stored slot.
+ */
+export function resolvePauseActiveSaveName(
+  pendingNewSaveName: string | null,
+  storedId: string | null,
+  slots: readonly SaveSlotInfo[],
+): string {
+  const pending = pendingNewSaveName?.trim()
+  if (pending) return pending
+  const id = pickActiveSaveId(storedId, slots)
+  return slots.find((slot) => slot.id === id)?.name ?? ''
+}
+
 function namesMatch(a: string, b: string): boolean {
   return a.trim().toLocaleLowerCase('pl') === b.trim().toLocaleLowerCase('pl')
 }

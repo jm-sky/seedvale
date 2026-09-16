@@ -11,6 +11,7 @@ import {
   nextDefaultSaveName,
   parseStoredSave,
   pickActiveSaveId,
+  resolvePauseActiveSaveName,
   SAVE_NAME_MAX_LENGTH,
   saveErrorMessage,
   sortSavesByRecency,
@@ -185,6 +186,13 @@ describe('saveSlots', () => {
     expect(pickActiveSaveId('missing', [a, b, c])).toBe('b')
     expect(pickActiveSaveId(null, [])).toBeNull()
     expect(sortSavesByRecency([a, b, c]).map((slot) => slot.id)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('pause identity prefers pending new-save name over existing slots (plan persistence-005)', () => {
+    const existing = toSaveSlotInfo({ id: 'slot_przygoda', name: 'Przygoda', data: loaded({ savedAt: 100 }) })
+    expect(resolvePauseActiveSaveName('Quest Adventure', null, [existing])).toBe('Quest Adventure')
+    expect(resolvePauseActiveSaveName(null, 'slot_przygoda', [existing])).toBe('Przygoda')
+    expect(resolvePauseActiveSaveName(null, null, [])).toBe('')
   })
 
   it('formats in-game day from elapsedDays', () => {
