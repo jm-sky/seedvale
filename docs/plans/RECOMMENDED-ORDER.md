@@ -151,31 +151,35 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-20. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+20. `items-player-040` — **Armor quality pricing and world availability**  
+  🟡 `M` · **Score:**  47  
+   → **unlocks:** 0/0
+
+21. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-21. `settlements-npcs-022` — **Household help and age-based work participation**  
+22. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-22. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+23. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-23. `items-player-014` — **Rope-pullable resource transport**  
+24. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `tools-005` — **Seedvale Character Preparation Panel**  
+25. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `items-player-039` — **UBC runtime pauldrons**  
+26. `items-player-039` — **UBC runtime pauldrons**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-26. `items-player-032` — **NPC player-storage resource and context rules**  
+27. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
@@ -336,6 +340,7 @@ graph TD
   items_player_037["items-player-037 — UBC runtime per-slot outfits"]
   items_player_038["items-player-038 — UBC jump land move lock"]
   items_player_039["items-player-039 — UBC runtime pauldrons"]
+  items_player_040["items-player-040 — Armor quality pricing and world availability"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -716,6 +721,7 @@ graph TD
   items_player_030 --> items_player_031
   items_player_030 --> items_player_037
   items_player_030 --> items_player_039
+  items_player_030 --> items_player_040
   items_player_031 --> quests_progression_035
   items_player_033 --> items_player_034
   items_player_033 --> items_player_035
@@ -873,6 +879,7 @@ graph TD
   settlements_009 --> settlements_013
   settlements_009 --> settlements_014
   settlements_011 --> settlements_014
+  settlements_012 --> items_player_040
   settlements_012 --> settlements_013
   settlements_012 --> settlements_014
   settlements_013 --> settlements_014
