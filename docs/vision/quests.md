@@ -68,6 +68,18 @@ For new quest writing, consider at least:
 - whether a promise, betrayal or important dispute should be reflected by later dialogue or quest availability;
 - whether no social consequence is the correct result for ordinary informational conversation.
 
+## Known deeds as quest entry points
+
+Persistent settlement-known deeds / reputation badges should eventually become another **world-grounded source of quest availability**.
+
+Repeated actions can establish a local reputation before any quest is authored around it. A player repeatedly treating injured villagers or livestock may become known locally as a healer; repeatedly cleaning animal corpses may establish a caretaker reputation; socially exposed grave disturbance may establish a negative local reputation. These facts should originate from real gameplay events and settlement social knowledge, not from completing an invisible quest checklist.
+
+A later quest may then use such a known deed as one prerequisite alongside existing relation, prior quest outcome, settlement reputation or renown. For example, a healer-known player could gain access to a difficult medical request that is unavailable to an unknown visitor. Negative known deeds may likewise open less reputable opportunities or close socially incompatible ones.
+
+The badge itself should not contain quest logic. Quest availability should read the authoritative persisted known-deed state through the existing prerequisite/evaluation mechanism. Do not create a second quest unlock registry or duplicate badge state inside `QuestManager`.
+
+This direction starts with `quests-progression-059-settlement-known-deeds-and-reputation-badges.md`; that plan establishes the underlying local history and reputation signals but deliberately does not add badge-gated quest content yet.
+
 ## Future evolution
 
 1. Expand world-problem quest sources.
@@ -76,6 +88,7 @@ For new quest writing, consider at least:
 4. Keep authored narrative/exploration content as a deliberate parallel source where simulation is not the right source.
 5. Improve discovery of opportunities without making the player the centre of simulation.
 6. Use socially consequential dialogue in suitable new quests so relationships and reputation affect conversations as well as quest availability.
+7. Let persistent settlement-known deeds unlock suitable authored or world-driven quest opportunities through the canonical availability system.
 
 ## Boundaries
 
