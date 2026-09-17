@@ -9,6 +9,7 @@
 **Subdomains:** `behavior` `dialogue` `memory`
 **Tags:** `player-follow-up` `proactive-dialogue` `world-knowledge` `approach-player`
 **Roadmap:** -
+**Model:** Opus, Sonnet
 
 ## Problem
 
