@@ -1,7 +1,8 @@
 /** Plan world-terrain-020 Stage D — presentation-only adventure cave props
- *  (wagon/cart, support, crate, lantern→torch light) materialized from Stage B
- *  content anchors when cave presentation is active. No gameplay authority, no
- *  collision, no terrain re-grounding.
+ *  (wagon/cart, support, lantern→torch light) materialized from Stage B
+ *  content anchors when cave presentation is active. Crate anchors are
+ *  systemic `WorldGeneratedContainers` (plan world-terrain-037), not props.
+ *  No gameplay authority, no collision, no terrain re-grounding.
  *
  * @domain world-terrain
  */
@@ -16,7 +17,6 @@ import {
 } from '../../settlement/houseLighting'
 import { VILLAGE_TORCH_HEIGHT, VILLAGE_TORCH_URL } from '../../settlement/propSpecs'
 import { loadPropOrFallback } from '../../settlement/propUtils'
-import { createCrate } from '../../settlement/settlementStructures'
 import { CART_MODEL_YAW_OFFSET, createCartProp, preloadCartProp } from '../cartProp'
 
 export const CAVE_ADVENTURE_PROPS_GROUP_NAME = 'cave-adventure-props'
@@ -26,13 +26,12 @@ export const CAVE_ADVENTURE_PROPS_USERDATA_KEY = 'caveAdventurePropsRoot'
 export const CAVE_PRESENTATION_PROP_ROLES = [
   'wagon',
   'support',
-  'crate',
   'lantern',
 ] as const
 
 export type CavePresentationPropRole = (typeof CAVE_PRESENTATION_PROP_ROLES)[number]
 
-export type CaveAdventurePropAssetKind = 'cart' | 'support' | 'crate' | 'lantern'
+export type CaveAdventurePropAssetKind = 'cart' | 'support' | 'lantern'
 
 export type CaveAdventurePropPlacement = {
   role: CavePresentationPropRole
@@ -47,11 +46,9 @@ export type CaveAdventurePropPlacement = {
 }
 
 const SUPPORT_URL = '/models/settlement/megakit/support.glb'
-const CRATE_URL = '/models/settlement/crate.glb'
 
 /** Longest-axis fit for megakit support posts in a cave chamber. */
 export const CAVE_SUPPORT_FIT_MAX = 2.2
-export const CAVE_CRATE_TARGET_HEIGHT = 0.6
 
 /** Max real PointLights per active adventure cave presentation (lantern anchors). */
 export const CAVE_ADVENTURE_LANTERN_LIGHT_LIMIT = 2
@@ -73,7 +70,8 @@ function yawOffsetForRole(role: CavePresentationPropRole): number {
 }
 
 /**
- * Keeps only presentation prop anchors — excludes systemic treasure chests.
+ * Keeps only presentation prop anchors — excludes systemic treasure chests
+ * and functional crates (plan world-terrain-037).
  *
  * @domain world-terrain
  */
@@ -129,7 +127,6 @@ function createProceduralSupport(): THREE.Group {
 export type CaveAdventurePropTemplates = {
   cart: THREE.Object3D
   support: THREE.Object3D
-  crate: THREE.Object3D
   torchPost: THREE.Object3D
 }
 
@@ -137,7 +134,7 @@ let templates: CaveAdventurePropTemplates | null = null
 let templatesLoad: Promise<void> | null = null
 
 /**
- * Loads support/crate/torch templates (cart via {@link preloadCartProp}).
+ * Loads support/torch templates (cart via {@link preloadCartProp}).
  * Idempotent; safe to call from world boot before synchronous cave activation.
  *
  * @domain world-terrain
@@ -150,18 +147,16 @@ export async function preloadCaveAdventurePropTemplates(): Promise<void> {
   }
   templatesLoad = (async () => {
     await preloadCartProp()
-    const [support, crate, torchPost] = await Promise.all([
+    const [support, torchPost] = await Promise.all([
       loadPropOrFallback(SUPPORT_URL, CAVE_SUPPORT_FIT_MAX, createProceduralSupport, 'max'),
-      loadPropOrFallback(CRATE_URL, CAVE_CRATE_TARGET_HEIGHT, () => createCrate(1)),
       loadPropOrFallback(VILLAGE_TORCH_URL, VILLAGE_TORCH_HEIGHT, createProceduralTorchPost),
     ])
     support.name = 'cave-adventure-prop-template:support'
-    crate.name = 'cave-adventure-prop-template:crate'
     torchPost.name = 'cave-adventure-prop-template:torchPost'
-    for (const root of [support, crate, torchPost]) markSharedGpu(root)
+    for (const root of [support, torchPost]) markSharedGpu(root)
     const cart = createCartProp()
     cart.name = 'cave-adventure-prop-template:cart'
-    templates = { cart, support, crate, torchPost }
+    templates = { cart, support, torchPost }
   })()
   await templatesLoad
 }
@@ -185,7 +180,6 @@ function templateForKind(
 ): THREE.Object3D {
   switch (kind) {
     case 'cart': return tpl.cart
-    case 'crate': return tpl.crate
     case 'lantern': return tpl.torchPost
     case 'support': return tpl.support
   }

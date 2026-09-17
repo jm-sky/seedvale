@@ -6,7 +6,11 @@ import { CONTAINER_DEFS, type ContainerKind, containerTotalWeight } from '../ite
 import { STORED_FOOD_DECAY } from '../items/foodFreshness'
 import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 import { placeOnGround } from '../settlement/props'
-import { createPlacedContainerProp, disposePlacedContainerProp } from './containerProp'
+import {
+  createPlacedContainerProp,
+  createPlacedCrateProp,
+  disposePlacedContainerProp,
+} from './containerProp'
 import {
   WORLD_SPATIAL_CONTEXT_SURFACE,
   type WorldSpatialContext,
@@ -70,6 +74,8 @@ function toRecord(entry: WorldGeneratedContainerEntry): SaveWorldGeneratedContai
   }
 }
 
+export type WorldGeneratedContainerVisual = 'chest' | 'crate'
+
 export type WorldGeneratedContainerSpec = {
   id: string
   kind: ContainerKind
@@ -89,6 +95,9 @@ export type WorldGeneratedContainerSpec = {
   /** Gameplay spatial identity (plan world-027). Required when `y` is set
    *  (cave-authored placement); omitted surface specs normalize to surface. */
   spatialContext?: WorldSpatialContext
+  /** Presentation-only mesh choice (plan world-terrain-037). Defaults to
+   *  chest; not persisted — the stable world spec recreates the visual. */
+  visual?: WorldGeneratedContainerVisual
 }
 
 function resolveSpecSpatialContext(spec: WorldGeneratedContainerSpec): WorldSpatialContext {
@@ -127,7 +136,7 @@ export function createWorldGeneratedContainers(
         def.capacityUnits,
         STORED_FOOD_DECAY,
       )
-    const mesh = createPlacedContainerProp()
+    const mesh = spec.visual === 'crate' ? createPlacedCrateProp() : createPlacedContainerProp()
     if (spec.y !== undefined) {
       const ox = mesh.position.x
       const oy = mesh.position.y

@@ -88,3 +88,39 @@ describe('worldGeneratedContainers explicit-Y placement (plan world-terrain-020 
     expect(containers.containerCounts('cave:x:final-treasure')).toEqual({})
   })
 })
+
+describe('worldGeneratedContainers visual discriminator (plan world-terrain-037)', () => {
+  it('defaults to the procedural chest mesh when visual is omitted', () => {
+    const containers = createWorldGeneratedContainers(
+      new Scene(),
+      () => 0,
+      [{ id: 'chest-default', kind: 'chest', x: 0, z: 0, yaw: 0, initialCounts: {} }],
+    )
+    const mesh = containers.find('chest-default')!.mesh
+    // Chest prop has body + lid + straps + clasp (5 meshes).
+    expect(mesh.children.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('uses the crate mesh when visual is crate', () => {
+    const containers = createWorldGeneratedContainers(
+      new Scene(),
+      () => { throw new Error('surface sampleHeight must not be called for an explicit-Y spec') },
+      [{
+        id: 'cave:x:crate:0',
+        kind: 'chest',
+        visual: 'crate',
+        x: 5,
+        y: -4,
+        z: 6,
+        yaw: 0.2,
+        initialCounts: { rope: 1 },
+        spatialContext: { kind: 'cave', caveId: 'cave:x' },
+      }],
+    )
+    const entry = containers.find('cave:x:crate:0')!
+    expect(entry.mesh.position.y).toBe(-4)
+    // Procedural crate is a single box child.
+    expect(entry.mesh.children).toHaveLength(1)
+    expect(containers.containerCounts('cave:x:crate:0')).toEqual({ rope: 1 })
+  })
+})

@@ -1,7 +1,7 @@
 # Plan: Functional adventure cave crates
 
 **Created:** 2026-09-16
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~world-terrain-020~~, ~~world-terrain-028~~

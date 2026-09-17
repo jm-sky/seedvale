@@ -47,6 +47,22 @@ export function createPlacedContainerProp(): THREE.Group {
   return group
 }
 
+/** Procedural crate visual for world-generated containers
+ *  (plan world-terrain-037). Matches `createCrate` fallback dimensions —
+ *  presentation-only; gameplay still uses `ContainerKind` chest/casket. */
+export const CRATE_SIZE = 0.6
+
+export function createPlacedCrateProp(): THREE.Group {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8a6a3e, flatShading: true, roughness: 0.9 })
+  const box = new THREE.Mesh(new THREE.BoxGeometry(CRATE_SIZE, CRATE_SIZE, CRATE_SIZE), mat)
+  box.position.y = CRATE_SIZE * 0.5
+  box.castShadow = true
+  box.receiveShadow = true
+  group.add(box)
+  return group
+}
+
 export function disposePlacedContainerProp(prop: THREE.Object3D): void {
   prop.removeFromParent()
   disposeObject3D(prop)

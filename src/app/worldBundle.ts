@@ -149,6 +149,7 @@ import {
 } from '../world/caves/caveAdventureContentPolicy'
 import { preloadCaveAdventurePropTemplates } from '../world/caves/caveAdventureProps'
 import { CaveAuthoredAnchorClaims } from '../world/caves/caveAuthoredAnchorClaims'
+import { generateCaveCrateLoot } from '../world/caves/caveCrateLoot'
 import {
   caveWorldgenFingerprint,
   loadCaveWorldgenSnapshot,
@@ -312,6 +313,37 @@ export function caveTreasureContainerSpecs(
       z: anchor.z,
       yaw: anchor.yaw,
       initialCounts: generateTreasureLoot(worldSeed, anchor.id, { profile }),
+      spatialContext: { kind: 'cave', caveId: anchor.caveId },
+    })
+  }
+  return specs
+}
+
+/**
+ * Materializes adventure-cave `crate` anchors as low-value underground
+ * containers (plan world-terrain-037). Independent of
+ * `CaveAdventureContentPolicy` — crates are environmental supplies, not
+ * treasure/story claims. Uses the anchor's exact x/y/z/yaw and deterministic
+ * cheap loot from {@link generateCaveCrateLoot}.
+ *
+ * @domain world-terrain
+ */
+export function caveCrateContainerSpecs(
+  anchors: readonly CaveContentAnchor[],
+  worldSeed: number,
+): WorldGeneratedContainerSpec[] {
+  const specs: WorldGeneratedContainerSpec[] = []
+  for (const anchor of anchors) {
+    if (anchor.role !== 'crate') continue
+    specs.push({
+      id: anchor.id,
+      kind: 'chest',
+      visual: 'crate',
+      x: anchor.x,
+      y: anchor.y,
+      z: anchor.z,
+      yaw: anchor.yaw,
+      initialCounts: generateCaveCrateLoot(worldSeed, anchor.id),
       spatialContext: { kind: 'cave', caveId: anchor.caveId },
     })
   }
@@ -1879,6 +1911,7 @@ async function buildWorldSystems(
       initialCounts: generateTreasureLoot(config.seed, site.id),
     })),
     ...caveTreasureContainerSpecs(caves.contentAnchors(), config.seed, caveAdventureContentPolicy),
+    ...caveCrateContainerSpecs(caves.contentAnchors(), config.seed),
     ...(treasureMapBearCaveBinding && bearCaveFinalAnchor && !bearCaveSourceExtracted
       ? [treasureMapBearCaveSourceContainerSpec(treasureMapBearCaveBinding, bearCaveFinalAnchor)]
       : []),
