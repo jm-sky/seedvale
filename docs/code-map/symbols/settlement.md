@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 450
-- `CreateSettlementDeps` — type — line 278
-- `Settlement` — type — line 152
-- `settlementSpawnPoint` — function — line 266
+- `createSettlement` — function — line 457
+- `CreateSettlementDeps` — type — line 279
+- `Settlement` — type — line 153
+- `settlementSpawnPoint` — function — line 267
 
 ## `settlement/decorProps.ts`
 
@@ -448,6 +448,23 @@ Generated from exported TypeScript symbols.
 - `selectLostTreasureChroniclesSpecialistSettlement` — function — line 95
   - domain: settlements-npcs
 
+## `settlement/merchantJourney.ts`
+
+- `advanceMerchantJourneyToVisiting` — function — line 65
+  - domain: settlements-npcs
+- `cloneMerchantJourney` — function — line 33
+- `isNpcAwayOnMerchantJourney` — function — line 53
+- `MerchantJourneyHost` — type — line 43
+- `MerchantJourneyPhase` — type — line 16
+  - domain: settlements-npcs
+- `MerchantJourneyState` — type — line 18
+- `MerchantReturnPoints` — type — line 85
+- `resolveMerchantReturnArrival` — function — line 134
+  - domain: settlements-npcs
+- `TRAVELLING_MERCHANT_VISIT_DAYS` — const — line 31
+- `tryBeginMerchantReturn` — function — line 100
+  - domain: settlements-npcs
+
 ## `settlement/merchantTrade.ts`
 
 - `generateMerchantAssortment` — function — line 470
@@ -496,13 +513,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcIdentity.ts`
 
-- `flattenedSettlementMembers` — function — line 22
+- `flattenedSettlementMembers` — function — line 23
   - domain: settlements-npcs
-- `SettlementNpcDescriptor` — type — line 29
-- `settlementNpcDescriptors` — function — line 41
+- `resolveSettlementNpcHomeDescriptor` — function — line 88
   - domain: settlements-npcs
-- `settlementNpcId` — function — line 12
+- `settlementMemberPhysicalSeed` — function — line 55
+- `SettlementNpcDescriptor` — type — line 30
+- `settlementNpcDescriptors` — function — line 42
   - domain: settlements-npcs
+- `SettlementNpcHomeDescriptor` — type — line 71
+- `settlementNpcId` — function — line 13
+  - domain: settlements-npcs
+- `settlementNpcMemberIndex` — function — line 62
+- `TravellingVisitorSpawn` — type — line 116
 
 ## `settlement/npcPhysicalProfile.ts`
 
@@ -569,17 +592,17 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 258
-- `createNpcStateRegistry` — function — line 306
-- `MAX_HP` — const — line 49
-- `MAX_STAMINA` — const — line 50
-- `NpcAuthoritativeState` — type — line 87
+- `createNpcAuthoritativeState` — function — line 268
+- `createNpcStateRegistry` — function — line 317
+- `MAX_HP` — const — line 50
+- `MAX_STAMINA` — const — line 51
+- `NpcAuthoritativeState` — type — line 88
   - domain: settlements-npcs
-- `NpcGraveVisitRecord` — type — line 41
-- `NpcId` — type — line 37
-- `NpcPhysicalMaxima` — type — line 244
-- `NpcStateRegistry` — type — line 292
-- `NpcStateSnapshot` — type — line 174
+- `NpcGraveVisitRecord` — type — line 42
+- `NpcId` — type — line 38
+- `NpcPhysicalMaxima` — type — line 254
+- `NpcStateRegistry` — type — line 303
+- `NpcStateSnapshot` — type — line 180
 
 ## `settlement/pathDryness.ts`
 
@@ -1045,13 +1068,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 320
+- `createSettlementsManager` — function — line 327
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 126
+- `SettlementsManager` — type — line 133
 
 ## `settlement/settlementStructures.ts`
 

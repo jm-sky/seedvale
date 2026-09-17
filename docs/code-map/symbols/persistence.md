@@ -19,10 +19,10 @@ Generated from exported TypeScript symbols.
 ## `persistence/saveData.ts`
 
 - `CURRENT_SAVE_VERSION` — const — line 683
-- `isSaveData` — function — line 2528
-- `loadSaveData` — function — line 2619
-- `loadStoredSave` — function — line 3932
-- `migrateStoredSave` — function — line 3895
+- `isSaveData` — function — line 2546
+- `loadSaveData` — function — line 2637
+- `loadStoredSave` — function — line 3950
+- `migrateStoredSave` — function — line 3913
 - `SaveBadges` — type — line 191
 - `SaveBedroll` — type — line 511
 - `SaveCarriedContainer` — type — line 347
@@ -49,7 +49,7 @@ Generated from exported TypeScript symbols.
 - `SaveLocationKnowledge` — type — line 170
 - `SaveMap` — type — line 172
 - `SaveMeasurableWorkContractScope` — type — line 614
-- `SaveMigration` — type — line 2633
+- `SaveMigration` — type — line 2651
 - `SavePalisadeContractTarget` — type — line 602
 - `SavePalisadeSegment` — type — line 472
 - `SavePlacedContainer` — type — line 324
@@ -90,7 +90,7 @@ Generated from exported TypeScript symbols.
 - `SaveWorkContractScope` — type — line 650
 - `SaveWorkContractState` — type — line 563
 - `SaveWorldFlags` — type — line 148
-- `StoredSaveResult` — type — line 3921
+- `StoredSaveResult` — type — line 3939
 
 ## `persistence/saveDb.ts`
 

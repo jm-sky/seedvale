@@ -4263,6 +4263,7 @@ Generated from TypeScript imports.
 - `ai/npcTravel.ts`
 - `economy/npcWork.ts`
 - `economy/oreTransportDemand.ts`
+- `settlement/merchantJourney.ts`
 - `settlement/npcState.ts`
 - `world/createTransportOrders.ts`
 - `world/transportOffscreen.ts`

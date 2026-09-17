@@ -71,13 +71,14 @@ import { createHouseDoorController } from './houseDoors'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
 import { disposeLivestock, type LivestockPersistence, spawnLivestock, tickSettlementLivestock } from './livestock'
+import { isNpcAwayOnMerchantJourney } from './merchantJourney'
 import {
   generateMerchantAssortment,
   resolveMerchantProfiles,
   resolvePremiumMerchantAssignment,
   seedMerchantStockIfNeeded,
 } from './merchantTrade'
-import { settlementNpcId } from './npcIdentity'
+import { settlementMemberPhysicalSeed, settlementNpcId, type TravellingVisitorSpawn } from './npcIdentity'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
 import {
   finalizeExpiredNpcCorpse,
@@ -431,6 +432,12 @@ export type CreateSettlementDeps = {
   npcGraves?: import('../world/npcGraves').NpcGraves
   /** Stateless cave/world spatial queries for NPC movement (plan npc-027). */
   npcWorldMovement?: NpcWorldMovementQueries
+  /** Travelling NPCs (plan settlements-npcs-038) currently logically present
+   *  at this (foreign) settlement — one live `NpcAgent` is materialized per
+   *  entry, home-identity-only, reusing the existing `npcStateRegistry`
+   *  object. `SettlementsManager`-owned; absent/empty for every settlement
+   *  with no current visitor. */
+  resolveTravellingVisitors?: (destinationSettlementId: string) => readonly TravellingVisitorSpawn[]
 }
 
 function paddockWaterHousehold(
@@ -498,6 +505,7 @@ export async function createSettlement(
     standingTorches,
     residentialBuildings,
     npcGraves,
+    resolveTravellingVisitors,
   } = deps
 
   // Bridge-aware ground/water composed once, used only where NPC/livestock
@@ -1041,7 +1049,7 @@ export async function createSettlement(
       // isn't part of `NpcAuthoritativeState`, see `npcState.ts`) — the same
       // stable `physicalSeed` formula reconstructs the same profile every
       // time, so this doesn't reroll an existing NPC's Strength either.
-      const physicalSeed = settlementSeed ^ Math.imul(i + 1, 0x51ed270b) ^ 0x50485953
+      const physicalSeed = settlementMemberPhysicalSeed(settlementSeed, i)
       const physicalProfile = generatePhysicalProfile(physicalSeed, member.character.gender, member.age)
       // Hydrates from the same HP/needs/stamina/vigor object every time this
       // id has been seen before (agent dispose/recreate on settlement
@@ -1070,6 +1078,13 @@ export async function createSettlement(
       }
       if (npcState.postDeath) finalizeExpiredNpcCorpse(npcState.postDeath, nowDays, droppedItems)
       if (shouldSkipNpcCorpsePresentation(npcState, nowDays)) return null
+      // Merchant journey away-suppression (plan settlements-npcs-038) —
+      // presentation-only: family/household/profession identity are
+      // untouched, only this authored home `NpcAgent` is skipped while the
+      // real Trader is outbound/visiting/returning elsewhere. Must exist
+      // before foreign visitor materialization below to keep "at most one
+      // live agent" true when home and destination are loaded together.
+      if (isNpcAwayOnMerchantJourney(npcState)) return null
       const agent = await NpcAgent.create({
         sampleHeight: surfaceSampleHeight,
         waterLevel,
@@ -1128,6 +1143,50 @@ export async function createSettlement(
   )).filter((agent): agent is NpcAgent => agent != null)
   } finally {
     bootMarkEnd('npcCreation')
+  }
+
+  // Generic travelling-NPC visitor materialization (plan settlements-npcs-038
+  // §5) — exactly one live `NpcAgent` per currently-visiting travelling NPC,
+  // home-identity-only (member/family from the cached home `SettlementDef`,
+  // authoritative state from the shared `npcStateRegistry`), anchored at this
+  // destination's own market stall so no new merchant stall is created.
+  // `workplace: null` keeps it out of this settlement's own profession work
+  // the same way an ordinary resident with no eligible workplace already is.
+  const visitorSpawns = resolveTravellingVisitors?.(def.id) ?? []
+  if (visitorSpawns.length > 0) {
+    const anchorPosition = workplaceFor(def.id, 'trader', landmarks, 0, 0, 0)?.position
+      ?? new Vector3(site.x, site.y, site.z)
+    const visitorAgents = (await Promise.all(visitorSpawns.map(async (visitorSpawn) => {
+      const physicalProfile = generatePhysicalProfile(
+        visitorSpawn.physicalSeed,
+        visitorSpawn.member.character.gender,
+        visitorSpawn.member.age,
+      )
+      const npcState = npcStateRegistry.getOrCreate(visitorSpawn.npcId, 0, physicalProfile)
+      if (npcState.postDeath) finalizeExpiredNpcCorpse(npcState.postDeath, currentNowDays, droppedItems)
+      if (shouldSkipNpcCorpsePresentation(npcState, currentNowDays)) return null
+      const agent = await NpcAgent.create({
+        sampleHeight: surfaceSampleHeight,
+        waterLevel,
+        collidersNear,
+        landmarks,
+        home: { id: `${def.id}:visitor:${visitorSpawn.npcId}`, type: 'home', position: anchorPosition },
+        workplace: null,
+        socialPlace,
+        treeIndex: 0,
+        needOffset: 0,
+        member: visitorSpawn.member,
+        physicalProfile,
+        familyMembers: visitorSpawn.familyMembers,
+        playAt,
+        npcId: visitorSpawn.npcId,
+        npcState,
+        household: visitorSpawn.household ?? null,
+      })
+      if (isSystemEnabled('npcs')) scene.add(agent.mesh)
+      return agent
+    }))).filter((agent): agent is NpcAgent => agent != null)
+    agents.push(...visitorAgents)
   }
 
   const spawn = settlementSpawnPoint(def, sampleHeight)

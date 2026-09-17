@@ -4912,6 +4912,15 @@ export class NpcAgent {
           this.npcState.travel = null
         }
       },
+      beginMerchantJourney: (homeSettlementId, destinationSettlementId, orderId) => {
+        if (this.npcState.merchantJourney) return
+        this.npcState.merchantJourney = {
+          homeSettlementId,
+          destinationSettlementId,
+          phase: 'outbound',
+          transportOrderId: orderId,
+        }
+      },
       strength: this.effectiveMeleeStrength(),
       nowDays: () => this.worldNowDays,
       shepherdFlock: this.shepherdFlock,

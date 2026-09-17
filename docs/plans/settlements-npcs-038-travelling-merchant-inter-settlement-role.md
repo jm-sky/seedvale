@@ -1,7 +1,7 @@
 # Plan: Travelling Merchant inter-settlement role
 
 **Created:** 2026-09-15
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** ~~settlements-npcs-037~~, ~~settlements-npcs-028~~, ~~settlements-npcs-033~~

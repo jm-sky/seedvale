@@ -1,7 +1,53 @@
 # Implementation Notes: settlements-npcs-038 — Travelling Merchant inter-settlement role
 
 **Plan:** `settlements-npcs-038-travelling-merchant-inter-settlement-role.md`  
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+
+## Implementation status (all 3 stages implemented)
+
+- `src/settlement/merchantJourney.ts` (new) — `MerchantJourneyState`, phase
+  transitions (`advanceMerchantJourneyToVisiting`, `tryBeginMerchantReturn`,
+  `resolveMerchantReturnArrival`), `isNpcAwayOnMerchantJourney`,
+  `TRAVELLING_MERCHANT_VISIT_DAYS`.
+- `NpcAuthoritativeState.merchantJourney` + `NpcStateSnapshot`/save
+  validation (`src/settlement/npcState.ts`, `src/persistence/saveData.ts`) —
+  sparse optional field, legacy saves restore with no journey.
+- `NpcTravelPurpose` extended with `{ kind: 'merchant-return', homeSettlementId }`
+  (`src/ai/npcTravel.ts`), including clone/validation support.
+- Home away-suppression + generic foreign-visitor materialization in
+  `src/settlement/createSettlement.ts`, driven by
+  `SettlementsManager.resolveTravellingVisitors()` (resolves home identity
+  from the cached `SettlementDef` via `defFor`/`knownSettlements`, never by
+  loading home) — one live `NpcAgent` per currently-`visiting` merchant,
+  anchored at the destination's own trader stall, `workplace: null` so it
+  never performs the destination's Trader work. New identity helpers in
+  `src/settlement/npcIdentity.ts`: `resolveSettlementNpcHomeDescriptor`,
+  `settlementNpcMemberIndex`, `settlementMemberPhysicalSeed`.
+- `planTraderInterSettlementExport()` (`src/ai/npcProfessionWork.ts`) starts
+  the journey via a new `ctx.beginMerchantJourney` hook, wired in
+  `src/ai/NpcAgent.ts` next to `bindTransportTravel`.
+- `resolveTransportTravelArrivals()` (`src/world/transportTravelArrival.ts`)
+  calls `advanceMerchantJourneyToVisiting()` after a successful matching
+  unload.
+- `SettlementsManager.resolveMerchantJourneyCheckpoints()` (bounded
+  `npcStates.forEach`, same envelope as the existing transport checkpoint)
+  drives `visiting` → `returning` on visit expiry and `returning` → journey
+  cleared on genuine home arrival; wired into both `recheck()`'s existing
+  checkpoint pass and `resolveTimeSkip()`.
+- Merchant trade specialization, current-location pricing and home-bound
+  horse gating (plan §9/§13/§14/§16) needed **no code change**: `role ===
+  'trader'` merchant status (settlements-012/040/042) and the home-only
+  horse offer (`settlement?.isHome` check) already key off
+  `findSettlementForNpc(npc)`, which resolves correctly to the destination
+  once the visitor is a normal member of its `Settlement.npcs`.
+- Tests: `src/settlement/merchantJourney.test.ts` (new),
+  `src/settlement/npcState.test.ts` (`merchantJourney` round-trip block),
+  `src/settlement/npcIdentity.test.ts` (new descriptor/seed helpers). Full
+  suite (`pnpm vitest run`) and `tsc --noEmit` pass.
+- Not covered by automated tests (needs manual browser verification): the
+  live foreign-visitor materialization end-to-end in a real running world
+  (mesh/animation/trade UI at the destination), and the full A→B→A gameplay
+  loop.
 
 ## 1. Current implementation baseline
 
