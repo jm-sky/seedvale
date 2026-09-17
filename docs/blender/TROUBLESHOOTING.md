@@ -37,6 +37,31 @@ Measure evaluated/export geometry first. Check body, hair, clothing, accessories
 
 Do not choose a generic decimation ratio before identifying the expensive components.
 
+## UBC modular outfit/accessory exported without skinning
+
+Observed 2026-09-17 while preparing custom Fantasy outfit parts in Blender 5.2:
+
+- `male_blacksmith_outfit.glb` was about 63 MB;
+- `male_leather_bracers.glb` was about 28 MB;
+- `male_steel_bracers.glb` was about 60 MB;
+- the Blender objects visibly had an `Armature` modifier, but exported meshes inspected with `gltf-transform inspect` did **not** contain `JOINTS_0` or `WEIGHTS_0`;
+- therefore the GLBs were not usable by the current skinned UBC compose/runtime accessory path (`bindAccessoryToPlayerSkeleton` would skip them).
+
+Large source size was mostly embedded 4K PNG textures, not mesh geometry. Example blacksmith source contained Peasant/Ranger 4096x4096 BaseColor/Normal/ORM textures; the mesh payload itself was comparatively small. Runtime optimization (`resize 512`, WebP, `gltfpack -cc -kn`) is expected to reduce texture size later, but it does not repair missing skinning.
+
+Before recreating these assets, verify all of the following in Blender/export:
+
+1. Mesh has the intended `Armature` modifier and its Object points to the UBC armature.
+2. Mesh retains vertex groups/weights matching skeleton bone names.
+3. Armature is included in the glTF export together with the selected mesh parts.
+4. glTF export has Skinning enabled and does not bake away the rig.
+5. After export, `gltf-transform inspect <file.glb>` shows `JOINTS_0` and `WEIGHTS_0` on skinned meshes and a skin in the asset.
+6. Only then feed the source into the existing UBC compose/optimization pipeline.
+
+The failed large GLBs were intentionally discarded and should not be treated as valid source/runtime assets.
+
+**Status:** researched / unresolved. Export fix not yet verified.
+
 ## GLB contains unwanted objects
 
 Check the export collection and explicit glTF export selection/settings. Do not depend on accidental viewport selection or hidden state.
