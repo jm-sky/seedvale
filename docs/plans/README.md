@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-044-shoulder-and-forearm-equipment-slots.md`                  | 🟡 | M      | ~~items-player-039~~                                                                                                                                                                                                                                                                       | -                                       |
 | 💡 `settlements-018-pasture-paddock-fence-road-clearance-and-collision.md`     | 🔴 | S      | ~~settlements-009~~, ~~settlements-013~~, ~~settlements-015~~                                                                                                                                                                                                                              | -                                       |
 | 💡 `npc-046-settlement-threat-response-and-livestock-safety.md`                | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| 💡 `tools-016-heavy-settlement-performance-benchmark.md`                       | 🔴 | S      | ~~tools-001~~                                                                                                                                                                                                                                                                              | -                                       |
 
 ---
 
@@ -244,7 +245,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - quests-progression: `056`
 - settlements: `019`
 - settlements-npcs: `043`
-- tools: `016`
+- tools: `017`
 - ui-input: `025`
 - world: `031`
 - world-terrain: `038`
