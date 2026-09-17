@@ -1,7 +1,7 @@
 # Plan: Dismount Follow/Stay anchor semantics
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-17 — browser checks are User-owned)
 **Type:** bug
 **Priority:** high · **Effort:** S
 **Depends on:** none

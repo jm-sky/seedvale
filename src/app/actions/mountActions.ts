@@ -51,6 +51,13 @@ export type ForeignPropertyMountHooks = {
   endMountedUse: (incident: MountedPropertyIncident) => void
 }
 
+/** @domain fauna — conscious player dismount may refresh Stay via livestock ownership
+ *  (plan fauna-035). Mount actions only report the lifecycle event; the injected
+ *  callback owns control mutation + registry upsert. */
+export type OwnedMountHooks = {
+  refreshStayOnPlayerDismount: (animal: AnimalAgent) => void
+}
+
 export function createMountActions(
   ctx: PlayerActionContext,
   /** Looks up a live `AnimalAgent` by its stable `animalId` across every
@@ -58,6 +65,7 @@ export function createMountActions(
    *  system never scans the world itself beyond this one indirection. */
   resolveAnimal: (animalId: string) => AnimalAgent | null,
   foreignProperty?: ForeignPropertyMountHooks,
+  ownedMount?: OwnedMountHooks,
 ): MountActions {
   const { player, toast, bundle, keyboard, mouseLook, dayNight } = ctx
 
@@ -93,6 +101,16 @@ export function createMountActions(
     }
     const last = mount
     last.setMounted(false)
+    // Stay refresh must run while the horse still sits at its ridden position
+    // (before the player is offset beside it). Only conscious player dismount
+    // redefines "stay here" — fall/death/unavailable/downed keep the old anchor.
+    if (
+      reason === 'player'
+      && last.isPlayerOwned()
+      && last.getOwnedControlMode() === 'stay'
+    ) {
+      ownedMount?.refreshStayOnPlayerDismount(last)
+    }
     mount = null
     player.setMounted(false)
     const yaw = last.mesh.rotation.y

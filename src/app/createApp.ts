@@ -2218,6 +2218,12 @@ export async function createApp(
     beginMountedUse: foreignPropertyUse.beginMountedUse,
     updateMountedUse: foreignPropertyUse.updateMountedUse,
     endMountedUse: foreignPropertyUse.endMountedUse,
+  }, {
+    // Plan fauna-035: conscious dismount redefines Stay as "here" through the
+    // same owned-control seam contextual Follow/Stay actions already use.
+    refreshStayOnPlayerDismount: (animal) => {
+      bundle.settlementsManager.setOwnedAnimalControl(animal.animalId, 'stay')
+    },
   })
   if (initialSave?.player.mountedAnimalId) {
     mount.restoreMountedAnimalId(initialSave.player.mountedAnimalId)

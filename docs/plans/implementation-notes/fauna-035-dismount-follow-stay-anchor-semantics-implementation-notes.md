@@ -122,6 +122,17 @@ Likely unchanged unless implementation reveals a missing seam:
 - `src/settlement/SettlementsManager.ts` — existing public API is sufficient.
 - save schema — no changes.
 
+## Landed (2026-09-17)
+
+Implemented as designed:
+
+- `OwnedMountHooks.refreshStayOnPlayerDismount` injected into `createMountActions`.
+- `exit('player')` gates on `isPlayerOwned()` + `getOwnedControlMode() === 'stay'`, then calls the hook after `setMounted(false)` and before player offset placement.
+- `createApp.ts` wires the hook to `bundle.settlementsManager.setOwnedAnimalControl(animalId, 'stay')`.
+- Unit coverage in `src/app/actions/mountActions.test.ts` (Stay→B, Follow no-op, fall no-op, non-owned no-op).
+
+No changes were required in `AnimalAgent`, `ownedAnimalControl`, livestock, or the save schema.
+
 ## Guardrails
 
 - Current code wins if signatures have changed since these notes.
