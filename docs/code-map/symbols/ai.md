@@ -579,21 +579,32 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcVoiceLines.ts`
 
-- `FRIENDLY_TALK_SOUND_VOLUME` — const — line 145
-- `NPC_CONFIRMATION_SOUND_URLS` — const — line 76
-- `NPC_FAREWELL_SOUND_URLS` — const — line 72
-- `NPC_FRIENDLY_TALK_SOUND_URLS` — const — line 139
-- `NPC_GREETING_SOUND_URLS` — const — line 68
-- `NPC_HMM_VOICE_URLS` — const — line 64
-- `NPC_QUEST_COMPLETE_SOUND_URLS` — const — line 114
-- `NPC_REACTION_SOUND_URLS` — const — line 103
-- `NpcVoiceActor` — type — line 18
-- `pickNpcConfirmationSound` — function — line 97
-- `pickNpcFarewellSound` — function — line 91
-- `pickNpcFriendlyTalkSound` — function — line 147
-- `pickNpcGreetingSound` — function — line 85
-- `REACTION_SOUND_VOLUME` — const — line 121
-- `voiceActorForIndex` — function — line 25
+- `buildNpcVoiceLookupKeys` — function — line 235
+- `FRIENDLY_TALK_SOUND_VOLUME` — const — line 148
+- `NPC_CONFIRMATION_SOUND_URLS` — const — line 79
+- `NPC_FAREWELL_SOUND_URLS` — const — line 75
+- `NPC_FRIENDLY_TALK_SOUND_URLS` — const — line 142
+- `NPC_GREETING_SOUND_URLS` — const — line 71
+- `NPC_HMM_VOICE_URLS` — const — line 67
+- `NPC_QUEST_COMPLETE_SOUND_URLS` — const — line 117
+- `NPC_REACTION_SOUND_URLS` — const — line 106
+- `NpcVoiceActor` — type — line 21
+- `NpcVoiceAgeBand` — type — line 167
+  - domain: npc
+- `NpcVoiceResolveInput` — type — line 170
+- `NpcVoiceSemanticIntent` — type — line 156
+- `pickNpcConfirmationSound` — function — line 100
+- `pickNpcFarewellSound` — function — line 94
+- `pickNpcFriendlyTalkSound` — function — line 150
+- `pickNpcGreetingSound` — function — line 88
+- `REACTION_SOUND_VOLUME` — const — line 124
+- `resolveNpcVoiceLine` — function — line 272
+  - domain: npc
+- `resolveNpcVoiceLineWithManifest` — function — line 280
+- `voiceActorForIndex` — function — line 28
+- `voiceAgeBandForAge` — function — line 184
+  - domain: npc
+- `voiceScopeForRole` — function — line 194
 
 ## `ai/npcWorkContract.ts`
 

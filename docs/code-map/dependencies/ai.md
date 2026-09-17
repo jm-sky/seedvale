@@ -1258,15 +1258,23 @@ Generated from TypeScript imports.
 - `ai/npcVigor.test.ts`
 - `settlement/npcState.ts`
 
+## `ai/npcVoiceLines.test.ts`
+
+**Imports**
+
+- `ai/npcVoiceLines.ts`
+
 ## `ai/npcVoiceLines.ts`
 
 **Imports**
 
 - `ai/characters.ts`
+- `settlement/npcPhysicalProfile.ts`
 
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcVoiceLines.test.ts`
 - `quests/QuestManager.ts`
 - `ui-vue/store.ts`
 

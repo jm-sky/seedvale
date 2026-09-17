@@ -1153,6 +1153,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcStamina.test.ts`
+- `ai/npcVoiceLines.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcPhysicalProfile.test.ts`
 - `shared/effectivePhysicalAttributes.ts`
