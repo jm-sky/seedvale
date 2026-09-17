@@ -43,8 +43,6 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
-2. `world-terrain-037` — **Functional adventure cave crates**  
-   🟡 `S` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -157,20 +155,20 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-21. `world-terrain-037` — **Functional adventure cave crates**  
-  🟡 `S` · **Score:**  31  
-   → **unlocks:** 0/0
-
-22. `npc-043` — **Dialogue language migration to English**  
+21. `npc-043` — **Dialogue language migration to English**  
   🔴 `L` · **Score:**  28  
    → **unlocks:** 0/0
 
-23. `items-player-014` — **Rope-pullable resource transport**  
+22. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `tools-005` — **Seedvale Character Preparation Panel**  
+23. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+24. `items-player-044` — **Shoulder and forearm equipment slots**  
+  🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
 25. `items-player-032` — **NPC player-storage resource and context rules**  
@@ -343,6 +341,7 @@ graph TD
   items_player_041["items-player-041 — Asset Browser UBC accessory overlay"]
   items_player_042["items-player-042 — Foreign property interaction warning and consequences"]
   items_player_043["items-player-043 — Renewable medicinal herbs and skill-aware foraging"]
+  items_player_044["items-player-044 — Shoulder and forearm equipment slots"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -385,6 +384,7 @@ graph TD
   npc_041["npc-041 — Chatterbox NPC voice proof of concept"]
   npc_042["npc-042 — NPC voice and dialogue catalog infrastructure"]
   npc_043["npc-043 — Dialogue language migration to English"]
+  npc_044["npc-044 — NPC hierarchical voice resolver"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -755,6 +755,7 @@ graph TD
   items_player_036 --> items_player_039
   items_player_036 --> npc_039
   items_player_039 --> items_player_041
+  items_player_039 --> items_player_044
   items_player_040 --> settlements_npcs_042
   npc_001 --> npc_019
   npc_002 --> npc_025
