@@ -80,8 +80,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-016-heavy-settlement-performance-benchmark.md`                       | 🔴 | S      | ~~tools-001~~                                                                                                                                                                                                                                                                              | -                                       |
 | 💡 `fauna-035-dismount-follow-stay-anchor-semantics.md`                        | 🔴 | S      | -                                                                                                                                                                                                                                                                                          | horse-and-riding                        |
 | 💡 `fauna-036-interruptible-carcass-feeding.md`                                | 🔴 | S      | ~~fauna-005~~, ~~fauna-017~~                                                                                                                                                                                                                                                               | -                                       |
-| ◼️ `items-player-045-medicine-targeted-treatment-for-player-npcs-and-livestock.md` | 🟡 | L      | ~~items-player-021~~, ~~npc-025~~, ~~items-player-043~~                                                                                                                                                                                                                                    | physical-attributes-health-and-medicine |
+| 💡 `items-player-045-medicine-targeted-treatment-for-player-npcs-and-livestock.md` | 🟡 | M      | ~~items-player-021~~, ~~npc-025~~, ~~items-player-043~~                                                                                                                                                                                                                                    | physical-attributes-health-and-medicine |
 | 💡 `quests-progression-056-dungeon-bandit-story-item-integrity-and-recovery.md` | 🔴 | M      | ~~quests-progression-026~~, ~~quests-progression-035~~                                                                                                                                                                                                                                     | -                                       |
+| 💡 `items-player-046-medicine-targeted-treatment-interaction.md`               | 🟡 | M      | items-player-045, ~~items-player-021~~, ~~items-player-043~~                                                                                                                                                                                                                               | physical-attributes-health-and-medicine |
 
 ---
 
@@ -243,7 +244,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `037`
-- items-player: `046`
+- items-player: `047`
 - npc: `047`
 - persistence: `006`
 - quests-progression: `057`
