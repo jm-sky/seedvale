@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1111
+- `AnimalAgent` — class — line 1122
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 571
-- `AnimalAgentDeps` — type — line 915
-- `AnimalSaveState` — type — line 699
-- `AnimalUpdateContext` — type — line 979
-- `BURY_DURATION_SEC` — const — line 383
-- `canPredatorPursueIntoVillage` — function — line 773
-- `FAUNA_SHADOW_DISTANCE` — const — line 352
-- `FaunaAiBranch` — type — line 508
-- `FaunaNavRescueDebugInfo` — type — line 555
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 443
-- `FrenzyWolfCandidate` — type — line 850
-- `HARVEST_MEAT_DURATION_SEC` — const — line 386
-- `isWithinVillageRadius` — function — line 754
-- `NearbyNpcCandidate` — type — line 845
-- `pickNearestEligibleWolf` — function — line 859
-- `pickRabidTarget` — function — line 884
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 370
-- `villageFleeBiasFalloff` — function — line 781
-- `VillageInfo` — type — line 748
+- `AnimalAgentDebugInfo` — type — line 576
+- `AnimalAgentDeps` — type — line 926
+- `AnimalSaveState` — type — line 704
+- `AnimalUpdateContext` — type — line 990
+- `BURY_DURATION_SEC` — const — line 388
+- `canPredatorPursueIntoVillage` — function — line 784
+- `FAUNA_SHADOW_DISTANCE` — const — line 357
+- `FaunaAiBranch` — type — line 513
+- `FaunaNavRescueDebugInfo` — type — line 560
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 448
+- `FrenzyWolfCandidate` — type — line 861
+- `HARVEST_MEAT_DURATION_SEC` — const — line 391
+- `isWithinVillageRadius` — function — line 765
+- `NearbyNpcCandidate` — type — line 856
+- `pickNearestEligibleWolf` — function — line 870
+- `pickRabidTarget` — function — line 895
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 375
+- `villageFleeBiasFalloff` — function — line 792
+- `VillageInfo` — type — line 759
 
 ## `fauna/animalAreaBound.ts`
 

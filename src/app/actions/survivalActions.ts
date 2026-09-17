@@ -457,7 +457,9 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       if (legacyRoll < risk.chance) {
         const damageRoll = legacyWaterConsumptionRoll(ctx.getWorldSeed(), drinkEventIndex, 'damage')
         const hpDamage = Math.round(risk.hpDamageMin + damageRoll * (risk.hpDamageMax - risk.hpDamageMin))
+        const hpBefore = player.health.currentHp
         damageHealth(player.health, hpDamage)
+        player.registerPhysicalDamage(hpBefore - player.health.currentHp, nowDays)
         drainVigor(player.needs.vigor, risk.vigorLoss)
         toast.show(UNCOVERED_WELL_WARNING, 'error')
         return { ok: true }
@@ -676,6 +678,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       playActionDrink(worldAudio.playAt, player.mesh.position)
     }
     else healHealth(player.health, relief)
+    if (entry.need === 'health') player.clampPhysicalInjuryToMissingHp()
     const treatment = ITEM_CATALOG[kind].conditionTreatment
     if (treatment) {
       const severityReduction = scaleMedicinalTreatmentAmount(

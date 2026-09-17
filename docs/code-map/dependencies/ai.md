@@ -144,6 +144,7 @@ Generated from TypeScript imports.
 - `shared/followHysteresis.ts`
 - `shared/injuryRecovery.ts`
 - `shared/injurySeverity.ts`
+- `shared/physicalInjuryTreatment.ts`
 - `shared/temporaryConditions.ts`
 - `simulation/index.ts`
 - `simulation/observation.ts`

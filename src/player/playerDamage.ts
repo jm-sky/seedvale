@@ -8,6 +8,7 @@ import {
 } from '../combat/defenseResolver'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { healHealth, type HealthState } from '../shared/HealthState'
+import { clampPhysicalInjuryToMissingHp, type InjuryRecoveryState } from '../shared/injuryRecovery'
 import { recordBloodHit } from '../world/bloodTraces'
 import { PLAYER_HEIGHT, type PlayerController } from './PlayerController'
 import {
@@ -28,10 +29,16 @@ export function rollDownedRecoveryHp(): number {
   return DOWNED_RECOVERY_HP_MIN + Math.floor(Math.random() * span)
 }
 
-/** Restores a small HP buffer when a downed player stands back up (plan 150). */
-export function applyDownedRecovery(health: HealthState): number {
+/** Restores a small HP buffer when a downed player stands back up (plan 150).
+ *  Generic (non-wound) recovery — clamps injury to missing HP when an injury
+ *  state is provided (plan items-player-045). */
+export function applyDownedRecovery(
+  health: HealthState,
+  injuryRecovery?: InjuryRecoveryState,
+): number {
   const amount = rollDownedRecoveryHp()
   healHealth(health, amount)
+  if (injuryRecovery) clampPhysicalInjuryToMissingHp(injuryRecovery)
   return amount
 }
 
@@ -51,6 +58,13 @@ export type ApplyPlayerDamageParams = {
   heldTool: ToolKind | null
   defenseSkillValue: number
   playerYaw: number
+  /** World elapsed days for injury recovery accounting (plan items-player-045). */
+  nowDays?: number
+  /**
+   * When false, HP loss does not increase physical injury (deprivation /
+   * starvation). Defaults to true for combat and environmental wounds.
+   */
+  registersPhysicalInjury?: boolean
   onCombatHit?: () => void
   /** Wearable-equipment modifiers (plan items-player-029) — passive armor
    *  mitigation applies only when a caller actually passes this (derived via
@@ -63,7 +77,8 @@ export type ApplyPlayerDamageParams = {
 /** Single entry for player HP loss (plan 150 §8) — active held-item defense
  *  resolves first, then worn-armor passive mitigation (plan items-player-029)
  *  on whatever damage remains, then HP is reduced; at 0 the player enters
- *  `downed` instead of `dead`. */
+ *  `downed` instead of `dead`. Physical hits register actual HP loss as
+ *  injury (plan items-player-045) unless `registersPhysicalInjury` is false. */
 export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamageResult {
   const {
     player,
@@ -74,6 +89,8 @@ export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamage
     heldTool,
     defenseSkillValue,
     playerYaw,
+    nowDays = 0,
+    registersPhysicalInjury = true,
     onCombatHit,
     equipmentModifiers,
   } = params
@@ -109,10 +126,15 @@ export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamage
   }
 
   const finalDamage = resolved.finalDamage * (equipmentModifiers?.incomingDamageMultiplier ?? 1)
+  const hpBefore = player.health.currentHp
   if (finalDamage > 0) {
     player.health.currentHp = Math.max(0, player.health.currentHp - finalDamage)
     onCombatHit?.()
     recordBloodHit(player.mesh.position.x, player.mesh.position.z, PLAYER_HEIGHT, finalDamage)
+  }
+  const actualHpLoss = hpBefore - player.health.currentHp
+  if (registersPhysicalInjury && actualHpLoss > 0) {
+    player.registerPhysicalDamage(actualHpLoss, nowDays)
   }
 
   let enteredDowned = false
@@ -133,7 +155,8 @@ export { defenseBlockRoll }
 
 /** Sustained hunger/thirst depletion damage (plan 165 — gated on how long
  *  each pool has stayed continuously critical, not on hitting the pool
- *  straight away), routed through the player downed lifecycle. */
+ *  straight away), routed through the player downed lifecycle. Does not
+ *  register physical injury (plan items-player-045). */
 export function tickPlayerStarvationDamage(
   player: PlayerController,
   needs: PlayerNeeds,
@@ -142,6 +165,7 @@ export function tickPlayerStarvationDamage(
   playerYaw: number,
   dayLengthSec: number,
   onCombatHit?: () => void,
+  nowDays = 0,
 ): void {
   let perSec = 0
   if (needs.starvationDuration >= hungerSevereDurationSec(dayLengthSec)) perSec += STARVATION_HP_PER_SEC
@@ -153,6 +177,8 @@ export function tickPlayerStarvationDamage(
     heldTool,
     defenseSkillValue: player.skills.defense.value,
     playerYaw,
+    nowDays,
+    registersPhysicalInjury: false,
     onCombatHit,
   })
 }

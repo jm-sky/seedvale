@@ -117,6 +117,7 @@ import {
   resolveInjurySeverity,
   type TreatableInjurySeverity,
 } from '../shared/injurySeverity'
+import { resolvePhysicalInjuryTreatment } from '../shared/physicalInjuryTreatment'
 import {
   drainStamina,
   getStaminaRatio,
@@ -5999,10 +6000,10 @@ export class NpcAgent {
       destination: copyVec3(this.home),
       durationSec: HEAL_DURATION_SEC * this.waitMultiplier,
       onComplete: () => {
-        // Full revalidation before consuming anything (plan npc-025):
-        // alive, still actually injured, current severity, selected item
-        // still held, catalog still declares suitable physical-injury
-        // treatment, and HP can actually be restored.
+        // Full revalidation before consuming anything (plan npc-025 /
+        // items-player-045): alive, still actually injured, current severity,
+        // selected item still held, shared treatment resolver accepts the
+        // material, and HP can actually be restored.
         if (this.health.dead) return
         resolveInjuryRecovery(this.npcState, this.nowDays())
         if (this.npcState.physicalInjury <= 0) return
@@ -6012,9 +6013,16 @@ export class NpcAgent {
         if (!kind) return
         const treatment = ITEM_CATALOG[kind].injuryTreatment
         if (!treatment) return
+        const resolved = resolvePhysicalInjuryTreatment({
+          physicalInjury: this.npcState.physicalInjury,
+          maxHp: this.health.maxHp,
+          mode: 'material',
+          material: treatment,
+        })
+        if (!resolved.allowed || resolved.requestedHpRestore <= 0) return
         if (!this.carried.remove(kind, 1)) return
         const hpBefore = this.health.currentHp
-        healHealth(this.health, treatment.immediateHp)
+        healHealth(this.health, resolved.requestedHpRestore)
         const actualRestored = this.health.currentHp - hpBefore
         registerPhysicalInjuryFromHeal(this.npcState, actualRestored, this.nowDays())
       },

@@ -137,51 +137,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-16. `items-player-045` — **Medicine targeted treatment for player, NPCs and livestock**  
-  🟡 `M` · **Score:**  45  
-   → **unlocks:** 1/1
-
-17. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+16. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-18. `settlements-npcs-022` — **Household help and age-based work participation**  
+17. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+18. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-20. `items-player-046` — **Medicine targeted treatment interaction**  
+19. `items-player-046` — **Medicine targeted treatment interaction**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 0/0
 
-21. `tools-015` — **Chatterbox local voice generation pipeline**  
+20. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-22. `items-player-014` — **Rope-pullable resource transport**  
+21. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `tools-005` — **Seedvale Character Preparation Panel**  
+22. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `items-player-044` — **Shoulder and forearm equipment slots**  
+23. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-25. `npc-046` — **Settlement threat response and livestock safety**  
+24. `npc-046` — **Settlement threat response and livestock safety**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-26. `items-player-032` — **NPC player-storage resource and context rules**  
+25. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-27. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+26. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
@@ -192,9 +188,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
-- [`items-player-046-medicine-targeted-treatment-interaction.md`](items-player-046-medicine-targeted-treatment-interaction.md)  
-  is blocked by:
-  - [`items-player-045-medicine-targeted-treatment-for-player-npcs-and-livestock.md`](items-player-045-medicine-targeted-treatment-for-player-npcs-and-livestock.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)

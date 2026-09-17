@@ -40,6 +40,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/effectivePhysicalAttributes.ts`
 - `shared/enduranceStamina.ts`
+- `shared/injuryRecovery.ts`
 - `shared/temporaryConditions.ts`
 - `terrain/footstepSurface.ts`
 - `terrain/slopeConstraint.ts`
@@ -161,6 +162,7 @@ Generated from TypeScript imports.
 - `shared/ThirstState.ts`
 - `shared/VigorState.ts`
 - `shared/enduranceStamina.ts`
+- `shared/injuryRecovery.ts`
 - `world/timeConversion.ts`
 
 **Imported by**
@@ -450,6 +452,7 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `shared/HealthState.ts`
+- `shared/injuryRecovery.ts`
 - `world/bloodTraces.ts`
 
 **Imported by**

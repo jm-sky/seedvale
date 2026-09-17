@@ -85,6 +85,24 @@ export function registerPhysicalInjuryFromHeal(
 }
 
 /**
+ * Keeps physical injury consistent after generic (non-wound) HP recovery:
+ * injury cannot exceed current missing HP. Does not award wound recovery —
+ * intentional treatment must use `registerPhysicalInjuryFromHeal` instead
+ * (plan items-player-045).
+ */
+export function clampPhysicalInjuryToMissingHp(state: InjuryRecoveryState): void {
+  if (state.health.dead) {
+    state.physicalInjury = Math.max(0, state.physicalInjury)
+    return
+  }
+  const missingHp = Math.max(0, state.health.maxHp - state.health.currentHp)
+  if (state.physicalInjury > missingHp) {
+    state.physicalInjury = missingHp
+  }
+  if (state.physicalInjury < 0) state.physicalInjury = 0
+}
+
+/**
  * Debug/test helper — moves injury (and matching HP) to a representative
  * amount for `severity` using the same damage/heal accounting as gameplay.
  * Never kills the actor.

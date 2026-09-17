@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** items-player-045, ~~items-player-021~~, ~~items-player-043~~
+**Depends on:** ~~items-player-045~~, ~~items-player-021~~, ~~items-player-043~~
 **Domain:** `items-player`
 **Subdomains:** `interaction` `items`
 **Tags:** `medicine` `targeted-skill` `treatment` `livestock`

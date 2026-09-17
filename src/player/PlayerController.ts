@@ -46,7 +46,14 @@ import {
   resolvePlayerEffectivePhysicalAttributesDetailed,
 } from '../shared/effectivePhysicalAttributes'
 import { applyDerivedStaminaMax, resolveMaxStaminaFromEndurance } from '../shared/enduranceStamina'
-import { createHealthState, type HealthState } from '../shared/HealthState'
+import { createHealthState, healHealth, type HealthState } from '../shared/HealthState'
+import {
+  clampPhysicalInjuryToMissingHp,
+  type InjuryRecoveryState,
+  registerPhysicalInjuryFromDamage,
+  registerPhysicalInjuryFromHeal,
+  resolveInjuryRecovery,
+} from '../shared/injuryRecovery'
 import { isExhausted } from '../shared/StaminaState'
 import {
   createEmptyTemporaryConditions,
@@ -255,6 +262,11 @@ export class PlayerController {
   readonly mesh: THREE.Object3D
   /** Shared survival HP — domain state only in v1 (no death UI / respawn). */
   readonly health: HealthState
+  /**
+   * Authoritative physical-injury + lazy recovery anchor (plan items-player-045).
+   * Shares `health` with this controller; runtime-only (HP is not persisted).
+   */
+  readonly injuryRecovery: InjuryRecoveryState
   /** Shared SPEA (plan npc-019 §6) — fixed at `PLAYER_STARTING_ATTRIBUTES`
    *  for now (slightly above the shared `0.5` typical-healthy-adult
    *  reference, which stays the neutral point for consumer mappings like
@@ -479,6 +491,7 @@ export class PlayerController {
     this.currentModelUrl = modelUrl
     this.currentAnimationUrl = animationUrl
     this.health = createHealthState(PLAYER_MAX_HP)
+    this.injuryRecovery = { health: this.health, physicalInjury: 0 }
     this.attributes = PLAYER_STARTING_ATTRIBUTES
     this.needs = createPlayerNeeds(this.attributes.endurance)
     this.skills = createPlayerSkills()
@@ -1192,16 +1205,62 @@ export class PlayerController {
     this.mesh.rotation.y = yaw
   }
 
-  /** Effective SPEA after temporary conditions (plan npc-024) — never mutates
-   *  `attributes`. Player has no physical-injury input. */
+  /** Outstanding healable physical injury (plan items-player-045). */
+  get physicalInjury(): number {
+    return this.injuryRecovery.physicalInjury
+  }
+
+  /** Lazy natural injury recovery — call from the player tick with world days. */
+  resolveInjuryRecovery(nowDays: number): void {
+    resolveInjuryRecovery(this.injuryRecovery, nowDays)
+  }
+
+  /** Registers accepted physical HP loss after damage is applied. */
+  registerPhysicalDamage(actualHpLoss: number, nowDays: number): void {
+    if (actualHpLoss <= 0) return
+    registerPhysicalInjuryFromDamage(this.injuryRecovery, actualHpLoss, nowDays)
+  }
+
+  /**
+   * Applies intentional wound treatment HP restore and injury accounting
+   * (plan items-player-045 / consumer in 046). Returns actual HP restored.
+   */
+  applyPhysicalInjuryTreatment(requestedHpRestore: number, nowDays: number): number {
+    if (requestedHpRestore <= 0 || this.health.dead) return 0
+    const hpBefore = this.health.currentHp
+    healHealth(this.health, requestedHpRestore)
+    const actualRestored = this.health.currentHp - hpBefore
+    if (actualRestored > 0) {
+      registerPhysicalInjuryFromHeal(this.injuryRecovery, actualRestored, nowDays)
+    }
+    return actualRestored
+  }
+
+  /** After generic (non-wound) HP recovery — keep injury ≤ missing HP. */
+  clampPhysicalInjuryToMissingHp(): void {
+    clampPhysicalInjuryToMissingHp(this.injuryRecovery)
+  }
+
+  /** Effective SPEA after injury + temporary conditions (plan npc-024 /
+   *  items-player-045) — never mutates `attributes`. */
   effectiveAttributes(nowDays: number): PhysicalAttributes {
-    return resolvePlayerEffectivePhysicalAttributes(this.attributes, this.temporaryConditions, nowDays)
+    return resolvePlayerEffectivePhysicalAttributes(
+      this.attributes,
+      this.temporaryConditions,
+      nowDays,
+      { maxHp: this.health.maxHp, physicalInjury: this.injuryRecovery.physicalInjury },
+    )
   }
 
   /** Same effective SPEA as `effectiveAttributes`, plus applied modifier
    *  contributions for Character presentation (plan ui-input-013). */
   effectiveAttributesDetailed(nowDays: number): EffectivePhysicalAttributesResult {
-    return resolvePlayerEffectivePhysicalAttributesDetailed(this.attributes, this.temporaryConditions, nowDays)
+    return resolvePlayerEffectivePhysicalAttributesDetailed(
+      this.attributes,
+      this.temporaryConditions,
+      nowDays,
+      { maxHp: this.health.maxHp, physicalInjury: this.injuryRecovery.physicalInjury },
+    )
   }
 
   /** Re-syncs derived max Stamina (with clamping) and optional carry capacity

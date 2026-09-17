@@ -27,6 +27,11 @@ import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { tintPropMaterials } from '../settlement/props'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { damageHealth, type HealthState } from '../shared/HealthState'
+import {
+  type InjuryRecoveryState,
+  registerPhysicalInjuryFromDamage,
+  resolveInjuryRecovery,
+} from '../shared/injuryRecovery'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
 import {
   type ActionLifecycle,
@@ -731,6 +736,12 @@ export type AnimalSaveState = {
   /** Paddock origin association (plan settlements-013) — kept after purchase
    *  until the player leads/rides the horse out of the footprint. */
   paddockStay?: HorsePaddockStay
+  /** Outstanding healable physical injury (plan items-player-045) — optional
+   *  on legacy saves (absent means `0`). Derived severity is never persisted. */
+  physicalInjury?: number
+  /** Lazy natural-injury recovery anchor (plan items-player-045) — optional;
+   *  absent means initialize on first resolution without retroactive heal. */
+  injuryRecoveryUpdatedAtDays?: number
 }
 
 type EnvironmentSense = {
@@ -1293,6 +1304,11 @@ export class AnimalAgent {
   /** Runtime-only hysteresis cache for observation-level presentation (npc-023). */
   private lastObservationLevel: ObservationLevel | null = null
   readonly health: HealthState
+  /**
+   * Authoritative physical-injury + recovery anchor (plan items-player-045).
+   * Shares `health`; livestock snapshots round-trip these fields.
+   */
+  readonly injuryRecovery: InjuryRecoveryState
   readonly life: AnimalLifeState
   /** Absolute `elapsedDays` anchor at which this animal's next production
    *  event — a fresh egg becoming ready (`chicken`) or the milking cooldown
@@ -1616,6 +1632,7 @@ export class AnimalAgent {
     this.wanderRadius = wanderRadius ?? def.roaming ?? DEFAULT_WANDER_RADIUS
     const trainingMods = this.trainingModifiers()
     this.health = createHealthState(MAX_HP[def.kind] * this.effective.healthMultiplier * trainingMods.maxHp)
+    this.injuryRecovery = { health: this.health, physicalInjury: 0 }
     this.life = createAnimalLifeState(Math.random(), {
       ...def.metabolism,
       staminaCapacity: def.metabolism.staminaCapacity * trainingMods.staminaCapacity,
@@ -2684,6 +2701,10 @@ export class AnimalAgent {
       stray: snapshotStrayState(this._stray),
       training: this._training,
       paddockStay: this._paddockStay,
+      physicalInjury: this.injuryRecovery.physicalInjury,
+      ...(this.injuryRecovery.injuryRecoveryUpdatedAtDays != null
+        ? { injuryRecoveryUpdatedAtDays: this.injuryRecovery.injuryRecoveryUpdatedAtDays }
+        : {}),
     }
   }
 
@@ -2749,6 +2770,8 @@ export class AnimalAgent {
     this.presentationAccumSec = CADENCE_PRIME_SEC
     this.rabid = state.rabid === true
     this._stray = hydrateStrayState(state.stray)
+    this.injuryRecovery.physicalInjury = Math.max(0, state.physicalInjury ?? 0)
+    this.injuryRecovery.injuryRecoveryUpdatedAtDays = state.injuryRecoveryUpdatedAtDays
     if (isStrayEpisodeActive(this._stray)) {
       this.home.set(state.x, 0, state.z)
     }
@@ -2837,10 +2860,16 @@ export class AnimalAgent {
 
   /** `source: 'npc'` (plan 177) is another human attacker, same provocation
    *  reaction as `'player'` — this is the existing predator-vs-human decision
-   *  reacting to being hit, not a new NPC-aware animal behaviour. */
+   *  reacting to being hit, not a new NPC-aware animal behaviour. Physical
+   *  injury tracks actual HP loss (plan items-player-045). */
   takeDamage(damage: number, source?: 'npc' | 'player'): void {
     if (this.health.dead) return
+    const hpBefore = this.health.currentHp
     damageHealth(this.health, damage)
+    const actualHpLoss = hpBefore - this.health.currentHp
+    if (actualHpLoss > 0) {
+      registerPhysicalInjuryFromDamage(this.injuryRecovery, actualHpLoss, this.tickNowDays)
+    }
     if (damage > 0) recordBloodHit(this.mesh.position.x, this.mesh.position.z, this.def.modelHeight, damage)
     if (source === 'player' || source === 'npc') {
       this.provokedTimer = PROVOCATION_SECONDS
@@ -3061,6 +3090,9 @@ export class AnimalAgent {
     this.attractionClockSec += dt
     pruneAttractionIgnored(this.attractionIgnoreUntil, this.attractionClockSec)
     this.tickNowDays = nowDays
+    if (!this.health.dead && this.injuryRecovery.physicalInjury > 0) {
+      resolveInjuryRecovery(this.injuryRecovery, nowDays)
+    }
     if (
       !this.health.dead
       && isStrayedAnimalReturned(this._stray, this.mesh.position, this.health.dead)

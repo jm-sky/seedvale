@@ -1,7 +1,7 @@
 # Plan: Medicine targeted treatment for player, NPCs and livestock
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `done` ✅ (implemented 2026-09-17 — foundation only; no browser verification required)
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~items-player-021~~, ~~npc-025~~, ~~items-player-043~~

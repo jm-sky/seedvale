@@ -3,7 +3,7 @@ import type { EquipmentModifiers } from '../items/equipment'
 import type { PlayerController } from './PlayerController'
 import { NEUTRAL_EQUIPMENT_MODIFIERS } from '../items/equipment'
 import { createHealthState } from '../shared/HealthState'
-import { applyPlayerDamage, tickPlayerStarvationDamage } from './playerDamage'
+import { applyPlayerDamage, applyDownedRecovery, tickPlayerStarvationDamage } from './playerDamage'
 import { createPlayerNeeds, hungerSevereDurationSec } from './PlayerNeeds'
 
 /** Narrow test double for the slice of `PlayerController` `applyPlayerDamage`
@@ -12,9 +12,21 @@ import { createPlayerNeeds, hungerSevereDurationSec } from './PlayerNeeds'
 function createMockPlayer(hp = 100): PlayerController {
   let downed = false
   let attempt = 0
+  const health = createHealthState(hp)
+  const injuryRecovery: { health: typeof health, physicalInjury: number, injuryRecoveryUpdatedAtDays?: number } = {
+    health,
+    physicalInjury: 0,
+  }
   return {
     isDowned: () => downed,
-    health: createHealthState(hp),
+    health,
+    injuryRecovery,
+    get physicalInjury() { return injuryRecovery.physicalInjury },
+    registerPhysicalDamage: (actualHpLoss: number, nowDays: number) => {
+      if (actualHpLoss <= 0) return
+      injuryRecovery.physicalInjury += actualHpLoss
+      injuryRecovery.injuryRecoveryUpdatedAtDays = nowDays
+    },
     mesh: { position: { x: 0, y: 0, z: 0 } },
     nextDefenseAttempt: () => ++attempt,
     enterDowned: () => { downed = true },
@@ -93,5 +105,39 @@ describe('tickPlayerStarvationDamage — never armor-mitigated (plan items-playe
     // multiplier ever reaches this path — `applyPlayerDamage` is called here
     // without `equipmentModifiers`).
     expect(player.health.currentHp).toBeLessThan(100)
+  })
+})
+
+describe('applyPlayerDamage — physical injury (plan items-player-045)', () => {
+  it('registers actual HP loss as physical injury', () => {
+    const player = createMockPlayer()
+    applyPlayerDamage({
+      player,
+      amount: 20,
+      heldTool: null,
+      defenseSkillValue: 0,
+      playerYaw: 0,
+      nowDays: 3,
+    })
+    expect(player.health.currentHp).toBe(80)
+    expect(player.physicalInjury).toBe(20)
+  })
+
+  it('does not register injury for starvation / deprivation damage', () => {
+    const player = createMockPlayer()
+    const needs = createPlayerNeeds()
+    const dayLengthSec = 600
+    needs.starvationDuration = hungerSevereDurationSec(dayLengthSec) + 1
+    tickPlayerStarvationDamage(player, needs, 1, null, 0, dayLengthSec, undefined, 5)
+    expect(player.health.currentHp).toBeLessThan(100)
+    expect(player.physicalInjury).toBe(0)
+  })
+
+  it('clamps injury after generic downed recovery', () => {
+    const player = createMockPlayer()
+    player.health.currentHp = 0
+    player.injuryRecovery.physicalInjury = 100
+    applyDownedRecovery(player.health, player.injuryRecovery)
+    expect(player.physicalInjury).toBe(player.health.maxHp - player.health.currentHp)
   })
 })

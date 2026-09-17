@@ -2366,7 +2366,9 @@ function isAnimalSaveState(value: unknown): boolean {
     (s.rabid === undefined || typeof s.rabid === 'boolean') &&
     (s.stray === undefined || isAnimalStraySave(s.stray)) &&
     isOptionalHorseTrainingField(s.training) &&
-    isOptionalHorsePaddockStayField(s.paddockStay)
+    isOptionalHorsePaddockStayField(s.paddockStay) &&
+    (s.physicalInjury === undefined || typeof s.physicalInjury === 'number') &&
+    (s.injuryRecoveryUpdatedAtDays === undefined || typeof s.injuryRecoveryUpdatedAtDays === 'number')
   )
 }
 

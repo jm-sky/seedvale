@@ -30,7 +30,7 @@ Generated from exported TypeScript symbols.
 - `resolveNpcBasePhysicalAttributes` — function — line 126
 - `resolveNpcEffectivePhysicalAttributes` — function — line 160
 - `resolvePlayerEffectivePhysicalAttributes` — function — line 174
-- `resolvePlayerEffectivePhysicalAttributesDetailed` — function — line 182
+- `resolvePlayerEffectivePhysicalAttributesDetailed` — function — line 183
 
 ## `shared/enduranceStamina.ts`
 
@@ -100,7 +100,8 @@ Generated from exported TypeScript symbols.
 
 ## `shared/injuryRecovery.ts`
 
-- `applyInjurySeverityForDebug` — function — line 92
+- `applyInjurySeverityForDebug` — function — line 110
+- `clampPhysicalInjuryToMissingHp` — function — line 93
 - `InjuryRecoveryState` — type — line 19
   - domain: shared
   - system: health
@@ -111,10 +112,10 @@ Generated from exported TypeScript symbols.
 
 ## `shared/injurySeverity.ts`
 
-- `applyInjuryModifiersToAttributes` — function — line 95
+- `applyInjuryModifiersToAttributes` — function — line 103
 - `criticalInjuryFloor` — function — line 79
-- `decreaseInjuryFromHeal` — function — line 151
-- `increaseInjuryFromDamage` — function — line 145
+- `decreaseInjuryFromHeal` — function — line 159
+- `increaseInjuryFromDamage` — function — line 153
 - `INJURY_NATURAL_RECOVERY_HP_PER_DAY` — const — line 40
 - `INJURY_SEVERITY_THRESHOLDS` — const — line 22
 - `INJURY_SPEA_PENALTY` — const — line 30
@@ -124,10 +125,11 @@ Generated from exported TypeScript symbols.
   - role: Pure derived physical-injury severity (plan npc-025). `physicalInjury` remains the single authoritative wound amount — severity, SPEA modifiers and recovery policy are re-derived from it and are never persisted.
   - owns: InjurySeverity
 - `injurySeverityRank` — function — line 73
-- `injurySpeaPenalties` — function — line 84
-- `naturalInjuryRecoveryHp` — function — line 116
-- `representativeInjuryAmount` — function — line 157
+- `injurySpeaPenalties` — function — line 92
+- `naturalInjuryRecoveryHp` — function — line 124
+- `representativeInjuryAmount` — function — line 165
 - `resolveInjurySeverity` — function — line 65
+- `seriousInjuryFloor` — function — line 87
 - `TreatableInjurySeverity` — type — line 15
 
 ## `shared/PhysicalAttributes.ts`
@@ -140,6 +142,18 @@ Generated from exported TypeScript symbols.
   - system: physical-attributes
   - role: Shared SPEA (Strength/Perception/Endurance/Agility) physical-attribute primitive used by the player and NPCs (plan npc-019), later fauna. Stable individual base attributes only — profile data, not a mutable resource pool like `HealthState`/`StaminaState`. Must not know about combat, work, movement, species, UI, age, sex, injuries, illness or temporary conditions; those live in per-consumer profile/effective resolvers (see `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile`/ `resolveHumanAgilityProfile`/`resolveHumanEnduranceProfile` and `combat/meleeStrength.ts`/`combat/meleeAgility.ts`, plus `player/physicalWorkStrength.ts`, `player/humanCarryCapacity.ts` and `shared/enduranceStamina.ts`.
   - owns: PhysicalAttributes
+
+## `shared/physicalInjuryTreatment.ts`
+
+- `PhysicalInjuryTreatmentMaterial` — type — line 25
+- `PhysicalInjuryTreatmentMode` — type — line 22
+  - domain: shared
+  - system: health
+  - role: Pure physical-injury treatment resolver (plan items-player-045). Computes stabilize/material treatment outcomes from injury + potency metadata without mutating health, consuming items, awarding XP, or reading PlayerSkills / inventory / UI.
+- `PhysicalInjuryTreatmentReason` — type — line 44
+- `PhysicalInjuryTreatmentResult` — type — line 50
+- `resolvePhysicalInjuryTreatment` — function — line 78
+- `ResolvePhysicalInjuryTreatmentInput` — type — line 30
 
 ## `shared/SettlementName.ts`
 

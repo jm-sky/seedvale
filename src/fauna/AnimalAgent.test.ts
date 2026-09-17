@@ -423,6 +423,51 @@ describe('AnimalAgent', () => {
     })
   })
 
+  describe('physical injury (plan items-player-045)', () => {
+    it('takeDamage increases injury by actual HP loss', () => {
+      const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.sheep, animalId: 'sheep-injury' }))
+      const maxHp = animal.health.maxHp
+      animal.takeDamage(10)
+      expect(animal.health.currentHp).toBe(maxHp - 10)
+      expect(animal.injuryRecovery.physicalInjury).toBe(10)
+    })
+
+    it('round-trips injury and recovery anchor through snapshot and hydrate', () => {
+      const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.cow, animalId: 'cow-injury' }))
+      animal.takeDamage(15)
+      animal.injuryRecovery.injuryRecoveryUpdatedAtDays = 4.5
+      const snap = animal.snapshot()
+      expect(snap.physicalInjury).toBe(15)
+      expect(snap.injuryRecoveryUpdatedAtDays).toBe(4.5)
+
+      const loaded = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.cow, animalId: 'cow-injury-2' }))
+      loaded.hydrate(snap)
+      expect(loaded.injuryRecovery.physicalInjury).toBe(15)
+      expect(loaded.injuryRecovery.injuryRecoveryUpdatedAtDays).toBe(4.5)
+      expect(loaded.health.currentHp).toBe(snap.health.current)
+    })
+
+    it('hydrates a legacy save without injury fields as zero injury', () => {
+      const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.chicken, animalId: 'chicken-legacy' }))
+      animal.takeDamage(5)
+      const {
+        physicalInjury: _injury,
+        injuryRecoveryUpdatedAtDays: _anchor,
+        ...legacy
+      } = animal.snapshot()
+      animal.hydrate(legacy)
+      expect(animal.injuryRecovery.physicalInjury).toBe(0)
+      expect(animal.injuryRecovery.injuryRecoveryUpdatedAtDays).toBeUndefined()
+    })
+
+    it('still collapses when damage kills the animal', () => {
+      const animal = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.sheep, animalId: 'sheep-die' }))
+      animal.takeDamage(9999)
+      expect(animal.isDead()).toBe(true)
+      expect(animal.injuryRecovery.physicalInjury).toBeGreaterThan(0)
+    })
+  })
+
   describe('player-owned follow/stay (plan fauna-020 / fauna-030)', () => {
     const farObserver = new THREE.Vector3(1000, 0, 1000)
 

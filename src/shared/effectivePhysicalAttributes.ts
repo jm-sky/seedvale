@@ -175,14 +175,16 @@ export function resolvePlayerEffectivePhysicalAttributes(
   base: PhysicalAttributes,
   conditions: TemporaryConditionsState,
   nowDays: number,
+  injury?: InjuryModifierInput,
 ): PhysicalAttributes {
-  return resolveEffectivePhysicalAttributes(base, conditions, nowDays)
+  return resolveEffectivePhysicalAttributes(base, conditions, nowDays, injury)
 }
 
 export function resolvePlayerEffectivePhysicalAttributesDetailed(
   base: PhysicalAttributes,
   conditions: TemporaryConditionsState,
   nowDays: number,
+  injury?: InjuryModifierInput,
 ): EffectivePhysicalAttributesResult {
-  return resolveEffectivePhysicalAttributesDetailed(base, conditions, nowDays)
+  return resolveEffectivePhysicalAttributesDetailed(base, conditions, nowDays, injury)
 }

@@ -300,6 +300,7 @@ export function createContainerActions(
             heldTool: ctx.heldTool.held(),
             defenseSkillValue: player.skills.defense.value,
             playerYaw: mouseLook.state.yaw,
+            nowDays: ctx.dayNight.elapsedDays,
             equipmentModifiers: resolveEquipmentModifiers(ctx.equipment, ctx.inventory),
           })
           toast.show('Ostrze pułapki cię zraniło.', 'error')

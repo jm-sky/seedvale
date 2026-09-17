@@ -81,6 +81,14 @@ export function criticalInjuryFloor(maxHp: number): number {
   return INJURY_SEVERITY_THRESHOLDS.critical * maxHp
 }
 
+/** Outstanding injury amount at the serious → minor boundary. Bare-hands
+ *  stabilization of serious injury may reach this floor but cannot cross
+ *  below it without material treatment (plan items-player-045). */
+export function seriousInjuryFloor(maxHp: number): number {
+  if (maxHp <= 0) return 0
+  return INJURY_SEVERITY_THRESHOLDS.serious * maxHp
+}
+
 export function injurySpeaPenalties(
   severity: InjurySeverity,
 ): Pick<PhysicalAttributes, 'agility' | 'endurance' | 'strength'> {

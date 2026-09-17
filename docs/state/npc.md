@@ -4,7 +4,7 @@
 
 **Not:** settlement generation, `Household`/`SettlementEconomy` internals (that's [SETTLEMENTS.md](./settlements.md)), fauna's own behaviour pipeline or `AnimalAgent` internals (that's [fauna.md](./fauna.md) — this doc only covers how NPCs *consume* what fauna exposes), combat resolver internals ([combat.md](./combat.md) owns those; this doc covers only where combat hands off into NPC state), the work-contract commitment record itself ([player-systems.md](./player-systems.md)'s Work Contracts section owns that; this doc covers only the NPC-side evaluation/execution), or a plan/changelog.
 
-**Last verified:** 2026-09-16
+**Last verified:** 2026-09-17
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -161,7 +161,9 @@ combat damage
 → healing pressure scores derived severity + catalog-suitable treatment
   → competes as the same 'heal' decision-arbitration candidate
 → beginHeal(): walk home, revalidate alive/injured/severity/suitable
-  catalog treatment/HP room, consume, apply immediate HP restore
+  catalog treatment/HP room, run shared resolvePhysicalInjuryTreatment
+  (material mode, catalog immediateHp/maxSeverity, no Medicine scaling),
+  consume only when allowed, apply requested HP restore
 → physicalInjury drops by the actually-restored HP
 ```
 

@@ -180,6 +180,7 @@ export function createMountActions(
       heldTool: ctx.heldTool.held(),
       defenseSkillValue: player.skills.defense.value,
       playerYaw: mouseLook.state.yaw,
+      nowDays: dayNight.elapsedDays,
       equipmentModifiers: resolveEquipmentModifiers(ctx.equipment, ctx.inventory),
     })
   }

@@ -353,7 +353,9 @@ export function createGatheringActions(
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     if (rollHiveSting(id, dayNight.elapsedDays)) {
+      const hpBefore = player.health.currentHp
       damageHealth(player.health, HIVE_STING_DAMAGE)
+      player.registerPhysicalDamage(hpBefore - player.health.currentHp, dayNight.elapsedDays)
       toast.show(`Użądlenie! +${amount} miodu`, 'error')
     } else {
       toast.show(`+${amount} miodu`, 'pickup')

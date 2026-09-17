@@ -3,6 +3,7 @@ import {
   resolveMaxStaminaFromEndurance,
 } from '../shared/enduranceStamina'
 import { healHealth, type HealthState } from '../shared/HealthState'
+import { clampPhysicalInjuryToMissingHp, type InjuryRecoveryState } from '../shared/injuryRecovery'
 import { createHungerState, drainHunger, type HungerState, isStarving, restoreHunger } from '../shared/HungerState'
 import { createStaminaState, drainStamina, restoreStamina, type StaminaState } from '../shared/StaminaState'
 import { createThirstState, drainThirst, isDehydrated, restoreThirst, type ThirstState } from '../shared/ThirstState'
@@ -402,9 +403,17 @@ export function isTakingDeprivationDamage(needs: PlayerNeeds, dayLengthSec: numb
 /** Passive HP regen (plan 153) — mirrors `tickPlayerStamina`'s "cheap
  *  per-tick pool nudge" shape. No-ops while deprivation HP loss is active
  *  (that tick already takes starvation/dehydration damage) or once already
- *  full. */
-export function tickHealthRegen(needs: PlayerNeeds, health: HealthState, dt: number, dayLengthSec: number): void {
+ *  full. Generic (non-wound) recovery — clamps injury to missing HP when an
+ *  injury state is provided (plan items-player-045). */
+export function tickHealthRegen(
+  needs: PlayerNeeds,
+  health: HealthState,
+  dt: number,
+  dayLengthSec: number,
+  injuryRecovery?: InjuryRecoveryState,
+): void {
   if (dt <= 0) return
   if (isTakingDeprivationDamage(needs, dayLengthSec)) return
   healHealth(health, HP_REGEN_PER_SEC * dt)
+  if (injuryRecovery) clampPhysicalInjuryToMissingHp(injuryRecovery)
 }

@@ -2450,12 +2450,22 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // see above) — stamina keeps ticking inside `player.update(dt)` on raw
       // `dt` (tied to sprint) regardless of any skip.
       tickPlayerNeeds(player.needs, worldDt, dayNight.dayLengthSec)
+      player.resolveInjuryRecovery(dayNight.elapsedDays)
       if (!player.isDowned()) {
-        tickPlayerStarvationDamage(player, player.needs, worldDt, heldTool.held(), mouseLook.state.yaw, dayNight.dayLengthSec, onPlayerDamaged)
-        tickHealthRegen(player.needs, player.health, worldDt, dayNight.dayLengthSec)
+        tickPlayerStarvationDamage(
+          player,
+          player.needs,
+          worldDt,
+          heldTool.held(),
+          mouseLook.state.yaw,
+          dayNight.dayLengthSec,
+          onPlayerDamaged,
+          dayNight.elapsedDays,
+        )
+        tickHealthRegen(player.needs, player.health, worldDt, dayNight.dayLengthSec, player.injuryRecovery)
       }
       if (player.tickDowned(worldDt)) {
-        applyDownedRecovery(player.health)
+        applyDownedRecovery(player.health, player.injuryRecovery)
       }
       hud.setPlayerNeeds({
         hp: player.health.maxHp > 0 ? player.health.currentHp / player.health.maxHp : 0,
@@ -2647,6 +2657,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 heldTool: heldTool.held(),
                 defenseSkillValue: player.skills.defense.value,
                 playerYaw: mouseLook.state.yaw,
+                nowDays: dayNight.elapsedDays,
                 equipmentModifiers,
                 onCombatHit: () => {
                   playerCombat.enter()

@@ -68,6 +68,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/agentAnimationSet.ts`
 - `shared/followHysteresis.ts`
+- `shared/injuryRecovery.ts`
 - `simulation/index.ts`
 - `simulation/observation.ts`
 - `terrain/slopeConstraint.ts`

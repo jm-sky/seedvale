@@ -37,6 +37,7 @@ Generated from TypeScript imports.
 - `shared/HealthState.test.ts`
 - `shared/injuryRecovery.test.ts`
 - `shared/injuryRecovery.ts`
+- `shared/physicalInjuryTreatment.test.ts`
 
 ## `shared/HungerState.ts`
 
@@ -318,7 +319,12 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcOffscreenSurvival.test.ts`
 - `ai/npcOffscreenSurvival.ts`
+- `fauna/AnimalAgent.ts`
+- `player/PlayerController.ts`
+- `player/PlayerNeeds.ts`
+- `player/playerDamage.ts`
 - `shared/injuryRecovery.test.ts`
+- `shared/physicalInjuryTreatment.test.ts`
 
 ## `shared/injurySeverity.test.ts`
 
@@ -345,7 +351,29 @@ Generated from TypeScript imports.
 - `shared/injuryRecovery.test.ts`
 - `shared/injuryRecovery.ts`
 - `shared/injurySeverity.test.ts`
+- `shared/physicalInjuryTreatment.test.ts`
+- `shared/physicalInjuryTreatment.ts`
 - `simulation/observation.ts`
+
+## `shared/physicalInjuryTreatment.test.ts`
+
+**Imports**
+
+- `shared/HealthState.ts`
+- `shared/injuryRecovery.ts`
+- `shared/injurySeverity.ts`
+- `shared/physicalInjuryTreatment.ts`
+
+## `shared/physicalInjuryTreatment.ts`
+
+**Imports**
+
+- `shared/injurySeverity.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `shared/physicalInjuryTreatment.test.ts`
 
 ## `shared/temporaryConditions.test.ts`
 
