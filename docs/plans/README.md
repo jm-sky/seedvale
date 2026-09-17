@@ -79,6 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-015-chatterbox-local-voice-generation-pipeline.md`                   | 🔴 | M      | npc-041, npc-042                                                                                                                                                                                                                                                                           | -                                       |
 | 💡 `fauna-034-wildlife-day-night-rest-and-den-defense.md`                      | 🟡 | M      | ~~fauna-028~~                                                                                                                                                                                                                                                                              | -                                       |
 | 💡 `items-player-044-shoulder-and-forearm-equipment-slots.md`                  | 🟡 | M      | ~~items-player-039~~                                                                                                                                                                                                                                                                       | -                                       |
+| 💡 `npc-045-campfire-spoken-conversation-pairs.md`                             | 🔴 | S      | ~~npc-013~~, ~~npc-044~~                                                                                                                                                                                                                                                                   | -                                       |
 
 ---
 
@@ -238,7 +239,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `035`
 - items-player: `045`
-- npc: `045`
+- npc: `046`
 - persistence: `006`
 - quests-progression: `056`
 - settlements: `018`

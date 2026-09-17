@@ -579,7 +579,7 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcVoiceLines.ts`
 
-- `buildNpcVoiceLookupKeys` — function — line 235
+- `buildNpcVoiceLookupKeys` — function — line 319
 - `FRIENDLY_TALK_SOUND_VOLUME` — const — line 148
 - `NPC_CONFIRMATION_SOUND_URLS` — const — line 79
 - `NPC_FAREWELL_SOUND_URLS` — const — line 75
@@ -589,22 +589,22 @@ Generated from exported TypeScript symbols.
 - `NPC_QUEST_COMPLETE_SOUND_URLS` — const — line 117
 - `NPC_REACTION_SOUND_URLS` — const — line 106
 - `NpcVoiceActor` — type — line 21
-- `NpcVoiceAgeBand` — type — line 167
+- `NpcVoiceAgeBand` — type — line 175
   - domain: npc
-- `NpcVoiceResolveInput` — type — line 170
+- `NpcVoiceResolveInput` — type — line 178
 - `NpcVoiceSemanticIntent` — type — line 156
 - `pickNpcConfirmationSound` — function — line 100
 - `pickNpcFarewellSound` — function — line 94
 - `pickNpcFriendlyTalkSound` — function — line 150
 - `pickNpcGreetingSound` — function — line 88
 - `REACTION_SOUND_VOLUME` — const — line 124
-- `resolveNpcVoiceLine` — function — line 272
+- `resolveNpcVoiceLine` — function — line 359
   - domain: npc
-- `resolveNpcVoiceLineWithManifest` — function — line 280
+- `resolveNpcVoiceLineWithManifest` — function — line 367
 - `voiceActorForIndex` — function — line 28
-- `voiceAgeBandForAge` — function — line 184
+- `voiceAgeBandForAge` — function — line 192
   - domain: npc
-- `voiceScopeForRole` — function — line 194
+- `voiceScopeForRole` — function — line 202
 
 ## `ai/npcWorkContract.ts`
 
