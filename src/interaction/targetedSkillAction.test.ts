@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PlacedTrapRecord, TrapState } from '../world/animalTraps'
-import { SKILL_IDS, SKILL_USE } from '../player/PlayerSkills'
+import { Inventory } from '../items/Inventory'
+import { createPlayerSkills, SKILL_IDS, SKILL_USE } from '../player/PlayerSkills'
 import { type Interactable, surfaceInteractable } from './Interactable'
 import {
   executeTargetedSkillAction,
@@ -46,6 +47,9 @@ function contextWith(trap: PlacedTrapRecord | null): TargetedSkillQueryContext {
     getTrap: (id) => traps.get(id) ?? null,
     campRepairAvailable: () => null,
     startCampRepair: () => {},
+    inventory: new Inventory(),
+    playerSkills: createPlayerSkills(),
+    startMedicalTreatment: () => {},
   }
 }
 
@@ -100,7 +104,10 @@ describe('executeTargetedSkillAction (plan items-player-021)', () => {
   it('revalidates against live domain state between query and execute', () => {
     const trap = trapRecord()
     const traps = new Map<string, PlacedTrapRecord>([[trap.id, trap]])
-    const ctx: TargetedSkillQueryContext = { getTrap: (id) => traps.get(id) ?? null, campRepairAvailable: () => null, startCampRepair: () => {} }
+    const ctx: TargetedSkillQueryContext = {
+      ...contextWith(trap),
+      getTrap: (id) => traps.get(id) ?? null,
+    }
     const queried = queryTargetedSkillAction('traps', trapTarget(), ctx)
     expect(queried).not.toBeNull()
     traps.delete(trap.id)
@@ -113,7 +120,10 @@ describe('executeTargetedSkillAction (plan items-player-021)', () => {
   it('reads the current durability if the record changed after targeting', () => {
     const trap = trapRecord({ durability: 2 })
     const traps = new Map<string, PlacedTrapRecord>([[trap.id, { ...trap }]])
-    const ctx: TargetedSkillQueryContext = { getTrap: (id) => traps.get(id) ?? null, campRepairAvailable: () => null, startCampRepair: () => {} }
+    const ctx: TargetedSkillQueryContext = {
+      ...contextWith(trap),
+      getTrap: (id) => traps.get(id) ?? null,
+    }
     queryTargetedSkillAction('traps', trapTarget(), ctx)
     traps.set(trap.id, { ...trap, durability: 0.5, state: 'broken', baitKind: null })
     const result = executeTargetedSkillAction('traps', trapTarget(trap.id, 'broken'), ctx)
@@ -148,7 +158,7 @@ describe('targeted Repair on camp objects (plan items-player-019)', () => {
   it('offers start/continue on a live tent and execute calls the shared action', () => {
     const started: string[] = []
     const ctx: TargetedSkillQueryContext = {
-      getTrap: () => null,
+      ...contextWith(null),
       campRepairAvailable: (kind, id) => kind === 'tent' && id === 'tent-1' ? { mode: 'start' } : null,
       startCampRepair: (kind, id) => { started.push(`${kind}:${id}`) },
     }
@@ -168,7 +178,7 @@ describe('targeted Repair on camp objects (plan items-player-019)', () => {
     let available: { mode: 'start' | 'continue' } | null = { mode: 'continue' }
     const started: string[] = []
     const ctx: TargetedSkillQueryContext = {
-      getTrap: () => null,
+      ...contextWith(null),
       campRepairAvailable: () => available,
       startCampRepair: (kind, id) => { started.push(`${kind}:${id}`) },
     }
@@ -189,7 +199,7 @@ describe('targeted Repair on camp objects (plan items-player-019)', () => {
       platformId: 'plat-1',
     })
     const ctx: TargetedSkillQueryContext = {
-      getTrap: () => null,
+      ...contextWith(null),
       campRepairAvailable: (kind, id) => kind === 'tent' && id === 'tent-1' ? { mode: 'start' } : null,
       startCampRepair: (kind, id) => { started.push(`${kind}:${id}`) },
     }
@@ -199,7 +209,7 @@ describe('targeted Repair on camp objects (plan items-player-019)', () => {
   })
 })
 
-describe('actionable player skills (plan ui-input-013)', () => {
+describe('actionable player skills (plan ui-input-013 / items-player-046)', () => {
   it('derives visibility from SKILL_USE and the query consumer dispatch', () => {
     for (const id of SKILL_IDS) {
       const kind = SKILL_USE[id]
@@ -212,11 +222,10 @@ describe('actionable player skills (plan ui-input-013)', () => {
     }
   })
 
-  it('currently exposes Sneak, Traps and Repair', () => {
+  it('exposes Sneak, Traps, Medicine and Repair', () => {
     expect(hasImplementedTargetedSkillConsumer('traps')).toBe(true)
     expect(hasImplementedTargetedSkillConsumer('repair')).toBe(true)
-    expect(hasImplementedTargetedSkillConsumer('medicine')).toBe(false)
-    expect(listActionablePlayerSkills()).toEqual(['sneak', 'traps', 'repair'])
+    expect(hasImplementedTargetedSkillConsumer('medicine')).toBe(true)
+    expect(listActionablePlayerSkills()).toEqual(['sneak', 'traps', 'medicine', 'repair'])
   })
 })
-

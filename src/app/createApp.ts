@@ -307,6 +307,7 @@ import { createPlacementPreviewActions } from './actions/placementPreviewActions
 import { createRestActions } from './actions/restActions'
 import { createStorageInfestationActions } from './actions/storageInfestationActions'
 import { createSurvivalActions } from './actions/survivalActions'
+import { createMedicalTreatmentActions } from './actions/medicalTreatmentActions'
 import { createTerrainPreparationActions } from './actions/terrainPreparationActions'
 import { createWorkContractActions } from './actions/workContractActions'
 import { createAppRenderLoop } from './appRenderLoop'
@@ -2301,6 +2302,7 @@ export async function createApp(
   })
   const gathering = createGatheringActions(actionCtx, { vueUi, fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
+  const medicalTreatment = createMedicalTreatmentActions(actionCtx)
   const ground = createGroundActions(actionCtx, {
     worldFlags,
     badges,
@@ -3303,6 +3305,7 @@ export async function createApp(
     inspectPlatform: rest.inspectPlatform,
     workOnCampRepair: rest.workOnCampRepair,
     campRepairAvailable: rest.campRepairAvailable,
+    startMedicalTreatment: medicalTreatment.startMedicalTreatment,
     sleepInHay: rest.sleepInHay,
     sleepInOwnedHouse: rest.sleepInOwnedHouse,
     openTrapArmDialog: gathering.openTrapArmDialog,

@@ -26,10 +26,11 @@ import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from 
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { tintPropMaterials } from '../settlement/props'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
-import { damageHealth, type HealthState } from '../shared/HealthState'
+import { damageHealth, healHealth, type HealthState } from '../shared/HealthState'
 import {
   type InjuryRecoveryState,
   registerPhysicalInjuryFromDamage,
+  registerPhysicalInjuryFromHeal,
   resolveInjuryRecovery,
 } from '../shared/injuryRecovery'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
@@ -2886,6 +2887,32 @@ export class AnimalAgent {
       // at the attacker's call site (`gameLoop.ts`) — this is animation only.
       this.hurtAnimTimer = this.anim.playOnce('hurt')
     }
+  }
+
+  /**
+   * Applies intentional wound treatment HP restore and injury accounting
+   * (plan items-player-045 / player consumer in items-player-046).
+   * Returns actual HP restored.
+   */
+  applyPhysicalInjuryTreatment(requestedHpRestore: number, nowDays: number): number {
+    if (requestedHpRestore <= 0 || this.health.dead) return 0
+    const hpBefore = this.health.currentHp
+    healHealth(this.health, requestedHpRestore)
+    const actualRestored = this.health.currentHp - hpBefore
+    if (actualRestored > 0) {
+      registerPhysicalInjuryFromHeal(this.injuryRecovery, actualRestored, nowDays)
+    }
+    return actualRestored
+  }
+
+  /** Outstanding healable physical injury (plan items-player-045). */
+  get physicalInjury(): number {
+    return this.injuryRecovery.physicalInjury
+  }
+
+  /** Lazy natural injury recovery for external treatment revalidation. */
+  resolveInjuryRecoveryAt(nowDays: number): void {
+    resolveInjuryRecovery(this.injuryRecovery, nowDays)
   }
 
   /** Death presentation: plays the GLB's own `Death` clip when the species

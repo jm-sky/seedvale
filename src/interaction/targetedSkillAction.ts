@@ -1,12 +1,20 @@
 import type { CampRepairTargetKind } from '../items/campRepair'
 import type { Interactable } from './Interactable'
 import { ITEM_DEFS } from '../items/items'
-import { SKILL_IDS, SKILL_LABEL, SKILL_USE, type SkillId } from '../player/PlayerSkills'
+import type { Inventory } from '../items/Inventory'
+import {
+  medicalTreatmentPromptLabel,
+  resolveMedicalTreatmentPlan,
+  treatableFromInteractable,
+  type TreatableTarget,
+} from '../player/medicalTreatment'
+import { SKILL_IDS, SKILL_LABEL, SKILL_USE, type PlayerSkills, type SkillId } from '../player/PlayerSkills'
 import { type PlacedTrapRecord, TRAP_DEFS, type TrapState } from '../world/animalTraps'
 
 /**
- * Live domain lookups for targeted skill query/execute (plan items-player-021).
- * Query must not mutate these owners. `startCampRepair` is execute-only.
+ * Live domain lookups for targeted skill query/execute (plan items-player-021,
+ * Medicine consumer plan items-player-046).
+ * Query must not mutate these owners. Execute-only seams start domain actions.
  *
  * @domain items-player
  * @system interaction
@@ -15,9 +23,13 @@ export type TargetedSkillQueryContext = {
   getTrap: (id: string) => PlacedTrapRecord | null
   campRepairAvailable: (kind: CampRepairTargetKind, id: string) => { mode: 'start' | 'continue' } | null
   startCampRepair: (kind: CampRepairTargetKind, id: string) => void
+  /** Player inventory for Medicine material/stabilization query (read-only). */
+  inventory: Inventory
+  playerSkills: PlayerSkills
+  startMedicalTreatment: (target: TreatableTarget) => void
 }
 
-export type TargetedSkillActionId = 'inspect-trap' | 'repair-camp'
+export type TargetedSkillActionId = 'inspect-trap' | 'provide-medical-treatment' | 'repair-camp'
 
 export type TargetedSkillAction = {
   id: TargetedSkillActionId
@@ -116,10 +128,33 @@ function queryInspectTrap(
   }
 }
 
+function queryMedicalTreatment(
+  skill: SkillId,
+  target: Interactable,
+  context: TargetedSkillQueryContext,
+): TargetedSkillAction | null {
+  const treatable = treatableFromInteractable(target)
+  if (!treatable) return null
+  const plan = resolveMedicalTreatmentPlan(
+    treatable,
+    context.inventory,
+    context.playerSkills,
+  )
+  if (!plan) return null
+  return {
+    id: 'provide-medical-treatment',
+    skill,
+    targetId: treatable.id,
+    targetKind: target.kind,
+    promptLabel: medicalTreatmentPromptLabel(plan, treatable.label),
+  }
+}
+
 /** Implemented targeted consumers — the same dispatch `queryTargetedSkillAction` uses. */
 const TARGETED_SKILL_CONSUMERS: Partial<Record<SkillId, readonly TargetedSkillConsumer[]>> = {
   repair: [{ id: 'repair-camp', query: queryCampRepair }],
   traps: [{ id: 'inspect-trap', query: queryInspectTrap }],
+  medicine: [{ id: 'provide-medical-treatment', query: queryMedicalTreatment }],
 }
 
 export function hasImplementedTargetedSkillConsumer(skill: SkillId): boolean {
@@ -162,8 +197,8 @@ export function queryTargetedSkillAction(
 
 /**
  * Revalidates live domain state at execute time. Inspect reports current trap
- * facts and awards no XP. Camp repair starts/resumes the same domain action
- * the inspection dialog uses.
+ * facts and awards no XP. Camp repair / Medicine start/resume domain Busy
+ * Actions without mutating on the query path.
  */
 export function executeTargetedSkillAction(
   skill: SkillId,
@@ -185,6 +220,18 @@ export function executeTargetedSkillAction(
     if (!trap) return { ok: false, reason: 'invalid-target' }
     const view = formatTrapInspection(trap)
     return { ok: true, title: view.title, line: view.line }
+  }
+  if (action.id === 'provide-medical-treatment') {
+    const treatable = treatableFromInteractable(target)
+    if (!treatable || treatable.id !== action.targetId) return { ok: false, reason: 'invalid-target' }
+    const plan = resolveMedicalTreatmentPlan(
+      treatable,
+      context.inventory,
+      context.playerSkills,
+    )
+    if (!plan) return { ok: false, reason: 'unavailable' }
+    context.startMedicalTreatment(treatable)
+    return { ok: true, started: true }
   }
   return { ok: false, reason: 'unavailable' }
 }

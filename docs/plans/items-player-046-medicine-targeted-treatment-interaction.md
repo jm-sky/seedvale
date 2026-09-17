@@ -1,7 +1,7 @@
 # Plan: Medicine targeted treatment interaction
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `done` ✅ (implemented 2026-09-17 — browser verification by user)
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~items-player-045~~, ~~items-player-021~~, ~~items-player-043~~

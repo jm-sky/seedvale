@@ -112,6 +112,11 @@ import { applySharpnessWear, getSharpnessDamageModifier, getWeaponMaintenancePro
 import { getGpuTimer, getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
 import { buildCharacterPresentation } from '../player/characterPresentation'
 import {
+  medicalTreatmentPromptLabel,
+  resolveMedicalTreatmentPlan,
+  treatableFromPlayer,
+} from '../player/medicalTreatment'
+import {
   collectLivingCombatTargets,
   collectRangedAnimalCandidates,
   createPlayerCombat,
@@ -442,6 +447,8 @@ export type GameLoopDeps = {
   inspectPlatform: (id: string) => void
   workOnCampRepair: (kind: CampRepairTargetKind, id: string) => void
   campRepairAvailable: (kind: CampRepairTargetKind, id: string) => { mode: 'start' | 'continue' } | null
+  /** Medicine wound treatment Busy Action (plan items-player-046). */
+  startMedicalTreatment: (target: import('../player/medicalTreatment').TreatableTarget) => void
   /** `[E]` on a hay bale (plan 168 follow-up) — sleeps directly in it via
    *  the same lodging commit path "Nocuj w mieście" uses, skipping Quick
    *  Actions entirely. */
@@ -715,6 +722,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     getTrap: (id: string) => bundle.placedTraps.get(id),
     campRepairAvailable: (kind, id) => deps.campRepairAvailable(kind, id),
     startCampRepair: (kind, id) => deps.workOnCampRepair(kind, id),
+    inventory,
+    playerSkills: player.skills,
+    startMedicalTreatment: (target) => deps.startMedicalTreatment(target),
   }
 
   const timer = new Timer()
@@ -1644,8 +1654,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const skillAction = selectedSkill && target
         ? queryTargetedSkillAction(selectedSkill, target, skillQueryContext)
         : null
+      const selfTreatable = selectedSkill === 'medicine'
+        ? treatableFromPlayer(player)
+        : null
+      const selfPlan = selfTreatable
+        ? resolveMedicalTreatmentPlan(selfTreatable, inventory, player.skills)
+        : null
+      const selfSkillPrompt = selfPlan && selfTreatable
+        ? medicalTreatmentPromptLabel(selfPlan, selfTreatable.label)
+        : null
       const skillPrompt = selectedSkill
-        ? targetedSkillPrompt(selectedSkill, skillAction, target != null)
+        ? (skillAction
+          ? targetedSkillPrompt(selectedSkill, skillAction, target != null)
+          : (selfSkillPrompt ?? targetedSkillPrompt(selectedSkill, null, target != null)))
         : null
       const inspectAvailable = inspectionTargetRef(target) !== null
       const interactionPrompt = selectedSkill
@@ -1740,9 +1761,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           if (target && skillAction) {
             const result = executeTargetedSkillAction(selectedSkill, target, skillQueryContext)
             if (result.ok && 'started' in result) {
-              /* camp repair already started the domain action */
+              /* camp repair / medicine already started the domain action */
             } else if (result.ok) vueUi.openFlavorDialog(result.title, result.line)
             else toast.show('Cel jest już niedostępny.', 'error')
+          } else if (selectedSkill === 'medicine' && selfTreatable && selfPlan) {
+            deps.startMedicalTreatment(selfTreatable)
           }
         }
       } else if (target?.kind === 'dig') {

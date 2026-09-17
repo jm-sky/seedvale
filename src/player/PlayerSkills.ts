@@ -225,6 +225,11 @@ export const SKILL_XP_AWARD = {
   /** Plan items-player-043 — awarded once when a medicinal treatment
    *  actually reduces poisoning severity. */
   medicinalTreatment: 8,
+  /** Plan items-player-046 — successful physical-injury treatment by severity
+   *  at the moment of effect (not query/cancel/no-op). */
+  woundTreatmentMinor: 6,
+  woundTreatmentSerious: 10,
+  woundTreatmentCritical: 14,
 } as const
 
 /** Metres of real sneaking movement per XP award — the "significant completed

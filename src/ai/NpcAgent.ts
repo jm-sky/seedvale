@@ -109,7 +109,7 @@ import {
   applyInjurySeverityForDebug,
   registerPhysicalInjuryFromDamage,
   registerPhysicalInjuryFromHeal,
-  resolveInjuryRecovery,
+  resolveInjuryRecovery as resolveSharedInjuryRecovery,
 } from '../shared/injuryRecovery'
 import {
   type InjurySeverity,
@@ -1858,7 +1858,7 @@ export class NpcAgent {
 
   /** Read-only diagnostic snapshot (plan 170) — see `NpcInspectionSnapshot`. */
   createInspectionSnapshot(timeOfDay: number): NpcInspectionSnapshot {
-    resolveInjuryRecovery(this.npcState, this.nowDays())
+    resolveSharedInjuryRecovery(this.npcState, this.nowDays())
     const queue = this.activeQueueId ? this.queues.get(this.activeQueueId) : undefined
     return {
       id: this.id,
@@ -2802,7 +2802,7 @@ export class NpcAgent {
     }
     this.tickPendingConversationVoiceCue()
     this.currentWeather = weather ?? null
-    resolveInjuryRecovery(this.npcState, this.nowDays())
+    resolveSharedInjuryRecovery(this.npcState, this.nowDays())
     const prevPhase = this.phase
     tickNeeds(this.needs, dt, dayLengthSec, {
       hungerThirstRate: this.phase === 'sleep' ? SLEEP_HUNGER_THIRST_RATE : 1,
@@ -3403,7 +3403,7 @@ export class NpcAgent {
       this.catchUpCommittedTravel(hours, dayLengthSec)
       return
     }
-    resolveInjuryRecovery(this.npcState, this.nowDays())
+    resolveSharedInjuryRecovery(this.npcState, this.nowDays())
     let finalActivity: ScheduleActivity | null = null
     let elapsed = 0
     let napping = this.sleepReason === 'collapse' || shouldCollapseSleep(this.vigor)
@@ -3630,7 +3630,7 @@ export class NpcAgent {
   }
 
   private effectivePhysicalAttributes() {
-    resolveInjuryRecovery(this.npcState, this.nowDays())
+    resolveSharedInjuryRecovery(this.npcState, this.nowDays())
     return resolveNpcEffectivePhysicalAttributes(
       this.physicalProfile,
       this.npcState.temporaryConditions,
@@ -3797,7 +3797,7 @@ export class NpcAgent {
     severity: ReturnType<typeof resolveInjurySeverity>
     treatmentKind: ReturnType<Inventory['findInjuryTreatment']>
   } {
-    resolveInjuryRecovery(this.npcState, nowDays)
+    resolveSharedInjuryRecovery(this.npcState, nowDays)
     const severity = resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp)
     return {
       modifiers: injurySpeaPenalties(severity),
@@ -5994,6 +5994,32 @@ export class NpcAgent {
    *
    * @produces NpcPlannedAction
    */
+  /** Outstanding healable physical injury (plan items-player-045). */
+  get physicalInjury(): number {
+    return this.npcState.physicalInjury
+  }
+
+  /** Lazy natural injury recovery — player Medicine revalidates via this. */
+  resolveInjuryRecovery(nowDays: number): void {
+    resolveSharedInjuryRecovery(this.npcState, nowDays)
+  }
+
+  /**
+   * Applies intentional wound treatment HP restore and injury accounting
+   * (plan items-player-045 / player consumer in items-player-046).
+   * Returns actual HP restored. Does not consume items or award XP.
+   */
+  applyPhysicalInjuryTreatment(requestedHpRestore: number, nowDays: number): number {
+    if (requestedHpRestore <= 0 || this.health.dead) return 0
+    const hpBefore = this.health.currentHp
+    healHealth(this.health, requestedHpRestore)
+    const actualRestored = this.health.currentHp - hpBefore
+    if (actualRestored > 0) {
+      registerPhysicalInjuryFromHeal(this.npcState, actualRestored, nowDays)
+    }
+    return actualRestored
+  }
+
   private beginHeal(): void {
     this.startAction({
       kind: 'heal',
@@ -6005,7 +6031,7 @@ export class NpcAgent {
         // selected item still held, shared treatment resolver accepts the
         // material, and HP can actually be restored.
         if (this.health.dead) return
-        resolveInjuryRecovery(this.npcState, this.nowDays())
+        this.resolveInjuryRecovery(this.nowDays())
         if (this.npcState.physicalInjury <= 0) return
         if (this.health.currentHp >= this.health.maxHp) return
         const severity = resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp)
@@ -6021,10 +6047,7 @@ export class NpcAgent {
         })
         if (!resolved.allowed || resolved.requestedHpRestore <= 0) return
         if (!this.carried.remove(kind, 1)) return
-        const hpBefore = this.health.currentHp
-        healHealth(this.health, resolved.requestedHpRestore)
-        const actualRestored = this.health.currentHp - hpBefore
-        registerPhysicalInjuryFromHeal(this.npcState, actualRestored, this.nowDays())
+        this.applyPhysicalInjuryTreatment(resolved.requestedHpRestore, this.nowDays())
       },
     })
   }

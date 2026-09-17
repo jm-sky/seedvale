@@ -71,7 +71,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Character presentation](../src/player/characterPresentation.ts) — Character Screen snapshot (base/effective SPEA, skills, condition views); Vue only renders it.
 - [Skill evaluation](../src/player/skillEvaluation.ts) — primary + optional support/context competence, independent of world targeting.
 - [Targeted skill selection](../src/player/targetedSkillSelection.ts) — runtime-only selected targeted skill.
-- [Targeted skill actions](../src/interaction/targetedSkillAction.ts) — query/execute seam over existing `Interactable`s; consumers are trap inspect and camp Repair.
+- [Targeted skill actions](../src/interaction/targetedSkillAction.ts) — query/execute seam over existing `Interactable`s; consumers are trap inspect, Medicine wound treatment, and camp Repair.
 - [Interaction view](../src/interaction/interactionView.ts) — derived primary/alternate/inspect presentation slots for gaze prompt and touch chrome (plan ui-input-015); action `consequenceTone` for foreign-property warnings (plan items-player-042).
 - [Foreign property use](../src/items/foreignProperty.ts) — action-level merchant-horse foreign-use preview and per-ride removal-threshold evaluation (plan items-player-042). Does not own fauna ownership.
 - [Trade grievance](../src/items/tradeGrievance.ts) — temporary merchant purchase markup (`unauthorized_property_use`), persisted as `SaveData.tradeGrievances`.
