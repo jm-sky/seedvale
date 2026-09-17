@@ -9,6 +9,7 @@
 **Subdomains:** `quests` `relationships`
 **Tags:** `medicine` `dog` `discovery` `world-action`
 **Roadmap:** -
+**Model:** Sonnet, Composer
 
 ## Goal
 
