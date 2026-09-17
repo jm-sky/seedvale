@@ -121,3 +121,19 @@ Do not create a browser automation test. Player does manual browser verification
 4. Add focused tests for duration and interruption/reset semantics.
 5. Run fauna tests/typecheck/build required by repository conventions.
 6. Leave browser/gameplay verification to the user.
+
+## Landed (2026-09-17)
+
+Implemented as designed:
+
+- `CARCASS_EAT_DURATION_SEC = 8` + exported `sourceActionDuration(kind)` in `animalForaging.ts`.
+- `AnimalAgent.performSourceAction()` uses the resolver (no carcass-only interrupt path).
+- `player-ignore` / `npc-ignore` no longer call `cancelSourceTarget()`; they continue via `updatePredator` (attack/flee/fire/scare cancel unchanged).
+- `foodTarget` debug exposes `actionElapsed` / `actionDuration`.
+- Unit coverage in `animalForaging.test.ts` (duration) and `AnimalAgent.test.ts` (mid-feed, complete, flee/attack interrupt, ignore preserve, restart from zero).
+
+## Verification handoff
+
+Automated: `vitest` on the two fauna test files above + `tsc --noEmit`.
+
+Browser verification remains User-owned: fox/wolf feed on a deer carcass for >5 s (target 8); approach so predator flees — carcass remains; ignore/distant calm predator keeps feeding; ordinary food/drink timings unchanged.

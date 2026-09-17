@@ -10,6 +10,7 @@ import { LEAD_START_DISTANCE } from './animalLead'
 import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { horseNameForAnimal } from './animalNames'
 import { type AnimalScareStimulus, scareFleeOrigin, shouldScare } from './animalScare'
+import { CARCASS_EAT_DURATION_SEC } from './animalForaging'
 import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
 import { senseOwnedFlockThreat } from './shepherdFlock'
 
@@ -1585,5 +1586,171 @@ describe('AnimalAgent', () => {
       sheep.takeDamage(9999)
       expect(sheep.interactionPosition()).toEqual({ x, z })
     })
+  })
+})
+
+describe('AnimalAgent interruptible carcass feeding (plan fauna-036)', () => {
+  const farObserver = () => new THREE.Vector3(1000, 0, 1000)
+
+  function makeCorpseAt(x: number, z: number, animalId = 'corpse-rabbit'): AnimalAgent {
+    const corpse = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId, x, z }))
+    corpse.takeDamage(9999)
+    expect(corpse.isDead()).toBe(true)
+    return corpse
+  }
+
+  function tickPredator(
+    predator: AnimalAgent,
+    others: AnimalAgent[],
+    observerPos: THREE.Vector3,
+    dt: number,
+  ): void {
+    predator.update({
+      dt,
+      others,
+      observerPos,
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+    })
+  }
+
+  /** Co-locate a hungry predator on a fresh corpse and advance until the
+   *  carcass food target is claimed and the eat action has started. */
+  function startCarcassFeed(opts: {
+    def: typeof ANIMAL_DEFS.wolf
+    animalId: string
+    hunger?: number
+  }): { predator: AnimalAgent, corpse: AnimalAgent } {
+    const corpse = makeCorpseAt(0, 0)
+    const predator = new AnimalAgent(makeDeps({
+      def: opts.def,
+      animalId: opts.animalId,
+      x: 0,
+      z: 0,
+    }))
+    predator.life.hunger = opts.hunger ?? 0.9
+    predator.life.thirst = 0.2
+    const others = [predator, corpse]
+    for (let i = 0; i < 12; i++) {
+      tickPredator(predator, others, farObserver(), 0.5)
+      const food = predator.getDebugInfo().foodTarget
+      if (food != null && food.actionElapsed > 0) {
+        expect(corpse.claimAsFood({})).toBe(false)
+        expect(corpse.foodConsumedPhase).toBeNull()
+        return { predator, corpse }
+      }
+    }
+    throw new Error('predator never started carcass feeding')
+  }
+
+  it('does not consume a carcass before CARCASS_EAT_DURATION_SEC', () => {
+    const { predator, corpse } = startCarcassFeed({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-mid-feed' })
+    const hungerBefore = predator.life.hunger
+    const already = predator.getDebugInfo().foodTarget!.actionElapsed
+    // Advance almost to completion but stay strictly below the duration.
+    const remaining = CARCASS_EAT_DURATION_SEC - already - 0.25
+    expect(remaining).toBeGreaterThan(0)
+    tickPredator(predator, [predator, corpse], farObserver(), remaining)
+    expect(corpse.foodConsumedPhase).toBeNull()
+    expect(corpse.claimAsFood({})).toBe(false)
+    expect(predator.life.hunger).toBeGreaterThanOrEqual(hungerBefore - 0.01)
+    const food = predator.getDebugInfo().foodTarget
+    expect(food).not.toBeNull()
+    expect(food!.actionDuration).toBe(CARCASS_EAT_DURATION_SEC)
+    expect(food!.actionElapsed).toBeGreaterThan(0)
+    expect(food!.actionElapsed).toBeLessThan(CARCASS_EAT_DURATION_SEC)
+  })
+
+  it('consumes the carcass exactly once after the full feeding duration', () => {
+    const { predator, corpse } = startCarcassFeed({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-finish-feed' })
+    const hungerBefore = predator.life.hunger
+    tickPredator(predator, [predator, corpse], farObserver(), CARCASS_EAT_DURATION_SEC + 1)
+    expect(corpse.foodConsumedPhase).toBe('fresh')
+    expect(predator.life.hunger).toBeLessThan(hungerBefore)
+    // Claim is released on completion; consumed phase still blocks re-eat.
+    expect(predator.getDebugInfo().foodTarget).toBeNull()
+    expect(corpse.claimAsFood({})).toBe(false)
+  })
+
+  it('releases the claim without consuming when player-attack or player-flee wins', () => {
+    const { predator, corpse } = startCarcassFeed({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-interrupt' })
+    // Inside panic range — notice is near-certain and hungry wolf resolves
+    // attack or close-range flee; both cancel the source target.
+    const closePlayer = new THREE.Vector3(1, 0, 0)
+    let interrupted = false
+    for (let i = 0; i < 20; i++) {
+      tickPredator(predator, [predator, corpse], closePlayer, 0.25)
+      const branch = predator.getDebugInfo().aiBranch
+      if (branch === 'player-attack' || branch === 'player-flee') {
+        interrupted = true
+        break
+      }
+    }
+    expect(interrupted).toBe(true)
+    expect(corpse.foodConsumedPhase).toBeNull()
+    expect(corpse.foodClaimedBy == null).toBe(true)
+    expect(predator.getDebugInfo().foodTarget).toBeNull()
+  })
+
+  it('keeps feeding under player-ignore instead of cancelling the carcass claim', () => {
+    // Hunger just elevated (needs) but below the human-attack floor so a
+    // distant bear scores ignore rather than attack/flee.
+    const { predator, corpse } = startCarcassFeed({
+      def: ANIMAL_DEFS.bear,
+      animalId: 'bear-ignore-feed',
+      hunger: 0.52,
+    })
+    // Ahead of default yaw (forward −Z), outside panic (5) but inside notice (13).
+    const calmPlayer = new THREE.Vector3(0, 0, -10)
+    let sawIgnore = false
+    for (let i = 0; i < 24; i++) {
+      tickPredator(predator, [predator, corpse], calmPlayer, 0.25)
+      if (predator.getDebugInfo().aiBranch === 'player-ignore') {
+        sawIgnore = true
+        expect(corpse.foodConsumedPhase).toBeNull()
+        expect(corpse.foodClaimedBy).toBe(predator)
+        expect(predator.getDebugInfo().foodTarget).not.toBeNull()
+        break
+      }
+    }
+    expect(sawIgnore).toBe(true)
+  })
+
+  it('restarts feeding from zero after an interrupt and reclaim', () => {
+    const { predator, corpse } = startCarcassFeed({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-restart' })
+    expect(predator.getDebugInfo().foodTarget!.actionElapsed).toBeGreaterThan(0)
+
+    const closePlayer = new THREE.Vector3(1, 0, 0)
+    for (let i = 0; i < 20; i++) {
+      tickPredator(predator, [predator, corpse], closePlayer, 0.25)
+      const branch = predator.getDebugInfo().aiBranch
+      if (branch === 'player-attack' || branch === 'player-flee') break
+    }
+    expect(corpse.foodConsumedPhase).toBeNull()
+    expect(corpse.foodClaimedBy == null).toBe(true)
+    expect(predator.getDebugInfo().foodTarget).toBeNull()
+
+    // Leave the carcass while alert hold drains so we cannot accidentally
+    // finish a full feed on the cool-down ticks.
+    predator.mesh.position.set(40, predator.mesh.position.y, 40)
+    for (let i = 0; i < 8; i++) {
+      tickPredator(predator, [predator, corpse], farObserver(), 1)
+      if (predator.getDebugInfo().aiBranch === 'predator-normal') break
+    }
+    expect(corpse.foodConsumedPhase).toBeNull()
+
+    predator.mesh.position.set(0, predator.mesh.position.y, 0)
+    predator.life.hunger = 0.9
+    for (let i = 0; i < 16; i++) {
+      tickPredator(predator, [predator, corpse], farObserver(), 0.25)
+      const food = predator.getDebugInfo().foodTarget
+      if (food != null && food.actionElapsed > 0) {
+        expect(food.actionElapsed).toBeLessThanOrEqual(0.5)
+        expect(corpse.foodConsumedPhase).toBeNull()
+        return
+      }
+    }
+    throw new Error('predator never reclaimed carcass after interrupt')
   })
 })

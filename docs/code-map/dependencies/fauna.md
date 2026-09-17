@@ -9,6 +9,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalLife.ts`
 - `fauna/animalDefs.ts`
+- `fauna/animalForaging.ts`
 - `fauna/animalHumanAffinity.ts`
 - `fauna/animalLead.ts`
 - `fauna/animalNames.ts`
@@ -413,6 +414,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalAttraction.test.ts`
 - `fauna/animalForaging.test.ts`

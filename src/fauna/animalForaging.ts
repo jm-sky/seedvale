@@ -67,6 +67,10 @@ export const EAT_DURATION_SEC = 3
 /** Seconds spent stationary drinking before thirst relief (`drinkWater`) is
  *  applied. */
 export const DRINK_DURATION_SEC = 2
+/** Seconds spent stationary feeding on a carcass before atomic consumption
+ *  (`applySourceRelief`) — longer than ordinary food so the action is
+ *  interruptible (plan fauna-036). */
+export const CARCASS_EAT_DURATION_SEC = 8
 /** Seconds to wait before retrying a failed food/water search — without
  *  this, a hungry/thirsty animal with no source in range would re-scan
  *  candidate points every frame. */
@@ -272,6 +276,20 @@ export type SourceTarget = {
   /** Set only for `kind: 'environmentalFood'` — diet item kind (e.g. `fish`). */
   environmentalFoodKind?: ItemKind
   environmentalFoodSourceId?: string
+}
+
+/**
+ * Real simulation seconds for a stationary source action before relief
+ * (`performSourceAction` / `actionTimer`). Carcass feeding is longer so
+ * higher-priority behaviour can interrupt before atomic consumption
+ * (plan fauna-036).
+ *
+ * @domain fauna
+ */
+export function sourceActionDuration(kind: SourceTargetKind): number {
+  if (kind === 'water') return DRINK_DURATION_SEC
+  if (kind === 'carcass') return CARCASS_EAT_DURATION_SEC
+  return EAT_DURATION_SEC
 }
 
 /** Per-tick environment `AnimalAgent` threads into every selection/

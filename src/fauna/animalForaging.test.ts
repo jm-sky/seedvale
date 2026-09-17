@@ -6,8 +6,11 @@ import { ANIMAL_DEFS } from './animalDefs'
 import {
   applySourceRelief,
   canAcceptHandFeed,
+  CARCASS_EAT_DURATION_SEC,
   type CarcassCandidate,
   dietItemReliefScale,
+  DRINK_DURATION_SEC,
+  EAT_DURATION_SEC,
   findFoodTarget,
   findGrassPatchTarget,
   findTroughTarget,
@@ -16,6 +19,7 @@ import {
   isDrinkableNaturalShorePoint,
   isSourceTargetValid,
   type SourceTarget,
+  sourceActionDuration,
   tryCommitHandFeed,
 } from './animalForaging'
 import { createAnimalLifeState, DEFAULT_ANIMAL_METABOLISM, FOOD_RELIEF, NEED_ELEVATED_THRESHOLD } from './AnimalLife'
@@ -349,6 +353,23 @@ describe('applySourceRelief / findGrassPatchTarget — grass patch race (plan fa
     expect(isSourceTargetValid(ctx, {}, {
       kind: 'grassPatch', x: 40, z: 0, patchId: 'patch-far',
     })).toBe(false)
+  })
+})
+
+describe('sourceActionDuration (plan fauna-036)', () => {
+  it('gives carcass a longer interruptible feed than ordinary food', () => {
+    expect(sourceActionDuration('carcass')).toBe(CARCASS_EAT_DURATION_SEC)
+    expect(CARCASS_EAT_DURATION_SEC).toBeGreaterThan(5)
+    expect(CARCASS_EAT_DURATION_SEC).toBe(8)
+  })
+
+  it('keeps ordinary food and drink timings unchanged', () => {
+    expect(sourceActionDuration('forage')).toBe(EAT_DURATION_SEC)
+    expect(sourceActionDuration('feed')).toBe(EAT_DURATION_SEC)
+    expect(sourceActionDuration('grassPatch')).toBe(EAT_DURATION_SEC)
+    expect(sourceActionDuration('environmentalFood')).toBe(EAT_DURATION_SEC)
+    expect(sourceActionDuration('paddockHay')).toBe(EAT_DURATION_SEC)
+    expect(sourceActionDuration('water')).toBe(DRINK_DURATION_SEC)
   })
 })
 

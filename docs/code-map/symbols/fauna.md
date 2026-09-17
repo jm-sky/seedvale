@@ -4,31 +4,31 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1102
+- `AnimalAgent` — class — line 1111
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
 - `AnimalAgentDebugInfo` — type — line 571
-- `AnimalAgentDeps` — type — line 906
-- `AnimalSaveState` — type — line 690
-- `AnimalUpdateContext` — type — line 970
+- `AnimalAgentDeps` — type — line 915
+- `AnimalSaveState` — type — line 699
+- `AnimalUpdateContext` — type — line 979
 - `BURY_DURATION_SEC` — const — line 383
-- `canPredatorPursueIntoVillage` — function — line 764
+- `canPredatorPursueIntoVillage` — function — line 773
 - `FAUNA_SHADOW_DISTANCE` — const — line 352
 - `FaunaAiBranch` — type — line 508
 - `FaunaNavRescueDebugInfo` — type — line 555
 - `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 443
-- `FrenzyWolfCandidate` — type — line 841
+- `FrenzyWolfCandidate` — type — line 850
 - `HARVEST_MEAT_DURATION_SEC` — const — line 386
-- `isWithinVillageRadius` — function — line 745
-- `NearbyNpcCandidate` — type — line 836
-- `pickNearestEligibleWolf` — function — line 850
-- `pickRabidTarget` — function — line 875
+- `isWithinVillageRadius` — function — line 754
+- `NearbyNpcCandidate` — type — line 845
+- `pickNearestEligibleWolf` — function — line 859
+- `pickRabidTarget` — function — line 884
 - `RABIES_BITE_INFECTION_CHANCE` — const — line 370
-- `villageFleeBiasFalloff` — function — line 772
-- `VillageInfo` — type — line 739
+- `villageFleeBiasFalloff` — function — line 781
+- `VillageInfo` — type — line 748
 
 ## `fauna/animalAreaBound.ts`
 
@@ -158,36 +158,39 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalForaging.ts`
 
-- `AnimalWaterSourceProvider` — type — line 95
-- `applySourceRelief` — function — line 684
-- `canAcceptHandFeed` — function — line 142
-- `CarcassCandidate` — type — line 227
-- `carcassCandidateScore` — function — line 218
-- `carcassFoodValue` — function — line 196
-- `dietItemReliefScale` — function — line 132
+- `AnimalWaterSourceProvider` — type — line 99
+- `applySourceRelief` — function — line 702
+- `canAcceptHandFeed` — function — line 146
+- `CARCASS_EAT_DURATION_SEC` — const — line 73
+- `CarcassCandidate` — type — line 231
+- `carcassCandidateScore` — function — line 222
+- `carcassFoodValue` — function — line 200
+- `dietItemReliefScale` — function — line 136
 - `DRINK_DURATION_SEC` — const — line 69
 - `EAT_DURATION_SEC` — const — line 66
-- `findFoodTarget` — function — line 596
-- `findForageTarget` — function — line 462
-- `findGrassPatchTarget` — function — line 490
-- `findHouseholdTroughTarget` — function — line 358
-- `findTroughTarget` — const — line 376
-- `findWaterTarget` — function — line 432
+- `findFoodTarget` — function — line 614
+- `findForageTarget` — function — line 480
+- `findGrassPatchTarget` — function — line 508
+- `findHouseholdTroughTarget` — function — line 376
+- `findTroughTarget` — const — line 394
+- `findWaterTarget` — function — line 450
 - `FOOD_INTERACTION_RANGE` — const — line 60
-- `forageEdgeScore` — function — line 109
-- `ForagingContext` — type — line 281
-- `isCarcassEdible` — function — line 169
-- `isDrinkableNaturalShorePoint` — function — line 332
-- `isSourceTargetValid` — function — line 611
-- `selectDietFeedKind` — function — line 120
-- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 73
-- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 78
-- `SourceTarget` — type — line 245
-- `SourceTargetKind` — type — line 244
-- `TROUGH_DRINK_AMOUNT` — const — line 81
-- `tryCommitHandFeed` — function — line 153
+- `forageEdgeScore` — function — line 113
+- `ForagingContext` — type — line 299
+- `isCarcassEdible` — function — line 173
+- `isDrinkableNaturalShorePoint` — function — line 350
+- `isSourceTargetValid` — function — line 629
+- `selectDietFeedKind` — function — line 124
+- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 77
+- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 82
+- `sourceActionDuration` — function — line 289
+  - domain: fauna
+- `SourceTarget` — type — line 249
+- `SourceTargetKind` — type — line 248
+- `TROUGH_DRINK_AMOUNT` — const — line 85
+- `tryCommitHandFeed` — function — line 157
 - `WATER_INTERACTION_RANGE` — const — line 63
-- `WaterSourceRef` — type — line 86
+- `WaterSourceRef` — type — line 90
 
 ## `fauna/animalHarvest.ts`
 

@@ -38,10 +38,6 @@
    🔴 `M` · ✅ ready · unlocks 0/0 · type: bug
 2. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
-3. `fauna-036` — **Interruptible Carcass Feeding**  
-   🔴 `S` · ✅ ready · unlocks 0/0 · type: fix
-4. `fauna-035` — **Dismount Follow/Stay anchor semantics**  
-   🔴 `S` · ✅ ready · unlocks 0/0 · type: bug
 
 ---
 
@@ -141,59 +137,51 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  61  
    → **unlocks:** 0/0
 
-16. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
+16. `items-player-045` — **Medicine targeted treatment for player, NPCs and livestock**  
+  🟡 `M` · **Score:**  45  
+   → **unlocks:** 1/1
+
+17. `quests-progression-054` — **Hunters Brotherhood — exceptional animal finale**  
   🟡 `L` · **Score:**  44  
    → **unlocks:** 0/0
 
-17. `settlements-npcs-022` — **Household help and age-based work participation**  
+18. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-18. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
+19. `npc-037` — **Work Contracts — Stale Target Discovery and Notice Cleanup**  
   🔴 `M` · **Score:**  35  
    → **unlocks:** 0/0
 
-19. `fauna-036` — **Interruptible Carcass Feeding**  
-  🔴 `S` · **Score:**  31  
+20. `items-player-046` — **Medicine targeted treatment interaction**  
+  🟡 `M` · **Score:**  33  
    → **unlocks:** 0/0
 
-20. `tools-015` — **Chatterbox local voice generation pipeline**  
+21. `tools-015` — **Chatterbox local voice generation pipeline**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-21. `tools-016` — **Heavy settlement performance benchmark**  
-  🔴 `S` · **Score:**  31  
-   → **unlocks:** 0/0
-
-22. `fauna-035` — **Dismount Follow/Stay anchor semantics**  
-  🔴 `S` · **Score:**  29  
-   → **unlocks:** 0/0
-
-23. `items-player-045` — **Medicine targeted treatment for player, NPCs and livestock**  
-  🟡 `L` · **Score:**  28  
-   → **unlocks:** 0/0
-
-24. `items-player-014` — **Rope-pullable resource transport**  
+22. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `tools-005` — **Seedvale Character Preparation Panel**  
+23. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `items-player-044` — **Shoulder and forearm equipment slots**  
+24. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-27. `npc-046` — **Settlement threat response and livestock safety**  
+25. `npc-046` — **Settlement threat response and livestock safety**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-28. `items-player-032` — **NPC player-storage resource and context rules**  
+26. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-29. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+27. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
@@ -204,6 +192,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-032-npc-player-storage-resource-and-context-rules.md`](items-player-032-npc-player-storage-resource-and-context-rules.md)  
   is blocked by:
   - [`items-player-028-npc-player-storage-access-policies.md`](items-player-028-npc-player-storage-access-policies.md)
+- [`items-player-046-medicine-targeted-treatment-interaction.md`](items-player-046-medicine-targeted-treatment-interaction.md)  
+  is blocked by:
+  - [`items-player-045-medicine-targeted-treatment-for-player-npcs-and-livestock.md`](items-player-045-medicine-targeted-treatment-for-player-npcs-and-livestock.md)
 - [`quests-progression-010-abandoned-gold-mine-colony.md`](quests-progression-010-abandoned-gold-mine-colony.md)  
   is blocked by:
   - [`settlements-003-colony-bootstrap.md`](settlements-003-colony-bootstrap.md)
@@ -353,6 +344,7 @@ graph TD
   items_player_043["items-player-043 — Renewable medicinal herbs and skill-aware foraging"]
   items_player_044["items-player-044 — Shoulder and forearm equipment slots"]
   items_player_045["items-player-045 — Medicine targeted treatment for player, NPCs and livestock"]
+  items_player_046["items-player-046 — Medicine targeted treatment interaction"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -745,6 +737,7 @@ graph TD
   items_player_021 --> items_player_019
   items_player_021 --> items_player_043
   items_player_021 --> items_player_045
+  items_player_021 --> items_player_046
   items_player_021 --> ui_input_013
   items_player_022 --> items_player_024
   items_player_022 --> items_player_025
@@ -777,6 +770,8 @@ graph TD
   items_player_039 --> items_player_044
   items_player_040 --> settlements_npcs_042
   items_player_043 --> items_player_045
+  items_player_043 --> items_player_046
+  items_player_045 --> items_player_046
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004

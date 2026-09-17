@@ -103,7 +103,6 @@ import {
   applySourceRelief,
   canAcceptHandFeed,
   dietItemReliefScale,
-  DRINK_DURATION_SEC,
   EAT_DURATION_SEC,
   findFoodTarget,
   findWaterTarget,
@@ -113,6 +112,7 @@ import {
   SOURCE_SEARCH_COOLDOWN_SEC,
   SOURCE_TARGET_TIMEOUT_SEC,
   type SourceTarget,
+  sourceActionDuration,
   tryCommitHandFeed,
   WATER_INTERACTION_RANGE,
 } from './animalForaging'
@@ -648,8 +648,17 @@ export type AnimalAgentDebugInfo = {
   preyAlertThreat: { x: number, z: number } | null
   /** Current carcass food-target diagnostics (plan fauna-005) — `null` when
    *  not currently pursuing a carcass. `riskPenalty` is always 0 today: the
-   *  `carcassCandidateScore` disease/food-safety seam has no consumer yet. */
-  foodTarget: { corpsePhase: CorpsePhase, foodValue: number, score: number, riskPenalty: number } | null
+   *  `carcassCandidateScore` disease/food-safety seam has no consumer yet.
+   *  `actionElapsed` / `actionDuration` expose in-progress feed timing
+   *  (plan fauna-036). */
+  foodTarget: {
+    corpsePhase: CorpsePhase
+    foodValue: number
+    score: number
+    riskPenalty: number
+    actionElapsed: number
+    actionDuration: number
+  } | null
   /** Current attraction pursuit (plan fauna-023 §13) — `null` when no
    *  compatible source is in range/being pursued. Answers "why is this
    *  animal approaching that food / blood / trap bait". */
@@ -2601,6 +2610,8 @@ export class AnimalAgent {
             foodValue: this.sourceTarget.foodValue,
             score: this.sourceTarget.score,
             riskPenalty: 0,
+            actionElapsed: this.actionTimer,
+            actionDuration: sourceActionDuration('carcass'),
           }
         : null,
       attractionTarget: this.attractionTarget
@@ -3328,6 +3339,10 @@ export class AnimalAgent {
             break
           }
           case 'npc-ignore': {
+            // Keep doing what it was doing (plan fauna-036) — do not cancel an
+            // in-progress source action merely because an NPC was noticed and
+            // scored `ignore`. Branch label stays for debug; behaviour continues
+            // through the normal predator loop.
             if (isNpcCombatDebugMode()) {
               logNpcThreatBranch({
                 label: 'npcThreat ON',
@@ -3338,10 +3353,8 @@ export class AnimalAgent {
                 playerActive: sense.playerActive,
               })
             }
-            this.cancelSourceTarget()
             this.threateningHuman = false
-            this.setIntent('wander')
-            this.wander(behaviourDt)
+            this.updatePredator(behaviourDt, others, attractionSources, huntableLivestock)
             break
           }
           case 'player-attack': {
@@ -3368,12 +3381,10 @@ export class AnimalAgent {
           case 'player-ignore': {
             // A bold predator (bear, playtest fixes plan §3) noticing a distant,
             // non-threatening human just keeps doing what it was doing instead
-            // of panicking — same "no reaction" shape as `updatePredator`'s
-            // no-prey-found wander, not a new idle mechanic.
-            this.cancelSourceTarget()
+            // of panicking — continue through `updatePredator` so an in-progress
+            // carcass feed is not cancelled by proximity alone (plan fauna-036).
             this.threateningHuman = false
-            this.setIntent('wander')
-            this.wander(behaviourDt)
+            this.updatePredator(behaviourDt, others, attractionSources, huntableLivestock)
             break
           }
           case 'predator-normal': {
@@ -4745,7 +4756,7 @@ export class AnimalAgent {
    *  `applySourceRelief()`. */
   private performSourceAction(dt: number, target: SourceTarget): void {
     this.actionTimer += dt
-    const duration = target.kind === 'water' ? DRINK_DURATION_SEC : EAT_DURATION_SEC
+    const duration = sourceActionDuration(target.kind)
     if (this.actionTimer < duration) return
     applySourceRelief(this.foragingContext(), target)
     this.cancelSourceTarget()

@@ -1,7 +1,7 @@
 # Plan: Interruptible Carcass Feeding
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 (implemented 2026-09-17 — browser checks are User-owned)
 **Priority:** high · **Effort:** S
 **Depends on:** ~~fauna-005~~, ~~fauna-017~~
 **Domain:** `fauna`
