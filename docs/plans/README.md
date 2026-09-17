@@ -76,8 +76,11 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-015-chatterbox-local-voice-generation-pipeline.md`                   | 🔴 | M      | ~~npc-041~~, ~~npc-042~~                                                                                                                                                                                                                                                                   | -                                       |
 | 💡 `fauna-034-wildlife-day-night-rest-and-den-defense.md`                      | 🟡 | M      | ~~fauna-028~~                                                                                                                                                                                                                                                                              | -                                       |
 | 💡 `items-player-044-shoulder-and-forearm-equipment-slots.md`                  | 🟡 | M      | ~~items-player-039~~                                                                                                                                                                                                                                                                       | -                                       |
-| 💡 `npc-046-settlement-threat-response-and-livestock-safety.md`                | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| 💡 `npc-046-settlement-threat-response-and-livestock-safety.md`                | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
 | 💡 `quests-progression-056-dungeon-bandit-story-item-integrity-and-recovery.md` | 🔴 | M      | ~~quests-progression-026~~, ~~quests-progression-035~~                                                                                                                                                                                                                                     | -                                       |
+| 💡 `fauna-037-domestic-livestock-safe-flee.md`                                 | 🔴 | M      | -                                                                                                                                                                                                                                                                                          | -                                       |
+| 💡 `npc-047-shepherd-livestock-threat-response.md`                             | 🔴 | M      | npc-046, fauna-037                                                                                                                                                                                                                                                                         | -                                       |
+| 💡 `npc-048-local-threat-assistance-and-guard-response.md`                     | 🔴 | M      | npc-046, npc-047                                                                                                                                                                                                                                                                           | -                                       |
 
 ---
 
@@ -186,9 +189,9 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `037`
+- fauna: `038`
 - items-player: `047`
-- npc: `047`
+- npc: `049`
 - persistence: `006`
 - quests-progression: `057`
 - settlements: `019`
