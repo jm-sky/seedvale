@@ -1,22 +1,26 @@
-# Implementation Notes: npc-046 — Settlement threat response and livestock safety
+# Implementation Notes: npc-046 — NPC emergency locomotion for settlement threats
 
 **Plan:** `docs/plans/npc-046-settlement-threat-response-and-livestock-safety.md`  
 **Reviewed:** 2026-09-17  
-**Source:** current `main` + targeted NPC/fauna/threat/movement recon
+**Source:** current `main` + targeted NPC movement/threat/stamina/animation recon
 
-## Current ownership and verified seams
+## Verified current seams
 
-### NPC movement is single-speed today
+### Detailed NPC movement is owned by `NpcAgent`
 
-`src/ai/NpcAgent.ts` owns detailed NPC movement execution. The current baseline is:
+`src/ai/NpcAgent.ts` owns detailed movement execution. Current baseline:
 
 ```ts
 const WALK_SPEED = 2.4
 ```
 
-`steerTo()`/movement watchdog/navigation already own destination execution and stuck recovery. Do not add a second pathfinder or flee movement controller. Add locomotion speed selection at the existing movement execution seam.
+`steerTo()` already executes committed destinations and cooperates with the existing movement watchdog/local navigation fallback. The plan should add locomotion urgency at this execution seam, not another destination/path system.
 
-The current semantic animation type is:
+`src/world/transportOffscreen.ts` intentionally duplicates the same `2.4` speed as `OFFSCREEN_TRAVEL_SPEED` for ordinary off-screen carrier travel. Do **not** change that constant merely because emergency detailed locomotion gains a run speed; emergency run is not the generic travel model.
+
+### Semantic animation is already centralized
+
+`NpcAgent.ts` currently declares:
 
 ```ts
 type NpcAnimClip =
@@ -29,202 +33,149 @@ type NpcAnimClip =
   | 'walk'
 ```
 
-There is no `run` semantic key. `AgentAnimationSet` already handles missing clips safely, so adding `run` should follow the same alias-resolution pattern rather than special-casing raw `AnimationAction`s.
+Existing calls resolve semantic keys through `AgentAnimationSet`. Add `run` following the same alias/fallback mechanism. Fallback belongs in animation resolution/presentation: an asset without Run should still execute real run movement.
 
-### Fauna already has sprint and immediate flee cadence
+### Personal animal-threat response already exists
 
-`src/fauna/animalDefs.ts::AnimalDef` already contains `walkSpeed` and `sprintSpeed` for every animal kind. `AnimalAgent` owns `walkSpeedNow()` / `sprintSpeedNow()` and its threat/flee/chase branches already call sprint-speed movement.
+`src/ai/npcAnimalThreat.ts` owns:
 
-`docs/state/fauna.md` confirms flee/combat are `immediate` importance under `animalUpdateCadence.ts`; skipped routine cadence is not the reason livestock reacts slowly.
+- `ThreateningAnimalCandidate`,
+- `senseImmediateAnimalThreat(...)`,
+- `ImmediateAnimalThreat`,
+- `arbitrateAnimalThreat(...)`,
+- score helpers used to choose defend vs flee.
 
-Therefore the livestock part of this plan should change **flee destination semantics**, not introduce run speed, a run flag or another animal movement state.
+`NpcAgent.update(...)` already accepts caller-bounded `nearbyAnimalThreats: readonly ThreateningAnimalCandidate[]`. Do not add per-NPC fauna scans or a second threat registry.
 
-### Animal threat bridge already carries committed livestock prey
+The existing scorer already makes defend depend on usable combat capability and accounts for HP/neuroticism. This plan should not retune that decision. Its vertical slice starts **after** the response is `flee`.
 
-`src/ai/npcAnimalThreat.ts::ThreateningAnimalCandidate` already has:
+### Existing interruption semantics matter
 
-```ts
-preyAnimalId?: string
-preyOwnerHouseId?: string
-```
+`NpcAgent` already has an interrupt/revalidation lifecycle for in-flight actions. Persistent `activePlan` intent is marked interrupted rather than erased, then ordinary arbitration recreates the next action later.
 
-and carries the existing `CombatTargetHandle` for the predator. This is the correct cross-domain read-only bridge to reuse for shepherd/guard response.
+Emergency personal threat should enter that lifecycle rather than directly wiping `pendingAction`, `activePlan` or unrelated authoritative state.
 
-`src/fauna/shepherdFlock.ts::senseOwnedFlockThreat()` already filters that candidate stream to predators committed against the shepherd household's livestock. Keep it pure/bounded.
+### Stamina is authoritative existing state
 
-### NPC defend/flee is already centralized
+NPC stamina is part of `NpcAuthoritativeState` and is referenced directly by `NpcAgent`. Existing fatigue/recovery/exhaustion policy already uses the same state.
 
-`src/ai/npcAnimalThreat.ts::arbitrateAnimalThreat()` already scores:
-
-- usable melee/ranged capability,
-- HP ratio,
-- neuroticism,
-
-and makes `defend` impossible for an NPC with no usable combat capability. Extend its input carefully if guard role bias is needed; do not fork a `guardThreatDecision()` unless the generic scorer cannot express the requirement.
-
-### Guard equipment is already systemic
-
-`src/ai/npcLoadout.ts::DEFAULT_WEAPON_BY_ROLE` contains:
-
-```ts
-guard: 'long_sword'
-```
-
-`seedInitialPersonalBelongingsIfNeeded()` persists the weapon through the normal personal-inventory path. The implementation should test/use this path, not seed a second transient guard sword into `NpcAgent.carried`.
-
-### Guard staffing does not currently rank physical candidates
-
-`src/settlement/professionStaffing.ts` owns generation-time role coverage. Guard policy is based on settlement `character` and `adultCapacity`; staffable adult slots are assigned independently of SPEA.
-
-`src/settlement/npcPhysicalProfile.ts` / `src/shared/effectivePhysicalAttributes.ts` derive Strength/Perception/Endurance/Agility later from deterministic physical profile data.
-
-Before changing candidate selection, trace generation order. If physical profiles do not exist yet at staffing time, do not duplicate attribute generation or perturb family RNG streams merely to rank guards. A small later training modifier is preferable to architectural inversion.
+Before inserting run drain, trace the update ordering around the existing base fatigue/recovery constants so one frame does not both recover and drain as if the NPC were resting and sprinting simultaneously.
 
 ## Recommended implementation order
 
-1. **NPC locomotion contract first.** Add semantic walk/run execution and tests without changing threat behaviour yet. Keep route/path/watchdog code identical.
-2. **NPC animation mapping.** Add `run` to `NpcAnimClip`, resolve `Run` aliases, make `syncAnimation()` consume locomotion mode, verify missing-run fallback.
-3. **NPC stamina coupling.** Run drains existing `StaminaState`; exhausted NPC falls back to walk/limited movement using existing exhaustion semantics.
-4. **Wire current personal-threat flee to run.** This gives an isolated vertical slice before adding shepherd/guard cooperation.
-5. **Domestic livestock safe-anchor preference.** Keep current flee arbitration and sprint execution; add only the contextual destination resolver/hook.
-6. **Shepherd threatened-flock interruption.** Reuse `senseOwnedFlockThreat()` and existing combat target handles.
-7. **Transient local alarm/assistance candidates.** Build at the existing settlement/fauna integration point, bounded to the materialized settlement/local fauna set.
-8. **Guard perception/bias.** Guards consume the same alarm/threat candidates, with wider bounded awareness and a defend score bias; use normal `beginCombat()`.
-9. **Only then evaluate guard physical tuning.** Prefer no explicit HP buff unless browser verification shows it is still necessary after response timing/equipment/run fixes.
+1. Add the narrow `walk | run` semantic locomotion contract without changing any callers.
+2. Centralize walk/run speed resolution at the current movement execution seam.
+3. Add `run` to `NpcAnimClip` and animation alias/fallback resolution.
+4. Couple `run` to existing `StaminaState` drain/exhaustion.
+5. Wire only the current `arbitrateAnimalThreat() === 'flee'` execution to run.
+6. Route personal-threat pre-emption through the existing interruption lifecycle.
+7. Add focused tests before any shepherd/guard/livestock follow-up work.
 
-## NPC locomotion design constraint
+This order keeps the first four steps testable without changing decision behaviour.
 
-Avoid changing every `steerTo(target, ...)` caller signature if a smaller committed-movement context already exists. The semantic mode should belong to the current movement/action episode so repeated per-frame steering cannot accidentally reset it.
+## Locomotion ownership
 
-Useful invariant:
+Prefer locomotion mode to belong to the current committed movement/action episode rather than adding a `run` boolean that arbitrary call sites toggle each frame.
 
-```text
-movement destination ownership != locomotion mode
-```
-
-The destination remains whatever current action/combat/flee code committed; locomotion only answers how urgently the NPC moves there.
-
-Do not derive `run` from `phase === 'wander'` or another broad phase because current animal-threat flee reuses ordinary movement/wander semantics.
-
-## NPC run speed and stamina
-
-Keep constants centralized near the existing movement constants or move both walk/run speeds into a tiny shared NPC locomotion module if tests need a pure resolver.
-
-Do not reuse player `SPRINT_MULTIPLIER` implicitly; NPC physical movement should own its own tuning.
-
-Potential pure helper shape:
-
-```ts
-resolveNpcLocomotionSpeed(mode, staminaState): number
-```
-
-Only extract this if it reduces test/runtime coupling; avoid creating a manager.
-
-Run drain should use existing `drainStamina()` and existing exhaustion thresholds. Check current `NpcAgent` fatigue/recovery update ordering so emergency drain and normal recovery do not both apply in the same frame.
-
-## Animation aliases
-
-Current NPC assets historically map locomotion around `Walk`, while some character pipelines may expose `Run` or UAL-style run names. Follow the existing alias-resolution style in `NpcAgent.create()`/`anim.resolve()`.
-
-Important: fallback belongs in animation resolution, not movement logic. An NPC with no Run clip should still move at run speed under threat; it may present Walk as fallback rather than lose gameplay behaviour.
-
-## Domestic safe-anchor resolver
-
-Keep the resolver outside raw `AnimalAgent` settlement scans. `AnimalAgent` should receive a narrow pre-resolved or queryable context from `createFauna()` / settlement integration, similar to existing ownership/hunting/shepherd hooks.
-
-The resolver needs to know at most:
-
-- animal ownership (`ownerHouseId`, already on livestock),
-- current threat position,
-- optional responsible shepherd position,
-- optional household/home/settlement-safe anchor.
-
-A safe candidate must pass a local directional guard before commitment. At minimum, the first movement direction should not reduce distance to the predator when an away-from-threat alternative exists.
-
-Do not replace `fleeFrom()` wholesale: preserve it as fallback and, if practical, factor only destination/direction selection into a pure helper tested independently.
-
-## Shepherd response
-
-`NpcAgent` already imports:
-
-```ts
-FLOCK_THREAT_RADIUS
-senseOwnedFlockThreat
-ShepherdFlockHooks
-```
-
-so shepherd integration already exists in the coordination class. Trace the current call site before adding another one; the likely change is to elevate the existing flock-threat result from profession-work concern into the immediate threat interruption path.
-
-The predator candidate already carries `target: CombatTargetHandle`; a defending shepherd should pass that through existing `beginCombat()` rather than resolve the animal again.
-
-## Alarm ownership
-
-Do not persist alarms and do not place them in `NpcAuthoritativeState`.
-
-Best ownership is the materialized settlement update/composition layer that already has:
-
-- local NPC collection,
-- fauna threat candidate bridge,
-- one update pass.
-
-Build one small bounded candidate list per settlement/update, then let nearby NPCs query it. Avoid `each NPC → scan every animal` and avoid callbacks from `AnimalAgent` into arbitrary NPCs.
-
-The alarm should disappear automatically when the live threat no longer exists / the combat target reports dead / the source situation is no longer relevant. No timeout registry is needed if it can be derived each update.
-
-## Guard behaviour
-
-Guard-specific differences should be data/scoring/perception differences, not a new FSM:
+Invariant:
 
 ```text
-same live threat/alarm
-→ larger guard perception radius
-→ guard defend-score bonus / lower flee bias while healthy + armed
-→ same arbitrateAnimalThreat()
-→ same beginCombat() or flee movement
+destination/route commitment != locomotion urgency
 ```
 
-Keep a hard escape path: critical HP, unusable weapon or exhaustion must still allow flee.
+A practical implementation may keep a transient execution-level mode on `NpcAgent`, but it must reset deterministically when the emergency episode ends and must not survive reconstruction/save-load.
 
-Do not change generic NPC weapon damage just because the attacker role is `guard`; the long sword and existing Strength/combat resolver should supply combat capability.
+Avoid deriving run from:
 
-## Physical-stat tuning caveat
+- `role`,
+- broad `phase`,
+- movement velocity thresholds,
+- animation state.
 
-`resolveNpcEffectivePhysicalAttributes()` composes base physical profile + injury + temporary-condition modifiers. If guard training becomes necessary, add it at a source where it is visible as a normal modifier/contribution rather than mutating effective values ad hoc inside combat.
+Those are downstream/orthogonal signals and would make ordinary patrol/work accidentally sprint.
 
-However, the first implementation should prioritize:
+## Speed policy
 
-1. actual emergency detection,
-2. run speed,
-3. weapon availability,
-4. cooperative response.
+Keep run speed near the existing movement constants or extract a tiny pure resolver only if it materially improves tests.
 
-Only then tune guard durability/attributes. The original pasture failure can be caused by delayed/nonexistent response rather than insufficient max HP.
+Do not reuse player sprint tuning implicitly. NPC movement owns its own value.
 
-## Tests worth keeping pure
+Do not change `OFFSCREEN_TRAVEL_SPEED` in `transportOffscreen.ts`; that file documents ordinary travel equivalence with `WALK_SPEED`, not emergency response.
 
-Prefer pure tests for:
+## Stamina coupling
 
-- locomotion speed selection,
+Use the existing stamina operations/state. A fixed V1 run-drain rate is sufficient.
+
+Important behaviours to preserve:
+
+- walking remains free of emergency run drain,
+- exhausted NPC cannot sprint indefinitely,
+- exhaustion fallback still produces movement instead of freezing,
+- normal recovery resumes once emergency running stops,
+- current Endurance/energetic modifiers remain authoritative where already applied.
+
+If a pure helper such as `resolveNpcLocomotionSpeed(mode, staminaState)` reduces test coupling, keep it small and stateless; do not create a locomotion manager.
+
+## Animation mapping
+
+Follow the existing semantic alias-resolution style. Prefer authored `Run`/known run aliases where the current resolver already supports alias lists.
+
+Do not make missing animation capability disable gameplay capability. Expected fallback:
+
+```text
+semantic run + Run clip exists    → play Run
+semantic run + no Run clip        → play safe Walk fallback
+movement execution in both cases  → run-speed rules
+```
+
+## Threat interruption integration
+
+The immediate threat path is already bounded by caller-supplied candidates. The implementation should elevate a live personal threat above low-priority movement/execution using existing cancellation/revalidation semantics.
+
+Do not yet make NPCs react to:
+
+- predators attacking somebody else,
+- livestock being attacked,
+- shepherd alarms,
+- guard-local danger.
+
+Those belong to the follow-up plans and are the main reason `npc-046` was narrowed.
+
+## Tests worth keeping focused
+
+Prefer pure/unit tests for:
+
+- locomotion speed resolution,
 - run eligibility under stamina/exhaustion,
-- guard bias in `arbitrateAnimalThreat`,
-- alarm radius filtering,
-- domestic safe-anchor selection,
-- safe-anchor rejection when it points through the predator.
+- run animation semantic fallback.
 
-Use `NpcAgent`/`AnimalAgent` integration tests only for wiring that cannot be proven by the pure helpers.
+Use `NpcAgent` integration tests for:
+
+- current personal animal-threat flee selects `run`,
+- low-priority action is interrupted through the existing lifecycle,
+- locomotion resets to walk after the threat disappears,
+- destination/path/watchdog behaviour is unchanged.
+
+## Explicit split from the former scope
+
+The previous `npc-046` combined several independent systems. Those responsibilities are now intentionally moved out:
+
+- domestic livestock contextual safe flee → `fauna-037-domestic-livestock-safe-flee.md`,
+- shepherd flock-threat response/loadout → `npc-047-shepherd-livestock-threat-response.md`,
+- transient local threat assistance + guard response → `npc-048-local-threat-assistance-and-guard-response.md`.
+
+Guard SPEA/candidate-quality/HP tuning is not part of any of these initial four plans; measure the response system first before adding physical-stat policy.
 
 ## Documentation follow-up
 
-If implemented, update:
+After implementation, update only the relevant current-state documentation:
 
-- `docs/state/npc.md` — NPC locomotion run mode + local assistance/guard threat response,
-- `docs/state/fauna.md` — domestic safe-anchor flee semantics while preserving sprint,
-- `docs/state/combat.md` only if the cross-domain threat handoff contract changes materially.
+- `docs/state/npc.md` — semantic emergency run + personal-threat interruption behaviour.
 
-Do not rewrite unrelated state sections.
+No fauna/state update belongs to this plan.
 
 ## Manual verification boundary
 
-AI implementation should run automated/type checks only. Browser gameplay verification is the User's responsibility per project rules.
+AI implementation should run automated/type checks only. Browser gameplay verification is the User's responsibility.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
