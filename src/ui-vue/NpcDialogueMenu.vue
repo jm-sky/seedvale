@@ -93,11 +93,6 @@ const requiredActionShortcuts = computed(() => (
 ))
 const activeMatters = computed(() => questPreview.value.filter((entry) => entry.kind === 'active'))
 
-const showHelpGroup = computed(() => true)
-const showConversationGroup = computed(() => (
-  isHomeGuard.value || true
-))
-const showActionsGroup = computed(() => true)
 const showAboutVillage = computed(() => state.settlement != null)
 
 const responseText = computed(() => {
@@ -413,7 +408,6 @@ watch(() => state.open, (open) => {
           {{ shortcutLabel(entry) }}
         </button>
         <button
-          v-if="showHelpGroup"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
           @click="enterGroup('help')"
@@ -429,7 +423,6 @@ watch(() => state.open, (open) => {
           Handel
         </button>
         <button
-          v-if="showConversationGroup"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
           @click="enterGroup('conversation')"
@@ -437,7 +430,6 @@ watch(() => state.open, (open) => {
           Rozmowa
         </button>
         <button
-          v-if="showActionsGroup"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
           @click="enterGroup('actions')"

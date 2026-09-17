@@ -1,7 +1,7 @@
 # Plan: NPC dialogue grouping and quest priority
 
 **Created:** 2026-09-17
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** high · **Effort:** M
 **Depends on:** none

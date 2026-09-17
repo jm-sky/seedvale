@@ -45,8 +45,6 @@
 
 1. `quests-progression-046` — **Lost Treasure Chronicles — integration, legacy catch-up and superseded quest cleanup**  
    🔴 `L` · 🔒 blocked · unlocks 0/0
-2. `ui-input-024` — **NPC dialogue grouping and quest priority**  
-   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -167,19 +165,15 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `ui-input-024` — **NPC dialogue grouping and quest priority**  
-  🔴 `M` · **Score:**  27  
-   → **unlocks:** 0/0
-
-24. `items-player-044` — **Shoulder and forearm equipment slots**  
+23. `items-player-044` — **Shoulder and forearm equipment slots**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-25. `items-player-032` — **NPC player-storage resource and context rules**  
+24. `items-player-032` — **NPC player-storage resource and context rules**  
   🟡 `L` · **Score:**  20  
    → **unlocks:** 0/0
 
-26. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
+25. `fauna-034` — **Wildlife Day/Night Rest and Den Defense**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 

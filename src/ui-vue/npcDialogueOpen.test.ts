@@ -6,6 +6,7 @@ import { Inventory } from '../items/Inventory'
 import { QuestManager } from '../quests/QuestManager'
 import {
   closeNpcDialogueMenu,
+  getNpcDialogueQuestPreview,
   openNpcDialogueMenu,
   resolveNpcDialogueHelp,
   resolveNpcDialogueOpenTopic,
@@ -275,6 +276,56 @@ describe('resolveNpcDialogueHelp topic picker contract (plan quests-progression-
     expect(ui.npcDialogueMenu.helpResult?.line).toBe('Potrzebuję muszli z plaży.')
     expect(ui.npcDialogueMenu.helpResult?.offer).toBeDefined()
 
+    closeNpcDialogueMenu()
+  })
+})
+
+describe('openNpcDialogueMenu quest preview seam (plan ui-input-024)', () => {
+  it('exposes read-only preview without setting helpResult or mutating quest state', () => {
+    const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
+    acceptOffer(qm, ANNA_ID)
+    const before = structuredClone(qm.exportProgress())
+
+    openNpcDialogueMenu(stubNpc('Piotr', PIOTR_ID), stubSettlement, qm, 12)
+
+    expect(ui.npcDialogueMenu.helpResult).toBeNull()
+    expect(resolveNpcDialogueOpenTopic()).toBeNull()
+    const preview = getNpcDialogueQuestPreview()
+    expect(preview.map((entry) => ({ id: entry.questId, kind: entry.kind }))).toEqual([
+      { id: 'relay', kind: 'required-action' },
+    ])
+    expect(ui.npcDialogueMenu.helpResult).toBeNull()
+    expect(qm.getState('relay')).toBe('active')
+    expect(qm.exportProgress()).toEqual(before)
+
+    closeNpcDialogueMenu()
+    expect(getNpcDialogueQuestPreview()).toEqual([])
+  })
+
+  it('preview of a selectable offer does not admit not_offered to offered', () => {
+    const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
+    openNpcDialogueMenu(stubNpc('Anna', ANNA_ID), stubSettlement, qm, 12)
+
+    expect(getNpcDialogueQuestPreview().map((entry) => entry.kind)).toEqual(['offer'])
+    expect(qm.getState('relay')).toBe('not_offered')
+    expect(ui.npcDialogueMenu.helpResult).toBeNull()
+
+    closeNpcDialogueMenu()
+  })
+
+  it('still lets payment win as the automatic open topic when a quest preview also exists', () => {
+    const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
+    acceptOffer(qm, ANNA_ID)
+    openNpcDialogueMenu(
+      stubNpc('Piotr', PIOTR_ID, 'hello there', { contractId: 'c1', npcId: 'n1', coins: 4 }),
+      stubSettlement,
+      qm,
+      12,
+    )
+
+    expect(resolveNpcDialogueOpenTopic()).toBe('payment')
+    expect(getNpcDialogueQuestPreview().some((entry) => entry.kind === 'required-action')).toBe(true)
+    expect(ui.npcDialogueMenu.helpResult).toBeNull()
     closeNpcDialogueMenu()
   })
 })
