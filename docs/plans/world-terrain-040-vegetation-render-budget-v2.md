@@ -8,6 +8,7 @@
 **Domain:** `world-terrain`
 **Subdomains:** `vegetation` `rendering`
 **Tags:** `lod` `batching` `performance`
+**Model:** Sonnet, Composer
 
 ## Cel
 
