@@ -41,6 +41,7 @@ Format: `- [ ] YYYY-MM-DD — opis (plan/plik, jeśli istotne)`
 
 ## Characters / presentation
 
+- [ ] 2026-09-17 — Blender exports for custom UBC `male_blacksmith_outfit` and `male_{leather,steel}_bracers` are currently **invalid for skinned runtime use**: `gltf-transform inspect` shows no `JOINTS_0` / `WEIGHTS_0` and therefore no usable skin binding, despite source Blender objects having Armature modifiers. `bindAccessoryToPlayerSkeleton` will skip such assets. The rejected source GLBs were also huge (~63 MB blacksmith, ~28 MB leather bracers, ~60 MB steel bracers) because Blender embedded 4K PNG atlases; mesh data itself was small. Do not restore/commit these GLBs until export preserves UBC joint weights/skin and the existing asset pipeline downsizes/converts textures. Detailed note: `docs/blender/TROUBLESHOOTING.md`; forearm work: `items-player-044`.
 - [ ] 2026-09-15 — UBC player (`items-player-033` / `034` / `036`) jest tylko męski. Żeńskie outfity (`Female_Peasant` / `Female_Ranger` / Knight / Noble / Wizard) i fryzury są w `_temp/` na tym samym rigu — nie robić osobnego pipeline, reuse `compose_ubc_player.py`.
 - [ ] 2026-09-15 — Runtime outfit jest całym meshem od slotu `body` (Peasant / Ranger / Knight), nie modularnymi Arms/Body/Legs. Wizard / Noble czekają na wearable (szata / strój); `Knight_Cloth` zostaje `?player=` debug. Sloty head/arms/legs nadal bez własnych meshy. Draft per-slot: `items-player-037-ubc-runtime-per-slot-outfits.md`.
 
