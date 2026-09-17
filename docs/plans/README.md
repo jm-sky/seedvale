@@ -78,6 +78,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-044-shoulder-and-forearm-equipment-slots.md`                  | 🟡 | M      | ~~items-player-039~~                                                                                                                                                                                                                                                                       | -                                       |
 | 💡 `npc-045-campfire-spoken-conversation-pairs.md`                             | 🔴 | S      | ~~npc-013~~, ~~npc-044~~                                                                                                                                                                                                                                                                   | -                                       |
 | 💡 `settlements-018-pasture-paddock-fence-road-clearance-and-collision.md`     | 🔴 | S      | ~~settlements-009~~, ~~settlements-013~~, ~~settlements-015~~                                                                                                                                                                                                                              | -                                       |
+| 💡 `npc-046-settlement-threat-response-and-livestock-safety.md`                | 🔴 | L      | -                                                                                                                                                                                                                                                                                          | -                                       |
 
 ---
 
@@ -238,7 +239,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `035`
 - items-player: `045`
-- npc: `046`
+- npc: `047`
 - persistence: `006`
 - quests-progression: `056`
 - settlements: `019`
